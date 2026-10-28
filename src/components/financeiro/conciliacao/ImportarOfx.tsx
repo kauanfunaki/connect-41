@@ -1,18 +1,25 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Check, Upload } from "lucide-react";
+import { Check, RefreshCw, Upload } from "lucide-react";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Card } from "@/components/ui/Card";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
-import { importarOfx, type ResumoDaImportacao } from "@/app/(app)/conciliacao/actions";
+import { importarExtratoDoOmie, importarOfx, type ResumoDaImportacao } from "@/app/(app)/conciliacao/actions";
+import { Button } from "@/components/ui/Button";
+import { CampoMes } from "@/components/ui/CampoMes";
 import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
 
 /** O mesmo teto da action. Conferido aqui para não subir 50 MB e só então ouvir "não". */
 const MAXIMO_MB = 5;
 
-export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
+/**
+ * `omie` (lote 4, 28/10/2026): a conta ligada a uma conta corrente do Omie
+ * ganha "Trazer do Omie" — o extrato do mês espelhado do que o BPO conciliou
+ * lá, para quem não tem OFX.
+ */
+export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; omie?: { rotulo: string | null; mesInicial: string } | null }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -20,6 +27,22 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
   const [pendente, startTransition] = useTransition();
   // Remonta o dropzone depois de importar, para ele esquecer o arquivo enviado.
   const [versao, setVersao] = useState(0);
+  const [mesDoOmie, setMesDoOmie] = useState(omie?.mesInicial ?? "");
+  const [trazendo, startTrazer] = useTransition();
+
+  function trazerDoOmie() {
+    if (!mesDoOmie) {
+      setErro("Escolha o mês do extrato do Omie.");
+      return;
+    }
+    setErro(null);
+    setResumo(null);
+    startTrazer(async () => {
+      const r = await importarExtratoDoOmie(bankAccountId, mesDoOmie);
+      if ("error" in r) setErro(r.error);
+      else setResumo(r.resumo);
+    });
+  }
 
   return (
     <Card className="p-4 flex flex-col gap-3">
@@ -61,6 +84,21 @@ export function ImportarOfx({ bankAccountId }: { bankAccountId: string }) {
             (08/10/2026): o "Importar" ficava à esquerda, embaixo do campo. */}
         <FormFooter pending={pendente} submitLabel="Importar" pendingLabel="Importando…" submitDisabled={!arquivo} erro={erro} size="sm" semDivisoria />
       </form>
+
+      {omie && (
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <p className="text-helper text-fg-secondary max-w-[70ch]">
+            Sem OFX? Esta conta é a {omie.rotulo ? `"${omie.rotulo}"` : "conta corrente"} no Omie. Traga do Omie o que o BPO já conciliou lá no mês — é um
+            espelho: só entra o lançamento conciliado no Omie, e conta com OFX no mesmo mês é recusada.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <CampoMes id={`omie-mes-${bankAccountId}`} value={mesDoOmie} onChange={setMesDoOmie} compact aria-label="Mês do extrato do Omie" />
+            <Button type="button" variant="secondary" size="sm" onClick={trazerDoOmie} loading={trazendo} loadingLabel="Lendo o Omie…">
+              <RefreshCw size={14} /> Trazer do Omie
+            </Button>
+          </div>
+        </div>
+      )}
 
       {resumo && (
         <div className="flex flex-col gap-1 text-fs-2 text-fg-secondary">

@@ -21,6 +21,9 @@ import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { itensDaGestao } from "@/lib/gestao/itens";
+import { feriadosDoEscritorio } from "@/lib/feriados";
+import { hojeIso, somarDias } from "@/lib/datas/calendario";
+import { chaveDoRisco, DIAS_DEPOIS_DA_DATA_LEGAL, mensagemDoRisco, riscoDeMulta } from "@/lib/obrigacoes/riscoDeMulta";
 import { pedidosAoClienteLigados } from "@/lib/financeiro/pendencias/setor";
 import { MARCA_DA_DEMONSTRACAO, SO_EMPRESA_DE_VERDADE } from "@/lib/demonstracao/marca";
 import {
@@ -38,6 +41,9 @@ import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoe
 import { processarConferencias } from "@/lib/autorizacoes/serpro";
 import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
 import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
+import { rotinaDasCertidoes } from "@/lib/certidoes/servidor";
+import { chaveDoProtocoloParado, mensagemDoProtocoloParado, protocoloParado } from "@/lib/societario/protocoloParado";
+import { diasParaCobrarOProtocolo } from "@/lib/societario/protocoloParadoServidor";
 import { configuracaoDoSerpro, ehSoftwareHouse } from "@/lib/serpro/cliente";
 import { validadeDoTermo } from "@/lib/serpro/termo";
 import { CODIGO_DA_INTEGRACAO } from "@/lib/serpro/regras";
@@ -890,6 +896,117 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
   return sent;
 }
 
+// Risco de multa nas obrigações por regime (lote 2, 28/10/2026): a atividade
+// do kanban ainda aberta perto da DATA LEGAL, no dia e logo depois dela. O
+// prazo interno (o vencimento da atividade) já avisa pela Gestão; este é o
+// aviso de que a multa está perto. Vai para quem está na atividade e, sem
+// ninguém nela, para os coordenadores do setor do modelo.
+async function checkObrigacoesEmRiscoDeMulta(tenantId: string, today: Date): Promise<number> {
+  const prisma = getPrisma();
+  const hoje = hojeIso();
+  // Folga generosa na consulta; a regra fina (dias úteis) está em `riscoDeMulta`.
+  const obrigacoes = await prisma.obrigacaoGerada.findMany({
+    where: {
+      tenantId,
+      dataLegal: { gte: somarDias(hoje, -DIAS_DEPOIS_DA_DATA_LEGAL), lte: somarDias(hoje, 15) },
+      pipelineItemId: { not: null },
+      company: SO_EMPRESA_DE_VERDADE,
+    },
+    select: {
+      id: true,
+      dataLegal: true,
+      modelo: { select: { nome: true, sectorCode: true } },
+      company: { select: { name: true, displayName: true } },
+      pipelineItem: {
+        select: { id: true, stage: { select: { type: true, isTerminal: true } }, assignees: { select: { userId: true } } },
+      },
+    },
+  });
+  if (obrigacoes.length === 0) return 0;
+
+  const feriados = new Set((await feriadosDoEscritorio(tenantId)).keys());
+  const coordenadores = new Map<string, string[]>();
+  let sent = 0;
+  for (const o of obrigacoes) {
+    const item = o.pipelineItem;
+    if (!item || item.stage.type === "DONE" || item.stage.isTerminal) continue;
+    const risco = riscoDeMulta(o.dataLegal, hoje, feriados);
+    if (!risco) continue;
+    if (!(await reservarPorChave(tenantId, chaveDoRisco(o.id, risco), today))) continue;
+    const input = {
+      tenantId,
+      type: "OBRIGACAO_MULTA",
+      message: mensagemDoRisco(risco, { obrigacao: o.modelo.nome, empresa: nomeExibicao(o.company), dataLegal: o.dataLegal }).slice(0, 250),
+      entityId: item.id,
+    };
+    let destino = item.assignees.map((a) => a.userId);
+    if (destino.length === 0) {
+      const setor = o.modelo.sectorCode;
+      if (!coordenadores.has(setor)) coordenadores.set(setor, await coordenadoresDoSetor(tenantId, setor));
+      destino = coordenadores.get(setor)!;
+    }
+    if (destino.length > 0) for (const userId of destino) await notifyUser(userId, input);
+    else await notifySector(o.modelo.sectorCode, input);
+    sent++;
+  }
+  return sent;
+}
+
+/**
+ * O protocolo parado no órgão (lote 5, 28/10/2026): pendente há N dias, sem
+ * resposta, avisa o responsável do processo para cobrar o órgão — e de novo a
+ * cada N dias. Sem responsável, os coordenadores do setor. As regras estão em
+ * src/lib/societario/protocoloParado.ts.
+ */
+async function checkProtocolosParados(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, "societario_processos"))) return 0;
+  const dias = await diasParaCobrarOProtocolo(tenantId);
+  if (dias <= 0) return 0;
+  const agora = new Date();
+  const protocolos = await getPrisma().processProtocol.findMany({
+    where: {
+      tenantId,
+      outcome: "PENDENTE",
+      submittedAt: { lte: new Date(agora.getTime() - dias * 24 * 60 * 60 * 1000) },
+      process: { status: { in: ["EM_ANDAMENTO", "AGUARDANDO_ORGAO"] }, company: SO_EMPRESA_DE_VERDADE },
+    },
+    select: {
+      id: true,
+      submittedAt: true,
+      organ: { select: { name: true, acronym: true } },
+      process: { select: { id: true, ownerUserId: true, title: true, type: { select: { name: true } }, company: { select: { name: true, displayName: true } } } },
+    },
+    take: 500,
+  });
+  if (protocolos.length === 0) return 0;
+
+  const setor = (await setorDoModulo(tenantId, "societario_processos")) ?? "societario";
+  let coordenadores: string[] | null = null;
+  let sent = 0;
+  for (const p of protocolos) {
+    const parado = protocoloParado(p.submittedAt, agora, dias);
+    if (!parado) continue;
+    if (!(await reservarPorChave(tenantId, chaveDoProtocoloParado(p.id, parado.volta), today))) continue;
+    const input = {
+      tenantId,
+      type: "PROCESS_PROTOCOLO_PARADO",
+      message: mensagemDoProtocoloParado({
+        orgao: p.organ.acronym || p.organ.name,
+        empresa: nomeExibicao(p.process.company),
+        processo: p.process.title ? `${p.process.type.name} (${p.process.title})` : p.process.type.name,
+        diasParado: parado.diasParado,
+      }),
+      entityId: p.process.id,
+    };
+    let destino = p.process.ownerUserId ? [p.process.ownerUserId] : null;
+    if (!destino) destino = coordenadores ??= await coordenadoresDoSetor(tenantId, setor);
+    if (destino.length > 0) for (const userId of destino) await notifyUser(userId, input);
+    else await notifySector(setor, input);
+    sent++;
+  }
+  return sent;
+}
+
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
     ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
@@ -917,7 +1034,11 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     // fiscal pedido na ficha, que o Serpro entrega depois do tempo de espera.
     ["serpro eventos", () => acompanharNoSerpro(tenantId)],
     ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
+    // Nem esta: a rotina das certidões do trimestre, um lote por passada (28/10/2026).
+    ["certidões", () => rotinaDasCertidoes(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
+    ["risco de multa", () => checkObrigacoesEmRiscoDeMulta(tenantId, today)],
+    ["protocolo parado", () => checkProtocolosParados(tenantId, today)],
   ];
 
   let sent = 0;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
-import { AbrirMensagem, EmitirGuia, PedirSituacaoFiscal, VerMensagem } from "@/components/autorizacoes/BotoesDaReceita";
+import { AbrirMensagem, EmitirCertificadoDoMei, EmitirGuia, PedirSituacaoFiscal, VerMensagem } from "@/components/autorizacoes/BotoesDaReceita";
 import type { TipoDeGuia } from "@/lib/serpro/guias";
 import type { MensagemNaTela, ReceitaDaEmpresa } from "@/lib/serpro/acompanhamento";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
@@ -144,6 +144,17 @@ export function ReceitaNaFicha({
         </div>
         {podePedir && <EmitirGuia companyId={companyId} desabilitado={!!motivo} sugestao={guiaSugerida} />}
       </section>
+
+      {guiaSugerida === "DAS_MEI" && (
+        <section className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-label font-medium text-fg">Certificado de MEI</h3>
+            <p className="text-ui text-fg-secondary">O CCMEI atualizado, para o Societário e para o cliente.</p>
+            <p className="text-micro text-fg-muted">Uma emissão, cobrada pelo Serpro. O PDF vai para Arquivos › Societário, que o cliente não vê: para mandar, use Enviar ao cliente.</p>
+          </div>
+          {podePedir && <EmitirCertificadoDoMei companyId={companyId} desabilitado={!!motivo} />}
+        </section>
+      )}
     </Card>
   );
 }

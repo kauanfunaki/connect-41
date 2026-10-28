@@ -21,6 +21,8 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (n.type === "SERPRO_CONFERENCIA") return "/autorizacoes";
   // Certificado ou termo da conexão do Serpro vencendo: abre as Integrações.
   if (n.type === "SERPRO_VENCIMENTO") return "/admin/integracoes";
+  // Certidão positiva: a tela das certidões, no recorte do que falta ver.
+  if (n.type === "CERTIDAO_POSITIVA") return "/certidoes?recorte=positivas";
   // Várias conversas do WhatsApp passadas de uma vez (02/10/2026): o aviso é um
   // só, sem conversa própria, e abre a lista das que estão com a pessoa.
   if (n.type === "WHATSAPP_HANDOFF" && !n.entityId) return "/whatsapp?ver=minhas";
@@ -43,6 +45,6 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Menção e comentário guardam o id do card (desde 02/10/2026): o card solto,
   // sem empresa nem pessoa, gerava notificação que não abria nada. A rota
   // acha a lista do card e redireciona.
-  if (n.type === "MENTION" || n.type === "COMMENT") return `/kanban/itens/${n.entityId}`;
+  if (n.type === "MENTION" || n.type === "COMMENT" || n.type === "OBRIGACAO_MULTA") return `/kanban/itens/${n.entityId}`;
   return null;
 }

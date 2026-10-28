@@ -23,8 +23,18 @@ import { emailDoDestinatario, rotaDoEnvio, rotaDosEnvios } from "@/lib/envios/re
 import { lerAgendamento } from "@/lib/envios/agendamento";
 import { lerDiasDoLembrete } from "@/lib/envios/lembrete";
 import { entregarPorEmail, publicarEnvioAgendado } from "@/lib/envios/agendador";
+import { anexoDosArquivos, arquivosParaOEnvio, type ArquivoParaOEnvio } from "@/lib/envios/anexoDosArquivos";
+import { ligarGuiaAoEnvio } from "@/lib/guias/servidor";
 
 export type ClientDocumentState = { error: string } | { success: true } | null;
+
+/** Os arquivos da empresa que cabem como anexo do envio, buscados pelo nome. */
+export async function buscarArquivosParaOEnvio(companyId: string, termo: string): Promise<ArquivoParaOEnvio[]> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId || !canWrite(ctx.role) || !companyId) return [];
+  if (!(await assertCompanyInScope(companyId, ctx))) return [];
+  return arquivosParaOEnvio(ctx, companyId, termo);
+}
 
 /** A lista e a ficha do envio, depois de qualquer mudança. */
 function revalidarEnvio(id?: string) {
@@ -102,6 +112,16 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
       return { error: err instanceof Error ? err.message : "Erro ao salvar arquivo anexo." };
     }
   }
+  // Um arquivo que já está nos Arquivos da empresa (28/10/2026). O anexo novo,
+  // se a pessoa escolheu os dois, vale no lugar.
+  const arquivoId = String(form.get("arquivoId") ?? "");
+  let veioDosArquivos: string | null = null;
+  if (!fileData && arquivoId) {
+    const r = await anexoDosArquivos(ctx, companyId, arquivoId);
+    if (!r.ok) return { error: r.erro };
+    fileData = r.anexo;
+    veioDosArquivos = arquivoId;
+  }
 
   const prisma = getPrisma();
   const document = await prisma.clientDocument.create({
@@ -123,6 +143,8 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
   });
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.create", entityType: "ClientDocument", entityId: document.id, metadata: { title, companyId } });
+  // A guia emitida que foi como anexo passa a saber do envio (Guias pelo Connect, 28/10/2026).
+  if (veioDosArquivos) await ligarGuiaAoEnvio(ctx.tenantId, veioDosArquivos, document.id);
   if (envio.scheduledFor) {
     await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.schedule", entityType: "ClientDocument", entityId: document.id, metadata: { title, quando: envio.scheduledFor.toISOString(), emails: envio.scheduledEmails } });
   }
@@ -177,6 +199,16 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
       return { error: err instanceof Error ? err.message : "Erro ao salvar arquivo anexo." };
     }
   }
+  // Um arquivo que já está nos Arquivos da empresa (28/10/2026). O anexo novo,
+  // se a pessoa escolheu os dois, vale no lugar.
+  const arquivoId = String(form.get("arquivoId") ?? "");
+  let veioDosArquivos: string | null = null;
+  if (!fileData && arquivoId) {
+    const r = await anexoDosArquivos(ctx, companyId, arquivoId);
+    if (!r.ok) return { error: r.erro };
+    fileData = r.anexo;
+    veioDosArquivos = arquivoId;
+  }
 
   // Só o rascunho ainda não publicado muda (22/10/2026): se o agendador
   // publicou o envio enquanto o formulário estava aberto, nada é gravado.
@@ -197,6 +229,7 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
   if (gravado.count !== 1) return { error: "Este envio acabou de ser publicado e não pode mais ser editado." };
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.update", entityType: "ClientDocument", entityId: id, metadata: { title } });
+  if (veioDosArquivos) await ligarGuiaAoEnvio(ctx.tenantId, veioDosArquivos, id);
   const agendouAntes = existing.scheduledFor?.getTime() ?? null;
   const agendaAgora = envio.scheduledFor?.getTime() ?? null;
   if (agendouAntes !== agendaAgora) {

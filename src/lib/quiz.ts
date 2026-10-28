@@ -9,6 +9,13 @@ export type QuizQuestionResult = {
   selectedIndex: number;
   correctIndex: number;
   correct: boolean;
+  /**
+   * O texto da pergunta e das alternativas como o candidato viu (28/10/2026).
+   * Editar o modelo recria as perguntas; sem esta cópia, o resultado antigo
+   * perdia o texto. Resultado gravado antes disso não tem os dois.
+   */
+  texto?: string;
+  alternativas?: string[];
 };
 
 export type QuizScores = {
@@ -54,17 +61,21 @@ export function validateQuizAnswers(
 
 export function scoreQuiz(
   answers: QuizAnswer[],
-  questions: { id: string; correctIndex: number }[]
+  questions: { id: string; correctIndex: number; text?: string; options?: unknown }[]
 ): QuizScores {
-  const correctIndexByQuestion = new Map(questions.map((q) => [q.id, q.correctIndex]));
+  const porId = new Map(questions.map((q) => [q.id, q]));
 
   const results: QuizQuestionResult[] = answers.map((a) => {
-    const correctIndex = correctIndexByQuestion.get(a.questionId) ?? -1;
+    const q = porId.get(a.questionId);
+    const correctIndex = q?.correctIndex ?? -1;
+    const alternativas = Array.isArray(q?.options) ? q.options.map((o) => (typeof o === "string" ? o : "")) : undefined;
     return {
       questionId: a.questionId,
       selectedIndex: a.selectedIndex,
       correctIndex,
       correct: a.selectedIndex === correctIndex,
+      ...(typeof q?.text === "string" ? { texto: q.text } : {}),
+      ...(alternativas ? { alternativas } : {}),
     };
   });
 

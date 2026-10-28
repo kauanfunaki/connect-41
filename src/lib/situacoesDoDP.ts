@@ -32,3 +32,16 @@ export function desligamentoEmAndamento(status: TerminationStatus): boolean {
 export function podeRegistrarDesligamento(anteriores: { status: TerminationStatus }[]): boolean {
   return !anteriores.some((t) => desligamentoEmAndamento(t.status));
 }
+
+/**
+ * A data de desligamento da pessoa: o término do contrato informado na
+ * conferência da rescisão e, sem ele, o dia em que o desligamento foi
+ * finalizado no Connect.
+ *
+ * Até 28/10/2026 era sempre o dia do clique em "Finalizado", e o "Desligamentos
+ * no mês" contava a pessoa no mês em que o DP fechou o processo, não no mês em
+ * que ela saiu.
+ */
+export function dataDoDesligamento(t: { terminationDate: Date | null; finalizedAt: Date | null }, agora: Date): Date {
+  return t.terminationDate ?? t.finalizedAt ?? agora;
+}

@@ -1,61 +1,9 @@
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
-import { scopedCompanyWhere } from "@/lib/auth/scope";
-import { BenefitCatalogForm } from "@/components/empresas/BenefitCatalogForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { atualizarBeneficio } from "../../actions";
+import { redirect } from "next/navigation";
 
-export default async function EditarBeneficioPage({
-  params,
-}: {
-  params: Promise<{ id: string; beneficioId: string }>;
-}) {
-  const { id: companyId, beneficioId } = await params;
-  const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) notFound();
-
-  const prisma = getPrisma();
-  const company = await prisma.company.findFirst({
-    where: { id: companyId, ...(await scopedCompanyWhere(ctx)) },
-    select: { id: true, name: true },
-  });
-  if (!company) notFound();
-
-  const beneficio = await prisma.benefitCatalog.findFirst({ where: { id: beneficioId, tenantId: ctx.tenantId, companyId } });
-  if (!beneficio) notFound();
-
-  return (
-    <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: "Cadastros", href: "/empresas" },
-          { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Benefícios", href: `/empresas/${companyId}/beneficios` },
-          { label: "Editar" },
-        ]}
-      />
-
-      <PageHeader title="Editar benefício" subtitle={company.name} />
-
-      <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">
-          <BenefitCatalogForm
-            action={atualizarBeneficio}
-            companyId={companyId}
-            cancelHref={`/empresas/${companyId}/beneficios`}
-            defaultValues={{
-              id: beneficio.id,
-              name: beneficio.name,
-              type: beneficio.type,
-              eligibilityRule: beneficio.eligibilityRule ?? undefined,
-            }}
-          />
-        </div>
-      </div>
-    </PageContainer>
-  );
+// O formulário abre no painel ao lado da lista desde 28/10/2026 (lote 5,
+// no molde da escolha 2B dos Ajustes de 15/10). Este endereço fica para os
+// links antigos.
+export default async function EditarBenefitCatalogFormPage({ params }: { params: Promise<{ id: string; beneficioId: string }> }) {
+  const { id, beneficioId } = await params;
+  redirect(`/empresas/${encodeURIComponent(id)}/beneficios?editar=${encodeURIComponent(beneficioId)}`);
 }

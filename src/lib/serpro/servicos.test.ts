@@ -7,6 +7,7 @@ import {
   DAS_DO_SIMPLES,
   DARF_DO_SICALC,
   GUIA_DA_DCTFWEB,
+  lerCertificadoDoMei,
   lerDarfDoSicalc,
   lerDasDoMei,
   lerDasDoSimples,
@@ -89,6 +90,12 @@ describe("os leitores, com as respostas da demonstração", () => {
     expect(r.dados).toMatchObject({ pdf: PDF_FICTICIO, vencimento: "2019-02-20", valores: { principal: 5590, multa: 1118, juros: 1071, total: 7779 }, razaoSocial: "EXEMPLO" });
     expect(r.dados.composicao.map((c) => c.codigo)).toEqual(["0151", "0083", "0125"]);
     expect(r.dados.composicao[0].periodoApuracao).toBe("201901");
+  });
+
+  it("certificado de MEI: `dados` em texto com `{ cnpj, pdf }`", () => {
+    const r = lerResposta(200, JSON.stringify({ status: 200, dados: JSON.stringify({ cnpj: "00000000000000", pdf: PDF_FICTICIO }), mensagens: [{ codigo: "Sucesso-CCMEI", texto: "Requisição efetuada com sucesso." }] }));
+    expect(lerCertificadoDoMei(r)).toEqual({ ok: true, dados: { pdf: PDF_FICTICIO } });
+    expect(lerCertificadoDoMei(lerResposta(200, JSON.stringify({ status: 200, dados: "{}", mensagens: [] }))).ok).toBe(false);
   });
 
   it("guia da DCTFWeb: só o PDF", () => {

@@ -121,6 +121,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "autorizacoes.serpro_lote": o("conferiu no Serpro as autorizações de acesso, em lote"),
   "autorizacoes.serpro_sitfis": o("pediu no Serpro a situação fiscal da empresa"),
   "autorizacoes.serpro_guia": o("emitiu no Serpro uma guia federal da empresa"),
+  "autorizacoes.serpro_ccmei": o("emitiu no Serpro o certificado de MEI da empresa"),
+  "autorizacoes.guia_paga": e("marcou a guia como paga"),
+  "autorizacoes.guia_reaberta": e("desmarcou a guia como paga"),
   "autorizacoes.serpro_caixa_postal": o("abriu uma mensagem da Caixa Postal da Receita, dando ciência"),
 
   // ── BPO ────────────────────────────────────────────────────────────────────
@@ -262,6 +265,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "societario.processo.documento": c("anexou documentos ao processo"),
   "societario.ia.varredura_aplicada": e("aplicou a varredura da IA"),
   "societario.ia.proposta_rejeitada": e("recusou uma proposta da IA"),
+  "societario.cobranca_de_protocolo": e("mudou o prazo para cobrar o órgão do protocolo parado"),
+  "societario.certidao_emitida": o("pediu uma certidão da empresa pela InfoSimples"),
+  "societario.certidao_vista": e("marcou a certidão positiva como vista"),
   "empresa.socio.importado_da_receita": c("importou da Receita os sócios da empresa"),
   "empresa.socio.importado_do_contrato": c("importou do contrato social os sócios da empresa"),
   "empresa.socio.saida": e("registrou a saída do sócio"),
@@ -269,6 +275,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "license.update": e("editou uma licença"),
   "license.revoke": e("revogou uma licença"),
   "license.reactivate": e("reativou uma licença"),
+  "license.import_radar": c("trouxe as licenças do Radar Societário"),
 
   // ── Gestão e Comercial ─────────────────────────────────────────────────────
   "gestao.reatribuir": e("trocou o responsável de"),
@@ -524,6 +531,8 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   CollectionAgreement: "acordo de cobrança",
   CollectionReminderConfig: "régua de lembretes",
   Company: "empresa",
+  Guia: "guia",
+  Certidao: "certidão",
   CompanyPartner: "sócio",
   CompanyRescisaoConfig: "cálculo de rescisão da empresa",
   CompanyService: "setor contratado",
@@ -570,6 +579,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",
   TenantEnviosConfig: "padrão dos envios",
+  TenantSocietarioConfig: "configuração do Societário",
   PortalUser: "acesso ao portal",
   Process: "processo",
   RecurringObligation: "obrigação recorrente",

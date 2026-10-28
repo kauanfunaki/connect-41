@@ -487,6 +487,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Licenças",
   },
   {
+    code: "societario_certidoes",
+    label: "Certidões",
+    sectorCode: "societario",
+    description: "Federal, FGTS, trabalhista, estadual e municipal da carteira, a cada trimestre, pela InfoSimples",
+    defaultEnabled: false,
+    icon: "CheckCheck",
+    group: "Licenças",
+  },
+  {
     code: "societario_processos",
     label: "Processos",
     sectorCode: "societario",
@@ -779,6 +788,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   fiscal_configuracoes:    "/fiscal/configuracoes",
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
+  societario_certidoes:    "/certidoes",
   // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e
   // `/processos/exigencias` acenderia "Processos" e "Exigências" juntos.
   societario_minha_area:   "/societario/minha-area",
