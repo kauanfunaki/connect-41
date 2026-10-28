@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { saoPauloParts } from "@/lib/agenda";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { AbasDoCiclo } from "@/components/dp/AbasDoCiclo";
 import { formatInstantDate } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
@@ -34,6 +35,7 @@ export default async function DesligamentosPage() {
         title="Desligamentos em andamento"
         subtitle={<>{terminations.length} desligamento{terminations.length !== 1 ? "s" : ""} em processo</>}
       />
+      <AbasDoCiclo ativa="desligamentos" />
 
       {terminations.length === 0 ? (
         <Card>

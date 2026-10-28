@@ -47,7 +47,7 @@ const PRAZO_DA_RESCISAO: Readonly<Record<string, string>> = { VENCIDO: "vencido"
 const fichaDoColaborador = (pessoa: { id: string; name: string }) => linkDaTela(pessoa.name, `/pessoas/${pessoa.id}`);
 
 export const MODULOS_DO_DP = {
-  dp_colaboradores: "/colaboradores",
+  dp_colaboradores: "/admissoes",
   dp_afastamentos: "/afastamentos",
   dp_horas_extras: "/horas-extras",
 } as const;
@@ -132,7 +132,7 @@ export const FERRAMENTAS_DE_DP: Record<string, FerramentaRegistrada> = {
       return {
         empresa: nomeExibicao(empresa),
         porSituacao: chavesLegiveis(Object.fromEntries(grupos.map((g) => [g.employmentStatus, g._count._all])), SITUACAO_DO_COLABORADOR),
-        link: linkDaTela("Abrir os colaboradores", "/colaboradores"),
+        link: linkDaTela("Abrir as admissões", "/admissoes"),
         mostrando: Math.min(pessoas.length, LINHAS),
         ...(salario ? {} : { aviso: "Salário omitido: seu perfil não tem acesso a esse dado." }),
         colaboradores: pessoas.slice(0, LINHAS).map((p) => ({
