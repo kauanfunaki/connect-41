@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Briefcase, FileSignature, HandCoins, KeyRound, ListTodo, MessageSquareWarning, Palmtree, Receipt, Stethoscope } from "lucide-react";
+import { BadgeCheck, Briefcase, FileSignature, FileWarning, HandCoins, KeyRound, Landmark, ListTodo, MessageSquareWarning, Palmtree, Receipt, Stethoscope } from "lucide-react";
 import type { PrazoDaAgenda, TipoDePrazo } from "@/lib/prazosDaAgenda";
 
 /** Nome e cor de cada setor, do cadastro do tenant. */
@@ -15,6 +15,10 @@ const ICONE: Record<TipoDePrazo, React.ReactNode> = {
   exame: <Stethoscope />,
   vaga: <Briefcase />,
   certificado: <KeyRound />,
+  // Os prazos do Societário que vieram da Minha área (fila única, 28/10/2026).
+  exigencia: <FileWarning />,
+  taxa: <Landmark />,
+  licenca: <BadgeCheck />,
 };
 
 /**

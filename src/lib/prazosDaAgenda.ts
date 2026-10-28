@@ -24,6 +24,9 @@ export type TipoDePrazo =
   | "conta-receber"
   | "pendencia"
   | "processo"
+  | "exigencia"
+  | "taxa"
+  | "licenca"
   | "ferias"
   | "exame"
   | "vaga"
@@ -50,6 +53,9 @@ export const ROTULO_DO_PRAZO: Record<TipoDePrazo, { um: string; varios: string }
   "conta-receber": { um: "conta a receber", varios: "contas a receber" },
   pendencia: { um: "pendência com o cliente", varios: "pendências com o cliente" },
   processo: { um: "processo com prazo combinado", varios: "processos com prazo combinado" },
+  exigencia: { um: "exigência do órgão", varios: "exigências do órgão" },
+  taxa: { um: "taxa do Societário", varios: "taxas do Societário" },
+  licenca: { um: "licença vencendo", varios: "licenças vencendo" },
   ferias: { um: "férias começando", varios: "férias começando" },
   exame: { um: "exame admissional", varios: "exames admissionais" },
   vaga: { um: "inscrição encerrando", varios: "inscrições encerrando" },
@@ -63,6 +69,9 @@ const TELA_DO_TIPO: Record<TipoDePrazo, string> = {
   "conta-receber": "/receber",
   pendencia: "/pendencias",
   processo: "/processos",
+  exigencia: "/societario/exigencias",
+  taxa: "/processos",
+  licenca: "/licencas",
   ferias: "/ferias",
   exame: "/admissoes",
   vaga: "/vagas",
@@ -140,7 +149,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
   if (contas?.modulos.has("bpo_contas_pagar")) kinds.push("PAGAR");
   if (contas?.modulos.has("bpo_contas_receber")) kinds.push("RECEBER");
 
-  const [cards, titulos, reqs, procs, ferias, exames, vagasAbertas, certs] = await Promise.all([
+  const [cards, titulos, reqs, procs, ferias, exames, vagasAbertas, certs, exigencias, taxas, licencas] = await Promise.all([
     prisma.pipelineItem.findMany({
       where: {
         tenantId,
@@ -202,6 +211,34 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
         })
       : Promise.resolve([]),
     certificados ? listarCertificados(tenantId) : Promise.resolve([]),
+    // Os prazos do Societário que antes só a Minha área mostrava (fila única,
+    // lote 7, 28/10/2026): exigência do órgão, taxa e licença vencendo.
+    processos
+      ? prisma.processRequirement.findMany({
+          where: { tenantId, resolvedAt: null, dueAt: noPeriodo, protocol: { process: { status: { notIn: ["CONCLUIDO", "CANCELADO", "INDEFERIDO"] } } } },
+          select: {
+            id: true,
+            description: true,
+            dueAt: true,
+            protocol: { select: { process: { select: { id: true, company: { select: { name: true, displayName: true } } } } } },
+          },
+          take: 1000,
+        })
+      : Promise.resolve([]),
+    processos
+      ? prisma.processFee.findMany({
+          where: { tenantId, paidAt: null, dueDate: noPeriodo },
+          select: { id: true, description: true, dueDate: true, processId: true, amountCents: true, company: { select: { name: true, displayName: true } } },
+          take: 1000,
+        })
+      : Promise.resolve([]),
+    processos
+      ? prisma.license.findMany({
+          where: { tenantId, revokedAt: null, expiresAt: noPeriodo },
+          select: { id: true, kind: true, expiresAt: true, company: { select: { name: true, displayName: true } } },
+          take: 1000,
+        })
+      : Promise.resolve([]),
   ]);
 
   const brutos: (Omit<PrazoDaAgenda, "quantos"> & { centavos?: number })[] = [];
@@ -247,6 +284,40 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
       detalhe: nomeExibicao(p.company),
       setor: processos!.setor,
       href: `/processos/${p.id}`,
+    });
+  }
+  for (const e of exigencias) {
+    brutos.push({
+      chave: `exigencia-${e.id}`,
+      dia: dia(e.dueAt!),
+      tipo: "exigencia",
+      titulo: e.description,
+      detalhe: nomeExibicao(e.protocol.process.company),
+      setor: processos!.setor,
+      href: `/processos/${e.protocol.process.id}`,
+    });
+  }
+  for (const t of taxas) {
+    brutos.push({
+      chave: `taxa-${t.id}`,
+      dia: dia(t.dueDate!),
+      tipo: "taxa",
+      titulo: t.description,
+      detalhe: nomeExibicao(t.company),
+      setor: processos!.setor,
+      href: t.processId ? `/processos/${t.processId}` : "/processos",
+      centavos: t.amountCents,
+    });
+  }
+  for (const l of licencas) {
+    brutos.push({
+      chave: `licenca-${l.id}`,
+      dia: dia(l.expiresAt!),
+      tipo: "licenca",
+      titulo: `${l.kind} vence`,
+      detalhe: nomeExibicao(l.company),
+      setor: processos!.setor,
+      href: "/licencas",
     });
   }
   for (const f of ferias) {
