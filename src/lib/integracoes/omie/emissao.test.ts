@@ -505,3 +505,23 @@ describe("a nota no acervo", () => {
     expect(r?.competencia).toBe("2026-10");
   });
 });
+
+describe("filtrosDeBuscaDeCliente", () => {
+  it("CNPJ ou CPF completo, com ou sem pontuação, vai pelo documento formatado", async () => {
+    const { filtrosDeBuscaDeCliente } = await import("./emissao");
+    expect(filtrosDeBuscaDeCliente("12.345.678/0001-95")).toEqual([{ cnpj_cpf: "12.345.678/0001-95" }]);
+    expect(filtrosDeBuscaDeCliente("12345678909")).toEqual([{ cnpj_cpf: "123.456.789-09" }]);
+  });
+
+  it("nome com números é nome, e termo curto não busca", async () => {
+    const { filtrosDeBuscaDeCliente } = await import("./emissao");
+    expect(filtrosDeBuscaDeCliente("Loja 12345678909")).toEqual([{ razao_social: "Loja 12345678909" }, { nome_fantasia: "Loja 12345678909" }]);
+    expect(filtrosDeBuscaDeCliente(" ab ")).toEqual([]);
+  });
+
+  it("o cadastro consultado segue a regra da lista", async () => {
+    const { clienteDaConsulta } = await import("./emissao");
+    expect(clienteDaConsulta({ codigo_cliente_omie: 7, razao_social: "X", inativo: "S" })).toEqual({ cliente: null, bloqueado: false });
+    expect(clienteDaConsulta({ codigo_cliente_omie: 7, razao_social: "X", bloquear_faturamento: "S" })).toEqual({ cliente: null, bloqueado: true });
+  });
+});

@@ -122,6 +122,36 @@ export function clientesDaPagina(corpo: unknown): { clientes: ClienteDoOmie[]; b
   return { clientes, bloqueados, totalDePaginas: totalDePaginas(o.total_de_paginas) };
 }
 
+/** Termo mínimo para buscar tomador no Omie por nome — menos que isso traz meia carteira. */
+export const MIN_LETRAS_DA_BUSCA = 3;
+
+/**
+ * Os filtros de `ListarClientes` (`clientesFiltro`) para achar um tomador que
+ * ficou fora da lista (28/10/2026): a lista para em 1.000 clientes, e a MULTI
+ * tem 1.401. CNPJ ou CPF completo vai pelo documento; o resto pela razão social
+ * e, se ela não achar, pelo nome fantasia — um filtro por chamada, na ordem.
+ * Termo curto demais não vira busca.
+ */
+export function filtrosDeBuscaDeCliente(termo: string): Obj[] {
+  const t = termo.trim();
+  const doc = digitos(t);
+  if ((doc.length === 11 || doc.length === 14) && doc.length >= t.replace(/[\s./-]/g, "").length) {
+    return [{ cnpj_cpf: doc.length === 14 ? formatCnpj(doc) : formatCpf(doc) }];
+  }
+  if (t.length < MIN_LETRAS_DA_BUSCA) return [];
+  const nome = t.slice(0, 100);
+  return [{ razao_social: nome }, { nome_fantasia: nome }];
+}
+
+/**
+ * A resposta de `ConsultarCliente` (um cadastro só, sem a lista em volta) na
+ * mesma regra da lista: inativo some, faturamento bloqueado volta à parte.
+ */
+export function clienteDaConsulta(corpo: unknown): { cliente: ClienteDoOmie | null; bloqueado: boolean } {
+  const r = clientesDaPagina({ clientes_cadastro: [obj(corpo)] });
+  return { cliente: r.clientes[0] ?? null, bloqueado: r.bloqueados.length > 0 };
+}
+
 /** Os códigos fiscais de um serviço numa OS que já saiu — a sugestão para quem emite. */
 export type CodigosDaUltimaOS = { codigoMunicipal: string | null; codigoLC116: string | null; numeroOS: string };
 
