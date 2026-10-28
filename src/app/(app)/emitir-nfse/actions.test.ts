@@ -32,7 +32,22 @@ const servidor = {
   emitirNfse: vi.fn(async () => ({ ok: true, emissaoId: "e1", estado: "PROCESSANDO", mensagem: null })),
   cancelarEmissao: vi.fn(async () => ({ ok: true, naPrefeitura: true, mensagem: null })),
 };
-vi.mock("@/lib/integracoes/omie/emissaoServidor", () => servidor);
+// O emissor da empresa (lote 2, 28/10/2026): um Omie simulado, e nenhum quando
+// `semEmissor` liga — empresa sem conta cadastrada.
+let semEmissor = false;
+const emissorSimulado = {
+  provedor: "omie",
+  nome: "Omie",
+  entidade: "OmieEmissao",
+  listas: (...a: unknown[]) => (servidor.listasParaEmitir as (...a: unknown[]) => unknown)(...a),
+  emitir: (...a: unknown[]) => (servidor.emitirNfse as (...a: unknown[]) => unknown)(...a),
+  cancelar: (...a: unknown[]) => (servidor.cancelarEmissao as (...a: unknown[]) => unknown)(...a),
+};
+vi.mock("@/lib/fiscal/nfse/emissores", () => ({
+  SEM_EMISSOR: "Esta empresa não tem emissor de NFS-e.",
+  emissorDaEmpresa: async () => (semEmissor ? null : emissorSimulado),
+  emissorDaEmissao: async (_t: string, id: string) => (semEmissor || id === "nenhuma" ? null : { emissor: emissorSimulado, companyId: "c1" }),
+}));
 
 const { carregarListasAction, emitirNfseAction, cancelarEmissaoAction } = await import("./actions");
 
@@ -70,6 +85,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   ligado = true;
   setor = "bpo";
+  semEmissor = false;
 });
 
 describe("as ações de Emitir NFS-e", () => {
@@ -137,6 +153,22 @@ describe("as ações de Emitir NFS-e", () => {
     // Sem categoria a OS não sai.
     expect(await emitirNfseAction({ ...pedido(), categoria: "" })).toMatchObject({ ok: false });
     expect(servidor.emitirNfse).not.toHaveBeenCalled();
+  });
+
+  it("empresa sem emissor para antes de qualquer chamada, e o pedido não vai para o AuditLog", async () => {
+    ctx = perfil("SECTOR_ADMIN", ["bpo"]);
+    semEmissor = true;
+    expect(await carregarListasAction("c1", false)).toEqual({ ok: false, erro: "Esta empresa não tem emissor de NFS-e." });
+    expect(await emitirNfseAction(pedido())).toEqual({ ok: false, erro: "Esta empresa não tem emissor de NFS-e." });
+    expect(servidor.listasParaEmitir).not.toHaveBeenCalled();
+    expect(servidor.emitirNfse).not.toHaveBeenCalled();
+    expect(logAudit).not.toHaveBeenCalled();
+  });
+
+  it("emissão que nenhum emissor reconhece não é cancelada", async () => {
+    ctx = perfil("SECTOR_ADMIN", ["bpo"]);
+    expect(await cancelarEmissaoAction("nenhuma")).toEqual({ ok: false, erro: "Emissão não encontrada." });
+    expect(servidor.cancelarEmissao).not.toHaveBeenCalled();
   });
 
   it("cancelamento recusado pelo Omie também fica no AuditLog", async () => {

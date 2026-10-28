@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { acompanharEmissoes } from "@/lib/integracoes/omie/emissaoServidor";
+import { acompanharTodas } from "@/lib/fiscal/nfse/emissores";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,9 @@ export const dynamic = "force-dynamic";
 // Só consulta o Omie (`StatusOS`): o que está em PROCESSANDO até a prefeitura
 // responder, e o que ficou em ENVIANDO porque a resposta do Omie se perdeu.
 // Nada é emitido nem faturado daqui. Nota autorizada entra no acervo fiscal.
+//
+// O caminho tem "omie" no nome porque o n8n já chama este endereço; a rodada
+// passa por todos os emissores de NFS-e (`acompanharTodas`, lote 2, 28/10/2026).
 export async function POST(req: NextRequest) {
   const expected = process.env.CRON_SERVICE_TOKEN;
   const authHeader = req.headers.get("authorization");
@@ -20,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const resumo = await acompanharEmissoes();
+    const resumo = await acompanharTodas();
     // 200 mesmo com falha numa emissão: a falha fica na lista do resumo, e uma
     // conta com chave vencida não deve deixar o cron inteiro vermelho.
     return NextResponse.json({ ok: true, ...resumo });
