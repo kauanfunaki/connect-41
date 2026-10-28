@@ -11,6 +11,8 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
+import { CampoAnexoDosArquivos } from "@/components/documentosCliente/CampoAnexoDosArquivos";
+import type { ArquivoParaOEnvio } from "@/lib/envios/anexoDosArquivos";
 import { Select } from "@/components/ui/Select";
 import { CampoData } from "@/components/ui/CampoData";
 import { CampoHora } from "@/components/ui/CampoHora";
@@ -45,9 +47,11 @@ type Props = {
    * do próprio envio (`defaultValues.reminderDays`).
    */
   lembretePadrao?: number | null;
+  /** O arquivo dos Arquivos que já chega escolhido (`?arquivo=`, o "Enviar ao cliente" da guia). */
+  arquivoInicial?: ArquivoParaOEnvio | null;
 };
 
-export function ClientDocumentForm({ action, companyId, empresas, documentId, cancelHref, defaultValues, lembretePadrao = null }: Props) {
+export function ClientDocumentForm({ action, companyId, empresas, documentId, cancelHref, defaultValues, lembretePadrao = null, arquivoInicial = null }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   // A empresa do envio, para o "Guardar também em Arquivos" buscar as pastas dela.
   const [empresaId, setEmpresaId] = useState<string | null>(companyId ?? null);
@@ -96,6 +100,8 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
       >
         <FileDropzoneField id="file" name="file" accept=".jpg,.jpeg,.png,.webp,.pdf" maxSizeMb={10} />
       </CampoForm>
+      {/* `key`: trocar a empresa limpa o arquivo escolhido, que era da outra. */}
+      <CampoAnexoDosArquivos key={empresaId ?? ""} companyId={empresaId} inicial={empresaId === companyId ? arquivoInicial : null} />
       <CampoGuardarNosArquivos companyId={empresaId} id="envio-guardar-em-pasta" />
 
       <div className="border-t border-border pt-4">

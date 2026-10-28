@@ -10,6 +10,7 @@ import {
   situacaoDoEnvio,
   situacaoParaOCliente,
   validarAceite,
+  rotaDeEnviarOArquivo,
 } from "./regras";
 
 // Os envios ao cliente (08/10/2026): o "Documentos para cliente" na aba
@@ -140,5 +141,11 @@ describe("rotas — os endereços antigos da ficha da empresa", () => {
     expect(rotaDosEnvios("a b&c")).toBe("/solicitacoes/envios?empresa=a%20b%26c");
     expect(rotaDosEnvios()).toBe("/solicitacoes/envios");
     expect(rotaDoArquivoNoPortal("doc/1")).toBe("/portal/envios/doc%2F1/arquivo");
+  });
+});
+
+describe("enviar um arquivo dos Arquivos", () => {
+  it("leva ao novo envio da empresa com o arquivo", () => {
+    expect(rotaDeEnviarOArquivo("emp-1", "arq-9")).toBe("/solicitacoes/envios/novo?empresa=emp-1&arquivo=arq-9");
   });
 });

@@ -15,6 +15,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { abrirMensagemAction, emitirGuiaAction, pedirSituacaoFiscalAction, verMensagemAction } from "@/app/(app)/autorizacoes/receita-actions";
+import { rotaDeEnviarOArquivo } from "@/lib/envios/regras";
 import { ROTULO_DA_GUIA, TIPOS_DE_GUIA, type TipoDeGuia } from "@/lib/serpro/guias";
 import { MODALIDADES_DE_PARCELAMENTO } from "@/lib/serpro/servicos";
 import type { MensagemAberta } from "@/lib/serpro/acompanhamento";
@@ -158,6 +159,11 @@ export function EmitirGuia({ companyId, desabilitado, sugestao }: { companyId: s
                 {resultado.texto}{" "}
                 <a href={`/api/arquivos/${resultado.arquivoId}?ver=1`} target="_blank" rel="noreferrer" className="text-brand underline">
                   Abrir o PDF
+                </a>
+                {" · "}
+                {/* Lote 2 (28/10/2026): o envio já chega com a guia como anexo. */}
+                <a href={rotaDeEnviarOArquivo(companyId, resultado.arquivoId)} className="text-brand underline">
+                  Enviar ao cliente
                 </a>
               </Aviso>
             ) : (
