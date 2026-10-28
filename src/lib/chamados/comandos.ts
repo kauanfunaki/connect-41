@@ -173,7 +173,7 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
   const token = randomUUID(), agora = new Date();
   const reserva = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null, OR: [{ analysisToken: null }, { analysisStartedAt: { lt: new Date(agora.getTime() - 70000) } }] }, data: { analysisToken: token, analysisStartedAt: agora } });
   if (reserva.count !== 1) throw new Error("Já há uma análise em andamento. Aguarde ou atualize a página.");
-  const parecer = pendencia ? { status: "needs_information" as const, summary: "Categoria identificada. Complete os campos e evidências indicados no formulário para enviar.", questions: [pendencia], attachments: [] }
+  const parecer = pendencia ? { status: "needs_information" as const, summary: "Categoria identificada. Complete os campos e evidências indicados no formulário para enviar.", questions: [{ text: pendencia, options: [] }], attachments: [] }
     : categoria.name === A_CLASSIFICAR ? indisponivel("A classificação automática está indisponível ou precisa de mais contexto. Você pode detalhar o pedido e tentar novamente ou enviar como A classificar para a equipe.")
     : await analisar({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, draftId: id }, dados, categoria, d.messages, d.attachments);
   await getPrisma().$transaction(async tx => {
