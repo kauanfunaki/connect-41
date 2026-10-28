@@ -22,7 +22,8 @@ import { resolverExigencia } from "@/app/(app)/processos/actions";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { CobrancaDoProtocolo } from "@/components/societario/CobrancaDoProtocolo";
 import { canManageSector } from "@/lib/auth/papeis";
-import { COBRAR_APOS_DIAS_PADRAO, diasParaCobrarOProtocolo } from "@/lib/societario/protocoloParado";
+import { COBRAR_APOS_DIAS_PADRAO } from "@/lib/societario/protocoloParado";
+import { diasParaCobrarOProtocolo } from "@/lib/societario/protocoloParadoServidor";
 
 const MODULE = "societario_prazos";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
