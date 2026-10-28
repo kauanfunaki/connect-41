@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { AlertTriangle, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
+import { canManageSector } from "@/lib/auth/papeis";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -31,7 +33,8 @@ export default async function LicencasPage({
 }) {
   const ctx = await getAuthContext();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, "societario_licencas")) ?? "societario")) notFound();
+  const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, "societario_licencas")) ?? "societario") : "societario";
+  if (!ctx.tenantId || !canActOnSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, "societario_licencas"))) notFound();
 
   const { recorte } = await searchParams;
@@ -72,10 +75,18 @@ export default async function LicencasPage({
         title="Licenças"
         subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
         action={
-          <NovaLicenca
-            empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
-            orgaos={orgaosDoForm}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* A carga do Radar Societário (28/10/2026): só quem administra o setor. */}
+            {canManageSector(ctx, setores) && (
+              <Link href="/licencas/radar" className="text-ui text-brand hover:underline">
+                Trazer do Radar
+              </Link>
+            )}
+            <NovaLicenca
+              empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
+              orgaos={orgaosDoForm}
+            />
+          </div>
         }
       />
 
