@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ gerar: vi.fn(), ler: vi.fn(), hit: vi.fn() }))
 vi.mock("./ia-fallback", () => ({ gerarComFallback: mocks.gerar }));
 vi.mock("./armazenamento", () => ({ anexosDoChamado: { lerAnexo: mocks.ler } }));
 vi.mock("@/lib/rateLimit", () => ({ hit: mocks.hit }));
-import { analisar, selecionarAnexos, PROMPT } from "./triagem";
+import { analisar, selecionarAnexos, PROMPT, repete, perguntasRespondidas } from "./triagem";
 import { dadosSchema, categoriaSchema } from "./regras";
 const c = { tenantId: "t", userId: "u", draftId: "d" }, dados = dadosSchema.parse({ title: "Erro no sistema", description: "O sistema não entra.", categoryId: "c", requesterSectorCode: "fiscal" }), cat = categoriaSchema.parse({ name: "Acesso", requiredAttachments: [{ key: "prova", label: "Print", required: true }] });
 const anexo = (id: string, fileName = `${id}.png`, sizeBytes = 100) => ({ id, fileName, fileUrl: `t/${id}.png`, sizeBytes, mimeType: "image/png", attachmentKey: null });
@@ -19,10 +19,21 @@ describe("triagem de chamados", () => {
     const r = await analisar(c, dados, cat, [{ role: "user", body: "Desde ontem" }], []);
     expect(r.status).toBe("needs_information"); expect(mocks.gerar.mock.calls[0][0].texto).toContain("Desde ontem");
   });
-  it("remove perguntas repetidas sem declarar suficiência", async () => {
+  it("quando só sobram perguntas repetidas, segue para a revisão com as respostas na descrição", async () => {
     mocks.gerar.mockResolvedValue({ valor: { status: "needs_information", summary: "Falta contexto", questions: [{ text: "Qual é o sistema afetado?", options: [] }, { text: "Qual e o sistema afetado?", options: [] }] } });
-    const r = await analisar(c, dados, cat, [{ role: "assistant", body: "Para iniciar:\n\nQual é o sistema afetado?" }, { role: "user", body: "Sistema de atendimento" }], []);
-    expect(r.status).toBe("unavailable"); expect(r.questions).toEqual([]); expect(mocks.gerar).toHaveBeenCalledTimes(1);
+    const r = await analisar(c, dados, cat, [{ role: "assistant", body: "Para iniciar:\n\nQual é o sistema afetado?" }, { role: "user", body: "Sistema de atendimento" }], [anexo("1")]);
+    expect(r.status).toBe("sufficient"); expect(r.questions).toEqual([]); expect(mocks.gerar).toHaveBeenCalledTimes(1);
+    expect(r.final?.description).toContain("Qual é o sistema afetado? Sistema de atendimento"); expect(r.final?.anexos).toEqual(["1"]);
+    expect(mocks.gerar.mock.calls[0][0].texto).toContain("perguntasJaFeitas");
+  });
+  it("barra a pergunta reescrita pelo tema, como no caso do relatório de faturamento", () => {
+    const anteriores = ["Qual o procedimento usado para gerar o relatório (tela, parâmetro ou filtro) e há alguma alteração recente no processo?"];
+    expect(repete("Qual tela, parâmetro ou filtro são utilizados para gerar o relatório de faturamento por cliente?", anteriores)).toBe(true);
+    expect(repete("Houve alguma alteração recente nos parâmetros, filtros ou processos de geração do relatório?", anteriores)).toBe(true);
+    // Mesmo assunto, pergunta nova: não cai.
+    expect(repete("Qual o período do relatório?", anteriores)).toBe(false);
+    // O resumo da IA não conta como pergunta já feita.
+    expect(perguntasRespondidas([{ role: "assistant", body: "Relatório de faturamento por cliente com erro.\n\nDesde quando?" }, { role: "user", body: "Outubro" }])).toEqual([{ pergunta: "Desde quando?", resposta: "Outubro" }]);
   });
   it("mantém apenas perguntas novas e distintas na complementação", async () => {
     mocks.gerar.mockResolvedValue({ valor: { status: "needs_information", summary: "Falta contexto", questions: [{ text: "Qual sistema?", options: [] }, { text: "Quando ocorreu?", options: ["Hoje", "Antes de hoje"] }, { text: "Quando ocorreu?", options: [] }] } });
