@@ -9,6 +9,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { pedirSituacaoFiscal } from "@/lib/serpro/situacaoFiscal";
 import { emitirGuia } from "@/lib/serpro/emissaoDeGuia";
+import { emitirCertificadoDoMei } from "@/lib/serpro/certificadoDoMei";
 import { abrirMensagem, mensagemJaAberta, type MensagemAberta } from "@/lib/serpro/acompanhamento";
 
 const ehId = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
@@ -34,6 +35,16 @@ export async function emitirGuiaAction(companyId: unknown, campos: unknown): Pro
   if (!ehId(companyId)) return { ok: false, erro: "Empresa não encontrada." };
   if (!campos || typeof campos !== "object" || Array.isArray(campos)) return { ok: false, erro: "Pedido inválido." };
   const r = await emitirGuia(acesso.tenantId, acesso.ctx.userId, companyId, campos as Record<string, unknown>);
+  revalidatePath(`/empresas/${companyId}`);
+  return r;
+}
+
+/** Emite o certificado de MEI (Societário, 28/10/2026): uma emissão, cobrada; o PDF vai para a pasta Societário. */
+export async function emitirCertificadoDoMeiAction(companyId: unknown): Promise<{ ok: true; texto: string; arquivoId: string } | { ok: false; erro: string }> {
+  const acesso = await acessoAsAutorizacoes(await getAuthContext());
+  if (!acesso?.podeEditar) return { ok: false, erro: "Sem permissão para emitir o certificado de MEI." };
+  if (!ehId(companyId)) return { ok: false, erro: "Empresa não encontrada." };
+  const r = await emitirCertificadoDoMei(acesso.tenantId, acesso.ctx.userId, companyId);
   revalidatePath(`/empresas/${companyId}`);
   return r;
 }
