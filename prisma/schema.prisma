@@ -1190,6 +1190,7 @@ model Tenant {
   agendaConfig              TenantAgendaConfig?
   aparencia                 TenantAparencia?
   enviosConfig              TenantEnviosConfig?
+  societarioConfig          TenantSocietarioConfig?
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -6488,6 +6489,20 @@ model TenantEnviosConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_envios_configs")
+}
+
+/// O que o Societário do escritório configura (lote 5, 28/10/2026). Sem linha,
+/// valem os padrões de src/lib/societario/protocoloParado.ts.
+model TenantSocietarioConfig {
+  tenantId                String   @id
+  /// Depois de quantos dias sem resposta o protocolo pendente avisa o
+  /// responsável para cobrar o órgão. 0 = não avisa; null = o padrão.
+  cobrarProtocoloAposDias Int?
+  updatedAt               DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_societario_configs")
 }
 
 /// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por
