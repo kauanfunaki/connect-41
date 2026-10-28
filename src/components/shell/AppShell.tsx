@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import {
   ChevronRight,
   Home,
@@ -27,6 +27,7 @@ import {
   Bot,
   Globe,
   AppWindow,
+  History,
   FolderGit2,
   CalendarCheck,
   ChevronDown,
@@ -270,7 +271,9 @@ export function AppShell({
   // A borda volta quando o conteúdo rola, para a tabela não sumir numa linha
   // invisível.
   const [rolou, setRolou] = useState(false);
-  const pathname = usePathname();
+  const pathname = usePathname(), params = useSearchParams();
+  // Qual parte do Ops Center está aberta, pela mesma regra da página (OpsCenter).
+  const visaoDoOps = pathname !== "/ops" ? null : params.get("view") ?? (["watcher", "status", "date"].some(k => params.has(k)) || Number(params.get("page")) > 1 ? "history" : "automations");
   // O "?" de cada tela (02/10/2026): com artigo, abre o passo a passo dela e
   // guarda de onde veio para o "Voltar"; sem artigo, a central.
   const naAjuda = pathname.startsWith("/ajuda");
@@ -552,10 +555,12 @@ export function AppShell({
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" cor={activeSector.color} abrirPorClique telas={[
-                    // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta as três abas.
-                    { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} /> },
-                    { label: "Sites", href: "/ops?view=sites", icon: <Globe size={16} /> },
-                    { label: "Apps", href: "/ops?view=apps", icon: <AppWindow size={16} /> },
+                    // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta
+                    // Robôs, Sites e Apps. A página não tem abas; o caminho é este submenu.
+                    { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} />, ativa: visaoDoOps === "automations" },
+                    { label: "Sites", href: "/ops?view=sites", icon: <Globe size={16} />, ativa: visaoDoOps === "sites" },
+                    { label: "Apps", href: "/ops?view=apps", icon: <AppWindow size={16} />, ativa: visaoDoOps === "apps" },
+                    { label: "Histórico", href: "/ops?view=history", icon: <History size={16} />, ativa: visaoDoOps === "history" },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/ops" icon={<ModuleIcon code={m.code} />} label={m.label} comTelas menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />;
