@@ -16,8 +16,10 @@ export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): stri
 export function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex min-w-0 flex-col gap-1.5 text-ui text-fg-secondary"><span className="font-semibold">{label}</span>{children}</label>;
 }
-export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false, ocultarTags = false }: {
+export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false, ocultarTags = false, abertura = false }: {
   dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean; ocultarTitulo?: boolean; ocultarTags?: boolean;
+  /** Tela de abertura: prioridade ao lado do setor e descrição mais alta. */
+  abertura?: boolean;
 }) {
   const categoria = categorias.find(c => c.id === dados.categoryId);
   const [buscaCategoria, setBuscaCategoria] = useState("");
@@ -63,18 +65,20 @@ export function CamposDoChamado({ dados, onChange, categorias, setores, origemFi
     {!ocultarCategoria && painelCategoria}
     <div className="grid gap-4 sm:grid-cols-2">
       <Campo label="Setor solicitante"><Select required value={dados.requesterSectorCode} disabled={origemFixa} onChange={e => mudar({ requesterSectorCode: e.target.value })}><option value="">Selecione o setor</option>{setores.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select></Campo>
+      {/* Na abertura (28/10/2026) a prioridade sobe para o lado do setor, e a descrição ganha a altura. */}
+      {abertura && <SeletorDePrioridade value={dados.priority} onChange={priority => mudar({ priority })} />}
     </div>
     {!ocultarTitulo && <Campo label="Título"><Input required minLength={3} maxLength={255} value={dados.title} onChange={e => mudar({ title: e.target.value })} placeholder="O que você precisa?" /></Campo>}
-    <Campo label="Descrição"><Textarea required rows={6} maxLength={15000} value={dados.description} onChange={e => mudar({ description: e.target.value })} placeholder="Descreva o pedido, o sistema ou recurso envolvido e o que aconteceu." /></Campo>
+    <Campo label="Descrição"><Textarea required rows={abertura ? 8 : 6} className={abertura ? "xl:min-h-80" : ""} maxLength={15000} value={dados.description} onChange={e => mudar({ description: e.target.value })} placeholder="Descreva o pedido, o sistema ou recurso envolvido e o que aconteceu." /></Campo>
     {categoria?.formSchema.length ? <div className="grid gap-4 sm:grid-cols-2">{categoria.formSchema.map(f => <Campo key={f.key} label={`${f.label}${f.required ? " *" : ""}`}>
       {f.type === "textarea" ? <Textarea required={f.required} value={dados.requestData[f.key] ?? ""} onChange={e => mudar({ requestData: { ...dados.requestData, [f.key]: e.target.value } })} maxLength={f.rules.maxLen ?? 10000} minLength={f.rules.minLen} placeholder={f.placeholder} />
         : f.type === "select" ? <Select required={f.required} value={dados.requestData[f.key] ?? ""} onChange={e => mudar({ requestData: { ...dados.requestData, [f.key]: e.target.value } })}><option value="">Selecione</option>{f.options.map(o => <option key={o}>{o}</option>)}</Select>
         : <Input required={f.required} type={f.type === "number" ? "number" : f.type === "email" ? "email" : "text"} min={f.rules.min} max={f.rules.max} maxLength={f.rules.maxLen ?? 10000} minLength={f.rules.minLen} value={dados.requestData[f.key] ?? ""} onChange={e => mudar({ requestData: { ...dados.requestData, [f.key]: e.target.value } })} placeholder={f.placeholder} />}
       {f.helpText && <span className="text-helper text-fg-muted">{f.helpText}</span>}
     </Campo>)}</div> : null}
-    <div className="grid gap-4 sm:grid-cols-2">
+    {!abertura && <div className="grid gap-4 sm:grid-cols-2">
       <SeletorDePrioridade value={dados.priority} onChange={priority => mudar({ priority })} />
       {!ocultarTags && <Campo label="Tags (separadas por vírgula)"><Input defaultValue={dados.tags.join(", ")} maxLength={1000} onChange={e => mudar({ tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })} /></Campo>}
-    </div>
+    </div>}
   </div>;
 }
