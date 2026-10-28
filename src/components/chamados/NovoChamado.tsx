@@ -112,8 +112,8 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
     <form ref={formulario} onSubmit={e => { e.preventDefault(); void enviar(true); }} className="min-w-0 space-y-5">
       <Card className="p-5"><fieldset disabled={!!busy} className="space-y-5">
         <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
-        <p className="text-ui text-fg-secondary" role="status">{cat ? <>Classificação: <strong className="text-fg">{nomeDaCategoria(categorias, cat.id)}</strong>{dados.title && <> · Título: <strong className="text-fg">{dados.title}</strong></>}</> : "A IA identifica o grupo, a categoria e o título ao enviar. Descreva o que você precisa."}</p>
-        <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo />
+        <p className="text-ui text-fg-secondary" role="status">{cat ? <>Classificação: <strong className="text-fg">{nomeDaCategoria(categorias, cat.id)}</strong>{dados.title && <> · Título: <strong className="text-fg">{dados.title}</strong></>}</> : "A IA identifica o grupo, a categoria, o título e as tags ao enviar. Descreva o que você precisa."}</p>
+        <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags />
       </fieldset></Card>
       <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Anexos</h2>
         {cat?.requiredAttachments.length ? <Campo label="Tipo de evidência"><Select disabled={!!busy} value={chave} onChange={e => setChave(e.target.value)}><option value="">Anexo complementar</option>{cat.requiredAttachments.map(a => <option key={a.key} value={a.key}>{a.label}{a.required ? " (obrigatório)" : ""}</option>)}</Select></Campo> : null}

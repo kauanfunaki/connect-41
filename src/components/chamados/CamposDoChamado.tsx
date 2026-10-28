@@ -5,8 +5,9 @@ import { Accordion } from "@/components/ui/Accordion";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
-import { PRIORIDADES, ROTULOS_PRIORIDADE, type Categoria, type DadosDoChamado } from "@/lib/chamados/regras";
+import type { Categoria, DadosDoChamado } from "@/lib/chamados/regras";
 import { caminhoDaCategoria } from "@/lib/chamados/catalogo";
+import { SeletorDePrioridade } from "./SeletorDePrioridade";
 
 export type CategoriaDaTela = Categoria & { id: string };
 export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): string {
@@ -15,8 +16,8 @@ export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): stri
 export function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex min-w-0 flex-col gap-1.5 text-ui text-fg-secondary"><span className="font-semibold">{label}</span>{children}</label>;
 }
-export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false }: {
-  dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean; ocultarTitulo?: boolean;
+export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false, ocultarTags = false }: {
+  dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean; ocultarTitulo?: boolean; ocultarTags?: boolean;
 }) {
   const categoria = categorias.find(c => c.id === dados.categoryId);
   const [buscaCategoria, setBuscaCategoria] = useState("");
@@ -72,8 +73,8 @@ export function CamposDoChamado({ dados, onChange, categorias, setores, origemFi
       {f.helpText && <span className="text-helper text-fg-muted">{f.helpText}</span>}
     </Campo>)}</div> : null}
     <div className="grid gap-4 sm:grid-cols-2">
-      <Campo label="Prioridade"><Select value={dados.priority} onChange={e => mudar({ priority: e.target.value as DadosDoChamado["priority"] })}>{PRIORIDADES.map(p => <option key={p} value={p}>{ROTULOS_PRIORIDADE[p]}</option>)}</Select></Campo>
-      <Campo label="Tags (separadas por vírgula)"><Input defaultValue={dados.tags.join(", ")} maxLength={1000} onChange={e => mudar({ tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })} /></Campo>
+      <SeletorDePrioridade value={dados.priority} onChange={priority => mudar({ priority })} />
+      {!ocultarTags && <Campo label="Tags (separadas por vírgula)"><Input defaultValue={dados.tags.join(", ")} maxLength={1000} onChange={e => mudar({ tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })} /></Campo>}
     </div>
   </div>;
 }

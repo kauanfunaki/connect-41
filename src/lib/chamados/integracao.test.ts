@@ -46,12 +46,12 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     await salvarCategoria(gestao, { name: "Acesso fictício", checklistTemplate: [{ key: "verificar", label: "Conferir o acesso" }] });
     categoriaId = (await db!.helpdeskCategory.findFirstOrThrow({ where: { tenantId } })).id;
   });
-  beforeEach(() => { mocks.analisar.mockReset(); mocks.classificar.mockReset().mockResolvedValue({ categoryId: categoriaId, reason: "Classificação fictícia", origem: "principal" }); mocks.push.mockReset().mockResolvedValue(undefined); mocks.auth.mockReturnValue(c.ctx); });
+  beforeEach(() => { mocks.analisar.mockReset(); mocks.classificar.mockReset().mockResolvedValue({ categoryId: categoriaId, reason: "Classificação fictícia", tags: ["acesso"], origem: "principal" }); mocks.push.mockReset().mockResolvedValue(undefined); mocks.auth.mockReturnValue(c.ctx); });
   afterAll(async () => { if (artefatos.length) await anexosDoChamado.apagarAnexosGravados(artefatos); await db!.$disconnect(); });
 
   it("salva e retoma rascunho sem gerar fila, SLA ou notificações", async () => {
     const d = await novo(); const salvo = await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } });
-    expect(salvo.payload).toMatchObject({ ...payload(), categoryId: "" }); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
+    expect(salvo.payload).toMatchObject({ ...payload(), categoryId: "", tags: [] }); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
     expect(await db!.helpdeskSlaCycle.count({ where: { tenantId } })).toBe(0);
   });
   it("finaliza uma única vez mesmo com duas submissões concorrentes", async () => {
@@ -61,6 +61,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     expect(a.ticketId).toBe(b.ticketId); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(1);
     expect(await db!.helpdeskEvent.count({ where: { ticketId: a.ticketId, type: "created" } })).toBe(1);
     expect(await db!.helpdeskChecklistItem.count({ where: { ticketId: a.ticketId } })).toBe(1);
+    expect((await db!.helpdeskTicket.findUniqueOrThrow({ where: { id: a.ticketId } })).tags).toEqual(["acesso"]);
   });
   it("isola colegas, participantes, gestores e escritórios em detalhe, lista e indicadores", async () => {
     const id = await abrir(), outro = contextoUsuario(colega, "SECTOR_USER", ["fiscal"]);
@@ -99,14 +100,14 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     await db!.helpdeskCategory.update({ where: { id: cat.id }, data: { descriptionTemplate: "Preservar configuração" } });
     const d = await novo(); expect(await db!.helpdeskCategory.count({ where: { tenantId } })).toBe(total);
     expect((await db!.helpdeskCategory.findUniqueOrThrow({ where: { id: cat.id } })).descriptionTemplate).toBe("Preservar configuração");
-    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Senha", origem: "groq" });
+    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Senha", tags: [], origem: "groq" });
     mocks.analisar.mockResolvedValue({ status: "sufficient", summary: "Completo", questions: [], attachments: [] });
     const r = await avaliarRascunho(c, d.id, d.version);
     expect(r.ticketId).toBeTruthy(); expect((await lista(c, { categoria: grupo.id })).rows.some(t => t.id === r.ticketId)).toBe(true);
     expect((await detalhe(c, r.ticketId!)).categoryId).toBe(cat.id);
   });
   it("abre como A classificar quando nenhum provedor consegue categorizar", async () => {
-    const d = await novo(); mocks.classificar.mockResolvedValue({ categoryId: null, reason: "Indisponível", origem: null });
+    const d = await novo(); mocks.classificar.mockResolvedValue({ categoryId: null, reason: "Indisponível", tags: [], origem: null });
     const r = await avaliarRascunho(c, d.id, d.version); expect(r.parecer?.status).toBe("unavailable"); expect(mocks.analisar).not.toHaveBeenCalled();
     const aberto = await finalizarRascunho(c, d.id, r.version, true);
     expect((await detalhe(c, aberto.ticketId)).category.name).toBe("A classificar");
@@ -119,7 +120,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const user = await db!.user.create({ data: { tenantId: t.id, name: "Pessoa fictícia", email: `${randomUUID()}@example.test`, passwordHash: "sem-login", role: "ADMIN" } });
     const legado = { ...c, ctx: { ...c.ctx, tenantId: t.id, userId: user.id, role: "ADMIN" as const } };
     const d = await db!.helpdeskDraft.create({ data: { tenantId: t.id, createdById: user.id, payload: payload() } });
-    mocks.classificar.mockResolvedValue({ categoryId: null, reason: "Indisponível", origem: null });
+    mocks.classificar.mockResolvedValue({ categoryId: null, reason: "Indisponível", tags: [], origem: null });
     const r = await avaliarRascunho(legado, d.id, d.version); expect(r.parecer?.status).toBe("unavailable");
     expect(await db!.helpdeskCategory.count({ where: { tenantId: t.id } })).toBe(28);
     expect((await finalizarRascunho(legado, d.id, r.version, true)).ticketId).toBeTruthy();
@@ -127,7 +128,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
   it("devolve campos exigidos pela classificação e preserva a categoria ao completá-los", async () => {
     await salvarCategoria(gestao, { name: "Campos da classificação fictícia", formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
     const cat = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Campos da classificação fictícia" } } });
-    const d = await novo(); mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", origem: "principal" });
+    const d = await novo(); mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", tags: [], origem: "principal" });
     const r = await avaliarRascunho(c, d.id, d.version); expect(r.parecer?.status).toBe("needs_information"); expect(r.dados?.categoryId).toBe(cat.id);
     await expect(finalizarRascunho(c, d.id, r.version, true)).rejects.toThrow("Preencha Sistema");
     const v = await salvarRascunho(c, d.id, r.version, { ...payload(), categoryId: "id-forjado", requestData: { sistema: "Fictício" }, _classificacao: { categoryId: "id-forjado" } });
@@ -140,7 +141,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     mocks.classificar.mockImplementation(() => { avisar(); return new Promise(resolve => { liberar = resolve; }); });
     const analise = avaliarRascunho(c, d.id, d.version); await iniciou;
     await salvarRascunho(c, d.id, d.version, { ...payload(), description: "Novo pedido salvo enquanto a IA respondia." });
-    liberar({ categoryId: categoriaId, reason: "Teste", origem: "principal" }); await expect(analise).rejects.toThrow("mudou");
+    liberar({ categoryId: categoriaId, reason: "Teste", tags: [], origem: "principal" }); await expect(analise).rejects.toThrow("mudou");
     const atual = await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } });
     expect(atual.payload).toMatchObject({ categoryId: "", description: "Novo pedido salvo enquanto a IA respondia." });
     expect(atual.analysisToken).toBeNull(); expect(await db!.helpdeskTicket.count({ where: { draftId: d.id } })).toBe(0);
@@ -148,7 +149,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
   it("não contorna campos obrigatórios e reverte a transação quando não há aprovador", async () => {
     await salvarCategoria(gestao, { name: "Restrito fictício", requiresApproval: true, approvalMode: "SPECIFIC_USERS", approvalUserIds: [solicitante] });
     const cat = await db!.helpdeskCategory.findFirstOrThrow({ where: { tenantId, name: "Restrito fictício" } });
-    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", origem: "principal" });
+    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", tags: [], origem: "principal" });
     const d = await criarRascunho(c), v = await salvarRascunho(c, d.id, 0, { ...payload(), categoryId: cat.id });
     await expect(finalizarRascunho(c, d.id, v.version, true)).rejects.toThrow("aprovador ativo");
     expect((await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } })).submittedAt).toBeNull();
@@ -170,7 +171,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
   it("aplica aprovação, reabertura e um novo ciclo sem reiniciar o anterior", async () => {
     await salvarCategoria(gestao, { name: "Compra fictícia", requiresApproval: true });
     const cat = await db!.helpdeskCategory.findFirstOrThrow({ where: { tenantId, name: "Compra fictícia" } });
-    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", origem: "principal" });
+    mocks.classificar.mockResolvedValue({ categoryId: cat.id, reason: "Teste", tags: [], origem: "principal" });
     const d = await criarRascunho(c); await salvarRascunho(c, d.id, 0, { ...payload(), categoryId: cat.id });
     const { ticketId: id } = await finalizarRascunho(c, d.id, 1, true);
     await expect(alterar(equipe, id, 0, "status", "EM_ANDAMENTO")).rejects.toThrow("aguarda aprovação");

@@ -60,7 +60,7 @@ try {
   await escolher(0, "Fiscal");
   assert.equal(await page.getByLabel("Título", { exact: true }).count(), 0);
   await page.getByLabel("Descrição", { exact: true }).fill("Preciso de acesso ao ambiente fictício para registrar os atendimentos da equipe de testes.");
-  await page.getByLabel("Tags (separadas por vírgula)").fill("sistema, acesso");
+  assert.equal(await page.getByLabel("Tags (separadas por vírgula)").count(), 0); await page.getByRole("slider", { name: "Prioridade" }).press("ArrowRight");
   await page.getByLabel("Adicionar arquivo").setInputFiles({ name: "evidencia-ficticia.txt", mimeType: "text/plain", buffer: Buffer.from("Evidência fictícia do teste de interface.") });
   await page.getByRole("link", { name: "evidencia-ficticia.txt" }).waitFor();
   await page.getByText("Rascunho salvo automaticamente", { exact: false }).waitFor();
