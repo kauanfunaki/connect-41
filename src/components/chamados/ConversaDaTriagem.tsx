@@ -1,59 +1,64 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AppWindow, Bot, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
+import { AppWindow, ArrowLeft, Bot, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConnectLoadingIndicator } from "@/components/shared/ConnectLoadingScreen";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { ROTULOS_EXISTENTE, type Existente, type Parecer } from "@/lib/chamados/regras";
 
-// A análise do chamado em conversa (28/10/2026): ao enviar, um modal com o
-// carregamento do Connect enquanto a IA lê; com a resposta, ele cresce e vira
-// conversa, um balão por mensagem. Perguntas fechadas trazem as respostas em
-// botões, e escrever continua possível. O clipe anexa um arquivo à conversa.
+// Etapa 2 do novo chamado (28/10/2026): a conversa com a IA na própria página,
+// um balão por mensagem. Perguntas fechadas trazem as respostas em botões, e
+// escrever continua possível; o clipe anexa um arquivo. Enquanto a IA lê, quem
+// aparece é o modal de carregamento (CarregandoIA), não a conversa.
 
 // 8 frases e a primeira de novo: a animação das palavras tem 8 passos.
-const FRASES = ["lendo a descrição", "entendendo o contexto", "conferindo os anexos", "identificando a categoria", "relacionando as informações", "verificando o que falta", "preparando a revisão", "organizando o pedido", "lendo a descrição"];
+const FRASES = ["lendo a descrição", "entendendo o contexto", "conferindo os anexos", "identificando a categoria", "relacionando as informações", "verificando o que falta", "montando o chamado", "organizando o pedido", "lendo a descrição"];
+
+/** O carregamento do Connect enquanto a IA processa; não fecha no meio. */
+export function CarregandoIA({ aberto, subtitulo }: { aberto: boolean; subtitulo: string }) {
+  return <Modal open={aberto} onClose={() => {}} maxWidth="max-w-sm">
+    <div className="pb-4"><ConnectLoadingIndicator label="A IA está" words={FRASES} subtitle={subtitulo} /></div>
+  </Modal>;
+}
 
 export type Mensagem = { id: string; role: string; body: string };
 type Props = {
-  aberta: boolean; onFechar: () => void;
   mensagens: Mensagem[]; parecer: Parecer | null; pergunta: { indice: number; total: number } | null;
-  /** O que está em andamento: "analisando" mostra o carregamento; os outros, só travam os controles. */
   busy: string; erro: string;
   onResponder: (texto: string) => void; onAnexar: (file: File) => void; onPararEnvio: () => void;
   /** Há arquivo anexado na conversa ainda sem resposta: enviar só com ele vale. */
   anexou: boolean;
   /** Robô, site ou app do Ops Center que parece atender: "É isso" guarda o rascunho; "Não é" segue a conversa. */
-  onAceitarSugestao: () => void; onRecusarSugestao: () => void;
-  onEnviarMesmoAssim: () => void; onTentarNovamente: () => void;
+  onAceitarSugestao: () => void; onRecusarSugestao: () => void; aviso: string;
+  onVoltar: () => void; onIrParaRevisao: () => void; onTentarNovamente: () => void;
 };
 
-export function ConversaDaTriagem({ aberta, onFechar, mensagens, parecer, pergunta, busy, erro, onResponder, onAnexar, onPararEnvio, anexou, onAceitarSugestao, onRecusarSugestao, onEnviarMesmoAssim, onTentarNovamente }: Props) {
+export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, onResponder, onAnexar, onPararEnvio, anexou, onAceitarSugestao, onRecusarSugestao, aviso, onVoltar, onIrParaRevisao, onTentarNovamente }: Props) {
   const [texto, setTexto] = useState("");
   const fim = useRef<HTMLDivElement>(null), seletor = useRef<HTMLInputElement>(null);
-  const analisando = busy === "analisando", conversa = mensagens.length > 0;
+  const analisando = busy === "analisando";
   const opcoes = pergunta ? parecer?.questions[pergunta.indice]?.options ?? [] : [];
-  useEffect(() => { fim.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }, [mensagens.length, analisando]);
+  useEffect(() => { fim.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [mensagens.length]);
   function responder(valor: string) {
     if ((!valor.trim() && !anexou) || busy) return;
     onResponder(valor.trim()); setTexto("");
   }
-  // Enquanto a IA lê, fechar não cancela nada no servidor; só travamos o X.
-  const fechar = () => { if (!analisando) onFechar(); };
 
-  return <Modal open={aberta} onClose={fechar} title={conversa ? "Revisão do chamado" : undefined} maxWidth={`${conversa ? "max-w-2xl" : "max-w-sm"} transition-[max-width] duration-300`}>
-    {!conversa ? <div className="pb-4">
-      <ConnectLoadingIndicator label="A IA está" words={FRASES} subtitle={busy === "enviando" ? "Abrindo o chamado" : "Processando as informações do chamado"} />
-      {erro && <p role="alert" className="mt-4 text-center text-ui text-danger">{erro}</p>}
-    </div> : <div className="flex max-h-[min(36rem,calc(100dvh-10rem))] flex-col gap-4">
-      <div role="log" aria-label="Conversa da revisão" aria-live="polite" className="-mx-1 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1 py-1">
+  return <Card className="mx-auto flex max-w-3xl flex-col gap-4 p-5 sm:p-6">
+    <div>
+      <h2 className="text-heading font-semibold text-fg">Conversa com a IA</h2>
+      <p className="mt-1 text-ui text-fg-secondary">Responda o que a IA perguntar para o chamado chegar completo a quem vai atender.</p>
+    </div>
+    <div className="flex flex-col gap-4">
+      <div role="log" aria-label="Conversa com a IA" aria-live="polite" className="-mx-1 flex max-h-[min(34rem,calc(100dvh-22rem))] min-h-40 flex-col gap-3 overflow-y-auto px-1 py-1">
         {mensagens.map(m => <Balao key={m.id} daIA={m.role !== "user"}>{m.body}</Balao>)}
         {busy === "Enviando arquivo…" && <Balao daIA={false}><span className="inline-flex items-center gap-2"><Digitando />Enviando arquivo <button type="button" onClick={onPararEnvio} className="underline">parar</button></span></Balao>}
-        {analisando && <Balao daIA><span className="inline-flex items-center gap-2 text-fg-secondary"><Digitando />Analisando sua resposta</span></Balao>}
         {parecer?.existente && !analisando && <CartaoDoExistente e={parecer.existente} busy={!!busy} onAceitar={onAceitarSugestao} onRecusar={onRecusarSugestao} />}
+        {aviso && <p role="status" className="pl-1 text-helper text-fg-secondary">{aviso}</p>}
         {opcoes.length > 0 && !analisando && <div role="group" aria-label="Respostas sugeridas" className="flex flex-wrap gap-2 pl-1">
           {opcoes.map(o => <button key={o} type="button" disabled={!!busy} onClick={() => responder(o)}
             className="rounded-full border border-brand/40 bg-surface px-3.5 py-1.5 text-ui font-medium text-brand transition-colors hover:bg-brand/8 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50">{o}</button>)}
@@ -72,15 +77,16 @@ export function ConversaDaTriagem({ aberta, onFechar, mensagens, parecer, pergun
         <Button type="submit" size="icon" className="size-12! shrink-0 rounded-2xl!" disabled={!!busy || (!texto.trim() && !anexou)} aria-label="Enviar resposta"><SendHorizontal size={18} /></Button>
       </form>}
       {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-        <span className="text-helper text-fg-muted">{pergunta && pergunta.total > 1 ? `Pergunta ${pergunta.indice + 1} de ${pergunta.total}` : ""}</span>
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
+        <Button variant="ghost" disabled={!!busy} onClick={onVoltar}><ArrowLeft size={14} /> Voltar ao pedido</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {pergunta && pergunta.total > 1 && <span className="text-helper text-fg-muted">Pergunta {pergunta.indice + 1} de {pergunta.total}</span>}
           {parecer?.status === "unavailable" && <Button variant="ghost" disabled={!!busy} onClick={onTentarNovamente}>Tentar análise novamente</Button>}
-          <Button variant="secondary" disabled={!!busy} onClick={onEnviarMesmoAssim}>{parecer?.status === "unavailable" ? "Enviar sem análise" : "Enviar mesmo assim"}</Button>
+          <Button variant="secondary" disabled={!!busy} onClick={onIrParaRevisao}>Ir para a revisão</Button>
         </div>
       </div>
-    </div>}
-  </Modal>;
+    </div>
+  </Card>;
 }
 
 function Balao({ daIA, children }: { daIA: boolean; children: React.ReactNode }) {

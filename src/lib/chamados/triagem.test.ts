@@ -71,5 +71,14 @@ describe("triagem de chamados", () => {
     const r = await analisar(c, dados, cat, [], [], { ...catalogo, recusados: ["robo:rendimentos"], linkDoOps: false });
     expect(r.existente).toBeNull(); expect(mocks.gerar.mock.calls[1][0].texto).not.toContain("robo:rendimentos");
   });
+  it("monta o chamado final: descrição da IA e só anexos deste rascunho", async () => {
+    mocks.gerar.mockResolvedValue({ origem: "principal", valor: { status: "sufficient", summary: "Completo", questions: [], existing: null, description: "Pedido com as respostas da conversa.", attachmentIds: ["2", "inventado"] } });
+    const r = await analisar(c, dados, cat, [], [anexo("1"), anexo("2")]);
+    expect(r.final).toEqual({ description: "Pedido com as respostas da conversa.", anexos: ["2"] });
+    mocks.gerar.mockResolvedValue({ valor: { status: "sufficient", summary: "Completo", questions: [], existing: null, description: "  " } });
+    expect((await analisar(c, dados, cat, [], [anexo("1")])).final).toEqual({ description: dados.description, anexos: ["1"] });
+    mocks.gerar.mockResolvedValue({ valor: { status: "needs_information", summary: "Falta", questions: [{ text: "Quando?", options: [] }], existing: null, description: "x", attachmentIds: [] } });
+    expect((await analisar(c, dados, cat, [], [])).final).toBeNull();
+  });
   it("limita requisições antes de gastar", async () => { mocks.hit.mockReturnValue({ allowed: false, retryAfterMs: 15000 }); expect((await analisar(c, dados, cat, [], [])).summary).toContain("15 segundos"); expect(mocks.gerar).not.toHaveBeenCalled(); });
 });

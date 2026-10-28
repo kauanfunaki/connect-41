@@ -18,6 +18,7 @@ Não repita o que já foi respondido. Se a pessoa não sabe, aceite essa limita�
 Não exija causa, diagnóstico ou solução técnica. Um pedido curto pode estar completo.
 Prefira perguntas fechadas: quando a resposta for sim ou não, ou uma escolha entre poucas alternativas, preencha options com duas a cinco respostas curtas (ex.: "Acontece com todos os usuários?" → ["Sim", "Não", "Não sei"]). Nas perguntas abertas, options vazio.
 jaExiste lista robôs, sites e apps que o Tech já entregou, com o que cada um faz. Se um deles já faz o que o pedido solicita, devolva existing com o ref exato da lista e match "same"; se só parece atender, com dúvida, match "similar". Em reason, uma frase curta dizendo por quê, para quem pediu. Se nenhum atende, ou se o pedido é um erro ou ajuste em algo da lista, existing null. Use somente refs da lista.
+Quando o status for sufficient, monte o chamado final: em description, a descrição completa na voz de quem pediu, juntando a descrição original e o que foi respondido na conversa, sem inventar nem tirar fatos; em attachmentIds, os ids dos anexos (recebidos ou não interpretados) que ajudam a entender ou atender o pedido, deixando de fora os que não têm relação. Na dúvida, inclua. Com needs_information, description vazia e attachmentIds vazio.
 Não invente fatos, não corrija nem reescreva o chamado, não altere categoria, prioridade ou SLA.
 Se houver contexto suficiente, status sufficient e questions vazio. Senão needs_information e perguntas.
 Os nomes dos anexos são só referência: não liste anexos na resposta e nunca presuma o conteúdo de arquivos que não recebeu.
@@ -30,7 +31,8 @@ export const SCHEMA_DA_TRIAGEM = {
     status: { type: "string", enum: ["sufficient", "needs_information"] }, summary: { type: "string" },
     questions: { type: "array", items: { type: "object", additionalProperties: false, properties: { text: { type: "string" }, options: { type: "array", items: { type: "string" } } }, required: ["text", "options"] } },
     existing: { anyOf: [{ type: "null" }, { type: "object", additionalProperties: false, properties: { ref: { type: "string" }, match: { type: "string", enum: ["same", "similar"] }, reason: { type: "string" } }, required: ["ref", "match", "reason"] }] },
-  }, required: ["status", "summary", "questions", "existing"],
+    description: { type: "string" }, attachmentIds: { type: "array", items: { type: "string" } },
+  }, required: ["status", "summary", "questions", "existing", "description", "attachmentIds"],
 };
 export type AnexoParaTriagem = { id: string; fileName: string; fileUrl: string; sizeBytes: number; mimeType: string; attachmentKey: string | null };
 export function selecionarAnexos(anexos: AnexoParaTriagem[], categoria: Categoria) {
@@ -91,7 +93,7 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     });
     const parecer = resultado.status === "needs_information" && !perguntas.length
       ? indisponivel("A análise repetiu perguntas já apresentadas. Você pode enviar o chamado com o contexto salvo ou tentar a análise novamente.")
-      : { ...resultado, questions: perguntas, existente };
+      : { ...resultado, questions: perguntas, existente, final: resultado.status === "sufficient" ? chamadoFinal(valor, dados, anexos) : null };
     return parecerSchema.parse({ ...parecer, attachments: anexos.map(a => cobertura.find(i => i.id === a.id)!) });
   } catch {
     // O erro do provedor, os prompts e os documentos nunca são registrados aqui.
@@ -109,4 +111,13 @@ function acharExistente(sugestao: unknown, candidatos: ItemExistente[], linkDoOp
   const aba = { robo: "automations", site: "sites", app: "apps" }[item.tipo];
   return { ref: item.ref, tipo: item.tipo, nome: item.nome, responsavel: item.responsavel, endereco: item.endereco, detalhe: item.detalhe, noOps: linkDoOps ? `/ops?view=${aba}` : null,
     match, reason: typeof reason === "string" ? reason.slice(0, 500) : "" };
+}
+
+// Os anexos que seguem para a revisão: só ids deste rascunho, e todos quando a
+// resposta não traz a lista. A descrição vazia volta a ser a original.
+function chamadoFinal(valor: unknown, dados: DadosDoChamado, anexos: AnexoParaTriagem[]) {
+  const { description, attachmentIds } = (valor ?? {}) as { description?: unknown; attachmentIds?: unknown };
+  const ids = Array.isArray(attachmentIds) ? new Set(attachmentIds.filter((i): i is string => typeof i === "string")) : null;
+  const texto = typeof description === "string" && description.trim() ? description.trim() : dados.description;
+  return { description: texto.slice(0, 15000), anexos: anexos.filter(a => !ids || ids.has(a.id)).map(a => a.id) };
 }
