@@ -2,6 +2,8 @@
 
 import { Fragment } from "react";
 import type { DetalheDosGrupos, ValorDaLinha } from "@/lib/dre/calculo";
+import type { CodigoDoModelo } from "@/lib/dre/estrutura";
+import { MoverCategoria } from "@/components/dre/MoverCategoria";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { RotuloDaCategoria, RotuloDaLinha, grupoDaLinha, useLinhasAbertas } from "@/components/dre/LinhaQueAbre";
 
@@ -13,7 +15,19 @@ const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFractionDi
  * por `RelatorioDoDre`, que manda para cá só as linhas e o detalhe — a fila de
  * classificação não viaja para o navegador do portal.
  */
-export function TabelaDaDre({ linhas, detalhe }: { linhas: ValorDaLinha[]; detalhe: DetalheDosGrupos }) {
+export function TabelaDaDre({
+  linhas,
+  detalhe,
+  mover,
+}: {
+  linhas: ValorDaLinha[];
+  detalhe: DetalheDosGrupos;
+  /**
+   * Só na equipe (28/10/2026): cada categoria aberta ganha o "Mover", que muda
+   * a linha dela nesta empresa. O portal do cliente não manda, e não move.
+   */
+  mover?: { companyId: string; modelo: CodigoDoModelo };
+}) {
   const { aberta, alternar } = useLinhasAbertas();
   // O acumulado da DRE econômica sai de totais por grupo, sem categoria: aí
   // nenhuma linha abre, e o rótulo fica sem o recuo da seta.
@@ -69,9 +83,16 @@ export function TabelaDaDre({ linhas, detalhe }: { linhas: ValorDaLinha[]; detal
               </tr>
               {abrir &&
                 categorias.map((c) => (
-                  <tr key={`${l.code}:${c.categoria}`} className="border-b border-border-soft bg-surface-2/50">
+                  <tr key={`${l.code}:${c.categoria}`} className="group/linha border-b border-border-soft bg-surface-2/50">
                     <td className="py-1.5 pl-4 pr-3">
-                      <RotuloDaCategoria nome={c.categoria} />
+                      {mover && grupo ? (
+                        <div className="flex items-start justify-between gap-3">
+                          <RotuloDaCategoria nome={c.categoria} />
+                          <MoverCategoria {...mover} nome={c.categoria} origem={c.origem} grupoAtual={grupo} />
+                        </div>
+                      ) : (
+                        <RotuloDaCategoria nome={c.categoria} />
+                      )}
                     </td>
                     <td
                       className={`py-1.5 pr-4 text-right text-fs-2 tabular-nums whitespace-nowrap ${

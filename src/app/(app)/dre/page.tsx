@@ -342,7 +342,8 @@ export default async function DrePage({
             : "Montado dos lançamentos pagos e recebidos no Connect."}
         </NotaDeFonte>
 
-        <RelatorioDoDre resultado={resultado} />
+        {/* A categoria aberta muda de linha só nesta empresa (28/10/2026, pedido do BPO). */}
+        <RelatorioDoDre resultado={resultado} mover={{ companyId, modelo: modelo.codigo }} />
 
         <NotaDeFonte>
           {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} pagos ou recebidos em{" "}
