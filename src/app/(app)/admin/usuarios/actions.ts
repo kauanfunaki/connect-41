@@ -11,6 +11,7 @@ import { revokeAllUserSessions } from "@/lib/auth/sessions";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { canAddUser } from "@/lib/subscriptions";
+import { destinoDepoisDoUsuario } from "@/lib/pessoas/acessoDaPessoa";
 
 export type UsuarioState = { error: string } | null;
 
@@ -27,6 +28,10 @@ export async function criarUsuario(
   const password = (form.get("password") as string) ?? "";
   const role = form.get("role") as UserRole;
   const sectors = (form.getAll("sectors") as string[]).filter(Boolean);
+  // Criado pela aba Acesso da ficha (lote 8, 28/10/2026): a conta já nasce
+  // ligada à pessoa, e o formulário volta para a ficha.
+  const personId = (form.get("personId") as string | null)?.trim() || null;
+  const destino = destinoDepoisDoUsuario(form.get("voltarPara"));
 
   if (!name) return { error: "Nome é obrigatório" };
   if (!email) return { error: "E-mail é obrigatório" };
@@ -60,10 +65,24 @@ export async function criarUsuario(
 
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "user.create", entityType: "User", entityId: id, metadata: { name, email, role } });
 
+  // Só liga o colaborador interno ainda sem conta, deste escritório. Se não
+  // ligar (outra pessoa pegou a vaga no meio), a conta fica criada e a aba
+  // mostra o seletor de conta existente.
+  if (personId) {
+    const ligadas = await prisma.person.updateMany({
+      where: { id: personId, tenantId: ctx.tenantId, isInternal: true, linkedUserId: null },
+      data: { linkedUserId: id },
+    });
+    if (ligadas.count > 0) {
+      await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "person.link_user", entityType: "Person", entityId: personId, metadata: { userId: id } });
+    }
+    revalidatePath(`/pessoas/${personId}`);
+  }
+
   revalidatePath("/admin/usuarios");
-  // Criou → volta pra lista. Ir pra tela de edição do recém-criado confundia
-  // (parecia que o cadastro não tinha terminado).
-  redirect("/admin/usuarios");
+  // Criou → volta pra lista (ou para a ficha da pessoa). Ir pra tela de edição
+  // do recém-criado confundia (parecia que o cadastro não tinha terminado).
+  redirect(destino);
 }
 
 export async function atualizarUsuario(
@@ -81,6 +100,7 @@ export async function atualizarUsuario(
   const role = form.get("role") as UserRole;
   const sectors = (form.getAll("sectors") as string[]).filter(Boolean);
   const active = form.get("active") === "on";
+  const destino = destinoDepoisDoUsuario(form.get("voltarPara"));
 
   if (!name) return { error: "Nome é obrigatório" };
   if (!email) return { error: "E-mail é obrigatório" };
@@ -132,7 +152,8 @@ export async function atualizarUsuario(
   }
 
   revalidatePath("/admin/usuarios");
-  redirect("/admin/usuarios");
+  if (destino !== "/admin/usuarios") revalidatePath(destino.split("?")[0]);
+  redirect(destino);
 }
 
 export async function alternarAtivoUsuario(id: string, novoStatus: boolean): Promise<void> {
