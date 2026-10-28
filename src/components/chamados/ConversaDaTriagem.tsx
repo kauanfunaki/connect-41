@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Paperclip, SendHorizontal } from "lucide-react";
+import { AppWindow, Bot, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConnectLoadingIndicator } from "@/components/shared/ConnectLoadingScreen";
 import { FORMATOS } from "@/lib/chamados/formatos";
-import type { Parecer } from "@/lib/chamados/regras";
+import { ROTULOS_EXISTENTE, type Existente, type Parecer } from "@/lib/chamados/regras";
 
 // A análise do chamado em conversa (28/10/2026): ao enviar, um modal com o
 // carregamento do Connect enquanto a IA lê; com a resposta, ele cresce e vira
@@ -26,10 +26,12 @@ type Props = {
   onResponder: (texto: string) => void; onAnexar: (file: File) => void; onPararEnvio: () => void;
   /** Há arquivo anexado na conversa ainda sem resposta: enviar só com ele vale. */
   anexou: boolean;
+  /** Robô, site ou app do Ops Center que parece atender: "É isso" guarda o rascunho; "Não é" segue a conversa. */
+  onAceitarSugestao: () => void; onRecusarSugestao: () => void;
   onEnviarMesmoAssim: () => void; onTentarNovamente: () => void;
 };
 
-export function ConversaDaTriagem({ aberta, onFechar, mensagens, parecer, pergunta, busy, erro, onResponder, onAnexar, onPararEnvio, anexou, onEnviarMesmoAssim, onTentarNovamente }: Props) {
+export function ConversaDaTriagem({ aberta, onFechar, mensagens, parecer, pergunta, busy, erro, onResponder, onAnexar, onPararEnvio, anexou, onAceitarSugestao, onRecusarSugestao, onEnviarMesmoAssim, onTentarNovamente }: Props) {
   const [texto, setTexto] = useState("");
   const fim = useRef<HTMLDivElement>(null), seletor = useRef<HTMLInputElement>(null);
   const analisando = busy === "analisando", conversa = mensagens.length > 0;
@@ -51,6 +53,7 @@ export function ConversaDaTriagem({ aberta, onFechar, mensagens, parecer, pergun
         {mensagens.map(m => <Balao key={m.id} daIA={m.role !== "user"}>{m.body}</Balao>)}
         {busy === "Enviando arquivo…" && <Balao daIA={false}><span className="inline-flex items-center gap-2"><Digitando />Enviando arquivo <button type="button" onClick={onPararEnvio} className="underline">parar</button></span></Balao>}
         {analisando && <Balao daIA><span className="inline-flex items-center gap-2 text-fg-secondary"><Digitando />Analisando sua resposta</span></Balao>}
+        {parecer?.existente && !analisando && <CartaoDoExistente e={parecer.existente} busy={!!busy} onAceitar={onAceitarSugestao} onRecusar={onRecusarSugestao} />}
         {opcoes.length > 0 && !analisando && <div role="group" aria-label="Respostas sugeridas" className="flex flex-wrap gap-2 pl-1">
           {opcoes.map(o => <button key={o} type="button" disabled={!!busy} onClick={() => responder(o)}
             className="rounded-full border border-brand/40 bg-surface px-3.5 py-1.5 text-ui font-medium text-brand transition-colors hover:bg-brand/8 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50">{o}</button>)}
@@ -90,4 +93,28 @@ function Balao({ daIA, children }: { daIA: boolean; children: React.ReactNode })
 
 function Digitando() {
   return <span aria-hidden className="inline-flex gap-1">{[0, 150, 300].map(d => <span key={d} className="size-1.5 animate-bounce rounded-full bg-fg-muted" style={{ animationDelay: `${d}ms` }} />)}</span>;
+}
+
+const ICONES = { robo: Bot, site: Globe, app: AppWindow };
+function CartaoDoExistente({ e, busy, onAceitar, onRecusar }: { e: Existente; busy: boolean; onAceitar: () => void; onRecusar: () => void }) {
+  const Icone = ICONES[e.tipo], primeiroNome = e.responsavel?.trim().split(/\s+/)[0];
+  return <div className="c41-surgir max-w-[85%] rounded-2xl rounded-tl-md border border-brand/30 bg-surface p-4 shadow-xs">
+    <p className="mb-3 text-helper font-medium text-brand">{e.match === "same" ? "Já existe no Ops Center" : "Pode ser parecido, no Ops Center"}</p>
+    <div className="flex items-start gap-3">
+      <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand"><Icone size={20} /></span>
+      <div className="min-w-0">
+        <p className="break-words font-semibold text-fg">{e.nome}</p>
+        <p className="text-helper text-fg-muted">{ROTULOS_EXISTENTE[e.tipo][0].toLocaleUpperCase("pt-BR") + ROTULOS_EXISTENTE[e.tipo].slice(1)}{e.detalhe ? `, ${e.detalhe}` : ""}</p>
+        <p className="mt-2 text-ui text-fg-secondary">Responsável: <strong className="text-fg">{e.responsavel ?? "sem responsável definido"}</strong></p>
+        {(e.endereco || e.noOps) && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-helper">
+          {e.endereco && <a href={e.endereco} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Abrir {ROTULOS_EXISTENTE[e.tipo]}</a>}
+          {e.noOps && <a href={e.noOps} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Ver no Ops Center</a>}
+        </div>}
+      </div>
+    </div>
+    <div className="mt-4 flex flex-wrap gap-2">
+      <Button size="sm" disabled={busy} onClick={onAceitar}>{primeiroNome ? `É isso, vou falar com ${primeiroNome}` : "É isso"}</Button>
+      <Button size="sm" variant="secondary" disabled={busy} onClick={onRecusar}>Não é o que preciso</Button>
+    </div>
+  </div>;
 }

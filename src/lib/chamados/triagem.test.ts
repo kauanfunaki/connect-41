@@ -54,5 +54,22 @@ describe("triagem de chamados", () => {
   it("não aprova JSON inválido nem parecer contraditório", async () => {
     for (const valor of [{}, { status: "sufficient", summary: "Completo", questions: [{ text: "Qual sistema?", options: [] }] }]) { mocks.gerar.mockResolvedValue({ valor }); expect((await analisar(c, dados, cat, [], [])).status).toBe("unavailable"); }
   });
+  const catalogo = { itens: [
+    { ref: "robo:rendimentos", tipo: "robo" as const, nome: "Conferência de rendimentos", descricao: "Monta a planilha de rendimentos.", detalhe: "Todos os clientes", responsavel: "Camila Duarte", endereco: null },
+    { ref: "site:1", tipo: "site" as const, nome: "Portal de certidões", descricao: "Emite certidões.", detalhe: null, responsavel: null, endereco: "https://certidoes.exemplo" },
+  ], recusados: [] as string[], linkDoOps: true };
+  it("aponta o que já existe no Ops Center com os dados do catálogo, não os do modelo", async () => {
+    mocks.gerar.mockResolvedValue({ valor: { status: "sufficient", summary: "Completo", questions: [], existing: { ref: "robo:rendimentos", match: "same", reason: "Já monta a planilha." } } });
+    const r = await analisar(c, dados, cat, [], [], catalogo);
+    expect(r.existente).toEqual(expect.objectContaining({ nome: "Conferência de rendimentos", responsavel: "Camila Duarte", match: "same", noOps: "/ops?view=automations" }));
+    expect(mocks.gerar.mock.calls[0][0].texto).toContain("robo:rendimentos");
+  });
+  it("ignora item inventado e não oferece de novo o que a pessoa recusou", async () => {
+    mocks.gerar.mockResolvedValue({ valor: { status: "sufficient", summary: "Completo", questions: [], existing: { ref: "robo:inventado", match: "same", reason: "" } } });
+    expect((await analisar(c, dados, cat, [], [], catalogo)).existente).toBeNull();
+    mocks.gerar.mockResolvedValue({ valor: { status: "sufficient", summary: "Completo", questions: [], existing: { ref: "robo:rendimentos", match: "same", reason: "" } } });
+    const r = await analisar(c, dados, cat, [], [], { ...catalogo, recusados: ["robo:rendimentos"], linkDoOps: false });
+    expect(r.existente).toBeNull(); expect(mocks.gerar.mock.calls[1][0].texto).not.toContain("robo:rendimentos");
+  });
   it("limita requisições antes de gastar", async () => { mocks.hit.mockReturnValue({ allowed: false, retryAfterMs: 15000 }); expect((await analisar(c, dados, cat, [], [])).summary).toContain("15 segundos"); expect(mocks.gerar).not.toHaveBeenCalled(); });
 });

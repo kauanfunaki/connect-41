@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestao, exigirOperacao, type Contexto } from "./contexto";
 import { podeResponder, podeVer } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, indisponivel, tituloDaDescricao, perguntaAtual, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Status, type DadosDoChamado } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, indisponivel, tituloDaDescricao, perguntaAtual, mensagemDoExistente, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Status, type DadosDoChamado } from "./regras";
 import { anexosDoChamado } from "./armazenamento";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, categoriasClassificaveis } from "./catalogo";
@@ -15,6 +15,10 @@ import { classificar } from "./classificacao";
 import { hit } from "@/lib/rateLimit";
 import { SLA_PADRAO, somarMinutosUteis, minutosUteisEntre } from "./sla";
 import { analisar } from "./triagem";
+import { catalogoParaTriagem } from "@/lib/ops/catalogo";
+import { MODULO_OPS } from "@/lib/ops/regras";
+import { isModuleEnabled } from "@/lib/modules";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { despacharEventos } from "./notificacoes";
 
 type Tx = Prisma.TransactionClient;
@@ -145,7 +149,7 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     await tx.helpdeskAttachment.updateMany({ where: { tenantId: c.ctx.tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });
     if (cat.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: cat.checklistTemplate.map(i => ({ tenantId: c.ctx.tenantId, ticketId: ticket.id, key: i.key, label: i.label })) });
     if (cat.requiresApproval) await tx.helpdeskApproval.create({ data: { tenantId: c.ctx.tenantId, ticketId: ticket.id, cycleNumber: 1 } });
-    await evento(tx, c.ctx.tenantId, ticket.id, c.ctx.userId, "created", { semAnalise, classificacao: (d.payload as Record<string, unknown>)._classificacao });
+    await evento(tx, c.ctx.tenantId, ticket.id, c.ctx.userId, "created", { semAnalise, classificacao: (d.payload as Record<string, unknown>)._classificacao, sugestoesRecusadas: recusadosDo(d.payload) });
     return ticket.id;
   });
   await depois(c, ticketId, "created"); return { ticketId };
@@ -173,9 +177,9 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
   const token = randomUUID(), agora = new Date();
   const reserva = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null, OR: [{ analysisToken: null }, { analysisStartedAt: { lt: new Date(agora.getTime() - 70000) } }] }, data: { analysisToken: token, analysisStartedAt: agora } });
   if (reserva.count !== 1) throw new Error("Já há uma análise em andamento. Aguarde ou atualize a página.");
-  const parecer = pendencia ? { status: "needs_information" as const, summary: "Categoria identificada. Complete os campos e evidências indicados no formulário para enviar.", questions: [{ text: pendencia, options: [] }], attachments: [] }
+  const parecer = pendencia ? { status: "needs_information" as const, summary: "Categoria identificada. Complete os campos e evidências indicados no formulário para enviar.", questions: [{ text: pendencia, options: [] }], attachments: [], existente: null }
     : categoria.name === A_CLASSIFICAR ? indisponivel("A classificação automática está indisponível ou precisa de mais contexto. Você pode detalhar o pedido e tentar novamente ou enviar como A classificar para a equipe.")
-    : await analisar({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, draftId: id }, dados, categoria, d.messages, d.attachments);
+    : await analisar({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, draftId: id }, dados, categoria, d.messages, d.attachments, await jaExiste(c, d.payload));
   await getPrisma().$transaction(async tx => {
     const categoriaAindaAtual = await tx.helpdeskCategory.count({ where: { tenantId: c.ctx.tenantId, id: row.id, version: row.version, active: true } });
     if (!categoriaAindaAtual) throw desatualizado();
@@ -183,10 +187,39 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
     if (r.count !== 1) throw desatualizado();
     // Uma pergunta por vez (27/10/2026): a mensagem leva o resumo e a primeira;
     // as seguintes entram conforme a pessoa responde (responderPergunta).
-    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: [parecer.summary, ...parecer.questions.slice(0, 1).map(q => q.text)].join("\n\n") } });
+    // Algo do Ops Center parece atender (28/10/2026): a mensagem aponta o item e
+    // as perguntas esperam a pessoa dizer se é ou não (recusarSugestao).
+    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: parecer.existente ? mensagemDoExistente(parecer.existente)
+      : [parecer.summary, ...parecer.questions.slice(0, 1).map(q => q.text)].join("\n\n") } });
   });
-  if (parecer.status === "sufficient") return { ...await finalizarRascunho(c, id, version), version };
+  if (parecer.status === "sufficient" && !parecer.existente) return { ...await finalizarRascunho(c, id, version), version };
   return { parecer, version, dados, categorias: (await categorias(c, true)).map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id })) };
+}
+const recusadosDo = (payload: unknown) => strings((payload as { _recusados?: unknown } | null)?._recusados);
+async function jaExiste(c: Contexto, payload: unknown) {
+  if (!await isModuleEnabled(c.ctx.tenantId, MODULO_OPS)) return { itens: [], recusados: [], linkDoOps: false };
+  return { itens: await catalogoParaTriagem(c.ctx.tenantId), recusados: recusadosDo(payload), linkDoOps: await podeNoModulo(c.ctx, MODULO_OPS, "ver") };
+}
+// "Não é o que preciso" (28/10/2026): o item não volta nas próximas análises
+// deste rascunho, e a conversa segue para as perguntas ou para o envio.
+export async function recusarSugestao(c: Contexto, id: string, version: number) {
+  exigirAbertura(c);
+  const d = await rascunho(c, id);
+  const lido = parecerSchema.safeParse(d.review);
+  if (d.reviewVersion !== version || !lido.success || !lido.data.existente) throw desatualizado();
+  const parecer = { ...lido.data, existente: null }, recusado = lido.data.existente;
+  // O resumo não saiu na mensagem da sugestão: vai junto com a primeira pergunta.
+  const proxima = parecer.status === "needs_information" && parecer.questions[0] ? [parecer.summary, parecer.questions[0].text].join("\n\n") : undefined;
+  await getPrisma().$transaction(async tx => {
+    const payload = { ...(d.payload as Record<string, unknown>), _recusados: [...recusadosDo(d.payload), recusado.ref] };
+    const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, reviewVersion: version, submittedAt: null }, data: { payload: json(payload), review: json(parecer), version: { increment: 1 }, reviewVersion: version + 1 } });
+    if (r.count !== 1) throw desatualizado();
+    const agora = Date.now();
+    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "user", body: `Não é o que preciso: ${recusado.nome}.`, createdAt: new Date(agora) } });
+    if (proxima) await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: proxima, createdAt: new Date(agora + 1) } });
+  });
+  if (parecer.status === "sufficient") return { ...await finalizarRascunho(c, id, version + 1), version: version + 1 };
+  return { parecer, version: version + 1, pergunta: proxima };
 }
 // Guarda a resposta e faz a próxima pergunta do mesmo parecer, sem chamar a IA.
 // A resposta da última pergunta volta para a análise com a conversa inteira.
