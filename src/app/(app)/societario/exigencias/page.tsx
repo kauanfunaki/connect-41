@@ -20,6 +20,9 @@ import { AbasDePrazos } from "@/components/societario/AbasDePrazos";
 import { ResolverExigencia } from "@/components/societario/ResolverExigencia";
 import { resolverExigencia } from "@/app/(app)/processos/actions";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CobrancaDoProtocolo } from "@/components/societario/CobrancaDoProtocolo";
+import { canManageSector } from "@/lib/auth/papeis";
+import { COBRAR_APOS_DIAS_PADRAO, diasParaCobrarOProtocolo } from "@/lib/societario/protocoloParado";
 
 const MODULE = "societario_prazos";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -44,6 +47,8 @@ export default async function ExigenciasPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
   // Ver é do setor; resolver é de quem age nele — o botão some para o resto.
   const podeAgir = canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const podeConfigurar = canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
+  const diasDaCobranca = podeConfigurar ? await diasParaCobrarOProtocolo(ctx.tenantId) : COBRAR_APOS_DIAS_PADRAO;
 
   const params = await searchParams;
   const situacao = lerSituacaoDaExigencia(params.situacao);
@@ -235,6 +240,12 @@ export default async function ExigenciasPage({
           </>
         )}
       </CascoDaTabela>
+      {/* O prazo para cobrar o órgão (lote 5, 28/10/2026): só quem administra o setor. */}
+      {podeConfigurar && (
+        <div className="mt-6">
+          <CobrancaDoProtocolo dias={diasDaCobranca} padrao={COBRAR_APOS_DIAS_PADRAO} />
+        </div>
+      )}
     </PageContainer>
   );
 }

@@ -76,16 +76,34 @@ banco, cria as tabelas pelo schema e carrega:
 Rode antes de cada rodada de gravação: alguns vídeos mudam os dados (aprovam uma
 conta, respondem uma pendência), e só o banco recriado garante o mesmo vídeo.
 
-### Por que o banco nasce do schema, e não das migrations
+### Por que o banco local nasce do schema, e não das migrations
 
-As migrations **não reconstroem o banco do zero**: a
-`20260728150734_manual_page_cover` altera `manual_pages`, que nenhuma migration
-cria (a tabela entrou na produção antes de as migrations virarem regra). Então o
-banco local vem de `prisma migrate diff --from-empty --to-schema` e não de
-`migrate deploy`. Nunca `db push`.
+Até 28/10/2026 as migrations **não reconstruíam o banco do zero**: oito tabelas e
+algumas colunas entraram na produção por fora, sem migration. Por isso o banco local
+vem de `prisma migrate diff --from-empty --to-schema`, e não de `migrate deploy`.
+Nunca `db push`.
 
 Consequência: dado que só existe porque uma migration o inseriu (como o setor
 Controladoria) não vem junto. O `preparar-ambiente.ts` repõe o que os vídeos usam.
+
+### Um banco novo pelas migrations (homologação, máquina nova, recuperação)
+
+Desde o lote 5 (28/10/2026) a cadeia monta um banco vazio igual ao schema. As
+migrations `…_manual_sem_migration`, `…_avaliacoes_sem_migration`,
+`…_tabelas_sem_migration` e `…_colunas_sem_migration` criam o que faltava, e só
+agem se faltar: na produção não mudam nada. Num banco **vazio**, um passo antes do
+deploy, o mesmo que a produção fez em 21/08:
+
+```bash
+npx prisma migrate resolve --applied 20260821180000_baseline_calculo_rescisao
+npx prisma migrate deploy
+```
+
+A `baseline_calculo_rescisao` repete o que migrations anteriores já criam (ela é o
+registro do que a produção tinha); rodada num banco vazio, falha com coluna
+duplicada. Comparado com o schema, o banco resultante só difere em `canvas_pages`
+(saiu do schema, e migration de alinhamento não apaga tabela) e no nome de dois
+índices.
 
 ## Atualizar o banco sem perder os dados
 

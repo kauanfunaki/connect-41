@@ -9,7 +9,9 @@ import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { DeleteButton } from "@/components/pessoas/DeleteButton";
 import { MenuDoRegistro } from "@/components/pessoas/MenuDoRegistro";
-import { excluirTreinamento } from "../actions";
+import { atualizarTreinamento, excluirTreinamento } from "../actions";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { TrainingForm } from "@/components/treinamentos/TrainingForm";
 import { criarTurma, excluirTurma } from "./actions";
 import { AddTurmaForm } from "@/components/treinamentos/AddTurmaForm";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -21,10 +23,14 @@ import { TabelaNoDesktop, TopoDoCartao, InfoDoCartao } from "@/components/shared
 
 export default async function TreinamentoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ editar?: string }>;
 }) {
   const { id } = await params;
+  // Editar no painel ao lado (lote 5, 28/10/2026) — ver `PainelDeCadastro`.
+  const { editar } = await searchParams;
   const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
   const canManage = canManageSector(ctx, setor);
   // Excluir treinamento e turma: só o administrador (13/10/2026).
@@ -57,7 +63,7 @@ export default async function TreinamentoPage({
         action={
           canManage && (
             <div className="flex items-center gap-2">
-              <Button href={`/treinamentos/${id}/editar`} variant="secondary" size="sm">
+              <Button href={`/treinamentos/${id}?editar=1`} scroll={false} variant="secondary" size="sm">
                 <Pencil size={14} />
                 Editar
               </Button>
@@ -186,6 +192,21 @@ export default async function TreinamentoPage({
 
         {canManage && <AddTurmaForm action={criarTurmaAction} />}
       </Card>
+      {canManage && editar === "1" && (
+        <PainelDeCadastro titulo="Editar treinamento" voltarPara={`/treinamentos/${id}`}>
+          <TrainingForm
+            action={atualizarTreinamento}
+            cancelHref={`/treinamentos/${id}`}
+            defaultValues={{
+              id: training.id,
+              name: training.name,
+              description: training.description ?? undefined,
+              workloadHours: training.workloadHours?.toString(),
+              validityMonths: training.validityMonths ?? undefined,
+            }}
+          />
+        </PainelDeCadastro>
+      )}
     </PageContainer>
   );
 }
