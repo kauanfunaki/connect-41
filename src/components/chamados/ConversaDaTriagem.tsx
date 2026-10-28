@@ -63,10 +63,10 @@ export function ConversaDaTriagem({ aberta, onFechar, mensagens, parecer, pergun
         <Textarea id="resposta-da-revisao" rows={1} maxLength={10000} disabled={!!busy} value={texto} onChange={e => setTexto(e.target.value)}
           placeholder={opcoes.length ? "Escolha uma opção ou escreva" : "Escreva sua resposta"}
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); responder(texto); } }}
-          className="field-sizing-content max-h-32 min-h-10! flex-1 rounded-2xl" />
+          className="field-sizing-content max-h-32 min-h-12! flex-1 rounded-2xl" />
         <input ref={seletor} type="file" accept={FORMATOS} hidden aria-label="Anexar arquivo à conversa" onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) onAnexar(file); }} />
-        <Button type="button" variant="secondary" size="icon" disabled={!!busy} aria-label="Anexar arquivo" title="Anexar arquivo (até 10 MB)" onClick={() => seletor.current?.click()}><Paperclip size={16} /></Button>
-        <Button type="submit" size="icon" disabled={!!busy || (!texto.trim() && !anexou)} aria-label="Enviar resposta"><SendHorizontal size={16} /></Button>
+        <Button type="button" variant="secondary" size="icon" className="size-12! shrink-0 rounded-2xl!" disabled={!!busy} aria-label="Anexar arquivo" title="Anexar arquivo (até 10 MB)" onClick={() => seletor.current?.click()}><Paperclip size={18} /></Button>
+        <Button type="submit" size="icon" className="size-12! shrink-0 rounded-2xl!" disabled={!!busy || (!texto.trim() && !anexou)} aria-label="Enviar resposta"><SendHorizontal size={18} /></Button>
       </form>}
       {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
