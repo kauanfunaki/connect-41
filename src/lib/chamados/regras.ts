@@ -54,7 +54,7 @@ export function tituloDaDescricao(descricao: string) {
 export function perguntaAtual(parecer: Parecer | null, mensagens: { role: string; body: string }[]) {
   if (parecer?.status !== "needs_information") return null;
   const ultima = [...mensagens].reverse().find(m => m.role === "assistant")?.body ?? "";
-  const indice = parecer.questions.findIndex(q => ultima.endsWith(q));
+  const indice = parecer.questions.findIndex(q => ultima.endsWith(q.text));
   return indice < 0 ? null : { indice, total: parecer.questions.length };
 }
 
@@ -77,8 +77,30 @@ export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, a
 }
 
 export const coberturaSchema = z.object({ id: z.string(), name: z.string(), status: z.enum(["analyzed", "partial", "skipped", "unreadable"]), reason: z.string().max(500) });
-export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(z.string().min(1).max(500)).max(5), attachments: z.array(coberturaSchema).max(50) }).superRefine((v, ctx) => {
+// Pergunta com respostas prontas (28/10/2026): sim/não ou poucas alternativas
+// viram botões na conversa. Pareceres gravados antes eram só o texto.
+export const perguntaSchema = z.preprocess(v => typeof v === "string" ? { text: v, options: [] } : v,
+  z.object({ text: z.string().min(1).max(500), options: z.array(z.string().trim().min(1).max(120)).max(5).default([]) }));
+export type Pergunta = z.infer<typeof perguntaSchema>;
+// O que já existe no Ops Center (28/10/2026): a triagem aponta o robô, site ou
+// app que parece atender o pedido, e quem responde por ele, antes das perguntas.
+export const existenteSchema = z.object({
+  ref: z.string().max(200), tipo: z.enum(["robo", "site", "app"]), nome: z.string().max(120), responsavel: z.string().max(191).nullable(),
+  endereco: z.string().max(500).nullable(), noOps: z.string().max(200).nullable(), detalhe: z.string().max(210).nullable(),
+  match: z.enum(["same", "similar"]), reason: z.string().max(500),
+});
+export type Existente = z.infer<typeof existenteSchema>;
+export const ROTULOS_EXISTENTE = { robo: "robô", site: "site", app: "app" } as const;
+/** A mensagem do assistente que acompanha o cartão: a mesma no servidor e na tela. */
+export function mensagemDoExistente(e: Existente) {
+  const inicio = e.match === "same" ? `Isso parece já existir no Ops Center: o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}` : `Pode ser parecido com o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}, do Ops Center`;
+  return `${inicio}${e.responsavel ? `, de responsabilidade de ${e.responsavel}` : ""}.${e.reason ? ` ${e.reason}` : ""}`;
+}
+export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(perguntaSchema).max(5), attachments: z.array(coberturaSchema).max(50), existente: existenteSchema.nullable().default(null),
+  // O chamado montado pela IA para a revisão (28/10/2026): descrição final, com as
+  // respostas da conversa, e os anexos que seguem. A pessoa edita tudo na etapa 3.
+  final: z.object({ description: z.string().min(1).max(15000), anexos: z.array(z.string().max(191)).max(50) }).nullable().default(null) }).superRefine((v, ctx) => {
   if ((v.status === "sufficient" && v.questions.length) || (v.status === "needs_information" && !v.questions.length)) ctx.addIssue({ code: "custom", message: "Parecer inconsistente." });
 });
 export type Parecer = z.infer<typeof parecerSchema>;
-export const indisponivel = (summary = "Não foi possível analisar agora. Tente novamente ou envie sem análise."): Parecer => ({ status: "unavailable", summary, questions: [], attachments: [] });
+export const indisponivel = (summary = "Não foi possível analisar agora. Tente novamente ou envie sem análise."): Parecer => ({ status: "unavailable", summary, questions: [], attachments: [], existente: null, final: null });

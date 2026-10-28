@@ -53,6 +53,7 @@ describe("abertura sem título e perguntas uma por vez", () => {
     expect(perguntaAtual(p, [{ role: "assistant", body: "Faltam dados.\n\nQual sistema?" }])).toEqual({ indice: 0, total: 3 });
     expect(perguntaAtual(p, [{ role: "assistant", body: "Faltam dados.\n\nQual sistema?" }, { role: "user", body: "ERP" }, { role: "assistant", body: "Desde quando?" }])).toEqual({ indice: 1, total: 3 });
     expect(perguntaAtual(p, [{ role: "user", body: "Sem pergunta ainda" }])).toBeNull();
+    expect(p.questions[0]).toEqual({ text: "Qual sistema?", options: [] });
     expect(perguntaAtual({ ...p, status: "sufficient", questions: [] }, [{ role: "assistant", body: "Qual sistema?" }])).toBeNull();
   });
 });

@@ -241,6 +241,8 @@ const USUARIO: Ligacao[] = [
   { modelo: "ServiceRequest", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["solicitação do portal atribuída a ele", "solicitações do portal atribuídas a ele"] },
   { modelo: "Lead", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["lead sob responsabilidade dele", "leads sob responsabilidade dele"] },
   { modelo: "OpsWatcher", campo: "owner", fk: "ownerId", tratamento: "desligar", rotulo: ["automação sob responsabilidade dele", "automações sob responsabilidade dele"] },
+  { modelo: "OpsSite", campo: "owner", fk: "ownerId", tratamento: "desligar", rotulo: ["site sob responsabilidade dele", "sites sob responsabilidade dele"] },
+  { modelo: "OpsApp", campo: "owner", fk: "ownerId", tratamento: "desligar", rotulo: ["app sob responsabilidade dele", "apps sob responsabilidade dele"] },
   { modelo: "TechInternalItem", campo: "assignee", fk: "assigneeId", tratamento: "desligar", rotulo: ["item do Tech sob responsabilidade dele", "itens do Tech sob responsabilidade dele"] },
   { modelo: "WhatsappThread", campo: "assignedTo", fk: "assignedToId", tratamento: "desligar", rotulo: ["conversa do WhatsApp atribuída a ele", "conversas do WhatsApp atribuídas a ele"] },
   { modelo: "FinanceEntry", campo: "collectionOwner", fk: "collectionOwnerId", tratamento: "desligar", rotulo: ["cobrança sob responsabilidade dele", "cobranças sob responsabilidade dele"] },
