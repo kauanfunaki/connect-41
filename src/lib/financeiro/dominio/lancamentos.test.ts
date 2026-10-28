@@ -47,6 +47,7 @@ describe("lancamentosDasBaixas", () => {
         codigoHistorico: "",
         complemento: "PAGTO IMOBILIÁRIA CENTRO - ALUGUEL DO GALPÃO",
         codigoFilial: "11301",
+        baixaId: "b1",
       },
     ]);
   });
