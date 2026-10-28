@@ -29,9 +29,12 @@ describe("o conjunto", () => {
     }
   });
 
-  it("o assistente da vaga libera exatamente estas", () => {
-    const liberadas = agenteDoCatalogo("assistente_de_vaga")!.ferramentas;
-    expect(liberadas.sort()).toEqual(Object.keys(FERRAMENTAS_DE_RECRUTAMENTO).sort());
+  // O "Assistente da vaga", que liberava todas estas, saiu do catálogo em
+  // 28/10/2026 (a ficha da vaga já usava a Ceci desde 14/10). As propostas de
+  // mover e encerrar seguem com a Ceci do Recrutamento.
+  it("as propostas de mover e encerrar seguem liberadas para a Ceci do Recrutamento", () => {
+    const liberadas = agenteDoCatalogo("assistente_do_recrutamento")!.ferramentas;
+    expect(liberadas).toEqual(expect.arrayContaining(["propor_mover_etapa", "propor_encerrar_candidatura"]));
   });
 
   // A descrição é o que o modelo lê para decidir se chama. "NÃO move" ali é o

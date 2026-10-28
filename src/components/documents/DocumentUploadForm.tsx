@@ -10,13 +10,12 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Aviso } from "@/components/ui/Aviso";
-import { CATEGORY_LABEL, CATEGORY_OPTIONS } from "@/lib/document-categories";
+import { CATEGORY_LABEL, CATEGORY_OPTIONS, TETO_DOS_DOCUMENTOS_MB } from "@/lib/document-categories";
 import type { DocumentCategory, DocumentEntityType } from "@/generated/prisma/enums";
 
 // Precisa bater com o que /api/documents aceita — divergir daria erro só
 // depois do envio, com o arquivo já subindo.
 export const ACEITOS_NOS_DOCUMENTOS = ".jpg,.jpeg,.png,.webp,.pdf";
-export const TETO_DOS_DOCUMENTOS_MB = 20;
 
 type Props = {
   entityType: DocumentEntityType;

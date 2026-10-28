@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canAct } from "@/lib/auth/context";
 import { DocumentCategory, DocumentEntityType } from "@/generated/prisma/enums";
+import { TETO_DOS_DOCUMENTOS_MB } from "@/lib/document-categories";
 
 // Fora de `public/` de propósito: documento sensível não pode ser servido
 // estaticamente sem passar pela checagem de permissão em [id]/route.ts.
@@ -16,7 +17,7 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/webp": "webp",
   "application/pdf": "pdf",
 };
-const MAX_SIZE = 10 * 1024 * 1024;
+const MAX_SIZE = TETO_DOS_DOCUMENTOS_MB * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const ctx = await getAuthContext();
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Formato não suportado. Use JPG, PNG, WEBP ou PDF." }, { status: 400 });
   }
   if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "Arquivo maior que 10MB." }, { status: 400 });
+    return NextResponse.json({ error: `Arquivo maior que ${TETO_DOS_DOCUMENTOS_MB} MB.` }, { status: 400 });
   }
 
   const id = randomUUID();
