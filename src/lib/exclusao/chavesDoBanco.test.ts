@@ -149,25 +149,12 @@ model Link {
  * lista exige decidir o que fazer com ela.
  */
 const CONHECIDAS = [
-  // Tabelas e coluna que existem no schema e não em migration nenhuma: em
-  // produção foram criadas fora das migrations (`db push`), então a chave —
-  // se existe — não aparece aqui. É parte do drift conhecido de produção.
+  // A coluna que entrou na produção por fora (`db push`). Desde o lote 5
+  // (28/10/2026) a chave existe na cadeia, mas dentro de um SQL montado e
+  // condicional (20261028210500_colunas_sem_migration), que esta leitura das
+  // migrations não interpreta. As tabelas que estavam aqui ganharam CREATE no
+  // mesmo lote e saíram da lista.
   "people.linkedUserId: relação Person.linkedUser sem chave estrangeira nas migrations",
-  "manual_documents.tenantId: relação ManualDocument.tenant sem chave estrangeira nas migrations",
-  "manual_documents.createdById: relação ManualDocument.createdBy sem chave estrangeira nas migrations",
-  "manual_pages.tenantId: relação ManualPage.tenant sem chave estrangeira nas migrations",
-  "manual_pages.documentId: relação ManualPage.document sem chave estrangeira nas migrations",
-  "manual_pages.createdById: relação ManualPage.createdBy sem chave estrangeira nas migrations",
-  "chatwoot_agent_links.tenantId: relação ChatwootAgentLink.tenant sem chave estrangeira nas migrations",
-  "chatwoot_agent_links.linkedUserId: relação ChatwootAgentLink.linkedUser sem chave estrangeira nas migrations",
-  "agent_evaluation_summaries.tenantId: relação AgentEvaluationSummary.tenant sem chave estrangeira nas migrations",
-  "bpo_credentials.tenantId: relação BpoCredential.tenant sem chave estrangeira nas migrations",
-  "bpo_credentials.companyId: relação BpoCredential.company sem chave estrangeira nas migrations",
-  "bpo_credentials.createdById: relação BpoCredential.createdBy sem chave estrangeira nas migrations",
-  "user_preferences.userId: relação UserPreference.user sem chave estrangeira nas migrations",
-  "bpo_credential_views.tenantId: relação BpoCredentialView.tenant sem chave estrangeira nas migrations",
-  "bpo_credential_views.credentialId: relação BpoCredentialView.credential sem chave estrangeira nas migrations",
-  "bpo_credential_views.userId: relação BpoCredentialView.user sem chave estrangeira nas migrations",
   // A tabela das páginas do Kanban saiu do schema em 27/07/2026 (commit
   // a1eaf9aa) sem migration que a apague. Se ainda existir em produção com
   // linhas, `createdById` → users (RESTRICT) trava a exclusão de quem criou

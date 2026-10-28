@@ -11,12 +11,12 @@
 //
 // ─── Por que o banco nasce do schema, e não das migrations ──────────────────
 //
-// O histórico de migrations **não reconstrói o banco do zero**: a
-// `20260728150734_manual_page_cover` altera `manual_pages`, que nenhuma
-// migration cria (a tabela entrou na produção por fora, antes de as migrations
-// virarem regra). Em produção isso não aparece, porque as tabelas já existem.
-// Aqui, `migrate diff --from-empty` gera o banco igual ao schema de hoje. Nunca
-// `db push` — ver a memória do projeto sobre o drift de produção.
+// Até 28/10/2026 o histórico de migrations não reconstruía o banco do zero
+// (tabelas e colunas que entraram na produção por fora). Desde o lote 5 ele
+// reconstrói, com um passo antes do deploy — ver scripts/local/README.md. Aqui
+// continua o `migrate diff --from-empty`, que gera o banco igual ao schema de
+// hoje num passo só. Nunca `db push` — ver a memória do projeto sobre o drift
+// de produção.
 
 import { readFileSync, writeFileSync, existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";

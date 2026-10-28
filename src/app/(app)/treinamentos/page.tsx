@@ -8,11 +8,16 @@ import { canManageSector } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { TrainingForm } from "@/components/treinamentos/TrainingForm";
+import { criarTreinamento } from "./actions";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
 
-export default async function TreinamentosPage() {
+export default async function TreinamentosPage({ searchParams }: { searchParams: Promise<{ novo?: string }> }) {
+  // Criar no painel ao lado (lote 5, 28/10/2026) — ver `PainelDeCadastro`.
+  const { novo: abrirNovo } = await searchParams;
   const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
   const canManage = canManageSector(ctx, setor);
 
@@ -37,7 +42,7 @@ export default async function TreinamentosPage() {
   }));
 
   const novo = canManage && (
-    <Button href="/treinamentos/novo" variant="primary">
+    <Button href="/treinamentos?novo=1" variant="primary">
       <Plus size={14} />
       Novo treinamento
     </Button>
@@ -119,6 +124,11 @@ export default async function TreinamentosPage() {
             </TabelaNoDesktop>
           </TabelaFiltravel>
         </>
+      )}
+      {canManage && abrirNovo === "1" && (
+        <PainelDeCadastro titulo="Novo treinamento" voltarPara="/treinamentos">
+          <TrainingForm action={criarTreinamento} cancelHref="/treinamentos" />
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );

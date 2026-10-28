@@ -1,56 +1,9 @@
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
-import { scopedCompanyWhere } from "@/lib/auth/scope";
-import { DepartmentForm } from "@/components/empresas/DepartmentForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { atualizarDepartment } from "../../actions";
+import { redirect } from "next/navigation";
 
-export default async function EditarDepartmentPage({
-  params,
-}: {
-  params: Promise<{ id: string; deptId: string }>;
-}) {
-  const { id: companyId, deptId } = await params;
-  const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) notFound();
-
-  const prisma = getPrisma();
-  const company = await prisma.company.findFirst({
-    where: { id: companyId, ...(await scopedCompanyWhere(ctx)) },
-    select: { id: true, name: true },
-  });
-  if (!company) notFound();
-
-  const department = await prisma.department.findFirst({ where: { id: deptId, tenantId: ctx.tenantId, companyId } });
-  if (!department) notFound();
-
-  return (
-    <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: "Cadastros", href: "/empresas" },
-          { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Departamentos", href: `/empresas/${companyId}/departamentos` },
-          { label: "Editar" },
-        ]}
-      />
-
-      <PageHeader title="Editar departamento" subtitle={company.name} />
-
-      <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">
-          <DepartmentForm
-            action={atualizarDepartment}
-            companyId={companyId}
-            cancelHref={`/empresas/${companyId}/departamentos`}
-            defaultValues={{ id: department.id, name: department.name }}
-          />
-        </div>
-      </div>
-    </PageContainer>
-  );
+// O formulário abre no painel ao lado da lista desde 28/10/2026 (lote 5,
+// no molde da escolha 2B dos Ajustes de 15/10). Este endereço fica para os
+// links antigos.
+export default async function EditarDepartmentFormPage({ params }: { params: Promise<{ id: string; deptId: string }> }) {
+  const { id, deptId } = await params;
+  redirect(`/empresas/${encodeURIComponent(id)}/departamentos?editar=${encodeURIComponent(deptId)}`);
 }

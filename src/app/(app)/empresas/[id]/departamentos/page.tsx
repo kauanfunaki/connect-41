@@ -10,14 +10,20 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { excluirDepartment } from "./actions";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { DepartmentForm } from "@/components/empresas/DepartmentForm";
+import { excluirDepartment, criarDepartment, atualizarDepartment } from "./actions";
 
 export default async function DepartamentosPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ novo?: string; editar?: string }>;
 }) {
   const { id: companyId } = await params;
+  // Criar e editar no painel ao lado (lote 5, 28/10/2026) — ver `PainelDeCadastro`.
+  const { novo, editar } = await searchParams;
   const ctx = await getAuthContext();
   const canManage = canWrite(ctx.role);
 
@@ -33,7 +39,9 @@ export default async function DepartamentosPage({
     orderBy: { name: "asc" },
   });
 
-  const novoHref = `/empresas/${companyId}/departamentos/novo`;
+  const listaHref = `/empresas/${companyId}/departamentos`;
+  const novoHref = `${listaHref}?novo=1`;
+  const emEdicao = canManage && editar ? departments.find((x) => x.id === editar) : undefined;
 
   return (
     <PageContainer>
@@ -80,11 +88,21 @@ export default async function DepartamentosPage({
             <div key={d.id} className="flex items-center justify-between gap-4 px-4 py-3">
               <p className="text-fs-3 text-fg font-medium">{d.name}</p>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/departamentos/${d.id}/editar`} excluir={podeExcluir(ctx) ? excluirDepartment.bind(null, d.id, companyId) : undefined} nome={d.name} />
+                <AcoesDoCadastro editarHref={`${listaHref}?editar=${d.id}`} excluir={podeExcluir(ctx) ? excluirDepartment.bind(null, d.id, companyId) : undefined} nome={d.name} />
               )}
             </div>
           ))}
         </div>
+      )}
+      {canManage && novo === "1" && (
+        <PainelDeCadastro titulo="Novo departamento" voltarPara={listaHref}>
+          <DepartmentForm action={criarDepartment} companyId={companyId} cancelHref={listaHref} />
+        </PainelDeCadastro>
+      )}
+      {emEdicao && (
+        <PainelDeCadastro titulo="Editar departamento" voltarPara={listaHref}>
+          <DepartmentForm key={emEdicao.id} action={atualizarDepartment} companyId={companyId} cancelHref={listaHref} defaultValues={{ id: emEdicao.id, name: emEdicao.name }} />
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );

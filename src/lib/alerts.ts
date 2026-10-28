@@ -42,6 +42,8 @@ import { processarConferencias } from "@/lib/autorizacoes/serpro";
 import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
 import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
 import { rotinaDasCertidoes } from "@/lib/certidoes/servidor";
+import { chaveDoProtocoloParado, mensagemDoProtocoloParado, protocoloParado } from "@/lib/societario/protocoloParado";
+import { diasParaCobrarOProtocolo } from "@/lib/societario/protocoloParadoServidor";
 import { configuracaoDoSerpro, ehSoftwareHouse } from "@/lib/serpro/cliente";
 import { validadeDoTermo } from "@/lib/serpro/termo";
 import { CODIGO_DA_INTEGRACAO } from "@/lib/serpro/regras";
@@ -950,6 +952,61 @@ async function checkObrigacoesEmRiscoDeMulta(tenantId: string, today: Date): Pro
   return sent;
 }
 
+/**
+ * O protocolo parado no órgão (lote 5, 28/10/2026): pendente há N dias, sem
+ * resposta, avisa o responsável do processo para cobrar o órgão — e de novo a
+ * cada N dias. Sem responsável, os coordenadores do setor. As regras estão em
+ * src/lib/societario/protocoloParado.ts.
+ */
+async function checkProtocolosParados(tenantId: string, today: Date): Promise<number> {
+  if (!(await isModuleEnabled(tenantId, "societario_processos"))) return 0;
+  const dias = await diasParaCobrarOProtocolo(tenantId);
+  if (dias <= 0) return 0;
+  const agora = new Date();
+  const protocolos = await getPrisma().processProtocol.findMany({
+    where: {
+      tenantId,
+      outcome: "PENDENTE",
+      submittedAt: { lte: new Date(agora.getTime() - dias * 24 * 60 * 60 * 1000) },
+      process: { status: { in: ["EM_ANDAMENTO", "AGUARDANDO_ORGAO"] }, company: SO_EMPRESA_DE_VERDADE },
+    },
+    select: {
+      id: true,
+      submittedAt: true,
+      organ: { select: { name: true, acronym: true } },
+      process: { select: { id: true, ownerUserId: true, title: true, type: { select: { name: true } }, company: { select: { name: true, displayName: true } } } },
+    },
+    take: 500,
+  });
+  if (protocolos.length === 0) return 0;
+
+  const setor = (await setorDoModulo(tenantId, "societario_processos")) ?? "societario";
+  let coordenadores: string[] | null = null;
+  let sent = 0;
+  for (const p of protocolos) {
+    const parado = protocoloParado(p.submittedAt, agora, dias);
+    if (!parado) continue;
+    if (!(await reservarPorChave(tenantId, chaveDoProtocoloParado(p.id, parado.volta), today))) continue;
+    const input = {
+      tenantId,
+      type: "PROCESS_PROTOCOLO_PARADO",
+      message: mensagemDoProtocoloParado({
+        orgao: p.organ.acronym || p.organ.name,
+        empresa: nomeExibicao(p.process.company),
+        processo: p.process.title ? `${p.process.type.name} (${p.process.title})` : p.process.type.name,
+        diasParado: parado.diasParado,
+      }),
+      entityId: p.process.id,
+    };
+    let destino = p.process.ownerUserId ? [p.process.ownerUserId] : null;
+    if (!destino) destino = coordenadores ??= await coordenadoresDoSetor(tenantId, setor);
+    if (destino.length > 0) for (const userId of destino) await notifyUser(userId, input);
+    else await notifySector(setor, input);
+    sent++;
+  }
+  return sent;
+}
+
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
     ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
@@ -981,6 +1038,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["certidões", () => rotinaDasCertidoes(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
     ["risco de multa", () => checkObrigacoesEmRiscoDeMulta(tenantId, today)],
+    ["protocolo parado", () => checkProtocolosParados(tenantId, today)],
   ];
 
   let sent = 0;
