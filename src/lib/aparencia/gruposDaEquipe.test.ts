@@ -24,7 +24,8 @@ describe("grupoDaTelaDaEquipe", () => {
   });
 
   it("as áreas novas de 28/10: Pessoas, Recrutamento e Escritório", () => {
-    expect(grupoDaTelaDaEquipe("/colaboradores/abc")).toBe("pessoas");
+    expect(grupoDaTelaDaEquipe("/admissoes")).toBe("pessoas");
+    expect(grupoDaTelaDaEquipe("/desligamentos")).toBe("pessoas");
     expect(grupoDaTelaDaEquipe("/ferias")).toBe("pessoas");
     expect(grupoDaTelaDaEquipe("/indicadores-rh")).toBe("pessoas");
     expect(grupoDaTelaDaEquipe("/vagas")).toBe("recrutamento");

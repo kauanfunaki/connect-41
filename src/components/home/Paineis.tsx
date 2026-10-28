@@ -367,7 +367,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
   // vem no rótulo de cima, e "DP · Departamento Pessoal" só o repetia (07/10).
   const titulo = "Férias e movimentações";
   const dados = await dadosDoDP(ctx.tenantId);
-  if (!dados) return <PainelIndisponivel setor={setor} titulo={titulo} href="/colaboradores" />;
+  if (!dados) return <PainelIndisponivel setor={setor} titulo={titulo} href="/admissoes" />;
   const { ferias: f, admissoes, rescisoes, exames, afastados } = dados;
   const t = await tendenciasDaHome(ctx, { ferias_vencidas: f.vencidas, ferias_a_vencer: f.aVencer });
 
@@ -383,7 +383,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
       setor={setor.rotulo}
       cor={setor.cor}
       titulo={titulo}
-      href="/colaboradores"
+      href="/admissoes"
       destaque={{
         valor: numero(f.vencidas),
         legenda: f.vencidas === 1 ? "férias vencida" : "férias vencidas",

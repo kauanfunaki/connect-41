@@ -762,7 +762,8 @@ export const MODULE_ROUTES: Record<string, string> = {
   recrutamento_testes:     "/testes",
   recrutamento_whatsapp:   "/whatsapp",
   recrutamento_colaboradores_clientes: "/colaboradores-clientes",
-  dp_colaboradores:      "/colaboradores",
+  // O hub saiu no lote 9 (28/10/2026): o item abre as Admissões.
+  dp_colaboradores:      "/admissoes",
   dp_afastamentos:       "/afastamentos",
   dp_horas_extras:       "/horas-extras",
   dp_escalas:            "/escalas",
