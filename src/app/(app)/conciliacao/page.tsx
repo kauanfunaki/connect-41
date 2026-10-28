@@ -24,7 +24,7 @@ import { TransacoesDaConta, type LinhaDaTransacao } from "@/components/financeir
 import { dataCurta } from "@/components/financeiro/conciliacao/data";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
-import { dataValida } from "@/lib/financeiro/periodo";
+import { competenciaDoInstante, dataValida } from "@/lib/financeiro/periodo";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import type { SituacaoDoSaldo } from "@/lib/financeiro/conciliacao/saldo";
 import { saldosDasContas } from "@/lib/financeiro/conciliacao/saldoDasContas";
@@ -140,6 +140,7 @@ export default async function ConciliacaoPage({
       openingBalance: true,
       openingBalanceDate: true,
       active: true,
+      omieAccountId: true,
       omieAccountLabel: true,
       _count: { select: { transactions: true } },
     },
@@ -357,7 +358,7 @@ async function ExtratoDaConta({
 }: {
   tenantId: string;
   companyId: string;
-  conta: { id: string; nickname: string; active: boolean };
+  conta: { id: string; nickname: string; active: boolean; omieAccountId: string | null; omieAccountLabel: string | null };
   outrasContas: { id: string; nome: string }[];
   contasDaRegra: { id: string; nome: string }[];
   podeAgir: boolean;
@@ -591,7 +592,10 @@ async function ExtratoDaConta({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-5">
         {podeAgir && conta.active ? (
-          <ImportarOfx bankAccountId={conta.id} />
+          <ImportarOfx
+            bankAccountId={conta.id}
+            omie={conta.omieAccountId ? { rotulo: conta.omieAccountLabel, mesInicial: competenciaDoInstante(new Date()) } : null}
+          />
         ) : (
           <Card className="p-4 text-fs-2 text-fg-muted">
             {conta.active ? "Sem permissão para importar extrato." : "Conta inativa: reative para importar extrato."}

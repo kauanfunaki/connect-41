@@ -27,22 +27,38 @@ export type SavedClientDocumentFile = {
 };
 
 export async function saveClientDocumentFile(tenantId: string, file: File): Promise<SavedClientDocumentFile> {
-  const ext = ALLOWED_TYPES[file.type];
+  return saveClientDocumentBytes(tenantId, { nome: file.name, mime: file.type, bytes: Buffer.from(await file.arrayBuffer()) });
+}
+
+/**
+ * O mesmo, a partir dos bytes — o anexo que vem de um arquivo que já está nos
+ * Arquivos da empresa (28/10/2026). O envio guarda uma cópia: apagar o arquivo
+ * de lá depois não tira o anexo de quem já recebeu.
+ */
+export async function saveClientDocumentBytes(
+  tenantId: string,
+  a: { nome: string; mime: string; bytes: Buffer }
+): Promise<SavedClientDocumentFile> {
+  const ext = ALLOWED_TYPES[a.mime];
   if (!ext) throw new Error("Formato não suportado. Use JPG, PNG, WEBP ou PDF.");
-  if (file.size > MAX_SIZE) throw new Error("Arquivo maior que 10MB.");
+  if (a.bytes.length > MAX_SIZE) throw new Error("Arquivo maior que 10MB.");
 
   const storedFileName = `${randomUUID()}.${ext}`;
   const dir = path.join(STORAGE_DIR, tenantId);
   await mkdir(dir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(dir, storedFileName), buffer);
+  await writeFile(path.join(dir, storedFileName), a.bytes);
 
   return {
-    fileName: file.name,
+    fileName: a.nome,
     fileUrl: `${tenantId}/${storedFileName}`,
-    mimeType: file.type,
-    fileSize: file.size,
+    mimeType: a.mime,
+    fileSize: a.bytes.length,
   };
+}
+
+/** O que o envio aceita como anexo: os tipos e o tamanho. */
+export function cabeNoEnvio(mime: string, tamanho: number): boolean {
+  return !!ALLOWED_TYPES[mime] && tamanho <= MAX_SIZE;
 }
 
 // Allowlist restrita ao que o editor rich text (Tiptap StarterKit) realmente

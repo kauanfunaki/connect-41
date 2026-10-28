@@ -21,7 +21,9 @@ import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { decimalDeCentavos, digitosDoDocumento, validarCamposDoLancamento } from "@/lib/financeiro/manual";
 import { instanteDaData, competenciaDoInstante } from "@/lib/financeiro/periodo";
-import { lerOfx } from "@/lib/financeiro/conciliacao/ofx";
+import { lerOfx, type ExtratoOfx } from "@/lib/financeiro/conciliacao/ofx";
+import { avisoDoQueFicouFora, PREFIXO_DO_EXTRATO_DO_OMIE } from "@/lib/integracoes/omie/extrato";
+import { extratoDoOmie } from "@/lib/integracoes/omie/extratoServidor";
 import { contaConfere, codigoDoBanco, validarConta } from "@/lib/financeiro/conciliacao/conta";
 import { tipoCompativel, validarSelecao } from "@/lib/financeiro/conciliacao/casamento";
 import { motivoDoBloqueioDeBaixa } from "@/lib/financeiro/aprovacao/regras";
@@ -266,6 +268,28 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
     // correspondente, o ISPB). O número da conta, que já bateu, é o que decide.
     avisos.push(`O arquivo informa o banco ${bancoDoArquivo}, e a conta está cadastrada no ${conta.bankCode}.`);
   }
+  // Conta ligada ao Omie com o espelho do extrato no mesmo período (lote 4,
+  // 28/10/2026): as duas viram linhas, e o mesmo movimento apareceria em dobro.
+  if (ex.inicioKey && ex.fimKey && (await temEspelhoDoOmie(c.prisma, conta.id, ex.inicioKey, ex.fimKey))) {
+    avisos.push("Esta conta já tem o extrato espelhado do Omie neste período: o mesmo movimento pode aparecer duas vezes na fila.");
+  }
+  return gravarExtrato(c, conta, ex, arquivo.name || "extrato.ofx", avisos);
+}
+
+type ContextoDaAcao = Extract<Awaited<ReturnType<typeof contexto>>, { ok: true }>;
+
+/**
+ * Grava as linhas de um extrato na conta — o do OFX e, desde o lote 4
+ * (28/10/2026), o espelho do Omie: as mesmas regras de repetição (pelo FITID),
+ * a conciliação pelo Omie e as regras de conciliação.
+ */
+async function gravarExtrato(
+  c: ContextoDaAcao,
+  conta: { id: string; companyId: string },
+  ex: ExtratoOfx,
+  nomeDoArquivo: string,
+  avisos: string[]
+): Promise<ResultadoDaImportacao> {
   const semFitId = ex.transacoes.filter((t) => t.fitIdGerado).length;
   if (semFitId > 0) {
     avisos.push(
@@ -296,7 +320,7 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
           data: {
             tenantId: c.tenantId,
             bankAccountId: conta.id,
-            fileName: (arquivo.name || "extrato.ofx").slice(0, 255),
+            fileName: nomeDoArquivo.slice(0, 255),
             periodStart: ex.inicioKey ? instanteDaData(ex.inicioKey) : null,
             periodEnd: ex.fimKey ? instanteDaData(ex.fimKey) : null,
             ledgerBalance: ex.saldo ? decimalDeCentavos(ex.saldo.centavos) : null,
@@ -366,7 +390,7 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
     metadata: {
       bankAccountId: conta.id,
       companyId: conta.companyId,
-      arquivo: arquivo.name,
+      arquivo: nomeDoArquivo,
       lidas: resumo.lidas,
       novas: resumo.novas,
       repetidas: resumo.repetidas,
@@ -377,6 +401,64 @@ export async function importarOfx(formData: FormData): Promise<ResultadoDaImport
 
   revalidar();
   return { ok: true, resumo };
+}
+
+/** A conta já tem importação do espelho do Omie que cruza o período? */
+async function temEspelhoDoOmie(prisma: Prisma.TransactionClient, bankAccountId: string, inicioKey: string, fimKey: string): Promise<boolean> {
+  const n = await prisma.bankStatementImport.count({
+    where: {
+      bankAccountId,
+      fileName: { startsWith: PREFIXO_DO_EXTRATO_DO_OMIE },
+      periodStart: { lte: instanteDaData(fimKey) },
+      periodEnd: { gte: instanteDaData(inicioKey) },
+    },
+  });
+  return n > 0;
+}
+
+/**
+ * "Trazer do Omie" (lote 4, 28/10/2026): o extrato do mês de uma conta ligada
+ * a uma conta corrente do Omie, para quem concilia no Omie e não tem OFX. Só o
+ * que foi conciliado lá vira linha (ver `integracoes/omie/extrato.ts`), e a
+ * conta que já tem OFX no mês é recusada — o espelho duplicaria o banco.
+ */
+export async function importarExtratoDoOmie(bankAccountId: string, mes: string): Promise<ResultadoDaImportacao> {
+  const c = await contexto();
+  if (!c.ok) return { error: c.erro };
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) return { error: "Escolha o mês do extrato." };
+
+  const conta = await c.prisma.bankAccount.findFirst({
+    where: { id: bankAccountId, tenantId: c.tenantId },
+    select: { id: true, companyId: true, active: true, type: true, omieAccountId: true, company: { select: { omieCutoverAt: true } } },
+  });
+  if (!conta) return { error: "Conta bancária não encontrada." };
+  const foraDoFoco = await recusaDoFoco(c.ctx, [conta.companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
+  if (!conta.active) return { error: "Conta inativa. Reative antes de importar." };
+  if (!temExtrato(conta.type)) return { error: `${rotuloDoTipo(conta.type)} não tem extrato — o saldo dela sai das baixas.` };
+  if (!conta.omieAccountId) return { error: "Esta conta não está ligada a uma conta corrente do Omie. A ligação sai da leitura das contas do Omie." };
+  if (conta.company.omieCutoverAt) return { error: "Esta empresa já virou para o Connect: a conciliação é feita aqui, e o Omie deixou de ser a fonte." };
+
+  const leitura = await extratoDoOmie(c.tenantId, conta.companyId, conta.omieAccountId, mes);
+  if (!leitura.ok) return { error: leitura.erro };
+  const ex = leitura.leitura.extrato;
+
+  // OFX do banco no mesmo mês: o espelho repetiria as mesmas saídas e entradas.
+  const comOfx = await c.prisma.bankStatementImport.count({
+    where: {
+      bankAccountId: conta.id,
+      NOT: { fileName: { startsWith: PREFIXO_DO_EXTRATO_DO_OMIE } },
+      periodStart: { lte: instanteDaData(ex.fimKey!) },
+      periodEnd: { gte: instanteDaData(ex.inicioKey!) },
+    },
+  });
+  if (comOfx > 0) return { error: "Esta conta já tem extrato do banco (OFX) neste mês. O espelho do Omie repetiria as mesmas linhas — siga pelo OFX." };
+  if (ex.transacoes.length === 0) {
+    return { error: avisoDoQueFicouFora(leitura.leitura.fora) ?? "O Omie não tem lançamento conciliado nesta conta neste mês." };
+  }
+
+  const avisos = [avisoDoQueFicouFora(leitura.leitura.fora)].filter((a): a is string => !!a);
+  return gravarExtrato(c, conta, ex, `${PREFIXO_DO_EXTRATO_DO_OMIE} ${mes}`, avisos);
 }
 
 // ─── Casamento ──────────────────────────────────────────────────────────────

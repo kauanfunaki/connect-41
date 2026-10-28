@@ -37,7 +37,7 @@ import {
   type Evento,
   type LinhaDaMatriz,
 } from "./eventos";
-import { lerDetalhe, lerIndicador, lerLista, limparCorpo, pedidoDaLista, pedidoDoDetalhe, pedidoDoIndicador, type MensagemDaLista } from "./caixaPostal";
+import { assuntoDoSocietario, lerDetalhe, lerIndicador, lerLista, limparCorpo, pedidoDaLista, pedidoDoDetalhe, pedidoDoIndicador, type MensagemDaLista } from "./caixaPostal";
 import { ultimoSitfisDaEmpresa, type OpcoesDoSerpro, type SitfisNaTela } from "./situacaoFiscal";
 import { chaveDaAutorizacao } from "@/lib/autorizacoes/regras";
 
@@ -49,6 +49,8 @@ const VALIDADE_DO_RESULTADO_MS = 20 * 60_000;
 const TRAVA_MS = 5 * 60_000;
 /** Quanto o ciclo espera o resultado dos eventos que acabou de pedir. */
 const ESPERA_NO_CICLO_MS = 15_000;
+/** O setor que recebe, além do das Autorizações, as mensagens de cadastro. */
+const SETOR_DO_SOCIETARIO = "societario";
 /** Clientes com mensagem nova tratados por ciclo (cada um, até duas chamadas). */
 const CAIXA_POR_CICLO = 40;
 
@@ -284,12 +286,18 @@ async function tratarCaixaPostal(tenantId: string, o: OpcoesDoSerpro): Promise<n
     feitos++;
     if (!novas.length) continue;
     const rep = reps.get(e.chave);
-    await notifySector(setor, {
+    const aviso = {
       tenantId,
       type: "SERPRO_CAIXA_POSTAL",
       message: textoDoAvisoDaCaixaPostal(rep?.nome ?? "um cliente", novas),
       ...(rep ? { entityType: "COMPANY" as const, entityId: rep.id } : {}),
-    });
+    };
+    await notifySector(setor, aviso);
+    // Cadastro, baixa, sócios, MEI: o Societário também fica sabendo (28/10/2026).
+    const doSocietario = novas.filter((m) => assuntoDoSocietario(m.assunto));
+    if (doSocietario.length && setor !== SETOR_DO_SOCIETARIO) {
+      await notifySector(SETOR_DO_SOCIETARIO, { ...aviso, message: textoDoAvisoDaCaixaPostal(rep?.nome ?? "um cliente", doSocietario) });
+    }
   }
   return feitos;
 }

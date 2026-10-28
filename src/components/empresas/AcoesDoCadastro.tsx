@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { abreNoPainel } from "@/lib/painelDeCadastro";
 
 type Props = {
   editarHref: string;
@@ -34,7 +35,7 @@ export function AcoesDoCadastro({ editarHref, nome, excluir, itensExtras }: Prop
 
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <Button variant="secondary" size="xs" href={editarHref}>
+      <Button variant="secondary" size="xs" href={editarHref} scroll={!abreNoPainel(editarHref)}>
         <Pencil size={11} /> Editar
       </Button>
       {temMenu && (

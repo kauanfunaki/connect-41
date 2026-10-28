@@ -182,6 +182,11 @@ export async function salvarDadosRescisao(
         apprentice,
       },
     });
+    // Desligamento já finalizado: o término informado agora passa a ser a
+    // data de desligamento da pessoa (ver `dataDoDesligamento`).
+    if (termination.status === "FINALIZADO" && terminationDate) {
+      await prisma.person.update({ where: { id: personId }, data: { dismissalDate: terminationDate } });
+    }
   } catch (err) {
     console.error("[salvarDadosRescisao]", err);
     return { error: "Erro ao salvar os dados da rescisão." };

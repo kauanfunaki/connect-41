@@ -19,6 +19,8 @@ const m = vi.hoisted(() => ({
   }),
   publicar: vi.fn(),
   entregar: vi.fn(),
+  anexoDosArquivos: vi.fn(),
+  ligarGuia: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => m.db }));
@@ -36,6 +38,8 @@ vi.mock("@/lib/clientDocuments", () => ({ sanitizeDocumentHtml: (h: string) => h
 vi.mock("@/lib/email/sendMail", () => ({ sendClientDocumentEmail: vi.fn() }));
 vi.mock("@/generated/prisma/client", () => ({ Prisma: { DbNull: "DbNull" } }));
 vi.mock("@/lib/envios/agendador", () => ({ publicarEnvioAgendado: m.publicar, entregarPorEmail: m.entregar }));
+vi.mock("@/lib/guias/servidor", () => ({ ligarGuiaAoEnvio: m.ligarGuia }));
+vi.mock("@/lib/envios/anexoDosArquivos", () => ({ anexoDosArquivos: m.anexoDosArquivos, arquivosParaOEnvio: vi.fn() }));
 
 const { criarDocumento, cancelarAgendamento, enviarAgendadoAgora, enviarDocumento, publicarDocumento } = await import("./actions");
 
@@ -152,5 +156,23 @@ describe("enviarDocumento — o lembrete escolhido no envio", () => {
     m.db.clientDocument.findFirst.mockResolvedValue({ ...DOC, reminderSentAt: new Date() });
     await enviarDocumento(null, form({ documentId: "d1", companyId: "c1", useCompanyEmail: "on", reminderDays: "2" }));
     expect(m.db.clientDocument.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("criarDocumento — anexo dos Arquivos (28/10)", () => {
+  it("copia o arquivo escolhido e grava como anexo do envio", async () => {
+    m.anexoDosArquivos.mockResolvedValue({ ok: true, anexo: { fileName: "DAS 09-2026.pdf", fileUrl: "t1/x.pdf", mimeType: "application/pdf", fileSize: 1234 } });
+    await expect(criarDocumento(null, form({ ...BASE, arquivoId: "arq-1" }))).rejects.toThrow("NEXT_REDIRECT");
+    expect(m.anexoDosArquivos).toHaveBeenCalledWith(m.ctx, "c1", "arq-1");
+    expect(m.db.clientDocument.create.mock.calls[0]![0].data).toMatchObject({ fileName: "DAS 09-2026.pdf", fileUrl: "t1/x.pdf" });
+    // A guia que estava nesse arquivo passa a saber do envio.
+    expect(m.ligarGuia).toHaveBeenCalledWith("t1", "arq-1", "d1");
+  });
+
+  it("arquivo que não é da empresa (ou sumiu): erro, nada criado", async () => {
+    m.anexoDosArquivos.mockResolvedValue({ ok: false, erro: "O arquivo escolhido não está mais nos Arquivos desta empresa. Escolha de novo." });
+    expect(await criarDocumento(null, form({ ...BASE, arquivoId: "arq-de-outra" }))).toEqual({ error: "O arquivo escolhido não está mais nos Arquivos desta empresa. Escolha de novo." });
+    expect(m.db.clientDocument.create).not.toHaveBeenCalled();
+    expect(m.ligarGuia).not.toHaveBeenCalled();
   });
 });

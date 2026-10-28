@@ -1238,6 +1238,7 @@ model Tenant {
   agendaConfig              TenantAgendaConfig?
   aparencia                 TenantAparencia?
   enviosConfig              TenantEnviosConfig?
+  societarioConfig          TenantSocietarioConfig?
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -1951,6 +1952,9 @@ model Company {
   costCenters              CostCenter[]
   financeProjects          FinanceProject[]
   dominioAccountMaps       DominioAccountMap[]
+  dominioExportacoes       DominioExportacao[]
+  guias                    Guia[]
+  certidoes                Certidao[]
   bankReconciliationRules  BankReconciliationRule[]
   financeRecurrences       FinanceRecurrence[]
   financeEntryPayments     FinanceEntryPayment[]
@@ -2841,6 +2845,7 @@ model ClientDocument {
   company    Company                   @relation(fields: [companyId], references: [id])
   createdBy  User                      @relation(fields: [createdById], references: [id])
   recipients ClientDocumentRecipient[]
+  guias      Guia[]
 
   @@index([tenantId, companyId])
   @@index([status, scheduledFor])
@@ -3373,6 +3378,10 @@ model FiscalDocument {
   // quebra a home do portal.
   @@index([tenantId, companyId, competence], map: "fiscal_documents_tenantId_companyId_competence_idx")
   @@index([tenantId, companyId, destination])
+  // A listagem COM filtro de empresa, na ordem da tela (data de emissão):
+  // até 28/10/2026 só havia (empresa, competência), e a ordenação por data
+  // dentro da empresa era feita fora do índice.
+  @@index([tenantId, companyId, issuedAt])
   // Os três abaixo servem a listagem SEM filtro de empresa, que é como a tela
   // abre. Medido em 09/09 com 244.558 linhas em produção: sem eles a página
   // fazia quatro varreduras completas em paralelo e levava ~35s — listagem
@@ -4952,6 +4961,32 @@ model DominioAccountMap {
   @@map("dominio_account_maps")
 }
 
+// Cada planilha da Domínio baixada (lote 3, 28/10/2026): o mês inteiro ou a
+// correção. `estado` é o que ficou na Domínio depois dela — as linhas de cada
+// baixa, `{ [paymentId]: LinhaDaDominio[] }` —, e é contra o estado da última
+// que a próxima correção compara (src/lib/financeiro/dominio/correcao.ts).
+model DominioExportacao {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// "AAAA-MM".
+  competencia String   @db.VarChar(7)
+  /// "COMPLETA" ou "CORRECAO".
+  tipo        String   @db.VarChar(10)
+  /// "xlsx" ou "txt".
+  formato     String   @db.VarChar(4)
+  /// Quantas linhas o arquivo levou.
+  linhas      Int
+  estado      Json
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, competencia, createdAt])
+  @@map("dominio_exportacoes")
+}
+
 // ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────
 //
 // Como as do Nibo: o que se repete no extrato (tarifa, rendimento, aluguel,
@@ -6504,6 +6539,20 @@ model TenantEnviosConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_envios_configs")
+}
+
+/// O que o Societário do escritório configura (lote 5, 28/10/2026). Sem linha,
+/// valem os padrões de src/lib/societario/protocoloParado.ts.
+model TenantSocietarioConfig {
+  tenantId                String   @id
+  /// Depois de quantos dias sem resposta o protocolo pendente avisa o
+  /// responsável para cobrar o órgão. 0 = não avisa; null = o padrão.
+  cobrarProtocoloAposDias Int?
+  updatedAt               DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_societario_configs")
 }
 
 /// Horário próprio de uma pessoa. Sem linha, ela usa o do escritório. Por
@@ -8283,6 +8332,90 @@ model SerproCall {
   @@map("serpro_calls")
 }
 
+// A guia como registro (Guias pelo Connect, 28/10/2026): cada guia emitida
+// pelo Connect, com o que a tela precisa para acompanhar — valor, vencimento,
+// o PDF nos Arquivos e o envio ao cliente. A situação (emitida, enviada,
+// aberta, paga, vencida) não é coluna: sai do envio, de `pagaEm` e da data
+// (src/lib/guias/situacao.ts), e não fica desatualizada.
+model Guia {
+  id              String   @id @default(uuid())
+  tenantId        String
+  companyId       String
+  /// "DAS", "DAS_MEI", "DCTFWEB", "DARF", "PARCELA" (os da emissão pelo Serpro).
+  tipo            String   @db.VarChar(20)
+  /// "DAS do Simples Nacional · 09/2026" — o rótulo da lista.
+  descricao       String   @db.VarChar(160)
+  /// "AAAA-MM", quando a guia é de uma competência (a parcela não tem).
+  competencia     String?  @db.VarChar(7)
+  /// "AAAA-MM-DD". A DCTFWeb e a parcela não devolvem em campo: fica nulo.
+  vencimento      String?  @db.VarChar(10)
+  /// "AAAA-MM-DD": até quando o banco aceita a guia com este cálculo.
+  validoAte       String?  @db.VarChar(10)
+  valor           Decimal? @db.Decimal(14, 2)
+  numeroDocumento String?  @db.VarChar(60)
+  linhaDigitavel  String?  @db.VarChar(60)
+  /// "SERPRO" (emitida pela ficha da empresa).
+  origem          String   @db.VarChar(10)
+  /// O PDF nos Arquivos da empresa (pasta Guias).
+  driveFileId     String?
+  /// O envio ao cliente que levou a guia, quando houve.
+  clientDocumentId String?
+  pagaEm          DateTime?
+  pagaPorId       String?
+  emitidaPorId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driveFile      DriveFile?      @relation(fields: [driveFileId], references: [id], onDelete: SetNull)
+  clientDocument ClientDocument? @relation(fields: [clientDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, companyId, competencia])
+  @@index([tenantId, vencimento])
+  @@index([driveFileId])
+  @@map("guias")
+}
+
+// As certidões da carteira (Certidões pelo Connect, 28/10/2026): cada consulta
+// à InfoSimples vira uma linha — a rotina do trimestre e o "Emitir agora". A
+// certidão vigente de uma empresa é a linha mais recente do tipo que saiu.
+model Certidao {
+  id          String    @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// "FEDERAL", "FGTS", "TRABALHISTA", "ESTADUAL_PR", "CURITIBA".
+  tipo        String    @db.VarChar(20)
+  /// "NEGATIVA", "POSITIVA_COM_EFEITO", "POSITIVA" ou "NAO_SAIU".
+  situacao    String    @db.VarChar(20)
+  codigo      String?   @db.VarChar(80)
+  /// "AAAA-MM-DD".
+  emitidaEm   String?   @db.VarChar(10)
+  /// "AAAA-MM-DD".
+  validaAte   String?   @db.VarChar(10)
+  /// O que o órgão disse, ou por que não saiu.
+  mensagem    String?   @db.VarChar(500)
+  /// "AAAA-T4" quando veio da rotina; nulo no "Emitir agora".
+  trimestre   String?   @db.VarChar(7)
+  /// O comprovante nos Arquivos: Certidões quando regular, Societário quando positiva.
+  driveFileId String?
+  /// Quem pediu; nulo quando foi a rotina.
+  pedidaPorId String?
+  /// A positiva que alguém do setor já viu.
+  vistaEm     DateTime?
+  vistaPorId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driveFile DriveFile? @relation(fields: [driveFileId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, companyId, tipo, createdAt])
+  @@index([tenantId, trimestre])
+  @@index([tenantId, createdAt])
+  @@index([driveFileId])
+  @@map("certidoes")
+}
+
 /// Eventos de Atualização do Serpro (Fase 1 do Integra Contador, 20/10/2026):
 /// o último evento de cada tipo por contribuinte. Uma vez por dia o agendador
 /// pede a matriz em lote (até 1.000 por pedido), que é de graça (Monitorar).
@@ -8670,6 +8803,8 @@ model DriveFile {
   uploadedByUser   User?             @relation("DriveFileEnviadoPor", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   uploadedByPortal PortalUser?       @relation("DriveFileEnviadoPeloCliente", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
   accesses         DriveFileAccess[]
+  guias            Guia[]
+  certidoes        Certidao[]
 
   @@index([tenantId, folderId])
   @@index([tenantId, deletedAt])

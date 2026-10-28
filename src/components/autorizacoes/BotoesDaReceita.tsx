@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileSearch, MailOpen, Receipt } from "lucide-react";
+import { BadgeCheck, FileSearch, MailOpen, Receipt } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { CampoData } from "@/components/ui/CampoData";
@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
-import { abrirMensagemAction, emitirGuiaAction, pedirSituacaoFiscalAction, verMensagemAction } from "@/app/(app)/autorizacoes/receita-actions";
+import { abrirMensagemAction, emitirCertificadoDoMeiAction, emitirGuiaAction, pedirSituacaoFiscalAction, verMensagemAction } from "@/app/(app)/autorizacoes/receita-actions";
+import { rotaDeEnviarOArquivo } from "@/lib/envios/regras";
 import { ROTULO_DA_GUIA, TIPOS_DE_GUIA, type TipoDeGuia } from "@/lib/serpro/guias";
 import { MODALIDADES_DE_PARCELAMENTO } from "@/lib/serpro/servicos";
 import type { MensagemAberta } from "@/lib/serpro/acompanhamento";
@@ -41,6 +42,31 @@ export function PedirSituacaoFiscal({ companyId, desabilitado }: { companyId: st
       }
     >
       <FileSearch size={14} /> Pedir situação fiscal
+    </Button>
+  );
+}
+
+/** Emite o certificado de MEI: uma emissão, cobrada. O PDF vai para a pasta Societário. */
+export function EmitirCertificadoDoMei({ companyId, desabilitado }: { companyId: string; desabilitado: boolean }) {
+  const [pendente, startTransition] = useTransition();
+  const toast = useToast();
+  const router = useRouter();
+  return (
+    <Button
+      size="sm"
+      variant="secondary"
+      loading={pendente}
+      disabled={desabilitado}
+      onClick={() =>
+        startTransition(async () => {
+          const r = await emitirCertificadoDoMeiAction(companyId);
+          if (r.ok) toast.success(r.texto);
+          else toast.error(r.erro);
+          router.refresh();
+        })
+      }
+    >
+      <BadgeCheck size={14} /> Emitir certificado de MEI
     </Button>
   );
 }
@@ -158,6 +184,11 @@ export function EmitirGuia({ companyId, desabilitado, sugestao }: { companyId: s
                 {resultado.texto}{" "}
                 <a href={`/api/arquivos/${resultado.arquivoId}?ver=1`} target="_blank" rel="noreferrer" className="text-brand underline">
                   Abrir o PDF
+                </a>
+                {" · "}
+                {/* Lote 2 (28/10/2026): o envio já chega com a guia como anexo. */}
+                <a href={rotaDeEnviarOArquivo(companyId, resultado.arquivoId)} className="text-brand underline">
+                  Enviar ao cliente
                 </a>
               </Aviso>
             ) : (

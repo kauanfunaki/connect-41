@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   } else {
     const template = await prisma.assessmentTemplate.findUnique({
       where: { id: link.templateId! },
-      select: { name: true, questions: { select: { id: true, options: true, correctIndex: true } } },
+      select: { name: true, questions: { select: { id: true, text: true, options: true, correctIndex: true } } },
     });
     if (!template) {
       return NextResponse.json({ error: "O modelo deste teste não está mais disponível." }, { status: 500 });
