@@ -1902,6 +1902,7 @@ model Company {
   financeProjects          FinanceProject[]
   dominioAccountMaps       DominioAccountMap[]
   dominioExportacoes       DominioExportacao[]
+  guias                    Guia[]
   bankReconciliationRules  BankReconciliationRule[]
   financeRecurrences       FinanceRecurrence[]
   financeEntryPayments     FinanceEntryPayment[]
@@ -2792,6 +2793,7 @@ model ClientDocument {
   company    Company                   @relation(fields: [companyId], references: [id])
   createdBy  User                      @relation(fields: [createdById], references: [id])
   recipients ClientDocumentRecipient[]
+  guias      Guia[]
 
   @@index([tenantId, companyId])
   @@index([status, scheduledFor])
@@ -8264,6 +8266,50 @@ model SerproCall {
   @@map("serpro_calls")
 }
 
+// A guia como registro (Guias pelo Connect, 28/10/2026): cada guia emitida
+// pelo Connect, com o que a tela precisa para acompanhar — valor, vencimento,
+// o PDF nos Arquivos e o envio ao cliente. A situação (emitida, enviada,
+// aberta, paga, vencida) não é coluna: sai do envio, de `pagaEm` e da data
+// (src/lib/guias/situacao.ts), e não fica desatualizada.
+model Guia {
+  id              String   @id @default(uuid())
+  tenantId        String
+  companyId       String
+  /// "DAS", "DAS_MEI", "DCTFWEB", "DARF", "PARCELA" (os da emissão pelo Serpro).
+  tipo            String   @db.VarChar(20)
+  /// "DAS do Simples Nacional · 09/2026" — o rótulo da lista.
+  descricao       String   @db.VarChar(160)
+  /// "AAAA-MM", quando a guia é de uma competência (a parcela não tem).
+  competencia     String?  @db.VarChar(7)
+  /// "AAAA-MM-DD". A DCTFWeb e a parcela não devolvem em campo: fica nulo.
+  vencimento      String?  @db.VarChar(10)
+  /// "AAAA-MM-DD": até quando o banco aceita a guia com este cálculo.
+  validoAte       String?  @db.VarChar(10)
+  valor           Decimal? @db.Decimal(14, 2)
+  numeroDocumento String?  @db.VarChar(60)
+  linhaDigitavel  String?  @db.VarChar(60)
+  /// "SERPRO" (emitida pela ficha da empresa).
+  origem          String   @db.VarChar(10)
+  /// O PDF nos Arquivos da empresa (pasta Guias).
+  driveFileId     String?
+  /// O envio ao cliente que levou a guia, quando houve.
+  clientDocumentId String?
+  pagaEm          DateTime?
+  pagaPorId       String?
+  emitidaPorId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driveFile      DriveFile?      @relation(fields: [driveFileId], references: [id], onDelete: SetNull)
+  clientDocument ClientDocument? @relation(fields: [clientDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, companyId, competencia])
+  @@index([tenantId, vencimento])
+  @@index([driveFileId])
+  @@map("guias")
+}
+
 /// Eventos de Atualização do Serpro (Fase 1 do Integra Contador, 20/10/2026):
 /// o último evento de cada tipo por contribuinte. Uma vez por dia o agendador
 /// pede a matriz em lote (até 1.000 por pedido), que é de graça (Monitorar).
@@ -8651,6 +8697,7 @@ model DriveFile {
   uploadedByUser   User?             @relation("DriveFileEnviadoPor", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   uploadedByPortal PortalUser?       @relation("DriveFileEnviadoPeloCliente", fields: [uploadedByPortalUserId], references: [id], onDelete: SetNull)
   accesses         DriveFileAccess[]
+  guias            Guia[]
 
   @@index([tenantId, folderId])
   @@index([tenantId, deletedAt])

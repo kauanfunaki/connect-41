@@ -4,8 +4,9 @@
 // PDF na pasta Guias da empresa. As regras de cada guia estão em ./guias.ts.
 //
 // A pasta Guias do modelo padrão é compartilhada com o portal: o cliente vê o
-// PDF lá, sem aviso nenhum. Não há envio, rastreio nem guia como dado — isso é
-// do "Guias pelo Connect", em standby (decisão do Kauan, 27/10/2026).
+// PDF lá, sem aviso nenhum. Desde 28/10/2026 a guia também vira registro
+// (`Guia`, src/lib/guias): valor, vencimento, o envio ao cliente e se foi paga,
+// na tela Guias do mês.
 
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
@@ -19,6 +20,8 @@ import { chamarSerpro, configuracaoDoSerpro, prontidaoDoSerpro, SO_EXEMPLOS_NA_D
 import { pastaDoModeloDaEmpresa } from "./situacaoFiscal";
 import { lerGuiaEmitida, lerPedidoDeGuia, nomeDaGuia, pedidoDaGuia, ROTULO_DA_GUIA, resumoDaGuia, servicoDaGuia } from "./guias";
 import type { Transporte } from "./transporte";
+import { registroDaGuia } from "@/lib/guias/registro";
+import { registrarGuiaEmitida } from "@/lib/guias/servidor";
 
 export type ResultadoDaGuia = { ok: true; texto: string; arquivoId: string } | { ok: false; erro: string };
 
@@ -76,5 +79,12 @@ export async function emitirGuia(
   });
   // A emissão já foi paga: o motivo fica, para alguém resolver a pasta e emitir de novo.
   if (!guardado.ok) return { ok: false, erro: `A guia veio do Serpro, mas não foi guardada nos Arquivos: ${guardado.erro}` };
+  // O registro não pode tirar a guia de quem a pediu: o PDF já está nos
+  // Arquivos, e uma falha aqui só deixa a guia fora da tela Guias do mês.
+  try {
+    await registrarGuiaEmitida({ tenantId, companyId, userId, registro: registroDaGuia(p, guia.dados), driveFileId: guardado.arquivoId });
+  } catch (err) {
+    console.error("[emitirGuia] a guia foi guardada, mas não entrou no registro", err);
+  }
   return { ok: true, texto: `${resumoDaGuia(p, guia.dados)}. Está em Arquivos › Guias.`, arquivoId: guardado.arquivoId };
 }
