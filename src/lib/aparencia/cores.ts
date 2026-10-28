@@ -16,27 +16,34 @@ import { contrastRatio, parseHexColor, relativeLuminance, toHex, type Rgb } from
 
 // ─── Os grupos ───────────────────────────────────────────────────────────────
 
-export const GRUPOS_DE_COR = ["financeiro", "fiscal", "processos", "atendimento"] as const;
+// Desde 28/10/2026 os grupos são as **áreas de uso** do Connect inteiro, como
+// no Omie (escolha do Kauan na página "Cores do Connect da equipe", rodada 3):
+// a cor diz o uso da tela — Finanças, Pessoas, Recrutamento… —, e não o setor.
+// As chaves antigas ficam (o banco guarda `coresDosGrupos` por elas); as três
+// últimas são novas e só aparecem no Connect da equipe.
+export const GRUPOS_DE_COR = ["financeiro", "fiscal", "pessoas", "recrutamento", "processos", "atendimento", "escritorio"] as const;
 export type GrupoDeCor = (typeof GRUPOS_DE_COR)[number];
 
 /**
- * Os grupos e o padrão de fábrica de cada um. Azul e laranja são os do Omie;
- * roxo e verde fecham quatro matizes bem separadas entre si e do azul do
- * Connect, para nenhum grupo parecer o item ativo do menu.
+ * As áreas e o padrão de fábrica de cada uma: sete matizes bem separadas entre
+ * si e do azul do Connect, para nenhuma área parecer outra.
  */
 export const GRUPOS: Record<GrupoDeCor, { rotulo: string; telas: string; padrao: string }> = {
   financeiro: {
-    rotulo: "Financeiro",
+    rotulo: "Finanças",
     telas: "Contas a pagar e a receber, lançamentos, conciliação, cobrança, fluxo de caixa, DRE e aprovações.",
-    padrao: "#1A7FD6",
+    padrao: "#3E8F1F",
   },
-  fiscal: { rotulo: "Fiscal e notas", telas: "As notas emitidas e recebidas, a emissão de NFS-e e as telas do Fiscal.", padrao: "#F07B1D" },
-  processos: { rotulo: "Processos", telas: "Processos societários, licenças e exigências.", padrao: "#8B5CF6" },
+  fiscal: { rotulo: "Notas e impostos", telas: "As notas emitidas e recebidas, a emissão de NFS-e, as telas do Fiscal e o SPED.", padrao: "#D7731A" },
+  pessoas: { rotulo: "Pessoas", telas: "Colaboradores, afastamentos, jornada, treinamentos, avaliações, cargos e indicadores de RH.", padrao: "#C93C72" },
+  recrutamento: { rotulo: "Recrutamento", telas: "Vagas, candidatos, testes e o WhatsApp do recrutamento.", padrao: "#7351D2" },
+  processos: { rotulo: "Processos e licenças", telas: "Processos societários, licenças, certidões e exigências.", padrao: "#D44A3C" },
   atendimento: {
-    rotulo: "Solicitações",
+    rotulo: "Clientes e atendimento",
     telas: "Solicitações, pendências, comunicados, documentos do escritório, arquivos e conversas.",
-    padrao: "#12A07A",
+    padrao: "#0E8E8A",
   },
+  escritorio: { rotulo: "Escritório", telas: "Chamados, controle interno, GitHub, painel de gestão e o que é da casa.", padrao: "#1A84C2" },
 };
 
 export function ehGrupoDeCor(valor: unknown): valor is GrupoDeCor {

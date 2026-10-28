@@ -79,7 +79,8 @@ import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
-import { grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
+import { areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
+import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 
@@ -133,7 +134,7 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
         </p>
       </TituloDoBloco>
       {telas.map((t) => (
-        <NavItem key={t.code} href={t.href} exact={t.href === "/fiscal"} icon={<ModuleIcon code={t.code} />} label={t.label} />
+        <NavItem key={t.code} href={t.href} exact={t.href === "/fiscal"} icon={<ModuleIcon code={t.code} />} label={t.label} area={areaDoModulo(t.code) ?? "marca"} />
       ))}
     </>
   );
@@ -313,11 +314,11 @@ export function AppShell({
           <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
         </PainelDoItem>
       )}
-      {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" />}
-      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} />}
-      {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" />}
-      {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" />}
-      {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" />}
+      {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" />}
+      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={areaDoModulo("portal_solicitacoes") ?? "marca"} />}
+      {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" area={areaDoModulo("helpdesk") ?? "marca"} />}
+      {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={areaDoModulo("arquivos") ?? "marca"} />}
+      {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" />}
     </>
   );
   useEffect(() => {
@@ -336,14 +337,14 @@ export function AppShell({
     // o brilho da direita (globals.css). Desde 21/10/2026 ela vem do grupo da
     // tela aberta (`data-grupo`, financeiro em azul, notas em laranja — como no
     // portal), e não mais do setor: no BPO tudo ficava laranja. Fora dos
-    // grupos, a cor principal. A cor do setor fica na bolinha dele
-    // (`--c41-cor-do-setor`).
+    // grupos, a cor principal. Desde 28/10/2026 os grupos são as áreas de uso
+    // (Finanças, Pessoas…), cada item do menu leva a da tela dele, e a bolinha
+    // na cor do setor saiu do menu e do cabeçalho (o ícone do setor ficou).
     // `h-dvh`, e não `h-screen` (07/10/2026): no navegador do celular 100vh é
     // maior que a área visível, e o pé da página ficava atrás da barra dele.
     <div
       className="flex h-dvh overflow-hidden bg-canvas"
       data-grupo={grupoDaTela ?? undefined}
-      style={activeSector ? ({ "--c41-cor-do-setor": activeSector.color } as React.CSSProperties) : undefined}
     >
       {/* Backdrop — só em telas pequenas, quando a sidebar vira drawer sobreposto. */}
       {mobileOpen && (
@@ -464,8 +465,8 @@ export function AppShell({
                     A identidade do setor não é mais um rótulo solto no topo: ela
                     está no seletor acima (com a cor) e volta como título das telas
                     do setor, que é onde diz de quem são aqueles grupos. */}
-                <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-                <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
+                <NavItem href="/home" icon={<Home size={16} />} label="Início" area="marca" />
+                <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" area="marca" />
 
                 {/* Transversais. NUNCA somem por causa do setor ativo: transferência
                     é setor↔setor por natureza, e cadastro é do tenant. Isolar os
@@ -495,6 +496,7 @@ export function AppShell({
                     ativo={(p) => quadrosAtivo(p, activeSector.code)}
                     icon={<FolderKanban size={16} />}
                     label="Quadros"
+                    area="marca"
                   />
                 )}
                 {itensDoGeral}
@@ -508,10 +510,12 @@ export function AppShell({
 
                 {/* O nome do setor leva a todas as telas dele (Ajustes 15/10, G10):
                     era só um rótulo com a bolinha, e a tela "Telas" do setor só
-                    se achava pela trilha de um grupo. A bolinha na cor do setor,
-                    com anel, e a seta dizendo que é caminho; aceso quando a tela é
-                    a dele. O nome fica na cor do texto: a do setor, em letra
-                    miúda, some no tema escuro. */}
+                    se achava pela trilha de um grupo. A seta diz que é caminho;
+                    aceso quando a tela é a dele. O nome fica na cor do texto: a
+                    do setor, em letra miúda, some no tema escuro.
+                    28/10/2026: o ícone do setor no lugar da bolinha na cor dele
+                    — com a cor da área de uso em cada item, a cor do setor ao
+                    lado do nome era redundante (Kauan). */}
                 {activeSectorModules.length > 0 && (
                   <TituloDoBloco nome={activeSector.label}>
                     <Link
@@ -521,11 +525,11 @@ export function AppShell({
                       data-dica={`Todas as telas de ${activeSector.label}`}
                       className="group c41-rotulo flex items-center gap-2 mt-3 mb-0.5 -mx-1 px-3.5 py-1.5 rounded-md hover:bg-surface-hover aria-[current=page]:bg-surface-hover transition-colors"
                     >
-                      <span
-                        aria-hidden
-                        className="inline-block size-2.5 rounded-full flex-shrink-0 ring-2 ring-[color-mix(in_srgb,var(--c41-cor-do-setor)_25%,transparent)]"
-                        style={{ backgroundColor: activeSector.color }}
-                      />
+                      {SECTOR_ICONS[activeSector.code] && (
+                        <span aria-hidden className="flex-shrink-0 text-fg-muted group-hover:text-fg [&>svg]:size-3.5">
+                          {SECTOR_ICONS[activeSector.code]}
+                        </span>
+                      )}
                       <span className="truncate text-fg-secondary group-hover:text-fg">
                         {activeSector.label}
                       </span>
@@ -540,15 +544,15 @@ export function AppShell({
                     label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
                     ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
                   }))}>
-                    {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} />}
+                    {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
                   const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" cor={activeSector.color} abrirPorClique telas={[
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
                   ]}>
-                    {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} />}
-                  </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />;
+                    {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
+                  </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} area={areaDoModulo(m.code) ?? "marca"} />;
                   const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
                   const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
                   if (grupos.length <= 1 || modulos.length <= 8) {
@@ -557,7 +561,7 @@ export function AppShell({
                       // quando era item do menu geral.
                       m.code === "gestao_painel" ? (
                         <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} cor={activeSector.color}>
-                          <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} />
+                          <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} area={areaDoModulo(m.code) ?? "marca"} />
                         </PainelDoItem>
                       ) : (
                         itemModulo(m)
@@ -578,6 +582,7 @@ export function AppShell({
                         href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
                         icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
                         itens={itens}
+                        area={areaDoGrupoDeTelas(itens.map((i) => i.code)) ?? "marca"}
                       />
                     </PainelDoItem>
                   ))}</>;
@@ -590,8 +595,8 @@ export function AppShell({
                     Geral
                   </p>
                 </TituloDoBloco>
-                <NavItem href="/home" icon={<Home size={16} />} label="Início" />
-                <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" />
+                <NavItem href="/home" icon={<Home size={16} />} label="Início" area="marca" />
+                <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" area="marca" />
                 {itensDoGeral}
 
                 <TelasFixadas telas={telasFixadas} />
@@ -610,7 +615,6 @@ export function AppShell({
                       <SectorNavItem
                         key={s.code}
                         label={s.label}
-                        color={s.color}
                         icon={SECTOR_ICONS[s.code]}
                         onEntrar={() => trocarSetor(s.code, appDomain, sectorHostSuffix)}
                       />
@@ -631,10 +635,13 @@ export function AppShell({
       <div className="c41-atmosfera flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
         <header
-          className={`h-[60px] flex-shrink-0 flex items-center gap-3 border-b px-4 lg:px-6 transition-colors ${
-            rolou ? "border-border" : "border-transparent"
+          className={`relative h-[60px] flex-shrink-0 flex items-center gap-3 border-b px-4 lg:px-6 transition-colors ${
+            rolou || grupoDaTela ? "border-border" : "border-transparent"
           }`}
         >
+          {/* A linha da área de uso fechando o cabeçalho (28/10/2026), como a
+              do Omie: diz em que área a tela aberta está, de longe. */}
+          {grupoDaTela && <span aria-hidden data-linha-da-area className="absolute inset-x-0 -bottom-px h-[3px] bg-grupo" />}
           {/* 40px de alvo (era o ícone, 20px) e `-ml-2` para o ícone seguir
               onde estava; diz se a gaveta está aberta (07/10/2026). */}
           <IconButton
@@ -681,7 +688,9 @@ export function AppShell({
                 <>
                   <span aria-hidden className="text-fg-muted">·</span>
                   <span className="inline-flex items-center gap-1.5 text-fg-secondary whitespace-nowrap">
-                    <span aria-hidden className="inline-block size-2 rounded-full" style={{ backgroundColor: activeSector.color }} />
+                    {SECTOR_ICONS[activeSector.code] && (
+                      <span aria-hidden className="text-fg-muted [&>svg]:size-3.5">{SECTOR_ICONS[activeSector.code]}</span>
+                    )}
                     {activeSector.label}
                   </span>
                 </>
@@ -693,6 +702,17 @@ export function AppShell({
               ) : null}
               {podeTrocar && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
             </button>
+            {/* A área de uso da tela aberta (28/10/2026), como a aba do Omie: leva
+                à página da área, com todas as telas dela que a pessoa abre. */}
+            {grupoDaTela && (
+              <Link
+                href={`/area/${grupoDaTela}`}
+                data-dica={`Todas as telas de ${GRUPOS[grupoDaTela].rotulo}`}
+                className="hidden lg:inline-flex items-center rounded-full bg-grupo-solid text-on-brand text-helper font-semibold px-2.5 py-0.5 whitespace-nowrap transition-opacity hover:opacity-90"
+              >
+                {GRUPOS[grupoDaTela].rotulo}
+              </Link>
+            )}
             {/* A busca do topo é a do celular; no computador ela mora na
                 lateral — no campo, com o menu aberto, ou na lupa da faixa de
                 ícones (14/10/2026; até ali, recolhido, ela vinha para cá). */}
@@ -776,7 +796,7 @@ export function AppShell({
           dentro e esticava a página: no detalhe do processo do portal, a tela
           inteira rolava e o casco subia junto (relato do Kauan, 08/10/2026). */}
         <main
-          className="scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto"
+          className="c41-cor-da-area scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto"
           onScroll={(e) => setRolou(e.currentTarget.scrollTop > 0)}
         >
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K
