@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { CampoData } from "@/components/ui/CampoData";
+import { PagamentosDoManual } from "@/components/financeiro/PagamentosDoManual";
 import { Select } from "@/components/ui/Select";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
@@ -341,9 +342,8 @@ export function FormLancamentoManual({
               required
             />
           </CampoForm>
-          <CampoForm label={kind === "PAGAR" ? "Já pago em" : "Já recebido em"} htmlFor="lancamento-pago-em" helper="Deixe vazio se ainda está em aberto.">
-            <CampoData id="lancamento-pago-em" name="pagoEm" max={hojeISO} />
-          </CampoForm>
+          {/* Com juros, multa, desconto e baixa parcial (lote 7, 28/10/2026). */}
+          <PagamentosDoManual kind={kind} hojeISO={hojeISO} />
 
           {/* Emissão, número e projeto (19/10, pedidos do BPO): opcionais, como no Omie. */}
           <CampoForm label="Emissão" htmlFor="lancamento-emissao" helper="Data do documento. Opcional.">
