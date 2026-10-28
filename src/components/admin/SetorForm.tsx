@@ -39,28 +39,18 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
         </Aviso>
       )}
 
-      <FieldGrid>
-        <CampoForm label="Nome do setor" htmlFor="label" required>
-          <Input
-            id="label"
-            name="label"
-            type="text"
-            required
-            defaultValue={defaultValues?.label ?? ""}
-            placeholder="Ex: Trabalhista, Marketing…"
-          />
-        </CampoForm>
-
-        {isEdit && defaultValues?.code && (
-          <CampoForm
-            label="Código"
-            htmlFor="code"
-            helper="Gerado a partir do nome na criação — não pode ser alterado (já é usado nos Quadros, nos usuários e nas transferências)."
-          >
-            <Input id="code" type="text" value={defaultValues.code} disabled className="font-mono" />
-          </CampoForm>
-        )}
-      </FieldGrid>
+      {/* O código interno do setor (o slug) não aparece: não se edita e não diz
+          nada a quem usa (Ajustes de 27/10/2026). */}
+      <CampoForm label="Nome do setor" htmlFor="label" required>
+        <Input
+          id="label"
+          name="label"
+          type="text"
+          required
+          defaultValue={defaultValues?.label ?? ""}
+          placeholder="Ex: Trabalhista, Marketing…"
+        />
+      </CampoForm>
 
       <fieldset>
         <legend className="text-label font-medium text-fg mb-1.5">Cor</legend>

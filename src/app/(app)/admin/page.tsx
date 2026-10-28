@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { IconeDaArea } from "@/components/configuracoes/IconeDaArea";
 import { getAuthContext } from "@/lib/auth/context";
-import { areasVisiveis, podeAbrirInicio, type AreaDeConfiguracao } from "@/lib/configuracoes/areas";
+import { areasVisiveis, podeAbrirInicio, type AreaDeConfiguracao, type ChaveDaArea } from "@/lib/configuracoes/areas";
 import { quemConfigura } from "@/lib/configuracoes/quem";
 
 // O início das configurações (escolha "Organização · A" do Kauan, 14/10/2026):
@@ -26,7 +26,7 @@ export default async function AdminPage() {
     <PageContainer>
       <PageHeader
         title="Configurações"
-        subtitle="O que vale para todo o escritório, separado por assunto. A trilha no topo de cada tela volta para cá."
+        subtitle="O que vale para todo o escritório, separado por assunto."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -71,16 +71,37 @@ export default async function AdminPage() {
   );
 }
 
-/** Uma área: o que ela junta e a lista das telas, cada uma com a frase do que faz. */
+// Uma cor por área (Ajustes de 27/10/2026): a tela era toda azul e texto, e as
+// áreas não se distinguiam de longe. A cor vai no filete do topo, no ícone e no
+// marcador de cada tela — nunca na letra, que segue o contraste de sempre.
+const COR_DA_AREA: Record<ChaveDaArea, string> = {
+  escritorio: "var(--c41-brand)",
+  pessoas: "var(--c41-grupo-processos)",
+  setores: "var(--c41-grupo-atendimento)",
+  portal: "var(--c41-sector-corretora)",
+  rotinas: "var(--c41-grupo-fiscal)",
+  integracoes: "var(--c41-sector-fiscal)",
+  plataforma: "var(--c41-fg-muted)",
+};
+
+/**
+ * Uma área: o nome, o resumo e as telas. A frase de cada tela saiu do cartão
+ * (poluía e repetia o nome) e fica na dica ao passar o mouse.
+ */
 function CartaoDaArea({ area }: { area: AreaDeConfiguracao }) {
+  const cor = COR_DA_AREA[area.chave];
   return (
     <section
       id={`area-${area.chave}`}
       aria-labelledby={`titulo-area-${area.chave}`}
-      className="scroll-mt-6 bg-surface border border-border rounded-lg shadow-xs p-5 flex flex-col gap-3"
+      className="scroll-mt-6 bg-surface border border-border rounded-lg shadow-xs overflow-hidden flex flex-col"
+      style={{ borderTop: `3px solid ${cor}` }}
     >
-      <div className="flex items-center gap-3">
-        <span className="inline-flex w-10 h-10 rounded-lg items-center justify-center bg-brand-subtle text-brand flex-shrink-0">
+      <div className="flex items-center gap-3 px-5 pt-4 pb-3">
+        <span
+          className="inline-flex w-10 h-10 rounded-lg items-center justify-center flex-shrink-0"
+          style={{ color: cor, background: `color-mix(in srgb, ${cor} 14%, var(--c41-surface))` }}
+        >
           <IconeDaArea icone={area.icone} size={20} />
         </span>
         <div className="min-w-0">
@@ -90,17 +111,16 @@ function CartaoDaArea({ area }: { area: AreaDeConfiguracao }) {
           <p className="text-fs-2 text-fg-muted">{area.resumo}</p>
         </div>
       </div>
-      <ul className="border-t border-border -mx-2">
+      <ul className="px-3 pb-3">
         {area.telas.map((t) => (
-          <li key={t.chave} className="border-b border-border last:border-b-0">
+          <li key={t.chave}>
             <Link
               href={t.href}
-              className="group flex items-center gap-3 px-2 py-2.5 rounded-md hover:bg-surface-hover transition-colors"
+              title={t.descricao}
+              className="group flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surface-hover transition-colors"
             >
-              <span className="min-w-0 flex-1">
-                <span className="block text-ui font-medium text-fg">{t.rotulo}</span>
-                <span className="block text-fs-2 text-fg-muted leading-snug mt-0.5">{t.descricao}</span>
-              </span>
+              <span className="size-1.5 rounded-full flex-shrink-0" style={{ background: cor }} aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-ui font-medium text-fg">{t.rotulo}</span>
               <ChevronRight size={16} className="text-fg-muted flex-shrink-0 group-hover:text-fg transition-colors" aria-hidden />
             </Link>
           </li>

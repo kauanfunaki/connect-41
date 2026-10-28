@@ -46,7 +46,7 @@ export function MoverModuloPara({
         aria-label={`Mover ${nome} para outro setor`}
         trigger={({ open, toggle }) => (
           <Button variant="secondary" size="xs" onClick={toggle} aria-expanded={open} className="whitespace-nowrap">
-            <ArrowRightLeft size={12} /> Mover para…
+            <ArrowRightLeft size={12} /> Mover
           </Button>
         )}
       >
