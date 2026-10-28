@@ -388,6 +388,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "sector.menu.show": e("mostrou uma tela no menu Geral do setor"),
   "sector.menu.hide": e("escondeu uma tela do menu Geral do setor"),
   "sector.menu.reset": e("voltou ao padrão o menu Geral do setor"),
+  // Os Quadros do setor (28/10/2026): o coordenador bloqueia ou libera a criação e a edição pelos colaboradores.
+  "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores nos Quadros do setor"),
+  "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores nos Quadros do setor"),
   "module.enable": e("ligou o módulo"),
   "module.disable": e("desligou o módulo"),
   "module.transfer": e("passou para outro setor o módulo"),
