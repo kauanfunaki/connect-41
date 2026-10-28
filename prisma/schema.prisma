@@ -1192,6 +1192,7 @@ model Tenant {
   enviosConfig              TenantEnviosConfig?
   societarioConfig          TenantSocietarioConfig?
   userAgendaConfigs         UserAgendaConfig[]
+  userTaskViews             UserTaskView[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
   aiConfig                  TenantAiConfig?
@@ -1297,6 +1298,27 @@ model Tenant {
 // Ausência de linha = padrão do catálogo (tudo visível), então um setor novo
 // nasce funcionando sem ninguém precisar configurar nada. Quem pertence a mais
 // de um setor vê a UNIÃO dos blocos dos seus setores.
+/// O Meu dia de uma pessoa (28/10/2026): os blocos que ela vê, quando tem
+/// configuração própria — gravada por ela, pelo coordenador de um setor dela
+/// ou pelo admin (ver src/lib/meuDia/configuracao.ts). Vale mais que a do
+/// setor. Sem linha, a pessoa vê a soma dos setores dela.
+model UserTaskView {
+  id          String   @id @default(uuid())
+  tenantId    String
+  userId      String   @unique
+  /// JSON com as chaves visíveis, como SectorTaskView.widgets.
+  widgets     String   @db.Text
+  /// Quem gravou por último (ela mesma, o coordenador ou o admin).
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("user_task_views")
+}
+
 model SectorTaskView {
   id         String   @id @default(uuid())
   tenantId   String

@@ -312,6 +312,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "GithubAccountLease", coluna: "githubUserId", tratamento: "manter", motivo: "coordenação por identidade externa do GitHub, não por usuário do Connect" },
   { modelo: "GithubConnection", coluna: "connectedBy", tratamento: "desligar" },
   { modelo: "GithubOAuthAttempt", coluna: "userId", tratamento: "apagar" },
+  { modelo: "UserTaskView", coluna: "userId", tratamento: "apagar" },
+  { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
