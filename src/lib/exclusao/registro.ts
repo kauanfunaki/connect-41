@@ -322,6 +322,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "Guia", coluna: "pagaPorId", tratamento: "manter", motivo: "quem marcou a guia como paga; a tela não expõe o id" },
+  { modelo: "SectorQuadrosBloqueados", coluna: "createdById", tratamento: "manter", motivo: "quem bloqueou os Quadros do setor; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "Guia", coluna: "emitidaPorId", tratamento: "manter", motivo: "quem emitiu a guia; a tela não expõe o id" },
   { modelo: "Certidao", coluna: "pedidaPorId", tratamento: "manter", motivo: "quem pediu a certidão; a tela não expõe o id" },
   { modelo: "Certidao", coluna: "vistaPorId", tratamento: "manter", motivo: "quem viu a positiva; a tela não expõe o id" },

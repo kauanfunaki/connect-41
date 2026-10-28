@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+// Criar tarefa e atividade e mexer nas colunas: também o colaborador, a não ser
+// que o coordenador tenha bloqueado o setor (28/10/2026).
+import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
 import { minutosApontados, segundosDesde } from "@/lib/datetime";
@@ -78,7 +81,7 @@ export async function criarPipeline(
 
   if (!name) return { error: "Nome da tarefa é obrigatório" };
   if (!sectorCode) return { error: "Setor é obrigatório" };
-  if (!canManageSector(ctx, sectorCode)) {
+  if (!(await podeEditarQuadrosNoSetor(ctx, sectorCode))) {
     return { error: "Sem permissão para criar tarefa neste setor." };
   }
 
@@ -158,7 +161,7 @@ export async function criarItem(
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
   if (!pipeline) return { error: "Tarefa não encontrada ou fora do seu escopo." };
-  if (!canManageSector(ctx, pipeline.sectorCode)) {
+  if (!(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) {
     return { error: "Sem permissão para adicionar atividades neste setor." };
   }
 
@@ -212,7 +215,7 @@ export async function criarTarefaRapida(pipelineId: string, stageId: string, tit
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
-  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) return;
 
   const stage = await prisma.pipelineStage.findFirst({ where: { id: stageId, pipelineId } });
   if (!stage) return;
@@ -243,7 +246,7 @@ export async function renomearEstagio(pipelineId: string, stageId: string, name:
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) return;
 
   try {
     await prisma.pipelineStage.update({ where: { id: stageId, pipelineId }, data: { name: trimmed } });
@@ -279,7 +282,7 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline) return { error: "Tarefa não encontrada." };
-  if (!canManageSector(ctx, pipeline.sectorCode)) {
+  if (!(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) {
     return { error: "Sem permissão para editar esta tarefa." };
   }
 
@@ -1523,7 +1526,7 @@ export async function duplicarPipeline(
     },
   });
   if (!source) return { error: "Tarefa de origem não encontrada." };
-  if (!canManageSector(ctx, source.sectorCode)) {
+  if (!(await podeEditarQuadrosNoSetor(ctx, source.sectorCode))) {
     return { error: "Sem permissão para duplicar tarefa neste setor." };
   }
 

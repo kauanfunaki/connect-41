@@ -7,7 +7,8 @@ import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarListaSimples, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canViewSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canViewSector, podeExcluir } from "@/lib/auth/context";
+import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -43,7 +44,8 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
   ]);
   if (!folder) notFound();
 
-  const canCreate = canManageSector(ctx, folder.space.sectorCode);
+  // Nova tarefa na pasta: também o colaborador, se o setor não está bloqueado (28/10/2026).
+  const canCreate = await podeEditarQuadrosNoSetor(ctx, folder.space.sectorCode);
 
   const lists = await prisma.pipeline.findMany({
     where: { folderId },

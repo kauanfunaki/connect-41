@@ -12,6 +12,9 @@ import { getAuthContext, canViewSector, canManageSector, podeExcluir } from "@/l
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
 import { boardPath } from "@/lib/kanbanPaths";
+import { QuadrosDosColaboradores } from "@/components/kanban/QuadrosDosColaboradores";
+import { liberarQuadrosAosColaboradores } from "./quadros-actions";
+import { quadrosBloqueados } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 
 /** Quantas listas o cartão do espaço mostra pelo nome antes do "+N". */
 const LISTAS_NO_CARTAO = 4;
@@ -57,6 +60,8 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
   const setor = sectorLabel(labels, code);
   const corDoSetor = colors[code] ?? "#586577";
   const podeCriar = canManageSector(ctx, code);
+  // O coordenador decide se os colaboradores criam e editam tarefas (28/10/2026; liberado por padrão).
+  const bloqueado = podeCriar ? await quadrosBloqueados(ctx.tenantId, code) : false;
 
   return (
     <PageContainer>
@@ -70,6 +75,11 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
         }
         action={podeCriar ? <NewSpaceButton action={criarEspaco.bind(null, code)} /> : undefined}
       />
+      {podeCriar && (
+        <div className="-mt-3 mb-6">
+          <QuadrosDosColaboradores sectorCode={code} liberado={!bloqueado} alterar={liberarQuadrosAosColaboradores} />
+        </div>
+      )}
 
       {spaces.length === 0 ? (
         <Card>

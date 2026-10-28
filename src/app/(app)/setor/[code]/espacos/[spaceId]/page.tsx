@@ -12,6 +12,7 @@ import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { criarPasta, criarListaSimples, excluirPasta, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, canViewSector, podeExcluir } from "@/lib/auth/context";
+import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -53,7 +54,10 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
   ]);
   if (!space) notFound();
 
+  // Pasta é estrutura do setor: só quem coordena. Tarefa: também o
+  // colaborador, se o setor não está bloqueado (28/10/2026).
   const canCreate = canManageSector(ctx, space.sectorCode);
+  const podeCriarTarefa = await podeEditarQuadrosNoSetor(ctx, space.sectorCode);
   // Excluir pasta e lista: só o administrador (13/10/2026). O gestor cria.
   const canDelete = podeExcluir(ctx);
   const pipelineSelect = {
@@ -92,10 +96,10 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
         <PageHeader
           title={space.name}
           action={
-            canCreate && (
+            (canCreate || podeCriarTarefa) && (
               <div className="flex items-center gap-2">
-                <NewFolderButton action={createFolderAction} />
-                <NewListButton action={createListAction} />
+                {canCreate && <NewFolderButton action={createFolderAction} />}
+                {podeCriarTarefa && <NewListButton action={createListAction} />}
               </div>
             )
           }
