@@ -386,6 +386,33 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
       },
     ],
   },
+  {
+    // Certidões pelo Connect (28/10/2026): federal, FGTS, trabalhista, estadual
+    // do PR e municipal de Curitiba, consultadas no site de cada órgão.
+    code: "infosimples",
+    label: "InfoSimples — certidões",
+    vendor: "InfoSimples",
+    natureza: "API",
+    sectorCode: "societario",
+    description: "As certidões negativas da carteira, a cada trimestre e por pedido, cobradas por consulta",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "token",
+        label: "Token",
+        type: "secret",
+        required: true,
+        help: "Área do cliente da InfoSimples › Tokens.",
+      },
+      {
+        name: "tetoMensal",
+        label: "Teto mensal (R$)",
+        type: "text",
+        required: true,
+        help: "Acima disso o Connect não faz consultas até o mês virar. A InfoSimples cobra R$ 0,20 por consulta até 500 no mês, e no mínimo R$ 100 por mês.",
+      },
+    ],
+  },
 ];
 
 export function integracaoDoCatalogo(code: string): IntegracaoDef | null {

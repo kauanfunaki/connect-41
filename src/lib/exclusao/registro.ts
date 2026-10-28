@@ -124,6 +124,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
   { modelo: "DominioExportacao", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["planilha da Domínio baixada", "planilhas da Domínio baixadas"] },
   { modelo: "Guia", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["guia emitida", "guias emitidas"] },
+  { modelo: "Certidao", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["certidão consultada", "certidões consultadas"] },
   { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
   { modelo: "FinanceRecurrence", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["série de repetição", "séries de repetição"] },
   // A marca de cada obrigação por regime gerada (22/10/2026). A atividade em si
@@ -322,6 +323,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "Guia", coluna: "pagaPorId", tratamento: "manter", motivo: "quem marcou a guia como paga; a tela não expõe o id" },
   { modelo: "Guia", coluna: "emitidaPorId", tratamento: "manter", motivo: "quem emitiu a guia; a tela não expõe o id" },
+  { modelo: "Certidao", coluna: "pedidaPorId", tratamento: "manter", motivo: "quem pediu a certidão; a tela não expõe o id" },
+  { modelo: "Certidao", coluna: "vistaPorId", tratamento: "manter", motivo: "quem viu a positiva; a tela não expõe o id" },
   { modelo: "BankReconciliationRule", coluna: "createdById", tratamento: "manter", motivo: "quem criou a regra; a tela não expõe o id" },
   { modelo: "FinanceRecurrence", coluna: "createdById", tratamento: "manter", motivo: "quem lançou a série; as contas que o agendador cria levam esse nome" },
   { modelo: "BankRuleApplication", coluna: "createdById", tratamento: "manter", motivo: "registro de quem lançou pela regra" },
