@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { contexto } from "@/lib/chamados/contexto";
-import { criarRascunho, salvarRascunho, avaliarRascunho, responderPergunta, excluirRascunho, finalizarRascunho, alterar, comentar } from "@/lib/chamados/comandos";
+import { criarRascunho, salvarRascunho, avaliarRascunho, responderPergunta, recusarSugestao, excluirRascunho, finalizarRascunho, alterar, comentar } from "@/lib/chamados/comandos";
 import { salvarPolitica, configurarSetores } from "@/lib/chamados/configuracao";
 import { removerAnexoRascunho } from "@/lib/chamados/anexos";
 import { salvarFallback } from "@/lib/chamados/ia-fallback";
@@ -23,3 +23,4 @@ export async function politica(input: unknown) { return executar(async () => sal
 export async function setores(input: unknown) { return executar(async () => { await configurarSetores(input); revalidatePath("/", "layout"); }); }
 export async function retirarAnexo(draftId: string, id: string, version: number) { return executar(async () => removerAnexoRascunho(await contexto(), draftId, id, version)); }
 export async function fallbackIa(input: unknown) { return executar(async () => salvarFallback(await contexto(), input)); }
+export async function naoEOQuePreciso(id: string, version: number) { return executar(async () => recusarSugestao(await contexto(), id, version)); }

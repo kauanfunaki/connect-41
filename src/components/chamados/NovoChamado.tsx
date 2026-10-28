@@ -11,15 +11,15 @@ import { IconeDoArquivo } from "./LinhaDoTempo";
 import { ConversaDaTriagem } from "./ConversaDaTriagem";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { formatInstantTime } from "@/lib/format";
-import { perguntaAtual } from "@/lib/chamados/regras";
-import { iniciar, guardar, avaliar, responderAoAssistente, finalizar, retirarAnexo } from "@/app/(app)/chamados/actions";
+import { mensagemDoExistente, perguntaAtual } from "@/lib/chamados/regras";
+import { iniciar, guardar, avaliar, responderAoAssistente, finalizar, retirarAnexo, naoEOQuePreciso } from "@/app/(app)/chamados/actions";
 import type { DadosDoChamado, Parecer } from "@/lib/chamados/regras";
 
 type Anexo = { id: string; fileName: string; attachmentKey: string | null };
 type Rascunho = { id: string; version: number };
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; parecer: Parecer | null; anexos: Anexo[]; mensagens: { id: string; role: string; body: string }[] };
 // Igual ao que o servidor grava: o resumo e só a primeira pergunta.
-const mensagemDoParecer = (p: Parecer) => ({ id: crypto.randomUUID(), role: "assistant", body: [p.summary, ...p.questions.slice(0, 1).map(q => q.text)].join("\n\n") });
+const mensagemDoParecer = (p: Parecer) => ({ id: crypto.randomUUID(), role: "assistant", body: p.existente ? mensagemDoExistente(p.existente) : [p.summary, ...p.questions.slice(0, 1).map(q => q.text)].join("\n\n") });
 // Códigos do `busy` que pertencem ao modal da revisão; os demais aparecem no formulário.
 const DO_MODAL = new Set(["analisando", "enviando", "respondendo"]);
 
@@ -36,7 +36,8 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
   const [busy, setBusy] = useState(""), [erro, setErro] = useState(""), [salvoAs, setSalvoAs] = useState("");
   const [chave, setChave] = useState(""), [arrastando, setArrastando] = useState(false); const abort = useRef<AbortController | null>(null);
   const cat = categorias.find(c => c.id === dados.categoryId);
-  const pergunta = perguntaAtual(parecer, mensagens);
+  const pergunta = perguntaAtual(parecer, mensagens), sugestao = parecer?.existente ?? null;
+  const [aviso, setAviso] = useState("");
   // Salvamento automático (27/10/2026): sem "Salvar rascunho". Toda gravação
   // passa por uma fila, porque cada uma muda a versão do rascunho e a seguinte
   // precisa da nova; os refs dão à fila os valores atuais, não os do render.
@@ -80,7 +81,7 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
     setRevisao(true);
     // Pergunta em aberto e pedido sem edição (editar descarta o parecer): a
     // conversa continua de onde parou, sem nova análise.
-    if (revisar && pergunta) return;
+    if (revisar && (pergunta || sugestao)) return;
     await executar(revisar ? "analisando" : "enviando", async () => {
       const d = await rascunhoAtual();
       const r = revisar ? await avaliar(d.id, d.version) : await finalizar(d.id, d.version);
@@ -113,6 +114,29 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
         if ("dados" in v && v.dados) { dadosRef.current = v.dados; setDados(v.dados); }
         if ("categorias" in v && v.categorias) setCategorias(v.categorias);
         if ("parecer" in v && v.parecer) { const novo = v.parecer; setParecer(novo); setMensagens(m => [...m, mensagemDoParecer(novo)]); }
+      } catch (e) { setMensagens(m => m.filter(x => x.id !== eu.id)); throw e; }
+    });
+  }
+  // "É isso" (28/10/2026): nada é enviado e o rascunho fica guardado, caso a
+  // conversa com o responsável não resolva.
+  function aceitarSugestao() {
+    setRevisao(false);
+    setAviso(sugestao?.responsavel ? `Rascunho guardado. Fale com ${sugestao.responsavel}; se não resolver, volte e envie o chamado.` : "Rascunho guardado. Se não resolver, volte e envie o chamado.");
+  }
+  function recusarSugestao() {
+    if (!draft || !sugestao) return;
+    const eu = { id: crypto.randomUUID(), role: "user", body: `Não é o que preciso: ${sugestao.nome}.` };
+    setMensagens(m => [...m, eu]);
+    void executar("respondendo", async () => {
+      try {
+        const d = await rascunhoAtual();
+        const r = await naoEOQuePreciso(d.id, d.version); if (!r.ok) throw new Error(r.error);
+        const v = r.valor;
+        if ("ticketId" in v && v.ticketId) { router.push(`/chamados/${v.ticketId}`); return; }
+        definirRascunho({ id: d.id, version: v.version });
+        if ("parecer" in v && v.parecer) setParecer(v.parecer);
+        const texto = "pergunta" in v ? v.pergunta : undefined;
+        if (texto) setMensagens(m => [...m, { id: crypto.randomUUID(), role: "assistant", body: texto }]);
       } catch (e) { setMensagens(m => m.filter(x => x.id !== eu.id)); throw e; }
     });
   }
@@ -166,14 +190,15 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
         <section aria-label="Envio" className="space-y-3 p-5">
           {cat ? <p className="text-ui text-fg-secondary" role="status">Classificação: <strong className="text-fg">{nomeDaCategoria(categorias, cat.id)}</strong>{dados.title && <><br />Título: <strong className="text-fg">{dados.title}</strong></>}</p>
             : <p className="text-ui text-fg-secondary">Ao enviar, a IA lê o pedido e, se faltar alguma informação, pergunta antes de abrir o chamado.</p>}
-          <Button type="submit" size="lg" className="w-full" disabled={!!busy}>{pergunta ? "Continuar revisão" : "Enviar chamado"}</Button>
-          {salvoAs && <p className="text-center text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
+          <Button type="submit" size="lg" className="w-full" disabled={!!busy}>{pergunta || sugestao ? "Continuar revisão" : "Enviar chamado"}</Button>
+          {aviso && sugestao ? <p className="text-center text-helper text-fg-secondary" role="status">{aviso}</p>
+            : salvoAs && <p className="text-center text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
           {doFormulario && <p role="status" className="text-ui text-fg-secondary">{doFormulario} {doFormulario === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}
           {erro && !revisao && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
         </section>
       </Card>
     </form>
     <ConversaDaTriagem aberta={revisao} onFechar={() => { setRevisao(false); setErro(""); }} mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro}
-      onResponder={responder} onAnexar={file => subir(file, true)} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()} onEnviarMesmoAssim={() => void enviar(false)} onTentarNovamente={() => void enviar(true)} />
+      onResponder={responder} onAnexar={file => subir(file, true)} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()} onAceitarSugestao={aceitarSugestao} onRecusarSugestao={recusarSugestao} onEnviarMesmoAssim={() => void enviar(false)} onTentarNovamente={() => void enviar(true)} />
   </>;
 }

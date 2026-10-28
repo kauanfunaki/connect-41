@@ -1,7 +1,8 @@
 import { type AnexoEstruturado } from "@/lib/ai";
 import { gerarComFallback } from "./ia-fallback";
 import { hit } from "@/lib/rateLimit";
-import { parecerSchema, indisponivel, type Parecer, type DadosDoChamado, type Categoria } from "./regras";
+import { parecerSchema, indisponivel, type Existente, type Parecer, type DadosDoChamado, type Categoria } from "./regras";
+import type { ItemExistente } from "@/lib/ops/catalogo";
 import { anexosDoChamado } from "./armazenamento";
 
 export const PROMPT = `Você avalia se um chamado interno tem informações suficientes para INICIAR o atendimento.
@@ -16,6 +17,7 @@ Se o pedido diz o que precisa ser feito e onde (empresa ou filial, período, doc
 Não repita o que já foi respondido. Se a pessoa não sabe, aceite essa limitação quando a equipe puder investigar.
 Não exija causa, diagnóstico ou solução técnica. Um pedido curto pode estar completo.
 Prefira perguntas fechadas: quando a resposta for sim ou não, ou uma escolha entre poucas alternativas, preencha options com duas a cinco respostas curtas (ex.: "Acontece com todos os usuários?" → ["Sim", "Não", "Não sei"]). Nas perguntas abertas, options vazio.
+jaExiste lista robôs, sites e apps que o Tech já entregou, com o que cada um faz. Se um deles já faz o que o pedido solicita, devolva existing com o ref exato da lista e match "same"; se só parece atender, com dúvida, match "similar". Em reason, uma frase curta dizendo por quê, para quem pediu. Se nenhum atende, ou se o pedido é um erro ou ajuste em algo da lista, existing null. Use somente refs da lista.
 Não invente fatos, não corrija nem reescreva o chamado, não altere categoria, prioridade ou SLA.
 Se houver contexto suficiente, status sufficient e questions vazio. Senão needs_information e perguntas.
 Os nomes dos anexos são só referência: não liste anexos na resposta e nunca presuma o conteúdo de arquivos que não recebeu.
@@ -27,7 +29,8 @@ export const SCHEMA_DA_TRIAGEM = {
   properties: {
     status: { type: "string", enum: ["sufficient", "needs_information"] }, summary: { type: "string" },
     questions: { type: "array", items: { type: "object", additionalProperties: false, properties: { text: { type: "string" }, options: { type: "array", items: { type: "string" } } }, required: ["text", "options"] } },
-  }, required: ["status", "summary", "questions"],
+    existing: { anyOf: [{ type: "null" }, { type: "object", additionalProperties: false, properties: { ref: { type: "string" }, match: { type: "string", enum: ["same", "similar"] }, reason: { type: "string" } }, required: ["ref", "match", "reason"] }] },
+  }, required: ["status", "summary", "questions", "existing"],
 };
 export type AnexoParaTriagem = { id: string; fileName: string; fileUrl: string; sizeBytes: number; mimeType: string; attachmentKey: string | null };
 export function selecionarAnexos(anexos: AnexoParaTriagem[], categoria: Categoria) {
@@ -44,7 +47,9 @@ export function selecionarAnexos(anexos: AnexoParaTriagem[], categoria: Categori
   }
   return { selecionados, ignorados };
 }
-export async function analisar(c: { tenantId: string; userId: string; draftId: string }, dados: DadosDoChamado, categoria: Categoria, historico: { role: string; body: string }[], anexos: AnexoParaTriagem[]): Promise<Parecer> {
+/** O catálogo do Ops Center e o que a pessoa já disse que não é: a IA só escolhe entre os demais. */
+export type JaExiste = { itens: ItemExistente[]; recusados: string[]; linkDoOps: boolean };
+export async function analisar(c: { tenantId: string; userId: string; draftId: string }, dados: DadosDoChamado, categoria: Categoria, historico: { role: string; body: string }[], anexos: AnexoParaTriagem[], jaExiste: JaExiste = { itens: [], recusados: [], linkDoOps: false }): Promise<Parecer> {
   const limite = hit(`helpdesk:${c.tenantId}:${c.userId}`, 10, 60000);
   if (!limite.allowed) return indisponivel(`Limite de análises atingido. Tente novamente em ${Math.ceil(limite.retryAfterMs / 1000)} segundos ou envie sem análise.`);
   // Evita crescimento ilimitado de contexto, sem apagar o histórico salvo.
@@ -56,12 +61,13 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     if (!bytes || bytes.length !== a.sizeBytes) { ignorados.push({ id: a.id, name: a.fileName, status: "unreadable", reason: "Não foi possível ler o arquivo completo." }); continue; }
     arquivos.push({ nome: a.fileName, mime: a.mimeType, base64: bytes.toString("base64"), imagem: a.mimeType.startsWith("image/") }); enviados.push(a);
   }
+  const candidatos = jaExiste.itens.filter(i => !jaExiste.recusados.includes(i.ref));
   try {
     // Provedor é o do escritório (22/10/2026): OpenAI ou Anthropic, com a mesma
     // saída estruturada, o mesmo teto e a mesma linha de auditoria da fundação.
     // O modelo sai da faixa `rapido` do catálogo, salvo override do escritório.
     const { valor, origem } = await gerarComFallback({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT,
-      texto: JSON.stringify({ chamado: dados, categoria, conversa: historico, anexosRecebidos: enviados.map(a => ({ id: a.id, name: a.fileName })), anexosNaoInterpretados: ignorados, limitacoes: "DOCX: texto sem imagens embutidas. XLSX/CSV: até 1.000 linhas por aba; gráficos não interpretados." }),
+      texto: JSON.stringify({ chamado: dados, categoria, conversa: historico, jaExiste: candidatos.map(({ ref, tipo, nome, descricao, detalhe, responsavel }) => ({ ref, tipo, nome, descricao, detalhe, responsavel })), anexosRecebidos: enviados.map(a => ({ id: a.id, name: a.fileName })), anexosNaoInterpretados: ignorados, limitacoes: "DOCX: texto sem imagens embutidas. XLSX/CSV: até 1.000 linhas por aba; gráficos não interpretados." }),
       anexos: arquivos, nome: "triagem_chamados", schema: SCHEMA_DA_TRIAGEM, maxTokens: 3000, estrito: true, timeoutMs: 30000, store: false,
       contexto: { userId: c.userId, entityType: "HelpdeskDraft", entityId: c.draftId },
     });
@@ -69,6 +75,7 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     // texto. A cobertura é do servidor, pelo que de fato foi enviado ao provedor.
     const resultado = parecerSchema.parse({ ...(valor as object), attachments: [] });
     if (resultado.status === "unavailable") throw new Error("Status inválido.");
+    const existente = acharExistente((valor as { existing?: unknown }).existing, candidatos, jaExiste.linkDoOps);
     const cobertura = [...ignorados, ...enviados.map(a => {
       if (origem === "groq") return { id: a.id, name: a.fileName, status: "skipped" as const, reason: "O fallback analisa somente o texto; arquivo disponível para a equipe." };
       const parcial = /\.(docx|xlsx|csv)$/i.test(a.fileName);
@@ -84,10 +91,22 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     });
     const parecer = resultado.status === "needs_information" && !perguntas.length
       ? indisponivel("A análise repetiu perguntas já apresentadas. Você pode enviar o chamado com o contexto salvo ou tentar a análise novamente.")
-      : { ...resultado, questions: perguntas };
+      : { ...resultado, questions: perguntas, existente };
     return parecerSchema.parse({ ...parecer, attachments: anexos.map(a => cobertura.find(i => i.id === a.id)!) });
   } catch {
     // O erro do provedor, os prompts e os documentos nunca são registrados aqui.
     return { ...indisponivel(), attachments: anexos.map(a => ignorados.find(i => i.id === a.id) ?? { id: a.id, name: a.fileName, status: "skipped" as const, reason: "A análise não foi concluída." }) };
   }
+}
+
+// O servidor confere a indicação da IA: só vale um ref do catálogo enviado, e o
+// cartão é montado com os dados do banco, não com o texto do modelo.
+function acharExistente(sugestao: unknown, candidatos: ItemExistente[], linkDoOps: boolean): Existente | null {
+  if (!sugestao || typeof sugestao !== "object") return null;
+  const { ref, match, reason } = sugestao as { ref?: unknown; match?: unknown; reason?: unknown };
+  const item = candidatos.find(i => i.ref === ref);
+  if (!item || (match !== "same" && match !== "similar")) return null;
+  const aba = { robo: "automations", site: "sites", app: "apps" }[item.tipo];
+  return { ref: item.ref, tipo: item.tipo, nome: item.nome, responsavel: item.responsavel, endereco: item.endereco, detalhe: item.detalhe, noOps: linkDoOps ? `/ops?view=${aba}` : null,
+    match, reason: typeof reason === "string" ? reason.slice(0, 500) : "" };
 }
