@@ -152,6 +152,8 @@ function comEmpresa(caminho: string, empresaId?: string | null): string {
 
 export const rotaDosEnvios = (empresaId?: string | null) => comEmpresa("/solicitacoes/envios", empresaId);
 export const rotaDoNovoEnvio = (empresaId?: string | null) => comEmpresa("/solicitacoes/envios/novo", empresaId);
+/** O novo envio com o anexo já escolhido dos Arquivos da empresa (28/10/2026): o "Enviar ao cliente" da guia emitida. */
+export const rotaDeEnviarOArquivo = (empresaId: string, arquivoId: string) => `${rotaDoNovoEnvio(empresaId)}&arquivo=${encodeURIComponent(arquivoId)}`;
 export const rotaDoEnvio = (id: string) => `/solicitacoes/envios/${encodeURIComponent(id)}`;
 export const rotaDeEditarOEnvio = (id: string) => `${rotaDoEnvio(id)}/editar`;
 

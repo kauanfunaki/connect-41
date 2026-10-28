@@ -21,6 +21,9 @@ import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
 import { itensDaGestao } from "@/lib/gestao/itens";
+import { feriadosDoEscritorio } from "@/lib/feriados";
+import { hojeIso, somarDias } from "@/lib/datas/calendario";
+import { chaveDoRisco, DIAS_DEPOIS_DA_DATA_LEGAL, mensagemDoRisco, riscoDeMulta } from "@/lib/obrigacoes/riscoDeMulta";
 import { pedidosAoClienteLigados } from "@/lib/financeiro/pendencias/setor";
 import { MARCA_DA_DEMONSTRACAO, SO_EMPRESA_DE_VERDADE } from "@/lib/demonstracao/marca";
 import {
@@ -890,6 +893,62 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
   return sent;
 }
 
+// Risco de multa nas obrigações por regime (lote 2, 28/10/2026): a atividade
+// do kanban ainda aberta perto da DATA LEGAL, no dia e logo depois dela. O
+// prazo interno (o vencimento da atividade) já avisa pela Gestão; este é o
+// aviso de que a multa está perto. Vai para quem está na atividade e, sem
+// ninguém nela, para os coordenadores do setor do modelo.
+async function checkObrigacoesEmRiscoDeMulta(tenantId: string, today: Date): Promise<number> {
+  const prisma = getPrisma();
+  const hoje = hojeIso();
+  // Folga generosa na consulta; a regra fina (dias úteis) está em `riscoDeMulta`.
+  const obrigacoes = await prisma.obrigacaoGerada.findMany({
+    where: {
+      tenantId,
+      dataLegal: { gte: somarDias(hoje, -DIAS_DEPOIS_DA_DATA_LEGAL), lte: somarDias(hoje, 15) },
+      pipelineItemId: { not: null },
+      company: SO_EMPRESA_DE_VERDADE,
+    },
+    select: {
+      id: true,
+      dataLegal: true,
+      modelo: { select: { nome: true, sectorCode: true } },
+      company: { select: { name: true, displayName: true } },
+      pipelineItem: {
+        select: { id: true, stage: { select: { type: true, isTerminal: true } }, assignees: { select: { userId: true } } },
+      },
+    },
+  });
+  if (obrigacoes.length === 0) return 0;
+
+  const feriados = new Set((await feriadosDoEscritorio(tenantId)).keys());
+  const coordenadores = new Map<string, string[]>();
+  let sent = 0;
+  for (const o of obrigacoes) {
+    const item = o.pipelineItem;
+    if (!item || item.stage.type === "DONE" || item.stage.isTerminal) continue;
+    const risco = riscoDeMulta(o.dataLegal, hoje, feriados);
+    if (!risco) continue;
+    if (!(await reservarPorChave(tenantId, chaveDoRisco(o.id, risco), today))) continue;
+    const input = {
+      tenantId,
+      type: "OBRIGACAO_MULTA",
+      message: mensagemDoRisco(risco, { obrigacao: o.modelo.nome, empresa: nomeExibicao(o.company), dataLegal: o.dataLegal }).slice(0, 250),
+      entityId: item.id,
+    };
+    let destino = item.assignees.map((a) => a.userId);
+    if (destino.length === 0) {
+      const setor = o.modelo.sectorCode;
+      if (!coordenadores.has(setor)) coordenadores.set(setor, await coordenadoresDoSetor(tenantId, setor));
+      destino = coordenadores.get(setor)!;
+    }
+    if (destino.length > 0) for (const userId of destino) await notifyUser(userId, input);
+    else await notifySector(o.modelo.sectorCode, input);
+    sent++;
+  }
+  return sent;
+}
+
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
     ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
@@ -918,6 +977,7 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["serpro eventos", () => acompanharNoSerpro(tenantId)],
     ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
+    ["risco de multa", () => checkObrigacoesEmRiscoDeMulta(tenantId, today)],
   ];
 
   let sent = 0;
