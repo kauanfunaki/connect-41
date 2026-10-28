@@ -20,6 +20,12 @@ describe("classificação automática", () => {
     expect((await classificar(c, dados, cats, [])).title).toBe("Recuperar senha do sistema");
     expect(m.gerar.mock.calls[0][0].schema.required).toContain("title");
   });
+  it("devolve as tags sugeridas, limpas e sem repetição", async () => {
+    m.gerar.mockResolvedValue({ valor: { categoryId: "senha", reason: "Senha", title: "Recuperar senha", tags: [" Senha ", "senha", "", "ERP", "a".repeat(61), "vpn", "e-mail", "acesso", "extra"] }, origem: "principal" });
+    expect((await classificar(c, dados, cats, [])).tags).toEqual(["senha", "erp", "vpn", "e-mail", "acesso"]);
+    expect(m.gerar.mock.calls[0][0].schema.required).toContain("tags");
+    m.gerar.mockRejectedValue(new Error("fora")); expect((await classificar(c, dados, cats, [])).tags).toEqual([]);
+  });
   it.each(["d", "off", "pending", "outro-escritorio", null])("não aceita grupo, categoria inválida, desativada ou incerta: %s", async categoryId => {
     m.gerar.mockResolvedValue({ valor: { categoryId, reason: "Teste" }, origem: "groq" });
     expect((await classificar(c, dados, cats, [])).categoryId).toBeNull();
