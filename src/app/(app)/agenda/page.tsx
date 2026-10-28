@@ -13,7 +13,8 @@ import {
   parseAgendaView,
   parseAgendaDate,
 } from "@/lib/agenda";
-import { intervaloDaBusca } from "@/lib/agendaExpediente";
+import Link from "next/link";
+import { descreverExpediente, intervaloDaBusca } from "@/lib/agendaExpediente";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { getSectorMaps } from "@/lib/sectors";
@@ -144,6 +145,17 @@ export default async function AgendaPage({
         subtitulo={(podeAgendar ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]}
         antesDaGrade={
           <>
+            {/* O horário da grade vem de Configurações › Agenda e a tela não
+                dizia (lote 10, 28/10/2026 — item 11 de "Telas e informações
+                repetidas"). Só na visão de dia e de semana, que têm grade. */}
+            {view !== "mes" && (
+              <p className="mb-2 -mt-1 text-fs-2 text-fg-muted">
+                Horário da grade: {descreverExpediente(expediente)}.{" "}
+                <Link href="/configuracoes#agenda" className="text-brand hover:underline">
+                  Mudar em Configurações › Agenda
+                </Link>
+              </p>
+            )}
             {setoresComPrazo.length > 0 && (
               <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-fs-2 text-fg-secondary" aria-label="Setores dos prazos">
                 {setoresComPrazo.map((code) => (
