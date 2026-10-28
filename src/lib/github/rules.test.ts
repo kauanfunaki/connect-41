@@ -36,8 +36,10 @@ describe("regras do heatmap GitHub", () => {
     expect(identity({ ...author, login: "robot[bot]" })).toMatchObject({ isBot: true });
     expect(identity({ ...author, node_id: "U_900719925474099399999", login: "nome-novo" }).externalId).toBe("U_900719925474099399999");
     const commit = normalize({ sha: "a".repeat(40), author: null, html_url: "https://github.com/example/test/commit/aaa", commit: { committer: { date: "2026-10-20T11:00:00Z" }, author: { name: "Pessoa conhecida", email: "privado@example.test" } } }, "COMMIT");
-    expect(commit?.user.unidentified).toBe(true);
-    expect(commit).not.toHaveProperty("email");
+    expect(commit?.user).toMatchObject({ unidentified: true, login: "Pessoa conhecida" });
+    expect(commit?.user.externalId).toMatch(/^git:[a-f\d]{64}$/);
+    expect(JSON.stringify(commit)).not.toContain("privado@example.test");
+    expect(identity(null, { email: "so-email@example.test" })).toMatchObject({ externalId: "unknown", unidentified: true });
   });
   it("recusa links externos ou com credencial na resposta", () => {
     for (const value of ["javascript:alert(1)", "https://github.com.evil.test/a", "https://token@github.com/a", "http://github.com/a"]) expect(() => safeGithubUrl(value)).toThrow();
