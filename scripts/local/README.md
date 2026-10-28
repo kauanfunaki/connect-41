@@ -165,8 +165,8 @@ para quem não é do setor. Para isso:
 node scripts/local/com-banco-local.mjs npx tsx scripts/local/perfis-de-teste.ts
 ```
 
-Cria `bpo.teste@`, `dp.teste@` e `dpcoord.teste@exemplo.invalido` (coordenador do
-BPO, usuário do DP e coordenador do DP), com a `LOCAL_PORTAL_PASSWORD`, e uma
+Cria `bpo.teste@`, `dp.teste@`, `dpcoord.teste@` e `fiscal.teste@exemplo.invalido` (coordenador do
+BPO, usuário do DP, coordenador do DP e usuário do Fiscal), com a `LOCAL_PORTAL_PASSWORD`, e uma
 colaboradora fictícia para a ficha da pessoa. Rode depois de recriar o banco.
 
 ## Conferir a demonstração do BPO da produção (15/10/2026)
