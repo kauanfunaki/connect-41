@@ -67,7 +67,7 @@ export function TambemEmSetores({
             title={disponivel ? undefined : "Ainda não dá para salvar: falta atualizar o banco (migration)."}
             className="whitespace-nowrap"
           >
-            <Share2 size={12} /> {quantos > 0 ? `Também em ${quantos}` : "Também em…"}
+            <Share2 size={12} /> {quantos > 0 ? `Compartilhado com ${quantos}` : "Compartilhar"}
           </Button>
         )}
       >

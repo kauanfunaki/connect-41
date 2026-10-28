@@ -61,10 +61,13 @@ export function TenantForm({ action, isSuperAdmin, defaultValues }: Props) {
           />
         </CampoForm>
       </FieldGrid>
-      <p className="flex items-center gap-2 text-helper text-fg-muted">
-        <Lock size={13} className="flex-shrink-0" aria-hidden />
-        Código interno <span className="font-mono text-fg">{defaultValues.slug}</span> · não muda por aqui
-      </p>
+      {/* O código interno (slug) só interessa a quem administra a plataforma (Ajustes de 27/10/2026). */}
+      {isSuperAdmin && (
+        <p className="flex items-center gap-2 text-helper text-fg-muted">
+          <Lock size={13} className="flex-shrink-0" aria-hidden />
+          Código interno <span className="font-mono text-fg">{defaultValues.slug}</span> · não muda por aqui
+        </p>
+      )}
 
       {isSuperAdmin && (
         <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_14rem]" className="border-t border-border pt-4">

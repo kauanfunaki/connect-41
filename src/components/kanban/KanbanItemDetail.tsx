@@ -309,7 +309,17 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         <Breadcrumb className="mb-4!" items={[...trilhaDaLista(pipeline, nomeDoSetor), { label: title, truncate: true }]} />
       )}
 
-      <div className={isModal ? "mb-3 pr-12" : "mb-3"}>
+      {/* No modal, o "Excluir tarefa" fica no canto, na mesma linha e altura do
+          fechar (`top-4`, h-8, do `KanbanItemModal`). Ao lado do título, ele
+          descia junto com a primeira linha do título grande e ficava torto em
+          relação ao X (Ajustes de 27/10/2026). */}
+      {isModal && canDelete && (
+        <div className="absolute top-4 right-14 z-10 flex h-8 items-center">
+          <DeleteTaskButton entityName={title} deleteAction={deleteAction} />
+        </div>
+      )}
+
+      <div className={isModal ? (canDelete ? "mb-3 pr-40" : "mb-3 pr-12") : "mb-3"}>
         {item.parentItemId && (
           <Link
             href={`${basePath}/itens/${item.parentItemId}`}
@@ -322,7 +332,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           <h1 className="text-display leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
-          {canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
+          {!isModal && canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
         </div>
         {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
