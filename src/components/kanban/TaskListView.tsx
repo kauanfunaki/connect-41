@@ -97,7 +97,12 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
     <span ref={menuRef} className="relative">
       <button
         type="button"
-        data-dica={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`} aria-label={`${a.name} · ${PRIORITY_LABEL[a.priority] ?? "Normal"}`}
+        // A dica diz o que o clique faz: sem ela, ninguém sabia que o avatar
+        // abre a prioridade do responsável (Ajustes de 27/10/2026).
+        data-dica={`${a.name} · prioridade ${(PRIORITY_LABEL[a.priority] ?? "Normal").toLowerCase()}${canAct ? " · clique para mudar" : ""}`}
+        aria-label={`${a.name} · prioridade ${(PRIORITY_LABEL[a.priority] ?? "Normal").toLowerCase()}`}
+        aria-haspopup={canAct ? "menu" : undefined}
+        aria-expanded={canAct ? open : undefined}
         onClick={(e) => {
           if (!canAct) return;
           e.preventDefault();
@@ -106,7 +111,12 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
         }}
         // 24px (07/10/2026): as iniciais saíram de 9px para os 11px da escala,
         // e não cabiam duas letras dentro da borda de prioridade num círculo de 20px.
-        className="w-6 h-6 rounded-full bg-surface-hover border-2 flex items-center justify-center text-micro font-medium text-fg-secondary"
+        // Clicável, ganha o realce de botão no hover/foco e sobe sobre os vizinhos.
+        className={`relative w-6 h-6 rounded-full bg-surface-hover border-2 flex items-center justify-center text-micro font-medium text-fg-secondary transition-[box-shadow,transform] ${
+          canAct
+            ? "cursor-pointer hover:z-10 hover:scale-110 hover:shadow-[0_0_0_2px_var(--c41-surface),0_0_0_4px_var(--c41-brand)] focus-visible:z-10 focus-visible:shadow-[0_0_0_2px_var(--c41-surface),0_0_0_4px_var(--c41-brand)] focus-visible:outline-none"
+            : "cursor-default"
+        }`}
         style={{ borderColor: PRIORITY_COLOR[a.priority] ?? PRIORITY_COLOR[0] }}
       >
         {a.name.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
@@ -114,12 +124,15 @@ function AssigneeAvatar({ a, itemId, canAct, priorityAction }: { a: AssigneeRow;
       {open && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-20 top-full right-0 mt-1 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-1 w-32"
+          role="menu"
+          className="absolute z-20 top-full left-1/2 -translate-x-1/2 mt-1 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] p-1 w-36"
         >
+          <p className="c41-rotulo px-2 pt-1 pb-1.5 text-left">Prioridade</p>
           {[0, 1, 2].map((p) => (
             <button
               key={p}
               type="button"
+              role="menuitem"
               onClick={(e) => {
                 e.preventDefault();
                 startTransition(() => priorityAction(itemId, a.id, p));
@@ -237,9 +250,12 @@ function Row({
             caía pra linha de baixo dentro de uma coluna de 176px — a linha
             inteira crescia de altura só por causa disso, quebrando o ritmo da
             lista. O contador guarda o resto sem custar altura nenhuma. */}
-        <td className="py-2 pr-2 w-44">
+        {/* Tags, Responsáveis e Prazo centralizados, como as tabelas do casco
+            padrão (`.c41-tabela`); só a Atividade, que é árvore, fica à esquerda.
+            Cada coluna seguia um lado (Ajustes de 27/10/2026). */}
+        <td className="py-2 px-2 w-44">
           {tags.length > 0 && (
-            <div className="flex items-center gap-1 min-w-0">
+            <div className="flex items-center justify-center gap-1 min-w-0">
               <EtiquetaColorida cor={tags[0].color} className="min-w-0">
                 {tags[0].name}
               </EtiquetaColorida>
@@ -255,9 +271,9 @@ function Row({
           )}
         </td>
 
-        <td className="py-2 pr-2 w-24">
+        <td className="py-2 px-2 w-32">
           {assignees.length > 0 && (
-            <div className="flex items-center -space-x-1.5">
+            <div className="flex items-center justify-center -space-x-1.5">
               {assignees.slice(0, 3).map((a) => (
                 <AssigneeAvatar key={a.id} a={a} itemId={item.id} canAct={canAct} priorityAction={priorityAction} />
               ))}
@@ -269,17 +285,25 @@ function Row({
             tela declaram colSpan={5} em vários pontos (cabeçalho de status,
             alvo de soltar, "Adicionar atividade"), e uma 6ª coluna obrigaria a
             revisar todos eles para ganhar 24px. */}
-        <td className="py-2 pr-4 w-[300px] text-right">
-          <div className="flex items-center justify-end gap-1">
-            {dueDate && (
-              <span className={`inline-flex items-center gap-1 text-ui font-medium tnum whitespace-nowrap ${prazoDaTarefa(dueDate, isTerminal).classe}`}>
-                {item.recurring && <Repeat size={10} />}
-                {formatCalendarDate(new Date(dueDate))} · {prazoDaTarefa(dueDate, isTerminal).rotulo}
-              </span>
-            )}
-            {canAct && deleteAction && (
-              <RowActionsMenu name={item.entityName} onDelete={() => deleteAction(item.id)} />
-            )}
+        {/* O prazo no centro da coluna e o menu encostado na direita: a
+            primeira trilha do grid, vazia, tem a largura da última (o menu),
+            e o prazo fica no eixo do cabeçalho. */}
+        <td className="py-2 pl-2 pr-4 w-[300px]">
+          <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_1.75rem] items-center gap-1">
+            <span aria-hidden />
+            <span className="flex justify-center min-w-0">
+              {dueDate && (
+                <span className={`inline-flex items-center gap-1 text-ui font-medium tnum whitespace-nowrap ${prazoDaTarefa(dueDate, isTerminal).classe}`}>
+                  {item.recurring && <Repeat size={10} />}
+                  {formatCalendarDate(new Date(dueDate))} · {prazoDaTarefa(dueDate, isTerminal).rotulo}
+                </span>
+              )}
+            </span>
+            <span className="flex justify-end">
+              {canAct && deleteAction && (
+                <RowActionsMenu name={item.entityName} onDelete={() => deleteAction(item.id)} />
+              )}
+            </span>
           </div>
         </td>
       </tr>
@@ -855,21 +879,21 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 (`c41-linha`), e o cabeçalho padrão pela `c41-cabecalho-dividido`
                 (14/10/2026): o fio entre as colunas e o funil na borda direita
                 da coluna, fora do rótulo. O rótulo segue o lado das células —
-                à esquerda (`c41-a-esquerda`) e, no Prazo, à direita
-                (`c41-a-direita`). */}
+                à esquerda (`c41-a-esquerda`) na Atividade e no centro nas
+                outras (27/10/2026). */}
             <thead className="c41-cabecalho-dividido sticky top-0 z-10">
               <tr className="text-left">
                 <th className={`${DOT_COL} bg-table-header-bg pt-2.5 pb-2 border-b border-border`} />
                 <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 border-b border-border">
                   <FiltroDaColuna rotulo="Atividade" chave="tarefa" />
                 </th>
-                <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
+                <th className="text-center text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-44 border-b border-border">
                   <FiltroDaColuna rotulo="Tags" chave="tags" />
                 </th>
-                <th className="c41-a-esquerda text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-24 border-b border-border">
+                <th className="text-center text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 px-2 w-32 border-b border-border">
                   <FiltroDaColuna rotulo="Responsáveis" chave="responsaveis" align="right" />
                 </th>
-                <th className="c41-a-direita text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[300px] text-right border-b border-border">
+                <th className="text-center text-fs-1 font-semibold text-fg-muted uppercase tracking-wide bg-table-header-bg pt-2.5 pb-2 pl-2 pr-4 w-[300px] border-b border-border">
                   <FiltroDaColuna rotulo="Prazo" chave="prazo" tipo="data" align="right" />
                 </th>
               </tr>
