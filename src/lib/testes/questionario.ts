@@ -5,8 +5,10 @@
 // A resposta escolhida e a certa já ficam guardadas no resultado
 // (`QuizScores.results`); o texto da pergunta e das alternativas vem do modelo
 // do teste. Editar um modelo recria as perguntas (`atualizarTemplate`), e as
-// respostas antigas deixam de achar a delas: a pergunta aparece sem o texto,
-// com a letra da alternativa, em vez de sumir da lista.
+// respostas antigas deixam de achar a delas. Desde 28/10/2026 o resultado
+// guarda o texto como o candidato viu, e é ele que aparece; o resultado de
+// antes disso, sem a cópia, mostra a pergunta sem o texto, com a letra da
+// alternativa, em vez de sumir da lista.
 
 import type { QuizScores } from "@/lib/quiz";
 
@@ -48,11 +50,13 @@ export function perguntasRespondidas(scores: QuizScores | null | undefined, mode
 
   const linhas = resultados.map((r, i) => {
     const q = porId.get(r.questionId);
+    // A cópia gravada com a resposta vale mais que o modelo, que pode ter mudado.
+    const opcoes = Array.isArray(r.alternativas) ? r.alternativas : q?.options;
     return {
       chave: q ? posicao.get(q.id)! : ordenadas.length + i,
-      texto: q?.text ?? null,
-      resposta: q ? textoDaAlternativa(q.options, r.selectedIndex) : alternativaPorLetra(r.selectedIndex),
-      certa: q ? textoDaAlternativa(q.options, r.correctIndex) : alternativaPorLetra(r.correctIndex),
+      texto: typeof r.texto === "string" ? r.texto : (q?.text ?? null),
+      resposta: textoDaAlternativa(opcoes, r.selectedIndex),
+      certa: textoDaAlternativa(opcoes, r.correctIndex),
       acertou: r.correct === true,
     };
   });

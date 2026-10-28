@@ -39,6 +39,18 @@ describe("perguntasRespondidas", () => {
     expect(lista[2]).toEqual({ numero: 3, texto: null, resposta: "Alternativa A", certa: "Alternativa B", acertou: false });
   });
 
+  it("resposta gravada com o texto (28/10) mantém a pergunta como o candidato viu, mesmo com o modelo editado", () => {
+    const comTexto = scoreQuiz(
+      [{ questionId: "q3", selectedIndex: 0 }],
+      [{ id: "q3", correctIndex: 1, text: MODELO[2].text, options: MODELO[2].options }]
+    );
+    // O modelo foi editado: a q3 sumiu, e a q1 ganhou outro texto.
+    const editado = [{ ...MODELO[1], text: "Pergunta reescrita" }];
+    expect(perguntasRespondidas(comTexto, editado)).toEqual([
+      { numero: 1, texto: "O turno começa às 4h e dura 8h20. A que horas termina?", resposta: "12h00", certa: "12h20", acertou: false },
+    ]);
+  });
+
   it("resultado sem a lista (dado antigo ou estragado) vira lista vazia", () => {
     expect(perguntasRespondidas(null, MODELO)).toEqual([]);
     expect(perguntasRespondidas({ total: 3, correct: 1, pct: 33 } as never, MODELO)).toEqual([]);

@@ -3323,6 +3323,10 @@ model FiscalDocument {
   // quebra a home do portal.
   @@index([tenantId, companyId, competence], map: "fiscal_documents_tenantId_companyId_competence_idx")
   @@index([tenantId, companyId, destination])
+  // A listagem COM filtro de empresa, na ordem da tela (data de emissão):
+  // até 28/10/2026 só havia (empresa, competência), e a ordenação por data
+  // dentro da empresa era feita fora do índice.
+  @@index([tenantId, companyId, issuedAt])
   // Os três abaixo servem a listagem SEM filtro de empresa, que é como a tela
   // abre. Medido em 09/09 com 244.558 linhas em produção: sem eles a página
   // fazia quatro varreduras completas em paralelo e levava ~35s — listagem

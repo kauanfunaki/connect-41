@@ -15,3 +15,10 @@ export const CATEGORY_LABEL: Record<DocumentCategory, string> = {
 };
 
 export const CATEGORY_OPTIONS = Object.keys(CATEGORY_LABEL) as DocumentCategory[];
+
+/**
+ * Teto de um documento anexado (`/api/documents` e o formulário). Até 28/10/2026
+ * a tela dizia 20 MB e a rota recusava acima de 10 MB; cabe nos 26 MB que o
+ * proxy guarda (`proxyClientMaxBodySize`).
+ */
+export const TETO_DOS_DOCUMENTOS_MB = 20;

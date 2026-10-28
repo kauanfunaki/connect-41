@@ -6,7 +6,7 @@ import { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
 import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { scopedPersonWhere } from "@/lib/auth/scope";
-import { DESLIGAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
+import { dataDoDesligamento, DESLIGAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
 
 export type TerminationState = { error: string } | null;
 
@@ -86,7 +86,7 @@ export async function atualizarDesligamento(
     if (status === "FINALIZADO") {
       await prisma.person.update({
         where: { id: personId },
-        data: { employmentStatus: "DESLIGADO", dismissalDate: finalizedAt ?? new Date() },
+        data: { employmentStatus: "DESLIGADO", dismissalDate: dataDoDesligamento({ terminationDate: existing.terminationDate, finalizedAt }, new Date()) },
       });
     }
   } catch (err) {
