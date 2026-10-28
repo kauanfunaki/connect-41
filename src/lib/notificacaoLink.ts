@@ -43,6 +43,6 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Menção e comentário guardam o id do card (desde 02/10/2026): o card solto,
   // sem empresa nem pessoa, gerava notificação que não abria nada. A rota
   // acha a lista do card e redireciona.
-  if (n.type === "MENTION" || n.type === "COMMENT") return `/kanban/itens/${n.entityId}`;
+  if (n.type === "MENTION" || n.type === "COMMENT" || n.type === "OBRIGACAO_MULTA") return `/kanban/itens/${n.entityId}`;
   return null;
 }

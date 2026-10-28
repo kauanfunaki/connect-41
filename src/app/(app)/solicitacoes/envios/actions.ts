@@ -23,8 +23,17 @@ import { emailDoDestinatario, rotaDoEnvio, rotaDosEnvios } from "@/lib/envios/re
 import { lerAgendamento } from "@/lib/envios/agendamento";
 import { lerDiasDoLembrete } from "@/lib/envios/lembrete";
 import { entregarPorEmail, publicarEnvioAgendado } from "@/lib/envios/agendador";
+import { anexoDosArquivos, arquivosParaOEnvio, type ArquivoParaOEnvio } from "@/lib/envios/anexoDosArquivos";
 
 export type ClientDocumentState = { error: string } | { success: true } | null;
+
+/** Os arquivos da empresa que cabem como anexo do envio, buscados pelo nome. */
+export async function buscarArquivosParaOEnvio(companyId: string, termo: string): Promise<ArquivoParaOEnvio[]> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId || !canWrite(ctx.role) || !companyId) return [];
+  if (!(await assertCompanyInScope(companyId, ctx))) return [];
+  return arquivosParaOEnvio(ctx, companyId, termo);
+}
 
 /** A lista e a ficha do envio, depois de qualquer mudança. */
 function revalidarEnvio(id?: string) {
@@ -102,6 +111,14 @@ export async function criarDocumento(_prev: ClientDocumentState, form: FormData)
       return { error: err instanceof Error ? err.message : "Erro ao salvar arquivo anexo." };
     }
   }
+  // Um arquivo que já está nos Arquivos da empresa (28/10/2026). O anexo novo,
+  // se a pessoa escolheu os dois, vale no lugar.
+  const arquivoId = String(form.get("arquivoId") ?? "");
+  if (!fileData && arquivoId) {
+    const r = await anexoDosArquivos(ctx, companyId, arquivoId);
+    if (!r.ok) return { error: r.erro };
+    fileData = r.anexo;
+  }
 
   const prisma = getPrisma();
   const document = await prisma.clientDocument.create({
@@ -176,6 +193,14 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
     } catch (err) {
       return { error: err instanceof Error ? err.message : "Erro ao salvar arquivo anexo." };
     }
+  }
+  // Um arquivo que já está nos Arquivos da empresa (28/10/2026). O anexo novo,
+  // se a pessoa escolheu os dois, vale no lugar.
+  const arquivoId = String(form.get("arquivoId") ?? "");
+  if (!fileData && arquivoId) {
+    const r = await anexoDosArquivos(ctx, companyId, arquivoId);
+    if (!r.ok) return { error: r.erro };
+    fileData = r.anexo;
   }
 
   // Só o rascunho ainda não publicado muda (22/10/2026): se o agendador

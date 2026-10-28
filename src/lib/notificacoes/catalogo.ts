@@ -117,6 +117,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   GESTAO_PRAZO: a("prazo", "warning", "Prazo de card ou processo"),
   GESTAO_ALERTA: { ...a("alerta", "warning", "Alerta da Gestão"), legado: true },
   OBLIGATION_GENERATED: a("documento", "info", "Obrigação gerada"),
+  // A obrigação por regime aberta perto da data legal (lote 2, 28/10/2026).
+  OBRIGACAO_MULTA: a("prazo", "danger", "Risco de multa na obrigação"),
   PROCESS_AVISO_JUNTA: a("processo", "info", "Aviso da Junta"),
   AVISO_ORGAO_SEM_PROCESSO: a("processo", "warning", "Aviso sem processo"),
   PROCESS_VARREDURA: a("processo", "info", "Varredura de processos"),
