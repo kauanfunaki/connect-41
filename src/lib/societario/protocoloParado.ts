@@ -5,11 +5,9 @@
 // dias, enquanto seguir parado.
 //
 // N é do escritório (Societário › Prazos); sem escolha, vale o padrão, até o
-// setor dizer o dele. A leitura nunca derruba o agendador: sem a tabela
-// (deploy antes da migration), vale o padrão.
-
-import { getPrisma } from "@/lib/prisma";
-import { isPrismaMissingTableError } from "@/lib/prismaErrors";
+// setor dizer o dele. Este arquivo é só regra, sem banco: a tela (componente
+// do navegador) importa daqui. A leitura do prazo gravado está em
+// ./protocoloParadoServidor.ts.
 
 /** O padrão até o setor dizer o dele. */
 export const COBRAR_APOS_DIAS_PADRAO = 15;
@@ -25,17 +23,6 @@ export function rotuloDaCobranca(dias: number): string {
 export function lerDiasDaCobranca(v: unknown): number | null {
   const n = typeof v === "number" ? v : typeof v === "string" && /^\d{1,3}$/.test(v.trim()) ? Number(v) : NaN;
   return (OPCOES_DA_COBRANCA as readonly number[]).includes(n) ? n : null;
-}
-
-/** O prazo do escritório. Nunca lança. */
-export async function diasParaCobrarOProtocolo(tenantId: string): Promise<number> {
-  try {
-    const linha = await getPrisma().tenantSocietarioConfig.findUnique({ where: { tenantId }, select: { cobrarProtocoloAposDias: true } });
-    return lerDiasDaCobranca(linha?.cobrarProtocoloAposDias ?? null) ?? COBRAR_APOS_DIAS_PADRAO;
-  } catch (err) {
-    if (!isPrismaMissingTableError(err)) console.error("[societário] leitura do prazo de cobrança do protocolo", err);
-    return COBRAR_APOS_DIAS_PADRAO;
-  }
 }
 
 const DIA_MS = 24 * 60 * 60 * 1000;
