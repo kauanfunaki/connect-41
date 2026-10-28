@@ -20,9 +20,9 @@ import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { competenciaDoInstante, competenciaValida } from "@/lib/financeiro/periodo";
 import { moeda } from "@/lib/financeiro/formato";
-import { formatarCompetencia } from "@/lib/format";
+import { formatarCompetencia, formatInstantDateTime } from "@/lib/format";
 import { nomeDaContaBancaria } from "@/lib/financeiro/contaPrevista";
-import { exportacaoDoMes } from "@/lib/financeiro/dominio/servidor";
+import { correcaoDoMes, exportacaoDoMes, exportacoesDoMes } from "@/lib/financeiro/dominio/servidor";
 import { dataCurta } from "@/components/financeiro/conciliacao/data";
 
 export const dynamic = "force-dynamic";
@@ -154,7 +154,14 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
 
   const total = r.linhas.reduce((s, l) => s + l.centavos, 0);
   const baixasProntas = r.baixas.length - r.pendencias.length;
-  const download = (formato: "xlsx" | "txt") => `/lancamentos/dominio/exportar?empresa=${companyId}&mes=${mes}&formato=${formato}`;
+  const download = (formato: "xlsx" | "txt", tipo?: "correcao") =>
+    `/lancamentos/dominio/exportar?empresa=${companyId}&mes=${mes}&formato=${formato}${tipo ? `&tipo=${tipo}` : ""}`;
+  // A correção (lote 3, 28/10/2026): contra a última planilha baixada deste mês.
+  const [feitas, correcao] = await Promise.all([exportacoesDoMes(tenantId, companyId, mes), correcaoDoMes(tenantId, companyId, mes, r)]);
+  const ultima = feitas[0] ?? null;
+  const botao = "inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-ui font-medium";
+  const principal = `${botao} bg-brand-solid text-on-brand hover:bg-brand-solid-hover`;
+  const secundario = `${botao} border border-border-strong text-fg hover:bg-surface-hover`;
 
   return (
     <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>
@@ -176,17 +183,63 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
             </p>
             {!r.codigoFilial && <p className="text-micro text-warning-fg">Sem o código Matriz/Filial da Domínio — preencha no de-para, abaixo.</p>}
           </div>
-          {podeEditar && r.linhas.length > 0 && (
+          {podeEditar && !ultima && r.linhas.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <a href={download("xlsx")} download className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-brand-solid text-on-brand text-ui font-medium hover:bg-brand-solid-hover">
+              <a href={download("xlsx")} download className={principal}>
                 <FileSpreadsheet size={14} /> Domínio (.xlsx)
               </a>
-              <a href={download("txt")} download className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border-strong text-fg text-ui font-medium hover:bg-surface-hover">
+              <a href={download("txt")} download className={secundario}>
                 <FileText size={14} /> Domínio (.txt)
               </a>
             </div>
           )}
         </Card>
+
+        {ultima && correcao && (
+          <Card className="p-4 mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-ui text-fg-secondary">
+              <p>
+                Última planilha deste mês: <strong className="text-fg">{ultima.tipo === "CORRECAO" ? "correção" : "mês inteiro"}</strong>, em{" "}
+                {formatInstantDateTime(ultima.em, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                {ultima.por ? ` por ${ultima.por}` : ""}.
+              </p>
+              <p>
+                {correcao.linhas.length === 0 ? (
+                  "Nada mudou desde ela: a Domínio já tem o que está aqui."
+                ) : (
+                  <>
+                    Desde ela: {correcao.novas} {correcao.novas === 1 ? "baixa nova" : "baixas novas"}, {correcao.alteradas}{" "}
+                    {correcao.alteradas === 1 ? "alterada" : "alteradas"} e {correcao.removidas} {correcao.removidas === 1 ? "que saiu" : "que saíram"} —{" "}
+                    <strong className="text-fg">
+                      {correcao.linhas.length} {correcao.linhas.length === 1 ? "linha" : "linhas"} na correção
+                    </strong>
+                    , com o estorno do que mudou ou saiu.
+                  </>
+                )}
+              </p>
+              <p className="text-micro text-fg-muted">Importar o mês inteiro de novo duplica na Domínio o que já foi importado. Para acertar, use a correção.</p>
+            </div>
+            {podeEditar && (
+              <div className="flex flex-wrap items-center gap-2">
+                {correcao.linhas.length > 0 && (
+                  <>
+                    <a href={download("xlsx", "correcao")} download className={principal}>
+                      <FileSpreadsheet size={14} /> Correção (.xlsx)
+                    </a>
+                    <a href={download("txt", "correcao")} download className={secundario}>
+                      <FileText size={14} /> Correção (.txt)
+                    </a>
+                  </>
+                )}
+                {r.linhas.length > 0 && (
+                  <a href={download("xlsx")} download className={secundario}>
+                    <FileSpreadsheet size={14} /> Mês inteiro de novo
+                  </a>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
 
         {r.pendencias.length > 0 && (
           <Aviso tom="atencao" className="mb-4">
@@ -238,6 +291,38 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
           )}
         </CascoDaTabela>
 
+        {feitas.length > 0 && (
+          <>
+            <h2 className="text-section font-semibold text-fg mt-8 mb-3">Planilhas baixadas deste mês</h2>
+            <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
+              <table className="w-full min-w-[560px]">
+                <thead>
+                  <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
+                    <th className="py-2 pr-3 font-medium">Quando</th>
+                    <th className="py-2 pr-3 font-medium">O quê</th>
+                    <th className="py-2 pr-3 font-medium">Linhas</th>
+                    <th className="py-2 font-medium">Quem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feitas.map((f) => (
+                    <tr key={f.id} className="border-b border-border-soft">
+                      <td className="py-2 pr-3 tabular-nums whitespace-nowrap">
+                        {formatInstantDateTime(f.em, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {f.tipo === "CORRECAO" ? "Correção" : "Mês inteiro"} (.{f.formato})
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">{f.linhas}</td>
+                      <td className="py-2">{f.por ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
         <h2 className="text-section font-semibold text-fg mt-8 mb-3">De-para da empresa</h2>
         <DeParaDaDominio companyId={companyId} codigoFilial={r.codigoFilial} grupos={grupos} podeEditar={podeEditar} />
 
@@ -246,7 +331,9 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
           de lançamentos da Domínio, uma vez por mês e empresa. Entram só as baixas — a provisão das notas de compra continua vindo do
           SPED Generator. Pagamento: débito na conta do fornecedor (se tiver no de-para) ou da categoria, crédito no banco; recebimento,
           o contrário. Juros e multa vão na categoria de encargos da baixa, e o desconto na de desconto. A baixa com alguma conta
-          faltando fica inteira fora do arquivo. O código do histórico vai vazio, e o complemento diz a baixa.
+          faltando fica inteira fora do arquivo. O código do histórico vai vazio, e o complemento diz a baixa. Toda planilha baixada
+          fica registrada: depois da primeira, a correção leva só o que mudou — as baixas novas e o estorno (débito e crédito
+          trocados, na mesma data) das que saíram ou mudaram. Planilhas baixadas antes de 28/10/2026 não ficaram registradas.
         </NotaDeFonte>
       </PageContainer>
     </EmpresaDaTela>

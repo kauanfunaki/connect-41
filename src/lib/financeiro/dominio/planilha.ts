@@ -37,6 +37,8 @@ export type LinhaDaDominio = {
   codigoHistorico: string;
   complemento: string;
   codigoFilial: string;
+  /** A baixa que gerou a linha (28/10/2026): é por ela que a correção compara. Não vai no arquivo. */
+  baixaId?: string;
 };
 
 function celulas(l: LinhaDaDominio): (string | number)[] {
