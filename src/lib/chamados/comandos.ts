@@ -72,6 +72,8 @@ export async function salvarRascunho(c: Contexto, id: string, version: number, i
   // O navegador não pode forjar uma classificação. Preserva apenas a salva
   // pelo servidor para o mesmo conteúdo, incluindo campos complementares.
   dados.categoryId = classificacao ? String(payload.categoryId) : "";
+  // As tags também são da IA (27/10/2026): a tela não tem mais o campo.
+  dados.tags = classificacao && Array.isArray(payload.tags) ? payload.tags.filter((t): t is string => typeof t === "string") : [];
   const result = await getPrisma().helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { payload: json({ ...dados, ...(classificacao ? { _classificacao: classificacao } : {}) }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
   if (result.count !== 1) throw desatualizado();
   return { version: version + 1 };
@@ -102,7 +104,7 @@ async function classificarRascunho(c: Contexto, id: string, version: number, for
       if (!atuais.some(cat => cat.id === escolhida.id && cat.active && cat.version === escolhida.version)
         || (resultado.categoryId && !categoriasClassificaveis(atuais).some(cat => cat.id === escolhida.id))) throw desatualizado();
       const title = dados.title || (resultado.title.length >= 3 ? resultado.title : tituloDaDescricao(dados.description));
-      const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, analysisToken: token, submittedAt: null }, data: { payload: json({ ...dados, title, categoryId, _classificacao: resultado }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
+      const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, analysisToken: token, submittedAt: null }, data: { payload: json({ ...dados, title, categoryId, tags: resultado.tags.length ? resultado.tags : dados.tags, _classificacao: resultado }), version: { increment: 1 }, review: Prisma.DbNull, reviewVersion: null, analysisToken: null } });
       if (r.count !== 1) throw desatualizado();
     });
   } finally {
