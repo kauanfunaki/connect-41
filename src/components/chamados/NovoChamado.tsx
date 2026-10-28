@@ -78,6 +78,9 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
   async function enviar(revisar: boolean) {
     if (!(formulario.current?.reportValidity() ?? false)) return;
     setRevisao(true);
+    // Pergunta em aberto e pedido sem edição (editar descarta o parecer): a
+    // conversa continua de onde parou, sem nova análise.
+    if (revisar && pergunta) return;
     await executar(revisar ? "analisando" : "enviando", async () => {
       const d = await rascunhoAtual();
       const r = revisar ? await avaliar(d.id, d.version) : await finalizar(d.id, d.version);
@@ -163,7 +166,7 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
         <section aria-label="Envio" className="space-y-3 p-5">
           {cat ? <p className="text-ui text-fg-secondary" role="status">Classificação: <strong className="text-fg">{nomeDaCategoria(categorias, cat.id)}</strong>{dados.title && <><br />Título: <strong className="text-fg">{dados.title}</strong></>}</p>
             : <p className="text-ui text-fg-secondary">Ao enviar, a IA lê o pedido e, se faltar alguma informação, pergunta antes de abrir o chamado.</p>}
-          <Button type="submit" size="lg" className="w-full" disabled={!!busy}>Enviar chamado</Button>
+          <Button type="submit" size="lg" className="w-full" disabled={!!busy}>{pergunta ? "Continuar revisão" : "Enviar chamado"}</Button>
           {salvoAs && <p className="text-center text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
           {doFormulario && <p role="status" className="text-ui text-fg-secondary">{doFormulario} {doFormulario === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}
           {erro && !revisao && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
