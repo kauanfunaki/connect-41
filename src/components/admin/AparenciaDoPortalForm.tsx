@@ -100,12 +100,13 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
       </div>
 
       <div className="space-y-3 border-t border-border pt-5">
-        <h3 className="text-label font-semibold text-fg">Cores dos grupos</h3>
-        <Switch name="coresPorGrupo" checked={porGrupo} onCheckedChange={setPorGrupo} rotulo="Uma cor para cada grupo de telas" />
+        <h3 className="text-label font-semibold text-fg">Cores das áreas de uso</h3>
+        <Switch name="coresPorGrupo" checked={porGrupo} onCheckedChange={setPorGrupo} rotulo="Uma cor para cada área de uso" />
         <p className="text-helper text-fg-muted">
-          Como no Omie, no portal e no Connect da equipe: aparece no traço do título, na barra do item aberto e no cartão do número de
-          cada tela (no portal, também no ícone do menu). Desligado, tudo fica na cor principal. A cor de cada setor continua só na
-          bolinha dele, no menu e na troca de setor.
+          Como no Omie, no portal e no Connect da equipe: a cor diz o uso da tela (Finanças, Pessoas, Recrutamento…), não o setor.
+          Aparece no ícone de cada item do menu, no traço do título e no cartão do número de cada tela; no Connect da equipe, também na
+          linha e na etiqueta do cabeçalho, no título, no botão principal e no cabeçalho das tabelas. Desligado, tudo fica na cor
+          principal. Pessoas, Recrutamento e Escritório só aparecem no Connect da equipe.
         </p>
         {porGrupo && (
           <ul className="divide-y divide-border rounded-md border border-border">
@@ -168,7 +169,7 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
           rotulo="Usar a cor principal também no Connect da equipe"
         />
         <p className="text-helper text-fg-muted">
-          Desligado, a equipe segue no azul do Connect nos botões e no item aberto do menu. As cores dos grupos valem para a equipe de
+          Desligado, a equipe segue no azul do Connect onde a tela não tem área de uso. As cores das áreas valem para a equipe de
           qualquer jeito.
         </p>
       </div>

@@ -7,9 +7,14 @@
 // Os grupos são os do portal (`lib/aparencia/cores.ts`); as cores, as que o
 // escritório escolheu em Aparência. Tela fora destes grupos fica na cor
 // principal.
+//
+// 28/10/2026: os grupos viraram as sete **áreas de uso** (opção 1 da página
+// "Cores do Connect da equipe", como no Omie). O menu continua por setor; a
+// cor de cada item e da tela aberta é a da área. Entraram Pessoas (DP e os
+// indicadores de RH), Recrutamento e Escritório (Tech, Gestão, Chamados).
 
 import { MODULE_ROUTES } from "@/lib/module-catalog";
-import type { GrupoDeCor } from "./cores";
+import { ehGrupoDeCor, type GrupoDeCor } from "./cores";
 
 /** O grupo de cada módulo da equipe. O que não está aqui fica na cor principal. */
 export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
@@ -47,12 +52,38 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   societario_minha_area: "processos",
   societario_prazos: "processos",
   societario_relatorios: "processos",
+  societario_certidoes: "processos",
   // Solicitações: a conversa com o cliente, de qualquer setor.
   bpo_pendencias: "atendimento",
   bpo_comunicacao: "atendimento",
   portal_solicitacoes: "atendimento",
   arquivos: "atendimento",
   controladoria_conversas: "atendimento",
+  comercial_leads: "atendimento",
+  // Pessoas: o ciclo do colaborador e o que se lê dele.
+  dp_colaboradores: "pessoas",
+  dp_afastamentos: "pessoas",
+  dp_horas_extras: "pessoas",
+  dp_escalas: "pessoas",
+  dp_treinamentos: "pessoas",
+  dp_avaliacoes: "pessoas",
+  gestao_cargos_salarios: "pessoas",
+  gestao_indicadores_rh: "pessoas",
+  // Recrutamento.
+  recrutamento_vagas: "recrutamento",
+  recrutamento_candidatos: "recrutamento",
+  recrutamento_testes: "recrutamento",
+  recrutamento_whatsapp: "recrutamento",
+  recrutamento_colaboradores_clientes: "recrutamento",
+  // Escritório: o que é da casa, e não de um cliente.
+  helpdesk: "escritorio",
+  tech_controle_interno: "escritorio",
+  tech_github_contributions: "escritorio",
+  tech_ops_center: "escritorio",
+  tech_certificados: "escritorio",
+  gestao_painel: "escritorio",
+  gestao_valora: "escritorio",
+  contabil_sped: "escritorio",
 };
 
 /**
@@ -62,6 +93,10 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
 const ENDERECOS_EXTRAS: readonly [string, GrupoDeCor][] = [
   ["/fornecedores-e-sacados", "financeiro"],
   ["/documentos-fiscais", "fiscal"],
+  // As telas do DP que saem de Colaboradores.
+  ["/ferias", "pessoas"],
+  ["/admissoes", "pessoas"],
+  ["/desligamentos", "pessoas"],
 ];
 
 const ROTAS: readonly [string, GrupoDeCor][] = [
@@ -77,6 +112,29 @@ const ROTAS: readonly [string, GrupoDeCor][] = [
 /** O grupo de cor da tela aberta no Connect da equipe; `null` fica na cor principal. */
 export function grupoDaTelaDaEquipe(pathname: string): GrupoDeCor | null {
   const caminho = pathname.replace(/\/+$/, "") || "/";
+  // A página da própria área (28/10/2026): `/area/financeiro`.
+  const daArea = /^\/area\/([^/]+)$/.exec(caminho)?.[1];
+  if (daArea) return ehGrupoDeCor(daArea) ? daArea : null;
   const achada = ROTAS.find(([rota]) => caminho === rota || caminho.startsWith(`${rota}/`));
   return achada?.[1] ?? null;
+}
+
+/** A área de uso de um módulo; `null` fica na cor principal. */
+export function areaDoModulo(code: string): GrupoDeCor | null {
+  return GRUPO_DO_MODULO[code] ?? null;
+}
+
+/**
+ * A área de um grupo de telas do menu (Contas, Cliente…): a que mais telas
+ * dele têm; no empate, a da primeira. `null` quando nenhuma tem área.
+ */
+export function areaDoGrupoDeTelas(codigos: readonly string[]): GrupoDeCor | null {
+  const contagem = new Map<GrupoDeCor, number>();
+  for (const c of codigos) {
+    const area = areaDoModulo(c);
+    if (area) contagem.set(area, (contagem.get(area) ?? 0) + 1);
+  }
+  let melhor: GrupoDeCor | null = null;
+  for (const [area, n] of contagem) if (!melhor || n > contagem.get(melhor)!) melhor = area;
+  return melhor;
 }

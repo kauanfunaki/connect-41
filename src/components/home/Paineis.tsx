@@ -373,7 +373,7 @@ export async function PainelDoDP({ ctx, setor }: Base) {
 
   const andamento = [
     { rotulo: "Admissões", detalhe: "em andamento", valor: admissoes, href: "/admissoes", icone: <UserPlus /> },
-    { rotulo: "Rescisões", detalhe: "em processo", valor: rescisoes, href: "/desligamentos", icone: <UserMinus /> },
+    { rotulo: "Desligamentos", detalhe: "em processo", valor: rescisoes, href: "/desligamentos", icone: <UserMinus /> },
     { rotulo: "Exames", detalhe: "admissionais pendentes", valor: exames, href: "/admissoes", icone: <Stethoscope /> },
     { rotulo: "Afastados", detalhe: "agora", valor: afastados, href: "/afastamentos", icone: <HeartPulse /> },
   ];

@@ -29,9 +29,15 @@ type Props = {
   sectorOptions: { value: string; label: string }[];
   defaultValues?: UsuarioDefaultValues;
   isSelf?: boolean;
+  /**
+   * Campos escondidos a mais. A aba Acesso da ficha da pessoa (lote 8,
+   * 28/10/2026) manda `personId` e `voltarPara`, para a conta nascer ligada
+   * à pessoa e o formulário voltar à ficha.
+   */
+  extras?: Record<string, string>;
 };
 
-export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, defaultValues, isSelf }: Props) {
+export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, defaultValues, isSelf, extras }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const isEdit = Boolean(defaultValues?.id);
   const [selectedSectors, setSelectedSectors] = useState(() => new Set(defaultValues?.sectors ?? []));
@@ -55,6 +61,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
   return (
     <form action={formAction} className="space-y-6">
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
+      {extras && Object.entries(extras).map(([nome, valor]) => <input key={nome} type="hidden" name={nome} value={valor} />)}
 
       {state?.error && (
         <Aviso>
