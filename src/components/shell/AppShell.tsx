@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
 import {
@@ -82,7 +82,7 @@ import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
-import { areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
+import { agruparPorCor, areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
 import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
@@ -280,7 +280,6 @@ export function AppShell({
   const artigoDaTela = naAjuda ? null : chaveDoCaminho(pathname, paresDeAjuda);
   const linkDaAjuda = artigoDaTela ? `/ajuda/${encodeURIComponent(artigoDaTela)}?de=${encodeURIComponent(pathname)}` : "/ajuda";
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes") || pathname.startsWith("/assinatura");
-  const corDoSetor = activeSector?.color;
   // O número do item Solicitações (21/10/2026), conferido a cada minuto.
   const novasSolicitacoes = useNumeroConferido(solicitacoesNovas, contarSolicitacoesNovas, solicitacoesLigadas && telasDoGeral.includes("solicitacoes"));
   const grupoDaTela = grupoDaTelaDaEquipe(pathname);
@@ -312,20 +311,31 @@ export function AppShell({
   // telas navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
   const telasDeCadastros = telasNavegaveis.some((t) => t.code === "bpo_cadastros") ? [...TELAS_DE_CADASTROS, TELA_DOS_FORNECEDORES] : TELAS_DE_CADASTROS;
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
-  const itensDoGeral = (
-    <>
-      {noGeral("cadastros") && (
-        <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} cor={corDoSetor}>
-          <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
-        </PainelDoItem>
-      )}
-      {noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" />}
-      {solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={areaDoModulo("portal_solicitacoes") ?? "marca"} />}
-      {chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" area={areaDoModulo("helpdesk") ?? "marca"} />}
-      {arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={areaDoModulo("arquivos") ?? "marca"} />}
-      {noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" />}
-    </>
-  );
+  // O Geral com as cores juntas (28/10/2026): os azuis — sem área e Chamados —
+  // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo.
+  const itensDoGeral = (quadros: React.ReactNode = null) => {
+    const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
+    const chamados = areaDoModulo("helpdesk") ?? "marca";
+    const arquivos = areaDoModulo("arquivos") ?? "marca";
+    const itens: { chave: string; area: string; no: React.ReactNode }[] = [
+      { chave: "quadros", area: "marca", no: quadros },
+      {
+        chave: "cadastros",
+        area: "marca",
+        no: noGeral("cadastros") && (
+          <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} area="marca">
+            <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
+          </PainelDoItem>
+        ),
+      },
+      { chave: "transferencias", area: "marca", no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
+      { chave: "solicitacoes", area: solicitacoes, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
+      { chave: "chamados", area: chamados, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" area={chamados} /> },
+      { chave: "arquivos", area: arquivos, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
+      { chave: "agenda", area: "marca", no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
+    ];
+    return agruparPorCor(itens.filter((i) => i.no), (i) => i.area).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
+  };
   useEffect(() => {
     if (!mobileOpen) return;
     function tecla(e: KeyboardEvent) {
@@ -495,16 +505,17 @@ export function AppShell({
                     </p>
                   </TituloDoBloco>
                 )}
-                {noGeral("espacos") && (
-                  <NavItem
-                    href={`/setor/${activeSector.code}`}
-                    ativo={(p) => quadrosAtivo(p, activeSector.code)}
-                    icon={<FolderKanban size={16} />}
-                    label="Quadros"
-                    area="marca"
-                  />
+                {itensDoGeral(
+                  noGeral("espacos") && (
+                    <NavItem
+                      href={`/setor/${activeSector.code}`}
+                      ativo={(p) => quadrosAtivo(p, activeSector.code)}
+                      icon={<FolderKanban size={16} />}
+                      label="Quadros"
+                      area="marca"
+                    />
+                  )
                 )}
-                {itensDoGeral}
 
                 {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
                     ícone: o setor pequeno não ganha nada em esconder cinco itens
@@ -545,13 +556,13 @@ export function AppShell({
                 {(() => {
                   const sped = menuSped(activeSectorModules);
                   const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
-                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" cor={activeSector.color} abrirPorClique telas={sped.laterais.map((item) => ({
+                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" abrirPorClique telas={sped.laterais.map((item) => ({
                     label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
                     ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
                   }))}>
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
-                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" cor={activeSector.color} abrirPorClique telas={[
+                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} abrirPorClique telas={[
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
@@ -569,11 +580,12 @@ export function AppShell({
                   const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
                   const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
                   if (grupos.length <= 1 || modulos.length <= 8) {
-                    return <>{itemSped}{modulos.map((m) =>
+                    // As cores juntas também nas telas do setor (28/10/2026).
+                    return <>{itemSped}{agruparPorCor(modulos, (m) => areaDoModulo(m.code)).map((m) =>
                       // O painel da Gestão mostra as abas dele ao lado, como fazia
                       // quando era item do menu geral.
                       m.code === "gestao_painel" ? (
-                        <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} cor={activeSector.color}>
+                        <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} area={areaDoModulo(m.code) ?? "marca"}>
                           <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} area={areaDoModulo(m.code) ?? "marca"} />
                         </PainelDoItem>
                       ) : (
@@ -583,11 +595,12 @@ export function AppShell({
                   }
                   // A tela do grupo continua (é o clique); o painel ao lado mostra
                   // as telas dele sem precisar abri-la.
-                  return <>{itemSped}{diretos.map(itemModulo)}{grupos.map(({ grupo, itens }) => (
+                  const areaDoGrupo = (itens: SectorModule[]) => areaDoGrupoDeTelas(itens.map((i) => i.code)) ?? "marca";
+                  return <>{itemSped}{agruparPorCor(diretos, (m) => areaDoModulo(m.code)).map(itemModulo)}{agruparPorCor(grupos, (g) => areaDoGrupo(g.itens)).map(({ grupo, itens }) => (
                     <PainelDoItem
                       key={grupo}
                       titulo={grupo}
-                      cor={activeSector.color}
+                      area={areaDoGrupo(itens)}
                       telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
                     >
                       <GrupoNavItem
@@ -595,7 +608,7 @@ export function AppShell({
                         href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
                         icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
                         itens={itens}
-                        area={areaDoGrupoDeTelas(itens.map((i) => i.code)) ?? "marca"}
+                        area={areaDoGrupo(itens)}
                       />
                     </PainelDoItem>
                   ))}</>;
@@ -610,7 +623,7 @@ export function AppShell({
                 </TituloDoBloco>
                 <NavItem href="/home" icon={<Home size={16} />} label="Início" area="marca" />
                 <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" area="marca" />
-                {itensDoGeral}
+                {itensDoGeral()}
 
                 <TelasFixadas telas={telasFixadas} />
 
