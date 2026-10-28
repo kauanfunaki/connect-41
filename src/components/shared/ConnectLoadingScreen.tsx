@@ -63,6 +63,36 @@ export function ConnectLoadingScreen({ words = CONNECT_LOADING_WORDS }: Props) {
   );
 }
 
+// Só o indicador (spinner e palavras girando), para dentro de um cartão ou
+// modal do app, sem a tela cheia. Usado na análise do chamado (28/10/2026).
+// `words` precisa de 9 itens, o último repetindo o primeiro, como acima: a
+// animação tem 8 passos.
+export function ConnectLoadingIndicator({ label, words, subtitle }: { label: string; words: string[]; subtitle?: string }) {
+  return (
+    <div className="connect-loading-inline">
+      <style>{CONNECT_LOADING_STYLES}</style>
+      <div className="connect-loading-visual" aria-hidden="true">
+        <span className="connect-spinner" />
+        <div className="connect-loader">
+          <p className="connect-loading-label">{label}</p>
+          <div className="connect-loading-words">
+            {words.map((w, i) => (
+              <span key={`${w}-${i}`} className="connect-loading-word">
+                {w}
+              </span>
+            ))}
+          </div>
+        </div>
+        <p className="connect-loading-static">{label}…</p>
+      </div>
+      {subtitle && <p className="connect-loading-subtitle">{subtitle}</p>}
+      <p className="connect-loading-sr-only" role="status" aria-live="polite">
+        {label}. {subtitle}
+      </p>
+    </div>
+  );
+}
+
 // Gera o mesmo markup do componente acima como string HTML pura — usado pela
 // página de transição do login, que não pode importar react-dom/server nem
 // renderizar um Client/Server Component (é um Route Handler devolvendo HTML
@@ -126,6 +156,29 @@ export const CONNECT_LOADING_STYLES = `
      pra ajudar no contraste, então usamos um degrau mais claro da escala. */
   --cls-primary: var(--c41-brand-400, #5C8BF0);
 }
+
+.connect-loading-inline {
+  --cls-border: var(--c41-border, #DBE3F4);
+  --cls-fg: var(--c41-fg, #0F1A33);
+  --cls-fg-muted: var(--c41-fg-muted, #56627C);
+  --cls-primary: var(--c41-brand, #1F5EEA);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 8px 8px;
+  text-align: center;
+  color: var(--cls-fg);
+}
+
+[data-theme="dark"] .connect-loading-inline {
+  --cls-border: var(--c41-border, rgba(140,170,255,.11));
+  --cls-fg: var(--c41-fg, #EEF3FF);
+  --cls-fg-muted: var(--c41-fg-muted, #8494B4);
+  --cls-primary: var(--c41-brand-400, #5C8BF0);
+}
+
+.connect-loading-inline .connect-loading-words { text-align: left; }
 
 .connect-loading-card {
   display: flex;

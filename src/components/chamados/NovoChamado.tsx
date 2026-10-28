@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { FileImage, FileSpreadsheet, FileText, FileVideo, Upload, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Campo, CamposDoChamado, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
 import { IconeDoArquivo } from "./LinhaDoTempo";
+import { ConversaDaTriagem } from "./ConversaDaTriagem";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { formatInstantTime } from "@/lib/format";
 import { perguntaAtual } from "@/lib/chamados/regras";
@@ -19,7 +19,9 @@ type Anexo = { id: string; fileName: string; attachmentKey: string | null };
 type Rascunho = { id: string; version: number };
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; parecer: Parecer | null; anexos: Anexo[]; mensagens: { id: string; role: string; body: string }[] };
 // Igual ao que o servidor grava: o resumo e só a primeira pergunta.
-const mensagemDoParecer = (p: Parecer) => ({ id: crypto.randomUUID(), role: "assistant", body: [p.summary, ...p.questions.slice(0, 1)].join("\n\n") });
+const mensagemDoParecer = (p: Parecer) => ({ id: crypto.randomUUID(), role: "assistant", body: [p.summary, ...p.questions.slice(0, 1).map(q => q.text)].join("\n\n") });
+// Códigos do `busy` que pertencem ao modal da revisão; os demais aparecem no formulário.
+const DO_MODAL = new Set(["analisando", "enviando", "respondendo"]);
 
 export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[] }) {
   const router = useRouter(), formulario = useRef<HTMLFormElement>(null), seletor = useRef<HTMLInputElement>(null);
@@ -27,7 +29,10 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
   const [categorias, setCategorias] = useState(categoriasIniciais);
   const [draft, setDraft] = useState<Rascunho | null>(inicial ? { id: inicial.id, version: inicial.version } : null);
   const [parecer, setParecer] = useState(inicial?.parecer ?? null), [anexos, setAnexos] = useState(inicial?.anexos ?? []);
-  const [mensagens, setMensagens] = useState(inicial?.mensagens ?? []), [resposta, setResposta] = useState("");
+  const [mensagens, setMensagens] = useState(inicial?.mensagens ?? []);
+  // Volta à conversa se o rascunho foi deixado com uma pergunta em aberto.
+  const [anexadosNaConversa, setAnexadosNaConversa] = useState<string[]>([]);
+  const [revisao, setRevisao] = useState(() => !!perguntaAtual(inicial?.parecer ?? null, inicial?.mensagens ?? []));
   const [busy, setBusy] = useState(""), [erro, setErro] = useState(""), [salvoAs, setSalvoAs] = useState("");
   const [chave, setChave] = useState(""), [arrastando, setArrastando] = useState(false); const abort = useRef<AbortController | null>(null);
   const cat = categorias.find(c => c.id === dados.categoryId);
@@ -72,7 +77,8 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
   async function rascunhoAtual() { return edicoes.current > salvas.current || !draftRef.current ? salvar() : draftRef.current; }
   async function enviar(revisar: boolean) {
     if (!(formulario.current?.reportValidity() ?? false)) return;
-    await executar(revisar ? "Analisando informações…" : "Enviando chamado…", async () => {
+    setRevisao(true);
+    await executar(revisar ? "analisando" : "enviando", async () => {
       const d = await rascunhoAtual();
       const r = revisar ? await avaliar(d.id, d.version) : await finalizar(d.id, d.version);
       if (!r.ok) throw new Error(r.error);
@@ -83,32 +89,47 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
       if ("parecer" in r.valor && r.valor.parecer) { const novo = r.valor.parecer; setParecer(novo); setMensagens(m => [...m, mensagemDoParecer(novo)]); }
     });
   }
-  function responder() {
-    if (!draft || !resposta.trim()) return;
-    void executar("Registrando resposta…", async () => {
-      const d = await rascunhoAtual(), texto = resposta;
-      const r = await responderAoAssistente(d.id, d.version, texto); if (!r.ok) throw new Error(r.error);
-      const v = r.valor;
-      if ("ticketId" in v && v.ticketId) { router.push(`/chamados/${v.ticketId}`); return; }
-      definirRascunho({ id: d.id, version: v.version }); setResposta("");
-      const eu = { id: crypto.randomUUID(), role: "user", body: texto };
-      if ("pergunta" in v) { setParecer(v.parecer); setMensagens(m => [...m, eu, { id: crypto.randomUUID(), role: "assistant", body: v.pergunta }]); return; }
-      if ("dados" in v && v.dados) { dadosRef.current = v.dados; setDados(v.dados); }
-      if ("categorias" in v && v.categorias) setCategorias(v.categorias);
-      if ("parecer" in v && v.parecer) { const novo = v.parecer; setParecer(novo); setMensagens(m => [...m, eu, mensagemDoParecer(novo)]); }
+  function responder(digitado: string) {
+    // Só o arquivo, sem texto, também responde.
+    const texto = digitado.trim() || (anexadosNaConversa.length ? `Anexei: ${anexadosNaConversa.join(", ")}` : "");
+    if (!draft || !texto) return;
+    // A última pergunta do parecer volta para a IA; as anteriores só avançam.
+    // Um arquivo novo também volta: o servidor descartou o parecer ao recebê-lo.
+    const final = !pergunta || pergunta.indice + 1 >= pergunta.total || anexadosNaConversa.length > 0;
+    // O balão da pessoa entra na hora; sai de novo se a resposta não for registrada.
+    const eu = { id: crypto.randomUUID(), role: "user", body: texto };
+    setMensagens(m => [...m, eu]);
+    void executar(final ? "analisando" : "respondendo", async () => {
+      try {
+        const d = await rascunhoAtual();
+        const r = await responderAoAssistente(d.id, d.version, texto); if (!r.ok) throw new Error(r.error);
+        const v = r.valor; setAnexadosNaConversa([]);
+        if ("ticketId" in v && v.ticketId) { router.push(`/chamados/${v.ticketId}`); return; }
+        definirRascunho({ id: d.id, version: v.version });
+        if ("pergunta" in v) { setParecer(v.parecer); setMensagens(m => [...m, { id: crypto.randomUUID(), role: "assistant", body: v.pergunta }]); return; }
+        if ("dados" in v && v.dados) { dadosRef.current = v.dados; setDados(v.dados); }
+        if ("categorias" in v && v.categorias) setCategorias(v.categorias);
+        if ("parecer" in v && v.parecer) { const novo = v.parecer; setParecer(novo); setMensagens(m => [...m, mensagemDoParecer(novo)]); }
+      } catch (e) { setMensagens(m => m.filter(x => x.id !== eu.id)); throw e; }
     });
   }
-  function subir(file: File) {
+  // Na conversa (28/10/2026), o arquivo entra como complementar e a pergunta
+  // continua na tela: ele segue para a IA junto com a próxima resposta.
+  function subir(file: File, naConversa = false) {
+    const tipo = naConversa ? "" : chave;
     void executar("Enviando arquivo…", async () => {
-      const d = await obterRascunho(), form = new FormData(); form.set("id", crypto.randomUUID()); form.set("draftId", d.id); form.set("version", String(d.version)); form.set("file", file); form.set("attachmentKey", chave);
+      const d = await obterRascunho(), form = new FormData(); form.set("id", crypto.randomUUID()); form.set("draftId", d.id); form.set("version", String(d.version)); form.set("file", file); form.set("attachmentKey", tipo);
       abort.current = new AbortController();
       const r = await fetch("/api/chamados/anexos", { method: "POST", body: form, signal: abort.current.signal });
       const resultado = await r.json(); if (!r.ok) throw new Error(resultado.error ?? "Falha no upload.");
-      definirRascunho({ id: d.id, version: resultado.version }); setAnexos(a => [...a, { id: resultado.id, fileName: file.name, attachmentKey: chave || null }]); setParecer(null);
+      definirRascunho({ id: d.id, version: resultado.version }); setAnexos(a => [...a, { id: resultado.id, fileName: file.name, attachmentKey: tipo || null }]);
+      if (!naConversa) { setParecer(null); return; }
+      setAnexadosNaConversa(a => [...a, file.name]);
+      setMensagens(m => [...m, { id: crypto.randomUUID(), role: "user", body: `📎 ${file.name}` }]);
     });
   }
-  const enviarMesmoAssim = <Button variant="secondary" disabled={!!busy} onClick={() => void enviar(false)}>{parecer?.status === "unavailable" ? "Enviar sem análise" : "Enviar mesmo assim"}</Button>;
-  return <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
+  const doFormulario = busy && !DO_MODAL.has(busy) ? busy : "";
+  return <div className="max-w-4xl">
     <form ref={formulario} onSubmit={e => { e.preventDefault(); void enviar(true); }} className="min-w-0 space-y-5">
       <Card className="p-5"><fieldset disabled={!!busy} className="space-y-5">
         <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
@@ -137,23 +158,10 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
         <Button type="submit" disabled={!!busy}>Enviar chamado</Button>
         {salvoAs && <span className="text-helper text-fg-muted" role="status">Rascunho salvo automaticamente às {salvoAs}</span>}
       </div>
-      {busy && <p role="status" className="text-ui text-fg-secondary">{busy} {busy === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}
-      {erro && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
+      {doFormulario && <p role="status" className="text-ui text-fg-secondary">{doFormulario} {doFormulario === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}
+      {erro && !revisao && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
     </form>
-    <Card className="min-w-0 self-start p-5 space-y-4">
-      <h2 className="text-heading font-semibold text-fg">Revisão das informações</h2>
-      <p className="text-ui text-fg-secondary">Ao enviar, a IA confere se há contexto suficiente para iniciar o atendimento. Você pode complementar aqui ou enviar mesmo assim.</p>
-      <div role="log" aria-label="Conversa de revisão" aria-live="polite" className="max-h-[32rem] space-y-3 overflow-y-auto">
-        {mensagens.map(m => <div key={m.id} className={`rounded-md p-3 text-ui whitespace-pre-wrap break-words ${m.role === "user" ? "bg-brand/8 text-fg" : "bg-surface-hover text-fg-secondary"}`}><p className="mb-1 text-helper font-semibold">{m.role === "user" ? "Você" : "Assistente"}</p>{m.body}</div>)}
-        {!mensagens.length && <p className="text-helper text-fg-muted">A revisão aparecerá aqui depois do envio.</p>}
-      </div>
-      {parecer?.attachments.map(a => <p key={a.id} className="text-helper text-fg-secondary"><strong>{a.name}</strong>: {a.status === "analyzed" ? "Analisado" : a.status === "partial" ? "Análise parcial" : a.status === "unreadable" ? "Ilegível" : "Não analisado"}. {a.reason}</p>)}
-      {pergunta ? <form onSubmit={e => { e.preventDefault(); responder(); }} className="space-y-3">
-        <Campo label={pergunta.total > 1 ? `Sua resposta · pergunta ${pergunta.indice + 1} de ${pergunta.total}` : "Sua resposta"}><Textarea required rows={4} maxLength={10000} disabled={!!busy} value={resposta} onChange={e => setResposta(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); responder(); } }} /></Campo>
-        <div className="flex flex-wrap gap-2"><Button type="submit" disabled={!!busy}>Responder ao assistente</Button>{enviarMesmoAssim}</div>
-      </form>
-        : (parecer || mensagens.length > 0) && <div className="flex flex-wrap gap-2">{enviarMesmoAssim}{parecer?.status === "unavailable" && <Button variant="ghost" disabled={!!busy} onClick={() => void enviar(true)}>Tentar análise novamente</Button>}</div>}
-    </Card>
+    <ConversaDaTriagem aberta={revisao} onFechar={() => { setRevisao(false); setErro(""); }} mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro}
+      onResponder={responder} onAnexar={file => subir(file, true)} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()} onEnviarMesmoAssim={() => void enviar(false)} onTentarNovamente={() => void enviar(true)} />
   </div>;
 }

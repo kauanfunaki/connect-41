@@ -183,7 +183,7 @@ export async function avaliarRascunho(c: Contexto, id: string, version: number, 
     if (r.count !== 1) throw desatualizado();
     // Uma pergunta por vez (27/10/2026): a mensagem leva o resumo e a primeira;
     // as seguintes entram conforme a pessoa responde (responderPergunta).
-    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: [parecer.summary, ...parecer.questions.slice(0, 1)].join("\n\n") } });
+    await tx.helpdeskTriageMessage.create({ data: { tenantId: c.ctx.tenantId, draftId: id, role: "assistant", body: [parecer.summary, ...parecer.questions.slice(0, 1).map(q => q.text)].join("\n\n") } });
   });
   if (parecer.status === "sufficient") return { ...await finalizarRascunho(c, id, version), version };
   return { parecer, version, dados, categorias: (await categorias(c, true)).map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id })) };
@@ -197,7 +197,7 @@ export async function responderPergunta(c: Contexto, id: string, version: number
   const parecer = parecerSchema.safeParse(d.review);
   const atual = d.reviewVersion === version && parecer.success ? perguntaAtual(parecer.data, d.messages) : null;
   if (!parecer.success || !atual || atual.indice + 1 >= atual.total) return avaliarRascunho(c, id, version, texto);
-  const proxima = parecer.data.questions[atual.indice + 1];
+  const proxima = parecer.data.questions[atual.indice + 1].text;
   await getPrisma().$transaction(async tx => {
     const r = await tx.helpdeskDraft.updateMany({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId, version, reviewVersion: version, submittedAt: null }, data: { version: { increment: 1 }, reviewVersion: version + 1 } });
     if (r.count !== 1) throw desatualizado();
