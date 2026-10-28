@@ -24,3 +24,16 @@ describe("quadrosAtivo", () => {
     for (const p of ["/setor/bpo/grupo/cadastros", "/setor/bpo/telas", "/setor/bpo/bpo_cadastros", "/setor/bpo-outro", "/setor/dp"]) expect(quadrosAtivo(p, "bpo")).toBe(false);
   });
 });
+
+// Lote 9 (28/10/2026): o item do DP abre as Admissões, e as abas Desligamentos
+// e Férias são da mesma tela — o item fica aceso nas três.
+describe("o item das Admissões acende nas abas do ciclo", () => {
+  it("acende em Admissões, Desligamentos e Férias", () => {
+    for (const p of ["/admissoes", "/desligamentos", "/ferias", "/ferias/abc"]) expect(caminhoDoMenuAtivo(p, "/admissoes"), p).toBe(true);
+  });
+
+  it("não acende em tela vizinha, nem as abas acendem umas às outras", () => {
+    expect(caminhoDoMenuAtivo("/feriados", "/admissoes")).toBe(false);
+    expect(caminhoDoMenuAtivo("/admissoes", "/ferias")).toBe(false);
+  });
+});

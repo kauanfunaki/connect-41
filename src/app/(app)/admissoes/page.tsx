@@ -6,6 +6,7 @@ import { ArrowRight, UserPlus } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { AbasDoCiclo } from "@/components/dp/AbasDoCiclo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
@@ -67,6 +68,7 @@ export default async function AdmissoesPage() {
         title="Admissões em andamento"
         subtitle={<>{people.length} colaborador{people.length !== 1 ? "es" : ""} em processo de admissão</>}
       />
+      <AbasDoCiclo ativa="admissoes" />
 
       {people.length === 0 ? (
         <Card>

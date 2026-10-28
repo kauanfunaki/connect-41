@@ -95,7 +95,7 @@ const ENDERECOS_EXTRAS: readonly [string, GrupoDeCor][] = [
   ["/documentos-fiscais", "fiscal"],
   // As telas do DP que saem de Colaboradores.
   ["/ferias", "pessoas"],
-  ["/admissoes", "pessoas"],
+  ["/colaboradores", "pessoas"],
   ["/desligamentos", "pessoas"],
 ];
 
