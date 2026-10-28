@@ -27,6 +27,13 @@ import type { EventoOps, PainelOps, WatcherOps } from "@/lib/ops/tipos";
 import styles from "./OpsCenter.module.css";
 import { CatalogoOps } from "./CatalogoOps";
 
+// Aviso de erro fechado no card (28/10/2026): só para quem fechou, neste
+// navegador, e só aquele evento; um erro novo do robô volta a aparecer.
+const CHAVE_DISPENSADOS = "ops:avisos-dispensados";
+function lerDispensados(): string[] {
+  try { const v = JSON.parse(window.localStorage.getItem(CHAVE_DISPENSADOS) ?? "[]"); return Array.isArray(v) ? v.filter(x => typeof x === "string") : []; }
+  catch { return []; }
+}
 const TITULOS = { automations: "Robôs", sites: "Sites", apps: "Apps", history: "Histórico" } as const;
 const COR: Record<EventoOps["status"], TomDoSelo> = { SUCCESS: "sucesso", ERROR: "perigo", WARNING: "atencao" };
 const data = (iso: string | null) => iso ? formatInstantDateTime(new Date(iso)) : "—";
@@ -75,6 +82,14 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const [instabilidade, setInstabilidade] = useState<WatcherOps | null>(null), [nota, setNota] = useState(""), [chamado, setChamado] = useState("");
   const [detalhe, setDetalhe] = useState<EventoOps | null>(null);
   const doCatalogo = visao === "sites" || visao === "apps";
+  // Os cards só aparecem depois da primeira busca no navegador, então ler o
+  // localStorage aqui não muda o HTML do servidor.
+  const [dispensados, setDispensados] = useState<string[]>(() => typeof window === "undefined" ? [] : lerDispensados());
+  function dispensar(id: string) {
+    const lista = [...dispensados.filter(x => x !== id), id].slice(-200);
+    setDispensados(lista);
+    try { window.localStorage.setItem(CHAVE_DISPENSADOS, JSON.stringify(lista)); } catch { /* sem armazenamento: some só nesta visita */ }
+  }
   const requisicao = useRef<AbortController | null>(null);
   const query = new URLSearchParams({ page: String(pagina), ...(watcher ? { watcher } : {}), ...(status ? { status } : {}), ...(dia ? { date: dia } : {}), ...(minhas ? { mine: "1" } : {}) }).toString();
 
@@ -205,7 +220,10 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
                 <div className="min-w-0 px-3"><p className="mb-1.5 flex items-center gap-1.5 text-helper text-fg-secondary"><XCircle size={14} className="shrink-0 text-danger" /> Erros</p><strong className={`text-section-title font-semibold tabular-nums ${w.errorToday ? "text-danger" : "text-fg"}`}>{numero(w.errorToday)}</strong><span className="ml-1 text-helper text-fg-muted">hoje</span></div>
               </div>
               <p className="mb-2 text-helper text-fg-muted">{numero(w.totalToday)} processados hoje · último sinal: {data(w.lastHeartbeatAt)}</p>
-              {w.lastEvent && <button type="button" className="mb-3 block w-full rounded-md border border-border p-2.5 text-left text-helper transition-colors hover:bg-surface-hover" onClick={() => setDetalhe(w.lastEvent)}><span className="flex flex-wrap items-center gap-2"><Selo tom={COR[w.lastEvent.status]}>{ROTULOS_OPS[w.lastEvent.status]}</Selo><span className="text-fg-muted">{data(w.lastEvent.processedAt)}</span></span><span className="mt-2 block truncate text-fg" title={w.lastEvent.filename}>{nomeArquivo(w.lastEvent.filenameRenamed || w.lastEvent.filename)}</span></button>}
+              {w.lastEvent && !dispensados.includes(w.lastEvent.id) && <div className="relative mb-3">
+                <button type="button" className={`block w-full rounded-md border border-border p-2.5 text-left text-helper transition-colors hover:bg-surface-hover ${w.lastEvent.status !== "SUCCESS" ? "pr-10" : ""}`} onClick={() => setDetalhe(w.lastEvent)}><span className="flex flex-wrap items-center gap-2"><Selo tom={COR[w.lastEvent.status]}>{ROTULOS_OPS[w.lastEvent.status]}</Selo><span className="text-fg-muted">{data(w.lastEvent.processedAt)}</span></span><span className="mt-2 block truncate text-fg" title={w.lastEvent.filename}>{nomeArquivo(w.lastEvent.filenameRenamed || w.lastEvent.filename)}</span></button>
+                {w.lastEvent.status !== "SUCCESS" && <IconButton size="sm" type="button" className="absolute right-1.5 top-1.5" aria-label={`Fechar aviso de ${ROTULOS_OPS[w.lastEvent.status].toLocaleLowerCase("pt-BR")} de ${w.name}`} title="Fechar aviso" onClick={() => dispensar(w.lastEvent!.id)}><X size={14} /></IconButton>}
+              </div>}
               {w.instabilityReportedAt && <div className="mb-3 rounded-md bg-warning-bg p-3 text-helper text-warning-fg"><p className="mb-1 font-semibold">Instabilidade sinalizada</p><p className="whitespace-pre-wrap break-words">{w.instabilityNote}</p><p className="mt-2 break-words">{w.instabilityReportedByName} · {data(w.instabilityReportedAt)}</p>{w.instabilityTicketId && <Button variant="link" href={`/chamados/${encodeURIComponent(w.instabilityTicketId)}`} className="mt-2">Ver chamado</Button>}</div>}
               <div className="mt-auto pt-1">{botoesDePasta(w)}</div>
               {podeGerir && <div className="mt-3 border-t border-border pt-3">
