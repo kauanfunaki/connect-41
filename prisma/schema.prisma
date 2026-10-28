@@ -1239,6 +1239,7 @@ model Tenant {
   aparencia                 TenantAparencia?
   enviosConfig              TenantEnviosConfig?
   societarioConfig          TenantSocietarioConfig?
+  quadrosBloqueados         SectorQuadrosBloqueados[]
   userAgendaConfigs         UserAgendaConfig[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -6539,6 +6540,24 @@ model TenantEnviosConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_envios_configs")
+}
+
+/// Os setores em que os colaboradores NÃO criam nem editam tarefas nos Quadros
+/// (28/10/2026, pedido do Kauan). Por padrão é liberado: sem linha, o
+/// colaborador do setor cria tarefas e atividades e edita as colunas, como o
+/// coordenador. Quem bloqueia é o coordenador do setor. Excluir e criar espaço
+/// ou pasta continuam com quem já podia.
+model SectorQuadrosBloqueados {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@map("quadros_bloqueados_por_setor")
 }
 
 /// O que o Societário do escritório configura (lote 5, 28/10/2026). Sem linha,
