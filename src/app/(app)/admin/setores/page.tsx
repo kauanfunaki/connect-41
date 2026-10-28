@@ -155,7 +155,6 @@ export default async function SetoresPage({
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-section font-semibold text-fg leading-tight">{escolhido.label}</h2>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-muted">
-                  <span className="font-mono">{escolhido.code}</span>
                   <StatusDot
                     color={escolhido.active ? "var(--c41-success)" : "var(--c41-fg-muted)"}
                     label={escolhido.active ? "Ativo" : "Inativo"}
@@ -181,7 +180,7 @@ export default async function SetoresPage({
                   <EmptyState
                     icon={<LayoutGrid />}
                     title="Nenhum módulo neste setor"
-                    description="Para trazer um módulo para cá, abra o setor que o opera hoje e use “Mover para…” ou “Também em…” na linha dele."
+                    description="Para trazer um módulo para cá, abra o setor que o opera hoje e use “Mover” ou “Compartilhar” na linha dele."
                   />
                 </div>
               ) : (
