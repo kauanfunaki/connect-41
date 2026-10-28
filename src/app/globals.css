@@ -51,14 +51,20 @@
        --c41-grupo-X-solid  fundo com letra branca — 4,5:1, igual nos dois temas
      Use pelo `data-grupo="X"` e os utilitários `text-grupo`, `text-grupo-fg`,
      `bg-grupo-solid` (ver `[data-grupo]` mais abaixo). */
-  --c41-grupo-financeiro:#1A7FD6;  --c41-grupo-financeiro-fg:#166DB8;
-  --c41-grupo-financeiro-solid:#1877C9; --c41-grupo-financeiro-solid-fim:#1566AD;
-  --c41-grupo-fiscal:#CE6A19;      --c41-grupo-fiscal-fg:#A75514;
-  --c41-grupo-fiscal-solid:#B65E16; --c41-grupo-fiscal-solid-fim:#9D5113;
-  --c41-grupo-processos:#8B5CF6;   --c41-grupo-processos-fg:#774FD3;
-  --c41-grupo-processos-solid:#8357E7; --c41-grupo-processos-solid-fim:#714BC7;
-  --c41-grupo-atendimento:#119773; --c41-grupo-atendimento-fg:#0E7A5D;
-  --c41-grupo-atendimento-solid:#0F8566; --c41-grupo-atendimento-solid-fim:#0D7258;
+  --c41-grupo-financeiro:#3E8F1F;  --c41-grupo-financeiro-fg:#34771A;
+  --c41-grupo-financeiro-solid:#3A871D; --c41-grupo-financeiro-solid-fim:#327419;
+  --c41-grupo-fiscal:#CA6C18;  --c41-grupo-fiscal-fg:#A35714;
+  --c41-grupo-fiscal-solid:#B36016; --c41-grupo-fiscal-solid-fim:#9A5313;
+  --c41-grupo-pessoas:#C93C72;  --c41-grupo-pessoas-fg:#BD386B;
+  --c41-grupo-pessoas-solid:#C93C72; --c41-grupo-pessoas-solid-fim:#AD3462;
+  --c41-grupo-recrutamento:#7351D2;  --c41-grupo-recrutamento-fg:#7351D2;
+  --c41-grupo-recrutamento-solid:#7351D2; --c41-grupo-recrutamento-solid-fim:#6346B5;
+  --c41-grupo-processos:#D44A3C;  --c41-grupo-processos-fg:#BC4235;
+  --c41-grupo-processos-solid:#CE483A; --c41-grupo-processos-solid-fim:#B13E32;
+  --c41-grupo-atendimento:#0E8E8A;  --c41-grupo-atendimento-fg:#0C7673;
+  --c41-grupo-atendimento-solid:#0D827E; --c41-grupo-atendimento-solid-fim:#0B706C;
+  --c41-grupo-escritorio:#1A84C2;  --c41-grupo-escritorio-fg:#1671A7;
+  --c41-grupo-escritorio-solid:#187CB7; --c41-grupo-escritorio-solid-fim:#156B9D;
 
   /* superfícies/texto — TEMA CLARO
      Paleta B "Mais azul" (escolha do Kauan em 13/10/2026, página Cores do
@@ -206,10 +212,13 @@
   --c41-scrollbar-thumb-hover: rgba(255,255,255,.24);
   --c41-scrollbar-thumb-active:rgba(255,255,255,.34);
   /* Os grupos do portal no escuro: o mesmo matiz, clareado até ler. */
-  --c41-grupo-financeiro:#1A7FD6;  --c41-grupo-financeiro-fg:#4B9BDE;
-  --c41-grupo-fiscal:#F07B1D;      --c41-grupo-fiscal-fg:#F07B1D;
-  --c41-grupo-processos:#8B5CF6;   --c41-grupo-processos-fg:#A480F6;
-  --c41-grupo-atendimento:#12A07A; --c41-grupo-atendimento-fg:#24A884;
+  --c41-grupo-financeiro:#3E8F1F;  --c41-grupo-financeiro-fg:#62A349;
+  --c41-grupo-fiscal:#D7731A;  --c41-grupo-fiscal-fg:#DB7E2C;
+  --c41-grupo-pessoas:#CB4478;  --c41-grupo-pessoas-fg:#D97299;
+  --c41-grupo-recrutamento:#8365D8;  --c41-grupo-recrutamento-fg:#9E86DF;
+  --c41-grupo-processos:#D44A3C;  --c41-grupo-processos-fg:#DE776C;
+  --c41-grupo-atendimento:#0E8E8A;  --c41-grupo-atendimento-fg:#3BA39F;
+  --c41-grupo-escritorio:#1A84C2;  --c41-grupo-escritorio-fg:#449BCC;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -258,10 +267,13 @@
     --c41-scrollbar-thumb:       rgba(255,255,255,.14);
     --c41-scrollbar-thumb-hover: rgba(255,255,255,.24);
     --c41-scrollbar-thumb-active:rgba(255,255,255,.34);
-    --c41-grupo-financeiro:#1A7FD6;  --c41-grupo-financeiro-fg:#4B9BDE;
-    --c41-grupo-fiscal:#F07B1D;      --c41-grupo-fiscal-fg:#F07B1D;
-    --c41-grupo-processos:#8B5CF6;   --c41-grupo-processos-fg:#A480F6;
-    --c41-grupo-atendimento:#12A07A; --c41-grupo-atendimento-fg:#24A884;
+    --c41-grupo-financeiro:#3E8F1F;  --c41-grupo-financeiro-fg:#62A349;
+    --c41-grupo-fiscal:#D7731A;  --c41-grupo-fiscal-fg:#DB7E2C;
+    --c41-grupo-pessoas:#CB4478;  --c41-grupo-pessoas-fg:#D97299;
+    --c41-grupo-recrutamento:#8365D8;  --c41-grupo-recrutamento-fg:#9E86DF;
+    --c41-grupo-processos:#D44A3C;  --c41-grupo-processos-fg:#DE776C;
+    --c41-grupo-atendimento:#0E8E8A;  --c41-grupo-atendimento-fg:#3BA39F;
+    --c41-grupo-escritorio:#1A84C2;  --c41-grupo-escritorio-fg:#449BCC;
   }
 }
 
@@ -927,6 +939,42 @@ input[type="search"]::-webkit-search-decoration {
   --c41-grupo-solid: var(--c41-grupo-atendimento-solid);
   --c41-setor: var(--c41-grupo-atendimento);
   --c41-destaque-numero-de: var(--c41-grupo-atendimento-solid); --c41-destaque-numero-ate: var(--c41-grupo-atendimento-solid-fim);
+}
+
+[data-grupo="pessoas"] {
+  --c41-grupo: var(--c41-grupo-pessoas); --c41-grupo-fg: var(--c41-grupo-pessoas-fg);
+  --c41-grupo-solid: var(--c41-grupo-pessoas-solid);
+  --c41-setor: var(--c41-grupo-pessoas);
+  --c41-destaque-numero-de: var(--c41-grupo-pessoas-solid); --c41-destaque-numero-ate: var(--c41-grupo-pessoas-solid-fim);
+}
+[data-grupo="recrutamento"] {
+  --c41-grupo: var(--c41-grupo-recrutamento); --c41-grupo-fg: var(--c41-grupo-recrutamento-fg);
+  --c41-grupo-solid: var(--c41-grupo-recrutamento-solid);
+  --c41-setor: var(--c41-grupo-recrutamento);
+  --c41-destaque-numero-de: var(--c41-grupo-recrutamento-solid); --c41-destaque-numero-ate: var(--c41-grupo-recrutamento-solid-fim);
+}
+[data-grupo="escritorio"] {
+  --c41-grupo: var(--c41-grupo-escritorio); --c41-grupo-fg: var(--c41-grupo-escritorio-fg);
+  --c41-grupo-solid: var(--c41-grupo-escritorio-solid);
+  --c41-setor: var(--c41-grupo-escritorio);
+  --c41-destaque-numero-de: var(--c41-grupo-escritorio-solid); --c41-destaque-numero-ate: var(--c41-grupo-escritorio-solid-fim);
+}
+/* O item do menu sem área (Início, Meu dia, Cadastros…) dentro de uma tela
+   com área: volta à cor principal, em vez de herdar a da tela aberta. */
+[data-grupo="marca"] {
+  --c41-grupo: var(--c41-brand); --c41-grupo-fg: var(--c41-brand); --c41-grupo-solid: var(--c41-brand-solid);
+  --c41-setor: var(--c41-brand);
+}
+
+/* A cor da área também no botão principal, no título e no cabeçalho das
+   tabelas do conteúdo (28/10/2026, opção 1 da página Cores do Connect da
+   equipe). Só no Connect da equipe: o AppShell marca o <main> com
+   `c41-cor-da-area`. Os interruptores, as abas e o calendário seguem na cor
+   principal. */
+[data-grupo]:not([data-grupo="marca"]) .c41-cor-da-area {
+  --c41-botao: var(--c41-grupo-solid); --c41-botao-hover: var(--c41-destaque-numero-ate);
+  --c41-titulo: var(--c41-grupo-fg);
+  --c41-table-header-fg: var(--c41-grupo-fg);
 }
 
 /* O brilho do topo da área de conteúdo: azul à esquerda, a cor do setor à
