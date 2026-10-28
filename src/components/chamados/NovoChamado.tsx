@@ -208,52 +208,49 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
   const catFinal = categorias.find(c => c.id === final.categoryId);
 
   return <>
-    <div className="mb-5 overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)] [&>ol]:border-b-0">
-      <Stepper steps={steps} onStepClick={i => { const alvo = (i + 1) as Etapa; if (alvo < etapa && (alvo !== 2 || conversou)) { setErro(""); setEtapa(alvo); } }} />
-    </div>
     <CarregandoIA aberto={busy === "analisando" || busy === "enviando"} subtitulo={busy === "enviando" ? "Abrindo o chamado" : "Processando as informações do chamado"} />
-
-    {etapa === 1 && <form ref={formulario} onSubmit={e => { e.preventDefault(); continuar(); }} className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <Card className="min-w-0 p-5 sm:p-6"><fieldset disabled={!!busy} className="space-y-5">
-        <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
-        <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
-      </fieldset></Card>
-      <Card className="min-w-0 divide-y divide-border xl:sticky xl:top-20">
-        <PainelDeAnexos anexos={anexos} busy={busy} chave={chave} onChave={setChave} requisitos={cat?.requiredAttachments ?? []} onSubir={f => subir(f)} onRetirar={retirar} />
-        <section aria-label="Continuar" className="space-y-3 p-5">
-          <p className="text-ui text-fg-secondary">Ao continuar, a IA lê o pedido, pergunta o que faltar e monta o chamado para você revisar.</p>
-          <Button type="submit" size="lg" className="w-full" disabled={!!busy}>Continuar</Button>
-          {salvoAs && <p className="text-center text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
-          {statusDeBusy}
-          {erro && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
-        </section>
-      </Card>
-    </form>}
-
-    {etapa === 2 && <ConversaDaTriagem mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
-      onResponder={responder} onAnexar={f => subir(f, "conversa")} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()}
-      onAceitarSugestao={aceitarSugestao} onRecusarSugestao={recusarSugestao}
-      onVoltar={() => { setErro(""); setEtapa(1); }} onIrParaRevisao={() => irParaRevisao()} onTentarNovamente={() => { setParecer(null); setEtapa(1); }} />}
-
-    {etapa === 3 && <form ref={formulario} onSubmit={e => { e.preventDefault(); enviarRevisao(); }} className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <Card className="min-w-0 p-5 sm:p-6"><fieldset disabled={!!busy} className="space-y-5">
-        <div>
-          <h2 className="text-heading font-semibold text-fg">Revisão do chamado</h2>
-          <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA preencheu tudo com o pedido e a conversa. Confira e mude o que precisar."}</p>
+    <form ref={formulario} onSubmit={e => { e.preventDefault(); if (etapa === 3) enviarRevisao(); else continuar(); }} className="space-y-5">
+      {/* A barra de progresso e a etapa num cartão só, como no cadastro de
+          empresa (28/10/2026); os anexos vêm logo abaixo, e os botões no fim. */}
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)]">
+        <Stepper steps={steps} onStepClick={i => { const alvo = (i + 1) as Etapa; if (alvo < etapa && (alvo !== 2 || conversou)) { setErro(""); setEtapa(alvo); } }} />
+        <div className="p-5 sm:p-6">
+          {etapa === 1 && <fieldset disabled={!!busy} className="space-y-5">
+            <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
+            <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
+          </fieldset>}
+          {etapa === 2 && <ConversaDaTriagem mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
+            onResponder={responder} onAnexar={f => subir(f, "conversa")} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()}
+            onAceitarSugestao={aceitarSugestao} onRecusarSugestao={recusarSugestao}
+            onVoltar={() => { setErro(""); setEtapa(1); }} onIrParaRevisao={() => irParaRevisao()} onTentarNovamente={() => { setParecer(null); setEtapa(1); }} />}
+          {etapa === 3 && <fieldset disabled={!!busy} className="space-y-5">
+            <div>
+              <h2 className="text-heading font-semibold text-fg">Revisão do chamado</h2>
+              <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA preencheu tudo com o pedido e a conversa. Confira e mude o que precisar."}</p>
+            </div>
+            <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} />
+          </fieldset>}
         </div>
-        <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} />
-      </fieldset></Card>
-      <Card className="min-w-0 divide-y divide-border xl:sticky xl:top-20">
-        <PainelDeAnexos anexos={anexos} busy={busy} chave={chave} onChave={setChave} requisitos={catFinal?.requiredAttachments ?? []} onSubir={f => subir(f, "revisao")}
-          escolha={{ incluidos, sugeridos: parecer?.final?.anexos ?? null, alternar: id => setIncluidos(i => i.includes(id) ? i.filter(x => x !== id) : [...i, id]) }} />
-        <section aria-label="Abrir chamado" className="space-y-3 p-5">
-          <Button type="submit" size="lg" className="w-full" disabled={!!busy}>Abrir chamado</Button>
-          <Button variant="ghost" className="w-full" disabled={!!busy} onClick={() => { setErro(""); setEtapa(conversou ? 2 : 1); }}><ArrowLeft size={14} /> {conversou ? "Voltar à conversa" : "Voltar ao pedido"}</Button>
+      </div>
+
+      {etapa !== 2 && <Card className="min-w-0">
+        {etapa === 1
+          ? <PainelDeAnexos anexos={anexos} busy={busy} chave={chave} onChave={setChave} requisitos={cat?.requiredAttachments ?? []} onSubir={f => subir(f)} onRetirar={retirar} />
+          : <PainelDeAnexos anexos={anexos} busy={busy} chave={chave} onChave={setChave} requisitos={catFinal?.requiredAttachments ?? []} onSubir={f => subir(f, "revisao")}
+              escolha={{ incluidos, sugeridos: parecer?.final?.anexos ?? null, alternar: id => setIncluidos(i => i.includes(id) ? i.filter(x => x !== id) : [...i, id]) }} />}
+      </Card>}
+
+      {etapa !== 2 && <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          {etapa === 3 && <Button variant="ghost" disabled={!!busy} onClick={() => { setErro(""); setEtapa(conversou ? 2 : 1); }}><ArrowLeft size={14} /> {conversou ? "Voltar à conversa" : "Voltar ao pedido"}</Button>}
+          {etapa === 1 && <p className="text-ui text-fg-secondary">Ao continuar, a IA lê o pedido, pergunta o que faltar e monta o chamado para você revisar.</p>}
+          {etapa === 1 && salvoAs && <p className="text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
           {statusDeBusy}
-          {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}
-        </section>
-      </Card>
-    </form>}
+          {erro && <p role="alert" className="text-ui text-danger">{erro}{etapa === 1 && <> <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></>}</p>}
+        </div>
+        <Button type="submit" size="lg" className="w-full sm:w-auto sm:min-w-56" disabled={!!busy}>{etapa === 3 ? "Abrir chamado" : "Continuar"}</Button>
+      </div>}
+    </form>
   </>;
 }
 

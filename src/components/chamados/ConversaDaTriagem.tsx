@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppWindow, ArrowLeft, Bot, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { ConnectLoadingIndicator } from "@/components/shared/ConnectLoadingScreen";
@@ -48,7 +47,8 @@ export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, on
     onResponder(valor.trim()); setTexto("");
   }
 
-  return <Card className="mx-auto flex max-w-3xl flex-col gap-4 p-5 sm:p-6">
+  // Sem cartão próprio: fica dentro do cartão da barra de progresso (NovoChamado).
+  return <div className="flex flex-col gap-4">
     <div>
       <h2 className="text-heading font-semibold text-fg">Conversa com a IA</h2>
       <p className="mt-1 text-ui text-fg-secondary">Responda o que a IA perguntar para o chamado chegar completo a quem vai atender.</p>
@@ -65,7 +65,8 @@ export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, on
         </div>}
         <div ref={fim} />
       </div>
-      {pergunta && <form onSubmit={e => { e.preventDefault(); responder(texto); }} className="flex items-end gap-2">
+      {/* Sem <form>: a conversa fica dentro do formulário da página, e Enter já envia. */}
+      {pergunta && <div className="flex items-end gap-2">
         <label className="sr-only" htmlFor="resposta-da-revisao">{pergunta.total > 1 ? `Sua resposta, pergunta ${pergunta.indice + 1} de ${pergunta.total}` : "Sua resposta"}</label>
         {/* Enter envia, como num app de conversa; Shift+Enter quebra a linha. */}
         <Textarea id="resposta-da-revisao" rows={1} maxLength={10000} disabled={!!busy} value={texto} onChange={e => setTexto(e.target.value)}
@@ -74,8 +75,8 @@ export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, on
           className="field-sizing-content max-h-32 min-h-12! flex-1 rounded-2xl" />
         <input ref={seletor} type="file" accept={FORMATOS} hidden aria-label="Anexar arquivo à conversa" onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) onAnexar(file); }} />
         <Button type="button" variant="secondary" size="icon" className="size-12! shrink-0 rounded-2xl!" disabled={!!busy} aria-label="Anexar arquivo" title="Anexar arquivo (até 10 MB)" onClick={() => seletor.current?.click()}><Paperclip size={18} /></Button>
-        <Button type="submit" size="icon" className="size-12! shrink-0 rounded-2xl!" disabled={!!busy || (!texto.trim() && !anexou)} aria-label="Enviar resposta"><SendHorizontal size={18} /></Button>
-      </form>}
+        <Button size="icon" className="size-12! shrink-0 rounded-2xl!" disabled={!!busy || (!texto.trim() && !anexou)} aria-label="Enviar resposta" onClick={() => responder(texto)}><SendHorizontal size={18} /></Button>
+      </div>}
       {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
         <Button variant="ghost" disabled={!!busy} onClick={onVoltar}><ArrowLeft size={14} /> Voltar ao pedido</Button>
@@ -86,7 +87,7 @@ export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, on
         </div>
       </div>
     </div>
-  </Card>;
+  </div>;
 }
 
 function Balao({ daIA, children }: { daIA: boolean; children: React.ReactNode }) {
