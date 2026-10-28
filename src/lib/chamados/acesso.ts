@@ -10,6 +10,14 @@ export const podeGerenciar = (ctx: AuthContext, config: ConfigDeAcesso) => confi
 // setor dele abriu (`podeVer`/`whereVisivel`).
 export const podeVerInterno = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && (ctx.sectors.includes(config.sectorCode) || isFullWrite(ctx.role));
 export const podeVerIndicadores = podeOperar;
+// Onde a busca da lista procura, por papel (27/10/2026): a equipe procura em
+// tudo; o coordenador do setor, também por quem abriu; o resto, só no chamado.
+export const ESCOPOS_DA_BUSCA = ["chamado", "solicitante", "setor", "responsavel"] as const;
+export type EscopoDaBusca = (typeof ESCOPOS_DA_BUSCA)[number];
+export function escoposDaBusca(ctx: AuthContext, config: ConfigDeAcesso): EscopoDaBusca[] {
+  if (podeVerInterno(ctx, config)) return [...ESCOPOS_DA_BUSCA];
+  return ctx.role === "SECTOR_ADMIN" ? ["chamado", "solicitante"] : ["chamado"];
+}
 export function podeAbrir(ctx: AuthContext, config: ConfigDeAcesso) {
   return !!ctx.userId && !!ctx.tenantId && config.enabled && !ctx.subscriptionReadOnly && ctx.role !== "READONLY" && (isFullWrite(ctx.role) || ctx.sectors.some(s => config.requesterSectors.includes(s)));
 }

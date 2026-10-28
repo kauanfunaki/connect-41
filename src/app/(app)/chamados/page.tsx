@@ -10,7 +10,7 @@ import { ControlesBuscaChamados } from "@/components/chamados/ControlesBuscaCham
 import { MoverNaFila } from "@/components/chamados/MoverNaFila";
 import { RascunhoDaLista } from "@/components/chamados/RascunhoDaLista";
 import { contexto } from "@/lib/chamados/contexto";
-import { podeAbrir, podeGerenciar, podeVerInterno } from "@/lib/chamados/acesso";
+import { podeAbrir, podeGerenciar, podeVerInterno, escoposDaBusca } from "@/lib/chamados/acesso";
 import { lista, categorias, usuarios, resumoRascunho } from "@/lib/chamados/consultas";
 import { getActiveSectors } from "@/lib/sectors";
 import { ROTULOS, ROTULOS_PRIORIDADE, aguardandoSolicitante } from "@/lib/chamados/regras";
@@ -50,10 +50,10 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
     { id: "pausa", texto: "Em Pausa", total: dados.counts.pausa, Icone: CirclePause },
   ] : [{ id: "abertos", texto: "Abertos", total: dados.counts.abertos, Icone: Ticket }];
   return <PageContainer>
-    <PageHeader title="Chamados" subtitle="Acompanhe e gerencie chamados de suporte." action={<div className="group flex flex-wrap items-center gap-2"><BotaoFixarTela code="helpdesk" fixada={fixadas.includes("helpdesk")} />{podeGerenciar(c.ctx, c.config) && <IconButton href="/chamados/configuracoes" variant="framed" size="lg" title="Configurar chamados"><Settings size={16} /></IconButton>}{podeAbrir(c.ctx, c.config) && <Button href="/chamados/novo"><Plus size={14} aria-hidden />Novo chamado</Button>}</div>} />
+    <PageHeader title="Chamados" subtitle={internos ? "Acompanhe e gerencie chamados de suporte." : c.ctx.role === "SECTOR_ADMIN" ? "Acompanhe os chamados que você e o seu setor abriram." : "Acompanhe os chamados que você abriu."} action={<div className="group flex flex-wrap items-center gap-2"><BotaoFixarTela code="helpdesk" fixada={fixadas.includes("helpdesk")} />{internos && podeGerenciar(c.ctx, c.config) && <IconButton href="/chamados/configuracoes" variant="framed" size="lg" title="Configurar chamados"><Settings size={16} /></IconButton>}{podeAbrir(c.ctx, c.config) && <Button href="/chamados/novo"><Plus size={14} aria-hidden />Novo chamado</Button>}</div>} />
     {!!dados.drafts.length && <Card className="mb-5 p-4"><h2 className="mb-2 font-semibold text-fg">Seu rascunho</h2><div className="flex flex-wrap gap-2">{dados.drafts.map(d => <RascunhoDaLista key={d.id} id={d.id} titulo={resumoRascunho(d.payload)} />)}</div></Card>}
     <div className="mb-4 flex flex-wrap items-center gap-3">
-      <Card className="min-w-64 flex-1 p-3"><ControlesBuscaChamados key={`${filtros.q ?? ""}:${filtros.em ?? ""}`} atribuidos={internos} /></Card>
+      <Card className="min-w-64 flex-1 p-3"><ControlesBuscaChamados key={`${filtros.q ?? ""}:${filtros.em ?? ""}`} atribuidos={internos} escopos={escoposDaBusca(c.ctx, c.config)} /></Card>
     </div>
     <nav aria-label="Filtrar chamados por situação" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-2">
       <div className="flex flex-wrap gap-1 rounded-md bg-surface-hover p-1">{abas.map(item => <Link key={item.id} href={url({ aba: item.id, pagina: null })} aria-current={aba === item.id ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-ui font-semibold transition-colors ${aba === item.id ? "bg-surface text-fg shadow-xs" : "text-fg-secondary hover:text-fg"}`}><item.Icone size={14} aria-hidden className="shrink-0" />{item.texto}<span className="rounded bg-surface-hover px-1.5 py-0.5 text-helper">{item.total}</span></Link>)}</div>
