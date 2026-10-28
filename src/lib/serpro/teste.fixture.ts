@@ -87,7 +87,7 @@ export function configDaSoftwareHouse(): Record<string, string> {
 
 // ─── Uma tabela genérica (Fase 1, 20/10/2026) ────────────────────────────────
 // O bastante do Prisma para os eventos, os pedidos e as mensagens: igualdade,
-// `in`, `not`, `startsWith`, `lte`/`lt`/`gte`, chave composta, `orderBy`, `take`.
+// `in`, `not`, `startsWith`, `contains`, `lte`/`lt`/`gte`, chave composta, `orderBy`, `take`.
 
 type Linha = Record<string, unknown> & { id: string };
 
@@ -102,6 +102,7 @@ function casa(l: Record<string, unknown>, onde: Record<string, unknown> = {}): b
       if ("in" in c) return (c.in as unknown[]).some((x) => igual(x, v));
       if ("not" in c) return !igual(c.not, v);
       if ("startsWith" in c) return typeof v === "string" && v.startsWith(c.startsWith as string);
+      if ("contains" in c) return typeof v === "string" && v.includes(c.contains as string);
       if ("lte" in c) return v != null && valorDe(v) <= valorDe(c.lte);
       if ("lt" in c) return v != null && valorDe(v) < valorDe(c.lt);
       if ("gte" in c) return v != null && valorDe(v) >= valorDe(c.gte);
