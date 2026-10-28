@@ -19,7 +19,7 @@ import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSele
 import { formatCnpj, formatCpf, formatarCompetencia, formatarNumero, formatarReaisDeCentavos, formatInstantDateTime } from "@/lib/format";
 import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { MAXIMO_DA_DESCRICAO } from "@/lib/integracoes/omie/emissao";
-import type { ListasParaATela } from "@/lib/integracoes/omie/emissaoServidor";
+import type { ListasParaATela } from "@/lib/fiscal/nfse/emissor";
 import { buscarTomadoresAction, carregarListasAction, emitirNfseAction } from "@/app/(app)/emitir-nfse/actions";
 
 function documento(doc: string | null): string | undefined {
