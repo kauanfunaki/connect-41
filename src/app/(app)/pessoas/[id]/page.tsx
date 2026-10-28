@@ -14,15 +14,14 @@ import {
   Star,
   GraduationCap,
   FileSpreadsheet,
-  KeyRound,
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
-import { Button } from "@/components/ui/Button";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
 import { AdmissaoCard } from "@/components/pessoas/AdmissaoCard";
+import { AcessoDaPessoa } from "@/components/pessoas/AcessoDaPessoa";
 import { horasDoDP } from "@/components/pessoas/rotulosDoDP";
 import { Badge } from "@/components/ui/Badge";
 import { InfoRow } from "@/components/empresas/InfoRow";
@@ -140,10 +139,6 @@ export default async function PessoaPage({
 
   if (!person) notFound();
 
-  const linkedUser = person.isInternal && person.linkedUserId
-    ? await prisma.user.findFirst({ where: { id: person.linkedUserId }, select: { name: true, email: true } })
-    : null;
-
   const personSectors = await getPersonSectors(ctx.tenantId, id);
   const customFields = await getApplicableCustomFields(ctx, "PERSON", id, personSectors);
 
@@ -244,29 +239,7 @@ export default async function PessoaPage({
           </Card>
         )}
 
-        {/* Conta de acesso — só funcionários internos. Somente leitura aqui: o
-            vínculo (e o de atendente Chatwoot, se houver) se edita no painel do
-            usuário, em Configurações › Usuários (3A, 20/10/2026). */}
-        {person.isInternal && (
-          <Card className="p-5 h-full">
-            <h2 className={TITULO}>Conta de acesso</h2>
-            <p className="text-body text-fg break-words">
-              {linkedUser ? `${linkedUser.name} (${linkedUser.email})` : "Não vinculada"}
-            </p>
-            {/* Era um link de texto (até 30/09): é uma ação, virou botão. */}
-            {canEdit && (
-              <Button
-                href={person.linkedUserId ? `/admin/usuarios?editar=${person.linkedUserId}` : "/admin/usuarios"}
-                variant="secondary"
-                size="sm"
-                className="mt-4"
-              >
-                <KeyRound size={14} />
-                {person.linkedUserId ? "Abrir a conta em Configurações › Usuários" : "Ligar a uma conta em Configurações › Usuários"}
-              </Button>
-            )}
-          </Card>
-        )}
+        {/* A conta de acesso saiu daqui para a aba Acesso (lote 8, 28/10/2026). */}
       </div>
 
       {person.notes && (
@@ -440,6 +413,7 @@ export default async function PessoaPage({
       <PersonDetailTabs
         overview={overviewContent}
         vinculo={vinculoContent}
+        acesso={person.isInternal ? <AcessoDaPessoa ctx={ctx} pessoa={{ id, name: person.name, email: person.email, linkedUserId: person.linkedUserId }} /> : undefined}
         trabalhista={trabalhistaContent}
         documents={documentsContent}
         documentsCount={documents.length}
