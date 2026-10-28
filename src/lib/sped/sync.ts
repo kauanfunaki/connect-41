@@ -14,6 +14,7 @@ import { listarDocumentos, ErroDoSped, type CredenciaisSped } from "./client";
 import { credenciaisDoSped } from "./credenciais";
 import { raizesSincronizadas } from "./raizesSincronizadas";
 import { mapearDocumento, empresaDaLinha } from "./mapeamento";
+import { chaveDeDeduplicacao } from "@/lib/fiscal/documentos";
 
 export type ResultadoDaRaiz = {
   cnpjRaiz: string;
@@ -162,6 +163,35 @@ export async function sincronizarRaiz(
           // no `lancarDocumento`, uma vez, e o que veio depois fica no documento.
           ...(mapeado.duplicatas ? { installments: mapeado.duplicatas } : {}),
         };
+
+        // A NFS-e que o Connect emitiu pelo Omie entra no acervo sem série (a
+        // OS do Omie não devolve a série — 28/10/2026). Quando o SPED traz a
+        // mesma nota com série, a chave muda e o upsert abaixo criaria uma
+        // segunda linha. Antes dele, a linha sem série que veio do Omie é
+        // adotada: ganha a série, a chave do SPED e os dados de lá.
+        if (mapeado.tipo === "NFSE" && mapeado.serie) {
+          const semSerie = chaveDeDeduplicacao({
+            tipo: "NFSE",
+            emitenteDocumento: mapeado.emitenteDocumento,
+            serie: null,
+            numero: mapeado.numero,
+            competencia: mapeado.competencia,
+          });
+          if (semSerie && semSerie !== mapeado.dedupKey) {
+            const doOmie = await prisma.fiscalDocument.findFirst({
+              where: { tenantId, dedupKey: semSerie, origin: "OMIE" },
+              select: { id: true },
+            });
+            const jaComSerie = doOmie
+              ? await prisma.fiscalDocument.findFirst({ where: { tenantId, dedupKey: mapeado.dedupKey }, select: { id: true } })
+              : null;
+            if (doOmie && !jaComSerie) {
+              await prisma.fiscalDocument.update({ where: { id: doOmie.id }, data: { dedupKey: mapeado.dedupKey, ...dados } });
+              resultado.gravados += 1;
+              continue;
+            }
+          }
+        }
 
         // Upsert pela mesma chave que o upload usa. Documento que já entrou à
         // mão é RECONHECIDO, não duplicado — e ganha o identificador do SPED,
