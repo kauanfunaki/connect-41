@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 import { boardPath } from "@/lib/kanbanPaths";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
@@ -77,7 +78,8 @@ export async function criarListaSimples(
   const prisma = getPrisma();
   const space = await prisma.space.findFirst({ where: { id: spaceId, tenantId } });
   if (!space) return { error: "Espaço não encontrado." };
-  if (!canManageSector(ctx, space.sectorCode)) return { error: "Sem permissão para criar tarefa neste espaço." };
+  // Criar tarefa no espaço: também o colaborador, se o setor não está bloqueado (28/10/2026).
+  if (!(await podeEditarQuadrosNoSetor(ctx, space.sectorCode))) return { error: "Sem permissão para criar tarefa neste espaço." };
 
   if (folderId) {
     const folder = await prisma.folder.findFirst({ where: { id: folderId, spaceId } });

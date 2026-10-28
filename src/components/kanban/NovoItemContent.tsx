@@ -7,7 +7,8 @@ import { ItemForm } from "@/components/kanban/ItemForm";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { criarItem } from "@/app/(app)/kanban/actions";
 import { NovoItemModal } from "@/components/kanban/NovoItemModal";
-import { getAuthContext, canManageSector } from "@/lib/auth/context";
+import { getAuthContext } from "@/lib/auth/context";
+import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { getSectorMaps } from "@/lib/sectors";
@@ -30,7 +31,7 @@ export async function NovoItemContent({ id, estagio, emModal = false }: { id: st
     },
   });
   if (!pipeline) notFound();
-  if (!canManageSector(ctx, pipeline.sectorCode)) notFound();
+  if (!(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) notFound();
 
   // As opções já no desenho do seletor com busca (15/10/2026): empresa com
   // logo, CNPJ, a filial embaixo da matriz e recentes; pessoa com a foto.

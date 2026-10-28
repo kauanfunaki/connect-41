@@ -10,7 +10,8 @@ import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineBu
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa, excluirItem } from "../actions";
-import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, podeExcluir } from "@/lib/auth/context";
+import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
 import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 function daysSince(d: Date): number {
@@ -56,7 +57,8 @@ export default async function KanbanBoardPage({
 
   if (!pipeline) notFound();
 
-  const canAddItem = canManageSector(ctx, pipeline.sectorCode);
+  // Também o colaborador, a não ser que o coordenador bloqueie o setor (28/10/2026).
+  const canAddItem = await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode);
   // Excluir card e tirar coluna: só o administrador (13/10/2026).
   const canDelete = podeExcluir(ctx);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
