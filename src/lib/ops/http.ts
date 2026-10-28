@@ -5,13 +5,13 @@ import { acessoOps, ErroOps, autenticarWatcher, receberEvento, gerarToken, gerar
 import { criarChaveOps, alterarChaveOps, nomeChaveSchema } from "./chaves";
 import { editarWatcherSchema, filtrosSchema, instabilidadeSchema, slugSchema, versaoSchema, watcherSchema } from "./regras";
 
-export async function responderOps(fn: () => Promise<unknown>) {
+export async function responderOps(fn: () => Promise<unknown>, duplicado = "Já existe uma automação com esse identificador.") {
   try { return Response.json(await fn(), { headers: { "Cache-Control": "no-store" } }); }
   catch (err) {
     if (err instanceof ErroOps) return Response.json({ error: err.message }, { status: err.status });
     if (err instanceof ZodError) return Response.json({ error: "Confira os dados informados.", details: err.issues.map(i => ({ path: i.path, message: i.message })) }, { status: 400 });
     if (err instanceof SyntaxError) return Response.json({ error: "JSON inválido." }, { status: 400 });
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return Response.json({ error: "Já existe uma automação com esse identificador." }, { status: 409 });
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return Response.json({ error: duplicado }, { status: 409 });
     console.error("[ops] Falha na operação", err instanceof Error ? err.name : "erro");
     return Response.json({ error: "Ops Center indisponível. Confira a conexão e a migração do módulo." }, { status: 503 });
   }
@@ -34,7 +34,7 @@ export async function lerJsonOps(request: Request) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
 }
 
-function exigirOrigem(request: Request) {
+export function exigirOrigem(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return;
   let origem: URL;
