@@ -12,8 +12,9 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SITUACAO_DAS_FERIAS, COR_DAS_FERIAS, SeloDoDP } from "@/components/pessoas/rotulosDoDP";
+import { FERIAS_EM_ABERTO } from "@/lib/ferias/regras";
 
-const ACTIVE_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
+const ACTIVE_STATUSES = FERIAS_EM_ABERTO;
 
 export default async function FeriasPage() {
   const { ctx } = await abrirTelaDoModulo("dp_colaboradores");

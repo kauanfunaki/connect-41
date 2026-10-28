@@ -58,10 +58,11 @@ import {
   textoDoAvisoDeValidacao,
   textoDoAvisoDeVencimento,
 } from "@/lib/autorizacoes/regras";
+import { DIAS_DO_AVISO_DAS_FERIAS, FERIAS_EM_ABERTO } from "@/lib/ferias/regras";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const VACATION_WARNING_DAYS = 30;
+const VACATION_WARNING_DAYS = DIAS_DO_AVISO_DAS_FERIAS;
 const PROBATION_CHECKPOINTS = [40, 45, 85, 90] as const; // dias desde a admissão (5 dias de antecedência + no dia)
 const EXAM_WARNING_DAYS = 15;
 const HANDOFF_STALE_DAYS = 3;
@@ -71,7 +72,7 @@ const ADMISSAO_CONFERENCIA_DAYS = 2; // colaborador preencheu, DP ainda não con
 const RESCISAO_WARNING_DAYS = 3; // antecedência do prazo do art. 477 §6
 const TRAINING_WARNING_DAYS = 30; // reciclagem de treinamento vencendo
 
-const VACATION_OPEN_STATUSES = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
+const VACATION_OPEN_STATUSES = FERIAS_EM_ABERTO;
 const EXAM_RESOLVED_STATUSES = ["ASO_APTO", "ASO_INAPTO", "ASO_APTO_COM_RESTRICAO"] as const;
 
 function startOfDayUTC(date: Date): Date {

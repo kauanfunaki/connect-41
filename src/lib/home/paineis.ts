@@ -3,6 +3,7 @@
 // testado, com as mesmas regras das telas de onde os números saem.
 
 import { addDaysToKey, mondayOfWeek } from "@/lib/agenda";
+import { DIAS_DAS_FERIAS_A_VENCER } from "@/lib/ferias/regras";
 
 export type Soma = { n: number; centavos: number };
 
@@ -119,7 +120,7 @@ export function contarTarefas(
 // ─── Férias (DP) ───────────────────────────────────────────────────────────
 
 /** Antecedência do aviso de férias a vencer, em dias. */
-export const AVISO_DAS_FERIAS_DIAS = 60;
+export const AVISO_DAS_FERIAS_DIAS = DIAS_DAS_FERIAS_A_VENCER;
 
 /**
  * Vencida é a de /ferias (fim do período concessivo antes de agora). "A
