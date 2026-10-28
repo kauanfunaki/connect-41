@@ -50,7 +50,10 @@ export type DashboardView = {
   page: number; pageSize: number; unidentified: number; total: number;
   summary: GithubSummary | null; all: boolean; linked: number;
   repositories: RepositoryHeatmap[]; totalRepositories: number;
+  unidentifiedAuthors: UnidentifiedAuthor[];
 };
+// Quem fez e onde fez as contribuições sem conta GitHub: o nome é o do autor no git (28/10/2026).
+export type UnidentifiedAuthor = { id: string; login: string; repository: string; total: number };
 // `reference` é o SHA curto do commit ou o número do PR/issue; `title`, a primeira
 // linha da mensagem ou o título, quando a coleta já o gravou (27/10/2026).
 export type DayEvent = {

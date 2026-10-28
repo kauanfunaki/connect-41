@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { CONTRIBUTION_TYPES, type Contribution, type ContributionType, type GithubIdentity } from "./types";
 
@@ -41,8 +42,16 @@ export function period(filters: Filters, now: Date, timezone: string) {
   return { from, to };
 }
 const identitySchema = z.object({ node_id: z.string().min(1).max(100), login: z.string().min(1).max(100), type: z.string().optional() });
-export function identity(value: unknown): GithubIdentity {
-  if (value === null) return { externalId: "unknown", login: "Autoria não identificada", isBot: false, unidentified: true };
+const gitAuthorSchema = z.object({ name: z.string().optional(), email: z.string().optional() }).nullish().catch(null);
+// Commit sem conta GitHub associada: fica fora dos totais individuais, mas guarda o nome
+// do autor no git para a tela mostrar quem fez. O e-mail só separa os autores e não é
+// gravado: vira um hash (28/10/2026).
+export function identity(value: unknown, gitAuthor?: unknown): GithubIdentity {
+  if (value === null) {
+    const git = gitAuthorSchema.parse(gitAuthor), name = git?.name?.trim().slice(0, 100), email = git?.email?.trim().toLowerCase();
+    if (name) return { externalId: `git:${createHash("sha256").update(email || name).digest("hex")}`, login: name, isBot: false, unidentified: true };
+    return { externalId: "unknown", login: "Autoria não identificada", isBot: false, unidentified: true };
+  }
   const raw = identitySchema.parse(value);
   return { externalId: raw.node_id, login: raw.login, isBot: raw.type === "Bot" || raw.login.endsWith("[bot]"), unidentified: false };
 }
@@ -63,8 +72,8 @@ export function contributionTitle(value: unknown): string | null {
 export function normalize(value: unknown, resource: "COMMIT" | "ISSUE" | "PULL_REQUEST" | "REVIEW"): Contribution | null {
   if (resource === "COMMIT") {
     const raw = z.object({ sha: z.string().regex(/^[a-f\d]{40,64}$/i), author: z.unknown(), html_url: z.string(),
-      commit: z.object({ committer: z.object({ date: instant }), message: z.unknown().optional() }) }).parse(value);
-    return { externalId: raw.sha, type: resource, user: identity(raw.author ?? null), occurredAt: new Date(raw.commit.committer.date), url: safeGithubUrl(raw.html_url), number: null, title: contributionTitle(raw.commit.message) };
+      commit: z.object({ committer: z.object({ date: instant }), author: z.unknown().optional(), message: z.unknown().optional() }) }).parse(value);
+    return { externalId: raw.sha, type: resource, user: identity(raw.author ?? null, raw.commit.author),occurredAt: new Date(raw.commit.committer.date), url: safeGithubUrl(raw.html_url), number: null, title: contributionTitle(raw.commit.message) };
   }
   if (resource === "REVIEW") {
     const raw = common.extend({ submitted_at: instant.nullish(), state: z.string() }).parse(value);
