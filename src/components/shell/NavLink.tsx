@@ -44,9 +44,12 @@ export function useNaFaixa(): boolean {
  * setor fica na borda da faixa, onde fica na coluna (`-left-3`: o item começa
  * 12px para dentro).
  */
-export function classeDoItemNaFaixa(active: boolean): string {
+export function classeDoItemNaFaixa(active: boolean, area?: string): string {
+  const comCor = area !== undefined && area !== "marca";
   return `relative flex items-center justify-center size-10 flex-shrink-0 rounded-lg transition-colors ${
-    active ? "text-on-brand bg-brand-solid" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+    active
+      ? `text-on-brand ${area !== undefined ? "bg-grupo-solid" : "bg-brand-solid"}`
+      : `${comCor ? "text-grupo" : "text-fg-secondary hover:text-fg"} hover:bg-surface-hover`
   }`;
 }
 
@@ -116,6 +119,11 @@ type NavItemProps = {
    */
   contador?: number;
   menu?: { aberto: boolean; onClick: () => void; painelId: string };
+  /**
+   * A área de uso do item no Connect da equipe (28/10/2026) — ver
+   * `classeDoItemComArea`. Sem ela, o desenho do portal.
+   */
+  area?: string;
 };
 
 /**
@@ -133,11 +141,31 @@ export function classeDoItem(active: boolean, extra = ""): string {
   } ${extra}`.trim();
 }
 
+/**
+ * O item do Connect da equipe com a **área de uso** (28/10/2026, opção 1 da
+ * página "Cores do Connect da equipe", como no Omie): o ícone num quadrado na
+ * cor da área, cheio quando a tela é a aberta; a linha aberta fica no fundo de
+ * hover, em negrito, com a barra na cor da área. `area` é a chave do grupo de
+ * cor (`data-grupo`) ou "marca", o item sem área, na cor principal. O portal
+ * segue com o desenho de `classeDoItem`.
+ */
+export function classeDoItemComArea(active: boolean, extra = ""): string {
+  return `relative flex items-center gap-2.5 py-1.5 pr-2.5 -ml-3 pl-[calc(0.5rem+0.75rem)] rounded-r-lg transition-colors ${
+    active ? "text-fg font-semibold bg-surface-hover" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"
+  } ${extra}`.trim();
+}
+
+/** O quadrado do ícone na cor da área. */
+export function IconeDaArea({ icon, active, area }: { icon: React.ReactNode; active: boolean; area: string }) {
+  const cor = active ? "bg-grupo-solid text-on-brand" : area === "marca" ? "text-fg-secondary" : "bg-grupo/12 text-grupo";
+  return <span aria-hidden className={`inline-grid place-items-center size-6 rounded-md flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${cor}`}>{icon}</span>;
+}
+
 function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
@@ -154,16 +182,17 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
         aria-current={active ? "true" : undefined}
         onClick={(e) => { menu.onClick(); if (!menu.aberto && e.detail === 0) focarMenu(); }}
         onKeyDown={(e) => { if (e.key === "ArrowDown") { e.preventDefault(); if (!menu.aberto) menu.onClick(); focarMenu(); } }}
-        className={naFaixa ? classeDoItemNaFaixa(active) : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
+        data-grupo={area}
+        className={naFaixa ? classeDoItemNaFaixa(active, area) : area !== undefined ? classeDoItemComArea(active, "w-[calc(100%+0.75rem)] text-label font-medium") : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
       >
-        {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}<span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span><span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
+        {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}{area !== undefined ? <IconeDaArea icon={icon} active={active} area={area} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}<span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
       </button>
     );
   }
 
   if (naFaixa) {
     return (
-      <Link href={href} aria-current={active ? "page" : undefined} {...nomeNaFaixa(contador > 0 ? `${label} (${contador} novas)` : label)} className={classeDoItemNaFaixa(active)}>
+      <Link href={href} aria-current={active ? "page" : undefined} data-grupo={area} {...nomeNaFaixa(contador > 0 ? `${label} (${contador} novas)` : label)} className={classeDoItemNaFaixa(active, area)}>
         <IconeNaFaixa icon={icon} active={active} comTelas={comTelas} />
         {contador > 0 && <span aria-hidden className="absolute top-[5px] right-[5px] size-2 rounded-full bg-danger-solid ring-2 ring-surface" />}
       </Link>
@@ -174,15 +203,19 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      data-grupo={grupo ?? undefined}
-      className={classeDoItem(active, "text-label font-medium")}
+      data-grupo={area ?? grupo ?? undefined}
+      className={area !== undefined ? classeDoItemComArea(active, "text-label font-medium") : classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${grupo && !active ? "text-grupo" : ""}`.trim()}>{icon}</span>
+      {area !== undefined ? (
+        <IconeDaArea icon={icon} active={active} area={area} />
+      ) : (
+        <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${grupo && !active ? "text-grupo" : ""}`.trim()}>{icon}</span>
+      )}
       {label}
       {contador > 0 && (
         <span className="ml-auto" aria-label={`${contador} ${contador === 1 ? "nova" : "novas"}`}>
-          <Contador valor={contador} tom={active ? "neutro" : "alerta"} pequeno />
+          <Contador valor={contador} tom={active && area === undefined ? "neutro" : "alerta"} pequeno />
         </span>
       )}
     </Link>
@@ -207,11 +240,14 @@ export function GrupoNavItem({
   href,
   icon,
   itens,
+  area,
 }: {
   label: string;
   href: string;
   icon: React.ReactNode;
   itens: ItemDeModulo[];
+  /** A área de uso do grupo (a da maioria das telas dele) — ver `classeDoItemComArea`. */
+  area?: string;
 }) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
@@ -224,8 +260,9 @@ export function GrupoNavItem({
       <Link
         href={href}
         aria-current={active ? "page" : undefined}
+        data-grupo={area}
         {...nomeNaFaixa(`${label}, ${telas}`, `${label} · ${telas}`)}
-        className={classeDoItemNaFaixa(active)}
+        className={classeDoItemNaFaixa(active, area)}
       >
         <IconeNaFaixa icon={icon} active={active} comTelas />
       </Link>
@@ -236,13 +273,14 @@ export function GrupoNavItem({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={classeDoItem(active, "text-label font-medium")}
+      data-grupo={area}
+      className={area !== undefined ? classeDoItemComArea(active, "text-label font-medium") : classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
+      {area !== undefined ? <IconeDaArea icon={icon} active={active} area={area} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
       <span className="truncate">{label}</span>
       {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
-      <span className={`ml-auto text-micro tabular-nums ${active ? "text-on-brand/80" : "text-fg-muted"}`}>
+      <span className={`ml-auto text-micro tabular-nums ${active && area === undefined ? "text-on-brand/80" : "text-fg-muted"}`}>
         {itens.length}
       </span>
     </Link>
@@ -269,19 +307,21 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
 
   if (naFaixa) {
     return (
-      <Link href={href} aria-current={active ? "page" : undefined} {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(active)}>
+      <Link href={href} aria-current={active ? "page" : undefined} data-grupo="marca" {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(active, "marca")}>
         <IconeNaFaixa icon={icon} active={active} comTelas />
       </Link>
     );
   }
 
+  // Sem área de uso (28/10/2026): Cadastros é de todas as áreas.
   return (
     <Link
       href={href}
-      className={classeDoItem(active, "text-label font-medium")}
+      data-grupo="marca"
+      className={classeDoItemComArea(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>
+      <IconeDaArea icon={icon} active={active} area="marca" />
       {label}
     </Link>
   );
@@ -289,7 +329,6 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
 
 type SectorNavItemProps = {
   label: string;
-  color: string;
   icon?: React.ReactNode;
   /** Troca o ambiente para o setor (ver `trocarSetor` em shell/contexto.ts). */
   onEntrar: () => void;
@@ -305,23 +344,23 @@ type SectorNavItemProps = {
 // Mesmo tamanho e peso dos outros itens da lista (07/10/2026): era 13px regular
 // com ícone de 15px logo abaixo de "Início… Agenda" em 14px médio com 16px, e os
 // setores pareciam menores e mais apagados sem motivo escrito.
-export function SectorNavItem({ label, color, icon, onEntrar }: SectorNavItemProps) {
+export function SectorNavItem({ label, icon, onEntrar }: SectorNavItemProps) {
   const naFaixa = useNaFaixa();
 
-  // Na faixa: o ícone do setor com a bolinha da cor dele no canto.
+  // Sem a bolinha da cor do setor (28/10/2026): com a cor da área de uso no
+  // menu, mais uma cor por setor era ruído — o Kauan achou redundante. O ícone
+  // diz o setor; a cor do setor fica na troca de setor.
   if (naFaixa) {
     return (
-      <button type="button" onClick={onEntrar} {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(false)}>
+      <button type="button" onClick={onEntrar} data-grupo="marca" {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(false, "marca")}>
         <IconeNaFaixa icon={icon ?? <span className="text-ui font-semibold">{label.charAt(0)}</span>} active={false} />
-        <span aria-hidden data-marca="cor" className="absolute top-[7px] right-[7px] size-[7px] rounded-full" style={{ background: color }} />
       </button>
     );
   }
 
   return (
-    <button type="button" onClick={onEntrar} className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-label font-medium")}>
-      <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: color }} />
-      {icon && <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
+    <button type="button" onClick={onEntrar} data-grupo="marca" className={classeDoItemComArea(false, "w-[calc(100%+0.75rem)] text-label font-medium")}>
+      <IconeDaArea icon={icon ?? <span className="text-ui font-semibold">{label.charAt(0)}</span>} active={false} area="marca" />
       {label}
     </button>
   );

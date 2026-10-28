@@ -110,17 +110,20 @@ describe("menu recolhido: a faixa de ícones", () => {
     }
   });
 
-  it("o ativo tem o mesmo desenho da coluna aberta (azul cheio, ícone branco)", () => {
+  // 28/10/2026: cheio na cor da área de uso (`bg-grupo-solid`); o item sem
+  // área ("marca") é a cor principal, pelo `data-grupo="marca"` do globals.css.
+  it("o ativo é cheio na cor da área, com o ícone branco", () => {
     rota.atual = "/tarefas";
     const aside = lateral(casco(true));
     const ativo = tagCom(aside, "Meu dia");
     expect(ativo).toContain('aria-current="page"');
-    expect(ativo).toContain("text-on-brand bg-brand-solid");
-    // As mesmas classes do ativo da coluna aberta.
+    expect(ativo).toContain('data-grupo="marca"');
+    expect(ativo).toContain("text-on-brand bg-grupo-solid");
+    // O portal segue com o desenho de antes.
     expect(classeDoItem(true)).toContain("text-on-brand bg-brand-solid");
     const outro = tagCom(aside, "Início");
     expect(outro).not.toContain("aria-current");
-    expect(outro).not.toContain("bg-brand-solid");
+    expect(outro).not.toContain("bg-grupo-solid");
   });
 
   it("os títulos dos blocos viram fios — e o nome fica só para o leitor de tela", () => {
@@ -160,10 +163,12 @@ describe("menu recolhido: a faixa de ícones", () => {
     expect(aside).not.toContain('placeholder="Buscar…"');
   });
 
-  it("em Todos os setores, cada setor é o ícone com a bolinha da cor", () => {
+  // Sem a bolinha da cor do setor desde 28/10/2026 (redundante com a cor da área).
+  it("em Todos os setores, cada setor é o ícone dele, sem a bolinha da cor", () => {
     const aside = lateral(casco(true, { activeSector: null, activeSectorModules: [] }));
     const fiscal = aside.slice(aside.indexOf('aria-label="Fiscal"'));
-    expect(fiscal.slice(0, fiscal.indexOf("</button>"))).toContain('style="background:#C5374B"');
+    expect(fiscal.slice(0, fiscal.indexOf("</button>"))).toContain("lucide-receipt-text");
+    expect(fiscal.slice(0, fiscal.indexOf("</button>"))).not.toContain("#C5374B");
     // "Geral" abre a lista: sem fio em cima; "Fixadas" e "Meus Setores" com.
     expect(aside.match(/<span aria-hidden="true" class="block ml-2 w-6 h-px bg-border">/g)).toHaveLength(2);
   });
