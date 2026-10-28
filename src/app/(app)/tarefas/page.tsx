@@ -17,13 +17,15 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { Contador } from "@/components/ui/Contador";
-import { ConfigurarTarefasButton, ID_DA_FAIXA_DO_MEU_DIA } from "@/components/tarefas/ConfigurarTarefasButton";
+import { ConfigurarTarefasButton, ID_DA_FAIXA_DO_MEU_DIA, type AlvoDoMeuDia } from "@/components/tarefas/ConfigurarTarefasButton";
+import { blocosDaPessoa, podeConfigurarAPessoa, podeConfigurarOSetor } from "@/lib/meuDia/configuracao";
+import { meuDiaDasPessoas } from "@/lib/meuDia/configuracaoServidor";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, scopedSectors } from "@/lib/auth/context";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
-import { parseTaskWidgets, visibleTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
+import { parseTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
 import { itensDaGestao } from "@/lib/gestao/itens";
 import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa } from "@/lib/gestao/regras";
 import { LinhasDeSituacao, type LinhaDeSituacao, type Segmento } from "@/components/shared/Graficos";
@@ -32,7 +34,7 @@ import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { addDaysToKey, saoPauloParts, weekdayLabel } from "@/lib/agenda";
 import { formatCalendarDate, formatInstantDate, formatInstantTime, formatarNumero } from "@/lib/format";
-import { salvarWidgetsSetor, restaurarWidgetsSetor } from "./actions";
+import { salvarWidgetsSetor, restaurarWidgetsSetor, salvarMeuDiaDaPessoa, restaurarMeuDiaDaPessoa } from "./actions";
 import { canActOnSector } from "@/lib/auth/papeis";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { AVISO_EM_DIAS } from "@/lib/societario/licencas";
@@ -194,12 +196,47 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
   ]);
   const configBySector: Record<string, TaskWidgetKey[]> = {};
   for (const v of taskViews) configBySector[v.sectorCode] = parseTaskWidgets(v.widgets);
-  const visiveis = new Set(visibleTaskWidgets(scopedSectors(ctx) ?? ctx.sectors, configBySector));
+
+  // Quem configura o Meu dia de quem (28/10/2026): cada um o seu, o
+  // coordenador o da equipe, Admin e Super Admin o de qualquer um e o padrão de
+  // cada setor. A configuração da pessoa vale mais que a do setor.
+  const setorAdmin = podeConfigurarOSetor(ctx);
+  const daEquipe =
+    setorAdmin || ctx.role === "SECTOR_ADMIN"
+      ? (
+          await prisma.user.findMany({
+            where: { tenantId: ctx.tenantId, active: true, id: { not: ctx.userId } },
+            orderBy: { name: "asc" },
+            select: { id: true, name: true, role: true, sectors: { select: { sectorCode: true } } },
+          })
+        )
+          .map((u) => ({ id: u.id, nome: u.name, role: u.role, sectors: u.sectors.map((x) => x.sectorCode) }))
+          .filter((u) => podeConfigurarAPessoa(ctx, u))
+      : [];
+  const proprios = await meuDiaDasPessoas(ctx.tenantId, [ctx.userId, ...daEquipe.map((u) => u.id)].filter(Boolean));
+  const visiveis = new Set(blocosDaPessoa(proprios.get(ctx.userId), scopedSectors(ctx) ?? ctx.sectors, configBySector));
   const mostraReunioes = visiveis.has("reunioes");
 
-  const podeConfigurar = ctx.role === "SUPER_ADMIN";
-  const setoresParaConfigurar = podeConfigurar
-    ? (await getActiveSectors(ctx.tenantId)).map((s) => ({ code: s.code, label: s.label }))
+  const alvosDoMeuDia: AlvoDoMeuDia[] = ctx.userId
+    ? [
+        { tipo: "pessoa", id: ctx.userId, rotulo: "Você", eu: true, blocos: [...visiveis], proprio: proprios.has(ctx.userId) },
+        ...daEquipe.map((u): AlvoDoMeuDia => ({
+          tipo: "pessoa",
+          id: u.id,
+          rotulo: u.nome,
+          eu: false,
+          blocos: blocosDaPessoa(proprios.get(u.id), u.sectors, configBySector),
+          proprio: proprios.has(u.id),
+        })),
+        ...(setorAdmin
+          ? (await getActiveSectors(ctx.tenantId)).map((s): AlvoDoMeuDia => ({
+              tipo: "setor",
+              code: s.code,
+              rotulo: s.label,
+              blocos: configBySector[s.code] ?? blocosDaPessoa(null, [s.code], {}),
+            }))
+          : []),
+      ]
     : [];
 
   const [todos, reunioes, prazos] = await Promise.all([
@@ -267,12 +304,13 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 ]}
               />
             )}
-            {podeConfigurar && (
+            {alvosDoMeuDia.length > 0 && (
               <ConfigurarTarefasButton
-                sectors={setoresParaConfigurar}
-                configBySector={configBySector}
-                saveAction={salvarWidgetsSetor}
-                resetAction={restaurarWidgetsSetor}
+                alvos={alvosDoMeuDia}
+                salvarPessoa={salvarMeuDiaDaPessoa}
+                restaurarPessoa={restaurarMeuDiaDaPessoa}
+                salvarSetor={salvarWidgetsSetor}
+                restaurarSetor={restaurarWidgetsSetor}
               />
             )}
             {/* "Todas as tarefas", o nome da tela que abre (20/10/2026, Quadro ›
@@ -285,7 +323,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
       />
       {/* O lugar da faixa do Configurar, que edita o Meu dia na própria tela
           (escolha 11A, 20/10/2026). */}
-      {podeConfigurar && <div id={ID_DA_FAIXA_DO_MEU_DIA} />}
+      {alvosDoMeuDia.length > 0 && <div id={ID_DA_FAIXA_DO_MEU_DIA} />}
 
       {/* Sem o cartão azul (15/10/2026): o primeiro número é de situação
           (atrasados), não o total — com zero, ele virava o número principal. */}
