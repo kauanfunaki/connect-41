@@ -120,6 +120,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "autorizacoes.serpro_lote": o("conferiu no Serpro as autorizações de acesso, em lote"),
   "autorizacoes.serpro_sitfis": o("pediu no Serpro a situação fiscal da empresa"),
   "autorizacoes.serpro_guia": o("emitiu no Serpro uma guia federal da empresa"),
+  "autorizacoes.guia_paga": e("marcou a guia como paga"),
+  "autorizacoes.guia_reaberta": e("desmarcou a guia como paga"),
   "autorizacoes.serpro_caixa_postal": o("abriu uma mensagem da Caixa Postal da Receita, dando ciência"),
 
   // ── BPO ────────────────────────────────────────────────────────────────────
@@ -522,6 +524,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   CollectionAgreement: "acordo de cobrança",
   CollectionReminderConfig: "régua de lembretes",
   Company: "empresa",
+  Guia: "guia",
   CompanyPartner: "sócio",
   CompanyRescisaoConfig: "cálculo de rescisão da empresa",
   CompanyService: "setor contratado",

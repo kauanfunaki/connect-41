@@ -147,6 +147,11 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                 Caixa Postal
               </Button>
             )}
+            {serpro?.ambiente === "producao" && (
+              <Button href="/autorizacoes/guias" variant="secondary" size="sm">
+                Guias do mês
+              </Button>
+            )}
             {serpro && (
               <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
                 Consumo do Serpro
