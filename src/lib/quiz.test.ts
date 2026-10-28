@@ -44,7 +44,12 @@ describe("scoreQuiz", () => {
   it("cada resultado individual marca o índice certo esperado", () => {
     const answers = [{ questionId: "q1", selectedIndex: 0 }];
     const result = scoreQuiz(answers, QUESTIONS);
-    expect(result.results[0]).toEqual({ questionId: "q1", selectedIndex: 0, correctIndex: 1, correct: false });
+    expect(result.results[0]).toEqual({ questionId: "q1", selectedIndex: 0, correctIndex: 1, correct: false, alternativas: ["a", "b", "c"] });
+  });
+
+  it("guarda o texto da pergunta e das alternativas com a resposta (28/10)", () => {
+    const result = scoreQuiz([{ questionId: "q1", selectedIndex: 2 }], [{ ...QUESTIONS[0], text: "Qual letra?" }]);
+    expect(result.results[0]).toMatchObject({ texto: "Qual letra?", alternativas: ["a", "b", "c"] });
   });
 });
 
