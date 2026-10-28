@@ -60,6 +60,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "person.create": c("criou a pessoa"),
   "person.update": e("editou a pessoa"),
   "person.delete": x("excluiu a pessoa"),
+  // A conta de acesso da pessoa, pela aba Acesso da ficha (lote 8, 28/10/2026).
+  "person.link_user": e("ligou a conta de acesso da pessoa"),
+  "person.unlink_user": e("desligou a conta de acesso da pessoa"),
   "companyservice.create": c("adicionou um setor contratado"),
   "companyservice.assign": e("trocou o responsável de um setor contratado"),
   // A tela Clientes saiu em 15/10/2026 (etapa 3 da saída do Cliente): as

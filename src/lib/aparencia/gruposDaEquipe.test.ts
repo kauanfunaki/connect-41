@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODULE_ROUTES } from "@/lib/module-catalog";
-import { GRUPO_DO_MODULO, grupoDaTelaDaEquipe } from "./gruposDaEquipe";
+import { GRUPO_DO_MODULO, areaDoGrupoDeTelas, grupoDaTelaDaEquipe } from "./gruposDaEquipe";
 
 // O que se testa (21/10/2026): no Connect da equipe a tela leva a cor do grupo
 // dela, e não a do setor — no BPO, o financeiro em azul e a nota em laranja.
@@ -23,9 +23,27 @@ describe("grupoDaTelaDaEquipe", () => {
     expect(grupoDaTelaDaEquipe("/solicitacoes")).toBe("atendimento");
   });
 
+  it("as áreas novas de 28/10: Pessoas, Recrutamento e Escritório", () => {
+    expect(grupoDaTelaDaEquipe("/colaboradores/abc")).toBe("pessoas");
+    expect(grupoDaTelaDaEquipe("/ferias")).toBe("pessoas");
+    expect(grupoDaTelaDaEquipe("/indicadores-rh")).toBe("pessoas");
+    expect(grupoDaTelaDaEquipe("/vagas")).toBe("recrutamento");
+    expect(grupoDaTelaDaEquipe("/colaboradores-clientes")).toBe("recrutamento");
+    expect(grupoDaTelaDaEquipe("/chamados/configuracoes")).toBe("escritorio");
+    expect(grupoDaTelaDaEquipe("/certidoes")).toBe("processos");
+    expect(grupoDaTelaDaEquipe("/area/pessoas")).toBe("pessoas");
+    expect(grupoDaTelaDaEquipe("/area/inventada")).toBeNull();
+  });
+
+  it("o grupo do menu fica com a área da maioria das telas dele", () => {
+    expect(areaDoGrupoDeTelas(["bpo_pendencias", "bpo_comunicacao", "bpo_aprovacoes"])).toBe("atendimento");
+    expect(areaDoGrupoDeTelas(["bpo_senhas", "bpo_manual"])).toBeNull();
+    expect(areaDoGrupoDeTelas(["dp_colaboradores"])).toBe("pessoas");
+  });
+
   it("o resto fica na cor principal, sem confundir prefixo de palavra", () => {
     expect(grupoDaTelaDaEquipe("/home")).toBeNull();
-    expect(grupoDaTelaDaEquipe("/vagas")).toBeNull();
+    expect(grupoDaTelaDaEquipe("/agenda")).toBeNull();
     expect(grupoDaTelaDaEquipe("/admin/tenant")).toBeNull();
     expect(grupoDaTelaDaEquipe("/pagamentos")).toBeNull();
   });

@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, Building2, Briefcase, FileText, History, MessageCircle } from "lucide-react";
+import { LayoutGrid, Building2, Briefcase, FileText, History, KeyRound, MessageCircle } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 
 type Props = {
   overview: React.ReactNode;
   vinculo: React.ReactNode;
+  /** A conta de acesso ao Connect (lote 8, 28/10/2026) — só do colaborador interno. */
+  acesso?: React.ReactNode;
   trabalhista: React.ReactNode;
   documents: React.ReactNode;
   documentsCount: number;
@@ -21,6 +23,7 @@ type Props = {
 export function PersonDetailTabs({
   overview,
   vinculo,
+  acesso,
   trabalhista,
   documents,
   documentsCount,
@@ -31,7 +34,7 @@ export function PersonDetailTabs({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const validTabs = ["overview", "vinculo", "trabalhista", "documents", "conversations", "history"];
+  const validTabs = ["overview", "vinculo", ...(acesso ? ["acesso"] : []), "trabalhista", "documents", "conversations", "history"];
   const tabFromUrl = searchParams.get("tab");
   const [active, setActive] = useState(
     tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : "overview"
@@ -40,6 +43,7 @@ export function PersonDetailTabs({
   const tabs = [
     { key: "overview", label: "Visão geral", icon: <LayoutGrid /> },
     { key: "vinculo", label: "Vínculo", icon: <Building2 /> },
+    ...(acesso ? [{ key: "acesso", label: "Acesso", icon: <KeyRound /> }] : []),
     { key: "trabalhista", label: "Dados trabalhistas", icon: <Briefcase /> },
     { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
     { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
@@ -62,6 +66,7 @@ export function PersonDetailTabs({
       <div role="tabpanel" id="painel-da-pessoa" aria-label={tabs.find((t) => t.key === active)?.label}>
         {active === "overview" && overview}
         {active === "vinculo" && vinculo}
+        {active === "acesso" && acesso}
         {active === "trabalhista" && trabalhista}
         {active === "documents" && documents}
         {active === "conversations" && conversations}

@@ -29,6 +29,7 @@ import {
   TIPO_DO_DESLIGAMENTO,
 } from "@/components/pessoas/rotulosDoDP";
 import { chavesLegiveis, linkDaTela, situacaoLegivel } from "@/lib/ia/legivel";
+import { DIAS_DO_AVISO_DAS_FERIAS, FERIAS_EM_ABERTO } from "@/lib/ferias/regras";
 
 /** A situação do colaborador como a ficha escreve (`PersonHeader`). */
 const SITUACAO_DO_COLABORADOR: Readonly<Record<string, string>> = {
@@ -68,8 +69,7 @@ export function podeVerSensivel(ctx: ContextoDaFerramenta, grupo: "SALARIO" | "D
 
 const DIA = 24 * 60 * 60 * 1000;
 /** A mesma antecedência do alerta de férias vencendo. */
-export const DIAS_DE_AVISO_DAS_FERIAS = 30;
-const FERIAS_EM_ABERTO = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
+export const DIAS_DE_AVISO_DAS_FERIAS = DIAS_DO_AVISO_DAS_FERIAS;
 
 const data = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
 

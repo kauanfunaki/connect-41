@@ -142,8 +142,8 @@ describe("corDoGrupo", () => {
     expect(corDoGrupo({ coresDosGrupos: {} }, "financeiro")).toBe(GRUPOS.financeiro.padrao);
   });
 
-  it("os padrões de fábrica são quatro cores distintas", () => {
-    expect(new Set(GRUPOS_DE_COR.map((g) => GRUPOS[g].padrao)).size).toBe(4);
+  it("os padrões de fábrica são cores distintas", () => {
+    expect(new Set(GRUPOS_DE_COR.map((g) => GRUPOS[g].padrao)).size).toBe(GRUPOS_DE_COR.length);
   });
 });
 

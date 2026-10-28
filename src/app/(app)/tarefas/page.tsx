@@ -33,6 +33,31 @@ import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { addDaysToKey, saoPauloParts, weekdayLabel } from "@/lib/agenda";
 import { formatCalendarDate, formatInstantDate, formatInstantTime, formatarNumero } from "@/lib/format";
 import { salvarWidgetsSetor, restaurarWidgetsSetor } from "./actions";
+import { canActOnSector } from "@/lib/auth/papeis";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
+import { AVISO_EM_DIAS } from "@/lib/societario/licencas";
+import { fimDoDia, type ItemDePrazo } from "@/lib/societario/prazos";
+import { itensDePrazo } from "@/lib/societario/painel-data";
+import { ListaDePrazos } from "@/components/societario/ListaDePrazos";
+
+/**
+ * O que a Minha área do Societário mostrava além dos processos (fila única,
+ * lote 7, 28/10/2026): exigências, taxas e licenças dos processos da pessoa.
+ * Os processos já vêm na lista do Meu dia, pela Gestão. Só para quem age no
+ * Societário, com a Minha área ligada.
+ */
+async function doSocietario(ctx: Awaited<ReturnType<typeof getAuthContext>>, hojeKey: string): Promise<ItemDePrazo[] | null> {
+  if (!ctx.tenantId || !ctx.userId) return null;
+  const modulo = "societario_minha_area";
+  if (!(await isModuleEnabled(ctx.tenantId, modulo))) return null;
+  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, modulo)) ?? "societario")) return null;
+  const itens = await itensDePrazo(ctx.tenantId, {
+    responsavelId: ctx.userId,
+    incluirSemData: true,
+    licencasAte: fimDoDia(addDaysToKey(hojeKey, AVISO_EM_DIAS)),
+  });
+  return itens.filter((i) => i.tipo !== "processo");
+}
 
 export const dynamic = "force-dynamic";
 
@@ -193,6 +218,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
       : Promise.resolve([]),
     prazosDoPeriodo(ctx, hojeKey, addDaysToKey(hojeKey, 6)),
   ]);
+  const societario = visaoTime ? null : await doSocietario(ctx, hojeKey);
 
   const itens = todos.filter(
     (x) =>
@@ -370,6 +396,22 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                   })}
                 </ul>
               )}
+            </section>
+          )}
+
+          {societario && societario.length > 0 && (
+            <section id="societario" className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden scroll-mt-20">
+              <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+                <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
+                  <CalendarDays size={16} className="text-fg-muted" /> No Societário, com você
+                </h2>
+                <Button href="/societario/exigencias" variant="secondary" size="xs">
+                  Abrir prazos
+                </Button>
+              </header>
+              <div className="px-4 py-2">
+                <ListaDePrazos itens={societario} hoje={agora} />
+              </div>
             </section>
           )}
 
