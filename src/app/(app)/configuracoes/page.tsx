@@ -96,7 +96,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
 
       {/* 05/10/2026: quem trabalha à noite ou de madrugada não via as
           próprias reuniões na grade fixa das 7h às 21h. */}
-      <SecaoDeConfiguracao titulo="Agenda" descricao="As horas que a grade de dia e de semana da Agenda mostra para você." icone={<CalendarClock />}>
+      <SecaoDeConfiguracao id="agenda" titulo="Agenda" descricao="As horas que a grade de dia e de semana da Agenda mostra para você." icone={<CalendarClock />}>
         <ExpedienteForm
           action={salvarMeuExpediente}
           valor={expedientes.pessoa ?? doEscritorio}
@@ -110,7 +110,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
         </SecaoDeConfiguracao>
       )}
 
-      <SecaoDeConfiguracao titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
+      <SecaoDeConfiguracao id="notificacoes" titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
         <PushNotificationToggle
           publicKey={getVapidPublicKey()}
           acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
