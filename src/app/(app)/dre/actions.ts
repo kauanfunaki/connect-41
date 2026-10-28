@@ -183,6 +183,52 @@ export async function classificarCategoriaDoArquivo(
   return { success: true };
 }
 
+/**
+ * Muda a linha da DRE de uma categoria que **já está** numa linha, só nesta
+ * empresa (28/10/2026, pedido da coordenação do BPO ao conferir a DRE de um
+ * cliente antes de liberar no portal: "esse IPTU não pode estar aqui, tem que
+ * estar nas despesas administrativas" — particularidade de um cliente, uma vez
+ * ou outra).
+ *
+ * Grava a exceção da empresa, como a fila: as outras empresas seguem o plano
+ * padrão, e o "Voltar ao padrão" do painel de classificação desfaz. A linha do
+ * relatório traz só o nome da categoria; com categoria desse nome no plano da
+ * empresa (ou no do escritório), é nela que a exceção vai. Sem, é a categoria
+ * do arquivo do Omie — o caminho de `classificarCategoriaDoArquivo`.
+ */
+export async function moverCategoria(
+  companyId: string,
+  nome: string,
+  origem: "pagamento" | "recebimento",
+  grupo: string
+): Promise<AcaoDoDre> {
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+  const foraDoFoco = await recusaDoFoco(c.ctx, [companyId]);
+  if (foraDoFoco) return { error: foraDoFoco };
+
+  const valido = grupoDeTexto(grupo, await modeloDaEmpresa(c.tenantId, companyId));
+  if (!valido) return { error: "Grupo do DRE desconhecido." };
+  if (origem !== "pagamento" && origem !== "recebimento") return { error: "Lado do lançamento desconhecido." };
+  if (!grupoAceitaOrigem(valido, origem)) {
+    return { error: origem === "pagamento" ? "Esse grupo é de recebimento, e este valor foi pago." : "Esse grupo é de pagamento, e este valor foi recebido." };
+  }
+  const limpo = nomeDaCategoria(nome);
+  if (!limpo || nome.trim() === SEM_CATEGORIA) return { error: "Esta linha não tem categoria para mover." };
+
+  const kind = origem === "pagamento" ? "PAGAR" : "RECEBER";
+  const existentes = await c.prisma.financeCategory.findMany({
+    where: ondeDaEmpresa(c.tenantId, companyId, { apenasAtivas: false, incluirOcultas: true }),
+    select: { id: true, name: true, kind: true, companyId: true },
+  });
+  const existente = categoriaComONome(padraoAntesDaEmpresa(existentes), limpo, kind);
+  if (!existente) return classificarCategoriaDoArquivo(companyId, nome, origem, valido);
+
+  await gravarExcecao(c, companyId, existente.id, valido);
+  for (const p of ["/dre", "/dre/economica"]) revalidatePath(p);
+  return { success: true };
+}
+
 /** Remove a exceção — a categoria volta a seguir o plano de contas. */
 export async function voltarAoPadrao(companyId: string, categoryId: string): Promise<AcaoDoDre> {
   const c = await contexto(companyId);
