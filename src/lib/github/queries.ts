@@ -3,7 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { emptyCounts, GithubError, period, type Filters } from "./rules";
 import { getConnection } from "./store";
 import { linkedPeople } from "./conta";
-import { CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type DayEvent, type HeatmapUser, type RepositoryHeatmap } from "./types";
+import { CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type DayEvent, type HeatmapUser, type RepositoryHeatmap, type UnidentifiedAuthor } from "./types";
 
 async function readable(tenantId: string) {
   const connection = await getConnection(tenantId);
@@ -28,7 +28,7 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
   if (filters.repository && !access.repositories.some(repo => repo.id === filters.repository)) throw new GithubError("Repositório indisponível para consulta. Confira a conexão e a seleção.", 403);
   const base: DashboardView = { ...dates, connected: connection?.status === "connected", enabled: connection?.integration.enabled ?? false,
     login: connection?.login ?? null, timezone, message: null, users: [], totalUsers: 0, page: 1, pageSize, unidentified: 0, total: 0, summary: null,
-    all, linked: names.size, repositories: [], totalRepositories: 0 };
+    all, linked: names.size, repositories: [], totalRepositories: 0, unidentifiedAuthors: [] };
   if (!connection || connection.status !== "connected") return { ...base, message: connection?.lastError ?? "Conecte uma conta GitHub em Integrações." };
   if (!access.selected) return { ...base, message: "Selecione os repositórios em Integrações para iniciar a coleta." };
   if (!access.repositories.length) return { ...base, message: "Os repositórios selecionados estão sem acesso no GitHub. Confira em Integrações." };
@@ -44,9 +44,10 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
   const [totalUsers, total, unidentified] = await Promise.all([
     db.githubUser.count({ where: whereUser }),
     db.githubDailyContribution.aggregate({ where: { ...common, user: userFilter }, _sum: { count: true } }),
-    db.githubDailyContribution.aggregate({ where: { ...common, user: { connectionId: connection.id, unidentified: true } }, _sum: { count: true } }),
+    db.githubDailyContribution.groupBy({ by: ["userId", "repositoryId"], where: { ...common, user: { connectionId: connection.id, unidentified: true } }, _sum: { count: true } }),
   ]);
-  const totals = { ...base, totalUsers, total: total._sum.count ?? 0, unidentified: unidentified._sum.count ?? 0 };
+  const totals = { ...base, totalUsers, total: total._sum.count ?? 0, unidentified: unidentified.reduce((sum, row) => sum + (row._sum.count ?? 0), 0),
+    unidentifiedAuthors: await unidentifiedAuthors(unidentified, repositories) };
   if (filters.view === "general") {
     const [daily, activity, recent] = await Promise.all([
       db.githubDailyContribution.groupBy({ by: ["day", "type"], where: { ...common, user: userFilter }, orderBy: { day: "asc" }, _sum: { count: true } }),
@@ -86,6 +87,18 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
     return { ...user, name: names.get(externalId) ?? null, counts, total: Object.values(counts).reduce((sum, value) => sum + value, 0), activeDays: days.length, days };
   });
   return { ...totals, users: result, page };
+}
+
+async function unidentifiedAuthors(rows: { userId: string; repositoryId: string; _sum: { count: number | null } }[], repositories: { id: string }[]): Promise<UnidentifiedAuthor[]> {
+  if (!rows.length) return [];
+  const db = getPrisma();
+  const [users, repos] = await Promise.all([
+    db.githubUser.findMany({ where: { id: { in: [...new Set(rows.map(row => row.userId))] } }, select: { id: true, login: true } }),
+    db.githubRepository.findMany({ where: { id: { in: repositories.map(repo => repo.id) } }, select: { id: true, fullName: true } }),
+  ]);
+  const logins = new Map(users.map(user => [user.id, user.login])), names = new Map(repos.map(repo => [repo.id, repo.fullName]));
+  return rows.map(row => ({ id: `${row.userId}:${row.repositoryId}`, login: logins.get(row.userId) ?? "Autoria não identificada", repository: names.get(row.repositoryId) ?? "—", total: row._sum.count ?? 0 }))
+    .sort((a, b) => b.total - a.total || a.login.localeCompare(b.login, "pt-BR") || a.repository.localeCompare(b.repository));
 }
 
 // Aba Repositórios (27/10/2026): todos os repositórios selecionados, do mais ativo ao
