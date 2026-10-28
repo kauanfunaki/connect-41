@@ -7,51 +7,63 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { useToast } from "@/components/ui/Toast";
-import { TASK_WIDGETS, DEFAULT_TASK_WIDGETS, type TaskWidgetKey } from "@/lib/taskWidgets";
+import { TASK_WIDGETS, type TaskWidgetKey } from "@/lib/taskWidgets";
 import type { ActionState } from "@/lib/actionState";
-
-export type SetorOption = { code: string; label: string };
 
 const semAssinatura = () => () => {};
 
 /** O lugar da faixa de edição, logo abaixo do cabeçalho do Meu dia. */
 export const ID_DA_FAIXA_DO_MEU_DIA = "faixa-do-meu-dia";
 
+/**
+ * De quem é o Meu dia que se configura (28/10/2026): o próprio, o de alguém da
+ * equipe ou o padrão de um setor. `blocos` é o que essa pessoa ou esse setor vê
+ * hoje; `proprio` diz se a pessoa já tem configuração dela (só aí o "Voltar ao
+ * padrão" tem o que desfazer).
+ */
+export type AlvoDoMeuDia =
+  | { tipo: "pessoa"; id: string; rotulo: string; eu: boolean; blocos: TaskWidgetKey[]; proprio: boolean }
+  | { tipo: "setor"; code: string; rotulo: string; blocos: TaskWidgetKey[] };
+
 type Props = {
-  sectors: SetorOption[];
-  /** Configuração atual por setor. Setor ausente = padrão (tudo visível). */
-  configBySector: Record<string, TaskWidgetKey[]>;
-  saveAction: (sectorCode: string, keys: TaskWidgetKey[]) => Promise<ActionState>;
-  resetAction: (sectorCode: string) => Promise<ActionState>;
+  alvos: AlvoDoMeuDia[];
+  salvarPessoa: (userId: string, keys: TaskWidgetKey[]) => Promise<ActionState>;
+  restaurarPessoa: (userId: string) => Promise<ActionState>;
+  salvarSetor: (sectorCode: string, keys: TaskWidgetKey[]) => Promise<ActionState>;
+  restaurarSetor: (sectorCode: string) => Promise<ActionState>;
 };
 
-// Configuração da tela /tarefas, por setor. Só o SUPER_ADMIN chega aqui.
+const chaveDo = (a: AlvoDoMeuDia) => (a.tipo === "pessoa" ? `p:${a.id}` : `s:${a.code}`);
+
+// Configuração da tela /tarefas.
 //
 // Na própria tela desde 20/10/2026 (escolha 11A dos Ajustes de 15/10, a mesma
-// do Início): o botão abre uma faixa no topo do Meu dia, com o setor, um
-// interruptor por bloco e Concluir. Era uma janela com caixas de marcar.
-// Continua por setor e sem ordem — a ordem é a do catálogo: com a união entre
-// setores, duas ordens conflitantes não teriam desempate.
-export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, resetAction }: Props) {
+// do Início): o botão abre uma faixa no topo do Meu dia, um interruptor por
+// bloco e Concluir. Desde 28/10/2026 não é mais só do Super Admin, nem só por
+// setor (decisão do Kauan): cada pessoa personaliza o seu, o coordenador
+// configura o da equipe e Admin e Super Admin, o de qualquer um e o padrão de
+// cada setor — o "Para quem" escolhe. Sem ordem: a do catálogo.
+export function ConfigurarTarefasButton({ alvos, salvarPessoa, restaurarPessoa, salvarSetor, restaurarSetor }: Props) {
   const [aberto, setAberto] = useState(false);
-  const [sectorCode, setSectorCode] = useState(sectors[0]?.code ?? "");
-  const [selected, setSelected] = useState<TaskWidgetKey[]>(() => configBySector[sectors[0]?.code] ?? DEFAULT_TASK_WIDGETS);
+  const [chave, setChave] = useState(() => (alvos[0] ? chaveDo(alvos[0]) : ""));
+  const alvo = alvos.find((a) => chaveDo(a) === chave) ?? alvos[0];
+  const [selected, setSelected] = useState<TaskWidgetKey[]>(() => alvo?.blocos ?? []);
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
 
   // A faixa vai para o lugar dela na página, abaixo do cabeçalho; o botão
   // fica no cabeçalho. No servidor não há documento (o padrão do SlideOver).
   const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
-  const alvo = noNavegador && aberto ? document.getElementById(ID_DA_FAIXA_DO_MEU_DIA) : null;
+  const lugar = noNavegador && aberto ? document.getElementById(ID_DA_FAIXA_DO_MEU_DIA) : null;
 
-  function loadSector(code: string) {
-    setSectorCode(code);
-    setSelected(configBySector[code] ?? DEFAULT_TASK_WIDGETS);
+  function escolher(nova: string) {
+    setChave(nova);
+    setSelected(alvos.find((a) => chaveDo(a) === nova)?.blocos ?? []);
   }
 
   function abrir() {
     // Reabrir depois de cancelar não pode manter o rascunho descartado.
-    loadSector(sectorCode || sectors[0]?.code || "");
+    escolher(chave || (alvos[0] ? chaveDo(alvos[0]) : ""));
     setAberto(true);
   }
 
@@ -59,33 +71,42 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
     setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   }
 
-  function save() {
+  function executar(acao: () => Promise<ActionState>, sucesso: string) {
     startTransition(async () => {
-      const result = await saveAction(sectorCode, selected);
+      const result = await acao();
       if (result?.error) {
         toast.error(result.error);
         return;
       }
       setAberto(false);
-      toast.success("Meu dia configurado para este setor.");
+      toast.success(sucesso);
     });
+  }
+
+  function save() {
+    if (!alvo) return;
+    if (alvo.tipo === "setor") executar(() => salvarSetor(alvo.code, selected), `Padrão do Meu dia de ${alvo.rotulo} salvo.`);
+    else executar(() => salvarPessoa(alvo.id, selected), alvo.eu ? "Seu Meu dia foi salvo." : `Meu dia de ${alvo.rotulo} salvo.`);
   }
 
   function reset() {
-    startTransition(async () => {
-      const result = await resetAction(sectorCode);
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      setAberto(false);
-      toast.success("Setor restaurado ao padrão.");
-    });
+    if (!alvo) return;
+    if (alvo.tipo === "setor") executar(() => restaurarSetor(alvo.code), `${alvo.rotulo} voltou ao padrão.`);
+    else executar(() => restaurarPessoa(alvo.id), alvo.eu ? "Seu Meu dia voltou ao padrão do setor." : `${alvo.rotulo} voltou ao padrão do setor.`);
   }
 
-  if (sectors.length === 0) return null;
+  if (!alvo) return null;
 
-  const sectorLabel = sectors.find((s) => s.code === sectorCode)?.label ?? sectorCode;
+  const eu = alvos.filter((a) => a.tipo === "pessoa" && a.eu);
+  const equipe = alvos.filter((a) => a.tipo === "pessoa" && !a.eu);
+  const setores = alvos.filter((a) => a.tipo === "setor");
+  const temOQueRestaurar = alvo.tipo === "setor" || alvo.proprio;
+  const explicacao =
+    alvo.tipo === "setor"
+      ? "O padrão de quem é do setor e não tem configuração própria — quem participa de mais de um vê a soma dos blocos."
+      : alvo.eu
+        ? "Só para você. Vale mais que o padrão do setor; o coordenador também pode ajustar o seu."
+        : `Só para ${alvo.rotulo}. Vale mais que o padrão do setor, e a pessoa também pode ajustar.`;
 
   const faixa = (
     <div
@@ -96,20 +117,42 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <SlidersHorizontal size={16} className="flex-shrink-0 text-brand" aria-hidden />
         <p className="font-semibold text-fg">Configurando o Meu dia de</p>
-        <Select compact value={sectorCode} onChange={(e) => loadSector(e.target.value)} aria-label="Setor" className="w-56 max-w-full">
-          {sectors.map((s) => (
-            <option key={s.code} value={s.code}>
-              {s.label}
-            </option>
-          ))}
-        </Select>
-        <p className="min-w-0 text-fs-2 text-fg-secondary">
-          Vale para todo mundo do setor — quem participa de mais de um vê a soma dos blocos.
-        </p>
+        {alvos.length > 1 ? (
+          <Select compact value={chave} onChange={(e) => escolher(e.target.value)} aria-label="Para quem" className="w-60 max-w-full">
+            {eu.map((a) => (
+              <option key={chaveDo(a)} value={chaveDo(a)}>
+                Você
+              </option>
+            ))}
+            {equipe.length > 0 && (
+              <optgroup label="Equipe">
+                {equipe.map((a) => (
+                  <option key={chaveDo(a)} value={chaveDo(a)}>
+                    {a.rotulo}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {setores.length > 0 && (
+              <optgroup label="Padrão do setor">
+                {setores.map((a) => (
+                  <option key={chaveDo(a)} value={chaveDo(a)}>
+                    {a.rotulo}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </Select>
+        ) : (
+          <p className="font-semibold text-fg">você</p>
+        )}
+        <p className="min-w-0 text-fs-2 text-fg-secondary">{explicacao}</p>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={reset} disabled={isPending}>
-            <RotateCcw size={13} /> Restaurar padrão
-          </Button>
+          {temOQueRestaurar && (
+            <Button variant="ghost" size="sm" onClick={reset} disabled={isPending}>
+              <RotateCcw size={13} /> {alvo.tipo === "setor" ? "Restaurar padrão" : "Voltar ao padrão do setor"}
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => setAberto(false)} disabled={isPending}>
             Cancelar
           </Button>
@@ -127,8 +170,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
       </div>
       {selected.length === 0 && (
         <p className="text-fs-2 text-warning-fg">
-          Sem nenhum bloco ligado, quem é só de {sectorLabel} vai abrir o Meu dia numa tela vazia. É uma escolha válida
-          enquanto o setor não tiver módulos próprios — só não é acidente.
+          Sem nenhum bloco ligado, este Meu dia abre numa tela vazia. É uma escolha válida — só não é acidente.
         </p>
       )}
     </div>
@@ -149,7 +191,7 @@ export function ConfigurarTarefasButton({ sectors, configBySector, saveAction, r
         <SlidersHorizontal size={14} />
         <span className="hidden sm:inline">Configurar</span>
       </Button>
-      {alvo && createPortal(faixa, alvo)}
+      {lugar && createPortal(faixa, lugar)}
     </>
   );
 }
