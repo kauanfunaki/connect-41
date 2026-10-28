@@ -252,7 +252,7 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
         chave: "helpdesk",
         rotulo: "Chamados internos",
         descricao: "Categorias, formulários, aprovações e prazos do atendimento interno.",
-        href: "/admin/modulos/helpdesk",
+        href: "/chamados/configuracoes",
         rota: "/admin/modulos/helpdesk",
         acesso: "admin",
       },
