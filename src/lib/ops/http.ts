@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import { logAudit } from "@/lib/audit";
 import { acessoOps, ErroOps, autenticarWatcher, receberEvento, gerarToken, gerarTokenCompartilhado, conferirChamado, conferirResponsavel, exigirAtualizacao, painelOps, validarTokenCompartilhado } from "./servidor";
 import { criarChaveOps, alterarChaveOps, nomeChaveSchema } from "./chaves";
 import { editarWatcherSchema, filtrosSchema, instabilidadeSchema, slugSchema, versaoSchema, watcherSchema } from "./regras";
@@ -107,4 +108,18 @@ export async function heartbeatWatcher(request: Request, slug: string) {
 export async function eventoWatcher(request: Request) {
   const w = await autenticarWatcher(request);
   return receberEvento(w, await lerJsonOps(request));
+}
+
+// Fecha o aviso de erro do card do robô para toda a equipe (28/10/2026). Só
+// erro e aviso; o evento fica no histórico com quem fechou. Repetir não muda nada.
+export async function fecharAviso(request: Request, id: string) {
+  exigirOrigem(request); const ctx = await acessoOps("agir");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ErroOps("Aviso não encontrado.", 404);
+  const db = getPrisma();
+  const evento = await db.opsEvent.findFirst({ where: { tenantId: ctx.tenantId, id }, select: { status: true, dismissedAt: true, watcherSlug: true } });
+  if (!evento || evento.status === "SUCCESS") throw new ErroOps("Aviso não encontrado.", 404);
+  if (evento.dismissedAt) return { ok: true };
+  await db.opsEvent.updateMany({ where: { tenantId: ctx.tenantId, id, dismissedAt: null }, data: { dismissedAt: new Date(), dismissedBy: ctx.userId } });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "ops.aviso_fechado", entityType: "OpsEvent", entityId: id, metadata: { robo: evento.watcherSlug } });
+  return { ok: true };
 }
