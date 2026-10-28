@@ -1,51 +1,11 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { canManageSector } from "@/lib/auth/context";
+import { redirect } from "next/navigation";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { TrainingForm } from "@/components/treinamentos/TrainingForm";
-import { atualizarTreinamento } from "../../actions";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
-export default async function EditarTreinamentoPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+// O formulário abre no painel ao lado desde 28/10/2026 (lote 5, no molde da
+// escolha 2B dos Ajustes de 15/10). Este endereço fica para os links antigos,
+// e passa pelo gate do módulo como toda tela do DP.
+export default async function EditarTreinamentoPage({ params }: { params: Promise<{ id: string }> }) {
+  await abrirTelaDoModulo("dp_treinamentos");
   const { id } = await params;
-  const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
-  if (!canManageSector(ctx, setor)) notFound();
-
-  const prisma = getPrisma();
-  const training = await prisma.training.findFirst({ where: { id, tenantId: ctx.tenantId } });
-  if (!training) notFound();
-
-  return (
-    <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: "Treinamentos", href: "/treinamentos" },
-          { label: training.name, href: `/treinamentos/${id}`, truncate: true },
-          { label: "Editar" },
-        ]}
-      />
-      <PageHeader title="Editar treinamento" />
-
-      <Card className="p-6">
-        <TrainingForm
-          action={atualizarTreinamento}
-          cancelHref={`/treinamentos/${id}`}
-          defaultValues={{
-            id: training.id,
-            name: training.name,
-            description: training.description ?? undefined,
-            workloadHours: training.workloadHours?.toString(),
-            validityMonths: training.validityMonths ?? undefined,
-          }}
-        />
-      </Card>
-    </PageContainer>
-  );
+  redirect(`/treinamentos/${encodeURIComponent(id)}?editar=1`);
 }

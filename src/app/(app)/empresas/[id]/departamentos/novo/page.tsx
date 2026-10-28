@@ -1,48 +1,9 @@
-import { notFound } from "next/navigation";
-import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite } from "@/lib/auth/context";
-import { scopedCompanyWhere } from "@/lib/auth/scope";
-import { DepartmentForm } from "@/components/empresas/DepartmentForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { criarDepartment } from "../actions";
+import { redirect } from "next/navigation";
 
-export default async function NovoDepartmentPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id: companyId } = await params;
-  const ctx = await getAuthContext();
-  if (!canWrite(ctx.role)) notFound();
-
-  const prisma = getPrisma();
-  const company = await prisma.company.findFirst({
-    where: { id: companyId, ...(await scopedCompanyWhere(ctx)) },
-    select: { id: true, name: true },
-  });
-  if (!company) notFound();
-
-  return (
-    <PageContainer>
-      <Breadcrumb
-        items={[
-          { label: "Cadastros", href: "/empresas" },
-          { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Departamentos", href: `/empresas/${companyId}/departamentos` },
-          { label: "Novo" },
-        ]}
-      />
-
-      <PageHeader title="Novo departamento" subtitle={company.name} />
-
-      <div className="w-full max-w-[720px]">
-        <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-6">
-          <DepartmentForm action={criarDepartment} companyId={companyId} cancelHref={`/empresas/${companyId}/departamentos`} />
-        </div>
-      </div>
-    </PageContainer>
-  );
+// O formulário abre no painel ao lado da lista desde 28/10/2026 (lote 5,
+// no molde da escolha 2B dos Ajustes de 15/10). Este endereço fica para os
+// links antigos.
+export default async function NovoDepartmentFormPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(`/empresas/${encodeURIComponent(id)}/departamentos?novo=1`);
 }

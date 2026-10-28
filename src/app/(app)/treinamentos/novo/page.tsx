@@ -1,25 +1,10 @@
-import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { notFound } from "next/navigation";
-import { canManageSector } from "@/lib/auth/context";
+import { redirect } from "next/navigation";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { TrainingForm } from "@/components/treinamentos/TrainingForm";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { criarTreinamento } from "../actions";
 
+// O formulário abre no painel ao lado desde 28/10/2026 (lote 5, no molde da
+// escolha 2B dos Ajustes de 15/10). Este endereço fica para os links antigos,
+// e passa pelo gate do módulo como toda tela do DP.
 export default async function NovoTreinamentoPage() {
-  const { ctx, setor } = await abrirTelaDoModulo("dp_treinamentos");
-  if (!canManageSector(ctx, setor)) notFound();
-
-  return (
-    <PageContainer>
-      <Breadcrumb items={[{ label: "Treinamentos", href: "/treinamentos" }, { label: "Novo" }]} />
-      <PageHeader title="Novo treinamento" />
-
-      <Card className="p-6">
-        <TrainingForm action={criarTreinamento} cancelHref="/treinamentos" />
-      </Card>
-    </PageContainer>
-  );
+  await abrirTelaDoModulo("dp_treinamentos");
+  redirect("/treinamentos?novo=1");
 }

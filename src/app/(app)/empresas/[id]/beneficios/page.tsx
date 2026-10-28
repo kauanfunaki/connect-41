@@ -11,7 +11,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { excluirBeneficio } from "./actions";
+import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
+import { BenefitCatalogForm } from "@/components/empresas/BenefitCatalogForm";
+import { excluirBeneficio, criarBeneficio, atualizarBeneficio } from "./actions";
 
 const TYPE_LABEL: Record<BenefitType, string> = {
   VALE_REFEICAO:       "Vale-refeição",
@@ -30,10 +32,14 @@ const TYPE_LABEL: Record<BenefitType, string> = {
 
 export default async function BeneficiosPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ novo?: string; editar?: string }>;
 }) {
   const { id: companyId } = await params;
+  // Criar e editar no painel ao lado (lote 5, 28/10/2026) — ver `PainelDeCadastro`.
+  const { novo, editar } = await searchParams;
   const ctx = await getAuthContext();
   const canManage = canWrite(ctx.role);
 
@@ -49,7 +55,9 @@ export default async function BeneficiosPage({
     orderBy: { name: "asc" },
   });
 
-  const novoHref = `/empresas/${companyId}/beneficios/novo`;
+  const listaHref = `/empresas/${companyId}/beneficios`;
+  const novoHref = `${listaHref}?novo=1`;
+  const emEdicao = canManage && editar ? beneficios.find((x) => x.id === editar) : undefined;
 
   return (
     <PageContainer>
@@ -99,11 +107,21 @@ export default async function BeneficiosPage({
                 <p className="text-fs-2 text-fg-muted">{TYPE_LABEL[b.type]}</p>
               </div>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/beneficios/${b.id}/editar`} excluir={podeExcluir(ctx) ? excluirBeneficio.bind(null, b.id, companyId) : undefined} nome={b.name} />
+                <AcoesDoCadastro editarHref={`${listaHref}?editar=${b.id}`} excluir={podeExcluir(ctx) ? excluirBeneficio.bind(null, b.id, companyId) : undefined} nome={b.name} />
               )}
             </div>
           ))}
         </div>
+      )}
+      {canManage && novo === "1" && (
+        <PainelDeCadastro titulo="Novo benefício" voltarPara={listaHref}>
+          <BenefitCatalogForm action={criarBeneficio} companyId={companyId} cancelHref={listaHref} />
+        </PainelDeCadastro>
+      )}
+      {emEdicao && (
+        <PainelDeCadastro titulo="Editar benefício" voltarPara={listaHref}>
+          <BenefitCatalogForm key={emEdicao.id} action={atualizarBeneficio} companyId={companyId} cancelHref={listaHref} defaultValues={{ id: emEdicao.id, name: emEdicao.name, type: emEdicao.type, eligibilityRule: emEdicao.eligibilityRule ?? undefined }} />
+        </PainelDeCadastro>
       )}
     </PageContainer>
   );
