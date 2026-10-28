@@ -2,39 +2,59 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileImage, FileSpreadsheet, FileText, FileVideo, Upload, X } from "lucide-react";
+import { ArrowLeft, FileImage, FileSpreadsheet, FileText, FileVideo, Upload, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
-import { Campo, CamposDoChamado, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Stepper, type StepStatus } from "@/components/ui/Stepper";
+import { Campo, CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
 import { IconeDoArquivo } from "./LinhaDoTempo";
+import { CarregandoIA, ConversaDaTriagem } from "./ConversaDaTriagem";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { formatInstantTime } from "@/lib/format";
-import { perguntaAtual } from "@/lib/chamados/regras";
-import { iniciar, guardar, avaliar, responderAoAssistente, finalizar, retirarAnexo } from "@/app/(app)/chamados/actions";
+import { mensagemDoExistente, perguntaAtual } from "@/lib/chamados/regras";
+import { iniciar, guardar, avaliar, responderAoAssistente, retirarAnexo, naoEOQuePreciso, abrirChamado } from "@/app/(app)/chamados/actions";
 import type { DadosDoChamado, Parecer } from "@/lib/chamados/regras";
+
+// Novo chamado em três etapas (28/10/2026), com a barra de progresso do
+// cadastro de empresa: 1. o pedido; 2. a conversa com a IA, só quando ela tem
+// algo a perguntar ou a apontar no Ops Center; 3. a revisão, com todos os campos
+// preenchidos e editáveis, inclusive os anexos que a IA escolheu manter.
 
 type Anexo = { id: string; fileName: string; attachmentKey: string | null };
 type Rascunho = { id: string; version: number };
+type Etapa = 1 | 2 | 3;
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; parecer: Parecer | null; anexos: Anexo[]; mensagens: { id: string; role: string; body: string }[] };
+const ETAPAS = ["Pedido", "Conversa com a IA", "Revisão"];
 // Igual ao que o servidor grava: o resumo e só a primeira pergunta.
-const mensagemDoParecer = (p: Parecer) => ({ id: crypto.randomUUID(), role: "assistant", body: [p.summary, ...p.questions.slice(0, 1)].join("\n\n") });
+const mensagemDoParecer = (p: Parecer) => ({ id: crypto.randomUUID(), role: "assistant", body: p.existente ? mensagemDoExistente(p.existente) : [p.summary, ...p.questions.slice(0, 1).map(q => q.text)].join("\n\n") });
+// Códigos do `busy` com tela própria (modal de carregamento ou conversa); os demais aparecem como texto.
+const SEM_TEXTO = new Set(["analisando", "enviando", "respondendo"]);
+const prontoParaRevisao = (p: Parecer | null) => p?.status === "sufficient" && !p.existente;
 
 export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[] }) {
-  const router = useRouter(), formulario = useRef<HTMLFormElement>(null), seletor = useRef<HTMLInputElement>(null);
+  const router = useRouter(), formulario = useRef<HTMLFormElement>(null);
   const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : "", priority: "MEDIA", requestData: {}, tags: [] });
   const [categorias, setCategorias] = useState(categoriasIniciais);
   const [draft, setDraft] = useState<Rascunho | null>(inicial ? { id: inicial.id, version: inicial.version } : null);
   const [parecer, setParecer] = useState(inicial?.parecer ?? null), [anexos, setAnexos] = useState(inicial?.anexos ?? []);
-  const [mensagens, setMensagens] = useState(inicial?.mensagens ?? []), [resposta, setResposta] = useState("");
+  const [mensagens, setMensagens] = useState(inicial?.mensagens ?? []);
+  const [anexadosNaConversa, setAnexadosNaConversa] = useState<string[]>([]);
   const [busy, setBusy] = useState(""), [erro, setErro] = useState(""), [salvoAs, setSalvoAs] = useState("");
-  const [chave, setChave] = useState(""), [arrastando, setArrastando] = useState(false); const abort = useRef<AbortController | null>(null);
+  const [chave, setChave] = useState(""); const abort = useRef<AbortController | null>(null);
+  const [aviso, setAviso] = useState("");
+  const pergunta = perguntaAtual(parecer, mensagens), sugestao = parecer?.existente ?? null;
+  // A revisão (etapa 3) edita uma cópia: o que a pessoa muda ali não volta a
+  // classificar nem descarta o parecer, e só vai ao servidor ao abrir o chamado.
+  const [final, setFinal] = useState<DadosDoChamado>(() => montarFinal(inicial?.dados ?? dados, inicial?.parecer ?? null));
+  const [incluidos, setIncluidos] = useState<string[]>(() => inicial?.parecer?.final?.anexos ?? inicial?.anexos.map(a => a.id) ?? []);
+  // Abre onde o rascunho parou.
+  const [etapa, setEtapa] = useState<Etapa>(() => prontoParaRevisao(inicial?.parecer ?? null) ? 3 : inicial?.parecer && inicial.mensagens.length ? 2 : 1);
   const cat = categorias.find(c => c.id === dados.categoryId);
-  const pergunta = perguntaAtual(parecer, mensagens);
-  // Salvamento automático (27/10/2026): sem "Salvar rascunho". Toda gravação
-  // passa por uma fila, porque cada uma muda a versão do rascunho e a seguinte
-  // precisa da nova; os refs dão à fila os valores atuais, não os do render.
+  // Salvamento automático do pedido (27/10/2026). Toda gravação passa por uma
+  // fila, porque cada uma muda a versão do rascunho e a seguinte precisa da
+  // nova; os refs dão à fila os valores atuais, não os do render.
   const draftRef = useRef(draft), dadosRef = useRef(dados), edicoes = useRef(0), salvas = useRef(0);
   const fila = useRef<Promise<unknown>>(Promise.resolve());
   const podeSalvar = (d: DadosDoChamado) => !!d.description.trim() && !!d.requesterSectorCode;
@@ -70,90 +90,209 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
     finally { setBusy(""); }
   }
   async function rascunhoAtual() { return edicoes.current > salvas.current || !draftRef.current ? salvar() : draftRef.current; }
-  async function enviar(revisar: boolean) {
-    if (!(formulario.current?.reportValidity() ?? false)) return;
-    await executar(revisar ? "Analisando informações…" : "Enviando chamado…", async () => {
-      const d = await rascunhoAtual();
-      const r = revisar ? await avaliar(d.id, d.version) : await finalizar(d.id, d.version);
-      if (!r.ok) throw new Error(r.error);
-      if ("ticketId" in r.valor && r.valor.ticketId) { router.push(`/chamados/${r.valor.ticketId}`); return; }
-      if ("version" in r.valor) definirRascunho({ id: d.id, version: r.valor.version });
-      if ("dados" in r.valor && r.valor.dados) { dadosRef.current = r.valor.dados; setDados(r.valor.dados); }
-      if ("categorias" in r.valor && r.valor.categorias) setCategorias(r.valor.categorias);
-      if ("parecer" in r.valor && r.valor.parecer) { const novo = r.valor.parecer; setParecer(novo); setMensagens(m => [...m, mensagemDoParecer(novo)]); }
-    });
+
+  function irParaRevisao(base = dadosRef.current, p = parecer) {
+    setFinal(montarFinal(base, p));
+    setIncluidos(p?.final?.anexos ?? anexos.map(a => a.id));
+    setEtapa(3); window.scrollTo({ top: 0 });
   }
-  function responder() {
-    if (!draft || !resposta.trim()) return;
-    void executar("Registrando resposta…", async () => {
-      const d = await rascunhoAtual(), texto = resposta;
-      const r = await responderAoAssistente(d.id, d.version, texto); if (!r.ok) throw new Error(r.error);
+  /** Depois de cada análise: suficiente vai à revisão; pergunta ou sugestão do Ops Center, à conversa. */
+  function seguir(novo: Parecer, base: DadosDoChamado) {
+    if (prontoParaRevisao(novo)) irParaRevisao(base, novo);
+    else { setEtapa(2); window.scrollTo({ top: 0 }); }
+  }
+  function continuar() {
+    if (!(formulario.current?.reportValidity() ?? false)) return;
+    // Pedido sem edição desde a última análise: retoma de onde parou.
+    if (parecer) { if (prontoParaRevisao(parecer)) irParaRevisao(); else setEtapa(2); return; }
+    void executar("analisando", async () => {
+      const d = await rascunhoAtual();
+      const r = await avaliar(d.id, d.version); if (!r.ok) throw new Error(r.error);
       const v = r.valor;
       if ("ticketId" in v && v.ticketId) { router.push(`/chamados/${v.ticketId}`); return; }
-      definirRascunho({ id: d.id, version: v.version }); setResposta("");
-      const eu = { id: crypto.randomUUID(), role: "user", body: texto };
-      if ("pergunta" in v) { setParecer(v.parecer); setMensagens(m => [...m, eu, { id: crypto.randomUUID(), role: "assistant", body: v.pergunta }]); return; }
-      if ("dados" in v && v.dados) { dadosRef.current = v.dados; setDados(v.dados); }
+      if ("version" in v) definirRascunho({ id: d.id, version: v.version });
+      let base = dadosRef.current;
+      if ("dados" in v && v.dados) { base = v.dados; dadosRef.current = v.dados; setDados(v.dados); }
       if ("categorias" in v && v.categorias) setCategorias(v.categorias);
-      if ("parecer" in v && v.parecer) { const novo = v.parecer; setParecer(novo); setMensagens(m => [...m, eu, mensagemDoParecer(novo)]); }
+      if ("parecer" in v && v.parecer) { const novo = v.parecer; setParecer(novo); setMensagens(m => [...m, mensagemDoParecer(novo)]); seguir(novo, base); }
     });
   }
-  function subir(file: File) {
+  function responder(digitado: string) {
+    // Só o arquivo, sem texto, também responde.
+    const texto = digitado.trim() || (anexadosNaConversa.length ? `Anexei: ${anexadosNaConversa.join(", ")}` : "");
+    if (!draft || !texto) return;
+    // A última pergunta do parecer volta para a IA; as anteriores só avançam.
+    // Um arquivo novo também volta: o servidor descartou o parecer ao recebê-lo.
+    const ultima = !pergunta || pergunta.indice + 1 >= pergunta.total || anexadosNaConversa.length > 0;
+    // O balão da pessoa entra na hora; sai de novo se a resposta não for registrada.
+    const eu = { id: crypto.randomUUID(), role: "user", body: texto };
+    setMensagens(m => [...m, eu]);
+    void executar(ultima ? "analisando" : "respondendo", async () => {
+      try {
+        const d = await rascunhoAtual();
+        const r = await responderAoAssistente(d.id, d.version, texto); if (!r.ok) throw new Error(r.error);
+        const v = r.valor; setAnexadosNaConversa([]);
+        if ("ticketId" in v && v.ticketId) { router.push(`/chamados/${v.ticketId}`); return; }
+        definirRascunho({ id: d.id, version: v.version });
+        if ("pergunta" in v) { setParecer(v.parecer); setMensagens(m => [...m, { id: crypto.randomUUID(), role: "assistant", body: v.pergunta }]); return; }
+        let base = dadosRef.current;
+        if ("dados" in v && v.dados) { base = v.dados; dadosRef.current = v.dados; setDados(v.dados); }
+        if ("categorias" in v && v.categorias) setCategorias(v.categorias);
+        if ("parecer" in v && v.parecer) { const novo = v.parecer; setParecer(novo); setMensagens(m => [...m, mensagemDoParecer(novo)]); seguir(novo, base); }
+      } catch (e) { setMensagens(m => m.filter(x => x.id !== eu.id)); throw e; }
+    });
+  }
+  // "É isso" (28/10/2026): nada é enviado e o rascunho fica guardado, caso a
+  // conversa com o responsável não resolva.
+  function aceitarSugestao() {
+    setAviso(sugestao?.responsavel ? `Rascunho guardado. Fale com ${sugestao.responsavel}; se não resolver, volte aqui e siga com o chamado.` : "Rascunho guardado. Se não resolver, volte aqui e siga com o chamado.");
+  }
+  function recusarSugestao() {
+    if (!draft || !sugestao) return;
+    const eu = { id: crypto.randomUUID(), role: "user", body: `Não é o que preciso: ${sugestao.nome}.` };
+    setMensagens(m => [...m, eu]); setAviso("");
+    void executar("respondendo", async () => {
+      try {
+        const d = await rascunhoAtual();
+        const r = await naoEOQuePreciso(d.id, d.version); if (!r.ok) throw new Error(r.error);
+        const v = r.valor;
+        definirRascunho({ id: d.id, version: v.version });
+        setParecer(v.parecer);
+        const texto = v.pergunta;
+        if (texto) setMensagens(m => [...m, { id: crypto.randomUUID(), role: "assistant", body: texto }]);
+        else seguir(v.parecer, dadosRef.current);
+      } catch (e) { setMensagens(m => m.filter(x => x.id !== eu.id)); throw e; }
+    });
+  }
+  // O arquivo do pedido descarta o parecer (a IA precisa ler de novo); o da
+  // conversa segue com a próxima resposta; o da revisão já entra marcado.
+  function subir(file: File, onde: "pedido" | "conversa" | "revisao" = "pedido") {
+    const tipo = onde === "conversa" ? "" : chave;
     void executar("Enviando arquivo…", async () => {
-      const d = await obterRascunho(), form = new FormData(); form.set("id", crypto.randomUUID()); form.set("draftId", d.id); form.set("version", String(d.version)); form.set("file", file); form.set("attachmentKey", chave);
+      const d = await obterRascunho(), form = new FormData(); form.set("id", crypto.randomUUID()); form.set("draftId", d.id); form.set("version", String(d.version)); form.set("file", file); form.set("attachmentKey", tipo);
       abort.current = new AbortController();
       const r = await fetch("/api/chamados/anexos", { method: "POST", body: form, signal: abort.current.signal });
       const resultado = await r.json(); if (!r.ok) throw new Error(resultado.error ?? "Falha no upload.");
-      definirRascunho({ id: d.id, version: resultado.version }); setAnexos(a => [...a, { id: resultado.id, fileName: file.name, attachmentKey: chave || null }]); setParecer(null);
+      definirRascunho({ id: d.id, version: resultado.version }); setAnexos(a => [...a, { id: resultado.id, fileName: file.name, attachmentKey: tipo || null }]);
+      if (onde === "pedido") { setParecer(null); return; }
+      if (onde === "revisao") { setIncluidos(i => [...i, resultado.id]); return; }
+      setAnexadosNaConversa(a => [...a, file.name]);
+      setMensagens(m => [...m, { id: crypto.randomUUID(), role: "user", body: `📎 ${file.name}` }]);
     });
   }
-  const enviarMesmoAssim = <Button variant="secondary" disabled={!!busy} onClick={() => void enviar(false)}>{parecer?.status === "unavailable" ? "Enviar sem análise" : "Enviar mesmo assim"}</Button>;
-  return <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,1fr)]">
-    <form ref={formulario} onSubmit={e => { e.preventDefault(); void enviar(true); }} className="min-w-0 space-y-5">
-      <Card className="p-5"><fieldset disabled={!!busy} className="space-y-5">
-        <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
-        <p className="text-ui text-fg-secondary" role="status">{cat ? <>Classificação: <strong className="text-fg">{nomeDaCategoria(categorias, cat.id)}</strong>{dados.title && <> · Título: <strong className="text-fg">{dados.title}</strong></>}</> : "A IA identifica o grupo, a categoria, o título e as tags ao enviar. Descreva o que você precisa."}</p>
-        <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags />
-      </fieldset></Card>
-      <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Anexos</h2>
-        {cat?.requiredAttachments.length ? <Campo label="Tipo de evidência"><Select disabled={!!busy} value={chave} onChange={e => setChave(e.target.value)}><option value="">Anexo complementar</option>{cat.requiredAttachments.map(a => <option key={a.key} value={a.key}>{a.label}{a.required ? " (obrigatório)" : ""}</option>)}</Select></Campo> : null}
-        <div onDragOver={e => { e.preventDefault(); if (!busy) setArrastando(true); }} onDragLeave={() => setArrastando(false)} onDrop={e => { e.preventDefault(); setArrastando(false); const file = e.dataTransfer.files[0]; if (file && !busy) subir(file); }}
-          className={`flex flex-col items-center gap-3 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${arrastando ? "border-brand bg-brand/5" : "border-border-strong"}`}>
-          <div aria-hidden className="flex items-center gap-3 text-fg-muted"><FileText size={22} /><FileImage size={22} /><FileSpreadsheet size={22} /><FileVideo size={22} /></div>
-          <p className="text-ui text-fg-secondary">Arraste um arquivo para cá ou</p>
-          <Button variant="secondary" disabled={!!busy} onClick={() => seletor.current?.click()}><Upload size={14} aria-hidden />Escolher arquivo</Button>
-          <p className="text-helper text-fg-muted">PDF, imagem, planilha, DOCX, TXT, ZIP ou vídeo · um por vez, até 10 MB. A análise considera até cinco arquivos e 20 MB, com prioridade para os obrigatórios.</p>
-          <input ref={seletor} aria-label="Adicionar arquivo" type="file" accept={FORMATOS} hidden disabled={!!busy} onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) subir(file); }} />
+  function retirar(a: Anexo) {
+    void executar("Retirando anexo…", async () => {
+      const d = draftRef.current; if (!d) return;
+      const r = await retirarAnexo(d.id, a.id, d.version); if (!r.ok) throw new Error(r.error);
+      definirRascunho({ id: d.id, version: r.valor.version }); setAnexos(lista => lista.filter(x => x.id !== a.id)); setParecer(null);
+    });
+  }
+  function enviarRevisao() {
+    if (!(formulario.current?.reportValidity() ?? false)) return;
+    void executar("enviando", async () => {
+      const d = await rascunhoAtual();
+      const r = await abrirChamado(d.id, d.version, { dados: final, retirar: anexos.filter(a => !incluidos.includes(a.id)).map(a => a.id) });
+      if (!r.ok) throw new Error(r.error);
+      router.push(`/chamados/${r.valor.ticketId}`);
+    });
+  }
+
+  const conversou = mensagens.length > 0;
+  const steps = ETAPAS.map((label, i): { label: string; status: StepStatus; disabled?: boolean } => ({
+    label, status: i + 1 === etapa ? "current" : i + 1 < etapa ? "done" : "upcoming",
+    // A conversa só se abre de volta se houve conversa.
+    disabled: i + 1 > etapa || (i === 1 && !conversou),
+  }));
+  const textoDeBusy = busy && !SEM_TEXTO.has(busy) ? busy : "";
+  const statusDeBusy = textoDeBusy && <p role="status" className="text-ui text-fg-secondary">{textoDeBusy} {textoDeBusy === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>;
+  const catFinal = categorias.find(c => c.id === final.categoryId);
+
+  return <>
+    <CarregandoIA aberto={busy === "analisando" || busy === "enviando"} subtitulo={busy === "enviando" ? "Abrindo o chamado" : "Processando as informações do chamado"} />
+    <form ref={formulario} onSubmit={e => { e.preventDefault(); if (etapa === 3) enviarRevisao(); else continuar(); }} className="space-y-5">
+      {/* A barra de progresso e a etapa num cartão só, como no cadastro de
+          empresa (28/10/2026); os anexos vêm logo abaixo, e os botões no fim. */}
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-[var(--c41-shadow-xs)]">
+        <Stepper steps={steps} onStepClick={i => { const alvo = (i + 1) as Etapa; if (alvo < etapa && (alvo !== 2 || conversou)) { setErro(""); setEtapa(alvo); } }} />
+        <div className="p-5 sm:p-6">
+          {etapa === 1 && <fieldset disabled={!!busy} className="space-y-5">
+            <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
+            <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
+          </fieldset>}
+          {etapa === 2 && <ConversaDaTriagem mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
+            onResponder={responder} onAnexar={f => subir(f, "conversa")} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()}
+            onAceitarSugestao={aceitarSugestao} onRecusarSugestao={recusarSugestao}
+            onVoltar={() => { setErro(""); setEtapa(1); }} onIrParaRevisao={() => irParaRevisao()} onTentarNovamente={() => { setParecer(null); setEtapa(1); }} />}
+          {etapa === 3 && <fieldset disabled={!!busy} className="space-y-5">
+            <div>
+              <h2 className="text-heading font-semibold text-fg">Revisão do chamado</h2>
+              <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA preencheu tudo com o pedido e a conversa. Confira e mude o que precisar."}</p>
+            </div>
+            <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} />
+          </fieldset>}
         </div>
-        {!!anexos.length && <ul aria-label="Arquivos anexados" className="flex flex-wrap gap-2">{anexos.map(a => <li key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-surface-hover py-1 pl-2 pr-1 text-helper">
-          <IconeDoArquivo nome={a.fileName} /><a className="min-w-0 truncate text-fg hover:text-brand hover:underline" href={`/api/chamados/anexos/${a.id}`} download>{a.fileName}</a>
-          <button type="button" disabled={!!busy} aria-label={`Retirar ${a.fileName}`} title="Retirar" onClick={() => void executar("Retirando anexo…", async () => {
-            const d = draftRef.current; if (!d) return; const r = await retirarAnexo(d.id, a.id, d.version); if (!r.ok) throw new Error(r.error); definirRascunho({ id: d.id, version: r.valor.version }); setAnexos(lista => lista.filter(x => x.id !== a.id)); setParecer(null);
-          })} className="inline-flex size-5 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"><X size={12} /></button>
-        </li>)}</ul>}
-        {cat?.requiredAttachments.filter(a => a.required && !anexos.some(x => x.attachmentKey === a.key)).map(a => <p key={a.key} className="text-helper text-warning">Falta anexar: {a.label}</p>)}
-      </Card>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={!!busy}>Enviar chamado</Button>
-        {salvoAs && <span className="text-helper text-fg-muted" role="status">Rascunho salvo automaticamente às {salvoAs}</span>}
       </div>
-      {busy && <p role="status" className="text-ui text-fg-secondary">{busy} {busy === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}
-      {erro && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
+
+      {etapa !== 2 && <Card className="min-w-0">
+        {etapa === 1
+          ? <PainelDeAnexos anexos={anexos} busy={busy} chave={chave} onChave={setChave} requisitos={cat?.requiredAttachments ?? []} onSubir={f => subir(f)} onRetirar={retirar} />
+          : <PainelDeAnexos anexos={anexos} busy={busy} chave={chave} onChave={setChave} requisitos={catFinal?.requiredAttachments ?? []} onSubir={f => subir(f, "revisao")}
+              escolha={{ incluidos, sugeridos: parecer?.final?.anexos ?? null, alternar: id => setIncluidos(i => i.includes(id) ? i.filter(x => x !== id) : [...i, id]) }} />}
+      </Card>}
+
+      {etapa !== 2 && <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          {etapa === 3 && <Button variant="ghost" disabled={!!busy} onClick={() => { setErro(""); setEtapa(conversou ? 2 : 1); }}><ArrowLeft size={14} /> {conversou ? "Voltar à conversa" : "Voltar ao pedido"}</Button>}
+          {etapa === 1 && <p className="text-ui text-fg-secondary">Ao continuar, a IA lê o pedido, pergunta o que faltar e monta o chamado para você revisar.</p>}
+          {etapa === 1 && salvoAs && <p className="text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
+          {statusDeBusy}
+          {erro && <p role="alert" className="text-ui text-danger">{erro}{etapa === 1 && <> <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></>}</p>}
+        </div>
+        <Button type="submit" size="lg" className="w-full sm:w-auto sm:min-w-56" disabled={!!busy}>{etapa === 3 ? "Abrir chamado" : "Continuar"}</Button>
+      </div>}
     </form>
-    <Card className="min-w-0 self-start p-5 space-y-4">
-      <h2 className="text-heading font-semibold text-fg">Revisão das informações</h2>
-      <p className="text-ui text-fg-secondary">Ao enviar, a IA confere se há contexto suficiente para iniciar o atendimento. Você pode complementar aqui ou enviar mesmo assim.</p>
-      <div role="log" aria-label="Conversa de revisão" aria-live="polite" className="max-h-[32rem] space-y-3 overflow-y-auto">
-        {mensagens.map(m => <div key={m.id} className={`rounded-md p-3 text-ui whitespace-pre-wrap break-words ${m.role === "user" ? "bg-brand/8 text-fg" : "bg-surface-hover text-fg-secondary"}`}><p className="mb-1 text-helper font-semibold">{m.role === "user" ? "Você" : "Assistente"}</p>{m.body}</div>)}
-        {!mensagens.length && <p className="text-helper text-fg-muted">A revisão aparecerá aqui depois do envio.</p>}
-      </div>
-      {parecer?.attachments.map(a => <p key={a.id} className="text-helper text-fg-secondary"><strong>{a.name}</strong>: {a.status === "analyzed" ? "Analisado" : a.status === "partial" ? "Análise parcial" : a.status === "unreadable" ? "Ilegível" : "Não analisado"}. {a.reason}</p>)}
-      {pergunta ? <form onSubmit={e => { e.preventDefault(); responder(); }} className="space-y-3">
-        <Campo label={pergunta.total > 1 ? `Sua resposta · pergunta ${pergunta.indice + 1} de ${pergunta.total}` : "Sua resposta"}><Textarea required rows={4} maxLength={10000} disabled={!!busy} value={resposta} onChange={e => setResposta(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); responder(); } }} /></Campo>
-        <div className="flex flex-wrap gap-2"><Button type="submit" disabled={!!busy}>Responder ao assistente</Button>{enviarMesmoAssim}</div>
-      </form>
-        : (parecer || mensagens.length > 0) && <div className="flex flex-wrap gap-2">{enviarMesmoAssim}{parecer?.status === "unavailable" && <Button variant="ghost" disabled={!!busy} onClick={() => void enviar(true)}>Tentar análise novamente</Button>}</div>}
-    </Card>
-  </div>;
+  </>;
+}
+
+/** O ponto de partida da revisão: o pedido com a classificação, e a descrição que a IA montou. */
+function montarFinal(base: DadosDoChamado, p: Parecer | null): DadosDoChamado {
+  return { ...base, description: p?.final?.description ?? base.description };
+}
+
+type Requisito = { key: string; label: string; required: boolean };
+function PainelDeAnexos({ anexos, busy, chave, onChave, requisitos, onSubir, onRetirar, escolha }: {
+  anexos: Anexo[]; busy: string; chave: string; onChave: (c: string) => void; requisitos: Requisito[]; onSubir: (f: File) => void;
+  /** No pedido, o X retira o arquivo do rascunho. */ onRetirar?: (a: Anexo) => void;
+  /** Na revisão, cada arquivo tem a caixa "segue no chamado", começando pela escolha da IA. */
+  escolha?: { incluidos: string[]; sugeridos: string[] | null; alternar: (id: string) => void };
+}) {
+  const seletor = useRef<HTMLInputElement>(null), [arrastando, setArrastando] = useState(false);
+  const seguem = escolha ? anexos.filter(a => escolha.incluidos.includes(a.id)) : anexos;
+  return <section aria-labelledby="anexos-do-chamado" className="space-y-3 p-5">
+    <div className="flex items-baseline justify-between gap-2">
+      <h2 id="anexos-do-chamado" className="font-semibold text-fg">Anexos</h2>
+      {!!anexos.length && <span className="text-helper text-fg-muted">{escolha ? `${seguem.length} de ${anexos.length} seguem` : `${anexos.length} ${anexos.length === 1 ? "arquivo" : "arquivos"}`}</span>}
+    </div>
+    {escolha && !!anexos.length && <p className="text-helper text-fg-secondary">{escolha.sugeridos ? "A IA marcou os arquivos que ajudam no atendimento. Os desmarcados saem do chamado." : "Desmarque os arquivos que não devem ir para o chamado."}</p>}
+    {requisitos.length ? <Campo label="Tipo de evidência"><Select disabled={!!busy} value={chave} onChange={e => onChave(e.target.value)}><option value="">Anexo complementar</option>{requisitos.map(a => <option key={a.key} value={a.key}>{a.label}{a.required ? " (obrigatório)" : ""}</option>)}</Select></Campo> : null}
+    <div onDragOver={e => { e.preventDefault(); if (!busy) setArrastando(true); }} onDragLeave={() => setArrastando(false)} onDrop={e => { e.preventDefault(); setArrastando(false); const file = e.dataTransfer.files[0]; if (file && !busy) onSubir(file); }}
+      className={`flex flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors ${arrastando ? "border-brand bg-brand/5" : "border-border-strong"}`}>
+      <div aria-hidden className="flex items-center gap-2.5 text-fg-muted"><FileText size={18} /><FileImage size={18} /><FileSpreadsheet size={18} /><FileVideo size={18} /></div>
+      <p className="text-ui text-fg-secondary">Arraste um arquivo para cá ou</p>
+      <Button variant="secondary" size="sm" disabled={!!busy} onClick={() => seletor.current?.click()}><Upload size={14} aria-hidden />Escolher arquivo</Button>
+      <input ref={seletor} aria-label="Adicionar arquivo" type="file" accept={FORMATOS} hidden disabled={!!busy} onChange={e => { const file = e.target.files?.[0]; e.target.value = ""; if (file) onSubir(file); }} />
+    </div>
+    <p className="text-helper text-fg-muted">PDF, imagem, planilha, DOCX, TXT, ZIP ou vídeo, um por vez, até 10 MB. A análise considera até cinco arquivos e 20 MB, com prioridade para os obrigatórios.</p>
+    {!!anexos.length && <ul aria-label="Arquivos anexados" className="space-y-1.5">{anexos.map(a => {
+      const segue = !escolha || escolha.incluidos.includes(a.id), deFora = escolha?.sugeridos && !escolha.sugeridos.includes(a.id);
+      return <li key={a.id} className={`flex items-center gap-2 rounded-md border border-border py-1.5 pl-2.5 pr-1 text-helper ${segue ? "bg-surface-hover" : "bg-surface opacity-70"}`}>
+        {escolha && <Checkbox aria-label={`${a.fileName} segue no chamado`} checked={segue} disabled={!!busy} onChange={() => escolha.alternar(a.id)} />}
+        <IconeDoArquivo nome={a.fileName} />
+        <span className="min-w-0 flex-1"><a className="block truncate text-fg hover:text-brand hover:underline" href={`/api/chamados/anexos/${a.id}`} download>{a.fileName}</a>
+          {deFora && <span className="block text-fg-muted">A IA deixou de fora</span>}</span>
+        {onRetirar && <button type="button" disabled={!!busy} aria-label={`Retirar ${a.fileName}`} title="Retirar" onClick={() => onRetirar(a)} className="inline-flex size-6 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"><X size={12} /></button>}
+      </li>;
+    })}</ul>}
+    {requisitos.filter(r => r.required && !seguem.some(x => x.attachmentKey === r.key)).map(r => <p key={r.key} className="text-helper text-warning">Falta anexar: {r.label}</p>)}
+  </section>;
 }

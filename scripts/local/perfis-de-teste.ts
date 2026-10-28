@@ -15,6 +15,7 @@ export const PERFIS = [
   { email: "bpo.teste@exemplo.invalido", nome: "Teste Só BPO", role: "SECTOR_ADMIN", setores: ["bpo"] },
   { email: "dp.teste@exemplo.invalido", nome: "Teste Só DP", role: "SECTOR_USER", setores: ["dp"] },
   { email: "dpcoord.teste@exemplo.invalido", nome: "Teste Coordenação DP", role: "SECTOR_ADMIN", setores: ["dp"] },
+  { email: "fiscal.teste@exemplo.invalido", nome: "Teste Só Fiscal", role: "SECTOR_USER", setores: ["fiscal"] },
 ] as const;
 
 async function main() {

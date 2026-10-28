@@ -28,7 +28,7 @@ describe("fallback protegido por escritório", () => {
   it("usa Groq uma vez com saída estrita, timeout e auditoria isolada", async () => {
     expect(await gerarComFallback(input)).toEqual({ valor: { ok: true }, origem: "groq" });
     const [url, p] = m.fetch.mock.calls[0]; expect(url).toBe("https://api.groq.com/openai/v1/chat/completions");
-    expect(JSON.parse(p.body)).toMatchObject({ model: "openai/gpt-oss-20b", max_completion_tokens: 1200, response_format: { type: "json_schema", json_schema: { strict: true } } });
+    expect(JSON.parse(p.body)).toMatchObject({ model: "openai/gpt-oss-120b", max_completion_tokens: 1200, response_format: { type: "json_schema", json_schema: { strict: true } } });
     expect(p.signal).toBeInstanceOf(AbortSignal); expect(m.fetch).toHaveBeenCalledTimes(1);
     expect(m.config).toHaveBeenCalledWith(expect.objectContaining({ where: { tenantId_integrationCode_instanceKey: { tenantId: "t", integrationCode: "helpdesk_groq", instanceKey: "default" } } }));
     expect(m.terminar).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ ok: true }) }));
@@ -41,10 +41,11 @@ describe("fallback protegido por escritório", () => {
   it.each([null, { ...config, enabled: false }])("sem fallback habilitado não envia dados à Groq", async row => {
     m.config.mockResolvedValue(row); await expect(gerarComFallback(input)).rejects.toThrow("indisponível"); expect(m.fetch).not.toHaveBeenCalled();
   });
-  it("não envia binários nem declara leitura de anexos no fallback", async () => {
-    m.fetch.mockResolvedValue({ ok: true, json: async () => ({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify({ attachments: [{ id: "a", status: "analyzed" }] }) } }] }) });
+  // A cobertura dos anexos é montada na triagem, pela origem da resposta (28/10/2026).
+  it("não envia binários no fallback", async () => {
+    m.fetch.mockResolvedValue({ ok: true, json: async () => ({ choices: [{ finish_reason: "stop", message: { content: JSON.stringify({ ok: true }) } }] }) });
     const r = await gerarComFallback({ ...input, anexos: [{ nome: "arquivo.png", mime: "image/png", imagem: true, base64: "binario-privado" }] });
-    expect(m.fetch.mock.calls[0][1].body).not.toContain("binario-privado"); expect(r.valor).toMatchObject({ attachments: [{ status: "unreadable" }] });
+    expect(m.fetch.mock.calls[0][1].body).not.toContain("binario-privado"); expect(r.origem).toBe("groq");
   });
   it.each(["length", "content_filter"])("recusa resposta incompleta e não guarda erro bruto: %s", async finish_reason => {
     m.fetch.mockResolvedValue({ ok: true, json: async () => ({ choices: [{ finish_reason, message: { content: "privado" } }] }) });

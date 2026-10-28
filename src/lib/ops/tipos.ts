@@ -1,6 +1,8 @@
 export type EventoOps = {
   id: string; watcherSlug: string; watcherName: string; filename: string; filenameRenamed: string | null;
   status: "SUCCESS" | "ERROR" | "WARNING"; errorMessage: string | null; client: string | null; processedAt: string;
+  /** Aviso fechado no card do robô, para toda a equipe. */
+  dismissedAt: string | null; dismissedByName: string | null;
 };
 export type WatcherOps = {
   ownerId: string | null; ownerName: string | null;

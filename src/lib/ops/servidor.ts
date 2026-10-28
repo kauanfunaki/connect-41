@@ -53,13 +53,14 @@ export async function painelOps(ctx: AuthContext, filtros: FiltrosOps): Promise<
   const events = await db.opsEvent.findMany({ where, include: { watcher: { select: { name: true } } },
     orderBy: [{ processedAt: "desc" }, { id: "desc" }], take: pageSize, skip: (page - 1) * pageSize });
   const nomes = new Map(watchers.map(w => [w.slug, w.name]));
-  const autores = [...new Set(watchers.flatMap(w => w.instabilityReportedBy ? [w.instabilityReportedBy] : []))];
+  const autores = [...new Set([...watchers.flatMap(w => w.instabilityReportedBy ? [w.instabilityReportedBy] : []), ...[...events, ...watchers.flatMap(w => w.events)].flatMap(e => e.dismissedBy ? [e.dismissedBy] : [])])];
   const usuarios = autores.length ? await db.user.findMany({ where: { tenantId, id: { in: autores } }, select: { id: true, name: true } }) : [];
   const nomesDeUsuarios = new Map(usuarios.map(u => [u.id, u.name]));
   const serializarEvento = (e: (typeof events)[number] | (typeof watchers)[number]["events"][number]) => ({
     id: e.id, watcherSlug: e.watcherSlug, watcherName: nomes.get(e.watcherSlug) ?? e.watcherSlug,
     filename: e.filename, filenameRenamed: e.filenameRenamed, status: e.status as "SUCCESS" | "ERROR" | "WARNING",
     errorMessage: e.errorMessage, client: e.client, processedAt: e.processedAt.toISOString(),
+    dismissedAt: e.dismissedAt?.toISOString() ?? null, dismissedByName: e.dismissedBy ? nomesDeUsuarios.get(e.dismissedBy) ?? "Equipe Tech" : null,
   });
   const counts = new Map<string, { total: number; success: number; error: number }>();
   const summary = { total: 0, success: 0, error: 0, warning: 0, successRate: null as number | null };
