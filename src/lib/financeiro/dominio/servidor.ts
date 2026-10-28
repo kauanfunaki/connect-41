@@ -8,6 +8,9 @@ import { centavosDeDecimal } from "../contas";
 import { somarMeses } from "../periodo";
 import { nomeExibicao } from "@/lib/companyName";
 import { lancamentosDasBaixas, type BaixaParaExportar, type DeParaDaEmpresa, type Exportacao, type TipoDoDePara } from "./lancamentos";
+import { correcaoEntre, estadoDasLinhas, lerEstado, type Correcao, type EstadoExportado } from "./correcao";
+import type { LinhaDaDominio } from "./planilha";
+import type { Prisma } from "@/generated/prisma/client";
 
 /** O começo do mês em São Paulo e o do mês seguinte — a baixa é gravada ao meio-dia. */
 function limitesDoMes(competencia: string): { de: Date; ate: Date } {
@@ -106,4 +109,84 @@ export async function exportacaoDoMes(tenantId: string, companyId: string, compe
     codigoFilial,
     empresa: { nome: nomeExibicao(empresa), cnpj: empresa.cnpj },
   };
+}
+
+// ─── O histórico e a correção (lote 3, 28/10/2026) ──────────────────────────
+
+export type TipoDaExportacao = "COMPLETA" | "CORRECAO";
+
+export type ExportacaoFeita = {
+  id: string;
+  tipo: TipoDaExportacao;
+  formato: string;
+  linhas: number;
+  em: Date;
+  por: string | null;
+};
+
+/** As planilhas já baixadas da empresa no mês, a mais nova primeiro. */
+export async function exportacoesDoMes(tenantId: string, companyId: string, competencia: string, limite = 10): Promise<ExportacaoFeita[]> {
+  const prisma = getPrisma();
+  const feitas = await prisma.dominioExportacao.findMany({
+    where: { tenantId, companyId, competencia },
+    orderBy: { createdAt: "desc" },
+    take: limite,
+    select: { id: true, tipo: true, formato: true, linhas: true, createdAt: true, createdById: true },
+  });
+  const ids = [...new Set(feitas.flatMap((f) => (f.createdById ? [f.createdById] : [])))];
+  const pessoas = ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
+  const nome = new Map(pessoas.map((p) => [p.id, p.name]));
+  return feitas.map((f) => ({
+    id: f.id,
+    tipo: f.tipo === "CORRECAO" ? "CORRECAO" : "COMPLETA",
+    formato: f.formato,
+    linhas: f.linhas,
+    em: f.createdAt,
+    por: f.createdById ? (nome.get(f.createdById) ?? null) : null,
+  }));
+}
+
+/** O que a Domínio tem deste mês, pela última planilha baixada. Nulo se nenhuma foi registrada. */
+export async function estadoNaDominio(tenantId: string, companyId: string, competencia: string): Promise<EstadoExportado | null> {
+  const ultima = await getPrisma().dominioExportacao.findFirst({
+    where: { tenantId, companyId, competencia },
+    orderBy: { createdAt: "desc" },
+    select: { estado: true },
+  });
+  return ultima ? lerEstado(ultima.estado) : null;
+}
+
+/** A correção do mês contra a última planilha baixada. Nula se ainda não houve nenhuma. */
+export async function correcaoDoMes(tenantId: string, companyId: string, competencia: string, atual: { linhas: LinhaDaDominio[] }): Promise<Correcao | null> {
+  const anterior = await estadoNaDominio(tenantId, companyId, competencia);
+  return anterior ? correcaoEntre(anterior, estadoDasLinhas(atual.linhas)) : null;
+}
+
+/**
+ * Grava a planilha baixada. O estado é sempre o de AGORA (as linhas de todas
+ * as baixas prontas), tanto na completa quanto na correção: depois de
+ * importar qualquer uma das duas, é isso que a Domínio tem.
+ */
+export async function registrarExportacao(p: {
+  tenantId: string;
+  companyId: string;
+  competencia: string;
+  tipo: TipoDaExportacao;
+  formato: "xlsx" | "txt";
+  linhasDoArquivo: number;
+  atual: { linhas: LinhaDaDominio[] };
+  userId: string | null;
+}): Promise<void> {
+  await getPrisma().dominioExportacao.create({
+    data: {
+      tenantId: p.tenantId,
+      companyId: p.companyId,
+      competencia: p.competencia,
+      tipo: p.tipo,
+      formato: p.formato,
+      linhas: p.linhasDoArquivo,
+      estado: estadoDasLinhas(p.atual.linhas) as unknown as Prisma.InputJsonValue,
+      createdById: p.userId,
+    },
+  });
 }

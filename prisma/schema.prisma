@@ -1901,6 +1901,7 @@ model Company {
   costCenters              CostCenter[]
   financeProjects          FinanceProject[]
   dominioAccountMaps       DominioAccountMap[]
+  dominioExportacoes       DominioExportacao[]
   bankReconciliationRules  BankReconciliationRule[]
   financeRecurrences       FinanceRecurrence[]
   financeEntryPayments     FinanceEntryPayment[]
@@ -4900,6 +4901,32 @@ model DominioAccountMap {
   @@unique([companyId, kind, refId])
   @@index([tenantId, companyId])
   @@map("dominio_account_maps")
+}
+
+// Cada planilha da Domínio baixada (lote 3, 28/10/2026): o mês inteiro ou a
+// correção. `estado` é o que ficou na Domínio depois dela — as linhas de cada
+// baixa, `{ [paymentId]: LinhaDaDominio[] }` —, e é contra o estado da última
+// que a próxima correção compara (src/lib/financeiro/dominio/correcao.ts).
+model DominioExportacao {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// "AAAA-MM".
+  competencia String   @db.VarChar(7)
+  /// "COMPLETA" ou "CORRECAO".
+  tipo        String   @db.VarChar(10)
+  /// "xlsx" ou "txt".
+  formato     String   @db.VarChar(4)
+  /// Quantas linhas o arquivo levou.
+  linhas      Int
+  estado      Json
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, competencia, createdAt])
+  @@map("dominio_exportacoes")
 }
 
 // ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────

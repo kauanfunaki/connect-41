@@ -122,6 +122,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "PortalUserCompany", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["acesso ao portal ligado a ela (a conta continua)", "acessos ao portal ligados a ela (as contas continuam)"] },
   { modelo: "ClientAnnouncementCompany", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "DominioAccountMap", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do de-para da Domínio", "contas do de-para da Domínio"] },
+  { modelo: "DominioExportacao", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["planilha da Domínio baixada", "planilhas da Domínio baixadas"] },
   { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
   { modelo: "FinanceRecurrence", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["série de repetição", "séries de repetição"] },
   // A marca de cada obrigação por regime gerada (22/10/2026). A atividade em si
@@ -317,6 +318,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
+  { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "BankReconciliationRule", coluna: "createdById", tratamento: "manter", motivo: "quem criou a regra; a tela não expõe o id" },
   { modelo: "FinanceRecurrence", coluna: "createdById", tratamento: "manter", motivo: "quem lançou a série; as contas que o agendador cria levam esse nome" },
   { modelo: "BankRuleApplication", coluna: "createdById", tratamento: "manter", motivo: "registro de quem lançou pela regra" },

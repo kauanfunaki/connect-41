@@ -152,6 +152,7 @@ export function lancamentosDasBaixas(baixas: readonly BaixaParaExportar[], dePar
         codigoHistorico: "",
         complemento,
         codigoFilial,
+        baixaId: b.id,
       });
     };
     for (const p of partes) linha(p.conta!, p.centavos, complementoDaBaixa(b));
