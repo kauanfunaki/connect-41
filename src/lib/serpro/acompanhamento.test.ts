@@ -152,6 +152,21 @@ describe("a Caixa Postal, a partir do evento de mensagem nova", () => {
     expect(m.notifySector).not.toHaveBeenCalled();
   });
 
+  it("mensagem de cadastro: o Societário também é avisado, só dela", async () => {
+    const cadastro = {
+      ...LISTA_DA_CAIXA_POSTAL,
+      corpo: LISTA_DA_CAIXA_POSTAL.corpo.replace("Notificação de recebimento de mensagem e-MAC - Mensagem nº ++VARIAVEL++ (nova)", "Termo de inaptidão do CNPJ ++VARIAVEL++"),
+    };
+    const t = dia({ MSGCONTRIBUINTE61: () => cadastro });
+    await acompanharNoSerpro(TENANT, opcoes(t.transporte));
+    expect(m.notifySector.mock.calls.filter(([s]) => s === "fiscal")).toHaveLength(2);
+    expect(m.notifySector).toHaveBeenCalledWith(
+      "societario",
+      expect.objectContaining({ type: "SERPRO_CAIXA_POSTAL", entityId: "empresa-11111111", message: "Caixa Postal da Receita: mensagem nova de Empresa 1111 (relevante): Termo de inaptidão do CNPJ 083549" })
+    );
+    expect(m.notifySector.mock.calls.filter(([s]) => s === "societario")).toHaveLength(2);
+  });
+
   it("o indicador diz que não há nova: a lista não é paga", async () => {
     const t = dia({ INNOVAMSG63: () => ({ status: 200, corpo: corpoDoSerpro({ codigo: "00", conteudo: [{ indicadorMensagensNovas: "0" }] }) }) });
     await acompanharNoSerpro(TENANT, opcoes(t.transporte));

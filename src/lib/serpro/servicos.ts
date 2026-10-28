@@ -58,6 +58,7 @@ function servico(
 export const CONFERIR_PROCURACAO = servico(45, "PROCURACOES", "OBTERPROCURACAO41", "Consultar", [], "Conferir a autorização (procuração)");
 export const DAS_DO_SIMPLES = servico(2, "PGDASD", "GERARDAS12", "Emitir", ["00146"], "DAS do Simples (com data de consolidação futura, recalculado)");
 export const DAS_DO_MEI = servico(18, "PGMEI", "GERARDASPDF21", "Emitir", [], "DAS do MEI em PDF");
+export const CERTIFICADO_DO_MEI = servico(22, "CCMEI", "EMITIRCCMEI121", "Emitir", [], "Certificado da condição de MEI");
 export const ENVIO_DO_TERMO = servico(57, "AUTENTICAPROCURADOR", "ENVIOXMLASSINADO81", "Apoiar", [], "Enviar o termo de autorização assinado");
 export const GUIA_DA_DCTFWEB = servico(28, "DCTFWEB", "GERARGUIA31", "Emitir", ["00103"], "Guia da DCTFWeb");
 // "Não listado" em Serviços x Procuração: presumido o código do sistema.
@@ -93,7 +94,7 @@ export const SERVICOS_DO_SERPRO: readonly ServicoDoSerpro[] = [
   DAS_DO_MEI,
   servico(19, "PGMEI", "GERARDASCODBARRA22", "Emitir", [], "DAS do MEI em código de barras"),
   servico(21, "PGMEI", "DIVIDAATIVA24", "Consultar", [], "Dívida ativa do MEI"),
-  servico(22, "CCMEI", "EMITIRCCMEI121", "Emitir", [], "Certificado da condição de MEI"),
+  CERTIFICADO_DO_MEI,
   servico(23, "CCMEI", "DADOSCCMEI122", "Consultar", [], "Dados do certificado de MEI"),
   servico(24, "CCMEI", "CCMEISITCADASTRAL123", "Consultar", [], "Situação cadastral dos MEI do CPF"),
   // DCTFWeb.
@@ -363,6 +364,18 @@ export function lerDasDaParcela(r: RespostaLida): Leitura<{ pdf: string }> {
   return pdf ? { ok: true, dados: { pdf } } : { ok: false, erro: "O Serpro não devolveu o PDF do DAS da parcela." };
 }
 
+/**
+ * O certificado da condição de MEI (Societário, 28/10/2026): `{ cnpj, pdf }`.
+ * A página do serviço chama o `pdf` de "Pdf do DAS" — cópia de outra página;
+ * é o CCMEI.
+ */
+export function lerCertificadoDoMei(r: RespostaLida): Leitura<{ pdf: string }> {
+  const erro = recusada(r);
+  if (erro) return { ok: false, erro };
+  const pdf = texto(primeiro(r.dados)?.pdf);
+  return pdf ? { ok: true, dados: { pdf } } : { ok: false, erro: "O Serpro não devolveu o PDF do certificado de MEI." };
+}
+
 /** Quem lê o quê. A conferência de procurações tem o leitor dela em regras.ts (`resultadoDaConferencia`). */
 export const LEITORES = {
   GERARDAS12: lerDasDoSimples,
@@ -370,4 +383,5 @@ export const LEITORES = {
   GERARGUIA31: lerGuiaDaDctfweb,
   GERARGUIAANDAMENTO313: lerGuiaDaDctfweb,
   CONSOLIDARGERARDARF51: lerDarfDoSicalc,
+  EMITIRCCMEI121: lerCertificadoDoMei,
 } as const;

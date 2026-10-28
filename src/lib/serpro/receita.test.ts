@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { corpoDoPedido, lerResposta, tagDaRequisicao, type RespostaLida } from "./regras";
 import { eventoNovo, gruposDeEventos, lerMatriz, lerSolicitacao, lerTipoDoPedido, pedidoDeObtencao, pedidoDeSolicitacao, tipoDoPedido } from "./eventos";
-import { instanteDaReceita, lerDetalhe, lerIndicador, lerLista, montarAssunto, montarCorpo, pedidoDaLista, pedidoDoIndicador } from "./caixaPostal";
+import { assuntoDoSocietario, instanteDaReceita, lerDetalhe, lerIndicador, lerLista, montarAssunto, montarCorpo, pedidoDaLista, pedidoDoIndicador } from "./caixaPostal";
 import { ESPERA_DO_PROTOCOLO_EM_CACHE_MS, FOLGA_MS, nomeDoRelatorio, passoDoProtocolo, passoDoRelatorio, pedidoDoProtocolo } from "./sitfis";
 import type { ResultadoDaChamada } from "./cliente";
 import { PDF_FICTICIO, type RespostaDoTrial } from "./servicos.fixture";
@@ -140,6 +140,15 @@ describe("a Caixa Postal", () => {
     expect(montarCorpo("<p>Olá ++1++</p><script>alert(1)</script>", ["<b>x</b>"])).toBe("<p>Olá &lt;b&gt;x&lt;/b&gt;</p>");
     expect(montarAssunto("Declaração do exercício ++VARIAVEL++ processada", "2023")).toBe("Declaração do exercício 2023 processada");
     expect(instanteDaReceita("")).toBeNull();
+  });
+
+  it("o assunto que é do Societário: cadastro, baixa, sócios, MEI", () => {
+    for (const a of ["Termo de inaptidão do CNPJ 12345", "Comunicado de baixa de ofício", "Suspensão da inscrição no CNPJ", "Alteração do quadro de sócios (QSA)", "Desenquadramento do SIMEI", "Responsável perante o CNPJ"]) {
+      expect(assuntoDoSocietario(a), a).toBe(true);
+    }
+    for (const a of ["Notificação de recebimento de mensagem e-MAC - Mensagem nº 083548 (nova)", "[e-Processo] Dossiê: 11111.111111/2022-11", "Termo de Exclusão do Simples Nacional", "Intimação para pagamento"]) {
+      expect(assuntoDoSocietario(a), a).toBe(false);
+    }
   });
 
   it("o 200 com ERRO não é lista nem mensagem", () => {
