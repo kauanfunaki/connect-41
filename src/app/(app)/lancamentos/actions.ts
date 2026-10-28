@@ -30,7 +30,9 @@ import { centroNaCriacao } from "@/lib/financeiro/centroDeCustoServidor";
 import { categoriaDaEmpresa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { projetoInformado } from "@/lib/financeiro/projetoServidor";
 import { contaPrevistaInformada } from "@/lib/financeiro/contaPrevistaServidor";
-import { quitarConta } from "@/lib/financeiro/baixa/servidor";
+import { quitarConta, registrarBaixa } from "@/lib/financeiro/baixa/servidor";
+import { lerPagamentosDoManual, planejarPagamentosDoManual } from "@/lib/financeiro/baixa/pagamentosDoManual";
+import type { BaixaValidada } from "@/lib/financeiro/baixa/regras";
 import { fichaOpcional, leitorDaFicha } from "@/lib/financeiro/fichaDaContraparte";
 import { lerEmail } from "@/lib/financeiro/cobranca/regua";
 import { arquivosDoFormulario, type AnexoGravado } from "@/lib/financeiro/pendencias/armazenamento";
@@ -329,6 +331,18 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
     anexos = gravacao.anexos;
   }
 
+  // Os pagamentos detalhados (lote 7, 28/10/2026): juros, multa, desconto e a
+  // baixa parcial em mais de uma data — ver `pagamentosDoManual`.
+  const lidosOsPagamentos = lerPagamentosDoManual(texto("pagamentos"));
+  if (!lidosOsPagamentos.ok) return { error: lidosOsPagamentos.erro };
+  let pagamentos: BaixaValidada[] = [];
+  if (lidosOsPagamentos.dados.length > 0) {
+    if (!d.pagoEmKey) return { error: "Informe a data do primeiro pagamento em \"Já pago em\"." };
+    const plano = planejarPagamentosDoManual(lidosOsPagamentos.dados, valorDaConta, hojeKey);
+    if (!plano.ok) return { error: plano.erro };
+    pagamentos = plano.dados;
+  }
+
   let entry: { id: string; amount: { toString(): string } };
   try {
     entry = await c.prisma.$transaction(async (tx) => {
@@ -447,7 +461,24 @@ export async function criarLancamentoManual(formData: FormData): Promise<Resulta
           if (parcelas) await reterNa(entryId, demais[i]!, proximas[i]!.competencia);
         }
       }
-      if (d.pagoEmKey) {
+      if (pagamentos.length > 0) {
+        // Cada pagamento é uma baixa, na ordem: a parcial deixa a conta em
+        // aberto com o saldo; juros e multa caem na categoria de encargos.
+        for (const p of pagamentos) {
+          await registrarBaixa(tx, {
+            tenantId: c.tenantId,
+            entryId: criado.id,
+            paidAt: instanteDaData(p.dataKey),
+            principalCentavos: p.principalCentavos,
+            jurosCentavos: p.jurosCentavos,
+            multaCentavos: p.multaCentavos,
+            descontoCentavos: p.descontoCentavos,
+            bankAccountId: contaPrevista.contaId,
+            origin: "LANCAMENTO",
+            userId: c.ctx.userId || null,
+          });
+        }
+      } else if (d.pagoEmKey) {
         await quitarConta(tx, {
           tenantId: c.tenantId,
           entryId: criado.id,
