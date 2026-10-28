@@ -5,6 +5,8 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { formatarNumero } from "@/lib/format";
+import { ADMISSAO_EM_ANDAMENTO, DESLIGAMENTO_EM_PROCESSO } from "@/lib/dp/contagens";
+import { FERIAS_EM_ABERTO } from "@/lib/ferias/regras";
 
 // Hub que une Admissão (bloco 1), Rescisão/Desligamento (bloco 2) e Férias
 // (bloco 3) do levantamento de DP/RH — mesma decisão de agrupamento do
@@ -15,18 +17,10 @@ export default async function ColaboradoresPage() {
   const prisma = getPrisma();
 
   const [admissoes, desligamentos, ferias] = await Promise.all([
-    prisma.person.count({
-      where: { tenantId: ctx.tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" },
-    }),
-    prisma.termination.count({
-      where: { tenantId: ctx.tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } },
-    }),
-    prisma.vacation.count({
-      where: {
-        tenantId: ctx.tenantId,
-        status: { in: ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] },
-      },
-    }),
+    // As mesmas regras da Home (lote 6, 28/10/2026): src/lib/dp/contagens.ts.
+    prisma.person.count({ where: { tenantId: ctx.tenantId, ...ADMISSAO_EM_ANDAMENTO } }),
+    prisma.termination.count({ where: { tenantId: ctx.tenantId, ...DESLIGAMENTO_EM_PROCESSO } }),
+    prisma.vacation.count({ where: { tenantId: ctx.tenantId, status: { in: [...FERIAS_EM_ABERTO] } } }),
   ]);
 
 
@@ -34,7 +28,7 @@ export default async function ColaboradoresPage() {
     <PageContainer>
       <PageHeader
         title="Colaboradores"
-        subtitle="Admissões, rescisões e férias — ciclo de vida do colaborador em um só lugar."
+        subtitle="Admissões, desligamentos e férias — ciclo de vida do colaborador em um só lugar."
       />
 
       {/* Os três atalhos eram cartões montados à mão (até 30/09); agora são

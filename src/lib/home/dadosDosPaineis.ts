@@ -34,6 +34,8 @@ import type { HomeWidgetKey } from "@/lib/homeWidgets";
 import type { AcessoDoPainel } from "./acessoDosPaineis";
 import type { NumerosDaHome } from "./destaques";
 import { aPagarPorSemana, carteiraPorFaixa, contarFerias, faixasDasPendencias, type Soma } from "./paineis";
+import { FERIAS_EM_ABERTO } from "@/lib/ferias/regras";
+import { ADMISSAO_EM_ANDAMENTO, DESLIGAMENTO_EM_PROCESSO } from "@/lib/dp/contagens";
 
 /** A consulta do painel, ou `null` quando ela falha — o erro fica no log do servidor. */
 async function tentar<T>(painel: string, consulta: () => Promise<T>): Promise<T | null> {
@@ -113,7 +115,6 @@ export const dadosDosProcessos = cache((tenantId: string) =>
 // ─── DP ────────────────────────────────────────────────────────────────────
 
 /** Os mesmos recortes das telas: /ferias, /colaboradores, /admissoes e /afastamentos. */
-const FERIAS_EM_ABERTO = ["PLANEJADA", "SOLICITADA", "EM_ANALISE", "APROVADA", "PROGRAMADA", "EM_GOZO"] as const;
 const EXAMES_PENDENTES = ["SOLICITADO", "AGENDADO", "REALIZADO", "ASO_PENDENTE"] as const;
 
 export const dadosDoDP = cache((tenantId: string) =>
@@ -121,8 +122,8 @@ export const dadosDoDP = cache((tenantId: string) =>
     const prisma = getPrisma();
     const [ferias, admissoes, rescisoes, exames, afastados] = await Promise.all([
       prisma.vacation.findMany({ where: { tenantId, status: { in: [...FERIAS_EM_ABERTO] } }, select: { concessivePeriodEnd: true } }),
-      prisma.person.count({ where: { tenantId, type: "COLABORADOR", employmentStatus: "ADMISSAO_EM_ANDAMENTO" } }),
-      prisma.termination.count({ where: { tenantId, status: { notIn: ["FINALIZADO", "CANCELADO"] } } }),
+      prisma.person.count({ where: { tenantId, ...ADMISSAO_EM_ANDAMENTO } }),
+      prisma.termination.count({ where: { tenantId, ...DESLIGAMENTO_EM_PROCESSO } }),
       prisma.exameAdmissional.count({ where: { tenantId, status: { in: [...EXAMES_PENDENTES] } } }),
       prisma.absence.count({ where: { tenantId, status: { notIn: [...AFASTAMENTO_ENCERRADO] } } }),
     ]);
