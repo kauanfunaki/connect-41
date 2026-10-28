@@ -27,7 +27,7 @@ const TEXTOS = {
 const emBranco = { name: "", url: "", repository: "", ownerId: "", description: "", isActive: true };
 const iniciais = (nome: string) => nome.trim().split(/\s+/).filter(Boolean).map(p => p[0]).filter((_, i, partes) => i === 0 || i === partes.length - 1).join("").toLocaleUpperCase("pt-BR");
 
-export function CatalogoOps({ tipo, podeGerir, onContagem }: { tipo: Tipo; podeGerir: boolean; onContagem?: (c: { sites: number; apps: number }) => void }) {
+export function CatalogoOps({ tipo, podeGerir }: { tipo: Tipo; podeGerir: boolean }) {
   const toast = useToast(), t = TEXTOS[tipo], Icone = t.icone;
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null), [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
@@ -38,9 +38,9 @@ export function CatalogoOps({ tipo, podeGerir, onContagem }: { tipo: Tipo; podeG
     try {
       const r = await fetch("/api/ops/catalogo", { cache: "no-store", signal: AbortSignal.timeout(15000) });
       const json = await r.json(); if (!r.ok) throw new Error(json.error || "Não foi possível carregar.");
-      setCatalogo(json); setErro(""); onContagem?.({ sites: json.sites.length, apps: json.apps.length });
+      setCatalogo(json); setErro("");
     } catch (e) { setErro(e instanceof Error ? e.message : "Não foi possível carregar."); }
-  }, [onContagem]);
+  }, []);
   useEffect(() => { const t = window.setTimeout(() => void carregar(), 0); return () => window.clearTimeout(t); }, [carregar]);
 
   function editar(item: ItemDoCatalogo | "novo") {

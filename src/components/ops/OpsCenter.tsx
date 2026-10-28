@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, AppWindow, Bot, Globe, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -27,6 +27,7 @@ import type { EventoOps, PainelOps, WatcherOps } from "@/lib/ops/tipos";
 import styles from "./OpsCenter.module.css";
 import { CatalogoOps } from "./CatalogoOps";
 
+const TITULOS = { automations: "Robôs", sites: "Sites", apps: "Apps", history: "Histórico" } as const;
 const COR: Record<EventoOps["status"], TomDoSelo> = { SUCCESS: "sucesso", ERROR: "perigo", WARNING: "atencao" };
 const data = (iso: string | null) => iso ? formatInstantDateTime(new Date(iso)) : "—";
 const nomeArquivo = (p: string) => p.split(/[\\/]/).pop() || p;
@@ -59,8 +60,9 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const [status, setStatus] = useState(params.get("status") ?? "");
   const [dia, setDia] = useState(params.get("date") ?? "");
   const [minhas, setMinhas] = useState(params.get("mine") === "1");
-  // Sites e Apps (28/10/2026) ficam ao lado dos robôs e do histórico.
-  const [visao, setVisao] = useState<"automations" | "history" | "sites" | "apps">(() => {
+  // Sem abas na página (28/10/2026): Robôs, Sites, Apps e Histórico se escolhem
+  // pelo submenu do Ops Center no menu lateral, que muda o ?view=.
+  const [visao] = useState<"automations" | "history" | "sites" | "apps">(() => {
     const inicial = params.get("view");
     if (inicial === "automations" || inicial === "history" || inicial === "sites" || inicial === "apps") return inicial;
     return params.has("watcher") || params.has("status") || params.has("date") || Number(params.get("page")) > 1 ? "history" : "automations";
@@ -72,7 +74,6 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const [edicao, setEdicao] = useState<WatcherOps | "novo" | null>(null), [form, setForm] = useState<Formulario>(emBranco);
   const [instabilidade, setInstabilidade] = useState<WatcherOps | null>(null), [nota, setNota] = useState(""), [chamado, setChamado] = useState("");
   const [detalhe, setDetalhe] = useState<EventoOps | null>(null);
-  const [contagemDoCatalogo, setContagemDoCatalogo] = useState<{ sites: number; apps: number } | null>(null);
   const doCatalogo = visao === "sites" || visao === "apps";
   const requisicao = useRef<AbortController | null>(null);
   const query = new URLSearchParams({ page: String(pagina), ...(watcher ? { watcher } : {}), ...(status ? { status } : {}), ...(dia ? { date: dia } : {}), ...(minhas ? { mine: "1" } : {}) }).toString();
@@ -141,40 +142,35 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   return <PageContainer>
     {/* Cabeçalho enxuto (26/10/2026): sem subtítulo, sem "Atualizado em" e sem a
         linha de sucessos/avisos/taxa — os números do dia ficam na faixa abaixo. */}
-    <PageHeader title="Ops Center" action={<div className="flex flex-wrap gap-2">
-      {podeGerir && <Button size="sm" variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={14} /> Integração dos bots</Button>}
-      <IconButton variant="framed" title="Atualizar agora" aria-label="Atualizar agora" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} /></IconButton>
+    <PageHeader title={TITULOS[visao]} action={<div className="flex flex-wrap gap-2">
+      {podeGerir && !doCatalogo && <Button size="sm" variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={14} /> Integração dos bots</Button>}
+      {!doCatalogo && <IconButton variant="framed" title="Atualizar agora" aria-label="Atualizar agora" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} /></IconButton>}
       {podeGerir && !doCatalogo && <Button size="sm" onClick={() => editar("novo")}><Plus size={14} /> Novo robô</Button>}
     </div>} />
     {/* O resumo saiu da ação do cabeçalho para a faixa de números do app: lá ele
         pedia largura fixa (`100vw-3rem`) para caber no celular (26/10/2026). */}
-    <FaixaDeTotais destaque={false} itens={[
+    {!doCatalogo && <FaixaDeTotais destaque={false} itens={[
       { rotulo: "Online agora", valor: painel ? numero(online) : "—", detalhe: painel ? `de ${numero(painel.watchers.length)} automações` : undefined },
       { rotulo: "Processados hoje", valor: summary ? numero(summary.total) : "—" },
       { rotulo: "Com erro", valor: summary ? numero(summary.error) : "—", tom: summary?.error ? "text-danger" : undefined },
-    ]} />
+    ]} />}
 
-    {erro && <Aviso className="mb-5">{erro} {painel && "Os dados abaixo são da última atualização recebida."} <Button variant="link" onClick={() => void atualizar()}>Tentar novamente</Button></Aviso>}
-    {!painel && !erro && <Card className="p-8 text-center text-fg-secondary" role="status">Carregando automações e resultados…</Card>}
+    {doCatalogo && <CatalogoOps key={visao} tipo={visao} podeGerir={podeGerir} />}
+    {!doCatalogo && erro && <Aviso className="mb-5">{erro} {painel && "Os dados abaixo são da última atualização recebida."} <Button variant="link" onClick={() => void atualizar()}>Tentar novamente</Button></Aviso>}
+    {!doCatalogo && !painel && !erro && <Card className="p-8 text-center text-fg-secondary" role="status">Carregando automações e resultados…</Card>}
     {/* As abas Automações e Histórico ficam dentro do bloco que elas controlam,
         e "Minhas automações" virou um filtro ao lado da busca (26/10/2026). */}
-    {painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
+    {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <SegmentedControl label="Visualizações do Ops Center" active={visao} onChange={setVisao} tone="brand" items={[
-          { key: "automations", label: "Robôs", icon: <Bot size={14} />, contagem: painel.watchers.length },
-          { key: "sites", label: "Sites", icon: <Globe size={14} />, contagem: contagemDoCatalogo?.sites },
-          { key: "apps", label: "Apps", icon: <AppWindow size={14} />, contagem: contagemDoCatalogo?.apps },
-          { key: "history", label: "Histórico", icon: <History size={14} />, contagem: painel.total },
-        ]} />
-        {!doCatalogo && <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
           <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-ui font-medium transition-colors focus-visible:outline-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand-subtle text-brand" : "border-border bg-surface text-fg-secondary hover:text-fg"}`}>
             <UserRound size={14} aria-hidden /> Minhas automações{minhas && <X size={14} aria-hidden className="-mr-1" />}
           </button>
-        </div>}
+        </div>
       </div>
-      {doCatalogo ? <CatalogoOps key={visao} tipo={visao} podeGerir={podeGerir} onContagem={setContagemDoCatalogo} /> : visao === "automations" ? <section aria-label="Automações">
+      {visao === "automations" ? <section aria-label="Robôs">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-full overflow-x-auto p-1">
             <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} items={[
