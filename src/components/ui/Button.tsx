@@ -69,8 +69,10 @@ type Props = ButtonProps | LinkProps;
 const VARIANT_CLASS: Record<Variant, string> = {
   // `brand-solid`, e não `brand` (07/10/2026): no escuro o `brand` vira o
   // brand-400, bom para texto azul, mas o branco em cima dele dava 3,28:1. O
-  // preenchimento fica no azul 41 nos dois temas (ver globals.css).
-  primary: "bg-brand-solid text-on-brand hover:bg-brand-solid-hover shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)]",
+  // preenchimento fica no azul 41 nos dois temas (ver globals.css). Desde
+  // 28/10/2026, numa tela do Connect da equipe com área de uso, o botão leva a
+  // cor sólida da área (`--c41-botao`, ver `.c41-cor-da-area`).
+  primary: "bg-[var(--c41-botao,var(--c41-brand-solid))] text-on-brand hover:bg-[var(--c41-botao-hover,var(--c41-brand-solid-hover))] shadow-[var(--c41-shadow-xs),inset_0_1px_0_rgba(255,255,255,.14)]",
   secondary: "border border-border-strong text-fg hover:bg-surface-hover",
   ghost: "bg-transparent text-fg-secondary hover:bg-surface-hover hover:text-fg",
   danger: "border border-danger/30 text-danger hover:bg-danger/8",
