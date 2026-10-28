@@ -84,6 +84,9 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   gestao_painel: "escritorio",
   gestao_valora: "escritorio",
   contabil_sped: "escritorio",
+  // Apoio do BPO (senhas e manual): ferramenta da equipe, não do cliente.
+  bpo_senhas: "escritorio",
+  bpo_manual: "escritorio",
 };
 
 /**
@@ -137,4 +140,29 @@ export function areaDoGrupoDeTelas(codigos: readonly string[]): GrupoDeCor | nul
   let melhor: GrupoDeCor | null = null;
   for (const [area, n] of contagem) if (!melhor || n > contagem.get(melhor)!) melhor = area;
   return melhor;
+}
+
+/**
+ * A família de cor de uma área no menu: o item sem área ("marca") e o
+ * Escritório são os dois azuis, e ficam juntos.
+ */
+function familiaDaCor(area: string | null): string {
+  return area === null || area === "marca" || area === "escritorio" ? "azul" : area;
+}
+
+/**
+ * Os itens do menu com as cores juntas (28/10/2026, pedido do Kauan: "azul,
+ * azul, verde", e não "azul, verde, azul"). Estável: cada família entra na
+ * posição do primeiro item dela, e dentro da família a ordem não muda — o
+ * menu segue a ordem de sempre, só sem alternar cor.
+ */
+export function agruparPorCor<T>(itens: readonly T[], areaDe: (item: T) => string | null): T[] {
+  const familias = new Map<string, T[]>();
+  for (const item of itens) {
+    const f = familiaDaCor(areaDe(item));
+    const lista = familias.get(f) ?? [];
+    lista.push(item);
+    familias.set(f, lista);
+  }
+  return [...familias.values()].flat();
 }

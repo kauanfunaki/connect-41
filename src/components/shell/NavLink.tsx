@@ -156,8 +156,10 @@ export function classeDoItemComArea(active: boolean, extra = ""): string {
 }
 
 /** O quadrado do ícone na cor da área. */
-export function IconeDaArea({ icon, active, area }: { icon: React.ReactNode; active: boolean; area: string }) {
-  const cor = active ? "bg-grupo-solid text-on-brand" : area === "marca" ? "text-fg-secondary" : "bg-grupo/12 text-grupo";
+export function IconeDaArea({ icon, active }: { icon: React.ReactNode; active: boolean }) {
+  // Todo item com o quadradinho (28/10/2026, "mais simétrico"): a cor vem do
+  // `data-grupo` do item — o sem área leva a principal, pelo "marca".
+  const cor = active ? "bg-grupo-solid text-on-brand" : "bg-grupo/12 text-grupo";
   return <span aria-hidden className={`inline-grid place-items-center size-6 rounded-md flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${cor}`}>{icon}</span>;
 }
 
@@ -185,7 +187,7 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
         data-grupo={area}
         className={naFaixa ? classeDoItemNaFaixa(active, area) : area !== undefined ? classeDoItemComArea(active, "w-[calc(100%+0.75rem)] text-label font-medium") : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
       >
-        {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}{area !== undefined ? <IconeDaArea icon={icon} active={active} area={area} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}<span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
+        {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}{area !== undefined ? <IconeDaArea icon={icon} active={active} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}<span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
       </button>
     );
   }
@@ -208,7 +210,7 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
     >
       {active && <BarraAtiva />}
       {area !== undefined ? (
-        <IconeDaArea icon={icon} active={active} area={area} />
+        <IconeDaArea icon={icon} active={active} />
       ) : (
         <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${grupo && !active ? "text-grupo" : ""}`.trim()}>{icon}</span>
       )}
@@ -277,7 +279,7 @@ export function GrupoNavItem({
       className={area !== undefined ? classeDoItemComArea(active, "text-label font-medium") : classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      {area !== undefined ? <IconeDaArea icon={icon} active={active} area={area} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
+      {area !== undefined ? <IconeDaArea icon={icon} active={active} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
       <span className="truncate">{label}</span>
       {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
       <span className={`ml-auto text-micro tabular-nums ${active && area === undefined ? "text-on-brand/80" : "text-fg-muted"}`}>
@@ -321,7 +323,7 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
       className={classeDoItemComArea(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
-      <IconeDaArea icon={icon} active={active} area="marca" />
+      <IconeDaArea icon={icon} active={active} />
       {label}
     </Link>
   );
@@ -360,7 +362,7 @@ export function SectorNavItem({ label, icon, onEntrar }: SectorNavItemProps) {
 
   return (
     <button type="button" onClick={onEntrar} data-grupo="marca" className={classeDoItemComArea(false, "w-[calc(100%+0.75rem)] text-label font-medium")}>
-      <IconeDaArea icon={icon ?? <span className="text-ui font-semibold">{label.charAt(0)}</span>} active={false} area="marca" />
+      <IconeDaArea icon={icon ?? <span className="text-ui font-semibold">{label.charAt(0)}</span>} active={false} />
       {label}
     </button>
   );
