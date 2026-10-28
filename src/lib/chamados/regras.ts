@@ -54,7 +54,7 @@ export function tituloDaDescricao(descricao: string) {
 export function perguntaAtual(parecer: Parecer | null, mensagens: { role: string; body: string }[]) {
   if (parecer?.status !== "needs_information") return null;
   const ultima = [...mensagens].reverse().find(m => m.role === "assistant")?.body ?? "";
-  const indice = parecer.questions.findIndex(q => ultima.endsWith(q));
+  const indice = parecer.questions.findIndex(q => ultima.endsWith(q.text));
   return indice < 0 ? null : { indice, total: parecer.questions.length };
 }
 
@@ -77,7 +77,12 @@ export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, a
 }
 
 export const coberturaSchema = z.object({ id: z.string(), name: z.string(), status: z.enum(["analyzed", "partial", "skipped", "unreadable"]), reason: z.string().max(500) });
-export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(z.string().min(1).max(500)).max(5), attachments: z.array(coberturaSchema).max(50) }).superRefine((v, ctx) => {
+// Pergunta com respostas prontas (28/10/2026): sim/não ou poucas alternativas
+// viram botões na conversa. Pareceres gravados antes eram só o texto.
+export const perguntaSchema = z.preprocess(v => typeof v === "string" ? { text: v, options: [] } : v,
+  z.object({ text: z.string().min(1).max(500), options: z.array(z.string().trim().min(1).max(120)).max(5).default([]) }));
+export type Pergunta = z.infer<typeof perguntaSchema>;
+export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(perguntaSchema).max(5), attachments: z.array(coberturaSchema).max(50) }).superRefine((v, ctx) => {
   if ((v.status === "sufficient" && v.questions.length) || (v.status === "needs_information" && !v.questions.length)) ctx.addIssue({ code: "custom", message: "Parecer inconsistente." });
 });
 export type Parecer = z.infer<typeof parecerSchema>;
