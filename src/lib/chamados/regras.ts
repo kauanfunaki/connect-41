@@ -96,8 +96,11 @@ export function mensagemDoExistente(e: Existente) {
   const inicio = e.match === "same" ? `Isso parece já existir no Ops Center: o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}` : `Pode ser parecido com o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}, do Ops Center`;
   return `${inicio}${e.responsavel ? `, de responsabilidade de ${e.responsavel}` : ""}.${e.reason ? ` ${e.reason}` : ""}`;
 }
-export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(perguntaSchema).max(5), attachments: z.array(coberturaSchema).max(50), existente: existenteSchema.nullable().default(null) }).superRefine((v, ctx) => {
+export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(perguntaSchema).max(5), attachments: z.array(coberturaSchema).max(50), existente: existenteSchema.nullable().default(null),
+  // O chamado montado pela IA para a revisão (28/10/2026): descrição final, com as
+  // respostas da conversa, e os anexos que seguem. A pessoa edita tudo na etapa 3.
+  final: z.object({ description: z.string().min(1).max(15000), anexos: z.array(z.string().max(191)).max(50) }).nullable().default(null) }).superRefine((v, ctx) => {
   if ((v.status === "sufficient" && v.questions.length) || (v.status === "needs_information" && !v.questions.length)) ctx.addIssue({ code: "custom", message: "Parecer inconsistente." });
 });
 export type Parecer = z.infer<typeof parecerSchema>;
-export const indisponivel = (summary = "Não foi possível analisar agora. Tente novamente ou envie sem análise."): Parecer => ({ status: "unavailable", summary, questions: [], attachments: [], existente: null });
+export const indisponivel = (summary = "Não foi possível analisar agora. Tente novamente ou envie sem análise."): Parecer => ({ status: "unavailable", summary, questions: [], attachments: [], existente: null, final: null });
