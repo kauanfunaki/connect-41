@@ -27,14 +27,7 @@ import type { EventoOps, PainelOps, WatcherOps } from "@/lib/ops/tipos";
 import styles from "./OpsCenter.module.css";
 import { CatalogoOps } from "./CatalogoOps";
 
-// Aviso de erro fechado no card (28/10/2026): só para quem fechou, neste
-// navegador, e só aquele evento; um erro novo do robô volta a aparecer.
-const CHAVE_DISPENSADOS = "ops:avisos-dispensados";
-function lerDispensados(): string[] {
-  try { const v = JSON.parse(window.localStorage.getItem(CHAVE_DISPENSADOS) ?? "[]"); return Array.isArray(v) ? v.filter(x => typeof x === "string") : []; }
-  catch { return []; }
-}
-const TITULOS = { automations: "Robôs", sites: "Sites", apps: "Apps", history: "Histórico" } as const;
+const TITULOS = { automations: "Robôs", sites: "Sites", apps: "Apps", history: "Robôs" } as const;
 const COR: Record<EventoOps["status"], TomDoSelo> = { SUCCESS: "sucesso", ERROR: "perigo", WARNING: "atencao" };
 const data = (iso: string | null) => iso ? formatInstantDateTime(new Date(iso)) : "—";
 const nomeArquivo = (p: string) => p.split(/[\\/]/).pop() || p;
@@ -60,16 +53,16 @@ async function gravar(url: string, method: string, body: unknown) {
   return result as { token?: string | null };
 }
 
-export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
+export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgir: boolean }) {
   const params = useSearchParams(), toast = useToast();
   const [painel, setPainel] = useState<PainelOps | null>(null);
   const [watcher, setWatcher] = useState(params.get("watcher") ?? "");
   const [status, setStatus] = useState(params.get("status") ?? "");
   const [dia, setDia] = useState(params.get("date") ?? "");
   const [minhas, setMinhas] = useState(params.get("mine") === "1");
-  // Sem abas na página (28/10/2026): Robôs, Sites, Apps e Histórico se escolhem
-  // pelo submenu do Ops Center no menu lateral, que muda o ?view=.
-  const [visao] = useState<"automations" | "history" | "sites" | "apps">(() => {
+  // Robôs, Sites e Apps se escolhem pelo submenu do Ops Center no menu lateral
+  // (28/10/2026); o Histórico continua dentro de Robôs, na alternância da página.
+  const [visao, setVisao] = useState<"automations" | "history" | "sites" | "apps">(() => {
     const inicial = params.get("view");
     if (inicial === "automations" || inicial === "history" || inicial === "sites" || inicial === "apps") return inicial;
     return params.has("watcher") || params.has("status") || params.has("date") || Number(params.get("page")) > 1 ? "history" : "automations";
@@ -82,13 +75,11 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
   const [instabilidade, setInstabilidade] = useState<WatcherOps | null>(null), [nota, setNota] = useState(""), [chamado, setChamado] = useState("");
   const [detalhe, setDetalhe] = useState<EventoOps | null>(null);
   const doCatalogo = visao === "sites" || visao === "apps";
-  // Os cards só aparecem depois da primeira busca no navegador, então ler o
-  // localStorage aqui não muda o HTML do servidor.
-  const [dispensados, setDispensados] = useState<string[]>(() => typeof window === "undefined" ? [] : lerDispensados());
-  function dispensar(id: string) {
-    const lista = [...dispensados.filter(x => x !== id), id].slice(-200);
-    setDispensados(lista);
-    try { window.localStorage.setItem(CHAVE_DISPENSADOS, JSON.stringify(lista)); } catch { /* sem armazenamento: some só nesta visita */ }
+  // Aviso de erro fechado no card (28/10/2026): vale para toda a equipe e fica
+  // registrado no evento, que continua no histórico.
+  async function fecharAviso(e: EventoOps) {
+    try { await gravar(`/api/ops/avisos/${encodeURIComponent(e.id)}`, "POST", {}); await atualizar(); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Não foi possível fechar o aviso."); }
   }
   const requisicao = useRef<AbortController | null>(null);
   const query = new URLSearchParams({ page: String(pagina), ...(watcher ? { watcher } : {}), ...(status ? { status } : {}), ...(dia ? { date: dia } : {}), ...(minhas ? { mine: "1" } : {}) }).toString();
@@ -177,7 +168,11 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
         e "Minhas automações" virou um filtro ao lado da busca (26/10/2026). */}
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <SegmentedControl label="Robôs ou histórico" active={visao} onChange={setVisao} tone="brand" items={[
+          { key: "automations", label: "Robôs", icon: <Activity size={14} />, contagem: painel.watchers.length },
+          { key: "history", label: "Histórico", icon: <History size={14} />, contagem: painel.total },
+        ]} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
           {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
           <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-ui font-medium transition-colors focus-visible:outline-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand-subtle text-brand" : "border-border bg-surface text-fg-secondary hover:text-fg"}`}>
@@ -220,9 +215,9 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
                 <div className="min-w-0 px-3"><p className="mb-1.5 flex items-center gap-1.5 text-helper text-fg-secondary"><XCircle size={14} className="shrink-0 text-danger" /> Erros</p><strong className={`text-section-title font-semibold tabular-nums ${w.errorToday ? "text-danger" : "text-fg"}`}>{numero(w.errorToday)}</strong><span className="ml-1 text-helper text-fg-muted">hoje</span></div>
               </div>
               <p className="mb-2 text-helper text-fg-muted">{numero(w.totalToday)} processados hoje · último sinal: {data(w.lastHeartbeatAt)}</p>
-              {w.lastEvent && !dispensados.includes(w.lastEvent.id) && <div className="relative mb-3">
-                <button type="button" className={`block w-full rounded-md border border-border p-2.5 text-left text-helper transition-colors hover:bg-surface-hover ${w.lastEvent.status !== "SUCCESS" ? "pr-10" : ""}`} onClick={() => setDetalhe(w.lastEvent)}><span className="flex flex-wrap items-center gap-2"><Selo tom={COR[w.lastEvent.status]}>{ROTULOS_OPS[w.lastEvent.status]}</Selo><span className="text-fg-muted">{data(w.lastEvent.processedAt)}</span></span><span className="mt-2 block truncate text-fg" title={w.lastEvent.filename}>{nomeArquivo(w.lastEvent.filenameRenamed || w.lastEvent.filename)}</span></button>
-                {w.lastEvent.status !== "SUCCESS" && <IconButton size="sm" type="button" className="absolute right-1.5 top-1.5" aria-label={`Fechar aviso de ${ROTULOS_OPS[w.lastEvent.status].toLocaleLowerCase("pt-BR")} de ${w.name}`} title="Fechar aviso" onClick={() => dispensar(w.lastEvent!.id)}><X size={14} /></IconButton>}
+              {w.lastEvent && !w.lastEvent.dismissedAt && <div className="relative mb-3">
+                <button type="button" className={`block w-full rounded-md border border-border p-2.5 text-left text-helper transition-colors hover:bg-surface-hover ${w.lastEvent.status !== "SUCCESS" && podeAgir ? "pr-10" : ""}`} onClick={() => setDetalhe(w.lastEvent)}><span className="flex flex-wrap items-center gap-2"><Selo tom={COR[w.lastEvent.status]}>{ROTULOS_OPS[w.lastEvent.status]}</Selo><span className="text-fg-muted">{data(w.lastEvent.processedAt)}</span></span><span className="mt-2 block truncate text-fg" title={w.lastEvent.filename}>{nomeArquivo(w.lastEvent.filenameRenamed || w.lastEvent.filename)}</span></button>
+                {w.lastEvent.status !== "SUCCESS" && podeAgir && <IconButton size="sm" type="button" className="absolute right-1.5 top-1.5" aria-label={`Fechar aviso de ${ROTULOS_OPS[w.lastEvent.status].toLocaleLowerCase("pt-BR")} de ${w.name}`} title="Fechar aviso para toda a equipe" onClick={() => void fecharAviso(w.lastEvent!)}><X size={14} /></IconButton>}
               </div>}
               {w.instabilityReportedAt && <div className="mb-3 rounded-md bg-warning-bg p-3 text-helper text-warning-fg"><p className="mb-1 font-semibold">Instabilidade sinalizada</p><p className="whitespace-pre-wrap break-words">{w.instabilityNote}</p><p className="mt-2 break-words">{w.instabilityReportedByName} · {data(w.instabilityReportedAt)}</p>{w.instabilityTicketId && <Button variant="link" href={`/chamados/${encodeURIComponent(w.instabilityTicketId)}`} className="mt-2">Ver chamado</Button>}</div>}
               <div className="mt-auto pt-1">{botoesDePasta(w)}</div>
@@ -287,7 +282,7 @@ export function OpsCenter({ podeGerir }: { podeGerir: boolean }) {
     </Modal>
 
     <Modal open={!!detalhe} onClose={() => setDetalhe(null)} title="Detalhes do processamento" maxWidth="max-w-xl">
-      {detalhe && <div className="mt-3 space-y-4 text-ui text-fg-secondary"><Selo tom={COR[detalhe.status]}>{ROTULOS_OPS[detalhe.status]}</Selo><p>{detalhe.watcherName} · {data(detalhe.processedAt)}</p><CampoForm label="Arquivo original" htmlFor="ops-detalhe-original"><Input id="ops-detalhe-original" readOnly value={detalhe.filename} /></CampoForm>{detalhe.filenameRenamed && <CampoForm label="Arquivo de destino" htmlFor="ops-detalhe-destino"><Input id="ops-detalhe-destino" readOnly value={detalhe.filenameRenamed} /></CampoForm>}<CampoForm label="Resultado" htmlFor="ops-detalhe-resultado"><Textarea id="ops-detalhe-resultado" readOnly rows={6} value={detalhe.errorMessage || "Nenhuma mensagem adicional informada pela automação."} /></CampoForm><Button variant="secondary" onClick={() => void copiar(caminhoDoEvento(detalhe, painel?.watchers.find(w => w.slug === detalhe.watcherSlug)), "Caminho copiado.")}><Copy size={14} /> Copiar caminho do arquivo</Button></div>}
+      {detalhe && <div className="mt-3 space-y-4 text-ui text-fg-secondary"><Selo tom={COR[detalhe.status]}>{ROTULOS_OPS[detalhe.status]}</Selo><p>{detalhe.watcherName} · {data(detalhe.processedAt)}</p>{detalhe.dismissedAt && <p className="text-helper text-fg-muted">Aviso fechado por {detalhe.dismissedByName} em {data(detalhe.dismissedAt)}.</p>}<CampoForm label="Arquivo original" htmlFor="ops-detalhe-original"><Input id="ops-detalhe-original" readOnly value={detalhe.filename} /></CampoForm>{detalhe.filenameRenamed && <CampoForm label="Arquivo de destino" htmlFor="ops-detalhe-destino"><Input id="ops-detalhe-destino" readOnly value={detalhe.filenameRenamed} /></CampoForm>}<CampoForm label="Resultado" htmlFor="ops-detalhe-resultado"><Textarea id="ops-detalhe-resultado" readOnly rows={6} value={detalhe.errorMessage || "Nenhuma mensagem adicional informada pela automação."} /></CampoForm><Button variant="secondary" onClick={() => void copiar(caminhoDoEvento(detalhe, painel?.watchers.find(w => w.slug === detalhe.watcherSlug)), "Caminho copiado.")}><Copy size={14} /> Copiar caminho do arquivo</Button></div>}
     </Modal>
   </PageContainer>;
 }

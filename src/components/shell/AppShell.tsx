@@ -27,7 +27,6 @@ import {
   Bot,
   Globe,
   AppWindow,
-  History,
   FolderGit2,
   CalendarCheck,
   ChevronDown,
@@ -556,11 +555,10 @@ export function AppShell({
                     {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" cor={activeSector.color} abrirPorClique telas={[
                     // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta
-                    // Robôs, Sites e Apps. A página não tem abas; o caminho é este submenu.
-                    { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} />, ativa: visaoDoOps === "automations" },
+                    // Robôs, Sites e Apps. O Histórico fica dentro de Robôs.
+                    { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} />, ativa: visaoDoOps === "automations" || visaoDoOps === "history" },
                     { label: "Sites", href: "/ops?view=sites", icon: <Globe size={16} />, ativa: visaoDoOps === "sites" },
                     { label: "Apps", href: "/ops?view=apps", icon: <AppWindow size={16} />, ativa: visaoDoOps === "apps" },
-                    { label: "Histórico", href: "/ops?view=history", icon: <History size={16} />, ativa: visaoDoOps === "history" },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/ops" icon={<ModuleIcon code={m.code} />} label={m.label} comTelas menu={{ aberto, onClick: alternar, painelId }} />}
                   </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} />;
