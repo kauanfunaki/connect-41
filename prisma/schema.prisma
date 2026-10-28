@@ -390,6 +390,10 @@ model OpsEvent {
   n8nExecutionId String? @db.VarChar(120)
   processedAt DateTime
   receivedAt DateTime @default(now())
+  /// Aviso fechado no card do robô (28/10/2026): some para toda a equipe; o
+  /// evento continua no histórico com quem fechou e quando.
+  dismissedAt DateTime?
+  dismissedBy String? @db.VarChar(191)
   watcher OpsWatcher @relation(fields: [tenantId, watcherSlug], references: [tenantId, slug])
   @@unique([tenantId, watcherSlug, eventId])
   @@index([tenantId, processedAt])
