@@ -123,6 +123,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   AVISO_ORGAO_SEM_PROCESSO: a("processo", "warning", "Aviso sem processo"),
   PROCESS_VARREDURA: a("processo", "info", "Varredura de processos"),
   LICENCA_VARREDURA: a("processo", "info", "Varredura de licenças"),
+  // A rotina das certidões achou uma positiva (28/10/2026).
+  CERTIDAO_POSITIVA: a("documento", "danger", "Certidão positiva"),
   SOLICITACAO_PRAZO: a("prazo", "danger", "Prazo da solicitação"),
 };
 
