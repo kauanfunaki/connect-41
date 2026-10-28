@@ -17,12 +17,19 @@ const spedSyncStateUpdate = vi.fn();
 const companyFindMany = vi.fn();
 const fiscalDocumentUpsert = vi.fn();
 const fiscalDocumentUpdateMany = vi.fn();
+const fiscalDocumentFindFirst = vi.fn();
+const fiscalDocumentUpdate = vi.fn();
 
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({
     spedSyncState: { upsert: spedSyncStateUpsert, update: spedSyncStateUpdate },
     company: { findMany: companyFindMany },
-    fiscalDocument: { upsert: fiscalDocumentUpsert, updateMany: fiscalDocumentUpdateMany },
+    fiscalDocument: {
+      upsert: fiscalDocumentUpsert,
+      updateMany: fiscalDocumentUpdateMany,
+      findFirst: fiscalDocumentFindFirst,
+      update: fiscalDocumentUpdate,
+    },
   }),
 }));
 
@@ -101,5 +108,79 @@ describe("sincronizarRaiz — estado da última execução", () => {
     await sincronizarRaiz("t-1", "12345678", creds);
 
     expect(gravacoes().at(-1)).toMatchObject({ lastError: null });
+  });
+});
+
+// A NFS-e emitida pelo Connect via Omie entra no acervo sem série (28/10/2026);
+// quando o SPED traz a mesma nota com série, a linha do Omie é adotada em vez
+// de virar uma segunda.
+describe("sincronizarRaiz — NFS-e emitida pelo Omie", () => {
+  const PRESTADOR = "11222333000181";
+  const nfse = {
+    tipo: "nfse",
+    identificador: "nfse-1",
+    chave: null,
+    cnpj_raiz: "11222333",
+    sentido: "saida",
+    competencia: "2026-10",
+    numero: "456",
+    serie: "A1",
+    data_emissao: "2026-10-28T10:00:00-03:00",
+    cnpj_emitente: PRESTADOR,
+    nome_emitente: "PRESTADOR LTDA",
+    cnpj_destinatario: null,
+    nome_destinatario: null,
+    valor: "10.00",
+    detalhe: "completo",
+    renderizavel: true,
+    removido: false,
+    atualizado_em: "2026-10-28T11:00:00",
+  };
+
+  beforeEach(() => {
+    spedSyncStateUpsert.mockReset().mockResolvedValue({ id: "s-1", cursorRetomada: null, watermark: null });
+    spedSyncStateUpdate.mockReset().mockResolvedValue({});
+    companyFindMany.mockReset().mockResolvedValue([{ id: "c-1", kind: "PESSOA_JURIDICA", cnpj: "11.222.333/0001-81", cpf: null }]);
+    fiscalDocumentUpsert.mockReset().mockResolvedValue({});
+    fiscalDocumentUpdateMany.mockReset().mockResolvedValue({ count: 0 });
+    fiscalDocumentFindFirst.mockReset();
+    fiscalDocumentUpdate.mockReset().mockResolvedValue({});
+    listarDocumentos.mockReset().mockResolvedValue({ documentos: [nfse], proximo_cursor: null, cursor_retomada: null });
+  });
+
+  it("adota a linha sem série que veio do Omie: ganha a série e a chave do SPED", async () => {
+    fiscalDocumentFindFirst.mockImplementation(async ({ where }: { where: { dedupKey: string; origin?: string } }) =>
+      where.origin === "OMIE" && where.dedupKey === `NFSE:${PRESTADOR}::456:2026-10` ? { id: "doc-omie" } : null
+    );
+
+    const r = await sincronizarRaiz("t-1", "11222333", creds);
+
+    expect(r.gravados).toBe(1);
+    expect(fiscalDocumentUpsert).not.toHaveBeenCalled();
+    expect(fiscalDocumentUpdate).toHaveBeenCalledWith({
+      where: { id: "doc-omie" },
+      data: expect.objectContaining({ dedupKey: `NFSE:${PRESTADOR}:A1:456:2026-10`, series: "A1", spedIdentificador: "nfse-1", companyId: "c-1" }),
+    });
+  });
+
+  it("sem linha do Omie, segue o upsert de sempre", async () => {
+    fiscalDocumentFindFirst.mockResolvedValue(null);
+    await sincronizarRaiz("t-1", "11222333", creds);
+    expect(fiscalDocumentUpdate).not.toHaveBeenCalled();
+    expect(fiscalDocumentUpsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("se a nota com série já existe, não mexe na do Omie (o upsert atualiza a com série)", async () => {
+    fiscalDocumentFindFirst.mockResolvedValue({ id: "qualquer" });
+    await sincronizarRaiz("t-1", "11222333", creds);
+    expect(fiscalDocumentUpdate).not.toHaveBeenCalled();
+    expect(fiscalDocumentUpsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("NFS-e sem série nem passa pela adoção", async () => {
+    listarDocumentos.mockResolvedValue({ documentos: [{ ...nfse, serie: null }], proximo_cursor: null, cursor_retomada: null });
+    await sincronizarRaiz("t-1", "11222333", creds);
+    expect(fiscalDocumentFindFirst).not.toHaveBeenCalled();
+    expect(fiscalDocumentUpsert).toHaveBeenCalledTimes(1);
   });
 });
