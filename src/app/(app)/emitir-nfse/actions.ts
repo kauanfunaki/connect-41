@@ -17,7 +17,14 @@ import { centavosDeTexto } from "@/lib/financeiro/manual";
 import { competenciaDoInstante } from "@/lib/financeiro/periodo";
 import { acessoAEmissao, MODULO_EMITIR_NFSE } from "@/lib/integracoes/omie/acessoEmissao";
 import { validarPedido } from "@/lib/integracoes/omie/emissao";
-import { cancelarEmissao, emitirNfse, listasParaEmitir, type ListasParaATela } from "@/lib/integracoes/omie/emissaoServidor";
+import {
+  buscarTomadores,
+  cancelarEmissao,
+  emitirNfse,
+  listasParaEmitir,
+  type ListasParaATela,
+  type ResultadoDaBusca,
+} from "@/lib/integracoes/omie/emissaoServidor";
 import type { EstadoDaEmissao } from "@/lib/integracoes/omie/emissao";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 
@@ -46,6 +53,14 @@ export async function carregarListasAction(
   if (!e.ok) return e;
   if (!companyId) return { ok: false, erro: "Escolha a empresa." };
   return listasParaEmitir(e.tenantId, companyId, atualizar);
+}
+
+/** O tomador que ficou fora da lista (ela para em 1.000), buscado no cadastro do Omie. Só leitura. */
+export async function buscarTomadoresAction(companyId: string, termo: string): Promise<ResultadoDaBusca> {
+  const e = await emissor();
+  if (!e.ok) return e;
+  if (!companyId) return { ok: false, erro: "Escolha a empresa." };
+  return buscarTomadores(e.tenantId, companyId, termo);
 }
 
 export type DadosDoPedido = {

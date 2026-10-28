@@ -400,3 +400,83 @@ describe("cancelar", () => {
     expect(chamadas.map((c) => c.call)).not.toContain("CancelarOS");
   });
 });
+
+describe("buscar tomador fora da lista", () => {
+  // A lista parou no teto de páginas (a MULTI tem 1.401 clientes, 28/10/2026):
+  // a página 1 se repete e o total diz 15.
+  function listaCortada(achados: (filtro: Record<string, unknown>) => unknown[] | null) {
+    respostas.ListarClientes = (p) => {
+      const filtro = p.clientesFiltro as Record<string, unknown> | undefined;
+      if (!filtro) {
+        return {
+          corpo: {
+            total_de_paginas: 15,
+            clientes_cadastro: [{ codigo_cliente_omie: 2485994, razao_social: "TOMADOR UM LTDA", cnpj_cpf: "98.765.432/0001-10", inativo: "N", bloquear_faturamento: "N" }],
+          },
+        };
+      }
+      const lista = achados(filtro);
+      if (!lista) return { status: 500, corpo: { faultstring: "ERROR: Não existem registros para a página [1]!" } };
+      return { corpo: { total_de_paginas: 1, clientes_cadastro: lista } };
+    };
+  }
+  const DOIS = { codigo_cliente_omie: 4100002, razao_social: "TOMADOR DOIS LTDA", nome_fantasia: "Dois", cnpj_cpf: "12.345.678/0001-95", inativo: "N", bloquear_faturamento: "N" };
+
+  it("acha pela razão social e o achado pode ser emitido", async () => {
+    const { buscarTomadores } = await import("./emissaoServidor");
+    listaCortada((f) => (f.razao_social ? [DOIS] : null));
+    const listas = await listasParaEmitir("t1", "erdias");
+    expect(listas).toMatchObject({ ok: true, listas: { clientesCortados: true } });
+
+    const r = await buscarTomadores("t1", "erdias", "  tomador dois ");
+    expect(r).toEqual({ ok: true, clientes: [{ codigo: "4100002", nome: "TOMADOR DOIS LTDA", documento: "12345678000195", cidade: null }], bloqueados: 0 });
+    const busca = chamadas.filter((c) => c.call === "ListarClientes" && c.param.clientesFiltro);
+    expect(busca.map((c) => c.param.clientesFiltro)).toEqual([{ razao_social: "tomador dois" }]);
+
+    const e = await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: { ...PEDIDO, tomadorCodigo: "4100002" }, agora: AGORA });
+    expect(e).toMatchObject({ ok: true, estado: "PROCESSANDO" });
+    expect(chamadas.map((c) => c.call)).not.toContain("ConsultarCliente");
+  });
+
+  it("sem achado na razão social, tenta o nome fantasia", async () => {
+    const { buscarTomadores } = await import("./emissaoServidor");
+    listaCortada((f) => (f.nome_fantasia ? [DOIS] : null));
+    const r = await buscarTomadores("t1", "erdias", "Dois");
+    expect(r).toMatchObject({ ok: true, clientes: [{ codigo: "4100002" }] });
+    const filtros = chamadas.filter((c) => c.param.clientesFiltro).map((c) => c.param.clientesFiltro);
+    expect(filtros).toEqual([{ razao_social: "Dois" }, { nome_fantasia: "Dois" }]);
+  });
+
+  it("CNPJ completo vai pelo documento, formatado; nada achado não é erro", async () => {
+    const { buscarTomadores } = await import("./emissaoServidor");
+    listaCortada(() => null);
+    const r = await buscarTomadores("t1", "erdias", "12345678000195");
+    expect(r).toEqual({ ok: true, clientes: [], bloqueados: 0 });
+    const filtros = chamadas.filter((c) => c.param.clientesFiltro).map((c) => c.param.clientesFiltro);
+    expect(filtros).toEqual([{ cnpj_cpf: "12.345.678/0001-95" }]);
+  });
+
+  it("termo curto não chega ao Omie", async () => {
+    const { buscarTomadores } = await import("./emissaoServidor");
+    const r = await buscarTomadores("t1", "erdias", "ab");
+    expect(r.ok).toBe(false);
+    expect(chamadas).toEqual([]);
+  });
+
+  it("tomador fora das listas guardadas é conferido no Omie antes de emitir, e o bloqueado é recusado", async () => {
+    listaCortada(() => null);
+    respostas.ConsultarCliente = () => ({ corpo: { ...DOIS, bloquear_faturamento: "S" } });
+    const e = await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: { ...PEDIDO, tomadorCodigo: "4100002" }, agora: AGORA });
+    expect(e.ok).toBe(false);
+    expect(chamadas.find((c) => c.call === "ConsultarCliente")!.param).toEqual({ codigo_cliente_omie: 4100002 });
+    expect(chamadas.map((c) => c.call)).not.toContain("IncluirOS");
+  });
+
+  it("tomador conferido no Omie e liberado é emitido", async () => {
+    listaCortada(() => null);
+    respostas.ConsultarCliente = () => ({ corpo: DOIS });
+    const e = await emitirNfse({ tenantId: "t1", companyId: "erdias", userId: "u1", pedido: { ...PEDIDO, tomadorCodigo: "4100002" }, agora: AGORA });
+    expect(e).toMatchObject({ ok: true, estado: "PROCESSANDO" });
+    expect(banco.emissoes[0]).toMatchObject({ tomadorCodigoOmie: "4100002", tomadorNome: "TOMADOR DOIS LTDA" });
+  });
+});

@@ -29,8 +29,11 @@ import { instanciaDaEmpresa, PREFIXO_DA_EMPRESA } from "./contas";
 import { chamarOmieNaFila, idDaConta, pausaAte, pausaPedidaPeloOmie } from "./fila";
 import { empresasDoGrupo } from "./sincronizacao";
 import {
+  clienteDaConsulta,
   clientesDaPagina,
   comoCancelar,
+  filtrosDeBuscaDeCliente,
+  MIN_LETRAS_DA_BUSCA,
   conferirEmissor,
   dataDoOmie,
   desfechoDoStatus,
@@ -271,6 +274,96 @@ export async function listasParaEmitir(
   };
 }
 
+// ─── Buscar tomador fora da lista ───────────────────────────────────────────
+
+/** Até 50 achados por busca: o bastante para escolher, sem gastar páginas. */
+const ACHADOS_POR_BUSCA = 50;
+
+export type ResultadoDaBusca =
+  | { ok: true; clientes: ClienteDoOmie[]; bloqueados: number }
+  | { ok: false; erro: string };
+
+/**
+ * Busca no Omie o tomador que ficou fora da lista (28/10/2026): a lista para em
+ * 1.000 clientes, e a busca vai direto ao cadastro da conta, por CNPJ/CPF ou
+ * pelo nome (razão social, depois nome fantasia). Só leitura no Omie. Os
+ * achados entram nas listas guardadas, para o formulário e a emissão os
+ * reconhecerem enquanto elas valerem; depois, `emitirNfse` confere o cadastro.
+ */
+export async function buscarTomadores(tenantId: string, companyId: string, termo: string): Promise<ResultadoDaBusca> {
+  const filtros = filtrosDeBuscaDeCliente(termo);
+  if (filtros.length === 0) {
+    return { ok: false, erro: `Digite o CNPJ ou CPF completo, ou pelo menos ${MIN_LETRAS_DA_BUSCA} letras do nome.` };
+  }
+  const p = await preparar(tenantId, companyId, false);
+  if (!p.ok) return p;
+  if (!p.conferencia.pode) return { ok: false, erro: p.conferencia.motivo };
+
+  const clientes: ClienteDoOmie[] = [];
+  const bloqueados: string[] = [];
+  try {
+    for (const clientesFiltro of filtros) {
+      let r: ReturnType<typeof clientesDaPagina>;
+      try {
+        r = clientesDaPagina(
+          await chamarOmieNaFila(p.conta.cred, "geral/clientes", "ListarClientes", {
+            pagina: 1,
+            registros_por_pagina: ACHADOS_POR_BUSCA,
+            apenas_importado_api: "N",
+            clientesFiltro,
+          })
+        );
+      } catch (err) {
+        // "Não existem registros para a página [1]!" é busca sem achado, não erro.
+        if (ehNaoEncontrada(err)) continue;
+        throw err;
+      }
+      clientes.push(...r.clientes.filter((c) => !clientes.some((x) => x.codigo === c.codigo)));
+      bloqueados.push(...r.bloqueados.filter((b) => !bloqueados.includes(b)));
+      if (clientes.length > 0) break;
+    }
+  } catch (err) {
+    return { ok: false, erro: `Não deu para buscar no Omie: ${mensagemDe(err)}` };
+  }
+
+  // Os achados passam a valer para o formulário e para a emissão.
+  const chave = idDaConta(p.conta.cred);
+  const guardada = cacheDasListas.get(chave);
+  if (guardada) {
+    const novos = clientes.filter((c) => !guardada.clientes.some((x) => x.codigo === c.codigo));
+    const novosBloqueados = bloqueados.filter((b) => !guardada.clientesBloqueados.includes(b));
+    if (novos.length > 0 || novosBloqueados.length > 0) {
+      cacheDasListas.set(chave, {
+        ...guardada,
+        clientes: [...guardada.clientes, ...novos],
+        clientesBloqueados: [...guardada.clientesBloqueados, ...novosBloqueados],
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    clientes: clientes.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    bloqueados: bloqueados.length,
+  };
+}
+
+/** O cadastro de um tomador pelo código, para emitir quem veio da busca. */
+async function consultarTomador(
+  cred: CredencialOmie,
+  codigoDoCliente: string
+): Promise<{ ok: true; cliente: ClienteDoOmie | null; bloqueado: boolean } | { ok: false; erro: string }> {
+  try {
+    const r = clienteDaConsulta(
+      await chamarOmieNaFila(cred, "geral/clientes", "ConsultarCliente", { codigo_cliente_omie: Number(codigoDoCliente) })
+    );
+    return { ok: true, ...r };
+  } catch (err) {
+    if (ehNaoEncontrada(err)) return { ok: true, cliente: null, bloqueado: false };
+    return { ok: false, erro: `Não deu para conferir o tomador no Omie: ${mensagemDe(err)}` };
+  }
+}
+
 // ─── Emitir ─────────────────────────────────────────────────────────────────
 
 export type ResultadoDaEmissao =
@@ -300,7 +393,17 @@ export async function emitirNfse(p: {
   if (listas.clientesBloqueados.includes(p.pedido.tomadorCodigo)) {
     return { ok: false, erro: "Este tomador está com o faturamento bloqueado no cadastro do Omie. Libere por lá e atualize as listas antes de emitir." };
   }
-  const tomador = listas.clientes.find((c) => c.codigo === p.pedido.tomadorCodigo);
+  let tomador: ClienteDoOmie | undefined = listas.clientes.find((c) => c.codigo === p.pedido.tomadorCodigo);
+  if (!tomador && listas.clientesCortados) {
+    // Achado pela busca (a lista parou nos primeiros 1.000): confere o cadastro
+    // dele direto no Omie, com a mesma regra da lista.
+    const consulta = await consultarTomador(conta.cred, p.pedido.tomadorCodigo);
+    if (!consulta.ok) return consulta;
+    if (consulta.bloqueado) {
+      return { ok: false, erro: "Este tomador está com o faturamento bloqueado no cadastro do Omie. Libere por lá e busque de novo antes de emitir." };
+    }
+    tomador = consulta.cliente ?? undefined;
+  }
   if (!tomador) return { ok: false, erro: "O tomador escolhido não está na lista do Omie desta conta. Atualize as listas e escolha de novo." };
   const servico = listas.servicos.find((s) => s.codigo === p.pedido.servicoCodigo);
   if (!servico) return { ok: false, erro: "O serviço escolhido não está no cadastro do Omie desta conta. Atualize as listas e escolha de novo." };
