@@ -7,6 +7,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
+import { DIAS_DAS_FERIAS_A_VENCER } from "@/lib/ferias/regras";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -49,7 +50,7 @@ export function classificarFerias(
   return { situacao: "EM_DIA", diasParaVencer: dias };
 }
 
-export const FERIAS_JANELA_DIAS = 60;
+export const FERIAS_JANELA_DIAS = DIAS_DAS_FERIAS_A_VENCER;
 
 export async function getRelatorioFerias(ctx: AuthContext, hoje = new Date()): Promise<FeriasRow[]> {
   const prisma = getPrisma();
