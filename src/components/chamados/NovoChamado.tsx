@@ -226,9 +226,9 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
           {etapa === 3 && <fieldset disabled={!!busy} className="space-y-5">
             <div>
               <h2 className="text-heading font-semibold text-fg">Revisão do chamado</h2>
-              <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA preencheu tudo com o pedido e a conversa. Confira e mude o que precisar."}</p>
+              <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA montou o chamado com o pedido e a conversa. Confira o título, a descrição e os anexos."}</p>
             </div>
-            <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} />
+            <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} revisao />
           </fieldset>}
         </div>
       </div>

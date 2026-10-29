@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AppWindow, ArrowLeft, Bot, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
+import { AppWindow, ArrowLeft, Bot, Check, Copy, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -105,6 +105,10 @@ function Digitando() {
 const ICONES = { robo: Bot, site: Globe, app: AppWindow };
 function CartaoDoExistente({ e, busy, onAceitar, onRecusar }: { e: Existente; busy: boolean; onAceitar: () => void; onRecusar: () => void }) {
   const Icone = ICONES[e.tipo], primeiroNome = e.responsavel?.trim().split(/\s+/)[0];
+  // Texto pronto para quem pediu confirmar com o responsável, sem precisar do Ops Center.
+  const mensagem = `Oi, ${primeiroNome}! Tudo bem? Ia abrir um chamado e vi que já existe o ${ROTULOS_EXISTENTE[e.tipo]} "${e.nome}", que fica com você. Ele atende ao que eu preciso? Se sim, como faço para usar?`;
+  const [copiado, setCopiado] = useState(false);
+  function copiar() { navigator.clipboard.writeText(mensagem).then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); }, () => {}); }
   return <div className="c41-surgir max-w-[85%] rounded-2xl rounded-tl-md border border-brand/30 bg-surface p-4 shadow-xs">
     <p className="mb-3 text-helper font-medium text-brand">{e.match === "same" ? "Já existe no Ops Center" : "Pode ser parecido, no Ops Center"}</p>
     <div className="flex items-start gap-3">
@@ -113,12 +117,16 @@ function CartaoDoExistente({ e, busy, onAceitar, onRecusar }: { e: Existente; bu
         <p className="break-words font-semibold text-fg">{e.nome}</p>
         <p className="text-helper text-fg-muted">{ROTULOS_EXISTENTE[e.tipo][0].toLocaleUpperCase("pt-BR") + ROTULOS_EXISTENTE[e.tipo].slice(1)}{e.detalhe ? `, ${e.detalhe}` : ""}</p>
         <p className="mt-2 text-ui text-fg-secondary">Responsável: <strong className="text-fg">{e.responsavel ?? "sem responsável definido"}</strong></p>
-        {(e.endereco || e.noOps) && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-helper">
-          {e.endereco && <a href={e.endereco} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Abrir {ROTULOS_EXISTENTE[e.tipo]}</a>}
-          {e.noOps && <a href={e.noOps} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Ver no Ops Center</a>}
-        </div>}
+        {e.endereco && <div className="mt-2 text-helper"><a href={e.endereco} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Abrir {ROTULOS_EXISTENTE[e.tipo]}</a></div>}
       </div>
     </div>
+    {e.responsavel && <div className="mt-4 rounded-lg bg-surface-hover p-3">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="text-helper font-medium text-fg-secondary">Mensagem para {primeiroNome}</p>
+        <Button size="sm" variant="ghost" onClick={copiar}>{copiado ? <Check size={14} /> : <Copy size={14} />}{copiado ? "Copiada" : "Copiar"}</Button>
+      </div>
+      <p className="whitespace-pre-line break-words text-ui text-fg">{mensagem}</p>
+    </div>}
     <div className="mt-4 flex flex-wrap gap-2">
       <Button size="sm" disabled={busy} onClick={onAceitar}>{primeiroNome ? `É isso, vou falar com ${primeiroNome}` : "É isso"}</Button>
       <Button size="sm" variant="secondary" disabled={busy} onClick={onRecusar}>Não é o que preciso</Button>
