@@ -159,31 +159,35 @@
   --c41-scrollbar-thumb-active:rgba(15,26,51,.4);
 }
 
+/* Escuro "Ardósia" (29/10/2026, escolha C da página de tema): o azul-marinho
+   quase preto (#0D1322) com letra quase branca foi relatado como pesado. O fundo
+   subiu para um azul acinzentado e a letra desceu um tom; o azul da 41 fica nos
+   destaques, e a lateral um degrau abaixo da tela separa o menu do conteúdo. */
 .c41-previa-escura,
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --c41-canvas:          #0D1322;
-  --c41-sidebar-bg:      #101828;
-  --c41-topbar-bg:       #0D1322;
-  --c41-surface:         #141D30;
-  --c41-surface-hover:   #1B2640;
-  --c41-surface-elevated:#202C46;
-  --c41-input-bg:        #111A2B;
-  --c41-table-header-bg: #182339;
-  --c41-table-header-fg: #8FB0FF;
+  --c41-canvas:          #1C2230;
+  --c41-sidebar-bg:      #181D29;
+  --c41-topbar-bg:       #1C2230;
+  --c41-surface:         #242B3A;
+  --c41-surface-hover:   #2C3446;
+  --c41-surface-elevated:#2F3849;
+  --c41-input-bg:        #1F2634;
+  --c41-table-header-bg: #283042;
+  --c41-table-header-fg: #A3BEFF;
   --c41-table-header-divider: rgba(143,176,255,.24);
-  --c41-border:          rgba(140,170,255,.11);
-  --c41-border-strong:   rgba(140,170,255,.22);
-  --c41-fg:              #EEF3FF;
-  --c41-fg-secondary:    #B5C2DD;
-  --c41-fg-muted:        #8494B4;
+  --c41-border:          #323B4E;
+  --c41-border-strong:   #46516A;
+  --c41-fg:              #DCE3EF;
+  --c41-fg-secondary:    #AEB9CC;
+  --c41-fg-muted:        #8F9BB1;
   /* O azul como TEXTO no escuro (abas, links, ícones): entre o brand-300 e o
      brand-400, mais claro que o 400 de antes para ler bem sobre o fundo azul-
      -escuro da paleta B (13/10/2026). Preenchimento com letra branca continua
      no --c41-brand-solid (brand-600). */
-  --c41-brand:           #7AA3FF;
+  --c41-brand:           #8AAEFF;
   --c41-brand-hover:     var(--c41-brand-300);
-  --c41-brand-subtle:    rgba(122,163,255,.18);
+  --c41-brand-subtle:    rgba(138,174,255,.15);
   --c41-on-brand:        #FFFFFF;
   --c41-success:         var(--c41-success-dark);
   --c41-success-bg:      rgba(63,204,143,.14);
@@ -206,42 +210,42 @@
   --c41-focus-ring:      rgba(92,139,240,.45);
   --c41-selected-bg:     rgba(31,94,234,.22);
   --c41-disabled-op:     .42;
-  --c41-shadow-sm:       0 2px 8px rgba(0,0,0,.45);
-  --c41-shadow-lg:       0 20px 48px rgba(0,0,0,.55);
+  --c41-shadow-sm:       0 2px 8px rgba(0,0,0,.30);
+  --c41-shadow-lg:       0 20px 48px rgba(0,0,0,.42);
   --c41-scrollbar-thumb:       rgba(255,255,255,.14);
   --c41-scrollbar-thumb-hover: rgba(255,255,255,.24);
   --c41-scrollbar-thumb-active:rgba(255,255,255,.34);
   /* Os grupos do portal no escuro: o mesmo matiz, clareado até ler. */
-  --c41-grupo-financeiro:#3E8F1F;  --c41-grupo-financeiro-fg:#62A349;
-  --c41-grupo-fiscal:#D7731A;  --c41-grupo-fiscal-fg:#DB7E2C;
-  --c41-grupo-pessoas:#CB4478;  --c41-grupo-pessoas-fg:#D97299;
-  --c41-grupo-recrutamento:#8365D8;  --c41-grupo-recrutamento-fg:#9E86DF;
-  --c41-grupo-processos:#D44A3C;  --c41-grupo-processos-fg:#DE776C;
-  --c41-grupo-atendimento:#0E8E8A;  --c41-grupo-atendimento-fg:#3BA39F;
-  --c41-grupo-escritorio:#1A84C2;  --c41-grupo-escritorio-fg:#449BCC;
+  --c41-grupo-financeiro:#469328;  --c41-grupo-financeiro-fg:#7AB164;
+  --c41-grupo-fiscal:#D7731A;  --c41-grupo-fiscal-fg:#DF924B;
+  --c41-grupo-pessoas:#D15987;  --c41-grupo-pessoas-fg:#DE87A9;
+  --c41-grupo-recrutamento:#8D71DB;  --c41-grupo-recrutamento-fg:#AA94E2;
+  --c41-grupo-processos:#D8584B;  --c41-grupo-processos-fg:#E28B82;
+  --c41-grupo-atendimento:#18938F;  --c41-grupo-atendimento-fg:#59B1AE;
+  --c41-grupo-escritorio:#2389C4;  --c41-grupo-escritorio-fg:#60ABD4;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     color-scheme: dark;
-    --c41-canvas:          #0D1322;
-    --c41-sidebar-bg:      #101828;
-    --c41-topbar-bg:       #0D1322;
-    --c41-surface:         #141D30;
-    --c41-surface-hover:   #1B2640;
-    --c41-surface-elevated:#202C46;
-    --c41-input-bg:        #111A2B;
-    --c41-table-header-bg: #182339;
-    --c41-table-header-fg: #8FB0FF;
+    --c41-canvas:          #1C2230;
+    --c41-sidebar-bg:      #181D29;
+    --c41-topbar-bg:       #1C2230;
+    --c41-surface:         #242B3A;
+    --c41-surface-hover:   #2C3446;
+    --c41-surface-elevated:#2F3849;
+    --c41-input-bg:        #1F2634;
+    --c41-table-header-bg: #283042;
+    --c41-table-header-fg: #A3BEFF;
     --c41-table-header-divider: rgba(143,176,255,.24);
-    --c41-border:          rgba(140,170,255,.11);
-    --c41-border-strong:   rgba(140,170,255,.22);
-    --c41-fg:              #EEF3FF;
-    --c41-fg-secondary:    #B5C2DD;
-    --c41-fg-muted:        #8494B4;
-    --c41-brand:           #7AA3FF;
+    --c41-border:          #323B4E;
+    --c41-border-strong:   #46516A;
+    --c41-fg:              #DCE3EF;
+    --c41-fg-secondary:    #AEB9CC;
+    --c41-fg-muted:        #8F9BB1;
+    --c41-brand:           #8AAEFF;
     --c41-brand-hover:     var(--c41-brand-300);
-    --c41-brand-subtle:    rgba(122,163,255,.18);
+    --c41-brand-subtle:    rgba(138,174,255,.15);
     --c41-on-brand:        #FFFFFF;
     --c41-success:         var(--c41-success-dark);
     --c41-success-bg:      rgba(63,204,143,.14);
@@ -262,18 +266,18 @@
     --c41-focus-ring:      rgba(92,139,240,.45);
     --c41-selected-bg:     rgba(31,94,234,.22);
     --c41-disabled-op:     .42;
-    --c41-shadow-sm:       0 2px 8px rgba(0,0,0,.45);
-    --c41-shadow-lg:       0 20px 48px rgba(0,0,0,.55);
+    --c41-shadow-sm:       0 2px 8px rgba(0,0,0,.30);
+    --c41-shadow-lg:       0 20px 48px rgba(0,0,0,.42);
     --c41-scrollbar-thumb:       rgba(255,255,255,.14);
     --c41-scrollbar-thumb-hover: rgba(255,255,255,.24);
     --c41-scrollbar-thumb-active:rgba(255,255,255,.34);
-    --c41-grupo-financeiro:#3E8F1F;  --c41-grupo-financeiro-fg:#62A349;
-    --c41-grupo-fiscal:#D7731A;  --c41-grupo-fiscal-fg:#DB7E2C;
-    --c41-grupo-pessoas:#CB4478;  --c41-grupo-pessoas-fg:#D97299;
-    --c41-grupo-recrutamento:#8365D8;  --c41-grupo-recrutamento-fg:#9E86DF;
-    --c41-grupo-processos:#D44A3C;  --c41-grupo-processos-fg:#DE776C;
-    --c41-grupo-atendimento:#0E8E8A;  --c41-grupo-atendimento-fg:#3BA39F;
-    --c41-grupo-escritorio:#1A84C2;  --c41-grupo-escritorio-fg:#449BCC;
+    --c41-grupo-financeiro:#469328;  --c41-grupo-financeiro-fg:#7AB164;
+    --c41-grupo-fiscal:#D7731A;  --c41-grupo-fiscal-fg:#DF924B;
+    --c41-grupo-pessoas:#D15987;  --c41-grupo-pessoas-fg:#DE87A9;
+    --c41-grupo-recrutamento:#8D71DB;  --c41-grupo-recrutamento-fg:#AA94E2;
+    --c41-grupo-processos:#D8584B;  --c41-grupo-processos-fg:#E28B82;
+    --c41-grupo-atendimento:#18938F;  --c41-grupo-atendimento-fg:#59B1AE;
+    --c41-grupo-escritorio:#2389C4;  --c41-grupo-escritorio-fg:#60ABD4;
   }
 }
 
