@@ -2,6 +2,10 @@ import { z } from "zod";
 
 export const MODULO_TECH_INTERNO = "tech_controle_interno";
 export const ROTA_TECH_INTERNO = "/tech/controle-interno";
+// Clicar em qualquer ponto da linha ou do cartão abre o item (29/10/2026): o
+// link do título se estica sobre o contêiner (que precisa ser `relative`). Só a
+// situação, uma camada acima, continua mudando ali mesmo.
+export const LINK_DO_ITEM = "after:absolute after:inset-0 after:content-['']";
 export const TAMANHO_PAGINA = 50;
 export const TIPOS = { BUG: "Bug", IMPROVEMENT: "Melhoria", FEATURE: "Nova funcionalidade", TEST: "Teste", MIGRATION: "Migração" } as const;
 export const SITUACOES = { PENDING: "Pendente", IN_PROGRESS: "Em andamento", VALIDATION: "Em validação", DONE: "Concluído", CANCELED: "Cancelado" } as const;
@@ -95,7 +99,7 @@ export function diferencas(antes: Record<string, string | null> | null, depois: 
 // O histórico conta quem fez o quê em frase (26/10/2026): "trocou o responsável
 // de Ana para Bruno", em vez de "Responsável: Ana → Bruno".
 const ARTIGO: Record<string, string> = { "Situação": "a situação", "Tipo": "o tipo", "Prioridade": "a prioridade", "Sistema": "o sistema" };
-const diaLegivel = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split("-").reverse().join("/") : v;
+export const diaLegivel = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split("-").reverse().join("/") : v;
 export function fraseDaAlteracao({ field, before, after }: Alteracao, criacao = false): string {
   const antes = before && diaLegivel(before), depois = after && diaLegivel(after);
   if (criacao) return `${field}: ${field === "Descrição" ? "preenchida" : depois ?? "não informado"}`;
@@ -107,12 +111,16 @@ export function fraseDaAlteracao({ field, before, after }: Alteracao, criacao = 
   if (field === "Prazo") return !antes ? `definiu o prazo para ${depois}` : !depois ? `removeu o prazo (era ${antes})` : `mudou o prazo de ${antes} para ${depois}`;
   return `mudou ${ARTIGO[field] ?? field.toLowerCase()} de ${antes ?? "não informado"} para ${depois ?? "não informado"}`;
 }
-// Um registro do histórico: a frase principal e, na criação ou com mais de um
-// campo, uma frase por campo. Serve o item e o histórico geral (29/10/2026).
-export function resumoDoRegistro(changes: Alteracao[], version: number) {
-  const criacao = version === 0;
-  return {
-    frase: criacao ? "criou o item" : changes.length === 1 ? fraseDaAlteracao(changes[0]) : "alterou o item",
-    detalhes: criacao || changes.length > 1 ? changes.filter(c => !criacao || c.after).map(c => fraseDaAlteracao(c, criacao)) : [],
-  };
+
+// O histórico do módulo agrupa por dia e mostra a hora, no fuso de São Paulo
+// (29/10/2026): "Hoje", "Ontem" e, antes disso, o dia por extenso.
+const FUSO = "America/Sao_Paulo";
+export function diaDoRegistro(quando: Date, agora = new Date()) {
+  const dia = hojeEmSaoPaulo(quando), hoje = hojeEmSaoPaulo(agora);
+  const ontem = hojeEmSaoPaulo(new Date(new Date(`${hoje}T12:00:00Z`).getTime() - 864e5));
+  const rotulo = dia === hoje ? "Hoje" : dia === ontem ? "Ontem" : new Intl.DateTimeFormat("pt-BR", {
+    timeZone: FUSO, weekday: "long", day: "numeric", month: "long", ...(dia.slice(0, 4) !== hoje.slice(0, 4) ? { year: "numeric" } : {}),
+  }).format(quando);
+  return { chave: dia, rotulo: rotulo.charAt(0).toUpperCase() + rotulo.slice(1) };
 }
+export const horaDoRegistro = (quando: Date) => new Intl.DateTimeFormat("pt-BR", { timeZone: FUSO, hour: "2-digit", minute: "2-digit" }).format(quando);

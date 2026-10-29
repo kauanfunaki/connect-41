@@ -31,7 +31,8 @@ export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = 
       } catch { setAtual(anterior); toast.error("Não foi possível confirmar a mudança. Atualize a página antes de tentar novamente."); }
     });
   }
-  return <div className={celula ? "absolute inset-0 [&>span]:flex [&>span]:h-full [&>span]:w-full" : "inline-flex max-w-full min-w-0 [&>span]:max-w-full"}>
+  // Uma camada acima do link esticado da linha ou do cartão (LINK_DO_ITEM).
+  return <div className={celula ? "absolute inset-0 z-[1] [&>span]:flex [&>span]:h-full [&>span]:w-full" : "relative z-[1] inline-flex max-w-full min-w-0 [&>span]:max-w-full"}>
     <Popover width={200} aria-label={`Situação de ${titulo}`} trigger={({ open, toggle }) => <button type="button" onClick={toggle} disabled={pendente} aria-haspopup="menu" aria-expanded={open}
       aria-label={`Situação de ${titulo}: ${SITUACOES[atual]}. Alterar`} title="Alterar situação"
       className={`${caixa} cursor-pointer font-semibold transition-[filter] hover:brightness-95 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-80`}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -10,12 +10,12 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { formatCalendarDate } from "@/lib/format";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/NavegacaoTech";
 import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { intervaloMes } from "@/lib/tech-interno/agenda";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta, nomeDoSistema } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta, nomeDoSistema, LINK_DO_ITEM } from "@/lib/tech-interno/regras";
 import { MODULO_OPS } from "@/lib/ops/regras";
 
 export const dynamic = "force-dynamic";
@@ -44,15 +44,10 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   };
   const nomeSistema = (item: typeof lista.items[number]) => nomeDoSistema(item, true);
   return <PageContainer>
-    <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech." action={<div className="flex flex-wrap gap-2">
-      {/* Os sistemas são os do Ops Center (29/10/2026): o cadastro fica lá. */}
-      {podeGerirOps && <Button href="/ops" variant="secondary">Sistemas no Ops Center</Button>}
-      <Button href={href(`${ROTA_TECH_INTERNO}/historico`)} variant="secondary">Histórico</Button>
-      {podeEditar && <Button href={href(`${ROTA_TECH_INTERNO}/novo`)}>Novo item</Button>}
-    </div>} />
+    <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech." action={<AcoesDoControle podeEditar={podeEditar} podeGerirOps={podeGerirOps} novoHref={href(`${ROTA_TECH_INTERNO}/novo`)} />} />
     <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-      <SegmentedControl label="Visualização do Controle interno" active={filtros.view} items={[{ key: "lista", label: "Lista", href: hrefVisao("lista") }, { key: "kanban", label: "Kanban", href: hrefVisao("kanban") }, { key: "agenda", label: "Agenda", href: hrefVisao("agenda") }]} />
-      {filtros.view === "agenda" && <nav className="flex items-center gap-3" aria-label="Mês da agenda"><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.anterior)}>Mês anterior</Button><span className="text-ui font-medium">{new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(mes.inicio)}</span><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.proximo)}>Próximo mês</Button></nav>}
+      <VisoesDoControle ativa={filtros.view} href={v => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : hrefVisao(v)} />
+      {filtros.view === "agenda" && <nav className="flex items-center gap-3" aria-label="Mês da agenda"><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.anterior)}><ChevronLeft size={14} aria-hidden />Mês anterior</Button><span className="text-ui font-medium">{new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(mes.inicio)}</span><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.proximo)}>Próximo mês<ChevronRight size={14} aria-hidden /></Button></nav>}
     </div>
     <CascoDaTabela buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[
       { chave: "situacao", rotulo: "Situação", vazioLabel: filtros.view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(filtros.view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
@@ -63,15 +58,15 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
       { chave: "atrasados", rotulo: "Prazo", vazioLabel: "Todos", opcoes: [{ value: "1", label: "Atrasados" }] },
     ]} />}>
       {filtros.view !== "lista" ? <VisoesTech voltar={voltar} view={filtros.view} month={filtros.month} today={hoje} canEdit={podeEditar} items={lista.items.map(item => ({ id: item.id, title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
-        <CartoesNoCelular>{lista.items.map(item => <Cartao key={item.id}>
-          <TopoDoCartao nome={<Link className="text-fg hover:text-brand" href={href(`${ROTA_TECH_INTERNO}/${item.id}`)}>{item.title}</Link>} />
+        <CartoesNoCelular>{lista.items.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
+          <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={href(`${ROTA_TECH_INTERNO}/${item.id}`)}>{item.title}</Link>} />
           <InfoDoCartao>{TIPOS[item.type]} · {PRIORIDADES[item.priority]}</InfoDoCartao><InfoDoCartao>{nomeSistema(item)}</InfoDoCartao>
           <InfoDoCartao>{item.assignee?.name ?? "Sem responsável"} · {prazoDoItem(item)}</InfoDoCartao>
           <PeDoCartao><SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></PeDoCartao>
         </Cartao>)}</CartoesNoCelular>
         <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Tipo", "Prioridade", "Sistema", "Situação", "Responsável", "Prazo"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
-          <tbody className="divide-y divide-border">{lista.items.map(item => <tr key={item.id} className="hover:bg-surface-hover">
-            <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={href(`${ROTA_TECH_INTERNO}/${item.id}`)} className="font-medium text-fg hover:text-brand">{item.title}</Link></td>
+          <tbody className="divide-y divide-border">{lista.items.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
+            <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={href(`${ROTA_TECH_INTERNO}/${item.id}`)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
             <td className="px-4 py-3">{TIPOS[item.type]}</td><td className={`px-4 py-3 ${item.priority >= 2 ? "font-semibold" : ""}`}>{PRIORIDADES[item.priority]}</td>
             <td className="px-4 py-3 break-words max-w-48">{nomeSistema(item)}</td><td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech key={`${item.id}:${item.version}`} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></td>
             <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td><td className="px-4 py-3 whitespace-nowrap">{prazoDoItem(item)}</td>

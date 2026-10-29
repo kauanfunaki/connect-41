@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, resumoDoRegistro, SEM_VINCULO } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -92,10 +92,13 @@ describe("controle interno do Tech", () => {
     expect(fraseDaAlteracao({ field: "Vínculo do responsável", before: "id-1", after: "id-2" })).not.toContain("id-");
     expect(fraseDaAlteracao({ field: "Prioridade", before: null, after: "Alta" }, true)).toBe("Prioridade: Alta");
   });
-  it("resume cada registro do histórico em uma frase e, se preciso, detalhes", () => {
-    expect(resumoDoRegistro([{ field: "Título", before: null, after: "Novo" }, { field: "Prazo", before: null, after: null }], 0)).toEqual({ frase: "criou o item", detalhes: ["Título: Novo"] });
-    expect(resumoDoRegistro([{ field: "Situação", before: "Pendente", after: "Concluído" }], 3)).toEqual({ frase: "mudou a situação de Pendente para Concluído", detalhes: [] });
-    expect(resumoDoRegistro([{ field: "Tipo", before: "Bug", after: "Teste" }, { field: "Prazo", before: null, after: "2026-10-29" }], 2))
-      .toEqual({ frase: "alterou o item", detalhes: ["mudou o tipo de Bug para Teste", "definiu o prazo para 29/10/2026"] });
+  it("agrupa o histórico por dia em São Paulo: hoje, ontem e o dia por extenso", () => {
+    const agora = new Date("2026-10-29T15:00:00Z");
+    expect(diaDoRegistro(new Date("2026-10-29T13:34:00Z"), agora)).toEqual({ chave: "2026-10-29", rotulo: "Hoje" });
+    // 01h UTC do dia 29 ainda é dia 28 em São Paulo.
+    expect(diaDoRegistro(new Date("2026-10-29T01:00:00Z"), agora)).toEqual({ chave: "2026-10-28", rotulo: "Ontem" });
+    expect(diaDoRegistro(new Date("2026-10-27T15:00:00Z"), agora).rotulo).toBe("Terça-feira, 27 de outubro");
+    expect(diaDoRegistro(new Date("2025-12-31T15:00:00Z"), agora).rotulo).toBe("Quarta-feira, 31 de dezembro de 2025");
+    expect(horaDoRegistro(new Date("2026-10-29T16:34:00Z"))).toBe("13:34");
   });
 });

@@ -134,12 +134,16 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   it("o histórico geral traz cada alteração com autor, item e ordem mais recente", async () => {
     assumir(contexto()); const itemId = id(await salvarItem(criar({ title: "Histórico geral" })));
     expect(await mudarSituacaoItem(itemId, "VALIDATION", 0)).toMatchObject({ ok: true });
-    const { changes, total } = await historicoTech(ctx, 1);
+    const { changes, total } = await historicoTech(ctx, { pagina: 1 });
     expect(total).toBeGreaterThanOrEqual(2);
     expect(changes[0]).toMatchObject({ itemId, authorId: tech, version: 1, item: { title: "Histórico geral" }, changes: [{ field: "Situação", before: "Pendente", after: "Em validação" }] });
     expect(changes[1]).toMatchObject({ itemId, version: 0 });
-    assumir(contexto(externo, "SECTOR_USER", ["tech"], outroTenant)); expect((await historicoTech(ctx, 1)).changes.some(c => c.itemId === itemId)).toBe(false);
-    assumir(contexto(fiscal, "SECTOR_USER", ["fiscal"])); await expect(historicoTech(ctx, 1)).rejects.toThrow();
+    expect((await historicoTech(ctx, { pagina: 1, q: "Histórico geral" })).changes.every(c => c.itemId === itemId)).toBe(true);
+    const porAutor = await historicoTech(ctx, { pagina: 1, autor: tech });
+    expect(porAutor.changes.length).toBeGreaterThan(0); expect(porAutor.changes.every(c => c.authorId === tech)).toBe(true);
+    expect(porAutor.autores).toEqual(expect.arrayContaining([{ authorId: tech, authorName: "Pessoa fictícia SECTOR_USER" }]));
+    assumir(contexto(externo, "SECTOR_USER", ["tech"], outroTenant)); expect((await historicoTech(ctx, { pagina: 1 })).changes.some(c => c.itemId === itemId)).toBe(false);
+    assumir(contexto(fiscal, "SECTOR_USER", ["fiscal"])); await expect(historicoTech(ctx, { pagina: 1 })).rejects.toThrow();
   });
   it("excluir a conta solta o responsável e preserva comentários e autoria do histórico", async () => {
     const temporario = await novoUsuario(tenantId, "SECTOR_USER", "tech"); assumir(contexto(temporario));

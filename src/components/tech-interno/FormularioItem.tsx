@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
@@ -88,6 +89,6 @@ export function FormularioComentario({ id }: { id: string }) {
   }}>
     <CampoForm label="Comentário" htmlFor="tech-comment"><Textarea id="tech-comment" name="body" value={texto} onChange={e => setTexto(e.target.value)} rows={3} maxLength={5000} required disabled={pendente} /></CampoForm>
     {erro && <p role="alert" className="text-helper text-danger">{erro}</p>}
-    <Button className="self-end" type="submit" loading={pendente}>Adicionar comentário</Button>
+    <Button className="self-end" type="submit" loading={pendente}><MessageSquarePlus size={14} aria-hidden />Adicionar comentário</Button>
   </form>;
 }

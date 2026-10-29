@@ -202,15 +202,23 @@ export async function comentarItem(id: string, body: unknown): Promise<Resultado
 }
 
 // O histórico do Controle interno inteiro (29/10/2026): toda alteração de item,
-// de qualquer pessoa, da mais recente para a mais antiga.
-export async function historicoTech(ctx: AuthContext, pagina: number) {
+// de qualquer pessoa, da mais recente para a mais antiga. Filtra pelo título do
+// item e por quem fez; a lista de pessoas é a de quem já tem registro.
+export async function historicoTech(ctx: AuthContext, filtros: { pagina: number; q?: string; autor?: string }) {
   await conferirAcesso(ctx, "ver");
-  const where = { tenantId: ctx.tenantId };
+  const where: Prisma.TechInternalChangeWhereInput = {
+    tenantId: ctx.tenantId,
+    ...(filtros.autor ? { authorId: filtros.autor } : {}),
+    ...(filtros.q ? { item: { title: { contains: filtros.q } } } : {}),
+  };
   return getPrisma().$transaction(async tx => {
     const total = await tx.techInternalChange.count({ where });
-    const pages = Math.max(1, Math.ceil(total / TAMANHO_PAGINA)), page = Math.min(pagina, pages);
-    const changes = await tx.techInternalChange.findMany({ where, include: { item: { select: { title: true } } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
-      orderBy: [{ createdAt: "desc" }, { version: "desc" }, { id: "asc" }] });
-    return { total, pages, page, changes };
+    const pages = Math.max(1, Math.ceil(total / TAMANHO_PAGINA)), page = Math.min(filtros.pagina, pages);
+    const [changes, autores] = await Promise.all([
+      tx.techInternalChange.findMany({ where, include: { item: { select: { title: true, type: true, status: true } } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
+        orderBy: [{ createdAt: "desc" }, { version: "desc" }, { id: "asc" }] }),
+      tx.techInternalChange.findMany({ where: { tenantId: ctx.tenantId }, distinct: ["authorId"], select: { authorId: true, authorName: true }, orderBy: { authorName: "asc" } }),
+    ]);
+    return { total, pages, page, changes, autores };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
