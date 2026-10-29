@@ -154,6 +154,8 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
           retentionsByTax: doc.retencoesPorTributo ?? undefined,
           // As duplicatas da NF-e (23/10): a conta da nota (a pagar ou a receber) nasce parcelada por elas.
           installments: doc.duplicatas ?? undefined,
+          // O de-para contábil procura o fornecedor pelo CFOP da nota (29/10/2026).
+          cfops: doc.cfops?.length ? doc.cfops.join(",") : null,
           issuedAt: doc.emitidoEm,
           competence: competencia,
           origin: "UPLOAD",
