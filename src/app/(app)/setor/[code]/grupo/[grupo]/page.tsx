@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { grupoDoSlug } from "@/lib/module-catalog";
+import { MODULOS_NOS_CADASTROS, grupoDoSlug } from "@/lib/module-catalog";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
@@ -34,13 +34,15 @@ export default async function GrupoDoSetorPage({
   const grupo = grupoDoSlug(slug);
   if (!grupo) notFound();
 
-  const [allModules, { labels, colors }, fixadas, telasDoGeral] = await Promise.all([
+  const [allModules, { labels }, fixadas, telasDoGeral] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
     telasDoGeralDaPessoa(ctx),
   ]);
-  const modules = allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled);
+  // Sem Fornecedores e sacados, que mora em Cadastros (29/10/2026): o grupo
+  // "Cadastros" do BPO deixa de ser endereço aqui.
+  const modules = allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled && !MODULOS_NOS_CADASTROS.has(m.code));
   // Grupo sem módulo ligado neste cliente não é tela vazia: é endereço que não
   // existe aqui — o módulo pode estar desligado ou pertencer a outro setor.
   // Conferido antes de tirar as telas do Geral escondidas: esconder do menu
@@ -54,7 +56,7 @@ export default async function GrupoDoSetorPage({
           com todas as telas do setor (a aba "Tudo" dos grupos). */}
       <Breadcrumb items={[{ label: `Telas · ${sectorLabel(labels, code)}`, href: `/setor/${code}/telas` }, { label: grupo }]} />
       <PageHeader title={sectorLabel(labels, code)} subtitle={`${grupo} — telas deste grupo.`} />
-      <ModulosDoSetor code={code} modulos={visiveis} cor={colors[code] ?? "#586577"} grupoAtivo={grupo} fixadas={fixadas} />
+      <ModulosDoSetor code={code} modulos={visiveis} grupoAtivo={grupo} fixadas={fixadas} />
     </PageContainer>
   );
 }

@@ -11,6 +11,7 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
+import { MODULOS_NOS_CADASTROS } from "@/lib/module-catalog";
 
 /**
  * Todas as telas de um setor, em cartões por grupo — onde se fixa uma tela na
@@ -26,7 +27,7 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
   const ctx = await getAuthContext();
   if (!canViewSector(ctx, code)) notFound();
 
-  const [allModules, { labels, colors }, fixadas, telasDoGeral] = await Promise.all([
+  const [allModules, { labels }, fixadas, telasDoGeral] = await Promise.all([
     getTenantModuleStates(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     codigosDeTelasFixadas(ctx.userId, ctx.tenantId),
@@ -34,8 +35,10 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
   ]);
   // Solicitações e Arquivos são do Geral: escondidas no menu desta pessoa
   // (Configurações › Setores, 14/10/2026), também não se oferecem para fixar.
+  // Fornecedores e sacados mora em Cadastros (29/10/2026, Kauan): repetir aqui
+  // era a mesma tela em dois menus — como já não está no menu do setor.
   const modulos = semTelasDoGeralOcultas(
-    allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled),
+    allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled && !MODULOS_NOS_CADASTROS.has(m.code)),
     telasDoGeral,
   );
 
@@ -51,7 +54,7 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
           />
         </Card>
       ) : (
-        <ModulosDoSetor code={code} modulos={modulos} cor={colors[code] ?? "#586577"} fixadas={fixadas} />
+        <ModulosDoSetor code={code} modulos={modulos} fixadas={fixadas} />
       )}
     </PageContainer>
   );

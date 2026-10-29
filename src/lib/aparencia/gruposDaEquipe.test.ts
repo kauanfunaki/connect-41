@@ -50,6 +50,13 @@ describe("grupoDaTelaDaEquipe", () => {
     expect(grupoDaTelaDaEquipe("/pagamentos")).toBeNull();
   });
 
+  it("as telas de um grupo do setor levam a área do grupo; a de todas as telas, não (29/10)", () => {
+    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/contas")).toBe("financeiro");
+    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/banco-e-caixa")).toBe("financeiro");
+    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/nao-existe")).toBeNull();
+    expect(grupoDaTelaDaEquipe("/setor/bpo/telas")).toBeNull();
+  });
+
   it("todo módulo do mapa existe no catálogo, com endereço", () => {
     for (const modulo of Object.keys(GRUPO_DO_MODULO)) expect(MODULE_ROUTES[modulo], modulo).toBeTruthy();
   });
