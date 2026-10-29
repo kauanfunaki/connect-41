@@ -9,8 +9,8 @@ describe("menu compacto do SPED", () => {
     expect(menuSped(modulos).telas.map((t) => t.label)).toEqual([
       "Classificação", "Apuração", "De-Para CFOP", "Regras", "DCIP e DIME",
     ]);
-    expect(menuSped(modulos).href).toBe("/fiscal/classificacao");
-    expect(menuSped(modulos).laterais.map((t) => t.label)).toEqual(["Painel", "Classificação e apuração", "SPED gerados", "Executar"]);
+    expect(menuSped(modulos).href).toBe("/fiscal/sped");
+    expect(menuSped(modulos).laterais.map((t) => [t.label, t.href])).toEqual([["Painel", "/fiscal"], ["SPED ICMS/IPI", "/fiscal/sped"], ["SPED gerados", "/fiscal/entregas"], ["Executar", "/fiscal/operacao"]]);
   });
   // No motor, só telas com fonte; Empresas é a entrada de Configurações (26/10/2026).
   it("no modo motor, não oferece telas sem fonte e leva às empresas", () => {
@@ -24,16 +24,22 @@ describe("menu compacto do SPED", () => {
   });
   it("remove os acessos desligados e usa uma entrada habilitada", () => {
     const menu = menuSped([{ code: "fiscal_contribuicoes", href: "/fiscal/contribuicoes" }]);
-    expect(menu.href).toBe("/fiscal/contribuicoes");
+    expect(menu.href).toBe("/fiscal/sped");
     expect(menu.telas.map((t) => [t.label, t.href])).toEqual([["Apuração", "/fiscal/contribuicoes"]]);
     expect(menuSped([])).toEqual({ href: undefined, telas: [], laterais: [] });
   });
   it("separa entregas e execução mesmo sem os módulos do SPED principal", () => {
-    const menu = menuSped([{ code: "fiscal_operacao", href: "/fiscal/operacao" }, { code: "fiscal_entregas", href: "/fiscal/entregas" }]);
+    const menu = menuSped([{ code: "fiscal_entregas", href: "/fiscal/entregas" }]);
     expect(menu.href).toBeUndefined();
-    expect(menu.laterais.map((t) => t.label)).toEqual(["SPED gerados", "Executar"]);
+    expect(menu.laterais.map((t) => t.label)).toEqual(["SPED gerados"]);
   });
-  it.each([["/fiscal", "Painel"], ["/fiscal/documentos", "Outras"], ["/fiscal/conferencia", "Outras"], ["/fiscal/classificacao", "SPED"], ["/fiscal/icms-ipi", "SPED"], ["/fiscal/configuracoes", "SPED"], ["/fiscal/contribuicoes", "SPED"], ["/fiscal/entregas", "SPED gerados"], ["/fiscal/operacao", "Executar"], ["/autorizacoes", undefined]])("marca somente a área correspondente a %s", (path, area) => {
+  // Gerar SPED é uma das quatro etapas: só o Executar já abre o SPED (29/10/2026).
+  it("leva às etapas do SPED com qualquer um dos módulos delas", () => {
+    const menu = menuSped([{ code: "fiscal_operacao", href: "/fiscal/operacao" }]);
+    expect(menu.href).toBe("/fiscal/sped");
+    expect(menu.laterais.map((t) => [t.label, t.area])).toEqual([["SPED ICMS/IPI", "SPED"], ["Executar", "Executar"]]);
+  });
+  it.each([["/fiscal", "Painel"], ["/fiscal/documentos", "Outras"], ["/fiscal/conferencia", "Outras"], ["/fiscal/sped/classificacao", "SPED"], ["/fiscal/sped", "SPED"], ["/fiscal/classificacao", "SPED"], ["/fiscal/icms-ipi", "SPED"], ["/fiscal/configuracoes", "SPED"], ["/fiscal/contribuicoes", "SPED"], ["/fiscal/entregas", "SPED gerados"], ["/fiscal/operacao", "Executar"], ["/autorizacoes", undefined]])("marca somente a área correspondente a %s", (path, area) => {
     expect(areaSpedAtiva(path)).toBe(area);
   });
   it("não absorve autorizações nem módulos de outros setores", () => {

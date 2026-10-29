@@ -558,7 +558,7 @@ export function AppShell({
                   const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
                   const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" icone={<ReceiptText />} abrirPorClique telas={sped.laterais.map((item) => ({
                     label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
-                    ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
+                    ativa: areaSpedAtiva(pathname) === item.area,
                   }))}>
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
