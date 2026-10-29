@@ -146,8 +146,8 @@ export const CONNECT_LOADING_STYLES = `
 }
 
 [data-theme="dark"] .connect-loading-screen {
-  --cls-bg: var(--c41-canvas, #0D1322);
-  --cls-surface: var(--c41-surface, #141D30);
+  --cls-bg: var(--c41-canvas, #1C2230);
+  --cls-surface: var(--c41-surface, #242B3A);
   --cls-border: var(--c41-border, rgba(140,170,255,.11));
   --cls-fg: var(--c41-fg, #EEF3FF);
   --cls-fg-muted: var(--c41-fg-muted, #8494B4);

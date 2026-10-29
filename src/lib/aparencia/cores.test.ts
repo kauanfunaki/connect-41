@@ -40,7 +40,7 @@ const BRANCO = "#FFFFFF";
 // Os fundos onde o app escreve: o claro (superfície, canvas, hover) e o
 // escuro (superfície, canvas, elevado).
 const FUNDOS_CLAROS = ["#FFFFFF", "#EEF3FD", FUNDO_CLARO];
-const FUNDOS_ESCUROS = ["#141D30", "#0D1322", FUNDO_ESCURO];
+const FUNDOS_ESCUROS = ["#242B3A", "#1C2230", FUNDO_ESCURO];
 
 describe("corCanonica", () => {
   it("devolve #RRGGBB em maiúsculas", () => {
