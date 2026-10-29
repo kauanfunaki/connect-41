@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { TextoRecolhivel } from "@/components/ui/TextoRecolhivel";
 import { useToast } from "@/components/ui/Toast";
 import type { CatalogoOps as Catalogo, ItemDoCatalogo } from "@/lib/ops/catalogo";
 
@@ -84,7 +85,7 @@ export function CatalogoOps({ tipo, podeGerir }: { tipo: Tipo; podeGerir: boolea
           </div>
           {podeGerir && <Button size="icon" variant="secondary" aria-label={`Editar ${i.name}`} title={`Editar ${t.singular}`} onClick={() => editar(i)}><Pencil size={15} /></Button>}
         </div>
-        <p className="mb-4 flex-1 break-words text-ui leading-relaxed text-fg-secondary">{i.description || "Sem descrição cadastrada."}</p>
+        <TextoRecolhivel className="mb-4 flex-1" texto={i.description || "Sem descrição cadastrada."} />
         <div className="mb-4 space-y-1.5 text-helper">
           {i.url && <a href={i.url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-1.5 text-brand hover:underline"><ExternalLink size={13} className="shrink-0" /><span className="truncate">{i.url.replace(/^https?:\/\//, "")}</span></a>}
           {i.repository && <a href={`https://github.com/${i.repository}`} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-1.5 text-fg-secondary hover:text-brand hover:underline"><FolderGit2 size={13} className="shrink-0" /><span className="truncate">{i.repository}</span></a>}

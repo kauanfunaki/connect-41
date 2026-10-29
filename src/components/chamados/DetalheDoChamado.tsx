@@ -75,7 +75,7 @@ export function DetalheDoChamado({ chamado: t, eu, usuarios, categorias, setores
       <div className="min-w-0 space-y-5">
         <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Atendimento</h2>
           {p.operar && !encerrado ? <Campo label="Situação"><Select value={situacao} disabled={busy} onChange={e => { const anterior = situacao, nova = e.target.value; setSituacao(nova); void executar(() => mudar(t.id, t.version, "status", nova)).then(ok => { if (!ok) setSituacao(anterior); }); }}>{STATUS.map(s => <option key={s} value={s}>{ROTULOS[s]}</option>)}</Select></Campo> : null}
-          <SeletorDePessoas titulo="Responsáveis" selecionados={responsaveis} nome={nome} vazio="Aguardando distribuição" disabled={busy || encerrado}
+          <SeletorDePessoas titulo="Responsáveis" selecionados={responsaveis} nome={nome} vazio="" disabled={busy || encerrado}
             opcoes={p.gerenciar ? atendentes : atendentes.filter(u => u.id === eu)}
             onAdicionar={p.operar && !encerrado ? id => p.gerenciar ? acao("responsaveis", [...responsaveis, id]) : acao("assumir", null) : undefined}
             onRetirar={p.gerenciar && !encerrado ? id => acao("responsaveis", responsaveis.filter(r => r !== id)) : undefined} />
