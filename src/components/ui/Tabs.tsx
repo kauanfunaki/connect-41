@@ -1,9 +1,16 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { Contador } from "@/components/ui/Contador";
+import { classeDaAba, classeDaFileira, ConteudoDaAba, MarcaDaAbaAtiva } from "@/components/ui/desenhoDaAba";
+
 export type TabItem = {
   key: string;
   label: string;
-  icon?: React.ReactNode;
+  /** Obrigatório desde 29/10/2026: toda aba tem o seu, em cima do rótulo. */
+  icon: ReactNode;
+  /** Vira um contador no canto do ícone — em vez de "Pessoas (12)" no texto. */
+  count?: number;
   panelId?: string; // id do painel controlado, para aria-controls
 };
 
@@ -16,12 +23,10 @@ type Props = {
 
 // Navegação por abas — indicador de barra inferior (mesma linguagem visual da
 // barra lateral de página ativa na sidebar), sem underline fraco nem cor em excesso.
+// O desenho é o de `desenhoDaAba`, o mesmo das `AbasDeLink`.
 export function Tabs({ tabs, active, onChange, className = "" }: Props) {
   return (
-    <div
-      role="tablist"
-      className={`scroll-x-hidden flex items-center gap-1 border-b border-border overflow-x-auto ${className}`.trim()}
-    >
+    <div role="tablist" className={`${classeDaFileira} ${className}`.trim()}>
       {tabs.map((t) => {
         const isActive = t.key === active;
         return (
@@ -32,13 +37,14 @@ export function Tabs({ tabs, active, onChange, className = "" }: Props) {
             aria-selected={isActive}
             aria-controls={t.panelId}
             onClick={() => onChange(t.key)}
-            className={`relative flex items-center gap-1.5 px-3.5 h-10 text-label font-medium whitespace-nowrap transition-colors rounded-t-md ${
-              isActive ? "text-brand" : "text-fg-secondary hover:text-fg"
-            }`}
+            className={classeDaAba(isActive)}
           >
-            {t.icon && <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{t.icon}</span>}
-            {t.label}
-            {isActive && <span className="absolute left-2.5 right-2.5 -bottom-px h-[2px] rounded-full bg-brand" />}
+            <ConteudoDaAba
+              icone={t.icon}
+              rotulo={t.label}
+              contador={t.count !== undefined && <Contador valor={t.count} tom={isActive ? "marca" : "neutro"} pequeno teto={999} />}
+            />
+            {isActive && <MarcaDaAbaAtiva />}
           </button>
         );
       })}

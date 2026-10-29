@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { iconeDaAbaFiscal } from "@/components/fiscal/iconeDaAbaFiscal";
 import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { menuSped } from "@/lib/fiscal/menu-sped";
@@ -36,10 +37,10 @@ export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao
     {menuPrincipal && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={caminho === "/fiscal/contribuicoes" ? "Apuração" : ativa?.label ?? ""} abas={telas.map((t) => {
       const [base, query] = t.href.split("?");
       const extra = Object.fromEntries(new URLSearchParams(query ?? ""));
-      return { chave: t.label, rotulo: t.label, href: hrefDoMotor(base, contexto, extra) };
+      return { chave: t.label, rotulo: t.label, href: hrefDoMotor(base, contexto, extra), icone: iconeDaAbaFiscal(t.label) };
     })} />}
-    {trocaDeObrigacao && <AbasDeLink className="mb-5" aria-label="Obrigação da apuração" ativa={caminho} abas={obrigacoes.map(([, href, rotulo]) => ({ chave: href, rotulo, href: hrefDoMotor(href, contexto) }))} />}
-    {abas && abas.length > 1 && <AbasDeLink className="mb-5" aria-label={`Seções de ${titulo}`} ativa={aba ?? ""} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo, href: hrefDoMotor(caminho, contexto, { aba: a.chave }) }))} />}
+    {trocaDeObrigacao && <AbasDeLink className="mb-5" aria-label="Obrigação da apuração" ativa={caminho} abas={obrigacoes.map(([, href, rotulo]) => ({ chave: href, rotulo, href: hrefDoMotor(href, contexto), icone: iconeDaAbaFiscal(rotulo) }))} />}
+    {abas && abas.length > 1 && <AbasDeLink className="mb-5" aria-label={`Seções de ${titulo}`} ativa={aba ?? ""} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo, href: hrefDoMotor(caminho, contexto, { aba: a.chave }), icone: iconeDaAbaFiscal(a.chave, a.rotulo) }))} />}
     <PageHeader title={titulo} subtitle={descricao} action={acao} />
     {contexto && <FiltroDoMotor raizes={motor.raizes} raiz={contexto.raiz} estabelecimentos={mapa.visiveis.map((e) => ({ id: e.id, rotulo: `${e.companyNome} · ${e.uf}${e.matriz ? " · matriz" : ""}${e.ativo ? "" : " · inativo"}` }))} estabelecimentoId={contexto.estabelecimentoId} competencia={contexto.competencia} semEstabelecimento={semEstabelecimento} />}
     <div className="mb-5 flex flex-col gap-3">

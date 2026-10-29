@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Building2, Plus, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
@@ -118,8 +118,8 @@ export default async function CamposPage({
           <AbasDeLink
             ativa={ficha}
             abas={[
-              { chave: "COMPANY", rotulo: "Ficha da empresa", href: `/admin/campos?ficha=COMPANY&setor=${encodeURIComponent(setor)}`, contagem: quantosNa(setor, "COMPANY") },
-              { chave: "PERSON", rotulo: "Ficha da pessoa", href: `/admin/campos?ficha=PERSON&setor=${encodeURIComponent(setor)}`, contagem: quantosNa(setor, "PERSON") },
+              { chave: "COMPANY", rotulo: "Ficha da empresa", href: `/admin/campos?ficha=COMPANY&setor=${encodeURIComponent(setor)}`, icone: <Building2 />, contagem: quantosNa(setor, "COMPANY") },
+              { chave: "PERSON", rotulo: "Ficha da pessoa", href: `/admin/campos?ficha=PERSON&setor=${encodeURIComponent(setor)}`, icone: <UserRound />, contagem: quantosNa(setor, "PERSON") },
             ]}
           />
           <ConstrutorDeCampos

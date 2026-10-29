@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Activity, CircleHelp, Wallet } from "lucide-react";
+import { Activity, Bot, CircleHelp, MessagesSquare, Users, Wallet } from "lucide-react";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -71,10 +71,10 @@ export default async function AgentesDeIAPage({ searchParams }: { searchParams: 
 
   const quantasChamadas = chamadas.length;
   const abas = [
-    { chave: "agentes", rotulo: "Agentes", href: "/admin/ia", contagem: linhas.length },
-    ...(painel ? [{ chave: "respostas", rotulo: "Respostas do chat", href: "/admin/ia?aba=respostas" }] : []),
-    { chave: "chamadas", rotulo: "Últimas chamadas", href: "/admin/ia?aba=chamadas", contagem: quantasChamadas },
-    { chave: "publico", rotulo: "Quem usa o chat", href: "/admin/ia?aba=publico" },
+    { chave: "agentes", rotulo: "Agentes", href: "/admin/ia", icone: <Bot />, contagem: linhas.length },
+    ...(painel ? [{ chave: "respostas", rotulo: "Respostas do chat", href: "/admin/ia?aba=respostas", icone: <MessagesSquare /> }] : []),
+    { chave: "chamadas", rotulo: "Últimas chamadas", href: "/admin/ia?aba=chamadas", icone: <Activity />, contagem: quantasChamadas },
+    { chave: "publico", rotulo: "Quem usa o chat", href: "/admin/ia?aba=publico", icone: <Users /> },
   ];
   const ativa = aba && abas.some((a) => a.chave === aba) ? aba : "agentes";
   const corDo = (l: LinhaDeAgente) => (l.def.sectorCode ? coresDosSetores[l.def.sectorCode] : undefined);
