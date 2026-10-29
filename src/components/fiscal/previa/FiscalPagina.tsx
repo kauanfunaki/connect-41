@@ -3,6 +3,7 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { iconeDaAbaFiscal } from "@/components/fiscal/iconeDaAbaFiscal";
 import { menuSped } from "@/lib/fiscal/menu-sped";
 import { useFiscal, AvisosFiscais, FiltroDoContextoFiscal, MenuDoCenarioFiscal } from "./ContextoFiscal";
 import { PainelFiscal } from "./PainelFiscal";
@@ -33,8 +34,8 @@ export function FiscalPagina({ pagina }: { pagina: PaginaFiscal }) {
   const visaoPedida = searchParams.get("visao");
   const visao = visaoPedida === "historico" ? visaoPedida : "resumo";
   return <>
-    {menuPrincipal && acessos.length > 0 && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={acessoAtivo ?? ""} abas={acessos.map((t) => ({ chave: t.label, rotulo: t.label, href: t.href }))} />}
-    {abasInternas && <AbasDeLink className="mb-5" aria-label={`Seções de ${definicao.titulo}`} ativa={aba} abas={abas.map(([chave, rotulo]) => ({ chave, rotulo, href: `${pathname}?aba=${chave}` }))} />}
+    {menuPrincipal && acessos.length > 0 && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={acessoAtivo ?? ""} abas={acessos.map((t) => ({ chave: t.label, rotulo: t.label, href: t.href, icone: iconeDaAbaFiscal(t.label) }))} />}
+    {abasInternas && <AbasDeLink className="mb-5" aria-label={`Seções de ${definicao.titulo}`} ativa={aba} abas={abas.map(([chave, rotulo]) => ({ chave, rotulo, href: `${pathname}?aba=${chave}`, icone: iconeDaAbaFiscal(chave, rotulo) }))} />}
     <PageHeader title={titulo} subtitle={definicao.descricao} action={<MenuDoCenarioFiscal />} />
     <FiltroDoContextoFiscal />
     <AvisosFiscais />

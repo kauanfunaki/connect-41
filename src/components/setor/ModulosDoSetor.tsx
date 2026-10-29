@@ -1,8 +1,9 @@
-import { ModuleIcon } from "@/components/shared/ModuleIcon";
+import { LayoutGrid } from "lucide-react";
+import { Icone, ModuleIcon } from "@/components/shared/ModuleIcon";
 import { BotaoFixarTela } from "@/components/setor/BotaoFixarTela";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { Card } from "@/components/ui/Card";
-import { agruparModulos, slugDoGrupo, type GrupoDeModulo } from "@/lib/module-catalog";
+import { agruparModulos, ICONE_DO_GRUPO, slugDoGrupo, type GrupoDeModulo } from "@/lib/module-catalog";
 import { areaDoGrupoDeTelas, areaDoModulo } from "@/lib/aparencia/gruposDaEquipe";
 
 export type ModuloDoSetor = { code: string; label: string; description: string };
@@ -41,10 +42,11 @@ export function ModulosDoSetor({
         <AbasDeLink
           ativa={grupoAtivo ?? "tudo"}
           abas={[
-            { chave: "tudo", rotulo: "Tudo", href: `/setor/${code}/telas` },
+            { chave: "tudo", rotulo: "Tudo", href: `/setor/${code}/telas`, icone: <LayoutGrid /> },
             ...grupos.map((g) => ({
               chave: g.grupo,
               rotulo: g.grupo,
+              icone: <Icone nome={ICONE_DO_GRUPO[g.grupo]} />,
               contagem: g.itens.length,
               href: `/setor/${code}/grupo/${slugDoGrupo(g.grupo)}`,
             })),

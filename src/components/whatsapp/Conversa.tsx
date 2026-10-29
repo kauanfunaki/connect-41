@@ -19,6 +19,9 @@ import {
   Users,
   XCircle,
   Gauge,
+  Archive,
+  ClipboardList,
+  MessageCircle,
 } from "lucide-react";
 import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
@@ -526,9 +529,9 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
     >
       <AbasDoPainel
         abas={[
-          { chave: "conversa", rotulo: `Conversa (${conversa.mensagens.length})`, conteudo: abaConversa, cheia: true },
-          { chave: "candidatura", rotulo: conversa.candidaturaId ? "Candidatura" : "Ligar à candidatura", conteudo: abaCandidatura },
-          { chave: "historico", rotulo: `Atendimentos encerrados (${conversa.encerramentos.length})`, conteudo: abaHistorico },
+          { chave: "conversa", rotulo: "Conversa", icone: <MessageCircle />, contagem: conversa.mensagens.length, conteudo: abaConversa, cheia: true },
+          { chave: "candidatura", rotulo: conversa.candidaturaId ? "Candidatura" : "Ligar à candidatura", icone: <ClipboardList />, conteudo: abaCandidatura },
+          { chave: "historico", rotulo: "Atendimentos encerrados", icone: <Archive />, contagem: conversa.encerramentos.length, conteudo: abaHistorico },
         ]}
       />
     </PainelDeConversa>

@@ -63,13 +63,13 @@ export function CompanyDetailTabs({
 
   const tabs = [
     { key: "overview", label: "Visão geral", icon: <LayoutGrid /> },
-    { key: "filiais", label: `Filiais${filiaisCount ? ` (${filiaisCount})` : ""}`, icon: <Network /> },
-    { key: "people", label: `Pessoas${peopleCount ? ` (${peopleCount})` : ""}`, icon: <Users /> },
+    { key: "filiais", label: "Filiais", count: filiaisCount || undefined, icon: <Network /> },
+    { key: "people", label: "Pessoas", count: peopleCount || undefined, icon: <Users /> },
     { key: "operations", label: "RH & operação", icon: <Briefcase /> },
-    ...(documents ? [{ key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> }] : []),
+    ...(documents ? [{ key: "documents", label: "Documentos", count: documentsCount || undefined, icon: <FileText /> }] : []),
     ...(files ? [{ key: "files", label: "Arquivos", icon: <FolderOpen /> }] : []),
-    ...(portal ? [{ key: "portal", label: `Acesso ao portal${portalCount ? ` (${portalCount})` : ""}`, icon: <KeyRound /> }] : []),
-    { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
+    ...(portal ? [{ key: "portal", label: "Acesso ao portal", count: portalCount || undefined, icon: <KeyRound /> }] : []),
+    { key: "conversations", label: "Conversas", count: conversationsCount || undefined, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },
   ];
 

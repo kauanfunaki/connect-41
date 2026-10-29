@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, FileText } from "lucide-react";
+import { AlertTriangle, CalendarDays, CalendarRange, FileText, TrendingUp } from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -52,9 +52,9 @@ const MODULE = "dre_economica";
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 const VISOES = [
-  { chave: "mes", rotulo: "Mês" },
-  { chave: "acumulado", rotulo: "Acumulado no ano" },
-  { chave: "12meses", rotulo: "Últimos 12 meses" },
+  { chave: "mes", rotulo: "Mês", icone: <CalendarDays /> },
+  { chave: "acumulado", rotulo: "Acumulado no ano", icone: <CalendarRange /> },
+  { chave: "12meses", rotulo: "Últimos 12 meses", icone: <TrendingUp /> },
 ] as const;
 
 /**
