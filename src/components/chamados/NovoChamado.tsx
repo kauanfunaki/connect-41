@@ -219,7 +219,7 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
             <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
             <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
           </fieldset>}
-          {etapa === 2 && <ConversaDaTriagem mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
+          {etapa === 2 && <ConversaDaTriagem pedido={dados.description} mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
             onResponder={responder} onAnexar={f => subir(f, "conversa")} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()}
             onAceitarSugestao={aceitarSugestao} onRecusarSugestao={recusarSugestao}
             onVoltar={() => { setErro(""); setEtapa(1); }} onIrParaRevisao={() => irParaRevisao()} onTentarNovamente={() => { setParecer(null); setEtapa(1); }} />}
