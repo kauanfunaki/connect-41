@@ -27,7 +27,8 @@ const REPASSADOS = ["Content-Type", "Content-Disposition", "Content-Length", "X-
  */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const auth = await getAuthContext();
-  if (!auth.tenantId || !(await podeNoModulo(auth, "fiscal_entregas", "ver"))) {
+  // O Contábil baixa o EFD Contribuições que pediu na aba SPED (29/10/2026).
+  if (!auth.tenantId || !((await podeNoModulo(auth, "fiscal_entregas", "ver")) || (await podeNoModulo(auth, "contabil_sped", "ver")))) {
     return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
   }
   const { id: bruto } = await ctx.params;

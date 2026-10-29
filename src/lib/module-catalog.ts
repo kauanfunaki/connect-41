@@ -178,7 +178,7 @@ const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está co
 export const MODULE_CATALOG: ModuleDef[] = [
   {
     code: "contabil_sped", label: "SPED", sectorCode: "contabil",
-    description: "Conferência, de-para e arquivos de lançamentos para a Domínio",
+    description: "De-para e lançamentos de entrada para a Domínio, e o EFD Contribuições gerado pelo motor do SPED",
     defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
   },
   {

@@ -167,6 +167,13 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // Exportação para a Domínio (fila do BPO, 21/10).
   "financeiro.dominio.exported": o("exportou para a Domínio as baixas da empresa"),
   "financeiro.dominio.depara_saved": e("atualizou o de-para da Domínio da empresa"),
+  // De-para e lançamentos do Contábil, e o SPED Contribuições pedido de lá (29/10/2026).
+  "contabil.regra.salva": e("gravou a regra do de-para contábil do fornecedor"),
+  "contabil.regra.desconsiderada": e("deixou fora da contabilidade"),
+  "contabil.regra.removida": x("removeu a regra do de-para contábil de"),
+  "contabil.modelos.salvos": e("atualizou as contas fixas do Contábil", { comNome: false }),
+  "contabil.plano.carregado": o("carregou o plano de contas da Domínio", { chaveDoNome: "arquivo" }),
+  "contabil.sped.contribuicoes.solicitada": c("pediu ao motor SPED o EFD Contribuições"),
   // Regras de conciliação (fila do BPO, 21/10).
   "financeiro.bank_rule.created": c("criou a regra de conciliação"),
   "financeiro.bank_rule.updated": e("editou a regra de conciliação"),
@@ -560,6 +567,8 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   SpedDecisao: "decisão fiscal do SPED",
   SpedEstabelecimento: "estabelecimento do SPED",
   SpedExecucao: "execução do SPED",
+  ContabilRegra: "regra do de-para contábil",
+  ContabilModelo: "configuração do Contábil",
   SpedRejeitado: "rejeitado da quarentena do SPED",
   SpedImportacao: "importação do SPED",
   SpedPagamento: "pagamento de apoio do SPED",
@@ -619,6 +628,7 @@ export type ChaveDaAreaDaAuditoria =
   | "chamados"
   | "tech"
   | "cadastros"
+  | "contabil"
   | "fiscal"
   | "bpo"
   | "dp"
@@ -639,6 +649,7 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
   chamados: { rotulo: "Chamados", cor: "#2E6FB8" },
   tech: { rotulo: "Tech", cor: "#3B7BE8" },
   cadastros: { rotulo: "Cadastros", cor: "#0891B2" },
+  contabil: { rotulo: "Contábil", cor: "#4F46E5" },
   fiscal: { rotulo: "Fiscal", cor: "#C5374B" },
   bpo: { rotulo: "BPO", cor: "#B7791F" },
   dp: { rotulo: "DP", cor: "#7C5CBF" },
@@ -670,6 +681,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["clientGroup.", "cadastros"],
   ["branch.", "cadastros"],
   ["certificados.", "cadastros"],
+  ["contabil.", "contabil"],
   ["fiscal.", "fiscal"],
   ["autorizacoes.", "fiscal"],
   ["financeiro.", "bpo"],
