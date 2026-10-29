@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AppWindow, ArrowLeft, Bot, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
+import { AppWindow, ArrowLeft, Bot, Check, Copy, ExternalLink, Globe, Paperclip, SendHorizontal } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -34,9 +34,11 @@ type Props = {
   /** Robô, site ou app do Ops Center que parece atender: "É isso" guarda o rascunho; "Não é" segue a conversa. */
   onAceitarSugestao: () => void; onRecusarSugestao: () => void; aviso: string;
   onVoltar: () => void; onIrParaRevisao: () => void; onTentarNovamente: () => void;
+  /** O que a pessoa escreveu no pedido, para a mensagem ao responsável. */
+  pedido: string;
 };
 
-export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, onResponder, onAnexar, onPararEnvio, anexou, onAceitarSugestao, onRecusarSugestao, aviso, onVoltar, onIrParaRevisao, onTentarNovamente }: Props) {
+export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, onResponder, onAnexar, onPararEnvio, anexou, onAceitarSugestao, onRecusarSugestao, aviso, onVoltar, onIrParaRevisao, onTentarNovamente, pedido }: Props) {
   const [texto, setTexto] = useState("");
   const fim = useRef<HTMLDivElement>(null), seletor = useRef<HTMLInputElement>(null);
   const analisando = busy === "analisando";
@@ -57,7 +59,7 @@ export function ConversaDaTriagem({ mensagens, parecer, pergunta, busy, erro, on
       <div role="log" aria-label="Conversa com a IA" aria-live="polite" className="-mx-1 flex max-h-[min(34rem,calc(100dvh-22rem))] min-h-40 flex-col gap-3 overflow-y-auto px-1 py-1">
         {mensagens.map(m => <Balao key={m.id} daIA={m.role !== "user"}>{m.body}</Balao>)}
         {busy === "Enviando arquivo…" && <Balao daIA={false}><span className="inline-flex items-center gap-2"><Digitando />Enviando arquivo <button type="button" onClick={onPararEnvio} className="underline">parar</button></span></Balao>}
-        {parecer?.existente && !analisando && <CartaoDoExistente e={parecer.existente} busy={!!busy} onAceitar={onAceitarSugestao} onRecusar={onRecusarSugestao} />}
+        {parecer?.existente && !analisando && <CartaoDoExistente e={parecer.existente} pedido={pedido} busy={!!busy} onAceitar={onAceitarSugestao} onRecusar={onRecusarSugestao} />}
         {aviso && <p role="status" className="pl-1 text-helper text-fg-secondary">{aviso}</p>}
         {opcoes.length > 0 && !analisando && <div role="group" aria-label="Respostas sugeridas" className="flex flex-wrap gap-2 pl-1">
           {opcoes.map(o => <button key={o} type="button" disabled={!!busy} onClick={() => responder(o)}
@@ -103,8 +105,18 @@ function Digitando() {
 }
 
 const ICONES = { robo: Bot, site: Globe, app: AppWindow };
-function CartaoDoExistente({ e, busy, onAceitar, onRecusar }: { e: Existente; busy: boolean; onAceitar: () => void; onRecusar: () => void }) {
+function CartaoDoExistente({ e, pedido, busy, onAceitar, onRecusar }: { e: Existente; pedido: string; busy: boolean; onAceitar: () => void; onRecusar: () => void }) {
   const Icone = ICONES[e.tipo], primeiroNome = e.responsavel?.trim().split(/\s+/)[0];
+  // Texto pronto para quem pediu confirmar com o responsável, sem precisar do Ops Center.
+  const texto = pedido.trim(), resumo = texto.length > 600 ? `${texto.slice(0, 600).trimEnd()}…` : texto;
+  const mensagem = `Oi, ${primeiroNome}! Tudo bem? Ia abrir um chamado e vi que já existe o ${ROTULOS_EXISTENTE[e.tipo]} "${e.nome}", que fica com você. Ele atende ao que eu preciso?${resumo ? `
+
+O que eu preciso:
+${resumo}` : ""}
+
+Se atender, como faço para usar?`;
+  const [copiado, setCopiado] = useState(false);
+  function copiar() { navigator.clipboard.writeText(mensagem).then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); }, () => {}); }
   return <div className="c41-surgir max-w-[85%] rounded-2xl rounded-tl-md border border-brand/30 bg-surface p-4 shadow-xs">
     <p className="mb-3 text-helper font-medium text-brand">{e.match === "same" ? "Já existe no Ops Center" : "Pode ser parecido, no Ops Center"}</p>
     <div className="flex items-start gap-3">
@@ -113,12 +125,16 @@ function CartaoDoExistente({ e, busy, onAceitar, onRecusar }: { e: Existente; bu
         <p className="break-words font-semibold text-fg">{e.nome}</p>
         <p className="text-helper text-fg-muted">{ROTULOS_EXISTENTE[e.tipo][0].toLocaleUpperCase("pt-BR") + ROTULOS_EXISTENTE[e.tipo].slice(1)}{e.detalhe ? `, ${e.detalhe}` : ""}</p>
         <p className="mt-2 text-ui text-fg-secondary">Responsável: <strong className="text-fg">{e.responsavel ?? "sem responsável definido"}</strong></p>
-        {(e.endereco || e.noOps) && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-helper">
-          {e.endereco && <a href={e.endereco} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Abrir {ROTULOS_EXISTENTE[e.tipo]}</a>}
-          {e.noOps && <a href={e.noOps} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Ver no Ops Center</a>}
-        </div>}
+        {e.endereco && <div className="mt-2 text-helper"><a href={e.endereco} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline"><ExternalLink size={12} />Abrir {ROTULOS_EXISTENTE[e.tipo]}</a></div>}
       </div>
     </div>
+    {e.responsavel && <div className="mt-4 rounded-lg bg-surface-hover p-3">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="text-helper font-medium text-fg-secondary">Mensagem para {primeiroNome}</p>
+        <Button size="sm" variant="ghost" onClick={copiar}>{copiado ? <Check size={14} /> : <Copy size={14} />}{copiado ? "Copiada" : "Copiar"}</Button>
+      </div>
+      <p className="whitespace-pre-line break-words text-ui text-fg">{mensagem}</p>
+    </div>}
     <div className="mt-4 flex flex-wrap gap-2">
       <Button size="sm" disabled={busy} onClick={onAceitar}>{primeiroNome ? `É isso, vou falar com ${primeiroNome}` : "É isso"}</Button>
       <Button size="sm" variant="secondary" disabled={busy} onClick={onRecusar}>Não é o que preciso</Button>

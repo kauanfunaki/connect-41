@@ -219,16 +219,16 @@ export function NovoChamado({ inicial, categorias: categoriasIniciais, setores }
             <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
             <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
           </fieldset>}
-          {etapa === 2 && <ConversaDaTriagem mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
+          {etapa === 2 && <ConversaDaTriagem pedido={dados.description} mensagens={mensagens} parecer={parecer} pergunta={pergunta} busy={busy} erro={erro} aviso={aviso}
             onResponder={responder} onAnexar={f => subir(f, "conversa")} anexou={anexadosNaConversa.length > 0} onPararEnvio={() => abort.current?.abort()}
             onAceitarSugestao={aceitarSugestao} onRecusarSugestao={recusarSugestao}
             onVoltar={() => { setErro(""); setEtapa(1); }} onIrParaRevisao={() => irParaRevisao()} onTentarNovamente={() => { setParecer(null); setEtapa(1); }} />}
           {etapa === 3 && <fieldset disabled={!!busy} className="space-y-5">
             <div>
               <h2 className="text-heading font-semibold text-fg">Revisão do chamado</h2>
-              <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA preencheu tudo com o pedido e a conversa. Confira e mude o que precisar."}</p>
+              <p className="mt-1 text-ui text-fg-secondary">{parecer?.status === "unavailable" ? "A IA não conseguiu montar o chamado agora. Confira e complete os campos antes de abrir." : "A IA montou o chamado com o pedido e a conversa. Confira o título, a descrição e os anexos."}</p>
             </div>
-            <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} />
+            <CamposDoChamado dados={final} onChange={setFinal} categorias={categorias} setores={setores} revisao />
           </fieldset>}
         </div>
       </div>
