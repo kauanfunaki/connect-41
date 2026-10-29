@@ -323,7 +323,7 @@ export function AppShell({
         chave: "cadastros",
         area: "marca",
         no: noGeral("cadastros") && (
-          <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} area="marca">
+          <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} area="marca" icone={<ContactRound />}>
             <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
           </PainelDoItem>
         ),
@@ -556,19 +556,19 @@ export function AppShell({
                 {(() => {
                   const sped = menuSped(activeSectorModules);
                   const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
-                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" abrirPorClique telas={sped.laterais.map((item) => ({
+                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" icone={<ReceiptText />} abrirPorClique telas={sped.laterais.map((item) => ({
                     label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
                     ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
                   }))}>
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
-                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} abrirPorClique telas={[
+                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} icone={<GitBranch />} abrirPorClique telas={[
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
-                  </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" cor={activeSector.color} abrirPorClique telas={[
+                  </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
                     // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta
                     // Robôs, Sites e Apps. O Histórico fica dentro de Robôs.
                     { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} />, ativa: visaoDoOps === "automations" || visaoDoOps === "history" },
@@ -585,7 +585,7 @@ export function AppShell({
                       // O painel da Gestão mostra as abas dele ao lado, como fazia
                       // quando era item do menu geral.
                       m.code === "gestao_painel" ? (
-                        <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} area={areaDoModulo(m.code) ?? "marca"}>
+                        <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />}>
                           <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} area={areaDoModulo(m.code) ?? "marca"} />
                         </PainelDoItem>
                       ) : (
@@ -601,6 +601,8 @@ export function AppShell({
                       key={grupo}
                       titulo={grupo}
                       area={areaDoGrupo(itens)}
+                      icone={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
+                      verTudo={{ href: `/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`, rotulo: "Ver as telas do grupo" }}
                       telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
                     >
                       <GrupoNavItem
