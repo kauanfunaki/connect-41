@@ -16,10 +16,12 @@ export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): stri
 export function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex min-w-0 flex-col gap-1.5 text-ui text-fg-secondary"><span className="font-semibold">{label}</span>{children}</label>;
 }
-export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false, ocultarTags = false, abertura = false }: {
+export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false, ocultarTags = false, abertura = false, revisao = false }: {
   dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean; ocultarTitulo?: boolean; ocultarTags?: boolean;
   /** Tela de abertura: prioridade ao lado do setor e descrição mais alta. */
   abertura?: boolean;
+  /** Revisão da abertura: só título e descrição para conferir; a categoria só aparece se a IA não a escolheu. */
+  revisao?: boolean;
 }) {
   const categoria = categorias.find(c => c.id === dados.categoryId);
   const [buscaCategoria, setBuscaCategoria] = useState("");
@@ -61,6 +63,11 @@ export function CamposDoChamado({ dados, onChange, categorias, setores, origemFi
       </div>
     </section>;
   if (somenteCategoria) return painelCategoria;
+  if (revisao) return <div className="space-y-5">
+    {!dados.categoryId && painelCategoria}
+    <Campo label="Título"><Input required minLength={3} maxLength={255} value={dados.title} onChange={e => mudar({ title: e.target.value })} placeholder="O que você precisa?" /></Campo>
+    <Campo label="Descrição"><Textarea required rows={8} maxLength={15000} value={dados.description} onChange={e => mudar({ description: e.target.value })} /></Campo>
+  </div>;
   return <div className="space-y-5">
     {!ocultarCategoria && painelCategoria}
     <div className="grid gap-4 sm:grid-cols-2">
