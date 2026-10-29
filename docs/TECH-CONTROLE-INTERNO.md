@@ -4,13 +4,15 @@ Módulo `tech_controle_interno`, em `/tech/controle-interno`, exclusivo do Tech 
 
 Os mesmos itens aparecem em **Lista**, **Kanban** e **Agenda**. Os filtros e a visualização ficam no endereço. A agenda usa o prazo, permite navegar entre meses e separa os itens sem prazo. No Kanban, arraste o cartão ou use o seletor de situação. Mudanças são confirmadas no servidor e registram autor, data e valores anteriores. Edições concorrentes pedem atualização da página.
 
-Tipos: Bug, Melhoria, Nova funcionalidade, Teste e Migração. Responsável e prazo são opcionais. O vínculo pode ser Sem sistema, Novo sistema ou um sistema cadastrado. Sistemas inativos permanecem no histórico e não podem receber novos vínculos. Gestores mantêm o cadastro de sistemas. Usuários Somente leitura podem consultar, sem gravar.
+Tipos: Bug, Melhoria, Nova funcionalidade, Teste e Migração. Responsável e prazo são opcionais. O vínculo pode ser Sem sistema, Novo sistema ou um sistema do **Ops Center** (robô, site ou app). Desde 29/10/2026 não há cadastro de sistemas no Controle interno: o que é cadastrado no Ops Center aparece na hora no campo Sistema, que tem busca por digitação. Sistemas inativos no Ops Center permanecem nos itens que já os usam e não recebem novos vínculos. Os vínculos com o cadastro anterior (`tech_internal_tools`) continuam visíveis nos itens que já os tinham. Usuários Somente leitura podem consultar, sem gravar.
+
+**Histórico:** cada criação e alteração de item grava quem fez, o que mudou (valor anterior e novo) e quando. O detalhe do item mostra a linha do tempo dele, junto com os comentários; o botão **Histórico**, na lista, abre o histórico do módulo inteiro, do mais recente para o mais antigo, com 50 registros por página.
 
 A lista pagina 50 itens. Kanban e agenda paginam 500 itens, com navegação explícita quando o recorte ultrapassa esse volume. A contagem por coluna corresponde à página exibida. A agenda considera o mês escolhido mais os itens sem prazo, respeitando os filtros.
 
 ## Implantação
 
-Aplicar `20261021160000_tech_internal` em ambiente autorizado antes de publicar. A migration apenas cria quatro tabelas e suas relações; não remove dados. Ativar o módulo no escritório após publicar. Planos que usam uma lista restrita de módulos também precisam permitir `tech_controle_interno`.
+Aplicar `20261021160000_tech_internal` em ambiente autorizado antes de publicar. A migration apenas cria quatro tabelas e suas relações; não remove dados. Depois, `20261029140000_tech_interno_sistemas_do_ops`: acrescenta ao item as colunas do vínculo com o Ops Center e índices; também não remove dados. Ativar o módulo no escritório após publicar. Planos que usam uma lista restrita de módulos também precisam permitir `tech_controle_interno`.
 
 ## Verificação local
 

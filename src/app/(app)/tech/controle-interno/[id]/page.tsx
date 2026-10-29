@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { MessageSquare, PencilLine, Plus } from "lucide-react";
-import { MODULO_TECH_INTERNO, SITUACOES, destinoDeVolta, fraseDaAlteracao, type Alteracao } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, SITUACOES, destinoDeVolta, resumoDoRegistro, chaveDoSistema, type Alteracao } from "@/lib/tech-interno/regras";
 import { CORES_DA_SITUACAO } from "@/lib/tech-interno/cores";
 import { detalheItem, opcoesTech } from "@/lib/tech-interno/servidor";
 import { FormularioItem, FormularioComentario } from "@/components/tech-interno/FormularioItem";
@@ -25,7 +25,7 @@ export default async function DetalheTechPage({ params, searchParams }: { params
       <Card as="section" aria-label="Dados do item" className="min-w-0 p-5">
         <FormularioItem key={`${item.id}:${item.version}`} {...opcoes} podeEditar={podeEditar} voltar={voltar} item={{
           id: item.id, version: item.version, title: item.title, description: item.description, type: item.type, priority: item.priority,
-          status: item.status, systemMode: item.systemMode, toolId: item.toolId, assigneeId: item.assigneeId,
+          status: item.status, systemMode: item.systemMode, systemKey: chaveDoSistema(item), assigneeId: item.assigneeId,
           assigneeName: item.assignee?.name ?? null, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,
         }} />
       </Card>
@@ -35,14 +35,14 @@ export default async function DetalheTechPage({ params, searchParams }: { params
         {/* Cada ação fica registrada com autor e horário: comentários, criação,
             situação, responsável, prazo e demais campos (26/10/2026). */}
         <ol className="flex flex-col" aria-label="Histórico do item">{eventos.map(e => {
-          const Icone = e.body ? MessageSquare : e.version === 0 ? Plus : PencilLine;
+          const Icone = e.body ? MessageSquare : e.version === 0 ? Plus : PencilLine, resumo = e.changes && resumoDoRegistro(e.changes, e.version ?? 0);
           return <li key={e.id} className="relative flex gap-3 pb-5 last:pb-0 min-w-0 before:absolute before:left-[13px] before:top-8 before:bottom-1 before:w-px before:bg-border last:before:hidden">
             <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-2 text-fg-secondary"><Icone size={14} /></span>
             <div className="min-w-0 flex-1">
-              <p className="text-ui text-fg break-words"><span className="font-medium">{e.authorName}</span> <span className="text-fg-secondary">{e.body ? "comentou" : e.version === 0 ? "criou o item" : e.changes?.length === 1 ? fraseDaAlteracao(e.changes[0]) : "alterou o item"}</span></p>
+              <p className="text-ui text-fg break-words"><span className="font-medium">{e.authorName}</span> <span className="text-fg-secondary">{resumo ? resumo.frase : "comentou"}</span></p>
               <time dateTime={e.createdAt.toISOString()} className="text-helper text-fg-muted">{formatInstantDateTime(e.createdAt)}</time>
               {e.body && <p className="mt-2 rounded-md bg-surface-2 p-3 text-ui whitespace-pre-wrap break-words">{e.body}</p>}
-              {e.changes && (e.version === 0 || e.changes.length > 1) && <ul className="mt-2 flex flex-col gap-1 text-helper text-fg-secondary">{e.changes.filter(c => e.version !== 0 || c.after).map(c => <li key={c.field} className="break-words">{fraseDaAlteracao(c, e.version === 0)}</li>)}</ul>}
+              {!!resumo?.detalhes.length && <ul className="mt-2 flex flex-col gap-1 text-helper text-fg-secondary">{resumo.detalhes.map((d, i) => <li key={i} className="break-words">{d}</li>)}</ul>}
               {e.changes?.some(c => c.field === "Situação") && (() => { const s = corDaSituacao(e.changes.find(c => c.field === "Situação")!.after); return s ? <span className="mt-2 inline-block rounded px-2 py-0.5 text-helper font-semibold" style={{ backgroundColor: CORES_DA_SITUACAO[s].fundo, color: CORES_DA_SITUACAO[s].tinta }}>{SITUACOES[s]}</span> : null; })()}
             </div>
           </li>;

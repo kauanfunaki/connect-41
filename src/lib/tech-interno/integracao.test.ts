@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({ auth: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Banco descartável não configurado."); return db; } }));
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
-import { salvarItem, salvarSistema, comentarItem, listarItens, detalheItem, opcoesTech, mudarSituacaoItem } from "./servidor";
+import { salvarItem, comentarItem, listarItens, detalheItem, opcoesTech, mudarSituacaoItem, historicoTech } from "./servidor";
 
 describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   let tenantId: string, outroTenant: string, tech: string, gestor: string, fiscal: string, admin: string, externo: string, readonly: string;
@@ -44,8 +44,9 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     for (const t of [tenantId, outroTenant].filter(Boolean)) {
       await db.techInternalComment.deleteMany({ where: { tenantId: t } }); await db.techInternalChange.deleteMany({ where: { tenantId: t } });
       await db.techInternalItem.deleteMany({ where: { tenantId: t } }); await db.techInternalTool.deleteMany({ where: { tenantId: t } });
+      await db.opsSite.deleteMany({ where: { tenantId: t } }); await db.opsApp.deleteMany({ where: { tenantId: t } }); await db.opsWatcher.deleteMany({ where: { tenantId: t } });
       await db.userSector.deleteMany({ where: { user: { tenantId: t } } }); await db.user.deleteMany({ where: { tenantId: t } });
-      await db.tenantModule.deleteMany({ where: { tenantId: t } }); await db.sector.deleteMany({ where: { tenantId: t } }); await db.tenant.delete({ where: { id: t } });
+      await db.auditLog.deleteMany({ where: { tenantId: t } }); await db.tenantModule.deleteMany({ where: { tenantId: t } }); await db.sector.deleteMany({ where: { tenantId: t } }); await db.tenant.delete({ where: { id: t } });
     }
     await db.$disconnect();
   });
@@ -106,18 +107,39 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     expect(item!.comments[0].authorName).toContain("Pessoa fictícia");
     expect(await comentarItem(itemId, " ")).toHaveProperty("error");
   });
-  it("cadastro de sistemas exige gestão; nomes únicos e inativos preservam vínculos", async () => {
-    assumir(contexto()); expect(await salvarSistema({ name: "Ferramenta", active: true })).toHaveProperty("error");
-    assumir(contexto(gestor, "SECTOR_ADMIN"));
-    const toolId = id(await salvarSistema({ name: "Ferramenta", active: true }));
-    expect(await salvarSistema({ name: "ferramenta", active: true })).toHaveProperty("error");
-    const itemId = id(await salvarItem(criar({ systemMode: "EXISTING", toolId })));
-    expect(await salvarSistema({ name: "Ferramenta renomeada", active: false }, toolId, 0)).toMatchObject({ ok: true });
-    expect(await salvarSistema({ name: "Tentativa antiga", active: true }, toolId, 0)).toEqual({ error: CONFLITO });
-    expect(await salvarItem(criar({ systemMode: "EXISTING", toolId }))).toHaveProperty("error");
-    expect(await salvarItem(criar({ systemMode: "EXISTING", toolId }), itemId, 0)).toMatchObject({ ok: true });
-    expect((await detalheItem(ctx, itemId))!.tool).toMatchObject({ active: false, name: "Ferramenta renomeada" });
-    expect((await detalheItem(ctx, itemId))!.changes.at(-1)!.changes).toEqual(expect.arrayContaining([{ field: "Sistema", before: null, after: "Ferramenta" }]));
+  it("os sistemas vêm do Ops Center: robôs, sites e apps; inativos preservam vínculos", async () => {
+    assumir(contexto()); const sufixo = randomUUID().slice(0, 8);
+    const site = await db!.opsSite.create({ data: { tenantId, name: `Portal ${sufixo}`, url: "https://portal.example.test" } });
+    const app = await db!.opsApp.create({ data: { tenantId, name: `App ${sufixo}` } });
+    await db!.opsWatcher.create({ data: { tenantId, slug: `robo-${sufixo}`, name: `Robô ${sufixo}` } });
+    const { sistemas } = await opcoesTech(ctx);
+    expect(sistemas).toEqual(expect.arrayContaining([
+      { chave: `site:${site.id}`, nome: site.name, origem: "site", ativo: true }, { chave: `app:${app.id}`, nome: app.name, origem: "app", ativo: true },
+      { chave: `robo:robo-${sufixo}`, nome: `Robô ${sufixo}`, origem: "robo", ativo: true },
+    ]));
+    const title = `Com sistema ${sufixo}`, itemId = id(await salvarItem(criar({ title, systemMode: "EXISTING", systemKey: `site:${site.id}` })));
+    expect(await detalheItem(ctx, itemId)).toMatchObject({ opsSiteId: site.id, opsSite: { name: site.name } });
+    expect(await salvarItem(criar({ title, systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }), itemId, 0)).toMatchObject({ ok: true });
+    expect(await detalheItem(ctx, itemId)).toMatchObject({ opsSiteId: null, opsWatcherSlug: `robo-${sufixo}` });
+    expect((await detalheItem(ctx, itemId))!.changes[0].changes).toEqual([{ field: "Sistema", before: site.name, after: `Robô ${sufixo}` }]);
+    expect((await listarItens(ctx, lerFiltros({ sistema: `robo:robo-${sufixo}` }))).items.map(i => i.id)).toEqual([itemId]);
+    await db!.opsWatcher.update({ where: { tenantId_slug: { tenantId, slug: `robo-${sufixo}` } }, data: { isActive: false } });
+    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }))).toHaveProperty("error");
+    expect(await salvarItem(criar({ title, systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }), itemId, 1)).toMatchObject({ ok: true });
+    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `app:${randomUUID()}` }))).toHaveProperty("error");
+    // O cadastro anterior só mantém o vínculo que já existia.
+    const tool = await db!.techInternalTool.create({ data: { tenantId, name: `Antigo ${sufixo}` } });
+    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `tool:${tool.id}` }))).toHaveProperty("error");
+  });
+  it("o histórico geral traz cada alteração com autor, item e ordem mais recente", async () => {
+    assumir(contexto()); const itemId = id(await salvarItem(criar({ title: "Histórico geral" })));
+    expect(await mudarSituacaoItem(itemId, "VALIDATION", 0)).toMatchObject({ ok: true });
+    const { changes, total } = await historicoTech(ctx, 1);
+    expect(total).toBeGreaterThanOrEqual(2);
+    expect(changes[0]).toMatchObject({ itemId, authorId: tech, version: 1, item: { title: "Histórico geral" }, changes: [{ field: "Situação", before: "Pendente", after: "Em validação" }] });
+    expect(changes[1]).toMatchObject({ itemId, version: 0 });
+    assumir(contexto(externo, "SECTOR_USER", ["tech"], outroTenant)); expect((await historicoTech(ctx, 1)).changes.some(c => c.itemId === itemId)).toBe(false);
+    assumir(contexto(fiscal, "SECTOR_USER", ["fiscal"])); await expect(historicoTech(ctx, 1)).rejects.toThrow();
   });
   it("excluir a conta solta o responsável e preserva comentários e autoria do histórico", async () => {
     const temporario = await novoUsuario(tenantId, "SECTOR_USER", "tech"); assumir(contexto(temporario));
@@ -137,14 +159,13 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   });
   it("isola leitura, comentários, atualizações, ferramentas e filtros entre escritórios", async () => {
     assumir(contexto(gestor, "SECTOR_ADMIN"));
-    const toolId = id(await salvarSistema({ name: "Privado", active: true })); const itemId = id(await salvarItem(criar()));
+    const site = await db!.opsSite.create({ data: { tenantId, name: `Privado ${randomUUID()}`, url: "https://privado.example.test" } }); const itemId = id(await salvarItem(criar()));
     assumir(contexto(externo, "SECTOR_USER", ["tech"], outroTenant));
     expect(await detalheItem(ctx, itemId)).toBeNull(); expect(await comentarItem(itemId, "Não autorizado")).toHaveProperty("error");
     expect(await salvarItem(criar(), itemId, 0)).toHaveProperty("error");
-    expect(await salvarItem(criar({ systemMode: "EXISTING", toolId }))).toHaveProperty("error");
+    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `site:${site.id}` }))).toHaveProperty("error");
     expect((await listarItens(ctx, lerFiltros({ situacao: "ALL" }))).total).toBe(0);
-    expect((await opcoesTech(ctx)).tools).toHaveLength(0);
-    assumir(contexto(externo, "ADMIN", [], outroTenant)); expect(await salvarSistema({ name: "Invasão", active: true }, toolId, 0)).toHaveProperty("error");
+    expect((await opcoesTech(ctx)).sistemas).toHaveLength(0);
   });
   it("bloqueia outro setor, somente leitura, assinatura e módulo desativado", async () => {
     assumir(contexto()); const itemId = id(await salvarItem(criar()));

@@ -15,15 +15,16 @@ import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { intervaloMes } from "@/lib/tech-interno/agenda";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta, nomeDoSistema } from "@/lib/tech-interno/regras";
+import { MODULO_OPS } from "@/lib/ops/regras";
 
 export const dynamic = "force-dynamic";
 
 export default async function ControleInternoPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO);
   const params = await searchParams, filtros = lerFiltros(params);
-  const [lista, opcoes, podeEditar, podeGerir] = await Promise.all([
-    listarItens(ctx, filtros), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir"),
+  const [lista, opcoes, podeEditar, podeGerirOps] = await Promise.all([
+    listarItens(ctx, filtros), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), podeNoModulo(ctx, MODULO_OPS, "gerir"),
   ]);
   const hrefPagina = (page: number) => {
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "pagina") q.set(k, v);
@@ -41,10 +42,12 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
     const atrasado = item.dueDate && item.dueDate.toISOString().slice(0, 10) < hoje && (EM_ABERTO as readonly string[]).includes(item.status);
     return <span className={atrasado ? "text-danger font-medium" : ""}>{item.dueDate ? formatCalendarDate(item.dueDate) : "Sem prazo"}{atrasado ? " · Atrasado" : ""}</span>;
   };
-  const nomeSistema = (item: typeof lista.items[number]) => item.systemMode === "NEW" ? "Novo sistema" : item.systemMode === "NONE" ? "Sem sistema" : `${item.tool?.name ?? "Sistema indisponível"}${item.tool && !item.tool.active ? " (inativo)" : ""}`;
+  const nomeSistema = (item: typeof lista.items[number]) => nomeDoSistema(item, true);
   return <PageContainer>
     <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech." action={<div className="flex flex-wrap gap-2">
-      {podeGerir && <Button href={href(`${ROTA_TECH_INTERNO}/sistemas`)} variant="secondary">Sistemas</Button>}
+      {/* Os sistemas são os do Ops Center (29/10/2026): o cadastro fica lá. */}
+      {podeGerirOps && <Button href="/ops" variant="secondary">Sistemas no Ops Center</Button>}
+      <Button href={href(`${ROTA_TECH_INTERNO}/historico`)} variant="secondary">Histórico</Button>
       {podeEditar && <Button href={href(`${ROTA_TECH_INTERNO}/novo`)}>Novo item</Button>}
     </div>} />
     <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
@@ -55,7 +58,7 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
       { chave: "situacao", rotulo: "Situação", vazioLabel: filtros.view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(filtros.view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
       { chave: "tipo", rotulo: "Tipo", opcoes: Object.entries(TIPOS).map(([value, label]) => ({ value, label })) },
       { chave: "prioridade", rotulo: "Prioridade", opcoes: PRIORIDADES.map((label, i) => ({ value: String(i), label })) },
-      { chave: "sistema", rotulo: "Sistema", opcoes: [{ value: "NONE", label: "Sem sistema" }, { value: "NEW", label: "Novo sistema" }, ...opcoes.tools.map(t => ({ value: t.id, label: `${t.name}${t.active ? "" : " (inativo)"}` }))] },
+      { chave: "sistema", rotulo: "Sistema", opcoes: [{ value: "NONE", label: "Sem sistema" }, { value: "NEW", label: "Novo sistema" }, ...opcoes.sistemas.map(s => ({ value: s.chave, label: `${s.nome}${s.ativo ? "" : " (inativo)"}` }))] },
       { chave: "responsavel", rotulo: "Responsável", opcoes: [{ value: "me", label: "Comigo" }, { value: "none", label: "Sem responsável" }, ...opcoes.users.map(u => ({ value: u.id, label: u.name }))] },
       { chave: "atrasados", rotulo: "Prazo", vazioLabel: "Todos", opcoes: [{ value: "1", label: "Atrasados" }] },
     ]} />}>

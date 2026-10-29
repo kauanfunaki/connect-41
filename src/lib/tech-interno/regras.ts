@@ -19,20 +19,41 @@ export const itemSchema = z.object({
   priority: z.coerce.number({ error: "Prioridade inválida." }).int("Prioridade inválida.").min(0, "Prioridade inválida.").max(3, "Prioridade inválida.").default(1),
   status: z.enum(["PENDING", "IN_PROGRESS", "VALIDATION", "DONE", "CANCELED"], { error: "Situação inválida." }).default("PENDING"),
   systemMode: z.enum(["NONE", "EXISTING", "NEW"], { error: "Escolha uma opção de sistema válida." }).default("NONE"),
-  toolId: idOpcional,
+  systemKey: idOpcional,
   assigneeId: idOpcional,
   dueDate: z.union([dia, z.literal(""), z.null()], { error: "Informe uma data válida." }).optional().transform(v => v || null),
 }).superRefine((v, ctx) => {
-  if (v.systemMode === "EXISTING" && !v.toolId) ctx.addIssue({ code: "custom", path: ["toolId"], message: "Escolha um sistema cadastrado." });
-  if (v.systemMode !== "EXISTING" && v.toolId) ctx.addIssue({ code: "custom", path: ["toolId"], message: "Esta opção não permite um sistema cadastrado." });
+  if (v.systemMode === "EXISTING" && !vinculoDoSistema(v.systemKey)) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Escolha um sistema do Ops Center." });
+  if (v.systemMode !== "EXISTING" && v.systemKey) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Esta opção não permite um sistema cadastrado." });
 });
 export type DadosItem = z.infer<typeof itemSchema>;
 export const versaoSchema = z.coerce.number().int().min(0);
 export const comentarioSchema = z.string().trim().min(1, "Escreva o comentário.").max(5000, "O comentário deve ter até 5.000 caracteres.");
-export const sistemaSchema = z.object({
-  name: z.string().trim().min(1, "Informe o nome do sistema.").max(120, "O nome deve ter até 120 caracteres.").transform(v => v.replace(/\s+/g, " ")),
-  active: z.boolean(),
-});
+
+// O sistema de um item vem do Ops Center (29/10/2026): o mesmo cadastro de robôs,
+// sites e apps, sem um segundo cadastro aqui. A chave diz de onde ele vem; "tool"
+// é o cadastro próprio anterior, aceito só para manter um vínculo já gravado.
+export const ORIGENS_DO_SISTEMA = { robo: "Robôs", site: "Sites", app: "Apps", tool: "Cadastro anterior" } as const;
+export type OrigemDoSistema = keyof typeof ORIGENS_DO_SISTEMA;
+export type SistemaTech = { chave: string; nome: string; origem: OrigemDoSistema; ativo: boolean };
+export type VinculoDoSistema = { opsWatcherSlug: string | null; opsSiteId: string | null; opsAppId: string | null; toolId: string | null };
+export const SEM_VINCULO: VinculoDoSistema = { opsWatcherSlug: null, opsSiteId: null, opsAppId: null, toolId: null };
+const COLUNA_DA_ORIGEM = { robo: "opsWatcherSlug", site: "opsSiteId", app: "opsAppId", tool: "toolId" } as const;
+export function vinculoDoSistema(chave: string | null | undefined): VinculoDoSistema | null {
+  const [, origem, ref] = /^(robo|site|app|tool):(.{1,185})$/.exec(chave ?? "") ?? [];
+  return origem ? { ...SEM_VINCULO, [COLUNA_DA_ORIGEM[origem as OrigemDoSistema]]: ref } : null;
+}
+export function chaveDoSistema(v: VinculoDoSistema): string | null {
+  const origem = (Object.keys(COLUNA_DA_ORIGEM) as OrigemDoSistema[]).find(o => v[COLUNA_DA_ORIGEM[o]]);
+  return origem ? `${origem}:${v[COLUNA_DA_ORIGEM[origem]]}` : null;
+}
+export function nomeDoSistema(item: { systemMode: string; tool?: { name: string; active: boolean } | null; opsWatcher?: { name: string; isActive: boolean } | null; opsSite?: { name: string; isActive: boolean } | null; opsApp?: { name: string; isActive: boolean } | null }, marcarInativo = false) {
+  if (item.systemMode === "NEW") return "Novo sistema";
+  if (item.systemMode === "NONE") return "Sem sistema";
+  const ops = item.opsWatcher ?? item.opsSite ?? item.opsApp;
+  const nome = ops?.name ?? item.tool?.name, ativo = ops ? ops.isActive : item.tool?.active;
+  return nome ? `${nome}${marcarInativo && !ativo ? " (inativo)" : ""}` : "Sistema indisponível";
+}
 
 const filtroEnum = <T extends string>(valores: readonly T[], valor: string | undefined): T | undefined => valores.includes(valor as T) ? valor as T : undefined;
 export function lerFiltros(params: Record<string, string | string[] | undefined>) {
@@ -85,4 +106,13 @@ export function fraseDaAlteracao({ field, before, after }: Alteracao, criacao = 
   if (field === "Responsável") return !antes ? `definiu o responsável: ${depois}` : !depois ? `removeu o responsável (${antes})` : `trocou o responsável de ${antes} para ${depois}`;
   if (field === "Prazo") return !antes ? `definiu o prazo para ${depois}` : !depois ? `removeu o prazo (era ${antes})` : `mudou o prazo de ${antes} para ${depois}`;
   return `mudou ${ARTIGO[field] ?? field.toLowerCase()} de ${antes ?? "não informado"} para ${depois ?? "não informado"}`;
+}
+// Um registro do histórico: a frase principal e, na criação ou com mais de um
+// campo, uma frase por campo. Serve o item e o histórico geral (29/10/2026).
+export function resumoDoRegistro(changes: Alteracao[], version: number) {
+  const criacao = version === 0;
+  return {
+    frase: criacao ? "criou o item" : changes.length === 1 ? fraseDaAlteracao(changes[0]) : "alterou o item",
+    detalhes: criacao || changes.length > 1 ? changes.filter(c => !criacao || c.after).map(c => fraseDaAlteracao(c, criacao)) : [],
+  };
 }
