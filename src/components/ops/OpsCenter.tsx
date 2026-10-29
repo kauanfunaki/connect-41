@@ -17,6 +17,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { formatInstantDateTime } from "@/lib/format";
 import { Textarea } from "@/components/ui/Textarea";
+import { TextoRecolhivel } from "@/components/ui/TextoRecolhivel";
 import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
@@ -209,7 +210,7 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
                 <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-helper font-semibold text-brand">{w.ownerName ? iniciais(w.ownerName) : <UserRound size={16} />}</span>
                 <div className="min-w-0"><p className="text-helper text-fg-muted">Responsável</p><p className="break-words text-ui font-medium text-fg-secondary">{w.ownerName || "Sem responsável"}</p></div>
               </div>
-              <p className="min-h-10 flex-1 break-words text-ui leading-relaxed text-fg-secondary">{w.description || "Sem descrição cadastrada."}</p>
+              <TextoRecolhivel className="min-h-10 flex-1" texto={w.description || "Sem descrição cadastrada."} />
               <div className="my-4 grid grid-cols-2 divide-x divide-border rounded-lg bg-surface-2 py-3">
                 <div className="min-w-0 px-3"><p className="mb-1.5 flex items-center gap-1.5 text-helper text-fg-secondary"><CheckCircle2 size={14} className="shrink-0 text-success-fg" /> Sucessos</p><strong className="text-section-title font-semibold tabular-nums text-fg">{numero(w.successToday)}</strong><span className="ml-1 text-helper text-fg-muted">hoje</span></div>
                 <div className="min-w-0 px-3"><p className="mb-1.5 flex items-center gap-1.5 text-helper text-fg-secondary"><XCircle size={14} className="shrink-0 text-danger" /> Erros</p><strong className={`text-section-title font-semibold tabular-nums ${w.errorToday ? "text-danger" : "text-fg"}`}>{numero(w.errorToday)}</strong><span className="ml-1 text-helper text-fg-muted">hoje</span></div>
