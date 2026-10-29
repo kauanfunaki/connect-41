@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { ehHostReservado } from "@/lib/auth/activeSector";
+import { setoresDoFoco } from "@/lib/empresas/foco";
 
 export type SetorState = { error: string } | null;
 
@@ -99,6 +100,9 @@ export async function atualizarSetor(
         color,
         active,
         order: orderRaw ? parseInt(orderRaw) : existing.order,
+        // A chave só vale onde as telas seguem o foco; nos outros setores o
+        // campo vem desabilitado e o valor guardado não muda.
+        ...(setoresDoFoco().has(existing.code) ? { companyFocus: form.get("companyFocus") === "on" } : {}),
       },
     });
   } catch (err) {
