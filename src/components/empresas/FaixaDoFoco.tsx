@@ -107,7 +107,7 @@ export function FaixaDoFoco({ foco }: { foco: FocoDaFaixa }) {
           Sair
         </Button>
       </div>
-      {trocandoDe === foco.companyId && <TrocarEmpresa atual={foco.companyId} tela={tela} onClose={() => setTrocandoDe(null)} />}
+      {trocandoDe === foco.companyId && <TrocarEmpresa atual={foco.companyId} onClose={() => setTrocandoDe(null)} />}
     </div>
   );
 }
@@ -115,8 +115,27 @@ export function FaixaDoFoco({ foco }: { foco: FocoDaFaixa }) {
 type EmpresaDaLista = EmpresaParaEscolher & { nome: string };
 
 /** A janela do "Trocar empresa": a busca de sempre (nome ou CNPJ, logo, filial recuada). */
-function TrocarEmpresa({ atual, tela, onClose }: { atual: string; tela: string; onClose: () => void }) {
+function TrocarEmpresa({ atual, onClose }: { atual: string; onClose: () => void }) {
+  return (
+    <Modal open onClose={onClose} title="Trabalhar em outra empresa">
+      <p className="text-ui text-fg-secondary mb-3">
+        As telas do BPO passam a mostrar e gravar só a empresa escolhida, com a matriz e as filiais dela.
+      </p>
+      <EscolherEmpresaDoFoco atual={atual} onPronto={onClose} />
+    </Modal>
+  );
+}
+
+/**
+ * A busca da empresa do foco, dividida entre o "Trocar empresa" da faixa e a
+ * janela do seletor do topo (29/10/2026). Escolhida a empresa, uma tela do
+ * foco volta limpa (o endereço da anterior ainda falaria da outra empresa:
+ * `?empresa=`, a conta bancária, o centro de custo); fora delas, a tela só é
+ * desenhada de novo, para o topo mostrar a empresa.
+ */
+export function EscolherEmpresaDoFoco({ atual, onPronto }: { atual: string | null; onPronto: () => void }) {
   const router = useRouter();
+  const caminho = usePathname();
   const toast = useToast();
   const [empresas, setEmpresas] = useState<EmpresaDaLista[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -134,23 +153,21 @@ function TrocarEmpresa({ atual, tela, onClose }: { atual: string; tela: string; 
 
   function escolher(companyId: string) {
     if (!companyId) return;
-    if (companyId === atual) return onClose();
+    if (companyId === atual) return onPronto();
     setErro(null);
     iniciar(async () => {
       const r = await trabalharNaEmpresa(companyId);
       if (!r.ok) return setErro(r.erro);
-      // A tela limpa: o endereço da anterior ainda falaria da outra empresa
-      // (`?empresa=`, a conta bancária, o centro de custo).
-      router.replace(tela);
+      const tela = telaDoFoco(caminho);
+      if (tela) router.replace(tela);
+      else router.refresh();
+      onPronto();
       toast.success(`Pronto: as telas do BPO agora mostram e gravam só ${r.descricao}.`);
     });
   }
 
   return (
-    <Modal open onClose={onClose} title="Trabalhar em outra empresa">
-      <p className="text-ui text-fg-secondary mb-3">
-        As telas do BPO passam a mostrar e gravar só a empresa escolhida, com a matriz e as filiais dela.
-      </p>
+    <>
       {erro && <Aviso className="mb-3">{erro}</Aviso>}
       {empresas === null ? (
         !erro && <p className="text-ui text-fg-muted">Carregando as empresas…</p>
@@ -162,12 +179,12 @@ function TrocarEmpresa({ atual, tela, onClose }: { atual: string; tela: string; 
             options={opcoesDeEmpresa(empresas)}
             avatar
             lembrarRecentes="empresas"
-            defaultValue={atual}
+            defaultValue={atual ?? undefined}
             placeholder="Buscar empresa por nome ou CNPJ…"
             onChange={escolher}
           />
         </div>
       )}
-    </Modal>
+    </>
   );
 }

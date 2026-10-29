@@ -29,7 +29,7 @@ import { configDoHelpdesk } from "@/lib/chamados/contexto";
 import { temAcessoAoModulo } from "@/lib/chamados/consultas";
 import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
 import { EstiloDaAparencia } from "@/components/aparencia/EstiloDaAparencia";
-import { lerEmpresaEmFoco } from "@/lib/empresas/focoServidor";
+import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
 import { alcanceDoFoco } from "@/lib/empresas/foco";
 import { FaixaDoFoco, ProvedorDoFoco } from "@/components/empresas/FaixaDoFoco";
 import { contarNovasDaEquipe } from "@/lib/solicitacoes/consultas";
@@ -180,10 +180,17 @@ export default async function AppLayout({
   // topo, nas telas que seguem o foco. Sem o cookie, nem consulta o banco;
   // erro aqui não derruba o app — a tela confere de novo (`ConferirFoco`) e a
   // trava das ações lê o foco por conta própria.
-  const foco = await lerEmpresaEmFoco(ctx).catch((err) => {
-    console.error("[layout] empresa em foco", err);
-    return null;
-  });
+  const [foco, podeFocar] = await Promise.all([
+    lerEmpresaEmFoco(ctx).catch((err) => {
+      console.error("[layout] empresa em foco", err);
+      return null;
+    }),
+    // O seletor do topo escolhe a empresa (29/10/2026): para quem usa o foco.
+    podeUsarOFoco(ctx).catch((err) => {
+      console.error("[layout] pode usar o foco", err);
+      return false;
+    }),
+  ]);
 
   return (
     <ToastProvider>
@@ -197,6 +204,7 @@ export default async function AppLayout({
             <FaixaDoFoco foco={{ companyId: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, alcance: alcanceDoFoco(foco) }} />
           ) : undefined
         }
+        foco={podeFocar ? { atual: foco ? { companyId: foco.companyId, nome: foco.nome } : null } : null}
         tenantId={tenantId}
         accessibleTenants={accessibleTenants}
         sectors={visibleSectors}

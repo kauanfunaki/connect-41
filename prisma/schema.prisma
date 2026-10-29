@@ -1467,6 +1467,10 @@ model Sector {
   /// Nulo usa o padrão (`src/lib/gestao/regras.ts`).
   alertStalledDays Int?
   alertDueSoonDays Int?
+  /// "Trabalhar numa empresa por vez" neste setor (29/10/2026), a chave de
+  /// Configurações › Setores. Nulo = ligado, o de antes da chave; só vale nos
+  /// setores cujas telas seguem o foco (`setoresDoFoco`, hoje o BPO).
+  companyFocus Boolean?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

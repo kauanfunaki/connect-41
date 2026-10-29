@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Check, LayoutGrid, Search } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Check, Crosshair, LayoutGrid, LogOut, Search } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
+import { EscolherEmpresaDoFoco } from "@/components/empresas/FaixaDoFoco";
+import { pararDeTrabalharNaEmpresa } from "@/app/(app)/foco-actions";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -10,6 +14,9 @@ import { TODOS_OS_SETORES, trocarSetor, trocarTenant } from "@/components/shell/
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
+
+/** A empresa em foco, para a janela: `null` quando a pessoa não usa o foco. */
+export type FocoDaTroca = { atual: { companyId: string; nome: string } | null } | null;
 
 /** A partir de quantos setores aparece a busca. */
 const SETORES_PARA_BUSCAR = 8;
@@ -22,6 +29,11 @@ const SETORES_PARA_BUSCAR = 8;
  *
  * A troca é a mesma de antes (`contexto.ts`): grava o cookie e recarrega no
  * destino. Trocar de escritório zera o setor.
+ *
+ * Desde 29/10/2026 também escolhe a empresa do foco ("Trabalhar numa
+ * empresa"), que antes só começava na ficha da empresa. Com isso a janela abre
+ * também para quem tem um setor e um escritório só — o caso de quase todo
+ * mundo do BPO.
  */
 export function TrocaDeContexto({
   open,
@@ -32,6 +44,7 @@ export function TrocaDeContexto({
   activeSector,
   appDomain,
   sectorHostSuffix,
+  foco = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -42,6 +55,7 @@ export function TrocaDeContexto({
   activeSector: string | null;
   appDomain: string | null;
   sectorHostSuffix: string;
+  foco?: FocoDaTroca;
 }) {
   const [busca, setBusca] = useState("");
   const [trocando, setTrocando] = useState<string | null>(null);
@@ -65,11 +79,13 @@ export function TrocaDeContexto({
         setBusca("");
         onClose();
       }}
-      title="Trocar de setor ou escritório"
+      title={sectors.length > 1 || tenants.length > 1 ? (foco ? "Trocar de setor, escritório ou empresa" : "Trocar de setor ou escritório") : "Trabalhar numa empresa"}
       maxWidth="max-w-2xl"
       desfocar
     >
       <div className="flex flex-col gap-6">
+        {foco && <EmpresaDoFoco foco={foco} onPronto={onClose} />}
+
         {sectors.length > 1 && (
           <section aria-labelledby="troca-setor" className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -150,6 +166,50 @@ export function TrocaDeContexto({
         )}
       </div>
     </Modal>
+  );
+}
+
+/** A empresa do foco: a atual, com "Todas as empresas", e a busca para escolher outra. */
+function EmpresaDoFoco({ foco, onPronto }: { foco: NonNullable<FocoDaTroca>; onPronto: () => void }) {
+  const toast = useToast();
+  const [saindo, sair] = useTransition();
+  return (
+    <section aria-labelledby="troca-empresa" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="troca-empresa" className="c41-rotulo">
+          Empresa
+        </h3>
+        {foco.atual && (
+          <Button
+            variant="ghost"
+            size="xs"
+            loading={saindo}
+            loadingLabel="Saindo…"
+            onClick={() =>
+              sair(async () => {
+                await pararDeTrabalharNaEmpresa();
+                onPronto();
+                toast.success("As telas do BPO voltaram a mostrar todas as empresas.");
+              })
+            }
+          >
+            <LogOut size={13} aria-hidden />
+            Todas as empresas
+          </Button>
+        )}
+      </div>
+      <p className="text-fs-2 text-fg-secondary">
+        {foco.atual ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Crosshair size={13} aria-hidden className="text-brand" />
+            Trabalhando em <span className="font-semibold text-fg">{foco.atual.nome}</span>. Escolha outra abaixo.
+          </span>
+        ) : (
+          "Escolha uma empresa e as telas do BPO passam a mostrar e gravar só ela, com a matriz e as filiais."
+        )}
+      </p>
+      <EscolherEmpresaDoFoco atual={foco.atual?.companyId ?? null} onPronto={onPronto} />
+    </section>
   );
 }
 

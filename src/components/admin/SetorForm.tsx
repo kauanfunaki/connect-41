@@ -17,15 +17,18 @@ export type SetorDefaultValues = {
   color?: string;
   active?: boolean;
   order?: number;
+  companyFocus?: boolean | null;
 };
 
 type Props = {
   action: (prev: SetorState, form: FormData) => Promise<SetorState>;
   cancelHref: string;
   defaultValues?: SetorDefaultValues;
+  /** As telas deste setor seguem a empresa em foco (`setoresDoFoco`). */
+  focoDisponivel?: boolean;
 };
 
-export function SetorForm({ action, cancelHref, defaultValues }: Props) {
+export function SetorForm({ action, cancelHref, defaultValues, focoDisponivel = false }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   const isEdit = Boolean(defaultValues?.id);
 
@@ -78,6 +81,23 @@ export function SetorForm({ action, cancelHref, defaultValues }: Props) {
             />
           </AlinhadoAoCampo>
         </FieldGrid>
+      )}
+
+      {/* A chave do foco (29/10/2026): sempre à vista, desabilitada com o
+          motivo onde as telas do setor ainda não seguem a empresa. */}
+      {isEdit && (
+        <Checkbox
+          id="companyFocus"
+          name="companyFocus"
+          defaultChecked={focoDisponivel && defaultValues?.companyFocus !== false}
+          disabled={!focoDisponivel}
+          label="Trabalhar numa empresa por vez"
+          helper={
+            focoDisponivel
+              ? "Quem é do setor escolhe uma empresa no topo (ou na ficha dela), e as telas passam a mostrar e gravar só ela, com a matriz e as filiais."
+              : "As telas deste setor ainda não seguem a empresa escolhida. Hoje, só as telas do BPO seguem."
+          }
+        />
       )}
 
       <FormFooter
