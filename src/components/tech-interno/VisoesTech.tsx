@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { ClipboardList } from "lucide-react";
 import { mudarSituacaoTech } from "@/app/(app)/tech/controle-interno/actions";
-import { SITUACOES, TIPOS, PRIORIDADES, EM_ABERTO, ROTA_TECH_INTERNO, comVolta } from "@/lib/tech-interno/regras";
+import { SITUACOES, TIPOS, PRIORIDADES, EM_ABERTO, ROTA_TECH_INTERNO, LINK_DO_ITEM, comVolta } from "@/lib/tech-interno/regras";
 import { intervaloMes } from "@/lib/tech-interno/agenda";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -32,10 +32,10 @@ export function VisoesTech({ items, view, month, today, canEdit, voltar = ROTA_T
   function card(item: ItemVisualTech, editable = false, noDia = false) {
     const late = item.dueDate && item.dueDate < today && (EM_ABERTO as readonly string[]).includes(item.status), cor = CORES_DO_TIPO[item.type];
     // A cor do tipo na borda e no fundo distingue os cartões de relance (26/10/2026).
-    return <article key={item.id} draggable={editable && canEdit && !pending} onDragStart={e => e.dataTransfer.setData("text/plain", item.id)} className="rounded-md border border-l-4 p-3 space-y-2 min-w-0"
+    return <article key={item.id} draggable={editable && canEdit && !pending} onDragStart={e => e.dataTransfer.setData("text/plain", item.id)} className="relative rounded-md border border-l-4 p-3 space-y-2 min-w-0 cursor-pointer transition-[filter] hover:brightness-[.98]"
       style={{ borderColor: `color-mix(in srgb, ${cor} 28%, var(--c41-border))`, borderLeftColor: cor, backgroundColor: `color-mix(in srgb, ${cor} 7%, var(--c41-surface))` }}>
       <p className="text-helper font-semibold" style={{ color: cor }}>{TIPOS[item.type]} <span className="font-normal text-fg-secondary">· {PRIORIDADES[item.priority]}</span></p>
-      <Link href={comVolta(`${ROTA_TECH_INTERNO}/${item.id}`, voltar)} className="block font-medium text-fg hover:text-brand break-words">{item.title}</Link>
+      <Link href={comVolta(`${ROTA_TECH_INTERNO}/${item.id}`, voltar)} draggable={false} className={`block font-medium text-fg hover:text-brand break-words ${LINK_DO_ITEM}`}>{item.title}</Link>
       <p className="text-helper text-fg-muted break-words">{item.system} · {item.assignee ?? "Sem responsável"}</p>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={canEdit} />

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
@@ -11,20 +12,19 @@ import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { salvarItemTech, comentarItemTech } from "@/app/(app)/tech/controle-interno/actions";
-import { TIPOS, PRIORIDADES, SITUACOES, ROTA_TECH_INTERNO, comVolta } from "@/lib/tech-interno/regras";
+import { TIPOS, PRIORIDADES, SITUACOES, ROTA_TECH_INTERNO, ORIGENS_DO_SISTEMA, comVolta, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
 
 type Pessoa = { id: string; name: string };
-type Sistema = Pessoa & { active: boolean };
 export type ItemDoFormulario = {
   id: string; version: number; title: string; description: string | null;
   type: keyof typeof TIPOS; priority: number; status: keyof typeof SITUACOES;
-  systemMode: "NONE" | "NEW" | "EXISTING"; toolId: string | null; assigneeId: string | null; dueDate: string | null;
+  systemMode: "NONE" | "NEW" | "EXISTING"; systemKey: string | null; assigneeId: string | null; dueDate: string | null;
   assigneeName: string | null;
 };
 
-export function FormularioItem({ item, tools, users, podeEditar, voltar = ROTA_TECH_INTERNO }: { item?: ItemDoFormulario; tools: Sistema[]; users: Pessoa[]; podeEditar: boolean; voltar?: string }) {
+export function FormularioItem({ item, sistemas, users, podeEditar, voltar = ROTA_TECH_INTERNO }: { item?: ItemDoFormulario; sistemas: SistemaTech[]; users: Pessoa[]; podeEditar: boolean; voltar?: string }) {
   const router = useRouter();
-  const [sistema, setSistema] = useState(item?.systemMode === "EXISTING" ? item.toolId ?? "NONE" : item?.systemMode ?? "NONE");
+  const [sistema, setSistema] = useState(item?.systemMode === "EXISTING" ? item.systemKey ?? "NONE" : item?.systemMode ?? "NONE");
   const [erro, setErro] = useState("");
   const { show } = useToast();
   const [pendente, iniciar] = useTransition();
@@ -45,7 +45,7 @@ export function FormularioItem({ item, tools, users, podeEditar, voltar = ROTA_T
   }}>
     <input type="hidden" name="version" value={item?.version ?? 0} />
     <input type="hidden" name="systemMode" value={modo} />
-    <input type="hidden" name="toolId" value={modo === "EXISTING" ? sistema : ""} />
+    <input type="hidden" name="systemKey" value={modo === "EXISTING" ? sistema : ""} />
     <fieldset disabled={!podeEditar || pendente} className="contents">
       <CampoForm label="Título" htmlFor="tech-title" required><Input id="tech-title" name="title" required maxLength={200} defaultValue={item?.title} /></CampoForm>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -54,9 +54,16 @@ export function FormularioItem({ item, tools, users, podeEditar, voltar = ROTA_T
         </Select></CampoForm>
         <CampoForm label="Prioridade" htmlFor="tech-priority" required><Select id="tech-priority" name="priority" defaultValue={item?.priority ?? 1}>{PRIORIDADES.map((label, v) => <option key={v} value={v}>{label}</option>)}</Select></CampoForm>
         <CampoForm label="Situação" htmlFor="tech-status" required><Select id="tech-status" name="status" defaultValue={item?.status ?? "PENDING"}>{Object.entries(SITUACOES).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</Select></CampoForm>
-        <CampoForm label="Sistema" htmlFor="tech-system"><Select id="tech-system" value={sistema} onChange={e => setSistema(e.target.value)}>
+        {/* Os robôs, sites e apps do Ops Center, com busca: a lista cresce com o
+            cadastro de lá (29/10/2026). Inativo só aparece no item que já o usa. */}
+        <CampoForm label="Sistema" htmlFor="tech-system" helper="Do cadastro do Ops Center."><Select id="tech-system" busca value={sistema} onChange={e => setSistema(e.target.value)}>
           <option value="NONE">Sem sistema</option><option value="NEW">Novo sistema</option>
-          {tools.filter(t => t.active || t.id === item?.toolId).map(t => <option key={t.id} value={t.id} disabled={!t.active && t.id !== item?.toolId}>{t.name}{!t.active ? " (inativo)" : ""}</option>)}
+          {(Object.keys(ORIGENS_DO_SISTEMA) as OrigemDoSistema[]).map(origem => {
+            const daOrigem = sistemas.filter(s => s.origem === origem && (s.ativo || s.chave === item?.systemKey));
+            return daOrigem.length ? <optgroup key={origem} label={ORIGENS_DO_SISTEMA[origem]}>
+              {daOrigem.map(s => <option key={s.chave} value={s.chave}>{s.nome}{!s.ativo ? " (inativo)" : ""}</option>)}
+            </optgroup> : null;
+          })}
         </Select></CampoForm>
         <CampoForm label="Responsável" htmlFor="tech-assignee"><Select id="tech-assignee" name="assigneeId" defaultValue={item?.assigneeId ?? ""}><option value="">Sem responsável</option>{responsaveis.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></CampoForm>
         <CampoForm label="Prazo" htmlFor="tech-due" helper="Opcional."><CampoData id="tech-due" name="dueDate" min="1900-01-01" max="9999-12-31" defaultValue={item?.dueDate ?? ""} /></CampoForm>
@@ -82,6 +89,6 @@ export function FormularioComentario({ id }: { id: string }) {
   }}>
     <CampoForm label="Comentário" htmlFor="tech-comment"><Textarea id="tech-comment" name="body" value={texto} onChange={e => setTexto(e.target.value)} rows={3} maxLength={5000} required disabled={pendente} /></CampoForm>
     {erro && <p role="alert" className="text-helper text-danger">{erro}</p>}
-    <Button className="self-end" type="submit" loading={pendente}>Adicionar comentário</Button>
+    <Button className="self-end" type="submit" loading={pendente}><MessageSquarePlus size={14} aria-hidden />Adicionar comentário</Button>
   </form>;
 }
