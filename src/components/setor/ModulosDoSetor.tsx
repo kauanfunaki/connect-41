@@ -3,6 +3,7 @@ import { BotaoFixarTela } from "@/components/setor/BotaoFixarTela";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { Card } from "@/components/ui/Card";
 import { agruparModulos, slugDoGrupo, type GrupoDeModulo } from "@/lib/module-catalog";
+import { areaDoGrupoDeTelas, areaDoModulo } from "@/lib/aparencia/gruposDaEquipe";
 
 export type ModuloDoSetor = { code: string; label: string; description: string };
 
@@ -21,14 +22,11 @@ export type ModuloDoSetor = { code: string; label: string; description: string }
 export function ModulosDoSetor({
   code,
   modulos,
-  cor,
   grupoAtivo = null,
   fixadas = [],
 }: {
   code: string;
   modulos: ModuloDoSetor[];
-  /** Cor do setor, do cadastro — pinta o ícone de cada cartão. */
-  cor: string;
   grupoAtivo?: GrupoDeModulo | null;
   /** Códigos já fixados na sidebar por quem está olhando. */
   fixadas?: string[];
@@ -60,20 +58,23 @@ export function ModulosDoSetor({
             {/* Com um grupo só na tela o título do grupo repetiria o subtítulo da
                 página, que já diz o nome dele. */}
             {visiveis.length > 1 && (
-              <h2 className="c41-rotulo mb-2.5">{grupo}</h2>
+              <h2 data-grupo={areaDoGrupoDeTelas(itens.map((m) => m.code)) ?? "marca"} className="c41-rotulo mb-2.5 flex items-center gap-1.5">
+                <span aria-hidden className="h-2 w-2 rounded-sm bg-grupo" />
+                {grupo}
+              </h2>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {itens.map((m) => (
                 // O alfinete é irmão do link, e não filho: botão dentro de <a>
                 // é inválido e o clique abriria a tela junto. O cartão é o
                 // cartão-atalho do app (`Card href`): borda azul, sobe 2px.
-                <div key={m.code} className="group relative">
-                  <Card href={`/setor/${code}/${m.code}`} className="h-full p-4 pr-11">
+                // Cada cartão na cor da área da tela (29/10/2026): o filete no
+                // topo e o ícone, como o item dela no menu e a página da área.
+                <div key={m.code} className="group relative" data-grupo={areaDoModulo(m.code) ?? "marca"}>
+                  <Card href={`/setor/${code}/${m.code}`} className="relative h-full overflow-hidden p-4 pr-11">
+                    <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-grupo" />
                     <div className="flex items-center gap-2.5">
-                      <span
-                        className="inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0"
-                        style={{ background: `${cor}1A`, color: cor }}
-                      >
+                      <span className="inline-flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 bg-grupo/12 text-grupo transition-colors group-hover:bg-grupo/20">
                         <ModuleIcon code={m.code} size={17} />
                       </span>
                       <p className="text-fs-4 font-semibold text-fg leading-tight">{m.label}</p>

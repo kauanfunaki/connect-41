@@ -13,7 +13,7 @@
 // cor de cada item e da tela aberta é a da área. Entraram Pessoas (DP e os
 // indicadores de RH), Recrutamento e Escritório (Tech, Gestão, Chamados).
 
-import { MODULE_ROUTES } from "@/lib/module-catalog";
+import { MODULE_CATALOG, MODULE_ROUTES, getModulesForSector, grupoDoSlug } from "@/lib/module-catalog";
 import { ehGrupoDeCor, type GrupoDeCor } from "./cores";
 
 /** O grupo de cada módulo da equipe. O que não está aqui fica na cor principal. */
@@ -118,6 +118,17 @@ export function grupoDaTelaDaEquipe(pathname: string): GrupoDeCor | null {
   // A página da própria área (28/10/2026): `/area/financeiro`.
   const daArea = /^\/area\/([^/]+)$/.exec(caminho)?.[1];
   if (daArea) return ehGrupoDeCor(daArea) ? daArea : null;
+  // As telas de um grupo do setor (`/setor/bpo/grupo/contas`, 29/10/2026): a
+  // área que mais telas do grupo têm, como o item do grupo no menu. A tela com
+  // todas as telas do setor mistura áreas e fica na principal — lá cada cartão
+  // leva a cor da sua.
+  const doGrupo = /^\/setor\/([^/]+)\/grupo\/([^/]+)$/.exec(caminho);
+  if (doGrupo) {
+    const grupo = grupoDoSlug(doGrupo[2]);
+    const doSetor = getModulesForSector(doGrupo[1]).filter((m) => m.group === grupo);
+    const telas = doSetor.length > 0 ? doSetor : MODULE_CATALOG.filter((m) => m.group === grupo);
+    return grupo ? areaDoGrupoDeTelas(telas.map((m) => m.code)) : null;
+  }
   const achada = ROTAS.find(([rota]) => caminho === rota || caminho.startsWith(`${rota}/`));
   return achada?.[1] ?? null;
 }
