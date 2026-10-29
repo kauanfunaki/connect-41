@@ -1015,6 +1015,15 @@ input[type="search"]::-webkit-search-decoration {
 .c41-surgir { animation: c41-surgir .14s ease-out backwards; transform-origin: top center; }
 @keyframes c41-esmaecer { from { opacity: 0; } to { opacity: 1; } }
 .c41-esmaecer { animation: c41-esmaecer .16s ease-out backwards; }
+/* O painel do item ao lado da sidebar (29/10/2026): sai de perto do menu, da
+   esquerda para a direita, e as telas entram uma depois da outra. */
+@keyframes c41-painel-lateral {
+  from { opacity: 0; transform: translateX(-6px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+.c41-painel-lateral { animation: c41-painel-lateral .16s cubic-bezier(.2,.7,.2,1) backwards; transform-origin: left top; }
+@keyframes c41-cascata { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+.c41-cascata { animation: c41-cascata .18s ease-out backwards; }
 /* Folha do celular (calendário do campo de data): sobe da borda de baixo. */
 @keyframes c41-folha { from { transform: translateY(100%); } to { transform: none; } }
 .c41-folha { animation: c41-folha .2s cubic-bezier(.2,.7,.2,1) backwards; }
@@ -1091,7 +1100,7 @@ input[type="search"]::-webkit-search-decoration {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .c41-pagina > *, .c41-surgir, .c41-esmaecer, .c41-folha { animation: none; }
+  .c41-pagina > *, .c41-surgir, .c41-esmaecer, .c41-folha, .c41-painel-lateral, .c41-cascata { animation: none; }
   .c41-chamar, .c41-ceci-pensando { animation: none; }
 }
 
