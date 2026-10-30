@@ -41,6 +41,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  ...(process.env.CONNECT_QA_DIST_DIR === ".local/sped-fiscal/next" ? { distDir: ".local/sped-fiscal/next" } : {}),
+  ...(process.env.CONNECT_QA_DIST_DIR === ".local/sped-fiscal/next" ? { typescript: { tsconfigPath: ".local/sped-fiscal/tsconfig.json" } } : {}),
   // Gera .next/standalone (server.js minimal) para imagem Docker enxuta no EasyPanel
   output: "standalone",
   // Fixa a raiz no diretório do projeto (há outros lockfiles em Documents/);

@@ -178,7 +178,7 @@ const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está co
 export const MODULE_CATALOG: ModuleDef[] = [
   {
     code: "contabil_sped", label: "SPED", sectorCode: "contabil",
-    description: "Conferência, de-para e arquivos de lançamentos para a Domínio",
+    description: "De-para e lançamentos de entrada para a Domínio, e o EFD Contribuições gerado pelo motor do SPED",
     defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
   },
   {
@@ -458,6 +458,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     ["fiscal_acervo", "Documentos e importações", `Acervo, serviços, contratos, importação e cobertura. ${SO_LEITURA}`, "ReceiptText", "Documentos"],
     ["fiscal_icms_ipi", "ICMS e IPI", `Ajustes da apuração (E111, DIME e DCIP), apuração e demonstrativo. ${COM_O_MOTOR}`, "FileSpreadsheet", "Apuração"],
     ["fiscal_contribuicoes", "PIS e COFINS", `Ajustes do bloco M, decisões por registro, parâmetros e fechamento da EFD Contribuições. ${COM_O_MOTOR}`, "Receipt", "Apuração"],
+    ["fiscal_fechamento", "Fechamento fiscal", "Documentos, faturamento, pagamentos e conferências processados no Connect.", "CheckCheck", "Conferência"],
     ["fiscal_entregas", "SPED gerados", `Versões de SPED, validação, entrega e decisões depois da geração. ${COM_O_MOTOR}`, "CheckCheck", "Conferência"],
     ["fiscal_conferencia", "Conferência fiscal", `Prévia financeira e confronto de documentos. ${SO_LEITURA}`, "Landmark", "Conferência"],
     ["fiscal_configuracoes", "Configurações fiscais", `Cadastro dos estabelecimentos, parâmetros e regras fiscais por CFOP e fonte. ${COM_O_MOTOR}`, "Building2", "Cadastros"],
@@ -784,6 +785,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   fiscal_acervo:           "/fiscal/documentos",
   fiscal_icms_ipi:         "/fiscal/icms-ipi",
   fiscal_contribuicoes:    "/fiscal/contribuicoes",
+  fiscal_fechamento:       "/fiscal/sped/fechamento",
   fiscal_entregas:         "/fiscal/entregas",
   fiscal_conferencia:      "/fiscal/conferencia",
   fiscal_configuracoes:    "/fiscal/configuracoes",

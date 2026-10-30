@@ -1,52 +1,91 @@
 import { z } from "zod";
-import { TIPOS_CONTABEIS, type ContextoContabil, type PendenciaContabil, type SecaoContabil } from "./types";
 
-export const contextoSchema = z.object({
-  cnpj: z.string().regex(/^\d{14}$/, "Escolha um estabelecimento válido."),
-  periodo: z.string().regex(/^\d{4}(-(0[1-9]|1[0-2]))?$/, "Escolha a competência ou o ano."),
-  tipos: z.array(z.enum(["entradas", "apoio", "saidas"])).min(1).max(3).transform(t => [...new Set(t)]),
-  incluir_dominio: z.boolean(),
-}).refine(c => c.periodo.length === 7 || !c.tipos.includes("saidas"), { message: "O faturamento é consultado por competência. Escolha um mês." });
+export const contaContabil = z.string().trim().regex(/^\d{0,20}$/, "Informe o código reduzido da conta, só números.");
+const data = z.string().default("").refine((v) => {
+  if (!v) return true;
+  const d = new Date(v + "T12:00:00Z");
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}, "Data inválida.");
+export const regraContabilSchema = z.object({
+  empresa: z.string().uuid(),
+  id: z.string().uuid().optional(),
+  cnpjFornecedor: z.string().trim().regex(/^(\d{11}|\d{14})?$/, "CPF/CNPJ deve ter 11 ou 14 dígitos."),
+  nomeFornecedor: z.string().trim().max(180).default(""),
+  cfop: z.string().trim().regex(/^(\d{4})?$/, "CFOP deve ter quatro dígitos."),
+  contaDebito: contaContabil.default(""),
+  contaCredito: contaContabil.default(""),
+  codigoHistorico: z.string().trim().regex(/^\d{0,10}$/).default(""),
+  historico: z.string().trim().max(255).default(""),
+  observacao: z.string().trim().max(500).default(""),
+  dataLancamento: data,
+  valor: z.string().trim().default("").refine((v) => !v || (/^\d{1,13}([.,]\d{1,2})?$/.test(v) && /[1-9]/.test(v)), "Valor inválido: use um valor positivo como 1234,56, sem milhar."),
+  iniciaLote: z.enum(["", "S", "N"]).default(""),
+  codigoFilial: z.string().trim().regex(/^\d{0,10}$/).default(""),
+  centroCustoDebito: z.string().trim().max(40).default(""),
+  centroCustoCredito: z.string().trim().max(40).default(""),
+  desconsiderar: z.boolean().default(false),
+}).superRefine((v, ctx) => {
+  if (!v.cnpjFornecedor && !(v.desconsiderar && v.cfop)) ctx.addIssue({ code: "custom", path: ["cnpjFornecedor"], message: "Informe o fornecedor; exclusão geral exige CFOP." });
+  if (!v.desconsiderar && !v.contaCredito) ctx.addIssue({ code: "custom", path: ["contaCredito"], message: "Informe a conta de crédito." });
+});
+export type DadosDaRegra = z.infer<typeof regraContabilSchema>;
 
-export function mesmoContexto(a: ContextoContabil, b: ContextoContabil) {
-  return a.cnpj === b.cnpj && a.periodo === b.periodo && a.incluir_dominio === b.incluir_dominio && [...a.tipos].sort().join() === [...b.tipos].sort().join();
+export function dadosPersistidosDaRegra(r: DadosDaRegra) {
+  return {
+    cnpjFornecedor: r.cnpjFornecedor, nomeFornecedor: r.nomeFornecedor, cfop: r.cfop,
+    contaDebito: r.contaDebito, contaCredito: r.contaCredito, codigoHistorico: r.codigoHistorico, historico: r.historico,
+    observacao: r.observacao, dataLancamento: r.dataLancamento, valor: r.valor ? r.valor.replace(",", ".") : null,
+    iniciaLote: r.iniciaLote, codigoFilial: r.codigoFilial, centroCustoDebito: r.centroCustoDebito, centroCustoCredito: r.centroCustoCredito,
+    desconsiderar: r.desconsiderar,
+  };
 }
-export function pendenciasAgrupadas(secoes: SecaoContabil[]): PendenciaContabil[] {
-  const mapa = new Map<string, PendenciaContabil>();
-  for (const s of secoes) for (const p of s.pendencias) {
-    const anterior = mapa.get(p.id);
-    if (!anterior) mapa.set(p.id, { ...p, competencias: [...p.competencias] });
-    else {
-      anterior.qtd += p.qtd;
-      // Totais de exibição somados em centavos, sem alterar os cálculos do motor.
-      anterior.valor = somarValores([anterior.valor, p.valor]);
-      anterior.competencias = [...new Set([...anterior.competencias, ...p.competencias])];
+
+export const COLUNAS_DE_REGRAS = {
+  cnpj_fornecedor: "cnpjFornecedor", nome_fornecedor: "nomeFornecedor", cfop: "cfop",
+  conta_debito: "contaDebito", conta_credito: "contaCredito", historico: "historico",
+  observacao: "observacao", codigo_historico: "codigoHistorico", data_lancamento: "dataLancamento",
+  valor: "valor", inicia_lote: "iniciaLote", codigo_filial: "codigoFilial",
+  centro_custo_debito: "centroCustoDebito", centro_custo_credito: "centroCustoCredito",
+  desconsiderar: "desconsiderar",
+} as const;
+
+export type PreviaDeRegras = { regras: DadosDaRegra[]; erros: { linha: number; mensagem: string }[]; ignoradas: number; impressao?: string };
+export function conferirImportacao(empresa: string, linhas: string[][], contas: { classificacao: string; reduzido: string }[] = []): PreviaDeRegras {
+  const [cabecalho = [], ...corpo] = linhas;
+  const colunas = cabecalho.map((v) => v.trim().toLowerCase().replace(/^\uFEFF/, ""));
+  const resultado: PreviaDeRegras = { regras: [], erros: [], ignoradas: 0 };
+  if (!colunas.includes("cnpj_fornecedor")) return { ...resultado, erros: [{ linha: 1, mensagem: "Falta a coluna cnpj_fornecedor." }] };
+  if (corpo.length > 5000) return { ...resultado, erros: [{ linha: 1, mensagem: "O limite é de 5.000 linhas por arquivo." }] };
+  const chaves = new Set<string>();
+  corpo.forEach((linha, i) => {
+    const dados: Record<string, unknown> = { empresa };
+    for (const [coluna, campo] of Object.entries(COLUNAS_DE_REGRAS)) {
+      const indice = colunas.indexOf(coluna);
+      if (indice >= 0) dados[campo] = linha[indice]?.trim() ?? "";
     }
-  }
-  return [...mapa.values()];
-}
-export function contextoDaUrl(params: URLSearchParams, padrao: ContextoContabil): ContextoContabil {
-  const tentativa = contextoSchema.safeParse({ cnpj: params.get("cnpj") ?? padrao.cnpj, periodo: params.get("periodo") ?? padrao.periodo,
-    tipos: params.get("tipos")?.split(",") ?? padrao.tipos, incluir_dominio: params.get("somente_faltantes") !== "1" });
-  return tentativa.success ? tentativa.data : padrao;
-}
-export function etapaDaUrl(params: URLSearchParams) { const n = Number(params.get("etapa") ?? 1); return n >= 1 && n <= 4 && Number.isInteger(n) ? n : 1; }
-export function rotuloTipo(tipo: string) { return TIPOS_CONTABEIS[tipo as keyof typeof TIPOS_CONTABEIS] ?? tipo; }
-
-/** Contrato monetário: string decimal com duas casas, proveniente do Python. */
-export function somarValores(valores: string[]): string {
-  const total = valores.reduce((soma, valor) => {
-    const m = /^(-?)([0-9]+)(?:[.]([0-9]{1,2}))?$/.exec(valor);
-    if (!m) throw new Error("Valor monetário inválido no relatório.");
-    const centavos = BigInt(m[2]) * BigInt(100) + BigInt((m[3] ?? "").padEnd(2, "0"));
-    return soma + (m[1] ? -centavos : centavos);
-  }, BigInt(0));
-  const absoluto = total < BigInt(0) ? -total : total;
-  return (total < BigInt(0) ? "-" : "") + String(absoluto / BigInt(100)) + "." + String(absoluto % BigInt(100)).padStart(2, "0");
+    const descarte = String(dados.desconsiderar ?? "").toLowerCase();
+    if (!["", "n", "nao", "não", "false", "0", "s", "sim", "true", "1"].includes(descarte)) {
+      resultado.erros.push({ linha: i + 2, mensagem: "desconsiderar: use S ou N." }); return;
+    }
+    dados.desconsiderar = ["s", "sim", "true", "1"].includes(descarte);
+    dados.cnpjFornecedor = String(dados.cnpjFornecedor ?? "").replace(/\D/g, "");
+    for (const campo of ["contaDebito", "contaCredito"]) {
+      const v = String(dados[campo] ?? "");
+      if (v.includes(".")) dados[campo] = contas.find((c) => c.classificacao === v)?.reduzido ?? v;
+    }
+    if (!dados.contaDebito && !dados.contaCredito && !dados.desconsiderar) { resultado.ignoradas++; return; }
+    const r = regraContabilSchema.safeParse(dados);
+    if (!r.success) { resultado.erros.push({ linha: i + 2, mensagem: r.error.issues.map((e) => e.path.join(".") + ": " + e.message).join("; ") }); return; }
+    const chave = r.data.cnpjFornecedor + "|" + r.data.cfop;
+    if (chaves.has(chave)) { resultado.erros.push({ linha: i + 2, mensagem: "Fornecedor e CFOP repetidos no arquivo." }); return; }
+    chaves.add(chave);
+    resultado.regras.push(r.data);
+  });
+  return resultado;
 }
 
-/** Formatos que todos os tipos selecionados conseguem produzir no motor atual. */
-export function formatosDoContexto(contexto: ContextoContabil): string[] {
-  const csv = !contexto.tipos.includes("saidas") && (contexto.periodo.length === 7 || !contexto.tipos.includes("entradas"));
-  return csv ? ["xlsx", "txt", "csv"] : ["xlsx", "txt"];
+export function csvDeRegras(linhas: Record<string, unknown>[]): string {
+  const campos = Object.values(COLUNAS_DE_REGRAS);
+  const celula = (v: unknown) => '"' + String(v ?? "").replace(/^[=+@-]/, "'$&").replace(/"/g, '""') + '"';
+  return "\uFEFF" + [Object.keys(COLUNAS_DE_REGRAS).join(";"), ...linhas.map((l) => campos.map((c) => celula(c === "desconsiderar" ? (l[c] ? "S" : "") : l[c])).join(";"))].join("\r\n") + "\r\n";
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ export function AcoesDoArquivo({ raiz, id, hrefDownload, obrigacao, validando, e
   permiteRegerar: boolean;
   permiteEntregas: boolean;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const [aberto, setAberto] = useState<Aberto>(null);
   const [resultado, setResultado] = useState<{ ok: boolean; mensagem: string } | null>(null);
@@ -45,7 +47,7 @@ export function AcoesDoArquivo({ raiz, id, hrefDownload, obrigacao, validando, e
     const inicio = Date.now();
     const relogio = setInterval(async () => {
       if (Date.now() - inicio > LIMITE_MS) { setAcompanhando(false); setResultado({ ok: false, mensagem: "A validação passou de 5 minutos. Recarregue mais tarde para ver o resultado." }); return; }
-      const r = await lerValidacaoNoMotor({ raiz, id }).catch(() => null);
+      const r = await lerValidacaoNoMotor({ raiz, empresaContabil, id }).catch(() => null);
       if (r?.ok && r.dados && r.dados.estado !== "validando") {
         setAcompanhando(false);
         setResultado({ ok: true, mensagem: "Validação concluída." });
@@ -53,10 +55,10 @@ export function AcoesDoArquivo({ raiz, id, hrefDownload, obrigacao, validando, e
       }
     }, CONSULTA_MS);
     return () => clearInterval(relogio);
-  }, [acompanhando, raiz, id, router]);
+  }, [acompanhando, raiz, id, router, empresaContabil]);
 
   const validar = () => startTransition(async () => {
-    const r = await validarArquivoNoMotor({ raiz, id, chave: chaveValidar });
+    const r = await validarArquivoNoMotor({ raiz, empresaContabil, id, chave: chaveValidar });
     depoisDeValidar(r);
     if (r.ok || r.codigo === "validacao_em_andamento") setAcompanhando(true);
     setResultado({ ok: r.ok, mensagem: r.mensagem });
@@ -77,6 +79,7 @@ export function AcoesDoArquivo({ raiz, id, hrefDownload, obrigacao, validando, e
 }
 
 function Regerar({ raiz, id, fechar }: { raiz: string; id: number; fechar: (r?: { ok: boolean; mensagem: string }) => void }) {
+  const empresaContabil = useEmpresaContabil();
   const [chave, , depoisDe] = useChaveDeIdempotencia();
   const [tipo, setTipo] = useState<"" | "0" | "1">("");
   const [duplicado, setDuplicado] = useState<string | null>(null);
@@ -84,7 +87,7 @@ function Regerar({ raiz, id, fechar }: { raiz: string; id: number; fechar: (r?: 
   const [pendente, startTransition] = useTransition();
   const enviar = (confirmarDuplicado: boolean) => startTransition(async () => {
     if (!tipo) { setErro("Escolha Original ou Substituto."); return; }
-    const r = await regerarArquivoNoMotor({ raiz, id, tipoSped: tipo, confirmarDuplicado, chave });
+    const r = await regerarArquivoNoMotor({ raiz, empresaContabil, id, tipoSped: tipo, confirmarDuplicado, chave });
     depoisDe(r);
     if (!r.ok && r.codigo === "execucao_duplicada") {
       const ex = r.detalhe?.existente as { id?: number } | undefined;
@@ -107,12 +110,13 @@ function Regerar({ raiz, id, fechar }: { raiz: string; id: number; fechar: (r?: 
 }
 
 function Entrega({ raiz, id, fechar }: { raiz: string; id: number; fechar: (r?: { ok: boolean; mensagem: string }) => void }) {
+  const empresaContabil = useEmpresaContabil();
   const [chave, , depoisDe] = useChaveDeIdempotencia();
   const [dados, setDados] = useState({ tipo: "original" as "original" | "retificadora", recibo: "", dataEntrega: new Date().toISOString().slice(0, 10), observacao: "" });
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const enviar = () => startTransition(async () => {
-    const r = await registrarEntregaNoMotor({ raiz, id, chave, ...dados });
+    const r = await registrarEntregaNoMotor({ raiz, empresaContabil, id, chave, ...dados });
     depoisDe(r);
     if (!r.ok) { setErro(r.mensagem); return; }
     fechar(r);

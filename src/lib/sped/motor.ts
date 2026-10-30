@@ -200,6 +200,7 @@ const texto = z.string().nullish().transform((v) => v ?? "");
 const quando = z.string().nullish().transform((v) => v ?? null);
 
 export const saudeSchema = z.object({
+  capacidades: z.array(z.string()).optional(),
   versao_api: z.string(),
   agora: z.string(),
   escrita_habilitada: z.boolean(),
@@ -245,6 +246,9 @@ export const ESTADOS_DE_EXECUCAO = ["pendente", "executando", "concluida", "erro
 export const ACOES_DE_EXECUCAO = ["paralela", "simples", "erros", "sped", "sped_contribuicoes"] as const;
 
 export const execucaoMotorSchema = z.object({
+  pacote_id: z.string().optional(),
+  revisao_connect: z.number().int().optional(),
+  sha256_connect: z.string().optional(),
   id: z.number().int(),
   acao: z.string(),
   rotulo: texto,
@@ -272,6 +276,9 @@ export const execucaoMotorSchema = z.object({
 export type ExecucaoDoMotor = z.infer<typeof execucaoMotorSchema>;
 
 export const arquivoMotorSchema = z.object({
+  pacote_id: z.string().optional(),
+  revisao_connect: z.number().int().optional(),
+  sha256_connect: z.string().optional(),
   id: z.number().int(),
   obrigacao: z.enum(["icms_ipi", "contribuicoes"]),
   cnpj: z.string(),
@@ -694,6 +701,10 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
     // §14.4 — sessões de upload.
     criarUpload: (raiz: string, corpo: { nome: string; tamanho: number }, escrita: Escrita) =>
       json({ metodo: "POST", caminho: "/uploads", raiz, corpo, escrita, exigeChave: true }, E.uploadSchema),
+    criarUploadDePacote: (raiz: string, corpo: { nome: string; tamanho: number; sha256: string }, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: "/uploads", raiz, corpo: { ...corpo, finalidade: "geracao_connect_v1" }, escrita, exigeChave: true }, E.uploadSchema),
+    concluirPacote: (raiz: string, id: string, sha256: string, escrita: Escrita) =>
+      json({ metodo: "POST", caminho: `/uploads/${idDoUpload(id)}/concluir`, raiz, corpo: { sha256 }, escrita, custo: "pesada" }, z.object({ pacote_id: z.string().min(1), sha256: z.string().regex(/^[0-9a-f]{64}$/) })),
     obterUpload: async (raiz: string, id: string) => json({ metodo: "GET", caminho: `/uploads/${idDoUpload(id)}`, raiz }, E.uploadSchema),
     /**
      * Uma parte, com o corpo **em stream** (do navegador ao motor sem ficar
@@ -789,6 +800,7 @@ export type ClienteDoMotor = ReturnType<typeof criarClienteDoMotor>;
 
 /** O corpo de `POST /execucoes` (§4.4). */
 export type CorpoDeExecucao = {
+  pacote_id?: string;
   acao: (typeof ACOES_DE_EXECUCAO)[number];
   empresa_id: number;
   competencia?: string | null;
