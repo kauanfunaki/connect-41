@@ -17,6 +17,11 @@ export type FeriasItem = {
   acquisitivePeriodLabel: string;
   concessivePeriodLabel: string | null;
   days: number;
+  /** "dd/mm/aaaa a dd/mm/aaaa" do gozo programado, ou null. */
+  gozoLabel: string | null;
+  /** As datas gravadas, para os campos abrirem preenchidos ("AAAA-MM-DD" ou ""). */
+  inicioISO: string;
+  retornoISO: string;
   isVencida: boolean;
 };
 
@@ -42,6 +47,7 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
           {ferias.concessivePeriodLabel && (
             <p className="text-fs-2 text-fg-muted">Concessivo: {ferias.concessivePeriodLabel}</p>
           )}
+          {ferias.gozoLabel && <p className="text-fs-2 text-fg-secondary tnum">Gozo: {ferias.gozoLabel}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {ferias.isVencida && (
@@ -71,12 +77,14 @@ export function FeriasRow({ ferias, updateAction, removeAction, canManage }: Pro
             </Select>
           </div>
           {/* Sem rótulo visível, os dois campos diziam "Escolher data", lado a
-              lado, sem dizer qual era qual (auditoria DRG-16, 07/10/2026). */}
+              lado, sem dizer qual era qual (auditoria DRG-16, 07/10/2026). Desde
+              30/10 abrem com as datas gravadas — vazios, pareciam não ter gozo
+              programado. */}
           <div className="w-full sm:w-40">
-            <CampoData name="startDate" title="Data de início" aria-label="Data de início" placeholder="Início" />
+            <CampoData name="startDate" defaultValue={ferias.inicioISO} title="Data de início" aria-label="Data de início" placeholder="Início" />
           </div>
           <div className="w-full sm:w-40">
-            <CampoData name="returnDate" title="Data de retorno" aria-label="Data de retorno" placeholder="Retorno" />
+            <CampoData name="returnDate" defaultValue={ferias.retornoISO} title="Data de retorno" aria-label="Data de retorno" placeholder="Retorno" />
           </div>
           <Button
             variant="secondary"

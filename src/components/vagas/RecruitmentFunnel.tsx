@@ -73,11 +73,25 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
   const [encerrarTarget, setEncerrarTarget] = useState<EncerrarTarget | null>(null);
   const [motivo, setMotivo] = useState("");
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [contratarAlvo, setContratarAlvo] = useState<{ cardId: string; personName: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Aplica otimista e DESFAZ se a action retornar erro — antes o card mudava de
   // coluna (ou sumia) mesmo quando o servidor recusava, e a tela só voltava ao
   // estado real num refresh manual.
+  // Soltar em "Contratado" contrata: a pessoa vira colaboradora da empresa da
+  // vaga, em admissão, e o cartão trava. Era um arraste sem volta e sem
+  // pergunta (auditoria de UX, 30/10/2026) — agora passa pela confirmação.
+  function pedirMover(cardId: string, stage: Stage) {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || card.stage === stage) return;
+    if (stage === "CONTRATADO") {
+      setContratarAlvo({ cardId, personName: card.personName });
+      return;
+    }
+    moveCard(cardId, stage);
+  }
+
   function moveCard(cardId: string, stage: Stage) {
     const card = cards.find((c) => c.id === cardId);
     if (!card || card.stage === stage) return;
@@ -162,7 +176,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                 const id = e.dataTransfer.getData("text/plain");
                 setDragOver(null);
                 setDraggingId(null);
-                if (id) moveCard(id, stage);
+                if (id) pedirMover(id, stage);
               }}
               className={`flex-1 flex-shrink-0 min-w-[15.5rem] rounded-lg border p-2.5 transition-colors ${
                 isDragOver ? "border-brand bg-brand/5" : "border-border bg-surface-2"
@@ -217,8 +231,11 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 text-brand text-micro font-semibold flex items-center justify-center">
                         {initials(c.personName)}
                       </span>
+                      {/* Contratada, a pessoa deixou de ser candidata: a ficha
+                          dela é a de Pessoas — /candidatos só abre candidato e
+                          dava 404. */}
                       <Link
-                        href={`/candidatos/${c.personId}`}
+                        href={isContratado ? `/pessoas/${c.personId}` : `/candidatos/${c.personId}`}
                         className="min-w-0 text-ui text-fg hover:text-brand transition-colors truncate"
                       >
                         {c.personName}
@@ -259,7 +276,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                           compact
                           value={c.stage}
                           disabled={pending}
-                          onChange={(e) => moveCard(c.id, e.target.value as Stage)}
+                          onChange={(e) => pedirMover(c.id, e.target.value as Stage)}
                         >
                           {ACTIVE_STAGES.map((s) => (
                             <option key={s} value={s}>
@@ -333,6 +350,20 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={contratarAlvo !== null}
+        title={`Contratar ${contratarAlvo?.personName ?? ""}?`}
+        description="A pessoa passa a colaboradora da empresa da vaga, com a admissão em andamento no DP, e o cartão fica fixo em Contratado — não volta para outra etapa pelo quadro."
+        confirmLabel="Contratar"
+        pending={pending}
+        onConfirm={() => {
+          if (!contratarAlvo) return;
+          moveCard(contratarAlvo.cardId, "CONTRATADO");
+          setContratarAlvo(null);
+        }}
+        onCancel={() => setContratarAlvo(null)}
+      />
 
       {/* Substitui o window.prompt: sem tema, sem validação, sem mostrar erro de
           retorno, e bloqueado por alguns navegadores. */}

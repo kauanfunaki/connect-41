@@ -42,7 +42,7 @@ export default async function CandidaturaScorecardPage({
   const candidatura = await prisma.candidatura.findFirst({
     where: { id: candidaturaId, vagaId, tenantId: ctx.tenantId, vaga: { ...scopedVagaWhere(ctx) } },
     include: {
-      person: { select: { id: true, name: true, phone: true, dataDeletionRequestedAt: true } },
+      person: { select: { id: true, name: true, phone: true, dataDeletionRequestedAt: true, type: true } },
       vaga: { select: { id: true, title: true, sectorCode: true, restrictedToRecruiters: true } },
       scorecards: {
         orderBy: { createdAt: "asc" },
@@ -132,7 +132,9 @@ export default async function CandidaturaScorecardPage({
       />
 
       <PageHeader
-        title={<><Link href={`/candidatos/${candidatura.person.id}`} className="hover:text-brand transition-colors">
+        // Contratada, a pessoa é colaboradora e a ficha dela é a de Pessoas
+        // (/candidatos só abre candidato e dava 404).
+        title={<><Link href={`${candidatura.person.type === "CANDIDATO" ? "/candidatos" : "/pessoas"}/${candidatura.person.id}`} className="hover:text-brand transition-colors">
             {candidatura.person.name}
           </Link></>}
         subtitle={<>Pareceres de entrevista · etapa atual: {STAGE_LABEL[candidatura.stage as Stage]}</>}
