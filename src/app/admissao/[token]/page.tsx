@@ -45,7 +45,7 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
   const toDateInput = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
 
   return (
-    <div className="min-h-screen py-10 px-4">
+    <main className="c41-toque min-h-dvh py-10 px-4">
       <div className="max-w-2xl mx-auto">
         {/* O logo do escritório, como no portal de vagas (padrão aceito na
             página de decisões, 08/10/2026): quem abre o link é de fora e
@@ -89,6 +89,6 @@ export default async function AdmissaoPage({ params }: { params: Promise<{ token
           Processo conduzido por {link.tenant.name}. Seus dados são usados apenas para sua admissão (LGPD).
         </p>
       </div>
-    </div>
+    </main>
   );
 }

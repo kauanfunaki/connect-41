@@ -33,8 +33,12 @@ export function TelaDeAvisoPublica({
   /** A ação embaixo do texto ("Tentar novamente"). */
   children?: ReactNode;
 }) {
+  // `<main>` e `min-h-dvh` (auditoria de UX, 30/10/2026): a tela não tinha
+  // ponto de referência para o leitor de tela, e com 100vh o aviso ficava
+  // abaixo do meio no celular, sob a barra do navegador. `c41-toque` dá o alvo
+  // de 44px aos controles quando o ponteiro é o dedo (globals.css).
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <main className="c41-toque min-h-dvh flex items-center justify-center p-6">
       <div className="max-w-md text-center flex flex-col items-center gap-3">
         <span className={`w-10 h-10 rounded-lg flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px] ${COR_DO_ICONE[tom]}`}>
           {icone}
@@ -43,6 +47,6 @@ export function TelaDeAvisoPublica({
         <p className="text-ui text-fg-muted">{texto}</p>
         {children}
       </div>
-    </div>
+    </main>
   );
 }

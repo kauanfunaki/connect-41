@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { ConfirmacaoEnviada } from "@/components/publico/ConfirmacaoEnviada";
 import { Aviso } from "@/components/ui/Aviso";
+import { uploadComProgresso } from "@/lib/uploadComProgresso";
 
 type Defaults = {
   cpf: string; rg: string; pis: string; ctps: string; ctpsSerie: string; education: string; birthDate: string;
@@ -51,6 +52,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progresso, setProgresso] = useState<number | null>(null);
   const [deps, setDeps] = useState<DependenteRow[]>([]);
 
   function updateDep(index: number, patch: Partial<DependenteRow>) {
@@ -107,18 +109,24 @@ export function AdmissaoForm({ token, defaults }: Props) {
       form.set(`dep_sf_${i}`, d.isSF ? "true" : "false");
     });
 
+    // Com progresso (auditoria de UX, 30/10/2026): até seis documentos de 10 MB
+    // vão neste envio, e no 4G eram minutos de "Enviando…" parado, sem saber
+    // se andava. `uploadComProgresso` conta os bytes que saem.
+    setProgresso(0);
     try {
-      const res = await fetch(`/api/admissao/${token}/submit`, { method: "POST", body: form });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error ?? "Erro ao enviar. Tente novamente.");
+      const r = await uploadComProgresso(`/api/admissao/${token}/submit`, form, setProgresso);
+      if (!r.ok) {
+        setError(
+          r.erro === "Falha de rede ao enviar."
+            ? "A conexão caiu durante o envio. Confira a internet e envie de novo — os dados preenchidos continuam aqui."
+            : r.erro
+        );
         return;
       }
       setDone(true);
-    } catch {
-      setError("Erro ao enviar. Verifique sua conexão e tente novamente.");
     } finally {
       setIsSubmitting(false);
+      setProgresso(null);
     }
   }
 
@@ -143,7 +151,7 @@ export function AdmissaoForm({ token, defaults }: Props) {
         <h2 className="text-card-title font-semibold text-fg mb-4">Dados pessoais</h2>
         <FieldGrid columns="sm:grid-cols-6">
           <CampoForm label="CPF" htmlFor="cpf" className="sm:col-span-2">
-            <Input id="cpf" name="cpf" type="text" defaultValue={defaults.cpf} placeholder="000.000.000-00" maxLength={14} />
+            <Input id="cpf" inputMode="numeric" autoComplete="off" name="cpf" type="text" defaultValue={defaults.cpf} placeholder="000.000.000-00" maxLength={14} />
           </CampoForm>
           <CampoForm label="RG" htmlFor="rg" className="sm:col-span-2">
             <Input id="rg" name="rg" type="text" defaultValue={defaults.rg} maxLength={20} />
@@ -152,10 +160,10 @@ export function AdmissaoForm({ token, defaults }: Props) {
             <CampoData id="birthDate" name="birthDate" defaultValue={defaults.birthDate} />
           </CampoForm>
           <CampoForm label="PIS / PASEP" htmlFor="pis" className="sm:col-span-2">
-            <Input id="pis" name="pis" type="text" defaultValue={defaults.pis} maxLength={20} />
+            <Input id="pis" inputMode="numeric" name="pis" type="text" defaultValue={defaults.pis} maxLength={20} />
           </CampoForm>
           <CampoForm label="CTPS (número)" htmlFor="ctps" className="sm:col-span-2">
-            <Input id="ctps" name="ctps" type="text" defaultValue={defaults.ctps} maxLength={20} />
+            <Input id="ctps" inputMode="numeric" name="ctps" type="text" defaultValue={defaults.ctps} maxLength={20} />
           </CampoForm>
           <CampoForm label="CTPS (série)" htmlFor="ctpsSerie" className="sm:col-span-2">
             <Input id="ctpsSerie" name="ctpsSerie" type="text" defaultValue={defaults.ctpsSerie} maxLength={10} />
@@ -170,25 +178,25 @@ export function AdmissaoForm({ token, defaults }: Props) {
         <h2 className="text-card-title font-semibold text-fg mb-4">Endereço</h2>
         <FieldGrid columns="sm:grid-cols-6">
           <CampoForm label="CEP" htmlFor="zipCode" className="sm:col-span-2">
-            <Input id="zipCode" name="zipCode" type="text" defaultValue={defaults.zipCode} placeholder="00000-000" maxLength={9} onBlur={handleCepBlur} />
+            <Input id="zipCode" inputMode="numeric" autoComplete="postal-code" name="zipCode" type="text" defaultValue={defaults.zipCode} placeholder="00000-000" maxLength={9} onBlur={handleCepBlur} />
           </CampoForm>
           <CampoForm label="Logradouro" htmlFor="addressStreet" className="sm:col-span-3">
-            <Input id="addressStreet" name="addressStreet" type="text" defaultValue={defaults.addressStreet} maxLength={180} />
+            <Input id="addressStreet" autoComplete="address-line1" name="addressStreet" type="text" defaultValue={defaults.addressStreet} maxLength={180} />
           </CampoForm>
           <CampoForm label="Número" htmlFor="addressNumber" className="sm:col-span-1">
             <Input id="addressNumber" name="addressNumber" type="text" defaultValue={defaults.addressNumber} maxLength={20} />
           </CampoForm>
           <CampoForm label="Complemento" htmlFor="addressComplement" className="sm:col-span-3">
-            <Input id="addressComplement" name="addressComplement" type="text" defaultValue={defaults.addressComplement} maxLength={80} />
+            <Input id="addressComplement" autoComplete="address-line2" name="addressComplement" type="text" defaultValue={defaults.addressComplement} maxLength={80} />
           </CampoForm>
           <CampoForm label="Bairro" htmlFor="neighborhood" className="sm:col-span-3">
-            <Input id="neighborhood" name="neighborhood" type="text" defaultValue={defaults.neighborhood} maxLength={80} />
+            <Input id="neighborhood" autoComplete="address-level3" name="neighborhood" type="text" defaultValue={defaults.neighborhood} maxLength={80} />
           </CampoForm>
           <CampoForm label="Cidade" htmlFor="city" className="sm:col-span-5">
-            <Input id="city" name="city" type="text" defaultValue={defaults.city} maxLength={80} />
+            <Input id="city" autoComplete="address-level2" name="city" type="text" defaultValue={defaults.city} maxLength={80} />
           </CampoForm>
           <CampoForm label="UF" htmlFor="stateCode" className="sm:col-span-1">
-            <Input id="stateCode" name="stateCode" type="text" defaultValue={defaults.stateCode} placeholder="SC" maxLength={2} />
+            <Input id="stateCode" autoComplete="address-level1" name="stateCode" type="text" defaultValue={defaults.stateCode} placeholder="SC" maxLength={2} />
           </CampoForm>
         </FieldGrid>
       </Card>
@@ -208,10 +216,10 @@ export function AdmissaoForm({ token, defaults }: Props) {
             </Select>
           </CampoForm>
           <CampoForm label="Agência" htmlFor="bankAgency" className="sm:col-span-2">
-            <Input id="bankAgency" name="bankAgency" type="text" defaultValue={defaults.bankAgency} maxLength={20} />
+            <Input id="bankAgency" inputMode="numeric" name="bankAgency" type="text" defaultValue={defaults.bankAgency} maxLength={20} />
           </CampoForm>
           <CampoForm label="Conta (com dígito)" htmlFor="bankAccount" className="sm:col-span-4">
-            <Input id="bankAccount" name="bankAccount" type="text" defaultValue={defaults.bankAccount} maxLength={30} />
+            <Input id="bankAccount" inputMode="numeric" name="bankAccount" type="text" defaultValue={defaults.bankAccount} maxLength={30} />
           </CampoForm>
         </FieldGrid>
       </Card>
@@ -302,8 +310,25 @@ export function AdmissaoForm({ token, defaults }: Props) {
         type="submit"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Enviando…" : "Enviar admissão"}
+        {isSubmitting ? (progresso !== null && progresso < 100 ? `Enviando… ${progresso}%` : "Enviando…") : "Enviar admissão"}
       </Button>
+      {progresso !== null && (
+        <div className="space-y-1.5">
+          <div
+            role="progressbar"
+            aria-label="Envio da admissão"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progresso}
+            className="h-1.5 overflow-hidden rounded-full bg-surface-2"
+          >
+            <div className="h-full rounded-full bg-brand transition-[width] duration-200" style={{ width: `${progresso}%` }} />
+          </div>
+          <p className="text-helper text-fg-muted">
+            {progresso < 100 ? "Enviando os dados e os documentos. Não feche esta página." : "Arquivos recebidos. Conferindo…"}
+          </p>
+        </div>
+      )}
     </form>
   );
 }
