@@ -47,9 +47,14 @@ type DefinicaoDoTipo = {
  *
  * O acompanhamento do protocolo no SIMA entra quando as três telas que faltam
  * forem levantadas com o setor (`orgaos/sima.ts`, `CONTRATO_PENDENTE`).
+ *
+ * A vigilância da IE (30/10/2026) não é pedida por ninguém: nasce quando a
+ * máquina pede trabalho com `vigiar_ie` nas capacidades (ver
+ * `robo/inscricaoEstadual.ts`).
  */
 export const TIPOS_DE_TAREFA = {
   imprimir_alvara: { rotulo: "Imprimir o alvará de Curitiba", repetivel: true, tentativas: 3 },
+  vigiar_ie: { rotulo: "Ler a situação da inscrição estadual", repetivel: true, tentativas: 3 },
 } as const satisfies Record<string, DefinicaoDoTipo>;
 
 export type TipoDeTarefa = keyof typeof TIPOS_DE_TAREFA;
