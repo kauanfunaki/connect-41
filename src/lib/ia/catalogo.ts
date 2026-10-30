@@ -247,13 +247,19 @@ export const AGENT_CATALOG: AgenteDef[] = [
     label: "Ceci · BPO (chat)",
     sectorCode: "bpo",
     description:
-      "Responde no chat do canto da tela sobre o financeiro dos clientes — contas a pagar e a receber, DRE do mês, pendências com o cliente, conciliação e aprovações — cada tela só para quem a opera",
+      "Responde no chat do canto da tela sobre o financeiro dos clientes — contas a pagar e a receber, DRE do mês, pendências com o cliente, conciliação e aprovações — cada tela só para quem a opera. Na DRE, propõe mover categoria de linha e trocar a categoria de lançamentos, para a pessoa confirmar",
     faixa: "padrao",
+    // Desde 30/10/2026 propõe a correção da DRE, mas não grava sozinho: o
+    // "Sim, aplicar" chama a action da tela (`dre/ia-actions.ts`).
     escreve: false,
     ferramentas: [
       "buscar_empresa",
       "contas_do_bpo",
       "dre_do_mes",
+      "ver_linha_da_dre",
+      "lancamentos_da_categoria",
+      "propor_mover_categoria_na_dre",
+      "propor_recategorizar_lancamentos",
       "pendencias_de_clientes",
       "conciliacao_pendente",
       "aprovacoes_aguardando",

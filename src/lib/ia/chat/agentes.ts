@@ -171,8 +171,15 @@ const BPO =
   "empresa, ache o id com buscar_empresa. Competência é AAAA-MM. Valores em reais, no formato R$ 1.234,56. Quando " +
   "houver link da tela, termine com ele para a pessoa conferir. Se uma ferramenta disser que a pessoa não tem " +
   "acesso a uma tela, diga isso — não tente outro caminho.\n" +
-  "Você só lê: baixar, conciliar, aprovar e cobrar são feitos nas telas. Se o financeiro de uma empresa estiver " +
-  "vazio, diga que os dados ainda não estão no Connect (a importação do Omie traz).";
+  "Baixar, conciliar, aprovar e cobrar são feitos nas telas. Se o financeiro de uma empresa estiver " +
+  "vazio, diga que os dados ainda não estão no Connect (a importação do Omie traz).\n" +
+  "DRE: para achar a origem de um número, use ver_linha_da_dre (as categorias da linha) e lancamentos_da_categoria " +
+  "(os lançamentos de uma categoria). Para corrigir, você PROPÕE, e a pessoa confirma no cartão: " +
+  "propor_mover_categoria_na_dre quando a categoria inteira está na linha errada para aquele cliente (vale só para a " +
+  "empresa; a linha de destino precisa aceitar o lado da categoria); propor_recategorizar_lancamentos quando só " +
+  "alguns lançamentos estão na categoria errada (até 50, todos do mesmo lado, sem os rateados e sem os marcados " +
+  "soJurosOuDesconto). Proponha só o que os dados mostram, com o motivo, e nunca diga que a correção foi feita: " +
+  "ela só vale depois do sim da pessoa.";
 
 const DP =
   "Você atende o DP (Departamento Pessoal) de um escritório de contabilidade que cuida dos colaboradores das " +

@@ -242,6 +242,16 @@ export function descreverProposta(p: {
     return `Mover${alvo || " o candidato"} para ${etapa}${motivo}`;
   }
   if (p.ferramenta === "abrir_transferencia") return `Abrir uma transferência para ${p.alvo ?? "o setor"}`;
+  // A Ceci do BPO corrigindo a DRE (30/10/2026).
+  if (p.ferramenta === "propor_mover_categoria_na_dre") {
+    const empresa = typeof a.empresaNome === "string" && a.empresaNome.trim() ? ` de ${a.empresaNome.trim()}` : "";
+    return `Na DRE${empresa}, mover "${String(a.categoria ?? "a categoria")}" para ${String(a.linha ?? "outra linha")} (só neste cliente)${motivo}`;
+  }
+  if (p.ferramenta === "propor_recategorizar_lancamentos") {
+    const n = Array.isArray(a.lancamentoIds) ? a.lancamentoIds.length : 0;
+    const quantos = n === 1 ? "1 lançamento" : `${n} lançamentos`;
+    return `Trocar a categoria de ${quantos} para "${String(a.categoriaNome ?? "outra categoria")}"${motivo}`;
+  }
   if (p.ferramenta === "propor_encerrar_candidatura") {
     const desfecho = a.desfecho === "DESISTENTE" ? "desistente" : "reprovado";
     return `Encerrar${alvo || " a candidatura"} como ${desfecho}${motivo}`;
