@@ -88,6 +88,17 @@ export async function atualizarDesligamento(
         where: { id: personId },
         data: { employmentStatus: "DESLIGADO", dismissalDate: dataDoDesligamento({ terminationDate: existing.terminationDate, finalizedAt }, new Date()) },
       });
+    } else if (existing.status === "FINALIZADO") {
+      // Reabrir um desligamento finalizado desfaz o que a finalização fez na
+      // pessoa (auditoria de UX, 30/10/2026): antes ela seguia DESLIGADA, com a
+      // data de demissão, e o registro dizia o contrário. Volta a ATIVO, como
+      // no fim de um afastamento ou de férias — só se ainda está desligada,
+      // para não atropelar outra situação gravada depois.
+      await prisma.termination.update({ where: { id: terminationId }, data: { finalizedAt: null } });
+      await prisma.person.updateMany({
+        where: { id: personId, tenantId: ctx.tenantId, employmentStatus: "DESLIGADO" },
+        data: { employmentStatus: "ATIVO", dismissalDate: null },
+      });
     }
   } catch (err) {
     console.error("[atualizarDesligamento]", err);

@@ -201,27 +201,29 @@ export async function definirAtivoPessoasEmMassa(ids: string[], ativo: boolean):
 // de acesso (User) correspondente — gestão de dados gerais fica em Pessoas,
 // gestão de acesso continua exclusivamente em /admin/usuarios (não cria nem
 // edita o User por aqui, só associa um já existente).
-export async function vincularUsuarioPessoa(personId: string, userId: string | null): Promise<void> {
+// Devolve `{ error }` quando não grava (30/10/2026): o painel do usuário avisa
+// "Vínculo salvo" e precisa saber quando não salvou.
+export async function vincularUsuarioPessoa(personId: string, userId: string | null): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canWriteEntity(ctx)) return;
+  if (!ctx.tenantId || !canWriteEntity(ctx)) return { error: "Você não tem permissão para vincular pessoas." };
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
     where: { id: personId, isInternal: true, ...(await scopedPersonWhere(ctx)) },
     select: { id: true },
   });
-  if (!person) return;
+  if (!person) return { error: "Este colaborador interno não está mais disponível." };
 
   if (userId) {
     const user = await prisma.user.findFirst({ where: { id: userId, tenantId: ctx.tenantId }, select: { id: true } });
-    if (!user) return;
+    if (!user) return { error: "Este usuário não existe mais." };
   }
 
   try {
     await prisma.person.update({ where: { id: personId }, data: { linkedUserId: userId } });
   } catch (err) {
     console.error("[vincularUsuarioPessoa]", err);
-    return;
+    return { error: "Não foi possível salvar o vínculo. Tente de novo." };
   }
 
   revalidatePath(`/pessoas/${personId}`);

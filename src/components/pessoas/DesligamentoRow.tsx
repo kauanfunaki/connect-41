@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { ClipboardCheck } from "lucide-react";
 import type { TerminationState } from "@/app/(app)/pessoas/[id]/desligamento/actions";
 import type { TerminationType, TerminationStatus } from "@/generated/prisma/enums";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { MenuDoRegistro } from "./MenuDoRegistro";
 import { TIPO_DO_DESLIGAMENTO, SITUACAO_DO_DESLIGAMENTO, COR_DO_DESLIGAMENTO, SeloDoDP } from "./rotulosDoDP";
 
@@ -34,6 +36,18 @@ type Props = {
 export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, removeAction, canManage }: Props) {
   const [state, formAction, isPending] = useActionState(updateAction, null);
   const [status, setStatus] = useState(desligamento.status);
+  // Finalizar marca a pessoa como desligada, com a data de demissão; reabrir
+  // devolve a pessoa a ativa. Os dois mudam a ficha inteira, e eram um clique
+  // em "Atualizar" (auditoria de UX, 30/10/2026): agora pedem confirmação.
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirmado = useRef(false);
+  const [confirmar, setConfirmar] = useState<"finalizar" | "reabrir" | null>(null);
+  const muda =
+    status === "FINALIZADO" && desligamento.status !== "FINALIZADO"
+      ? "finalizar"
+      : desligamento.status === "FINALIZADO" && status !== "FINALIZADO"
+        ? "reabrir"
+        : null;
 
   return (
     <div className="py-3 border-b border-border last:border-0">
@@ -77,7 +91,18 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
           todas as telas da ficha (era w-40, w-44, w-52 ou w-56 conforme a
           tela), a data a de uma data, e tudo na altura do botão. */}
       {canManage && (
-        <form action={formAction} className="flex flex-wrap items-center gap-2 mt-3">
+        <form
+          ref={formRef}
+          action={formAction}
+          onSubmit={(e) => {
+            if (muda && !confirmado.current) {
+              e.preventDefault();
+              setConfirmar(muda);
+            }
+            confirmado.current = false;
+          }}
+          className="flex flex-wrap items-center gap-2 mt-3"
+        >
           <div className="w-full sm:w-56">
             <Select
               aria-label="Situação"
@@ -101,7 +126,25 @@ export function DesligamentoRow({ desligamento, conferenciaHref, updateAction, r
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso className="mt-2">{state.error}</Aviso>}
+
+      <ConfirmDialog
+        open={confirmar !== null}
+        title={confirmar === "finalizar" ? "Finalizar o desligamento?" : "Reabrir o desligamento?"}
+        description={
+          confirmar === "finalizar"
+            ? "A pessoa passa a desligada, com a data de demissão gravada na ficha, e sai das listas de colaboradores ativos."
+            : "A pessoa volta a ativa e a data de demissão sai da ficha."
+        }
+        confirmLabel={confirmar === "finalizar" ? "Finalizar" : "Reabrir"}
+        destructive={confirmar === "finalizar"}
+        onConfirm={() => {
+          setConfirmar(null);
+          confirmado.current = true;
+          formRef.current?.requestSubmit();
+        }}
+        onCancel={() => setConfirmar(null)}
+      />
     </div>
   );
 }

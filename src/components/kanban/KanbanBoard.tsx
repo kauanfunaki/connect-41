@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
+import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 import { Selo } from "@/components/ui/Selo";
 import { formatCalendarDate } from "@/lib/format";
@@ -30,7 +31,7 @@ type Props = {
   pipelineId: string;
   stages: Stage[];
   items: Item[];
-  moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
   /** Base do link do card — default `/kanban/{pipelineId}`. Setores com módulo
    * dedicado passariam a própria base aqui — hoje não há nenhum. */
   basePath?: string;
@@ -47,18 +48,32 @@ function isOverdue(dueDate: string | null, isTerminal?: boolean): boolean {
 
 export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction, basePath }: Props) {
   const base = basePath ?? `/kanban/${pipelineId}`;
-  const [items, setItems] = useState(initialItems);
+  // Os cartões vêm da prop e o arraste fica por cima, otimista (auditoria de UX,
+  // 30/10/2026). Antes era `useState(initialItems)`, lido só na montagem: a
+  // busca e os filtros do `BoardView` não mudavam o quadro, e a tarefa que outra
+  // pessoa criou ou mexeu só aparecia ao remontar. Quando o servidor recusa ou
+  // falha, o otimista acaba junto com a transição e o cartão volta sozinho para
+  // a coluna gravada; o aviso diz por quê.
+  const [items, moverOtimista] = useOptimistic(initialItems, (atual, { itemId, stageId }: { itemId: string; stageId: string }) =>
+    atual.map((i) => (i.id === itemId ? { ...i, stageId } : i))
+  );
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const toast = useToast();
 
   function handleDrop(stageId: string, itemId: string) {
     setDragOverStage(null);
     setDraggingId(null);
-    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, stageId } : i)));
-    startTransition(() => {
-      moveAction(itemId, stageId);
+    startTransition(async () => {
+      moverOtimista({ itemId, stageId });
+      try {
+        const r = await moveAction(itemId, stageId);
+        if (r && "error" in r) toast.error(r.error);
+      } catch {
+        toast.error("Não deu para falar com o servidor. O cartão voltou para a coluna de antes.");
+      }
     });
   }
 
@@ -113,7 +128,9 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                   } ${draggingId === item.id ? "opacity-90 shadow-[var(--c41-shadow-lg)] rotate-[-1.5deg]" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-kanban-title font-semibold text-fg leading-snug truncate group-hover:text-fg transition-colors">
+                    {/* Até duas linhas: cortado em uma, sem dica, o título longo
+                        ficava ilegível no quadro (auditoria de UX, 30/10/2026). */}
+                    <p className="text-kanban-title font-semibold text-fg leading-snug line-clamp-2 break-words group-hover:text-fg transition-colors">
                       {item.entityName}
                     </p>
                     {item.daysInStage !== undefined && (

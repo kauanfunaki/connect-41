@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ClipboardCheck, FileText, LogOut, UserX } from "lucide-react";
+import { ClipboardCheck, FileText, LogOut, Undo2, UserX } from "lucide-react";
 import { ACTIVE_STAGES, STAGE_LABEL, linhaDaColuna, numerosDasColunas, resumoDoFunil, type Stage } from "@/lib/recruitmentFunnel";
 import { rotuloDaOrigem } from "@/lib/recrutamento/origem";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -28,6 +28,12 @@ export type FunnelCard = {
   nota: { score: number; faixa: Faixa; desatualizada: boolean } | null;
   /** Resumo das respostas do candidato (pretensão · deslocamento · disponibilidade), ou nulo. */
   respostas: string | null;
+  /**
+   * Só nos contratados: o motivo que trava o "Desfazer contratação", ou `null`
+   * quando pode desfazer (`travaDoDesfazer`, 30/10/2026). Fora de Contratado,
+   * ausente.
+   */
+  travaDoDesfazer?: string | null;
 };
 
 const COR_DA_FAIXA: Record<Faixa, string> = {
@@ -56,6 +62,8 @@ type Props = {
     outcome: "REPROVADO" | "DESISTENTE",
     reason: string | null
   ) => Promise<ActionResult>;
+  /** Desfaz a contratação (com a trava conferida no servidor). */
+  desfazerAction: (candidaturaId: string) => Promise<ActionResult>;
 };
 
 type EncerrarTarget = { cardId: string; personName: string; outcome: "REPROVADO" | "DESISTENTE" };
@@ -65,7 +73,7 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1]![0] : "")).toUpperCase();
 }
 
-export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, quantidadeDeVagas, canManage, moveAction, encerrarAction }: Props) {
+export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, quantidadeDeVagas, canManage, moveAction, encerrarAction, desfazerAction }: Props) {
   const [cards, setCards] = useState(initialCards);
   const [dragOver, setDragOver] = useState<Stage | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -73,11 +81,27 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
   const [encerrarTarget, setEncerrarTarget] = useState<EncerrarTarget | null>(null);
   const [motivo, setMotivo] = useState("");
   const [dialogError, setDialogError] = useState<string | null>(null);
+  const [contratarAlvo, setContratarAlvo] = useState<{ cardId: string; personName: string } | null>(null);
+  const [desfazerAlvo, setDesfazerAlvo] = useState<{ cardId: string; personName: string } | null>(null);
+  const [erroDoDesfazer, setErroDoDesfazer] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   // Aplica otimista e DESFAZ se a action retornar erro — antes o card mudava de
   // coluna (ou sumia) mesmo quando o servidor recusava, e a tela só voltava ao
   // estado real num refresh manual.
+  // Soltar em "Contratado" contrata: a pessoa vira colaboradora da empresa da
+  // vaga, em admissão, e o cartão trava. Era um arraste sem volta e sem
+  // pergunta (auditoria de UX, 30/10/2026) — agora passa pela confirmação.
+  function pedirMover(cardId: string, stage: Stage) {
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || card.stage === stage) return;
+    if (stage === "CONTRATADO") {
+      setContratarAlvo({ cardId, personName: card.personName });
+      return;
+    }
+    moveCard(cardId, stage);
+  }
+
   function moveCard(cardId: string, stage: Stage) {
     const card = cards.find((c) => c.id === cardId);
     if (!card || card.stage === stage) return;
@@ -162,7 +186,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                 const id = e.dataTransfer.getData("text/plain");
                 setDragOver(null);
                 setDraggingId(null);
-                if (id) moveCard(id, stage);
+                if (id) pedirMover(id, stage);
               }}
               className={`flex-1 flex-shrink-0 min-w-[15.5rem] rounded-lg border p-2.5 transition-colors ${
                 isDragOver ? "border-brand bg-brand/5" : "border-border bg-surface-2"
@@ -217,8 +241,11 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 text-brand text-micro font-semibold flex items-center justify-center">
                         {initials(c.personName)}
                       </span>
+                      {/* Contratada, a pessoa deixou de ser candidata: a ficha
+                          dela é a de Pessoas — /candidatos só abre candidato e
+                          dava 404. */}
                       <Link
-                        href={`/candidatos/${c.personId}`}
+                        href={isContratado ? `/pessoas/${c.personId}` : `/candidatos/${c.personId}`}
                         className="min-w-0 text-ui text-fg hover:text-brand transition-colors truncate"
                       >
                         {c.personName}
@@ -259,7 +286,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                           compact
                           value={c.stage}
                           disabled={pending}
-                          onChange={(e) => moveCard(c.id, e.target.value as Stage)}
+                          onChange={(e) => pedirMover(c.id, e.target.value as Stage)}
                         >
                           {ACTIVE_STAGES.map((s) => (
                             <option key={s} value={s}>
@@ -324,6 +351,33 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
                           )}
                         </MenuDeMaisAcoes>
                       )}
+                      {/* Desfazer a contratação (30/10/2026, "desfazer com
+                          trava"): só enquanto o DP não começou a admissão. Com
+                          a trava, o item aparece desligado e diz por quê. */}
+                      {canManage && isContratado && c.travaDoDesfazer !== undefined && (
+                        <MenuDeMaisAcoes
+                          align="right"
+                          width={260}
+                          sempreMenu
+                          rotulo={`Mais ações para ${c.personName}`}
+                          classeDoGatilho="max-md:w-9 max-md:h-9"
+                        >
+                          {({ close }) => (
+                            <ItemDoMenu
+                              icone={<Undo2 />}
+                              disabled={!!c.travaDoDesfazer}
+                              descricao={c.travaDoDesfazer ?? "A pessoa volta a candidata e o cartão, à Proposta."}
+                              onClick={() => {
+                                close();
+                                setErroDoDesfazer(null);
+                                setDesfazerAlvo({ cardId: c.id, personName: c.personName });
+                              }}
+                            >
+                              Desfazer contratação
+                            </ItemDoMenu>
+                          )}
+                        </MenuDeMaisAcoes>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -333,6 +387,44 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={contratarAlvo !== null}
+        title={`Contratar ${contratarAlvo?.personName ?? ""}?`}
+        description="A pessoa passa a colaboradora da empresa da vaga, com a admissão em andamento no DP, e o cartão fica fixo em Contratado. Enquanto o DP não começar a admissão, dá para desfazer pelo ⋯ do cartão."
+        confirmLabel="Contratar"
+        pending={pending}
+        onConfirm={() => {
+          if (!contratarAlvo) return;
+          moveCard(contratarAlvo.cardId, "CONTRATADO");
+          setContratarAlvo(null);
+        }}
+        onCancel={() => setContratarAlvo(null)}
+      />
+
+      <ConfirmDialog
+        open={desfazerAlvo !== null}
+        title={`Desfazer a contratação de ${desfazerAlvo?.personName ?? ""}?`}
+        description="A pessoa volta a candidata — sai da empresa e do cargo da vaga no DP — e o cartão volta para Proposta, de onde segue pelo quadro."
+        confirmLabel="Desfazer contratação"
+        destructive
+        pending={pending}
+        error={erroDoDesfazer}
+        onConfirm={() => {
+          if (!desfazerAlvo) return;
+          const { cardId } = desfazerAlvo;
+          startTransition(async () => {
+            const r = await desfazerAction(cardId);
+            if (r?.error) {
+              setErroDoDesfazer(r.error);
+              return;
+            }
+            setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, stage: "PROPOSTA", travaDoDesfazer: undefined } : c)));
+            setDesfazerAlvo(null);
+          });
+        }}
+        onCancel={() => setDesfazerAlvo(null)}
+      />
 
       {/* Substitui o window.prompt: sem tema, sem validação, sem mostrar erro de
           retorno, e bloqueado por alguns navegadores. */}

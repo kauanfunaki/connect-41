@@ -120,7 +120,7 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
                   {TIPOS_DE_CERTIDAO.map((t) => (
                     <td key={t} className="py-2 pr-3">
                       {t in l.certidoes ? (
-                        <Celula certidao={l.certidoes[t] ?? null} companyId={l.companyId} tipo={t} podeEditar={acesso.podeEditar && conexao.pronta} />
+                        <Celula certidao={l.certidoes[t] ?? null} companyId={l.companyId} empresa={l.empresa} tipo={t} podeEditar={acesso.podeEditar && conexao.pronta} />
                       ) : (
                         <span className="text-micro text-fg-muted">não se aplica</span>
                       )}
@@ -144,7 +144,7 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
   );
 }
 
-function Celula({ certidao, companyId, tipo, podeEditar }: { certidao: CertidaoNaTela | null; companyId: string; tipo: (typeof TIPOS_DE_CERTIDAO)[number]; podeEditar: boolean }) {
+function Celula({ certidao, companyId, empresa, tipo, podeEditar }: { certidao: CertidaoNaTela | null; companyId: string; empresa: string; tipo: (typeof TIPOS_DE_CERTIDAO)[number]; podeEditar: boolean }) {
   return (
     <div className="flex flex-col items-start gap-1">
       {certidao ? (
@@ -167,7 +167,7 @@ function Celula({ certidao, companyId, tipo, podeEditar }: { certidao: CertidaoN
       ) : (
         <span className="text-micro text-fg-muted">Ainda não consultada</span>
       )}
-      {podeEditar && <EmitirCertidao companyId={companyId} tipo={tipo} />}
+      {podeEditar && <EmitirCertidao companyId={companyId} empresa={empresa} tipo={tipo} />}
     </div>
   );
 }
