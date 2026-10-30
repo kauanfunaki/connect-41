@@ -4771,6 +4771,9 @@ model BankAccount {
   /// Nulos nas outras contas.
   cardClosingDay Int? @db.TinyInt
   cardDueDay     Int? @db.TinyInt
+  /// O limite do cartão (30/10/2026), lido do `valor_limite` do Omie. Nulo
+  /// quando o Omie não informa; o Connect só mostra, não trava a compra.
+  cardLimit      Decimal? @db.Decimal(14, 2)
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

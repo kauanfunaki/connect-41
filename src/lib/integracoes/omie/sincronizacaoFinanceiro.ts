@@ -86,6 +86,7 @@ import {
 import {
   juntarBaixas,
   lerContasCorrentes,
+  lerContasForaDoCaixa,
   ligarContas,
   mapearLinhaDeConta,
   paginaDeContasCorrentes,
@@ -99,6 +100,8 @@ import { planoDoEspelho, planoMexe, type TituloNoEspelho } from "@/lib/financeir
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { resumoDoRateio, type LinhaDoRateio } from "@/lib/financeiro/rateio";
 import { gravarRateio } from "@/lib/financeiro/rateioServidor";
+import { BANCO_DO_ADIANTAMENTO, CONTA_DE_ADIANTAMENTO, ehContaDeAdiantamento } from "@/lib/financeiro/adiantamento";
+import { TIPOS_FORA_DO_CAIXA } from "@/lib/financeiro/tiposDeConta";
 import type { Prisma } from "@/generated/prisma/client";
 
 
@@ -375,9 +378,8 @@ export async function sincronizarFinanceiroDaEmpresa(
     }
 
     // ─── contas bancárias ──────────────────────────────────────────────────
-    const contasDoOmie = lerContasCorrentes(
-      await todasAsPaginas(cred, "geral/contacorrente", "ListarContasCorrentes", paginaDeContasCorrentes)
-    );
+    const itensDasContas = await todasAsPaginas(cred, "geral/contacorrente", "ListarContasCorrentes", paginaDeContasCorrentes);
+    const contasDoOmie = lerContasCorrentes(itensDasContas);
     const contasDoConnect = await prisma.bankAccount.findMany({
       where: { tenantId, companyId },
       select: { id: true, bankCode: true, accountDigits: true, omieAccountId: true, omieAccountLabel: true },
@@ -435,6 +437,81 @@ export async function sincronizarFinanceiroDaEmpresa(
       }
     }
 
+    // ─── contas fora do caixa: cartão, adiantamento e afins (30/10/2026) ───
+    // A baixa que o Omie fez por uma delas não é dinheiro andando. Ligadas
+    // aqui, ela sai do fluxo de caixa do Connect (a passada do fim da leitura,
+    // `baixasNasContasForaDoCaixa`); a DRE não muda. O adiantamento vai na
+    // conta única do lado (uma de fornecedores, uma de clientes por empresa).
+    const contasForaDoOmie = lerContasForaDoCaixa(itensDasContas);
+    const foraDoConnect = await prisma.bankAccount.findMany({
+      where: { tenantId, companyId, type: { in: [...TIPOS_FORA_DO_CAIXA] } },
+      select: { id: true, type: true, bankCode: true, accountDigits: true, omieAccountId: true, omieAccountLabel: true, cardLimit: true },
+    });
+    /** A conta do Omie (`nCodCC`) fora do caixa → a do Connect ligada a ela. */
+    const foraLigadas = new Map<string, string>();
+    for (const o of contasForaDoOmie) {
+      if (!o.tipo) {
+        somar("contas_fora_sem_lado");
+        continue;
+      }
+      const limite = o.limiteCentavos === null ? null : (o.limiteCentavos / 100).toFixed(2);
+      const ja = foraDoConnect.find((c) => c.omieAccountId === o.id);
+      if (ja) {
+        foraLigadas.set(o.id, ja.id);
+        somar("contas_fora_ligadas");
+        if (opcoes.gravar && (ja.omieAccountLabel !== o.rotulo || (ja.cardLimit?.toFixed(2) ?? null) !== limite)) {
+          await prisma.bankAccount.update({ where: { id: ja.id }, data: { omieAccountLabel: o.rotulo, cardLimit: limite } });
+        }
+        continue;
+      }
+      if (o.inativa) continue;
+      if (ehContaDeAdiantamento(o.tipo)) {
+        const ident = CONTA_DE_ADIANTAMENTO[o.tipo];
+        const existente = foraDoConnect.find((c) => c.type === o.tipo && c.bankCode === BANCO_DO_ADIANTAMENTO && c.accountDigits === ident.digitos);
+        // A conta do lado já está ligada a outro adiantamento do Omie: a
+        // segunda não tem onde entrar sem misturar os saldos.
+        if (existente?.omieAccountId) {
+          somar("contas_fora_sem_par");
+          continue;
+        }
+        somar(existente ? "contas_fora_ligadas" : "contas_fora_criadas");
+        if (!opcoes.gravar) continue;
+        const conta = existente
+          ? await prisma.bankAccount.update({ where: { id: existente.id }, data: { omieAccountId: o.id, omieAccountLabel: o.rotulo }, select: { id: true } })
+          : await prisma.bankAccount.create({
+              data: { tenantId, companyId, nickname: ident.apelido, bankCode: BANCO_DO_ADIANTAMENTO, accountNumber: ident.numero, accountDigits: ident.digitos, type: o.tipo, omieAccountId: o.id, omieAccountLabel: o.rotulo },
+              select: { id: true },
+            });
+        foraLigadas.set(o.id, conta.id);
+        continue;
+      }
+      somar("contas_fora_criadas");
+      if (!opcoes.gravar) continue;
+      try {
+        const criada = await prisma.bankAccount.create({
+          data: {
+            tenantId,
+            companyId,
+            nickname: o.rotulo.slice(0, 80),
+            // Sem banco nem número de verdade, como o adiantamento: o código
+            // 000 e o id do Omie, que o unique de banco e número separa. No
+            // cartão, "do Omie" pede os quatro números na primeira edição.
+            bankCode: BANCO_DO_ADIANTAMENTO,
+            accountNumber: "do Omie",
+            accountDigits: `omie${o.id}`.slice(0, 30),
+            type: o.tipo,
+            omieAccountId: o.id,
+            omieAccountLabel: o.rotulo,
+            cardLimit: limite,
+          },
+          select: { id: true },
+        });
+        foraLigadas.set(o.id, criada.id);
+      } catch (err) {
+        if (!isPrismaUniqueError(err)) throw err;
+      }
+    }
+
     // A conta do Omie (`nCodCC`) → a conta do Connect ligada a ela, já com as
     // ligações e as contas criadas acima: é a conta corrente prevista do título
     // (20/10). Na prévia nada foi ligado nem criado; vale o que seria, para o resumo.
@@ -445,6 +522,9 @@ export async function sincronizarFinanceiroDaEmpresa(
         select: { id: true, omieAccountId: true },
       });
       for (const c of ligadasAgora) contaDoConnect.set(c.omieAccountId!, c.id);
+      // As fora do caixa também: o título comprado no cartão tem o cartão
+      // como conta prevista, como no Omie.
+      for (const [omieId, connectId] of foraLigadas) contaDoConnect.set(omieId, connectId);
     } else {
       for (const c of contasDoConnect) if (c.omieAccountId) contaDoConnect.set(c.omieAccountId, c.id);
       for (const [id, omie] of ligadas) if (!contaDoConnect.has(omie.id)) contaDoConnect.set(omie.id, id);
@@ -454,6 +534,32 @@ export async function sincronizarFinanceiroDaEmpresa(
     function contaPrevista(contaDoOmie: string | null): string | null {
       const id = contaDoOmie ? contaDoConnect.get(contaDoOmie) : undefined;
       return id && !id.startsWith("previa:") ? id : null;
+    }
+
+    /**
+     * A baixa espelhada do Omie leva a conta fora do caixa por onde o Omie a
+     * fez (30/10/2026). O espelho grava a baixa sem conta — e sem conta é
+     * caixa —, então a compra no cartão ou o uso do adiantamento entrava no
+     * fluxo de caixa como dinheiro saindo. A conta da baixa é a que o próprio
+     * Omie informa (`omieAccountId` da conta, gravado na leitura das linhas):
+     * de uma vez para todas as baixas, e não só as do título que mudou. Se o
+     * Omie passou a baixa para um banco, ela volta a ficar sem conta. Só mexe
+     * na baixa do Omie (`origin` OMIE): a feita no Connect tem a conta dela.
+     */
+    async function baixasNasContasForaDoCaixa(ligadas: Map<string, string>): Promise<number> {
+      let mexidas = 0;
+      for (const [omieId, contaId] of ligadas) {
+        const entrou = await prisma.financeEntryPayment.updateMany({
+          where: { tenantId, companyId, origin: "OMIE", bankAccountId: null, entry: { omieAccountId: omieId } },
+          data: { bankAccountId: contaId },
+        });
+        const saiu = await prisma.financeEntryPayment.updateMany({
+          where: { tenantId, companyId, origin: "OMIE", bankAccountId: contaId, NOT: { entry: { omieAccountId: omieId } } },
+          data: { bankAccountId: null },
+        });
+        mexidas += entrou.count + saiu.count;
+      }
+      return mexidas;
     }
 
     // Contraparte dos lançamentos de conta que não têm cliente/fornecedor no Omie.
@@ -648,6 +754,7 @@ export async function sincronizarFinanceiroDaEmpresa(
     }
 
     if (opcoes.gravar && leuContas) {
+      somar("baixas_fora_do_caixa", await baixasNasContasForaDoCaixa(foraLigadas));
       somar("extrato_conciliado_pelo_omie", await conciliarEmpresaPeloOmie(tenantId, companyId));
     }
     return { cont, proxima };
