@@ -69,9 +69,12 @@ export function MetricasFiscais({ itens }: { itens: MetricaFiscal[] }) {
  * cartão: a primeira coluna no topo, as outras com o rótulo do cabeçalho — a
  * tabela rolava de lado.
  *
- * Texto à esquerda e números à direita (26/10/2026); tudo era centralizado.
- * A coluna é numérica quando todas as células preenchidas são números ou
- * valores (R$, %, `tabular-nums`).
+ * Centralizada como toda tabela do app (decisão do Kauan, 30/10/2026, por
+ * simetria e padrão). Em 26/10 tentou-se texto à esquerda e número à direita,
+ * mas a regra da `.c41-tabela` vence as classes do Tailwind e nunca teve efeito;
+ * as classes saíram. A coluna numérica — todas as células preenchidas são
+ * números ou valores (R$, %, `tabular-nums`) — fica só com os algarismos de
+ * mesma largura, para os valores se alinharem pelo centro.
  */
 const NUMERICO = /^[-+]?(R\$\s?)?[-+]?[\d.,]+\s?%?$/;
 function celulaNumerica(c: ReactNode): boolean {
@@ -102,8 +105,8 @@ export function TabelaFiscal({ colunas, linhas: todas, vazio = "Nenhum item nest
     </CartoesNoCelular>
     <TabelaNoDesktop padrao>
       <table className="w-full">
-        <thead><tr>{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className={`px-3 align-middle ${numerica[i] ? "text-right" : "text-left"}`}>{c}</th>)}</tr></thead>
-        <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className={`px-3 align-middle text-fg ${numerica[i] ? "text-right tabular-nums" : "text-left"}`}>{c}</td>)}</tr>)}</tbody>
+        <thead><tr>{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className="px-3 align-middle">{c}</th>)}</tr></thead>
+        <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className={`px-3 align-middle text-fg ${numerica[i] ? "tabular-nums" : ""}`.trim()}>{c}</td>)}</tr>)}</tbody>
       </table>
     </TabelaNoDesktop>
     {faltam > 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
