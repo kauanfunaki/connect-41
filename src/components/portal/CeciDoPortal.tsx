@@ -7,6 +7,7 @@ import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Textarea } from "@/components/ui/Textarea";
+import { useDialog } from "@/components/ui/useDialog";
 import type { BotaoDaResposta, EventoDoPortal, SolicitacaoPreparada } from "@/lib/ia/portal/responder";
 
 /** Uma troca na tela. Só o texto vai de volta ao servidor, como histórico. */
@@ -58,12 +59,28 @@ export function CeciDoPortal({ primeiroNome }: { primeiroNome: string | null }) 
   const [enviando, setEnviando] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
   const campoRef = useRef<HTMLTextAreaElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  const jaAbriu = useRef(false);
+
+  // Janela de verdade (auditoria de UX, 30/10/2026): no celular o chat ocupa a
+  // tela inteira, mas o fundo seguia no Tab e no TalkBack, o Esc não fechava e o
+  // foco se perdia ao fechar. O `useDialog` prende o foco, trava a rolagem de
+  // trás e fecha no Esc.
+  const painelRef = useDialog(aberto, () => setAberto(false));
 
   useEffect(() => {
     fimRef.current?.scrollIntoView({ block: "end" });
   }, [mensagens, passo, aberto]);
+  // Depois do foco inicial do `useDialog` (o primeiro botão do cabeçalho): o
+  // lugar de começar é o campo da pergunta. Ao fechar, o foco volta para o
+  // botão da Ceci — o que abriu o chat sai da tela enquanto ele está aberto.
   useEffect(() => {
-    if (aberto) campoRef.current?.focus();
+    if (aberto) {
+      jaAbriu.current = true;
+      campoRef.current?.focus();
+    } else if (jaAbriu.current) {
+      botaoRef.current?.focus();
+    }
   }, [aberto]);
 
   const estado: EstadoDaCeci = enviando ? "pensando" : erro ? "naoConsegui" : "parada";
@@ -139,7 +156,9 @@ export function CeciDoPortal({ primeiroNome }: { primeiroNome: string | null }) 
     return (
       <div className="fixed bottom-4 right-4 z-40">
         <button
+          ref={botaoRef}
           type="button"
+          aria-haspopup="dialog"
           onClick={() => setAberto(true)}
           aria-label="Falar com a Ceci, assistente do portal"
           data-dica="Ceci · Portal do cliente"
@@ -155,7 +174,11 @@ export function CeciDoPortal({ primeiroNome }: { primeiroNome: string | null }) 
     <>
       <div aria-hidden className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
       <section
-        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[min(720px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-lg overflow-hidden"
+        ref={painelRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="fixed z-40 inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[min(720px,calc(100dvh-2rem))] flex flex-col bg-surface-elevated sm:border sm:border-border sm:rounded-lg shadow-lg overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-0 sm:pb-0"
         aria-label="Chat com a Ceci"
       >
         <header className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
@@ -164,10 +187,12 @@ export function CeciDoPortal({ primeiroNome }: { primeiroNome: string | null }) 
             <p className="text-label font-semibold text-fg truncate">Ceci</p>
             <p className="text-micro text-fg-muted truncate">Assistente do portal</p>
           </div>
-          <IconButton size="sm" onClick={novaConversa} title="Nova conversa" disabled={enviando}>
+          {/* 44px no celular, onde o chat é a tela inteira e o dedo é o ponteiro
+              (eram 28px); 28px no computador, como no resto do app. */}
+          <IconButton size="sm" className="max-sm:w-11 max-sm:h-11" onClick={novaConversa} title="Nova conversa" disabled={enviando}>
             <Plus size={16} />
           </IconButton>
-          <IconButton size="sm" onClick={() => setAberto(false)} title="Fechar o chat">
+          <IconButton size="sm" className="max-sm:w-11 max-sm:h-11" onClick={() => setAberto(false)} title="Fechar o chat">
             <X size={16} />
           </IconButton>
         </header>
