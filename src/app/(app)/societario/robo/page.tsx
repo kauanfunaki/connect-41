@@ -4,6 +4,7 @@ import { Bot, CircleAlert, ListTodo } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
@@ -90,16 +91,22 @@ export default async function RoboDoSocietarioPage() {
         ]}
       />
 
-      <Card className="p-4 overflow-x-auto">
-        {tarefas.length === 0 ? (
+      {/* Na tabela padrão do app (`.c41-tabela`, auditoria de UX, 30/10/2026):
+          era uma tabela própria, alinhada à esquerda e com o cabeçalho à mão. O
+          estado vazio mostrava ao usuário o caminho de um arquivo do repositório. */}
+      {tarefas.length === 0 ? (
+        <Card>
           <EmptyState
+            icon={<Bot />}
             title="Nada pedido ao robô ainda"
-            description="Peça a impressão do alvará pelo ⋯ de uma licença de alvará. A máquina do TI busca a tarefa na próxima volta (o roteiro de instalação está em docs/ROBO-DO-SOCIETARIO.md)."
+            description="Peça a impressão do alvará pelo ⋯ de uma licença de alvará. A máquina do TI busca a tarefa na próxima volta."
           />
-        ) : (
+        </Card>
+      ) : (
+        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg shadow-xs">
           <table className="w-full min-w-[820px] text-ui">
             <thead>
-              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
+              <tr>
                 <th className={TH}>Pedida em</th>
                 <th className={TH}>Tarefa</th>
                 <th className={TH}>Empresa</th>
@@ -132,9 +139,9 @@ export default async function RoboDoSocietarioPage() {
                     </td>
                     <td className={`${TD} text-fg-secondary max-w-[44ch]`}>
                       {t.fileId ? (
-                        <a href={`/api/arquivos/${t.fileId}?ver=1`} target="_blank" rel="noopener" className="text-brand hover:underline">
-                          Abrir o PDF em Arquivos › Societário
-                        </a>
+                        <Button href={`/api/arquivos/${t.fileId}?ver=1`} nativo target="_blank" rel="noopener" variant="secondary" size="xs" title="O PDF fica em Arquivos › Societário">
+                          Abrir o PDF
+                        </Button>
                       ) : (
                         (t.reason ?? (status === "EM_EXECUCAO" && t.machineSlug ? `Com a máquina ${t.machineSlug}.` : "—"))
                       )}
@@ -145,8 +152,8 @@ export default async function RoboDoSocietarioPage() {
               })}
             </tbody>
           </table>
-        )}
-      </Card>
+        </div>
+      )}
     </PageContainer>
   );
 }

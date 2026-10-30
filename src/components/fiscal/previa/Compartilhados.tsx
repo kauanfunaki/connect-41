@@ -69,9 +69,12 @@ export function MetricasFiscais({ itens }: { itens: MetricaFiscal[] }) {
  * cartão: a primeira coluna no topo, as outras com o rótulo do cabeçalho — a
  * tabela rolava de lado.
  *
- * Texto à esquerda e números à direita (26/10/2026); tudo era centralizado.
- * A coluna é numérica quando todas as células preenchidas são números ou
- * valores (R$, %, `tabular-nums`).
+ * Centralizada como toda tabela do app (decisão do Kauan, 30/10/2026, por
+ * simetria e padrão). Em 26/10 tentou-se texto à esquerda e número à direita,
+ * mas a regra da `.c41-tabela` vence as classes do Tailwind e nunca teve efeito;
+ * as classes saíram. A coluna numérica — todas as células preenchidas são
+ * números ou valores (R$, %, `tabular-nums`) — fica só com os algarismos de
+ * mesma largura, para os valores se alinharem pelo centro.
  */
 const NUMERICO = /^[-+]?(R\$\s?)?[-+]?[\d.,]+\s?%?$/;
 function celulaNumerica(c: ReactNode): boolean {
@@ -79,8 +82,16 @@ function celulaNumerica(c: ReactNode): boolean {
   if (typeof c === "string") return NUMERICO.test(c.trim());
   return isValidElement<{ className?: string }>(c) && /\btabular-nums\b/.test(c.props.className ?? "");
 }
-export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtro.", descricaoVazio = "Troque os filtros ou use as ações de teste para adicionar informações." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string; descricaoVazio?: string }) {
-  if (!linhas.length) return <EmptyState icon={<FileText />} title={vazio} description={descricaoVazio} />;
+/** Quantas linhas a tabela desenha de cada vez; o resto vem pelo "Mostrar mais". */
+const LOTE_DA_TABELA = 200;
+export function TabelaFiscal({ colunas, linhas: todas, vazio = "Nenhum item neste filtro.", descricaoVazio = "Troque os filtros ou use as ações de teste para adicionar informações." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string; descricaoVazio?: string }) {
+  // De 200 em 200 (auditoria de UX, 30/10/2026): a conferência dos pagamentos
+  // cortava em 200 linhas de uma fila de até 2000, e da 201ª em diante não
+  // havia como ver nem decidir.
+  const [quantas, setQuantas] = useState(LOTE_DA_TABELA);
+  if (!todas.length) return <EmptyState icon={<FileText />} title={vazio} description={descricaoVazio} />;
+  const linhas = todas.slice(0, quantas);
+  const faltam = todas.length - linhas.length;
   const resto = colunas.slice(1);
   const numerica = colunas.map((_, i) => { const preenchidas = linhas.map((l) => l.celulas[i]).filter((c) => c !== null && c !== undefined && c !== "" && c !== "—"); return preenchidas.length > 0 && preenchidas.every(celulaNumerica); });
   return <>
@@ -94,10 +105,14 @@ export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtr
     </CartoesNoCelular>
     <TabelaNoDesktop padrao>
       <table className="w-full">
-        <thead><tr>{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className={`px-3 align-middle ${numerica[i] ? "text-right" : "text-left"}`}>{c}</th>)}</tr></thead>
-        <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className={`px-3 align-middle text-fg ${numerica[i] ? "text-right tabular-nums" : "text-left"}`}>{c}</td>)}</tr>)}</tbody>
+        <thead><tr>{colunas.map((c, i) => <th key={`${c}-${i}`} scope="col" className="px-3 align-middle">{c}</th>)}</tr></thead>
+        <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className={`px-3 align-middle text-fg ${numerica[i] ? "tabular-nums" : ""}`.trim()}>{c}</td>)}</tr>)}</tbody>
       </table>
     </TabelaNoDesktop>
+    {faltam > 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-helper text-fg-muted tabular-nums" aria-live="polite">Mostrando {formatarNumero(linhas.length, 0)} de {formatarNumero(todas.length, 0)} linhas.</p>
+      <Button variant="secondary" size="sm" onClick={() => setQuantas((n) => n + LOTE_DA_TABELA)}>Mostrar mais {formatarNumero(Math.min(LOTE_DA_TABELA, faltam), 0)}</Button>
+    </div>}
   </>;
 }
 /** O rótulo do campo é o do `CampoForm` (15/10/2026); era um <label> à mão. O `erro` vai para a mensagem do `CampoForm`, não para o rótulo (26/10/2026). */

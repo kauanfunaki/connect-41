@@ -4,12 +4,15 @@ import { Copy, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { useToast } from "@/components/ui/Toast";
+import { Aviso } from "@/components/ui/Aviso";
 import type { ChaveOps } from "@/lib/ops/chaves";
 
 export function OpsAdditionalKeys({ initialKeys }: { initialKeys: ChaveOps[] }) {
   const [keys, setKeys] = useState(initialKeys), [name, setName] = useState("");
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [generated, setGenerated] = useState<{ name: string; token: string } | null>(null);
+  const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
   async function execute(key?: ChaveOps, revoke = false) {
     setBusy(true); setError(""); setGenerated(null);
@@ -40,7 +43,8 @@ export function OpsAdditionalKeys({ initialKeys }: { initialKeys: ChaveOps[] }) 
       <span className="min-w-0 break-words text-ui">{key.name} <span className="text-helper text-fg-muted">· {key.hasToken ? "Ativa" : "Revogada"}</span></span>
       <div className="flex gap-2"><Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => key.hasToken ? alter(key, false) : void execute(key)}> {key.hasToken ? "Trocar" : "Gerar nova chave"}</Button>{key.hasToken && <Button type="button" size="sm" variant="danger" disabled={busy} onClick={() => alter(key, true)}>Revogar</Button>}</div>
     </li>)}</ul>
-    {generated && <div className="space-y-2"><label htmlFor="ops-extra-token" className="block text-helper font-semibold">{generated.name} — copie agora; esta chave aparece uma única vez</label><div className="flex gap-2"><Input id="ops-extra-token" value={generated.token} readOnly className="min-w-0 font-mono" onFocus={e => e.target.select()} /><Button type="button" variant="secondary" onClick={() => void navigator.clipboard.writeText(generated.token).catch(() => setError("Selecione e copie a chave manualmente."))}><Copy size={14} /> Copiar</Button></div></div>}
-    {error && <p role="alert" className="text-ui text-danger">{error}</p>}{dialog}
+    {generated && <div className="space-y-2"><label htmlFor="ops-extra-token" className="block text-helper font-semibold">{generated.name} — copie agora; esta chave aparece uma única vez</label><div className="flex gap-2"><Input id="ops-extra-token" value={generated.token} readOnly className="min-w-0 font-mono" onFocus={e => e.target.select()} /><Button type="button" variant="secondary" onClick={() => void navigator.clipboard.writeText(generated.token).then(() => toast.success("Chave copiada."), () => toast.error("Não foi possível copiar. Selecione e copie a chave manualmente."))}><Copy size={14} /> Copiar</Button></div></div>}
+    {/* O copiar avisa como o da chave principal, e o erro sai no `Aviso` (auditoria de UX, 30/10/2026). */}
+    {error && <Aviso>{error}</Aviso>}{dialog}
   </section>;
 }

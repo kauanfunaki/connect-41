@@ -160,6 +160,8 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
 
 const ESTADO_DA_COBERTURA: Record<CoberturaDoMotor["estado"], string> = { apurando: "Apurando", ok: "Apurada", erro: "Erro na apuração" };
 const COR_DO_MOTIVO: Record<string, "perigo" | "atencao" | "neutro"> = { vermelho: "perigo", amarelo: "atencao", cinza: "neutro" };
+/** O que a cor do motivo quer dizer — o selo mostrava o nome da cor ("vermelho") em vez do significado (auditoria de UX, 30/10/2026). */
+const ROTULO_DO_MOTIVO: Record<string, string> = { vermelho: "Grave", amarelo: "Conferir", cinza: "Informativo" };
 
 function contadores(c: Record<string, number>) {
   return Object.entries(c).map(([k, v]) => `${k}: ${contagemDoMotor(v)}`).join(" · ") || "—";
@@ -187,7 +189,7 @@ export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; para
               {r.abandonada && <Aviso tom="atencao">A apuração está “apurando” há mais de 15 minutos e foi dada como abandonada. {apurar ? "Apure de novo." : "Apure de novo no painel do motor."}</Aviso>}
               {apurar && (r.estado !== "apurando" || r.abandonada) ? apurar : r.estado === "apurando" && !r.abandonada ? <p className="text-helper text-fg-muted">Apurando agora; acompanhe na fila do motor.</p> : null}
               {r.mensagem && <Aviso tom={r.estado === "erro" ? "perigo" : "neutro"}>{r.mensagem}</Aviso>}
-              {(d.cobertura.dados.avaliacao?.motivos ?? []).length > 0 && <ul className="space-y-2">{d.cobertura.dados.avaliacao!.motivos.map((m, i) => <li key={i} className="flex items-start gap-2 text-ui text-fg"><Selo tom={COR_DO_MOTIVO[m.cor] ?? "neutro"}>{m.cor}</Selo><span>{m.texto}</span></li>)}</ul>}
+              {(d.cobertura.dados.avaliacao?.motivos ?? []).length > 0 && <ul className="space-y-2">{d.cobertura.dados.avaliacao!.motivos.map((m, i) => <li key={i} className="flex items-start gap-2 text-ui text-fg"><Selo tom={COR_DO_MOTIVO[m.cor] ?? "neutro"}>{ROTULO_DO_MOTIVO[m.cor] ?? m.cor}</Selo><span>{m.texto}</span></li>)}</ul>}
               <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">{([
                 ["Estado", ESTADO_DA_COBERTURA[r.estado]], ["Apurada em", dataHora(r.apurado_em)], ["Duração", r.duracao_seg != null ? `${r.duracao_seg} s` : "—"],
                 ["CT-e", `${contagemDoMotor(r.cte_total)}${ant ? ` (anterior ${contagemDoMotor(ant.cte_total)})` : ""}`],

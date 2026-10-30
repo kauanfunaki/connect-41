@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { colunasPresentes } from "@/lib/fiscal/previa/doMotor";
+import { rotuloDaColuna, valorDaCelula } from "@/lib/fiscal/motor/exibicao";
 import type { FalhaDaLeitura } from "@/lib/fiscal/motor/leitura";
 import { TabelaContabilDoMotor } from "@/components/contabil/TabelaContabil";
 
@@ -53,26 +54,39 @@ export function PaginacaoDoMotor({ temCursor, proximo, hrefInicio, hrefProxima }
   </div>;
 }
 
-function celula(v: unknown): ReactNode {
-  if (v === null || v === undefined || v === "") return "—";
-  if (typeof v === "boolean") return v ? "Sim" : "Não";
-  if (typeof v === "string" || typeof v === "number") return <span className="break-words">{String(v)}</span>;
-  return <span className="block max-w-72 break-all text-helper">{JSON.stringify(v)}</span>;
+const INTEIRO = new Intl.NumberFormat("pt-BR");
+const DECIMAL = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * Célula legível (auditoria de UX, 30/10/2026): era o valor cru do motor —
+ * `1234.5`, `2026-03-01`, `JSON.stringify` de objeto. Agora o mesmo formatador
+ * do Contábil (`valorDaCelula`, 26/10): moeda nas colunas de valor, datas
+ * dd/mm/aaaa, CNPJ com máscara, objeto em "Campo: valor"; e número solto no
+ * formato brasileiro.
+ */
+function celula(coluna: string, v: unknown): ReactNode {
+  if (typeof v === "number" && !/^valor|_valor$|^total/i.test(coluna)) {
+    return <span className="tabular-nums">{Number.isInteger(v) ? INTEIRO.format(v) : DECIMAL.format(v)}</span>;
+  }
+  const texto = valorDaCelula(coluna, v);
+  if (texto === "—") return texto;
+  if (v !== null && typeof v === "object") return <span className="block max-w-72 break-words text-helper">{texto}</span>;
+  return <span className={typeof v === "number" || /^-?R\$/.test(texto) ? "tabular-nums" : "break-words"}>{texto}</span>;
 }
 
 /**
  * Uma lista que o contrato só descreve pela função do motor: as colunas são as
- * que vieram (as `candidatas` primeiro), com os nomes do motor. Coluna que
- * nenhuma linha trouxe não aparece.
+ * que vieram (as `candidatas` primeiro). O cabeçalho sai legível desde 30/10
+ * ("falta_para_aceitar" → "Falta para aceitar"). Coluna que nenhuma linha
+ * trouxe não aparece. A tabela desenha 200 linhas e traz o resto pelo
+ * "Mostrar mais" — antes cortava em 200, e a fila dos pagamentos vai a 2000.
  */
-export function TabelaLivre({ linhas, candidatas = [], vazio = "Nada a mostrar.", limite = 200, acoes, contabil = false }: { linhas: Record<string, unknown>[]; candidatas?: readonly string[]; vazio?: string; limite?: number; contabil?: boolean; /** Uma coluna "Ações" no fim, por linha (as escritas de §13). */ acoes?: (linha: Record<string, unknown>) => ReactNode }) {
+export function TabelaLivre({ linhas, candidatas = [], vazio = "Nada a mostrar.", acoes, contabil = false }: { linhas: Record<string, unknown>[]; candidatas?: readonly string[]; vazio?: string; /** Na área do Contábil, a tabela dele (com busca), em vez da do Fiscal. */ contabil?: boolean; /** Uma coluna "Ações" no fim, por linha (as escritas de §13). */ acoes?: (linha: Record<string, unknown>) => ReactNode }) {
   const colunas = colunasPresentes(linhas, candidatas);
+  // As duas recebem todas as linhas: a do Fiscal desenha de 200 em 200 com o
+  // "Mostrar mais"; a do Contábil tem a busca e a lista dela.
   const Tabela = contabil ? TabelaContabilDoMotor : TabelaFiscal;
-  if (contabil) limite = linhas.length;
-  return <>
-    <Tabela vazio={vazio} descricaoVazio="" colunas={acoes ? [...colunas, "Ações"] : colunas} linhas={linhas.slice(0, limite).map((l, i) => ({ id: String(l.id ?? i), celulas: [...colunas.map((c) => celula(l[c])), ...(acoes ? [acoes(l)] : [])] }))} />
-    {linhas.length > limite && <p className="mt-2 text-helper text-fg-muted">Mostrando {limite} de {linhas.length} linhas.</p>}
-  </>;
+  return <Tabela vazio={vazio} descricaoVazio="" colunas={[...colunas.map(rotuloDaColuna), ...(acoes ? ["Ações"] : [])]} linhas={linhas.map((l, i) => ({ id: String(l.id ?? i), celulas: [...colunas.map((c) => celula(c, l[c])), ...(acoes ? [acoes(l)] : [])] }))} />;
 }
 
 const ehRegistro = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
@@ -88,8 +102,8 @@ export function BlocoLivre({ valor, contabil = false }: { valor: unknown; contab
   const simples = Object.entries(valor).filter(([, v]) => !Array.isArray(v) && !ehRegistro(v));
   const compostos = Object.entries(valor).filter(([, v]) => Array.isArray(v) || ehRegistro(v));
   return <div className="space-y-4">
-    {simples.length > 0 && <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{simples.map(([k, v]) => <div key={k}><dt className="text-helper text-fg-secondary">{k}</dt><dd className="mt-1 text-ui text-fg tabular-nums">{celula(v)}</dd></div>)}</dl>}
-    {compostos.map(([k, v]) => <section key={k} aria-label={k}><h4 className="mb-2 text-label font-semibold text-fg">{k}</h4>{Array.isArray(v) && v.every(ehRegistro) ? <TabelaLivre linhas={v} contabil={contabil} /> : celula(v)}</section>)}
+    {simples.length > 0 && <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{simples.map(([k, v]) => <div key={k}><dt className="text-helper text-fg-secondary">{rotuloDaColuna(k)}</dt><dd className="mt-1 text-ui text-fg tabular-nums">{celula(k, v)}</dd></div>)}</dl>}
+    {compostos.map(([k, v]) => <section key={k} aria-label={rotuloDaColuna(k)}><h4 className="mb-2 text-label font-semibold text-fg">{rotuloDaColuna(k)}</h4>{Array.isArray(v) && v.every(ehRegistro) ? <TabelaLivre linhas={v} contabil={contabil} /> : celula(k, v)}</section>)}
   </div>;
 }
 

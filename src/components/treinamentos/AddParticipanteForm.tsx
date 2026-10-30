@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import type { TrainingParticipantState } from "@/app/(app)/treinamentos/[id]/turmas/[classId]/actions";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
@@ -38,7 +39,7 @@ export function AddParticipanteForm({ action, candidatos }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso>{state.error}</Aviso>}
     </form>
   );
 }

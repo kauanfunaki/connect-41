@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Aviso } from "@/components/ui/Aviso";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Input } from "@/components/ui/Input";
@@ -124,7 +125,7 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
 
       {(canEdit || state?.error) && (
         <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border">
-          {state?.error && <p className="mr-auto text-helper font-medium text-danger">{state.error}</p>}
+          {state?.error && <Aviso className="mr-auto">{state.error}</Aviso>}
           {canEdit && (
             <Button type="submit" disabled={isPending}>
               {isPending ? "Salvando…" : "Salvar dados"}

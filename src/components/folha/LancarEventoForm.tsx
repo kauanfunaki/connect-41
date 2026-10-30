@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import type { PayrollEntryState } from "@/app/(app)/empresas/[id]/folha/[competencyId]/actions";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -114,7 +115,7 @@ export function LancarEventoForm({ action, colaboradores }: Props) {
       </CampoForm>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {state?.error && <p className="mr-auto text-helper font-medium text-danger">{state.error}</p>}
+        {state?.error && <Aviso className="mr-auto">{state.error}</Aviso>}
         <Button type="submit" disabled={isPending}>
           {isPending ? "Lançando…" : "Lançar evento"}
         </Button>

@@ -118,7 +118,7 @@ function LinhaDaFatura({ fatura: f }: { fatura: FaturaDoCartao }) {
         <ul className="mt-1 flex flex-col gap-0.5 pl-5">
           {f.compras.map((p) => (
             <li key={p.paymentId} className="flex items-center justify-between gap-3 text-micro">
-              <span className="min-w-0 truncate text-fg-secondary">
+              <span className="min-w-0 truncate text-fg-secondary" data-dica={`${dataBr(p.dataKey)} · ${p.contraparteNome}${p.descricao ? ` — ${p.descricao}` : ""}`}>
                 {dataBr(p.dataKey)} · {p.contraparteNome}
                 {p.descricao && ` — ${p.descricao}`}
               </span>

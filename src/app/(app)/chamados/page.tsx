@@ -13,7 +13,13 @@ import { contexto } from "@/lib/chamados/contexto";
 import { podeAbrir, podeGerenciar, podeVerInterno, escoposDaBusca } from "@/lib/chamados/acesso";
 import { lista, categorias, usuarios, resumoRascunho } from "@/lib/chamados/consultas";
 import { getActiveSectors } from "@/lib/sectors";
-import { ROTULOS, ROTULOS_PRIORIDADE, aguardandoSolicitante } from "@/lib/chamados/regras";
+import { ROTULOS, ROTULOS_PRIORIDADE, aguardandoSolicitante, type Prioridade, type Status } from "@/lib/chamados/regras";
+import { TOM_DA_PRIORIDADE, TOM_DA_SITUACAO, slaAtrasado } from "@/lib/chamados/tons";
+import { Selo } from "@/components/ui/Selo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Pagination } from "@/components/shared/Pagination";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import { formatInstantDate } from "@/lib/format";
 import { BotaoFixarTela } from "@/components/setor/BotaoFixarTela";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
@@ -36,6 +42,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
     const anteriores = await lista(c, { aba: "historico" }); if (!anteriores.total) notFound();
   }
   const nome = (id: string) => users.find(u => u.id === id)?.name ?? "Usuário indisponível";
+  const agora = new Date();
   const fixadas = await codigosDeTelasFixadas(c.ctx.userId, c.ctx.tenantId);
   function url(alteracoes: Record<string, string | null>) {
     const q = new URLSearchParams();
@@ -55,22 +62,25 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
     <div className="mb-4 flex flex-wrap items-center gap-3">
       <Card className="min-w-64 flex-1 p-3"><ControlesBuscaChamados key={`${filtros.q ?? ""}:${filtros.em ?? ""}`} atribuidos={internos} escopos={escoposDaBusca(c.ctx, c.config)} /></Card>
     </div>
-    <nav aria-label="Filtrar chamados por situação" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-2">
-      <div className="flex flex-wrap gap-1 rounded-md bg-surface-hover p-1">{abas.map(item => <Link key={item.id} href={url({ aba: item.id, pagina: null })} aria-current={aba === item.id ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-ui font-semibold transition-colors ${aba === item.id ? "bg-surface text-fg shadow-xs" : "text-fg-secondary hover:text-fg"}`}><item.Icone size={14} aria-hidden className="shrink-0" />{item.texto}<span className="rounded bg-surface-hover px-1.5 py-0.5 text-helper">{item.total}</span></Link>)}</div>
-      <Link href={url({ aba: "historico", pagina: null })} aria-current={aba === "historico" ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-ui font-semibold transition-colors ${aba === "historico" ? "bg-surface-hover text-fg" : "text-fg-secondary hover:text-fg hover:bg-surface-hover"}`}><History size={14} aria-hidden className="shrink-0" />Histórico<span className="rounded bg-surface-hover px-1.5 py-0.5 text-helper">{dados.counts.historico}</span></Link>
-    </nav>
+    {/* As abas do app (`AbasDeLink`, regra de 30/09: aba troca a tela e tem a
+        barra embaixo) no lugar da fileira de pílulas montada aqui (auditoria de
+        UX, 30/10/2026). O Histórico entra na mesma fileira, por último. */}
+    <AbasDeLink aria-label="Filtrar chamados por situação" ativa={aba} abas={[
+      ...abas.map(item => ({ chave: item.id, rotulo: item.texto, href: url({ aba: item.id, pagina: null }), icone: <item.Icone size={14} aria-hidden />, contagem: item.total })),
+      { chave: "historico", rotulo: "Histórico", href: url({ aba: "historico", pagina: null }), icone: <History size={14} aria-hidden />, contagem: dados.counts.historico },
+    ]} />
     {!internos && !!dados.counts.aguardando && <Link href={url({ aba: "abertos", pagina: null })} className="mb-4 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-ui font-semibold text-warning-fg hover:bg-warning/15"><BellRing size={16} aria-hidden className="shrink-0" />{dados.counts.aguardando === 1 ? "1 chamado aguarda a sua resposta." : `${dados.counts.aguardando} chamados aguardam a sua resposta.`}</Link>}
-    <p className="mb-3 text-helper text-fg-secondary">{dados.total} chamado(s) · página {dados.page}</p>
-    {!dados.rows.length ? <Card className="p-8 text-center text-fg-secondary"><h2 className="font-semibold text-fg">Nenhum chamado neste recorte</h2><p className="mt-2 text-ui">Altere os filtros ou abra uma nova solicitação.</p></Card> : <div className="space-y-3">{dados.rows.map(t => {
+    <p className="mb-3 text-helper text-fg-secondary tabular-nums">{dados.total === 1 ? "1 chamado" : `${dados.total} chamados`}</p>
+    {!dados.rows.length ? <Card><EmptyState icon={<Ticket />} title="Nenhum chamado neste recorte" description={podeAbrir(c.ctx, c.config) ? "Troque a aba ou a busca, ou abra um chamado novo." : "Troque a aba ou a busca."} action={podeAbrir(c.ctx, c.config) ? <Button href="/chamados/novo" variant="secondary"><Plus size={14} aria-hidden />Novo chamado</Button> : undefined} /></Card> : <div className="space-y-3">{dados.rows.map(t => {
       const setor = setores.find(s => s.code === t.requesterSectorCode);
       const corCategoria = corDaCategoria(t.categoryId);
       const posicao = dados.posicoes.get(t.id);
       const suaVez = !internos && aguardandoSolicitante(t.status);
-      return <Card key={t.id} className={`relative flex gap-2 border-l-[3px] p-4 transition-colors hover:bg-surface-hover/40 ${suaVez ? "bg-warning/5 ring-2 ring-warning/60" : ""}`} style={{ borderLeftColor: setor?.color ?? "#586577" }}>{reordenar && t.status === "NA_FILA" && posicao && <div className="relative z-10"><MoverNaFila id={t.id} version={t.version} posicao={posicao} total={dados.totalFila} titulo={t.title} /></div>}<div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><Link href={`/chamados/${t.id}`} className="break-words text-label font-semibold text-brand after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] hover:underline">{t.title}</Link><p className="mt-2 flex flex-wrap items-center gap-1.5 text-helper">
+      return <Card key={t.id} className={`relative flex gap-2 border-l-[3px] p-4 transition-colors hover:bg-surface-hover/40 ${suaVez ? "bg-warning/5 ring-2 ring-warning/60" : ""}`} style={{ borderLeftColor: setor?.color ?? "var(--c41-fg-muted)" }}>{reordenar && t.status === "NA_FILA" && posicao && <div className="relative z-10"><MoverNaFila id={t.id} version={t.version} posicao={posicao} total={dados.totalFila} titulo={t.title} /></div>}<div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><Link href={`/chamados/${t.id}`} className="break-words text-label font-semibold text-brand after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] hover:underline">{t.title}</Link><p className="mt-2 flex flex-wrap items-center gap-1.5 text-helper">
         <span aria-label="Grupo e categoria" className="inline-flex items-center rounded-md border px-2 py-0.5 font-medium" style={{ color: corCategoria, borderColor: `color-mix(in srgb, ${corCategoria} 32%, transparent)`, backgroundColor: `color-mix(in srgb, ${corCategoria} 10%, var(--c41-surface))` }}>{caminhoDaCategoria(cats, t.categoryId) || t.category.name}</span>
-        <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5" style={{ color: setor?.color ?? "#586577", backgroundColor: `color-mix(in srgb, ${setor?.color ?? "#586577"} 10%, var(--c41-surface))` }}><span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: setor?.color ?? "#586577" }} />{setor?.label ?? t.requesterSectorCode}</span>
-        <span className="text-fg-secondary">· {formatInstantDate(t.createdAt)}</span></p></div><div className="flex flex-wrap gap-2 text-helper">{suaVez ? <span className="inline-flex items-center gap-1 rounded bg-warning/15 px-2 py-1 font-semibold text-warning-fg"><BellRing size={12} aria-hidden />Aguardando sua resposta</span> : <span className="rounded bg-brand/8 px-2 py-1 text-brand">{ROTULOS[t.status]}</span>}<span className="rounded bg-surface-hover px-2 py-1 text-fg-secondary">{ROTULOS_PRIORIDADE[t.priority]}</span></div></div><div className="mt-3 flex flex-wrap justify-between gap-2 text-helper text-fg-secondary">{t.assignees.length > 0 && <span aria-label={`Responsáveis: ${t.assignees.map(a => nome(a.userId)).join(", ")}`} className="flex -space-x-1.5">{t.assignees.map(a => { const partes = nome(a.userId).trim().split(/\s+/).filter(p => !/^(d[aeo]s?|e)$/i.test(p)); const ini = (partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? ""); return <span key={a.userId} title={nome(a.userId)} aria-hidden className="flex size-7 items-center justify-center rounded-full bg-brand-subtle text-helper font-semibold uppercase text-brand ring-2 ring-surface">{ini}</span>; })}</span>}{t.status === "NA_FILA" && <span>Posição {posicao} de {dados.totalFila} na fila</span>}{t.cycles[0] && <span>Prazo: {formatInstantDate(t.cycles[0].resolutionDueAt)}{t.cycles[0].pausedAt ? " · SLA pausado" : ""}</span>}</div></div></Card>;
+        <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5" style={{ color: setor?.color ?? "var(--c41-fg-muted)", backgroundColor: `color-mix(in srgb, ${setor?.color ?? "var(--c41-fg-muted)"} 10%, var(--c41-surface))` }}><span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: setor?.color ?? "var(--c41-fg-muted)" }} />{setor?.label ?? t.requesterSectorCode}</span>
+        <span className="text-fg-secondary">· {formatInstantDate(t.createdAt)}</span></p></div><div className="flex flex-wrap items-center gap-1.5">{suaVez ? <Selo tom="atencao" className="gap-1 font-semibold"><BellRing size={12} aria-hidden />Aguardando sua resposta</Selo> : <Selo tom={TOM_DA_SITUACAO[t.status as Status]}>{ROTULOS[t.status as Status]}</Selo>}<Selo tom={TOM_DA_PRIORIDADE[t.priority as Prioridade]}>Prioridade {ROTULOS_PRIORIDADE[t.priority as Prioridade].toLowerCase()}</Selo>{slaAtrasado(t.status, t.cycles[0], agora) && <Selo tom="perigo" className="font-semibold">Atrasado</Selo>}</div></div><div className="mt-3 flex flex-wrap justify-between gap-2 text-helper text-fg-secondary">{t.assignees.length > 0 && <span role="img" aria-label={`Responsáveis: ${t.assignees.map(a => nome(a.userId)).join(", ")}`} data-dica={t.assignees.map(a => nome(a.userId)).join(", ")} className="relative z-10 flex -space-x-1.5">{t.assignees.map(a => <AvatarImage key={a.userId} src={null} name={nome(a.userId)} size={28} />)}</span>}{t.status === "NA_FILA" && <span>Posição {posicao} de {dados.totalFila} na fila</span>}{t.cycles[0] && <span>Prazo: {formatInstantDate(t.cycles[0].resolutionDueAt)}{t.cycles[0].pausedAt ? " · SLA pausado" : ""}</span>}</div></div></Card>;
     })}</div>}
-    <div className="mt-5 flex flex-wrap gap-2">{dados.page > 1 && <Button href={pagina(dados.page - 1)} variant="secondary">Anterior</Button>}{dados.page * 25 < dados.total && <Button href={pagina(dados.page + 1)} variant="secondary">Próxima página</Button>}</div>
+    <Pagination page={dados.page} totalPages={Math.max(1, Math.ceil(dados.total / 25))} buildHref={pagina} total={dados.total} rotulo="chamados" />
   </PageContainer>;
 }

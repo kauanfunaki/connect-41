@@ -5,6 +5,7 @@ import { Check, CircleDollarSign, Send, FileText, MessageSquareWarning, Pencil, 
 import { Button } from "@/components/ui/Button";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { useToast } from "@/components/ui/Toast";
 import type { AcaoDeContaState } from "@/lib/financeiro/acoes";
 import type { SituacaoDaConta } from "@/lib/financeiro/contas";
 import { useEdicaoDeLancamento } from "./EditarLancamento";
@@ -68,9 +69,19 @@ export function AcoesDaConta({
   const [pendente, startTransition] = useTransition();
   // A baixa abre numa janela (lote C): data, conta bancária, valor, juros,
   // multa e desconto — era um balão só com a data. Baixa parcial avisa na linha.
-  const baixa = useJanelaDaBaixa(hojeISO, (avisoDaBaixa) => setAviso(avisoDaBaixa));
+  // A baixa integral e a edição sem ressalva também dizem que deu certo
+  // (auditoria de UX, 30/10/2026): no recorte "em aberto" a linha simplesmente
+  // sumia, sem confirmação de nada. O que tem ressalva continua na linha.
+  const toast = useToast();
+  const baixa = useJanelaDaBaixa(hojeISO, (avisoDaBaixa) => {
+    setAviso(avisoDaBaixa);
+    if (!avisoDaBaixa) toast.success(aPagar ? "Conta paga." : "Conta recebida.");
+  });
   // Conta que voltou para a aprovação ao mudar de valor diz isso na linha.
-  const edicao = useEdicaoDeLancamento((avisoDaEdicao) => setAviso(avisoDaEdicao));
+  const edicao = useEdicaoDeLancamento((avisoDaEdicao) => {
+    setAviso(avisoDaEdicao);
+    if (!avisoDaEdicao) toast.success("Conta salva.");
+  });
 
   function executar(fn: () => Promise<AcaoDeContaState>, aoTerminar?: () => void) {
     setErro(null);
@@ -89,7 +100,10 @@ export function AcoesDaConta({
     startTransition(async () => {
       const r = await enviarParaAprovacao(entryId);
       if ("error" in r) setErro(r.error);
-      else setAviso(r.aviso ?? null);
+      else {
+        setAviso(r.aviso ?? null);
+        if (!r.aviso) toast.success("Conta enviada para aprovação.");
+      }
     });
   }
 
@@ -118,7 +132,7 @@ export function AcoesDaConta({
               disabled={pendente}
               onClick={() => {
                 close();
-                executar(() => acoes.conferir(entryId));
+                executar(() => acoes.conferir(entryId), () => toast.success("Conta conferida."));
               }}
             >
               Conferir

@@ -13,8 +13,12 @@ export type CategoriaDaTela = Categoria & { id: string };
 export function nomeDaCategoria(categorias: CategoriaDaTela[], id: string): string {
   return caminhoDaCategoria(categorias, id);
 }
+// O rótulo no desenho do `CampoForm` (14px, médio, na cor do texto), o único do
+// app desde 30/09 — aqui era 13px negrito cinza, e o chamado destoava das outras
+// telas (auditoria de UX, 30/10/2026). Fica o `<label>` em volta do controle:
+// a ligação com o campo vem de graça, sem `id`.
 export function Campo({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="flex min-w-0 flex-col gap-1.5 text-ui text-fg-secondary"><span className="font-semibold">{label}</span>{children}</label>;
+  return <label className="flex min-w-0 flex-col gap-1.5"><span className="text-label font-medium leading-5 text-fg">{label}</span>{children}</label>;
 }
 export function CamposDoChamado({ dados, onChange, categorias, setores, origemFixa = false, somenteCategoria = false, ocultarCategoria = false, ocultarTitulo = false, ocultarTags = false, abertura = false, revisao = false }: {
   dados: DadosDoChamado; onChange: (d: DadosDoChamado) => void; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; origemFixa?: boolean; somenteCategoria?: boolean; ocultarCategoria?: boolean; ocultarTitulo?: boolean; ocultarTags?: boolean;

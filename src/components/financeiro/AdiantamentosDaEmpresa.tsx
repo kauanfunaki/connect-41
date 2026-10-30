@@ -88,7 +88,7 @@ export function AdiantamentosDaEmpresa({
             <ul className="flex flex-col divide-y divide-border-soft rounded-md border border-border">
               {saldos.map((s) => (
                 <li key={s.contraparteId} className="flex items-center justify-between gap-3 px-3 py-2 text-fs-2">
-                  <span className="min-w-0 truncate text-fg">{s.contraparteNome}</span>
+                  <span className="min-w-0 truncate text-fg" data-dica={s.contraparteNome}>{s.contraparteNome}</span>
                   <span className={`tabular-nums font-medium ${s.saldoCentavos < 0 ? "text-danger" : "text-fg"}`}>{reais(s.saldoCentavos)} disponível</span>
                 </li>
               ))}

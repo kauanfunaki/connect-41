@@ -83,7 +83,7 @@ export function FaixaDoFoco({ foco }: { foco: FocoDaFaixa }) {
       <Crosshair size={14} aria-hidden className="flex-shrink-0 text-brand" />
       <span className="hidden sm:inline flex-shrink-0 text-helper text-fg-secondary">Trabalhando em</span>
       <AvatarImage src={foco.logoUrl} name={foco.nome} size={20} shape="lg" fontSize={9} />
-      <span className="min-w-0 truncate text-ui font-semibold text-fg">{foco.nome}</span>
+      <span className="min-w-0 truncate text-ui font-semibold text-fg" data-dica={foco.nome}>{foco.nome}</span>
       {foco.alcance && <span className="hidden md:inline flex-shrink-0 text-helper text-fg-muted whitespace-nowrap">· {foco.alcance}</span>}
       <div className="ml-auto flex flex-shrink-0 items-center gap-1">
         <Button
