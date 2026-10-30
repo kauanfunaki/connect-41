@@ -1947,6 +1947,13 @@ model Company {
   stateCode             String?       @db.VarChar(2)
   // Inscrições fiscais
   stateRegistration     String?       @db.VarChar(40)
+  /// A situação da IE no CICAD da Receita do PR (robô do Societário,
+  /// 30/10/2026): ATIVA, SUSPENSA, BAIXADA ou CANCELADA. Nula enquanto o robô
+  /// não leu. Quando foi lida e desde quando está assim. Ver
+  /// `src/lib/societario/inscricaoEstadual.ts`.
+  stateRegistrationStatus    String?   @db.VarChar(12)
+  stateRegistrationCheckedAt DateTime?
+  stateRegistrationChangedAt DateTime?
   municipalRegistration String?       @db.VarChar(40)
   nire                  String?       @db.VarChar(20)
   // Contato
