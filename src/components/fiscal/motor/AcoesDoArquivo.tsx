@@ -43,10 +43,22 @@ export function AcoesDoArquivo({ raiz, id, hrefDownload, obrigacao, validando, e
   useEffect(() => {
     if (!acompanhando) return;
     const inicio = Date.now();
+    // Consulta que falha seguidas vezes avisa (auditoria de UX, 30/10/2026): o
+    // botão ficava em "Validando…" por até 5 minutos sem dizer que o Connect
+    // tinha perdido contato com o motor. A consulta continua; volta a calar
+    // quando o motor responde.
+    let falhasSeguidas = 0;
     const relogio = setInterval(async () => {
       if (Date.now() - inicio > LIMITE_MS) { setAcompanhando(false); setResultado({ ok: false, mensagem: "A validação passou de 5 minutos. Recarregue mais tarde para ver o resultado." }); return; }
       const r = await lerValidacaoNoMotor({ raiz, id }).catch(() => null);
-      if (r?.ok && r.dados && r.dados.estado !== "validando") {
+      if (!r?.ok) {
+        falhasSeguidas += 1;
+        if (falhasSeguidas === 3) setResultado({ ok: false, mensagem: "Sem resposta do motor há alguns instantes. A validação segue lá; o Connect continua tentando." });
+        return;
+      }
+      if (falhasSeguidas >= 3) setResultado(null);
+      falhasSeguidas = 0;
+      if (r.dados && r.dados.estado !== "validando") {
         setAcompanhando(false);
         setResultado({ ok: true, mensagem: "Validação concluída." });
         router.refresh();

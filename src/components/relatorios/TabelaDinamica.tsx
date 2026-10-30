@@ -65,8 +65,8 @@ export function TabelaDinamica({
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full text-ui">
           <thead>
-            <tr className="border-b border-border bg-surface-subtle text-micro font-medium uppercase tracking-wide text-fg-muted">
-              <th className="sticky left-0 z-10 bg-surface-subtle px-3 py-2 text-left">{rotuloDasLinhas}</th>
+            <tr className="border-b border-border bg-table-header-bg text-micro font-medium uppercase tracking-wide text-table-header-fg">
+              <th className="sticky left-0 z-10 bg-table-header-bg px-3 py-2 text-left">{rotuloDasLinhas}</th>
               {comColunas &&
                 tabela.colunas.map((c) => (
                   <th key={c.chave} className="px-3 py-2 text-right whitespace-nowrap">
@@ -82,8 +82,8 @@ export function TabelaDinamica({
               const temFilhas = !!l.filhas && l.filhas.length > 0;
               return (
                 <Fragment key={l.chave}>
-                  <tr className="border-b border-border-soft hover:bg-surface-hover">
-                    <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium text-fg">
+                  <tr className="group border-b border-border-soft hover:bg-surface-hover">
+                    <td className="sticky left-0 z-10 bg-surface px-3 py-2 font-medium text-fg group-hover:bg-surface-hover">
                       {temFilhas ? (
                         <button
                           type="button"

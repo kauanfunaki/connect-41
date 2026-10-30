@@ -14,7 +14,11 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { dadosDaBaixaEmLote, registrarPagamentosEmLote, type DadosDoLote, type ResultadoDoLote } from "@/lib/financeiro/acoes";
-import { algumaTemRegra, encargosDoLote, type ForaDoLote } from "@/lib/financeiro/baixa/lote";
+import { algumaTemRegra, encargosDoLote } from "@/lib/financeiro/baixa/lote";
+// A lista de quem fica de fora é a da janela de alteração (auditoria de UX,
+// 30/10/2026): esta mostrava uma linha por conta, sem agrupar nem altura
+// máxima — com 200 contas marcadas, a janela ficava enorme.
+import { ListaDeFora } from "./JanelaDaAlteracaoEmLote";
 import { contaSugeridaNaBaixa } from "@/lib/financeiro/contaPrevista";
 
 const reais = (c: number) => formatarReaisDeCentavos(c);
@@ -94,21 +98,6 @@ export function JanelaDaBaixaEmLote({
 function resumo(r: { baixadas: number; totalCentavos: number }, aPagar: boolean) {
   const contas = r.baixadas === 1 ? "1 conta" : `${r.baixadas} contas`;
   return `${contas} ${aPagar ? (r.baixadas === 1 ? "paga" : "pagas") : r.baixadas === 1 ? "recebida" : "recebidas"} · ${reais(r.totalCentavos)}.`;
-}
-
-function ListaDeFora({ ficam, titulo }: { ficam: ForaDoLote[]; titulo: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <p className="text-label font-semibold text-fg">{titulo}</p>
-      <ul className="text-fs-2 text-fg-secondary">
-        {ficam.map((f) => (
-          <li key={f.id}>
-            <span className="text-fg">{f.contraparteNome}</span> — {f.motivo}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 function Formulario({

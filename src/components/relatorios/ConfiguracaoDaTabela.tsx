@@ -6,21 +6,20 @@ import { CampoMes } from "@/components/ui/CampoMes";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CampoForm } from "@/components/ui/CampoForm";
 import { DIMENSOES, MEDIDAS, ROTULO_DA_BASE, BASES, type Base, type Configuracao, type Dimensao, type Medida } from "@/lib/relatorios/tabelaDinamica";
-
-const ROTULO = "text-micro font-medium uppercase tracking-wide text-fg-muted";
 
 const dimensoesDa = (base: Base) => (Object.keys(DIMENSOES) as Dimensao[]).filter((d) => DIMENSOES[d].bases.includes(base));
 const medidasDa = (base: Base) => (Object.keys(MEDIDAS) as Medida[]).filter((m) => MEDIDAS[m].bases.includes(base));
 
+// O rótulo do `CampoForm`, o de todo formulário do app (auditoria de UX,
+// 30/10/2026): aqui era um rótulo próprio em caixa alta miúda, e a tabela
+// dinâmica destoava das outras telas.
 function Campo({ id, rotulo, children }: { id: string; rotulo: string; children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className={ROTULO}>
-        {rotulo}
-      </label>
+    <CampoForm label={rotulo} htmlFor={id}>
       {children}
-    </div>
+    </CampoForm>
   );
 }
 

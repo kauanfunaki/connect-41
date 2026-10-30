@@ -32,7 +32,10 @@ export function AcompanhamentoDaExecucao({ raiz, inicial, logInicial, truncadoIn
     const relogio = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
       const r = await lerExecucaoNoMotor({ raiz, id: inicial.id }).catch(() => null);
-      if (!vivo || !r) return;
+      if (!vivo) return;
+      // Falha de rede também aparece (auditoria de UX, 30/10/2026): era engolida,
+      // e o "Atualizando" seguia como se o log estivesse em dia.
+      if (!r) { setErro("Sem resposta do Connect agora. O log volta a atualizar quando a conexão voltar."); return; }
       if (!r.ok) { setErro(r.mensagem); return; }
       setErro(null);
       setExecucao(r.dados!.execucao);
