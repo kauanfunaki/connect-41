@@ -107,3 +107,15 @@ Um órgão novo entra em três lugares, com o mesmo nome de tipo:
 1. `TIPOS_DE_TAREFA`, em `tarefas.ts`, dizendo se é repetível. Tipo que submete algo ao órgão nunca é repetível: repetir abre dois processos lá.
 2. A decisão do resultado, num arquivo ao lado do `alvara.ts`.
 3. A função em `CAPACIDADES`, no programa da máquina.
+
+## A vigilância da inscrição estadual (vigiar_ie)
+
+O Connect já sabe o que fazer com a leitura: grava a situação da IE na empresa, mostra o selo na ficha e avisa o Societário quando ela muda (`src/lib/societario/inscricaoEstadual.ts`). A tarefa não é pedida por ninguém: nasce quando a máquina pede trabalho com `vigiar_ie` nas capacidades, uma empresa por vez:
+
+- entram as empresas ativas com IE do PR, as nunca lidas primeiro, e cada uma volta depois de 7 dias;
+- a que parou numa pessoa não volta na mesma semana;
+- três leituras seguidas que pararam numa pessoa param a rodada por 24 horas (a tela do CICAD mudou, o certificado venceu).
+
+**Falta a leitura na máquina.** Ela entra em `CAPACIDADES` só depois de testada contra a página real da Receita do PR, como o SIMA. Até lá, a máquina não diz `vigiar_ie` e nenhuma tarefa nasce. Antes, a Ruli precisa confirmar que a emissão do CICAD não pede captcha.
+
+A tarefa recebe `{ inscricao, cnpj }` (só dígitos; `cnpj` nulo quando o cadastro não tem) e devolve `{ ok: true, resultado: { situacao } }`, com o texto do campo "Situação Atual" como está na tela. Quem interpreta é o Connect.

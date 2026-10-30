@@ -24,6 +24,9 @@ import {
   type TipoDeTarefa,
 } from "./tarefas";
 import { decidirAlvara, nomeDoPdfDoAlvara, pedidoDoAlvara, resultadoDoAlvaraSchema } from "./alvara";
+import { FALHAS_PARA_PARAR, pedidoDaIE, resultadoDaIESchema, vigilanciaPodeSeguir } from "./inscricaoEstadual";
+import { empresasParaVigiarIE, registrarSituacaoDaIE } from "@/lib/societario/inscricaoEstadualServidor";
+import { INTERVALO_DA_VIGILANCIA_DIAS } from "@/lib/societario/inscricaoEstadual";
 
 export type ResultadoDoPedido = { ok: true; texto: string } | { ok: false; erro: string };
 
@@ -97,6 +100,7 @@ export async function pegarProxima(w: CredencialAutenticadaOps, capacidades: rea
 
   const tipos = capacidadesConhecidas(capacidades);
   if (tipos.length === 0) return { tarefa: null };
+  if (tipos.includes("vigiar_ie")) await criarVigilanciaDaIE(w.tenantId, agora);
   // Duas máquinas (ou duas voltas) podem mirar a mesma: quem não conseguir
   // marcar tenta a seguinte.
   for (let i = 0; i < 3; i++) {
@@ -115,6 +119,45 @@ export async function pegarProxima(w: CredencialAutenticadaOps, capacidades: rea
     }
   }
   return { tarefa: null };
+}
+
+/**
+ * A próxima empresa da rodada da IE vira tarefa, se a fila não tiver uma
+ * aberta. Uma por vez: a máquina lê, devolve, e no pedido seguinte vem a
+ * próxima.
+ */
+async function criarVigilanciaDaIE(tenantId: string, agora: Date) {
+  const prisma = getPrisma();
+  const aberta = await prisma.robotTask.findFirst({ where: { tenantId, kind: "vigiar_ie", status: { in: ["PENDENTE", "EM_EXECUCAO"] } }, select: { id: true } });
+  if (aberta) return;
+  const ultimas = await prisma.robotTask.findMany({
+    where: { tenantId, kind: "vigiar_ie", status: { in: ["CONCLUIDA", "PRECISA_DE_GENTE"] } },
+    orderBy: { finishedAt: "desc" },
+    take: FALHAS_PARA_PARAR,
+    select: { status: true, finishedAt: true },
+  });
+  if (!vigilanciaPodeSeguir(ultimas, agora)) return;
+  const naSemana = await prisma.robotTask.findMany({
+    where: { tenantId, kind: "vigiar_ie", createdAt: { gte: new Date(agora.getTime() - INTERVALO_DA_VIGILANCIA_DIAS * 86_400_000) } },
+    select: { companyId: true },
+  });
+  const [empresa] = await empresasParaVigiarIE(tenantId, agora, 1, new Set(naSemana.map((t) => t.companyId).filter((id): id is string => id !== null)));
+  if (!empresa) return;
+  try {
+    await prisma.robotTask.create({
+      data: {
+        tenantId,
+        kind: "vigiar_ie",
+        companyId: empresa.id,
+        payload: JSON.stringify(pedidoDaIE(empresa.stateRegistration, empresa.cnpj)),
+        openKey: chaveAberta(tenantId, "vigiar_ie", empresa.id),
+        requestedById: null,
+      },
+    });
+  } catch (err) {
+    // Dois pedidos da máquina ao mesmo tempo: o outro já criou.
+    if (!isPrismaUniqueError(err)) throw err;
+  }
 }
 
 async function recolherPerdidas(tenantId: string, agora: Date) {
@@ -175,6 +218,7 @@ export async function devolverTarefa(w: CredencialAutenticadaOps, id: string, de
     return { ok: true, status: depois?.status ?? "PENDENTE" };
   }
   if (t.kind === "imprimir_alvara") return { ok: true, status: await concluirAlvara(w, t, devolucao.resultado, arquivo) };
+  if (t.kind === "vigiar_ie") return { ok: true, status: await concluirIE(w, t, devolucao.resultado) };
   throw new ErroOps("Tipo de tarefa desconhecido.", 400);
 }
 
@@ -225,6 +269,27 @@ async function concluirAlvara(w: CredencialAutenticadaOps, t: TarefaAberta & { l
     }
   }
   await finalizar(w, t.id, { status: "CONCLUIDA", reason: null, result: resultado, fileId: guardado.arquivoId });
+  return "CONCLUIDA";
+}
+
+async function concluirIE(w: CredencialAutenticadaOps, t: TarefaAberta, bruto: Record<string, unknown>): Promise<string> {
+  const lido = resultadoDaIESchema.safeParse(bruto);
+  if (!lido.success) throw new ErroOps("Resultado da IE fora do formato.", 400);
+  const resultado = JSON.stringify({ situacao: lido.data.situacao });
+  if (!t.companyId) {
+    await finalizar(w, t.id, { status: "PRECISA_DE_GENTE", reason: "A tarefa não tem empresa.", result: resultado });
+    return "PRECISA_DE_GENTE";
+  }
+  const r = await registrarSituacaoDaIE({ tenantId: w.tenantId, companyId: t.companyId, texto: lido.data.situacao, lidaEm: new Date() });
+  if (r.tipo === "sem_empresa") {
+    await finalizar(w, t.id, { status: "PRECISA_DE_GENTE", reason: "A empresa não existe mais.", result: resultado });
+    return "PRECISA_DE_GENTE";
+  }
+  if (r.tipo === "nao_reconhecida") {
+    await finalizar(w, t.id, { status: "PRECISA_DE_GENTE", reason: `O CICAD mostrou uma situação que o Connect não conhece: "${r.texto}". Confira na Receita do PR.`, result: resultado });
+    return "PRECISA_DE_GENTE";
+  }
+  await finalizar(w, t.id, { status: "CONCLUIDA", reason: null, result: resultado });
   return "CONCLUIDA";
 }
 

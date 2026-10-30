@@ -20,17 +20,26 @@ import {
 
 const SETOR = "societario";
 
-/** As empresas da próxima rodada, das nunca lidas para as lidas há mais tempo. */
-export async function empresasParaVigiarIE(tenantId: string, agora: Date, limite: number): Promise<{ id: string; stateRegistration: string }[]> {
+/**
+ * As empresas da próxima rodada, das nunca lidas para as lidas há mais tempo.
+ * `excluir` tira as que já tiveram tarefa na semana, inclusive as que pararam
+ * numa pessoa: sem isso, a que falha voltaria a cada pedido da máquina.
+ */
+export async function empresasParaVigiarIE(
+  tenantId: string,
+  agora: Date,
+  limite: number,
+  excluir: ReadonlySet<string> = new Set(),
+): Promise<{ id: string; stateRegistration: string; cnpj: string | null }[]> {
   const empresas = await getPrisma().company.findMany({
     where: { tenantId, status: "ACTIVE", stateCode: UF_DA_VIGILANCIA, stateRegistration: { not: null } },
-    select: { id: true, stateRegistration: true, stateCode: true, stateRegistrationCheckedAt: true },
+    select: { id: true, cnpj: true, stateRegistration: true, stateCode: true, stateRegistrationCheckedAt: true },
   });
   return empresas
-    .filter((e) => precisaVigiarIE(e, agora))
+    .filter((e) => !excluir.has(e.id) && precisaVigiarIE(e, agora))
     .sort((a, b) => (a.stateRegistrationCheckedAt?.getTime() ?? 0) - (b.stateRegistrationCheckedAt?.getTime() ?? 0))
     .slice(0, limite)
-    .map((e) => ({ id: e.id, stateRegistration: e.stateRegistration! }));
+    .map((e) => ({ id: e.id, stateRegistration: e.stateRegistration!, cnpj: e.cnpj }));
 }
 
 export type ResultadoDaLeituraDaIE =
