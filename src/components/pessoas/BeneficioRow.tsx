@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Aviso } from "@/components/ui/Aviso";
+import { useToast } from "@/components/ui/Toast";
 import type { BenefitAssignmentState } from "@/app/(app)/pessoas/[id]/beneficios/actions";
 import { BenefitStatus } from "@/generated/prisma/enums";
 import { CampoData } from "@/components/ui/CampoData";
@@ -50,7 +52,13 @@ type Props = {
 };
 
 export function BeneficioRow({ beneficio, updateAction, removeAction, canManage }: Props) {
-  const [state, formAction, isPending] = useActionState(updateAction, null);
+  // "Atualizar" diz que gravou (auditoria de UX, 30/10/2026): antes, sem erro, nada mudava na tela além do selo.
+  const toast = useToast();
+  const [state, formAction, isPending] = useActionState(async (anterior: Parameters<typeof updateAction>[0], form: FormData) => {
+    const r = await updateAction(anterior, form);
+    if (!r?.error) toast.success("Registro atualizado.");
+    return r;
+  }, null);
   const [status, setStatus] = useState(beneficio.status);
 
   return (
@@ -104,7 +112,7 @@ export function BeneficioRow({ beneficio, updateAction, removeAction, canManage 
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso className="mt-2">{state.error}</Aviso>}
     </div>
   );
 }

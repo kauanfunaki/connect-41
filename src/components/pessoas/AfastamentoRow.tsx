@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Aviso } from "@/components/ui/Aviso";
+import { useToast } from "@/components/ui/Toast";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
 import type { AbsenceType, AbsenceStatus } from "@/generated/prisma/enums";
 import { CampoData } from "@/components/ui/CampoData";
@@ -31,7 +33,13 @@ type Props = {
 };
 
 export function AfastamentoRow({ afastamento, updateAction, removeAction, canManage, canViewMedical }: Props) {
-  const [state, formAction, isPending] = useActionState(updateAction, null);
+  // "Atualizar" diz que gravou (auditoria de UX, 30/10/2026): antes, sem erro, nada mudava na tela além do selo.
+  const toast = useToast();
+  const [state, formAction, isPending] = useActionState(async (anterior: Parameters<typeof updateAction>[0], form: FormData) => {
+    const r = await updateAction(anterior, form);
+    if (!r?.error) toast.success("Registro atualizado.");
+    return r;
+  }, null);
   const [status, setStatus] = useState(afastamento.status);
 
   return (
@@ -86,7 +94,7 @@ export function AfastamentoRow({ afastamento, updateAction, removeAction, canMan
         </form>
       )}
 
-      {state?.error && <p className="mt-2 text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso className="mt-2">{state.error}</Aviso>}
     </div>
   );
 }
