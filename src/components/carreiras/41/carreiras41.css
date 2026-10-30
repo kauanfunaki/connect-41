@@ -39,7 +39,11 @@
   --t41-brasa-fundo: #fbe8df;
   --t41-sombra: 0 1px 2px rgba(34, 3, 63, 0.06), 0 8px 24px -12px rgba(34, 3, 63, 0.18);
   --t41-sombra-alta: 0 2px 4px rgba(34, 3, 63, 0.06), 0 28px 60px -24px rgba(34, 3, 63, 0.5);
-  --t41-titulo: var(--t41-fonte-titulo), "Hanken Grotesk", ui-sans-serif, sans-serif;
+  /* A reserva do título é a fonte do texto pela variável (30/10/2026): com as
+     fontes locais o nome "Hanken Grotesk" não existe mais na página — o
+     `next/font/local` dá outro nome à família. Um caractere fora do latin num
+     título (a Unbounded é só latin) sai na Hanken, como antes. */
+  --t41-titulo: var(--t41-fonte-titulo), var(--t41-fonte-texto), ui-sans-serif, sans-serif;
   --t41-texto: var(--t41-fonte-texto), ui-sans-serif, sans-serif;
   --t41-topo-altura: 64px;
   /* A trama de triângulos de 60° (lado 56 px), em lilás. */
