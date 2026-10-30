@@ -321,6 +321,45 @@ model OpsWatcher {
   @@map("ops_watchers")
 }
 
+/// A fila do robô do Societário (30/10/2026). O robô roda na máquina do TI,
+/// atrás do firewall do escritório, como uma automação do Ops Center (mesma
+/// chave, mesmo sinal de vida): é ela que vem buscar a tarefa, executa no portal
+/// do órgão e devolve o resultado. O certificado e a senha nunca chegam aqui.
+/// Regras em `src/lib/robo/tarefas.ts`.
+model RobotTask {
+  id            String    @id @default(uuid())
+  tenantId      String
+  /// O que fazer, do catálogo em código (`TIPOS_DE_TAREFA`): "imprimir_alvara".
+  kind          String    @db.VarChar(40)
+  companyId     String?
+  licenseId     String?
+  /// O que o robô precisa para executar, em JSON (inscrição municipal etc.).
+  payload       String    @db.Text
+  /// PENDENTE, EM_EXECUCAO, CONCLUIDA, PRECISA_DE_GENTE ou CANCELADA.
+  status        String    @default("PENDENTE") @db.VarChar(20)
+  /// Preenchida enquanto a tarefa está aberta e nula depois: o banco recusa a
+  /// segunda tarefa aberta para a mesma coisa (dois cliques, duas abas).
+  openKey       String?   @unique @db.VarChar(160)
+  attempts      Int       @default(0)
+  /// O slug da automação do Ops Center que pegou a tarefa.
+  machineSlug   String?   @db.VarChar(60)
+  claimedAt     DateTime?
+  finishedAt    DateTime?
+  /// O que o robô devolveu, em JSON, sem arquivo.
+  result        String?   @db.Text
+  /// Por que parou, quando precisa de gente.
+  reason        String?   @db.VarChar(500)
+  /// O arquivo que a tarefa guardou nos Arquivos (o PDF do alvará).
+  fileId        String?
+  requestedById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("robot_tasks")
+}
+
 /// Sites do Tech no Ops Center (28/10/2026): o que já está no ar, com quem
 /// responde por ele. A triagem dos chamados consulta antes de abrir um pedido.
 model OpsSite {
@@ -1308,6 +1347,7 @@ model Tenant {
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
   sectorMenuViews           SectorMenuView[]
+  robotTasks                RobotTask[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
   processTemplates          ProcessTemplate[]

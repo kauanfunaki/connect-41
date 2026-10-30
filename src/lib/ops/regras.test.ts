@@ -36,6 +36,10 @@ describe("Ops Center", () => {
     expect(ehIngestaoOps("POST", "/api/ops/events")).toBe(true);
     expect(ehIngestaoOps("POST", "/api/ops/watchers/meu_bot/heartbeat")).toBe(true);
     expect(ehIngestaoOps("POST", "/api/ops/watchers/pasta-de-rede/arquivos")).toBe(true);
+    expect(ehIngestaoOps("POST", "/api/ops/watchers/robo-societario/tarefas")).toBe(true);
+    expect(ehIngestaoOps("POST", "/api/ops/watchers/robo-societario/tarefas/0b6f3c1e-8d2a-4c6b-9f1e-2a3b4c5d6e7f")).toBe(true);
+    expect(ehIngestaoOps("POST", "/api/ops/watchers/robo-societario/tarefas/qualquer-coisa")).toBe(false);
+    expect(ehIngestaoOps("GET", "/api/ops/watchers/robo-societario/tarefas")).toBe(false);
     for (const rota of ["/api/ops", "/api/ops/watchers", "/api/ops/events-extra", "/api/ops/watchers/meu_bot/token", "/api/ops/watchers/meu_bot/instability", "/api/ops/watchers/meu_bot/arquivos/x"]) expect(ehIngestaoOps("POST", rota)).toBe(false);
     expect(ehIngestaoOps("GET", "/api/ops/events")).toBe(false);
   });

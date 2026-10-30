@@ -58,6 +58,12 @@ export function caminhoDoEvento(evento: { filename: string; filenameRenamed: str
   return pasta ? `${pasta.replace(/[\\/]+$/, "")}${pasta.includes("\\") ? "\\" : "/"}${nome}` : nome;
 }
 
+// `tarefas` e `tarefas/<id>` (30/10/2026): o robô do Societário pede e devolve
+// trabalho com a mesma chave (src/lib/robo/).
 export function ehIngestaoOps(method: string, pathname: string) {
-  return method === "POST" && (pathname === "/api/ops/events" || /^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*\/(?:heartbeat|arquivos)$/.test(pathname));
+  return (
+    method === "POST" &&
+    (pathname === "/api/ops/events" ||
+      /^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*\/(?:heartbeat|arquivos|tarefas|tarefas\/[0-9a-f-]{36})$/.test(pathname))
+  );
 }
