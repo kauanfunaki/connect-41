@@ -11,6 +11,7 @@ import { responder } from "@/app/(app)/chamados/actions";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { tamanhoDoArquivo } from "@/lib/chamados/linhaDoTempo";
 import { IconeDoArquivo } from "./LinhaDoTempo";
+import { uploadComProgresso } from "@/lib/uploadComProgresso";
 
 const LIMITE = 10 * 1024 * 1024, ACEITOS = FORMATOS.split(","), ALTURA_MAXIMA = 320;
 type Pendente = { id: string; file: File; enviado: boolean };
@@ -32,6 +33,7 @@ export function CaixaDeMensagem({ chamado, podeInterno }: { chamado: { id: strin
     el.style.overflowY = el.scrollHeight > ALTURA_MAXIMA ? "auto" : "hidden";
   }, [texto]);
   const [busy, setBusy] = useState(false), [erro, setErro] = useState("");
+  const [progresso, setProgresso] = useState<Record<string, number>>({});
   const requestId = useRef(crypto.randomUUID()), versao = useRef(chamado.version);
   const subiu = arquivos.some(a => a.enviado);
   function adicionar(lista: File[]) {
@@ -53,9 +55,10 @@ export function CaixaDeMensagem({ chamado, podeInterno }: { chamado: { id: strin
       for (const a of arquivos) {
         if (a.enviado) continue;
         const f = new FormData(); f.set("id", a.id); f.set("draftId", chamado.draftId); f.set("ticketId", chamado.id); f.set("version", String(versao.current)); f.set("file", a.file); f.set("mensagem", "1"); if (interno) f.set("internal", "1");
-        const r = await fetch("/api/chamados/anexos", { method: "POST", body: f }), d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(`${a.file.name}: ${d.error ?? "Falha no envio do arquivo."}`);
-        versao.current = d.version; setArquivos(lista => lista.map(x => x.id === a.id ? { ...x, enviado: true } : x));
+        // Com progresso por arquivo (auditoria de UX, 30/10/2026), como em Arquivos: eram até 10 MB só com "Enviando…".
+        const r = await uploadComProgresso("/api/chamados/anexos", f, p => setProgresso(m => ({ ...m, [a.id]: p })));
+        if (!r.ok) throw new Error(`${a.file.name}: ${r.erro}`);
+        versao.current = (r.body as { version: number }).version; setArquivos(lista => lista.map(x => x.id === a.id ? { ...x, enviado: true } : x));
       }
       const r = await responder(chamado.id, versao.current, { requestId: requestId.current, body: texto, internal: interno, attachmentIds: arquivos.map(a => a.id) });
       if (!r.ok) throw new Error(r.error);
@@ -67,7 +70,7 @@ export function CaixaDeMensagem({ chamado, podeInterno }: { chamado: { id: strin
     <Textarea ref={campo} aria-label={interno ? "Nota interna" : "Resposta pública"} rows={3} maxLength={15000} disabled={busy} value={texto} onChange={e => setTexto(e.target.value)} placeholder={interno ? "Nota visível só para a equipe…" : "Escreva uma mensagem. Cole prints e arquivos com Ctrl+V."} className="min-h-16! border-0! bg-transparent! p-0! focus:shadow-none!"
       onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void enviar(); } }}
       onPaste={e => { const files = [...e.clipboardData.files]; if (files.length && !e.clipboardData.getData("text/plain")) { e.preventDefault(); adicionar(files); } }} />
-    {!!arquivos.length && <ul aria-label="Arquivos para enviar" className="flex flex-wrap gap-2">{arquivos.map(a => <li key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-surface-hover py-1 pl-2 pr-1 text-helper text-fg-secondary"><IconeDoArquivo nome={a.file.name} /><span className="min-w-0 truncate text-fg">{a.file.name}</span><span className="shrink-0 text-fg-muted">{tamanhoDoArquivo(a.file.size)}</span>{!a.enviado && <button type="button" disabled={busy} aria-label={`Retirar ${a.file.name}`} onClick={() => setArquivos(lista => lista.filter(x => x.id !== a.id))} className="inline-flex size-5 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"><X size={12} /></button>}</li>)}</ul>}
+    {!!arquivos.length && <ul aria-label="Arquivos para enviar" className="flex flex-wrap gap-2">{arquivos.map(a => <li key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-surface-hover py-1 pl-2 pr-1 text-helper text-fg-secondary"><IconeDoArquivo nome={a.file.name} /><span className="min-w-0 truncate text-fg">{a.file.name}</span><span className="shrink-0 text-fg-muted">{tamanhoDoArquivo(a.file.size)}</span>{busy && !a.enviado && progresso[a.id] !== undefined && <span role="status" className="shrink-0 tabular-nums text-brand">{progresso[a.id]}%</span>}{!a.enviado && <button type="button" disabled={busy} aria-label={`Retirar ${a.file.name}`} onClick={() => setArquivos(lista => lista.filter(x => x.id !== a.id))} className="inline-flex size-5 shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"><X size={12} /></button>}</li>)}</ul>}
     <div className="flex flex-wrap items-center gap-2">
       <IconButton title="Anexar arquivos" disabled={busy} onClick={() => seletor.current?.click()}><Paperclip size={16} /></IconButton>
       <input ref={seletor} type="file" multiple accept={FORMATOS} hidden aria-hidden tabIndex={-1} onChange={e => { adicionar([...e.target.files ?? []]); e.target.value = ""; }} />

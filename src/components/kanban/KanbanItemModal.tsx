@@ -36,7 +36,7 @@ export function KanbanItemModal({ children }: Props) {
           sobrava zero embaixo, e o modal encostava na borda inferior da tela.
           Agora os 4rem descontados são exatamente o padding do container, o
           que deixa 32px em cima e 32px embaixo. */}
-      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-label="Detalhe do item" className="c41-surgir relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
+      <div ref={panelRef} role="dialog" aria-modal="true" tabIndex={-1} aria-labelledby="titulo-da-tarefa" className="c41-surgir relative w-full min-h-full sm:min-h-0 sm:max-w-[94vw] xl:max-w-[1400px] bg-canvas sm:border sm:border-border sm:rounded-lg shadow-[var(--c41-shadow-lg)] sm:h-[calc(100vh-4rem)] overflow-y-auto lg:overflow-hidden">
         {/* `IconButton`, como o do `Modal` (07/10/2026): era um `Button md`
             forçado a `w-9`, e o `px-4` dele espremia o ícone até virar um
             ponto. O cabeçalho do detalhe reserva o canto (`pr-12` em modal)
