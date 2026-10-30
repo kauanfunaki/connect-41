@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { normalizar } from "@/lib/buscaDeTelas";
 import { TODOS_OS_SETORES, trocarSetor, trocarTenant } from "@/components/shell/contexto";
+import { SECTOR_ICONS } from "@/components/shell/iconesDosSetores";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -128,9 +129,12 @@ export function TrocaDeContexto({
                     ativo={s.code === activeSector}
                     ocupado={trocando === s.code}
                     onClick={() => irParaSetor(s.code)}
+                    // O ícone do setor, o mesmo do menu e do cabeçalho
+                    // (30/10/2026), no lugar da bolinha de cor. Setor sem
+                    // ícone próprio fica com a bolinha.
                     marca={
-                      <span className="inline-flex size-8 items-center justify-center rounded-md" style={{ backgroundColor: `color-mix(in srgb, ${s.color} 13%, transparent)` }}>
-                        <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                      <span className="inline-flex size-8 items-center justify-center rounded-md bg-surface-hover text-fg-secondary">
+                        {SECTOR_ICONS[s.code] ?? <span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} />}
                       </span>
                     }
                     titulo={s.label}

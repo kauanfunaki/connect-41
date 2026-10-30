@@ -7,22 +7,13 @@ import {
   ChevronRight,
   Home,
   ContactRound,
-  Columns3,
   ArrowRightLeft,
   CalendarDays,
   FolderOpen,
   Inbox,
   Settings,
-  Calculator,
   ReceiptText,
-  UserRoundCog,
-  FileSignature,
   FolderKanban,
-  WalletCards,
-  BriefcaseBusiness,
-  UserSearch,
-  ClipboardList,
-  ShieldCheck,
   LayoutGrid,
   Bot,
   Globe,
@@ -30,7 +21,6 @@ import {
   FolderGit2,
   CalendarCheck,
   ChevronDown,
-  ClipboardCheck,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -79,6 +69,7 @@ import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { IconButton } from "@/components/ui/IconButton";
 import { TrocaDeContexto, type FocoDaTroca } from "@/components/shell/TrocaDeContexto";
+import { SECTOR_ICONS } from "@/components/shell/iconesDosSetores";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
@@ -91,22 +82,6 @@ import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
 type SectorModule = { code: string; label: string; href: string };
-
-// Ícone linear por setor (identidade visual; cor do setor continua vindo do dot).
-const SECTOR_ICONS: Record<string, React.ReactNode> = {
-  tech: <Columns3 size={16} />,
-  dp: <UserRoundCog size={16} />,
-  recrutamento: <UserSearch size={16} />,
-  societario: <FileSignature size={16} />,
-  financeiro: <WalletCards size={16} />,
-  fiscal: <ReceiptText size={16} />,
-  contabil: <Calculator size={16} />,
-  bpo: <ClipboardList size={16} />,
-  comercial: <BriefcaseBusiness size={16} />,
-  corretora: <ShieldCheck size={16} />,
-  gestao: <LayoutGrid size={16} />,
-  controladoria: <ClipboardCheck size={16} />,
-};
 
 // O que o painel ao lado da sidebar mostra para os itens que têm telas dentro
 // (pedido de 30/09, referência do HubStrom).

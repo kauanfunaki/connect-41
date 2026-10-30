@@ -510,9 +510,9 @@ export const MODULE_CATALOG: ModuleDef[] = [
   // `societario_processos`.
   {
     code: "societario_minha_area",
-    label: "Minha área",
+    label: "Prazos no Meu dia",
     sectorCode: "societario",
-    description: "O que está na sua mão, por prazo: processos, exigências, taxas e licenças vencendo",
+    description: "No Meu dia, o bloco \"No Societário, com você\": exigências, taxas e licenças vencendo nos seus processos",
     defaultEnabled: true,
     icon: "UserRoundCheck",
     group: "Operação",
@@ -860,6 +860,13 @@ export const MODULOS_NAS_SOLICITACOES: ReadonlySet<string> = new Set(TELAS_DO_BP
  * tela dela segue no Ctrl+K e nas fixadas.
  */
 export const FORA_DO_MENU_COM_SOLICITACOES: ReadonlySet<string> = new Set([...MODULOS_NAS_SOLICITACOES, "bpo_comunicacao"]);
+
+/**
+ * Fora do menu, do Ctrl+K e das fixadas em todo ambiente (30/10/2026). A Minha
+ * área do Societário virou o bloco "No Societário, com você" do Meu dia, e o
+ * item só levava para lá: o módulo segue como a chave desse bloco.
+ */
+export const MODULOS_FORA_DO_MENU: ReadonlySet<string> = new Set(["societario_minha_area"]);
 
 /** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
 export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);

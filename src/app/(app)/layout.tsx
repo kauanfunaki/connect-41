@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_MENU_GERAL, FORA_DO_MENU_COM_SOLICITACOES, MODULOS_SEM_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_MENU_GERAL, FORA_DO_MENU_COM_SOLICITACOES, MODULOS_FORA_DO_MENU, MODULOS_SEM_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { bancoFiscalLocal } from "@/lib/fiscal/local/ambiente";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
@@ -90,7 +90,7 @@ export default async function AppLayout({
   // fiscal local): ali o caminho é o Acervo. Em produção a prévia mostra
   // "Processamento fiscal indisponível", e sem esta exceção a tela ficava sem
   // entrada nenhuma (21/10/2026).
-  const semMenu: ReadonlySet<string> = bancoFiscalLocal() ? MODULOS_SEM_MENU : new Set<string>();
+  const semMenu: ReadonlySet<string> = new Set([...MODULOS_FORA_DO_MENU, ...(bancoFiscalLocal() ? MODULOS_SEM_MENU : [])]);
   const [moduleStates, telasDoGeral] = await Promise.all([
     getTenantModuleStates(tenantId),
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
