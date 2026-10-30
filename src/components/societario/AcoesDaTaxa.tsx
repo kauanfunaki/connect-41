@@ -20,7 +20,9 @@ export function AcoesDaTaxa({ taxaId, descricao, paga, podeExcluir }: { taxaId: 
   function alternarPagamento() {
     iniciar(async () => {
       const r = await marcarTaxaComoPaga(taxaId, !paga);
+      // Sucesso também avisa (auditoria de UX, 30/10/2026): a linha só trocava o selo.
       if (r) toast.error(r.error);
+      else toast.success(paga ? "Pagamento desmarcado." : "Taxa marcada como paga.");
     });
   }
 
@@ -49,6 +51,12 @@ export function AcoesDaTaxa({ taxaId, descricao, paga, podeExcluir }: { taxaId: 
             >
               {paga ? "Desmarcar pagamento" : "Marcar como paga hoje"}
             </ItemDoMenu>
+            {/* Paga, a taxa não sai — e o menu diz por quê, em vez de o Excluir sumir. */}
+            {podeExcluir && paga && (
+              <ItemDoMenu icone={<Trash2 />} disabled descricao="Desmarque o pagamento antes de excluir.">
+                Excluir
+              </ItemDoMenu>
+            )}
             {podeExcluir && !paga && (
               <ItemDoMenu
                 icone={<Trash2 />}

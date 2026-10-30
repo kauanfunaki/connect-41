@@ -12,20 +12,46 @@ function digitando(alvo: EventTarget | null): boolean {
   return el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName);
 }
 
-/** ↑ anterior, ↓ próxima, Esc fecha — fora dos campos de texto e sem modal aberto. */
+/** Alguma caixa com rolagem própria, entre `el` e a página, que ainda tem para onde rolar. */
+function dentroDeAreaQueRola(el: Element | null): boolean {
+  for (let atual = el; atual && atual !== document.body; atual = atual.parentElement) {
+    const { overflowY } = getComputedStyle(atual);
+    if ((overflowY === "auto" || overflowY === "scroll") && atual.scrollHeight > atual.clientHeight + 1) return true;
+  }
+  return false;
+}
+
+/**
+ * ↑ anterior, ↓ próxima, Esc fecha — fora dos campos de texto e sem modal aberto.
+ *
+ * As setas ficam com a rolagem quando a pessoa está numa área que rola — o
+ * histórico da conversa, a lista (auditoria de UX, 30/10/2026): quem usava ↑↓
+ * para ler mensagens antigas pulava para outra conversa. Vale o foco dentro da
+ * área ou o ponteiro em cima dela. Fora disso, ↑↓ seguem trocando de conversa.
+ */
 export function NavegacaoPorTeclado({ anterior, proxima, fechar }: { anterior: string | null; proxima: string | null; fechar: string }) {
   const router = useRouter();
   useEffect(() => {
+    let sobOPonteiro: Element | null = null;
+    const aoMover = (e: PointerEvent) => {
+      sobOPonteiro = e.target as Element | null;
+    };
     function aoTeclar(e: KeyboardEvent) {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || digitando(e.target)) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      const seta = e.key === "ArrowUp" || e.key === "ArrowDown";
+      if (seta && (dentroDeAreaQueRola(e.target as Element | null) || dentroDeAreaQueRola(sobOPonteiro))) return;
       const destino = e.key === "ArrowUp" ? anterior : e.key === "ArrowDown" ? proxima : e.key === "Escape" ? fechar : null;
       if (!destino) return;
       e.preventDefault();
       router.push(destino, { scroll: false });
     }
     window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
+    window.addEventListener("pointerover", aoMover);
+    return () => {
+      window.removeEventListener("keydown", aoTeclar);
+      window.removeEventListener("pointerover", aoMover);
+    };
   }, [anterior, proxima, fechar, router]);
   return null;
 }

@@ -329,7 +329,9 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           </Link>
         )}
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-display leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
+          {/* O `id` dá nome ao modal da tarefa (`KanbanItemModal`): o leitor de
+              tela anunciava "Detalhe do item" para toda tarefa. */}
+          <h1 id="titulo-da-tarefa" className="text-display leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
           {!isModal && canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}

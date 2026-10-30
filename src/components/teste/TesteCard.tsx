@@ -173,6 +173,8 @@ export function TesteCard({ personId, candidaturaId, initialLink, canManage, tem
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? "Copiado!" : "Copiar"}
                 </Button>
+                {/* Anunciado ao leitor de tela (auditoria de UX, 30/10/2026): a troca do rótulo do botão não é lida. */}
+                <span role="status" className="sr-only">{copied ? "Link copiado." : ""}</span>
               </div>
             </>
           )}

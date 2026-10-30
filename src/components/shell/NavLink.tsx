@@ -216,8 +216,13 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
       )}
       {label}
       {contador > 0 && (
-        <span className="ml-auto" aria-label={`${contador} ${contador === 1 ? "nova" : "novas"}`}>
-          <Contador valor={contador} tom={active && area === undefined ? "neutro" : "alerta"} pequeno />
+        // Texto `sr-only` em vez de `aria-label` no span, que não é lido com
+        // segurança (30/10/2026): "Solicitações, 3 novas".
+        <span className="ml-auto">
+          <span aria-hidden>
+            <Contador valor={contador} tom={active && area === undefined ? "neutro" : "alerta"} pequeno />
+          </span>
+          <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
         </span>
       )}
     </Link>
@@ -319,6 +324,8 @@ export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
   return (
     <Link
       href={href}
+      // `aria-current` também no menu aberto, como na faixa (30/10/2026).
+      aria-current={active ? "page" : undefined}
       data-grupo="marca"
       className={classeDoItemComArea(active, "text-label font-medium")}
     >

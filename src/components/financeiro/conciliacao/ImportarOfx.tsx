@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { importarExtratoDoOmie, importarOfx, type ResumoDaImportacao } from "@/app/(app)/conciliacao/actions";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { moeda } from "@/lib/financeiro/formato";
 import { dataCurta } from "./data";
@@ -29,17 +30,23 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
   const [versao, setVersao] = useState(0);
   const [mesDoOmie, setMesDoOmie] = useState(omie?.mesInicial ?? "");
   const [trazendo, startTrazer] = useTransition();
+  // Um erro para cada caminho (auditoria de UX, 30/10/2026): o do Omie saía no
+  // rodapé do formulário do OFX, acima do bloco do Omie, longe do botão que o
+  // causou. E os dois envios se travam um ao outro enquanto um corre.
+  const [erroDoOmie, setErroDoOmie] = useState<string | null>(null);
+  const ocupado = pendente || trazendo;
 
   function trazerDoOmie() {
     if (!mesDoOmie) {
-      setErro("Escolha o mês do extrato do Omie.");
+      setErroDoOmie("Escolha o mês do extrato do Omie.");
       return;
     }
+    setErroDoOmie(null);
     setErro(null);
     setResumo(null);
     startTrazer(async () => {
       const r = await importarExtratoDoOmie(bankAccountId, mesDoOmie);
-      if ("error" in r) setErro(r.error);
+      if ("error" in r) setErroDoOmie(r.error);
       else setResumo(r.resumo);
     });
   }
@@ -63,8 +70,10 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
             setErro("Escolha o arquivo OFX.");
             return;
           }
+          if (ocupado) return;
           const dados = new FormData(e.currentTarget);
           setErro(null);
+          setErroDoOmie(null);
           setResumo(null);
           startTransition(async () => {
             const r = await importarOfx(dados);
@@ -82,7 +91,7 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
         <FileDropzoneField key={versao} name="arquivo" accept=".ofx" maxSizeMb={MAXIMO_MB} compacto onFileChange={setArquivo} />
         {/* O rodapé padrão, à direita como o "Lançar" e o "Criar versão"
             (08/10/2026): o "Importar" ficava à esquerda, embaixo do campo. */}
-        <FormFooter pending={pendente} submitLabel="Importar" pendingLabel="Importando…" submitDisabled={!arquivo} erro={erro} size="sm" semDivisoria />
+        <FormFooter pending={pendente} submitLabel="Importar" pendingLabel="Importando…" submitDisabled={!arquivo || trazendo} erro={erro} size="sm" semDivisoria />
       </form>
 
       {omie && (
@@ -93,15 +102,17 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <CampoMes id={`omie-mes-${bankAccountId}`} value={mesDoOmie} onChange={setMesDoOmie} compact aria-label="Mês do extrato do Omie" />
-            <Button type="button" variant="secondary" size="sm" onClick={trazerDoOmie} loading={trazendo} loadingLabel="Lendo o Omie…">
+            <Button type="button" variant="secondary" size="sm" onClick={trazerDoOmie} disabled={pendente} loading={trazendo} loadingLabel="Lendo o Omie…">
               <RefreshCw size={14} /> Trazer do Omie
             </Button>
           </div>
+          {erroDoOmie && <Aviso>{erroDoOmie}</Aviso>}
         </div>
       )}
 
       {resumo && (
-        <div className="flex flex-col gap-1 text-fs-2 text-fg-secondary">
+        // Anunciado: o resumo aparece sem o foco sair do botão que importou.
+        <div role="status" className="flex flex-col gap-1 text-fs-2 text-fg-secondary">
           <p className="inline-flex items-center gap-1.5 text-ui text-success-fg">
             <Check size={14} /> {resumo.novas} {resumo.novas === 1 ? "transação nova" : "transações novas"} de {resumo.lidas} lidas
             {resumo.repetidas > 0 && ` · ${resumo.repetidas} já estavam importadas`}

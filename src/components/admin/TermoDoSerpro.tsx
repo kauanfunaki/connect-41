@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { Download, FileSignature, Upload } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -44,6 +44,8 @@ export function TermoDoSerpro({
   problema: string | null;
 }) {
   const [meses, setMeses] = useState<number>(12);
+  // Id único (auditoria de UX, 30/10/2026): o fixo "termo-vigencia" repetia se a tela tivesse dois termos.
+  const idDaVigencia = useId();
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<{ tom: "sucesso" | "atencao" | "perigo"; texto: string } | null>(null);
   const [baixando, startBaixar] = useTransition();
@@ -119,10 +121,10 @@ export function TermoDoSerpro({
           <li>
             <p>Baixe o assinador, com o termo dentro.</p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <label htmlFor="termo-vigencia" className="text-ui text-fg-muted">
+              <label htmlFor={idDaVigencia} className="text-ui text-fg-muted">
                 Vigência
               </label>
-              <Select id="termo-vigencia" value={String(meses)} onChange={(e) => setMeses(Number(e.target.value))} className="w-36">
+              <Select id={idDaVigencia} value={String(meses)} onChange={(e) => setMeses(Number(e.target.value))} className="w-36">
                 {VIGENCIAS_DO_TERMO.map((m) => (
                   <option key={m} value={m}>
                     {m} meses

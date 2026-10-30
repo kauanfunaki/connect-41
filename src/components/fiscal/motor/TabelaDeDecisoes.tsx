@@ -83,6 +83,8 @@ export function TabelaDeDecisoes({ tipo, raiz, linhas, permiteAgir, permiteExclu
     {aviso && <div role={aviso.ok ? "status" : "alert"}><Aviso tom={aviso.ok ? "sucesso" : "atencao"}>{aviso.texto}</Aviso></div>}
     {permiteAgir && <div className="flex flex-wrap items-center gap-2">
       {def.criar && <Button size="sm" onClick={() => setEdicao({ modo: "nova" })}>{def.criarPorPost ? "Lançar ajuste" : "Nova decisão"}</Button>}
+      {/* Marcar todas as linhas desta página: a coluna "Selecionar" só marcava uma a uma (30/10/2026). */}
+      {permiteAgir && linhas.length > 1 && marcadas.length < linhas.length && <Button size="sm" variant="ghost" onClick={() => setSelecionadas(linhas.map(idDaLinha))}>Marcar todas ({linhas.length})</Button>}
       {marcadas.length > 0 && <>
         <span className="text-ui text-fg-secondary tabular-nums">{marcadas.length} selecionada(s)</span>
         <Button size="sm" variant="secondary" onClick={() => setEdicao({ modo: "editar", linhas: marcadas })}>Editar selecionadas</Button>
@@ -101,7 +103,8 @@ export function TabelaDeDecisoes({ tipo, raiz, linhas, permiteAgir, permiteExclu
           <span key="quem" className="text-helper">{l.decidido_por ?? "—"}<span className="block text-fg-muted">{dataHora(l.atualizado_em)}</span></span>,
           ...(permiteAgir ? [<AcoesFiscais key="acoes">
             <Button size="xs" variant="secondary" onClick={() => setEdicao({ modo: "editar", linhas: [l] })}>Editar</Button>
-            {apagavel && <Button size="xs" variant="ghost" onClick={() => apagar([l])}>Apagar</Button>}
+            {/* Vermelho, como o "Apagar selecionadas" da barra (auditoria de UX, 30/10/2026): era ghost. */}
+            {apagavel && <Button size="xs" variant="danger" onClick={() => apagar([l])}>Apagar</Button>}
           </AcoesFiscais>] : []),
         ] };
       })} />

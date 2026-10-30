@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { FileText, Search, X } from "lucide-react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
@@ -18,6 +18,17 @@ export function CampoAnexoDosArquivos({ companyId, inicial }: { companyId: strin
   const [termo, setTermo] = useState("");
   const [achados, setAchados] = useState<ArquivoParaOEnvio[] | null>(null);
   const [buscando, startTransition] = useTransition();
+  // O foco segue a troca (auditoria de UX, 30/10/2026): o botão clicado some —
+  // a opção da lista vira o arquivo escolhido, e o "Tirar" volta à busca — e o
+  // foco caía no `body`. Escolher leva ao "Tirar"; tirar, de volta à busca.
+  const tirarRef = useRef<HTMLButtonElement>(null);
+  const focoDepois = useRef<"tirar" | "busca" | null>(null);
+  useEffect(() => {
+    const alvo = focoDepois.current;
+    focoDepois.current = null;
+    if (alvo === "tirar") tirarRef.current?.focus();
+    else if (alvo === "busca") document.getElementById("buscarArquivo")?.focus();
+  }, [escolhido]);
 
   if (!companyId) return null;
 
@@ -29,14 +40,25 @@ export function CampoAnexoDosArquivos({ companyId, inicial }: { companyId: strin
 
   if (escolhido) {
     return (
-      <CampoForm label="Anexo dos Arquivos" htmlFor="arquivoId" helper="Uma cópia vai com o envio. Um anexo novo, acima, vale no lugar deste.">
-        <input type="hidden" id="arquivoId" name="arquivoId" value={escolhido.id} />
+      <CampoForm label="Anexo dos Arquivos" htmlFor="tirarArquivo" helper="Uma cópia vai com o envio. Um anexo novo, acima, vale no lugar deste.">
+        <input type="hidden" name="arquivoId" value={escolhido.id} />
         <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-ui">
           <FileText size={14} className="shrink-0 text-fg-muted" />
-          <span className="min-w-0 flex-1 truncate">
+          <span className="min-w-0 flex-1 truncate" data-dica={`${escolhido.nome} · ${escolhido.pasta}`}>
             {escolhido.nome} <span className="text-fg-muted">· {escolhido.pasta}</span>
           </span>
-          <Button type="button" variant="ghost" size="xs" onClick={() => setEscolhido(null)} aria-label="Tirar o arquivo escolhido">
+          <Button
+            ref={tirarRef}
+            id="tirarArquivo"
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => {
+              focoDepois.current = "busca";
+              setEscolhido(null);
+            }}
+            aria-label={`Tirar o arquivo escolhido, ${escolhido.nome}`}
+          >
             <X size={12} /> Tirar
           </Button>
         </div>
@@ -73,6 +95,7 @@ export function CampoAnexoDosArquivos({ companyId, inicial }: { companyId: strin
                 type="button"
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-ui hover:bg-surface-hover"
                 onClick={() => {
+                  focoDepois.current = "tirar";
                   setEscolhido(a);
                   setAchados(null);
                 }}

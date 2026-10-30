@@ -101,7 +101,8 @@ export function JanelaDaAlteracaoEmLote({
 }
 
 /** Quem fica de fora, agrupado pelo motivo: a seleção vai a 200 contas. */
-function ListaDeFora({ ficam, titulo }: { ficam: ForaDoLote[]; titulo: string }) {
+/** Quem fica de fora do lote, agrupado por motivo e com altura máxima — a janela da baixa em lote usa a mesma. */
+export function ListaDeFora({ ficam, titulo }: { ficam: ForaDoLote[]; titulo: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-label font-semibold text-fg">{titulo}</p>
@@ -253,7 +254,7 @@ function Formulario({
           onAlternar={() => alternar("vencimento")}
           ajuda="Não muda em conta paga, conciliada, do Omie ou parcela de acordo."
         >
-          <CampoData id={`${id}-vencimento`} name="vencimento" disabled={!marcada("vencimento")} required={marcada("vencimento")} />
+          <CampoData id={`${id}-vencimento`} aria-label="Novo vencimento" name="vencimento" disabled={!marcada("vencimento")} required={marcada("vencimento")} />
         </Linha>
         <Linha
           id={`${id}-m-previsao`}
@@ -262,7 +263,7 @@ function Formulario({
           onAlternar={() => alternar("previsao")}
           ajuda="Quando deve ser paga de fato. Em branco, tira a previsão e vale o vencimento. Não muda em conta paga."
         >
-          <CampoData id={`${id}-previsao`} name="previsao" disabled={!marcada("previsao")} />
+          <CampoData id={`${id}-previsao`} aria-label="Nova previsão" name="previsao" disabled={!marcada("previsao")} />
         </Linha>
         <Linha
           id={`${id}-m-competencia`}
@@ -271,7 +272,7 @@ function Formulario({
           onAlternar={() => alternar("competencia")}
           ajuda="O mês que a DRE econômica soma."
         >
-          <CampoMes id={`${id}-competencia`} name="competencia" disabled={!marcada("competencia")} required={marcada("competencia")} />
+          <CampoMes id={`${id}-competencia`} aria-label="Nova competência" name="competencia" disabled={!marcada("competencia")} required={marcada("competencia")} />
         </Linha>
         <Linha
           id={`${id}-m-categoria`}

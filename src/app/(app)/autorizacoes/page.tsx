@@ -307,8 +307,14 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
                         <td className="py-2.5 pr-3">
                           <Selo tom={TOM_DA_SITUACAO[l.situacao]}>{ROTULO_DA_SITUACAO[l.situacao]}</Selo>
                           {semAcessoNoSerpro.has(l.chave) && (
-                            <span className="block mt-1" title="O Serpro negou o acesso no último acompanhamento: falta a Autorização de Acesso, ou ela não cobre o serviço.">
+                            // A explicação em texto, e não num `title` (auditoria de UX,
+                            // 30/10/2026): o `title` de um span não recebe foco, e
+                            // teclado e leitor de tela nunca chegavam nela.
+                            <span className="block mt-1">
                               <Selo tom="perigo">Serpro sem acesso</Selo>
+                              <span className="mt-1 block max-w-[28ch] text-micro text-fg-muted">
+                                Falta a Autorização de Acesso, ou ela não cobre o serviço.
+                              </span>
                             </span>
                           )}
                         </td>

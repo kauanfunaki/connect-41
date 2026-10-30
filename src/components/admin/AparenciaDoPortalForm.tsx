@@ -63,8 +63,6 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
 
   return (
     <form action={formAction} className="space-y-6">
-      {state && "error" in state && <Aviso>{state.error}</Aviso>}
-      {state && "success" in state && <Aviso tom="sucesso">Aparência salva. O portal já abre com ela.</Aviso>}
 
       {/* O que vai no formulário: a cor vazia é o azul do Connect. */}
       <input type="hidden" name="corPrincipal" value={aparencia.corPrincipal ?? ""} />
@@ -179,9 +177,14 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
         <PreviaDoPortal aparencia={aparencia} logo={aparencia.logoNoPortal && logoUrl ? { src: logoUrl, nome: escritorio.nome } : null} />
       </div>
 
+      {/* O retorno junto do botão (auditoria de UX, 30/10/2026): ficava no topo
+          de um formulário longo, fora da vista de quem acabou de clicar em
+          Salvar, no fim. */}
+      {state && "error" in state && <Aviso>{state.error}</Aviso>}
+      {state && "success" in state && <Aviso tom="sucesso">Aparência salva. O portal já abre com ela.</Aviso>}
       <div className="flex justify-end">
-        <Button type="submit" disabled={isPending || bloqueado}>
-          {isPending ? "Salvando…" : "Salvar aparência"}
+        <Button type="submit" disabled={bloqueado} loading={isPending} loadingLabel="Salvando…">
+          Salvar aparência
         </Button>
       </div>
     </form>

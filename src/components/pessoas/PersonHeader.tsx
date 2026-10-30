@@ -97,6 +97,8 @@ export function PersonHeader({
                   {maskCpf(cpf)}
                 </Button>
               )}
+              {/* O "copiado" anunciado ao leitor de tela — o ✓ só aparecia na tela (auditoria de UX, 30/10/2026). */}
+              {cpf && <span role="status" className="sr-only">{copied ? "CPF copiado." : ""}</span>}
               {companyId && companyName && (
                 <Link
                   href={`/empresas/${companyId}`}
