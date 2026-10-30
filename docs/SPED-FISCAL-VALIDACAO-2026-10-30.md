@@ -1,5 +1,24 @@
 # Validação do SPED Fiscal — 30/10/2026
 
+## Integração da main e navegação final
+
+A main foi integrada à branch `codex/sped-fiscal-contabil-completo`. As quatro
+áreas principais ficam no dropdown lateral SPED, aberto por hover, clique ou
+teclado; a faixa dessas quatro abas foi retirada da página. As visões internas
+seguem o contrato de ícones atualizado na main.
+
+Após a integração: 7.126 testes aprovados, zero falhas e 90 ignorados; 38 testes
+direcionados aprovados após os ajustes de compatibilidade; build standalone,
+TypeScript, ESLint dos ajustes e verificação de diff aprovados. O navegador
+aprovou 34 verificações, incluindo hover nas quatro áreas, gaveta responsiva,
+preservação do contexto, gravação/importação, histórico e exportação conferida
+com a tela. Captura: `.local/sped-fiscal/capturas/dropdown-sped.png`.
+
+O banco local existente foi alinhado às adições da main pelo atualizador do
+projeto, com backup e sem recriação ou alteração de senhas. As evidências das
+rodadas anteriores abaixo permanecem como histórico; a integração real com o
+motor e o deploy de produção continuam fora dessas verificações.
+
 ## Escopo entregue
 
 Quatro áreas com navegação livre, contexto de empresa/período e componentes do Connect. Classificação, apuração e fechamento persistem no Connect. Geração usa revisão imutável e transporte remoto, condicionado à capacidade `geracao_connect_v1`.
