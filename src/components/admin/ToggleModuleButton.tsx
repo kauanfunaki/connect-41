@@ -4,7 +4,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { Switch } from "@/components/ui/Switch";
 
 type Props = {
-  action: () => Promise<void>;
+  action: () => Promise<{ error: string } | void>;
   enabled: boolean;
   nome: string;
 };

@@ -60,12 +60,12 @@ export async function vincularAgenteChatwoot(agentLinkId: string, userId: string
 export async function definirPapelDoRemetente(
   senderName: string,
   papel: { isReception?: boolean; isAutomation?: boolean }
-): Promise<void> {
+): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullAccess(ctx.role)) return;
+  if (!ctx.tenantId || !isFullAccess(ctx.role)) return { error: "Só o administrador define o papel de um atendente." };
 
   const nome = normalizarNomeAtendente(senderName);
-  if (!nome) return;
+  if (!nome) return { error: "Esse atendente não tem nome para gravar." };
 
   const prisma = getPrisma();
   await prisma.chatwootSenderRole.upsert({

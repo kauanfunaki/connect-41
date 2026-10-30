@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { empilharCamada } from "@/components/ui/camadas";
 
 const FOCUSABLE = [
   "a[href]",
@@ -74,14 +75,11 @@ export function useDialog(open: boolean, onClose: () => void) {
     ).find(isRendered);
     (firstFocusable ?? panel)?.focus();
 
+    // O Esc vai pela pilha de camadas: fecha o diálogo só quando não há um
+    // calendário, lista ou menu aberto por cima dele (ver `camadas.ts`).
+    const desempilhar = empilharCamada(() => onCloseRef.current());
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        // Marca o Esc como usado, como o Popover: o chat de IA, que escuta na
-        // janela, não fecha junto com a confirmação aberta nele (15/10/2026).
-        e.preventDefault();
-        onCloseRef.current();
-        return;
-      }
       if (e.key !== "Tab" || !panel) return;
       // Alguém mais fundo já tratou este Tab (editor de texto que indenta
       // lista, combobox que navega opções). Sequestrar o foco aqui atropelaria
@@ -117,6 +115,7 @@ export function useDialog(open: boolean, onClose: () => void) {
 
     document.addEventListener("keydown", onKeyDown);
     return () => {
+      desempilhar();
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
       previouslyFocused?.focus?.();

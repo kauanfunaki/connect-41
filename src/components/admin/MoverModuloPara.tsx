@@ -21,7 +21,7 @@ export function MoverModuloPara({
   nome: string;
   /** Os setores ativos, fora o que opera o módulo hoje. */
   destinos: Destino[];
-  action: (sectorCode: string) => Promise<void>;
+  action: (sectorCode: string) => Promise<{ error: string } | void>;
 }) {
   const { dialog, requestConfirm } = useConfirm();
   if (destinos.length === 0) return null;
