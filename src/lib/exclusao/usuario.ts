@@ -53,6 +53,8 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
   { modelo: "GithubConnection", acao: "anular", coluna: "connectedBy", executar: (tx, a) => n(tx.githubConnection.updateMany({ where: { tenantId: a.tenantId, connectedBy: a.id }, data: { connectedBy: null } })) },
   { modelo: "GithubOAuthAttempt", acao: "apagar", executar: (tx, a) => n(tx.githubOAuthAttempt.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
   { modelo: "UserTaskView", acao: "apagar", executar: (tx, a) => n(tx.userTaskView.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
+  // Quem pediu ao robô (30/10/2026): a tarefa fica, sem a pessoa.
+  { modelo: "RobotTask", acao: "anular", coluna: "requestedById", executar: (tx, a) => n(tx.robotTask.updateMany({ where: { tenantId: a.tenantId, requestedById: a.id }, data: { requestedById: null } })) },
   reatribuir("HelpdeskDraft", "createdById", (tx, a) => n(tx.helpdeskDraft.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))),
   reatribuir("HelpdeskTicket", "createdById", (tx, a) => n(tx.helpdeskTicket.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))),
   reatribuir("HelpdeskAttachment", "uploadedById", (tx, a) => n(tx.helpdeskAttachment.updateMany({ where: { tenantId: a.tenantId, uploadedById: a.id }, data: { uploadedById: a.para } }))),

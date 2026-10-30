@@ -14,6 +14,7 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (n.type === "OPS_AUTOMACAO_ERRO" && n.entityId) return `/ops?watcher=${encodeURIComponent(n.entityId)}&status=ERROR`;
   // Aviso de órgão sem processo ligado: vai para a lista, onde a pessoa escolhe.
   if (n.type === "AVISO_ORGAO_SEM_PROCESSO") return "/processos/avisos";
+  if (n.type === "ROBO_PRECISA_DE_VOCE") return "/societario/robo";
   // Alertas da Gestão (processo ou card parado, prazo): a lista mostra o item e o link dele.
   // GESTAO_ALERTA é o tipo único de antes de 05/10/2026, nas notificações já gravadas.
   if (n.type === "GESTAO_PARADO" || n.type === "GESTAO_PRAZO" || n.type === "GESTAO_ALERTA") return "/gestao/alertas";
