@@ -76,7 +76,7 @@ export default async function LicencasDoRadarPage({ searchParams }: { searchPara
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 <table className="w-full min-w-[640px]">
                   <thead>
-                    <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr>
                       <th className="py-2 pr-3 font-medium">Empresa</th>
                       <th className="py-2 pr-3 font-medium">Licença</th>
                       <th className="py-2 font-medium">No Radar</th>
@@ -103,7 +103,7 @@ export default async function LicencasDoRadarPage({ searchParams }: { searchPara
               <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
                 <table className="w-full min-w-[640px]">
                   <thead>
-                    <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
+                    <tr>
                       <th className="py-2 pr-3 font-medium">Empresa no Radar</th>
                       <th className="py-2 pr-3 font-medium">CNPJ</th>
                       <th className="py-2 font-medium">Licenças</th>
