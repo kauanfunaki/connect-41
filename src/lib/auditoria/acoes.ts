@@ -390,6 +390,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "user.self_update": e("editou o próprio perfil", { comNome: false }),
   "user.password_change": e("trocou a própria senha", { comNome: false }),
   "user.agenda_update": e("mudou o próprio horário da Agenda", { comNome: false }),
+  "user.paleta_update": e("mudou a própria paleta de cores", { comNome: false }),
   "sector.create": c("criou o setor"),
   "sector.update": e("editou o setor"),
   "sector.menu.show": e("mostrou uma tela no menu Geral do setor"),

@@ -1665,6 +1665,9 @@ model User {
   email        String   @db.VarChar(120)
   passwordHash String   @db.VarChar(255)
   photoUrl     String?  @db.VarChar(255)
+  /// A paleta da pessoa (30/10/2026): a cor de destaque, em hex. Nula usa a
+  /// do escritório. Ver `src/lib/aparencia/paletas.ts`.
+  accentColor  String?  @db.VarChar(7)
   role         UserRole @default(SECTOR_USER)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
