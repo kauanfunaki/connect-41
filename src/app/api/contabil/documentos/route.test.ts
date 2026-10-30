@@ -31,7 +31,8 @@ describe("consulta de notas da regra", () => {
     expect(m.entradas).not.toHaveBeenCalled();
   });
   it("recusa competência, fornecedor e CFOP malformados", async () => {
-    for (const extra of [{ mes: "2026-99" }, { fornecedor: "123" }, { cfop: "165" }]) expect((await GET(req(extra))).status).toBe(404);
+    const invalidos: Record<string, string>[] = [{ mes: "2026-99" }, { fornecedor: "123" }, { cfop: "165" }];
+    for (const extra of invalidos) expect((await GET(req(extra))).status).toBe(404);
     expect(m.entradas).not.toHaveBeenCalled();
   });
 });

@@ -27,4 +27,3 @@ describe("contrato HTTP do pacote remoto", () => {
     expect((chamadas[0].init.headers as Record<string, string>)["X-Connect-Ator"]).toBeTruthy();
   });
 });
-

@@ -99,4 +99,3 @@ export function revalidarFiscal() {
 export function revalidarTelas(...caminhos: string[]) {
   for (const c of new Set(caminhos)) revalidatePath(c);
 }
-

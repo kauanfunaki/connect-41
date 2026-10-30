@@ -149,4 +149,3 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
     m.motor = null;
   });
 });
-

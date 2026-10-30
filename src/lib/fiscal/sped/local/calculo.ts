@@ -170,4 +170,3 @@ export function conferirApoios(apoios: ApoioEscriturado[]) {
   }
   return { pendentes: apoios.filter(a => a.decisao === "pendente"), duplicatas: [...grupos.values()].filter(g => g.length > 1), contratos: apoios.filter(a => a.categoria === "contrato_locacao_imovel" && !a.contratoInformado), bruto: somar(apoios.filter(a => a.categoria !== "contrato_locacao" && a.decisao !== "rejeitado").map(a => a.bruto)) };
 }
-

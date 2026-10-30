@@ -253,4 +253,3 @@ export async function atualizarEstabelecimentoNoMotor(entrada: unknown): Promise
     return doErro(err);
   }
 }
-

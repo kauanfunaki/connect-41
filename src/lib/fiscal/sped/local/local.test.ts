@@ -52,5 +52,3 @@ describe("revisão e exportação", () => {
   it("alteração posterior produz outro hash e preserva bytes anteriores", () => { const valor = { revisao: 1, documentos: [documentoDeTeste()] }; const antes = serializarPacote(valor); valor.documentos[0].valor = "200.00"; expect(serializarPacote(valor).sha256).not.toBe(antes.sha256); expect(Buffer.from(antes.bytes).toString()).toContain('"valor":"95.00"'); });
   it("CSV protege fórmulas e não perde identificadores", () => { const csv = csvSeguro(["Código", "Nome"], [["000012", "=1+1"]]); expect(csv).toContain('"000012"'); expect(csv).toContain("'=1+1"); });
 });
-
-

@@ -1,4 +1,5 @@
 "use client";
+import { iconeDaAbaFiscal } from "@/components/fiscal/iconeDaAbaFiscal";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Download, FileText, Plus, Search, Settings2, Upload } from "lucide-react";
@@ -111,7 +112,7 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
     {(aba === "fechamento" || aba === "apuracao" && obrigacao === "contribuicoes") && <div className="flex flex-wrap items-center gap-3 text-ui"><Select compact aria-label="Abrangência" className="w-64" value={contexto.consolidado ? "raiz" : "empresa"} onChange={e => router.push(href({ escopo: e.target.value }))}><option value="empresa">Empresa selecionada</option><option value="raiz">Consolidado da raiz</option></Select>{contexto.consolidado && <span className="text-fg-secondary">Raiz {contexto.raiz}: {grupo.map(e => e.nome).join(", ")}</span>}</div>}
     {aba === "gerar" && obrigacao === "contribuicoes" && contexto.consolidado && <p className="text-ui text-fg-secondary">Consolidado da raiz {contexto.raiz}: {grupo.map(e => `${e.nome} (${e.cnpj})`).join(", ")}</p>}
     {(aba === "apuracao" || aba === "gerar") && <Select aria-label="Obrigação" compact className="w-56" value={obrigacao} onChange={e => { const valor = e.target.value as Obrigacao; setObrigacao(valor); router.replace(href({ obrigacao: valor })); }}>{direitos.icms && <option value="icms_ipi">EFD ICMS/IPI</option>}{direitos.contribuicoes && <option value="contribuicoes">PIS e COFINS</option>}</Select>}
-    {VISTAS[aba].length > 0 && <AbasDeLink aria-label="Visões da área" ativa={vista} abas={VISTAS[aba].map(([chave, rotulo]) => ({ chave, rotulo, href: href({ vista: chave }) }))} />}
+    {VISTAS[aba].length > 0 && <AbasDeLink aria-label="Visões da área" ativa={vista} abas={VISTAS[aba].map(([chave, rotulo]) => ({ chave, rotulo, icone: iconeDaAbaFiscal(chave, rotulo), href: href({ vista: chave }) }))} />}
     {mensagem && <div role="status"><Aviso tom="neutro">{mensagem}</Aviso></div>}{erro && <Aviso tom="perigo">{erro}</Aviso>}
     {aba === "classificacao" && vista === "produtos" && <>
       <FaixaDeTotais destaque={false} itens={[{ rotulo: "Produtos", valor: String(base.produtos.length) }, { rotulo: "A decidir", valor: String(base.produtos.filter(p => !p.decidido).length) }, { rotulo: "Decididos", valor: String(base.produtos.filter(p => p.decidido).length) }]} />
@@ -176,4 +177,3 @@ function resumoDecisao(dados: Record<string, unknown>): string {
 function resultadosImportacao(dados: unknown): ReactNode[][] {
   return Array.isArray(dados) ? dados.filter(d => d && typeof d === "object").map(d => [String(d.registro ?? "Arquivo"), String(d.estado ?? ""), String(d.motivo ?? "")]) : [];
 }
-

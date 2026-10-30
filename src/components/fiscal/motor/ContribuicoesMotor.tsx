@@ -221,4 +221,3 @@ export async function DemonstrativoContribMotor({ tela, params }: { tela: TelaDo
     </Suspense>
   </div>;
 }
-

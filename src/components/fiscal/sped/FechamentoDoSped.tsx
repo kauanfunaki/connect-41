@@ -132,4 +132,3 @@ function Pendencia({ ok, titulo, detalhe, acao }: { ok: boolean; titulo: string;
     {acao && <div className="basis-full pl-[30px]">{acao}</div>}
   </li>;
 }
-

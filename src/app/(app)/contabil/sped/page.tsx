@@ -1,3 +1,4 @@
+import { iconeDaAbaFiscal } from "@/components/fiscal/iconeDaAbaFiscal";
 import { Suspense } from "react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -43,7 +44,7 @@ export default async function SpedDoContabilPage({ searchParams }: { searchParam
     <FiltroDaEmpresa acao={CAMINHO} empresas={noSeletor} foco={foco} valor={companyId ?? null} manter={{ mes, aba, grupo, secao }}>
       {companyId && <FiltroDePeriodo acao={CAMINHO} mes={mes} extras={{ empresa: companyId, aba, grupo, secao }} naFileira />}
     </FiltroDaEmpresa>
-    <AbasDeLink aria-label={"Seções de " + titulo} ativa={secao} abas={areas.map(([id, nome]) => ({ chave: id, rotulo: nome, href: href({ secao: id }) }))} />
+    <AbasDeLink aria-label={"Seções de " + titulo} ativa={secao} abas={areas.map(([id, nome]) => ({ icone: iconeDaAbaFiscal(id, nome), chave: id, rotulo: nome, href: href({ secao: id }) }))} />
     <div>
       <section className="min-w-0" aria-label={areas.find(([id]) => id === secao)?.[1]}>
         {!doContabil ? empresas.length === 0 ? <EmptyState title="Nenhuma empresa ativa" /> : <EscolhaAEmpresa escolha={escolha} porQue="Selecione a empresa para consultar ou trabalhar nesta área." /> : <LimiteDaAreaContabil key={[aba, secao, companyId, mes, JSON.stringify(params)].join("|")}><Suspense fallback={<div role="status" className="animate-pulse rounded-lg border border-border p-6 text-label text-fg-muted">Carregando esta área…</div>}>

@@ -85,4 +85,3 @@ O pacote contém `versao`, `finalidade`, escritório, raiz, competência, obriga
 Manter o envelope de erros da API atual. Usar 404 para pacote de outro escopo; 409 para hash/conteúdo/intenção conflitante; 422 para versão, cadastro ou conteúdo incompatível; 503 para indisponibilidade, com `Retry-After` quando aplicável. Depois de resposta incerta, consultar estado/idempotência antes de reenfileirar.
 
 **Kauan:** implementar capacidade, upload/pacote, persistência da associação, consumo pelos agentes e metadados dos arquivos. Conferir cancelamento, reinício, duplicidade, retificação e coexistência do painel legado. Homologar ICMS/IPI e Contribuições com amostras autorizadas. O Connect já tem testes de transporte simulado, pacote imutável, retomada após perda de resposta e não repetição da execução; esses testes não validam o motor real nem o PVA.
-

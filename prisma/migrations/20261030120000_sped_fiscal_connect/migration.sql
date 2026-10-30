@@ -161,4 +161,3 @@ CREATE TABLE `sped_fiscal_imports` (
     UNIQUE INDEX `sped_fiscal_imports_tenantId_companyId_sha256_key`(`tenantId`, `companyId`, `sha256`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-

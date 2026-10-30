@@ -12,6 +12,14 @@ const page = await context.newPage(), falhas = [], verificacoes = [];
 let concluido = false;
 page.on("pageerror", e => falhas.push(e.message));
 const conferir = (nome, condicao) => { verificacoes.push({ nome, passou: !!condicao }); console.log(`${condicao ? "OK" : "FALHOU"}: ${nome}`); if (!condicao) throw new Error(nome); };
+async function abrirMenuSped() {
+  const botao = page.locator("aside").getByRole("button", { name: "SPED", exact: true });
+  if (!await botao.isVisible()) await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
+  if (page.viewportSize().width >= 1024) await botao.hover(); else await botao.click();
+  const menu = page.getByRole("menu", { name: "SPED", exact: true });
+  await menu.waitFor({ state: "visible" });
+  return menu;
+}
 try {
   await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 60000 });
   conferir("Tela de login abre", (await page.locator('input[name="email"]').count()) === 1);
@@ -24,7 +32,11 @@ try {
   for (const aba of ["fechamento", "apuracao", "classificacao", "gerar"]) {
     const resposta = await page.goto(url(aba), { waitUntil: "domcontentloaded" }); await page.locator('[data-testid="sped-estacao"][data-hidratado="true"]').waitFor();
     conferir(`Acesso direto a ${aba} sem motor`, resposta.status() === 200);
-    conferir(`Quatro abas em ${aba}`, await page.getByRole("navigation", { name: "Áreas do SPED" }).getByRole("link").count() === 4);
+    const menu = await abrirMenuSped();
+    conferir(`Quatro áreas no dropdown em ${aba}`, await menu.getByRole("menuitem").count() === 4);
+    if (aba === "classificacao") await page.screenshot({ path: ".local/sped-fiscal/capturas/dropdown-sped.png", animations: "disabled" });
+    await page.keyboard.press("Escape");
+    conferir(`Sem abas principais dentro de ${aba}`, await page.getByRole("navigation", { name: "Áreas do SPED" }).count() === 0);
     conferir(`Empresa preservada em ${aba}`, new URL(page.url()).searchParams.get("empresa") === ids.companyId);
     if (aba === "gerar") conferir("Geração informa integração ausente", await page.getByText("Configure o motor em Administração", { exact: false }).count() > 0);
     await page.screenshot({ path: `.local/sped-fiscal/capturas/${aba}-desktop.png`, fullPage: true, animations: "disabled", caret: "initial" });
@@ -50,7 +62,7 @@ try {
   await page.getByRole("button", { name: "Importar no Connect", exact: true }).click();
   await page.waitForFunction(nome => [...document.querySelectorAll("tr")].some(r => r.textContent.includes(nome) && r.textContent.includes("concluido")), nomeCsv);
   conferir("Importação processada pelo navegador", true);
-  await page.getByRole("navigation", { name: "Áreas do SPED" }).getByRole("link", { name: "Apuração", exact: true }).click();
+  await (await abrirMenuSped()).getByRole("menuitem", { name: "Apuração", exact: true }).click();
   await page.waitForURL(u => u.pathname === "/fiscal/sped/apuracao");
   await page.getByRole("combobox", { name: "Obrigação", exact: true }).waitFor();
   conferir("Troca livre preserva contexto", new URL(page.url()).searchParams.get("competencia") === "2026-09" && new URL(page.url()).searchParams.get("empresa") === ids.companyId);
@@ -86,17 +98,13 @@ try {
     await page.setViewportSize({ width: largura, height: Math.round(768 / escala) }); await page.emulateMedia({ colorScheme: dark ? "dark" : "light" });
     await context.addCookies([{ name: "theme", value: dark ? "dark" : "light", url: base }]);
     await page.goto(url("fechamento"), { waitUntil: "domcontentloaded" }); await page.locator('[data-testid="sped-estacao"][data-hidratado="true"]').waitFor();
-    conferir(`Abas acessíveis em ${nome}`, await page.getByRole("navigation", { name: "Áreas do SPED" }).isVisible());
+    const menu = await abrirMenuSped();
+    conferir(`Dropdown acessível em ${nome}`, await menu.getByRole("menuitem").count() === 4);
     await page.screenshot({ path: `.local/sped-fiscal/capturas/fechamento-${nome}.png`, fullPage: true, animations: "disabled", caret: "initial" });
-    if (nome === "mobile") {
-      await page.getByRole("navigation", { name: "Áreas do SPED" }).getByRole("link").first().focus();
-      for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
-      conferir("Quarta aba alcançada pelo teclado na tela pequena", await page.evaluate(() => document.activeElement?.textContent.trim()) === "Gerar SPED");
-      await page.keyboard.press("Enter");
-      await page.waitForURL(u => u.pathname === "/fiscal/sped/gerar");
-      await page.locator('[data-testid="sped-estacao"][data-hidratado="true"]').waitFor();
-      await page.screenshot({ path: ".local/sped-fiscal/capturas/gerar-mobile.png", fullPage: true, animations: "disabled", caret: "initial" });
-    }
+    await menu.getByRole("menuitem", { name: "Gerar SPED", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await page.waitForURL(u => u.pathname === "/fiscal/sped/gerar");
+
   }
   conferir("Sem exceções no navegador", falhas.length === 0);
   concluido = true;

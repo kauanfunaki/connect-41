@@ -101,4 +101,3 @@ export function ratearCredito(total: string, pesos: Record<string, string>): Rec
     return [m, decimal(parcela)];
   }));
 }
-

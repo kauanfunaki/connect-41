@@ -1,6 +1,6 @@
 # SPED Fiscal no Connect
 
-As quatro áreas são independentes: Classificação, Apuração, Fechamento e Gerar SPED. A empresa e o período ficam acima das abas. Trocar de empresa mantém a área aberta; os filtros específicos são reiniciados. O seletor segue a última empresa e o foco do BPO. O ano serve à análise; ao abrir Gerar SPED a partir de um ano, janeiro daquele ano aparece explicitamente para seleção do mês desejado.
+As quatro áreas são independentes: Classificação, Apuração, Fechamento e Gerar SPED. As quatro áreas ficam no dropdown do SPED na lateral, aberto por hover, clique ou teclado. A empresa e o período ficam no topo do conteúdo, sem repetir as quatro áreas em abas na página. Trocar de empresa mantém a área aberta; os filtros específicos são reiniciados. O seletor segue a última empresa e o foco do BPO. O ano serve à análise; ao abrir Gerar SPED a partir de um ano, janeiro daquele ano aparece explicitamente para seleção do mês desejado.
 
 Classificação, Apuração e Fechamento usam o banco e o servidor do Connect. Não precisam de integração SPED nem de TXT previamente gerado. A prévia fictícia anterior e as telas antigas continuam nos seus endereços, isoladas no grupo de rotas `(legado)`.
 

@@ -178,4 +178,3 @@ export function montarPacote(tela: TelaLocal, base: BaseLocal, obrigacao: Obriga
   const pacote = pacoteGeracaoSchema.parse({ versao: 1, finalidade: "geracao_connect_v1", tenant_id: c.tenantId, raiz: c.raiz, competencia: c.competencia, obrigacao, tipo_sped: tipo, revisao: base.revisao, estabelecimentos: tela.grupo.map(e => ({ id_connect: e.id, cnpj: e.cnpj, nome: e.nome, perfil: base.perfis.find(p => p.companyId === e.id) })), documentos: base.documentos, apoios: base.apoios, decisoes: base.decisoes, parametros: base.periodos, apuracao });
   return { pacote, ...serializarPacote(pacote) };
 }
-
