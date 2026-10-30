@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MolduraDaEquipe } from "@/components/login/MolduraDaEquipe";
 import { MailIcon, LockIcon } from "@/components/login/icons";
 import { Aviso } from "@/components/ui/Aviso";
-import { Button } from "@/components/ui/Button";
+import { BotaoDeEntrar } from "@/components/login/BotaoDeEntrar";
 import { CampoDeSenha } from "@/components/ui/CampoDeSenha";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Card } from "@/components/ui/Card";
@@ -76,13 +76,7 @@ export default async function LoginPage({
           {/* `mt-1` é acréscimo, não sobreposição: a variante não define margem,
               então não depende da ordem no CSS gerado. O afundar ao clicar já vem
               do próprio Button. */}
-          <Button
-            type="submit"
-            size="md"
-            className="w-full mt-1"
-          >
-            Entrar
-          </Button>
+          <BotaoDeEntrar className="w-full mt-1" />
         </form>
 
         {/* O link embaixo do botão, centralizado e com o rótulo do portal
