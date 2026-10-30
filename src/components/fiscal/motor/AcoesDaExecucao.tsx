@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -21,12 +22,13 @@ export function AcoesDaExecucao({ raiz, id, podeCancelar, podeDestravar, permite
   permiteGerir: boolean;
   hrefDetalhe: string;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const [chaveCancelar, , depoisDeCancelar] = useChaveDeIdempotencia();
   const [chaveDestravar, , depoisDeDestravar] = useChaveDeIdempotencia();
   const { dialog, requestConfirm } = useConfirm();
   const agir = async (acao: typeof cancelarExecucaoNoMotor, chave: string, depoisDe: typeof depoisDeCancelar) => {
-    const r = await acao({ raiz, id, chave });
+    const r = await acao({ raiz, empresaContabil, id, chave });
     depoisDe(r);
     if (!r.ok) throw new Error(r.mensagem);
     router.refresh();

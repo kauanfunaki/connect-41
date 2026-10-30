@@ -26,7 +26,7 @@ export function TambemEmSetores({
   setores: Setor[];
   /** `false` quando a tabela ainda não existe (deploy antes da migration). */
   disponivel: boolean;
-  action: (sectorCode: string, ligar: boolean) => Promise<void>;
+  action: (sectorCode: string, ligar: boolean) => Promise<{ error: string } | void>;
 }) {
   const { dialog, requestConfirm } = useConfirm();
   if (setores.length === 0) return null;

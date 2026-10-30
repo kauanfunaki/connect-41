@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 // Peças comuns dos botões das escritas de §13 nas telas fiscais (23/10/2026).
 
@@ -6,6 +7,7 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { FileDropzone, type ArquivoNaFila } from "@/components/ui/FileDropzone";
 import type { ResultadoDoMotor } from "@/lib/fiscal/motor/acoes";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
@@ -93,10 +95,14 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
   aoFalhar?: (r: Extract<ResultadoDoMotor<T>, { ok: false }>) => void;
   rotuloDoBotao: string;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const regra = ENVIOS[destino];
   const [fila, setFila] = useState<ArquivoNaFila[]>([]);
   const [filaExtra, setFilaExtra] = useState<ArquivoNaFila[]>([]);
+  // "Desistir e apagar as partes" apaga no motor o que já subiu: confirma antes
+  // (auditoria de UX, 30/10/2026) — era um botão discreto, um clique.
+  const [confirmarDesistir, setConfirmarDesistir] = useState(false);
   const [gesto, , depoisDe] = useChaveDeIdempotencia();
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<(Resultado & { retomavel?: boolean }) | null>(null);
@@ -148,7 +154,8 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     if (regra.extra) for (const a of extras) form.append(regra.extra.parte, a, a.name);
     let r: ResultadoDoMotor<T>;
     try {
-      const resposta = await fetch(`/api/fiscal/sped/envios/${destino}?raiz=${raiz}`, { method: "POST", body: form });
+      const query = new URLSearchParams({ raiz, ...(empresaContabil ? { empresaContabil } : {}) });
+      const resposta = await fetch("/api/fiscal/sped/envios/" + destino + "?" + query, { method: "POST", body: form });
       r = await resposta.json().catch(() => ({ ok: false, mensagem: resposta.status === 413 ? "O envio passou do limite de tamanho." : `O Connect não conseguiu enviar (${resposta.status}). Tente de novo.`, renovarChave: resposta.status < 500 }));
     } catch {
       r = { ok: false, mensagem: "Falha de conexão com o Connect. Tente de novo: o mesmo arquivo não é importado duas vezes.", renovarChave: false };
@@ -186,12 +193,15 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     <div className="flex flex-wrap items-center gap-3">
       <Button size="sm" disabled={!permissao.pode || fila.length === 0 || !!problema} loading={enviando} loadingLabel={emPartes?.modo === "partes" ? "Enviando em partes…" : "Enviando ao motor…"} onClick={enviar}>{resultado?.retomavel ? "Retomar" : rotuloDoBotao}</Button>
       {enviando && emPartes?.modo === "partes" && <Button size="sm" variant="secondary" onClick={cancelar}>Cancelar envio</Button>}
-      {!enviando && resultado?.retomavel && <Button size="sm" variant="ghost" onClick={cancelar}>Desistir e apagar as partes</Button>}
+      {!enviando && resultado?.retomavel && <Button size="sm" variant="danger" onClick={() => setConfirmarDesistir(true)}>Desistir e apagar as partes</Button>}
       {enviando && emPartes?.modo !== "partes" && <span className="text-helper text-fg-muted">O motor lê o arquivo na hora: pode levar até um minuto.</span>}
       {enviando && p && <span className="text-helper text-fg-muted" aria-live="polite">{p.arquivo}: {p.fase === "criando" ? "abrindo a sessão…" : p.fase === "enviando" ? `${Math.round(p.enviados / (1024 * 1024))} de ${Math.round(p.total / (1024 * 1024))} MB enviados` : p.fase === "concluindo" ? "o motor está juntando as partes e importando…" : "conferindo a conclusão no motor…"}</span>}
     </div>
     <MotivoSemEscrita permissao={permissao} />
     <AvisoDoResultado resultado={resultado} />
+    <ConfirmDialog open={confirmarDesistir} title="Desistir do envio?" description="As partes que já subiram são apagadas no motor. Para mandar o arquivo de novo, o envio recomeça do zero."
+      confirmLabel="Desistir e apagar" cancelLabel="Voltar" destructive
+      onConfirm={() => { setConfirmarDesistir(false); void cancelar(); }} onCancel={() => setConfirmarDesistir(false)} />
   </div>;
 }
 

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { RefreshCw, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { Aviso } from "@/components/ui/Aviso";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { gerarLinkAdmissao, concluirAdmissao } from "@/app/(app)/pessoas/[id]/admissao-actions";
 
 type LinkState =
@@ -27,6 +29,7 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [emailNote, setEmailNote] = useState<string | null>(null);
+  const [confirmarNovoLink, setConfirmarNovoLink] = useState(false);
 
   // O endereço público, como no e-mail (05/10/2026): `window.location` levava o
   // host do setor em que a pessoa estava.
@@ -118,7 +121,9 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
           {canManage && (
             // Era texto sublinhado (até 30/09) — é uma ação, e das que desfazem
             // algo (invalida o link enviado): botão, para não passar por prosa.
-            <Button variant="secondary" size="xs" onClick={handleGerar} disabled={pending}>
+            // Desde 30/10 pede confirmação, como o mesmo gesto no link do teste:
+            // o link que o colaborador já recebeu para de abrir na hora.
+            <Button variant="secondary" size="xs" onClick={() => setConfirmarNovoLink(true)} disabled={pending}>
               <RefreshCw size={12} />
               {pending ? "Gerando…" : "Gerar novo link (invalida o atual)"}
             </Button>
@@ -150,7 +155,21 @@ export function AdmissaoCard({ personId, initialLink, canManage, urlPublica }: P
         </>
       )}
 
-      {error && <p className="text-helper font-medium text-danger mt-3">{error}</p>}
+      {error && <Aviso className="mt-3">{error}</Aviso>}
+
+      <ConfirmDialog
+        open={confirmarNovoLink}
+        title="Gerar um novo link de admissão?"
+        description="O link atual para de funcionar na hora. Se o colaborador já começou a preencher, ele vai precisar do link novo."
+        confirmLabel="Gerar novo link"
+        destructive
+        pending={pending}
+        onConfirm={async () => {
+          await handleGerar();
+          setConfirmarNovoLink(false);
+        }}
+        onCancel={() => setConfirmarNovoLink(false)}
+      />
     </div>
   );
 }

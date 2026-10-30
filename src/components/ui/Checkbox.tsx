@@ -5,6 +5,8 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & {
   /** Explicação curta embaixo do rótulo, alinhada ao texto dele (e não à
    *  caixa) — as telas montavam um <p> à parte, começando na borda da caixa. */
   helper?: React.ReactNode;
+  /** Para quem precisa do elemento — o `indeterminate` da caixa de "marcar todas". */
+  ref?: React.Ref<HTMLInputElement>;
 };
 
 export function Checkbox({ label, helper, className = "", id, ...rest }: Props) {

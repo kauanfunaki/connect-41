@@ -71,12 +71,15 @@ export function ConfirmDialog({
   }, [pending, onCancel]);
   const panelRef = useDialog(open, handleClose);
 
-  // O foco inicial aqui é o botão de confirmar, não o primeiro controle do
-  // painel (que seria "Cancelar") — sobrepõe o padrão do useDialog de
-  // propósito: num diálogo de confirmação a ação esperada é o Enter.
+  // O foco inicial é o botão de confirmar, não o primeiro controle do painel
+  // (que seria "Cancelar") — sobrepõe o padrão do useDialog de propósito: num
+  // diálogo de confirmação a ação esperada é o Enter. Menos quando a ação é
+  // destrutiva (auditoria de UX, 30/10/2026): aí vale o padrão do useDialog —
+  // o primeiro campo, se a confirmação pede um (motivo, nome digitado), ou o
+  // Cancelar —, e um Enter apressado não apaga nada.
   useEffect(() => {
-    if (open) confirmRef.current?.focus();
-  }, [open]);
+    if (open && !destructive) confirmRef.current?.focus();
+  }, [open, destructive]);
 
   if (!open) return null;
 

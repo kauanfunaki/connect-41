@@ -1,3 +1,5 @@
+import { cloneElement, isValidElement } from "react";
+
 type Props = {
   label: string;
   htmlFor: string;
@@ -22,6 +24,18 @@ type Props = {
 // quatro outros montados à mão (12px cinza, 11px com mb-1…), e campos lado a
 // lado com rótulos de tamanhos diferentes desciam em alturas diferentes.
 export function CampoForm({ label, htmlFor, required = false, helper, error, className = "", acao, children }: Props) {
+  // A ajuda e o erro ligados ao campo (auditoria de UX, 30/10/2026): sem o
+  // `aria-describedby`, o leitor de tela lia só o rótulo ao focar e o erro
+  // ficava mudo. Só quando o filho é o próprio controle rotulado (`id` igual ao
+  // `htmlFor`) — num grupo de controles não há um campo só para descrever.
+  const idDoTexto = error ? `${htmlFor}-erro` : helper ? `${htmlFor}-ajuda` : undefined;
+  const controle =
+    isValidElement<ControleRotulado>(children) && children.props.id === htmlFor
+      ? cloneElement(children, {
+          "aria-describedby": [children.props["aria-describedby"], idDoTexto].filter(Boolean).join(" ") || undefined,
+          "aria-invalid": children.props["aria-invalid"] ?? (error ? true : undefined),
+        })
+      : children;
   const rotulo = (
     <label htmlFor={htmlFor} className="text-label font-medium leading-5 text-fg">
       {label}
@@ -38,15 +52,21 @@ export function CampoForm({ label, htmlFor, required = false, helper, error, cla
       ) : (
         rotulo
       )}
-      {children}
+      {controle}
       {error ? (
-        <p className="text-helper font-medium text-danger">{error}</p>
+        <p id={idDoTexto} className="text-helper font-medium text-danger">{error}</p>
       ) : helper ? (
-        <p className="text-helper text-fg-muted">{helper}</p>
+        <p id={idDoTexto} className="text-helper text-fg-muted">{helper}</p>
       ) : null}
     </div>
   );
 }
+
+type ControleRotulado = {
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+};
 
 /**
  * Para o que divide a linha com campos mas não tem rótulo — uma caixa de

@@ -20,9 +20,13 @@ export const metadata: Metadata = {
 // `min-h-dvh`, como a moldura de dentro (07/10/2026): com `min-h-screen`
 // (100vh, maior que a área visível no navegador do celular), esta caixa ficava
 // mais alta que a moldura `h-dvh` e a página inteira rolava um pedaço.
+//
+// `c41-toque` (auditoria de UX, 30/10/2026): o portal é usado no celular e
+// instalado como APK — num aparelho de toque, botões e campos vão a 44px
+// (globals.css). No computador nada muda.
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-canvas">
+    <div className="c41-toque min-h-dvh bg-canvas">
       <AvisoDeVersaoNova quem="O portal" />
       {children}
     </div>

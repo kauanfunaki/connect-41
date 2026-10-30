@@ -62,7 +62,7 @@ export default async function ClientDocumentViewPage({
   const bodyHtml = sanitizeDocumentHtml(doc.bodyHtml);
 
   return (
-    <div className="min-h-screen py-10 px-4">
+    <main className="c41-toque min-h-dvh py-10 px-4">
       <div className="max-w-2xl mx-auto">
         {/* O topo das telas públicas, com o logo do escritório, como os links de
             admissão e de teste (15/10/2026): era um título montado à mão, com a
@@ -105,6 +105,6 @@ export default async function ClientDocumentViewPage({
             <SignatureForm token={token} documentTitle={doc.title} />
           ))}
       </div>
-    </div>
+    </main>
   );
 }

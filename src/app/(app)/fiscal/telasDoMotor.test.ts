@@ -14,10 +14,10 @@ vi.mock("@/components/fiscal/motor/CascoDoMotor", () => ({ CascoDoMotor: () => n
 vi.mock("@/components/fiscal/motor/DecisoesMotor", () => ({ DecisoesMotor: () => null }));
 vi.mock("@/components/fiscal/previa/FiscalPagina", () => ({ FiscalPagina: () => null }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
-const { default: Conferencia } = await import("./conferencia/page");
-const { default: Documentos } = await import("./documentos/page");
-const { default: IcmsIpi } = await import("./icms-ipi/page");
-const { default: Contribuicoes } = await import("./contribuicoes/page");
+const { default: Conferencia } = await import("./(legado)/conferencia/page");
+const { default: Documentos } = await import("./(legado)/documentos/page");
+const { default: IcmsIpi } = await import("./(legado)/icms-ipi/page");
+const { default: Contribuicoes } = await import("./(legado)/contribuicoes/page");
 const { ConfrontoMotor, PreviaFinanceiraMotor } = await import("@/components/fiscal/motor/ConferenciaMotor");
 const { AcervoMotor, CoberturaMotor, ImportacoesMotor } = await import("@/components/fiscal/motor/DocumentosMotor");
 const { ApuracaoIcmsMotor, DcipDimeMotor, DemonstrativoIcmsMotor } = await import("@/components/fiscal/motor/IcmsIpiMotor");

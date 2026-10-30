@@ -15,15 +15,19 @@ import { logAudit } from "@/lib/audit";
  * um código inventado esconderia o módulo de todo mundo que não é admin, sem
  * nenhum setor na tela para desfazer.
  */
-export async function transferirModulo(code: string, sectorCode: string): Promise<void> {
+// As três devolvem `{ error }` quando recusam (30/10/2026): a confirmação que as
+// chama fica aberta com o motivo, em vez de fechar como se tivesse mudado.
+type Recusa = { error: string } | void;
+
+export async function transferirModulo(code: string, sectorCode: string): Promise<Recusa> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
+  if (!ctx.tenantId || !isFullWrite(ctx.role)) return { error: "Só o administrador muda o setor de uma tela." };
   const def = getModuleDef(code);
-  if (!def) return;
-  if (def.fixedSector && sectorCode !== def.sectorCode) return;
+  if (!def) return { error: "Essa tela não existe mais." };
+  if (def.fixedSector && sectorCode !== def.sectorCode) return { error: "Essa tela é fixa do setor dela e não muda de dono." };
 
   const ativos = await getActiveSectors(ctx.tenantId);
-  if (!ativos.some((s) => s.code === sectorCode)) return;
+  if (!ativos.some((s) => s.code === sectorCode)) return { error: "Esse setor está inativo. Ative-o antes de mover a tela para ele." };
 
   await setModuleSector(ctx.tenantId, code, setorParaGravar(def.sectorCode, sectorCode));
   // O novo dono sai da lista de "Também em…" (21/10/2026): se ficasse, a tela
@@ -53,23 +57,26 @@ export async function transferirModulo(code: string, sectorCode: string): Promis
  * Como em `transferirModulo`, só setor ativo do tenant entra — o valor vem do
  * navegador.
  */
-export async function ligarModuloAoSetor(code: string, sectorCode: string, ligar: boolean): Promise<void> {
+export async function ligarModuloAoSetor(code: string, sectorCode: string, ligar: boolean): Promise<Recusa> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
-  if (!getModuleDef(code) || getModuleDef(code)?.fixedSector || MODULOS_DO_MENU_GERAL.has(code) || MODULOS_NAS_SOLICITACOES.has(code)) return;
+  if (!ctx.tenantId || !isFullWrite(ctx.role)) return { error: "Só o administrador compartilha uma tela com outro setor." };
+  if (!getModuleDef(code) || getModuleDef(code)?.fixedSector || MODULOS_DO_MENU_GERAL.has(code) || MODULOS_NAS_SOLICITACOES.has(code)) {
+    return { error: "Essa tela não pode ser compartilhada com outro setor." };
+  }
 
   const [dono, ligados, ativos] = await Promise.all([
     setorDoModulo(ctx.tenantId, code),
     lerSetoresLigados(ctx.tenantId, code),
     getActiveSectors(ctx.tenantId),
   ]);
-  if (!dono || !ligados.disponivel) return;
+  if (!dono) return { error: "Essa tela não tem setor dono definido." };
+  if (!ligados.disponivel) return { error: "Ainda não dá para salvar: falta atualizar o banco (migration)." };
   const atuais = ligados.porModulo.get(code) ?? [];
   const marcados = ligar ? [...atuais, sectorCode] : atuais.filter((s) => s !== sectorCode);
   // Na hora de tirar, os já gravados de setores inativos ficam de fora junto —
   // eles não aparecem para marcar de novo.
   const novos = setoresParaLigar(dono, marcados, ativos.map((s) => s.code));
-  if (ligar && !novos.includes(sectorCode)) return;
+  if (ligar && !novos.includes(sectorCode)) return { error: "Esse setor está inativo ou já é o dono da tela." };
 
   await setModuleSharedSectors(ctx.tenantId, code, novos);
   await logAudit({
@@ -84,10 +91,10 @@ export async function ligarModuloAoSetor(code: string, sectorCode: string, ligar
   revalidatePath("/", "layout");
 }
 
-export async function alternarModulo(code: string, enabled: boolean): Promise<void> {
+export async function alternarModulo(code: string, enabled: boolean): Promise<Recusa> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullWrite(ctx.role)) return;
-  if (!getModuleDef(code)) return;
+  if (!ctx.tenantId || !isFullWrite(ctx.role)) return { error: "Só o administrador ativa ou desativa uma tela." };
+  if (!getModuleDef(code)) return { error: "Essa tela não existe mais." };
 
   await setModuleEnabled(ctx.tenantId, code, enabled);
   await logAudit({

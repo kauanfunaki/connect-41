@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { empilharCamada } from "@/components/ui/camadas";
 
 type Props = {
   trigger: (props: { open: boolean; toggle: () => void }) => React.ReactNode;
@@ -44,20 +45,17 @@ export function Dropdown({ trigger, children, align = "left", width = 240, altur
       if (foiDentro) return;
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
     }
-    function tecla(e: KeyboardEvent) {
-      if (e.key !== "Escape" || e.defaultPrevented) return;
-      // Marca o Esc como usado, como o Popover: quem está embaixo (o chat de
-      // IA, um modal) não fecha junto.
-      e.preventDefault();
+    // Esc pela pilha de camadas: só a de cima fecha, então dentro de um modal
+    // ele fecha este menu e não a janela (ver `camadas.ts`).
+    const desempilhar = empilharCamada(() => {
       const focoDentro = rootRef.current?.contains(document.activeElement) ?? false;
       setOpen(false);
       if (focoDentro) gatilhoRef.current?.querySelector<HTMLElement>(FOCAVEL)?.focus();
-    }
+    });
     document.addEventListener("mousedown", onClickOutside);
-    document.addEventListener("keydown", tecla);
     return () => {
+      desempilhar();
       document.removeEventListener("mousedown", onClickOutside);
-      document.removeEventListener("keydown", tecla);
     };
   }, [open]);
 

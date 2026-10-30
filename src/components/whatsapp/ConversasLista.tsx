@@ -85,8 +85,17 @@ export function ConversasLista() {
   async function aplicar(acao: AcaoEmLote) {
     setOcupado(true);
     setRetorno(null);
-    const r = await agirEmLote(selecionadas, acao);
-    setOcupado(false);
+    // Se a action lançar (rede, deploy), a seleção não pode ficar travada em
+    // "ocupado" até recarregar a página (auditoria de UX, 30/10/2026).
+    let r: Awaited<ReturnType<typeof agirEmLote>>;
+    try {
+      r = await agirEmLote(selecionadas, acao);
+    } catch {
+      setRetorno({ texto: "Não deu para falar com o servidor. Confira a conexão e tente de novo.", puladas: [], erro: true });
+      return;
+    } finally {
+      setOcupado(false);
+    }
     if ("error" in r) {
       setRetorno({ texto: r.error, puladas: [], erro: true });
       return;

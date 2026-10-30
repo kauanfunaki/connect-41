@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { CampoData } from "@/components/ui/CampoData";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Aviso } from "@/components/ui/Aviso";
+import { SlideOver } from "@/components/ui/SlideOver";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { AcoesFiscais, CampoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
@@ -42,8 +44,11 @@ export function TabelaDeDecisoes({ tipo, raiz, linhas, permiteAgir, permiteExclu
   estabelecimentos: { cnpj: string; rotulo: string }[];
   competencia: string;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const def = DECISOES[tipo];
   const router = useRouter();
+  const [busca, setBusca] = useState("");
+  const visiveis = empresaContabil && busca.trim() ? linhas.filter((l) => JSON.stringify([l.chave, l.valor, l.decidido_por]).toLowerCase().includes(busca.trim().toLowerCase())) : linhas;
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const [edicao, setEdicao] = useState<Edicao | null>(null);
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -66,7 +71,7 @@ export function TabelaDeDecisoes({ tipo, raiz, linhas, permiteAgir, permiteExclu
     confirmLabel: "Apagar", destructive: true,
   }, async () => {
     const corpo = alvo.length === 1 ? { chave: chaveLimpa(tipo, alvo[0].chave) } : { chaves: alvo.map((l) => chaveLimpa(tipo, l.chave)) };
-    const r = await apagarDecisaoNoMotor({ raiz, tipo, ...corpo, idempotencia: chave });
+    const r = await apagarDecisaoNoMotor({ raiz, empresaContabil, tipo, ...corpo, idempotencia: chave });
     depoisDe(r);
     if (!r.ok) throw new Error(r.mensagem);
     setAviso({ ok: true, texto: r.mensagem });
@@ -87,9 +92,10 @@ export function TabelaDeDecisoes({ tipo, raiz, linhas, permiteAgir, permiteExclu
         <Button size="sm" variant="ghost" onClick={() => setSelecionadas([])}>Desmarcar</Button>
       </>}
     </div>}
+    {empresaContabil && <label className="grid gap-1 text-helper text-fg-secondary max-w-sm">Buscar nos registros carregados<Input compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar parâmetros e ajustes" /></label>}
     <TabelaFiscal vazio="Nenhuma decisão neste recorte." descricaoVazio={def.filtros.includes("competencia") ? `Competência ${competencia}. Sem decisão gravada, o motor usa o que vem do documento.` : "Sem decisão gravada, o motor usa o que vem do documento."}
       colunas={[...(permiteAgir ? ["Selecionar"] : []), ...def.colunas.map((c) => rotuloDoCampo(def, c)), "Decidido por", ...(permiteAgir ? ["Ações"] : [])]}
-      linhas={linhas.map((l) => {
+      linhas={visiveis.map((l) => {
         const id = idDaLinha(l);
         return { id, celulas: [
           ...(permiteAgir ? [<Checkbox key="sel" aria-label={`Selecionar decisão ${def.chave.map((c) => texto(l.chave[c.nome])).filter(Boolean).join(" · ")}`.trim()} checked={selecionadas.includes(id)} onChange={() => setSelecionadas((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))} />] : []),
@@ -123,6 +129,7 @@ function EdicaoDeDecisao({ tipo, raiz, edicao, estabelecimentos, competencia, fe
   competencia: string;
   fechar: (mensagem?: string) => void;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const def = DECISOES[tipo];
   const nova = edicao.modo === "nova";
   const lote = edicao.modo === "editar" && edicao.linhas.length > 1;
@@ -173,9 +180,9 @@ function EdicaoDeDecisao({ tipo, raiz, edicao, estabelecimentos, competencia, fe
     if (Object.keys(campos).length) { setErro({ texto: "Confira os campos destacados.", campos }); return; }
     if (Object.keys(valor).length === 0) { setErro({ texto: "Nada mudou." }); return; }
     const r = nova && def.criarPorPost
-      ? await criarDecisaoNoMotor({ raiz, tipo, valor, idempotencia: chave })
+      ? await criarDecisaoNoMotor({ raiz, empresaContabil, tipo, valor, idempotencia: chave })
       : await gravarDecisaoNoMotor({
-        raiz, tipo, valor, idempotencia: chave,
+        raiz, empresaContabil, tipo, valor, idempotencia: chave,
         ...(nova ? { chave: chaveNova } : edicao.modo === "editar" && edicao.linhas.length > 1 ? { chaves: edicao.linhas.map((l) => chaveLimpa(tipo, l.chave)) } : { chave: chaveLimpa(tipo, (edicao as { linhas: LinhaDeDecisao[] }).linhas[0].chave) }),
       });
     depoisDe(r);
@@ -192,7 +199,8 @@ function EdicaoDeDecisao({ tipo, raiz, edicao, estabelecimentos, competencia, fe
     return <Input value={valor} maxLength={c.max} inputMode={c.tipo === "decimal" || c.tipo === "cnpj" ? "decimal" : undefined} placeholder={c.tipo === "competencia" ? "AAAA-MM" : c.tipo === "competencias" ? "2026-09, 2026-10" : c.tipo === "decimal" ? "0,00" : undefined} onChange={(e) => mudar(e.target.value)} />;
   };
   const titulo = nova ? (def.criarPorPost ? `Lançar · ${def.rotulo}` : `Nova decisão · ${def.rotulo}`) : lote ? `Editar ${(edicao as { linhas: unknown[] }).linhas.length} decisões · ${def.rotulo}` : `Editar · ${def.rotulo}`;
-  return <Modal open title={titulo} onClose={() => fechar()} maxWidth="max-w-3xl">
+  const Dialogo = empresaContabil ? SlideOver : Modal;
+  return <Dialogo open title={titulo} onClose={() => fechar()} maxWidth="max-w-3xl" width="max-w-3xl">
     {edicao.modo === "editar" && !lote && <p className="mb-4 text-helper text-fg-secondary">{def.chave.map((c) => `${c.rotulo}: ${texto(edicao.linhas[0].chave[c.nome]) || "—"}`).join(" · ")}</p>}
     {lote && <p className="mb-4 text-helper text-fg-secondary">Só os campos que você alterar serão gravados nas {(edicao as { linhas: unknown[] }).linhas.length} decisões, tudo ou nada.</p>}
     <div className="grid gap-4 sm:grid-cols-2">
@@ -203,5 +211,5 @@ function EdicaoDeDecisao({ tipo, raiz, edicao, estabelecimentos, competencia, fe
       <Button loading={pendente} onClick={salvar}>{def.criarPorPost && nova ? "Lançar no motor" : "Gravar no motor"}</Button>
       <Button variant="secondary" onClick={() => fechar()}>Cancelar</Button>
     </div>
-  </Modal>;
+  </Dialogo>;
 }

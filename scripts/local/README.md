@@ -1,10 +1,11 @@
 # Connect local, com dados fictícios
 
-O menu lateral oferece uma entrada **SPED**, que abre **Classificação e apuração**,
-**SPED gerados** e **Executar** ao passar o mouse ou clicar, inclusive na faixa
-recolhida e no celular. Classificação e apuração abre em Classificação; Executar
-tem as abas Executar e Histórico. As operações são simuladas e
-salvas no banco local. Guia e roteiro: [Fluxo SPED local](../../docs/FISCAL-PREVIA-VISUAL.md).
+O menu lateral oferece uma entrada **SPED**, com quatro áreas independentes:
+**Classificação**, **Apuração**, **Fechamento** e **Gerar SPED**. As três primeiras
+usam o Connect; a geração depende da integração remota adaptada. Guia:
+[SPED Fiscal no Connect](../../docs/SPED-FISCAL-CONNECT.md). A prévia simulada
+anterior continua disponível pelas telas legadas documentadas no
+[Fluxo SPED local](../../docs/FISCAL-PREVIA-VISUAL.md).
 
 Um Connect inteiro rodando na máquina, com banco próprio no Docker e só dado
 inventado. Existe para gravar os vídeos da ajuda (`scripts/videos/`), que vão para
@@ -106,6 +107,20 @@ duplicada. Comparado com o schema, o banco resultante só difere em `canvas_page
 índices.
 
 ## Atualizar o banco sem perder os dados
+
+Se o novo SPED mostrar erro de tabela `sped_fiscal_*` ausente no servidor local
+da porta 3100, prepare suas tabelas na base existente, sem recriar o laboratório:
+
+```powershell
+node scripts/local/atualizar-sped-fiscal.mjs
+node scripts/local/atualizar-sped-fiscal.mjs --aplicar
+```
+
+O primeiro comando só confere. O segundo exige a base local `connect41` na porta
+3307 e o contêiner `connect41-local`, faz e confere um backup antes de criar
+somente as tabelas SPED ausentes. Preserva registros, senhas e trabalhos locais;
+não executa outras migrations. Depois, recarregue a página. A validação isolada
+da porta 3127 usa outro banco e não prepara automaticamente o banco da porta 3100.
 
 Depois de um pull, pare o servidor com Ctrl+C e rode:
 

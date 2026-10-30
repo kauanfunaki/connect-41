@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useEnvioQueGuardaNoErro } from "@/components/ui/useEnvioQueGuardaNoErro";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import type { VacationState } from "@/app/(app)/pessoas/[id]/ferias/actions";
 import { CampoForm, AlinhadoAoCampo } from "@/components/ui/CampoForm";
@@ -15,7 +16,8 @@ type Props = {
 };
 
 export function AddFeriasForm({ action }: Props) {
-  const [state, formAction, isPending] = useActionState(action, null);
+  // Pelo `onSubmit`: um erro do servidor não apaga o que já foi digitado.
+  const [state, enviar, isPending] = useEnvioQueGuardaNoErro(action);
 
   // Revisão de alinhamento (30/09): os rótulos "Período Aquisitivo — Início"
   // quebravam em duas linhas numa coluna estreita e derrubavam o campo, e as
@@ -23,7 +25,7 @@ export function AddFeriasForm({ action }: Props) {
   // períodos e os dias numa grade só, as caixas numa linha própria e o botão
   // alinhado ao campo de observações.
   return (
-    <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+    <form onSubmit={enviar} className="border-t border-border pt-5 mt-2 space-y-4">
       {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
       <h3 className="c41-rotulo">Novo período de férias</h3>
       <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_120px]">
@@ -57,7 +59,7 @@ export function AddFeriasForm({ action }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso>{state.error}</Aviso>}
     </form>
   );
 }

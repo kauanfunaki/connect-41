@@ -71,8 +71,22 @@ export function TemaSelector() {
     applyPreferencia(valor);
   }
 
+  // Grupo de rádio do ARIA (auditoria de UX, 30/10/2026): uma parada só no Tab,
+  // a opção marcada; as setas trocam de tema. E a marca da escolha deixou de ser
+  // o mesmo anel do foco — um contorno de 2px por dentro da borda —, para dar
+  // para ver onde está o foco e qual está escolhido ao mesmo tempo.
+  function noTeclado(e: React.KeyboardEvent<HTMLDivElement>) {
+    const passo = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (passo === 0) return;
+    e.preventDefault();
+    const atual = OPCOES.findIndex((o) => o.valor === preferencia);
+    const proxima = (atual + passo + OPCOES.length) % OPCOES.length;
+    escolher(OPCOES[proxima].valor);
+    e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]')[proxima]?.focus();
+  }
+
   return (
-    <div role="radiogroup" aria-label="Tema" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div role="radiogroup" aria-label="Tema" onKeyDown={noTeclado} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {OPCOES.map((o) => {
         const ativo = preferencia === o.valor;
         return (
@@ -81,10 +95,11 @@ export function TemaSelector() {
             type="button"
             role="radio"
             aria-checked={ativo}
+            tabIndex={ativo ? 0 : -1}
             onClick={() => escolher(o.valor)}
             className={`group flex flex-col overflow-hidden rounded-lg border text-left transition-[border-color,box-shadow] ${
               ativo
-                ? "border-brand shadow-[0_0_0_3px_var(--c41-focus-ring)]"
+                ? "border-brand outline-2 outline-brand -outline-offset-2"
                 : "border-border-strong hover:border-brand/50"
             }`}
           >

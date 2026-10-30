@@ -3,8 +3,10 @@
 import { useId, useState, useTransition } from "react";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
+import { useToast } from "@/components/ui/Toast";
 
 type Opcao = { id: string; nome: string };
+type Vincular = (alvo: string, conta: string | null) => Promise<{ error: string } | void>;
 
 /**
  * Quem a conta é na equipe e no Chatwoot, no fim do painel do usuário
@@ -33,19 +35,30 @@ export function AtendimentoDoUsuario({
   /** Atendentes do Chatwoot sem conta, mais o desta; nulo sem a integração. */
   agentes: Opcao[] | null;
   agenteAtual: string | null;
-  vincularPessoa: (personId: string, userId: string | null) => Promise<void>;
-  vincularAgente: (agentLinkId: string, userId: string | null) => Promise<void>;
+  vincularPessoa: Vincular;
+  vincularAgente: Vincular;
 }) {
   const id = useId();
   const [pessoa, setPessoa] = useState(pessoaAtual ?? "");
   const [agente, setAgente] = useState(agenteAtual ?? "");
   const [pendente, startTransition] = useTransition();
+  const toast = useToast();
 
-  function trocar(atual: string, nova: string, definir: (v: string) => void, vincular: (alvo: string, conta: string | null) => Promise<void>) {
+  // Com retorno (auditoria de UX, 30/10/2026): a troca gravava sem aviso nenhum,
+  // e uma falha deixava o seletor mostrando um vínculo que não existia.
+  function trocar(atual: string, nova: string, definir: (v: string) => void, vincular: Vincular) {
     definir(nova);
     startTransition(async () => {
-      if (atual && atual !== nova) await vincular(atual, null);
-      if (nova) await vincular(nova, userId);
+      try {
+        const soltou = atual && atual !== nova ? await vincular(atual, null) : undefined;
+        if (soltou && "error" in soltou) throw new Error(soltou.error);
+        const ligou = nova ? await vincular(nova, userId) : undefined;
+        if (ligou && "error" in ligou) throw new Error(ligou.error);
+        toast.success(nova ? "Vínculo salvo." : "Vínculo desfeito.");
+      } catch (e) {
+        definir(atual);
+        toast.error(e instanceof Error && e.message ? e.message : "Não foi possível salvar o vínculo. Tente de novo.");
+      }
     });
   }
 
@@ -59,7 +72,7 @@ export function AtendimentoDoUsuario({
         </h3>
         <p className="mt-0.5 text-fs-2 text-fg-muted">
           Quem esta conta é na equipe{agentes ? " e no Chatwoot" : ""} — é o que põe o nome e a foto reais na
-          avaliação das conversas. Grava na hora.
+          avaliação das conversas. Grava na hora, à parte do Salvar acima — o Cancelar não desfaz esta parte.
         </p>
       </div>
       {pessoas.length > 0 && (

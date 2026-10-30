@@ -10,6 +10,7 @@ import { iconeDaTela } from "@/components/portal/iconeDaTela";
 import { GRUPO_DA_SECAO, SECOES_DO_PORTAL, grupoDoCaminho, telasVisiveis } from "@/lib/portal/telas";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
 import { SugestaoDoPortal } from "./SugestaoDoPortal";
+import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
 
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
 // "tela grande": a gaveta só fica inerte depois da hidratação, no celular. O
@@ -77,6 +78,7 @@ export function PortalShell({
     // `h-dvh`, e não `h-screen` (07/10/2026): no navegador do celular 100vh é
     // maior que a área visível, e o fim da tela ficava atrás da barra dele.
     <div className="flex h-dvh overflow-hidden bg-canvas" data-grupo={grupoDaTela ?? undefined}>
+      <PularParaOConteudo />
       {menuAberto && (
         <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenuAberto(false)} aria-hidden="true" />
       )}
@@ -212,7 +214,13 @@ export function PortalShell({
           `sr-only`, por exemplo). Sem ele, o elemento escapava da rolagem de
           dentro e esticava a página: no detalhe do processo do portal, a tela
           inteira rolava e o casco subia junto (relato do Kauan, 08/10/2026). */}
-        <main className="c41-atmosfera scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto">{children}</main>
+        <main
+          id="conteudo"
+          tabIndex={-1}
+          className="c41-atmosfera scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto focus-visible:shadow-none"
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

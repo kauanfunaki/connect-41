@@ -62,6 +62,13 @@ export default async function FeriasPage({
                     ? `${formatCalendarDate(v.concessivePeriodStart)} — ${formatCalendarDate(v.concessivePeriodEnd)}`
                     : null,
                   days: v.days,
+                  // O gozo programado (auditoria de UX, 30/10/2026): a action
+                  // gravava as datas e a ficha nunca as mostrava.
+                  gozoLabel: v.startDate
+                    ? `${formatCalendarDate(v.startDate)}${v.returnDate ? ` a ${formatCalendarDate(v.returnDate)}` : ""}`
+                    : null,
+                  inicioISO: v.startDate ? v.startDate.toISOString().slice(0, 10) : "",
+                  retornoISO: v.returnDate ? v.returnDate.toISOString().slice(0, 10) : "",
                   isVencida: !!v.concessivePeriodEnd && v.concessivePeriodEnd < new Date() && !["CONCLUIDA", "CANCELADA"].includes(v.status),
                 }}
                 updateAction={atualizarFerias.bind(null, id, v.id)}

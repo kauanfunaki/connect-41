@@ -32,14 +32,26 @@ export function ChipDeFiltro({ rotulo, valor, opcoes, direita = false }: { rotul
     };
     document.addEventListener("pointerdown", fora);
     document.addEventListener("keydown", tecla);
+    // O foco entra no painel ao abrir — na opção marcada, se houver (auditoria
+    // de UX, 30/10/2026): no celular o painel abre como folha por cima da
+    // página, e o Tab seguia pela página atrás dela.
+    const painel = raiz.current?.querySelector<HTMLElement>(`[id="${id}"]`);
+    (painel?.querySelector<HTMLElement>('[aria-current="true"]') ?? painel?.querySelector<HTMLElement>("a, button"))?.focus();
     return () => {
       document.removeEventListener("pointerdown", fora);
       document.removeEventListener("keydown", tecla);
     };
-  }, [aberto]);
+  }, [aberto, id]);
 
   return (
-    <div ref={raiz} className={`t41-chip${valor ? " t41-chip--ativo" : ""}${direita ? " t41-chip--direita" : ""}`}>
+    <div
+      ref={raiz}
+      className={`t41-chip${valor ? " t41-chip--ativo" : ""}${direita ? " t41-chip--direita" : ""}`}
+      // Tab que sai do painel fecha a folha, em vez de deixá-la aberta sobre a página.
+      onBlur={(e) => {
+        if (aberto && !e.currentTarget.contains(e.relatedTarget as Node | null)) setAberto(false);
+      }}
+    >
       <button
         ref={botao}
         type="button"

@@ -178,7 +178,7 @@ const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está co
 export const MODULE_CATALOG: ModuleDef[] = [
   {
     code: "contabil_sped", label: "SPED", sectorCode: "contabil",
-    description: "Conferência, de-para e arquivos de lançamentos para a Domínio",
+    description: "De-para e lançamentos de entrada para a Domínio, e o EFD Contribuições gerado pelo motor do SPED",
     defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
   },
   {
@@ -458,6 +458,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     ["fiscal_acervo", "Documentos e importações", `Acervo, serviços, contratos, importação e cobertura. ${SO_LEITURA}`, "ReceiptText", "Documentos"],
     ["fiscal_icms_ipi", "ICMS e IPI", `Ajustes da apuração (E111, DIME e DCIP), apuração e demonstrativo. ${COM_O_MOTOR}`, "FileSpreadsheet", "Apuração"],
     ["fiscal_contribuicoes", "PIS e COFINS", `Ajustes do bloco M, decisões por registro, parâmetros e fechamento da EFD Contribuições. ${COM_O_MOTOR}`, "Receipt", "Apuração"],
+    ["fiscal_fechamento", "Fechamento fiscal", "Documentos, faturamento, pagamentos e conferências processados no Connect.", "CheckCheck", "Conferência"],
     ["fiscal_entregas", "SPED gerados", `Versões de SPED, validação, entrega e decisões depois da geração. ${COM_O_MOTOR}`, "CheckCheck", "Conferência"],
     ["fiscal_conferencia", "Conferência fiscal", `Prévia financeira e confronto de documentos. ${SO_LEITURA}`, "Landmark", "Conferência"],
     ["fiscal_configuracoes", "Configurações fiscais", `Cadastro dos estabelecimentos, parâmetros e regras fiscais por CFOP e fonte. ${COM_O_MOTOR}`, "Building2", "Cadastros"],
@@ -510,9 +511,9 @@ export const MODULE_CATALOG: ModuleDef[] = [
   // `societario_processos`.
   {
     code: "societario_minha_area",
-    label: "Minha área",
+    label: "Prazos no Meu dia",
     sectorCode: "societario",
-    description: "O que está na sua mão, por prazo: processos, exigências, taxas e licenças vencendo",
+    description: "No Meu dia, o bloco \"No Societário, com você\": exigências, taxas e licenças vencendo nos seus processos",
     defaultEnabled: true,
     icon: "UserRoundCheck",
     group: "Operação",
@@ -784,6 +785,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   fiscal_acervo:           "/fiscal/documentos",
   fiscal_icms_ipi:         "/fiscal/icms-ipi",
   fiscal_contribuicoes:    "/fiscal/contribuicoes",
+  fiscal_fechamento:       "/fiscal/sped/fechamento",
   fiscal_entregas:         "/fiscal/entregas",
   fiscal_conferencia:      "/fiscal/conferencia",
   fiscal_configuracoes:    "/fiscal/configuracoes",
@@ -860,6 +862,13 @@ export const MODULOS_NAS_SOLICITACOES: ReadonlySet<string> = new Set(TELAS_DO_BP
  * tela dela segue no Ctrl+K e nas fixadas.
  */
 export const FORA_DO_MENU_COM_SOLICITACOES: ReadonlySet<string> = new Set([...MODULOS_NAS_SOLICITACOES, "bpo_comunicacao"]);
+
+/**
+ * Fora do menu, do Ctrl+K e das fixadas em todo ambiente (30/10/2026). A Minha
+ * área do Societário virou o bloco "No Societário, com você" do Meu dia, e o
+ * item só levava para lá: o módulo segue como a chave desse bloco.
+ */
+export const MODULOS_FORA_DO_MENU: ReadonlySet<string> = new Set(["societario_minha_area"]);
 
 /** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
 export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);

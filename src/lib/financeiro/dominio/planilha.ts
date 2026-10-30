@@ -29,6 +29,9 @@ export const COLUNAS_DA_DOMINIO = [
 
 /** Uma linha da planilha, já com as contas no código reduzido da Domínio. */
 export type LinhaDaDominio = {
+  iniciaLote?: string;
+  centroCustoDebito?: string;
+  centroCustoCredito?: string;
   /** "AAAA-MM-DD". */
   dataKey: string;
   debito: string;
@@ -42,7 +45,7 @@ export type LinhaDaDominio = {
 };
 
 function celulas(l: LinhaDaDominio): (string | number)[] {
-  return [l.dataKey, l.debito, l.credito, l.centavos / 100, l.codigoHistorico, l.complemento, "", l.codigoFilial, "", ""];
+  return [l.dataKey, l.debito, l.credito, l.centavos / 100, l.codigoHistorico, l.complemento, l.iniciaLote ?? "", l.codigoFilial, l.centroCustoDebito ?? "", l.centroCustoCredito ?? ""];
 }
 
 /** O .xlsx do modelo da Domínio, em bytes. */

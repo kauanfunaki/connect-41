@@ -11,6 +11,7 @@ import { contextoDaUrl, type ContextoDoMotor, type EstabelecimentoVisivel, type 
 import { param } from "./url";
 
 export type TelaDoMotor = {
+  contabil?: { empresaId: string };
   ctx: AuthContext;
   motor: MotorDoEscritorio;
   contexto: ContextoDoMotor | null;

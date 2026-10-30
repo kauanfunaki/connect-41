@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,7 @@ const ABERTOS = new Set(["pendente", "executando"]);
  * de perguntar — e atualiza a tela para os arquivos gerados aparecerem.
  */
 export function AcompanhamentoDaExecucao({ raiz, inicial, logInicial, truncadoInicial }: { raiz: string; inicial: ExecucaoDoMotor; logInicial: string; truncadoInicial: boolean }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const [execucao, setExecucao] = useState(inicial);
   const [log, setLog] = useState({ texto: logInicial, truncado: truncadoInicial });
@@ -31,7 +33,7 @@ export function AcompanhamentoDaExecucao({ raiz, inicial, logInicial, truncadoIn
     let vivo = true;
     const relogio = setInterval(async () => {
       if (document.visibilityState === "hidden") return;
-      const r = await lerExecucaoNoMotor({ raiz, id: inicial.id }).catch(() => null);
+      const r = await lerExecucaoNoMotor({ raiz, empresaContabil, id: inicial.id }).catch(() => null);
       if (!vivo) return;
       // Falha de rede também aparece (auditoria de UX, 30/10/2026): era engolida,
       // e o "Atualizando" seguia como se o log estivesse em dia.
@@ -43,7 +45,7 @@ export function AcompanhamentoDaExecucao({ raiz, inicial, logInicial, truncadoIn
       if (!ABERTOS.has(r.dados!.execucao.estado)) router.refresh();
     }, INTERVALO_MS);
     return () => { vivo = false; clearInterval(relogio); };
-  }, [aberto, raiz, inicial.id, router]);
+  }, [aberto, raiz, inicial.id, router, empresaContabil]);
 
   // Só o quadro do log acompanha o fim; a página rola uma vez, ao abrir (`FocoAoAbrir`).
   // Rolar a página a cada consulta tirava o usuário do lugar (26/10/2026).
