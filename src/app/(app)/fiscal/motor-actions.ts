@@ -12,6 +12,8 @@
 // Nenhuma ação executa geração: ela enfileira, e o agente do motor executa.
 
 import { z } from "zod";
+import { prepararEscritaContribuicoes, contextoContabilPermitido } from "@/lib/fiscal/motor/acoes";
+import { recursoDeContribuicoes } from "@/lib/contabil/escopoContribuicoes";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
@@ -58,23 +60,23 @@ export async function solicitarExecucaoNoMotor(entrada: unknown): Promise<Result
   }
 }
 
-const porIdSchema = z.object({ raiz: raizSchema, id: idSchema, chave: chaveSchema.optional() });
+const porIdSchema = z.object({ empresaContabil: z.string().uuid().optional(), raiz: raizSchema, id: idSchema, chave: chaveSchema.optional() });
 
-async function execucaoVisivel(p: Preparo, raiz: string, id: number) {
+async function execucaoVisivel(p: Preparo, raiz: string, id: number, soContribuicoes = false) {
   const execucao = await p.motor.cliente.obterExecucao(raiz, id);
   const estabs = await visiveis(p.ctx, raiz);
-  return execucao.empresa_id !== null && estabs.some((x) => x.id === execucao.empresa_id) ? execucao : null;
+  return (!soContribuicoes || recursoDeContribuicoes(execucao)) && execucao.empresa_id !== null && estabs.some((x) => x.id === execucao.empresa_id) ? execucao : null;
 }
 
 export async function cancelarExecucaoNoMotor(entrada: unknown): Promise<ResultadoDoMotor<ExecucaoDoMotor>> {
   const e = porIdSchema.safeParse(entrada);
   if (!e.success) return recusa("Pedido inválido.");
-  const p = await prepararEscrita(e.data.raiz, "fiscal_operacao", "agir");
+  const p = await prepararEscritaContribuicoes(e.data.raiz, "fiscal_operacao", "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
-    if (!(await execucaoVisivel(p, e.data.raiz, e.data.id))) return recusa("Execução não encontrada.");
+    if (!(await execucaoVisivel(p, e.data.raiz, e.data.id, !!e.data.empresaContabil))) return recusa("Execução não encontrada.");
     const execucao = await p.motor.cliente.cancelarExecucao(e.data.raiz, e.data.id, { ator: p.ator, chave: e.data.chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.execucao.cancelada",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.execucao.cancelada" : "fiscal.sped.execucao.cancelada",
       entityType: "SpedExecucao", entityId: String(e.data.id), metadata: { nome: `#${e.data.id}`, raiz: e.data.raiz } });
     revalidarFiscal();
     return { ok: true, mensagem: "Pedido cancelado.", dados: execucao };
@@ -87,12 +89,12 @@ export async function cancelarExecucaoNoMotor(entrada: unknown): Promise<Resulta
 export async function destravarExecucaoNoMotor(entrada: unknown): Promise<ResultadoDoMotor<ExecucaoDoMotor>> {
   const e = porIdSchema.safeParse(entrada);
   if (!e.success) return recusa("Pedido inválido.");
-  const p = await prepararEscrita(e.data.raiz, "fiscal_operacao", "gerir");
+  const p = await prepararEscritaContribuicoes(e.data.raiz, "fiscal_operacao", "gerir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
-    if (!(await execucaoVisivel(p, e.data.raiz, e.data.id))) return recusa("Execução não encontrada.");
+    if (!(await execucaoVisivel(p, e.data.raiz, e.data.id, !!e.data.empresaContabil))) return recusa("Execução não encontrada.");
     const execucao = await p.motor.cliente.destravarExecucao(e.data.raiz, e.data.id, { ator: p.ator, chave: e.data.chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.execucao.destravada",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.execucao.destravada" : "fiscal.sped.execucao.destravada",
       entityType: "SpedExecucao", entityId: String(e.data.id), metadata: { nome: `#${e.data.id}`, raiz: e.data.raiz } });
     revalidarFiscal();
     return { ok: true, mensagem: "Execução liberada: marcada como erro por falta de sinal do agente.", dados: execucao };
@@ -106,13 +108,13 @@ export async function lerExecucaoNoMotor(entrada: unknown): Promise<ResultadoDoM
   const e = porIdSchema.safeParse(entrada);
   if (!e.success) return recusa("Pedido inválido.");
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "fiscal_operacao", "ver"))) return recusa("Seu perfil não permite esta consulta.");
+  if (!ctx.tenantId || !(e.data.empresaContabil ? await contextoContabilPermitido(ctx, e.data.empresaContabil, e.data.raiz) : await podeNoModulo(ctx, "fiscal_operacao", "ver"))) return recusa("Seu perfil não permite esta consulta.");
   const motor = await abrirMotor(ctx.tenantId);
   if (!motor || !motor.raizes.includes(e.data.raiz)) return recusa("Execução não encontrada.");
   try {
     const execucao = await motor.cliente.obterExecucao(e.data.raiz, e.data.id);
     const estabs = await visiveis(ctx, e.data.raiz);
-    if (execucao.empresa_id === null || !estabs.some((x) => x.id === execucao.empresa_id)) return recusa("Execução não encontrada.");
+    if ((e.data.empresaContabil && !recursoDeContribuicoes(execucao)) || execucao.empresa_id === null || !estabs.some((x) => x.id === execucao.empresa_id)) return recusa("Execução não encontrada.");
     const log = await motor.cliente.logDaExecucao(e.data.raiz, e.data.id, 200);
     return { ok: true, mensagem: "", dados: { execucao, log: log.texto, truncado: log.truncado } };
   } catch (err) {
@@ -122,23 +124,23 @@ export async function lerExecucaoNoMotor(entrada: unknown): Promise<ResultadoDoM
 
 // ─── Arquivos ────────────────────────────────────────────────────────────────
 
-async function arquivoVisivel(p: { ctx: AuthContext; motor: MotorDoEscritorio }, raiz: string, id: number) {
+async function arquivoVisivel(p: { ctx: AuthContext; motor: MotorDoEscritorio }, raiz: string, id: number, soContribuicoes = false) {
   const arquivo = await p.motor.cliente.obterArquivo(raiz, id);
   const estabs = await visiveis(p.ctx, raiz);
-  return estabs.some((x) => x.cnpj === arquivo.cnpj) ? arquivo : null;
+  return (!soContribuicoes || recursoDeContribuicoes(arquivo)) && estabs.some((x) => x.cnpj === arquivo.cnpj) ? arquivo : null;
 }
 
-const regerarSchema = z.object({ raiz: raizSchema, id: idSchema, tipoSped: z.enum(["0", "1"]), confirmarDuplicado: z.boolean().default(false), chave: chaveSchema });
+const regerarSchema = z.object({ empresaContabil: z.string().uuid().optional(), raiz: raizSchema, id: idSchema, tipoSped: z.enum(["0", "1"]), confirmarDuplicado: z.boolean().default(false), chave: chaveSchema });
 
 export async function regerarArquivoNoMotor(entrada: unknown): Promise<ResultadoDoMotor<ExecucaoDoMotor>> {
   const e = regerarSchema.safeParse(entrada);
   if (!e.success) return recusa("Escolha Original ou Substituto.");
-  const p = await prepararEscrita(e.data.raiz, "fiscal_operacao", "agir");
+  const p = await prepararEscritaContribuicoes(e.data.raiz, "fiscal_operacao", "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
-    if (!(await arquivoVisivel(p, e.data.raiz, e.data.id))) return recusa("Arquivo não encontrado.");
+    if (!(await arquivoVisivel(p, e.data.raiz, e.data.id, !!e.data.empresaContabil))) return recusa("Arquivo não encontrado.");
     const execucao = await p.motor.cliente.regerarArquivo(e.data.raiz, e.data.id, { tipo_sped: e.data.tipoSped, confirmar_duplicado: e.data.confirmarDuplicado }, { ator: p.ator, chave: e.data.chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.arquivo.regerado",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.arquivo.regerado" : "fiscal.sped.arquivo.regerado",
       entityType: "SpedArquivo", entityId: String(e.data.id), metadata: { nome: `#${e.data.id}`, raiz: e.data.raiz, execucaoId: execucao.id, tipoSped: e.data.tipoSped } });
     revalidarFiscal();
     return { ok: true, mensagem: `Nova geração na fila (pedido #${execucao.id}).`, dados: execucao };
@@ -148,14 +150,14 @@ export async function regerarArquivoNoMotor(entrada: unknown): Promise<Resultado
 }
 
 export async function validarArquivoNoMotor(entrada: unknown): Promise<ResultadoDoMotor<{ validacaoId: number }>> {
-  const e = z.object({ raiz: raizSchema, id: idSchema, chave: chaveSchema }).safeParse(entrada);
+  const e = z.object({ empresaContabil: z.string().uuid().optional(), raiz: raizSchema, id: idSchema, chave: chaveSchema }).safeParse(entrada);
   if (!e.success) return recusa("Pedido inválido.");
-  const p = await prepararEscrita(e.data.raiz, "fiscal_entregas", "agir");
+  const p = await prepararEscritaContribuicoes(e.data.raiz, "fiscal_entregas", "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
-    if (!(await arquivoVisivel(p, e.data.raiz, e.data.id))) return recusa("Arquivo não encontrado.");
+    if (!(await arquivoVisivel(p, e.data.raiz, e.data.id, !!e.data.empresaContabil))) return recusa("Arquivo não encontrado.");
     const r = await p.motor.cliente.validarArquivo(e.data.raiz, e.data.id, { ator: p.ator, chave: e.data.chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.arquivo.validado",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.arquivo.validado" : "fiscal.sped.arquivo.validado",
       entityType: "SpedArquivo", entityId: String(e.data.id), metadata: { nome: `#${e.data.id}`, raiz: e.data.raiz, validacaoId: r.validacao_id } });
     return { ok: true, mensagem: "Validação iniciada no motor. O resultado aparece aqui em instantes.", dados: { validacaoId: r.validacao_id } };
   } catch (err) {
@@ -164,14 +166,14 @@ export async function validarArquivoNoMotor(entrada: unknown): Promise<Resultado
 }
 
 export async function lerValidacaoNoMotor(entrada: unknown): Promise<ResultadoDoMotor<ValidacaoDoMotor>> {
-  const e = z.object({ raiz: raizSchema, id: idSchema, validacaoId: idSchema.optional() }).safeParse(entrada);
+  const e = z.object({ empresaContabil: z.string().uuid().optional(), raiz: raizSchema, id: idSchema, validacaoId: idSchema.optional() }).safeParse(entrada);
   if (!e.success) return recusa("Pedido inválido.");
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "fiscal_entregas", "ver"))) return recusa("Seu perfil não permite esta consulta.");
+  if (!ctx.tenantId || !(e.data.empresaContabil ? await contextoContabilPermitido(ctx, e.data.empresaContabil, e.data.raiz) : await podeNoModulo(ctx, "fiscal_entregas", "ver"))) return recusa("Seu perfil não permite esta consulta.");
   const motor = await abrirMotor(ctx.tenantId);
   if (!motor || !motor.raizes.includes(e.data.raiz)) return recusa("Arquivo não encontrado.");
   try {
-    if (!(await arquivoVisivel({ ctx, motor }, e.data.raiz, e.data.id))) return recusa("Arquivo não encontrado.");
+    if (!(await arquivoVisivel({ ctx, motor }, e.data.raiz, e.data.id, !!e.data.empresaContabil))) return recusa("Arquivo não encontrado.");
     return { ok: true, mensagem: "", dados: await motor.cliente.obterValidacao(e.data.raiz, e.data.id, e.data.validacaoId) };
   } catch (err) {
     return doErro(err);
@@ -181,6 +183,7 @@ export async function lerValidacaoNoMotor(entrada: unknown): Promise<ResultadoDo
 const hojeEmSaoPaulo = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
 const entregaSchema = z.object({
+  empresaContabil: z.string().uuid().optional(),
   raiz: raizSchema,
   id: idSchema,
   chave: chaveSchema,
@@ -196,12 +199,12 @@ const entregaSchema = z.object({
 export async function registrarEntregaNoMotor(entrada: unknown): Promise<ResultadoDoMotor> {
   const e = entregaSchema.safeParse(entrada);
   if (!e.success) return recusa(e.error.issues[0]?.message ?? "Dados da entrega inválidos.");
-  const p = await prepararEscrita(e.data.raiz, "fiscal_entregas", "agir");
+  const p = await prepararEscritaContribuicoes(e.data.raiz, "fiscal_entregas", "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
-    if (!(await arquivoVisivel(p, e.data.raiz, e.data.id))) return recusa("Arquivo não encontrado.");
+    if (!(await arquivoVisivel(p, e.data.raiz, e.data.id, !!e.data.empresaContabil))) return recusa("Arquivo não encontrado.");
     await p.motor.cliente.registrarEntrega(e.data.raiz, e.data.id, { tipo: e.data.tipo, recibo: e.data.recibo, data_entrega: e.data.dataEntrega, observacao: e.data.observacao }, { ator: p.ator, chave: e.data.chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.arquivo.entregue",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.arquivo.entregue" : "fiscal.sped.arquivo.entregue",
       entityType: "SpedArquivo", entityId: String(e.data.id), metadata: { nome: `#${e.data.id}`, raiz: e.data.raiz, tipo: e.data.tipo, recibo: e.data.recibo, dataEntrega: e.data.dataEntrega } });
     revalidarFiscal();
     return { ok: true, mensagem: "Entrega registrada no motor." };

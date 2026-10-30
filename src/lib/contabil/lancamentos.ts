@@ -24,6 +24,7 @@ export const TIPOS_DA_ENTRADA: TipoDaEntrada[] = [NFE, CTE, NFSE];
 
 /** Um documento de entrada, com o que o lançamento precisa. */
 export type Entrada = {
+  documentoId?: string;
   chave: string;
   tipo: TipoDaEntrada;
   /** O fornecedor (emitente; o prestador na NFS-e), só dígitos. */
@@ -40,6 +41,13 @@ export type Entrada = {
 };
 
 export type Regra = {
+  observacao?: string;
+  dataLancamento?: string;
+  valorCentavos?: number | null;
+  iniciaLote?: string;
+  codigoFilial?: string;
+  centroCustoDebito?: string;
+  centroCustoCredito?: string;
   cnpjFornecedor: string;
   cfop: string;
   nomeFornecedor: string;
@@ -68,6 +76,10 @@ export const ROTULO_DA_ORIGEM: Record<OrigemDoCredito, string> = {
 };
 
 export type Lancamento = {
+  iniciaLote?: string;
+  codigoFilial?: string;
+  centroCustoDebito?: string;
+  centroCustoCredito?: string;
   debito: string;
   credito: string;
   centavos: number;
@@ -112,7 +124,8 @@ export type Descartado = {
   cfop: string;
 };
 
-export type Relatorio = { lancamentos: Lancamento[]; pendencias: Pendencia[]; descartados: Descartado[] };
+export type SituacaoDaEntrada = "pronta" | "pendente" | "fora";
+export type Relatorio = { lancamentos: Lancamento[]; pendencias: Pendencia[]; descartados: Descartado[]; situacoes: Record<string, SituacaoDaEntrada> };
 
 /** A conta de crédito do fornecedor achada no plano (CT-e e NFS-e sem regra). */
 export type ContaNoPlano = (cnpj: string, nome: string) => { conta: string; origem: OrigemDoCredito; nome: string } | null;
@@ -209,13 +222,15 @@ export function montarRelatorio(entradas: readonly Entrada[], regras: readonly R
   const creditoDoFornecedor = new Map<string, Regra>();
   for (const r of regras) {
     if (r.cnpjFornecedor && r.contaCredito && !r.desconsiderar && !creditoDoFornecedor.has(r.cnpjFornecedor)) {
-      creditoDoFornecedor.set(r.cnpjFornecedor, { ...r, cfop: "", contaDebito: "", historico: "", codigoHistorico: "" });
+      creditoDoFornecedor.set(r.cnpjFornecedor, { cnpjFornecedor: r.cnpjFornecedor, nomeFornecedor: r.nomeFornecedor, contaCredito: r.contaCredito, cfop: "", contaDebito: "", historico: "", codigoHistorico: "", desconsiderar: false });
     }
   }
   const lancamentos: Lancamento[] = [];
+  const situacoes: Record<string, SituacaoDaEntrada> = {};
   const pendencias = new Map<string, Pendencia>();
   const descartados = new Map<string, Descartado>();
   const descartar = (motivo: MotivoDoDescarte, rotulo: string, e: Entrada, cnpj = "", cfop = "") => {
+    situacoes[e.chave] = "fora";
     const k = `${motivo}|${rotulo}`;
     const d = descartados.get(k) ?? { motivo, rotulo, qtd: 0, centavos: 0, cnpj, cfop };
     d.qtd += 1;
@@ -252,6 +267,7 @@ export function montarRelatorio(entradas: readonly Entrada[], regras: readonly R
         const achada = contaNoPlano(e.cnpj, e.nome);
         if (achada) {
           regra = {
+            ...regra,
             cnpjFornecedor: e.cnpj, cfop: regra?.cfop ?? "", nomeFornecedor: regra?.nomeFornecedor || achada.nome,
             contaDebito: "", contaCredito: achada.conta, codigoHistorico: "", historico: "", desconsiderar: false,
           };
@@ -267,10 +283,12 @@ export function montarRelatorio(entradas: readonly Entrada[], regras: readonly R
 
     const debitoFixo = imobilizado || temModelo;
     if (!regra || !regra.contaCredito || (!debitoFixo && !regra.contaDebito)) {
+      situacoes[e.chave] = "pendente";
       const k = chaveDaRegra(e.cnpj, cfop);
       const p = pendencias.get(k) ?? { cnpjFornecedor: e.cnpj, nomeFornecedor: e.nome, cfop, qtd: 0, centavos: 0, cadastradaSemConta: !!regra, tipos: [], soCredito: debitoFixo };
       if (!p.tipos.includes(e.tipo)) p.tipos.push(e.tipo);
       if (!p.nomeFornecedor && e.nome) p.nomeFornecedor = e.nome;
+      p.soCredito = p.soCredito && debitoFixo;
       p.qtd += 1;
       p.centavos += e.centavos;
       pendencias.set(k, p);
@@ -291,15 +309,19 @@ export function montarRelatorio(entradas: readonly Entrada[], regras: readonly R
       historico = aplicarCoringas(regra.historico.trim() || HISTORICO_PADRAO, e, nome);
     }
     lancamentos.push({
-      debito, credito: regra.contaCredito, centavos: e.centavos, data: e.data,
+      debito, credito: regra.contaCredito, centavos: regra.valorCentavos ?? e.centavos, data: regra.dataLancamento || e.data,
+      iniciaLote: regra.iniciaLote, codigoFilial: regra.codigoFilial,
+      centroCustoDebito: regra.centroCustoDebito, centroCustoCredito: regra.centroCustoCredito,
       codigoHistorico, historico: fornecedorNoFim(historico, nome, regra.nomeFornecedor),
       cnpjFornecedor: e.cnpj, nomeFornecedor: nome, chave: e.chave, cfop, numero: e.numero, tipo: e.tipo,
       imobilizado, origemDoCredito: origem,
     });
+    situacoes[e.chave] = "pronta";
   }
 
   return {
     lancamentos,
+    situacoes,
     pendencias: [...pendencias.values()].sort((a, b) => b.centavos - a.centavos),
     descartados: [...descartados.values()].sort((a, b) => a.motivo.localeCompare(b.motivo) || b.qtd - a.qtd),
   };

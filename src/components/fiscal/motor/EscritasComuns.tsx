@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 // Peças comuns dos botões das escritas de §13 nas telas fiscais (23/10/2026).
 
@@ -93,6 +94,7 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
   aoFalhar?: (r: Extract<ResultadoDoMotor<T>, { ok: false }>) => void;
   rotuloDoBotao: string;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const regra = ENVIOS[destino];
   const [fila, setFila] = useState<ArquivoNaFila[]>([]);
@@ -148,7 +150,8 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     if (regra.extra) for (const a of extras) form.append(regra.extra.parte, a, a.name);
     let r: ResultadoDoMotor<T>;
     try {
-      const resposta = await fetch(`/api/fiscal/sped/envios/${destino}?raiz=${raiz}`, { method: "POST", body: form });
+      const query = new URLSearchParams({ raiz, ...(empresaContabil ? { empresaContabil } : {}) });
+      const resposta = await fetch("/api/fiscal/sped/envios/" + destino + "?" + query, { method: "POST", body: form });
       r = await resposta.json().catch(() => ({ ok: false, mensagem: resposta.status === 413 ? "O envio passou do limite de tamanho." : `O Connect não conseguiu enviar (${resposta.status}). Tente de novo.`, renovarChave: resposta.status < 500 }));
     } catch {
       r = { ok: false, mensagem: "Falha de conexão com o Connect. Tente de novo: o mesmo arquivo não é importado duas vezes.", renovarChave: false };

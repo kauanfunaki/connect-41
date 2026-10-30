@@ -125,6 +125,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "DominioExportacao", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["planilha da Domínio baixada", "planilhas da Domínio baixadas"] },
   { modelo: "ContabilRegra", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra do de-para contábil", "regras do de-para contábil"] },
   { modelo: "ContabilConta", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta do plano da Domínio", "contas do plano da Domínio"] },
+  { modelo: "ContabilCfopConta", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["sugestão contábil de CFOP", "sugestões contábeis de CFOP"] },
   { modelo: "ContabilModelo", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["configuração do Contábil", "configurações do Contábil"] },
   { modelo: "Guia", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["guia emitida", "guias emitidas"] },
   { modelo: "Certidao", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["certidão consultada", "certidões consultadas"] },
@@ -143,6 +144,9 @@ const EMPRESA: Ligacao[] = [
 ];
 
 const EMPRESA_SOLTAS: ColunaSolta[] = [
+  // A exclusão de um cadastro não autoriza apagar a escrituração nem as
+  // revisões fiscais. A retenção desse histórico exige uma operação própria.
+  ...["SpedFiscalProfile", "SpedFiscalBook", "SpedFiscalSupport", "SpedFiscalPeriod", "SpedFiscalCalculation", "SpedFiscalRevision", "SpedFiscalImport"].map((modelo): ColunaSolta => ({ modelo, coluna: "companyId", tratamento: "manter", motivo: "histórico fiscal e revisões preservados; retenção não é exclusão do cadastro" })),
   { modelo: "Document", coluna: "entityId", tratamento: "apagar" },
   { modelo: "CustomValue", coluna: "entityId", tratamento: "apagar" },
   { modelo: "Handoff", coluna: "entityId", tratamento: "apagar" },
@@ -330,6 +334,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },
   { modelo: "ContabilModelo", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu nas contas fixas ou carregou o plano; a tela não expõe o id" },
+  { modelo: "ContabilCfopConta", coluna: "updatedById", tratamento: "manter", motivo: "autor da sugestão contábil de CFOP" },
   { modelo: "Guia", coluna: "pagaPorId", tratamento: "manter", motivo: "quem marcou a guia como paga; a tela não expõe o id" },
   { modelo: "SectorQuadrosBloqueados", coluna: "createdById", tratamento: "manter", motivo: "quem bloqueou os Quadros do setor; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "Guia", coluna: "emitidaPorId", tratamento: "manter", motivo: "quem emitiu a guia; a tela não expõe o id" },

@@ -1,3 +1,4 @@
+import { TabelaContabilDoMotor } from "@/components/contabil/TabelaContabil";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
@@ -6,7 +7,7 @@ import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDa
 import { BlocoFiscal, EstadoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { errosDaValidacao, linhasDosTotais, situacaoDoArquivo } from "@/lib/fiscal/previa/doMotor";
 import { doMotor, type TelaDoMotor } from "@/lib/fiscal/motor/tela";
-import { hrefDoMotor, param } from "@/lib/fiscal/motor/url";
+import { hrefDoMotor, hrefComParams, param } from "@/lib/fiscal/motor/url";
 import { cnpjFormatado, data, dataHora, tamanho } from "@/lib/fiscal/motor/formato";
 import { formatarNumero } from "@/lib/format";
 import type { ArquivoDetalhado, RegistroDeDecisao } from "@/lib/sped/motor";
@@ -33,24 +34,25 @@ export async function ArquivosMotor({ tela, params, permiteRegerar, permiteEntre
   permiteRegerar: boolean;
   permiteEntregas: boolean;
 }) {
+  const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
   const { contexto, motor, mapa } = tela;
   if (!contexto) return null;
   const porCnpj = new Map(mapa.visiveis.map((e) => [e.cnpj, e]));
   const cursor = param(params, "cursor") ?? null;
   const obrigacao = param(params, "obrigacao");
-  const obrigacaoValida = obrigacao === "icms_ipi" || obrigacao === "contribuicoes" ? obrigacao : undefined;
+  const obrigacaoValida = tela.contabil ? "contribuicoes" : obrigacao === "icms_ipi" || obrigacao === "contribuicoes" ? obrigacao : undefined;
   const vigentes = param(params, "vigencia") === "vigente";
   const lista = await doMotor(() => motor.cliente.listarArquivos(contexto.raiz, {
     competencia: contexto.competencia, obrigacao: obrigacaoValida, cnpj: tela.estabelecimento?.cnpj, apenas_considerados: vigentes, limite: 50, cursor,
   }));
   const arquivos = (lista.dados?.itens ?? []).filter((a) => porCnpj.has(a.cnpj));
-  const hrefDe = (extra: Record<string, string | number | undefined>) => hrefDoMotor("/fiscal/entregas", contexto, { obrigacao: obrigacaoValida, vigencia: vigentes ? "vigente" : undefined, ...extra });
-  const hrefDownload = (id: number) => `/api/fiscal/sped/arquivos/${id}/download?raiz=${contexto.raiz}`;
+  const hrefDe = (extra: Record<string, string | number | undefined>) => tela.contabil ? hrefComParams("/contabil/sped", { empresa: tela.contabil.empresaId, mes: contexto.competencia, aba: "contribuicoes", secao: "arquivos", vigencia: vigentes ? "vigente" : undefined }, extra) : hrefDoMotor("/fiscal/entregas", contexto, { obrigacao: obrigacaoValida, vigencia: vigentes ? "vigente" : undefined, ...extra });
+  const hrefDownload = (id: number) => "/api/fiscal/sped/arquivos/" + id + "/download?" + new URLSearchParams({ raiz: contexto.raiz, ...(tela.contabil ? { empresaContabil: tela.contabil.empresaId } : {}) });
 
   const idAberto = Number(param(params, "arquivo"));
   const detalhe = Number.isSafeInteger(idAberto) && idAberto > 0 ? await doMotor(async () => {
     const a = await motor.cliente.obterArquivo(contexto.raiz, idAberto);
-    if (!porCnpj.has(a.cnpj)) return null;
+    if (!porCnpj.has(a.cnpj) || (tela.contabil && a.obrigacao !== "contribuicoes")) return null;
     const [validacao, posteriores] = await Promise.all([
       a.validacao.estado === "nao_validado" ? null : motor.cliente.obterValidacao(contexto.raiz, a.id).catch(() => null),
       a.decisao_ate === null ? null : motor.cliente.decisoesDoArquivo(contexto.raiz, a.id, { visao: "posteriores", limite: 50 }).catch(() => null),
@@ -62,11 +64,11 @@ export async function ArquivosMotor({ tela, params, permiteRegerar, permiteEntre
     {detalhe?.erro && <Aviso tom="atencao">{detalhe.erro}</Aviso>}
     {detalhe && !detalhe.erro && !detalhe.dados && <Aviso tom="atencao">Arquivo não encontrado entre as empresas que você acessa.</Aviso>}
     {detalhe?.dados && <FocoAoAbrir key={detalhe.dados.a.id} rotulo={`Detalhes do arquivo #${detalhe.dados.a.id}`}><DetalheDoArquivo {...detalhe.dados} hrefFechar={hrefDe({ cursor: cursor ?? undefined })} estabelecimento={porCnpj.get(detalhe.dados.a.cnpj)?.companyNome ?? cnpjFormatado(detalhe.dados.a.cnpj)}
-      hrefExecucao={detalhe.dados.a.execucao_id && tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "historico", execucao: detalhe.dados.a.execucao_id }) : null}
+      hrefExecucao={detalhe.dados.a.execucao_id && tela.contabil ? hrefComParams("/contabil/sped", { empresa: tela.contabil.empresaId, mes: contexto.competencia, aba: "contribuicoes", secao: "gerar" }, { execucao: detalhe.dados.a.execucao_id }) : detalhe.dados.a.execucao_id && tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "historico", execucao: detalhe.dados.a.execucao_id }) : null}
       acoes={<AcoesDoArquivo raiz={contexto.raiz} id={detalhe.dados.a.id} hrefDownload={hrefDownload(detalhe.dados.a.id)} obrigacao={detalhe.dados.a.obrigacao} validando={detalhe.dados.a.validacao.estado === "validando"} entregue={detalhe.dados.a.entrega.estado === "registrada"} permiteRegerar={permiteRegerar} permiteEntregas={permiteEntregas} />} /></FocoAoAbrir>}
     {lista.erro && <Aviso tom="atencao">{lista.erro}</Aviso>}
-    <CascoDaTabela contagem={`${arquivos.length} arquivo(s) nesta página`} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={tela.modulos.includes("fiscal_operacao") && <Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" })}>Gerar novo SPED</Button>}>
-      <TabelaFiscal vazio="Nenhum SPED gerado neste filtro." descricaoVazio={`Competência ${contexto.competencia}. Troque o filtro, a competência ou o estabelecimento.`} colunas={["Arquivo / obrigação", "Estabelecimento", "Competência", "Versão", "Situação", "Gerado em", "Ações"]} linhas={arquivos.map((a) => ({ id: String(a.id), celulas: [
+    <CascoDaTabela contagem={`${arquivos.length} arquivo(s) nesta página`} filtros={<FiltrosDaTela naBarra campos={tela.contabil ? FILTROS.filter((f) => f.chave !== "obrigacao") : FILTROS} />} acoes={tela.modulos.includes("fiscal_operacao") && <Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" })}>Gerar novo SPED</Button>}>
+      <Tabela vazio="Nenhum SPED gerado neste filtro." descricaoVazio={`Competência ${contexto.competencia}. Troque o filtro, a competência ou o estabelecimento.`} colunas={["Arquivo / obrigação", "Estabelecimento", "Competência", "Versão", "Situação", "Gerado em", "Ações"]} linhas={arquivos.map((a) => ({ id: String(a.id), celulas: [
         <span key="nome" className="block max-w-60 break-words text-helper">{a.nome_arquivo}<span className="block text-ui font-medium">{OBRIGACAO[a.obrigacao]}</span></span>,
         porCnpj.get(a.cnpj)?.companyNome ?? cnpjFormatado(a.cnpj),
         a.competencia,

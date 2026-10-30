@@ -3,7 +3,8 @@ import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { competenciaValida } from "@/lib/financeiro/periodo";
 import { txtDaDominio, xlsxDaDominio } from "@/lib/financeiro/dominio/planilha";
-import { empresaDoContabil, linhasParaADominio, painelDoContabil } from "@/lib/contabil/servidor";
+import { empresaContabilVisivel, linhasParaADominio, painelDoContabil } from "@/lib/contabil/servidor";
+import { filtrarLancamentos } from "@/lib/contabil/navegacao";
 import { CTE, NFE, NFSE } from "@/lib/contabil/lancamentos";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +27,12 @@ export async function GET(req: NextRequest) {
   const formato = p.get("formato") === "txt" ? "txt" : "xlsx";
   const id = p.get("empresa") ?? "";
   if (!mes || !tipo || !/^[0-9a-f-]{36}$/i.test(id)) return naoAchou();
-  const empresa = await empresaDoContabil(auth.tenantId, id);
+  const empresa = await empresaContabilVisivel(auth, id);
   if (!empresa) return naoAchou();
 
-  const painel = await painelDoContabil(auth.tenantId, empresa, mes);
-  const linhas = linhasParaADominio(painel.lancamentos, tipo, painel.configuracao.modelos.codigoFilial);
+  const painel = await painelDoContabil(auth.tenantId, empresa, mes, { sugestoes: false });
+  const filtros = Object.fromEntries(["q", "cfop", "origem", "imobilizado"].map((k) => [k, p.get(k) ?? undefined]));
+  const linhas = linhasParaADominio(filtrarLancamentos(painel.lancamentos, filtros), tipo, painel.configuracao.modelos.codigoFilial);
   if (!linhas.length) return NextResponse.json({ error: "Nenhum lançamento deste tipo no mês." }, { status: 409 });
   const nome = `lancamentos_${p.get("tipo")}_${empresa.cnpj || "empresa"}_${mes}.${formato}`;
   const corpo = formato === "txt" ? txtDaDominio(linhas) : await xlsxDaDominio(linhas);

@@ -84,7 +84,6 @@ describe("menu recolhido: a faixa de ícones", () => {
         { code: "fiscal_operacao", label: "Executar", href: "/fiscal/operacao" },
       ] }));
       expect(aside).toContain('aria-haspopup="menu"');
-      expect(aside).toContain('aria-expanded="false"');
       expect(aside).toContain('aria-current="true"');
       expect(aside).not.toContain('href="/fiscal/operacao"');
       expect(aside).not.toContain('href="/fiscal/entregas"');

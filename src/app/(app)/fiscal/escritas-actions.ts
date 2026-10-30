@@ -14,6 +14,7 @@
 // `/api/fiscal/sped/envios/[destino]`.
 
 import { z } from "zod";
+import { prepararEscritaContribuicoes } from "@/lib/fiscal/motor/acoes";
 import { logAudit } from "@/lib/audit";
 import { ErroDoMotor, type ExecucaoDoMotor } from "@/lib/sped/motor";
 import {
@@ -104,6 +105,7 @@ const chaveDoPagamento = {
 };
 
 const decidirSchema = z.object({
+  empresaContabil: z.string().uuid().optional(),
   raiz: raizSchema,
   ...chaveDoPagamento,
   decisao: z.enum(DECISOES_DE_PAGAMENTO),
@@ -117,13 +119,14 @@ export async function decidirPagamentoNoMotor(entrada: unknown): Promise<Resulta
   const e = decidirSchema.safeParse(entrada);
   if (!e.success) return recusa(primeiraMensagem(e.error, "Decisão inválida."));
   const { raiz, caminho, pagina, ordem, decisao, motivo, chave } = e.data;
-  const p = await prepararEscrita(raiz, MODULO.contribuicoes, "agir");
+  const p = await prepararEscritaContribuicoes(raiz, MODULO.contribuicoes, "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
     const r = await p.motor.cliente.decidirPagamento(raiz, { caminho, pagina, ordem, decisao, ...(motivo ? { motivo } : {}) }, { ator: p.ator, chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.pagamento.decidido",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.pagamento.decidido" : "fiscal.sped.pagamento.decidido",
       entityType: "SpedPagamento", entityId: recursoDoPagamento(e.data), metadata: { nome: recursoDoPagamento(e.data), raiz, decisao, motivo, registroIds: r.registro_ids } });
     revalidarTelas(CONTRIBUICOES);
+    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
     return { ok: true, mensagem: decisao === "aceito" ? "Pagamento aceito. Os SPEDs de Contribuições do período ficam defasados." : decisao === "descartado" ? "Pagamento descartado." : "Decisão desfeita: o pagamento volta a conferir.", dados: r };
   } catch (err) {
     return doErro(err);
@@ -131,6 +134,7 @@ export async function decidirPagamentoNoMotor(entrada: unknown): Promise<Resulta
 }
 
 const correcaoSchema = z.object({
+  empresaContabil: z.string().uuid().optional(),
   raiz: raizSchema,
   ...chaveDoPagamento,
   // Ausente não mexe; "" limpa a correção (a convenção do painel).
@@ -158,15 +162,16 @@ export async function corrigirPagamentoNoMotor(entrada: unknown): Promise<Result
   const { raiz, caminho, pagina, ordem, motivo, decisao, chave } = e.data;
   const campos = Object.fromEntries(CAMPOS_CORRIGIVEIS.filter((c) => e.data[c] !== undefined).map((c) => [c, e.data[c] as string]));
   if (Object.keys(campos).length === 0) return recusa("Nenhum campo corrigido.");
-  const p = await prepararEscrita(raiz, MODULO.contribuicoes, "agir");
+  const p = await prepararEscritaContribuicoes(raiz, MODULO.contribuicoes, "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   const corpo = { caminho, pagina, ordem, ...campos, ...(motivo ? { motivo } : {}), ...(decisao !== undefined ? { decisao } : {}) };
-  const auditar = (extra: Record<string, unknown>) => logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.pagamento.corrigido",
+  const auditar = (extra: Record<string, unknown>) => logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.pagamento.corrigido" : "fiscal.sped.pagamento.corrigido",
     entityType: "SpedPagamento", entityId: recursoDoPagamento(e.data), metadata: { nome: recursoDoPagamento(e.data), raiz, campos: Object.keys(campos), decisao: decisao ?? null, motivo, ...extra } as never });
   try {
     const r = await p.motor.cliente.corrigirPagamento(raiz, corpo, { ator: p.ator, chave });
     await auditar({ registroIds: r.registro_ids });
     revalidarTelas(CONTRIBUICOES);
+    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
     return { ok: true, mensagem: decisao === "aceito" ? "Correção gravada e pagamento aceito." : "Correção gravada.", dados: r };
   } catch (err) {
     if (err instanceof ErroDoMotor && err.codigo === "pagamento_nao_aceitavel" && err.corpo.pagamento) {
@@ -174,6 +179,7 @@ export async function corrigirPagamentoNoMotor(entrada: unknown): Promise<Result
       const registroIds = Array.isArray(err.corpo.registro_ids) ? err.corpo.registro_ids : [];
       await auditar({ registroIds, aceiteRecusado: true });
       revalidarTelas(CONTRIBUICOES);
+    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
       return {
         ok: false,
         codigo: err.codigo,
@@ -190,6 +196,7 @@ export async function corrigirPagamentoNoMotor(entrada: unknown): Promise<Result
 
 const simNao = z.enum(["S", "N"]).optional();
 const contratoSchema = z.object({
+  empresaContabil: z.string().uuid().optional(),
   raiz: raizSchema,
   fornecedor: z.string().trim().min(1, "Informe o fornecedor.").max(255),
   existe_contrato: simNao,
@@ -215,7 +222,7 @@ export async function informarContratoNoMotor(entrada: unknown): Promise<Resulta
   const e = contratoSchema.safeParse(entrada);
   if (!e.success) return recusa(primeiraMensagem(e.error, "Contrato inválido."), { codigo: "parametro_invalido", campos: Object.fromEntries(e.error.issues.map((i) => [String(i.path[0]), i.message])) });
   const { raiz, fornecedor, chave } = e.data;
-  const p = await prepararEscrita(raiz, MODULO.contribuicoes, "agir");
+  const p = await prepararEscritaContribuicoes(raiz, MODULO.contribuicoes, "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   // Só o que a pessoa preencheu: o resto fica com o padrão de `db.gravar_contrato_informado`.
   const corpo = {
@@ -225,9 +232,10 @@ export async function informarContratoNoMotor(entrada: unknown): Promise<Resulta
   };
   try {
     const r = await p.motor.cliente.informarContrato(raiz, corpo, { ator: p.ator, chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.contrato.informado",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.contrato.informado" : "fiscal.sped.contrato.informado",
       entityType: "SpedContrato", entityId: fornecedor.slice(0, 120), metadata: { nome: fornecedor, raiz, campos: Object.keys(corpo), resultado: { pagamentos: r.resultado.pagamentos, aceitos: r.resultado.aceitos, conferir: r.resultado.conferir }, registroIds: r.registro_ids } });
     revalidarTelas(CONTRIBUICOES);
+    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
     const res = r.resultado;
     return { ok: true, mensagem: `Contrato informado. ${res.pagamentos} pagamento(s) do fornecedor: ${res.aceitos} aceito(s), ${res.conferir} a conferir.`, dados: r };
   } catch (err) {
@@ -238,7 +246,8 @@ export async function informarContratoNoMotor(entrada: unknown): Promise<Resulta
 // ─── Apurar CT-e de um arquivo (§13.7) ──────────────────────────────────────
 
 const TELAS_DO_CTE = { contribuicoes: { modulo: MODULO.contribuicoes }, conferencia: { modulo: MODULO.conferencia } } as const;
-const cteSchema = z.object({ raiz: raizSchema, id: idSchema, tela: z.enum(["contribuicoes", "conferencia"]), chave: chaveSchema.optional() });
+const cteSchema = z.object({
+  empresaContabil: z.string().uuid().optional(), raiz: raizSchema, id: idSchema, tela: z.enum(["contribuicoes", "conferencia"]), chave: chaveSchema.optional() });
 
 /**
  * Lê o SPED gerado uma vez e grava o total e a quebra do CT-e. Pesada: um
@@ -248,17 +257,19 @@ const cteSchema = z.object({ raiz: raizSchema, id: idSchema, tela: z.enum(["cont
 export async function apurarCteNoMotor(entrada: unknown): Promise<ResultadoDoMotor<CteApurado>> {
   const e = cteSchema.safeParse(entrada);
   if (!e.success) return recusa("Pedido inválido.");
+  if (e.data.empresaContabil && e.data.tela !== "contribuicoes") return recusa("Operação fora de Contribuições.");
   const { raiz, id, chave } = e.data;
-  const p = await prepararEscrita(raiz, TELAS_DO_CTE[e.data.tela].modulo, "agir");
+  const p = await prepararEscritaContribuicoes(raiz, TELAS_DO_CTE[e.data.tela].modulo, "agir", e.data.empresaContabil);
   if (recusado(p)) return p;
   try {
     const arquivo = await p.motor.cliente.obterArquivo(raiz, id);
     if (!(await visiveis(p.ctx, raiz)).some((x) => x.cnpj === arquivo.cnpj)) return recusa("Arquivo não encontrado.");
     if (arquivo.obrigacao !== "icms_ipi") return recusa("O CT-e é apurado no SPED de ICMS/IPI; este arquivo é de outra obrigação.", { codigo: "obrigacao_incompativel" });
     const r = await p.motor.cliente.apurarCteDoArquivo(raiz, id, { ator: p.ator, chave });
-    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.cte.apurado",
+    await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.cte.apurado" : "fiscal.sped.cte.apurado",
       entityType: "SpedArquivo", entityId: String(id), metadata: { nome: `#${id}`, raiz, competencia: arquivo.competencia, qtdCte: r.qtd_cte, valorTotal: r.valor_total, series: r.series } });
     revalidarTelas(CONTRIBUICOES, CONFERENCIA);
+    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
     return { ok: true, mensagem: `CT-e do arquivo #${id} apurado: ${r.qtd_cte} CT-e.`, dados: r };
   } catch (err) {
     return doErro(err);

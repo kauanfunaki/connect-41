@@ -1,0 +1,36 @@
+{
+  "_comentario": [
+    "Desempate para os 9 CFOPs que aparecem em mais de uma definição no depara_cfop.json",
+    "(5102, 5655, 5667, 5929, 5949, 6102, 6656, 6929, 6949).",
+    "",
+    "A regra roda em dois passos, e só quando o CFOP é ambíguo:",
+    "  1) definicao_por_ncm -- se o NCM do item casar com um prefixo, essa definição vence.",
+    "     O prefixo mais longo ganha, então dá para cadastrar 27101921 separado de 2710.",
+    "  2) definicao_padrao -- o que fazer com o resto, por CFOP.",
+    "",
+    "Definição 653 = 'Compra de combustível ou lubrificante por consumidor ou usuário",
+    "final'. Só os capítulos de combustível propriamente dito entram no passo 1:",
+    "  2710 - óleos de petróleo (óleo diesel, gasolina, lubrificantes)",
+    "  2711 - gás de petróleo (GLP, GNV)",
+    "  2207 - álcool etílico (etanol combustível)",
+    "",
+    "Todo o resto cai no padrão. Para 5102/5655/5667/5929/6102/6656/6929 o padrão é 126",
+    "(compra para utilização na prestação de serviço): é o caso de ARLA 32 (NCM 3102.10.10,",
+    "ureia, não é combustível), pneu, peça e afins. Para 5949/6949 o padrão é 949 (outra",
+    "entrada), que é a única alternativa que o de-para oferece nesses dois."
+  ],
+  "definicao_por_ncm": {
+    "653": ["2710", "2711", "2207"]
+  },
+  "definicao_padrao": {
+    "5102": "126",
+    "5655": "126",
+    "5667": "126",
+    "5929": "126",
+    "6102": "126",
+    "6656": "126",
+    "6929": "126",
+    "5949": "949",
+    "6949": "949"
+  }
+}

@@ -3,6 +3,9 @@ import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { ErroDoMotor } from "@/lib/sped/motor";
 import { abrirMotor } from "@/lib/fiscal/motor/servidor";
+import { contextoContabilPermitido } from "@/lib/fiscal/motor/acoes";
+import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +45,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (!motor.raizes.includes(raiz)) return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
 
   try {
+    const empresaContabil = req.nextUrl.searchParams.get("empresaContabil");
+    const acessoFiscal = await podeNoModulo(auth, "fiscal_entregas", "ver");
+    if (empresaContabil || !acessoFiscal) {
+      if (empresaContabil && !await contextoContabilPermitido(auth, empresaContabil, raiz)) return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
+      const arquivo = await motor.cliente.obterArquivo(raiz, id);
+      if (arquivo.obrigacao !== "contribuicoes") return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
+      if (!empresaContabil) {
+        const empresas = await getPrisma().company.findMany({ where: await scopedCompanyWhere(auth), select: { cnpj: true } });
+        if (!empresas.some((c) => c.cnpj?.replace(/\D/g, "").slice(0, 8) === raiz)) return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
+      }
+    }
     const resposta = await motor.cliente.baixarArquivo(raiz, id);
     const headers = new Headers({ "Cache-Control": "private, no-store" });
     for (const nome of REPASSADOS) {

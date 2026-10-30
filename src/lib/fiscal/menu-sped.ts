@@ -6,6 +6,7 @@ export const MODULOS_SPED: ReadonlySet<string> = new Set([
   "fiscal_painel", "fiscal_classificacao", "fiscal_operacao", "fiscal_acervo",
   "fiscal_icms_ipi", "fiscal_contribuicoes", "fiscal_entregas",
   "fiscal_conferencia", "fiscal_configuracoes",
+  "fiscal_fechamento",
 ]);
 
 /**
@@ -28,13 +29,13 @@ export function menuSped(modulos: readonly { code: string; href: string }[], { m
   // O SPED em quatro etapas (29/10/2026): Classificação, Apuração, Fechamento e
   // Gerar SPED numa tela só, com a empresa escolhida como no BPO. É a entrada
   // do item SPED; as telas antigas continuam abrindo pelo endereço.
-  const etapas = ETAPAS_DO_SPED.some((e) => ativos.has(e.modulo));
+  const etapas = ETAPAS_DO_SPED.some((e) => ativos.has(e.modulo)) || ativos.has("fiscal_contribuicoes");
   const href = etapas ? CAMINHO_DO_SPED : (telas[0]?.href ?? (auxiliar ? getModuleRoute(auxiliar) : undefined));
   // O painel do item SPED são as quatro etapas (pedido do Victor, 30/10/2026).
   // Painel, SPED gerados e Executar seguem abrindo pelo endereço.
   // Sem nenhuma etapa ligada, ficam as entradas que o escritório tem.
   const laterais: { label: string; href: string; modulo: string; area: AreaDoSped }[] = etapas
-    ? ETAPAS_DO_SPED.filter((e) => ativos.has(e.modulo)).map((e) => ({ label: e.rotulo, href: `${CAMINHO_DO_SPED}/${e.chave}`, modulo: e.modulo, area: e.rotulo }))
+    ? ETAPAS_DO_SPED.filter(e => ativos.has(e.modulo) || e.chave === "apuracao" && ativos.has("fiscal_contribuicoes")).map(e => ({ label: e.rotulo, href: `${CAMINHO_DO_SPED}/${e.chave}`, modulo: e.chave === "apuracao" && !ativos.has(e.modulo) ? "fiscal_contribuicoes" : e.modulo, area: e.rotulo }))
     : [
       ...(ativos.has("fiscal_painel") ? [{ label: "Painel", href: "/fiscal", modulo: "fiscal_painel", area: "Painel" as const }] : []),
       ...(href ? [{ label: "Classificação e apuração", href, modulo: "fiscal_classificacao", area: "SPED" as const }] : []),

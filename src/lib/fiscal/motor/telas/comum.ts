@@ -10,7 +10,7 @@ import type { TelaDoMotor } from "../tela";
 import type { FalhaDaLeitura, Leitura } from "../leitura";
 import { param } from "../url";
 
-export type TelaDeLeitura = Pick<TelaDoMotor, "motor" | "contexto" | "mapa" | "estabelecimento" | "modulos"> & { ctx: Pick<TelaDoMotor["ctx"], "tenantId"> };
+export type TelaDeLeitura = Pick<TelaDoMotor, "motor" | "contexto" | "mapa" | "estabelecimento" | "modulos" | "contabil"> & { ctx: Pick<TelaDoMotor["ctx"], "tenantId"> };
 export type Params = Record<string, string | string[] | undefined>;
 
 export const MODULO = {
@@ -29,6 +29,7 @@ export const SEM_ESTABELECIMENTO = "Escolha um estabelecimento no filtro acima."
 
 /** Quem não vê o módulo não lê nada dele (o mesmo "ver" de `abrirTelaDoModulo`). */
 export function podeLer(tela: TelaDeLeitura, modulo: string): boolean {
+  if (tela.contabil) return modulo === MODULO.contribuicoes && tela.modulos.includes("contabil_sped");
   return tela.modulos.includes(modulo);
 }
 

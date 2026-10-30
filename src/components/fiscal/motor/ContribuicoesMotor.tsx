@@ -1,3 +1,4 @@
+import { TabelaContabilDoMotor } from "@/components/contabil/TabelaContabil";
 import { Suspense } from "react";
 import { FileText, Receipt, Wallet } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
@@ -19,7 +20,6 @@ import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
 import { chaveDoPagamentoDaLinha, COLUNA_ORIGINAL, CAMPOS_CORRIGIVEIS, correcaoGravada } from "@/lib/sped/escritasDoMotor";
 import { AcoesDoPagamento, ApurarCte, ImportarFaturasBpo, ImportarPagamentosApoio, InformarContrato } from "./EscritasFechamento";
 
-const CAMINHO = "/fiscal/contribuicoes";
 const din = (v: string | null) => <span className="tabular-nums">{reaisDoMotor(v)}</span>;
 /** As colunas de pagamento que a tela procura primeiro; o resto do `_COLS_PAGAMENTO_LEITURA` vem depois, como veio. */
 const COLUNAS_DE_PAGAMENTO = ["tipo", "competencia", "nome", "documento", "data_pagamento", "valor_bruto", "valor_liquido", "falta_para_aceitar", "decisao", "decidido_por", "motivo_decisao", "mesmo_documento_em"] as const;
@@ -32,9 +32,11 @@ const originaisDa = (l: Record<string, unknown>) => Object.fromEntries(CAMPOS_CO
  * contrato de aluguel e apurar o CT-e dos arquivos pendentes.
  */
 export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
+  const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
+  const CAMINHO = tela.contabil ? "/contabil/sped" : "/fiscal/contribuicoes";
   const { contexto } = tela;
   if (!contexto) return null;
-  const [d, escrita] = await Promise.all([carregarFechamento(tela, params), escritaNaTela(tela.ctx, tela.motor, "fiscal_contribuicoes")]);
+  const [d, escrita] = await Promise.all([carregarFechamento(tela, params), escritaNaTela(tela.ctx, tela.motor, tela.contabil ? "contabil_sped" : "fiscal_contribuicoes")]);
   if (!d) return null;
   const aqui = (m: Record<string, string | null> = {}) => hrefComParams(CAMINHO, params, m);
   const acoesDoPagamento = escrita.visivel ? (l: Record<string, unknown>) => {
@@ -62,7 +64,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
           { rotulo: "Apoio · líquido", valor: reaisDoMotor(b.totais.apoio_liquido), icone: <Wallet />, detalhe: b.totais.fora ? `${contagemDoMotor(b.totais.fora)} fora do fechamento` : undefined },
         ]} />
         <BlocoFiscal titulo="Documentos fiscais" descricao="Do índice de documentos e, no CT-e de saída, da contagem do último SPED gerado.">
-          <TabelaFiscal vazio="Nenhum documento fiscal no período." descricaoVazio="" colunas={["Documento", "Sentido", "Documentos", "Valor", "Sem valor", "Origem"]} linhas={b.fiscais.map((f, i) => ({ id: `${f.tipo}-${f.sentido}-${i}`, celulas: [
+          <Tabela vazio="Nenhum documento fiscal no período." descricaoVazio="" colunas={["Documento", "Sentido", "Documentos", "Valor", "Sem valor", "Origem"]} linhas={b.fiscais.map((f, i) => ({ id: `${f.tipo}-${f.sentido}-${i}`, celulas: [
             f.rotulo, f.sentido === "entrada" ? "Entrada" : f.sentido === "saida" ? "Saída" : f.sentido || "—", contagemDoMotor(f.documentos), din(f.valor), contagemDoMotor(f.sem_valor), <span key="o" className="block max-w-64 break-words text-helper">{f.origem || "—"}</span>,
           ] }))} />
         </BlocoFiscal>
@@ -71,7 +73,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
             <BlocoRecolhivel titulo="Importar pagamentos de apoio (PDF, até 25 MB por envio)" abertoInicial={false}><div><ImportarPagamentosApoio raiz={contexto.raiz} permissao={escrita} /></div></BlocoRecolhivel>
             <BlocoRecolhivel titulo="Importar a planilha de faturas do BPO (.xlsx e comprovantes, até 25 MB)" abertoInicial={false}><div><ImportarFaturasBpo raiz={contexto.raiz} permissao={escrita} /></div></BlocoRecolhivel>
           </div>}
-          <TabelaFiscal vazio="Nenhum documento de apoio." descricaoVazio="" colunas={["Tipo", "Documentos", "Pessoas", "Bruto", "Líquido", "Vias", "A conferir", "Inválidos", "Sem valor"]} linhas={b.apoio.map((a, i) => ({ id: `${a.tipo}-${i}`, celulas: [
+          <Tabela vazio="Nenhum documento de apoio." descricaoVazio="" colunas={["Tipo", "Documentos", "Pessoas", "Bruto", "Líquido", "Vias", "A conferir", "Inválidos", "Sem valor"]} linhas={b.apoio.map((a, i) => ({ id: `${a.tipo}-${i}`, celulas: [
             <span key="t">{a.rotulo}{a.cadastro && <span className="block text-helper text-fg-muted">cadastro</span>}</span>, contagemDoMotor(a.documentos), contagemDoMotor(a.pessoas), din(a.valor_bruto), din(a.valor_liquido), contagemDoMotor(a.vias),
             a.conferir ? <Selo key="c" tom="atencao">{contagemDoMotor(a.conferir)}</Selo> : contagemDoMotor(a.conferir), contagemDoMotor(a.invalidos), contagemDoMotor(a.sem_valor),
           ] }))} />
@@ -86,7 +88,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
         return <div className="space-y-3">
           {aApurar.length > 0 && <Aviso tom="atencao">Falta apurar o CT-e destes arquivos: {aApurar.flatMap((l) => l.pendentes).map((id) => `#${id}`).join(", ") || aApurar.map((l) => l.rotulo).join(", ")}. Até lá, o valor fica como “não levantado”.{escrita.visivel ? "" : " Apure no painel do motor."}</Aviso>}
           <ApurarCte raiz={contexto.raiz} ids={[...new Set(aApurar.flatMap((l) => l.pendentes))]} tela="contribuicoes" permissao={escrita} />
-          <TabelaFiscal vazio="Sem linhas de faturamento." descricaoVazio="" colunas={["Grupo", "Documentos", "Valor", "Origem"]} linhas={f.linhas.map((l, i) => ({ id: `${l.grupo}-${i}`, celulas: [l.rotulo, contagemDoMotor(l.documentos), din(l.valor), <span key="o" className="text-helper">{l.origem || "—"}</span>] }))} />
+          <Tabela vazio="Sem linhas de faturamento." descricaoVazio="" colunas={["Grupo", "Documentos", "Valor", "Origem"]} linhas={f.linhas.map((l, i) => ({ id: `${l.grupo}-${i}`, celulas: [l.rotulo, contagemDoMotor(l.documentos), din(l.valor), <span key="o" className="text-helper">{l.origem || "—"}</span>] }))} />
           <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{([
             ["Saídas", reaisDoMotor(f.totais.saidas)], ["Entradas com nota", reaisDoMotor(f.totais.entradas_com_nota)], ["Entradas sem nota", reaisDoMotor(f.totais.entradas_sem_nota)],
             ["Entradas", reaisDoMotor(f.totais.entradas)], ["Saídas − entradas", reaisDoMotor(f.totais.saidas_menos_entradas)], ["Linhas incompletas", contagemDoMotor(f.totais.incompletas)],
@@ -104,14 +106,14 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
         return <div className="space-y-3">
           {c.conferir_truncado && <Aviso tom="atencao">A fila passou de 2000 linhas: mostrando as primeiras. Restrinja o período.</Aviso>}
           {c.ocultos.linhas > 0 && <Aviso tom="neutro">{contagemDoMotor(c.ocultos.linhas)} linha(s) ocultas ({reaisDoMotor(c.ocultos.valor)}): {Object.entries(c.ocultos.motivos).map(([m, n]) => `${m} (${contagemDoMotor(n)})`).join("; ")}.</Aviso>}
-          <TabelaLivre linhas={c.conferir as Record<string, unknown>[]} candidatas={COLUNAS_DE_PAGAMENTO} vazio="Nenhum pagamento a conferir." acoes={acoesDoPagamento} />
+          <TabelaLivre contabil={!!tela.contabil} linhas={c.conferir as Record<string, unknown>[]} candidatas={COLUNAS_DE_PAGAMENTO} vazio="Nenhum pagamento a conferir." acoes={acoesDoPagamento} />
         </div>;
       })()}
     </BlocoFiscal>
 
     <BlocoFiscal titulo="Duplicatas" descricao={d.conferencia.dados ? `${contagemDoMotor(d.conferencia.dados.duplicatas_resumo.grupos)} grupo(s) · ${contagemDoMotor(d.conferencia.dados.duplicatas_resumo.ocorrencias)} ocorrência(s) · excedente ${reaisDoMotor(d.conferencia.dados.duplicatas_resumo.valor_excedente)}` : "Pagamentos de apoio repetidos, do maior excedente para o menor."}>
       {d.duplicatas.erro !== null ? <ErroDaLeitura falha={d.duplicatas} hrefDeNovo={aqui()} /> : <div className="space-y-3">
-        <TabelaFiscal vazio="Nenhuma duplicata no período." descricaoVazio="" colunas={["Pessoa", "Tipo", "Competência", "Pagamento", "Valor bruto", "Ocorrências", "Excedente"]} linhas={d.duplicatas.dados.itens.map((g, i) => ({ id: `${g.chave_negocio}-${i}`, celulas: [
+        <Tabela vazio="Nenhuma duplicata no período." descricaoVazio="" colunas={["Pessoa", "Tipo", "Competência", "Pagamento", "Valor bruto", "Ocorrências", "Excedente"]} linhas={d.duplicatas.dados.itens.map((g, i) => ({ id: `${g.chave_negocio}-${i}`, celulas: [
           <span key="n">{g.nome || "—"}<span className="block text-helper text-fg-muted">{g.documento}</span></span>, g.tipo || "—", g.competencia || "—", data(g.data_pagamento), din(g.valor_bruto), contagemDoMotor(g.ocorrencias), din(g.valor_excedente),
         ] }))} />
         <PaginacaoDoMotor temCursor={!!d.cursorDuplicatas} proximo={d.duplicatas.dados.proximo_cursor} hrefInicio={aqui({ c_dup: null })} hrefProxima={(cur) => aqui({ c_dup: cur })} />
@@ -121,8 +123,8 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
     <BlocoRecolhivel titulo="Aluguéis de imóveis pendentes" abertoInicial={false}>
       <div className="space-y-4">
         {d.alugueis.erro !== null ? <ErroDaLeitura falha={d.alugueis} hrefDeNovo={aqui()} /> : <>
-          <TabelaLivre linhas={d.alugueis.dados.grupos} vazio="Nenhum aluguel pendente." acoes={escrita.visivel ? (g) => typeof g.fornecedor === "string" && g.fornecedor ? <InformarContrato raiz={contexto.raiz} fornecedor={g.fornecedor} permissao={escrita} /> : "—" : undefined} />
-          {d.alugueis.dados.ressalvas.length > 0 && <section aria-label="Aprovações com ressalva"><h4 className="mb-2 text-label font-semibold text-fg">Aprovações com ressalva</h4><TabelaLivre linhas={d.alugueis.dados.ressalvas} /></section>}
+          <TabelaLivre contabil={!!tela.contabil} linhas={d.alugueis.dados.grupos} vazio="Nenhum aluguel pendente." acoes={escrita.visivel ? (g) => typeof g.fornecedor === "string" && g.fornecedor ? <InformarContrato raiz={contexto.raiz} fornecedor={g.fornecedor} permissao={escrita} /> : "—" : undefined} />
+          {d.alugueis.dados.ressalvas.length > 0 && <section aria-label="Aprovações com ressalva"><h4 className="mb-2 text-label font-semibold text-fg">Aprovações com ressalva</h4><TabelaLivre contabil={!!tela.contabil} linhas={d.alugueis.dados.ressalvas} /></section>}
           {!escrita.visivel && <p className="text-helper text-fg-muted">Informar contrato continua no painel do motor.</p>}
         </>}
       </div>
@@ -137,16 +139,19 @@ function valorDoCredito(formato: string, v: string | null) {
   return v ?? "—";
 }
 
-function ApuracaoDoAno({ titulo, linhas, competencias }: { titulo: string; linhas: LinhaDaApuracaoContrib[]; competencias: string[] }) {
+function ApuracaoDoAno({ titulo, linhas, competencias, contabil = false }: { titulo: string; linhas: LinhaDaApuracaoContrib[]; competencias: string[]; contabil?: boolean }) {
+  const Tabela = contabil ? TabelaContabilDoMotor : TabelaFiscal;
   return <section aria-label={titulo}>
     <h3 className="mb-2 text-label font-semibold text-fg">{titulo}</h3>
-    <TabelaFiscal vazio="Sem apuração." descricaoVazio="" colunas={["Linha", ...competencias, "Soma do ano"]} linhas={linhas.map((l, i) => ({ id: `${l.rotulo}-${i}`, celulas: [
+    <Tabela vazio="Sem apuração." descricaoVazio="" colunas={["Linha", ...competencias, "Soma do ano"]} linhas={linhas.map((l, i) => ({ id: `${l.rotulo}-${i}`, celulas: [
       l.total ? <strong key="r">{l.rotulo}</strong> : l.rotulo, ...competencias.map((c) => din(l.valores[c] ?? null)), din(l.soma_ano),
     ] }))} />
   </section>;
 }
 
 async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor; filtro: FiltroDoDemonstrativo; params: Params }) {
+  const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
+  const CAMINHO = tela.contabil ? "/contabil/sped" : "/fiscal/contribuicoes";
   const d = await carregarDemonstrativoContrib(tela, filtro);
   if (d.erro !== null) return <ErroDaLeitura falha={d} hrefDeNovo={hrefComParams(CAMINHO, params)} />;
   const x = d.dados;
@@ -156,20 +161,20 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
     {x.avisos.length > 0 && <Aviso tom="atencao"><ul className="list-disc pl-5">{x.avisos.map((a, i) => <li key={i}>{a}</li>)}</ul></Aviso>}
     {x.faltando.length > 0 && <Aviso tom="neutro">Sem SPED gerado: {x.faltando.join(", ")}.</Aviso>}
     <BlocoFiscal titulo="Meses" descricao={`Alíquotas: PIS ${percentualDoMotor(x.aliq_pis)} · COFINS ${percentualDoMotor(x.aliq_cofins)}`}>
-      <TabelaFiscal vazio="Sem meses." descricaoVazio="" colunas={["Competência", "Arquivo", "Linhas"]} linhas={x.meses.map((m) => ({ id: m.competencia, celulas: [m.competencia, m.arquivo ? `#${m.arquivo.arquivo_id}` : <Selo key="s" tom="atencao">Sem arquivo</Selo>, contagemDoMotor(m.arquivo?.qtd_linhas ?? null)] }))} />
+      <Tabela vazio="Sem meses." descricaoVazio="" colunas={["Competência", "Arquivo", "Linhas"]} linhas={x.meses.map((m) => ({ id: m.competencia, celulas: [m.competencia, m.arquivo ? `#${m.arquivo.arquivo_id}` : <Selo key="s" tom="atencao">Sem arquivo</Selo>, contagemDoMotor(m.arquivo?.qtd_linhas ?? null)] }))} />
     </BlocoFiscal>
     <BlocoFiscal titulo="Conferência da cadeia" descricao={divergentes.length ? `${divergentes.length} elo(s) não batem com a competência anterior.` : "Cada competência parte do que a anterior deixou."}>
-      <TabelaFiscal vazio="Sem cadeia." descricaoVazio="" colunas={["Competência", "Imposto", "Entrou", "Apurado", "Descontado", "Saiu", "Esperado da anterior", "Situação"]} linhas={x.cadeia.map((c, i) => ({ id: `${c.competencia}-${c.imposto}-${i}`, celulas: [
+      <Tabela vazio="Sem cadeia." descricaoVazio="" colunas={["Competência", "Imposto", "Entrou", "Apurado", "Descontado", "Saiu", "Esperado da anterior", "Situação"]} linhas={x.cadeia.map((c, i) => ({ id: `${c.competencia}-${c.imposto}-${i}`, celulas: [
         c.competencia, c.imposto.toUpperCase() || "—", din(c.entrou), din(c.apurado), din(c.descontado), din(c.saiu), din(c.esperado_da_anterior), <Selo key="b" tom={c.bate ? "sucesso" : "perigo"}>{c.bate ? "Bate" : "Não bate"}</Selo>,
       ] }))} />
     </BlocoFiscal>
     <BlocoFiscal titulo="Apuração" descricao="Na ordem das linhas do bloco M.">
-      <div className="space-y-5"><ApuracaoDoAno titulo="PIS" linhas={x.apuracao.pis} competencias={competencias} /><ApuracaoDoAno titulo="COFINS" linhas={x.apuracao.cofins} competencias={competencias} /></div>
+      <div className="space-y-5"><ApuracaoDoAno contabil={!!tela.contabil} titulo="PIS" linhas={x.apuracao.pis} competencias={competencias} /><ApuracaoDoAno contabil={!!tela.contabil} titulo="COFINS" linhas={x.apuracao.cofins} competencias={competencias} /></div>
     </BlocoFiscal>
     <BlocoFiscal titulo={`Relatório de ${x.relatorio === "saidas" ? "saídas" : "entradas"}`} descricao={`Ordenado por ${x.ordenar || "cst"}. Colunas com os nomes do motor.`}>
       <div className="space-y-4">
-        <TabelaLivre linhas={x.linhas} vazio="Sem linhas no relatório." />
-        {x.total !== null && <section aria-label="Total"><h4 className="mb-2 text-label font-semibold text-fg">Total</h4><BlocoLivre valor={x.total} /></section>}
+        <TabelaLivre contabil={!!tela.contabil} linhas={x.linhas} vazio="Sem linhas no relatório." />
+        {x.total !== null && <section aria-label="Total"><h4 className="mb-2 text-label font-semibold text-fg">Total</h4><BlocoLivre contabil={!!tela.contabil} valor={x.total} /></section>}
       </div>
     </BlocoFiscal>
     <BlocoRecolhivel titulo="Créditos, por CFOP e estabelecimentos" abertoInicial={false}>
@@ -177,14 +182,14 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
         <section aria-label="Créditos" className="space-y-4"><h4 className="text-label font-semibold text-fg">Créditos</h4>
           {x.creditos.length === 0 ? <p className="text-ui text-fg-muted">Sem créditos.</p> : x.creditos.map((c, i) => <div key={`${c.cod_cred}-${i}`}>
             <p className="mb-2 text-ui text-fg-secondary">Código {c.cod_cred || "—"} · origem {c.ind_cred_ori || "—"}</p>
-            <TabelaFiscal colunas={["Linha", ...competencias.flatMap((m) => [`PIS ${m}`, `COFINS ${m}`])]} linhas={c.linhas.map((l, j) => ({ id: `${l.chave}-${j}`, celulas: [
+            <Tabela colunas={["Linha", ...competencias.flatMap((m) => [`PIS ${m}`, `COFINS ${m}`])]} linhas={c.linhas.map((l, j) => ({ id: `${l.chave}-${j}`, celulas: [
               l.total ? <strong key="r">{l.rotulo}</strong> : l.rotulo,
               ...competencias.flatMap((m) => (["pis", "cofins"] as const).map((imp) => valorDoCredito(l.formato, l.valores[imp]?.[m] ?? null))),
             ] }))} />
           </div>)}
         </section>
-        <section aria-label="Por CFOP"><h4 className="mb-2 text-label font-semibold text-fg">Por CFOP</h4><BlocoLivre valor={x.por_cfop} /></section>
-        <section aria-label="Estabelecimentos"><h4 className="mb-2 text-label font-semibold text-fg">Estabelecimentos</h4><BlocoLivre valor={x.estabelecimentos} /></section>
+        <section aria-label="Por CFOP"><h4 className="mb-2 text-label font-semibold text-fg">Por CFOP</h4><BlocoLivre contabil={!!tela.contabil} valor={x.por_cfop} /></section>
+        <section aria-label="Estabelecimentos"><h4 className="mb-2 text-label font-semibold text-fg">Estabelecimentos</h4><BlocoLivre contabil={!!tela.contabil} valor={x.estabelecimentos} /></section>
       </div>
     </BlocoRecolhivel>
   </div>;
@@ -192,6 +197,7 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
 
 /** Aba Demonstrativo (§11.3.1 e 11.3.2): a lista é leve; o demonstrativo, pesado. */
 export async function DemonstrativoContribMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
+  const CAMINHO = tela.contabil ? "/contabil/sped" : "/fiscal/contribuicoes";
   const { contexto } = tela;
   if (!contexto) return null;
   const disponiveis = await competenciasDoDemonstrativo(tela);

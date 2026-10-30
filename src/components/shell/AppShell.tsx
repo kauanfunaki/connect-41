@@ -81,6 +81,7 @@ import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
+import { grupoContabil } from "@/lib/contabil/navegacao";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 import { agruparPorCor, areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
 import { GRUPOS } from "@/lib/aparencia/cores";
@@ -557,12 +558,25 @@ export function AppShell({
                   const sped = menuSped(activeSectorModules);
                   const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
                   const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" icone={<ReceiptText />} abrirPorClique telas={sped.laterais.map((item) => ({
-                    label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
+                    label: item.label, href: (() => { const q = new URLSearchParams(); for (const campo of ["empresa", "competencia"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); } return q.size ? `${item.href}?${q}` : item.href; })(), icon: <ModuleIcon code={item.modulo} />,
                     ativa: areaSpedAtiva(pathname) === item.area,
                   }))}>
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
-                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} icone={<GitBranch />} abrirPorClique telas={[
+                  const hrefContabil = (aba: string, secao: string) => {
+                    const q = new URLSearchParams({ aba, secao, grupo: aba === "contribuicoes" ? "contribuicoes" : secao === "lancamentos" ? "lancamentos" : "depara" });
+                    for (const campo of ["empresa", "mes"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
+                    return "/contabil/sped?" + q;
+                  };
+                  const noContabil = pathname === "/contabil/sped";
+                  const grupoAtualContabil = grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined });
+                  const itemModulo = (m: SectorModule) => m.code === "contabil_sped" ? <PainelDoItem key={m.code} titulo="SPED" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
+                    { label: "De-para", href: hrefContabil("lancamentos", "regras"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "depara" },
+                    { label: "Lançamentos", href: hrefContabil("lancamentos", "lancamentos"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "lancamentos" },
+                    { label: "Gerar SPED Contribuições", href: hrefContabil("contribuicoes", "gerar"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "contribuicoes" },
+                  ]}>
+                    {({ aberto, alternar, painelId }) => <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={noContabil} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
+                  </PainelDoItem> : m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} icone={<GitBranch />} abrirPorClique telas={[
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },

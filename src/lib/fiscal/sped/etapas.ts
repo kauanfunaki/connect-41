@@ -7,7 +7,7 @@
 export const ETAPAS_DO_SPED = [
   { chave: "classificacao", rotulo: "Classificação", modulo: "fiscal_classificacao", resumo: "Destinação e crédito de cada produto de entrada." },
   { chave: "apuracao", rotulo: "Apuração", modulo: "fiscal_icms_ipi", resumo: "Apuração do ICMS, ajustes e livro fiscal." },
-  { chave: "fechamento", rotulo: "Fechamento", modulo: "fiscal_contribuicoes", resumo: "Documentos, faturamento e pendências da competência." },
+  { chave: "fechamento", rotulo: "Fechamento", modulo: "fiscal_fechamento", resumo: "Documentos, faturamento e pendências da competência." },
   { chave: "gerar", rotulo: "Gerar SPED", modulo: "fiscal_operacao", resumo: "Geração no motor, validação e download do arquivo." },
 ] as const;
 

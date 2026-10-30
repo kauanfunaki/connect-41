@@ -9,6 +9,7 @@ import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { ErroDoMotor, FORMATO_DA_CHAVE, type AtorDoMotor } from "@/lib/sped/motor";
 import { abrirMotor, atorDaSessao, estabelecimentosDaRaiz, type MotorDoEscritorio } from "./servidor";
+import { empresaContabilVisivel } from "@/lib/contabil/servidor";
 
 export type ResultadoDoMotor<T = undefined> =
   | { ok: true; mensagem: string; dados?: T }
@@ -66,12 +67,27 @@ export async function prepararEscrita(raiz: string, modulo: string, nivel: Nivel
 
 export const recusado = (p: Preparo | Extract<ResultadoDoMotor, { ok: false }>): p is Extract<ResultadoDoMotor, { ok: false }> => "ok" in p;
 
+export async function contextoContabilPermitido(ctx: AuthContext, empresa: string, raiz: string, nivel: NivelNoModulo = "ver") {
+  if (!z.string().uuid().safeParse(empresa).success || !ctx.tenantId || !await podeNoModulo(ctx, "contabil_sped", nivel)) return false;
+  const c = await empresaContabilVisivel(ctx, empresa);
+  return !!c && c.cnpj.length === 14 && c.cnpj.slice(0, 8) === raiz;
+}
+
+/** Usada somente pelas operações de Contribuições explicitamente adaptadas. */
+export async function prepararEscritaContribuicoes(raiz: string, moduloFiscal: string, nivel: NivelNoModulo, empresa?: string) {
+  if (!empresa) return prepararEscrita(raiz, moduloFiscal, nivel);
+  const ctx = await getAuthContext();
+  if (!await contextoContabilPermitido(ctx, empresa, raiz, nivel)) return recusa("Empresa não encontrada ou ação não permitida.");
+  return prepararEscrita(raiz, "contabil_sped", nivel);
+}
+
 export async function visiveis(ctx: AuthContext, raiz: string) {
   return (await estabelecimentosDaRaiz(ctx.tenantId, raiz)).visiveis;
 }
 
 export function revalidarFiscal() {
   revalidatePath("/fiscal", "layout");
+  revalidatePath("/contabil/sped");
 }
 
 /**

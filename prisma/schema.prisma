@@ -1979,6 +1979,7 @@ model Company {
   contabilRegras           ContabilRegra[]
   contabilContas           ContabilConta[]
   contabilModelo           ContabilModelo?
+  contabilCfopContas       ContabilCfopConta[]
   guias                    Guia[]
   certidoes                Certidao[]
   bankReconciliationRules  BankReconciliationRule[]
@@ -3255,6 +3256,154 @@ enum EvaluationSegment {
 ///
 /// O módulo **não emite** nada: ele reflete o acervo, aceita o que falta e vira
 /// lançamento — como o Omie. Emissão ficou em standby por decisão de 2026-08-21.
+/// Livro fiscal do Connect: o acervo financeiro continua com seus vínculos originais.
+model SpedFiscalRoot {
+  tenantId String @db.VarChar(191)
+  raiz String @db.VarChar(8)
+  revision Int @default(0)
+  updatedAt DateTime @updatedAt
+  @@id([tenantId, raiz])
+  @@map("sped_fiscal_roots")
+}
+
+model SpedFiscalProfile {
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  data Json
+  updatedAt DateTime @updatedAt
+  @@id([tenantId, companyId])
+  @@map("sped_fiscal_profiles")
+}
+
+model SpedFiscalDocument {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  identity String @db.VarChar(160)
+  sha256 String @db.VarChar(64)
+  data Json
+  sourceName String @db.VarChar(255)
+  sourcePath String @db.VarChar(500)
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, identity])
+  @@map("sped_fiscal_documents")
+}
+
+model SpedFiscalItem {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  documentId String @db.VarChar(36)
+  position Int
+  data Json
+  @@unique([tenantId, documentId, position])
+  @@map("sped_fiscal_items")
+}
+
+model SpedFiscalBook {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  documentId String @db.VarChar(36)
+  competence String @db.VarChar(7)
+  direction String @db.VarChar(7)
+  @@unique([tenantId, companyId, documentId])
+  @@index([tenantId, companyId, competence])
+  @@map("sped_fiscal_books")
+}
+
+model SpedFiscalSupport {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  identity String @db.VarChar(160)
+  competence String @db.VarChar(7)
+  data Json
+  updatedBy String @db.VarChar(191)
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, companyId, identity])
+  @@index([tenantId, companyId, competence])
+  @@map("sped_fiscal_support")
+}
+
+model SpedFiscalDecision {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  raiz String @db.VarChar(8)
+  type String @db.VarChar(30)
+  key String @db.VarChar(255)
+  data Json
+  updatedBy String @db.VarChar(191)
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, raiz, type, key])
+  @@map("sped_fiscal_decisions")
+}
+
+model SpedFiscalPeriod {
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  competence String @db.VarChar(7)
+  data Json
+  updatedAt DateTime @updatedAt
+  @@id([tenantId, companyId, competence])
+  @@map("sped_fiscal_periods")
+}
+
+/// Revisões imutáveis. Somente os campos de transporte podem ser atualizados.
+model SpedFiscalCalculation {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  period String @db.VarChar(7)
+  scope String @db.VarChar(12)
+  revision Int
+  data Json
+  createdAt DateTime @default(now())
+  @@unique([tenantId, companyId, period, scope, revision], map: "sped_fiscal_calculations_revision_key")
+  @@map("sped_fiscal_calculations")
+}
+
+model SpedFiscalRevision {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  raiz String @db.VarChar(8)
+  competence String @db.VarChar(7)
+  obligation String @db.VarChar(20)
+  revision Int
+  sha256 String @db.VarChar(64)
+  data Json
+  requestedBy String @db.VarChar(191)
+  requestKey String @db.VarChar(100)
+  remoteUploadId String? @db.VarChar(100)
+  remotePackageId String? @db.VarChar(100)
+  remoteExecutionId Int?
+  createdAt DateTime @default(now())
+  @@unique([tenantId, requestKey])
+  @@index([tenantId, companyId, competence])
+  @@map("sped_fiscal_revisions")
+}
+
+/// Fila retomável: um arquivo por item, aquisição da lease por compare-and-set.
+model SpedFiscalImport {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  sha256 String @db.VarChar(64)
+  name String @db.VarChar(255)
+  path String @db.VarChar(500)
+  state String @default("pendente") @db.VarChar(20)
+  cursor Int @default(0)
+  total Int @default(0)
+  results Json
+  leaseOwner String? @db.VarChar(36)
+  leaseUntil DateTime?
+  createdBy String @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, companyId, sha256])
+  @@index([tenantId, companyId, createdAt])
+  @@map("sped_fiscal_imports")
+}
+
 model FiscalDocument {
   id        String @id @default(uuid())
   tenantId  String
@@ -5047,6 +5196,13 @@ model ContabilRegra {
   /// O complemento do histórico, com os coringas {nf}, {fornecedor}, {data},
   /// {cfop} e {serie}. Vazio usa o padrão, "COMPRAS NF {nf} {fornecedor}".
   historico       String   @default("") @db.VarChar(255)
+  observacao      String   @default("") @db.VarChar(500)
+  dataLancamento  String   @default("") @db.VarChar(10)
+  valor           Decimal? @db.Decimal(15, 2)
+  iniciaLote      String   @default("") @db.VarChar(1)
+  codigoFilial    String   @default("") @db.VarChar(10)
+  centroCustoDebito  String @default("") @db.VarChar(40)
+  centroCustoCredito String @default("") @db.VarChar(40)
   /// Fora da contabilidade: as notas deste par saem contadas, sem lançamento.
   desconsiderar   Boolean  @default(false)
   updatedById     String?
@@ -5058,6 +5214,23 @@ model ContabilRegra {
   @@unique([companyId, cnpjFornecedor, cfop])
   @@index([tenantId, companyId])
   @@map("contabil_regras")
+}
+
+/// Sugestão de débito; só vira regra de fornecedor após confirmação.
+model ContabilCfopConta {
+  id           String @id @default(uuid())
+  tenantId     String
+  companyId    String
+  cfop         String @db.VarChar(4)
+  contaDebito  String @db.VarChar(20)
+  observacao   String @default("") @db.VarChar(500)
+  updatedById  String?
+  updatedAt    DateTime @updatedAt
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, cfop])
+  @@index([tenantId, companyId])
+  @@map("contabil_cfop_contas")
 }
 
 /// O plano de contas da Domínio, carregado por planilha. Substituído inteiro a

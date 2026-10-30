@@ -1,0 +1,11 @@
+import { build } from "esbuild";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { z } from "zod";
+await mkdir(".local/sped-fiscal", { recursive: true });
+await build({ entryPoints: ["src/lib/fiscal/sped/local/contrato.ts"], bundle: true, platform: "node", format: "esm", packages: "external", outfile: ".local/sped-fiscal/contrato.mjs" });
+const { pacoteGeracaoSchema } = await import(pathToFileURL(resolve(".local/sped-fiscal/contrato.mjs")).href);
+await mkdir("docs/contracts", { recursive: true });
+await writeFile("docs/contracts/sped-geracao-connect-v1.schema.json", JSON.stringify(z.toJSONSchema(pacoteGeracaoSchema), null, 2) + "\n");
+console.log("Schema do pacote SPED v1 gerado.");
