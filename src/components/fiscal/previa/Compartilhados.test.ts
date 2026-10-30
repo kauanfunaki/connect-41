@@ -5,7 +5,6 @@ vi.mock("@/app/(app)/fiscal/local-actions", () => ({ agirNoFiscalLocal: vi.fn() 
 import { EstadoFiscal, TabelaFiscal } from "./Compartilhados";
 
 describe("tabelas da prévia fiscal", () => {
-  // Texto à esquerda, valores à direita (26/10/2026); antes tudo centralizado.
   // Centralizada como o resto do app (decisão do Kauan, 30/10/2026): nenhuma
   // classe de alinhamento por coluna; o valor só ganha os algarismos de mesma
   // largura.
