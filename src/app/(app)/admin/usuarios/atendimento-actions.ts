@@ -13,17 +13,19 @@ import { normalizarNomeAtendente } from "@/lib/chatwoot/evaluation";
 //
 // Vínculo manual agente do Chatwoot <-> User — mesmo critério de permissão
 // usado pra vincular contato em /conversas (isFullAccess).
-export async function vincularAgenteChatwoot(agentLinkId: string, userId: string | null): Promise<void> {
+// Devolve `{ error }` quando não grava (30/10/2026): o painel do usuário avisa
+// "Vínculo salvo" e precisa saber quando não salvou.
+export async function vincularAgenteChatwoot(agentLinkId: string, userId: string | null): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !isFullAccess(ctx.role)) return;
+  if (!ctx.tenantId || !isFullAccess(ctx.role)) return { error: "Só o administrador vincula atendentes." };
 
   const prisma = getPrisma();
   const agentLink = await prisma.chatwootAgentLink.findFirst({ where: { id: agentLinkId, tenantId: ctx.tenantId }, select: { id: true } });
-  if (!agentLink) return;
+  if (!agentLink) return { error: "Este atendente não está mais no Chatwoot. Recarregue a página." };
 
   if (userId) {
     const user = await prisma.user.findFirst({ where: { id: userId, tenantId: ctx.tenantId }, select: { id: true } });
-    if (!user) return;
+    if (!user) return { error: "Este usuário não existe mais." };
   }
 
   await prisma.chatwootAgentLink.update({ where: { id: agentLinkId }, data: { linkedUserId: userId } });
