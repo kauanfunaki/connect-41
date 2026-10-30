@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { AppShell } from "./AppShell";
+import { ToastProvider } from "@/components/ui/Toast";
 import { classeDoItem, GrupoNavItem, NavItem, ProvedorDaFaixa } from "./NavLink";
 
 beforeAll(() => vi.stubGlobal("React", React));
@@ -51,7 +52,9 @@ function casco(recolhido: boolean, extra: Partial<Props> = {}): string {
     children: React.createElement("p", null, "conteúdo"),
     ...extra,
   };
-  return renderToStaticMarkup(React.createElement(AppShell, props));
+  // Dentro do `ToastProvider`, como no layout do app: o sino avisa por toast
+  // quando não consegue tirar uma notificação.
+  return renderToStaticMarkup(React.createElement(ToastProvider, null, React.createElement(AppShell, props)));
 }
 
 /** Do `<aside` ao `</aside>`. */

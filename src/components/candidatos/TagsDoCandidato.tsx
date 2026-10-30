@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/Card";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Popover } from "@/components/ui/Popover";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
+import { useToast } from "@/components/ui/Toast";
 
 type Tag = { id: string; name: string; color: string };
 
 type Props = {
   todas: Tag[];
   marcadas: string[];
-  alternar: (tagId: string, marcado: boolean) => Promise<void>;
+  alternar: (tagId: string, marcado: boolean) => Promise<{ error: string } | void>;
   podeEditar: boolean;
 };
 
@@ -27,15 +28,28 @@ export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props
   const [selecionadas, setSelecionadas] = useState(() => new Set(marcadas));
   const [busca, setBusca] = useState("");
   const [, startTransition] = useTransition();
+  const toast = useToast();
 
-  function trocar(tagId: string, marcado: boolean) {
+  function aplicar(tagId: string, marcado: boolean) {
     setSelecionadas((antes) => {
       const depois = new Set(antes);
       if (marcado) depois.add(tagId);
       else depois.delete(tagId);
       return depois;
     });
-    startTransition(() => alternar(tagId, marcado));
+  }
+
+  // Marca na hora e desfaz se o servidor recusar — antes a tag ficava marcada
+  // na tela sem ter sido gravada.
+  function trocar(tagId: string, marcado: boolean) {
+    aplicar(tagId, marcado);
+    startTransition(async () => {
+      const r = await alternar(tagId, marcado);
+      if (r && "error" in r) {
+        aplicar(tagId, !marcado);
+        toast.error(r.error);
+      }
+    });
   }
 
   const termo = busca.trim().toLowerCase();

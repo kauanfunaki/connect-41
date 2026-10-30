@@ -11,7 +11,7 @@ type Props = {
   descricao?: string;
   /** "Remover" nos registros da ficha; "Excluir" na turma, que leva os participantes junto. */
   rotulo?: string;
-  onRemover: () => Promise<void>;
+  onRemover: () => Promise<{ error: string } | null | void>;
   /** `sm` (28px) na linha de tabela, ao lado de um botão `xs` — a turma do treinamento. */
   size?: "sm" | "md";
 };

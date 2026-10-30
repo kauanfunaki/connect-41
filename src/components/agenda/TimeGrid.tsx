@@ -212,10 +212,14 @@ export function TimeGrid({ days, meetings, actions, onSlotClick, prazos, setores
                 }
                 // Depois da meia-noite, o horário é do dia seguinte ao da coluna.
                 const diaDoHorario = expediente.inicio + i >= 24 ? addDaysToKey(d.dateKey, 1) : d.dateKey;
+                // Fora do Tab (auditoria de UX, 30/10/2026): um horário por hora
+                // por dia eram 70 a 100 paradas antes de chegar às reuniões, e
+                // o "Nova reunião" do topo já cria pelo teclado.
                 return (
                   <button
                     key={h}
                     type="button"
+                    tabIndex={-1}
                     onClick={() => onSlotClick(slotDaLinha(expediente, d.dateKey, i))}
                     className={`w-full border-b ${borda} hover:bg-surface-hover transition-colors block last:border-b-0`}
                     aria-label={`Criar reunião ${weekdayLabel(diaDoHorario)} ${dayNumber(diaDoHorario)} às ${rotuloDaHora(h)}`}

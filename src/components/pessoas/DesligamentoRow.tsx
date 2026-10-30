@@ -27,7 +27,7 @@ type Props = {
   conferenciaHref: string;
   updateAction: (prev: TerminationState, form: FormData) => Promise<TerminationState>;
   /** Só para o administrador (13/10/2026): sem ela, o "⋯" de remover não aparece. */
-  removeAction?: () => Promise<void>;
+  removeAction?: () => Promise<{ error: string } | void>;
   canManage: boolean;
 };
 

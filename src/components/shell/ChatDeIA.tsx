@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { Aviso } from "@/components/ui/Aviso";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -771,7 +772,10 @@ export function ChatDeIA({
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto px-4 pt-2 pb-4 flex flex-col gap-5">
+            {/* Região viva (auditoria de UX, 30/10/2026): a resposta, o "pensando"
+                e o erro chegam aqui sem o foco sair do campo, e o leitor de tela
+                não lia nada disso. */}
+            <div role="log" aria-live="polite" aria-label="Conversa com a Ceci" className="flex-1 overflow-y-auto px-4 pt-2 pb-4 flex flex-col gap-5">
               {/* As boas-vindas desta entrada (13/10/2026): a primeira mensagem da
                   conversa nova, com até três sugestões do setor. Texto local —
                   não vai ao modelo nem fica gravado. */}
@@ -919,7 +923,7 @@ export function ChatDeIA({
                   {passo}
                 </p>
               )}
-              {erro && <p className="text-fs-2 text-danger">{erro}</p>}
+              {erro && <Aviso>{erro}</Aviso>}
               <div ref={fimRef} />
             </div>
   

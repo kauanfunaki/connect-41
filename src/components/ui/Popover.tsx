@@ -27,22 +27,60 @@ type Props = {
 export function Popover({ trigger, children, align = "left", width = 240, "aria-label": ariaLabel }: Props) {
   const [open, setOpen] = useState(false);
   const ancoraRef = useRef<HTMLSpanElement>(null);
+  const conteudoRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
+  // O Esc vem pela pilha de camadas do `PainelFlutuante` (ver `camadas.ts`).
 
+  // Teclado (auditoria de UX, 30/10/2026): o painel mora no fim do `body`, então
+  // sem isto o Tab saía do "⋯" para a página e as ações dele — Inativar,
+  // Excluir, que pela regra de 30/09 só existem ali — ficavam fora de alcance.
+  // Ao abrir, o foco entra no primeiro item; ao fechar, volta para o botão que
+  // abriu, a não ser que a pessoa já tenha ido para outro lugar (clicou num
+  // campo) ou que uma janela aberta pelo item tenha levado o foco.
   useEffect(() => {
     if (!open) return;
-    function tecla(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      // Marca o Esc como usado: quem está embaixo (o chat de IA, que escuta na
-      // janela) não fecha junto. Conferir o painel na tela não serve — o React
-      // já o tirou quando o evento chega lá.
-      e.preventDefault();
-      setOpen(false);
-    }
-    document.addEventListener("keydown", tecla);
-    return () => document.removeEventListener("keydown", tecla);
+    const conteudo = conteudoRef.current;
+    const gatilho = ancoraRef.current?.querySelector<HTMLElement>(FOCAVEL) ?? null;
+    const quadro = requestAnimationFrame(() => {
+      // Quem já pôs o foco num campo (o funil das colunas, com `autoFocus`) fica.
+      if (conteudo?.contains(document.activeElement)) return;
+      focaveis(conteudo)[0]?.focus({ preventScroll: true });
+    });
+    return () => {
+      cancelAnimationFrame(quadro);
+      const ativo = document.activeElement;
+      if (!ativo || ativo === document.body || conteudo?.contains(ativo)) gatilho?.focus({ preventScroll: true });
+    };
   }, [open]);
+
+  function noTeclado(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.defaultPrevented) return;
+    const itens = focaveis(conteudoRef.current);
+    if (itens.length === 0) return;
+    const atual = itens.indexOf(document.activeElement as HTMLElement);
+    // Tab passando da ponta fecha e devolve o foco ao gatilho, como num menu do
+    // sistema — seguir para o `body` largaria a pessoa no fim da página.
+    if (e.key === "Tab") {
+      const saindo = e.shiftKey ? atual <= 0 : atual === itens.length - 1;
+      if (saindo) {
+        e.preventDefault();
+        setOpen(false);
+      }
+      return;
+    }
+    // Setas andam entre os itens; dentro de campo de texto elas são do campo.
+    const alvo = e.target as HTMLElement;
+    if (alvo.closest("input, textarea, select, [contenteditable='true']")) return;
+    const passo = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
+    if (passo !== 0) {
+      e.preventDefault();
+      itens[(atual + passo + itens.length) % itens.length].focus();
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      itens[e.key === "Home" ? 0 : itens.length - 1].focus();
+    }
+  }
 
   return (
     <>
@@ -58,10 +96,20 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
         aria-label={ariaLabel}
         className="p-3 text-dropdown"
       >
-        {typeof children === "function" ? children({ close }) : children}
+        <div ref={conteudoRef} onKeyDown={noTeclado}>
+          {typeof children === "function" ? children({ close }) : children}
+        </div>
       </PainelFlutuante>
     </>
   );
+}
+
+const FOCAVEL =
+  "a[href], button:not([disabled]), input:not([disabled]):not([type='hidden']), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex^='-'])";
+
+function focaveis(raiz: HTMLElement | null): HTMLElement[] {
+  if (!raiz) return [];
+  return Array.from(raiz.querySelectorAll<HTMLElement>(FOCAVEL)).filter((el) => el.getClientRects().length > 0);
 }
 
 /**

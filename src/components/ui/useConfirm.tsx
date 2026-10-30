@@ -18,12 +18,19 @@ type ConfirmOptions = {
 //   const { dialog, requestConfirm } = useConfirm();
 //   <button onClick={() => requestConfirm({ title: "Remover X?", destructive: true }, action)} />
 //   {dialog}
+//
+// A ação pode devolver `{ error }` (30/10/2026): a janela fica aberta e mostra o
+// motivo. Antes só exceção virava erro, e a Server Action que recusava com um
+// `return` vazio (sem permissão, setor inativo) fechava a janela como se
+// tivesse feito.
+type ConfirmAction = () => Promise<{ error: string } | null | void>;
+
 export function useConfirm() {
-  const [pendingConfirm, setPendingConfirm] = useState<{ options: ConfirmOptions; action: () => Promise<void> } | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<{ options: ConfirmOptions; action: ConfirmAction } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function requestConfirm(options: ConfirmOptions, action: () => Promise<void>) {
+  function requestConfirm(options: ConfirmOptions, action: ConfirmAction) {
     setError(null);
     setPendingConfirm({ options, action });
   }
@@ -33,7 +40,11 @@ export function useConfirm() {
     const { action } = pendingConfirm;
     startTransition(async () => {
       try {
-        await action();
+        const result = await action();
+        if (result && "error" in result) {
+          setError(result.error);
+          return;
+        }
         setPendingConfirm(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Erro ao processar. Tente novamente.");

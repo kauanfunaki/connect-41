@@ -61,7 +61,7 @@ export async function PapeisDosAtendentes({ tenantId, canEdit }: { tenantId: str
           canEdit={canEdit}
           action={async (ligado: boolean) => {
             "use server";
-            await definirPapelDoRemetente(nome, { isReception: ligado });
+            return definirPapelDoRemetente(nome, { isReception: ligado });
           }}
         />
       ),
@@ -74,7 +74,7 @@ export async function PapeisDosAtendentes({ tenantId, canEdit }: { tenantId: str
           canEdit={canEdit}
           action={async (ligado: boolean) => {
             "use server";
-            await definirPapelDoRemetente(nome, { isAutomation: ligado });
+            return definirPapelDoRemetente(nome, { isAutomation: ligado });
           }}
         />
       ),

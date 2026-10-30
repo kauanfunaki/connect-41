@@ -111,7 +111,14 @@ export function ProfileMenu({ name, roleLabel, photoUrl, tenants, currentTenantI
             </div>
           )}
 
-          <DropdownItem onClick={() => router.push("/configuracoes")}>
+          {/* Fecha antes de navegar: o casco não desmonta na troca de tela, e o
+              menu ficava aberto por cima da tela nova. */}
+          <DropdownItem
+            onClick={() => {
+              close();
+              router.push("/configuracoes");
+            }}
+          >
             <span className="flex items-center gap-2.5">
               <UserRound size={15} className="flex-shrink-0 text-fg-muted" />
               Sua conta

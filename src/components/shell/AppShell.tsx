@@ -78,6 +78,7 @@ import { agruparPorCor, areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } 
 import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
+import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -345,6 +346,7 @@ export function AppShell({
       className="flex h-dvh overflow-hidden bg-canvas"
       data-grupo={grupoDaTela ?? undefined}
     >
+      <PularParaOConteudo />
       {/* Backdrop — só em telas pequenas, quando a sidebar vira drawer sobreposto. */}
       {mobileOpen && (
         <div
@@ -818,7 +820,9 @@ export function AppShell({
           dentro e esticava a página: no detalhe do processo do portal, a tela
           inteira rolava e o casco subia junto (relato do Kauan, 08/10/2026). */}
         <main
-          className="c41-cor-da-area scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto"
+          id="conteudo"
+          tabIndex={-1}
+          className="c41-cor-da-area scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto focus-visible:shadow-none"
           onScroll={(e) => setRolou(e.currentTarget.scrollTop > 0)}
         >
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K
