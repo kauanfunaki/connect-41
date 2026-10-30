@@ -56,6 +56,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
+  "company.ie_situacao": e("registrou a situação da inscrição estadual da empresa"),
   "company.delete": x("excluiu a empresa"),
   "person.create": c("criou a pessoa"),
   "person.update": e("editou a pessoa"),

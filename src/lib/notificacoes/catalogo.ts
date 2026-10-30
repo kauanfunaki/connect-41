@@ -127,6 +127,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   LICENCA_VARREDURA: a("processo", "info", "Varredura de licenças"),
   // A rotina das certidões achou uma positiva (28/10/2026).
   CERTIDAO_POSITIVA: a("documento", "danger", "Certidão positiva"),
+  // A IE mudou de situação no CICAD (robô do Societário, 30/10/2026).
+  IE_SITUACAO_MUDOU: a("alerta", "danger", "Inscrição estadual mudou"),
   SOLICITACAO_PRAZO: a("prazo", "danger", "Prazo da solicitação"),
 };
 
