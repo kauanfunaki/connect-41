@@ -28,7 +28,7 @@ type Props = {
   stages: StageOption[];
   items: Item[];
   canAct: boolean;
-  moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
   reorderAction: (itemId: string, direction: "up" | "down") => Promise<void>;
   renameStageAction: (stageId: string, name: string) => Promise<void>;
   createTaskAction: (stageId: string, title: string) => Promise<void>;

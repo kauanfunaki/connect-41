@@ -108,6 +108,12 @@ export type DocumentoFiscalExtraido = {
    * emissão — a mesma regra do motor, para as duas origens concordarem.
    */
   duplicatas?: DuplicataDaNota[] | null;
+  /**
+   * Os CFOPs da NF-e (`det/prod/CFOP`) e do CT-e (`ide/CFOP`), em ordem e sem
+   * repetição (29/10/2026). É o que o de-para contábil procura junto do
+   * fornecedor. NFS-e não tem CFOP: fica de fora (`undefined`).
+   */
+  cfops?: string[];
 };
 
 export type MotivoRecusa =
@@ -671,6 +677,7 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
       competenciaDeclarada: null,
       cancelada: false,
       duplicatas: duplicatasDaNfe(inf, ide),
+      cfops: cfopsUnicos(filhos(inf, "det").map((d) => texto(caminho(d, "prod", "CFOP")))),
     },
   };
 }
@@ -719,6 +726,12 @@ function lerCte(cte: unknown): ResultadoLeitura {
       retencoesPorTributo: null,
       competenciaDeclarada: null,
       cancelada: false,
+      cfops: cfopsUnicos([texto(filho(ide, "CFOP"))]),
     },
   };
+}
+
+/** Os CFOPs de quatro dígitos, em ordem e sem repetição. */
+function cfopsUnicos(lidos: (string | null)[]): string[] {
+  return [...new Set(lidos.filter((c): c is string => !!c && /^\d{4}$/.test(c)))].sort();
 }

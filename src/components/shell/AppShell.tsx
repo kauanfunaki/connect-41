@@ -7,22 +7,13 @@ import {
   ChevronRight,
   Home,
   ContactRound,
-  Columns3,
   ArrowRightLeft,
   CalendarDays,
   FolderOpen,
   Inbox,
   Settings,
-  Calculator,
   ReceiptText,
-  UserRoundCog,
-  FileSignature,
   FolderKanban,
-  WalletCards,
-  BriefcaseBusiness,
-  UserSearch,
-  ClipboardList,
-  ShieldCheck,
   LayoutGrid,
   Bot,
   Globe,
@@ -30,7 +21,6 @@ import {
   FolderGit2,
   CalendarCheck,
   ChevronDown,
-  ClipboardCheck,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -79,34 +69,21 @@ import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { IconButton } from "@/components/ui/IconButton";
 import { TrocaDeContexto, type FocoDaTroca } from "@/components/shell/TrocaDeContexto";
+import { SECTOR_ICONS } from "@/components/shell/iconesDosSetores";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
+import { grupoContabil } from "@/lib/contabil/navegacao";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 import { agruparPorCor, areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } from "@/lib/aparencia/gruposDaEquipe";
 import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
+import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
 type SectorModule = { code: string; label: string; href: string };
-
-// Ícone linear por setor (identidade visual; cor do setor continua vindo do dot).
-const SECTOR_ICONS: Record<string, React.ReactNode> = {
-  tech: <Columns3 size={16} />,
-  dp: <UserRoundCog size={16} />,
-  recrutamento: <UserSearch size={16} />,
-  societario: <FileSignature size={16} />,
-  financeiro: <WalletCards size={16} />,
-  fiscal: <ReceiptText size={16} />,
-  contabil: <Calculator size={16} />,
-  bpo: <ClipboardList size={16} />,
-  comercial: <BriefcaseBusiness size={16} />,
-  corretora: <ShieldCheck size={16} />,
-  gestao: <LayoutGrid size={16} />,
-  controladoria: <ClipboardCheck size={16} />,
-};
 
 // O que o painel ao lado da sidebar mostra para os itens que têm telas dentro
 // (pedido de 30/09, referência do HubStrom).
@@ -370,6 +347,7 @@ export function AppShell({
       className="flex h-dvh overflow-hidden bg-canvas"
       data-grupo={grupoDaTela ?? undefined}
     >
+      <PularParaOConteudo />
       {/* Backdrop — só em telas pequenas, quando a sidebar vira drawer sobreposto. */}
       {mobileOpen && (
         <div
@@ -566,12 +544,25 @@ export function AppShell({
                   const sped = menuSped(activeSectorModules);
                   const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
                   const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" icone={<ReceiptText />} abrirPorClique telas={sped.laterais.map((item) => ({
-                    label: item.label, href: item.href, icon: <ModuleIcon code={item.modulo} />,
-                    ativa: areaSpedAtiva(pathname) === (item.modulo === "fiscal_classificacao" ? "SPED" : item.label),
+                    label: item.label, href: (() => { const q = new URLSearchParams(); for (const campo of ["empresa", "competencia"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); } return q.size ? `${item.href}?${q}` : item.href; })(), icon: <ModuleIcon code={item.modulo} />,
+                    ativa: areaSpedAtiva(pathname) === item.area,
                   }))}>
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
-                  const itemModulo = (m: SectorModule) => m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} icone={<GitBranch />} abrirPorClique telas={[
+                  const hrefContabil = (aba: string, secao: string) => {
+                    const q = new URLSearchParams({ aba, secao, grupo: aba === "contribuicoes" ? "contribuicoes" : secao === "lancamentos" ? "lancamentos" : "depara" });
+                    for (const campo of ["empresa", "mes"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
+                    return "/contabil/sped?" + q;
+                  };
+                  const noContabil = pathname === "/contabil/sped";
+                  const grupoAtualContabil = grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined });
+                  const itemModulo = (m: SectorModule) => m.code === "contabil_sped" ? <PainelDoItem key={m.code} titulo="SPED" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
+                    { label: "De-para", href: hrefContabil("lancamentos", "regras"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "depara" },
+                    { label: "Lançamentos", href: hrefContabil("lancamentos", "lancamentos"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "lancamentos" },
+                    { label: "Gerar SPED Contribuições", href: hrefContabil("contribuicoes", "gerar"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "contribuicoes" },
+                  ]}>
+                    {({ aberto, alternar, painelId }) => <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={noContabil} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
+                  </PainelDoItem> : m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} icone={<GitBranch />} abrirPorClique telas={[
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
@@ -843,7 +834,9 @@ export function AppShell({
           dentro e esticava a página: no detalhe do processo do portal, a tela
           inteira rolava e o casco subia junto (relato do Kauan, 08/10/2026). */}
         <main
-          className="c41-cor-da-area scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto"
+          id="conteudo"
+          tabIndex={-1}
+          className="c41-cor-da-area scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto focus-visible:shadow-none"
           onScroll={(e) => setRolou(e.currentTarget.scrollTop > 0)}
         >
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K

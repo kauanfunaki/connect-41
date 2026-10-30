@@ -338,23 +338,26 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
   return null;
 }
 
+// Devolve `{ error }` quando não move (auditoria de UX, 30/10/2026): o quadro
+// põe o cartão na coluna nova na hora e precisa saber quando devolvê-lo e
+// avisar — antes a recusa e a falha eram silenciosas.
 export async function moverItem(
   itemId: string,
   newStageId: string
-): Promise<void> {
+): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
-  if (!tenantId || !userId) return;
+  if (!tenantId || !userId) return { error: "Sua sessão expirou. Entre de novo para mover a tarefa." };
 
   const prisma = getPrisma();
 
   try {
     const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
-    if (!item) return;
+    if (!item) return { error: "Esta tarefa não existe mais." };
     if (item.stageId === newStageId) return; // reordenar dentro da mesma coluna — sem mudança de estágio, não registra atividade
 
     const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
-    if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+    if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return { error: "Você não pode mover tarefas deste quadro." };
 
     const [fromStage, toStage] = await Promise.all([
       prisma.pipelineStage.findUnique({ where: { id: item.stageId } }),
@@ -382,6 +385,7 @@ export async function moverItem(
     revalidatePath(`${base}/itens/${itemId}`);
   } catch (err) {
     console.error("[moverItem]", err);
+    return { error: "Não foi possível mover a tarefa. Tente de novo." };
   }
 }
 

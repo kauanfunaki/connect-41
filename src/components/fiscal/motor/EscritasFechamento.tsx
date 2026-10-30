@@ -1,4 +1,5 @@
 "use client";
+import { useEmpresaContabil } from "@/components/contabil/ContextoContribuicoes";
 
 // As escritas do Fechamento de PIS e COFINS (API-CONNECT §13.4 a §13.7 e §14.3).
 
@@ -40,6 +41,7 @@ export function AcoesDoPagamento({ raiz, chave: alvo, decisao, falta, correcao, 
   originais: Record<CampoCorrigivel, string>;
   permissao: PermissaoDeEscrita;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const [chave, , depoisDe] = useChaveDeIdempotencia();
   const [pendente, startTransition] = useTransition();
@@ -47,7 +49,7 @@ export function AcoesDoPagamento({ raiz, chave: alvo, decisao, falta, correcao, 
   const [aberto, setAberto] = useState<"descartar" | "corrigir" | null>(null);
   if (!permissao.visivel) return null;
   const decidir = (d: "aceito" | "descartado" | "", motivo = "") => new Promise<boolean>((fim) => startTransition(async () => {
-    const r = await decidirPagamentoNoMotor({ raiz, ...alvo, decisao: d, motivo, chave });
+    const r = await decidirPagamentoNoMotor({ raiz, empresaContabil, ...alvo, decisao: d, motivo, chave });
     depoisDe(r);
     setResultado({ ok: r.ok, mensagem: r.mensagem });
     if (r.ok) router.refresh();
@@ -94,6 +96,7 @@ function Corrigir({ raiz, alvo, inicial, originais, falta, fechar }: {
   falta: string | null;
   fechar: (r?: Resultado) => void;
 }) {
+  const empresaContabil = useEmpresaContabil();
   const [chave, , depoisDe] = useChaveDeIdempotencia();
   const [campos, setCampos] = useState(inicial);
   const [motivo, setMotivo] = useState("");
@@ -105,7 +108,7 @@ function Corrigir({ raiz, alvo, inicial, originais, falta, fechar }: {
     const corpo = camposDaCorrecao(inicial, campos);
     if ("erro" in corpo) { setErro(corpo.erro as string); return; }
     if (Object.keys(corpo).length === 0) { setErro("Nenhum campo mudou."); return; }
-    const r = await corrigirPagamentoNoMotor({ raiz, ...alvo, ...corpo, motivo, ...(aceitar ? { decisao: "aceito" } : {}), chave });
+    const r = await corrigirPagamentoNoMotor({ raiz, empresaContabil, ...alvo, ...corpo, motivo, ...(aceitar ? { decisao: "aceito" } : {}), chave });
     depoisDe(r);
     // O aceite recusado com a correção gravada fecha o diálogo: o que foi gravado tem de aparecer na tela.
     if (r.ok || r.detalhe?.correcaoGravada) { fechar({ ok: r.ok, mensagem: r.mensagem }); return; }
@@ -148,6 +151,7 @@ const TEXTO_DO_CONTRATO = [
  * resposta aos pagamentos a conferir do fornecedor e devolve a conta.
  */
 export function InformarContrato({ raiz, fornecedor, permissao }: { raiz: string; fornecedor: string; permissao: PermissaoDeEscrita }) {
+  const empresaContabil = useEmpresaContabil();
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [chave, , depoisDe] = useChaveDeIdempotencia();
@@ -160,7 +164,7 @@ export function InformarContrato({ raiz, fornecedor, permissao }: { raiz: string
   const ressalva = dados.aprovado_fora_da_regra === "S" || dados.so_contabil === "S";
   const enviar = () => startTransition(async () => {
     const corpo = { fornecedor, ...Object.fromEntries(Object.entries(dados).filter(([, v]) => v !== "")) } as CorpoDoContrato;
-    const r = await informarContratoNoMotor({ raiz, ...corpo, chave });
+    const r = await informarContratoNoMotor({ raiz, empresaContabil, ...corpo, chave });
     depoisDe(r);
     if (!r.ok) { setErro(r.mensagem); setCampos(r.campos ?? {}); return; }
     setAberto(false);
@@ -194,7 +198,8 @@ export function InformarContrato({ raiz, fornecedor, permissao }: { raiz: string
  * "Continuar" retoma de onde parou.
  */
 export function ApurarCte({ raiz, ids, tela, permissao }: { raiz: string; ids: number[]; tela: "contribuicoes" | "conferencia"; permissao: PermissaoDeEscrita }) {
-  const executar = useCallback((id: number, chave: string) => apurarCteNoMotor({ raiz, id, tela, chave }), [raiz, tela]);
+  const empresaContabil = useEmpresaContabil();
+  const executar = useCallback((id: number, chave: string) => apurarCteNoMotor({ raiz, empresaContabil, id, tela, chave }), [raiz, tela, empresaContabil]);
   const rotulo = useCallback((id: number) => `#${id}`, []);
   const laco = useLacoPesado(executar, rotulo);
   if (!permissao.visivel || ids.length === 0) return null;

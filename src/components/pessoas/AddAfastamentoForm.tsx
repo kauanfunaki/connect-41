@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useEnvioQueGuardaNoErro } from "@/components/ui/useEnvioQueGuardaNoErro";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import type { AbsenceState } from "@/app/(app)/pessoas/[id]/afastamentos/actions";
 import { AbsenceType } from "@/generated/prisma/enums";
@@ -27,12 +28,13 @@ type Props = {
 };
 
 export function AddAfastamentoForm({ action, canEditMedical }: Props) {
-  const [state, formAction, isPending] = useActionState(action, null);
+  // Pelo `onSubmit`: um erro do servidor não apaga o que já foi digitado.
+  const [state, enviar, isPending] = useEnvioQueGuardaNoErro(action);
 
   // Revisão de alinhamento (30/09): datas e dias na largura do que cabe
   // neles, e o botão alinhado ao campo do lado.
   return (
-    <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+    <form onSubmit={enviar} className="border-t border-border pt-5 mt-2 space-y-4">
       {/* O bloco do "novo" com nome, acima dos campos: vinha logo abaixo do
           último registro, separado só pelo fio (escolha 5A do Kauan, 08/10/2026). */}
       <h3 className="c41-rotulo">Novo afastamento</h3>
@@ -79,7 +81,7 @@ export function AddAfastamentoForm({ action, canEditMedical }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso>{state.error}</Aviso>}
     </form>
   );
 }

@@ -9,12 +9,12 @@ vi.mock("@/lib/fiscal/motor/permissoes", () => ({ permissoesDeDecisao: async () 
 vi.mock("@/components/fiscal/motor/CascoDoMotor", () => ({ CascoDoMotor: () => null, SemFonteNoMotor: () => null }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/components/fiscal/previa/FiscalPagina", () => ({ FiscalPagina: () => null }));
-import Conferencia from "./conferencia/page";
-import Configuracoes from "./configuracoes/page";
-import Documentos from "./documentos/page";
-import Operacao from "./operacao/page";
-import Classificacao from "./classificacao/page";
-import Contribuicoes from "./contribuicoes/page";
+import Conferencia from "./(legado)/conferencia/page";
+import Configuracoes from "./(legado)/configuracoes/page";
+import Documentos from "./(legado)/documentos/page";
+import Operacao from "./(legado)/operacao/page";
+import Classificacao from "./(legado)/classificacao/page";
+import Contribuicoes from "./(legado)/contribuicoes/page";
 
 beforeEach(() => {
   vi.clearAllMocks();

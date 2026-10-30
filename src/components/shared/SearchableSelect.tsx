@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Search, X, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -143,6 +143,10 @@ export function SearchableSelect({
   const [ativa, setAtiva] = useState(0);
   const caixaRef = useRef<HTMLDivElement>(null);
   const listaRef = useRef<HTMLUListElement>(null);
+  const gatilhoRef = useRef<HTMLButtonElement>(null);
+  const idBase = useId();
+  const idDaLista = `${idBase}lista`;
+  const idDaOpcao = (indice: number) => `${idBase}op${indice}`;
 
   const selecionada = useMemo(() => options.find((o) => o.value === valor), [options, valor]);
 
@@ -189,10 +193,18 @@ export function SearchableSelect({
     setAberto(true);
   }
 
+  // Fechar volta o foco ao campo (auditoria de UX, 30/10/2026): a busca, onde ele
+  // estava, some com a lista, e o foco caía no `body` — o próximo Tab recomeçava
+  // do topo da página.
+  function fechar() {
+    setAberto(false);
+    gatilhoRef.current?.focus();
+  }
+
   function escolher(v: string) {
     setValor(v);
     setQuery("");
-    setAberto(false);
+    fechar();
     if (v && lembrarRecentes) gravarRecente(lembrarRecentes, v);
     onChange?.(v);
   }
@@ -209,21 +221,28 @@ export function SearchableSelect({
       const o = navegaveis[ativa];
       if (o) escolher(o.value);
     } else if (e.key === "Escape") {
+      // O `preventDefault` avisa a pilha de camadas: dentro de um modal, este Esc
+      // fecha só a lista.
       e.preventDefault();
+      fechar();
+    } else if (e.key === "Tab") {
       setAberto(false);
     }
   }
 
   const texto = selecionada ? selecionada.label : textoSemValor ?? vazioLabel ?? placeholder;
+  const limpavel = Boolean(selecionada && vazioLabel);
   const tamanhoDoAvatar = compact ? 18 : 20;
 
   function linha(o: Opcao, indice: number) {
     const escolhida = o.value === valor;
     return (
-      <li key={`${indice}-${o.value}`}>
+      <li key={`${indice}-${o.value}`} role="none">
         <button
           type="button"
           role="option"
+          id={idDaOpcao(indice)}
+          tabIndex={-1}
           aria-selected={escolhida}
           data-indice={indice}
           onClick={() => escolher(o.value)}
@@ -254,6 +273,7 @@ export function SearchableSelect({
       <input type="hidden" name={name} value={valor} />
 
       <Button
+        ref={gatilhoRef}
         variant="secondary"
         size={compact ? "sm" : "md"}
         // `!`: a base do `Button` centraliza, põe negrito e tem fonte e recuo de
@@ -261,7 +281,7 @@ export function SearchableSelect({
         // esquerda, peso normal, a fonte do campo e a seta na ponta.
         className={`w-full flex justify-between! font-normal! px-3! gap-2 bg-input-bg text-left ${
           compact ? "text-ui!" : "text-input!"
-        } hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40`}
+        } ${limpavel ? "pr-12!" : ""} hover:border-border-strong focus:outline-none focus:ring-2 focus:ring-brand/40`}
         id={id}
         onClick={() => (aberto ? setAberto(false) : abrir())}
         aria-expanded={aberto}
@@ -275,31 +295,22 @@ export function SearchableSelect({
           )}
           <span className={`truncate ${selecionada ? "text-fg" : "text-fg-muted"}`}>{texto}</span>
         </span>
-        <span className="flex items-center gap-1 shrink-0">
-          {selecionada && vazioLabel && (
-            <span
-              role="button"
-              tabIndex={0}
-              aria-label="Limpar seleção"
-              onClick={(e) => {
-                e.stopPropagation();
-                escolher("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  escolher("");
-                }
-              }}
-              className="p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-2"
-            >
-              <X size={13} />
-            </span>
-          )}
-          <ChevronDown size={14} className="text-fg-muted" />
-        </span>
+        <ChevronDown size={14} className="shrink-0 text-fg-muted" />
       </Button>
+      {/* O "Limpar" fica ao lado do campo, e não dentro do botão dele: controle
+          dentro de controle (um `span role=button` no `<button>`) não tem
+          comportamento definido no HTML e o leitor de tela o lia como parte do
+          nome do campo (auditoria de UX, 30/10/2026). */}
+      {limpavel && (
+        <button
+          type="button"
+          aria-label="Limpar seleção"
+          onClick={() => escolher("")}
+          className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-fg-muted hover:text-fg hover:bg-surface-2"
+        >
+          <X size={13} />
+        </button>
+      )}
 
       {aberto && (
         <div className="c41-surgir absolute z-30 mt-1 w-full min-w-[280px] rounded-lg border border-border-strong bg-surface-elevated shadow-lg">
@@ -318,13 +329,24 @@ export function SearchableSelect({
               onKeyDown={noTeclado}
               placeholder={placeholder}
               aria-label={placeholder}
+              // Combobox de verdade: o foco fica na busca e o leitor de tela
+              // anuncia a opção que as setas destacam.
+              role="combobox"
+              aria-expanded
+              aria-controls={idDaLista}
+              aria-autocomplete="list"
+              aria-activedescendant={navegaveis[ativa] ? idDaOpcao(ativa) : undefined}
             />
           </div>
-          <ul ref={listaRef} role="listbox" className="scroll-y max-h-72 overflow-y-auto py-1">
+          <ul ref={listaRef} id={idDaLista} role="listbox" className="scroll-y max-h-72 overflow-y-auto py-1">
             {vazioLabel && (
-              <li>
+              <li role="none">
                 <button
                   type="button"
+                  role="option"
+                  id={idDaOpcao(0)}
+                  tabIndex={-1}
+                  aria-selected={valor === ""}
                   data-indice={0}
                   onClick={() => escolher("")}
                   onMouseEnter={() => setAtiva(0)}

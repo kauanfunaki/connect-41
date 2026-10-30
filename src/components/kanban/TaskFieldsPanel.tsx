@@ -16,6 +16,7 @@ import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 import { formatCalendarDate } from "@/lib/format";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { useToast } from "@/components/ui/Toast";
 import type { StageDotType } from "@/components/kanban/StageDot";
 
 type StageOption = { id: string; name: string; type?: StageDotType };
@@ -68,7 +69,7 @@ type Props = {
   itemId: string;
   stages: StageOption[];
   currentStageId: string;
-  moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
 
   dueDate: string | null;
   startDate: string | null;
@@ -108,6 +109,19 @@ export function TaskFieldsPanel({
 }: Props) {
   const [collapseEmpty, setCollapseEmpty] = useState(false);
   const [, startTransition] = useTransition();
+  const toast = useToast();
+
+  // Trocar a situação avisa quando não grava (auditoria de UX, 30/10/2026).
+  function mudarSituacao(stageId: string) {
+    startTransition(async () => {
+      try {
+        const r = await moveAction(itemId, stageId);
+        if (r && "error" in r) toast.error(r.error);
+      } catch {
+        toast.error("Não deu para falar com o servidor. A situação não mudou.");
+      }
+    });
+  }
 
   const currentStage = stages.find((s) => s.id === currentStageId);
   const currentStageName = currentStage?.name ?? "—";
@@ -142,7 +156,7 @@ export function TaskFieldsPanel({
             )}
           >
             {stages.map((s) => (
-              <DropdownItem key={s.id} onClick={() => startTransition(() => moveAction(itemId, s.id))}>
+              <DropdownItem key={s.id} onClick={() => mudarSituacao(s.id)}>
                 <span className="flex items-center justify-between gap-2">
                   {s.name}
                   {currentStageId === s.id && <Check size={14} className="text-brand flex-shrink-0" />}

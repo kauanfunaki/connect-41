@@ -31,7 +31,8 @@ import type { Stage } from "@/lib/recruitmentFunnel";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { excluirVaga, encerrarVaga, reabrirVaga } from "../actions";
-import { moverEtapaCandidatura, encerrarCandidatura } from "./actions";
+import { moverEtapaCandidatura, encerrarCandidatura, desfazerContratacao } from "./actions";
+import { travaDoDesfazer } from "@/lib/recrutamento/desfazerContratacao";
 import { podeAgirNaVaga, ehCoordenadorDoRecrutamento, SETOR_RECRUTAMENTO } from "@/lib/recrutamento/acessoVagas";
 import { AcessoDosRecrutadores } from "@/components/vagas/AcessoDosRecrutadores";
 import { Selo } from "@/components/ui/Selo";
@@ -58,7 +59,7 @@ export default async function VagaPage({
       candidaturas: {
         orderBy: { createdAt: "desc" },
         include: {
-          person: { select: { id: true, name: true } },
+          person: { select: { id: true, name: true, type: true, employmentStatus: true, admissionDate: true, currentCompanyId: true } },
           _count: { select: { scorecards: true } },
         },
       },
@@ -130,6 +131,7 @@ export default async function VagaPage({
   const encerrarAction = encerrarVaga.bind(null, id);
   const reabrirAction = reabrirVaga.bind(null, id);
   const moverEtapaAction = moverEtapaCandidatura.bind(null, id);
+  const desfazerContratacaoAction = desfazerContratacao.bind(null, id);
   const encerrarCandidaturaAction = encerrarCandidatura.bind(null, id);
 
   const local = localDaVaga({ workCity: vaga.workCity, workStateCode: vaga.workStateCode, company: vaga.company });
@@ -155,12 +157,33 @@ export default async function VagaPage({
   // Funil: separa candidaturas ativas (colunas do board) das encerradas
   // (reprovado/desistente, faixa embaixo). Os números do topo das colunas usam
   // TODAS (o stage preservado é o que mede quem alcançou cada etapa).
+  // A trava do "Desfazer contratação" de cada contratado (30/10/2026): link de
+  // admissão gerado ou contratação em outra vaga deixam o item desabilitado,
+  // com o motivo. A action confere de novo na hora.
+  const idsDosContratados = vaga.candidaturas.filter((c) => c.status === "CONTRATADO").map((c) => c.person.id);
+  const [comLink, contratadosEmOutraVaga] = idsDosContratados.length
+    ? await Promise.all([
+        prisma.admissaoLink.findMany({ where: { tenantId: ctx.tenantId, personId: { in: idsDosContratados } }, select: { personId: true } }),
+        prisma.candidatura.findMany({ where: { tenantId: ctx.tenantId, personId: { in: idsDosContratados }, status: "CONTRATADO", vagaId: { not: id } }, select: { personId: true } }),
+      ])
+    : [[], []];
+  const pessoasComLink = new Set(comLink.map((l) => l.personId));
   const activeCards: FunnelCard[] = vaga.candidaturas
     .filter((c) => c.status !== "REPROVADO" && c.status !== "DESISTENTE")
     .map((c) => ({
       id: c.id,
       personId: c.person.id,
       personName: c.person.name,
+      travaDoDesfazer:
+        c.status === "CONTRATADO"
+          ? travaDoDesfazer({
+              statusDaCandidatura: c.status,
+              pessoa: c.person,
+              companyIdDaVaga: vaga.companyId,
+              temLinkDeAdmissao: pessoasComLink.has(c.person.id),
+              outrasContratacoes: contratadosEmOutraVaga.filter((o) => o.personId === c.person.id).length,
+            })
+          : undefined,
       origin: c.origin,
       hasResume: c.resumeUrl != null,
       stage: c.stage as Stage,
@@ -304,6 +327,7 @@ export default async function VagaPage({
               canManage={canManage}
               moveAction={moverEtapaAction}
               encerrarAction={encerrarCandidaturaAction}
+              desfazerAction={desfazerContratacaoAction}
             />
             {canManage && (
               <p className="text-fs-1 text-fg-muted mt-2">

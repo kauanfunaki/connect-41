@@ -255,18 +255,25 @@ export async function atualizarDocumento(_prev: ClientDocumentState, form: FormD
  * destinatário nunca se exclui. Mas deixou de ser de qualquer gestor: só quem
  * escreveu o rascunho, ou o administrador.
  */
-export async function excluirDocumento(id: string, companyId: string): Promise<void> {
+export async function excluirDocumento(id: string, companyId: string): Promise<{ error: string } | void> {
+  // Cada recusa diz o motivo (30/10/2026): o `DeleteButton` lia o retorno vazio
+  // como sucesso e mostrava "excluído" sem ter excluído nada.
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || ctx.subscriptionReadOnly || !canWrite(ctx.role)) return;
-  if (!(await assertCompanyInScope(companyId, ctx))) return;
+  if (!ctx.tenantId || !canWrite(ctx.role)) return { error: "Você não tem permissão para excluir documentos." };
+  if (ctx.subscriptionReadOnly) return { error: "A assinatura está em modo somente leitura." };
+  if (!(await assertCompanyInScope(companyId, ctx))) return { error: "Você não tem acesso a esta empresa." };
 
   const prisma = getPrisma();
   const existing = await prisma.clientDocument.findFirst({
     where: { id, tenantId: ctx.tenantId, companyId },
     include: { recipients: { select: { id: true } } },
   });
-  if (!existing || existing.recipients.length > 0) return; // nunca excluir documento já enviado
-  if (existing.createdById !== ctx.userId && !podeExcluir(ctx)) return;
+  if (!existing) return { error: "Este documento já foi excluído." };
+  // Nunca excluir documento já enviado.
+  if (existing.recipients.length > 0) return { error: "Documento já enviado não pode ser excluído: ele é a prova do envio." };
+  if (existing.createdById !== ctx.userId && !podeExcluir(ctx)) {
+    return { error: "Só quem escreveu o rascunho, ou o administrador, pode excluí-lo." };
+  }
 
   await prisma.clientDocument.delete({ where: { id } });
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "clientDocument.delete", entityType: "ClientDocument", entityId: id });

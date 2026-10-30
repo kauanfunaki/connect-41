@@ -2,9 +2,10 @@
 
 import { useTransition } from "react";
 import { Switch } from "@/components/ui/Switch";
+import { useToast } from "@/components/ui/Toast";
 
 type Props = {
-  action: (ligado: boolean) => Promise<void>;
+  action: (ligado: boolean) => Promise<{ error: string } | void>;
   ligado: boolean;
   /** Texto quando ligado — ex. "Recepção", "Automação". */
   rotuloLigado: string;
@@ -30,6 +31,7 @@ export function ToggleAgenteButton({
   canEdit,
 }: Props) {
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   if (!canEdit) {
     return <span className="text-ui text-fg-muted">{ligado ? rotuloLigado : "—"}</span>;
@@ -40,7 +42,14 @@ export function ToggleAgenteButton({
   return (
     <Switch
       checked={ligado}
-      onCheckedChange={(proximo) => startTransition(() => void action(proximo))}
+      onCheckedChange={(proximo) =>
+        startTransition(async () => {
+          // A chave mostra o que está gravado, então quando o servidor recusa
+          // ela não muda — sem o aviso, o clique parecia simplesmente ignorado.
+          const r = await action(proximo);
+          if (r && "error" in r) toast.error(r.error);
+        })
+      }
       disabled={pending}
       rotulo={ligado ? rotuloLigado : rotuloDesligado}
       aria-label={`${rotuloLigado}: ${nome}`}

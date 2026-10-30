@@ -35,13 +35,12 @@ export default function CarreirasSemEmpresaPage() {
 
   // No aviso único das telas públicas (15/10/2026), como o "Vaga não
   // encontrada": eram um título e um texto soltos.
+  // O `<main>` vem da própria `TelaDeAvisoPublica` desde 30/10/2026.
   return (
-    <main>
-      <TelaDeAvisoPublica
-        titulo="Portal de vagas"
-        texto="As vagas ficam na página de cada empresa. Use o link de carreiras que a empresa divulgou — ele termina com o nome dela, depois de “/carreiras/”."
-        icone={<Briefcase />}
-      />
-    </main>
+    <TelaDeAvisoPublica
+      titulo="Portal de vagas"
+      texto="As vagas ficam na página de cada empresa. Use o link de carreiras que a empresa divulgou — ele termina com o nome dela, depois de “/carreiras/”."
+      icone={<Briefcase />}
+    />
   );
 }

@@ -8,6 +8,7 @@ import { Contador } from "@/components/ui/Contador";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
+import { useToast } from "@/components/ui/Toast";
 import { CartaoDeNotificacao } from "@/components/notificacoes/CartaoDeNotificacao";
 import { AbasDasNotificacoes } from "@/components/notificacoes/AbasDasNotificacoes";
 import {
@@ -45,6 +46,7 @@ function ajustar(c: Contagens, n: NotificacaoNaTela, delta: number): Contagens {
 
 export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   const router = useRouter();
+  const toast = useToast();
   const [aberto, setAberto] = useState(false);
   const [aba, setAba] = useState<AbaOuTodas>("todas");
   const [dados, setDados] = useState<Dados | null>(null);
@@ -79,14 +81,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!aberto) return;
-    function tecla(e: KeyboardEvent) {
-      if (e.key === "Escape") setAberto(false);
-    }
-    document.addEventListener("keydown", tecla);
-    return () => document.removeEventListener("keydown", tecla);
-  }, [aberto]);
+  // O Esc vem do `PainelFlutuante`, pela pilha de camadas (ver `ui/camadas.ts`).
 
   async function carregar(alvo: AbaOuTodas) {
     const n = ++pedido.current;
@@ -140,16 +135,25 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     if (!n.lida) setContagemDoTopo((c) => Math.max(0, c - 1));
   }
 
-  async function remover(n: NotificacaoNaTela) {
+  // Tira da lista na hora; se o servidor falhar, a lista volta como está no
+  // banco e a pessoa fica sabendo — antes o item sumia sem ter saído.
+  async function tirarDoSino(n: NotificacaoNaTela, acao: () => Promise<void>, falha: string) {
     tirar(n);
-    await removerNotificacoes([n.id]);
+    try {
+      await acao();
+    } catch {
+      toast.error(falha);
+      await carregar(aba);
+    }
     router.refresh();
   }
 
-  async function arquivar(n: NotificacaoNaTela) {
-    tirar(n);
-    await arquivarNotificacoes([n.id]);
-    router.refresh();
+  function remover(n: NotificacaoNaTela) {
+    return tirarDoSino(n, () => removerNotificacoes([n.id]), "Não foi possível remover a notificação. Tente de novo.");
+  }
+
+  function arquivar(n: NotificacaoNaTela) {
+    return tirarDoSino(n, () => arquivarNotificacoes([n.id]), "Não foi possível arquivar a notificação. Tente de novo.");
   }
 
   async function marcarTodas() {

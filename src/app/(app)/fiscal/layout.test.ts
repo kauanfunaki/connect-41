@@ -9,7 +9,7 @@ vi.mock("@/lib/fiscal/local/servidor", () => ({ lerEstadoFiscalLocal: m.ler }));
 vi.mock("@/components/fiscal/previa/ContextoFiscal", () => ({ ContextoFiscalProvider: function ContextoFiscalProvider() { return null; } }));
 vi.mock("@/components/shared/PageContainer", () => ({ PageContainer: function PageContainer() { return null; } }));
 vi.mock("@/components/ui/EmptyState", () => ({ EmptyState: function EmptyState() { return null; } }));
-const { default: FiscalLayout } = await import("./layout");
+const { default: FiscalLayout } = await import("./(legado)/layout");
 
 const tipo = (el: unknown) => (isValidElement(el) ? (el.type as { name: string }).name : null);
 const filhos = (el: unknown) => ((el as ReactElement<{ children: unknown }>).props.children);

@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { colunasPresentes } from "@/lib/fiscal/previa/doMotor";
-import { rotuloDaColuna, valorDaCelula } from "@/lib/contabil/exibicao";
+import { rotuloDaColuna, valorDaCelula } from "@/lib/fiscal/motor/exibicao";
 import type { FalhaDaLeitura } from "@/lib/fiscal/motor/leitura";
+import { TabelaContabilDoMotor } from "@/components/contabil/TabelaContabil";
 
 /** Códigos 422 de §11.0.9 e §2.1 que são situação do dado, não falha: aviso neutro. */
 const SITUACOES = new Set(["sem_arquivo", "uf_nao_suportada", "obrigacao_incompativel", "matriz_nao_cadastrada", "sem_estabelecimento"]);
@@ -80,18 +81,21 @@ function celula(coluna: string, v: unknown): ReactNode {
  * trouxe não aparece. A tabela desenha 200 linhas e traz o resto pelo
  * "Mostrar mais" — antes cortava em 200, e a fila dos pagamentos vai a 2000.
  */
-export function TabelaLivre({ linhas, candidatas = [], vazio = "Nada a mostrar.", acoes }: { linhas: Record<string, unknown>[]; candidatas?: readonly string[]; vazio?: string; /** Uma coluna "Ações" no fim, por linha (as escritas de §13). */ acoes?: (linha: Record<string, unknown>) => ReactNode }) {
+export function TabelaLivre({ linhas, candidatas = [], vazio = "Nada a mostrar.", acoes, contabil = false }: { linhas: Record<string, unknown>[]; candidatas?: readonly string[]; vazio?: string; /** Na área do Contábil, a tabela dele (com busca), em vez da do Fiscal. */ contabil?: boolean; /** Uma coluna "Ações" no fim, por linha (as escritas de §13). */ acoes?: (linha: Record<string, unknown>) => ReactNode }) {
   const colunas = colunasPresentes(linhas, candidatas);
-  return <TabelaFiscal vazio={vazio} descricaoVazio="" colunas={[...colunas.map(rotuloDaColuna), ...(acoes ? ["Ações"] : [])]} linhas={linhas.map((l, i) => ({ id: String(l.id ?? i), celulas: [...colunas.map((c) => celula(c, l[c])), ...(acoes ? [acoes(l)] : [])] }))} />;
+  // As duas recebem todas as linhas: a do Fiscal desenha de 200 em 200 com o
+  // "Mostrar mais"; a do Contábil tem a busca e a lista dela.
+  const Tabela = contabil ? TabelaContabilDoMotor : TabelaFiscal;
+  return <Tabela vazio={vazio} descricaoVazio="" colunas={[...colunas.map(rotuloDaColuna), ...(acoes ? ["Ações"] : [])]} linhas={linhas.map((l, i) => ({ id: String(l.id ?? i), celulas: [...colunas.map((c) => celula(c, l[c])), ...(acoes ? [acoes(l)] : [])] }))} />;
 }
 
 const ehRegistro = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
 /** Um bloco sem forma fixa (`simulacoes`, `cte`, `combustivel`...): lista vira tabela, objeto vira campo → valor. */
-export function BlocoLivre({ valor }: { valor: unknown }) {
+export function BlocoLivre({ valor, contabil = false }: { valor: unknown; contabil?: boolean }) {
   if (valor === null || valor === undefined) return <p className="text-ui text-fg-muted">Não levantado pelo motor.</p>;
   if (Array.isArray(valor)) {
-    if (valor.every(ehRegistro)) return <TabelaLivre linhas={valor} />;
+    if (valor.every(ehRegistro)) return <TabelaLivre linhas={valor} contabil={contabil} />;
     return <p className="text-ui text-fg">{valor.map((v) => String(v)).join(", ") || "—"}</p>;
   }
   if (!ehRegistro(valor)) return <p className="text-ui text-fg">{String(valor)}</p>;
@@ -99,7 +103,7 @@ export function BlocoLivre({ valor }: { valor: unknown }) {
   const compostos = Object.entries(valor).filter(([, v]) => Array.isArray(v) || ehRegistro(v));
   return <div className="space-y-4">
     {simples.length > 0 && <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{simples.map(([k, v]) => <div key={k}><dt className="text-helper text-fg-secondary">{rotuloDaColuna(k)}</dt><dd className="mt-1 text-ui text-fg tabular-nums">{celula(k, v)}</dd></div>)}</dl>}
-    {compostos.map(([k, v]) => <section key={k} aria-label={rotuloDaColuna(k)}><h4 className="mb-2 text-label font-semibold text-fg">{rotuloDaColuna(k)}</h4>{Array.isArray(v) && v.every(ehRegistro) ? <TabelaLivre linhas={v} /> : celula(k, v)}</section>)}
+    {compostos.map(([k, v]) => <section key={k} aria-label={rotuloDaColuna(k)}><h4 className="mb-2 text-label font-semibold text-fg">{rotuloDaColuna(k)}</h4>{Array.isArray(v) && v.every(ehRegistro) ? <TabelaLivre linhas={v} contabil={contabil} /> : celula(k, v)}</section>)}
   </div>;
 }
 

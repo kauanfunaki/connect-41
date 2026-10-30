@@ -12,6 +12,7 @@ import { scopedVagaWhere } from "@/lib/auth/scope";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { podeAgirNaVaga } from "@/lib/recrutamento/acessoVagas";
 import { limparOrigem } from "@/lib/recrutamento/origem";
+import { travaDoDesfazer } from "@/lib/recrutamento/desfazerContratacao";
 import { MAX_BYTES_DO_CURRICULO, MAX_MB_DO_CURRICULO, ehPdf } from "@/lib/curriculo";
 import { validatePersonForm } from "@/lib/validation/person";
 import { pick } from "@/lib/forms";
@@ -272,6 +273,65 @@ export async function moverEtapaCandidatura(
 
   revalidatePath(`/vagas/${vagaId}`);
   revalidatePath(`/candidatos/${candidatura.personId}`);
+  return null;
+}
+
+/**
+ * Desfaz uma contratação feita pelo funil (decisão do Kauan, 30/10/2026:
+ * "desfazer com trava"). A trava é a de `travaDoDesfazer`, conferida de novo
+ * aqui — a tela pode estar velha. Volta a pessoa a candidata, sem empresa nem
+ * cargo, e a candidatura à Proposta, numa transação: as duas mudam juntas ou
+ * nenhuma muda.
+ */
+export async function desfazerContratacao(vagaId: string, candidaturaId: string): Promise<{ error: string } | null> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const candidatura = await prisma.candidatura.findFirst({
+    where: { id: candidaturaId, tenantId: ctx.tenantId, vagaId },
+    include: {
+      vaga: true,
+      person: { select: { id: true, type: true, employmentStatus: true, admissionDate: true, currentCompanyId: true } },
+    },
+  });
+  if (!candidatura) return { error: "Candidatura não encontrada ou fora do seu escopo." };
+  if (!(await podeAgirNaVaga(ctx, candidatura.vaga))) {
+    return { error: "Sem permissão para desfazer contratações nesta vaga." };
+  }
+
+  const [links, outrasContratacoes] = await Promise.all([
+    prisma.admissaoLink.count({ where: { tenantId: ctx.tenantId, personId: candidatura.personId } }),
+    prisma.candidatura.count({ where: { tenantId: ctx.tenantId, personId: candidatura.personId, status: "CONTRATADO", id: { not: candidaturaId } } }),
+  ]);
+  const trava = travaDoDesfazer({
+    statusDaCandidatura: candidatura.status,
+    pessoa: candidatura.person,
+    companyIdDaVaga: candidatura.vaga.companyId,
+    temLinkDeAdmissao: links > 0,
+    outrasContratacoes,
+  });
+  if (trava) return { error: trava };
+
+  try {
+    await prisma.$transaction([
+      prisma.candidatura.update({
+        where: { id: candidaturaId },
+        data: { stage: RecruitmentStage.PROPOSTA, status: "EM_ANDAMENTO", hiredAt: null },
+      }),
+      prisma.person.update({
+        where: { id: candidatura.personId },
+        data: { type: PersonType.CANDIDATO, currentCompanyId: null, cargoId: null },
+      }),
+    ]);
+  } catch (err) {
+    console.error("[desfazerContratacao]", err);
+    return { error: "Não foi possível desfazer a contratação. Tente novamente." };
+  }
+
+  revalidatePath(`/vagas/${vagaId}`);
+  revalidatePath(`/candidatos/${candidatura.personId}`);
+  revalidatePath(`/pessoas/${candidatura.personId}`);
   return null;
 }
 

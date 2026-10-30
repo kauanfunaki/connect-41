@@ -80,19 +80,23 @@ export async function criarCandidato(
 // reprovado/desistir de uma vaga específica — é o que o torna pesquisável pra
 // oportunidades futuras. Mesmo catálogo de Tag do setor "recrutamento" já
 // usado no Kanban (gerenciado em /admin/tags), só um join novo.
-export async function alternarTagPessoa(personId: string, tagId: string, marcado: boolean): Promise<void> {
+// Devolve `{ error }` quando não grava (30/10/2026): a ficha marca a tag na hora
+// e precisa saber quando desfazer.
+export async function alternarTagPessoa(personId: string, tagId: string, marcado: boolean): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) return;
+  if (!ctx.tenantId || !(await podeNoModulo(ctx, "recrutamento_candidatos", "gerir"))) {
+    return { error: "Você não tem permissão para mudar as tags do candidato." };
+  }
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
     where: { id: personId, tenantId: ctx.tenantId, type: PersonType.CANDIDATO },
     select: { id: true },
   });
-  if (!person) return;
+  if (!person) return { error: "Este candidato não está mais no banco de talentos." };
 
   const tag = await prisma.tag.findFirst({ where: { id: tagId, tenantId: ctx.tenantId, sectorCode: "recrutamento" } });
-  if (!tag) return;
+  if (!tag) return { error: "Essa tag foi excluída. Recarregue a página." };
 
   try {
     if (marcado) {
@@ -106,7 +110,7 @@ export async function alternarTagPessoa(personId: string, tagId: string, marcado
     }
   } catch (err) {
     console.error("[alternarTagPessoa]", err);
-    return;
+    return { error: "Não foi possível salvar a tag. Tente de novo." };
   }
 
   revalidatePath(`/candidatos/${personId}`);

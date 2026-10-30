@@ -1,7 +1,8 @@
+import { prepararEscritaContribuicoes } from "@/lib/fiscal/motor/acoes";
 import type { NextRequest } from "next/server";
 import { logAudit } from "@/lib/audit";
 import { camposDoEnvio, chaveDoEnvio, conferirArquivos, DESTINOS_DE_ENVIO, ENVIOS, mensagemDeTamanho, ROTULO_DO_TIPO_DE_APOIO, sha256DoArquivo, type DestinoDeEnvio, type TipoDePagamentoApoio } from "@/lib/sped/escritasDoMotor";
-import { doErro, prepararEscrita, recusa, recusado, revalidarTelas } from "@/lib/fiscal/motor/acoes";
+import { doErro, recusa, recusado, revalidarTelas } from "@/lib/fiscal/motor/acoes";
 import { responder, statusDoErro } from "@/lib/fiscal/motor/rotas";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
 
   const raiz = req.nextUrl.searchParams.get("raiz") ?? "";
   if (!/^\d{8}$/.test(raiz)) return responder(recusa("Empresa não encontrada."), 404);
-  const p = await prepararEscrita(raiz, regra.modulo, "agir");
+  const empresaContabil = req.nextUrl.searchParams.get("empresaContabil") ?? undefined;
+  if (empresaContabil && destino !== "pagamentos_apoio" && destino !== "faturas_bpo") return responder(recusa("Envio fora de Contribuições."), 403);
+  const p = await prepararEscritaContribuicoes(raiz, regra.modulo, "agir", empresaContabil);
   if (recusado(p)) return responder(p, p.codigo === "escrita_nao_habilitada" ? 409 : 403);
 
   const form = await req.formData().catch(() => null);
@@ -82,18 +85,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
     if (destino === "pagamentos_apoio") {
       const tipo = campos.tipo as TipoDePagamentoApoio;
       const r = await p.motor.cliente.importarPagamentosApoio(raiz, arquivos, { tipo, pasta: campos.pasta, ocr: campos.ocr === "true" }, escrita);
-      await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.pagamentos_apoio.importados",
+      await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: empresaContabil ? "contabil.sped.pagamentos_apoio.importados" : "fiscal.sped.pagamentos_apoio.importados",
         entityType: "SpedImportacaoApoio", entityId: `pagamentos_apoio:${tipo}`, metadata: { nome: `${ROTULO_DO_TIPO_DE_APOIO[tipo]}${r.pasta ? ` · ${r.pasta}` : ""}`, raiz, chave, tipo, pasta: r.pasta || null, ocr: campos.ocr === "true", arquivos: metaArquivos, linhas: r.linhas, gravadas: r.gravadas, porCompetencia: r.por_competencia, recusadas: r.recusadas.length } });
       revalidarTelas(regra.tela, "/fiscal/conferencia");
+      if (empresaContabil) revalidarTelas("/contabil/sped");
       const recusadas = r.recusadas.length ? ` ${r.recusadas.length} arquivo(s) recusado(s): já gravados com outro tipo.` : "";
       const comps = Object.keys(r.por_competencia);
       return responder({ ok: true, mensagem: `${r.arquivos.length} arquivo(s) importado(s): ${r.gravadas} linha(s) gravada(s) de ${r.linhas}.${recusadas}${comps.length ? ` Competências: ${comps.join(", ")} — o SPED de Contribuições delas muda na próxima geração.` : ""}`, dados: r });
     }
     if (destino === "faturas_bpo") {
       const r = await p.motor.cliente.importarFaturasBpo(raiz, arquivos[0], extras, { substituir: campos.substituir === "true" }, escrita);
-      await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: "fiscal.sped.faturas_bpo.importadas",
+      await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: empresaContabil ? "contabil.sped.faturas_bpo.importadas" : "fiscal.sped.faturas_bpo.importadas",
         entityType: "SpedImportacaoApoio", entityId: `faturas_bpo:${r.planilha}`.slice(0, 120), metadata: { nome: r.planilha, raiz, chave, substituir: campos.substituir === "true", arquivos: metaArquivos, pagamentos: r.pagamentos, gravadas: r.gravadas, removidas: r.removidas, comComprovante: r.com_comprovante, porCompetencia: r.por_competencia } });
       revalidarTelas(regra.tela, "/fiscal/conferencia");
+      if (empresaContabil) revalidarTelas("/contabil/sped");
       return responder({ ok: true, mensagem: `Planilha importada: ${r.gravadas} fatura(s) gravada(s)${r.removidas ? `, ${r.removidas} substituída(s)` : ""}, ${r.com_comprovante} com comprovante.`, dados: r });
     }
     if (destino === "omie") {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -41,6 +41,28 @@ export default function ErroNoPortal({
             action={
               <Button type="button" onClick={() => window.location.reload()}>
                 Recarregar a página
+              </Button>
+            }
+          />
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  // Sem internet, o erro é de conexão, não da página (auditoria de UX,
+  // 30/10/2026): no celular e no APK é o caso mais comum, e "Algo deu errado"
+  // não dizia o que fazer.
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return (
+      <PageContainer>
+        <Card>
+          <EmptyState
+            icon={<WifiOff />}
+            title="Sem conexão com a internet."
+            description="Confira o Wi-Fi ou os dados móveis e tente de novo. O que você já enviou continua salvo."
+            action={
+              <Button type="button" onClick={() => unstable_retry()}>
+                Tentar de novo
               </Button>
             }
           />

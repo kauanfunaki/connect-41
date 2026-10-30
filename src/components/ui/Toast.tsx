@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 
 type ToastKind = "success" | "error" | "info";
@@ -24,7 +24,7 @@ export function useToast(): ToastContextValue {
 let nextId = 1;
 
 /**
- * Os avisos que somem sozinhos (5 s, ou no clique).
+ * Os avisos que somem sozinhos (5 s; 10 s o de erro; ou no clique).
  *
  * Refeitos em 07/10/2026:
  * - **Opacos.** O fundo era só a tinta de 10% do tom, e o conteúdo de baixo
@@ -45,14 +45,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const show = useCallback(
-    (message: string, kind: ToastKind = "info") => {
-      const id = nextId++;
-      setToasts((prev) => [...prev, { id, kind, message }]);
-      setTimeout(() => remove(id), 5000);
-    },
-    [remove]
-  );
+  // Pausa com o ponteiro em cima ou o foco dentro (auditoria de UX, 30/10/2026):
+  // quem está lendo um erro comprido não o vê sumir no meio da frase.
+  const [pausado, setPausado] = useState(false);
+
+  const show = useCallback((message: string, kind: ToastKind = "info") => {
+    const id = nextId++;
+    setToasts((prev) => [...prev, { id, kind, message }]);
+  }, []);
 
   const value: ToastContextValue = {
     show,
@@ -60,25 +60,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     error: (m) => show(m, "error"),
   };
 
-  const item = (t: Toast) => (
-    <button
-      key={t.id}
-      type="button"
-      onClick={() => remove(t.id)}
-      title="Fechar"
-      className="c41-surgir w-full flex items-start gap-2.5 text-left rounded-md border border-border-strong bg-surface-elevated px-3.5 py-2.5 text-ui text-fg shadow-lg"
-    >
-      <span aria-hidden className={`flex-shrink-0 mt-px ${COR_DO_ICONE[t.kind]}`}>
-        {ICONE[t.kind]}
-      </span>
-      <span className="min-w-0">{t.message}</span>
-    </button>
-  );
+  const item = (t: Toast) => <ItemDoAviso key={t.id} aviso={t} pausado={pausado} onFechar={remove} />;
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 w-[min(360px,calc(100vw-2rem))]">
+      <div
+        onMouseEnter={() => setPausado(true)}
+        onMouseLeave={() => setPausado(false)}
+        onFocus={() => setPausado(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPausado(false);
+        }}
+        className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 w-[min(360px,calc(100vw-2rem))]"
+      >
         {/* As duas regiões ficam montadas e visíveis mesmo vazias (sem
             `hidden`): fora da árvore de acessibilidade, o leitor de tela não
             anuncia o que entra nelas. Vazias, não ocupam altura. */}
@@ -90,6 +85,37 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </ToastContext.Provider>
+  );
+}
+
+/** Quanto cada aviso fica: o de erro o dobro — é o que a pessoa precisa ler e agir. */
+const DURACAO: Record<ToastKind, number> = { success: 5000, info: 5000, error: 10000 };
+
+function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: boolean; onFechar: (id: number) => void }) {
+  // O tempo que falta sobrevive à pausa: voltar do hover não recomeça do zero.
+  const restante = useRef(DURACAO[aviso.kind]);
+  useEffect(() => {
+    if (pausado) return;
+    const inicio = Date.now();
+    const id = setTimeout(() => onFechar(aviso.id), restante.current);
+    return () => {
+      clearTimeout(id);
+      restante.current = Math.max(0, restante.current - (Date.now() - inicio));
+    };
+  }, [pausado, aviso.id, onFechar]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onFechar(aviso.id)}
+      title="Fechar"
+      className="c41-surgir w-full flex items-start gap-2.5 text-left rounded-md border border-border-strong bg-surface-elevated px-3.5 py-2.5 text-ui text-fg shadow-lg"
+    >
+      <span aria-hidden className={`flex-shrink-0 mt-px ${COR_DO_ICONE[aviso.kind]}`}>
+        {ICONE[aviso.kind]}
+      </span>
+      <span className="min-w-0">{aviso.message}</span>
+    </button>
   );
 }
 

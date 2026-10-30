@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { useToast } from "@/components/ui/Toast";
@@ -13,8 +13,19 @@ import { JanelaDaAlteracaoEmLote } from "./JanelaDaAlteracaoEmLote";
 
 type Empresa = { id: string; nome: string; centros: { id: string; nome: string }[] };
 
+/**
+ * As caixas que a pessoa está vendo. Cada conta tem duas: a da linha da tabela
+ * e a do cartão do celular, e a que não serve à largura atual fica escondida
+ * por CSS (`md:hidden` / `hidden md:block`), não sai do DOM. Contar as duas
+ * dobrava o contador e fazia o "Marcar todas" pegar os cartões das contas que o
+ * funil da coluna tirou da tabela — e o lote agia sobre elas (auditoria de UX,
+ * 30/10/2026). Caixa sob `display: none` não tem retângulo; a linha que o funil
+ * esconde nem está no DOM.
+ */
 function caixas(): HTMLInputElement[] {
-  return Array.from(document.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][form="${FORM_DAS_CONTAS}"]`));
+  return Array.from(document.querySelectorAll<HTMLInputElement>(`input[type="checkbox"][form="${FORM_DAS_CONTAS}"]`)).filter(
+    (c) => c.getClientRects().length > 0
+  );
 }
 
 /**
@@ -38,8 +49,24 @@ function useContasMarcadas(): { marcadas: number; total: number } {
       setEstado({ marcadas: todas.filter((c) => c.checked).length, total: todas.length });
     };
     ler();
+    // O funil da coluna tira e põe linhas sem disparar `change`, e passar da
+    // largura do celular para a do desktop troca as caixas visíveis: as duas
+    // coisas mudam a conta. Uma leitura por quadro basta.
+    let quadro = 0;
+    const lerNoProximoQuadro = () => {
+      cancelAnimationFrame(quadro);
+      quadro = requestAnimationFrame(ler);
+    };
+    const observador = new MutationObserver(lerNoProximoQuadro);
+    observador.observe(document.body, { childList: true, subtree: true });
     document.addEventListener("change", ler);
-    return () => document.removeEventListener("change", ler);
+    window.addEventListener("resize", lerNoProximoQuadro);
+    return () => {
+      cancelAnimationFrame(quadro);
+      observador.disconnect();
+      document.removeEventListener("change", ler);
+      window.removeEventListener("resize", lerNoProximoQuadro);
+    };
   }, []);
   return estado;
 }
@@ -48,7 +75,13 @@ function useContasMarcadas(): { marcadas: number; total: number } {
 export function MarcarTodasAsContas() {
   const { marcadas, total } = useContasMarcadas();
   const todas = total > 0 && marcadas === total;
-  return <Checkbox checked={todas} onChange={() => marcarTodas(!todas)} aria-label="Marcar todas as contas" />;
+  const algumas = marcadas > 0 && !todas;
+  // `indeterminate` só existe como propriedade do DOM, não como atributo.
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = algumas;
+  }, [algumas]);
+  return <Checkbox ref={ref} checked={todas} onChange={() => marcarTodas(!todas)} aria-label="Marcar todas as contas" />;
 }
 
 /**

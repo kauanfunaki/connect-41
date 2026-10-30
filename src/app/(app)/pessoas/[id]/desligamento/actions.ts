@@ -88,6 +88,17 @@ export async function atualizarDesligamento(
         where: { id: personId },
         data: { employmentStatus: "DESLIGADO", dismissalDate: dataDoDesligamento({ terminationDate: existing.terminationDate, finalizedAt }, new Date()) },
       });
+    } else if (existing.status === "FINALIZADO") {
+      // Reabrir um desligamento finalizado desfaz o que a finalização fez na
+      // pessoa (auditoria de UX, 30/10/2026): antes ela seguia DESLIGADA, com a
+      // data de demissão, e o registro dizia o contrário. Volta a ATIVO, como
+      // no fim de um afastamento ou de férias — só se ainda está desligada,
+      // para não atropelar outra situação gravada depois.
+      await prisma.termination.update({ where: { id: terminationId }, data: { finalizedAt: null } });
+      await prisma.person.updateMany({
+        where: { id: personId, tenantId: ctx.tenantId, employmentStatus: "DESLIGADO" },
+        data: { employmentStatus: "ATIVO", dismissalDate: null },
+      });
     }
   } catch (err) {
     console.error("[atualizarDesligamento]", err);
@@ -98,21 +109,25 @@ export async function atualizarDesligamento(
   return null;
 }
 
-export async function excluirDesligamento(personId: string, terminationId: string): Promise<void> {
+// Devolve `{ error }` quando não remove (30/10/2026): a confirmação fechava como
+// se tivesse removido.
+export async function excluirDesligamento(personId: string, terminationId: string): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
   // Excluir: só o administrador (13/10/2026). Antes, quem gere o módulo no setor.
-  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) return;
-  if (!(await assertPersonInScope(personId, ctx))) return;
+  if (!ctx.tenantId || !podeExcluir(ctx) || !(await podeNoModulo(ctx, "dp_colaboradores", "gerir"))) {
+    return { error: "Só o administrador remove um registro de desligamento." };
+  }
+  if (!(await assertPersonInScope(personId, ctx))) return { error: "Você não tem acesso a esta pessoa." };
 
   const prisma = getPrisma();
   const existing = await prisma.termination.findFirst({ where: { id: terminationId, tenantId: ctx.tenantId, personId } });
-  if (!existing) return;
+  if (!existing) return { error: "Este registro já foi removido." };
 
   try {
     await prisma.termination.delete({ where: { id: terminationId } });
   } catch (err) {
     console.error("[excluirDesligamento]", err);
-    return;
+    return { error: "Não foi possível remover o registro. Tente de novo." };
   }
 
   revalidatePath(`/pessoas/${personId}`);

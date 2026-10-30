@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { empilharCamada } from "@/components/ui/camadas";
 
 type Props = {
   /** O elemento de onde o painel sai (o campo, o botão). */
@@ -99,6 +100,12 @@ export function PainelFlutuante({
       window.removeEventListener("resize", posicionar);
     };
   }, [aberto, comoFolha, ancora, largura, align]);
+
+  // Esc fecha este painel antes do diálogo de baixo (ver `camadas.ts`).
+  useEffect(() => {
+    if (!aberto) return;
+    return empilharCamada(() => fecharRef.current());
+  }, [aberto]);
 
   useEffect(() => {
     if (!aberto) return;

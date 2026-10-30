@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useEnvioQueGuardaNoErro } from "@/components/ui/useEnvioQueGuardaNoErro";
+import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import type { OvertimeState } from "@/app/(app)/pessoas/[id]/horas-extras/actions";
 import { DayType } from "@/generated/prisma/enums";
@@ -24,12 +25,13 @@ type Props = {
 };
 
 export function AddHoraExtraForm({ action }: Props) {
-  const [state, formAction, isPending] = useActionState(action, null);
+  // Pelo `onSubmit`: um erro do servidor não apaga o que já foi digitado.
+  const [state, enviar, isPending] = useEnvioQueGuardaNoErro(action);
 
   // Revisão de alinhamento (30/09): botão alinhado ao campo de
   // justificativa, como nos outros formulários da ficha.
   return (
-    <form action={formAction} className="border-t border-border pt-5 mt-2 space-y-4">
+    <form onSubmit={enviar} className="border-t border-border pt-5 mt-2 space-y-4">
       {/* Bloco do "novo" com nome, acima dos campos (5A, 08/10/2026). */}
       <h3 className="c41-rotulo">Novo lançamento</h3>
       <FieldGrid columns="sm:grid-cols-3 lg:grid-cols-6">
@@ -66,7 +68,7 @@ export function AddHoraExtraForm({ action }: Props) {
           </Button>
         </AlinhadoAoCampo>
       </FieldGrid>
-      {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
+      {state?.error && <Aviso>{state.error}</Aviso>}
     </form>
   );
 }

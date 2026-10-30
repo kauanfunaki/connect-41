@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileSpreadsheet, FileText, Landmark } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, Landmark } from "lucide-react";
+import { BaixarParaADominio } from "@/components/financeiro/dominio/BaixarParaADominio";
 import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -159,9 +160,6 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
   // A correção (lote 3, 28/10/2026): contra a última planilha baixada deste mês.
   const [feitas, correcao] = await Promise.all([exportacoesDoMes(tenantId, companyId, mes), correcaoDoMes(tenantId, companyId, mes, r)]);
   const ultima = feitas[0] ?? null;
-  const botao = "inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-ui font-medium";
-  const principal = `${botao} bg-brand-solid text-on-brand hover:bg-brand-solid-hover`;
-  const secundario = `${botao} border border-border-strong text-fg hover:bg-surface-hover`;
 
   return (
     <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>
@@ -185,12 +183,8 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
           </div>
           {podeEditar && !ultima && r.linhas.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
-              <a href={download("xlsx")} download className={principal}>
-                <FileSpreadsheet size={14} /> Domínio (.xlsx)
-              </a>
-              <a href={download("txt")} download className={secundario}>
-                <FileText size={14} /> Domínio (.txt)
-              </a>
+              <BaixarParaADominio href={download("xlsx")} formato="xlsx" rotulo="Domínio (.xlsx)" variant="primary" />
+              <BaixarParaADominio href={download("txt")} formato="txt" rotulo="Domínio (.txt)" />
             </div>
           )}
         </Card>
@@ -223,18 +217,22 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
               <div className="flex flex-wrap items-center gap-2">
                 {correcao.linhas.length > 0 && (
                   <>
-                    <a href={download("xlsx", "correcao")} download className={principal}>
-                      <FileSpreadsheet size={14} /> Correção (.xlsx)
-                    </a>
-                    <a href={download("txt", "correcao")} download className={secundario}>
-                      <FileText size={14} /> Correção (.txt)
-                    </a>
+                    <BaixarParaADominio href={download("xlsx", "correcao")} formato="xlsx" rotulo="Correção (.xlsx)" variant="primary" />
+                    <BaixarParaADominio href={download("txt", "correcao")} formato="txt" rotulo="Correção (.txt)" />
                   </>
                 )}
                 {r.linhas.length > 0 && (
-                  <a href={download("xlsx")} download className={secundario}>
-                    <FileSpreadsheet size={14} /> Mês inteiro de novo
-                  </a>
+                  <BaixarParaADominio
+                    href={download("xlsx")}
+                    formato="xlsx"
+                    rotulo="Mês inteiro de novo"
+                    confirmar={{
+                      titulo: "Baixar o mês inteiro de novo?",
+                      descricao:
+                        "Importar esta planilha duplica na Domínio tudo o que já foi importado deste mês. Para acertar o que mudou, use a correção.",
+                      botao: "Baixar o mês inteiro",
+                    }}
+                  />
                 )}
               </div>
             )}

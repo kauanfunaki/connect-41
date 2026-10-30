@@ -7,6 +7,7 @@ import { Pencil, Plus, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Aviso } from "@/components/ui/Aviso";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { pontuarPassoDoLote, salvarRequisitosDaVaga } from "@/app/(app)/vagas/[id]/triagem-actions";
@@ -71,6 +72,7 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
   // não se perder quem digitou e foi direto ao "Salvar requisitos".
   const [novos, setNovos] = useState<Record<Linha["tipo"], string>>({ OBRIGATORIO: "", DESEJAVEL: "" });
   const [cortes, setCortes] = useState(() => cortesDoGravado(requisitos));
+  const [confirmarReprocesso, setConfirmarReprocesso] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, startSalvar] = useTransition();
   const [lote, setLote] = useState<{ rodando: boolean; feitas: number; total: number; log: string[] } | null>(null);
@@ -115,7 +117,15 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
     let total = modo === "pendentes" ? pendentes : emAndamento;
     setLote({ rodando: true, feitas: 0, total, log });
     for (;;) {
-      const r = await pontuarPassoDoLote(vagaId, modo, pular, modo === "todas" ? feitas : []);
+      // Uma exceção (rede, deploy) parava o laço com o lote preso em
+      // "Pontuando…" e os botões desligados até recarregar (30/10/2026).
+      let r: Awaited<ReturnType<typeof pontuarPassoDoLote>>;
+      try {
+        r = await pontuarPassoDoLote(vagaId, modo, pular, modo === "todas" ? feitas : []);
+      } catch {
+        log.push("A conexão com o servidor caiu no meio do lote. O que já foi pontuado ficou; rode de novo para continuar.");
+        break;
+      }
       if ("error" in r) {
         log.push(r.error);
         break;
@@ -245,7 +255,9 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
                 <Button size="sm" disabled={!!lote?.rodando || pendentes === 0} onClick={() => rodar("pendentes")}>
                   <Sparkles size={13} /> Pontuar pendentes ({pendentes})
                 </Button>
-                <Button variant="secondary" size="sm" disabled={!!lote?.rodando || emAndamento === 0} onClick={() => rodar("todas")}>
+                {/* Reprocessar gasta uma chamada de IA por candidato e troca as
+                    notas que já existem: confirma antes (30/10/2026). */}
+                <Button variant="secondary" size="sm" disabled={!!lote?.rodando || emAndamento === 0} onClick={() => setConfirmarReprocesso(true)}>
                   Reprocessar todas ({emAndamento})
                 </Button>
               </div>
@@ -257,8 +269,22 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
         <p className="text-ui text-fg-muted">Sem requisitos cadastrados — peça a quem gerencia a vaga.</p>
       )}
 
+      <ConfirmDialog
+        open={confirmarReprocesso}
+        title={`Reprocessar as ${emAndamento} candidaturas?`}
+        description="A IA confere de novo todos os currículos em andamento — uma consulta por candidato — e as notas atuais são trocadas pelas novas."
+        confirmLabel="Reprocessar"
+        onConfirm={() => {
+          setConfirmarReprocesso(false);
+          void rodar("todas");
+        }}
+        onCancel={() => setConfirmarReprocesso(false)}
+      />
+
       {lote && (
-        <div className="mt-3 rounded-md border border-border bg-surface-2 p-3">
+        // O andamento é anunciado: o lote corre sozinho e a pessoa pode estar
+        // com o foco em outro lugar da tela.
+        <div role="status" className="mt-3 rounded-md border border-border bg-surface-2 p-3">
           <p className="text-fs-2 font-medium text-fg">
             {lote.rodando ? "Pontuando…" : "Lote concluído"} {lote.feitas}/{lote.total}
           </p>

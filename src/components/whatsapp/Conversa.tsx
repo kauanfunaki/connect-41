@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Aviso } from "@/components/ui/Aviso";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ItemDoMenu } from "@/components/ui/Popover";
+import { useConfirm } from "@/components/ui/useConfirm";
 import { AcaoRapida, BarraDoPainel, LinhasDeInfo, PainelDeConversa } from "@/components/conversas/caixa/Caixa";
 import { AbasDoPainel, RolarParaOFim } from "@/components/conversas/caixa/Interativos";
 import { formatInstantDateTime } from "@/lib/format";
@@ -87,6 +88,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
   const [texto, setTexto] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const { dialog: dialogoDeConfirmar, requestConfirm } = useConfirm();
   const [escolhida, setEscolhida] = useState("");
   const [encerrando, setEncerrando] = useState(false);
   const [desfecho, setDesfecho] = useState("");
@@ -107,10 +109,18 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
   async function correr(fn: () => Promise<AcaoNaConversa>, limparTexto = false) {
     setOcupado(true);
     setErro(null);
-    const r = await fn();
-    if (r && "error" in r) setErro(r.error);
-    else if (limparTexto) setTexto("");
-    setOcupado(false);
+    // Com `finally` (auditoria de UX, 30/10/2026): se a action lançava — rede
+    // caiu, deploy no meio —, `ocupado` ficava ligado e todos os botões da
+    // conversa travavam até recarregar a página, sem mensagem.
+    try {
+      const r = await fn();
+      if (r && "error" in r) setErro(r.error);
+      else if (limparTexto) setTexto("");
+    } catch {
+      setErro("Não deu para falar com o servidor. Confira a conexão e tente de novo.");
+    } finally {
+      setOcupado(false);
+    }
   }
 
   const comQuem = conversa.responsavel ? (
@@ -163,7 +173,17 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
               disabled={ocupado}
               onClick={() => {
                 close();
-                void correr(() => desvincularCandidatura(conversa.id));
+                // Confirmado (30/10): depois disso o assistente não religa a
+                // conversa à candidatura sozinho.
+                requestConfirm(
+                  {
+                    title: "Desfazer o vínculo com a candidatura?",
+                    description: "A conversa deixa de aparecer na candidatura, e o assistente não volta a ligá-las sozinho.",
+                    confirmLabel: "Desfazer o vínculo",
+                    destructive: true,
+                  },
+                  () => correr(() => desvincularCandidatura(conversa.id))
+                );
               }}
             >
               Desfazer o vínculo com a candidatura
@@ -510,7 +530,12 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
           anteriorHref={navegacao.anterior}
           proximaHref={navegacao.proxima}
           data={ultima ? `Última mensagem: ${formatInstantDateTime(ultima)}` : null}
-          direita={menu}
+          direita={
+            <>
+              {menu}
+              {dialogoDeConfirmar}
+            </>
+          }
         />
       }
       etiquetas={[
