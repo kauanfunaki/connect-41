@@ -1,4 +1,5 @@
-import { AlarmClock, ArrowRightLeft, CalendarClock, CircleDot, File, FileArchive, FileImage, FilePlay, FileSpreadsheet, FileText, Flag, ListChecks, ListOrdered, Lock, Paperclip, Pencil, RotateCcw, ShieldCheck, ShieldX, Tag, Ticket, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { AlarmClock, ArrowRightLeft, CalendarClock, CircleDot, FilePlay, Flag, ListChecks, ListOrdered, Lock, Paperclip, Pencil, RotateCcw, ShieldCheck, ShieldX, Tag, Ticket, UserPlus, Users, type LucideIcon } from "lucide-react";
+import { IconeDoArquivo as IconeDosArquivos } from "@/components/arquivos/IconeDoArquivo";
 import { formatInstantDateTime } from "@/lib/format";
 import { descreverEvento, tamanhoDoArquivo, type AnexoDaLinha, type ItemDaLinha } from "@/lib/chamados/linhaDoTempo";
 
@@ -7,10 +8,13 @@ export const iniciais = (nome: string) => nome.trim().split(/\s+/).filter(Boolea
 export function Avatar({ nome, className = "size-7 text-micro" }: { nome: string; className?: string }) {
   return <span aria-hidden className={`inline-flex shrink-0 items-center justify-center rounded-full bg-brand-subtle font-semibold text-brand ${className}`}>{iniciais(nome)}</span>;
 }
+// O ícone dos Arquivos, com a cor por tipo (PDF, planilha, imagem): eram dois
+// desenhos para a mesma coisa (auditoria de UX, 30/10/2026). Vídeo, que só o
+// chamado recebe, fica aqui.
 export function IconeDoArquivo({ nome, size = 14 }: { nome: string; size?: number }) {
   const ext = nome.split(".").pop()?.toLowerCase() ?? "";
-  const Icone = ["png", "jpg", "jpeg"].includes(ext) ? FileImage : ["xlsx", "csv"].includes(ext) ? FileSpreadsheet : ext === "zip" ? FileArchive : ["mp4", "webm"].includes(ext) ? FilePlay : ["pdf", "docx", "txt"].includes(ext) ? FileText : File;
-  return <Icone size={size} aria-hidden className="shrink-0 text-fg-muted" />;
+  if (["mp4", "webm"].includes(ext)) return <FilePlay size={size} aria-hidden className="shrink-0 text-fg-muted" />;
+  return <IconeDosArquivos nome={nome} size={size} />;
 }
 export function LinkDoAnexo({ anexo }: { anexo: Pick<AnexoDaLinha, "id" | "fileName" | "sizeBytes" | "internal"> }) {
   return <a href={`/api/chamados/anexos/${anexo.id}`} download className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-helper text-fg-secondary transition-colors hover:border-border-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"><IconeDoArquivo nome={anexo.fileName} /><span className="min-w-0 truncate font-medium text-brand">{anexo.fileName}</span><span className="shrink-0 text-fg-muted">{tamanhoDoArquivo(anexo.sizeBytes)}</span>{anexo.internal && <Lock size={12} aria-label="Somente a equipe" className="shrink-0 text-warning-fg" />}</a>;
