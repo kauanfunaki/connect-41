@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Copy, KeyRound, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { OpsAdditionalKeys } from "./OpsAdditionalKeys";
@@ -55,10 +56,12 @@ export function OpsCredentialForm({ hasToken: inicial, version: versaoInicial, k
     <h3 className="font-semibold text-fg">Chave principal</h3>
     {hasToken ? <p className="text-helper text-fg-secondary">Chave principal configurada. Guarde-a na configuração protegida dos bots autorizados.</p> : <p className="text-helper text-warning-fg">Nenhuma chave principal configurada. Você também pode usar as chaves adicionais abaixo.</p>}
     {token && <div className="space-y-2"><label htmlFor="ops-shared-token" className="block text-helper font-semibold text-fg-secondary">Nova chave — copie agora; ela não poderá ser consultada depois</label><div className="flex min-w-0 gap-2"><Input id="ops-shared-token" readOnly value={token} onFocus={e => e.target.select()} className="font-mono text-helper" /><Button type="button" variant="secondary" onClick={() => void copiar()}><Copy size={14} /> Copiar</Button></div></div>}
-    {erro && <p role="alert" className="text-ui text-danger">{erro}</p>}
-    <div className="flex flex-wrap justify-end gap-2">
-      {hasToken && <Button type="button" variant="danger" disabled={ocupado} onClick={() => void alterar("DELETE")}><XCircle size={14} /> Revogar chave</Button>}
-      <Button type="button" disabled={ocupado} loading={ocupado} onClick={() => void alterar("POST")}><KeyRound size={14} /> {hasToken ? "Trocar chave" : "Gerar chave"}</Button>
+    {erro && <Aviso>{erro}</Aviso>}
+    {/* Regra do rodapé (30/09): destrutivo à esquerda, separado da ação
+        principal — "Revogar" ficava colado no "Trocar" (auditoria de UX, 30/10/2026). */}
+    <div className="flex flex-wrap items-center gap-2">
+      {hasToken && <Button type="button" variant="danger" className="mr-auto" disabled={ocupado} onClick={() => void alterar("DELETE")}><XCircle size={14} /> Revogar chave</Button>}
+      <Button type="button" className="ml-auto" disabled={ocupado} loading={ocupado} onClick={() => void alterar("POST")}><KeyRound size={14} /> {hasToken ? "Trocar chave" : "Gerar chave"}</Button>
     </div>
     <p className="break-all rounded-md bg-surface-2 p-3 font-mono text-helper text-fg-secondary">Authorization: Bearer &lt;chave&gt;<br />POST /api/ops/events<br />POST /api/ops/watchers/&lt;slug&gt;/heartbeat</p>
     <p className="text-helper text-fg-muted"><RefreshCw size={12} className="mr-1 inline" />Ao trocar ou revogar uma chave, atualize somente os bots que a utilizam.</p>

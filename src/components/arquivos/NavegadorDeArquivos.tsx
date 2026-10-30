@@ -500,7 +500,7 @@ function LinhaDaPasta({
     <li className="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover transition-colors">
       <Icone size={18} className={pasta.enviados ? "text-brand shrink-0" : "text-fg-muted shrink-0"} aria-hidden />
       <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Link href={href} className="text-fs-3 font-medium text-fg hover:text-brand transition-colors truncate">
+        <Link href={href} data-dica={pasta.nome} className="text-fs-3 font-medium text-fg hover:text-brand transition-colors truncate">
           {pasta.nome}
         </Link>
         {pasta.setor && (
@@ -577,7 +577,11 @@ function LinhaDoArquivo({
           target={arquivo.previa ? "_blank" : undefined}
           rel="noreferrer"
           className="block text-fs-3 font-medium text-fg hover:text-brand transition-colors truncate"
-          title={arquivo.previa ? "Abrir" : "Baixar"}
+          // A dica é o nome inteiro, não "Abrir"/"Baixar" — o `title` virava a
+          // dica da `DicaFlutuante` e o nome cortado ficava ilegível (auditoria
+          // de UX, 30/10/2026). O que o clique faz vai no nome acessível.
+          data-dica={arquivo.nome}
+          aria-label={`${arquivo.previa ? "Abrir" : "Baixar"} ${arquivo.nome}`}
         >
           {arquivo.nome}
         </a>
