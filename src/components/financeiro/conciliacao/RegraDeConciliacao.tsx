@@ -18,6 +18,8 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { CampoDeProjeto } from "@/components/financeiro/CampoDeProjeto";
 import {
   salvarRegra,
@@ -455,47 +457,58 @@ export function AcoesDaRegra({
   const [previa, setPrevia] = useState(false);
   const [pendente, startTransition] = useTransition();
 
+  // "Editar" à vista e o resto no "⋯" (auditoria de UX, 30/10/2026): eram quatro
+  // botões por regra, com o Excluir vermelho em toda linha. Pausar e retomar
+  // passaram a confirmar com aviso — antes a regra mudava sem retorno.
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Button size="xs" variant="secondary" onClick={() => setEditando(true)}>
         <Pencil size={12} /> Editar
       </Button>
-      <Button size="xs" variant="secondary" onClick={() => setPrevia(true)}>
-        <ListChecks size={12} /> Aplicar às pendentes
-      </Button>
-      <Button
-        size="xs"
-        variant="ghost"
-        disabled={pendente}
-        onClick={() =>
-          startTransition(async () => {
-            const r = await alterarRegraAtiva(id, !ativa);
-            if ("error" in r) toast.error(r.error);
-          })
-        }
-      >
-        {ativa ? <Pause size={12} /> : <Play size={12} />} {ativa ? "Pausar" : "Retomar"}
-      </Button>
-      <Button
-        size="xs"
-        variant="danger"
-        onClick={() =>
-          requestConfirm(
-            {
-              title: "Excluir a regra?",
-              description: `“${nome}” deixa de sugerir e de lançar. O que ela já lançou fica — para tirar um lançamento, desfaça no registro abaixo.`,
-              confirmLabel: "Excluir",
-              destructive: true,
-            },
-            async () => {
-              const r = await excluirRegra(id);
-              if ("error" in r) throw new Error(r.error);
-            }
-          )
-        }
-      >
-        <Trash2 size={12} /> Excluir
-      </Button>
+      <MenuDeMaisAcoes rotulo={`Mais ações da regra ${nome}`} width={200} sempreMenu>
+        {({ close }) => (
+          <>
+            <ItemDoMenu icone={<ListChecks />} onClick={() => { close(); setPrevia(true); }}>
+              Aplicar às pendentes
+            </ItemDoMenu>
+            <ItemDoMenu
+              icone={ativa ? <Pause /> : <Play />}
+              disabled={pendente}
+              onClick={() => {
+                close();
+                startTransition(async () => {
+                  const r = await alterarRegraAtiva(id, !ativa);
+                  if ("error" in r) toast.error(r.error);
+                  else toast.success(ativa ? `“${nome}” pausada: deixa de sugerir e de lançar.` : `“${nome}” retomada.`);
+                });
+              }}
+            >
+              {ativa ? "Pausar" : "Retomar"}
+            </ItemDoMenu>
+            <ItemDoMenu
+              icone={<Trash2 />}
+              danger
+              onClick={() => {
+                close();
+                requestConfirm(
+                  {
+                    title: "Excluir a regra?",
+                    description: `“${nome}” deixa de sugerir e de lançar. O que ela já lançou fica — para tirar um lançamento, desfaça no registro abaixo.`,
+                    confirmLabel: "Excluir",
+                    destructive: true,
+                  },
+                  async () => {
+                    const r = await excluirRegra(id);
+                    if ("error" in r) throw new Error(r.error);
+                  }
+                );
+              }}
+            >
+              Excluir
+            </ItemDoMenu>
+          </>
+        )}
+      </MenuDeMaisAcoes>
       {dialog}
       {editando && (
         <FormularioDaRegra id={id} companyId={companyId} inicial={campos} opcoes={opcoes} lidaDoOmie={lidaDoOmie} onClose={() => setEditando(false)} />

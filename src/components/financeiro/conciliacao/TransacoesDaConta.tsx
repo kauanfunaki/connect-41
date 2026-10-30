@@ -17,6 +17,8 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import {
   confirmarConciliacao,
@@ -387,39 +389,17 @@ export function TransacoesDaConta({
                           </span>
                         </Aviso>
                       )}
-                      {podeAgir && (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {l.sugestao && !l.sugestao.bloqueio && (
-                            <Button size="xs" onClick={() => confirmarSugestao(l)}>
-                              <Check size={12} /> Confirmar
-                            </Button>
-                          )}
-                          {l.provavel && !l.provavel.bloqueio && (
-                            <Button size="xs" variant="secondary" onClick={() => conciliarComProvavel(l)}>
-                              <Check size={12} /> Conciliar com este
-                            </Button>
-                          )}
-                          {l.regra && (
-                            <Button size="xs" variant={l.provavel ? "secondary" : "primary"} onClick={() => lancarComRegra(l)}>
-                              <Wand2 size={12} /> Lançar pela regra
-                            </Button>
-                          )}
-                          <Button size="xs" variant="secondary" onClick={() => setEscolhendo(l)}>
-                            <ListChecks size={12} /> Escolher lançamentos
-                          </Button>
-                          <Button size="xs" variant="secondary" onClick={() => setCriando(l)}>
-                            <Plus size={12} /> Criar lançamento
-                          </Button>
-                          {outrasContas.length > 0 && (
-                            <Button size="xs" variant="secondary" onClick={() => setTransferindo(l)}>
-                              <ArrowLeftRight size={12} /> Transferência
-                            </Button>
-                          )}
-                          <Button size="xs" variant="ghost" onClick={() => setIgnorando(l)}>
-                            <EyeOff size={12} /> Ignorar
-                          </Button>
-                        </div>
-                      )}
+                      {podeAgir && <AcoesDaLinhaPendente
+                        l={l}
+                        temOutrasContas={outrasContas.length > 0}
+                        confirmar={() => confirmarSugestao(l)}
+                        conciliar={() => conciliarComProvavel(l)}
+                        lancarPelaRegra={() => lancarComRegra(l)}
+                        escolher={() => setEscolhendo(l)}
+                        criar={() => setCriando(l)}
+                        transferir={() => setTransferindo(l)}
+                        ignorar={() => setIgnorando(l)}
+                      />}
                     </div>
                   )}
 
@@ -541,6 +521,89 @@ export function TransacoesDaConta({
       {previa && <PreviaDaRegra id={previa.id} nome={previa.nome} onClose={() => setPrevia(null)} />}
       {ignorando && <IgnorarTransacao transacao={ignorando} onClose={() => setIgnorando(null)} />}
     </>
+  );
+}
+
+/**
+ * As ações de uma linha pendente do extrato (auditoria de UX, 30/10/2026). Eram
+ * até sete botões soltos, às vezes dois primários, repetidos em toda linha da
+ * tela mais usada do BPO. Agora, pela regra das tabelas (botão + "⋯"): a ação
+ * que a tela recomenda — confirmar a sugestão, conciliar com o mais provável ou
+ * lançar pela regra, nessa ordem — em primário; "Escolher lançamentos", o
+ * caminho manual de sempre, ao lado; e o resto no menu.
+ */
+function AcoesDaLinhaPendente({
+  l,
+  temOutrasContas,
+  confirmar,
+  conciliar,
+  lancarPelaRegra,
+  escolher,
+  criar,
+  transferir,
+  ignorar,
+}: {
+  l: LinhaDaTransacao;
+  temOutrasContas: boolean;
+  confirmar: () => void;
+  conciliar: () => void;
+  lancarPelaRegra: () => void;
+  escolher: () => void;
+  criar: () => void;
+  transferir: () => void;
+  ignorar: () => void;
+}) {
+  const podeConfirmar = !!l.sugestao && !l.sugestao.bloqueio;
+  const podeConciliar = !!l.provavel && !l.provavel.bloqueio;
+  const principal = podeConfirmar ? "confirmar" : podeConciliar ? "conciliar" : l.regra ? "regra" : null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {principal === "confirmar" && (
+        <Button size="xs" onClick={confirmar}>
+          <Check size={12} /> Confirmar
+        </Button>
+      )}
+      {principal === "conciliar" && (
+        <Button size="xs" onClick={conciliar}>
+          <Check size={12} /> Conciliar com este
+        </Button>
+      )}
+      {principal === "regra" && (
+        <Button size="xs" onClick={lancarPelaRegra}>
+          <Wand2 size={12} /> Lançar pela regra
+        </Button>
+      )}
+      <Button size="xs" variant="secondary" onClick={escolher}>
+        <ListChecks size={12} /> Escolher lançamentos
+      </Button>
+      <MenuDeMaisAcoes rotulo="Mais ações da transação" width={220} sempreMenu>
+        {({ close }) => (
+          <>
+            {podeConciliar && principal !== "conciliar" && (
+              <ItemDoMenu icone={<Check />} onClick={() => { close(); conciliar(); }}>
+                Conciliar com o mais provável
+              </ItemDoMenu>
+            )}
+            {l.regra && principal !== "regra" && (
+              <ItemDoMenu icone={<Wand2 />} onClick={() => { close(); lancarPelaRegra(); }}>
+                Lançar pela regra
+              </ItemDoMenu>
+            )}
+            <ItemDoMenu icone={<Plus />} onClick={() => { close(); criar(); }}>
+              Criar lançamento
+            </ItemDoMenu>
+            {temOutrasContas && (
+              <ItemDoMenu icone={<ArrowLeftRight />} onClick={() => { close(); transferir(); }}>
+                Transferência entre contas
+              </ItemDoMenu>
+            )}
+            <ItemDoMenu icone={<EyeOff />} onClick={() => { close(); ignorar(); }}>
+              Ignorar
+            </ItemDoMenu>
+          </>
+        )}
+      </MenuDeMaisAcoes>
+    </div>
   );
 }
 
