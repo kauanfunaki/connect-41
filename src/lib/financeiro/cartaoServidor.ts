@@ -74,6 +74,8 @@ export type CartaoDaEmpresa = {
   accountNumber: string;
   fechamento: number | null;
   vencimento: number | null;
+  /** O limite lido do Omie (30/10/2026), em centavos; nulo sem ele. */
+  limiteCentavos: number | null;
   ativo: boolean;
   faturas: FaturaDoCartao[];
 };
@@ -92,6 +94,7 @@ export async function cartoesDaEmpresa(cliente: Cliente, tenantId: string, compa
       accountNumber: true,
       cardClosingDay: true,
       cardDueDay: true,
+      cardLimit: true,
       active: true,
       cardInvoices: {
         where: { status: { not: "CANCELADO" } },
@@ -121,6 +124,7 @@ export async function cartoesDaEmpresa(cliente: Cliente, tenantId: string, compa
     accountNumber: c.accountNumber,
     fechamento: c.cardClosingDay,
     vencimento: c.cardDueDay,
+    limiteCentavos: c.cardLimit === null ? null : centavosDeDecimal(c.cardLimit),
     ativo: c.active,
     faturas: c.cardInvoices.map((f) => {
       const ciclo = f.cardCycle ?? "";

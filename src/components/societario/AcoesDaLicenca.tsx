@@ -1,22 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, Pencil, RotateCcw } from "lucide-react";
+import { Ban, Bot, Pencil, RotateCcw } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { revogarLicenca, reativarLicenca } from "@/app/(app)/licencas/actions";
+import { imprimirAlvaraPeloRobo, revogarLicenca, reativarLicenca } from "@/app/(app)/licencas/actions";
 import { LicencaModal, type LicencaParaEditar, type OrgaoDaLicenca } from "./LicencaForm";
 
 type Props = {
-  licenca: LicencaParaEditar & { revogada: boolean };
+  /** `alvara`: o robô do Societário sabe imprimir (30/10/2026). */
+  licenca: LicencaParaEditar & { revogada: boolean; alvara?: boolean };
   orgaos: OrgaoDaLicenca[];
 };
 
 export function AcoesDaLicenca({ licenca, orgaos }: Props) {
   const [editando, setEditando] = useState(false);
   const { dialog, requestConfirm } = useConfirm();
+  const toast = useToast();
+
+  function imprimirPeloRobo() {
+    requestConfirm(
+      {
+        title: "Pedir ao robô a impressão do alvará?",
+        description:
+          "A máquina do TI abre o site da prefeitura com a inscrição municipal da empresa, marca o aceite de acessibilidade em nome do cliente e guarda o PDF em Arquivos › Societário. O aceite fica registrado na trilha.",
+        confirmLabel: "Pedir ao robô",
+      },
+      async () => {
+        const r = await imprimirAlvaraPeloRobo(licenca.id);
+        if ("error" in r) throw new Error(r.error);
+        toast.success(r.texto);
+      }
+    );
+  }
 
   function revogar() {
     requestConfirm(
@@ -55,7 +74,7 @@ export function AcoesDaLicenca({ licenca, orgaos }: Props) {
       <Button variant="secondary" size="xs" type="button" onClick={() => setEditando(true)}>
         <Pencil size={12} /> Editar
       </Button>
-      <MenuDeMaisAcoes align="right" width={180} aria-label="Mais ações da licença">
+      <MenuDeMaisAcoes align="right" width={200} aria-label="Mais ações da licença">
         {({ close }) =>
           licenca.revogada ? (
             <ItemDoMenu
@@ -68,16 +87,29 @@ export function AcoesDaLicenca({ licenca, orgaos }: Props) {
               Reativar
             </ItemDoMenu>
           ) : (
-            <ItemDoMenu
-              icone={<Ban />}
-              danger
-              onClick={() => {
-                close();
-                revogar();
-              }}
-            >
-              Revogar
-            </ItemDoMenu>
+            <>
+              {licenca.alvara && (
+                <ItemDoMenu
+                  icone={<Bot />}
+                  onClick={() => {
+                    close();
+                    imprimirPeloRobo();
+                  }}
+                >
+                  Imprimir pelo robô
+                </ItemDoMenu>
+              )}
+              <ItemDoMenu
+                icone={<Ban />}
+                danger
+                onClick={() => {
+                  close();
+                  revogar();
+                }}
+              >
+                Revogar
+              </ItemDoMenu>
+            </>
           )
         }
       </MenuDeMaisAcoes>

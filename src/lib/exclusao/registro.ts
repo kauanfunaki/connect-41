@@ -146,6 +146,9 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "entityId", tratamento: "apagar" },
   { modelo: "PipelineItem", coluna: "entityId", tratamento: "desligar" },
   { modelo: "ValoraProposta", coluna: "companyId", tratamento: "desligar" },
+  // A fila do robô do Societário (30/10/2026): o PDF que a tarefa guardou
+  // mora nos Arquivos da empresa, que vão junto.
+  { modelo: "RobotTask", coluna: "companyId", tratamento: "apagar" },
   // O pedido de situação fiscal da ficha (Serpro, 20/10/2026): sem a empresa, não serve a ninguém.
   { modelo: "SerproPedido", coluna: "companyId", tratamento: "apagar" },
   // Preferência "última empresa aberta": sem a empresa, não vale nada.
@@ -315,6 +318,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "GithubConnection", coluna: "connectedBy", tratamento: "desligar" },
   { modelo: "GithubOAuthAttempt", coluna: "userId", tratamento: "apagar" },
   { modelo: "UserTaskView", coluna: "userId", tratamento: "apagar" },
+  { modelo: "RobotTask", coluna: "requestedById", tratamento: "desligar" },
   { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },

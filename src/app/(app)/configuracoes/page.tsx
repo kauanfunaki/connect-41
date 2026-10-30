@@ -13,6 +13,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PerfilForm } from "@/components/configuracoes/PerfilForm";
 import { AlterarSenhaForm } from "@/components/configuracoes/AlterarSenhaForm";
 import { TemaSelector } from "@/components/configuracoes/TemaSelector";
+import { SeletorDePaleta } from "@/components/configuracoes/SeletorDePaleta";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
 import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { getVapidPublicKey } from "@/lib/vapid";
@@ -35,7 +36,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   const [me, { labels: sectorLabels }, expedientes, github, params] = await Promise.all([
     prisma.user.findFirst({
       where: { id: ctx.userId, tenantId: ctx.tenantId },
-      select: { name: true, email: true, photoUrl: true },
+      select: { name: true, email: true, photoUrl: true, accentColor: true },
     }),
     getSectorMaps(ctx.tenantId),
     carregarExpedientes(ctx.tenantId, ctx.userId),
@@ -90,8 +91,11 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
         <AlterarSenhaForm action={alterarMinhaSenha} />
       </SecaoDeConfiguracao>
 
-      <SecaoDeConfiguracao titulo="Aparência" descricao="Escolha o tema claro, o escuro, ou siga o tema do seu aparelho." icone={<Palette />}>
-        <TemaSelector />
+      <SecaoDeConfiguracao titulo="Aparência" descricao="O tema claro, o escuro ou o do seu aparelho, e a paleta de cores, só para você." icone={<Palette />}>
+        <div className="flex flex-col gap-6">
+          <TemaSelector />
+          <SeletorDePaleta atual={me.accentColor} />
+        </div>
       </SecaoDeConfiguracao>
 
       {/* 05/10/2026: quem trabalha à noite ou de madrugada não via as

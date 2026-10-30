@@ -1,4 +1,5 @@
 import { cssDaAparencia, variaveisDaAparencia, type Aparencia } from "@/lib/aparencia/cores";
+import { variaveisDaPaleta } from "@/lib/aparencia/paletas";
 
 /**
  * As cores do escritório na página (21/10/2026): um <style> com os tokens que
@@ -15,4 +16,15 @@ export function EstiloDaAparencia({ aparencia, grupos = true }: { aparencia: Apa
   const css = cssDaAparencia(variaveisDaAparencia(aparencia, { grupos }));
   if (!css) return null;
   return <style data-aparencia="" dangerouslySetInnerHTML={{ __html: css }} />;
+}
+
+/**
+ * A paleta da pessoa (30/10/2026), depois da aparência do escritório na
+ * página: ganha dela com a mesma especificidade. Sem paleta, nada sai.
+ */
+export function EstiloDaPaleta({ cor }: { cor: string | null }) {
+  const v = cor ? variaveisDaPaleta(cor) : null;
+  const css = v ? cssDaAparencia(v) : "";
+  if (!css) return null;
+  return <style data-paleta="" dangerouslySetInnerHTML={{ __html: css }} />;
 }

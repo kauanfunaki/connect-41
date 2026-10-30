@@ -12,6 +12,7 @@ import {
 import { campoDaData } from "@/lib/societario/datas";
 import type { LinhaDeLicenca } from "@/lib/societario/licencas-data";
 import { AcoesDaLicenca } from "./AcoesDaLicenca";
+import { ehAlvara } from "@/lib/robo/alvara";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { saoPauloParts } from "@/lib/agenda";
@@ -74,6 +75,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
     expiresAt: campoDaData(l.expiresAt),
     notes: l.notes,
     revogada: l.revokedAt !== null,
+    alvara: ehAlvara(l.kind),
   });
 
   // O link da célula principal no desenho da fila de processos: negrito, cor

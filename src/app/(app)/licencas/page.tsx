@@ -82,6 +82,10 @@ export default async function LicencasPage({
                 Trazer do Radar
               </Link>
             )}
+            {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença. */}
+            <Link href="/societario/robo" className="text-ui text-brand hover:underline">
+              Robô
+            </Link>
             <NovaLicenca
               empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
               orgaos={orgaosDoForm}

@@ -5,14 +5,21 @@ import type { TaxaNaTela } from "@/lib/societario/licencas-data";
 import type { CustoDoProcesso } from "@/lib/societario/licencas";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EnviarTaxaAoCliente } from "./EnviarTaxaAoCliente";
+import { NovaTaxa, type ApresentacaoParaTaxa } from "./NovaTaxa";
+import { AcoesDaTaxa } from "./AcoesDaTaxa";
 import { Aviso } from "@/components/ui/Aviso";
 import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 
-type Props = { taxas: TaxaNaTela[]; custo: CustoDoProcesso };
+type Props = {
+  taxas: TaxaNaTela[];
+  custo: CustoDoProcesso;
+  /** Lançar e editar (30/10/2026). Sem isto, o bloco só mostra — e some sem taxa. */
+  edicao?: { processId: string; apresentacoes: ApresentacaoParaTaxa[]; podeExcluir: boolean };
+};
 
-export function TaxasDoProcesso({ taxas, custo }: Props) {
-  if (taxas.length === 0) return null;
+export function TaxasDoProcesso({ taxas, custo, edicao }: Props) {
+  if (taxas.length === 0 && !edicao) return null;
 
   const aPagar = custo.totalCentavos - custo.pagoCentavos;
 
@@ -22,11 +29,20 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
         {/* Título de seção da ficha em 18px (padrão aceito na página de
             decisões, 08/10/2026) — era o de cartão em grade, 14px. */}
         <h2 id="taxas-do-processo" className="text-section font-semibold text-fg">Taxas</h2>
-        <p className="text-ui tabular-nums text-fg">
-          <strong>{formatarReaisDeCentavos(custo.totalCentavos)}</strong>
-          {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
-        </p>
+        <div className="flex items-center gap-2">
+          {taxas.length > 0 && (
+            <p className="text-ui tabular-nums text-fg">
+              <strong>{formatarReaisDeCentavos(custo.totalCentavos)}</strong>
+              {aPagar > 0 && <span className="text-warning-fg"> · {formatarReaisDeCentavos(aPagar)} a pagar</span>}
+            </p>
+          )}
+          {edicao && <NovaTaxa processId={edicao.processId} apresentacoes={edicao.apresentacoes} />}
+        </div>
       </div>
+
+      {taxas.length === 0 && (
+        <p className="text-ui text-fg-muted">Nenhuma taxa lançada. Lance a guia da Junta, o DAM ou a taxa do Bombeiros quando sair.</p>
+      )}
 
       {/* O número que dá causa ao prazo: "trinta dias" sozinho não conta a
           história que "trinta dias e duas guias a mais" conta. */}
@@ -64,6 +80,11 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
               ) : (
                 <Selo tom="atencao">Em aberto</Selo>
               )}
+              {edicao && (
+                <span className="ml-auto">
+                  <AcoesDaTaxa taxaId={t.id} descricao={t.description} paga={t.paidAt !== null} podeExcluir={edicao.podeExcluir} />
+                </span>
+              )}
             </PeDoCartao>
             {t.envio && (
               <div className="mt-2">
@@ -90,6 +111,11 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
               <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Taxa" chave="taxa" /></th>
               <th className="py-2 pr-3 font-medium">Valor</th>
               <th className="py-2 font-medium"><FiltroDaColuna rotulo="Situação" chave="situacao" align="right" /></th>
+              {edicao && (
+                <th className="py-2 font-medium">
+                  <span className="sr-only">Ações</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -127,6 +153,11 @@ export function TaxasDoProcesso({ taxas, custo }: Props) {
                     <Selo tom="atencao">Em aberto</Selo>
                   )}
                 </td>
+                {edicao && (
+                  <td className="py-2.5 pl-2 text-right">
+                    <AcoesDaTaxa taxaId={t.id} descricao={t.description} paga={t.paidAt !== null} podeExcluir={edicao.podeExcluir} />
+                  </td>
+                )}
               </LinhaFiltravel>
             ))}
           </tbody>

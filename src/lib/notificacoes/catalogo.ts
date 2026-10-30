@@ -129,6 +129,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   CERTIDAO_POSITIVA: a("documento", "danger", "Certidão positiva"),
   // A IE mudou de situação no CICAD (robô do Societário, 30/10/2026).
   IE_SITUACAO_MUDOU: a("alerta", "danger", "Inscrição estadual mudou"),
+  // O robô do Societário parou e chamou quem pediu (30/10/2026).
+  ROBO_PRECISA_DE_VOCE: p("processo", "warning", "O robô precisa de você"),
   SOLICITACAO_PRAZO: a("prazo", "danger", "Prazo da solicitação"),
 };
 

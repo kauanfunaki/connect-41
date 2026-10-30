@@ -28,7 +28,7 @@ import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
 import { temAcessoAoModulo } from "@/lib/chamados/consultas";
 import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
-import { EstiloDaAparencia } from "@/components/aparencia/EstiloDaAparencia";
+import { EstiloDaAparencia, EstiloDaPaleta } from "@/components/aparencia/EstiloDaAparencia";
 import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
 import { alcanceDoFoco } from "@/lib/empresas/foco";
 import { FaixaDoFoco, ProvedorDoFoco } from "@/components/empresas/FaixaDoFoco";
@@ -154,7 +154,7 @@ export default async function AppLayout({
           })
       : Promise.resolve(0),
     ctx.userId
-      ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true } })
+      ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true, accentColor: true } })
       : Promise.resolve(null),
     // A janela de troca lista os escritórios pela MESMA regra que o token usa
     // para autorizar a troca (`escritoriosAcessiveis`, via
@@ -198,6 +198,8 @@ export default async function AppLayout({
           do grupo dela (ver `grupoDaTelaDaEquipe`). A cor principal do
           escritório, só com "Usar também no Connect da equipe". */}
       <EstiloDaAparencia aparencia={aparencia.noConnect ? aparencia : { ...aparencia, corPrincipal: null }} />
+      {/* A paleta da pessoa (30/10/2026), por cima da cor do escritório. */}
+      <EstiloDaPaleta cor={me?.accentColor ?? null} />
       <AppShell
         faixaDoFoco={
           foco ? (

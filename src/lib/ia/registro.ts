@@ -17,6 +17,7 @@ import { FERRAMENTAS_DE_AJUDA } from "@/lib/ia/ferramentas-ajuda";
 import { FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR } from "@/lib/ia/ferramentas-recrutamento-setor";
 import { FERRAMENTAS_DE_FISCAL } from "@/lib/ia/ferramentas-fiscal";
 import { FERRAMENTAS_DE_BPO } from "@/lib/ia/ferramentas-bpo";
+import { FERRAMENTAS_DA_DRE_DO_BPO } from "@/lib/ia/ferramentas-bpo-dre";
 import { FERRAMENTAS_DO_ORQUESTRADOR } from "@/lib/ia/ferramentas-orquestrador";
 import { FERRAMENTAS_DE_DP } from "@/lib/ia/ferramentas-dp";
 import { FERRAMENTAS_DA_EQUIPE } from "@/lib/ia/ferramentas-equipe";
@@ -30,6 +31,7 @@ const CONJUNTOS = [
   FERRAMENTAS_DE_RECRUTAMENTO_DO_SETOR,
   FERRAMENTAS_DE_FISCAL,
   FERRAMENTAS_DE_BPO,
+  FERRAMENTAS_DA_DRE_DO_BPO,
   FERRAMENTAS_DO_ORQUESTRADOR,
   FERRAMENTAS_DE_DP,
   FERRAMENTAS_DA_EQUIPE,
