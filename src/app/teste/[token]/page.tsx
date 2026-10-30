@@ -54,7 +54,7 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
   }
 
   return (
-    <div className="min-h-screen py-10 px-4">
+    <main className="c41-toque min-h-dvh py-10 px-4">
       <div className="max-w-2xl mx-auto">
         {/* O logo do escritório, como no portal de vagas (padrão aceito na
             página de decisões, 08/10/2026): quem abre o link é de fora e
@@ -77,6 +77,6 @@ export default async function TestePage({ params }: { params: Promise<{ token: s
           Processo conduzido por {link.tenant.name}. Suas respostas são usadas apenas para este processo seletivo (LGPD).
         </p>
       </div>
-    </div>
+    </main>
   );
 }

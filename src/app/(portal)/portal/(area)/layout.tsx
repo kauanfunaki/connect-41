@@ -68,6 +68,10 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
       <EstiloDaAparencia aparencia={aparencia} />
       <PortalShell grupoNome={nome} modulos={[...modulos]} bloqueadas={[...bloqueadas]} logo={logo} sugestao={comSugestao}>
         {children}
+        {/* Folga no fim da página para o botão flutuante da Ceci (48px no canto),
+            que cobria o "Baixar" da última linha e a paginação (auditoria de UX,
+            30/10/2026). */}
+        {comCeci && <div aria-hidden className="h-20" />}
       </PortalShell>
       <TutorialDoPortal />
       {comCeci && <CeciDoPortal primeiroNome={primeiroNomeParaOPrompt(conta?.name)} />}

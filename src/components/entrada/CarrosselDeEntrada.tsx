@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pause, Play } from "lucide-react";
 
 // O carrossel das telas de entrada — o do portal do cliente (02/10/2026) e o da
 // equipe (06/10/2026). Aqui mora só o mecanismo e as peças das cenas; o que
@@ -23,14 +24,18 @@ export function CarrosselDeEntrada({ rotulo, slides }: { rotulo: string; slides:
   // Parado com o mouse ou o foco do teclado em cima — e sempre, para quem
   // pediu menos movimento ao sistema.
   const [pausado, setPausado] = useState(false);
+  // E pelo botão "Pausar a troca" (auditoria de UX, 30/10/2026; WCAG 2.2.2):
+  // pausar só com o mouse em cima não serve a quem usa o dedo nem a quem só
+  // quer ler com calma. O mesmo botão da Ceci por setor, no site.
+  const [parado, setParado] = useState(false);
 
   useEffect(() => {
-    if (pausado || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (pausado || parado || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     // Um timer por slide, e não um intervalo fixo: escolher um slide pelos
     // pontinhos recomeça a contagem.
     const t = window.setTimeout(() => setAtual((i) => (i + 1) % slides.length), INTERVALO_MS);
     return () => window.clearTimeout(t);
-  }, [atual, pausado, slides.length]);
+  }, [atual, pausado, parado, slides.length]);
 
   return (
     <section
@@ -72,6 +77,15 @@ export function CarrosselDeEntrada({ rotulo, slides }: { rotulo: string; slides:
       </div>
 
       <div className="flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setParado((p) => !p)}
+          className="mr-2 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-fs-2 font-medium text-white/80 shadow-[inset_0_0_0_1px_rgba(255,255,255,.18)] transition-colors hover:text-white motion-reduce:hidden"
+        >
+          {parado ? <Play size={12} aria-hidden className="flex-none" /> : <Pause size={12} aria-hidden className="flex-none" />}
+          {parado ? "Retomar a troca" : "Pausar a troca"}
+        </button>
+        {/* Pontos com área de toque de 32px (eram ~20px); o desenho continua o mesmo. */}
         {slides.map((s, i) => (
           <button
             key={s.chave}
@@ -79,7 +93,7 @@ export function CarrosselDeEntrada({ rotulo, slides }: { rotulo: string; slides:
             onClick={() => setAtual(i)}
             aria-label={`Mostrar: ${s.titulo}`}
             aria-current={i === atual}
-            className="group/ponto p-1.5 -m-1 rounded-full focus-visible:outline-2 focus-visible:outline-white/80"
+            className="group/ponto inline-flex min-h-8 min-w-8 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-white/80"
           >
             <span
               className={`block h-2 rounded-full transition-all duration-300 ${
@@ -90,7 +104,8 @@ export function CarrosselDeEntrada({ rotulo, slides }: { rotulo: string; slides:
         ))}
       </div>
 
-      <p className="text-center text-fs-1 text-white/40 -mt-6">Ilustrações com dados fictícios.</p>
+      {/* 75% (era 40%, ~3,1:1 sobre o azul): o único texto abaixo de AA nesta tela. */}
+      <p className="text-center text-fs-1 text-white/75 -mt-6">Ilustrações com dados fictícios.</p>
     </section>
   );
 }
