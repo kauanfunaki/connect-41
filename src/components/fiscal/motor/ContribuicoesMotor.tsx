@@ -95,7 +95,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
       })()}
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Conferência dos pagamentos" descricao={`${d.filaInteira ? "A fila inteira, de todas as competências" : `Período ${d.periodo}`}.${escrita.visivel ? " Aceitar pede o que a coluna falta_para_aceitar indica; aceitar deixa o SPED de Contribuições do período defasado." : ""}`} acao={<span className="flex flex-wrap gap-2">
+    <BlocoFiscal titulo="Conferência dos pagamentos" descricao={`${d.filaInteira ? "A fila inteira, de todas as competências" : `Período ${d.periodo}`}.${escrita.visivel ? " Aceitar pede o que a coluna “Falta para aceitar” indica; aceitar deixa o SPED de Contribuições do período defasado." : ""}`} acao={<span className="flex flex-wrap gap-2">
       <Button size="sm" variant="secondary" href={aqui({ fila: d.filaInteira ? null : "toda" })} scroll={false}>{d.filaInteira ? "Só do período" : "Ver a fila inteira"}</Button>
       <Button size="sm" variant="ghost" href={aqui({ sem_credito: d.semCredito ? null : "1" })} scroll={false}>{d.semCredito ? "Esconder os sem crédito" : "Incluir os sem crédito"}</Button>
     </span>}>

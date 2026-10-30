@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { CampoFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { apurarCteNoMotor, corrigirPagamentoNoMotor, decidirPagamentoNoMotor, informarContratoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
@@ -51,12 +53,19 @@ export function AcoesDoPagamento({ raiz, chave: alvo, decisao, falta, correcao, 
     if (r.ok) router.refresh();
     fim(r.ok);
   }));
+  // Um botão e o "⋯" por linha (auditoria de UX, 30/10/2026): eram até quatro
+  // botões, com "Aceitar" primário em todas as linhas — dezenas de primários
+  // numa fila de pagamentos. "Aceitar" fica à vista, em secundário; Descartar,
+  // Corrigir e Desfazer vão para o menu, como nas outras tabelas do app.
+  const travado = !permissao.pode || pendente;
   return <div className="flex min-w-40 flex-col items-center gap-1">
-    <span className="flex flex-wrap justify-center gap-1">
-      {decisao !== "aceito" && <Button size="xs" disabled={!permissao.pode || pendente} title={falta ?? permissao.motivo ?? undefined} onClick={() => decidir("aceito")}>Aceitar</Button>}
-      {decisao !== "descartado" && <Button size="xs" variant="secondary" disabled={!permissao.pode || pendente} onClick={() => { setResultado(null); setAberto("descartar"); }}>Descartar</Button>}
-      <Button size="xs" variant="secondary" disabled={!permissao.pode || pendente} onClick={() => { setResultado(null); setAberto("corrigir"); }}>Corrigir</Button>
-      {decisao && <Button size="xs" variant="ghost" disabled={!permissao.pode || pendente} onClick={() => decidir("")}>Desfazer</Button>}
+    <span className="flex flex-wrap items-center justify-center gap-1">
+      {decisao !== "aceito" && <Button size="xs" variant="secondary" disabled={travado} title={falta ?? permissao.motivo ?? undefined} onClick={() => decidir("aceito")}>Aceitar</Button>}
+      {permissao.pode && <MenuDeMaisAcoes rotulo="Mais decisões do pagamento" sempreMenu>{({ close }) => <>
+        <ItemDoMenu disabled={pendente} onClick={() => { close(); setResultado(null); setAberto("corrigir"); }}>Corrigir</ItemDoMenu>
+        {decisao && <ItemDoMenu disabled={pendente} onClick={() => { close(); void decidir(""); }}>Desfazer a decisão</ItemDoMenu>}
+        {decisao !== "descartado" && <ItemDoMenu danger disabled={pendente} onClick={() => { close(); setResultado(null); setAberto("descartar"); }}>Descartar</ItemDoMenu>}
+      </>}</MenuDeMaisAcoes>}
     </span>
     {resultado && <span role={resultado.ok ? "status" : "alert"} className={`max-w-56 text-helper ${resultado.ok ? "text-success-fg" : "text-warning-fg"}`}>{resultado.mensagem}</span>}
     {aberto === "descartar" && <Descartar fechar={() => setAberto(null)} enviar={async (motivo) => { if (await decidir("descartado", motivo)) setAberto(null); }} pendente={pendente} />}
@@ -68,9 +77,11 @@ function Descartar({ fechar, enviar, pendente }: { fechar: () => void; enviar: (
   const [motivo, setMotivo] = useState("");
   return <Modal open title="Descartar o pagamento" onClose={fechar}>
     <CampoFiscal nome="Motivo"><Input maxLength={300} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: duplicado da página 2" /></CampoFiscal>
-    <div className="mt-5 flex flex-wrap gap-3">
-      <Button loading={pendente} loadingLabel="Gravando…" onClick={() => enviar(motivo)}>Descartar</Button>
-      <Button variant="secondary" onClick={fechar}>Cancelar</Button>
+    {/* Rodapé do app: Cancelar e a ação à direita; a ação em vermelho, porque
+        descarta (era o azul de primário). */}
+    <div className="mt-5 flex flex-wrap justify-end gap-2">
+      <Button variant="secondary" onClick={fechar} disabled={pendente}>Cancelar</Button>
+      <Button variant="dangerSolid" loading={pendente} loadingLabel="Gravando…" onClick={() => enviar(motivo)}>Descartar</Button>
     </div>
   </Modal>;
 }
@@ -105,9 +116,11 @@ function Corrigir({ raiz, alvo, inicial, originais, falta, fechar }: {
     <p className="text-ui text-fg-secondary">Só o campo que você mudar é gravado. Esvaziar um campo limpa a correção e volta ao valor lido do documento.</p>
     {falta && <Aviso tom="atencao" className="mt-3">Para aceitar falta: {falta}</Aviso>}
     <div className="mt-4 grid gap-4 sm:grid-cols-2">
-      {CAMPOS_CORRIGIVEIS.map((c) => <CampoFiscal key={c} nome={ROTULO_DO_CAMPO[c]}>
+      {/* O erro pela prop `erro` (auditoria de UX, 30/10/2026): passado como
+          segundo filho, impedia o `CampoFiscal` de dar o `id` ao campo, e o
+          rótulo ficava solto dele. */}
+      {CAMPOS_CORRIGIVEIS.map((c) => <CampoFiscal key={c} nome={ROTULO_DO_CAMPO[c]} erro={errosDosCampos[c]}>
         <Input value={campos[c]} error={!!errosDosCampos[c]} placeholder={originais[c] ? `Lido: ${originais[c]}` : "Sem valor lido"} onChange={(e) => setCampos((x) => ({ ...x, [c]: e.target.value }))} />
-        {errosDosCampos[c] && <span className="text-helper text-danger">{errosDosCampos[c]}</span>}
       </CampoFiscal>)}
       <CampoFiscal nome="Motivo" className="sm:col-span-2"><Input maxLength={300} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: conferi o PDF" /></CampoFiscal>
     </div>
@@ -162,9 +175,8 @@ export function InformarContrato({ raiz, fornecedor, permissao }: { raiz: string
         {SIM_NAO_DO_CONTRATO.map(([k, rotulo]) => <CampoFiscal key={k} nome={rotulo}>
           <Select value={dados[k] ?? ""} onChange={(e) => setDados((d) => ({ ...d, [k]: e.target.value }))}><option value="">Padrão do motor</option><option value="S">Sim</option><option value="N">Não</option></Select>
         </CampoFiscal>)}
-        {TEXTO_DO_CONTRATO.map(([k, rotulo, tipo]) => <CampoFiscal key={k} nome={k === "tratativa" && ressalva ? `${rotulo} (obrigatória)` : rotulo} className={k === "observacao" || k === "tratativa" ? "sm:col-span-2" : undefined}>
+        {TEXTO_DO_CONTRATO.map(([k, rotulo, tipo]) => <CampoFiscal key={k} nome={k === "tratativa" && ressalva ? `${rotulo} (obrigatória)` : rotulo} erro={campos[k]} className={k === "observacao" || k === "tratativa" ? "sm:col-span-2" : undefined}>
           <Input type={tipo} value={dados[k] ?? ""} error={!!campos[k]} onChange={(e) => setDados((d) => ({ ...d, [k]: e.target.value }))} />
-          {campos[k] && <span className="text-helper text-danger">{campos[k]}</span>}
         </CampoFiscal>)}
       </div>
       {erro && <Aviso tom="atencao" className="mt-3">{erro}</Aviso>}

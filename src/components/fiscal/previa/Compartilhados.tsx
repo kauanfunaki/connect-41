@@ -79,8 +79,16 @@ function celulaNumerica(c: ReactNode): boolean {
   if (typeof c === "string") return NUMERICO.test(c.trim());
   return isValidElement<{ className?: string }>(c) && /\btabular-nums\b/.test(c.props.className ?? "");
 }
-export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtro.", descricaoVazio = "Troque os filtros ou use as ações de teste para adicionar informações." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string; descricaoVazio?: string }) {
-  if (!linhas.length) return <EmptyState icon={<FileText />} title={vazio} description={descricaoVazio} />;
+/** Quantas linhas a tabela desenha de cada vez; o resto vem pelo "Mostrar mais". */
+const LOTE_DA_TABELA = 200;
+export function TabelaFiscal({ colunas, linhas: todas, vazio = "Nenhum item neste filtro.", descricaoVazio = "Troque os filtros ou use as ações de teste para adicionar informações." }: { colunas: string[]; linhas: { id: string; celulas: ReactNode[] }[]; vazio?: string; descricaoVazio?: string }) {
+  // De 200 em 200 (auditoria de UX, 30/10/2026): a conferência dos pagamentos
+  // cortava em 200 linhas de uma fila de até 2000, e da 201ª em diante não
+  // havia como ver nem decidir.
+  const [quantas, setQuantas] = useState(LOTE_DA_TABELA);
+  if (!todas.length) return <EmptyState icon={<FileText />} title={vazio} description={descricaoVazio} />;
+  const linhas = todas.slice(0, quantas);
+  const faltam = todas.length - linhas.length;
   const resto = colunas.slice(1);
   const numerica = colunas.map((_, i) => { const preenchidas = linhas.map((l) => l.celulas[i]).filter((c) => c !== null && c !== undefined && c !== "" && c !== "—"); return preenchidas.length > 0 && preenchidas.every(celulaNumerica); });
   return <>
@@ -98,6 +106,10 @@ export function TabelaFiscal({ colunas, linhas, vazio = "Nenhum item neste filtr
         <tbody>{linhas.map((l) => <tr key={l.id} className="border-b border-border-soft">{l.celulas.map((c, i) => <td key={i} className={`px-3 align-middle text-fg ${numerica[i] ? "text-right tabular-nums" : "text-left"}`}>{c}</td>)}</tr>)}</tbody>
       </table>
     </TabelaNoDesktop>
+    {faltam > 0 && <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-helper text-fg-muted tabular-nums" aria-live="polite">Mostrando {formatarNumero(linhas.length, 0)} de {formatarNumero(todas.length, 0)} linhas.</p>
+      <Button variant="secondary" size="sm" onClick={() => setQuantas((n) => n + LOTE_DA_TABELA)}>Mostrar mais {formatarNumero(Math.min(LOTE_DA_TABELA, faltam), 0)}</Button>
+    </div>}
   </>;
 }
 /** O rótulo do campo é o do `CampoForm` (15/10/2026); era um <label> à mão. O `erro` vai para a mensagem do `CampoForm`, não para o rótulo (26/10/2026). */
