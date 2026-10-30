@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 import { Building2, Calendar, ExternalLink, Pencil, Trash2, Users, Video } from "lucide-react";
 import { EditMeetingDialog } from "./EditMeetingDialog";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
@@ -52,15 +53,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
   const rootRef = useRef<HTMLDivElement>(null);
   const canEdit = meeting.createdByUserId === actions.currentUserId;
   const { dialog: confirmDialog, requestConfirm } = useConfirm();
-
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [open]);
+  // Clique fora e Esc vêm do `PainelFlutuante` (ver o comentário do painel abaixo).
 
   const start = new Date(meeting.startAt);
   const end = new Date(meeting.endAt);
@@ -78,6 +71,8 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
     variant === "block" ? (
       <button
         type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
@@ -98,6 +93,8 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
     ) : (
       <button
         type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
@@ -123,8 +120,18 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
     <div ref={rootRef} style={positioning} className={`${variant === "block" ? "" : "relative"} ${open || editing ? "z-30" : "z-10"}`}>
       {trigger}
 
-      {open && (
-        <div className="absolute z-20 top-full left-0 mt-1.5 w-80 bg-surface-elevated border border-border-strong rounded-lg shadow-[var(--c41-shadow-lg)] overflow-hidden">
+      {/* No `PainelFlutuante` (auditoria de UX, 30/10/2026): era `absolute`
+          dentro da célula do mês e do cartão da agenda, os dois com
+          `overflow-hidden`, e Entrar/Editar/Excluir saíam cortados. Agora vai
+          para o `body`, vira para cima quando não cabe e fecha no Esc. */}
+      <PainelFlutuante
+        ancora={rootRef}
+        aberto={open}
+        onFechar={() => setOpen(false)}
+        largura={320}
+        aria-label={`Reunião: ${meeting.title}`}
+        className="overflow-hidden"
+      >
           <div className="h-1" style={{ background: accent }} />
 
           <div className="p-3.5 space-y-3">
@@ -223,8 +230,7 @@ export function MeetingItem({ meeting, actions, variant, top, height, compact = 
               </Button>
             )}
           </div>
-        </div>
-      )}
+      </PainelFlutuante>
       {confirmDialog}
 
       {editing && (

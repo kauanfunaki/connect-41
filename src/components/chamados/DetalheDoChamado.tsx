@@ -12,6 +12,7 @@ import { CampoDataHora } from "@/components/ui/CampoDataHora";
 import { formatInstantDateTime } from "@/lib/format";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Campo, CamposDoChamado, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
 import { CaixaDeMensagem } from "./CaixaDeMensagem";
 import { LinhaDoTempo, LinkDoAnexo } from "./LinhaDoTempo";
@@ -50,9 +51,18 @@ export function DetalheDoChamado({ chamado: t, eu, usuarios, categorias, setores
     finally { setBusy(false); }
   }
   const acao = (op: string, valor: unknown) => void executar(() => mudar(t.id, t.version, op, valor));
+  // Resolver e cancelar encerram o chamado: passam pela confirmação (auditoria de
+  // UX, 30/10/2026). A situação grava a cada troca, e percorrer a lista pelo
+  // teclado podia encerrar o chamado no meio do caminho.
+  const [finalPedido, setFinalPedido] = useState<"RESOLVIDO" | "CANCELADO" | null>(null);
+  function trocarSituacao(nova: string) { const anterior = situacao; setSituacao(nova); void executar(() => mudar(t.id, t.version, "status", nova)).then(ok => { if (!ok) setSituacao(anterior); }); }
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center gap-2 text-ui"><span className="rounded bg-brand/8 px-3 py-1 text-brand">{ROTULOS[t.status]}</span><span className="rounded bg-surface-hover px-3 py-1 text-fg" aria-label="Grupo e categoria">{nomeDaCategoria(categorias, t.categoryId) || t.category.name}</span><span className="text-fg-secondary">{ROTULOS_PRIORIDADE[t.priority]} · {setores.find(s => s.code === t.requesterSectorCode)?.label ?? t.requesterSectorCode}</span><IconButton title="Atualizar" size="sm" onClick={() => router.refresh()}><RefreshCw size={14} /></IconButton></div>
     {erro && <p role="alert" className="rounded-md bg-danger/8 p-3 text-ui text-danger">{erro}</p>}{busy && <p role="status" className="text-ui text-fg-secondary">Salvando alteração…</p>}
+    <ConfirmDialog open={finalPedido !== null} title={finalPedido === "CANCELADO" ? "Cancelar o chamado?" : "Marcar o chamado como resolvido?"}
+      description={finalPedido === "CANCELADO" ? "O chamado é encerrado sem solução e sai da fila. O solicitante é avisado." : "O chamado é encerrado e o solicitante é avisado. Ele pode pedir reabertura depois."}
+      confirmLabel={finalPedido === "CANCELADO" ? "Cancelar o chamado" : "Marcar como resolvido"} cancelLabel="Voltar" destructive={finalPedido === "CANCELADO"}
+      onConfirm={() => { if (finalPedido) trocarSituacao(finalPedido); setFinalPedido(null); }} onCancel={() => setFinalPedido(null)} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
       <div className="min-w-0 space-y-5">
         <Card className="p-5 space-y-4"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold text-fg">Solicitação</h2>{p.operar && !encerrado && <Button variant="ghost" size="sm" onClick={() => setEditar(!editar)}>{editar ? "Fechar edição" : "Editar dados"}</Button>}</div>
@@ -74,7 +84,7 @@ export function DetalheDoChamado({ chamado: t, eu, usuarios, categorias, setores
       </div>
       <div className="min-w-0 space-y-5">
         <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Atendimento</h2>
-          {p.operar && !encerrado ? <Campo label="Situação"><Select value={situacao} disabled={busy} onChange={e => { const anterior = situacao, nova = e.target.value; setSituacao(nova); void executar(() => mudar(t.id, t.version, "status", nova)).then(ok => { if (!ok) setSituacao(anterior); }); }}>{STATUS.map(s => <option key={s} value={s}>{ROTULOS[s]}</option>)}</Select></Campo> : null}
+          {p.operar && !encerrado ? <Campo label="Situação"><Select value={situacao} disabled={busy} onChange={e => { const nova = e.target.value; if (nova === "RESOLVIDO" || nova === "CANCELADO") setFinalPedido(nova); else trocarSituacao(nova); }}>{STATUS.map(s => <option key={s} value={s}>{ROTULOS[s]}</option>)}</Select></Campo> : null}
           <SeletorDePessoas titulo="Responsáveis" selecionados={responsaveis} nome={nome} vazio="" disabled={busy || encerrado}
             opcoes={p.gerenciar ? atendentes : atendentes.filter(u => u.id === eu)}
             onAdicionar={p.operar && !encerrado ? id => p.gerenciar ? acao("responsaveis", [...responsaveis, id]) : acao("assumir", null) : undefined}

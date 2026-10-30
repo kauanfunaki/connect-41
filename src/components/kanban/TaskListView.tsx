@@ -14,6 +14,7 @@ import { RowActionsMenu } from "@/components/kanban/RowActionsMenu";
 import { Button } from "@/components/ui/Button";
 import { TabelaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
+import { useToast } from "@/components/ui/Toast";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -48,7 +49,7 @@ type Props = {
   renameStageAction: (stageId: string, name: string) => Promise<void>;
   createTaskAction: (stageId: string, title: string) => Promise<void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
-  moveAction: (itemId: string, newStageId: string) => Promise<void>;
+  moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
   reorderAction: (itemId: string, direction: "up" | "down") => Promise<void>;
   concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
   reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
@@ -442,7 +443,11 @@ function TaskCard({
             value={item.stageId}
             onChange={(e) => {
               const newStageId = e.target.value;
-              if (newStageId !== item.stageId) startTransition(() => moveAction(item.id, newStageId));
+              if (newStageId !== item.stageId) {
+                startTransition(async () => {
+                  await moveAction(item.id, newStageId);
+                });
+              }
             }}
             className="w-full"
           >
@@ -715,9 +720,23 @@ const MAX_SCROLL_SPEED = 18;
 // fixas somavam ~340px de largura reservada e esmagavam o título no celular.
 // Os cards perdem o drag-and-drop — que já não funcionava no toque — e ganham
 // um select de status no lugar.
-export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction, reorderAction, concluirAction, reabrirAction, deleteAction }: Props) {
+export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, priorityAction, moveAction: moverNoServidor, reorderAction, concluirAction, reabrirAction, deleteAction }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const toast = useToast();
+
+  // Toda troca de situação da lista passa por aqui — arrastar, soltar na linha,
+  // o seletor do cartão — e avisa quando o servidor recusa ou falha
+  // (auditoria de UX, 30/10/2026). Antes era "dispara e esquece": a tarefa
+  // ficava onde estava sem ninguém saber por quê.
+  async function moveAction(itemId: string, newStageId: string) {
+    try {
+      const r = await moverNoServidor(itemId, newStageId);
+      if (r && "error" in r) toast.error(r.error);
+    } catch {
+      toast.error("Não deu para falar com o servidor. A tarefa continua na situação de antes.");
+    }
+  }
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollSpeedRef = useRef(0);
   const rafRef = useRef<number | null>(null);
