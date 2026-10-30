@@ -30,20 +30,26 @@ export function menuSped(modulos: readonly { code: string; href: string }[], { m
   // do item SPED; as telas antigas continuam abrindo pelo endereço.
   const etapas = ETAPAS_DO_SPED.some((e) => ativos.has(e.modulo));
   const href = etapas ? CAMINHO_DO_SPED : (telas[0]?.href ?? (auxiliar ? getModuleRoute(auxiliar) : undefined));
-  const laterais: { label: string; href: string; modulo: string; area: AreaDoSped }[] = [
-    ...(ativos.has("fiscal_painel") ? [{ label: "Painel", href: "/fiscal", modulo: "fiscal_painel", area: "Painel" as const }] : []),
-    ...(href ? [{ label: etapas ? "SPED ICMS/IPI" : "Classificação e apuração", href, modulo: "fiscal_classificacao", area: "SPED" as const }] : []),
-    ...(ativos.has("fiscal_entregas") ? [{ label: "SPED gerados", href: "/fiscal/entregas", modulo: "fiscal_entregas", area: "SPED gerados" as const }] : []),
-    ...(ativos.has("fiscal_operacao") ? [{ label: "Executar", href: "/fiscal/operacao", modulo: "fiscal_operacao", area: "Executar" as const }] : []),
-  ];
+  // O painel do item SPED são as quatro etapas (pedido do Victor, 30/10/2026).
+  // Painel, SPED gerados e Executar seguem abrindo pelo endereço.
+  // Sem nenhuma etapa ligada, ficam as entradas que o escritório tem.
+  const laterais: { label: string; href: string; modulo: string; area: AreaDoSped }[] = etapas
+    ? ETAPAS_DO_SPED.filter((e) => ativos.has(e.modulo)).map((e) => ({ label: e.rotulo, href: `${CAMINHO_DO_SPED}/${e.chave}`, modulo: e.modulo, area: e.rotulo }))
+    : [
+      ...(ativos.has("fiscal_painel") ? [{ label: "Painel", href: "/fiscal", modulo: "fiscal_painel", area: "Painel" as const }] : []),
+      ...(href ? [{ label: "Classificação e apuração", href, modulo: "fiscal_classificacao", area: "SPED" as const }] : []),
+      ...(ativos.has("fiscal_entregas") ? [{ label: "SPED gerados", href: "/fiscal/entregas", modulo: "fiscal_entregas", area: "SPED gerados" as const }] : []),
+    ];
   return { telas, href, laterais };
 }
 
 // "SPED" marca "Classificação e apuração"; documentos e conferência não têm
 // entrada lateral própria e só acendem o item SPED (26/10/2026).
-export type AreaDoSped = "SPED" | "Painel" | "SPED gerados" | "Executar" | "Outras";
+export type AreaDoSped = (typeof ETAPAS_DO_SPED)[number]["rotulo"] | "SPED" | "Painel" | "SPED gerados" | "Executar" | "Outras";
 
 export function areaSpedAtiva(pathname: string): AreaDoSped | undefined {
+  const etapa = ETAPAS_DO_SPED.find((e) => pathname.startsWith(`${CAMINHO_DO_SPED}/${e.chave}`));
+  if (etapa) return etapa.rotulo;
   if (pathname === "/fiscal") return "Painel";
   if (pathname === "/fiscal/entregas") return "SPED gerados";
   if (pathname === "/fiscal/operacao") return "Executar";
