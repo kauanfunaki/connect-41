@@ -55,7 +55,12 @@ model TechInternalItem {
   priority      Int                    @default(1)
   status        TechInternalStatus     @default(PENDING)
   systemMode    TechInternalSystemMode @default(NONE)
+  /// Cadastro próprio anterior (até 29/10/2026): só os vínculos já gravados.
   toolId        String?
+  /// O sistema vem do Ops Center (29/10/2026): um robô, um site ou um app.
+  opsWatcherSlug String?               @db.VarChar(60)
+  opsSiteId     String?
+  opsAppId      String?
   assigneeId    String?
   dueDate       DateTime?              @db.Date
   version       Int                    @default(0)
@@ -63,6 +68,9 @@ model TechInternalItem {
   updatedAt     DateTime               @updatedAt
   tenant        Tenant                 @relation(fields: [tenantId], references: [id])
   tool          TechInternalTool?      @relation(fields: [tenantId, toolId], references: [tenantId, id], onDelete: Restrict)
+  opsWatcher    OpsWatcher?            @relation(fields: [tenantId, opsWatcherSlug], references: [tenantId, slug], onDelete: Restrict)
+  opsSite       OpsSite?               @relation(fields: [tenantId, opsSiteId], references: [tenantId, id], onDelete: Restrict)
+  opsApp        OpsApp?                @relation(fields: [tenantId, opsAppId], references: [tenantId, id], onDelete: Restrict)
   assignee      User?                  @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
   comments      TechInternalComment[]
   changes       TechInternalChange[]
@@ -70,6 +78,9 @@ model TechInternalItem {
   @@unique([tenantId, id])
   @@index([tenantId, status, priority, dueDate])
   @@index([tenantId, toolId])
+  @@index([tenantId, opsWatcherSlug])
+  @@index([tenantId, opsSiteId])
+  @@index([tenantId, opsAppId])
   @@index([tenantId, assigneeId])
   @@map("tech_internal_items")
 }
@@ -104,6 +115,7 @@ model TechInternalChange {
 
   @@unique([tenantId, itemId, version])
   @@index([tenantId, itemId, createdAt])
+  @@index([tenantId, createdAt])
   @@map("tech_internal_changes")
 }
 
@@ -303,9 +315,49 @@ model OpsWatcher {
   tenant Tenant @relation(fields: [tenantId], references: [id])
   owner User? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   events OpsEvent[]
+  techItems TechInternalItem[]
   @@id([tenantId, slug])
   @@index([tenantId, ownerId])
   @@map("ops_watchers")
+}
+
+/// A fila do robô do Societário (30/10/2026). O robô roda na máquina do TI,
+/// atrás do firewall do escritório, como uma automação do Ops Center (mesma
+/// chave, mesmo sinal de vida): é ela que vem buscar a tarefa, executa no portal
+/// do órgão e devolve o resultado. O certificado e a senha nunca chegam aqui.
+/// Regras em `src/lib/robo/tarefas.ts`.
+model RobotTask {
+  id            String    @id @default(uuid())
+  tenantId      String
+  /// O que fazer, do catálogo em código (`TIPOS_DE_TAREFA`): "imprimir_alvara".
+  kind          String    @db.VarChar(40)
+  companyId     String?
+  licenseId     String?
+  /// O que o robô precisa para executar, em JSON (inscrição municipal etc.).
+  payload       String    @db.Text
+  /// PENDENTE, EM_EXECUCAO, CONCLUIDA, PRECISA_DE_GENTE ou CANCELADA.
+  status        String    @default("PENDENTE") @db.VarChar(20)
+  /// Preenchida enquanto a tarefa está aberta e nula depois: o banco recusa a
+  /// segunda tarefa aberta para a mesma coisa (dois cliques, duas abas).
+  openKey       String?   @unique @db.VarChar(160)
+  attempts      Int       @default(0)
+  /// O slug da automação do Ops Center que pegou a tarefa.
+  machineSlug   String?   @db.VarChar(60)
+  claimedAt     DateTime?
+  finishedAt    DateTime?
+  /// O que o robô devolveu, em JSON, sem arquivo.
+  result        String?   @db.Text
+  /// Por que parou, quando precisa de gente.
+  reason        String?   @db.VarChar(500)
+  /// O arquivo que a tarefa guardou nos Arquivos (o PDF do alvará).
+  fileId        String?
+  requestedById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("robot_tasks")
 }
 
 /// Sites do Tech no Ops Center (28/10/2026): o que já está no ar, com quem
@@ -323,6 +375,8 @@ model OpsSite {
   updatedAt   DateTime @updatedAt
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  techItems   TechInternalItem[]
+  @@unique([tenantId, id])
   @@unique([tenantId, name])
   @@index([tenantId, ownerId])
   @@map("ops_sites")
@@ -345,6 +399,8 @@ model OpsApp {
   updatedAt   DateTime @updatedAt
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  techItems   TechInternalItem[]
+  @@unique([tenantId, id])
   @@unique([tenantId, name])
   @@index([tenantId, ownerId])
   @@map("ops_apps")
@@ -1291,6 +1347,7 @@ model Tenant {
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
   sectorMenuViews           SectorMenuView[]
+  robotTasks                RobotTask[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
   processTemplates          ProcessTemplate[]
@@ -1450,6 +1507,10 @@ model Sector {
   /// Nulo usa o padrão (`src/lib/gestao/regras.ts`).
   alertStalledDays Int?
   alertDueSoonDays Int?
+  /// "Trabalhar numa empresa por vez" neste setor (29/10/2026), a chave de
+  /// Configurações › Setores. Nulo = ligado, o de antes da chave; só vale nos
+  /// setores cujas telas seguem o foco (`setoresDoFoco`, hoje o BPO).
+  companyFocus Boolean?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1604,6 +1665,9 @@ model User {
   email        String   @db.VarChar(120)
   passwordHash String   @db.VarChar(255)
   photoUrl     String?  @db.VarChar(255)
+  /// A paleta da pessoa (30/10/2026): a cor de destaque, em hex. Nula usa a
+  /// do escritório. Ver `src/lib/aparencia/paletas.ts`.
+  accentColor  String?  @db.VarChar(7)
   role         UserRole @default(SECTOR_USER)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -1883,6 +1947,13 @@ model Company {
   stateCode             String?       @db.VarChar(2)
   // Inscrições fiscais
   stateRegistration     String?       @db.VarChar(40)
+  /// A situação da IE no CICAD da Receita do PR (robô do Societário,
+  /// 30/10/2026): ATIVA, SUSPENSA, BAIXADA ou CANCELADA. Nula enquanto o robô
+  /// não leu. Quando foi lida e desde quando está assim. Ver
+  /// `src/lib/societario/inscricaoEstadual.ts`.
+  stateRegistrationStatus    String?   @db.VarChar(12)
+  stateRegistrationCheckedAt DateTime?
+  stateRegistrationChangedAt DateTime?
   municipalRegistration String?       @db.VarChar(40)
   nire                  String?       @db.VarChar(20)
   // Contato
@@ -4908,6 +4979,9 @@ model BankAccount {
   /// Nulos nas outras contas.
   cardClosingDay Int? @db.TinyInt
   cardDueDay     Int? @db.TinyInt
+  /// O limite do cartão (30/10/2026), lido do `valor_limite` do Omie. Nulo
+  /// quando o Omie não informa; o Connect só mostra, não trava a compra.
+  cardLimit      Decimal? @db.Decimal(14, 2)
 
   active    Boolean  @default(true)
   createdAt DateTime @default(now())

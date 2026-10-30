@@ -137,7 +137,7 @@ export function CabecalhoDoPainel({
  * conta própria (a conversa: mensagens rolando, caixa de escrever parada);
  * sem ela, o conteúdo rola inteiro, com a margem de sempre.
  */
-export type AbaDoPainel = { chave: string; rotulo: string; conteudo: ReactNode; cheia?: boolean };
+export type AbaDoPainel = { chave: string; rotulo: string; icone: ReactNode; contagem?: number; conteudo: ReactNode; cheia?: boolean };
 
 /** As abas de baixo do painel (Conversa, Candidatura, Histórico…). A primeira abre; as abas ficam paradas. */
 export function AbasDoPainel({ abas, inicial }: { abas: AbaDoPainel[]; inicial?: string }) {
@@ -150,7 +150,7 @@ export function AbasDoPainel({ abas, inicial }: { abas: AbaDoPainel[]; inicial?:
         className="px-3 sm:px-4 shrink-0 bg-surface"
         active={atual.chave}
         onChange={setAtiva}
-        tabs={abas.map((a) => ({ key: a.chave, label: a.rotulo, panelId: `aba-${a.chave}` }))}
+        tabs={abas.map((a) => ({ key: a.chave, label: a.rotulo, icon: a.icone, count: a.contagem, panelId: `aba-${a.chave}` }))}
       />
       <div
         id={`aba-${atual.chave}`}

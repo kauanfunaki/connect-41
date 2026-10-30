@@ -45,8 +45,8 @@ export function PersonDetailTabs({
     { key: "vinculo", label: "Vínculo", icon: <Building2 /> },
     ...(acesso ? [{ key: "acesso", label: "Acesso", icon: <KeyRound /> }] : []),
     { key: "trabalhista", label: "Dados trabalhistas", icon: <Briefcase /> },
-    { key: "documents", label: `Documentos${documentsCount ? ` (${documentsCount})` : ""}`, icon: <FileText /> },
-    { key: "conversations", label: `Conversas${conversationsCount ? ` (${conversationsCount})` : ""}`, icon: <MessageCircle /> },
+    { key: "documents", label: "Documentos", count: documentsCount || undefined, icon: <FileText /> },
+    { key: "conversations", label: "Conversas", count: conversationsCount || undefined, icon: <MessageCircle /> },
     { key: "history", label: "Histórico", icon: <History /> },
   ];
 

@@ -61,6 +61,7 @@ export function CartoesDaEmpresa({ companyId, cartoes }: { companyId: string; ca
                     <span className="block text-micro text-fg-muted">
                       {c.accountNumber}
                       {c.fechamento && c.vencimento ? ` · fecha dia ${c.fechamento} · vence dia ${c.vencimento}` : " · sem os dias da fatura"}
+                      {c.limiteCentavos !== null && ` · limite ${formatarReaisDeCentavos(c.limiteCentavos)}`}
                       {!c.ativo && " · inativo"}
                     </span>
                   </span>

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, sistemaSchema, fraseDaAlteracao } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -19,20 +19,36 @@ describe("controle interno do Tech", () => {
   });
   it.each(["PENDING", "IN_PROGRESS", "VALIDATION", "DONE", "CANCELED"])("aceita a situação %s", status => expect(itemSchema.parse({ ...minimo, status }).status).toBe(status));
   it.each([0, 1, 2, 3])("aceita prioridade %i", priority => expect(itemSchema.parse({ ...minimo, priority: String(priority) }).priority).toBe(priority));
-  it("diferencia sem sistema, novo sistema e sistema existente", () => {
-    expect(itemSchema.parse({ ...minimo, systemMode: "NEW" }).toolId).toBeNull();
-    expect(itemSchema.parse({ ...minimo, systemMode: "EXISTING", toolId: "id" }).toolId).toBe("id");
+  it("diferencia sem sistema, novo sistema e sistema do Ops Center", () => {
+    expect(itemSchema.parse({ ...minimo, systemMode: "NEW" }).systemKey).toBeNull();
+    expect(itemSchema.parse({ ...minimo, systemMode: "EXISTING", systemKey: "site:id" }).systemKey).toBe("site:id");
     expect(itemSchema.safeParse({ ...minimo, systemMode: "EXISTING" }).success).toBe(false);
-    expect(itemSchema.safeParse({ ...minimo, systemMode: "NEW", toolId: "id" }).success).toBe(false);
-    expect(itemSchema.safeParse({ ...minimo, systemMode: "NONE", toolId: "id" }).success).toBe(false);
+    expect(itemSchema.safeParse({ ...minimo, systemMode: "EXISTING", systemKey: "id" }).success).toBe(false);
+    expect(itemSchema.safeParse({ ...minimo, systemMode: "NEW", systemKey: "app:id" }).success).toBe(false);
+    expect(itemSchema.safeParse({ ...minimo, systemMode: "NONE", systemKey: "app:id" }).success).toBe(false);
+  });
+  it("a chave do sistema aponta para robô, site, app ou o cadastro anterior", () => {
+    expect(vinculoDoSistema("robo:importa-xml")).toEqual({ ...SEM_VINCULO, opsWatcherSlug: "importa-xml" });
+    expect(vinculoDoSistema("site:s1")).toEqual({ ...SEM_VINCULO, opsSiteId: "s1" });
+    expect(vinculoDoSistema("app:a1")).toEqual({ ...SEM_VINCULO, opsAppId: "a1" });
+    expect(vinculoDoSistema("tool:t1")).toEqual({ ...SEM_VINCULO, toolId: "t1" });
+    for (const invalida of ["", "outro:x", "site:", null, undefined]) expect(vinculoDoSistema(invalida)).toBeNull();
+    for (const chave of ["robo:importa-xml", "site:s1", "app:a1", "tool:t1"]) expect(chaveDoSistema(vinculoDoSistema(chave)!)).toBe(chave);
+    expect(chaveDoSistema(SEM_VINCULO)).toBeNull();
+  });
+  it("mostra o nome do sistema e marca o inativo quando pedido", () => {
+    expect(nomeDoSistema({ systemMode: "NONE" })).toBe("Sem sistema");
+    expect(nomeDoSistema({ systemMode: "NEW" })).toBe("Novo sistema");
+    expect(nomeDoSistema({ systemMode: "EXISTING", opsSite: { name: "Portal", isActive: false } }, true)).toBe("Portal (inativo)");
+    expect(nomeDoSistema({ systemMode: "EXISTING", opsSite: { name: "Portal", isActive: false } })).toBe("Portal");
+    expect(nomeDoSistema({ systemMode: "EXISTING", tool: { name: "Antigo", active: true } })).toBe("Antigo");
+    expect(nomeDoSistema({ systemMode: "EXISTING" })).toBe("Sistema indisponível");
   });
   it.each([{ title: " " }, { title: "x".repeat(201) }, { description: "x".repeat(10001) }, { type: "OTHER" }, { priority: 4 }, { status: "OTHER" }, { dueDate: "2026-02-30" }, { dueDate: "2026-10-21T00:00:00Z" }])("recusa campos inválidos %j", override => expect(itemSchema.safeParse({ ...minimo, ...override }).success).toBe(false));
   it("comentários e nomes são validados e normalizados", () => {
     expect(comentarioSchema.parse("  Conferido  ")).toBe("Conferido");
     expect(comentarioSchema.safeParse(" ").success).toBe(false);
     expect(comentarioSchema.safeParse("x".repeat(5001)).success).toBe(false);
-    expect(sistemaSchema.parse({ name: "  Connect   interno ", active: true }).name).toBe("Connect interno");
-    expect(sistemaSchema.safeParse({ name: " ", active: true }).success).toBe(false);
   });
   it("normaliza filtros combinados e impede paginações inválidas", () => {
     expect(lerFiltros({ q: "  lista  ", tipo: "TEST", situacao: "ALL", prioridade: "0", sistema: "NEW", responsavel: "me", atrasados: "1", page: "2" })).toMatchObject({ q: "lista", type: "TEST", status: "ALL", priority: "0", system: "NEW", assignee: "me", overdue: true, page: 2 });
@@ -75,5 +91,14 @@ describe("controle interno do Tech", () => {
     expect(fraseDaAlteracao({ field: "Descrição", before: "a", after: "b" })).toBe("editou a descrição");
     expect(fraseDaAlteracao({ field: "Vínculo do responsável", before: "id-1", after: "id-2" })).not.toContain("id-");
     expect(fraseDaAlteracao({ field: "Prioridade", before: null, after: "Alta" }, true)).toBe("Prioridade: Alta");
+  });
+  it("agrupa o histórico por dia em São Paulo: hoje, ontem e o dia por extenso", () => {
+    const agora = new Date("2026-10-29T15:00:00Z");
+    expect(diaDoRegistro(new Date("2026-10-29T13:34:00Z"), agora)).toEqual({ chave: "2026-10-29", rotulo: "Hoje" });
+    // 01h UTC do dia 29 ainda é dia 28 em São Paulo.
+    expect(diaDoRegistro(new Date("2026-10-29T01:00:00Z"), agora)).toEqual({ chave: "2026-10-28", rotulo: "Ontem" });
+    expect(diaDoRegistro(new Date("2026-10-27T15:00:00Z"), agora).rotulo).toBe("Terça-feira, 27 de outubro");
+    expect(diaDoRegistro(new Date("2025-12-31T15:00:00Z"), agora).rotulo).toBe("Quarta-feira, 31 de dezembro de 2025");
+    expect(horaDoRegistro(new Date("2026-10-29T16:34:00Z"))).toBe("13:34");
   });
 });

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
-import { ArrowRight, ListChecks, Star } from "lucide-react";
+import { ArrowRight, ListChecks, RefreshCcw, Star } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector, podeExcluir } from "@/lib/auth/context";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
@@ -54,8 +54,8 @@ export default async function AvaliacoesPage({
     );
 
   const abas = [
-    { chave: "ciclos", rotulo: "Ciclos", href: "/avaliacoes", contagem: ciclos.length },
-    { chave: "competencias", rotulo: "Competências", href: "/avaliacoes?aba=competencias", contagem: competencias.length },
+    { chave: "ciclos", rotulo: "Ciclos", href: "/avaliacoes", icone: <RefreshCcw />, contagem: ciclos.length },
+    { chave: "competencias", rotulo: "Competências", href: "/avaliacoes?aba=competencias", icone: <Star />, contagem: competencias.length },
   ];
 
   return (

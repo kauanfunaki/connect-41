@@ -6,14 +6,15 @@ import { logAudit } from "@/lib/audit";
 import { intervaloMes } from "./agenda";
 import {
   MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO,
-  CONFLITO, itemSchema, sistemaSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
-  type DadosItem, type Filtros,
+  CONFLITO, SEM_VINCULO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
+  vinculoDoSistema, chaveDoSistema, nomeDoSistema, type DadosItem, type Filtros, type SistemaTech,
 } from "./regras";
 
 export class ErroTechInterno extends Error {}
 type Tx = Prisma.TransactionClient;
 export type ResultadoTech = { ok: true; id: string } | { error: string };
-const incluir = { tool: { select: { name: true, active: true } }, assignee: { select: { name: true, active: true } } } as const;
+const doOps = { select: { name: true, isActive: true } } as const;
+const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } } } as const;
 type ItemCompleto = Prisma.TechInternalItemGetPayload<{ include: typeof incluir }>;
 
 async function conferirAcesso(ctx: AuthContext, nivel: NivelNoModulo) {
@@ -43,12 +44,22 @@ function registrar(ctx: AuthContext, action: string, id: string, metadata: Recor
 
 export async function opcoesTech(ctx: AuthContext) {
   await conferirAcesso(ctx, "ver");
-  const db = getPrisma();
-  const [tools, users] = await Promise.all([
-    db.techInternalTool.findMany({ where: { tenantId: ctx.tenantId }, orderBy: [{ active: "desc" }, { name: "asc" }], select: { id: true, name: true, active: true, version: true } }),
+  const db = getPrisma(), tenantId = ctx.tenantId, ordem = [{ isActive: "desc" as const }, { name: "asc" as const }];
+  const [robos, sites, apps, anteriores, users] = await Promise.all([
+    db.opsWatcher.findMany({ where: { tenantId }, select: { slug: true, name: true, isActive: true }, orderBy: ordem }),
+    db.opsSite.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true }, orderBy: ordem }),
+    db.opsApp.findMany({ where: { tenantId }, select: { id: true, name: true, isActive: true }, orderBy: ordem }),
+    // Do cadastro anterior, só os que ainda têm itens: o filtro e o item já vinculado.
+    db.techInternalTool.findMany({ where: { tenantId, items: { some: {} } }, select: { id: true, name: true, active: true }, orderBy: { name: "asc" } }),
     db.user.findMany({ where: { tenantId: ctx.tenantId, active: true, role: { not: "READONLY" }, OR: [{ role: { in: ["ADMIN", "SUPER_ADMIN"] } }, { sectors: { some: { sectorCode: "tech" } } }] }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
-  return { tools, users };
+  const sistemas: SistemaTech[] = [
+    ...robos.map(r => ({ chave: `robo:${r.slug}`, nome: r.name, origem: "robo" as const, ativo: r.isActive })),
+    ...sites.map(s => ({ chave: `site:${s.id}`, nome: s.name, origem: "site" as const, ativo: s.isActive })),
+    ...apps.map(a => ({ chave: `app:${a.id}`, nome: a.name, origem: "app" as const, ativo: a.isActive })),
+    ...anteriores.map(t => ({ chave: `tool:${t.id}`, nome: t.name, origem: "tool" as const, ativo: false })),
+  ];
+  return { sistemas, users };
 }
 
 export function whereDosItens(tenantId: string, userId: string, filtros: Filtros): Prisma.TechInternalItemWhereInput {
@@ -59,7 +70,8 @@ export function whereDosItens(tenantId: string, userId: string, filtros: Filtros
     status: filtros.status === "ALL" || (!filtros.status && filtros.view === "kanban") ? undefined : filtros.status ? filtros.status as keyof typeof SITUACOES : { in: [...EM_ABERTO] },
     ...(filtros.type ? { type: filtros.type } : {}),
     ...(filtros.priority ? { priority: Number(filtros.priority) } : {}),
-    ...(filtros.system ? filtros.system === "NONE" || filtros.system === "NEW" ? { systemMode: filtros.system } : { systemMode: "EXISTING", toolId: filtros.system } : {}),
+    // Um endereço salvo antes de 29/10/2026 traz só o id do cadastro anterior.
+    ...(filtros.system ? filtros.system === "NONE" || filtros.system === "NEW" ? { systemMode: filtros.system } : { systemMode: "EXISTING", ...vinculoDoSistema(filtros.system) ?? { ...SEM_VINCULO, toolId: filtros.system } } : {}),
     ...(filtros.assignee ? { assigneeId: filtros.assignee === "me" ? userId : filtros.assignee === "none" ? null : filtros.assignee } : {}),
     ...(filtros.overdue ? { dueDate: { lt: new Date(hojeEmSaoPaulo()) }, AND: { status: { in: [...EM_ABERTO] } } } : {}),
     ...(filtros.q ? { OR: [{ title: { contains: filtros.q } }, { description: { contains: filtros.q } }] } : {}),
@@ -111,14 +123,19 @@ function valoresLegiveis(item: ItemCompleto): Record<string, string | null> {
   return {
     "Título": item.title, "Descrição": item.description, "Tipo": TIPOS[item.type],
     "Prioridade": PRIORIDADES[item.priority], "Situação": SITUACOES[item.status],
-    "Sistema": item.systemMode === "NEW" ? "Novo sistema" : item.systemMode === "NONE" ? "Sem sistema" : item.tool?.name ?? "Sistema indisponível",
+    "Sistema": nomeDoSistema(item),
     "Responsável": item.assignee?.name ?? null, "Prazo": item.dueDate?.toISOString().slice(0, 10) ?? null,
   };
 }
 async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, anterior: ItemCompleto | null) {
-  if (dados.toolId) {
-    const tool = await tx.techInternalTool.findFirst({ where: { id: dados.toolId, tenantId: ctx.tenantId } });
-    if (!tool || (!tool.active && dados.toolId !== anterior?.toolId)) throw new ErroTechInterno("Escolha um sistema ativo deste escritório.");
+  // Um vínculo que já estava no item continua, mesmo inativo ou do cadastro anterior.
+  const vinculo = vinculoDoSistema(dados.systemKey);
+  if (vinculo && dados.systemKey !== (anterior && chaveDoSistema(anterior))) {
+    const where = { tenantId: ctx.tenantId, isActive: true };
+    const existe = vinculo.opsWatcherSlug ? await tx.opsWatcher.count({ where: { ...where, slug: vinculo.opsWatcherSlug } })
+      : vinculo.opsSiteId ? await tx.opsSite.count({ where: { ...where, id: vinculo.opsSiteId } })
+      : vinculo.opsAppId ? await tx.opsApp.count({ where: { ...where, id: vinculo.opsAppId } }) : 0;
+    if (!existe) throw new ErroTechInterno("Escolha um sistema ativo do Ops Center.");
   }
   if (dados.assigneeId && dados.assigneeId !== anterior?.assigneeId) {
     const pessoa = await tx.user.findFirst({ where: {
@@ -136,13 +153,13 @@ export async function salvarItem(raw: unknown, id?: string, versao?: unknown): P
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     const version = id ? versaoSchema.safeParse(versao) : null;
     if (id && (!version?.success || versao === null || versao === undefined || versao === "")) return { error: CONFLITO };
-    const dados = parsed.data;
+    const dados = parsed.data, { systemKey, ...campos } = dados;
     const result = await getPrisma().$transaction(async tx => {
       const anterior = id ? await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: incluir }) : null;
       if (id && !anterior) throw new ErroTechInterno("Item não encontrado.");
       if (anterior && anterior.version !== (version?.success ? version.data : -1)) throw new ErroTechInterno(CONFLITO);
       await conferirVinculos(tx, ctx, dados, anterior);
-      const data = { ...dados, dueDate: dados.dueDate ? new Date(dados.dueDate) : null };
+      const data = { ...campos, ...vinculoDoSistema(systemKey) ?? SEM_VINCULO, dueDate: dados.dueDate ? new Date(dados.dueDate) : null };
       let item: ItemCompleto;
       if (anterior) {
         const atualizado = await tx.techInternalItem.updateMany({ where: { id: anterior.id, tenantId: ctx.tenantId, version: anterior.version }, data: { ...data, version: { increment: 1 } } });
@@ -154,7 +171,7 @@ export async function salvarItem(raw: unknown, id?: string, versao?: unknown): P
       const changes = diferencas(anterior ? valoresLegiveis(anterior) : null, valoresLegiveis(item));
       // Uma mudança de vínculo com o mesmo nome continua sendo mudança real.
       for (const [field, before, after] of [
-        ["Vínculo do sistema", anterior?.toolId ?? null, item.toolId],
+        ["Vínculo do sistema", anterior && chaveDoSistema(anterior), chaveDoSistema(item)],
         ["Vínculo do responsável", anterior?.assigneeId ?? null, item.assigneeId],
       ] as const) {
         const nome = field === "Vínculo do sistema" ? "Sistema" : "Responsável";
@@ -184,24 +201,24 @@ export async function comentarItem(id: string, body: unknown): Promise<Resultado
   } catch (e) { return erroDaOperacao(e); }
 }
 
-export async function salvarSistema(raw: unknown, id?: string, versao?: unknown): Promise<ResultadoTech> {
-  try {
-    const ctx = await getAuthContext(); await conferirAcesso(ctx, "gerir");
-    const parsed = sistemaSchema.safeParse(raw);
-    if (!parsed.success) return { error: parsed.error.issues[0].message };
-    const version = id ? versaoSchema.safeParse(versao) : null;
-    if (id && (!version?.success || versao === null || versao === undefined || versao === "")) return { error: CONFLITO };
-    return await getPrisma().$transaction(async tx => {
-      let toolId = id;
-      if (id) {
-        const anterior = await tx.techInternalTool.findFirst({ where: { id, tenantId: ctx.tenantId } });
-        if (!anterior) throw new ErroTechInterno("Sistema não encontrado.");
-        const r = await tx.techInternalTool.updateMany({ where: { id, tenantId: ctx.tenantId, version: version?.success ? version.data : -1 }, data: { ...parsed.data, version: { increment: 1 } } });
-        if (r.count !== 1) throw new ErroTechInterno(CONFLITO);
-      } else {
-        toolId = (await tx.techInternalTool.create({ data: { tenantId: ctx.tenantId, ...parsed.data } })).id;
-      }
-      return { ok: true as const, id: toolId! };
-    });
-  } catch (e) { return erroDaOperacao(e); }
+// O histórico do Controle interno inteiro (29/10/2026): toda alteração de item,
+// de qualquer pessoa, da mais recente para a mais antiga. Filtra pelo título do
+// item e por quem fez; a lista de pessoas é a de quem já tem registro.
+export async function historicoTech(ctx: AuthContext, filtros: { pagina: number; q?: string; autor?: string }) {
+  await conferirAcesso(ctx, "ver");
+  const where: Prisma.TechInternalChangeWhereInput = {
+    tenantId: ctx.tenantId,
+    ...(filtros.autor ? { authorId: filtros.autor } : {}),
+    ...(filtros.q ? { item: { title: { contains: filtros.q } } } : {}),
+  };
+  return getPrisma().$transaction(async tx => {
+    const total = await tx.techInternalChange.count({ where });
+    const pages = Math.max(1, Math.ceil(total / TAMANHO_PAGINA)), page = Math.min(filtros.pagina, pages);
+    const [changes, autores] = await Promise.all([
+      tx.techInternalChange.findMany({ where, include: { item: { select: { title: true, type: true, status: true } } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
+        orderBy: [{ createdAt: "desc" }, { version: "desc" }, { id: "asc" }] }),
+      tx.techInternalChange.findMany({ where: { tenantId: ctx.tenantId }, distinct: ["authorId"], select: { authorId: true, authorName: true }, orderBy: { authorName: "asc" } }),
+    ]);
+    return { total, pages, page, changes, autores };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }

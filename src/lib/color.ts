@@ -131,7 +131,7 @@ function luminanceOf({ r, g, b }: Rgb): number {
 // direto sobre eles, sem pílula por trás — então uma cor perto do preto some no
 // tema escuro e uma perto do branco some no claro.
 const SURFACE_LIGHT_LUMINANCE = 1; // #FFFFFF
-const SURFACE_DARK_LUMINANCE = 0.012; // #141D30 (paleta B, 13/10/2026; era #1C1A22, 0.011)
+const SURFACE_DARK_LUMINANCE = 0.0236; // #242B3A (Ardósia, 29/10/2026; era #141D30, 0.012)
 
 // Piso de contraste exigido contra os dois fundos.
 //
@@ -141,7 +141,11 @@ const SURFACE_DARK_LUMINANCE = 0.012; // #141D30 (paleta B, 13/10/2026; era #1C1
 // corrigir o problema real. 2.5:1 passa toda a paleta atual intacta e ainda
 // barra o que de fato quebra a leitura: preto (1.22 contra o fundo escuro),
 // quase-preto (~1.0) e branco/amarelo puro (~1.0 contra o claro).
-const MIN_ACCENT_CONTRAST = 2.5;
+//
+// 2.2:1 desde o escuro Ardósia (29/10/2026): a superfície escura clareou e as
+// duas cores caíram para 2.39 e 2.25. O piso desceu com elas, e não a paleta;
+// o preto segue barrado (1.48 contra a superfície nova).
+const MIN_ACCENT_CONTRAST = 2.2;
 
 /** A cor é legível sobre a superfície dos dois temas? */
 export function isUsableAccent(color: string): boolean {

@@ -22,6 +22,7 @@ import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES } from "@/lib/module-ca
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
 import { TELAS_DO_GERAL, podeConfigurarMenuGeral } from "@/lib/menuGeral";
 import { atualizarSetor, criarSetor } from "./actions";
+import { setoresDoFoco } from "@/lib/empresas/foco";
 import { alternarModulo, ligarModuloAoSetor, transferirModulo } from "./modulos-actions";
 import { alternarTelaDoGeral, restaurarMenuGeral } from "./menu-geral-actions";
 
@@ -299,7 +300,9 @@ export default async function SetoresPage({
               color: emEdicao.color,
               active: emEdicao.active,
               order: emEdicao.order,
+              companyFocus: emEdicao.companyFocus,
             }}
+            focoDisponivel={setoresDoFoco().has(emEdicao.code)}
           />
         </PainelDeCadastro>
       )}

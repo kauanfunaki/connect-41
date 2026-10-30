@@ -30,12 +30,13 @@ import { FALTA_ATUALIZAR_O_BANCO_DOS_ENVIOS, lerLembretePadrao } from "@/lib/env
 import { definirLembretePadraoDosEnvios } from "./envios-actions";
 import { LembretePadraoDosEnvios } from "@/components/portal/LembretePadraoDosEnvios";
 import Link from "next/link";
+import { KeyRound, PanelsTopLeft, Send, Sparkles } from "lucide-react";
 
 const ABAS = [
-  { chave: "acessos", rotulo: "Acessos", href: "/admin/portal" },
-  { chave: "telas", rotulo: "Telas liberadas", href: "/admin/portal?aba=telas" },
-  { chave: "ceci", rotulo: "Ceci", href: "/admin/portal?aba=ceci" },
-  { chave: "envios", rotulo: "Envios", href: "/admin/portal?aba=envios" },
+  { chave: "acessos", rotulo: "Acessos", href: "/admin/portal", icone: <KeyRound /> },
+  { chave: "telas", rotulo: "Telas liberadas", href: "/admin/portal?aba=telas", icone: <PanelsTopLeft /> },
+  { chave: "ceci", rotulo: "Ceci", href: "/admin/portal?aba=ceci", icone: <Sparkles /> },
+  { chave: "envios", rotulo: "Envios", href: "/admin/portal?aba=envios", icone: <Send /> },
 ];
 
 // O portal do cliente, do lado do escritório. Tela de administração do tenant,

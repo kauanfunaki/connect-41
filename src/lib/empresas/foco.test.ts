@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  focoLigadoNoSetor,
+  setoresDoFoco,
   alcanceDoFoco,
   dentroDoFoco,
   descricaoDoFoco,
@@ -114,5 +116,18 @@ describe("as telas do foco", () => {
     expect(telaDoFoco("/empresas/bld")).toBeNull();
     expect(telaDoFoco("/pagarx")).toBeNull();
     expect(telaDoFoco("/")).toBeNull();
+  });
+});
+
+describe("setoresDoFoco / focoLigadoNoSetor (29/10/2026)", () => {
+  it("o BPO é dono das telas do foco", () => {
+    expect(setoresDoFoco().has("bpo")).toBe(true);
+  });
+
+  it("nulo (nunca mexida) é ligado; só o falso desliga", () => {
+    expect(focoLigadoNoSetor(null)).toBe(true);
+    expect(focoLigadoNoSetor(undefined)).toBe(true);
+    expect(focoLigadoNoSetor(true)).toBe(true);
+    expect(focoLigadoNoSetor(false)).toBe(false);
   });
 });

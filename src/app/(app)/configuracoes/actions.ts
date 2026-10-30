@@ -8,6 +8,8 @@ import { revokeAllUserSessions } from "@/lib/auth/sessions";
 import { logAudit } from "@/lib/audit";
 import { lerExpediente } from "@/lib/agendaExpediente";
 import { unlinkAccount } from "@/lib/github/conta";
+import { corCanonica } from "@/lib/aparencia/cores";
+import { motivoDaCorRecusada } from "@/lib/aparencia/paletas";
 
 // Conta do próprio usuário. Tudo aqui é escopado a ctx.userId — nunca a um id
 // vindo do formulário — então SECTOR_USER e READONLY também podem usar: não é
@@ -152,4 +154,24 @@ export async function desvincularGithub(): Promise<void> {
   if (!ctx.userId || !ctx.tenantId) return;
   await unlinkAccount(ctx);
   revalidatePath("/configuracoes");
+}
+
+/**
+ * A paleta da pessoa (30/10/2026): a cor de destaque, ou `null` para voltar à
+ * do escritório. A cor própria que não daria destaque é recusada aqui, e não
+ * só na tela.
+ */
+export async function salvarMinhaPaleta(cor: string | null): Promise<{ error: string } | { success: true }> {
+  const ctx = await getAuthContext();
+  if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
+  let valor: string | null = null;
+  if (cor !== null) {
+    const motivo = motivoDaCorRecusada(cor);
+    if (motivo) return { error: motivo };
+    valor = corCanonica(cor);
+  }
+  await getPrisma().user.updateMany({ where: { id: ctx.userId, tenantId: ctx.tenantId }, data: { accentColor: valor } });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "user.paleta_update", entityType: "User", entityId: ctx.userId, metadata: { cor: valor } });
+  revalidatePath("/", "layout");
+  return { success: true };
 }

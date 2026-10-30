@@ -30,6 +30,12 @@ type Props = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "multiple" | "s
    * em Input.tsx: 16px é o que evita o zoom automático do Safari no iOS).
    */
   compact?: boolean;
+  /**
+   * Busca no topo mesmo com poucas opções — para listas que crescem com o
+   * cadastro (o sistema do Controle interno, 29/10/2026). Sem isto, só acima de
+   * `LIMITE_SEM_BUSCA`.
+   */
+  busca?: boolean;
 };
 
 /** Quanto tempo as letras digitadas seguidas contam como uma busca só ("são p"). */
@@ -93,6 +99,7 @@ function ouvirRotulos() {
 export function Select({
   error = false,
   compact = false,
+  busca: sempreComBusca = false,
   className = "",
   disabled = false,
   children,
@@ -148,7 +155,7 @@ export function Select({
   const painelAberto = aberto && !disabled;
 
   const listaveis = useMemo(() => opcoes.filter(naLista), [opcoes]);
-  const comBusca = listaveis.length > LIMITE_SEM_BUSCA;
+  const comBusca = sempreComBusca || listaveis.length > LIMITE_SEM_BUSCA;
   const visiveis = useMemo(() => (comBusca ? filtrarOpcoes(listaveis, busca) : listaveis), [comBusca, listaveis, busca]);
   // Na tela de toque a busca não ganha o foco sozinha: abriria o teclado por
   // cima da folha a cada toque no campo.

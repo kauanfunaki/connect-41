@@ -103,13 +103,13 @@ export function clarearAte(cor: string, fundo: string, minimo: number): string {
 // Os fundos de referência: o mais escuro dos claros e o mais claro dos
 // escuros, onde o texto colorido pior se lê. No claro, o `--c41-surface-hover`
 // (#E6EDFB, o hover das linhas e do menu); no escuro, o `--c41-surface-elevated`
-// (#202C46, o painel flutuante). Quem passa neles passa no canvas, na
+// (#2F3849, o painel flutuante; era #202C46 até o Ardósia, 29/10/2026). Quem passa neles passa no canvas, na
 // superfície e nos cartões.
 export const FUNDO_CLARO = "#E6EDFB";
-export const FUNDO_ESCURO = "#202C46";
+export const FUNDO_ESCURO = "#2F3849";
 const BRANCO = "#FFFFFF";
 // A superfície do escuro, sob o cabeçalho de tabela tingido.
-const SUPERFICIE_ESCURA = "#141D30";
+const SUPERFICIE_ESCURA = "#242B3A";
 
 export const AA_TEXTO = 4.5;
 export const AA_GRAFICO = 3;

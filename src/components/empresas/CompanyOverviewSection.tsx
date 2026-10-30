@@ -2,6 +2,28 @@ import { Card } from "@/components/ui/Card";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { formatCalendarDate, formatInstantDate, formatDocumento, formatPhone, formatCep } from "@/lib/format";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
+import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { ehSituacaoDaIE, ROTULO_DA_SITUACAO_DA_IE, type SituacaoDaIE } from "@/lib/societario/inscricaoEstadual";
+
+// A situação da IE que o robô do Societário leu no CICAD (30/10/2026).
+const TOM_DA_IE: Record<SituacaoDaIE, TomDoSelo> = { ATIVA: "sucesso", SUSPENSA: "atencao", BAIXADA: "perigo", CANCELADA: "perigo" };
+
+/** A IE com a situação lida, quando o robô já leu; sem leitura, só o número. */
+function InscricaoEstadual({ company }: { company: Pick<Props["company"], "stateRegistration" | "stateRegistrationStatus" | "stateRegistrationCheckedAt"> }) {
+  const situacao = ehSituacaoDaIE(company.stateRegistrationStatus) ? company.stateRegistrationStatus : null;
+  if (!situacao || !company.stateRegistration) return <InfoRow label="Inscrição estadual" value={company.stateRegistration} mono />;
+  return (
+    <InfoRow label="Inscrição estadual">
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="tnum">{company.stateRegistration}</span>
+        <Selo tom={TOM_DA_IE[situacao]}>{ROTULO_DA_SITUACAO_DA_IE[situacao]}</Selo>
+      </span>
+      {company.stateRegistrationCheckedAt && (
+        <span className="block text-helper text-fg-muted">Lida no CICAD em {formatInstantDate(company.stateRegistrationCheckedAt)}</span>
+      )}
+    </InfoRow>
+  );
+}
 
 type CustomFieldValue = {
   id: string;
@@ -32,6 +54,8 @@ type Props = {
     phone: string | null;
     website: string | null;
     stateRegistration: string | null;
+    stateRegistrationStatus: string | null;
+    stateRegistrationCheckedAt: Date | null;
     municipalRegistration: string | null;
     nire: string | null;
     cnaePrincipal: string | null;
@@ -125,7 +149,7 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
               aqui — senão a ficha de uma pessoa física mostraria quatro linhas
               com "—" logo abaixo da única que ela pode ter. */}
           <div className={GRADE}>
-            {!ehPF && <InfoRow label="Inscrição estadual" value={company.stateRegistration} mono />}
+            {!ehPF && <InscricaoEstadual company={company} />}
             <InfoRow label="Inscrição municipal" value={company.municipalRegistration} mono />
             {!ehPF && (
               <>

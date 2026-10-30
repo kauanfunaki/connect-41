@@ -6,6 +6,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerFormularioDeLicenca } from "@/lib/societario/licenca-form";
+import { pedirImpressaoDoAlvara } from "@/lib/robo/servidor";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -153,6 +154,20 @@ async function mudarRevogacao(id: string, revogar: boolean): Promise<LicencaStat
  * Apagar faria sumir a prova de que ela existiu, e é essa prova que se procura
  * quando o cliente é fiscalizado.
  */
+/**
+ * Pede ao robô do Societário a impressão do alvará (30/10/2026). A máquina do
+ * TI busca a tarefa, imprime no site da prefeitura e o PDF vai para
+ * Arquivos › Societário da empresa. Ver `src/lib/robo/`.
+ */
+export async function imprimirAlvaraPeloRobo(id: string): Promise<{ error: string } | { success: true; texto: string }> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const r = await pedirImpressaoDoAlvara(ctx.tenantId, id, ctx.userId ?? null);
+  if (!r.ok) return { error: r.erro };
+  revalidatePath("/societario/robo");
+  return { success: true, texto: r.texto };
+}
+
 export async function revogarLicenca(id: string): Promise<LicencaState> {
   return mudarRevogacao(id, true);
 }

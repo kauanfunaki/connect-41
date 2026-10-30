@@ -15,6 +15,8 @@
 // - Foco só tira, nunca dá: ele filtra as telas e recusa gravação fora dele,
 //   mas não abre empresa nem tela que a pessoa já não pudesse abrir.
 
+import { getModuleDef } from "@/lib/module-catalog";
+
 export const COOKIE_DO_FOCO = "c41_foco";
 
 /** Um mês, como a memória do escritório e do setor (`components/shell/contexto.ts`). */
@@ -40,6 +42,25 @@ export const TELAS_DO_FOCO = [
   "/dre/analises",
   "/dre/orcamento",
 ] as const;
+
+/**
+ * Os setores donos das telas do foco (29/10/2026): só neles a chave
+ * "Trabalhar numa empresa por vez" de Configurações › Setores faz efeito —
+ * ligar num setor cujas telas não filtram pela empresa só mostraria a faixa.
+ */
+export function setoresDoFoco(): Set<string> {
+  const setores = new Set<string>();
+  for (const code of MODULOS_DO_FOCO) {
+    const setor = getModuleDef(code)?.sectorCode;
+    if (setor) setores.add(setor);
+  }
+  return setores;
+}
+
+/** A chave do setor: nulo (nunca mexida) é ligado, o de antes da chave. */
+export function focoLigadoNoSetor(companyFocus: boolean | null | undefined): boolean {
+  return companyFocus !== false;
+}
 
 /** Os módulos dessas telas: quem vê o setor de um deles pode trabalhar numa empresa por vez. */
 export const MODULOS_DO_FOCO: ReadonlySet<string> = new Set([

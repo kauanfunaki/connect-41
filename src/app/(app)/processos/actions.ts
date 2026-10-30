@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import {
   etapasLiberadas,
@@ -34,6 +34,7 @@ import {
 import { salvarGuia, lerGuia } from "@/lib/societario/guias";
 import { sendTaxaAoClienteEmail } from "@/lib/email/sendMail";
 import { setoresDoModulo } from "@/lib/modules";
+import { lerFormularioDaTaxa } from "@/lib/societario/taxa-form";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -891,5 +892,106 @@ export async function atualizarDadosDoProcesso(_prev: ProcessoState, form: FormD
 
   revalidatePath(`/processos/${processo.id}`);
   revalidatePath("/processos");
+  return null;
+}
+
+// ─── A taxa lançada à mão (30/10/2026) ──────────────────────────────────────
+
+export type TaxaState = { error: string } | { success: true } | null;
+
+/**
+ * Lança a taxa de um processo — a guia que o setor pagou ou vai pagar. O
+ * processo e a tentativa são conferidos no tenant, e a tentativa precisa ser
+ * deste processo: é ela que separa a primeira via do que as voltas custaram.
+ */
+export async function lancarTaxa(_prev: TaxaState, form: FormData): Promise<TaxaState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const lido = lerFormularioDaTaxa({
+    processId: form.get("processId"),
+    description: form.get("description"),
+    amount: form.get("amount"),
+    dueDate: form.get("dueDate"),
+    protocolId: form.get("protocolId"),
+    paidAt: form.get("paidAt"),
+  });
+  if (!lido.ok) return { error: lido.erro };
+  const d = lido.dados;
+
+  const prisma = getPrisma();
+  const processo = await prisma.process.findFirst({ where: { id: d.processId, tenantId: ctx.tenantId }, select: { id: true, companyId: true } });
+  if (!processo) return { error: "Processo não encontrado." };
+  if (d.protocolId) {
+    const protocolo = await prisma.processProtocol.findFirst({ where: { id: d.protocolId, processId: processo.id, tenantId: ctx.tenantId }, select: { id: true } });
+    if (!protocolo) return { error: "Essa apresentação não é deste processo." };
+  }
+
+  const taxa = await prisma.processFee.create({
+    data: {
+      tenantId: ctx.tenantId,
+      companyId: processo.companyId,
+      processId: processo.id,
+      protocolId: d.protocolId,
+      description: d.description,
+      amountCents: d.amountCents,
+      dueDate: d.dueDate,
+      paidAt: d.paidAt,
+    },
+    select: { id: true },
+  });
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "process.fee_created",
+    entityType: "Process",
+    entityId: processo.id,
+    metadata: { taxaId: taxa.id, descricao: d.description, valorCentavos: d.amountCents },
+  });
+  revalidatePath(`/processos/${processo.id}`);
+  return { success: true };
+}
+
+/** Marca a taxa como paga hoje, ou desfaz quando foi engano. */
+export async function marcarTaxaComoPaga(taxaId: string, paga: boolean): Promise<{ error: string } | null> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const prisma = getPrisma();
+  const taxa = await prisma.processFee.findFirst({ where: { id: taxaId, tenantId: ctx.tenantId }, select: { id: true, processId: true } });
+  if (!taxa) return { error: "Taxa não encontrada." };
+  await prisma.processFee.update({ where: { id: taxa.id }, data: { paidAt: paga ? new Date() : null } });
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: paga ? "process.fee_paid" : "process.fee_unpaid",
+    entityType: "Process",
+    entityId: taxa.processId ?? taxa.id,
+    metadata: { taxaId: taxa.id },
+  });
+  if (taxa.processId) revalidatePath(`/processos/${taxa.processId}`);
+  return null;
+}
+
+/**
+ * Exclui a taxa lançada por engano. A paga não sai: é o registro de quanto o
+ * processo custou — desmarque o pagamento antes, se foi engano mesmo.
+ */
+export async function excluirTaxa(taxaId: string): Promise<{ error: string } | null> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  if (!podeExcluir(ctx)) return { error: "Seu papel não exclui registros." };
+  const prisma = getPrisma();
+  const taxa = await prisma.processFee.findFirst({ where: { id: taxaId, tenantId: ctx.tenantId }, select: { id: true, processId: true, paidAt: true, description: true, amountCents: true } });
+  if (!taxa) return { error: "Taxa não encontrada." };
+  if (taxa.paidAt) return { error: "A taxa está paga. Desmarque o pagamento antes de excluir." };
+  await prisma.processFee.deleteMany({ where: { id: taxa.id, tenantId: ctx.tenantId } });
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "process.fee_deleted",
+    entityType: "Process",
+    entityId: taxa.processId ?? taxa.id,
+    metadata: { taxaId: taxa.id, descricao: taxa.description, valorCentavos: taxa.amountCents },
+  });
+  if (taxa.processId) revalidatePath(`/processos/${taxa.processId}`);
   return null;
 }

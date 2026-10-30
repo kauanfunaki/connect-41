@@ -1,11 +1,12 @@
+import { Building2, Handshake, Users } from "lucide-react";
 import { AbasDeLink, type AbaDeLink } from "@/components/ui/AbasDeLink";
 import { CAMINHO_DOS_FORNECEDORES, type CadastrosTab } from "@/lib/cadastrosNav";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 
 const ABAS: AbaDeLink[] = [
-  { chave: "empresas", rotulo: "Empresas", href: "/empresas" },
-  { chave: "pessoas", rotulo: "Pessoas", href: "/pessoas" },
+  { chave: "empresas", rotulo: "Empresas", href: "/empresas", icone: <Building2 /> },
+  { chave: "pessoas", rotulo: "Pessoas", href: "/pessoas", icone: <Users /> },
 ];
 
 // Barra de abas do topo de /empresas e /pessoas — troca de aba navega para a
@@ -32,4 +33,4 @@ export async function CadastrosTabsBar({ active }: { active: CadastrosTab | "for
 // só para quem vê o BPO (e o administrador). A mesma porta da tela
 // (`podeNoModulo`): setor que opera o módulo neste escritório e módulo ligado.
 // Para os outros a aba nem aparece, e o endereço dá 404.
-const ABA_DOS_FORNECEDORES: AbaDeLink = { chave: "fornecedores", rotulo: "Fornecedores e sacados", href: CAMINHO_DOS_FORNECEDORES };
+const ABA_DOS_FORNECEDORES: AbaDeLink = { chave: "fornecedores", rotulo: "Fornecedores e sacados", href: CAMINHO_DOS_FORNECEDORES, icone: <Handshake /> };

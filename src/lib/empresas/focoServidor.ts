@@ -19,6 +19,7 @@ import {
   COOKIE_DO_FOCO,
   MODULOS_DO_FOCO,
   empresaDoCookie,
+  focoLigadoNoSetor,
   lerCookieDoFoco,
   matrizDoFoco,
   motivoForaDoFoco,
@@ -62,7 +63,11 @@ const empresaConferida = cache(async (tenantId: string, companyId: string): Prom
  */
 export async function lerEmpresaEmFoco(ctx: AuthContext): Promise<EmpresaEmFoco | null> {
   const companyId = empresaDoCookie(lerCookieDoFoco((await cookies()).get(COOKIE_DO_FOCO)?.value), ctx);
-  return companyId ? empresaParaOFoco(ctx, companyId) : null;
+  if (!companyId) return null;
+  // A chave desligada no setor (29/10/2026) encerra o foco de quem já estava
+  // nele: o cookie fica, mas não vale. Só quem tem o cookie paga a consulta.
+  if (!(await podeUsarOFoco(ctx))) return null;
+  return empresaParaOFoco(ctx, companyId);
 }
 
 /**
@@ -123,11 +128,22 @@ export async function leituraNoFoco(ctx: AuthContext, empresa: string): Promise<
 }
 
 /** Quem vê o setor de alguma tela do foco, com o módulo ligado, pode trabalhar numa empresa por vez. */
-export async function podeUsarOFoco(ctx: AuthContext): Promise<boolean> {
+//
+// Desde 29/10/2026, também com a chave do setor ligada (Configurações ›
+// Setores, `Sector.companyFocus`). Uma vez por requisição: o layout, a ficha
+// e a leitura do foco perguntam na mesma ida ao servidor.
+export const podeUsarOFoco = cache(async (ctx: AuthContext): Promise<boolean> => {
   if (!ctx.tenantId || !ctx.userId) return false;
   const modulos = await getTenantModuleStates(ctx.tenantId);
-  return modulos.some((m) => MODULOS_DO_FOCO.has(m.code) && m.enabled && canViewSector(ctx, m.sectorCode));
-}
+  const setores = [...new Set(modulos.filter((m) => MODULOS_DO_FOCO.has(m.code) && m.enabled && canViewSector(ctx, m.sectorCode)).map((m) => m.sectorCode))];
+  if (setores.length === 0) return false;
+  const chaves = await getPrisma().sector.findMany({
+    where: { tenantId: ctx.tenantId, code: { in: setores } },
+    select: { code: true, companyFocus: true },
+  });
+  const desligados = new Set(chaves.filter((s) => !focoLigadoNoSetor(s.companyFocus)).map((s) => s.code));
+  return setores.some((s) => !desligados.has(s));
+});
 
 /**
  * As opções do cookie. Sem leitura pela tela (`httpOnly`): quem mostra o foco

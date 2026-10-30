@@ -1,3 +1,4 @@
+import { TreePalm, UserMinus, UserPlus } from "lucide-react";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
 /**
@@ -12,9 +13,9 @@ export function AbasDoCiclo({ ativa }: { ativa: "admissoes" | "desligamentos" | 
       ativa={ativa}
       aria-label="Ciclo do colaborador"
       abas={[
-        { chave: "admissoes", rotulo: "Admissões", href: "/admissoes" },
-        { chave: "desligamentos", rotulo: "Desligamentos", href: "/desligamentos" },
-        { chave: "ferias", rotulo: "Férias", href: "/ferias" },
+        { chave: "admissoes", rotulo: "Admissões", href: "/admissoes", icone: <UserPlus /> },
+        { chave: "desligamentos", rotulo: "Desligamentos", href: "/desligamentos", icone: <UserMinus /> },
+        { chave: "ferias", rotulo: "Férias", href: "/ferias", icone: <TreePalm /> },
       ]}
     />
   );

@@ -22,6 +22,7 @@ import {
 } from "@/lib/ia/chat/conversas";
 import { avaliacaoParaGravar, lerPropostas, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
 import { aplicarPropostaDoSocietario } from "@/app/(app)/processos/ia-actions";
+import { aplicarPropostaDoBpo } from "@/app/(app)/dre/ia-actions";
 import { aplicarProposta as aplicarPropostaDaVaga } from "@/app/(app)/vagas/[id]/ia-actions";
 
 async function dono() {
@@ -81,6 +82,8 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
     r = c
       ? await aplicarPropostaDaVaga(c.vagaId, { ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos })
       : { error: "Candidatura não encontrada." };
+  } else if (m.conversation.agentCode === "assistente_do_bpo") {
+    r = await aplicarPropostaDoBpo({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos });
   } else {
     r = { error: "Neste setor, a Ceci não aplica propostas." };
   }

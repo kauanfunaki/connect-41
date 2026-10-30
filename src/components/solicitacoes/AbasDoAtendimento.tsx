@@ -1,3 +1,5 @@
+import { FileSignature, Inbox, Megaphone, MessageSquareMore } from "lucide-react";
+import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { AbasDeLink, type AbaDeLink } from "@/components/ui/AbasDeLink";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
@@ -6,10 +8,10 @@ import { TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
 export type AbaDoAtendimento = "solicitacoes" | "pedidos" | "comunicados" | "envios" | "pendencias" | "aprovacoes";
 
 const ABAS: AbaDeLink[] = [
-  { chave: "solicitacoes", rotulo: "Solicitações dos clientes", href: "/solicitacoes" },
-  { chave: "pedidos", rotulo: "Pedidos ao cliente", href: "/solicitacoes/pedidos" },
-  { chave: "comunicados", rotulo: "Comunicados", href: "/solicitacoes/comunicados" },
-  { chave: "envios", rotulo: "Envios", href: "/solicitacoes/envios" },
+  { chave: "solicitacoes", rotulo: "Solicitações dos clientes", href: "/solicitacoes", icone: <Inbox /> },
+  { chave: "pedidos", rotulo: "Pedidos ao cliente", href: "/solicitacoes/pedidos", icone: <MessageSquareMore /> },
+  { chave: "comunicados", rotulo: "Comunicados", href: "/solicitacoes/comunicados", icone: <Megaphone /> },
+  { chave: "envios", rotulo: "Envios", href: "/solicitacoes/envios", icone: <FileSignature /> },
 ];
 
 /**
@@ -29,7 +31,7 @@ const ABAS: AbaDeLink[] = [
 export async function AbasDoAtendimento({ ativa }: { ativa: AbaDoAtendimento }) {
   const ctx = await getAuthContext();
   const doBpo = await Promise.all(
-    TELAS_DO_BPO_NAS_SOLICITACOES.map(async (t) => ((await podeNoModulo(ctx, t.modulo, "ver")) ? [{ chave: t.chave, rotulo: t.rotulo, href: t.href }] : []))
+    TELAS_DO_BPO_NAS_SOLICITACOES.map(async (t) => ((await podeNoModulo(ctx, t.modulo, "ver")) ? [{ chave: t.chave, rotulo: t.rotulo, href: t.href, icone: <ModuleIcon code={t.modulo} /> }] : []))
   );
   return <AbasDeLink ativa={ativa} abas={[...ABAS, ...doBpo.flat()]} />;
 }

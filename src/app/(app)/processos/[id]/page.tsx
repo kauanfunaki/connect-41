@@ -422,7 +422,18 @@ export default async function ProcessoDetalhePage({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
-          <TaxasDoProcesso taxas={taxas} custo={custo} />
+          <TaxasDoProcesso
+            taxas={taxas}
+            custo={custo}
+            edicao={{
+              processId: processo.id,
+              apresentacoes: processo.protocols.map((p) => ({
+                id: p.id,
+                rotulo: `${p.organ.name} · ${p.attempt}ª apresentação${p.number ? ` · nº ${p.number}` : ""}`,
+              })),
+              podeExcluir: podeExcluir(ctx),
+            }}
+          />
 
           <HorasDoProcesso
             processId={processo.id}

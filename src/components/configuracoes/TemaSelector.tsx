@@ -7,7 +7,7 @@ import { applyPreferencia, assinarTema, readPreferencia, type PreferenciaDeTema 
 // parecer escuro mesmo com a tela em tema claro, e vice-versa. São os valores
 // de --c41-canvas / sidebar / surface / border de cada tema (globals.css).
 const CLARO = { fundo: "#EEF3FD", lateral: "#FFFFFF", cartao: "#FFFFFF", linha: "#DBE3F4", texto: "#C3D0EC" };
-const ESCURO = { fundo: "#0D1322", lateral: "#101828", cartao: "#141D30", linha: "#202C46", texto: "#2E3B58" };
+const ESCURO = { fundo: "#1C2230", lateral: "#181D29", cartao: "#242B3A", linha: "#323B4E", texto: "#46516A" };
 const MARCA = "#1F5EEA";
 
 type Paleta = typeof CLARO;

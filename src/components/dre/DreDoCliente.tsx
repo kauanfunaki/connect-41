@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { CalendarCheck, FileText, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -139,8 +139,8 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
       {competenciaLiberada && (
         <AbasDeLink
           abas={[
-            { chave: "caixa", rotulo: "Caixa", href: base },
-            { chave: "competencia", rotulo: "Competência", href: `${base}&regime=competencia` },
+            { chave: "caixa", rotulo: "Caixa", href: base, icone: <Wallet /> },
+            { chave: "competencia", rotulo: "Competência", href: `${base}&regime=competencia`, icone: <CalendarCheck /> },
           ]}
           ativa={regime}
         />

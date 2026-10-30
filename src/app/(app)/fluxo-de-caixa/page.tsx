@@ -1,3 +1,4 @@
+import { Building2, TrendingUp } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -83,8 +84,8 @@ export default async function FluxoDeCaixaPage({
       )}
       <AbasDeLink
         abas={[
-          { chave: "fluxo", rotulo: "Realizado e projeção", href: qs("fluxo") },
-          { chave: "empresas", rotulo: "Por empresa", href: qs("empresas") },
+          { chave: "fluxo", rotulo: "Realizado e projeção", href: qs("fluxo"), icone: <TrendingUp /> },
+          { chave: "empresas", rotulo: "Por empresa", href: qs("empresas"), icone: <Building2 /> },
         ]}
         ativa={aba}
       />

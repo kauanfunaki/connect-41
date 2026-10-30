@@ -10,6 +10,8 @@ export type SectorRow = {
   color: string;
   active: boolean;
   order: number;
+  /** A chave do foco (ver `focoLigadoNoSetor`). */
+  companyFocus?: boolean | null;
 };
 
 async function ensureDefaultSectors(tenantId: string): Promise<void> {

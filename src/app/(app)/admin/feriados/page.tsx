@@ -1,3 +1,4 @@
+import { CalendarDays } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -54,6 +55,7 @@ export default async function FeriadosPage({ searchParams }: { searchParams: Pro
           chave: String(a),
           rotulo: String(a),
           href: `/admin/feriados?ano=${a}`,
+          icone: <CalendarDays />,
         }))}
       />
 

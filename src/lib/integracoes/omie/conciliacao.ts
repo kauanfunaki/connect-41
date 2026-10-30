@@ -187,6 +187,77 @@ export function lerContasCorrentes(itens: unknown[]): ContaCorrenteDoOmie[] {
   return saida;
 }
 
+// ─── Contas fora do caixa: cartão, adiantamento e afins (30/10/2026) ────────
+//
+// Os códigos de `tipo_conta_corrente` do Omie (documentação do
+// ListarContasCorrentes): AC administradora de cartões, AD adiantamento, CE
+// empréstimo, CN crediário, CR cartão de crédito, MT mútuo — os que não são
+// dinheiro da empresa. A baixa que o Omie fez por uma delas não é dinheiro
+// andando, e era espelhada no Connect sem conta, como se fosse caixa: a compra
+// no cartão entrava no fluxo de caixa no dia da compra. Ligadas aqui, a baixa
+// espelhada passa a levar a conta, e sai do fluxo (a DRE não muda).
+//
+// O Omie tem um adiantamento só (AD); o Connect tem um de fornecedores e um de
+// clientes. O lado sai do nome da conta no Omie ("Adiantamento a
+// fornecedores"); nome que não diz fica sem par, contado no resumo — ligar no
+// lado errado inverteria o saldo de quem adiantou.
+
+export type TipoForaDoCaixa =
+  | "ADMINISTRADORA_CARTOES"
+  | "ADIANTAMENTO_FORNECEDOR"
+  | "ADIANTAMENTO_CLIENTE"
+  | "EMPRESTIMO"
+  | "CREDIARIO"
+  | "CARTAO_CREDITO"
+  | "MUTUO";
+
+const TIPO_FORA_DO_OMIE: Readonly<Record<string, TipoForaDoCaixa>> = {
+  AC: "ADMINISTRADORA_CARTOES",
+  CE: "EMPRESTIMO",
+  CN: "CREDIARIO",
+  CR: "CARTAO_CREDITO",
+  MT: "MUTUO",
+};
+
+export type ContaForaDoCaixaDoOmie = {
+  id: string;
+  rotulo: string;
+  /** `null` no adiantamento cujo nome não diz se é de fornecedor ou de cliente. */
+  tipo: TipoForaDoCaixa | null;
+  /** `valor_limite` do cartão, em centavos. */
+  limiteCentavos: number | null;
+  inativa: boolean;
+};
+
+/** O lado do adiantamento pelo nome da conta, ou `null` quando não diz (ou diz os dois). */
+export function ladoDoAdiantamento(descricao: string): "ADIANTAMENTO_FORNECEDOR" | "ADIANTAMENTO_CLIENTE" | null {
+  const t = descricao.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const fornecedor = /fornecedor/.test(t);
+  const cliente = /client/.test(t);
+  if (fornecedor === cliente) return null;
+  return fornecedor ? "ADIANTAMENTO_FORNECEDOR" : "ADIANTAMENTO_CLIENTE";
+}
+
+/** As contas do Omie que não são dinheiro da empresa, de `ListarContasCorrentes`. */
+export function lerContasForaDoCaixa(itens: unknown[]): ContaForaDoCaixaDoOmie[] {
+  const saida: ContaForaDoCaixaDoOmie[] = [];
+  for (const l of itens.map(obj)) {
+    const codigo = texto(l.tipo_conta_corrente).toUpperCase();
+    const idConta = id(l.nCodCC);
+    if (!idConta || (codigo !== "AD" && !TIPO_FORA_DO_OMIE[codigo])) continue;
+    const rotulo = (texto(l.descricao) || (codigo === "CR" ? "Cartão de crédito" : codigo === "AD" ? "Adiantamento" : "Conta do Omie")).slice(0, 120);
+    const limite = codigo === "CR" ? numero(l.valor_limite) : null;
+    saida.push({
+      id: idConta,
+      rotulo,
+      tipo: codigo === "AD" ? ladoDoAdiantamento(rotulo) : TIPO_FORA_DO_OMIE[codigo]!,
+      limiteCentavos: limite !== null && limite > 0 ? Math.round(limite * 100) : null,
+      inativa: texto(l.inativo).toUpperCase() === "S",
+    });
+  }
+  return saida;
+}
+
 export function paginaDeContasCorrentes(corpo: unknown): { itens: unknown[]; totalDePaginas: number } {
   const o = obj(corpo);
   const lista = Array.isArray(o.ListarContasCorrentes) ? o.ListarContasCorrentes : Object.values(o).find(Array.isArray) ?? [];
