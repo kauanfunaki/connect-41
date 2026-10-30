@@ -198,6 +198,11 @@ export function AdicionarCandidato({ vagaId, podeCadastrar }: { vagaId: string; 
               {erro && <Aviso>{erro}</Aviso>}
             </div>
 
+            {/* A origem antes dos resultados (auditoria de UX, 30/10/2026): o
+                "Vincular" grava na hora, e com a origem embaixo da lista era fácil
+                vincular antes de vê-la. */}
+            {escolhaDaOrigem}
+
             <div className="space-y-1.5">
               <p className="c41-rotulo">No banco de talentos</p>
               {termo.trim().length < 2 ? (
@@ -243,8 +248,6 @@ export function AdicionarCandidato({ vagaId, podeCadastrar }: { vagaId: string; 
                 </ul>
               )}
             </div>
-
-            {escolhaDaOrigem}
 
             {podeCadastrar && (
               <div className="mt-auto border-t border-border pt-3">

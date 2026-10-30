@@ -148,7 +148,14 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, on
       >
         <span className="flex items-baseline gap-2">
           <span className={`text-fs-3 text-fg truncate ${n.lida ? "font-medium" : "font-semibold"}`}>{n.titulo}</span>
-          {!n.lida && <span aria-label="não lida" className="flex-shrink-0 size-1.5 rounded-full bg-brand translate-y-[-1px]" />}
+          {/* Texto para o leitor de tela: `aria-label` num span sem papel não é
+              lido com segurança, e o "não lida" ficava só no ponto azul (30/10/2026). */}
+          {!n.lida && (
+            <>
+              <span aria-hidden className="flex-shrink-0 size-1.5 rounded-full bg-brand translate-y-[-1px]" />
+              <span className="sr-only">(não lida)</span>
+            </>
+          )}
         </span>
         <span className="block text-fs-3 text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
