@@ -14,8 +14,11 @@ page.on("pageerror", e => falhas.push(e.message));
 const conferir = (nome, condicao) => { verificacoes.push({ nome, passou: !!condicao }); console.log(`${condicao ? "OK" : "FALHOU"}: ${nome}`); if (!condicao) throw new Error(nome); };
 async function abrirMenuSped() {
   const botao = page.locator("aside").getByRole("button", { name: "SPED", exact: true });
-  if (!await botao.isVisible()) await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
-  if (page.viewportSize().width >= 1024) await botao.hover(); else await botao.click();
+  if (page.viewportSize().width < 1024) {
+    const abrir = page.getByRole("button", { name: "Abrir menu", exact: true });
+    if (await abrir.getAttribute("aria-expanded") !== "true") await abrir.click();
+  }
+  if (page.viewportSize().width >= 1024) { await page.mouse.move(700, 100); await botao.hover(); } else await botao.click();
   const menu = page.getByRole("menu", { name: "SPED", exact: true });
   await menu.waitFor({ state: "visible" });
   return menu;
