@@ -81,6 +81,13 @@ describe("classificarSolicitacao", () => {
 
 describe("o que o leitor recusa", () => {
   // Este é o caso que não vimos e o mais caro de confundir com deferimento.
+  it("Finalizado CANCELADO volta como exigência, com o motivo do SIMA (03/11/2026)", () => {
+    expect(
+      classificarSolicitacao({ aba: "Finalizado", selo: "CANCELADO", motivo: "Solicitação CANCELADA automaticamente devido ao não atendimento do prazo" })
+    ).toEqual({ desfecho: "EXIGENCIA", detalhe: "O SIMA marcou a solicitação como cancelado: Solicitação CANCELADA automaticamente devido ao não atendimento do prazo" });
+    expect(classificarSolicitacao({ aba: "Finalizado", selo: "Cancelado" }).detalhe).toBe("O SIMA marcou a solicitação como cancelado.");
+  });
+
   it("Finalizado que não é DEFERIDO falha em vez de concluir", () => {
     expect(() => classificarSolicitacao({ aba: "Finalizado", selo: "INDEFERIDO" })).toThrow(SeloNaoObservado);
     expect(() => classificarSolicitacao({ aba: "Finalizado", selo: "INDEFERIDO" })).toThrow(/INDEFERIDO/);
@@ -150,8 +157,8 @@ describe("a ponte com o observador", () => {
     expect(OBSERVADORES[SIGLA]).toBeUndefined();
   });
 
-  it("do que faltava, sobrou o que depende de ver a tela autenticada", () => {
-    expect(CONTRATO_PENDENTE).toHaveLength(3);
-    expect(CONTRATO_PENDENTE.join(" ")).toContain("URL");
+  it("do que faltava, sobraram os selos que a tela de 03/11 não mostrou", () => {
+    expect(CONTRATO_PENDENTE).toHaveLength(2);
+    expect(CONTRATO_PENDENTE.join(" ")).not.toContain("URL");
   });
 });

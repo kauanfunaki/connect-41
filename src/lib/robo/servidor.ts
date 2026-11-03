@@ -27,6 +27,9 @@ import { decidirAlvara, nomeDoPdfDoAlvara, pedidoDoAlvara, resultadoDoAlvaraSche
 import { FALHAS_PARA_PARAR, pedidoDaIE, resultadoDaIESchema, vigilanciaPodeSeguir } from "./inscricaoEstadual";
 import { empresasParaVigiarIE, registrarSituacaoDaIE } from "@/lib/societario/inscricaoEstadualServidor";
 import { INTERVALO_DA_VIGILANCIA_DIAS } from "@/lib/societario/inscricaoEstadual";
+import { lerProtocolosDoSima, pedidoDoSima, resultadoDoSimaSchema, rodadaDoSimaPodeComecar, type ProtocoloDoSima } from "./sima";
+import { SIGLA as SIGLA_DO_SIMA } from "@/lib/societario/orgaos/sima";
+import { aplicarDecisaoDoProtocolo, anotarFalhaDoProtocolo } from "@/lib/societario/observadorServidor";
 
 export type ResultadoDoPedido = { ok: true; texto: string } | { ok: false; erro: string };
 
@@ -101,6 +104,7 @@ export async function pegarProxima(w: CredencialAutenticadaOps, capacidades: rea
   const tipos = capacidadesConhecidas(capacidades);
   if (tipos.length === 0) return { tarefa: null };
   if (tipos.includes("vigiar_ie")) await criarVigilanciaDaIE(w.tenantId, agora);
+  if (tipos.includes("observar_sima")) await criarRodadaDoSima(w.tenantId, agora);
   // Duas máquinas (ou duas voltas) podem mirar a mesma: quem não conseguir
   // marcar tenta a seguinte.
   for (let i = 0; i < 3; i++) {
@@ -156,6 +160,37 @@ async function criarVigilanciaDaIE(tenantId: string, agora: Date) {
     });
   } catch (err) {
     // Dois pedidos da máquina ao mesmo tempo: o outro já criou.
+    if (!isPrismaUniqueError(err)) throw err;
+  }
+}
+
+/** Os protocolos do SIMA à espera do órgão, com número para consultar. */
+async function protocolosPendentesDoSima(tenantId: string, numeros?: string[]): Promise<ProtocoloDoSima[]> {
+  const linhas = await getPrisma().processProtocol.findMany({
+    where: { tenantId, outcome: "PENDENTE", number: numeros ? { in: numeros } : { not: null }, organ: { acronym: SIGLA_DO_SIMA } },
+    select: { id: true, tenantId: true, stepId: true, outcome: true, number: true, organ: { select: { acronym: true, trackingUrl: true } } },
+    orderBy: { lastCheckedAt: { sort: "asc", nulls: "first" } },
+    take: 500,
+  });
+  return linhas.map((p) => ({ id: p.id, tenantId: p.tenantId, stepId: p.stepId, outcome: p.outcome, numero: p.number, trackingUrl: p.organ.trackingUrl, siglaDoOrgao: p.organ.acronym }));
+}
+
+/**
+ * Uma rodada do SIMA vira tarefa: há protocolo pendente com número, nenhuma
+ * rodada aberta e a última foi há mais do intervalo.
+ */
+async function criarRodadaDoSima(tenantId: string, agora: Date) {
+  const prisma = getPrisma();
+  const ultima = await prisma.robotTask.findFirst({ where: { tenantId, kind: "observar_sima" }, orderBy: { createdAt: "desc" }, select: { status: true, createdAt: true } });
+  if (ultima && (ultima.status === "PENDENTE" || ultima.status === "EM_EXECUCAO")) return;
+  if (!rodadaDoSimaPodeComecar(ultima?.createdAt ?? null, agora)) return;
+  const pedido = pedidoDoSima((await protocolosPendentesDoSima(tenantId)).map((p) => p.numero));
+  if (pedido.protocolos.length === 0) return;
+  try {
+    await prisma.robotTask.create({
+      data: { tenantId, kind: "observar_sima", payload: JSON.stringify(pedido), openKey: chaveAberta(tenantId, "observar_sima", "rodada"), requestedById: null },
+    });
+  } catch (err) {
     if (!isPrismaUniqueError(err)) throw err;
   }
 }
@@ -219,6 +254,7 @@ export async function devolverTarefa(w: CredencialAutenticadaOps, id: string, de
   }
   if (t.kind === "imprimir_alvara") return { ok: true, status: await concluirAlvara(w, t, devolucao.resultado, arquivo) };
   if (t.kind === "vigiar_ie") return { ok: true, status: await concluirIE(w, t, devolucao.resultado) };
+  if (t.kind === "observar_sima") return { ok: true, status: await concluirSima(w, t, devolucao.resultado) };
   throw new ErroOps("Tipo de tarefa desconhecido.", 400);
 }
 
@@ -290,6 +326,33 @@ async function concluirIE(w: CredencialAutenticadaOps, t: TarefaAberta, bruto: R
     return "PRECISA_DE_GENTE";
   }
   await finalizar(w, t.id, { status: "CONCLUIDA", reason: null, result: resultado });
+  return "CONCLUIDA";
+}
+
+/**
+ * A rodada do SIMA voltou: cada protocolo pedido que segue pendente recebe a
+ * decisão (ou a falha anotada), pela mesma gravação do cron do observador.
+ */
+async function concluirSima(w: CredencialAutenticadaOps, t: TarefaAberta & { payload: string }, bruto: Record<string, unknown>): Promise<string> {
+  const lido = resultadoDoSimaSchema.safeParse(bruto);
+  if (!lido.success) throw new ErroOps("Resultado do SIMA fora do formato.", 400);
+  const { protocolos } = JSON.parse(t.payload) as { protocolos?: string[] };
+  // Relido agora: alguém pode ter resolvido um protocolo à mão durante a rodada.
+  const pendentes = await protocolosPendentesDoSima(w.tenantId, protocolos ?? []);
+  const contagem = { deferidos: 0, exigencias: 0, seguemPendentes: 0, falhas: 0 };
+  for (const l of lerProtocolosDoSima(pendentes, lido.data)) {
+    const p = pendentes.find((x) => x.id === l.id)!;
+    if (l.tipo === "falha") {
+      await anotarFalhaDoProtocolo(p.id, l.mensagem);
+      contagem.falhas++;
+      continue;
+    }
+    const feito = await aplicarDecisaoDoProtocolo(p, l.decisao);
+    if (feito === "deferido") contagem.deferidos++;
+    else if (feito === "exigencia") contagem.exigencias++;
+    else contagem.seguemPendentes++;
+  }
+  await finalizar(w, t.id, { status: "CONCLUIDA", reason: null, result: JSON.stringify({ lidos: lido.data.itens.length, ...contagem }) });
   return "CONCLUIDA";
 }
 
