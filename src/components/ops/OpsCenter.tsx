@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -70,7 +70,7 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
     return params.has("watcher") || params.has("status") || params.has("date") || Number(params.get("page")) > 1 ? "history" : "automations";
   });
   const [busca, setBusca] = useState("");
-  const [filtroSituacao, setFiltroSituacao] = useState<"all" | "online" | "unstable" | "offline">("all");
+  const [filtroSituacao, setFiltroSituacao] = useState<"all" | "online" | "offline">("all");
   const [pagina, setPagina] = useState(Math.max(1, Math.min(100000, Number.parseInt(params.get("page") ?? "1", 10) || 1))), [loading, setLoading] = useState(true), [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false), [erroAcao, setErroAcao] = useState("");
   const [edicao, setEdicao] = useState<WatcherOps | "novo" | null>(null), [form, setForm] = useState<Formulario>(emBranco);
@@ -138,9 +138,11 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
   const agora = painel ? new Date(painel.serverTime).getTime() : 0;
   const online = painel?.watchers.filter(w => atividade(w.lastHeartbeatAt, w.isActive, agora) === "Em execução").length ?? 0;
   const termo = busca.toLocaleLowerCase("pt-BR").trim();
-  const automacoes = painel?.watchers.filter(w => (
-    !termo || [w.name, w.ownerName, w.description, w.client, w.slug].some(v => v?.toLocaleLowerCase("pt-BR").includes(termo))
-  ) && (filtroSituacao === "all" || situacao(w, agora) === filtroSituacao)) ?? [];
+  // O filtro tem só Online e Offline (03/11/2026): a instável segue com
+  // comunicação ativa, então entra em Online, e o cartão já mostra o aviso.
+  const buscadas = painel?.watchers.filter(w => !termo || [w.name, w.ownerName, w.description, w.client, w.slug].some(v => v?.toLocaleLowerCase("pt-BR").includes(termo))) ?? [];
+  const ligada = (w: WatcherOps) => situacao(w, agora) !== "offline";
+  const automacoes = buscadas.filter(w => filtroSituacao === "all" || (filtroSituacao === "online") === ligada(w));
   const atualizarCampo = (key: keyof Formulario, value: string | boolean) => setForm(f => ({ ...f, [key]: value }));
   const botoesDePasta = (w: WatcherOps) => <div className="grid grid-cols-2 gap-2">
     <Button size="sm" variant="secondary" title={w.folderInput ? `Copiar caminho: ${w.folderInput}` : "Pasta de entrada não configurada"} disabled={!w.folderInput} onClick={() => void copiar(w.folderInput!, "Caminho copiado.")}><FolderInput size={14} /> Entrada</Button>
@@ -174,9 +176,18 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
       { key: "history", label: "Histórico", icon: <History size={14} aria-hidden />, count: painel.total },
     ]} />}
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
-          {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
+      {/* Busca à esquerda; status e "Minhas automações" à direita, numa
+          fileira só (03/11/2026). */}
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
+        <div className="flex min-w-0 flex-wrap items-center gap-2 lg:ml-auto">
+          {visao === "automations" && <div className="max-w-full overflow-x-auto">
+            <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} className="bg-surface" items={[
+              { key: "all", label: "Todos", icon: <Bot size={14} aria-hidden />, contagem: buscadas.length },
+              { key: "online", label: "Online", icon: <span aria-hidden className="size-2 rounded-full bg-current text-success-fg" />, contagem: buscadas.filter(ligada).length, tone: "success" },
+              { key: "offline", label: "Offline", icon: <span aria-hidden className="size-2 rounded-full bg-current text-danger" />, contagem: buscadas.filter(w => !ligada(w)).length, tone: "danger" },
+            ]} />
+          </div>}
           <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-helper font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand/10 text-brand" : "border-border-strong text-fg-secondary hover:bg-surface-hover hover:text-fg"}`}>
             {minhas ? <Check size={14} aria-hidden /> : <UserRound size={14} aria-hidden />}Minhas automações
@@ -184,15 +195,7 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
         </div>
       </div>
       {visao === "automations" ? <section aria-label="Robôs">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="max-w-full overflow-x-auto p-1">
-            <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} items={[
-              { key: "all", label: "Todos" }, { key: "online", label: "Online", tone: "success" },
-              { key: "unstable", label: "Instável", tone: "warning" }, { key: "offline", label: "Offline", tone: "danger" },
-            ]} />
-          </div>
-          <span className="text-helper text-fg-muted" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações</span>
-        </div>
+        <span className="sr-only" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações</span>
         {!painel.watchers.length ? <Card><EmptyState icon={<Activity />} title={minhas ? "Nenhuma automação atribuída a você" : "Nenhuma automação cadastrada"} description={minhas ? "O gestor pode definir o dono de cada automação no cadastro." : "Cadastre a automação e configure o envio de atividade e resultados para começar."}
             action={podeGerir && !minhas ? <Button onClick={() => editar("novo")}><Plus size={14} /> Nova automação</Button> : undefined} /></Card> :
           !automacoes.length ? <Card><EmptyState icon={<Search />} title="Nenhuma automação encontrada" description="Tente ajustar sua busca ou o filtro de status."
