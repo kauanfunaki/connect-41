@@ -1,30 +1,40 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Script from "next/script";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { SCRIPT_DO_TEMA } from "@/lib/theme";
 import { ValidacaoDosFormularios } from "@/components/ui/ValidacaoDosFormularios";
 import { DicaFlutuante } from "@/components/shared/DicaFlutuante";
 
-const plexSans = IBM_Plex_Sans({
+// As fontes ficam no repositório (`src/fontes`, OFL), desde 30/10/2026: com
+// `next/font/google` o build baixava as fontes a cada vez, e quando o download
+// falhava o build caía ("next/font/google queries have exactly one entry") — o
+// CI do #345 caiu assim. Mesmos pesos, variáveis e subsets (latin + latin-ext)
+// de antes; os arquivos e como gerá-los estão em `src/fontes/LEIA-ME.md`.
+const plexSans = localFont({
+  src: "../fontes/IBMPlexSans-wght.woff2",
   variable: "--font-ibm-plex-sans",
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
   display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
+const plexMono = localFont({
+  src: [
+    { path: "../fontes/IBMPlexMono-400.woff2", weight: "400", style: "normal" },
+    { path: "../fontes/IBMPlexMono-500.woff2", weight: "500", style: "normal" },
+  ],
   variable: "--font-ibm-plex-mono",
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500"],
   display: "swap",
+  // A fonte de reserva com as medidas ajustadas é calculada sobre a Arial;
+  // para uma monoespaçada isso desalinharia mais do que ajudaria.
+  adjustFontFallback: false,
 });
 
-const spaceGrotesk = Space_Grotesk({
+const spaceGrotesk = localFont({
+  src: "../fontes/SpaceGrotesk-wght.woff2",
   variable: "--font-space-grotesk",
-  subsets: ["latin", "latin-ext"],
-  weight: ["500", "600", "700"],
+  weight: "500 700",
   display: "swap",
 });
 
