@@ -70,6 +70,22 @@ npm run robo:societario -- --testar-certificado --config=.local/robo-societario.
 - `--origens` lista os endereços que podem pedir o certificado. No SIMA, o login é no e-Cidadão, outro endereço.
 - O navegador fica aberto. Siga o login e veja se entrou. Ao terminar, aperte Enter no terminal: o robô guarda uma captura da última tela e fecha.
 
+### Mapear um site novo
+
+Para escrever a leitura de um órgão contra a página real, uma pessoa faz o caminho à mão com o certificado, e o robô anota cada tela:
+
+```
+npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario.json --url=https://receita.pr.gov.br/login --pfx="<arquivo>.pfx" --entrada="<título da entrada no cofre>"
+```
+
+- A cada tela que importa, aperte Enter no terminal. Dá para escrever uma nota antes do Enter ("depois de emitir", por exemplo). Para terminar, escreva `fim` e Enter.
+- Em cada passo o robô anota o endereço, os campos (rótulo, nome, id e tipo, sem o que foi digitado), os botões e links, o começo do texto e uma captura de cada aba aberta. PDF que o site abrir é guardado.
+- No fim, mostra os endereços que o site usou. Se o certificado for pedido num endereço que não está em `--origens`, o login falha: acrescente o endereço e rode de novo.
+- Tudo fica em `.local/capturas-do-robo/mapa-<nome>/`, só na máquina, porque tem dado de cliente.
+- O `npm run robo:societario` liga o `--openssl-legacy-provider` do Node. Os `.pfx` das certificadoras vêm cifrados num algoritmo antigo (RC2), e sem essa opção o robô para em "Unsupported TLS certificate". Quem chamar o `node` direto (o Agendador, por exemplo) precisa pôr a opção antes do script.
+- **Site com Web PKI** (a Receita do PR, 03/11/2026): a tela mostra uma "Lista de Certificados" lida por uma extensão, e não pede o certificado pela janela do navegador. Para esses sites o robô usa um perfil fixo do Chrome, em `.local/perfil-do-chrome`, com a extensão Web PKI, e o certificado instalado no Windows da máquina (usuário atual, sem marcar como exportável). Uma vez, rode `--preparar-perfil`: o Chrome abre nesse perfil, você instala a extensão pelo aviso do site, autoriza o site e confere se o certificado aparece na lista. Depois, mapeie com `--perfil` no lugar de `--pfx` e `--entrada`.
+- Sem `--entrada`, o robô pede a senha do certificado no terminal, sem aparecer na tela, e não grava. Serve quando o cofre não está à mão; vale também para `--testar-certificado`.
+
 ## 5. Acompanhar
 
 - **Societário › Robô** no menu (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
@@ -119,6 +135,20 @@ O Connect já sabe o que fazer com a leitura: grava a situação da IE na empres
 - a que parou numa pessoa não volta na mesma semana;
 - três leituras seguidas que pararam numa pessoa param a rodada por 24 horas (a tela do CICAD mudou, o certificado venceu).
 
-**Falta a leitura na máquina.** Ela entra em `CAPACIDADES` só depois de testada contra a página real da Receita do PR, como o SIMA. Até lá, a máquina não diz `vigiar_ie` e nenhuma tarefa nasce. Antes, a Ruli precisa confirmar que a emissão do CICAD não pede captcha.
+**A leitura na máquina (03/11/2026).** Mapeada contra a página real: nem o login nem a emissão do CICAD pedem captcha, mas o login usa Web PKI, então ela roda no perfil do Chrome do robô (seção 4), com o certificado da 041 instalado no Windows. O robô escolhe o certificado pelo CNPJ (`31052957000105`, ou `vigiarIE.cnpjDoCertificado`), abre a Emissão de CICAD pelo menu, emite e lê o texto entre "Situação Atual" e "Natureza Jurídica". O Chrome fica aberto entre uma empresa e outra, com 15 s de pausa, e fecha depois de 5 minutos sem trabalho.
+
+Vai para alguém olhar, sem nova tentativa:
+- o certificado não aparece na lista da Receita;
+- a Receita diz "CAD/ICMS Inválido.";
+- o CICAD que abriu é de outra IE, ou de outro CNPJ que não o do cadastro;
+- o CICAD abriu sem o campo Situação Atual.
+
+Antes de ligar, ensaie com uma IE conhecida. O ensaio mostra o que o robô leria, sem falar com o Connect:
+
+```
+npm run robo:societario -- --ensaio-ie --inscricao=<IE> --config=.local/robo-societario.json
+```
+
+Para ligar, acrescente `"vigiarIE": { "ativo": true }` em `.local/robo-societario.json` e reinicie o robô. Sem isso, a máquina não diz `vigiar_ie` e nenhuma tarefa nasce.
 
 A tarefa recebe `{ inscricao, cnpj }` (só dígitos; `cnpj` nulo quando o cadastro não tem) e devolve `{ ok: true, resultado: { situacao } }`, com o texto do campo "Situação Atual" como está na tela. Quem interpreta é o Connect.

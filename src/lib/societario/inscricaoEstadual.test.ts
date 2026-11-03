@@ -11,6 +11,10 @@ describe("lerSituacaoDaIE", () => {
     expect(lerSituacaoDaIE("  Cancelada ")).toBe("CANCELADA");
   });
 
+  it("lê o campo como o CICAD de verdade escreve, com o regime junto (03/11/2026)", () => {
+    expect(lerSituacaoDaIE("ATIVO - SIMPLES NACIONAL / SIMPLES NACIONAL - DIA 03 DO MES+2, DESDE 08/2023")).toBe("ATIVA");
+  });
+
   it("não chuta: texto desconhecido, vazio ou 'inativa' fica nulo", () => {
     expect(lerSituacaoDaIE("INATIVA")).toBeNull();
     expect(lerSituacaoDaIE("Em análise")).toBeNull();
