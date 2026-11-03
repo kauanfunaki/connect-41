@@ -176,23 +176,23 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
       { key: "history", label: "Histórico", icon: <History size={14} aria-hidden />, count: painel.total },
     ]} />}
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
-      {/* Busca à esquerda; status e "Minhas automações" à direita, numa
-          fileira só (03/11/2026). */}
+      {/* Busca e "Minhas automações" à esquerda, como a busca e o "Atribuídos
+          a mim" de Chamados; o status à direita (03/11/2026). */}
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
-        <div className="flex min-w-0 flex-wrap items-center gap-2 lg:ml-auto">
-          {visao === "automations" && <div className="max-w-full overflow-x-auto">
-            <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} className="bg-surface" items={[
-              { key: "all", label: "Todos", icon: <Bot size={14} aria-hidden />, contagem: buscadas.length },
-              { key: "online", label: "Online", icon: <span aria-hidden className="size-2 rounded-full bg-current text-success-fg" />, contagem: buscadas.filter(ligada).length, tone: "success" },
-              { key: "offline", label: "Offline", icon: <span aria-hidden className="size-2 rounded-full bg-current text-danger" />, contagem: buscadas.filter(w => !ligada(w)).length, tone: "danger" },
-            ]} />
-          </div>}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
           <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
             className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-helper font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand/10 text-brand" : "border-border-strong text-fg-secondary hover:bg-surface-hover hover:text-fg"}`}>
             {minhas ? <Check size={14} aria-hidden /> : <UserRound size={14} aria-hidden />}Minhas automações
           </button>
         </div>
+        {visao === "automations" && <div className="max-w-full shrink-0 overflow-x-auto">
+          <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} className="bg-surface" items={[
+            { key: "all", label: "Todos", icon: <Bot size={14} aria-hidden />, contagem: buscadas.length },
+            { key: "online", label: "Online", icon: <span aria-hidden className="size-2 rounded-full bg-current text-success-fg" />, contagem: buscadas.filter(ligada).length, tone: "success" },
+            { key: "offline", label: "Offline", icon: <span aria-hidden className="size-2 rounded-full bg-current text-danger" />, contagem: buscadas.filter(w => !ligada(w)).length, tone: "danger" },
+          ]} />
+        </div>}
       </div>
       {visao === "automations" ? <section aria-label="Robôs">
         <span className="sr-only" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações</span>
