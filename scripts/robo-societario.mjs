@@ -309,6 +309,7 @@ const LOGIN_DA_RECEITA = "https://receita.pr.gov.br/certificado";
 const CNPJ_DO_CERTIFICADO = "31052957000105";
 const PAUSA_ENTRE_LEITURAS_MS = 15_000;
 const SITUACAO_NO_CICAD = /Situa[çc][ãa]o Atual\s+([\s\S]+?)\s+Natureza Jur[íi]dica/i;
+const RECUSA_DO_CICAD = /solicita[çc][ãa]o n[ãa]o p[ôo]de ser atendida/i;
 
 // O Chrome da Receita fica aberto entre uma empresa e outra: um login por
 // rodada, e não um por empresa. Fecha depois de alguns minutos sem uso.
@@ -343,6 +344,13 @@ async function vigiarIE(config, tarefa, { ensaio = false } = {}) {
   const aoAviso = (d) => { avisos.push(espacos(d.message())); d.accept().catch(() => {}); };
   page.on("dialog", aoAviso);
   try {
+    // O perfil guarda a sessão: depois de uma falha, ou de reiniciar o robô, a
+    // Receita pode já estar logada, e aí a tela do certificado não mostra a
+    // lista (03/11/2026). Confere antes de tentar entrar.
+    if (!receita.logado) {
+      await page.goto("https://receita.pr.gov.br/", { waitUntil: "domcontentloaded", timeout: 60_000 });
+      if (await page.getByText("Emissão de CICAD").count()) receita.logado = true;
+    }
     if (!receita.logado) {
       const doCertificado = config.vigiarIE?.cnpjDoCertificado || CNPJ_DO_CERTIFICADO;
       await page.goto(LOGIN_DA_RECEITA, { waitUntil: "domcontentloaded", timeout: 60_000 });
@@ -408,8 +416,22 @@ async function vigiarIE(config, tarefa, { ensaio = false } = {}) {
 
     try {
       await resultado.waitForLoadState("domcontentloaded", { timeout: 30_000 });
-      await resultado.getByText("Situação Atual").first().waitFor({ timeout: 30_000 });
+      // Ou o CICAD, ou a recusa ("Sua solicitação não pôde ser atendida").
+      await resultado.getByText(/Situação Atual|não p[ôo]de ser atendida/).first().waitFor({ timeout: 30_000 });
       const texto = espacos(await resultado.locator("body").innerText());
+
+      // A recusa traz o motivo, e ele é a situação do cliente, não falha do
+      // robô: "Estabelecimento inativo no CAD/ICMS." (03/11/2026). O motivo
+      // vai como situação, e o Connect decide — o que ele não conhece vai
+      // para uma pessoa com o texto da Receita.
+      if (RECUSA_DO_CICAD.test(texto)) {
+        const motivo = texto.match(/Motivo:\s*(.+?)(?:\s+Orienta[çc][õo]es|$)/i)?.[1]?.trim();
+        const ieNaRecusa = texto.match(/CAD\/ICMS:\s*([\d.\-/]+)/i)?.[1]?.replace(/\D/g, "");
+        if (ensaio) return { ensaio: { recusa: true, motivo: motivo ?? null, ieNaRecusa, texto: texto.slice(0, 800) } };
+        if (!motivo) { await capturar(resultado, tarefa.id); return pessoa("A Receita do PR recusou o CICAD sem dizer o motivo onde o robô espera. A captura está na máquina do robô."); }
+        if (ieNaRecusa && ieNaRecusa !== inscricao) return pessoa(`A recusa da Receita do PR é de outra inscrição estadual (${ieNaRecusa}). Confira na Receita do PR.`);
+        return { devolucao: { ok: true, resultado: { situacao: motivo.slice(0, 200) } } };
+      }
       const situacao = texto.match(SITUACAO_NO_CICAD)?.[1]?.trim();
       const ieNoCicad = texto.match(/Inscri[çc][ãa]o no CAD\/ICMS\s+([\d.\-/]+)/i)?.[1]?.replace(/\D/g, "");
       const cnpjNoCicad = texto.match(/Inscri[çc][ãa]o CNPJ\s+([\d.\-/]+)/i)?.[1]?.replace(/\D/g, "");
@@ -651,7 +673,19 @@ async function mapearSite() {
 async function watch() {
   await mkdir(dirname(lockPath), { recursive: true });
   let lock;
-  try { lock = await open(lockPath, "wx"); } catch { throw new Error("Já existe um robô rodando com esta configuração."); }
+  // A trava guarda o PID. Fechar a janela do cmd mata o robô sem soltar a
+  // trava, e aí o Agendador não conseguia subir outro (03/11/2026): trava de
+  // processo que não existe mais é descartada.
+  try { lock = await open(lockPath, "wx"); } catch {
+    const pid = Number((await readFile(lockPath, "utf8").catch(() => "")).trim());
+    let vivo = false;
+    try { if (pid) { process.kill(pid, 0); vivo = true; } } catch {}
+    if (vivo) throw new Error("Já existe um robô rodando com esta configuração.");
+    log(`trava antiga${pid ? ` do processo ${pid}` : ""} descartada: o robô anterior não está mais rodando`);
+    await unlink(lockPath).catch(() => {});
+    lock = await open(lockPath, "wx");
+  }
+  await lock.writeFile(String(process.pid));
   const parar = async () => { await fecharReceita(); await lock.close(); await unlink(lockPath).catch(() => {}); await unlink(stopPath).catch(() => {}); log("parado"); process.exit(0); };
   process.once("SIGINT", parar);
   process.once("SIGTERM", parar);

@@ -137,6 +137,8 @@ O Connect já sabe o que fazer com a leitura: grava a situação da IE na empres
 
 **A leitura na máquina (03/11/2026).** Mapeada contra a página real: nem o login nem a emissão do CICAD pedem captcha, mas o login usa Web PKI, então ela roda no perfil do Chrome do robô (seção 4), com o certificado da 041 instalado no Windows. O robô escolhe o certificado pelo CNPJ (`31052957000105`, ou `vigiarIE.cnpjDoCertificado`), abre a Emissão de CICAD pelo menu, emite e lê o texto entre "Situação Atual" e "Natureza Jurídica". O Chrome fica aberto entre uma empresa e outra, com 15 s de pausa, e fecha depois de 5 minutos sem trabalho.
 
+Para estabelecimento fora de ativo, a Receita não emite o CICAD: responde "Sua solicitação não pôde ser atendida", com o motivo "Estabelecimento inativo no CAD/ICMS." (03/11/2026). Isso é a situação do cliente, e não falha do robô. O robô devolve o motivo como situação, e o Connect grava **inativa** e avisa o Societário. Motivo que o Connect não conhece vai para alguém, com o texto da Receita.
+
 Vai para alguém olhar, sem nova tentativa:
 - o certificado não aparece na lista da Receita;
 - a Receita diz "CAD/ICMS Inválido.";
