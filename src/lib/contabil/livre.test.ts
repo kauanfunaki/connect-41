@@ -38,6 +38,8 @@ describe("lançamentos e navegação livre", () => {
     expect(areaContabil({ aba: "contribuicoes", secao: "arquivos" })).toBe("arquivos");
     expect(areaContabil({ ver: "fora" })).toBe("entradas");
     expect(areaContabil({ ver: "regras" })).toBe("regras");
+    expect(areaContabil({ secao: "saidas" })).toBe("saidas");
+    expect(areaContabil({ secao: "lote" })).toBe("lote");
     expect(areaContabil({ aba: "contribuicoes", secao: "regras" })).toBe("visao");
   });
   it("a autorização contábil é restrita às decisões e recursos de Contribuições", () => {

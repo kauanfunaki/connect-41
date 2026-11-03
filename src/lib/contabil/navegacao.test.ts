@@ -5,7 +5,7 @@ import { ETAPAS_DO_CONTABIL, SECOES_DO_CONTABIL, etapaDaSecao } from "./navegaca
 // etapa, e a ordem é a do trabalho do mês.
 describe("etapas do Contábil", () => {
   it("segue a ordem do trabalho do mês", () => {
-    expect(ETAPAS_DO_CONTABIL.map((e) => e.chave)).toEqual(["entradas", "pendencias", "depara", "lancamentos"]);
+    expect(ETAPAS_DO_CONTABIL.map((e) => e.chave)).toEqual(["entradas", "pendencias", "depara", "lancamentos", "saidas", "lote"]);
   });
 
   it("põe cada seção antiga na sua etapa", () => {
@@ -15,6 +15,8 @@ describe("etapas do Contábil", () => {
     expect(etapaDaSecao("configuracao").chave).toBe("depara");
     expect(etapaDaSecao("lancamentos").chave).toBe("lancamentos");
     expect(etapaDaSecao("visao").chave).toBe("lancamentos");
+    expect(etapaDaSecao("saidas").chave).toBe("saidas");
+    expect(etapaDaSecao("lote").chave).toBe("lote");
   });
 
   it("abre a primeira etapa quando a seção não existe", () => {

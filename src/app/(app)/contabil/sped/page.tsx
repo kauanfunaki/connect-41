@@ -11,12 +11,14 @@ import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { competenciaDoInstante, competenciaValida, somarMeses } from "@/lib/financeiro/periodo";
-import { empresaContabilVisivel, painelDoContabil, type EmpresaDoContabil } from "@/lib/contabil/servidor";
+import { empresaContabilVisivel, painelDasSaidas, painelDoContabil, type EmpresaDoContabil } from "@/lib/contabil/servidor";
 import { areaContabil, etapaDaSecao, secoesDoGrupo, ETAPAS_DO_CONTABIL, SECOES_DO_CONTABIL } from "@/lib/contabil/navegacao";
 import { EtapasNumeradas } from "@/components/ui/EtapasNumeradas";
 import { DeparaWorkspace } from "@/components/contabil/DeparaWorkspace";
 import { AreasContribuicoes } from "@/components/contabil/AreasContribuicoes";
 import { LimiteDaAreaContabil } from "@/components/contabil/LimiteDaAreaContabil";
+import { SaidasDoContabil } from "@/components/contabil/SaidasDoContabil";
+import { LoteDoAno } from "@/components/contabil/LoteDoAno";
 import type { AuthContext } from "@/lib/auth/context";
 import { podeExcluir } from "@/lib/auth/papeis";
 
@@ -63,6 +65,15 @@ export default async function SpedDoContabilPage({ searchParams }: { searchParam
 
 async function Conteudo({ ctx, empresa, mes, aba, secao, params, daMatriz }: { ctx: AuthContext; empresa: EmpresaDoContabil; mes: string; aba: string; secao: string; params: Params; daMatriz: string | null }) {
   if (aba === "contribuicoes") return <AreasContribuicoes ctx={ctx} empresa={empresa} mes={mes} secao={secao} params={params} />;
+  if (secao === "lote") return <LoteDoAno empresaId={empresa.id} mes={mes} />;
+  if (secao === "saidas") {
+    const dados = await Promise.all([painelDasSaidas(ctx.tenantId, empresa, mes), podeNoModulo(ctx, "contabil_sped", "agir")]).catch((err) => {
+      console.error("[contabil/sped] saídas indisponíveis", err);
+      return null;
+    });
+    if (!dados) return <Aviso tom="atencao">Não foi possível carregar as saídas. Tente novamente. As outras etapas continuam disponíveis.</Aviso>;
+    return <SaidasDoContabil painel={dados[0]} empresaId={empresa.id} mes={mes} podeAgir={dados[1]} />;
+  }
   const dados = await Promise.all([painelDoContabil(ctx.tenantId, empresa, mes, { entradas: secao !== "configuracao" && secao !== "regras", sugestoes: secao === "pendencias" }), podeNoModulo(ctx, "contabil_sped", "agir")]).catch((err) => {
     console.error("[contabil/sped] área indisponível", err);
     return null;

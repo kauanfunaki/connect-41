@@ -2,6 +2,7 @@ import type { Lancamento } from "./lancamentos";
 export const AREAS_CONTABEIS = [
   ["visao", "Visão geral"], ["entradas", "Notas de entrada"], ["pendencias", "Pendências"],
   ["regras", "Regras do de-para"], ["lancamentos", "Lançamentos"], ["configuracao", "Plano e contas"],
+  ["saidas", "Saídas"], ["lote", "Lote do ano"],
 ] as const;
 export const AREAS_CONTRIBUICOES = [
   ["visao", "Visão geral"], ["fechamento", "Fechamento e conferência"], ["apuracao", "Apuração e créditos"],
@@ -16,12 +17,15 @@ export function grupoContabil(params: Record<string, string | undefined>) {
 // De-para e lançamentos como um trabalho em etapas, na ordem do mês
 // (03/11/2026), como o SPED ICMS/IPI: ver o que entrou, tratar o que ficou
 // sem regra, criar a regra e baixar a planilha da Domínio. Cada etapa reúne
-// as seções que já existiam; a primeira é a que a etapa abre.
+// as seções que já existiam; a primeira é a que a etapa abre. Saídas e o
+// lote do ano vieram do painel do motor (passos 6 e 7, 03/11/2026).
 export const ETAPAS_DO_CONTABIL = [
   { chave: "entradas", rotulo: "Notas de entrada", resumo: "O que entrou no mês e o que vira lançamento.", secoes: [["entradas", "Notas de entrada"]] },
   { chave: "pendencias", rotulo: "Pendências", resumo: "As notas que ficaram fora do de-para.", secoes: [["pendencias", "Pendências"]] },
   { chave: "depara", rotulo: "De-para", resumo: "Onde a pendência vira regra de conta.", secoes: [["regras", "Regras"], ["configuracao", "Plano e contas"]] },
   { chave: "lancamentos", rotulo: "Lançamentos", resumo: "A planilha no modelo da Domínio.", secoes: [["lancamentos", "Lançamentos"], ["visao", "Resumo"]] },
+  { chave: "saidas", rotulo: "Saídas", resumo: "O faturamento do mês, um lançamento por dia.", secoes: [["saidas", "Saídas"]] },
+  { chave: "lote", rotulo: "Lote do ano", resumo: "Os doze meses num ZIP, com o resumo do que saiu.", secoes: [["lote", "Lote do ano"]] },
 ] as const;
 export type EtapaDoContabil = (typeof ETAPAS_DO_CONTABIL)[number];
 export const SECOES_DO_CONTABIL: readonly string[] = ETAPAS_DO_CONTABIL.flatMap((e) => e.secoes.map(([id]) => id));
