@@ -144,6 +144,11 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
   const ligada = (w: WatcherOps) => situacao(w, agora) !== "offline";
   const automacoes = buscadas.filter(w => filtroSituacao === "all" || (filtroSituacao === "online") === ligada(w));
   const atualizarCampo = (key: keyof Formulario, value: string | boolean) => setForm(f => ({ ...f, [key]: value }));
+  // Em Robôs fica ao lado da busca; no Histórico, junto dos filtros dele.
+  const botaoMinhas = <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-helper font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand/10 text-brand" : "border-border-strong text-fg-secondary hover:bg-surface-hover hover:text-fg"}`}>
+            {minhas ? <Check size={14} aria-hidden /> : <UserRound size={14} aria-hidden />}Minhas automações
+          </button>;
   const botoesDePasta = (w: WatcherOps) => <div className="grid grid-cols-2 gap-2">
     <Button size="sm" variant="secondary" title={w.folderInput ? `Copiar caminho: ${w.folderInput}` : "Pasta de entrada não configurada"} disabled={!w.folderInput} onClick={() => void copiar(w.folderInput!, "Caminho copiado.")}><FolderInput size={14} /> Entrada</Button>
     <Button size="sm" variant="secondary" title={w.folderOutput ? `Copiar caminho: ${w.folderOutput}` : "Pasta de saída não configurada"} disabled={!w.folderOutput} onClick={() => void copiar(w.folderOutput!, "Caminho copiado.")}><FolderOutput size={14} /> Saída</Button>
@@ -178,22 +183,19 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
       {/* Busca e "Minhas automações" à esquerda, como a busca e o "Atribuídos
           a mim" de Chamados; o status à direita (03/11/2026). */}
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {visao === "automations" && <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
-          <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
-            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-helper font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand/10 text-brand" : "border-border-strong text-fg-secondary hover:bg-surface-hover hover:text-fg"}`}>
-            {minhas ? <Check size={14} aria-hidden /> : <UserRound size={14} aria-hidden />}Minhas automações
-          </button>
+          <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>
+          {botaoMinhas}
         </div>
-        {visao === "automations" && <div className="max-w-full shrink-0 overflow-x-auto">
+        <div className="max-w-full shrink-0 overflow-x-auto">
           <SegmentedControl label="Filtrar automações por status" active={filtroSituacao} onChange={setFiltroSituacao} className="bg-surface" items={[
             { key: "all", label: "Todos", icon: <Bot size={14} aria-hidden />, contagem: buscadas.length },
             { key: "online", label: "Online", icon: <span aria-hidden className="size-2 rounded-full bg-current text-success-fg" />, contagem: buscadas.filter(ligada).length, tone: "success" },
             { key: "offline", label: "Offline", icon: <span aria-hidden className="size-2 rounded-full bg-current text-danger" />, contagem: buscadas.filter(w => !ligada(w)).length, tone: "danger" },
           ]} />
-        </div>}
-      </div>
+        </div>
+      </div>}
       {visao === "automations" ? <section aria-label="Robôs">
         <span className="sr-only" role="status">{numero(automacoes.length)} de {numero(painel.watchers.length)} automações</span>
         {!painel.watchers.length ? <Card><EmptyState icon={<Activity />} title={minhas ? "Nenhuma automação atribuída a você" : "Nenhuma automação cadastrada"} description={minhas ? "O gestor pode definir o dono de cada automação no cadastro." : "Cadastre a automação e configure o envio de atividade e resultados para começar."}
@@ -238,11 +240,11 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
       <section aria-labelledby="ops-historico">
         <Card className="overflow-hidden">
           <h2 id="ops-historico" className="sr-only">Histórico de processamento</h2>
-          <div className="grid gap-3 border-b border-border p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 border-b border-border p-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
             <CampoForm label="Automação" htmlFor="ops-filtro-automacao"><Select id="ops-filtro-automacao" compact value={watcher} onChange={e => { setWatcher(e.target.value); setPagina(1); }}><option value="">Todas as automações</option>{painel.watchers.map(w => <option key={w.slug} value={w.slug}>{w.name}</option>)}</Select></CampoForm>
             <CampoForm label="Resultado" htmlFor="ops-filtro-resultado"><Select id="ops-filtro-resultado" compact value={status} onChange={e => { setStatus(e.target.value); setPagina(1); }}><option value="">Todos os resultados</option><option value="SUCCESS">Sucesso</option><option value="ERROR">Erro</option><option value="WARNING">Aviso</option></Select></CampoForm>
             <CampoForm label="Data do processamento" htmlFor="ops-filtro-data"><CampoData id="ops-filtro-data" compact value={dia} onChange={value => { setDia(value); setPagina(1); }} /></CampoForm>
-            <div className="flex items-end"><Button variant="ghost" size="sm" onClick={() => { setWatcher(""); setStatus(""); setDia(""); setPagina(1); }}>Limpar filtros</Button></div>
+            <div className="flex items-end gap-2">{botaoMinhas}<Button variant="ghost" size="sm" onClick={() => { setWatcher(""); setStatus(""); setDia(""); setPagina(1); setMinhas(false); }}>Limpar filtros</Button></div>
           </div>
           {/* Na tabela padrão do app (`.c41-tabela`: cabeçalho, centro, fio azul
               na linha), e "Ver detalhes" como botão — era uma tabela própria
