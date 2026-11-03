@@ -17,7 +17,7 @@
 //
 // Uso:
 //   node scripts/robo-societario.mjs --config=.local/robo-societario.json [--once | --watch | --status | --stop]
-//   node scripts/robo-societario.mjs --ensaio-alvara --inscricao=<8 dígitos>   (para antes do aceite)
+//   node scripts/robo-societario.mjs --ensaio-alvara --inscricao=<inscrição municipal>   (para antes do aceite)
 //   node scripts/robo-societario.mjs --testar-certificado --url=<site> --pfx=<arquivo.pfx> --entrada=<título no cofre> [--origens=a,b]
 // Roteiro completo em docs/ROBO-DO-SOCIETARIO.md.
 
@@ -339,7 +339,10 @@ async function criarConfig() {
  * acha o campo e os botões antes da primeira tarefa de verdade.
  */
 async function ensaiarAlvara() {
-  const inscricao = String(value("--inscricao", "")).replace(/\D/g, "");
+  // Como o Connect faz (`normalizarInscricao`): 7 dígitos ganham o zero, e o
+  // código inteiro que o site exibe (11) perde os 4 primeiros.
+  const digitos = String(value("--inscricao", "")).replace(/\D/g, "");
+  const inscricao = digitos.length === 7 ? `0${digitos}` : digitos.length === 11 ? `0${digitos.slice(4)}` : digitos;
   const config = await loadConfig().catch(() => ({ navegador: { visivel: true, canal: null } }));
   const saida = await imprimirAlvara(config, { id: "ensaio-do-alvara", dados: { inscricao } }, { ensaio: true });
   console.log(JSON.stringify(saida.ensaio ?? saida.devolucao, null, 2));

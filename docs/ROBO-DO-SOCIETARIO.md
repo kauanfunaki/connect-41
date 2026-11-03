@@ -41,7 +41,7 @@ O último comando cria o arquivo de configuração. Preencha os campos nele, e s
 Antes da primeira tarefa de verdade, faça o ensaio. Ele consulta a inscrição no site da prefeitura e para antes do aceite: não marca nada, não imprime e não fala com o Connect. Mostra se achou o alvará, se o texto do aceite é o mesmo e o começo do texto da página, e guarda uma captura da tela.
 
 ```
-npm run robo:societario -- --ensaio-alvara --inscricao=<8 dígitos> --config=.local/robo-societario.json
+npm run robo:societario -- --ensaio-alvara --inscricao=<inscrição municipal> --config=.local/robo-societario.json
 ```
 
 Para testar uma volta, peça um alvará pelo ⋯ de uma licença e rode:
@@ -79,7 +79,7 @@ npm run robo:societario -- --testar-certificado --config=.local/robo-societario.
 
 1. Na licença de alvará, **⋯ › Imprimir pelo robô**. O Connect confere antes:
    - a licença é de alvará e não está revogada;
-   - a empresa tem inscrição municipal de 8 dígitos;
+   - a empresa tem inscrição municipal. O campo do site recebe 8 dígitos (`0804925-8`), e o Connect aceita o cadastro também sem o zero (`804925-8`) ou com o código inteiro que o site exibe (`17 19 804.925-8`);
    - a cidade é Curitiba (ou está em branco).
 2. A máquina consulta a inscrição no site da prefeitura.
 3. Se o alvará aparece e o texto do aceite é o mesmo decidido em 15/09, ela marca o aceite, imprime e devolve o PDF da aba nova.
