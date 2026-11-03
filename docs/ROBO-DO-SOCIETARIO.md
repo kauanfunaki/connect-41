@@ -154,3 +154,27 @@ npm run robo:societario -- --ensaio-ie --inscricao=<IE> --config=.local/robo-soc
 Para ligar, acrescente `"vigiarIE": { "ativo": true }` em `.local/robo-societario.json` e reinicie o robô. Sem isso, a máquina não diz `vigiar_ie` e nenhuma tarefa nasce.
 
 A tarefa recebe `{ inscricao, cnpj }` (só dígitos; `cnpj` nulo quando o cadastro não tem) e devolve `{ ok: true, resultado: { situacao } }`, com o texto do campo "Situação Atual" como está na tela. Quem interpreta é o Connect.
+
+## O acompanhamento dos protocolos do SIMA (observar_sima)
+
+Mapeado contra a página real em 03/11/2026, com o certificado da 041. A cada 6 horas, quando há protocolo do SIMA (órgão `MA`) à espera do órgão e com número, o Connect cria uma rodada com até 60 protocolos. A máquina:
+
+1. abre `/solicitacoes` no Chrome do robô. Sem sessão, entra pelo e-Cidadão com o certificado da 041 ("Entrar com Certificado Digital" e, no primeiro acesso, "Aceitar e entrar");
+2. espera o "Carregando solicitações..." sumir: os dados chegam 5 a 15 s depois da página;
+3. passa pelas três abas (Pendente, Em análise, Finalizado) e lê o selo e o protocolo de cada cartão;
+4. no finalizado sem deferimento, abre o detalhe e lê o "Motivo do cancelamento".
+
+O Connect decide com `classificarSolicitacao` (`src/lib/societario/orgaos/sima.ts`) e grava como o observador de protocolo:
+- **Em análise**: segue pendente, com a hora da verificação;
+- **Finalizado DEFERIDO**: conclui o protocolo e a etapa, como feito pelo robô;
+- **Finalizado CANCELADO**: exigência com o motivo do SIMA, e a etapa volta para o setor;
+- **Pendente** com "Aguardando Envio de Documento", "Aguardando Assinatura" ou "Aguardando Pagamento": exigência;
+- selo que a tela ainda não mostrou, ou protocolo que não aparece no login da 041 (aberto com o certificado do cliente): fica anotado no protocolo como falha da verificação, sem mexer no desfecho.
+
+Antes de ligar, ensaie. O ensaio lê a lista e mostra o que devolveria, sem falar com o Connect:
+
+```
+npm run robo:societario -- --ensaio-sima --config=.local/robo-societario.json
+```
+
+Para ligar, acrescente `"observarSima": { "ativo": true }` em `.local/robo-societario.json` e reinicie o robô.

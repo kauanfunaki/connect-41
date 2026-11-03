@@ -5,6 +5,7 @@ import {
   decidir,
   type ProtocoloParaVerificar,
 } from "@/lib/societario/observador";
+import { aplicarDecisaoDoProtocolo, anotarFalhaDoProtocolo } from "@/lib/societario/observadorServidor";
 
 export const dynamic = "force-dynamic";
 
@@ -88,84 +89,16 @@ export async function POST(req: NextRequest) {
         const leitura = await observador({ numero: dados.numero, trackingUrl: dados.trackingUrl });
         const decisao = decidir(dados, leitura);
         resultado.verificados += 1;
-
-        if (decisao.tipo === "pular") {
-          // Verificação deu certo — o que não dá é para agir. `checkError`
-          // limpo, porque o robô funcionou.
-          await prisma.processProtocol.update({
-            where: { id: p.id },
-            data: { lastCheckedAt: new Date(), checkError: null },
-          });
-          resultado.pulados += 1;
-          continue;
-        }
-
-        if (decisao.tipo === "segue_pendente") {
-          await prisma.processProtocol.update({
-            where: { id: p.id },
-            data: { lastCheckedAt: new Date(), checkError: null },
-          });
-          resultado.seguemPendentes += 1;
-          continue;
-        }
-
-        if (decisao.tipo === "deferir") {
-          await prisma.$transaction(async (tx) => {
-            await tx.processProtocol.update({
-              where: { id: p.id },
-              data: {
-                outcome: "DEFERIDO",
-                resolvedAt: new Date(),
-                // A coluna que existe desde a primeira migration justamente
-                // para este momento: o histórico sabe que foi robô.
-                resolvedByActor: "ROBO",
-                lastCheckedAt: new Date(),
-                checkError: null,
-              },
-            });
-            if (p.stepId) {
-              await tx.processStep.update({
-                where: { id: p.stepId },
-                data: { status: "CONCLUIDA", doneAt: new Date(), actor: "ROBO" },
-              });
-            }
-          });
-          resultado.deferidos += 1;
-          continue;
-        }
-
-        // Exigência: fecha o protocolo e devolve a etapa para trabalho humano,
-        // exatamente como a ação da tela faz.
-        await prisma.$transaction(async (tx) => {
-          await tx.processProtocol.update({
-            where: { id: p.id },
-            data: {
-              outcome: "EXIGENCIA",
-              resolvedAt: new Date(),
-              resolvedByActor: "ROBO",
-              lastCheckedAt: new Date(),
-              checkError: null,
-            },
-          });
-          await tx.processRequirement.create({
-            data: { tenantId: p.tenantId, protocolId: p.id, description: decisao.descricao },
-          });
-          if (p.stepId) {
-            await tx.processStep.update({
-              where: { id: p.stepId },
-              data: { status: "PENDENTE", doneAt: null },
-            });
-          }
-        });
-        resultado.exigencias += 1;
+        const feito = await aplicarDecisaoDoProtocolo({ id: p.id, tenantId: p.tenantId, stepId: p.stepId }, decisao);
+        if (feito === "pulado") resultado.pulados += 1;
+        else if (feito === "segue_pendente") resultado.seguemPendentes += 1;
+        else if (feito === "deferido") resultado.deferidos += 1;
+        else resultado.exigencias += 1;
       } catch (err) {
         // A falha é deste protocolo, não da rodada: um órgão fora do ar não
         // pode impedir a verificação dos outros.
         const mensagem = err instanceof Error ? err.message : "falha desconhecida";
-        await prisma.processProtocol.update({
-          where: { id: p.id },
-          data: { lastCheckedAt: new Date(), checkError: mensagem.slice(0, 500) },
-        });
+        await anotarFalhaDoProtocolo(p.id, mensagem);
         resultado.falhas += 1;
       }
     }
