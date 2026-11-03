@@ -196,8 +196,9 @@ export async function mensagemComPropostas(dono: Dono, mensagemId: string) {
   });
 }
 
-export async function marcarPropostaAplicada(mensagemId: string, propostas: PropostaGravada[], indice: number): Promise<void> {
-  const novas = propostas.map((p, i) => (i === indice ? { ...p, aplicada: true } : p));
+/** `link`: o que a aplicação criou (o chamado aberto), para o cartão apontar. */
+export async function marcarPropostaAplicada(mensagemId: string, propostas: PropostaGravada[], indice: number, link?: string): Promise<void> {
+  const novas = propostas.map((p, i) => (i === indice ? { ...p, aplicada: true, ...(link ? { link } : {}) } : p));
   await getPrisma().agentMessage.update({
     where: { id: mensagemId },
     data: { proposals: novas as unknown as Prisma.InputJsonValue },

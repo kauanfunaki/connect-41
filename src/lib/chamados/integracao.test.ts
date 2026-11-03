@@ -16,7 +16,7 @@ vi.mock("@/lib/rateLimit", () => ({ hit: () => ({ allowed: true }) }));
 vi.mock("@/lib/webPush", () => ({ sendWebPushToUser: mocks.push }));
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 
-import { criarRascunho, salvarRascunho, avaliarRascunho, finalizarRascunho, alterar, comentar } from "./comandos";
+import { criarRascunho, salvarRascunho, avaliarRascunho, finalizarRascunho, alterar, comentar, abrirPelaCeci } from "./comandos";
 import { detalhe, lista, indicadores } from "./consultas";
 import { configurarSetores, salvarCategoria } from "./configuracao";
 import { configDoHelpdesk } from "./contexto";
@@ -112,6 +112,25 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const aberto = await finalizarRascunho(c, d.id, r.version, true);
     expect((await detalhe(c, aberto.ticketId)).category.name).toBe("A classificar");
     expect(mocks.classificar).toHaveBeenCalledTimes(1);
+  });
+  it("abre pela Ceci com a categoria confirmada, sem refazer a triagem nem apagar o rascunho aberto na tela", async () => {
+    const aberto = await novo();
+    const { ticketId } = await abrirPelaCeci(c, { ...payload(), title: "Pedido feito na conversa com a Ceci" });
+    expect(await db!.helpdeskTicket.findUniqueOrThrow({ where: { id: ticketId } })).toMatchObject({ categoryId: categoriaId, title: "Pedido feito na conversa com a Ceci", createdById: solicitante, requesterSectorCode: "fiscal", status: "ABERTO" });
+    expect(mocks.classificar).not.toHaveBeenCalled(); expect(mocks.analisar).not.toHaveBeenCalled();
+    expect(await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: aberto.id } })).toMatchObject({ submittedAt: null });
+    expect(await db!.helpdeskEvent.findFirstOrThrow({ where: { ticketId, type: "created" } })).toMatchObject({ data: { revisadoPelaPessoa: true, classificacao: { origem: "ceci" } } });
+  });
+  it("pela Ceci, recusa grupo, setor de fora, campo obrigatório vazio e quem não abre — sem deixar rascunho", async () => {
+    const antes = await db!.helpdeskDraft.count({ where: { tenantId } });
+    const grupo = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Suporte" } } });
+    await expect(abrirPelaCeci(c, { ...payload(), categoryId: grupo.id })).rejects.toThrow("não um grupo");
+    await expect(abrirPelaCeci(c, { ...payload(), requesterSectorCode: "controladoria" })).rejects.toThrow("Setor solicitante não autorizado");
+    await salvarCategoria(gestao, { name: "Campo obrigatório pela Ceci", formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
+    const comCampo = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Campo obrigatório pela Ceci" } } });
+    await expect(abrirPelaCeci(c, { ...payload(), categoryId: comCampo.id })).rejects.toThrow("Preencha Sistema");
+    await expect(abrirPelaCeci(equipe, payload())).rejects.toThrow("não está autorizado a abrir");
+    expect(await db!.helpdeskDraft.count({ where: { tenantId } })).toBe(antes);
   });
   it("retoma rascunho antigo sem catálogo nem categoria de contingência", async () => {
     const t = await db!.tenant.create({ data: { name: "Escritório fictício com rascunho legado", slug: `helpdesk-legado-${randomUUID()}` } });

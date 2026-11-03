@@ -16,7 +16,7 @@ import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { SISTEMA_DO_SOCIETARIO } from "@/lib/societario/assistente";
 import { nomeExibicao } from "@/lib/companyName";
-import { publicoPermite, type ContextoDaTela, type PropostaGravada, type SetorDoEncaminhamento } from "./regras";
+import { ABRIR_CHAMADO, publicoPermite, type ContextoDaTela, type PropostaGravada, type SetorDoEncaminhamento } from "./regras";
 import { MODULOS_DO_BPO } from "@/lib/ia/ferramentas-bpo";
 import { MODULOS_DO_DP } from "@/lib/ia/ferramentas-dp";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
@@ -25,6 +25,12 @@ import { recorteDaGestao } from "@/lib/gestao/regras";
 import { MODULO_GESTAO } from "@/lib/gestao/acesso";
 import { setoresDaEquipe } from "./citacoes";
 import { nomeDaTela, rotuloDaTela } from "./telas";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { MODULO_OPS } from "@/lib/ops/regras";
+import { configDoHelpdesk } from "@/lib/chamados/contexto";
+import { podeAbrir, setoresQuePodemAbrir } from "@/lib/chamados/acesso";
+import { caminhoDaCategoria, categoriasClassificaveis } from "@/lib/chamados/catalogo";
+import { getActiveSectors } from "@/lib/sectors";
 import {
   apresentacaoDaCeci,
   cumprimentoDaCeci,
@@ -96,6 +102,20 @@ const GUARDA_DO_CHAT =
   "receber, vencimentos, DRE, conciliação bancária, pendências com o cliente e aprovações; Contábil = balanço, " +
   "balancete, lançamentos contábeis e fechamento contábil; DP = colaboradores, folha, férias, afastamentos e " +
   "rescisões; Ajuda = como usar o Connect.\n" +
+  // O Tech na Ceci de todo setor (03/11/2026 — `src/lib/ia/ferramentas-tech.ts`).
+  "Sistemas, robôs, sites e apps do escritório (o Ops Center) e pedidos ao Tech são com você, em qualquer setor — " +
+  "não encaminhe. Para \"já existe algo que faz X?\", \"quem cuida de Y?\" ou \"o robô Z está funcionando?\", " +
+  "consulte sistemas_do_ops_center e responda com o nome do sistema, o que ele faz e o responsável; se não achar, diga " +
+  "que não há nada parecido cadastrado. Quando a pessoa pedir uma melhoria, a correção de um erro, suporte, um acesso " +
+  "ou um sistema novo ao Tech: veja antes em sistemas_do_ops_center se algo já atende e conte a ela; pergunte o que " +
+  "faltar (o que acontece, onde, desde quando, o que ela espera), uma coisa por vez; chame categorias_de_chamado e " +
+  "escolha a categoria folha que melhor descreve o pedido (Desenvolvimento = criar ou alterar código, automação, " +
+  "relatório, integração, bug no código; Infraestrutura = acesso, senha, rede, e-mail, máquina; Suporte = dúvida de " +
+  "uso, treinamento, sistema travando no uso); preencha os campos que a categoria pede com as respostas dela; e só " +
+  "então chame propor_abrir_chamado. Na resposta, mostre o resumo (categoria, título e descrição) e diga que o " +
+  "chamado só é aberto quando ela clicar em \"Abrir chamado\" no cartão — nunca diga que já abriu. Se a categoria " +
+  "pedir anexo, não proponha: mande abrir pela tela, com o link que categorias_de_chamado devolveu. Se a ferramenta " +
+  "disser que a pessoa não pode abrir chamado, diga isso e quem procurar (a coordenação do setor dela).\n" +
   "Se a pergunta é de OUTRO setor, não responda — nem em parte, nem com os dados que você tem, que são de outro " +
   "assunto e dariam uma resposta errada: chame encaminhar_pergunta com o setor certo e escreva só uma frase dizendo " +
   "para qual setor a pergunta foi passada. Nunca encaminhe para o seu próprio setor. Se nenhuma das suas " +
@@ -357,12 +377,36 @@ export async function escopoDoAgente(
   agentCode: string,
   todosOsSetores: string[]
 ): Promise<Record<string, string>> {
-  const base = await escopoBaseDoAgente(ctx, agentCode, todosOsSetores);
+  const base = { ...(await escopoBaseDoAgente(ctx, agentCode, todosOsSetores)), ...(await escopoDoTech(ctx)) };
   const modulo = configDoChat(agentCode)?.modulo ?? null;
   if (!modulo || !ctx.tenantId) return base;
   const setorDoAgente = (await setorDoModulo(ctx.tenantId, modulo)) ?? getModuleDef(modulo)?.sectorCode ?? null;
   const gestaoLigada = await isModuleEnabled(ctx.tenantId, MODULO_GESTAO);
   return { ...base, equipe: setoresDaEquipe(recorteDaGestao(ctx), setorDoAgente, gestaoLigada).join(",") };
+}
+
+/**
+ * O Ops Center e os chamados, para as ferramentas do Tech de toda Ceci da
+ * equipe (`ferramentas-tech.ts`). A régua é a das telas: quem vê o Ops Center
+ * vê a situação dos robôs; quem pode abrir chamado vê o catálogo que a triagem
+ * já mostra a qualquer solicitante, e abre chamado dos setores que o campo
+ * Setor da tela Novo chamado lhe oferece.
+ */
+export async function escopoDoTech(ctx: AuthContext): Promise<Record<string, string>> {
+  if (!ctx.tenantId) return {};
+  const [verOps, opsLigado, config] = await Promise.all([
+    podeNoModulo(ctx, MODULO_OPS, "ver"),
+    isModuleEnabled(ctx.tenantId, MODULO_OPS),
+    configDoHelpdesk(ctx.tenantId),
+  ]);
+  const abre = podeAbrir(ctx, config);
+  const setores = abre ? setoresQuePodemAbrir(ctx, config, await getActiveSectors(ctx.tenantId)).map((s) => s.code) : [];
+  return {
+    ops: verOps ? "completo" : opsLigado && abre ? "catalogo" : "",
+    chamado: setores.length ? "1" : "",
+    setoresDoChamado: setores.join(","),
+    setorAtivo: ctx.activeSector ?? "",
+  };
 }
 
 async function escopoBaseDoAgente(
@@ -496,6 +540,7 @@ export async function contextoParaOAgente(
  * aplicar. Id que não existe no tenant fica sem nome (e a aplicação recusa).
  */
 export async function rotularPropostas(tenantId: string, propostas: PropostaGravada[]): Promise<PropostaGravada[]> {
+  propostas = await rotularChamados(tenantId, propostas);
   const candidaturas = [...new Set(propostas.map((p) => p.argumentos.candidaturaId).filter((v): v is string => typeof v === "string"))];
   const etapas = [...new Set(propostas.map((p) => p.argumentos.stepId).filter((v): v is string => typeof v === "string"))];
   if (candidaturas.length === 0 && etapas.length === 0) return propostas;
@@ -516,6 +561,33 @@ export async function rotularPropostas(tenantId: string, propostas: PropostaGrav
     const id = p.argumentos.candidaturaId ?? p.argumentos.stepId;
     const alvo = typeof id === "string" ? nomes.get(id) : undefined;
     return alvo ? { ...p, alvo } : p;
+  });
+}
+
+/**
+ * No chamado, a categoria pelo caminho da árvore ("Desenvolvimento › Bug |
+ * Correção") e o nome do setor, lidos do banco: o cartão mostra o que vai ser
+ * gravado, e não o que o modelo escreveu. Categoria que não é folha ativa fica
+ * sem nome — o cartão avisa, e a abertura recusa.
+ */
+async function rotularChamados(tenantId: string, propostas: PropostaGravada[]): Promise<PropostaGravada[]> {
+  if (!propostas.some((p) => p.ferramenta === ABRIR_CHAMADO)) return propostas;
+  const prisma = getPrisma();
+  const [categorias, setores] = await Promise.all([
+    prisma.helpdeskCategory.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, active: true } }),
+    prisma.sector.findMany({ where: { tenantId }, select: { code: true, label: true } }),
+  ]);
+  const folhas = new Set(categoriasClassificaveis(categorias).map((c) => c.id));
+  const nomeDoSetor = new Map(setores.map((s) => [s.code, s.label]));
+  return propostas.map((p) => {
+    if (p.ferramenta !== ABRIR_CHAMADO) return p;
+    const categoriaId = typeof p.argumentos.categoriaId === "string" ? p.argumentos.categoriaId : "";
+    const setorNome = typeof p.argumentos.setor === "string" ? nomeDoSetor.get(p.argumentos.setor) : undefined;
+    return {
+      ...p,
+      argumentos: { ...p.argumentos, setorNome: setorNome ?? "" },
+      alvo: folhas.has(categoriaId) ? caminhoDaCategoria(categorias, categoriaId) : undefined,
+    };
   });
 }
 

@@ -29,9 +29,11 @@ describe("o conjunto", () => {
   it("o assistente do Societário libera exatamente estas", () => {
     // Cópia antes de ordenar: `.sort()` na lista do catálogo a reordenaria para
     // os outros testes. `encaminhar_pergunta` e `sugerir_respostas` são do chat
-    // (orquestrador e respostas rápidas), não do Societário.
+    // (orquestrador e respostas rápidas), não do Societário; as três do Tech
+    // estão em toda Ceci da equipe (`ferramentas-tech.ts`).
     const liberadas = [...agenteDoCatalogo("assistente_do_societario")!.ferramentas];
-    expect(liberadas.sort()).toEqual([...Object.keys(FERRAMENTAS_DE_SOCIETARIO), "encaminhar_pergunta", "sugerir_respostas", "atividade_da_equipe"].sort());
+    const doChat = ["encaminhar_pergunta", "sugerir_respostas", "atividade_da_equipe", "sistemas_do_ops_center", "categorias_de_chamado", "propor_abrir_chamado"];
+    expect(liberadas.sort()).toEqual([...Object.keys(FERRAMENTAS_DE_SOCIETARIO), ...doChat].sort());
   });
 
   it("as de escrita avisam, na descrição, que não executam", () => {
