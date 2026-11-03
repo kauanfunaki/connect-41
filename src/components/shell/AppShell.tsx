@@ -550,15 +550,15 @@ export function AppShell({
                     {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
                   </PainelDoItem>;
                   const hrefContabil = (aba: string, secao: string) => {
-                    const q = new URLSearchParams({ aba, secao, grupo: aba === "contribuicoes" ? "contribuicoes" : secao === "lancamentos" ? "lancamentos" : "depara" });
+                    const q = new URLSearchParams({ aba, secao });
                     for (const campo of ["empresa", "mes"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
                     return "/contabil/sped?" + q;
                   };
                   const noContabil = pathname === "/contabil/sped";
                   const grupoAtualContabil = grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined });
                   const itemModulo = (m: SectorModule) => m.code === "contabil_sped" ? <PainelDoItem key={m.code} titulo="SPED" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
-                    { label: "De-para", href: hrefContabil("lancamentos", "regras"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "depara" },
-                    { label: "Lançamentos", href: hrefContabil("lancamentos", "lancamentos"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "lancamentos" },
+                    // De-para e lançamentos é um trabalho em etapas (03/11/2026): um item só.
+                    { label: "De-para e lançamentos", href: hrefContabil("lancamentos", "entradas"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil !== "contribuicoes" },
                     { label: "Gerar SPED Contribuições", href: hrefContabil("contribuicoes", "gerar"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "contribuicoes" },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={noContabil} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}

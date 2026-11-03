@@ -13,6 +13,21 @@ export function grupoContabil(params: Record<string, string | undefined>) {
   const secao = params.secao ?? params.ver;
   return ["lancamentos", "entradas", "fora", "visao"].includes(secao ?? "") ? "lancamentos" : "depara";
 }
+// De-para e lançamentos como um trabalho em etapas, na ordem do mês
+// (03/11/2026), como o SPED ICMS/IPI: ver o que entrou, tratar o que ficou
+// sem regra, criar a regra e baixar a planilha da Domínio. Cada etapa reúne
+// as seções que já existiam; a primeira é a que a etapa abre.
+export const ETAPAS_DO_CONTABIL = [
+  { chave: "entradas", rotulo: "Notas de entrada", resumo: "O que entrou no mês e o que vira lançamento.", secoes: [["entradas", "Notas de entrada"]] },
+  { chave: "pendencias", rotulo: "Pendências", resumo: "As notas que ficaram fora do de-para.", secoes: [["pendencias", "Pendências"]] },
+  { chave: "depara", rotulo: "De-para", resumo: "Onde a pendência vira regra de conta.", secoes: [["regras", "Regras"], ["configuracao", "Plano e contas"]] },
+  { chave: "lancamentos", rotulo: "Lançamentos", resumo: "A planilha no modelo da Domínio.", secoes: [["lancamentos", "Lançamentos"], ["visao", "Resumo"]] },
+] as const;
+export type EtapaDoContabil = (typeof ETAPAS_DO_CONTABIL)[number];
+export const SECOES_DO_CONTABIL: readonly string[] = ETAPAS_DO_CONTABIL.flatMap((e) => e.secoes.map(([id]) => id));
+export function etapaDaSecao(secao: string): EtapaDoContabil {
+  return ETAPAS_DO_CONTABIL.find((e) => e.secoes.some(([id]) => id === secao)) ?? ETAPAS_DO_CONTABIL[0];
+}
 export function secoesDoGrupo(grupo: string): readonly (readonly [string, string])[] {
   if (grupo === "contribuicoes") return [
     ["gerar", "Gerar e acompanhar"], ["arquivos", "Arquivos e histórico"],

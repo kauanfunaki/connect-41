@@ -12,7 +12,8 @@ import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { competenciaDoInstante, competenciaValida, somarMeses } from "@/lib/financeiro/periodo";
 import { empresaContabilVisivel, painelDoContabil, type EmpresaDoContabil } from "@/lib/contabil/servidor";
-import { areaContabil, grupoContabil, secoesDoGrupo } from "@/lib/contabil/navegacao";
+import { areaContabil, etapaDaSecao, secoesDoGrupo, ETAPAS_DO_CONTABIL, SECOES_DO_CONTABIL } from "@/lib/contabil/navegacao";
+import { EtapasNumeradas } from "@/components/ui/EtapasNumeradas";
 import { DeparaWorkspace } from "@/components/contabil/DeparaWorkspace";
 import { AreasContribuicoes } from "@/components/contabil/AreasContribuicoes";
 import { LimiteDaAreaContabil } from "@/components/contabil/LimiteDaAreaContabil";
@@ -28,23 +29,28 @@ export default async function SpedDoContabilPage({ searchParams }: { searchParam
   const params: Params = Object.fromEntries(Object.entries(await searchParams).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]));
   const mes = competenciaValida(params.mes) ?? somarMeses(competenciaDoInstante(new Date()), -1);
   const aba = params.aba === "contribuicoes" ? "contribuicoes" : "lancamentos";
-  const grupo = grupoContabil(params);
-  const areas = secoesDoGrupo(grupo);
+  // Contribuições segue em seções; de-para e lançamentos viraram etapas
+  // (03/11/2026), e o `grupo` antigo da URL deixou de mandar na tela.
+  const contribuicoes = aba === "contribuicoes";
   const pedida = areaContabil(params);
-  const secao = (params.secao || params.ver) && areas.some(([id]) => id === pedida) ? pedida : areas[0][0];
-  const titulo = grupo === "depara" ? "De-para" : grupo === "lancamentos" ? "Lançamentos" : "Gerar SPED Contribuições";
+  const secoesValidas = contribuicoes ? secoesDoGrupo("contribuicoes").map(([id]) => id) : SECOES_DO_CONTABIL;
+  const secao = (params.secao || params.ver) && secoesValidas.includes(pedida) ? pedida : secoesValidas[0];
+  const etapa = contribuicoes ? null : etapaDaSecao(secao);
+  const areas = etapa ? etapa.secoes : secoesDoGrupo("contribuicoes");
+  const titulo = contribuicoes ? "Gerar SPED Contribuições" : "De-para e lançamentos";
   const empresas = await empresasDoSeletor(ctx.tenantId);
   const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id;
   const doContabil = companyId ? await empresaContabilVisivel(ctx, companyId) : null;
-  const href = (mudar: Params) => CAMINHO + "?" + new URLSearchParams(Object.fromEntries(Object.entries({ empresa: companyId, mes, aba, grupo, secao, ...mudar }).filter(([, v]) => v)) as Record<string, string>);
+  const href = (mudar: Params) => CAMINHO + "?" + new URLSearchParams(Object.fromEntries(Object.entries({ empresa: companyId, mes, aba, secao, ...mudar }).filter(([, v]) => v)) as Record<string, string>);
   const daMatriz = doContabil && doContabil.baseId !== doContabil.id ? empresas.find((e) => e.id === doContabil.baseId)?.nome ?? "Matriz" : null;
   return <PageContainer>
-    <PageHeader title={titulo} subtitle={grupo === "depara" ? "Regras contábeis, pendências e plano de contas." : grupo === "lancamentos" ? "Consulte as entradas e prepare os arquivos para a Domínio." : "Conferência e geração pelo motor remoto."} />
-    <FiltroDaEmpresa acao={CAMINHO} empresas={noSeletor} foco={foco} valor={companyId ?? null} manter={{ mes, aba, grupo, secao }}>
-      {companyId && <FiltroDePeriodo acao={CAMINHO} mes={mes} extras={{ empresa: companyId, aba, grupo, secao }} naFileira />}
+    <PageHeader title={titulo} subtitle={contribuicoes ? "Conferência e geração pelo motor remoto." : "Das notas de entrada à planilha da Domínio: o que ficar sem de-para vira regra, e os lançamentos saem completos."} />
+    <FiltroDaEmpresa acao={CAMINHO} empresas={noSeletor} foco={foco} valor={companyId ?? null} manter={{ mes, aba, secao }}>
+      {companyId && <FiltroDePeriodo acao={CAMINHO} mes={mes} extras={{ empresa: companyId, aba, secao }} naFileira />}
     </FiltroDaEmpresa>
-    <AbasDeLink aria-label={"Seções de " + titulo} ativa={secao} abas={areas.map(([id, nome]) => ({ icone: iconeDaAbaFiscal(id, nome), chave: id, rotulo: nome, href: href({ secao: id }) }))} />
+    {etapa && <EtapasNumeradas aria-label="Etapas do de-para e lançamentos" atual={etapa.chave} etapas={ETAPAS_DO_CONTABIL.map((e) => ({ chave: e.chave, rotulo: e.rotulo, resumo: e.resumo, href: href({ secao: e.secoes[0][0] }) }))} />}
+    {areas.length > 1 && <AbasDeLink aria-label={"Seções de " + (etapa?.rotulo ?? titulo)} ativa={secao} abas={areas.map(([id, nome]) => ({ icone: iconeDaAbaFiscal(id, nome), chave: id, rotulo: nome, href: href({ secao: id }) }))} />}
     <div>
       <section className="min-w-0" aria-label={areas.find(([id]) => id === secao)?.[1]}>
         {!doContabil ? empresas.length === 0 ? <EmptyState title="Nenhuma empresa ativa" /> : <EscolhaAEmpresa escolha={escolha} porQue="Selecione a empresa para consultar ou trabalhar nesta área." /> : <LimiteDaAreaContabil key={[aba, secao, companyId, mes, JSON.stringify(params)].join("|")}><Suspense fallback={<div role="status" className="animate-pulse rounded-lg border border-border p-6 text-label text-fg-muted">Carregando esta área…</div>}>
