@@ -51,6 +51,7 @@
     "react-dom": "19.2.4",
     "react-easy-crop": "^6.2.2",
     "sanitize-html": "^2.17.6",
+    "unpdf": "1.8.1",
     "web-push": "^3.6.7",
     "zod": "^4.4.3"
   },

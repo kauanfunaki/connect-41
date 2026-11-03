@@ -2051,6 +2051,11 @@ model Company {
   contabilContas           ContabilConta[]
   contabilModelo           ContabilModelo?
   contabilCfopContas       ContabilCfopConta[]
+  contabilDocumentosPagamento ContabilDocumentoPagamento[]
+  contabilPagamentos       ContabilPagamento[]
+  contabilPagamentoCategorias ContabilPagamentoCategoria[]
+  contabilPagamentoNomes   ContabilPagamentoNome[]
+  contabilContasPagamento  ContabilContaPagamento[]
   guias                    Guia[]
   certidoes                Certidao[]
   bankReconciliationRules  BankReconciliationRule[]
@@ -5353,6 +5358,161 @@ model ContabilModelo {
   @@index([tenantId])
   @@map("contabil_modelos")
 }
+
+// ─── Pagamentos sem nota (passo 5 do motor, 03/11/2026) ─────────────────────
+//
+// RPA, recibos, contratos de motorista e faturas de aluguel: os PDFs e a
+// planilha do BPO são enviados na etapa, lidos no Connect e lançados na
+// Domínio. Tudo mora na empresa base (a matriz), como no motor.
+
+/// Um arquivo enviado: um PDF de pagamentos ou a planilha de faturas do BPO.
+/// O mesmo conteúdo (sha256) não entra duas vezes na mesma empresa.
+model ContabilDocumentoPagamento {
+  id           String   @id @default(uuid())
+  tenantId     String
+  companyId    String
+  /// rpa | recibo | contrato_motorista | contrato_locacao | fatura | planilha_bpo
+  tipo         String   @db.VarChar(20)
+  /// Recibo: "recibo_motorista" ou "recibo_outros", escolhido no envio.
+  categoria    String   @default("") @db.VarChar(40)
+  nome         String   @db.VarChar(255)
+  /// A pasta informada no envio — dá a competência quando o documento não traz data.
+  pasta        String   @default("") @db.VarChar(255)
+  fileUrl      String   @db.VarChar(255)
+  mimeType     String   @db.VarChar(120)
+  sizeBytes    Int
+  sha256       String   @db.Char(64)
+  paginas      Int      @default(0)
+  /// Páginas sem camada de texto (imagem): sem OCR, quem envia preenche à mão.
+  semTexto     Int      @default(0)
+  enviadoPorId String?
+  createdAt    DateTime @default(now())
+
+  company    Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pagamentos ContabilPagamento[]
+
+  @@unique([companyId, sha256])
+  @@index([tenantId, companyId, tipo])
+  @@map("contabil_documentos_pagamento")
+}
+
+/// Um pagamento lido de um documento (uma página do RPA tem dois). O que a
+/// conferência corrigiu fica ao lado do lido, e vence; a decisão de uma
+/// pessoa vence a `situacao` da leitura. Só "ok" (ou aceito) vira lançamento.
+model ContabilPagamento {
+  id                     String    @id @default(uuid())
+  tenantId               String
+  companyId              String
+  arquivoId              String
+  pagina                 Int
+  ordem                  Int       @default(1)
+  tipo                   String    @db.VarChar(20)
+  categoria              String    @default("") @db.VarChar(40)
+  competencia            String    @default("") @db.VarChar(7)
+  nome                   String    @default("") @db.VarChar(200)
+  /// CPF (11) ou CNPJ (14), só dígitos.
+  documento              String    @default("") @db.VarChar(14)
+  numero                 String    @default("") @db.VarChar(30)
+  dataPagamento          String    @default("") @db.VarChar(10)
+  dataServico            String    @default("") @db.VarChar(10)
+  /// NULL = não lido, que é informação.
+  bruto                  Decimal?  @db.Decimal(15, 2)
+  liquido                Decimal?  @db.Decimal(15, 2)
+  /// As retenções do RPA: [{ verba, descricao, centavos }].
+  retencoes              Json?
+  centroCusto            String    @default("") @db.VarChar(20)
+  /// O PDF que comprova a fatura da planilha, ligado pelo número da nota.
+  comprovanteId          String?
+  /// ok | via | conferir | invalido
+  situacao               String    @default("ok") @db.VarChar(12)
+  observacao             String    @default("") @db.VarChar(300)
+  /// Agrupa possíveis duplicatas para uma pessoa decidir; não é restrição.
+  chaveNegocio           String    @default("") @db.VarChar(120)
+  tipoCorrigido          String    @default("") @db.VarChar(20)
+  categoriaCorrigida     String    @default("") @db.VarChar(40)
+  nomeCorrigido          String    @default("") @db.VarChar(200)
+  documentoCorrigido     String    @default("") @db.VarChar(14)
+  competenciaCorrigida   String    @default("") @db.VarChar(7)
+  dataPagamentoCorrigida String    @default("") @db.VarChar(10)
+  valorCorrigido         Decimal?  @db.Decimal(15, 2)
+  corrigidoPorId         String?
+  corrigidoEm            DateTime?
+  /// "" (ninguém olhou) | aceito | descartado
+  decisao                String    @default("") @db.VarChar(12)
+  motivoDecisao          String    @default("") @db.VarChar(300)
+  decididoPorId          String?
+  decididoEm             DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  company Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  arquivo ContabilDocumentoPagamento @relation(fields: [arquivoId], references: [id], onDelete: Cascade)
+
+  @@unique([arquivoId, pagina, ordem])
+  @@index([tenantId, companyId, competencia])
+  @@index([tenantId, companyId, competenciaCorrigida])
+  @@index([chaveNegocio])
+  @@map("contabil_pagamentos")
+}
+
+/// A regra de uma categoria de pagamento: o débito e o crédito padrão (o
+/// `depara_documento_conta` do motor). Os lançamentos-modelo vencem a regra.
+model ContabilPagamentoCategoria {
+  id           String   @id @default(uuid())
+  tenantId     String
+  companyId    String
+  categoria    String   @db.VarChar(40)
+  codigoDebito String   @default("") @db.VarChar(20)
+  contaCredito String   @default("") @db.VarChar(20)
+  observacao   String   @default("") @db.VarChar(500)
+  updatedById  String?
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, categoria])
+  @@index([tenantId, companyId])
+  @@map("contabil_pagamento_categorias")
+}
+
+/// A conta de crédito confirmada para o fornecedor que vem sem CPF/CNPJ (as
+/// faturas do BPO): o `depara_apoio_nome` do motor, chaveado pelo nome reduzido.
+model ContabilPagamentoNome {
+  id           String   @id @default(uuid())
+  tenantId     String
+  companyId    String
+  chaveNome    String   @db.VarChar(200)
+  nome         String   @db.VarChar(200)
+  contaCredito String   @db.VarChar(20)
+  updatedById  String?
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, chaveNome])
+  @@index([tenantId, companyId])
+  @@map("contabil_pagamento_nomes")
+}
+
+/// As contas dos lançamentos-modelo dos pagamentos (motorista, aluguel de
+/// veículo e de imóvel, RPA), uma linha por campo de `ContasDosPagamentos`.
+/// Sem linha, vale o código do motor; gravada vazia, a categoria fica pendente.
+model ContabilContaPagamento {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  chave       String   @db.VarChar(40)
+  conta       String   @default("") @db.VarChar(20)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, chave])
+  @@index([tenantId, companyId])
+  @@map("contabil_contas_pagamento")
+}
+
 
 // ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────
 //
