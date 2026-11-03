@@ -1,7 +1,6 @@
 import { AlertTriangle, Bot, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
-import { canManageSector } from "@/lib/auth/papeis";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -82,12 +81,6 @@ export default async function LicencasPage({
         subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {/* A carga do Radar Societário (28/10/2026): só quem administra o setor. */}
-            {canManageSector(ctx, setores) && (
-              <Button href="/licencas/radar" variant="secondary" size="sm">
-                Trazer do Radar
-              </Button>
-            )}
             {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença.
                 Botão, e não link de texto, desde 03/11/2026 — e também no menu. */}
             {roboLigado && (
