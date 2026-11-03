@@ -41,14 +41,14 @@ export async function prepararTelaLocal(params: Record<string, string | string[]
   const competencia = periodo.success ? aba === "gerar" && periodo.data.length === 4 ? `${periodo.data}-01` : periodo.data : competenciaPadrao();
   const empresa = selecao.empresa;
   const contribuicoes = params.obrigacao === "contribuicoes" || params.obrigacao !== "icms_ipi" && !modulos.includes("fiscal_icms_ipi");
-  const consolidado = aba === "fechamento" && params.escopo === "raiz"
-    || aba === "apuracao" && contribuicoes && params.escopo === "raiz"
-    || aba === "gerar" && contribuicoes;
+  // Onde a pessoa escolhe entre só a empresa e o grupo da raiz; no Gerar, Contribuições é sempre da raiz.
+  const comAbrangencia = aba === "fechamento" || aba === "apuracao" && contribuicoes;
+  const consolidado = comAbrangencia && params.escopo === "raiz" || aba === "gerar" && contribuicoes;
   const grupo = empresa ? empresas.filter(e => consolidado ? e.cnpj.slice(0, 8) === empresa.cnpj.slice(0, 8) : e.id === empresa.id) : [];
   const root = empresa ? await getPrisma().spedFiscalRoot.findUnique({ where: { tenantId_raiz: { tenantId: ctx.tenantId, raiz: empresa.cnpj.slice(0, 8) } } }) : null;
   const contexto: ContextoLocal | null = empresa ? { tenantId: ctx.tenantId, companyId: empresa.id, cnpj: empresa.cnpj, raiz: empresa.cnpj.slice(0, 8), competencia, consolidado, revisao: root?.revision ?? 0 } : null;
   const pode = (await Promise.all(MODULOS_DA_ABA[aba].map(m => podeNoModulo(ctx, m, "agir")))).some(Boolean);
-  return { ctx, empresa, empresas: selecao.noSeletor, escolha: selecao.escolha, foco: selecao.foco, grupo, contexto, competencia, abas, aba, modulos, pode };
+  return { ctx, empresa, empresas: selecao.noSeletor, escolha: selecao.escolha, foco: selecao.foco, grupo, contexto, competencia, abas, aba, modulos, pode, comAbrangencia };
 }
 export type TelaLocal = Awaited<ReturnType<typeof prepararTelaLocal>>;
 export async function carregarBase(tela: TelaLocal) {

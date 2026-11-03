@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/Select";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { formatCnpj } from "@/lib/format";
 import { uploadComProgresso } from "@/lib/uploadComProgresso";
+import { formatarRaiz } from "./AbrangenciaLocalSped";
 import { dadosDoApoio, FormularioLocalSped, novoApoio, type EdicaoSped } from "./FormularioLocalSped";
 import { AcoesDoArquivo } from "@/components/fiscal/motor/AcoesDoArquivo";
 import { AcompanhamentoDaExecucao } from "@/components/fiscal/motor/AcompanhamentoDaExecucao";
@@ -120,7 +121,8 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
     </div>
     {!perfil && <Aviso tom="atencao">Complete o perfil fiscal da empresa para definir suas obrigações, regime e UF. Você já pode importar e conferir os documentos.</Aviso>}
     {base.acervo.length > 0 && <Aviso tom="atencao">Há {base.acervo.length} documento(s) no acervo do Connect ainda sem itens nesta escrituração. Eles aparecem no Fechamento e não entram nos valores apurados até a importação dos itens.</Aviso>}
-    {(aba === "fechamento" || aba === "apuracao" && obrigacao === "contribuicoes") && <div className="flex flex-wrap items-center gap-3 text-ui"><Select compact aria-label="Abrangência" className="w-64" value={contexto.consolidado ? "raiz" : "empresa"} onChange={e => router.push(href({ escopo: e.target.value }))}><option value="empresa">Empresa selecionada</option><option value="raiz">Consolidado da raiz</option></Select>{contexto.consolidado && <span className="text-fg-secondary">Raiz {contexto.raiz}: {grupo.map(e => e.nome).join(", ")}</span>}</div>}
+    {/* A escolha da abrangência fica junto da empresa e do período, no topo (AbrangenciaLocalSped). */}
+    {(aba === "fechamento" || aba === "apuracao") && contexto.consolidado && <p className="text-ui text-fg-secondary">Somando a matriz e as filiais da raiz {formatarRaiz(contexto.raiz)}: {grupo.map(e => e.nome).join(", ")}</p>}
     {aba === "gerar" && obrigacao === "contribuicoes" && contexto.consolidado && <p className="text-ui text-fg-secondary">Consolidado da raiz {contexto.raiz}: {grupo.map(e => `${e.nome} (${e.cnpj})`).join(", ")}</p>}
     {(aba === "apuracao" || aba === "gerar") && <Select aria-label="Obrigação" compact className="w-56" value={obrigacao} onChange={e => { const valor = e.target.value as Obrigacao; setObrigacao(valor); router.replace(href({ obrigacao: valor })); }}>{direitos.icms && <option value="icms_ipi">EFD ICMS/IPI</option>}{direitos.contribuicoes && <option value="contribuicoes">PIS e COFINS</option>}</Select>}
     {VISTAS[aba].length > 0 && <AbasDeLink aria-label="Visões da área" ativa={vista} abas={VISTAS[aba].map(([chave, rotulo]) => ({ chave, rotulo, icone: iconeDaAbaFiscal(chave, rotulo), href: href({ vista: chave }) }))} />}
