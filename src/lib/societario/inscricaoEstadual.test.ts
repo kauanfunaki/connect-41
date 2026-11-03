@@ -15,9 +15,15 @@ describe("lerSituacaoDaIE", () => {
     expect(lerSituacaoDaIE("ATIVO - SIMPLES NACIONAL / SIMPLES NACIONAL - DIA 03 DO MES+2, DESDE 08/2023")).toBe("ATIVA");
   });
 
-  it("não chuta: texto desconhecido, vazio ou 'inativa' fica nulo", () => {
-    expect(lerSituacaoDaIE("INATIVA")).toBeNull();
+  it("lê a recusa do CICAD para estabelecimento inativo como inativa, e não como ativa (03/11/2026)", () => {
+    expect(lerSituacaoDaIE("Estabelecimento inativo no CAD/ICMS.")).toBe("INATIVA");
+    expect(lerSituacaoDaIE("INATIVA")).toBe("INATIVA");
+    expect(avisoDaMudancaDaIE("ATIVA", "INATIVA", "Empresa X")).toEqual({ tom: "danger", mensagem: "Inscrição estadual de Empresa X passou de ativa para inativa" });
+  });
+
+  it("não chuta: texto desconhecido ou vazio fica nulo", () => {
     expect(lerSituacaoDaIE("Em análise")).toBeNull();
+    expect(lerSituacaoDaIE("Estabelecimento não encontrado")).toBeNull();
     expect(lerSituacaoDaIE("")).toBeNull();
     expect(lerSituacaoDaIE(null)).toBeNull();
   });
