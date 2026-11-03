@@ -2050,6 +2050,7 @@ model Company {
   contabilRegras           ContabilRegra[]
   contabilContas           ContabilConta[]
   contabilModelo           ContabilModelo?
+  contabilContasSaida      ContabilContaSaida[]
   contabilCfopContas       ContabilCfopConta[]
   contabilDocumentosPagamento ContabilDocumentoPagamento[]
   contabilPagamentos       ContabilPagamento[]
@@ -5511,6 +5512,30 @@ model ContabilContaPagamento {
   @@unique([companyId, chave])
   @@index([tenantId, companyId])
   @@map("contabil_contas_pagamento")
+}
+
+// As contas dos lançamentos de saída (03/11/2026): um lançamento por dia e
+// por tipo, CT-e e NFS-e emitidos pela empresa, como o passo 6 do painel do
+// motor. Sem linha gravada valem os códigos do motor (ver
+// src/lib/contabil/saidas.ts); a linha só existe quando alguém troca.
+model ContabilContaSaida {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// "cte" ou "nfse".
+  chave       String   @db.VarChar(10)
+  debito      String   @db.VarChar(20)
+  credito     String   @db.VarChar(20)
+  historico   String   @default("") @db.VarChar(10)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, chave])
+  @@index([tenantId])
+  @@map("contabil_contas_saida")
 }
 
 
