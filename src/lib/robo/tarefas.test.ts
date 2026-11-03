@@ -6,6 +6,7 @@ import {
   destinoDaFalha,
   devolucaoSchema,
   execucaoPerdida,
+  motivoParaPessoa,
 } from "./tarefas";
 
 // A fila do robô do Societário (30/10/2026): o que volta para a fila e o que
@@ -55,5 +56,20 @@ describe("devolucaoSchema", () => {
 
   it("sucesso leva o resultado", () => {
     expect(devolucaoSchema.safeParse({ ok: true, resultado: { tela: "encontrado" } }).success).toBe(true);
+  });
+});
+
+// 03/11/2026: a tela mostrava o erro do navegador cru.
+describe("motivoParaPessoa", () => {
+  it("traduz o erro cru que as máquinas antigas guardaram", () => {
+    expect(motivoParaPessoa("O robô falhou no site: locator.innerText: Target page, context or browser has been closed")).toMatch(/^A janela do navegador fechou/);
+    expect(motivoParaPessoa("O robô falhou no site: locator.waitFor: Timeout 30000ms exceeded.")).toMatch(/demorou demais/);
+    expect(motivoParaPessoa("O robô falhou no site: page.goto: net::ERR_NAME_NOT_RESOLVED")).toMatch(/não abriu/);
+    expect(motivoParaPessoa("O robô falhou no site: qualquer outra coisa")).not.toMatch(/qualquer outra coisa/);
+  });
+
+  it("deixa como está o motivo que já é frase", () => {
+    expect(motivoParaPessoa("A prefeitura não achou alvará para esta inscrição.")).toBe("A prefeitura não achou alvará para esta inscrição.");
+    expect(motivoParaPessoa(null)).toBeNull();
   });
 });

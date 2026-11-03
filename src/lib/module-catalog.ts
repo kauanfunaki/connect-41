@@ -23,6 +23,7 @@ export type IconeDeModulo =
   | "AlarmClock"
   | "BadgeCheck"
   | "BookOpen"
+  | "Bot"
   | "Briefcase"
   | "Building2"
   | "CalendarClock"
@@ -496,6 +497,18 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "CheckCheck",
     group: "Licenças",
   },
+  // A tela do robô (30/10/2026) só se abria pelo link "Robô" de Licenças. No
+  // menu desde 03/11/2026. Desligado por padrão: o robô é a máquina do TI de
+  // um escritório, não uma tela de todo cliente do Connect.
+  {
+    code: "societario_robo",
+    label: "Robô",
+    sectorCode: "societario",
+    description: "A fila do robô do Societário na máquina do TI: o alvará de Curitiba impresso e o que parou para alguém olhar",
+    defaultEnabled: false,
+    icon: "Bot",
+    group: "Licenças",
+  },
   {
     code: "societario_processos",
     label: "Processos",
@@ -792,6 +805,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
   societario_certidoes:    "/certidoes",
+  societario_robo:         "/societario/robo",
   // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e
   // `/processos/exigencias` acenderia "Processos" e "Exigências" juntos.
   societario_minha_area:   "/societario/minha-area",

@@ -93,6 +93,24 @@ export function destinoDaFalha(p: { tipo: TipoDeTarefa; tentativas: number; recu
   return p.tentativas >= def.tentativas ? "PRECISA_DE_GENTE" : "PENDENTE";
 }
 
+/**
+ * O motivo como a tela do robô mostra (03/11/2026). A máquina de antes mandava
+ * o erro do navegador cru — "O robô falhou no site: locator.innerText: Target
+ * page, context or browser has been closed" —, que fica guardado assim na
+ * tarefa; aqui ele vira a frase que a máquina nova já manda pronta
+ * (`motivoDaFalha` em scripts/robo-societario.mjs).
+ */
+export function motivoParaPessoa(motivo: string | null): string | null {
+  if (!motivo) return null;
+  const cru = /^O robô falhou no site: ([\s\S]*)$/.exec(motivo);
+  if (!cru) return motivo;
+  const m = cru[1]!;
+  if (/has been closed|browser.*closed|Target closed/i.test(m)) return "A janela do navegador fechou antes de o robô terminar. Ele tenta de novo na próxima volta.";
+  if (/passou de \d+ minutos|Timeout|timed out/i.test(m)) return "O site da prefeitura demorou demais para responder. O robô tenta de novo na próxima volta.";
+  if (/net::|ENOTFOUND|ECONNRE|ERR_/i.test(m)) return "O site da prefeitura não abriu: fora do ar ou sem internet na máquina. O robô tenta de novo na próxima volta.";
+  return "O robô não conseguiu terminar no site da prefeitura. Ele tenta de novo na próxima volta; o detalhe está no registro da máquina.";
+}
+
 /** O que a máquina manda ao pedir trabalho: os tipos que ela sabe executar. */
 export const pedidoDeTrabalhoSchema = z.object({
   capacidades: z.array(z.string().max(40)).max(20),

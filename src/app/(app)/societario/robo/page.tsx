@@ -14,10 +14,11 @@ import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDateTime, formatarNumero } from "@/lib/format";
-import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, type StatusDaTarefa } from "@/lib/robo/tarefas";
+import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, motivoParaPessoa, type StatusDaTarefa } from "@/lib/robo/tarefas";
 import type { TomDoSelo } from "@/components/ui/Selo";
 
-const MODULE = "societario_licencas";
+// Módulo próprio desde 03/11/2026, para a tela estar no menu do Societário.
+const MODULE = "societario_robo";
 
 export const dynamic = "force-dynamic";
 
@@ -70,9 +71,9 @@ export default async function RoboDoSocietarioPage() {
         title="Robô do Societário"
         subtitle="O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje o robô imprime o alvará de Curitiba, pedido no ⋯ da licença."
         action={
-          <Link href="/licencas" className="text-ui text-brand hover:underline">
+          <Button href="/licencas" variant="secondary" size="sm">
             Ir para Licenças
-          </Link>
+          </Button>
         }
       />
 
@@ -143,7 +144,7 @@ export default async function RoboDoSocietarioPage() {
                           Abrir o PDF
                         </Button>
                       ) : (
-                        (t.reason ?? (status === "EM_EXECUCAO" && t.machineSlug ? `Com a máquina ${t.machineSlug}.` : "—"))
+                        (motivoParaPessoa(t.reason) ?? (status === "EM_EXECUCAO" && t.machineSlug ? `Com a máquina ${t.machineSlug}.` : "—"))
                       )}
                     </td>
                     <td className="py-2.5 text-right">{status === "PENDENTE" && <CancelarTarefaDoRobo id={t.id} />}</td>

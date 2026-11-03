@@ -123,12 +123,27 @@ async function umaVolta(config) {
     saida = executar ? await comPrazo(executar(config, tarefa), 10 * 60_000) : { devolucao: { ok: false, motivo: `Esta máquina não sabe executar ${tarefa.tipo}.`, recuperavel: false } };
   } catch (err) {
     // Site fora do ar, tela que demorou, navegador que travou: tenta de novo.
-    saida = { devolucao: { ok: false, motivo: `O robô falhou no site: ${String(err?.message || err).slice(0, 300)}`, recuperavel: true } };
+    // O detalhe técnico fica no log da máquina; o Connect mostra a frase.
+    log(`tarefa ${tarefa.id}: ${String(err?.message || err).slice(0, 300)}`);
+    saida = { devolucao: { ok: false, motivo: motivoDaFalha(err), recuperavel: true } };
   }
   const resposta = await devolver(config, tarefa.id, saida.devolucao, saida.arquivo ?? null);
   log(`tarefa ${tarefa.id}: devolvida, ficou ${resposta.status}`);
   await saveState({ ultimaTarefa: { id: tarefa.id, tipo: tarefa.tipo, status: resposta.status, em: new Date().toISOString() } });
   return true;
+}
+
+/**
+ * A falha em palavras de quem vai ler na tela do robô (03/11/2026). A mesma
+ * classificação mora em `motivoParaPessoa` (src/lib/robo/tarefas.ts), que
+ * traduz também o que as máquinas antigas mandavam cru.
+ */
+function motivoDaFalha(err) {
+  const m = String(err?.message || err);
+  if (/has been closed|browser.*closed|Target closed/i.test(m)) return "A janela do navegador fechou antes de o robô terminar. Ele tenta de novo na próxima volta.";
+  if (/passou de \d+ minutos|Timeout|timed out/i.test(m)) return "O site da prefeitura demorou demais para responder. O robô tenta de novo na próxima volta.";
+  if (/net::|ENOTFOUND|ECONNRE|ERR_/i.test(m)) return "O site da prefeitura não abriu: fora do ar ou sem internet na máquina. O robô tenta de novo na próxima volta.";
+  return "O robô não conseguiu terminar no site da prefeitura. Ele tenta de novo na próxima volta; o detalhe está no registro da máquina.";
 }
 
 function comPrazo(promessa, ms) {
@@ -162,12 +177,24 @@ const ACEITE =
   "Estou ciente da legislação específica de acessibilidade e, caso o estabelecimento " +
   "comercial não as atenda integralmente, adequarei para início das atividades.";
 const espacos = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
+// O que a prefeitura escreve quando não há o que imprimir. Se a redação mudar,
+// a tela cai em "outra" e vai para alguém conferir — nunca para a impressão.
+// "Alvará pendente de regularização, aguardando anuências obrigatórias dos
+// órgãos de licenciamento." (03/11/2026)
+const PENDENTE = /pendente de regulariza|aguardando anu[êe]ncia/i;
+const NAO_ENCONTRADO = /n[ãa]o (foi )?encontrad|n[ãa]o h[áa] alvar/i;
 
 async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
   const { inscricao } = tarefa.dados ?? {};
   if (!/^\d{8}$/.test(String(inscricao ?? ""))) return { devolucao: { ok: false, motivo: "A tarefa veio sem inscrição municipal de 8 dígitos.", recuperavel: false } };
   const { browser, context } = await abrirNavegador(config);
   const page = await context.newPage();
+  // Aviso em janela do navegador (alert) some sem deixar texto na página.
+  const avisos = [];
+  page.on("dialog", (d) => {
+    avisos.push(d.message());
+    d.accept().catch(() => {});
+  });
   try {
     await page.goto(CONSULTA_DO_ALVARA, { waitUntil: "domcontentloaded", timeout: 60_000 });
     const campo = page.getByRole("textbox").first();
@@ -175,14 +202,33 @@ async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
     await campo.fill(inscricao);
     await page.getByRole("button", { name: /consultar/i }).first().click();
 
-    // Uma de três saídas: o botão de imprimir, a mensagem de não encontrado, ou outra tela.
+    // Uma de quatro saídas: o botão de imprimir, "não encontrado", "pendente de
+    // regularização" ou outra tela. A pendência (03/11/2026) aparece num aviso
+    // que some, então a página é lida a cada meio segundo, e não só no fim da
+    // espera — esperar só o botão de imprimir deixava o robô parado 45 s
+    // olhando o aviso.
     const imprimir = page.getByRole("button", { name: /imprimir/i }).first();
-    const naoEncontrado = page.getByText(/n[ãa]o (foi )?encontrad|n[ãa]o h[áa] alvar/i).first();
-    await Promise.any([imprimir.waitFor({ timeout: 45_000 }), naoEncontrado.waitFor({ timeout: 45_000 })]).catch(() => {});
+    let tela = null;
+    let mensagem = null;
+    for (const fim = Date.now() + 45_000; !tela && Date.now() < fim; ) {
+      if (page.isClosed()) throw new Error("Target page, context or browser has been closed");
+      const agora = `${avisos.join("\n")}\n${await page.locator("body").innerText().catch(() => "")}`;
+      const linhaPendente = agora.split("\n").find((l) => PENDENTE.test(l));
+      if (linhaPendente) {
+        tela = "pendente";
+        mensagem = espacos(linhaPendente).slice(0, 500);
+      } else if (NAO_ENCONTRADO.test(agora)) tela = "nao_encontrado";
+      else if (await imprimir.isVisible().catch(() => false)) tela = "encontrado";
+      else await page.waitForTimeout(500);
+    }
     const texto = (await page.locator("body").innerText()).slice(0, 20_000);
-    if (await naoEncontrado.isVisible().catch(() => false)) return { devolucao: { ok: true, resultado: { tela: "nao_encontrado", texto } } };
-    if (!(await imprimir.isVisible().catch(() => false))) {
-      await capturar(page, tarefa.id);
+    if (tela === "pendente") {
+      await capturar(page, ensaio ? "ensaio-do-alvara" : tarefa.id);
+      return { devolucao: { ok: true, resultado: { tela, mensagem, texto } } };
+    }
+    if (tela === "nao_encontrado") return { devolucao: { ok: true, resultado: { tela, texto } } };
+    if (tela !== "encontrado") {
+      await capturar(page, ensaio ? "ensaio-do-alvara" : tarefa.id);
       return { devolucao: { ok: true, resultado: { tela: "outra", texto } } };
     }
     // No ensaio, para aqui: sem aceite, sem impressão, sem Connect.

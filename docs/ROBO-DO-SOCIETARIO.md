@@ -16,6 +16,8 @@ A máquina fica atrás do firewall do escritório. Por isso é ela que busca tra
 
 O Ops Center precisa estar ligado: sem ele a máquina não busca nada, e o Connect recusa o pedido com esse motivo.
 
+Ligue também o módulo **Robô** do Societário em Configurações (desde 03/11/2026, desligado por padrão). É ele que põe a tela no menu e libera o "Imprimir pelo robô" no ⋯ da licença.
+
 ## 3. Instalar na máquina do TI
 
 É preciso ter Node 20 ou mais novo e o repositório do Connect clonado na máquina.
@@ -70,7 +72,7 @@ npm run robo:societario -- --testar-certificado --config=.local/robo-societario.
 
 ## 5. Acompanhar
 
-- **Societário › Licenças › Robô** (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
+- **Societário › Robô** no menu (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
 - **Sino**: quem pediu recebe "O robô precisa de você" quando a tarefa para.
 - **Ops Center, automação `robo-societario`**: o sinal de vida da máquina.
 - **Trilha de auditoria**: cada aceite de acessibilidade que o robô marcou, com a empresa e a inscrição.
@@ -86,10 +88,11 @@ npm run robo:societario -- --testar-certificado --config=.local/robo-societario.
 4. O Connect guarda o PDF como `<EMPRESA> - Alvará de Funcionamento <ano>.pdf` e preenche o número e a data de emissão na licença, se estiverem vazios.
 5. Vai para alguém olhar:
    - "não encontrado" ou "sem alvará": divergência entre a Junta e a prefeitura, decisão de 15/09;
+   - "Alvará pendente de regularização, aguardando anuências…" (03/11/2026): a prefeitura ainda não libera a impressão. A frase dela vai para o motivo, e a tarefa não volta para a fila;
    - texto do aceite diferente: alguém relê antes de o robô aceitar em nome do cliente;
    - PDF que não veio;
    - tela desconhecida.
-6. Site fora do ar ou tela que demorou: a tarefa volta para a fila, até 3 tentativas. Tarefa que a máquina pegou e não devolveu em 15 minutos também volta.
+6. Site fora do ar, tela que demorou ou janela do navegador fechada: a tarefa volta para a fila, até 3 tentativas. O motivo vai em frase; o erro técnico fica no registro da máquina. Tarefa que a máquina pegou e não devolveu em 15 minutos também volta.
 
 ## Por dentro
 
