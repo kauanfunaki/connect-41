@@ -8,6 +8,9 @@ import {
   textoDoPasso,
   lerPropostas,
   descreverProposta,
+  chamadoDaProposta,
+  detalhesDaProposta,
+  rotulosDaDecisao,
 } from "./regras";
 import { normalizarHistorico, MAX_TURNOS_DO_HISTORICO } from "@/lib/ia/laco";
 
@@ -116,5 +119,61 @@ describe("normalizarHistorico", () => {
       texto: String(i),
     }));
     expect(normalizarHistorico(muitos).length).toBeLessThanOrEqual(MAX_TURNOS_DO_HISTORICO);
+  });
+});
+
+describe("chamado proposto pela Ceci", () => {
+  const argumentos = {
+    categoriaId: "c-bug",
+    titulo: " Erro ao gerar a DRE ",
+    descricao: "A DRE de outubro não abre.\nAparece tela branca.",
+    setor: "bpo",
+    setorNome: "BPO",
+    prioridade: "ALTA",
+    campos: [
+      { chave: "tela", nome: "Tela", valor: "DRE" },
+      { chave: "tela", nome: "Tela", valor: "repetida" },
+      { chave: "", nome: "Sem chave", valor: "x" },
+      { chave: "vazio", nome: "Vazio", valor: "  " },
+    ],
+  };
+
+  it("vira os campos da tela Novo chamado, sem chave vazia nem repetida", () => {
+    expect(chamadoDaProposta(argumentos)).toEqual({
+      title: "Erro ao gerar a DRE",
+      description: "A DRE de outubro não abre.\nAparece tela branca.",
+      categoryId: "c-bug",
+      requesterSectorCode: "bpo",
+      priority: "ALTA",
+      requestData: { tela: "DRE" },
+      tags: [],
+    });
+    expect(chamadoDaProposta({ ...argumentos, prioridade: "QUALQUER" }).priority).toBe("MEDIA");
+  });
+
+  it("o cartão mostra categoria do servidor, título, descrição, setor, prioridade e campos", () => {
+    const p = { ferramenta: "propor_abrir_chamado", descricao: "", argumentos, alvo: "Desenvolvimento › Bug | Correção" };
+    expect(descreverProposta(p)).toBe("Abrir este chamado para o Tech");
+    expect(detalhesDaProposta(p)).toEqual([
+      { rotulo: "Categoria", texto: "Desenvolvimento › Bug | Correção" },
+      { rotulo: "Título", texto: "Erro ao gerar a DRE" },
+      { rotulo: "Descrição", texto: "A DRE de outubro não abre.\nAparece tela branca." },
+      { rotulo: "Setor", texto: "BPO" },
+      { rotulo: "Prioridade", texto: "Alta" },
+      { rotulo: "Tela", texto: "DRE" },
+    ]);
+    // Sem `alvo` (categoria que não é folha ativa), o cartão avisa em vez de mostrar o texto do modelo.
+    expect(detalhesDaProposta({ ...p, alvo: undefined })[0]!.texto).toMatch(/não encontrada/);
+    expect(rotulosDaDecisao("propor_abrir_chamado")).toEqual({ sim: "Abrir chamado", nao: "Não abrir" });
+    expect(detalhesDaProposta({ ferramenta: "propor_concluir_etapa", argumentos: {} })).toEqual([]);
+  });
+
+  it("o link gravado só vale se for caminho do Connect", () => {
+    const [ok, fora] = lerPropostas([
+      { ferramenta: "propor_abrir_chamado", aplicada: true, link: "/chamados/abc" },
+      { ferramenta: "propor_abrir_chamado", aplicada: true, link: "https://fora.test" },
+    ]);
+    expect(ok!.link).toBe("/chamados/abc");
+    expect(fora!.link).toBeUndefined();
   });
 });

@@ -112,6 +112,9 @@ const PASSOS: Record<string, string> = {
   propor_mover_etapa: "Preparando uma sugestão…",
   propor_encerrar_candidatura: "Preparando uma sugestão…",
   buscar_nos_manuais: "Procurando nos manuais…",
+  sistemas_do_ops_center: "Consultando o Ops Center…",
+  categorias_de_chamado: "Vendo as categorias de chamado…",
+  propor_abrir_chamado: "Preparando o chamado…",
 };
 
 export function textoDoPasso(ferramenta: string): string {
@@ -128,6 +131,8 @@ export type PropostaGravada = {
   aplicada?: boolean;
   /** A pessoa disse "Não" no cartão (02/10/2026). Fica gravado, como o "aplicada". */
   recusada?: boolean;
+  /** O que a aplicação criou, para o cartão apontar ("/chamados/{id}"). Gravado pelo servidor. */
+  link?: string;
 };
 
 /** Lê as propostas do JSON gravado, descartando o que não tiver a forma certa. */
@@ -145,6 +150,7 @@ export function lerPropostas(bruto: unknown): PropostaGravada[] {
         ...(typeof o.alvo === "string" ? { alvo: o.alvo } : {}),
         aplicada: o.aplicada === true,
         ...(o.recusada === true ? { recusada: true } : {}),
+        ...(typeof o.link === "string" && o.link.startsWith("/") ? { link: o.link } : {}),
       },
     ];
   });
@@ -174,7 +180,68 @@ export function opcoesDeRespostaRapida(p: { ferramenta: string; argumentos?: Rec
 /** Os botões do cartão de decisão: candidatura é Aprovar/Recusar; o resto, Sim/Não. */
 export function rotulosDaDecisao(ferramenta: string): { sim: string; nao: string } {
   if (ferramenta === "propor_mover_etapa" || ferramenta === "propor_encerrar_candidatura") return { sim: "Aprovar", nao: "Recusar" };
+  if (ferramenta === ABRIR_CHAMADO) return { sim: "Abrir chamado", nao: "Não abrir" };
   return { sim: "Sim, aplicar", nao: "Não, cancelar" };
+}
+
+// ─── Chamado aberto pela Ceci (03/11/2026) ──────────────────────────────────
+
+/** A proposta de chamado — a ferramenta mora em `src/lib/ia/ferramentas-tech.ts`. */
+export const ABRIR_CHAMADO = "propor_abrir_chamado";
+
+const PRIORIDADE_EM_PALAVRAS: Record<string, string> = { BAIXA: "Baixa", MEDIA: "Média", ALTA: "Alta", URGENTE: "Urgente" };
+const textoDe = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+/** Os campos da categoria como vieram na proposta (`[{chave, valor}]`), sem chave vazia nem repetida. */
+export function camposDaProposta(argumentos: Record<string, unknown>): Record<string, string> {
+  const campos: Record<string, string> = {};
+  for (const c of Array.isArray(argumentos.campos) ? argumentos.campos : []) {
+    if (!c || typeof c !== "object") continue;
+    const chave = textoDe((c as Record<string, unknown>).chave), valor = textoDe((c as Record<string, unknown>).valor);
+    if (chave && valor && !(chave in campos)) campos[chave] = valor;
+  }
+  return campos;
+}
+
+/**
+ * O que vai para `abrirPelaCeci` — os mesmos campos da tela Novo chamado. A
+ * validação é a de lá (`dadosSchema`, categoria, formulário); aqui só se lê.
+ */
+export function chamadoDaProposta(argumentos: Record<string, unknown>) {
+  const prioridade = textoDe(argumentos.prioridade);
+  return {
+    title: textoDe(argumentos.titulo),
+    description: textoDe(argumentos.descricao),
+    categoryId: textoDe(argumentos.categoriaId),
+    requesterSectorCode: textoDe(argumentos.setor),
+    priority: prioridade in PRIORIDADE_EM_PALAVRAS ? prioridade : "MEDIA",
+    requestData: camposDaProposta(argumentos),
+    tags: [],
+  };
+}
+
+/**
+ * As linhas que o cartão mostra embaixo da frase: no chamado, o que a pessoa
+ * confirma — categoria, título, descrição. A categoria e o setor são os nomes
+ * resolvidos no servidor (`alvo` e `setorNome`), não o texto do modelo.
+ */
+export function detalhesDaProposta(p: { ferramenta: string; argumentos?: Record<string, unknown>; alvo?: string }): { rotulo: string; texto: string }[] {
+  if (p.ferramenta !== ABRIR_CHAMADO) return [];
+  const a = p.argumentos ?? {};
+  const nomes = new Map(
+    (Array.isArray(a.campos) ? a.campos : []).flatMap((c) =>
+      c && typeof c === "object" && textoDe((c as Record<string, unknown>).nome) ? [[textoDe((c as Record<string, unknown>).chave), textoDe((c as Record<string, unknown>).nome)] as const] : []
+    )
+  );
+  const campos = Object.entries(camposDaProposta(a)).map(([chave, valor]) => ({ rotulo: nomes.get(chave) ?? chave, texto: valor }));
+  return [
+    { rotulo: "Categoria", texto: p.alvo ?? "categoria não encontrada — peça à Ceci para escolher de novo" },
+    { rotulo: "Título", texto: textoDe(a.titulo) },
+    { rotulo: "Descrição", texto: textoDe(a.descricao) },
+    { rotulo: "Setor", texto: textoDe(a.setorNome) || textoDe(a.setor) },
+    { rotulo: "Prioridade", texto: PRIORIDADE_EM_PALAVRAS[textoDe(a.prioridade)] ?? "Média" },
+    ...campos,
+  ].filter((d) => d.texto);
 }
 
 /**
@@ -242,6 +309,7 @@ export function descreverProposta(p: {
     return `Mover${alvo || " o candidato"} para ${etapa}${motivo}`;
   }
   if (p.ferramenta === "abrir_transferencia") return `Abrir uma transferência para ${p.alvo ?? "o setor"}`;
+  if (p.ferramenta === ABRIR_CHAMADO) return "Abrir este chamado para o Tech";
   // A Ceci do BPO corrigindo a DRE (30/10/2026).
   if (p.ferramenta === "propor_mover_categoria_na_dre") {
     const empresa = typeof a.empresaNome === "string" && a.empresaNome.trim() ? ` de ${a.empresaNome.trim()}` : "";

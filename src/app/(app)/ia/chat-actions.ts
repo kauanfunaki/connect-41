@@ -5,6 +5,7 @@
 // partes (ver lá).
 
 import { revalidatePath } from "next/cache";
+import { ZodError } from "zod";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
@@ -20,7 +21,9 @@ import {
   type ConversaNaLista,
   type MensagemNaTela,
 } from "@/lib/ia/chat/conversas";
-import { avaliacaoParaGravar, lerPropostas, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
+import { ABRIR_CHAMADO, avaliacaoParaGravar, chamadoDaProposta, lerPropostas, SUGERIR_RESPOSTAS } from "@/lib/ia/chat/regras";
+import { contexto as contextoDosChamados } from "@/lib/chamados/contexto";
+import { abrirPelaCeci } from "@/lib/chamados/comandos";
 import { aplicarPropostaDoSocietario } from "@/app/(app)/processos/ia-actions";
 import { aplicarPropostaDoBpo } from "@/app/(app)/dre/ia-actions";
 import { aplicarProposta as aplicarPropostaDaVaga } from "@/app/(app)/vagas/[id]/ia-actions";
@@ -56,7 +59,7 @@ export async function apagarConversaDoChat(conversaId: string): Promise<{ ok: bo
  * agente propôs e ficou gravado. E vai pela action da tela do setor, que
  * refaz tenant, permissão e regra — a IA não ganha atalho nenhum.
  */
-export async function aplicarPropostaDoChat(mensagemId: string, indice: number): Promise<{ error: string } | { ok: true }> {
+export async function aplicarPropostaDoChat(mensagemId: string, indice: number): Promise<{ error: string } | { ok: true; link?: string }> {
   const d = await dono();
   if (!d) return { error: "Não autenticado." };
   const m = await mensagemComPropostas(d, mensagemId);
@@ -64,9 +67,25 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
   const propostas = lerPropostas(m.proposals);
   const p = propostas[indice];
   if (!p) return { error: "Proposta não encontrada." };
-  if (p.aplicada) return { ok: true };
+  if (p.aplicada) return { ok: true, ...(p.link ? { link: p.link } : {}) };
   if (p.recusada) return { error: "Esta sugestão foi recusada. Peça de novo à Ceci, se mudou de ideia." };
   if (p.ferramenta === SUGERIR_RESPOSTAS) return { error: "Resposta rápida não se aplica." };
+
+  // O chamado vale em toda Ceci da equipe (03/11/2026), então decide pela
+  // ferramenta, e não pelo setor da conversa. Vai pela mesma abertura da tela
+  // Novo chamado, que refaz quem pode abrir, setor, categoria e formulário.
+  if (p.ferramenta === ABRIR_CHAMADO) {
+    let ticketId: string;
+    try {
+      ({ ticketId } = await abrirPelaCeci(await contextoDosChamados(), chamadoDaProposta(p.argumentos)));
+    } catch (err) {
+      return { error: err instanceof ZodError ? "O chamado ficou incompleto (título com 3 letras ou mais, descrição, categoria e setor). Peça à Ceci para refazer." : err instanceof Error ? err.message : "Não foi possível abrir o chamado." };
+    }
+    const link = `/chamados/${ticketId}`;
+    await marcarPropostaAplicada(m.id, propostas, indice, link);
+    revalidatePath("/chamados", "layout");
+    return { ok: true, link };
+  }
 
   let r: { error: string } | null;
   if (m.conversation.agentCode === "assistente_do_societario") {

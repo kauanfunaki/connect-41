@@ -21,6 +21,10 @@ export function escoposDaBusca(ctx: AuthContext, config: ConfigDeAcesso): Escopo
 export function podeAbrir(ctx: AuthContext, config: ConfigDeAcesso) {
   return !!ctx.userId && !!ctx.tenantId && config.enabled && !ctx.subscriptionReadOnly && ctx.role !== "READONLY" && (isFullWrite(ctx.role) || ctx.sectors.some(s => config.requesterSectors.includes(s)));
 }
+/** De onde a pessoa pode abrir: o campo Setor da tela Novo chamado e o da Ceci (`conferirOrigem` confere de novo ao gravar). */
+export function setoresQuePodemAbrir<T extends { code: string }>(ctx: AuthContext, config: ConfigDeAcesso, ativos: T[]): T[] {
+  return ativos.filter(s => isFullWrite(ctx.role) || (ctx.sectors.includes(s.code) && config.requesterSectors.includes(s.code)));
+}
 export function podeVer(ctx: AuthContext, config: ConfigDeAcesso, chamado: Alvo) {
   return ctx.tenantId === chamado.tenantId && config.enabled && (podeVerInterno(ctx, config) || chamado.createdById === ctx.userId || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(chamado.requesterSectorCode)));
 }

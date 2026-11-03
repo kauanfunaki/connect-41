@@ -5,7 +5,7 @@ import type { AuthContext } from "@/lib/auth/context";
 import { getConnection } from "@/lib/github/store";
 import { acessoOps, conferirResponsavel, exigirAtualizacao, ErroOps, responsaveisOps } from "./servidor";
 import { exigirOrigem, lerJsonOps } from "./http";
-import { MODULO_OPS } from "./regras";
+import { MODULO_OPS, atividade, diaEmSaoPaulo, periodoDoDia } from "./regras";
 
 // Sites e Apps do Ops Center (28/10/2026): o catálogo do que o Tech já entregou,
 // ao lado dos robôs. A triagem dos chamados consulta os três antes de abrir um
@@ -98,4 +98,48 @@ export async function catalogoParaTriagem(tenantId: string): Promise<ItemExisten
     ...sites.map(s => ({ ref: `site:${s.id}`, tipo: "site" as const, nome: s.name, descricao: s.description, detalhe: null, responsavel: s.owner?.name ?? null, endereco: s.url })),
     ...apps.map(a => ({ ref: `app:${a.id}`, tipo: "app" as const, nome: a.name, descricao: a.description, detalhe: a.repository, responsavel: a.owner?.name ?? null, endereco: a.url ?? (a.repository ? `https://github.com/${a.repository}` : null) })),
   ];
+}
+
+/**
+ * Os robôs com a situação de cada um, para a Ceci do chat (03/11/2026) — só
+ * para quem vê o Ops Center. Inclui os desativados: "o robô Z está no ar?"
+ * pede "está desativado", não "não achei". Quem não vê o Ops Center fica com o
+ * `catalogoParaTriagem`, o mesmo que a triagem dos chamados mostra a qualquer
+ * solicitante.
+ */
+export type RoboComSituacao = {
+  slug: string; nome: string; descricao: string | null; cliente: string | null; responsavel: string | null;
+  ativo: boolean; atividade: string; ultimoSinal: string | null;
+  hoje: { total: number; sucesso: number; erro: number; aviso: number };
+  ultimoEvento: { status: "SUCCESS" | "ERROR" | "WARNING"; quando: string; erro: string | null } | null;
+  instabilidade: { nota: string | null; desde: string } | null;
+};
+export async function robosComSituacao(tenantId: string, agora = new Date()): Promise<RoboComSituacao[]> {
+  const db = getPrisma();
+  const [robos, contagens] = await Promise.all([
+    db.opsWatcher.findMany({ where: { tenantId }, orderBy: [{ isActive: "desc" }, { name: "asc" }], take: 200, select: {
+      slug: true, name: true, description: true, client: true, owner: { select: { name: true } },
+      isActive: true, lastHeartbeatAt: true, instabilityReportedAt: true, instabilityNote: true,
+      events: { orderBy: [{ processedAt: "desc" }, { id: "desc" }], take: 1, select: { status: true, processedAt: true, errorMessage: true } },
+    } }),
+    db.opsEvent.groupBy({ by: ["watcherSlug", "status"], where: { tenantId, processedAt: periodoDoDia(diaEmSaoPaulo(agora)) }, _count: { _all: true } }),
+  ]);
+  return robos.map(r => {
+    const hoje = { total: 0, sucesso: 0, erro: 0, aviso: 0 };
+    for (const c of contagens) {
+      if (c.watcherSlug !== r.slug) continue;
+      const n = c._count._all;
+      hoje.total += n;
+      if (c.status === "SUCCESS") hoje.sucesso += n;
+      if (c.status === "ERROR") hoje.erro += n;
+      if (c.status === "WARNING") hoje.aviso += n;
+    }
+    const e = r.events[0], sinal = r.lastHeartbeatAt?.toISOString() ?? null;
+    return {
+      slug: r.slug, nome: r.name, descricao: r.description, cliente: r.client, responsavel: r.owner?.name ?? null,
+      ativo: r.isActive, atividade: atividade(sinal, r.isActive, agora.getTime()), ultimoSinal: sinal, hoje,
+      ultimoEvento: e ? { status: e.status as "SUCCESS" | "ERROR" | "WARNING", quando: e.processedAt.toISOString(), erro: e.errorMessage?.slice(0, 300) ?? null } : null,
+      instabilidade: r.instabilityReportedAt ? { nota: r.instabilityNote, desde: r.instabilityReportedAt.toISOString() } : null,
+    };
+  });
 }

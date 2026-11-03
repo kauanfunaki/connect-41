@@ -155,6 +155,23 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
   });
   await depois(c, ticketId, "created"); return { ticketId };
 }
+// A Ceci do chat (03/11/2026): a pessoa confirmou categoria, título e descrição
+// no cartão da conversa. É o rascunho e a finalização da tela Novo chamado, com
+// as mesmas regras de abertura, origem, categoria e formulário. Duas diferenças,
+// de propósito: a classificação gravada é a categoria confirmada na conversa (a
+// triagem não a refaz), e o rascunho que a pessoa deixou aberto na tela fica —
+// o da Ceci já sai enviado, e some se a finalização recusar.
+export async function abrirPelaCeci(c: Contexto, input: unknown) {
+  exigirAbertura(c);
+  const dados = dadosSchema.parse(input); await conferirOrigem(c, dados);
+  await prepararCatalogo(c.ctx.tenantId);
+  if (!categoriasClassificaveis(await categorias(c, true)).some(cat => cat.id === dados.categoryId)) throw new Error("Escolha uma categoria ativa da árvore de chamados, e não um grupo.");
+  validarFormulario(dados, (await categoriaAtual(c.ctx.tenantId, dados.categoryId)).categoria, []);
+  const classificacao = { categoryId: dados.categoryId, reason: "Escolhida na conversa com a Ceci e confirmada por quem abriu.", title: dados.title, tags: dados.tags, origem: "ceci" };
+  const d = await getPrisma().helpdeskDraft.create({ data: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, payload: json({ ...dados, _classificacao: classificacao }) }, select: { id: true, version: true } });
+  try { return await finalizarRascunho(c, d.id, d.version, true, true); }
+  catch (err) { await apagarRascunhos(c, [d.id]); throw err; }
+}
 export async function avaliarRascunho(c: Contexto, id: string, version: number, resposta?: string) {
   exigirAbertura(c);
   if (resposta !== undefined) {

@@ -22,6 +22,7 @@ import { FERRAMENTAS_DO_ORQUESTRADOR } from "@/lib/ia/ferramentas-orquestrador";
 import { FERRAMENTAS_DE_DP } from "@/lib/ia/ferramentas-dp";
 import { FERRAMENTAS_DA_EQUIPE } from "@/lib/ia/ferramentas-equipe";
 import { FERRAMENTAS_DO_PORTAL } from "@/lib/ia/ferramentas-portal";
+import { FERRAMENTAS_DO_TECH } from "@/lib/ia/ferramentas-tech";
 
 const CONJUNTOS = [
   FERRAMENTAS_DE_RECRUTAMENTO,
@@ -36,6 +37,7 @@ const CONJUNTOS = [
   FERRAMENTAS_DE_DP,
   FERRAMENTAS_DA_EQUIPE,
   FERRAMENTAS_DO_PORTAL,
+  FERRAMENTAS_DO_TECH,
 ];
 
 export function registrarTodasAsFerramentas(): void {

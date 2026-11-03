@@ -59,6 +59,14 @@ Agente desligado e tetos atingidos bloqueiam ambos os caminhos. Tentativas da Gr
 
 Com OpenAI, a chamada usa Responses API com JSON Schema estrito e `store: false`; com Anthropic, Messages API com saída estruturada (`output_config.format` JSON Schema). Nos dois: teto de tokens de saída, validação Zod, timeout de 30 segundos, resposta incompleta ou recusada vira indisponível, e no máximo dez avaliações por usuário/escritório por minuto. Custo e tetos mensais passam pela mesma fundação de agentes (`executarAgente`). Não há repetição automática de chamadas pagas. `store: false` não substitui a política de retenção da conta da API; na Anthropic, a retenção é a da conta. Como o Anthropic só lê PDF, imagem e texto, DOCX (texto) e XLSX (até mil linhas por aba) são convertidos em texto no servidor antes do envio; o que não puder ser convertido vai como aviso e o modelo marca o anexo como ilegível. O limite por minuto acompanha a implantação atual em uma instância; precisa de armazenamento compartilhado se o Connect passar a usar várias réplicas.
 
+### Pela Ceci, no chat do canto da tela
+
+Desde 03/11/2026, toda Ceci da equipe (a de cada setor e a da Ajuda) consulta o Ops Center e abre chamado quando a conversa pede (`src/lib/ia/ferramentas-tech.ts`):
+
+- **`sistemas_do_ops_center`** responde "já existe algo que faz X?", "quem cuida de Y?" e "o robô Z está funcionando?". Quem vê o Ops Center recebe a situação dos robôs (no ar, sem comunicação, desativado), os arquivos do dia e o último erro. Quem só pode abrir chamado recebe o mesmo catálogo que a triagem já mostra: itens ativos, o que fazem e o responsável.
+- **`categorias_de_chamado`** devolve as categorias folha ativas (**Grupo › Categoria**), os campos e anexos que cada uma pede e os setores de onde a pessoa pode abrir. É a mesma regra do campo Setor da tela Novo chamado (`setoresQuePodemAbrir`).
+- **`propor_abrir_chamado`** não grava. Vira um cartão no chat com categoria, título, descrição, setor e prioridade. A categoria e o setor aparecem pelo nome lido do banco. O chamado só é aberto quando a pessoa clica em **Abrir chamado**. O clique chama `abrirPelaCeci`: mesmo rascunho e mesma finalização da tela, com as mesmas regras de abertura, origem, categoria, formulário e aprovação. A triagem não reclassifica, porque a categoria foi confirmada na conversa (o evento de abertura registra `origem: "ceci"`). O rascunho que a pessoa deixou aberto na tela não é descartado. Categoria com anexo obrigatório não é proposta: a Ceci manda abrir pela tela.
+
 Prompts, documentos e corpos de erro do provedor não são gravados nos logs da triagem. O histórico é dado funcional, protegido pelo acesso ao chamado. Conteúdo fornecido pelo usuário é tratado como dado não confiável, sem ferramentas, comandos ou navegação por links.
 
 ## Arquivos

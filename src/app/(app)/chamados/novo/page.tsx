@@ -3,11 +3,10 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NovoChamado, type RascunhoDaTela } from "@/components/chamados/NovoChamado";
 import { contexto } from "@/lib/chamados/contexto";
-import { podeAbrir } from "@/lib/chamados/acesso";
+import { podeAbrir, setoresQuePodemAbrir } from "@/lib/chamados/acesso";
 import { categorias, rascunho, parecerAtual } from "@/lib/chamados/consultas";
 import { categoriaSchema, dadosRascunhoSchema, type DadosDoChamado } from "@/lib/chamados/regras";
 import { getActiveSectors } from "@/lib/sectors";
-import { isFullWrite } from "@/lib/auth/papeis";
 
 export const dynamic = "force-dynamic";
 export default async function NovoPage({ searchParams }: { searchParams: Promise<{ rascunho?: string }> }) {
@@ -18,5 +17,5 @@ export default async function NovoPage({ searchParams }: { searchParams: Promise
   const vazios: DadosDoChamado = { title: "", description: "", categoryId: "", requesterSectorCode: "", priority: "MEDIA", requestData: {}, tags: [] };
   const lidos = dadosRascunhoSchema.safeParse(d?.payload);
   const inicial: RascunhoDaTela | null = d ? { id: d.id, version: d.version, dados: lidos.success ? lidos.data : vazios, parecer: parecerAtual(d), anexos: d.attachments.map(a => ({ id: a.id, fileName: a.fileName, attachmentKey: a.attachmentKey })), mensagens: d.messages.map(m => ({ id: m.id, role: m.role, body: m.body })) } : null;
-  return <PageContainer><PageHeader title="Novo chamado" subtitle="Conte o que precisa. A IA identifica o grupo e a categoria e ajuda a completar as informações." /><NovoChamado inicial={inicial} categorias={cats.map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id }))} setores={setores.filter(s => isFullWrite(c.ctx.role) || (c.ctx.sectors.includes(s.code) && c.config.requesterSectors.includes(s.code))).map(s => ({ code: s.code, label: s.label }))} /></PageContainer>;
+  return <PageContainer><PageHeader title="Novo chamado" subtitle="Conte o que precisa. A IA identifica o grupo e a categoria e ajuda a completar as informações." /><NovoChamado inicial={inicial} categorias={cats.map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id }))} setores={setoresQuePodemAbrir(c.ctx, c.config, setores).map(s => ({ code: s.code, label: s.label }))} /></PageContainer>;
 }

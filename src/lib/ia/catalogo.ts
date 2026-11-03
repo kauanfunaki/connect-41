@@ -90,6 +90,14 @@ export type AgenteDef = {
   padraoLigado: boolean;
 };
 
+/**
+ * O Ops Center e os chamados ao Tech, em toda Ceci da equipe (03/11/2026 —
+ * `src/lib/ia/ferramentas-tech.ts`). Repetido aqui, e não importado de lá,
+ * porque este catálogo não carrega o registro: o teste confere que os nomes
+ * existem.
+ */
+const DO_TECH = ["sistemas_do_ops_center", "categorias_de_chamado", "propor_abrir_chamado"];
+
 export const AGENT_CATALOG: AgenteDef[] = [
   {
     code: "triagem_chamados", label: "Triagem de chamados", sectorCode: null,
@@ -191,7 +199,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
     escreve: false,
     // `encaminhar_pergunta` é do chat (orquestrador); o cartão da página
     // `/processos` descarta a proposta — ver `perguntarAoSocietario`.
-    ferramentas: ["listar_fila", "ver_processo", "propor_concluir_etapa", "propor_dispensar_etapa", "encaminhar_pergunta", "sugerir_respostas", "atividade_da_equipe"],
+    ferramentas: ["listar_fila", "ver_processo", "propor_concluir_etapa", "propor_dispensar_etapa", "encaminhar_pergunta", "sugerir_respostas", "atividade_da_equipe", ...DO_TECH],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 800,
     padraoLigado: false,
@@ -215,6 +223,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "encaminhar_pergunta",
       "sugerir_respostas",
       "atividade_da_equipe",
+      ...DO_TECH,
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -237,6 +246,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "encaminhar_pergunta",
       "sugerir_respostas",
       "atividade_da_equipe",
+      ...DO_TECH,
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -266,6 +276,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "encaminhar_pergunta",
       "sugerir_respostas",
       "atividade_da_equipe",
+      ...DO_TECH,
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -290,6 +301,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "encaminhar_pergunta",
       "sugerir_respostas",
       "atividade_da_equipe",
+      ...DO_TECH,
     ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 3_000,
@@ -303,7 +315,7 @@ export const AGENT_CATALOG: AgenteDef[] = [
       "Responde no chat do canto da tela como usar o Connect — onde fica cada função e o que dizem os manuais do escritório. Atende quem está num setor ainda sem IA própria",
     faixa: "rapido",
     escreve: false,
-    ferramentas: ["listar_minhas_telas", "buscar_nos_manuais", "encaminhar_pergunta", "sugerir_respostas"],
+    ferramentas: ["listar_minhas_telas", "buscar_nos_manuais", "encaminhar_pergunta", "sugerir_respostas", ...DO_TECH],
     // Pergunta de "onde fica" é curta e barata; o teto de chamadas é o que
     // segura um uso maior que o previsto no piloto.
     tetoMensalCentavos: 30_000,
