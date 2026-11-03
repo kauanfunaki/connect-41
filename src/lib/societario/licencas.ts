@@ -137,6 +137,26 @@ export function contarPendentes(
   return { vencidas, aRenovar };
 }
 
+const semAcentoMinusculo = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/**
+ * A busca da tela de Licenças (03/11/2026): pelo nome da empresa, pela cidade
+ * ou pelo CNPJ, com ou sem pontuação. Era preciso abrir licença por licença
+ * para saber de quem era e onde.
+ */
+export function buscarLicencas<T extends { empresaNome: string; empresaCnpj: string | null; cidade: string | null }>(linhas: T[], busca: string | null | undefined): T[] {
+  const termo = semAcentoMinusculo(busca?.trim() ?? "");
+  if (!termo) return linhas;
+  const digitos = termo.replace(/\D/g, "");
+  return linhas.filter(
+    (l) =>
+      semAcentoMinusculo(l.empresaNome).includes(termo) ||
+      semAcentoMinusculo(l.cidade ?? "").includes(termo) ||
+      // Só a partir de quatro dígitos, para "2" não achar todo mundo.
+      (digitos.length >= 4 && (l.empresaCnpj ?? "").replace(/\D/g, "").includes(digitos))
+  );
+}
+
 // ─── Taxas ───────────────────────────────────────────────────────────────────
 
 export type TaxaParaTotal = {

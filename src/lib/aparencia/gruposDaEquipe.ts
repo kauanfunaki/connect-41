@@ -53,6 +53,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   societario_prazos: "processos",
   societario_relatorios: "processos",
   societario_certidoes: "processos",
+  societario_robo: "processos",
   // Solicitações: a conversa com o cliente, de qualquer setor.
   bpo_pendencias: "atendimento",
   bpo_comunicacao: "atendimento",
