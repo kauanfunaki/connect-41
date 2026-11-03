@@ -39,7 +39,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
   }
   return <PageContainer>
     <PageHeader title="Controle interno" subtitle="Quem mudou o quê, e quando, em cada item da equipe Tech." action={<AcoesDoControle podeEditar={podeEditar} podeGerirOps={podeGerirOps} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
-    <div className="mb-4"><VisoesDoControle ativa="historico" href={v => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`} /></div>
+    <VisoesDoControle ativa="historico" href={v => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`} />
     <CascoDaTabela buscaAEsquerda contagem={`${total} ${total === 1 ? "registro" : "registros"}`}
       busca={<DebouncedSearchInput key={q} paramName="q" placeholder="Buscar pelo título do item" />}
       filtros={<FiltrosDaTela naBarra campos={[{ chave: "autor", rotulo: "Pessoa", vazioLabel: "Todas", opcoes: autores.map(a => ({ value: a.authorId, label: a.authorName })) }]} />}>
@@ -54,7 +54,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
             return <li key={c.id} className="relative cursor-pointer transition-colors hover:bg-surface-hover grid grid-cols-1 gap-x-3 gap-y-1 px-4 py-4 sm:grid-cols-[3.5rem_minmax(0,1fr)]">
               <time dateTime={c.createdAt.toISOString()} className="text-helper tabular-nums text-fg-muted sm:pt-1">{horaDoRegistro(c.createdAt)}</time>
               <div className="flex min-w-0 gap-3">
-                <AvatarImage src={null} name={c.authorName} size={28} className="mt-0.5 hidden shrink-0 sm:block" />
+                <AvatarImage src={null} name={c.authorName} size={28} className="mt-0.5 hidden shrink-0 sm:flex" />
                 <div className="min-w-0 flex-1 max-w-3xl">
                   <p className="text-ui text-fg-secondary break-words"><span className="font-medium text-fg">{c.authorName}</span> {criacao ? "criou o item" : changesDoRegistro.length === 1 ? "alterou 1 campo de" : `alterou ${changesDoRegistro.length} campos de`}</p>
                   <p className="flex flex-wrap items-baseline gap-x-2 text-ui">

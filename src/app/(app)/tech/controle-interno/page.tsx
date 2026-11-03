@@ -45,10 +45,10 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const nomeSistema = (item: typeof lista.items[number]) => nomeDoSistema(item, true);
   return <PageContainer>
     <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech." action={<AcoesDoControle podeEditar={podeEditar} podeGerirOps={podeGerirOps} novoHref={href(`${ROTA_TECH_INTERNO}/novo`)} />} />
-    <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-      <VisoesDoControle ativa={filtros.view} href={v => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : hrefVisao(v)} />
-      {filtros.view === "agenda" && <nav className="flex items-center gap-3" aria-label="Mês da agenda"><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.anterior)}><ChevronLeft size={14} aria-hidden />Mês anterior</Button><span className="text-ui font-medium">{new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(mes.inicio)}</span><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.proximo)}>Próximo mês<ChevronRight size={14} aria-hidden /></Button></nav>}
-    </div>
+    <VisoesDoControle ativa={filtros.view} href={v => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : hrefVisao(v)} />
+    {filtros.view === "agenda" && <div className="flex justify-end mb-4">
+      <nav className="flex items-center gap-3" aria-label="Mês da agenda"><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.anterior)}><ChevronLeft size={14} aria-hidden />Mês anterior</Button><span className="text-ui font-medium">{new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(mes.inicio)}</span><Button variant="secondary" size="sm" href={hrefVisao("agenda", mes.proximo)}>Próximo mês<ChevronRight size={14} aria-hidden /></Button></nav>
+    </div>}
     <CascoDaTabela buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[
       { chave: "situacao", rotulo: "Situação", vazioLabel: filtros.view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(filtros.view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
       { chave: "tipo", rotulo: "Tipo", opcoes: Object.entries(TIPOS).map(([value, label]) => ({ value, label })) },

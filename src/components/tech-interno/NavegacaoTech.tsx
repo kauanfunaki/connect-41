@@ -1,16 +1,18 @@
 import { CalendarDays, History, List, Plus, Server, SquareKanban } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
 // O Histórico é uma visão do módulo, ao lado de Lista, Kanban e Agenda
 // (29/10/2026): fica onde a pessoa já troca de visão, com o ícone de cada uma.
+// Nas abas do app (`AbasDeLink`, 03/11/2026), como GitHub e Chamados, no
+// lugar das pílulas: aba troca a tela, pílula parecia filtro.
 export type VisaoTech = "lista" | "kanban" | "agenda" | "historico";
 export function VisoesDoControle({ ativa, href }: { ativa: VisaoTech; href: (visao: VisaoTech) => string }) {
-  return <SegmentedControl label="Visualização do Controle interno" active={ativa} items={[
-    { key: "lista", label: "Lista", icon: <List size={14} aria-hidden />, href: href("lista") },
-    { key: "kanban", label: "Kanban", icon: <SquareKanban size={14} aria-hidden />, href: href("kanban") },
-    { key: "agenda", label: "Agenda", icon: <CalendarDays size={14} aria-hidden />, href: href("agenda") },
-    { key: "historico", label: "Histórico", icon: <History size={14} aria-hidden />, title: "Quem mudou o quê, e quando", href: href("historico") },
+  return <AbasDeLink aria-label="Visualização do Controle interno" ativa={ativa} abas={[
+    { chave: "lista", rotulo: "Lista", icone: <List size={14} aria-hidden />, href: href("lista") },
+    { chave: "kanban", rotulo: "Kanban", icone: <SquareKanban size={14} aria-hidden />, href: href("kanban") },
+    { chave: "agenda", rotulo: "Agenda", icone: <CalendarDays size={14} aria-hidden />, href: href("agenda") },
+    { chave: "historico", rotulo: "Histórico", icone: <History size={14} aria-hidden />, href: href("historico") },
   ]} />;
 }
 
