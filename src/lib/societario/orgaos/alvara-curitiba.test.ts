@@ -15,19 +15,30 @@ describe("inscrição municipal", () => {
     // O que a pessoa digita são os oito dígitos; a máscara vem com ou sem.
     expect(normalizarInscricao("0804925-8")).toBe("08049258");
     expect(normalizarInscricao("08049258")).toBe("08049258");
-    // O que o site EXIBE de volta tem prefixo e onze dígitos — não é o que se
-    // digita, e por isso não passa na validação de oito.
-    expect(normalizarInscricao("17 19 804.925-8")).toBe("17198049258");
+  });
+
+  // 03/11/2026: a maior parte dos cadastros guarda a inscrição sem o zero, e
+  // alguns com o código inteiro que o site exibe. Os dois viram os oito dígitos.
+  it("põe o zero que falta nos sete dígitos", () => {
+    expect(normalizarInscricao("804925-8")).toBe("08049258");
+    expect(normalizarInscricao("8049258")).toBe("08049258");
+  });
+
+  it("tira o prefixo do código inteiro que o site exibe", () => {
+    expect(normalizarInscricao("17 19 804.925-8")).toBe("08049258");
+    expect(normalizarInscricao("17198049258")).toBe("08049258");
   });
 
   it("valida os oito dígitos", () => {
     expect(inscricaoValida("0804925-8")).toBe(true);
     expect(inscricaoValida("08049258")).toBe(true);
+    expect(inscricaoValida("804925-8")).toBe(true);
+    expect(inscricaoValida("17 19 804.925-8")).toBe(true);
   });
 
-  it("recusa o que não tem oito dígitos", () => {
+  it("recusa o que não vira oito dígitos", () => {
     expect(inscricaoValida("804925")).toBe(false);
-    expect(inscricaoValida("171980492 58")).toBe(false);
+    expect(inscricaoValida("1719804925")).toBe(false);
     expect(inscricaoValida("")).toBe(false);
     expect(inscricaoValida(null)).toBe(false);
   });

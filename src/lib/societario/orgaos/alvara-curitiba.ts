@@ -41,16 +41,26 @@ export const CONSULTA =
   "https://alvarafuncionamento.curitiba.pr.gov.br/client/alvara-licenca-localizacao";
 
 /**
- * A inscrição municipal tem 8 dígitos.
+ * O campo do site recebe a inscrição municipal em 8 dígitos.
  *
- * O site a exibe formatada — `17 19 804.925-8` — e aceita só os oito números.
- * Normalizar antes evita a classe de erro mais boba: mandar a máscara e receber
- * "não encontrado", registrando isso como se a empresa não tivesse alvará.
+ * O site a exibe formatada — `17 19 804.925-8` — e aceita só o número do fim,
+ * com zero à esquerda: `0804925-8`. Normalizar antes evita a classe de erro
+ * mais boba: mandar a máscara e receber "não encontrado", registrando isso
+ * como se a empresa não tivesse alvará.
+ *
+ * Os cadastros guardam a inscrição de três jeitos, e os três viram os 8
+ * dígitos do campo (conferido no site em 03/11/2026):
+ * - 8 dígitos, `0804925-8`: já é o que o campo recebe;
+ * - 7 dígitos, `804925-8`, sem o zero — o jeito mais comum nos cadastros;
+ * - o código inteiro que o site exibe, 11 dígitos: os 4 primeiros saem.
  */
 const OITO_DIGITOS = /^\d{8}$/;
 
 export function normalizarInscricao(valor: string): string {
-  return valor.replace(/\D/g, "");
+  const digitos = valor.replace(/\D/g, "");
+  if (digitos.length === 7) return `0${digitos}`;
+  if (digitos.length === 11) return `0${digitos.slice(4)}`;
+  return digitos;
 }
 
 export function inscricaoValida(valor: string | null): boolean {

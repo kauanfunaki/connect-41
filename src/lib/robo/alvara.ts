@@ -36,7 +36,7 @@ export function pedidoDoAlvara(p: { tipoDaLicenca: string; revogada: boolean; in
   if (p.revogada) return { ok: false, erro: "A licença está revogada." };
   if (!cidadeAceita(p.cidade)) return { ok: false, erro: "O robô só conhece o alvará de Curitiba, e a empresa é de outra cidade." };
   if (!inscricaoValida(p.inscricao)) {
-    return { ok: false, erro: "A empresa não tem inscrição municipal de 8 dígitos no cadastro. Preencha na ficha da empresa e peça de novo." };
+    return { ok: false, erro: "A inscrição municipal da empresa está vazia ou incompleta no cadastro. Preencha na ficha da empresa (ex.: 804.925-8) e peça de novo." };
   }
   return { ok: true, dados: { inscricao: normalizarInscricao(p.inscricao!) } };
 }
