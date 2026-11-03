@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -22,6 +22,7 @@ import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast";
 import { atividade, caminhoDoEvento, ROTULOS_OPS } from "@/lib/ops/regras";
 import type { EventoOps, PainelOps, WatcherOps } from "@/lib/ops/tipos";
@@ -165,19 +166,20 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
     {doCatalogo && <CatalogoOps key={visao} tipo={visao} podeGerir={podeGerir} />}
     {!doCatalogo && erro && <Aviso className="mb-5">{erro} {painel && "Os dados abaixo são da última atualização recebida."} <Button variant="link" onClick={() => void atualizar()}>Tentar novamente</Button></Aviso>}
     {!doCatalogo && !painel && !erro && <Card className="p-8 text-center text-fg-secondary" role="status">Carregando automações e resultados…</Card>}
-    {/* As abas Automações e Histórico ficam dentro do bloco que elas controlam,
-        e "Minhas automações" virou um filtro ao lado da busca (26/10/2026). */}
+    {/* "Minhas automações" virou um filtro ao lado da busca (26/10/2026). As
+        abas Robôs e Histórico são as do app (`Tabs`, 03/11/2026), como GitHub
+        e Chamados, no lugar das pílulas dentro do bloco. */}
+    {!doCatalogo && painel && <Tabs className="mb-4" active={visao} onChange={v => setVisao(v as typeof visao)} tabs={[
+      { key: "automations", label: "Robôs", icon: <Activity size={14} aria-hidden />, count: painel.watchers.length },
+      { key: "history", label: "Histórico", icon: <History size={14} aria-hidden />, count: painel.total },
+    ]} />}
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <SegmentedControl label="Robôs ou histórico" active={visao} onChange={setVisao} tone="brand" items={[
-          { key: "automations", label: "Robôs", icon: <Activity size={14} />, contagem: painel.watchers.length },
-          { key: "history", label: "Histórico", icon: <History size={14} />, contagem: painel.total },
-        ]} />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 lg:justify-end">
           {visao === "automations" && <label className="block min-w-48 flex-1 lg:max-w-sm"><span className="sr-only">Buscar automação</span><Input compact type="search" icon={<Search size={16} />} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou responsável…" /></label>}
           <button type="button" aria-pressed={minhas} onClick={() => { setMinhas(!minhas); setWatcher(""); setPagina(1); }} title={minhas ? "Mostrar todas as automações" : "Mostrar só as automações sob sua responsabilidade"}
-            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-ui font-medium transition-colors focus-visible:outline-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand-subtle text-brand" : "border-border bg-surface text-fg-secondary hover:text-fg"}`}>
-            <UserRound size={14} aria-hidden /> Minhas automações{minhas && <X size={14} aria-hidden className="-mr-1" />}
+            className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-helper font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${minhas ? "border-brand/40 bg-brand/10 text-brand" : "border-border-strong text-fg-secondary hover:bg-surface-hover hover:text-fg"}`}>
+            {minhas ? <Check size={14} aria-hidden /> : <UserRound size={14} aria-hidden />}Minhas automações
           </button>
         </div>
       </div>
