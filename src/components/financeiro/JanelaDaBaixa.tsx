@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { FileDown, Lock, Undo2 } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
+import { CheckCircle2, FileDown, Lock, Undo2 } from "lucide-react";
+import { SlideOver } from "@/components/ui/SlideOver";
+import { Selo } from "@/components/ui/Selo";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { CampoData } from "@/components/ui/CampoData";
@@ -97,7 +98,10 @@ function Janela({
   const [pendente, setPendente] = useState(false);
   const aPagar = dados?.ok ? dados.kind === "PAGAR" : true;
   return (
-    <Modal open onClose={() => !pendente && onFechar()} title={aPagar ? "Pagamento" : "Recebimento"} maxWidth="max-w-2xl">
+    // Painel lateral (Pagar/Receber A, página de opções de 04/11/2026): era uma
+    // janela no meio da tela, com a frase "fornecedor · valor · já pago ·
+    // saldo" numa linha só e a tabela das baixas rolando de lado.
+    <SlideOver open onClose={() => !pendente && onFechar()} title={aPagar ? "Pagamento" : "Recebimento"} width="max-w-lg">
       {dados === null ? (
         <p className="py-6 text-center text-fs-2 text-fg-muted">Carregando…</p>
       ) : !dados.ok ? (
@@ -113,16 +117,26 @@ function Janela({
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <p className="text-helper text-fg-secondary">
-            <strong className="text-fg">{dados.contraparteNome}</strong> · valor {reais(dados.valorCentavos)}
-            {dados.saldoCentavos < dados.valorCentavos && (
-              <>
-                {" "}
-                · já {aPagar ? "pago" : "recebido"} {reais(dados.valorCentavos - dados.saldoCentavos)} ·{" "}
-                <strong className="text-fg">saldo {reais(dados.saldoCentavos)}</strong>
-              </>
-            )}
-          </p>
+          <div className="flex flex-col gap-3">
+            <p className="text-ui font-semibold text-fg break-words">{dados.contraparteNome}</p>
+            {/* Valor, pago e saldo em números grandes, lado a lado. */}
+            <dl className="grid grid-cols-3 gap-2">
+              {[
+                { rotulo: "Valor", valor: dados.valorCentavos, cor: "text-fg" },
+                {
+                  rotulo: aPagar ? "Pago" : "Recebido",
+                  valor: dados.valorCentavos - dados.saldoCentavos,
+                  cor: dados.saldoCentavos < dados.valorCentavos ? "text-success-fg" : "text-fg-muted",
+                },
+                { rotulo: "Saldo", valor: dados.saldoCentavos, cor: dados.saldoCentavos > 0 ? "text-fg" : "text-fg-muted" },
+              ].map((n) => (
+                <div key={n.rotulo} className="rounded-md border border-border bg-surface px-3 py-2">
+                  <dt className="c41-rotulo">{n.rotulo}</dt>
+                  <dd className={`mt-0.5 text-fs-4 font-semibold tabular-nums ${n.cor}`}>{reais(n.valor)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
 
           {dados.saldoCentavos > 0 &&
             (dados.bloqueio ? (
@@ -144,7 +158,7 @@ function Janela({
           )}
         </div>
       )}
-    </Modal>
+    </SlideOver>
   );
 }
 
@@ -365,62 +379,52 @@ function ListaDeBaixas({ baixas, aPagar, onDesfeito }: { baixas: BaixaDaConta[];
     );
   }
 
+  // Uma baixa por bloco (04/11/2026): a tabela de sete colunas pedia 640px e
+  // rolava de lado; "conciliada" e o recibo ficavam miúdos no fim da linha.
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-label font-semibold text-fg">{baixas.length === 1 ? "Baixa desta conta" : `As ${baixas.length} baixas desta conta`}</h3>
-      <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[640px] text-ui">
-          <thead>
-            <tr className="border-b border-border bg-table-header-bg text-micro uppercase tracking-wide text-fg-muted">
-              <th className="px-3 py-2 text-left font-medium">Data</th>
-              <th className="px-3 py-2 text-left font-medium">Conta</th>
-              <th className="px-3 py-2 text-right font-medium">Valor</th>
-              <th className="px-3 py-2 text-right font-medium">Encargos</th>
-              <th className="px-3 py-2 text-right font-medium">Desconto</th>
-              <th className="px-3 py-2 text-right font-medium">Total</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {baixas.map((b) => (
-              <tr key={b.id} className="border-b border-border-soft last:border-b-0 align-top">
-                <td className="px-3 py-2 tabular-nums whitespace-nowrap">
-                  {dataBr(b.dataKey)}
-                  <span className="block text-micro text-fg-muted">{ORIGEM[b.origem]}</span>
-                </td>
-                <td className="px-3 py-2">
-                  {b.contaNome ?? <span className="text-fg-muted">—</span>}
-                  {b.observacao && <span className="block text-micro text-fg-muted">{b.observacao}</span>}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">{reais(b.principalCentavos)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{b.jurosCentavos + b.multaCentavos ? reais(b.jurosCentavos + b.multaCentavos) : "—"}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{b.descontoCentavos ? reais(b.descontoCentavos) : "—"}</td>
-                <td className="px-3 py-2 text-right tabular-nums font-medium">{reais(b.caixaCentavos)}</td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
-                  {/* O recibo da baixa em PDF (22/10/2026): só leitura, sai de toda baixa. */}
-                  <a
-                    href={`/api/financeiro/baixas/${b.id}/recibo`}
-                    className="mr-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-brand hover:underline"
-                    title="Baixar o recibo desta baixa em PDF"
-                    download
-                  >
-                    <FileDown size={12} /> Recibo
-                  </a>
-                  {b.conciliada ? (
-                    <span className="text-micro text-fg-muted whitespace-nowrap" title="Desfaça na conciliação, que devolve a linha do extrato junto.">
-                      conciliada
-                    </span>
-                  ) : (
-                    <Button variant="ghost" size="xs" onClick={() => desfazer(b)}>
-                      <Undo2 size={12} /> Desfazer
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ul className="flex flex-col gap-2">
+        {baixas.map((b) => {
+          const encargos = b.jurosCentavos + b.multaCentavos;
+          const detalhe = [
+            encargos > 0 && `${reais(b.principalCentavos)} + ${reais(encargos)} de encargos`,
+            b.descontoCentavos > 0 && `${reais(b.descontoCentavos)} de desconto`,
+          ].filter(Boolean);
+          return (
+            <li key={b.id} className="flex flex-col gap-2 rounded-md border border-border px-3 py-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="text-ui font-semibold tabular-nums text-fg">{dataBr(b.dataKey)}</span>
+                  <span className="block text-micro text-fg-muted">
+                    {[ORIGEM[b.origem], b.contaNome].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className="text-ui font-semibold tabular-nums text-fg whitespace-nowrap">{reais(b.caixaCentavos)}</span>
+              </div>
+              {(detalhe.length > 0 || b.observacao) && (
+                <p className="text-micro text-fg-muted tabular-nums">{[...detalhe, b.observacao].filter(Boolean).join(" · ")}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {b.conciliada ? (
+                  <Selo tom="sucesso">
+                    <CheckCircle2 size={12} aria-hidden /> Conciliada
+                  </Selo>
+                ) : (
+                  <Button variant="ghost" size="xs" onClick={() => desfazer(b)}>
+                    <Undo2 size={12} /> Desfazer
+                  </Button>
+                )}
+                {/* O recibo da baixa em PDF (22/10/2026): só leitura, sai de toda baixa. */}
+                <Button href={`/api/financeiro/baixas/${b.id}/recibo`} download variant="secondary" size="xs" className="ml-auto">
+                  <FileDown size={12} /> Baixar recibo
+                </Button>
+              </div>
+              {b.conciliada && <p className="text-micro text-fg-muted">Para desfazer, use a Conciliação: ela devolve a linha do extrato junto.</p>}
+            </li>
+          );
+        })}
+      </ul>
       {dialog}
     </div>
   );

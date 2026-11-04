@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState, useTransition } from "react";
 import { Lock, Plus } from "lucide-react";
-import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
@@ -25,8 +24,12 @@ const dataBr = (k: string) => k.split("-").reverse().join("/");
 /**
  * Os adiantamentos da empresa (lote D, 20/10 — a conta de adiantamento do
  * Omie): o disponível de cada fornecedor (ou cliente), os lançados e o "Novo
- * adiantamento". Um bloco que começa fechado (a regra do Kauan, 08/10), com o
- * total disponível na linha.
+ * adiantamento".
+ *
+ * Aba própria desde 04/11/2026 (Pagar/Receber A, página de opções): era um
+ * bloco recolhível em cima da lista de contas, e passava despercebido. O
+ * disponível vira um cartão por fornecedor — compacto, como o Kauan pediu ao
+ * escolher a opção.
  *
  * Usar o adiantamento é na baixa da conta: "Saiu da conta" oferece o
  * adiantamento de quem é a conta, com o disponível.
@@ -65,39 +68,58 @@ export function AdiantamentosDaEmpresa({
     );
   }
 
+  // Quantos adiantamentos e o último, por nome — os lançados não trazem o id.
+  const doFornecedor = new Map<string, { n: number; ultimo: string }>();
+  for (const a of lancados) {
+    const atual = doFornecedor.get(a.contraparteNome);
+    doFornecedor.set(a.contraparteNome, { n: (atual?.n ?? 0) + 1, ultimo: atual && atual.ultimo > a.dataKey ? atual.ultimo : a.dataKey });
+  }
+
   return (
     <>
-      <BlocoRecolhivel
-        titulo={titulo}
-        resumo={total > 0 ? `${reais(total)} disponível` : "Nenhum em aberto"}
-        className="mb-4 bg-surface"
-        espacoDaAcao="pr-48"
-        acao={
-          <Button size="xs" variant="secondary" onClick={() => setNovo(true)}>
-            <Plus size={12} /> Novo adiantamento
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-4 pt-1">
-          <p className="text-helper text-fg-muted">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="max-w-3xl text-helper text-fg-muted">
             {aPagar
-              ? "O que se pagou ao fornecedor antes da conta. Quando a conta chegar, pague-a escolhendo o adiantamento em “Saiu da conta”: a despesa entra na DRE ali, e o banco não se mexe de novo."
-              : "O que o cliente pagou antes da conta. Quando a conta a receber existir, receba-a escolhendo o adiantamento em “Entrou na conta”: a receita entra na DRE ali, e o banco não se mexe de novo."}
+              ? "O que se pagou ao fornecedor antes da conta. Para usar, pague a conta escolhendo o adiantamento em “Saiu da conta”: a despesa entra na DRE ali, e o banco não se mexe de novo."
+              : "O que o cliente pagou antes da conta. Para usar, receba a conta escolhendo o adiantamento em “Entrou na conta”: a receita entra na DRE ali, e o banco não se mexe de novo."}
           </p>
+          <Button size="sm" variant="secondary" onClick={() => setNovo(true)}>
+            <Plus size={14} /> Novo adiantamento
+          </Button>
+        </div>
+
+        <section aria-labelledby="disponivel" className="flex flex-col gap-2">
+          <h2 id="disponivel" className="flex items-baseline gap-2 text-label font-semibold text-fg">
+            {titulo}
+            <span className="font-normal text-fg-muted tabular-nums">{total > 0 ? `${reais(total)} disponível` : "nenhum em aberto"}</span>
+          </h2>
           {saldos.length > 0 && (
-            <ul className="flex flex-col divide-y divide-border-soft rounded-md border border-border">
-              {saldos.map((s) => (
-                <li key={s.contraparteId} className="flex items-center justify-between gap-3 px-3 py-2 text-fs-2">
-                  <span className="min-w-0 truncate text-fg" data-dica={s.contraparteNome}>{s.contraparteNome}</span>
-                  <span className={`tabular-nums font-medium ${s.saldoCentavos < 0 ? "text-danger" : "text-fg"}`}>{reais(s.saldoCentavos)} disponível</span>
-                </li>
-              ))}
+            <ul className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(13rem,1fr))]">
+              {saldos.map((s) => {
+                const info = doFornecedor.get(s.contraparteNome);
+                return (
+                  <li key={s.contraparteId} className="flex flex-col gap-0.5 rounded-lg border border-border bg-surface px-3 py-2 shadow-xs">
+                    <span className="min-w-0 truncate text-fs-2 font-medium text-fg" data-dica={s.contraparteNome}>
+                      {s.contraparteNome}
+                    </span>
+                    <span className={`text-fs-4 font-semibold tabular-nums leading-tight ${s.saldoCentavos < 0 ? "text-danger" : "text-fg"}`}>
+                      {reais(s.saldoCentavos)}
+                    </span>
+                    <span className="text-micro text-fg-muted">
+                      disponível{info ? ` · ${info.n} ${info.n === 1 ? "adiantamento" : "adiantamentos"} · último em ${dataBr(info.ultimo)}` : ""}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
+        </section>
+
           {lancados.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-label font-semibold text-fg">Lançados</p>
-              <ul className="flex flex-col divide-y divide-border-soft rounded-md border border-border">
+            <section aria-labelledby="lancados" className="flex flex-col gap-2">
+              <h2 id="lancados" className="text-label font-semibold text-fg">Lançados</h2>
+              <ul className="flex flex-col divide-y divide-border-soft rounded-md border border-border bg-surface">
                 {lancados.map((a) => (
                   <li key={a.transferId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-fs-2">
                     <span className="min-w-0">
@@ -123,10 +145,9 @@ export function AdiantamentosDaEmpresa({
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           )}
-        </div>
-      </BlocoRecolhivel>
+      </div>
       {novo && <JanelaDoAdiantamento companyId={companyId} aPagar={aPagar} onFechar={() => setNovo(false)} onFeito={() => { setNovo(false); toast.success("Adiantamento registrado."); }} />}
       {dialog}
     </>
