@@ -18,6 +18,7 @@ import {
   diasUteisEntre,
 } from "@/lib/societario/processo";
 import { saoPauloParts } from "@/lib/agenda";
+import { rastroDoDia, seloDaOrigem } from "@/lib/horas/regras";
 import { ResumoDoProcesso } from "@/components/societario/ResumoDoProcesso";
 import { ConversaEmPainel } from "@/components/societario/ConversaEmPainel";
 import { SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
@@ -238,7 +239,7 @@ export default async function ProcessoDetalhePage({
       where: { tenantId: ctx.tenantId, processId: processo.id },
       orderBy: [{ loggedOn: "desc" }, { createdAt: "desc" }],
       take: 50,
-      select: { id: true, minutes: true, note: true, loggedOn: true, userId: true, user: { select: { name: true } } },
+      select: { id: true, minutes: true, note: true, loggedOn: true, userId: true, source: true, editedAt: true, user: { select: { name: true } } },
     }),
     processo.activeTimerUserId
       ? prisma.user.findUnique({ where: { id: processo.activeTimerUserId }, select: { name: true } }).then((u) => u?.name ?? null)
@@ -247,6 +248,31 @@ export default async function ProcessoDetalhePage({
       .aggregate({ where: { tenantId: ctx.tenantId, processId: processo.id }, _sum: { minutes: true } })
       .then((r) => r._sum.minutes ?? 0),
   ]);
+
+  // O rastro do dia de cada lançamento (04/11/2026, lote D): quantas ações a
+  // pessoa registrou neste processo naquele dia — etapas, protocolos,
+  // exigências, mensagens, documentos. Fica ao lado da hora, sem a substituir.
+  const chaveDoRastro = (userId: string, d: Date) => `${userId}|${saoPauloParts(d).dateKey}`;
+  const acoesPorDia = new Map<string, number>();
+  if (horas.length > 0) {
+    const maisAntigo = horas.reduce((m, h) => (h.loggedOn < m ? h.loggedOn : m), horas[0].loggedOn);
+    const acoes = await prisma.auditLog.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        entityType: "Process",
+        entityId: processo.id,
+        userId: { in: [...new Set(horas.map((h) => h.userId))] },
+        createdAt: { gte: new Date(maisAntigo.getTime() - 24 * 60 * 60 * 1000) },
+      },
+      select: { userId: true, createdAt: true },
+      take: 5000,
+    });
+    for (const a of acoes) {
+      if (!a.userId) continue;
+      const k = chaveDoRastro(a.userId, a.createdAt);
+      acoesPorDia.set(k, (acoesPorDia.get(k) ?? 0) + 1);
+    }
+  }
 
   const [{ taxas, custo }, conversa, avisos, destinos] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
@@ -500,6 +526,8 @@ export default async function ProcessoDetalhePage({
               // Corrige o próprio lançamento; apagar é só do administrador (13/10/2026).
               podeEditar: h.userId === ctx.userId,
               podeExcluir: podeExcluir(ctx),
+              origem: seloDaOrigem(h.source, h.editedAt !== null, h.minutes),
+              rastro: rastroDoDia(acoesPorDia.get(chaveDoRastro(h.userId, h.loggedOn)) ?? 0),
             }))}
             cronometro={
               processo.activeTimerUserId && processo.activeTimerStartedAt

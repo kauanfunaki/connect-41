@@ -2490,6 +2490,12 @@ model ChecklistItem {
 /// também aceita processo do Societário (`processId`), para as horas de
 /// operação da Gestão (vindas do 41-gestao). Sempre um dos dois — o código
 /// garante, o banco não.
+/// De onde veio um lançamento de horas (04/11/2026).
+enum TimeEntrySource {
+  CRONOMETRO
+  MANUAL
+}
+
 model TimeEntry {
   id             String   @id @default(uuid())
   tenantId       String
@@ -2500,6 +2506,12 @@ model TimeEntry {
   note           String?  @db.VarChar(280)
   loggedOn       DateTime // data-calendário do trabalho (pode ser retroativo)
   createdAt      DateTime @default(now())
+  /// De onde veio a hora (04/11/2026, lote D dos ajustes de 03/11): o
+  /// cronômetro ou à mão. Nulo nas de antes, quando não se gravava.
+  source         TimeEntrySource?
+  /// Quando foi corrigida depois de lançada. A hora do cronômetro editada
+  /// deixa de ser só do cronômetro, e a tela diz isso.
+  editedAt       DateTime?
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)

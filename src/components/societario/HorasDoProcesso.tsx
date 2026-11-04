@@ -14,6 +14,7 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
 import { ListaDeHoras, type LinhaDeHoras } from "@/components/shared/ListaDeHoras";
 import { duracaoDoLancamento as duracao } from "@/lib/horas/edicao";
+import { MINUTOS_DE_CRONOMETRO_LONGO } from "@/lib/horas/regras";
 
 /**
  * As horas trabalhadas no processo: cronômetro (um por vez) e lançamento
@@ -78,9 +79,17 @@ export function HorasDoProcesso({
           <div className="flex flex-wrap items-center gap-2">
             {cronometro ? (
               cronometro.meu ? (
-                <Button variant="primary" size="sm" disabled={pendente} onClick={() => rodar(() => acoes.parar(processId))}>
-                  Parar {formatarDecorrido(segundos)} · lança {minutosApontados(segundos)} min
-                </Button>
+                <>
+                  <Button variant="primary" size="sm" disabled={pendente} onClick={() => rodar(() => acoes.parar(processId))}>
+                    Parar {formatarDecorrido(segundos)} · lança {minutosApontados(segundos)} min
+                  </Button>
+                  {/* Ligado há mais de 4 h: esqueceu? (04/11/2026, lote D) */}
+                  {segundos > MINUTOS_DE_CRONOMETRO_LONGO * 60 && (
+                    <span className="text-fs-2 font-medium text-warning-fg">
+                      Ligado há mais de 4 h — se esqueceu, pare e corrija o tempo no Editar.
+                    </span>
+                  )}
+                </>
               ) : (
                 <span className="text-fs-2 text-fg-muted">
                   {cronometro.quem} está com o cronômetro ({formatarDecorrido(segundos)})

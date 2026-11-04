@@ -6,7 +6,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+import { saoPauloParts } from "@/lib/agenda";
+import { recusaDoLancamentoAtrasado } from "@/lib/horas/regras";
 import { setoresDoModulo } from "@/lib/modules";
 import { lerDataDoCampo } from "@/lib/societario/datas";
 import { lerLancamentoDeHoras } from "@/lib/horas/edicao";
@@ -20,12 +22,14 @@ export type HorasState = { error: string } | { ok: true } | null;
 async function processoNoAlcance(processId: string) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return null;
-  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return null;
+  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR;
+  if (!canActOnSector(ctx, setores)) return null;
   const p = await getPrisma().process.findFirst({
     where: { id: processId, tenantId: ctx.tenantId },
     select: { id: true, activeTimerUserId: true, activeTimerStartedAt: true },
   });
-  return p ? { ctx, p } : null;
+  // Coordenar o setor libera o lançamento atrasado (04/11/2026).
+  return p ? { ctx, p, coordena: canManageSector(ctx, setores) } : null;
 }
 
 export async function iniciarCronometroDoProcesso(processId: string): Promise<HorasState> {
@@ -54,7 +58,7 @@ export async function pararCronometroDoProcesso(processId: string): Promise<Hora
   await prisma.$transaction([
     prisma.process.update({ where: { id: processId }, data: { activeTimerUserId: null, activeTimerStartedAt: null } }),
     prisma.timeEntry.create({
-      data: { tenantId: ctx.tenantId, processId, userId: ctx.userId, minutes, note: "cronômetro", loggedOn: new Date() },
+      data: { tenantId: ctx.tenantId, processId, userId: ctx.userId, minutes, note: "cronômetro", loggedOn: new Date(), source: "CRONOMETRO" },
     }),
   ]);
   revalidatePath(`/processos/${processId}`);
@@ -71,8 +75,11 @@ export async function lancarHorasNoProcesso(processId: string, _prev: HorasState
   const dia = lerDataDoCampo(form.get("dia"));
   if (!dia.ok) return { error: "Data inválida." };
   const note = String(form.get("nota") ?? "").trim().slice(0, 280) || null;
+  const hoje = saoPauloParts(new Date()).dateKey;
+  const recusa = dia.data ? recusaDoLancamentoAtrasado(dia.data.toISOString().slice(0, 10), hoje, r.coordena) : null;
+  if (recusa) return { error: recusa };
   await getPrisma().timeEntry.create({
-    data: { tenantId: r.ctx.tenantId, processId, userId: r.ctx.userId, minutes, note, loggedOn: dia.data ?? new Date() },
+    data: { tenantId: r.ctx.tenantId, processId, userId: r.ctx.userId, minutes, note, loggedOn: dia.data ?? new Date(), source: "MANUAL" },
   });
   revalidatePath(`/processos/${processId}`);
   return { ok: true };
@@ -87,9 +94,14 @@ export async function editarHorasDoProcesso(processId: string, entryId: string, 
   if (!r) return { error: "Processo não encontrado." };
   const lido = lerLancamentoDeHoras(form);
   if (!lido.ok) return { error: lido.error };
+  if (lido.dia) {
+    const recusa = recusaDoLancamentoAtrasado(lido.dia.toISOString().slice(0, 10), saoPauloParts(new Date()).dateKey, r.coordena);
+    if (recusa) return { error: recusa };
+  }
   const u = await getPrisma().timeEntry.updateMany({
     where: { id: entryId, processId, tenantId: r.ctx.tenantId, userId: r.ctx.userId },
-    data: { minutes: lido.minutos, note: lido.nota, ...(lido.dia ? { loggedOn: lido.dia } : {}) },
+    // `editedAt`: a hora corrigida deixa de ser só do cronômetro (04/11/2026).
+    data: { minutes: lido.minutos, note: lido.nota, editedAt: new Date(), ...(lido.dia ? { loggedOn: lido.dia } : {}) },
   });
   if (u.count === 0) return { error: "Lançamento não encontrado." };
   revalidatePath(`/processos/${processId}`);

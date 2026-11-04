@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+import { recusaDoLancamentoAtrasado } from "@/lib/horas/regras";
+import { saoPauloParts } from "@/lib/agenda";
 // Criar tarefa e atividade e mexer nas colunas: também o colaborador, a não ser
 // que o coordenador tenha bloqueado o setor (28/10/2026).
 import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
@@ -930,7 +932,7 @@ export async function pararCronometro(pipelineId: string, itemId: string): Promi
     const minutes = minutosApontados(segundosDesde(item.activeTimerStartedAt.toISOString()));
     await prisma.$transaction([
       prisma.pipelineItem.update({ where: { id: itemId }, data: { activeTimerUserId: null, activeTimerStartedAt: null } }),
-      prisma.timeEntry.create({ data: { tenantId, pipelineItemId: itemId, userId, minutes, loggedOn: new Date() } }),
+      prisma.timeEntry.create({ data: { tenantId, pipelineItemId: itemId, userId, minutes, loggedOn: new Date(), source: "CRONOMETRO" } }),
     ]);
     await prisma.activity.create({
       data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.TIME_LOGGED, content: `${minutes} min apontados (cronômetro)` },
@@ -1383,10 +1385,16 @@ export async function criarLancamentoTempo(pipelineItemId: string, _prev: Pipeli
     return { error: "Sem permissão para editar este item." };
   }
   const { prisma, pipeline } = loaded;
+  // Lançamento atrasado só pela coordenação (04/11/2026, lote D).
+  // O dia como veio do campo: `new Date("AAAA-MM-DD")` é meia-noite UTC, a véspera em São Paulo.
+  const hojeKey = saoPauloParts(new Date()).dateKey;
+  const diaDoCampo = /^\d{4}-\d{2}-\d{2}/.test(loggedOnRaw ?? "") ? loggedOnRaw!.slice(0, 10) : hojeKey;
+  const recusa = recusaDoLancamentoAtrasado(diaDoCampo, hojeKey, canManageSector(ctx, pipeline.sectorCode));
+  if (recusa) return { error: recusa };
 
   try {
     await prisma.timeEntry.create({
-      data: { tenantId, pipelineItemId, userId, minutes, note: noteRaw || null, loggedOn },
+      data: { tenantId, pipelineItemId, userId, minutes, note: noteRaw || null, loggedOn, source: "MANUAL" },
     });
     await prisma.activity.create({
       data: {
@@ -1435,11 +1443,15 @@ export async function editarLancamentoTempo(
   if (entry.userId !== userId && !canManageSector(ctx, pipeline.sectorCode)) {
     return { error: "Só quem apontou ou o gestor do setor corrige este apontamento." };
   }
+  if (lido.dia) {
+    const recusa = recusaDoLancamentoAtrasado(lido.dia.toISOString().slice(0, 10), saoPauloParts(new Date()).dateKey, canManageSector(ctx, pipeline.sectorCode));
+    if (recusa) return { error: recusa };
+  }
 
   try {
     await prisma.timeEntry.update({
       where: { id: entryId },
-      data: { minutes: lido.minutos, note: lido.nota, ...(lido.dia ? { loggedOn: lido.dia } : {}) },
+      data: { minutes: lido.minutos, note: lido.nota, editedAt: new Date(), ...(lido.dia ? { loggedOn: lido.dia } : {}) },
     });
     if (entry.minutes !== lido.minutos) {
       await prisma.activity.create({
