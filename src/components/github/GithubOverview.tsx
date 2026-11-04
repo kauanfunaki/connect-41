@@ -8,6 +8,8 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao } from "@/components/shared/ListaResponsiva";
 import { avatarDoGithub, iniciaisDoLogin } from "@/lib/github/avatar";
 import { dateLabel } from "@/lib/github/calendar";
+import { corDaPessoa, type ModoDeCor } from "@/lib/github/cores";
+import { ContributionCalendar } from "./ContributionCalendar";
 import { TYPE_LABELS, type DashboardView, type GithubSummary } from "@/lib/github/types";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import styles from "./GithubContributions.module.css";
@@ -26,7 +28,7 @@ export function DeveloperName({ login, name }: { login: string; name: string | n
   return <><span>{login}</span>{name && <span className={styles.developerName}> — {name}</span>}</>;
 }
 
-export function GithubOverview({ data, query }: { data: DashboardView; query: string }) {
+export function GithubOverview({ data, query, modo, onDay }: { data: DashboardView; query: string; modo: ModoDeCor; onDay: (id: string, day: string) => void }) {
   const summary = data.summary;
   const developers = new URLSearchParams(query); developers.delete("page"); developers.delete("view");
   const developersHref = `/github/desenvolvedores?${developers}`;
@@ -37,6 +39,13 @@ export function GithubOverview({ data, query }: { data: DashboardView; query: st
       { rotulo: "Revisões", valor: number(summary?.counts.REVIEW ?? 0), icone: <MessageSquare /> },
       { rotulo: "Desenvolvedores ativos", valor: number(summary?.activeDevelopers ?? 0), icone: <Users /> },
     ]} />
+    {/* Calendário do time (04/11/2026): cada dia com a cor de quem contribuiu nele;
+        com mais de uma pessoa (ou time), as cores se misturam. */}
+    <section className={`${styles.panel} mb-5`} aria-labelledby="github-team-calendar">
+      <div className={styles.panelHeading}><div><h2 id="github-team-calendar">Calendário do time</h2>
+        <p>{modo === "time" ? "A cor de cada dia é a do time que contribuiu; dias com mais de um time misturam as cores." : "A cor de cada dia é a de quem contribuiu; dias com mais de uma pessoa misturam as cores."}</p></div></div>
+      <div className="px-[22px] py-4"><ContributionCalendar label="todo o time" id="team" from={data.from} to={data.to} days={summary?.calendar ?? []} onDay={onDay} paleta={data.paleta} modo={modo} /></div>
+    </section>
     <div className={styles.overviewGrid}>
       <section className={styles.panel} aria-labelledby="github-cadence">
         <div className={styles.panelHeading}><div><h2 id="github-cadence">Cadência de entregas</h2><p>Commits e pull requests no período</p></div>
@@ -47,7 +56,8 @@ export function GithubOverview({ data, query }: { data: DashboardView; query: st
       <section className={styles.panel} aria-labelledby="github-team">
         <div className={styles.panelHeading}><div><h2 id="github-team">Atividade do time</h2><p>Contribuições no período</p></div><Link href={developersHref}>Ver todos</Link></div>
         <div className={styles.leaders}>{summary?.leaders.length ? summary.leaders.map((person, index) => <div key={person.id} className={styles.person}>
-          <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><DeveloperAvatar login={person.login} />
+          <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><span className="relative"><DeveloperAvatar login={person.login} />
+            <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface" style={{ background: corDaPessoa(person.id, data.paleta, modo) }} /></span>
           <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}><DeveloperName login={person.login} name={person.name} /></Link>
           <span className={styles.personCount}><strong>{number(person.total)}</strong><small>contribuições</small></span>
         </div>) : <EmptyState icon={<Users />} title="Nenhuma atividade no período" />}</div>

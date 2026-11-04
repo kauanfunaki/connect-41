@@ -5,6 +5,7 @@ import { GithubError, filtersSchema } from "./rules";
 import { integrationView, changeIntegration } from "./service";
 import { dashboard, dayEvents } from "./queries";
 import { getConnection } from "./store";
+import { mudarTimes, timesView } from "./times";
 import { processConnection, scheduleSync } from "./sync";
 
 export async function githubResponse(fn: () => Promise<unknown>) {
@@ -32,6 +33,9 @@ export async function readJson(request: Request) {
 }
 export async function getIntegration() { const ctx = await githubAccess("configurar"); return integrationView(ctx.tenantId); }
 export async function postIntegration(request: Request) { requireOrigin(request); const ctx = await githubAccess("configurar"); return changeIntegration(ctx, await readJson(request)); }
+// Aba Times (04/11/2026): do coordenador do Tech, quem gerencia o módulo.
+export async function getTimes() { const ctx = await githubAccess("gerir"); return timesView(ctx.tenantId); }
+export async function postTimes(request: Request) { requireOrigin(request); const ctx = await githubAccess("gerir"); return mudarTimes(ctx, await readJson(request)); }
 export async function getDashboard(request: Request) {
   const ctx = await githubAccess();
   return dashboard(ctx.tenantId, filtersSchema.parse(Object.fromEntries(new URL(request.url).searchParams)));
@@ -40,7 +44,7 @@ export async function getDayEvents(request: Request) {
   const ctx = await githubAccess(), params = Object.fromEntries(new URL(request.url).searchParams), filters = filtersSchema.parse(params);
   const userId = params.userId ? z.string().uuid().parse(params.userId) : null, date = filtersSchema.parse({ from: params.day, to: params.day }).from;
   if (!date) throw new GithubError("Informe o dia.");
-  return dayEvents(ctx.tenantId, filters, userId, date, filters.page);
+  return dayEvents(ctx.tenantId, filters, userId, date, filters.page, params.team === "1");
 }
 export async function postSync(request: Request) {
   requireOrigin(request); const ctx = await githubAccess("gerir");

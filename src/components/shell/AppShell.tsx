@@ -28,6 +28,7 @@ import {
   X,
   Building2,
   Users,
+  UsersRound,
   Truck,
   GitBranch,
   Crosshair,
@@ -144,6 +145,8 @@ type Props = {
   // continua ali.
   activeSector: Sector | null;
   activeSectorModules: SectorModule[];
+  /** Mostra "Times" no menu do GitHub: só para quem gerencia o módulo (04/11/2026). */
+  podeGerirGithub?: boolean;
   /** Tudo que a pessoa pode abrir, de qualquer setor — alimenta o Ctrl+K. */
   telasNavegaveis: TelaNavegavel[];
   /** As telas que ela fixou, na ordem dela, já filtradas pelo que pode abrir. */
@@ -206,6 +209,7 @@ export function AppShell({
   sectors,
   activeSector,
   activeSectorModules,
+  podeGerirGithub = false,
   telasNavegaveis,
   telasFixadas,
   appDomain,
@@ -566,6 +570,7 @@ export function AppShell({
                     { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
                     { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
                     { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
+                    ...(podeGerirGithub ? [{ label: "Times", href: "/github/times", icon: <UsersRound size={16} />, ativa: pathname.startsWith("/github/times") }] : []),
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
                   </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[

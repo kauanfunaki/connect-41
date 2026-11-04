@@ -1,6 +1,6 @@
 # GitHub — Contribuições
 
-O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`), **Desenvolvedores** (`/github/desenvolvedores`) e **Repositórios** (`/github/repositorios`).
+O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`), **Desenvolvedores** (`/github/desenvolvedores`), **Repositórios** (`/github/repositorios`) e, para quem gerencia o módulo, **Times** (`/github/times`).
 
 O módulo `tech_github_contributions` é exclusivo do **Tech**, nasce desligado e respeita o plano contratado. Não pode ser transferido para outro setor. Administradores mantêm o acesso amplo previsto nos papéis do Connect.
 
@@ -29,6 +29,14 @@ O vínculo fica em `github_account_links` (uma conta GitHub por pessoa e por esc
 
 No painel o nome aparece ao lado do login: `login — Nome no Connect`.
 
+## Times e cores (04/11/2026)
+
+A aba **Times** aparece só para quem gerencia o módulo: o coordenador do Tech (Gestor de setor com o Tech) e os administradores. Lá ele cria os times (nome e cor), põe cada pessoa em **um** time e escolhe a cor de cada pessoa. Tudo salva na hora. Quem não tem cor escolhida fica com uma cor automática, sempre a mesma para a mesma pessoa. Excluir um time deixa as pessoas dele sem time. **Falta alguém?** acompanha um login do GitHub mesmo sem atividade (era **Acompanhar usuário** em Integrações), e quem está sem time e é acompanhado tem **Deixar de acompanhar**.
+
+Os dias do calendário ganham a cor de quem contribuiu. **Cor por: Por pessoa | Por time**, na barra de filtros, escolhe entre a cor de cada pessoa e a do time dela (`cor=time` na URL; quem está sem time fica cinza). Num dia com mais de uma pessoa ou time, as cores se **misturam** pelo peso das contribuições de cada um, em OKLab, para a mistura não virar cinza-barro. A intensidade continua dizendo quantas contribuições houve (a mesma escala de antes). Passar o mouse sobre o dia, ou ouvi-lo no leitor de tela, mostra quem contribuiu e quanto. A aba **Geral** tem o **Calendário do time**, com todas as pessoas do filtro, e clicar num dia dele abre as atividades de todo o time.
+
+Cor e time ficam em `github_teams` e `github_people`, pelo ID estável do GitHub. Por isso continuam valendo depois de trocar a conta do escritório. Migration: `prisma/migrations/20261104120000_github_times_e_cores/migration.sql`, aditiva. Sem ela aplicada, o painel segue com as cores automáticas e a aba Times avisa que o módulo está indisponível. Auditoria: `github.team_create`, `github.team_update` e `github.team_delete`.
+
 ## Uso do painel
 
 - **Geral** reúne commits, PRs abertos, revisões e desenvolvedores ativos, gráfico de cadência, atividade do time e oito eventos mais recentes. As contagens abrangem todos os desenvolvedores dos filtros, sem o limite de vinte pessoas da lista. O gráfico agrupa períodos longos em até trinta janelas, somando as contribuições; o detalhe de cada ponto informa a janela. A atividade do time soma os quatro tipos, sem nota de produtividade.
@@ -42,9 +50,9 @@ No painel o nome aparece ao lado do login: `login — Nome no Connect`.
 - Selecionar um dia com contribuições para abrir as atividades (SHA ou número, título, repositório e horário) e seus links no GitHub. Os eventos são consultados só ao abrir o dia, em páginas de 50. Dias sem contribuição aparecem como uma caixa com um traço e não são botões.
 - Usar as setas do teclado no calendário, que andam entre os dias com contribuições: cima/baixo vão ao dia anterior/seguinte com atividade; esquerda/direita, a um dia com atividade uma semana ou mais antes/depois; Home/End, ao primeiro/último dia com atividade.
 - Bots ficam ocultos no painel.
-- Para acompanhar uma pessoa sem atividade no período, informar seu login em **Integrações → GitHub → Acompanhar usuário**.
+- Para acompanhar uma pessoa sem atividade no período, informar seu login em **Times → Falta alguém?**.
 
-O padrão do calendário é `America/Sao_Paulo`. O fuso pode ser ajustado antes da primeira coleta; depois disso fica fixo para preservar os agrupamentos. A escala de cores é a mesma para todos: zero, 1–2, 3–5, 6–9 e 10 ou mais contribuições no dia.
+O padrão do calendário é `America/Sao_Paulo`. O fuso pode ser ajustado antes da primeira coleta; depois disso fica fixo para preservar os agrupamentos. A escala de intensidade é a mesma para todos: zero, 1–2, 3–5, 6–9 e 10 ou mais contribuições no dia; a cor é a de quem contribuiu (ver Times e cores).
 
 O painel lê o acervo já gravado no banco, sem consultar o GitHub ao abrir. Um dia vazio significa que nada foi coletado para ele; enquanto a primeira coleta de um repositório não termina, o painel pode mostrar menos atividade. O andamento e as falhas da coleta ficam em **Integrações → GitHub**.
 
@@ -86,6 +94,7 @@ Há uma lease no banco por identidade GitHub, compartilhada entre conexões, e v
 - Consulta: acesso ao Tech e ao módulo habilitado, conforme os papéis existentes.
 - Atualização manual pela rota `/api/github/sync`: gestão do módulo. O painel não tem mais o botão **Atualizar dados**. Assinatura em somente leitura impede novas sincronizações, preservando a consulta autorizada.
 - Conectar, trocar conta, selecionar repositórios, configurar, forçar a atualização completa, pausar e desconectar: administração do escritório e gestão do módulo.
+- Times e cores (aba **Times**, `/api/github/times`): gestão do módulo, o que inclui o coordenador do Tech.
 - Integração, histórico e consultas são separados por escritório. Todas as rotas repetem a autorização no servidor.
 
 O executor começa a revalidar conta e repositórios após quatro minutos, em lotes de até vinte repositórios e com orçamento de tempo. As leituras do painel e dos eventos usam apenas o banco, sem chamadas à API GitHub ou disputa da lease. Desde 26/10/2026 elas mostram o acervo gravado dos repositórios selecionados, de conexão ativa e do mesmo escritório, sem exigir confirmação de acesso dos últimos cinco minutos (essa janela escondia os dados até o executor passar). Após revogação detectada pelo executor, a conexão passa a pedir reconexão e a visualização é bloqueada. Um repositório marcado sem acesso sai dos totais, preservando os dados para recuperação. Pausar a coleta mantém a conferência periódica de acesso.
