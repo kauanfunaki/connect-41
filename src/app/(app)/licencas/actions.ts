@@ -6,6 +6,14 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerFormularioDeLicenca } from "@/lib/societario/licenca-form";
+import {
+  chaveDaLicenca,
+  conferirLinhas,
+  lerPlanilhaDeLicencas,
+  PlanilhaInvalida,
+  TAMANHO_MAXIMO_DA_PLANILHA,
+  type LinhaConferida,
+} from "@/lib/societario/importacaoDeLicencas";
 import { pedirImpressaoDoAlvara } from "@/lib/robo/servidor";
 import { gerarEstruturado } from "@/lib/ai";
 import { saoPauloParts } from "@/lib/agenda";
@@ -271,4 +279,68 @@ export async function revogarLicenca(id: string): Promise<LicencaState> {
 /** Desfaz a revogação — quando foi marcada por engano. */
 export async function reativarLicenca(id: string): Promise<LicencaState> {
   return mudarRevogacao(id, false);
+}
+
+export type ResultadoDaImportacao =
+  | { error: string }
+  | { ok: true; linhas: Omit<LinhaConferida, "dados">[]; criadas: number | null };
+
+/**
+ * Importar licenças de uma planilha (lote B dos ajustes de 03/11/2026). Em
+ * duas voltas com o mesmo arquivo: sem `confirmar`, só confere e devolve linha
+ * a linha o que entra, o que já existe e o que tem erro; com `confirmar=1`,
+ * confere de novo (o banco pode ter mudado) e grava as novas.
+ */
+export async function importarLicencas(form: FormData): Promise<ResultadoDaImportacao> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+
+  const arquivo = form.get("planilha");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha a planilha." };
+  if (arquivo.size > TAMANHO_MAXIMO_DA_PLANILHA) return { error: "A planilha passa de 5 MB." };
+
+  let lidas;
+  try {
+    lidas = await lerPlanilhaDeLicencas(new Uint8Array(await arquivo.arrayBuffer()));
+  } catch (err) {
+    if (err instanceof PlanilhaInvalida) return { error: err.message };
+    console.error("[importarLicencas] leitura", err);
+    return { error: "Não deu para ler a planilha." };
+  }
+  if (lidas.length === 0) return { error: "A planilha não tem nenhuma licença preenchida." };
+
+  const prisma = getPrisma();
+  const [empresas, orgaos, atuais] = await Promise.all([
+    prisma.company.findMany({ where: { tenantId }, select: { id: true, name: true, displayName: true, cnpj: true } }),
+    prisma.processOrgan.findMany({ where: { tenantId, active: true }, select: { id: true, name: true } }),
+    prisma.license.findMany({ where: { tenantId }, select: { companyId: true, kind: true, number: true, expiresAt: true } }),
+  ]);
+  const conferidas = conferirLinhas(lidas, {
+    empresas: empresas.map((e) => ({ id: e.id, nome: nomeExibicao(e), documento: e.cnpj ?? "" })),
+    orgaos: orgaos.map((o) => ({ id: o.id, nome: o.name })),
+    existentes: new Set(atuais.map((l) => chaveDaLicenca(l.companyId, l.kind, l.number, l.expiresAt))),
+  });
+  // O que volta à tela não leva os dados prontos para gravar: a gravação confere de novo.
+  const semDados = conferidas.map((l) => ({ linha: l.linha, documento: l.documento, empresa: l.empresa, tipo: l.tipo, validade: l.validade, situacao: l.situacao, motivo: l.motivo, aviso: l.aviso }));
+
+  if (form.get("confirmar") !== "1") return { ok: true, linhas: semDados, criadas: null };
+
+  const novas = conferidas.filter((l) => l.situacao === "nova" && l.dados).map((l) => ({ tenantId, ...l.dados! }));
+  if (novas.length === 0) return { error: "Nenhuma licença nova para importar." };
+  try {
+    await prisma.license.createMany({ data: novas });
+  } catch (err) {
+    console.error("[importarLicencas] gravação", err);
+    return { error: "Erro ao gravar as licenças. Nada foi importado." };
+  }
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "license.import",
+    entityType: "License",
+    metadata: { arquivo: arquivo.name.slice(0, 120), criadas: novas.length, linhas: conferidas.length },
+  });
+  revalidatePath("/licencas");
+  return { ok: true, linhas: semDados, criadas: novas.length };
 }

@@ -322,6 +322,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "license.update": e("editou uma licença"),
   "license.revoke": e("revogou uma licença"),
   "license.reactivate": e("reativou uma licença"),
+  "license.import": c("importou licenças de uma planilha"),
   "license.import_radar": c("trouxe as licenças do Radar Societário"),
 
   // ── Gestão e Comercial ─────────────────────────────────────────────────────
