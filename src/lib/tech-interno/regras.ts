@@ -11,6 +11,13 @@ export const TIPOS = { BUG: "Bug", IMPROVEMENT: "Melhoria", FEATURE: "Nova funci
 export const SITUACOES = { PENDING: "Pendente", IN_PROGRESS: "Em andamento", VALIDATION: "Em validação", DONE: "Concluído", CANCELED: "Cancelado" } as const;
 export const PRIORIDADES = ["Baixa", "Média", "Alta", "Urgente"] as const;
 export const EM_ABERTO = ["PENDING", "IN_PROGRESS", "VALIDATION"] as const;
+/**
+ * O tamanho combinado antes de começar e o peso dele nas entregas (04/11/2026,
+ * lote D dos ajustes de 03/11). Quem coordena a Tech define; trava quando o
+ * item sai de Pendente.
+ */
+export const TAMANHOS = { P: "Pequeno", M: "Médio", G: "Grande" } as const;
+export const PESO_DO_TAMANHO: Record<keyof typeof TAMANHOS, number> = { P: 1, M: 3, G: 8 };
 export const CONFLITO = "Este registro foi alterado por outra pessoa. Atualize a página e confira antes de salvar.";
 
 const opcional = (max: number) => z.string({ error: "Texto inválido." }).trim().max(max, `O campo deve ter até ${max} caracteres.`).nullish().transform(v => v || null);
@@ -26,6 +33,8 @@ export const itemSchema = z.object({
   systemKey: idOpcional,
   assigneeId: idOpcional,
   dueDate: z.union([dia, z.literal(""), z.null()], { error: "Informe uma data válida." }).optional().transform(v => v || null),
+  size: z.union([z.enum(["P", "M", "G"]), z.literal(""), z.null()], { error: "Tamanho inválido." }).optional().transform(v => v || null),
+  originItemId: idOpcional,
 }).superRefine((v, ctx) => {
   if (v.systemMode === "EXISTING" && !vinculoDoSistema(v.systemKey)) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Escolha um sistema do Ops Center." });
   if (v.systemMode !== "EXISTING" && v.systemKey) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Esta opção não permite um sistema cadastrado." });
