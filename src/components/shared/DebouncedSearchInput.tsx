@@ -32,7 +32,9 @@ export function DebouncedSearchInput({ paramName = "search", placeholder, classN
       const params = new URLSearchParams(searchParams.toString());
       if (value.trim()) params.set(paramName, value.trim());
       else params.delete(paramName);
+      // Nova busca volta à primeira página — as telas usam "page" ou "pagina".
       params.delete("page");
+      params.delete("pagina");
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, 350);
     return () => {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pagination } from "@/components/shared/Pagination";
 import { notFound } from "next/navigation";
 import { AlertTriangle, CheckCircle2, FileText, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -36,12 +37,16 @@ const RECORTES: { chave: string; rotulo: string; filtro: (l: LinhaDoQuadro) => b
  * trabalhista, estadual do PR e municipal de Curitiba —, consultadas a cada
  * trimestre pela InfoSimples, e "Emitir agora" para o pedido fora da rotina.
  */
-export default async function CertidoesPage({ searchParams }: { searchParams: Promise<{ recorte?: string }> }) {
+/** Empresas por página (lote B de 03/11/2026: a carteira inteira, cinco certidões por linha, pesava ao abrir). */
+const POR_PAGINA = 50;
+
+export default async function CertidoesPage({ searchParams }: { searchParams: Promise<{ recorte?: string; pagina?: string }> }) {
   const ctx = await getAuthContext();
   const acesso = await acessoAsCertidoes(ctx);
   if (!acesso) notFound();
 
-  const { recorte } = await searchParams;
+  const { recorte, pagina: paginaDaUrl } = await searchParams;
+  const pagina = Math.max(1, Math.min(1000, Number.parseInt(paginaDaUrl ?? "1", 10) || 1));
   const atual = RECORTES.find((r) => r.chave === recorte) ?? RECORTES[0];
   const [{ linhas, consultasNoMes, gastoNoMesCentavos }, conexao] = await Promise.all([
     quadroDasCertidoes(acesso.tenantId, await scopedCompanyWhere(ctx)),
@@ -52,6 +57,17 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
   const regulares = celulas.filter((c) => c && ehRegular(c.situacao)).length;
   const faltando = celulas.filter(semCertidao).length;
   const filtradas = linhas.filter(atual.filtro);
+  // Os totais são da carteira inteira; só a tabela vem por página.
+  const totalDePaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  const paginaVista = Math.min(pagina, totalDePaginas);
+  const daPagina = filtradas.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    if (atual.chave !== "todas") q.set("recorte", atual.chave);
+    if (p > 1) q.set("pagina", String(p));
+    const t = q.toString();
+    return t ? `/certidoes?${t}` : "/certidoes";
+  };
 
   return (
     <PageContainer>
@@ -119,7 +135,7 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
               </tr>
             </thead>
             <tbody>
-              {filtradas.map((l) => (
+              {daPagina.map((l) => (
                 <tr key={l.companyId} className="border-b border-border-soft align-top">
                   <td className="py-2 pr-3">
                     <Link href={`/empresas/${l.companyId}`} className="hover:text-brand">
@@ -141,6 +157,7 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
           </table>
         </div>
       )}
+      <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={filtradas.length} rotulo="empresas" />
 
       <NotaDeFonte>
         Federal, FGTS e trabalhista valem para a raiz do CNPJ e saem pela matriz; a estadual do PR, uma por raiz entre os estabelecimentos do
