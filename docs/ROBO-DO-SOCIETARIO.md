@@ -56,6 +56,8 @@ Para deixar rodando, use `--watch` num serviço do Windows (NSSM ou o Agendador 
 - `--status`: a última volta, a última tarefa e o último erro;
 - `--stop`: para o robô na próxima volta.
 
+O robô grava o que faz em `.local/robo-societario.log`, além da janela do cmd: o detalhe de uma falha fica no arquivo depois que a janela fecha. Passou de 2 MB, o arquivo vira `.log.1` e começa outro; o `--status` mostra o caminho.
+
 Quando uma tela sai do esperado, o robô guarda uma captura em `.local/capturas-do-robo/<id da tarefa>.png`. É o material para ajustar o robô.
 
 ## 4. Testar como um site pede o certificado
