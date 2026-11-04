@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext } from "@/lib/auth/context";
+import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { canManageSector } from "@/lib/auth/papeis";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
@@ -45,6 +45,38 @@ export async function definirCobrancaDoProtocolo(valor: unknown): Promise<{ ok: 
       metadata: { antes, depois: dias },
     });
   }
+  revalidatePath("/societario/exigencias");
+  return { ok: true };
+}
+
+/**
+ * "Registrar cobrança" na aba Protocolos parados (04/11/2026): quem ligou ou
+ * escreveu para o órgão anota que cobrou. Fica na auditoria, que é de onde a
+ * lista lê a "Última cobrança" — sem coluna nova no banco. Só quem age no
+ * setor, e só protocolo do tenant que ainda espera o órgão.
+ */
+export async function registrarCobrancaDoOrgao(protocoloId: unknown): Promise<{ ok: true } | { erro: string }> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, MODULO))) return { erro: "Sem acesso." };
+  if (ctx.subscriptionReadOnly || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULO)) ?? "societario")) {
+    return { erro: "Só quem atua no Societário registra a cobrança." };
+  }
+  if (typeof protocoloId !== "string" || protocoloId.length === 0 || protocoloId.length > 64) return { erro: "Protocolo inválido." };
+
+  const protocolo = await getPrisma().processProtocol.findFirst({
+    where: { id: protocoloId, tenantId: ctx.tenantId, outcome: "PENDENTE" },
+    select: { id: true, processId: true, organ: { select: { name: true } } },
+  });
+  if (!protocolo) return { erro: "Este protocolo não está mais esperando o órgão." };
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "societario.protocolo.cobrado", // = ACAO_DA_COBRANCA (o teste da auditoria lê o literal)
+    entityType: "ProcessProtocol",
+    entityId: protocolo.id,
+    metadata: { processoId: protocolo.processId, orgao: protocolo.organ.name },
+  });
   revalidatePath("/societario/exigencias");
   return { ok: true };
 }
