@@ -56,8 +56,8 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
 
   const cabecalho = (
     <PageHeader
-      title="Exportar para a Domínio"
-      subtitle="As baixas do mês — o que foi pago e recebido, contra o banco — na planilha que o Contábil importa na Domínio."
+      title="Exportar as baixas"
+      subtitle="As baixas do mês — o que foi pago e recebido, contra o banco — numa planilha para o sistema contábil (no layout de importação da Domínio)."
       action={
         <Button href={`/lancamentos${companyId ? `?empresa=${companyId}&mes=${mes}` : ""}`} variant="ghost" size="sm">
           <ArrowLeft size={14} /> Lançamentos

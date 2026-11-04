@@ -487,8 +487,8 @@ export async function PainelDeCertificados({ ctx, setor }: Base) {
         legendaDoTotal="em uso"
         vazio="Nenhum certificado importado ainda."
         segmentos={[
-          { chave: "vencido", rotulo: "Vencidos", valor: c.vencido, tom: "critico", href: "/certificados" },
-          { chave: "a_renovar", rotulo: "A renovar (60 dias)", valor: c.a_renovar, tom: "atencao", href: "/certificados" },
+          { chave: "vencido", rotulo: "Vencidos", valor: c.vencido, tom: "critico", href: "/certificados?aba=renovar" },
+          { chave: "a_renovar", rotulo: "A renovar (60 dias)", valor: c.a_renovar, tom: "atencao", href: "/certificados?aba=renovar" },
           { chave: "vigente", rotulo: "Vigentes", valor: c.vigente, tom: "ok", href: "/certificados?aba=todos" },
         ]}
       />
