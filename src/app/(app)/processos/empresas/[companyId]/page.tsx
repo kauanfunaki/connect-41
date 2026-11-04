@@ -26,6 +26,8 @@ import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/priorida
 import { PrazoCelula, SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { saoPauloParts } from "@/lib/agenda";
+import { FaixaDeRenovacoes } from "@/components/societario/FaixaDeRenovacoes";
+import { renovacoesDaEmpresa } from "@/lib/societario/renovacoesServidor";
 import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 
 const MODULE = "societario_processos";
@@ -103,6 +105,7 @@ export default async function VisaoSocietariaDoClientePage({
   const visao = await visaoDoCliente(ctx.tenantId, companyId, agora, feriados);
   if (!visao) notFound();
   const licencas = await listarLicencas(ctx.tenantId, agora, companyId);
+  const renovacoes = await renovacoesDaEmpresa(ctx, companyId, licencas, agora);
 
   const situacoes = licencas.map((l) => situacaoDaLicenca(l, agora));
   const vencendo = situacoes.filter((s) => s === "vencida" || s === "a_renovar").length;
@@ -129,6 +132,10 @@ export default async function VisaoSocietariaDoClientePage({
           </Button>
         }
       />
+
+      {/* As renovações no topo (04/11/2026, escolha A): licenças, certidões e
+          o certificado da empresa, do que vence primeiro ao último. */}
+      <FaixaDeRenovacoes itens={renovacoes} />
 
       {/* Os totais no cartão das filas irmãs (Processos, Licenças) — era o
           MetricCard sem ícone, um dos três desenhos de total do módulo
