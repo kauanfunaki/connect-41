@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { certidoesDaCarteira, dataDaInfoSimples, grupoDaEmpresa, lerCertidao, mesDoTrimestre, nomeDoComprovante, trimestreDe } from "./regras";
+import { certidoesDaCarteira, consultaCobrada, dataDaInfoSimples, gastoDoMesEmCentavos, grupoDaEmpresa, lerCertidao, mesDoTrimestre, nomeDoComprovante, PRECO_EM_CENTAVOS, trimestreDe } from "./regras";
 
 // As regras puras das certidões (28/10/2026): quem precisa de quê, o trimestre
 // e a leitura de cada consulta, com os campos das páginas da InfoSimples.
@@ -96,5 +96,24 @@ describe("a leitura de cada consulta", () => {
   it("datas e o nome do arquivo", () => {
     expect([dataDaInfoSimples("01/02/2027"), dataDaInfoSimples("2027-02-01T10:00:00"), dataDaInfoSimples("ontem"), dataDaInfoSimples(null)]).toEqual(["2027-02-01", "2027-02-01", null, null]);
     expect(nomeDoComprovante("FEDERAL", "Empresa: Fictícia/Ltda", "2026-10-28", "pdf")).toBe("CND Federal - Empresa Fictícia Ltda - 2026-10-28.pdf");
+  });
+});
+
+describe("o custo das consultas (04/11/2026)", () => {
+  it("cobra a que saiu e a recusa do órgão; não cobra tempo esgotado nem site fora do ar", () => {
+    expect(consultaCobrada({ situacao: "NEGATIVA", mensagem: null })).toBe(true);
+    expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "A consulta não foi realizada dentro do tempo (código 605)" })).toBe(false);
+    expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "Site indisponível (código 615)" })).toBe(false);
+    expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "Nada consta (código 612)" })).toBe(true);
+    expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "A InfoSimples respondeu sem a certidão." })).toBe(true);
+  });
+
+  it("o gasto do mês soma o preço de cada certidão cobrada", () => {
+    const gasto = gastoDoMesEmCentavos([
+      { tipo: "FEDERAL", situacao: "NEGATIVA", mensagem: null },
+      { tipo: "ESTADUAL_PR", situacao: "NAO_SAIU", mensagem: "Tempo esgotado (código 605)" },
+      { tipo: "CURITIBA", situacao: "POSITIVA", mensagem: null },
+    ]);
+    expect(gasto).toBe(PRECO_EM_CENTAVOS.FEDERAL + PRECO_EM_CENTAVOS.CURITIBA);
   });
 });

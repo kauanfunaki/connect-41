@@ -199,5 +199,49 @@ export function nomeDoComprovante(tipo: TipoDeCertidao, empresa: string, dia: st
   return `${NOME_DO_ARQUIVO[tipo]} - ${limpo} - ${dia}.${extensao}`;
 }
 
-/** O preço da primeira faixa: o teto é conferido por ele, o mais caro. */
-export const PRECO_POR_CONSULTA_EM_CENTAVOS = 20;
+/**
+ * Quanto cada certidão custa de verdade, com o adicional que algumas consultas
+ * da InfoSimples somam ao preço da faixa (04/11/2026). Na primeira semana, 18
+ * consultas custaram R$ 4,86: R$ 0,27 cada, e não os R$ 0,20 da faixa. O teto
+ * contava R$ 0,20 e deixaria passar uns 35% acima do combinado.
+ *
+ * Por ora todas na média medida, arredondada para cima; quando o extrato da
+ * InfoSimples disser o adicional de cada uma, entra aqui o valor dela.
+ */
+export const PRECO_EM_CENTAVOS: Record<TipoDeCertidao, number> = {
+  FEDERAL: 27,
+  FGTS: 27,
+  TRABALHISTA: 27,
+  ESTADUAL_PR: 27,
+  CURITIBA: 27,
+};
+
+/** A franquia mínima da InfoSimples: o mês custa pelo menos isto, com ou sem uso. */
+export const FRANQUIA_EM_CENTAVOS = 10_000;
+
+/** O código da InfoSimples guardado no fim da mensagem: "… (código 605)". */
+const codigoNaMensagem = (mensagem: string | null): number | null => {
+  const m = /\(c[oó]digo (\d+)\)\s*$/.exec(mensagem ?? "");
+  return m ? Number(m[1]) : null;
+};
+
+/**
+ * A consulta foi cobrada? A InfoSimples não cobra falha técnica, tempo
+ * esgotado nem órgão fora do ar — os códigos que a rotina já trata como
+ * passageiros. Cobra o resto, inclusive "nada consta". Na dúvida, conta.
+ */
+export function consultaCobrada(r: { situacao: string; mensagem: string | null }): boolean {
+  if (r.situacao !== "NAO_SAIU") return true;
+  const codigo = codigoNaMensagem(r.mensagem);
+  return codigo === null || !PASSAGEIROS.has(codigo);
+}
+
+/** O gasto estimado do mês, pelo preço de cada certidão cobrada. */
+export function gastoDoMesEmCentavos(registros: { tipo: string; situacao: string; mensagem: string | null }[]): number {
+  let total = 0;
+  for (const r of registros) {
+    if (!consultaCobrada(r)) continue;
+    total += PRECO_EM_CENTAVOS[r.tipo as TipoDeCertidao] ?? Math.max(...Object.values(PRECO_EM_CENTAVOS));
+  }
+  return total;
+}

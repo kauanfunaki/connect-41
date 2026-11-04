@@ -13,7 +13,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { acessoAsCertidoes } from "@/lib/certidoes/acesso";
 import { conexaoDaInfoSimples, quadroDasCertidoes, type CertidaoNaTela, type LinhaDoQuadro } from "@/lib/certidoes/servidor";
-import { ehRegular, PRECO_POR_CONSULTA_EM_CENTAVOS, ROTULO_DA_CERTIDAO, ROTULO_DA_SITUACAO, TIPOS_DE_CERTIDAO, type SituacaoDaCertidao } from "@/lib/certidoes/regras";
+import { ehRegular, FRANQUIA_EM_CENTAVOS, ROTULO_DA_CERTIDAO, ROTULO_DA_SITUACAO, TIPOS_DE_CERTIDAO, type SituacaoDaCertidao } from "@/lib/certidoes/regras";
 import { dataBR } from "@/lib/datas/calendario";
 import { moeda } from "@/lib/financeiro/formato";
 
@@ -43,7 +43,7 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
 
   const { recorte } = await searchParams;
   const atual = RECORTES.find((r) => r.chave === recorte) ?? RECORTES[0];
-  const [{ linhas, consultasNoMes }, conexao] = await Promise.all([
+  const [{ linhas, consultasNoMes, gastoNoMesCentavos }, conexao] = await Promise.all([
     quadroDasCertidoes(acesso.tenantId, await scopedCompanyWhere(ctx)),
     conexaoDaInfoSimples(acesso.tenantId),
   ]);
@@ -68,10 +68,19 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
           { rotulo: "Regulares", valor: String(regulares), detalhe: `de ${celulas.length} certidões de ${linhas.length} empresas`, icone: <CheckCircle2 /> },
           { rotulo: "Positivas a ver", valor: String(positivasAVer), tom: positivasAVer > 0 ? "text-danger" : undefined, icone: <AlertTriangle /> },
           { rotulo: "Sem certidão", valor: String(faltando), detalhe: "ainda não consultadas ou não saíram", icone: <FileText /> },
+          // O gasto do mês contra o teto (04/11/2026): o preço real de cada certidão,
+          // sem as que o órgão não respondeu, que a InfoSimples não cobra.
           {
-            rotulo: "Consultas no mês",
-            valor: String(consultasNoMes),
-            detalhe: `até ${moeda(consultasNoMes * PRECO_POR_CONSULTA_EM_CENTAVOS)}, mínimo de R$ 100,00`,
+            rotulo: "Gasto no mês",
+            valor: moeda(gastoNoMesCentavos),
+            detalhe: [
+              `${consultasNoMes} ${consultasNoMes === 1 ? "consulta" : "consultas"}`,
+              conexao.pronta ? `teto de ${moeda(conexao.tetoCentavos)}` : null,
+              `mínimo de ${moeda(FRANQUIA_EM_CENTAVOS)} no mês`,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            tom: conexao.pronta && gastoNoMesCentavos >= conexao.tetoCentavos ? "text-warning-fg" : undefined,
             icone: <Receipt />,
           },
         ]}

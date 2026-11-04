@@ -25,7 +25,8 @@ import {
   lerCertidao,
   mesDoTrimestre,
   nomeDoComprovante,
-  PRECO_POR_CONSULTA_EM_CENTAVOS,
+  gastoDoMesEmCentavos,
+  PRECO_EM_CENTAVOS,
   ROTULO_DA_CERTIDAO,
   SETORES_DO_AVISO,
   TIPOS_DE_CERTIDAO,
@@ -100,10 +101,18 @@ export async function conexaoDaInfoSimples(tenantId: string): Promise<ConexaoDaI
 
 const inicioDoMes = (hoje: string) => new Date(`${hoje.slice(0, 7)}-01T00:00:00-03:00`);
 
-/** Cabe mais uma consulta no teto do mês? Conta pelo preço da primeira faixa, o mais caro. */
-async function cabeNoTeto(tenantId: string, tetoCentavos: number, hoje: string): Promise<boolean> {
-  const feitas = await getPrisma().certidao.count({ where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } } });
-  return (feitas + 1) * PRECO_POR_CONSULTA_EM_CENTAVOS <= tetoCentavos;
+/** O gasto estimado do mês até agora: o preço de cada certidão cobrada. */
+async function gastoDoMes(tenantId: string, hoje: string): Promise<number> {
+  const doMes = await getPrisma().certidao.findMany({
+    where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } },
+    select: { tipo: true, situacao: true, mensagem: true },
+  });
+  return gastoDoMesEmCentavos(doMes);
+}
+
+/** Cabe mais esta certidão no teto do mês, pelo preço real dela (04/11/2026)? */
+async function cabeNoTeto(tenantId: string, tetoCentavos: number, hoje: string, tipo: TipoDeCertidao): Promise<boolean> {
+  return (await gastoDoMes(tenantId, hoje)) + PRECO_EM_CENTAVOS[tipo] <= tetoCentavos;
 }
 
 // ─── Uma certidão ────────────────────────────────────────────────────────────
@@ -234,7 +243,12 @@ export async function rotinaDasCertidoes(tenantId: string, opcoes: OpcoesDasCert
   const prisma = getPrisma();
 
   const empresas = await prisma.company.findMany({ where: { tenantId, ...ATIVAS }, select: { id: true, cnpj: true, stateCode: true, city: true } });
-  const doMes = certidoesDaCarteira(empresas).filter((c) => grupoDaEmpresa(c.companyId) <= mes);
+  // Só o grupo do mês (04/11/2026). Antes entravam também os grupos dos meses
+  // anteriores do trimestre, para recuperar o atraso: ligada em novembro, a
+  // rotina quis outubro e novembro juntos, o dobro de um mês. O grupo que
+  // ficou para trás volta no mês dele do trimestre seguinte; quem precisar
+  // antes usa "Emitir agora".
+  const doMes = certidoesDaCarteira(empresas).filter((c) => grupoDaEmpresa(c.companyId) === mes);
   if (!doMes.length) return 0;
 
   const feitas = await prisma.certidao.findMany({ where: { tenantId, trimestre }, select: { companyId: true, tipo: true, situacao: true, createdAt: true } });
@@ -255,7 +269,7 @@ export async function rotinaDasCertidoes(tenantId: string, opcoes: OpcoesDasCert
 
   let feitasAgora = 0;
   for (const c of pendentes.slice(0, LOTE)) {
-    if (!(await cabeNoTeto(tenantId, conexao.tetoCentavos, hoje))) break;
+    if (!(await cabeNoTeto(tenantId, conexao.tetoCentavos, hoje, c.tipo))) break;
     const r = await emitirCertidao({ tenantId, companyId: c.companyId, tipo: c.tipo, token: conexao.token, userId: null, trimestre, opcoes });
     feitasAgora++;
     if (!r.ok && r.configuracao) break;
@@ -268,7 +282,7 @@ export async function emitirAgora(tenantId: string, userId: string, companyId: s
   const conexao = await conexaoDaInfoSimples(tenantId);
   if (!conexao.pronta) return { ok: false, erro: conexao.motivo };
   const hoje = hojeIso(opcoes.agora?.() ?? new Date());
-  if (!(await cabeNoTeto(tenantId, conexao.tetoCentavos, hoje))) return { ok: false, erro: "O teto mensal da InfoSimples foi atingido. Aumente em Integrações ou espere o mês virar." };
+  if (!(await cabeNoTeto(tenantId, conexao.tetoCentavos, hoje, tipo))) return { ok: false, erro: "O teto mensal da InfoSimples foi atingido. Aumente em Integrações ou espere o mês virar." };
   return emitirCertidao({ tenantId, companyId, tipo, token: conexao.token, userId, trimestre: null, opcoes });
 }
 
@@ -305,7 +319,7 @@ export type LinhaDoQuadro = {
  * Empresa por empresa, a última consulta de cada certidão que ela precisa.
  * A última que saiu vale mais que uma tentativa que falhou depois dela.
  */
-export async function quadroDasCertidoes(tenantId: string, escopoDaEmpresa: Prisma.CompanyWhereInput = {}): Promise<{ linhas: LinhaDoQuadro[]; consultasNoMes: number }> {
+export async function quadroDasCertidoes(tenantId: string, escopoDaEmpresa: Prisma.CompanyWhereInput = {}): Promise<{ linhas: LinhaDoQuadro[]; consultasNoMes: number; gastoNoMesCentavos: number }> {
   const prisma = getPrisma();
   const hoje = hojeIso();
   const empresas = await prisma.company.findMany({
@@ -317,7 +331,7 @@ export async function quadroDasCertidoes(tenantId: string, escopoDaEmpresa: Pris
   for (const c of certidoesDaCarteira(empresas)) precisa.set(c.companyId, (precisa.get(c.companyId) ?? new Set()).add(c.tipo));
 
   const ids = [...precisa.keys()];
-  const [registros, consultasNoMes] = await Promise.all([
+  const [registros, doMes] = await Promise.all([
     ids.length
       ? prisma.certidao.findMany({
           where: { tenantId, companyId: { in: ids } },
@@ -326,8 +340,10 @@ export async function quadroDasCertidoes(tenantId: string, escopoDaEmpresa: Pris
           take: 20_000,
         })
       : Promise.resolve([]),
-    prisma.certidao.count({ where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } } }),
+    prisma.certidao.findMany({ where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } }, select: { tipo: true, situacao: true, mensagem: true } }),
   ]);
+  const consultasNoMes = doMes.length;
+  const gastoNoMesCentavos = gastoDoMesEmCentavos(doMes);
 
   // Os registros vêm do mais novo: o primeiro de cada chave é a última consulta;
   // o primeiro que saiu é a certidão que vale.
@@ -360,5 +376,5 @@ export async function quadroDasCertidoes(tenantId: string, escopoDaEmpresa: Pris
       empresa: nomeExibicao(e),
       certidoes: Object.fromEntries(TIPOS_DE_CERTIDAO.filter((t) => precisa.get(e.id)!.has(t)).map((t) => [t, naTela(`${e.id}:${t}`)])),
     }));
-  return { linhas, consultasNoMes };
+  return { linhas, consultasNoMes, gastoNoMesCentavos };
 }
