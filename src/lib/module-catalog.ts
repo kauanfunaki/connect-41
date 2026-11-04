@@ -187,9 +187,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
     defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
+  {
+    // Acompanhar a Ceci (lote C dos ajustes de 03/11/2026): avaliações, processamento e o que pede atenção.
+    code: "tech_ceci", label: "Ceci", sectorCode: "tech",
+    description: "Como a Ceci está indo: respostas boas e ruins por semana, tempo, erros e custo das chamadas, e o que pede atenção",
+    defaultEnabled: false, icon: "Bot", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+  },
 
   {
-    code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
+    code: "tech_github_contributions", label: "GitHub", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
   },
@@ -763,6 +769,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 export const MODULE_ROUTES: Record<string, string> = {
   contabil_sped: "/sped-contabil",
   tech_controle_interno: "/tech/controle-interno",
+  tech_ceci: "/tech/ceci",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
   helpdesk: "/chamados",

@@ -16,9 +16,15 @@ import { atuaisPorDocumento, ROTULO_DA_SITUACAO, situacaoDoCertificado, type Sit
 import { diasAte } from "@/lib/societario/licencas";
 import { formatCalendarDate, formatCnpj, formatCpf, formatInstantDate } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
+import { Pagination } from "@/components/shared/Pagination";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
+
+/** Certificados por página (lote A de 03/11/2026: a lista inteira pesava na abertura). */
+const POR_PAGINA = 50;
+/** O recorte de quem abre a tela sem escolher: todos em uso (era "A renovar"). */
+const PADRAO = "todos";
 
 const ABAS = [
   { chave: "renovar", rotulo: "A renovar" },
@@ -46,7 +52,8 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
   const acesso = await acessoAosCertificados();
   if (!acesso) notFound();
   const params = await searchParams;
-  const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "renovar";
+  const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? PADRAO;
+  const pagina = Math.max(1, Math.min(1000, Number.parseInt(params.pagina ?? "1", 10) || 1));
   const busca = (params.q ?? "").trim().toLowerCase();
 
   const hoje = new Date();
@@ -78,9 +85,20 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
         (c.cofreEntrada ?? "").toLowerCase().includes(busca) ||
         (digitos.length >= 3 && c.documento.includes(digitos)))
   );
+  const totalDePaginas = Math.max(1, Math.ceil(visiveis.length / POR_PAGINA));
+  const paginaVista = Math.min(pagina, totalDePaginas);
+  const daPagina = visiveis.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    if (aba !== PADRAO) q.set("aba", aba);
+    if (params.q) q.set("q", params.q);
+    if (p > 1) q.set("pagina", String(p));
+    const t = q.toString();
+    return t ? `/certificados?${t}` : "/certificados";
+  };
   const ultimaImportacao = certs.reduce<Date | null>((m, c) => (!m || c.importedAt > m ? c.importedAt : m), null);
   const documento = (c: { tipo: string; documento: string }) => (c.tipo === "CPF" ? formatCpf(c.documento) : formatCnpj(c.documento));
-  const href = (a: string) => `/certificados${a === "renovar" ? "" : `?aba=${a}`}`;
+  const href = (a: string) => `/certificados${a === PADRAO ? "" : `?aba=${a}`}`;
 
   return (
     <PageContainer>
@@ -132,7 +150,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
         contagem={contarItens(visiveis.length, "certificado", "certificados")}
         busca={
           <form method="get" action="/certificados" className="max-w-full">
-            {aba !== "renovar" && <input type="hidden" name="aba" value={aba} />}
+            {aba !== PADRAO && <input type="hidden" name="aba" value={aba} />}
             {/* A busca no mesmo desenho da do acervo fiscal: lupa, `search` e nome
                 para o leitor de tela — era a única caixa de busca sem os três. */}
             <CampoDeBusca
@@ -152,8 +170,8 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               {
                 chave: "aba",
                 rotulo: "Situação",
-                vazioLabel: "A renovar",
-                opcoes: ABAS.filter((a) => a.chave !== "renovar").map((a) => ({ value: a.chave, label: a.rotulo })),
+                vazioLabel: "Todos em uso",
+                opcoes: ABAS.filter((a) => a.chave !== PADRAO).map((a) => ({ value: a.chave, label: a.rotulo })),
               },
             ]}
           />
@@ -185,7 +203,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
         ) : (
           <>
             <CartoesNoCelular>
-              {visiveis.map((c) => (
+              {daPagina.map((c) => (
                 <Cartao key={c.id}>
                   <TopoDoCartao nome={c.company ? nomeExibicao(c.company) : c.titular} valor={formatCalendarDate(c.expiresAt)} />
                   <InfoDoCartao className="tabular-nums">
@@ -201,7 +219,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
             </CartoesNoCelular>
 
             <TabelaFiltravel
-              linhas={visiveis.map((c) => ({
+              linhas={daPagina.map((c) => ({
                 id: c.id,
                 valores: {
                   titular: c.company ? nomeExibicao(c.company) : c.titular,
@@ -225,7 +243,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
                   </tr>
                 </thead>
                 <tbody>
-                  {visiveis.map((c) => (
+                  {daPagina.map((c) => (
                     <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
                       <td className="py-2.5 pr-3">
                         {c.company ? (
@@ -257,6 +275,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               </table>
             </TabelaNoDesktop>
             </TabelaFiltravel>
+            <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={visiveis.length} rotulo="certificados" />
             <p className="text-micro text-fg-muted mt-3">
               Vencimento lido de dentro do certificado. Quando o mesmo CNPJ/CPF tem um certificado mais novo, o antigo vira
               &ldquo;substituído&rdquo; e para de avisar. Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento.

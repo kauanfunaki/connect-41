@@ -574,8 +574,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         passos: [
           "Entre no setor e abra “Certificados digitais” na barra lateral.",
           "Confira os cartões “Vencidos”, “Vencem em 30 dias”, “Vencem em 60 dias” e “Sem empresa no Connect”. Clique em um para abrir a lista.",
-          "A lista abre em “A renovar”, com os vencidos e os que vencem nos próximos 60 dias.",
-          "Para ver os outros, clique em “Filtros” e escolha em “Situação”: “Todos em uso”, “Sem empresa no Connect” ou “Substituídos”.",
+          "A lista abre em “Todos em uso”, 50 por página. Para ver só o que precisa de atenção, clique no cartão “A renovar”: os vencidos e os que vencem nos próximos 60 dias.",
+          "Para os outros recortes, clique em “Filtros” e escolha em “Situação”: “A renovar”, “Sem empresa no Connect” ou “Substituídos”.",
           "Use a coluna “Entrada do cofre” para achar a senha do certificado no cofre do escritório.",
         ],
       },

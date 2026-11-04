@@ -247,6 +247,8 @@ export async function ContasPage({
     },
   ];
 
+  const semDado = resultado.totalGeral === 0 && !params.competencia && recorte === "todas";
+
   return (
     <PageContainer>
       {/* Sem "Voltar": é página principal do setor, não uma ficha aberta de
@@ -341,12 +343,15 @@ export async function ContasPage({
           )}
           <CascoDaTabela
             contagem={contarItens(resultado.linhas.length, "conta", "contas", resultado.limitada)}
-            filtros={<FiltrosDaTela campos={filtros} naBarra />}
+            // Empresa sem conta nenhuma deste lado: nada a filtrar nem a
+            // exportar (lote A de 03/11/2026). Com filtro escolhido, o botão
+            // fica, para dar como tirá-lo.
+            filtros={semDado ? undefined : <FiltrosDaTela campos={filtros} naBarra />}
             // A lista em Excel (numa Tabela do Excel, pronta para a tabela
             // dinâmica) ou em CSV, com a empresa, a competência e o recorte da
             // tela (lote D, 20/10).
             acoes={
-              <BotaoDeExportar
+              !semDado && <BotaoDeExportar
                 href={`${base}/exportar?${new URLSearchParams({
                   empresa: empresaNaUrl(escolha) ?? "",
                   recorte,

@@ -73,12 +73,19 @@ img.avatar { object-fit: cover; }
 .blank { background: var(--c41-surface); margin: -1px; }
 .day { padding: 0; border: 1px solid color-mix(in srgb, var(--c41-border) 40%, transparent); border-radius: 3px; cursor: pointer; outline: none; }
 .day:hover, .day:focus-visible { box-shadow: 0 0 0 2px var(--c41-brand); }
-/* Tons opacos (misturados à superfície) para o traço do fundo não aparecer por baixo. */
-.day[data-level="1"], .legendCell[data-level="1"] { background: color-mix(in srgb, var(--c41-success) 20%, var(--c41-surface)); }
-.day[data-level="2"], .legendCell[data-level="2"] { background: color-mix(in srgb, var(--c41-success) 40%, var(--c41-surface)); }
-.day[data-level="3"], .legendCell[data-level="3"] { background: color-mix(in srgb, var(--c41-success) 70%, var(--c41-surface)); }
-.day[data-level="4"], .legendCell[data-level="4"] { background: var(--c41-success); }
+/* Tons opacos (misturados à superfície) para o traço do fundo não aparecer por baixo.
+   A cor é a de quem contribuiu (--day-color, a mistura das pessoas ou dos times do
+   dia, 04/11/2026); sem ela, o verde de antes. O nível só muda a intensidade. */
+.day, .legendCell { --day-tone: var(--day-color, var(--c41-success)); }
+.day[data-level="1"], .legendCell[data-level="1"] { background: color-mix(in oklab, var(--day-tone) 25%, var(--c41-surface)); }
+.day[data-level="2"], .legendCell[data-level="2"] { background: color-mix(in oklab, var(--day-tone) 45%, var(--c41-surface)); }
+.day[data-level="3"], .legendCell[data-level="3"] { background: color-mix(in oklab, var(--day-tone) 72%, var(--c41-surface)); }
+.day[data-level="4"], .legendCell[data-level="4"] { background: var(--day-tone); }
 .legendCell { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c41-surface-hover); }
+/* Quem aparece no calendário, com a sua cor. */
+.swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.swatch { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.swatch::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--swatch); flex: none; }
 /* Cartões fora da tela não são pintados nem diagramados até chegarem perto (27/10/2026). */
 .developer { content-visibility: auto; contain-intrinsic-size: auto 260px; }
 .developerName { font-weight: 400; color: var(--c41-fg-muted); }
@@ -90,7 +97,7 @@ img.avatar { object-fit: cover; }
 .contributor .avatar { width: 24px; height: 24px; }
 .contributorName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .contributorBar { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--c41-surface-hover); overflow: hidden; margin-top: -4px; }
-.contributorBar span { display: block; height: 100%; background: var(--c41-success); border-radius: inherit; }
+.contributorBar span { display: block; height: 100%; background: var(--bar-color, var(--c41-success)); border-radius: inherit; }
 .eventCode { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-helper); padding: 1px 6px; border-radius: 4px; background: var(--c41-surface-2, var(--c41-surface-hover)); color: var(--c41-fg-secondary); }
 @media (max-width: 1100px) { .overviewGrid, .repositoryBody { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {

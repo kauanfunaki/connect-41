@@ -348,3 +348,35 @@ export async function gerarContribuicoes(entrada: unknown): Promise<ResultadoDoM
     return doErro(err);
   }
 }
+
+const contaDaSaidaSchema = z.object({
+  empresa: z.string(),
+  tipo: z.enum(["cte", "nfse"]),
+  debito: conta.min(1, "Informe a conta de débito."),
+  credito: conta.min(1, "Informe a conta de crédito."),
+  historico: z.string().trim().regex(/^\d{0,10}$/, "O código do histórico é só números.").default(""),
+});
+
+/** As contas do lançamento diário de um tipo de saída (passo 6). Vale para a matriz e as filiais. */
+export async function salvarContaDaSaida(entrada: unknown): Promise<ResultadoDoContabil> {
+  const e = contaDaSaidaSchema.safeParse(entrada);
+  if (!e.success) return falha(e.error.issues[0]?.message ?? "Confira as contas.");
+  const a = await abrir(e.data.empresa);
+  if (recusou(a)) return a;
+  const { tipo, debito, credito, historico } = e.data;
+  await getPrisma().contabilContaSaida.upsert({
+    where: { companyId_chave: { companyId: a.empresa.baseId, chave: tipo } },
+    create: { tenantId: a.ctx.tenantId, companyId: a.empresa.baseId, chave: tipo, debito, credito, historico, updatedById: a.ctx.userId },
+    update: { debito, credito, historico, updatedById: a.ctx.userId },
+  });
+  await logAudit({
+    tenantId: a.ctx.tenantId,
+    userId: a.ctx.userId,
+    action: "contabil.saidas.contas_salvas",
+    entityType: "ContabilContaSaida",
+    entityId: a.empresa.baseId,
+    metadata: { tipo, debito, credito, historico },
+  });
+  revalidatePath(CAMINHO);
+  return { ok: true, mensagem: "Contas das saídas salvas." };
+}

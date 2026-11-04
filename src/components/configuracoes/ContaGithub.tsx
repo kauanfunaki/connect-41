@@ -28,7 +28,7 @@ export function ContaGithub({ view, retorno, desvincular }: { view: AccountLinkV
         <Button variant="danger" size="sm" disabled={pendente} onClick={() => iniciar(() => desvincular())}>{pendente ? "Desvinculando…" : "Desvincular"}</Button>
       </div>
     </div> : view.available ? <div className="space-y-2">
-      <p className="text-ui text-fg-secondary">Vincule a sua conta para aparecer com o seu nome em GitHub — Contribuições. O GitHub só confirma quem você é; nenhum repositório é lido com a sua conta.</p>
+      <p className="text-ui text-fg-secondary">Vincule a sua conta para aparecer com o seu nome em GitHub. O GitHub só confirma quem você é; nenhum repositório é lido com a sua conta.</p>
       <Button href="/api/integrations/github/conta" nativo>Vincular conta GitHub</Button>
     </div> : <Aviso tom="neutro">{view.reason}</Aviso>}
   </div>;

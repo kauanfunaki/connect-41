@@ -11,7 +11,7 @@ import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { competenciaDoInstante, competenciaValida, somarMeses } from "@/lib/financeiro/periodo";
-import { empresaContabilVisivel, painelDoContabil, type EmpresaDoContabil } from "@/lib/contabil/servidor";
+import { empresaContabilVisivel, painelDasSaidas, painelDoContabil, type EmpresaDoContabil } from "@/lib/contabil/servidor";
 import { areaContabil, etapaDaSecao, secoesDoGrupo, ETAPAS_DO_CONTABIL, SECOES_DO_CONTABIL } from "@/lib/contabil/navegacao";
 import { EtapasNumeradas } from "@/components/ui/EtapasNumeradas";
 import { DeparaWorkspace } from "@/components/contabil/DeparaWorkspace";
@@ -21,6 +21,8 @@ import { PagamentosSemNota } from "@/components/contabil/PagamentosSemNota";
 import { ContasDosPagamentos } from "@/components/contabil/ContasDosPagamentos";
 import { contasDosPagamentos, painelDosPagamentos } from "@/lib/contabil/pagamentosServidor";
 import { getPrisma } from "@/lib/prisma";
+import { SaidasDoContabil } from "@/components/contabil/SaidasDoContabil";
+import { LoteDoAno } from "@/components/contabil/LoteDoAno";
 import type { AuthContext } from "@/lib/auth/context";
 import { podeExcluir } from "@/lib/auth/papeis";
 
@@ -75,6 +77,15 @@ async function Conteudo({ ctx, empresa, mes, aba, secao, params, daMatriz }: { c
     });
     if (!pagamentos) return indisponivel;
     return <PagamentosSemNota key={empresa.id + mes + secao} painel={pagamentos[0]} empresaId={empresa.id} mes={mes} secao={secao} podeAgir={pagamentos[1]} permiteExcluir={podeExcluir(ctx)} daMatriz={daMatriz} />;
+  }
+  if (secao === "lote") return <LoteDoAno empresaId={empresa.id} mes={mes} />;
+  if (secao === "saidas") {
+    const saidas = await Promise.all([painelDasSaidas(ctx.tenantId, empresa, mes), podeNoModulo(ctx, "contabil_sped", "agir")]).catch((err) => {
+      console.error("[contabil/sped] saídas indisponíveis", err);
+      return null;
+    });
+    if (!saidas) return indisponivel;
+    return <SaidasDoContabil painel={saidas[0]} empresaId={empresa.id} mes={mes} podeAgir={saidas[1]} />;
   }
   const configuracao = secao === "configuracao";
   const dados = await Promise.all([

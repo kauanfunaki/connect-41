@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { History } from "lucide-react";
-import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
+import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, LINK_DO_ITEM, diaDoRegistro, horaDoRegistro, type Alteracao } from "@/lib/tech-interno/regras";
 import { CORES_DO_TIPO } from "@/lib/tech-interno/cores";
-import { MODULO_OPS } from "@/lib/ops/regras";
 import { historicoTech } from "@/lib/tech-interno/servidor";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -14,7 +13,7 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { MudancasDoRegistro } from "@/components/tech-interno/MudancasDoRegistro";
-import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/NavegacaoTech";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +24,8 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO), params = await searchParams;
   const texto = (chave: string) => typeof params[chave] === "string" ? (params[chave] as string).trim() : "";
   const p = Number(texto("page") || 1), q = texto("q").slice(0, 200), autor = texto("autor").slice(0, 191);
-  const [{ total, pages, page, changes, autores }, podeEditar, podeGerirOps] = await Promise.all([
+  const [{ total, pages, page, changes, autores }] = await Promise.all([
     historicoTech(ctx, { pagina: Number.isInteger(p) && p > 0 ? Math.min(p, 1000000) : 1, q, autor }),
-    podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), podeNoModulo(ctx, MODULO_OPS, "gerir"),
   ]);
   const aqui = new URLSearchParams(); if (q) aqui.set("q", q); if (autor) aqui.set("autor", autor);
   const hrefPagina = (n: number) => { const u = new URLSearchParams(aqui); u.set("page", String(n)); return `${ROTA_TECH_INTERNO}/historico?${u}`; };
@@ -37,9 +35,11 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
     if (dias.at(-1)?.chave !== dia.chave) dias.push({ ...dia, registros: [] });
     dias.at(-1)!.registros.push(c);
   }
+  // Fora das abas desde o lote C de 03/11/2026: o histórico é a Auditoria
+  // (área Tech). Esta tela fica para quem não abre a Auditoria.
   return <PageContainer>
-    <PageHeader title="Controle interno" subtitle="Quem mudou o quê, e quando, em cada item da equipe Tech." action={<AcoesDoControle podeEditar={podeEditar} podeGerirOps={podeGerirOps} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
-    <VisoesDoControle ativa="historico" href={v => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`} />
+    <Breadcrumb items={[{ label: "Controle interno", href: ROTA_TECH_INTERNO }, { label: "Histórico" }]} />
+    <PageHeader title="Histórico do controle interno" subtitle="Quem mudou o quê, e quando, em cada item da equipe Tech." />
     <CascoDaTabela buscaAEsquerda contagem={`${total} ${total === 1 ? "registro" : "registros"}`}
       busca={<DebouncedSearchInput key={q} paramName="q" placeholder="Buscar pelo título do item" />}
       filtros={<FiltrosDaTela naBarra campos={[{ chave: "autor", rotulo: "Pessoa", vazioLabel: "Todas", opcoes: autores.map(a => ({ value: a.authorId, label: a.authorName })) }]} />}>

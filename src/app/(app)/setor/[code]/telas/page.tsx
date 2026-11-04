@@ -11,7 +11,7 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
-import { MODULOS_NOS_CADASTROS } from "@/lib/module-catalog";
+import { MODULOS_NOS_CADASTROS, MODULOS_FORA_DO_MENU } from "@/lib/module-catalog";
 
 /**
  * Todas as telas de um setor, em cartões por grupo — onde se fixa uma tela na
@@ -38,7 +38,7 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
   // Fornecedores e sacados mora em Cadastros (29/10/2026, Kauan): repetir aqui
   // era a mesma tela em dois menus — como já não está no menu do setor.
   const modulos = semTelasDoGeralOcultas(
-    allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled && !MODULOS_NOS_CADASTROS.has(m.code)),
+    allModules.filter((m) => m.sectorCodes.includes(code) && m.enabled && !MODULOS_NOS_CADASTROS.has(m.code) && !MODULOS_FORA_DO_MENU.has(m.code)),
     telasDoGeral,
   );
 
