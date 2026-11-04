@@ -14,7 +14,8 @@ import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDateTime, formatarNumero } from "@/lib/format";
-import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, motivoParaPessoa, type StatusDaTarefa } from "@/lib/robo/tarefas";
+import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, maquinaSemSinal, motivoParaPessoa, type StatusDaTarefa } from "@/lib/robo/tarefas";
+import { Aviso } from "@/components/ui/Aviso";
 import type { TomDoSelo } from "@/components/ui/Selo";
 
 // Módulo próprio desde 03/11/2026, para a tela estar no menu do Societário.
@@ -64,12 +65,16 @@ export default async function RoboDoSocietarioPage() {
   const nomeDaEmpresa = new Map(empresas.map((e) => [e.id, nomeExibicao(e)]));
   const naFila = tarefas.filter((t) => t.status === "PENDENTE" || t.status === "EM_EXECUCAO").length;
   const paradas = tarefas.filter((t) => t.status === "PRECISA_DE_GENTE").length;
+  // A máquina parada (04/11/2026): o robô roda no PC de alguém, e com ele desligado
+  // nada é lido sem que ninguém saiba. Só as ativas no Ops Center contam.
+  const agora = new Date();
+  const semSinal = maquinas.filter((m) => m.isActive && maquinaSemSinal(m.lastHeartbeatAt, agora));
 
   return (
     <PageContainer>
       <PageHeader
         title="Robô do Societário"
-        subtitle="O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje o robô imprime o alvará de Curitiba, pedido no ⋯ da licença."
+        subtitle="O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje ele imprime o alvará de Curitiba (pedido no ⋯ da licença), lê a situação da inscrição estadual no PR e acompanha os protocolos do SIMA."
         action={
           <Button href="/licencas" variant="secondary" size="sm">
             Ir para Licenças
@@ -77,13 +82,20 @@ export default async function RoboDoSocietarioPage() {
         }
       />
 
+      {semSinal.map((m) => (
+        <Aviso key={m.slug} tom="atencao" className="mb-4">
+          A máquina do robô ({m.name}) {m.lastHeartbeatAt ? `não responde desde ${formatInstantDateTime(m.lastHeartbeatAt)}` : "nunca respondeu"}. Nada é lido enquanto ela estiver desligada, sem internet ou com a janela do robô fechada: ligue a máquina ou rode a tarefa robo-societario no Agendador de Tarefas.
+        </Aviso>
+      ))}
+
       <FaixaDeTotais
         itens={[
           { rotulo: "Na fila", valor: formatarNumero(naFila, 0), icone: <ListTodo /> },
           { rotulo: "Precisa de alguém", valor: formatarNumero(paradas, 0), icone: <CircleAlert />, tom: paradas > 0 ? "text-warning-fg" : undefined },
           {
             rotulo: "Máquina",
-            valor: maquinas.length ? `${maquinas.length}` : "—",
+            valor: maquinas.length ? (semSinal.length ? "Sem sinal" : "Respondendo") : "—",
+            tom: semSinal.length ? "text-warning-fg" : undefined,
             icone: <Bot />,
             detalhe: maquinas.length
               ? maquinas.map((m) => `${m.name}: ${m.lastHeartbeatAt ? `sinal ${formatInstantDateTime(m.lastHeartbeatAt)}` : "sem sinal"}`).join(" · ")

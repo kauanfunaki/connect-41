@@ -32,6 +32,7 @@
 
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { appendFileSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { access, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
@@ -47,7 +48,23 @@ const capturasDir = join(dirname(statePath), "capturas-do-robo");
 const lockPath = `${statePath}.lock`;
 const stopPath = `${statePath}.stop`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const log = (...m) => console.log(`[robo-societario] ${new Date().toISOString()}`, ...m);
+// O registro também vai para um arquivo ao lado do estado (04/11/2026): a janela
+// do cmd some quando fecha, e o detalhe de uma falha só existia nela. Passou de
+// 2 MB, o arquivo vira .1 e começa outro.
+const registroPath = join(dirname(statePath), "robo-societario.log");
+function gravarNoRegistro(linha) {
+  try {
+    mkdirSync(dirname(registroPath), { recursive: true });
+    try { if (statSync(registroPath).size > 2 * 1024 * 1024) renameSync(registroPath, `${registroPath}.1`); } catch {}
+    appendFileSync(registroPath, `${linha}
+`);
+  } catch {}
+}
+const log = (...m) => {
+  const linha = [`[robo-societario] ${new Date().toISOString()}`, ...m].join(" ");
+  console.log(linha);
+  gravarNoRegistro(linha);
+};
 
 // ─── configuração e estado ─────────────────────────────────────────────────
 
@@ -876,7 +893,7 @@ async function watch() {
 async function status() {
   let rodando = false;
   try { await access(lockPath); rodando = true; } catch {}
-  console.log(JSON.stringify({ configPath, statePath, rodando, ...(await readState()) }, null, 2));
+  console.log(JSON.stringify({ configPath, statePath, registro: registroPath, rodando, ...(await readState()) }, null, 2));
 }
 
 async function criarConfig() {
@@ -923,5 +940,6 @@ try {
   else console.log("Uso: --config[=arquivo] | --once | --watch | --status | --stop | --ensaio-alvara --inscricao= | --ensaio-ie --inscricao= [--cnpj=] | --ensaio-sima [--protocolos=A,B] | --testar-certificado --url= --pfx= --entrada= | --mapear --nome= --url= (--pfx= --entrada= | --perfil) | --preparar-perfil");
 } catch (error) {
   console.error(`[robo-societario] ${error.message}`);
+  gravarNoRegistro(`[robo-societario] ${new Date().toISOString()} erro: ${error.message}`);
   process.exitCode = 1;
 }

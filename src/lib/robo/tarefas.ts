@@ -72,6 +72,16 @@ export function execucaoPerdida(pegaEm: Date | null, agora: Date): boolean {
 }
 
 /**
+ * A máquina está respondendo? (04/11/2026) Ela pede trabalho a cada 30 s, e
+ * cada pedido é o sinal de vida; no meio de uma tarefa ela fica até 10 minutos
+ * sem pedir. Passou do prazo de uma execução sem sinal, está desligada, sem
+ * internet ou com a janela do robô fechada — e nada é lido até voltar.
+ */
+export function maquinaSemSinal(ultimoSinal: Date | null, agora: Date): boolean {
+  return ultimoSinal === null || agora.getTime() - ultimoSinal.getTime() > PRAZO_DA_EXECUCAO_MS;
+}
+
+/**
  * A chave da tarefa aberta: uma por coisa (a licença), por tipo e escritório.
  * Fica nula quando a tarefa termina, e o índice único do banco recusa a
  * segunda aberta.
