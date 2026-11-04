@@ -9,13 +9,17 @@ import { JanelaDeCadastro } from "@/components/shared/JanelaDeCadastro";
 type Acao = (title: string) => Promise<{ error: string } | { id: string }>;
 
 /**
- * O "+ Novo documento" do cabeçalho do Repositório de manuais, com o título numa
- * janela (P19, 15/10/2026). Ficava no pé da árvore e criava ali mesmo, num campo
- * solto que sumia ao perder o foco. O documento novo chega aberto na árvore.
+ * O "+ Nova pasta" do Repositório de manuais, com o título numa janela.
+ *
+ * Esteve no cabeçalho de 15/10/2026 (P19) — antes, no pé da árvore, criava ali
+ * mesmo, num campo solto que sumia ao perder o foco. Volta ao pé da coluna de
+ * pastas no lote C dos ajustes de 03/11/2026, a pedido do Kauan, mas com a
+ * janela: é onde se procura criar a pasta, logo abaixo das que existem. A
+ * pasta nova chega aberta na árvore.
  */
 export function NovoDocumento({ action }: { action: Acao }) {
   return (
-    <JanelaDeCadastro rotulo="Novo documento">
+    <JanelaDeCadastro rotulo="Nova pasta" botao={{ variant: "ghost", size: "sm", className: "w-full justify-start" }}>
       {(fechar) => <FormDoDocumento action={action} onSucesso={fechar} onCancelar={fechar} />}
     </JanelaDeCadastro>
   );
@@ -39,10 +43,10 @@ function FormDoDocumento({ action, onSucesso, onCancelar }: { action: Acao; onSu
         });
       }}
     >
-      <CampoForm label="Título do documento" htmlFor="manual-documento-titulo" required helper="As páginas entram depois, pelo “+ Página” do documento, na árvore.">
+      <CampoForm label="Nome da pasta" htmlFor="manual-documento-titulo" required helper="As páginas entram depois, pelo “+ Página” da pasta, na árvore.">
         <Input id="manual-documento-titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
       </CampoForm>
-      <FormFooter pending={pendente} pendingLabel="Criando…" submitLabel="Criar documento" onCancel={onCancelar} erro={erro} />
+      <FormFooter pending={pendente} pendingLabel="Criando…" submitLabel="Criar pasta" onCancel={onCancelar} erro={erro} />
     </form>
   );
 }

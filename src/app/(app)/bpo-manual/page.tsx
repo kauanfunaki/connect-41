@@ -58,12 +58,10 @@ export default async function BpoManualPage() {
       {/* Subtítulo no próprio PageHeader (30/09) — estava escrito à parte, com
           o cabeçalho aninhado num bloco com margem própria. */}
       <div className="flex-shrink-0">
-        {/* "+ Novo documento" à direita do título, numa janela (P19, 15/10/2026):
-            ficava no pé da árvore de documentos. */}
+        {/* O "+ Nova pasta" foi para o pé da coluna de pastas (lote C de 03/11/2026). */}
         <PageHeader
           title="Repositório de manuais"
           subtitle="Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias."
-          action={canAct ? <NovoDocumento action={criarDocumentoManual} /> : undefined}
         />
       </div>
 
@@ -72,6 +70,7 @@ export default async function BpoManualPage() {
           em vez de rolar por dentro. */}
       <div className="flex-1 min-h-0">
         <ManualWorkspace
+          rodapeDaArvore={canAct ? <NovoDocumento action={criarDocumentoManual} /> : undefined}
           canAct={canAct}
           canDelete={canDelete}
           setorRotulo={setorRotulo}
