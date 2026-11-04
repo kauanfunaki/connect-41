@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Aviso } from "@/components/ui/Aviso";
 import { useChaveDeIdempotencia } from "@/components/fiscal/motor/useChaveDeIdempotencia";
-import { gerarContribuicoes } from "@/app/(app)/contabil/sped/actions";
+import { gerarContribuicoes } from "@/app/(app)/sped-contabil/actions";
 export function GerarContribuicoesForm({ empresaId, mes, pode, motivo, tipoInicial = "0", reciboInicial = "" }: { empresaId: string; mes: string; pode: boolean; motivo: string; tipoInicial?: "0" | "1"; reciboInicial?: string }) {
   const [tipo, setTipo] = useState<"0" | "1">(tipoInicial);
   const [recibo, setRecibo] = useState(reciboInicial);
@@ -20,7 +20,7 @@ export function GerarContribuicoesForm({ empresaId, mes, pode, motivo, tipoInici
     depoisDe(r);
     if (!r.ok) { setErro(r.mensagem); setDuplicado(r.codigo === "execucao_duplicada"); return; }
     setErro(""); setDuplicado(false);
-    router.push("/contabil/sped?" + new URLSearchParams({ empresa: empresaId, mes, aba: "contribuicoes", secao: "gerar", execucao: String(r.dados?.id ?? "") }));
+    router.push("/sped-contabil?" + new URLSearchParams({ empresa: empresaId, mes, aba: "contribuicoes", secao: "gerar", execucao: String(r.dados?.id ?? "") }));
     router.refresh();
   });
   return <form className="space-y-3 rounded-lg border border-border bg-surface p-4" onSubmit={(e) => { e.preventDefault(); gerar(duplicado); }}>

@@ -18,7 +18,7 @@ import { CATEGORIAS, CONTAS_DO_MOTOR, TIPOS_DE_PAGAMENTO, type ContasDosPagament
 import { armazenamentoDosPagamentos } from "@/lib/contabil/importacaoDePagamentos";
 
 const MODULO = "contabil_sped";
-const CAMINHO = "/contabil/sped";
+const CAMINHO = "/sped-contabil";
 
 export type ResultadoDosPagamentos = { ok: true; mensagem: string } | { ok: false; erro: string };
 const falha = (erro: string): ResultadoDosPagamentos => ({ ok: false, erro });

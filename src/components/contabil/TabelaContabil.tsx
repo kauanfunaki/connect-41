@@ -9,7 +9,7 @@ import { TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 export function hrefContabil(params: URLSearchParams, mudar: Record<string, string | undefined>) {
   const q = new URLSearchParams(params);
   for (const [k, v] of Object.entries(mudar)) { if (v) q.set(k, v); else q.delete(k); }
-  return "/contabil/sped?" + q;
+  return "/sped-contabil?" + q;
 }
 export function FiltrosContabeis({ filtros = [], children }: { filtros?: { chave: string; nome: string; opcoes: readonly (readonly [string, string])[] }[]; children?: React.ReactNode }) {
   const params = useSearchParams();

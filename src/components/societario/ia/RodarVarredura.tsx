@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
-import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
+import type { AcaoDaIa } from "@/app/(app)/processos/ia/actions";
 
 /** "Rodar varredura": se houver pendência, a action leva direto à revisão. */
 export function RodarVarredura({ rodar, desligada }: { rodar: () => Promise<AcaoDaIa>; desligada: boolean }) {

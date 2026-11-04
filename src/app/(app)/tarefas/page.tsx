@@ -443,7 +443,7 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
                 <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
                   <CalendarDays size={16} className="text-fg-muted" /> No Societário, com você
                 </h2>
-                <Button href="/societario/exigencias" variant="secondary" size="xs">
+                <Button href="/exigencias" variant="secondary" size="xs">
                   Abrir prazos
                 </Button>
               </header>

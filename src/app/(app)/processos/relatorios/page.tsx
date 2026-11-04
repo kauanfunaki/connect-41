@@ -87,7 +87,7 @@ export default async function RelatoriosDoSocietarioPage({
     const v = mudar.visao ?? visao;
     if (v !== "grafico") q.set("visao", v);
     const s = q.toString();
-    return s ? `/societario/relatorios?${s}` : "/societario/relatorios";
+    return s ? `/processos/relatorios?${s}` : "/processos/relatorios";
   };
 
   const leitura: Record<ChaveDoRelatorio, string> = {
@@ -180,7 +180,7 @@ export default async function RelatoriosDoSocietarioPage({
                 ]}
               />
               <BotaoDeExportar
-                href={`/societario/relatorios/exportar?${new URLSearchParams({ relatorio: relatorio.chave, periodo: periodo.chave })}`}
+                href={`/processos/relatorios/exportar?${new URLSearchParams({ relatorio: relatorio.chave, periodo: periodo.chave })}`}
                 dica={`Vai o relatório inteiro do período (últimos ${periodo.rotulo}), mesmo o que a tela não mostra.`}
               />
             </div>

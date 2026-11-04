@@ -45,7 +45,7 @@ export async function definirCobrancaDoProtocolo(valor: unknown): Promise<{ ok: 
       metadata: { antes, depois: dias },
     });
   }
-  revalidatePath("/societario/exigencias");
+  revalidatePath("/exigencias");
   return { ok: true };
 }
 
@@ -77,6 +77,6 @@ export async function registrarCobrancaDoOrgao(protocoloId: unknown): Promise<{ 
     entityId: protocolo.id,
     metadata: { processoId: protocolo.processId, orgao: protocolo.organ.name },
   });
-  revalidatePath("/societario/exigencias");
+  revalidatePath("/exigencias");
   return { ok: true };
 }

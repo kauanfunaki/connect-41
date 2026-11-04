@@ -75,7 +75,7 @@ const TELA_DO_TIPO: Record<TipoDePrazo, string> = {
   "conta-receber": "/receber",
   pendencia: "/pendencias",
   processo: "/processos",
-  exigencia: "/societario/exigencias",
+  exigencia: "/exigencias",
   taxa: "/processos",
   licenca: "/licencas",
   ferias: "/ferias",

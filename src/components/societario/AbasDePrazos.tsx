@@ -7,8 +7,8 @@ import { AbasDeLink } from "@/components/ui/AbasDeLink";
 // prazos do Societário (exigência, taxa, licença, prazo combinado); o botão
 // "Ver prazos na Agenda" do cabeçalho abre a Agenda filtrada no setor.
 const ABAS = [
-  { chave: "exigencias", rotulo: "Exigências", href: "/societario/exigencias", icone: <AlertTriangle /> },
-  { chave: "parados", rotulo: "Protocolos parados", href: "/societario/exigencias?aba=parados", icone: <PauseCircle /> },
+  { chave: "exigencias", rotulo: "Exigências", href: "/exigencias", icone: <AlertTriangle /> },
+  { chave: "parados", rotulo: "Protocolos parados", href: "/exigencias?aba=parados", icone: <PauseCircle /> },
 ] as const;
 
 export type AbaDePrazos = (typeof ABAS)[number]["chave"];

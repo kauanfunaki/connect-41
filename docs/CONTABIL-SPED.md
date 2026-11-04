@@ -1,6 +1,6 @@
 # SPED do Contábil
 
-O módulo `contabil_sped` aparece como **SPED** no setor **Contábil**, em `/contabil/sped`, ligado por padrão para quem tem acesso ao setor. Pode ser desligado em Configurações → Setores e módulos. Planos com catálogo restrito precisam permitir esse código.
+O módulo `contabil_sped` aparece como **SPED** no setor **Contábil**, em `/sped-contabil`, ligado por padrão para quem tem acesso ao setor. Pode ser desligado em Configurações → Setores e módulos. Planos com catálogo restrito precisam permitir esse código.
 
 O fluxo possui quatro telas: escolher estabelecimento/período, conferir dados, resolver pendências e gerar arquivos. Reúne entradas, pagamentos sem nota e faturamento, regras de fornecedor/CFOP/categoria, prévia de CSV, conferência e exportação conforme o suporte de cada origem. Cálculos e geração longa são executados na fila do motor SPED; o Connect usa a API, sem conexão direta ao banco SPED.
 

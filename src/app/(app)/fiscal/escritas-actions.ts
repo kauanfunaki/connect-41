@@ -126,7 +126,7 @@ export async function decidirPagamentoNoMotor(entrada: unknown): Promise<Resulta
     await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.pagamento.decidido" : "fiscal.sped.pagamento.decidido",
       entityType: "SpedPagamento", entityId: recursoDoPagamento(e.data), metadata: { nome: recursoDoPagamento(e.data), raiz, decisao, motivo, registroIds: r.registro_ids } });
     revalidarTelas(CONTRIBUICOES);
-    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
+    if (e.data.empresaContabil) revalidarTelas("/sped-contabil");
     return { ok: true, mensagem: decisao === "aceito" ? "Pagamento aceito. Os SPEDs de Contribuições do período ficam defasados." : decisao === "descartado" ? "Pagamento descartado." : "Decisão desfeita: o pagamento volta a conferir.", dados: r };
   } catch (err) {
     return doErro(err);
@@ -171,7 +171,7 @@ export async function corrigirPagamentoNoMotor(entrada: unknown): Promise<Result
     const r = await p.motor.cliente.corrigirPagamento(raiz, corpo, { ator: p.ator, chave });
     await auditar({ registroIds: r.registro_ids });
     revalidarTelas(CONTRIBUICOES);
-    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
+    if (e.data.empresaContabil) revalidarTelas("/sped-contabil");
     return { ok: true, mensagem: decisao === "aceito" ? "Correção gravada e pagamento aceito." : "Correção gravada.", dados: r };
   } catch (err) {
     if (err instanceof ErroDoMotor && err.codigo === "pagamento_nao_aceitavel" && err.corpo.pagamento) {
@@ -179,7 +179,7 @@ export async function corrigirPagamentoNoMotor(entrada: unknown): Promise<Result
       const registroIds = Array.isArray(err.corpo.registro_ids) ? err.corpo.registro_ids : [];
       await auditar({ registroIds, aceiteRecusado: true });
       revalidarTelas(CONTRIBUICOES);
-    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
+    if (e.data.empresaContabil) revalidarTelas("/sped-contabil");
       return {
         ok: false,
         codigo: err.codigo,
@@ -235,7 +235,7 @@ export async function informarContratoNoMotor(entrada: unknown): Promise<Resulta
     await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.contrato.informado" : "fiscal.sped.contrato.informado",
       entityType: "SpedContrato", entityId: fornecedor.slice(0, 120), metadata: { nome: fornecedor, raiz, campos: Object.keys(corpo), resultado: { pagamentos: r.resultado.pagamentos, aceitos: r.resultado.aceitos, conferir: r.resultado.conferir }, registroIds: r.registro_ids } });
     revalidarTelas(CONTRIBUICOES);
-    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
+    if (e.data.empresaContabil) revalidarTelas("/sped-contabil");
     const res = r.resultado;
     return { ok: true, mensagem: `Contrato informado. ${res.pagamentos} pagamento(s) do fornecedor: ${res.aceitos} aceito(s), ${res.conferir} a conferir.`, dados: r };
   } catch (err) {
@@ -269,7 +269,7 @@ export async function apurarCteNoMotor(entrada: unknown): Promise<ResultadoDoMot
     await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: e.data.empresaContabil ? "contabil.sped.cte.apurado" : "fiscal.sped.cte.apurado",
       entityType: "SpedArquivo", entityId: String(id), metadata: { nome: `#${id}`, raiz, competencia: arquivo.competencia, qtdCte: r.qtd_cte, valorTotal: r.valor_total, series: r.series } });
     revalidarTelas(CONTRIBUICOES, CONFERENCIA);
-    if (e.data.empresaContabil) revalidarTelas("/contabil/sped");
+    if (e.data.empresaContabil) revalidarTelas("/sped-contabil");
     return { ok: true, mensagem: `CT-e do arquivo #${id} apurado: ${r.qtd_cte} CT-e.`, dados: r };
   } catch (err) {
     return doErro(err);

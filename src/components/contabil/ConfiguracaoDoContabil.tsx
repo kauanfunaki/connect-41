@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { formatInstantDateTime } from "@/lib/format";
 import { contarItens } from "@/components/shared/CascoDaTabela";
 import type { ConfiguracaoDoContabil as Configuracao } from "@/lib/contabil/servidor";
-import { carregarPlano, salvarModelos, type ResultadoDoContabil } from "@/app/(app)/contabil/sped/actions";
+import { carregarPlano, salvarModelos, type ResultadoDoContabil } from "@/app/(app)/sped-contabil/actions";
 
 const CAMPOS = [
   { chave: "debitoCte", rotulo: "Débito do CT-e (frete)", ajuda: "Ex.: 312 Fretes e carretos." },

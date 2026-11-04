@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { useToast } from "@/components/ui/Toast";
 import { CONTAS_DO_MOTOR, type ContasDosPagamentos as Contas } from "@/lib/contabil/pagamentos";
-import { salvarContasDosPagamentos, type ResultadoDosPagamentos } from "@/app/(app)/contabil/sped/pagamentos-actions";
+import { salvarContasDosPagamentos, type ResultadoDosPagamentos } from "@/app/(app)/sped-contabil/pagamentos-actions";
 
 type Chave = keyof Contas;
 const GRUPOS: { titulo: string; ajuda: string; campos: [Chave, string][] }[] = [

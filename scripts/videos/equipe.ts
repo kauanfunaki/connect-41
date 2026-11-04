@@ -1762,7 +1762,7 @@ function videosDoSocietario(): DefinicaoDeVideo[] {
       chave: "societario_prazos",
       logado: true,
       async executar(r) {
-        await r.ir("/societario/exigencias");
+        await r.ir("/exigencias");
         await r.cartaz(SELO, "Exigências e prazos", "As exigências de todos os processos e a agenda única de prazos");
         await r.apontar(main(r).getByRole("table").first(), "Na aba Exigências, as abertas, com o prazo que o órgão deu.");
         await r.apontar(main(r).getByRole("button", { name: /^Filtros/ }), "Em Filtros, as cumpridas ou todas, ou as de um responsável.");
@@ -1793,7 +1793,7 @@ function videosDoSocietario(): DefinicaoDeVideo[] {
       chave: "societario_relatorios",
       logado: true,
       async executar(r) {
-        await r.ir("/societario/relatorios");
+        await r.ir("/processos/relatorios");
         await r.cartaz(SELO, "Relatórios do Societário", "Prazo cumprido, voltas de exigência, produtividade e taxas");
         await r.clicar(main(r).getByRole("button", { name: /^Filtros/ }), "Em Filtros, escolha o Período: 30 dias, 90 dias ou 12 meses.");
         await r.pausa(1200);

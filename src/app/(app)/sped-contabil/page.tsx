@@ -27,7 +27,7 @@ import type { AuthContext } from "@/lib/auth/context";
 import { podeExcluir } from "@/lib/auth/papeis";
 
 export const dynamic = "force-dynamic";
-const CAMINHO = "/contabil/sped";
+const CAMINHO = "/sped-contabil";
 type Params = Record<string, string | undefined>;
 
 export default async function SpedDoContabilPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

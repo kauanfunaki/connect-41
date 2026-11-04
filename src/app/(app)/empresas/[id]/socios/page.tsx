@@ -20,7 +20,7 @@ import { excluirSocio, importarDaReceita, previaDaReceita, registrarSaida } from
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { LerContratoSocial } from "@/components/societario/ia/LerContratoSocial";
-import { lerContratoSocialAction } from "@/app/(app)/societario/ia/actions";
+import { lerContratoSocialAction } from "@/app/(app)/processos/ia/actions";
 import { AGENTE_CONTRATO } from "@/lib/societario/iaDoSetor";
 
 const PERCENTUAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 });

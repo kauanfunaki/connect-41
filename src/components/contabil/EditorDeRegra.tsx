@@ -10,7 +10,7 @@ import { SlideOver } from "@/components/ui/SlideOver";
 import { Aviso } from "@/components/ui/Aviso";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { useToast } from "@/components/ui/Toast";
-import { salvarRegra } from "@/app/(app)/contabil/sped/actions";
+import { salvarRegra } from "@/app/(app)/sped-contabil/actions";
 import { aplicarCoringas, fornecedorNoFim, HISTORICO_PADRAO, CORINGAS_DO_HISTORICO, type ContaDoPlano, type Entrada, type Regra } from "@/lib/contabil/lancamentos";
 import type { DadosDaRegra } from "@/lib/contabil/regras";
 
@@ -79,7 +79,7 @@ export function EditorDeRegra({ empresaId, mes, inicial, contas, notas, fechar }
           <div className="grid gap-3 sm:grid-cols-2"><label className="grid gap-1 text-label text-fg-secondary">Inicia lote<Select value={r.iniciaLote} onChange={(e) => mudar("iniciaLote", e.target.value)}><option value="">Padrão</option><option value="S">Sim</option><option value="N">Não</option></Select></label>{campo("codigoFilial", "Código matriz/filial", 10)}{campo("centroCustoDebito", "Centro de custo débito", 40)}{campo("centroCustoCredito", "Centro de custo crédito", 40)}</div>
         </div>
       </BlocoRecolhivel>
-      <BlocoRecolhivel titulo={leitura?.chave === chaveDasNotas && leitura.carregando ? "Consultando notas…" : relacionadas.length + " nota(s) deste fornecedor no período"}>{leitura?.chave === chaveDasNotas && leitura.erro && <Aviso tom="atencao">{leitura.erro}</Aviso>}<ul className="mt-2 space-y-2">{relacionadas.slice(0, 50).map((n) => <li key={n.chave} className="text-helper"><Button size="xs" variant="link" href={"/documentos-fiscais/" + n.documentoId} target="_blank">{n.tipo + " " + n.numero + " · " + n.data.split("-").reverse().join("/")}</Button></li>)}</ul>{relacionadas.length > 50 && <Button variant="link" size="sm" href={"/contabil/sped?" + new URLSearchParams({ empresa: empresaId, mes, aba: "lancamentos", secao: "entradas", q: r.cnpjFornecedor, cfop: r.cfop })}>Consultar todas em Notas de entrada</Button>}</BlocoRecolhivel>
+      <BlocoRecolhivel titulo={leitura?.chave === chaveDasNotas && leitura.carregando ? "Consultando notas…" : relacionadas.length + " nota(s) deste fornecedor no período"}>{leitura?.chave === chaveDasNotas && leitura.erro && <Aviso tom="atencao">{leitura.erro}</Aviso>}<ul className="mt-2 space-y-2">{relacionadas.slice(0, 50).map((n) => <li key={n.chave} className="text-helper"><Button size="xs" variant="link" href={"/documentos-fiscais/" + n.documentoId} target="_blank">{n.tipo + " " + n.numero + " · " + n.data.split("-").reverse().join("/")}</Button></li>)}</ul>{relacionadas.length > 50 && <Button variant="link" size="sm" href={"/sped-contabil?" + new URLSearchParams({ empresa: empresaId, mes, aba: "lancamentos", secao: "entradas", q: r.cnpjFornecedor, cfop: r.cfop })}>Consultar todas em Notas de entrada</Button>}</BlocoRecolhivel>
       {erro && <Aviso tom="perigo">{erro}</Aviso>}
       <div className="flex gap-2 sticky bottom-0 bg-surface-elevated py-3 border-t border-border"><Button type="submit" loading={pendente}>Salvar regra</Button><Button type="button" variant="secondary" disabled={pendente} onClick={fechar}>Cancelar</Button></div>
     </form>

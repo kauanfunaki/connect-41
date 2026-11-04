@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
-import type { LeituraState } from "@/app/(app)/societario/ia/actions";
+import type { LeituraState } from "@/app/(app)/processos/ia/actions";
 import { FormFooter } from "@/components/ui/FormFooter";
 
 /**

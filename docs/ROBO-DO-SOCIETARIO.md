@@ -90,7 +90,7 @@ npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario
 
 ## 5. Acompanhar
 
-- **Societário › Robô** no menu (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
+- **Societário › Robô** no menu (`/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
 - **Sino**: quem pediu recebe "O robô precisa de você" quando a tarefa para.
 - **Ops Center, automação `robo-societario`**: o sinal de vida da máquina.
 - **Trilha de auditoria**: cada aceite de acessibilidade que o robô marcou, com a empresa e a inscrição.

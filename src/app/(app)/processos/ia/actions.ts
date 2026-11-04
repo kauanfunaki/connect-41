@@ -69,8 +69,8 @@ export async function rodarVarreduraAction(): Promise<AcaoDaIa> {
   if (r.tipo === "vazia") {
     return { ok: true, mensagem: "Nenhuma pendência: não há exigência vencida, processo parado, prazo vencido nem licença vencendo." };
   }
-  revalidatePath("/societario/ia");
-  redirect(`/societario/ia/${r.propostaId}`);
+  revalidatePath("/processos/ia");
+  redirect(`/processos/ia/${r.propostaId}`);
 }
 
 /**
@@ -151,7 +151,7 @@ export async function aplicarVarredura(propostaId: string, chavesMarcadas: strin
     entityId: propostaId,
     metadata: { itens: itens.length, de: payload.avaliacao.itens.length, processosSubiram },
   });
-  revalidatePath("/societario/ia");
+  revalidatePath("/processos/ia");
   revalidatePath("/processos");
   return {
     ok: true,
@@ -180,7 +180,7 @@ export async function rejeitarProposta(propostaId: string, motivo: string): Prom
     entityId: propostaId,
     metadata: { agente: proposta.agentCode },
   });
-  revalidatePath("/societario/ia");
+  revalidatePath("/processos/ia");
   return { ok: true };
 }
 
@@ -221,8 +221,8 @@ export async function lerContratoSocialAction(_prev: LeituraState, form: FormDat
     console.error("[lerContratoSocial]", err);
     return { error: mensagemDeErroDaIa(err) };
   }
-  revalidatePath("/societario/ia");
-  redirect(`/societario/ia/${propostaId}`);
+  revalidatePath("/processos/ia");
+  redirect(`/processos/ia/${propostaId}`);
 }
 
 /**
@@ -333,7 +333,7 @@ export async function aplicarContrato(propostaId: string, linhas: SocioLido[]): 
     metadata: { propostaId, novos: plano.novos.length, atualizados: plano.atualizar.length, editada: !semMudanca },
   });
   revalidatePath(`/empresas/${companyId}/socios`);
-  revalidatePath("/societario/ia");
+  revalidatePath("/processos/ia");
   return {
     ok: true,
     mensagem: `${plano.novos.length} ${plano.novos.length === 1 ? "sócio novo" : "sócios novos"} e ${plano.atualizar.length} ${plano.atualizar.length === 1 ? "atualizado" : "atualizados"}.`,
