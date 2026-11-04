@@ -52,7 +52,17 @@ export default async function PainelDoSocietarioPage() {
             ? [{ rotulo: "Certidões positivas", valor: formatarNumero(n.positivas, 0), tom: n.positivas > 0 ? "text-danger" : undefined, icone: <ShieldCheck />, href: "/certidoes?recorte=positivas" }]
             : []),
           ...(n.robo !== null
-            ? [{ rotulo: "Robô", valor: n.robo === "ok" ? "respondendo" : "sem sinal", tom: n.robo === "ok" ? "text-success-fg" : "text-danger", icone: <Bot />, href: "/robo" }]
+            ? [
+                {
+                  // Uma palavra curta no valor (04/11/2026): "respondendo" não cabia no cartão e virava "responden…".
+                  rotulo: "Robô",
+                  valor: n.robo === "ok" ? "OK" : "Parado",
+                  detalhe: n.robo === "ok" ? "respondendo" : "sem sinal da máquina",
+                  tom: n.robo === "ok" ? "text-success-fg" : "text-danger",
+                  icone: <Bot />,
+                  href: "/robo",
+                },
+              ]
             : []),
         ]}
       />
