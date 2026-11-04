@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { gravarMensagem, processoNoEscopo } from "@/lib/societario/conversa";
+import { avisarClienteDoProcesso } from "@/lib/societario/avisoAoCliente";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
@@ -135,6 +137,11 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
   );
   if (!lido.ok) return { error: lido.erro };
   const dados = lido.dados;
+  // Abertura guiada (04/11/2026): os itens do checklist que o escritório já
+  // tem nascem marcados, e o pedido do resto vai ao cliente pelo portal.
+  const jaTemos = new Set(form.getAll("jaTemos").map(String).filter((v) => v.length > 0 && v.length <= 64));
+  const pedido = String(form.get("pedido") ?? "").trim().slice(0, 5000);
+  const pedirAoCliente = form.get("pedirAoCliente") === "1" && pedido.length > 0;
 
   const prisma = getPrisma();
 
@@ -193,11 +200,13 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
             select: { id: true },
           });
           for (const item of passo.items) {
+            const temos = jaTemos.has(item.id);
             await tx.processChecklistItem.create({
               data: {
                 tenantId: ctx.tenantId!,
                 stepId: etapa.id,
                 templateItemId: item.id,
+                ...(temos ? { done: true, doneAt: new Date() } : {}),
               },
             });
           }
@@ -217,8 +226,20 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
     action: "process.open",
     entityType: "Process",
     entityId: processoId,
-    metadata: { tipo: template.type.name, companyId, prioridade: dados.prioridade },
+    metadata: { tipo: template.type.name, companyId, prioridade: dados.prioridade, jaTemos: jaTemos.size, pedidoAoCliente: pedirAoCliente },
   });
+
+  // O pedido ao cliente vai na conversa do processo, que ele vê no portal e
+  // recebe por e-mail. Best-effort: o processo já está aberto.
+  if (pedirAoCliente) {
+    try {
+      await gravarMensagem({ tenantId: ctx.tenantId, processId: processoId, autor: { userId: ctx.userId || null }, corpo: pedido, anexos: [] });
+      const proc = await processoNoEscopo({ tenantId: ctx.tenantId, companyIds: null }, processoId);
+      if (proc) await avisarClienteDoProcesso(ctx.tenantId, proc, "mensagem");
+    } catch (err) {
+      console.error("[abrirProcesso] pedido ao cliente", processoId, err);
+    }
+  }
 
   revalidatePath("/processos");
   redirect(`/processos/${processoId}`);

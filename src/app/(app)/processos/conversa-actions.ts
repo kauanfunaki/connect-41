@@ -12,12 +12,9 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { guardarTambemNosArquivos } from "@/lib/drive/guardarTambem";
-import { nomeExibicao } from "@/lib/companyName";
 import { validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { arquivosDoFormulario } from "@/lib/financeiro/pendencias/armazenamento";
-import { usuariosDoPortalDaEmpresa } from "@/lib/financeiro/pendencias/avisos";
-import { sendNovidadeNoProcessoEmail } from "@/lib/email/sendMail";
-import { avisarClientePorPush } from "@/lib/portal/avisos";
+import { avisarClienteDoProcesso } from "@/lib/societario/avisoAoCliente";
 import {
   arquivosDoProcesso,
   gravarDocumentos,
@@ -45,37 +42,8 @@ async function contexto(formData: FormData) {
 
 type Processo = NonNullable<Awaited<ReturnType<typeof processoNoEscopo>>>;
 
-/** Avisa os usuários do portal da empresa. Best-effort: o envio já está gravado. */
-async function avisarCliente(tenantId: string, processo: Processo, motivo: "mensagem" | "documento"): Promise<string | null> {
-  try {
-    const destinatarios = await usuariosDoPortalDaEmpresa(tenantId, processo.companyId);
-    if (destinatarios.length === 0) {
-      return "Nenhum usuário ativo do portal nesta empresa — fica gravado aqui até alguém ter acesso.";
-    }
-    const processoNome = `${processo.title || processo.type.name} — ${nomeExibicao(processo.company)}`;
-    const [envio] = await Promise.all([
-      sendNovidadeNoProcessoEmail({
-        tenantId,
-        destinatarios: destinatarios.map((u) => ({ email: u.email, nome: u.name })),
-        processId: processo.id,
-        processoNome,
-        motivo,
-      }),
-      avisarClientePorPush(tenantId, destinatarios.map((u) => u.id), {
-        tipo: "processo",
-        motivo,
-        processoNome,
-        processId: processo.id,
-      }),
-    ]);
-    if (envio.semSmtp) return "Gravado, mas o SMTP deste workspace não está configurado: o cliente só vê ao entrar no portal.";
-    if (envio.falhas > 0) return `${envio.falhas} aviso(s) por e-mail falharam. O cliente vê ao entrar no portal.`;
-    return null;
-  } catch (err) {
-    console.error("[processo:conversa] aviso ao cliente", processo.id, err);
-    return "Gravado, mas o aviso ao cliente falhou. Ele vê ao entrar no portal.";
-  }
-}
+// O aviso ao cliente mora em `@/lib/societario/avisoAoCliente` (04/11/2026).
+const avisarCliente = (tenantId: string, processo: Processo, motivo: "mensagem" | "documento") => avisarClienteDoProcesso(tenantId, processo, motivo);
 
 function revalidar(processId: string) {
   revalidatePath(`/processos/${processId}`);

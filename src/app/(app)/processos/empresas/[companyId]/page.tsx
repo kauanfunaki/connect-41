@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AlertCircle, AlertTriangle, Building2, CalendarClock, FolderOpen, Receipt } from "lucide-react";
+import { AlertCircle, AlertTriangle, Building2, CalendarClock, FolderOpen, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -127,9 +127,15 @@ export default async function VisaoSocietariaDoClientePage({
           visao.empresa.nome !== visao.empresa.razaoSocial ? `${visao.empresa.razaoSocial} · visão do Societário` : "Visão do Societário"
         }
         action={
-          <Button href={`/empresas/${visao.empresa.id}`} variant="secondary">
-            <Building2 size={14} /> Cadastro da empresa
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button href={`/empresas/${visao.empresa.id}`} variant="secondary">
+              <Building2 size={14} /> Cadastro da empresa
+            </Button>
+            {/* A abertura guiada já com a empresa escolhida (04/11/2026). */}
+            <Button href={`/processos/novo?empresa=${visao.empresa.id}`}>
+              <Plus size={14} /> Abrir processo
+            </Button>
+          </div>
         }
       />
 
