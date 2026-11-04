@@ -1,19 +1,25 @@
-import { formatInstantDateTime } from "@/lib/format";
+import { formatInstantTime } from "@/lib/format";
 import type { SyncProgress } from "@/lib/github/types";
 
 const STATES: Record<SyncProgress["state"], string> = {
-  disconnected: "Reconexão necessária", paused: "Sincronização pausada", processing: "Consultando GitHub",
-  waiting: "Aguardando nova tentativa", queued: "Aguardando o próximo lote automático", error: "Há tarefas que precisam de nova tentativa", idle: "Fila concluída",
+  disconnected: "Reconexão necessária", paused: "Pausada", processing: "Coletando agora",
+  waiting: "Aguardando nova tentativa", queued: "Na fila do próximo lote", error: "Coleta com falhas", idle: "Em dia",
 };
+
+/**
+ * A fila da coleta numa linha (04/11/2026). Com a fila vazia e sem falhas não
+ * aparece: a "última coleta" do cabeçalho já diz tudo. As falhas só entram
+ * quando houver.
+ */
 export function SyncStatus({ progress, timezone }: { progress: SyncProgress | null; timezone: string }) {
-  if (!progress) return null;
-  // Sem `role="status"`: o painel é refeito a cada 30 s e o leitor de tela
-  // repetia a fila inteira a cada leitura (26/10/2026).
-  return <div className="space-y-1 rounded-lg border border-border bg-surface-2 p-3 text-helper text-fg-secondary">
-    <p className="font-medium text-fg">{STATES[progress.state]}</p>
-    <p>{progress.done} de {progress.total} tarefas concluídas · {progress.pending} pendentes · {progress.failed} com falha</p>
-    {progress.pending > 0 && <p className="text-fg-muted">Novas tarefas podem surgir ao encontrar pull requests. {progress.automatic ? "A coleta continua no servidor; você pode fechar esta página." : "O executor interno está desativado nesta instância. Confira o agendador do servidor."}</p>}
-    {progress.lastActivityAt && <p className="text-fg-muted">Última atividade: {formatInstantDateTime(new Date(progress.lastActivityAt), { timeZone: timezone })}</p>}
-    {progress.nextAttemptAt && <p className="text-fg-muted">Nova tentativa a partir de {formatInstantDateTime(new Date(progress.nextAttemptAt), { timeZone: timezone })}</p>}
-  </div>;
+  if (!progress || progress.state !== "processing" && !progress.pending && !progress.failed) return null;
+  const partes: React.ReactNode[] = [<span key="estado" className="font-medium text-fg-secondary">{STATES[progress.state]}</span>];
+  if (progress.total) partes.push(`${progress.done} de ${progress.total} tarefas`);
+  if (progress.failed) partes.push(<span key="falhas" className="text-warning-fg">{progress.failed === 1 ? "1 com falha" : `${progress.failed} com falha`}</span>);
+  if (progress.nextAttemptAt) partes.push(`nova tentativa às ${formatInstantTime(new Date(progress.nextAttemptAt), { hour: "2-digit", minute: "2-digit", timeZone: timezone })}`);
+  if (progress.pending && !progress.automatic) partes.push(<span key="executor" className="text-warning-fg">executor interno desligado nesta instância</span>);
+  // Sem `role="status"`: a tela relê a cada 15 s e o leitor de tela repetiria a linha (26/10/2026).
+  return <p className="text-fs-2 text-fg-muted">
+    {partes.map((parte, i) => <span key={i}>{i > 0 && " · "}{parte}</span>)}
+  </p>;
 }
