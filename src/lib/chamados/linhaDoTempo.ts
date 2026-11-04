@@ -27,13 +27,9 @@ export function montarLinhaDoTempo({ mensagens, anexos, eventos }: { mensagens: 
 }
 
 const lista = (ids: unknown, nome: (id: string) => string) => Array.isArray(ids) ? ids.filter((v): v is string => typeof v === "string").map(nome).join(", ") : null;
-/**
- * Quem fez e o quê, numa frase: "Ana alterou a situação para Em andamento".
- * `quemAgiu` troca só o sujeito da frase (a lista dos chamados diz "Suporte",
- * não o nome); as pessoas citadas depois dele seguem pelo nome.
- */
-export function descreverEvento(e: Pick<EventoDaLinha, "type" | "actorId" | "data">, nome: (id: string) => string, quemAgiu?: string): { texto: string; detalhe?: string } {
-  const quem = quemAgiu ?? (e.actorId ? nome(e.actorId) : "O Connect"), d = (e.data ?? {}) as Record<string, unknown>;
+/** Quem fez e o quê, numa frase: "Ana alterou a situação para Em andamento". */
+export function descreverEvento(e: Pick<EventoDaLinha, "type" | "actorId" | "data">, nome: (id: string) => string): { texto: string; detalhe?: string } {
+  const quem = e.actorId ? nome(e.actorId) : "O Connect", d = (e.data ?? {}) as Record<string, unknown>;
   switch (e.type) {
     case "created": return { texto: `${quem} abriu o chamado${d.semAnalise ? " sem a revisão da IA" : ""}` };
     case "status": return { texto: `${quem} alterou a situação para ${ROTULOS[d.to as Status] ?? "outra situação"}` };
