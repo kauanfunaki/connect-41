@@ -191,7 +191,19 @@ export default async function LancamentosPage({
           />
         </>
       )}
-      {filtroDaEmpresa}
+      {aba === "novo" ? (
+        // A empresa num selo (Lançamentos B, página de opções de 04/11/2026): a
+        // barra de troca de empresa repetia a da lista. Trocar volta à lista,
+        // que tem o seletor — e o formulário ainda vazio não perde nada.
+        <p className="mb-4 flex flex-wrap items-center gap-2">
+          <Selo tom="marca">Lançando em: {empresa.nome}</Selo>
+          <Button href={href("lista")} variant="ghost" size="xs">
+            Trocar a empresa
+          </Button>
+        </p>
+      ) : (
+        filtroDaEmpresa
+      )}
 
       {aba === "novo" && <FormularioDaEmpresa companyId={companyId} tenantId={ctx.tenantId} hojeKey={hojeKey} mes={mes} />}
 

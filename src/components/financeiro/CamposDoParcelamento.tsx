@@ -63,7 +63,11 @@ export function CamposDoParcelamento({
   valorTexto,
   primeiroVencimento,
   className = "",
+  abertoInicial = false,
 }: {
+  /** Abre já aberto: o botão do "Também" no lançamento (04/11/2026). */
+  abertoInicial?: boolean;
+
   parcelas: string;
   onParcelas: (v: string) => void;
   /** O valor do formulário, como digitado — o total a dividir. */
@@ -106,7 +110,7 @@ export function CamposDoParcelamento({
   const json = JSON.stringify(finais.map((p) => ({ vencimento: p.vencimento, centavos: p.centavos ?? 0 })));
 
   return (
-    <BlocoRecolhivel titulo="Parcelar" resumo={resumoDoParcelamento(parcelas, total)} className={`bg-surface ${className}`.trim()}>
+    <BlocoRecolhivel titulo="Parcelar" resumo={resumoDoParcelamento(parcelas, total)} className={`bg-surface ${className}`.trim()} abertoInicial={abertoInicial}>
       <div className="flex flex-col gap-3 pt-1">
         <input type="hidden" name="parcelar" value={parcelando ? "1" : "0"} />
         {parcelando && <input type="hidden" name="parcelas" value={json} />}
