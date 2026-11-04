@@ -17,6 +17,10 @@ import { EtapasNumeradas } from "@/components/ui/EtapasNumeradas";
 import { DeparaWorkspace } from "@/components/contabil/DeparaWorkspace";
 import { AreasContribuicoes } from "@/components/contabil/AreasContribuicoes";
 import { LimiteDaAreaContabil } from "@/components/contabil/LimiteDaAreaContabil";
+import { PagamentosSemNota } from "@/components/contabil/PagamentosSemNota";
+import { ContasDosPagamentos } from "@/components/contabil/ContasDosPagamentos";
+import { contasDosPagamentos, painelDosPagamentos } from "@/lib/contabil/pagamentosServidor";
+import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { podeExcluir } from "@/lib/auth/papeis";
 
@@ -63,11 +67,29 @@ export default async function SpedDoContabilPage({ searchParams }: { searchParam
 
 async function Conteudo({ ctx, empresa, mes, aba, secao, params, daMatriz }: { ctx: AuthContext; empresa: EmpresaDoContabil; mes: string; aba: string; secao: string; params: Params; daMatriz: string | null }) {
   if (aba === "contribuicoes") return <AreasContribuicoes ctx={ctx} empresa={empresa} mes={mes} secao={secao} params={params} />;
-  const dados = await Promise.all([painelDoContabil(ctx.tenantId, empresa, mes, { entradas: secao !== "configuracao" && secao !== "regras", sugestoes: secao === "pendencias" }), podeNoModulo(ctx, "contabil_sped", "agir")]).catch((err) => {
+  const indisponivel = <Aviso tom="atencao">Não foi possível carregar esta área. Tente novamente. As outras áreas continuam disponíveis.</Aviso>;
+  if (etapaDaSecao(secao).chave === "pagamentos") {
+    const pagamentos = await Promise.all([painelDosPagamentos(ctx.tenantId, empresa, mes), podeNoModulo(ctx, "contabil_sped", "agir")]).catch((err) => {
+      console.error("[contabil/sped] pagamentos sem nota indisponíveis", err);
+      return null;
+    });
+    if (!pagamentos) return indisponivel;
+    return <PagamentosSemNota key={empresa.id + mes + secao} painel={pagamentos[0]} empresaId={empresa.id} mes={mes} secao={secao} podeAgir={pagamentos[1]} permiteExcluir={podeExcluir(ctx)} daMatriz={daMatriz} />;
+  }
+  const configuracao = secao === "configuracao";
+  const dados = await Promise.all([
+    painelDoContabil(ctx.tenantId, empresa, mes, { entradas: !configuracao && secao !== "regras", sugestoes: secao === "pendencias" }),
+    podeNoModulo(ctx, "contabil_sped", "agir"),
+    configuracao ? contasDosPagamentos(ctx.tenantId, empresa.baseId) : null,
+    configuracao ? getPrisma().contabilContaPagamento.findMany({ where: { tenantId: ctx.tenantId, companyId: empresa.baseId }, select: { chave: true } }) : [],
+  ]).catch((err) => {
     console.error("[contabil/sped] área indisponível", err);
     return null;
   });
-  if (!dados) return <Aviso tom="atencao">Não foi possível carregar esta área. Tente novamente. As outras áreas continuam disponíveis.</Aviso>;
-  const [painel, podeAgir] = dados;
-  return <DeparaWorkspace key={empresa.id + mes + secao + JSON.stringify(params)} painel={painel} empresaId={empresa.id} mes={mes} secao={secao} filtros={{ ...params, situacao: params.situacao ?? (params.ver === "fora" ? "fora" : undefined) }} podeAgir={podeAgir} permiteExcluir={podeExcluir(ctx)} daMatriz={daMatriz} />;
+  if (!dados) return indisponivel;
+  const [painel, podeAgir, contasDoModelo, gravadas] = dados;
+  return <>
+    <DeparaWorkspace key={empresa.id + mes + secao + JSON.stringify(params)} painel={painel} empresaId={empresa.id} mes={mes} secao={secao} filtros={{ ...params, situacao: params.situacao ?? (params.ver === "fora" ? "fora" : undefined) }} podeAgir={podeAgir} permiteExcluir={podeExcluir(ctx)} daMatriz={daMatriz} />
+    {contasDoModelo && <div className="mt-4"><ContasDosPagamentos key={empresa.baseId} empresaId={empresa.id} contas={contasDoModelo} gravadas={gravadas.map((g) => g.chave as keyof typeof contasDoModelo)} podeAgir={podeAgir} /></div>}
+  </>;
 }

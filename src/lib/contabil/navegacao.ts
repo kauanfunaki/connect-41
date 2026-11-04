@@ -2,6 +2,7 @@ import type { Lancamento } from "./lancamentos";
 export const AREAS_CONTABEIS = [
   ["visao", "Visão geral"], ["entradas", "Notas de entrada"], ["pendencias", "Pendências"],
   ["regras", "Regras do de-para"], ["lancamentos", "Lançamentos"], ["configuracao", "Plano e contas"],
+  ["pagamentos", "Lançados e pendências"], ["documentos-lidos", "Documentos lidos"], ["enviar-pagamentos", "Enviar documentos"], ["regras-pagamentos", "Regras dos pagamentos"],
 ] as const;
 export const AREAS_CONTRIBUICOES = [
   ["visao", "Visão geral"], ["fechamento", "Fechamento e conferência"], ["apuracao", "Apuração e créditos"],
@@ -22,6 +23,9 @@ export const ETAPAS_DO_CONTABIL = [
   { chave: "pendencias", rotulo: "Pendências", resumo: "As notas que ficaram fora do de-para.", secoes: [["pendencias", "Pendências"]] },
   { chave: "depara", rotulo: "De-para", resumo: "Onde a pendência vira regra de conta.", secoes: [["regras", "Regras"], ["configuracao", "Plano e contas"]] },
   { chave: "lancamentos", rotulo: "Lançamentos", resumo: "A planilha no modelo da Domínio.", secoes: [["lancamentos", "Lançamentos"], ["visao", "Resumo"]] },
+  // O passo 5 do motor (03/11/2026): RPA, recibos, contratos e as faturas do
+  // BPO, lidos dos documentos enviados aqui. As contas-modelo ficam em Plano e contas.
+  { chave: "pagamentos", rotulo: "Pagamentos sem nota", resumo: "RPA, recibos, contratos e faturas do BPO.", secoes: [["pagamentos", "Lançados e pendências"], ["documentos-lidos", "Documentos lidos"], ["enviar-pagamentos", "Enviar documentos"], ["regras-pagamentos", "Regras"]] },
 ] as const;
 export type EtapaDoContabil = (typeof ETAPAS_DO_CONTABIL)[number];
 export const SECOES_DO_CONTABIL: readonly string[] = ETAPAS_DO_CONTABIL.flatMap((e) => e.secoes.map(([id]) => id));
