@@ -15,6 +15,16 @@ describe("seleção do menu fiscal", () => {
   });
 });
 
+describe("tela que é item próprio debaixo de outro item (04/11/2026)", () => {
+  it("o Painel e os Órgãos acendem sozinhos; Processos segue aceso no resto", () => {
+    expect(caminhoDoMenuAtivo("/processos/painel", "/processos")).toBe(false);
+    expect(caminhoDoMenuAtivo("/processos/painel", "/processos/painel")).toBe(true);
+    expect(caminhoDoMenuAtivo("/processos/orgaos", "/processos")).toBe(false);
+    expect(caminhoDoMenuAtivo("/processos/123", "/processos")).toBe(true);
+    expect(caminhoDoMenuAtivo("/processos/kanban", "/processos")).toBe(true);
+  });
+});
+
 describe("quadrosAtivo", () => {
   it("acende na raiz, nos espaços, nas pastas e nas listas", () => {
     for (const p of ["/setor/bpo", "/setor/bpo/espacos/e1", "/setor/bpo/pastas/p1", "/kanban/l1", "/kanban/l1/itens/x"]) expect(quadrosAtivo(p, "bpo")).toBe(true);

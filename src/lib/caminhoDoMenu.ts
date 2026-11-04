@@ -1,3 +1,12 @@
+import { MODULE_ROUTES } from "@/lib/module-catalog";
+
+/**
+ * As telas que são item próprio no menu. Uma que mora debaixo de outra
+ * (`/processos/painel` debaixo de `/processos`) acende só ela: o print do
+ * Kauan de 04/11/2026 mostrava Processos e Painel acesos juntos.
+ */
+const ROTAS_DO_MENU = [...new Set(Object.values(MODULE_ROUTES).map((r) => r.split("?")[0]))];
+
 /**
  * Telas que acendem o item de outra (lote 9, 28/10/2026): o item do DP abre as
  * Admissões, e Desligamentos e Férias são abas da mesma tela.
@@ -11,6 +20,7 @@ export function caminhoDoMenuAtivo(pathname: string, href: string): boolean {
   const base = href.split("?")[0];
   if (base === "/fiscal") return pathname === base;
   const dentro = (prefixo: string) => pathname === prefixo || pathname.startsWith(`${prefixo}/`);
+  if (dentro(base) && ROTAS_DO_MENU.some((r) => r !== base && r.startsWith(`${base}/`) && dentro(r))) return false;
   return dentro(base) || (ACENDEM_JUNTO[base] ?? []).some(dentro);
 }
 
