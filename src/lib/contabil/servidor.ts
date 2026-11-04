@@ -13,6 +13,7 @@ import {
   type ContaDoPlano, type Entrada, type Lancamento, type Modelos, type Pendencia, type Regra, type Relatorio, type TipoDaEntrada,
 } from "./lancamentos";
 import { criarSugestor, type Sugestao } from "./sugestao";
+import { contasDaEmpresa, linhasDasSaidas, saidasPorDia, type ContasDasSaidas, type DiaDeSaidas, type TipoDeSaida } from "./saidas";
 import type { AuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 
@@ -144,4 +145,33 @@ export function linhasParaADominio(lancamentos: readonly Lancamento[], tipo: Tip
     codigoHistorico: l.codigoHistorico, complemento: l.historico, codigoFilial: l.codigoFilial || codigoFilial,
     iniciaLote: l.iniciaLote, centroCustoDebito: l.centroCustoDebito, centroCustoCredito: l.centroCustoCredito,
   }));
+}
+
+export type PainelDasSaidas = { dias: DiaDeSaidas[]; contas: ContasDasSaidas; gravadas: TipoDeSaida[]; codigoFilial: string; linhas: LinhaDaDominio[] };
+
+/**
+ * As saídas da empresa no mês (passo 6, 03/11/2026): CT-e e NFS-e em que ela é
+ * a emitente, somados por dia. A filial é a da própria empresa na Domínio,
+ * como no motor; sem ela, a do Contábil da matriz.
+ */
+export async function painelDasSaidas(tenantId: string, empresa: EmpresaDoContabil, competencia: string): Promise<PainelDasSaidas> {
+  const prisma = getPrisma();
+  const [docs, gravadas, modelo, company] = await Promise.all([
+    empresa.cnpj ? prisma.fiscalDocument.findMany({
+      where: { tenantId, companyId: empresa.id, competence: competencia, issuerDocument: empresa.cnpj, type: { in: ["CTE", "NFSE"] }, removedAtOrigin: false },
+      select: { type: true, amount: true, issuedAt: true, situation: true },
+    }) : Promise.resolve([]),
+    prisma.contabilContaSaida.findMany({ where: { tenantId, companyId: empresa.baseId }, select: { chave: true, debito: true, credito: true, historico: true } }),
+    prisma.contabilModelo.findUnique({ where: { companyId: empresa.baseId }, select: { codigoFilial: true } }),
+    prisma.company.findFirst({ where: { id: empresa.id, tenantId }, select: { dominioBranchCode: true } }),
+  ]);
+  const dias = saidasPorDia(docs.map((d) => ({
+    tipo: d.type === "CTE" ? "cte" : "nfse",
+    data: saoPauloParts(d.issuedAt).dateKey,
+    centavos: d.amount === null ? 0 : centavosDeDecimal(d.amount),
+    cancelada: d.situation === "CANCELADA",
+  })));
+  const contas = contasDaEmpresa(gravadas);
+  const codigoFilial = company?.dominioBranchCode?.trim() || modelo?.codigoFilial || "";
+  return { dias, contas, gravadas: gravadas.map((g) => g.chave).filter((c): c is TipoDeSaida => c === "cte" || c === "nfse"), codigoFilial, linhas: linhasDasSaidas(dias, contas, codigoFilial) };
 }
