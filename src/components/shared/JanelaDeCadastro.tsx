@@ -15,6 +15,10 @@ type Props = {
    * `novo` sai do endereço, para a janela não voltar ao recarregar.
    */
   abertaDeInicio?: boolean;
+  /** O botão fora do cabeçalho (no pé de uma coluna, por exemplo) pede outro peso. */
+  botao?: { variant?: "primary" | "secondary" | "ghost"; size?: "xs" | "sm" | "md"; className?: string };
+  /** O título da janela, quando difere do texto do botão. */
+  titulo?: string;
   /** O formulário. Recebe `fechar`, para fechar a janela quando o cadastro der certo. */
   children: (fechar: () => void) => React.ReactNode;
 };
@@ -28,7 +32,7 @@ type Props = {
  * cartão que abria no lugar do botão —, e cada tela tinha o "criar" num lugar.
  * Agora é o "+ Novo …" à direita do título, como nas outras listas do Connect.
  */
-export function JanelaDeCadastro({ rotulo, maxWidth = "max-w-lg", abertaDeInicio = false, children }: Props) {
+export function JanelaDeCadastro({ rotulo, maxWidth = "max-w-lg", abertaDeInicio = false, botao, titulo, children }: Props) {
   const [aberta, setAberta] = useState(abertaDeInicio);
   const fechar = () => {
     setAberta(false);
@@ -43,10 +47,10 @@ export function JanelaDeCadastro({ rotulo, maxWidth = "max-w-lg", abertaDeInicio
 
   return (
     <>
-      <Button onClick={() => setAberta(true)}>
+      <Button onClick={() => setAberta(true)} variant={botao?.variant} size={botao?.size} className={botao?.className}>
         <Plus size={14} /> {rotulo}
       </Button>
-      <Modal open={aberta} onClose={fechar} title={rotulo} maxWidth={maxWidth}>
+      <Modal open={aberta} onClose={fechar} title={titulo ?? rotulo} maxWidth={maxWidth}>
         {aberta && children(fechar)}
       </Modal>
     </>

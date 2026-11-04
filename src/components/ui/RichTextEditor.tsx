@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Italic, List, ListOrdered, Heading2, GripVertical } from "lucide-react";
+import { Bold, Italic, List, ListOrdered, Heading2, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
 import type { EditorView } from "@tiptap/pm/view";
+import { TextSelection } from "@tiptap/pm/state";
 
 type Props = {
   /** Sincroniza um <input type="hidden"> pra submissão via <form>. Omitido
@@ -109,6 +110,24 @@ function posForIndex(doc: EditorView["state"]["doc"], index: number): number {
 // Acha em qual bloco de nível 1 (parágrafo, título, item de lista...) as
 // coordenadas de tela caem — devolve o índice do bloco e o elemento DOM dele,
 // usado tanto pra posicionar o puxador quanto pra decidir onde soltar.
+/**
+ * Move o bloco `de` para a posição `para` (índices de nível 1) e deixa o cursor
+ * dentro dele. É o "Mover para cima/baixo" do puxador e o Alt+↑/↓ (lote C dos
+ * ajustes de 03/11/2026): arrastar pede mira; isto, não.
+ */
+function moverBloco(view: EditorView, de: number, para: number): boolean {
+  const doc = view.state.doc;
+  if (para < 0 || para >= doc.childCount || para === de) return false;
+  const node = doc.child(de);
+  const tr = view.state.tr.delete(posForIndex(doc, de), posForIndex(doc, de) + node.nodeSize);
+  const insertPos = posForIndex(tr.doc, para);
+  tr.insert(insertPos, node.type.create(node.attrs, node.content, node.marks));
+  tr.setSelection(TextSelection.near(tr.doc.resolve(insertPos + 1)));
+  view.dispatch(tr.scrollIntoView());
+  view.focus();
+  return true;
+}
+
 function hoveredBlock(view: EditorView, clientX: number, clientY: number) {
   const posInfo = view.posAtCoords({ left: clientX, top: clientY });
   if (!posInfo) return null;
@@ -139,6 +158,8 @@ export function RichTextEditor({
   // re-renderizam o componente React — precisa do valor mais recente na hora.
   const draggingIndexRef = useRef<number | null>(null);
   const [handle, setHandle] = useState<{ top: number; index: number } | null>(null);
+  // O bloco com o menu "Mover para cima/baixo" aberto.
+  const [menuDoBloco, setMenuDoBloco] = useState<number | null>(null);
   const bare = chrome === "bare";
 
   const editorProps = useMemo(
@@ -150,6 +171,12 @@ export function RichTextEditor({
       },
       ...(blockDragHandle
         ? {
+            // Alt+↑ / Alt+↓ move o bloco onde está o cursor.
+            handleKeyDown: (view: EditorView, event: KeyboardEvent) => {
+              if (!event.altKey || event.ctrlKey || event.metaKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return false;
+              const de = view.state.selection.$from.index(0);
+              return moverBloco(view, de, de + (event.key === "ArrowUp" ? -1 : 1));
+            },
             handleDOMEvents: {
               mousemove: (view: EditorView, event: Event) => {
                 if (draggingIndexRef.current !== null) return false;
@@ -279,13 +306,46 @@ export function RichTextEditor({
           onDragStart={onHandleDragStart}
           onDragEnd={onHandleDragEnd}
           onMouseDown={(e) => e.preventDefault()}
+          // Clicar (sem arrastar) abre "Mover para cima/baixo" (03/11/2026).
+          onClick={() => setMenuDoBloco((m) => (m === handle.index ? null : handle.index))}
+          aria-expanded={menuDoBloco === handle.index}
           style={{ top: handle.top + 2 }}
           className={`absolute w-6 h-6 flex items-center justify-center rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover cursor-grab active:cursor-grabbing ${bare ? "-left-8" : "left-1.5"}`}
-          title="Arrastar para reordenar"
-          aria-label="Arrastar bloco para reordenar"
+          title="Arraste para reordenar, ou clique para mover (Alt+↑/↓)"
+          aria-label="Mover bloco"
         >
           <GripVertical size={14} />
         </button>
+      )}
+      {blockDragHandle && handle && editor && menuDoBloco === handle.index && (
+        <div
+          role="menu"
+          aria-label="Mover bloco"
+          style={{ top: handle.top + 28 }}
+          className={`absolute z-10 flex flex-col rounded-md border border-border-strong bg-surface-elevated p-1 shadow-lg ${bare ? "-left-8" : "left-1.5"}`}
+        >
+          {[
+            { rotulo: "Mover para cima", icone: <ArrowUp size={13} aria-hidden />, para: handle.index - 1 },
+            { rotulo: "Mover para baixo", icone: <ArrowDown size={13} aria-hidden />, para: handle.index + 1 },
+          ].map((o) => (
+            <button
+              key={o.rotulo}
+              type="button"
+              role="menuitem"
+              disabled={o.para < 0 || o.para >= editor.state.doc.childCount}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                moverBloco(editor.view, handle.index, o.para);
+                setMenuDoBloco(null);
+                setHandle(null);
+              }}
+              className="flex items-center gap-2 whitespace-nowrap rounded-sm px-2 py-1.5 text-left text-fs-2 text-fg-secondary hover:bg-surface-hover hover:text-fg disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              {o.icone}
+              {o.rotulo}
+            </button>
+          ))}
+        </div>
       )}
       {name && <input type="hidden" name={name} value={html} readOnly />}
     </div>
