@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Crosshair, LayoutGrid, LogOut, Search } from "lucide-react";
+import { Check, Crosshair, LayoutGrid, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { EscolherEmpresaDoFoco } from "@/components/empresas/FaixaDoFoco";
 import { pararDeTrabalharNaEmpresa } from "@/app/(app)/foco-actions";
 import { Modal } from "@/components/ui/Modal";
-import { Input } from "@/components/ui/Input";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { normalizar } from "@/lib/buscaDeTelas";
 import { TODOS_OS_SETORES, trocarSetor, trocarTenant } from "@/components/shell/contexto";
 import { SECTOR_ICONS } from "@/components/shell/iconesDosSetores";
 
@@ -18,9 +16,6 @@ type Sector = { code: string; label: string; color: string };
 
 /** A empresa em foco, para a janela: `null` quando a pessoa não usa o foco. */
 export type FocoDaTroca = { atual: { companyId: string; nome: string } | null } | null;
-
-/** A partir de quantos setores aparece a busca. */
-const SETORES_PARA_BUSCAR = 8;
 
 /**
  * Trocar de setor ou de escritório numa janela no centro, com o fundo
@@ -58,10 +53,10 @@ export function TrocaDeContexto({
   sectorHostSuffix: string;
   foco?: FocoDaTroca;
 }) {
-  const [busca, setBusca] = useState("");
   const [trocando, setTrocando] = useState<string | null>(null);
-  const termo = normalizar(busca.trim());
-  const setores = termo ? sectors.filter((s) => normalizar(s.label).includes(termo)) : sectors;
+  // Sem busca de setor (lote A de 03/11/2026): são poucos setores, todos à
+  // vista em cartões; a busca que importa é a da empresa, logo acima.
+  const setores = sectors;
 
   function irParaSetor(code: string) {
     setTrocando(code);
@@ -76,10 +71,7 @@ export function TrocaDeContexto({
   return (
     <Modal
       open={open}
-      onClose={() => {
-        setBusca("");
-        onClose();
-      }}
+      onClose={onClose}
       title={sectors.length > 1 || tenants.length > 1 ? (foco ? "Trocar de setor, escritório ou empresa" : "Trocar de setor ou escritório") : "Trabalhar numa empresa"}
       maxWidth="max-w-2xl"
       desfocar
@@ -89,40 +81,24 @@ export function TrocaDeContexto({
 
         {sectors.length > 1 && (
           <section aria-labelledby="troca-setor" className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 id="troca-setor" className="c41-rotulo">
-                Setor
-              </h3>
-              {sectors.length > SETORES_PARA_BUSCAR && (
-                <Input
-                  compact
-                  autoFocus
-                  icon={<Search size={14} />}
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar setor…"
-                  aria-label="Buscar setor"
-                  className="w-full sm:w-56"
-                />
-              )}
-            </div>
+            <h3 id="troca-setor" className="c41-rotulo">
+              Setor
+            </h3>
             <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {!termo && (
-                <li>
-                  <Opcao
-                    ativo={activeSector === null}
-                    ocupado={trocando === TODOS_OS_SETORES}
-                    onClick={() => irParaSetor(TODOS_OS_SETORES)}
-                    marca={
-                      <span className="inline-flex size-8 items-center justify-center rounded-md bg-surface-hover text-fg-secondary">
-                        <LayoutGrid size={16} />
-                      </span>
-                    }
-                    titulo="Todos os setores"
-                    detalhe="Visão geral"
-                  />
-                </li>
-              )}
+              <li>
+                <Opcao
+                  ativo={activeSector === null}
+                  ocupado={trocando === TODOS_OS_SETORES}
+                  onClick={() => irParaSetor(TODOS_OS_SETORES)}
+                  marca={
+                    <span className="inline-flex size-8 items-center justify-center rounded-md bg-surface-hover text-fg-secondary">
+                      <LayoutGrid size={16} />
+                    </span>
+                  }
+                  titulo="Todos os setores"
+                  detalhe="Visão geral"
+                />
+              </li>
               {setores.map((s) => (
                 <li key={s.code}>
                   <Opcao
@@ -142,7 +118,6 @@ export function TrocaDeContexto({
                 </li>
               ))}
             </ul>
-            {termo && setores.length === 0 && <p className="text-ui text-fg-muted">Nenhum setor com esse nome.</p>}
           </section>
         )}
 
@@ -178,7 +153,9 @@ function EmpresaDoFoco({ foco, onPronto }: { foco: NonNullable<FocoDaTroca>; onP
   const toast = useToast();
   const [saindo, sair] = useTransition();
   return (
-    <section aria-labelledby="troca-empresa" className="flex flex-col gap-3">
+    // Em destaque (lote A de 03/11/2026): é a troca mais usada no dia — a
+    // busca por nome ou CNPJ vem primeiro, numa caixa na cor da marca.
+    <section aria-labelledby="troca-empresa" className="flex flex-col gap-3 rounded-lg border border-brand/30 bg-brand/5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 id="troca-empresa" className="c41-rotulo">
           Empresa

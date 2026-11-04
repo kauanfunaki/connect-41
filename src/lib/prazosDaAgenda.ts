@@ -75,7 +75,7 @@ const TELA_DO_TIPO: Record<TipoDePrazo, string> = {
   ferias: "/ferias",
   exame: "/admissoes",
   vaga: "/vagas",
-  certificado: "/certificados",
+  certificado: "/certificados?aba=renovar",
 };
 
 const MOEDA_CURTA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
@@ -363,7 +363,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
         tipo: "certificado",
         titulo: `Certificado vence: ${c.titular}`,
         setor: certificados.setor,
-        href: "/certificados",
+        href: "/certificados?aba=renovar",
       });
     }
   }
