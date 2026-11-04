@@ -1,29 +1,33 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { BarChart3, Table2, FolderOpen, AlertTriangle, CheckCircle2, RotateCcw, Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
-import { FolderOpen, AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { Card } from "@/components/ui/Card";
 import { Selo } from "@/components/ui/Selo";
+import { Aviso } from "@/components/ui/Aviso";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { BotaoDeExportar } from "@/components/shared/BotaoDeExportar";
+import { LinhasDeSituacao, BarrasRanqueadas, ColunasPareadas } from "@/components/shared/Graficos";
 import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
-import { feriadosDoTenant } from "@/lib/societario/fila";
-import { processosParaRelatorio } from "@/lib/societario/painel-data";
+import { PERIODOS, lerPeriodo } from "@/lib/societario/relatorios";
+import { dadosDosRelatorios, type DadosDosRelatorios } from "@/lib/societario/relatoriosServidor";
 import {
-  PERIODOS,
-  lerPeriodo,
-  inicioDoPeriodo,
-  slaPorTipo,
-  resumoDeVoltas,
-  processosComMaisVoltas,
-  produtividadePorResponsavel,
-  custoPorProcesso,
-  totaisDeCusto,
-} from "@/lib/societario/relatorios";
+  RELATORIOS,
+  lerRelatorio,
+  lerVisao,
+  leituraDoSla,
+  leituraDasVoltas,
+  leituraDaProdutividade,
+  leituraDoCusto,
+  type ChaveDoRelatorio,
+  type VisaoDoRelatorio,
+} from "@/lib/societario/relatoriosNaTela";
 import { formatarReaisDeCentavos, formatarNumero } from "@/lib/format";
 
 const MODULE = "societario_relatorios";
@@ -40,15 +44,26 @@ const faixaPrevista = (min: number | null, max: number | null) =>
 
 const TH = "py-2 pr-3 font-medium";
 const TD = "py-2 pr-3 tabular-nums";
-// Cartão de seção como o do detalhe do processo: título de 14px com a
-// explicação logo embaixo, e o conteúdo a um `gap` — eram `mb-1`/`mb-3` soltos.
-const SECAO = "p-4 flex flex-col gap-3";
-const TITULO = "text-fs-4 font-semibold text-fg";
-const EXPLICACAO = "text-fs-2 text-fg-muted";
+const CABECALHO = "text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border";
 
-/** Quantas linhas de custo a tela mostra — o total soma todas. */
-const LINHAS_DE_CUSTO = 30;
+/** Quantas linhas a tela mostra nas listas de processos — a exportação leva todas. */
+const LINHAS_NA_TELA = 30;
 
+/**
+ * Relatórios do Societário, um por vez (escolha do Kauan na página de opções
+ * de 04/11/2026 — Relatórios B). Eram quatro tabelas empilhadas, densas e sem
+ * exportação. Agora:
+ *
+ * - a lista dos relatórios à esquerda (no celular, em cima), e o escolhido à
+ *   direita;
+ * - a troca Gráfico | Tabela no cabeçalho do relatório — o gráfico é o padrão,
+ *   e a tabela guarda o número exato;
+ * - "Exportar" em Excel ou CSV, do relatório e do período que estão na tela;
+ * - uma frase com a leitura do relatório, embaixo.
+ *
+ * Relatório, visão e período vivem na URL: link direto e voltar do navegador
+ * funcionam.
+ */
 export default async function RelatoriosDoSocietarioPage({
   searchParams,
 }: {
@@ -60,33 +75,35 @@ export default async function RelatoriosDoSocietarioPage({
 
   const params = await searchParams;
   const periodo = lerPeriodo(params.periodo);
-  const agora = new Date();
-  const inicio = inicioDoPeriodo(periodo, agora);
+  const relatorio = lerRelatorio(params.relatorio);
+  const visao = lerVisao(params.visao);
+  const d = await dadosDosRelatorios(ctx.tenantId, periodo);
 
-  const feriados = await feriadosDoTenant(ctx.tenantId);
-  const processos = await processosParaRelatorio(ctx.tenantId, inicio, agora, feriados);
+  const href = (mudar: { relatorio?: ChaveDoRelatorio; visao?: VisaoDoRelatorio }) => {
+    const q = new URLSearchParams();
+    if (params.periodo) q.set("periodo", periodo.chave);
+    const r = mudar.relatorio ?? relatorio.chave;
+    if (r !== RELATORIOS[0].chave) q.set("relatorio", r);
+    const v = mudar.visao ?? visao;
+    if (v !== "grafico") q.set("visao", v);
+    const s = q.toString();
+    return s ? `/societario/relatorios?${s}` : "/societario/relatorios";
+  };
 
-  const sla = slaPorTipo(processos);
-  const voltas = resumoDeVoltas(processos);
-  const maisVoltas = processosComMaisVoltas(processos);
-  const produtividade = produtividadePorResponsavel(processos, inicio, agora);
-  const custos = custoPorProcesso(processos);
-  const totais = totaisDeCusto(custos);
-
-  const abertos = processos.filter((p) => p.concluidoEm === null);
-  const estouradosAbertos = abertos.filter((p) => p.prazo.situacao === "estourado").length;
+  const leitura: Record<ChaveDoRelatorio, string> = {
+    sla: leituraDoSla(d.sla),
+    voltas: leituraDasVoltas(d.voltas, d.maisVoltas),
+    produtividade: leituraDaProdutividade(d.produtividade),
+    custo: leituraDoCusto(d.custos, d.totais),
+  };
 
   return (
     <PageContainer>
-      {/* O período escrito (07/10, auditoria dos gráficos): no padrão (90
-          dias) o Filtros não mostrava chip, e ele só aparecia no rótulo de um
-          dos cartões. Agora vai no subtítulo e no chip `sempreVisivel`. */}
       <PageHeader
         title="Relatórios do Societário"
         subtitle={`Processos abertos agora, mais os concluídos nos últimos ${periodo.rotulo}. Prazo em dias úteis, descontados os feriados do escritório.`}
       />
 
-      {/* O período no botão "Filtros" — eram pílulas (conferência de 30/09). */}
       <FiltrosDaTela
         className="mb-5"
         campos={[
@@ -95,276 +112,388 @@ export default async function RelatoriosDoSocietarioPage({
             rotulo: "Período",
             vazioLabel: `Últimos ${PERIODOS[1].rotulo}`,
             opcoes: PERIODOS.filter((p) => p !== PERIODOS[1]).map((p) => ({ value: p.chave, label: `Últimos ${p.rotulo}` })),
-            // O período à vista também no padrão (G31): sem isto, "90 dias" só
-            // aparecia dentro do botão Filtros.
             sempreVisivel: true,
           },
         ]}
       />
 
-      {/* A faixa de totais, com "Abertos agora" no cartão azul de número
-          principal (15/10/2026): eram MetricCard soltos numa grade própria. */}
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "Abertos agora", valor: formatarNumero(abertos.length, 0), icone: <FolderOpen /> },
-          // Estourado é vermelho, como no painel de Processos da Home (era âmbar).
+          { rotulo: "Abertos agora", valor: formatarNumero(d.abertos, 0), icone: <FolderOpen /> },
           {
             rotulo: "Abertos com prazo estourado",
-            valor: formatarNumero(estouradosAbertos, 0),
-            tom: estouradosAbertos > 0 ? "text-danger" : undefined,
+            valor: formatarNumero(d.estouradosAbertos, 0),
+            tom: d.estouradosAbertos > 0 ? "text-danger" : undefined,
             icone: <AlertTriangle />,
           },
-          { rotulo: `Concluídos em ${periodo.rotulo}`, valor: formatarNumero(processos.length - abertos.length, 0), icone: <CheckCircle2 /> },
+          { rotulo: `Concluídos em ${periodo.rotulo}`, valor: formatarNumero(d.concluidos, 0), icone: <CheckCircle2 /> },
           {
             rotulo: "Processos com volta",
-            valor: voltas.percentualComVolta === null ? "—" : `${voltas.percentualComVolta}%`,
+            valor: d.voltas.percentualComVolta === null ? "—" : `${d.voltas.percentualComVolta}%`,
             icone: <RotateCcw />,
-            detalhe: `${voltas.totalDeVoltas} ${voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`,
+            detalhe: `${d.voltas.totalDeVoltas} ${d.voltas.totalDeVoltas === 1 ? "volta" : "voltas"}`,
           },
         ]}
       />
 
-      <div className="flex flex-col gap-5">
-        <Card as="section" className={SECAO}>
-          <div className="flex flex-col gap-0.5">
-            <h2 className={TITULO}>SLA por tipo</h2>
-            <p className={EXPLICACAO}>
-              Dias úteis consumidos contra o previsto do tipo. As voltas ficam na mesma linha porque são a causa do
-              estouro.
-            </p>
-          </div>
-          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[760px]">
-              <thead>
-                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
-                  <th className={TH}>Tipo</th>
-                  <th className={TH}>Previsto</th>
-                  <th className={TH}>Processos</th>
-                  <th className={TH}>Dentro</th>
-                  <th className={TH}>No limite</th>
-                  <th className={TH}>Estourados</th>
-                  <th className={TH}>Média de dias</th>
-                  <th className={TH}>Média de voltas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sla.map((l) => (
-                  <tr key={l.tipoId} className="border-b border-border-soft">
-                    <td className="py-2 pr-3 font-medium">{l.tipoNome}</td>
-                    <td className={TD}>{faixaPrevista(l.previstoMin, l.previstoMax)}</td>
-                    <td className={TD}>
-                      {l.total}
-                      <span className="text-fg-muted"> ({l.concluidos} concl.)</span>
-                    </td>
-                    {/* Tipo sem previsão (alvará) não tem dentro nem fora: traço em vez de zero. */}
-                    <td className={TD}>{l.previstoMax === null ? "—" : l.dentro}</td>
-                    <td className={TD}>{l.previstoMax === null ? "—" : l.noLimite}</td>
-                    <td className={`${TD} ${l.estourados > 0 ? "text-danger font-medium" : ""}`}>
-                      {l.previstoMax === null ? "—" : l.estourados}
-                    </td>
-                    <td className={TD}>{numero(l.mediaDeDias)}</td>
-                    <td className={TD}>{numero(l.mediaDeVoltas)}</td>
-                  </tr>
-                ))}
-                {sla.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="py-6 text-center text-fg-muted">
-                      Nenhum processo no período.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
+        {/* A lista dos relatórios: navegação, com a página atual marcada. */}
+        <nav aria-label="Relatórios">
+          <Card className="p-2">
+            <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+              {RELATORIOS.map((r) => {
+                const ativo = r.chave === relatorio.chave;
+                return (
+                  <li key={r.chave} className="shrink-0">
+                    <Link
+                      href={href({ relatorio: r.chave })}
+                      aria-current={ativo ? "page" : undefined}
+                      className={`flex min-h-9 items-center rounded-md px-3 py-2 text-ui transition-colors ${
+                        ativo ? "bg-brand-subtle font-semibold text-brand" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+                      }`}
+                    >
+                      {r.rotulo}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </nav>
 
-        <Card as="section" className={SECAO}>
-          <div className="flex flex-col gap-0.5">
-            <h2 className={TITULO}>Processos que mais voltaram</h2>
-            <p className={EXPLICACAO}>
-              {voltas.comVolta} de {voltas.processos} processos tiveram ao menos uma reapresentação.
-            </p>
-          </div>
-          {maisVoltas.length === 0 ? (
-            <p className="text-fs-3 text-fg-muted">Nenhuma volta de exigência no período.</p>
-          ) : (
-            <>
-            {/* No celular, cartões nas duas listas de processos (15/10/2026):
-                a tabela rolava de lado. SLA e Produtividade ficam em tabela —
-                são grade de números, que só se leem lado a lado. */}
-            <CartoesNoCelular>
-              {maisVoltas.map((p) => (
-                <Cartao key={p.id}>
-                  <TopoDoCartao
-                    nome={
-                      <Link href={`/processos/${p.id}`} className="text-fg hover:text-brand transition-colors">
-                        {p.tipoNome} — {p.empresaNome}
-                      </Link>
-                    }
-                  />
-                  <InfoDoCartao className="tabular-nums">
-                    <span className="font-medium text-danger">
-                      {p.voltas} {p.voltas === 1 ? "volta" : "voltas"}
-                    </span>{" "}
-                    · {p.prazo.dias} dias úteis
-                  </InfoDoCartao>
-                  <PeDoCartao>{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</PeDoCartao>
-                </Cartao>
-              ))}
-            </CartoesNoCelular>
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
-              <table className="w-full min-w-[560px]">
-                <thead>
-                  <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className={TH}>Processo</th>
-                    <th className={TH}>Voltas</th>
-                    <th className={TH}>Dias úteis</th>
-                    <th className={TH}>Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {maisVoltas.map((p) => (
-                    <tr key={p.id} className="border-b border-border-soft">
-                      <td className="py-2 pr-3">
-                        <Link href={`/processos/${p.id}`} className="text-brand hover:underline">
-                          {p.tipoNome} — {p.empresaNome}
-                        </Link>
-                      </td>
-                      <td className={`${TD} text-danger font-medium`}>{p.voltas}</td>
-                      <td className={TD}>{p.prazo.dias}</td>
-                      <td className="py-2 pr-3">{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <Card as="section" aria-labelledby="relatorio-aberto" className="p-4 flex flex-col gap-4 min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <h2 id="relatorio-aberto" className="text-section font-semibold text-fg">
+                {relatorio.rotulo}
+              </h2>
+              <p className="text-fs-2 text-fg-muted max-w-2xl">{relatorio.explicacao}</p>
             </div>
-            </>
-          )}
-        </Card>
-
-        <Card as="section" className={SECAO}>
-          <div className="flex flex-col gap-0.5">
-            <h2 className={TITULO}>Produtividade por responsável</h2>
-            <p className={EXPLICACAO}>
-              Concluídos em {periodo.rotulo}, ao lado da carteira aberta. O crédito é do responsável atual do processo —
-              não há histórico de redistribuição.
-            </p>
-          </div>
-          <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[680px]">
-              <thead>
-                <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
-                  <th className={TH}>Responsável</th>
-                  <th className={TH}>Concluídos</th>
-                  <th className={TH}>Média de dias</th>
-                  <th className={TH}>Voltas nos concluídos</th>
-                  <th className={TH}>Abertos</th>
-                  <th className={TH}>Abertos estourados</th>
-                </tr>
-              </thead>
-              <tbody>
-                {produtividade.map((l) => (
-                  <tr key={l.responsavelId ?? "nenhum"} className="border-b border-border-soft">
-                    <td className="py-2 pr-3 font-medium">{l.nome}</td>
-                    <td className={TD}>{l.concluidosNoPeriodo}</td>
-                    <td className={TD}>{numero(l.mediaDeDiasDosConcluidos)}</td>
-                    <td className={TD}>{l.voltasDosConcluidos}</td>
-                    <td className={TD}>{l.abertos}</td>
-                    <td className={`${TD} ${l.estouradosAbertos > 0 ? "text-danger font-medium" : ""}`}>
-                      {l.estouradosAbertos}
-                    </td>
-                  </tr>
-                ))}
-                {produtividade.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-6 text-center text-fg-muted">
-                      Nenhum processo no período.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <Card as="section" className={SECAO}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className={TITULO}>Custo em taxas por processo</h2>
-            <p className="text-fs-3 tabular-nums">
-              <strong>{formatarReaisDeCentavos(totais.totalCentavos)}</strong>
-              {totais.custoDasVoltasCentavos > 0 && (
-                <span className="text-warning-fg"> · {formatarReaisDeCentavos(totais.custoDasVoltasCentavos)} de reapresentação</span>
-              )}
-            </p>
-          </div>
-          {custos.length === 0 ? (
-            <p className="text-fs-3 text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>
-          ) : (
-            <>
-            <CartoesNoCelular>
-              {custos.slice(0, LINHAS_DE_CUSTO).map((l) => (
-                <Cartao key={l.id}>
-                  <TopoDoCartao
-                    nome={
-                      <Link href={`/processos/${l.id}`} className="text-fg hover:text-brand transition-colors">
-                        {l.tipoNome} — {l.empresaNome}
-                      </Link>
-                    }
-                    valor={formatarReaisDeCentavos(l.totalCentavos)}
-                  />
-                  <InfoDoCartao className="tabular-nums">
-                    {formatarReaisDeCentavos(l.pagoCentavos)} pagos · {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
-                  </InfoDoCartao>
-                  {l.custoDasVoltasCentavos > 0 && (
-                    <InfoDoCartao className="tabular-nums text-warning-fg">
-                      {formatarReaisDeCentavos(l.custoDasVoltasCentavos)} das voltas
-                    </InfoDoCartao>
-                  )}
-                </Cartao>
-              ))}
-            </CartoesNoCelular>
-            <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
-              <table className="w-full min-w-[680px]">
-                <thead>
-                  <tr className="text-fs-1 uppercase tracking-wide text-fg-muted border-b border-border">
-                    <th className={TH}>Processo</th>
-                    <th className={TH}>Voltas</th>
-                    <th className={TH}>Total</th>
-                    <th className={TH}>Pago</th>
-                    <th className={TH}>Das voltas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {custos.slice(0, LINHAS_DE_CUSTO).map((l) => (
-                    <tr key={l.id} className="border-b border-border-soft">
-                      <td className="py-2 pr-3">
-                        <Link href={`/processos/${l.id}`} className="text-brand hover:underline">
-                          {l.tipoNome} — {l.empresaNome}
-                        </Link>
-                      </td>
-                      <td className={TD}>{l.voltas}</td>
-                      <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
-                      <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
-                      <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning-fg" : ""}`}>
-                        {formatarReaisDeCentavos(l.custoDasVoltasCentavos)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-wrap items-center gap-2">
+              <SegmentedControl
+                label="Ver como"
+                active={visao}
+                items={[
+                  { key: "grafico", label: "Gráfico", icon: <BarChart3 size={14} />, href: href({ visao: "grafico" }) },
+                  { key: "tabela", label: "Tabela", icon: <Table2 size={14} />, href: href({ visao: "tabela" }) },
+                ]}
+              />
+              <BotaoDeExportar
+                href={`/societario/relatorios/exportar?${new URLSearchParams({ relatorio: relatorio.chave, periodo: periodo.chave })}`}
+                dica={`Vai o relatório inteiro do período (últimos ${periodo.rotulo}), mesmo o que a tela não mostra.`}
+              />
             </div>
-            </>
-          )}
-          {/* Fora da caixa da tabela: dentro, a nota ficava colada na borda,
-              sem o recuo das células. */}
-          {custos.length > LINHAS_DE_CUSTO && (
-            <p className={EXPLICACAO}>
-              Mostrando os {LINHAS_DE_CUSTO} mais caros de {custos.length}; o total acima soma todos.
-            </p>
-          )}
+          </div>
+
+          {relatorio.chave === "sla" && <Sla d={d} visao={visao} />}
+          {relatorio.chave === "voltas" && <Voltas d={d} visao={visao} />}
+          {relatorio.chave === "produtividade" && <Produtividade d={d} visao={visao} periodo={periodo.rotulo} />}
+          {relatorio.chave === "custo" && <Custo d={d} visao={visao} />}
+
+          {/* A leitura do relatório numa frase: o que o número quer dizer. */}
+          <Aviso tom="neutro" icone={<Lightbulb />}>
+            <p className="text-fg">{leitura[relatorio.chave]}</p>
+          </Aviso>
         </Card>
       </div>
     </PageContainer>
+  );
+}
+
+// ─── SLA por tipo ────────────────────────────────────────────────────────────
+
+function Sla({ d, visao }: { d: DadosDosRelatorios; visao: VisaoDoRelatorio }) {
+  if (visao === "grafico") {
+    return (
+      <LinhasDeSituacao
+        titulo="SLA por tipo"
+        vazio="Nenhum processo no período."
+        linhas={d.sla.map((l) => ({
+          chave: l.tipoId,
+          rotulo: l.tipoNome,
+          sublabel: `previsto ${faixaPrevista(l.previstoMin, l.previstoMax)}${l.previstoMax === null ? "" : " dias"}`,
+          segmentos:
+            l.previstoMax === null
+              ? [{ chave: "sem", rotulo: "Sem previsão", valor: l.total, tom: "neutro" as const }]
+              : [
+                  { chave: "dentro", rotulo: "Dentro", valor: l.dentro, tom: "ok" as const },
+                  { chave: "limite", rotulo: "No limite", valor: l.noLimite, tom: "atencao" as const },
+                  { chave: "estourado", rotulo: "Estourado", valor: l.estourados, tom: "critico" as const },
+                ],
+        }))}
+      />
+    );
+  }
+  return (
+    <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[760px]">
+        <thead>
+          <tr className={CABECALHO}>
+            <th className={TH}>Tipo</th>
+            <th className={TH}>Previsto</th>
+            <th className={TH}>Processos</th>
+            <th className={TH}>Dentro</th>
+            <th className={TH}>No limite</th>
+            <th className={TH}>Estourados</th>
+            <th className={TH}>Média de dias</th>
+            <th className={TH}>Média de voltas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {d.sla.map((l) => (
+            <tr key={l.tipoId} className="border-b border-border-soft">
+              <td className="py-2 pr-3 font-medium">{l.tipoNome}</td>
+              <td className={TD}>{faixaPrevista(l.previstoMin, l.previstoMax)}</td>
+              <td className={TD}>
+                {l.total}
+                <span className="text-fg-muted"> ({l.concluidos} concl.)</span>
+              </td>
+              {/* Tipo sem previsão (alvará) não tem dentro nem fora: traço em vez de zero. */}
+              <td className={TD}>{l.previstoMax === null ? "—" : l.dentro}</td>
+              <td className={TD}>{l.previstoMax === null ? "—" : l.noLimite}</td>
+              <td className={`${TD} ${l.estourados > 0 ? "text-danger font-medium" : ""}`}>{l.previstoMax === null ? "—" : l.estourados}</td>
+              <td className={TD}>{numero(l.mediaDeDias)}</td>
+              <td className={TD}>{numero(l.mediaDeVoltas)}</td>
+            </tr>
+          ))}
+          {d.sla.length === 0 && (
+            <tr>
+              <td colSpan={8} className="py-6 text-center text-fg-muted">
+                Nenhum processo no período.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Processos que mais voltaram ─────────────────────────────────────────────
+
+function Voltas({ d, visao }: { d: DadosDosRelatorios; visao: VisaoDoRelatorio }) {
+  const lista = d.maisVoltas.slice(0, LINHAS_NA_TELA);
+  if (lista.length === 0) return <p className="text-fs-3 text-fg-muted">Nenhuma volta de exigência no período.</p>;
+  const resto = d.maisVoltas.length - lista.length;
+  const nota = resto > 0 && (
+    <p className="text-fs-2 text-fg-muted">
+      Mostrando os {lista.length} que mais voltaram de {d.maisVoltas.length}; a exportação leva todos.
+    </p>
+  );
+
+  if (visao === "grafico") {
+    return (
+      <>
+        <BarrasRanqueadas
+          titulo="Processos que mais voltaram"
+          formatar={(n) => `${n} ${n === 1 ? "volta" : "voltas"}`}
+          linhas={lista.map((p) => ({
+            chave: p.id,
+            rotulo: `${p.tipoNome} — ${p.empresaNome}`,
+            sublabel: `${p.prazo.dias} dias úteis · ${p.concluidoEm ? "concluído" : "aberto"}`,
+            href: `/processos/${p.id}`,
+            segmentos: [{ chave: "voltas", rotulo: "Voltas", valor: p.voltas, tom: "atencao" as const }],
+          }))}
+        />
+        {nota}
+      </>
+    );
+  }
+  return (
+    <>
+      <CartoesNoCelular>
+        {lista.map((p) => (
+          <Cartao key={p.id}>
+            <TopoDoCartao
+              nome={
+                <Link href={`/processos/${p.id}`} className="text-fg hover:text-brand transition-colors">
+                  {p.tipoNome} — {p.empresaNome}
+                </Link>
+              }
+            />
+            <InfoDoCartao className="tabular-nums">
+              <span className="font-medium text-danger">
+                {p.voltas} {p.voltas === 1 ? "volta" : "voltas"}
+              </span>{" "}
+              · {p.prazo.dias} dias úteis
+            </InfoDoCartao>
+            <PeDoCartao>{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</PeDoCartao>
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
+      <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
+        <table className="w-full min-w-[560px]">
+          <thead>
+            <tr className={CABECALHO}>
+              <th className={TH}>Processo</th>
+              <th className={TH}>Voltas</th>
+              <th className={TH}>Dias úteis</th>
+              <th className={TH}>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map((p) => (
+              <tr key={p.id} className="border-b border-border-soft">
+                <td className="py-2 pr-3">
+                  <Link href={`/processos/${p.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
+                    {p.tipoNome} — {p.empresaNome}
+                  </Link>
+                </td>
+                <td className={`${TD} text-danger font-medium`}>{p.voltas}</td>
+                <td className={TD}>{p.prazo.dias}</td>
+                <td className="py-2 pr-3">{p.concluidoEm ? <Selo tom="sucesso">Concluído</Selo> : <Selo tom="marca">Aberto</Selo>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {nota}
+    </>
+  );
+}
+
+// ─── Produtividade por responsável ───────────────────────────────────────────
+
+function Produtividade({ d, visao, periodo }: { d: DadosDosRelatorios; visao: VisaoDoRelatorio; periodo: string }) {
+  if (d.produtividade.length === 0) return <p className="text-fs-3 text-fg-muted">Nenhum processo no período.</p>;
+  if (visao === "grafico") {
+    return (
+      <ColunasPareadas
+        titulo={`Concluídos em ${periodo} e abertos, por responsável`}
+        series={["Concluídos", "Abertos"]}
+        pares={d.produtividade.map((l) => ({
+          chave: l.responsavelId ?? "nenhum",
+          rotulo: l.nome,
+          valores: [l.concluidosNoPeriodo, l.abertos] as const,
+          dica: l.estouradosAbertos > 0 ? `${l.estouradosAbertos} abertos estourados` : undefined,
+        }))}
+      />
+    );
+  }
+  return (
+    <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[680px]">
+        <thead>
+          <tr className={CABECALHO}>
+            <th className={TH}>Responsável</th>
+            <th className={TH}>Concluídos</th>
+            <th className={TH}>Média de dias</th>
+            <th className={TH}>Voltas nos concluídos</th>
+            <th className={TH}>Abertos</th>
+            <th className={TH}>Abertos estourados</th>
+          </tr>
+        </thead>
+        <tbody>
+          {d.produtividade.map((l) => (
+            <tr key={l.responsavelId ?? "nenhum"} className="border-b border-border-soft">
+              <td className="py-2 pr-3 font-medium">{l.nome}</td>
+              <td className={TD}>{l.concluidosNoPeriodo}</td>
+              <td className={TD}>{numero(l.mediaDeDiasDosConcluidos)}</td>
+              <td className={TD}>{l.voltasDosConcluidos}</td>
+              <td className={TD}>{l.abertos}</td>
+              <td className={`${TD} ${l.estouradosAbertos > 0 ? "text-danger font-medium" : ""}`}>{l.estouradosAbertos}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Custo em taxas por processo ─────────────────────────────────────────────
+
+function Custo({ d, visao }: { d: DadosDosRelatorios; visao: VisaoDoRelatorio }) {
+  const lista = d.custos.slice(0, LINHAS_NA_TELA);
+  if (lista.length === 0) return <p className="text-fs-3 text-fg-muted">Nenhuma taxa registrada nos processos do período.</p>;
+  const total = (
+    <p className="text-fs-3 tabular-nums">
+      <strong>{formatarReaisDeCentavos(d.totais.totalCentavos)}</strong>
+      {d.totais.custoDasVoltasCentavos > 0 && (
+        <span className="text-warning-fg"> · {formatarReaisDeCentavos(d.totais.custoDasVoltasCentavos)} de reapresentação</span>
+      )}
+    </p>
+  );
+  const nota = d.custos.length > lista.length && (
+    <p className="text-fs-2 text-fg-muted">
+      Mostrando os {lista.length} mais caros de {d.custos.length}; o total soma todos, e a exportação leva todos.
+    </p>
+  );
+
+  if (visao === "grafico") {
+    return (
+      <>
+        {total}
+        <BarrasRanqueadas
+          titulo="Custo em taxas por processo"
+          formatar={formatarReaisDeCentavos}
+          linhas={lista.map((l) => ({
+            chave: l.id,
+            rotulo: `${l.tipoNome} — ${l.empresaNome}`,
+            sublabel: `${l.voltas} ${l.voltas === 1 ? "volta" : "voltas"} · ${formatarReaisDeCentavos(l.pagoCentavos)} pagos`,
+            href: `/processos/${l.id}`,
+            segmentos: [
+              { chave: "primeira", rotulo: "Primeira apresentação", valor: l.totalCentavos - l.custoDasVoltasCentavos, tom: "proximo" as const },
+              { chave: "voltas", rotulo: "Reapresentação", valor: l.custoDasVoltasCentavos, tom: "atencao" as const },
+            ],
+          }))}
+        />
+        {nota}
+      </>
+    );
+  }
+  return (
+    <>
+      {total}
+      <CartoesNoCelular>
+        {lista.map((l) => (
+          <Cartao key={l.id}>
+            <TopoDoCartao
+              nome={
+                <Link href={`/processos/${l.id}`} className="text-fg hover:text-brand transition-colors">
+                  {l.tipoNome} — {l.empresaNome}
+                </Link>
+              }
+              valor={formatarReaisDeCentavos(l.totalCentavos)}
+            />
+            <InfoDoCartao className="tabular-nums">
+              {formatarReaisDeCentavos(l.pagoCentavos)} pagos · {l.voltas} {l.voltas === 1 ? "volta" : "voltas"}
+            </InfoDoCartao>
+            {l.custoDasVoltasCentavos > 0 && (
+              <InfoDoCartao className="tabular-nums text-warning-fg">{formatarReaisDeCentavos(l.custoDasVoltasCentavos)} das voltas</InfoDoCartao>
+            )}
+          </Cartao>
+        ))}
+      </CartoesNoCelular>
+      <div className="c41-tabela overflow-x-auto rounded-lg border border-border hidden md:block">
+        <table className="w-full min-w-[680px]">
+          <thead>
+            <tr className={CABECALHO}>
+              <th className={TH}>Processo</th>
+              <th className={TH}>Voltas</th>
+              <th className={TH}>Total</th>
+              <th className={TH}>Pago</th>
+              <th className={TH}>Das voltas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map((l) => (
+              <tr key={l.id} className="border-b border-border-soft">
+                <td className="py-2 pr-3">
+                  <Link href={`/processos/${l.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
+                    {l.tipoNome} — {l.empresaNome}
+                  </Link>
+                </td>
+                <td className={TD}>{l.voltas}</td>
+                <td className={TD}>{formatarReaisDeCentavos(l.totalCentavos)}</td>
+                <td className={TD}>{formatarReaisDeCentavos(l.pagoCentavos)}</td>
+                <td className={`${TD} ${l.custoDasVoltasCentavos > 0 ? "text-warning-fg" : ""}`}>{formatarReaisDeCentavos(l.custoDasVoltasCentavos)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {nota}
+    </>
   );
 }
