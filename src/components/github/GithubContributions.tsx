@@ -63,7 +63,7 @@ export function GithubContributions({ initialQuery: suppliedQuery, canConfigure,
     : detail?.kind === "repository" ? data?.repositories.find(repo => repo.id === detail.id)?.fullName : undefined;
   // O título é o nome do módulo no menu; Geral, Desenvolvedores e Repositórios são abas dele.
   return <PageContainer>
-    <PageHeader title="GitHub — Contribuições" subtitle={SUBTITLES[view]}
+    <PageHeader title="GitHub" subtitle={SUBTITLES[view]}
       action={canConfigure ? <IconButton href={INTEGRATION} title="Integração GitHub" variant="framed"><Settings2 size={16} /></IconButton> : undefined} />
     <AbasDeLink className="mb-6" aria-label="GitHub" ativa={view} abas={[
       { chave: "general", rotulo: "Geral", href: `/github?${tabParams}`, icone: <LayoutGrid /> },

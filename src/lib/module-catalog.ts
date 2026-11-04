@@ -188,7 +188,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
 
   {
-    code: "tech_github_contributions", label: "GitHub — Contribuições", sectorCode: "tech",
+    code: "tech_github_contributions", label: "GitHub", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
   },

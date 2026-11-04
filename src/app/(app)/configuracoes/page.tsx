@@ -40,7 +40,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     }),
     getSectorMaps(ctx.tenantId),
     carregarExpedientes(ctx.tenantId, ctx.userId),
-    // Só quem vê GitHub — Contribuições (o Tech e os administradores) tem a seção.
+    // Só quem vê GitHub (o Tech e os administradores) tem a seção.
     // Sem a migration do GitHub aplicada, a tela segue sem a seção.
     accountLinkView(ctx).catch(() => null),
     searchParams,
