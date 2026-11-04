@@ -33,7 +33,7 @@ const originaisDa = (l: Record<string, unknown>) => Object.fromEntries(CAMPOS_CO
  */
 export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
   const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
-  const CAMINHO = tela.contabil ? "/contabil/sped" : "/fiscal/contribuicoes";
+  const CAMINHO = tela.contabil ? "/sped-contabil" : "/fiscal/contribuicoes";
   const { contexto } = tela;
   if (!contexto) return null;
   const [d, escrita] = await Promise.all([carregarFechamento(tela, params), escritaNaTela(tela.ctx, tela.motor, tela.contabil ? "contabil_sped" : "fiscal_contribuicoes")]);
@@ -151,7 +151,7 @@ function ApuracaoDoAno({ titulo, linhas, competencias, contabil = false }: { tit
 
 async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor; filtro: FiltroDoDemonstrativo; params: Params }) {
   const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
-  const CAMINHO = tela.contabil ? "/contabil/sped" : "/fiscal/contribuicoes";
+  const CAMINHO = tela.contabil ? "/sped-contabil" : "/fiscal/contribuicoes";
   const d = await carregarDemonstrativoContrib(tela, filtro);
   if (d.erro !== null) return <ErroDaLeitura falha={d} hrefDeNovo={hrefComParams(CAMINHO, params)} />;
   const x = d.dados;
@@ -197,7 +197,7 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
 
 /** Aba Demonstrativo (§11.3.1 e 11.3.2): a lista é leve; o demonstrativo, pesado. */
 export async function DemonstrativoContribMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
-  const CAMINHO = tela.contabil ? "/contabil/sped" : "/fiscal/contribuicoes";
+  const CAMINHO = tela.contabil ? "/sped-contabil" : "/fiscal/contribuicoes";
   const { contexto } = tela;
   if (!contexto) return null;
   const disponiveis = await competenciasDoDemonstrativo(tela);

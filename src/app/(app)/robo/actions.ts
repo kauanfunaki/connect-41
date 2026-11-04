@@ -15,6 +15,6 @@ export async function cancelarTarefaDoRobo(id: string): Promise<{ error: string 
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "O robô do Societário não está ligado neste escritório." };
   const r = await cancelarTarefa(ctx.tenantId, id, ctx.userId ?? null);
   if (!r.ok) return { error: r.erro };
-  revalidatePath("/societario/robo");
+  revalidatePath("/robo");
   return { success: true };
 }

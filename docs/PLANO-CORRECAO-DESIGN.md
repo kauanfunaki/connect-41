@@ -626,8 +626,8 @@ da página (uma empresa por vez), não um recorte da lista.
 hierarquia, número à direita. Centralizar desmancha a leitura da DRE.
 
 **Falta aplicar** nos outros setores, na ordem do cronograma de testes:
-Societário (até 12/10 — `/processos`, `/licencas`, `/societario/exigencias`,
-`/societario/agenda` e `/societario/relatorios` ainda têm pílulas de filtro), depois
+Societário (até 12/10 — `/processos`, `/licencas`, `/exigencias`,
+`/societario/agenda` e `/processos/relatorios` ainda têm pílulas de filtro), depois
 DP, Recrutamento, Fiscal, Gestão e as telas comuns (Empresas, Pessoas e Clientes
 já têm o "Filtros"; falta o funil nas colunas e o centralizado).
 

@@ -260,7 +260,7 @@ export async function imprimirAlvaraPeloRobo(id: string): Promise<{ error: strin
   if (!(await isModuleEnabled(ctx.tenantId, "societario_robo"))) return { error: "O robô do Societário não está ligado neste escritório." };
   const r = await pedirImpressaoDoAlvara(ctx.tenantId, id, ctx.userId ?? null);
   if (!r.ok) return { error: r.erro };
-  revalidatePath("/societario/robo");
+  revalidatePath("/robo");
   return { success: true, texto: r.texto };
 }
 

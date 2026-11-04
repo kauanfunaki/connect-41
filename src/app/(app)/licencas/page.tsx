@@ -84,7 +84,7 @@ export default async function LicencasPage({
             {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença.
                 Botão, e não link de texto, desde 03/11/2026 — e também no menu. */}
             {roboLigado && (
-              <Button href="/societario/robo" variant="secondary" size="sm">
+              <Button href="/robo" variant="secondary" size="sm">
                 <Bot size={14} /> Robô
               </Button>
             )}

@@ -26,7 +26,7 @@ import { parametrosIniciais } from "@/lib/fiscal/previa/execucao";
 import type { ExecucaoDoMotor } from "@/lib/sped/motor";
 
 const MODULO = "contabil_sped";
-const CAMINHO = "/contabil/sped";
+const CAMINHO = "/sped-contabil";
 
 export type ResultadoDoContabil = { ok: true; mensagem: string } | { ok: false; erro: string };
 const falha = (erro: string): ResultadoDoContabil => ({ ok: false, erro });

@@ -761,7 +761,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
-  contabil_sped: "/contabil/sped",
+  contabil_sped: "/sped-contabil",
   tech_controle_interno: "/tech/controle-interno",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
@@ -805,12 +805,12 @@ export const MODULE_ROUTES: Record<string, string> = {
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
   societario_certidoes:    "/certidoes",
-  societario_robo:         "/societario/robo",
+  societario_robo:         "/robo",
   // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e
   // `/processos/exigencias` acenderia "Processos" e "Exigências" juntos.
   societario_minha_area:   "/societario/minha-area",
-  societario_prazos:       "/societario/exigencias",
-  societario_relatorios:   "/societario/relatorios",
+  societario_prazos:       "/exigencias",
+  societario_relatorios:   "/processos/relatorios",
   bpo_contas_pagar:        "/pagar",
   bpo_contas_receber:      "/receber",
   bpo_lancamentos:         "/lancamentos",

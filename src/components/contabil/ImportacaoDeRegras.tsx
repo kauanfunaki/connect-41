@@ -6,7 +6,7 @@ import { SlideOver } from "@/components/ui/SlideOver";
 import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
 import { TabelaContabil } from "./TabelaContabil";
-import { importarRegras } from "@/app/(app)/contabil/sped/actions";
+import { importarRegras } from "@/app/(app)/sped-contabil/actions";
 import type { PreviaDeRegras } from "@/lib/contabil/regras";
 
 export function ImportacaoDeRegras({ empresaId, fechar }: { empresaId: string; fechar: () => void }) {

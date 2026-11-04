@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { cancelarTarefaDoRobo } from "@/app/(app)/societario/robo/actions";
+import { cancelarTarefaDoRobo } from "@/app/(app)/robo/actions";
 
 /** Tira da fila uma tarefa que a máquina ainda não pegou. */
 export function CancelarTarefaDoRobo({ id }: { id: string }) {

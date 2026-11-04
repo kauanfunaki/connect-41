@@ -25,7 +25,7 @@ import type { Regra } from "@/lib/contabil/lancamentos";
 import {
   corrigirPagamento, decidirPagamento, preencherPagina, removerContaPorNome, removerDocumentoDePagamento, salvarContaPorNome, salvarRegraDaCategoria,
   type ResultadoDosPagamentos,
-} from "@/app/(app)/contabil/sped/pagamentos-actions";
+} from "@/app/(app)/sped-contabil/pagamentos-actions";
 
 const FALTA: Record<PendenciaDoPagamento["falta"], string> = { conta_credito: "Conta de crédito", codigo_debito: "Débito da categoria", retencao: "Retenção do RPA", competencia: "Competência" };
 const SITUACAO: Record<string, [string, "sucesso" | "atencao" | "perigo" | "neutro"]> = {

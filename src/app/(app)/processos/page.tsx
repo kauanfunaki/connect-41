@@ -148,7 +148,7 @@ export default async function ProcessosPage({
           </Button>
         )}
         {coordena && (
-          <Button href="/societario/ia" variant="secondary">
+          <Button href="/processos/ia" variant="secondary">
             <Sparkles size={14} />
             Ceci · Societário
             {/* As propostas no `Contador`, como o "Classificar" da DRE (15/10/2026):

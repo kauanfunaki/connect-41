@@ -6,7 +6,7 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { OPCOES_DA_COBRANCA, rotuloDaCobranca } from "@/lib/societario/protocoloParado";
-import { definirCobrancaDoProtocolo } from "@/app/(app)/societario/exigencias/actions";
+import { definirCobrancaDoProtocolo } from "@/app/(app)/exigencias/actions";
 
 /**
  * Depois de quantos dias sem resposta o protocolo avisa para cobrar o órgão

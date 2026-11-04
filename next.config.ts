@@ -69,6 +69,19 @@ const nextConfig: NextConfig = {
     // quebrado. As outras rotas continuam conferindo os próprios tetos.
     proxyClientMaxBodySize: "26mb",
   },
+  // Endereços sem o setor (decisão do Kauan, 04/11/2026): o endereço é do
+  // módulo, que pode mudar de setor num escritório; as sub-telas ficam embaixo
+  // do módulo. Os antigos levam aos novos, com a query junto. Temporário (307):
+  // um 308 ficaria no cache do navegador se um dia o endereço voltar.
+  async redirects() {
+    return [
+      { source: "/societario/exigencias/:caminho*", destination: "/exigencias/:caminho*", permanent: false },
+      { source: "/societario/robo/:caminho*", destination: "/robo/:caminho*", permanent: false },
+      { source: "/societario/relatorios/:caminho*", destination: "/processos/relatorios/:caminho*", permanent: false },
+      { source: "/societario/ia/:caminho*", destination: "/processos/ia/:caminho*", permanent: false },
+      { source: "/contabil/sped/:caminho*", destination: "/sped-contabil/:caminho*", permanent: false },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

@@ -89,7 +89,7 @@ export default async function ExigenciasPage({
     for (const chave of ["situacao", "responsavel"] as const) if (params[chave]) q.set(chave, params[chave]!);
     if (p > 1) q.set("pagina", String(p));
     const t = q.toString();
-    return t ? `/societario/exigencias?${t}` : "/societario/exigencias";
+    return t ? `/exigencias?${t}` : "/exigencias";
   };
 
   // As peças que a tabela e os cartões do celular dividem (07/10/2026: a fila

@@ -72,7 +72,7 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
     <Breadcrumb
       items={[
         { label: "Processos", href: "/processos" },
-        { label: "Ceci · Societário", href: "/societario/ia" },
+        { label: "Ceci · Societário", href: "/processos/ia" },
         { label: proposta.title, truncate: true },
       ]}
     />

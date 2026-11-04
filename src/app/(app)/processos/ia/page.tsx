@@ -105,7 +105,7 @@ export default async function IaDoSocietarioPage() {
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
             {pendentes.map((p) => (
               <li key={p.id}>
-                <Link href={`/societario/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
+                <Link href={`/processos/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
                   <div className="min-w-0">
                     <p className="text-fs-4 font-medium text-fg">{p.title}</p>
                     <p className="text-fs-2 text-fg-muted">
@@ -183,7 +183,7 @@ export default async function IaDoSocietarioPage() {
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface">
             {revisadas.map((p) => (
               <li key={p.id}>
-                <Link href={`/societario/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
+                <Link href={`/processos/ia/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-2">
                   <div className="min-w-0">
                     <p className="text-fs-3 text-fg">{p.title}</p>
                     <p className="text-fs-2 text-fg-muted">

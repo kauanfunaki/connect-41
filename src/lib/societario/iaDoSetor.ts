@@ -1,7 +1,7 @@
 // As duas funções de IA do Societário que vieram do protótipo (29/09): a
 // varredura de pendências e a leitura do contrato social. Aqui fica o lado do
 // servidor — ler o banco, chamar a IA e deixar a proposta na fila do setor.
-// Aplicar o que foi aprovado é das actions de `/societario/ia`.
+// Aplicar o que foi aprovado é das actions de `/processos/ia`.
 
 import { getPrisma } from "@/lib/prisma";
 import { gerarEstruturado } from "@/lib/ai";

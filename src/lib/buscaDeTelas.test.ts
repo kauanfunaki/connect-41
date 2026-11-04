@@ -5,7 +5,7 @@ const telas: TelaNavegavel[] = [
   { code: "bpo_conciliacao", label: "Conciliação bancária", href: "/conciliacao", setor: "BPO" },
   { code: "bpo_cobranca", label: "Cobrança", href: "/cobranca", setor: "BPO" },
   { code: "bpo_contas_pagar", label: "Contas a pagar", href: "/pagar", setor: "BPO" },
-  { code: "societario_relatorios", label: "Relatórios", href: "/societario/relatorios", setor: "Societário" },
+  { code: "societario_relatorios", label: "Relatórios", href: "/processos/relatorios", setor: "Societário" },
 ];
 
 describe("buscarTelas", () => {

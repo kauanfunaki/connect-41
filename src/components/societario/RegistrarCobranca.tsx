@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { PhoneOutgoing } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { registrarCobrancaDoOrgao } from "@/app/(app)/societario/exigencias/actions";
+import { registrarCobrancaDoOrgao } from "@/app/(app)/exigencias/actions";
 
 /**
  * O botão da linha em Protocolos parados (04/11/2026): anota que alguém cobrou

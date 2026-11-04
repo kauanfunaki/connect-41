@@ -658,7 +658,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
   {
     chave: "societario_prazos",
     titulo: "Exigências e prazos",
-    caminhos: ["/societario/exigencias"],
+    caminhos: ["/exigencias"],
     resumo:
       "Reúne as exigências de todos os processos e os protocolos parados no órgão. Os prazos (de órgão, taxa, licença e combinados com o cliente) ficam na Agenda geral.",
     secoes: [
@@ -699,7 +699,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
   {
     chave: "societario_relatorios",
     titulo: "Relatórios",
-    caminhos: ["/societario/relatorios"],
+    caminhos: ["/processos/relatorios"],
     resumo:
       "Indicadores do Societário: prazo cumprido por tipo de processo, voltas de exigência, produtividade por responsável e custo em taxas.",
     secoes: [
