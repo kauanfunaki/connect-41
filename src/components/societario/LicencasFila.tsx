@@ -12,7 +12,7 @@ import {
 import { campoDaData } from "@/lib/societario/datas";
 import type { LinhaDeLicenca } from "@/lib/societario/licencas-data";
 import { AcoesDaLicenca } from "./AcoesDaLicenca";
-import { ehAlvara } from "@/lib/robo/alvara";
+import { cidadeAceita, ehAlvara } from "@/lib/robo/alvara";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { saoPauloParts } from "@/lib/agenda";
@@ -24,7 +24,15 @@ type Props = {
   hoje: Date;
   filtrado: boolean;
   orgaos: OrgaoDaLicenca[];
+  /** O módulo do robô está ligado: o ⋯ do alvará oferece "Imprimir pelo robô". */
+  roboLigado: boolean;
 };
+
+/** "Curitiba/PR", ou só o que o cadastro tiver. */
+function cidadeDaEmpresa(l: LinhaDeLicenca): string | null {
+  if (!l.cidade) return l.uf;
+  return l.uf ? `${l.cidade}/${l.uf}` : l.cidade;
+}
 
 /**
  * Quanto falta, em palavras.
@@ -47,12 +55,12 @@ function prazoEmPalavras(expiresAt: Date | null, hoje: Date): string | null {
  * era a única fila do Societário, com a de exigências, que rolava de lado no
  * celular (`min-w-[920px]`).
  */
-export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
+export function LicencasFila({ linhas, hoje, filtrado, orgaos, roboLigado }: Props) {
   if (linhas.length === 0) {
     return filtrado ? (
       <EmptyState
         title="Nada neste recorte"
-        description="Troque o filtro acima para ver as outras."
+        description="Troque o filtro ou a busca acima para ver as outras."
         icon={<ShieldCheck />}
       />
     ) : (
@@ -75,7 +83,9 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
     expiresAt: campoDaData(l.expiresAt),
     notes: l.notes,
     revogada: l.revokedAt !== null,
-    alvara: ehAlvara(l.kind),
+    // Só onde o robô sabe imprimir: alvará de empresa de Curitiba (ou sem
+    // cidade no cadastro, que o pedido aceita).
+    alvara: roboLigado && ehAlvara(l.kind) && cidadeAceita(l.cidade),
   });
 
   // O link da célula principal no desenho da fila de processos: negrito, cor
@@ -98,6 +108,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
                 nome={linkDaEmpresa(l)}
                 valor={l.expiresAt ? formatInstantDate(l.expiresAt) : <span className="font-normal text-fg-muted">não vence</span>}
               />
+              {cidadeDaEmpresa(l) && <InfoDoCartao>{cidadeDaEmpresa(l)}</InfoDoCartao>}
               <InfoDoCartao>
                 {l.kind}
                 {l.orgaoNome ? ` · ${l.orgaoNome}` : ""}
@@ -120,6 +131,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
           id: l.id,
           valores: {
             empresa: l.empresaNome,
+            cidade: cidadeDaEmpresa(l) ?? "",
             licenca: l.kind,
             orgao: l.orgaoNome ?? "",
             validade: l.expiresAt ? saoPauloParts(l.expiresAt).dateKey : "",
@@ -128,10 +140,11 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
         }))}
       >
         <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[920px]">
+          <table className="w-full min-w-[1040px]">
             <thead>
               <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Empresa" chave="empresa" /></th>
+                <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Cidade" chave="cidade" /></th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Licença" chave="licenca" /></th>
                 <th className="py-2 pr-3 font-medium"><FiltroDaColuna rotulo="Órgão" chave="orgao" /></th>
                 <th className="py-2 pr-3 font-medium">Número</th>
@@ -149,6 +162,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos }: Props) {
                 return (
                   <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">{linkDaEmpresa(l)}</td>
+                    <td className="py-2.5 pr-3 text-fg-secondary">{cidadeDaEmpresa(l) ?? <span className="text-fg-muted">—</span>}</td>
                     <td className="py-2.5 pr-3 text-fg-secondary">
                       {l.kind}
                       {l.notes && (

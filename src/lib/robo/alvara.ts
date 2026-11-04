@@ -43,8 +43,13 @@ export function pedidoDoAlvara(p: { tipoDaLicenca: string; revogada: boolean; in
 
 /** O que a máquina devolve no `resultado` da tarefa de alvará. */
 export const resultadoDoAlvaraSchema = z.object({
-  /** O que a máquina viu: o botão de imprimir, a mensagem de não encontrado, ou outra tela. */
-  tela: z.enum(["encontrado", "nao_encontrado", "outra"]),
+  /**
+   * O que a máquina viu: o botão de imprimir, a mensagem de não encontrado, a
+   * de alvará pendente de regularização (03/11/2026), ou outra tela.
+   */
+  tela: z.enum(["encontrado", "nao_encontrado", "pendente", "outra"]),
+  /** A frase da prefeitura, quando a tela é de pendência. */
+  mensagem: z.string().max(500).nullish(),
   /** O texto visível da página, para ler número e data e para quem for conferir. */
   texto: z.string().max(20_000).default(""),
   /** O texto do aceite que estava na página, verbatim. */
@@ -84,6 +89,10 @@ export type DecisaoDoAlvara =
 export function decidirAlvara(r: ResultadoDoAlvara, temPdf: boolean): DecisaoDoAlvara {
   if (r.tela === "nao_encontrado") {
     return { tipo: "pessoa", motivo: "A prefeitura não achou alvará para esta inscrição. Confira na Junta se o alvará já saiu." };
+  }
+  if (r.tela === "pendente") {
+    const frase = r.mensagem?.trim() || "o alvará está pendente de regularização";
+    return { tipo: "pessoa", motivo: `A prefeitura não libera a impressão: "${frase.replace(/\.$/, "")}". Confira as anuências na Junta e peça de novo quando o alvará sair.` };
   }
   if (r.tela === "outra") {
     return { tipo: "pessoa", motivo: "A página do alvará mostrou uma tela que o robô não conhece. Confira à mão." };

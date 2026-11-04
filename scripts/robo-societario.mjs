@@ -14,11 +14,20 @@
 //     Curitiba, marca o aceite de acessibilidade (decisão do Kauan, 15/09) e
 //     devolve o PDF. Não decide nada além de "achou o botão de imprimir": o
 //     número, a data e o que fazer com "não encontrado" são decididos no Connect.
+//   vigiar_ie — emite o CICAD na Receita do PR, com o certificado da 041 pela
+//     Web PKI, e devolve a "Situação Atual". Ligado só com `vigiarIE.ativo`.
+//   observar_sima — lê "Minhas Solicitações" do SIMA com o certificado da 041
+//     e devolve aba e selo dos protocolos pedidos. Ligado só com `observarSima.ativo`.
 //
 // Uso:
 //   node scripts/robo-societario.mjs --config=.local/robo-societario.json [--once | --watch | --status | --stop]
 //   node scripts/robo-societario.mjs --ensaio-alvara --inscricao=<inscrição municipal>   (para antes do aceite)
 //   node scripts/robo-societario.mjs --testar-certificado --url=<site> --pfx=<arquivo.pfx> --entrada=<título no cofre> [--origens=a,b]
+//   node scripts/robo-societario.mjs --mapear --nome=<órgão> --url=<site> --pfx=<arquivo.pfx> --entrada=<título no cofre> [--origens=a,b]
+//   node scripts/robo-societario.mjs --ensaio-ie --inscricao=<IE> [--cnpj=<CNPJ>]   (lê sem falar com o Connect)
+//   node scripts/robo-societario.mjs --ensaio-sima [--protocolos=AFU-26003257,...]   (idem, no SIMA)
+//   node scripts/robo-societario.mjs --preparar-perfil   (Chrome do robô, para instalar a Web PKI)
+//   node scripts/robo-societario.mjs --mapear --nome=<órgão> --url=<site> --perfil   (site com Web PKI)
 // Roteiro completo em docs/ROBO-DO-SOCIETARIO.md.
 
 import { spawn } from "node:child_process";
@@ -62,13 +71,16 @@ async function saveState(patch) {
 
 // ─── conversa com o Connect ───────────────────────────────────────────────
 
-const CAPACIDADES = { imprimir_alvara: imprimirAlvara };
+const CAPACIDADES = { imprimir_alvara: imprimirAlvara, vigiar_ie: vigiarIE, observar_sima: observarSima };
+// A vigilância da IE e o SIMA só entram quando ligados na configuração.
+const LIGADAS_NA_CONFIGURACAO = { vigiar_ie: "vigiarIE", observar_sima: "observarSima" };
+const capacidadesLigadas = (config) => Object.keys(CAPACIDADES).filter((t) => !LIGADAS_NA_CONFIGURACAO[t] || config[LIGADAS_NA_CONFIGURACAO[t]]?.ativo === true);
 
 async function pedirTarefa(config) {
   const r = await fetch(`${config.baseUrl}/api/ops/watchers/${encodeURIComponent(config.slug)}/tarefas`, {
     method: "POST",
     headers: { authorization: `Bearer ${config.token}`, "content-type": "application/json" },
-    body: JSON.stringify({ capacidades: Object.keys(CAPACIDADES), versao: VERSAO }),
+    body: JSON.stringify({ capacidades: capacidadesLigadas(config), versao: VERSAO }),
     signal: AbortSignal.timeout(15_000),
   });
   if (!r.ok) throw new Error(`pedir tarefa: HTTP ${r.status} ${(await r.text()).slice(0, 160)}`);
@@ -123,12 +135,27 @@ async function umaVolta(config) {
     saida = executar ? await comPrazo(executar(config, tarefa), 10 * 60_000) : { devolucao: { ok: false, motivo: `Esta máquina não sabe executar ${tarefa.tipo}.`, recuperavel: false } };
   } catch (err) {
     // Site fora do ar, tela que demorou, navegador que travou: tenta de novo.
-    saida = { devolucao: { ok: false, motivo: `O robô falhou no site: ${String(err?.message || err).slice(0, 300)}`, recuperavel: true } };
+    // O detalhe técnico fica no log da máquina; o Connect mostra a frase.
+    log(`tarefa ${tarefa.id}: ${String(err?.message || err).slice(0, 300)}`);
+    saida = { devolucao: { ok: false, motivo: motivoDaFalha(err), recuperavel: true } };
   }
   const resposta = await devolver(config, tarefa.id, saida.devolucao, saida.arquivo ?? null);
   log(`tarefa ${tarefa.id}: devolvida, ficou ${resposta.status}`);
   await saveState({ ultimaTarefa: { id: tarefa.id, tipo: tarefa.tipo, status: resposta.status, em: new Date().toISOString() } });
   return true;
+}
+
+/**
+ * A falha em palavras de quem vai ler na tela do robô (03/11/2026). A mesma
+ * classificação mora em `motivoParaPessoa` (src/lib/robo/tarefas.ts), que
+ * traduz também o que as máquinas antigas mandavam cru.
+ */
+function motivoDaFalha(err) {
+  const m = String(err?.message || err);
+  if (/has been closed|browser.*closed|Target closed/i.test(m)) return "A janela do navegador fechou antes de o robô terminar. Ele tenta de novo na próxima volta.";
+  if (/passou de \d+ minutos|Timeout|timed out/i.test(m)) return "O site da prefeitura demorou demais para responder. O robô tenta de novo na próxima volta.";
+  if (/net::|ENOTFOUND|ECONNRE|ERR_/i.test(m)) return "O site da prefeitura não abriu: fora do ar ou sem internet na máquina. O robô tenta de novo na próxima volta.";
+  return "O robô não conseguiu terminar no site da prefeitura. Ele tenta de novo na próxima volta; o detalhe está no registro da máquina.";
 }
 
 function comPrazo(promessa, ms) {
@@ -162,12 +189,24 @@ const ACEITE =
   "Estou ciente da legislação específica de acessibilidade e, caso o estabelecimento " +
   "comercial não as atenda integralmente, adequarei para início das atividades.";
 const espacos = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
+// O que a prefeitura escreve quando não há o que imprimir. Se a redação mudar,
+// a tela cai em "outra" e vai para alguém conferir — nunca para a impressão.
+// "Alvará pendente de regularização, aguardando anuências obrigatórias dos
+// órgãos de licenciamento." (03/11/2026)
+const PENDENTE = /pendente de regulariza|aguardando anu[êe]ncia/i;
+const NAO_ENCONTRADO = /n[ãa]o (foi )?encontrad|n[ãa]o h[áa] alvar/i;
 
 async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
   const { inscricao } = tarefa.dados ?? {};
   if (!/^\d{8}$/.test(String(inscricao ?? ""))) return { devolucao: { ok: false, motivo: "A tarefa veio sem inscrição municipal de 8 dígitos.", recuperavel: false } };
   const { browser, context } = await abrirNavegador(config);
   const page = await context.newPage();
+  // Aviso em janela do navegador (alert) some sem deixar texto na página.
+  const avisos = [];
+  page.on("dialog", (d) => {
+    avisos.push(d.message());
+    d.accept().catch(() => {});
+  });
   try {
     await page.goto(CONSULTA_DO_ALVARA, { waitUntil: "domcontentloaded", timeout: 60_000 });
     const campo = page.getByRole("textbox").first();
@@ -175,14 +214,33 @@ async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
     await campo.fill(inscricao);
     await page.getByRole("button", { name: /consultar/i }).first().click();
 
-    // Uma de três saídas: o botão de imprimir, a mensagem de não encontrado, ou outra tela.
+    // Uma de quatro saídas: o botão de imprimir, "não encontrado", "pendente de
+    // regularização" ou outra tela. A pendência (03/11/2026) aparece num aviso
+    // que some, então a página é lida a cada meio segundo, e não só no fim da
+    // espera — esperar só o botão de imprimir deixava o robô parado 45 s
+    // olhando o aviso.
     const imprimir = page.getByRole("button", { name: /imprimir/i }).first();
-    const naoEncontrado = page.getByText(/n[ãa]o (foi )?encontrad|n[ãa]o h[áa] alvar/i).first();
-    await Promise.any([imprimir.waitFor({ timeout: 45_000 }), naoEncontrado.waitFor({ timeout: 45_000 })]).catch(() => {});
+    let tela = null;
+    let mensagem = null;
+    for (const fim = Date.now() + 45_000; !tela && Date.now() < fim; ) {
+      if (page.isClosed()) throw new Error("Target page, context or browser has been closed");
+      const agora = `${avisos.join("\n")}\n${await page.locator("body").innerText().catch(() => "")}`;
+      const linhaPendente = agora.split("\n").find((l) => PENDENTE.test(l));
+      if (linhaPendente) {
+        tela = "pendente";
+        mensagem = espacos(linhaPendente).slice(0, 500);
+      } else if (NAO_ENCONTRADO.test(agora)) tela = "nao_encontrado";
+      else if (await imprimir.isVisible().catch(() => false)) tela = "encontrado";
+      else await page.waitForTimeout(500);
+    }
     const texto = (await page.locator("body").innerText()).slice(0, 20_000);
-    if (await naoEncontrado.isVisible().catch(() => false)) return { devolucao: { ok: true, resultado: { tela: "nao_encontrado", texto } } };
-    if (!(await imprimir.isVisible().catch(() => false))) {
-      await capturar(page, tarefa.id);
+    if (tela === "pendente") {
+      await capturar(page, ensaio ? "ensaio-do-alvara" : tarefa.id);
+      return { devolucao: { ok: true, resultado: { tela, mensagem, texto } } };
+    }
+    if (tela === "nao_encontrado") return { devolucao: { ok: true, resultado: { tela, texto } } };
+    if (tela !== "encontrado") {
+      await capturar(page, ensaio ? "ensaio-do-alvara" : tarefa.id);
       return { devolucao: { ok: true, resultado: { tela: "outra", texto } } };
     }
     // No ensaio, para aqui: sem aceite, sem impressão, sem Connect.
@@ -233,6 +291,342 @@ async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
   }
 }
 
+// ─── vigiar_ie ────────────────────────────────────────────────────────────
+//
+// Emite o CICAD na Receita do PR e devolve o texto do campo "Situação Atual".
+// Mapeado contra a página real em 03/11/2026 (`--mapear --nome=cicad`):
+//   1. receita.pr.gov.br/certificado mostra a "Lista de Certificados" da Web
+//      PKI; a opção é "<NOME>:<CNPJ>", e o robô escolhe pelo CNPJ, não pela
+//      posição — na máquina há mais de um certificado.
+//   2. Logado, o menu tem "Emissão de CICAD", um link com chave da sessão.
+//   3. O formulário (arinternet.pr.gov.br/cadicms/_d_cicad1.asp) tem o campo
+//      eCadICMS, só dígitos, e o botão B1. IE errada dá o alerta
+//      "CAD/ICMS Inválido."; certa abre o CICAD numa aba nova.
+//   4. No CICAD, a situação fica entre "Situação Atual" e "Natureza Jurídica"
+//      ("ATIVO - SIMPLES NACIONAL / … DESDE 08/2023"). Quem interpreta é o
+//      Connect (`lerSituacaoDaIE`).
+//
+// Desligado por padrão: só pede `vigiar_ie` com `vigiarIE.ativo` na
+// configuração, porque a primeira rodada lê a carteira inteira do PR.
+
+const LOGIN_DA_RECEITA = "https://receita.pr.gov.br/certificado";
+const CNPJ_DO_CERTIFICADO = "31052957000105";
+const PAUSA_ENTRE_LEITURAS_MS = 15_000;
+const SITUACAO_NO_CICAD = /Situa[çc][ãa]o Atual\s+([\s\S]+?)\s+Natureza Jur[íi]dica/i;
+const RECUSA_DO_CICAD = /solicita[çc][ãa]o n[ãa]o p[ôo]de ser atendida/i;
+
+// O Chrome do robô fica aberto entre uma tarefa e outra: um login por rodada,
+// e não um por empresa. Fecha depois de alguns minutos sem uso. É um só para
+// a Receita e o SIMA (03/11/2026): o mesmo perfil não abre duas vezes, então
+// cada site tem a sua aba dentro dele.
+let perfil = null;
+let receita = null;
+let sima = null;
+async function abrirPerfilDoRobo(config) {
+  if (perfil) { perfil.usadoEm = Date.now(); return perfil.context; }
+  const { chromium } = await import("playwright");
+  const context = await chromium.launchPersistentContext(perfilDir, {
+    headless: false,
+    ...(config.navegador?.chrome ? { executablePath: config.navegador.chrome } : { channel: "chrome" }),
+    acceptDownloads: true,
+    locale: "pt-BR",
+    ignoreDefaultArgs: ["--disable-extensions"],
+  });
+  // Janela fechada à mão: na próxima tarefa abre de novo.
+  context.on("close", () => { perfil = null; receita = null; sima = null; });
+  perfil = { context, usadoEm: Date.now() };
+  return context;
+}
+/** Uma aba do perfil para um site: a em branco do começo, ou uma nova. */
+async function abaNoPerfil(context) {
+  const livre = context.pages().find((p) => p.url() === "about:blank" && p !== receita?.page && p !== sima?.page);
+  return livre ?? (await context.newPage());
+}
+async function fecharReceita() {
+  const p = perfil;
+  perfil = null;
+  receita = null;
+  sima = null;
+  await p?.context.close().catch(() => {});
+}
+
+async function vigiarIE(config, tarefa, { ensaio = false } = {}) {
+  const inscricao = String(tarefa.dados?.inscricao ?? "").replace(/\D/g, "");
+  const cnpj = String(tarefa.dados?.cnpj ?? "").replace(/\D/g, "");
+  const pessoa = (motivo) => ({ devolucao: { ok: false, motivo, recuperavel: false } });
+  if (inscricao.length < 8) return pessoa("A empresa não tem inscrição estadual completa no cadastro.");
+
+  const context = await abrirPerfilDoRobo(config);
+  if (!receita || receita.page.isClosed()) receita = { page: await abaNoPerfil(context), logado: false };
+  const { page } = receita;
+  const avisos = [];
+  const aoAviso = (d) => { avisos.push(espacos(d.message())); d.accept().catch(() => {}); };
+  page.on("dialog", aoAviso);
+  try {
+    // O perfil guarda a sessão: depois de uma falha, ou de reiniciar o robô, a
+    // Receita pode já estar logada, e aí a tela do certificado não mostra a
+    // lista (03/11/2026). Confere antes de tentar entrar.
+    if (!receita.logado) {
+      await page.goto("https://receita.pr.gov.br/", { waitUntil: "domcontentloaded", timeout: 60_000 });
+      if (await page.getByText("Emissão de CICAD").count()) receita.logado = true;
+    }
+    if (!receita.logado) {
+      const doCertificado = config.vigiarIE?.cnpjDoCertificado || CNPJ_DO_CERTIFICADO;
+      await page.goto(LOGIN_DA_RECEITA, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      // A lista é preenchida pela extensão, depois de a página carregar. Lê
+      // todas as listas da página pelo textContent: o innerText de uma opção
+      // fechada pode vir vazio.
+      // O $$eval da página não achou lista nenhuma (03/11): ela pode estar num
+      // frame ou dentro de um componente. O locator do Playwright entra nos
+      // dois, então a busca é por ele, frame a frame.
+      let vistas = [];
+      const opcao = await (async () => {
+        const fim = Date.now() + 30_000;
+        while (Date.now() < fim) {
+          vistas = [];
+          for (const [f, frame] of page.frames().entries()) {
+            const doFrame = await frame
+              .locator("select")
+              .evaluateAll((ls) => ls.flatMap((l, i) => [...l.options].map((o) => ({ lista: i, valor: o.value, texto: (o.textContent || "").trim() }))))
+              .catch((e) => [{ erro: String(e?.message || e).slice(0, 120) }]);
+            vistas.push(...doFrame.map((o) => ({ frame: f, ...o })));
+          }
+          const achou = vistas.find((o) => !o.erro && (o.texto + o.valor).replace(/\D/g, "").includes(doCertificado));
+          if (achou) return achou;
+          await sleep(1_000);
+        }
+        return null;
+      })();
+      if (!opcao) {
+        log(`opções vistas na lista: ${JSON.stringify(vistas).slice(0, 600)} (${page.frames().length} frame(s): ${page.frames().map((f) => f.url()).join(" ")})`);
+        await capturar(page, `${tarefa.id}-lista-de-certificados`);
+        return pessoa(`O certificado de CNPJ ${doCertificado} não apareceu na lista da Receita do PR. Confira, na máquina do robô, se ele está instalado no Windows e se a extensão Web PKI está no Chrome do robô.`);
+      }
+      // O formulário fica num frame: a lista e o botão são procurados nele.
+      const formulario = page.frames()[opcao.frame];
+      await formulario.locator("select").nth(opcao.lista).selectOption(opcao.valor ? opcao.valor : { label: opcao.texto });
+      await formulario.getByText("Login com Certificado").click();
+      await page.getByText("Emissão de CICAD").first().waitFor({ state: "attached", timeout: 60_000 });
+      receita.logado = true;
+    } else {
+      await page.goto("https://receita.pr.gov.br/", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    }
+
+    // O link do menu leva a chave da sessão: vale o endereço da hora.
+    const link = page.getByText("Emissão de CICAD").first();
+    if (!(await link.count())) { receita.logado = false; throw new Error("sessão da Receita do PR caiu"); }
+    const href = await link.getAttribute("href");
+    await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const campo = page.locator('input[name="eCadICMS"]');
+    await campo.waitFor({ timeout: 30_000 });
+    await campo.fill(inscricao);
+
+    const abaNova = context.waitForEvent("page", { timeout: 30_000 }).catch(() => null);
+    await page.locator('input[name="B1"]').click();
+    // A aba nova ou o alerta, o que vier primeiro.
+    let decidido = false;
+    const resultado = await Promise.race([
+      abaNova,
+      (async () => { while (!decidido && !avisos.length) await sleep(250); return null; })(),
+    ]);
+    decidido = true;
+    if (avisos.some((a) => /inv[áa]lid/i.test(a))) return pessoa(`A Receita do PR diz que a inscrição estadual ${inscricao} é inválida. Confira o cadastro da empresa.`);
+    if (!resultado) throw new Error(`o CICAD não abriu${avisos.length ? `: ${avisos.join(" / ")}` : ""}`);
+
+    try {
+      await resultado.waitForLoadState("domcontentloaded", { timeout: 30_000 });
+      // Ou o CICAD, ou a recusa ("Sua solicitação não pôde ser atendida").
+      await resultado.getByText(/Situação Atual|não p[ôo]de ser atendida/).first().waitFor({ timeout: 30_000 });
+      const texto = espacos(await resultado.locator("body").innerText());
+
+      // A recusa traz o motivo, e ele é a situação do cliente, não falha do
+      // robô: "Estabelecimento inativo no CAD/ICMS." (03/11/2026). O motivo
+      // vai como situação, e o Connect decide — o que ele não conhece vai
+      // para uma pessoa com o texto da Receita.
+      if (RECUSA_DO_CICAD.test(texto)) {
+        const motivo = texto.match(/Motivo:\s*(.+?)(?:\s+Orienta[çc][õo]es|$)/i)?.[1]?.trim();
+        const ieNaRecusa = texto.match(/CAD\/ICMS:\s*([\d.\-/]+)/i)?.[1]?.replace(/\D/g, "");
+        if (ensaio) return { ensaio: { recusa: true, motivo: motivo ?? null, ieNaRecusa, texto: texto.slice(0, 800) } };
+        if (!motivo) { await capturar(resultado, tarefa.id); return pessoa("A Receita do PR recusou o CICAD sem dizer o motivo onde o robô espera. A captura está na máquina do robô."); }
+        if (ieNaRecusa && ieNaRecusa !== inscricao) return pessoa(`A recusa da Receita do PR é de outra inscrição estadual (${ieNaRecusa}). Confira na Receita do PR.`);
+        return { devolucao: { ok: true, resultado: { situacao: motivo.slice(0, 200) } } };
+      }
+      const situacao = texto.match(SITUACAO_NO_CICAD)?.[1]?.trim();
+      const ieNoCicad = texto.match(/Inscri[çc][ãa]o no CAD\/ICMS\s+([\d.\-/]+)/i)?.[1]?.replace(/\D/g, "");
+      const cnpjNoCicad = texto.match(/Inscri[çc][ãa]o CNPJ\s+([\d.\-/]+)/i)?.[1]?.replace(/\D/g, "");
+      if (ensaio) return { ensaio: { situacao: situacao ?? null, ieNoCicad, cnpjNoCicad, texto: texto.slice(0, 800) } };
+      if (!situacao) { await capturar(resultado, tarefa.id); return pessoa("O CICAD abriu, mas sem o campo Situação Atual onde o robô espera. A captura está na máquina do robô."); }
+      if (ieNoCicad && ieNoCicad !== inscricao) return pessoa(`O CICAD que abriu é de outra inscrição estadual (${ieNoCicad}). Confira na Receita do PR.`);
+      if (cnpj && cnpjNoCicad && cnpjNoCicad !== cnpj) return pessoa(`A inscrição estadual ${inscricao} é de outro CNPJ na Receita do PR (${cnpjNoCicad}). Confira o cadastro da empresa.`);
+      return { devolucao: { ok: true, resultado: { situacao: situacao.slice(0, 200) } } };
+    } finally {
+      await resultado.close().catch(() => {});
+    }
+  } catch (err) {
+    await capturar(page, tarefa.id);
+    // Na dúvida sobre a sessão, a próxima tentativa entra de novo.
+    if (receita) receita.logado = false;
+    throw err;
+  } finally {
+    page.off("dialog", aoAviso);
+    if (ensaio) await fecharReceita();
+    else await sleep(PAUSA_ENTRE_LEITURAS_MS);
+  }
+}
+
+// ─── observar_sima ────────────────────────────────────────────────────────
+//
+// Lê "Minhas Solicitações" do SIMA com o certificado da 041 e devolve, para
+// cada protocolo pedido, a aba e o selo do cartão — e, no finalizado sem
+// deferimento, o motivo do detalhe. Quem decide é o Connect
+// (`classificarSolicitacao`). Mapeado contra a página real em 03/11/2026
+// (`--mapear --nome=sima`):
+//   - /solicitacoes leva ao e-Cidadão quando não há sessão; o perfil do robô
+//     guarda a sessão entre uma rodada e outra;
+//   - os dados chegam 5 a 15 s depois da página ("Carregando solicitações...");
+//   - as abas são os botões #nav-pendente-tab, #nav-analise-tab e
+//     #nav-finalizado-tab; o cartão é "<SELO> <PROTOCOLO> <TIPO> Solicitante:
+//     … Ver detalhes";
+//   - o detalhe do cancelado traz "Motivo do cancelamento <texto>".
+//
+// Desligado por padrão: só pede `observar_sima` com `observarSima.ativo`.
+
+const SIMA = "https://sima.curitiba.pr.gov.br";
+const ABAS_DO_SIMA = [
+  { aba: "Pendente", botao: "#nav-pendente-tab" },
+  { aba: "Em análise", botao: "#nav-analise-tab" },
+  { aba: "Finalizado", botao: "#nav-finalizado-tab" },
+];
+const PROTOCOLO_DO_SIMA = /\b([A-Z]{2,4}-\d{6,12})\b/;
+
+/** Espera o SIMA terminar de carregar as solicitações (5 a 15 s, às vezes mais). */
+async function esperarSolicitacoes(page) {
+  await page.locator(ABAS_DO_SIMA[0].botao).waitFor({ timeout: 60_000 });
+  const fim = Date.now() + 90_000;
+  while (Date.now() < fim) {
+    const carregando = await page.getByText(/Carregando solicita/i).first().isVisible().catch(() => false);
+    if (!carregando) return;
+    await sleep(1_000);
+  }
+  throw new Error("o SIMA não terminou de carregar as solicitações em 90 s");
+}
+
+/**
+ * Entra no SIMA, se a sessão do perfil não estiver mais valendo. O e-Cidadão
+ * pede "Entrar com Certificado Digital" e, no primeiro acesso de cada
+ * certificado, "Aceitar e entrar".
+ */
+async function entrarNoSima(config, page, id) {
+  await page.goto(`${SIMA}/solicitacoes`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  const noSima = () => new URL(page.url()).host === new URL(SIMA).host;
+  if (noSima()) return null;
+  const doCertificado = config.observarSima?.cnpjDoCertificado || CNPJ_DO_CERTIFICADO;
+  const botao = page.getByText(/Certificado Digital/i).first();
+  if (await botao.count()) await botao.click().catch(() => {});
+  let escolheu = false;
+  const fim = Date.now() + 90_000;
+  while (Date.now() < fim && !noSima()) {
+    const aceitar = page.getByText(/Aceitar e entrar/i).first();
+    if (await aceitar.isVisible().catch(() => false)) await aceitar.click().catch(() => {});
+    // Se o e-Cidadão mostrar uma lista de certificados na página (Web PKI),
+    // escolhe o da 041 pelo CNPJ, como na Receita.
+    if (!escolheu) {
+      for (const frame of page.frames()) {
+        const opcoes = await frame.locator("select").evaluateAll((ls) => ls.flatMap((l, i) => [...l.options].map((o) => ({ lista: i, valor: o.value, texto: (o.textContent || "").trim() })))).catch(() => []);
+        const opcao = opcoes.find((o) => (o.texto + o.valor).replace(/\D/g, "").includes(doCertificado));
+        if (!opcao) continue;
+        await frame.locator("select").nth(opcao.lista).selectOption(opcao.valor ? opcao.valor : { label: opcao.texto });
+        await frame.getByRole("button", { name: /entrar|login|acessar|confirmar/i }).first().click().catch(() => {});
+        escolheu = true;
+        break;
+      }
+    }
+    await sleep(1_000);
+  }
+  if (noSima()) return null;
+  await capturar(page, `${id}-login-do-sima`);
+  return "O login no e-Cidadão não terminou com o certificado da 041. A captura está na máquina do robô; entre uma vez pelo Chrome do robô (--preparar-perfil --url=https://sima.curitiba.pr.gov.br/) e peça de novo.";
+}
+
+async function observarSima(config, tarefa, { ensaio = false } = {}) {
+  const pedidos = new Set((tarefa.dados?.protocolos ?? []).map((p) => String(p).trim().toUpperCase()));
+  const pessoa = (motivo) => ({ devolucao: { ok: false, motivo, recuperavel: false } });
+  if (!pedidos.size && !ensaio) return pessoa("A rodada do SIMA veio sem protocolo para consultar.");
+
+  const context = await abrirPerfilDoRobo(config);
+  if (!sima || sima.page.isClosed()) sima = { page: await abaNoPerfil(context) };
+  const { page } = sima;
+  try {
+    const falhaNoLogin = await entrarNoSima(config, page, tarefa.id);
+    if (falhaNoLogin) return pessoa(falhaNoLogin);
+    if (!page.url().includes("/solicitacoes")) await page.goto(`${SIMA}/solicitacoes`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await esperarSolicitacoes(page);
+
+    const cartoes = [];
+    for (const { aba, botao } of ABAS_DO_SIMA) {
+      await page.locator(botao).click();
+      await sleep(1_500);
+      await esperarSolicitacoes(page);
+      // Os cartões visíveis da aba: o de cada "Ver detalhes", subindo até o
+      // bloco que tem o "Solicitante:".
+      const daAba = await page.locator("a", { hasText: "Ver detalhes" }).evaluateAll((links) =>
+        links
+          .filter((a) => a.getClientRects().length > 0)
+          .map((a) => {
+            let el = a;
+            while (el.parentElement && !/Solicitante:/.test(el.innerText || "")) el = el.parentElement;
+            return { texto: (el.innerText || "").replace(/\s+/g, " ").trim(), href: a.getAttribute("href") };
+          })
+      );
+      for (const c of daAba) {
+        const m = c.texto.match(PROTOCOLO_DO_SIMA);
+        if (!m) continue;
+        cartoes.push({ protocolo: m[1], aba, selo: c.texto.slice(0, m.index).trim(), href: c.href });
+      }
+    }
+
+    const itens = [];
+    for (const c of cartoes) {
+      if (!ensaio && !pedidos.has(c.protocolo)) continue;
+      if (ensaio && pedidos.size && !pedidos.has(c.protocolo)) continue;
+      let motivo = null;
+      // Finalizado sem deferimento: o motivo está no detalhe.
+      if (c.aba === "Finalizado" && !/^deferido$/i.test(c.selo) && c.href) {
+        await page.goto(new URL(c.href, SIMA).toString(), { waitUntil: "domcontentloaded", timeout: 60_000 });
+        await page.getByText(/Status:/).first().waitFor({ timeout: 60_000 }).catch(() => {});
+        const texto = espacos(await page.locator("body").innerText());
+        motivo = texto.match(/Motivo d[oe] cancelamento\s+([\s\S]+?)\s+\d+\s+Guia de pagamento/i)?.[1]?.trim()
+          ?? texto.match(/Motivo d[oe] cancelamento\s+(.{1,300})/i)?.[1]?.trim()
+          ?? null;
+      }
+      itens.push({ protocolo: c.protocolo, aba: c.aba, selo: c.selo.slice(0, 120), motivo: motivo?.slice(0, 500) ?? null });
+    }
+    if (ensaio) return { ensaio: { cartoes: cartoes.length, itens } };
+    log(`SIMA: ${cartoes.length} cartão(ões) na lista, ${itens.length} dos ${pedidos.size} protocolo(s) pedidos`);
+    return { devolucao: { ok: true, resultado: { itens } } };
+  } catch (err) {
+    await capturar(page, tarefa.id);
+    throw err;
+  } finally {
+    if (ensaio) await fecharReceita();
+  }
+}
+
+/** Ensaio do SIMA: lê a lista e mostra o que devolveria, sem falar com o Connect. */
+async function ensaiarSima() {
+  const config = await loadConfig().catch(() => ({ navegador: { visivel: true, canal: null } }));
+  const protocolos = String(value("--protocolos", "")).split(",").map((p) => p.trim()).filter(Boolean);
+  const saida = await observarSima(config, { id: "ensaio-do-sima", dados: { protocolos } }, { ensaio: true });
+  console.log(JSON.stringify(saida.ensaio ?? saida.devolucao, null, 2));
+}
+
+/** Ensaio da IE: lê uma inscrição e mostra o que leria, sem falar com o Connect. */
+async function ensaiarIE() {
+  const config = await loadConfig().catch(() => ({ navegador: { visivel: true, canal: null } }));
+  const saida = await vigiarIE(config, { id: "ensaio-da-ie", dados: { inscricao: value("--inscricao", ""), cnpj: value("--cnpj", "") } }, { ensaio: true });
+  console.log(JSON.stringify(saida.ensaio ?? saida.devolucao, null, 2));
+}
+
 // ─── teste do certificado (o primeiro risco: como o site pede o certificado) ─
 
 /**
@@ -263,22 +657,44 @@ function perguntarSemEco(pergunta) {
 }
 
 /**
+ * Abre o navegador visível com o certificado do cofre, liberado para as origens
+ * de `--origens` (ou só a de `--url`). É a mesma abertura do teste do
+ * certificado e do mapeamento.
+ */
+async function abrirComCertificado() {
+  const url = value("--url"), pfx = value("--pfx"), entrada = value("--entrada");
+  if (!url || !pfx) throw new Error("Use --url e --pfx, e --entrada (o título da entrada no cofre) para ler a senha do cofre.");
+  const config = await loadConfig().catch(() => ({ navegador: { visivel: true, canal: null }, cofre: null }));
+  // Sem --entrada, a senha do certificado é digitada aqui, sem eco (03/11/2026):
+  // serve para mapear um site quando o cofre não está à mão.
+  let passphrase;
+  if (entrada) {
+    const cofre = config.cofre;
+    if (!cofre?.arquivo || !cofre?.arquivoChave) throw new Error("Preencha cofre.arquivo e cofre.arquivoChave na configuração.");
+    passphrase = await senhaDoCofre(cofre, entrada);
+  } else {
+    passphrase = await perguntarSemEco("Senha do certificado: ");
+  }
+  const origens = (value("--origens") || new URL(url).origin).split(",").map((o) => o.trim()).filter(Boolean);
+  // Os .pfx das certificadoras vêm cifrados em RC2, que o OpenSSL 3 só abre com
+  // o provedor legado — o `npm run robo:societario` já liga (03/11/2026).
+  if (!process.execArgv.includes("--openssl-legacy-provider") && !/--openssl-legacy-provider/.test(process.env.NODE_OPTIONS ?? "")) {
+    log("aviso: sem --openssl-legacy-provider, o certificado das certificadoras não abre. Rode pelo npm run robo:societario.");
+  }
+  const { browser, context } = await abrirNavegador({ navegador: { ...config.navegador, visivel: true } }, {
+    clientCertificates: origens.map((origin) => ({ origin, pfxPath: resolve(pfx), passphrase })),
+  });
+  return { url, origens, browser, context };
+}
+
+/**
  * Abre o site com o certificado e deixa o navegador aberto para olhar. Serve
  * para o primeiro risco do mapa: se o site pede o certificado pela janela
  * comum (certificado de cliente), o Playwright resolve; se pedir extensão
  * (Web PKI e afins), o desenho muda antes de escrever o robô.
  */
 async function testarCertificado() {
-  const url = value("--url"), pfx = value("--pfx"), entrada = value("--entrada");
-  if (!url || !pfx || !entrada) throw new Error("Use --url, --pfx e --entrada (o título da entrada no cofre).");
-  const config = await loadConfig().catch(() => ({ navegador: { visivel: true, canal: null }, cofre: null }));
-  const cofre = config.cofre;
-  if (!cofre?.arquivo || !cofre?.arquivoChave) throw new Error("Preencha cofre.arquivo e cofre.arquivoChave na configuração.");
-  const passphrase = await senhaDoCofre(cofre, entrada);
-  const origens = (value("--origens") || new URL(url).origin).split(",").map((o) => o.trim()).filter(Boolean);
-  const { browser, context } = await abrirNavegador({ navegador: { ...config.navegador, visivel: true } }, {
-    clientCertificates: origens.map((origin) => ({ origin, pfxPath: resolve(pfx), passphrase })),
-  });
+  const { url, browser, context } = await abrirComCertificado();
   const page = await context.newPage();
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
   log(`aberto em ${page.url()}. Siga o login no navegador; ao terminar, aperte Enter aqui.`);
@@ -288,13 +704,154 @@ async function testarCertificado() {
   await browser.close();
 }
 
+// ─── perfil próprio do Chrome, para os sites com Web PKI (03/11/2026) ──────
+//
+// A Receita do PR não pede o certificado pela janela do navegador: mostra uma
+// "Lista de Certificados" que a extensão Web PKI lê do Windows. Para esses
+// sites o robô usa um perfil fixo do Chrome instalado, com a extensão, e o
+// certificado instalado no Windows da máquina (decisão do Kauan, 03/11). O
+// perfil é só do robô: não é o Chrome de quem usa a máquina.
+
+const perfilDir = join(dirname(statePath), "perfil-do-chrome");
+const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+
+/**
+ * Abre o Chrome comum, fora do Playwright, no perfil do robô. É onde a pessoa
+ * instala a extensão e autoriza o site uma vez — o Playwright, com o perfil
+ * aberto por ele, deixa a extensão rodar, mas a instalação é mais segura assim.
+ */
+async function prepararPerfil() {
+  const config = await loadConfig().catch(() => ({ navegador: {} }));
+  await mkdir(perfilDir, { recursive: true });
+  const url = value("--url", "https://receita.pr.gov.br/certificado");
+  spawn(config.navegador?.chrome || CHROME, [`--user-data-dir=${perfilDir}`, "--no-first-run", url], { detached: true, stdio: "ignore" }).unref();
+  log(`Chrome aberto no perfil do robô (${perfilDir}). Instale a extensão Web PKI pelo aviso do site, clique em Atualizar Lista de Certificados, autorize o site e confira se o certificado aparece. Depois feche o Chrome.`);
+}
+
+/** O perfil do robô pelo Playwright, com as extensões ligadas. */
+async function abrirComPerfil() {
+  const url = value("--url");
+  if (!url) throw new Error("Use --url.");
+  const config = await loadConfig().catch(() => ({ navegador: {} }));
+  const { chromium } = await import("playwright");
+  const context = await chromium.launchPersistentContext(perfilDir, {
+    headless: false,
+    ...(config.navegador?.chrome ? { executablePath: config.navegador.chrome } : { channel: "chrome" }),
+    acceptDownloads: true,
+    locale: "pt-BR",
+    // O Playwright desliga as extensões por padrão; aqui elas são o motivo do perfil.
+    ignoreDefaultArgs: ["--disable-extensions"],
+  });
+  return { url, origens: [], browser: context, context };
+}
+
+// ─── mapeamento de um site novo (03/11/2026) ───────────────────────────────
+
+/**
+ * Uma pessoa faz o caminho à mão, com o certificado, e a cada Enter o robô
+ * anota a tela: endereço, campos (rótulo, nome, id, tipo — sem o valor
+ * digitado), botões e links, o começo do texto e uma captura. Abas novas e
+ * PDFs que o site abre também ficam anotados, e o PDF é guardado.
+ *
+ * É o material para escrever a leitura de um órgão contra a página real, sem
+ * adivinhar seletor. Tudo fica em `.local/capturas-do-robo/mapa-<nome>/`, na
+ * máquina: tem dado de cliente, e não vai para o repositório nem para o Connect.
+ */
+async function mapearSite() {
+  const nome = String(value("--nome", "site")).replace(/[^\w-]/g, "") || "site";
+  const pasta = join(capturasDir, `mapa-${nome}`);
+  await mkdir(pasta, { recursive: true });
+  const { url, origens, browser, context } = args.has("--perfil") ? await abrirComPerfil() : await abrirComCertificado();
+  const hosts = new Set();
+  const eventos = [];
+  let pdfs = 0;
+  context.on("page", (p) => eventos.push({ em: new Date().toISOString(), aba_nova: p.url() }));
+  context.on("request", (r) => { try { hosts.add(new URL(r.url()).origin); } catch {} });
+  context.on("response", async (r) => {
+    if (!/application\/pdf/i.test(r.headers()["content-type"] ?? "")) return;
+    try {
+      const arquivo = join(pasta, `documento-${++pdfs}.pdf`);
+      await writeFile(arquivo, await r.body());
+      eventos.push({ em: new Date().toISOString(), pdf: r.url(), arquivo });
+    } catch {}
+  });
+  const page = context.pages()[0] ?? (await context.newPage());
+  page.on("dialog", (d) => { eventos.push({ em: new Date().toISOString(), aviso: d.message() }); d.accept().catch(() => {}); });
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
+
+  const passos = [];
+  const linhas = createInterface({ input: process.stdin });
+  const proxima = () => new Promise((ok) => linhas.once("line", ok));
+  log(`aberto em ${page.url()}. Faça o caminho no navegador. A cada tela que importa, aperte Enter aqui (pode escrever uma nota antes). Para terminar, escreva fim e Enter.`);
+  while (true) {
+    const nota = (await proxima()).trim();
+    if (nota.toLowerCase() === "fim") break;
+    const n = passos.length + 1;
+    for (const aba of context.pages()) {
+      const tela = await aba.evaluate(() => {
+        const curto = (t, max = 120) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+        const rotulo = (el) =>
+          curto(
+            (el.id && document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.innerText) ||
+              el.closest("label")?.innerText ||
+              el.getAttribute("aria-label") ||
+              el.getAttribute("placeholder") ||
+              el.previousElementSibling?.innerText
+          );
+        const campos = [...document.querySelectorAll("input, select, textarea")]
+          .filter((el) => el.type !== "hidden")
+          .map((el) => ({
+            tag: el.tagName.toLowerCase(),
+            tipo: el.type || null,
+            nome: el.name || null,
+            id: el.id || null,
+            rotulo: rotulo(el),
+            opcoes: el.tagName === "SELECT" ? [...el.options].slice(0, 30).map((o) => curto(o.text, 60)) : undefined,
+          }));
+        const acoes = [...document.querySelectorAll("button, a, input[type=submit], input[type=button], [role=button], [onclick]")]
+          .map((el) => ({ tag: el.tagName.toLowerCase(), texto: curto(el.innerText || el.value || el.title, 80), href: el.getAttribute("href") || null, id: el.id || null }))
+          .filter((a) => a.texto || a.href)
+          .slice(0, 150);
+        return {
+          titulo: document.title,
+          campos,
+          acoes,
+          frames: [...document.querySelectorAll("iframe, frame")].map((f) => f.src),
+          texto: curto(document.body?.innerText, 6000),
+        };
+      }).catch((e) => ({ erro: String(e?.message || e).slice(0, 200) }));
+      const captura = join(pasta, `passo-${n}-aba-${context.pages().indexOf(aba) + 1}.png`);
+      await aba.screenshot({ path: captura, fullPage: true }).catch(() => {});
+      passos.push({ passo: n, nota: nota || null, url: aba.url(), captura, ...tela });
+    }
+    await writeFile(join(pasta, "mapa.json"), `${JSON.stringify({ url, origens, hosts: [...hosts], passos, eventos }, null, 2)}\n`);
+    log(`passo ${n} anotado (${context.pages().length} aba(s)). Enter para o próximo, fim para terminar.`);
+  }
+  linhas.close();
+  await writeFile(join(pasta, "mapa.json"), `${JSON.stringify({ url, origens, hosts: [...hosts], passos, eventos }, null, 2)}\n`);
+  log(`mapa em ${join(pasta, "mapa.json")}. Endereços que o site usou: ${[...hosts].join(", ")}`);
+  await browser.close();
+}
+
 // ─── laço ─────────────────────────────────────────────────────────────────
 
 async function watch() {
   await mkdir(dirname(lockPath), { recursive: true });
   let lock;
-  try { lock = await open(lockPath, "wx"); } catch { throw new Error("Já existe um robô rodando com esta configuração."); }
-  const parar = async () => { await lock.close(); await unlink(lockPath).catch(() => {}); await unlink(stopPath).catch(() => {}); log("parado"); process.exit(0); };
+  // A trava guarda o PID. Fechar a janela do cmd mata o robô sem soltar a
+  // trava, e aí o Agendador não conseguia subir outro (03/11/2026): trava de
+  // processo que não existe mais é descartada.
+  try { lock = await open(lockPath, "wx"); } catch {
+    const pid = Number((await readFile(lockPath, "utf8").catch(() => "")).trim());
+    let vivo = false;
+    try { if (pid) { process.kill(pid, 0); vivo = true; } } catch {}
+    if (vivo) throw new Error("Já existe um robô rodando com esta configuração.");
+    log(`trava antiga${pid ? ` do processo ${pid}` : ""} descartada: o robô anterior não está mais rodando`);
+    await unlink(lockPath).catch(() => {});
+    lock = await open(lockPath, "wx");
+  }
+  await lock.writeFile(String(process.pid));
+  const parar = async () => { await fecharReceita(); await lock.close(); await unlink(lockPath).catch(() => {}); await unlink(stopPath).catch(() => {}); log("parado"); process.exit(0); };
   process.once("SIGINT", parar);
   process.once("SIGTERM", parar);
   const config = await loadConfig();
@@ -309,7 +866,10 @@ async function watch() {
       await saveState({ ultimaVolta: new Date().toISOString(), ultimoErro: String(err.message).slice(0, 300) });
     }
     // Com trabalho, emenda a próxima; sem, espera a volta.
-    if (!trabalhou) await sleep(config.intervaloMs);
+    if (!trabalhou) {
+      if (perfil && Date.now() - perfil.usadoEm > 5 * 60_000) await fecharReceita();
+      await sleep(config.intervaloMs);
+    }
   }
 }
 
@@ -350,13 +910,17 @@ async function ensaiarAlvara() {
 
 try {
   if (args.has("--testar-certificado")) await testarCertificado();
+  else if (args.has("--mapear")) await mapearSite();
+  else if (args.has("--preparar-perfil")) await prepararPerfil();
+  else if (args.has("--ensaio-ie")) await ensaiarIE();
+  else if (args.has("--ensaio-sima")) await ensaiarSima();
   else if (args.has("--ensaio-alvara")) await ensaiarAlvara();
   else if (args.has("--once")) { const config = await loadConfig(); await umaVolta(config); }
   else if (args.has("--watch") || args.has("--start")) await watch();
   else if (args.has("--status")) await status();
   else if (args.has("--stop")) { await mkdir(dirname(stopPath), { recursive: true }); await writeFile(stopPath, `${new Date().toISOString()}\n`); console.log("Parada pedida; o robô para na próxima volta."); }
   else if (args.has("--config")) await criarConfig();
-  else console.log("Uso: --config[=arquivo] | --once | --watch | --status | --stop | --ensaio-alvara --inscricao= | --testar-certificado --url= --pfx= --entrada=");
+  else console.log("Uso: --config[=arquivo] | --once | --watch | --status | --stop | --ensaio-alvara --inscricao= | --ensaio-ie --inscricao= [--cnpj=] | --ensaio-sima [--protocolos=A,B] | --testar-certificado --url= --pfx= --entrada= | --mapear --nome= --url= (--pfx= --entrada= | --perfil) | --preparar-perfil");
 } catch (error) {
   console.error(`[robo-societario] ${error.message}`);
   process.exitCode = 1;

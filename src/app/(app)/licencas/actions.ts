@@ -162,6 +162,7 @@ async function mudarRevogacao(id: string, revogar: boolean): Promise<LicencaStat
 export async function imprimirAlvaraPeloRobo(id: string): Promise<{ error: string } | { success: true; texto: string }> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  if (!(await isModuleEnabled(ctx.tenantId, "societario_robo"))) return { error: "O robô do Societário não está ligado neste escritório." };
   const r = await pedirImpressaoDoAlvara(ctx.tenantId, id, ctx.userId ?? null);
   if (!r.ok) return { error: r.erro };
   revalidatePath("/societario/robo");

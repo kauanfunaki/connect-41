@@ -1,3 +1,4 @@
+import type { Paleta, ParteDoDia } from "./cores";
 export const GITHUB_MODULE = "tech_github_contributions";
 export const CONTRIBUTION_TYPES = ["COMMIT", "PULL_REQUEST", "ISSUE", "REVIEW"] as const;
 export type ContributionType = typeof CONTRIBUTION_TYPES[number];
@@ -29,9 +30,11 @@ export type HeatmapUser = {
   id: string; login: string; name: string | null; isBot: boolean; tracked: boolean; total: number; activeDays: number;
   counts: Record<ContributionType, number>; days: { day: string; count: number }[];
 };
+/** Um dia do calendário; `parts` diz quem contribuiu nele (04/11/2026), para misturar as cores. */
+export type CalendarDay = { day: string; count: number; parts?: ParteDoDia[] };
 export type RepositoryHeatmap = {
   id: string; fullName: string; private: boolean; total: number; activeDays: number;
-  counts: Record<ContributionType, number>; days: { day: string; count: number }[];
+  counts: Record<ContributionType, number>; days: CalendarDay[];
   contributors: { id: string; login: string; name: string | null; total: number; counts: Record<ContributionType, number> }[];
 };
 export type GithubSummary = {
@@ -40,6 +43,8 @@ export type GithubSummary = {
   days: { day: string; counts: Record<ContributionType, number> }[];
   leaders: { id: string; login: string; name: string | null; total: number }[];
   recent: DayEvent[];
+  /** O calendário de todo o time filtrado, com as cores de quem contribuiu em cada dia (04/11/2026). */
+  calendar: CalendarDay[];
 };
 // O painel lê só o acervo gravado; cobertura e fila ficam em Integrações (26/10/2026).
 // `message` aparece apenas quando não há o que mostrar: sem conexão ou sem repositório.
@@ -51,6 +56,8 @@ export type DashboardView = {
   summary: GithubSummary | null; all: boolean; linked: number;
   repositories: RepositoryHeatmap[]; totalRepositories: number;
   unidentifiedAuthors: UnidentifiedAuthor[];
+  /** Cor e time de cada pessoa da resposta, pelo `GithubUser.id`, e os times (04/11/2026). */
+  paleta: Paleta;
 };
 // Quem fez e onde fez as contribuições sem conta GitHub: o nome é o do autor no git (28/10/2026).
 export type UnidentifiedAuthor = { id: string; login: string; repository: string; total: number };

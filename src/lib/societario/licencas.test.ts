@@ -4,6 +4,7 @@ import {
   diasAte,
   ordenarLicencas,
   contarPendentes,
+  buscarLicencas,
   custoEmTaxas,
   AVISO_EM_DIAS,
   SITUACAO_LABEL,
@@ -174,5 +175,30 @@ describe("custoEmTaxas", () => {
       pagoCentavos: 0,
       custoDasVoltasCentavos: 0,
     });
+  });
+});
+
+// 03/11/2026: era preciso abrir licença por licença para achar a empresa.
+describe("buscarLicencas", () => {
+  const linhas = [
+    { id: "1", empresaNome: "Padaria São João", empresaCnpj: "12.345.678/0001-90", cidade: "Curitiba" },
+    { id: "2", empresaNome: "Oficina Central", empresaCnpj: null, cidade: "São José dos Pinhais" },
+  ];
+
+  it("acha pelo nome e pela cidade, sem acento nem caixa", () => {
+    expect(buscarLicencas(linhas, "sao joao").map((l) => l.id)).toEqual(["1"]);
+    expect(buscarLicencas(linhas, "CURITIBA").map((l) => l.id)).toEqual(["1"]);
+    expect(buscarLicencas(linhas, "pinhais").map((l) => l.id)).toEqual(["2"]);
+  });
+
+  it("acha pelo CNPJ com ou sem pontuação, a partir de quatro dígitos", () => {
+    expect(buscarLicencas(linhas, "12345678").map((l) => l.id)).toEqual(["1"]);
+    expect(buscarLicencas(linhas, "345.678").map((l) => l.id)).toEqual(["1"]);
+    expect(buscarLicencas(linhas, "1")).toEqual([]);
+  });
+
+  it("sem busca devolve tudo", () => {
+    expect(buscarLicencas(linhas, "")).toHaveLength(2);
+    expect(buscarLicencas(linhas, null)).toHaveLength(2);
   });
 });

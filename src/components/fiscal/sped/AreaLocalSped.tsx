@@ -9,6 +9,7 @@ import { type EtapaDoSped } from "@/lib/fiscal/sped/etapas";
 import { carregarBase, ErroFiscal, prepararTelaLocal } from "@/lib/fiscal/sped/local/servidor";
 import { EstacaoSped, type MotorDaEstacao } from "./EstacaoSped";
 import { PeriodoLocalSped } from "./PeriodoLocalSped";
+import { AbrangenciaLocalSped } from "./AbrangenciaLocalSped";
 
 export async function AreaLocalSped({ aba, params }: { aba: EtapaDoSped; params: Record<string, string | string[] | undefined> }) {
   let tela;
@@ -34,6 +35,7 @@ export async function AreaLocalSped({ aba, params }: { aba: EtapaDoSped; params:
     <PageHeader title="SPED" subtitle="Classificação, apuração e fechamento no Connect. Arquivos gerados no motor do escritório." />
     <FiltroDaEmpresa acao={`/fiscal/sped/${aba}`} empresas={tela.empresas} valor={tela.empresa?.id ?? null} foco={tela.foco} manter={{ competencia: tela.competencia, vista: typeof params.vista === "string" ? params.vista : undefined, escopo: typeof params.escopo === "string" ? params.escopo : undefined }}>
       <PeriodoLocalSped competencia={tela.competencia} mensal={aba === "gerar"} />
+      {tela.empresa && tela.comAbrangencia && <AbrangenciaLocalSped raiz={tela.empresa.cnpj.slice(0, 8)} consolidado={Boolean(tela.contexto?.consolidado)} />}
     </FiltroDaEmpresa>
     {!tela.empresa || !base || !tela.contexto ? <EscolhaAEmpresa escolha={tela.escolha} /> : <EstacaoSped key={`${tela.empresa.id}:${tela.competencia}:${aba}:${tela.contexto.consolidado}:${base.revisao}`} aba={aba} empresa={{ id: tela.empresa.id, nome: tela.empresa.nome, cnpj: tela.empresa.cnpj }} contexto={{ ...tela.contexto, revisao: base.revisao }} base={base} pode={tela.pode} direitos={direitos} grupo={tela.grupo.map(e => ({ id: e.id, nome: e.nome, cnpj: e.cnpj }))} vistaInicial={typeof params.vista === "string" ? params.vista : undefined} motor={motor} />}
   </PageContainer>;

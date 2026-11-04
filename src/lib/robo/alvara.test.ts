@@ -61,6 +61,17 @@ describe("decidirAlvara", () => {
     expect(decidirAlvara(resultadoDoAlvaraSchema.parse({ tela: "outra" }), false).tipo).toBe("pessoa");
   });
 
+  // 03/11/2026: a prefeitura respondeu com a pendência, e o robô ficava 45 s
+  // esperando o botão de imprimir. Agora a máquina devolve a frase, e a tarefa
+  // para numa pessoa com ela — não volta para a fila.
+  it("alvará pendente de regularização vai para alguém com a frase da prefeitura", () => {
+    const frase = "Alvará pendente de regularização, aguardando anuências obrigatórias dos órgãos de licenciamento.";
+    const d = decidirAlvara(resultadoDoAlvaraSchema.parse({ tela: "pendente", mensagem: frase }), false);
+    expect(d.tipo).toBe("pessoa");
+    expect(d.tipo === "pessoa" && d.motivo).toContain("aguardando anuências obrigatórias dos órgãos de licenciamento\"");
+    expect(decidirAlvara(resultadoDoAlvaraSchema.parse({ tela: "pendente" }), false).tipo).toBe("pessoa");
+  });
+
   it("observação fora do formato não inventa data", () => {
     const d = decidirAlvara(encontrado({ texto: "Alvará Nº 1.855.561" }), true);
     expect(d).toEqual({ tipo: "guardar", numero: "1.855.561", protocolo: null, emitidoEm: null });

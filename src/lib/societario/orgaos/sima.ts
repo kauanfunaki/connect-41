@@ -91,10 +91,17 @@ export function normalizarProtocolo(numero: string): string {
  * documento à parte, porque é a lista que alguém consulta no momento em que
  * abre o portal para levantar — documento separado é o que fica desatualizado.
  */
+//
+// 03/11/2026, mapeado pelo Kauan com o certificado da 041 (`--mapear --nome=sima`):
+// "Minhas Solicitações" é `/solicitacoes`, com as abas nos botões
+// `#nav-pendente-tab`, `#nav-analise-tab` e `#nav-finalizado-tab` e os dados
+// chegando 5 a 15 s depois da página; o detalhe é `/solicitacoes/<uuid>/detalhe`,
+// com "Status: EM ANÁLISE", "Status: DEFERIDO" ou "Status: CANCELADO" e, no
+// cancelado, o "Motivo do cancelamento". A leitura roda no programa da máquina
+// (tarefa `observar_sima`), e não neste servidor: o login é com o certificado.
 export const CONTRATO_PENDENTE = [
-  "A URL exata de 'Minhas Solicitações' e a de 'Ver detalhes' de um protocolo",
-  "O texto do selo no DETALHE quando está em análise e quando há exigência (na lista já sabemos; MA-5/MA-6 responderam 'é a mesma tela', então muda só o status)",
-  "Os selos da aba Finalizado que não sejam DEFERIDO — indeferido, cancelado, arquivado",
+  "Os selos da aba Pendente vistos na tela (nenhuma solicitação estava pendente em 03/11)",
+  "Os selos da aba Finalizado além de DEFERIDO e CANCELADO — indeferido, arquivado, condicionado",
 ] as const;
 
 export class ContratoNaoLevantado extends Error {
@@ -138,6 +145,14 @@ export const SELOS_DE_EXIGENCIA = [
 
 /** O selo de conclusão observado no detalhe de um protocolo real (`AFU-26003257`). */
 export const SELO_DEFERIDO = "DEFERIDO";
+
+/**
+ * Finalizado sem deferimento, visto na tela em 03/11/2026 (`AFU-26002918`,
+ * "Solicitação CANCELADA automaticamente devido ao não atendimento do prazo…").
+ * O pedido acabou sem o documento: volta para o setor como exigência, com o
+ * motivo do SIMA, para alguém abrir outro — nunca conclui a etapa.
+ */
+export const SELOS_FINALIZADO_SEM_DEFERIMENTO = ["CANCELADO"] as const;
 
 /** O que a consulta mostra quando o protocolo não é daquele login (MA-8). */
 export const SEM_SOLICITACAO = "Nenhuma solicitação encontrada";
@@ -204,7 +219,11 @@ export type SolicitacaoNaLista = {
   aba: Aba;
   /** O selo do cartão, verbatim. */
   selo: string;
+  /** O "Motivo do cancelamento" do detalhe, quando há. */
+  motivo?: string | null;
 };
+
+const SEM_DEFERIMENTO = new Set(SELOS_FINALIZADO_SEM_DEFERIMENTO.map(normalizarSelo));
 
 /**
  * O que a lista diz sobre uma solicitação.
@@ -233,8 +252,13 @@ export function classificarSolicitacao(s: SolicitacaoNaLista): LeituraDoOrgao {
     case "Em análise":
       return { desfecho: "PENDENTE" };
     case "Finalizado": {
-      if (normalizarSelo(s.selo) !== SELO_DEFERIDO) throw new SeloNaoObservado(s.aba, s.selo);
-      return { desfecho: "DEFERIDO" };
+      const selo = normalizarSelo(s.selo);
+      if (selo === SELO_DEFERIDO) return { desfecho: "DEFERIDO" };
+      if (SEM_DEFERIMENTO.has(selo)) {
+        const motivo = s.motivo?.trim();
+        return { desfecho: "EXIGENCIA", detalhe: `O SIMA marcou a solicitação como ${s.selo.trim().toLowerCase()}${motivo ? `: ${motivo}` : "."}` };
+      }
+      throw new SeloNaoObservado(s.aba, s.selo);
     }
   }
 }

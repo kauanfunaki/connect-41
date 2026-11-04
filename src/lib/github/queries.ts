@@ -3,7 +3,9 @@ import { getPrisma } from "@/lib/prisma";
 import { emptyCounts, GithubError, period, type Filters } from "./rules";
 import { getConnection } from "./store";
 import { linkedPeople } from "./conta";
-import { CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type DayEvent, type HeatmapUser, type RepositoryHeatmap, type UnidentifiedAuthor } from "./types";
+import { paletaDoPainel } from "./paleta";
+import type { ParteDoDia } from "./cores";
+import { CONTRIBUTION_TYPES, type CalendarDay, type ContributionType, type DashboardView, type DayEvent, type HeatmapUser, type RepositoryHeatmap, type UnidentifiedAuthor } from "./types";
 
 async function readable(tenantId: string) {
   const connection = await getConnection(tenantId);
@@ -28,7 +30,7 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
   if (filters.repository && !access.repositories.some(repo => repo.id === filters.repository)) throw new GithubError("Repositório indisponível para consulta. Confira a conexão e a seleção.", 403);
   const base: DashboardView = { ...dates, connected: connection?.status === "connected", enabled: connection?.integration.enabled ?? false,
     login: connection?.login ?? null, timezone, message: null, users: [], totalUsers: 0, page: 1, pageSize, unidentified: 0, total: 0, summary: null,
-    all, linked: names.size, repositories: [], totalRepositories: 0, unidentifiedAuthors: [] };
+    all, linked: names.size, repositories: [], totalRepositories: 0, unidentifiedAuthors: [], paleta: { pessoas: {}, times: [] } };
   if (!connection || connection.status !== "connected") return { ...base, message: connection?.lastError ?? "Conecte uma conta GitHub em Integrações." };
   if (!access.selected) return { ...base, message: "Selecione os repositórios em Integrações para iniciar a coleta." };
   if (!access.repositories.length) return { ...base, message: "Os repositórios selecionados estão sem acesso no GitHub. Confira em Integrações." };
@@ -49,11 +51,12 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
   const totals = { ...base, totalUsers, total: total._sum.count ?? 0, unidentified: unidentified.reduce((sum, row) => sum + (row._sum.count ?? 0), 0),
     unidentifiedAuthors: await unidentifiedAuthors(unidentified, repositories) };
   if (filters.view === "general") {
-    const [daily, activity, recent] = await Promise.all([
+    const [daily, activity, recent, calendar] = await Promise.all([
       db.githubDailyContribution.groupBy({ by: ["day", "type"], where: { ...common, user: userFilter }, orderBy: { day: "asc" }, _sum: { count: true } }),
       db.githubDailyContribution.groupBy({ by: ["userId"], where: { ...common, user: userFilter }, _sum: { count: true }, orderBy: [{ _sum: { count: "desc" } }, { userId: "asc" }] }),
       db.githubContribution.findMany({ where: { tenantId, repositoryId: { in: repoIds }, day: common.day, current: true, user: userFilter, ...(filters.type ? { type: filters.type } : {}) },
         orderBy: [{ occurredAt: "desc" }, { id: "asc" }], take: 8, select: eventSelect }),
+      db.githubDailyContribution.groupBy({ by: ["userId", "day"], where: { ...common, user: userFilter }, orderBy: [{ day: "asc" }, { userId: "asc" }], _sum: { count: true } }),
     ]);
     const counts = emptyCounts(), byDay = new Map<string, ReturnType<typeof emptyCounts>>();
     for (const row of daily) {
@@ -61,14 +64,17 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
       counts[type] += count; day[type] += count; byDay.set(row.day, day);
     }
     const leaders = activity.slice(0, 4);
-    const people = await db.githubUser.findMany({ where: { ...userFilter, id: { in: leaders.map(row => row.userId) } }, select: { id: true, login: true, externalId: true } });
+    const people = await db.githubUser.findMany({ where: { ...userFilter, id: { in: activity.map(row => row.userId) } }, select: { id: true, login: true, externalId: true } });
     const byId = new Map(people.map(person => [person.id, person]));
-    return { ...totals,
+    return { ...totals, paleta: await paletaDoPainel(tenantId, people, names),
       summary: { counts, activeDevelopers: activity.length, days: [...byDay].map(([day, counts]) => ({ day, counts })),
         leaders: leaders.flatMap(row => { const person = byId.get(row.userId); return person ? [{ id: row.userId, login: person.login, name: names.get(person.externalId) ?? null, total: row._sum.count ?? 0 }] : []; }),
-        recent: recent.map(row => toEvent(row, names)) } };
+        recent: recent.map(row => toEvent(row, names)), calendar: withParts(calendar.map(row => ({ key: "", day: row.day, userId: row.userId, count: row._sum.count ?? 0 }))).get("") ?? [] } };
   }
-  if (filters.view === "repositories") return { ...totals, ...await repositoryHeatmaps(tenantId, common, userFilter, filters.page, pageSize, names) };
+  if (filters.view === "repositories") {
+    const { people, ...heatmaps } = await repositoryHeatmaps(tenantId, common, userFilter, filters.page, pageSize, names);
+    return { ...totals, ...heatmaps, paleta: await paletaDoPainel(tenantId, people, names) };
+  }
   const page = Math.min(filters.page, Math.max(1, Math.ceil(totalUsers / pageSize)));
   const users = await db.githubUser.findMany({ where: whereUser, orderBy: [{ login: "asc" }, { id: "asc" }], skip: (page - 1) * pageSize, take: pageSize,
     select: { id: true, login: true, externalId: true, isBot: true, tracked: true } });
@@ -86,7 +92,20 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
     const { counts, days } = byUser.get(user.id)!;
     return { ...user, name: names.get(externalId) ?? null, counts, total: Object.values(counts).reduce((sum, value) => sum + value, 0), activeDays: days.length, days };
   });
-  return { ...totals, users: result, page };
+  return { ...totals, users: result, page, paleta: await paletaDoPainel(tenantId, users, names) };
+}
+
+// Linhas (chave, dia, pessoa) → os dias de cada chave, com a parte de cada pessoa,
+// em ordem de dia. A chave é o repositório; no calendário do time, uma só ("").
+function withParts(rows: { key: string; day: string; userId: string; count: number }[]): Map<string, CalendarDay[]> {
+  const byKey = new Map<string, Map<string, { count: number; parts: ParteDoDia[] }>>();
+  for (const { key, day, userId, count } of rows) {
+    if (count <= 0) continue;
+    const days = byKey.get(key) ?? new Map(), entry = days.get(day) ?? { count: 0, parts: [] };
+    entry.count += count; entry.parts.push([userId, count]); days.set(day, entry); byKey.set(key, days);
+  }
+  return new Map([...byKey].map(([key, days]) => [key, [...days].sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, { count, parts }]) => ({ day, count, parts: parts.sort((a, b) => b[1] - a[1]) }))]));
 }
 
 async function unidentifiedAuthors(rows: { userId: string; repositoryId: string; _sum: { count: number | null } }[], repositories: { id: string }[]): Promise<UnidentifiedAuthor[]> {
@@ -115,13 +134,13 @@ async function repositoryHeatmaps(tenantId: string, common: Prisma.GithubDailyCo
   const page = Math.min(requestedPage, Math.max(1, Math.ceil(repos.length / pageSize))), visible = repos.slice((page - 1) * pageSize, page * pageSize);
   const where = { ...common, repositoryId: { in: visible.map(repo => repo.id) }, user: userFilter };
   const [days, people] = await Promise.all([
-    db.githubDailyContribution.groupBy({ by: ["repositoryId", "day"], where, orderBy: [{ repositoryId: "asc" }, { day: "asc" }], _sum: { count: true } }),
+    db.githubDailyContribution.groupBy({ by: ["repositoryId", "day", "userId"], where, orderBy: [{ repositoryId: "asc" }, { day: "asc" }], _sum: { count: true } }),
     db.githubDailyContribution.groupBy({ by: ["repositoryId", "userId", "type"], where, _sum: { count: true } }),
   ]);
   const users = await db.githubUser.findMany({ where: { id: { in: [...new Set(people.map(row => row.userId))] } }, select: { id: true, login: true, externalId: true } });
   const byId = new Map(users.map(user => [user.id, user]));
-  const entries = new Map(visible.map(repo => [repo.id, { counts: emptyCounts(), days: [] as { day: string; count: number }[], contributors: new Map<string, RepositoryHeatmap["contributors"][number]>() }]));
-  for (const row of days) entries.get(row.repositoryId)?.days.push({ day: row.day, count: row._sum.count ?? 0 });
+  const calendars = withParts(days.map(row => ({ key: row.repositoryId, day: row.day, userId: row.userId, count: row._sum.count ?? 0 })));
+  const entries = new Map(visible.map(repo => [repo.id, { counts: emptyCounts(), days: calendars.get(repo.id) ?? [], contributors: new Map<string, RepositoryHeatmap["contributors"][number]>() }]));
   for (const row of people) {
     const entry = entries.get(row.repositoryId), user = byId.get(row.userId), count = row._sum.count ?? 0, type = row.type as ContributionType;
     if (!entry || !user) continue;
@@ -134,14 +153,15 @@ async function repositoryHeatmaps(tenantId: string, common: Prisma.GithubDailyCo
     return { ...repo, counts, days, total: sums.get(repo.id) ?? 0, activeDays: days.length,
       contributors: [...contributors.values()].sort((a, b) => b.total - a.total || a.login.localeCompare(b.login)) };
   });
-  return { repositories, totalRepositories: repos.length, page };
+  return { repositories, totalRepositories: repos.length, page, people: users };
 }
-// Sem `userId`, o dia de um repositório (aba Repositórios): todas as pessoas do filtro.
-export async function dayEvents(tenantId: string, filters: Filters, userId: string | null, day: string, page: number) {
+// Sem `userId`, o dia de um repositório (aba Repositórios) ou, com `team`, o do
+// calendário do time (aba Geral): todas as pessoas do filtro.
+export async function dayEvents(tenantId: string, filters: Filters, userId: string | null, day: string, page: number, team = false) {
   const [access, names] = await Promise.all([readable(tenantId), linkedPeople(tenantId)]);
   const ids = access.repositories.filter(repo => (!filters.repository || repo.id === filters.repository) && (!filters.organization || repo.owner.toLowerCase() === filters.organization.toLowerCase())).map(repo => repo.id);
   if (!access.connection || access.connection.status !== "connected" || !ids.length) throw new GithubError("Confirme o acesso aos repositórios antes de consultar os eventos.", 403);
-  if (!userId && !filters.repository) throw new GithubError("Informe o desenvolvedor ou o repositório.");
+  if (!userId && !filters.repository && !team) throw new GithubError("Informe o desenvolvedor ou o repositório.");
   const where = { tenantId, ...(userId ? { userId } : {}), day, current: true, repositoryId: { in: ids }, ...(filters.type ? { type: filters.type } : {}),
     user: { connectionId: access.connection.id, unidentified: false, ...(filters.bots === "0" ? { isBot: false } : {}),
       ...(userId || filters.all === "1" ? {} : { externalId: { in: [...names.keys()] } }) } } satisfies Prisma.GithubContributionWhereInput;

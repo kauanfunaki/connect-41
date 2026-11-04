@@ -14,6 +14,10 @@ export type LinhaDeLicenca = {
   id: string;
   companyId: string;
   empresaNome: string;
+  /** Para a busca e a coluna Cidade (03/11/2026): a licença é da empresa, e não do órgão. */
+  empresaCnpj: string | null;
+  cidade: string | null;
+  uf: string | null;
   kind: string;
   number: string | null;
   organId: string | null;
@@ -50,7 +54,7 @@ export async function listarLicencas(
       expiresAt: true,
       revokedAt: true,
       notes: true,
-      company: { select: { name: true, tradeName: true } },
+      company: { select: { name: true, tradeName: true, cnpj: true, city: true, stateCode: true } },
       organ: { select: { name: true, acronym: true } },
     },
   });
@@ -60,6 +64,9 @@ export async function listarLicencas(
       id: l.id,
       companyId: l.companyId,
       empresaNome: l.company.tradeName || l.company.name,
+      empresaCnpj: l.company.cnpj,
+      cidade: l.company.city?.trim() || null,
+      uf: l.company.stateCode?.trim() || null,
       kind: l.kind,
       number: l.number,
       organId: l.organId,

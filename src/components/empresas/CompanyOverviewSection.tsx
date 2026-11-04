@@ -6,7 +6,7 @@ import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { ehSituacaoDaIE, ROTULO_DA_SITUACAO_DA_IE, type SituacaoDaIE } from "@/lib/societario/inscricaoEstadual";
 
 // A situação da IE que o robô do Societário leu no CICAD (30/10/2026).
-const TOM_DA_IE: Record<SituacaoDaIE, TomDoSelo> = { ATIVA: "sucesso", SUSPENSA: "atencao", BAIXADA: "perigo", CANCELADA: "perigo" };
+const TOM_DA_IE: Record<SituacaoDaIE, TomDoSelo> = { ATIVA: "sucesso", SUSPENSA: "atencao", BAIXADA: "perigo", CANCELADA: "perigo", INATIVA: "perigo" };
 
 /** A IE com a situação lida, quando o robô já leu; sem leitura, só o número. */
 function InscricaoEstadual({ company }: { company: Pick<Props["company"], "stateRegistration" | "stateRegistrationStatus" | "stateRegistrationCheckedAt"> }) {

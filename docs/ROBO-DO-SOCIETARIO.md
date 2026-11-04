@@ -16,6 +16,8 @@ A máquina fica atrás do firewall do escritório. Por isso é ela que busca tra
 
 O Ops Center precisa estar ligado: sem ele a máquina não busca nada, e o Connect recusa o pedido com esse motivo.
 
+Ligue também o módulo **Robô** do Societário em Configurações (desde 03/11/2026, desligado por padrão). É ele que põe a tela no menu e libera o "Imprimir pelo robô" no ⋯ da licença.
+
 ## 3. Instalar na máquina do TI
 
 É preciso ter Node 20 ou mais novo e o repositório do Connect clonado na máquina.
@@ -68,9 +70,25 @@ npm run robo:societario -- --testar-certificado --config=.local/robo-societario.
 - `--origens` lista os endereços que podem pedir o certificado. No SIMA, o login é no e-Cidadão, outro endereço.
 - O navegador fica aberto. Siga o login e veja se entrou. Ao terminar, aperte Enter no terminal: o robô guarda uma captura da última tela e fecha.
 
+### Mapear um site novo
+
+Para escrever a leitura de um órgão contra a página real, uma pessoa faz o caminho à mão com o certificado, e o robô anota cada tela:
+
+```
+npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario.json --url=https://receita.pr.gov.br/login --pfx="<arquivo>.pfx" --entrada="<título da entrada no cofre>"
+```
+
+- A cada tela que importa, aperte Enter no terminal. Dá para escrever uma nota antes do Enter ("depois de emitir", por exemplo). Para terminar, escreva `fim` e Enter.
+- Em cada passo o robô anota o endereço, os campos (rótulo, nome, id e tipo, sem o que foi digitado), os botões e links, o começo do texto e uma captura de cada aba aberta. PDF que o site abrir é guardado.
+- No fim, mostra os endereços que o site usou. Se o certificado for pedido num endereço que não está em `--origens`, o login falha: acrescente o endereço e rode de novo.
+- Tudo fica em `.local/capturas-do-robo/mapa-<nome>/`, só na máquina, porque tem dado de cliente.
+- O `npm run robo:societario` liga o `--openssl-legacy-provider` do Node. Os `.pfx` das certificadoras vêm cifrados num algoritmo antigo (RC2), e sem essa opção o robô para em "Unsupported TLS certificate". Quem chamar o `node` direto (o Agendador, por exemplo) precisa pôr a opção antes do script.
+- **Site com Web PKI** (a Receita do PR, 03/11/2026): a tela mostra uma "Lista de Certificados" lida por uma extensão, e não pede o certificado pela janela do navegador. Para esses sites o robô usa um perfil fixo do Chrome, em `.local/perfil-do-chrome`, com a extensão Web PKI, e o certificado instalado no Windows da máquina (usuário atual, sem marcar como exportável). Uma vez, rode `--preparar-perfil`: o Chrome abre nesse perfil, você instala a extensão pelo aviso do site, autoriza o site e confere se o certificado aparece na lista. Depois, mapeie com `--perfil` no lugar de `--pfx` e `--entrada`.
+- Sem `--entrada`, o robô pede a senha do certificado no terminal, sem aparecer na tela, e não grava. Serve quando o cofre não está à mão; vale também para `--testar-certificado`.
+
 ## 5. Acompanhar
 
-- **Societário › Licenças › Robô** (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
+- **Societário › Robô** no menu (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
 - **Sino**: quem pediu recebe "O robô precisa de você" quando a tarefa para.
 - **Ops Center, automação `robo-societario`**: o sinal de vida da máquina.
 - **Trilha de auditoria**: cada aceite de acessibilidade que o robô marcou, com a empresa e a inscrição.
@@ -86,10 +104,11 @@ npm run robo:societario -- --testar-certificado --config=.local/robo-societario.
 4. O Connect guarda o PDF como `<EMPRESA> - Alvará de Funcionamento <ano>.pdf` e preenche o número e a data de emissão na licença, se estiverem vazios.
 5. Vai para alguém olhar:
    - "não encontrado" ou "sem alvará": divergência entre a Junta e a prefeitura, decisão de 15/09;
+   - "Alvará pendente de regularização, aguardando anuências…" (03/11/2026): a prefeitura ainda não libera a impressão. A frase dela vai para o motivo, e a tarefa não volta para a fila;
    - texto do aceite diferente: alguém relê antes de o robô aceitar em nome do cliente;
    - PDF que não veio;
    - tela desconhecida.
-6. Site fora do ar ou tela que demorou: a tarefa volta para a fila, até 3 tentativas. Tarefa que a máquina pegou e não devolveu em 15 minutos também volta.
+6. Site fora do ar, tela que demorou ou janela do navegador fechada: a tarefa volta para a fila, até 3 tentativas. O motivo vai em frase; o erro técnico fica no registro da máquina. Tarefa que a máquina pegou e não devolveu em 15 minutos também volta.
 
 ## Por dentro
 
@@ -116,6 +135,46 @@ O Connect já sabe o que fazer com a leitura: grava a situação da IE na empres
 - a que parou numa pessoa não volta na mesma semana;
 - três leituras seguidas que pararam numa pessoa param a rodada por 24 horas (a tela do CICAD mudou, o certificado venceu).
 
-**Falta a leitura na máquina.** Ela entra em `CAPACIDADES` só depois de testada contra a página real da Receita do PR, como o SIMA. Até lá, a máquina não diz `vigiar_ie` e nenhuma tarefa nasce. Antes, a Ruli precisa confirmar que a emissão do CICAD não pede captcha.
+**A leitura na máquina (03/11/2026).** Mapeada contra a página real: nem o login nem a emissão do CICAD pedem captcha, mas o login usa Web PKI, então ela roda no perfil do Chrome do robô (seção 4), com o certificado da 041 instalado no Windows. O robô escolhe o certificado pelo CNPJ (`31052957000105`, ou `vigiarIE.cnpjDoCertificado`), abre a Emissão de CICAD pelo menu, emite e lê o texto entre "Situação Atual" e "Natureza Jurídica". O Chrome fica aberto entre uma empresa e outra, com 15 s de pausa, e fecha depois de 5 minutos sem trabalho.
+
+Para estabelecimento fora de ativo, a Receita não emite o CICAD: responde "Sua solicitação não pôde ser atendida", com o motivo "Estabelecimento inativo no CAD/ICMS." (03/11/2026). Isso é a situação do cliente, e não falha do robô. O robô devolve o motivo como situação, e o Connect grava **inativa** e avisa o Societário. Motivo que o Connect não conhece vai para alguém, com o texto da Receita.
+
+Vai para alguém olhar, sem nova tentativa:
+- o certificado não aparece na lista da Receita;
+- a Receita diz "CAD/ICMS Inválido.";
+- o CICAD que abriu é de outra IE, ou de outro CNPJ que não o do cadastro;
+- o CICAD abriu sem o campo Situação Atual.
+
+Antes de ligar, ensaie com uma IE conhecida. O ensaio mostra o que o robô leria, sem falar com o Connect:
+
+```
+npm run robo:societario -- --ensaio-ie --inscricao=<IE> --config=.local/robo-societario.json
+```
+
+Para ligar, acrescente `"vigiarIE": { "ativo": true }` em `.local/robo-societario.json` e reinicie o robô. Sem isso, a máquina não diz `vigiar_ie` e nenhuma tarefa nasce.
 
 A tarefa recebe `{ inscricao, cnpj }` (só dígitos; `cnpj` nulo quando o cadastro não tem) e devolve `{ ok: true, resultado: { situacao } }`, com o texto do campo "Situação Atual" como está na tela. Quem interpreta é o Connect.
+
+## O acompanhamento dos protocolos do SIMA (observar_sima)
+
+Mapeado contra a página real em 03/11/2026, com o certificado da 041. A cada 6 horas, quando há protocolo do SIMA (órgão `MA`) à espera do órgão e com número, o Connect cria uma rodada com até 60 protocolos. A máquina:
+
+1. abre `/solicitacoes` no Chrome do robô. Sem sessão, entra pelo e-Cidadão com o certificado da 041 ("Entrar com Certificado Digital" e, no primeiro acesso, "Aceitar e entrar");
+2. espera o "Carregando solicitações..." sumir: os dados chegam 5 a 15 s depois da página;
+3. passa pelas três abas (Pendente, Em análise, Finalizado) e lê o selo e o protocolo de cada cartão;
+4. no finalizado sem deferimento, abre o detalhe e lê o "Motivo do cancelamento".
+
+O Connect decide com `classificarSolicitacao` (`src/lib/societario/orgaos/sima.ts`) e grava como o observador de protocolo:
+- **Em análise**: segue pendente, com a hora da verificação;
+- **Finalizado DEFERIDO**: conclui o protocolo e a etapa, como feito pelo robô;
+- **Finalizado CANCELADO**: exigência com o motivo do SIMA, e a etapa volta para o setor;
+- **Pendente** com "Aguardando Envio de Documento", "Aguardando Assinatura" ou "Aguardando Pagamento": exigência;
+- selo que a tela ainda não mostrou, ou protocolo que não aparece no login da 041 (aberto com o certificado do cliente): fica anotado no protocolo como falha da verificação, sem mexer no desfecho.
+
+Antes de ligar, ensaie. O ensaio lê a lista e mostra o que devolveria, sem falar com o Connect:
+
+```
+npm run robo:societario -- --ensaio-sima --config=.local/robo-societario.json
+```
+
+Para ligar, acrescente `"observarSima": { "ativo": true }` em `.local/robo-societario.json` e reinicie o robô.

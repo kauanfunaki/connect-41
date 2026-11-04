@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { AlertTriangle, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
-import { canManageSector } from "@/lib/auth/papeis";
+import { AlertTriangle, Bot, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -14,7 +14,7 @@ import { NovaLicenca } from "@/components/societario/LicencaForm";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { resumoDasLicencas } from "@/lib/societario/licencas-data";
-import { situacaoDaLicenca, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
+import { situacaoDaLicenca, buscarLicencas, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { formatarNumero } from "@/lib/format";
 
@@ -29,7 +29,7 @@ const RECORTES: { chave: string; rotulo: string; situacao: SituacaoDaLicenca | n
 export default async function LicencasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ recorte?: string }>;
+  searchParams: Promise<{ recorte?: string; busca?: string }>;
 }) {
   const ctx = await getAuthContext();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
@@ -37,12 +37,16 @@ export default async function LicencasPage({
   if (!ctx.tenantId || !canActOnSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, "societario_licencas"))) notFound();
 
-  const { recorte } = await searchParams;
-  const chave = RECORTES.some((r) => r.chave === recorte) ? recorte! : "atencao";
+  const { recorte, busca } = await searchParams;
+  // Quem busca uma empresa quer achar a licença dela, vença ou não: sem recorte
+  // escolhido, a busca olha todas (03/11/2026). O padrão "Precisa de ação"
+  // escondia o alvará sem validade, que é o que o robô imprime.
+  const padrao = busca?.trim() ? "todas" : "atencao";
+  const chave = RECORTES.some((r) => r.chave === recorte) ? recorte! : padrao;
 
   const hoje = new Date();
   const prisma = getPrisma();
-  const [{ linhas, vencidas, aRenovar }, empresas, orgaos] = await Promise.all([
+  const [{ linhas, vencidas, aRenovar }, empresas, orgaos, roboLigado] = await Promise.all([
     resumoDasLicencas(ctx.tenantId, hoje),
     prisma.company.findMany({
       where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
@@ -54,10 +58,11 @@ export default async function LicencasPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    isModuleEnabled(ctx.tenantId, "societario_robo"),
   ]);
   const orgaosDoForm = orgaos.map((o) => ({ id: o.id, nome: o.name }));
 
-  const filtradas = linhas.filter((l) => {
+  const filtradas = buscarLicencas(linhas, busca).filter((l) => {
     const s = situacaoDaLicenca(l, hoje);
     if (chave === "todas") return true;
     // O recorte padrão é o que pede ação — é para isso que a tela existe, e
@@ -76,16 +81,13 @@ export default async function LicencasPage({
         subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {/* A carga do Radar Societário (28/10/2026): só quem administra o setor. */}
-            {canManageSector(ctx, setores) && (
-              <Link href="/licencas/radar" className="text-ui text-brand hover:underline">
-                Trazer do Radar
-              </Link>
+            {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença.
+                Botão, e não link de texto, desde 03/11/2026 — e também no menu. */}
+            {roboLigado && (
+              <Button href="/societario/robo" variant="secondary" size="sm">
+                <Bot size={14} /> Robô
+              </Button>
             )}
-            {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença. */}
-            <Link href="/societario/robo" className="text-ui text-brand hover:underline">
-              Robô
-            </Link>
             <NovaLicenca
               empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
               orgaos={orgaosDoForm}
@@ -138,6 +140,7 @@ export default async function LicencasPage({
       />
       <CascoDaTabela
         contagem={contarItens(filtradas.length, "licença", "licenças")}
+        busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar empresa, cidade ou CNPJ" />}
         filtros={
           <FiltrosDaTela
             naBarra
@@ -145,7 +148,7 @@ export default async function LicencasPage({
               {
                 chave: "recorte",
                 rotulo: "Situação",
-                vazioLabel: "Precisa de ação",
+                vazioLabel: padrao === "todas" ? "Todas" : "Precisa de ação",
                 opcoes: RECORTES.filter((r) => r.chave !== "atencao").map((r) => ({ value: r.chave, label: r.rotulo })),
               },
             ]}
@@ -157,6 +160,7 @@ export default async function LicencasPage({
           hoje={hoje}
           filtrado={linhas.length > 0 && filtradas.length === 0}
           orgaos={orgaosDoForm}
+          roboLigado={roboLigado}
         />
       </CascoDaTabela>
     </PageContainer>

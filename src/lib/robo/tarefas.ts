@@ -45,8 +45,8 @@ type DefinicaoDoTipo = {
  * O que o robô sabe fazer. Tipo novo entra aqui e no programa da máquina
  * (`scripts/robo-societario.mjs`), com o mesmo nome.
  *
- * O acompanhamento do protocolo no SIMA entra quando as três telas que faltam
- * forem levantadas com o setor (`orgaos/sima.ts`, `CONTRATO_PENDENTE`).
+ * O acompanhamento dos protocolos do SIMA (03/11/2026) também nasce sozinho,
+ * uma rodada a cada poucas horas (ver `robo/sima.ts`).
  *
  * A vigilância da IE (30/10/2026) não é pedida por ninguém: nasce quando a
  * máquina pede trabalho com `vigiar_ie` nas capacidades (ver
@@ -55,6 +55,7 @@ type DefinicaoDoTipo = {
 export const TIPOS_DE_TAREFA = {
   imprimir_alvara: { rotulo: "Imprimir o alvará de Curitiba", repetivel: true, tentativas: 3 },
   vigiar_ie: { rotulo: "Ler a situação da inscrição estadual", repetivel: true, tentativas: 3 },
+  observar_sima: { rotulo: "Acompanhar os protocolos do SIMA", repetivel: true, tentativas: 3 },
 } as const satisfies Record<string, DefinicaoDoTipo>;
 
 export type TipoDeTarefa = keyof typeof TIPOS_DE_TAREFA;
@@ -91,6 +92,24 @@ export function destinoDaFalha(p: { tipo: TipoDeTarefa; tentativas: number; recu
   const def: DefinicaoDoTipo = TIPOS_DE_TAREFA[p.tipo];
   if (!p.recuperavel || !def.repetivel) return "PRECISA_DE_GENTE";
   return p.tentativas >= def.tentativas ? "PRECISA_DE_GENTE" : "PENDENTE";
+}
+
+/**
+ * O motivo como a tela do robô mostra (03/11/2026). A máquina de antes mandava
+ * o erro do navegador cru — "O robô falhou no site: locator.innerText: Target
+ * page, context or browser has been closed" —, que fica guardado assim na
+ * tarefa; aqui ele vira a frase que a máquina nova já manda pronta
+ * (`motivoDaFalha` em scripts/robo-societario.mjs).
+ */
+export function motivoParaPessoa(motivo: string | null): string | null {
+  if (!motivo) return null;
+  const cru = /^O robô falhou no site: ([\s\S]*)$/.exec(motivo);
+  if (!cru) return motivo;
+  const m = cru[1]!;
+  if (/has been closed|browser.*closed|Target closed/i.test(m)) return "A janela do navegador fechou antes de o robô terminar. Ele tenta de novo na próxima volta.";
+  if (/passou de \d+ minutos|Timeout|timed out/i.test(m)) return "O site da prefeitura demorou demais para responder. O robô tenta de novo na próxima volta.";
+  if (/net::|ENOTFOUND|ECONNRE|ERR_/i.test(m)) return "O site da prefeitura não abriu: fora do ar ou sem internet na máquina. O robô tenta de novo na próxima volta.";
+  return "O robô não conseguiu terminar no site da prefeitura. Ele tenta de novo na próxima volta; o detalhe está no registro da máquina.";
 }
 
 /** O que a máquina manda ao pedir trabalho: os tipos que ela sabe executar. */

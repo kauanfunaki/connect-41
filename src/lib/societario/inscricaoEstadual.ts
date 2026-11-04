@@ -7,7 +7,11 @@
 // leitura da tela é do programa da máquina e só entra depois de testada contra
 // a página real, como a do SIMA.
 
-export const SITUACOES_DA_IE = ["ATIVA", "SUSPENSA", "BAIXADA", "CANCELADA"] as const;
+// INATIVA (03/11/2026): para estabelecimento fora de ativo, a Receita não emite
+// o CICAD — responde "Sua solicitação não pôde ser atendida" com o motivo
+// "Estabelecimento inativo no CAD/ICMS.", sem dizer se é baixa, suspensão ou
+// cancelamento. É a situação do cliente, e não falha do robô.
+export const SITUACOES_DA_IE = ["ATIVA", "SUSPENSA", "BAIXADA", "CANCELADA", "INATIVA"] as const;
 export type SituacaoDaIE = (typeof SITUACOES_DA_IE)[number];
 
 export const ROTULO_DA_SITUACAO_DA_IE: Record<SituacaoDaIE, string> = {
@@ -15,6 +19,7 @@ export const ROTULO_DA_SITUACAO_DA_IE: Record<SituacaoDaIE, string> = {
   SUSPENSA: "suspensa",
   BAIXADA: "baixada",
   CANCELADA: "cancelada",
+  INATIVA: "inativa",
 };
 
 /** De quanto em quanto tempo a mesma empresa é lida de novo. */
@@ -31,12 +36,16 @@ const RADICAIS: [string, SituacaoDaIE][] = [
   ["SUSPENS", "SUSPENSA"],
   ["BAIXAD", "BAIXADA"],
   ["CANCELAD", "CANCELADA"],
+  ["INATIV", "INATIVA"],
 ];
 
 /**
  * O que o texto do campo "Situação Atual" quer dizer. Nulo quando não é
- * nenhuma das quatro: a situação gravada fica como estava, em vez de virar
+ * nenhuma das cinco: a situação gravada fica como estava, em vez de virar
  * palpite. "Inativa" não é "ativa": o radical precisa estar no começo.
+ *
+ * O motivo da recusa do CICAD ("Estabelecimento inativo no CAD/ICMS.") não
+ * começa pela situação, então vale à parte.
  */
 export function lerSituacaoDaIE(texto: string | null | undefined): SituacaoDaIE | null {
   const t = (texto ?? "")
@@ -47,6 +56,7 @@ export function lerSituacaoDaIE(texto: string | null | undefined): SituacaoDaIE 
   if (!t) return null;
   const primeira = t.split(/[^A-Z]+/).find(Boolean) ?? "";
   for (const [radical, situacao] of RADICAIS) if (primeira.startsWith(radical)) return situacao;
+  if (/^ESTABELECIMENTO INATIVO\b/.test(t)) return "INATIVA";
   return null;
 }
 
