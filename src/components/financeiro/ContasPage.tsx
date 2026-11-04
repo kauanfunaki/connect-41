@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { RECORTES_A_PAGAR, RECORTES_A_RECEBER } from "@/lib/financeiro/exportacao";
 import { empresaLidaDoOmie } from "@/lib/integracoes/omie/viradaServidor";
-import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3 } from "lucide-react";
+import { Wallet, AlertTriangle, CalendarClock, CheckCircle2, List, BarChart3, HandCoins, CreditCard, Building2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BotaoDeExportar } from "@/components/shared/BotaoDeExportar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -73,9 +74,14 @@ export async function ContasPage({
   }
   // A análise lê sempre o recorte "em aberto": faixa de atraso de conta paga
   // não existe, e a soma das faixas precisa bater com o total do topo.
-  const aba = params.aba === "analise" ? "analise" : "contas";
+  // Adiantamentos e Cartões em aba própria (Pagar/Receber A, página de opções
+  // de 04/11/2026) — eram blocos recolhíveis em cima da lista. Cartão é só de
+  // contas a pagar.
+  const ABAS_DA_TELA = aPagar ? (["contas", "adiantamentos", "cartoes", "analise"] as const) : (["contas", "adiantamentos", "analise"] as const);
+  type Aba = "contas" | "adiantamentos" | "cartoes" | "analise";
+  const aba: Aba = (ABAS_DA_TELA as readonly string[]).includes(params.aba ?? "") ? (params.aba as Aba) : "contas";
   const recorte =
-    aba === "analise" ? "abertas" : recortes.find((r) => r.chave === params.recorte)?.chave ?? "todas";
+    aba === "contas" ? recortes.find((r) => r.chave === params.recorte)?.chave ?? "todas" : "abertas";
 
   const prisma = getPrisma();
   const agora = new Date();
@@ -119,7 +125,7 @@ export async function ContasPage({
       empresas={noSeletor}
       valor={empresaNaUrl(escolha) ?? null}
       todas="explicita"
-      manter={{ aba: params.aba === "analise" ? "analise" : undefined, competencia: params.competencia, recorte: params.recorte }}
+      manter={{ aba: aba === "contas" ? undefined : aba, competencia: params.competencia, recorte: params.recorte }}
       foco={foco}
     />
   );
@@ -177,14 +183,14 @@ export async function ContasPage({
   // Os adiantamentos da empresa (lote D, 20/10): por empresa, como a conta de adiantamento.
   const tipoDoAdiantamentoDaTela = tipoDoAdiantamento(kind);
   const [saldosDoAdiantamento, adiantamentosDaTela] =
-    empresaId && aba === "contas"
+    empresaId && aba === "adiantamentos"
       ? await Promise.all([
           saldosDeAdiantamento(prisma, ctx.tenantId, empresaId, tipoDoAdiantamentoDaTela),
           adiantamentosLancados(prisma, ctx.tenantId, empresaId, tipoDoAdiantamentoDaTela),
         ])
       : [[], []];
   // Os cartões de crédito da empresa (lote D, 20/10), com as faturas: só em contas a pagar.
-  const cartoes = aPagar && empresaId && aba === "contas" ? await cartoesDaEmpresa(prisma, ctx.tenantId, empresaId) : [];
+  const cartoes = aPagar && empresaId && aba === "cartoes" ? await cartoesDaEmpresa(prisma, ctx.tenantId, empresaId) : [];
 
   const empresasDaLista = [...new Set(resultado.linhas.map((l) => l.empresaId))];
   const centros =
@@ -213,7 +219,7 @@ export async function ContasPage({
     const empresaDoLink = empresaNaUrl(escolha);
     if (empresaDoLink) q.set("empresa", empresaDoLink);
     if (recorte !== "todas" && (!aPagar || recorte !== "abertas")) q.set("recorte", recorte);
-    if (aba === "analise") q.set("aba", "analise");
+    if (aba !== "contas") q.set("aba", aba);
     if (valor) q.set(chave, valor);
     else q.delete(chave);
     const s = q.toString();
@@ -260,13 +266,16 @@ export async function ContasPage({
       <AbasDeLink
         abas={[
           { chave: "contas", rotulo: "Contas", href: comParam("aba", undefined), icone: <List /> },
-          { chave: "analise", rotulo: "Análise — atraso e ranking", href: comParam("aba", "analise"), icone: <BarChart3 /> },
+          { chave: "adiantamentos", rotulo: "Adiantamentos", href: comParam("aba", "adiantamentos"), icone: <HandCoins /> },
+          ...(aPagar ? [{ chave: "cartoes", rotulo: "Cartões", href: comParam("aba", "cartoes"), icone: <CreditCard /> }] : []),
+          { chave: "analise", rotulo: "Análise", href: comParam("aba", "analise"), icone: <BarChart3 /> },
         ]}
         ativa={aba}
       />
 
       {/* Os quatro cartões permanecem na mesma grade em todos os recortes.
           Pago/Recebido mostra zero quando as contas liquidadas ficam fora do filtro. */}
+      {(aba === "contas" || aba === "analise") && (
       <FaixaDeTotais
         itens={[
           {
@@ -300,10 +309,21 @@ export async function ContasPage({
           },
         ]}
       />
+      )}
 
       {/* A Análise é relatório da tela inteira: o Filtros fica fora de casco.
           Na lista, vai na barra da tabela (05/10/2026). */}
-      {aba === "analise" ? (
+      {(aba === "adiantamentos" || aba === "cartoes") && !empresaId ? (
+        <EmptyState
+          title="Escolha uma empresa"
+          description={aba === "cartoes" ? "Os cartões de crédito são de cada empresa." : "Os adiantamentos são de cada empresa, como a conta de adiantamento."}
+          icon={<Building2 />}
+        />
+      ) : aba === "adiantamentos" && empresaId ? (
+        <AdiantamentosDaEmpresa companyId={empresaId} aPagar={aPagar} saldos={saldosDoAdiantamento} lancados={adiantamentosDaTela} />
+      ) : aba === "cartoes" && empresaId ? (
+        <CartoesDaEmpresa companyId={empresaId} cartoes={cartoes} />
+      ) : aba === "analise" ? (
         <>
           <FiltrosDaTela campos={filtros} className="mb-4" />
           {resultado.limitada && (
@@ -316,10 +336,6 @@ export async function ContasPage({
         </>
       ) : (
         <>
-          {empresaId && (
-            <AdiantamentosDaEmpresa companyId={empresaId} aPagar={aPagar} saldos={saldosDoAdiantamento} lancados={adiantamentosDaTela} />
-          )}
-          {empresaId && aPagar && <CartoesDaEmpresa companyId={empresaId} cartoes={cartoes} />}
           {resultado.linhas.length > 0 && (
             <AcoesEmLoteDasContas empresas={empresasComCentros} comCentro={podeDefinirCentro} aPagar={aPagar} hojeISO={saoPauloParts(agora).dateKey} />
           )}
