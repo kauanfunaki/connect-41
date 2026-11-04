@@ -293,6 +293,37 @@ model GithubAccountLink {
   @@map("github_account_links")
 }
 
+/// Times do GitHub montados pelo coordenador do Tech (04/11/2026): nome e cor;
+/// a cor pinta os dias do calendário no modo "Cor por time".
+model GithubTeam {
+  id                   String @id @default(uuid())
+  tenantId             String
+  name                 String @db.VarChar(80)
+  color                String @db.VarChar(7)
+  position             Int @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  people               GithubPerson[]
+  @@unique([tenantId, name])
+  @@map("github_teams")
+}
+
+/// Cor e time de uma pessoa do GitHub (04/11/2026). Pelo ID estável do GitHub
+/// (`externalId`), não pelo `GithubUser.id`: este é por conexão e se refaz quando
+/// a conta do escritório é trocada. Cor vazia = cor automática da paleta.
+model GithubPerson {
+  id                   String @id @default(uuid())
+  tenantId             String
+  externalId           String @db.VarChar(100)
+  login                String @db.VarChar(100)
+  color                String? @db.VarChar(7)
+  teamId               String?
+  team                 GithubTeam? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  @@unique([tenantId, externalId])
+  @@index([tenantId, teamId])
+  @@map("github_people")
+}
+
 model OpsWatcher {
   tenantId String
   ownerId String?
