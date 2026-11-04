@@ -6,6 +6,7 @@
 
 import type { CelulaDaTabela, ColunaDaTabela } from "@/lib/planilha/tabelaDoExcel";
 import { formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
+import type { LinhaDoTempoPorEtapa } from "./tempoPorEtapa";
 import type { LinhaDeCusto, LinhaDeProdutividade, LinhaDeSla, ResumoDeVoltas, ProcessoParaRelatorio } from "./relatorios";
 
 export const RELATORIOS = [
@@ -24,6 +25,11 @@ export const RELATORIOS = [
     rotulo: "Produtividade por responsável",
     explicacao:
       "Concluídos no período, ao lado da carteira aberta. O crédito é do responsável atual do processo — não há histórico de redistribuição.",
+  },
+  {
+    chave: "tempo",
+    rotulo: "Tempo por etapa",
+    explicacao: "Quanto cada etapa do roteiro leva, por tipo de processo, nas etapas concluídas no período. Dias úteis, do início ao fim da etapa.",
   },
   {
     chave: "custo",
@@ -159,6 +165,19 @@ export function tabelaDaProdutividade(linhas: LinhaDeProdutividade[]): TabelaDoR
       { nome: "Abertos estourados", tipo: "inteiro" },
     ],
     linhas: linhas.map((l) => [l.nome, l.concluidosNoPeriodo, l.mediaDeDiasDosConcluidos, l.voltasDosConcluidos, l.abertos, l.estouradosAbertos]),
+  };
+}
+
+export function tabelaDoTempoPorEtapa(linhas: LinhaDoTempoPorEtapa[]): TabelaDoRelatorio {
+  return {
+    colunas: [
+      { nome: "Tipo", tipo: "texto" },
+      { nome: "Etapa", tipo: "texto", largura: 36 },
+      { nome: "Concluídas", tipo: "inteiro" },
+      { nome: "Mediana (dias úteis)", tipo: "decimal" },
+      { nome: "Mais longa (dias úteis)", tipo: "inteiro" },
+    ],
+    linhas: linhas.map((l) => [l.tipoNome, l.etapa, l.concluidas, l.medianaDias, l.maximoDias]),
   };
 }
 

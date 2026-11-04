@@ -29,6 +29,7 @@ import {
   type VisaoDoRelatorio,
 } from "@/lib/societario/relatoriosNaTela";
 import { formatarReaisDeCentavos, formatarNumero } from "@/lib/format";
+import { leituraDoTempoPorEtapa } from "@/lib/societario/tempoPorEtapa";
 
 const MODULE = "societario_relatorios";
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -95,6 +96,7 @@ export default async function RelatoriosDoSocietarioPage({
     voltas: leituraDasVoltas(d.voltas, d.maisVoltas),
     produtividade: leituraDaProdutividade(d.produtividade),
     custo: leituraDoCusto(d.custos, d.totais),
+    tempo: leituraDoTempoPorEtapa(d.tempoPorEtapa),
   };
 
   return (
@@ -190,6 +192,7 @@ export default async function RelatoriosDoSocietarioPage({
           {relatorio.chave === "voltas" && <Voltas d={d} visao={visao} />}
           {relatorio.chave === "produtividade" && <Produtividade d={d} visao={visao} periodo={periodo.rotulo} />}
           {relatorio.chave === "custo" && <Custo d={d} visao={visao} />}
+          {relatorio.chave === "tempo" && <TempoPorEtapa d={d} visao={visao} />}
 
           {/* A leitura do relatório numa frase: o que o número quer dizer. */}
           <Aviso tom="neutro" icone={<Lightbulb />}>
@@ -393,6 +396,55 @@ function Produtividade({ d, visao, periodo }: { d: DadosDosRelatorios; visao: Vi
               <td className={TD}>{l.voltasDosConcluidos}</td>
               <td className={TD}>{l.abertos}</td>
               <td className={`${TD} ${l.estouradosAbertos > 0 ? "text-danger font-medium" : ""}`}>{l.estouradosAbertos}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Tempo por etapa ─────────────────────────────────────────────────────────
+
+function TempoPorEtapa({ d, visao }: { d: DadosDosRelatorios; visao: VisaoDoRelatorio }) {
+  const linhas = d.tempoPorEtapa;
+  if (linhas.length === 0) return <p className="text-fs-3 text-fg-muted">Nenhuma etapa concluída no período com início registrado.</p>;
+  if (visao === "grafico") {
+    // As 15 mais demoradas, em mediana: é onde o processo espera.
+    const lista = [...linhas].sort((a, b) => b.medianaDias - a.medianaDias).slice(0, 15);
+    return (
+      <BarrasRanqueadas
+        titulo="Tempo por etapa"
+        formatar={(n) => `${formatarNumero(n, 1)} dias úteis`}
+        linhas={lista.map((l) => ({
+          chave: l.chave,
+          rotulo: l.etapa,
+          sublabel: `${l.tipoNome} · ${l.concluidas} ${l.concluidas === 1 ? "concluída" : "concluídas"} · a mais longa com ${l.maximoDias}`,
+          segmentos: [{ chave: "mediana", rotulo: "Mediana", valor: l.medianaDias, tom: "proximo" as const }],
+        }))}
+      />
+    );
+  }
+  return (
+    <div className="c41-tabela overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[640px]">
+        <thead>
+          <tr className={CABECALHO}>
+            <th className={TH}>Tipo</th>
+            <th className={TH}>Etapa</th>
+            <th className={TH}>Concluídas</th>
+            <th className={TH}>Mediana (dias úteis)</th>
+            <th className={TH}>Mais longa</th>
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.map((l) => (
+            <tr key={l.chave} className="border-b border-border-soft">
+              <td className="py-2 pr-3 font-medium">{l.tipoNome}</td>
+              <td className="py-2 pr-3">{l.etapa}</td>
+              <td className={TD}>{l.concluidas}</td>
+              <td className={TD}>{formatarNumero(l.medianaDias, 1)}</td>
+              <td className={TD}>{l.maximoDias}</td>
             </tr>
           ))}
         </tbody>
