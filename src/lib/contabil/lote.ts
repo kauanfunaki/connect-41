@@ -4,8 +4,8 @@
 // que saiu, do que ficou pendente e do que não tinha nada. Puro: quem chama
 // traz as linhas de cada mês.
 //
-// O que muda do motor: lá o lote levava só as entradas; aqui leva também as
-// saídas, e os pagamentos sem nota quando o passo 5 existir.
+// O que muda do motor: lá o lote levava só as entradas; aqui leva também os
+// pagamentos sem nota e as saídas.
 
 import type { LinhaDaDominio } from "@/lib/financeiro/dominio/planilha";
 

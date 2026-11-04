@@ -22,7 +22,7 @@ export function LoteDoAno({ empresaId, mes }: { empresaId: string; mes: string }
   return <Card className="p-4 space-y-4 max-w-2xl">
     <div>
       <h3 className="text-card-title font-semibold">Gerar o ano inteiro</h3>
-      <p className="text-helper text-fg-secondary">Entra cada mês de janeiro a dezembro: {[ROTULO_DO_PASSO.nfe, ROTULO_DO_PASSO.cte, ROTULO_DO_PASSO.nfse, ROTULO_DO_PASSO.saidas].join(", ")}. Os pagamentos sem nota entram quando a etapa deles estiver pronta. Mês sem lançamento não gera arquivo, mas aparece no resumo.</p>
+      <p className="text-helper text-fg-secondary">Entra cada mês de janeiro a dezembro: {[ROTULO_DO_PASSO.nfe, ROTULO_DO_PASSO.cte, ROTULO_DO_PASSO.nfse, ROTULO_DO_PASSO.pagamentos, ROTULO_DO_PASSO.saidas].join(", ")}. Mês sem lançamento não gera arquivo, mas aparece no resumo.</p>
     </div>
     <div className="flex flex-wrap items-end gap-4">
       <label className="block w-32"><span className="block text-helper text-fg-secondary mb-1">Ano</span>
