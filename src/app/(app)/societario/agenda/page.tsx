@@ -1,145 +1,19 @@
-import { notFound } from "next/navigation";
-import { CalendarDays } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { PageContainer } from "@/components/shared/PageContainer";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { getAuthContext, canViewSector } from "@/lib/auth/context";
-import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
+import { redirect } from "next/navigation";
+import { getAuthContext } from "@/lib/auth/context";
+import { setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
-import { getSectorUsers } from "@/lib/sectorUsers";
-import { formatInstantDate } from "@/lib/format";
-import { saoPauloParts, addDaysToKey, mondayOfWeek, firstOfMonth, monthYearLabel } from "@/lib/agenda";
-import {
-  agruparAgenda,
-  fimDoDia,
-  lerVisaoDaAgenda,
-  ultimoDiaDaAgenda,
-  JANELA_DA_AGENDA,
-  type VisaoDaAgenda,
-} from "@/lib/societario/prazos";
-import { itensDePrazo } from "@/lib/societario/painel-data";
-import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { AbasDePrazos } from "@/components/societario/AbasDePrazos";
-import { ListaDePrazos } from "@/components/societario/ListaDePrazos";
 
+// A agenda própria do Societário saiu (Exigências A, página de opções de
+// 04/11/2026): repetia a Agenda geral, que já mostra os prazos do setor —
+// exigência, taxa, licença e prazo combinado (`prazosDaAgenda.ts`). O endereço
+// antigo leva à Agenda geral, filtrada no setor que opera o módulo.
 const MODULE = "societario_prazos";
-// `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
-// setor que opera o módulo neste tenant — ver `setorDoModulo`.
-const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
 export const dynamic = "force-dynamic";
 
-const VISOES: { chave: VisaoDaAgenda; rotulo: string }[] = [
-  { chave: "semana", rotulo: "Por semana" },
-  { chave: "mes", rotulo: "Por mês" },
-];
-
-// A chave vira data ao meio-dia UTC para formatar: é o mesmo dia civil em São
-// Paulo, e `formatInstantDate` não o empurra para a véspera.
-const diaDaChave = (chave: string) => new Date(`${chave}T12:00:00Z`);
-
-export default async function AgendaDePrazosPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | undefined>>;
-}) {
+export default async function AgendaDePrazosPage() {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
-  if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
-
-  const params = await searchParams;
-  const visao = lerVisaoDaAgenda(params.visao);
-  const responsaveis = await getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
-  const responsavelFiltro = responsaveis.some((r) => r.id === params.responsavel) ? params.responsavel : undefined;
-
-  const agora = new Date();
-  const hojeChave = saoPauloParts(agora).dateKey;
-  const ate = fimDoDia(ultimoDiaDaAgenda(visao, agora));
-
-  const itens = await itensDePrazo(ctx.tenantId, {
-    responsavelId: responsavelFiltro,
-    ate,
-    licencasAte: ate,
-  });
-  const grupos = agruparAgenda(itens, (i) => i.data!, visao, agora);
-  const grupoAtual = visao === "semana" ? mondayOfWeek(hojeChave) : firstOfMonth(hojeChave);
-
-  const tituloDoGrupo = (chave: string) => {
-    if (chave === "vencidos") return "Vencidos";
-    if (visao === "mes") return monthYearLabel(chave);
-    return `Semana de ${formatInstantDate(diaDaChave(chave), { day: "2-digit", month: "2-digit" })} a ${formatInstantDate(
-      diaDaChave(addDaysToKey(chave, 6)),
-      { day: "2-digit", month: "2-digit" }
-    )}`;
-  };
-
-
-  return (
-    <PageContainer>
-      <PageHeader
-        title="Exigências e prazos"
-        subtitle={`Prazo do órgão, vencimento de taxa, validade de licença e prazo combinado com o cliente — numa linha do tempo só. ${
-          visao === "semana" ? `Próximas ${JANELA_DA_AGENDA.semana} semanas` : `Próximos ${JANELA_DA_AGENDA.mes} meses`
-        }, e tudo o que já venceu.`}
-      />
-      <AbasDePrazos ativa="agenda" />
-
-      {/* "Por semana / Por mês" é troca de visão, e não filtro (15/10/2026):
-          vai no seletor de segmentos, à vista, como Listas/Kanban nos Quadros;
-          estava escondida como "Agrupar" dentro do Filtros. O responsável
-          segue no "Filtros" — era um formulário com "Filtrar" (30/09). */}
-      <div className="flex flex-wrap items-center gap-2 mb-5">
-        <SegmentedControl
-          label="Agrupar a agenda"
-          active={visao}
-          items={VISOES.map((v) => {
-            const q = new URLSearchParams();
-            if (v.chave !== "semana") q.set("visao", v.chave);
-            if (responsavelFiltro) q.set("responsavel", responsavelFiltro);
-            const busca = q.toString();
-            return { key: v.chave, label: v.rotulo, href: busca ? `/societario/agenda?${busca}` : "/societario/agenda" };
-          })}
-        />
-        <FiltrosDaTela
-          campos={[
-            {
-              chave: "responsavel",
-              rotulo: "Responsável",
-              vazioLabel: "Todos",
-              opcoes: responsaveis.map((r) => ({ value: r.id, label: r.name })),
-            },
-          ]}
-        />
-      </div>
-
-      {grupos.length === 0 ? (
-        <EmptyState
-          title="Nenhum prazo no período"
-          description="Exigência com prazo do órgão, taxa com vencimento, licença com validade e processo com prazo combinado aparecem aqui."
-          icon={<CalendarDays />}
-        />
-      ) : (
-        <div className="flex flex-col gap-6">
-          {grupos.map((g) => (
-            <section
-              key={g.chave}
-              className={g.vencido ? "rounded-lg border border-danger/30 bg-danger-bg/40 px-3 pt-2" : undefined}
-            >
-              <h2
-                className={`text-section font-semibold mb-1 ${
-                  g.vencido ? "text-danger" : g.chave === grupoAtual ? "text-brand" : "text-fg-secondary"
-                }`}
-              >
-                {tituloDoGrupo(g.chave)}
-                {g.chave === grupoAtual && (visao === "semana" ? " · esta semana" : " · este mês")}{" "}
-                <span className="tabular-nums text-fg-muted font-normal">{g.itens.length}</span>
-              </h2>
-              <ListaDePrazos itens={g.itens} hoje={agora} mostrarResponsavel />
-            </section>
-          ))}
-        </div>
-      )}
-    </PageContainer>
-  );
+  // O primeiro setor que opera o módulo: é o dono (ver `setoresDoModulo`).
+  const setor = (ctx.tenantId && (await setoresDoModulo(ctx.tenantId, MODULE))?.[0]) || getModuleDef(MODULE)!.sectorCode;
+  redirect(`/agenda?view=semana&setor=${encodeURIComponent(setor)}`);
 }
