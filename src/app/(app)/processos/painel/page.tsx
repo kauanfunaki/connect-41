@@ -44,15 +44,15 @@ export default async function PainelDoSocietarioPage() {
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "Protocolos parados", valor: formatarNumero(n.parados, 0), tom: n.parados > 0 ? "text-danger" : undefined, icone: <PauseCircle />, href: "/societario/exigencias?aba=parados" },
-          { rotulo: "Exigências em 7 dias", valor: formatarNumero(n.exigencias7, 0), tom: n.exigencias7 > 0 ? "text-warning-fg" : undefined, icone: <AlertTriangle />, href: "/societario/exigencias" },
+          { rotulo: "Protocolos parados", valor: formatarNumero(n.parados, 0), tom: n.parados > 0 ? "text-danger" : undefined, icone: <PauseCircle />, href: "/exigencias?aba=parados" },
+          { rotulo: "Exigências em 7 dias", valor: formatarNumero(n.exigencias7, 0), tom: n.exigencias7 > 0 ? "text-warning-fg" : undefined, icone: <AlertTriangle />, href: "/exigencias" },
           { rotulo: "Processos estourados", valor: formatarNumero(n.estourados, 0), tom: n.estourados > 0 ? "text-danger" : undefined, icone: <Timer />, href: "/processos" },
           { rotulo: "Licenças a renovar", valor: formatarNumero(n.licencas, 0), tom: n.licencas > 0 ? "text-warning-fg" : undefined, icone: <CalendarClock />, href: "/licencas" },
           ...(n.positivas !== null
             ? [{ rotulo: "Certidões positivas", valor: formatarNumero(n.positivas, 0), tom: n.positivas > 0 ? "text-danger" : undefined, icone: <ShieldCheck />, href: "/certidoes?recorte=positivas" }]
             : []),
           ...(n.robo !== null
-            ? [{ rotulo: "Robô", valor: n.robo === "ok" ? "respondendo" : "sem sinal", tom: n.robo === "ok" ? "text-success-fg" : "text-danger", icone: <Bot />, href: "/societario/robo" }]
+            ? [{ rotulo: "Robô", valor: n.robo === "ok" ? "respondendo" : "sem sinal", tom: n.robo === "ok" ? "text-success-fg" : "text-danger", icone: <Bot />, href: "/robo" }]
             : []),
         ]}
       />

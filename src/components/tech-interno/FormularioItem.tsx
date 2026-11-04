@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { FormFooter } from "@/components/ui/FormFooter";
-import { salvarItemTech, comentarItemTech } from "@/app/(app)/tech/controle-interno/actions";
+import { salvarItemTech, comentarItemTech } from "@/app/(app)/controle-interno/actions";
 import { TIPOS, PRIORIDADES, SITUACOES, TAMANHOS, ROTA_TECH_INTERNO, ORIGENS_DO_SISTEMA, comVolta, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
 
 type Pessoa = { id: string; name: string };

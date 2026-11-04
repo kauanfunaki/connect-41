@@ -80,6 +80,9 @@ const nextConfig: NextConfig = {
       { source: "/societario/relatorios/:caminho*", destination: "/processos/relatorios/:caminho*", permanent: false },
       { source: "/societario/ia/:caminho*", destination: "/processos/ia/:caminho*", permanent: false },
       { source: "/contabil/sped/:caminho*", destination: "/sped-contabil/:caminho*", permanent: false },
+      // A Tech (04/11/2026, depois do #378 e do #380).
+      { source: "/tech/controle-interno/:caminho*", destination: "/controle-interno/:caminho*", permanent: false },
+      { source: "/tech/ceci/:caminho*", destination: "/ceci/:caminho*", permanent: false },
     ];
   },
   async headers() {
