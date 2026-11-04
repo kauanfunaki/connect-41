@@ -1,4 +1,4 @@
-# GitHub — Contribuições
+# GitHub
 
 O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`), **Desenvolvedores** (`/github/desenvolvedores`), **Repositórios** (`/github/repositorios`) e, para quem gerencia o módulo, **Times** (`/github/times`).
 
@@ -8,7 +8,7 @@ O módulo `tech_github_contributions` é exclusivo do **Tech**, nasce desligado 
 
 1. Em uma publicação autorizada, aplicar `prisma/migrations/20261021120000_github_contributions/migration.sql` pelo fluxo normal `prisma migrate deploy`. É uma migration aditiva: cria oito tabelas do GitHub, sem alterar registros dos outros módulos. Não usar reset ou db push em produção.
 2. Configurar no servidor `APP_PUBLIC_URL` e a chave `SECRETS_ENCRYPTION_KEY` já usada pelo Connect. Cada instalação de empresa, com seu banco próprio, deve ter sua própria chave. Guardar a chave junto ao backup seguro da instalação: restaurar o banco exige a mesma chave para ler as credenciais. O domínio dos cookies continua seguindo `APP_DOMAIN`. Em produção, o endereço público deve usar HTTPS; HTTP é aceito apenas em loopback para verificação local.
-3. Publicar o build normal do Connect e habilitar **GitHub — Contribuições** em Módulos, no Tech.
+3. Publicar o build normal do Connect e habilitar **GitHub** em Módulos, no Tech.
 4. Cadastrar um **OAuth App** no GitHub da empresa. Copiar a **Authorization callback URL** exibida em **Integrações → GitHub → OAuth App da empresa** para o cadastro no GitHub. Preencher **Client ID** e **Client Secret** nessa tela e clicar em **Salvar credenciais**. O cadastro segue a [documentação oficial do GitHub](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app).
 5. Como administrador, abrir **Integrações → GitHub**, clicar em **Conectar GitHub** e autorizar a conta. Manter o mesmo escritório e a mesma sessão até retornar.
 6. Aguardar o carregamento automático dos repositórios, selecionar os desejados e usar **Salvar e sincronizar**. Repositórios próprios, de colaboração e de organizações aparecem conforme o acesso autorizado. A coleta continua no servidor mesmo depois de fechar a página.

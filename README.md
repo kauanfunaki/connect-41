@@ -204,7 +204,7 @@ Em **Setores e módulos**, o administrador pode:
 - Usar **Também em…** para disponibilizar a mesma tela a outros setores. A rota e os dados continuam sendo os da mesma funcionalidade; registros com escopo próprio continuam respeitando esse escopo.
 - Ajustar quais telas do **menu Geral** aparecem em cada setor. Essa preferência de menu altera visibilidade; a autorização continua sendo conferida no servidor.
 
-O usuário alcança uma tela compartilhada se puder acessar algum dos setores ligados a ela, no nível exigido pela ação. Avisos destinados ao setor dono continuam indo para ele. Módulos com `fixedSector`, como GitHub — Contribuições, têm restrição de movimentação e compartilhamento.
+O usuário alcança uma tela compartilhada se puder acessar algum dos setores ligados a ela, no nível exigido pela ação. Avisos destinados ao setor dono continuam indo para ele. Módulos com `fixedSector`, como GitHub, têm restrição de movimentação e compartilhamento.
 
 Desligar um módulo bloqueia suas telas e ações protegidas, preservando os registros. Ligar um módulo não configura automaticamente sua integração externa. Nem toda aba é um módulo independente: algumas são visões da mesma funcionalidade.
 
@@ -214,7 +214,7 @@ Esta tabela mostra o **setor de origem do catálogo**. O escritório pode ter um
 
 | Setor | Funcionalidades |
 |---|---|
-| **Tech** | Controle interno (Lista, Kanban e Agenda por prazo), Ops Center, GitHub — Contribuições, chamados internos e controle de vencimento de certificados digitais |
+| **Tech** | Controle interno (Lista, Kanban e Agenda por prazo), Ops Center, GitHub, chamados internos e controle de vencimento de certificados digitais |
 | **Controladoria** | Conversas do Chatwoot e avaliação de atendimento, solicitações dos clientes e Arquivos |
 | **Comercial** | Leads e acompanhamento de interessados em contratar o escritório |
 | **Recrutamento** | Vagas, candidatos, colaboradores de clientes, testes e WhatsApp de recrutamento; conexão com o portal de carreiras |
@@ -354,7 +354,7 @@ Na aplicação, a **Ajuda** (`/ajuda`) reúne artigos e vídeos por funcionalida
 | Lista, Kanban e Agenda por prazo do Tech | [Controle interno do Tech](docs/TECH-CONTROLE-INTERNO.md) |
 | Conferência, regras e arquivos do SPED Contábil | [SPED Contábil](docs/CONTABIL-SPED.md) |
 | Classificação por grupo e categoria, formulários, SLA, aprovações, visibilidade e IA (do escritório, com alternativa Groq) | [Chamados internos](docs/HELPDESK.md) |
-| OAuth, coleta, contagens, permissões e validação do painel | [GitHub — Contribuições](docs/GITHUB-CONTRIBUTIONS.md) |
+| OAuth, coleta, contagens, permissões e validação do painel | [GitHub](docs/GITHUB-CONTRIBUTIONS.md) |
 | Modelo das pastas, empresas do piloto e robô de importação | [Pasta de rede](docs/PASTA-DE-REDE.md) |
 | Fluxos de trabalho e automações do Societário | [Índice dos fluxos](docs/fluxos/README.md), [fluxo do setor](docs/fluxos/societario.html), [portais e robôs](docs/fluxos/societario-robos.html) |
 | App do portal e publicação Android | [Android TWA](android/README.md), [Play Store](android/play-store/README.md) |

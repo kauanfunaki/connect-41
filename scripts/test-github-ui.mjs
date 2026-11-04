@@ -118,7 +118,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
     }
   };
   await page.goto(base + "/github");
-  await page.getByRole("heading", { name: "GitHub — Contribuições", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "GitHub", exact: true }).waitFor();
   await page.getByRole("heading", { name: "Atividade recente", exact: true }).waitFor();
   const overview = await api("/api/github?view=general");
   assert.equal(overview.summary.counts.COMMIT, 30); assert.equal(overview.summary.counts.PULL_REQUEST, 30);
@@ -135,7 +135,7 @@ server = spawn(process.execPath, ["--import", pathToFileURL(hook).href, executab
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), label);
     await page.getByRole("heading", { name: "Cadência de entregas", exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(output, `github-${label}-chart.png`), fullPage: true, animations: "disabled" });
-    await page.getByRole("heading", { name: "GitHub — Contribuições", exact: true }).scrollIntoViewIfNeeded();
+    await page.getByRole("heading", { name: "GitHub", exact: true }).scrollIntoViewIfNeeded();
   }
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.getByRole("button", { name: "GitHub", exact: true }).click();
