@@ -12,6 +12,7 @@ import {
   tabelaDasVoltas,
   tabelaDoCusto,
   tabelaDoSla,
+  tabelaDoTempoPorEtapa,
   type ChaveDoRelatorio,
   type TabelaDoRelatorio,
 } from "@/lib/societario/relatoriosNaTela";
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
     voltas: () => tabelaDasVoltas(d.maisVoltas),
     produtividade: () => tabelaDaProdutividade(d.produtividade),
     custo: () => tabelaDoCusto(d.custos),
+    tempo: () => tabelaDoTempoPorEtapa(d.tempoPorEtapa),
   };
   const tabela = tabelas[relatorio.chave]();
   const nome = `societario-${relatorio.chave}-${periodo.chave}-${saoPauloParts(new Date()).dateKey}`;
