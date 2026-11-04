@@ -793,11 +793,11 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
   contabil_sped: "/sped-contabil",
-  tech_controle_interno: "/tech/controle-interno",
-  tech_ceci: "/tech/ceci",
+  tech_controle_interno: "/controle-interno",
+  tech_ceci: "/ceci",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
-  tech_entregas: "/tech/controle-interno/entregas",
+  tech_entregas: "/controle-interno/entregas",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",

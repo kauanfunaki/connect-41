@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const MODULO_TECH_INTERNO = "tech_controle_interno";
-export const ROTA_TECH_INTERNO = "/tech/controle-interno";
+export const ROTA_TECH_INTERNO = "/controle-interno";
 // Clicar em qualquer ponto da linha ou do cartão abre o item (29/10/2026): o
 // link do título se estica sobre o contêiner (que precisa ser `relative`). Só a
 // situação, uma camada acima, continua mudando ali mesmo.

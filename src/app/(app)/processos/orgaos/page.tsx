@@ -48,7 +48,7 @@ export default async function OrgaosPage({ searchParams }: { searchParams: Promi
         className="mb-6"
         itens={[
           { rotulo: "Protocolos esperando", valor: formatarNumero(esperando, 0), icone: <Hourglass /> },
-          { rotulo: `Parados (${prazoDoParado}+ dias)`, valor: formatarNumero(parados, 0), tom: parados > 0 ? "text-danger" : undefined, icone: <PauseCircle />, href: "/societario/exigencias?aba=parados" },
+          { rotulo: `Parados (${prazoDoParado}+ dias)`, valor: formatarNumero(parados, 0), tom: parados > 0 ? "text-danger" : undefined, icone: <PauseCircle />, href: "/exigencias?aba=parados" },
           { rotulo: "Resposta média", valor: media === null ? "—" : `${formatarNumero(media, 1)} dias`, icone: <Timer /> },
           { rotulo: "Órgãos com protocolo", valor: formatarNumero(linhas.length, 0), icone: <Landmark /> },
         ]}

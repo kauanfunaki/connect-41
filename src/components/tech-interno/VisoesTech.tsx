@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { ClipboardList } from "lucide-react";
-import { mudarSituacaoTech } from "@/app/(app)/tech/controle-interno/actions";
+import { mudarSituacaoTech } from "@/app/(app)/controle-interno/actions";
 import { SITUACOES, TIPOS, PRIORIDADES, EM_ABERTO, ROTA_TECH_INTERNO, LINK_DO_ITEM, comVolta } from "@/lib/tech-interno/regras";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";

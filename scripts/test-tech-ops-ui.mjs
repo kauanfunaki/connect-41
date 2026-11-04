@@ -49,7 +49,7 @@ try {
   browser = await chromium.launch({ headless: true, ...(installed ? {} : { channel: "msedge" }) });
   const context = await browser.newContext({ viewport: { width: 1366, height: 768 } }); page = await context.newPage(); page.setDefaultTimeout(30000);
   page.on("pageerror", e => results.errosDeNavegador.push(e.message));
-  await page.goto(base + "/login?next=/tech/controle-interno");
+  await page.goto(base + "/login?next=/controle-interno");
   await page.locator('input[name="email"]').fill(email); await page.locator('input[name="password"]').fill(password);
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.getByRole("heading", { name: "Controle interno", exact: true }).waitFor(); ok("Login real e entrada no Controle interno");
@@ -58,7 +58,7 @@ try {
   await page.getByRole("combobox", { name: /^Tipo/ }).click(); await page.getByRole("option", { name: "Melhoria", exact: true }).click();
   await page.getByRole("button", { name: "Criar item", exact: true }).click();
   await page.getByRole("heading", { name: "Novo item pelo navegador", exact: true }).waitFor(); ok("Criação de item pelo formulário");
-  await page.goto(base + "/tech/controle-interno?visao=kanban&situacao=ALL");
+  await page.goto(base + "/controle-interno?visao=kanban&situacao=ALL");
   const kanban = page.getByLabel("Kanban do Tech", { exact: true });
   await kanban.getByRole("link", { name: "Bug com prazo fictício", exact: true }).waitFor();
   await page.getByRole("combobox", { name: "Situação de Bug com prazo fictício", exact: true }).click(); await page.getByRole("option", { name: "Em andamento", exact: true }).click();
@@ -66,7 +66,7 @@ try {
   await page.getByRole("region", { name: "Em andamento", exact: true }).getByRole("link", { name: "Bug com prazo fictício", exact: true }).waitFor();
   const rows = await db.query("SELECT status,version FROM tech_internal_items WHERE id=?", [dated]); assert.equal(rows[0].status, "IN_PROGRESS"); assert.equal(rows[0].version, 1); ok("Kanban persiste situação e histórico");
   await page.screenshot({ path: path.join(output, "tech-kanban.png"), fullPage: true });
-  await page.goto(base + "/tech/controle-interno?visao=agenda&mes=2026-10&situacao=ALL");
+  await page.goto(base + "/controle-interno?visao=agenda&mes=2026-10&situacao=ALL");
   await page.getByRole("region", { name: "2026-10-23", exact: true }).getByRole("link", { name: "Bug com prazo fictício", exact: true }).waitFor();
   await page.getByRole("region", { name: "Itens sem prazo", exact: true }).getByRole("link", { name: "Melhoria sem prazo fictícia", exact: true }).waitFor();
   await page.getByRole("link", { name: "Próximo mês", exact: true }).click(); await page.waitForURL(/mes=2026-11/);
@@ -85,12 +85,12 @@ try {
   await page.goto(base + "/setor/contabil/telas"); await page.locator('a[href="/setor/contabil/contabil_sped"]').first().click(); await page.getByRole("heading", { name: "SPED contábil", exact: true }).waitFor();
   await page.getByText(/Configure e ative a integração SPED Generator/).waitFor(); ok("SPED disponível no setor Contábil e informa integração ausente");
   const cookie = (id, role, sectors) => ({ name: "access_token", value: jwt.sign({ sub: id, tenantId, role, sectors, accessibleTenants: [tenantId] }, secret, { expiresIn: "30m" }), url: base, httpOnly: true, sameSite: "Lax" });
-  const readContext = await browser.newContext(); await readContext.addCookies([cookie(readonlyId, "READONLY", ["tech"])]); const readPage = await readContext.newPage(); await readPage.goto(base + "/tech/controle-interno?visao=kanban"); await readPage.getByLabel("Kanban do Tech", { exact: true }).waitFor(); assert.equal(await readPage.getByLabel("Kanban do Tech", { exact: true }).getByRole("combobox").count(), 0); assert.equal(await readPage.getByRole("link", { name: "Novo item", exact: true }).count(), 0); await readContext.close(); ok("Somente leitura consulta Kanban sem ações de escrita");
+  const readContext = await browser.newContext(); await readContext.addCookies([cookie(readonlyId, "READONLY", ["tech"])]); const readPage = await readContext.newPage(); await readPage.goto(base + "/controle-interno?visao=kanban"); await readPage.getByLabel("Kanban do Tech", { exact: true }).waitFor(); assert.equal(await readPage.getByLabel("Kanban do Tech", { exact: true }).getByRole("combobox").count(), 0); assert.equal(await readPage.getByRole("link", { name: "Novo item", exact: true }).count(), 0); await readContext.close(); ok("Somente leitura consulta Kanban sem ações de escrita");
   const other = await browser.newContext(); await other.addCookies([cookie(fiscalId, "SECTOR_USER", ["fiscal"])]); const otherPage = await other.newPage();
-  for (const route of ["/tech/controle-interno", "/sped-contabil"]) { await otherPage.goto(base + route); await otherPage.getByText(/^Página não encontrada\.?$/).waitFor(); }
+  for (const route of ["/controle-interno", "/sped-contabil"]) { await otherPage.goto(base + route); await otherPage.getByText(/^Página não encontrada\.?$/).waitFor(); }
   assert.equal((await other.request.get(base + "/api/contabil/sped/contexto")).status(), 404); await other.close(); ok("Outro setor não abre Tech nem Contábil");
   for (const view of ["lista", "kanban", "agenda"]) {
-    await page.goto(base + `/tech/controle-interno?visao=${view}&mes=2026-10`); await page.getByRole("heading", { name: "Controle interno", exact: true }).waitFor(); await page.getByRole("link", { name: "Bug com prazo fictício", exact: true }).first().waitFor();
+    await page.goto(base + `/controle-interno?visao=${view}&mes=2026-10`); await page.getByRole("heading", { name: "Controle interno", exact: true }).waitFor(); await page.getByRole("link", { name: "Bug com prazo fictício", exact: true }).first().waitFor();
     for (const width of [1366, 683, 390]) { await page.setViewportSize({ width, height: 768 }); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `Sem overflow em ${view}/${width}`); }
   }
   await context.addCookies([{ name: "theme", value: "dark", url: base }]); await page.reload(); await page.getByRole("link", { name: "Bug com prazo fictício", exact: true }).first().waitFor(); await page.getByLabel("Itens sem prazo", { exact: true }).waitFor(); await page.screenshot({ path: path.join(output, "tech-agenda-mobile.png"), fullPage: true, animations: "disabled" }); ok("Lista, Kanban e agenda responsivos, incluindo tema escuro");
