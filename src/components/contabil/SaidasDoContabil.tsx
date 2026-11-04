@@ -12,7 +12,7 @@ import { TabelaContabil } from "./TabelaContabil";
 import { moeda } from "@/lib/financeiro/formato";
 import { ROTULO_DA_SAIDA, TIPOS_DE_SAIDA, type ContaDaSaida, type TipoDeSaida } from "@/lib/contabil/saidas";
 import type { PainelDasSaidas } from "@/lib/contabil/servidor";
-import { salvarContaDaSaida } from "@/app/(app)/contabil/sped/actions";
+import { salvarContaDaSaida } from "@/app/(app)/sped-contabil/actions";
 
 /**
  * O passo 6 (03/11/2026): o faturamento do mês em um lançamento por dia e por
