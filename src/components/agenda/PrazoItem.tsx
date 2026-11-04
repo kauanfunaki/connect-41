@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { BadgeCheck, Briefcase, FileSignature, FileWarning, HandCoins, KeyRound, Landmark, ListTodo, MessageSquareWarning, Palmtree, Receipt, Stethoscope } from "lucide-react";
+import { BadgeCheck, Briefcase, FileSignature, FileWarning, HandCoins, KeyRound, Landmark, ListTodo, MessageSquareWarning, Palmtree, Receipt, Stethoscope, Wrench } from "lucide-react";
 import type { PrazoDaAgenda, TipoDePrazo } from "@/lib/prazosDaAgenda";
 
 /** Nome e cor de cada setor, do cadastro do tenant. */
 export type SetoresDaAgenda = Record<string, { rotulo: string; cor: string }>;
 
 const ICONE: Record<TipoDePrazo, React.ReactNode> = {
+  // O controle interno do Tech (lote C de 03/11/2026).
+  tech: <Wrench />,
   tarefa: <ListTodo />,
   "conta-pagar": <Receipt />,
   "conta-receber": <HandCoins />,
