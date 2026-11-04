@@ -105,6 +105,7 @@ npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario
 5. Vai para alguém olhar:
    - "não encontrado" ou "sem alvará": divergência entre a Junta e a prefeitura, decisão de 15/09;
    - "Alvará pendente de regularização, aguardando anuências…" (03/11/2026): a prefeitura ainda não libera a impressão. A frase dela vai para o motivo, e a tarefa não volta para a fila;
+   - a caixa "Não sou um robô" (ICI Captcha, desde 03/11/2026): o robô não marca. Ele traz a janela para a frente e espera 3 minutos por quem estiver na máquina; se ninguém marcar, o motivo traz o link da consulta e a inscrição, para fazer à mão e subir o PDF em Licenças › Editar › Ler do PDF, que preenche número, emissão e validade e guarda o PDF em Arquivos › Societário;
    - texto do aceite diferente: alguém relê antes de o robô aceitar em nome do cliente;
    - PDF que não veio;
    - tela desconhecida.

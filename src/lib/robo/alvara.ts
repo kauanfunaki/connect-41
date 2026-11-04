@@ -8,7 +8,7 @@
 // e da data fica do lado de cá, onde há teste.
 
 import { z } from "zod";
-import { ACEITE_ANTES_DE_IMPRIMIR, inscricaoValida, lerObservacoes, normalizarInscricao } from "@/lib/societario/orgaos/alvara-curitiba";
+import { ACEITE_ANTES_DE_IMPRIMIR, CONSULTA, inscricaoValida, lerObservacoes, normalizarInscricao } from "@/lib/societario/orgaos/alvara-curitiba";
 import { arquivar } from "@/lib/societario/arquivamento";
 
 /** Licença que o robô sabe imprimir: o alvará, como o setor escreve o tipo. */
@@ -45,9 +45,10 @@ export function pedidoDoAlvara(p: { tipoDaLicenca: string; revogada: boolean; in
 export const resultadoDoAlvaraSchema = z.object({
   /**
    * O que a máquina viu: o botão de imprimir, a mensagem de não encontrado, a
-   * de alvará pendente de regularização (03/11/2026), ou outra tela.
+   * de alvará pendente de regularização (03/11/2026), a caixa "Não sou um
+   * robô" que ninguém marcou na máquina (04/11/2026), ou outra tela.
    */
-  tela: z.enum(["encontrado", "nao_encontrado", "pendente", "outra"]),
+  tela: z.enum(["encontrado", "nao_encontrado", "pendente", "captcha", "outra"]),
   /** A frase da prefeitura, quando a tela é de pendência. */
   mensagem: z.string().max(500).nullish(),
   /** O texto visível da página, para ler número e data e para quem for conferir. */
@@ -86,13 +87,22 @@ export type DecisaoDoAlvara =
  * Junta e a prefeitura (decisão de 15/09), e aceite com texto novo precisa de
  * alguém reler antes de o robô assumir a declaração.
  */
-export function decidirAlvara(r: ResultadoDoAlvara, temPdf: boolean): DecisaoDoAlvara {
+export function decidirAlvara(r: ResultadoDoAlvara, temPdf: boolean, inscricao?: string | null): DecisaoDoAlvara {
   if (r.tela === "nao_encontrado") {
     return { tipo: "pessoa", motivo: "A prefeitura não achou alvará para esta inscrição. Confira na Junta se o alvará já saiu." };
   }
   if (r.tela === "pendente") {
     const frase = r.mensagem?.trim() || "o alvará está pendente de regularização";
     return { tipo: "pessoa", motivo: `A prefeitura não libera a impressão: "${frase.replace(/\.$/, "")}". Confira as anuências na Junta e peça de novo quando o alvará sair.` };
+  }
+  if (r.tela === "captcha") {
+    // O robô não marca o captcha: o caminho é a consulta à mão e o PDF lido pelo
+    // Connect, que preenche a licença (04/11/2026).
+    return {
+      tipo: "pessoa",
+      motivo:
+        `A prefeitura pediu "Não sou um robô" e ninguém marcou na máquina do robô. Consulte à mão em ${CONSULTA}${inscricao ? ` com a inscrição ${inscricao}` : ""}, baixe o PDF e suba em Licenças › Editar › Ler do PDF.`,
+    };
   }
   if (r.tela === "outra") {
     return { tipo: "pessoa", motivo: "A página do alvará mostrou uma tela que o robô não conhece. Confira à mão." };

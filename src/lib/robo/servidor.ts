@@ -263,7 +263,7 @@ async function concluirAlvara(w: CredencialAutenticadaOps, t: TarefaAberta & { l
   const lido = resultadoDoAlvaraSchema.safeParse(bruto);
   if (!lido.success) throw new ErroOps("Resultado do alvará fora do formato.", 400);
   const pdf = arquivo && arquivo.type === "application/pdf" && arquivo.size > 0 ? arquivo : null;
-  const decisao = decidirAlvara(lido.data, pdf !== null);
+  const decisao = decidirAlvara(lido.data, pdf !== null, (JSON.parse(t.payload) as { inscricao?: string }).inscricao ?? null);
   const resultado = JSON.stringify({ tela: lido.data.tela, aceiteMarcado: lido.data.aceiteMarcado, texto: lido.data.texto.slice(0, 4_000) });
 
   // O robô marcou o aceite em nome do cliente: fica registrado, com empresa,
