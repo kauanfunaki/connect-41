@@ -40,7 +40,10 @@ const { emitirAgora, emitirCertidao, marcarCertidaoComoVista, quadroDasCertidoes
 const TENANT = "tenant-1";
 const MATRIZ = { id: "matriz", tenantId: TENANT, name: "Empresa Fictícia Ltda", cnpj: "11444777000161", stateCode: "PR", city: "Curitiba", status: "ACTIVE", displayName: null };
 const FILIAL = { id: "filial", tenantId: TENANT, name: "Empresa Fictícia Filial", cnpj: "11444777000242", stateCode: "PR", city: "Curitiba", status: "ACTIVE", displayName: null };
-// Dezembro: o terceiro mês do trimestre, em que a carteira inteira já chegou.
+// Cada empresa entra no mês do trimestre do grupo dela (`grupoDaEmpresa`): a
+// matriz no primeiro (outubro), a filial no terceiro (dezembro).
+const OUTUBRO = () => new Date("2026-10-10T12:00:00-03:00");
+const NOVEMBRO = () => new Date("2026-11-10T12:00:00-03:00");
 const DEZEMBRO = () => new Date("2026-12-10T12:00:00-03:00");
 
 type Chamada = { caminho: string; corpo: URLSearchParams };
@@ -108,13 +111,20 @@ describe("uma certidão", () => {
 });
 
 describe("a rotina do trimestre", () => {
-  it("consulta o que falta da carteira, uma vez por trimestre", async () => {
+  it("consulta o grupo do mês, uma vez por trimestre", async () => {
     const { t, chamadas } = transporte(negativa);
-    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: DEZEMBRO })).toBe(6);
-    // Raiz: federal, FGTS, trabalhista e estadual pela matriz; Curitiba, das duas.
-    expect(chamadas.map((c) => c.caminho).sort()).toEqual(["caixa/regularidade", "pref/pr/curitiba/cnd", "pref/pr/curitiba/cnd", "receita-federal/pgfn", "sefaz/pr/certidao-debitos", "tribunal/tst/cndt"]);
+    // Raiz: federal, FGTS, trabalhista e estadual pela matriz, no mês dela; Curitiba, de cada uma no seu.
+    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: OUTUBRO })).toBe(5);
+    expect(chamadas.map((c) => c.caminho).sort()).toEqual(["caixa/regularidade", "pref/pr/curitiba/cnd", "receita-federal/pgfn", "sefaz/pr/certidao-debitos", "tribunal/tst/cndt"]);
+    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: OUTUBRO })).toBe(0);
+    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: DEZEMBRO })).toBe(1);
     expect(m.certidao.linhas.every((c) => c.trimestre === "2026-T4" && c.pedidaPorId === null)).toBe(true);
-    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: DEZEMBRO })).toBe(0);
+  });
+
+  it("não recupera o grupo de um mês que já passou (04/11/2026)", async () => {
+    const { t } = transporte(negativa);
+    // Ligada em novembro, a matriz (grupo de outubro) e a filial (dezembro) não entram.
+    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: NOVEMBRO })).toBe(0);
   });
 
   it("token recusado: para na primeira", async () => {
@@ -132,23 +142,33 @@ describe("a rotina do trimestre", () => {
       await rotinaDasCertidoes(TENANT, { transporte: t, agora: () => new Date(iso) });
       m.certidao.linhas.slice(antes).forEach((c) => (c.createdAt = new Date(iso)));
     };
-    await passada("2026-12-10T12:00:00-03:00");
+    await passada("2026-10-10T12:00:00-03:00");
     expect(chamadas).toHaveLength(3);
-    await passada("2026-12-10T18:00:00-03:00");
+    await passada("2026-10-10T18:00:00-03:00");
     expect(chamadas).toHaveLength(3);
-    await passada("2026-12-11T12:00:00-03:00");
+    await passada("2026-10-11T12:00:00-03:00");
     expect(chamadas).toHaveLength(6);
-    await passada("2026-12-12T12:00:00-03:00");
-    await passada("2026-12-13T12:00:00-03:00");
+    await passada("2026-10-12T12:00:00-03:00");
+    await passada("2026-10-13T12:00:00-03:00");
     expect(chamadas).toHaveLength(9);
   });
 
-  it("o teto: R$ 0,40 dá duas consultas no mês", async () => {
-    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,40" }) };
-    m.padroesDaCertidao.createdAt = DEZEMBRO();
+  it("o teto conta o preço real de cada certidão: R$ 0,54 dá duas consultas no mês", async () => {
+    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,54" }) };
+    m.padroesDaCertidao.createdAt = OUTUBRO();
     const { t } = transporte(negativa);
-    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: DEZEMBRO })).toBe(2);
-    expect(await emitirAgora(TENANT, "kauan", "matriz", "FEDERAL", { transporte: t, agora: DEZEMBRO })).toMatchObject({ ok: false, erro: expect.stringContaining("teto mensal") });
+    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: OUTUBRO })).toBe(2);
+    expect(await emitirAgora(TENANT, "kauan", "matriz", "FEDERAL", { transporte: t, agora: OUTUBRO })).toMatchObject({ ok: false, erro: expect.stringContaining("teto mensal") });
+  });
+
+  it("a que o órgão não respondeu não conta no teto: a InfoSimples não cobra", async () => {
+    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,27" }) };
+    m.padroesDaCertidao.createdAt = OUTUBRO();
+    const { t, chamadas } = transporte((caminho) => (caminho === "sefaz/pr/certidao-debitos" ? { code: 605, code_message: "Tempo esgotado" } : negativa()));
+    // A estadual falha sem custo; das outras quatro, só uma cabe em R$ 0,27.
+    await rotinaDasCertidoes(TENANT, { transporte: t, agora: OUTUBRO });
+    expect(m.certidao.linhas.filter((c) => c.situacao !== "NAO_SAIU")).toHaveLength(1);
+    expect(chamadas.length).toBeGreaterThanOrEqual(1);
   });
 
   it("sem módulo ou sem conexão, nada roda", async () => {

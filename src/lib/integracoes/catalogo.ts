@@ -409,7 +409,7 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         label: "Teto mensal (R$)",
         type: "text",
         required: true,
-        help: "Acima disso o Connect não faz consultas até o mês virar. A InfoSimples cobra R$ 0,20 por consulta até 500 no mês, e no mínimo R$ 100 por mês.",
+        help: "Acima disso o Connect não faz consultas até o mês virar. Conta o preço real de cada certidão (cerca de R$ 0,27, com o adicional da InfoSimples); a InfoSimples cobra no mínimo R$ 100 por mês.",
       },
     ],
   },
