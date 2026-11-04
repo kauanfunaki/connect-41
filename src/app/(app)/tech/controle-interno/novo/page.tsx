@@ -12,8 +12,8 @@ import { Card } from "@/components/ui/Card";
 export default async function NovoItemTechPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO), voltar = destinoDeVolta((await searchParams).voltar);
   if (!await podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir")) notFound();
-  const opcoes = await opcoesTech(ctx);
+  const [opcoes, podeDefinirTamanho] = await Promise.all([opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir")]);
   return <PageContainer><PageHeader title="Novo item" subtitle="Registre o que precisa ser feito pela equipe Tech." action={<Button variant="secondary" href={voltar}><ArrowLeft size={14} aria-hidden />Voltar para a lista</Button>} />
-    <Card className="p-5 max-w-3xl"><FormularioItem {...opcoes} podeEditar voltar={voltar} /></Card>
+    <Card className="p-5 max-w-3xl"><FormularioItem {...opcoes} podeEditar podeDefinirTamanho={podeDefinirTamanho} voltar={voltar} /></Card>
   </PageContainer>;
 }

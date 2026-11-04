@@ -13,7 +13,7 @@ import { formatInstantDateTime } from "@/lib/format";
 
 export default async function DetalheTechPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO), { id } = await params, voltar = destinoDeVolta((await searchParams).voltar);
-  const [item, opcoes, podeEditar] = await Promise.all([detalheItem(ctx, id), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir")]);
+  const [item, opcoes, podeEditar, podeDefinirTamanho] = await Promise.all([detalheItem(ctx, id), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir")]);
   if (!item) notFound();
   const eventos = [
     ...item.comments.map(c => ({ id: c.id, createdAt: c.createdAt, authorName: c.authorName, body: c.body, changes: null, version: null })),
@@ -22,10 +22,11 @@ export default async function DetalheTechPage({ params, searchParams }: { params
   return <PageContainer><PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`Criado em ${formatInstantDateTime(item.createdAt)}`} action={<Button variant="secondary" href={voltar}><ArrowLeft size={14} aria-hidden />Voltar para a lista</Button>} />
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-6 items-start">
       <Card as="section" aria-label="Dados do item" className="min-w-0 p-5">
-        <FormularioItem key={`${item.id}:${item.version}`} {...opcoes} podeEditar={podeEditar} voltar={voltar} item={{
+        <FormularioItem key={`${item.id}:${item.version}`} {...opcoes} podeEditar={podeEditar} podeDefinirTamanho={podeDefinirTamanho} voltar={voltar} item={{
           id: item.id, version: item.version, title: item.title, description: item.description, type: item.type, priority: item.priority,
           status: item.status, systemMode: item.systemMode, systemKey: chaveDoSistema(item), assigneeId: item.assigneeId,
           assigneeName: item.assignee?.name ?? null, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,
+          size: item.size, originItemId: item.originItemId,
         }} />
       </Card>
       <Card as="section" className="min-w-0 p-5 flex flex-col gap-5">

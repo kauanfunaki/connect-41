@@ -200,6 +200,12 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
   },
   {
+    // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
+    code: "tech_entregas", label: "Entregas da Tech", sectorCode: "tech",
+    description: "Entregas validadas pesadas pelo tamanho, tempo de ciclo, retrabalho e chamados, por pessoa e por trimestre",
+    defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+  },
+  {
     code: "tech_ops_center", label: "Ops Center", sectorCode: "tech",
     description: "Automações, sinal de atividade, resultados de processamento e instabilidades",
     defaultEnabled: false, icon: "Workflow", group: "Operação", menuDireto: true,
@@ -772,6 +778,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   tech_ceci: "/tech/ceci",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
+  tech_entregas: "/tech/controle-interno/entregas",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",

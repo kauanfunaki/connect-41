@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { salvarItemTech, comentarItemTech } from "@/app/(app)/tech/controle-interno/actions";
-import { TIPOS, PRIORIDADES, SITUACOES, ROTA_TECH_INTERNO, ORIGENS_DO_SISTEMA, comVolta, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
+import { TIPOS, PRIORIDADES, SITUACOES, TAMANHOS, ROTA_TECH_INTERNO, ORIGENS_DO_SISTEMA, comVolta, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
 
 type Pessoa = { id: string; name: string };
 export type ItemDoFormulario = {
@@ -20,9 +20,20 @@ export type ItemDoFormulario = {
   type: keyof typeof TIPOS; priority: number; status: keyof typeof SITUACOES;
   systemMode: "NONE" | "NEW" | "EXISTING"; systemKey: string | null; assigneeId: string | null; dueDate: string | null;
   assigneeName: string | null;
+  size: keyof typeof TAMANHOS | null; originItemId: string | null;
 };
 
-export function FormularioItem({ item, sistemas, users, podeEditar, voltar = ROTA_TECH_INTERNO }: { item?: ItemDoFormulario; sistemas: SistemaTech[]; users: Pessoa[]; podeEditar: boolean; voltar?: string }) {
+export function FormularioItem({ item, sistemas, users, entregas = [], podeEditar, podeDefinirTamanho = false, voltar = ROTA_TECH_INTERNO }: {
+  item?: ItemDoFormulario; sistemas: SistemaTech[]; users: Pessoa[];
+  /** As entregas concluídas, para o "Veio de" (04/11/2026). */
+  entregas?: { id: string; title: string }[];
+  podeEditar: boolean;
+  /** Quem coordena a Tech define o tamanho (04/11/2026). */
+  podeDefinirTamanho?: boolean;
+  voltar?: string;
+}) {
+  // O tamanho trava quando o item sai de Pendente (04/11/2026, lote D).
+  const tamanhoTravado = !podeDefinirTamanho || (item ? item.status !== "PENDING" : false);
   const router = useRouter();
   const [sistema, setSistema] = useState(item?.systemMode === "EXISTING" ? item.systemKey ?? "NONE" : item?.systemMode ?? "NONE");
   const [erro, setErro] = useState("");
@@ -67,6 +78,20 @@ export function FormularioItem({ item, sistemas, users, podeEditar, voltar = ROT
         </Select></CampoForm>
         <CampoForm label="Responsável" htmlFor="tech-assignee"><Select id="tech-assignee" name="assigneeId" defaultValue={item?.assigneeId ?? ""}><option value="">Sem responsável</option>{responsaveis.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></CampoForm>
         <CampoForm label="Prazo" htmlFor="tech-due" helper="Opcional."><CampoData id="tech-due" name="dueDate" min="1900-01-01" max="9999-12-31" defaultValue={item?.dueDate ?? ""} /></CampoForm>
+        <CampoForm label="Tamanho" htmlFor="tech-size" helper={!podeDefinirTamanho ? "Quem coordena a Tech define." : tamanhoTravado ? "Travado: o item já começou." : "P, M ou G — trava quando o item começa."}>
+          {/* Desabilitado não vai no envio: o valor de antes segue num campo escondido. */}
+          {tamanhoTravado && <input type="hidden" name="size" value={item?.size ?? ""} />}
+          <Select id="tech-size" name={tamanhoTravado ? undefined : "size"} defaultValue={item?.size ?? ""} disabled={tamanhoTravado}>
+            <option value="">Sem tamanho</option>
+            {Object.entries(TAMANHOS).map(([v, label]) => <option key={v} value={v}>{v} · {label}</option>)}
+          </Select>
+        </CampoForm>
+        <CampoForm label="Veio de" htmlFor="tech-origin" helper="A entrega que gerou este item — o retrabalho dela.">
+          <Select id="tech-origin" name="originItemId" defaultValue={item?.originItemId ?? ""}>
+            <option value="">Não veio de uma entrega</option>
+            {entregas.filter(e => e.id !== item?.id).map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+          </Select>
+        </CampoForm>
       </div>
       <CampoForm label="Descrição" htmlFor="tech-description"><Textarea id="tech-description" name="description" rows={6} maxLength={10000} defaultValue={item?.description ?? ""} /></CampoForm>
     </fieldset>

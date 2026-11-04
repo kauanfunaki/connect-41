@@ -5,7 +5,7 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
 import { intervaloMes } from "./agenda";
 import {
-  MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO,
+  MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
   CONFLITO, SEM_VINCULO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
   vinculoDoSistema, chaveDoSistema, nomeDoSistema, type DadosItem, type Filtros, type SistemaTech,
 } from "./regras";
@@ -14,7 +14,7 @@ export class ErroTechInterno extends Error {}
 type Tx = Prisma.TransactionClient;
 export type ResultadoTech = { ok: true; id: string } | { error: string };
 const doOps = { select: { name: true, isActive: true } } as const;
-const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } } } as const;
+const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } }, originItem: { select: { title: true } } } as const;
 type ItemCompleto = Prisma.TechInternalItemGetPayload<{ include: typeof incluir }>;
 
 async function conferirAcesso(ctx: AuthContext, nivel: NivelNoModulo) {
@@ -59,7 +59,11 @@ export async function opcoesTech(ctx: AuthContext) {
     ...apps.map(a => ({ chave: `app:${a.id}`, nome: a.name, origem: "app" as const, ativo: a.isActive })),
     ...anteriores.map(t => ({ chave: `tool:${t.id}`, nome: t.name, origem: "tool" as const, ativo: false })),
   ];
-  return { sistemas, users };
+  // As entregas recentes, para o "Veio de" do bug (04/11/2026).
+  const entregas = await db.techInternalItem.findMany({
+    where: { tenantId, status: "DONE" }, select: { id: true, title: true }, orderBy: { updatedAt: "desc" }, take: 200,
+  });
+  return { sistemas, users, entregas };
 }
 
 export function whereDosItens(tenantId: string, userId: string, filtros: Filtros): Prisma.TechInternalItemWhereInput {
@@ -125,6 +129,7 @@ function valoresLegiveis(item: ItemCompleto): Record<string, string | null> {
     "Prioridade": PRIORIDADES[item.priority], "Situação": SITUACOES[item.status],
     "Sistema": nomeDoSistema(item),
     "Responsável": item.assignee?.name ?? null, "Prazo": item.dueDate?.toISOString().slice(0, 10) ?? null,
+    "Tamanho": item.size ? TAMANHOS[item.size] : null, "Veio de": item.originItem?.title ?? null,
   };
 }
 async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, anterior: ItemCompleto | null) {
@@ -159,6 +164,18 @@ export async function salvarItem(raw: unknown, id?: string, versao?: unknown): P
       if (id && !anterior) throw new ErroTechInterno("Item não encontrado.");
       if (anterior && anterior.version !== (version?.success ? version.data : -1)) throw new ErroTechInterno(CONFLITO);
       await conferirVinculos(tx, ctx, dados, anterior);
+      // O tamanho (04/11/2026): só quem coordena a Tech define, e trava quando
+      // o item sai de Pendente.
+      if (dados.size !== (anterior?.size ?? null)) {
+        if (!(await podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir"))) throw new ErroTechInterno("Só quem coordena a Tech define o tamanho do item.");
+        if (anterior && anterior.status !== "PENDING") throw new ErroTechInterno("O tamanho trava quando o item começa: ele já saiu de Pendente.");
+      }
+      // "Veio de": uma entrega concluída deste escritório, que não é o próprio item.
+      if (dados.originItemId && dados.originItemId !== (anterior?.originItemId ?? null)) {
+        if (dados.originItemId === anterior?.id) throw new ErroTechInterno("Um item não vem dele mesmo.");
+        const origem = await tx.techInternalItem.count({ where: { id: dados.originItemId, tenantId: ctx.tenantId, status: "DONE" } });
+        if (!origem) throw new ErroTechInterno("Escolha uma entrega concluída em \"Veio de\".");
+      }
       const data = { ...campos, ...vinculoDoSistema(systemKey) ?? SEM_VINCULO, dueDate: dados.dueDate ? new Date(dados.dueDate) : null };
       let item: ItemCompleto;
       if (anterior) {
