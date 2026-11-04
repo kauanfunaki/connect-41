@@ -91,4 +91,10 @@ describe("detalhes", () => {
   it("o nome do PDF segue a convenção do setor", () => {
     expect(nomeDoPdfDoAlvara("Padaria do Zé", 2023)).toBe("PADARIA DO ZÉ - Alvará de Funcionamento 2023.pdf");
   });
+  it("captcha que ninguém marcou: vai para o caminho do PDF, com o link e a inscrição (04/11/2026)", () => {
+    const d = decidirAlvara(resultadoDoAlvaraSchema.parse({ tela: "captcha" }), false, "08049258");
+    expect(d.tipo).toBe("pessoa");
+    expect(d.tipo === "pessoa" && d.motivo).toMatch(/Não sou um robô.*com a inscrição 08049258.*Ler do PDF/);
+  });
+
 });

@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Plus } from "lucide-react";
+import { useActionState, useRef, useState, useTransition } from "react";
+import { FileText, Plus, ScanText, Sparkles, TriangleAlert, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
@@ -12,7 +12,9 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
-import { salvarLicenca, type LicencaState } from "@/app/(app)/licencas/actions";
+import { lerPdfDaLicenca, salvarLicenca, type LicencaState } from "@/app/(app)/licencas/actions";
+import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
+import type { LeituraDaLicenca } from "@/lib/societario/leituraDaLicenca";
 import { TIPOS_SUGERIDOS, MAX_TIPO, MAX_NUMERO, MAX_OBSERVACOES } from "@/lib/societario/licenca-form";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Aviso } from "@/components/ui/Aviso";
@@ -51,17 +53,50 @@ export function LicencaModal({ open, onClose, orgaos, empresas, licenca }: Modal
   );
 }
 
+/** O que a IA leu do PDF, e o próprio PDF, que vai para os Arquivos com o "Salvar". */
+type Lido = { leitura: LeituraDaLicenca; arquivo: File };
+
 function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "open">) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [lido, setLido] = useState<Lido | null>(null);
+  // A ação do formulário lê o PDF por aqui: o estado capturado nela pode ser o de antes da leitura.
+  const lidoRef = useRef<Lido | null>(null);
+  // Os campos que a leitura preenche são remontados a cada leitura, com o lido como valor inicial.
+  const [versao, setVersao] = useState(0);
   const [estado, action, isPending] = useActionState(async (prev: LicencaState, form: FormData) => {
+    if (lidoRef.current) form.set("pdf", lidoRef.current.arquivo);
     const r = await salvarLicenca(prev, form);
     if (r && "success" in r) onClose();
     return r;
   }, null);
 
   const prefixo = licenca ? `lic-${licenca.id}` : "lic-nova";
+  const l = lido?.leitura;
+  const confira = (c: LeituraDaLicenca["conferir"][number]) => (l?.conferir.includes(c) ? "A IA não achou no PDF: confira." : undefined);
+  // Lido vence o que estava; o que a IA não achou fica como estava.
+  const numero = l?.numero ?? licenca?.number ?? "";
+  const emissao = l?.emissaoKey ?? licenca?.issuedAt ?? "";
+  const validade = l?.semValidade ? "" : (l?.validadeKey ?? licenca?.expiresAt ?? "");
+  // O tipo só vem da leitura na licença nova: na edição, o nome que o setor deu fica.
+  const tipo = licenca?.kind ?? l?.tipo ?? "";
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+    <LerPdf
+      lido={lido}
+      empresaDoFormulario={() => licenca?.companyId ?? String(new FormData(formRef.current ?? undefined).get("companyId") ?? "")}
+      aoLer={(novo) => {
+        lidoRef.current = novo;
+        setLido(novo);
+        setVersao((v) => v + 1);
+      }}
+      aoDescartar={() => {
+        lidoRef.current = null;
+        setLido(null);
+        setVersao((v) => v + 1);
+      }}
+    />
+    <form ref={formRef} action={action} className="flex flex-col gap-4">
       {licenca && <input type="hidden" name="id" value={licenca.id} />}
 
       {licenca ? (
@@ -90,7 +125,8 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
           name="kind"
           sugestoes={TIPOS_SUGERIDOS}
           maxLength={MAX_TIPO}
-          defaultValue={licenca?.kind ?? ""}
+          key={`tipo-${versao}`}
+          defaultValue={tipo}
           required
         />
       </CampoForm>
@@ -107,21 +143,21 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Número" htmlFor={`${prefixo}-numero`}>
-          <Input id={`${prefixo}-numero`} name="number" maxLength={MAX_NUMERO} defaultValue={licenca?.number ?? ""} />
+        <CampoForm label="Número" htmlFor={`${prefixo}-numero`} helper={confira("numero")}>
+          <Input key={`numero-${versao}`} id={`${prefixo}-numero`} name="number" maxLength={MAX_NUMERO} defaultValue={numero} />
         </CampoForm>
       </FieldGrid>
 
       <FieldGrid>
-        <CampoForm label="Emissão" htmlFor={`${prefixo}-emissao`}>
-          <CampoData id={`${prefixo}-emissao`} name="issuedAt" defaultValue={licenca?.issuedAt ?? ""} />
+        <CampoForm label="Emissão" htmlFor={`${prefixo}-emissao`} helper={confira("emissao")}>
+          <CampoData key={`emissao-${versao}`} id={`${prefixo}-emissao`} name="issuedAt" defaultValue={emissao} />
         </CampoForm>
         <CampoForm
           label="Validade"
           htmlFor={`${prefixo}-validade`}
-          helper="Em branco quando não vence — inscrição municipal, por exemplo."
+          helper={confira("validade") ?? (l?.semValidade ? "O PDF diz que não vence: fica em branco." : "Em branco quando não vence — inscrição municipal, por exemplo.")}
         >
-          <CampoData id={`${prefixo}-validade`} name="expiresAt" defaultValue={licenca?.expiresAt ?? ""} />
+          <CampoData key={`validade-${versao}`} id={`${prefixo}-validade`} name="expiresAt" defaultValue={validade} />
         </CampoForm>
       </FieldGrid>
 
@@ -139,6 +175,92 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         onCancel={onClose}
       />
     </form>
+    </div>
+  );
+}
+
+/**
+ * "Ler do PDF" (04/11/2026): a pessoa escolhe o PDF do alvará ou da licença, a
+ * IA lê e o formulário se preenche. Fica FORA do `<form>`: o PDF vai no "Salvar"
+ * uma vez só, anexado pelo formulário, e nada é gravado antes disso.
+ */
+function LerPdf({
+  lido,
+  empresaDoFormulario,
+  aoLer,
+  aoDescartar,
+}: {
+  lido: Lido | null;
+  empresaDoFormulario: () => string;
+  aoLer: (lido: Lido) => void;
+  aoDescartar: () => void;
+}) {
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [lendo, startTransition] = useTransition();
+  const [escolha, setEscolha] = useState(0);
+
+  function ler() {
+    if (!arquivo) return;
+    setErro(null);
+    const dados = new FormData();
+    dados.set("companyId", empresaDoFormulario());
+    dados.set("pdf", arquivo);
+    startTransition(async () => {
+      const r = await lerPdfDaLicenca(dados);
+      if ("error" in r) {
+        setErro(r.error);
+        return;
+      }
+      aoLer({ leitura: r.leitura, arquivo });
+      setArquivo(null);
+      setEscolha((v) => v + 1);
+    });
+  }
+
+  if (lido) {
+    const { leitura } = lido;
+    return (
+      <div className="flex flex-col gap-2">
+        <Aviso tom={leitura.avisos.length > 0 ? "atencao" : "info"} icone={leitura.avisos.length > 0 ? <TriangleAlert /> : <Sparkles />}>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-fg">
+              <strong>Lido pela IA</strong> de {lido.arquivo.name}. Confira antes de salvar: o PDF vai para Arquivos › Societário junto com a licença.
+            </p>
+            {leitura.avisos.length > 0 && (
+              <ul className="list-disc pl-4 text-fg-secondary">
+                {leitura.avisos.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Aviso>
+        <Button type="button" variant="ghost" size="xs" className="self-start" onClick={aoDescartar}>
+          <X size={12} /> Descartar a leitura e o PDF
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-dashed border-border-strong p-3">
+      <div className="flex items-center gap-2 text-fs-2 text-fg">
+        <ScanText size={16} className="flex-shrink-0 text-brand" />
+        <span>
+          <strong>Ler do PDF</strong> — a IA lê o alvará ou a licença e preenche número, emissão e validade. Nada é gravado antes de você conferir e salvar.
+        </span>
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <FileDropzoneField key={escolha} name="pdf-para-ler" accept=".pdf" maxSizeMb={10} compacto onFileChange={setArquivo} />
+        </div>
+        <Button type="button" variant="secondary" onClick={ler} disabled={!arquivo} loading={lendo} loadingLabel="Lendo…">
+          <FileText size={14} /> Ler do PDF
+        </Button>
+      </div>
+      {erro && <p className="text-helper text-danger">{erro}</p>}
+    </div>
   );
 }
 
