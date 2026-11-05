@@ -30,6 +30,8 @@ import { INTERVALO_DA_VIGILANCIA_DIAS } from "@/lib/societario/inscricaoEstadual
 import { lerProtocolosDoSima, pedidoDoSima, resultadoDoSimaSchema, rodadaDoSimaPodeComecar, type ProtocoloDoSima } from "./sima";
 import { SIGLA as SIGLA_DO_SIMA } from "@/lib/societario/orgaos/sima";
 import { aplicarDecisaoDoProtocolo, anotarFalhaDoProtocolo } from "@/lib/societario/observadorServidor";
+import { registrarUsoDoCertificado } from "@/lib/certificados/registro";
+import { usoDaTarefa } from "@/lib/certificados/usos";
 
 export type ResultadoDoPedido = { ok: true; texto: string } | { ok: false; erro: string };
 
@@ -246,6 +248,13 @@ export async function devolverTarefa(w: CredencialAutenticadaOps, id: string, de
     select: { id: true, kind: true, attempts: true, requestedById: true, companyId: true, licenseId: true, payload: true },
   });
   if (!t) throw new ErroOps("A tarefa não está mais com esta máquina.", 409);
+
+  // O certificado com que a máquina fez a tarefa (05/11/2026): conta como uso
+  // quando ela terminou o trabalho no site, mesmo que o Connect depois mande o
+  // resultado para uma pessoa — o login com o certificado funcionou.
+  if (devolucao.ok && devolucao.certificado) {
+    await registrarUsoDoCertificado(w.tenantId, devolucao.certificado.documento, usoDaTarefa(t.kind));
+  }
 
   if (!devolucao.ok) {
     await encerrarComFalha(w.tenantId, t, devolucao, w.slug);

@@ -137,9 +137,20 @@ export function capacidadesConhecidas(capacidades: readonly string[]): TipoDeTar
  * O que a máquina devolve. `recuperavel` separa "o site caiu, tente de novo"
  * de "o órgão mostrou algo que precisa de gente" — o mesmo corte do executor.
  */
+/**
+ * O certificado que a máquina usou na tarefa (05/11/2026): só o CNPJ/CPF dele,
+ * para a tela Certificados saber onde cada um é usado — nunca o arquivo nem a
+ * senha. Opcional: a máquina antiga não manda e segue igual. Mal formado, é
+ * descartado em vez de recusar a devolução inteira.
+ */
+const certificadoUsadoSchema = z
+  .object({ documento: z.string().trim().min(11).max(20) })
+  .optional()
+  .catch(undefined);
+
 export const devolucaoSchema = z.discriminatedUnion("ok", [
-  z.object({ ok: z.literal(true), resultado: z.record(z.string(), z.unknown()) }),
-  z.object({ ok: z.literal(false), motivo: z.string().trim().min(1).max(500), recuperavel: z.boolean() }),
+  z.object({ ok: z.literal(true), resultado: z.record(z.string(), z.unknown()), certificado: certificadoUsadoSchema }),
+  z.object({ ok: z.literal(false), motivo: z.string().trim().min(1).max(500), recuperavel: z.boolean(), certificado: certificadoUsadoSchema }),
 ]);
 
 export type Devolucao = z.infer<typeof devolucaoSchema>;

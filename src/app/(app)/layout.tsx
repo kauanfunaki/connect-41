@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_MENU_GERAL, FORA_DO_MENU_COM_SOLICITACOES, MODULOS_FORA_DO_MENU, MODULOS_SEM_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DO_APOIO, MODULOS_FORA_DO_MENU, MODULOS_SEM_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { bancoFiscalLocal } from "@/lib/fiscal/local/ambiente";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
@@ -26,7 +26,9 @@ import { ChatDeIA } from "@/components/shell/ChatDeIA";
 import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
-import { temAcessoAoModulo } from "@/lib/chamados/consultas";
+import { contarChamadosDoMenu, temAcessoAoModulo } from "@/lib/chamados/consultas";
+import { telasDoMenuDoSetor } from "@/lib/telasDoMenuDoSetor";
+import { lerOrdemDoMenuDoSetor } from "@/lib/menuDoSetorDb";
 import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
 import { EstiloDaAparencia, EstiloDaPaleta } from "@/components/aparencia/EstiloDaAparencia";
 import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
@@ -167,7 +169,8 @@ export default async function AppLayout({
   // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
   const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   // As solicitações novas (21/10/2026): o número do item Solicitações do menu.
-  const [telasDoGeral, chamadosLigados, solicitacoesNovas] = await Promise.all([
+  // O número dos Chamados (05/11/2026): o que pede ação de quem olha — ver `contarChamadosDoMenu`.
+  const [telasDoGeral, chamadosLigados, solicitacoesNovas, chamadosNovos] = await Promise.all([
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
     temAcessoAoModulo({ ctx, config: helpdeskConfig }),
     solicitacoesLigadas && ctx.userId
@@ -176,10 +179,18 @@ export default async function AppLayout({
           return 0;
         })
       : Promise.resolve(0),
+    contarChamadosDoMenu({ ctx, config: helpdeskConfig }).catch((err) => {
+      console.error("[layout] chamados do menu", err);
+      return 0;
+    }),
   ]);
+  // O Apoio do Geral (05/11/2026): Senhas e Manuais para todo setor, cada um
+  // com os seus — quem pode agir em algum setor vê (a tela decide qual).
+  const doApoio = (code: string) => moduleStates.some((m) => m.code === code && m.enabled) && ctx.role !== "READONLY";
+  const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual") };
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
-      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCodes)))
+      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
       .map((m) => ({
         code: m.code,
         label: m.label,
@@ -192,14 +203,10 @@ export default async function AppLayout({
   // No setor que atende os chamados (a Tech), eles saem do Geral e entram no
   // menu do setor (26/10/2026, ver `chamadosNoMenuDoSetor`).
   const chamadosNoSetor = chamadosLigados && chamadosNoMenuDoSetor(activeSector?.code ?? null, helpdeskConfig.sectorCode);
-  const activeSectorModules = activeSector
-    ? moduleStates
-        // Com as Solicitações ligadas, o grupo Cliente do BPO sai do menu do
-        // setor: Pendências e Aprovações moram nas abas delas, e a Conversa
-        // repetia o item Solicitações do Geral (21/10/2026).
-        .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && (!MODULOS_DO_MENU_GERAL.has(m.code) || (m.code === "helpdesk" && chamadosNoSetor)) && !semMenu.has(m.code) && !(solicitacoesLigadas && FORA_DO_MENU_COM_SOLICITACOES.has(m.code)))
-        .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
-    : [];
+  // As telas do setor, pela mesma regra da tela "Organizar menu" (`telasDoMenuDoSetor`),
+  // e a ordem que o super admin escolheu para ele (05/11/2026).
+  const activeSectorModules = activeSector ? telasDoMenuDoSetor(moduleStates, activeSector.code, { chamadosNoSetor, solicitacoesLigadas, semMenu }) : [];
+  const ordemDoMenu = activeSector ? (await lerOrdemDoMenuDoSetor(tenantId, activeSector.code)).ordem : undefined;
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
@@ -238,6 +245,10 @@ export default async function AppLayout({
         solicitacoesNovas={solicitacoesNovas}
         arquivosLigados={arquivosLigados}
         chamadosLigados={chamadosLigados && !chamadosNoSetor}
+        chamadosNovos={chamadosLigados ? chamadosNovos : 0}
+        apoioLigado={apoioLigado}
+        ordemDoMenu={ordemDoMenu}
+        podeOrganizarMenu={role === "SUPER_ADMIN"}
         telasDoGeral={telasDoGeral}
         profileName={me?.name ?? "Usuário"}
         profileRoleLabel={ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}

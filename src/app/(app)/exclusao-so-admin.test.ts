@@ -36,6 +36,9 @@ const registro = () => ({
   financeEntries: [],
   space: { sectorCode: "setor" },
   vaga: { id: "v1", sectorCode: "setor", restrictedToRecruiters: false },
+  // A página do manual é do setor do documento dela desde 05/11/2026 (o
+  // `sectorCode` de cima vale também para a credencial: cofre por setor).
+  document: { sectorCode: "setor" },
   _count: { items: 0, folders: 0, pipelines: 0, recurringObligations: 0, modelosDeObrigacao: 0, links: 0 },
 });
 
@@ -120,8 +123,8 @@ const folha = await import("./empresas/[id]/folha/actions");
 const lancamentosDaFolha = await import("./empresas/[id]/folha/[competencyId]/actions");
 const socios = await import("./empresas/[id]/socios/actions");
 const fiscal = await import("./documentos-fiscais/[id]/editar");
-const senhas = await import("./bpo-senhas/actions");
-const manual = await import("./bpo-manual/actions");
+const senhas = await import("./senhas/actions");
+const manual = await import("./manuais/actions");
 const modelosDeTeste = await import("./testes/templates/actions");
 const testes = await import("./testes/actions");
 const campos = await import("./admin/campos/actions");

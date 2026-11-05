@@ -167,6 +167,12 @@ export type ModuleDef = {
   group: GrupoDeModulo;
   /** Exibe a tela diretamente na lateral, mesmo em setores agrupados. */
   menuDireto?: boolean;
+  /**
+   * A tela de onde esta veio (05/11/2026, regra "Tela 1 / Tela 2" do Kauan):
+   * no menu ela fica recuada logo abaixo da mãe, e não solta, e entra no grupo
+   * da mãe. Com a mãe desligada (ou em outro setor), aparece como tela comum.
+   */
+  telaMae?: string;
   /** Módulo exclusivo do setor de origem; não permite transferência. */
   fixedSector?: boolean;
 };
@@ -203,7 +209,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
-    code: "tech_entregas", label: "Entregas da Tech", sectorCode: "tech",
+    code: "tech_entregas", telaMae: "tech_controle_interno", label: "Entregas da Tech", sectorCode: "tech",
     // Desde 05/11/2026 é a lista do que foi entregue; os números foram para a Produtividade.
     description: "Os itens entregues no período, com tamanho, pontos, ciclo e de onde vieram",
     defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
@@ -526,7 +532,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   // Painel e visão por órgão (04/11/2026, lote D dos ajustes de 03/11 — escolhas A).
   {
-    code: "societario_painel",
+    code: "societario_painel", telaMae: "societario_processos",
     label: "Painel",
     sectorCode: "societario",
     description: "O dia do setor numa tela: seis números e a fila do que fazer hoje",
@@ -535,7 +541,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Operação",
   },
   {
-    code: "societario_orgaos",
+    code: "societario_orgaos", telaMae: "societario_processos",
     label: "Órgãos",
     sectorCode: "societario",
     description: "Onde os processos esperam: protocolos por órgão, parados, resposta média e voltas",
@@ -575,7 +581,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Operação",
   },
   {
-    code: "societario_relatorios",
+    code: "societario_relatorios", telaMae: "societario_processos",
     label: "Relatórios",
     sectorCode: "societario",
     description: "SLA por tipo, voltas de exigência, produtividade por responsável e custo em taxas",
@@ -725,7 +731,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Documentos",
   },
   {
-    code: "dre_economica",
+    code: "dre_economica", telaMae: "bpo_dre",
     label: "DRE econômica",
     sectorCode: "bpo",
     description: "Demonstrativo de resultado por competência — o que pertence ao mês, pago ou não",
@@ -736,7 +742,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Resultado",
   },
   {
-    code: "dre_analises",
+    code: "dre_analises", telaMae: "bpo_dre",
     label: "Análises gerenciais",
     sectorCode: "bpo",
     description: "Econômico × financeiro, reconciliação lucro → caixa, comparativos, forecast, cenários, indicadores e CFO",
@@ -748,7 +754,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   // DRE econômica já está no ar. Ligado, as telas de DRE passam a comparar com a
   // versão aprovada do ano.
   {
-    code: "dre_orcamento",
+    code: "dre_orcamento", telaMae: "bpo_dre",
     label: "Orçamento",
     sectorCode: "bpo",
     description: "Orçamento anual por grupo da DRE, com versões e aprovação, comparado ao realizado na DRE econômica e nas análises",
@@ -825,9 +831,9 @@ export const MODULE_ROUTES: Record<string, string> = {
   gestao_indicadores_rh:   "/indicadores-rh",
   gestao_valora:           "/valora",
   gestao_painel:           "/gestao",
-  bpo_senhas:              "/bpo-senhas",
+  bpo_senhas:              "/senhas",
   bpo_dre:                 "/dre",
-  bpo_manual:              "/bpo-manual",
+  bpo_manual:              "/manuais",
   fiscal_documentos:       "/documentos-fiscais",
   fiscal_autorizacoes:     "/autorizacoes",
   fiscal_painel:           "/sped-fiscal/motor",
@@ -880,7 +886,15 @@ export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastro
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual"]);
+
+/**
+ * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e
+ * Repositório de manuais deixaram de ser do BPO e viraram um grupo do Geral,
+ * para todo setor, junto dos Quadros. Cada setor vê os seus (cofre por setor).
+ * O módulo segue ligado e desligado pelo escritório, no BPO de Setores e módulos.
+ */
+export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual"] as const;
 
 /**
  * Chamados fica no Geral para todo setor, menos o que atende os chamados

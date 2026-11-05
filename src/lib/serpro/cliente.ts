@@ -19,6 +19,7 @@ import { camposFaltando, integracaoDoCatalogo } from "@/lib/integracoes/catalogo
 import { hojeIso } from "@/lib/datas/calendario";
 import { formatCnpj } from "@/lib/format";
 import { lerCertificado, TAMANHO_MAXIMO_DO_CERTIFICADO, type CertificadoLido } from "./certificado";
+import { registrarUsoDoCertificado } from "@/lib/certificados/registro";
 import { transporteHttps, type CabecalhosDaResposta, type RespostaHttps, type Transporte } from "./transporte";
 import { podeChamar } from "./portao";
 import { ENVIO_DO_TERMO, EXEMPLO_DA_DEMONSTRACAO, pedidoDoServico, servicoDoCatalogo } from "./servicos";
@@ -593,6 +594,13 @@ export async function chamarSerpro(
       requestTag,
     },
   });
+
+  // A conexão com o certificado da integração chegou ao Serpro: conta como uso
+  // dele na tela Certificados (05/11/2026), ligado pelo CNPJ de dentro do
+  // certificado. A demonstração não usa certificado.
+  if (r && !demonstracao && cfg!.certificado?.ok && cfg!.certificado.cnpj) {
+    await registrarUsoDoCertificado(tenantId, cfg!.certificado.cnpj, "serpro");
+  }
 
   if (!r || !resposta) {
     return erroDeAutenticacao

@@ -124,6 +124,12 @@ type NavItemProps = {
    * `classeDoItemComArea`. Sem ela, o desenho do portal.
    */
   area?: string;
+  /**
+   * A tela que veio de outra (05/11/2026, "Tela 1 / Tela 2"): recuada embaixo
+   * da mãe, com o fio que liga as duas e o ícone menor. Só na coluna aberta;
+   * na faixa de ícones a filha não aparece (a mãe leva a ela).
+   */
+  recuado?: boolean;
 };
 
 /**
@@ -167,10 +173,37 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area, recuado = false }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
+
+  if (recuado) {
+    if (naFaixa) return null;
+    return (
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        data-grupo={area ?? "marca"}
+        data-recuado
+        // O fio vertical passa pelo centro do ícone da mãe (quadrado de 24px que
+        // começa em 0,5rem + 0,75rem); a filha começa depois dele.
+        className={`relative flex items-center gap-2 py-1.5 pr-2.5 -ml-3 pl-[calc(2.25rem+0.75rem)] rounded-r-lg text-ui transition-colors before:absolute before:left-[calc(1.25rem+0.75rem)] before:top-0 before:bottom-0 before:w-px before:bg-border ${
+          active ? "text-fg font-semibold bg-surface-hover" : "font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover"
+        }`}
+      >
+        {active && <BarraAtiva />}
+        <span aria-hidden className={`inline-grid place-items-center size-5 rounded-md flex-shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5 ${active ? "bg-grupo-solid text-on-brand" : "bg-grupo/12 text-grupo"}`}>{icon}</span>
+        <span className="truncate">{label}</span>
+        {contador > 0 && (
+          <span className="ml-auto">
+            <span aria-hidden><Contador valor={contador} tom="alerta" pequeno /></span>
+            <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
+          </span>
+        )}
+      </Link>
+    );
+  }
 
   if (menu) {
     const focarMenu = () => requestAnimationFrame(() => document.getElementById(menu.painelId)?.querySelector<HTMLElement>("[role='menuitem']")?.focus());
@@ -230,6 +263,59 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
 }
 
 export type ItemDeModulo = { code: string; label: string; href: string };
+
+/**
+ * Um grupo de telas que abre e fecha no próprio menu (05/11/2026, opção A da
+ * página "Ajustes de 05/11"): o nome do grupo em caixa alta, como o "Geral",
+ * com a seta e o número de telas em cinza. O número de telas não é pílula —
+ * pílula é só para o que pede ação (chamados, solicitações).
+ *
+ * Só na coluna aberta. Na faixa de ícones não cabe abrir no lugar: lá o grupo
+ * segue sendo o ícone com o painel ao lado (`GrupoNavItem`).
+ */
+export function GrupoDoMenu({
+  titulo,
+  telas,
+  aberto,
+  temTelaAberta,
+  onAlternar,
+  children,
+}: {
+  titulo: string;
+  telas: number;
+  aberto: boolean;
+  /** A tela aberta é deste grupo — com o grupo fechado, o nome fica em destaque. */
+  temTelaAberta: boolean;
+  onAlternar: () => void;
+  children: React.ReactNode;
+}) {
+  const id = `menu-grupo-${titulo.normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase()}`;
+  const contagem = `${telas} ${telas === 1 ? "tela" : "telas"}`;
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={aberto}
+        aria-controls={id}
+        onClick={onAlternar}
+        className={`group c41-rotulo flex w-full items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-md transition-colors hover:bg-surface-hover hover:text-fg ${temTelaAberta && !aberto ? "text-fg" : ""}`}
+      >
+        <svg aria-hidden viewBox="0 0 12 12" className={`size-3 flex-shrink-0 transition-transform motion-reduce:transition-none ${aberto ? "rotate-90" : ""}`}>
+          <path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="truncate">{titulo}</span>
+        {temTelaAberta && !aberto && <span aria-hidden className="size-1.5 rounded-full bg-[var(--c41-setor)]" />}
+        <span className="ml-auto text-micro tabular-nums normal-case tracking-normal text-fg-muted">
+          <span aria-hidden>{telas}</span>
+          <span className="sr-only">, {contagem}{temTelaAberta ? ", com a tela aberta" : ""}</span>
+        </span>
+      </button>
+      <div id={id} hidden={!aberto} className="space-y-0.5">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Um grupo de módulos na sidebar — uma linha que **leva** à tela do grupo.

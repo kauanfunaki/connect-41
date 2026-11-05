@@ -92,6 +92,9 @@ const nextConfig: NextConfig = {
       // A ordem importa: /fiscal/sped antes da regra geral de /fiscal.
       { source: "/fiscal/sped/:caminho*", destination: "/sped-fiscal/:caminho*", permanent: false },
       { source: "/fiscal/:caminho*", destination: "/sped-fiscal/motor/:caminho*", permanent: false },
+      // O Apoio no Geral (05/11/2026): senhas e manuais deixam de ser só do BPO.
+      { source: "/bpo-senhas/:caminho*", destination: "/senhas/:caminho*", permanent: false },
+      { source: "/bpo-manual/:caminho*", destination: "/manuais/:caminho*", permanent: false },
     ];
   },
   async headers() {

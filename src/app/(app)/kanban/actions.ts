@@ -1630,4 +1630,4 @@ export async function duplicarPipeline(
 }
 
 // Documentos (canvas) por tarefa — removido em 2026-07-24, virou módulo
-// próprio "Manual" (ver src/app/(app)/bpo-manual/actions.ts).
+// próprio "Manual" (ver src/app/(app)/manuais/actions.ts).

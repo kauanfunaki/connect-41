@@ -4,6 +4,8 @@ import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "rea
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
 import {
+  ArrowUpDown,
+  BookOpen,
   ChevronRight,
   Home,
   ContactRound,
@@ -14,7 +16,6 @@ import {
   Settings,
   ReceiptText,
   FolderKanban,
-  Bot,
   Globe,
   AppWindow,
   CalendarCheck,
@@ -26,9 +27,8 @@ import {
   X,
   Building2,
   Users,
-  UsersRound,
-  Truck,
   GitBranch,
+  Truck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -39,14 +39,16 @@ import {
   SectorNavItem,
   CadastrosNavItem,
   GrupoNavItem,
+  GrupoDoMenu,
   ProvedorDaFaixa,
   TituloDoBloco,
   nomeNaFaixa,
 } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
-import { agruparModulos, slugDoGrupo, ICONE_DO_GRUPO, getModuleDef } from "@/lib/module-catalog";
-import { quadrosAtivo } from "@/lib/caminhoDoMenu";
+import { slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
+import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
+import { chaveDosGruposAbertos, grupoEstaAberto, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
 import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
@@ -77,6 +79,7 @@ import { agruparPorCor, areaDoGrupoDeTelas, areaDoModulo, grupoDaTelaDaEquipe } 
 import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
+import { contarChamadosDoMenuAction } from "@/app/(app)/chamados/contagem-actions";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
 import { abaDaProdutividade, ROTAS_DA_PRODUTIVIDADE } from "@/lib/tech-interno/rotasDaProdutividade";
 
@@ -130,6 +133,43 @@ function assinarTela(aviso: () => void) {
 const lerTela = () => window.matchMedia(TELA_GRANDE).matches;
 const lerTelaNoServidor = () => true;
 
+// Os grupos do menu que a pessoa abriu ou fechou (05/11/2026), por setor, no
+// navegador. Ler pode falhar (janela anônima, armazenamento bloqueado): aí vale
+// o padrão, o grupo da tela aberta.
+const EVENTO_GRUPOS = "c41-menu-grupos";
+function assinarGruposDoMenu(aviso: () => void) {
+  window.addEventListener("storage", aviso);
+  window.addEventListener(EVENTO_GRUPOS, aviso);
+  return () => {
+    window.removeEventListener("storage", aviso);
+    window.removeEventListener(EVENTO_GRUPOS, aviso);
+  };
+}
+function lerGruposDoMenu(setor: string): string {
+  try {
+    return window.localStorage.getItem(chaveDosGruposAbertos(setor)) ?? "{}";
+  } catch {
+    return "{}";
+  }
+}
+function lerEscolhas(json: string): Record<string, boolean> {
+  try {
+    const v: unknown = JSON.parse(json);
+    return v && typeof v === "object" ? (v as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+function gravarGrupoDoMenu(setor: string, grupo: string, aberto: boolean) {
+  try {
+    const atual = lerEscolhas(lerGruposDoMenu(setor));
+    window.localStorage.setItem(chaveDosGruposAbertos(setor), JSON.stringify({ ...atual, [grupo]: aberto }));
+  } catch {
+    // Sem armazenamento, o grupo não fica lembrado; o padrão continua valendo.
+  }
+  window.dispatchEvent(new Event(EVENTO_GRUPOS));
+}
+
 type Props = {
   tenantId: string;
   accessibleTenants: Tenant[];
@@ -164,6 +204,17 @@ type Props = {
    * lá a tela vem em `activeSectorModules` (ver `chamadosNoMenuDoSetor`).
    */
   chamadosLigados?: boolean;
+  /** O que pede ação nos Chamados (05/11/2026): o número no item, conferido a cada minuto. */
+  chamadosNovos?: number;
+  /**
+   * As telas do Apoio ligadas no escritório (05/11/2026): Repositório de senhas
+   * e de manuais, no grupo Apoio do Geral, para todo setor (cada um vê os seus).
+   */
+  apoioLigado?: { senhas: boolean; manuais: boolean };
+  /** A ordem do menu do setor que o super admin escolheu (05/11/2026); sem ela, a do catálogo. */
+  ordemDoMenu?: OrdemDoMenu;
+  /** Mostra "Organizar menu" no fim das telas do setor — só o Super Admin. */
+  podeOrganizarMenu?: boolean;
   /**
    * As telas do Geral que o setor (ou os setores da pessoa, em "Todos os
    * setores") não escondeu — ver `src/lib/menuGeral.ts`. Sem a prop, todas.
@@ -210,6 +261,10 @@ export function AppShell({
   solicitacoesNovas = 0,
   arquivosLigados = false,
   chamadosLigados = false,
+  chamadosNovos = 0,
+  apoioLigado = { senhas: false, manuais: false },
+  ordemDoMenu,
+  podeOrganizarMenu = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
   profileName,
   profileRoleLabel,
@@ -260,6 +315,9 @@ export function AppShell({
   const emConfiguracoes = pathname.startsWith("/admin") || pathname.startsWith("/configuracoes") || pathname.startsWith("/assinatura");
   // O número do item Solicitações (21/10/2026), conferido a cada minuto.
   const novasSolicitacoes = useNumeroConferido(solicitacoesNovas, contarSolicitacoesNovas, solicitacoesLigadas && telasDoGeral.includes("solicitacoes"));
+  // O número dos Chamados (05/11/2026), no Geral ou no menu do setor que atende.
+  const chamadosNoMenu = chamadosLigados || activeSectorModules.some((m) => m.code === "helpdesk");
+  const novosChamados = useNumeroConferido(chamadosNovos, contarChamadosDoMenuAction, chamadosNoMenu);
   const grupoDaTela = grupoDaTelaDaEquipe(pathname);
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
@@ -273,11 +331,25 @@ export function AppShell({
   // lateral enquanto ela cresce.
   const larguraFinal = animando && !naFaixa ? "min-w-[240px]" : "";
 
+  // O menu do setor (05/11/2026): os blocos da regra nova e os grupos abertos.
+  // O grupo da tela aberta começa aberto; o que a pessoa abre ou fecha fica no
+  // navegador, por setor (`grupoEstaAberto`).
+  const blocosDoSetor = activeSector ? montarMenuDoSetor(activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code)), ordemDoMenu) : [];
+  // Com a ordem escolhida pelo super admin, ela vence o "cores juntas" (28/10/2026).
+  const ordemEscolhida = !!ordemDoMenu && (ordemDoMenu.grupos.length > 0 || ordemDoMenu.telas.length > 0);
+  const grupoDaTelaAberta = blocosDoSetor.find((b) => b.tipo === "grupo" && telasDoBloco(b).some((tela) => caminhoDoMenuAtivo(pathname, tela.href)))?.grupo ?? null;
+  const setorDoMenu = activeSector?.code ?? "";
+  const escolhasJson = useSyncExternalStore(assinarGruposDoMenu, () => lerGruposDoMenu(setorDoMenu), () => "{}");
+  const escolhasDoMenu = lerEscolhas(escolhasJson);
+  const alternarGrupo = (grupo: string, abrir: boolean) => gravarGrupoDoMenu(setorDoMenu, grupo, abrir);
+
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
   const noGeral = (tela: TelaDoGeral) => telasDoGeral.includes(tela);
   const algumaNoGeral = [
     noGeral("espacos"),
+    apoioLigado.senhas,
+    apoioLigado.manuais,
     noGeral("cadastros"),
     noGeral("transferencias"),
     solicitacoesLigadas && noGeral("solicitacoes"),
@@ -288,15 +360,45 @@ export function AppShell({
   // Fornecedores e sacados é aba de Cadastros só para o BPO (21/10/2026). As
   // telas navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
   const telasDeCadastros = telasNavegaveis.some((t) => t.code === "bpo_cadastros") ? [...TELAS_DE_CADASTROS, TELA_DOS_FORNECEDORES] : TELAS_DE_CADASTROS;
+  // O grupo Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de
+  // senhas, Repositório de manuais e Quadros, para todo setor — cada setor vê
+  // os seus. Com uma tela só, ela fica solta (a regra dos grupos do menu).
+  type ItemDoApoio = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean };
+  const blocoDoApoio = (quadros: ItemDoApoio | null) => {
+    const telas: ItemDoApoio[] = [
+      ...(apoioLigado.senhas ? [{ chave: "senhas", label: "Repositório de senhas", href: "/senhas", icon: <ModuleIcon code="bpo_senhas" />, area: areaDoModulo("bpo_senhas") ?? "marca" }] : []),
+      ...(apoioLigado.manuais ? [{ chave: "manuais", label: "Repositório de manuais", href: "/manuais", icon: <ModuleIcon code="bpo_manual" />, area: areaDoModulo("bpo_manual") ?? "marca" }] : []),
+      ...(quadros ? [quadros] : []),
+    ];
+    if (telas.length === 0) return null;
+    const acesa = (i: ItemDoApoio) => i.ativo ?? caminhoDoMenuAtivo(pathname, i.href);
+    const item = (i: ItemDoApoio) => <NavItem key={i.chave} href={i.href} ativo={i.ativo} icon={i.icon} label={i.label} area={i.area} />;
+    if (telas.length === 1) return item(telas[0]!);
+    const ativa = telas.some(acesa);
+    if (naFaixa) {
+      return (
+        <PainelDoItem titulo="Apoio" area="escritorio" icone={<BookOpen />} telas={telas.map((i) => ({ label: i.label, href: i.href, icon: i.icon, ativa: acesa(i) }))}>
+          <NavItem href={telas[0]!.href} ativo={ativa} icon={<BookOpen size={16} />} label="Apoio" comTelas area="escritorio" />
+        </PainelDoItem>
+      );
+    }
+    const aberto = grupoEstaAberto("Apoio", ativa ? "Apoio" : null, escolhasDoMenu);
+    return (
+      <GrupoDoMenu titulo="Apoio" telas={telas.length} aberto={aberto} temTelaAberta={ativa} onAlternar={() => alternarGrupo("Apoio", !aberto)}>
+        {telas.map(item)}
+      </GrupoDoMenu>
+    );
+  };
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
   // O Geral com as cores juntas (28/10/2026): os azuis — sem área e Chamados —
-  // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo.
-  const itensDoGeral = (quadros: React.ReactNode = null) => {
+  // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo,
+  // que entra no grupo Apoio (05/11/2026).
+  const itensDoGeral = (quadros: ItemDoApoio | null = null) => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
     const itens: { chave: string; area: string; no: React.ReactNode }[] = [
-      { chave: "quadros", area: "marca", no: quadros },
+      { chave: "apoio", area: "escritorio", no: blocoDoApoio(quadros) },
       {
         chave: "cadastros",
         area: "marca",
@@ -308,7 +410,7 @@ export function AppShell({
       },
       { chave: "transferencias", area: "marca", no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
       { chave: "solicitacoes", area: solicitacoes, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
-      { chave: "chamados", area: chamados, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" area={chamados} /> },
+      { chave: "chamados", area: chamados, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
       { chave: "arquivos", area: arquivos, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
       { chave: "agenda", area: "marca", no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
     ];
@@ -484,23 +586,17 @@ export function AppShell({
                     </p>
                   </TituloDoBloco>
                 )}
+                {/* Na Tech, os Quadros são o Controle interno (decisão do Kauan,
+                    05/11/2026): o item leva até ele, sem acender por conta
+                    própria — quem acende é o Controle interno, no grupo dele. */}
                 {itensDoGeral(
-                  noGeral("espacos") && (
-                    <NavItem
-                      href={`/setor/${activeSector.code}`}
-                      ativo={(p) => quadrosAtivo(p, activeSector.code)}
-                      icon={<FolderKanban size={16} />}
-                      label="Quadros"
-                      area="marca"
-                    />
-                  )
+                  !noGeral("espacos")
+                    ? null
+                    : activeSectorModules.some((m) => m.code === "tech_controle_interno")
+                      ? { chave: "quadros", label: "Quadros", href: "/controle-interno", icon: <FolderKanban size={16} />, area: "marca", ativo: false }
+                      : { chave: "quadros", label: "Quadros", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) }
                 )}
 
-                {/* Até 8 módulos, a sidebar lista as telas direto, cada uma com seu
-                    ícone: o setor pequeno não ganha nada em esconder cinco itens
-                    atrás de três grupos. Acima disso (o BPO tem quinze), a linha é
-                    o **grupo**, e clicar nela abre a tela do setor filtrada por ele
-                    — pedido do Kauan em 17/09, no lugar de abrir e fechar seções. */}
                 <TelasFixadas telas={telasFixadas} />
 
                 {/* O nome do setor leva a todas as telas dele (Ajustes 15/10, G10):
@@ -532,82 +628,143 @@ export function AppShell({
                     </Link>
                   </TituloDoBloco>
                 )}
+                {/* A regra do menu (05/11/2026, opção A escolhida pelo Kauan — ver
+                    `montarMenuDoSetor`): todo setor junta as telas por tema, o
+                    grupo abre e fecha no próprio menu e a Tela 2 fica recuada sob
+                    a Tela 1. Acabaram os quatro jeitos de antes (lista solta até 8
+                    telas, grupo que levava a outra tela, e as janelas do GitHub,
+                    do Ops Center e do Painel de Gestão). Na faixa de ícones não
+                    cabe abrir no lugar: lá o grupo segue com o painel ao lado. */}
                 {(() => {
                   const sped = menuSped(activeSectorModules);
-                  const modulos = activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code));
-                  const itemSped = sped.laterais.length > 0 && <PainelDoItem titulo="SPED" area="fiscal" icone={<ReceiptText />} abrirPorClique telas={sped.laterais.map((item) => ({
-                    label: item.label, href: (() => { const q = new URLSearchParams(); for (const campo of ["empresa", "competencia"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); } return q.size ? `${item.href}?${q}` : item.href; })(), icon: <ModuleIcon code={item.modulo} />,
-                    ativa: areaSpedAtiva(pathname) === item.area,
-                  }))}>
-                    {({ aberto, alternar, painelId }) => <NavItem href={sped.href ?? sped.laterais[0].href} icon={<ReceiptText size={16} />} label="SPED" comTelas ativo={!!areaSpedAtiva(pathname)} menu={{ aberto, onClick: alternar, painelId }} area="fiscal" />}
-                  </PainelDoItem>;
+                  const areaDe = (code: string) => areaDoModulo(code) ?? "marca";
                   const hrefContabil = (aba: string, secao: string) => {
                     const q = new URLSearchParams({ aba, secao });
                     for (const campo of ["empresa", "mes"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
                     return "/sped-contabil?" + q;
                   };
                   const noContabil = pathname === "/sped-contabil";
-                  const grupoAtualContabil = grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined });
-                  const itemModulo = (m: SectorModule) => m.code === "contabil_sped" ? <PainelDoItem key={m.code} titulo="SPED" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
-                    // De-para e lançamentos é um trabalho em etapas (03/11/2026): um item só.
-                    { label: "De-para e lançamentos", href: hrefContabil("lancamentos", "entradas"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil !== "contribuicoes" },
-                    { label: "Gerar SPED Contribuições", href: hrefContabil("contribuicoes", "gerar"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "contribuicoes" },
-                  ]}>
-                    {({ aberto, alternar, painelId }) => <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={noContabil} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
-                  </PainelDoItem> : m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo={m.label} area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
-                    // A Produtividade (05/11/2026): Time, Pessoas e GitHub. As telas
-                    // do GitHub (Desenvolvedores, Repositórios, Times) são abas dentro dele.
-                    { label: "Time", href: ROTAS_DA_PRODUTIVIDADE.time, icon: <UsersRound size={16} />, ativa: abaDaProdutividade(pathname) === "time" },
-                    { label: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icon: <Users size={16} />, ativa: abaDaProdutividade(pathname) === "pessoas" },
-                    { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch size={16} />, ativa: abaDaProdutividade(pathname) === "github" },
-                  ]}>
-                    {({ aberto, alternar, painelId }) => <NavItem href={ROTAS_DA_PRODUTIVIDADE.time} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={abaDaProdutividade(pathname) !== null} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
-                  </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
-                    // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta
-                    // Robôs, Sites e Apps. O Histórico fica dentro de Robôs.
-                    { label: "Robôs", href: "/ops?view=automations", icon: <Bot size={16} />, ativa: visaoDoOps === "automations" || visaoDoOps === "history" },
-                    { label: "Sites", href: "/ops?view=sites", icon: <Globe size={16} />, ativa: visaoDoOps === "sites" },
-                    { label: "Apps", href: "/ops?view=apps", icon: <AppWindow size={16} />, ativa: visaoDoOps === "apps" },
-                  ]}>
-                    {({ aberto, alternar, painelId }) => <NavItem href="/ops" icon={<ModuleIcon code={m.code} />} label={m.label} comTelas menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
-                  </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/sped-fiscal/motor"} icon={<ModuleIcon code={m.code} />} label={m.label} area={areaDoModulo(m.code) ?? "marca"} />;
-                  const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
-                  const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
-                  if (grupos.length <= 1 || modulos.length <= 8) {
-                    // As cores juntas também nas telas do setor (28/10/2026).
-                    return <>{itemSped}{agruparPorCor(modulos, (m) => areaDoModulo(m.code)).map((m) =>
-                      // O painel da Gestão mostra as abas dele ao lado, como fazia
-                      // quando era item do menu geral.
-                      m.code === "gestao_painel" ? (
-                        <PainelDoItem key={m.code} titulo={m.label} telas={TELAS_DA_GESTAO} area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />}>
-                          <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas={TELAS_DA_GESTAO.length > 0} area={areaDoModulo(m.code) ?? "marca"} />
+                  const contribuicoes = noContabil && grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined }) === "contribuicoes";
+                  // As telas de dentro de uma tela que têm entrada no menu (as abas
+                  // do GitHub, do Ops Center, do SPED Contábil e do Painel de
+                  // Gestão): ficam recuadas sob ela, como a Tela 2. A primeira aba
+                  // é a própria tela, que é o item de cima.
+                  const subTelas = (code: string): (TelaDoPainel & { ativa: boolean })[] => {
+                    switch (code) {
+                      case "tech_github_contributions":
+                        // A Produtividade (05/11/2026): Time é a tela de entrada; Pessoas e
+                        // GitHub ficam recuados. Desenvolvedores, Repositórios e Times são
+                        // abas dentro do GitHub.
+                        return [
+                          { label: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icon: <Users />, ativa: abaDaProdutividade(pathname) === "pessoas" },
+                          { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch />, ativa: abaDaProdutividade(pathname) === "github" },
+                        ];
+                      case "tech_ops_center":
+                        // A triagem dos chamados consulta Robôs, Sites e Apps (28/10/2026); Robôs é a tela de entrada.
+                        return [
+                          { label: "Sites", href: "/ops?view=sites", icon: <Globe />, ativa: visaoDoOps === "sites" },
+                          { label: "Apps", href: "/ops?view=apps", icon: <AppWindow />, ativa: visaoDoOps === "apps" },
+                        ];
+                      case "contabil_sped":
+                        // De-para e lançamentos é um trabalho em etapas (03/11/2026): é a tela de entrada.
+                        return [{ label: "Gerar SPED Contribuições", href: hrefContabil("contribuicoes", "gerar"), icon: <ModuleIcon code={code} />, ativa: contribuicoes }];
+                      case "gestao_painel":
+                        return TELAS_DA_GESTAO.slice(1).map((t) => ({ ...t, ativa: pathname === t.href || pathname.startsWith(`${t.href}/`) }));
+                      default:
+                        return [];
+                    }
+                  };
+                  // A tela de cima acende só quando nenhuma de dentro está aberta.
+                  const ativaSemFilha = (code: string, subs: { ativa: boolean }[]) => {
+                    if (subs.some((s) => s.ativa)) return false;
+                    if (code === "contabil_sped") return noContabil;
+                    if (code === "tech_ops_center") return visaoDoOps !== null;
+                    if (code === "gestao_painel") return pathname === "/gestao";
+                    if (code === "tech_github_contributions") return abaDaProdutividade(pathname) === "time";
+                    return undefined;
+                  };
+                  const linkDoContabil = hrefContabil("lancamentos", "entradas");
+
+                  type Filha = { chave: string; label: string; href: string; icon: React.ReactNode; ativa?: boolean };
+                  const itemComFilhas = (chave: string, mae: { label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; exact?: boolean; contador?: number }, filhas: Filha[]) => {
+                    if (naFaixa && filhas.length > 0) {
+                      // Na faixa, as filhas no painel ao lado da mãe (o clique na mãe abre a tela dela).
+                      return (
+                        <PainelDoItem key={chave} titulo={mae.label} area={mae.area} icone={mae.icon} telas={[{ label: mae.label, href: mae.href, icon: mae.icon, ativa: mae.ativo }, ...filhas.map((f) => ({ label: f.label, href: f.href, icon: f.icon, ativa: f.ativa }))]}>
+                          <NavItem href={mae.href} exact={mae.exact} ativo={mae.ativo} icon={mae.icon} label={mae.label} comTelas area={mae.area} />
                         </PainelDoItem>
-                      ) : (
-                        itemModulo(m)
-                      )
-                    )}</>;
-                  }
-                  // A tela do grupo continua (é o clique); o painel ao lado mostra
-                  // as telas dele sem precisar abri-la.
-                  const areaDoGrupo = (itens: SectorModule[]) => areaDoGrupoDeTelas(itens.map((i) => i.code)) ?? "marca";
-                  return <>{itemSped}{agruparPorCor(diretos, (m) => areaDoModulo(m.code)).map(itemModulo)}{agruparPorCor(grupos, (g) => areaDoGrupo(g.itens)).map(({ grupo, itens }) => (
-                    <PainelDoItem
-                      key={grupo}
-                      titulo={grupo}
-                      area={areaDoGrupo(itens)}
-                      icone={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
-                      verTudo={{ href: `/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`, rotulo: "Ver as telas do grupo" }}
-                      telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
+                      );
+                    }
+                    return (
+                      <Fragment key={chave}>
+                        <NavItem href={mae.href} exact={mae.exact} ativo={mae.ativo} icon={mae.icon} label={mae.label} contador={mae.contador} area={mae.area} />
+                        {filhas.map((f) => <NavItem key={f.chave} recuado href={f.href} ativo={f.ativa} icon={f.icon} label={f.label} area={mae.area} />)}
+                      </Fragment>
+                    );
+                  };
+                  const entrada = (e: EntradaDoMenu<SectorModule>) => {
+                    const subs = subTelas(e.tela.code);
+                    const filhas: Filha[] = [
+                      ...e.filhas.map((f) => ({ chave: f.code, label: f.label, href: f.href, icon: <ModuleIcon code={f.code} /> })),
+                      ...subs.map((s) => ({ chave: s.href, label: s.label, href: s.href, icon: s.icon, ativa: s.ativa })),
+                    ];
+                    const href = e.tela.code === "contabil_sped" ? linkDoContabil : e.tela.href;
+                    return itemComFilhas(e.tela.code, { label: e.tela.label, href, icon: <ModuleIcon code={e.tela.code} />, area: areaDe(e.tela.code), ativo: ativaSemFilha(e.tela.code, subs), exact: e.tela.href === "/sped-fiscal/motor", contador: e.tela.code === "helpdesk" ? novosChamados : undefined }, filhas);
+                  };
+
+                  // O SPED do Fiscal junta dez módulos num item só, com as etapas embaixo.
+                  const lateraisDoSped = sped.laterais.map((item) => {
+                    const q = new URLSearchParams();
+                    for (const campo of ["empresa", "competencia"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
+                    return { chave: item.href, label: item.label, href: q.size ? `${item.href}?${q}` : item.href, icon: <ModuleIcon code={item.modulo} />, ativa: areaSpedAtiva(pathname) === item.area };
+                  });
+                  const itemSped = sped.laterais.length > 0 && itemComFilhas(
+                    "sped",
+                    { label: "SPED", href: sped.href ?? sped.laterais[0].href, icon: <ReceiptText size={16} />, area: "fiscal", ativo: !!areaSpedAtiva(pathname) && !lateraisDoSped.some((l) => l.ativa) },
+                    lateraisDoSped,
+                  );
+
+                  const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDe(b.entrada.tela.code) : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
+                  return <>{itemSped}{(ordemEscolhida ? blocosDoSetor : agruparPorCor(blocosDoSetor, areaDoBloco)).map((b) => {
+                    if (b.tipo === "solta") return entrada(b.entrada);
+                    const itens = telasDoBloco(b);
+                    const area = areaDoBloco(b);
+                    if (naFaixa) {
+                      return (
+                        <PainelDoItem
+                          key={b.grupo}
+                          titulo={b.grupo}
+                          area={area}
+                          icone={<Icone nome={ICONE_DO_GRUPO[b.grupo]} />}
+                          verTudo={{ href: `/setor/${activeSector.code}/grupo/${slugDoGrupo(b.grupo)}`, rotulo: "Ver as telas do grupo" }}
+                          telas={itens.map((i) => ({ label: i.label, href: i.href, icon: <ModuleIcon code={i.code} /> }))}
+                        >
+                          <GrupoNavItem label={b.grupo} href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(b.grupo)}`} icon={<Icone nome={ICONE_DO_GRUPO[b.grupo]} />} itens={itens} area={area} />
+                        </PainelDoItem>
+                      );
+                    }
+                    return (
+                      <GrupoDoMenu
+                        key={b.grupo}
+                        titulo={b.grupo}
+                        telas={b.telas}
+                        aberto={grupoEstaAberto(b.grupo, grupoDaTelaAberta, escolhasDoMenu)}
+                        temTelaAberta={b.grupo === grupoDaTelaAberta}
+                        onAlternar={() => alternarGrupo(b.grupo, !grupoEstaAberto(b.grupo, grupoDaTelaAberta, escolhasDoMenu))}
+                      >
+                        {b.entradas.map(entrada)}
+                      </GrupoDoMenu>
+                    );
+                  })}{podeOrganizarMenu && !naFaixa && (
+                    <Link
+                      href={`/admin/setores?setor=${encodeURIComponent(activeSector.code)}#ordem-do-menu`}
+                      onClick={() => setMobileOpen(false)}
+                      className="mt-2 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-fs-1 text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
                     >
-                      <GrupoNavItem
-                        label={grupo}
-                        href={`/setor/${activeSector.code}/grupo/${slugDoGrupo(grupo)}`}
-                        icon={<Icone nome={ICONE_DO_GRUPO[grupo]} />}
-                        itens={itens}
-                        area={areaDoGrupo(itens)}
-                      />
-                    </PainelDoItem>
-                  ))}</>;
+                      <ArrowUpDown size={13} aria-hidden className="flex-shrink-0" />
+                      Organizar menu
+                    </Link>
+                  )}</>;
                 })()}
               </>
             ) : (
