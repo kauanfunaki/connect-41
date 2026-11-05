@@ -660,7 +660,9 @@ export function AppShell({
       <div className="c41-atmosfera flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Topbar */}
         <header
-          className={`relative h-[60px] flex-shrink-0 flex items-center gap-3 border-b px-4 lg:px-6 transition-colors ${
+          // `z-40`: os menus do topo (perfil, ajuda) abrem por cima da faixa da
+          // empresa logo abaixo, que tem `z-30` para as listas dela cobrirem a tela.
+          className={`relative z-40 h-[60px] flex-shrink-0 flex items-center gap-3 border-b px-4 lg:px-6 transition-colors ${
             rolou || grupoDaTela ? "border-border" : "border-transparent"
           }`}
         >
