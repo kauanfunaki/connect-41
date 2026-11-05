@@ -7,13 +7,14 @@ import { encryptSecret, decryptSecret } from "@/lib/crypto";
 import { pick } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/actionState";
-import { setoresDoModulo } from "@/lib/modules";
+import { isModuleEnabled } from "@/lib/modules";
 
 export type BpoCredencialState = ActionState;
 
-// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
-// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
-const SECTOR = "bpo";
+// Cofre por setor (05/11/2026): cada credencial é de um setor
+// (`BpoCredential.sectorCode`), e quem ver, revelar, editar ou excluir é
+// decidido pelo setor DELA — e não mais pelo setor que opera a tela. Criar
+// recebe o setor da tela (`setorDaTelaDoApoio`), conferido de novo aqui.
 const MODULE = "bpo_senhas";
 
 function credencialData(form: FormData) {
@@ -27,12 +28,14 @@ function credencialData(form: FormData) {
 }
 
 export async function criarCredencial(
+  setor: string,
   _prev: BpoCredencialState,
   form: FormData
 ): Promise<BpoCredencialState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do setor pode cadastrar credenciais." };
+  if (!setor || !(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "O Repositório de senhas está desligado." };
+  if (!canManageSector(ctx, setor)) return { error: "Só a coordenação do setor pode cadastrar credenciais." };
 
   const data = credencialData(form);
   const password = (form.get("password") as string)?.trim();
@@ -45,6 +48,7 @@ export async function criarCredencial(
     const created = await prisma.bpoCredential.create({
       data: {
         tenantId: ctx.tenantId,
+        sectorCode: setor,
         title: data.title,
         companyId: data.companyId,
         username: data.username,
@@ -69,7 +73,7 @@ export async function criarCredencial(
     metadata: { title: data.title },
   });
 
-  revalidatePath("/bpo-senhas");
+  revalidatePath("/senhas");
   return null;
 }
 
@@ -80,10 +84,10 @@ export async function atualizarCredencial(
 ): Promise<BpoCredencialState> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Só a coordenação do setor pode editar credenciais." };
 
-  const existing = await getPrisma().bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
+  const existing = await getPrisma().bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, sectorCode: true } });
   if (!existing) return { error: "Credencial não encontrada." };
+  if (!canManageSector(ctx, existing.sectorCode)) return { error: "Só a coordenação do setor pode editar credenciais." };
 
   const data = credencialData(form);
   if (!data.title) return { error: "Título é obrigatório" };
@@ -119,18 +123,18 @@ export async function atualizarCredencial(
     metadata: { title: data.title },
   });
 
-  revalidatePath("/bpo-senhas");
+  revalidatePath("/senhas");
   return null;
 }
 
 export async function excluirCredencial(id: string): Promise<void> {
   const ctx = await getAuthContext();
   // Excluir senha do cofre: só o administrador (13/10/2026). Era o gestor do BPO.
-  if (!ctx.tenantId || !ctx.userId || !podeExcluir(ctx) || !canManageSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return;
+  if (!ctx.tenantId || !ctx.userId || !podeExcluir(ctx)) return;
 
   const prisma = getPrisma();
-  const existing = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, title: true } });
-  if (!existing) return;
+  const existing = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, title: true, sectorCode: true } });
+  if (!existing || !canManageSector(ctx, existing.sectorCode)) return;
 
   try {
     await prisma.bpoCredential.delete({ where: { id } });
@@ -148,7 +152,7 @@ export async function excluirCredencial(id: string): Promise<void> {
     metadata: { title: existing.title },
   });
 
-  revalidatePath("/bpo-senhas");
+  revalidatePath("/senhas");
 }
 
 // Revela a senha em texto puro — qualquer colaborador do setor pode (não só
@@ -157,11 +161,12 @@ export async function excluirCredencial(id: string): Promise<void> {
 export async function revelarCredencial(id: string): Promise<{ error: string } | { password: string }> {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
-  if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { error: "Sem permissão para ver esta credencial." };
 
   const prisma = getPrisma();
-  const credential = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { passwordEnc: true } });
+  const credential = await prisma.bpoCredential.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { passwordEnc: true, sectorCode: true } });
   if (!credential) return { error: "Credencial não encontrada." };
+  // A senha de um setor não se revela a quem é de outro (cofre por setor, 05/11/2026).
+  if (!canActOnSector(ctx, credential.sectorCode)) return { error: "Sem permissão para ver esta credencial." };
 
   let password: string;
   try {

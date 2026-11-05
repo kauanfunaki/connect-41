@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
-import { setoresDoModulo } from "@/lib/modules";
+import { getAuthContext, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI, type AuthContext } from "@/lib/auth/context";
 
-// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
-// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
-const SECTOR = "bpo";
-const MODULE = "bpo_manual";
+// A capa de uma página do manual. Desde 05/11/2026 (Apoio de todo setor) a
+// permissão é a do setor do documento da página, e não a do setor da tela.
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -17,16 +14,23 @@ const ALLOWED_TYPES: Record<string, string> = {
 };
 const MAX_SIZE = 4 * 1024 * 1024;
 
+/** A página, se é deste escritório e a pessoa pode agir no setor do documento dela. */
+async function paginaPermitida(ctx: AuthContext, id: string) {
+  if (!ctx.tenantId) return null;
+  const page = await getPrisma().manualPage.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, document: { select: { sectorCode: true } } } });
+  if (!page) return { erro: NextResponse.json({ error: "Página não encontrada." }, { status: 404 }) };
+  if (!canActOnSector(ctx, page.document.sectorCode)) return { erro: NextResponse.json({ error: "Sem permissão." }, { status: 403 }) };
+  return { page };
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
-    return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
-  }
+  if (!ctx.tenantId) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
 
   const { id } = await params;
-  const prisma = getPrisma();
-  const page = await prisma.manualPage.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
-  if (!page) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
+  const achada = await paginaPermitida(ctx, id);
+  if (!achada) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
+  if ("erro" in achada) return achada.erro;
 
   const form = await req.formData();
   const file = form.get("cover");
@@ -49,25 +53,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await writeFile(path.join(dir, filename), buffer);
 
   const coverImageUrl = `/api/manual-covers/${filename}?v=${Date.now()}`;
-  await prisma.manualPage.update({ where: { id }, data: { coverImageUrl } });
+  await getPrisma().manualPage.update({ where: { id }, data: { coverImageUrl } });
 
   return NextResponse.json({ coverImageUrl });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) {
-    return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
-  }
+  if (!ctx.tenantId) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
   // Remover a capa: só o administrador (13/10/2026). Trocar segue com quem escreve.
   if (!podeExcluir(ctx)) return NextResponse.json({ error: SO_ADMIN_EXCLUI }, { status: 403 });
 
   const { id } = await params;
-  const prisma = getPrisma();
-  const page = await prisma.manualPage.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
-  if (!page) return NextResponse.json({ error: "Página não encontrada." }, { status: 404 });
+  const achada = await paginaPermitida(ctx, id);
+  if (!achada) return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
+  if ("erro" in achada) return achada.erro;
 
-  await prisma.manualPage.update({ where: { id }, data: { coverImageUrl: null } });
+  await getPrisma().manualPage.update({ where: { id }, data: { coverImageUrl: null } });
 
   return NextResponse.json({ coverImageUrl: null });
 }

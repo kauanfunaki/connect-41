@@ -15,13 +15,19 @@ type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "prefix"> & {
    * focar um campo, e vale pagar esse preço onde se digita de verdade.
    */
   compact?: boolean;
+  /**
+   * O campo que é o assunto da tela — o título de um item novo (05/11/2026,
+   * Controle interno): 48px de altura e 18px de fonte, para ler como título.
+   * Só no campo simples, sem prefixo, sufixo nem controle à direita.
+   */
+  grande?: boolean;
   /** Controle dentro do campo, à direita — o olho da senha, um "limpar".
    *  Diferente do `suffix`, é clicável e não leva a divisória. */
   direita?: React.ReactNode;
 };
 
-export function Input({ error = false, icon, prefix, suffix, direita, compact = false, className = "", disabled, readOnly, ...rest }: Props) {
-  const sizeClass = compact ? "h-8 text-ui" : "h-9 text-input";
+export function Input({ error = false, icon, prefix, suffix, direita, compact = false, grande = false, className = "", disabled, readOnly, ...rest }: Props) {
+  const sizeClass = compact ? "h-8 text-ui" : grande ? "h-12 text-fs-7 font-medium" : "h-9 text-input";
   // `w-full` é o padrão de formulário; quem passa largura própria (o mês do
   // filtro, as horas do processo) quer a dele. Com os dois, o `w-40` perdia
   // para o `w-full` no CSS, e o filtro de mês esticava pela tela inteira,

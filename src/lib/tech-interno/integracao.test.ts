@@ -54,58 +54,58 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   it("cria os cinco tipos, aceita opcionais vazios e cria histórico inicial", async () => {
     assumir(contexto());
     for (const type of ["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"]) {
-      const itemId = id(await salvarItem(criar({ type, dueDate: "", assigneeId: "" })));
+      const itemId = id(await salvarItem(ctx, criar({ type, dueDate: "", assigneeId: "" })));
       const item = await detalheItem(ctx, itemId);
       expect(item).toMatchObject({ type, priority: 1, status: "PENDING", systemMode: "NONE", dueDate: null, assigneeId: null, version: 0 });
       expect(item!.changes).toHaveLength(1); expect(item!.changes[0].authorId).toBe(tech);
     }
   });
   it("Kanban altera situação com histórico, conflito entre abas e bloqueio de somente leitura", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar()));
-    expect(await mudarSituacaoItem(itemId, "IN_PROGRESS", 0)).toMatchObject({ ok: true });
-    expect(await mudarSituacaoItem(itemId, "DONE", 0)).toEqual({ error: CONFLITO });
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar()));
+    expect(await mudarSituacaoItem(ctx, itemId, "IN_PROGRESS", 0)).toMatchObject({ ok: true });
+    expect(await mudarSituacaoItem(ctx, itemId, "DONE", 0)).toMatchObject({ error: CONFLITO });
     const item = await detalheItem(ctx, itemId);
     expect(item).toMatchObject({ status: "IN_PROGRESS", version: 1 }); expect(item!.changes[0].changes).toEqual([{ field: "Situação", before: "Pendente", after: "Em andamento" }]);
-    assumir(contexto(readonly, "READONLY")); expect(await mudarSituacaoItem(itemId, "DONE", 1)).toHaveProperty("error");
-    assumir(contexto(externo, "ADMIN", [], outroTenant)); expect(await mudarSituacaoItem(itemId, "DONE", 1)).toHaveProperty("error");
+    assumir(contexto(readonly, "READONLY")); expect(await mudarSituacaoItem(ctx, itemId, "DONE", 1)).toHaveProperty("error");
+    assumir(contexto(externo, "ADMIN", [], outroTenant)); expect(await mudarSituacaoItem(ctx, itemId, "DONE", 1)).toHaveProperty("error");
   });
   it("agenda respeita o mês, inclui itens sem prazo e conserva os filtros", async () => {
     assumir(contexto()); const prefixo = randomUUID();
-    for (const [dueDate, type] of [["2026-10-01", "BUG"], ["2026-10-31", "BUG"], ["2026-11-01", "BUG"], ["", "BUG"], ["2026-10-15", "TEST"]]) await salvarItem(criar({ title: prefixo, dueDate, type }));
+    for (const [dueDate, type] of [["2026-10-01", "BUG"], ["2026-10-31", "BUG"], ["2026-11-01", "BUG"], ["", "BUG"], ["2026-10-15", "TEST"]]) await salvarItem(ctx, criar({ title: prefixo, dueDate, type }));
     const agenda = await listarItens(ctx, lerFiltros({ q: prefixo, visao: "agenda", mes: "2026-10", tipo: "BUG" }));
     expect(agenda.total).toBe(3); expect(agenda.items.map(i => i.dueDate?.toISOString().slice(0, 10) ?? null).sort()).toEqual(["2026-10-01", "2026-10-31", null].sort());
     expect((await listarItens(ctx, lerFiltros({ q: prefixo, visao: "kanban" }))).total).toBe(5);
   });
   it("reabre e registra valores anteriores e novos; preserva calendário", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar({ title: "Antes", status: "DONE", dueDate: "2026-10-21" })));
-    expect(await salvarItem(criar({ title: "Depois", status: "PENDING", dueDate: "2026-10-21", assigneeId: tech }), itemId, 0)).toMatchObject({ ok: true });
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar({ title: "Antes", status: "DONE", dueDate: "2026-10-21" })));
+    expect(await salvarItem(ctx, criar({ title: "Depois", status: "PENDING", dueDate: "2026-10-21", assigneeId: tech }), itemId, 0)).toMatchObject({ ok: true });
     const item = await detalheItem(ctx, itemId);
     expect(item!.dueDate!.toISOString().slice(0, 10)).toBe("2026-10-21");
     expect(item!.changes[0].changes).toEqual(expect.arrayContaining([{ field: "Título", before: "Antes", after: "Depois" }, { field: "Situação", before: "Concluído", after: "Pendente" }]));
   });
   it("recusa versão antiga e duas edições simultâneas não se sobrescrevem", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar()));
-    const results = await Promise.all([salvarItem(criar({ title: "A" }), itemId, 0), salvarItem(criar({ title: "B" }), itemId, 0)]);
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar()));
+    const results = await Promise.all([salvarItem(ctx, criar({ title: "A" }), itemId, 0), salvarItem(ctx, criar({ title: "B" }), itemId, 0)]);
     expect(results.filter(r => "ok" in r)).toHaveLength(1);
-    expect(results.find(r => "error" in r)).toEqual({ error: CONFLITO });
-    expect(await salvarItem(criar(), itemId, 0)).toEqual({ error: CONFLITO });
-    expect(await salvarItem(criar(), itemId)).toEqual({ error: CONFLITO });
+    expect(results.find(r => "error" in r)).toMatchObject({ error: CONFLITO });
+    expect(await salvarItem(ctx, criar(), itemId, 0)).toMatchObject({ error: CONFLITO });
+    expect(await salvarItem(ctx, criar(), itemId)).toMatchObject({ error: CONFLITO });
     expect(await detalheItem(ctx, itemId)).toMatchObject({ version: 1 });
     expect(await db!.techInternalChange.count({ where: { itemId } })).toBe(2);
   });
   it("gravação e histórico são atômicos quando o autor deixa de existir", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar({ title: "Original" })));
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar({ title: "Original" })));
     assumir({ ...ctx, userId: "autor-inexistente" });
-    expect(await salvarItem(criar({ title: "Não deve persistir" }), itemId, 0)).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar({ title: "Não deve persistir" }), itemId, 0)).toHaveProperty("error");
     expect(await db!.techInternalItem.findUnique({ where: { id: itemId } })).toMatchObject({ title: "Original", version: 0 });
     expect(await db!.techInternalChange.count({ where: { itemId } })).toBe(1);
   });
   it("comentários independentes são preservados e não mudam a versão do formulário", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar()));
-    await Promise.all([comentarItem(itemId, "Primeiro comentário"), comentarItem(itemId, "Segundo comentário")]);
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar()));
+    await Promise.all([comentarItem(ctx, itemId, "Primeiro comentário"), comentarItem(ctx, itemId, "Segundo comentário")]);
     const item = await detalheItem(ctx, itemId); expect(item!.comments).toHaveLength(2); expect(item!.version).toBe(0);
     expect(item!.comments[0].authorName).toContain("Pessoa fictícia");
-    expect(await comentarItem(itemId, " ")).toHaveProperty("error");
+    expect(await comentarItem(ctx, itemId, " ")).toHaveProperty("error");
   });
   it("os sistemas vêm do Ops Center: robôs, sites e apps; inativos preservam vínculos", async () => {
     assumir(contexto()); const sufixo = randomUUID().slice(0, 8);
@@ -117,23 +117,23 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
       { chave: `site:${site.id}`, nome: site.name, origem: "site", ativo: true }, { chave: `app:${app.id}`, nome: app.name, origem: "app", ativo: true },
       { chave: `robo:robo-${sufixo}`, nome: `Robô ${sufixo}`, origem: "robo", ativo: true },
     ]));
-    const title = `Com sistema ${sufixo}`, itemId = id(await salvarItem(criar({ title, systemMode: "EXISTING", systemKey: `site:${site.id}` })));
+    const title = `Com sistema ${sufixo}`, itemId = id(await salvarItem(ctx, criar({ title, systemMode: "EXISTING", systemKey: `site:${site.id}` })));
     expect(await detalheItem(ctx, itemId)).toMatchObject({ opsSiteId: site.id, opsSite: { name: site.name } });
-    expect(await salvarItem(criar({ title, systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }), itemId, 0)).toMatchObject({ ok: true });
+    expect(await salvarItem(ctx, criar({ title, systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }), itemId, 0)).toMatchObject({ ok: true });
     expect(await detalheItem(ctx, itemId)).toMatchObject({ opsSiteId: null, opsWatcherSlug: `robo-${sufixo}` });
     expect((await detalheItem(ctx, itemId))!.changes[0].changes).toEqual([{ field: "Sistema", before: site.name, after: `Robô ${sufixo}` }]);
     expect((await listarItens(ctx, lerFiltros({ sistema: `robo:robo-${sufixo}` }))).items.map(i => i.id)).toEqual([itemId]);
     await db!.opsWatcher.update({ where: { tenantId_slug: { tenantId, slug: `robo-${sufixo}` } }, data: { isActive: false } });
-    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }))).toHaveProperty("error");
-    expect(await salvarItem(criar({ title, systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }), itemId, 1)).toMatchObject({ ok: true });
-    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `app:${randomUUID()}` }))).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar({ systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }))).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar({ title, systemMode: "EXISTING", systemKey: `robo:robo-${sufixo}` }), itemId, 1)).toMatchObject({ ok: true });
+    expect(await salvarItem(ctx, criar({ systemMode: "EXISTING", systemKey: `app:${randomUUID()}` }))).toHaveProperty("error");
     // O cadastro anterior só mantém o vínculo que já existia.
     const tool = await db!.techInternalTool.create({ data: { tenantId, name: `Antigo ${sufixo}` } });
-    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `tool:${tool.id}` }))).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar({ systemMode: "EXISTING", systemKey: `tool:${tool.id}` }))).toHaveProperty("error");
   });
   it("o histórico geral traz cada alteração com autor, item e ordem mais recente", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar({ title: "Histórico geral" })));
-    expect(await mudarSituacaoItem(itemId, "VALIDATION", 0)).toMatchObject({ ok: true });
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar({ title: "Histórico geral" })));
+    expect(await mudarSituacaoItem(ctx, itemId, "VALIDATION", 0)).toMatchObject({ ok: true });
     const { changes, total } = await historicoTech(ctx, { pagina: 1 });
     expect(total).toBeGreaterThanOrEqual(2);
     expect(changes[0]).toMatchObject({ itemId, authorId: tech, version: 1, item: { title: "Histórico geral" }, changes: [{ field: "Situação", before: "Pendente", after: "Em validação" }] });
@@ -147,7 +147,7 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   });
   it("excluir a conta solta o responsável e preserva comentários e autoria do histórico", async () => {
     const temporario = await novoUsuario(tenantId, "SECTOR_USER", "tech"); assumir(contexto(temporario));
-    const itemId = id(await salvarItem(criar({ assigneeId: temporario }))); await comentarItem(itemId, "Registro que deve permanecer.");
+    const itemId = id(await salvarItem(ctx, criar({ assigneeId: temporario }))); await comentarItem(ctx, itemId, "Registro que deve permanecer.");
     await db!.user.delete({ where: { id: temporario } }); assumir(contexto());
     const item = await detalheItem(ctx, itemId);
     expect(item!.assigneeId).toBeNull(); expect(item!.comments[0]).toMatchObject({ authorId: temporario, authorName: "Pessoa fictícia SECTOR_USER", body: "Registro que deve permanecer." });
@@ -155,32 +155,32 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   });
   it("recusa responsáveis de outros setores, inativos, somente leitura e outro escritório", async () => {
     assumir(contexto());
-    for (const assigneeId of [fiscal, externo, readonly]) expect(await salvarItem(criar({ assigneeId }))).toHaveProperty("error");
+    for (const assigneeId of [fiscal, externo, readonly]) expect(await salvarItem(ctx, criar({ assigneeId }))).toHaveProperty("error");
     await db!.user.update({ where: { id: tech }, data: { active: false } });
-    assumir(contexto(admin, "ADMIN", ["fiscal"])); expect(await salvarItem(criar({ assigneeId: tech }))).toHaveProperty("error");
+    assumir(contexto(admin, "ADMIN", ["fiscal"])); expect(await salvarItem(ctx, criar({ assigneeId: tech }))).toHaveProperty("error");
     await db!.user.update({ where: { id: tech }, data: { active: true } });
-    expect(await salvarItem(criar({ assigneeId: admin }))).toMatchObject({ ok: true });
+    expect(await salvarItem(ctx, criar({ assigneeId: admin }))).toMatchObject({ ok: true });
   });
   it("isola leitura, comentários, atualizações, ferramentas e filtros entre escritórios", async () => {
     assumir(contexto(gestor, "SECTOR_ADMIN"));
-    const site = await db!.opsSite.create({ data: { tenantId, name: `Privado ${randomUUID()}`, url: "https://privado.example.test" } }); const itemId = id(await salvarItem(criar()));
+    const site = await db!.opsSite.create({ data: { tenantId, name: `Privado ${randomUUID()}`, url: "https://privado.example.test" } }); const itemId = id(await salvarItem(ctx, criar()));
     assumir(contexto(externo, "SECTOR_USER", ["tech"], outroTenant));
-    expect(await detalheItem(ctx, itemId)).toBeNull(); expect(await comentarItem(itemId, "Não autorizado")).toHaveProperty("error");
-    expect(await salvarItem(criar(), itemId, 0)).toHaveProperty("error");
-    expect(await salvarItem(criar({ systemMode: "EXISTING", systemKey: `site:${site.id}` }))).toHaveProperty("error");
+    expect(await detalheItem(ctx, itemId)).toBeNull(); expect(await comentarItem(ctx, itemId, "Não autorizado")).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar(), itemId, 0)).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar({ systemMode: "EXISTING", systemKey: `site:${site.id}` }))).toHaveProperty("error");
     expect((await listarItens(ctx, lerFiltros({ situacao: "ALL" }))).total).toBe(0);
     expect((await opcoesTech(ctx)).sistemas).toHaveLength(0);
   });
   it("bloqueia outro setor, somente leitura, assinatura e módulo desativado", async () => {
-    assumir(contexto()); const itemId = id(await salvarItem(criar()));
+    assumir(contexto()); const itemId = id(await salvarItem(ctx, criar()));
     assumir(contexto(fiscal, "SECTOR_USER", ["fiscal"]));
-    await expect(detalheItem(ctx, itemId)).rejects.toThrow(); expect(await salvarItem(criar())).toHaveProperty("error");
+    await expect(detalheItem(ctx, itemId)).rejects.toThrow(); expect(await salvarItem(ctx, criar())).toHaveProperty("error");
     assumir(contexto(readonly, "READONLY", ["fiscal"])); expect(await detalheItem(ctx, itemId)).not.toBeNull();
-    expect(await salvarItem(criar())).toHaveProperty("error"); expect(await comentarItem(itemId, "Não permitido")).toHaveProperty("error");
-    assumir({ ...contexto(), subscriptionReadOnly: true }); expect(await salvarItem(criar())).toHaveProperty("error");
-    expect(await comentarItem(itemId, "Não permitido")).toHaveProperty("error");
+    expect(await salvarItem(ctx, criar())).toHaveProperty("error"); expect(await comentarItem(ctx, itemId, "Não permitido")).toHaveProperty("error");
+    assumir({ ...contexto(), subscriptionReadOnly: true }); expect(await salvarItem(ctx, criar())).toHaveProperty("error");
+    expect(await comentarItem(ctx, itemId, "Não permitido")).toHaveProperty("error");
     await db!.tenantModule.update({ where: { tenantId_moduleCode: { tenantId, moduleCode: "tech_controle_interno" } }, data: { enabled: false } });
-    assumir(contexto(admin, "ADMIN", [])); await expect(listarItens(ctx, lerFiltros({}))).rejects.toThrow(); expect(await salvarItem(criar())).toHaveProperty("error");
+    assumir(contexto(admin, "ADMIN", [])); await expect(listarItens(ctx, lerFiltros({}))).rejects.toThrow(); expect(await salvarItem(ctx, criar())).toHaveProperty("error");
     await db!.tenantModule.update({ where: { tenantId_moduleCode: { tenantId, moduleCode: "tech_controle_interno" } }, data: { enabled: true } });
   });
   it("filtra combinações, atrasados e estados especiais; pagina 50 itens com ordem estável", async () => {
@@ -194,8 +194,8 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     expect((await listarItens(ctx, { ...filtros, assignee: "none" })).total).toBe(0);
     expect((await listarItens(ctx, { ...filtros, system: "NONE" })).total).toBe(0);
     expect((await listarItens(ctx, { ...filtros, status: "DONE" })).total).toBe(0);
-    const urgent = id(await salvarItem(criar({ title: prefixo + " urgente", priority: 3, dueDate: "2019-01-01" })));
-    const low = id(await salvarItem(criar({ title: prefixo + " baixa", priority: 0, dueDate: "2018-01-01" })));
+    const urgent = id(await salvarItem(ctx, criar({ title: prefixo + " urgente", priority: 3, dueDate: "2019-01-01" })));
+    const low = id(await salvarItem(ctx, criar({ title: prefixo + " baixa", priority: 0, dueDate: "2018-01-01" })));
     const todos = await listarItens(ctx, lerFiltros({ q: prefixo })); expect(todos.items[0].id).toBe(urgent); expect(todos.items.some(i => i.id === low)).toBe(false);
   });
 });
