@@ -308,6 +308,7 @@ const USUARIO: Ligacao[] = [
   // Da própria conta — o banco apaga junto.
   { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Ceci", "conversas com a Ceci"] },
   { modelo: "Notification", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["notificação", "notificações"] },
+  { modelo: "PersonalApiToken", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["token de acesso", "tokens de acesso"] },
   { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de atividade dos Quadros (a atividade fica, sem ele)", "atribuições de atividade dos Quadros (as atividades ficam, sem ele)"] },
   { modelo: "VagaRecrutador", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PipelineItemWatcher", campo: "user", fk: "userId", tratamento: "cascata" },
@@ -344,6 +345,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "PersonalApiToken", coluna: "revokedById", tratamento: "manter", motivo: "quem revogou o token de outra pessoa (o administrador); a tela não expõe o id" },
   { modelo: "TechInternalAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },

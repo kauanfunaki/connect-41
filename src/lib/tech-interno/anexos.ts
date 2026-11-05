@@ -14,6 +14,7 @@ import { podeNoModulo } from "@/lib/auth/modulo";
 import { criarArmazenamento } from "@/lib/financeiro/pendencias/armazenamento";
 import { validarArquivoDoDrive } from "@/lib/drive/tipoDoArquivo";
 import { MODULO_TECH_INTERNO } from "./regras";
+import { metadadosDoAtor, type AtorTech } from "./servidor";
 
 export const armazenamentoTech = criarArmazenamento("tech-interno", { validar: validarArquivoDoDrive, maximoPorEnvio: 1 });
 
@@ -22,7 +23,7 @@ export const MAXIMO_DE_ANEXOS_POR_ITEM = 50;
 
 type Resultado<T> = { ok: true; valor: T } | { ok: false; erro: string; status: number };
 
-export async function anexarArquivo(ctx: AuthContext, itemId: string, arquivo: File): Promise<Resultado<{ id: string; nome: string }>> {
+export async function anexarArquivo(ctx: AtorTech, itemId: string, arquivo: File): Promise<Resultado<{ id: string; nome: string }>> {
   if (!ctx.userId || !ctx.tenantId || !await podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir")) {
     return { ok: false, erro: "Você não pode anexar arquivos neste item.", status: 403 };
   }
@@ -44,7 +45,7 @@ export async function anexarArquivo(ctx: AuthContext, itemId: string, arquivo: F
       data: { tenantId: ctx.tenantId, itemId, uploadedById: ctx.userId, uploadedByName: pessoa.name, ...gravado },
       select: { id: true, fileName: true },
     });
-    await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tech_interno.item.attachment", entityType: "TechInternalItem", entityId: itemId, metadata: { title: item.title, arquivo: anexo.fileName } });
+    await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tech_interno.item.attachment", entityType: "TechInternalItem", entityId: itemId, metadata: { title: item.title, arquivo: anexo.fileName, ...metadadosDoAtor(ctx) } });
     return { ok: true, valor: { id: anexo.id, nome: anexo.fileName } };
   } catch (err) {
     await armazenamentoTech.apagarAnexosGravados(gravados.anexos);

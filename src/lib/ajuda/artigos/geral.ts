@@ -823,4 +823,57 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Enquanto os custos dos setores não forem informados em “Parâmetros”, o preço da simulação não serve para proposta.",
     ],
   },
+
+  // ─── Tokens de acesso e IA (05/11/2026) ────────────────────────────────────
+  // Sem caminho: a seção fica dentro de “Sua conta”, e o “?” de lá não pode
+  // virar este artigo. Chega-se pelo link da própria seção e pela central.
+  {
+    chave: "geral:tokens-de-acesso",
+    titulo: "Tokens de acesso e IA",
+    caminhos: [],
+    resumo:
+      "Conecte a sua IA (Claude Code, Codex, Cursor) ou um script ao Controle interno: com um token pessoal, ela consulta, registra e atualiza bugs, melhorias e novas funcionalidades em seu nome.",
+    secoes: [
+      {
+        titulo: "Como criar um token",
+        passos: [
+          "Abra “Configurações” e, em “Sua conta”, vá até “Tokens de acesso”.",
+          "Dê um “Nome do token” que diga onde ele vai ser usado, como “Claude Code no notebook”.",
+          "Em “O que o token pode fazer”, escolha “Consultar e registrar” ou “Só consultar”.",
+          "Escolha a “Validade” e clique em “Criar token”.",
+          "Copie o token na hora: depois que você sair da tela, ele não aparece de novo.",
+        ],
+      },
+      {
+        titulo: "Como conectar o Claude Code",
+        passos: [
+          "Logo depois de criar o token, copie o comando de “Para o Claude Code, rode no terminal”.",
+          "Cole e rode o comando no terminal do seu computador.",
+          "Abra o Claude Code e peça, por exemplo: “registre um bug no Controle interno: a busca de empresas não acha pelo CNPJ”.",
+        ],
+      },
+      {
+        titulo: "Como conectar o Codex ou o Cursor",
+        passos: [
+          "No Codex, acrescente ao arquivo de configuração dele um servidor MCP chamado “connect”, com o endereço do Connect terminado em “/api/mcp” e o cabeçalho “Authorization: Bearer” seguido do token.",
+          "No Cursor, acrescente o mesmo servidor no arquivo “mcp.json”, com o endereço e o cabeçalho.",
+          "O passo a passo com os arquivos prontos para copiar fica no guia técnico do Connect, para quem cuida da integração.",
+        ],
+      },
+      {
+        titulo: "Como revogar um token",
+        passos: [
+          "Em “Tokens de acesso”, encontre o token em “Seus tokens”.",
+          "Clique em “Revogar” e confirme. A IA ou o script que usava o token para de funcionar na hora.",
+        ],
+      },
+    ],
+    dicas: [
+      "O token age com o seu acesso de hoje: se o seu papel ou os seus setores mudarem, o que ele pode fazer muda junto.",
+      "Tudo o que a IA faz fica no histórico do item com o seu nome, e a Auditoria marca que veio pelo token.",
+      "Todo token vence. Perto de vencer, ele aparece como “Vence em breve”; crie outro e revogue o antigo.",
+      "O administrador vê os tokens ativos do escritório e pode revogar qualquer um.",
+      "Trate o token como uma senha: não cole em chat, e-mail ou repositório.",
+    ],
+  },
 ];
