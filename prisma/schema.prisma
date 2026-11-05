@@ -1441,6 +1441,8 @@ model Tenant {
   whatsappAtendimentos      WhatsappAtendimento[]
   licenses                  License[]
   digitalCertificates       DigitalCertificate[]
+  digitalCertificateUses    DigitalCertificateUse[]
+  digitalCertificateUseDays DigitalCertificateUseDay[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
@@ -8918,6 +8920,18 @@ model DigitalCertificate {
   conferir     String?  @db.VarChar(300)
   /// Última importação em que o certificado estava no relatório.
   importedAt   DateTime
+  /// A renovação deste certificado (05/11/2026): em que pé está, quem cuida,
+  /// quanto custa e quem paga — a parte que o Financeiro lê. Nulo = ninguém
+  /// mexeu (a tela mostra "A pedir" quando ele já está a renovar).
+  /// A_PEDIR | PEDIDO | COMPRADO | NAO_RENOVAR
+  renovacaoStatus        String?   @db.VarChar(12)
+  /// Usuário da equipe que cuida da renovação.
+  renovacaoResponsavelId String?
+  /// Custo da renovação, em centavos.
+  renovacaoCustoCentavos Int?
+  /// CLIENTE | ESCRITORIO (a 41)
+  renovacaoPagaQuem      String?   @db.VarChar(10)
+  renovacaoAtualizadaEm  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -8928,6 +8942,53 @@ model DigitalCertificate {
   @@index([tenantId, expiresAt])
   @@index([tenantId, companyId])
   @@map("digital_certificates")
+}
+
+/// Onde o certificado de um CNPJ/CPF é usado (05/11/2026). A chave é o
+/// documento, e não o certificado: renovar gera outro arquivo (outra linha em
+/// DigitalCertificate), e o robô, o Serpro e a NFS-e seguem usando o do mesmo
+/// CNPJ — o certificado novo herda os usos, e o "se vencer, para…" continua
+/// certo. Uma linha por uso; `declarado` é o "Usado por" marcado à mão por quem
+/// coordena, `ultimoUsoAt` vem do registro automático (robô, Serpro).
+/// Os códigos de uso e o impacto escrito moram em src/lib/certificados/usos.ts.
+model DigitalCertificateUse {
+  id             String    @id @default(uuid())
+  tenantId       String
+  /// CNPJ (14) ou CPF (11), só dígitos.
+  documento      String    @db.VarChar(14)
+  /// serpro | nfse | procuracao_ecac | outro | robo:<tipo da tarefa>
+  uso            String    @db.VarChar(40)
+  /// O texto do uso "outro".
+  descricao      String?   @db.VarChar(80)
+  declarado      Boolean   @default(false)
+  declaradoPorId String?
+  /// Último uso registrado pelo sistema; nulo = só declarado.
+  ultimoUsoAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, documento, uso])
+  @@map("digital_certificate_uses")
+}
+
+/// Quantas vezes o certificado foi usado em cada dia, por uso: a contagem dos
+/// 30 dias e o "sem uso há 90 dias" saem daqui. Uma linha por documento, uso e
+/// dia — o robô e o Serpro somam na mesma linha (INSERT … ON DUPLICATE KEY).
+model DigitalCertificateUseDay {
+  tenantId  String
+  documento String   @db.VarChar(14)
+  uso       String   @db.VarChar(40)
+  /// O dia em UTC.
+  dia       DateTime @db.Date
+  vezes     Int      @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@id([tenantId, documento, uso, dia])
+  @@index([tenantId, dia])
+  @@map("digital_certificate_use_days")
 }
 
 /// Autorização de Acesso da Receita Federal — a procuração eletrônica do e-CAC,

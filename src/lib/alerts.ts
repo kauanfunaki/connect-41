@@ -14,6 +14,7 @@ import { nomeExibicao } from "@/lib/companyName";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { atuaisPorDocumento, faixaDeAviso } from "@/lib/certificados/certificados";
+import { mensagemDoAviso, seVencerParaCurto } from "@/lib/certificados/usos";
 import { diasAte } from "@/lib/societario/licencas";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { avisoDeContasAPagar, avisoDeOrcamento, avisoDePendenciasVencidas, maiorEstouro } from "@/lib/financeiro/alertas";
@@ -628,21 +629,33 @@ async function checkCertificadosVencendo(tenantId: string, today: Date): Promise
   const prisma = getPrisma();
   const certs = await prisma.digitalCertificate.findMany({
     where: { tenantId },
-    select: { id: true, documento: true, titular: true, expiresAt: true, companyId: true, cofreEntrada: true },
+    select: { id: true, documento: true, titular: true, expiresAt: true, companyId: true, cofreEntrada: true, renovacaoStatus: true },
   });
   const setor = (await setorDoModulo(tenantId, MODULO_CERTIFICADOS)) ?? getModuleDef(MODULO_CERTIFICADOS)!.sectorCode;
   const agora = new Date();
+  // O que para se ele vencer (05/11/2026): os usos do documento, registrados
+  // pelo robô e pelo Serpro ou declarados à mão (ver certificados/usos.ts).
+  const atuais = [...atuaisPorDocumento(certs).values()].filter((c) => faixaDeAviso(c.expiresAt, agora) !== null);
+  const usos = atuais.length
+    ? await prisma.digitalCertificateUse.findMany({
+        where: { tenantId, documento: { in: atuais.map((c) => c.documento) } },
+        select: { documento: true, uso: true, descricao: true, declarado: true, ultimoUsoAt: true },
+      })
+    : [];
 
   let sent = 0;
-  for (const c of atuaisPorDocumento(certs).values()) {
-    const faixa = faixaDeAviso(c.expiresAt, agora);
-    if (faixa === null) continue;
+  for (const c of atuais) {
+    // Quem marcou "não renovar" já decidiu: o aviso só faria barulho.
+    if (c.renovacaoStatus === "NAO_RENOVAR") continue;
+    const faixa = faixaDeAviso(c.expiresAt, agora)!;
     if (!(await reservarPorChave(tenantId, `CERT_EXPIRING:${c.id}:${faixa}`, today))) continue;
 
-    const dias = diasAte(c.expiresAt, agora);
-    const data = c.expiresAt.toISOString().slice(0, 10).split("-").reverse().join("/");
-    const quando = dias < 0 ? `venceu em ${data}` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s), ${data}`;
-    const message = `Certificado digital de ${c.titular} ${quando}.`.slice(0, 255);
+    const message = mensagemDoAviso({
+      titular: c.titular,
+      expiresAt: c.expiresAt,
+      agora,
+      impactoCurto: seVencerParaCurto(usos.filter((u) => u.documento === c.documento), agora),
+    });
     await notifySector(setor, {
       tenantId,
       type: "CERT_EXPIRING",

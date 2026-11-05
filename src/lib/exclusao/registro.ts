@@ -390,10 +390,12 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Vaga", coluna: "responsibleUserId", tratamento: "desligar" },
   { modelo: "PipelineItem", coluna: "activeTimerUserId", tratamento: "desligar" },
   { modelo: "Process", coluna: "activeTimerUserId", tratamento: "desligar" },
+  { modelo: "DigitalCertificate", coluna: "renovacaoResponsavelId", tratamento: "desligar" },
   // Trilhas que guardam o id de quem fez e não mostram o nome.
   { modelo: "Notification", coluna: "actorUserId", tratamento: "manter", motivo: "a notificação já foi entregue; o texto leva o nome" },
   { modelo: "AgentRun", coluna: "userId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "SerproCall", coluna: "userId", tratamento: "manter", motivo: "trilha de consultas ao Serpro (cobradas por chamada)" },
+  { modelo: "DigitalCertificateUse", coluna: "declaradoPorId", tratamento: "manter", motivo: "quem marcou o uso do certificado; a tela não expõe o id" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },

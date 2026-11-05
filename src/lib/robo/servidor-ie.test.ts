@@ -10,8 +10,11 @@ const m = await vi.hoisted(async () => {
     company: tabela({ displayName: null, cnpj: null, stateRegistrationStatus: null, stateRegistrationCheckedAt: null, stateRegistrationChangedAt: null }),
     opsWatcher: tabela({}),
     notifySector: vi.fn(),
+    registrarUso: vi.fn(async () => true),
   };
 });
+
+vi.mock("@/lib/certificados/registro", () => ({ registrarUsoDoCertificado: m.registrarUso }));
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ robotTask: m.robotTask, company: m.company, opsWatcher: m.opsWatcher }) }));
 vi.mock("@/lib/notifications", () => ({ notifySector: m.notifySector, notifyUser: vi.fn() }));
@@ -80,5 +83,32 @@ describe("a vigilância da IE na fila", () => {
     const { tarefa: segunda } = await pegarProxima(MAQUINA, ["vigiar_ie"]);
     const empresaDaSegunda = m.robotTask.linhas.find((t) => t.id === segunda!.id)!.companyId;
     expect([primeira, empresaDaSegunda].sort()).toEqual(["a", "b"]);
+  });
+});
+
+// 05/11/2026: a devolução com o CNPJ do certificado vira uso na tela Certificados.
+describe("o uso do certificado na devolução", () => {
+  it("devolução feita com certificado registra o uso pelo tipo da tarefa", async () => {
+    m.company.linhas.push(empresa("a"));
+    const { tarefa } = await pegarProxima(MAQUINA, ["vigiar_ie"]);
+    await devolverTarefa(MAQUINA, tarefa!.id, { ok: true, resultado: { situacao: "ATIVO" }, certificado: { documento: "11222333000181" } }, null);
+    expect(m.registrarUso).toHaveBeenCalledWith(TENANT, "11222333000181", "robo:vigiar_ie");
+  });
+
+  it("vale mesmo quando o resultado vai para uma pessoa: o login funcionou", async () => {
+    m.company.linhas.push(empresa("a"));
+    const { tarefa } = await pegarProxima(MAQUINA, ["vigiar_ie"]);
+    const r = await devolverTarefa(MAQUINA, tarefa!.id, { ok: true, resultado: { situacao: "Erro 500" }, certificado: { documento: "11222333000181" } }, null);
+    expect(r.status).toBe("PRECISA_DE_GENTE");
+    expect(m.registrarUso).toHaveBeenCalledTimes(1);
+  });
+
+  it("máquina antiga (sem o campo) e falha não registram nada", async () => {
+    m.company.linhas.push(empresa("a"), empresa("b"));
+    const { tarefa } = await pegarProxima(MAQUINA, ["vigiar_ie"]);
+    await devolverTarefa(MAQUINA, tarefa!.id, { ok: true, resultado: { situacao: "ATIVO" } }, null);
+    const { tarefa: outra } = await pegarProxima(MAQUINA, ["vigiar_ie"]);
+    await devolverTarefa(MAQUINA, outra!.id, { ok: false, motivo: "site fora do ar", recuperavel: true, certificado: { documento: "11222333000181" } }, null);
+    expect(m.registrarUso).not.toHaveBeenCalled();
   });
 });
