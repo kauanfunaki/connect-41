@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ehRotaDeTokenPessoal, escoposEfetivos, gravarEscopos, lerEscopos, novoTokenSchema, pistaDoToken, situacaoDoToken, tokenDoCabecalho,
+  ehRotaDeTokenPessoal, escoposEfetivos, gravarEscopos, lerEscopos, novoTokenSchema, pistaDoToken, situacaoDoToken, tokenDoCabecalho, comandoDoClaudeCode, origemDoComando,
 } from "./regras";
 
 const TOKEN_FALSO = `c41_${"ab".repeat(32)}`;
@@ -47,5 +47,17 @@ describe("token pessoal: regras sem banco", () => {
   it("o proxy libera só a API do Controle interno e o MCP", () => {
     for (const p of ["/api/mcp", "/api/v1/controle-interno", "/api/v1/controle-interno/abc", "/api/v1/controle-interno/abc/anexos"]) expect(ehRotaDeTokenPessoal(p), p).toBe(true);
     for (const p of ["/api/mcpx", "/api/mcp/outra", "/api/v1/controle-internox", "/api/v1/outro", "/api/tech-interno/anexos", "/controle-interno"]) expect(ehRotaDeTokenPessoal(p), p).toBe(false);
+  });
+});
+
+describe("o comando da IA", () => {
+  it("usa o endereço neutro do Connect, e não o do setor em que a página foi aberta", () => {
+    expect(origemDoComando("https://societario.useconnect.com.br", "app.useconnect.com.br")).toBe("https://app.useconnect.com.br");
+    expect(origemDoComando("http://localhost:3000", null)).toBe("http://localhost:3000");
+  });
+
+  it("o Claude Code com --scope user, para valer em todas as pastas", () => {
+    const c = comandoDoClaudeCode("https://app.useconnect.com.br", "c41_abc");
+    expect(c).toBe('claude mcp add --scope user --transport http connect https://app.useconnect.com.br/api/mcp --header "Authorization: Bearer c41_abc"');
   });
 });
