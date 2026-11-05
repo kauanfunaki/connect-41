@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FolderGit2, GitCommitHorizontal, LayoutGrid, Lock, Settings2, Users, UsersRound } from "lucide-react";
+import { FolderGit2, GitCommitHorizontal, LayoutGrid, Lock, Plus, Users, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { IconButton } from "@/components/ui/IconButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -28,7 +27,6 @@ import { DeveloperAvatar, DeveloperName, GithubOverview } from "./GithubOverview
 import { GithubTimes } from "./GithubTimes";
 import styles from "./GithubContributions.module.css";
 
-const INTEGRATION = "/admin/integracoes?integracao=github";
 export type View = "general" | "developers" | "repositories" | "teams";
 const PATHS: Record<View, string> = { general: "/github", developers: "/github/desenvolvedores", repositories: "/github/repositorios", teams: "/github/times" };
 const SUBTITLES: Record<View, string> = { general: "Acompanhe a atividade do time no GitHub.", developers: "Desenvolvedores e suas contribuições.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
@@ -38,18 +36,18 @@ const TYPE_SINGULAR: Record<ContributionType, string> = { COMMIT: "Commit", PULL
 // "team": o dia do calendário do time (aba Geral), com todas as pessoas do filtro.
 type Detail = { kind: "user" | "repository" | "team"; id: string; day: string };
 
-export function GithubContributions({ initialQuery: suppliedQuery, canConfigure, view = "general" }: { initialQuery: string; canConfigure: boolean; view?: View }) {
+export function GithubContributions({ initialQuery: suppliedQuery, canConfigure, conectar = false, view = "general" }: { initialQuery: string; canConfigure: boolean; conectar?: boolean; view?: View }) {
   // A aba Times (04/11/2026) é só do coordenador e não lê o painel.
-  if (view === "teams") return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure}><GithubTimes /></GithubShell>;
-  return <Dashboard initialQuery={suppliedQuery} canConfigure={canConfigure} view={view} />;
+  if (view === "teams") return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar}><GithubTimes /></GithubShell>;
+  return <Dashboard initialQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar} view={view} />;
 }
 
 // Cabeçalho e abas, comuns às quatro telas. "Times" só aparece para quem gerencia o módulo.
-function GithubShell({ view, suppliedQuery, canConfigure, children }: { view: View; suppliedQuery: string; canConfigure: boolean; children: React.ReactNode }) {
+function GithubShell({ view, suppliedQuery, canConfigure, conectar, children }: { view: View; suppliedQuery: string; canConfigure: boolean; conectar: boolean; children: React.ReactNode }) {
   const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
   return <PageContainer>
     <PageHeader title="GitHub" subtitle={SUBTITLES[view]}
-      action={canConfigure ? <IconButton href={INTEGRATION} title="Integração GitHub" variant="framed"><Settings2 size={16} /></IconButton> : undefined} />
+      action={conectar ? <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button> : undefined} />
     <AbasDeLink className="mb-6" aria-label="GitHub" ativa={view} abas={[
       { chave: "general", rotulo: "Geral", href: `/github?${tabParams}`, icone: <LayoutGrid /> },
       { chave: "developers", rotulo: "Desenvolvedores", href: `/github/desenvolvedores?${tabParams}`, icone: <Users /> },
@@ -60,7 +58,7 @@ function GithubShell({ view, suppliedQuery, canConfigure, children }: { view: Vi
   </PageContainer>;
 }
 
-function Dashboard({ initialQuery: suppliedQuery, canConfigure, view }: { initialQuery: string; canConfigure: boolean; view: Exclude<View, "teams"> }) {
+function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }: { initialQuery: string; canConfigure: boolean; conectar: boolean; view: Exclude<View, "teams"> }) {
   // `cor` (pessoa ou time) só muda a pintura: sai da consulta para não reler o painel.
   const modo: ModoDeCor = new URLSearchParams(suppliedQuery).get("cor") === "time" ? "time" : "pessoa";
   const requestParams = new URLSearchParams(suppliedQuery); requestParams.set("view", view); requestParams.delete("cor");
@@ -91,11 +89,11 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, view }: { initia
   const detailTitle = detailUser ? (detailUser.name ? `${detailUser.login} — ${detailUser.name}` : detailUser.login)
     : detail?.kind === "repository" ? data?.repositories.find(repo => repo.id === detail.id)?.fullName : detail?.kind === "team" ? "Todo o time" : undefined;
   // O título é o nome do módulo no menu; Geral, Desenvolvedores, Repositórios e Times são abas dele.
-  return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure}>
+  return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar}>
     {dates && !data?.message && <Toolbar path={path} query={suppliedQuery} from={dates.from} to={dates.to} filtered={filtered} modo={modo} />}
     {error && <Aviso className="mb-4">{error}{!data && !loading && <> <Button variant="link" onClick={() => { setError(null); setTentativa(n => n + 1); }}>Tentar novamente</Button></>}</Aviso>}
     {loading && <div aria-busy><span className="sr-only" role="status">Carregando contribuições…</span>{view === "general" ? <><SkeletonMetrics /><SkeletonBlocks blocos={2} /></> : <SkeletonCardList cards={3} />}</div>}
-    {data?.message && !loading && <Aviso tom="atencao" className="mb-4">{data.message}{canConfigure && <> <Link href={INTEGRATION} className="font-medium underline">Abrir Integrações</Link></>}</Aviso>}
+    {data?.message && !loading && <Aviso tom="atencao" className="mb-4">{data.message}{canConfigure && <> <Link href="/admin/integracoes?integracao=github" className="font-medium underline">Abrir Integrações</Link></>}</Aviso>}
     {data && !data.message && !loading && <>
       {!data.all && !data.linked && <Aviso tom="info" className="mb-4">Ninguém vinculou a conta GitHub ainda, por isso o painel está vazio. Cada pessoa do Tech vincula a sua em <Link href="/configuracoes#github" className="font-medium underline">Sua conta</Link>; enquanto isso, use <strong>Mostrar todos</strong>.</Aviso>}
       {view === "general" ? <GithubOverview data={data} query={suppliedQuery} modo={modo} onDay={openTeamDay} />
