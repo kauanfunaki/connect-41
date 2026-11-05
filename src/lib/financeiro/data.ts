@@ -205,7 +205,9 @@ export async function listarContas(
     prisma.financeEntry.count({ where: doFiltro }),
     prisma.financeEntry.count({ where: { ...doFiltro, ...whereDoRecorte(recorte, hojeKey) } }),
     totaisDoEscopo(
-      { tenantId, companyIds: filtro.empresaId ? [filtro.empresaId] : null },
+      // Com a base em foco (matriz e filiais), os totais somam só ela, como a
+      // lista: antes somavam o escritório inteiro e diziam outra coisa (05/11/2026).
+      { tenantId, companyIds: filtro.empresaId ? [filtro.empresaId] : (filtro.empresaIds ?? null) },
       kind,
       hojeKey,
       { competencia: filtro.competencia || undefined }

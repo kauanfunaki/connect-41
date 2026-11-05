@@ -212,7 +212,7 @@ export default async function AppLayout({
       <AppShell
         faixaDoFoco={
           podeFocar ? (
-            <FaixaDoFoco foco={foco ? { companyId: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, alcance: alcanceDoFoco(foco) } : null} />
+            <FaixaDoFoco escritorio={tenantId} foco={foco ? { companyId: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, matrizId: foco.matrizId, alcance: alcanceDoFoco(foco) } : null} />
           ) : undefined
         }
         tenantId={tenantId}

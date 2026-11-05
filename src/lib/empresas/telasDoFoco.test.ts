@@ -120,7 +120,7 @@ describe("casco e ficha", () => {
   it("o layout monta a faixa (também sem empresa) e o provedor do foco em volta do casco", () => {
     const fonte = ler("src/app/(app)/layout.tsx");
     expect(fonte).toContain("<FaixaDoFoco");
-    expect(fonte).toMatch(/podeFocar \? \(\s*<FaixaDoFoco foco=\{foco \?/);
+    expect(fonte).toMatch(/podeFocar \? \(\s*<FaixaDoFoco escritorio=\{tenantId\} foco=\{foco \?/);
     expect(fonte.indexOf("<ProvedorDoFoco")).toBeLessThan(fonte.indexOf("<AppShell"));
   });
 
