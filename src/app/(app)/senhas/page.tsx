@@ -2,32 +2,34 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { formatInstantDate } from "@/lib/format";
 import { BpoCredentialsList, NewCredentialModal } from "@/components/bpoSenhas/BpoCredentialsList";
+import { SeletorDoSetorDoApoio } from "@/components/apoio/SeletorDoSetorDoApoio";
 import { criarCredencial, atualizarCredencial, excluirCredencial, revelarCredencial } from "./actions";
-import { setoresDoModulo } from "@/lib/modules";
-import { getSectorMaps, sectorLabel } from "@/lib/sectors";
+import { isModuleEnabled } from "@/lib/modules";
+import { setorDaTelaDoApoio } from "@/lib/apoio/servidor";
 
-// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
-// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
-const SECTOR = "bpo";
 const MODULE = "bpo_senhas";
 
-export default async function BpoSenhasPage() {
+// O Repositório de senhas é Apoio de todo setor desde 05/11/2026 (cofre por
+// setor, decisão do Kauan): cada setor vê só as suas credenciais. O setor é o
+// da pessoa (o que ela está usando, ou o escolhido em "Todos os setores") —
+// ver `setorDaTelaDoApoio`. O módulo ligado/desligado continua valendo para o
+// escritório inteiro.
+export default async function SenhasPage({ searchParams }: { searchParams: Promise<{ setor?: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
-  const setor = setores[0];
-  if (!canActOnSector(ctx, setores)) notFound();
-  const canManage = canManageSector(ctx, setores);
-  // O vazio cita quem coordena o setor que opera o módulo, e não "o BPO" (05/10/2026).
-  const setorRotulo = sectorLabel((await getSectorMaps(ctx.tenantId)).labels, setor);
+  const [{ setor: pedido }, ligado] = await Promise.all([searchParams, isModuleEnabled(ctx.tenantId, MODULE)]);
+  if (!ligado) notFound();
+  const apoio = await setorDaTelaDoApoio(ctx, pedido);
+  if (!apoio) notFound();
+  const canManage = canManageSector(ctx, apoio.setor);
 
   const prisma = getPrisma();
   const [credentials, companies] = await Promise.all([
     prisma.bpoCredential.findMany({
-      where: { tenantId: ctx.tenantId },
+      where: { tenantId: ctx.tenantId, sectorCode: apoio.setor },
       orderBy: { createdAt: "desc" },
       include: { company: { select: { id: true, name: true } }, createdBy: { select: { name: true } } },
     }),
@@ -40,14 +42,13 @@ export default async function BpoSenhasPage() {
 
   return (
     <PageContainer>
-      {/* Sem "Voltar" (08/10/2026): é página principal do setor, aberta pelo
-          menu — a regra de contas a pagar. Subtítulo no próprio PageHeader
-          (30/09), e "Nova credencial" no `action`, como as outras telas. */}
+      {/* Sem "Voltar" (08/10/2026): é página principal, aberta pelo menu. */}
       <PageHeader
         title="Repositório de senhas"
-        subtitle="Credenciais de portais, bancos e sistemas de clientes — centralizadas com auditoria de acesso."
-        action={canManage ? <NewCredentialModal companies={companies} createAction={criarCredencial} /> : undefined}
+        subtitle={`As credenciais de ${apoio.rotulo}: portais, bancos e sistemas, com cada acesso registrado.`}
+        action={canManage ? <NewCredentialModal companies={companies} createAction={criarCredencial.bind(null, apoio.setor)} /> : undefined}
       />
+      <SeletorDoSetorDoApoio apoio={apoio} caminho="/senhas" />
 
       <BpoCredentialsList
         credentials={credentials.map((c) => ({
@@ -63,7 +64,8 @@ export default async function BpoSenhasPage() {
         }))}
         companies={companies}
         canManage={canManage}
-        setorRotulo={setorRotulo}
+        // O vazio cita quem coordena o setor da tela (05/10/2026).
+        setorRotulo={apoio.rotulo}
         updateAction={atualizarCredencial}
         // Excluir senha do cofre: só o administrador (13/10/2026).
         deleteAction={podeExcluir(ctx) ? excluirCredencial : undefined}

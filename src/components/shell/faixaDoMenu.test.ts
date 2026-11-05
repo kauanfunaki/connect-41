@@ -303,3 +303,42 @@ describe("menu do setor: grupos que abrem no lugar", () => {
     expect(aside).not.toContain(">Times<");
   });
 });
+
+// O Apoio do Geral (05/11/2026): Senhas, Manuais e Quadros num grupo do Geral,
+// para todo setor; na Tech, os Quadros levam ao Controle interno.
+describe("o Apoio no Geral", () => {
+  const TECH = { code: "tech", label: "Tech", color: "#1A84C2" };
+
+  it("Senhas, Manuais e Quadros no grupo Apoio, aberto na tela de um deles", () => {
+    rota.atual = "/senhas";
+    const aside = lateral(casco(false, { telasFixadas: [], apoioLigado: { senhas: true, manuais: true } }));
+    expect(aside).toMatch(/<button[^>]*aria-expanded="true"[^>]*aria-controls="menu-grupo-apoio"/);
+    expect(tagDoLink(aside, "Repositório de senhas")).toContain('aria-current="page"');
+    expect(tagDoLink(aside, "Repositório de manuais")).toContain('href="/manuais"');
+    expect(tagDoLink(aside, "Quadros")).toContain('href="/setor/dp"');
+  });
+
+  it("com o Apoio desligado, o Quadros fica sozinho, solto", () => {
+    const aside = lateral(casco(false, { telasFixadas: [] }));
+    expect(aside).not.toContain("menu-grupo-apoio");
+    expect(tagDoLink(aside, "Quadros")).toContain('href="/setor/dp"');
+  });
+
+  it("na Tech, o Quadros leva ao Controle interno e não acende sozinho", () => {
+    rota.atual = "/controle-interno";
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, apoioLigado: { senhas: true, manuais: false }, activeSectorModules: [
+      { code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" },
+      { code: "tech_ceci", label: "Ceci", href: "/ceci" },
+    ] }));
+    const quadros = tagDoLink(aside, "Quadros");
+    expect(quadros).toContain('href="/controle-interno"');
+    expect(quadros).not.toContain("aria-current");
+    expect(tagDoLink(aside, "Controle interno")).toContain('aria-current="page"');
+  });
+
+  it("o número dos Chamados aparece no item do Geral", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], chamadosLigados: true, chamadosNovos: 3 }));
+    const chamados = linksDoMenu(aside).find((l) => l.texto.startsWith("Chamados"));
+    expect(chamados?.texto).toContain("3");
+  });
+});

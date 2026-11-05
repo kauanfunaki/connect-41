@@ -14,33 +14,35 @@ import {
   atualizarPaginaManual,
   excluirPaginaManual,
 } from "./actions";
-import { setoresDoModulo } from "@/lib/modules";
-import { getSectorMaps, sectorLabel } from "@/lib/sectors";
+import { isModuleEnabled } from "@/lib/modules";
+import { setorDaTelaDoApoio } from "@/lib/apoio/servidor";
+import { SeletorDoSetorDoApoio } from "@/components/apoio/SeletorDoSetorDoApoio";
 
-// `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
-// acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
-const SECTOR = "bpo";
 const MODULE = "bpo_manual";
 
-// Manual/Instruções internas do BPO — biblioteca em dois níveis (Documento >
+// Manual/Instruções internas do setor — biblioteca em dois níveis (Documento >
 // Página) escrita pelos próprios colaboradores (não upload de arquivo) pra
-// alinhamento em caso de ausência/férias de alguém. Módulo próprio, ao lado
-// dos Espaços do setor em /setor/bpo e de /bpo-senhas (Repositório de Senhas).
-export default async function BpoManualPage() {
+// alinhamento em caso de ausência/férias de alguém. No Apoio, ao lado dos
+// Quadros e de /senhas (Repositório de senhas).
+//
+// Apoio de todo setor desde 05/11/2026: cada setor tem os seus manuais
+// (`ManualDocument.sectorCode`); o setor é o da pessoa — ver `setorDaTelaDoApoio`.
+export default async function ManuaisPage({ searchParams }: { searchParams: Promise<{ setor?: string }> }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
-  const setores = (await setoresDoModulo(ctx.tenantId, MODULE)) ?? [SECTOR];
-  const setor = setores[0];
-  if (!canActOnSector(ctx, setores)) notFound();
-  const canAct = canActOnSector(ctx, setores);
+  const [{ setor: pedido }, ligado] = await Promise.all([searchParams, isModuleEnabled(ctx.tenantId, MODULE)]);
+  if (!ligado) notFound();
+  const apoio = await setorDaTelaDoApoio(ctx, pedido);
+  if (!apoio) notFound();
+  const canAct = canActOnSector(ctx, apoio.setor);
   // Excluir documento, página e capa do manual: só o administrador (13/10/2026).
-  const canDelete = canManageSector(ctx, setores) && podeExcluir(ctx);
-  // O vazio cita quem coordena o setor que opera o módulo, e não "o BPO" (05/10/2026).
-  const setorRotulo = sectorLabel((await getSectorMaps(ctx.tenantId)).labels, setor);
+  const canDelete = canManageSector(ctx, apoio.setor) && podeExcluir(ctx);
+  // O vazio cita quem coordena o setor da tela (05/10/2026).
+  const setorRotulo = apoio.rotulo;
 
   const prisma = getPrisma();
   const documents = await prisma.manualDocument.findMany({
-    where: { tenantId: ctx.tenantId, sectorCode: SECTOR },
+    where: { tenantId: ctx.tenantId, sectorCode: apoio.setor },
     orderBy: { createdAt: "asc" },
     include: { pages: { orderBy: { order: "asc" }, include: { createdBy: { select: { name: true } } } } },
   });
@@ -61,8 +63,9 @@ export default async function BpoManualPage() {
         {/* O "+ Nova pasta" foi para o pé da coluna de pastas (lote C de 03/11/2026). */}
         <PageHeader
           title="Repositório de manuais"
-          subtitle="Instruções internas do setor — escritas pelos colaboradores para alinhamento em ausências e férias."
+          subtitle={`As instruções de ${apoio.rotulo}, escritas pela equipe para quem cobre ausências e férias.`}
         />
+        <SeletorDoSetorDoApoio apoio={apoio} caminho="/manuais" />
       </div>
 
       {/* flex-1 min-h-0 é o que dá ao workspace uma altura definida igual ao
@@ -70,7 +73,7 @@ export default async function BpoManualPage() {
           em vez de rolar por dentro. */}
       <div className="flex-1 min-h-0">
         <ManualWorkspace
-          rodapeDaArvore={canAct ? <NovoDocumento action={criarDocumentoManual} /> : undefined}
+          rodapeDaArvore={canAct ? <NovoDocumento action={criarDocumentoManual.bind(null, apoio.setor)} /> : undefined}
           canAct={canAct}
           canDelete={canDelete}
           setorRotulo={setorRotulo}

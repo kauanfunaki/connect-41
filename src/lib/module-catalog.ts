@@ -828,9 +828,9 @@ export const MODULE_ROUTES: Record<string, string> = {
   gestao_indicadores_rh:   "/indicadores-rh",
   gestao_valora:           "/valora",
   gestao_painel:           "/gestao",
-  bpo_senhas:              "/bpo-senhas",
+  bpo_senhas:              "/senhas",
   bpo_dre:                 "/dre",
-  bpo_manual:              "/bpo-manual",
+  bpo_manual:              "/manuais",
   fiscal_documentos:       "/documentos-fiscais",
   fiscal_autorizacoes:     "/autorizacoes",
   fiscal_painel:           "/sped-fiscal/motor",
@@ -883,7 +883,15 @@ export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastro
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual"]);
+
+/**
+ * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e
+ * Repositório de manuais deixaram de ser do BPO e viraram um grupo do Geral,
+ * para todo setor, junto dos Quadros. Cada setor vê os seus (cofre por setor).
+ * O módulo segue ligado e desligado pelo escritório, no BPO de Setores e módulos.
+ */
+export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual"] as const;
 
 /**
  * Chamados fica no Geral para todo setor, menos o que atende os chamados
