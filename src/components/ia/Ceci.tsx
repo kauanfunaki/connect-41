@@ -37,6 +37,7 @@ export function Ceci({
   tamanho = 32,
   className = "",
   rotulo,
+  sombra = false,
 }: {
   estado?: EstadoDaCeci;
   /** Lado do quadrado, em px. */
@@ -44,6 +45,12 @@ export function Ceci({
   className?: string;
   /** Nome para leitor de tela, quando não há texto ao lado. */
   rotulo?: string;
+  /**
+   * A sombra do botão do canto, que flutua sobre a página (contraste sobre
+   * azul, ver globals.css). Só do lado de fora do desenho: o vão entre o rosto
+   * e o anel fica limpo.
+   */
+  sombra?: boolean;
 }) {
   // Mais de uma Ceci na tela (botão, topo, mensagens): o id do degradê tem de
   // ser único, e sem os caracteres que o useId usa.
@@ -52,26 +59,10 @@ export function Ceci({
   const traco = { fill: "none", stroke: branco, strokeWidth: 4.2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   const bochecha = { fill: "var(--c41-ceci-bochecha, #9DBEFF)" };
 
-  return (
-    <svg
-      viewBox="0 0 120 120"
-      width={tamanho}
-      height={tamanho}
-      data-estado={estado}
-      className={`flex-shrink-0 ${className}`.trim()}
-      {...(rotulo ? { role: "img", "aria-label": rotulo } : { "aria-hidden": true, focusable: false })}
-    >
-      <defs>
-        <linearGradient id={`${id}-anel`} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" style={{ stopColor: "var(--c41-ceci-anel-de, #1B4FD8)" }} />
-          <stop offset="1" style={{ stopColor: "var(--c41-ceci-anel-ate, #4D8DFF)" }} />
-        </linearGradient>
-        <linearGradient id={`${id}-rosto`} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" style={{ stopColor: "var(--c41-ceci-rosto-de, #1A56DE)" }} />
-          <stop offset="1" style={{ stopColor: "var(--c41-ceci-rosto-ate, #3F7FF8)" }} />
-        </linearGradient>
-      </defs>
-
+  // O anel e o rosto, sem a expressão. Desenhados uma segunda vez, por baixo,
+  // só para gerar a sombra (com a mesma animação, ficam em compasso).
+  const corpo = (
+    <>
       {/* O fone: o anel aberto do logo (centro 58,60, raio 45, abertura de 80°) e o nó. */}
       <g className={estado === "pensando" ? "c41-ceci-pensando" : undefined}>
         <path
@@ -86,6 +77,62 @@ export function Ceci({
 
       {/* O rosto: o ponto do meio do logo. */}
       <circle cx={58} cy={60} r={33} fill={`url(#${id}-rosto)`} />
+    </>
+  );
+
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      width={tamanho}
+      height={tamanho}
+      data-estado={estado}
+      className={`flex-shrink-0 ${className}`.trim()}
+      // A sombra passa da borda do quadrado; sem isto, sai cortada embaixo.
+      overflow={sombra ? "visible" : undefined}
+      {...(rotulo ? { role: "img", "aria-label": rotulo } : { "aria-hidden": true, focusable: false })}
+    >
+      <defs>
+        <linearGradient id={`${id}-anel`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" style={{ stopColor: "var(--c41-ceci-anel-de, #1B4FD8)" }} />
+          <stop offset="1" style={{ stopColor: "var(--c41-ceci-anel-ate, #4D8DFF)" }} />
+        </linearGradient>
+        <linearGradient id={`${id}-rosto`} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" style={{ stopColor: "var(--c41-ceci-rosto-de, #1A56DE)" }} />
+          <stop offset="1" style={{ stopColor: "var(--c41-ceci-rosto-ate, #3F7FF8)" }} />
+        </linearGradient>
+        {sombra && (
+          <>
+            {/* As duas sombras de antes (1px/1,5px e 3px/8px no botão de 48 px),
+                em unidades do viewBox (2,5 por px). Só a sombra sai do filtro. */}
+            <filter id={`${id}-sombra`} filterUnits="userSpaceOnUse" x={-30} y={-30} width={180} height={190} colorInterpolationFilters="sRGB">
+              <feGaussianBlur in="SourceAlpha" stdDeviation={1.9} result="perto" />
+              <feOffset in="perto" dy={2.5} result="pertoDesce" />
+              <feFlood style={{ floodColor: "var(--c41-ceci-sombra-perto, rgba(15,26,51,.28))" }} result="corPerto" />
+              <feComposite in="corPerto" in2="pertoDesce" operator="in" result="sombraPerto" />
+              <feGaussianBlur in="SourceAlpha" stdDeviation={10} result="longe" />
+              <feOffset in="longe" dy={7.5} result="longeDesce" />
+              <feFlood style={{ floodColor: "var(--c41-ceci-sombra-longe, rgba(15,26,51,.16))" }} result="corLonge" />
+              <feComposite in="corLonge" in2="longeDesce" operator="in" result="sombraLonge" />
+              <feMerge>
+                <feMergeNode in="sombraLonge" />
+                <feMergeNode in="sombraPerto" />
+              </feMerge>
+            </filter>
+            {/* Do rosto até a borda de dentro do anel (raio 39,5) não há
+                sombra: era a sombra do rosto caindo no vão que desenhava uma
+                faixa cinza em volta da carinha, cortada na abertura do anel
+                (05/11/2026). Assim o vão fica claro e fechado, da mesma
+                largura em toda a volta. */}
+            <mask id={`${id}-fora`} maskUnits="userSpaceOnUse" x={-30} y={-30} width={180} height={190}>
+              <rect x={-30} y={-30} width={180} height={190} fill={branco} />
+              <circle cx={58} cy={60} r={39.5} fill="#000000" />
+            </mask>
+          </>
+        )}
+      </defs>
+
+      {sombra && <g filter={`url(#${id}-sombra)`} mask={`url(#${id}-fora)`}>{corpo}</g>}
+      {corpo}
 
       {estado === "parada" && (
         <>
