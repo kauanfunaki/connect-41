@@ -245,8 +245,9 @@ function Toolbar({ path, query, from, to, filtered, modo, times }: { path: strin
   return <div role="search" className={styles.toolbar}>
     <label className={styles.dateField}><span>De</span><CampoData aria-label="De" value={period.from} max={period.to || undefined} onChange={value => changeDate("from", value)} /></label>
     <label className={styles.dateField}><span>Até</span><CampoData aria-label="Até" value={period.to} min={period.from || undefined} onChange={value => changeDate("to", value)} /></label>
-    <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><CampoDeBusca aria-label="Buscar desenvolvedor" placeholder="Buscar desenvolvedor…" value={user} enviarAoLimpar={false}
-      onChange={event => setUser(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && user.trim() !== sent.current) apply({ user: user.trim() }); }} /></label>
+    {/* Por time, a aba Desenvolvedores mostra times: a busca por pessoa sai (05/11/2026). */}
+    {!(modo === "time" && path === PATHS.developers) && <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><CampoDeBusca aria-label="Buscar desenvolvedor" placeholder="Buscar desenvolvedor…" value={user} enviarAoLimpar={false}
+      onChange={event => setUser(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && user.trim() !== sent.current) apply({ user: user.trim() }); }} /></label>}
     {times.length > 0 && <Select aria-label="Time" value={time} onChange={event => apply({ user: user.trim(), time: event.target.value })}>
       <option value="">Todos os times</option>{times.map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
     </Select>}
