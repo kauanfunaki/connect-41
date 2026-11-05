@@ -5,7 +5,6 @@ import { getAuthContext, canViewSector, canActOnSector } from "@/lib/auth/contex
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { formatCnpj, formatCpf } from "@/lib/format";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
@@ -147,11 +146,10 @@ export default async function CadastrosFinanceirosPage({
   // Aba de Cadastros desde 21/10/2026: a barra de Empresas e Pessoas vem em cima.
   const comAcao = (action?: React.ReactNode) => (
     <>
-      <CadastrosTabsBar active="fornecedores" />
-      <PageHeader
-        title="Fornecedores e sacados"
-        subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
-        action={action}
+      <CadastrosTabsBar
+        active="fornecedores"
+        subtitulo="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+        acao={action}
       />
     </>
   );
