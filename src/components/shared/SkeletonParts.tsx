@@ -95,7 +95,7 @@ export function SkeletonFilterBar() {
  * Cards soltos, com respiro entre eles.
  *
  * Diferente do `ListPageSkeleton`, que desenha uma tabela com borda única: aqui
- * cada item tem borda própria, que é o formato de `/conversas`, `/bpo-senhas` e
+ * cada item tem borda própria, que é o formato de `/conversas`, `/senhas` e
  * companhia. Trocar um pelo outro faz o layout saltar na troca.
  */
 export function SkeletonCardList({ cards = 4, linhas = 2 }: { cards?: number; linhas?: number }) {
@@ -162,7 +162,7 @@ export function SkeletonTiles({ tiles = 6 }: { tiles?: number }) {
 }
 
 /**
- * Dois painéis lado a lado — o workspace de `/bpo-manual`: índice à esquerda,
+ * Dois painéis lado a lado — o workspace de `/manuais`: índice à esquerda,
  * conteúdo à direita.
  *
  * `h-full` porque a página real usa `flex-1 min-h-0` para dar altura definida

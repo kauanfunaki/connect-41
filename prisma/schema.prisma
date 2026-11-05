@@ -7238,6 +7238,11 @@ model UserAgendaConfig {
 model BpoCredential {
   id          String   @id @default(uuid())
   tenantId    String
+  /// O setor dono da credencial (05/11/2026): o Repositório de senhas virou
+  /// Apoio de todo setor, e cada setor vê só as suas (cofre por setor, decisão
+  /// do Kauan). As que já existiam ficam no setor que operava a tela — o BPO,
+  /// ou para onde ela foi transferida. Código de `Sector`, sem FK.
+  sectorCode  String   @default("bpo") @db.VarChar(40)
   companyId   String?
   title       String   @db.VarChar(120)
   username    String?  @db.VarChar(180)
@@ -7254,6 +7259,7 @@ model BpoCredential {
   views     BpoCredentialView[]
 
   @@index([tenantId, companyId])
+  @@index([tenantId, sectorCode])
   @@map("bpo_credentials")
 }
 

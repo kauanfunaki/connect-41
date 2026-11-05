@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Popover } from "@/components/ui/Popover";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { formatInstantDate } from "@/lib/format";
-import type { ManualPageState } from "@/app/(app)/bpo-manual/actions";
+import type { ManualPageState } from "@/app/(app)/manuais/actions";
 import { Button } from "@/components/ui/Button";
 
 export type ManualPageData = {
