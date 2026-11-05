@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import ExcelJS from "exceljs";
 import { getAuthContext } from "@/lib/auth/context";
 import { getIndicadoresRH } from "@/lib/indicadoresRH";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { formatInstantDateTime } from "@/lib/format";
 
 const A4_WIDTH = 595.28;
@@ -51,6 +52,12 @@ export async function GET(req: NextRequest) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  }
+
+  // O mesmo gate da tela (05/11/2026): sem ele, qualquer pessoa do escritório
+  // baixava os indicadores digitando o endereço. 404, como a tela.
+  if (!(await podeNoModulo(ctx, "gestao_indicadores_rh", "ver"))) {
+    return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
   }
 
   const format = req.nextUrl.searchParams.get("format");
