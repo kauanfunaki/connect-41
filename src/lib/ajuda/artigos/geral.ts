@@ -743,14 +743,16 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Indicadores de RH",
     caminhos: ["/indicadores-rh"],
     resumo:
-      "O painel consolidado de RH — headcount, turnover, absenteísmo, férias, vagas, treinamentos, custo de folha e mais —, calculado a partir do que é lançado no DP e no Recrutamento.",
+      "O painel de RH: quatro números no topo (headcount, turnover, absenteísmo e vagas abertas) e um gráfico mês a mês por tema — quadro, férias, horas extras e o funil do recrutamento —, calculados a partir do que é lançado no DP e no Recrutamento.",
     secoes: [
       {
         titulo: "Como ler os indicadores",
         passos: [
           "Entre no setor e abra “Indicadores de RH” na barra lateral.",
-          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias vencidas”, “Vagas abertas” e “Custo de folha (mês atual)”.",
-          "Leia a linha abaixo do número: ela diz o que ele conta.",
+          "No topo ficam “Headcount”, “Turnover (12 meses)”, “Absenteísmo (30 dias)” e “Vagas abertas”. Leia a linha abaixo do número: ela diz o que ele conta.",
+          "Embaixo, quatro gráficos: “Headcount, admissões e desligamentos”, as férias vencidas e a vencer no fim de cada mês, as “Horas extras por mês” e o “Funil do trimestre”.",
+          "Escolha “6 meses” ou “12 meses” acima dos gráficos para mudar o período. O funil é sempre do mês atual e dos dois anteriores.",
+          "Passe o mouse sobre um mês para ver os números dele. Clique em “Abrir” no gráfico para ir à tela de onde os números saem.",
         ],
       },
       {
@@ -772,8 +774,9 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Os números vêm do que é lançado no DP e no Recrutamento: se um dado parece errado, corrija na origem.",
-      "O relatório “Distorções salariais” só aparece para quem tem permissão de ver salários.",
-      "O cartão “Férias vencidas” fica destacado quando há alguma, porque é o número que pede ação.",
+      "O relatório “Distorções salariais” e os “Custos” (folha e benefícios) só aparecem para quem tem permissão de ver salários.",
+      "O número de férias vencidas fica em vermelho quando há alguma, porque é o que pede ação.",
+      "O histórico sai das datas do cadastro (admissão, desligamento, volta das férias): uma data faltando ou errada muda os meses de antes.",
     ],
   },
 

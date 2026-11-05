@@ -1106,6 +1106,230 @@ export function Cascata({
   );
 }
 
+// ─── Linha sobre colunas ───────────────────────────────────────────────────
+//
+// Indicadores de RH (05/11/2026, opção A da tela 9): o headcount mês a mês em
+// linha, com as admissões e os desligamentos em colunas. São duas escalas
+// (48 pessoas × 3 admissões), então são dois desenhos, um em cima do outro,
+// com o mesmo eixo de meses — nunca dois eixos no mesmo desenho, que inventa
+// uma relação entre as séries. Cada mês é uma coluna de largura igual, sem
+// vão: o ponto da linha fica no meio dela, em cima das duas barras do mês.
+
+export type MesDaLinha = {
+  chave: string;
+  /** No eixo ("nov"). */
+  rotulo: string;
+  /** Na dica e na tabela acessível ("novembro de 2026"). */
+  rotuloLongo: string;
+  linha: number;
+  colunas: readonly [number, number];
+};
+
+export function LinhaSobreColunas({
+  titulo,
+  serieDaLinha,
+  seriesDasColunas,
+  meses,
+  vazio = "Nada por aqui.",
+}: {
+  titulo: string;
+  serieDaLinha: string;
+  /** A primeira no azul da coluna, a segunda dois degraus mais clara (as de `ColunasPareadas`). */
+  seriesDasColunas: readonly [string, string];
+  meses: MesDaLinha[];
+  vazio?: string;
+}) {
+  if (meses.length === 0 || meses.every((m) => m.linha === 0 && m.colunas[0] === 0 && m.colunas[1] === 0)) {
+    return <p className="text-helper text-fg-muted py-1.5">{vazio}</p>;
+  }
+
+  const n = meses.length;
+  const menor = Math.min(...meses.map((m) => m.linha));
+  const maior = Math.max(...meses.map((m) => m.linha));
+  // Linha reta (o mesmo número o período todo) fica no meio, e não no chão.
+  const [lo, hi] = menor === maior ? [menor - 1, maior + 1] : [menor, maior];
+  const y = (v: number) => 14 + (1 - (v - lo) / (hi - lo)) * 72;
+  const x = (i: number) => ((i + 0.5) / n) * 100;
+  const caminho = meses.map((m, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(2)},${y(m.linha).toFixed(2)}`).join(" ");
+
+  const maiorColuna = Math.max(1, ...meses.flatMap((m) => m.colunas));
+  const cores = [COR_DA_ENTRADA, COR_DA_SAIDA] as const;
+  const totais = [0, 1].map((i) => meses.reduce((s, m) => s + m.colunas[i], 0));
+  const ultimo = meses[n - 1];
+
+  return (
+    <div className="@container min-w-0">
+      <ul className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3">
+        <li className="inline-flex items-center gap-1.5 text-fs-2">
+          <span className="w-3.5 h-0.5 rounded-full flex-shrink-0" style={{ background: "var(--c41-brand)" }} aria-hidden />
+          <span className="text-fg-secondary">{serieDaLinha}</span>
+          <span className="font-medium text-fg tnum">{numero(ultimo.linha)}</span>
+          <span className="text-fg-muted">hoje</span>
+        </li>
+        {seriesDasColunas.map((s, i) => (
+          <li key={s} className="inline-flex items-center gap-1.5 text-fs-2">
+            <span className="size-2.5 mx-0.5 rounded-[3px] flex-shrink-0" style={{ background: cores[i] }} aria-hidden />
+            <span className="text-fg-secondary">{s}</span>
+            <span className={`font-medium tnum ${totais[i] === 0 ? "text-fg-muted" : "text-fg"}`}>{numero(totais[i])}</span>
+            <span className="text-fg-muted">no período</span>
+          </li>
+        ))}
+      </ul>
+
+      <div aria-hidden className="group/linha relative">
+        {/* A linha, esticada na largura (o ponto é HTML: num SVG esticado o círculo viraria elipse). */}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-x-0 top-0 h-28 w-full overflow-visible pointer-events-none">
+          <path
+            d={caminho}
+            fill="none"
+            stroke="var(--c41-brand)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        <div className="flex">
+          {meses.map((m, i) => {
+            const primeiro = i === 0;
+            const final = i === n - 1;
+            return (
+              <div
+                key={m.chave}
+                className="group/mes flex-1 min-w-0 flex flex-col transition-opacity duration-150 group-hover/linha:opacity-45 hover:opacity-100!"
+                data-dica={`${m.rotuloLongo}\n${serieDaLinha}: ${numero(m.linha)}\n${seriesDasColunas[0]}: ${numero(m.colunas[0])}\n${seriesDasColunas[1]}: ${numero(m.colunas[1])}`}
+                data-dica-rapida=""
+              >
+                <div className="relative h-28">
+                  {/* O valor escrito só no começo e no fim; o resto fica na dica e na tabela. */}
+                  {(primeiro || final) && (
+                    <span
+                      className={`absolute -translate-x-1/2 -translate-y-full -mt-2 text-micro tnum whitespace-nowrap ${final ? "font-semibold text-fg" : "font-medium text-fg-secondary"}`}
+                      style={{ left: "50%", top: `${y(m.linha)}%` }}
+                    >
+                      {numero(m.linha)}
+                    </span>
+                  )}
+                  <span
+                    className="absolute size-2 rounded-full ring-2 ring-surface -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: "50%", top: `${y(m.linha)}%`, background: "var(--c41-brand)" }}
+                  />
+                </div>
+                {/* As colunas do mês: `pt-4` guarda o lugar do número em cima da mais alta. */}
+                <div className="h-24 pt-4 flex items-end justify-center gap-[2px] px-[18%] border-b border-border">
+                  {m.colunas.map((v, k) => (
+                    <div key={seriesDasColunas[k]} className="flex-1 max-w-6 h-full flex flex-col justify-end items-center min-w-0">
+                      {v > 0 && <span className="hidden @lg:block shrink-0 text-micro font-medium text-fg-secondary tnum mb-0.5">{numero(v)}</span>}
+                      <span
+                        className="block shrink-0 w-full rounded-t-[4px]"
+                        style={{ height: v > 0 ? `${Math.max((v / maiorColuna) * 100, 4)}%` : 0, background: cores[k] }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <span className="mt-1.5 text-center text-micro text-fg-muted truncate">{m.rotulo}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <TabelaOculta
+        titulo={titulo}
+        linhas={[
+          ...meses.map((m): [string, string] => [
+            m.rotuloLongo,
+            `${serieDaLinha}: ${numero(m.linha)}; ${seriesDasColunas[0]}: ${numero(m.colunas[0])}; ${seriesDasColunas[1]}: ${numero(m.colunas[1])}`,
+          ]),
+          ["Total do período", `${seriesDasColunas[0]}: ${numero(totais[0])}; ${seriesDasColunas[1]}: ${numero(totais[1])}`],
+        ]}
+      />
+    </div>
+  );
+}
+
+// ─── Colunas por situação ──────────────────────────────────────────────────
+
+export type ColunaDeSituacao = {
+  chave: string;
+  rotulo: string;
+  rotuloLongo: string;
+  /** As partes da coluna, de baixo para cima. A chave e o rótulo são os mesmos em todas as colunas. */
+  segmentos: Segmento[];
+};
+
+/**
+ * Colunas empilhadas por situação, uma por período (férias vencidas e a
+ * vencer no fim de cada mês). A cor é de situação — por isso a legenda leva o
+ * ícone, e os números que ela mostra são os da última coluna (hoje). O total
+ * vai em cima de cada coluna; cada parte, na dica e na tabela acessível.
+ */
+export function ColunasDeSituacao({
+  titulo,
+  colunas,
+  legendaDosValores = "hoje",
+  vazio = "Nada por aqui.",
+}: {
+  titulo: string;
+  colunas: ColunaDeSituacao[];
+  /** O que os números da legenda são — os da última coluna. */
+  legendaDosValores?: string;
+  vazio?: string;
+}) {
+  const totalDe = (c: ColunaDeSituacao) => c.segmentos.reduce((s, x) => s + Math.max(0, x.valor), 0);
+  const maior = Math.max(0, ...colunas.map(totalDe));
+  if (maior === 0) return <p className="text-helper text-fg-muted py-1.5">{vazio}</p>;
+  const ultima = colunas[colunas.length - 1];
+
+  return (
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-2">
+        <Legenda segmentos={ultima.segmentos.map((s) => ({ ...s, href: undefined }))} />
+        <span className="text-micro text-fg-muted">{legendaDosValores}</span>
+      </div>
+      <div aria-hidden>
+        <div className="group/colunas flex items-end gap-[3px] h-36 pt-5 border-b border-border">
+          {colunas.map((c) => {
+            const total = totalDe(c);
+            const visiveis = c.segmentos.filter((s) => s.valor > 0);
+            return (
+              <div
+                key={c.chave}
+                className="group/col flex-1 h-full flex flex-col justify-end items-center min-w-0 transition-opacity duration-150 group-hover/colunas:opacity-45 hover:opacity-100!"
+                data-dica={[c.rotuloLongo, ...c.segmentos.map((s) => `${s.rotulo}: ${numero(s.valor)}`)].join("\n")}
+                data-dica-rapida=""
+              >
+                {total > 0 && <span className="shrink-0 text-micro font-medium text-fg-secondary tnum mb-1">{numero(total)}</span>}
+                {/* De baixo para cima, com 2px de superfície entre as partes; só a de cima arredonda. */}
+                <div className="flex w-full max-w-9 flex-col-reverse gap-[2px]" style={{ height: `${(total / maior) * 100}%` }}>
+                  {visiveis.map((s, i) => (
+                    <span
+                      key={s.chave}
+                      className={`block w-full min-h-[3px] ${i === visiveis.length - 1 ? "rounded-t-[4px]" : ""}`}
+                      style={{ flexGrow: s.valor, flexBasis: 0, background: COR_DA_AREA[s.tom] }}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-[3px] mt-1.5">
+          {colunas.map((c) => (
+            <span key={c.chave} className="flex-1 min-w-0 text-center text-micro text-fg-muted truncate">
+              {c.rotulo}
+            </span>
+          ))}
+        </div>
+      </div>
+      <TabelaOculta
+        titulo={titulo}
+        linhas={colunas.map((c) => [c.rotuloLongo, c.segmentos.map((s) => `${s.rotulo}: ${numero(s.valor)}`).join("; ")])}
+      />
+    </div>
+  );
+}
+
 /** As três células de uma linha das grades acima, sem caixa em volta. */
 function Fragmento({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
