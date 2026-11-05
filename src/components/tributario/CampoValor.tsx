@@ -6,6 +6,8 @@
 //
 // Fora da edição o número aparece formatado ("1.200.000"); ao entrar no campo,
 // vira o número cru ("1200000") para digitar sem tropeçar no separador.
+// Com prefixo "R$" o campo é dinheiro: "1.075" é milhar. Nos demais (FAP,
+// percentuais, dias), ponto é decimal e todas as casas aparecem — ver numeroDigitado.ts.
 
 import { useState, type InputHTMLAttributes } from "react";
 import { Input } from "@/components/ui/Input";
@@ -23,6 +25,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | 
 };
 
 export function CampoValor({ value, onChange, onFocus, onBlur, prefix, suffix, compact, error, placeholder = "Não informado", ...resto }: Props) {
+  const dinheiro = prefix === "R$";
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(textoDoNumero(value));
   // O último valor que este campo viu: quando o de fora muda sem ser pela
@@ -42,7 +45,7 @@ export function CampoValor({ value, onChange, onFocus, onBlur, prefix, suffix, c
       compact={compact}
       error={error}
       placeholder={placeholder}
-      value={editando ? texto : textoFormatadoDoNumero(value)}
+      value={editando ? texto : textoFormatadoDoNumero(value, dinheiro)}
       onFocus={(e) => {
         setTexto(textoDoNumero(value));
         setEditando(true);
@@ -51,7 +54,7 @@ export function CampoValor({ value, onChange, onFocus, onBlur, prefix, suffix, c
       onChange={(e) => {
         const t = e.target.value;
         setTexto(t);
-        const n = lerNumeroDigitado(t);
+        const n = lerNumeroDigitado(t, dinheiro);
         if (n !== undefined) {
           setUltimo(n);
           onChange(n);
