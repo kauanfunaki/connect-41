@@ -12,7 +12,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { BlocoFiscal, CampoFiscal, ETAPAS_DA_EXTRACAO } from "@/components/fiscal/previa/Compartilhados";
 import { MODOS_EXECUCAO, mesInteiro, parametrosExecucaoSchema, parametrosIniciais, type ModoExecucao, type ParametrosExecucao } from "@/lib/fiscal/previa/execucao";
-import { solicitarExecucaoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { solicitarExecucaoNoMotor } from "@/app/(app)/sped-fiscal/motor-actions";
 import { useChavesPorAcao } from "./useChaveDeIdempotencia";
 
 type Existente = { id?: number; estado?: string; solicitado_por?: string | null; solicitado_em?: string | null };

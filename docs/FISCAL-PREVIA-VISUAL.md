@@ -18,12 +18,12 @@ O menu lateral apresenta uma entrada **SPED**, que abre ao passar o mouse ou
 clicar. Na faixa de ícones e no celular, o clique/toque também abre as opções,
 sempre sujeitas aos módulos habilitados:
 
-- **Painel** (`/fiscal`) abre o painel da competência, com as próprias abas.
+- **Painel** (`/sped-fiscal/motor`) abre o painel da competência, com as próprias abas.
 - **Classificação e apuração** abre Classificação. Seu menu superior tem Classificação, Apuração,
   De-Para CFOP, Regras e DCIP e DIME (no modo real: Classificação, Apuração,
   Empresas e DCIP e DIME). Sem Classificação, abre a primeira área habilitada nessa ordem.
-- **SPED gerados** (`/fiscal/entregas`) consulta as versões e suas ações.
-- **Executar** (`/fiscal/operacao`) tem somente as abas Executar e Histórico.
+- **SPED gerados** (`/sped-fiscal/motor/entregas`) consulta as versões e suas ações.
+- **Executar** (`/sped-fiscal/motor/operacao`) tem somente as abas Executar e Histórico.
 
 A ordem da página é menu contextual, trilha, cabeçalho, empresa/estabelecimento/
 competência, avisos e conteúdo. O cabeçalho global do Connect permanece no topo.
@@ -93,7 +93,7 @@ raiz não deve ser usado para testes. Veja `scripts/local/README.md`.
 
 ## Verificação
 
-- Testes puros: `npx vitest run src/lib/fiscal src/components/fiscal/previa "src/app/(app)/fiscal"`.
+- Testes puros: `npx vitest run src/lib/fiscal src/components/fiscal/previa "src/app/(app)/sped-fiscal"`.
 - Interface: com o servidor local iniciado pelo lançador, defina `SPED_QA_URL`
   para seu endereço e execute, pelo mesmo lançador,
   `npx tsx scripts/local/verificar-sped-ui.ts`.
@@ -109,7 +109,7 @@ raiz não deve ser usado para testes. Veja `scripts/local/README.md`.
 
 ## Modo real (motor SPED)
 
-Escolha da fonte (`src/app/(app)/fiscal/layout.tsx`, `src/lib/fiscal/motor/modo.ts`):
+Escolha da fonte (`src/app/(app)/sped-fiscal/layout.tsx`, `src/lib/fiscal/motor/modo.ts`):
 motor configurado → telas reais; senão, banco local de demonstração → prévia;
 senão, "Processamento fiscal indisponível".
 

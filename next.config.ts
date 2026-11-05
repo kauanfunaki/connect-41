@@ -83,6 +83,11 @@ const nextConfig: NextConfig = {
       // A Tech (04/11/2026, depois do #378 e do #380).
       { source: "/tech/controle-interno/:caminho*", destination: "/controle-interno/:caminho*", permanent: false },
       { source: "/tech/ceci/:caminho*", destination: "/ceci/:caminho*", permanent: false },
+      // O Fiscal (05/11/2026), como o SPED do Contábil: as quatro etapas do
+      // SPED na raiz de /sped-fiscal, e as telas do motor embaixo, em /motor.
+      // A ordem importa: /fiscal/sped antes da regra geral de /fiscal.
+      { source: "/fiscal/sped/:caminho*", destination: "/sped-fiscal/:caminho*", permanent: false },
+      { source: "/fiscal/:caminho*", destination: "/sped-fiscal/motor/:caminho*", permanent: false },
     ];
   },
   async headers() {

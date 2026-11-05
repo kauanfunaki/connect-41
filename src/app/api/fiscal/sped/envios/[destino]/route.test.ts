@@ -73,7 +73,7 @@ describe("envio de documentos", () => {
     expect([...enviado.keys()]).toEqual(["arquivos", "arquivos"]);
     expect(m.pode).toHaveBeenCalledWith(expect.anything(), "fiscal_acervo", "agir");
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.documentos.enviados", entityType: "SpedImportacao", entityId: "100" }));
-    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/documentos");
+    expect(m.revalidar).toHaveBeenCalledWith("/sped-fiscal/motor/documentos");
   });
 
   it("a nova tentativa do mesmo arquivo, no mesmo gesto, manda a mesma chave (replay); gesto novo, chave nova", async () => {
@@ -128,7 +128,7 @@ describe("relatório do Omie e planilha do BPO", () => {
     expect(String(m.fetch.mock.calls[0][0])).toBe("https://motor/api/connect/v1/conferencia/documentos?cnpj_raiz=17122471");
     expect(m.pode).toHaveBeenCalledWith(expect.anything(), "fiscal_conferencia", "agir");
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.omie.conferido" }));
-    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/conferencia");
+    expect(m.revalidar).toHaveBeenCalledWith("/sped-fiscal/motor/conferencia");
   });
 
   it("422 arquivo_invalido do motor chega com a frase dele", async () => {
@@ -178,8 +178,8 @@ describe("pagamentos de apoio e faturas do BPO (§14.3)", () => {
     expect([...enviado.keys()]).toEqual(["tipo", "pasta", "arquivos"]);
     expect(m.pode).toHaveBeenCalledWith(expect.anything(), "fiscal_contribuicoes", "agir");
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.pagamentos_apoio.importados", entityType: "SpedImportacaoApoio" }));
-    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/contribuicoes");
-    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/conferencia");
+    expect(m.revalidar).toHaveBeenCalledWith("/sped-fiscal/motor/contribuicoes");
+    expect(m.revalidar).toHaveBeenCalledWith("/sped-fiscal/motor/conferencia");
   });
 
   it("pagamentos: sem tipo, tipo fora da lista, pasta com `..` ou arquivo que não é PDF: recusa sem chamar", async () => {

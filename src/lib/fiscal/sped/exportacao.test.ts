@@ -27,7 +27,7 @@ describe("exportação da apuração", () => {
 
 describe("endereço das etapas", () => {
   it("leva a empresa e a competência", () => {
-    expect(hrefDoSped("apuracao", { empresa: "e1", competencia: "2026-09" }, { vista: "livro", vazio: "" })).toBe("/fiscal/sped/apuracao?empresa=e1&competencia=2026-09&vista=livro");
-    expect(hrefDoSped("gerar", {})).toBe("/fiscal/sped/gerar");
+    expect(hrefDoSped("apuracao", { empresa: "e1", competencia: "2026-09" }, { vista: "livro", vazio: "" })).toBe("/sped-fiscal/apuracao?empresa=e1&competencia=2026-09&vista=livro");
+    expect(hrefDoSped("gerar", {})).toBe("/sped-fiscal/gerar");
   });
 });

@@ -33,7 +33,7 @@ const originaisDa = (l: Record<string, unknown>) => Object.fromEntries(CAMPOS_CO
  */
 export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
   const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
-  const CAMINHO = tela.contabil ? "/sped-contabil" : "/fiscal/contribuicoes";
+  const CAMINHO = tela.contabil ? "/sped-contabil" : "/sped-fiscal/motor/contribuicoes";
   const { contexto } = tela;
   if (!contexto) return null;
   const [d, escrita] = await Promise.all([carregarFechamento(tela, params), escritaNaTela(tela.ctx, tela.motor, tela.contabil ? "contabil_sped" : "fiscal_contribuicoes")]);
@@ -151,7 +151,7 @@ function ApuracaoDoAno({ titulo, linhas, competencias, contabil = false }: { tit
 
 async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor; filtro: FiltroDoDemonstrativo; params: Params }) {
   const Tabela = tela.contabil ? TabelaContabilDoMotor : TabelaFiscal;
-  const CAMINHO = tela.contabil ? "/sped-contabil" : "/fiscal/contribuicoes";
+  const CAMINHO = tela.contabil ? "/sped-contabil" : "/sped-fiscal/motor/contribuicoes";
   const d = await carregarDemonstrativoContrib(tela, filtro);
   if (d.erro !== null) return <ErroDaLeitura falha={d} hrefDeNovo={hrefComParams(CAMINHO, params)} />;
   const x = d.dados;
@@ -197,13 +197,13 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
 
 /** Aba Demonstrativo (§11.3.1 e 11.3.2): a lista é leve; o demonstrativo, pesado. */
 export async function DemonstrativoContribMotor({ tela, params }: { tela: TelaDoMotor; params: Params }) {
-  const CAMINHO = tela.contabil ? "/sped-contabil" : "/fiscal/contribuicoes";
+  const CAMINHO = tela.contabil ? "/sped-contabil" : "/sped-fiscal/motor/contribuicoes";
   const { contexto } = tela;
   if (!contexto) return null;
   const disponiveis = await competenciasDoDemonstrativo(tela);
   if (disponiveis.erro !== null) return <ErroDaLeitura falha={disponiveis} hrefDeNovo={hrefComParams(CAMINHO, params)} />;
   const filtro = filtroDoDemonstrativo(params, tela, disponiveis.dados);
-  if (!filtro) return <EmptyState title="Nenhum SPED de Contribuições gerado" description="O demonstrativo lê os arquivos gerados pelo motor." action={tela.modulos.includes("fiscal_operacao") ? <Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" })}>Gerar em Executar</Button> : undefined} />;
+  if (!filtro) return <EmptyState title="Nenhum SPED de Contribuições gerado" description="O demonstrativo lê os arquivos gerados pelo motor." action={tela.modulos.includes("fiscal_operacao") ? <Button href={hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "executar" })}>Gerar em Executar</Button> : undefined} />;
   const campos: CampoDeFiltro[] = [
     { chave: "visao", rotulo: "Visão", vazioLabel: "Competência", sempreVisivel: true, opcoes: [{ value: "ano", label: "Ano inteiro" }] },
     { chave: "ano", rotulo: "Ano", vazioLabel: `Ano da competência (${contexto.competencia.slice(0, 4)})`, opcoes: disponiveis.dados.anos.map((a) => ({ value: a, label: a })) },

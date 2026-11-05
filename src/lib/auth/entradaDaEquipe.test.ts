@@ -78,10 +78,10 @@ describe("decisão da entrada", () => {
 });
 
 describe("conferir a escolha do segundo passo", () => {
-  const liberada = { contas: ["a", "b"], lembrar: true, next: "/fiscal" };
+  const liberada = { contas: ["a", "b"], lembrar: true, next: "/sped-fiscal/motor" };
 
   it("um id do token entra, com o lembrar e o next do primeiro passo", () => {
-    expect(conferirEscolha(liberada, "b")).toEqual({ ok: true, contaId: "b", lembrar: true, next: "/fiscal" });
+    expect(conferirEscolha(liberada, "b")).toEqual({ ok: true, contaId: "b", lembrar: true, next: "/sped-fiscal/motor" });
   });
 
   it("um id fora do token é recusado", () => {

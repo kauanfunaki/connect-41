@@ -26,7 +26,7 @@ export function ConferenciaFiscal({ aba }: { aba: string }) {
     { rotulo: "Faturamento", valor: reais(totais.saidas), icone: <TrendingUp /> },
     { rotulo: "Entradas", valor: reais(totais.entradas), icone: <TrendingDown /> },
     { rotulo: "PIS + COFINS · teste", valor: reais(totais.pis + totais.cofins), icone: <Landmark /> },
-    { rotulo: "Pagamentos conciliados", valor: confrontos.filter((c) => c.estado === "Conciliado").length, icone: <Handshake />, href: "/fiscal/conferencia?aba=confronto" },
+    { rotulo: "Pagamentos conciliados", valor: confrontos.filter((c) => c.estado === "Conciliado").length, icone: <Handshake />, href: "/sped-fiscal/motor/conferencia?aba=confronto" },
   ]} /><BlocoFiscal titulo="Prévia de fechamento financeiro" descricao="Conferência demonstrativa do faturamento, das entradas e dos documentos de apoio." acao={<Button size="sm" variant="secondary" onClick={() => visualizar("Prévia financeira para exportar", relatorio)}>Prévia do relatório</Button>}><TabelaFiscal colunas={["Conferência", "Resultado"]} linhas={[
     { id: "nfs", celulas: ["NFS-e recebidas", docs.filter((d) => d.tipo === "NFS-e").length] }, { id: "cte", celulas: ["Fretes CT-e", reais(docs.filter((d) => d.tipo === "CT-e").reduce((v, d) => v + d.valor, 0))] }, { id: "apoio", celulas: ["Contratos, recibos, RPA e faturas", reais(docs.filter((d) => ["Contrato", "Recibo", "RPA", "Fatura"].includes(d.tipo)).reduce((v, d) => v + d.valor, 0))] },
   ]} /><div className="mt-5"><AcoesFiscais><AtalhoFiscal modulo="fiscal_conferencia" aba="confronto">Confrontar pagamentos</AtalhoFiscal><AtalhoFiscal modulo="fiscal_contribuicoes" aba="fechamento">Revisar fechamento fiscal</AtalhoFiscal></AcoesFiscais></div></BlocoFiscal></div>;

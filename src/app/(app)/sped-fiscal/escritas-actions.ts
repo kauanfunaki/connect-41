@@ -25,10 +25,10 @@ import type { DocumentoDaConferencia, PreviaFinanceira, RejeitadoDoMotor } from 
 import { chaveSchema, doErro, idSchema, prepararEscrita, raizSchema, recusa, recusado, revalidarTelas, visiveis, type ResultadoDoMotor } from "@/lib/fiscal/motor/acoes";
 import { MODULO } from "@/lib/fiscal/motor/telas/comum";
 
-const DOCUMENTOS = "/fiscal/documentos";
-const CONTRIBUICOES = "/fiscal/contribuicoes";
-const CONFERENCIA = "/fiscal/conferencia";
-const OPERACAO = "/fiscal/operacao";
+const DOCUMENTOS = "/sped-fiscal/motor/documentos";
+const CONTRIBUICOES = "/sped-fiscal/motor/contribuicoes";
+const CONFERENCIA = "/sped-fiscal/motor/conferencia";
+const OPERACAO = "/sped-fiscal/motor/operacao";
 
 const competencia = z.string().regex(COMPETENCIA, "Competência inválida (AAAA-MM).");
 const primeiraMensagem = (e: z.ZodError, padrao: string) => e.issues[0]?.message ?? padrao;

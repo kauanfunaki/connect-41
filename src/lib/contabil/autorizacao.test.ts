@@ -19,8 +19,8 @@ vi.mock("@/lib/fiscal/motor/servidor", () => ({
   estabelecimentosDaRaiz: async () => ({ visiveis: [{ id: 1, cnpj: "00123456000199", matriz: true, companyId: "00000000-0000-4000-8000-000000000001" }] }),
 }));
 const permissoes = await import("@/lib/fiscal/motor/acoes");
-const operacao = await import("@/app/(app)/fiscal/motor-actions");
-const decisoes = await import("@/app/(app)/fiscal/decisoes-actions");
+const operacao = await import("@/app/(app)/sped-fiscal/motor-actions");
+const decisoes = await import("@/app/(app)/sped-fiscal/decisoes-actions");
 beforeEach(() => {
   vi.clearAllMocks();
   m.ctx = { tenantId: "t1", userId: "u1", role: "ADMIN" };

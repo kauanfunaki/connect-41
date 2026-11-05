@@ -65,7 +65,7 @@ function sessao(res: Response) {
 describe("entrada da equipe", () => {
   it("um e-mail só: entra direto, com os tokens e os cookies de sempre", async () => {
     user.findMany.mockResolvedValue([contaNoEscritorio("conta-a", "escritorio-a", hashDoA, ["fiscal"])]);
-    const res = await entrar({ email: " Pessoa@Exemplo.com ", senha: "senha-do-a", next: "/fiscal" });
+    const res = await entrar({ email: " Pessoa@Exemplo.com ", senha: "senha-do-a", next: "/sped-fiscal/motor" });
 
     expect(user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { email: "pessoa@exemplo.com", active: true } })
@@ -74,7 +74,7 @@ describe("entrada da equipe", () => {
     expect(cookie(res, "refresh_token")).toMatch(/Max-Age=604800/);
     expect(refreshToken.create).toHaveBeenCalledTimes(1);
     expect(cookie(res, "equipe_escolha")).toBeUndefined();
-    expect(await res.text()).toContain("/fiscal");
+    expect(await res.text()).toContain("/sped-fiscal/motor");
     expect(reset).toHaveBeenCalledWith("login-email:pessoa@exemplo.com");
   });
 

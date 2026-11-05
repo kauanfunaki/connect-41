@@ -116,7 +116,7 @@ function TelasFixadas({ telas }: { telas: TelaNavegavel[] }) {
         </p>
       </TituloDoBloco>
       {telas.map((t) => (
-        <NavItem key={t.code} href={t.href} exact={t.href === "/fiscal"} icon={<ModuleIcon code={t.code} />} label={t.label} area={areaDoModulo(t.code) ?? "marca"} />
+        <NavItem key={t.code} href={t.href} exact={t.href === "/sped-fiscal/motor"} icon={<ModuleIcon code={t.code} />} label={t.label} area={areaDoModulo(t.code) ?? "marca"} />
       ))}
     </>
   );
@@ -581,7 +581,7 @@ export function AppShell({
                     { label: "Apps", href: "/ops?view=apps", icon: <AppWindow size={16} />, ativa: visaoDoOps === "apps" },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href="/ops" icon={<ModuleIcon code={m.code} />} label={m.label} comTelas menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
-                  </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/fiscal"} icon={<ModuleIcon code={m.code} />} label={m.label} area={areaDoModulo(m.code) ?? "marca"} />;
+                  </PainelDoItem> : <NavItem key={m.code} href={m.href} exact={m.href === "/sped-fiscal/motor"} icon={<ModuleIcon code={m.code} />} label={m.label} area={areaDoModulo(m.code) ?? "marca"} />;
                   const diretos = modulos.filter((m) => getModuleDef(m.code)?.menuDireto);
                   const grupos = agruparModulos(modulos.filter((m) => !getModuleDef(m.code)?.menuDireto));
                   if (grupos.length <= 1 || modulos.length <= 8) {

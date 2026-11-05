@@ -20,11 +20,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       // a aba aberta. A aba padrão continua a leve (Ajustes). DCIP e DIME é
       // tela própria no menu (`menu-sped`), sem as abas internas.
       const aba = params.aba === "apuracao" || params.aba === "demonstrativo" || params.aba === "dcip-dime" ? params.aba : "ajustes";
-      return <CascoDoMotor tela={tela} caminho="/fiscal/icms-ipi" abas={aba === "dcip-dime" ? undefined : [{ chave: "apuracao", rotulo: "Apuração" }, { chave: "demonstrativo", rotulo: "Demonstrativo" }, { chave: "ajustes", rotulo: "Ajustes" }]} aba={aba} titulo={aba === "dcip-dime" ? "DCIP e DIME" : "Apuração"} descricao="Apuração, demonstrativo e ajustes do ICMS (E111, DIME e DCIP) do motor SPED, por estabelecimento.">
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/icms-ipi" abas={aba === "dcip-dime" ? undefined : [{ chave: "apuracao", rotulo: "Apuração" }, { chave: "demonstrativo", rotulo: "Demonstrativo" }, { chave: "ajustes", rotulo: "Ajustes" }]} aba={aba} titulo={aba === "dcip-dime" ? "DCIP e DIME" : "Apuração"} descricao="Apuração, demonstrativo e ajustes do ICMS (E111, DIME e DCIP) do motor SPED, por estabelecimento.">
         {aba === "apuracao" ? <ApuracaoIcmsMotor tela={tela} params={params} />
           : aba === "demonstrativo" ? <DemonstrativoIcmsMotor tela={tela} params={params} />
             : aba === "dcip-dime" ? <Suspense key={JSON.stringify(params)} fallback={<CarregandoLeitura oQue="a DCIP e a DIME" />}><DcipDimeMotor tela={tela} params={params} /></Suspense>
-              : <DecisoesMotor tela={tela} caminho="/fiscal/icms-ipi" aba={aba} tipos={["ajuste_apuracao"]} params={params} permissoes={await permissoesDeDecisao(ctx, ["ajuste_apuracao"])} />}
+              : <DecisoesMotor tela={tela} caminho="/sped-fiscal/motor/icms-ipi" aba={aba} tipos={["ajuste_apuracao"]} params={params} permissoes={await permissoesDeDecisao(ctx, ["ajuste_apuracao"])} />}
       </CascoDoMotor>;
     }
   }

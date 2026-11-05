@@ -18,7 +18,7 @@ import { ErroDaLeitura, EscolhaUmEstabelecimento, PaginacaoDoMotor } from "./Lei
 import { escritaNaTela } from "@/lib/fiscal/motor/permissoes";
 import { ApurarCobertura, EnviarDocumentos, ReprocessarQuarentena, ResolverRejeitado } from "./EscritasDocumentos";
 
-const CAMINHO = "/fiscal/documentos";
+const CAMINHO = "/sped-fiscal/motor/documentos";
 
 const FILTROS_DO_ACERVO: CampoDeFiltro[] = [
   { chave: "tipo", rotulo: "Tipo", opcoes: [{ value: "NFE", label: "NF-e" }, { value: "NFCE", label: "NFC-e" }, { value: "NFSE", label: "NFS-e" }, { value: "CTE", label: "CT-e" }] },
@@ -92,7 +92,7 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
   const aqui = (m: Record<string, string | number | null> = {}) => hrefComParams(CAMINHO, params, m);
   const xml = (id: number, baixar = false) => `/api/fiscal/sped/quarentena/${id}/xml?raiz=${contexto.raiz}${baixar ? "&baixar=1" : ""}`;
   const classes = d.resumo.dados?.por_classe ?? [];
-  const hrefFila = tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" }) : null;
+  const hrefFila = tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "executar" }) : null;
   const filtrosDaQuarentena: CampoDeFiltro[] = [
     { chave: "classe", rotulo: "Classe", vazioLabel: "Pede decisão (desconhecido)", opcoes: [{ value: "todas", label: "Todas as classes" }, ...classes.filter((c) => c.classe !== "desconhecido").map((c) => ({ value: c.classe, label: `${c.classe} (${contagemDoMotor(c.total)})` }))] },
     { chave: "pendentes", rotulo: "Situação", vazioLabel: "Só pendentes", opcoes: [{ value: "0", label: "Pendentes e resolvidos" }] },
@@ -174,7 +174,7 @@ export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; para
   const [d, escrita] = await Promise.all([carregarCobertura(tela), escritaNaTela(tela.ctx, tela.motor, "fiscal_acervo")]);
   if (!d) return null;
   const aqui = hrefComParams(CAMINHO, params);
-  const hrefFila = tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" }) : null;
+  const hrefFila = tela.modulos.includes("fiscal_operacao") ? hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "executar" }) : null;
   const apurar = estabelecimento && escrita.visivel ? <ApurarCobertura raiz={contexto.raiz} estabelecimentoId={estabelecimento.id} competencia={contexto.competencia} permissao={escrita} hrefFila={hrefFila} /> : null;
   const porId = new Map(tela.mapa.visiveis.map((e) => [e.id, e]));
   const nfseDaCompetencia = (d.nfse.dados?.itens ?? []).filter((n) => n.competencia === contexto.competencia);
@@ -213,7 +213,7 @@ export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; para
       ] }))} />}
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Erros de extração pendentes" descricao={`CT-e com rota de ${contexto.competencia} que não foram extraídos. Para tentar de novo, peça a execução "erros" em Executar.`} acao={tela.modulos.includes("fiscal_operacao") ? <Button size="sm" variant="secondary" href={`/fiscal/operacao?aba=executar&raiz=${contexto.raiz}&competencia=${contexto.competencia}`}>Executar</Button> : undefined}>
+    <BlocoFiscal titulo="Erros de extração pendentes" descricao={`CT-e com rota de ${contexto.competencia} que não foram extraídos. Para tentar de novo, peça a execução "erros" em Executar.`} acao={tela.modulos.includes("fiscal_operacao") ? <Button size="sm" variant="secondary" href={`/sped-fiscal/motor/operacao?aba=executar&raiz=${contexto.raiz}&competencia=${contexto.competencia}`}>Executar</Button> : undefined}>
       {d.erros.erro !== null ? <ErroDaLeitura falha={d.erros} hrefDeNovo={aqui} /> : <div className="space-y-3">
         <MetricasFiscais itens={[
           { rotulo: "Pendências", valor: d.erros.dados.total, icone: <AlertTriangle />, tom: d.erros.dados.total > 0 ? "text-warning-fg" : undefined },

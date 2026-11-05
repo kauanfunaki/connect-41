@@ -10,7 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const { ctx } = await abrirTelaDoModulo("fiscal_painel");
   if (await modoDoFiscal(ctx) === "motor") {
     const tela = await prepararTelaDoMotor(await searchParams);
-    if (tela) return <CascoDoMotor tela={tela} caminho="/fiscal" titulo="Painel fiscal" descricao="Agentes, fila e arquivos da competência no motor SPED.">
+    if (tela) return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor" titulo="Painel fiscal" descricao="Agentes, fila e arquivos da competência no motor SPED.">
       <PainelMotor tela={tela} />
     </CascoDoMotor>;
   }

@@ -40,7 +40,7 @@ function casco(recolhido: boolean, extra: Partial<Props> = {}): string {
       { code: "dp_ferias", label: "Férias", href: "/dp/ferias" },
     ],
     telasNavegaveis: [],
-    telasFixadas: [{ code: "fiscal_apuracao", label: "Apuração", href: "/fiscal/apuracao", setor: "Fiscal" }],
+    telasFixadas: [{ code: "fiscal_apuracao", label: "Apuração", href: "/sped-fiscal/motor/apuracao", setor: "Fiscal" }],
     appDomain: null,
     sectorHostSuffix: "",
     canOpenAdmin: true,
@@ -79,17 +79,17 @@ function linksDoMenu(html: string): { tag: string; texto: string }[] {
 
 describe("menu recolhido: a faixa de ícones", () => {
   it("reúne as áreas fiscais em um único botão SPED também na faixa", () => {
-    rota.atual = "/fiscal/entregas";
+    rota.atual = "/sped-fiscal/motor/entregas";
     for (const recolhido of [false, true]) {
       const aside = lateral(casco(recolhido, { telasFixadas: [], activeSector: FISCAL, activeSectorModules: [
-        { code: "fiscal_classificacao", label: "Classificação", href: "/fiscal/classificacao" },
-        { code: "fiscal_entregas", label: "SPED gerados", href: "/fiscal/entregas" },
-        { code: "fiscal_operacao", label: "Executar", href: "/fiscal/operacao" },
+        { code: "fiscal_classificacao", label: "Classificação", href: "/sped-fiscal/motor/classificacao" },
+        { code: "fiscal_entregas", label: "SPED gerados", href: "/sped-fiscal/motor/entregas" },
+        { code: "fiscal_operacao", label: "Executar", href: "/sped-fiscal/motor/operacao" },
       ] }));
       expect(aside).toContain('aria-haspopup="menu"');
       expect(aside).toContain('aria-current="true"');
-      expect(aside).not.toContain('href="/fiscal/operacao"');
-      expect(aside).not.toContain('href="/fiscal/entregas"');
+      expect(aside).not.toContain('href="/sped-fiscal/motor/operacao"');
+      expect(aside).not.toContain('href="/sped-fiscal/motor/entregas"');
     }
   });
   it("a lateral fica na tela e no Tab — sem `inert`, sem esconder do leitor de tela", () => {

@@ -1,7 +1,7 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-vi.mock("@/app/(app)/fiscal/local-actions", () => ({ agirNoFiscalLocal: vi.fn() }));
+vi.mock("@/app/(app)/sped-fiscal/local-actions", () => ({ agirNoFiscalLocal: vi.fn() }));
 import { EstadoFiscal, TabelaFiscal } from "./Compartilhados";
 
 describe("tabelas da prévia fiscal", () => {

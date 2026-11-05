@@ -22,7 +22,7 @@ export function ApuracaoOrganizada({ aba, imposto }: { aba: string; imposto: Imp
   const { modulos } = useFiscal();
   const router = useRouter();
   return <div className="space-y-5">
-    <div className="max-w-sm"><CampoFiscal nome="Obrigação da apuração"><Select aria-label="Obrigação da apuração" value={imposto} onChange={(e) => router.push(e.target.value === "ICMS/IPI" ? "/fiscal/icms-ipi" : "/fiscal/contribuicoes")}>
+    <div className="max-w-sm"><CampoFiscal nome="Obrigação da apuração"><Select aria-label="Obrigação da apuração" value={imposto} onChange={(e) => router.push(e.target.value === "ICMS/IPI" ? "/sped-fiscal/motor/icms-ipi" : "/sped-fiscal/motor/contribuicoes")}>
       {modulos.includes("fiscal_icms_ipi") && <option>ICMS/IPI</option>}
       {modulos.includes("fiscal_contribuicoes") && <option value="Contribuições">PIS e COFINS</option>}
     </Select></CampoFiscal></div>

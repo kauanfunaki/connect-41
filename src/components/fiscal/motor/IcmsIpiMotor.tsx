@@ -14,7 +14,7 @@ import type { ArquivoDoMotor } from "@/lib/sped/motor";
 import type { GrupoCfop, LinhaCfop, QuadroDoDemonstrativo, VerbaDoDemonstrativo } from "@/lib/sped/telasDoMotor";
 import { CarregandoLeituraPesada, ErroDaLeitura, EscolhaUmEstabelecimento } from "./LeituraDoMotor";
 
-const CAMINHO = "/fiscal/icms-ipi";
+const CAMINHO = "/sped-fiscal/motor/icms-ipi";
 const GRUPOS: { chave: GrupoCfop; rotulo: string }[] = [
   { chave: "saidas_cte", rotulo: "Saídas · CT-e" }, { chave: "saidas_nfe", rotulo: "Saídas · NF-e" },
   { chave: "entradas", rotulo: "Entradas · NF-e" }, { chave: "entradas_cte", rotulo: "Entradas · CT-e" },
@@ -29,7 +29,7 @@ async function ComArquivo({ tela, params, aba, children }: { tela: TelaDoMotor; 
   const escolha = await arquivoDaCompetencia(tela, params);
   if (escolha.erro !== null) return <ErroDaLeitura falha={escolha} hrefDeNovo={hrefComParams(CAMINHO, params)} />;
   const { versoes, escolhido } = escolha.dados;
-  if (!escolhido) return <EmptyState title="Nenhum SPED gerado" description={`Não há EFD ICMS/IPI gerado de ${estabelecimento.companyNome} em ${contexto.competencia}.`} action={tela.modulos.includes("fiscal_operacao") ? <Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" })}>Gerar em Executar</Button> : undefined} />;
+  if (!escolhido) return <EmptyState title="Nenhum SPED gerado" description={`Não há EFD ICMS/IPI gerado de ${estabelecimento.companyNome} em ${contexto.competencia}.`} action={tela.modulos.includes("fiscal_operacao") ? <Button href={hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "executar" })}>Gerar em Executar</Button> : undefined} />;
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center gap-2 text-ui text-fg-secondary">
       <span>Arquivo:</span>
