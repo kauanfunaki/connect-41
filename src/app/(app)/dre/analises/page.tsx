@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDaDre } from "@/components/dre/AbasDaDre";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
@@ -78,7 +79,7 @@ export default async function AnalisesPage({
   if (!empresa || !companyId) {
     return (
       <PageContainer>
-        <PageHeader title="Análises gerenciais" />
+        <PageHeader title="DRE" subtitle="Análises e reconciliação, sobre a DRE por competência e o caixa." />
         {empresas.length === 0 ? (
           <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
         ) : (
@@ -102,15 +103,19 @@ export default async function AnalisesPage({
 
   return comEmpresa(
     <PageContainer>
+      {/* "DRE", com a aba Análises e reconciliação marcada embaixo (05/11/2026,
+          escolha 6A do Kauan): as quatro DREs são abas de uma tela só. */}
       <PageHeader
-        title="Análises gerenciais"
-        subtitle={`Sobre a DRE por competência e o caixa de ${rotuloDaCompetencia(mes)} — cálculo determinístico, sem IA externa.`}
+        title="DRE"
+        subtitle={`Análises e reconciliação de ${rotuloDaCompetencia(mes)}, sobre a DRE por competência e o caixa — cálculo determinístico, sem IA externa.`}
       />
+      <AbasDaDre ativa="analises" companyId={companyId} mes={mes} />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
       <FiltroDaEmpresa foco={foco}>
         <FiltroDePeriodo acao="/dre/analises" mes={mes} mesEmNumero extras={{ empresa: companyId, aba }} naFileira />
       </FiltroDaEmpresa>
       <AbasDeLink
+        aria-label="Análises"
         abas={ABAS.map((a) => ({ ...a, href: `/dre/analises?aba=${a.chave}&empresa=${companyId}&mes=${mes}` }))}
         ativa={aba}
       />
