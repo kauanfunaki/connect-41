@@ -183,6 +183,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
   },
   {
+    // Planejamento tributário (05/11/2026): o simulador do Connect Tributário (motor R_4.1),
+    // trazido para o Connect. Nasce desligado; o escritório liga em Admin › Módulos.
+    code: "contabil_planejamento", label: "Planejamento tributário", sectorCode: "contabil",
+    description: "Avaliações que comparam Simples, Simples híbrido, Presumido e Real de 2027 a 2033, com relatório para o cliente",
+    defaultEnabled: false, icon: "Landmark", group: "Apuração", menuDireto: true,
+  },
+  {
     code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
     description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
     defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
@@ -793,6 +800,7 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
   contabil_sped: "/sped-contabil",
+  contabil_planejamento: "/planejamento-tributario",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
   tech_github_contributions: "/github",

@@ -147,6 +147,9 @@ const EMPRESA: Ligacao[] = [
   { modelo: "Meeting", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["reunião", "reuniões"] },
   { modelo: "DigitalCertificate", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["certificado digital", "certificados digitais"] },
   { modelo: "ChatwootContactLink", campo: "company", fk: "companyId", tratamento: "desligar" },
+  // Planejamento tributário (05/11/2026): a avaliação guarda nome e CNPJ nos
+  // próprios dados e segue aberta como prospecto (onDelete: SetNull).
+  { modelo: "AvaliacaoTributaria", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["avaliação tributária (fica, como prospecto)", "avaliações tributárias (ficam, como prospecto)"] },
 ];
 
 const EMPRESA_SOLTAS: ColunaSolta[] = [
@@ -248,6 +251,12 @@ const USUARIO: Ligacao[] = [
 
   // A trilha fica, com o nome (migration 20261013200000).
   { modelo: "AuditLog", campo: "user", fk: "userId", tratamento: "desligar", rotulo: ["registro na auditoria (fica, com o nome dele)", "registros na auditoria (ficam, com o nome dele)"] },
+
+  // Autoria das avaliações tributárias (05/11/2026): a avaliação e as versões
+  // ficam, sem o autor (onDelete: SetNull) — a trilha está na auditoria.
+  { modelo: "AvaliacaoTributaria", campo: "criadoPor", fk: "criadoPorId", tratamento: "desligar", rotulo: ["avaliação tributária criada por ele (fica, sem o autor)", "avaliações tributárias criadas por ele (ficam, sem o autor)"] },
+  { modelo: "AvaliacaoTributaria", campo: "atualizadoPor", fk: "atualizadoPorId", tratamento: "desligar" },
+  { modelo: "AvaliacaoTributariaVersao", campo: "autor", fk: "autorId", tratamento: "desligar" },
 
   // Responsável por algo — fica sem responsável.
   { modelo: "Person", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar", rotulo: ["ficha em Pessoas ligada à conta", "fichas em Pessoas ligadas à conta"] },
