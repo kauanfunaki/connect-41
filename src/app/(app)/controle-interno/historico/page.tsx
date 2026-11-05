@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { History } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, LINK_DO_ITEM, nomeDoSistema } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, LINK_DO_ITEM, SITUACOES, nomeDoSistema, type Alteracao } from "@/lib/tech-interno/regras";
+import { getPrisma } from "@/lib/prisma";
+import { formatInstantDate } from "@/lib/format";
 import { historicoTech } from "@/lib/tech-interno/servidor";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -32,6 +34,16 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
   const hrefPagina = (n: number) => { const u = new URLSearchParams(aqui); u.set("page", String(n)); return `${ROTA_TECH_INTERNO}/historico?${u}`; };
   // Um item por linha: vários registros seguidos do mesmo item viram um só.
   const vistos = new Set<string>(), itens = changes.filter(c => !vistos.has(c.itemId) && vistos.add(c.itemId)).map(c => c.item);
+  // Fechado é Concluído ou Cancelado; a data é a da última mudança de
+  // "Situação" para a situação atual (o item não guarda coluna de fim).
+  const fechados = itens.filter(i => i.status === "DONE" || i.status === "CANCELED");
+  const mudancas = fechados.length ? await getPrisma().techInternalChange.findMany({ where: { tenantId: ctx.tenantId, itemId: { in: fechados.map(i => i.id) } }, select: { itemId: true, createdAt: true, changes: true }, orderBy: { createdAt: "asc" } }) : [];
+  const fechadoEm = new Map<string, Date>();
+  for (const m of mudancas) {
+    const item = fechados.find(i => i.id === m.itemId)!;
+    if ((m.changes as unknown as Alteracao[]).some(c => c.field === "Situação" && c.after === SITUACOES[item.status])) fechadoEm.set(m.itemId, m.createdAt);
+  }
+  const data = (d: Date | undefined) => d ? formatInstantDate(d) : "—";
   const linkDoItem = (id: string) => `${ROTA_TECH_INTERNO}/${id}`;
   const hrefVisao = (v: string) => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`;
   return <PageContainer>
@@ -46,14 +58,16 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
         : <>
           <CartoesNoCelular>{itens.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
             <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={linkDoItem(item.id)}>{item.title}</Link>} />
-            <InfoDoCartao>{nomeDoSistema(item, true)}</InfoDoCartao><InfoDoCartao>{item.assignee?.name ?? "Sem responsável"}</InfoDoCartao>
+            <InfoDoCartao>{nomeDoSistema(item, true)}</InfoDoCartao><InfoDoCartao>{item.assignee?.name ?? "Sem responsável"}</InfoDoCartao><InfoDoCartao>Aberto em {data(item.createdAt)} · Fechado em {data(fechadoEm.get(item.id))}</InfoDoCartao>
             <PeDoCartao><SituacaoTech forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></PeDoCartao>
           </Cartao>)}</CartoesNoCelular>
-          <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Sistema", "Responsável", "Situação"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
+          <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Sistema", "Responsável", "Aberto em", "Fechado em", "Situação"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">{itens.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
               <td className="px-4 py-3 min-w-48 max-w-md break-words"><Link href={linkDoItem(item.id)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
               <td className="px-4 py-3 break-words max-w-48">{nomeDoSistema(item, true)}</td>
               <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td>
+              <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(item.createdAt)}</td>
+              <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(fechadoEm.get(item.id))}</td>
               <td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></td>
             </tr>)}</tbody>
           </table></TabelaNoDesktop>
