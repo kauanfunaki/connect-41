@@ -1,37 +1,39 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { LayoutList } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { Aviso } from "@/components/ui/Aviso";
 import { Badge } from "@/components/ui/Badge";
-import { MODELOS, modeloDoCodigo, type CodigoDoModelo } from "@/lib/dre/estrutura";
+import { MODELOS, type CodigoDoModelo } from "@/lib/dre/estrutura";
 import { preverTrocaDeModelo, trocarModeloDoDre, type PreviaDaTroca } from "@/app/(app)/dre/actions";
 
 // O modelo do DRE da empresa (21/10/2026, pedido do Kauan): a visualização do
-// DRE depende do cliente — o padrão, ou um customizado. O botão fica ao lado
-// dos controles do topo e diz o modelo em uso; o painel lista os modelos,
-// mostra o que a troca refaz antes de fazer e pede a confirmação. Trocar é da
-// coordenação do setor; quem não pode vê o modelo e o porquê.
+// DRE depende do cliente — o padrão, ou um customizado. O painel lista os
+// modelos, mostra o que a troca refaz antes de fazer e pede a confirmação.
+// Trocar é da coordenação do setor; quem não pode vê o modelo e o porquê.
+//
+// Desde 05/11/2026 (escolha 5A do Kauan) o painel abre pelo item "Modelo da
+// DRE" do menu "⋯" do topo, e não por um botão na fileira dos filtros: quem
+// abre guarda o estado, fora do menu, que fecha ao clicar.
 
 type Props = {
   companyId: string;
   modelo: CodigoDoModelo;
   podeTrocar: boolean;
+  aberto: boolean;
+  onFechar: () => void;
 };
 
-export function SeletorDoModeloDoDre({ companyId, modelo, podeTrocar }: Props) {
-  const [aberto, setAberto] = useState(false);
+export function PainelDoModeloDoDre({ companyId, modelo, podeTrocar, aberto, onFechar }: Props) {
   const [escolhido, setEscolhido] = useState<CodigoDoModelo>(modelo);
   const [previa, setPrevia] = useState<PreviaDaTroca | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, iniciar] = useTransition();
-  const atual = modeloDoCodigo(modelo);
 
   function fechar() {
-    setAberto(false);
+    onFechar();
     setEscolhido(modelo);
     setPrevia(null);
     setErro(null);
@@ -56,16 +58,13 @@ export function SeletorDoModeloDoDre({ companyId, modelo, podeTrocar }: Props) {
         setErro(r.error);
         return;
       }
-      setAberto(false);
+      onFechar();
       setPrevia(null);
     });
   }
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setAberto(true)} title={atual.descricao}>
-        <LayoutList size={14} /> Modelo: {atual.codigo === "padrao" ? "Padrão" : "Customizado"}
-      </Button>
       <SlideOver open={aberto} onClose={fechar} title="Modelo do DRE desta empresa" width="max-w-xl" fundo="leve">
         <div className="flex flex-col gap-4 px-5 py-4 overflow-y-auto">
           <p className="text-ui text-fg-secondary">
