@@ -83,6 +83,10 @@ const nextConfig: NextConfig = {
       // A Tech (04/11/2026, depois do #378 e do #380).
       { source: "/tech/controle-interno/:caminho*", destination: "/controle-interno/:caminho*", permanent: false },
       { source: "/tech/ceci/:caminho*", destination: "/ceci/:caminho*", permanent: false },
+      // O GitHub virou a aba GitHub da Produtividade (05/11/2026): /github e as
+      // telas dele (desenvolvedores, repositórios, times) vão para dentro dela.
+      // A API (/api/github) não muda.
+      { source: "/github/:caminho*", destination: "/produtividade/github/:caminho*", permanent: false },
       // O Fiscal (05/11/2026), como o SPED do Contábil: as quatro etapas do
       // SPED na raiz de /sped-fiscal, e as telas do motor embaixo, em /motor.
       // A ordem importa: /fiscal/sped antes da regra geral de /fiscal.

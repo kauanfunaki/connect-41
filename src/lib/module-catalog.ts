@@ -195,14 +195,17 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
 
   {
-    code: "tech_github_contributions", label: "GitHub", sectorCode: "tech",
-    description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
+    // Produtividade (05/11/2026, opção A da tela 7): o time, as pessoas e o
+    // GitHub como contexto. O código do módulo continua o mesmo.
+    code: "tech_github_contributions", label: "Produtividade", sectorCode: "tech",
+    description: "Pontos entregues, ciclo, retrabalho e chamados do time e de cada pessoa, a saúde do fluxo e a atividade no GitHub como contexto",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
   },
   {
     // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
     code: "tech_entregas", label: "Entregas da Tech", sectorCode: "tech",
-    description: "Entregas validadas pesadas pelo tamanho, tempo de ciclo, retrabalho e chamados, por pessoa e por trimestre",
+    // Desde 05/11/2026 é a lista do que foi entregue; os números foram para a Produtividade.
+    description: "Os itens entregues no período, com tamanho, pontos, ciclo e de onde vieram",
     defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
   {
@@ -795,7 +798,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   contabil_sped: "/sped-contabil",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
-  tech_github_contributions: "/github",
+  tech_github_contributions: "/produtividade",
   tech_ops_center:         "/ops",
   tech_entregas: "/controle-interno/entregas",
   helpdesk: "/chamados",

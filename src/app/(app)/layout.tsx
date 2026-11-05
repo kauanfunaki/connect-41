@@ -10,8 +10,6 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullAccess, isFullWrite, canViewSector } from "@/lib/auth/context";
-import { alcancaModulo } from "@/lib/auth/modulo";
-import { GITHUB_MODULE } from "@/lib/github/types";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
@@ -202,9 +200,6 @@ export default async function AppLayout({
         .filter((m) => m.enabled && m.sectorCodes.includes(activeSector.code) && (!MODULOS_DO_MENU_GERAL.has(m.code) || (m.code === "helpdesk" && chamadosNoSetor)) && !semMenu.has(m.code) && !(solicitacoesLigadas && FORA_DO_MENU_COM_SOLICITACOES.has(m.code)))
         .map((m) => ({ code: m.code, label: m.label, href: getModuleRoute(m.code) ?? `/setor/${activeSector.code}/${m.code}` }))
     : [];
-  // A aba Times do GitHub (04/11/2026) é de quem gerencia o módulo: o coordenador do Tech e os administradores.
-  const github = moduleStates.find((m) => m.code === GITHUB_MODULE);
-  const podeGerirGithub = github ? alcancaModulo(ctx, github.sectorCodes, github.enabled, "gerir") : false;
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
@@ -233,7 +228,6 @@ export default async function AppLayout({
         sectors={visibleSectors}
         activeSector={activeSector}
         activeSectorModules={activeSectorModules}
-        podeGerirGithub={podeGerirGithub}
         telasNavegaveis={telasNavegaveis}
         telasFixadas={telasFixadas}
         appDomain={baseDomain()}

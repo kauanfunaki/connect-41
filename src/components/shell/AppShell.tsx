@@ -14,11 +14,9 @@ import {
   Settings,
   ReceiptText,
   FolderKanban,
-  LayoutGrid,
   Bot,
   Globe,
   AppWindow,
-  FolderGit2,
   CalendarCheck,
   ChevronDown,
   Menu,
@@ -80,6 +78,7 @@ import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
+import { abaDaProdutividade, ROTAS_DA_PRODUTIVIDADE } from "@/lib/tech-interno/rotasDaProdutividade";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -144,8 +143,6 @@ type Props = {
   // continua ali.
   activeSector: Sector | null;
   activeSectorModules: SectorModule[];
-  /** Mostra "Times" no menu do GitHub: só para quem gerencia o módulo (04/11/2026). */
-  podeGerirGithub?: boolean;
   /** Tudo que a pessoa pode abrir, de qualquer setor — alimenta o Ctrl+K. */
   telasNavegaveis: TelaNavegavel[];
   /** As telas que ela fixou, na ordem dela, já filtradas pelo que pode abrir. */
@@ -203,7 +200,6 @@ export function AppShell({
   sectors,
   activeSector,
   activeSectorModules,
-  podeGerirGithub = false,
   telasNavegaveis,
   telasFixadas,
   appDomain,
@@ -558,13 +554,14 @@ export function AppShell({
                     { label: "Gerar SPED Contribuições", href: hrefContabil("contribuicoes", "gerar"), icon: <ModuleIcon code={m.code} />, ativa: noContabil && grupoAtualContabil === "contribuicoes" },
                   ]}>
                     {({ aberto, alternar, painelId }) => <NavItem href={m.href} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={noContabil} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
-                  </PainelDoItem> : m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo="GitHub" area={areaDoModulo(m.code) ?? "marca"} icone={<GitBranch />} abrirPorClique telas={[
-                    { label: "Geral", href: "/github", icon: <LayoutGrid size={16} />, ativa: pathname === "/github" },
-                    { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users size={16} />, ativa: pathname.startsWith("/github/desenvolvedores") },
-                    { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 size={16} />, ativa: pathname.startsWith("/github/repositorios") },
-                    ...(podeGerirGithub ? [{ label: "Times", href: "/github/times", icon: <UsersRound size={16} />, ativa: pathname.startsWith("/github/times") }] : []),
+                  </PainelDoItem> : m.code === "tech_github_contributions" ? <PainelDoItem key={m.code} titulo={m.label} area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
+                    // A Produtividade (05/11/2026): Time, Pessoas e GitHub. As telas
+                    // do GitHub (Desenvolvedores, Repositórios, Times) são abas dentro dele.
+                    { label: "Time", href: ROTAS_DA_PRODUTIVIDADE.time, icon: <UsersRound size={16} />, ativa: abaDaProdutividade(pathname) === "time" },
+                    { label: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icon: <Users size={16} />, ativa: abaDaProdutividade(pathname) === "pessoas" },
+                    { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch size={16} />, ativa: abaDaProdutividade(pathname) === "github" },
                   ]}>
-                    {({ aberto, alternar, painelId }) => <NavItem href="/github" icon={<GitBranch size={16} />} label="GitHub" comTelas menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
+                    {({ aberto, alternar, painelId }) => <NavItem href={ROTAS_DA_PRODUTIVIDADE.time} icon={<ModuleIcon code={m.code} />} label={m.label} comTelas ativo={abaDaProdutividade(pathname) !== null} menu={{ aberto, onClick: alternar, painelId }} area={areaDoModulo(m.code) ?? "marca"} />}
                   </PainelDoItem> : m.code === "tech_ops_center" ? <PainelDoItem key={m.code} titulo="Ops Center" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
                     // O que o Tech entregou (28/10/2026): a triagem dos chamados consulta
                     // Robôs, Sites e Apps. O Histórico fica dentro de Robôs.
