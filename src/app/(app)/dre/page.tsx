@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, Eye, FileText, CalendarDays, CalendarRange, Users } from "lucide-react";
+import { AlertTriangle, Eye, FilePen, FileText, CalendarDays, CalendarRange, Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -15,7 +16,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
-import { formatarCompetencia, formatarCompetenciaNumerica, formatarReaisDeCentavos as moeda } from "@/lib/format";
+import { formatarCompetencia, formatarCompetenciaNumerica, formatarReaisDeCentavos as moeda, formatInstantDate } from "@/lib/format";
 import { AvisoDeSemGrupo, PainelDeClassificacao } from "@/components/dre/PainelDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno } from "@/lib/dre/anual";
@@ -34,6 +35,10 @@ import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { DreDoCliente } from "@/components/dre/DreDoCliente";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { FaixaDoRascunho } from "@/components/dre/FaixaDoRascunho";
+import { diferencasDaDre } from "@/lib/dre/publicacao";
+import type { Publicacao } from "@/lib/dre/doClientePublicado";
+import { fotoAtualDoMes, garantirFotoInicial, mesesComRascunho, publicacoesDaEmpresa } from "@/lib/dre/publicacaoServidor";
 
 /**
  * O mês do DRE no formato de competência do app, "Out/26" (08/10/2026). Era
@@ -104,10 +109,14 @@ export default async function DrePage({
 
   // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
   // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
+  // A foto inicial da empresa (05/11/2026, ver `publicacaoServidor.ts`): na
+  // primeira abertura depois do deploy da publicação, o que o cliente já via
+  // vira a versão publicada de cada mês.
   const [meses, modelo, podeTrocarModelo] = await Promise.all([
     mesesComMovimento(ctx.tenantId, companyId),
     modeloDaEmpresa(ctx.tenantId, companyId),
     podeTrocarOModeloDoDre(ctx),
+    garantirFotoInicial(ctx.tenantId, companyId),
   ]);
   const opcoes = opcoesDaUrl(impostos, modelo);
 
@@ -219,6 +228,7 @@ export default async function DrePage({
       impostoForaDoResultado: impostoDoAno,
     } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido, opcoes);
     const anual = dreDoAno(porMes, opcoes);
+    const comRascunho = await mesesComRascunho(ctx.tenantId, companyId, anoEscolhido, porMes, modelo);
 
     // O ano mistura meses importados e meses do financeiro.
     const fila = itensDaFila(soltosDoAno, categoriasDoAno, { temImport: temMesImportado, doSemCategoria: fontesDoSemCategoria });
@@ -251,6 +261,7 @@ export default async function DrePage({
               campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
             />
           </div>
+          <RascunhoDoAno companyId={companyId} ano={anoEscolhido} meses={comRascunho} />
           {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
               some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
               passam onde um grande não passaria. */}
@@ -311,10 +322,17 @@ export default async function DrePage({
   // recebido ou importado): sem ele, "subiu 100%" sobre zero diria nada.
   const anteriorAoEscolhido = escolhido.mes === 1 ? { ano: escolhido.ano - 1, mes: 12 } : { ano: escolhido.ano, mes: escolhido.mes - 1 };
   const temAnterior = meses.some((m) => m.ano === anteriorAoEscolhido.ano && m.mes === anteriorAoEscolhido.mes);
-  const [{ resultado, categorias, lancamentos, fonte }, anterior] = await Promise.all([
+  const competencia = competenciaDe(escolhido.ano, escolhido.mes);
+  const [{ resultado, categorias, lancamentos, fonte }, anterior, fotoAtual, publicadas] = await Promise.all([
     dreDoMes(ctx.tenantId, companyId, escolhido, opcoes),
     temAnterior ? dreDoMes(ctx.tenantId, companyId, anteriorAoEscolhido, opcoes) : Promise.resolve(null),
+    // O rascunho (05/11/2026, decisão D4 do Kauan): a DRE de agora, como o
+    // cliente a veria, contra a versão publicada no portal.
+    fotoAtualDoMes(ctx.tenantId, companyId, competencia),
+    publicacoesDaEmpresa(ctx.tenantId, companyId, [competencia]),
   ]);
+  const publicada = publicadas.get(competencia) ?? null;
+  const diferencas = diferencasDaDre(publicada?.foto ?? null, fotoAtual);
 
   const fila = itensDaFila(resultado.naoClassificado, categorias, {
     temImport: fonte.tipo === "import",
@@ -365,7 +383,21 @@ export default async function DrePage({
               },
             ]}
           />
+          {publicada && diferencas.length === 0 && <VersaoNoPortal publicada={publicada} />}
         </div>
+
+        {/* O rascunho e o que falta classificar, logo abaixo da fileira — os
+            dois dizem o que ainda não está pronto para o cliente. */}
+        {diferencas.length > 0 && (
+          <FaixaDoRascunho
+            companyId={companyId}
+            competencia={competencia}
+            rotuloDoMes={rotuloDoMes(escolhido)}
+            diferencas={diferencas}
+            nuncaPublicado={!publicada}
+          />
+        )}
+        <AvisoDeSemGrupo />
 
         {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
             Kauan: na DRE, o padrão entra nos números do topo e a tabela fica
@@ -390,10 +422,6 @@ export default async function DrePage({
             </span>
           </Aviso>
         )}
-
-        {/* O que falta classificar, em uma linha que abre o painel — a fila
-            inteira aqui fazia rolar (13/10/2026). */}
-        <AvisoDeSemGrupo />
 
         {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
             relatório em que ninguém confia duas vezes. Na `NotaDeFonte` (15/10/2026),
@@ -492,6 +520,49 @@ async function ComoOClienteVe({
         />
       </section>
     </>
+  );
+}
+
+/**
+ * A versão que o portal mostra, na ponta da fileira, quando a DRE da equipe
+ * está igual a ela — o par da faixa do rascunho.
+ */
+function VersaoNoPortal({ publicada }: { publicada: Publicacao }) {
+  const quando = formatInstantDate(publicada.publicadoEm);
+  return (
+    <p className="text-fs-2 text-fg-muted sm:ml-auto">
+      No portal: versão de {quando}
+      {publicada.inicial ? " (a que o cliente já via)" : publicada.publicadoPorNome ? `, publicada por ${publicada.publicadoPorNome}` : ""}
+    </p>
+  );
+}
+
+/**
+ * Na visão do ano, os meses com mudança fora do portal. A publicação é por
+ * mês, então cada um leva ao mês, onde ficam "Ver diferenças" e "Publicar".
+ */
+function RascunhoDoAno({ companyId, ano, meses }: { companyId: string; ano: number; meses: string[] }) {
+  if (meses.length === 0) return null;
+  return (
+    <Aviso tom="marca" icone={<FilePen />} className="mb-4">
+      <p className="text-fg">
+        <strong>Rascunho em {ano}</strong> —{" "}
+        {meses.length === 1 ? "um mês tem mudanças que ainda não estão" : `${meses.length} meses têm mudanças que ainda não estão`} no
+        portal:{" "}
+        {meses.map((c, i) => {
+          const [a, m] = c.split("-");
+          return (
+            <span key={c}>
+              {i > 0 && (i === meses.length - 1 ? " e " : ", ")}
+              <Link href={`/dre?empresa=${companyId}&mes=${a}-${Number(m)}`} className="font-medium text-brand underline-offset-2 hover:underline">
+                {formatarCompetencia(c)}
+              </Link>
+            </span>
+          );
+        })}
+        . Cada mês se publica na visão do mês.
+      </p>
+    </Aviso>
   );
 }
 

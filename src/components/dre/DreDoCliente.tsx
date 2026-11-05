@@ -6,12 +6,11 @@ import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
 import type { EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
-import { mesesComMovimento } from "@/lib/dre/data";
-import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { comRotulosEconomicos } from "@/lib/dre/economica";
-import { dreDoClienteNoAno, dreDoClienteNoMes, opcoesDoCliente } from "@/lib/dre/doCliente";
-import { anoValido, competenciaValida, competenciaDe, rotuloDaCompetencia, somarMeses } from "@/lib/financeiro/periodo";
-import { formatarCompetencia } from "@/lib/format";
+import { lerDreDoCliente } from "@/lib/dre/doClientePublicado";
+import { garantirFotoInicial, publicacoesDaEmpresa } from "@/lib/dre/publicacaoServidor";
+import { anoValido, competenciaValida, rotuloDaCompetencia, somarMeses } from "@/lib/financeiro/periodo";
+import { formatarCompetencia, formatInstantDate } from "@/lib/format";
 
 type Props = {
   tenantId: string;
@@ -20,7 +19,7 @@ type Props = {
   params: { mes?: string; ano?: string; regime?: string };
   /** O tenant ligou a DRE econômica: a aba Competência aparece. */
   competenciaLiberada: boolean;
-  /** Rota do filtro e das abas: `/portal/dre`, ou `/dre` no "Ver como o cliente". */
+  /** Rota do filtro e das abas: `/portal/dre`, ou `/dre` na aba "Como o cliente vê". */
   acao: string;
   /** As empresas do seletor, quando há mais de uma para escolher (portal). */
   empresas?: (EmpresaParaEscolher & { nome: string })[];
@@ -30,9 +29,15 @@ type Props = {
 
 /**
  * A DRE do cliente: filtro, abas Caixa e Competência, números do topo, tabela
- * e a nota do regime. É o corpo de `/portal/dre`, e o mesmo corpo aparece no
- * "Ver como o cliente" de `/dre` (21/10/2026) — um componente só, para a
+ * e a nota do regime. É o corpo de `/portal/dre`, e o mesmo corpo aparece na
+ * aba "Como o cliente vê" de `/dre` (21/10/2026) — um componente só, para a
  * equipe ver exatamente o que o cliente vê.
+ *
+ * Desde 05/11/2026 (decisão D4 do Kauan) lê a **última foto publicada** de cada
+ * mês, e não os lançamentos ao vivo: importar ou classificar na DRE da equipe
+ * não chega ao cliente até alguém publicar o mês. A primeira leitura de cada
+ * empresa tira a foto inicial (ver `publicacaoServidor.ts`), para nada do que
+ * o cliente já via sumir.
  *
  * O ano inteiro (14/10/2026) — os doze meses lado a lado, com média e total,
  * como a aba "Ano inteiro" da DRE da equipe — se escolhe no próprio campo do
@@ -42,11 +47,11 @@ type Props = {
 export async function DreDoCliente({ tenantId, companyId, params, competenciaLiberada, acao, empresas, manter }: Props) {
   const regime = params.regime === "competencia" && competenciaLiberada ? "competencia" : "caixa";
 
-  const [meses, modelo] = await Promise.all([mesesComMovimento(tenantId, companyId), modeloDaEmpresa(tenantId, companyId)]);
-  const opcoes = opcoesDoCliente(modelo);
-  const recente = meses[0] ? competenciaDe(meses[0].ano, meses[0].mes) : undefined;
+  await garantirFotoInicial(tenantId, companyId);
+  const publicacoes = await publicacoesDaEmpresa(tenantId, companyId);
   const ano = anoValido(params.ano);
-  const mes = ano ? undefined : (competenciaValida(params.mes) ?? recente);
+  const leitura = lerDreDoCliente(publicacoes, { mes: ano ? null : competenciaValida(params.mes), ano }, regime);
+  const mes = leitura.tipo === "mes" ? leitura.mes : undefined;
 
   const naUrl = new URLSearchParams();
   for (const [k, v] of Object.entries(manter ?? {})) if (v) naUrl.set(k, v);
@@ -57,61 +62,48 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
 
   // Os vazios vão num Card, como o "Nenhuma empresa vinculada" do portal e os
   // das outras telas dele — soltos, flutuavam no fundo da página.
+  const vazio = (title: string, description?: string) => (
+    <Card>
+      <EmptyState icon={<FileText />} title={title} description={description} />
+    </Card>
+  );
   let conteudo: React.ReactNode;
   // Quantos meses entram na média do ano — a nota do pé diz.
   let mesesNaMedia: number | null = null;
-  if (ano) {
-    const anual = await dreDoClienteNoAno(tenantId, companyId, ano, regime, opcoes);
-    if (anual.mesesComMovimento === 0) {
-      conteudo = (
-        <Card>
-          <EmptyState
-            icon={<FileText />}
-            title={regime === "caixa" ? `Nenhum pagamento ou recebimento em ${ano}` : `Nenhum lançamento com competência em ${ano}`}
-          />
-        </Card>
-      );
+  let atualizadaEm: Date | null = null;
+  if (leitura.tipo === "ano") {
+    if (!leitura.anual || leitura.anual.mesesComMovimento === 0) {
+      conteudo = vazio(regime === "caixa" ? `Nenhum pagamento ou recebimento em ${leitura.ano}` : `Nenhum lançamento com competência em ${leitura.ano}`);
     } else {
-      mesesNaMedia = anual.mesesComMovimento;
-      conteudo = <RelatorioAnual anual={anual} regime={regime} />;
+      mesesNaMedia = leitura.anual.mesesComMovimento;
+      atualizadaEm = leitura.atualizadaEm;
+      conteudo = <RelatorioAnual anual={leitura.anual} regime={regime} />;
     }
-  } else if (!mes) {
-    conteudo = (
-      <Card>
-        <EmptyState
-          icon={<FileText />}
-          title="Ainda não há DRE para esta empresa"
-          description="A DRE aparece aqui quando a equipe lançar os pagamentos e recebimentos do mês."
-        />
-      </Card>
+  } else if (leitura.tipo === "nenhum") {
+    conteudo = vazio("Ainda não há DRE para esta empresa", "A DRE aparece aqui quando a equipe publicar o primeiro mês.");
+  } else if (!leitura.publicada) {
+    // O mês existe, mas ninguém o publicou: a equipe ainda está conferindo.
+    conteudo = vazio(`A DRE de ${formatarCompetencia(leitura.mes)} ainda não foi publicada`, "A equipe publica cada mês depois de conferir os números.");
+  } else if (!leitura.publicada.temMovimento) {
+    conteudo = vazio(
+      regime === "caixa"
+        ? `Nenhum pagamento ou recebimento em ${formatarCompetencia(leitura.mes)}`
+        : `Nenhum lançamento com competência em ${formatarCompetencia(leitura.mes)}`
     );
   } else {
-    // Os números do topo com a comparação ao mês anterior, como em /dre (9A da
-    // página de decisões, 08/10/2026). No caixa, o mês anterior só entra
-    // quando teve movimento.
-    const mesAnterior = somarMeses(mes, -1);
-    const temAnterior = meses.some((x) => competenciaDe(x.ano, x.mes) === mesAnterior);
-    const dre = await dreDoClienteNoMes(tenantId, companyId, mes, regime, opcoes, temAnterior);
-    conteudo = !dre.temMovimento ? (
-      <Card>
-        <EmptyState
-          icon={<FileText />}
-          title={
-            regime === "caixa"
-              ? `Nenhum pagamento ou recebimento em ${formatarCompetencia(mes)}`
-              : `Nenhum lançamento com competência em ${formatarCompetencia(mes)}`
-          }
-        />
-      </Card>
-    ) : (
+    const { resultado, anterior } = leitura.publicada;
+    atualizadaEm = leitura.publicada.atualizadaEm;
+    conteudo = (
       <>
+        {/* Os números do topo com a comparação ao mês anterior, como em /dre
+            (9A da página de decisões, 08/10/2026); o anterior é o publicado. */}
         <NumerosDaDre
-          resultado={dre.resultado}
+          resultado={resultado}
           regime={regime}
-          anterior={dre.anterior ? { resultado: dre.anterior, rotulo: rotuloDaCompetencia(mesAnterior) } : null}
+          anterior={anterior ? { resultado: anterior, rotulo: rotuloDaCompetencia(somarMeses(leitura.mes, -1)) } : null}
           className="mb-4"
         />
-        <RelatorioDoDre resultado={regime === "caixa" ? dre.resultado : comRotulosEconomicos(dre.resultado)} />
+        <RelatorioDoDre resultado={regime === "caixa" ? resultado : comRotulosEconomicos(resultado)} />
       </>
     );
   }
@@ -122,7 +114,7 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
         acao={acao}
         empresas={empresas && empresas.length > 1 ? empresas : undefined}
         empresaId={companyId}
-        // Sem mês com movimento, não há o que escolher: o campo vazio ("-- de ----")
+        // Sem mês publicado, não há o que escolher: o campo vazio ("-- de ----")
         // só confundia.
         mes={mes ?? undefined}
         // O mês em número, "10/2026", como nos filtros da DRE da equipe (14/10/2026).
@@ -145,6 +137,9 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
           ativa={regime}
         />
       )}
+      {/* "Atualizada em" (decisão D4): o cliente sabe de quando é o número que
+          está vendo — a equipe publica quando confere, não a cada lançamento. */}
+      {atualizadaEm && <p className="text-helper text-fg-muted mb-3">Atualizada em {formatInstantDate(atualizadaEm)}.</p>}
       {conteudo}
       {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
           cabeçalho de tabela, numa explicação que o cliente lê no celular. */}

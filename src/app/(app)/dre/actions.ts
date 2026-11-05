@@ -19,6 +19,7 @@ import {
   nomeDaCategoria,
 } from "@/lib/financeiro/categoriaDaEmpresa";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { garantirFotoInicial } from "@/lib/dre/publicacaoServidor";
 
 export type AcaoDoDre = { error: string } | { success: true } | null;
 
@@ -44,6 +45,11 @@ async function contexto(companyId: string): Promise<Contexto | { ok: false; erro
     select: { id: true },
   });
   if (!empresa) return { ok: false, erro: "Empresa não encontrada." };
+
+  // Antes de qualquer mudança, a foto do que o cliente já via (05/11/2026):
+  // a primeira classificação depois do deploy da publicação fica no rascunho,
+  // e não entra sozinha no portal (ver `publicacaoServidor.ts`).
+  await garantirFotoInicial(tenantId, companyId);
 
   return { ok: true, ctx, tenantId, prisma };
 }

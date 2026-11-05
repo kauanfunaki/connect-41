@@ -1445,6 +1445,8 @@ model Tenant {
   dreMappings               DreCategoryMapping[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
+  drePublicacoes            DrePublicacao[]
+  drePublicacaoEmpresas     DrePublicacaoEmpresa[]
   candidatoAcessos          CandidatoAcesso[]
   leads                     Lead[]
 
@@ -2140,6 +2142,8 @@ model Company {
   financeCategories        FinanceCategory[]
   hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
+  drePublicacoes           DrePublicacao[]
+  drePublicacaoEmpresa     DrePublicacaoEmpresa?
   processFees              ProcessFee[]
   portalUserLinks          PortalUserCompany[]
   announcementLinks        ClientAnnouncementCompany[]
@@ -8794,6 +8798,53 @@ model DreImportLine {
 
   @@index([importId])
   @@map("dre_import_lines")
+}
+
+/// A DRE de uma empresa num mês como o cliente vê no portal (05/11/2026,
+/// decisão D4 do Kauan). A equipe vê e mexe ao vivo; o portal mostra a última
+/// foto publicada. Uma linha por empresa e mês: publicar de novo substitui, e
+/// a trilha de quem publicou o quê fica na auditoria ("dre.publicar").
+model DrePublicacao {
+  id          String @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// O mês, "AAAA-MM".
+  competencia String @db.Char(7)
+
+  /// A foto (`FotoDaDre`, src/lib/dre/publicacao.ts): totais por grupo e
+  /// categorias de cada grupo, no caixa e na competência, e o modelo da DRE.
+  foto Json
+
+  /// A foto que o Connect tirou sozinho na primeira vez que a empresa foi
+  /// aberta depois do deploy da publicação: o que o cliente já via ao vivo.
+  inicial Boolean @default(false)
+
+  publicadoEm      DateTime @default(now())
+  /// Quem publicou; vazio na foto inicial. O nome vai junto, como na auditoria.
+  publicadoPorId   String?
+  publicadoPorNome String?  @db.VarChar(120)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, competencia])
+  @@index([tenantId, companyId])
+  @@map("dre_publicacoes")
+}
+
+/// A empresa já tem a foto inicial (ver `DrePublicacao.inicial`). Existe à
+/// parte porque empresa sem mês nenhum também precisa da marca — senão a
+/// primeira importação dela entraria na foto inicial e iria direto ao portal.
+model DrePublicacaoEmpresa {
+  companyId     String   @id
+  tenantId      String
+  fotoInicialEm DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([tenantId])
+  @@map("dre_publicacao_empresas")
 }
 
 // ── Valora (precificação de honorários) ────────────────────────────────────
