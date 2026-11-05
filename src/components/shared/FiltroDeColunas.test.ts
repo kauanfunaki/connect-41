@@ -125,8 +125,9 @@ describe("a divisória entre as colunas do cabeçalho", () => {
   const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8").replace(/\r\n/g, "\n");
   const TOKEN = "--c41-table-header-divider";
   const SELETOR = [
-    ".c41-tabela > table > thead > tr > th:not(:empty) + th,",
-    ".c41-cabecalho-dividido > tr > th:not(:empty) + th {",
+    // A coluna de ações sem título (só o "Ações" do leitor de tela) fica sem o fio (03/11/2026).
+    ".c41-tabela > table > thead > tr > th:not(:empty) + th:not(:has(> .sr-only:only-child)),",
+    ".c41-cabecalho-dividido > tr > th:not(:empty) + th:not(:has(> .sr-only:only-child)) {",
   ].join("\n");
   const inicio = css.indexOf(SELETOR);
   const corpo = inicio < 0 ? "" : css.slice(inicio + SELETOR.length, css.indexOf("}", inicio));

@@ -45,9 +45,9 @@ const VIEW_HELPER_SEM_REUNIAO: Record<string, string> = {
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; date?: string }>;
+  searchParams: Promise<{ view?: string; date?: string; setor?: string }>;
 }) {
-  const { view: viewRaw, date: dateRaw } = await searchParams;
+  const { view: viewRaw, date: dateRaw, setor: setorRaw } = await searchParams;
   const ctx = await getAuthContext();
   const podeAgendar = canManageMeetings(ctx);
 
@@ -199,6 +199,7 @@ export default async function AgendaPage({
         setores={setores}
         podeAgendar={podeAgendar}
         expediente={expediente}
+        setorInicial={setorRaw && setores[setorRaw] ? setorRaw : null}
       />
     </PageContainer>
   );

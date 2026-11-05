@@ -6,6 +6,7 @@ import { txtDaDominio, xlsxDaDominio } from "@/lib/financeiro/dominio/planilha";
 import { contentDispositionDeAnexo } from "@/lib/drive/zip";
 import { empresaContabilVisivel, linhasParaADominio, painelDasSaidas, painelDoContabil, type EmpresaDoContabil } from "@/lib/contabil/servidor";
 import { CTE, NFE, NFSE } from "@/lib/contabil/lancamentos";
+import { linhasDosPagamentosDoMes } from "@/lib/contabil/pagamentosServidor";
 import { competenciasDoAno, nomeNoLote, resumoDoLote, type MesDoLote, type ResultadoDoPasso } from "@/lib/contabil/lote";
 
 export const dynamic = "force-dynamic";
@@ -31,13 +32,21 @@ async function mesDoLote(tenantId: string, empresa: EmpresaDoContabil, competenc
     console.error("[contabil/lote] saídas", competencia, err);
     passos.push({ passo: "saidas", linhas: [], pendencias: 0, erro: "Não foi possível montar as saídas do mês." });
   }
-  // Os pagamentos sem nota (passo 5) entram aqui quando existirem.
+  try {
+    const { linhas, pendencias } = await linhasDosPagamentosDoMes(tenantId, empresa, competencia);
+    passos.push({ passo: "pagamentos", linhas, pendencias });
+  } catch (err) {
+    // Sem o código da filial na matriz, a função recusa: vira o detalhe do resumo.
+    console.error("[contabil/lote] pagamentos", competencia, err);
+    passos.push({ passo: "pagamentos", linhas: [], pendencias: 0, erro: err instanceof Error ? err.message : "Não foi possível montar os pagamentos do mês." });
+  }
   return { competencia, passos };
 }
 
 /**
  * O lote do ano (passo 7, 03/11/2026): os doze meses da empresa num ZIP, uma
- * pasta por mês com um arquivo da Domínio por passo, e o _RESUMO.csv.
+ * pasta por mês com um arquivo da Domínio por passo (entradas, pagamentos sem
+ * nota e saídas), e o _RESUMO.csv.
  */
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext();

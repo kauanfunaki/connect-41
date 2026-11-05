@@ -34,6 +34,8 @@ type Props = {
   createPageAction: (documentId: string, title: string) => Promise<{ error: string } | { id: string }>;
   updatePageAction: (pageId: string, prev: ManualPageState, form: FormData) => Promise<ManualPageState>;
   deletePageAction: (pageId: string) => Promise<void>;
+  /** O que vai no pé da coluna de pastas — o "+ Nova pasta". */
+  rodapeDaArvore?: React.ReactNode;
 };
 
 // Paleta curta de ícones comuns pra manual/procedimento — não é um picker de
@@ -385,7 +387,7 @@ function PageCanvas({
 // pra adicionar mais conteúdo, nunca começar um segundo documento.
 export function ManualWorkspace({
   canAct, canDelete, setorRotulo, documents, renameDocumentAction, deleteDocumentAction, updateDocumentIconAction,
-  createPageAction, updatePageAction, deletePageAction,
+  createPageAction, updatePageAction, deletePageAction, rodapeDaArvore,
 }: Props) {
   const firstDoc = documents[0];
   const [activePageId, setActivePageId] = useState<string | null>(firstDoc?.pages[0]?.id ?? null);
@@ -634,7 +636,8 @@ export function ManualWorkspace({
             );
           })}
         </div>
-
+        {/* "+ Nova pasta" no pé da coluna (lote C de 03/11/2026). */}
+        {rodapeDaArvore && <div className="flex-shrink-0 border-t border-border pt-2 mt-2">{rodapeDaArvore}</div>}
       </div>
 
       <div className="flex-1 min-w-0 min-h-0">
@@ -657,7 +660,7 @@ export function ManualWorkspace({
               description={
                 documents.length === 0
                   ? canAct
-                    ? "Use “+ Novo documento”, no alto da tela, para começar."
+                    ? "Use “+ Nova pasta”, no pé da coluna, para começar."
                     : undefined
                   : "Selecione ou crie uma página para começar."
               }

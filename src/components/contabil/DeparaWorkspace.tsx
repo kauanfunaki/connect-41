@@ -19,7 +19,7 @@ import type { PainelDoContabil } from "@/lib/contabil/servidor";
 import { TIPOS_DA_ENTRADA, ROTULO_DA_ORIGEM, type Regra } from "@/lib/contabil/lancamentos";
 import { filtrarLancamentos, type FiltrosContabeis as Filtros } from "@/lib/contabil/navegacao";
 import { sugestaoEmLote } from "@/lib/contabil/sugestoesEmLote";
-import { removerRegra, deixarDeFora, reativarRegra, salvarCfopConta, confirmarSugestoes, type ResultadoDoContabil } from "@/app/(app)/contabil/sped/actions";
+import { removerRegra, deixarDeFora, reativarRegra, salvarCfopConta, confirmarSugestoes, type ResultadoDoContabil } from "@/app/(app)/sped-contabil/actions";
 
 const TIPOS = TIPOS_DA_ENTRADA.map((t) => [t, t] as const);
 const SITUACOES = [["pronta", "Prontas"], ["pendente", "Pendentes"], ["fora", "Fora dos lançamentos"]] as const;

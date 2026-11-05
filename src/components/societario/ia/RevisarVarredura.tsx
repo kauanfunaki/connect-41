@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";
 import { RejeitarProposta } from "./RejeitarProposta";
-import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
+import type { AcaoDaIa } from "@/app/(app)/processos/ia/actions";
 import type { Sinal, ItemAvaliado, Urgencia } from "@/lib/societario/varredura";
 
 const URGENCIA: Record<Urgencia, { rotulo: string; variante: "danger" | "warning" | "info" }> = {

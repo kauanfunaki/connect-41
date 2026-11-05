@@ -10,8 +10,8 @@
 
 import ExcelJS from "exceljs";
 
-/** "data": "AAAA-MM-DD"; "mes": "AAAA-MM"; "reais": centavos; "inteiro": número. */
-export type TipoDaColuna = "texto" | "data" | "mes" | "reais" | "inteiro";
+/** "data": "AAAA-MM-DD"; "mes": "AAAA-MM"; "reais": centavos; "inteiro" e "decimal" (uma casa): número. */
+export type TipoDaColuna = "texto" | "data" | "mes" | "reais" | "inteiro" | "decimal";
 
 export type ColunaDaTabela = { nome: string; tipo: TipoDaColuna; largura?: number };
 
@@ -41,8 +41,9 @@ const FORMATO: Record<TipoDaColuna, string | undefined> = {
   mes: "mm/yyyy",
   reais: FORMATO_DE_REAIS,
   inteiro: "0",
+  decimal: "0.0",
 };
-const LARGURA: Record<TipoDaColuna, number> = { texto: 24, data: 12, mes: 10, reais: 14, inteiro: 10 };
+const LARGURA: Record<TipoDaColuna, number> = { texto: 24, data: 12, mes: 10, reais: 14, inteiro: 10, decimal: 12 };
 
 /** O nome de uma Tabela do Excel a partir de um texto qualquer. */
 export function nomeDeTabela(texto: string): string {
@@ -66,7 +67,7 @@ export function valorDaCelula(valor: CelulaDaTabela, tipo: TipoDaColuna): string
     return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, tipo === "mes" ? 1 : Number(m[3] ?? 1)));
   }
   if (tipo === "reais") return typeof valor === "number" ? valor / 100 : Number(valor);
-  if (tipo === "inteiro") return typeof valor === "number" ? valor : Number(valor);
+  if (tipo === "inteiro" || tipo === "decimal") return typeof valor === "number" ? valor : Number(valor);
   return String(valor);
 }
 

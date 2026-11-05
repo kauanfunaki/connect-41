@@ -33,7 +33,11 @@ export function CamposDasRetencoes({
   situacao,
   className = "",
   children,
+  abertoInicial = false,
 }: {
+  /** Abre já aberto: o botão do "Também" no lançamento (04/11/2026). */
+  abertoInicial?: boolean;
+
   valores: ValoresDasRetencoes;
   onChange: (tributo: TributoRetido, valor: string) => void;
   /** Na edição: a conta de cada imposto, e o porquê do campo travado. */
@@ -48,6 +52,7 @@ export function CamposDasRetencoes({
       titulo="Retenções na fonte"
       resumo={retido > 0 ? `${formatarReaisDeCentavos(retido)} retidos` : "Sem retenção"}
       className={`bg-surface ${className}`.trim()}
+      abertoInicial={abertoInicial}
     >
       <div className="flex flex-col gap-3 pt-1">
         <p className="text-helper text-fg-muted">

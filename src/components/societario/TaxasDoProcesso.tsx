@@ -61,6 +61,9 @@ export function TaxasDoProcesso({ taxas, custo, edicao }: Props) {
           está paga —, e com eles saem os dois funis, que numa lista de
           poucas taxas por processo pouco recortavam. No celular, um cartão
           por taxa (15/10/2026): a tabela de 320px rolava de lado no cartão. */}
+      {/* Sem taxa, sem tabela: o cabeçalho vazio com os funis sobrava (04/11/2026). */}
+      {taxas.length > 0 && (
+      <>
       <CartoesNoCelular>
         {taxas.map((t) => (
           <Cartao key={t.id}>
@@ -164,6 +167,8 @@ export function TaxasDoProcesso({ taxas, custo, edicao }: Props) {
         </table>
       </div>
       </TabelaFiltravel>
+      </>
+      )}
     </Card>
   );
 }

@@ -48,7 +48,7 @@ export function GithubContributions({ initialQuery: suppliedQuery, canConfigure,
 function GithubShell({ view, suppliedQuery, canConfigure, children }: { view: View; suppliedQuery: string; canConfigure: boolean; children: React.ReactNode }) {
   const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
   return <PageContainer>
-    <PageHeader title="GitHub — Contribuições" subtitle={SUBTITLES[view]}
+    <PageHeader title="GitHub" subtitle={SUBTITLES[view]}
       action={canConfigure ? <IconButton href={INTEGRATION} title="Integração GitHub" variant="framed"><Settings2 size={16} /></IconButton> : undefined} />
     <AbasDeLink className="mb-6" aria-label="GitHub" ativa={view} abas={[
       { chave: "general", rotulo: "Geral", href: `/github?${tabParams}`, icone: <LayoutGrid /> },

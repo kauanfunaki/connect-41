@@ -15,7 +15,12 @@ import {
   situacaoDoProcesso,
   prazoDoProcesso,
   totalDeVoltas,
+  diasUteisEntre,
 } from "@/lib/societario/processo";
+import { saoPauloParts } from "@/lib/agenda";
+import { rastroDoDia, seloDaOrigem } from "@/lib/horas/regras";
+import { ResumoDoProcesso } from "@/components/societario/ResumoDoProcesso";
+import { ConversaEmPainel } from "@/components/societario/ConversaEmPainel";
 import { SITUACAO_LABEL, SITUACAO_VARIANTE } from "@/components/societario/ProcessosFila";
 import { SituacaoDoProcesso } from "@/components/societario/SituacaoDoProcesso";
 import { RoteiroDoProcesso, type EtapaNaTela } from "@/components/societario/RoteiroDoProcesso";
@@ -117,6 +122,9 @@ export default async function ProcessoDetalhePage({
           id: true,
           templateStepId: true,
           status: true,
+          startedAt: true,
+          doneAt: true,
+          executedBy: { select: { name: true } },
           items: {
             select: {
               id: true,
@@ -169,6 +177,8 @@ export default async function ProcessoDetalhePage({
   );
 
   const instanciaPorTemplate = new Map(processo.steps.map((s) => [s.templateStepId, s]));
+  const hoje = new Date();
+  const chaveDoDia = (d: Date) => saoPauloParts(d).dateKey;
 
   const etapas: EtapaNaTela[] = processo.template.steps.map((passo) => {
     const instancia = instanciaPorTemplate.get(passo.id);
@@ -183,6 +193,13 @@ export default async function ProcessoDetalhePage({
       executorEsperado: passo.expectedActor,
       status: instancia?.status ?? "PENDENTE",
       liberada: liberadas.has(passo.id),
+      encerradaEm: instancia?.doneAt ?? null,
+      // Quanto a etapa levou (feita) ou leva até hoje (em andamento), em dias
+      // úteis como o prazo do processo. Sem início gravado, não se inventa.
+      diasUteis: instancia?.startedAt
+        ? diasUteisEntre(chaveDoDia(instancia.startedAt), chaveDoDia(instancia.doneAt ?? hoje), feriados)
+        : null,
+      executadaPor: instancia?.executedBy?.name ?? null,
       itens: (instancia?.items ?? [])
         .slice()
         .sort((a, b) => a.templateItem.position - b.templateItem.position)
@@ -217,17 +234,45 @@ export default async function ProcessoDetalhePage({
 
   const empresaNome = nomeExibicao(processo.company);
 
-  const [horas, donoDoCronometro] = await Promise.all([
+  const [horas, donoDoCronometro, totalDeMinutos] = await Promise.all([
     prisma.timeEntry.findMany({
       where: { tenantId: ctx.tenantId, processId: processo.id },
       orderBy: [{ loggedOn: "desc" }, { createdAt: "desc" }],
       take: 50,
-      select: { id: true, minutes: true, note: true, loggedOn: true, userId: true, user: { select: { name: true } } },
+      select: { id: true, minutes: true, note: true, loggedOn: true, userId: true, source: true, editedAt: true, user: { select: { name: true } } },
     }),
     processo.activeTimerUserId
       ? prisma.user.findUnique({ where: { id: processo.activeTimerUserId }, select: { name: true } }).then((u) => u?.name ?? null)
       : Promise.resolve(null),
+    prisma.timeEntry
+      .aggregate({ where: { tenantId: ctx.tenantId, processId: processo.id }, _sum: { minutes: true } })
+      .then((r) => r._sum.minutes ?? 0),
   ]);
+
+  // O rastro do dia de cada lançamento (04/11/2026, lote D): quantas ações a
+  // pessoa registrou neste processo naquele dia — etapas, protocolos,
+  // exigências, mensagens, documentos. Fica ao lado da hora, sem a substituir.
+  const chaveDoRastro = (userId: string, d: Date) => `${userId}|${saoPauloParts(d).dateKey}`;
+  const acoesPorDia = new Map<string, number>();
+  if (horas.length > 0) {
+    const maisAntigo = horas.reduce((m, h) => (h.loggedOn < m ? h.loggedOn : m), horas[0].loggedOn);
+    const acoes = await prisma.auditLog.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        entityType: "Process",
+        entityId: processo.id,
+        userId: { in: [...new Set(horas.map((h) => h.userId))] },
+        createdAt: { gte: new Date(maisAntigo.getTime() - 24 * 60 * 60 * 1000) },
+      },
+      select: { userId: true, createdAt: true },
+      take: 5000,
+    });
+    for (const a of acoes) {
+      if (!a.userId) continue;
+      const k = chaveDoRastro(a.userId, a.createdAt);
+      acoesPorDia.set(k, (acoesPorDia.get(k) ?? 0) + 1);
+    }
+  }
 
   const [{ taxas, custo }, conversa, avisos, destinos] = await Promise.all([
     taxasDoProcesso(ctx.tenantId, processo.id),
@@ -242,6 +287,28 @@ export default async function ProcessoDetalhePage({
   const responsaveis =
     processo.owner && !equipe.some((u) => u.id === processo.owner!.id) ? [...equipe, processo.owner] : equipe;
   const combinado = processo.dueAt ? prazoCombinado(processo.dueAt, new Date()) : null;
+
+  const exigenciasComPrazo = processo.protocols
+    .flatMap((p) => p.requirements.filter((r) => r.resolvedAt === null && r.dueAt).map((r) => ({ quando: r.dueAt!, onde: p.organ.name })))
+    .sort((a, b) => a.quando.getTime() - b.quando.getTime());
+  const proximoPrazo =
+    exigenciasComPrazo[0] ??
+    (processo.dueAt && processo.concludedAt === null ? { quando: processo.dueAt, onde: "combinado com o cliente" } : null);
+
+  const ultimaMensagem = conversa?.mensagens.at(-1);
+  const qtdMensagens = conversa?.mensagens.length ?? 0;
+  const resumoDaConversa =
+    qtdMensagens === 0
+      ? "Nenhuma mensagem ainda. O cliente vê no portal o que for escrito e é avisado por e-mail."
+      : [
+          `${qtdMensagens}${conversa?.limitada ? "+" : ""} ${qtdMensagens === 1 ? "mensagem" : "mensagens"}`,
+          ultimaMensagem &&
+            `última ${ultimaMensagem.lado === "CLIENTE" ? "do cliente" : "da equipe"} em ${formatInstantDate(ultimaMensagem.criadaEm)}`,
+          conversa && conversa.documentos.length > 0 &&
+            `${conversa.documentos.length} ${conversa.documentos.length === 1 ? "documento" : "documentos"}`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
 
   return (
     <PageContainer>
@@ -422,6 +489,18 @@ export default async function ProcessoDetalhePage({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5">
+          {/* Resumo no alto da coluna (Processo B, 04/11/2026): o prazo em
+              barra e os números do processo sempre à vista, sem rolar até as
+              taxas e as horas. */}
+          <ResumoDoProcesso
+            prazo={prazo}
+            encerrado={processo.concludedAt !== null || encerradoSemConclusao}
+            taxasCentavos={custo.totalCentavos}
+            aPagarCentavos={custo.totalCentavos - custo.pagoCentavos}
+            minutos={totalDeMinutos}
+            proximoPrazo={proximoPrazo}
+          />
+
           <TaxasDoProcesso
             taxas={taxas}
             custo={custo}
@@ -447,6 +526,8 @@ export default async function ProcessoDetalhePage({
               // Corrige o próprio lançamento; apagar é só do administrador (13/10/2026).
               podeEditar: h.userId === ctx.userId,
               podeExcluir: podeExcluir(ctx),
+              origem: seloDaOrigem(h.source, h.editedAt !== null, h.minutes),
+              rastro: rastroDoDia(acoesPorDia.get(chaveDoRastro(h.userId, h.loggedOn)) ?? 0),
             }))}
             cronometro={
               processo.activeTimerUserId && processo.activeTimerStartedAt
@@ -467,15 +548,13 @@ export default async function ProcessoDetalhePage({
             }}
           />
 
-          {/* Um embaixo do outro na coluna da direita — eram lado a lado
-              (3:2) numa faixa da largura toda. */}
+          {/* Conversa e documentos num painel lateral (Processo B, 04/11/2026):
+              eram dois cartões altos aqui, com a caixa de mensagem aberta. */}
           {conversa && (
-            <>
-              <Card as="section" aria-labelledby="conversa-do-processo" className="p-4 flex flex-col gap-4">
+            <ConversaEmPainel resumo={resumoDaConversa}>
+              <section aria-labelledby="painel-conversa" className="flex flex-col gap-4">
                 <div className="flex flex-col gap-0.5">
-                  <h2 id="conversa-do-processo" className="text-section font-semibold text-fg">
-                    Conversa com o cliente
-                  </h2>
+                  <h3 id="painel-conversa" className="text-ui font-semibold text-fg">Mensagens</h3>
                   <p className="text-fs-2 text-fg-muted">
                     O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
                     interna, use as observações do processo.
@@ -499,12 +578,12 @@ export default async function ProcessoDetalhePage({
                   dica="Anexe PDF, PNG, JPG ou XML de até 10 MB."
                   extras={<CampoGuardarNosArquivos companyId={processo.company.id} destinos={destinos} id="processo-msg-guardar" />}
                 />
-              </Card>
+              </section>
 
-              <Card as="section" aria-labelledby="documentos-do-processo" className="p-4 flex flex-col gap-4">
-                <h2 id="documentos-do-processo" className="text-section font-semibold text-fg">
+              <section aria-labelledby="painel-documentos" className="flex flex-col gap-4 border-t border-border pt-5">
+                <h3 id="painel-documentos" className="text-ui font-semibold text-fg">
                   Documentos <span className="text-fg-muted font-normal tabular-nums">({conversa.documentos.length})</span>
-                </h2>
+                </h3>
                 <DocumentosDoProcesso
                   processId={processo.id}
                   documentos={conversa.documentos}
@@ -514,8 +593,8 @@ export default async function ProcessoDetalhePage({
                   dica="O cliente vê e é avisado."
                   extras={<CampoGuardarNosArquivos companyId={processo.company.id} destinos={destinos} id="processo-doc-guardar" />}
                 />
-              </Card>
-            </>
+              </section>
+            </ConversaEmPainel>
           )}
         </div>
       </div>

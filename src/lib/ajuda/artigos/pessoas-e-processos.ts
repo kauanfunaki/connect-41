@@ -658,9 +658,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
   {
     chave: "societario_prazos",
     titulo: "Exigências e prazos",
-    caminhos: ["/societario/exigencias", "/societario/agenda"],
+    caminhos: ["/exigencias"],
     resumo:
-      "Reúne as exigências de todos os processos e uma agenda única com prazos de órgão, vencimentos de taxa, validades de licença e prazos combinados com o cliente.",
+      "Reúne as exigências de todos os processos e os protocolos parados no órgão. Os prazos (de órgão, taxa, licença e combinados com o cliente) ficam na Agenda geral.",
     secoes: [
       {
         titulo: "Acompanhar as exigências",
@@ -672,11 +672,19 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         ],
       },
       {
-        titulo: "Ver a agenda de prazos",
+        titulo: "Cobrar os protocolos parados",
         passos: [
-          "Clique na aba “Agenda de prazos”.",
-          "Os prazos aparecem agrupados por semana, com os já vencidos em destaque no topo.",
-          "Clique em “Filtros” e use “Agrupar” para ver por mês, ou “Responsável” para ver os prazos de uma pessoa.",
+          "Clique na aba “Protocolos parados”: estão ali os protocolos que esperam o órgão há mais tempo que o prazo do aviso.",
+          "A coluna “Parado há” fica vermelha quando o protocolo já passou do dobro do prazo.",
+          "Cobrou o órgão por telefone, e-mail ou no balcão? Clique em “Registrar cobrança”: a data e o seu nome vão para “Última cobrança”.",
+          "Quem administra o setor escolhe, no alto da aba, depois de quantos dias o responsável é avisado.",
+        ],
+      },
+      {
+        titulo: "Ver os prazos na Agenda",
+        passos: [
+          "Clique em “Ver prazos na Agenda”, no alto da tela.",
+          "A Agenda abre só com os prazos do Societário. Para ver os de todos os setores, clique em “Ver todos os setores”.",
         ],
       },
     ],
@@ -691,7 +699,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
   {
     chave: "societario_relatorios",
     titulo: "Relatórios",
-    caminhos: ["/societario/relatorios"],
+    caminhos: ["/processos/relatorios"],
     resumo:
       "Indicadores do Societário: prazo cumprido por tipo de processo, voltas de exigência, produtividade por responsável e custo em taxas.",
     secoes: [

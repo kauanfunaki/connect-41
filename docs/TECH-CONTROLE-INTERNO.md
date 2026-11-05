@@ -1,6 +1,6 @@
 # Controle interno do Tech
 
-Módulo `tech_controle_interno`, em `/tech/controle-interno`, exclusivo do Tech e administradores. Ative em **Configurações → Setores e módulos → Tech → Controle interno**. Continua independente de Chamados e Ops Center; nasce desligado.
+Módulo `tech_controle_interno`, em `/controle-interno`, exclusivo do Tech e administradores. Ative em **Configurações → Setores e módulos → Tech → Controle interno**. Continua independente de Chamados e Ops Center; nasce desligado.
 
 Os mesmos itens aparecem em **Lista**, **Kanban** e **Agenda**. Os filtros e a visualização ficam no endereço. A agenda usa o prazo, permite navegar entre meses e separa os itens sem prazo. No Kanban, arraste o cartão ou use o seletor de situação. Mudanças são confirmadas no servidor e registram autor, data e valores anteriores. Edições concorrentes pedem atualização da página.
 

@@ -19,7 +19,7 @@ describe("grupoDaTelaDaEquipe", () => {
     expect(grupoDaTelaDaEquipe("/fiscal/operacao")).toBe("fiscal");
     expect(grupoDaTelaDaEquipe("/documentos-fiscais/entrada")).toBe("fiscal");
     expect(grupoDaTelaDaEquipe("/processos/abc")).toBe("processos");
-    expect(grupoDaTelaDaEquipe("/societario/exigencias")).toBe("processos");
+    expect(grupoDaTelaDaEquipe("/exigencias")).toBe("processos");
     expect(grupoDaTelaDaEquipe("/solicitacoes")).toBe("atendimento");
   });
 

@@ -23,6 +23,10 @@ export type LinhaDeHoras = {
   nota: string | null;
   podeEditar: boolean;
   podeExcluir: boolean;
+  /** De onde veio a hora (04/11/2026): "cronômetro", "à mão", "cronômetro longo — confira". */
+  origem?: { texto: string; alerta: boolean };
+  /** O rastro do dia no processo: quantas ações a pessoa registrou nele. */
+  rastro?: { texto: string; alerta: boolean };
 };
 
 /**
@@ -58,7 +62,14 @@ export function ListaDeHoras({
             <li key={l.id} className="flex items-center justify-between gap-2 py-1.5">
               <span className="text-fg-secondary min-w-0">
                 <span className="text-fg tabular-nums">{duracaoDoLancamento(l.minutos)}</span> · {l.quem} · {l.dia}
-                {l.nota && ` · ${l.nota}`}
+                {l.nota && l.nota !== "cronômetro" && ` · ${l.nota}`}
+                {(l.origem || l.rastro) && (
+                  <span className="block text-micro">
+                    {l.origem && <span className={l.origem.alerta ? "text-warning-fg font-medium" : "text-fg-muted"}>{l.origem.texto}</span>}
+                    {l.origem && l.rastro && <span className="text-fg-muted"> · </span>}
+                    {l.rastro && <span className={l.rastro.alerta ? "text-warning-fg" : "text-fg-muted"}>{l.rastro.texto}</span>}
+                  </span>
+                )}
               </span>
               {(l.podeEditar || (l.podeExcluir && excluir)) && (
                 <span className="flex flex-shrink-0 items-center gap-1">

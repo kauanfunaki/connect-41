@@ -55,8 +55,17 @@ describe("editarHorasDoProcesso", () => {
     expect(r).toEqual({ ok: true });
     expect(timeEntry.updateMany).toHaveBeenCalledWith({
       where: { id: "te1", processId: "pr1", tenantId: "t1", userId: "eu" },
-      data: { minutes: 135, note: "protocolo" },
+      // Marca a correção (04/11/2026): a hora corrigida deixa de ser só do cronômetro.
+      data: { minutes: 135, note: "protocolo", editedAt: expect.any(Date) },
     });
+  });
+
+  it("dia com mais de 7 dias de atraso: só a coordenação (04/11/2026)", async () => {
+    const antigo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    expect(await editarHorasDoProcesso("pr1", "te1", null, form({ horas: "1", dia: antigo }))).toMatchObject({ error: expect.stringContaining("coordenação") });
+    expect(timeEntry.updateMany).not.toHaveBeenCalled();
+    ctx.role = "SECTOR_ADMIN";
+    expect(await editarHorasDoProcesso("pr1", "te1", null, form({ horas: "1", dia: antigo }))).toEqual({ ok: true });
   });
 
   it("lançamento de outra pessoa não é achado", async () => {

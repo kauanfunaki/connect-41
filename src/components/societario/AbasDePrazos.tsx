@@ -1,15 +1,25 @@
-import { AlertTriangle, CalendarDays } from "lucide-react";
+import { AlertTriangle, PauseCircle } from "lucide-react";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
-// Exigências e Agenda são o mesmo módulo (`societario_prazos`): duas leituras
-// do que tem data para cumprir. As abas deixam isso visível sem ocupar dois
-// itens na sidebar. Desde o polimento de 30/09 usam as abas padrão
-// (`AbasDeLink`) — tinham um desenho próprio, parecido mas não igual.
+// Exigências e Protocolos parados (Exigências A, página de opções de
+// 04/11/2026): o que o órgão devolveu e o que o órgão ainda não respondeu.
+// A aba "Agenda de prazos" saiu — repetia a Agenda geral, que já mostra os
+// prazos do Societário (exigência, taxa, licença, prazo combinado); o botão
+// "Ver prazos na Agenda" do cabeçalho abre a Agenda filtrada no setor.
 const ABAS = [
-  { chave: "exigencias", rotulo: "Exigências", href: "/societario/exigencias", icone: <AlertTriangle /> },
-  { chave: "agenda", rotulo: "Agenda de prazos", href: "/societario/agenda", icone: <CalendarDays /> },
+  { chave: "exigencias", rotulo: "Exigências", href: "/exigencias", icone: <AlertTriangle /> },
+  { chave: "parados", rotulo: "Protocolos parados", href: "/exigencias?aba=parados", icone: <PauseCircle /> },
 ] as const;
 
-export function AbasDePrazos({ ativa }: { ativa: (typeof ABAS)[number]["chave"] }) {
-  return <AbasDeLink abas={[...ABAS]} ativa={ativa} />;
+export type AbaDePrazos = (typeof ABAS)[number]["chave"];
+
+export function AbasDePrazos({
+  ativa,
+  contagens,
+}: {
+  ativa: AbaDePrazos;
+  /** Exigências abertas e protocolos parados — o contador no canto do ícone. */
+  contagens?: Partial<Record<AbaDePrazos, number>>;
+}) {
+  return <AbasDeLink abas={ABAS.map((a) => ({ ...a, contagem: contagens?.[a.chave] || undefined }))} ativa={ativa} />;
 }

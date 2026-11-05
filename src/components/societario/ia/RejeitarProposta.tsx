@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
+import type { AcaoDaIa } from "@/app/(app)/processos/ia/actions";
 
 /**
  * Rejeitar pede um motivo, opcional: é o que o painel de qualidade não
@@ -45,7 +45,7 @@ export function RejeitarProposta({ propostaId, rejeitar }: { propostaId: string;
             startTransition(async () => {
               const r = await rejeitar(propostaId, motivo);
               if ("error" in r) setErro(r.error);
-              else router.push("/societario/ia");
+              else router.push("/processos/ia");
             })
           }
         >

@@ -12,7 +12,7 @@ const minimo = { title: "  Corrigir a lista  ", type: "BUG" };
 describe("controle interno do Tech", () => {
   it("é exclusivo do Tech, desativado por padrão e tem rota", () => {
     expect(getModuleDef(MODULO_TECH_INTERNO)).toMatchObject({ sectorCode: "tech", fixedSector: true, defaultEnabled: false, group: "Desenvolvimento", menuDireto: true });
-    expect(getModuleRoute(MODULO_TECH_INTERNO)).toBe("/tech/controle-interno");
+    expect(getModuleRoute(MODULO_TECH_INTERNO)).toBe("/controle-interno");
   });
   it.each(["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"])("aceita o tipo %s e campos opcionais vazios", type => {
     expect(itemSchema.parse({ ...minimo, type, assigneeId: "", dueDate: "" })).toMatchObject({ title: "Corrigir a lista", type, priority: 1, status: "PENDING", systemMode: "NONE", assigneeId: null, dueDate: null });
@@ -56,12 +56,12 @@ describe("controle interno do Tech", () => {
     expect(lerFiltros({ q: ["a", "b"], page: "Infinity" })).toMatchObject({ q: "", page: 1 });
   });
   it("volta só para a própria lista, com o recorte de origem", () => {
-    expect(destinoDeVolta("/tech/controle-interno?visao=kanban&tipo=BUG&page=2")).toBe("/tech/controle-interno?visao=kanban&tipo=BUG&page=2");
-    expect(destinoDeVolta("/tech/controle-interno")).toBe("/tech/controle-interno");
-    for (const ruim of ["https://exemplo.test", "//exemplo.test", "/tech/controle-internox", "/tech/controle-interno?a=1//b", "/tech/controle-interno?\\a", ["/tech/controle-interno?a=1"], undefined]) expect(destinoDeVolta(ruim)).toBe("/tech/controle-interno");
-    expect(comVolta("/tech/controle-interno/abc", "/tech/controle-interno")).toBe("/tech/controle-interno/abc");
-    expect(comVolta("/tech/controle-interno/abc", "/tech/controle-interno?visao=kanban")).toBe("/tech/controle-interno/abc?voltar=%2Ftech%2Fcontrole-interno%3Fvisao%3Dkanban");
-    expect(destinoDeVolta(decodeURIComponent("%2Ftech%2Fcontrole-interno%3Fvisao%3Dkanban"))).toBe("/tech/controle-interno?visao=kanban");
+    expect(destinoDeVolta("/controle-interno?visao=kanban&tipo=BUG&page=2")).toBe("/controle-interno?visao=kanban&tipo=BUG&page=2");
+    expect(destinoDeVolta("/controle-interno")).toBe("/controle-interno");
+    for (const ruim of ["https://exemplo.test", "//exemplo.test", "/tech/controle-internox", "/controle-interno?a=1//b", "/controle-interno?\\a", ["/controle-interno?a=1"], undefined]) expect(destinoDeVolta(ruim)).toBe("/controle-interno");
+    expect(comVolta("/controle-interno/abc", "/controle-interno")).toBe("/controle-interno/abc");
+    expect(comVolta("/controle-interno/abc", "/controle-interno?visao=kanban")).toBe("/controle-interno/abc?voltar=%2Fcontrole-interno%3Fvisao%3Dkanban");
+    expect(destinoDeVolta(decodeURIComponent("%2Fcontrole-interno%3Fvisao%3Dkanban"))).toBe("/controle-interno?visao=kanban");
   });
   it("registra só campos alterados e preserva valor anterior", () => {
     expect(diferencas({ Prazo: null, Título: "Antes" }, { Prazo: null, Título: "Depois" })).toEqual([{ field: "Título", before: "Antes", after: "Depois" }]);

@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Contador } from "@/components/ui/Contador";
-import { Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
+import { Plus, Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -13,13 +13,8 @@ import { listarFila, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } fro
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
 import { ProcessosFila, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
-import { NovoProcessoForm } from "@/components/societario/NovoProcessoForm";
 import { AssistenteDoSocietario } from "@/components/societario/AssistenteDoSocietario";
-import { getPrisma } from "@/lib/prisma";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { nomeExibicao } from "@/lib/companyName";
-import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
-import { abrirProcesso } from "./actions";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
 import { contarPendentesDoSetor } from "@/lib/ia/propostas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
@@ -67,19 +62,7 @@ export default async function ProcessosPage({
 
   const feriados = await feriadosDoTenant(ctx.tenantId);
   const agora = new Date();
-  const prisma = getPrisma();
-
-  const [empresas, tipos, responsaveis, avisosPendentes] = await Promise.all([
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
-      orderBy: { name: "asc" },
-      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
-    }),
-    prisma.processType.findMany({
-      where: { tenantId: ctx.tenantId, active: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
-    }),
+  const [responsaveis, avisosPendentes] = await Promise.all([
     getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR),
     contarAvisosPendentes(ctx.tenantId),
   ]);
@@ -148,7 +131,7 @@ export default async function ProcessosPage({
           </Button>
         )}
         {coordena && (
-          <Button href="/societario/ia" variant="secondary">
+          <Button href="/processos/ia" variant="secondary">
             <Sparkles size={14} />
             Ceci · Societário
             {/* As propostas no `Contador`, como o "Classificar" da DRE (15/10/2026):
@@ -167,23 +150,12 @@ export default async function ProcessosPage({
           <Columns3 size={14} />
           Ver no kanban
         </Button>
-        <NovoProcessoForm
-          empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
-          tipos={tipos.map((t) => ({
-            id: t.id,
-            name: t.name,
-            // O prazo entra no rótulo porque é o que diferencia Constituição de
-            // Alteração na hora de escolher — as duas têm o mesmo roteiro.
-            prazo: t.variableFlow
-              ? "fluxo variável"
-              : t.expectedDaysMin === t.expectedDaysMax
-                ? `${t.expectedDaysMax} dias úteis`
-                : `${t.expectedDaysMin}–${t.expectedDaysMax} dias úteis`,
-          }))}
-          responsaveis={responsaveis}
-          responsavelPadrao={responsaveis.some((r) => r.id === ctx.userId) ? (ctx.userId ?? "") : ""}
-          abrirAction={abrirProcesso}
-        />
+        {/* A abertura em três passos (04/11/2026) é página própria: a janela
+            não comportava o checklist nem o pedido ao cliente. */}
+        <Button href="/processos/novo">
+          <Plus size={14} />
+          Abrir processo
+        </Button>
         </div>
         }
       />

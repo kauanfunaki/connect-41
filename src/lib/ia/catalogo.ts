@@ -383,6 +383,22 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 500,
     padraoLigado: false,
   },
+  // "Ler do PDF" na licença (04/11/2026): o alvará consultado à mão (o de
+  // Curitiba pede "Não sou um robô") ou de qualquer outra cidade. Uma volta,
+  // sem ferramenta; o que lê preenche o formulário, e o "Salvar" confirma.
+  {
+    code: "leitor_de_licenca",
+    label: "Leitura de alvará e licença",
+    sectorCode: "societario",
+    description:
+      "Lê o PDF do alvará ou da licença e preenche o número, a emissão e a validade no formulário da licença; avisa quando o titular é outra empresa. A pessoa revisa antes de salvar, e o PDF vai para Arquivos › Societário",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 1_000,
+    padraoLigado: false,
+  },
   // Lote H2 do BPO (19/10): a leitura do boleto que o Nibo faz. Uma volta, sem
   // ferramenta; o que lê preenche o Novo lançamento e a pessoa confere antes de
   // gravar — a confirmação é o próprio "Lançar".

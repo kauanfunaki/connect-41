@@ -32,6 +32,7 @@
 
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { appendFileSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { access, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
@@ -47,7 +48,23 @@ const capturasDir = join(dirname(statePath), "capturas-do-robo");
 const lockPath = `${statePath}.lock`;
 const stopPath = `${statePath}.stop`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const log = (...m) => console.log(`[robo-societario] ${new Date().toISOString()}`, ...m);
+// O registro também vai para um arquivo ao lado do estado (04/11/2026): a janela
+// do cmd some quando fecha, e o detalhe de uma falha só existia nela. Passou de
+// 2 MB, o arquivo vira .1 e começa outro.
+const registroPath = join(dirname(statePath), "robo-societario.log");
+function gravarNoRegistro(linha) {
+  try {
+    mkdirSync(dirname(registroPath), { recursive: true });
+    try { if (statSync(registroPath).size > 2 * 1024 * 1024) renameSync(registroPath, `${registroPath}.1`); } catch {}
+    appendFileSync(registroPath, `${linha}
+`);
+  } catch {}
+}
+const log = (...m) => {
+  const linha = [`[robo-societario] ${new Date().toISOString()}`, ...m].join(" ");
+  console.log(linha);
+  gravarNoRegistro(linha);
+};
 
 // ─── configuração e estado ─────────────────────────────────────────────────
 
@@ -196,6 +213,19 @@ const espacos = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 const PENDENTE = /pendente de regulariza|aguardando anu[êe]ncia/i;
 const NAO_ENCONTRADO = /n[ãa]o (foi )?encontrad|n[ãa]o h[áa] alvar/i;
 
+/** Quanto o robô espera alguém marcar o "Não sou um robô" na máquina. */
+const ESPERA_DO_CAPTCHA_MS = 3 * 60_000;
+const CAPTCHA = /n[ãa]o sou um rob[ôo]|ICI Captcha/i;
+
+/** A caixa do captcha está na página, ou num frame dela? */
+async function temCaptcha(page) {
+  for (const frame of page.frames()) {
+    const texto = await frame.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
+    if (CAPTCHA.test(texto)) return true;
+  }
+  return false;
+}
+
 async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
   const { inscricao } = tarefa.dados ?? {};
   if (!/^\d{8}$/.test(String(inscricao ?? ""))) return { devolucao: { ok: false, motivo: "A tarefa veio sem inscrição municipal de 8 dígitos.", recuperavel: false } };
@@ -212,7 +242,28 @@ async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
     const campo = page.getByRole("textbox").first();
     await campo.waitFor({ timeout: 30_000 });
     await campo.fill(inscricao);
-    await page.getByRole("button", { name: /consultar/i }).first().click();
+
+    // A caixa "Não sou um robô" (ICI Captcha, desde 03/11/2026) deixa o
+    // Consultar desligado até alguém marcar. O robô não marca: espera alguns
+    // minutos por quem estiver na máquina e, se ninguém marcar, devolve a tela
+    // "captcha" — o Connect manda para o caminho do PDF.
+    const consultar = page.getByRole("button", { name: /consultar/i }).first();
+    await page.waitForTimeout(1_500);
+    if (await temCaptcha(page)) {
+      log(`tarefa ${tarefa.id}: a prefeitura pediu "Não sou um robô". Marque na janela do Chrome em até ${ESPERA_DO_CAPTCHA_MS / 60_000} minutos.`);
+      await page.bringToFront().catch(() => {});
+      const fim = Date.now() + ESPERA_DO_CAPTCHA_MS;
+      while (Date.now() < fim && !(await consultar.isEnabled().catch(() => false))) {
+        if (page.isClosed()) throw new Error("Target page, context or browser has been closed");
+        await page.waitForTimeout(1_000);
+      }
+      if (!(await consultar.isEnabled().catch(() => false))) {
+        await capturar(page, ensaio ? "ensaio-do-alvara" : tarefa.id);
+        if (ensaio) return { ensaio: { tela: "captcha" } };
+        return { devolucao: { ok: true, resultado: { tela: "captcha", texto: (await page.locator("body").innerText().catch(() => "")).slice(0, 20_000) } } };
+      }
+    }
+    await consultar.click();
 
     // Uma de quatro saídas: o botão de imprimir, "não encontrado", "pendente de
     // regularização" ou outra tela. A pendência (03/11/2026) aparece num aviso
@@ -876,7 +927,7 @@ async function watch() {
 async function status() {
   let rodando = false;
   try { await access(lockPath); rodando = true; } catch {}
-  console.log(JSON.stringify({ configPath, statePath, rodando, ...(await readState()) }, null, 2));
+  console.log(JSON.stringify({ configPath, statePath, registro: registroPath, rodando, ...(await readState()) }, null, 2));
 }
 
 async function criarConfig() {
@@ -923,5 +974,6 @@ try {
   else console.log("Uso: --config[=arquivo] | --once | --watch | --status | --stop | --ensaio-alvara --inscricao= | --ensaio-ie --inscricao= [--cnpj=] | --ensaio-sima [--protocolos=A,B] | --testar-certificado --url= --pfx= --entrada= | --mapear --nome= --url= (--pfx= --entrada= | --perfil) | --preparar-perfil");
 } catch (error) {
   console.error(`[robo-societario] ${error.message}`);
+  gravarNoRegistro(`[robo-societario] ${new Date().toISOString()} erro: ${error.message}`);
   process.exitCode = 1;
 }

@@ -6,6 +6,7 @@ import {
   destinoDaFalha,
   devolucaoSchema,
   execucaoPerdida,
+  maquinaSemSinal,
   motivoParaPessoa,
 } from "./tarefas";
 
@@ -34,6 +35,18 @@ describe("execucaoPerdida", () => {
     expect(execucaoPerdida(new Date(agora.getTime() - PRAZO_DA_EXECUCAO_MS - 1), agora)).toBe(true);
     expect(execucaoPerdida(new Date(agora.getTime() - 60_000), agora)).toBe(false);
     expect(execucaoPerdida(null, agora)).toBe(false);
+  });
+});
+
+describe("maquinaSemSinal (04/11/2026)", () => {
+  const agora = new Date("2026-11-04T12:00:00Z");
+  it("sem sinal há mais que o prazo de uma execução, ou nunca: está parada", () => {
+    expect(maquinaSemSinal(new Date(agora.getTime() - PRAZO_DA_EXECUCAO_MS - 1), agora)).toBe(true);
+    expect(maquinaSemSinal(null, agora)).toBe(true);
+  });
+
+  it("no meio de uma tarefa longa, sem pedir trabalho, ainda conta como ligada", () => {
+    expect(maquinaSemSinal(new Date(agora.getTime() - 10 * 60_000), agora)).toBe(false);
   });
 });
 

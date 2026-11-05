@@ -2,7 +2,6 @@
 
 import { useId, useState, useTransition } from "react";
 import { ChevronDown, ChevronRight, CreditCard, Plus } from "lucide-react";
-import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
@@ -22,8 +21,11 @@ const dataBr = (k: string) => k.split("-").reverse().join("/");
 /**
  * Os cartões de crédito da empresa (lote D, 20/10 — a conta corrente do tipo
  * cartão do Omie): o cadastro, com os dias de fechamento e vencimento, e as
- * faturas mais recentes de cada um, com as compras. Um bloco que começa
- * fechado (a regra do Kauan, 08/10), com o que há a pagar na linha.
+ * faturas mais recentes de cada um, com as compras.
+ *
+ * Aba própria desde 04/11/2026 (Pagar/Receber A, página de opções): cada
+ * cartão é um cartão de verdade, com a fatura em aberto em destaque e o limite
+ * usado em barra; as faturas ficam embaixo, com as compras recolhidas.
  *
  * Comprar no cartão é pagar a conta por ele: "Saiu da conta" na baixa, ou
  * "Conta corrente" com "Já pago em" ao lançar.
@@ -35,54 +37,32 @@ export function CartoesDaEmpresa({ companyId, cartoes }: { companyId: string; ca
 
   return (
     <>
-      <BlocoRecolhivel
-        titulo="Cartões de crédito"
-        resumo={cartoes.length === 0 ? "Nenhum cadastrado" : aPagar > 0 ? `${reais(aPagar)} em faturas a pagar` : "Nenhuma fatura a pagar"}
-        className="mb-4 bg-surface"
-        espacoDaAcao="pr-40"
-        acao={
-          <Button size="xs" variant="secondary" onClick={() => setEditando("novo")}>
-            <Plus size={12} /> Novo cartão
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-4 pt-1">
-          <p className="text-helper text-fg-muted">
-            A conta paga no cartão entra na fatura do ciclo: em “Pagar”, escolha o cartão em “Saiu da conta” — ou, ao lançar, escolha-o em “Conta corrente” com
-            “Já pago em”. A despesa entra na DRE no dia da compra. A fatura é uma conta a pagar ao cartão, fora da DRE, e o dinheiro sai do banco quando ela é paga.
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="max-w-3xl text-helper text-fg-muted">
+            A conta paga no cartão entra na fatura do ciclo: em “Pagar”, escolha o cartão em “Saiu da conta” — ou, ao lançar, em “Conta corrente” com “Já
+            pago em”. A despesa entra na DRE no dia da compra; a fatura é uma conta a pagar ao cartão, fora da DRE.
           </p>
-          {cartoes.map((c) => (
-            <div key={c.id} className="flex flex-col gap-2 rounded-md border border-border px-3 py-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <CreditCard size={14} className="flex-shrink-0 text-fg-muted" />
-                  <span className="min-w-0">
-                    <span className="text-fs-2 font-medium text-fg">{c.nome}</span>
-                    <span className="block text-micro text-fg-muted">
-                      {c.accountNumber}
-                      {c.fechamento && c.vencimento ? ` · fecha dia ${c.fechamento} · vence dia ${c.vencimento}` : " · sem os dias da fatura"}
-                      {c.limiteCentavos !== null && ` · limite ${formatarReaisDeCentavos(c.limiteCentavos)}`}
-                      {!c.ativo && " · inativo"}
-                    </span>
-                  </span>
-                </span>
-                <Button size="xs" variant="ghost" onClick={() => setEditando(c)}>
-                  Editar
-                </Button>
-              </div>
-              {c.faturas.length === 0 ? (
-                <p className="text-micro text-fg-muted">Nenhuma compra ainda.</p>
-              ) : (
-                <ul className="flex flex-col divide-y divide-border-soft">
-                  {c.faturas.map((f) => (
-                    <LinhaDaFatura key={f.id} fatura={f} />
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
+          <Button size="sm" variant="secondary" onClick={() => setEditando("novo")}>
+            <Plus size={14} /> Novo cartão
+          </Button>
         </div>
-      </BlocoRecolhivel>
+        {cartoes.length === 0 ? (
+          <p className="text-fs-2 text-fg-muted">Nenhum cartão cadastrado nesta empresa.</p>
+        ) : (
+          <>
+            <p className="text-label font-semibold text-fg">
+              Cartões de crédito{" "}
+              <span className="font-normal text-fg-muted tabular-nums">{aPagar > 0 ? `${reais(aPagar)} em faturas a pagar` : "nenhuma fatura a pagar"}</span>
+            </p>
+            <ul className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
+              {cartoes.map((c) => (
+                <CartaoVisual key={c.id} cartao={c} onEditar={() => setEditando(c)} />
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
       {editando && (
         <JanelaDoCartao
           companyId={companyId}
@@ -95,6 +75,62 @@ export function CartoesDaEmpresa({ companyId, cartoes }: { companyId: string; ca
         />
       )}
     </>
+  );
+}
+
+/**
+ * Um cartão: a faixa na cor da marca com o nome, o final, a fatura em aberto e
+ * o limite usado; embaixo, as faturas. Compacto — sem o respiro do desenho.
+ */
+function CartaoVisual({ cartao: c, onEditar }: { cartao: CartaoDaEmpresa; onEditar: () => void }) {
+  const aberta = c.faturas.find((f) => f.situacao === "Aberta") ?? c.faturas.find((f) => f.situacao !== "Paga") ?? null;
+  const usado = c.faturas.filter((f) => f.situacao !== "Paga").reduce((s, f) => s + f.valorCentavos, 0);
+  const pct = c.limiteCentavos ? Math.min(100, Math.round((usado / c.limiteCentavos) * 100)) : null;
+  const final = finalDoCartao(c.accountNumber);
+  return (
+    <li className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-xs">
+      <div className={`flex flex-col gap-1.5 px-3 py-2.5 text-on-brand ${c.ativo ? "bg-brand-solid" : "bg-fg-muted"}`}>
+        <div className="flex items-center gap-2">
+          <CreditCard size={14} aria-hidden className="shrink-0 opacity-80" />
+          <span className="min-w-0 truncate text-fs-2 font-semibold">{c.nome}</span>
+          {final && <span className="ml-auto font-mono text-micro opacity-85">•••• {final}</span>}
+        </div>
+        <span className="text-micro opacity-85">
+          {aberta ? `Fatura de ${mesDoCiclo(aberta.ciclo)} · ${aberta.situacao.toLowerCase()} · vence ${dataBr(aberta.vencimentoKey)}` : "Nenhuma fatura em aberto"}
+          {!c.ativo && " · inativo"}
+        </span>
+        <span className="text-xl font-semibold tabular-nums leading-tight">{reais(aberta?.valorCentavos ?? 0)}</span>
+        {pct !== null && (
+          <>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/25" role="meter" aria-label="Limite usado" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+              <div className="h-full rounded-full bg-white" style={{ width: `${Math.max(pct, 2)}%` }} />
+            </div>
+            <span className="text-micro opacity-85 tabular-nums">
+              {reais(usado)} de {reais(c.limiteCentavos!)} do limite · {pct}%
+            </span>
+          </>
+        )}
+      </div>
+      <div className="flex flex-col gap-1 px-3 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-micro text-fg-muted">
+            {c.fechamento && c.vencimento ? `Fecha dia ${c.fechamento} · vence dia ${c.vencimento}` : "Sem os dias da fatura"}
+          </span>
+          <Button size="xs" variant="ghost" onClick={onEditar}>
+            Editar
+          </Button>
+        </div>
+        {c.faturas.length === 0 ? (
+          <p className="text-micro text-fg-muted">Nenhuma compra ainda.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border-soft">
+            {c.faturas.map((f) => (
+              <LinhaDaFatura key={f.id} fatura={f} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </li>
   );
 }
 

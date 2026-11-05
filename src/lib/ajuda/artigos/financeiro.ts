@@ -677,11 +677,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Instruções internas escritas pela própria equipe, organizadas em documentos e páginas, para ninguém ficar sem saber o que fazer em ausências e férias.",
     secoes: [
       {
-        titulo: "Criar um documento e suas páginas",
+        titulo: "Criar uma pasta e suas páginas",
         passos: [
-          "No pé da lista à esquerda, clique em “Novo documento”.",
-          "Digite o título e tecle Enter.",
-          "Abaixo do documento, clique em “Página”.",
+          "No pé da coluna de pastas, à esquerda, clique em “Nova pasta”.",
+          "Digite o nome e clique em “Criar pasta”.",
+          "Abaixo da pasta, clique em “Página”.",
           "Digite o título da página e tecle Enter.",
         ],
       },
@@ -690,6 +690,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Clique na página na lista à esquerda.",
           "Clique no título ou no texto e escreva direto na folha.",
+          "Para mudar um bloco de lugar, arraste o puxador (⋮⋮) à esquerda dele, ou clique no puxador e escolha “Mover para cima” ou “Mover para baixo”. No teclado: Alt+↑ ou Alt+↓.",
           "O texto grava sozinho; o canto de cima mostra “Salvando…” e depois “Salvo”.",
           "Para ilustrar, clique em “Adicionar capa” e escolha uma imagem.",
         ],

@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { CampoData } from "@/components/ui/CampoData";
 import { RejeitarProposta } from "./RejeitarProposta";
-import type { AcaoDaIa } from "@/app/(app)/societario/ia/actions";
+import type { AcaoDaIa } from "@/app/(app)/processos/ia/actions";
 import type { PlanoDoContrato, SocioLido } from "@/lib/societario/contratoSocial";
 import { Aviso } from "@/components/ui/Aviso";
 import { useToast } from "@/components/ui/Toast";

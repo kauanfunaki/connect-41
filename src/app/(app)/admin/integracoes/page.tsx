@@ -116,7 +116,9 @@ export default async function IntegracoesPage({
   // configuração do escritório inteiro — só quem o administra vê e mexe.
   const podeConfigurar = isFullWrite(ctx.role);
   const podeGerirOps = podeConfigurar && await podeNoModulo(ctx, MODULO_OPS, "gerir");
-  const podeGerirGithub = podeConfigurar && await podeNoModulo(ctx, GITHUB_MODULE, "gerir");
+  // O GitHub é do Tech: quem gere o módulo (o coordenador, além do admin)
+  // configura tudo, inclusive as credenciais do OAuth App (04/11/2026).
+  const podeGerirGithub = await podeNoModulo(ctx, GITHUB_MODULE, "gerir");
   const github = podeGerirGithub ? await integrationView(ctx.tenantId).catch(() => null) : null;
   const [integracoes, contasOmie, empresasParaOmie, serpro, aiConfig, chatwootConnection, { labels: nomesDosSetores }, credencialOps] = podeConfigurar
     ? await Promise.all([
@@ -202,15 +204,15 @@ export default async function IntegracoesPage({
       estado: temChaveOps ? "ligada" : "desligada",
       detalhe: "Os bots continuam identificados pelo próprio slug.",
     });
-    if (podeGerirGithub) blocos.push({
-      chave: "github", nome: "GitHub", icone: <GitBranch />,
-      descricao: "Conta e repositórios monitorados pelo módulo de contribuições do Tech.",
-      selo: github?.error || github?.status === "needs_reconnect" ? { tom: "atencao", rotulo: "Com pendência" }
-        : github?.connected ? { tom: "sucesso", rotulo: github.enabled ? "Sincronizando" : "Conectada" } : { tom: "neutro", rotulo: "Não conectada" },
-      estado: github?.error || github?.status === "needs_reconnect" ? "problema" : github?.connected ? "ligada" : "desligada",
-      detalhe: github?.login ? `Conta ${github.login} · exclusivo do Tech` : "Exclusivo do Tech",
-    });
   }
+  if (podeGerirGithub) blocos.push({
+    chave: "github", nome: "GitHub", icone: <GitBranch />,
+    descricao: "Conta e repositórios monitorados pelo módulo de contribuições do Tech.",
+    selo: github?.error || github?.status === "needs_reconnect" ? { tom: "atencao", rotulo: "Com pendência" }
+      : github?.connected ? { tom: "sucesso", rotulo: github.enabled ? "Sincronizando" : "Conectada" } : { tom: "neutro", rotulo: "Não conectada" },
+    estado: github?.error || github?.status === "needs_reconnect" ? "problema" : github?.connected ? "ligada" : "desligada",
+    detalhe: github?.login ? `Conta ${github.login} · exclusivo do Tech` : "Exclusivo do Tech",
+  });
 
   // As reuniões são da conta de cada um: o bloco vale para quem olha.
   const expirada = (Boolean(google) && googleHealth === "NEEDS_RECONNECT") || (Boolean(microsoft) && microsoftHealth === "NEEDS_RECONNECT");

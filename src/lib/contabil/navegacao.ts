@@ -2,6 +2,7 @@ import type { Lancamento } from "./lancamentos";
 export const AREAS_CONTABEIS = [
   ["visao", "Visão geral"], ["entradas", "Notas de entrada"], ["pendencias", "Pendências"],
   ["regras", "Regras do de-para"], ["lancamentos", "Lançamentos"], ["configuracao", "Plano e contas"],
+  ["pagamentos", "Lançados e pendências"], ["documentos-lidos", "Documentos lidos"], ["enviar-pagamentos", "Enviar documentos"], ["regras-pagamentos", "Regras dos pagamentos"],
   ["saidas", "Saídas"], ["lote", "Lote do ano"],
 ] as const;
 export const AREAS_CONTRIBUICOES = [
@@ -24,6 +25,9 @@ export const ETAPAS_DO_CONTABIL = [
   { chave: "pendencias", rotulo: "Pendências", resumo: "As notas que ficaram fora do de-para.", secoes: [["pendencias", "Pendências"]] },
   { chave: "depara", rotulo: "De-para", resumo: "Onde a pendência vira regra de conta.", secoes: [["regras", "Regras"], ["configuracao", "Plano e contas"]] },
   { chave: "lancamentos", rotulo: "Lançamentos", resumo: "A planilha no modelo da Domínio.", secoes: [["lancamentos", "Lançamentos"], ["visao", "Resumo"]] },
+  // O passo 5 do motor (03/11/2026): RPA, recibos, contratos e as faturas do
+  // BPO, lidos dos documentos enviados aqui. As contas-modelo ficam em Plano e contas.
+  { chave: "pagamentos", rotulo: "Pagamentos sem nota", resumo: "RPA, recibos, contratos e faturas do BPO.", secoes: [["pagamentos", "Lançados e pendências"], ["documentos-lidos", "Documentos lidos"], ["enviar-pagamentos", "Enviar documentos"], ["regras-pagamentos", "Regras"]] },
   { chave: "saidas", rotulo: "Saídas", resumo: "O faturamento do mês, um lançamento por dia.", secoes: [["saidas", "Saídas"]] },
   { chave: "lote", rotulo: "Lote do ano", resumo: "Os doze meses num ZIP, com o resumo do que saiu.", secoes: [["lote", "Lote do ano"]] },
 ] as const;

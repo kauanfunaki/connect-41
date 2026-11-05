@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { Check, FileText, ScanText, Sparkles, TriangleAlert, X } from "lucide-react";
+import { useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { Check, ChevronDown, FileText, Plus, ScanText, Sparkles, TriangleAlert, X } from "lucide-react";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -39,6 +40,26 @@ type Projeto = { id: string; nome: string };
 type Categoria = { id: string; nome: string; kind: "PAGAR" | "RECEBER" };
 
 const NOVA = "__nova__";
+
+/** O que o "Também" abre (Lançamentos B, 04/11/2026). */
+type Extra = "pago" | "repetir" | "parcelar" | "retencoes" | "anexos";
+const ROTULO_DO_EXTRA: Record<Extra, (kind: "PAGAR" | "RECEBER") => string> = {
+  pago: (k) => (k === "PAGAR" ? "Já está paga" : "Já foi recebida"),
+  repetir: () => "Repetir",
+  parcelar: () => "Parcelar",
+  retencoes: () => "Retenções",
+  anexos: () => "Anexos",
+};
+/** "Mais detalhes" aberto fica lembrado neste navegador (quem usa sempre o centro de custo). */
+const CHAVE_DOS_DETALHES = "c41:lancamento:mais-detalhes";
+const semAssinatura = () => () => {};
+function lerDetalhesLembrados(): boolean {
+  try {
+    return window.localStorage.getItem(CHAVE_DOS_DETALHES) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /** O que a leitura do boleto deixou pronto na tela, até a pessoa lançar. */
 type Lido = { leitura: LeituraDoBoleto; runId: string | null; arquivo: File };
@@ -98,6 +119,32 @@ export function FormLancamentoManual({
   const [lido, setLido] = useState<Lido | null>(null);
   const [versao, setVersao] = useState(0);
 
+  // Os blocos que a pessoa pediu no "Também", e o "Mais detalhes".
+  const [extras, setExtras] = useState<ReadonlySet<Extra>>(new Set());
+  // Lembrado neste navegador; no servidor (e na hidratação) começa fechado.
+  const lembrado = useSyncExternalStore(semAssinatura, lerDetalhesLembrados, () => false);
+  const [escolhaDosDetalhes, setMaisDetalhes] = useState<boolean | null>(null);
+  const maisDetalhes = escolhaDosDetalhes ?? lembrado;
+  function alternarDetalhes() {
+    const novo = !maisDetalhes;
+    setMaisDetalhes(novo);
+    try {
+      window.localStorage.setItem(CHAVE_DOS_DETALHES, novo ? "1" : "0");
+    } catch {
+      // Sem armazenamento (janela anônima): vale só nesta tela.
+    }
+  }
+  /** Liga ou desliga um bloco. Desligar desfaz o que ele tinha. */
+  function alternarExtra(e: Extra) {
+    const ligado = extras.has(e);
+    const novo = new Set(extras);
+    if (ligado) novo.delete(e);
+    else novo.add(e);
+    setExtras(novo);
+    if (ligado && e === "parcelar") setParcelas("");
+    if (ligado && e === "retencoes") setRetencoes({});
+  }
+
   const doTipo = categorias.filter((c) => c.kind === kind);
   const contasDoTipo = contasBancarias.filter((c) => kind === "PAGAR" || !c.cartao);
   const retido = kind === "PAGAR" ? totalRetido(retencoes) : 0;
@@ -127,6 +174,7 @@ export function FormLancamentoManual({
     setCategoria(padrao && categorias.some((c) => c.id === padrao && c.kind === "PAGAR") ? padrao : "");
     setValorTexto(novo.leitura.valorCentavos ? valorNoCampo(novo.leitura.valorCentavos) : "");
     setVencimentoTexto(novo.leitura.vencimentoKey ?? "");
+    if (novo.leitura.emissaoKey || novo.leitura.numeroDocumento) setMaisDetalhes(true);
     setVersao((v) => v + 1);
     setErro(null);
     setSalvo(false);
@@ -172,16 +220,42 @@ export function FormLancamentoManual({
       setRateando(false);
       setValorTexto("");
       setLido(null);
+      setExtras(new Set());
       setVersao((v) => v + 1);
     });
   }
 
-  // Uma grade só, de quatro colunas, para os campos caírem alinhados de uma
-  // linha para a outra. Antes eram quatro grades (3, 3, 3 e 4 colunas), e o
-  // centro de custo ficava sozinho numa linha de três.
   const semCentro = centros.length === 0;
+  const nomeDaContraparte = contrapartes.find((c) => c.id === contraparte)?.nome ?? (contraparte === NOVA ? leitura?.beneficiario || "contraparte nova" : null);
+  const nomeDaCategoria = rateando ? "rateada" : doTipo.find((c) => c.id === categoria)?.nome ?? null;
+  const valorDigitado = centavosDeTexto(valorTexto);
+  const chips: Extra[] = kind === "PAGAR" ? ["pago", "repetir", "parcelar", "retencoes", "anexos"] : ["pago", "repetir", "parcelar", "anexos"];
+  // O bloco aberto: fundo levemente diferente, título e o ✕ para tirar — um
+  // embaixo do outro, só os que foram pedidos.
+  const BLOCO = "rounded-md border border-border-soft bg-surface-muted/40 p-3";
+
+  /*
+   * Lançamentos B (escolha do Kauan na página de opções de 04/11/2026): o
+   * formulário era uma grade de quatro colunas com dezoito campos e quatro
+   * blocos, todos à vista. Agora:
+   *
+   * - em cima, o PDF para a IA ler (como antes);
+   * - depois, só o que toda conta tem: tipo, fornecedor, valor, vencimento,
+   *   categoria e descrição;
+   * - "Também": botões que abrem o bloco quando precisa — já paga, repetir,
+   *   parcelar, retenções e anexos; "Ratear" fica no campo da categoria;
+   * - "Mais detalhes", recolhido: competência, previsão, centro de custo,
+   *   projeto, conta corrente, emissão e nº do documento. Fica no formulário
+   *   mesmo fechado (a competência é obrigatória e já vem preenchida), e
+   *   lembra aberto neste navegador;
+   * - ao lado, um resumo do que vai ser lançado.
+   *
+   * Pedido do Kauan ao escolher: aberto, também não pode poluir — cada bloco
+   * só aparece quando pedido, e some pelo ✕ (desfazendo o que tinha).
+   */
   return (
-    <Card className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
+    <Card className="flex flex-col gap-4 p-4 min-w-0">
       {leitorDeBoleto ? (
         <LerBoleto companyId={companyId} lido={lido} aoLer={aplicarLeitura} aoDescartar={descartarLeitura} />
       ) : (
@@ -192,28 +266,33 @@ export function FormLancamentoManual({
 
       <form ref={formRef} onSubmit={enviar} className="flex flex-col gap-4">
         <input type="hidden" name="companyId" value={companyId} />
+        <input type="hidden" name="kind" value={kind} />
 
-        <FieldGrid key={versao} columns="sm:grid-cols-2 lg:grid-cols-4">
-          <CampoForm label="Tipo" htmlFor="lancamento-tipo" required>
-            <Select
-              id="lancamento-tipo"
-              name="kind"
-              value={kind}
-              onChange={(e) => {
-                setKind(e.target.value as "PAGAR" | "RECEBER");
-                setCategoria("");
-              }}
-            >
-              <option value="PAGAR">Conta a pagar</option>
-              <option value="RECEBER">Conta a receber</option>
-            </Select>
-          </CampoForm>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-label font-medium text-fg-secondary">Tipo</span>
+          <SegmentedControl
+            label="Tipo da conta"
+            active={kind}
+            tone="brand"
+            items={[
+              { key: "PAGAR", label: "A pagar" },
+              { key: "RECEBER", label: "A receber" },
+            ]}
+            onChange={(k) => {
+              setKind(k);
+              setCategoria("");
+              // Conta a receber não tem retenção: o bloco sai, e o que tinha.
+              if (k === "RECEBER" && extras.has("retencoes")) alternarExtra("retencoes");
+            }}
+          />
+        </div>
 
+        <FieldGrid key={versao} columns="sm:grid-cols-2">
           <CampoForm
             label={kind === "PAGAR" ? "Fornecedor" : "Cliente (sacado)"}
             htmlFor="lancamento-contraparte"
             required
-            className={rateando ? "lg:col-span-3" : semCentro ? "lg:col-span-2" : ""}
+            className="sm:col-span-2"
             helper={leitura && conferir("fornecedor") && contraparte !== NOVA ? "A leitura não achou o CNPJ do beneficiário — escolha o fornecedor." : undefined}
           >
             <Select id="lancamento-contraparte" name="counterpartyId" value={contraparte} onChange={(e) => escolherContraparte(e.target.value)} required>
@@ -230,61 +309,6 @@ export function FormLancamentoManual({
             </Select>
           </CampoForm>
 
-          <input type="hidden" name="comRateio" value={rateando ? "1" : "0"} />
-          {rateando ? (
-            // A conta dividida em categorias, centros e projetos (lote D, 20/10).
-            // `key`: trocar o tipo troca o plano de contas, e as linhas recomeçam.
-            <CamposDoRateio
-              key={kind}
-              className="sm:col-span-2 lg:col-span-4"
-              categorias={doTipo}
-              centros={centros.map((c) => ({ id: c.id, nome: c.codigo ? `${c.nome} · ${c.codigo}` : c.nome }))}
-              projetos={projetos}
-              valorTexto={valorTexto}
-              categoriaInicial={categoria}
-              onDesfazer={() => setRateando(false)}
-            />
-          ) : (
-            <CampoForm
-              label="Categoria"
-              htmlFor="lancamento-categoria"
-              required={kind === "PAGAR"}
-              helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
-              acao={
-                <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
-                  Ratear
-                </Button>
-              }
-            >
-              <Select id="lancamento-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
-                <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
-                {doTipo.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
-            </CampoForm>
-          )}
-
-          {!semCentro && !rateando && (
-            <CampoForm
-              label="Centro de custo"
-              htmlFor="lancamento-centro"
-              helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional. Um centro por lançamento."}
-            >
-              <Select id="lancamento-centro" name="costCenterId" defaultValue="">
-                <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
-                {centros.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                    {c.codigo ? ` · ${c.codigo}` : ""}
-                  </option>
-                ))}
-              </Select>
-            </CampoForm>
-          )}
-
           {/* CNPJ primeiro (19/10): com ele, a Receita preenche o nome. */}
           {contraparte === NOVA && (
             <CamposDaContraparteNova
@@ -293,32 +317,11 @@ export function FormLancamentoManual({
               nomePadrao={leitura?.beneficiario ?? ""}
               documentoPadrao={leitura?.documentoDoBeneficiario ?? ""}
               ajudaDoDocumento={leitura && !leitura.documentoDoBeneficiario ? "A leitura não achou o CNPJ — digite o do boleto." : undefined}
-              classeDoNome="lg:col-span-3"
-              classeDoAviso="sm:col-span-2 lg:col-span-4"
+              classeDoNome=""
+              classeDoAviso="sm:col-span-2"
             />
           )}
 
-          <CampoForm
-            label="Competência"
-            htmlFor="lancamento-competencia"
-            required
-            helper="O mês a que a conta pertence — é o que a DRE econômica soma."
-          >
-            <CampoMes id="lancamento-competencia" name="competencia" defaultValue={competenciaPadrao} required />
-          </CampoForm>
-          <CampoForm label="Vencimento" htmlFor="lancamento-vencimento" required helper={leitura && conferir("vencimento") ? CONFIRA : undefined}>
-            <CampoData
-              id="lancamento-vencimento"
-              name="vencimento"
-              defaultValue={leitura?.vencimentoKey ?? undefined}
-              onChange={setVencimentoTexto}
-              required
-            />
-          </CampoForm>
-          {/* A data de previsão (lote D, 20/10): o fluxo de caixa projeta por ela. */}
-          <CampoForm label="Previsão" htmlFor="lancamento-previsao" helper="Quando deve ser paga de fato. Em branco, o vencimento.">
-            <CampoData id="lancamento-previsao" name="previsao" />
-          </CampoForm>
           <CampoForm
             label={parcelando ? "Valor total (todas as parcelas)" : retido > 0 ? "Valor bruto (da nota)" : "Valor"}
             htmlFor="lancamento-valor"
@@ -342,92 +345,201 @@ export function FormLancamentoManual({
               required
             />
           </CampoForm>
-          {/* Com juros, multa, desconto e baixa parcial (lote 7, 28/10/2026). */}
-          <PagamentosDoManual kind={kind} hojeISO={hojeISO} />
-
-          {/* Emissão, número e projeto (19/10, pedidos do BPO): opcionais, como no Omie. */}
-          <CampoForm label="Emissão" htmlFor="lancamento-emissao" helper="Data do documento. Opcional.">
-            <CampoData id="lancamento-emissao" name="emissao" max={hojeISO} defaultValue={leitura?.emissaoKey ?? undefined} />
-          </CampoForm>
-          <CampoForm label="Nº do documento" htmlFor="lancamento-numero">
-            <Input id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" defaultValue={leitura?.numeroDocumento ?? undefined} />
-          </CampoForm>
-          {!rateando && <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} />}
-          {/* A conta corrente prevista (lote D, 20/10): a baixa já vem com ela. O
-              cartão de crédito só na conta a pagar — com "Já pago em", ela
-              nasce paga no cartão e entra na fatura. */}
-          <CampoForm
-            label="Conta corrente"
-            htmlFor="lancamento-conta"
-            helper={
-              contasDoTipo.length === 0
-                ? "Nenhuma conta bancária nesta empresa (Banco e caixa)."
-                : `Opcional. Por onde deve ser ${kind === "PAGAR" ? "paga" : "recebida"} — a baixa já vem com ela.`
-            }
-          >
-            <Select id="lancamento-conta" name="bankAccountId" defaultValue="" disabled={contasDoTipo.length === 0}>
-              <option value="">{contasDoTipo.length === 0 ? "Nenhuma conta cadastrada" : "Não prevista"}</option>
-              {contasDoTipo.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </Select>
+          <CampoForm label={parcelando ? "Vencimento da 1ª parcela" : "Vencimento"} htmlFor="lancamento-vencimento" required helper={leitura && conferir("vencimento") ? CONFIRA : undefined}>
+            <CampoData
+              id="lancamento-vencimento"
+              name="vencimento"
+              defaultValue={leitura?.vencimentoKey ?? undefined}
+              onChange={setVencimentoTexto}
+              required
+            />
           </CampoForm>
 
-          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className={rateando ? "sm:col-span-2 lg:col-span-4" : "lg:col-span-3"}>
-            <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
-          </CampoForm>
-
-          {/* Retenções na fonte (lote D, 20/10): só na conta a pagar. */}
-          {kind === "PAGAR" && (
-            <CamposDasRetencoes
-              className="sm:col-span-2 lg:col-span-4"
-              valores={retencoes}
-              onChange={(t, v) => setRetencoes((a) => ({ ...a, [t]: v }))}
+          <input type="hidden" name="comRateio" value={rateando ? "1" : "0"} />
+          {rateando ? (
+            // A conta dividida em categorias, centros e projetos (lote D, 20/10).
+            // `key`: trocar o tipo troca o plano de contas, e as linhas recomeçam.
+            <CamposDoRateio
+              key={kind}
+              className="sm:col-span-2"
+              categorias={doTipo}
+              centros={centros.map((c) => ({ id: c.id, nome: c.codigo ? `${c.nome} · ${c.codigo}` : c.nome }))}
+              projetos={projetos}
+              valorTexto={valorTexto}
+              categoriaInicial={categoria}
+              onDesfazer={() => setRateando(false)}
+            />
+          ) : (
+            <CampoForm
+              label="Categoria"
+              htmlFor="lancamento-categoria"
+              required={kind === "PAGAR"}
+              className="sm:col-span-2"
+              helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
+              acao={
+                <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
+                  Ratear
+                </Button>
+              }
             >
-              {retido > 0 && (
-                <p className="text-helper text-fg-secondary">
-                  Bruto {formatarReaisDeCentavos(centavosDeTexto(valorTexto) ?? 0)} − retido {formatarReaisDeCentavos(retido)} ={" "}
-                  <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}</strong> a pagar ao
-                  fornecedor. As contas dos impostos nascem junto.
-                  {/* Lote M1 do mercado (23/10/2026): rateio e parcelas são digitados sobre o bruto. */}
-                  {parcelando && " As parcelas somam o bruto; cada uma fica com a parte dela das retenções e paga o líquido dela."}
-                  {rateando && " O rateio fecha o bruto; a conta guarda as linhas na proporção do líquido."}
-                </p>
-              )}
-            </CamposDasRetencoes>
+              <Select id="lancamento-categoria" name="categoryId" value={categoria} onChange={(e) => setCategoria(e.target.value)} required={kind === "PAGAR"}>
+                <option value="">{kind === "PAGAR" ? "Escolha…" : "Sem categoria"}</option>
+                {doTipo.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
           )}
 
-          {/* Repetir (lote D): as próximas nascem junto — ver `CamposDaRepeticao`. */}
-          <CamposDaRepeticao className="sm:col-span-2 lg:col-span-4" />
-
-          {/* Parcelar (22/10/2026): o valor dividido em parcelas — ver `CamposDoParcelamento`. */}
-          <CamposDoParcelamento
-            className="sm:col-span-2 lg:col-span-4"
-            parcelas={parcelas}
-            onParcelas={setParcelas}
-            valorTexto={valorTexto}
-            primeiroVencimento={vencimentoTexto}
-          />
-
-          {/* Anexos (lote H2): o boleto, a nota, o comprovante — ficam na conta. */}
-          <CampoForm
-            label="Anexos"
-            htmlFor="lancamento-anexos-0"
-            className="sm:col-span-2 lg:col-span-4"
-            helper={
-              lido
-                ? `O boleto lido (${lido.arquivo.name}) já vai anexado. Junte outros, se quiser — até 10 MB no total.`
-                : "Opcional. PDF, PNG, JPG ou XML — até 10 MB no total."
-            }
-          >
-            <CampoDeAnexos idBase="lancamento-anexos" />
+          <CampoForm label="Descrição" htmlFor="lancamento-descricao" className="sm:col-span-2">
+            <Input id="lancamento-descricao" name="descricao" maxLength={255} placeholder="Ex.: aluguel de setembro" defaultValue={leitura?.descricao ?? undefined} />
           </CampoForm>
         </FieldGrid>
 
-        {/* O rodapé padrão (08/10/2026): era escrito à mão, com o erro em 12px
-            e "Lançando…" num ternário. */}
+        {/* "Também": cada botão abre o seu bloco; ligado, mostra o ✓. */}
+        <div className="flex flex-col gap-2">
+          <p className="c41-rotulo">Também</p>
+          <div className="flex flex-wrap gap-2">
+            {chips.map((e) => {
+              const ligado = extras.has(e);
+              return (
+                <button
+                  key={e}
+                  type="button"
+                  aria-pressed={ligado}
+                  onClick={() => alternarExtra(e)}
+                  className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-fs-2 font-medium transition-colors ${
+                    ligado ? "border-brand/40 bg-brand-subtle text-brand" : "border-border bg-surface text-fg-secondary hover:border-brand/30 hover:text-fg"
+                  }`}
+                >
+                  {ligado ? <Check size={13} aria-hidden /> : <Plus size={13} aria-hidden />}
+                  {ROTULO_DO_EXTRA[e](kind)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {extras.has("pago") && (
+          <BlocoDoExtra titulo={ROTULO_DO_EXTRA.pago(kind)} classe={BLOCO} onTirar={() => alternarExtra("pago")}>
+            {/* Com juros, multa, desconto e baixa parcial (lote 7, 28/10/2026). */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <PagamentosDoManual kind={kind} hojeISO={hojeISO} />
+            </div>
+          </BlocoDoExtra>
+        )}
+        {/* Repetir (lote D): as próximas nascem junto — ver `CamposDaRepeticao`. */}
+        {extras.has("repetir") && <CamposDaRepeticao abertoInicial />}
+        {/* Parcelar (22/10/2026): o valor dividido em parcelas — ver `CamposDoParcelamento`. */}
+        {extras.has("parcelar") && (
+          <CamposDoParcelamento abertoInicial parcelas={parcelas} onParcelas={setParcelas} valorTexto={valorTexto} primeiroVencimento={vencimentoTexto} />
+        )}
+        {/* Retenções na fonte (lote D, 20/10): só na conta a pagar. */}
+        {kind === "PAGAR" && extras.has("retencoes") && (
+          <CamposDasRetencoes abertoInicial valores={retencoes} onChange={(t, v) => setRetencoes((a) => ({ ...a, [t]: v }))}>
+            {retido > 0 && (
+              <p className="text-helper text-fg-secondary">
+                Bruto {formatarReaisDeCentavos(centavosDeTexto(valorTexto) ?? 0)} − retido {formatarReaisDeCentavos(retido)} ={" "}
+                <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}</strong> a pagar ao fornecedor. As
+                contas dos impostos nascem junto.
+                {/* Lote M1 do mercado (23/10/2026): rateio e parcelas são digitados sobre o bruto. */}
+                {parcelando && " As parcelas somam o bruto; cada uma fica com a parte dela das retenções e paga o líquido dela."}
+                {rateando && " O rateio fecha o bruto; a conta guarda as linhas na proporção do líquido."}
+              </p>
+            )}
+          </CamposDasRetencoes>
+        )}
+        {/* Anexos (lote H2): o boleto, a nota, o comprovante — ficam na conta. */}
+        {extras.has("anexos") && (
+          <BlocoDoExtra titulo="Anexos" classe={BLOCO} onTirar={() => alternarExtra("anexos")}>
+            <CampoForm
+              label="Arquivos"
+              htmlFor="lancamento-anexos-0"
+              helper={
+                lido
+                  ? `O boleto lido (${lido.arquivo.name}) já vai anexado. Junte outros, se quiser — até 10 MB no total.`
+                  : "PDF, PNG, JPG ou XML — até 10 MB no total."
+              }
+            >
+              <CampoDeAnexos idBase="lancamento-anexos" />
+            </CampoForm>
+          </BlocoDoExtra>
+        )}
+        {lido && !extras.has("anexos") && <p className="text-micro text-fg-muted">O boleto lido ({lido.arquivo.name}) vai anexado à conta.</p>}
+
+        {/* "Mais detalhes": recolhido, mas no formulário — a competência é obrigatória. */}
+        <div className="rounded-md border border-border">
+          <button
+            type="button"
+            aria-expanded={maisDetalhes}
+            aria-controls="lancamento-mais-detalhes"
+            onClick={alternarDetalhes}
+            className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-hover"
+          >
+            <ChevronDown size={14} aria-hidden className={`shrink-0 text-fg-muted transition-transform ${maisDetalhes ? "rotate-180" : ""}`} />
+            <span className="text-ui font-semibold text-fg">Mais detalhes</span>
+            <span className="min-w-0 truncate text-fs-2 text-fg-muted">
+              competência, previsão, {semCentro ? "" : "centro de custo, "}projeto, conta corrente, emissão e nº do documento
+            </span>
+          </button>
+          <div id="lancamento-mais-detalhes" className={`${maisDetalhes ? "grid" : "hidden"} gap-4 border-t border-border px-3 py-3 sm:grid-cols-2 lg:grid-cols-3`}>
+            <CampoForm label="Competência" htmlFor="lancamento-competencia" required helper="O mês a que a conta pertence — é o que a DRE econômica soma.">
+              <CampoMes id="lancamento-competencia" name="competencia" defaultValue={competenciaPadrao} required />
+            </CampoForm>
+            {/* A data de previsão (lote D, 20/10): o fluxo de caixa projeta por ela. */}
+            <CampoForm label="Previsão" htmlFor="lancamento-previsao" helper="Quando deve ser paga de fato. Em branco, o vencimento.">
+              <CampoData id="lancamento-previsao" name="previsao" />
+            </CampoForm>
+            {!semCentro && !rateando && (
+              <CampoForm
+                label="Centro de custo"
+                htmlFor="lancamento-centro"
+                helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional. Um centro por lançamento."}
+              >
+                <Select id="lancamento-centro" name="costCenterId" defaultValue="">
+                  <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
+                  {centros.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                      {c.codigo ? ` · ${c.codigo}` : ""}
+                    </option>
+                  ))}
+                </Select>
+              </CampoForm>
+            )}
+            {!rateando && <CampoDeProjeto id="lancamento-projeto" companyId={companyId} projetos={projetos} />}
+            {/* A conta corrente prevista (lote D, 20/10): a baixa já vem com ela. */}
+            <CampoForm
+              label="Conta corrente"
+              htmlFor="lancamento-conta"
+              helper={
+                contasDoTipo.length === 0
+                  ? "Nenhuma conta bancária nesta empresa (Banco e caixa)."
+                  : `Opcional. Por onde deve ser ${kind === "PAGAR" ? "paga" : "recebida"} — a baixa já vem com ela.`
+              }
+            >
+              <Select id="lancamento-conta" name="bankAccountId" defaultValue="" disabled={contasDoTipo.length === 0}>
+                <option value="">{contasDoTipo.length === 0 ? "Nenhuma conta cadastrada" : "Não prevista"}</option>
+                {contasDoTipo.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+            {/* Emissão e número (19/10, pedidos do BPO): opcionais, como no Omie. */}
+            <CampoForm label="Emissão" htmlFor="lancamento-emissao" helper="Data do documento. Opcional.">
+              <CampoData key={`emissao-${versao}`} id="lancamento-emissao" name="emissao" max={hojeISO} defaultValue={leitura?.emissaoKey ?? undefined} />
+            </CampoForm>
+            <CampoForm label="Nº do documento" htmlFor="lancamento-numero">
+              <Input key={`numero-${versao}`} id="lancamento-numero" name="numeroDocumento" maxLength={60} placeholder="Boleto, contrato, título" defaultValue={leitura?.numeroDocumento ?? undefined} />
+            </CampoForm>
+          </div>
+        </div>
+
+        {/* O rodapé padrão (08/10/2026). */}
         <FormFooter
           pending={pendente}
           submitLabel="Lançar"
@@ -447,6 +559,62 @@ export function FormLancamentoManual({
         />
       </form>
     </Card>
+
+    {/* O resumo do que vai ser lançado, ao lado (no computador). */}
+    <Card as="section" aria-labelledby="resumo-do-lancamento" className="flex flex-col gap-2 p-4 xl:sticky xl:top-4">
+      <h2 id="resumo-do-lancamento" className="c41-rotulo">
+        Resumo
+      </h2>
+      <p className="text-2xl font-semibold tabular-nums text-fg leading-tight">{formatarReaisDeCentavos(valorDigitado ?? 0)}</p>
+      <p className="text-fs-2 text-fg-muted">
+        {kind === "PAGAR" ? "Conta a pagar" : "Conta a receber"}
+        {nomeDaContraparte ? ` · ${nomeDaContraparte}` : ""}
+      </p>
+      <dl className="mt-1 flex flex-col divide-y divide-border-soft text-fs-2">
+        <div className="flex justify-between gap-3 py-1.5">
+          <dt className="text-fg-secondary">Vencimento</dt>
+          <dd className="tabular-nums text-fg">{vencimentoTexto ? vencimentoTexto.split("-").reverse().join("/") : <span className="text-fg-muted">a preencher</span>}</dd>
+        </div>
+        <div className="flex justify-between gap-3 py-1.5">
+          <dt className="text-fg-secondary">Categoria</dt>
+          <dd className="text-right text-fg">{nomeDaCategoria ?? <span className="text-fg-muted">{kind === "PAGAR" ? "a escolher" : "sem categoria"}</span>}</dd>
+        </div>
+        {retido > 0 && (
+          <div className="flex justify-between gap-3 py-1.5">
+            <dt className="text-fg-secondary">Líquido</dt>
+            <dd className="tabular-nums text-fg">{formatarReaisDeCentavos((valorDigitado ?? 0) - retido)}</dd>
+          </div>
+        )}
+        {parcelando && (
+          <div className="flex justify-between gap-3 py-1.5">
+            <dt className="text-fg-secondary">Parcelas</dt>
+            <dd className="tabular-nums text-fg">{parcelas}</dd>
+          </div>
+        )}
+        {extras.size > 0 && (
+          <div className="flex justify-between gap-3 py-1.5">
+            <dt className="text-fg-secondary">Também</dt>
+            <dd className="text-right text-fg">{[...extras].map((e) => ROTULO_DO_EXTRA[e](kind).toLowerCase()).join(", ")}</dd>
+          </div>
+        )}
+      </dl>
+    </Card>
+    </div>
+  );
+}
+
+/** Um bloco aberto pelo "Também", com o título e o ✕ que o tira. */
+function BlocoDoExtra({ titulo, classe, onTirar, children }: { titulo: string; classe: string; onTirar: () => void; children: React.ReactNode }) {
+  return (
+    <section className={`flex flex-col gap-3 ${classe}`} aria-label={titulo}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-ui font-semibold text-fg">{titulo}</h3>
+        <Button type="button" variant="ghost" size="xs" onClick={onTirar} aria-label={`Tirar: ${titulo}`}>
+          <X size={12} aria-hidden /> Tirar
+        </Button>
+      </div>
+      {children}
+    </section>
   );
 }
 

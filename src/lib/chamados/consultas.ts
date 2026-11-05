@@ -57,14 +57,20 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   const filtroPrioridade = filtros.prioridade && PRIORIDADES.includes(filtros.prioridade as never) ? { priority: filtros.prioridade as never } : {};
   const where: Prisma.HelpdeskTicketWhereInput = { AND: [base, filtroAba, filtroPrioridade] };
   const countAba = (aba: string) => getPrisma().helpdeskTicket.count({ where: { AND: [base, estadosPorAba[aba]] } });
+  // Os três últimos eventos de cada chamado (03/11/2026): a atividade recente
+  // que o cartão mostra ao lado da situação. Quem não é da equipe não vê os internos.
+  const soPublicos = podeVerInterno(c.ctx, c.config) ? {} : { internal: false };
   const [rows, total, drafts] = await Promise.all([
-    getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } }, orderBy: filtros.status === "NA_FILA" || (!filtros.status && (filtros.aba ?? padrao) === "fila") ? [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }] : [{ updatedAt: "desc" }, { id: "desc" }], take: 25, skip: (page - 1) * 25 }),
+    getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 }, events: { where: soPublicos, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 3 } }, orderBy: filtros.status === "NA_FILA" || (!filtros.status && (filtros.aba ?? padrao) === "fila") ? [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }] : [{ updatedAt: "desc" }, { id: "desc" }], take: 25, skip: (page - 1) * 25 }),
     getPrisma().helpdeskTicket.count({ where }),
     getPrisma().helpdeskDraft.findMany({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, submittedAt: null }, orderBy: { updatedAt: "desc" }, take: 20 }),
   ]);
   const [abertosCount, filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["abertos", "fila", "aguardando", "pausa", "historico"].map(countAba));
   const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
-  return { rows, total, page, drafts, counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
+  // O texto dos comentários entre esses eventos, para a dica ao lado de "Suporte comentou".
+  const idsDosComentarios = rows.flatMap(t => t.events.filter(e => e.type === "comment").map(e => (e.data as { commentId?: unknown } | null)?.commentId)).filter((id): id is string => typeof id === "string");
+  const comentarios = idsDosComentarios.length ? await getPrisma().helpdeskComment.findMany({ where: { tenantId: c.ctx.tenantId, id: { in: idsDosComentarios }, ...soPublicos }, select: { id: true, body: true } }) : [];
+  return { rows, total, page, drafts, comentarios: new Map(comentarios.map(m => [m.id, m.body])), counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
 }
 // A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
 // chamado (título, descrição, protocolo), em quem abriu, no setor solicitante ou

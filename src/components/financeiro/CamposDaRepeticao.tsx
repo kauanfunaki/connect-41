@@ -34,7 +34,7 @@ export function resumoDaRepeticao(frequencia: string, vezes: string, fim: FimDaS
  * `validarRepeticao`, no servidor. O formulário remonta este bloco depois de lançar, e ele volta a
  * "Não repete".
  */
-export function CamposDaRepeticao({ className = "" }: { className?: string }) {
+export function CamposDaRepeticao({ className = "", abertoInicial = false }: { className?: string; abertoInicial?: boolean }) {
   const [frequencia, setFrequencia] = useState<Frequencia | "">("");
   const [fim, setFim] = useState<FimDaSerie["tipo"]>("VEZES");
   const [vezes, setVezes] = useState("12");
@@ -45,7 +45,7 @@ export function CamposDaRepeticao({ className = "" }: { className?: string }) {
   const diaria = frequencia === "DIARIA";
 
   return (
-    <BlocoRecolhivel titulo="Repetir" resumo={resumoDaRepeticao(frequencia, vezes, fim, ate)} className={`bg-surface ${className}`.trim()}>
+    <BlocoRecolhivel titulo="Repetir" resumo={resumoDaRepeticao(frequencia, vezes, fim, ate)} className={`bg-surface ${className}`.trim()} abertoInicial={abertoInicial}>
       <div className="flex flex-col gap-3 pt-1">
         <FieldGrid columns="sm:grid-cols-2">
           <CampoForm label="Frequência" htmlFor="lancamento-repetir-frequencia">

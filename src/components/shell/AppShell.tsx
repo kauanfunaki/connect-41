@@ -556,9 +556,9 @@ export function AppShell({
                   const hrefContabil = (aba: string, secao: string) => {
                     const q = new URLSearchParams({ aba, secao });
                     for (const campo of ["empresa", "mes"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
-                    return "/contabil/sped?" + q;
+                    return "/sped-contabil?" + q;
                   };
-                  const noContabil = pathname === "/contabil/sped";
+                  const noContabil = pathname === "/sped-contabil";
                   const grupoAtualContabil = grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined });
                   const itemModulo = (m: SectorModule) => m.code === "contabil_sped" ? <PainelDoItem key={m.code} titulo="SPED" area={areaDoModulo(m.code) ?? "marca"} icone={<ModuleIcon code={m.code} />} abrirPorClique telas={[
                     // De-para e lançamentos é um trabalho em etapas (03/11/2026): um item só.

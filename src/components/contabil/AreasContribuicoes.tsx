@@ -23,7 +23,7 @@ import { formatInstantDateTime } from "@/lib/format";
 import type { ExecucaoDoMotor } from "@/lib/sped/motor";
 
 type Params = Record<string, string | undefined>;
-const href = (empresa: string, mes: string, secao: string, extra: Params = {}) => "/contabil/sped?" + new URLSearchParams(Object.fromEntries(Object.entries({ empresa, mes, aba: "contribuicoes", secao, ...extra }).filter(([, v]) => v !== undefined)) as Record<string, string>);
+const href = (empresa: string, mes: string, secao: string, extra: Params = {}) => "/sped-contabil?" + new URLSearchParams(Object.fromEntries(Object.entries({ empresa, mes, aba: "contribuicoes", secao, ...extra }).filter(([, v]) => v !== undefined)) as Record<string, string>);
 const quando = (s: string | null) => s ? formatInstantDateTime(new Date(s)) : "—";
 
 export async function AreasContribuicoes({ ctx, empresa, mes, secao, params }: { ctx: AuthContext; empresa: EmpresaDoContabil; mes: string; secao: string; params: Params }) {

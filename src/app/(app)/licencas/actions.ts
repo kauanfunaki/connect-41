@@ -6,7 +6,31 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerFormularioDeLicenca } from "@/lib/societario/licenca-form";
+import {
+  chaveDaLicenca,
+  conferirLinhas,
+  lerPlanilhaDeLicencas,
+  PlanilhaInvalida,
+  TAMANHO_MAXIMO_DA_PLANILHA,
+  type LinhaConferida,
+} from "@/lib/societario/importacaoDeLicencas";
 import { pedirImpressaoDoAlvara } from "@/lib/robo/servidor";
+import { gerarEstruturado } from "@/lib/ai";
+import { saoPauloParts } from "@/lib/agenda";
+import { documentoDaEmpresa } from "@/lib/companyTaxId";
+import { nomeExibicao } from "@/lib/companyName";
+import { guardarArquivo } from "@/lib/drive/servidor";
+import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
+import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
+import { TAMANHO_MAXIMO_DO_ANEXO } from "@/lib/financeiro/pendencias/anexo";
+import {
+  AGENTE_DA_LICENCA,
+  SCHEMA_DA_LICENCA,
+  SISTEMA_DA_LICENCA,
+  lerRespostaDaLicenca,
+  nomeDoPdfDaLicenca,
+  type LeituraDaLicenca,
+} from "@/lib/societario/leituraDaLicenca";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -23,16 +47,90 @@ async function contexto() {
   return { erro: null, ctx };
 }
 
+/** O PDF do formulário, conferido pelos bytes: o nome e o tipo são o que o navegador disse. */
+async function pdfDoFormulario(form: FormData): Promise<{ pdf: { nome: string; bytes: Buffer } | null } | { error: string }> {
+  const arquivo = form.get("pdf");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { pdf: null };
+  if (arquivo.size > TAMANHO_MAXIMO_DO_ANEXO) return { error: "O PDF passa de 10 MB." };
+  const bytes = Buffer.from(await arquivo.arrayBuffer());
+  if (bytes.subarray(0, 5).toString("latin1") !== "%PDF-") return { error: "O arquivo não é um PDF." };
+  return { pdf: { nome: arquivo.name, bytes } };
+}
+
+function mensagemDeErroDaIa(err: unknown): string {
+  const m = err instanceof Error ? err.message : "";
+  if (/desligad/i.test(m)) return "A leitura de alvará e licença está desligada. Um administrador liga em Configurações › Inteligência artificial.";
+  if (/chave|api key|configur/i.test(m)) return "O escritório não tem chave de IA configurada.";
+  if (/teto|limite/i.test(m)) return "O teto de gasto da leitura de licenças no mês foi atingido.";
+  return "A IA não conseguiu ler agora. Tente de novo em alguns minutos, ou preencha à mão.";
+}
+
+export type ResultadoDaLeituraDaLicenca = { error: string } | { ok: true; leitura: LeituraDaLicenca };
+
+/**
+ * "Ler do PDF" no formulário da licença (04/11/2026). Manda o PDF à IA, confere
+ * o que voltou e devolve o que preenche a tela. Não grava nada: o PDF só vai
+ * para os Arquivos com o "Salvar", depois que a pessoa conferiu.
+ */
+export async function lerPdfDaLicenca(form: FormData): Promise<ResultadoDaLeituraDaLicenca> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const lido = await pdfDoFormulario(form);
+  if ("error" in lido) return lido;
+  if (!lido.pdf) return { error: "Escolha o PDF do alvará ou da licença." };
+
+  // A empresa é opcional na licença nova: sem ela, só não há a conferência do titular.
+  const companyId = String(form.get("companyId") ?? "").trim();
+  const empresa = companyId
+    ? await getPrisma().company.findFirst({ where: { id: companyId, tenantId: ctx.tenantId }, select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } })
+    : null;
+
+  try {
+    const r = await gerarEstruturado({
+      tenantId: ctx.tenantId,
+      agentCode: AGENTE_DA_LICENCA,
+      sistema: SISTEMA_DA_LICENCA,
+      texto: empresa ? `Leia este alvará ou licença da empresa ${nomeExibicao(empresa)}.` : "Leia este alvará ou licença.",
+      pdfBase64: lido.pdf.bytes.toString("base64"),
+      nomeDoArquivo: lido.pdf.nome.slice(0, 120) || "licenca.pdf",
+      nome: "licenca",
+      schema: SCHEMA_DA_LICENCA,
+      maxTokens: 1024,
+      contexto: { userId: ctx.userId, entityType: "empresa", entityId: empresa?.id },
+    });
+    return { ok: true, leitura: lerRespostaDaLicenca(r.valor, saoPauloParts(new Date()).dateKey, empresa ? (documentoDaEmpresa(empresa)?.digitos ?? null) : null) };
+  } catch (err) {
+    console.error("[lerPdfDaLicenca]", err);
+    return { error: mensagemDeErroDaIa(err) };
+  }
+}
+
+/** Guarda o PDF da licença em Arquivos › Societário, pela convenção do setor. */
+async function guardarPdfDaLicenca(tenantId: string, companyId: string, tipo: string, emitidaEm: Date | null, pdf: { bytes: Buffer }): Promise<{ ok: true } | { error: string }> {
+  if (!(await isModuleEnabled(tenantId, MODULO_ARQUIVOS))) return { error: "Os Arquivos estão desligados: não há onde guardar o PDF. Tire o PDF e salve, ou peça para ligar os Arquivos." };
+  const pasta = await pastaDoModeloDaEmpresa(tenantId, companyId, "societario");
+  if (!pasta) return { error: "A empresa não tem a pasta Societário nos Arquivos. Tire o PDF e salve, ou crie a pasta." };
+  const empresa = await getPrisma().company.findFirst({ where: { id: companyId, tenantId }, select: { name: true, displayName: true } });
+  const ano = (emitidaEm ?? new Date()).getUTCFullYear();
+  const nome = nomeDoPdfDaLicenca(empresa ? nomeExibicao(empresa) : "EMPRESA", tipo, ano);
+  const g = await guardarArquivo({ tenantId, folderId: pasta, arquivo: new File([new Uint8Array(pdf.bytes)], nome, { type: "application/pdf" }) });
+  return g.ok ? { ok: true } : { error: `A licença não foi salva: o PDF não entrou nos Arquivos (${g.erro}).` };
+}
+
 /**
  * Cria ou edita uma licença.
  *
  * O tenant é conferido nas três pontas — empresa, órgão e a própria licença —,
- * porque os três ids chegam pelo formulário.
+ * porque os três ids chegam pelo formulário. Com um PDF lido (04/11/2026), ele
+ * vai para Arquivos › Societário antes de gravar: se não couber, nada é gravado
+ * e a pessoa decide.
  */
 export async function salvarLicenca(_prev: LicencaState, form: FormData): Promise<LicencaState> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
   const tenantId = ctx.tenantId;
+  const doPdf = await pdfDoFormulario(form);
+  if ("error" in doPdf) return doPdf;
 
   const id = String(form.get("id") ?? "").trim() || null;
   const lido = lerFormularioDeLicenca({
@@ -60,6 +158,11 @@ export async function salvarLicenca(_prev: LicencaState, form: FormData): Promis
       select: { id: true },
     });
     if (!orgao) return { error: "Órgão não encontrado." };
+  }
+
+  if (doPdf.pdf) {
+    const guardado = await guardarPdfDaLicenca(tenantId, dados.companyId, dados.kind, dados.issuedAt, doPdf.pdf);
+    if ("error" in guardado) return guardado;
   }
 
   try {
@@ -165,7 +268,7 @@ export async function imprimirAlvaraPeloRobo(id: string): Promise<{ error: strin
   if (!(await isModuleEnabled(ctx.tenantId, "societario_robo"))) return { error: "O robô do Societário não está ligado neste escritório." };
   const r = await pedirImpressaoDoAlvara(ctx.tenantId, id, ctx.userId ?? null);
   if (!r.ok) return { error: r.erro };
-  revalidatePath("/societario/robo");
+  revalidatePath("/robo");
   return { success: true, texto: r.texto };
 }
 
@@ -176,4 +279,68 @@ export async function revogarLicenca(id: string): Promise<LicencaState> {
 /** Desfaz a revogação — quando foi marcada por engano. */
 export async function reativarLicenca(id: string): Promise<LicencaState> {
   return mudarRevogacao(id, false);
+}
+
+export type ResultadoDaImportacao =
+  | { error: string }
+  | { ok: true; linhas: Omit<LinhaConferida, "dados">[]; criadas: number | null };
+
+/**
+ * Importar licenças de uma planilha (lote B dos ajustes de 03/11/2026). Em
+ * duas voltas com o mesmo arquivo: sem `confirmar`, só confere e devolve linha
+ * a linha o que entra, o que já existe e o que tem erro; com `confirmar=1`,
+ * confere de novo (o banco pode ter mudado) e grava as novas.
+ */
+export async function importarLicencas(form: FormData): Promise<ResultadoDaImportacao> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const tenantId = ctx.tenantId;
+
+  const arquivo = form.get("planilha");
+  if (!(arquivo instanceof File) || arquivo.size === 0) return { error: "Escolha a planilha." };
+  if (arquivo.size > TAMANHO_MAXIMO_DA_PLANILHA) return { error: "A planilha passa de 5 MB." };
+
+  let lidas;
+  try {
+    lidas = await lerPlanilhaDeLicencas(new Uint8Array(await arquivo.arrayBuffer()));
+  } catch (err) {
+    if (err instanceof PlanilhaInvalida) return { error: err.message };
+    console.error("[importarLicencas] leitura", err);
+    return { error: "Não deu para ler a planilha." };
+  }
+  if (lidas.length === 0) return { error: "A planilha não tem nenhuma licença preenchida." };
+
+  const prisma = getPrisma();
+  const [empresas, orgaos, atuais] = await Promise.all([
+    prisma.company.findMany({ where: { tenantId }, select: { id: true, name: true, displayName: true, cnpj: true } }),
+    prisma.processOrgan.findMany({ where: { tenantId, active: true }, select: { id: true, name: true } }),
+    prisma.license.findMany({ where: { tenantId }, select: { companyId: true, kind: true, number: true, expiresAt: true } }),
+  ]);
+  const conferidas = conferirLinhas(lidas, {
+    empresas: empresas.map((e) => ({ id: e.id, nome: nomeExibicao(e), documento: e.cnpj ?? "" })),
+    orgaos: orgaos.map((o) => ({ id: o.id, nome: o.name })),
+    existentes: new Set(atuais.map((l) => chaveDaLicenca(l.companyId, l.kind, l.number, l.expiresAt))),
+  });
+  // O que volta à tela não leva os dados prontos para gravar: a gravação confere de novo.
+  const semDados = conferidas.map((l) => ({ linha: l.linha, documento: l.documento, empresa: l.empresa, tipo: l.tipo, validade: l.validade, situacao: l.situacao, motivo: l.motivo, aviso: l.aviso }));
+
+  if (form.get("confirmar") !== "1") return { ok: true, linhas: semDados, criadas: null };
+
+  const novas = conferidas.filter((l) => l.situacao === "nova" && l.dados).map((l) => ({ tenantId, ...l.dados! }));
+  if (novas.length === 0) return { error: "Nenhuma licença nova para importar." };
+  try {
+    await prisma.license.createMany({ data: novas });
+  } catch (err) {
+    console.error("[importarLicencas] gravação", err);
+    return { error: "Erro ao gravar as licenças. Nada foi importado." };
+  }
+  await logAudit({
+    tenantId,
+    userId: ctx.userId,
+    action: "license.import",
+    entityType: "License",
+    metadata: { arquivo: arquivo.name.slice(0, 120), criadas: novas.length, linhas: conferidas.length },
+  });
+  revalidatePath("/licencas");
+  return { ok: true, linhas: semDados, criadas: novas.length };
 }

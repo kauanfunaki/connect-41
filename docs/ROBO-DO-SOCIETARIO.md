@@ -56,6 +56,8 @@ Para deixar rodando, use `--watch` num serviço do Windows (NSSM ou o Agendador 
 - `--status`: a última volta, a última tarefa e o último erro;
 - `--stop`: para o robô na próxima volta.
 
+O robô grava o que faz em `.local/robo-societario.log`, além da janela do cmd: o detalhe de uma falha fica no arquivo depois que a janela fecha. Passou de 2 MB, o arquivo vira `.log.1` e começa outro; o `--status` mostra o caminho.
+
 Quando uma tela sai do esperado, o robô guarda uma captura em `.local/capturas-do-robo/<id da tarefa>.png`. É o material para ajustar o robô.
 
 ## 4. Testar como um site pede o certificado
@@ -88,7 +90,7 @@ npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario
 
 ## 5. Acompanhar
 
-- **Societário › Robô** no menu (`/societario/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
+- **Societário › Robô** no menu (`/robo`): a fila, o que já foi (com o link do PDF) e o que parou para alguém olhar, com o motivo. Tarefa que ainda está na fila pode ser cancelada.
 - **Sino**: quem pediu recebe "O robô precisa de você" quando a tarefa para.
 - **Ops Center, automação `robo-societario`**: o sinal de vida da máquina.
 - **Trilha de auditoria**: cada aceite de acessibilidade que o robô marcou, com a empresa e a inscrição.
@@ -105,6 +107,7 @@ npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario
 5. Vai para alguém olhar:
    - "não encontrado" ou "sem alvará": divergência entre a Junta e a prefeitura, decisão de 15/09;
    - "Alvará pendente de regularização, aguardando anuências…" (03/11/2026): a prefeitura ainda não libera a impressão. A frase dela vai para o motivo, e a tarefa não volta para a fila;
+   - a caixa "Não sou um robô" (ICI Captcha, desde 03/11/2026): o robô não marca. Ele traz a janela para a frente e espera 3 minutos por quem estiver na máquina; se ninguém marcar, o motivo traz o link da consulta e a inscrição, para fazer à mão e subir o PDF em Licenças › Editar › Ler do PDF, que preenche número, emissão e validade e guarda o PDF em Arquivos › Societário;
    - texto do aceite diferente: alguém relê antes de o robô aceitar em nome do cliente;
    - PDF que não veio;
    - tela desconhecida.

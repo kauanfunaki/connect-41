@@ -1,4 +1,5 @@
 import { AlertTriangle, Bot, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
+import { ImportarLicencas } from "@/components/societario/ImportarLicencas";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { notFound } from "next/navigation";
@@ -16,6 +17,10 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { resumoDasLicencas } from "@/lib/societario/licencas-data";
 import { situacaoDaLicenca, buscarLicencas, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Pagination } from "@/components/shared/Pagination";
+
+/** Licenças por página (lote B de 03/11/2026: a tela inteira pesava ao abrir). */
+const POR_PAGINA = 50;
 import { formatarNumero } from "@/lib/format";
 
 const RECORTES: { chave: string; rotulo: string; situacao: SituacaoDaLicenca | null }[] = [
@@ -29,7 +34,7 @@ const RECORTES: { chave: string; rotulo: string; situacao: SituacaoDaLicenca | n
 export default async function LicencasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ recorte?: string; busca?: string }>;
+  searchParams: Promise<{ recorte?: string; busca?: string; pagina?: string }>;
 }) {
   const ctx = await getAuthContext();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
@@ -37,7 +42,8 @@ export default async function LicencasPage({
   if (!ctx.tenantId || !canActOnSector(ctx, setores)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, "societario_licencas"))) notFound();
 
-  const { recorte, busca } = await searchParams;
+  const { recorte, busca, pagina: paginaDaUrl } = await searchParams;
+  const pagina = Math.max(1, Math.min(1000, Number.parseInt(paginaDaUrl ?? "1", 10) || 1));
   // Quem busca uma empresa quer achar a licença dela, vença ou não: sem recorte
   // escolhido, a busca olha todas (03/11/2026). O padrão "Precisa de ação"
   // escondia o alvará sem validade, que é o que o robô imprime.
@@ -72,6 +78,19 @@ export default async function LicencasPage({
     return s === RECORTES.find((r) => r.chave === chave)!.situacao;
   });
 
+  // A contagem e os totais são da lista inteira; só a tabela vem por página.
+  const totalDePaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  const paginaVista = Math.min(pagina, totalDePaginas);
+  const daPagina = filtradas.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    if (recorte) q.set("recorte", recorte);
+    if (busca?.trim()) q.set("busca", busca.trim());
+    if (p > 1) q.set("pagina", String(p));
+    const t = q.toString();
+    return t ? `/licencas?${t}` : "/licencas";
+  };
+
   return (
     <PageContainer>
       {/* O botão vai no `action` do cabeçalho, como nas outras telas: numa div
@@ -84,10 +103,12 @@ export default async function LicencasPage({
             {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença.
                 Botão, e não link de texto, desde 03/11/2026 — e também no menu. */}
             {roboLigado && (
-              <Button href="/societario/robo" variant="secondary" size="sm">
+              <Button href="/robo" variant="secondary" size="sm">
                 <Bot size={14} /> Robô
               </Button>
             )}
+            {/* Importar de planilha (lote B de 03/11/2026), com o modelo do Connect. */}
+            <ImportarLicencas />
             <NovaLicenca
               empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
               orgaos={orgaosDoForm}
@@ -156,13 +177,14 @@ export default async function LicencasPage({
         }
       >
         <LicencasFila
-          linhas={filtradas}
+          linhas={daPagina}
           hoje={hoje}
           filtrado={linhas.length > 0 && filtradas.length === 0}
           orgaos={orgaosDoForm}
           roboLigado={roboLigado}
         />
       </CascoDaTabela>
+      <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={filtradas.length} rotulo="licenças" />
     </PageContainer>
   );
 }

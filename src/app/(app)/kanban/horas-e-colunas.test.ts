@@ -54,15 +54,26 @@ beforeEach(() => {
 describe("editarLancamentoTempo", () => {
   it("quem apontou corrige duração, dia e nota", async () => {
     timeEntry.findFirst.mockResolvedValue({ userId: "eu", minutes: 480 });
-    const r = await editarLancamentoTempo("pl1", "i1", "te1", null, form({ horas: "1", minutos: "30", dia: "2026-10-10", nota: "conferência" }));
+    // Ontem: dentro dos 7 dias que qualquer um lança (04/11/2026).
+    const ontem = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const r = await editarLancamentoTempo("pl1", "i1", "te1", null, form({ horas: "1", minutos: "30", dia: ontem, nota: "conferência" }));
     expect(r).toEqual({ ok: true });
     expect(timeEntry.findFirst.mock.calls[0][0].where).toEqual({ id: "te1", tenantId: "t1", pipelineItemId: "i1", pipelineItem: { pipelineId: "pl1" } });
     expect(timeEntry.update).toHaveBeenCalledWith({
       where: { id: "te1" },
-      data: { minutes: 90, note: "conferência", loggedOn: new Date(Date.UTC(2026, 9, 10, 12)) },
+      data: { minutes: 90, note: "conferência", editedAt: expect.any(Date), loggedOn: new Date(`${ontem}T12:00:00Z`) },
     });
     // A correção fica no histórico do card.
     expect(activity.create.mock.calls[0][0].data.content).toBe("Apontamento corrigido: 8h → 1h30min");
+  });
+
+  it("dia com mais de 7 dias de atraso: só o gestor do setor (04/11/2026)", async () => {
+    timeEntry.findFirst.mockResolvedValue({ userId: "eu", minutes: 60 });
+    const antigo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    expect(await editarLancamentoTempo("pl1", "i1", "te1", null, form({ horas: "1", dia: antigo }))).toMatchObject({ error: expect.stringContaining("coordenação") });
+    expect(timeEntry.update).not.toHaveBeenCalled();
+    ctx.role = "SECTOR_ADMIN";
+    expect(await editarLancamentoTempo("pl1", "i1", "te1", null, form({ horas: "1", dia: antigo }))).toEqual({ ok: true });
   });
 
   it("colaborador não corrige o apontamento de outra pessoa", async () => {

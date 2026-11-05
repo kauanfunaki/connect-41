@@ -58,6 +58,13 @@ type Props = {
   podeAgendar: boolean;
   /** Horário da grade de dia/semana — o da pessoa ou o do escritório. */
   expediente: Expediente;
+  /**
+   * Abre mostrando só os prazos deste setor (`?setor=`): o "Ver prazos na
+   * Agenda" das Exigências (04/11/2026), que substituiu a agenda própria do
+   * Societário. É estado da tela, e não da URL: trocar de semana mantém o
+   * filtro, e "Ver todos os setores" o tira.
+   */
+  setorInicial?: string | null;
 };
 
 export function agendaHref(view: AgendaView, dateKey: string): string {
@@ -88,8 +95,11 @@ export function AgendaCalendar({
   setores,
   podeAgendar,
   expediente,
+  setorInicial = null,
 }: Props) {
   const [dialogSlot, setDialogSlot] = useState<Slot | null>(null);
+  const [setorFiltro, setSetorFiltro] = useState<string | null>(setorInicial && setores[setorInicial] ? setorInicial : null);
+  const prazosVistos = setorFiltro ? prazos.filter((p) => p.setor === setorFiltro) : prazos;
 
   const actions: MeetingActions = { editAction, deleteAction, allUsers, companies, currentUserId };
   const todayKey = saoPauloParts(new Date()).dateKey;
@@ -117,6 +127,15 @@ export function AgendaCalendar({
           }
         />
         {antesDaGrade}
+        {setorFiltro && (
+          <p className="mb-3 -mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-2 text-fg-secondary">
+            <span className="size-2.5 rounded-[3px]" style={{ background: setores[setorFiltro].cor }} aria-hidden />
+            Só os prazos de {setores[setorFiltro].rotulo}.
+            <Button variant="ghost" size="xs" onClick={() => setSetorFiltro(null)}>
+              Ver todos os setores
+            </Button>
+          </p>
+        )}
       </div>
       <div className="flex-1 min-h-0">
         <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden h-full flex flex-col min-h-0">
@@ -161,7 +180,7 @@ export function AgendaCalendar({
                 actions={actions}
                 monthKey={dateKey}
                 onDayClick={podeAgendar ? (day) => setDialogSlot(slotNoDia(expediente, day, new Date())) : undefined}
-                prazos={prazos}
+                prazos={prazosVistos}
                 setores={setores}
               />
             ) : (
@@ -170,7 +189,7 @@ export function AgendaCalendar({
                 meetings={meetings}
                 actions={actions}
                 onSlotClick={podeAgendar ? setDialogSlot : undefined}
-                prazos={prazos}
+                prazos={prazosVistos}
                 setores={setores}
                 expediente={expediente}
               />

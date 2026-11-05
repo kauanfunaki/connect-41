@@ -187,11 +187,23 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
     defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
+  {
+    // Acompanhar a Ceci (lote C dos ajustes de 03/11/2026): avaliações, processamento e o que pede atenção.
+    code: "tech_ceci", label: "Ceci", sectorCode: "tech",
+    description: "Como a Ceci está indo: respostas boas e ruins por semana, tempo, erros e custo das chamadas, e o que pede atenção",
+    defaultEnabled: false, icon: "Bot", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+  },
 
   {
     code: "tech_github_contributions", label: "GitHub", sectorCode: "tech",
     description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
+  },
+  {
+    // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
+    code: "tech_entregas", label: "Entregas da Tech", sectorCode: "tech",
+    description: "Entregas validadas pesadas pelo tamanho, tempo de ciclo, retrabalho e chamados, por pessoa e por trimestre",
+    defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
   {
     code: "tech_ops_center", label: "Ops Center", sectorCode: "tech",
@@ -509,6 +521,25 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "Bot",
     group: "Licenças",
   },
+  // Painel e visão por órgão (04/11/2026, lote D dos ajustes de 03/11 — escolhas A).
+  {
+    code: "societario_painel",
+    label: "Painel",
+    sectorCode: "societario",
+    description: "O dia do setor numa tela: seis números e a fila do que fazer hoje",
+    defaultEnabled: true,
+    icon: "Target",
+    group: "Operação",
+  },
+  {
+    code: "societario_orgaos",
+    label: "Órgãos",
+    sectorCode: "societario",
+    description: "Onde os processos esperam: protocolos por órgão, parados, resposta média e voltas",
+    defaultEnabled: true,
+    icon: "Landmark",
+    group: "Operação",
+  },
   {
     code: "societario_processos",
     label: "Processos",
@@ -761,13 +792,17 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
-  contabil_sped: "/contabil/sped",
-  tech_controle_interno: "/tech/controle-interno",
+  contabil_sped: "/sped-contabil",
+  tech_controle_interno: "/controle-interno",
+  tech_ceci: "/ceci",
   tech_github_contributions: "/github",
   tech_ops_center:         "/ops",
+  tech_entregas: "/controle-interno/entregas",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",
+  societario_painel: "/processos/painel",
+  societario_orgaos: "/processos/orgaos",
   arquivos:                "/arquivos",
   tech_certificados:       "/certificados",
   comercial_leads:         "/leads",
@@ -805,12 +840,12 @@ export const MODULE_ROUTES: Record<string, string> = {
   societario_processos:    "/processos",
   societario_licencas:     "/licencas",
   societario_certidoes:    "/certidoes",
-  societario_robo:         "/societario/robo",
+  societario_robo:         "/robo",
   // Fora de `/processos` de propósito: a sidebar marca ativo por prefixo, e
   // `/processos/exigencias` acenderia "Processos" e "Exigências" juntos.
   societario_minha_area:   "/societario/minha-area",
-  societario_prazos:       "/societario/exigencias",
-  societario_relatorios:   "/societario/relatorios",
+  societario_prazos:       "/exigencias",
+  societario_relatorios:   "/processos/relatorios",
   bpo_contas_pagar:        "/pagar",
   bpo_contas_receber:      "/receber",
   bpo_lancamentos:         "/lancamentos",

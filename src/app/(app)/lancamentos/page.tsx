@@ -167,7 +167,7 @@ export default async function LancamentosPage({
             <div className="flex flex-wrap items-center gap-2">
               {/* A planilha das baixas do mês para o Contábil (fila do BPO, 21/10). */}
               <Button href={`/lancamentos/dominio?empresa=${companyId}&mes=${mes}`} variant="secondary">
-                <FileSpreadsheet size={14} /> Exportar para a Domínio
+                <FileSpreadsheet size={14} /> Exportar
               </Button>
               <Button href={href("importar")} variant="secondary">
                 <Upload size={14} /> Importar CSV
@@ -191,7 +191,19 @@ export default async function LancamentosPage({
           />
         </>
       )}
-      {filtroDaEmpresa}
+      {aba === "novo" ? (
+        // A empresa num selo (Lançamentos B, página de opções de 04/11/2026): a
+        // barra de troca de empresa repetia a da lista. Trocar volta à lista,
+        // que tem o seletor — e o formulário ainda vazio não perde nada.
+        <p className="mb-4 flex flex-wrap items-center gap-2">
+          <Selo tom="marca">Lançando em: {empresa.nome}</Selo>
+          <Button href={href("lista")} variant="ghost" size="xs">
+            Trocar a empresa
+          </Button>
+        </p>
+      ) : (
+        filtroDaEmpresa
+      )}
 
       {aba === "novo" && <FormularioDaEmpresa companyId={companyId} tenantId={ctx.tenantId} hojeKey={hojeKey} mes={mes} />}
 
@@ -442,9 +454,9 @@ async function ListaDeManuais({
                             {podeCancelar && (
                               <div className="flex flex-wrap justify-end gap-1.5">
                                 {l.status !== "CANCELADO" && <BotaoEditarLancamento entryId={l.id} />}
+                                {/* Mudar a série daqui em diante (22/10/2026): o aluguel reajustado.
+                                    Uma vez só — saía duas vezes por linha (lote A de 03/11/2026). */}
                                 {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
-                          {/* Mudar a série daqui em diante (22/10/2026): o aluguel reajustado. */}
-                          {mudaASerie(l) && <BotaoMudarSerie entryId={l.id} />}
                                 {podeCancelarManual({ ...l, presoAoOmie: presaAoOmie(l, l.company) }).pode && (
                                   <CancelarLancamento entryId={l.id} naSerie={temProximasNaSerie(l)} />
                                 )}

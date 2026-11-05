@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronDown } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { useToast } from "@/components/ui/Toast";
-import { mudarSituacaoTech } from "@/app/(app)/tech/controle-interno/actions";
+import { mudarSituacaoTech } from "@/app/(app)/controle-interno/actions";
 import { SITUACOES } from "@/lib/tech-interno/regras";
 import { CORES_DA_SITUACAO } from "@/lib/tech-interno/cores";
 

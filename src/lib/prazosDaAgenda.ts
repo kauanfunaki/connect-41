@@ -17,8 +17,12 @@ import { nomeExibicao } from "@/lib/companyName";
 import { listarCertificados } from "@/lib/certificados/servidor";
 import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/certificados";
 import { soDoSetorPadrao, whereDoRecorteDeSetor } from "@/lib/financeiro/pendencias/setor";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { setoresDoModulo } from "@/lib/modules";
+import { EM_ABERTO, MODULO_TECH_INTERNO, ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
 
 export type TipoDePrazo =
+  | "tech"
   | "tarefa"
   | "conta-pagar"
   | "conta-receber"
@@ -48,6 +52,7 @@ export type PrazoDaAgenda = {
 };
 
 export const ROTULO_DO_PRAZO: Record<TipoDePrazo, { um: string; varios: string }> = {
+  tech: { um: "item do controle interno", varios: "itens do controle interno" },
   tarefa: { um: "atividade", varios: "atividades" },
   "conta-pagar": { um: "conta a pagar", varios: "contas a pagar" },
   "conta-receber": { um: "conta a receber", varios: "contas a receber" },
@@ -64,18 +69,19 @@ export const ROTULO_DO_PRAZO: Record<TipoDePrazo, { um: string; varios: string }
 
 /** Para onde leva a entrada que junta vários prazos do mesmo tipo. */
 const TELA_DO_TIPO: Record<TipoDePrazo, string> = {
+  tech: ROTA_TECH_INTERNO,
   tarefa: "/tarefas",
   "conta-pagar": "/pagar",
   "conta-receber": "/receber",
   pendencia: "/pendencias",
   processo: "/processos",
-  exigencia: "/societario/exigencias",
+  exigencia: "/exigencias",
   taxa: "/processos",
   licenca: "/licencas",
   ferias: "/ferias",
   exame: "/admissoes",
   vaga: "/vagas",
-  certificado: "/certificados",
+  certificado: "/certificados?aba=renovar",
 };
 
 const MOEDA_CURTA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 });
@@ -363,9 +369,39 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string)
         tipo: "certificado",
         titulo: `Certificado vence: ${c.titular}`,
         setor: certificados.setor,
-        href: "/certificados",
+        href: "/certificados?aba=renovar",
       });
     }
   }
+  brutos.push(...(await prazosDoTech(ctx, tenantId, de, ate)));
   return agruparPrazos(brutos);
+}
+
+/**
+ * Os itens em aberto do controle interno do Tech com prazo no período (lote C
+ * dos ajustes de 03/11/2026: a agenda própria do controle interno saiu, e os
+ * prazos vêm para cá). Só para quem vê o módulo. O prazo é `@db.Date` — o dia
+ * é o da parte UTC, e não o de São Paulo.
+ */
+async function prazosDoTech(ctx: AuthContext, tenantId: string, de: string, ate: string) {
+  if (!(await podeNoModulo(ctx, MODULO_TECH_INTERNO, "ver"))) return [];
+  const setor = (await setoresDoModulo(tenantId, MODULO_TECH_INTERNO))?.[0] ?? "tech";
+  const itens = await getPrisma().techInternalItem.findMany({
+    where: {
+      tenantId,
+      status: { in: [...EM_ABERTO] },
+      dueDate: { gte: new Date(`${de}T00:00:00Z`), lte: new Date(`${ate}T00:00:00Z`) },
+    },
+    select: { id: true, title: true, dueDate: true, assignee: { select: { name: true } } },
+    take: 500,
+  });
+  return itens.map((t) => ({
+    chave: `tech-${t.id}`,
+    dia: t.dueDate!.toISOString().slice(0, 10),
+    tipo: "tech" as const,
+    titulo: t.title,
+    detalhe: t.assignee?.name ?? "sem responsável",
+    setor,
+    href: `${ROTA_TECH_INTERNO}/${t.id}`,
+  }));
 }
