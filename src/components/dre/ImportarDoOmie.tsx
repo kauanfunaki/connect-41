@@ -119,7 +119,7 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
                     {estado.categoriasCriadas}{" "}
                     {estado.categoriasCriadas === 1 ? "categoria nova" : "categorias novas"} no plano de contas
                     {estado.categoriasSemGrupo > 0 &&
-                      ` — ${estado.categoriasSemGrupo} sem grupo no DRE, para classificar em "Classificar", no topo da DRE`}
+                      ` — ${estado.categoriasSemGrupo} sem grupo no DRE, para classificar pelo aviso "Classificar" da DRE`}
                   </span>
                 )}
                 {estado.ignoradas > 0 && (
