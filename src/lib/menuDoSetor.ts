@@ -1,18 +1,22 @@
 import { ORDEM_DOS_GRUPOS, getModuleDef, grupoDoModulo, type GrupoDeModulo } from "@/lib/module-catalog";
 
-// A regra do menu de um setor (05/11/2026, opção A da página "Ajustes de 05/11",
-// escolhida pelo Kauan). Antes eram quatro jeitos: até 8 telas lista solta, mais
-// que isso grupos com contagem (o BPO), e GitHub, Ops Center e o Painel de Gestão
-// com janelas escritas à mão — o Societário, com 8 telas, ficava sem grupo
-// nenhum enquanto o BPO tinha cinco.
+// A regra do menu de um setor (05/11/2026, página "Ajustes de 05/11"). Antes
+// eram quatro jeitos: até 8 telas lista solta, mais que isso grupos com
+// contagem (o BPO), e GitHub, Ops Center e o Painel de Gestão com janelas
+// escritas à mão — o Societário, com 8 telas, ficava sem grupo nenhum enquanto
+// o BPO tinha cinco.
 //
 // Agora, para todo setor:
 // - as telas se juntam pelo tema (`group` do catálogo), na ordem de
 //   `ORDEM_DOS_GRUPOS`;
 // - grupo com uma tela só vira tela solta (não há grupo de um item);
-// - a tela que veio de outra (`telaMae`, "Tela 1 / Tela 2") fica logo abaixo
-//   da mãe, recuada, e entra no grupo dela — Entregas sob Controle interno,
-//   Painel, Órgãos e Relatórios sob Processos.
+// - a tela que veio de outra (`telaMae`, "Tela 1 / Tela 2") entra no grupo da
+//   mãe, logo depois dela — Entregas com o Controle interno; Painel, Órgãos e
+//   Relatórios com Processos.
+//
+// O desenho é a opção C, "o jeito do BPO para todos" (o Kauan trocou a A pela C
+// no mesmo dia): o grupo e a tela com filhas são uma linha com o número de
+// telas e o "›", e a janela abre ao lado (`ItemComJanela`, no AppShell).
 //
 // Só a montagem; o desenho é do AppShell.
 
@@ -102,21 +106,8 @@ function montarNaOrdemDoCatalogo<T extends TelaDoMenu>(telas: readonly T[]): Blo
   });
 }
 
-/** As telas de um bloco, a mãe antes das filhas — para o painel da faixa de ícones e para achar o grupo aberto. */
+/** As telas de um bloco, a mãe antes das filhas — para a cor do grupo e para conferir o menu. */
 export function telasDoBloco<T extends TelaDoMenu>(bloco: BlocoDoMenu<T>): T[] {
   const lista = bloco.tipo === "solta" ? [bloco.entrada] : bloco.entradas;
   return lista.flatMap((e) => [e.tela, ...e.filhas]);
 }
-
-/**
- * Os grupos abertos do menu: o grupo da tela aberta começa aberto e os outros
- * fechados (a regra do recolhível de 08/10/2026), salvo o que a pessoa já abriu
- * ou fechou — `escolhas` vem do navegador, por setor.
- */
-export function grupoEstaAberto(grupo: string, grupoDaTelaAberta: string | null, escolhas: Readonly<Record<string, boolean>>): boolean {
-  if (grupo in escolhas) return escolhas[grupo]!;
-  return grupo === grupoDaTelaAberta;
-}
-
-/** A chave do navegador com os grupos que a pessoa abriu ou fechou, por setor. */
-export const chaveDosGruposAbertos = (setor: string) => `c41-menu-grupos:${setor}`;
