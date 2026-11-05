@@ -63,7 +63,7 @@ describe("publicarEnvioAgendado", () => {
     expect(m.sendMail).toHaveBeenCalledTimes(2);
     expect(m.sendMail.mock.calls[0]![0]).toMatchObject({ to: "cliente@padaria.com", senderName: "Ana", viewToken: "tok-cliente@padaria.com" });
     expect(m.db.clientDocumentRecipient.update).toHaveBeenCalledTimes(2);
-    expect(m.logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "clientDocument.scheduled_send", userId: "" }));
+    expect(m.logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "clientDocument.scheduled_send", rotina: "agendadorDeEnvios" }));
   });
 
   it("quem não ganhou a trava (outra passada, cancelado, já publicado) não envia nada", async () => {
