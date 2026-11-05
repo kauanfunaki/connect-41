@@ -35,9 +35,11 @@ function casco(recolhido: boolean, extra: Partial<Props> = {}): string {
     accessibleTenants: [{ id: "t1", name: "41 Contábil", logoUrl: null }],
     sectors: [DP, FISCAL],
     activeSector: DP,
+    // Duas telas reais do DP em temas diferentes (Pessoas e Jornada): pela regra
+    // de 05/11/2026, grupo de uma tela só vira tela solta.
     activeSectorModules: [
-      { code: "dp_folha", label: "Folha", href: "/dp/folha" },
-      { code: "dp_ferias", label: "Férias", href: "/dp/ferias" },
+      { code: "dp_colaboradores", label: "Colaboradores", href: "/admissoes" },
+      { code: "dp_horas_extras", label: "Horas extras", href: "/horas-extras" },
     ],
     telasNavegaveis: [],
     telasFixadas: [{ code: "fiscal_apuracao", label: "Apuração", href: "/sped-fiscal/motor/apuracao", setor: "Fiscal" }],
@@ -71,6 +73,13 @@ function tagCom(html: string, rotulo: string): string {
   return m![0];
 }
 
+/** A tag de abertura do link cujo texto visível é este. */
+function tagDoLink(html: string, texto: string): string {
+  const l = linksDoMenu(html).find((x) => x.texto === texto);
+  expect(l, `link "${texto}"`).toBeDefined();
+  return l!.tag;
+}
+
 /** Os links do menu: tag de abertura e o texto visível de dentro (sem as tags). */
 function linksDoMenu(html: string): { tag: string; texto: string }[] {
   const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
@@ -78,19 +87,27 @@ function linksDoMenu(html: string): { tag: string; texto: string }[] {
 }
 
 describe("menu recolhido: a faixa de ícones", () => {
-  it("reúne as áreas fiscais em um único botão SPED também na faixa", () => {
+  // 05/11/2026: o SPED é a tela-mãe com as etapas recuadas embaixo (sem a
+  // janela de antes); na faixa, a mãe com o pontinho de "tem telas dentro".
+  it("reúne as áreas fiscais em um único item SPED, com as etapas embaixo; na faixa, só o SPED", () => {
     rota.atual = "/sped-fiscal/motor/entregas";
-    for (const recolhido of [false, true]) {
-      const aside = lateral(casco(recolhido, { telasFixadas: [], activeSector: FISCAL, activeSectorModules: [
-        { code: "fiscal_classificacao", label: "Classificação", href: "/sped-fiscal/motor/classificacao" },
-        { code: "fiscal_entregas", label: "SPED gerados", href: "/sped-fiscal/motor/entregas" },
-        { code: "fiscal_operacao", label: "Executar", href: "/sped-fiscal/motor/operacao" },
-      ] }));
-      expect(aside).toContain('aria-haspopup="menu"');
-      expect(aside).toContain('aria-current="true"');
-      expect(aside).not.toContain('href="/sped-fiscal/motor/operacao"');
-      expect(aside).not.toContain('href="/sped-fiscal/motor/entregas"');
-    }
+    const modulos = [
+      { code: "fiscal_classificacao", label: "Classificação", href: "/sped-fiscal/motor/classificacao" },
+      { code: "fiscal_entregas", label: "SPED gerados", href: "/sped-fiscal/motor/entregas" },
+      { code: "fiscal_operacao", label: "Executar", href: "/sped-fiscal/motor/operacao" },
+    ];
+    const aberto = lateral(casco(false, { telasFixadas: [], activeSector: FISCAL, activeSectorModules: modulos }));
+    expect(aberto).not.toContain('aria-haspopup="menu"');
+    expect(tagDoLink(aberto, "SPED")).toContain('aria-current="page"');
+    expect(aberto).toContain('data-recuado="true"');
+    expect(aberto).not.toContain('href="/sped-fiscal/motor/operacao"');
+    expect(aberto).not.toContain('href="/sped-fiscal/motor/entregas"');
+
+    const faixa = lateral(casco(true, { telasFixadas: [], activeSector: FISCAL, activeSectorModules: modulos }));
+    const sped = tagCom(faixa, "SPED");
+    expect(sped).toContain('aria-current="page"');
+    expect(faixa).not.toContain("data-recuado");
+    expect(faixa).not.toContain('href="/sped-fiscal/motor/operacao"');
   });
   it("a lateral fica na tela e no Tab — sem `inert`, sem esconder do leitor de tela", () => {
     const aside = lateral(casco(true));
@@ -103,7 +120,7 @@ describe("menu recolhido: a faixa de ícones", () => {
 
   it("cada item é só o ícone, com o nome no aria-label e na dica à direita", () => {
     const links = linksDoMenu(lateral(casco(true)));
-    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadros", "Cadastros", "Transferências", "Agenda", "Apuração", "Folha", "Férias"]);
+    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadros", "Cadastros", "Transferências", "Agenda", "Apuração", "Colaboradores", "Horas extras"]);
     for (const l of links) {
       expect(l.texto).toBe("");
       const nome = /aria-label="([^"]*)"/.exec(l.tag)![1];
@@ -240,5 +257,49 @@ describe("os itens na faixa, um a um", () => {
     const html = renderToStaticMarkup(React.createElement(NavItem, { href: "/agenda", icon: React.createElement("svg"), label: "Agenda" }));
     expect(html).not.toContain("aria-label");
     expect(html.replace(/<[^>]+>/g, "")).toBe("Agenda");
+  });
+});
+
+// A regra do menu de 05/11/2026 (opção A): grupos por tema que abrem no lugar,
+// a Tela 2 recuada sob a Tela 1 e as abas de dentro (GitHub) sem janela.
+describe("menu do setor: grupos que abrem no lugar", () => {
+  const SOCIETARIO = { code: "societario", label: "Societário", color: "#D44A3C" };
+  const TECH = { code: "tech", label: "Tech", color: "#1A84C2" };
+  const soc = [
+    { code: "societario_licencas", label: "Licenças", href: "/licencas" },
+    { code: "societario_certidoes", label: "Certidões", href: "/certidoes" },
+    { code: "societario_painel", label: "Painel", href: "/processos/painel" },
+    { code: "societario_processos", label: "Processos", href: "/processos" },
+    { code: "societario_prazos", label: "Exigências e prazos", href: "/exigencias" },
+  ];
+  const botaoDoGrupo = (html: string, grupo: string) => {
+    const m = new RegExp(`<button[^>]*aria-expanded="(true|false)"[^>]*>(?:(?!</button>)[\\s\\S])*?${grupo}`).exec(html);
+    expect(m, `grupo "${grupo}"`).not.toBeNull();
+    return m![0];
+  };
+
+  it("o grupo da tela aberta vem aberto, o outro fechado; a Tela 2 acende sozinha, recuada", () => {
+    rota.atual = "/processos/painel";
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }));
+    expect(botaoDoGrupo(aside, "Operação")).toContain('aria-expanded="true"');
+    expect(botaoDoGrupo(aside, "Licenças")).toContain('aria-expanded="false"');
+    const painel = tagDoLink(aside, "Painel");
+    expect(painel).toContain('aria-current="page"');
+    expect(painel).toContain('data-recuado="true"');
+    expect(tagDoLink(aside, "Processos")).not.toContain("aria-current");
+    // O grupo fechado continua no HTML (o leitor de tela e o Ctrl+F acham), escondido.
+    expect(aside).toMatch(/<div id="menu-grupo-licencas" hidden=""/);
+  });
+
+  it("GitHub sem janela: as abas recuadas embaixo, e só a aba aberta acende", () => {
+    rota.atual = "/github/repositorios";
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, podeGerirGithub: false, activeSectorModules: [
+      { code: "tech_github_contributions", label: "GitHub", href: "/github" },
+      { code: "tech_ops_center", label: "Ops Center", href: "/ops" },
+    ] }));
+    expect(aside).not.toContain('aria-haspopup="menu"');
+    expect(tagDoLink(aside, "Repositórios")).toContain('aria-current="page"');
+    expect(tagDoLink(aside, "GitHub")).not.toContain("aria-current");
+    expect(aside).not.toContain(">Times<");
   });
 });
