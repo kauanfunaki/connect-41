@@ -260,6 +260,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "dre.unmap": e("desligou uma categoria da DRE da empresa"),
   // A troca do modelo do DRE (21/10/2026), com o grupo de cada categoria em `classificacao`.
   "dre.modelo": e("trocou o modelo do DRE da empresa"),
+  "dre.publicar": e("publicou para o cliente a DRE de um mês da empresa"),
   // Correção feita por script, com o "de → para" em `linhaDaDre` (14/10/2026).
   "dre.categoria.linha_corrigida": e("corrigiu a linha da DRE da categoria"),
   "dre.budget.created": c("criou o orçamento"),

@@ -238,6 +238,8 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "OmieEmissao", acao: "apagar", executar: (tx, a) => n(tx.omieEmissao.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "FiscalDocument", acao: "apagar", executar: (tx, a) => n(tx.fiscalDocument.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "DreImport", acao: "apagar", executar: (tx, a) => n(tx.dreImport.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "DrePublicacao", acao: "apagar", executar: (tx, a) => n(tx.drePublicacao.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "DrePublicacaoEmpresa", acao: "apagar", executar: (tx, a) => n(tx.drePublicacaoEmpresa.deleteMany({ where: daEmpresa(a) })) },
 
   // DP: a folha (as linhas vão em cascata) e os benefícios atribuídos a
   // funcionários, que travariam a cascata do catálogo de benefícios.

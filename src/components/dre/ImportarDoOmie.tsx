@@ -122,6 +122,11 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
                       ` — ${estado.categoriasSemGrupo} sem grupo no DRE, para classificar pelo aviso "Classificar" da DRE`}
                   </span>
                 )}
+                {/* A importação não vai sozinha ao portal (05/11/2026, decisão D4):
+                    fica no rascunho do mês até alguém publicar. */}
+                <span className="text-fg-secondary">
+                  Fica no rascunho: o cliente vê depois de “Publicar para o cliente”, na DRE do mês.
+                </span>
                 {estado.ignoradas > 0 && (
                   <span className="text-warning-fg">
                     {estado.ignoradas} {estado.ignoradas === 1 ? "linha ignorada" : "linhas ignoradas"} — sem data ou

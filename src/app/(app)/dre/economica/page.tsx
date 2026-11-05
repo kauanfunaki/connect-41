@@ -17,6 +17,9 @@ import { Accordion } from "@/components/ui/Accordion";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { AbasDaDre } from "@/components/dre/AbasDaDre";
+import { FaixaDoRascunho } from "@/components/dre/FaixaDoRascunho";
+import { diferencasDaDre } from "@/lib/dre/publicacao";
+import { fotoAtualDoMes, garantirFotoInicial, publicacoesDaEmpresa } from "@/lib/dre/publicacaoServidor";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioOrcadoRealizado } from "@/components/dre/RelatorioOrcadoRealizado";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
@@ -163,10 +166,22 @@ export default async function DreEconomicaPage({
   const competenciasDaSerie =
     visao === "mes" ? [...new Set([...(orcamento ? acumuladoDoAno(mes) : competencias), mesAnterior])] : competencias;
 
-  const [serie, quadro] = await Promise.all([
+  // O rascunho do mês também aqui (05/11/2026, decisão D4): mês que só tem
+  // lançamento por competência não aparece na DRE de caixa, e sem esta faixa
+  // não haveria onde publicá-lo. Só na visão do mês e sem filtro de centro —
+  // a publicação é do mês da empresa inteira.
+  const comRascunho = visao === "mes" && filtro.tipo === "todos";
+  const [serie, quadro, rascunho] = await Promise.all([
     serieEconomica(ctx.tenantId, companyId, competenciasDaSerie, filtro, opcoes),
     centros.length > 0 ? quadroPorCentroDoPeriodo(ctx.tenantId, companyId, competencias, opcoes) : Promise.resolve(null),
+    comRascunho
+      ? garantirFotoInicial(ctx.tenantId, companyId).then(() =>
+          Promise.all([fotoAtualDoMes(ctx.tenantId, companyId, mes), publicacoesDaEmpresa(ctx.tenantId, companyId, [mes])])
+        )
+      : Promise.resolve(null),
   ]);
+  const publicada = rascunho ? (rascunho[1].get(mes) ?? null) : null;
+  const diferencas = rascunho ? diferencasDaDre(publicada?.foto ?? null, rascunho[0]) : [];
   const meses = competencias.map((c) => serie.get(c)!);
   const lancamentos = meses.reduce((n, m) => n + m.lancamentos, 0);
   const provisorios = meses.reduce((n, m) => n + m.provisorios, 0);
@@ -287,6 +302,16 @@ export default async function DreEconomicaPage({
           items={VISOES.map((v) => ({ key: v.chave, label: v.rotulo, icon: v.icone, href: hrefDaVisao(v.chave) }))}
         />
       </FiltroDaEmpresa>
+
+      {diferencas.length > 0 && (
+        <FaixaDoRascunho
+          companyId={companyId}
+          competencia={mes}
+          rotuloDoMes={rotuloDaCompetencia(mes)}
+          diferencas={diferencas}
+          nuncaPublicado={!publicada}
+        />
+      )}
 
       {/* Revisão de 05/10: botão não é link — os atalhos desta tela eram texto azul. */}
       {nomeDoFiltro && (

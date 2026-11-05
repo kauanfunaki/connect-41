@@ -84,6 +84,8 @@ const EMPRESA: Ligacao[] = [
   { modelo: "Budget", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "DreImport", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["importação da DRE", "importações da DRE"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },
+  { modelo: "DrePublicacao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mês da DRE publicado no portal", "meses da DRE publicados no portal"], historico: true },
+  { modelo: "DrePublicacaoEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["marca da foto inicial da DRE", "marcas da foto inicial da DRE"], historico: true },
   { modelo: "OmieEmissao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["nota emitida pelo Omie", "notas emitidas pelo Omie"], historico: true },
   { modelo: "ClientRequest", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["pendência do cliente", "pendências do cliente"], historico: true },
   { modelo: "CompanyMessage", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mensagem com o cliente", "mensagens com o cliente"], historico: true },
@@ -326,6 +328,7 @@ const USUARIO: Ligacao[] = [
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  { modelo: "DrePublicacao", coluna: "publicadoPorId", tratamento: "manter", motivo: "a publicação guarda o nome de quem publicou (publicadoPorNome), como a auditoria" },
   { modelo: "GithubConnection", coluna: "githubUserId", tratamento: "manter", motivo: "identidade externa do GitHub, sem vínculo com User do Connect" },
   { modelo: "GithubAccountLease", coluna: "githubUserId", tratamento: "manter", motivo: "coordenação por identidade externa do GitHub, não por usuário do Connect" },
   { modelo: "GithubConnection", coluna: "connectedBy", tratamento: "desligar" },
