@@ -17,6 +17,7 @@ import { Modal } from "@/components/ui/Modal";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoData } from "@/components/ui/CampoData";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Select } from "@/components/ui/Select";
 import { formatInstantDateTime } from "@/lib/format";
 import { githubFetch } from "@/lib/github/browser";
 import { TYPE_LABELS, CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type CalendarDay, type DayEvent, type HeatmapUser, type RepositoryHeatmap } from "@/lib/github/types";
@@ -84,13 +85,13 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
   const params = new URLSearchParams(initialQuery);
   // Repositório, organização, tipo e robôs saíram da tela com a caixa de filtros (26/10/2026);
   // um link antigo com eles ainda filtra, e o Limpar aparece para desfazer.
-  const filtered = ["user", "from", "to", "repository", "organization", "type", "all"].some(key => params.has(key)) || params.get("bots") === "1";
+  const filtered = ["user", "from", "to", "repository", "organization", "type", "all", "time"].some(key => params.has(key)) || params.get("bots") === "1";
   const detailUser = detail?.kind === "user" ? data?.users.find(item => item.id === detail.id) : undefined;
   const detailTitle = detailUser ? (detailUser.name ? `${detailUser.login} — ${detailUser.name}` : detailUser.login)
     : detail?.kind === "repository" ? data?.repositories.find(repo => repo.id === detail.id)?.fullName : detail?.kind === "team" ? "Todo o time" : undefined;
   // O título é o nome do módulo no menu; Geral, Desenvolvedores, Repositórios e Times são abas dele.
   return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar}>
-    {dates && !data?.message && <Toolbar path={path} query={suppliedQuery} from={dates.from} to={dates.to} filtered={filtered} modo={modo} />}
+    {dates && !data?.message && <Toolbar path={path} query={suppliedQuery} from={dates.from} to={dates.to} filtered={filtered} modo={modo} times={data?.paleta.times ?? []} />}
     {error && <Aviso className="mb-4">{error}{!data && !loading && <> <Button variant="link" onClick={() => { setError(null); setTentativa(n => n + 1); }}>Tentar novamente</Button></>}</Aviso>}
     {loading && <div aria-busy><span className="sr-only" role="status">Carregando contribuições…</span>{view === "general" ? <><SkeletonMetrics /><SkeletonBlocks blocos={2} /></> : <SkeletonCardList cards={3} />}</div>}
     {data?.message && !loading && <Aviso tom="atencao" className="mb-4">{data.message}{canConfigure && <> <Link href="/admin/integracoes?integracao=github" className="font-medium underline">Abrir Integrações</Link></>}</Aviso>}
@@ -216,19 +217,20 @@ function Unidentified({ data }: { data: DashboardView }) {
 // Busca e período se aplicam sozinhos, sem "Aplicar filtros" (26/10/2026): a busca
 // espera 300 ms de pausa na digitação, como as outras buscas do Connect.
 // "Mostrar todos" inclui quem não vinculou a conta; clicar de novo volta aos integrados (27/10/2026).
-function Toolbar({ path, query, from, to, filtered, modo }: { path: string; query: string; from: string; to: string; filtered: boolean; modo: ModoDeCor }) {
+function Toolbar({ path, query, from, to, filtered, modo, times }: { path: string; query: string; from: string; to: string; filtered: boolean; modo: ModoDeCor; times: { id: string; nome: string }[] }) {
   const router = useRouter(), [user, setUser] = useState(() => new URLSearchParams(query).get("user") ?? ""), sent = useRef(user.trim());
   const [period, setPeriod] = useState({ from, to }), [resolved, setResolved] = useState({ from, to });
-  const all = new URLSearchParams(query).get("all") === "1";
+  const all = new URLSearchParams(query).get("all") === "1", time = new URLSearchParams(query).get("time") ?? "";
   // O período devolvido pelo servidor (o padrão de 12 meses, depois de Limpar) volta aos campos.
   if (resolved.from !== from || resolved.to !== to) { setResolved({ from, to }); setPeriod({ from, to }); }
-  const apply = useCallback((next: { user: string; from?: string; to?: string; all?: boolean; cor?: ModoDeCor }) => {
+  const apply = useCallback((next: { user: string; from?: string; to?: string; all?: boolean; cor?: ModoDeCor; time?: string }) => {
     const current = new URLSearchParams(query), params = new URLSearchParams();
     sent.current = next.user;
     if (next.user) params.set("user", next.user);
     for (const key of ["from", "to"] as const) { const value = next[key] ?? current.get(key); if (value) params.set(key, value); }
     if (next.all ?? current.get("all") === "1") params.set("all", "1");
     if ((next.cor ?? current.get("cor")) === "time") params.set("cor", "time");
+    const time = next.time ?? current.get("time"); if (time) params.set("time", time);
     const suffix = params.toString(); router.replace(`${path}${suffix ? `?${suffix}` : ""}`, { scroll: false });
   }, [path, query, router]);
   useEffect(() => {
@@ -245,6 +247,9 @@ function Toolbar({ path, query, from, to, filtered, modo }: { path: string; quer
     <label className={styles.dateField}><span>Até</span><CampoData aria-label="Até" value={period.to} min={period.from || undefined} onChange={value => changeDate("to", value)} /></label>
     <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><CampoDeBusca aria-label="Buscar desenvolvedor" placeholder="Buscar desenvolvedor…" value={user} enviarAoLimpar={false}
       onChange={event => setUser(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && user.trim() !== sent.current) apply({ user: user.trim() }); }} /></label>
+    {times.length > 0 && <Select aria-label="Time" value={time} onChange={event => apply({ user: user.trim(), time: event.target.value })}>
+      <option value="">Todos os times</option>{times.map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
+    </Select>}
     <Button variant={all ? "primary" : "secondary"} aria-pressed={all} title={all ? "Mostrando também quem não vinculou a conta GitHub. Clique para ver só os integrados." : "Incluir quem não vinculou a conta GitHub em Sua conta"}
       onClick={() => apply({ user: user.trim(), all: !all })}><Users size={14} /> Mostrar todos</Button>
     <SegmentedControl label="Cor por" active={modo} onChange={cor => apply({ user: user.trim(), cor })}

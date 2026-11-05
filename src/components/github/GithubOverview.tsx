@@ -8,13 +8,25 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao } from "@/components/shared/ListaResponsiva";
 import { avatarDoGithub, iniciaisDoLogin } from "@/lib/github/avatar";
 import { dateLabel } from "@/lib/github/calendar";
-import { corDaPessoa, type ModoDeCor } from "@/lib/github/cores";
+import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/github/cores";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { TYPE_LABELS, type DashboardView, type GithubSummary } from "@/lib/github/types";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import styles from "./GithubContributions.module.css";
 
 const number = (value: number) => Number(value).toLocaleString("pt-BR");
+// "Atividade do time" por time (05/11/2026): soma as pessoas de cada time; quem
+// está sem time entra em "Sem time", sempre por último.
+type Lider = GithubSummary["leaders"][number];
+function timesDoPainel(leaders: Lider[], paleta: Paleta) {
+  const grupos = new Map<string, { id: string; nome: string; cor: string; total: number; pessoas: Lider[] }>();
+  for (const pessoa of leaders) {
+    const time = paleta.times.find(item => item.id === paleta.pessoas[pessoa.id]?.time), id = time?.id ?? "";
+    const grupo = grupos.get(id) ?? { id, nome: time?.nome ?? "Sem time", cor: time?.cor ?? COR_SEM_TIME, total: 0, pessoas: [] };
+    grupo.total += pessoa.total; grupo.pessoas.push(pessoa); grupos.set(id, grupo);
+  }
+  return [...grupos.values()].sort((a, b) => (a.id ? 0 : 1) - (b.id ? 0 : 1) || b.total - a.total);
+}
 // A foto do GitHub; sem login de conta ou com a imagem fora do ar, as iniciais.
 export function DeveloperAvatar({ login }: { login: string }) {
   const src = avatarDoGithub(login), [falhou, setFalhou] = useState<string | null>(null);
@@ -55,7 +67,13 @@ export function GithubOverview({ data, query, modo, onDay }: { data: DashboardVi
       </section>
       <section className={styles.panel} aria-labelledby="github-team">
         <div className={styles.panelHeading}><div><h2 id="github-team">Atividade do time</h2><p>Contribuições no período</p></div><Link href={developersHref}>Ver todos</Link></div>
-        <div className={styles.leaders}>{summary?.leaders.length ? summary.leaders.map((person, index) => <div key={person.id} className={styles.person}>
+        <div className={styles.leaders}>{modo === "time" && summary?.leaders.length ? timesDoPainel(summary.leaders, data.paleta).map((time, index) => <div key={time.id} className={styles.person}>
+          <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span>
+          <span className="flex -space-x-2" title={time.pessoas.map(p => p.name ?? p.login).join(", ")}>{time.pessoas.slice(0, 3).map(p => <span key={p.id} className="rounded-full ring-2 ring-surface"><DeveloperAvatar login={p.login} /></span>)}</span>
+          <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), cor: "time", ...(time.id ? { time: time.id } : {}) })}`} className={styles.personName}>
+            <span className={styles.swatch} style={{ "--swatch": time.cor } as React.CSSProperties}>{time.nome}</span></Link>
+          <span className={styles.personCount}><strong>{number(time.total)}</strong><small>contribuições</small></span>
+        </div>) : summary?.leaders.length ? summary.leaders.slice(0, 4).map((person, index) => <div key={person.id} className={styles.person}>
           <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><span className="relative"><DeveloperAvatar login={person.login} />
             <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface" style={{ background: corDaPessoa(person.id, data.paleta, modo) }} /></span>
           <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}><DeveloperName login={person.login} name={person.name} /></Link>
