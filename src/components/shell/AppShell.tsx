@@ -652,9 +652,9 @@ export function AppShell({
                   const subTelas = (code: string): (TelaDoPainel & { ativa: boolean })[] => {
                     switch (code) {
                       case "tech_github_contributions":
-                        // A Produtividade (05/11/2026): Time é a tela de entrada; Pessoas e
-                        // GitHub ficam recuados. Desenvolvedores, Repositórios e Times são
-                        // abas dentro do GitHub.
+                        // A Produtividade (05/11/2026; abas de 06/11): o Painel é a tela de
+                        // entrada; Pessoas (desenvolvedores e times) e GitHub ficam recuados.
+                        // Times e Repositórios abrem por botão dentro deles.
                         return [
                           { label: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icon: <Users />, ativa: abaDaProdutividade(pathname) === "pessoas" },
                           { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch />, ativa: abaDaProdutividade(pathname) === "github" },
@@ -680,7 +680,7 @@ export function AppShell({
                     if (code === "contabil_sped") return noContabil;
                     if (code === "tech_ops_center") return visaoDoOps !== null;
                     if (code === "gestao_painel") return pathname === "/gestao";
-                    if (code === "tech_github_contributions") return abaDaProdutividade(pathname) === "time";
+                    if (code === "tech_github_contributions") return abaDaProdutividade(pathname) === "painel";
                     return undefined;
                   };
                   const linkDoContabil = hrefContabil("lancamentos", "entradas");

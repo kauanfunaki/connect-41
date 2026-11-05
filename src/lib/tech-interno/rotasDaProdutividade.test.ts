@@ -17,42 +17,46 @@ async function destinoDe(caminho: string): Promise<string | null> {
   return null;
 }
 
-describe("o /github antigo", () => {
+// Desde 06/11/2026: Painel, Pessoas (desenvolvedores e times) e GitHub (Geral + repositórios).
+describe("os endereços antigos", () => {
   it.each([
     ["/github", "/produtividade/github"],
-    ["/github/desenvolvedores", "/produtividade/github/desenvolvedores"],
     ["/github/repositorios", "/produtividade/github/repositorios"],
-    ["/github/times", "/produtividade/github/times"],
+    ["/github/desenvolvedores", "/produtividade/pessoas"],
+    ["/github/times", "/produtividade/pessoas/times"],
+    ["/produtividade/github/desenvolvedores", "/produtividade/pessoas"],
+    ["/produtividade/github/times", "/produtividade/pessoas/times"],
   ])("%s vai para %s", async (de, para) => {
     expect(await destinoDe(de)).toBe(para);
   });
 
-  it("os destinos são as telas de hoje da aba GitHub", async () => {
-    expect(Object.values(ROTAS_DO_GITHUB)).toEqual([
-      "/produtividade/github",
-      "/produtividade/github/desenvolvedores",
-      "/produtividade/github/repositorios",
-      "/produtividade/github/times",
-    ]);
+  it("cada visão do painel do GitHub tem a sua tela", () => {
+    expect(ROTAS_DO_GITHUB).toEqual({
+      general: "/produtividade/github",
+      developers: "/produtividade/pessoas",
+      repositories: "/produtividade/github/repositorios",
+      teams: "/produtividade/pessoas/times",
+    });
   });
 
-  it("a API e as telas novas não são redirecionadas", async () => {
-    for (const caminho of ["/api/github", "/api/github/events", "/produtividade", "/produtividade/pessoas", "/produtividade/github", "/githubber"]) {
+  it("a API e as telas de hoje não são redirecionadas", async () => {
+    for (const caminho of ["/api/github", "/api/github/events", ...Object.values(ROTAS_DA_PRODUTIVIDADE), ...Object.values(ROTAS_DO_GITHUB), "/githubber"]) {
       expect(await destinoDe(caminho)).toBeNull();
     }
   });
 });
 
 describe("o endereço da Produtividade", () => {
-  it("o módulo abre na aba Time", () => {
-    expect(MODULE_ROUTES.tech_github_contributions).toBe(ROTAS_DA_PRODUTIVIDADE.time);
+  it("o módulo abre no Painel", () => {
+    expect(MODULE_ROUTES.tech_github_contributions).toBe(ROTAS_DA_PRODUTIVIDADE.painel);
   });
 
   it("a aba de cada endereço, para o menu marcar a ativa", () => {
-    expect(abaDaProdutividade("/produtividade")).toBe("time");
+    expect(abaDaProdutividade("/produtividade")).toBe("painel");
     expect(abaDaProdutividade("/produtividade/pessoas")).toBe("pessoas");
+    expect(abaDaProdutividade("/produtividade/pessoas/times")).toBe("pessoas");
     expect(abaDaProdutividade("/produtividade/github")).toBe("github");
-    expect(abaDaProdutividade("/produtividade/github/times")).toBe("github");
+    expect(abaDaProdutividade("/produtividade/github/repositorios")).toBe("github");
     expect(abaDaProdutividade("/produtividade-x")).toBeNull();
     expect(abaDaProdutividade("/github")).toBeNull();
   });

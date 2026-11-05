@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FolderGit2, GitCommitHorizontal, LayoutGrid, Lock, Plus, Users, UsersRound } from "lucide-react";
+import { ArrowLeft, FolderGit2, GitCommitHorizontal, Lock, Plus, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
@@ -29,9 +28,10 @@ import { ROTAS_DO_GITHUB } from "@/lib/tech-interno/rotasDaProdutividade";
 import styles from "./GithubContributions.module.css";
 
 export type View = "general" | "developers" | "repositories" | "teams";
-// Dentro da Produtividade desde 05/11/2026: `/produtividade/github/...` (o `/github` antigo redireciona).
+// Dentro da Produtividade (05/11/2026); desde 06/11 os desenvolvedores e os times
+// são a aba Pessoas, e o Geral é a aba GitHub, com os repositórios num botão.
 const PATHS: Record<View, string> = ROTAS_DO_GITHUB;
-const SUBTITLES: Record<View, string> = { general: "A atividade do time no GitHub. É contexto: commits e PRs ficam fora das contas de entrega.", developers: "Desenvolvedores e suas contribuições.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
+const SUBTITLES: Record<View, string> = { general: "A atividade do time no GitHub. É contexto: commits e PRs ficam fora das contas de entrega.", developers: "Cada desenvolvedor, ou cada time, e as contribuições no GitHub.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
   teams: "Monte os times e escolha a cor de cada pessoa e de cada time." };
 const TYPE_SINGULAR: Record<ContributionType, string> = { COMMIT: "Commit", PULL_REQUEST: "Pull request", ISSUE: "Issue", REVIEW: "Revisão" };
 // O dia aberto: de um desenvolvedor (aba Desenvolvedores) ou de um repositório (aba Repositórios).
@@ -44,20 +44,24 @@ export function GithubContributions({ initialQuery: suppliedQuery, canConfigure,
   return <Dashboard initialQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar} view={view} />;
 }
 
-// Cabeçalho e abas, comuns às quatro telas. "Times" só aparece para quem gerencia o módulo.
-// Desde 05/11/2026 o título é o da Produtividade (Time, Pessoas, GitHub), e as
-// quatro telas do GitHub viraram a segunda fileira de abas, dentro da aba GitHub.
+// Cabeçalho comum às quatro telas, sem segunda fileira de abas (06/11/2026): os
+// desenvolvedores são a aba Pessoas e o Geral é a aba GitHub. Repositórios (do
+// GitHub) e Times (de Pessoas, só para quem gerencia o módulo) abrem por botão
+// e voltam por um "Voltar" — telas de dentro, não abas.
 function GithubShell({ view, suppliedQuery, canConfigure, conectar, children }: { view: View; suppliedQuery: string; canConfigure: boolean; conectar: boolean; children: React.ReactNode }) {
-  const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
+  // O período e a busca vão junto ao trocar de tela.
+  const params = new URLSearchParams(suppliedQuery); params.delete("page"); params.delete("view");
+  const comParams = (path: string) => params.size ? `${path}?${params}` : path;
+  const aba = view === "developers" || view === "teams" ? "pessoas" : "github";
+  const acoes = <>
+    {view === "general" && <Button href={comParams(PATHS.repositories)} variant="secondary"><FolderGit2 size={14} aria-hidden />Ver repositórios</Button>}
+    {view === "repositories" && <Button href={comParams(PATHS.general)} variant="ghost"><ArrowLeft size={14} aria-hidden />Voltar ao GitHub</Button>}
+    {view === "developers" && canConfigure && <Button href={PATHS.teams} variant="secondary"><UsersRound size={14} aria-hidden />Times e cores</Button>}
+    {view === "teams" && <Button href={PATHS.developers} variant="ghost"><ArrowLeft size={14} aria-hidden />Voltar a Pessoas</Button>}
+    {conectar && <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button>}
+  </>;
   return <PageContainer>
-    <CabecalhoDaProdutividade aba="github" subtitulo={SUBTITLES[view]}
-      acao={conectar ? <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button> : undefined} />
-    <AbasDeLink className="mb-6" aria-label="Telas do GitHub" ativa={view} abas={[
-      { chave: "general", rotulo: "Geral", href: `${PATHS.general}?${tabParams}`, icone: <LayoutGrid /> },
-      { chave: "developers", rotulo: "Desenvolvedores", href: `${PATHS.developers}?${tabParams}`, icone: <Users /> },
-      { chave: "repositories", rotulo: "Repositórios", href: `${PATHS.repositories}?${tabParams}`, icone: <FolderGit2 /> },
-      ...(canConfigure ? [{ chave: "teams", rotulo: "Times", href: PATHS.teams, icone: <UsersRound /> }] : []),
-    ]} />
+    <CabecalhoDaProdutividade aba={aba} subtitulo={SUBTITLES[view]} acao={<div className="flex flex-wrap gap-2">{acoes}</div>} />
     {children}
   </PageContainer>;
 }
@@ -92,7 +96,7 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
   const detailUser = detail?.kind === "user" ? data?.users.find(item => item.id === detail.id) : undefined;
   const detailTitle = detailUser ? (detailUser.name ? `${detailUser.login} — ${detailUser.name}` : detailUser.login)
     : detail?.kind === "repository" ? data?.repositories.find(repo => repo.id === detail.id)?.fullName : detail?.kind === "team" ? "Todo o time" : undefined;
-  // O título é o nome do módulo no menu; Geral, Desenvolvedores, Repositórios e Times são abas dele.
+  // O título é o nome do módulo no menu; o Geral é a aba GitHub e os desenvolvedores, a aba Pessoas.
   return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar}>
     {dates && !data?.message && <Toolbar path={path} query={suppliedQuery} from={dates.from} to={dates.to} modo={modo} times={data?.paleta.times ?? []} />}
     {error && <Aviso className="mb-4">{error}{!data && !loading && <> <Button variant="link" onClick={() => { setError(null); setTentativa(n => n + 1); }}>Tentar novamente</Button></>}</Aviso>}

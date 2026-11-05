@@ -1,12 +1,13 @@
-import { GitBranch, Users, UsersRound } from "lucide-react";
+import { GitBranch, LayoutDashboard, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { ROTAS_DA_PRODUTIVIDADE, type AbaDaProdutividade } from "@/lib/tech-interno/rotasDaProdutividade";
 
 /**
- * O título e as abas da Produtividade (05/11/2026): Time, Pessoas e GitHub.
- * Sem hook — serve às telas do servidor (Time, Pessoas) e ao painel cliente
- * do GitHub. O período escolhido em Time vai junto para Pessoas, e volta.
+ * O título e as abas da Produtividade: Painel, Pessoas e GitHub (06/11/2026;
+ * o Painel era "Time"). Sem hook — serve à tela do servidor (Painel) e ao
+ * painel cliente do GitHub (Pessoas e GitHub). O período do Painel fica no
+ * Painel: Pessoas e GitHub têm o período deles (De/Até).
  */
 export function CabecalhoDaProdutividade({
   aba,
@@ -16,7 +17,7 @@ export function CabecalhoDaProdutividade({
 }: {
   aba: AbaDaProdutividade;
   subtitulo: string;
-  /** O `?periodo=` de Time e Pessoas, quando não é o padrão. */
+  /** O `?periodo=` do Painel, quando não é o padrão — para voltar a ele com o mesmo período. */
   periodo?: string;
   acao?: React.ReactNode;
 }) {
@@ -29,8 +30,8 @@ export function CabecalhoDaProdutividade({
         aria-label="Produtividade"
         ativa={aba}
         abas={[
-          { chave: "time", rotulo: "Time", href: `${ROTAS_DA_PRODUTIVIDADE.time}${q}`, icone: <UsersRound /> },
-          { chave: "pessoas", rotulo: "Pessoas", href: `${ROTAS_DA_PRODUTIVIDADE.pessoas}${q}`, icone: <Users /> },
+          { chave: "painel", rotulo: "Painel", href: `${ROTAS_DA_PRODUTIVIDADE.painel}${q}`, icone: <LayoutDashboard /> },
+          { chave: "pessoas", rotulo: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icone: <Users /> },
           { chave: "github", rotulo: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icone: <GitBranch /> },
         ]}
       />
