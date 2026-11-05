@@ -55,12 +55,14 @@ describe("pessoas que agiram", () => {
         { userId: "u1", nome: "Carla Mendes", total: 2 },
         { userId: null, nome: "Rafael Souza", total: 1 },
         { userId: null, nome: null, total: 4 },
+        { userId: null, nome: "Robô do Societário", total: 18 },
       ],
       new Map([["u1", "Carla Mendes"]])
     );
     expect(opcoes).toEqual([
-      { valor: "u1", rotulo: "Carla Mendes", total: 5, excluido: false },
-      { valor: "nome:Rafael Souza", rotulo: "Rafael Souza", total: 1, excluido: true },
+      { valor: "u1", rotulo: "Carla Mendes", total: 5, excluido: false, rotina: false },
+      { valor: "nome:Rafael Souza", rotulo: "Rafael Souza", total: 1, excluido: true, rotina: false },
+      { valor: "nome:Robô do Societário", rotulo: "Robô do Societário", total: 18, excluido: false, rotina: true },
     ]);
   });
 });

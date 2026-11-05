@@ -30,6 +30,7 @@ import { fraseDoEvento } from "@/lib/auditoria/frase";
 import { empresaNosDetalhes, fatosDoRegistro, mudancasDoRegistro, nomeNosDetalhes, registroCompleto } from "@/lib/auditoria/metadados";
 import { contagemPorTipo, metricasDaAuditoria, opcoesDeArea, pessoasQueAgiram } from "@/lib/auditoria/metricas";
 import { chaveDoAlvo, resolverReferencias } from "@/lib/auditoria/alvos";
+import { NOME_DO_SISTEMA, ehRotinaDoSistema } from "@/lib/auditoria/rotinas";
 
 type Onde = Prisma.AuditLogWhereInput;
 
@@ -146,7 +147,8 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
 
   const metricas = metricasDaAuditoria({
     porAcao,
-    pessoas: f.pessoa ? pessoas.filter((p) => p.valor === f.pessoa).length : pessoas.length,
+    // Robô e agendador não contam como pessoa.
+    pessoas: pessoas.filter((p) => !p.rotina && (!f.pessoa || p.valor === f.pessoa)).length,
     ultimaExclusao: ultimaExclusao?.createdAt ?? null,
     hoje: deHoje,
     agora,
@@ -187,7 +189,8 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
         const alvo = l.entityType && l.entityId ? (resolvidos.alvos.get(chaveDoAlvo(l.entityType, l.entityId)) ?? null) : null;
         const empresaId = alvo?.empresaId ?? empresaNosDetalhes(l.metadata);
         const empresa = empresaId ? (resolvidos.empresas.get(empresaId) ?? null) : null;
-        const nomeDoAtor = l.user?.name ?? l.actorName ?? null;
+        const rotina = ehRotinaDoSistema(l);
+        const nomeDoAtor = l.user?.name ?? l.actorName ?? (rotina ? NOME_DO_SISTEMA : null);
         const descricao = descricaoDaAcao(l.action);
         const nomeNaFrase = descricao.comNome === false ? null : (alvo?.nome ?? nomeNosDetalhes(l.metadata, descricao.chaveDoNome));
         return {
@@ -199,8 +202,9 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
             metadata: l.metadata,
             ator: nomeDoAtor,
             // Sem o vínculo com o usuário (excluído desde 13/10/2026), a linha
-            // mostra o nome guardado em `actorName`.
-            atorExcluido: !l.user,
+            // mostra o nome guardado em `actorName`. Rotina do sistema (robô,
+            // agendador) também vem sem usuário, mas não é gente excluída.
+            atorExcluido: !l.user && !rotina,
             alvo: alvo ? { nome: alvo.nome, href: alvo.href } : null,
             empresa,
           }),
@@ -252,7 +256,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
         ...pessoas.map((p) => ({
           valor: p.valor,
           rotulo: p.rotulo,
-          nota: p.excluido ? "(excluído)" : undefined,
+          nota: p.excluido ? "(excluído)" : p.rotina ? "(rotina)" : undefined,
           total: p.total,
           href: hrefDaAuditoria(f, { pessoa: p.valor }),
           escolhida: p.valor === f.pessoa,

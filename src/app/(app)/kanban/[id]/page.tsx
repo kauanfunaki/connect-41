@@ -1,11 +1,10 @@
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
+import { BotaoNovaTarefa } from "@/components/kanban/NovaTarefaEmLinha";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -196,12 +195,8 @@ export default async function KanbanBoardPage({
                 defaultName={`${pipeline.name} — cópia`}
               />
             )}
-            <Button
-              href={`/kanban/${id}/novo-item`}
-              variant="primary"
-            >
-              <Plus size={14} /> Nova tarefa
-            </Button>
+            {/* Sem formulário (05/11/2026): abre o campo em linha na primeira coluna. */}
+            <BotaoNovaTarefa />
           </div>
           )
         }

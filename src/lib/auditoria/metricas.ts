@@ -6,6 +6,7 @@
 import { formatInstantTime } from "@/lib/format";
 import { AREAS_DA_AUDITORIA, areaDaAcao, descricaoDaAcao, type ChaveDaAreaDaAuditoria, type TipoDaAcao } from "./acoes";
 import { diaEmSaoPaulo } from "./dias";
+import { ehRotinaDoSistema } from "./rotinas";
 import { dataBR, somarDias } from "@/lib/datas/calendario";
 
 export type ContagemPorAcao = { acao: string; total: number };
@@ -79,7 +80,8 @@ export function metricasDaAuditoria(dados: {
 
 export type Ator = { userId: string | null; nome: string | null; total: number };
 
-export type OpcaoDePessoa = { valor: string; rotulo: string; total: number; excluido: boolean };
+/** `rotina`: um robô ou agendador do sistema (05/11/2026), que não é gente nem foi excluído. */
+export type OpcaoDePessoa = { valor: string; rotulo: string; total: number; excluido: boolean; rotina: boolean };
 
 /**
  * Quem agiu, uma vez por pessoa: o mesmo usuário com nomes diferentes (trocou
@@ -94,7 +96,10 @@ export function pessoasQueAgiram(atores: readonly Ator[], nomeAtual: ReadonlyMap
     const rotulo = (a.userId && nomeAtual.get(a.userId)) || a.nome || "Sem nome";
     const atual = porChave.get(valor);
     if (atual) atual.total += a.total;
-    else porChave.set(valor, { valor, rotulo, total: a.total, excluido: !a.userId });
+    else {
+      const rotina = ehRotinaDoSistema({ userId: a.userId, actorName: a.nome });
+      porChave.set(valor, { valor, rotulo, total: a.total, excluido: !a.userId && !rotina, rotina });
+    }
   }
   return [...porChave.values()].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" }));
 }

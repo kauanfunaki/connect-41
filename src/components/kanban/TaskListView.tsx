@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronRight, ChevronDown, Plus, Repeat } from "lucide-react";
+import { ChevronRight, ChevronDown, Repeat } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
 import { prazoDaTarefa } from "@/lib/kanbanPrazo";
 import { formatCalendarDate } from "@/lib/format";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { TabelaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 import { useToast } from "@/components/ui/Toast";
+import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "@/components/kanban/NovaTarefaEmLinha";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 export type SubtaskRow = {
@@ -548,14 +549,26 @@ function StageGroupHeader({
   );
 }
 
-// O mesmo formulário em modal para todos os pontos de criação, com o estágio escolhido.
-function AddTaskInline({ stageId, basePath }: { stageId: string; basePath: string }) {
-  return <Button variant="ghost" size="xs" href={`${basePath}/novo-item?estagio=${encodeURIComponent(stageId)}`} className="-ml-2.5"><Plus size={11} /> Adicionar atividade</Button>;
+// Criação em linha, só com o nome (05/11/2026, como no ClickUp) — era um link
+// para o formulário em janela. O formulário segue no link do próprio campo,
+// para a atividade de uma empresa ou pessoa.
+function AddTaskInline({
+  stage, basePath, createTaskAction, sinalParaAbrir,
+}: { stage: StageOption; basePath: string; createTaskAction: Props["createTaskAction"]; sinalParaAbrir: number }) {
+  return (
+    <NovaTarefaEmLinha
+      stageId={stage.id}
+      nomeDaColuna={stage.name}
+      criar={createTaskAction}
+      hrefDoFormulario={`${basePath}/novo-item?estagio=${encodeURIComponent(stage.id)}`}
+      sinalParaAbrir={sinalParaAbrir}
+    />
+  );
 }
 
 function StageGroup({
-  stage, items, basePath, canAct, renameStageAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, deleteAction,
-  dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, deleteAction,
+  dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow, primeiro = false,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -574,9 +587,12 @@ function StageGroup({
   onDragEndRow: () => void;
   onDropStage: (stageId: string) => void;
   onDropOnRow: (targetId: string) => void;
+  /** O primeiro grupo atende ao "+ Nova tarefa" do topo. */
+  primeiro?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const sinalDoTopo = useNovaTarefaDoTopo(primeiro && canAct, () => setCollapsed(false));
 
   return (
     <tbody
@@ -634,7 +650,7 @@ function StageGroup({
           {canAct && (
             <tr>
               <td colSpan={5} className="py-1.5" style={{ paddingLeft: CONTENT_OFFSET }}>
-                <AddTaskInline stageId={stage.id} basePath={basePath} />
+                <AddTaskInline stage={stage} basePath={basePath} createTaskAction={createTaskAction} sinalParaAbrir={sinalDoTopo} />
               </td>
             </tr>
           )}
@@ -645,7 +661,8 @@ function StageGroup({
 }
 
 function StageGroupCards({
-  stage, items, basePath, canAct, renameStageAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction, deleteAction,
+  stage, items, basePath, canAct, renameStageAction, createTaskAction, priorityAction, pipelineId, concluirAction, reabrirAction, stages, moveAction, deleteAction,
+  primeiro = false,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -660,8 +677,10 @@ function StageGroupCards({
   stages: StageOption[];
   moveAction: Props["moveAction"];
   deleteAction?: Props["deleteAction"];
+  primeiro?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const sinalDoTopo = useNovaTarefaDoTopo(primeiro && canAct, () => setCollapsed(false));
 
   return (
     <div className="pt-3 first:pt-0">
@@ -696,7 +715,7 @@ function StageGroupCards({
 
           {canAct && (
             <div className="px-1 pt-0.5">
-              <AddTaskInline stageId={stage.id} basePath={basePath} />
+              <AddTaskInline stage={stage} basePath={basePath} createTaskAction={createTaskAction} sinalParaAbrir={sinalDoTopo} />
             </div>
           )}
         </div>
@@ -866,9 +885,10 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
           className="scroll-y bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] pb-2 flex-1 min-h-0 overflow-y-auto"
         >
           <div className="md:hidden px-2 pt-2">
-            {byStage.map(({ stage, items: stageItems }) => (
+            {byStage.map(({ stage, items: stageItems }, i) => (
               <StageGroupCards
                 key={stage.id}
+                primeiro={i === 0}
                 stage={stage}
                 items={stageItems}
                 basePath={basePath}
@@ -917,9 +937,10 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 </th>
               </tr>
             </thead>
-            {byStageNaTabela.map(({ stage, items: stageItems }) => (
+            {byStageNaTabela.map(({ stage, items: stageItems }, i) => (
               <StageGroup
                 key={stage.id}
+                primeiro={i === 0}
                 stage={stage}
                 items={stageItems}
                 basePath={basePath}
