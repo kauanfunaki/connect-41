@@ -8,7 +8,7 @@ import { NewListButton } from "@/components/kanban/NewListButton";
 import { criarListaSimples, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canViewSector, podeExcluir } from "@/lib/auth/context";
-import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+import { poderesNoEspaco } from "@/lib/kanban/permissaoDoEspaco";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -38,14 +38,14 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
   const [folder, { labels: sectorLabels }] = await Promise.all([
     prisma.folder.findFirst({
       where: { id: folderId, space: { tenantId: ctx.tenantId, sectorCode: code } },
-      include: { space: { select: { id: true, name: true, sectorCode: true } } },
+      include: { space: { select: { id: true, name: true, sectorCode: true, defaultPermission: true } } },
     }),
     getSectorMaps(ctx.tenantId),
   ]);
   if (!folder) notFound();
 
-  // Nova tarefa na pasta: também o colaborador, se o setor não está bloqueado (28/10/2026).
-  const canCreate = await podeEditarQuadrosNoSetor(ctx, folder.space.sectorCode);
+  // Nova lista na pasta: quem edita no espaço (05/11/2026).
+  const canCreate = poderesNoEspaco(ctx, folder.space).editar;
 
   const lists = await prisma.pipeline.findMany({
     where: { folderId },

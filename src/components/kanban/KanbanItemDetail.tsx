@@ -47,7 +47,8 @@ import { ListaDeHoras } from "@/components/shared/ListaDeHoras";
 import { campoDaData } from "@/lib/societario/datas";
 import { boardPath, trilhaDaLista } from "@/lib/kanbanPaths";
 import { getSectorMaps } from "@/lib/sectors";
-import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
+import { poderesNaLista } from "@/lib/kanban/permissaoDoEspacoServidor";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
@@ -119,7 +120,11 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   // O gestor segue corrigindo o apontamento de tempo de qualquer pessoa.
   const canDelete = podeExcluir(ctx);
   const canManage = canManageSector(ctx, pipeline.sectorCode);
-  const canAct = canActOnSector(ctx, pipeline.sectorCode);
+  // Editar os campos e comentar, pela permissão do espaço (05/11/2026): no
+  // nível "Comentário" o colaborador comenta sem editar.
+  const poderes = await poderesNaLista(ctx, pipeline);
+  const canAct = poderes.editar;
+  const podeComentar = poderes.comentar;
 
   const [entity, activities, sectorTags, sectorUsers, documents, activeTimerUser, otherItems] = await Promise.all([
     !item.entityId
@@ -250,7 +255,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   // aninhadas sob cada comentário. Edita o autor (como o `editarNota` exige);
   // exclui só o administrador (13/10/2026).
   function canEditNote(noteUserId: string): boolean {
-    return canAct && noteUserId === ctx.userId;
+    return podeComentar && noteUserId === ctx.userId;
   }
   const repliesByParent = new Map<string, typeof activities>();
   for (const a of activities) {
@@ -526,7 +531,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         </div>
         <ActivityFeed
           items={feedItems}
-          canAct={canAct}
+          canAct={podeComentar}
           mentionUsers={mentionUsers}
           pipelineItemId={itemId}
           taskCandidates={taskCandidates}

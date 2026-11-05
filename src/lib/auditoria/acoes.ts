@@ -459,6 +459,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // Os Quadros do setor (28/10/2026): o coordenador bloqueia ou libera a criação e a edição pelos colaboradores.
   "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores nos Quadros do setor"),
   "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores nos Quadros do setor"),
+  // 05/11/2026: o interruptor virou a permissão padrão de cada espaço; mudar fica aqui.
+  "sector.quadros.permissao": e("mudou a permissão dos colaboradores num espaço dos Quadros do setor"),
   "module.enable": e("ligou o módulo"),
   "module.disable": e("desligou o módulo"),
   "module.transfer": e("passou para outro setor o módulo"),

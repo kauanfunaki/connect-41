@@ -351,8 +351,10 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como criar espaços, pastas, tarefas e atividades",
         passos: [
-          "Na tela Quadros, clique em “Novo espaço”, dê um “Nome” e clique em “Criar”.",
-          "Dentro do espaço, clique em “Nova pasta” ou “Nova tarefa”, dê um nome e clique em “Criar”.",
+          "Na tela Quadros, clique em “Novo espaço”. Clique no quadrado com a inicial para escolher a cor e o ícone, dê um “Nome”, escolha a “Permissão padrão” e, se quiser, um modelo em “Usar modelo”. Clique em “Criar espaço”.",
+          "Para criar uma lista ou uma pasta sem entrar no espaço, clique em “Criar”, ao lado de “Novo espaço”, escolha “Lista” ou “Pasta”, dê o nome, escolha onde fica e clique em “Criar lista” ou “Criar pasta”.",
+          "Dentro do espaço, clique em “Nova pasta” ou “Nova lista”, dê um nome e clique em “Criar”.",
+          "Para mudar o nome, a cor, o ícone ou a permissão do espaço, abra o espaço e clique em “Editar espaço”.",
           "Na tarefa, clique em “Editar tarefa” para ajustar os estágios das colunas.",
           "Para criar uma atividade, na visão “Lista”, clique em “Adicionar atividade” no grupo do status, digite o nome e aperte Enter.",
           "Para criar a atividade de uma empresa ou pessoa, clique em “Nova atividade”, escolha quem é e clique em “Criar atividade”.",
@@ -371,7 +373,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Criar espaços, pastas e tarefas é para o gestor do setor e os administradores. Quem é do setor cria, comenta e atualiza as atividades.",
+      "Criar e editar espaços é para o gestor do setor e os administradores. O que os colaboradores fazem em cada espaço é a “Permissão padrão” dele: “Edição total” (criam e editam, e criam pastas), “Editar” (criam e editam, sem pastas), “Comentário” (só comentam) ou “Apenas exibição” (só veem).",
       "Excluir atividade, subatividade, comentário, item do checklist, coluna, espaço, pasta ou tarefa é só do Administrador ou do Super Admin, e não pode ser desfeito. Quem escreveu um comentário corrige pelo “Editar”.",
       "Hora apontada errada se corrige na atividade, em “Horas apontadas”: clique no lápis do lançamento.",
       "A tela “Todas as tarefas” reúne num lugar só as tarefas de todos os seus setores. Para chegar nela, clique em “Todas as tarefas”, no topo do Meu dia.",

@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
-import { getAuthContext, canManageSector, canActOnSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
+import { poderesNoEspaco } from "@/lib/kanban/permissaoDoEspaco";
 import { recusaDoLancamentoAtrasado } from "@/lib/horas/regras";
 import { saoPauloParts } from "@/lib/agenda";
-// Criar tarefa e atividade e mexer nas colunas: também o colaborador, a não ser
-// que o coordenador tenha bloqueado o setor (28/10/2026).
-import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+// O que cada um faz numa lista vem da permissão do espaço dela (05/11/2026):
+// `editar` cria e edita, `comentar` comenta. Ver `permissaoDoEspaco.ts`.
+import { poderesNaLista } from "@/lib/kanban/permissaoDoEspacoServidor";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { boardPath } from "@/lib/kanbanPaths";
 import { minutosApontados, segundosDesde } from "@/lib/datetime";
@@ -83,9 +84,17 @@ export async function criarPipeline(
 
   if (!name) return { error: "Nome da tarefa é obrigatório" };
   if (!sectorCode) return { error: "Setor é obrigatório" };
-  if (!(await podeEditarQuadrosNoSetor(ctx, sectorCode))) {
-    return { error: "Sem permissão para criar tarefa neste setor." };
-  }
+
+  const prisma = getPrisma();
+  // Toda Lista precisa de um Espaço (estrutura Espaço → Pasta → Lista) — o
+  // formulário genérico de criação de kanban ainda não pede espaço
+  // explicitamente, então reaproveita/cria um espaço padrão (nome = code do
+  // setor) pra não travar esse fluxo enquanto a navegação por Espaço não
+  // chega nos demais setores. Com o espaço, vale a permissão dele (05/11/2026);
+  // sem, criá-lo é de quem coordena o setor.
+  const espacoPadrao = await prisma.space.findFirst({ where: { tenantId, sectorCode, name: sectorCode } });
+  const pode = espacoPadrao ? poderesNoEspaco(ctx, espacoPadrao).editar : canManageSector(ctx, sectorCode);
+  if (!pode) return { error: "Sem permissão para criar tarefa neste setor." };
 
   const stageNames = form.getAll("stageName") as string[];
   const stageColors = form.getAll("stageColor") as string[];
@@ -95,19 +104,10 @@ export async function criarPipeline(
 
   if (stages.length === 0) return { error: "Adicione ao menos um estágio" };
 
-  const prisma = getPrisma();
   let id: string;
 
   try {
-    // Toda Lista precisa de um Espaço (estrutura Espaço → Pasta → Lista) — o
-    // formulário genérico de criação de kanban ainda não pede espaço
-    // explicitamente, então reaproveita/cria um espaço padrão (nome = code do
-    // setor) pra não travar esse fluxo enquanto a navegação por Espaço não
-    // chega nos demais setores.
-    let space = await prisma.space.findFirst({ where: { tenantId, sectorCode, name: sectorCode } });
-    if (!space) {
-      space = await prisma.space.create({ data: { tenantId, sectorCode, name: sectorCode } });
-    }
+    const space = espacoPadrao ?? (await prisma.space.create({ data: { tenantId, sectorCode, name: sectorCode } }));
 
     const pipeline = await prisma.pipeline.create({
       data: {
@@ -163,7 +163,7 @@ export async function criarItem(
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
   if (!pipeline) return { error: "Tarefa não encontrada ou fora do seu escopo." };
-  if (!(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) {
+  if (!(await poderesNaLista(ctx, pipeline)).editar) {
     return { error: "Sem permissão para adicionar atividades neste setor." };
   }
 
@@ -217,7 +217,7 @@ export async function criarTarefaRapida(pipelineId: string, stageId: string, tit
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, ...accessiblePipelineWhere(ctx) } });
-  if (!pipeline || !(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   const stage = await prisma.pipelineStage.findFirst({ where: { id: stageId, pipelineId } });
   if (!stage) return;
@@ -248,7 +248,7 @@ export async function renomearEstagio(pipelineId: string, stageId: string, name:
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   try {
     await prisma.pipelineStage.update({ where: { id: stageId, pipelineId }, data: { name: trimmed } });
@@ -284,7 +284,7 @@ export async function atualizarEstagios(pipelineId: string, stages: StageInput[]
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline) return { error: "Tarefa não encontrada." };
-  if (!(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) {
+  if (!(await poderesNaLista(ctx, pipeline)).editar) {
     return { error: "Sem permissão para editar esta tarefa." };
   }
 
@@ -359,7 +359,7 @@ export async function moverItem(
     if (item.stageId === newStageId) return; // reordenar dentro da mesma coluna — sem mudança de estágio, não registra atividade
 
     const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
-    if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return { error: "Você não pode mover tarefas deste quadro." };
+    if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return { error: "Você não pode mover tarefas deste quadro." };
 
     const [fromStage, toStage] = await Promise.all([
       prisma.pipelineStage.findUnique({ where: { id: item.stageId } }),
@@ -405,7 +405,7 @@ export async function reordenarItem(itemId: string, direction: "up" | "down"): P
     if (!item) return;
 
     const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
-    if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+    if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
     const siblings = await prisma.pipelineItem.findMany({
       where: { tenantId, pipelineId: item.pipelineId, stageId: item.stageId, parentItemId: item.parentItemId },
@@ -447,8 +447,8 @@ export async function adicionarNota(
   const prisma = getPrisma();
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
-    return { error: "Sem permissão para registrar atividade neste setor." };
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).comentar) {
+    return { error: "Sem permissão para comentar nesta lista." };
   }
 
   // Resposta só é válida se apontar pra um comentário (NOTE) do mesmo item.
@@ -574,7 +574,7 @@ export async function alternarObservadorItem(pipelineId: string, itemId: string,
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).comentar) return;
 
   // Mesmo fix de alternarTagItem/alternarResponsavelItem.
   const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
@@ -622,7 +622,7 @@ export async function atualizarPrazoPrioridade(
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) {
     return { error: "Sem permissão para editar este item." };
   }
 
@@ -703,7 +703,7 @@ export async function atualizarDescricao(
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) {
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) {
     return { error: "Sem permissão para editar este item." };
   }
 
@@ -753,7 +753,7 @@ export async function alternarTagItem(
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   // Sem isso, um itemId de outro tenant/pipeline passava (só o pipelineId do
   // chamador era checado acima) e ganhava/perdia tag de fora do escopo dele.
@@ -810,7 +810,7 @@ export async function alternarResponsavelItem(
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   // Mesmo fix de alternarTagItem — valida que itemId é mesmo desse pipeline/tenant.
   const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId }, select: { id: true } });
@@ -862,7 +862,7 @@ export async function atualizarPrioridadeResponsavel(pipelineId: string, itemId:
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   // Mesmo fix de alternarTagItem — sem isso dava pra reescrever a prioridade
   // de um responsável em item de outro tenant/pipeline.
@@ -893,7 +893,7 @@ export async function iniciarCronometro(pipelineId: string, itemId: string): Pro
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   try {
     const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId }, select: { activeTimerUserId: true } });
@@ -918,7 +918,7 @@ export async function pararCronometro(pipelineId: string, itemId: string): Promi
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   try {
     const item = await prisma.pipelineItem.findFirst({
@@ -954,7 +954,7 @@ export async function criarLinkItem(pipelineId: string, itemId: string, linkedIt
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   // itemId (origem) também precisa ser validado — só o linkedItemId (alvo) era
   // checado, então dava pra criar um PipelineItemLink apontando pra um item de
@@ -986,7 +986,7 @@ export async function removerLinkItem(pipelineId: string, itemId: string, linked
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
   // Desvincular segue com quem age no setor (exceção do dia a dia, 13/10/2026),
   // mas o card tem de ser desta lista: só o pipelineId era conferido, e quem
   // agia num setor desfazia vínculo de card de outro.
@@ -1053,7 +1053,7 @@ export async function criarSubtarefa(parentItemId: string, title: string): Promi
   if (!parent || parent.parentItemId) return; // não achou, ou é subtarefa (só 1 nível)
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: parent.pipelineId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   try {
     const firstStage = await prisma.pipelineStage.findFirst({
@@ -1136,7 +1136,7 @@ export async function criarChecklistItem(pipelineItemId: string, textRaw: string
   if (!tenantId || !text) return;
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
-  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  if (!loaded || !(await poderesNaLista(ctx, loaded.pipeline)).editar) return;
   const { prisma, pipeline } = loaded;
 
   try {
@@ -1167,7 +1167,7 @@ export async function alternarChecklistItem(pipelineItemId: string, checklistIte
   if (!tenantId) return;
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
-  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  if (!loaded || !(await poderesNaLista(ctx, loaded.pipeline)).editar) return;
   const { prisma, pipeline } = loaded;
 
   try {
@@ -1197,7 +1197,7 @@ export async function editarChecklistItem(pipelineItemId: string, checklistItemI
   if (!tenantId || !text.trim()) return;
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
-  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  if (!loaded || !(await poderesNaLista(ctx, loaded.pipeline)).editar) return;
   const { prisma, pipeline } = loaded;
 
   try {
@@ -1218,7 +1218,7 @@ export async function excluirChecklistItem(pipelineItemId: string, checklistItem
   if (!tenantId || !podeExcluir(ctx)) return;
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
-  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  if (!loaded || !(await poderesNaLista(ctx, loaded.pipeline)).editar) return;
   const { prisma, pipeline } = loaded;
 
   try {
@@ -1236,7 +1236,7 @@ export async function reordenarChecklistItem(pipelineItemId: string, checklistIt
   if (!tenantId) return;
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
-  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) return;
+  if (!loaded || !(await poderesNaLista(ctx, loaded.pipeline)).editar) return;
   const { prisma, pipeline } = loaded;
 
   try {
@@ -1276,7 +1276,7 @@ export async function concluirTarefa(pipelineId: string, itemId: string): Promis
   if (!item) return;
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   try {
     const terminalStage = await prisma.pipelineStage.findFirst({
@@ -1309,7 +1309,7 @@ export async function reabrirTarefa(pipelineId: string, itemId: string): Promise
   if (!item) return;
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   try {
     const firstStage = await prisma.pipelineStage.findFirst({
@@ -1345,7 +1345,7 @@ export async function atualizarEstimativa(pipelineId: string, itemId: string, mi
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
   const trimmed = minutesRaw.trim();
   const minutes = trimmed ? parseInt(trimmed, 10) : null;
@@ -1381,7 +1381,7 @@ export async function criarLancamentoTempo(pipelineItemId: string, _prev: Pipeli
   if (Number.isNaN(loggedOn.getTime())) return { error: "Data inválida" };
 
   const loaded = await loadItemPipeline(tenantId, pipelineItemId);
-  if (!loaded || !canActOnSector(ctx, loaded.pipeline.sectorCode)) {
+  if (!loaded || !(await poderesNaLista(ctx, loaded.pipeline)).editar) {
     return { error: "Sem permissão para editar este item." };
   }
   const { prisma, pipeline } = loaded;
@@ -1433,7 +1433,7 @@ export async function editarLancamentoTempo(
 
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
-  if (!pipeline || !canActOnSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para editar este apontamento." };
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return { error: "Sem permissão para editar este apontamento." };
 
   const entry = await prisma.timeEntry.findFirst({
     where: { id: entryId, tenantId, pipelineItemId: itemId, pipelineItem: { pipelineId } },
@@ -1542,7 +1542,7 @@ export async function duplicarPipeline(
     },
   });
   if (!source) return { error: "Tarefa de origem não encontrada." };
-  if (!(await podeEditarQuadrosNoSetor(ctx, source.sectorCode))) {
+  if (!(await poderesNaLista(ctx, source)).editar) {
     return { error: "Sem permissão para duplicar tarefa neste setor." };
   }
 
