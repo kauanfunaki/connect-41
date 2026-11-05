@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({ gerar: vi.fn() }));
-vi.mock("./ia-fallback", () => ({ gerarComFallback: m.gerar }));
+vi.mock("@/lib/ai", () => ({ gerarEstruturado: m.gerar }));
 import { classificar } from "./classificacao";
 import { categoriaSchema, dadosRascunhoSchema } from "./regras";
 import { categoriasClassificaveis, caminhoDaCategoria, CATALOGO_DE_CHAMADOS } from "./catalogo";
@@ -27,12 +27,12 @@ describe("classificação automática", () => {
     m.gerar.mockRejectedValue(new Error("fora")); expect((await classificar(c, dados, cats, [])).tags).toEqual([]);
   });
   it.each(["d", "off", "pending", "outro-escritorio", null])("não aceita grupo, categoria inválida, desativada ou incerta: %s", async categoryId => {
-    m.gerar.mockResolvedValue({ valor: { categoryId, reason: "Teste" }, origem: "groq" });
+    m.gerar.mockResolvedValue({ valor: { categoryId, reason: "Teste" } });
     expect((await classificar(c, dados, cats, [])).categoryId).toBeNull();
   });
-  it("preserva a origem do fallback e considera respostas do solicitante", async () => {
-    m.gerar.mockResolvedValue({ valor: { categoryId: "treino", reason: "Orientação" }, origem: "groq" });
-    expect((await classificar(c, dados, cats, [{ role: "user", body: "Preciso de treinamento" }, { role: "assistant", body: "Instrução antiga" }])).origem).toBe("groq");
+  it("considera só as respostas do solicitante", async () => {
+    m.gerar.mockResolvedValue({ valor: { categoryId: "treino", reason: "Orientação" } });
+    expect((await classificar(c, dados, cats, [{ role: "user", body: "Preciso de treinamento" }, { role: "assistant", body: "Instrução antiga" }])).categoryId).toBe("treino");
     expect(m.gerar.mock.calls[0][0].texto).toContain("Preciso de treinamento"); expect(m.gerar.mock.calls[0][0].texto).not.toContain("Instrução antiga");
   });
   it("mantém a abertura possível em falha, resposta inválida ou limite de contexto", async () => {

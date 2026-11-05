@@ -1,5 +1,5 @@
 import { type AnexoEstruturado } from "@/lib/ai";
-import { gerarComFallback } from "./ia-fallback";
+import { gerarEstruturado } from "@/lib/ai";
 import { hit } from "@/lib/rateLimit";
 import { parecerSchema, indisponivel, type Existente, type Parecer, type DadosDoChamado, type Categoria } from "./regras";
 import type { ItemExistente } from "@/lib/ops/catalogo";
@@ -69,7 +69,7 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     // Provedor é o do escritório (22/10/2026): OpenAI ou Anthropic, com a mesma
     // saída estruturada, o mesmo teto e a mesma linha de auditoria da fundação.
     // O modelo sai da faixa `rapido` do catálogo, salvo override do escritório.
-    const { valor, origem } = await gerarComFallback({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT,
+    const { valor } = await gerarEstruturado({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT,
       texto: JSON.stringify({ chamado: dados, categoria, conversa: historico, perguntasJaFeitas: respondidas, jaExiste: candidatos.map(({ ref, tipo, nome, descricao, detalhe, responsavel }) => ({ ref, tipo, nome, descricao, detalhe, responsavel })), anexosRecebidos: enviados.map(a => ({ id: a.id, name: a.fileName })), anexosNaoInterpretados: ignorados, limitacoes: "DOCX: texto sem imagens embutidas. XLSX/CSV: até 1.000 linhas por aba; gráficos não interpretados." }),
       anexos: arquivos, nome: "triagem_chamados", schema: SCHEMA_DA_TRIAGEM, maxTokens: 3000, estrito: true, timeoutMs: 30000, store: false,
       contexto: { userId: c.userId, entityType: "HelpdeskDraft", entityId: c.draftId },
@@ -80,7 +80,6 @@ export async function analisar(c: { tenantId: string; userId: string; draftId: s
     if (resultado.status === "unavailable") throw new Error("Status inválido.");
     const existente = acharExistente((valor as { existing?: unknown }).existing, candidatos, jaExiste.linkDoOps);
     const cobertura = [...ignorados, ...enviados.map(a => {
-      if (origem === "groq") return { id: a.id, name: a.fileName, status: "skipped" as const, reason: "O fallback analisa somente o texto; arquivo disponível para a equipe." };
       const parcial = /\.(docx|xlsx|csv)$/i.test(a.fileName);
       return { id: a.id, name: a.fileName, status: parcial ? "partial" as const : "analyzed" as const, reason: parcial ? "Leitura parcial; imagens e gráficos embutidos não interpretados." : "Enviado para a análise." };
     })];
