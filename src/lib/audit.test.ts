@@ -21,6 +21,14 @@ describe("logAudit", () => {
     });
   });
 
+  it("rotina do sistema grava o nome dela, sem usuário (05/11/2026)", async () => {
+    await logAudit({ tenantId: "t1", rotina: "roboDoSocietario", action: "company.ie_situacao", entityType: "Company", entityId: "e1" });
+    expect(user.findUnique).not.toHaveBeenCalled();
+    expect(auditLog.create).toHaveBeenCalledWith({
+      data: { tenantId: "t1", userId: null, actorName: "Robô do Societário", action: "company.ie_situacao", entityType: "Company", entityId: "e1", metadata: undefined },
+    });
+  });
+
   it("falha ao gravar não derruba a ação (best-effort)", async () => {
     user.findUnique.mockResolvedValue(null);
     auditLog.create.mockRejectedValue(new Error("coluna actorName não existe"));

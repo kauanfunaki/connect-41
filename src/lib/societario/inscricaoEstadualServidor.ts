@@ -76,7 +76,7 @@ export async function registrarSituacaoDaIE(p: { tenantId: string; companyId: st
   });
   await logAudit({
     tenantId: p.tenantId,
-    userId: "", // o robô: sem pessoa (vira null na trilha)
+    rotina: "roboDoSocietario", // sem pessoa: a trilha mostra o nome da rotina
     action: "company.ie_situacao",
     entityType: "Company",
     entityId: empresa.id,
