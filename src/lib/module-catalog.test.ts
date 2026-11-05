@@ -26,7 +26,7 @@ import { DEFAULT_SECTORS } from "./sector-constants";
 describe("catálogo de módulos", () => {
   it("GitHub é exclusivo do Tech e nasce desligado", () => {
     expect(getModuleDef("tech_github_contributions")).toMatchObject({ sectorCode: "tech", fixedSector: true, defaultEnabled: false });
-    expect(MODULE_ROUTES.tech_github_contributions).toBe("/github");
+    expect(MODULE_ROUTES.tech_github_contributions).toBe("/produtividade");
   });
   it("todo módulo tem rota", () => {
     const semRota = MODULE_CATALOG.filter((m) => !MODULE_ROUTES[m.code]).map((m) => m.code);

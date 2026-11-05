@@ -26,7 +26,7 @@ describe("montarMenuDoSetor", () => {
   it("Tech: Entregas sob o Controle interno; grupo de uma tela vira tela solta", () => {
     const menu = montarMenuDoSetor(telas("tech_controle_interno", "tech_ceci", "tech_github_contributions", "tech_entregas", "tech_ops_center", "helpdesk", "tech_certificados"));
     expect(desenho(menu)).toEqual([
-      "Operação: GitHub, Ops Center",
+      "Operação: Produtividade, Ops Center",
       "Chamados",
       "Certificados digitais",
       "Desenvolvimento: Controle interno (Entregas da Tech), Ceci",

@@ -291,16 +291,29 @@ describe("menu do setor: grupos que abrem no lugar", () => {
     expect(aside).toMatch(/<div id="menu-grupo-licencas" hidden=""/);
   });
 
-  it("GitHub sem janela: as abas recuadas embaixo, e só a aba aberta acende", () => {
-    rota.atual = "/github/repositorios";
-    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, podeGerirGithub: false, activeSectorModules: [
-      { code: "tech_github_contributions", label: "GitHub", href: "/github" },
+  // A Produtividade (05/11/2026): Time é a tela de entrada; Pessoas e GitHub
+  // recuados embaixo. As telas do GitHub são abas dentro dele, fora do menu.
+  it("Produtividade sem janela: Pessoas e GitHub recuados, e só a aba aberta acende", () => {
+    rota.atual = "/produtividade/github/repositorios";
+    const modulos = [
+      { code: "tech_github_contributions", label: "Produtividade", href: "/produtividade" },
       { code: "tech_ops_center", label: "Ops Center", href: "/ops" },
-    ] }));
+    ];
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: modulos }));
     expect(aside).not.toContain('aria-haspopup="menu"');
-    expect(tagDoLink(aside, "Repositórios")).toContain('aria-current="page"');
-    expect(tagDoLink(aside, "GitHub")).not.toContain("aria-current");
+    const github = tagDoLink(aside, "GitHub");
+    expect(github).toContain('aria-current="page"');
+    expect(github).toContain('href="/produtividade/github"');
+    expect(github).toContain('data-recuado="true"');
+    expect(tagDoLink(aside, "Pessoas")).not.toContain("aria-current");
+    expect(tagDoLink(aside, "Produtividade")).not.toContain("aria-current");
+    expect(aside).not.toContain(">Repositórios<");
     expect(aside).not.toContain(">Times<");
+
+    rota.atual = "/produtividade";
+    const noTime = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: modulos }));
+    expect(tagDoLink(noTime, "Produtividade")).toContain('aria-current="page"');
+    expect(tagDoLink(noTime, "GitHub")).not.toContain("aria-current");
   });
 });
 

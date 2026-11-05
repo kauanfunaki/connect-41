@@ -18,7 +18,6 @@ import {
   FolderKanban,
   Globe,
   AppWindow,
-  FolderGit2,
   CalendarCheck,
   ChevronDown,
   Menu,
@@ -28,7 +27,7 @@ import {
   X,
   Building2,
   Users,
-  UsersRound,
+  GitBranch,
   Truck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -82,6 +81,7 @@ import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 import { contarChamadosDoMenuAction } from "@/app/(app)/chamados/contagem-actions";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
+import { abaDaProdutividade, ROTAS_DA_PRODUTIVIDADE } from "@/lib/tech-interno/rotasDaProdutividade";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -183,8 +183,6 @@ type Props = {
   // continua ali.
   activeSector: Sector | null;
   activeSectorModules: SectorModule[];
-  /** Mostra "Times" no menu do GitHub: só para quem gerencia o módulo (04/11/2026). */
-  podeGerirGithub?: boolean;
   /** Tudo que a pessoa pode abrir, de qualquer setor — alimenta o Ctrl+K. */
   telasNavegaveis: TelaNavegavel[];
   /** As telas que ela fixou, na ordem dela, já filtradas pelo que pode abrir. */
@@ -253,7 +251,6 @@ export function AppShell({
   sectors,
   activeSector,
   activeSectorModules,
-  podeGerirGithub = false,
   telasNavegaveis,
   telasFixadas,
   appDomain,
@@ -655,10 +652,12 @@ export function AppShell({
                   const subTelas = (code: string): (TelaDoPainel & { ativa: boolean })[] => {
                     switch (code) {
                       case "tech_github_contributions":
+                        // A Produtividade (05/11/2026): Time é a tela de entrada; Pessoas e
+                        // GitHub ficam recuados. Desenvolvedores, Repositórios e Times são
+                        // abas dentro do GitHub.
                         return [
-                          { label: "Desenvolvedores", href: "/github/desenvolvedores", icon: <Users />, ativa: pathname.startsWith("/github/desenvolvedores") },
-                          { label: "Repositórios", href: "/github/repositorios", icon: <FolderGit2 />, ativa: pathname.startsWith("/github/repositorios") },
-                          ...(podeGerirGithub ? [{ label: "Times", href: "/github/times", icon: <UsersRound />, ativa: pathname.startsWith("/github/times") }] : []),
+                          { label: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icon: <Users />, ativa: abaDaProdutividade(pathname) === "pessoas" },
+                          { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch />, ativa: abaDaProdutividade(pathname) === "github" },
                         ];
                       case "tech_ops_center":
                         // A triagem dos chamados consulta Robôs, Sites e Apps (28/10/2026); Robôs é a tela de entrada.
@@ -681,6 +680,7 @@ export function AppShell({
                     if (code === "contabil_sped") return noContabil;
                     if (code === "tech_ops_center") return visaoDoOps !== null;
                     if (code === "gestao_painel") return pathname === "/gestao";
+                    if (code === "tech_github_contributions") return abaDaProdutividade(pathname) === "time";
                     return undefined;
                   };
                   const linkDoContabil = hrefContabil("lancamentos", "entradas");

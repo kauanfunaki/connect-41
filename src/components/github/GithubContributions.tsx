@@ -7,7 +7,6 @@ import { FolderGit2, GitCommitHorizontal, LayoutGrid, Lock, Settings2, Users, Us
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { IconButton } from "@/components/ui/IconButton";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -26,12 +25,15 @@ import { corDaPessoa, type ModoDeCor, type Paleta } from "@/lib/github/cores";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { DeveloperAvatar, DeveloperName, GithubOverview } from "./GithubOverview";
 import { GithubTimes } from "./GithubTimes";
+import { CabecalhoDaProdutividade } from "@/components/produtividade/CabecalhoDaProdutividade";
+import { ROTAS_DO_GITHUB } from "@/lib/tech-interno/rotasDaProdutividade";
 import styles from "./GithubContributions.module.css";
 
 const INTEGRATION = "/admin/integracoes?integracao=github";
 export type View = "general" | "developers" | "repositories" | "teams";
-const PATHS: Record<View, string> = { general: "/github", developers: "/github/desenvolvedores", repositories: "/github/repositorios", teams: "/github/times" };
-const SUBTITLES: Record<View, string> = { general: "Acompanhe a atividade do time no GitHub.", developers: "Desenvolvedores e suas contribuições.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
+// Dentro da Produtividade desde 05/11/2026: `/produtividade/github/...` (o `/github` antigo redireciona).
+const PATHS: Record<View, string> = ROTAS_DO_GITHUB;
+const SUBTITLES: Record<View, string> = { general: "A atividade do time no GitHub. É contexto: commits e PRs ficam fora das contas de entrega.", developers: "Desenvolvedores e suas contribuições.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
   teams: "Monte os times e escolha a cor de cada pessoa e de cada time." };
 const TYPE_SINGULAR: Record<ContributionType, string> = { COMMIT: "Commit", PULL_REQUEST: "Pull request", ISSUE: "Issue", REVIEW: "Revisão" };
 // O dia aberto: de um desenvolvedor (aba Desenvolvedores) ou de um repositório (aba Repositórios).
@@ -45,16 +47,18 @@ export function GithubContributions({ initialQuery: suppliedQuery, canConfigure,
 }
 
 // Cabeçalho e abas, comuns às quatro telas. "Times" só aparece para quem gerencia o módulo.
+// Desde 05/11/2026 o título é o da Produtividade (Time, Pessoas, GitHub), e as
+// quatro telas do GitHub viraram a segunda fileira de abas, dentro da aba GitHub.
 function GithubShell({ view, suppliedQuery, canConfigure, children }: { view: View; suppliedQuery: string; canConfigure: boolean; children: React.ReactNode }) {
   const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
   return <PageContainer>
-    <PageHeader title="GitHub" subtitle={SUBTITLES[view]}
-      action={canConfigure ? <IconButton href={INTEGRATION} title="Integração GitHub" variant="framed"><Settings2 size={16} /></IconButton> : undefined} />
-    <AbasDeLink className="mb-6" aria-label="GitHub" ativa={view} abas={[
-      { chave: "general", rotulo: "Geral", href: `/github?${tabParams}`, icone: <LayoutGrid /> },
-      { chave: "developers", rotulo: "Desenvolvedores", href: `/github/desenvolvedores?${tabParams}`, icone: <Users /> },
-      { chave: "repositories", rotulo: "Repositórios", href: `/github/repositorios?${tabParams}`, icone: <FolderGit2 /> },
-      ...(canConfigure ? [{ chave: "teams", rotulo: "Times", href: "/github/times", icone: <UsersRound /> }] : []),
+    <CabecalhoDaProdutividade aba="github" subtitulo={SUBTITLES[view]}
+      acao={canConfigure ? <IconButton href={INTEGRATION} title="Integração GitHub" variant="framed"><Settings2 size={16} /></IconButton> : undefined} />
+    <AbasDeLink className="mb-6" aria-label="Telas do GitHub" ativa={view} abas={[
+      { chave: "general", rotulo: "Geral", href: `${PATHS.general}?${tabParams}`, icone: <LayoutGrid /> },
+      { chave: "developers", rotulo: "Desenvolvedores", href: `${PATHS.developers}?${tabParams}`, icone: <Users /> },
+      { chave: "repositories", rotulo: "Repositórios", href: `${PATHS.repositories}?${tabParams}`, icone: <FolderGit2 /> },
+      ...(canConfigure ? [{ chave: "teams", rotulo: "Times", href: PATHS.teams, icone: <UsersRound /> }] : []),
     ]} />
     {children}
   </PageContainer>;
@@ -109,7 +113,7 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, view }: { initia
 
 function Developers({ data, filtered, canConfigure, onDay, pageHref, modo }: { data: DashboardView; filtered: boolean; canConfigure: boolean; onDay: (id: string, day: string) => void; pageHref: (page: number) => string; modo: ModoDeCor }) {
   return <>
-    <div className={styles.listHeading}><span>{data.totalUsers} desenvolvedores · {Number(data.total).toLocaleString("pt-BR")} contribuições</span>{canConfigure && <Link href="/github/times" className="text-fg-secondary hover:underline">Times e cores</Link>}</div>
+    <div className={styles.listHeading}><span>{data.totalUsers} desenvolvedores · {Number(data.total).toLocaleString("pt-BR")} contribuições</span>{canConfigure && <Link href={PATHS.teams} className="text-fg-secondary hover:underline">Times e cores</Link>}</div>
     <div className={styles.developerList}>
       {!data.users.length ? <Card><EmptyState icon={<GitCommitHorizontal />} title="Nenhum desenvolvedor encontrado" description={filtered ? "Ajuste a busca ou o período para ver outros desenvolvedores." : undefined} /></Card>
         : data.users.map(user => <DeveloperCard key={user.id} user={user} from={data.from} to={data.to} onDay={onDay} paleta={data.paleta} modo={modo} />)}
