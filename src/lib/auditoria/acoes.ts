@@ -50,6 +50,15 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),
+  // O Financeiro da 41 (05/11/2026): estoque e contratos do escritório.
+  "estoque.item.create": c("cadastrou o item do estoque"),
+  "estoque.item.update": e("editou o item do estoque"),
+  "estoque.item.movimento": e("movimentou o item do estoque"),
+  "estoque.item.delete": x("excluiu o item do estoque"),
+  "contrato_interno.create": c("cadastrou o contrato do escritório"),
+  "contrato_interno.update": e("editou o contrato do escritório"),
+  "contrato_interno.cancel": e("cancelou o contrato do escritório"),
+  "contrato_interno.delete": x("excluiu o contrato do escritório"),
   "tech_interno.item.create": c("criou o item do controle interno do Tech"),
   "tech_interno.item.update": e("editou o item do controle interno do Tech"),
   "tech_interno.item.status": e("mudou a situação do item do controle interno do Tech"),
@@ -563,6 +572,8 @@ export function codigosDoTipo(codigos: Iterable<string>, tipo: TipoDaAcao): stri
  * tela ("FinanceEntry", "DriveFolder").
  */
 export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
+  InventoryItem: "item do estoque",
+  InternalContract: "contrato do escritório",
   HelpdeskTicket: "chamado",
   OpsEvent: "evento de robô do Ops Center",
   HelpdeskCategory: "categoria de chamados",
@@ -705,6 +716,7 @@ export type ChaveDaAreaDaAuditoria =
   | "ia"
   | "configuracoes"
   | "planos"
+  | "financeiro"
   | "outros";
 
 /** Rótulo e cor do ponto de cada área (a cor dos setores padrão, onde há setor). */
@@ -726,6 +738,7 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
   ia: { rotulo: "IA", cor: "#9333EA" },
   configuracoes: { rotulo: "Configurações", cor: "#586577" },
   planos: { rotulo: "Clientes e planos", cor: "#475569" },
+  financeiro: { rotulo: "Financeiro", cor: "#3E8F1F" },
   outros: { rotulo: "Outros", cor: "#94A3B8" },
 };
 
@@ -737,6 +750,8 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
 const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]> = [
   ["helpdesk.", "chamados"],
   ["tech_interno.", "tech"],
+  ["estoque.", "financeiro"],
+  ["contrato_interno.", "financeiro"],
   ["ops.", "tech"],
   ["company.", "cadastros"],
   ["person.", "cadastros"],

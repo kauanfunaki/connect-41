@@ -45,6 +45,8 @@ export type IconeDeModulo =
   | "MessageCircle"
   | "MessageSquareWarning"
   | "MessagesSquare"
+  | "Package"
+  | "FileSignature"
   | "Network"
   | "Receipt"
   | "ReceiptText"
@@ -183,6 +185,18 @@ const COM_O_MOTOR = "Opera o motor do SPED Generator quando a integração está
 const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está configurada, e as ações da área continuam no painel do motor; sem ela, mostra a prévia de teste";
 
 export const MODULE_CATALOG: ModuleDef[] = [
+  // O Financeiro da 41 (05/11/2026, decisão do Kauan — fase 1): o setor existia
+  // na semente, sem tela. O BPO é o financeiro dos clientes; este é o de casa.
+  {
+    code: "financeiro_estoque", label: "Estoque", sectorCode: "financeiro",
+    description: "Máquinas e materiais do escritório: com quem está cada um, entradas, saídas, empréstimos, reposição e conferência",
+    defaultEnabled: false, icon: "Package", group: "Operação",
+  },
+  {
+    code: "financeiro_contratos", label: "Contratos e assinaturas", sectorCode: "financeiro",
+    description: "Softwares, serviços e aluguéis que o escritório paga: valor por mês, renovação e quem responde por cada um",
+    defaultEnabled: false, icon: "FileSignature", group: "Contas",
+  },
   {
     code: "contabil_sped", label: "SPED", sectorCode: "contabil",
     description: "De-para e lançamentos de entrada para a Domínio, e o EFD Contribuições gerado pelo motor do SPED",
@@ -801,6 +815,8 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  financeiro_estoque: "/estoque",
+  financeiro_contratos: "/contratos",
   contabil_sped: "/sped-contabil",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
