@@ -45,7 +45,7 @@ import {
 } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
-import { slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
+import { slugDoGrupo, ICONE_DO_GRUPO, TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
 import { montarMenuDoSetor, telasDoBloco, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
 import { ItemComJanela } from "@/components/shell/ItemComJanela";
@@ -353,7 +353,7 @@ export function AppShell({
         ),
       },
       { chave: "transferencias", area: "marca", no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
-      { chave: "solicitacoes", area: solicitacoes, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
+      { chave: "solicitacoes", area: solicitacoes, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
       { chave: "chamados", area: chamados, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
       { chave: "arquivos", area: arquivos, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
       { chave: "agenda", area: "marca", no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
