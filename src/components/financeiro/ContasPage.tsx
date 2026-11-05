@@ -29,7 +29,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { formatarCompetencia, formatarNumero, formatarReaisDeCentavos } from "@/lib/format";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
-import { empresaNaUrl, hrefDaEmpresa, idDaEscolha } from "@/lib/empresas/escolhaDaEmpresa";
+import { empresaNaUrl, idDaEscolha } from "@/lib/empresas/escolhaDaEmpresa";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 
 // Os recortes moram com a exportação (`lib/financeiro/exportacao`), que lê o mesmo.
@@ -87,19 +87,13 @@ export async function ContasPage({
   const agora = new Date();
   const base = aPagar ? "/pagar" : "/receber";
 
-  // A empresa vem antes de tudo (13/10/2026): a da URL, a última aberta pela
-  // pessoa, ou nenhuma — e aí a tela pede, sem ler conta nenhuma. "Todas as
-  // empresas" continua, como escolha explícita (`?empresa=todas`): a lista para
-  // em mil contas e os totais são somados no banco, então a consulta tem teto.
-  const [empresasDoEscritorio, empresasComContas] = await Promise.all([
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
-      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
-    }),
-    // O seletor oferece só quem tem conta deste lado — são quase quatrocentas
-    // empresas no escritório, e a maioria não é cliente do BPO.
-    prisma.financeEntry.groupBy({ by: ["companyId"], where: { tenantId: ctx.tenantId, kind } }),
-  ]);
+  // A empresa é a da faixa "Trabalhando em" (05/11/2026): a do foco — com a
+  // matriz e as filiais —, ou todas sem foco. Todas tem teto: a lista para em
+  // mil contas e os totais são somados no banco.
+  const empresasDoEscritorio = await prisma.company.findMany({
+    where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+  });
   const empresas = empresasDoEscritorio.map((e) => ({
     id: e.id,
     nome: nomeExibicao(e),
@@ -112,22 +106,13 @@ export async function ContasPage({
   const daTela = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true, comFoco: true });
   const { escolha, foco, empresasDeTodas } = daTela;
   const empresaId = idDaEscolha(escolha);
-  const comConta = new Set(empresasComContas.map((e) => e.companyId));
-  const noSeletor = daTela.noSeletor.filter((e) => comConta.has(e.id) || e.id === empresaId);
   const titulo = aPagar ? "Contas a pagar" : "Contas a receber";
   const subtitulo = aPagar
     ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
     : "O que as empresas têm a receber, do documento fiscal emitido ao recebimento.";
   // Trocar de empresa conserva a aba, a competência e o recorte.
   const filtroDaEmpresa = (
-    <FiltroDaEmpresa
-      acao={base}
-      empresas={noSeletor}
-      valor={empresaNaUrl(escolha) ?? null}
-      todas="explicita"
-      manter={{ aba: aba === "contas" ? undefined : aba, competencia: params.competencia, recorte: params.recorte }}
-      foco={foco}
-    />
+    <FiltroDaEmpresa foco={foco} />
   );
 
   if (escolha.tipo === "escolher") {
@@ -135,11 +120,7 @@ export async function ContasPage({
       <PageContainer>
         <PageHeader title={titulo} subtitle={subtitulo} />
         {filtroDaEmpresa}
-        <EscolhaAEmpresa
-          escolha={escolha}
-          porQue="Para não carregar as contas de todos os clientes de uma vez, a tela abre numa empresa."
-          todasHref={foco ? undefined : hrefDaEmpresa(base, "", { todas: "explicita", manter: { recorte: params.recorte } })}
-        />
+        <EscolhaAEmpresa escolha={escolha} porQue="Para não carregar as contas de todos os clientes de uma vez, a tela abre numa empresa." />
       </PageContainer>
     );
   }

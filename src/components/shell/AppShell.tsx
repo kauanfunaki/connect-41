@@ -31,7 +31,6 @@ import {
   UsersRound,
   Truck,
   GitBranch,
-  Crosshair,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NotificationBell } from "@/components/shell/NotificationBell";
@@ -69,7 +68,7 @@ import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { IconButton } from "@/components/ui/IconButton";
-import { TrocaDeContexto, type FocoDaTroca } from "@/components/shell/TrocaDeContexto";
+import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { SECTOR_ICONS } from "@/components/shell/iconesDosSetores";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
@@ -188,15 +187,10 @@ type Props = {
   menuRecolhidoInicial?: boolean;
   /**
    * A faixa da empresa em foco (21/10/2026), montada no layout: fica parada
-   * entre o topo e a rolagem, nas telas do BPO (`FaixaDoFoco`).
+   * entre o topo e a rolagem, nas telas por empresa (`FaixaDoFoco`). Desde
+   * 05/11/2026 é o único lugar de escolher a empresa: o topo não mostra mais.
    */
   faixaDoFoco?: React.ReactNode;
-  /**
-   * O foco para o seletor do topo (29/10/2026): `null` para quem não usa;
-   * senão, a empresa atual (ou nenhuma). Abre a janela mesmo para quem tem um
-   * setor e um escritório só.
-   */
-  foco?: FocoDaTroca;
   children: React.ReactNode;
 };
 
@@ -229,7 +223,6 @@ export function AppShell({
   paresDeAjuda = [],
   menuRecolhidoInicial = false,
   faixaDoFoco,
-  foco = null,
   children,
 }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -274,7 +267,6 @@ export function AppShell({
   const grupoDaTela = grupoDaTelaDaEquipe(pathname);
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
-  const abreATroca = podeTrocar || foco !== null;
   // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
   // seguiam no Tab e no leitor de tela. `inert` tira os dois; Esc fecha
   // (07/10/2026, junto com o PortalShell). A faixa de ícones fica no Tab: ela
@@ -711,8 +703,8 @@ export function AppShell({
             <button
               type="button"
               onClick={() => setTrocaAberta(true)}
-              disabled={!abreATroca}
-              data-dica={podeTrocar ? (foco ? "Trocar setor, escritório ou empresa" : "Trocar setor ou escritório") : foco ? "Trabalhar numa empresa" : undefined}
+              disabled={!podeTrocar}
+              data-dica={podeTrocar ? "Trocar setor ou escritório" : undefined}
               className="hidden lg:flex items-center gap-2 min-w-0 text-ui rounded-md -ml-1.5 px-1.5 py-1 transition-colors enabled:hover:bg-surface-hover disabled:cursor-default"
             >
               <AvatarImage src={tenantAtual?.logoUrl ?? null} name={tenantAtual?.name ?? "—"} size={22} shape="lg" fontSize={10} />
@@ -733,16 +725,7 @@ export function AppShell({
                   <span className="text-fg-muted whitespace-nowrap">Todos os setores</span>
                 </>
               ) : null}
-              {foco?.atual && (
-                <>
-                  <span aria-hidden className="text-fg-muted">·</span>
-                  <span className="inline-flex min-w-0 items-center gap-1 text-brand font-medium">
-                    <Crosshair size={13} aria-hidden className="flex-shrink-0" />
-                    <span className="truncate max-w-48">{foco.atual.nome}</span>
-                  </span>
-                </>
-              )}
-              {abreATroca && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
+              {podeTrocar && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
             </button>
             {/* A área de uso da tela aberta (28/10/2026), como a aba do Omie: leva
                 à página da área, com todas as telas dela que a pessoa abre. */}
@@ -805,7 +788,6 @@ export function AppShell({
               activeSector={activeSector?.code ?? null}
               appDomain={appDomain}
               sectorHostSuffix={sectorHostSuffix}
-              foco={foco}
             />
           </div>
         </header>

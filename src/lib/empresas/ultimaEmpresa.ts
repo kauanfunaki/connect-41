@@ -20,7 +20,7 @@ import { getPrisma } from "@/lib/prisma";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import type { AuthContext } from "@/lib/auth/context";
 import { pedidaForaDoFoco, resolverEmpresaDaTela, TODAS_AS_EMPRESAS, type EscolhaDaEmpresa } from "./escolhaDaEmpresa";
-import { lerEmpresaEmFoco } from "./focoServidor";
+import { lerEmpresaEmFoco, podeUsarOFoco } from "./focoServidor";
 import type { EmpresaEmFoco } from "./foco";
 
 /** Confere que a empresa existe e que a pessoa a enxerga neste tenant. */
@@ -72,10 +72,11 @@ export async function gravarUltimaEmpresa(ctx: AuthContext, companyId: string): 
 /** A empresa em foco, como a tela a mostra — e o que a URL pediu fora dele. */
 export type FocoNaTela = EmpresaEmFoco & {
   /**
-   * O que a URL pediu fora do foco — "todas as empresas", ou o nome da
-   * empresa —, quando pediu: a tela ficou na empresa em foco e avisa.
+   * O que a URL pediu fora do foco — "todas as empresas" (`id` nulo) ou a
+   * empresa —, quando pediu: a tela ficou na empresa em foco e avisa, com o
+   * botão de trabalhar na outra.
    */
-  pedida: string | null;
+  pedida: { id: string | null; nome: string } | null;
 };
 
 export type EmpresaDaTela<E> = {
@@ -106,9 +107,10 @@ function nomeNaLista(e: object): string | null {
  * última aberta só valem se estiverem nela — é assim que a tela respeita o
  * recorte dela (só ativas, só com conta do Omie…).
  *
- * `comFoco` (15/10/2026): as telas do BPO que seguem a empresa em foco. Com
- * foco, a tela abre nela e o seletor (`noSeletor`) só oferece a matriz e as
- * filiais; sem foco, nada muda.
+ * `comFoco` (15/10/2026): as telas que seguem a empresa em foco. Desde
+ * 05/11/2026 a escolha é só da faixa (`soFoco` em `resolverEmpresaDaTela`) para
+ * quem pode usá-la; quem é de um setor com a faixa desligada (Configurações ›
+ * Setores) segue a regra de antes — a URL, a última aberta, a única.
  */
 export async function escolherEmpresaDaTela<E extends { id: string }>(
   ctx: AuthContext,
@@ -116,21 +118,26 @@ export async function escolherEmpresaDaTela<E extends { id: string }>(
   empresas: E[],
   opcoes: { permitirTodas?: boolean; comFoco?: boolean } = {}
 ): Promise<EmpresaDaTela<E>> {
-  const foco = opcoes.comFoco ? await lerEmpresaEmFoco(ctx) : null;
-  // Com a empresa na URL, a última não decide nada — e, com a empresa em foco
-  // na lista, também não: a consulta a mais fica de fora.
-  const semUltima = !!pedida?.trim() || (foco !== null && empresas.some((e) => e.id === foco.companyId));
-  const ultima = semUltima ? null : await lerUltimaEmpresa(ctx);
-  const entrada = { pedida, disponiveis: empresas.map((e) => e.id), permitirTodas: opcoes.permitirTodas, foco };
-  const escolha = resolverEmpresaDaTela({ ...entrada, ultima });
+  const soFoco = opcoes.comFoco ? await podeUsarOFoco(ctx) : false;
+  const foco = soFoco ? await lerEmpresaEmFoco(ctx) : null;
+  // Só a faixa escolhe: a última aberta não decide nada. Fora disso, com a
+  // empresa na URL, a última também não: a consulta a mais fica de fora.
+  const ultima = soFoco || pedida?.trim() ? null : await lerUltimaEmpresa(ctx);
+  const entrada = { pedida, disponiveis: empresas.map((e) => e.id), permitirTodas: opcoes.permitirTodas, foco, soFoco };
+  let escolha = resolverEmpresaDaTela({ ...entrada, ultima });
+  if (escolha.tipo === "escolher" && escolha.pedida) {
+    const id = escolha.pedida.id;
+    const nome = nomeNaLista(empresas.find((e) => e.id === id)!) ?? undefined;
+    escolha = { ...escolha, pedida: { id, nome } };
+  }
   const empresa = escolha.tipo === "empresa" ? (empresas.find((e) => e.id === escolha.companyId) ?? null) : null;
   if (!foco) return { escolha, empresa, noSeletor: empresas, foco: null, empresasDeTodas: null };
 
   const pedidaLimpa = pedida?.trim() ?? "";
   const daUrl = pedidaForaDoFoco(entrada)
     ? pedidaLimpa === TODAS_AS_EMPRESAS
-      ? "todas as empresas"
-      : (nomeNaLista(empresas.find((e) => e.id === pedidaLimpa)!) ?? "outra empresa")
+      ? { id: null, nome: "todas as empresas" }
+      : { id: pedidaLimpa, nome: nomeNaLista(empresas.find((e) => e.id === pedidaLimpa)!) ?? "outra empresa" }
     : null;
   return {
     escolha,

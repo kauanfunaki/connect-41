@@ -7,6 +7,10 @@ import { describe, expect, it } from "vitest";
 // toda action que grava dinheiro nelas passa pela trava (`recusaDoFoco`, ou
 // `motivoForaDoFoco` com o foco lido antes da transação); e as exportações,
 // pela leitura com foco. Tela ou action nova do BPO entra nas listas abaixo.
+//
+// Desde 05/11/2026 a empresa se escolhe só na faixa "Trabalhando em" (pedido
+// do Victor): nenhuma tela tem seletor de empresa próprio, a faixa aparece
+// mesmo sem empresa, e o topo e a janela de troca não escolhem empresa.
 
 const raiz = path.resolve(__dirname, "../../..");
 const ler = (arquivo: string) => readFileSync(path.join(raiz, arquivo), "utf8");
@@ -26,6 +30,10 @@ const TELAS = [
   "src/app/(app)/dre/economica/page.tsx",
   "src/app/(app)/dre/analises/page.tsx",
   "src/app/(app)/dre/orcamento/page.tsx",
+  "src/app/(app)/aprovacoes/page.tsx",
+  "src/app/(app)/sped-contabil/page.tsx",
+  "src/app/(app)/documentos-fiscais/page.tsx",
+  "src/app/(app)/colaboradores-clientes/page.tsx",
 ];
 
 const ACOES = [
@@ -59,14 +67,30 @@ const EXPORTACOES = [
 
 describe("telas do foco", () => {
   for (const tela of TELAS) {
-    it(`${tela}: escolhe a empresa com o foco e o mostra na fileira`, () => {
+    it(`${tela}: a empresa vem da faixa, sem seletor na tela`, () => {
       const fonte = ler(tela);
       expect(fonte).toContain("comFoco: true");
       expect(fonte).toContain("foco={foco}");
-      // O seletor oferece só a base em foco.
-      expect(fonte).toContain("noSeletor");
+      expect(fonte).not.toMatch(/SeletorDeEmpresa|navegaSozinho/);
     });
   }
+
+  it("o SPED Fiscal escolhe a empresa com o foco, e a fileira recebe o foco da tela", () => {
+    expect(ler("src/lib/fiscal/sped/local/servidor.ts")).toContain("comFoco: true");
+    expect(ler("src/components/fiscal/sped/AreaLocalSped.tsx")).toContain("foco={tela.foco}");
+  });
+
+  it("a Conversa com o cliente segue o foco", () => {
+    const fonte = ler("src/app/(app)/comunicacao/page.tsx");
+    expect(fonte).toContain("lerEmpresaEmFoco(ctx)");
+    expect(fonte).not.toContain("navegaSozinho");
+  });
+
+  it("a fileira não tem mais seletor de empresa", () => {
+    const fonte = ler("src/components/empresas/FiltroDaEmpresa.tsx");
+    expect(fonte).not.toMatch(/SearchableSelect|SeletorDeEmpresa/);
+    expect(fonte).toContain("<BotaoEscolherEmpresa");
+  });
 });
 
 describe("actions que gravam nas telas do foco", () => {
@@ -93,10 +117,16 @@ describe("exportações", () => {
 });
 
 describe("casco e ficha", () => {
-  it("o layout monta a faixa e o provedor do foco", () => {
+  it("o layout monta a faixa (também sem empresa) e o provedor do foco em volta do casco", () => {
     const fonte = ler("src/app/(app)/layout.tsx");
     expect(fonte).toContain("<FaixaDoFoco");
-    expect(fonte).toContain("<ProvedorDoFoco");
+    expect(fonte).toMatch(/podeFocar \? \(\s*<FaixaDoFoco foco=\{foco \?/);
+    expect(fonte.indexOf("<ProvedorDoFoco")).toBeLessThan(fonte.indexOf("<AppShell"));
+  });
+
+  it("a janela de troca e o topo não escolhem mais a empresa", () => {
+    expect(ler("src/components/shell/TrocaDeContexto.tsx")).not.toMatch(/EscolherEmpresaDoFoco|EmpresaDoFoco/);
+    expect(ler("src/components/shell/AppShell.tsx")).not.toMatch(/foco\??\.atual/);
   });
 
   it("a ficha da empresa oferece “Trabalhar nesta empresa”", () => {

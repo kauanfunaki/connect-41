@@ -2,7 +2,6 @@ import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { Button } from "@/components/ui/Button";
-import { SeletorDeEmpresaDoFiltro } from "./SeletorDeEmpresaDoFiltro";
 
 // `AbasDeLink` e `FaixaDeTotais` moravam aqui até 07/10/2026 e foram para
 // `components/ui` (servem telas de todos os setores). Ficam reexportadas para
@@ -37,12 +36,6 @@ type Props = {
   /** Campos a mais no mesmo formulário (ex.: centro de custo), antes do botão. */
   children?: React.ReactNode;
   /**
-   * Sem mês e sem campos a mais, a empresa é a única escolha: troca e navega,
-   * sem "Aplicar" (08/10/2026, a regra do `SeletorDeEmpresaQueNavega`). Opção
-   * de cada tela, e não o padrão, porque o portal também usa este filtro.
-   */
-  navegaSozinho?: boolean;
-  /**
    * Dentro da fileira da empresa (`FiltroDaEmpresa`, 13/10/2026): o formulário
    * não monta caixa própria, e mês e "Aplicar" entram na mesma linha do
    * seletor, que navega sozinho.
@@ -69,21 +62,9 @@ export function FiltroDePeriodo({
   ano,
   extras,
   children,
-  navegaSozinho,
   naFileira,
 }: Props) {
   const periodo = anoInteiro && ano !== undefined ? ano : mes;
-  if (navegaSozinho && empresas && periodo === undefined && !children) {
-    return (
-      <SeletorDeEmpresaDoFiltro
-        acao={acao}
-        empresas={empresas}
-        empresaId={empresaId ?? null}
-        permitirTodas={permitirTodas}
-        extras={extras}
-      />
-    );
-  }
   return (
     <form method="get" action={acao} className={naFileira ? "contents" : "flex flex-wrap items-center gap-2 mb-4"}>
       {Object.entries(extras ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}

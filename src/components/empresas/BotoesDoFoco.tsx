@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Crosshair, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
@@ -19,7 +20,7 @@ export function TrabalharNestaEmpresa({ companyId, emFoco }: { companyId: string
   function entrar() {
     iniciar(async () => {
       const r = await trabalharNaEmpresa(companyId);
-      if (r.ok) toast.success(`Pronto: as telas do BPO agora mostram e gravam só ${r.descricao}.`);
+      if (r.ok) toast.success(`Pronto: as telas por empresa agora mostram e gravam só ${r.descricao}.`);
       else toast.error(r.erro);
     });
   }
@@ -27,7 +28,7 @@ export function TrabalharNestaEmpresa({ companyId, emFoco }: { companyId: string
   function sair() {
     iniciar(async () => {
       await pararDeTrabalharNaEmpresa();
-      toast.success("As telas do BPO voltaram a mostrar todas as empresas.");
+      toast.success("As telas por empresa voltaram a mostrar todas as empresas.");
     });
   }
 
@@ -40,7 +41,7 @@ export function TrabalharNestaEmpresa({ companyId, emFoco }: { companyId: string
           size="sm"
           onClick={sair}
           disabled={pendente}
-          data-dica="Parar de trabalhar nesta empresa: as telas do BPO voltam a mostrar todas"
+          data-dica="Parar de trabalhar nesta empresa: as telas por empresa voltam a mostrar todas"
         >
           <LogOut size={14} aria-hidden />
           Sair
@@ -55,7 +56,7 @@ export function TrabalharNestaEmpresa({ companyId, emFoco }: { companyId: string
       onClick={entrar}
       loading={pendente}
       loadingLabel="Abrindo…"
-      data-dica="As telas do BPO passam a mostrar e gravar só esta empresa, com a matriz e as filiais"
+      data-dica="As telas por empresa passam a mostrar e gravar só esta empresa, com a matriz e as filiais"
     >
       <Crosshair size={14} aria-hidden />
       Trabalhar nesta empresa
@@ -64,11 +65,15 @@ export function TrabalharNestaEmpresa({ companyId, emFoco }: { companyId: string
 }
 
 /**
- * O botão do aviso de endereço fora do foco: sai do foco e fica no mesmo
- * endereço, que então abre a empresa que ele pedia.
+ * O botão do aviso de um link de outra empresa (05/11/2026): a empresa só se
+ * escolhe na faixa, então o link não troca sozinho — o botão troca. Com
+ * `companyId`, passa a trabalhar nela; sem (o link pedia "todas"), sai do foco.
+ * O endereço fica o mesmo, e a tela é desenhada de novo.
  */
-export function SairDoFocoEAbrir({ rotulo }: { rotulo: string }) {
+export function AbrirOQueOLinkPedia({ companyId, rotulo }: { companyId: string | null; rotulo: string }) {
   const [pendente, iniciar] = useTransition();
+  const router = useRouter();
+  const toast = useToast();
   return (
     <Button
       variant="secondary"
@@ -77,7 +82,14 @@ export function SairDoFocoEAbrir({ rotulo }: { rotulo: string }) {
       loadingLabel="Abrindo…"
       onClick={() =>
         iniciar(async () => {
-          await pararDeTrabalharNaEmpresa();
+          if (!companyId) {
+            await pararDeTrabalharNaEmpresa();
+            return;
+          }
+          const r = await trabalharNaEmpresa(companyId);
+          if (!r.ok) return toast.error(r.erro);
+          router.refresh();
+          toast.success(`Pronto: as telas por empresa agora mostram e gravam só ${r.descricao}.`);
         })
       }
     >

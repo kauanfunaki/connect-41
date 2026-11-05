@@ -45,14 +45,14 @@ export default async function SpedDoContabilPage({ searchParams }: { searchParam
   const areas = etapa ? etapa.secoes : secoesDoGrupo("contribuicoes");
   const titulo = contribuicoes ? "Gerar SPED Contribuições" : "De-para e lançamentos";
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id;
   const doContabil = companyId ? await empresaContabilVisivel(ctx, companyId) : null;
   const href = (mudar: Params) => CAMINHO + "?" + new URLSearchParams(Object.fromEntries(Object.entries({ empresa: companyId, mes, aba, secao, ...mudar }).filter(([, v]) => v)) as Record<string, string>);
   const daMatriz = doContabil && doContabil.baseId !== doContabil.id ? empresas.find((e) => e.id === doContabil.baseId)?.nome ?? "Matriz" : null;
   return <PageContainer>
     <PageHeader title={titulo} subtitle={contribuicoes ? "Conferência e geração pelo motor remoto." : "Das notas de entrada à planilha da Domínio: o que ficar sem de-para vira regra, e os lançamentos saem completos."} />
-    <FiltroDaEmpresa acao={CAMINHO} empresas={noSeletor} foco={foco} valor={companyId ?? null} manter={{ mes, aba, secao }}>
+    <FiltroDaEmpresa foco={foco}>
       {companyId && <FiltroDePeriodo acao={CAMINHO} mes={mes} extras={{ empresa: companyId, aba, secao }} naFileira />}
     </FiltroDaEmpresa>
     {etapa && <EtapasNumeradas aria-label="Etapas do de-para e lançamentos" atual={etapa.chave} etapas={ETAPAS_DO_CONTABIL.map((e) => ({ chave: e.chave, rotulo: e.rotulo, resumo: e.resumo, href: href({ secao: e.secoes[0][0] }) }))} />}

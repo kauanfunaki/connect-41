@@ -62,7 +62,7 @@ export default async function OrcamentoPage({
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
-  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
   const podeEditar = canActOnSector(ctx, setores);
   const coordena = canManageSector(ctx, setores);
@@ -82,7 +82,7 @@ export default async function OrcamentoPage({
           <EmptyState title="Nenhuma empresa ativa" icon={<Target />} />
         ) : (
           <>
-            <FiltroDaEmpresa acao="/dre/orcamento" empresas={noSeletor} foco={foco} valor={null} manter={{ ano: params.ano }} />
+            <FiltroDaEmpresa foco={foco} />
             <EscolhaAEmpresa escolha={escolha} porQue="O orçamento é de uma empresa por vez." />
           </>
         )}
@@ -143,7 +143,7 @@ export default async function OrcamentoPage({
       )}
       {/* A empresa navega sozinha (e vira a última aberta); o ano, com "Aplicar".
           Trocar de empresa conserva o ano; a versão é da empresa anterior. */}
-      <FiltroDaEmpresa acao="/dre/orcamento" empresas={noSeletor} foco={foco} valor={companyId} manter={{ ano: String(ano) }}>
+      <FiltroDaEmpresa foco={foco}>
         <FiltroDePeriodo acao="/dre/orcamento" extras={{ empresa: companyId }} naFileira>
           <Input compact type="number" name="ano" defaultValue={ano} min={2000} max={2100} className="w-24" aria-label="Ano" />
         </FiltroDePeriodo>

@@ -44,7 +44,7 @@ export default async function DocumentosFiscaisPage({
   const params = await searchParams;
   const prisma = getPrisma();
 
-  // Uma empresa por vez (13/10/2026): a da URL, a última aberta pela pessoa,
+  // Uma empresa por vez (13/10/2026): a da faixa "Trabalhando em" (05/11/2026),
   // ou nenhuma — e a tela pede, sem ler o acervo. Era "todas" por padrão, e o
   // acervo tem 252 mil documentos num banco de cache pequeno: a busca por
   // texto e os filtros raros varriam a tabela inteira (ver TETO_DA_CONTAGEM em
@@ -57,7 +57,7 @@ export default async function DocumentosFiscaisPage({
   )
     .map((e) => ({ id: e.id, nome: nomeExibicao(e), logoUrl: e.logoUrl, cnpj: e.cnpj, matrizId: e.parentCompanyId }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa, empresas);
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const alcance = alcanceFiscalDaEscolha(ctx.tenantId, escolha);
 
   const cabecalho = (
@@ -82,26 +82,14 @@ export default async function DocumentosFiscaisPage({
       }
     />
   );
-  // Trocar de empresa conserva tipo e destino; competência, busca e página
-  // são da empresa anterior e ficam para trás.
-  const filtroDaEmpresa = (
-    <FiltroDaEmpresa
-      acao="/documentos-fiscais"
-      empresas={empresas}
-      valor={empresa?.id ?? null}
-      manter={{ tipo: params.tipo, destino: params.destino }}
-    />
-  );
+  const filtroDaEmpresa = <FiltroDaEmpresa foco={foco} />;
 
   if (!alcance || !empresa) {
     return (
       <PageContainer>
         {cabecalho}
         {filtroDaEmpresa}
-        <EscolhaAEmpresa
-          escolha={escolha}
-          porQue="O acervo tem centenas de milhares de documentos; a tela mostra os de uma empresa por vez."
-        />
+        <EscolhaAEmpresa escolha={escolha} porQue="O acervo tem centenas de milhares de documentos; a tela mostra os de uma empresa por vez." />
       </PageContainer>
     );
   }

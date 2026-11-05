@@ -47,7 +47,7 @@ import { quebrarAcordo, desfazerAcordo } from "./actions";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
-import { empresaNaUrl, hrefDaEmpresa, type EscolhaDaEmpresa } from "@/lib/empresas/escolhaDaEmpresa";
+import { empresaNaUrl, type EscolhaDaEmpresa } from "@/lib/empresas/escolhaDaEmpresa";
 import { escopoFinanceiroDaEscolha, type EscopoDaEscolha } from "@/lib/empresas/escopoDaEscolha";
 
 export const dynamic = "force-dynamic";
@@ -102,14 +102,7 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
         subtitle="Contas a receber vencidas: quem cobrar hoje, o que foi combinado, acordos e a régua de lembretes por e-mail."
       />
       {aba !== "regua" && (
-        <FiltroDaEmpresa
-          acao="/cobranca"
-          empresas={noSeletor}
-          valor={naUrl ?? null}
-          todas="explicita"
-          manter={{ aba: aba === "fila" ? undefined : aba }}
-          foco={foco}
-        />
+        <FiltroDaEmpresa foco={foco} />
       )}
       <div className="mt-4">
         <AbasDeLink
@@ -122,11 +115,7 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
         />
       </div>
       {aba !== "regua" && !escopo && (
-        <EscolhaAEmpresa
-          escolha={escolha}
-          porQue="Para não carregar os títulos de todos os clientes de uma vez, a cobrança abre numa empresa."
-          todasHref={foco ? undefined : hrefDaEmpresa("/cobranca", "", { todas: "explicita", manter: { aba: aba === "fila" ? undefined : aba } })}
-        />
+        <EscolhaAEmpresa escolha={escolha} porQue="Para não carregar os títulos de todos os clientes de uma vez, a cobrança abre numa empresa." />
       )}
       {aba === "fila" && escopo && (
         <Fila tenantId={ctx.tenantId} userId={ctx.userId} setores={setores} escopo={escopo} escolha={escolha} params={params} podeAgir={podeAgir} />
