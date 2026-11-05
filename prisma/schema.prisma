@@ -501,6 +501,34 @@ model OpsApiKey {
   @@map("ops_api_keys")
 }
 
+/// Token pessoal de acesso (05/11/2026): a pessoa usa na IA (Claude Code,
+/// Codex, Cursor) e nas integrações dela para agir no Connect em nome dela —
+/// por ora, no Controle interno, pela API `/api/v1` e pelo servidor MCP. Fica
+/// só o hash; o token aparece uma vez, ao ser criado. Age com o papel e os
+/// setores de hoje da pessoa, nunca mais que isso.
+model PersonalApiToken {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+  name        String    @db.VarChar(120)
+  tokenHash   String    @unique @db.Char(64)
+  /// O começo e o fim do token, para a pessoa reconhecer qual é (c41_ab12…f9e0).
+  hint        String    @db.VarChar(24)
+  /// Os escopos, separados por vírgula (ex.: "controle-interno:ler,controle-interno:escrever").
+  scopes      String    @db.VarChar(500)
+  expiresAt   DateTime
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  revokedById String?
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+  @@map("personal_api_tokens")
+}
+
 model OpsEvent {
   id String @id @default(uuid())
   tenantId String
@@ -1268,6 +1296,7 @@ enum TrainingParticipantStatus {
 
 model Tenant {
   opsApiKeys OpsApiKey[]
+  personalApiTokens PersonalApiToken[]
   techInternalTools TechInternalTool[]
   techInternalItems TechInternalItem[]
   techInternalComments TechInternalComment[]
@@ -1728,6 +1757,7 @@ model Subscription {
 
 model User {
   techInternalAssignments TechInternalItem[]
+  personalApiTokens       PersonalApiToken[]
   opsWatchers                 OpsWatcher[]
   opsSites                    OpsSite[]
   opsApps                     OpsApp[]
