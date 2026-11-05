@@ -78,14 +78,14 @@ export default async function ColaboradoresClientesPage({
   const situacao = situacaoSelecionada(filtro) || undefined;
 
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const { escolha, empresa } = await escolherEmpresaDaTela(ctx, params.empresa ?? params.companyId, empresas);
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa ?? params.companyId, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
   const modo = modoDaTela(busca, escolha);
 
   const cabecalho = (
     <PageHeader
       title="Colaboradores de clientes"
-      subtitle="As pessoas que trabalham nas empresas clientes — é este cadastro que alimenta admissão, férias e rescisão no DP. A tela abre na última empresa que você abriu."
+      subtitle="As pessoas que trabalham nas empresas clientes — é este cadastro que alimenta admissão, férias e rescisão no DP. A tela mostra a empresa escolhida na faixa acima."
       action={
         canCreate ? (
           <Button href="/pessoas/nova?tipo=cliente" variant="primary">
@@ -96,10 +96,8 @@ export default async function ColaboradoresClientesPage({
       }
     />
   );
-  // Trocar de empresa conserva o filtro de cadastro; a busca fica para trás —
-  // escolher uma empresa é sair da busca em todas.
   const fileiraDaEmpresa = (
-    <FiltroDaEmpresa acao="/colaboradores-clientes" empresas={empresas} valor={companyId} manter={{ situacao }} className="mb-5">
+    <FiltroDaEmpresa className="mb-5" foco={foco}>
       {/* A chave remonta o campo ao trocar de empresa: escolher uma empresa
           sai da busca, e o campo não pode continuar mostrando o termo. Só a
           empresa — com o termo na chave, o campo remontaria a cada letra. */}
@@ -195,10 +193,7 @@ export default async function ColaboradoresClientesPage({
       empresas.length === 0 ? (
         <EmptyState icon={<Users />} title="Nenhuma empresa ativa" description="Os colaboradores aparecem aqui por empresa cliente." />
       ) : (
-        <EscolhaAEmpresa
-          escolha={escolha}
-          porQue="A lista mostra o pessoal de uma empresa por vez. Para achar alguém sem saber a empresa, use a busca em todas as empresas, ao lado do campo."
-        />
+        <EscolhaAEmpresa escolha={escolha} porQue="A lista mostra o pessoal de uma empresa por vez. Para achar alguém sem saber a empresa, use a busca em todas as empresas, ao lado do campo." />
       )
     );
   }

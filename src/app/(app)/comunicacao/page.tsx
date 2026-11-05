@@ -10,7 +10,8 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDaEmpresa } from "@/components/empresas/FiltroDaEmpresa";
+import { lerEmpresaEmFoco } from "@/lib/empresas/focoServidor";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import {
@@ -52,9 +53,14 @@ export default async function ComunicacaoPage({
   const substituida = await isModuleEnabled(ctx.tenantId, "portal_solicitacoes");
   const podeAgir = canActOnSector(ctx, setores) && !substituida;
 
-  const { empresa: companyId } = await searchParams;
-  const escopo = { tenantId: ctx.tenantId, companyIds: null };
+  const { empresa: pedida } = await searchParams;
+  // A empresa da faixa (05/11/2026): com foco, a lista é só da matriz e das
+  // filiais e a tela abre na conversa da empresa em foco — é como se começa
+  // conversa com quem ainda não tem. O `?empresa=` só abre uma conversa da lista.
+  const foco = await lerEmpresaEmFoco(ctx);
+  const escopo = { tenantId: ctx.tenantId, companyIds: foco ? [...foco.grupo] : null };
   const [empresas, conversas] = await Promise.all([empresasDoSeletor(ctx.tenantId), empresasComConversa(escopo)]);
+  const companyId = pedida && (!foco || foco.grupo.includes(pedida)) ? pedida : (foco?.companyId ?? null);
   const selecionada = companyId ? (empresas.find((e) => e.id === companyId) ?? null) : null;
   const conversa = selecionada ? await conversaDaEmpresa(escopo, selecionada.id) : null;
   const agora = new Date();
@@ -169,14 +175,14 @@ export default async function ComunicacaoPage({
         </Aviso>
       )}
 
-      <FiltroDePeriodo acao="/comunicacao" empresas={empresas} empresaId={selecionada?.id ?? null} permitirTodas navegaSozinho />
+      <FiltroDaEmpresa foco={foco ? { ...foco, pedida: null } : null} />
 
       <CaixaDeConversas
         aberta={!!(selecionada && conversa)}
         lista={
           <ColunaDaLista>
             {conversas.length === 0 ? (
-              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description={substituida ? "Nenhuma empresa tem conversa anterior." : "Escolha uma empresa acima para começar."} />
+              <EmptyState icon={<MessagesSquare />} title="Nenhuma conversa ainda" description={substituida ? "Nenhuma empresa tem conversa anterior." : "Escolha a empresa na faixa acima para começar."} />
             ) : (
               conversas.map((c) => (
                 <CartaoDeConversa

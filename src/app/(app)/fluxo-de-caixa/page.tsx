@@ -61,7 +61,7 @@ export default async function FluxoDeCaixaPage({
   // caixa de ninguém. A visão de todas é a aba "Por empresa", que soma no banco.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   // Com uma empresa em foco (21/10/2026), só a base dela — também em "Por empresa".
-  const { escolha, noSeletor, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const escopo = escopoFinanceiroDaEscolha(ctx.tenantId, escolha);
   const empresaId = escopo?.companyIds?.[0] ?? null;
 
@@ -76,7 +76,7 @@ export default async function FluxoDeCaixaPage({
       />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
       {aba === "fluxo" ? (
-        <FiltroDaEmpresa acao="/fluxo-de-caixa" empresas={noSeletor} valor={empresaId} manter={{ mes }} foco={foco}>
+        <FiltroDaEmpresa foco={foco}>
           <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ empresa: empresaId ?? undefined }} naFileira />
         </FiltroDaEmpresa>
       ) : (
@@ -95,11 +95,7 @@ export default async function FluxoDeCaixaPage({
       ) : escopo ? (
         <Fluxo escopo={escopo} mes={mes} hojeKey={hojeKey} />
       ) : (
-        <EscolhaAEmpresa
-          escolha={escolha}
-          porQue="O realizado e a projeção são de uma empresa por vez; a soma de todas, mês a mês, está na aba “Por empresa”."
-          todasHref={qs("empresas")}
-        />
+        <EscolhaAEmpresa escolha={escolha} porQue="O realizado e a projeção são de uma empresa por vez; a soma de todas, mês a mês, está na aba “Por empresa”." />
       )}
     </PageContainer>
   );

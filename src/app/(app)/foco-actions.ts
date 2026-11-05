@@ -28,7 +28,7 @@ import { gravarUltimaEmpresa } from "@/lib/empresas/ultimaEmpresa";
 
 export type ResultadoDoFoco = { ok: true; descricao: string } | { ok: false; erro: string };
 
-const SEM_ACESSO = "Trabalhar numa empresa por vez é das telas do BPO, e você não tem acesso a elas.";
+const SEM_ACESSO = "Trabalhar numa empresa por vez é das telas por empresa, e você não tem acesso a elas (ou o seu setor desligou a escolha em Configurações › Setores).";
 
 /**
  * Passa a trabalhar só nesta empresa (e na matriz e nas filiais dela).
@@ -57,7 +57,7 @@ export async function trabalharNaEmpresa(companyId: string): Promise<ResultadoDo
   return { ok: true, descricao: descricaoDoFoco(foco) };
 }
 
-/** Para de trabalhar numa empresa só: as telas do BPO voltam a mostrar todas. */
+/** Para de trabalhar numa empresa só: as telas por empresa voltam a mostrar todas. */
 export async function pararDeTrabalharNaEmpresa(): Promise<{ ok: true }> {
   (await cookies()).set(COOKIE_DO_FOCO, "", opcoesDoCookieDoFoco(0));
   return { ok: true };

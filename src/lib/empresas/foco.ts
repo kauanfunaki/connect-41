@@ -41,6 +41,19 @@ export const TELAS_DO_FOCO = [
   "/dre/economica",
   "/dre/analises",
   "/dre/orcamento",
+  // A faixa é o único lugar de escolher a empresa (05/11/2026, pedido do
+  // Victor): as outras telas que mostram uma empresa por vez entram também.
+  // As telas do motor (/sped-fiscal/motor) ficam de fora — a prévia tem o
+  // seletor de cenário dela.
+  "/sped-fiscal/classificacao",
+  "/sped-fiscal/apuracao",
+  "/sped-fiscal/fechamento",
+  "/sped-fiscal/gerar",
+  "/sped-contabil",
+  "/documentos-fiscais",
+  "/colaboradores-clientes",
+  "/aprovacoes",
+  "/comunicacao",
 ] as const;
 
 /**
@@ -77,6 +90,18 @@ export const MODULOS_DO_FOCO: ReadonlySet<string> = new Set([
   "dre_economica",
   "dre_analises",
   "dre_orcamento",
+  "bpo_aprovacoes",
+  "bpo_comunicacao",
+  // 05/11/2026: o SPED Fiscal, o do Contábil, os Documentos fiscais e os
+  // Colaboradores de clientes também seguem a faixa.
+  "fiscal_classificacao",
+  "fiscal_icms_ipi",
+  "fiscal_contribuicoes",
+  "fiscal_fechamento",
+  "fiscal_operacao",
+  "contabil_sped",
+  "fiscal_documentos",
+  "recrutamento_colaboradores_clientes",
 ]);
 
 /**

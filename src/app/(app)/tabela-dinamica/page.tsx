@@ -16,7 +16,7 @@ import { nomeExibicao } from "@/lib/companyName";
 import { formatarNumero } from "@/lib/format";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
-import { empresaNaUrl, hrefDaEmpresa, idDaEscolha } from "@/lib/empresas/escolhaDaEmpresa";
+import { empresaNaUrl, idDaEscolha } from "@/lib/empresas/escolhaDaEmpresa";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import {
   DIMENSOES,
@@ -58,13 +58,12 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
     .map((e) => ({ id: e.id, nome: nomeExibicao(e), logoUrl: e.logoUrl, cnpj: e.cnpj, matrizId: e.parentCompanyId }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   // Com uma empresa em foco (21/10/2026), só a base dela; "Todas" é a base.
-  const { escolha, noSeletor, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, {
+  const { escolha, foco, empresasDeTodas } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, {
     permitirTodas: true,
     comFoco: true,
   });
   const empresaId = idDaEscolha(escolha);
   const empresaUrl = empresaNaUrl(escolha) ?? null;
-  const manter = Object.fromEntries(paramsDaConfiguracao(config, { visao: params.visao }));
 
   const cabecalho = (
     <PageHeader
@@ -73,7 +72,7 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
     />
   );
   const filtroDaEmpresa = (
-    <FiltroDaEmpresa acao="/tabela-dinamica" empresas={noSeletor} valor={empresaUrl} todas="explicita" manter={manter} foco={foco} />
+    <FiltroDaEmpresa foco={foco} />
   );
 
   if (escolha.tipo === "escolher") {
@@ -81,11 +80,7 @@ export default async function TabelaDinamicaPage({ searchParams }: { searchParam
       <PageContainer>
         {cabecalho}
         {filtroDaEmpresa}
-        <EscolhaAEmpresa
-          escolha={escolha}
-          porQue="A tabela abre numa empresa para não somar o escritório inteiro sem querer."
-          todasHref={foco ? undefined : hrefDaEmpresa("/tabela-dinamica", "", { todas: "explicita", manter })}
-        />
+        <EscolhaAEmpresa escolha={escolha} porQue="A tabela abre numa empresa para não somar o escritório inteiro sem querer." />
       </PageContainer>
     );
   }

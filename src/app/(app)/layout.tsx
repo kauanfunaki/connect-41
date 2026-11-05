@@ -190,7 +190,7 @@ export default async function AppLayout({
       console.error("[layout] empresa em foco", err);
       return null;
     }),
-    // O seletor do topo escolhe a empresa (29/10/2026): para quem usa o foco.
+    // Quem pode usar o foco vê a faixa, mesmo sem empresa (05/11/2026).
     podeUsarOFoco(ctx).catch((err) => {
       console.error("[layout] pode usar o foco", err);
       return false;
@@ -205,13 +205,16 @@ export default async function AppLayout({
       <EstiloDaAparencia aparencia={aparencia.noConnect ? aparencia : { ...aparencia, corPrincipal: null }} />
       {/* A paleta da pessoa (30/10/2026), por cima da cor do escritório. */}
       <EstiloDaPaleta cor={me?.accentColor ?? null} />
+      {/* A faixa é o único lugar de escolher a empresa (05/11/2026): aparece
+          para quem pode usar o foco, com ou sem empresa escolhida, e o
+          provedor envolve o casco para o vazio de uma tela abrir a janela dela. */}
+      <ProvedorDoFoco companyId={foco?.companyId ?? null} disponivel={podeFocar}>
       <AppShell
         faixaDoFoco={
-          foco ? (
-            <FaixaDoFoco foco={{ companyId: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, alcance: alcanceDoFoco(foco) }} />
+          podeFocar ? (
+            <FaixaDoFoco escritorio={tenantId} foco={foco ? { companyId: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, matrizId: foco.matrizId, alcance: alcanceDoFoco(foco) } : null} />
           ) : undefined
         }
-        foco={podeFocar ? { atual: foco ? { companyId: foco.companyId, nome: foco.nome } : null } : null}
         tenantId={tenantId}
         accessibleTenants={accessibleTenants}
         sectors={visibleSectors}
@@ -242,10 +245,11 @@ export default async function AppLayout({
         <MeetingAlertOverlay />
         <AvisoDeVersaoNova />
         <DicaFlutuante />
-        <ProvedorDoFoco companyId={foco?.companyId ?? null}>{children}</ProvedorDoFoco>
+        {children}
         {modal}
         <ChatDeIA agentes={agentesDoChatDeIA} nome={me?.name ?? ""} />
       </AppShell>
+      </ProvedorDoFoco>
     </ToastProvider>
   );
 }

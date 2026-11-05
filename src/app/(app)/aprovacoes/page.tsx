@@ -21,6 +21,7 @@ import { DecisaoDaEquipe } from "@/components/aprovacoes/DecisaoDaEquipe";
 import { HistoricoDaAprovacao, SeloDaAprovacao, type EventoDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { NovaAlcada, AlternarAlcada } from "@/components/aprovacoes/FormAlcada";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { podeDecidir, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
@@ -62,7 +63,11 @@ export default async function AprovacoesPage({
   const params = await searchParams;
   const aba = params.aba === "alcadas" && gerencia ? "alcadas" : "fila";
   const empresas = await empresasDoSeletor(ctx.tenantId);
-  const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
+  // A empresa vem da faixa (05/11/2026): a do foco, ou todas sem foco. Com a
+  // base inteira (matriz e filiais), a fila fica na empresa em foco — a
+  // alçada é de cada empresa.
+  const { empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true, comFoco: true });
+  const empresaId = empresa?.id ?? foco?.companyId ?? null;
 
   const abas = [
     { chave: "fila", rotulo: "Fila", href: `/aprovacoes${empresaId ? `?empresa=${empresaId}` : ""}`, icone: <ListChecks /> },
@@ -87,16 +92,8 @@ export default async function AprovacoesPage({
       {/* Aba das Solicitações desde 21/10/2026, quando elas estão ligadas: a
           tela saiu do menu do BPO (ver TELAS_DO_BPO_NAS_SOLICITACOES). */}
       {(await isModuleEnabled(ctx.tenantId, "portal_solicitacoes")) && <AbasDoAtendimento ativa="aprovacoes" />}
-      {/* Empresa primeiro, num seletor só para as duas abas (15/10/2026): na
-          Fila ela estava dentro do Filtros e nas Alçadas era o seletor antigo,
-          sem o rótulo nem a última aberta, numa fileira embaixo das abas. */}
-      <FiltroDaEmpresa
-        acao="/aprovacoes"
-        empresas={empresas}
-        valor={empresaId}
-        todas="padrao"
-        manter={{ aba: aba === "alcadas" ? "alcadas" : undefined, situacao: aba === "fila" ? params.situacao : undefined }}
-      />
+      {/* A empresa das duas abas é a da faixa "Trabalhando em" (05/11/2026). */}
+      <FiltroDaEmpresa foco={foco} />
       <AbasDeLink abas={abas} ativa={aba} />
       {aba === "fila" ? (
         <Fila

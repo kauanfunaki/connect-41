@@ -105,7 +105,7 @@ export default async function LancamentosPage({
   // olhar o seletor gravava na empresa errada.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
-  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   const cabecalho = (action?: React.ReactNode) => (
@@ -118,13 +118,7 @@ export default async function LancamentosPage({
 
   // A empresa primeiro, na fileira de cima; o mês, na lista, ao lado dela.
   const filtroDaEmpresa = (
-    <FiltroDaEmpresa
-      acao="/lancamentos"
-      empresas={noSeletor}
-      valor={companyId}
-      foco={foco}
-      manter={{ mes: aba === "lista" ? mes : undefined, aba: aba === "lista" ? undefined : aba }}
-    >
+    <FiltroDaEmpresa foco={foco}>
       {aba === "lista" && companyId && (
         <FiltroDePeriodo acao="/lancamentos" mes={mes} extras={{ empresa: companyId }} naFileira />
       )}
@@ -140,10 +134,7 @@ export default async function LancamentosPage({
         ) : (
           <>
             {filtroDaEmpresa}
-            <EscolhaAEmpresa
-              escolha={escolha}
-              porQue="Os lançamentos são de uma empresa por vez."
-            />
+            <EscolhaAEmpresa escolha={escolha} porQue="Os lançamentos são de uma empresa por vez." />
           </>
         )}
       </PageContainer>

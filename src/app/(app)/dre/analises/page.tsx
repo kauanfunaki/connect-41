@@ -83,7 +83,7 @@ export default async function AnalisesPage({
           <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
         ) : (
           <>
-            <FiltroDaEmpresa acao="/dre/analises" empresas={noSeletor} foco={foco} valor={null} manter={{ aba, mes: params.mes }} />
+            <FiltroDaEmpresa foco={foco} />
             <EscolhaAEmpresa escolha={escolha} porQue="As análises são de uma empresa por vez." />
           </>
         )}
@@ -107,7 +107,7 @@ export default async function AnalisesPage({
         subtitle={`Sobre a DRE por competência e o caixa de ${rotuloDaCompetencia(mes)} — cálculo determinístico, sem IA externa.`}
       />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
-      <FiltroDaEmpresa acao="/dre/analises" empresas={noSeletor} foco={foco} valor={companyId} manter={{ aba, mes }}>
+      <FiltroDaEmpresa foco={foco}>
         <FiltroDePeriodo acao="/dre/analises" mes={mes} mesEmNumero extras={{ empresa: companyId, aba }} naFileira />
       </FiltroDaEmpresa>
       <AbasDeLink

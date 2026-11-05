@@ -94,8 +94,8 @@ export function SetorForm({ action, cancelHref, defaultValues, focoDisponivel = 
           label="Trabalhar numa empresa por vez"
           helper={
             focoDisponivel
-              ? "Quem é do setor escolhe uma empresa no topo (ou na ficha dela), e as telas passam a mostrar e gravar só ela, com a matriz e as filiais."
-              : "As telas deste setor ainda não seguem a empresa escolhida. Hoje, só as telas do BPO seguem."
+              ? "Quem é do setor escolhe a empresa na faixa “Trabalhando em”, acima das telas (ou na ficha dela), e as telas passam a mostrar e gravar só ela, com a matriz e as filiais. Desligada, a faixa some para o setor."
+              : "As telas deste setor não mostram uma empresa por vez: a faixa da empresa não aparece nelas."
           }
         />
       )}

@@ -195,3 +195,49 @@ describe("resolverEmpresaDaTela — com uma empresa em foco", () => {
     });
   });
 });
+
+describe("resolverEmpresaDaTela — só a faixa escolhe (05/11/2026)", () => {
+  const TELA = ["alfa", "bld", "bld-f1", "bld-f2", "padaria"];
+  const BLD = { companyId: "bld-f1", grupo: ["bld", "bld-f1", "bld-f2"] };
+  const PADARIA = { companyId: "padaria", grupo: ["padaria"] };
+
+  it("sem foco, a tela que aceita todas mostra todas — nem a URL nem a última escolhem", () => {
+    expect(resolverEmpresaDaTela({ pedida: "alfa", ultima: "padaria", disponiveis: TELA, permitirTodas: true, soFoco: true })).toEqual({ tipo: "todas" });
+  });
+
+  it("sem foco, a tela de uma empresa por vez pede a escolha na faixa, e guarda o que o link pedia", () => {
+    expect(resolverEmpresaDaTela({ pedida: "", ultima: "padaria", disponiveis: TELA, soFoco: true })).toEqual({ tipo: "escolher", motivo: "sem-foco" });
+    expect(resolverEmpresaDaTela({ pedida: "alfa", ultima: null, disponiveis: TELA, soFoco: true })).toEqual({
+      tipo: "escolher",
+      motivo: "sem-foco",
+      pedida: { id: "alfa" },
+    });
+    // Empresa que a tela não mostra não vira pedido.
+    expect(resolverEmpresaDaTela({ pedida: "de-outro-escritorio", ultima: null, disponiveis: TELA, soFoco: true })).toEqual({ tipo: "escolher", motivo: "sem-foco" });
+  });
+
+  it("com foco, abre na empresa em foco mesmo com outra na URL", () => {
+    expect(resolverEmpresaDaTela({ pedida: "alfa", ultima: null, disponiveis: TELA, foco: BLD, soFoco: true })).toEqual({
+      tipo: "empresa",
+      companyId: "bld-f1",
+      origem: "foco",
+    });
+    expect(resolverEmpresaDaTela({ pedida: "bld", ultima: null, disponiveis: TELA, foco: BLD, soFoco: true })).toMatchObject({ companyId: "bld-f1" });
+  });
+
+  it("com foco numa base com filiais, a tela que aceita todas abre na base inteira", () => {
+    expect(resolverEmpresaDaTela({ pedida: "", ultima: null, disponiveis: TELA, permitirTodas: true, foco: BLD, soFoco: true })).toEqual({ tipo: "todas" });
+    // Empresa sozinha: "todas" seria ela mesma.
+    expect(resolverEmpresaDaTela({ pedida: "", ultima: null, disponiveis: TELA, permitirTodas: true, foco: PADARIA, soFoco: true })).toMatchObject({
+      tipo: "empresa",
+      companyId: "padaria",
+    });
+  });
+
+  it("com foco fora da tela, pede outra empresa — a última aberta não decide", () => {
+    expect(resolverEmpresaDaTela({ pedida: "", ultima: "alfa", disponiveis: ["alfa"], foco: BLD, soFoco: true })).toEqual({
+      tipo: "escolher",
+      motivo: "foco-fora-da-tela",
+    });
+  });
+});
