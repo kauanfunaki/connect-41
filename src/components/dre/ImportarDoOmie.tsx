@@ -19,6 +19,9 @@ const MAXIMO_MB = 8;
  * abrindo um diálogo pequeno (13/10/2026, print do Kauan). Era um cartão no pé
  * da tela, com o texto à esquerda e uma área de arquivo de largura inteira
  * quase vazia. A ação e as validações são as mesmas (`importarExportDoOmie`).
+ *
+ * É a ação principal do topo desde 05/11/2026 (escolha 5A do Kauan): o
+ * "Exportar" e o resto foram para o "⋯".
  */
 export function ImportarDoOmie({ companyId }: { companyId: string }) {
   const [aberto, setAberto] = useState(false);
@@ -59,7 +62,7 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={abrir}>
+      <Button variant="primary" size="sm" onClick={abrir}>
         <Upload size={14} /> Importar do Omie
       </Button>
       <Modal open={aberto} onClose={() => !enviando && setAberto(false)} title="Importar do Omie">
@@ -116,9 +119,14 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
                     {estado.categoriasCriadas}{" "}
                     {estado.categoriasCriadas === 1 ? "categoria nova" : "categorias novas"} no plano de contas
                     {estado.categoriasSemGrupo > 0 &&
-                      ` — ${estado.categoriasSemGrupo} sem grupo no DRE, para classificar em "Classificar", no topo da DRE`}
+                      ` — ${estado.categoriasSemGrupo} sem grupo no DRE, para classificar pelo aviso "Classificar" da DRE`}
                   </span>
                 )}
+                {/* A importação não vai sozinha ao portal (05/11/2026, decisão D4):
+                    fica no rascunho do mês até alguém publicar. */}
+                <span className="text-fg-secondary">
+                  Fica no rascunho: o cliente vê depois de “Publicar para o cliente”, na DRE do mês.
+                </span>
                 {estado.ignoradas > 0 && (
                   <span className="text-warning-fg">
                     {estado.ignoradas} {estado.ignoradas === 1 ? "linha ignorada" : "linhas ignoradas"} — sem data ou

@@ -17,13 +17,13 @@ export const MODULOS_SPED: ReadonlySet<string> = new Set([
 export function menuSped(modulos: readonly { code: string; href: string }[], { motor = false }: { motor?: boolean } = {}) {
   const ativos = new Set(modulos.map((m) => m.code));
   const telas = [
-    { modulo: "fiscal_classificacao", label: "Classificação", href: "/fiscal/classificacao" },
-    { modulo: ativos.has("fiscal_icms_ipi") ? "fiscal_icms_ipi" : "fiscal_contribuicoes", label: "Apuração", href: ativos.has("fiscal_icms_ipi") ? "/fiscal/icms-ipi" : "/fiscal/contribuicoes" },
-    ...(motor ? [{ modulo: "fiscal_configuracoes", label: "Empresas", href: "/fiscal/configuracoes" }] : [
-      { modulo: "fiscal_configuracoes", label: "De-Para CFOP", href: "/fiscal/configuracoes?aba=depara" },
-      { modulo: "fiscal_configuracoes", label: "Regras", href: "/fiscal/configuracoes?aba=regras" },
+    { modulo: "fiscal_classificacao", label: "Classificação", href: "/sped-fiscal/motor/classificacao" },
+    { modulo: ativos.has("fiscal_icms_ipi") ? "fiscal_icms_ipi" : "fiscal_contribuicoes", label: "Apuração", href: ativos.has("fiscal_icms_ipi") ? "/sped-fiscal/motor/icms-ipi" : "/sped-fiscal/motor/contribuicoes" },
+    ...(motor ? [{ modulo: "fiscal_configuracoes", label: "Empresas", href: "/sped-fiscal/motor/configuracoes" }] : [
+      { modulo: "fiscal_configuracoes", label: "De-Para CFOP", href: "/sped-fiscal/motor/configuracoes?aba=depara" },
+      { modulo: "fiscal_configuracoes", label: "Regras", href: "/sped-fiscal/motor/configuracoes?aba=regras" },
     ]),
-    { modulo: "fiscal_icms_ipi", label: "DCIP e DIME", href: "/fiscal/icms-ipi?aba=dcip-dime" },
+    { modulo: "fiscal_icms_ipi", label: "DCIP e DIME", href: "/sped-fiscal/motor/icms-ipi?aba=dcip-dime" },
   ].filter((t) => ativos.has(t.modulo));
   const auxiliar = ["fiscal_acervo", "fiscal_conferencia"].find((code) => ativos.has(code));
   // O SPED em quatro etapas (29/10/2026): Classificação, Apuração, Fechamento e
@@ -37,9 +37,9 @@ export function menuSped(modulos: readonly { code: string; href: string }[], { m
   const laterais: { label: string; href: string; modulo: string; area: AreaDoSped }[] = etapas
     ? ETAPAS_DO_SPED.filter(e => ativos.has(e.modulo) || e.chave === "apuracao" && ativos.has("fiscal_contribuicoes")).map(e => ({ label: e.rotulo, href: `${CAMINHO_DO_SPED}/${e.chave}`, modulo: e.chave === "apuracao" && !ativos.has(e.modulo) ? "fiscal_contribuicoes" : e.modulo, area: e.rotulo }))
     : [
-      ...(ativos.has("fiscal_painel") ? [{ label: "Painel", href: "/fiscal", modulo: "fiscal_painel", area: "Painel" as const }] : []),
+      ...(ativos.has("fiscal_painel") ? [{ label: "Painel", href: "/sped-fiscal/motor", modulo: "fiscal_painel", area: "Painel" as const }] : []),
       ...(href ? [{ label: "Classificação e apuração", href, modulo: "fiscal_classificacao", area: "SPED" as const }] : []),
-      ...(ativos.has("fiscal_entregas") ? [{ label: "SPED gerados", href: "/fiscal/entregas", modulo: "fiscal_entregas", area: "SPED gerados" as const }] : []),
+      ...(ativos.has("fiscal_entregas") ? [{ label: "SPED gerados", href: "/sped-fiscal/motor/entregas", modulo: "fiscal_entregas", area: "SPED gerados" as const }] : []),
     ];
   return { telas, href, laterais };
 }
@@ -51,9 +51,11 @@ export type AreaDoSped = (typeof ETAPAS_DO_SPED)[number]["rotulo"] | "SPED" | "P
 export function areaSpedAtiva(pathname: string): AreaDoSped | undefined {
   const etapa = ETAPAS_DO_SPED.find((e) => pathname.startsWith(`${CAMINHO_DO_SPED}/${e.chave}`));
   if (etapa) return etapa.rotulo;
-  if (pathname === "/fiscal") return "Painel";
-  if (pathname === "/fiscal/entregas") return "SPED gerados";
-  if (pathname === "/fiscal/operacao") return "Executar";
-  if ([CAMINHO_DO_SPED, "/fiscal/classificacao", "/fiscal/icms-ipi", "/fiscal/contribuicoes", "/fiscal/configuracoes"].some((p) => pathname === p || pathname.startsWith(`${p}/`))) return "SPED";
-  if (pathname.startsWith("/fiscal/")) return "Outras";
+  if (pathname === "/sped-fiscal/motor") return "Painel";
+  if (pathname === "/sped-fiscal/motor/entregas") return "SPED gerados";
+  if (pathname === "/sped-fiscal/motor/operacao") return "Executar";
+  // A entrada do SPED só por igualdade: desde 05/11/2026 as telas do motor
+  // moram embaixo dela (/sped-fiscal/motor), e o prefixo as marcaria todas.
+  if (pathname === CAMINHO_DO_SPED || ["/sped-fiscal/motor/classificacao", "/sped-fiscal/motor/icms-ipi", "/sped-fiscal/motor/contribuicoes", "/sped-fiscal/motor/configuracoes"].some((p) => pathname === p || pathname.startsWith(`${p}/`))) return "SPED";
+  if (pathname.startsWith("/sped-fiscal/motor/")) return "Outras";
 }

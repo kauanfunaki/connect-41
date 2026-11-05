@@ -16,7 +16,7 @@ import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
 import { COMPETENCIAS, chaveDoCenario, precisaRevisar, type AcaoFiscal, type ContextoFiscal } from "@/lib/fiscal/previa/cenario";
 import { ultimasVersoesDoContexto } from "@/lib/fiscal/previa/fluxo";
-import { agirNoFiscalLocal } from "@/app/(app)/fiscal/local-actions";
+import { agirNoFiscalLocal } from "@/app/(app)/sped-fiscal/local-actions";
 import type { EstadoFiscalLocal } from "@/lib/fiscal/local/servidor";
 
 type Contexto = EstadoFiscalLocal & {
@@ -168,6 +168,6 @@ export function AvisosFiscais() {
   if (!resultado && revisoes === 0) return null;
   return <div className="mb-5 flex flex-col gap-3">
     {resultado && <div role={resultado.erro ? "alert" : "status"}><Aviso tom={resultado.erro ? "atencao" : "info"}>{resultado.mensagem}</Aviso></div>}
-    {revisoes > 0 && <Aviso tom="atencao"><span className="flex flex-wrap items-center justify-between gap-3"><span>{revisoes} versão(ões) de teste precisam de revisão: os dados mudaram após a geração.</span>{modulos.includes("fiscal_entregas") && <Button href="/fiscal/entregas" variant="secondary" size="sm">Revisar e gerar nova versão</Button>}</span></Aviso>}
+    {revisoes > 0 && <Aviso tom="atencao"><span className="flex flex-wrap items-center justify-between gap-3"><span>{revisoes} versão(ões) de teste precisam de revisão: os dados mudaram após a geração.</span>{modulos.includes("fiscal_entregas") && <Button href="/sped-fiscal/motor/entregas" variant="secondary" size="sm">Revisar e gerar nova versão</Button>}</span></Aviso>}
   </div>;
 }

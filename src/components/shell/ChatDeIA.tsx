@@ -639,7 +639,7 @@ export function ChatDeIA({
   // `DicaFlutuante`, por `data-dica`). O anel de foco é o de todo o Connect
   // (`:focus-visible` em globals.css): só no teclado, não no clique. A sombra
   // leve segue o contorno do desenho e existe para o anel não sumir sobre
-  // fundo azul (`.c41-ceci-flutuante`). Até a primeira abertura, um brilho
+  // fundo azul (`sombra` na Ceci, só do lado de fora do anel). Até a primeira abertura, um brilho
   // suave respira atrás dela (`.c41-chamar`).
   //
   // Mensagem nova (13/10/2026) — as boas-vindas esperando, ou a resposta que
@@ -658,7 +658,7 @@ export function ChatDeIA({
           data-dica={`${NOME_DA_ASSISTENTE} · ${agente.especialidade}`}
           className="relative flex size-12 sm:size-14 rounded-full outline-none transition-transform hover:-translate-y-0.5 motion-reduce:transition-none"
         >
-          <Ceci tamanho={56} estado={novas > 0 && estadoDaCeci === "parada" ? "deuCerto" : estadoDaCeci} className="c41-ceci-flutuante size-full" />
+          <Ceci tamanho={56} estado={novas > 0 && estadoDaCeci === "parada" ? "deuCerto" : estadoDaCeci} sombra className="size-full" />
           {novas > 0 && <Contador valor={novas} tom="alerta" pequeno className="pointer-events-none absolute -top-0.5 -right-0.5 border-2 border-surface" />}
         </button>
         <span role="status" className="sr-only">

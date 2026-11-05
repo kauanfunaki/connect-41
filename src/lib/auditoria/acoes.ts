@@ -54,8 +54,12 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tech_interno.item.update": e("editou o item do controle interno do Tech"),
   "tech_interno.item.status": e("mudou a situação do item do controle interno do Tech"),
   "tech_interno.item.comment": e("comentou no item do controle interno do Tech"),
+  "tech_interno.item.attachment": e("anexou um arquivo ao item do controle interno do Tech"),
+  "tech_interno.item.attachment_remove": x("removeu um anexo do item do controle interno do Tech"),
   "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   "ops.aviso_fechado": e("fechou o aviso de erro do robô no Ops Center"),
+  "token_pessoal.create": c("criou o token de acesso pessoal"),
+  "token_pessoal.revoke": e("revogou o token de acesso pessoal"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
@@ -81,6 +85,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "branch.create": c("criou a filial"),
   "branch.update": e("editou a filial"),
   "certificados.importar": c("importou certificados digitais"),
+  "certificados.usado_por": e("marcou onde o certificado digital é usado"),
+  "certificados.renovacao": e("editou a renovação do certificado digital"),
 
   // ── Fiscal ─────────────────────────────────────────────────────────────────
   "fiscal.document.uploaded": c("enviou o documento fiscal"),
@@ -262,6 +268,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "dre.unmap": e("desligou uma categoria da DRE da empresa"),
   // A troca do modelo do DRE (21/10/2026), com o grupo de cada categoria em `classificacao`.
   "dre.modelo": e("trocou o modelo do DRE da empresa"),
+  "dre.publicar": e("publicou para o cliente a DRE de um mês da empresa"),
   // Correção feita por script, com o "de → para" em `linhaDaDre` (14/10/2026).
   "dre.categoria.linha_corrigida": e("corrigiu a linha da DRE da categoria"),
   "dre.budget.created": c("criou o orçamento"),
@@ -442,6 +449,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "sector.menu.show": e("mostrou uma tela no menu Geral do setor"),
   "sector.menu.hide": e("escondeu uma tela do menu Geral do setor"),
   "sector.menu.reset": e("voltou ao padrão o menu Geral do setor"),
+  "sector.menu.ordem": e("organizou o menu do setor"),
+  "sector.menu.ordem_padrao": e("voltou à ordem padrão o menu do setor"),
   // Os Quadros do setor (28/10/2026): o coordenador bloqueia ou libera a criação e a edição pelos colaboradores.
   "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores nos Quadros do setor"),
   "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores nos Quadros do setor"),
@@ -563,6 +572,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   HelpdeskCategory: "categoria de chamados",
   HelpdeskSlaPolicy: "política de SLA dos chamados",
   TechInternalItem: "item do controle interno",
+  PersonalApiToken: "token de acesso",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   AvaliacaoTributaria: "avaliação tributária",
@@ -796,6 +806,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["tenant.", "configuracoes"],
   ["integration.", "configuracoes"],
   ["github.", "configuracoes"],
+  ["token_pessoal.", "configuracoes"],
   ["subscription.", "planos"],
   ["subscription_plan.", "planos"],
   ["site.", "planos"],

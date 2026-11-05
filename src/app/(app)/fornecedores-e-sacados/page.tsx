@@ -139,7 +139,7 @@ export default async function CadastrosFinanceirosPage({
   // nela sem ninguém ter escolhido.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
-  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
   // A ação da tela vai no cabeçalho, como em pendências e no resto do app
@@ -158,13 +158,7 @@ export default async function CadastrosFinanceirosPage({
   const cabecalho = comAcao();
   // Trocar de empresa conserva a aba; a busca é da empresa anterior e fica para trás.
   const filtroDaEmpresa = (
-    <FiltroDaEmpresa
-      acao="/fornecedores-e-sacados"
-      empresas={noSeletor}
-      foco={foco}
-      valor={companyId}
-      manter={{ aba: aba === "fornecedores" ? undefined : aba }}
-    />
+    <FiltroDaEmpresa foco={foco} />
   );
   if (!empresa || !companyId) {
     return (

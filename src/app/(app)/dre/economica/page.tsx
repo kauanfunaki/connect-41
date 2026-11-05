@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, CalendarDays, CalendarRange, FileText, TrendingUp } from "lucide-react";
+import { AlertTriangle, CalendarDays, CalendarRange, FileText, Percent, TrendingUp } from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
@@ -12,10 +12,18 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Accordion } from "@/components/ui/Accordion";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { AbasDaDre } from "@/components/dre/AbasDaDre";
+import { FaixaDoRascunho } from "@/components/dre/FaixaDoRascunho";
+import { diferencasDaDre } from "@/lib/dre/publicacao";
+import { fotoAtualDoMes, garantirFotoInicial, publicacoesDaEmpresa } from "@/lib/dre/publicacaoServidor";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioOrcadoRealizado } from "@/components/dre/RelatorioOrcadoRealizado";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
-import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
@@ -35,7 +43,7 @@ import { resultadoDePorGrupo, somarPorGrupo } from "@/lib/dre/analises";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { opcoesDaUrl } from "@/lib/dre/estrutura";
 import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
-import { SeletorDosImpostos, sufixoDosImpostos } from "@/components/dre/SeletorDosImpostos";
+import { sufixoDosImpostos, trocaDosImpostos } from "@/lib/dre/visaoDosImpostos";
 import { moeda, tomDoValor } from "@/lib/financeiro/formato";
 import { lerFiltroDeCentro, valorDoFiltroDeCentro, SEM_CENTRO } from "@/lib/financeiro/centroDeCusto";
 import { orcamentosAprovados, orcamentoLigado } from "@/lib/dre/orcamento/dados";
@@ -51,10 +59,12 @@ const MODULE = "dre_economica";
 // é só o padrão.
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
+// Mês, acumulado e doze meses num seletor ao lado do mês (05/11/2026): eram
+// abas, e embaixo das quatro DREs em abas viravam uma segunda fileira.
 const VISOES = [
-  { chave: "mes", rotulo: "Mês", icone: <CalendarDays /> },
-  { chave: "acumulado", rotulo: "Acumulado no ano", icone: <CalendarRange /> },
-  { chave: "12meses", rotulo: "Últimos 12 meses", icone: <TrendingUp /> },
+  { chave: "mes", rotulo: "Mês", icone: <CalendarDays size={14} aria-hidden /> },
+  { chave: "acumulado", rotulo: "Acumulado no ano", icone: <CalendarRange size={14} aria-hidden /> },
+  { chave: "12meses", rotulo: "Últimos 12 meses", icone: <TrendingUp size={14} aria-hidden /> },
 ] as const;
 
 /**
@@ -90,31 +100,27 @@ export default async function DreEconomicaPage({
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
-  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
   // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
   // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
   const modelo = companyId ? await modeloDaEmpresa(ctx.tenantId, companyId) : undefined;
   const opcoes = opcoesDaUrl(params.impostos, modelo);
 
-  const cabecalho = (
-    <PageHeader title="DRE econômica" subtitle="Demonstrativo de resultado por competência — o que pertence ao mês, pago ou não." />
+  // "DRE", com a aba Competência marcada embaixo (05/11/2026, escolha 6A do
+  // Kauan): as quatro DREs são abas de uma tela só.
+  const cabecalho = (action?: React.ReactNode) => (
+    <PageHeader title="DRE" subtitle="Competência: o mês a que a conta pertence, não o dia em que foi paga." action={action} />
   );
   if (!empresa || !companyId) {
     return (
       <PageContainer>
-        {cabecalho}
+        {cabecalho()}
         {empresas.length === 0 ? (
           <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
         ) : (
           <>
-            <FiltroDaEmpresa
-              acao="/dre/economica"
-              empresas={noSeletor}
-              foco={foco}
-              valor={null}
-              manter={{ mes: params.mes, visao: visao === "mes" ? undefined : visao }}
-            />
+            <FiltroDaEmpresa foco={foco} />
             <EscolhaAEmpresa escolha={escolha} porQue="A DRE econômica é de uma empresa por vez." />
           </>
         )}
@@ -160,10 +166,22 @@ export default async function DreEconomicaPage({
   const competenciasDaSerie =
     visao === "mes" ? [...new Set([...(orcamento ? acumuladoDoAno(mes) : competencias), mesAnterior])] : competencias;
 
-  const [serie, quadro] = await Promise.all([
+  // O rascunho do mês também aqui (05/11/2026, decisão D4): mês que só tem
+  // lançamento por competência não aparece na DRE de caixa, e sem esta faixa
+  // não haveria onde publicá-lo. Só na visão do mês e sem filtro de centro —
+  // a publicação é do mês da empresa inteira.
+  const comRascunho = visao === "mes" && filtro.tipo === "todos";
+  const [serie, quadro, rascunho] = await Promise.all([
     serieEconomica(ctx.tenantId, companyId, competenciasDaSerie, filtro, opcoes),
     centros.length > 0 ? quadroPorCentroDoPeriodo(ctx.tenantId, companyId, competencias, opcoes) : Promise.resolve(null),
+    comRascunho
+      ? garantirFotoInicial(ctx.tenantId, companyId).then(() =>
+          Promise.all([fotoAtualDoMes(ctx.tenantId, companyId, mes), publicacoesDaEmpresa(ctx.tenantId, companyId, [mes])])
+        )
+      : Promise.resolve(null),
   ]);
+  const publicada = rascunho ? (rascunho[1].get(mes) ?? null) : null;
+  const diferencas = rascunho ? diferencasDaDre(publicada?.foto ?? null, rascunho[0]) : [];
   const meses = competencias.map((c) => serie.get(c)!);
   const lancamentos = meses.reduce((n, m) => n + m.lancamentos, 0);
   const provisorios = meses.reduce((n, m) => n + m.provisorios, 0);
@@ -227,19 +245,37 @@ export default async function DreEconomicaPage({
       ? rotuloDaCompetencia(mes)
       : `${rotuloDaCompetencia(competencias[0]!)} a ${rotuloDaCompetencia(competencias.at(-1)!)}`;
 
+  // A visão dos impostos no "⋯" do cabeçalho, como na DRE de caixa (05/11/2026):
+  // era um seletor de dois segmentos na fileira dos filtros.
+  const impostos =
+    modelo?.impostos === "escolha"
+      ? trocaDosImpostos(opcoes, "/dre/economica", {
+          empresa: companyId,
+          mes,
+          visao: visao === "mes" ? undefined : visao,
+          centro: centroNaUrl || undefined,
+        })
+      : null;
+  // O vazio leva ao último mês com lançamentos (05/11/2026): dizia só "nenhum
+  // lançamento", e quem abria no mês corrente não sabia para onde ir.
+  const ultimoComMovimento = comMovimento[0] && !competencias.includes(comMovimento[0]) ? comMovimento[0] : null;
+
   return comEmpresa(
     <PageContainer>
-      {cabecalho}
-      {/* A empresa navega sozinha (e vira a última aberta); mês e centro de
-          custo seguem no formulário com "Aplicar". Trocar de empresa conserva
-          o mês e a visão — o centro é da empresa anterior e fica para trás. */}
-      <FiltroDaEmpresa
-        acao="/dre/economica"
-        empresas={noSeletor}
-        foco={foco}
-        valor={companyId}
-        manter={{ mes, visao: visao === "mes" ? undefined : visao, impostos: opcoes.impostosNoEbitda ? undefined : "fora" }}
-      >
+      {cabecalho(
+        impostos ? (
+          <MenuDeMaisAcoes rotulo="Mais ações da DRE" size="md" width={280} sempreMenu>
+            <ItemDoMenu href={impostos.href} icone={<Percent />}>
+              {impostos.rotulo}
+            </ItemDoMenu>
+          </MenuDeMaisAcoes>
+        ) : undefined
+      )}
+      <AbasDaDre ativa="competencia" companyId={companyId} mes={mes} />
+      {/* O mês e o centro de custo seguem no formulário com "Aplicar"; a
+          visão, no seletor ao lado. O centro é da empresa — trocar de empresa
+          o deixa para trás. */}
+      <FiltroDaEmpresa foco={foco}>
         <FiltroDePeriodo
           acao="/dre/economica"
           mes={mes}
@@ -260,15 +296,22 @@ export default async function DreEconomicaPage({
             </Select>
           )}
         </FiltroDePeriodo>
-        {modelo?.impostos === "escolha" && (
-          <SeletorDosImpostos
-            opcoes={opcoes}
-            base="/dre/economica"
-            params={{ empresa: companyId, mes, visao: visao === "mes" ? undefined : visao, centro: centroNaUrl || undefined }}
-          />
-        )}
+        <SegmentedControl
+          label="Período do relatório"
+          active={visao}
+          items={VISOES.map((v) => ({ key: v.chave, label: v.rotulo, icon: v.icone, href: hrefDaVisao(v.chave) }))}
+        />
       </FiltroDaEmpresa>
-      <AbasDeLink abas={VISOES.map((v) => ({ ...v, href: hrefDaVisao(v.chave) }))} ativa={visao} />
+
+      {diferencas.length > 0 && (
+        <FaixaDoRascunho
+          companyId={companyId}
+          competencia={mes}
+          rotuloDoMes={rotuloDaCompetencia(mes)}
+          diferencas={diferencas}
+          nuncaPublicado={!publicada}
+        />
+      )}
 
       {/* Revisão de 05/10: botão não é link — os atalhos desta tela eram texto azul. */}
       {nomeDoFiltro && (
@@ -287,8 +330,25 @@ export default async function DreEconomicaPage({
         // Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo.
         <Card>
           <EmptyState
-            title={`Nenhum lançamento com competência em ${periodo}${nomeDoFiltro ? ` em ${nomeDoFiltro}` : ""}`}
-            description="A DRE econômica soma os lançamentos pela competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
+            title={`Nada com competência em ${periodo}${nomeDoFiltro ? ` em ${nomeDoFiltro}` : ""}`}
+            description={
+              nomeDoFiltro
+                ? "Nenhum lançamento deste centro de custo no período."
+                : ultimoComMovimento
+                  ? `O último mês com lançamentos é ${rotuloDaCompetencia(ultimoComMovimento)}.`
+                  : "Esta empresa ainda não tem lançamentos com competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
+            }
+            action={
+              !nomeDoFiltro && ultimoComMovimento ? (
+                <Button
+                  href={`/dre/economica?empresa=${companyId}&mes=${ultimoComMovimento}${visao === "mes" ? "" : `&visao=${visao}`}${sufixoDosImpostos(opcoes)}`}
+                  variant="primary"
+                  size="sm"
+                >
+                  Ver {rotuloDaCompetencia(ultimoComMovimento)}
+                </Button>
+              ) : undefined
+            }
             icon={<FileText />}
           />
         </Card>
@@ -368,9 +428,6 @@ export default async function DreEconomicaPage({
                 da DRE (despesa negativa); verde é melhor que o orçado — receita acima ou despesa abaixo —, vermelho é pior. Sem
                 orçado na linha, a variação % fica em branco.
               </NotaDeFonte>
-              <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs" className="mt-2">
-                Abrir orçamento
-              </Button>
             </>
           ) : (
             <RelatorioDoDre resultado={resultado} />
@@ -378,18 +435,8 @@ export default async function DreEconomicaPage({
         </>
       )}
 
-      {/* Sem versão aprovada, um aviso discreto em vez de a comparação sumir sem explicação. */}
-      {querOrcado && !orcamento && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mt-3">
-          <p>Sem orçamento aprovado para {ano} — o orçado × realizado aparece aqui quando houver.</p>
-          <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="xs">
-            Abrir orçamento
-          </Button>
-        </div>
-      )}
-      {comOrcamento && filtro.tipo === "todos" && visao === "12meses" && (
-        <p className="text-helper text-fg-muted mt-3">Orçado × realizado nas visões Mês e Acumulado no ano.</p>
-      )}
+      {/* O aviso "sem orçamento aprovado" saiu daqui (05/11/2026, escolha 6A
+          do Kauan): mora na aba Orçado × realizado. Aqui, só na explicação. */}
 
       {/* O quadro na tabela padrão (15/10/2026): era uma lista com o cabeçalho
           cinza escrito à mão e os valores encostados à direita. Centro inativo
@@ -445,20 +492,76 @@ export default async function DreEconomicaPage({
         </section>
       )}
 
-      <NotaDeFonte>
-        {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}
-        {nomeDoFiltro ? ` (${nomeDoFiltro})` : ""}, cancelados e parcelas de acordo fora.
-        {" "}Regime de <strong>competência</strong>: o que foi pago ou recebido está na DRE de caixa. O import do Omie
-        não entra aqui — é export de pagamentos, sem competência. A diferença entre os dois regimes está na reconciliação.
-      </NotaDeFonte>
-      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-        <Button href={`/dre?empresa=${companyId}`} variant="ghost" size="xs">
-          Abrir DRE de caixa
-        </Button>
-        <Button href={`/dre/analises?empresa=${companyId}&mes=${mes}&aba=reconciliacao`} variant="ghost" size="xs">
-          Ver reconciliação
-        </Button>
-      </div>
+      <ComoEstaDreEMontada
+        lancamentos={lancamentos}
+        periodo={periodo}
+        nomeDoFiltro={nomeDoFiltro}
+        orcamento={
+          !comOrcamento
+            ? null
+            : filtro.tipo !== "todos"
+              ? "centro"
+              : visao === "12meses"
+                ? "doze-meses"
+                : orcamento
+                  ? "aprovado"
+                  : "sem-aprovado"
+        }
+        ano={ano}
+      />
     </PageContainer>
+  );
+}
+
+/**
+ * O rodapé da DRE econômica numa linha que recolhe (05/11/2026, escolha 6A do
+ * Kauan), fechada como todo recolhível do app: era um parágrafo técnico, o
+ * aviso do orçamento e dois botões soltos ("Abrir DRE de caixa", "Ver
+ * reconciliação"), que viraram as abas do alto.
+ */
+function ComoEstaDreEMontada({
+  lancamentos,
+  periodo,
+  nomeDoFiltro,
+  orcamento,
+  ano,
+}: {
+  lancamentos: number;
+  periodo: string;
+  nomeDoFiltro: string | null;
+  /** O que dizer do orçado × realizado; `null` sem o módulo de orçamento. */
+  orcamento: "aprovado" | "sem-aprovado" | "centro" | "doze-meses" | null;
+  ano: number;
+}) {
+  return (
+    <Accordion
+      className="mt-5 border-t border-border pt-3"
+      classeDoCabecalho="w-full text-fs-2 text-fg-secondary hover:text-fg"
+      classeDoConteudo="pt-2 pl-5"
+      titulo={
+        <span className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-medium">Como esta DRE é montada</span>
+          <span className="text-fg-muted">
+            {lancamentos} {lancamentos === 1 ? "lançamento" : "lançamentos"} com competência em {periodo}
+            {nomeDoFiltro ? ` (${nomeDoFiltro})` : ""}
+          </span>
+        </span>
+      }
+    >
+      <ul className="flex flex-col gap-1.5 text-helper text-fg-secondary list-disc pl-4 max-w-[75ch]">
+        <li>
+          Regime de <strong className="text-fg">competência</strong>: entra o que pertence ao mês, pago ou não. O que foi
+          pago ou recebido está na aba Caixa, e a diferença entre os dois regimes, na aba Análises e reconciliação.
+        </li>
+        <li>Cancelados e parcelas de acordo ficam fora: parcela de acordo é recebimento, não receita.</li>
+        <li>O import do Omie não entra aqui: é um export de pagamentos, sem competência.</li>
+        {orcamento === "aprovado" && <li>As colunas do orçado vêm da versão aprovada de {ano}, na aba Orçado × realizado.</li>}
+        {orcamento === "sem-aprovado" && (
+          <li>{ano} ainda não tem orçamento aprovado. Com uma versão aprovada na aba Orçado × realizado, esta DRE ganha as colunas do orçado.</li>
+        )}
+        {orcamento === "doze-meses" && <li>O orçado × realizado aparece nas visões Mês e Acumulado no ano.</li>}
+        {orcamento === "centro" && <li>O orçado × realizado só aparece sem filtro de centro: o orçamento é da empresa inteira.</li>}
+      </ul>
+    </Accordion>
   );
 }

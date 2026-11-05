@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { UploadCloud, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { aceitaArquivo, extensaoDe, formatarBytes, formatosDoAccept } from "@/lib/fileSize";
+import { arquivosDaColagem, nomeDoArquivoColado } from "@/lib/arquivoColado";
 
 /** Estado de um arquivo na fila, do momento em que é escolhido até o fim. */
 export type ArquivoNaFila = {
@@ -12,6 +13,11 @@ export type ArquivoNaFila = {
   progresso: number;
   estado: "pendente" | "enviando" | "concluido" | "erro";
   erro?: string;
+  /**
+   * Endereço local (`URL.createObjectURL`) de uma imagem, para a fila mostrar a
+   * miniatura no lugar do selo da extensão. Quem cria o endereço o libera.
+   */
+  miniatura?: string;
 };
 
 type Props = {
@@ -24,6 +30,12 @@ type Props = {
   onRemover: (id: string) => void;
   /** Desliga a área toda enquanto o formulário envia. */
   desabilitado?: boolean;
+  /**
+   * Aceita Ctrl+V em qualquer ponto da página (05/11/2026): o print colado
+   * entra na fila com as mesmas regras de formato e tamanho. Colagem com texto
+   * fica para o campo onde se está digitando (`arquivosDaColagem`).
+   */
+  colarNaPagina?: boolean;
 };
 
 // Cor por tipo — só o suficiente pra reconhecer o arquivo de relance, sem virar
@@ -59,13 +71,17 @@ export function FileDropzone({
   onAdicionar,
   onRemover,
   desabilitado = false,
+  colarNaPagina = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [sobre, setSobre] = useState(false);
   const [recusados, setRecusados] = useState<string[]>([]);
   const inputId = useId();
+  // Conta os prints colados nesta tela: do segundo em diante, o nome leva o
+  // número, para dois prints do mesmo minuto não saírem com o mesmo nome.
+  const colados = useRef(0);
 
-  function peneirar(lista: FileList | null) {
+  function peneirar(lista: FileList | File[] | null) {
     if (!lista) return;
     const aceitos: File[] = [];
     const problemas: string[] = [];
@@ -86,6 +102,26 @@ export function FileDropzone({
     setRecusados(problemas);
     if (aceitos.length > 0) onAdicionar(multiple ? aceitos : aceitos.slice(0, 1));
   }
+
+  const aoColar = useEffectEvent((e: ClipboardEvent) => {
+    if (desabilitado || !e.clipboardData) return;
+    const arquivos = arquivosDaColagem(Array.from(e.clipboardData.files), e.clipboardData.getData("text/plain"));
+    if (!arquivos.length) return;
+    e.preventDefault();
+    const quando = new Date();
+    peneirar(arquivos.map(f => {
+      const nome = nomeDoArquivoColado(f.name, quando, colados.current + 1);
+      if (nome === f.name) return f;
+      colados.current++;
+      return new File([f], nome, { type: f.type, lastModified: f.lastModified });
+    }));
+  });
+  useEffect(() => {
+    if (!colarNaPagina) return;
+    const ouvir = (e: ClipboardEvent) => aoColar(e);
+    document.addEventListener("paste", ouvir);
+    return () => document.removeEventListener("paste", ouvir);
+  }, [colarNaPagina]);
 
   const formatosLegiveis = formatosDoAccept(accept);
 
@@ -121,7 +157,7 @@ export function FileDropzone({
           <UploadCloud size={20} />
         </span>
         <span className="text-body font-medium text-fg">
-          Arraste {multiple ? "os arquivos" : "o arquivo"} aqui ou{" "}
+          Arraste {multiple ? "os arquivos" : "o arquivo"} aqui{colarNaPagina ? ", cole (Ctrl+V)" : ""} ou{" "}
           <span className="text-brand underline underline-offset-2">clique para escolher</span>
         </span>
         <span className="text-helper text-fg-muted">
@@ -165,13 +201,18 @@ export function FileDropzone({
                 key={a.id}
                 className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5"
               >
-                <span
-                  className="grid place-items-center w-9 h-9 shrink-0 rounded-md text-micro font-semibold text-white"
-                  style={{ background: COR_POR_EXT[ext] ?? "var(--c41-fg-muted)" }}
-                  aria-hidden="true"
-                >
-                  {ext.slice(0, 4) || "?"}
-                </span>
+                {a.miniatura ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- endereço local (blob:), o otimizador do Next não o lê
+                  <img src={a.miniatura} alt="" aria-hidden="true" className="w-14 h-10 shrink-0 rounded-md border border-border object-cover bg-surface-2" />
+                ) : (
+                  <span
+                    className="grid place-items-center w-9 h-9 shrink-0 rounded-md text-micro font-semibold text-white"
+                    style={{ background: COR_POR_EXT[ext] ?? "var(--c41-fg-muted)" }}
+                    aria-hidden="true"
+                  >
+                    {ext.slice(0, 4) || "?"}
+                  </span>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-body text-fg" title={a.file.name}>

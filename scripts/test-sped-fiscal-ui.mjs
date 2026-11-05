@@ -31,7 +31,7 @@ try {
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(u => !u.pathname.startsWith("/login") && !u.pathname.startsWith("/api"), { timeout: 60000 });
   conferir("Login real com dados fictícios", !page.url().includes("/login") && !page.url().includes("/api/"));
-  const url = aba => `/fiscal/sped/${aba}?empresa=${ids.companyId}&competencia=2026-09`;
+  const url = aba => `/sped-fiscal/${aba}?empresa=${ids.companyId}&competencia=2026-09`;
   for (const aba of ["fechamento", "apuracao", "classificacao", "gerar"]) {
     const resposta = await page.goto(url(aba), { waitUntil: "domcontentloaded" }); await page.locator('[data-testid="sped-estacao"][data-hidratado="true"]').waitFor();
     conferir(`Acesso direto a ${aba} sem motor`, resposta.status() === 200);
@@ -66,20 +66,20 @@ try {
   await page.waitForFunction(nome => [...document.querySelectorAll("tr")].some(r => r.textContent.includes(nome) && r.textContent.includes("concluido")), nomeCsv);
   conferir("Importação processada pelo navegador", true);
   await (await abrirMenuSped()).getByRole("menuitem", { name: "Apuração", exact: true }).click();
-  await page.waitForURL(u => u.pathname === "/fiscal/sped/apuracao");
+  await page.waitForURL(u => u.pathname === "/sped-fiscal/apuracao");
   await page.getByRole("combobox", { name: "Obrigação", exact: true }).waitFor();
   conferir("Troca livre preserva contexto", new URL(page.url()).searchParams.get("competencia") === "2026-09" && new URL(page.url()).searchParams.get("empresa") === ids.companyId);
   await page.getByRole("button", { name: /^Empresa:/ }).click();
   await page.getByRole("option", { name: /Filial/ }).click();
   await page.waitForURL(u => u.searchParams.get("empresa") === ids.filialId);
-  conferir("Filtro do BPO troca empresa mantendo a aba e o mês", new URL(page.url()).pathname === "/fiscal/sped/apuracao" && new URL(page.url()).searchParams.get("competencia") === "2026-09");
+  conferir("Filtro do BPO troca empresa mantendo a aba e o mês", new URL(page.url()).pathname === "/sped-fiscal/apuracao" && new URL(page.url()).searchParams.get("competencia") === "2026-09");
   await page.goBack();
   await page.waitForURL(u => u.searchParams.get("empresa") === ids.companyId);
   await page.goForward();
   await page.waitForURL(u => u.searchParams.get("empresa") === ids.filialId);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="sped-estacao"][data-hidratado="true"]').waitFor();
-  conferir("Contexto preservado em voltar, avançar e atualizar", new URL(page.url()).pathname === "/fiscal/sped/apuracao" && new URL(page.url()).searchParams.get("empresa") === ids.filialId && new URL(page.url()).searchParams.get("competencia") === "2026-09");
+  conferir("Contexto preservado em voltar, avançar e atualizar", new URL(page.url()).pathname === "/sped-fiscal/apuracao" && new URL(page.url()).searchParams.get("empresa") === ids.filialId && new URL(page.url()).searchParams.get("competencia") === "2026-09");
   await page.goto(url("apuracao"), { waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="sped-estacao"][data-hidratado="true"]').waitFor();
   const aguardarXlsx = page.waitForEvent("download");
@@ -106,7 +106,7 @@ try {
     await page.screenshot({ path: `.local/sped-fiscal/capturas/fechamento-${nome}.png`, fullPage: true, animations: "disabled", caret: "initial" });
     await menu.getByRole("menuitem", { name: "Gerar SPED", exact: true }).focus();
     await page.keyboard.press("Enter");
-    await page.waitForURL(u => u.pathname === "/fiscal/sped/gerar");
+    await page.waitForURL(u => u.pathname === "/sped-fiscal/gerar");
 
   }
   conferir("Sem exceções no navegador", falhas.length === 0);

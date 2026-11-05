@@ -84,6 +84,8 @@ const EMPRESA: Ligacao[] = [
   { modelo: "Budget", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "DreImport", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["importação da DRE", "importações da DRE"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },
+  { modelo: "DrePublicacao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mês da DRE publicado no portal", "meses da DRE publicados no portal"], historico: true },
+  { modelo: "DrePublicacaoEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["marca da foto inicial da DRE", "marcas da foto inicial da DRE"], historico: true },
   { modelo: "OmieEmissao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["nota emitida pelo Omie", "notas emitidas pelo Omie"], historico: true },
   { modelo: "ClientRequest", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["pendência do cliente", "pendências do cliente"], historico: true },
   { modelo: "CompanyMessage", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mensagem com o cliente", "mensagens com o cliente"], historico: true },
@@ -315,6 +317,7 @@ const USUARIO: Ligacao[] = [
   // Da própria conta — o banco apaga junto.
   { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Ceci", "conversas com a Ceci"] },
   { modelo: "Notification", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["notificação", "notificações"] },
+  { modelo: "PersonalApiToken", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["token de acesso", "tokens de acesso"] },
   { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de atividade dos Quadros (a atividade fica, sem ele)", "atribuições de atividade dos Quadros (as atividades ficam, sem ele)"] },
   { modelo: "VagaRecrutador", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PipelineItemWatcher", campo: "user", fk: "userId", tratamento: "cascata" },
@@ -335,6 +338,7 @@ const USUARIO: Ligacao[] = [
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  { modelo: "DrePublicacao", coluna: "publicadoPorId", tratamento: "manter", motivo: "a publicação guarda o nome de quem publicou (publicadoPorNome), como a auditoria" },
   { modelo: "GithubConnection", coluna: "githubUserId", tratamento: "manter", motivo: "identidade externa do GitHub, sem vínculo com User do Connect" },
   { modelo: "GithubAccountLease", coluna: "githubUserId", tratamento: "manter", motivo: "coordenação por identidade externa do GitHub, não por usuário do Connect" },
   { modelo: "GithubConnection", coluna: "connectedBy", tratamento: "desligar" },
@@ -342,6 +346,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "UserTaskView", coluna: "userId", tratamento: "apagar" },
   { modelo: "RobotTask", coluna: "requestedById", tratamento: "desligar" },
   { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
+  { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
@@ -349,6 +354,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "PersonalApiToken", coluna: "revokedById", tratamento: "manter", motivo: "quem revogou o token de outra pessoa (o administrador); a tela não expõe o id" },
+  { modelo: "TechInternalAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },
@@ -395,10 +402,12 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Vaga", coluna: "responsibleUserId", tratamento: "desligar" },
   { modelo: "PipelineItem", coluna: "activeTimerUserId", tratamento: "desligar" },
   { modelo: "Process", coluna: "activeTimerUserId", tratamento: "desligar" },
+  { modelo: "DigitalCertificate", coluna: "renovacaoResponsavelId", tratamento: "desligar" },
   // Trilhas que guardam o id de quem fez e não mostram o nome.
   { modelo: "Notification", coluna: "actorUserId", tratamento: "manter", motivo: "a notificação já foi entregue; o texto leva o nome" },
   { modelo: "AgentRun", coluna: "userId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "SerproCall", coluna: "userId", tratamento: "manter", motivo: "trilha de consultas ao Serpro (cobradas por chamada)" },
+  { modelo: "DigitalCertificateUse", coluna: "declaradoPorId", tratamento: "manter", motivo: "quem marcou o uso do certificado; a tela não expõe o id" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },

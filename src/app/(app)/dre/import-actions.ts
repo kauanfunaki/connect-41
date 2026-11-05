@@ -11,6 +11,7 @@ import { categoriasParaCriar } from "@/lib/dre/categoriasDoImport";
 import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
+import { garantirFotoInicial } from "@/lib/dre/publicacaoServidor";
 
 export type ResultadoDaImportacao =
   | { error: string }
@@ -70,6 +71,10 @@ export async function importarExportDoOmie(form: FormData): Promise<ResultadoDaI
   // Uma empresa por vez no BPO (21/10/2026): com foco, só grava nele.
   const foraDoFoco = await recusaDoFoco(ctx, [empresa.id]);
   if (foraDoFoco) return { error: foraDoFoco };
+  // A foto do que o cliente já via antes da primeira importação depois do
+  // deploy da publicação (05/11/2026): o que este arquivo trouxer fica no
+  // rascunho até alguém publicar o mês.
+  await garantirFotoInicial(tenantId, empresa.id);
 
   let leitura;
   try {

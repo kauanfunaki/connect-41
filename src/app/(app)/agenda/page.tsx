@@ -133,7 +133,7 @@ export default async function AgendaPage({
 
   return (
     // A Agenda é uma tela de relance: o calendário se ajusta à altura que sobra
-    // em vez de a página rolar. Mesmo arranjo de /kanban/[id] e /bpo-manual.
+    // em vez de a página rolar. Mesmo arranjo de /kanban/[id] e /manuais.
     //
     // O cabeçalho é desenhado pelo AgendaCalendar (08/10/2026, escolha 5A): o
     // "Nova reunião" mora nas ações do cabeçalho, como o botão de criar das

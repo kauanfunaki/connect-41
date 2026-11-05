@@ -1065,7 +1065,8 @@ input[type="search"]::-webkit-search-decoration {
    página: no fundo da página e nas superfícies o anel passa (claro 6,0–2,9:1
    no canvas, nó 4,9:1; escuro 4,8–9,0:1), mas sobre azul ele some — botão
    primário (brand-solid) 1,2–1,7:1 no claro e 1,4–2,7:1 no escuro, nó 1,0:1
-   e 2,2:1. Daí a sombra leve de --c41-ceci-sombra, em .c41-ceci-flutuante. */
+   e 2,2:1. Daí a sombra leve do botão do canto (Ceci com `sombra`), nas cores
+   --c41-ceci-sombra-perto e -longe, só do lado de fora do anel (05/11/2026). */
 :root {
   --c41-ceci-anel-de:  #1B4FD8;
   --c41-ceci-anel-ate: #4D8DFF;
@@ -1073,7 +1074,8 @@ input[type="search"]::-webkit-search-decoration {
   --c41-ceci-rosto-de: #1A56DE;
   --c41-ceci-rosto-ate:#3F7FF8;
   --c41-ceci-bochecha: #9DBEFF;
-  --c41-ceci-sombra:   drop-shadow(0 1px 1.5px rgba(15,26,51,.28)) drop-shadow(0 3px 8px rgba(15,26,51,.16));
+  --c41-ceci-sombra-perto: rgba(15,26,51,.28);
+  --c41-ceci-sombra-longe: rgba(15,26,51,.16);
 }
 :root[data-theme="dark"] {
   --c41-ceci-anel-de:  #3D7BFF;
@@ -1081,7 +1083,8 @@ input[type="search"]::-webkit-search-decoration {
   --c41-ceci-no:       #6FA3FF;
   --c41-ceci-rosto-de: #3069F0;
   --c41-ceci-rosto-ate:#4A86FA;
-  --c41-ceci-sombra:   drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.4));
+  --c41-ceci-sombra-perto: rgba(0,0,0,.55);
+  --c41-ceci-sombra-longe: rgba(0,0,0,.4);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
@@ -1090,13 +1093,10 @@ input[type="search"]::-webkit-search-decoration {
     --c41-ceci-no:       #6FA3FF;
     --c41-ceci-rosto-de: #3069F0;
     --c41-ceci-rosto-ate:#4A86FA;
-    --c41-ceci-sombra:   drop-shadow(0 1px 1.5px rgba(0,0,0,.55)) drop-shadow(0 3px 8px rgba(0,0,0,.4));
+    --c41-ceci-sombra-perto: rgba(0,0,0,.55);
+    --c41-ceci-sombra-longe: rgba(0,0,0,.4);
   }
 }
-/* A sombra do botão do canto: `drop-shadow`, que segue o contorno do desenho
-   (o anel aberto e o nó), e não `box-shadow`, que desenharia um círculo em
-   volta — o pedido é sem borda. */
-.c41-ceci-flutuante { filter: var(--c41-ceci-sombra); }
 /* Pensando: o anel e o nó giram em volta do rosto — o carregando é o próprio
    logo. Devagar, para não chamar mais atenção que a resposta. A origem é o
    centro do anel, em unidades do viewBox (0 0 120 120). */

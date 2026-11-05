@@ -29,6 +29,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { lerAno, versaoAprovada, versaoPadrao } from "@/lib/dre/orcamento/versoes";
 import { MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { AbasDaDre } from "@/components/dre/AbasDaDre";
 
 export const dynamic = "force-dynamic";
 
@@ -62,15 +63,17 @@ export default async function OrcamentoPage({
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
-  const { escolha, empresa, noSeletor, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
+  const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
   const podeEditar = canActOnSector(ctx, setores);
   const coordena = canManageSector(ctx, setores);
 
   const cabecalho = (action?: React.ReactNode) => (
+    // "DRE", com a aba Orçado × realizado marcada embaixo (05/11/2026, escolha
+    // 6A do Kauan): as quatro DREs são abas de uma tela só.
     <PageHeader
-      title="Orçamento"
-      subtitle="Orçado por grupo da DRE, mês a mês — a versão aprovada é comparada com o realizado na DRE econômica."
+      title="DRE"
+      subtitle="Orçado por grupo da DRE, mês a mês — a versão aprovada é comparada com o realizado na aba Competência."
       action={action}
     />
   );
@@ -82,7 +85,7 @@ export default async function OrcamentoPage({
           <EmptyState title="Nenhuma empresa ativa" icon={<Target />} />
         ) : (
           <>
-            <FiltroDaEmpresa acao="/dre/orcamento" empresas={noSeletor} foco={foco} valor={null} manter={{ ano: params.ano }} />
+            <FiltroDaEmpresa foco={foco} />
             <EscolhaAEmpresa escolha={escolha} porQue="O orçamento é de uma empresa por vez." />
           </>
         )}
@@ -141,9 +144,10 @@ export default async function OrcamentoPage({
           />
         ) : undefined
       )}
+      <AbasDaDre ativa="orcamento" companyId={companyId} />
       {/* A empresa navega sozinha (e vira a última aberta); o ano, com "Aplicar".
           Trocar de empresa conserva o ano; a versão é da empresa anterior. */}
-      <FiltroDaEmpresa acao="/dre/orcamento" empresas={noSeletor} foco={foco} valor={companyId} manter={{ ano: String(ano) }}>
+      <FiltroDaEmpresa foco={foco}>
         <FiltroDePeriodo acao="/dre/orcamento" extras={{ empresa: companyId }} naFileira>
           <Input compact type="number" name="ano" defaultValue={ano} min={2000} max={2100} className="w-24" aria-label="Ano" />
         </FiltroDePeriodo>
@@ -173,8 +177,8 @@ export default async function OrcamentoPage({
             // O vazio aponta o botão do cabeçalho, e não o repete (P19, 15/10/2026).
             description={
               podeEditar
-                ? "Use “+ Nova versão”, no alto da tela, para criar uma vazia, copiar outra versão com reajuste ou partir do realizado de um ano anterior."
-                : "Ninguém criou uma versão para este ano ainda."
+                ? "Use “+ Nova versão”, no alto da tela, para criar uma vazia, copiar outra versão com reajuste ou partir do realizado de um ano anterior. Aprovada, ela aparece como orçado × realizado na aba Competência."
+                : "Ninguém criou uma versão para este ano ainda. Com uma versão aprovada, a aba Competência compara o orçado com o realizado."
             }
             icon={<Target />}
           />
@@ -199,7 +203,9 @@ export default async function OrcamentoPage({
               </p>
               {selecionada.status === "RASCUNHO" && (
                 <p className="text-fs-2 text-fg-muted mt-0.5">
-                  {aprovada ? `A aprovada de ${ano} é "${aprovada.name}".` : `${ano} ainda não tem versão aprovada — a DRE não mostra orçado.`}
+                  {aprovada
+                    ? `A aprovada de ${ano} é "${aprovada.name}".`
+                    : `${ano} ainda não tem versão aprovada — a aba Competência não mostra orçado até uma ser aprovada.`}
                 </p>
               )}
             </div>

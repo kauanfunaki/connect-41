@@ -12,7 +12,7 @@ export type EtapaNumerada = {
 /**
  * As etapas de um trabalho em ordem, como links numerados (03/11/2026, para
  * o de-para e lançamentos do Contábil; o desenho é o das etapas do SPED
- * ICMS/IPI em `fiscal/sped/CascoDoSped`). As anteriores à atual aparecem como
+ * ICMS/IPI no SPED Fiscal). As anteriores à atual aparecem como
  * percorridas: o ✓ só diz a ordem do trabalho, não que a etapa foi aceita.
  */
 export function EtapasNumeradas({ etapas, atual, "aria-label": rotulo }: { etapas: EtapaNumerada[]; atual: string; "aria-label": string }) {

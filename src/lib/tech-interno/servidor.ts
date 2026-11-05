@@ -1,6 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, type AuthContext } from "@/lib/auth/context";
+import type { AuthContext } from "@/lib/auth/context";
 import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
 import { intervaloMes } from "./agenda";
@@ -10,36 +10,52 @@ import {
   vinculoDoSistema, chaveDoSistema, nomeDoSistema, type DadosItem, type Filtros, type SistemaTech,
 } from "./regras";
 
-export class ErroTechInterno extends Error {}
+/** O tipo do erro, para a API responder com o código e o status certos; as telas usam só a mensagem. */
+export type CodigoTech = "forbidden" | "not_found" | "conflict" | "validation_error" | "internal_error";
+export class ErroTechInterno extends Error {
+  constructor(message: string, public code: CodigoTech = "validation_error") { super(message); }
+}
 type Tx = Prisma.TransactionClient;
-export type ResultadoTech = { ok: true; id: string } | { error: string };
+export type FalhaTech = { error: string; code: CodigoTech };
+export type ResultadoTech = { ok: true; id: string } | FalhaTech;
+/**
+ * Quem age (05/11/2026): a pessoa da sessão, nas telas, ou a pessoa dona do
+ * token pessoal, na API e no MCP — a mesma regra para os dois. `via` marca na
+ * Auditoria que a ação veio pelo token; o histórico do item fica com o nome da
+ * pessoa, como se ela tivesse feito pela tela.
+ */
+export type AtorTech = AuthContext & { via?: { tokenId: string; tokenName: string } };
+const conflito = (): FalhaTech => ({ error: CONFLITO, code: "conflict" });
 const doOps = { select: { name: true, isActive: true } } as const;
 const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } }, originItem: { select: { title: true } } } as const;
 type ItemCompleto = Prisma.TechInternalItemGetPayload<{ include: typeof incluir }>;
 
 async function conferirAcesso(ctx: AuthContext, nivel: NivelNoModulo) {
   if (!ctx.userId || !ctx.tenantId || !await podeNoModulo(ctx, MODULO_TECH_INTERNO, nivel)) {
-    throw new ErroTechInterno("Controle interno indisponível para este acesso.");
+    throw new ErroTechInterno("Controle interno indisponível para este acesso.", "forbidden");
   }
 }
 async function autor(tx: Tx, ctx: AuthContext) {
   const pessoa = await tx.user.findFirst({ where: { id: ctx.userId, tenantId: ctx.tenantId, active: true }, select: { name: true } });
-  if (!pessoa) throw new ErroTechInterno("Sessão indisponível. Entre novamente.");
+  if (!pessoa) throw new ErroTechInterno("Sessão indisponível. Entre novamente.", "forbidden");
   return { authorId: ctx.userId, authorName: pessoa.name };
 }
-function erroDaOperacao(e: unknown): { error: string } {
-  if (e instanceof ErroTechInterno) return { error: e.message };
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034") return { error: CONFLITO };
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "Já existe um sistema com esse nome." };
+function erroDaOperacao(e: unknown): FalhaTech {
+  if (e instanceof ErroTechInterno) return { error: e.message, code: e.code };
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034") return conflito();
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: "Já existe um sistema com esse nome.", code: "conflict" };
   // Não inclui dados livres, parâmetros ou credenciais no diagnóstico.
   console.error("[tech-interno] Falha na operação", e instanceof Prisma.PrismaClientKnownRequestError ? e.code : "indisponivel");
-  return { error: "Não foi possível confirmar a operação. Atualize a página para conferir o que foi salvo antes de tentar novamente." };
+  return { error: "Não foi possível confirmar a operação. Atualize a página para conferir o que foi salvo antes de tentar novamente.", code: "internal_error" };
 }
 
 // A trilha de Auditoria do Connect recebe cada ação, além do histórico do item
 // (26/10/2026). Fora da transação: o registro é best-effort e não desfaz a ação.
-function registrar(ctx: AuthContext, action: string, id: string, metadata: Record<string, string | number | null>) {
-  return logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action, entityType: "TechInternalItem", entityId: id, metadata });
+export function metadadosDoAtor(ctx: AtorTech): Record<string, string> {
+  return ctx.via ? { via: "token pessoal", token: ctx.via.tokenName } : {};
+}
+function registrar(ctx: AtorTech, action: string, id: string, metadata: Record<string, string | number | null>) {
+  return logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action, entityType: "TechInternalItem", entityId: id, metadata: { ...metadata, ...metadadosDoAtor(ctx) } });
 }
 
 export async function opcoesTech(ctx: AuthContext) {
@@ -98,17 +114,19 @@ export async function listarItens(ctx: AuthContext, filtros: Filtros) {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
-export async function mudarSituacaoItem(id: string, raw: unknown, versao: unknown): Promise<ResultadoTech> {
+export async function mudarSituacaoItem(ctx: AtorTech, id: string, raw: unknown, versao: unknown): Promise<ResultadoTech> {
   try {
-    const ctx = await getAuthContext(); await conferirAcesso(ctx, "agir");
+    await conferirAcesso(ctx, "agir");
     const parsed = itemSchema.shape.status.safeParse(raw), version = versaoSchema.safeParse(versao);
-    if (!parsed.success || !version.success || versao === null || versao === undefined || versao === "") return { error: CONFLITO };
+    if (!parsed.success) return { error: "Situação inválida.", code: "validation_error" };
+    if (!version.success || versao === null || versao === undefined || versao === "") return conflito();
     const result = await getPrisma().$transaction(async tx => {
       const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId } });
-      if (!item || item.version !== version.data) throw new ErroTechInterno(CONFLITO);
+      if (!item) throw new ErroTechInterno("Item não encontrado.", "not_found");
+      if (item.version !== version.data) throw new ErroTechInterno(CONFLITO, "conflict");
       if (item.status === parsed.data) return null;
       const atualizado = await tx.techInternalItem.updateMany({ where: { id, tenantId: ctx.tenantId, version: version.data }, data: { status: parsed.data, version: { increment: 1 } } });
-      if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO);
+      if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO, "conflict");
       await tx.techInternalChange.create({ data: { tenantId: ctx.tenantId, itemId: id, version: version.data + 1, changes: [{ field: "Situação", before: SITUACOES[item.status], after: SITUACOES[parsed.data] }], ...await autor(tx, ctx) } });
       return { title: item.title, antes: SITUACOES[item.status], depois: SITUACOES[parsed.data] };
     });
@@ -119,7 +137,7 @@ export async function mudarSituacaoItem(id: string, raw: unknown, versao: unknow
 export async function detalheItem(ctx: AuthContext, id: string) {
   await conferirAcesso(ctx, "ver");
   return getPrisma().techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: {
-    ...incluir, comments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }, changes: { orderBy: { version: "desc" } },
+    ...incluir, comments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }, changes: { orderBy: { version: "desc" } }, attachments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
   } });
 }
 
@@ -151,23 +169,23 @@ async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, ante
   }
 }
 
-export async function salvarItem(raw: unknown, id?: string, versao?: unknown): Promise<ResultadoTech> {
+export async function salvarItem(ctx: AtorTech, raw: unknown, id?: string, versao?: unknown): Promise<ResultadoTech> {
   try {
-    const ctx = await getAuthContext(); await conferirAcesso(ctx, "agir");
+    await conferirAcesso(ctx, "agir");
     const parsed = itemSchema.safeParse(raw);
-    if (!parsed.success) return { error: parsed.error.issues[0].message };
+    if (!parsed.success) return { error: parsed.error.issues[0].message, code: "validation_error" };
     const version = id ? versaoSchema.safeParse(versao) : null;
-    if (id && (!version?.success || versao === null || versao === undefined || versao === "")) return { error: CONFLITO };
+    if (id && (!version?.success || versao === null || versao === undefined || versao === "")) return conflito();
     const dados = parsed.data, { systemKey, ...campos } = dados;
     const result = await getPrisma().$transaction(async tx => {
       const anterior = id ? await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: incluir }) : null;
-      if (id && !anterior) throw new ErroTechInterno("Item não encontrado.");
-      if (anterior && anterior.version !== (version?.success ? version.data : -1)) throw new ErroTechInterno(CONFLITO);
+      if (id && !anterior) throw new ErroTechInterno("Item não encontrado.", "not_found");
+      if (anterior && anterior.version !== (version?.success ? version.data : -1)) throw new ErroTechInterno(CONFLITO, "conflict");
       await conferirVinculos(tx, ctx, dados, anterior);
       // O tamanho (04/11/2026): só quem coordena a Tech define, e trava quando
       // o item sai de Pendente.
       if (dados.size !== (anterior?.size ?? null)) {
-        if (!(await podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir"))) throw new ErroTechInterno("Só quem coordena a Tech define o tamanho do item.");
+        if (!(await podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir"))) throw new ErroTechInterno("Só quem coordena a Tech define o tamanho do item.", "forbidden");
         if (anterior && anterior.status !== "PENDING") throw new ErroTechInterno("O tamanho trava quando o item começa: ele já saiu de Pendente.");
       }
       // "Veio de": uma entrega concluída deste escritório, que não é o próprio item.
@@ -180,7 +198,7 @@ export async function salvarItem(raw: unknown, id?: string, versao?: unknown): P
       let item: ItemCompleto;
       if (anterior) {
         const atualizado = await tx.techInternalItem.updateMany({ where: { id: anterior.id, tenantId: ctx.tenantId, version: anterior.version }, data: { ...data, version: { increment: 1 } } });
-        if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO);
+        if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO, "conflict");
         item = await tx.techInternalItem.findUniqueOrThrow({ where: { id: anterior.id }, include: incluir });
       } else {
         item = await tx.techInternalItem.create({ data: { ...data, tenantId: ctx.tenantId }, include: incluir });
@@ -204,17 +222,17 @@ export async function salvarItem(raw: unknown, id?: string, versao?: unknown): P
   } catch (e) { return erroDaOperacao(e); }
 }
 
-export async function comentarItem(id: string, body: unknown): Promise<ResultadoTech> {
+export async function comentarItem(ctx: AtorTech, id: string, body: unknown): Promise<{ ok: true; id: string; commentId: string } | FalhaTech> {
   try {
-    const ctx = await getAuthContext(); await conferirAcesso(ctx, "agir");
+    await conferirAcesso(ctx, "agir");
     const parsed = comentarioSchema.safeParse(body);
-    if (!parsed.success) return { error: parsed.error.issues[0].message };
+    if (!parsed.success) return { error: parsed.error.issues[0].message, code: "validation_error" };
     return await getPrisma().$transaction(async tx => {
       const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { title: true } });
-      if (!item) throw new ErroTechInterno("Item não encontrado.");
-      await tx.techInternalComment.create({ data: { tenantId: ctx.tenantId, itemId: id, body: parsed.data, ...await autor(tx, ctx) } });
-      return item;
-    }).then(async item => { await registrar(ctx, "tech_interno.item.comment", id, { title: item.title }); return { ok: true as const, id }; });
+      if (!item) throw new ErroTechInterno("Item não encontrado.", "not_found");
+      const comentario = await tx.techInternalComment.create({ data: { tenantId: ctx.tenantId, itemId: id, body: parsed.data, ...await autor(tx, ctx) }, select: { id: true } });
+      return { title: item.title, commentId: comentario.id };
+    }).then(async r => { await registrar(ctx, "tech_interno.item.comment", id, { title: r.title }); return { ok: true as const, id, commentId: r.commentId }; });
   } catch (e) { return erroDaOperacao(e); }
 }
 

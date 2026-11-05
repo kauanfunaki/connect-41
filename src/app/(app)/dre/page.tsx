@@ -1,30 +1,32 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Eye, FileText, CalendarDays, CalendarRange, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, Eye, FilePen, FileText, CalendarDays, CalendarRange, Users } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/context";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Button } from "@/components/ui/Button";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EscolhaAEmpresa, FiltroDaEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
-import { escolherEmpresaDaTela, type FocoNaTela } from "@/lib/empresas/ultimaEmpresa";
+import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
-import { formatarCompetencia, formatarCompetenciaNumerica, formatarReaisDeCentavos as moeda } from "@/lib/format";
-import { AvisoDeSemGrupo, BotaoDeClassificar, PainelDeClassificacao } from "@/components/dre/PainelDeClassificacao";
+import { formatarCompetencia, formatarCompetenciaNumerica, formatarReaisDeCentavos as moeda, formatInstantDate } from "@/lib/format";
+import { AvisoDeSemGrupo, PainelDeClassificacao } from "@/components/dre/PainelDeClassificacao";
 import { dreDoMes, dreDoAnoDaEmpresa, mesesComMovimento } from "@/lib/dre/data";
 import { dreDoAno } from "@/lib/dre/anual";
 import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { ImportarDoOmie } from "@/components/dre/ImportarDoOmie";
 import { impostoForaDoResultado } from "@/lib/dre/calculo";
 import { TRANSFERENCIA, opcoesDaUrl, type ModeloDoDre } from "@/lib/dre/estrutura";
-import { SeletorDosImpostos, sufixoDosImpostos } from "@/components/dre/SeletorDosImpostos";
-import { SeletorDoModeloDoDre } from "@/components/dre/SeletorDoModeloDoDre";
+import { sufixoDosImpostos, trocaDosImpostos } from "@/lib/dre/visaoDosImpostos";
+import { MenuDaDre } from "@/components/dre/MenuDaDre";
+import { AbasDaDre } from "@/components/dre/AbasDaDre";
 import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { desconsideradasDoPeriodo, excecoesDaEmpresa, itensDaFila, totalForaDasLinhas, type ItemDaFila } from "@/lib/dre/fila";
 import { podeAbrirADre, podeTrocarOModeloDoDre } from "@/lib/dre/acesso";
@@ -33,6 +35,10 @@ import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { DreDoCliente } from "@/components/dre/DreDoCliente";
 import { competenciaDe } from "@/lib/financeiro/periodo";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { FaixaDoRascunho } from "@/components/dre/FaixaDoRascunho";
+import { diferencasDaDre } from "@/lib/dre/publicacao";
+import type { Publicacao } from "@/lib/dre/doClientePublicado";
+import { fotoAtualDoMes, garantirFotoInicial, mesesComRascunho, publicacoesDaEmpresa } from "@/lib/dre/publicacaoServidor";
 
 /**
  * O mês do DRE no formato de competência do app, "Out/26" (08/10/2026). Era
@@ -51,15 +57,6 @@ function rotuloDoMes(m: { ano: number; mes: number }): string {
 function rotuloDoMesNoFiltro(m: { ano: number; mes: number }): string {
   return formatarCompetenciaNumerica(competenciaDe(m.ano, m.mes));
 }
-
-type EmpresaNaAba = {
-  id: string;
-  name: string;
-  tradeName: string | null;
-  logoUrl: string | null;
-  cnpj: string | null;
-  parentCompanyId: string | null;
-};
 
 // O gate — setor que opera o módulo e módulo ligado — mora em `podeAbrirADre`,
 // a mesma régua da rota que exporta no modelo do BPO (13/10/2026).
@@ -86,7 +83,7 @@ export default async function DrePage({
   // (13/10/2026). Era a primeira em ordem alfabética, e a classificação e o
   // "Importar do Omie" gravavam nela sem ninguém ter escolhido.
   // Com uma empresa em foco (21/10/2026), só ela, a matriz e as filiais.
-  const { escolha, empresa: daTela, noSeletor, foco } = await escolherEmpresaDaTela(ctx, empresa, empresas, { comFoco: true });
+  const { escolha, empresa: daTela, foco } = await escolherEmpresaDaTela(ctx, empresa, empresas, { comFoco: true });
   const companyId = daTela?.id ?? null;
   if (!daTela || !companyId) {
     return (
@@ -97,7 +94,7 @@ export default async function DrePage({
         ) : (
           <>
             <div className="mb-4">
-              <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={null} visao={visao} />
+              <FiltroDaEmpresa className="" foco={foco} />
             </div>
             <EscolhaAEmpresa escolha={escolha} porQue="A DRE é de uma empresa por vez." />
           </>
@@ -110,26 +107,112 @@ export default async function DrePage({
     <EmpresaDaTela empresa={{ nome: daTela.tradeName || daTela.name, cnpj: daTela.cnpj }}>{tela}</EmpresaDaTela>
   );
 
-  // "Ver como o cliente" (21/10/2026): a tela do portal desta empresa, só de
-  // leitura, com o mesmo componente — sem fila, sem import, sem seletor dos
-  // impostos. `mes` e `ano` aqui seguem o formato do portal ("2026-09", "2026").
-  if (como === "cliente") {
-    return comEmpresa(
-      <PageContainer>
-        <ComoOClienteVe tenantId={ctx.tenantId} companyId={companyId} params={{ mes, ano, regime }} />
-      </PageContainer>
-    );
-  }
-
   // O modelo do DRE da empresa (21/10/2026) e, no padrão, as duas visões dos
   // impostos (20/10/2026): no EBITDA, o padrão; ou fora do resultado.
+  // A foto inicial da empresa (05/11/2026, ver `publicacaoServidor.ts`): na
+  // primeira abertura depois do deploy da publicação, o que o cliente já via
+  // vira a versão publicada de cada mês.
   const [meses, modelo, podeTrocarModelo] = await Promise.all([
     mesesComMovimento(ctx.tenantId, companyId),
     modeloDaEmpresa(ctx.tenantId, companyId),
     podeTrocarOModeloDoDre(ctx),
+    garantirFotoInicial(ctx.tenantId, companyId),
   ]);
   const opcoes = opcoesDaUrl(impostos, modelo);
-  const seletorDoModelo = <SeletorDoModeloDoDre companyId={companyId} modelo={modelo.codigo} podeTrocar={podeTrocarModelo} />;
+
+  // O topo (05/11/2026, escolha 5A do Kauan): uma ação principal, "Importar do
+  // Omie", e o "⋯" com exportar, modelo e impostos; embaixo, as quatro DREs em
+  // abas e, na de caixa, "DRE da equipe" | "Como o cliente vê". Eram três
+  // botões no cabeçalho e cinco controles na fileira dos filtros.
+  const topo = ({
+    subtitulo,
+    exportar,
+    impostosDaTela,
+    competencia,
+    visao,
+    equipe,
+    cliente,
+  }: {
+    subtitulo: string;
+    exportar: string;
+    /** Os parâmetros da tela, para a troca dos impostos; `null` onde ela não vale (a visão do cliente). */
+    impostosDaTela: Record<string, string | undefined> | null;
+    /** O mês da tela, "AAAA-MM", que as abas das outras DREs levam. */
+    competencia: string | null;
+    visao: "equipe" | "cliente";
+    equipe: string;
+    cliente: string;
+  }) => (
+    <>
+      <PageHeader
+        title="DRE"
+        subtitle={subtitulo}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportarDoOmie companyId={companyId} />
+            <MenuDaDre
+              companyId={companyId}
+              exportar={exportar}
+              modelo={{ codigo: modelo.codigo, nome: modelo.nome }}
+              podeTrocarModelo={podeTrocarModelo}
+              impostos={impostosDaTela && modelo.impostos === "escolha" ? trocaDosImpostos(opcoes, "/dre", impostosDaTela) : null}
+            />
+          </div>
+        }
+      />
+      <AbasDaDre ativa="caixa" companyId={companyId} mes={competencia} />
+      {/* "Ver como o cliente" vira aba (05/11/2026): era um botão no topo que
+          trocava a tela inteira e voltava por outro botão. */}
+      <AbasDeLink
+        aria-label="De quem é a visão"
+        ativa={visao}
+        abas={[
+          { chave: "equipe", rotulo: "DRE da equipe", href: equipe, icone: <Users /> },
+          { chave: "cliente", rotulo: "Como o cliente vê", href: cliente, icone: <Eye /> },
+        ]}
+      />
+    </>
+  );
+
+  // "Ver como o cliente" (21/10/2026): a tela do portal desta empresa, só de
+  // leitura, com o mesmo componente — sem fila, sem seletor dos impostos.
+  // `mes` e `ano` aqui seguem o formato do portal ("2026-09", "2026").
+  if (como === "cliente") {
+    const doPortal = mes?.match(/^(\d{4})-(\d{2})$/);
+    const anoDoPortal = ano && /^\d{4}$/.test(ano) ? ano : null;
+    // Volta para o mesmo período, no formato da tela da equipe ("2026-9").
+    const daEquipe = anoDoPortal
+      ? `/dre?empresa=${companyId}&visao=ano&ano=${anoDoPortal}`
+      : `/dre?empresa=${companyId}${doPortal ? `&mes=${doPortal[1]}-${Number(doPortal[2])}` : ""}`;
+    const mesDaExportacao = anoDoPortal
+      ? null
+      : doPortal
+        ? `${doPortal[1]}-${Number(doPortal[2])}`
+        : meses[0]
+          ? `${meses[0].ano}-${meses[0].mes}`
+          : null;
+    const exportar = anoDoPortal
+      ? `/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoDoPortal}`
+      : `/dre/exportar?empresa=${companyId}&visao=mes${mesDaExportacao ? `&mes=${mesDaExportacao}` : ""}`;
+    const noPortal = new URLSearchParams({ empresa: companyId, como: "cliente" });
+    if (mes) noPortal.set("mes", mes);
+    if (ano) noPortal.set("ano", ano);
+    return comEmpresa(
+      <PageContainer>
+        {topo({
+          subtitulo: "A DRE desta empresa exatamente como aparece no portal do cliente. Só leitura.",
+          exportar,
+          impostosDaTela: null,
+          competencia: doPortal ? mes! : null,
+          visao: "cliente",
+          equipe: daEquipe,
+          cliente: `/dre?${noPortal.toString()}`,
+        })}
+        <FiltroDaEmpresa className="" foco={foco} />
+        <ComoOClienteVe tenantId={ctx.tenantId} companyId={companyId} params={{ mes, ano, regime }} />
+      </PageContainer>
+    );
+  }
 
   // ─── Visão de doze meses ─────────────────────────────────────────────────
   if (visao === "ano") {
@@ -145,6 +228,7 @@ export default async function DrePage({
       impostoForaDoResultado: impostoDoAno,
     } = await dreDoAnoDaEmpresa(ctx.tenantId, companyId, anoEscolhido, opcoes);
     const anual = dreDoAno(porMes, opcoes);
+    const comRascunho = await mesesComRascunho(ctx.tenantId, companyId, anoEscolhido, porMes, modelo);
 
     // O ano mistura meses importados e meses do financeiro.
     const fila = itensDaFila(soltosDoAno, categoriasDoAno, { temImport: temMesImportado, doSemCategoria: fontesDoSemCategoria });
@@ -159,31 +243,25 @@ export default async function DrePage({
           excecoes={excecoesDaEmpresa(categoriasDoAno)}
           desconsideradas={desconsideradasDoPeriodo(desconsideradoDoAno, categoriasDoAno)}
         >
-          <PageHeader
-            title="DRE"
-            subtitle="Demonstrativo de resultado de caixa — os doze meses lado a lado."
-            action={
-              <AcoesDoTopo
-                companyId={companyId}
-                exportar={`/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}${sufixoDosImpostos(opcoes)}`}
-                comoCliente={`/dre?empresa=${companyId}&como=cliente&ano=${anoEscolhido}`}
-              />
-            }
-          />
-          {/* Empresa e período, depois as abas — a ordem da família da DRE
-              (padrão aceito pelo Kauan em 08/10/2026). */}
+          {topo({
+            subtitulo: "Demonstrativo de resultado de caixa — os doze meses lado a lado.",
+            exportar: `/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}${sufixoDosImpostos(opcoes)}`,
+            impostosDaTela: { empresa: companyId, visao: "ano", ano: String(anoEscolhido) },
+            competencia: null,
+            visao: "equipe",
+            equipe: `/dre?empresa=${companyId}&visao=ano&ano=${anoEscolhido}${sufixoDosImpostos(opcoes)}`,
+            cliente: `/dre?empresa=${companyId}&como=cliente&ano=${anoEscolhido}`,
+          })}
+          <FiltroDaEmpresa className="" foco={foco} />
+          {/* Por mês | Ano inteiro num seletor, e o ano no "Filtros" — sem uma
+              terceira fileira de abas embaixo das de cima. */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={companyId} visao={visao} impostos={impostos} />
+            <SeletorDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} sufixo={sufixoDosImpostos(opcoes)} />
             <FiltrosDaTela
               campos={[{ chave: "ano", rotulo: "Ano", vazioLabel: `Mais recente (${anos[0] ?? anoEscolhido})`, sempreVisivel: true, opcoes: anos.map((a) => ({ value: String(a), label: String(a) })) }]}
             />
-            {modelo.impostos === "escolha" && (
-              <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, visao: "ano", ano: String(anoEscolhido) }} />
-            )}
-            {seletorDoModelo}
-            <BotaoDeClassificar />
           </div>
-          <AbasDaVisao companyId={companyId} ativa="ano" ano={anoEscolhido} sufixo={sufixoDosImpostos(opcoes)} />
+          <RascunhoDoAno companyId={companyId} ano={anoEscolhido} meses={comRascunho} />
           {/* Os dois avisos que só a visão mensal tinha. Uma categoria que
               some R$ 200 por mês some R$ 2.400 no ano — e doze avisos pequenos
               passam onde um grande não passaria. */}
@@ -226,7 +304,8 @@ export default async function DrePage({
           subtitle="Demonstrativo de resultado, por empresa e mês."
           action={<ImportarDoOmie companyId={companyId} />}
         />
-        <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={companyId} visao={visao} />
+        <AbasDaDre ativa="caixa" companyId={companyId} />
+        <FiltroDaEmpresa className="" foco={foco} />
         {/* Em cartão, como o vazio das listas (08/10/2026): solto, flutuava no fundo. */}
         <Card className="mt-4">
           <EmptyState
@@ -243,10 +322,17 @@ export default async function DrePage({
   // recebido ou importado): sem ele, "subiu 100%" sobre zero diria nada.
   const anteriorAoEscolhido = escolhido.mes === 1 ? { ano: escolhido.ano - 1, mes: 12 } : { ano: escolhido.ano, mes: escolhido.mes - 1 };
   const temAnterior = meses.some((m) => m.ano === anteriorAoEscolhido.ano && m.mes === anteriorAoEscolhido.mes);
-  const [{ resultado, categorias, lancamentos, fonte }, anterior] = await Promise.all([
+  const competencia = competenciaDe(escolhido.ano, escolhido.mes);
+  const [{ resultado, categorias, lancamentos, fonte }, anterior, fotoAtual, publicadas] = await Promise.all([
     dreDoMes(ctx.tenantId, companyId, escolhido, opcoes),
     temAnterior ? dreDoMes(ctx.tenantId, companyId, anteriorAoEscolhido, opcoes) : Promise.resolve(null),
+    // O rascunho (05/11/2026, decisão D4 do Kauan): a DRE de agora, como o
+    // cliente a veria, contra a versão publicada no portal.
+    fotoAtualDoMes(ctx.tenantId, companyId, competencia),
+    publicacoesDaEmpresa(ctx.tenantId, companyId, [competencia]),
   ]);
+  const publicada = publicadas.get(competencia) ?? null;
+  const diferencas = diferencasDaDre(publicada?.foto ?? null, fotoAtual);
 
   const fila = itensDaFila(resultado.naoClassificado, categorias, {
     temImport: fonte.tipo === "import",
@@ -269,25 +355,23 @@ export default async function DrePage({
         {/* O mês escrito na tela (07/10, auditoria dos gráficos): ficava só
             dentro do botão Filtros ("Mais recente (…)"), e a tabela inteira
             aparecia sem dizer de quando. */}
-        <PageHeader
-          title="DRE"
-          subtitle={`Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`}
-          action={
-            <AcoesDoTopo
-              companyId={companyId}
-              exportar={`/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}${sufixoDosImpostos(opcoes)}`}
-              comoCliente={`/dre?empresa=${companyId}&como=cliente&mes=${competenciaDe(escolhido.ano, escolhido.mes)}`}
-            />
-          }
-        />
+        {topo({
+          subtitulo: `Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`,
+          exportar: `/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}${sufixoDosImpostos(opcoes)}`,
+          impostosDaTela: { empresa: companyId, mes },
+          competencia: competenciaDe(escolhido.ano, escolhido.mes),
+          visao: "equipe",
+          equipe: `/dre?empresa=${companyId}${mes ? `&mes=${mes}` : ""}${sufixoDosImpostos(opcoes)}`,
+          cliente: `/dre?empresa=${companyId}&como=cliente&mes=${competenciaDe(escolhido.ano, escolhido.mes)}`,
+        })}
+        <FiltroDaEmpresa className="" foco={foco} />
 
-        {/* Empresa e período, depois as abas, os números do topo e a tabela — a
-            ordem da família da DRE, como na DRE econômica, nas análises e no
-            orçamento (padrão aceito pelo Kauan em 08/10/2026). O mês vinha
-            embaixo das abas. Numa lista com busca, e não 18 pílulas numa
-            fileira — a regra da conferência de 30/09 para competência. */}
+        {/* As abas, depois a visão e o mês, os números do topo e a tabela — a
+            ordem das quatro DREs (05/11/2026). O mês numa lista com busca, e
+            não 18 pílulas numa fileira — a regra da conferência de 30/09 para
+            competência. */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <SeletorDeEmpresa empresas={noSeletor} foco={foco} companyId={companyId} visao={visao} impostos={impostos} />
+          <SeletorDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} sufixo={sufixoDosImpostos(opcoes)} />
           <FiltrosDaTela
             campos={[
               {
@@ -299,11 +383,21 @@ export default async function DrePage({
               },
             ]}
           />
-          {modelo.impostos === "escolha" && <SeletorDosImpostos opcoes={opcoes} base="/dre" params={{ empresa: companyId, mes }} />}
-          {seletorDoModelo}
-          <BotaoDeClassificar />
+          {publicada && diferencas.length === 0 && <VersaoNoPortal publicada={publicada} />}
         </div>
-        <AbasDaVisao companyId={companyId} ativa="mes" ano={escolhido.ano} sufixo={sufixoDosImpostos(opcoes)} />
+
+        {/* O rascunho e o que falta classificar, logo abaixo da fileira — os
+            dois dizem o que ainda não está pronto para o cliente. */}
+        {diferencas.length > 0 && (
+          <FaixaDoRascunho
+            companyId={companyId}
+            competencia={competencia}
+            rotuloDoMes={rotuloDoMes(escolhido)}
+            diferencas={diferencas}
+            nuncaPublicado={!publicada}
+          />
+        )}
+        <AvisoDeSemGrupo />
 
         {/* Os números do topo, como na DRE econômica (08/10/2026, escolha 9A do
             Kauan: na DRE, o padrão entra nos números do topo e a tabela fica
@@ -328,10 +422,6 @@ export default async function DrePage({
             </span>
           </Aviso>
         )}
-
-        {/* O que falta classificar, em uma linha que abre o painel — a fila
-            inteira aqui fazia rolar (13/10/2026). */}
-        <AvisoDeSemGrupo />
 
         {/* De onde saiu o número. Relatório que muda de fonte sem avisar é
             relatório em que ninguém confia duas vezes. Na `NotaDeFonte` (15/10/2026),
@@ -369,7 +459,7 @@ export default async function DrePage({
 
 /**
  * O porquê do imposto fora do resultado, conforme o modelo: no por área é a
- * regra do modelo; no padrão, a visão escolhida no seletor dos impostos.
+ * regra do modelo; no padrão, a visão escolhida no "⋯" do topo.
  */
 function PorQueOImpostoFicaFora({ modelo }: { modelo: ModeloDoDre }) {
   if (modelo.impostos === "fora") {
@@ -387,9 +477,14 @@ function PorQueOImpostoFicaFora({ modelo }: { modelo: ModeloDoDre }) {
 }
 
 /**
- * O "Ver como o cliente" (21/10/2026): o corpo de `/portal/dre` desta empresa,
- * com as mesmas regras do portal — a aba Competência só com a DRE econômica
- * ligada, e o aviso quando o escritório bloqueou a tela para os clientes.
+ * A aba "Como o cliente vê" (21/10/2026; aba desde 05/11/2026): o corpo de
+ * `/portal/dre` desta empresa, com as mesmas regras do portal — a aba
+ * Competência só com a DRE econômica ligada, e o aviso quando o escritório
+ * bloqueou a tela para os clientes.
+ *
+ * Numa moldura com o nome "Prévia do portal": o portal tem as próprias abas
+ * (Caixa | Competência) e o próprio filtro, e solto embaixo das abas da tela
+ * ele parecia mais uma fileira de navegação da equipe.
  */
 async function ComoOClienteVe({
   tenantId,
@@ -401,22 +496,8 @@ async function ComoOClienteVe({
   params: { mes?: string; ano?: string; regime?: string };
 }) {
   const [modulos, bloqueada] = await Promise.all([getEnabledModuleCodes(tenantId), telaBloqueadaNoPortal(tenantId, "/portal/dre")]);
-  // Volta para o mesmo período, no formato da tela da equipe ("2026-9").
-  const doPortal = params.mes?.match(/^(\d{4})-(\d{2})$/);
-  const voltar = params.ano
-    ? `/dre?empresa=${companyId}&visao=ano&ano=${params.ano}`
-    : `/dre?empresa=${companyId}${doPortal ? `&mes=${doPortal[1]}-${Number(doPortal[2])}` : ""}`;
   return (
     <>
-      <PageHeader
-        title="DRE — como o cliente vê"
-        subtitle="A DRE desta empresa exatamente como aparece no portal do cliente. Só leitura."
-        action={
-          <Button href={voltar} variant="secondary" size="sm">
-            <ArrowLeft size={14} /> Voltar à DRE da equipe
-          </Button>
-        }
-      />
       {bloqueada && (
         <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
           <span className="text-fg">
@@ -425,56 +506,80 @@ async function ComoOClienteVe({
           </span>
         </Aviso>
       )}
-      <DreDoCliente
-        tenantId={tenantId}
-        companyId={companyId}
-        params={params}
-        competenciaLiberada={modulos.has("dre_economica")}
-        acao="/dre"
-        manter={{ como: "cliente" }}
-      />
+      <section aria-labelledby="previa-do-portal" className="rounded-lg border border-border p-3 sm:p-4">
+        <p id="previa-do-portal" className="flex items-center gap-1.5 text-fs-2 text-fg-muted mb-3">
+          <Eye size={14} aria-hidden /> Prévia do portal do cliente — só leitura
+        </p>
+        <DreDoCliente
+          tenantId={tenantId}
+          companyId={companyId}
+          params={params}
+          competenciaLiberada={modulos.has("dre_economica")}
+          acao="/dre"
+          manter={{ como: "cliente" }}
+        />
+      </section>
     </>
   );
 }
 
 /**
- * As ações do topo: trazer do Omie e levar no modelo do BPO, lado a lado
- * (13/10/2026 — o import era um cartão no pé da tela), e o "Ver como o
- * cliente" no mesmo período (21/10/2026).
+ * A versão que o portal mostra, na ponta da fileira, quando a DRE da equipe
+ * está igual a ela — o par da faixa do rascunho.
  */
-function AcoesDoTopo({ companyId, exportar, comoCliente }: { companyId: string; exportar: string; comoCliente: string }) {
+function VersaoNoPortal({ publicada }: { publicada: Publicacao }) {
+  const quando = formatInstantDate(publicada.publicadoEm);
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button href={comoCliente} variant="secondary" size="sm">
-        <Eye size={14} /> Ver como o cliente
-      </Button>
-      <ImportarDoOmie companyId={companyId} />
-      <ExportarNoModeloDoBpo href={exportar} />
-    </div>
+    <p className="text-fs-2 text-fg-muted sm:ml-auto">
+      No portal: versão de {quando}
+      {publicada.inicial ? " (a que o cliente já via)" : publicada.publicadoPorNome ? `, publicada por ${publicada.publicadoPorNome}` : ""}
+    </p>
   );
 }
 
 /**
- * A DRE da tela no desenho da planilha que o BPO entrega (13/10/2026): mesma
- * empresa, mesmo período. `download`, e não `<Link>`: o pré-carregamento
- * geraria a planilha só de a tela abrir.
+ * Na visão do ano, os meses com mudança fora do portal. A publicação é por
+ * mês, então cada um leva ao mês, onde ficam "Ver diferenças" e "Publicar".
  */
-function ExportarNoModeloDoBpo({ href }: { href: string }) {
+function RascunhoDoAno({ companyId, ano, meses }: { companyId: string; ano: number; meses: string[] }) {
+  if (meses.length === 0) return null;
   return (
-    <Button href={href} download variant="secondary" size="sm">
-      <FileSpreadsheet size={14} /> Exportar no modelo do BPO
-    </Button>
+    <Aviso tom="marca" icone={<FilePen />} className="mb-4">
+      <p className="text-fg">
+        <strong>Rascunho em {ano}</strong> —{" "}
+        {meses.length === 1 ? "um mês tem mudanças que ainda não estão" : `${meses.length} meses têm mudanças que ainda não estão`} no
+        portal:{" "}
+        {meses.map((c, i) => {
+          const [a, m] = c.split("-");
+          return (
+            <span key={c}>
+              {i > 0 && (i === meses.length - 1 ? " e " : ", ")}
+              <Link href={`/dre?empresa=${companyId}&mes=${a}-${Number(m)}`} className="font-medium text-brand underline-offset-2 hover:underline">
+                {formatarCompetencia(c)}
+              </Link>
+            </span>
+          );
+        })}
+        . Cada mês se publica na visão do mês.
+      </p>
+    </Aviso>
   );
 }
 
-/** "Por mês" e "Ano inteiro" trocam a tela — são abas, não filtro. */
-function AbasDaVisao({ companyId, ativa, ano, sufixo }: { companyId: string; ativa: "mes" | "ano"; ano: number; sufixo: string }) {
+/**
+ * "Por mês" e "Ano inteiro" trocam a visão do relatório. Eram abas embaixo da
+ * fileira dos filtros; com as quatro DREs e a visão do cliente em abas no
+ * alto (05/11/2026, escolha 5A do Kauan), viram um seletor na fileira, ao lado
+ * do mês — a terceira fileira de abas não cabia.
+ */
+function SeletorDaVisao({ companyId, ativa, ano, sufixo }: { companyId: string; ativa: "mes" | "ano"; ano: number; sufixo: string }) {
   return (
-    <AbasDeLink
-      ativa={ativa}
-      abas={[
-        { chave: "mes", rotulo: "Por mês", href: `/dre?empresa=${companyId}${sufixo}`, icone: <CalendarDays /> },
-        { chave: "ano", rotulo: "Ano inteiro", href: `/dre?empresa=${companyId}&visao=ano&ano=${ano}${sufixo}`, icone: <CalendarRange /> },
+    <SegmentedControl
+      label="Período do relatório"
+      active={ativa}
+      items={[
+        { key: "mes", label: "Por mês", href: `/dre?empresa=${companyId}${sufixo}`, icon: <CalendarDays size={14} aria-hidden /> },
+        { key: "ano", label: "Ano inteiro", href: `/dre?empresa=${companyId}&visao=ano&ano=${ano}${sufixo}`, icon: <CalendarRange size={14} aria-hidden /> },
       ]}
     />
   );
@@ -502,33 +607,3 @@ async function linksDasContas(ctx: AuthContext, companyId: string, fila: ItemDaF
   };
 }
 
-/**
- * O seletor das telas da equipe (13/10/2026), que grava a escolha como a
- * última empresa aberta. Trocar de empresa conserva a visão (mês ou ano); o
- * mês e o ano ficam para trás, porque os meses com movimento são de cada empresa.
- */
-function SeletorDeEmpresa({
-  empresas,
-  companyId,
-  visao,
-  impostos,
-  foco,
-}: {
-  empresas: EmpresaNaAba[];
-  companyId: string | null;
-  visao: string | undefined;
-  impostos?: string;
-  /** A empresa em foco (21/10/2026) — a fileira avisa o endereço que pedia outra. */
-  foco: FocoNaTela | null;
-}) {
-  return (
-    <FiltroDaEmpresa
-      className=""
-      empresas={empresas.map((e) => ({ ...e, nome: e.tradeName || e.name }))}
-      valor={companyId}
-      acao="/dre"
-      manter={{ visao: visao === "ano" ? "ano" : undefined, impostos: impostos === "fora" ? "fora" : undefined }}
-      foco={foco}
-    />
-  );
-}

@@ -25,8 +25,8 @@ export function PainelFiscal({ visao }: { visao: string }) {
     {/* As abas no desenho de sempre — só o texto e a barra embaixo (15/10/2026):
         tinham fundo próprio e a ativa preenchida. */}
     <AbasDeLink ativa={visao} className="" aria-label="Visões do painel" abas={[
-      { chave: "resumo", rotulo: "Visão geral", href: "/fiscal", icone: <ListChecks /> },
-      { chave: "historico", rotulo: "Histórico", href: "/fiscal?visao=historico", icone: <History /> },
+      { chave: "resumo", rotulo: "Visão geral", href: "/sped-fiscal/motor", icone: <ListChecks /> },
+      { chave: "historico", rotulo: "Histórico", href: "/sped-fiscal/motor?visao=historico", icone: <History /> },
     ]} />
 
     {visao === "historico" ? <BlocoFiscal titulo="Histórico da competência" descricao="Ações registradas para a empresa, o estabelecimento e o período selecionados.">
@@ -40,13 +40,13 @@ export function PainelFiscal({ visao }: { visao: string }) {
             <p className="mt-2 text-label text-fg-secondary">{etapa?.orientacao ?? "Consulte os protocolos em SPED gerados ou selecione outra competência para continuar."}</p>
           </div>
           {etapa && pagina && modulos.includes(etapa.modulo) ? <Button href={`${pagina.caminho}?aba=${etapa.aba}`} size="lg">{etapa.acao}<ArrowRight size={16} /></Button>
-            : !etapa && modulos.includes("fiscal_entregas") ? <Button href="/fiscal/entregas?aba=entregas" variant="secondary">Consultar entregas<ArrowRight size={16} /></Button>
+            : !etapa && modulos.includes("fiscal_entregas") ? <Button href="/sped-fiscal/motor/entregas?aba=entregas" variant="secondary">Consultar entregas<ArrowRight size={16} /></Button>
               : etapa && <p className="text-ui text-fg-muted">A área desta etapa não está disponível para seu acesso.</p>}
         </div>
       </Card>
 
       <MetricasFiscais itens={[
-        { rotulo: "Documentos recebidos", valor: documentosDoContexto(cenario).length, icone: <FileText />, href: modulos.includes("fiscal_acervo") ? "/fiscal/documentos?aba=acervo&grupo=todos" : undefined },
+        { rotulo: "Documentos recebidos", valor: documentosDoContexto(cenario).length, icone: <FileText />, href: modulos.includes("fiscal_acervo") ? "/sped-fiscal/motor/documentos?aba=acervo&grupo=todos" : undefined },
         { rotulo: "Pendências de documentos", valor: totais.pendentes + totais.rejeitados, icone: <ListChecks />, detalhe: `${totais.pendentes} para classificar · ${totais.rejeitados} em quarentena`, tom: totais.pendentes + totais.rejeitados > 0 ? "text-warning-fg" : undefined },
         { rotulo: "Etapas concluídas", valor: `${completas} de ${etapas.length}`, icone: <CheckCircle2 />, detalhe: "No recorte selecionado" },
       ]} />

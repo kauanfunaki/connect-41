@@ -29,12 +29,12 @@ export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao
   const { contexto, motor, mapa } = tela;
   const telas = menuSped(PAGINAS_FISCAIS.filter((p) => tela.modulos.includes(p.modulo)).map((p) => ({ code: p.modulo, href: p.caminho })), { motor: true }).telas;
   // A troca entre ICMS/IPI e PIS e COFINS, que na prévia é o campo "Obrigação da apuração" (26/10/2026).
-  const obrigacoes = ([["fiscal_icms_ipi", "/fiscal/icms-ipi", "ICMS/IPI"], ["fiscal_contribuicoes", "/fiscal/contribuicoes", "PIS e COFINS"]] as const).filter(([modulo]) => tela.modulos.includes(modulo));
-  const trocaDeObrigacao = (caminho === "/fiscal/icms-ipi" || caminho === "/fiscal/contribuicoes") && obrigacoes.length > 1;
-  const menuPrincipal = ["/fiscal/classificacao", "/fiscal/icms-ipi", "/fiscal/contribuicoes", "/fiscal/configuracoes"].includes(caminho) && telas.length > 0;
+  const obrigacoes = ([["fiscal_icms_ipi", "/sped-fiscal/motor/icms-ipi", "ICMS/IPI"], ["fiscal_contribuicoes", "/sped-fiscal/motor/contribuicoes", "PIS e COFINS"]] as const).filter(([modulo]) => tela.modulos.includes(modulo));
+  const trocaDeObrigacao = (caminho === "/sped-fiscal/motor/icms-ipi" || caminho === "/sped-fiscal/motor/contribuicoes") && obrigacoes.length > 1;
+  const menuPrincipal = ["/sped-fiscal/motor/classificacao", "/sped-fiscal/motor/icms-ipi", "/sped-fiscal/motor/contribuicoes", "/sped-fiscal/motor/configuracoes"].includes(caminho) && telas.length > 0;
   const ativa = telas.find((t) => t.href === `${caminho}?aba=${aba}`) ?? telas.find((t) => t.href === caminho);
   return <>
-    {menuPrincipal && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={caminho === "/fiscal/contribuicoes" ? "Apuração" : ativa?.label ?? ""} abas={telas.map((t) => {
+    {menuPrincipal && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={caminho === "/sped-fiscal/motor/contribuicoes" ? "Apuração" : ativa?.label ?? ""} abas={telas.map((t) => {
       const [base, query] = t.href.split("?");
       const extra = Object.fromEntries(new URLSearchParams(query ?? ""));
       return { chave: t.label, rotulo: t.label, href: hrefDoMotor(base, contexto, extra), icone: iconeDaAbaFiscal(t.label) };

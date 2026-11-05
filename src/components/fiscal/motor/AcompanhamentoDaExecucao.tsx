@@ -8,7 +8,7 @@ import { Selo } from "@/components/ui/Selo";
 import { BlocoFiscal, EstadoFiscal, PreviaTexto } from "@/components/fiscal/previa/Compartilhados";
 import { ESTADO_DA_EXECUCAO } from "@/lib/fiscal/previa/doMotor";
 import type { ExecucaoDoMotor } from "@/lib/sped/motor";
-import { lerExecucaoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { lerExecucaoNoMotor } from "@/app/(app)/sped-fiscal/motor-actions";
 import { FocoAoAbrir } from "./FocoAoAbrir";
 
 const INTERVALO_MS = 4000;

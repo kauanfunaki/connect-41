@@ -1,16 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeftRight, Crosshair, LogOut } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, Crosshair, Loader2, LogOut, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { Aviso } from "@/components/ui/Aviso";
+import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
-import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
+import { formatCnpj } from "@/lib/format";
 import { telaDoFoco } from "@/lib/empresas/foco";
+import type { EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { empresasParaOFoco, pararDeTrabalharNaEmpresa, trabalharNaEmpresa } from "@/app/(app)/foco-actions";
 
 /** O que a faixa mostra da empresa em foco — montado no layout. */
@@ -18,16 +17,41 @@ export type FocoDaFaixa = {
   companyId: string;
   nome: string;
   logoUrl: string | null;
+  /** A matriz da base (a própria empresa, quando não é filial). */
+  matrizId: string;
   /** "com 21 filiais", "com a matriz e 20 filiais", ou `null` (empresa sozinha). */
   alcance: string | null;
 };
 
-// A empresa em foco que o layout leu, para a tela conferir (`ConferirFoco`).
-// `undefined` fora do casco do app.
-const FocoDoLayout = createContext<string | null | undefined>(undefined);
+// O foco que o layout leu, para a tela conferir (`ConferirFoco`) e abrir a
+// escolha da faixa (`BotaoEscolherEmpresa`). `undefined` fora do casco do app.
+//
+// Envolve o casco inteiro, não só a tela (05/11/2026): a faixa é desenhada
+// pelo casco, e o vazio "Escolha a empresa" de uma tela abre a busca dela.
+type FocoDoLayout = {
+  companyId: string | null;
+  /** A pessoa pode trabalhar numa empresa por vez (a faixa aparece). */
+  disponivel: boolean;
+  /** A busca de empresa da faixa está aberta. */
+  escolhendo: boolean;
+  abrirEscolha: () => void;
+  fecharEscolha: () => void;
+};
+const FocoDoLayout = createContext<FocoDoLayout | undefined>(undefined);
 
-export function ProvedorDoFoco({ companyId, children }: { companyId: string | null; children: React.ReactNode }) {
-  return <FocoDoLayout.Provider value={companyId}>{children}</FocoDoLayout.Provider>;
+export function ProvedorDoFoco({ companyId, disponivel, children }: { companyId: string | null; disponivel: boolean; children: React.ReactNode }) {
+  const [escolhendo, setEscolhendo] = useState(false);
+  // Trocada a empresa (aqui ou em outra aba), a busca fecha sozinha.
+  const [deQual, setDeQual] = useState(companyId);
+  if (deQual !== companyId) {
+    setDeQual(companyId);
+    setEscolhendo(false);
+  }
+  const valor = useMemo(
+    () => ({ companyId, disponivel, escolhendo, abrirEscolha: () => setEscolhendo(true), fecharEscolha: () => setEscolhendo(false) }),
+    [companyId, disponivel, escolhendo]
+  );
+  return <FocoDoLayout.Provider value={valor}>{children}</FocoDoLayout.Provider>;
 }
 
 /**
@@ -37,7 +61,7 @@ export function ProvedorDoFoco({ companyId, children }: { companyId: string | nu
  * Quando as duas discordam, pede ao servidor a tela inteira de novo, uma vez.
  */
 export function ConferirFoco({ companyId }: { companyId: string | null }) {
-  const doLayout = useContext(FocoDoLayout);
+  const doLayout = useContext(FocoDoLayout)?.companyId;
   const router = useRouter();
   const pediu = useRef(false);
   useEffect(() => {
@@ -48,143 +72,654 @@ export function ConferirFoco({ companyId }: { companyId: string | null }) {
   return null;
 }
 
+/** O botão do vazio "Escolha a empresa" de uma tela: abre a busca da faixa. */
+export function BotaoEscolherEmpresa() {
+  const foco = useContext(FocoDoLayout);
+  if (!foco?.disponivel) return null;
+  return (
+    <Button onClick={foco.abrirEscolha}>
+      <Crosshair size={14} aria-hidden />
+      Escolher empresa
+    </Button>
+  );
+}
+
 /**
- * A faixa da empresa em foco (15/10/2026), logo abaixo do topo, nas telas que
- * seguem o foco (`TELAS_DO_FOCO`): quem trabalha, em que empresa, e os dois
- * caminhos — trocar de empresa ou sair (as telas voltam a mostrar todas).
+ * O que segue no endereço ao trocar de empresa (05/11/2026): o período e a aba
+ * valem para qualquer empresa; o resto (a conta bancária, o centro de custo, a
+ * busca, a página, o `?empresa=`) é da anterior e fica para trás.
+ */
+const PARAMETROS_QUE_SEGUEM = ["mes", "ano", "competencia", "aba", "secao", "visao", "vista", "tipo", "destino", "situacao"];
+
+function enderecoParaOutraEmpresa(tela: string, atuais: URLSearchParams): string {
+  const q = new URLSearchParams();
+  for (const chave of PARAMETROS_QUE_SEGUEM) {
+    const valor = atuais.get(chave);
+    if (valor) q.set(chave, valor);
+  }
+  const s = q.toString();
+  return s ? `${tela}?${s}` : tela;
+}
+
+// ─── As abas de empresas (05/11/2026, opção 6 do Victor) ────────────────────
+//
+// Cada aba é uma empresa em que a pessoa trabalha; a ativa é a empresa em foco
+// (o cookie, lido no servidor). As abas moram no navegador — são atalho, não
+// permissão: clicar numa aba passa pelo `trabalharNaEmpresa`, que confere tudo.
+// Uma base (matriz e filiais) ocupa uma aba só: trocar de filial troca a aba.
+
+type Aba = { id: string; nome: string; logoUrl: string | null; matrizId: string; comUnidades: boolean };
+type EmpresaDaLista = EmpresaParaEscolher & { nome: string };
+
+const MAXIMO_DE_ABAS = 8;
+const chaveDasAbas = (escritorio: string) => `c41:abas-de-empresas:${escritorio}`;
+
+// As abas guardadas são lidas como loja externa (`useSyncExternalStore`): o
+// servidor desenha sem elas, e o navegador as traz sem um efeito a mais. Outra
+// aba do navegador que mexer nelas avisa pelo evento `storage`.
+const ouvintesDasAbas = new Set<() => void>();
+function assinarAbas(avisar: () => void) {
+  ouvintesDasAbas.add(avisar);
+  window.addEventListener("storage", avisar);
+  return () => {
+    ouvintesDasAbas.delete(avisar);
+    window.removeEventListener("storage", avisar);
+  };
+}
+
+function abasDoTexto(texto: string): Aba[] {
+  try {
+    const bruto = JSON.parse(texto);
+    return Array.isArray(bruto) ? bruto.filter((a): a is Aba => typeof a?.id === "string" && typeof a?.nome === "string").slice(0, MAXIMO_DE_ABAS) : [];
+  } catch {
+    return [];
+  }
+}
+
+function textoDasAbas(escritorio: string): string {
+  try {
+    return window.localStorage.getItem(chaveDasAbas(escritorio)) ?? "[]";
+  } catch {
+    return "[]";
+  }
+}
+
+function gravarAbas(escritorio: string, abas: Aba[]) {
+  try {
+    window.localStorage.setItem(chaveDasAbas(escritorio), JSON.stringify(abas.slice(0, MAXIMO_DE_ABAS)));
+  } catch {
+    // Sem armazenamento (janela anônima, cota): as abas só não ficam para a próxima.
+  }
+  for (const avisar of ouvintesDasAbas) avisar();
+}
+
+/** A aba entra no lugar da que é da mesma base; senão, no fim (sai a mais antiga, se passar do teto). */
+function comAba(abas: Aba[], nova: Aba): Aba[] {
+  const i = abas.findIndex((a) => a.id === nova.id || a.matrizId === nova.matrizId);
+  if (i >= 0) return abas.map((a, j) => (j === i ? nova : a));
+  const lista = [...abas, nova];
+  return lista.length > MAXIMO_DE_ABAS ? lista.slice(lista.length - MAXIMO_DE_ABAS) : lista;
+}
+
+/**
+ * A aba nova no lugar de outra (05/11/2026): clicar na aba aberta e buscar outra
+ * empresa troca aquela aba, sem abrir mais uma. Outra aba da mesma base sai.
+ */
+function comAbaNoLugar(abas: Aba[], lugar: string, nova: Aba): Aba[] {
+  if (!abas.some((a) => a.id === lugar)) return comAba(abas, nova);
+  return abas.filter((a) => a.id === lugar || (a.id !== nova.id && a.matrizId !== nova.matrizId)).map((a) => (a.id === lugar ? nova : a));
+}
+
+const matrizDe = (e: EmpresaDaLista) => e.matrizId ?? e.id;
+
+/** Para comparar na busca: sem acento e em minúsculas — "clinica" acha "CLÍNICA". */
+const paraBusca = (texto: string) => texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+// ─── As mais acessadas (05/11/2026, pedido do Victor) ───────────────────────
+//
+// A busca aberta sem texto começa pelas empresas em que a pessoa mais trabalha;
+// sem histórico, a ordem alfabética de antes. Conta no navegador, por
+// escritório, a cada troca pela faixa — é ordem de lista, não dado do escritório.
+
+type Acessos = Record<string, { vezes: number; em: number }>;
+const chaveDosAcessos = (escritorio: string) => `c41:acessos-de-empresas:${escritorio}`;
+
+function lerAcessos(escritorio: string): Acessos {
+  try {
+    const bruto = JSON.parse(window.localStorage.getItem(chaveDosAcessos(escritorio)) ?? "{}");
+    return bruto && typeof bruto === "object" && !Array.isArray(bruto) ? (bruto as Acessos) : {};
+  } catch {
+    return {};
+  }
+}
+
+function registrarAcesso(escritorio: string, companyId: string): Acessos {
+  const acessos = lerAcessos(escritorio);
+  const antes = acessos[companyId];
+  acessos[companyId] = { vezes: (antes?.vezes ?? 0) + 1, em: Date.now() };
+  // Fica com as 50 mais usadas: a lista é de atalho, não um histórico inteiro.
+  const mantidas = Object.entries(acessos)
+    .sort(([, a], [, b]) => b.vezes - a.vezes || b.em - a.em)
+    .slice(0, 50);
+  const enxuto = Object.fromEntries(mantidas);
+  try {
+    window.localStorage.setItem(chaveDosAcessos(escritorio), JSON.stringify(enxuto));
+  } catch {
+    // Sem armazenamento: a lista só não aprende a ordem.
+  }
+  return enxuto;
+}
+
+const TAMANHO_DA_LISTA = 8;
+
+/**
+ * A faixa da empresa (15/10/2026), logo abaixo do topo, nas telas que mostram
+ * uma empresa por vez (`TELAS_DO_FOCO`). Desde 05/11/2026 é o único lugar de
+ * escolher a empresa, e as empresas viram abas: clicar troca, o "+" busca outra
+ * ali mesmo, e uma base com filiais abre a janelinha das unidades presa à aba
+ * (pedido do Victor: nada de janela no meio da tela).
  *
  * Fora da rolagem, como a faixa da assinatura em modo de leitura: fica parada
- * no topo, e a tela de altura cheia só perde a altura dela (40px).
+ * no topo, e a tela de altura cheia só perde a altura dela (44px).
  */
-export function FaixaDoFoco({ foco }: { foco: FocoDaFaixa }) {
+export function FaixaDoFoco({ foco, escritorio }: { foco: FocoDaFaixa | null; escritorio: string }) {
   const caminho = usePathname();
+  const parametros = useSearchParams();
+  const router = useRouter();
   const tela = telaDoFoco(caminho);
   const toast = useToast();
   const [pendente, iniciar] = useTransition();
-  // A janela de trocar é da empresa em que abriu: trocada a empresa (aqui ou
-  // em outra aba), ela fecha sozinha.
-  const [trocandoDe, setTrocandoDe] = useState<string | null>(null);
+  const doLayout = useContext(FocoDoLayout);
+  const buscando = Boolean(doLayout?.escolhendo);
+
+  const textoGuardado = useSyncExternalStore(assinarAbas, () => textoDasAbas(escritorio), () => "[]");
+  const [empresas, setEmpresas] = useState<EmpresaDaLista[] | null>(null);
+  const [acessos, setAcessos] = useState<Acessos>({});
+  const [erro, setErro] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  // A janelinha das unidades: de qual base, e embaixo de qual aba (ou da busca).
+  const [unidadesDe, setUnidadesDe] = useState<{ matrizId: string; ancora: string } | null>(null);
+  const [esquerda, setEsquerda] = useState(0);
+  // A aba que a busca vai trocar (aberta clicando na aba), e a empresa que está
+  // abrindo agora — a aba dela aparece na hora e pode ser fechada enquanto carrega.
+  const [trocandoAba, setTrocandoAba] = useState<string | null>(null);
+  const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [canceladas] = useState(() => new Set<string>());
+  const faixa = useRef<HTMLDivElement>(null);
+  const ancoras = useRef(new Map<string, HTMLElement>());
+
+  // As abas guardadas, com a empresa em foco garantida nelas — a escolhida na
+  // ficha da empresa, ou em outra aba do navegador, entra também.
+  // Enquanto outra empresa abre — até a tela recarregar com o foco novo —, a do
+  // foco antigo não volta para as abas (senão, ao trocar de base, piscava uma
+  // segunda aba com a empresa anterior).
+  const abas = useMemo(() => {
+    const guardadas = abasDoTexto(textoGuardado);
+    return foco && !abrindo && !pendente ? comAba(guardadas, { id: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, matrizId: foco.matrizId, comUnidades: foco.alcance !== null }) : guardadas;
+  }, [textoGuardado, foco, abrindo, pendente]);
+  const setAbas = (lista: Aba[]) => gravarAbas(escritorio, lista);
+
+  const carregar = useCallback(() => {
+    if (empresas !== null) return;
+    empresasParaOFoco()
+      .then((r) => {
+        if (!r.ok) return setErro(r.erro);
+        setAcessos(lerAcessos(escritorio));
+        setEmpresas(r.empresas);
+      })
+      .catch(() => setErro("Não deu para carregar as empresas. Tente de novo."));
+  }, [empresas, escritorio]);
+
+  useEffect(() => {
+    if (buscando) carregar();
+  }, [buscando, carregar]);
+
+  const fecharTudo = useCallback(() => {
+    doLayout?.fecharEscolha();
+    setUnidadesDe(null);
+    setTrocandoAba(null);
+    setBusca("");
+    setErro(null);
+  }, [doLayout]);
+
+  // Clique fora da faixa ou Esc fecham a busca e a janelinha.
+  useEffect(() => {
+    if (!buscando && !unidadesDe) return;
+    const fora = (e: MouseEvent) => {
+      if (faixa.current && !faixa.current.contains(e.target as Node)) fecharTudo();
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") fecharTudo();
+    };
+    document.addEventListener("mousedown", fora);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", fora);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [buscando, unidadesDe, fecharTudo]);
+
+  const porId = useMemo(() => new Map((empresas ?? []).map((e) => [e.id, e])), [empresas]);
+  const unidadesPorMatriz = useMemo(() => {
+    const mapa = new Map<string, EmpresaDaLista[]>();
+    for (const e of empresas ?? []) mapa.set(matrizDe(e), [...(mapa.get(matrizDe(e)) ?? []), e]);
+    for (const lista of mapa.values()) lista.sort((a, b) => (a.matrizId ? 1 : 0) - (b.matrizId ? 1 : 0) || a.nome.localeCompare(b.nome, "pt-BR"));
+    return mapa;
+  }, [empresas]);
+
+  // Sem texto: as mais acessadas primeiro (`frequente`), depois as bases em ordem
+  // alfabética. Com texto: a matriz antes das filiais, e as mais acessadas na
+  // frente dentro de cada grupo.
+  const achadas = useMemo(() => {
+    const termo = paraBusca(busca.trim());
+    const digitos = termo.replace(/\D/g, "");
+    const todas = empresas ?? [];
+    const peso = (e: EmpresaDaLista) => acessos[e.id]?.vezes ?? 0;
+    const porAcesso = (a: EmpresaDaLista, b: EmpresaDaLista) => peso(b) - peso(a) || (acessos[b.id]?.em ?? 0) - (acessos[a.id]?.em ?? 0);
+    const alfabetica = (a: EmpresaDaLista, b: EmpresaDaLista) => a.nome.localeCompare(b.nome, "pt-BR");
+    if (!termo) {
+      const frequentes = todas.filter((e) => peso(e) > 0).sort(porAcesso).slice(0, TAMANHO_DA_LISTA);
+      const ja = new Set(frequentes.map((e) => e.id));
+      const outras = todas.filter((e) => !e.matrizId && !ja.has(e.id)).sort(alfabetica);
+      return [...frequentes.map((e) => ({ ...e, frequente: true })), ...outras.map((e) => ({ ...e, frequente: false }))].slice(0, TAMANHO_DA_LISTA);
+    }
+    const lista = todas.filter((e) => paraBusca(e.nome).includes(termo) || (digitos.length >= 3 && (e.cnpj ?? "").includes(digitos)));
+    // A matriz antes das filiais: quem busca "bld" quer a base, e a matriz abre as unidades.
+    return lista
+      .sort((a, b) => (a.matrizId ? 1 : 0) - (b.matrizId ? 1 : 0) || porAcesso(a, b) || alfabetica(a, b))
+      .slice(0, TAMANHO_DA_LISTA)
+      .map((e) => ({ ...e, frequente: false }));
+  }, [busca, empresas, acessos]);
+
   if (!tela) return null;
+
+  function posicionar(ancora: string) {
+    const el = ancoras.current.get(ancora);
+    const caixa = faixa.current?.getBoundingClientRect();
+    if (el && caixa) setEsquerda(Math.max(0, Math.min(el.getBoundingClientRect().left - caixa.left, caixa.width - 360)));
+  }
+
+  /**
+   * Passa a trabalhar na empresa. A aba dela entra na hora (no `lugar` de outra,
+   * quando a busca veio de uma aba), com o carregando, e pode ser fechada antes
+   * de a troca terminar: aí a faixa volta para a empresa de antes.
+   */
+  function trabalhar(
+    empresa: { id: string; nome: string; logoUrl?: string | null; matrizId: string; comUnidades: boolean },
+    lugar: string | null = null,
+    /** As abas de partida — ao fechar uma, a lista já sem ela. */
+    base: Aba[] = abas
+  ) {
+    const nova = { id: empresa.id, nome: empresa.nome, logoUrl: empresa.logoUrl ?? null, matrizId: empresa.matrizId, comUnidades: empresa.comUnidades };
+    setAbas(lugar ? comAbaNoLugar(base, lugar, nova) : comAba(base, nova));
+    setAbrindo(empresa.id);
+    canceladas.delete(empresa.id);
+    fecharTudo();
+    const anterior = foco?.companyId ?? null;
+    iniciar(async () => {
+      const r = await trabalharNaEmpresa(empresa.id);
+      const atuais = abasDoTexto(textoDasAbas(escritorio));
+      setAbrindo(null);
+      if (canceladas.has(empresa.id)) {
+        canceladas.delete(empresa.id);
+        if (r.ok) {
+          const volta = atuais.find((a) => a.id === anterior) ?? atuais[0];
+          if (volta) await trabalharNaEmpresa(volta.id);
+          else await pararDeTrabalharNaEmpresa();
+        }
+        router.refresh();
+        return;
+      }
+      if (!r.ok) {
+        // A aba de uma empresa que não abre mais (excluída, de outro escritório) sai.
+        setAbas(atuais.filter((a) => a.id !== empresa.id));
+        setErro(r.erro);
+        return toast.error(r.erro);
+      }
+      setAcessos(registrarAcesso(escritorio, empresa.id));
+      router.replace(enderecoParaOutraEmpresa(tela!, new URLSearchParams(parametros.toString())));
+    });
+  }
+
+  function daLista(e: EmpresaDaLista) {
+    return { id: e.id, nome: e.nome, logoUrl: e.logoUrl ?? null, matrizId: matrizDe(e), comUnidades: (unidadesPorMatriz.get(matrizDe(e))?.length ?? 1) > 1 };
+  }
+
+  // Na busca: a matriz de uma base com filiais abre a janelinha das unidades;
+  // uma filial (procurada pelo nome ou CNPJ) ou empresa sozinha entra direto.
+  function escolherNaBusca(e: EmpresaDaLista) {
+    const unidades = unidadesPorMatriz.get(matrizDe(e)) ?? [e];
+    if (!e.matrizId && unidades.length > 1) {
+      if (trocandoAba) {
+        // Na busca dentro da aba: a janelinha abre embaixo dela, e o campo passa a procurar nas filiais.
+        doLayout?.fecharEscolha();
+        setBusca("");
+        setUnidadesDe({ matrizId: e.id, ancora: trocandoAba });
+      } else {
+        setUnidadesDe({ matrizId: e.id, ancora: "busca" });
+      }
+      return;
+    }
+    trabalhar(daLista(e), trocandoAba);
+  }
+
+  // Na aba aberta: a busca para trocá-la por outra empresa (05/11/2026). Numa
+  // base com filiais, a janelinha das unidades, e a busca procura nelas.
+  function clicarAba(aba: Aba) {
+    if (aba.id !== foco?.companyId) return trabalhar(aba);
+    if (unidadesDe?.ancora === aba.id || (buscando && trocandoAba === aba.id)) return fecharTudo();
+    carregar();
+    setBusca("");
+    setErro(null);
+    setTrocandoAba(aba.id);
+    posicionar(aba.id);
+    if (aba.comUnidades) {
+      doLayout?.fecharEscolha();
+      setUnidadesDe({ matrizId: aba.matrizId, ancora: aba.id });
+    } else {
+      setUnidadesDe(null);
+      doLayout?.abrirEscolha();
+    }
+  }
+
+  /**
+   * Da janelinha das unidades para a busca de todas as empresas, trocando a
+   * mesma aba. `manterTexto`: o que foi digitado e não achou filial segue na busca.
+   */
+  function procurarOutraEmpresa(manterTexto = false) {
+    setUnidadesDe(null);
+    if (!manterTexto) setBusca("");
+    doLayout?.abrirEscolha();
+  }
+
+  function fecharAba(aba: Aba) {
+    const resto = abas.filter((a) => a.id !== aba.id);
+    setAbas(resto);
+    // A que está abrindo: a troca termina e volta para a empresa de antes.
+    if (aba.id === abrindo) {
+      canceladas.add(aba.id);
+      return;
+    }
+    if (pendente || aba.id !== foco?.companyId) return;
+    if (resto[0]) return trabalhar(resto[0], null, resto);
+    iniciar(async () => {
+      await pararDeTrabalharNaEmpresa();
+    });
+  }
 
   function sair() {
     iniciar(async () => {
       await pararDeTrabalharNaEmpresa();
-      toast.success("As telas do BPO voltaram a mostrar todas as empresas.");
+      fecharTudo();
     });
   }
 
-  return (
-    <div
-      role="region"
-      aria-label="Empresa em que você está trabalhando"
-      aria-busy={pendente || undefined}
-      className={`flex-shrink-0 h-10 flex items-center gap-2 border-b border-brand/20 bg-brand/8 px-4 lg:px-6 transition-opacity ${pendente ? "opacity-60" : ""}`}
-    >
-      <Crosshair size={14} aria-hidden className="flex-shrink-0 text-brand" />
-      <span className="hidden sm:inline flex-shrink-0 text-helper text-fg-secondary">Trabalhando em</span>
-      <AvatarImage src={foco.logoUrl} name={foco.nome} size={20} shape="lg" fontSize={9} />
-      <span className="min-w-0 truncate text-ui font-semibold text-fg" data-dica={foco.nome}>{foco.nome}</span>
-      {foco.alcance && <span className="hidden md:inline flex-shrink-0 text-helper text-fg-muted whitespace-nowrap">· {foco.alcance}</span>}
-      <div className="ml-auto flex flex-shrink-0 items-center gap-1">
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => setTrocandoDe(foco.companyId)}
-          disabled={pendente}
-          data-dica="Trabalhar em outra empresa"
+  /** A lista da busca: embaixo do campo do "+" (`onde` relativo a ele) ou da aba (`esquerdaPx`, medido no clique). */
+  function listaDaBusca(onde = "absolute left-0 top-[calc(100%+6px)]", esquerdaPx?: number) {
+    return (
+        <div
+          className={`${onde} w-[22rem] max-w-[calc(100vw-2rem)] rounded-b-lg border border-t-0 border-border bg-surface py-1.5 shadow-lg`}
+          style={esquerdaPx === undefined ? undefined : { left: esquerdaPx }}
         >
-          <ArrowLeftRight size={13} aria-hidden />
-          Trocar<span className="hidden sm:inline"> empresa</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={sair}
-          disabled={pendente}
-          data-dica="Parar de trabalhar nesta empresa: as telas do BPO voltam a mostrar todas"
-        >
-          <LogOut size={13} aria-hidden />
-          Sair
-        </Button>
-      </div>
-      {trocandoDe === foco.companyId && <TrocarEmpresa atual={foco.companyId} onClose={() => setTrocandoDe(null)} />}
-    </div>
-  );
-}
-
-type EmpresaDaLista = EmpresaParaEscolher & { nome: string };
-
-/** A janela do "Trocar empresa": a busca de sempre (nome ou CNPJ, logo, filial recuada). */
-function TrocarEmpresa({ atual, onClose }: { atual: string; onClose: () => void }) {
-  return (
-    <Modal open onClose={onClose} title="Trabalhar em outra empresa">
-      <p className="text-ui text-fg-secondary mb-3">
-        As telas do BPO passam a mostrar e gravar só a empresa escolhida, com a matriz e as filiais dela.
-      </p>
-      <EscolherEmpresaDoFoco atual={atual} onPronto={onClose} />
-    </Modal>
-  );
-}
-
-/**
- * A busca da empresa do foco, dividida entre o "Trocar empresa" da faixa e a
- * janela do seletor do topo (29/10/2026). Escolhida a empresa, uma tela do
- * foco volta limpa (o endereço da anterior ainda falaria da outra empresa:
- * `?empresa=`, a conta bancária, o centro de custo); fora delas, a tela só é
- * desenhada de novo, para o topo mostrar a empresa.
- */
-export function EscolherEmpresaDoFoco({ atual, onPronto }: { atual: string | null; onPronto: () => void }) {
-  const router = useRouter();
-  const caminho = usePathname();
-  const toast = useToast();
-  const [empresas, setEmpresas] = useState<EmpresaDaLista[] | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-  const [pendente, iniciar] = useTransition();
-  const pediu = useRef(false);
-
-  // A lista vem quando a janela abre — a faixa está em toda tela do foco.
-  useEffect(() => {
-    if (pediu.current) return;
-    pediu.current = true;
-    empresasParaOFoco()
-      .then((r) => (r.ok ? setEmpresas(r.empresas) : setErro(r.erro)))
-      .catch(() => setErro("Não deu para carregar as empresas. Feche e tente de novo."));
-  }, []);
-
-  function escolher(companyId: string) {
-    if (!companyId) return;
-    if (companyId === atual) return onPronto();
-    setErro(null);
-    iniciar(async () => {
-      const r = await trabalharNaEmpresa(companyId);
-      if (!r.ok) return setErro(r.erro);
-      const tela = telaDoFoco(caminho);
-      if (tela) router.replace(tela);
-      else router.refresh();
-      onPronto();
-      toast.success(`Pronto: as telas do BPO agora mostram e gravam só ${r.descricao}.`);
-    });
-  }
-
-  return (
-    <>
-      {erro && <Aviso className="mb-3">{erro}</Aviso>}
-      {empresas === null ? (
-        !erro && <p className="text-ui text-fg-muted">Carregando as empresas…</p>
-      ) : (
-        <div className={`transition-opacity ${pendente ? "opacity-60" : ""}`} aria-busy={pendente || undefined}>
-          <SearchableSelect
-            name="empresa"
-            aria-label="Empresa"
-            options={opcoesDeEmpresa(empresas)}
-            avatar
-            lembrarRecentes="empresas"
-            defaultValue={atual ?? undefined}
-            placeholder="Buscar empresa por nome ou CNPJ…"
-            onChange={escolher}
-          />
+          {erro ? (
+            <p className="px-3 py-2 text-helper text-danger">{erro}</p>
+          ) : empresas === null ? (
+            <p className="px-3 py-2 text-helper text-fg-muted">Carregando as empresas…</p>
+          ) : achadas.length === 0 ? (
+            <p className="px-3 py-2 text-helper text-fg-muted">Nenhuma empresa com esse nome ou CNPJ.</p>
+          ) : (
+            <ul role="listbox" aria-label="Empresas encontradas">
+              {achadas.map((e, i) => {
+                const unidadesDaBase = unidadesPorMatriz.get(matrizDe(e))?.length ?? 1;
+                const filial = e.matrizId ? porId.get(e.matrizId) : undefined;
+                const rotulo =
+                  e.frequente && i === 0 ? "Mais acessadas" : !e.frequente && i > 0 && achadas[i - 1]!.frequente ? "Outras empresas" : null;
+                return (
+                  <li key={e.id}>
+                    {rotulo && <p className="px-3 pb-1 pt-2 text-micro font-semibold uppercase tracking-wide text-fg-muted">{rotulo}</p>}
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={e.id === foco?.companyId}
+                      onClick={() => escolherNaBusca(e)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
+                    >
+                      <AvatarImage src={e.logoUrl ?? null} name={e.nome} size={26} shape="lg" fontSize={10} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-ui font-medium text-fg">{e.nome}</span>
+                        <span className="block truncate text-helper text-fg-muted">
+                          {filial ? `filial de ${filial.nome}` : e.cnpj ? formatCnpj(e.cnpj) : ""}
+                          {!e.matrizId && unidadesDaBase > 1 ? ` · matriz e ${unidadesDaBase - 1} ${unidadesDaBase === 2 ? "filial" : "filiais"}` : ""}
+                        </span>
+                      </span>
+                      {!e.matrizId && unidadesDaBase > 1 && <ChevronDown size={14} aria-hidden className="-rotate-90 text-fg-muted" />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-      )}
-    </>
+    );
+  }
+
+  const todasAsUnidades = unidadesDe ? (unidadesPorMatriz.get(unidadesDe.matrizId) ?? null) : null;
+  const matrizDaJanelinha = unidadesDe ? porId.get(unidadesDe.matrizId) : undefined;
+  // A janelinha aberta pela aba usa o campo da faixa para procurar nas unidades.
+  const buscaNasUnidades = unidadesDe !== null && unidadesDe.ancora !== "busca";
+  const campoAberto = buscando || buscaNasUnidades;
+  // Aberto pela aba ativa, o campo fica NA aba (pedido do Victor); pelo "+", ao lado das abas.
+  const campoNaAba = campoAberto && trocandoAba !== null;
+  const termoDasUnidades = buscaNasUnidades ? paraBusca(busca.trim()) : "";
+  const digitosDasUnidades = termoDasUnidades.replace(/\D/g, "");
+  const unidades =
+    todasAsUnidades && termoDasUnidades
+      ? todasAsUnidades.filter((u) => paraBusca(u.nome).includes(termoDasUnidades) || (digitosDasUnidades.length >= 3 && (u.cnpj ?? "").includes(digitosDasUnidades)))
+      : todasAsUnidades;
+
+  /** A janelinha das unidades: presa à busca (`onde` relativo a ela) ou à aba (`esquerdaPx`, medido no clique). */
+  function janelinha(onde: string, esquerdaPx?: number) {
+    return (
+        <div
+          role="dialog"
+          aria-label={`Unidades de ${matrizDaJanelinha?.nome ?? "a empresa"}`}
+          className={`${onde} w-[22rem] max-w-[calc(100vw-2rem)] rounded-b-lg border border-t-0 border-border bg-surface shadow-lg`}
+          style={esquerdaPx === undefined ? undefined : { left: esquerdaPx }}
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <p className="min-w-0 truncate text-helper text-fg-secondary">
+              Em qual unidade de <span className="font-semibold text-fg">{matrizDaJanelinha?.nome ?? "…"}</span>?
+            </p>
+            <button type="button" onClick={() => setUnidadesDe(null)} aria-label="Fechar as unidades" className="grid size-6 place-items-center rounded text-fg-muted hover:bg-surface-hover">
+              <X size={12} aria-hidden />
+            </button>
+          </div>
+          {unidades === null ? (
+            <p className="px-3 py-2 text-helper text-fg-muted">Carregando as unidades…</p>
+          ) : unidades.length === 0 ? (
+            <div className="px-3 py-2">
+              <p className="text-helper text-fg-muted">Nenhuma unidade com esse nome ou CNPJ.</p>
+              {buscaNasUnidades && busca.trim() && (
+                <button type="button" onClick={() => procurarOutraEmpresa(true)} className="mt-1 text-helper font-semibold text-brand hover:underline">
+                  Buscar “{busca.trim()}” em todas as empresas
+                </button>
+              )}
+            </div>
+          ) : (
+            <ul className="max-h-72 overflow-y-auto py-1">
+              {unidades.map((u) => {
+                const atual = u.id === foco?.companyId;
+                return (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      onClick={() => (atual ? fecharTudo() : trabalhar(daLista(u), trocandoAba))}
+                      disabled={pendente}
+                      aria-current={atual || undefined}
+                      className={`flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-surface-hover ${atual ? "bg-brand/5" : ""}`}
+                    >
+                      <span className={`rounded px-1.5 py-0.5 text-micro font-semibold ${u.matrizId ? "bg-surface-2 text-fg-secondary" : "bg-brand/10 text-brand"}`}>{u.matrizId ? "Filial" : "Matriz"}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-ui font-medium text-fg">{u.nome}</span>
+                        {u.cnpj && <span className="block text-helper text-fg-muted">{formatCnpj(u.cnpj)}</span>}
+                      </span>
+                      {atual && <span className="text-helper font-semibold text-brand">Atual</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {unidadesDe?.ancora !== "busca" && (
+            <div className="border-t border-border px-3 py-2">
+              <button type="button" onClick={() => procurarOutraEmpresa()} className="text-helper font-semibold text-brand hover:underline">
+                Procurar outra empresa
+              </button>
+            </div>
+          )}
+        </div>
+    );
+  }
+
+  /**
+   * O campo da busca. `naAba`: sem a caixa do campo (borda, fundo, anel) — a aba
+   * vira o campo, com a borda dela, em vez de mostrar outra caixa por cima.
+   */
+  function campoDeBusca(naAba = false) {
+    return (
+    <Input
+      // Trocar entre a busca nas filiais e a de todas remonta o campo, e o foco volta para ele.
+      key={buscaNasUnidades ? "busca-nas-unidades" : "busca-de-empresas"}
+      compact
+      autoFocus
+      icon={naAba ? undefined : <Search />}
+      className={naAba ? "h-full! border-0! bg-transparent! px-0! shadow-none! focus:shadow-none! focus-visible:shadow-none!" : ""}
+      aria-label={buscaNasUnidades ? "Buscar filial por nome ou CNPJ" : "Buscar empresa por nome ou CNPJ"}
+      value={busca}
+      onChange={(e) => {
+        setBusca(e.target.value);
+        // Depois de escolher uma matriz na busca, digitar de novo volta à busca de todas.
+        if (unidadesDe?.ancora === "busca") setUnidadesDe(null);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter") return;
+        if (buscaNasUnidades) {
+          const primeira = unidades?.find((u) => u.id !== foco?.companyId);
+          if (primeira) {
+            e.preventDefault();
+            trabalhar(daLista(primeira), trocandoAba);
+          }
+        } else if (achadas[0]) {
+          e.preventDefault();
+          escolherNaBusca(achadas[0]);
+        }
+      }}
+      placeholder={buscaNasUnidades ? "Buscar filial por nome ou CNPJ…" : "Nome ou CNPJ…"}
+    />
+    );
+  }
+
+  return (
+    <div ref={faixa} className="relative z-30 flex-shrink-0">
+      <div
+        role="region"
+        aria-label="Empresas em que você está trabalhando"
+        aria-busy={pendente || undefined}
+        className="h-11 flex items-center gap-1.5 border-b border-brand/20 bg-brand/8 px-4 lg:px-6"
+      >
+        <Crosshair size={14} aria-hidden className="flex-shrink-0 text-brand mr-1" />
+        <div role="tablist" aria-label="Empresas" className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+          {abas.length === 0 && !buscando && <span className="whitespace-nowrap px-1 text-ui font-semibold text-fg">Nenhuma empresa escolhida</span>}
+          {abas.map((aba) => {
+            const carregando = aba.id === abrindo;
+            const ativa = carregando || (!abrindo && aba.id === foco?.companyId);
+            return (
+              <div
+                key={aba.id}
+                ref={(el) => {
+                  if (el) ancoras.current.set(aba.id, el);
+                  else ancoras.current.delete(aba.id);
+                }}
+                className={`group flex h-8 flex-shrink-0 items-center rounded-md border pl-1.5 transition-colors ${
+                  ativa ? "border-brand/40 bg-surface shadow-sm" : "border-transparent hover:bg-surface/70"
+                }`}
+              >
+                {campoNaAba && trocandoAba === aba.id ? (
+                  <div className="flex h-full w-64 items-center gap-1.5 pr-2">
+                    <Search size={14} aria-hidden className="flex-shrink-0 text-fg-muted" />
+                    {campoDeBusca(true)}
+                  </div>
+                ) : (
+                <>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={ativa}
+                  aria-expanded={ativa ? unidadesDe?.ancora === aba.id || (buscando && trocandoAba === aba.id) : undefined}
+                  onClick={() => clicarAba(aba)}
+                  disabled={pendente}
+                  data-dica={ativa ? (aba.comUnidades ? "Trocar a unidade ou procurar outra empresa" : "Procurar outra empresa para esta aba") : `Trabalhar em ${aba.nome}`}
+                  className="flex h-full min-w-0 max-w-64 items-center gap-1.5 rounded-md px-1 text-left focus-visible:outline-2 focus-visible:outline-brand"
+                >
+                  {carregando ? (
+                    <Loader2 size={16} aria-label="Abrindo" className="flex-shrink-0 animate-spin text-brand" />
+                  ) : (
+                    <AvatarImage src={aba.logoUrl} name={aba.nome} size={20} shape="lg" fontSize={9} />
+                  )}
+                  <span className={`truncate text-ui ${ativa ? "font-semibold text-fg" : "text-fg-secondary"}`}>{aba.nome}</span>
+                  {ativa && !carregando && <ChevronDown size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fecharAba(aba)}
+                  aria-label={`Tirar ${aba.nome} das abas`}
+                  className={`mr-0.5 grid size-6 flex-shrink-0 place-items-center rounded text-fg-muted hover:bg-surface-hover hover:text-fg ${ativa ? "" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"}`}
+                >
+                  <X size={12} aria-hidden />
+                </button>
+                </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {campoAberto && !campoNaAba ? (
+          <div
+            ref={(el) => {
+              if (el) ancoras.current.set("busca", el);
+            }}
+            className="relative w-64 flex-shrink-0"
+          >
+            {campoDeBusca()}
+            {unidadesDe?.ancora === "busca" ? janelinha("absolute left-0 top-[calc(100%+6px)]") : buscando ? listaDaBusca() : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setUnidadesDe(null);
+              setTrocandoAba(null);
+              doLayout?.abrirEscolha();
+            }}
+            disabled={pendente}
+            aria-label="Abrir outra empresa"
+            data-dica="Abrir outra empresa"
+            className={`flex h-8 flex-shrink-0 items-center gap-1.5 rounded-md text-ui font-semibold text-brand hover:bg-surface/70 ${abas.length === 0 ? "px-2.5 border border-brand/30 bg-surface" : "w-8 justify-center"}`}
+          >
+            <Plus size={15} aria-hidden />
+            {abas.length === 0 && "Escolher empresa"}
+          </button>
+        )}
+        {foco && (
+          <Button variant="ghost" size="xs" onClick={sair} disabled={pendente} className="ml-auto flex-shrink-0" data-dica="Parar de trabalhar numa empresa: as telas por empresa voltam a mostrar todas">
+            <LogOut size={13} aria-hidden />
+            <span className="hidden sm:inline">Todas as empresas</span>
+          </Button>
+        )}
+      </div>
+
+      {unidadesDe && unidadesDe.ancora !== "busca" && janelinha("absolute top-11", esquerda)}
+      {campoNaAba && buscando && !unidadesDe && listaDaBusca("absolute top-11", esquerda)}
+    </div>
   );
 }

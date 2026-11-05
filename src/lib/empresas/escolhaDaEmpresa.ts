@@ -26,6 +26,13 @@
 // empresa em foco e avisa o que o endereço pedia, com o botão para sair do
 // foco e abrir a outra (`pedidaForaDoFoco`). "Todas", com foco, é a base
 // inteira — a matriz e as filiais (21/10/2026: a BLD vê as 21 juntas).
+//
+// **Só a faixa** (05/11/2026, pedido do Victor): o seletor de cada tela saiu, e
+// a empresa se escolhe só na faixa "Trabalhando em" (`soFoco`). A tela abre na
+// empresa em foco — ou na base inteira (matriz e filiais), nas que oferecem
+// "todas" —; sem foco, mostra todas as empresas onde pode, e pede a escolha na
+// faixa onde não pode. Nem a URL nem a última empresa aberta escolhem mais: o
+// `?empresa=` de um link só serve para a tela dizer o que ele pedia.
 
 /** O valor de `?empresa=` que pede todas as empresas, nas telas que oferecem. */
 export const TODAS_AS_EMPRESAS = "todas";
@@ -45,7 +52,9 @@ export type EscolhaDaEmpresa =
        * - `foco-fora-da-tela`: nenhuma empresa do foco aparece nesta tela (só
        *   as com conta do Omie, por exemplo).
        */
-      motivo: "nenhuma" | "invalida" | "foco-fora-da-tela";
+      motivo: "nenhuma" | "invalida" | "foco-fora-da-tela" | "sem-foco";
+      /** `sem-foco`: a empresa que o link pedia (`?empresa=`), para a tela oferecer trabalhar nela. */
+      pedida?: { id: string; nome?: string };
     };
 
 /** O foco que a escolha respeita: a empresa escolhida e o grupo dela (matriz e filiais). */
@@ -62,11 +71,23 @@ export type EntradaDaEscolha = {
   permitirTodas?: boolean;
   /** A empresa em foco, nas telas que seguem o foco — ou nada. */
   foco?: FocoDaEscolha | null;
+  /**
+   * Só a faixa escolhe (05/11/2026): sem foco, todas ou "escolher" (`sem-foco`);
+   * com foco, a empresa em foco ou a base inteira. A URL e a última não contam.
+   */
+  soFoco?: boolean;
 };
 
-export function resolverEmpresaDaTela({ pedida, ultima, disponiveis, permitirTodas = false, foco = null }: EntradaDaEscolha): EscolhaDaEmpresa {
+export function resolverEmpresaDaTela({ pedida, ultima, disponiveis, permitirTodas = false, foco = null, soFoco = false }: EntradaDaEscolha): EscolhaDaEmpresa {
   const naLista = new Set(disponiveis);
   const pedidaLimpa = pedida?.trim() ?? "";
+  if (soFoco) {
+    if (foco) return resolverNoFoco("", null, naLista, permitirTodas, foco, true);
+    if (permitirTodas) return { tipo: "todas" };
+    return naLista.has(pedidaLimpa)
+      ? { tipo: "escolher", motivo: "sem-foco", pedida: { id: pedidaLimpa } }
+      : { tipo: "escolher", motivo: "sem-foco" };
+  }
   if (foco) return resolverNoFoco(pedidaLimpa, ultima, naLista, permitirTodas, foco);
 
   if (pedidaLimpa !== "") {
@@ -88,11 +109,14 @@ function resolverNoFoco(
   ultima: string | null,
   naLista: ReadonlySet<string>,
   permitirTodas: boolean,
-  foco: FocoDaEscolha
+  foco: FocoDaEscolha,
+  /** Só a faixa: onde a tela oferece "todas", ela abre na base inteira (matriz e filiais). */
+  basePorPadrao = false
 ): EscolhaDaEmpresa {
   const grupo = new Set(foco.grupo);
   const naTela = [...naLista].filter((id) => grupo.has(id));
   const noFoco = new Set(naTela);
+  if (basePorPadrao && todasNoFoco(permitirTodas, naTela.length)) return { tipo: "todas" };
 
   if (pedida !== "") {
     if (noFoco.has(pedida)) return { tipo: "empresa", companyId: pedida, origem: "url" };

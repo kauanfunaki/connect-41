@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ehIngestaoOps } from "@/lib/ops/regras";
+import { ehRotaDeTokenPessoal } from "@/lib/tokens-pessoais/regras";
 import { ehCaminhoDoPortal, ehRotaPublicaDoPortal, PORTAL_COOKIE } from "@/lib/auth/portal";
 import { jwtVerify } from "jose";
 import type { AccessTokenPayload } from "@/lib/auth/types";
@@ -266,6 +267,12 @@ export async function proxy(req: NextRequest) {
   // Somente os POSTs de ingestão usam o token do watcher no próprio handler.
   // Leituras e administração continuam exigindo a sessão da equipe.
   if (ehIngestaoOps(req.method, pathname)) return NextResponse.next({ request: { headers } });
+
+  // A API pública e o servidor MCP (05/11/2026) se autenticam pelo token
+  // pessoal (`Bearer c41_…`), conferido no próprio handler. Aqui só passam sem
+  // a sessão da equipe e sem cabeçalho de identidade — o cookie de quem está
+  // logado não vale nessas rotas.
+  if (ehRotaDeTokenPessoal(pathname)) return NextResponse.next({ request: { headers } });
 
   // `/carreiras` sem empresa é público por **igualdade**, não por prefixo: pôr
   // "/carreiras" em PUBLIC_PATHS liberaria qualquer caminho que comece assim.

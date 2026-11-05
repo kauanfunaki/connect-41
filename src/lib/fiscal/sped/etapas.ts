@@ -13,7 +13,7 @@ export const ETAPAS_DO_SPED = [
 
 export type EtapaDoSped = (typeof ETAPAS_DO_SPED)[number]["chave"];
 
-export const CAMINHO_DO_SPED = "/fiscal/sped";
+export const CAMINHO_DO_SPED = "/sped-fiscal";
 
 export function caminhoDaEtapa(etapa: EtapaDoSped): string {
   return `${CAMINHO_DO_SPED}/${etapa}`;

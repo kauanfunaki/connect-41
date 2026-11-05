@@ -24,7 +24,7 @@ export async function PainelMotor({ tela }: { tela: TelaDoMotor }) {
     doMotor(() => motor.cliente.saude(contexto.raiz)),
     doMotor(() => motor.cliente.listarArquivos(contexto.raiz, { competencia: contexto.competencia, apenas_considerados: true, limite: 200 })),
   ]);
-  const historico = (estado: string) => hrefDoMotor("/fiscal/operacao", contexto, { aba: "historico", estado });
+  const historico = (estado: string) => hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "historico", estado });
   const fila = saude.dados?.fila;
   const daCompetencia = (arquivos.dados?.itens ?? []).filter((a) => vistos.has(a.cnpj));
   const podeOperar = tela.modulos.includes("fiscal_operacao");
@@ -51,7 +51,7 @@ export async function PainelMotor({ tela }: { tela: TelaDoMotor }) {
     </>}
     {arquivos.erro ? <Aviso tom="atencao">{arquivos.erro}</Aviso> : <>
       <MetricasFiscais itens={[
-        { rotulo: `SPED vigentes · ${contexto.competencia}`, valor: daCompetencia.length, icone: <FileText />, href: podeArquivos ? hrefDoMotor("/fiscal/entregas", contexto) : undefined },
+        { rotulo: `SPED vigentes · ${contexto.competencia}`, valor: daCompetencia.length, icone: <FileText />, href: podeArquivos ? hrefDoMotor("/sped-fiscal/motor/entregas", contexto) : undefined },
         { rotulo: "Validação aprovada", valor: daCompetencia.filter((a) => validacaoDoArquivo(a.validacao) === "Aprovado").length, icone: <BadgeCheck /> },
         { rotulo: "Defasados", valor: daCompetencia.filter((a) => a.defasado).length, icone: <RefreshCw />, tom: daCompetencia.some((a) => a.defasado) ? "text-warning-fg" : undefined, detalhe: "decisões depois da geração" },
         { rotulo: "Entregas registradas", valor: daCompetencia.filter((a) => a.entrega.estado === "registrada").length, icone: <Send /> },

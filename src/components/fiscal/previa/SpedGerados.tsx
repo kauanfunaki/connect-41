@@ -43,7 +43,7 @@ export function ArquivosFiscal({ aba, imposto }: { aba: string; imposto?: Impost
     && (!params.get("validacao") || situacao(a) === params.get("validacao")));
   const paginas = Math.max(1, Math.ceil(filtrados.length / 12));
   const pagina = Math.min(paginas, Math.max(1, Number(params.get("pagina")) || 1));
-  const hrefPagina = (n: number) => { const q = new URLSearchParams(params.toString()); q.set("pagina", String(n)); return `/fiscal/entregas?${q}`; };
+  const hrefPagina = (n: number) => { const q = new URLSearchParams(params.toString()); q.set("pagina", String(n)); return `/sped-fiscal/motor/entregas?${q}`; };
   const arquivo = todos.find((a) => a.id === detalhe?.id);
   const podeValidar = (a: ArquivoTeste) => atuaisIds.has(a.id) && !precisaRevisar(cenario, a) && !a.entregue;
   const empresa = cenario.empresas.find((e) => e.id === cenario.contexto.empresaId)!;
@@ -55,7 +55,7 @@ export function ArquivosFiscal({ aba, imposto }: { aba: string; imposto?: Impost
       { rotulo: "Entregas simuladas", valor: todos.filter((a) => a.entregue).length, icone: <Send /> },
     ]} />
     {(aba === "validacao" || aba === "entregas") && <Aviso tom="info">{aba === "validacao" ? "Abra Validar ou Ver relatório nas ações do arquivo para consultar a validação." : "Abra Registrar entrega ou Ver entrega nas ações do arquivo para consultar o protocolo de teste."}</Aviso>}
-    <CascoDaTabela contagem={contarItens(filtrados.length, "arquivo", "arquivos")} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={modulos.includes("fiscal_operacao") && <Button href="/fiscal/operacao?aba=executar&secao=gerar">Gerar novo SPED</Button>}>
+    <CascoDaTabela contagem={contarItens(filtrados.length, "arquivo", "arquivos")} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={modulos.includes("fiscal_operacao") && <Button href="/sped-fiscal/motor/operacao?aba=executar&secao=gerar">Gerar novo SPED</Button>}>
       <TabelaFiscal vazio="Nenhum SPED gerado neste filtro." colunas={["Arquivo / obrigação", "Empresa / estabelecimento", "Competência", "Versão / vigência", "Validação", "Gerado em", "Ações"]} linhas={filtrados.slice((pagina - 1) * 12, pagina * 12).map((a) => ({ id: a.id, celulas: [
         <span key="nome" className="block max-w-60 break-words text-helper">{a.nome}<span className="block text-ui font-medium">{a.tipo}</span></span>,
         <span key="empresa">{empresa.nome}<span className="block text-helper text-fg-muted">{empresa.estabelecimentos.find((f) => f.id === a.contexto.estabelecimentoId)?.nome ?? "Todos os estabelecimentos · CNPJ raiz"}</span></span>,

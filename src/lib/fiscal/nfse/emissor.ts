@@ -15,7 +15,9 @@
 // O que a Focus vai precisar, além de implementar isto: onde guardar as
 // emissões (a `OmieEmissao` tem as colunas da OS), o cadastro de tomadores e
 // serviços (no Omie eles moram lá; na Focus, no Connect) e o certificado A1 da
-// empresa.
+// empresa. Ao emitir com ele, registrar o uso —
+// `registrarUsoDoCertificado(tenantId, cnpj, "nfse")` (certificados/registro.ts)
+// — para a tela Certificados dizer que a NFS-e para se ele vencer.
 
 import type { EstadoDaEmissao, PedidoDeNfse } from "@/lib/integracoes/omie/emissao";
 import type {

@@ -14,7 +14,7 @@ import { Select } from "@/components/ui/Select";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { CampoFiscal } from "@/components/fiscal/previa/Compartilhados";
-import { apurarCteNoMotor, corrigirPagamentoNoMotor, decidirPagamentoNoMotor, informarContratoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
+import { apurarCteNoMotor, corrigirPagamentoNoMotor, decidirPagamentoNoMotor, informarContratoNoMotor } from "@/app/(app)/sped-fiscal/escritas-actions";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import { camposDaCorrecao, CAMPOS_CORRIGIVEIS, pastaValida, ROTULO_DO_TIPO_DE_APOIO, TIPOS_DE_PAGAMENTO_APOIO, type CampoCorrigivel, type ChaveDoPagamento, type CorpoDoContrato, type FaturasBpoImportadas, type PagamentosApoioImportados, type TipoDePagamentoApoio } from "@/lib/sped/escritasDoMotor";
 import { reaisDoMotor } from "@/lib/fiscal/motor/formato";

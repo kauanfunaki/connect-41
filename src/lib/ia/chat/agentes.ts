@@ -10,7 +10,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { canActOnSector, canViewSector, isFullWrite, type AuthContext } from "@/lib/auth/context";
-import { isModuleEnabled, setorDoModulo, setoresDoModulo } from "@/lib/modules";
+import { getTenantModuleStates, isModuleEnabled, setorDoModulo, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { agenteDoCatalogo } from "@/lib/ia/catalogo";
 import { estadoDosAgentes } from "@/lib/ia/data";
@@ -330,7 +330,13 @@ export async function agentesDoChat(ctx: AuthContext): Promise<AgenteDoChat[]> {
   const audiencia = await audienciaDoChat(ctx.tenantId);
   if (!audiencia || !publicoPermite(ctx.role, audiencia)) return [];
 
-  const estados = await estadoDosAgentes(ctx.tenantId, CONFIGS.map((c) => c.code));
+  // O estado dos módulos sai de uma leitura só (05/11/2026): antes, cada agente
+  // pedia os setores e o "está ligado" do seu módulo, um depois do outro — até
+  // 8 idas ao banco em fila em toda página, porque o layout monta o chat.
+  const [estados, modulos] = await Promise.all([
+    estadoDosAgentes(ctx.tenantId, CONFIGS.map((c) => c.code)),
+    getTenantModuleStates(ctx.tenantId),
+  ]);
   const disponiveis: AgenteDoChat[] = [];
   for (const c of CONFIGS) {
     if (!agenteDoCatalogo(c.code)) continue;
@@ -338,11 +344,12 @@ export async function agentesDoChat(ctx: AuthContext): Promise<AgenteDoChat[]> {
     if (!estado?.ligado || !estado.temChave) continue;
     // Os setores da tela do agente (21/10/2026): o dono e os que também usam.
     // `setor` segue sendo o dono; "do setor ativo" vale para qualquer um deles.
+    // (`sectorCodes` é a mesma lista de `setoresDoModulo`.)
     let setores: string[] = [];
     if (c.modulo) {
-      const def = getModuleDef(c.modulo);
-      setores = (await setoresDoModulo(ctx.tenantId, c.modulo)) ?? (def ? [def.sectorCode] : []);
-      if (setores.length === 0 || !canActOnSector(ctx, setores) || !(await isModuleEnabled(ctx.tenantId, c.modulo))) continue;
+      const modulo = modulos.find((m) => m.code === c.modulo);
+      setores = modulo?.sectorCodes ?? [];
+      if (setores.length === 0 || !canActOnSector(ctx, setores) || !modulo?.enabled) continue;
     }
     disponiveis.push({
       code: c.code,

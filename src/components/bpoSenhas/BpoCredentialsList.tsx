@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useConfirm } from "@/components/ui/useConfirm";
-import type { BpoCredencialState } from "@/app/(app)/bpo-senhas/actions";
+import type { BpoCredencialState } from "@/app/(app)/senhas/actions";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { FormFooter } from "@/components/ui/FormFooter";

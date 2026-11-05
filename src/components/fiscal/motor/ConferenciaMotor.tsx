@@ -17,7 +17,7 @@ import { LINHAS_SIMULAVEIS, pendenciasDaPrevia, ROTULO_DA_LINHA_SIMULAVEL } from
 import { ApurarCte } from "./EscritasFechamento";
 import { ApurarCombustivel, CorrigirRegime, DecidirDocumento, EnviarPlanilhaDoBpo, EnviarRelatorioOmie, OrigemDoRegimeSelo, SimularLinha } from "./EscritasConferencia";
 
-const CAMINHO = "/fiscal/conferencia";
+const CAMINHO = "/sped-fiscal/motor/conferencia";
 const din = (v: string | null) => <span className="tabular-nums">{reaisDoMotor(v)}</span>;
 const ROTULO_PADRAO: Record<string, string> = { sem_nota: "Sem nota", achado: "Nota achada", com_nota: "Com nota", possivel_duplicidade: "Possível duplicidade" };
 

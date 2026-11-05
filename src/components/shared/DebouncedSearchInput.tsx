@@ -10,12 +10,14 @@ type Props = {
   className?: string;
   /** Repassa a variante enxuta do Input — default true porque este componente só é usado em barra de ferramentas acima de listagem, nunca em formulário. */
   compact?: boolean;
+  /** O nome da caixa para o leitor de tela; sem ele, o placeholder (que some ao digitar). */
+  "aria-label"?: string;
 };
 
 // Filtra a listagem enquanto o usuário digita (debounce de 350ms), sem
 // precisar apertar Enter — atualiza a URL via router.replace preservando os
 // demais filtros ativos (status, empresa, etc.) já presentes na query string.
-export function DebouncedSearchInput({ paramName = "search", placeholder, className, compact = true }: Props) {
+export function DebouncedSearchInput({ paramName = "search", placeholder, className, compact = true, "aria-label": ariaLabel }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,6 +53,7 @@ export function DebouncedSearchInput({ paramName = "search", placeholder, classN
       value={value}
       onChange={(e) => setValue(e.target.value)}
       placeholder={placeholder}
+      aria-label={ariaLabel ?? placeholder}
       className={className}
     />
   );

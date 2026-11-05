@@ -50,13 +50,13 @@ export type RegraDoEnvio = {
 };
 
 export const ENVIOS: Readonly<Record<DestinoDeEnvio, RegraDoEnvio>> = {
-  documentos: { caminho: "/documentos", parte: "arquivos", varios: true, teto: 25 * MiB, extensoes: [], modulo: "fiscal_acervo", tela: "/fiscal/documentos", rotulo: "documentos" },
-  omie: { caminho: "/conferencia/documentos", parte: "arquivo", varios: false, teto: 20 * MiB, extensoes: [], modulo: "fiscal_conferencia", tela: "/fiscal/conferencia", rotulo: "relatório do Omie" },
-  confronto: { caminho: "/conferencia/confronto", parte: "arquivo", varios: false, teto: 20 * MiB, extensoes: ["xlsx"], modulo: "fiscal_conferencia", tela: "/fiscal/conferencia", rotulo: "planilha do BPO" },
+  documentos: { caminho: "/documentos", parte: "arquivos", varios: true, teto: 25 * MiB, extensoes: [], modulo: "fiscal_acervo", tela: "/sped-fiscal/motor/documentos", rotulo: "documentos" },
+  omie: { caminho: "/conferencia/documentos", parte: "arquivo", varios: false, teto: 20 * MiB, extensoes: [], modulo: "fiscal_conferencia", tela: "/sped-fiscal/motor/conferencia", rotulo: "relatório do Omie" },
+  confronto: { caminho: "/conferencia/confronto", parte: "arquivo", varios: false, teto: 20 * MiB, extensoes: ["xlsx"], modulo: "fiscal_conferencia", tela: "/sped-fiscal/motor/conferencia", rotulo: "planilha do BPO" },
   // §14.3 — as duas importações de apoio, na tela onde os pagamentos de apoio
   // são conferidos (PIS e COFINS › Fechamento, §14.6).
-  pagamentos_apoio: { caminho: "/pagamentos-apoio/importar", parte: "arquivos", varios: true, teto: 25 * MiB, extensoes: ["pdf"], modulo: "fiscal_contribuicoes", tela: "/fiscal/contribuicoes", rotulo: "pagamentos de apoio" },
-  faturas_bpo: { caminho: "/faturas-bpo/importar", parte: "planilha", varios: false, teto: 25 * MiB, extensoes: ["xlsx"], extra: { parte: "pdfs", extensoes: ["pdf"], rotulo: "comprovantes" }, modulo: "fiscal_contribuicoes", tela: "/fiscal/contribuicoes", rotulo: "planilha de faturas do BPO" },
+  pagamentos_apoio: { caminho: "/pagamentos-apoio/importar", parte: "arquivos", varios: true, teto: 25 * MiB, extensoes: ["pdf"], modulo: "fiscal_contribuicoes", tela: "/sped-fiscal/motor/contribuicoes", rotulo: "pagamentos de apoio" },
+  faturas_bpo: { caminho: "/faturas-bpo/importar", parte: "planilha", varios: false, teto: 25 * MiB, extensoes: ["xlsx"], extra: { parte: "pdfs", extensoes: ["pdf"], rotulo: "comprovantes" }, modulo: "fiscal_contribuicoes", tela: "/sped-fiscal/motor/contribuicoes", rotulo: "planilha de faturas do BPO" },
 };
 
 /**

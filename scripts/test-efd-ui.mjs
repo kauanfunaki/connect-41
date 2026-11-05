@@ -82,7 +82,7 @@ try{
   await contexto.addCookies([{name:"access_token",value:jwt.sign({sub:user,tenantId:tenant,role:"ADMIN",sectors:["fiscal"],accessibleTenants:[tenant]},segredo,{expiresIn:"30m"}),url:base,httpOnly:true,sameSite:"Lax"},{name:"active_sector_code",value:"fiscal",url:base},{name:"theme",value:"light",url:base}]);
   const page=await contexto.newPage();page.setDefaultTimeout(20000);page.on("pageerror",e=>resultado.erros.push(e.message));
   const selecao="raiz=17122471&estab=1&competencia=2026-01";
-  await page.goto(base+"/fiscal/entregas?"+selecao);
+  await page.goto(base+"/sped-fiscal/motor/entregas?"+selecao);
   await page.getByRole("link",{name:"Baixar",exact:true}).first().waitFor();
   const pular=page.getByRole("button",{name:"Pular tutorial",exact:true});if(await pular.isVisible())await pular.click();
   assert.doesNotMatch(await page.locator("main").innerText(),/simula|dados fictícios|cenário de teste|restaurar cenário|prévia fiscal/i);
@@ -90,7 +90,7 @@ try{
   assert.deepEqual(await readFile(path.join(saida,"evidencias","efd.txt")),textoEfd);
   ok("API /api/connect/v1: arquivos e download com bytes preservados");
   await page.screenshot({path:path.join(saida,"evidencias","01-arquivos.png"),animations:"disabled"});
-  await page.goto(base+"/fiscal/operacao?"+selecao);
+  await page.goto(base+"/sped-fiscal/motor/operacao?"+selecao);
   await page.getByRole("combobox",{name:"Tipo do arquivo",exact:true}).click();await page.getByRole("option",{name:"Original",exact:true}).click();
   await page.getByRole("button",{name:"Solicitar geração",exact:true}).click();
   await page.getByRole("button",{name:"Cancelar",exact:true}).first().waitFor();
@@ -98,16 +98,16 @@ try{
   await page.getByRole("button",{name:"Cancelar",exact:true}).first().click();await page.getByRole("alertdialog").getByRole("button",{name:"Cancelar pedido",exact:true}).click();
   await page.getByRole("alertdialog").waitFor({state:"hidden"});await page.getByRole("table").getByRole("button",{name:"Cancelar",exact:true}).waitFor({state:"detached"});assert.equal(fila[0].estado,"cancelada");
   ok("Server Actions enviam geração e cancelamento pelo contrato, com ator e idempotência");
-  await page.goto(base+"/fiscal/operacao?"+selecao+"&aba=historico&execucao=1");await page.getByText(logExecucao,{exact:true}).waitFor();
+  await page.goto(base+"/sped-fiscal/motor/operacao?"+selecao+"&aba=historico&execucao=1");await page.getByText(logExecucao,{exact:true}).waitFor();
   await page.reload();await page.getByText(logExecucao,{exact:true}).waitFor();
   ok("Histórico e log permanecem acessíveis após atualizar a página");
   await page.screenshot({path:path.join(saida,"evidencias","02-historico.png"),animations:"disabled"});
   for(const [width,height,nome]of [[1093,614,"125"],[911,512,"150"],[683,384,"200"],[390,844,"celular"]]){await page.setViewportSize({width,height});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),"Sem transbordamento: "+nome);await page.screenshot({path:path.join(saida,"evidencias","tela-"+nome+".png"),animations:"disabled"});}
   ok("Interface em 1366×768, áreas úteis de 125%, 150% e 200% e celular");
-  await page.goto(base+"/fiscal/documentos?"+selecao);await page.getByText(/ainda não disponível no Connect/).waitFor();
+  await page.goto(base+"/sped-fiscal/motor/documentos?"+selecao);await page.getByText(/ainda não disponível no Connect/).waitFor();
   assert.doesNotMatch(await page.locator("main").innerText(),/simula|dados fictícios|restaurar cenário|prévia fiscal/i);
   ok("Áreas sem endpoint orientam o uso do painel SPED");
-  disponivel=false;await page.goto(base+"/fiscal?"+selecao);await page.getByText("A integração com o motor SPED está desligada no servidor do motor.",{exact:true}).first().waitFor();
+  disponivel=false;await page.goto(base+"/sped-fiscal/motor?"+selecao);await page.getByText("A integração com o motor SPED está desligada no servidor do motor.",{exact:true}).first().waitFor();
   ok("API desligada apresenta a falha de conexão");
   await db.query("UPDATE tenant_integrations SET enabled=false WHERE tenantId=? AND integrationCode='sped'",[tenant]);await page.reload();await page.getByText("Processamento fiscal indisponível",{exact:true}).waitFor();
   assert.doesNotMatch(await page.locator("main").innerText(),/simula|dados fictícios|restaurar cenário|prévia fiscal/i);

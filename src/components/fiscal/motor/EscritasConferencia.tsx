@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { CampoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
-import { apurarCombustivelNoMotor, decidirDocumentoDaConferenciaNoMotor, definirRegimeDoPrestadorNoMotor, gravarSimulacaoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
+import { apurarCombustivelNoMotor, decidirDocumentoDaConferenciaNoMotor, definirRegimeDoPrestadorNoMotor, gravarSimulacaoNoMotor } from "@/app/(app)/sped-fiscal/escritas-actions";
 import { Badge } from "@/components/ui/Badge";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import { reaisDoMotor } from "@/lib/fiscal/motor/formato";

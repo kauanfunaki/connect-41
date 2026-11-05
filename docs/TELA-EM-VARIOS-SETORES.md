@@ -16,7 +16,7 @@
 - O menu do setor mostra as telas daquele setor. O acesso é
   `canViewSector` / `canActOnSector` / `canManageSector` **no setor da tela**:
   quem é do setor vê e age, o gestor do setor gere, administrador faz tudo.
-- A URL é uma só por tela (`/cadastros-financeiros`, `/fiscal/conferencia`…).
+- A URL é uma só por tela (`/cadastros-financeiros`, `/sped-fiscal/motor/conferencia`…).
 
 ## As três saídas que o código permite
 

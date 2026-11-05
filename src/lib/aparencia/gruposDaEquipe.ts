@@ -46,6 +46,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   fiscal_entregas: "fiscal",
   fiscal_conferencia: "fiscal",
   fiscal_configuracoes: "fiscal",
+  fiscal_fechamento: "fiscal",
   // Processos: o Societário.
   societario_processos: "processos",
   societario_licencas: "processos",
@@ -54,6 +55,8 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   societario_relatorios: "processos",
   societario_certidoes: "processos",
   societario_robo: "processos",
+  societario_painel: "processos",
+  societario_orgaos: "processos",
   // Solicitações: a conversa com o cliente, de qualquer setor.
   bpo_pendencias: "atendimento",
   bpo_comunicacao: "atendimento",
@@ -79,6 +82,8 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   // Escritório: o que é da casa, e não de um cliente.
   helpdesk: "escritorio",
   tech_controle_interno: "escritorio",
+  tech_entregas: "escritorio",
+  tech_ceci: "escritorio",
   tech_github_contributions: "escritorio",
   tech_ops_center: "escritorio",
   tech_certificados: "escritorio",

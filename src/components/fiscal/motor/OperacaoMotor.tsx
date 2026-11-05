@@ -56,7 +56,7 @@ export async function OperacaoMotor({ tela, aba, params, permiteAgir, permiteGer
     })
     : null;
 
-  const hrefDe = (extra: Record<string, string | number | undefined>) => hrefDoMotor("/fiscal/operacao", contexto, { aba, estado: estadoValido, acao: acaoValida, ...extra });
+  const hrefDe = (extra: Record<string, string | number | undefined>) => hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba, estado: estadoValido, acao: acaoValida, ...extra });
   const linhas = execucoes.map((e) => {
     const estab = e.empresa_id !== null ? vistos.get(e.empresa_id) : undefined;
     return { id: String(e.id), celulas: [
@@ -64,7 +64,7 @@ export async function OperacaoMotor({ tela, aba, params, permiteAgir, permiteGer
       `${e.data_ini} a ${e.data_fim}`,
       <span key="estado" className="flex flex-col items-start gap-1"><EstadoFiscal>{ESTADO_DA_EXECUCAO[e.estado]}</EstadoFiscal>{e.travada && <Selo tom="atencao">Sem sinal do agente</Selo>}</span>,
       <span key="hora" className="text-helper">Pedido: {dataHora(e.solicitado_em)}<span className="block">Início: {dataHora(e.iniciado_em)}</span><span className="block">{duracao(e.iniciado_em, e.concluido_em)}</span></span>,
-      <span key="resultado" className="block max-w-60 text-helper">{e.mensagem ?? (e.agente_host ? `Agente ${e.agente_host}` : "—")}{tela.modulos.includes("fiscal_entregas") && e.arquivo_ids.map((id) => <Button key={id} href={hrefDoMotor("/fiscal/entregas", contexto, { arquivo: id })} size="xs" variant="link">Arquivo #{id}</Button>)}</span>,
+      <span key="resultado" className="block max-w-60 text-helper">{e.mensagem ?? (e.agente_host ? `Agente ${e.agente_host}` : "—")}{tela.modulos.includes("fiscal_entregas") && e.arquivo_ids.map((id) => <Button key={id} href={hrefDoMotor("/sped-fiscal/motor/entregas", contexto, { arquivo: id })} size="xs" variant="link">Arquivo #{id}</Button>)}</span>,
       <AcoesDaExecucao key="acoes" raiz={contexto.raiz} id={e.id} podeCancelar={e.pode_cancelar} podeDestravar={e.pode_destravar} permiteAgir={permiteAgir} permiteGerir={permiteGerir} hrefDetalhe={hrefDe({ execucao: e.id, cursor: cursor ?? undefined })} />,
     ] };
   });
@@ -77,7 +77,7 @@ export async function OperacaoMotor({ tela, aba, params, permiteAgir, permiteGer
     {detalhe && !detalhe.erro && !detalhe.dados && <Aviso tom="atencao">Execução não encontrada entre as empresas que você acessa.</Aviso>}
     {lista.erro && <Aviso tom="atencao">{lista.erro}</Aviso>}
     {historico ? <>
-      <CascoDaTabela contagem={`${execucoes.length} execução(ões) nesta página`} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={<Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "executar" })}>Nova execução</Button>}>
+      <CascoDaTabela contagem={`${execucoes.length} execução(ões) nesta página`} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={<Button href={hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "executar" })}>Nova execução</Button>}>
         <TabelaFiscal vazio="Nenhuma execução neste filtro." descricaoVazio={`Competência ${contexto.competencia}. Troque o filtro ou a competência.`} colunas={colunas} linhas={linhas} />
       </CascoDaTabela>
       <div className="flex flex-wrap gap-3">
@@ -86,7 +86,7 @@ export async function OperacaoMotor({ tela, aba, params, permiteAgir, permiteGer
       </div>
     </> : <>
       <FormularioDeExecucao raiz={contexto.raiz} estabelecimentos={mapa.visiveis.map((e) => ({ id: e.id, rotulo: `${e.companyNome} · ${e.uf}`, matriz: e.matriz, ativo: e.ativo }))} estabelecimentoId={contexto.estabelecimentoId} competencia={contexto.competencia} podeSolicitar={motor.escrita && permiteAgir} motivo={motivo} />
-      <BlocoFiscal titulo="Fila do motor" descricao={`${execucoes.length} pedido(s) na fila ou executando. A lista se atualiza ao recarregar; o log de cada um se atualiza sozinho.`} acao={<Button href={hrefDoMotor("/fiscal/operacao", contexto, { aba: "historico" })} variant="link" size="sm">Ver histórico</Button>}>
+      <BlocoFiscal titulo="Fila do motor" descricao={`${execucoes.length} pedido(s) na fila ou executando. A lista se atualiza ao recarregar; o log de cada um se atualiza sozinho.`} acao={<Button href={hrefDoMotor("/sped-fiscal/motor/operacao", contexto, { aba: "historico" })} variant="link" size="sm">Ver histórico</Button>}>
         <TabelaFiscal vazio="Nenhum pedido na fila." descricaoVazio="Os pedidos enviados aparecem aqui até o agente concluir." colunas={colunas} linhas={linhas} />
       </BlocoFiscal>
     </>}

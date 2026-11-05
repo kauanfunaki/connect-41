@@ -128,10 +128,16 @@ export function ItemDoMenu({
   descricao,
   danger = false,
   disabled = false,
+  download = false,
   children,
 }: {
   onClick?: () => void;
   href?: string;
+  /**
+   * Com `href`, baixa um arquivo: vira `<a download>`, e não `<Link>` — o
+   * pré-carregamento geraria o arquivo só de o menu abrir (a exportação da DRE).
+   */
+  download?: boolean;
   icone?: React.ReactNode;
   /** Linha de apoio embaixo do título; troca para o desenho de duas linhas. */
   descricao?: string;
@@ -161,6 +167,13 @@ export function ItemDoMenu({
       {children}
     </>
   );
+  if (href && download) {
+    return (
+      <a href={href} download className={cls} onClick={onClick}>
+        {conteudo}
+      </a>
+    );
+  }
   if (href) {
     return (
       <Link href={href} className={cls} onClick={onClick}>

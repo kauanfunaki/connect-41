@@ -743,14 +743,16 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Indicadores de RH",
     caminhos: ["/indicadores-rh"],
     resumo:
-      "O painel consolidado de RH — headcount, turnover, absenteísmo, férias, vagas, treinamentos, custo de folha e mais —, calculado a partir do que é lançado no DP e no Recrutamento.",
+      "O painel de RH: quatro números no topo (headcount, turnover, absenteísmo e vagas abertas) e um gráfico mês a mês por tema — quadro, férias, horas extras e o funil do recrutamento —, calculados a partir do que é lançado no DP e no Recrutamento.",
     secoes: [
       {
         titulo: "Como ler os indicadores",
         passos: [
           "Entre no setor e abra “Indicadores de RH” na barra lateral.",
-          "Cada cartão é um número, como “Headcount”, “Turnover (30 dias)”, “Absenteísmo (30 dias)”, “Férias vencidas”, “Vagas abertas” e “Custo de folha (mês atual)”.",
-          "Leia a linha abaixo do número: ela diz o que ele conta.",
+          "No topo ficam “Headcount”, “Turnover (12 meses)”, “Absenteísmo (30 dias)” e “Vagas abertas”. Leia a linha abaixo do número: ela diz o que ele conta.",
+          "Embaixo, quatro gráficos: “Headcount, admissões e desligamentos”, as férias vencidas e a vencer no fim de cada mês, as “Horas extras por mês” e o “Funil do trimestre”.",
+          "Escolha “6 meses” ou “12 meses” acima dos gráficos para mudar o período. O funil é sempre do mês atual e dos dois anteriores.",
+          "Passe o mouse sobre um mês para ver os números dele. Clique em “Abrir” no gráfico para ir à tela de onde os números saem.",
         ],
       },
       {
@@ -772,8 +774,9 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Os números vêm do que é lançado no DP e no Recrutamento: se um dado parece errado, corrija na origem.",
-      "O relatório “Distorções salariais” só aparece para quem tem permissão de ver salários.",
-      "O cartão “Férias vencidas” fica destacado quando há alguma, porque é o número que pede ação.",
+      "O relatório “Distorções salariais” e os “Custos” (folha e benefícios) só aparecem para quem tem permissão de ver salários.",
+      "O número de férias vencidas fica em vermelho quando há alguma, porque é o que pede ação.",
+      "O histórico sai das datas do cadastro (admissão, desligamento, volta das férias): uma data faltando ou errada muda os meses de antes.",
     ],
   },
 
@@ -863,6 +866,59 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Cada vez que você salva, uma versão fica guardada na aba “Histórico”; “Abrir esta versão” carrega os valores antigos como rascunho.",
       "Avaliações movidas para a lixeira guardam dados e histórico e podem ser restauradas na aba “Lixeira” da lista.",
       "O cálculo é anual: não faz apuração trimestral nem compensação automática de prejuízos, e diferença de carga não é economia garantida.",
+    ],
+  },
+
+  // ─── Tokens de acesso e IA (05/11/2026) ────────────────────────────────────
+  // Sem caminho: a seção fica dentro de “Sua conta”, e o “?” de lá não pode
+  // virar este artigo. Chega-se pelo link da própria seção e pela central.
+  {
+    chave: "geral:tokens-de-acesso",
+    titulo: "Tokens de acesso e IA",
+    caminhos: [],
+    resumo:
+      "Conecte a sua IA (Claude Code, Codex, Cursor) ou um script ao Controle interno: com um token pessoal, ela consulta, registra e atualiza bugs, melhorias e novas funcionalidades em seu nome.",
+    secoes: [
+      {
+        titulo: "Como criar um token",
+        passos: [
+          "Abra “Configurações” e, em “Sua conta”, vá até “Tokens de acesso”.",
+          "Dê um “Nome do token” que diga onde ele vai ser usado, como “Claude Code no notebook”.",
+          "Em “O que o token pode fazer”, escolha “Consultar e registrar” ou “Só consultar”.",
+          "Escolha a “Validade” e clique em “Criar token”.",
+          "Copie o token na hora: depois que você sair da tela, ele não aparece de novo.",
+        ],
+      },
+      {
+        titulo: "Como conectar o Claude Code",
+        passos: [
+          "Logo depois de criar o token, copie o comando de “Para o Claude Code, rode no terminal”.",
+          "Cole e rode o comando no terminal do seu computador.",
+          "Abra o Claude Code e peça, por exemplo: “registre um bug no Controle interno: a busca de empresas não acha pelo CNPJ”.",
+        ],
+      },
+      {
+        titulo: "Como conectar o Codex ou o Cursor",
+        passos: [
+          "No Codex, acrescente ao arquivo de configuração dele um servidor MCP chamado “connect”, com o endereço do Connect terminado em “/api/mcp” e o cabeçalho “Authorization: Bearer” seguido do token.",
+          "No Cursor, acrescente o mesmo servidor no arquivo “mcp.json”, com o endereço e o cabeçalho.",
+          "O passo a passo com os arquivos prontos para copiar fica no guia técnico do Connect, para quem cuida da integração.",
+        ],
+      },
+      {
+        titulo: "Como revogar um token",
+        passos: [
+          "Em “Tokens de acesso”, encontre o token em “Seus tokens”.",
+          "Clique em “Revogar” e confirme. A IA ou o script que usava o token para de funcionar na hora.",
+        ],
+      },
+    ],
+    dicas: [
+      "O token age com o seu acesso de hoje: se o seu papel ou os seus setores mudarem, o que ele pode fazer muda junto.",
+      "Tudo o que a IA faz fica no histórico do item com o seu nome, e a Auditoria marca que veio pelo token.",
+      "Todo token vence. Perto de vencer, ele aparece como “Vence em breve”; crie outro e revogue o antigo.",
+      "O administrador vê os tokens ativos do escritório e pode revogar qualquer um.",
+      "Trate o token como uma senha: não cole em chat, e-mail ou repositório.",
     ],
   },
 ];

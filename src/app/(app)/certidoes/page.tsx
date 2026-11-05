@@ -1,163 +1,157 @@
 import Link from "next/link";
-import { Pagination } from "@/components/shared/Pagination";
 import { notFound } from "next/navigation";
 import { AlertTriangle, CheckCircle2, FileText, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { Pagination } from "@/components/shared/Pagination";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Aviso } from "@/components/ui/Aviso";
-import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
-import { EmitirCertidao, MarcarCertidaoComoVista } from "@/components/societario/BotoesDaCertidao";
+import { ListaDasCertidoes } from "@/components/societario/ListaDasCertidoes";
 import { getAuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { acessoAsCertidoes } from "@/lib/certidoes/acesso";
-import { conexaoDaInfoSimples, quadroDasCertidoes, type CertidaoNaTela, type LinhaDoQuadro } from "@/lib/certidoes/servidor";
-import { ehRegular, FRANQUIA_EM_CENTAVOS, ROTULO_DA_CERTIDAO, ROTULO_DA_SITUACAO, TIPOS_DE_CERTIDAO, type SituacaoDaCertidao } from "@/lib/certidoes/regras";
-import { dataBR } from "@/lib/datas/calendario";
+import { conexaoDaInfoSimples } from "@/lib/certidoes/servidor";
+import { listaDasCertidoes } from "@/lib/certidoes/lista";
+import { DIAS_PARA_VENCER, lerRecorte, RECORTES, ROTULO_DO_RECORTE, type Recorte } from "@/lib/certidoes/lista-regras";
+import { FRANQUIA_EM_CENTAVOS } from "@/lib/certidoes/regras";
+import { hojeIso } from "@/lib/datas/calendario";
 import { moeda } from "@/lib/financeiro/formato";
+import { formatarNumero } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const TOM: Record<SituacaoDaCertidao, TomDoSelo> = { NEGATIVA: "sucesso", POSITIVA_COM_EFEITO: "marca", POSITIVA: "perigo", NAO_SAIU: "atencao" };
-
-const aVer = (c: CertidaoNaTela | null | undefined) => c?.situacao === "POSITIVA" && !c.vista;
-const semCertidao = (c: CertidaoNaTela | null | undefined) => !c || c.situacao === "NAO_SAIU";
-
-const RECORTES: { chave: string; rotulo: string; filtro: (l: LinhaDoQuadro) => boolean }[] = [
-  { chave: "todas", rotulo: "Todas", filtro: () => true },
-  { chave: "positivas", rotulo: "Positivas a ver", filtro: (l) => Object.values(l.certidoes).some(aVer) },
-  { chave: "faltando", rotulo: "Sem certidão", filtro: (l) => Object.values(l.certidoes).some(semCertidao) },
-];
+/** A dica de cada atalho: o que entra nele. */
+const DICA_DO_RECORTE: Record<Recorte, string> = {
+  todas: "Todas as empresas ativas com CNPJ",
+  positivas: "Empresas com certidão positiva que ninguém do setor marcou como vista",
+  faltando: "Empresas com alguma certidão ainda não consultada ou que não saiu",
+  vencendo: `Empresas com certidão vencida ou que vence nos próximos ${DIAS_PARA_VENCER} dias`,
+};
 
 /**
- * As certidões da carteira (Certidões pelo Connect, 28/10/2026): empresa por
- * empresa, a certidão que vale de cada tipo que ela precisa — federal, FGTS,
- * trabalhista, estadual do PR e municipal de Curitiba —, consultadas a cada
- * trimestre pela InfoSimples, e "Emitir agora" para o pedido fora da rotina.
+ * As certidões da carteira (Certidões pelo Connect, 28/10/2026), na opção A
+ * escolhida pelo Kauan em 05/11/2026: busca por nome ou CNPJ, atalhos com
+ * contagem, uma linha por empresa com as certidões em selos e um só
+ * "Emitir ▾", e o painel ao lado com cada certidão. A página lê só as
+ * empresas dela (50) por inteiro; a busca e os atalhos andam no servidor
+ * (`listaDasCertidoes`).
  */
-/** Empresas por página (lote B de 03/11/2026: a carteira inteira, cinco certidões por linha, pesava ao abrir). */
-const POR_PAGINA = 50;
-
-export default async function CertidoesPage({ searchParams }: { searchParams: Promise<{ recorte?: string; pagina?: string }> }) {
+export default async function CertidoesPage({ searchParams }: { searchParams: Promise<{ recorte?: string; pagina?: string; busca?: string }> }) {
   const ctx = await getAuthContext();
   const acesso = await acessoAsCertidoes(ctx);
   if (!acesso) notFound();
 
-  const { recorte, pagina: paginaDaUrl } = await searchParams;
-  const pagina = Math.max(1, Math.min(1000, Number.parseInt(paginaDaUrl ?? "1", 10) || 1));
-  const atual = RECORTES.find((r) => r.chave === recorte) ?? RECORTES[0];
-  const [{ linhas, consultasNoMes, gastoNoMesCentavos }, conexao] = await Promise.all([
-    quadroDasCertidoes(acesso.tenantId, await scopedCompanyWhere(ctx)),
+  const { recorte: recorteDaUrl, pagina: paginaDaUrl, busca: buscaDaUrl } = await searchParams;
+  const recorte = lerRecorte(recorteDaUrl);
+  const busca = (buscaDaUrl ?? "").slice(0, 100).trim();
+  const pedida = Math.max(1, Math.min(1000, Number.parseInt(paginaDaUrl ?? "1", 10) || 1));
+  const agora = new Date();
+  const [lista, conexao] = await Promise.all([
+    listaDasCertidoes(acesso.tenantId, await scopedCompanyWhere(ctx), { busca, recorte, pagina: pedida, agora }),
     conexaoDaInfoSimples(acesso.tenantId),
   ]);
-  const celulas = linhas.flatMap((l) => Object.values(l.certidoes));
-  const positivasAVer = celulas.filter(aVer).length;
-  const regulares = celulas.filter((c) => c && ehRegular(c.situacao)).length;
-  const faltando = celulas.filter(semCertidao).length;
-  const filtradas = linhas.filter(atual.filtro);
-  // Os totais são da carteira inteira; só a tabela vem por página.
-  const totalDePaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
-  const paginaVista = Math.min(pagina, totalDePaginas);
-  const daPagina = filtradas.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
-  const hrefDaPagina = (p: number) => {
+  const { totais } = lista;
+
+  const href = (p: { recorte?: Recorte; pagina?: number }) => {
     const q = new URLSearchParams();
-    if (atual.chave !== "todas") q.set("recorte", atual.chave);
-    if (p > 1) q.set("pagina", String(p));
+    if (busca) q.set("busca", busca);
+    const r = p.recorte ?? recorte;
+    if (r !== "todas") q.set("recorte", r);
+    if (p.pagina && p.pagina > 1) q.set("pagina", String(p.pagina));
     const t = q.toString();
     return t ? `/certidoes?${t}` : "/certidoes";
   };
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Certidões"
-        subtitle="A certidão que vale de cada empresa — federal, FGTS, trabalhista, estadual e municipal —, consultada a cada trimestre."
-      />
+      <PageHeader title="Certidões" subtitle="Federal, FGTS, trabalhista, estadual e municipal de cada empresa, renovadas sozinhas a cada trimestre." />
 
-      {!conexao.pronta && <Aviso tom="atencao" className="mb-4">{conexao.motivo} Sem ela, a rotina não roda e &quot;Emitir agora&quot; não sai.</Aviso>}
+      {!conexao.pronta && <Aviso tom="atencao" className="mb-4">{conexao.motivo} Sem ela, a rotina não roda e não dá para emitir pela tela.</Aviso>}
 
       <FaixaDeTotais
         className="mb-6"
         itens={[
-          { rotulo: "Regulares", valor: String(regulares), detalhe: `de ${celulas.length} certidões de ${linhas.length} empresas`, icone: <CheckCircle2 /> },
-          { rotulo: "Positivas a ver", valor: String(positivasAVer), tom: positivasAVer > 0 ? "text-danger" : undefined, icone: <AlertTriangle /> },
-          { rotulo: "Sem certidão", valor: String(faltando), detalhe: "ainda não consultadas ou não saíram", icone: <FileText /> },
+          {
+            rotulo: "Regulares",
+            valor: formatarNumero(totais.regulares, 0),
+            detalhe: `de ${formatarNumero(totais.certidoes, 0)} certidões de ${formatarNumero(totais.empresas, 0)} empresas`,
+            icone: <CheckCircle2 />,
+          },
+          {
+            rotulo: "Positivas a ver",
+            valor: formatarNumero(totais.positivasAVer, 0),
+            detalhe: totais.empresasComPositiva > 0 ? `em ${formatarNumero(totais.empresasComPositiva, 0)} ${totais.empresasComPositiva === 1 ? "empresa" : "empresas"}` : "nenhuma esperando o setor",
+            tom: totais.positivasAVer > 0 ? "text-danger" : undefined,
+            icone: <AlertTriangle />,
+          },
+          { rotulo: "Sem certidão", valor: formatarNumero(totais.semCertidao, 0), detalhe: "ainda não consultadas ou não saíram", icone: <FileText /> },
           // O gasto do mês contra o teto (04/11/2026): o preço real de cada certidão,
           // sem as que o órgão não respondeu, que a InfoSimples não cobra.
           {
             rotulo: "Gasto no mês",
-            valor: moeda(gastoNoMesCentavos),
+            valor: moeda(lista.gastoNoMesCentavos),
             detalhe: [
-              `${consultasNoMes} ${consultasNoMes === 1 ? "consulta" : "consultas"}`,
+              `${lista.consultasNoMes} ${lista.consultasNoMes === 1 ? "consulta" : "consultas"}`,
               conexao.pronta ? `teto de ${moeda(conexao.tetoCentavos)}` : null,
               `mínimo de ${moeda(FRANQUIA_EM_CENTAVOS)} no mês`,
             ]
               .filter(Boolean)
               .join(" · "),
-            tom: conexao.pronta && gastoNoMesCentavos >= conexao.tetoCentavos ? "text-warning-fg" : undefined,
+            tom: conexao.pronta && lista.gastoNoMesCentavos >= conexao.tetoCentavos ? "text-warning-fg" : undefined,
             icone: <Receipt />,
           },
         ]}
       />
 
-      <nav className="mb-4 flex flex-wrap gap-2" aria-label="Recortes">
-        {RECORTES.map((r) => (
-          <Link
-            key={r.chave}
-            href={r.chave === "todas" ? "/certidoes" : `/certidoes?recorte=${r.chave}`}
-            aria-current={r.chave === atual.chave ? "page" : undefined}
-            className={`rounded-full border px-3 py-1 text-ui transition-colors ${r.chave === atual.chave ? "border-brand bg-brand/10 text-brand" : "border-border text-fg-secondary hover:text-fg"}`}
-          >
-            {r.rotulo}
-          </Link>
-        ))}
-      </nav>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <DebouncedSearchInput paramName="busca" placeholder="Buscar empresa por nome ou CNPJ" aria-label="Buscar empresa por nome ou CNPJ" className="w-full lg:w-96" />
+        <nav className="flex flex-wrap gap-2" aria-label="Atalhos das certidões">
+          {RECORTES.map((r) => {
+            const atual = r === recorte;
+            return (
+              <Link
+                key={r}
+                href={href({ recorte: r })}
+                aria-current={atual ? "page" : undefined}
+                data-dica={DICA_DO_RECORTE[r]}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-ui transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+                  atual ? "border-brand bg-brand/10 text-brand font-medium" : "border-border text-fg-secondary hover:text-fg hover:bg-surface-hover"
+                }`}
+              >
+                {ROTULO_DO_RECORTE[r]}
+                <span className={`tabular-nums text-micro ${atual ? "text-brand" : "text-fg-muted"}`}>{formatarNumero(lista.contagens[r], 0)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-      {filtradas.length === 0 ? (
+      {lista.total === 0 ? (
         <EmptyState
-          title={linhas.length === 0 ? "Nenhuma empresa ativa com CNPJ" : "Nada neste recorte"}
-          description={linhas.length === 0 ? "As certidões são da carteira ativa com CNPJ válido no cadastro." : "Escolha outro recorte acima."}
+          title={totais.empresas === 0 ? "Nenhuma empresa ativa com CNPJ" : busca ? `Nenhuma empresa com “${busca}”` : "Nenhuma empresa neste atalho"}
+          description={
+            totais.empresas === 0
+              ? "As certidões são da carteira ativa com CNPJ válido no cadastro."
+              : busca
+                ? lista.contagens.todas > 0
+                  ? `A busca acha ${formatarNumero(lista.contagens.todas, 0)} em Todas, mas nenhuma em ${ROTULO_DO_RECORTE[recorte]}.`
+                  : "Confira o nome ou o CNPJ, ou limpe a busca."
+                : "Escolha outro atalho acima."
+          }
           icon={<FileText />}
         />
       ) : (
-        <div className="c41-tabela overflow-x-auto bg-surface border border-border rounded-lg">
-          <table className="w-full min-w-[1100px]">
-            <thead>
-              <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border">
-                <th className="py-2 pr-3 font-medium">Empresa</th>
-                {TIPOS_DE_CERTIDAO.map((t) => (
-                  <th key={t} className="py-2 pr-3 font-medium">
-                    {ROTULO_DA_CERTIDAO[t]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {daPagina.map((l) => (
-                <tr key={l.companyId} className="border-b border-border-soft align-top">
-                  <td className="py-2 pr-3">
-                    <Link href={`/empresas/${l.companyId}`} className="hover:text-brand">
-                      {l.empresa}
-                    </Link>
-                  </td>
-                  {TIPOS_DE_CERTIDAO.map((t) => (
-                    <td key={t} className="py-2 pr-3">
-                      {t in l.certidoes ? (
-                        <Celula certidao={l.certidoes[t] ?? null} companyId={l.companyId} empresa={l.empresa} tipo={t} podeEditar={acesso.podeEditar && conexao.pronta} />
-                      ) : (
-                        <span className="text-micro text-fg-muted">não se aplica</span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ListaDasCertidoes
+          linhas={lista.linhas}
+          podeEmitir={acesso.podeEditar && conexao.pronta}
+          podeEditar={acesso.podeEditar}
+          hoje={hojeIso(agora)}
+        />
       )}
-      <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={filtradas.length} rotulo="empresas" />
+      <Pagination page={lista.pagina} totalPages={lista.totalDePaginas} buildHref={(p) => href({ pagina: p })} total={lista.total} rotulo="empresas" />
 
       <NotaDeFonte>
         Federal, FGTS e trabalhista valem para a raiz do CNPJ e saem pela matriz; a estadual do PR, uma por raiz entre os estabelecimentos do
@@ -167,33 +161,5 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
         certidão simplificada da Junta não entra: é paga a cada pedido.
       </NotaDeFonte>
     </PageContainer>
-  );
-}
-
-function Celula({ certidao, companyId, empresa, tipo, podeEditar }: { certidao: CertidaoNaTela | null; companyId: string; empresa: string; tipo: (typeof TIPOS_DE_CERTIDAO)[number]; podeEditar: boolean }) {
-  return (
-    <div className="flex flex-col items-start gap-1">
-      {certidao ? (
-        <>
-          <Selo tom={TOM[certidao.situacao]}>{ROTULO_DA_SITUACAO[certidao.situacao]}</Selo>
-          {certidao.situacao === "NAO_SAIU" ? (
-            certidao.mensagem && <span className="text-micro text-fg-muted max-w-[14rem] break-words">{certidao.mensagem}</span>
-          ) : (
-            <span className="text-micro text-fg-muted tabular-nums">
-              {certidao.validaAte ? `até ${dataBR(certidao.validaAte)}` : certidao.emitidaEm ? `emitida em ${dataBR(certidao.emitidaEm)}` : ""}
-            </span>
-          )}
-          {certidao.arquivoId && (
-            <a href={`/api/arquivos/${certidao.arquivoId}?ver=1`} target="_blank" rel="noreferrer" className="text-micro text-brand underline">
-              Abrir
-            </a>
-          )}
-          {podeEditar && aVer(certidao) && <MarcarCertidaoComoVista certidaoId={certidao.id} />}
-        </>
-      ) : (
-        <span className="text-micro text-fg-muted">Ainda não consultada</span>
-      )}
-      {podeEditar && <EmitirCertidao companyId={companyId} empresa={empresa} tipo={tipo} />}
-    </div>
   );
 }
