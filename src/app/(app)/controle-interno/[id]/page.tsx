@@ -24,7 +24,7 @@ export default async function DetalheTechPage({ params, searchParams }: { params
   return <PageContainer><PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`Criado em ${formatInstantDateTime(item.createdAt)}`} action={<Button variant="secondary" href={voltar}><ArrowLeft size={14} aria-hidden />Voltar para a lista</Button>} />
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-6 items-start">
       <Card as="section" aria-label="Dados do item" className="min-w-0 p-5">
-        <FormularioItem key={`${item.id}:${item.version}`} {...opcoes} podeEditar={podeEditar} podeDefinirTamanho={podeDefinirTamanho} voltar={voltar} item={{
+        <FormularioItem key={`${item.id}:${item.version}`} disposicao="compacta" {...opcoes} podeEditar={podeEditar} podeDefinirTamanho={podeDefinirTamanho} voltar={voltar} item={{
           id: item.id, version: item.version, title: item.title, description: item.description, type: item.type, priority: item.priority,
           status: item.status, systemMode: item.systemMode, systemKey: chaveDoSistema(item), assigneeId: item.assigneeId,
           assigneeName: item.assignee?.name ?? null, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,

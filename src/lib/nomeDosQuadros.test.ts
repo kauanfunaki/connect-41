@@ -47,7 +47,8 @@ describe("a tela Quadros (antes Espaços)", () => {
 
   it("o item do menu e o título da tela", () => {
     const menu = semComentarios("src/components/shell/AppShell.tsx");
-    expect(menu).toContain('label="Quadros"');
+    // Como prop (`label="Quadros"`) ou, desde 05/11/2026, como item do grupo Apoio (`label: "Quadros"`).
+    expect(menu).toMatch(/label(=|: )"Quadros"/);
     expect(menu).not.toContain("Espaços");
     const tela = semComentarios("src/app/(app)/setor/[code]/page.tsx");
     expect(tela).toContain('title="Quadros"');

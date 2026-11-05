@@ -196,10 +196,14 @@ export function bancoFalso() {
     company: tabela({ displayName: null, cpf: null, cnpj: null }),
     driveFolder: tabela({ parentId: null, deletedAt: null, systemKey: null }),
     user: tabela(),
+    // O registro de uso do certificado (05/11/2026), que toda chamada de
+    // produção faz; a contagem do dia vai pelo $executeRaw abaixo.
+    digitalCertificateUse: tabela({ descricao: null, declarado: false, declaradoPorId: null, ultimoUsoAt: null }),
   };
 
   const prisma = {
     ...tabelas,
+    $executeRaw: async () => 1,
     tenantIntegration: {
       findUnique: async () => (estado.conexao ? { ...estado.conexao } : null),
       update: async ({ data }: { data: { cursor: string | null } }) => {

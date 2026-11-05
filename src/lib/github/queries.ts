@@ -179,3 +179,29 @@ export async function dayEvents(tenantId: string, filters: Filters, userId: stri
     select: eventSelect })]);
   return { events: rows.map(row => toEvent(row, names)), total, page, pageSize: 50 };
 }
+
+/**
+ * As contribuições de cada pessoa do Connect no período, pela conta GitHub que
+ * ela vinculou em Sua conta (05/11/2026, a aba Pessoas da Produtividade): é só
+ * contexto, ao lado das entregas. `null` quando o GitHub não está conectado ou
+ * não tem repositório para ler — a tela mostra "—", não zero.
+ */
+export async function contribuicoesPorPessoa(tenantId: string, from: string, to: string): Promise<Map<string, Record<ContributionType, number> & { total: number }> | null> {
+  const access = await readable(tenantId), { connection } = access;
+  if (!connection || connection.status !== "connected" || !access.repositories.length) return null;
+  const db = getPrisma();
+  const links = await db.githubAccountLink.findMany({ where: { tenantId }, select: { userId: true, externalId: true } });
+  if (!links.length) return new Map();
+  const users = await db.githubUser.findMany({ where: { tenantId, connectionId: connection.id, externalId: { in: links.map(link => link.externalId) } }, select: { id: true, externalId: true } });
+  const rows = users.length ? await db.githubDailyContribution.groupBy({ by: ["userId", "type"], _sum: { count: true },
+    where: { tenantId, repositoryId: { in: access.repositories.map(repo => repo.id) }, userId: { in: users.map(user => user.id) }, day: { gte: from, lte: to }, count: { gt: 0 }, type: { in: [...CONTRIBUTION_TYPES] } } }) : [];
+  const pessoaDoGithub = new Map(users.map(user => [user.id, links.find(link => link.externalId === user.externalId)!.userId]));
+  const porPessoa = new Map<string, Record<ContributionType, number> & { total: number }>();
+  for (const link of links) porPessoa.set(link.userId, { ...emptyCounts(), total: 0 });
+  for (const row of rows) {
+    const pessoa = porPessoa.get(pessoaDoGithub.get(row.userId) ?? ""), count = row._sum.count ?? 0;
+    if (!pessoa) continue;
+    pessoa[row.type as ContributionType] += count; pessoa.total += count;
+  }
+  return porPessoa;
+}

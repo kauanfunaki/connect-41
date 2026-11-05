@@ -4,6 +4,8 @@ Roteiro de 30/10/2026. O robô roda na máquina do TI, ligada o tempo todo, e ex
 
 A máquina fica atrás do firewall do escritório. Por isso é ela que busca trabalho no Connect: a cada 30 segundos pede a próxima tarefa, executa num navegador de verdade e devolve o resultado. Quando um órgão pedir certificado, a senha é lida do cofre na hora e fica só na memória do robô. O certificado e a senha nunca vão para o Connect.
 
+Desde 05/11/2026, ao devolver uma tarefa feita com certificado (a IE e o SIMA), a máquina manda junto só o CNPJ do certificado usado. O Connect anota o uso na tela Certificados ("Usado por", "Último uso" e "Se vencer, para…"). Máquina com o programa antigo não manda o campo e segue funcionando; só o uso dela não aparece.
+
 ## 1. Publicar
 
 1. Rode `npx prisma migrate deploy`. A migration `20261030120000_robo_do_societario` cria a tabela `robot_tasks`, a fila. Ela não altera registros existentes.

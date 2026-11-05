@@ -250,11 +250,13 @@ export function FaixaDoFoco({ foco, escritorio }: { foco: FocoDaFaixa | null; es
 
   // As abas guardadas, com a empresa em foco garantida nelas — a escolhida na
   // ficha da empresa, ou em outra aba do navegador, entra também.
-  // Enquanto outra empresa abre, a do foco antigo não volta para as abas.
+  // Enquanto outra empresa abre — até a tela recarregar com o foco novo —, a do
+  // foco antigo não volta para as abas (senão, ao trocar de base, piscava uma
+  // segunda aba com a empresa anterior).
   const abas = useMemo(() => {
     const guardadas = abasDoTexto(textoGuardado);
-    return foco && !abrindo ? comAba(guardadas, { id: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, matrizId: foco.matrizId, comUnidades: foco.alcance !== null }) : guardadas;
-  }, [textoGuardado, foco, abrindo]);
+    return foco && !abrindo && !pendente ? comAba(guardadas, { id: foco.companyId, nome: foco.nome, logoUrl: foco.logoUrl, matrizId: foco.matrizId, comUnidades: foco.alcance !== null }) : guardadas;
+  }, [textoGuardado, foco, abrindo, pendente]);
   const setAbas = (lista: Aba[]) => gravarAbas(escritorio, lista);
 
   const carregar = useCallback(() => {

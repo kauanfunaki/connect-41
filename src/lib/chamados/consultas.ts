@@ -8,6 +8,19 @@ export const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((s)
 export async function temAcessoAoModulo(c: Contexto) {
   return c.config.enabled && (podeAbrir(c.ctx, c.config) || podeVerInterno(c.ctx, c.config) || await getPrisma().helpdeskTicket.count({ where: whereVisivel(c) }) > 0);
 }
+/**
+ * O número do item Chamados no menu (05/11/2026, "a contagem à direita, como
+ * em Solicitações"): o que pede ação de quem olha. Para a equipe que atende,
+ * os chamados que esperam alguém pegar (abertos e na fila); para quem abriu,
+ * os seus que esperam a resposta dele. Zero não aparece.
+ */
+export async function contarChamadosDoMenu(c: Contexto): Promise<number> {
+  if (!c.config.enabled || !c.ctx.userId) return 0;
+  if (podeVerInterno(c.ctx, c.config)) {
+    return getPrisma().helpdeskTicket.count({ where: { tenantId: c.ctx.tenantId, status: { in: ["ABERTO", "NA_FILA"] } } });
+  }
+  return getPrisma().helpdeskTicket.count({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, status: { in: ["AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE"] } } });
+}
 export function whereVisivel({ ctx, config }: Contexto): Prisma.HelpdeskTicketWhereInput {
   if (!config.enabled) return { tenantId: ctx.tenantId, id: { in: [] } };
   if (podeVerInterno(ctx, config)) return { tenantId: ctx.tenantId };

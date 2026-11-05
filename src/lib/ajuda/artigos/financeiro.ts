@@ -629,7 +629,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
   {
     chave: "bpo_senhas",
     titulo: "Repositório de senhas",
-    caminhos: ["/bpo-senhas"],
+    caminhos: ["/senhas"],
     resumo:
       "Guarda as credenciais de portais, bancos e sistemas dos clientes num lugar só, com registro de quem consultou cada senha.",
     secoes: [
@@ -672,7 +672,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
   {
     chave: "bpo_manual",
     titulo: "Repositório de manuais",
-    caminhos: ["/bpo-manual"],
+    caminhos: ["/manuais"],
     resumo:
       "Instruções internas escritas pela própria equipe, organizadas em documentos e páginas, para ninguém ficar sem saber o que fazer em ausências e férias.",
     secoes: [

@@ -70,6 +70,20 @@ describe("devolucaoSchema", () => {
   it("sucesso leva o resultado", () => {
     expect(devolucaoSchema.safeParse({ ok: true, resultado: { tela: "encontrado" } }).success).toBe(true);
   });
+
+  // 05/11/2026: a máquina nova manda o CNPJ do certificado usado.
+  it("o certificado é opcional: a máquina antiga segue passando", () => {
+    const antiga = devolucaoSchema.parse({ ok: true, resultado: { situacao: "ATIVO" } });
+    expect(antiga).toEqual({ ok: true, resultado: { situacao: "ATIVO" } });
+    const nova = devolucaoSchema.parse({ ok: true, resultado: { situacao: "ATIVO" }, certificado: { documento: "11222333000181" } });
+    expect(nova).toMatchObject({ certificado: { documento: "11222333000181" } });
+  });
+
+  it("certificado mal formado é descartado, sem recusar a devolução", () => {
+    const r = devolucaoSchema.safeParse({ ok: true, resultado: {}, certificado: { documento: 123 } });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.certificado).toBeUndefined();
+  });
 });
 
 // 03/11/2026: a tela mostrava o erro do navegador cru.

@@ -148,6 +148,66 @@ export function entregasPorPessoa(
     .sort((a, b) => b.pontos - a.pontos || b.validadas - a.validadas || a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
+/** Um item concluído no período, como a lista das Entregas e a Produtividade o leem. */
+export type ItemEntregue = {
+  id: string;
+  title: string;
+  size: keyof typeof TAMANHOS | null;
+  /** O peso do tamanho, só na entrega validada com tamanho; senão 0. */
+  pontos: number;
+  validado: boolean;
+  assigneeId: string | null;
+  assigneeName: string;
+  concluidoEm: Date;
+  inicioEm: Date | null;
+  cicloDias: number | null;
+  voltasDaValidacao: number;
+  /** De qual item este veio ("veio de"), quando veio de algum. */
+  originItemId: string | null;
+  originTitle: string | null;
+  /** Quantos itens dizem ter vindo deste: o retrabalho que ele gerou. */
+  retrabalho: number;
+};
+
+/**
+ * As entregas do período item a item (05/11/2026, a Produtividade da Tech):
+ * a mesma regra de `entregasPorPessoa`, sem somar — da mais recente para a
+ * mais antiga. É de onde saem a lista das Entregas, o ciclo mediano do time e
+ * os pontos por semana.
+ */
+export function itensEntregues(
+  itens: (ItemParaEntregas & { originTitle?: string | null })[],
+  mudancas: MudancaParaEntregas[],
+  inicio: Date,
+  fim: Date
+): ItemEntregue[] {
+  const derivados = new Map<string, number>();
+  for (const item of itens) if (item.originItemId) derivados.set(item.originItemId, (derivados.get(item.originItemId) ?? 0) + 1);
+  const lista: ItemEntregue[] = [];
+  for (const item of itens) {
+    if (item.status !== "DONE") continue;
+    const t = linhaDoItem(item.id, mudancas);
+    if (!t.concluidoEm || t.concluidoEm < inicio || t.concluidoEm > fim) continue;
+    lista.push({
+      id: item.id,
+      title: item.title,
+      size: item.size,
+      pontos: t.validado && item.size ? PESO_DO_TAMANHO[item.size] : 0,
+      validado: t.validado,
+      assigneeId: item.assigneeId,
+      assigneeName: item.assigneeName ?? "Sem responsável",
+      concluidoEm: t.concluidoEm,
+      inicioEm: t.inicioEm,
+      cicloDias: t.inicioEm ? Math.round(((t.concluidoEm.getTime() - t.inicioEm.getTime()) / DIA_MS) * 10) / 10 : null,
+      voltasDaValidacao: t.voltasDaValidacao,
+      originItemId: item.originItemId,
+      originTitle: item.originTitle ?? null,
+      retrabalho: derivados.get(item.id) ?? 0,
+    });
+  }
+  return lista.sort((a, b) => b.concluidoEm.getTime() - a.concluidoEm.getTime() || a.title.localeCompare(b.title, "pt-BR"));
+}
+
 export const PERIODOS_DAS_ENTREGAS = [
   { chave: "trimestre", rotulo: "Este trimestre" },
   { chave: "anterior", rotulo: "Trimestre passado" },
@@ -174,7 +234,7 @@ export async function entregasDoPeriodo(tenantId: string, periodo: PeriodoDasEnt
     prisma.techInternalItem.findMany({
       // Concluídos que mexeram desde o início do período, mais os que dizem vir de algum.
       where: { tenantId, OR: [{ status: "DONE", updatedAt: { gte: inicio } }, { originItemId: { not: null } }] },
-      select: { id: true, title: true, status: true, size: true, assigneeId: true, originItemId: true, createdAt: true, assignee: { select: { name: true } } },
+      select: { id: true, title: true, status: true, size: true, assigneeId: true, originItemId: true, createdAt: true, assignee: { select: { name: true } }, originItem: { select: { title: true } } },
       take: 5000,
     }),
     prisma.helpdeskSlaCycle.findMany({
@@ -197,16 +257,16 @@ export async function entregasDoPeriodo(tenantId: string, periodo: PeriodoDasEnt
   for (const a of atribuicoes) quemNoChamado.set(a.ticketId, [...(quemNoChamado.get(a.ticketId) ?? []), a.userId]);
   const pessoas = await prisma.user.findMany({ where: { id: { in: [...new Set(atribuicoes.map((a) => a.userId))] } }, select: { id: true, name: true } });
   const nomes = new Map(pessoas.map((p) => [p.id, p.name]));
+  const itensLidos = itens.map((i) => ({ ...i, assigneeName: i.assignee?.name ?? null, originTitle: i.originItem?.title ?? null }));
+  const mudancasLidas = mudancas.map((m) => ({ itemId: m.itemId, createdAt: m.createdAt, changes: (Array.isArray(m.changes) ? m.changes : []) as unknown as Alteracao[] }));
+  const chamados = chamadosBrutos.map((c) => ({ userIds: quemNoChamado.get(c.ticketId) ?? [], resolvedAt: c.resolvedAt!, resolutionDueAt: c.resolutionDueAt, cycleNumber: c.cycleNumber }));
   return {
     inicio,
     fim,
-    pessoas: entregasPorPessoa(
-      itens.map((i) => ({ ...i, assigneeName: i.assignee?.name ?? null })),
-      mudancas.map((m) => ({ itemId: m.itemId, createdAt: m.createdAt, changes: (Array.isArray(m.changes) ? m.changes : []) as unknown as Alteracao[] })),
-      chamadosBrutos.map((c) => ({ userIds: quemNoChamado.get(c.ticketId) ?? [], resolvedAt: c.resolvedAt!, resolutionDueAt: c.resolutionDueAt, cycleNumber: c.cycleNumber })),
-      nomes,
-      inicio,
-      fim
-    ),
+    pessoas: entregasPorPessoa(itensLidos, mudancasLidas, chamados, nomes, inicio, fim),
+    entregues: itensEntregues(itensLidos, mudancasLidas, inicio, fim),
+    // O time conta cada ciclo de chamado uma vez; por pessoa, ele soma para
+    // cada responsável (um chamado com duas pessoas conta para as duas).
+    chamados: { total: chamados.length, noPrazo: chamados.filter((c) => c.resolvedAt <= c.resolutionDueAt).length },
   };
 }

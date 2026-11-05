@@ -6,7 +6,6 @@ import Link from "next/link";
 import { FolderGit2, GitCommitHorizontal, LayoutGrid, Lock, Plus, Users, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -25,11 +24,14 @@ import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/gi
 import { ContributionCalendar } from "./ContributionCalendar";
 import { DeveloperAvatar, DeveloperName, GithubOverview, SeloDoTime } from "./GithubOverview";
 import { GithubTimes } from "./GithubTimes";
+import { CabecalhoDaProdutividade } from "@/components/produtividade/CabecalhoDaProdutividade";
+import { ROTAS_DO_GITHUB } from "@/lib/tech-interno/rotasDaProdutividade";
 import styles from "./GithubContributions.module.css";
 
 export type View = "general" | "developers" | "repositories" | "teams";
-const PATHS: Record<View, string> = { general: "/github", developers: "/github/desenvolvedores", repositories: "/github/repositorios", teams: "/github/times" };
-const SUBTITLES: Record<View, string> = { general: "Acompanhe a atividade do time no GitHub.", developers: "Desenvolvedores e suas contribuições.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
+// Dentro da Produtividade desde 05/11/2026: `/produtividade/github/...` (o `/github` antigo redireciona).
+const PATHS: Record<View, string> = ROTAS_DO_GITHUB;
+const SUBTITLES: Record<View, string> = { general: "A atividade do time no GitHub. É contexto: commits e PRs ficam fora das contas de entrega.", developers: "Desenvolvedores e suas contribuições.", repositories: "Repositórios conectados e a contribuição de cada desenvolvedor.",
   teams: "Monte os times e escolha a cor de cada pessoa e de cada time." };
 const TYPE_SINGULAR: Record<ContributionType, string> = { COMMIT: "Commit", PULL_REQUEST: "Pull request", ISSUE: "Issue", REVIEW: "Revisão" };
 // O dia aberto: de um desenvolvedor (aba Desenvolvedores) ou de um repositório (aba Repositórios).
@@ -43,16 +45,18 @@ export function GithubContributions({ initialQuery: suppliedQuery, canConfigure,
 }
 
 // Cabeçalho e abas, comuns às quatro telas. "Times" só aparece para quem gerencia o módulo.
+// Desde 05/11/2026 o título é o da Produtividade (Time, Pessoas, GitHub), e as
+// quatro telas do GitHub viraram a segunda fileira de abas, dentro da aba GitHub.
 function GithubShell({ view, suppliedQuery, canConfigure, conectar, children }: { view: View; suppliedQuery: string; canConfigure: boolean; conectar: boolean; children: React.ReactNode }) {
   const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
   return <PageContainer>
-    <PageHeader title="GitHub" subtitle={SUBTITLES[view]}
-      action={conectar ? <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button> : undefined} />
-    <AbasDeLink className="mb-6" aria-label="GitHub" ativa={view} abas={[
-      { chave: "general", rotulo: "Geral", href: `/github?${tabParams}`, icone: <LayoutGrid /> },
-      { chave: "developers", rotulo: "Desenvolvedores", href: `/github/desenvolvedores?${tabParams}`, icone: <Users /> },
-      { chave: "repositories", rotulo: "Repositórios", href: `/github/repositorios?${tabParams}`, icone: <FolderGit2 /> },
-      ...(canConfigure ? [{ chave: "teams", rotulo: "Times", href: "/github/times", icone: <UsersRound /> }] : []),
+    <CabecalhoDaProdutividade aba="github" subtitulo={SUBTITLES[view]}
+      acao={conectar ? <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button> : undefined} />
+    <AbasDeLink className="mb-6" aria-label="Telas do GitHub" ativa={view} abas={[
+      { chave: "general", rotulo: "Geral", href: `${PATHS.general}?${tabParams}`, icone: <LayoutGrid /> },
+      { chave: "developers", rotulo: "Desenvolvedores", href: `${PATHS.developers}?${tabParams}`, icone: <Users /> },
+      { chave: "repositories", rotulo: "Repositórios", href: `${PATHS.repositories}?${tabParams}`, icone: <FolderGit2 /> },
+      ...(canConfigure ? [{ chave: "teams", rotulo: "Times", href: PATHS.teams, icone: <UsersRound /> }] : []),
     ]} />
     {children}
   </PageContainer>;
@@ -95,7 +99,7 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
     {loading && <div aria-busy><span className="sr-only" role="status">Carregando contribuições…</span>{view === "general" ? <><SkeletonMetrics /><SkeletonBlocks blocos={2} /></> : <SkeletonCardList cards={3} />}</div>}
     {data?.message && !loading && <Aviso tom="atencao" className="mb-4">{data.message}{canConfigure && <> <Link href="/admin/integracoes?integracao=github" className="font-medium underline">Abrir Integrações</Link></>}</Aviso>}
     {data && !data.message && !loading && <>
-      {!data.all && !data.linked && <Aviso tom="info" className="mb-4">Ninguém vinculou a conta GitHub ainda, por isso o painel está vazio. Cada pessoa do Tech vincula a sua em <Link href="/configuracoes#github" className="font-medium underline">Sua conta</Link>; enquanto isso, use <strong>Mostrar todos</strong>.</Aviso>}
+      {!data.all && !data.linked && <Aviso tom="info" className="mb-4">Ninguém vinculou a conta GitHub ainda, por isso o painel está vazio. Cada pessoa do Tech vincula a sua em <Link href="/configuracoes#github" className="font-medium underline">Sua conta</Link>.</Aviso>}
       {view === "general" ? <GithubOverview data={data} query={suppliedQuery} modo={modo} onDay={openTeamDay} />
         : view === "developers" ? <Developers data={data} filtered={filtered} canConfigure={canConfigure} onDay={openUserDay} pageHref={pageHref} modo={modo} />
           : <Repositories data={data} onDay={openRepositoryDay} pageHref={pageHref} modo={modo} />}
