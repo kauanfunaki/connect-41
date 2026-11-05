@@ -820,4 +820,49 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Enquanto os custos dos setores não forem informados em “Parâmetros”, o preço da simulação não serve para proposta.",
     ],
   },
+
+  // ─── Planejamento tributário ─────────────────────────────────────────────
+  {
+    chave: "contabil_planejamento",
+    titulo: "Planejamento tributário",
+    caminhos: ["/planejamento-tributario"],
+    resumo:
+      "Avaliações que comparam Simples Nacional, Simples híbrido, Lucro Presumido e Lucro Real de 2027 a 2033, com os dados da empresa e as premissas da reforma, e geram um relatório para o cliente.",
+    secoes: [
+      {
+        titulo: "Como começar uma avaliação",
+        passos: [
+          "No setor Contábil, abra “Planejamento tributário” na barra lateral e clique em “Nova avaliação”.",
+          "Escolha “Avaliação rápida”, para começar pelos totais, ou “Avaliação analítica”, para seguir as oito etapas.",
+          "Em “Empresa do cadastro”, busque a empresa: nome, CNPJ, regime e UF vêm do cadastro. Para quem ainda não é cliente, use “Prospecto sem cadastro” e digite o nome.",
+          "Escolha o “Ano dos dados” e clique em “Criar avaliação”.",
+        ],
+      },
+      {
+        titulo: "Como preencher os dados e as premissas",
+        passos: [
+          "Na aba “Dados”, informe os totais do período. Deixe em branco o que ainda não souber e use “Sem movimento: R$ 0” quando não houver valor.",
+          "Para detalhar, clique em “Aprofundar esta avaliação” e siga as etapas: Empresa, Receitas, Operação, Pessoal, Contabilidade, Tributos e Caixa.",
+          "Na aba “Premissas”, confira as hipóteses de CBS e IBS, as presunções, os créditos, a folha e as receitas por atividade.",
+          "Ainda em “Premissas”, marque a elegibilidade de cada regime e “Utilizar estas premissas na comparação”.",
+          "Clique em “Salvar” no topo. Mudar dados ou premissas depois pede para revisar as premissas de novo.",
+        ],
+      },
+      {
+        titulo: "Como ler o resultado e entregar o relatório",
+        passos: [
+          "Na aba “Resultado”, escolha o ano em “Projeção” e compare os quatro cartões; o selo “Menor carga neste cenário” aparece quando os quatro têm dados e as premissas foram revisadas.",
+          "Use o gráfico da transição para ver os anos de 2027 a 2033 e baixe a tabela em CSV.",
+          "Na aba “Relatório”, preencha o “Responsável” e a “Conclusão e observações”.",
+          "Clique em “Imprimir / salvar PDF” para o cliente, ou em “Baixar relatório e memória” para o arquivo com a memória de cálculo.",
+        ],
+      },
+    ],
+    dicas: [
+      "As alíquotas de CBS e IBS são hipóteses editáveis do estudo, não alíquotas oficiais confirmadas.",
+      "Cada vez que você salva, uma versão fica guardada na aba “Histórico”; “Abrir esta versão” carrega os valores antigos como rascunho.",
+      "Avaliações movidas para a lixeira guardam dados e histórico e podem ser restauradas na aba “Lixeira” da lista.",
+      "O cálculo é anual: não faz apuração trimestral nem compensação automática de prejuízos, e diferença de carga não é economia garantida.",
+    ],
+  },
 ];
