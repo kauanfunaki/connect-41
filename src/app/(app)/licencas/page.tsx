@@ -37,10 +37,14 @@ export default async function LicencasPage({
   searchParams: Promise<{ recorte?: string; busca?: string; pagina?: string }>;
 }) {
   const ctx = await getAuthContext();
+  if (!ctx.tenantId) notFound();
   // Setor que opera o módulo neste tenant, não o de origem — ver `setorDoModulo`.
-  const setores = ctx.tenantId ? ((await setoresDoModulo(ctx.tenantId, "societario_licencas")) ?? "societario") : "societario";
-  if (!ctx.tenantId || !canActOnSector(ctx, setores)) notFound();
-  if (!(await isModuleEnabled(ctx.tenantId, "societario_licencas"))) notFound();
+  // As duas conferências saem juntas (05/11/2026); antes iam uma depois da outra.
+  const [setoresDaTela, ligado] = await Promise.all([
+    setoresDoModulo(ctx.tenantId, "societario_licencas"),
+    isModuleEnabled(ctx.tenantId, "societario_licencas"),
+  ]);
+  if (!canActOnSector(ctx, setoresDaTela ?? "societario") || !ligado) notFound();
 
   const { recorte, busca, pagina: paginaDaUrl } = await searchParams;
   const pagina = Math.max(1, Math.min(1000, Number.parseInt(paginaDaUrl ?? "1", 10) || 1));

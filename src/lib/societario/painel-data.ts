@@ -531,6 +531,29 @@ export async function visaoDoCliente(
  * A base dos relatórios: todo processo aberto agora, mais os concluídos desde
  * `inicio`. Cancelado fica fora — não teve prazo cumprido nem estourado.
  */
+/**
+ * Os processos abertos com o prazo estourado — o número e a fila do painel do
+ * Societário (05/11/2026). Antes o painel usava `processosParaRelatorio`, que
+ * traz até 2.000 processos com todos os protocolos e taxas, só para contar
+ * estes. Mesma conta de prazo (`prazoDoProcesso`).
+ */
+export async function processosEstourados(tenantId: string, agora: Date, feriados: Set<string>) {
+  const processos = await getPrisma().process.findMany({
+    where: { tenantId, status: { notIn: STATUS_ENCERRADOS }, concludedAt: null },
+    select: {
+      id: true,
+      startedAt: true,
+      concludedAt: true,
+      company: EMPRESA,
+      type: { select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true } },
+    },
+    take: 2000,
+  });
+  return processos
+    .map((p) => ({ id: p.id, tipoNome: p.type.name, empresaNome: nomeExibicao(p.company), prazo: prazoDoProcesso(p.type, p, agora, feriados) }))
+    .filter((p) => p.prazo.situacao === "estourado");
+}
+
 export async function processosParaRelatorio(
   tenantId: string,
   inicio: Date,

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
 import { MODULE_CATALOG, getModuleDef, type ModuleDef } from "@/lib/module-catalog";
 import { resolverSetorDoModulo, resolverSetoresDoModulo } from "@/lib/modulo-setor";
@@ -63,7 +64,18 @@ async function getPlanAllowedModules(tenantId: string): Promise<Set<string> | nu
 // contrato comercial libera) e o TenantModule é o ajuste fino por tenant
 // dentro desse teto (liga/desliga um módulo específico que o plano já
 // permite) — nenhum dos dois consegue liberar o que o outro nega.
-export async function getTenantModuleStates(tenantId: string): Promise<ModuleState[]> {
+//
+// Uma leitura por requisição (05/11/2026): layout, página, gates e o menu da
+// Ceci pediam o mesmo estado de 7 a 10 vezes por página, 3 consultas cada.
+// `cache()` do React guarda o resultado só durante a renderização do servidor
+// (como o `getAuthContext`); fora dela, em testes e scripts, cada chamada lê o
+// banco. Quem grava (Setores e módulos) não relê na mesma requisição, e o
+// `revalidatePath` da action renderiza de novo, com leitura nova.
+export function getTenantModuleStates(tenantId: string): Promise<ModuleState[]> {
+  return estadosDoTenant(tenantId);
+}
+
+const estadosDoTenant = cache(async (tenantId: string): Promise<ModuleState[]> => {
   if (MODULE_CATALOG.length === 0) return [];
 
   const prisma = getPrisma();
@@ -85,7 +97,7 @@ export async function getTenantModuleStates(tenantId: string): Promise<ModuleSta
       enabled: (allowedByPlan === null || allowedByPlan.has(m.code)) && (row?.enabled ?? m.defaultEnabled),
     };
   });
-}
+});
 
 export async function getEnabledModuleCodes(tenantId: string): Promise<Set<string>> {
   const states = await getTenantModuleStates(tenantId);
@@ -103,9 +115,14 @@ export async function isModuleEnabled(tenantId: string, code: string): Promise<b
  * `null`, e o chamador trata como não encontrado.
  *
  * Consulta só a linha do módulo, e não os estados todos: o gate roda em toda
- * página e em toda action.
+ * página e em toda action. Uma vez por requisição por módulo (05/11/2026): as
+ * Exigências pediam o mesmo setor quatro vezes em fila.
  */
-export async function setorDoModulo(tenantId: string, code: string): Promise<string | null> {
+export function setorDoModulo(tenantId: string, code: string): Promise<string | null> {
+  return setorDoModuloNaRequisicao(tenantId, code);
+}
+
+const setorDoModuloNaRequisicao = cache(async (tenantId: string, code: string): Promise<string | null> => {
   const def = getModuleDef(code);
   if (!def) return null;
   const prisma = getPrisma();
@@ -114,7 +131,7 @@ export async function setorDoModulo(tenantId: string, code: string): Promise<str
     select: { sectorCode: true },
   });
   return resolverSetorDoModulo(def.sectorCode, row?.sectorCode, def.fixedSector);
-}
+});
 
 /**
  * Todos os setores da tela neste tenant (21/10/2026): o dono primeiro, depois
@@ -125,13 +142,17 @@ export async function setorDoModulo(tenantId: string, code: string): Promise<str
  * Para aviso e rótulo ("o setor da tela") continua valendo `setorDoModulo`:
  * ligar a tela a outro setor não muda quem recebe notificação.
  */
-export async function setoresDoModulo(tenantId: string, code: string): Promise<string[] | null> {
+export function setoresDoModulo(tenantId: string, code: string): Promise<string[] | null> {
+  return setoresDoModuloNaRequisicao(tenantId, code);
+}
+
+const setoresDoModuloNaRequisicao = cache(async (tenantId: string, code: string): Promise<string[] | null> => {
   const def = getModuleDef(code);
   if (def?.fixedSector) return [def.sectorCode];
   const [dono, ligados] = await Promise.all([setorDoModulo(tenantId, code), lerSetoresLigados(tenantId, code)]);
   if (dono === null) return null;
   return resolverSetoresDoModulo(dono, ligados.porModulo.get(code) ?? []);
-}
+});
 
 // Setores que têm ao menos um módulo ativo para o tenant — usado pra sidebar não
 // mostrar um setor sem nenhum módulo plugado nele.

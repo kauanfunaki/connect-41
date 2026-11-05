@@ -49,8 +49,81 @@ export default async function AppLayout({
   const isAdmin = isFullWrite(role);
   const canManageFields = isAdmin || (role === "SECTOR_ADMIN" && sectors.length > 0);
   const canOpenAdmin = isAdmin || canManageFields;
-  const { labels: sectorLabels, colors: sectorColors, options: sectorOptions } = await getSectorMaps(tenantId);
-  const sectorsWithModules = await getSectorsWithEnabledModules(tenantId);
+  // As leituras que não dependem umas das outras saem juntas (05/11/2026): o
+  // layout ia ao banco umas 12 vezes em fila, em toda página. O estado dos
+  // módulos é lido uma vez por requisição (`cache()` em `@/lib/modules`), por
+  // mais que layout, página e gates o peçam.
+  const prisma = getPrisma();
+  // Só o contador do sino: a lista é buscada quando o sino abre (02/10/2026) —
+  // vinda daqui, ela envelhecia, porque o layout não re-renderiza ao navegar.
+  // Sem as arquivadas e os tipos ocultos (05/10/2026). Falha aqui não derruba
+  // o app inteiro (deploy antes da migration, por exemplo): o sino fica sem número.
+  const dono = { tenantId, userId: ctx.userId };
+  const [
+    { labels: sectorLabels, colors: sectorColors, options: sectorOptions },
+    moduleStates,
+    sectorsWithModules,
+    helpdeskConfig,
+    codigosFixados,
+    agentesDoChatDeIA,
+    unreadCount,
+    me,
+    accessibleTenants,
+    { aparencia },
+    foco,
+    podeFocar,
+  ] = await Promise.all([
+    getSectorMaps(tenantId),
+    getTenantModuleStates(tenantId),
+    getSectorsWithEnabledModules(tenantId),
+    configDoHelpdesk(tenantId),
+    codigosDeTelasFixadas(ctx.userId, tenantId),
+    // O chat de IA do canto da tela: a lista vazia (fora do piloto, nenhum
+    // agente ligado, sem chave) é o que esconde o botão. Falha aqui não pode
+    // derrubar o app — sem chat é o estado seguro.
+    agentesDoChat(ctx).catch((err) => {
+      console.error("[chat-ia] agentes do chat", err);
+      return [];
+    }),
+    ctx.userId
+      ? tiposOcultos(dono)
+          .then((ocultos) => contarNaoLidasVisiveis(dono, ocultos))
+          .catch((err) => {
+            console.error("[layout] contador do sino", err);
+            return 0;
+          })
+      : Promise.resolve(0),
+    ctx.userId
+      ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true, accentColor: true } })
+      : Promise.resolve(null),
+    // A janela de troca lista os escritórios pela MESMA regra que o token usa
+    // para autorizar a troca (`escritoriosAcessiveis`, via
+    // getAccessibleTenantIds): SUPER_ADMIN vê o de origem e os concedidos; os
+    // demais papéis, só o atual — o nome real no cabeçalho, sem troca.
+    getAccessibleTenantIds(ctx.userId, role, ctx.homeTenantId).then((acessiveis) =>
+      prisma.tenant.findMany({
+        where: { id: { in: escritoriosDaTroca(acessiveis, tenantId) } },
+        select: { id: true, name: true, logoUrl: true },
+        orderBy: { name: "asc" },
+      })
+    ),
+    // A aparência do escritório (21/10/2026): as cores dos grupos de telas, e a
+    // cor principal só se ele ligou "Usar também no Connect da equipe".
+    aparenciaDoEscritorio(tenantId),
+    // A empresa em foco (BPO, uma empresa por vez — 21/10/2026): a faixa do
+    // topo, nas telas que seguem o foco. Sem o cookie, nem consulta o banco;
+    // erro aqui não derruba o app — a tela confere de novo (`ConferirFoco`) e a
+    // trava das ações lê o foco por conta própria.
+    lerEmpresaEmFoco(ctx).catch((err) => {
+      console.error("[layout] empresa em foco", err);
+      return null;
+    }),
+    // Quem pode usar o foco vê a faixa, mesmo sem empresa (05/11/2026).
+    podeUsarOFoco(ctx).catch((err) => {
+      console.error("[layout] pode usar o foco", err);
+      return false;
+    }),
+  ]);
   const visibleSectors = setoresDoSeletor({
     userSectors: sectors,
     isFullAccess: isFullAccess(role),
@@ -93,12 +166,19 @@ export default async function AppLayout({
   // "Processamento fiscal indisponível", e sem esta exceção a tela ficava sem
   // entrada nenhuma (21/10/2026).
   const semMenu: ReadonlySet<string> = new Set([...MODULOS_FORA_DO_MENU, ...(bancoFiscalLocal() ? MODULOS_SEM_MENU : [])]);
-  const [moduleStates, telasDoGeral] = await Promise.all([
-    getTenantModuleStates(tenantId),
+  // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
+  const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
+  // As solicitações novas (21/10/2026): o número do item Solicitações do menu.
+  const [telasDoGeral, chamadosLigados, solicitacoesNovas] = await Promise.all([
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
+    temAcessoAoModulo({ ctx, config: helpdeskConfig }),
+    solicitacoesLigadas && ctx.userId
+      ? contarNovasDaEquipe({ tenantId, setores: setoresDaFila(ctx), userId: ctx.userId }).catch((err) => {
+          console.error("[layout] solicitações novas", err);
+          return 0;
+        })
+      : Promise.resolve(0),
   ]);
-  const helpdeskConfig = await configDoHelpdesk(tenantId);
-  const chamadosLigados = await temAcessoAoModulo({ ctx, config: helpdeskConfig });
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
       .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : canViewSector(ctx, m.sectorCodes)))
@@ -110,8 +190,6 @@ export default async function AppLayout({
       })),
     telasDoGeral,
   );
-  // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
-  const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   // No setor que atende os chamados (a Tech), eles saem do Geral e entram no
   // menu do setor (26/10/2026, ver `chamadosNoMenuDoSetor`).
@@ -130,72 +208,7 @@ export default async function AppLayout({
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
-  const telasFixadas = telasFixadasVisiveis(await codigosDeTelasFixadas(ctx.userId, tenantId), telasNavegaveis);
-
-  // O chat de IA do canto da tela: a lista vazia (fora do piloto, nenhum
-  // agente ligado, sem chave) é o que esconde o botão. Falha aqui não pode
-  // derrubar o app — sem chat é o estado seguro.
-  const agentesDoChatDeIA = await agentesDoChat(ctx).catch((err) => {
-    console.error("[chat-ia] agentes do chat", err);
-    return [];
-  });
-
-  const prisma = getPrisma();
-  // Só o contador do sino: a lista é buscada quando o sino abre (02/10/2026) —
-  // vinda daqui, ela envelhecia, porque o layout não re-renderiza ao navegar.
-  // Sem as arquivadas e os tipos ocultos (05/10/2026). Falha aqui não derruba
-  // o app inteiro (deploy antes da migration, por exemplo): o sino fica sem número.
-  const dono = { tenantId, userId: ctx.userId };
-  // A aparência do escritório (21/10/2026): as cores dos grupos de telas, e a
-  // cor principal só se ele ligou "Usar também no Connect da equipe".
-  // As solicitações novas (21/10/2026): o número do item Solicitações do menu.
-  const [unreadCount, me, accessibleTenants, { aparencia }, solicitacoesNovas] = await Promise.all([
-    ctx.userId
-      ? tiposOcultos(dono)
-          .then((ocultos) => contarNaoLidasVisiveis(dono, ocultos))
-          .catch((err) => {
-            console.error("[layout] contador do sino", err);
-            return 0;
-          })
-      : Promise.resolve(0),
-    ctx.userId
-      ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true, photoUrl: true, accentColor: true } })
-      : Promise.resolve(null),
-    // A janela de troca lista os escritórios pela MESMA regra que o token usa
-    // para autorizar a troca (`escritoriosAcessiveis`, via
-    // getAccessibleTenantIds): SUPER_ADMIN vê o de origem e os concedidos; os
-    // demais papéis, só o atual — o nome real no cabeçalho, sem troca.
-    getAccessibleTenantIds(ctx.userId, role, ctx.homeTenantId).then((acessiveis) =>
-      prisma.tenant.findMany({
-        where: { id: { in: escritoriosDaTroca(acessiveis, tenantId) } },
-        select: { id: true, name: true, logoUrl: true },
-        orderBy: { name: "asc" },
-      })
-    ),
-    aparenciaDoEscritorio(tenantId),
-    solicitacoesLigadas && ctx.userId
-      ? contarNovasDaEquipe({ tenantId, setores: setoresDaFila(ctx), userId: ctx.userId }).catch((err) => {
-          console.error("[layout] solicitações novas", err);
-          return 0;
-        })
-      : Promise.resolve(0),
-  ]);
-
-  // A empresa em foco (BPO, uma empresa por vez — 21/10/2026): a faixa do
-  // topo, nas telas que seguem o foco. Sem o cookie, nem consulta o banco;
-  // erro aqui não derruba o app — a tela confere de novo (`ConferirFoco`) e a
-  // trava das ações lê o foco por conta própria.
-  const [foco, podeFocar] = await Promise.all([
-    lerEmpresaEmFoco(ctx).catch((err) => {
-      console.error("[layout] empresa em foco", err);
-      return null;
-    }),
-    // Quem pode usar o foco vê a faixa, mesmo sem empresa (05/11/2026).
-    podeUsarOFoco(ctx).catch((err) => {
-      console.error("[layout] pode usar o foco", err);
-      return false;
-    }),
-  ]);
+  const telasFixadas = telasFixadasVisiveis(codigosFixados, telasNavegaveis);
 
   return (
     <ToastProvider>

@@ -315,6 +315,47 @@ export type LinhaDoQuadro = {
   certidoes: Partial<Record<TipoDeCertidao, CertidaoNaTela | null>>;
 };
 
+export type PositivaNaoVista = { id: string; companyId: string; empresa: string; tipo: TipoDeCertidao };
+
+/**
+ * As certidões positivas que ninguém marcou como vistas e que ainda são a
+ * certidão que vale — o número e a fila do painel do Societário (05/11/2026).
+ * A mesma regra do quadro (a última que saiu, empresa ativa, certidão que a
+ * empresa precisa), sem carregar o quadro inteiro: antes o painel lia todas
+ * as empresas e até 20.000 consultas para contar estas.
+ */
+export async function positivasNaoVistas(tenantId: string): Promise<PositivaNaoVista[]> {
+  const prisma = getPrisma();
+  const candidatas = await prisma.certidao.findMany({
+    where: { tenantId, situacao: "POSITIVA", vistaEm: null },
+    select: { id: true, companyId: true, tipo: true, createdAt: true },
+  });
+  if (candidatas.length === 0) return [];
+  const ids = [...new Set(candidatas.map((c) => c.companyId))];
+  const [empresas, ultimas] = await Promise.all([
+    prisma.company.findMany({
+      where: { tenantId, id: { in: ids }, ...ATIVAS },
+      select: { id: true, cnpj: true, stateCode: true, city: true, name: true, displayName: true },
+    }),
+    // A última que saiu de cada empresa e certidão (índice tenant+empresa+tipo+data).
+    prisma.certidao.groupBy({
+      by: ["companyId", "tipo"],
+      where: { tenantId, companyId: { in: ids }, situacao: { not: "NAO_SAIU" } },
+      _max: { createdAt: true },
+    }),
+  ]);
+  const precisa = new Set(certidoesDaCarteira(empresas).map((c) => `${c.companyId}:${c.tipo}`));
+  const vale = new Map(ultimas.map((u) => [`${u.companyId}:${u.tipo}`, u._max.createdAt?.getTime() ?? null]));
+  const nome = new Map(empresas.map((e) => [e.id, nomeExibicao(e)]));
+  return candidatas
+    .filter((c) => {
+      const k = `${c.companyId}:${c.tipo}`;
+      return precisa.has(k) && vale.get(k) === c.createdAt.getTime();
+    })
+    .map((c) => ({ id: c.id, companyId: c.companyId, empresa: nome.get(c.companyId)!, tipo: c.tipo as TipoDeCertidao }))
+    .sort((a, b) => a.empresa.localeCompare(b.empresa, "pt-BR"));
+}
+
 /**
  * Empresa por empresa, a última consulta de cada certidão que ela precisa.
  * A última que saiu vale mais que uma tentativa que falhou depois dela.
