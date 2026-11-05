@@ -12,6 +12,7 @@ import { LinkedItemsSection } from "@/components/kanban/LinkedItemsSection";
 import { DetailSection } from "@/components/kanban/DetailSection";
 import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
+import { AtalhosDoDetalhe, type AtalhoDoDetalhe } from "@/components/kanban/AtalhosDoDetalhe";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight } from "lucide-react";
@@ -362,7 +363,6 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
               ? "Atividade concluída"
               : null
         }
-        concluirAction={concluirAction}
         reabrirAction={reabrirAction}
       />
 
@@ -380,6 +380,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
             currentStageId={item.stageId}
             moveAction={moverItem}
+            isCompleted={isCompleted}
+            concluirAction={concluirAction}
             dueDate={item.dueDate ? item.dueDate.toISOString() : null}
             startDate={item.startDate ? item.startDate.toISOString() : null}
             recurring={item.recurring}
@@ -408,12 +410,26 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
+          {/* Os atalhos para o que se acrescenta à tarefa (05/11/2026, como no
+              ClickUp): abrem a seção certa, que começa fechada. */}
+          {canAct && (
+            <AtalhosDoDetalhe
+              atalhos={[
+                ...(!item.parentItemId ? (["subatividades"] as AtalhoDoDetalhe[]) : []),
+                "relacionadas",
+                "checklist",
+                "anexos",
+              ]}
+            />
+          )}
+
           {/* Rodapé do detalhamento — as seções em blocos recolhíveis, que
               começam fechados com o resumo na linha (15/10/2026). Cada uma só
               aparece se tiver conteúdo ou se o usuário puder criar algo ali. */}
           <div className="flex flex-col gap-2">
             {!item.parentItemId && (subtasks.length > 0 || canAct) && (
               <DetailSection
+                id="secao-subatividades"
                 title="Subatividades"
                 summary={
                   subtasks.length > 0
@@ -445,6 +461,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
             {(relatedItems.length > 0 || canAct) && (
               <DetailSection
+                id="secao-relacionadas"
                 title="Atividades relacionadas"
                 summary={relatedItems.length > 0 ? relatedItems.length : undefined}
               >
@@ -461,6 +478,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
             {(checklistItems.length > 0 || canAct) && (
               <DetailSection
+                id="secao-checklist"
                 title="Checklist"
                 summary={
                   checklistItems.length > 0
@@ -482,7 +500,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             )}
 
             {(documents.length > 0 || canAct) && (
-              <DetailSection title="Anexos" summary={documents.length > 0 ? documents.length : undefined}>
+              <DetailSection id="secao-anexos" title="Anexos" summary={documents.length > 0 ? documents.length : undefined}>
                 <TaskAttachmentsSection
                   entityId={itemId}
                   canUpload={canAct}

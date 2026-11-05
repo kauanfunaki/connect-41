@@ -603,7 +603,8 @@ export async function alternarObservadorItem(pipelineId: string, itemId: string,
   revalidarItem(pipeline, itemId);
 }
 
-const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
+// Para o histórico do cartão: 0 é "sem prioridade" desde 05/11/2026 (era "Normal").
+const PRIORITY_LABEL: Record<number, string> = { 0: "Sem prioridade", 1: "Alta", 2: "Urgente" };
 
 function formatDueDateLabel(d: Date | null): string {
   if (!d) return "sem prazo";
