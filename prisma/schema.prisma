@@ -988,6 +988,17 @@ enum PipelineEntityType {
 // vazia, IN_PROGRESS preenchida pela metade, PENDING pontilhada, DONE cheia
 // com check. isTerminal continua no schema (muita leitura já existente) e
 // passa a ser derivado: DONE => isTerminal true, qualquer outro => false.
+/// A permissão padrão de um espaço dos Quadros (05/11/2026, no modelo do
+/// ClickUp). Vale para quem é do setor sem coordená-lo; o coordenador e o
+/// administrador gerenciam sempre, e excluir segue só com o administrador.
+/// Regra em src/lib/kanban/permissaoDoEspaco.ts.
+enum SpacePermission {
+  TOTAL
+  EDITAR
+  COMENTAR
+  EXIBIR
+}
+
 enum StageType {
   NOT_STARTED
   IN_PROGRESS
@@ -2351,6 +2362,14 @@ model Space {
   sectorCode String   @db.VarChar(40)
   name       String   @db.VarChar(80)
   color      String   @default("#586577") @db.VarChar(7)
+  /// O ícone do quadrado do espaço (nome de um ícone de `ICONES_DO_ESPACO`);
+  /// sem ele, o quadrado mostra a inicial do nome (05/11/2026).
+  icon        String?         @db.VarChar(40)
+  description String?         @db.Text
+  /// O que quem é do setor faz no espaço sem coordená-lo (05/11/2026). Os
+  /// espaços dos setores que tinham os Quadros bloqueados vieram como
+  /// COMENTAR; os outros, como EDITAR, que é o que o colaborador já fazia.
+  defaultPermission SpacePermission @default(EDITAR)
   order      Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -7235,6 +7254,11 @@ model TenantEnviosConfig {
   @@map("tenant_envios_configs")
 }
 
+/// LEGADO desde 05/11/2026: o bloqueio por setor virou a permissão padrão de
+/// cada espaço (`Space.defaultPermission`); a migration daquele dia passou os
+/// espaços dos setores bloqueados para COMENTAR. A tabela fica só como
+/// registro — nenhuma tela lê ou grava mais.
+///
 /// Os setores em que os colaboradores NÃO criam nem editam tarefas nos Quadros
 /// (28/10/2026, pedido do Kauan). Por padrão é liberado: sem linha, o
 /// colaborador do setor cria tarefas e atividades e edita as colunas, como o
