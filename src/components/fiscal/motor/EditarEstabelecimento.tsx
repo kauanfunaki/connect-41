@@ -8,7 +8,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Modal } from "@/components/ui/Modal";
 import { FormSection } from "@/components/ui/FormSection";
 import { CampoFiscal } from "@/components/fiscal/previa/Compartilhados";
-import { atualizarEstabelecimentoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { atualizarEstabelecimentoNoMotor } from "@/app/(app)/sped-fiscal/motor-actions";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
 
 /**

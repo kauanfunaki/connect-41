@@ -14,7 +14,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { AcoesFiscais, CampoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { DECISOES, lerCompetencias, normalizarDecimal, rotuloDoCampo, textoDoValor, type CampoDeDecisao, type TipoDeDecisao } from "@/lib/fiscal/motor/decisoes";
-import { apagarDecisaoNoMotor, criarDecisaoNoMotor, gravarDecisaoNoMotor } from "@/app/(app)/fiscal/decisoes-actions";
+import { apagarDecisaoNoMotor, criarDecisaoNoMotor, gravarDecisaoNoMotor } from "@/app/(app)/sped-fiscal/decisoes-actions";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
 
 export type LinhaDeDecisao = { chave: Record<string, unknown>; valor: Record<string, unknown>; natureza?: unknown; decidido_por: string | null; atualizado_em: string | null };

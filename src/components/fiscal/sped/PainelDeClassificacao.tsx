@@ -21,7 +21,7 @@ import { cnpjFormatado, contagem, decimalDeCentavos, reaisDeCentavos, normalizar
 import { normalizarDecimal } from "@/lib/fiscal/motor/decisoes";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import type { ProdutoNaTela } from "@/lib/fiscal/sped/dados";
-import { apagarDecisaoNoMotor, gravarDecisaoNoMotor } from "@/app/(app)/fiscal/decisoes-actions";
+import { apagarDecisaoNoMotor, gravarDecisaoNoMotor } from "@/app/(app)/sped-fiscal/decisoes-actions";
 
 type Filtro = "todos" | "decidir" | "decididos" | "simples";
 

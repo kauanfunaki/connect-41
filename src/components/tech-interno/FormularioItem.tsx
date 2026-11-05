@@ -11,6 +11,9 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { FileDropzone, type ArquivoNaFila } from "@/components/ui/FileDropzone";
+import { uploadComProgresso } from "@/lib/uploadComProgresso";
+import { ACCEPT_DO_DRIVE } from "@/lib/drive/tipoDoArquivo";
 import { salvarItemTech, comentarItemTech } from "@/app/(app)/controle-interno/actions";
 import { TIPOS, PRIORIDADES, SITUACOES, TAMANHOS, ROTA_TECH_INTERNO, ORIGENS_DO_SISTEMA, comVolta, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
 
@@ -39,6 +42,8 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
   const [erro, setErro] = useState("");
   const { show } = useToast();
   const [pendente, iniciar] = useTransition();
+  // Na criação, os anexos esperam o item existir e sobem um por vez logo depois.
+  const [fila, setFila] = useState<ArquivoNaFila[]>([]);
   const modo = sistema === "NONE" || sistema === "NEW" ? sistema : "EXISTING";
   const responsaveis = item?.assigneeId && !users.some(u => u.id === item.assigneeId)
     ? [...users, { id: item.assigneeId, name: `${item.assigneeName ?? "Responsável anterior"} (indisponível)` }] : users;
@@ -48,7 +53,15 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
       try {
         const r = await salvarItemTech(item?.id, form);
         if ("error" in r) { setErro(r.error); return; }
-        show(item ? "Alterações salvas." : "Item criado.", "success");
+        let falhas = 0;
+        if (!item) for (const a of fila) {
+          setFila(f => f.map(x => x.id === a.id ? { ...x, estado: "enviando", progresso: 0 } : x));
+          const envio = new FormData(); envio.set("itemId", r.id); envio.set("arquivo", a.file);
+          const up = await uploadComProgresso("/api/tech-interno/anexos", envio, pct => setFila(f => f.map(x => x.id === a.id ? { ...x, progresso: pct } : x)));
+          if (!up.ok) falhas++;
+          setFila(f => f.map(x => x.id === a.id ? (up.ok ? { ...x, estado: "concluido", progresso: 100 } : { ...x, estado: "erro", erro: up.erro }) : x));
+        }
+        show(item ? "Alterações salvas." : falhas ? `Item criado, mas ${falhas === 1 ? "um anexo não foi enviado" : `${falhas} anexos não foram enviados`}. Anexe de novo na tela do item.` : "Item criado.", falhas ? "error" : "success");
         if (!item) router.replace(comVolta(`${ROTA_TECH_INTERNO}/${r.id}`, voltar));
         else router.refresh();
       } catch { setErro("Não foi possível confirmar o salvamento. Atualize a página antes de tentar novamente."); }
@@ -94,6 +107,12 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
         </CampoForm>
       </div>
       <CampoForm label="Descrição" htmlFor="tech-description"><Textarea id="tech-description" name="description" rows={6} maxLength={10000} defaultValue={item?.description ?? ""} /></CampoForm>
+      {!item && podeEditar && <div role="group" aria-labelledby="tech-anexos-rotulo" className="flex flex-col gap-1.5 min-w-0">
+        <span id="tech-anexos-rotulo" className="text-label font-medium leading-5 text-fg">Anexos <span className="font-normal text-fg-muted">(opcional)</span></span>
+        <FileDropzone accept={ACCEPT_DO_DRIVE} maxSizeMb={10} multiple arquivos={fila} desabilitado={pendente}
+          onAdicionar={files => setFila(f => [...f, ...files.map(file => ({ id: crypto.randomUUID(), file, progresso: 0, estado: "pendente" as const }))])}
+          onRemover={id => setFila(f => f.filter(a => a.id !== id))} />
+      </div>}
     </fieldset>
     {podeEditar ? <FormFooter pending={pendente} submitLabel={item ? "Salvar alterações" : "Criar item"} pendingLabel={item ? undefined : "Criando…"} cancelHref={voltar} erro={erro || undefined} />
       : <p className="text-helper text-fg-muted text-right">Acesso somente para consulta.</p>}

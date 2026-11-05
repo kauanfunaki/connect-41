@@ -55,7 +55,7 @@ async function main() {
       await page.evaluate(() => new Promise<void>((ok) => requestAnimationFrame(() => requestAnimationFrame(() => ok()))));
     };
     const controlar = async (nome: string) => { await page.getByRole("button", { name: nome, exact: true }).first().click(); await salvo(); };
-    await ir("/fiscal/operacao");
+    await ir("/sped-fiscal/motor/operacao");
     const sped = page.locator("aside").getByRole("button", { name: "SPED", exact: true });
     assert.equal(await sped.count(), 1);
     for (const label of ["SPED gerados", "Executar"]) assert.equal(await page.locator("aside").getByRole("link", { name: label, exact: true }).count(), 0);
@@ -89,7 +89,7 @@ async function main() {
     await controlar("Simular conclusão");
     assert((await estado()).documentos.length > antes);
 
-    await ir("/fiscal/classificacao?situacao=Pendente");
+    await ir("/sped-fiscal/motor/classificacao?situacao=Pendente");
     assert.equal(await page.locator("main").getByRole("tablist").count(), 0);
     const menu = page.locator("main nav[aria-label='Abas']");
     assert.equal(await menu.getByRole("link").count(), 5);
@@ -97,19 +97,19 @@ async function main() {
     await page.getByRole("checkbox", { name: "Selecionar esta página", exact: true }).check();
     await page.getByRole("button", { name: /^Aplicar a \d+ selecionado/ }).click();
     await salvo();
-    await ir("/fiscal/icms-ipi");
+    await ir("/sped-fiscal/motor/icms-ipi");
     assert.equal(await page.locator("main").getByRole("tablist").count(), 0);
     await controlar("Simular apuração");
     await controlar("Fechar competência");
 
-    await ir("/fiscal/operacao?aba=executar&secao=gerar");
+    await ir("/sped-fiscal/motor/operacao?aba=executar&secao=gerar");
     await escolher(page, "Tipo do arquivo", "Original");
     await controlar("Solicitar geração de teste");
     await controlar("Simular início");
     await controlar("Simular conclusão");
     const gerado = (await estado()).arquivos[0];
     assert(gerado?.resumo, "A geração precisa registrar o resumo da versão.");
-    await ir("/fiscal/entregas");
+    await ir("/sped-fiscal/motor/entregas");
     assert.equal(await page.locator("main nav[aria-label='Abas']").count(), 0);
     assert.equal(await page.locator("main").getByRole("tablist").count(), 0);
     await page.getByRole("button", { name: `Opções de ${gerado.nome}`, exact: true }).click();
@@ -138,7 +138,7 @@ async function main() {
     await page.getByRole("dialog").getByRole("cell", { name: "Receita", exact: true }).waitFor();
     await page.keyboard.press("Escape");
 
-    await ir("/fiscal/operacao");
+    await ir("/sped-fiscal/motor/operacao");
     await controlar("Extração única");
     await controlar("Solicitar extração única");
     const falhaId = (await estado()).execucoes[0].id;
@@ -153,7 +153,7 @@ async function main() {
     await controlar("Ver log");
     await page.getByRole("heading", { name: /^Log ·/ }).waitFor();
 
-    for (const [path, nome] of [["/fiscal/classificacao", "classificacao"], ["/fiscal/icms-ipi", "apuracao"], ["/fiscal/entregas", "gerados"], ["/fiscal/operacao?secao=gerar", "executar"], ["/fiscal/operacao?aba=historico", "historico"]]) {
+    for (const [path, nome] of [["/sped-fiscal/motor/classificacao", "classificacao"], ["/sped-fiscal/motor/icms-ipi", "apuracao"], ["/sped-fiscal/motor/entregas", "gerados"], ["/sped-fiscal/motor/operacao?secao=gerar", "executar"], ["/sped-fiscal/motor/operacao?aba=historico", "historico"]]) {
       await ir(path);
       for (const tema of ["light", "dark"]) {
         await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), tema);
@@ -174,15 +174,15 @@ async function main() {
       await page.setViewportSize({ width: 1366, height: 768 });
     }
     await context.addCookies([{ name: "c41_menu", value: "recolhido", url: baseURL }]);
-    await ir("/fiscal/classificacao");
+    await ir("/sped-fiscal/motor/classificacao");
     await page.screenshot({ path: resolve(pasta, "menu-recolhido.png"), animations: "disabled", caret: "initial" });
     assert.equal(await page.locator("aside button[aria-current='true']").count(), 1);
     await sped.click();
     await submenu.waitFor();
     await submenu.getByRole("menuitem", { name: "SPED gerados", exact: true }).click();
-    await page.waitForURL((url) => url.pathname === "/fiscal/entregas");
+    await page.waitForURL((url) => url.pathname === "/sped-fiscal/motor/entregas");
     await salvo();
-    assert.equal(new URL(page.url()).pathname, "/fiscal/entregas");
+    assert.equal(new URL(page.url()).pathname, "/sped-fiscal/motor/entregas");
     await page.setViewportSize({ width: 390, height: 780 });
     await page.getByRole("button", { name: "Abrir menu", exact: true }).click();
     await sped.click();
@@ -191,11 +191,11 @@ async function main() {
     assert(limites.x >= 0 && limites.x + limites.width <= 391, "O submenu precisa caber na tela do celular.");
     await page.screenshot({ path: resolve(pasta, "menu-sped-celular.png"), animations: "disabled", caret: "initial" });
     await submenu.getByRole("menuitem", { name: "Executar", exact: true }).click();
-    await page.waitForURL((url) => url.pathname === "/fiscal/operacao");
+    await page.waitForURL((url) => url.pathname === "/sped-fiscal/motor/operacao");
     await salvo();
-    assert.equal(new URL(page.url()).pathname, "/fiscal/operacao");
+    assert.equal(new URL(page.url()).pathname, "/sped-fiscal/motor/operacao");
     await page.setViewportSize({ width: 1366, height: 768 });
-    await ir("/fiscal/classificacao?aba=apoio");
+    await ir("/sped-fiscal/motor/classificacao?aba=apoio");
     assert(new URL(page.url()).searchParams.get("grupo") === "apoio");
     assert.equal(await page.locator("main").getByRole("tablist").count(), 0);
     const resultado = { status: erros.length ? "failed" : "passed", fluxo: "passed", persistencia: "passed", download: "passed", tentativas: "passed", layout: "passed", erros, avisosDoProfiler: [...new Set(avisosDoProfiler)], evidencias: pasta };

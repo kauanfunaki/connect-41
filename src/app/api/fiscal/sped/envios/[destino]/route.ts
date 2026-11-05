@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
       const r = await p.motor.cliente.importarPagamentosApoio(raiz, arquivos, { tipo, pasta: campos.pasta, ocr: campos.ocr === "true" }, escrita);
       await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: empresaContabil ? "contabil.sped.pagamentos_apoio.importados" : "fiscal.sped.pagamentos_apoio.importados",
         entityType: "SpedImportacaoApoio", entityId: `pagamentos_apoio:${tipo}`, metadata: { nome: `${ROTULO_DO_TIPO_DE_APOIO[tipo]}${r.pasta ? ` · ${r.pasta}` : ""}`, raiz, chave, tipo, pasta: r.pasta || null, ocr: campos.ocr === "true", arquivos: metaArquivos, linhas: r.linhas, gravadas: r.gravadas, porCompetencia: r.por_competencia, recusadas: r.recusadas.length } });
-      revalidarTelas(regra.tela, "/fiscal/conferencia");
+      revalidarTelas(regra.tela, "/sped-fiscal/motor/conferencia");
       if (empresaContabil) revalidarTelas("/sped-contabil");
       const recusadas = r.recusadas.length ? ` ${r.recusadas.length} arquivo(s) recusado(s): já gravados com outro tipo.` : "";
       const comps = Object.keys(r.por_competencia);
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ destino: s
       const r = await p.motor.cliente.importarFaturasBpo(raiz, arquivos[0], extras, { substituir: campos.substituir === "true" }, escrita);
       await logAudit({ tenantId: p.ctx.tenantId, userId: p.ctx.userId, action: empresaContabil ? "contabil.sped.faturas_bpo.importadas" : "fiscal.sped.faturas_bpo.importadas",
         entityType: "SpedImportacaoApoio", entityId: `faturas_bpo:${r.planilha}`.slice(0, 120), metadata: { nome: r.planilha, raiz, chave, substituir: campos.substituir === "true", arquivos: metaArquivos, pagamentos: r.pagamentos, gravadas: r.gravadas, removidas: r.removidas, comComprovante: r.com_comprovante, porCompetencia: r.por_competencia } });
-      revalidarTelas(regra.tela, "/fiscal/conferencia");
+      revalidarTelas(regra.tela, "/sped-fiscal/motor/conferencia");
       if (empresaContabil) revalidarTelas("/sped-contabil");
       return responder({ ok: true, mensagem: `Planilha importada: ${r.gravadas} fatura(s) gravada(s)${r.removidas ? `, ${r.removidas} substituída(s)` : ""}, ${r.com_comprovante} com comprovante.`, dados: r });
     }

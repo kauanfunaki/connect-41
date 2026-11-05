@@ -11,7 +11,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Aviso } from "@/components/ui/Aviso";
 import { Modal } from "@/components/ui/Modal";
 import { AcoesFiscais, CampoFiscal } from "@/components/fiscal/previa/Compartilhados";
-import { lerValidacaoNoMotor, regerarArquivoNoMotor, registrarEntregaNoMotor, validarArquivoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { lerValidacaoNoMotor, regerarArquivoNoMotor, registrarEntregaNoMotor, validarArquivoNoMotor } from "@/app/(app)/sped-fiscal/motor-actions";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
 
 type Aberto = "regerar" | "entrega" | null;

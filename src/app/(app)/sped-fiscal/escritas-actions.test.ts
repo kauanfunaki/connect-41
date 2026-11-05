@@ -92,7 +92,7 @@ describe("Documentos", () => {
     expect(r).toMatchObject({ ok: true, dados: { id: 38, acao: "cobertura" } });
     expect((enviado().init.headers as Record<string, string>)["Idempotency-Key"]).toBe(CHAVE);
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.cobertura.apurada", entityType: "SpedExecucao", entityId: "38" }));
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/documentos", "/fiscal/operacao"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/documentos", "/sped-fiscal/motor/operacao"]);
   });
   it("estabelecimento que a pessoa não vê: recusa sem chamar", async () => {
     expect((await acoes.apurarCoberturaNoMotor({ raiz: R, estabelecimentoId: 77, competencia: "2032-02", chave: CHAVE })).ok).toBe(false);
@@ -120,7 +120,7 @@ describe("Documentos", () => {
     expect(r).toMatchObject({ ok: true, dados: { id: 109, resolvido: true } });
     expect(JSON.parse(enviado().init.body as string)).toEqual({ resolvido: true, observacao: "evento, não documento" });
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.quarentena.resolvida", entityId: "109" }));
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/documentos"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/documentos"]);
     responder({ status: 200, corpo: { ...(fixture("quarentena_resolver").resposta.corpo as object), resolvido: false }, x_custo: "leve" });
     await acoes.resolverRejeitadoNoMotor({ raiz: R, id: 109, resolvido: false, observacao: "" });
     expect(m.audit).toHaveBeenLastCalledWith(expect.objectContaining({ action: "fiscal.sped.quarentena.reaberta" }));
@@ -139,7 +139,7 @@ describe("PIS e COFINS › Fechamento", () => {
     expect(r.ok).toBe(true);
     expect(JSON.parse(enviado().init.body as string)).toEqual({ caminho: "TESTE-TELAS/rpa.pdf", pagina: 1, ordem: 1, decisao: "descartado", motivo: "duplicado da página 2" });
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.pagamento.decidido", entityType: "SpedPagamento", metadata: expect.objectContaining({ registroIds: [282] }) }));
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/contribuicoes"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/contribuicoes"]);
   });
   it("422 pagamento_nao_aceitavel no decidir: a frase do motor, sem auditoria", async () => {
     responder("erro_pagamento_nao_aceitavel");
@@ -166,7 +166,7 @@ describe("PIS e COFINS › Fechamento", () => {
     expect(r).toMatchObject({ ok: false, codigo: "pagamento_nao_aceitavel", detalhe: { correcaoGravada: true, registro_ids: [284] } });
     expect(r.mensagem).toMatch(/^A correção foi gravada, mas o aceite foi recusado: não dá para aceitar/);
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.pagamento.corrigido", metadata: expect.objectContaining({ aceiteRecusado: true, registroIds: [284] }) }));
-    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/contribuicoes");
+    expect(m.revalidar).toHaveBeenCalledWith("/sped-fiscal/motor/contribuicoes");
   });
   it("informar contrato: só o preenchido vai; a tratativa é exigida na ressalva", async () => {
     responder("contrato_informar");
@@ -183,7 +183,7 @@ describe("PIS e COFINS › Fechamento", () => {
     expect(r).toMatchObject({ ok: true, dados: { qtd_cte: 3, valor_total: "10416.67" } });
     expect(enviado(1).url).toBe("https://motor/api/connect/v1/arquivos/103/apurar-cte?cnpj_raiz=17122471");
     expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_contribuicoes", "agir");
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/contribuicoes", "/fiscal/conferencia"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/contribuicoes", "/sped-fiscal/motor/conferencia"]);
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.cte.apurado", entityId: "103" }));
   });
   it("apurar CT-e de arquivo de outro estabelecimento ou de Contribuições: recusa sem apurar", async () => {
@@ -211,7 +211,7 @@ describe("Conferência", () => {
     expect(JSON.parse(enviado().init.body as string)).toEqual({ competencia: "2032-03", linha: "rpas", valor: "1234.56", observacao: "RPA de março" });
     expect(enviado().init.method).toBe("PUT");
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.simulacao.gravada" }));
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/conferencia"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/conferencia"]);
   });
   it("simulação com valor null apaga a linha (não é zero)", async () => {
     responder("simulacao");
@@ -254,7 +254,7 @@ describe("Conferência › prestadores: regime MEI/normal (§14.1)", () => {
     expect(JSON.parse(init.body as string)).toEqual({ cnpj: CNPJ, regime: "mei", competencia: "2032-03" });
     expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_conferencia", "agir");
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.regime.definido", entityType: "SpedPrestador", entityId: CNPJ }));
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/conferencia"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/conferencia"]);
   });
   it("`null` apaga a correção: volta ao cadastro ou ao nome, e a frase diz qual", async () => {
     responder("regime_apagar");
@@ -295,7 +295,7 @@ describe("Documentos › quarentena: reprocessar (§14.2)", () => {
     expect((init.headers as Record<string, string>)["Idempotency-Key"]).toBe(CHAVE);
     expect(m.pode).toHaveBeenCalledWith(m.ctx, "fiscal_acervo", "agir");
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.quarentena.reprocessada", entityType: "SpedExecucao", entityId: "68" }));
-    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/fiscal/documentos", "/fiscal/operacao"]);
+    expect(m.revalidar.mock.calls.map((c) => c[0])).toEqual(["/sped-fiscal/motor/documentos", "/sped-fiscal/motor/operacao"]);
   });
   it("409 reprocessamento_em_andamento: aponta o pedido aberto e devolve o existente; nada auditado", async () => {
     responder("erro_reprocessamento_em_andamento");

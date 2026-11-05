@@ -1,6 +1,6 @@
 // A porta comum das Server Actions do modo real (22/10/2026). Não é
 // "use server": são funções internas, chamadas pelas ações de
-// `src/app/(app)/fiscal/*-actions.ts`.
+// `src/app/(app)/sped-fiscal/*-actions.ts`.
 
 import "server-only";
 import { revalidatePath } from "next/cache";
@@ -86,7 +86,7 @@ export async function visiveis(ctx: AuthContext, raiz: string) {
 }
 
 export function revalidarFiscal() {
-  revalidatePath("/fiscal", "layout");
+  revalidatePath("/sped-fiscal", "layout");
   revalidatePath("/sped-contabil");
 }
 

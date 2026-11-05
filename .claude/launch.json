@@ -4,9 +4,70 @@
     {
       "name": "connect-41",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "connect-41-local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/local/com-banco-local.mjs",
+        "npx",
+        "next",
+        "dev",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "connect-41-controle-interno",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Dev\\connect-41-controle-interno && node scripts/local/com-banco-local.mjs npx next dev -p 3110"
+      ],
+      "port": 3110
+    },
+    {
+      "name": "connect-41-chamados-detalhe",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Dev\\connect-41-chamados-detalhe && node scripts/local/com-banco-local.mjs npx next dev -p 3100"
+      ],
+      "port": 3100
+    },
+    {
+      "name": "connect-41-sped",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Dev\\connect-41-sped && node scripts/local/com-banco-local.mjs npx next dev -p 3120"
+      ],
+      "port": 3120
+    },
+    {
+      "name": "connect-41-ceci",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Dev\\connect-41-ceci && node scripts/local/com-banco-local.mjs npx next dev -p 3130"
+      ],
+      "port": 3130
+    },
+    {
+      "name": "connect-41-github",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd /d C:\\Dev\\connect-41-github && node scripts/local/com-banco-local.mjs npx next dev -p 3150"
+      ],
+      "port": 3150
     }
   ]
 }

@@ -119,7 +119,7 @@ export async function mudarSituacaoItem(id: string, raw: unknown, versao: unknow
 export async function detalheItem(ctx: AuthContext, id: string) {
   await conferirAcesso(ctx, "ver");
   return getPrisma().techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: {
-    ...incluir, comments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }, changes: { orderBy: { version: "desc" } },
+    ...incluir, comments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }, changes: { orderBy: { version: "desc" } }, attachments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
   } });
 }
 

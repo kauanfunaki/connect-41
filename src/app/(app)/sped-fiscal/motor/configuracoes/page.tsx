@@ -14,11 +14,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   if (await modoDoFiscal(ctx) === "motor") {
     const tela = await prepararTelaDoMotor(params);
     // De-Para e Regras não têm fonte no motor: qualquer aba abre as empresas, a única tela com dados (26/10/2026).
-    if (tela) return <CascoDoMotor tela={tela} caminho="/fiscal/configuracoes" titulo="Empresas no motor" descricao="O cadastro de cada estabelecimento no motor SPED e o vínculo com as empresas do escritório.">
+    if (tela) return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/configuracoes" titulo="Empresas no motor" descricao="O cadastro de cada estabelecimento no motor SPED e o vínculo com as empresas do escritório.">
       <EmpresasMotor tela={tela} permiteGerir={await podeNoModulo(ctx, "fiscal_configuracoes", "gerir")} />
     </CascoDoMotor>;
   }
-  if (aba === "empresas") redirect("/fiscal/configuracoes?aba=parametros");
-  if (aba === "cfop") redirect("/fiscal/configuracoes?aba=regras");
+  if (aba === "empresas") redirect("/sped-fiscal/motor/configuracoes?aba=parametros");
+  if (aba === "cfop") redirect("/sped-fiscal/motor/configuracoes?aba=regras");
   return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="configuracoes" /></Suspense>;
 }

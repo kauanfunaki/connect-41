@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { AcoesFiscais } from "@/components/fiscal/previa/Compartilhados";
-import { cancelarExecucaoNoMotor, destravarExecucaoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { cancelarExecucaoNoMotor, destravarExecucaoNoMotor } from "@/app/(app)/sped-fiscal/motor-actions";
 import { useChaveDeIdempotencia } from "./useChaveDeIdempotencia";
 
 /**

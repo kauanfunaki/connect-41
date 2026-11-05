@@ -84,16 +84,16 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
     e.parametros ? `${e.parametros.dataIni} a ${e.parametros.dataFim}` : e.contexto.competencia,
     <EstadoFiscal key="estado">{e.estado}</EstadoFiscal>,
     <span key="hora" className="text-helper">Pedido: {dataFiscal(e.criadoEm)}<span className="block">Início: {e.iniciadoEm ? dataFiscal(e.iniciadoEm) : "Não registrado"}</span><span className="block">Fim: {e.concluidoEm ? dataFiscal(e.concluidoEm) : "Não registrado"} · {duracao(e)}</span></span>,
-    <span key="resultado" className="block max-w-60 text-helper">{e.documentos !== undefined && <span className="block">{e.documentos} documento(s)</span>}{e.log.at(-1)?.replace(/^\d{4}-\d{2}-\d{2}T\S+ · /, "") || "Sem retorno registrado"}{modulos.includes("fiscal_entregas") && (e.arquivoIds ?? []).map((arquivoId) => { const arquivo = cenario.arquivos.find((a) => a.id === arquivoId); return arquivo && <Button key={arquivoId} href={`/fiscal/entregas?arquivo=${encodeURIComponent(arquivoId)}`} size="xs" variant="link">{arquivo.tipo} · v{arquivo.versao}</Button>; })}</span>,
+    <span key="resultado" className="block max-w-60 text-helper">{e.documentos !== undefined && <span className="block">{e.documentos} documento(s)</span>}{e.log.at(-1)?.replace(/^\d{4}-\d{2}-\d{2}T\S+ · /, "") || "Sem retorno registrado"}{modulos.includes("fiscal_entregas") && (e.arquivoIds ?? []).map((arquivoId) => { const arquivo = cenario.arquivos.find((a) => a.id === arquivoId); return arquivo && <Button key={arquivoId} href={`/sped-fiscal/motor/entregas?arquivo=${encodeURIComponent(arquivoId)}`} size="xs" variant="link">{arquivo.tipo} · v{arquivo.versao}</Button>; })}</span>,
     controles(e),
   ] }));
   return <div className="space-y-5">
     {aba === "executar" ? <>
       <MetricasFiscais itens={[
-        { rotulo: "Na fila", valor: fila.filter((e) => e.estado === "Na fila").length, icone: <Clock />, href: "/fiscal/operacao?aba=historico&estado=fila" },
-        { rotulo: "Executando", valor: fila.filter((e) => e.estado === "Executando").length, icone: <Play />, href: "/fiscal/operacao?aba=historico&estado=executando" },
-        { rotulo: "Concluídas", valor: execucoes.filter((e) => e.estado === "Concluída").length, icone: <CheckCircle2 />, href: "/fiscal/operacao?aba=historico&estado=concluida" },
-        { rotulo: "Com erro", valor: execucoes.filter((e) => e.estado === "Erro").length, icone: <AlertTriangle />, href: "/fiscal/operacao?aba=historico&estado=erro" },
+        { rotulo: "Na fila", valor: fila.filter((e) => e.estado === "Na fila").length, icone: <Clock />, href: "/sped-fiscal/motor/operacao?aba=historico&estado=fila" },
+        { rotulo: "Executando", valor: fila.filter((e) => e.estado === "Executando").length, icone: <Play />, href: "/sped-fiscal/motor/operacao?aba=historico&estado=executando" },
+        { rotulo: "Concluídas", valor: execucoes.filter((e) => e.estado === "Concluída").length, icone: <CheckCircle2 />, href: "/sped-fiscal/motor/operacao?aba=historico&estado=concluida" },
+        { rotulo: "Com erro", valor: execucoes.filter((e) => e.estado === "Erro").length, icone: <AlertTriangle />, href: "/sped-fiscal/motor/operacao?aba=historico&estado=erro" },
       ]} />
       <BlocoFiscal titulo="Preparar pedido de teste" descricao="Empresa e estabelecimento são os selecionados acima. Os pedidos ficam salvos até você avançar a simulação.">
         <div className="grid gap-4 sm:grid-cols-3">
@@ -129,13 +129,13 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
       </BlocoRecolhivel>
       <BlocoFiscal titulo="Fila de simulação" descricao={`${fila.length} pedido(s). Use os controles para avançar a simulação ou cancelar um pedido pendente.`}>
         <TabelaFiscal vazio="Nenhum pedido na fila ou executando." colunas={["Ação / parâmetros", "Período", "Estado", "Horários / duração", "Resultado", "Ações"]} linhas={linhas(fila.slice(0, 12))} />
-        {fila.length > 12 && <Button href="/fiscal/operacao?aba=historico" variant="link">Consultar todos os pedidos no Histórico</Button>}
+        {fila.length > 12 && <Button href="/sped-fiscal/motor/operacao?aba=historico" variant="link">Consultar todos os pedidos no Histórico</Button>}
       </BlocoFiscal>
     </> : <>
-      <CascoDaTabela contagem={contarItens(filtradas.length, "execução", "execuções")} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={<Button href="/fiscal/operacao?aba=executar">Nova execução</Button>}>
+      <CascoDaTabela contagem={contarItens(filtradas.length, "execução", "execuções")} filtros={<FiltrosDaTela naBarra campos={FILTROS} />} acoes={<Button href="/sped-fiscal/motor/operacao?aba=executar">Nova execução</Button>}>
         <TabelaFiscal vazio="Nenhuma execução neste filtro." colunas={["Ação / parâmetros", "Período", "Estado", "Horários / duração", "Resultado / arquivo", "Ações"]} linhas={linhas(filtradas.slice((pagina - 1) * 12, pagina * 12))} />
       </CascoDaTabela>
-      <Pagination page={pagina} totalPages={paginas} total={filtradas.length} rotulo="execuções" buildHref={(n) => { const q = new URLSearchParams(query.toString()); q.set("pagina", String(n)); return `/fiscal/operacao?${q}`; }} />
+      <Pagination page={pagina} totalPages={paginas} total={filtradas.length} rotulo="execuções" buildHref={(n) => { const q = new URLSearchParams(query.toString()); q.set("pagina", String(n)); return `/sped-fiscal/motor/operacao?${q}`; }} />
     </>}
     {log && <div ref={blocoDoLog} tabIndex={-1} role="region" aria-label={`Log · ${log.acao}`} className="scroll-mt-4 outline-none"><BlocoFiscal titulo={`Log · ${log.acao}`} descricao={`Pedido ${log.id}`}><PreviaTexto texto={log.log.join("\n")} /></BlocoFiscal></div>}
   </div>;

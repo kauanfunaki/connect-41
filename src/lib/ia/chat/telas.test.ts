@@ -22,8 +22,8 @@ describe("nome da tela pelo endereço", () => {
   });
 
   it("a rota mais longa ganha", () => {
-    expect(nomeDaTela("/fiscal")).toBe("Painel fiscal");
-    expect(nomeDaTela("/fiscal/classificacao")).toBe("Classificação");
+    expect(nomeDaTela("/sped-fiscal/motor")).toBe("Painel fiscal");
+    expect(nomeDaTela("/sped-fiscal/motor/classificacao")).toBe("Classificação");
     expect(nomeDaTela("/dre/orcamento")).toBe("Orçamento");
   });
 

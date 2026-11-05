@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { mesInteiro, parametrosIniciais } from "@/lib/fiscal/previa/execucao";
-import { solicitarExecucaoNoMotor } from "@/app/(app)/fiscal/motor-actions";
+import { solicitarExecucaoNoMotor } from "@/app/(app)/sped-fiscal/motor-actions";
 import { useChaveDeIdempotencia } from "@/components/fiscal/motor/useChaveDeIdempotencia";
 
 type Existente = { id?: number; estado?: string; solicitado_por?: string };

@@ -15,7 +15,7 @@ describe("compatibilidade da antiga aba Domínio", () => {
   it("redireciona para o fluxo do Connect depois de conferir acesso", async () => {
     mocks.abrir.mockResolvedValue({ ctx: { tenantId: "t1" }, setor: ["fiscal"] });
     mocks.modo.mockResolvedValue("local");
-    await expect(Entregas({ searchParams: Promise.resolve({ aba: "dominio" }) })).rejects.toThrow("redirect:/fiscal/entregas?aba=entregas");
+    await expect(Entregas({ searchParams: Promise.resolve({ aba: "dominio" }) })).rejects.toThrow("redirect:/sped-fiscal/motor/entregas?aba=entregas");
     expect(mocks.abrir).toHaveBeenCalledWith("fiscal_entregas");
   });
 });

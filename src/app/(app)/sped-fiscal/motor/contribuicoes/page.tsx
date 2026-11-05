@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const { ctx } = await abrirTelaDoModulo("fiscal_contribuicoes");
   const params = await searchParams;
   const aba = typeof params.aba === "string" ? params.aba : undefined;
-  if (aba === "sped") redirect("/fiscal/entregas?obrigacao=contribuicoes");
+  if (aba === "sped") redirect("/sped-fiscal/motor/entregas?obrigacao=contribuicoes");
   if (await modoDoFiscal(ctx) === "motor") {
     const tela = await prepararTelaDoMotor(params);
     if (tela) {
@@ -22,13 +22,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       const tipo = atual === "decisoes" ? "decisao_registro_contribuicoes" : atual === "parametros" ? "parametro_contribuicoes" : "ajuste_contribuicoes";
       // Fechamento (leve) e Demonstrativo (pesado) leem §11.3; o
       // demonstrativo só roda com a aba aberta.
-      return <CascoDoMotor tela={tela} caminho="/fiscal/contribuicoes" abas={[{ chave: "ajustes", rotulo: "Ajustes" }, { chave: "decisoes", rotulo: "Decisões por registro" }, { chave: "parametros", rotulo: "Parâmetros" }, { chave: "fechamento", rotulo: "Fechamento" }, { chave: "demonstrativo", rotulo: "Demonstrativo" }]} aba={atual} titulo="Apuração" descricao="EFD Contribuições: ajustes do bloco M, decisões por registro, parâmetros, fechamento e demonstrativo, por raiz." semEstabelecimento>
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/contribuicoes" abas={[{ chave: "ajustes", rotulo: "Ajustes" }, { chave: "decisoes", rotulo: "Decisões por registro" }, { chave: "parametros", rotulo: "Parâmetros" }, { chave: "fechamento", rotulo: "Fechamento" }, { chave: "demonstrativo", rotulo: "Demonstrativo" }]} aba={atual} titulo="Apuração" descricao="EFD Contribuições: ajustes do bloco M, decisões por registro, parâmetros, fechamento e demonstrativo, por raiz." semEstabelecimento>
         {atual === "fechamento" ? <Suspense key={JSON.stringify(params)} fallback={<CarregandoLeitura oQue="o fechamento" />}><FechamentoMotor tela={tela} params={params} /></Suspense>
           : atual === "demonstrativo" ? <Suspense key={JSON.stringify(params)} fallback={<CarregandoLeitura oQue="as competências do demonstrativo" />}><DemonstrativoContribMotor tela={tela} params={params} /></Suspense>
-          : <DecisoesMotor tela={tela} caminho="/fiscal/contribuicoes" aba={atual} tipos={[tipo]} params={params} permissoes={await permissoesDeDecisao(ctx, [tipo])} />}
+          : <DecisoesMotor tela={tela} caminho="/sped-fiscal/motor/contribuicoes" aba={atual} tipos={[tipo]} params={params} permissoes={await permissoesDeDecisao(ctx, [tipo])} />}
       </CascoDoMotor>;
     }
   }
-  if (aba === "parametros") redirect("/fiscal/configuracoes?aba=parametros");
+  if (aba === "parametros") redirect("/sped-fiscal/motor/configuracoes?aba=parametros");
   return <Suspense fallback={<p className="text-ui text-fg-secondary">Carregando prévia fiscal…</p>}><FiscalPagina pagina="contribuicoes" /></Suspense>;
 }

@@ -18,7 +18,7 @@ const ACENDEM_JUNTO: Readonly<Record<string, readonly string[]>> = {
 /** O painel fiscal é uma página própria, não o item pai de todas as áreas. */
 export function caminhoDoMenuAtivo(pathname: string, href: string): boolean {
   const base = href.split("?")[0];
-  if (base === "/fiscal") return pathname === base;
+  if (base === "/sped-fiscal/motor") return pathname === base;
   const dentro = (prefixo: string) => pathname === prefixo || pathname.startsWith(`${prefixo}/`);
   if (dentro(base) && ROTAS_DO_MENU.some((r) => r !== base && r.startsWith(`${base}/`) && dentro(r))) return false;
   return dentro(base) || (ACENDEM_JUNTO[base] ?? []).some(dentro);

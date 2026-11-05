@@ -38,7 +38,7 @@ async function main() {
     assert(alinhamentos.length > 0 && alinhamentos.every((value) => value === "middle"));
     const nav = page.locator("aside a[href='/autorizacoes']");
     assert.equal(await nav.count(), 1, "Autorizações precisa ter um link direto na lateral.");
-    await page.goto("/fiscal/entregas");
+    await page.goto("/sped-fiscal/motor/entregas");
     await page.getByText("Salvo no banco local", { exact: true }).waitFor();
     const estadoAntes = await prisma.localFiscalScenario.findUniqueOrThrow({ where: { tenantId_userId: { tenantId: modelo.tenantId, userId: id } } });
     const quantidadeAntes = (estadoAntes.data as { arquivos: unknown[] }).arquivos.length;
@@ -51,12 +51,12 @@ async function main() {
     await page.getByText("Salvo no banco local", { exact: true }).waitFor();
     const arquivo = (estadoDepois.data as { arquivos: { nome: string }[] }).arquivos[0];
     await page.getByText(arquivo.nome).waitFor();
-    await page.goto("/fiscal/classificacao");
+    await page.goto("/sped-fiscal/motor/classificacao");
     await page.getByRole("checkbox", { name: "Selecionar esta página", exact: true }).check();
     await page.getByRole("button", { name: /^Aplicar a \d+ selecionado/ }).click();
     await page.getByText(/documento\(s\) classificados\. Apuração/).waitFor();
     await page.getByText(/versão\(ões\) de teste precisam de revisão/).waitFor();
-    await page.goto("/fiscal/entregas");
+    await page.goto("/sped-fiscal/motor/entregas");
     await page.getByRole("button", { name: "Gerar versão de teste", exact: true }).click();
     await page.getByText("Nova versão de teste criada. Continue em Validação.", { exact: true }).waitFor();
     assert.equal(await page.getByText(/versão\(ões\) de teste precisam de revisão/).count(), 0, "Nova versão precisa limpar a revisão da obrigação regenerada.");

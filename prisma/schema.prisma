@@ -90,6 +90,7 @@ model TechInternalItem {
   derivedItems  TechInternalItem[]     @relation("OrigemDoItemTech")
   comments      TechInternalComment[]
   changes       TechInternalChange[]
+  attachments   TechInternalAttachment[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status, priority, dueDate])
@@ -134,6 +135,26 @@ model TechInternalChange {
   @@index([tenantId, itemId, createdAt])
   @@index([tenantId, createdAt])
   @@map("tech_internal_changes")
+}
+
+/// Imagens, PDFs e outros arquivos do item (05/11/2026). O arquivo fica em
+/// `storage/tech-interno/<tenantId>/`, e só sai pela rota autenticada.
+model TechInternalAttachment {
+  id             String   @id @default(uuid())
+  tenantId       String
+  itemId         String
+  uploadedById   String
+  uploadedByName String   @db.VarChar(120)
+  fileName       String   @db.VarChar(255)
+  fileUrl        String   @db.VarChar(255)
+  mimeType       String   @db.VarChar(120)
+  sizeBytes      Int
+  createdAt      DateTime @default(now())
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  item           TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
+
+  @@index([tenantId, itemId, createdAt])
+  @@map("tech_internal_attachments")
 }
 
 /// Conta compartilhada do escritório. A credencial existe somente em TenantIntegration.configEnc.
@@ -1251,6 +1272,7 @@ model Tenant {
   techInternalItems TechInternalItem[]
   techInternalComments TechInternalComment[]
   techInternalChanges TechInternalChange[]
+  techInternalAttachments TechInternalAttachment[]
   opsWatchers             OpsWatcher[]
   opsSites                OpsSite[]
   opsApps                 OpsApp[]

@@ -33,7 +33,7 @@ export async function AreaLocalSped({ aba, params }: { aba: EtapaDoSped; params:
   const direitos = { importar: await podeNoModulo(tela.ctx, "fiscal_acervo", "agir"), configurar: await podeNoModulo(tela.ctx, "fiscal_configuracoes", "gerir"), entregas: await podeNoModulo(tela.ctx, "fiscal_entregas", "agir"), icms: await podeNoModulo(tela.ctx, "fiscal_icms_ipi", "ver"), contribuicoes: await podeNoModulo(tela.ctx, "fiscal_contribuicoes", "ver") };
   const conteudo = <PageContainer>
     <PageHeader title="SPED" subtitle="Classificação, apuração e fechamento no Connect. Arquivos gerados no motor do escritório." />
-    <FiltroDaEmpresa acao={`/fiscal/sped/${aba}`} empresas={tela.empresas} valor={tela.empresa?.id ?? null} foco={tela.foco} manter={{ competencia: tela.competencia, vista: typeof params.vista === "string" ? params.vista : undefined, escopo: typeof params.escopo === "string" ? params.escopo : undefined }}>
+    <FiltroDaEmpresa acao={`/sped-fiscal/${aba}`} empresas={tela.empresas} valor={tela.empresa?.id ?? null} foco={tela.foco} manter={{ competencia: tela.competencia, vista: typeof params.vista === "string" ? params.vista : undefined, escopo: typeof params.escopo === "string" ? params.escopo : undefined }}>
       <PeriodoLocalSped competencia={tela.competencia} mensal={aba === "gerar"} />
       {tela.empresa && tela.comAbrangencia && <AbrangenciaLocalSped raiz={tela.empresa.cnpj.slice(0, 8)} consolidado={Boolean(tela.contexto?.consolidado)} />}
     </FiltroDaEmpresa>

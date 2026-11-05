@@ -270,7 +270,7 @@ describe("ver, concluir e cancelar", () => {
     expect((await r.json()).dados).toMatchObject({ importacao_id: 206, upload_id: ID });
     expect(JSON.parse((m.fetch.mock.calls[0][1] as RequestInit).body as string)).toEqual({ sha256: SHA });
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "fiscal.sped.upload.concluido", entityType: "SpedImportacao", entityId: "206" }));
-    expect(m.revalidar).toHaveBeenCalledWith("/fiscal/documentos");
+    expect(m.revalidar).toHaveBeenCalledWith("/sped-fiscal/motor/documentos");
   });
 
   it("concluir: os 60 s estouram e a sessão já está concluída — pede o relatório de novo (replay)", async () => {

@@ -70,7 +70,7 @@ export function ehCaminhoInterno(href: string): boolean {
 
 /**
  * O nome da tela de um endereço do Connect — a rota mais longa que bate, para
- * "/fiscal/classificacao" ser "Classificação" e não "Painel fiscal". `null`
+ * "/sped-fiscal/motor/classificacao" ser "Classificação" e não "Painel fiscal". `null`
  * para endereço de fora, ou de tela sem nome conhecido.
  */
 export function nomeDaTela(caminho: string | null | undefined): string | null {

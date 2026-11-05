@@ -17,7 +17,7 @@ import { mesPorExtenso } from "@/lib/fiscal/sped/formato";
 import { hrefDoSped } from "@/lib/fiscal/sped/etapas";
 
 type Params = Record<string, string | string[] | undefined>;
-const CAMINHO = "/fiscal/sped/fechamento";
+const CAMINHO = "/sped-fiscal/fechamento";
 const COLUNAS_DE_PAGAMENTO = ["tipo", "competencia", "nome", "documento", "data_pagamento", "valor_bruto", "valor_liquido", "falta_para_aceitar", "decisao", "decidido_por", "motivo_decisao", "mesmo_documento_em"] as const;
 const originaisDa = (l: Record<string, unknown>) => Object.fromEntries(CAMPOS_CORRIGIVEIS.map((c) => [c, l[COLUNA_ORIGINAL[c]] == null ? "" : String(l[COLUNA_ORIGINAL[c]])])) as Record<(typeof CAMPOS_CORRIGIVEIS)[number], string>;
 const din = (v: string | null) => <span className="tabular-nums">{reaisDoMotor(v)}</span>;

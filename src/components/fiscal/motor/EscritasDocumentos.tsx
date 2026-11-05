@@ -11,7 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Selo } from "@/components/ui/Selo";
 import { CampoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilhados";
 import { Select } from "@/components/ui/Select";
-import { apurarCoberturaNoMotor, reprocessarQuarentenaNoMotor, resolverRejeitadoNoMotor } from "@/app/(app)/fiscal/escritas-actions";
+import { apurarCoberturaNoMotor, reprocessarQuarentenaNoMotor, resolverRejeitadoNoMotor } from "@/app/(app)/sped-fiscal/escritas-actions";
 import type { PermissaoDeEscrita } from "@/lib/fiscal/motor/escrita";
 import type { EnvioDeDocumentos } from "@/lib/sped/escritasDoMotor";
 import { AvisoDoResultado, EnvioDeArquivo, MotivoSemEscrita, type Resultado } from "./EscritasComuns";

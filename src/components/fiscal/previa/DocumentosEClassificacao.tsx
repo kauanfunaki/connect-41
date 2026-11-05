@@ -52,10 +52,10 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
   if (aba === "cobertura") {
     const empresa = cenario.empresas.find((e) => e.id === cenario.contexto.empresaId)!;
     return <><MetricasFiscais itens={[
-      { rotulo: "Documentos recebidos", valor: docs.length, icone: <FileText />, href: "/fiscal/documentos?aba=acervo&grupo=todos" },
-      { rotulo: "Prontos para apuração", valor: docs.filter((d) => d.estado === "Classificado").length, icone: <CheckCircle2 />, href: "/fiscal/documentos?aba=acervo&grupo=todos&situacao=Classificado" },
-      { rotulo: "Pendentes de decisão", valor: totais.pendentes, icone: <ListChecks />, href: "/fiscal/documentos?aba=acervo&grupo=todos&situacao=Pendente", tom: totais.pendentes > 0 ? "text-warning-fg" : undefined },
-      { rotulo: "Quarentena", valor: totais.rejeitados, icone: <ShieldOff />, href: "/fiscal/documentos?aba=acervo&grupo=quarentena", tom: totais.rejeitados > 0 ? "text-warning-fg" : undefined },
+      { rotulo: "Documentos recebidos", valor: docs.length, icone: <FileText />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=todos" },
+      { rotulo: "Prontos para apuração", valor: docs.filter((d) => d.estado === "Classificado").length, icone: <CheckCircle2 />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=todos&situacao=Classificado" },
+      { rotulo: "Pendentes de decisão", valor: totais.pendentes, icone: <ListChecks />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=todos&situacao=Pendente", tom: totais.pendentes > 0 ? "text-warning-fg" : undefined },
+      { rotulo: "Quarentena", valor: totais.rejeitados, icone: <ShieldOff />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=quarentena", tom: totais.rejeitados > 0 ? "text-warning-fg" : undefined },
     ]} /><BlocoFiscal titulo="Cobertura do estabelecimento" descricao="Tipos de documento e pendências da competência selecionada." acao={<AtalhoFiscal modulo="fiscal_classificacao">Classificar documentos</AtalhoFiscal>}><TabelaFiscal colunas={["Estabelecimento", "NF-e / NFC-e", "CT-e", "NFS-e", "Sem XML", "Pendências"]} linhas={empresa.estabelecimentos.filter((e) => !cenario.contexto.estabelecimentoId || cenario.contexto.estabelecimentoId === e.id).map((e) => { const itens = docs.filter((d) => d.estabelecimentoId === e.id); return { id: e.id, celulas: [e.nome, itens.filter((d) => ["NF-e", "NFC-e"].includes(d.tipo)).length, itens.filter((d) => d.tipo === "CT-e").length, itens.filter((d) => d.tipo === "NFS-e").length, itens.filter((d) => !d.xml).length, itens.filter((d) => d.estado !== "Classificado").length] }; })} /></BlocoFiscal></>;
   }
   const itens = docs.filter(doGrupo(grupo));

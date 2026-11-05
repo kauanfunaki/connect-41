@@ -16,7 +16,7 @@ describe("grupoDaTelaDaEquipe", () => {
   });
 
   it("Fiscal, Societário e o atendimento ao cliente têm o grupo deles", () => {
-    expect(grupoDaTelaDaEquipe("/fiscal/operacao")).toBe("fiscal");
+    expect(grupoDaTelaDaEquipe("/sped-fiscal/motor/operacao")).toBe("fiscal");
     expect(grupoDaTelaDaEquipe("/documentos-fiscais/entrada")).toBe("fiscal");
     expect(grupoDaTelaDaEquipe("/processos/abc")).toBe("processos");
     expect(grupoDaTelaDaEquipe("/exigencias")).toBe("processos");
