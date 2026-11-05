@@ -250,7 +250,7 @@ export async function historicoTech(ctx: AuthContext, filtros: { pagina: number;
     const total = await tx.techInternalChange.count({ where });
     const pages = Math.max(1, Math.ceil(total / TAMANHO_PAGINA)), page = Math.min(filtros.pagina, pages);
     const [changes, autores] = await Promise.all([
-      tx.techInternalChange.findMany({ where, include: { item: { select: { title: true, type: true, status: true } } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
+      tx.techInternalChange.findMany({ where, include: { item: { include: incluir } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
         orderBy: [{ createdAt: "desc" }, { version: "desc" }, { id: "asc" }] }),
       tx.techInternalChange.findMany({ where: { tenantId: ctx.tenantId }, distinct: ["authorId"], select: { authorId: true, authorName: true }, orderBy: { authorName: "asc" } }),
     ]);

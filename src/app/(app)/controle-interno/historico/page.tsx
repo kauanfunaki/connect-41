@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { History } from "lucide-react";
-import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, LINK_DO_ITEM, diaDoRegistro, horaDoRegistro, type Alteracao } from "@/lib/tech-interno/regras";
-import { CORES_DO_TIPO } from "@/lib/tech-interno/cores";
+import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, LINK_DO_ITEM, SITUACOES, nomeDoSistema, type Alteracao } from "@/lib/tech-interno/regras";
+import { getPrisma } from "@/lib/prisma";
+import { formatInstantDate } from "@/lib/format";
 import { historicoTech } from "@/lib/tech-interno/servidor";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,62 +12,66 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { CascoDaTabela } from "@/components/shared/CascoDaTabela";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
-import { AvatarImage } from "@/components/shared/AvatarImage";
-import { MudancasDoRegistro } from "@/components/tech-interno/MudancasDoRegistro";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/NavegacaoTech";
+import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 
 export const dynamic = "force-dynamic";
 
-// O histórico do módulo inteiro (29/10/2026), como uma visão ao lado de Lista,
-// Kanban e Agenda: por dia, com a hora, quem fez, em qual item e o que mudou,
-// campo a campo. O detalhe do item continua com a linha do tempo dele.
+// O Histórico é a terceira aba do Controle interno (05/11/2026), ao lado de
+// Lista e Kanban. Mais enxuto: os itens mexidos por último, com título,
+// sistema, responsável e situação. O que mudou, campo a campo, fica na linha
+// do tempo do próprio item.
 export default async function HistoricoTechPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO), params = await searchParams;
   const texto = (chave: string) => typeof params[chave] === "string" ? (params[chave] as string).trim() : "";
   const p = Number(texto("page") || 1), q = texto("q").slice(0, 200), autor = texto("autor").slice(0, 191);
-  const [{ total, pages, page, changes, autores }] = await Promise.all([
+  const [{ pages, page, changes, autores }, podeEditar] = await Promise.all([
     historicoTech(ctx, { pagina: Number.isInteger(p) && p > 0 ? Math.min(p, 1000000) : 1, q, autor }),
+    podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"),
   ]);
   const aqui = new URLSearchParams(); if (q) aqui.set("q", q); if (autor) aqui.set("autor", autor);
   const hrefPagina = (n: number) => { const u = new URLSearchParams(aqui); u.set("page", String(n)); return `${ROTA_TECH_INTERNO}/historico?${u}`; };
-  const dias: { chave: string; rotulo: string; registros: typeof changes }[] = [];
-  for (const c of changes) {
-    const dia = diaDoRegistro(c.createdAt);
-    if (dias.at(-1)?.chave !== dia.chave) dias.push({ ...dia, registros: [] });
-    dias.at(-1)!.registros.push(c);
+  // Um item por linha: vários registros seguidos do mesmo item viram um só.
+  const vistos = new Set<string>(), itens = changes.filter(c => !vistos.has(c.itemId) && vistos.add(c.itemId)).map(c => c.item);
+  // Fechado é Concluído ou Cancelado; a data é a da última mudança de
+  // "Situação" para a situação atual (o item não guarda coluna de fim).
+  const fechados = itens.filter(i => i.status === "DONE" || i.status === "CANCELED");
+  const mudancas = fechados.length ? await getPrisma().techInternalChange.findMany({ where: { tenantId: ctx.tenantId, itemId: { in: fechados.map(i => i.id) } }, select: { itemId: true, createdAt: true, changes: true }, orderBy: { createdAt: "asc" } }) : [];
+  const fechadoEm = new Map<string, Date>();
+  for (const m of mudancas) {
+    const item = fechados.find(i => i.id === m.itemId)!;
+    if ((m.changes as unknown as Alteracao[]).some(c => c.field === "Situação" && c.after === SITUACOES[item.status])) fechadoEm.set(m.itemId, m.createdAt);
   }
-  // Fora das abas desde o lote C de 03/11/2026: o histórico é a Auditoria
-  // (área Tech). Esta tela fica para quem não abre a Auditoria.
+  const data = (d: Date | undefined) => d ? formatInstantDate(d) : "—";
+  const linkDoItem = (id: string) => `${ROTA_TECH_INTERNO}/${id}`;
+  const hrefVisao = (v: string) => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`;
   return <PageContainer>
-    <Breadcrumb items={[{ label: "Controle interno", href: ROTA_TECH_INTERNO }, { label: "Histórico" }]} />
-    <PageHeader title="Histórico do controle interno" subtitle="Quem mudou o quê, e quando, em cada item da equipe Tech." />
-    <CascoDaTabela buscaAEsquerda contagem={`${total} ${total === 1 ? "registro" : "registros"}`}
+    <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech."
+      action={<AcoesDoControle podeEditar={podeEditar} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
+    <VisoesDoControle ativa="historico" href={hrefVisao} />
+    <CascoDaTabela buscaAEsquerda
       busca={<DebouncedSearchInput key={q} paramName="q" placeholder="Buscar pelo título do item" />}
-      filtros={<FiltrosDaTela naBarra campos={[{ chave: "autor", rotulo: "Pessoa", vazioLabel: "Todas", opcoes: autores.map(a => ({ value: a.authorId, label: a.authorName })) }]} />}>
-      {!changes.length ? <EmptyState icon={<History />} title={q || autor ? "Nenhum registro neste recorte" : "Nada registrado ainda"}
-        description={q || autor ? "Ajuste a busca ou a pessoa para ver outros registros." : "Cada criação e alteração de item aparece aqui, com quem fez e quando."} />
-        : dias.map(dia => <section key={dia.chave} aria-labelledby={`dia-${dia.chave}`}>
-          <h2 id={`dia-${dia.chave}`} className="sticky top-0 z-[1] flex items-baseline gap-2 border-b border-border bg-surface px-4 py-2 text-label font-semibold text-fg">
-            {dia.rotulo}<span className="text-helper font-normal text-fg-muted">{dia.registros.length} {dia.registros.length === 1 ? "registro" : "registros"}</span>
-          </h2>
-          <ol className="divide-y divide-border">{dia.registros.map(c => {
-            const criacao = c.version === 0, changesDoRegistro = c.changes as unknown as Alteracao[];
-            return <li key={c.id} className="relative cursor-pointer transition-colors hover:bg-surface-hover grid grid-cols-1 gap-x-3 gap-y-1 px-4 py-4 sm:grid-cols-[3.5rem_minmax(0,1fr)]">
-              <time dateTime={c.createdAt.toISOString()} className="text-helper tabular-nums text-fg-muted sm:pt-1">{horaDoRegistro(c.createdAt)}</time>
-              <div className="flex min-w-0 gap-3">
-                <AvatarImage src={null} name={c.authorName} size={28} className="mt-0.5 hidden shrink-0 sm:flex" />
-                <div className="min-w-0 flex-1 max-w-3xl">
-                  <p className="text-ui text-fg-secondary break-words"><span className="font-medium text-fg">{c.authorName}</span> {criacao ? "criou o item" : changesDoRegistro.length === 1 ? "alterou 1 campo de" : `alterou ${changesDoRegistro.length} campos de`}</p>
-                  <p className="flex flex-wrap items-baseline gap-x-2 text-ui">
-                    <Link href={`${ROTA_TECH_INTERNO}/${c.itemId}`} className={`font-semibold text-fg underline-offset-2 hover:text-brand hover:underline break-words [overflow-wrap:anywhere] ${LINK_DO_ITEM}`}>{c.item.title}</Link>
-                    <span className="flex items-center gap-1.5 text-helper text-fg-secondary"><span aria-hidden className="size-2.5 rounded-sm" style={{ backgroundColor: CORES_DO_TIPO[c.item.type] }} />{TIPOS[c.item.type]}</span>
-                  </p>
-                  <MudancasDoRegistro changes={changesDoRegistro} criacao={criacao} />
-                </div>
-              </div>
-            </li>;
-          })}</ol>
-        </section>)}
+      filtros={<FiltrosDaTela naBarra campos={[{ chave: "autor", rotulo: "Quem mexeu", vazioLabel: "Todos", opcoes: autores.map(a => ({ value: a.authorId, label: a.authorName })) }]} />}>
+      {!itens.length ? <EmptyState icon={<History />} title={q || autor ? "Nenhum item neste recorte" : "Nada registrado ainda"}
+        description={q || autor ? "Ajuste a busca ou o filtro para ver outros itens." : "Os itens criados ou alterados aparecem aqui, do mais recente para o mais antigo."} />
+        : <>
+          <CartoesNoCelular>{itens.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
+            <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={linkDoItem(item.id)}>{item.title}</Link>} />
+            <InfoDoCartao>{nomeDoSistema(item, true)}</InfoDoCartao><InfoDoCartao>{item.assignee?.name ?? "Sem responsável"}</InfoDoCartao><InfoDoCartao>Aberto em {data(item.createdAt)} · Fechado em {data(fechadoEm.get(item.id))}</InfoDoCartao>
+            <PeDoCartao><SituacaoTech forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></PeDoCartao>
+          </Cartao>)}</CartoesNoCelular>
+          <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Sistema", "Responsável", "Aberto em", "Fechado em", "Situação"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
+            <tbody className="divide-y divide-border">{itens.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
+              <td className="px-4 py-3 min-w-48 max-w-md break-words"><Link href={linkDoItem(item.id)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
+              <td className="px-4 py-3 break-words max-w-48">{nomeDoSistema(item, true)}</td>
+              <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td>
+              <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(item.createdAt)}</td>
+              <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(fechadoEm.get(item.id))}</td>
+              <td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></td>
+            </tr>)}</tbody>
+          </table></TabelaNoDesktop>
+        </>}
     </CascoDaTabela>
     {pages > 1 && <nav aria-label="Paginação" className="mt-4 flex flex-wrap items-center justify-end gap-3 text-helper">
       {page > 1 && <Button variant="secondary" size="sm" href={hrefPagina(page - 1)}>Anterior</Button>}

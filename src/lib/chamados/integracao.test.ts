@@ -18,7 +18,7 @@ vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof impo
 
 import { criarRascunho, salvarRascunho, avaliarRascunho, finalizarRascunho, alterar, comentar, abrirPelaCeci } from "./comandos";
 import { detalhe, lista, indicadores } from "./consultas";
-import { configurarSetores, salvarCategoria } from "./configuracao";
+import { salvarCategoria } from "./configuracao";
 import { configDoHelpdesk } from "./contexto";
 import { enviarAnexo } from "./anexos";
 import { despacharEventos } from "./notificacoes";
@@ -30,7 +30,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
   let tenantId: string, outroTenant: string, categoriaId: string, solicitante: string, colega: string, gestor: string, operador: string, chefe: string;
   let c: Contexto, equipe: Contexto, gestao: Contexto;
   const artefatos: { fileUrl: string; fileName: string; mimeType: string; sizeBytes: number }[] = [];
-  const contextoUsuario = (userId: string, role: Contexto["ctx"]["role"], sectors: string[]): Contexto => ({ ctx: { userId, role, sectors, tenantId, homeTenantId: tenantId, activeSector: null, subscriptionReadOnly: false, canSelfRegularizeSubscription: false }, config: { enabled: true, sectorCode: "tech", requesterSectors: ["fiscal"] } });
+  const contextoUsuario = (userId: string, role: Contexto["ctx"]["role"], sectors: string[]): Contexto => ({ ctx: { userId, role, sectors, tenantId, homeTenantId: tenantId, activeSector: null, subscriptionReadOnly: false, canSelfRegularizeSubscription: false }, config: { enabled: true, sectorCode: "tech" } });
   const payload = () => ({ title: "Acesso ao sistema de testes", description: "Preciso de acesso ao ambiente fictício de atendimento para registrar solicitações.", categoryId: categoriaId, requesterSectorCode: "fiscal", priority: "MEDIA", requestData: {}, tags: ["teste"] });
   const novo = async () => { const d = await criarRascunho(c); const v = await salvarRascunho(c, d.id, d.version, payload()); return { ...d, version: v.version }; };
   const abrir = async () => { const d = await novo(); return (await finalizarRascunho(c, d.id, d.version, true)).ticketId; };
@@ -267,13 +267,12 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const depois = await detalhe(equipe, id); expect(depois.attachments.find(x => x.id === a.id)?.commentId).toBe(depois.comments[0].id);
     expect(depois.events.some(e => e.type === "attachment")).toBe(false);
   });
-  it("retirar setor preserva chamados antigos; desligar módulo bloqueia as rotas", async () => {
-    const id = await abrir(); mocks.auth.mockReturnValue({ ...gestao.ctx, role: "ADMIN" }); await configurarSetores([]);
-    const config = await configDoHelpdesk(tenantId); expect(config.requesterSectors).toEqual([]); await expect(criarRascunho({ ...c, config })).rejects.toThrow("não está autorizado"); expect((await detalhe({ ...c, config }, id)).id).toBe(id);
+  it("trocar o setor responsável esconde a fila; desligar módulo bloqueia as rotas", async () => {
+    const id = await abrir();
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { sectorCode: "controladoria" } });
     const transferido = await configDoHelpdesk(tenantId); await expect(alterar({ ...equipe, config: transferido }, id, 0, "assumir", null)).rejects.toThrow("não encontrado");
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: false } });
     const off = await configDoHelpdesk(tenantId); await expect(detalhe({ ...c, config: off }, id)).rejects.toThrow("não encontrado");
-    await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: true, sectorCode: "tech" } }); await db!.helpdeskRequesterSector.create({ data: { tenantId, sectorCode: "fiscal" } });
+    await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: true, sectorCode: "tech" } });
   });
 });

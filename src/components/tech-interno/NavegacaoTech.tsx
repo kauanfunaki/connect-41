@@ -1,65 +1,30 @@
-import { CalendarDays, Columns3, History, List, Plus, Server } from "lucide-react";
+import { Columns3, History, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
-// Lista e Kanban num seletor, como em Quadros (lote C dos ajustes de
-// 03/11/2026). Eram quatro abas: a Agenda saiu para a Agenda geral (os prazos
-// dos itens aparecem lá, no setor do Tech) e o Histórico, para a Auditoria —
-// as ações do controle interno já iam para a trilha, na área "Tech".
-export type VisaoTech = "lista" | "kanban";
+// Lista, Kanban e Histórico nas abas do app, como no Ops Center (05/11/2026).
+// Antes Lista e Kanban ficavam num seletor e o Histórico num botão do topo.
+export type VisaoTech = "lista" | "kanban" | "historico";
 export function VisoesDoControle({ ativa, href }: { ativa: VisaoTech; href: (visao: VisaoTech) => string }) {
   return (
-    <SegmentedControl
-      label="Visão do Controle interno"
-      active={ativa}
-      items={[
-        { key: "lista", label: "Lista", icon: <List size={14} aria-hidden />, href: href("lista") },
-        { key: "kanban", label: "Kanban", icon: <Columns3 size={14} aria-hidden />, href: href("kanban") },
+    <AbasDeLink
+      aria-label="Visão do Controle interno"
+      ativa={ativa}
+      abas={[
+        { chave: "lista", rotulo: "Lista", icone: <List />, href: href("lista") },
+        { chave: "kanban", rotulo: "Kanban", icone: <Columns3 />, href: href("kanban") },
+        { chave: "historico", rotulo: "Histórico", icone: <History />, href: href("historico") },
       ]}
     />
   );
 }
 
-export function AcoesDoControle({
-  podeEditar,
-  podeGerirOps,
-  novoHref,
-  agendaHref,
-  historicoHref,
-}: {
-  podeEditar: boolean;
-  podeGerirOps: boolean;
-  novoHref: string;
-  /** A Agenda geral filtrada no setor do Tech. */
-  agendaHref: string;
-  /** A Auditoria na área Tech; nulo para quem não abre a Auditoria. */
-  historicoHref: string | null;
-}) {
+export function AcoesDoControle({ podeEditar, novoHref }: { podeEditar: boolean; novoHref: string }) {
+  if (!podeEditar) return null;
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button href={agendaHref} variant="secondary">
-        <CalendarDays size={14} aria-hidden />
-        Prazos na Agenda
-      </Button>
-      {historicoHref && (
-        <Button href={historicoHref} variant="secondary">
-          <History size={14} aria-hidden />
-          Histórico
-        </Button>
-      )}
-      {/* Os sistemas são os do Ops Center (29/10/2026): o cadastro fica lá. */}
-      {podeGerirOps && (
-        <Button href="/ops?view=sites" variant="secondary">
-          <Server size={14} aria-hidden />
-          Sistemas no Ops Center
-        </Button>
-      )}
-      {podeEditar && (
-        <Button href={novoHref}>
-          <Plus size={14} aria-hidden />
-          Novo item
-        </Button>
-      )}
-    </div>
+    <Button href={novoHref}>
+      <Plus size={14} aria-hidden />
+      Novo item
+    </Button>
   );
 }
