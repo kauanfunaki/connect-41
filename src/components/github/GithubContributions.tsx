@@ -19,9 +19,9 @@ import { CampoData } from "@/components/ui/CampoData";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { formatInstantDateTime } from "@/lib/format";
 import { githubFetch } from "@/lib/github/browser";
-import { TYPE_LABELS, CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type DayEvent, type HeatmapUser, type RepositoryHeatmap } from "@/lib/github/types";
+import { TYPE_LABELS, CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type CalendarDay, type DayEvent, type HeatmapUser, type RepositoryHeatmap } from "@/lib/github/types";
 import { dateLabel } from "@/lib/github/calendar";
-import { corDaPessoa, type ModoDeCor, type Paleta } from "@/lib/github/cores";
+import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/github/cores";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { DeveloperAvatar, DeveloperName, GithubOverview } from "./GithubOverview";
 import { GithubTimes } from "./GithubTimes";
@@ -105,15 +105,46 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
   </GithubShell>;
 }
 
-function Developers({ data, filtered, canConfigure, onDay, pageHref, modo }: { data: DashboardView; filtered: boolean; canConfigure: boolean; onDay: (id: string, day: string) => void; pageHref: (page: number) => string; modo: ModoDeCor }) {
+function Developers({ data, filtered, onDay, pageHref, modo }: { data: DashboardView; filtered: boolean; canConfigure: boolean; onDay: (id: string, day: string) => void; pageHref: (page: number) => string; modo: ModoDeCor }) {
+  const times = modo === "time" ? timesDaPagina(data.users, data.paleta) : [];
   return <>
-    <div className={styles.listHeading}><span>{data.totalUsers} desenvolvedores · {Number(data.total).toLocaleString("pt-BR")} contribuições</span>{canConfigure && <Link href="/github/times" className="text-fg-secondary hover:underline">Times e cores</Link>}</div>
+    <div className={styles.listHeading}><span>{modo === "time" ? `${times.length} ${times.length === 1 ? "time" : "times"} · ` : ""}{data.totalUsers} desenvolvedores · {Number(data.total).toLocaleString("pt-BR")} contribuições</span></div>
     <div className={styles.developerList}>
       {!data.users.length ? <Card><EmptyState icon={<GitCommitHorizontal />} title="Nenhum desenvolvedor encontrado" description={filtered ? "Ajuste a busca ou o período para ver outros desenvolvedores." : undefined} /></Card>
+        : modo === "time" ? times.map(time => <TeamCard key={time.id} time={time} from={data.from} to={data.to} paleta={data.paleta} />)
         : data.users.map(user => <DeveloperCard key={user.id} user={user} from={data.from} to={data.to} onDay={onDay} paleta={data.paleta} modo={modo} />)}
     </div>
     <Pagination page={data.page} totalPages={Math.max(1, Math.ceil(data.totalUsers / data.pageSize))} buildHref={pageHref} total={data.totalUsers} rotulo="desenvolvedores" />
   </>;
+}
+
+// "Por time" (05/11/2026): um card por time, somando os desenvolvedores dele
+// nesta página; quem está sem time vira o card "Sem time".
+type TimeNoPainel = { id: string; nome: string; cor: string; users: HeatmapUser[]; total: number; activeDays: number; counts: Record<ContributionType, number>; days: CalendarDay[] };
+function timesDaPagina(users: HeatmapUser[], paleta: Paleta): TimeNoPainel[] {
+  const grupos = new Map<string, HeatmapUser[]>();
+  for (const user of users) { const id = paleta.pessoas[user.id]?.time ?? ""; grupos.set(id, [...(grupos.get(id) ?? []), user]); }
+  return [...grupos].map(([id, membros]) => {
+    const time = paleta.times.find(item => item.id === id), porDia = new Map<string, CalendarDay>();
+    for (const user of membros) for (const d of user.days) {
+      const dia = porDia.get(d.day) ?? { day: d.day, count: 0, parts: [] };
+      dia.count += d.count; dia.parts!.push([user.id, d.count]); porDia.set(d.day, dia);
+    }
+    const counts = Object.fromEntries(CONTRIBUTION_TYPES.map(type => [type, membros.reduce((s, u) => s + u.counts[type], 0)])) as Record<ContributionType, number>;
+    return { id: id || "sem-time", nome: time?.nome ?? "Sem time", cor: time?.cor ?? COR_SEM_TIME, users: membros, total: membros.reduce((s, u) => s + u.total, 0),
+      activeDays: porDia.size, counts, days: [...porDia.values()].sort((a, b) => a.day.localeCompare(b.day)) };
+  }).sort((a, b) => (a.id === "sem-time" ? 1 : 0) - (b.id === "sem-time" ? 1 : 0) || b.total - a.total);
+}
+function TeamCard({ time, from, to, paleta }: { time: TimeNoPainel; from: string; to: string; paleta: Paleta }) {
+  return <section className={styles.developer}>
+    <div className={styles.developerHeading}><div className={styles.developerIdentity}>
+      <span className="flex -space-x-2" title={time.users.map(u => u.name ?? u.login).join(", ")}>{time.users.slice(0, 6).map(u => <span key={u.id} className="rounded-full ring-2 ring-surface"><DeveloperAvatar login={u.login} /></span>)}{time.users.length > 6 && <span className={`${styles.avatar} ring-2 ring-surface`}>+{time.users.length - 6}</span>}</span>
+      <div><h2><span className={styles.swatch} style={{ "--swatch": time.cor } as React.CSSProperties}>{time.nome}</span></h2>
+        <p>{time.users.length} {time.users.length === 1 ? "desenvolvedor" : "desenvolvedores"} · {Number(time.total).toLocaleString("pt-BR")} contribuições · {time.activeDays} dias com atividade</p></div></div>
+      <div className={styles.developerCounts}>{CONTRIBUTION_TYPES.map(type => <span key={type}>{TYPE_LABELS[type]} <strong>{time.counts[type]}</strong></span>)}</div>
+    </div>
+    <ContributionCalendar label={time.nome} id={time.id} from={from} to={to} days={time.days} onDay={() => {}} paleta={paleta} modo="time" />
+  </section>;
 }
 
 function DeveloperCard({ user, from, to, onDay, paleta, modo }: { user: HeatmapUser; from: string; to: string; onDay: (id: string, day: string) => void; paleta: Paleta; modo: ModoDeCor }) {
