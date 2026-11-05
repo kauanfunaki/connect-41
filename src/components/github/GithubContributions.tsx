@@ -90,7 +90,7 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
     : detail?.kind === "repository" ? data?.repositories.find(repo => repo.id === detail.id)?.fullName : detail?.kind === "team" ? "Todo o time" : undefined;
   // O título é o nome do módulo no menu; Geral, Desenvolvedores, Repositórios e Times são abas dele.
   return <GithubShell view={view} suppliedQuery={suppliedQuery} canConfigure={canConfigure} conectar={conectar}>
-    {dates && !data?.message && <Toolbar path={path} query={suppliedQuery} from={dates.from} to={dates.to} filtered={filtered} modo={modo} times={data?.paleta.times ?? []} />}
+    {dates && !data?.message && <Toolbar path={path} query={suppliedQuery} from={dates.from} to={dates.to} modo={modo} times={data?.paleta.times ?? []} />}
     {error && <Aviso className="mb-4">{error}{!data && !loading && <> <Button variant="link" onClick={() => { setError(null); setTentativa(n => n + 1); }}>Tentar novamente</Button></>}</Aviso>}
     {loading && <div aria-busy><span className="sr-only" role="status">Carregando contribuições…</span>{view === "general" ? <><SkeletonMetrics /><SkeletonBlocks blocos={2} /></> : <SkeletonCardList cards={3} />}</div>}
     {data?.message && !loading && <Aviso tom="atencao" className="mb-4">{data.message}{canConfigure && <> <Link href="/admin/integracoes?integracao=github" className="font-medium underline">Abrir Integrações</Link></>}</Aviso>}
@@ -216,7 +216,7 @@ function Unidentified({ data }: { data: DashboardView }) {
 // Busca e período se aplicam sozinhos, sem "Aplicar filtros" (26/10/2026): a busca
 // espera 300 ms de pausa na digitação, como as outras buscas do Connect.
 // "Mostrar todos" inclui quem não vinculou a conta; clicar de novo volta aos integrados (27/10/2026).
-function Toolbar({ path, query, from, to, filtered, modo, times }: { path: string; query: string; from: string; to: string; filtered: boolean; modo: ModoDeCor; times: { id: string; nome: string }[] }) {
+function Toolbar({ path, query, from, to, modo, times }: { path: string; query: string; from: string; to: string; modo: ModoDeCor; times: { id: string; nome: string }[] }) {
   const router = useRouter(), [user, setUser] = useState(() => new URLSearchParams(query).get("user") ?? ""), sent = useRef(user.trim());
   const [period, setPeriod] = useState({ from, to }), [resolved, setResolved] = useState({ from, to });
   const time = new URLSearchParams(query).get("time") ?? "";
@@ -244,8 +244,8 @@ function Toolbar({ path, query, from, to, filtered, modo, times }: { path: strin
   return <div role="search" className={styles.toolbar}>
     <label className={styles.dateField}><span>De</span><CampoData aria-label="De" value={period.from} max={period.to || undefined} onChange={value => changeDate("from", value)} /></label>
     <label className={styles.dateField}><span>Até</span><CampoData aria-label="Até" value={period.to} min={period.from || undefined} onChange={value => changeDate("to", value)} /></label>
-    {/* Por time, a aba Desenvolvedores mostra times: a busca por pessoa sai (05/11/2026). */}
-    {!(modo === "time" && path === PATHS.developers) && <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><CampoDeBusca aria-label="Buscar desenvolvedor" placeholder="Buscar desenvolvedor…" value={user} enviarAoLimpar={false}
+    {/* A busca por pessoa fica fora da aba Geral (05/11/2026). */}
+    {path !== PATHS.general && <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><CampoDeBusca aria-label="Buscar desenvolvedor" placeholder="Buscar desenvolvedor…" value={user} enviarAoLimpar={false}
       onChange={event => setUser(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && user.trim() !== sent.current) apply({ user: user.trim() }); }} /></label>}
     {/* Um campo só (05/11/2026): agrupa por pessoa ou por time, e escolhe um time. */}
     <label className="flex flex-col gap-1 text-helper text-fg-secondary"><span>Agrupar por</span>
@@ -256,7 +256,6 @@ function Toolbar({ path, query, from, to, filtered, modo, times }: { path: strin
         {times.map(item => <option key={item.id} value={`time:${item.id}`}>{item.nome}</option>)}
       </Select>
     </label>
-    {(filtered || user.trim()) && <Button variant="ghost" size="sm" onClick={() => { setUser(""); setPeriod(resolved); sent.current = ""; router.replace(modo === "time" ? `${path}?cor=time` : path, { scroll: false }); }}>Limpar</Button>}
   </div>;
 }
 
