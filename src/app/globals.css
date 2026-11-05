@@ -1367,3 +1367,34 @@ tr.c41-linha:hover > :first-child {
     min-width: 44px;
   }
 }
+
+/* A faixa de matiz do seletor de cor livre (Aparência, 05/11/2026): o arco-íris
+   no trilho e um botão branco com contorno, que lê sobre qualquer cor. */
+.c41-faixa-de-matiz {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.c41-faixa-de-matiz:focus-visible { outline: 3px solid var(--c41-focus-ring, currentColor); outline-offset: 2px; }
+.c41-faixa-de-matiz::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.25);
+}
+.c41-faixa-de-matiz::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.25);
+}

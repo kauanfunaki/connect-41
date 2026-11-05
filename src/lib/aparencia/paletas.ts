@@ -15,9 +15,16 @@ import { corCanonica, misturar, tonsDaCor, variaveisDaMarca, type VariaveisPorTe
 
 export type Paleta = { codigo: string; nome: string; cor: string };
 
-/** As paletas prontas, na ordem do seletor. A primeira é o azul de sempre. */
+/**
+ * O azul do Connect: a cor de destaque do escritório que não escolheu a dele.
+ * Era também a paleta "41" do seletor, que saiu em 05/11/2026 (o Kauan, pensando
+ * na venda do Connect: o nome da 41 não diz nada a outro escritório). Quem a
+ * tinha escolhido segue com o mesmo azul, agora como cor personalizada.
+ */
+export const AZUL_DO_CONNECT = "#1F5EEA";
+
+/** As paletas prontas, na ordem do seletor. */
 export const PALETAS: readonly Paleta[] = [
-  { codigo: "41", nome: "41", cor: "#1F5EEA" },
   { codigo: "oceano", nome: "Oceano", cor: "#0B7A8A" },
   { codigo: "floresta", nome: "Floresta", cor: "#2F7D4F" },
   { codigo: "ameixa", nome: "Ameixa", cor: "#6D3FC0" },

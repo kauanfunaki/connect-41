@@ -15,6 +15,8 @@ import { PerfilForm } from "@/components/configuracoes/PerfilForm";
 import { AlterarSenhaForm } from "@/components/configuracoes/AlterarSenhaForm";
 import { TemaSelector } from "@/components/configuracoes/TemaSelector";
 import { SeletorDePaleta } from "@/components/configuracoes/SeletorDePaleta";
+import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
+import { AZUL_DO_CONNECT } from "@/lib/aparencia/paletas";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
 import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { getVapidPublicKey } from "@/lib/vapid";
@@ -56,7 +58,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   if (!ctx.userId) notFound();
 
   const prisma = getPrisma();
-  const [me, { labels: sectorLabels }, expedientes, github, params] = await Promise.all([
+  const [me, { labels: sectorLabels }, expedientes, github, params, aparencia] = await Promise.all([
     prisma.user.findFirst({
       where: { id: ctx.userId, tenantId: ctx.tenantId },
       select: { name: true, email: true, photoUrl: true, accentColor: true },
@@ -67,6 +69,8 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     // Sem a migration do GitHub aplicada, a tela segue sem a seção.
     accountLinkView(ctx).catch(() => null),
     searchParams,
+    // A cor do escritório, para a bolinha "Do escritório" da paleta (05/11/2026).
+    aparenciaDoEscritorio(ctx.tenantId),
   ]);
   const tokens = await dadosDosTokens(ctx).catch(() => null);
   if (!me) notFound();
@@ -118,7 +122,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       <SecaoDeConfiguracao titulo="Aparência" descricao="O tema claro, o escuro ou o do seu aparelho, e a paleta de cores, só para você." icone={<Palette />}>
         <div className="flex flex-col gap-6">
           <TemaSelector />
-          <SeletorDePaleta atual={me.accentColor} />
+          <SeletorDePaleta atual={me.accentColor} corDoEscritorio={(aparencia.aparencia.noConnect ? aparencia.aparencia.corPrincipal : null) ?? AZUL_DO_CONNECT} />
         </div>
       </SecaoDeConfiguracao>
 
