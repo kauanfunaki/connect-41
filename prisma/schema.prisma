@@ -1374,6 +1374,7 @@ model Tenant {
   candidaturaNotas          CandidaturaNota[]
   valoraConfig              ValoraConfig?
   valoraPropostas           ValoraProposta[]
+  avaliacoesTributarias     AvaliacaoTributaria[]
   companyMessages           CompanyMessage[]
   serviceRequests           ServiceRequest[]
   serviceRequestSubjects    ServiceRequestSubject[]
@@ -1791,6 +1792,9 @@ model User {
   preference                  UserPreference?
   pinnedModules               UserPinnedModule[]
   valoraPropostas             ValoraProposta[]
+  avaliacoesTributariasCriadas   AvaliacaoTributaria[]       @relation("AvaliacaoTributariaCriadaPor")
+  avaliacoesTributariasAlteradas AvaliacaoTributaria[]       @relation("AvaliacaoTributariaAlteradaPor")
+  versoesDeAvaliacaoTributaria   AvaliacaoTributariaVersao[] @relation("AvaliacaoTributariaVersaoAutor")
   ownedProcesses              Process[]                  @relation("ProcessOwner")
   executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
   whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
@@ -2078,6 +2082,7 @@ model Company {
   clientDocuments          ClientDocument[]
   recurringObligations     RecurringObligation[]
   obrigacoesGeradas        ObrigacaoGerada[]
+  avaliacoesTributarias    AvaliacaoTributaria[]
   chatwootContactLinks     ChatwootContactLink[]
   bpoCredentials           BpoCredential[]
   fiscalDocuments          FiscalDocument[]
@@ -9573,4 +9578,71 @@ model FinanceRecurrence {
   @@index([active, endMode])
   @@index([tenantId, companyId])
   @@map("finance_recurrences")
+}
+
+// ─── Planejamento tributário (Fase 1, 05/11/2026) ──────────────────────────
+// Avaliações do Connect Tributário (dev41tech/connect-tributario, motor R_4.1)
+// trazidas para o Connect como módulo `contabil_planejamento`. A avaliação
+// inteira (dados, premissas e o `Data` do motor) fica em `dados`, no formato
+// que o motor consome (src/lib/tributario/avaliacao/model.ts); viram colunas
+// só os campos usados em lista e filtro.
+
+/// Uma avaliação tributária (estudo): compara Simples, Simples híbrido,
+/// Presumido e Real de 2027 a 2033. A empresa é opcional — o original aceita
+/// simular um prospecto sem cadastro, só com nome e CNPJ.
+model AvaliacaoTributaria {
+  id              String    @id @default(uuid())
+  tenantId        String
+  companyId       String?
+  /// Nome da avaliação (o mesmo de `dados.name`), para a lista.
+  nome            String    @db.VarChar(160)
+  /// CNPJ só com dígitos, ou nulo para prospecto sem CNPJ.
+  cnpj            String?   @db.VarChar(14)
+  /// rapida | guiada
+  modo            String    @db.VarChar(10)
+  /// Ano dos dados informados (o de `dados.start`).
+  ano             Int
+  /// O `Study` inteiro, validado por `studySchema` antes de gravar.
+  dados           Json
+  /// Versão do motor que calculou (ENGINE de src/lib/tributario/motor/fiscal.ts).
+  motor           String    @db.VarChar(10)
+  /// Controle de edição concorrente: salvar exige a revisão que a tela leu.
+  revisao         Int       @default(1)
+  /// Lixeira: preenchido = fora da lista. Não há exclusão definitiva.
+  naLixeiraEm     DateTime?
+  criadoPorId     String?
+  atualizadoPorId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant        Tenant                      @relation(fields: [tenantId], references: [id])
+  company       Company?                    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  criadoPor     User?                       @relation("AvaliacaoTributariaCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor User?                       @relation("AvaliacaoTributariaAlteradaPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  versoes       AvaliacaoTributariaVersao[]
+
+  @@index([tenantId, naLixeiraEm, updatedAt])
+  @@index([tenantId, companyId])
+  @@map("avaliacoes_tributarias")
+}
+
+/// Foto da avaliação a cada gravação (criar, salvar, lixeira, restaurar),
+/// como o `study_revisions` do original: o histórico abre qualquer versão
+/// como rascunho.
+model AvaliacaoTributariaVersao {
+  id          String   @id @default(uuid())
+  avaliacaoId String
+  revisao     Int
+  /// Ex.: "Avaliação criada", "Edição da avaliação", "Avaliação movida para a lixeira".
+  acao        String   @db.VarChar(80)
+  dados       Json
+  motor       String   @db.VarChar(10)
+  autorId     String?
+  createdAt   DateTime @default(now())
+
+  avaliacao AvaliacaoTributaria @relation(fields: [avaliacaoId], references: [id], onDelete: Cascade)
+  autor     User?               @relation("AvaliacaoTributariaVersaoAutor", fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([avaliacaoId, revisao])
+  @@map("avaliacoes_tributarias_versoes")
 }
