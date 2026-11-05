@@ -171,6 +171,14 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
     coluna: "enviadoPorId",
     executar: (tx, a) => n(tx.serproTermo.updateMany({ where: { tenantId: a.tenantId, enviadoPorId: a.id }, data: { enviadoPorId: null } })),
   },
+  // Quem cuida da renovação de um certificado (05/11/2026): a renovação fica, sem responsável.
+  {
+    modelo: "DigitalCertificate",
+    acao: "anular",
+    coluna: "renovacaoResponsavelId",
+    executar: (tx, a) =>
+      n(tx.digitalCertificate.updateMany({ where: { tenantId: a.tenantId, renovacaoResponsavelId: a.id }, data: { renovacaoResponsavelId: null } })),
+  },
   {
     modelo: "Vaga",
     acao: "anular",

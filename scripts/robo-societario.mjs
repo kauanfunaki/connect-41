@@ -36,7 +36,7 @@ import { appendFileSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { access, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-const VERSAO = "2026-10-30";
+const VERSAO = "2026-11-05";
 const args = new Set(process.argv.slice(2).map((a) => a.split("=")[0]));
 const value = (name, fallback = null) => {
   const hit = process.argv.find((arg) => arg.startsWith(`${name}=`));
@@ -156,10 +156,25 @@ async function umaVolta(config) {
     log(`tarefa ${tarefa.id}: ${String(err?.message || err).slice(0, 300)}`);
     saida = { devolucao: { ok: false, motivo: motivoDaFalha(err), recuperavel: true } };
   }
+  // O CNPJ do certificado usado vai junto (05/11/2026), para a tela
+  // Certificados saber onde cada um é usado. Só o documento: nunca o arquivo
+  // nem a senha. O Connect de antes ignora o campo.
+  const doCertificado = certificadoDaTarefa(config, tarefa.tipo);
+  if (doCertificado && saida.devolucao.ok) saida.devolucao = { ...saida.devolucao, certificado: { documento: doCertificado } };
   const resposta = await devolver(config, tarefa.id, saida.devolucao, saida.arquivo ?? null);
   log(`tarefa ${tarefa.id}: devolvida, ficou ${resposta.status}`);
   await saveState({ ultimaTarefa: { id: tarefa.id, tipo: tarefa.tipo, status: resposta.status, em: new Date().toISOString() } });
   return true;
+}
+
+/**
+ * Com qual certificado a tarefa entra no site: a IE e o SIMA, com o da 041
+ * (ou o da configuração); o alvará consulta sem certificado.
+ */
+function certificadoDaTarefa(config, tipo) {
+  if (tipo === "vigiar_ie") return config.vigiarIE?.cnpjDoCertificado || CNPJ_DO_CERTIFICADO;
+  if (tipo === "observar_sima") return config.observarSima?.cnpjDoCertificado || CNPJ_DO_CERTIFICADO;
+  return null;
 }
 
 /**

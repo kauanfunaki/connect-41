@@ -15,10 +15,11 @@ import { pedidoDeProcuracao } from "./regras";
 
 const m = await vi.hoisted(async () => {
   const { bancoFalso } = await import("./teste.fixture");
-  return { banco: bancoFalso() };
+  return { banco: bancoFalso(), registrarUso: vi.fn(async () => true) };
 });
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => m.banco.prisma }));
+vi.mock("@/lib/certificados/registro", () => ({ registrarUsoDoCertificado: m.registrarUso }));
 // A configuração vai em texto no banco falso: sem cifra no teste.
 vi.mock("@/lib/integracoes/data", () => ({
   lerConfig: (enc: string) => (enc ? JSON.parse(enc) : {}),
@@ -44,6 +45,7 @@ const das = () => pedidoDoServico(DAS_DO_SIMPLES, CLIENTE, { periodoApuracao: "2
 
 beforeEach(() => {
   m.banco.zerar();
+  m.registrarUso.mockClear();
   esquecerTokens();
   vi.unstubAllEnvs();
 });
@@ -65,6 +67,14 @@ describe("chamarSerpro na produção", () => {
     expect(m.banco.estado.chamadas).toEqual([
       expect.objectContaining({ httpStatus: 200, cobrada: true, tipoDeCobranca: "CONSULTA", ambiente: "PRODUCAO", requestTag: `2${ESCRITORIO}2${CLIENTE}45` }),
     ]);
+  });
+
+  // 05/11/2026: a tela Certificados mostra o Serpro no "Usado por" do certificado dele.
+  it("a chamada que chegou ao Serpro registra o uso do certificado, pelo CNPJ de dentro dele", async () => {
+    m.banco.conectar(configDeProducao());
+    const t = transporteFalso(() => ok());
+    await chamarSerpro(TENANT, pedidoDeProcuracao(CLIENTE, ESCRITORIO), { origem: "teste", transporte: t.transporte });
+    expect(m.registrarUso).toHaveBeenCalledWith(TENANT, ESCRITORIO, "serpro");
   });
 
   it("401: renova o token uma vez e repete", async () => {
@@ -246,6 +256,8 @@ describe("o modo demonstração", () => {
     // O trial confere contratante e autor: vão os do cenário.
     expect(JSON.parse(c.corpo)).toMatchObject({ contratante: { numero: "99999999999999" }, autorPedidoDados: { numero: "99999999999999" }, contribuinte: { numero: "99999999999", tipo: 1 } });
     expect(m.banco.estado.chamadas[0]).toMatchObject({ ambiente: "DEMONSTRACAO", cobrada: false, httpStatus: 200 });
+    // Sem certificado na demonstração: nada a registrar.
+    expect(m.registrarUso).not.toHaveBeenCalled();
   });
 
   it("o 200 com ERRO é falha", async () => {

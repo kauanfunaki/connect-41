@@ -83,6 +83,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "branch.create": c("criou a filial"),
   "branch.update": e("editou a filial"),
   "certificados.importar": c("importou certificados digitais"),
+  "certificados.usado_por": e("marcou onde o certificado digital é usado"),
+  "certificados.renovacao": e("editou a renovação do certificado digital"),
 
   // ── Fiscal ─────────────────────────────────────────────────────────────────
   "fiscal.document.uploaded": c("enviou o documento fiscal"),
