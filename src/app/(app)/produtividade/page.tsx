@@ -1,6 +1,10 @@
 import { Headset, PackageCheck, RotateCcw, Timer } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { GITHUB_MODULE } from "@/lib/github/types";
+import { contribuicoesPorPessoa } from "@/lib/github/queries";
+import { dayAt } from "@/lib/github/rules";
+import { Card } from "@/components/ui/Card";
+import { TabelaPorPessoa } from "@/components/produtividade/TabelaPorPessoa";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -20,22 +24,25 @@ export const dynamic = "force-dynamic";
 const pct = (parte: number, todo: number) => (todo ? `${Math.round((parte / todo) * 100)}%` : "—");
 
 /**
- * Produtividade da Tech, aba Time (05/11/2026, opção A da tela 7 escolhida
- * pelo Kauan). O Controle interno e as Entregas dizem o que vamos fazer e o
+ * Produtividade da Tech, aba Painel (05/11/2026, opção A da tela 7 escolhida
+ * pelo Kauan; até 06/11 se chamava "Time", e mudou para não confundir com os
+ * times dos devs, que estão em Pessoas). O Controle interno e as Entregas dizem o que vamos fazer e o
  * que já fizemos; aqui se mede o time: quatro números, os pontos por semana e
  * a saúde do fluxo para quem coordena. Base: o estudo 14 (04/11) — mede-se
  * entrega validada pesada pelo tamanho, não commit, PR ou token.
  */
-export default async function ProdutividadeTimePage({ searchParams }: { searchParams: Promise<{ periodo?: string }> }) {
+export default async function ProdutividadePainelPage({ searchParams }: { searchParams: Promise<{ periodo?: string }> }) {
   const { ctx } = await abrirTelaDoModulo(GITHUB_MODULE);
   const periodo = lerPeriodo((await searchParams).periodo);
-  const [{ inicio, fim, resumo, semanal, saude }, veEntregas] = await Promise.all([carregarProdutividade(ctx.tenantId!, periodo), podeNoModulo(ctx, "tech_entregas", "ver")]);
+  const [{ inicio, fim, resumo, semanal, saude, pessoas }, veEntregas] = await Promise.all([carregarProdutividade(ctx.tenantId!, periodo), podeNoModulo(ctx, "tech_entregas", "ver")]);
+  // O GitHub de cada pessoa, só como contexto na tabela "Por pessoa"; fora do ar, a coluna mostra "—".
+  const github = await contribuicoesPorPessoa(ctx.tenantId!, dayAt(inicio), dayAt(fim)).catch(() => null);
   const intervalo = `${formatInstantDate(inicio)} a ${formatInstantDate(fim)}`;
 
   return (
     <PageContainer>
       <CabecalhoDaProdutividade
-        aba="time"
+        aba="painel"
         periodo={periodo === "trimestre" ? undefined : periodo}
         subtitulo={`Entregas validadas de ${intervalo}, pesadas pelo tamanho combinado antes de começar: P = ${PESO_DO_TAMANHO.P}, M = ${PESO_DO_TAMANHO.M}, G = ${PESO_DO_TAMANHO.G}.`}
         acao={
@@ -97,6 +104,20 @@ export default async function ProdutividadeTimePage({ searchParams }: { searchPa
           <PontosPorSemana titulo={`Pontos entregues por semana e por pessoa, de ${intervalo}`} semanas={semanal.semanas} pessoas={semanal.pessoas} />
         </Painel>
       </div>
+
+      {/* Por pessoa (06/11/2026): era a aba Pessoas, que passou a ser a dos
+          desenvolvedores e dos times. O mesmo período e os mesmos dados do gráfico. */}
+      <Card as="section" aria-labelledby="por-pessoa" className="mb-6 p-4 sm:p-5 flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h2 id="por-pessoa" className="text-section font-semibold text-fg">
+            Por pessoa
+          </h2>
+          <p className="text-fs-2 text-fg-muted">
+            O que cada pessoa entregou de {intervalo}, em quanto tempo e quanto voltou. O GitHub mostra atividade, não entrega: fica fora de toda conta.
+          </p>
+        </div>
+        <TabelaPorPessoa pessoas={pessoas} github={github} titulo={`Entregas por pessoa, de ${intervalo}`} />
+      </Card>
 
       <SaudeDoFluxo saude={saude} />
     </PageContainer>
