@@ -18,6 +18,7 @@ import {
   FolderKanban,
   Globe,
   AppWindow,
+  Bot,
   CalendarCheck,
   ChevronDown,
   Menu,
@@ -602,8 +603,9 @@ export function AppShell({
                           { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch />, ativa: abaDaProdutividade(pathname) === "github" },
                         ];
                       case "tech_ops_center":
-                        // A triagem dos chamados consulta Robôs, Sites e Apps (28/10/2026); Robôs é a tela de entrada.
+                        // Robôs, Sites e Apps embaixo; o Ops Center é só o título (05/11/2026).
                         return [
+                          { label: "Robôs", href: "/ops", icon: <Bot />, ativa: visaoDoOps === "automations" || visaoDoOps === "history" },
                           { label: "Sites", href: "/ops?view=sites", icon: <Globe />, ativa: visaoDoOps === "sites" },
                           { label: "Apps", href: "/ops?view=apps", icon: <AppWindow />, ativa: visaoDoOps === "apps" },
                         ];
@@ -620,7 +622,7 @@ export function AppShell({
                   const ativaSemFilha = (code: string, subs: { ativa: boolean }[]) => {
                     if (subs.some((s) => s.ativa)) return false;
                     if (code === "contabil_sped") return noContabil;
-                    if (code === "tech_ops_center") return visaoDoOps !== null;
+                    if (code === "tech_ops_center") return false;
                     if (code === "gestao_painel") return pathname === "/gestao";
                     if (code === "tech_github_contributions") return abaDaProdutividade(pathname) === "time";
                     return undefined;
@@ -628,10 +630,11 @@ export function AppShell({
                   const linkDoContabil = hrefContabil("lancamentos", "entradas");
 
                   type Filha = { chave: string; label: string; href: string; icon: React.ReactNode; ativa?: boolean };
-                  type Mae = { label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; exact?: boolean; contador?: number };
+                  type Mae = { label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; exact?: boolean; contador?: number; semLink?: boolean };
                   // A janela de uma tela com filhas: a própria tela no alto, depois as filhas.
+                  // Sem a mãe quando ela é só o título (Ops Center, 05/11/2026).
                   const telasDaMae = (mae: Mae, filhas: Filha[]): TelaDoPainel[] => [
-                    { label: mae.label, href: mae.href, icon: mae.icon, ativa: mae.ativo },
+                    ...(mae.semLink ? [] : [{ label: mae.label, href: mae.href, icon: mae.icon, ativa: mae.ativo }]),
                     ...filhas.map((f) => ({ label: f.label, href: f.href, icon: f.icon, ativa: f.ativa })),
                   ];
                   const itemComFilhas = (chave: string, mae: Mae, filhas: Filha[]) =>
@@ -649,7 +652,7 @@ export function AppShell({
                       ...subs.map((s) => ({ chave: s.href, label: s.label, href: s.href, icon: s.icon, ativa: s.ativa })),
                     ];
                     const href = e.tela.code === "contabil_sped" ? linkDoContabil : e.tela.href;
-                    const mae: Mae = { label: e.tela.label, href, icon: <ModuleIcon code={e.tela.code} />, area: areaDe(e.tela.code), ativo: ativaSemFilha(e.tela.code, subs), exact: e.tela.href === "/sped-fiscal/motor", contador: e.tela.code === "helpdesk" ? novosChamados : undefined };
+                    const mae: Mae = { label: e.tela.label, href, icon: <ModuleIcon code={e.tela.code} />, area: areaDe(e.tela.code), ativo: ativaSemFilha(e.tela.code, subs), exact: e.tela.href === "/sped-fiscal/motor", semLink: e.tela.code === "tech_ops_center", contador: e.tela.code === "helpdesk" ? novosChamados : undefined };
                     return { mae, filhas };
                   };
                   const entrada = (e: EntradaDoMenu<SectorModule>) => {
@@ -670,7 +673,12 @@ export function AppShell({
                   );
 
                   const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDe(b.entrada.tela.code) : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
-                  return <>{itemSped}{(ordemEscolhida ? blocosDoSetor : agruparPorCor(blocosDoSetor, areaDoBloco)).map((b) => {
+                  // Chamados e Certificados digitais sempre no fim do menu (05/11/2026).
+                  const NO_FIM = ["helpdesk", "tech_certificados"];
+                  const posNoFim = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? NO_FIM.indexOf(b.entrada.tela.code) : -1;
+                  const ordenados = ordemEscolhida ? blocosDoSetor : agruparPorCor(blocosDoSetor, areaDoBloco);
+                  const blocosDoMenu = [...ordenados.filter((b) => posNoFim(b) < 0), ...ordenados.filter((b) => posNoFim(b) >= 0).sort((x, y) => posNoFim(x) - posNoFim(y))];
+                  return <>{itemSped}{blocosDoMenu.map((b) => {
                     if (b.tipo === "solta") return entrada(b.entrada);
                     // O grupo: a janela com todas as telas dele, a mãe antes das filhas.
                     const telas = b.entradas.flatMap((e) => {

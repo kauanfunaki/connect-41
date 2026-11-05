@@ -323,6 +323,15 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
     expect(aside).not.toContain('href="/produtividade/github"');
   });
 
+  // O Ops Center é só o título (Victor, 05/11/2026): a janela traz Robôs, Sites e Apps, sem ele.
+  it("Ops Center abre a janela com Robôs, Sites e Apps, sem a própria tela", () => {
+    rota.atual = "/ops";
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: [{ code: "tech_ops_center", label: "Ops Center", href: "/ops" }] }));
+    const ops = botaoComJanela(aside, "Ops Center");
+    expect(ops.telas).toBe(3);
+    expect(ops.tag).toContain('aria-current="true"');
+  });
+
   it("tela sem filhas continua um link direto", () => {
     rota.atual = "/exigencias";
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: [soc[4]!, soc[0]!] }));

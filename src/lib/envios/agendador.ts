@@ -18,6 +18,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { pessoaOuRotina } from "@/lib/auditoria/rotinas";
 import { isModuleEnabled } from "@/lib/modules";
 import { generateRecipientToken } from "@/lib/clientDocuments";
 import { sendClientDocumentEmail } from "@/lib/email/sendMail";
@@ -129,7 +130,7 @@ export async function publicarEnvioAgendado(
 
   await logAudit({
     tenantId: doc.tenantId,
-    userId: opcoes.por?.userId ?? "",
+    ...pessoaOuRotina(opcoes.por?.userId, "agendadorDeEnvios"),
     action: opcoes.por ? "clientDocument.scheduled_send_now" : "clientDocument.scheduled_send",
     entityType: "ClientDocument",
     entityId: doc.id,
@@ -238,7 +239,7 @@ export async function enviarLembretesDevidos(opcoes: { agora?: Date } = {}): Pro
 
       await logAudit({
         tenantId: d.tenantId,
-        userId: "", // o agendador: sem pessoa (vira null na trilha)
+        rotina: "agendadorDeEnvios", // sem pessoa: a trilha mostra o nome da rotina
         action: "clientDocument.reminder",
         entityType: "ClientDocument",
         entityId: d.id,

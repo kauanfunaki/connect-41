@@ -9,14 +9,13 @@ type Props = {
   canAct: boolean;
   isCompleted: boolean;
   completedByLabel: string | null; // ex: "Concluída em 22/07 por Ana"
-  concluirAction: () => Promise<void>;
   reabrirAction: () => Promise<void>;
 };
 
 // Botão explícito de conclusão/reabertura — faz o mesmo que arrastar o card
 // pro estágio terminal/inicial, mas com 1 clique e um evento de histórico
 // dedicado (COMPLETED/REOPENED), em vez de depender do Kanban.
-export function CompletionBanner({ canAct, isCompleted, completedByLabel, concluirAction, reabrirAction }: Props) {
+export function CompletionBanner({ canAct, isCompleted, completedByLabel, reabrirAction }: Props) {
   const [isPending, startTransition] = useTransition();
 
   if (isCompleted) {
@@ -40,20 +39,7 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, conclu
     );
   }
 
-  if (!canAct) return null;
-
-  return (
-    // Neutro em repouso e verde só no hover — não é o `success` do design
-    // system, que é verde o tempo todo. O convite a concluir não deve competir
-    // com o conteúdo da tarefa antes de o mouse chegar nele.
-    <Button
-      variant="secondary"
-      size="sm"
-      className="mb-4 hover:text-success-fg hover:border-success/40 hover:bg-success/5"
-      disabled={isPending}
-      onClick={() => startTransition(() => concluirAction())}
-    >
-      <CheckCircle2 size={14} /> Concluir tarefa
-    </Button>
-  );
+  // Por concluir, o convite mora na linha da Situação ("Marcar como
+  // concluída", 05/11/2026) — era um botão solto acima dos campos.
+  return null;
 }

@@ -5,6 +5,7 @@ import { getPrisma } from "@/lib/prisma";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { isModuleEnabled } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
+import { pessoaOuRotina } from "@/lib/auditoria/rotinas";
 import { notifyUser } from "@/lib/notifications";
 import { nomeExibicao } from "@/lib/companyName";
 import { guardarArquivo } from "@/lib/drive/servidor";
@@ -74,7 +75,7 @@ export async function pedirImpressaoDoAlvara(tenantId: string, licenseId: string
     if (isPrismaUniqueError(err)) return { ok: false, erro: "Este alvará já está na fila do robô." };
     throw err;
   }
-  await logAudit({ tenantId, userId: userId ?? "", action: "societario.robo.pedido", entityType: "License", entityId: licenca.id, metadata: { tipo: "imprimir_alvara" } });
+  await logAudit({ tenantId, ...pessoaOuRotina(userId, "roboDoSocietario"), action: "societario.robo.pedido", entityType: "License", entityId: licenca.id, metadata: { tipo: "imprimir_alvara" } });
   return { ok: true, texto: "Pedido ao robô. Ele imprime quando a máquina do TI buscar a próxima tarefa; acompanhe em Robô do Societário." };
 }
 
@@ -85,7 +86,7 @@ export async function cancelarTarefa(tenantId: string, id: string, userId: strin
     data: { status: "CANCELADA", openKey: null, finishedAt: new Date(), reason: "Cancelada na tela do robô." },
   });
   if (r.count !== 1) return { ok: false, erro: "A tarefa já saiu da fila: a máquina pegou ou ela terminou." };
-  await logAudit({ tenantId, userId: userId ?? "", action: "societario.robo.cancelada", entityType: "RobotTask", entityId: id });
+  await logAudit({ tenantId, ...pessoaOuRotina(userId, "roboDoSocietario"), action: "societario.robo.cancelada", entityType: "RobotTask", entityId: id });
   return { ok: true, texto: "Tarefa tirada da fila." };
 }
 
@@ -282,7 +283,7 @@ async function concluirAlvara(w: CredencialAutenticadaOps, t: TarefaAberta & { l
     await logAudit({
       tenantId: w.tenantId,
       // Quem pediu responde pelo aceite que o robô marcou no lugar dele.
-      userId: t.requestedById ?? "",
+      ...pessoaOuRotina(t.requestedById, "roboDoSocietario"),
       action: "societario.robo.aceite_alvara",
       entityType: "Company",
       entityId: t.companyId ?? undefined,
