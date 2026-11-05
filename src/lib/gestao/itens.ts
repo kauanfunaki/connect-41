@@ -33,7 +33,16 @@ export type FiltroDeItens = {
   responsavel?: string;
   /** Só estes setores ("todos" ou ausente = sem recorte). */
   setores?: "todos" | string[];
+  /**
+   * Concluídos a partir desta data (05/11/2026, a Produtividade da Gestão mede
+   * o período escolhido). Sem ela, os dos últimos 30 dias, como sempre.
+   */
+  concluidosDesde?: Date;
 };
+
+function inicioDosConcluidos(agora: Date, filtro: FiltroDeItens): Date {
+  return filtro.concluidosDesde ?? new Date(agora.getTime() - JANELA_DE_CONCLUIDOS);
+}
 
 function doSetor(filtro: FiltroDeItens, setor: string): boolean {
   return !filtro.setores || filtro.setores === "todos" || filtro.setores.includes(setor);
@@ -56,7 +65,7 @@ async function processos(tenantId: string, agora: Date, filtro: FiltroDeItens): 
       ...(filtro.responsavel ? { ownerUserId: filtro.responsavel } : {}),
       OR: [
         { status: { notIn: ["CONCLUIDO", "CANCELADO", "INDEFERIDO"] } },
-        { status: "CONCLUIDO", concludedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } },
+        { status: "CONCLUIDO", concludedAt: { gte: inicioDosConcluidos(agora, filtro) } },
       ],
     },
     select: {
@@ -118,7 +127,7 @@ async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Prom
       // tela dele: candidato não é "tarefa do setor".
       candidatura: { is: null },
       pipeline: { active: true, ...(setores ? { sectorCode: { in: setores } } : {}) },
-      OR: [{ stage: { type: { not: "DONE" } } }, { updatedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } }],
+      OR: [{ stage: { type: { not: "DONE" } } }, { updatedAt: { gte: inicioDosConcluidos(agora, filtro) } }],
     },
     select: {
       id: true,
@@ -176,7 +185,7 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
       ...(filtro.responsavel ? { createdById: filtro.responsavel } : {}),
       OR: [
         { status: { in: ["ABERTA", "RESPONDIDA"] } },
-        { status: "RESOLVIDA", resolvedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } },
+        { status: "RESOLVIDA", resolvedAt: { gte: inicioDosConcluidos(agora, filtro) } },
       ],
     },
     select: {
@@ -230,7 +239,7 @@ async function solicitacoes(tenantId: string, agora: Date, filtro: FiltroDeItens
       ...(filtro.responsavel ? { assigneeId: filtro.responsavel } : {}),
       OR: [
         { status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] } },
-        { status: "CONCLUIDA", closedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } },
+        { status: "CONCLUIDA", closedAt: { gte: inicioDosConcluidos(agora, filtro) } },
       ],
     },
     select: {
@@ -278,7 +287,7 @@ async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeIte
       tenantId,
       ...(filtro.responsavel ? { assignees: { some: { userId: filtro.responsavel } } } : {}),
       ...(setores ? { sectorCode: { in: setores } } : {}),
-      OR: [{ status: { not: "DONE" } }, { resolvedAt: { gte: new Date(agora.getTime() - JANELA_DE_CONCLUIDOS) } }],
+      OR: [{ status: { not: "DONE" } }, { resolvedAt: { gte: inicioDosConcluidos(agora, filtro) } }],
     },
     select: {
       id: true,
@@ -340,7 +349,7 @@ export async function itensDaGestao(
   tenantId: string,
   recorte: "todos" | string[],
   agora = new Date(),
-  filtro: Pick<FiltroDeItens, "responsavel"> = {}
+  filtro: Pick<FiltroDeItens, "responsavel" | "concluidosDesde"> = {}
 ): Promise<ItemClassificado[]> {
   const [itens, limites] = await Promise.all([coletarItens(tenantId, agora, { ...filtro, setores: recorte }), limitesPorSetor(tenantId)]);
   return itens

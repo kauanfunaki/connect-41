@@ -1,15 +1,17 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { BellRing, Clock, LayoutDashboard, Users } from "lucide-react";
+import { BellRing, Clock, LayoutDashboard, TrendingUp, Users } from "lucide-react";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
-type Aba = "painel" | "alertas" | "coordenadores" | "horas";
+type Aba = "painel" | "alertas" | "coordenadores" | "produtividade" | "horas";
 
 export const ABAS_DA_GESTAO: { chave: Aba; rotulo: string; href: string; icone: React.ReactNode }[] = [
   { chave: "painel", rotulo: "Painel", href: "/gestao", icone: <LayoutDashboard /> },
   { chave: "alertas", rotulo: "Alertas", href: "/gestao/alertas", icone: <BellRing /> },
   { chave: "coordenadores", rotulo: "Coordenadores", href: "/gestao/coordenadores", icone: <Users /> },
+  // A produtividade por pessoa (05/11/2026, Gestão C).
+  { chave: "produtividade", rotulo: "Produtividade", href: "/gestao/produtividade", icone: <TrendingUp /> },
   { chave: "horas", rotulo: "Horas de operação", href: "/gestao/horas", icone: <Clock /> },
 ];
 
@@ -27,9 +29,11 @@ export function AbasDaGestao() {
     ? "alertas"
     : pathname.startsWith("/gestao/coordenadores")
       ? "coordenadores"
-      : pathname.startsWith("/gestao/horas")
-        ? "horas"
-        : "painel";
+      : pathname.startsWith("/gestao/produtividade")
+        ? "produtividade"
+        : pathname.startsWith("/gestao/horas")
+          ? "horas"
+          : "painel";
   return (
     <AbasDeLink
       abas={ABAS_DA_GESTAO.map((a) => ({ ...a, href: setor ? `${a.href}?setor=${encodeURIComponent(setor)}` : a.href }))}
