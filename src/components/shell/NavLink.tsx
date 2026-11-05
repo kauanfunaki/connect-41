@@ -97,6 +97,8 @@ export function TituloDoBloco({ nome, primeiro = false, children }: { nome: stri
 
 type NavItemProps = {
   href: string;
+  /** Só o título de um grupo, sem abrir tela (Ops Center, 05/11/2026): as telas ficam nas filhas. */
+  semLink?: boolean;
   icon: React.ReactNode;
   label: string;
   /**
@@ -173,7 +175,7 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area, recuado = false }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area, recuado = false, semLink = false }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
@@ -222,6 +224,15 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
       >
         {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}{area !== undefined ? <IconeDaArea icon={icon} active={active} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}<span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
       </button>
+    );
+  }
+
+  if (semLink && !naFaixa) {
+    return (
+      <div data-grupo={area ?? grupo ?? undefined} className={`${area !== undefined ? classeDoItemComArea(false, "text-label font-medium") : classeDoItem(false, "text-label font-medium")} cursor-default hover:bg-transparent`}>
+        {area !== undefined ? <IconeDaArea icon={icon} active={false} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
+        {label}
+      </div>
     );
   }
 
