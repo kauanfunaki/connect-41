@@ -1,4 +1,4 @@
-import { CalendarDays, Columns3, History, List, Plus, Server } from "lucide-react";
+import { Columns3, History, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
@@ -22,36 +22,20 @@ export function VisoesDoControle({ ativa, href }: { ativa: VisaoTech; href: (vis
 
 export function AcoesDoControle({
   podeEditar,
-  podeGerirOps,
   novoHref,
-  agendaHref,
   historicoHref,
 }: {
   podeEditar: boolean;
-  podeGerirOps: boolean;
   novoHref: string;
-  /** A Agenda geral filtrada no setor do Tech. */
-  agendaHref: string;
   /** A Auditoria na área Tech; nulo para quem não abre a Auditoria. */
   historicoHref: string | null;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Button href={agendaHref} variant="secondary">
-        <CalendarDays size={14} aria-hidden />
-        Prazos na Agenda
-      </Button>
       {historicoHref && (
         <Button href={historicoHref} variant="secondary">
           <History size={14} aria-hidden />
           Histórico
-        </Button>
-      )}
-      {/* Os sistemas são os do Ops Center (29/10/2026): o cadastro fica lá. */}
-      {podeGerirOps && (
-        <Button href="/ops?view=sites" variant="secondary">
-          <Server size={14} aria-hidden />
-          Sistemas no Ops Center
         </Button>
       )}
       {podeEditar && (
