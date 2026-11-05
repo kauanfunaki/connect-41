@@ -42,7 +42,7 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   afterAll(async () => {
     if (!db) return;
     for (const t of [tenantId, outroTenant].filter(Boolean)) {
-      await db.techInternalComment.deleteMany({ where: { tenantId: t } }); await db.techInternalChange.deleteMany({ where: { tenantId: t } });
+      await db.techInternalAttachment.deleteMany({ where: { tenantId: t } }); await db.techInternalComment.deleteMany({ where: { tenantId: t } }); await db.techInternalChange.deleteMany({ where: { tenantId: t } });
       await db.techInternalItem.deleteMany({ where: { tenantId: t } }); await db.techInternalTool.deleteMany({ where: { tenantId: t } });
       await db.opsSite.deleteMany({ where: { tenantId: t } }); await db.opsApp.deleteMany({ where: { tenantId: t } }); await db.opsWatcher.deleteMany({ where: { tenantId: t } });
       await db.userSector.deleteMany({ where: { user: { tenantId: t } } }); await db.user.deleteMany({ where: { tenantId: t } });

@@ -54,6 +54,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tech_interno.item.update": e("editou o item do controle interno do Tech"),
   "tech_interno.item.status": e("mudou a situação do item do controle interno do Tech"),
   "tech_interno.item.comment": e("comentou no item do controle interno do Tech"),
+  "tech_interno.item.attachment": e("anexou um arquivo ao item do controle interno do Tech"),
+  "tech_interno.item.attachment_remove": x("removeu um anexo do item do controle interno do Tech"),
   "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   "ops.aviso_fechado": e("fechou o aviso de erro do robô no Ops Center"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
@@ -620,7 +622,6 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   ContabilContaPagamento: "contas dos pagamentos sem nota",
   ContabilContaSaida: "contas das saídas",
   ContabilModelo: "configuração do Contábil",
-  ContabilContaSaida: "contas das saídas do Contábil",
   SpedRejeitado: "rejeitado da quarentena do SPED",
   SpedImportacao: "importação do SPED",
   SpedPagamento: "pagamento de apoio do SPED",

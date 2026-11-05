@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { salvarItem, comentarItem, mudarSituacaoItem } from "@/lib/tech-interno/servidor";
 import { ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
+import { removerAnexo } from "@/lib/tech-interno/anexos";
+import { getAuthContext } from "@/lib/auth/context";
 
 export async function salvarItemTech(id: string | undefined, form: FormData) {
   const result = await salvarItem(Object.fromEntries(form), id, form.get("version"));
@@ -18,4 +20,10 @@ export async function mudarSituacaoTech(id: string, status: string, version: num
   const result = await mudarSituacaoItem(id, status, version);
   if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); }
   return result;
+}
+export async function removerAnexoTech(id: string): Promise<{ error: string } | null> {
+  const result = await removerAnexo(await getAuthContext(), id);
+  if (!result.ok) return { error: result.erro };
+  revalidatePath(`${ROTA_TECH_INTERNO}/${result.valor.itemId}`);
+  return null;
 }

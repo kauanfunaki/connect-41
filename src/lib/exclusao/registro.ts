@@ -340,6 +340,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
+  { modelo: "TechInternalAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },
