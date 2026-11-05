@@ -24,7 +24,7 @@ import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/gi
 import { ContributionCalendar } from "./ContributionCalendar";
 import { DeveloperAvatar, DeveloperName, GithubOverview, SeloDoTime } from "./GithubOverview";
 import { GithubTimes } from "./GithubTimes";
-import { CabecalhoDaProdutividade } from "@/components/produtividade/CabecalhoDaProdutividade";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ROTAS_DO_GITHUB } from "@/lib/tech-interno/rotasDaProdutividade";
 import styles from "./GithubContributions.module.css";
 
@@ -50,8 +50,9 @@ export function GithubContributions({ initialQuery: suppliedQuery, canConfigure,
 function GithubShell({ view, suppliedQuery, canConfigure, conectar, children }: { view: View; suppliedQuery: string; canConfigure: boolean; conectar: boolean; children: React.ReactNode }) {
   const tabParams = new URLSearchParams(suppliedQuery); tabParams.delete("page"); tabParams.delete("view");
   return <PageContainer>
-    <CabecalhoDaProdutividade aba="github" subtitulo={SUBTITLES[view]}
-      acao={conectar ? <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button> : undefined} />
+    {/* Só as abas do GitHub (05/11/2026): sem a fileira Time, Pessoas, GitHub da Produtividade. */}
+    <PageHeader title="GitHub" subtitle={SUBTITLES[view]}
+      action={conectar ? <Button href="/api/integrations/github/conta" nativo><Plus size={14} aria-hidden />Conectar GitHub</Button> : undefined} />
     <AbasDeLink className="mb-6" aria-label="Telas do GitHub" ativa={view} abas={[
       { chave: "general", rotulo: "Geral", href: `${PATHS.general}?${tabParams}`, icone: <LayoutGrid /> },
       { chave: "developers", rotulo: "Desenvolvedores", href: `${PATHS.developers}?${tabParams}`, icone: <Users /> },
