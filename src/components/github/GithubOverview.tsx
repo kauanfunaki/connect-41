@@ -15,6 +15,11 @@ import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import styles from "./GithubContributions.module.css";
 
 const number = (value: number) => Number(value).toLocaleString("pt-BR");
+// O selo de um time (05/11/2026): a cor dele com as iniciais, no lugar das fotos.
+export function SeloDoTime({ nome, cor }: { nome: string; cor: string }) {
+  const iniciais = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join("").toLocaleUpperCase("pt-BR") || "?";
+  return <span aria-hidden className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-micro font-bold text-white" style={{ background: cor }}>{iniciais}</span>;
+}
 // "Atividade do time" por time (05/11/2026): soma as pessoas de cada time; quem
 // está sem time entra em "Sem time", sempre por último.
 type Lider = GithubSummary["leaders"][number];
@@ -69,9 +74,9 @@ export function GithubOverview({ data, query, modo, onDay }: { data: DashboardVi
         <div className={styles.panelHeading}><div><h2 id="github-team">Atividade do time</h2><p>Contribuições no período</p></div><Link href={developersHref}>Ver todos</Link></div>
         <div className={styles.leaders}>{modo === "time" && summary?.leaders.length ? timesDoPainel(summary.leaders, data.paleta).map((time, index) => <div key={time.id} className={styles.person}>
           <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span>
-          <span className="flex -space-x-2" title={time.pessoas.map(p => p.name ?? p.login).join(", ")}>{time.pessoas.slice(0, 3).map(p => <span key={p.id} className="rounded-full ring-2 ring-surface"><DeveloperAvatar login={p.login} /></span>)}</span>
+          <SeloDoTime nome={time.nome} cor={time.cor} />
           <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), cor: "time", ...(time.id ? { time: time.id } : {}) })}`} className={styles.personName}>
-            <span className={styles.swatch} style={{ "--swatch": time.cor } as React.CSSProperties}>{time.nome}</span></Link>
+            <span title={time.pessoas.map(p => p.name ?? p.login).join(", ")}>{time.nome}</span></Link>
           <span className={styles.personCount}><strong>{number(time.total)}</strong><small>contribuições</small></span>
         </div>) : summary?.leaders.length ? summary.leaders.slice(0, 4).map((person, index) => <div key={person.id} className={styles.person}>
           <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><span className="relative"><DeveloperAvatar login={person.login} />

@@ -16,7 +16,6 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Modal } from "@/components/ui/Modal";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { CampoData } from "@/components/ui/CampoData";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
 import { formatInstantDateTime } from "@/lib/format";
 import { githubFetch } from "@/lib/github/browser";
@@ -24,7 +23,7 @@ import { TYPE_LABELS, CONTRIBUTION_TYPES, type ContributionType, type DashboardV
 import { dateLabel } from "@/lib/github/calendar";
 import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/github/cores";
 import { ContributionCalendar } from "./ContributionCalendar";
-import { DeveloperAvatar, DeveloperName, GithubOverview } from "./GithubOverview";
+import { DeveloperAvatar, DeveloperName, GithubOverview, SeloDoTime } from "./GithubOverview";
 import { GithubTimes } from "./GithubTimes";
 import styles from "./GithubContributions.module.css";
 
@@ -139,8 +138,8 @@ function timesDaPagina(users: HeatmapUser[], paleta: Paleta): TimeNoPainel[] {
 function TeamCard({ time, from, to, paleta }: { time: TimeNoPainel; from: string; to: string; paleta: Paleta }) {
   return <section className={styles.developer}>
     <div className={styles.developerHeading}><div className={styles.developerIdentity}>
-      <span className="flex -space-x-2" title={time.users.map(u => u.name ?? u.login).join(", ")}>{time.users.slice(0, 6).map(u => <span key={u.id} className="rounded-full ring-2 ring-surface"><DeveloperAvatar login={u.login} /></span>)}{time.users.length > 6 && <span className={`${styles.avatar} ring-2 ring-surface`}>+{time.users.length - 6}</span>}</span>
-      <div><h2><span className={styles.swatch} style={{ "--swatch": time.cor } as React.CSSProperties}>{time.nome}</span></h2>
+      <SeloDoTime nome={time.nome} cor={time.cor} />
+      <div><h2 title={time.users.map(u => u.name ?? u.login).join(", ")}>{time.nome}</h2>
         <p>{time.users.length} {time.users.length === 1 ? "desenvolvedor" : "desenvolvedores"} · {Number(time.total).toLocaleString("pt-BR")} contribuições · {time.activeDays} dias com atividade</p></div></div>
       <div className={styles.developerCounts}>{CONTRIBUTION_TYPES.map(type => <span key={type}>{TYPE_LABELS[type]} <strong>{time.counts[type]}</strong></span>)}</div>
     </div>
@@ -220,7 +219,7 @@ function Unidentified({ data }: { data: DashboardView }) {
 function Toolbar({ path, query, from, to, filtered, modo, times }: { path: string; query: string; from: string; to: string; filtered: boolean; modo: ModoDeCor; times: { id: string; nome: string }[] }) {
   const router = useRouter(), [user, setUser] = useState(() => new URLSearchParams(query).get("user") ?? ""), sent = useRef(user.trim());
   const [period, setPeriod] = useState({ from, to }), [resolved, setResolved] = useState({ from, to });
-  const all = new URLSearchParams(query).get("all") === "1", time = new URLSearchParams(query).get("time") ?? "";
+  const time = new URLSearchParams(query).get("time") ?? "";
   // O período devolvido pelo servidor (o padrão de 12 meses, depois de Limpar) volta aos campos.
   if (resolved.from !== from || resolved.to !== to) { setResolved({ from, to }); setPeriod({ from, to }); }
   const apply = useCallback((next: { user: string; from?: string; to?: string; all?: boolean; cor?: ModoDeCor; time?: string }) => {
@@ -248,13 +247,15 @@ function Toolbar({ path, query, from, to, filtered, modo, times }: { path: strin
     {/* Por time, a aba Desenvolvedores mostra times: a busca por pessoa sai (05/11/2026). */}
     {!(modo === "time" && path === PATHS.developers) && <label className="min-w-0 flex-1 basis-48"><span className="sr-only">Buscar desenvolvedor</span><CampoDeBusca aria-label="Buscar desenvolvedor" placeholder="Buscar desenvolvedor…" value={user} enviarAoLimpar={false}
       onChange={event => setUser(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && user.trim() !== sent.current) apply({ user: user.trim() }); }} /></label>}
-    {times.length > 0 && <Select aria-label="Time" value={time} onChange={event => apply({ user: user.trim(), time: event.target.value })}>
-      <option value="">Todos os times</option>{times.map(item => <option key={item.id} value={item.id}>{item.nome}</option>)}
-    </Select>}
-    <Button variant={all ? "primary" : "secondary"} aria-pressed={all} title={all ? "Mostrando também quem não vinculou a conta GitHub. Clique para ver só os integrados." : "Incluir quem não vinculou a conta GitHub em Sua conta"}
-      onClick={() => apply({ user: user.trim(), all: !all })}><Users size={14} /> Mostrar todos</Button>
-    <SegmentedControl label="Cor por" active={modo} onChange={cor => apply({ user: user.trim(), cor })}
-      items={[{ key: "pessoa", label: "Por pessoa", title: "Cada pessoa com a sua cor" }, { key: "time", label: "Por time", title: "Cada time com a sua cor" }]} />
+    {/* Um campo só (05/11/2026): agrupa por pessoa ou por time, e escolhe um time. */}
+    <label className="flex flex-col gap-1 text-helper text-fg-secondary"><span>Agrupar por</span>
+      <Select aria-label="Agrupar por" value={modo === "time" ? (time ? `time:${time}` : "time") : "pessoa"}
+        onChange={event => { const v = event.target.value; apply({ user: user.trim(), cor: v === "pessoa" ? "pessoa" : "time", time: v.startsWith("time:") ? v.slice(5) : "" }); }}>
+        <option value="pessoa">Pessoas</option>
+        <option value="time">Times · todos</option>
+        {times.map(item => <option key={item.id} value={`time:${item.id}`}>{item.nome}</option>)}
+      </Select>
+    </label>
     {(filtered || user.trim()) && <Button variant="ghost" size="sm" onClick={() => { setUser(""); setPeriod(resolved); sent.current = ""; router.replace(modo === "time" ? `${path}?cor=time` : path, { scroll: false }); }}>Limpar</Button>}
   </div>;
 }
