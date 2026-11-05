@@ -63,4 +63,25 @@ describe("Ceci", () => {
     expect(new Set(ids).size).toBe(4);
     for (const id of ids) expect(html).toContain(`url(#${id})`);
   });
+
+  // 05/11/2026: a sombra do desenho inteiro caía no vão entre o rosto e o anel
+  // e desenhava uma faixa cinza em volta da carinha, cortada na abertura do anel.
+  it("sem `sombra`, nenhum filtro; com `sombra`, ela fica fora do vão e em compasso com o anel", () => {
+    expect(desenhar()).not.toContain("<filter");
+    expect(desenhar()).not.toContain("overflow");
+
+    const html = desenhar({ sombra: true, estado: "pensando" });
+    expect(html).toContain('overflow="visible"');
+    const filtro = html.match(/<filter id="([^"]+)"/)?.[1];
+    const mascara = html.match(/<mask id="([^"]+)"/)?.[1];
+    expect(filtro).toBeTruthy();
+    expect(html).toContain(`filter="url(#${filtro})"`);
+    expect(html).toContain(`mask="url(#${mascara})"`);
+    // O furo da máscara vai até a borda de dentro do anel (raio 45 − 11/2).
+    expect(html).toMatch(/<circle cx="58" cy="60" r="39.5" fill="#000000"/);
+    // A cópia que gera a sombra gira junto com o anel de verdade.
+    expect(html.match(/c41-ceci-pensando/g)).toHaveLength(2);
+    expect(html).toContain("var(--c41-ceci-sombra-perto");
+    expect(html).toContain("var(--c41-ceci-sombra-longe");
+  });
 });

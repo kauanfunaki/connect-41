@@ -164,7 +164,7 @@ export function CeciDoPortal({ primeiroNome }: { primeiroNome: string | null }) 
           data-dica="Ceci · Portal do cliente"
           className="relative flex size-12 sm:size-14 rounded-full outline-none transition-transform hover:-translate-y-0.5 motion-reduce:transition-none"
         >
-          <Ceci tamanho={56} estado={estado} className="c41-ceci-flutuante size-full" />
+          <Ceci tamanho={56} estado={estado} sombra className="size-full" />
         </button>
       </div>
     );
