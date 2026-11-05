@@ -8,13 +8,13 @@ import type { AuthContext } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
 import { feriadosDoTenant } from "./fila";
-import { processosParaRelatorio } from "./painel-data";
-import { resumoDasLicencas } from "./licencas-data";
-import { situacaoDaLicenca, diasAte } from "./licencas";
+import { processosEstourados } from "./painel-data";
+import { licencasARenovar } from "./licencas-data";
+import { diasAte } from "./licencas";
 import { STATUS_SEM_CONCLUSAO } from "./processo";
 import { listarProtocolosParados, diasDaLista } from "./protocolosParadosServidor";
 import { diasParaCobrarOProtocolo } from "./protocoloParadoServidor";
-import { quadroDasCertidoes } from "@/lib/certidoes/servidor";
+import { positivasNaoVistas } from "@/lib/certidoes/servidor";
 import { acessoAsCertidoes } from "@/lib/certidoes/acesso";
 import { ROTULO_DA_CERTIDAO } from "@/lib/certidoes/regras";
 import { maquinaSemSinal } from "@/lib/robo/tarefas";
@@ -39,7 +39,10 @@ export async function painelDoSocietario(ctx: AuthContext, agora = new Date()): 
   const tenantId = ctx.tenantId!;
   const prisma = getPrisma();
   const daqui7 = new Date(agora.getTime() + 7 * DIA_MS);
-  const [dias, feriados, exigencias, licencas, acessoCertidoes, roboLigado] = await Promise.all([
+  // 05/11/2026: cada número lê só o que conta (as licenças a renovar, os
+  // processos abertos sem protocolos e taxas, as positivas não vistas), e não
+  // as listas inteiras das telas de origem — a tela levava de 3 a 5 segundos.
+  const [dias, feriados, exigencias, aRenovar, acessoCertidoes, roboLigado] = await Promise.all([
     diasParaCobrarOProtocolo(tenantId).catch(() => 15),
     feriadosDoTenant(tenantId),
     prisma.processRequirement.findMany({
@@ -58,18 +61,18 @@ export async function painelDoSocietario(ctx: AuthContext, agora = new Date()): 
       orderBy: { dueAt: "asc" },
       take: 300,
     }),
-    resumoDasLicencas(tenantId, agora),
+    licencasARenovar(tenantId, agora),
     acessoAsCertidoes(ctx),
     isModuleEnabled(tenantId, "societario_robo"),
   ]);
-  const [parados, processos, certidoes, maquinas] = await Promise.all([
+  const [parados, estourados, positivasDaFila, maquinas] = await Promise.all([
     listarProtocolosParados(tenantId, dias, agora),
-    // Abertos agora: o início do período não importa para os abertos.
-    processosParaRelatorio(tenantId, agora, agora, feriados),
-    acessoCertidoes ? quadroDasCertidoes(tenantId).then((q) => q.linhas) : Promise.resolve(null),
+    processosEstourados(tenantId, agora, feriados),
+    acessoCertidoes ? positivasNaoVistas(tenantId) : Promise.resolve(null),
     roboLigado
       ? prisma.robotTask
-          .findMany({ where: { tenantId, machineSlug: { not: null }, createdAt: { gte: new Date(agora.getTime() - 30 * DIA_MS) } }, select: { machineSlug: true }, distinct: ["machineSlug"] })
+          // As máquinas distintas saem do banco (groupBy), e não de todas as tarefas do mês.
+          .groupBy({ by: ["machineSlug"], where: { tenantId, machineSlug: { not: null }, createdAt: { gte: new Date(agora.getTime() - 30 * DIA_MS) } } })
           .then((t) => prisma.opsWatcher.findMany({ where: { tenantId, isActive: true, slug: { in: t.map((x) => x.machineSlug!) } }, select: { lastHeartbeatAt: true } }))
       : Promise.resolve([]),
   ]);
@@ -90,7 +93,6 @@ export async function painelDoSocietario(ctx: AuthContext, agora = new Date()): 
       selo: d <= 0 ? "exigência vencendo" : "exigência", tom: d <= 0 ? "perigo" : "atencao", href: `/processos/${proc.id}`, peso: d, urgente: d <= 0,
     });
   }
-  const estourados = processos.filter((p) => p.concluidoEm === null && p.prazo.situacao === "estourado");
   for (const p of estourados) {
     fila.push({
       chave: `estourado-${p.id}`, tipo: "estourado", titulo: `${p.tipoNome} — ${p.empresaNome}`,
@@ -98,30 +100,19 @@ export async function painelDoSocietario(ctx: AuthContext, agora = new Date()): 
       peso: p.prazo.dias - (p.prazo.previstoMax ?? 0),
     });
   }
-  const aRenovar = licencas.linhas.filter((l) => {
-    const s = situacaoDaLicenca(l, agora);
-    return s === "vencida" || s === "a_renovar";
-  });
   for (const l of aRenovar) {
-    const d = l.expiresAt ? diasAte(l.expiresAt, agora) : 0;
+    const d = diasAte(l.expiresAt, agora);
     fila.push({
-      chave: `licenca-${l.id}`, tipo: "licenca", titulo: `${l.kind} — ${l.empresaNome}`, detalhe: l.expiresAt ? `Licença ${textoDoPrazoEmDias(d)}` : "Licença sem validade",
+      chave: `licenca-${l.id}`, tipo: "licenca", titulo: `${l.kind} — ${l.empresaNome}`, detalhe: `Licença ${textoDoPrazoEmDias(d)}`,
       selo: d < 0 ? "vencida" : "renovar", tom: d < 0 ? "perigo" : "atencao", href: `/licencas?busca=${encodeURIComponent(l.empresaNome)}`, peso: d, urgente: d < 0,
     });
   }
-  let positivas: number | null = null;
-  if (certidoes) {
-    positivas = 0;
-    for (const linha of certidoes) {
-      for (const [tipo, c] of Object.entries(linha.certidoes)) {
-        if (c?.situacao !== "POSITIVA" || c.vista) continue;
-        positivas++;
-        fila.push({
-          chave: `certidao-${c.id}`, tipo: "certidao", titulo: linha.empresa, detalhe: `Certidão ${ROTULO_DA_CERTIDAO[tipo as keyof typeof ROTULO_DA_CERTIDAO] ?? tipo} positiva`,
-          selo: "positiva", tom: "perigo", href: "/certidoes?recorte=positivas", peso: 0,
-        });
-      }
-    }
+  const positivas = positivasDaFila ? positivasDaFila.length : null;
+  for (const c of positivasDaFila ?? []) {
+    fila.push({
+      chave: `certidao-${c.id}`, tipo: "certidao", titulo: c.empresa, detalhe: `Certidão ${ROTULO_DA_CERTIDAO[c.tipo] ?? c.tipo} positiva`,
+      selo: "positiva", tom: "perigo", href: "/certidoes?recorte=positivas", peso: 0,
+    });
   }
 
   return {

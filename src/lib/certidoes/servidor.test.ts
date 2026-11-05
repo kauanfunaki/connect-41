@@ -9,10 +9,23 @@ const m = await vi.hoisted(async () => {
   const { tabela } = await import("@/lib/serpro/teste.fixture");
   // `createdAt` aqui vale para as linhas novas: o teto conta as do mês do relógio do teste.
   const padroesDaCertidao: Record<string, unknown> = { codigo: null, emitidaEm: null, validaAte: null, mensagem: null, trimestre: null, driveFileId: null, pedidaPorId: null, vistaEm: null, vistaPorId: null };
+  const certidao = tabela(padroesDaCertidao);
+  // O falso não tem groupBy; este cobre o que `positivasNaoVistas` usa (_max de createdAt).
+  const groupBy = async ({ by, where }: { by: string[]; where: Record<string, unknown>; _max: { createdAt: true } }) => {
+    const grupos = new Map<string, { chave: Record<string, unknown>; max: Date | null }>();
+    for (const l of (await certidao.findMany({ where })) as Record<string, unknown>[]) {
+      const k = by.map((b) => String(l[b])).join(":");
+      const g = grupos.get(k) ?? { chave: Object.fromEntries(by.map((b) => [b, l[b]])), max: null };
+      const d = l.createdAt as Date;
+      if (!g.max || d > g.max) g.max = d;
+      grupos.set(k, g);
+    }
+    return [...grupos.values()].map((g) => ({ ...g.chave, _max: { createdAt: g.max } }));
+  };
   return {
     padroesDaCertidao,
     company: tabela({ displayName: null, cnpj: null, stateCode: null, city: null, status: "ACTIVE" }),
-    certidao: tabela(padroesDaCertidao),
+    certidao: Object.assign(certidao, { groupBy }),
     driveFolder: tabela({ parentId: null, deletedAt: null, systemKey: null }),
     conexao: null as { enabled: boolean; configEnc: string } | null,
     notifySector: vi.fn(),
@@ -35,7 +48,7 @@ vi.mock("@/lib/drive/servidor", () => ({
   guardarArquivo: m.guardarArquivo,
 }));
 
-const { emitirAgora, emitirCertidao, marcarCertidaoComoVista, quadroDasCertidoes, rotinaDasCertidoes } = await import("./servidor");
+const { emitirAgora, emitirCertidao, marcarCertidaoComoVista, positivasNaoVistas, quadroDasCertidoes, rotinaDasCertidoes } = await import("./servidor");
 
 const TENANT = "tenant-1";
 const MATRIZ = { id: "matriz", tenantId: TENANT, name: "Empresa Fictícia Ltda", cnpj: "11444777000161", stateCode: "PR", city: "Curitiba", status: "ACTIVE", displayName: null };
@@ -201,6 +214,43 @@ describe("o quadro da tela", () => {
     expect(await marcarCertidaoComoVista(TENANT, "kauan", "c1")).toBeNull();
     expect(await marcarCertidaoComoVista(TENANT, "kauan", "c3")).toEqual({ companyId: "matriz" });
     expect((await quadroDasCertidoes(TENANT)).linhas.find((l) => l.companyId === "matriz")!.certidoes.FGTS).toMatchObject({ vista: true });
+  });
+});
+
+// 05/11/2026: o painel do Societário conta as positivas sem ler o quadro
+// inteiro. A conta tem de bater com a do quadro.
+describe("as positivas não vistas do painel", () => {
+  const positivasDoQuadro = async () =>
+    (await quadroDasCertidoes(TENANT)).linhas.flatMap((l) =>
+      Object.entries(l.certidoes).filter(([, c]) => c?.situacao === "POSITIVA" && !c.vista).map(([tipo, c]) => `${l.companyId}:${tipo}:${c!.id}`)
+    ).sort();
+  const doPainel = async () => (await positivasNaoVistas(TENANT)).map((p) => `${p.companyId}:${p.tipo}:${p.id}`).sort();
+
+  it("vale a última que saiu; vista, superada, de empresa inativa ou de certidão que a empresa não precisa ficam fora", async () => {
+    m.company.linhas.push({ id: "inativa", tenantId: TENANT, name: "Inativa Ltda", cnpj: "22333444000181", stateCode: "PR", city: "Curitiba", status: "INACTIVE", displayName: null });
+    m.certidao.linhas.push(
+      // Matriz: FGTS positiva e a última que saiu (uma falha depois não conta) → entra.
+      { id: "p1", tenantId: TENANT, companyId: "matriz", tipo: "FGTS", situacao: "POSITIVA", createdAt: new Date("2026-10-02T12:00:00Z") },
+      { id: "p1b", tenantId: TENANT, companyId: "matriz", tipo: "FGTS", situacao: "NAO_SAIU", createdAt: new Date("2026-10-20T12:00:00Z") },
+      // Matriz: federal positiva superada por uma negativa → fora.
+      { id: "p2", tenantId: TENANT, companyId: "matriz", tipo: "FEDERAL", situacao: "POSITIVA", createdAt: new Date("2026-09-01T12:00:00Z") },
+      { id: "p2b", tenantId: TENANT, companyId: "matriz", tipo: "FEDERAL", situacao: "NEGATIVA", createdAt: new Date("2026-10-01T12:00:00Z") },
+      // Matriz: estadual positiva já vista → fora.
+      { id: "p3", tenantId: TENANT, companyId: "matriz", tipo: "ESTADUAL_PR", situacao: "POSITIVA", vistaEm: new Date("2026-10-05T12:00:00Z"), createdAt: new Date("2026-10-03T12:00:00Z") },
+      // Filial: só precisa da municipal; a federal positiva fica fora, a municipal entra.
+      { id: "p4", tenantId: TENANT, companyId: "filial", tipo: "FEDERAL", situacao: "POSITIVA", createdAt: new Date("2026-10-04T12:00:00Z") },
+      { id: "p5", tenantId: TENANT, companyId: "filial", tipo: "CURITIBA", situacao: "POSITIVA", createdAt: new Date("2026-10-04T12:00:00Z") },
+      // Empresa inativa → fora.
+      { id: "p6", tenantId: TENANT, companyId: "inativa", tipo: "FGTS", situacao: "POSITIVA", createdAt: new Date("2026-10-04T12:00:00Z") }
+    );
+    for (const l of m.certidao.linhas) Object.assign(l, { codigo: null, emitidaEm: null, driveFileId: null, vistaEm: null, ...l });
+
+    expect(await doPainel()).toEqual(["filial:CURITIBA:p5", "matriz:FGTS:p1"]);
+    expect(await doPainel()).toEqual(await positivasDoQuadro());
+  });
+
+  it("sem positivas, a lista vem vazia", async () => {
+    expect(await positivasNaoVistas(TENANT)).toEqual([]);
   });
 });
 

@@ -1,7 +1,7 @@
 // Leitura de licenças e taxas.
 
 import { getPrisma } from "@/lib/prisma";
-import { ordenarLicencas, contarPendentes, custoEmTaxas, type CustoDoProcesso } from "@/lib/societario/licencas";
+import { ordenarLicencas, contarPendentes, custoEmTaxas, situacaoDaLicenca, AVISO_EM_DIAS, type CustoDoProcesso } from "@/lib/societario/licencas";
 import {
   ehTaxaDoBombeiros,
   arquivarTaxaDeBombeiros,
@@ -83,6 +83,30 @@ export async function listarLicencas(
 export async function resumoDasLicencas(tenantId: string, hoje: Date) {
   const linhas = await listarLicencas(tenantId, hoje);
   return { linhas, ...contarPendentes(linhas, hoje) };
+}
+
+export type LicencaARenovar = { id: string; kind: string; empresaNome: string; expiresAt: Date; revokedAt: null };
+
+/**
+ * Só as licenças vencidas ou dentro do aviso de renovação — o painel do
+ * Societário (05/11/2026). Antes ele lia a carteira inteira, com o texto das
+ * observações, para contar estas. A data de corte tem um dia de folga, porque
+ * `situacaoDaLicenca` conta por dia de calendário em São Paulo; a situação de
+ * cada linha continua sendo decidida por ela.
+ */
+export async function licencasARenovar(tenantId: string, hoje: Date): Promise<LicencaARenovar[]> {
+  const corte = new Date(hoje.getTime() + (AVISO_EM_DIAS + 1) * 86_400_000);
+  const linhas = await getPrisma().license.findMany({
+    where: { tenantId, revokedAt: null, expiresAt: { not: null, lte: corte } },
+    select: { id: true, kind: true, expiresAt: true, company: { select: { name: true, tradeName: true } } },
+    orderBy: { expiresAt: "asc" },
+  });
+  return linhas
+    .map((l) => ({ id: l.id, kind: l.kind, empresaNome: l.company.tradeName || l.company.name, expiresAt: l.expiresAt!, revokedAt: null }))
+    .filter((l) => {
+      const s = situacaoDaLicenca(l, hoje);
+      return s === "vencida" || s === "a_renovar";
+    });
 }
 
 /**
