@@ -176,7 +176,7 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
         e Chamados, no lugar das pílulas dentro do bloco. */}
     {!doCatalogo && painel && <Tabs className="mb-4" active={visao} onChange={v => setVisao(v as typeof visao)} tabs={[
       { key: "automations", label: "Robôs", icon: <Activity size={14} aria-hidden />, count: painel.watchers.length },
-      { key: "history", label: "Histórico", icon: <History size={14} aria-hidden />, count: painel.total },
+      { key: "history", label: "Histórico", icon: <History size={14} aria-hidden /> },
     ]} />}
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
       {/* Busca e "Minhas automações" à esquerda, como a busca e o "Atribuídos

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Button } from "@/components/ui/Button";
+import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ConfiguracaoDosChamados } from "@/components/chamados/ConfiguracaoDosChamados";
 import { contexto } from "@/lib/chamados/contexto";
 import { podeGerenciar } from "@/lib/chamados/acesso";
@@ -19,10 +19,10 @@ export default async function ConfiguracaoPage() {
   const politicas = await getPrisma().helpdeskSlaPolicy.findMany({ where: { tenantId: c.ctx.tenantId } });
   return (
     <PageContainer>
+      <Breadcrumb items={[{ label: "Chamados", href: "/chamados" }, { label: "Configurações" }]} />
       <PageHeader
         title="Configurar chamados"
         subtitle="Prazos de atendimento. A IA interpreta cada pedido e pergunta o que faltar."
-        action={<Button variant="secondary" href="/chamados">Voltar aos chamados</Button>}
       />
       <ConfiguracaoDosChamados politicas={politicas} />
     </PageContainer>
