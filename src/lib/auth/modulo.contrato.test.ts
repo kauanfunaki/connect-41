@@ -34,6 +34,8 @@ const PASTAS = [
   "pessoas/[id]/beneficios",
   "pessoas/[id]/salario",
   "pessoas/[id]/esocial-s2200",
+  // Planejamento tributário (05/11/2026): telas e ações pelo gate do contabil_planejamento.
+  "planejamento-tributario",
 ];
 
 function arquivos(dir: string): string[] {
