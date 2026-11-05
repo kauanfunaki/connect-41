@@ -336,6 +336,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "UserTaskView", coluna: "userId", tratamento: "apagar" },
   { modelo: "RobotTask", coluna: "requestedById", tratamento: "desligar" },
   { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
+  { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },

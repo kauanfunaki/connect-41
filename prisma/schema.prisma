@@ -1417,6 +1417,7 @@ model Tenant {
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
   sectorMenuViews           SectorMenuView[]
+  sectorMenuOrders          SectorMenuOrder[]
   robotTasks                RobotTask[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
@@ -1541,6 +1542,29 @@ model SectorMenuView {
   @@unique([tenantId, sectorCode])
   @@index([tenantId])
   @@map("sector_menu_views")
+}
+
+// A ordem das telas no menu de um setor (05/11/2026, pedido do Kauan: o super
+// admin ordena). Sem linha, a ordem do catálogo — o menu de antes desta tabela.
+// Tabela à parte da SectorMenuView de propósito: criar uma linha lá só para
+// guardar a ordem mudaria o padrão do Geral (setor sem linha recebe os padrões
+// de visibilidade). Regras em `src/lib/menuDoSetor.ts`.
+model SectorMenuOrder {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  /// JSON { "grupos": [...], "telas": [...] }: a ordem dos grupos e a das telas
+  /// (códigos de módulo). O que não está na lista vem depois, na ordem do
+  /// catálogo; código desconhecido é descartado na leitura.
+  ordem       String   @db.Text
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@map("sector_menu_orders")
 }
 
 // Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —

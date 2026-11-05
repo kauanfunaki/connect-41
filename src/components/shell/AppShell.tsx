@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "rea
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
 import {
+  ArrowUpDown,
   BookOpen,
   ChevronRight,
   Home,
@@ -48,7 +49,7 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { slugDoGrupo, ICONE_DO_GRUPO } from "@/lib/module-catalog";
 import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
-import { chaveDosGruposAbertos, grupoEstaAberto, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu, type EntradaDoMenu } from "@/lib/menuDoSetor";
+import { chaveDosGruposAbertos, grupoEstaAberto, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
 import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
 import { trocarSetor } from "@/components/shell/contexto";
@@ -212,6 +213,10 @@ type Props = {
    * e de manuais, no grupo Apoio do Geral, para todo setor (cada um vê os seus).
    */
   apoioLigado?: { senhas: boolean; manuais: boolean };
+  /** A ordem do menu do setor que o super admin escolheu (05/11/2026); sem ela, a do catálogo. */
+  ordemDoMenu?: OrdemDoMenu;
+  /** Mostra "Organizar menu" no fim das telas do setor — só o Super Admin. */
+  podeOrganizarMenu?: boolean;
   /**
    * As telas do Geral que o setor (ou os setores da pessoa, em "Todos os
    * setores") não escondeu — ver `src/lib/menuGeral.ts`. Sem a prop, todas.
@@ -261,6 +266,8 @@ export function AppShell({
   chamadosLigados = false,
   chamadosNovos = 0,
   apoioLigado = { senhas: false, manuais: false },
+  ordemDoMenu,
+  podeOrganizarMenu = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
   profileName,
   profileRoleLabel,
@@ -330,7 +337,9 @@ export function AppShell({
   // O menu do setor (05/11/2026): os blocos da regra nova e os grupos abertos.
   // O grupo da tela aberta começa aberto; o que a pessoa abre ou fecha fica no
   // navegador, por setor (`grupoEstaAberto`).
-  const blocosDoSetor = activeSector ? montarMenuDoSetor(activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code))) : [];
+  const blocosDoSetor = activeSector ? montarMenuDoSetor(activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code)), ordemDoMenu) : [];
+  // Com a ordem escolhida pelo super admin, ela vence o "cores juntas" (28/10/2026).
+  const ordemEscolhida = !!ordemDoMenu && (ordemDoMenu.grupos.length > 0 || ordemDoMenu.telas.length > 0);
   const grupoDaTelaAberta = blocosDoSetor.find((b) => b.tipo === "grupo" && telasDoBloco(b).some((tela) => caminhoDoMenuAtivo(pathname, tela.href)))?.grupo ?? null;
   const setorDoMenu = activeSector?.code ?? "";
   const escolhasJson = useSyncExternalStore(assinarGruposDoMenu, () => lerGruposDoMenu(setorDoMenu), () => "{}");
@@ -716,7 +725,7 @@ export function AppShell({
                   );
 
                   const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDe(b.entrada.tela.code) : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
-                  return <>{itemSped}{agruparPorCor(blocosDoSetor, areaDoBloco).map((b) => {
+                  return <>{itemSped}{(ordemEscolhida ? blocosDoSetor : agruparPorCor(blocosDoSetor, areaDoBloco)).map((b) => {
                     if (b.tipo === "solta") return entrada(b.entrada);
                     const itens = telasDoBloco(b);
                     const area = areaDoBloco(b);
@@ -746,7 +755,16 @@ export function AppShell({
                         {b.entradas.map(entrada)}
                       </GrupoDoMenu>
                     );
-                  })}</>;
+                  })}{podeOrganizarMenu && !naFaixa && (
+                    <Link
+                      href={`/admin/setores?setor=${encodeURIComponent(activeSector.code)}#ordem-do-menu`}
+                      onClick={() => setMobileOpen(false)}
+                      className="mt-2 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-fs-1 text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+                    >
+                      <ArrowUpDown size={13} aria-hidden className="flex-shrink-0" />
+                      Organizar menu
+                    </Link>
+                  )}</>;
                 })()}
               </>
             ) : (

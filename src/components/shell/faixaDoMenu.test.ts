@@ -342,3 +342,29 @@ describe("o Apoio no Geral", () => {
     expect(chamados?.texto).toContain("3");
   });
 });
+
+// Organizar menu (05/11/2026): a ordem do super admin vale no menu, e o link
+// "Organizar menu" aparece só para ele.
+describe("a ordem do menu escolhida", () => {
+  const SOCIETARIO = { code: "societario", label: "Societário", color: "#D44A3C" };
+  const soc = [
+    { code: "societario_licencas", label: "Licenças", href: "/licencas" },
+    { code: "societario_certidoes", label: "Certidões", href: "/certidoes" },
+    { code: "societario_processos", label: "Processos", href: "/processos" },
+    { code: "societario_prazos", label: "Exigências e prazos", href: "/exigencias" },
+  ];
+  const ordemDosGrupos = (html: string) => [...html.matchAll(/aria-controls="menu-grupo-([a-z-]+)"/g)].map((m) => m[1]);
+
+  it("os grupos saem na ordem escolhida", () => {
+    const padrao = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }));
+    expect(ordemDosGrupos(padrao)).toEqual(["operacao", "licencas"]);
+    const escolhida = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: ["Licenças"], telas: [] } }));
+    expect(ordemDosGrupos(escolhida)).toEqual(["licencas", "operacao"]);
+  });
+
+  it("“Organizar menu” só para quem pode", () => {
+    expect(lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }))).not.toContain("Organizar menu");
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, podeOrganizarMenu: true }));
+    expect(tagDoLink(aside, "Organizar menu")).toContain('href="/admin/setores?setor=societario#ordem-do-menu"');
+  });
+});
