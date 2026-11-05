@@ -26,6 +26,8 @@ import { accountLinkView } from "@/lib/github/conta";
 import { atualizarMeuPerfil, alterarMinhaSenha, salvarMeuExpediente, desvincularGithub } from "./actions";
 import { TokensDeAcesso } from "@/components/configuracoes/TokensDeAcesso";
 import { listarMeusTokens, listarTokensDoEscritorio } from "@/lib/tokens-pessoais/servidor";
+import { origemDoComando } from "@/lib/tokens-pessoais/regras";
+import { baseDomain, hostSuffix, sectorHost } from "@/lib/auth/activeSector";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_TECH_INTERNO } from "@/lib/tech-interno/regras";
 
@@ -40,7 +42,9 @@ async function dadosDosTokens(ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   ]);
   const host = h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host") || "localhost:3000";
   const proto = h.get("x-forwarded-proto")?.split(",")[0]?.trim() === "http" || host.startsWith("localhost") ? "http" : "https";
-  return { meus, doEscritorio, podeEscrever, origem: `${proto}://${host}`, agora: new Date().toISOString() };
+  // O endereço neutro (`app.`), e não o do setor da página (05/11/2026).
+  const origem = origemDoComando(`${proto}://${host}`, sectorHost(null, baseDomain(), hostSuffix()));
+  return { meus, doEscritorio, podeEscrever, origem, agora: new Date().toISOString() };
 }
 
 // Configurações da conta do próprio usuário — o que antes era só um botão
