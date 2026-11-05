@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MODULE_ROUTES } from "@/lib/module-catalog";
+import { MODULE_CATALOG, MODULE_ROUTES } from "@/lib/module-catalog";
 import { GRUPO_DO_MODULO, agruparPorCor, areaDoGrupoDeTelas, grupoDaTelaDaEquipe } from "./gruposDaEquipe";
 
 // O que se testa (21/10/2026): no Connect da equipe a tela leva a cor do grupo
@@ -59,6 +59,22 @@ describe("grupoDaTelaDaEquipe", () => {
 
   it("todo módulo do mapa existe no catálogo, com endereço", () => {
     for (const modulo of Object.keys(GRUPO_DO_MODULO)) expect(MODULE_ROUTES[modulo], modulo).toBeTruthy();
+  });
+
+  // 05/11/2026: a Ceci, as Entregas da Tech, o Painel e os Órgãos do
+  // Societário (e o Fechamento do Fiscal) nasceram fora do mapa e saíam na
+  // cor principal, sem categoria
+  // ("a plataforma precisa seguir um padrão"). Módulo novo sem área reprova aqui.
+  it("todo módulo do catálogo tem área de uso", () => {
+    const semArea = MODULE_CATALOG.map((m) => m.code).filter((code) => !GRUPO_DO_MODULO[code]);
+    expect(semArea).toEqual([]);
+  });
+
+  it("as telas que vieram de outra levam a área da tela de origem", () => {
+    expect(grupoDaTelaDaEquipe("/ceci")).toBe("escritorio");
+    expect(grupoDaTelaDaEquipe("/controle-interno/entregas")).toBe("escritorio");
+    expect(grupoDaTelaDaEquipe("/processos/painel")).toBe("processos");
+    expect(grupoDaTelaDaEquipe("/processos/orgaos")).toBe("processos");
   });
 });
 
