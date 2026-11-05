@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODULE_CATALOG, MODULE_ROUTES } from "@/lib/module-catalog";
-import { grupoEstaAberto, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
+import { grupoEstaAberto, lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
 
 // A regra do menu de 05/11/2026 (opção A): grupos por tema em todo setor, grupo
 // de uma tela vira tela solta, e a Tela 2 fica recuada sob a Tela 1.
@@ -61,5 +61,33 @@ describe("grupoEstaAberto", () => {
     expect(grupoEstaAberto("Relatórios", "Contas", { Relatórios: true })).toBe(true);
     expect(grupoEstaAberto("Contas", "Contas", { Contas: false })).toBe(false);
     expect(grupoEstaAberto("Contas", null, {})).toBe(false);
+  });
+});
+
+// Organizar menu (05/11/2026): o super admin escolhe a ordem dos grupos e das telas.
+describe("a ordem escolhida", () => {
+  const soc = telas("societario_licencas", "societario_certidoes", "societario_robo", "societario_painel", "societario_orgaos", "societario_processos", "societario_prazos", "societario_relatorios");
+
+  it("grupos e telas na ordem escolhida; o que não está na lista vem depois, na ordem de sempre", () => {
+    const menu = montarMenuDoSetor(soc, { grupos: ["Licenças"], telas: ["societario_robo", "societario_prazos", "societario_relatorios"] });
+    expect(desenho(menu)).toEqual([
+      "Licenças: Robô, Licenças, Certidões",
+      "Operação: Exigências e prazos, Processos (Relatórios, Painel, Órgãos)",
+    ]);
+  });
+
+  it("uma tela não sai do grupo dela nem a filha sai de baixo da mãe, mesmo pedindo", () => {
+    const menu = montarMenuDoSetor(soc, { grupos: [], telas: ["societario_painel", "societario_licencas"] });
+    expect(desenho(menu)[0]).toBe("Operação: Processos (Painel, Órgãos, Relatórios), Exigências e prazos");
+  });
+
+  it("sem ordem, o menu de antes", () => {
+    expect(montarMenuDoSetor(soc, { grupos: [], telas: [] })).toEqual(montarMenuDoSetor(soc));
+  });
+
+  it("a ordem gravada estranha vira a ordem padrão; repetidos e não-texto saem", () => {
+    expect(lerOrdemDoMenu(null)).toEqual({ grupos: [], telas: [] });
+    expect(lerOrdemDoMenu("não é json")).toEqual({ grupos: [], telas: [] });
+    expect(lerOrdemDoMenu('{"grupos":["Contas","Contas",3],"telas":"x"}')).toEqual({ grupos: ["Contas"], telas: [] });
   });
 });

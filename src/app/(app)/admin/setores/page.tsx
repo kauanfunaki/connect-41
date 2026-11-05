@@ -18,7 +18,12 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
 import { getTenantModuleStates, lerSetoresLigados } from "@/lib/modules";
-import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES } from "@/lib/module-catalog";
+import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES, MODULOS_FORA_DO_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
+import { MODULOS_SPED } from "@/lib/fiscal/menu-sped";
+import { telasDoMenuDoSetor } from "@/lib/telasDoMenuDoSetor";
+import { lerOrdemDoMenuDoSetor } from "@/lib/menuDoSetorDb";
+import { OrganizarMenu } from "@/components/admin/OrganizarMenu";
+import { salvarOrdemDoMenu, restaurarOrdemDoMenu } from "./ordem-do-menu-actions";
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
 import { TELAS_DO_GERAL, podeConfigurarMenuGeral } from "@/lib/menuGeral";
 import { atualizarSetor, criarSetor } from "./actions";
@@ -100,6 +105,18 @@ export default async function SetoresPage({
           ? "Aparece quando o setor está escolhido no alto da tela."
           : null,
   }));
+
+  // Organizar menu (05/11/2026): as telas do menu do setor, pela mesma regra do
+  // layout (`telasDoMenuDoSetor`), sem as do SPED, que ficam num item só, no alto.
+  const helpdesk = modulos.find((m) => m.code === "helpdesk");
+  const telasDoMenu = escolhido
+    ? telasDoMenuDoSetor(modulos, escolhido.code, {
+        chamadosNoSetor: !!helpdesk?.enabled && chamadosNoMenuDoSetor(escolhido.code, helpdesk.sectorCode),
+        solicitacoesLigadas: modulos.some((m) => m.code === "portal_solicitacoes" && m.enabled),
+        semMenu: MODULOS_FORA_DO_MENU,
+      }).filter((t) => !MODULOS_SPED.has(t.code))
+    : [];
+  const ordemDoMenu = escolhido && ctx.role === "SUPER_ADMIN" ? await lerOrdemDoMenuDoSetor(ctx.tenantId, escolhido.code) : null;
 
   const doEscolhido = escolhido ? modulosDo(escolhido.code) : [];
   const ligadosDoEscolhido = doEscolhido.filter((m) => m.enabled).length;
@@ -238,6 +255,22 @@ export default async function SetoresPage({
                 </div>
               )}
             </Card>
+
+            {/* Organizar menu (05/11/2026): só o Super Admin ordena. */}
+            {ordemDoMenu && (
+              <Card className="p-5">
+                <OrganizarMenu
+                  key={escolhido.code}
+                  setor={escolhido.label}
+                  telas={telasDoMenu}
+                  ordemInicial={ordemDoMenu.ordem}
+                  personalizada={ordemDoMenu.personalizada}
+                  disponivel={ordemDoMenu.disponivel}
+                  salvar={salvarOrdemDoMenu.bind(null, escolhido.id)}
+                  restaurar={restaurarOrdemDoMenu.bind(null, escolhido.id)}
+                />
+              </Card>
+            )}
 
             <Card className="p-5">
               {/* Chave por setor: o interruptor de cada tela guarda o estado

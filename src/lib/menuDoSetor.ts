@@ -26,10 +26,53 @@ export type BlocoDoMenu<T extends TelaDoMenu = TelaDoMenu> =
   | { tipo: "grupo"; grupo: GrupoDeModulo; entradas: EntradaDoMenu<T>[]; telas: number };
 
 /**
- * Os blocos do menu do setor, na ordem dos grupos. Dentro de cada grupo, a
- * ordem em que as telas chegaram (a do catálogo).
+ * A ordem que o super admin escolheu para o menu do setor (05/11/2026,
+ * "Organizar menu"): os grupos e as telas, por código. O que não está na lista
+ * vem depois, na ordem de sempre (a dos grupos e a do catálogo).
  */
-export function montarMenuDoSetor<T extends TelaDoMenu>(telas: readonly T[]): BlocoDoMenu<T>[] {
+export type OrdemDoMenu = { grupos: string[]; telas: string[] };
+
+export const ORDEM_PADRAO: OrdemDoMenu = { grupos: [], telas: [] };
+
+/** Lê a ordem gravada (JSON); qualquer coisa estranha vira a ordem padrão. */
+export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
+  if (!json) return ORDEM_PADRAO;
+  try {
+    const v: unknown = JSON.parse(json);
+    if (!v || typeof v !== "object") return ORDEM_PADRAO;
+    const lista = (x: unknown) => (Array.isArray(x) ? [...new Set(x.filter((s): s is string => typeof s === "string"))] : []);
+    const o = v as Record<string, unknown>;
+    return { grupos: lista(o.grupos), telas: lista(o.telas) };
+  } catch {
+    return ORDEM_PADRAO;
+  }
+}
+
+/** Ordena pela posição na lista escolhida; quem não está nela vai depois, na ordem em que veio. */
+function pelaOrdem<T>(itens: readonly T[], chave: (i: T) => string, ordem: readonly string[]): T[] {
+  if (ordem.length === 0) return [...itens];
+  const pos = new Map(ordem.map((c, i) => [c, i]));
+  return itens
+    .map((item, i) => ({ item, i, p: pos.get(chave(item)) ?? Number.MAX_SAFE_INTEGER }))
+    .sort((a, b) => a.p - b.p || a.i - b.i)
+    .map((x) => x.item);
+}
+
+/**
+ * Os blocos do menu do setor, na ordem dos grupos. Dentro de cada grupo, a
+ * ordem em que as telas chegaram (a do catálogo) — ou a que o super admin
+ * escolheu (`ordem`), para os grupos, as telas e as filhas de cada tela.
+ */
+export function montarMenuDoSetor<T extends TelaDoMenu>(telas: readonly T[], ordem: OrdemDoMenu = ORDEM_PADRAO): BlocoDoMenu<T>[] {
+  const padrao = montarNaOrdemDoCatalogo(telas);
+  const blocos = pelaOrdem(padrao, (b) => b.grupo, ordem.grupos);
+  const ordenar = (e: EntradaDoMenu<T>): EntradaDoMenu<T> => ({ tela: e.tela, filhas: pelaOrdem(e.filhas, (f) => f.code, ordem.telas) });
+  return blocos.map((b) =>
+    b.tipo === "solta" ? { ...b, entrada: ordenar(b.entrada) } : { ...b, entradas: pelaOrdem(b.entradas, (e) => e.tela.code, ordem.telas).map(ordenar) },
+  );
+}
+
+function montarNaOrdemDoCatalogo<T extends TelaDoMenu>(telas: readonly T[]): BlocoDoMenu<T>[] {
   const presentes = new Set(telas.map((t) => t.code));
   const maeDe = (code: string) => {
     const mae = getModuleDef(code)?.telaMae;
