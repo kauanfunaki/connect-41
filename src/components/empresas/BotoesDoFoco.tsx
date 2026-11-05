@@ -20,15 +20,13 @@ export function TrabalharNestaEmpresa({ companyId, emFoco }: { companyId: string
   function entrar() {
     iniciar(async () => {
       const r = await trabalharNaEmpresa(companyId);
-      if (r.ok) toast.success(`Pronto: as telas por empresa agora mostram e gravam só ${r.descricao}.`);
-      else toast.error(r.erro);
+      if (!r.ok) toast.error(r.erro);
     });
   }
 
   function sair() {
     iniciar(async () => {
       await pararDeTrabalharNaEmpresa();
-      toast.success("As telas por empresa voltaram a mostrar todas as empresas.");
     });
   }
 
@@ -89,7 +87,6 @@ export function AbrirOQueOLinkPedia({ companyId, rotulo }: { companyId: string |
           const r = await trabalharNaEmpresa(companyId);
           if (!r.ok) return toast.error(r.erro);
           router.refresh();
-          toast.success(`Pronto: as telas por empresa agora mostram e gravam só ${r.descricao}.`);
         })
       }
     >
