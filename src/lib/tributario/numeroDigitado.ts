@@ -30,6 +30,15 @@ export function lerNumeroDigitado(texto: string): number | null | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * O número como aparece no campo fora da edição: com milhar e até duas casas
+ * ("1.200.000", "1.234,56"). `lerNumeroDigitado` lê de volta o mesmo valor.
+ */
+export function textoFormatadoDoNumero(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined || !Number.isFinite(valor)) return "";
+  return Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+}
+
 /** O número como aparece no campo enquanto se edita: vírgula decimal, sem milhar. */
 export function textoDoNumero(valor: number | null | undefined): string {
   if (valor === null || valor === undefined || !Number.isFinite(valor)) return "";

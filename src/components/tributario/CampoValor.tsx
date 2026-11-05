@@ -3,10 +3,13 @@
 // Campo de valor do Planejamento tributário (05/11/2026): reais, percentual,
 // dias ou número livre, controlado como `number | null`. Vazio é "não
 // informado" — o motor distingue isso de zero. Aceita "1.234,56".
+//
+// Fora da edição o número aparece formatado ("1.200.000"); ao entrar no campo,
+// vira o número cru ("1200000") para digitar sem tropeçar no separador.
 
 import { useState, type InputHTMLAttributes } from "react";
 import { Input } from "@/components/ui/Input";
-import { lerNumeroDigitado, textoDoNumero } from "@/lib/tributario/numeroDigitado";
+import { lerNumeroDigitado, textoDoNumero, textoFormatadoDoNumero } from "@/lib/tributario/numeroDigitado";
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type" | "prefix" | "size" | "defaultValue"> & {
   value: number | null | undefined;
@@ -19,7 +22,8 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | 
   error?: boolean;
 };
 
-export function CampoValor({ value, onChange, onBlur, prefix, suffix, compact, error, placeholder = "Não informado", ...resto }: Props) {
+export function CampoValor({ value, onChange, onFocus, onBlur, prefix, suffix, compact, error, placeholder = "Não informado", ...resto }: Props) {
+  const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(textoDoNumero(value));
   // O último valor que este campo viu: quando o de fora muda sem ser pela
   // digitação (um botão "Sem movimento: R$ 0", uma versão aberta), o texto acompanha.
@@ -38,7 +42,12 @@ export function CampoValor({ value, onChange, onBlur, prefix, suffix, compact, e
       compact={compact}
       error={error}
       placeholder={placeholder}
-      value={texto}
+      value={editando ? texto : textoFormatadoDoNumero(value)}
+      onFocus={(e) => {
+        setTexto(textoDoNumero(value));
+        setEditando(true);
+        onFocus?.(e);
+      }}
       onChange={(e) => {
         const t = e.target.value;
         setTexto(t);
@@ -49,7 +58,7 @@ export function CampoValor({ value, onChange, onBlur, prefix, suffix, compact, e
         }
       }}
       onBlur={(e) => {
-        setTexto(textoDoNumero(value));
+        setEditando(false);
         onBlur?.(e);
       }}
     />
