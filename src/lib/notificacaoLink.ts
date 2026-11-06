@@ -15,6 +15,8 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Aviso de órgão sem processo ligado: vai para a lista, onde a pessoa escolhe.
   if (n.type === "AVISO_ORGAO_SEM_PROCESSO") return "/processos/avisos";
   if (n.type === "ROBO_PRECISA_DE_VOCE") return "/robo";
+  // A geração do SPED parou (06/11/2026): a tela do Gerar mostra o motivo.
+  if (n.type === "SPED_GERACAO_PARADA") return "/sped-fiscal/gerar";
   // Alertas da Gestão (processo ou card parado, prazo): a lista mostra o item e o link dele.
   // GESTAO_ALERTA é o tipo único de antes de 05/10/2026, nas notificações já gravadas.
   if (n.type === "GESTAO_PARADO" || n.type === "GESTAO_PRAZO" || n.type === "GESTAO_ALERTA") return "/gestao/alertas";

@@ -36,6 +36,8 @@ const PASTAS = [
   "pessoas/[id]/esocial-s2200",
   // Planejamento tributário (05/11/2026): telas e ações pelo gate do contabil_planejamento.
   "planejamento-tributario",
+  // Revisão do fechamento (05/11/2026): nasceu com o gate.
+  "revisao-contabil",
 ];
 
 function arquivos(dir: string): string[] {

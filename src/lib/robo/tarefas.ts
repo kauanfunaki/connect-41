@@ -19,6 +19,13 @@
 // Tipo que submete alguma coisa ao órgão nunca volta sozinho: repetir é como se
 // abrem dois processos no órgão (ver `societario/executor.ts`). Hoje só existe
 // tipo repetível.
+//
+// ─── A geração do SPED (06/11/2026) ─────────────────────────────────────────
+//
+// O motor do SPED roda por fora, sem o app do EasyPanel: o agente dele é mais
+// uma automação do Ops Center e busca `gerar_sped` nesta mesma fila. A área do
+// tipo separa as telas (o robô do Societário não mostra o SPED), e o prazo é
+// por tipo porque uma geração passa dos 15 minutos de uma impressão.
 
 import { z } from "zod";
 
@@ -33,13 +40,22 @@ export const ROTULO_DO_STATUS: Record<StatusDaTarefa, string> = {
   CANCELADA: "Cancelada",
 };
 
+export type AreaDaTarefa = "societario" | "fiscal";
+
 type DefinicaoDoTipo = {
   rotulo: string;
+  /** A tela que mostra a tarefa: a do robô do Societário ou a do SPED. */
+  area: AreaDaTarefa;
   /** Pode rodar de novo sem efeito no órgão (só lê ou só imprime). */
   repetivel: boolean;
   /** Quantas vezes a máquina tenta antes de chamar alguém. */
   tentativas: number;
+  /** Pega e não devolvida depois disto, a tarefa é dada como perdida. */
+  prazoMs: number;
 };
+
+/** Tarefa pega e não devolvida depois disto é dada como perdida — o prazo padrão, e o menor. */
+export const PRAZO_DA_EXECUCAO_MS = 15 * 60 * 1000;
 
 /**
  * O que o robô sabe fazer. Tipo novo entra aqui e no programa da máquina
@@ -51,11 +67,17 @@ type DefinicaoDoTipo = {
  * A vigilância da IE (30/10/2026) não é pedida por ninguém: nasce quando a
  * máquina pede trabalho com `vigiar_ie` nas capacidades (ver
  * `robo/inscricaoEstadual.ts`).
+ *
+ * `gerar_sped` (06/11/2026) é do agente do motor do SPED, não do robô do
+ * Societário: gerar de novo não tem efeito fora do Connect, e a geração de um
+ * mês grande leva bem mais que uma impressão (ver
+ * `fiscal/sped/local/geracaoPeloAgente.ts`).
  */
 export const TIPOS_DE_TAREFA = {
-  imprimir_alvara: { rotulo: "Imprimir o alvará de Curitiba", repetivel: true, tentativas: 3 },
-  vigiar_ie: { rotulo: "Ler a situação da inscrição estadual", repetivel: true, tentativas: 3 },
-  observar_sima: { rotulo: "Acompanhar os protocolos do SIMA", repetivel: true, tentativas: 3 },
+  imprimir_alvara: { rotulo: "Imprimir o alvará de Curitiba", area: "societario", repetivel: true, tentativas: 3, prazoMs: PRAZO_DA_EXECUCAO_MS },
+  vigiar_ie: { rotulo: "Ler a situação da inscrição estadual", area: "societario", repetivel: true, tentativas: 3, prazoMs: PRAZO_DA_EXECUCAO_MS },
+  observar_sima: { rotulo: "Acompanhar os protocolos do SIMA", area: "societario", repetivel: true, tentativas: 3, prazoMs: PRAZO_DA_EXECUCAO_MS },
+  gerar_sped: { rotulo: "Gerar o arquivo SPED", area: "fiscal", repetivel: true, tentativas: 2, prazoMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, DefinicaoDoTipo>;
 
 export type TipoDeTarefa = keyof typeof TIPOS_DE_TAREFA;
@@ -64,11 +86,20 @@ export function ehTipoDeTarefa(valor: string): valor is TipoDeTarefa {
   return Object.prototype.hasOwnProperty.call(TIPOS_DE_TAREFA, valor);
 }
 
-/** Tarefa pega e não devolvida depois disto é dada como perdida. */
-export const PRAZO_DA_EXECUCAO_MS = 15 * 60 * 1000;
+/** Os tipos de uma área: cada tela lista só os seus. */
+export function tiposDaArea(area: AreaDaTarefa): TipoDeTarefa[] {
+  return (Object.keys(TIPOS_DE_TAREFA) as TipoDeTarefa[]).filter((t) => TIPOS_DE_TAREFA[t].area === area);
+}
 
-export function execucaoPerdida(pegaEm: Date | null, agora: Date): boolean {
-  return pegaEm !== null && agora.getTime() - pegaEm.getTime() > PRAZO_DA_EXECUCAO_MS;
+/** O rótulo no meio de uma frase: só a primeira letra em minúscula ("gerar o arquivo SPED"). */
+export function rotuloNaFrase(tipo: TipoDeTarefa): string {
+  const r = TIPOS_DE_TAREFA[tipo].rotulo;
+  return r.charAt(0).toLowerCase() + r.slice(1);
+}
+
+export function execucaoPerdida(pegaEm: Date | null, agora: Date, tipo?: TipoDeTarefa): boolean {
+  const prazo = tipo ? TIPOS_DE_TAREFA[tipo].prazoMs : PRAZO_DA_EXECUCAO_MS;
+  return pegaEm !== null && agora.getTime() - pegaEm.getTime() > prazo;
 }
 
 /**

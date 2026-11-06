@@ -94,6 +94,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   gestao_valora: "escritorio",
   contabil_sped: "escritorio",
   contabil_planejamento: "escritorio",
+  contabil_revisao: "escritorio",
   // Apoio do BPO (senhas e manual): ferramenta da equipe, não do cliente.
   bpo_senhas: "escritorio",
   bpo_manual: "escritorio",

@@ -46,6 +46,18 @@ export type DocumentoFiscal = z.infer<typeof documentoSchema>;
 export const perfilSchema = z.object({
   uf: z.string().regex(/^[A-Z]{2}$/), regime: z.enum(["simples", "presumido", "real"]),
   obrigacoes: z.array(obrigacaoSchema).min(1), inscricaoEstadual: z.string().max(30).default(""),
+  // O cadastro do arquivo (0000, 0005, 0100 e E116), 06/11/2026: o motor gera só
+  // pelo pacote. Opcionais: sem eles o motor recusa e diz o que falta.
+  codigoMunicipio: z.string().regex(/^(\d{7})?$/, "Código do município (IBGE): 7 dígitos.").default(""),
+  indPerfil: z.enum(["", "A", "B", "C"]).default(""),
+  indAtiv: z.enum(["", "0", "1"]).default(""),
+  contadorNome: z.string().max(100).default(""),
+  contadorCpf: z.string().regex(/^(\d{11})?$/, "CPF do contador: 11 dígitos.").default(""),
+  contadorCrc: z.string().max(20).default(""),
+  icmsCodReceita: z.string().max(10).default(""),
+  icmsDiaVencimento: z.string().regex(/^((0?[1-9])|([12]\d)|(3[01]))?$/, "Dia do vencimento do ICMS: de 1 a 31.").default(""),
+  codCta: z.string().max(60).default(""),
+  codInf: z.string().max(60).default(""),
 });
 export type PerfilFiscal = z.infer<typeof perfilSchema>;
 export const apoioSchema = z.object({

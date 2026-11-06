@@ -131,6 +131,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   IE_SITUACAO_MUDOU: a("alerta", "danger", "Inscrição estadual mudou"),
   // O robô do Societário parou e chamou quem pediu (30/10/2026).
   ROBO_PRECISA_DE_VOCE: p("processo", "warning", "O robô precisa de você"),
+  // A geração do SPED pela fila do agente do motor parou e chamou quem pediu (06/11/2026).
+  SPED_GERACAO_PARADA: p("processo", "warning", "A geração do SPED parou"),
   SOLICITACAO_PRAZO: a("prazo", "danger", "Prazo da solicitação"),
 };
 

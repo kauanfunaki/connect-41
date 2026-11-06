@@ -9,17 +9,37 @@ export async function temAcessoAoModulo(c: Contexto) {
   return c.config.enabled && (podeAbrir(c.ctx, c.config) || podeVerInterno(c.ctx, c.config) || await getPrisma().helpdeskTicket.count({ where: whereVisivel(c) }) > 0);
 }
 /**
- * O número do item Chamados no menu (05/11/2026, "a contagem à direita, como
- * em Solicitações"): o que pede ação de quem olha. Para a equipe que atende,
- * os chamados que esperam alguém pegar (abertos e na fila); para quem abriu,
- * os seus que esperam a resposta dele. Zero não aparece.
+ * O número do item Chamados no menu (06/11/2026, regra do Victor): o que é
+ * novo para quem olha, e some ao abrir o chamado.
+ * - Para quem atende (vê a fila): os chamados em aberto **sem responsável**
+ *   que a pessoa ainda não abriu.
+ * - Para qualquer pessoa: os chamados em que ela é **responsável** e que
+ *   tiveram alteração de outra pessoa depois da última vez que ela abriu.
+ * Zero não aparece. Abrir o chamado grava a visita (`marcarChamadoVisto`).
  */
 export async function contarChamadosDoMenu(c: Contexto): Promise<number> {
   if (!c.config.enabled || !c.ctx.userId) return 0;
-  if (podeVerInterno(c.ctx, c.config)) {
-    return getPrisma().helpdeskTicket.count({ where: { tenantId: c.ctx.tenantId, status: { in: ["ABERTO", "NA_FILA"] } } });
-  }
-  return getPrisma().helpdeskTicket.count({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, status: { in: ["AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE"] } } });
+  const db = getPrisma(), tenantId = c.ctx.tenantId, userId = c.ctx.userId;
+  const semResponsavel = podeVerInterno(c.ctx, c.config)
+    ? db.helpdeskTicket.count({ where: { tenantId, status: { notIn: ["RESOLVIDO", "CANCELADO"] }, assignees: { none: {} }, views: { none: { userId } } } })
+    : Promise.resolve(0);
+  const meus = db.helpdeskTicket.findMany({
+    where: { tenantId, assignees: { some: { userId } } },
+    select: {
+      events: { where: { OR: [{ actorId: null }, { actorId: { not: userId } }] }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
+      views: { where: { userId }, select: { viewedAt: true } },
+    },
+    orderBy: { updatedAt: "desc" }, take: 500,
+  });
+  const [a, lista] = await Promise.all([semResponsavel, meus]);
+  const alterados = lista.filter(t => { const ultima = t.events[0]?.createdAt; return !!ultima && (!t.views[0] || ultima > t.views[0].viewedAt); }).length;
+  return a + alterados;
+}
+/** Grava que a pessoa abriu o chamado agora: apaga o número dele no menu. */
+export async function marcarChamadoVisto(c: Contexto, ticketId: string) {
+  if (!c.ctx.userId) return;
+  const chave = { tenantId: c.ctx.tenantId, ticketId, userId: c.ctx.userId };
+  await getPrisma().helpdeskTicketView.upsert({ where: { tenantId_ticketId_userId: chave }, create: chave, update: { viewedAt: new Date() } });
 }
 export function whereVisivel({ ctx, config }: Contexto): Prisma.HelpdeskTicketWhereInput {
   if (!config.enabled) return { tenantId: ctx.tenantId, id: { in: [] } };

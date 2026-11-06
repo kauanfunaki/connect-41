@@ -210,6 +210,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: false, icon: "Landmark", group: "Apuração", menuDireto: true,
   },
   {
+    // A revisão do fechamento (05/11/2026): o AudTool dentro do Connect, com o
+    // motor em src/lib/revisao-contabil e o desenho em docs/REVISAO-CONTABIL.md.
+    code: "contabil_revisao", label: "Revisão do fechamento", sectorCode: "contabil",
+    description: "Confere balancete, razão, faturamento e guias do fechamento de cada empresa e aponta as inconsistências por item do manual de conferência",
+    defaultEnabled: false, icon: "CheckCheck", group: "Conferência", menuDireto: true,
+  },
+  {
     code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
     description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
     defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
@@ -826,6 +833,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   financeiro_contratos: "/contratos",
   contabil_sped: "/sped-contabil",
   contabil_planejamento: "/planejamento-tributario",
+  contabil_revisao: "/revisao-contabil",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
   tech_github_contributions: "/produtividade",

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apoioSchema, documentoSchema, obrigacaoSchema, parametrosSchema, perfilSchema } from "./dominio";
+import { escrituracaoSchema } from "./escrituracaoXml";
 const identificador = z.string().min(1).max(191);
 export const pacoteGeracaoSchema = z.object({
   versao: z.literal(1), finalidade: z.literal("geracao_connect_v1"), tenant_id: identificador,
@@ -11,5 +12,12 @@ export const pacoteGeracaoSchema = z.object({
   decisoes: z.array(z.object({ chave: z.string(), tipo: z.string(), dados: z.record(z.string(), z.unknown()), autor: z.string(), em: z.string() })),
   parametros: z.array(parametrosSchema.extend({ companyId: identificador, competencia: z.string() })),
   apuracao: z.object({ obrigacao: obrigacaoSchema, linhas: z.array(z.record(z.string(), z.unknown())), tributos: z.array(z.object({ tributo: z.string(), debitos: z.string(), creditos: z.string(), saldoAnterior: z.string().nullable(), recolher: z.string().nullable(), transportar: z.string().nullable() })), pendencias: z.array(z.string()), ajustes: z.array(z.record(z.string(), z.unknown())), totalEntradas: z.string(), totalSaidas: z.string() }),
+  /**
+   * 06/11/2026: o que o EFD ICMS/IPI exige e os blocos acima não trazem (cadastro
+   * do estabelecimento, endereço dos participantes, unidade, origem e valor
+   * bruto dos itens, tomador e municípios do CT-e). Opcional no schema: pacote
+   * congelado antes disto não tem, e o motor recusa dizendo o que falta.
+   */
+  escrituracao: escrituracaoSchema.optional(),
 });
 export type PacoteGeracaoV1 = z.infer<typeof pacoteGeracaoSchema>;
