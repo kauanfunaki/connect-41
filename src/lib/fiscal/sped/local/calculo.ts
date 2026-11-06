@@ -6,9 +6,12 @@ import desempate from "./desempate.json";
 export function cfopEfetivo(cfop: string | null, ncm: string, sentido: "entrada" | "saida", fonte: "xml" | "txt", decisao: Classificacao | null): string | null {
   if (!cfop) return null;
   if (sentido === "saida") return cfop;
-  const prefixo = fonte === "txt" ? cfop[0] : ({ "5": "1", "6": "2", "7": "3" }[cfop[0]] ?? cfop[0]);
+  // CFOP que já é de entrada (a nota de entrada de emissão própria, 06/11/2026) vale como veio, como no TXT:
+  // o de-para converte o CFOP de saída do fornecedor, e não tem o que converter aqui.
+  const comoVeio = fonte === "txt" || /^[123]/.test(cfop);
+  const prefixo = comoVeio ? cfop[0] : ({ "5": "1", "6": "2", "7": "3" }[cfop[0]] ?? cfop[0]);
   if (decisao?.definicao) return prefixo + decisao.definicao;
-  if (fonte === "txt") return cfop;
+  if (comoVeio) return cfop;
   const candidatas = Object.entries(depara.definicoes).filter(([, v]) => (v.cfops as string[]).includes(cfop)).map(([d]) => d);
   if (candidatas.length === 1) return prefixo + candidatas[0];
   const regras = Object.entries(desempate.definicao_por_ncm).flatMap(([d, prefixos]) => prefixos.map(p => ({ d, p }))).sort((a, b) => b.p.length - a.p.length);
