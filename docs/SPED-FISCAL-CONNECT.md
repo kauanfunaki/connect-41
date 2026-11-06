@@ -6,7 +6,7 @@ Classificação, Apuração e Fechamento usam o banco e o servidor do Connect. N
 
 ## Operação
 
-1. Escolha a empresa e complete o Perfil fiscal: UF, regime, inscrição estadual e obrigações. O cadastro não decide uma obrigação em função da existência da empresa no motor.
+1. Escolha a empresa e complete o Perfil fiscal: UF, regime, inscrição estadual e obrigações. O cadastro não decide uma obrigação em função da existência da empresa no motor. Para gerar o arquivo, preencha também a seção "Para o arquivo do SPED" (código IBGE do município, perfil, atividade, contador e ICMS); o endereço vem do cadastro da empresa.
 2. Abra **Importar documentos e consultar resultados** em uma das três áreas locais. Envie XML, ZIP, TXT SPED, CSV ou XLSX no modelo fornecido. Cada envio aceita até 25 MiB. ZIP: até 2000 arquivos e 128 MiB descompactados. PDFs são anexos privados, sem extração automática.
 3. Consulte os resultados de cada arquivo. A pausa aguarda o lote atual; cancelar preserva os registros anteriores. Retomar continua pelo cursor. Uma lease no banco evita dois executores para o mesmo item. O processamento avança em lotes de até 50 registros por solicitação, acionados pela tela; reabrir a tela permite retomar.
 4. Classifique produtos individualmente ou em lote. No lote, “manter” preserva as decisões anteriores e campos vazios não apagam informações. Destinação, CFOP e decisão de crédito PIS/COFINS valem para fornecedor/produto na raiz. O crédito de ICMS vale para estabelecimento e mês; no lote o valor é por produto. No ano, o valor é rateado pelo ICMS das competências, com resíduo preservado e parcelas não negativas. A opção de restaurar o crédito original remove o override, mantendo o histórico auditado.

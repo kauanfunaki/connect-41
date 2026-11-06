@@ -21,6 +21,7 @@ import { ROTULO_DO_STATUS, chaveAberta, maquinaSemSinal, type StatusDaTarefa } f
 import { ErroFiscal, carregarBase, json, montarPacote, prepararTelaLocal } from "./servidor";
 import { obrigacaoSchema, type Obrigacao } from "./dominio";
 import { serializarPacote } from "./pacote";
+import { montarEscrituracao } from "./escrituracao";
 import type { PedidoDeGeracao } from "./geracaoPeloAgente";
 
 const pedidoSchema = z.object({ obrigacao: obrigacaoSchema, tipo: z.enum(["0", "1"]), chave: z.string().uuid() });
@@ -52,7 +53,9 @@ export async function pedirGeracao(ctx: AuthContext, entrada: { empresa: string;
 
   const base = await carregarBase(tela);
   if (base.revisao !== entrada.revisao) throw new ErroFiscal("Os dados mudaram. Confira a revisão antes de gerar.", 409);
-  const pacote = montarPacote(tela, base, pedido.obrigacao, pedido.tipo);
+  // O que o arquivo exige além da apuração: o cadastro do estabelecimento e o que só o XML guardado traz.
+  const escrituracao = await montarEscrituracao(tela, base, dono.id);
+  const pacote = montarPacote(tela, base, pedido.obrigacao, pedido.tipo, escrituracao);
   try {
     const r = await db.$transaction(async (tx) => {
       const lock = await tx.spedFiscalRoot.updateMany({ where: { tenantId: ctx.tenantId, raiz: c.raiz, revision: base.revisao }, data: { revision: { increment: 0 } } });

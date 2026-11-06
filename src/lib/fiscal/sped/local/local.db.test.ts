@@ -23,6 +23,7 @@ const { autorizar, carregarBase, escreverNaRaiz, gravarDocumento, json, preparar
 const { enfileirarArquivo, processarImportacao } = await import("./fila");
 const { POST } = await import("@/app/api/fiscal/sped/local/acao/route");
 const dados = { tenantId: "", userId: "", companyId: "", filialId: "", outroTenantId: "", outraEmpresaId: "" };
+const PERFIL_DO_ARQUIVO = { uf: "PR", regime: "real", obrigacoes: ["icms_ipi", "contribuicoes"], inscricaoEstadual: "", codigoMunicipio: "4106902", indPerfil: "A", indAtiv: "1", contadorNome: "CONTADOR FICTICIO", contadorCpf: "98765432100", contadorCrc: "PR-000000/O-0", icmsCodReceita: "1015", icmsDiaVencimento: "12" };
 const nome = "SPED Fiscal QA";
 describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
   beforeAll(async () => {
@@ -142,6 +143,8 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
       // Nenhuma geração aberta de uma rodada anterior do laboratório.
       await db.robotTask.updateMany({ where: { tenantId: dados.tenantId, kind: "gerar_sped", status: { in: ["PENDENTE", "EM_EXECUCAO"] } }, data: { status: "CANCELADA", openKey: null } });
       await acao("parametros", { saldoIcms: "0.00", saldoIpi: "0.00", saldoPis: "0.00", saldoCofins: "0.00", receitaBruta: "0.00" }, "apuracao");
+      // O cadastro que o arquivo exige (bloco `escrituracao`), pelo mesmo caminho da tela.
+      expect((await acao("perfil", { ...PERFIL_DO_ARQUIVO }, "classificacao")).status).toBe(200);
     });
     afterAll(async () => { if (habilitado) await rm(`storage/sped-fiscal/${dados.tenantId}/gerados`, { recursive: true, force: true }); });
 
@@ -166,7 +169,10 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
       expect(resposta.status).toBe(200);
       const pacote = new Uint8Array(await resposta.arrayBuffer());
       expect(sha(pacote)).toBe(d.sha256); expect(pacote.length).toBe(d.tamanho);
-      expect(JSON.parse(Buffer.from(pacote).toString("utf8"))).toMatchObject({ finalidade: "geracao_connect_v1", competencia: "2026-09", obrigacao: "icms_ipi" });
+      expect(JSON.parse(Buffer.from(pacote).toString("utf8"))).toMatchObject({
+        finalidade: "geracao_connect_v1", competencia: "2026-09", obrigacao: "icms_ipi",
+        escrituracao: { estabelecimento: { razaoSocial: "EMPRESA FICTÍCIA — Matriz", codMun: "4106902", indPerfil: "A", contador: { nome: "CONTADOR FICTICIO", cpf: "98765432100" }, icms: { codReceita: "1015", diaVencimento: 12 } } },
+      });
       await expect(pacoteDaTarefa({ ...w(), slug: "outra-maquina" }, tarefa!.id)).rejects.toMatchObject({ status: 409 });
 
       const txt = Buffer.from("|0000|ARQUIVO FICTÍCIO|\r\n|9999|2|\r\n", "latin1");
@@ -215,6 +221,22 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
       const outra = await pedirGeracao(m.ctx, await pedidoNovo());
       expect(outra.geracaoId).not.toBe(r.geracaoId);
       expect((await acao("cancelar_geracao", { id: outra.geracaoId }, "gerar")).status).toBe(200);
+    });
+
+    it("o bloco escrituracao relê o XML guardado: itens, participantes e o endereço que o cadastro não tem", async () => {
+      // Competência própria: este documento não entra nas contas dos testes de 2026-09.
+      const xml = `<?xml version="1.0" encoding="UTF-8"?><nfeProc><NFe><infNFe Id="NFe41260711222333000181550010000000771123456789"><ide><mod>55</mod><nNF>77</nNF><serie>1</serie><tpNF>1</tpNF><dhEmi>2026-07-15T10:00:00-03:00</dhEmi></ide><emit><CNPJ>11222333000181</CNPJ><xNome>FORNECEDOR FICTICIO &amp; CIA</xNome><enderEmit><xLgr>RUA DO FORNECEDOR</xLgr><nro>10</nro><xBairro>VILA</xBairro><cMun>4113700</cMun></enderEmit><IE>1112223334</IE></emit><dest><CNPJ>39952818000140</CNPJ><xNome>EMPRESA FICTICIA</xNome><enderDest><xLgr>RUA DA EMPRESA FICTICIA</xLgr><nro>500</nro><xBairro>CENTRO</xBairro><cMun>4106902</cMun></enderDest></dest><det nItem="1"><prod><cProd>E1</cProd><xProd>Insumo fictício</xProd><NCM>40112090</NCM><CFOP>5102</CFOP><uCom>CX</uCom><qCom>1</qCom><vProd>50.00</vProd></prod><imposto><ICMS><ICMS00><orig>1</orig><CST>00</CST><vBC>50.00</vBC><pICMS>12.00</pICMS><vICMS>6.00</vICMS></ICMS00></ICMS></imposto></det><total><ICMSTot><vNF>50.00</vNF></ICMSTot></total></infNFe></NFe></nfeProc>`;
+      const [importacao] = await enfileirarArquivo(m.ctx, { id: dados.companyId }, new File([xml], "nota-escrituracao.xml"));
+      await processarImportacao(m.ctx, { id: dados.companyId, cnpj: "39952818000140" }, importacao);
+      const tela = await prepararTelaLocal({ empresa: dados.companyId, competencia: "2026-07", obrigacao: "icms_ipi" }, "gerar");
+      const base = await carregarBase(tela);
+      const doc = base.documentos.find((d) => d.identidade === "41260711222333000181550010000000771123456789")!;
+      const { montarEscrituracao } = await import("./escrituracao");
+      const e = await montarEscrituracao(tela, base, dados.companyId);
+      expect(e.documentos.find((d) => d.id === doc.id)).toMatchObject({ tpNF: "1", vDesc: "0.00", itens: [{ ordem: 1, unidade: "CX", origem: "1", vProd: "50.00" }] });
+      expect(e.participantes.find((p) => p.documento === "11222333000181")).toMatchObject({ nome: "FORNECEDOR FICTICIO & CIA", ie: "1112223334", codMun: "4113700", endereco: "RUA DO FORNECEDOR" });
+      // A empresa fictícia não tem endereço no cadastro: vem do XML em que ela é a destinatária.
+      expect(e.estabelecimento).toMatchObject({ razaoSocial: "EMPRESA FICTÍCIA — Matriz", endereco: "RUA DA EMPRESA FICTICIA", numero: "500", codMun: "4106902", indAtiv: "1" });
     });
 
     it("a revisão congelada não muda quando os dados mudam depois do pedido", async () => {

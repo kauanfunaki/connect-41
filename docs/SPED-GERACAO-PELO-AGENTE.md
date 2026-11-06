@@ -100,14 +100,30 @@ Não saiu:
 
 ## O pacote
 
-O formato não mudou. O [JSON Schema](contracts/sped-geracao-connect-v1.schema.json) é gerado de `src/lib/fiscal/sped/local/contrato.ts`; para regenerar, rode `node scripts/gerar-schema-sped-fiscal.mjs`.
+O [JSON Schema](contracts/sped-geracao-connect-v1.schema.json) é gerado de `src/lib/fiscal/sped/local/contrato.ts`; para regenerar, rode `node scripts/gerar-schema-sped-fiscal.mjs`.
 
 O pacote traz:
 - `versao`, `finalidade`, escritório, raiz, competência, obrigação e tipo de arquivo;
 - a revisão;
 - os estabelecimentos com o perfil de cada um;
 - os documentos com os itens e os documentos de apoio;
-- as decisões com autor e data, os parâmetros por competência e a apuração calculada.
+- as decisões com autor e data, os parâmetros por competência e a apuração calculada;
+- o bloco `escrituracao` (desde 06/11/2026), com o que o EFD ICMS/IPI exige e os blocos acima não trazem.
+
+### O bloco `escrituracao`
+
+O mapeamento de cada campo para o arquivo está em `docs/CONNECT-PACOTE-ICMS.md`, no repositório do motor (sped_generator#59). No Connect, quem monta o bloco é `src/lib/fiscal/sped/local/escrituracao.ts`; o leitor do XML é `escrituracaoXml.ts`.
+
+| Parte | De onde vem |
+|---|---|
+| `estabelecimento` | Razão social, nome fantasia, endereço, CEP, telefone e e-mail vêm do cadastro da empresa. O código IBGE do município, o perfil (A/B/C), a atividade, o contador (nome, CPF, CRC), o código de receita e o dia do vencimento do ICMS vêm do **perfil fiscal**, na seção "Para o arquivo do SPED". O endereço e o município que faltarem no cadastro saem do XML em que a própria empresa aparece. |
+| `participantes` | O XML guardado de cada documento: CNPJ/CPF, nome, IE, município e endereço de emitente, destinatário, remetente, expedidor, recebedor e tomador. Fica um por CNPJ/CPF, o cadastro mais completo. |
+| `documentos` | O XML guardado, por `id` do documento no pacote. NF-e: `tpNF`, `infCpl`, `vDesc` e, por item (`ordem`), `unidade`, `origem`, `vProd`, `vDesc` e `vICMSST`. CT-e: `tpCTe`, `chaveRef`, `tomador`, `munIni` e `munFim`. |
+
+- **Documento sem XML guardado** (veio do TXT, ou o arquivo saiu do disco) não entra em `documentos`. O motor recusa e diz qual falta.
+- **Entidades:** as do XML chegam decodificadas (`&amp;` vira `&`).
+- **Ausência de campo:** desconto e ST ausentes no XML viram `"0.00"`. Campo de cadastro que o Connect não tem vai como texto vazio, e `diaVencimento` vai como `null`.
+- **Revisão antiga:** congelada antes de 06/11/2026, não tem o bloco.
 
 Regras de leitura:
 - Valores monetários, quantidades e alíquotas são texto decimal com ponto. `null` quer dizer não levantado; zero é valor confirmado.
