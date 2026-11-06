@@ -249,7 +249,7 @@ export async function comentarItem(ctx: AtorTech, id: string, body: unknown): Pr
   } catch (e) { return erroDaOperacao(e); }
 }
 
-// O histórico do Controle interno inteiro (29/10/2026): toda alteração de item,
+// O histórico do Controle interno inteiro (29/10/2026): toda alteração de item encerrado,
 // de qualquer pessoa, da mais recente para a mais antiga. Filtra pelo título do
 // item e por quem fez; a lista de pessoas é a de quem já tem registro.
 export async function historicoTech(ctx: AuthContext, filtros: { pagina: number; q?: string; autor?: string }) {
@@ -257,7 +257,9 @@ export async function historicoTech(ctx: AuthContext, filtros: { pagina: number;
   const where: Prisma.TechInternalChangeWhereInput = {
     tenantId: ctx.tenantId,
     ...(filtros.autor ? { authorId: filtros.autor } : {}),
-    ...(filtros.q ? { item: { title: { contains: filtros.q } } } : {}),
+    // Só os itens encerrados — Concluído ou Cancelado (06/11/2026): o que está
+    // em aberto fica na Lista e no Kanban.
+    item: { status: { in: ["DONE", "CANCELED"] }, ...(filtros.q ? { title: { contains: filtros.q } } : {}) },
   };
   return getPrisma().$transaction(async tx => {
     const total = await tx.techInternalChange.count({ where });
