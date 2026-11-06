@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Upload, FileText, Truck, Hourglass, CheckCircle2, EyeOff } from "lucide-react";
+import { Upload, FileText, Truck, Hourglass, CheckCircle2, EyeOff, FileX2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
@@ -74,6 +74,9 @@ export default async function DocumentosFiscaisPage({
         <div className="flex flex-wrap items-center gap-2">
           <Button href="/documentos-fiscais/cte" variant="secondary">
             <Truck size={14} /> Consultar CT-e
+          </Button>
+          <Button href="/documentos-fiscais/recusados" variant="secondary">
+            <FileX2 size={14} /> XML recusados
           </Button>
           <Button href="/documentos-fiscais/entrada">
             <Upload size={14} /> Entrada de XML

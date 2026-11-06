@@ -7,6 +7,8 @@ import ExcelJS from "exceljs";
 import type { AuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { lerCsv, lerDocumentoXml, lerDocumentosTxt, lerLinhasApoio } from "./importacao";
+import { lerXmlFiscal } from "@/lib/fiscal/xml";
+import { registrarRecusaSemTravar } from "@/lib/fiscal/recusasServidor";
 import { ErroFiscal, escreverNaRaiz, gravarDocumento, json } from "./servidor";
 
 const LIMITE = 25 * 1024 * 1024, EXPANDIDO = 128 * 1024 * 1024;
@@ -49,6 +51,18 @@ export async function enfileirarArquivo(ctx: AuthContext, empresa: { id: string 
   }
   return ids;
 }
+/**
+ * Lê o XML como antes e, quando o leitor recusa, guarda a recusa para a contagem
+ * por município (06/11/2026) antes de deixar o erro seguir. Uma nova tentativa
+ * do mesmo arquivo soma em "vezes".
+ */
+async function lerXmlGuardandoRecusa(ctx: AuthContext, companyId: string, nome: string, xml: string) {
+  const leitura = lerXmlFiscal(xml);
+  if (!leitura.ok) {
+    await registrarRecusaSemTravar({ tenantId: ctx.tenantId, companyId, origem: "sped_local", nomeDoArquivo: nome, xml, motivo: leitura.motivo, detalhe: leitura.detalhe, userId: ctx.userId });
+  }
+  return lerDocumentoXml(xml);
+}
 export async function processarImportacao(ctx: AuthContext, empresa: { id: string; cnpj: string }, id: string) {
   const db = getPrisma(), owner = randomUUID(), agora = new Date();
   const job = await db.spedFiscalImport.findFirst({ where: { id, tenantId: ctx.tenantId, companyId: empresa.id } });
@@ -60,7 +74,7 @@ export async function processarImportacao(ctx: AuthContext, empresa: { id: strin
     const bytes = await readFile(caminhoPrivado(job.path));
     const ext = path.extname(job.name).toLowerCase();
     const texto = () => new TextDecoder(ext === ".txt" && !bytes.subarray(0, 3).equals(Buffer.from([239, 187, 191])) ? "windows-1252" : "utf-8").decode(bytes).replace(/^\uFEFF/, "");
-    const documentos = ext === ".xml" ? [lerDocumentoXml(texto())] : ext === ".txt" ? lerDocumentosTxt(texto(), empresa.cnpj) : [];
+    const documentos = ext === ".xml" ? [await lerXmlGuardandoRecusa(ctx, empresa.id, job.name, texto())] : ext === ".txt" ? lerDocumentosTxt(texto(), empresa.cnpj) : [];
     let apoios: ReturnType<typeof lerLinhasApoio> = [];
     if (ext === ".csv") apoios = lerLinhasApoio(lerCsv(texto()));
     if (ext === ".xlsx") {
