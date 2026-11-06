@@ -13,7 +13,6 @@ import { isValidCPF } from "@/lib/validation/common";
 
 export type DadosSped = {
   codMunicipioIbge: string | null;
-  spedCodVersao: string | null;
   spedIndPerfil: string | null;
   spedIndAtividade: string | null;
   contabilistaNome: string | null;
@@ -27,7 +26,6 @@ export type Contabilista = Pick<DadosSped, "contabilistaNome" | "contabilistaCpf
 
 export const CAMPOS_SPED = [
   "codMunicipioIbge",
-  "spedCodVersao",
   "spedIndPerfil",
   "spedIndAtividade",
   "contabilistaNome",
@@ -43,15 +41,6 @@ export const ATIVIDADES = [
   { valor: "0", rotulo: "0 — Industrial ou equiparado a industrial" },
   { valor: "1", rotulo: "1 — Outros (comércio, serviço, transporte…)" },
 ] as const;
-
-/**
- * Versão do leiaute da EFD ICMS/IPI de um ano: a 017 é de 2023 e cada ano soma
- * um (020 em 2026). É a sugestão de empresa nova — o campo continua editável,
- * porque quem publica a versão é o Guia Prático, não esta conta.
- */
-export function versaoDoLeiaute(ano: number): string {
-  return String(Math.max(ano - 2006, 1)).padStart(3, "0");
-}
 
 /**
  * IND_ATIV pelo CNAE principal: indústria de transformação e extrativa (seções
@@ -93,7 +82,6 @@ export function contabilistaDoFormulario(form: FormData): Contabilista {
 export function dadosSpedDoFormulario(form: FormData): DadosSped {
   return {
     codMunicipioIbge: soDigitos(texto(form.get("codMunicipioIbge"))),
-    spedCodVersao: soDigitos(texto(form.get("spedCodVersao"))),
     spedIndPerfil: texto(form.get("spedIndPerfil"))?.toUpperCase() ?? null,
     spedIndAtividade: texto(form.get("spedIndAtividade")),
     ...contabilistaDoFormulario(form),
@@ -113,7 +101,6 @@ export function erroDoContabilista(c: Contabilista): string | null {
 /** Confere o formato do que veio preenchido; tudo vazio é válido. */
 export function erroDosDadosSped(d: DadosSped): string | null {
   if (d.codMunicipioIbge && !/^\d{7}$/.test(d.codMunicipioIbge)) return "O código IBGE do município tem 7 dígitos.";
-  if (d.spedCodVersao && !/^\d{3}$/.test(d.spedCodVersao)) return "A versão do leiaute tem 3 dígitos (ex.: 020).";
   if (d.spedIndPerfil && !(PERFIS as readonly string[]).includes(d.spedIndPerfil)) return "O perfil é A, B ou C.";
   if (d.spedIndAtividade && !["0", "1"].includes(d.spedIndAtividade)) return "O indicador de atividade é 0 ou 1.";
   if (d.spedContaContabilPadrao && d.spedContaContabilPadrao.length > 60) return "Conta contábil padrão com mais de 60 caracteres.";
@@ -146,7 +133,6 @@ export function camposDoMotorPeloCadastro(c: CadastroParaMotor): Record<string, 
     ["razao_social", c.name],
     ["nome_fantasia", c.tradeName],
     ["ie", digitos(c.stateRegistration)],
-    ["cod_ver", c.spedCodVersao],
     ["ind_perfil", c.spedIndPerfil],
     ["ind_ativ", c.spedIndAtividade],
     ["cep", digitos(c.zipCode)],
@@ -171,8 +157,6 @@ export function camposDoMotorPeloCadastro(c: CadastroParaMotor): Record<string, 
  * fontes que essa pessoa acessa — nunca o SPED gerado nem o motor.
  */
 export const DICAS_SPED = {
-  spedCodVersao:
-    "Versão do leiaute da EFD ICMS/IPI do ano, publicada no Portal do SPED (sped.rfb.gov.br › EFD ICMS IPI › Guia Prático). Já vem com a versão do ano; só muda na virada do ano.",
   spedIndPerfil:
     "Perfil de apresentação que a SEFAZ do estado exige da empresa (A, B ou C). Consulte o portal da SEFAZ da UF, na página da EFD ICMS/IPI, ou o fiscal responsável pelo cliente.",
   spedIndAtividade:

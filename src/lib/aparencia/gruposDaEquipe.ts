@@ -26,7 +26,6 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   bpo_tabela_dinamica: "financeiro",
   bpo_conciliacao: "financeiro",
   bpo_cadastros: "financeiro",
-  bpo_aprovacoes: "financeiro",
   bpo_cobranca: "financeiro",
   bpo_painel_carteira: "financeiro",
   bpo_dre: "financeiro",
@@ -60,6 +59,8 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   // Solicitações: a conversa com o cliente, de qualquer setor.
   bpo_pendencias: "atendimento",
   bpo_comunicacao: "atendimento",
+  // Aprovações é aba de Solicitações (06/11/2026): mesma cor das outras.
+  bpo_aprovacoes: "atendimento",
   portal_solicitacoes: "atendimento",
   arquivos: "atendimento",
   controladoria_conversas: "atendimento",
