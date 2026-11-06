@@ -27,7 +27,6 @@ export function FormularioLocalSped({ edicao, competencia, onClose, executar, an
       if (edicao.tipo === "perfil") {
         dados.obrigacoes = f.getAll("obrigacoes");
         // Máscara digitada (000.000.000-00, 41.069-02) não vai para o cadastro: só os dígitos.
-        for (const k of ["codigoMunicipio", "contadorCpf"]) dados[k] = texto(f.get(k)).replace(/\D/g, "");
       }
       if (edicao.tipo === "classificar") {
         dados.chaves = edicao.chaves;
@@ -54,24 +53,13 @@ export function FormularioLocalSped({ edicao, competencia, onClose, executar, an
   }
   return <SlideOver open onClose={() => { if (!pendente) onClose(); }} title={titulos[edicao.tipo]} width="max-w-xl">
     <form onSubmit={salvar} className="space-y-5 p-5">
-      {edicao.tipo === "perfil" && <>{campo("uf", "UF", "text", true)}{select("regime", "Regime", [["real", "Lucro real"], ["presumido", "Lucro presumido"], ["simples", "Simples Nacional"]])}{campo("inscricaoEstadual", "Inscrição estadual")}<fieldset className="space-y-2"><legend className="text-label mb-2">Obrigações aplicáveis</legend>{[["icms_ipi", "EFD ICMS/IPI"], ["contribuicoes", "EFD Contribuições"]].map(([v, r]) => <div key={v}><Checkbox name="obrigacoes" value={v} label={r} defaultChecked={Array.isArray(d.obrigacoes) && d.obrigacoes.includes(v)} /></div>)}</fieldset>
-        {/* O cadastro que o arquivo do EFD ICMS/IPI exige (06/11/2026). Opcional para salvar; sem ele, o Gerar SPED avisa o que falta. */}
-        <fieldset className="space-y-4 border-t border-border pt-4">
-          <legend className="text-label">Para o arquivo do SPED</legend>
-          <p className="text-helper text-fg-secondary">Endereço, telefone e e-mail vêm do cadastro da empresa. Estes campos completam o que o arquivo exige.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {campo("codigoMunicipio", "Código do município (IBGE)")}
-            {campo("icmsCodReceita", "Código de receita do ICMS")}
-            {select("indPerfil", "Perfil de apresentação", [["", "Não informado"], ["A", "Perfil A"], ["B", "Perfil B"], ["C", "Perfil C"]])}
-            {select("indAtiv", "Atividade", [["", "Não informada"], ["0", "Industrial ou equiparado"], ["1", "Outras"]])}
-            {campo("icmsDiaVencimento", "Dia do vencimento do ICMS")}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {campo("contadorNome", "Contador")}
-            {campo("contadorCpf", "CPF do contador")}
-            {campo("contadorCrc", "CRC do contador")}
-          </div>
-        </fieldset></>}
+      {edicao.tipo === "perfil" && <>
+        {/* Tudo o que o cadastro da empresa já tem aparece aqui só para leitura. */}
+        <dl className="grid gap-3 sm:grid-cols-3 text-ui">{([["UF", d.uf], ["Regime", ({ simples: "Simples Nacional", presumido: "Lucro presumido", real: "Lucro real" } as Record<string, string>)[String(d.regime)]], ["Inscrição estadual", d.inscricaoEstadual], ["Município (IBGE)", d.codigoMunicipio], ["Perfil de apresentação", d.indPerfil], ["Atividade", ({ "0": "Industrial ou equiparado", "1": "Outras" } as Record<string, string>)[String(d.indAtiv)]], ["Contador", d.contadorNome], ["CPF do contador", d.contadorCpf], ["CRC do contador", d.contadorCrc]] as [string, unknown][]).map(([r, v]) => <div key={r}><dt className="text-label">{r}</dt><dd>{v ? String(v) : "—"}</dd></div>)}</dl>
+        <p className="text-helper text-fg-secondary">Esses dados vêm do cadastro da empresa. <a className="underline" href={`/empresas/${String(d.empresaId)}`}>Editar no cadastro</a></p>
+        <fieldset className="space-y-2"><legend className="text-label mb-2">Obrigações aplicáveis</legend>{[["icms_ipi", "EFD ICMS/IPI"], ["contribuicoes", "EFD Contribuições"]].map(([v, r]) => <div key={v}><Checkbox name="obrigacoes" value={v} label={r} defaultChecked={Array.isArray(d.obrigacoes) && d.obrigacoes.includes(v)} /></div>)}</fieldset>
+        <div className="grid gap-4 sm:grid-cols-2 border-t border-border pt-4">{campo("icmsCodReceita", "Código de receita do ICMS")}{campo("icmsDiaVencimento", "Dia do vencimento do ICMS")}</div>
+      </>}
       {edicao.tipo === "classificar" && <>
         <Aviso tom="info">A destinação, o CFOP e a decisão de PIS/COFINS valem para este fornecedor e produto na raiz inteira. O crédito de ICMS é desta empresa e período.</Aviso>
         {edicao.produto && <p className="text-ui">{edicao.produto.descricao} · fornecedor {edicao.produto.fornecedor}</p>}

@@ -12,7 +12,7 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { canViewSector } from "@/lib/auth/context";
 import { competenciaPadrao } from "@/lib/fiscal/motor/estabelecimentos";
 import { apurarPeriodos, conferirApoios, produtosDaBase } from "./calculo";
-import { ajusteSchema, apoioSchema, classificacaoSchema, documentoSchema, itemSchema, parametrosSchema, perfilSchema, periodoSchema, mesesDoPeriodo, chaveCredito, ratearCredito, type ApoioEscriturado, type Classificacao, type ContextoLocal, type DecisaoFiscal, type DocumentoEscriturado, type DocumentoFiscal, type Obrigacao } from "./dominio";
+import { ajusteSchema, apoioSchema, classificacaoSchema, documentoSchema, itemSchema, parametrosSchema, perfilGuardadoSchema, perfilDaEmpresa, perfilSchema, periodoSchema, mesesDoPeriodo, chaveCredito, ratearCredito, type ApoioEscriturado, type Classificacao, type ContextoLocal, type DecisaoFiscal, type DocumentoEscriturado, type DocumentoFiscal, type Obrigacao } from "./dominio";
 import type { EtapaDoSped } from "../etapas";
 import type { Escrituracao } from "./escrituracaoXml";
 
@@ -61,7 +61,7 @@ export async function carregarBase(tela: TelaLocal) {
       tx.spedFiscalBook.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids }, competence: { in: meses } } }),
       tx.spedFiscalDecision.findMany({ where: { tenantId: c.tenantId, raiz: c.raiz }, orderBy: { updatedAt: "desc" } }),
       tx.spedFiscalSupport.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids }, competence: { in: meses } } }),
-      tx.spedFiscalProfile.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids } } }),
+      tx.spedFiscalProfile.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids } } }).then(async guardados => { const cadastros = await tx.company.findMany({ where: { id: { in: ids } }, select: { id: true, stateCode: true, stateRegistration: true, taxRegimeKind: true, codMunicipioIbge: true, spedIndPerfil: true, spedIndAtividade: true, contabilistaNome: true, contabilistaCpf: true, contabilistaCrc: true, spedContaContabilPadrao: true, spedCodObservacaoPadrao: true } }); return cadastros.map(e => { const g = perfilGuardadoSchema.safeParse(guardados.find(p => p.companyId === e.id)?.data ?? {}); return { companyId: e.id, ...perfilDaEmpresa(e, g.success ? g.data : undefined) }; }); }),
       tx.spedFiscalPeriod.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids }, competence: { in: meses } } }),
       tx.spedFiscalImport.findMany({ where: { tenantId: c.tenantId, companyId: c.companyId }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, name: true, state: true, cursor: true, total: true, results: true } }),
       tx.spedFiscalRevision.findMany({ where: { tenantId: c.tenantId, companyId: c.companyId, competence: { in: meses } }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, revision: true, sha256: true, obligation: true, competence: true, remoteExecutionId: true, remotePackageId: true, createdAt: true } }),
@@ -94,7 +94,7 @@ export async function carregarBase(tela: TelaLocal) {
       const aviso = `${pendentesAcervo} documento(s) do acervo do Connect ainda sem itens na escrituração. Importe os XMLs ou os registros disponíveis do TXT para completar a apuração.`;
       icms.pendencias.push(aviso); contribuicoes.pendencias.push(aviso);
     }
-    return { revisao: root?.revision ?? 0, documentos, acervo, decisoes, apoios, ajustes, parametros, perfis: perfis.map(p => ({ companyId: p.companyId, ...perfilSchema.parse(p.data) })), periodos: periodos.map(p => ({ companyId: p.companyId, competencia: p.competence, ...parametrosSchema.parse(p.data) })), produtos, icms, contribuicoes, fechamento: conferirApoios(apoios), importacoes, revisoes: revisoes.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) };
+    return { revisao: root?.revision ?? 0, documentos, acervo, decisoes, apoios, ajustes, parametros, perfis, periodos: periodos.map(p => ({ companyId: p.companyId, competencia: p.competence, ...parametrosSchema.parse(p.data) })), produtos, icms, contribuicoes, fechamento: conferirApoios(apoios), importacoes, revisoes: revisoes.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) };
   }, { isolationLevel: "RepeatableRead", timeout: 30000 });
   // INSERT IGNORE é atômico no MySQL: prefetch, refresh e outra aba podem
   // registrar a mesma revisão juntos, preservando a primeira cópia imutável.
@@ -172,10 +172,14 @@ export async function gravarDocumento(tx: Prisma.TransactionClient, ctx: AuthCon
 export function montarPacote(tela: TelaLocal, base: BaseLocal, obrigacao: Obrigacao, tipo: "0" | "1", escrituracao?: Escrituracao) {
   const c = tela.contexto!;
   if (c.competencia.length !== 7) throw new ErroFiscal("Escolha uma competência mensal para gerar.");
-  if (base.perfis.length !== tela.grupo.length) throw new ErroFiscal("Configure o perfil fiscal de todos os estabelecimentos da geração.");
-  if (base.perfis.some(p => !p.obrigacoes.includes(obrigacao))) throw new ErroFiscal("Obrigação não habilitada no perfil fiscal.");
+  for (const e of tela.grupo) {
+    const p = base.perfis.find(p => p.companyId === e.id);
+    if (!p?.obrigacoes.length) throw new ErroFiscal(`Escolha as obrigações no perfil fiscal de ${e.nome}.`);
+    if (p.faltando.length) throw new ErroFiscal(`Complete no cadastro da empresa ${e.nome}: ${p.faltando.join(", ")}.`);
+    if (!p.obrigacoes.includes(obrigacao)) throw new ErroFiscal(`Obrigação não habilitada no perfil fiscal de ${e.nome}.`);
+  }
   const apuracao = obrigacao === "icms_ipi" ? base.icms : base.contribuicoes;
   if (apuracao.pendencias.length) throw new ErroFiscal(`Confira a apuração antes de gerar: ${apuracao.pendencias[0]}`);
-  const pacote = pacoteGeracaoSchema.parse({ versao: 1, finalidade: "geracao_connect_v1", tenant_id: c.tenantId, raiz: c.raiz, competencia: c.competencia, obrigacao, tipo_sped: tipo, revisao: base.revisao, estabelecimentos: tela.grupo.map(e => ({ id_connect: e.id, cnpj: e.cnpj, nome: e.nome, perfil: base.perfis.find(p => p.companyId === e.id) })), documentos: base.documentos, apoios: base.apoios, decisoes: base.decisoes, parametros: base.periodos, apuracao, ...(escrituracao ? { escrituracao } : {}) });
+  const pacote = pacoteGeracaoSchema.parse({ versao: 1, finalidade: "geracao_connect_v1", tenant_id: c.tenantId, raiz: c.raiz, competencia: c.competencia, obrigacao, tipo_sped: tipo, revisao: base.revisao, estabelecimentos: tela.grupo.map(e => ({ id_connect: e.id, cnpj: e.cnpj, nome: e.nome, perfil: perfilSchema.parse(base.perfis.find(p => p.companyId === e.id)) })), documentos: base.documentos, apoios: base.apoios, decisoes: base.decisoes, parametros: base.periodos, apuracao, ...(escrituracao ? { escrituracao } : {}) });
   return { pacote, ...serializarPacote(pacote) };
 }

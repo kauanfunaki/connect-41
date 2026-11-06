@@ -1429,6 +1429,7 @@ model Tenant {
   userTaskViews             UserTaskView[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
+  spedConfig                TenantSpedConfig?
   aiConfig                  TenantAiConfig?
   alertDispatches           AlertDispatch[]
   recurringObligations      RecurringObligation[]
@@ -2121,6 +2122,25 @@ model Company {
   stateRegistrationChangedAt DateTime?
   municipalRegistration String?       @db.VarChar(40)
   nire                  String?       @db.VarChar(20)
+  /// Código IBGE do município (7 dígitos), vindo do CNPJ ou do CEP (06/11/2026).
+  codMunicipioIbge      String?       @db.VarChar(7)
+  // Dados do SPED da empresa (06/11/2026): registros 0000, 0005 e 0100 e o
+  // COD_CTA/COD_INF dos lançamentos. Todos opcionais — o cadastro salva sem
+  // eles. Cada campo tem, no formulário, a dica de onde achar o dado.
+  /// COD_VER: versão do leiaute da EFD ICMS/IPI (3 dígitos).
+  spedCodVersao           String?     @db.VarChar(3)
+  /// IND_PERFIL: A, B ou C, definido pela SEFAZ da UF.
+  spedIndPerfil           String?     @db.VarChar(1)
+  /// IND_ATIV: 0 = industrial ou equiparado; 1 = outros.
+  spedIndAtividade        String?     @db.VarChar(1)
+  /// Contabilista que assina pela empresa (0100).
+  contabilistaNome        String?     @db.VarChar(100)
+  contabilistaCpf         String?     @db.VarChar(11)
+  contabilistaCrc         String?     @db.VarChar(20)
+  /// COD_CTA padrão: conta de receita do serviço no plano de contas da empresa.
+  spedContaContabilPadrao String?     @db.VarChar(60)
+  /// COD_INF padrão: código de observação/informação complementar.
+  spedCodObservacaoPadrao String?     @db.VarChar(60)
   // Contato
   email                 String?       @db.VarChar(120)
   phone                 String?       @db.VarChar(30)
@@ -7258,6 +7278,21 @@ model TenantAgendaConfig {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("tenant_agenda_configs")
+}
+
+// O padrão do SPED do escritório (06/11/2026): o contabilista que já vem
+// preenchido em empresa nova. Configuração de cada escritório — o Connect não
+// tem contabilista fixo. Tudo opcional; sem linha = sem padrão.
+model TenantSpedConfig {
+  tenantId         String   @id
+  contabilistaNome String?  @db.VarChar(100)
+  contabilistaCpf  String?  @db.VarChar(11)
+  contabilistaCrc  String?  @db.VarChar(20)
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_sped_configs")
 }
 
 // A aparência do escritório (21/10/2026): a cor principal que o portal dos

@@ -13,8 +13,28 @@ type Props = {
    * um link de ajuda. Fica fora do rótulo para não entrar no nome do campo.
    */
   acao?: React.ReactNode;
+  /**
+   * O "?" ao lado do rótulo (06/11/2026): passar o mouse, focar pelo teclado
+   * ou tocar abre a dica (pelo `DicaFlutuante`) — o que é o campo e onde achar
+   * o dado.
+   */
+  dica?: string;
   children: React.ReactNode;
 };
+
+/** O "?" com a dica de um campo. Botão para o teclado e o toque alcançarem. */
+export function AjudaDoCampo({ texto, rotulo }: { texto: string; rotulo: string }) {
+  return (
+    <button
+      type="button"
+      data-dica={texto}
+      aria-label={`Ajuda — ${rotulo}: ${texto}`}
+      className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border border-border-strong text-[10px] font-semibold leading-none text-fg-muted hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand cursor-help"
+    >
+      ?
+    </button>
+  );
+}
 
 // Campo padrão do sistema: label + required + helper/error + o controle em si
 // (Input/Select/Textarea, que já cuidam de disabled/readonly/error visualmente —
@@ -23,7 +43,7 @@ type Props = {
 // Revisão de alinhamento (30/09): é o único rótulo de campo do app. Havia
 // quatro outros montados à mão (12px cinza, 11px com mb-1…), e campos lado a
 // lado com rótulos de tamanhos diferentes desciam em alturas diferentes.
-export function CampoForm({ label, htmlFor, required = false, helper, error, className = "", acao, children }: Props) {
+export function CampoForm({ label, htmlFor, required = false, helper, error, className = "", acao, dica, children }: Props) {
   // A ajuda e o erro ligados ao campo (auditoria de UX, 30/10/2026): sem o
   // `aria-describedby`, o leitor de tela lia só o rótulo ao focar e o erro
   // ficava mudo. Só quando o filho é o próprio controle rotulado (`id` igual ao
@@ -36,11 +56,21 @@ export function CampoForm({ label, htmlFor, required = false, helper, error, cla
           "aria-invalid": children.props["aria-invalid"] ?? (error ? true : undefined),
         })
       : children;
-  const rotulo = (
+  const etiqueta = (
     <label htmlFor={htmlFor} className="text-label font-medium leading-5 text-fg">
       {label}
       {required && <span className="text-danger"> *</span>}
     </label>
+  );
+  // A dica fica fora do <label>: clicar nela não pode focar o campo, e o texto
+  // dela não entra no nome do campo.
+  const rotulo = dica ? (
+    <span className="flex items-center gap-1.5 min-w-0">
+      {etiqueta}
+      <AjudaDoCampo texto={dica} rotulo={label} />
+    </span>
+  ) : (
+    etiqueta
   );
   return (
     <div className={`flex flex-col gap-1.5 min-w-0 ${className}`.trim()}>

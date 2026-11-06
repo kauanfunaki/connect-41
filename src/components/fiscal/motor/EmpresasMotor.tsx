@@ -4,6 +4,15 @@ import { BlocoFiscal, TabelaFiscal } from "@/components/fiscal/previa/Compartilh
 import { doMotor, type TelaDoMotor } from "@/lib/fiscal/motor/tela";
 import { cnpjFormatado, dataHora } from "@/lib/fiscal/motor/formato";
 import { EditarEstabelecimento } from "./EditarEstabelecimento";
+import { getPrisma } from "@/lib/prisma";
+import { camposDoMotorPeloCadastro } from "@/lib/empresas/camposSped";
+
+const CAMPOS_DO_CADASTRO = {
+  id: true, name: true, tradeName: true, stateRegistration: true, zipCode: true, addressStreet: true, addressNumber: true,
+  addressComplement: true, neighborhood: true, phone: true, email: true, codMunicipioIbge: true, spedCodVersao: true,
+  spedIndPerfil: true, spedIndAtividade: true, contabilistaNome: true, contabilistaCpf: true, contabilistaCrc: true,
+  spedContaContabilPadrao: true, spedCodObservacaoPadrao: true,
+} as const;
 
 /**
  * Configurações › Empresas com o motor real: o cadastro de cada
@@ -16,6 +25,15 @@ export async function EmpresasMotor({ tela, permiteGerir }: { tela: TelaDoMotor;
   const lista = await doMotor(() => motor.cliente.listarEmpresas(contexto.raiz, true));
   const porId = new Map((lista.dados?.itens ?? []).map((e) => [e.id, e]));
   const podeEditar = permiteGerir && motor.escrita;
+  // O que o cadastro da empresa já sabe (06/11/2026): sugerido no modal onde o
+  // motor está vazio. Só sugestão — vai ao motor quando a pessoa salvar.
+  const cadastros = podeEditar
+    ? await getPrisma().company.findMany({
+        where: { tenantId: tela.ctx.tenantId, id: { in: mapa.visiveis.map((v) => v.companyId) } },
+        select: CAMPOS_DO_CADASTRO,
+      })
+    : [];
+  const sugestoesPorCompany = new Map(cadastros.map((c) => [c.id, camposDoMotorPeloCadastro(c)]));
   return <div className="space-y-5">
     {lista.erro && <Aviso tom="atencao">{lista.erro}</Aviso>}
     <BlocoFiscal titulo="Estabelecimentos no motor" descricao={`Raiz ${contexto.raiz}. Vinculados às empresas do escritório pelo CNPJ.${!podeEditar ? " Edição indisponível para seu perfil ou sem escrita habilitada." : ""}`}>
@@ -32,7 +50,7 @@ export async function EmpresasMotor({ tela, permiteGerir }: { tela: TelaDoMotor;
           v.obrigacoes.map((o) => (o === "icms_ipi" ? "ICMS/IPI" : o === "contribuicoes" ? "Contribuições" : o)).join(", "),
           <Selo key="s" tom={v.ativo ? "sucesso" : "neutro"}>{v.ativo ? "Ativo" : "Inativo"}</Selo>,
           <span key="a" className="text-helper">{dataHora(e?.atualizado_em)}{e?.atualizado_por ? <span className="block text-fg-muted">por {e.atualizado_por}</span> : null}</span>,
-          ...(podeEditar ? [e ? <EditarEstabelecimento key="ed" raiz={contexto.raiz} id={v.id} rotulo={v.companyNome} valores={valores} atualizadoEm={e.atualizado_em} /> : "—"] : []),
+          ...(podeEditar ? [e ? <EditarEstabelecimento key="ed" raiz={contexto.raiz} id={v.id} rotulo={v.companyNome} valores={valores} sugestoes={sugestoesPorCompany.get(v.companyId)} atualizadoEm={e.atualizado_em} /> : "—"] : []),
         ] };
       })} />
     </BlocoFiscal>

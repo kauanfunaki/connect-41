@@ -14,6 +14,7 @@ import { logAudit } from "@/lib/audit";
 import { validarMatriz } from "@/lib/companyHierarchyDb";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { camposDoRegime } from "@/lib/taxRegime";
+import { dadosSpedDoFormulario, erroDosDadosSped } from "@/lib/empresas/camposSped";
 import { ASSINATURA_SOMENTE_LEITURA, papelExclui } from "@/lib/exclusao/comum";
 import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { excluirEmpresasEmMassa as excluirEmpresasEmMassaDeVez } from "@/lib/exclusao/empresa";
@@ -52,6 +53,8 @@ function companyData(form: FormData) {
     status:                (form.get("status") as CompanyStatus) ?? CompanyStatus.PROSPECT,
     source:                pick(form, "source"),
     parentCompanyId:       pick(form, "parentCompanyId"),
+    // Os dados do SPED (06/11/2026): opcionais, já normalizados.
+    ...dadosSpedDoFormulario(form),
   };
 }
 
@@ -83,6 +86,10 @@ async function validateCompany(
 ): Promise<string | null> {
   const ehPF = data.kind === CompanyKind.PESSOA_FISICA;
   if (!data.name) return ehPF ? "O nome é obrigatório." : "A razão social é obrigatória.";
+
+  // Nenhum é obrigatório; só o formato do que veio preenchido.
+  const erroSped = erroDosDadosSped(data);
+  if (erroSped) return erroSped;
 
   const documento = ehPF ? data.cpf : data.cnpj;
   const rotulo = rotuloDoDocumento(data.kind);

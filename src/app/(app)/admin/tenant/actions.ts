@@ -10,6 +10,7 @@ import { verifySmtpConnection, type SmtpTestConfig } from "@/lib/email/sendMail"
 import { lerExpediente } from "@/lib/agendaExpediente";
 import { aparenciaDoFormulario } from "@/lib/aparencia/formulario";
 import { FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA } from "@/lib/aparencia/leitura";
+import { contabilistaDoFormulario, erroDoContabilista } from "@/lib/empresas/camposSped";
 
 export type TenantState = { error: string } | { success: true } | null;
 
@@ -118,6 +119,38 @@ export async function salvarAparencia(_prev: AparenciaState, form: FormData): Pr
 
   // O layout do portal e o da equipe leem a aparência: os dois de uma vez.
   revalidatePath("/", "layout");
+  return { success: true };
+}
+
+export type ContabilistaState = { error: string } | { success: true } | null;
+
+// O contabilista padrão do escritório (06/11/2026): já vem preenchido em
+// empresa nova. Tudo opcional — salvar vazio apaga o padrão.
+export async function salvarContabilistaPadrao(_prev: ContabilistaState, form: FormData): Promise<ContabilistaState> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { error: "Não autenticado" };
+  if (!isFullWrite(ctx.role)) return { error: "Sem permissão para editar o contabilista padrão." };
+
+  const data = contabilistaDoFormulario(form);
+  const erro = erroDoContabilista(data);
+  if (erro) return { error: erro };
+
+  try {
+    await getPrisma().tenantSpedConfig.upsert({
+      where: { tenantId: ctx.tenantId },
+      create: { tenantId: ctx.tenantId, ...data },
+      update: data,
+    });
+  } catch (err) {
+    if (isPrismaMissingTableError(err)) return { error: "Falta atualizar o banco (migration de 06/11/2026) para salvar o contabilista padrão." };
+    console.error("[salvarContabilistaPadrao]", err);
+    return { error: "Erro ao salvar o contabilista padrão." };
+  }
+
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "tenant.contabilista.update", entityType: "Tenant", entityId: ctx.tenantId, metadata: { nome: data.contabilistaNome, crc: data.contabilistaCrc } });
+
+  revalidatePath("/admin/tenant");
+  revalidatePath("/empresas/nova");
   return { success: true };
 }
 

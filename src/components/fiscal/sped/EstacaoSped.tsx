@@ -48,7 +48,7 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
   const [tipoSped, setTipoSped] = useState<"0" | "1">("0"), [chaveGeracao, setChaveGeracao] = useState(() => crypto.randomUUID());
   const apuracao = obrigacao === "icms_ipi" ? base.icms : base.contribuicoes;
   const perfil = base.perfis.find(p => p.companyId === empresa.id);
-  const abrirPerfil = () => setEdicao({ tipo: "perfil", dados: perfil ? { ...perfil } : { uf: "", regime: "", obrigacoes: [] } });
+  const abrirPerfil = () => setEdicao({ tipo: "perfil", dados: { ...perfil, empresaId: empresa.id } });
   // O cadastro que o agente exige para o ICMS/IPI (06/11/2026): com falta, o pedido nem vai para a fila.
   const faltasDoArquivo = obrigacao === "icms_ipi" ? geracao.faltas : [];
   // O andamento das gerações pela fila do Connect (06/11/2026): relido enquanto há uma aberta.
@@ -117,11 +117,12 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-helper text-fg-secondary">{empresa.nome} · {formatCnpj(empresa.cnpj)} · revisão {base.revisao}</p>
       <div className="flex flex-wrap gap-2">
-        {direitos.configurar && <Button variant="ghost" size="sm" title="Regime, UF e obrigações da empresa" onClick={abrirPerfil}><Settings2 size={14} /> Editar perfil fiscal</Button>}
+        {direitos.configurar && <Button variant="ghost" size="sm" title="Obrigações da empresa; o resto vem do cadastro" onClick={abrirPerfil}><Settings2 size={14} /> Editar perfil fiscal</Button>}
         {aba !== "gerar" && <><Button variant="secondary" size="sm" href={exportar("xlsx")} download title="Baixa a visão aberta desta competência numa planilha Excel"><Download size={14} /> Exportar em Excel</Button><Button variant="ghost" size="sm" href={exportar("csv")} download title="Baixa a visão aberta desta competência num arquivo CSV"><Download size={14} /> Exportar em CSV</Button></>}
       </div>
     </div>
-    {!perfil && <Aviso tom="atencao">Complete o perfil fiscal da empresa para definir suas obrigações, regime e UF. Você já pode importar e conferir os documentos.</Aviso>}
+    {!!perfil?.faltando.length && <Aviso tom="atencao">Complete no <a className="underline" href={`/empresas/${empresa.id}`}>cadastro da empresa</a>: {perfil.faltando.join(", ")}. Você já pode importar e conferir os documentos.</Aviso>}
+    {!perfil?.obrigacoes.length && <Aviso tom="atencao">Escolha no perfil fiscal as obrigações da empresa. Você já pode importar e conferir os documentos.</Aviso>}
     {base.acervo.length > 0 && <Aviso tom="atencao">Há {base.acervo.length} documento(s) no acervo do Connect ainda sem itens nesta escrituração. Eles aparecem no Fechamento e não entram nos valores apurados até a importação dos itens.</Aviso>}
     {/* A escolha da abrangência fica junto da empresa e do período, no topo (AbrangenciaLocalSped). */}
     {(aba === "fechamento" || aba === "apuracao") && contexto.consolidado && <p className="text-ui text-fg-secondary">Somando a matriz e as filiais da raiz {formatarRaiz(contexto.raiz)}: {grupo.map(e => e.nome).join(", ")}</p>}

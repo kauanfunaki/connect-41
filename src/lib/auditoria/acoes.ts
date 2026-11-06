@@ -452,6 +452,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tenant.agent.update": e("configurou um agente de IA"),
   "tenant.agent.reset": e("voltou ao padrão um agente de IA"),
   "tenant.ai.update": e("configurou a chave da IA", { comNome: false }),
+  "tenant.contabilista.update": e("editou o contabilista padrão do SPED", { comNome: false }),
   "tenant.ai.remove": x("removeu a chave da IA", { comNome: false }),
 
   // ── Configurações ──────────────────────────────────────────────────────────
