@@ -349,6 +349,10 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "societario.robo.pedido": c("pediu ao robô a impressão do alvará"),
   "societario.robo.cancelada": o("tirou uma tarefa da fila do robô"),
   "societario.robo.aceite_alvara": o("teve o aceite de acessibilidade do alvará marcado pelo robô"),
+  // A sessão assistida do captcha (06/11/2026): o robô pede, uma pessoa resolve pelo Connect.
+  "societario.robo.assistencia_pedida": o("parou no \"Não sou um robô\" e pediu ajuda pelo Connect"),
+  "societario.robo.assistencia_resolvida": o("marcou pelo Connect o \"Não sou um robô\" do robô"),
+  "societario.robo.assistencia_sem_resposta": o("ficou sem ajuda no \"Não sou um robô\" e seguiu para o caminho do PDF"),
   "societario.ia.varredura_aplicada": e("aplicou a varredura da IA"),
   "societario.ia.proposta_rejeitada": e("recusou uma proposta da IA"),
   "societario.cobranca_de_protocolo": e("mudou o prazo para cobrar o órgão do protocolo parado"),

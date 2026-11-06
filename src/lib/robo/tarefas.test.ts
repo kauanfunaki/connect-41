@@ -44,12 +44,15 @@ describe("execucaoPerdida", () => {
 // 06/11/2026: a geração do SPED usa a mesma fila, com prazo e tela próprios.
 describe("gerar_sped na fila do robô", () => {
   const agora = new Date("2026-11-06T12:00:00Z");
-  it("tem uma hora de prazo; as tarefas do Societário seguem com 15 minutos", () => {
+  it("tem uma hora de prazo; as tarefas do Societário seguem com 15 minutos, menos o alvará", () => {
     const ha20min = new Date(agora.getTime() - 20 * 60_000);
     expect(execucaoPerdida(ha20min, agora, "gerar_sped")).toBe(false);
-    expect(execucaoPerdida(ha20min, agora, "imprimir_alvara")).toBe(true);
+    expect(execucaoPerdida(ha20min, agora, "vigiar_ie")).toBe(true);
     expect(execucaoPerdida(new Date(agora.getTime() - 61 * 60_000), agora, "gerar_sped")).toBe(true);
-    for (const tipo of tiposDaArea("societario")) expect(TIPOS_DE_TAREFA[tipo].prazoMs).toBe(PRAZO_DA_EXECUCAO_MS);
+    // O alvará tem 25 min (06/11/2026): cabe a espera de 10 min por alguém no captcha.
+    expect(execucaoPerdida(ha20min, agora, "imprimir_alvara")).toBe(false);
+    expect(execucaoPerdida(new Date(agora.getTime() - 26 * 60_000), agora, "imprimir_alvara")).toBe(true);
+    for (const tipo of tiposDaArea("societario").filter((t) => t !== "imprimir_alvara")) expect(TIPOS_DE_TAREFA[tipo].prazoMs).toBe(PRAZO_DA_EXECUCAO_MS);
   });
 
   it("volta para a fila uma vez e, na segunda falha, chama quem pediu", () => {
