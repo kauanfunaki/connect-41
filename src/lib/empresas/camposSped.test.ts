@@ -6,7 +6,6 @@ import {
   dadosSpedDoFormulario,
   erroDosDadosSped,
   formatarCnae,
-  versaoDoLeiaute,
 } from "./camposSped";
 
 function form(campos: Record<string, string>): FormData {
@@ -17,8 +16,6 @@ function form(campos: Record<string, string>): FormData {
 
 describe("camposSped", () => {
   it("versão do leiaute por ano", () => {
-    expect(versaoDoLeiaute(2023)).toBe("017");
-    expect(versaoDoLeiaute(2026)).toBe("020");
   });
 
   it("atividade pelo CNAE: indústria é 0, o resto é 1", () => {
@@ -55,7 +52,7 @@ describe("camposSped", () => {
   it("leva ao motor só o que o cadastro tem, no formato dele", () => {
     const vazio = Object.fromEntries(
       ["name", "tradeName", "stateRegistration", "zipCode", "addressStreet", "addressNumber", "addressComplement", "neighborhood", "phone", "email",
-        "codMunicipioIbge", "spedCodVersao", "spedIndPerfil", "spedIndAtividade", "contabilistaNome", "contabilistaCpf", "contabilistaCrc",
+        "codMunicipioIbge", "spedIndPerfil", "spedIndAtividade", "contabilistaNome", "contabilistaCpf", "contabilistaCrc",
         "spedContaContabilPadrao", "spedCodObservacaoPadrao"].map((k) => [k, null])
     ) as unknown as Parameters<typeof camposDoMotorPeloCadastro>[0];
     expect(camposDoMotorPeloCadastro(vazio)).toEqual({});

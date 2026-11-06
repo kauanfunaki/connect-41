@@ -107,7 +107,6 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
       {view === "general" ? <GithubOverview data={data} query={suppliedQuery} modo={modo} onDay={openTeamDay} />
         : view === "developers" ? <Developers data={data} filtered={filtered} canConfigure={canConfigure} onDay={openUserDay} pageHref={pageHref} modo={modo} />
           : <Repositories data={data} onDay={openRepositoryDay} pageHref={pageHref} modo={modo} />}
-      {data.unidentified > 0 && <Unidentified data={data} />}
     </>}
     {detail && detailTitle && data && !loading && <DayDetails key={`${detail.kind}:${detail.id}:${detail.day}`} detail={detail} title={detailTitle} query={initialQuery} timezone={data.timezone} onClose={() => setDetail(null)} />}
   </GithubShell>;
@@ -201,23 +200,6 @@ function RepositoryCard({ repo, from, to, onDay, paleta, modo }: { repo: Reposit
           </div>)}
       </div>
     </div>
-  </section>;
-}
-
-// Commits sem conta GitHub associada (28/10/2026): o nome é o do autor no git, sem link
-// nem foto, porque não há perfil para abrir. Os coletados antes disso aparecem como
-// "Autoria não identificada" até a próxima atualização completa em Integrações.
-function Unidentified({ data }: { data: DashboardView }) {
-  return <section className="mt-6" aria-labelledby="github-sem-conta">
-    <h2 id="github-sem-conta" className="text-ui font-medium text-fg">Sem conta GitHub identificada</h2>
-    <p className="mt-1 text-helper text-fg-muted">{Number(data.unidentified).toLocaleString("pt-BR")} contribuições cujo autor não está associado a uma conta GitHub, fora dos totais individuais.</p>
-    <Card className="mt-3 divide-y divide-border p-0">
-      {data.unidentifiedAuthors.map(author => <div key={author.id} className="flex min-w-0 items-baseline gap-3 px-4 py-2 text-ui">
-        <span className="min-w-0 flex-1 truncate font-medium text-fg" title={author.login}>{author.login}</span>
-        <span className="min-w-0 flex-1 truncate text-fg-muted" title={author.repository}>{author.repository}</span>
-        <strong className="tabular-nums">{Number(author.total).toLocaleString("pt-BR")}</strong>
-      </div>)}
-    </Card>
   </section>;
 }
 

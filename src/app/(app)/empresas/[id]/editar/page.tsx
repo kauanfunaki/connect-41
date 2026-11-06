@@ -78,7 +78,6 @@ export default async function EditarEmpresaPage({
             source:                company.source                ?? undefined,
             parentCompanyId:       company.parentCompanyId        ?? undefined,
             codMunicipioIbge:        company.codMunicipioIbge        ?? undefined,
-            spedCodVersao:           company.spedCodVersao           ?? undefined,
             spedIndPerfil:           company.spedIndPerfil           ?? undefined,
             spedIndAtividade:        company.spedIndAtividade        ?? undefined,
             contabilistaNome:        company.contabilistaNome        ?? undefined,

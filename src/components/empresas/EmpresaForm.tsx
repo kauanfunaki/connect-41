@@ -66,7 +66,6 @@ export type EmpresaDefaultValues = {
   source?: string;
   parentCompanyId?: string;
   codMunicipioIbge?: string;
-  spedCodVersao?: string;
   spedIndPerfil?: string;
   spedIndAtividade?: string;
   contabilistaNome?: string;
@@ -132,7 +131,6 @@ export function EmpresaForm({
     source: defaultValues?.source ?? "",
     parentCompanyId: defaultValues?.parentCompanyId ?? "",
     codMunicipioIbge: defaultValues?.codMunicipioIbge ?? "",
-    spedCodVersao: defaultValues?.spedCodVersao ?? "",
     spedIndPerfil: defaultValues?.spedIndPerfil ?? "",
     spedIndAtividade: defaultValues?.spedIndAtividade ?? "",
     contabilistaNome: defaultValues?.contabilistaNome ?? "",
@@ -609,9 +607,6 @@ export function EmpresaForm({
                   Opcional. Dados que vão no SPED da empresa. Passe o mouse no <strong>?</strong> de cada campo para ver onde encontrar a informação.
                 </p>
                 <FieldGrid columns={GRADE}>
-                  <CampoForm label="Versão do leiaute" htmlFor="spedCodVersao" dica={DICAS_SPED.spedCodVersao}>
-                    <Input id="spedCodVersao" name="spedCodVersao" type="text" inputMode="numeric" value={values.spedCodVersao} placeholder="020" maxLength={3} />
-                  </CampoForm>
                   <CampoForm label="Perfil" htmlFor="spedIndPerfil" dica={DICAS_SPED.spedIndPerfil}>
                     <Select id="spedIndPerfil" name="spedIndPerfil" value={values.spedIndPerfil}>
                       <option value="">Selecionar…</option>
@@ -741,7 +736,6 @@ export function EmpresaForm({
                 title="SPED fiscal"
                 onEdit={() => goTo(4)}
                 items={[
-                  { label: "Versão do leiaute", value: values.spedCodVersao },
                   { label: "Perfil", value: values.spedIndPerfil },
                   { label: "Indicador de atividade", value: ATIVIDADES.find((a) => a.valor === values.spedIndAtividade)?.rotulo ?? "" },
                   { label: "Município (IBGE)", value: values.codMunicipioIbge },
