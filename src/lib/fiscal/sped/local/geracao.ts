@@ -20,7 +20,18 @@ import { MODULO_OPS } from "@/lib/ops/regras";
 import { ROTULO_DO_STATUS, chaveAberta, maquinaSemSinal, type StatusDaTarefa } from "@/lib/robo/tarefas";
 import { ErroFiscal, carregarBase, json, montarPacote, prepararTelaLocal } from "./servidor";
 import { obrigacaoSchema, type Obrigacao } from "./dominio";
-import { serializarPacote } from "./pacote";
+import { cabeNoBanco, ehPacoteGrandeDemais, mensagemDoPacoteGrande, serializarPacote } from "./pacote";
+
+/** O `max_allowed_packet` da conexão, em bytes; `null` se a consulta falhar (aí não barra). */
+async function limiteDoBanco(): Promise<number | null> {
+  try {
+    const [linha] = await getPrisma().$queryRaw<{ limite: bigint | number }[]>`SELECT @@max_allowed_packet AS limite`;
+    const limite = Number(linha?.limite);
+    return Number.isFinite(limite) && limite > 0 ? limite : null;
+  } catch {
+    return null;
+  }
+}
 import { montarEscrituracao } from "./escrituracao";
 import { faltasDoEstabelecimento, faltasDosDocumentos, mensagemDasFaltas } from "./conferenciaDoArquivo";
 import type { PedidoDeGeracao } from "./geracaoPeloAgente";
@@ -56,7 +67,16 @@ export async function pedirGeracao(ctx: AuthContext, entrada: { empresa: string;
   if (base.revisao !== entrada.revisao) throw new ErroFiscal("Os dados mudaram. Confira a revisão antes de gerar.", 409);
   // O que o arquivo exige além da apuração: o cadastro do estabelecimento e o que só o XML guardado traz.
   const escrituracao = await montarEscrituracao(tela, base, dono.id);
-  const pacote = montarPacote(tela, base, pedido.obrigacao, pedido.tipo, escrituracao);
+  let pacote: ReturnType<typeof montarPacote>;
+  try {
+    pacote = montarPacote(tela, base, pedido.obrigacao, pedido.tipo, escrituracao);
+  } catch (err) {
+    if (ehPacoteGrandeDemais(err)) throw new ErroFiscal(mensagemDoPacoteGrande(base.documentos.length, null));
+    throw err;
+  }
+  // A revisão inteira vai numa coluna JSON, num INSERT só. Acima do `max_allowed_packet`, o MySQL
+  // fecha a conexão sem dizer por quê: confere antes, pelo limite do próprio banco.
+  if (!cabeNoBanco(pacote.bytes.length, await limiteDoBanco())) throw new ErroFiscal(mensagemDoPacoteGrande(base.documentos.length, pacote.bytes.length));
   // O que o agente recusaria por falta de dado, dito agora e não depois que a máquina pegar
   // a tarefa (06/11/2026). Só o ICMS/IPI: é o que o agente gera hoje (sped_generator#59).
   if (pedido.obrigacao === "icms_ipi") {
@@ -80,6 +100,7 @@ export async function pedirGeracao(ctx: AuthContext, entrada: { empresa: string;
     await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "fiscal.sped.geracao_pedida", entityType: "SpedFiscalGeneration", entityId: r.geracaoId, metadata: { companyId: c.companyId, competencia: c.competencia, obrigacao: pedido.obrigacao, tipo: pedido.tipo, revisao: base.revisao, sha256: pacote.sha256 } });
     return { ...r, mensagem: "Pedido na fila. O agente do motor gera quando buscar a próxima tarefa; acompanhe abaixo." };
   } catch (err) {
+    if (ehPacoteGrandeDemais(err)) throw new ErroFiscal(mensagemDoPacoteGrande(base.documentos.length, pacote.bytes.length));
     if (!isPrismaUniqueError(err)) throw err;
     // Duas abas com a mesma chave: a outra gravou primeiro.
     const outro = await pedidoJaFeito(ctx, pedido.chave, { companyId: c.companyId, competencia: c.competencia, obrigacao: pedido.obrigacao, tipo: pedido.tipo });
