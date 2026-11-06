@@ -21,37 +21,14 @@ import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
 import { normalizeAccentColor } from "@/lib/color";
 import { logAudit } from "@/lib/audit";
 import { AVISO_DO_LIMITE, PROFUNDIDADE_MAXIMA, aceitaSubatividade, montarArvore, porOrdem, reposicionar, type NoDaArvore } from "@/lib/kanban/subatividades";
+import { apagarAtividadeComAnexos, subarvoreDoItem } from "@/lib/kanban/exclusaoDeAtividade";
 
 export type PipelineState = { error: string } | null;
 
 // ─── A árvore de subatividades (06/11/2026) ─────────────────────────────────
 // Ver `src/lib/kanban/subatividades.ts`: a regra e o limite moram lá.
 
-// O MySQL para a cascata em 15 níveis encadeados; nada pela tela passa de
-// PROFUNDIDADE_MAXIMA, e a volta é só a guarda contra dado montado à mão.
-const NIVEIS_NA_LEITURA = 15;
-
-/**
- * Tudo o que fica abaixo do item, em todos os níveis, com a coluna de cada
- * um. Uma leitura por nível — no máximo PROFUNDIDADE_MAXIMA na prática.
- */
-async function subarvoreDoItem(tenantId: string, raizId: string): Promise<{ id: string; stageId: string }[]> {
-  const prisma = getPrisma();
-  const out: { id: string; stageId: string }[] = [];
-  const vistos = new Set([raizId]);
-  let fronteira = [raizId];
-  for (let nivel = 0; nivel < NIVEIS_NA_LEITURA && fronteira.length > 0; nivel++) {
-    const filhas = await prisma.pipelineItem.findMany({
-      where: { tenantId, parentItemId: { in: fronteira } },
-      select: { id: true, stageId: true },
-    });
-    const novas = filhas.filter((f) => !vistos.has(f.id));
-    for (const f of novas) vistos.add(f.id);
-    out.push(...novas);
-    fronteira = novas.map((f) => f.id);
-  }
-  return out;
-}
+// A subárvore e a exclusão com os anexos moram em `src/lib/kanban/exclusaoDeAtividade.ts`.
 
 /** A profundidade do item pelo pai dele (0 = a atividade, sem pai), subindo nível a nível. */
 async function profundidadePeloPai(tenantId: string, parentItemId: string | null): Promise<number> {
@@ -1109,22 +1086,23 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
 
 /**
  * Exclui o item — as subatividades de todos os níveis vão junto, pela cascata
- * do banco (`parentItemId` ON DELETE CASCADE), com o histórico, os anexos e as
- * horas de cada uma. A tela pergunta antes, dizendo quantas são.
+ * do banco (`parentItemId` ON DELETE CASCADE), com o histórico e as horas de
+ * cada uma, e os anexos de todas (`apagarAtividadeComAnexos`, 06/11/2026: sem
+ * chave no banco, eles ficavam para trás). A tela pergunta antes, dizendo
+ * quantas são.
  *
  * O histórico de quem foi apagado vai junto com ele, então o rastro fica em
  * dois lugares (06/11/2026): no histórico do pai, quando o apagado era
- * subatividade, e na Auditoria, com quantas subatividades foram junto.
+ * subatividade, e na Auditoria, com quantas subatividades e anexos foram junto.
  */
 async function excluirComSubatividades(
   ctx: { tenantId: string; userId: string | null },
   item: { id: string; title: string | null; parentItemId: string | null },
 ): Promise<void> {
   const prisma = getPrisma();
-  const abaixo = (await subarvoreDoItem(ctx.tenantId, item.id)).length;
   const titulo = item.title ?? "(sem título)";
 
-  await prisma.pipelineItem.delete({ where: { id: item.id } });
+  const { subatividades: abaixo, anexos } = await apagarAtividadeComAnexos(ctx.tenantId, item.id);
 
   if (ctx.userId && item.parentItemId) {
     await prisma.activity.create({
@@ -1146,7 +1124,7 @@ async function excluirComSubatividades(
       action: "kanban.atividade.excluir",
       entityType: "PipelineItem",
       entityId: item.id,
-      metadata: { title: titulo, subatividades: abaixo, ...(item.parentItemId ? { pai: item.parentItemId } : {}) },
+      metadata: { title: titulo, subatividades: abaixo, anexos, ...(item.parentItemId ? { pai: item.parentItemId } : {}) },
     });
   }
 }
