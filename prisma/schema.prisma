@@ -77,6 +77,10 @@ model TechInternalItem {
   /// A entrega de onde este item veio (o bug que nasce de uma entrega): é o
   /// retrabalho das Entregas da Tech.
   originItemId  String?
+  /// A entrega no código (06/11/2026): o PR e o commit da mudança, informados
+  /// ao concluir o item — pela tela, pela API ou pelo MCP.
+  prUrl         String?                @db.VarChar(500)
+  commitSha     String?                @db.VarChar(64)
   version       Int                    @default(0)
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
@@ -988,6 +992,17 @@ enum PipelineEntityType {
 // vazia, IN_PROGRESS preenchida pela metade, PENDING pontilhada, DONE cheia
 // com check. isTerminal continua no schema (muita leitura já existente) e
 // passa a ser derivado: DONE => isTerminal true, qualquer outro => false.
+/// A permissão padrão de um espaço dos Quadros (05/11/2026, no modelo do
+/// ClickUp). Vale para quem é do setor sem coordená-lo; o coordenador e o
+/// administrador gerenciam sempre, e excluir segue só com o administrador.
+/// Regra em src/lib/kanban/permissaoDoEspaco.ts.
+enum SpacePermission {
+  TOTAL
+  EDITAR
+  COMENTAR
+  EXIBIR
+}
+
 enum StageType {
   NOT_STARTED
   IN_PROGRESS
@@ -1446,6 +1461,9 @@ model Tenant {
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
   sectorMenuViews           SectorMenuView[]
+  inventoryItems            InventoryItem[]
+  inventoryMovements        InventoryMovement[]
+  internalContracts         InternalContract[]
   sectorMenuOrders          SectorMenuOrder[]
   robotTasks                RobotTask[]
   processOrgans             ProcessOrgan[]
@@ -2356,6 +2374,14 @@ model Space {
   sectorCode String   @db.VarChar(40)
   name       String   @db.VarChar(80)
   color      String   @default("#586577") @db.VarChar(7)
+  /// O ícone do quadrado do espaço (nome de um ícone de `ICONES_DO_ESPACO`);
+  /// sem ele, o quadrado mostra a inicial do nome (05/11/2026).
+  icon        String?         @db.VarChar(40)
+  description String?         @db.Text
+  /// O que quem é do setor faz no espaço sem coordená-lo (05/11/2026). Os
+  /// espaços dos setores que tinham os Quadros bloqueados vieram como
+  /// COMENTAR; os outros, como EDITAR, que é o que o colaborador já fazia.
+  defaultPermission SpacePermission @default(EDITAR)
   order      Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -7240,6 +7266,11 @@ model TenantEnviosConfig {
   @@map("tenant_envios_configs")
 }
 
+/// LEGADO desde 05/11/2026: o bloqueio por setor virou a permissão padrão de
+/// cada espaço (`Space.defaultPermission`); a migration daquele dia passou os
+/// espaços dos setores bloqueados para COMENTAR. A tabela fica só como
+/// registro — nenhuma tela lê ou grava mais.
+///
 /// Os setores em que os colaboradores NÃO criam nem editam tarefas nos Quadros
 /// (28/10/2026, pedido do Kauan). Por padrão é liberado: sem linha, o
 /// colaborador do setor cria tarefas e atividades e edita as colunas, como o
@@ -9772,6 +9803,112 @@ model FinanceRecurrence {
   @@index([active, endMode])
   @@index([tenantId, companyId])
   @@map("finance_recurrences")
+}
+
+// ─── Financeiro interno (05/11/2026) ─────────────────────────────────────────
+//
+// O setor Financeiro é o da 41 (o BPO é o financeiro dos clientes): estoque de
+// máquinas e materiais do escritório e os contratos e assinaturas que a 41 paga.
+// Decisão do Kauan, fase 1. Regras em `src/lib/financeiroInterno/*`.
+// Pessoas por id solto (sem FK) e com o nome gravado junto, como o histórico do
+// Controle interno: sair do escritório não apaga quem estava com a máquina.
+
+/// Um item do estoque: patrimônio (uma máquina, com número) ou material (com quantidade).
+model InventoryItem {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  /// "patrimonio" | "material".
+  kind               String    @db.VarChar(20)
+  name               String    @db.VarChar(160)
+  category           String    @db.VarChar(80)
+  /// O número de patrimônio (etiqueta); único no escritório quando existe.
+  assetTag           String?   @db.VarChar(60)
+  serialNumber       String?   @db.VarChar(120)
+  location           String?   @db.VarChar(120)
+  /// Com quem está (pessoa do Connect) — ou só o nome, para quem não é usuário.
+  holderUserId       String?
+  holderName         String?   @db.VarChar(120)
+  /// DISPONIVEL | EM_USO | EMPRESTADO | MANUTENCAO | BAIXADO.
+  status             String    @default("DISPONIVEL") @db.VarChar(20)
+  quantity           Int       @default(1)
+  unit               String    @default("un") @db.VarChar(20)
+  /// Abaixo disto, o material entra no aviso de reposição.
+  minQuantity        Int?
+  purchaseDate       DateTime? @db.Date
+  purchaseValueCents Int?
+  supplier           String?   @db.VarChar(160)
+  notes              String?   @db.Text
+  /// A última conferência (inventário) do item.
+  lastCheckedAt      DateTime?
+  createdById        String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id])
+  movements InventoryMovement[]
+
+  @@unique([tenantId, assetTag])
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+  @@map("inventory_items")
+}
+
+/// O que aconteceu com um item: entrada, saída, entrega, empréstimo, devolução, manutenção, baixa, conferência.
+model InventoryMovement {
+  id            String   @id @default(uuid())
+  tenantId      String
+  itemId        String
+  /// ENTRADA | SAIDA | ENTREGA | EMPRESTIMO | DEVOLUCAO | MANUTENCAO | BAIXA | CONFERENCIA.
+  type          String   @db.VarChar(20)
+  /// Quanto entrou ou saiu (material); na conferência, a quantidade contada.
+  quantity      Int      @default(0)
+  holderUserId  String?
+  holderName    String?  @db.VarChar(120)
+  location      String?  @db.VarChar(120)
+  note          String?  @db.Text
+  createdById   String
+  createdByName String   @db.VarChar(120)
+  createdAt     DateTime @default(now())
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  item   InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, itemId, createdAt])
+  @@map("inventory_movements")
+}
+
+/// Um contrato ou assinatura que a 41 paga: software, serviço, aluguel.
+model InternalContract {
+  id          String    @id @default(uuid())
+  tenantId    String
+  name        String    @db.VarChar(160)
+  supplier    String    @db.VarChar(160)
+  /// SOFTWARE | SERVICO | ALUGUEL | OUTRO.
+  category    String    @db.VarChar(20)
+  /// O valor de cada cobrança, no ciclo abaixo.
+  amountCents Int
+  /// MENSAL | TRIMESTRAL | SEMESTRAL | ANUAL.
+  cycle       String    @db.VarChar(20)
+  startDate   DateTime? @db.Date
+  endDate     DateTime? @db.Date
+  /// A próxima renovação (ou o vencimento do contrato).
+  renewalDate DateTime? @db.Date
+  autoRenew   Boolean   @default(false)
+  /// Quem responde pelo contrato (aprova a renovação).
+  ownerUserId String?
+  ownerName   String?   @db.VarChar(120)
+  /// ATIVO | CANCELADO.
+  status      String    @default("ATIVO") @db.VarChar(20)
+  url         String?   @db.VarChar(255)
+  notes       String?   @db.Text
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status, renewalDate])
+  @@map("internal_contracts")
 }
 
 // ─── Revisão do fechamento contábil (AudTool, Fase 2, 05/11/2026) ────────────

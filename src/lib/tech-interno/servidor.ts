@@ -7,7 +7,7 @@ import { intervaloMes } from "./agenda";
 import {
   MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
   CONFLITO, SEM_VINCULO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
-  vinculoDoSistema, chaveDoSistema, nomeDoSistema, type DadosItem, type Filtros, type SistemaTech,
+  vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, type DadosItem, type Filtros, type SistemaTech,
 } from "./regras";
 
 /** O tipo do erro, para a API responder com o código e o status certos; as telas usam só a mensagem. */
@@ -114,20 +114,32 @@ export async function listarItens(ctx: AuthContext, filtros: Filtros) {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
-export async function mudarSituacaoItem(ctx: AtorTech, id: string, raw: unknown, versao: unknown): Promise<ResultadoTech> {
+/**
+ * Muda a situação. `entrega` (06/11/2026): o PR e o commit, informados ao
+ * concluir — só os campos enviados mudam; os outros ficam como estão.
+ */
+export async function mudarSituacaoItem(ctx: AtorTech, id: string, raw: unknown, versao: unknown, entrega?: unknown): Promise<ResultadoTech> {
   try {
     await conferirAcesso(ctx, "agir");
     const parsed = itemSchema.shape.status.safeParse(raw), version = versaoSchema.safeParse(versao);
     if (!parsed.success) return { error: "Situação inválida.", code: "validation_error" };
+    const doCodigo = entregaSchema.partial().safeParse(entrega ?? {});
+    if (!doCodigo.success) return { error: doCodigo.error.issues[0].message, code: "validation_error" };
+    const codigo = Object.fromEntries(Object.entries(doCodigo.data).filter(([, v]) => v !== undefined)) as { prUrl?: string | null; commitSha?: string | null };
     if (!version.success || versao === null || versao === undefined || versao === "") return conflito();
     const result = await getPrisma().$transaction(async tx => {
       const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId } });
       if (!item) throw new ErroTechInterno("Item não encontrado.", "not_found");
       if (item.version !== version.data) throw new ErroTechInterno(CONFLITO, "conflict");
-      if (item.status === parsed.data) return null;
-      const atualizado = await tx.techInternalItem.updateMany({ where: { id, tenantId: ctx.tenantId, version: version.data }, data: { status: parsed.data, version: { increment: 1 } } });
+      const changes = [
+        ...(item.status !== parsed.data ? [{ field: "Situação", before: SITUACOES[item.status], after: SITUACOES[parsed.data] }] : []),
+        ...("prUrl" in codigo && codigo.prUrl !== item.prUrl ? [{ field: "PR", before: item.prUrl, after: codigo.prUrl ?? null }] : []),
+        ...("commitSha" in codigo && codigo.commitSha !== item.commitSha ? [{ field: "Commit", before: item.commitSha, after: codigo.commitSha ?? null }] : []),
+      ];
+      if (!changes.length) return null;
+      const atualizado = await tx.techInternalItem.updateMany({ where: { id, tenantId: ctx.tenantId, version: version.data }, data: { status: parsed.data, ...codigo, version: { increment: 1 } } });
       if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO, "conflict");
-      await tx.techInternalChange.create({ data: { tenantId: ctx.tenantId, itemId: id, version: version.data + 1, changes: [{ field: "Situação", before: SITUACOES[item.status], after: SITUACOES[parsed.data] }], ...await autor(tx, ctx) } });
+      await tx.techInternalChange.create({ data: { tenantId: ctx.tenantId, itemId: id, version: version.data + 1, changes, ...await autor(tx, ctx) } });
       return { title: item.title, antes: SITUACOES[item.status], depois: SITUACOES[parsed.data] };
     });
     if (result) await registrar(ctx, "tech_interno.item.status", id, result);
@@ -148,6 +160,7 @@ function valoresLegiveis(item: ItemCompleto): Record<string, string | null> {
     "Sistema": nomeDoSistema(item),
     "Responsável": item.assignee?.name ?? null, "Prazo": item.dueDate?.toISOString().slice(0, 10) ?? null,
     "Tamanho": item.size ? TAMANHOS[item.size] : null, "Veio de": item.originItem?.title ?? null,
+    "PR": item.prUrl, "Commit": item.commitSha,
   };
 }
 async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, anterior: ItemCompleto | null) {
@@ -250,7 +263,7 @@ export async function historicoTech(ctx: AuthContext, filtros: { pagina: number;
     const total = await tx.techInternalChange.count({ where });
     const pages = Math.max(1, Math.ceil(total / TAMANHO_PAGINA)), page = Math.min(filtros.pagina, pages);
     const [changes, autores] = await Promise.all([
-      tx.techInternalChange.findMany({ where, include: { item: { select: { title: true, type: true, status: true } } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
+      tx.techInternalChange.findMany({ where, include: { item: { include: incluir } }, take: TAMANHO_PAGINA, skip: (page - 1) * TAMANHO_PAGINA,
         orderBy: [{ createdAt: "desc" }, { version: "desc" }, { id: "asc" }] }),
       tx.techInternalChange.findMany({ where: { tenantId: ctx.tenantId }, distinct: ["authorId"], select: { authorId: true, authorName: true }, orderBy: { authorName: "asc" } }),
     ]);

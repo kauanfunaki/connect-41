@@ -4,8 +4,11 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
-import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+import { logAudit } from "@/lib/audit";
+import { parseHexColor } from "@/lib/color";
 import { boardPath } from "@/lib/kanbanPaths";
+import { lerPermissao, PERMISSAO_PADRAO, ROTULO_DA_PERMISSAO, poderesNoEspaco } from "@/lib/kanban/permissaoDoEspaco";
+import { colunasDoModelo, lerIcone, modeloDeEspaco } from "@/lib/kanban/modelosDeEspaco";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 // Estágios padrão usados pelas Listas criadas pelo fluxo simplificado
@@ -17,28 +20,77 @@ const DEFAULT_STAGES = [
   { name: "Concluído", order: 3, color: "#059669", isTerminal: true },
 ];
 
+const COR_PADRAO = "#586577";
+
+function texto(form: FormData, campo: string): string {
+  const v = form.get(campo);
+  return typeof v === "string" ? v.trim() : "";
+}
+
+/** O que a janela do espaço manda — igual para criar e para editar. */
+function lerEspaco(form: FormData) {
+  const cor = texto(form, "color");
+  return {
+    name: texto(form, "name"),
+    description: texto(form, "description") || null,
+    color: parseHexColor(cor) ? cor.toUpperCase() : COR_PADRAO,
+    icon: lerIcone(texto(form, "icon")),
+    defaultPermission: lerPermissao(texto(form, "defaultPermission")) ?? PERMISSAO_PADRAO,
+  };
+}
+
+/**
+ * A janela "Criar espaço" (05/11/2026): nome, ícone e cor, descrição, a
+ * permissão padrão dos colaboradores e, se escolhido, um modelo — as listas e
+ * as colunas prontas (`MODELOS_DE_ESPACO`). Só quem coordena o setor.
+ */
 export async function criarEspaco(sectorCode: string, _prev: PipelineState, form: FormData): Promise<PipelineState> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
   if (!canManageSector(ctx, sectorCode)) return { error: "Sem permissão para criar espaço neste setor." };
 
-  const name = (form.get("name") as string)?.trim();
-  if (!name) return { error: "Nome do espaço é obrigatório" };
+  const dados = lerEspaco(form);
+  if (!dados.name) return { error: "Nome do espaço é obrigatório" };
+  if (dados.name.length > 80) return { error: "O nome do espaço vai até 80 letras." };
+  const modelo = modeloDeEspaco(texto(form, "modelo"));
 
   const prisma = getPrisma();
+  let espacoId: string;
   try {
-    await prisma.space.create({ data: { tenantId, sectorCode, name } });
+    const ordem = await prisma.space.count({ where: { tenantId, sectorCode } });
+    espacoId = await prisma.$transaction(async (tx) => {
+      const espaco = await tx.space.create({ data: { tenantId, sectorCode, order: ordem, ...dados } });
+      for (const lista of modelo?.listas ?? []) {
+        await tx.pipeline.create({
+          data: {
+            tenantId,
+            sectorCode,
+            spaceId: espaco.id,
+            name: lista.nome,
+            description: lista.descricao ?? null,
+            entityType: "COMPANY",
+            stages: { create: colunasDoModelo(modelo!) },
+          },
+        });
+      }
+      return espaco.id;
+    });
   } catch (err) {
     console.error("[criarEspaco]", err);
     return { error: "Erro ao criar espaço. Já existe um espaço com esse nome neste setor?" };
   }
 
   revalidatePath(`/setor/${sectorCode}`);
-  return null;
+  redirect(`/setor/${sectorCode}/espacos/${espacoId}`);
 }
 
-export async function criarPasta(spaceId: string, _prev: PipelineState, form: FormData): Promise<PipelineState> {
+/**
+ * As configurações do espaço — a mesma janela, sem o modelo. Só quem coordena
+ * o setor (o colaborador nunca, em nenhum nível). Mudar a permissão fica na
+ * auditoria: decide o que os colaboradores fazem.
+ */
+export async function editarEspaco(spaceId: string, _prev: PipelineState, form: FormData): Promise<PipelineState> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
@@ -46,20 +98,80 @@ export async function criarPasta(spaceId: string, _prev: PipelineState, form: Fo
   const prisma = getPrisma();
   const space = await prisma.space.findFirst({ where: { id: spaceId, tenantId } });
   if (!space) return { error: "Espaço não encontrado." };
-  if (!canManageSector(ctx, space.sectorCode)) return { error: "Sem permissão para criar pasta neste espaço." };
+  if (!poderesNoEspaco(ctx, space).gerenciar) return { error: "Só quem coordena o setor muda o espaço." };
 
-  const name = (form.get("name") as string)?.trim();
+  const dados = lerEspaco(form);
+  if (!dados.name) return { error: "Nome do espaço é obrigatório" };
+  if (dados.name.length > 80) return { error: "O nome do espaço vai até 80 letras." };
+
+  try {
+    await prisma.space.update({ where: { id: spaceId }, data: dados });
+  } catch (err) {
+    console.error("[editarEspaco]", err);
+    return { error: "Erro ao salvar o espaço. Já existe um espaço com esse nome neste setor?" };
+  }
+
+  if (dados.defaultPermission !== space.defaultPermission) {
+    const setor = await prisma.sector.findFirst({ where: { tenantId, code: space.sectorCode }, select: { id: true } });
+    await logAudit({
+      tenantId,
+      userId: ctx.userId,
+      action: "sector.quadros.permissao",
+      entityType: "Sector",
+      entityId: setor?.id ?? space.sectorCode,
+      metadata: {
+        sectorCode: space.sectorCode,
+        espaco: dados.name,
+        de: ROTULO_DA_PERMISSAO[space.defaultPermission],
+        para: ROTULO_DA_PERMISSAO[dados.defaultPermission],
+      },
+    });
+  }
+
+  revalidatePath(`/setor/${space.sectorCode}`, "layout");
+  return null;
+}
+
+/** A pasta, com o espaço já conferido. Devolve o id ou o erro. */
+async function gravarPasta(spaceId: string, form: FormData): Promise<{ id: string; sectorCode: string } | { error: string }> {
+  const ctx = await getAuthContext();
+  const { tenantId } = ctx;
+  if (!tenantId) return { error: "Não autenticado" };
+
+  const prisma = getPrisma();
+  const space = await prisma.space.findFirst({ where: { id: spaceId, tenantId } });
+  if (!space) return { error: "Espaço não encontrado." };
+  // Criar pasta: a coordenação e, com "Edição total", o colaborador (05/11/2026).
+  if (!poderesNoEspaco(ctx, space).criarPasta) return { error: "Sem permissão para criar pasta neste espaço." };
+
+  const name = texto(form, "name");
   if (!name) return { error: "Nome da pasta é obrigatório" };
 
   try {
-    await prisma.folder.create({ data: { tenantId, spaceId, name } });
+    const pasta = await prisma.folder.create({ data: { tenantId, spaceId, name } });
+    revalidatePath(`/setor/${space.sectorCode}/espacos/${spaceId}`);
+    return { id: pasta.id, sectorCode: space.sectorCode };
   } catch (err) {
     console.error("[criarPasta]", err);
     return { error: "Erro ao criar pasta." };
   }
+}
 
-  revalidatePath(`/setor/${space.sectorCode}/espacos/${spaceId}`);
-  return null;
+export async function criarPasta(spaceId: string, _prev: PipelineState, form: FormData): Promise<PipelineState> {
+  const r = await gravarPasta(spaceId, form);
+  return "error" in r ? r : null;
+}
+
+/**
+ * "Criar pasta" pelo "+" da tela de Quadros (05/11/2026): o espaço vem da
+ * janela, não da página. Abre a pasta criada.
+ */
+export async function criarPastaNoEspacoEscolhido(_prev: PipelineState, form: FormData): Promise<PipelineState> {
+  const spaceId = texto(form, "spaceId");
+  if (!spaceId) return { error: "Escolha o espaço da pasta." };
+  const r = await gravarPasta(spaceId, form);
+  if ("error" in r) return r;
+  redirect(`/setor/${r.sectorCode}/pastas/${r.id}`);
 }
 
 // Fluxo "Nova lista" simplificado — só pede nome (+ descrição opcional).
@@ -78,17 +190,18 @@ export async function criarListaSimples(
   const prisma = getPrisma();
   const space = await prisma.space.findFirst({ where: { id: spaceId, tenantId } });
   if (!space) return { error: "Espaço não encontrado." };
-  // Criar tarefa no espaço: também o colaborador, se o setor não está bloqueado (28/10/2026).
-  if (!(await podeEditarQuadrosNoSetor(ctx, space.sectorCode))) return { error: "Sem permissão para criar tarefa neste espaço." };
+  // Criar lista: quem edita no espaço — a coordenação e, com "Editar" ou
+  // "Edição total", o colaborador (05/11/2026).
+  if (!poderesNoEspaco(ctx, space).editar) return { error: "Sem permissão para criar lista neste espaço." };
 
   if (folderId) {
     const folder = await prisma.folder.findFirst({ where: { id: folderId, spaceId } });
     if (!folder) return { error: "Pasta não encontrada." };
   }
 
-  const name = (form.get("name") as string)?.trim();
-  if (!name) return { error: "Nome da tarefa é obrigatório" };
-  const description = (form.get("description") as string)?.trim() || null;
+  const name = texto(form, "name");
+  if (!name) return { error: "Nome da lista é obrigatório" };
+  const description = texto(form, "description") || null;
 
   let destination: string;
   try {
@@ -107,10 +220,20 @@ export async function criarListaSimples(
     destination = boardPath(pipeline);
   } catch (err) {
     console.error("[criarListaSimples]", err);
-    return { error: "Erro ao criar a tarefa." };
+    return { error: "Erro ao criar a lista." };
   }
 
   redirect(destination);
+}
+
+/**
+ * "Criar lista" pelo "+" da tela de Quadros (05/11/2026): a localização vem da
+ * janela — "espaço" ou "espaço/pasta".
+ */
+export async function criarListaNoLocalEscolhido(prev: PipelineState, form: FormData): Promise<PipelineState> {
+  const [spaceId, folderId] = texto(form, "local").split("/");
+  if (!spaceId) return { error: "Escolha onde fica a lista." };
+  return criarListaSimples(spaceId, folderId || null, prev, form);
 }
 
 // ─── Exclusão ──────────────────────────────────────────────────────────────

@@ -34,6 +34,9 @@ const registro = () => ({
   recipients: [],
   financeEntry: null,
   financeEntries: [],
+  // A permissão padrão do espaço (05/11/2026): os gestos do dia a dia abaixo
+  // são do colaborador num espaço que o deixa editar.
+  defaultPermission: "EDITAR",
   space: { sectorCode: "setor" },
   vaga: { id: "v1", sectorCode: "setor", restrictedToRecruiters: false },
   // A página do manual é do setor do documento dela desde 05/11/2026 (o

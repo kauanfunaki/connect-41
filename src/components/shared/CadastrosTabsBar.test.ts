@@ -10,8 +10,8 @@ vi.mock("@/lib/auth/modulo", () => ({ podeNoModulo: mocks.podeNoModulo }));
 import { CadastrosTabsBar } from "./CadastrosTabsBar";
 
 async function abas(active: Parameters<typeof CadastrosTabsBar>[0]["active"]): Promise<{ abas: AbaDeLink[]; ativa: string }> {
-  const div = await CadastrosTabsBar({ active });
-  const barra = (div.props as { children: React.ReactElement[] }).children[1];
+  const cabecalho = await CadastrosTabsBar({ active, subtitulo: "x" });
+  const barra = (cabecalho.props as { children: React.ReactElement[] }).children[1];
   return barra.props as { abas: AbaDeLink[]; ativa: string };
 }
 
@@ -33,5 +33,15 @@ describe("abas de Cadastros", () => {
     expect(lista.at(-1)).toMatchObject({ chave: "fornecedores", rotulo: "Fornecedores e sacados", href: "/fornecedores-e-sacados" });
     expect(ativa).toBe("fornecedores");
     expect(mocks.podeNoModulo).toHaveBeenCalledWith(expect.anything(), "bpo_cadastros", "ver");
+  });
+});
+
+describe("cabeçalho de Cadastros (05/11/2026)", () => {
+  it("o título é Cadastros, com o subtítulo da aba, e as abas vêm embaixo", async () => {
+    mocks.pode = false;
+    const cabecalho = await CadastrosTabsBar({ active: "pessoas", subtitulo: "Os funcionários internos do escritório." });
+    const [titulo, barra] = (cabecalho.props as { children: React.ReactElement[] }).children;
+    expect(titulo!.props).toMatchObject({ title: "Cadastros", subtitle: "Os funcionários internos do escritório." });
+    expect((barra!.props as { ativa: string }).ativa).toBe("pessoas");
   });
 });

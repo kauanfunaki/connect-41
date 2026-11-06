@@ -10,8 +10,6 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { getSectorMaps } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { getAuthContext, isFullAccess, isFullWrite, canViewSector } from "@/lib/auth/context";
-import { alcancaModulo } from "@/lib/auth/modulo";
-import { GITHUB_MODULE } from "@/lib/github/types";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
@@ -209,9 +207,6 @@ export default async function AppLayout({
   // e a ordem que o super admin escolheu para ele (05/11/2026).
   const activeSectorModules = activeSector ? telasDoMenuDoSetor(moduleStates, activeSector.code, { chamadosNoSetor, solicitacoesLigadas, semMenu }) : [];
   const ordemDoMenu = activeSector ? (await lerOrdemDoMenuDoSetor(tenantId, activeSector.code)).ordem : undefined;
-  // A aba Times do GitHub (04/11/2026) é de quem gerencia o módulo: o coordenador do Tech e os administradores.
-  const github = moduleStates.find((m) => m.code === GITHUB_MODULE);
-  const podeGerirGithub = github ? alcancaModulo(ctx, github.sectorCodes, github.enabled, "gerir") : false;
   // Fixadas: a ordem é a que a pessoa escolheu, e o filtro é o que ela pode
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
@@ -240,7 +235,6 @@ export default async function AppLayout({
         sectors={visibleSectors}
         activeSector={activeSector}
         activeSectorModules={activeSectorModules}
-        podeGerirGithub={podeGerirGithub}
         telasNavegaveis={telasNavegaveis}
         telasFixadas={telasFixadas}
         appDomain={baseDomain()}

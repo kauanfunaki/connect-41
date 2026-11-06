@@ -10,6 +10,8 @@ import { podeVerSetor } from "@/lib/gestao/regras";
 
 export type LinhaDeHora = Apontamento & {
   id: string;
+  /** Pelo cronômetro ou à mão (04/11/2026); nulo nos apontamentos de antes. */
+  origem: "CRONOMETRO" | "MANUAL" | null;
   dia: Date;
   nota: string | null;
   titulo: string;
@@ -46,6 +48,7 @@ export async function horasDoPeriodo(tenantId: string, recorte: "todos" | string
       minutes: true,
       note: true,
       loggedOn: true,
+      source: true,
       pipelineItem: {
         select: { id: true, title: true, entityType: true, entityId: true, pipelineId: true, pipeline: { select: { sectorCode: true, name: true } } },
       },
@@ -59,6 +62,7 @@ export async function horasDoPeriodo(tenantId: string, recorte: "todos" | string
     if (e.process) {
       linhas.push({
         id: e.id,
+        origem: e.source ?? null,
         setor: setorDoSocietario,
         userId: e.userId,
         minutos: e.minutes,
@@ -72,6 +76,7 @@ export async function horasDoPeriodo(tenantId: string, recorte: "todos" | string
       const c = e.pipelineItem;
       linhas.push({
         id: e.id,
+        origem: e.source ?? null,
         setor: c.pipeline.sectorCode,
         userId: e.userId,
         minutos: e.minutes,

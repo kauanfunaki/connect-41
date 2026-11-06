@@ -339,6 +339,13 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "UserTaskView", coluna: "userId", tratamento: "apagar" },
   { modelo: "RobotTask", coluna: "requestedById", tratamento: "desligar" },
   { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
+  // O Financeiro da 41 (05/11/2026): o nome fica gravado junto do id.
+  { modelo: "InventoryItem", coluna: "holderUserId", tratamento: "manter", motivo: "com quem está o item; o nome fica gravado em holderName e a tela mostra o nome" },
+  { modelo: "InventoryItem", coluna: "createdById", tratamento: "manter", motivo: "autor do cadastro do item do estoque; a tela não expõe o id" },
+  { modelo: "InventoryMovement", coluna: "holderUserId", tratamento: "manter", motivo: "histórico do estoque, com o nome gravado no movimento" },
+  { modelo: "InventoryMovement", coluna: "createdById", tratamento: "manter", motivo: "histórico do estoque, com o nome de quem registrou" },
+  { modelo: "InternalContract", coluna: "ownerUserId", tratamento: "manter", motivo: "quem responde pelo contrato; o nome fica gravado em ownerName e a tela mostra o nome" },
+  { modelo: "InternalContract", coluna: "createdById", tratamento: "manter", motivo: "autor do cadastro do contrato; a tela não expõe o id" },
   { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },

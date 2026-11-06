@@ -39,7 +39,8 @@ type Props = {
   deleteAction?: (itemId: string) => Promise<void>;
 };
 
-const PRIORITY_LABEL: Record<string, string> = { "": "Toda prioridade", "0": "Normal", "1": "Alta", "2": "Urgente" };
+// "0" é a tarefa sem prioridade — o jeito como ela nasce (05/11/2026); era "Normal".
+const PRIORITY_LABEL: Record<string, string> = { "": "Toda prioridade", "0": "Sem prioridade", "1": "Alta", "2": "Urgente" };
 const DUE_FILTERS = [
   { value: "", label: "Todo prazo" },
   { value: "overdue", label: "Atrasadas" },
@@ -234,7 +235,14 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
 
       <div className="flex-1 min-h-0">
         {view === "board" ? (
-          <KanbanBoard pipelineId={pipelineId} basePath={basePath} stages={stages} items={filtered} moveAction={moveAction} />
+          <KanbanBoard
+            pipelineId={pipelineId}
+            basePath={basePath}
+            stages={stages}
+            items={filtered}
+            moveAction={moveAction}
+            criarTarefa={canAct ? createTaskAction : undefined}
+          />
         ) : (
           <TaskListView
             basePath={basePath}

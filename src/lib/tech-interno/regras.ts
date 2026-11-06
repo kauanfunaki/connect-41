@@ -22,6 +22,15 @@ export const CONFLITO = "Este registro foi alterado por outra pessoa. Atualize a
 
 const opcional = (max: number) => z.string({ error: "Texto inválido." }).trim().max(max, `O campo deve ter até ${max} caracteres.`).nullish().transform(v => v || null);
 const idOpcional = opcional(191);
+// O PR e o commit da mudança (06/11/2026): o endereço do PR (http/https) e o
+// hash do commit, curto ou completo. Opcionais; vazio limpa.
+const ENDERECO_DO_PR = /^https?:\/\/[^\s]+$/i, HASH_DO_COMMIT = /^[0-9a-f]{7,64}$/i;
+export const entregaNoCodigo = {
+  prUrl: opcional(500).refine(v => !v || ENDERECO_DO_PR.test(v), "Informe o endereço completo do PR (https://…)."),
+  commitSha: opcional(64).refine(v => !v || HASH_DO_COMMIT.test(v), "Informe o hash do commit (7 a 64 caracteres, só 0-9 e a-f)."),
+};
+export const entregaSchema = z.object(entregaNoCodigo);
+export type EntregaNoCodigo = z.infer<typeof entregaSchema>;
 const dia = z.iso.date({ error: "Informe uma data válida." }).refine(v => v >= "1900-01-01" && v <= "9999-12-31", "Data inválida.");
 export const itemSchema = z.object({
   title: z.string().trim().min(1, "Informe o título.").max(200, "O título deve ter até 200 caracteres."),
@@ -35,6 +44,7 @@ export const itemSchema = z.object({
   dueDate: z.union([dia, z.literal(""), z.null()], { error: "Informe uma data válida." }).optional().transform(v => v || null),
   size: z.union([z.enum(["P", "M", "G"]), z.literal(""), z.null()], { error: "Tamanho inválido." }).optional().transform(v => v || null),
   originItemId: idOpcional,
+  ...entregaNoCodigo,
 }).superRefine((v, ctx) => {
   if (v.systemMode === "EXISTING" && !vinculoDoSistema(v.systemKey)) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Escolha um sistema do Ops Center." });
   if (v.systemMode !== "EXISTING" && v.systemKey) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Esta opção não permite um sistema cadastrado." });
@@ -117,6 +127,7 @@ export function fraseDaAlteracao({ field, before, after }: Alteracao, criacao = 
   if (field === "Título") return `renomeou de “${antes ?? ""}” para “${depois ?? ""}”`;
   if (field === "Descrição") return !antes ? "adicionou a descrição" : !depois ? "removeu a descrição" : "editou a descrição";
   if (field === "Responsável") return !antes ? `definiu o responsável: ${depois}` : !depois ? `removeu o responsável (${antes})` : `trocou o responsável de ${antes} para ${depois}`;
+  if (field === "PR" || field === "Commit") return !antes ? `informou o ${field}: ${depois}` : !depois ? `removeu o ${field} (${antes})` : `trocou o ${field} de ${antes} para ${depois}`;
   if (field === "Prazo") return !antes ? `definiu o prazo para ${depois}` : !depois ? `removeu o prazo (era ${antes})` : `mudou o prazo de ${antes} para ${depois}`;
   return `mudou ${ARTIGO[field] ?? field.toLowerCase()} de ${antes ?? "não informado"} para ${depois ?? "não informado"}`;
 }

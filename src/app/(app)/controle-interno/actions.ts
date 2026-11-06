@@ -20,8 +20,8 @@ export async function comentarItemTech(id: string, form: FormData): Promise<Resp
   if ("ok" in result) { revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id }; }
   return { error: result.error };
 }
-export async function mudarSituacaoTech(id: string, status: string, version: number): Promise<Resposta> {
-  const result = await mudarSituacaoItem(await getAuthContext(), id, status, version);
+export async function mudarSituacaoTech(id: string, status: string, version: number, entrega?: { prUrl?: string; commitSha?: string }): Promise<Resposta> {
+  const result = await mudarSituacaoItem(await getAuthContext(), id, status, version, entrega);
   if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id: result.id }; }
   return { error: result.error };
 }

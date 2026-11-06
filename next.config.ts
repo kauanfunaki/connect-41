@@ -83,11 +83,24 @@ const nextConfig: NextConfig = {
       // A Tech (04/11/2026, depois do #378 e do #380).
       { source: "/tech/controle-interno/:caminho*", destination: "/controle-interno/:caminho*", permanent: false },
       { source: "/tech/ceci/:caminho*", destination: "/ceci/:caminho*", permanent: false },
+      // O GitHub virou a Produtividade (05/11/2026); desde 06/11 os
+      // desenvolvedores e os times são a aba Pessoas, e o GitHub fica com o
+      // Geral e os repositórios. Os específicos antes do geral. A API
+      // (/api/github) não muda.
+      { source: "/github/desenvolvedores", destination: "/produtividade/pessoas", permanent: false },
+      { source: "/github/times", destination: "/produtividade/pessoas/times", permanent: false },
+      { source: "/produtividade/github/desenvolvedores", destination: "/produtividade/pessoas", permanent: false },
+      { source: "/produtividade/github/times", destination: "/produtividade/pessoas/times", permanent: false },
+      { source: "/github/:caminho*", destination: "/produtividade/github/:caminho*", permanent: false },
       // O Fiscal (05/11/2026), como o SPED do Contábil: as quatro etapas do
       // SPED na raiz de /sped-fiscal, e as telas do motor embaixo, em /motor.
       // A ordem importa: /fiscal/sped antes da regra geral de /fiscal.
       { source: "/fiscal/sped/:caminho*", destination: "/sped-fiscal/:caminho*", permanent: false },
       { source: "/fiscal/:caminho*", destination: "/sped-fiscal/motor/:caminho*", permanent: false },
+      // Cadastros (05/11/2026): o endereço curto abre a primeira aba. Cada aba
+      // segue com o próprio endereço (/empresas, /pessoas…), que é o que os
+      // links de cadastro (/empresas/123) e os filtros guardados usam.
+      { source: "/cadastros", destination: "/empresas", permanent: false },
       // O Apoio no Geral (05/11/2026): senhas e manuais deixam de ser só do BPO.
       { source: "/bpo-senhas/:caminho*", destination: "/senhas/:caminho*", permanent: false },
       { source: "/bpo-manual/:caminho*", destination: "/manuais/:caminho*", permanent: false },

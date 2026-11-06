@@ -1,5 +1,4 @@
 import { Pagination } from "@/components/shared/Pagination";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Plus, Users } from "lucide-react";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { getPrisma } from "@/lib/prisma";
@@ -81,14 +80,10 @@ export default async function PessoasPage({
 
   return (
     <PageContainer>
-      <CadastrosTabsBar active="pessoas" />
-
-      <div id="cadastros-content">
-      {/* Header */}
-      <PageHeader
-        title="Pessoas"
-        subtitle="Os funcionários internos do escritório."
-        action={<>{canCreate && (
+      <CadastrosTabsBar
+        active="pessoas"
+        subtitulo="Os funcionários internos do escritório."
+        acao={<>{canCreate && (
           <Button
             href="/pessoas/nova?internal=1"
             variant="primary"
@@ -97,6 +92,8 @@ export default async function PessoasPage({
           </Button>
         )}</>}
       />
+
+      <div id="cadastros-content">
 
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
       {ocultos > 0 && (

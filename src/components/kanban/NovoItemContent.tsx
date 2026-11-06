@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { criarItem } from "@/app/(app)/kanban/actions";
 import { NovoItemModal } from "@/components/kanban/NovoItemModal";
 import { getAuthContext } from "@/lib/auth/context";
-import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+import { poderesNaLista } from "@/lib/kanban/permissaoDoEspacoServidor";
 import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { getSectorMaps } from "@/lib/sectors";
@@ -31,7 +31,8 @@ export async function NovoItemContent({ id, estagio, emModal = false }: { id: st
     },
   });
   if (!pipeline) notFound();
-  if (!(await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode))) notFound();
+  // Criar atividade: quem edita no espaço da lista (05/11/2026).
+  if (!(await poderesNaLista(ctx, pipeline)).editar) notFound();
 
   // As opções já no desenho do seletor com busca (15/10/2026): empresa com
   // logo, CNPJ, a filial embaixo da matriz e recentes; pessoa com a foto.

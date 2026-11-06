@@ -9,10 +9,12 @@ import { ListsTable, type ListRow } from "@/components/kanban/ListsTable";
 import { NewFolderButton } from "@/components/kanban/NewFolderButton";
 import { NewListButton } from "@/components/kanban/NewListButton";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
-import { criarPasta, criarListaSimples, excluirPasta, excluirLista } from "@/app/(app)/kanban/spaces-actions";
+import { JanelaDoEspaco } from "@/components/kanban/JanelaDoEspaco";
+import { QuadradoDoEspaco } from "@/components/kanban/QuadradoDoEspaco";
+import { criarPasta, criarListaSimples, editarEspaco, excluirPasta, excluirLista } from "@/app/(app)/kanban/spaces-actions";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canManageSector, canViewSector, podeExcluir } from "@/lib/auth/context";
-import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+import { getAuthContext, canViewSector } from "@/lib/auth/context";
+import { poderesNoEspaco, ROTULO_DA_PERMISSAO } from "@/lib/kanban/permissaoDoEspaco";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 
 function toListRow(p: {
@@ -54,12 +56,13 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
   ]);
   if (!space) notFound();
 
-  // Pasta é estrutura do setor: só quem coordena. Tarefa: também o
-  // colaborador, se o setor não está bloqueado (28/10/2026).
-  const canCreate = canManageSector(ctx, space.sectorCode);
-  const podeCriarTarefa = await podeEditarQuadrosNoSetor(ctx, space.sectorCode);
-  // Excluir pasta e lista: só o administrador (13/10/2026). O gestor cria.
-  const canDelete = podeExcluir(ctx);
+  // O que cada um faz aqui vem da permissão padrão do espaço (05/11/2026):
+  // pasta com "Edição total" (e a coordenação), lista com "Editar" para cima.
+  // Excluir pasta e lista: só o administrador (13/10/2026).
+  const poderes = poderesNoEspaco(ctx, space);
+  const canCreate = poderes.criarPasta;
+  const podeCriarTarefa = poderes.editar;
+  const canDelete = poderes.excluir;
   const pipelineSelect = {
     id: true, name: true, color: true, startDate: true, endDate: true,
     items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
@@ -94,10 +97,34 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
           aninhado numa linha própria, com a margem dele somada à da linha. */}
       <div className="mt-1">
         <PageHeader
-          title={space.name}
+          title={
+            <span className="inline-flex items-center gap-3 min-w-0">
+              <QuadradoDoEspaco nome={space.name} cor={space.color} icone={space.icon} tamanho="md" />
+              <span className="truncate">{space.name}</span>
+            </span>
+          }
+          subtitle={
+            <>
+              {space.description ? `${space.description} · ` : ""}
+              Colaboradores: {ROTULO_DA_PERMISSAO[space.defaultPermission]}
+            </>
+          }
           action={
-            (canCreate || podeCriarTarefa) && (
+            (canCreate || podeCriarTarefa || poderes.gerenciar) && (
               <div className="flex items-center gap-2">
+                {poderes.gerenciar && (
+                  <JanelaDoEspaco
+                    modo="editar"
+                    action={editarEspaco.bind(null, space.id)}
+                    inicial={{
+                      name: space.name,
+                      description: space.description,
+                      color: space.color,
+                      icon: space.icon,
+                      defaultPermission: space.defaultPermission,
+                    }}
+                  />
+                )}
                 {canCreate && <NewFolderButton action={createFolderAction} />}
                 {podeCriarTarefa && <NewListButton action={createListAction} />}
               </div>

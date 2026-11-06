@@ -66,3 +66,25 @@ export function situacaoDoToken(t: { expiresAt: Date; revokedAt: Date | null }, 
   if (t.revokedAt) return "revogado";
   return t.expiresAt.getTime() <= agora.getTime() ? "vencido" : "ativo";
 }
+
+/**
+ * O endereço do Connect para o comando da IA (05/11/2026). Era o host da página
+ * aberta: quem criava o token em `societario.` levava o endereço do Societário,
+ * e os links dos itens criados pela IA abriam com o Societário como setor. Com
+ * o domínio configurado, vale o endereço neutro (`app.`); sem ele (local), o
+ * da página.
+ */
+export function origemDoComando(paginaAberta: string, hostNeutro: string | null): string {
+  if (!hostNeutro) return paginaAberta;
+  const proto = paginaAberta.startsWith("http://") ? "http" : "https";
+  return `${proto}://${hostNeutro}`;
+}
+
+/**
+ * O comando do Claude Code. `--scope user` vale para todas as pastas: sem ele, o
+ * servidor fica só na pasta onde o terminal estava (o Kauan rodou em
+ * `C:\WINDOWS\system32`, e o Claude Code aberto no projeto não o enxergava).
+ */
+export function comandoDoClaudeCode(origem: string, token: string): string {
+  return `claude mcp add --scope user --transport http connect ${origem}/api/mcp --header "Authorization: Bearer ${token}"`;
+}

@@ -16,7 +16,6 @@ import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
 import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta, nomeDoSistema, LINK_DO_ITEM } from "@/lib/tech-interno/regras";
-import { MODULO_OPS } from "@/lib/ops/regras";
 import { setoresDoModulo } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
@@ -30,11 +29,8 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const agendaHref = `/agenda?view=mes&setor=${encodeURIComponent(setorDoTech)}`;
   if (filtros.view === "agenda") redirect(agendaHref);
   const view = filtros.view === "kanban" ? "kanban" : "lista";
-  // O histórico é a Auditoria, na área Tech — as ações daqui já vão para lá.
-  // Quem não abre a Auditoria (só o SUPER_ADMIN abre) segue com a tela própria.
-  const historicoHref = ctx.role === "SUPER_ADMIN" ? "/admin/auditoria?area=tech" : `${ROTA_TECH_INTERNO}/historico`;
-  const [lista, opcoes, podeEditar, podeGerirOps] = await Promise.all([
-    listarItens(ctx, filtros), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), podeNoModulo(ctx, MODULO_OPS, "gerir"),
+  const [lista, opcoes, podeEditar] = await Promise.all([
+    listarItens(ctx, filtros), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"),
   ]);
   const hrefPagina = (page: number) => {
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "pagina") q.set(k, v);
@@ -44,6 +40,7 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const atual = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "voltar") atual.set(k, v);
   const voltar = atual.toString() ? `${ROTA_TECH_INTERNO}?${atual}` : ROTA_TECH_INTERNO, href = (destino: string) => comVolta(destino, voltar);
   const hrefVisao = (view: string, month = filtros.month) => {
+    if (view === "historico") return `${ROTA_TECH_INTERNO}/historico`;
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "page" && k !== "pagina") q.set(k, v);
     q.set("visao", view); q.set("mes", month); return `${ROTA_TECH_INTERNO}?${q}`;
   };
@@ -55,8 +52,8 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   // O Kanban ocupa a altura da tela, sem rolagem de lado (lote C de 03/11/2026).
   return <PageContainer className={view === "kanban" ? "h-full flex flex-col" : ""}>
     <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech."
-      action={<AcoesDoControle podeEditar={podeEditar} podeGerirOps={podeGerirOps} novoHref={href(`${ROTA_TECH_INTERNO}/novo`)} agendaHref={agendaHref} historicoHref={historicoHref} />} />
-    <div className="mb-3 flex-shrink-0"><VisoesDoControle ativa={view} href={v => hrefVisao(v)} /></div>
+      action={<AcoesDoControle podeEditar={podeEditar} novoHref={href(`${ROTA_TECH_INTERNO}/novo`)} />} />
+    <div className="flex-shrink-0"><VisoesDoControle ativa={view} href={v => hrefVisao(v)} /></div>
     <CascoDaTabela className={view === "kanban" ? "flex min-h-0 flex-1 flex-col" : ""} buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[
       { chave: "situacao", rotulo: "Situação", vazioLabel: view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
       { chave: "tipo", rotulo: "Tipo", opcoes: Object.entries(TIPOS).map(([value, label]) => ({ value, label })) },

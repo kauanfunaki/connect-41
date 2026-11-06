@@ -68,7 +68,7 @@ O módulo é o `contabil_revisao`, "Revisão do fechamento", no setor Contábil,
 | `src/app/api/revisao-contabil/` | O envio (um arquivo por requisição, com progresso), o arquivo original e os downloads da execução (`.md`, `.csv`, `.json`). |
 | `src/lib/revisao-contabil/servidor.ts` | O banco. As regras puras ficam em `fechamento.ts` e as listas da tela em `regras-da-tela.ts`. |
 
-**Banco:** a migration `20261105230000_revisao_contabil` só cria tabelas novas.
+**Banco:** a migration `20261106130000_revisao_contabil` só cria tabelas novas.
 
 | Tabela | O que guarda |
 |---|---|

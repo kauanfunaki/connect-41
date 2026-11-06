@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Building2, Plus } from "lucide-react";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -154,14 +153,10 @@ export default async function EmpresasPage({
 
   return (
     <PageContainer>
-      <CadastrosTabsBar active="empresas" />
-
-      <div id="cadastros-content">
-      {/* Header */}
-      <PageHeader
-        title="Empresas"
-        subtitle="As empresas atendidas pelo escritório."
-        action={<>{canCreate && (
+      <CadastrosTabsBar
+        active="empresas"
+        subtitulo="As empresas atendidas pelo escritório."
+        acao={<>{canCreate && (
           <Button
             href="/empresas/nova"
             variant="primary"
@@ -170,6 +165,8 @@ export default async function EmpresasPage({
           </Button>
         )}</>}
       />
+
+      <div id="cadastros-content">
 
       {/* Esconder sem avisar faria a base parecer menor do que é. */}
       {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}

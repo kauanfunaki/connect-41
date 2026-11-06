@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { IconeDaArea } from "@/components/configuracoes/IconeDaArea";
 import { getAuthContext } from "@/lib/auth/context";
@@ -27,6 +28,14 @@ export default async function AdminPage() {
       <PageHeader
         title="Configurações"
         subtitle="O que vale para todo o escritório, separado por assunto."
+        // A conta da própria pessoa a um clique (05/11/2026, pedido do Kauan): a
+        // engrenagem do topo traz quem configura para cá, e "Sua conta" só
+        // estava no menu do nome.
+        action={
+          <Button href="/configuracoes" variant="secondary">
+            <UserRound size={14} aria-hidden /> Sua conta
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">

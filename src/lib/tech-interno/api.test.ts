@@ -195,10 +195,13 @@ describe("criar e atualizar", () => {
 describe("situação, comentário e anexo", () => {
   it("muda a situação com a version enviada, ou com a atual quando não vem", async () => {
     await situacao.POST(pedido(`/${ID_ITEM}/situacao`, { token: ESCRITOR, metodo: "POST", corpo: { status: "IN_PROGRESS", version: 3 } }), params());
-    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "IN_PROGRESS", 3);
+    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "IN_PROGRESS", 3, {});
     expect(s.detalheItem).toHaveBeenCalledTimes(1); // só a resposta
     await situacao.POST(pedido(`/${ID_ITEM}/situacao`, { token: ESCRITOR, metodo: "POST", corpo: { status: "VALIDATION" } }), params());
-    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "VALIDATION", 3);
+    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "VALIDATION", 3, {});
+    // Ao concluir, o PR e o commit da mudança seguem junto (06/11/2026).
+    await situacao.POST(pedido(`/${ID_ITEM}/situacao`, { token: ESCRITOR, metodo: "POST", corpo: { status: "DONE", version: 3, prUrl: "https://github.com/o/r/pull/1", commitSha: "abc1234" } }), params());
+    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "DONE", 3, { prUrl: "https://github.com/o/r/pull/1", commitSha: "abc1234" });
     expect(await corpo(await situacao.POST(pedido(`/${ID_ITEM}/situacao`, { token: ESCRITOR, metodo: "POST", corpo: {} }), params()))).toMatchObject({ status: 422 });
   });
 

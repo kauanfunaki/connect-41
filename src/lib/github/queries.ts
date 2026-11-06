@@ -23,6 +23,14 @@ type EventRow = Prisma.GithubContributionGetPayload<{ select: typeof eventSelect
 const toEvent = (row: EventRow, names: Map<string, string>): DayEvent => ({ id: row.id, type: row.type as ContributionType, url: row.url, occurredAt: row.occurredAt.toISOString(),
   repository: row.repository.fullName, login: row.user.login, name: names.get(row.user.externalId) ?? null, number: row.number, reference: reference(row), title: row.title });
 
+/** Quem entra no painel: os vinculados (ou todos, com "Mostrar todos"), e só os do time escolhido. */
+async function filtroDePessoas(tenantId: string, filters: Filters, names: Map<string, string>) {
+  const todos = filters.all === "1";
+  if (!filters.time) return todos ? {} : { externalId: { in: [...names.keys()] } };
+  const doTime = (await getPrisma().githubPerson.findMany({ where: { tenantId, teamId: filters.time }, select: { externalId: true } })).map(p => p.externalId);
+  return { externalId: { in: todos ? doTime : doTime.filter(id => names.has(id)) } };
+}
+
 export async function dashboard(tenantId: string, filters: Filters): Promise<DashboardView> {
   const db = getPrisma(), [access, names] = await Promise.all([readable(tenantId), linkedPeople(tenantId)]), { connection } = access;
   const timezone = connection?.timezone ?? "America/Sao_Paulo", dates = period(filters, new Date(), timezone), pageSize = 20, all = filters.all === "1";
@@ -39,7 +47,7 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
   const common = { tenantId, repositoryId: { in: repoIds }, day: { gte: dates.from, lte: dates.to }, count: { gt: 0 }, type: filters.type ?? { in: [...CONTRIBUTION_TYPES] } } satisfies Prisma.GithubDailyContributionWhereInput;
   // Por padrão só quem vinculou a conta em Sua conta; "Mostrar todos" inclui os demais autores (27/10/2026).
   const userFilter = { connectionId: connection.id, tenantId, unidentified: false, ...(filters.bots === "0" ? { isBot: false } : {}), ...(filters.user ? { login: { contains: filters.user } } : {}),
-    ...(all ? {} : { externalId: { in: [...names.keys()] } }) };
+    ...await filtroDePessoas(tenantId, filters, names) };
   // Mantém pessoas sem atividade no período, sem revelar autores de repositórios
   // removidos ou sem acesso. Usuários acompanhados são cadastros explícitos.
   const whereUser = { ...userFilter, OR: [{ tracked: true }, { daily: { some: { ...common, day: undefined } } }] } satisfies Prisma.GithubUserWhereInput;
@@ -63,7 +71,8 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
       const type = row.type as ContributionType, count = row._sum.count ?? 0, day = byDay.get(row.day) ?? emptyCounts();
       counts[type] += count; day[type] += count; byDay.set(row.day, day);
     }
-    const leaders = activity.slice(0, 4);
+    // Todos: a tela mostra os 4 primeiros por pessoa e, por time, soma cada time.
+    const leaders = activity;
     const people = await db.githubUser.findMany({ where: { ...userFilter, id: { in: activity.map(row => row.userId) } }, select: { id: true, login: true, externalId: true } });
     const byId = new Map(people.map(person => [person.id, person]));
     return { ...totals, paleta: await paletaDoPainel(tenantId, people, names),
@@ -162,10 +171,37 @@ export async function dayEvents(tenantId: string, filters: Filters, userId: stri
   const ids = access.repositories.filter(repo => (!filters.repository || repo.id === filters.repository) && (!filters.organization || repo.owner.toLowerCase() === filters.organization.toLowerCase())).map(repo => repo.id);
   if (!access.connection || access.connection.status !== "connected" || !ids.length) throw new GithubError("Confirme o acesso aos repositórios antes de consultar os eventos.", 403);
   if (!userId && !filters.repository && !team) throw new GithubError("Informe o desenvolvedor ou o repositório.");
+  const pessoas = userId ? {} : await filtroDePessoas(tenantId, filters, names);
   const where = { tenantId, ...(userId ? { userId } : {}), day, current: true, repositoryId: { in: ids }, ...(filters.type ? { type: filters.type } : {}),
     user: { connectionId: access.connection.id, unidentified: false, ...(filters.bots === "0" ? { isBot: false } : {}),
-      ...(userId || filters.all === "1" ? {} : { externalId: { in: [...names.keys()] } }) } } satisfies Prisma.GithubContributionWhereInput;
+      ...pessoas } } satisfies Prisma.GithubContributionWhereInput;
   const [total, rows] = await Promise.all([getPrisma().githubContribution.count({ where }), getPrisma().githubContribution.findMany({ where, orderBy: [{ occurredAt: "desc" }, { id: "asc" }], skip: (page - 1) * 50, take: 50,
     select: eventSelect })]);
   return { events: rows.map(row => toEvent(row, names)), total, page, pageSize: 50 };
+}
+
+/**
+ * As contribuições de cada pessoa do Connect no período, pela conta GitHub que
+ * ela vinculou em Sua conta (05/11/2026, a aba Pessoas da Produtividade): é só
+ * contexto, ao lado das entregas. `null` quando o GitHub não está conectado ou
+ * não tem repositório para ler — a tela mostra "—", não zero.
+ */
+export async function contribuicoesPorPessoa(tenantId: string, from: string, to: string): Promise<Map<string, Record<ContributionType, number> & { total: number }> | null> {
+  const access = await readable(tenantId), { connection } = access;
+  if (!connection || connection.status !== "connected" || !access.repositories.length) return null;
+  const db = getPrisma();
+  const links = await db.githubAccountLink.findMany({ where: { tenantId }, select: { userId: true, externalId: true } });
+  if (!links.length) return new Map();
+  const users = await db.githubUser.findMany({ where: { tenantId, connectionId: connection.id, externalId: { in: links.map(link => link.externalId) } }, select: { id: true, externalId: true } });
+  const rows = users.length ? await db.githubDailyContribution.groupBy({ by: ["userId", "type"], _sum: { count: true },
+    where: { tenantId, repositoryId: { in: access.repositories.map(repo => repo.id) }, userId: { in: users.map(user => user.id) }, day: { gte: from, lte: to }, count: { gt: 0 }, type: { in: [...CONTRIBUTION_TYPES] } } }) : [];
+  const pessoaDoGithub = new Map(users.map(user => [user.id, links.find(link => link.externalId === user.externalId)!.userId]));
+  const porPessoa = new Map<string, Record<ContributionType, number> & { total: number }>();
+  for (const link of links) porPessoa.set(link.userId, { ...emptyCounts(), total: 0 });
+  for (const row of rows) {
+    const pessoa = porPessoa.get(pessoaDoGithub.get(row.userId) ?? ""), count = row._sum.count ?? 0;
+    if (!pessoa) continue;
+    pessoa[row.type as ContributionType] += count; pessoa.total += count;
+  }
+  return porPessoa;
 }

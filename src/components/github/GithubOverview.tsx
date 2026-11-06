@@ -8,13 +8,31 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao } from "@/components/shared/ListaResponsiva";
 import { avatarDoGithub, iniciaisDoLogin } from "@/lib/github/avatar";
 import { dateLabel } from "@/lib/github/calendar";
-import { corDaPessoa, type ModoDeCor } from "@/lib/github/cores";
+import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/github/cores";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { TYPE_LABELS, type DashboardView, type GithubSummary } from "@/lib/github/types";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
+import { ROTAS_DO_GITHUB } from "@/lib/tech-interno/rotasDaProdutividade";
 import styles from "./GithubContributions.module.css";
 
 const number = (value: number) => Number(value).toLocaleString("pt-BR");
+// O selo de um time (05/11/2026): a cor dele com as iniciais, no lugar das fotos.
+export function SeloDoTime({ nome, cor }: { nome: string; cor: string }) {
+  const iniciais = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join("").toLocaleUpperCase("pt-BR") || "?";
+  return <span aria-hidden className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-micro font-bold text-white" style={{ background: cor }}>{iniciais}</span>;
+}
+// "Atividade do time" por time (05/11/2026): soma as pessoas de cada time; quem
+// está sem time entra em "Sem time", sempre por último.
+type Lider = GithubSummary["leaders"][number];
+function timesDoPainel(leaders: Lider[], paleta: Paleta) {
+  const grupos = new Map<string, { id: string; nome: string; cor: string; total: number; pessoas: Lider[] }>();
+  for (const pessoa of leaders) {
+    const time = paleta.times.find(item => item.id === paleta.pessoas[pessoa.id]?.time), id = time?.id ?? "";
+    const grupo = grupos.get(id) ?? { id, nome: time?.nome ?? "Sem time", cor: time?.cor ?? COR_SEM_TIME, total: 0, pessoas: [] };
+    grupo.total += pessoa.total; grupo.pessoas.push(pessoa); grupos.set(id, grupo);
+  }
+  return [...grupos.values()].sort((a, b) => (a.id ? 0 : 1) - (b.id ? 0 : 1) || b.total - a.total);
+}
 // A foto do GitHub; sem login de conta ou com a imagem fora do ar, as iniciais.
 export function DeveloperAvatar({ login }: { login: string }) {
   const src = avatarDoGithub(login), [falhou, setFalhou] = useState<string | null>(null);
@@ -31,7 +49,7 @@ export function DeveloperName({ login, name }: { login: string; name: string | n
 export function GithubOverview({ data, query, modo, onDay }: { data: DashboardView; query: string; modo: ModoDeCor; onDay: (id: string, day: string) => void }) {
   const summary = data.summary;
   const developers = new URLSearchParams(query); developers.delete("page"); developers.delete("view");
-  const developersHref = `/github/desenvolvedores?${developers}`;
+  const developersHref = `${ROTAS_DO_GITHUB.developers}?${developers}`;
   return <>
     <FaixaDeTotais itens={[
       { rotulo: "Total de commits", valor: number(summary?.counts.COMMIT ?? 0), icone: <GitCommitHorizontal /> },
@@ -55,10 +73,16 @@ export function GithubOverview({ data, query, modo, onDay }: { data: DashboardVi
       </section>
       <section className={styles.panel} aria-labelledby="github-team">
         <div className={styles.panelHeading}><div><h2 id="github-team">Atividade do time</h2><p>Contribuições no período</p></div><Link href={developersHref}>Ver todos</Link></div>
-        <div className={styles.leaders}>{summary?.leaders.length ? summary.leaders.map((person, index) => <div key={person.id} className={styles.person}>
+        <div className={styles.leaders}>{modo === "time" && summary?.leaders.length ? timesDoPainel(summary.leaders, data.paleta).map((time, index) => <div key={time.id} className={styles.person}>
+          <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span>
+          <SeloDoTime nome={time.nome} cor={time.cor} />
+          <Link href={`${ROTAS_DO_GITHUB.developers}?${new URLSearchParams({ ...Object.fromEntries(developers), cor: "time", ...(time.id ? { time: time.id } : {}) })}`} className={styles.personName}>
+            <span title={time.pessoas.map(p => p.name ?? p.login).join(", ")}>{time.nome}</span></Link>
+          <span className={styles.personCount}><strong>{number(time.total)}</strong><small>contribuições</small></span>
+        </div>) : summary?.leaders.length ? summary.leaders.slice(0, 4).map((person, index) => <div key={person.id} className={styles.person}>
           <span className={styles.position}>{String(index + 1).padStart(2, "0")}</span><span className="relative"><DeveloperAvatar login={person.login} />
             <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-surface" style={{ background: corDaPessoa(person.id, data.paleta, modo) }} /></span>
-          <Link href={`/github/desenvolvedores?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}><DeveloperName login={person.login} name={person.name} /></Link>
+          <Link href={`${ROTAS_DO_GITHUB.developers}?${new URLSearchParams({ ...Object.fromEntries(developers), user: person.login })}`} className={styles.personName}><DeveloperName login={person.login} name={person.name} /></Link>
           <span className={styles.personCount}><strong>{number(person.total)}</strong><small>contribuições</small></span>
         </div>) : <EmptyState icon={<Users />} title="Nenhuma atividade no período" />}</div>
       </section>

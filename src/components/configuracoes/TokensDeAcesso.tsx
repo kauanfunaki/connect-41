@@ -13,7 +13,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { useToast } from "@/components/ui/Toast";
-import { VALIDADES, VALIDADE_PADRAO, type Escopo } from "@/lib/tokens-pessoais/regras";
+import { VALIDADES, VALIDADE_PADRAO, comandoDoClaudeCode, type Escopo } from "@/lib/tokens-pessoais/regras";
 import type { TokenListado } from "@/lib/tokens-pessoais/servidor";
 import { criarTokenAction, revogarTokenAction } from "@/app/(app)/configuracoes/tokens-actions";
 
@@ -103,7 +103,7 @@ export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial
 
   const ativos = meus.filter(t => t.situacao === "ativo");
   const inativos = meus.filter(t => t.situacao !== "ativo");
-  const comando = criado ? `claude mcp add --transport http connect ${origem}/api/mcp --header "Authorization: Bearer ${criado.token}"` : "";
+  const comando = criado ? comandoDoClaudeCode(origem, criado.token) : "";
 
   const linha = (t: TokenListado, comDono = false) => {
     const s = selo(t, agora);
@@ -177,7 +177,7 @@ export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial
               <Button type="button" variant="secondary" aria-label="Copiar o token" onClick={() => copiar(criado.token, "Token")}><Copy size={14} /> Copiar</Button>
             </div>
           </CampoForm>
-          <CampoForm label="Para o Claude Code, rode no terminal" htmlFor="token-comando">
+          <CampoForm label="Para o Claude Code, rode no terminal" htmlFor="token-comando" helper="Vale para todas as pastas. Depois, abra uma sessão nova do Claude Code: o servidor só carrega quando a sessão começa.">
             <div className="flex gap-2">
               <Input id="token-comando" value={comando} readOnly className="min-w-0 font-mono" onFocus={e => e.target.select()} />
               <Button type="button" variant="secondary" aria-label="Copiar o comando do Claude Code" onClick={() => copiar(comando, "Comando")}><Copy size={14} /> Copiar</Button>

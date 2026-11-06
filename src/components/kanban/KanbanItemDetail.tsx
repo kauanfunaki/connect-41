@@ -12,6 +12,7 @@ import { LinkedItemsSection } from "@/components/kanban/LinkedItemsSection";
 import { DetailSection } from "@/components/kanban/DetailSection";
 import { TaskFieldsPanel } from "@/components/kanban/TaskFieldsPanel";
 import { CompletionBanner } from "@/components/kanban/CompletionBanner";
+import { AtalhosDoDetalhe, type AtalhoDoDetalhe } from "@/components/kanban/AtalhosDoDetalhe";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight } from "lucide-react";
@@ -47,7 +48,8 @@ import { ListaDeHoras } from "@/components/shared/ListaDeHoras";
 import { campoDaData } from "@/lib/societario/datas";
 import { boardPath, trilhaDaLista } from "@/lib/kanbanPaths";
 import { getSectorMaps } from "@/lib/sectors";
-import { getAuthContext, canManageSector, canActOnSector, podeExcluir } from "@/lib/auth/context";
+import { getAuthContext, canManageSector, podeExcluir } from "@/lib/auth/context";
+import { poderesNaLista } from "@/lib/kanban/permissaoDoEspacoServidor";
 import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
@@ -119,7 +121,11 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   // O gestor segue corrigindo o apontamento de tempo de qualquer pessoa.
   const canDelete = podeExcluir(ctx);
   const canManage = canManageSector(ctx, pipeline.sectorCode);
-  const canAct = canActOnSector(ctx, pipeline.sectorCode);
+  // Editar os campos e comentar, pela permissão do espaço (05/11/2026): no
+  // nível "Comentário" o colaborador comenta sem editar.
+  const poderes = await poderesNaLista(ctx, pipeline);
+  const canAct = poderes.editar;
+  const podeComentar = poderes.comentar;
 
   const [entity, activities, sectorTags, sectorUsers, documents, activeTimerUser, otherItems] = await Promise.all([
     !item.entityId
@@ -250,7 +256,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   // aninhadas sob cada comentário. Edita o autor (como o `editarNota` exige);
   // exclui só o administrador (13/10/2026).
   function canEditNote(noteUserId: string): boolean {
-    return canAct && noteUserId === ctx.userId;
+    return podeComentar && noteUserId === ctx.userId;
   }
   const repliesByParent = new Map<string, typeof activities>();
   for (const a of activities) {
@@ -362,7 +368,6 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
               ? "Atividade concluída"
               : null
         }
-        concluirAction={concluirAction}
         reabrirAction={reabrirAction}
       />
 
@@ -380,6 +385,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, type: s.type }))}
             currentStageId={item.stageId}
             moveAction={moverItem}
+            isCompleted={isCompleted}
+            concluirAction={concluirAction}
             dueDate={item.dueDate ? item.dueDate.toISOString() : null}
             startDate={item.startDate ? item.startDate.toISOString() : null}
             recurring={item.recurring}
@@ -408,12 +415,26 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
           <DescriptionEditor canAct={canAct} description={item.description} action={descricaoAction} />
 
+          {/* Os atalhos para o que se acrescenta à tarefa (05/11/2026, como no
+              ClickUp): abrem a seção certa, que começa fechada. */}
+          {canAct && (
+            <AtalhosDoDetalhe
+              atalhos={[
+                ...(!item.parentItemId ? (["subatividades"] as AtalhoDoDetalhe[]) : []),
+                "relacionadas",
+                "checklist",
+                "anexos",
+              ]}
+            />
+          )}
+
           {/* Rodapé do detalhamento — as seções em blocos recolhíveis, que
               começam fechados com o resumo na linha (15/10/2026). Cada uma só
               aparece se tiver conteúdo ou se o usuário puder criar algo ali. */}
           <div className="flex flex-col gap-2">
             {!item.parentItemId && (subtasks.length > 0 || canAct) && (
               <DetailSection
+                id="secao-subatividades"
                 title="Subatividades"
                 summary={
                   subtasks.length > 0
@@ -445,6 +466,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
             {(relatedItems.length > 0 || canAct) && (
               <DetailSection
+                id="secao-relacionadas"
                 title="Atividades relacionadas"
                 summary={relatedItems.length > 0 ? relatedItems.length : undefined}
               >
@@ -461,6 +483,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
 
             {(checklistItems.length > 0 || canAct) && (
               <DetailSection
+                id="secao-checklist"
                 title="Checklist"
                 summary={
                   checklistItems.length > 0
@@ -482,7 +505,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             )}
 
             {(documents.length > 0 || canAct) && (
-              <DetailSection title="Anexos" summary={documents.length > 0 ? documents.length : undefined}>
+              <DetailSection id="secao-anexos" title="Anexos" summary={documents.length > 0 ? documents.length : undefined}>
                 <TaskAttachmentsSection
                   entityId={itemId}
                   canUpload={canAct}
@@ -526,7 +549,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         </div>
         <ActivityFeed
           items={feedItems}
-          canAct={canAct}
+          canAct={podeComentar}
           mentionUsers={mentionUsers}
           pipelineItemId={itemId}
           taskCandidates={taskCandidates}

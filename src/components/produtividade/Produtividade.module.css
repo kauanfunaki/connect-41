@@ -1,0 +1,41 @@
+/*
+ * As cores de cada pessoa no gráfico de pontos por semana (05/11/2026). É cor
+ * de identidade, não de situação: a paleta categórica do método de dataviz
+ * (azul, laranja, água, amarelo, magenta, verde, nesta ordem), validada com o
+ * validador do método sobre a superfície do Connect —
+ * claro (#FFFFFF): CVD ΔE ≥ 9,1 entre vizinhas, visão normal ≥ 19,6; água,
+ *   amarelo e magenta ficam abaixo de 3:1, e por isso o gráfico tem legenda
+ *   com nome e pontos, o total em cima de cada coluna e a tabela acessível;
+ * escuro (#1C1A22): CVD ΔE ≥ 8,4, visão normal ≥ 19,3, todas ≥ 3:1.
+ * Da 7ª pessoa em diante, "Outras pessoas", no cinza neutro dos gráficos.
+ * O vermelho não entra: é a cor de "crítico" no Connect.
+ */
+.serie {
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --serie-4: #eda100;
+  --serie-5: #e87ba4;
+  --serie-6: #008300;
+  --serie-outras: var(--c41-grafico-neutro);
+}
+
+:global(:root[data-theme="dark"]) .serie {
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+  --serie-3: #199e70;
+  --serie-4: #c98500;
+  --serie-5: #d55181;
+  --serie-6: #008300;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"]):not([data-theme="dark"])) .serie {
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
+    --serie-4: #c98500;
+    --serie-5: #d55181;
+    --serie-6: #008300;
+  }
+}

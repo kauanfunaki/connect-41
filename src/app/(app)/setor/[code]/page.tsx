@@ -1,20 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FolderKanban, FolderClosed, ListTodo } from "lucide-react";
+import { FolderKanban, FolderClosed, ListTodo, UserCog } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { NewSpaceButton } from "@/components/kanban/NewSpaceButton";
+import { JanelaDoEspaco } from "@/components/kanban/JanelaDoEspaco";
+import { CriarNosQuadros } from "@/components/kanban/CriarNosQuadros";
+import { QuadradoDoEspaco } from "@/components/kanban/QuadradoDoEspaco";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
-import { criarEspaco, excluirEspaco } from "@/app/(app)/kanban/spaces-actions";
+import {
+  criarEspaco,
+  excluirEspaco,
+  criarListaNoLocalEscolhido,
+  criarPastaNoEspacoEscolhido,
+} from "@/app/(app)/kanban/spaces-actions";
 import { getAuthContext, canViewSector, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
 import { boardPath } from "@/lib/kanbanPaths";
-import { QuadrosDosColaboradores } from "@/components/kanban/QuadrosDosColaboradores";
-import { liberarQuadrosAosColaboradores } from "./quadros-actions";
-import { quadrosBloqueados } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+import { poderesNoEspaco, ROTULO_DA_PERMISSAO } from "@/lib/kanban/permissaoDoEspaco";
 
 /** Quantas listas o cartão do espaço mostra pelo nome antes do "+N". */
 const LISTAS_NO_CARTAO = 4;
@@ -46,6 +51,9 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
         id: true,
         name: true,
         color: true,
+        icon: true,
+        defaultPermission: true,
+        folders: { orderBy: { order: "asc" }, select: { id: true, name: true } },
         _count: { select: { folders: true, pipelines: { where: { active: true } } } },
         pipelines: {
           where: { active: true },
@@ -59,9 +67,11 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
 
   const setor = sectorLabel(labels, code);
   const corDoSetor = colors[code] ?? "#586577";
+  // Criar espaço: quem coordena o setor. O que cada um faz dentro de um espaço
+  // vem da permissão padrão dele (05/11/2026) — no lugar do interruptor por
+  // setor de 28/10.
   const podeCriar = canManageSector(ctx, code);
-  // O coordenador decide se os colaboradores criam e editam tarefas (28/10/2026; liberado por padrão).
-  const bloqueado = podeCriar ? await quadrosBloqueados(ctx.tenantId, code) : false;
+  const comPoderes = spaces.map((s) => ({ ...s, poderes: poderesNoEspaco(ctx, { sectorCode: code, defaultPermission: s.defaultPermission }) }));
 
   return (
     <PageContainer>
@@ -73,13 +83,24 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
             {setor} · as listas de tarefas do setor, organizadas em espaços e pastas
           </span>
         }
-        action={podeCriar ? <NewSpaceButton action={criarEspaco.bind(null, code)} /> : undefined}
+        action={
+          <div className="flex items-center gap-2">
+            {/* O "+ Criar" (05/11/2026): lista ou pasta sem entrar no espaço. */}
+            <CriarNosQuadros
+              espacos={comPoderes.map((s) => ({
+                id: s.id,
+                name: s.name,
+                podeCriarLista: s.poderes.editar,
+                podeCriarPasta: s.poderes.criarPasta,
+                pastas: s.folders,
+              }))}
+              criarLista={criarListaNoLocalEscolhido}
+              criarPasta={criarPastaNoEspacoEscolhido}
+            />
+            {podeCriar && <JanelaDoEspaco modo="criar" action={criarEspaco.bind(null, code)} />}
+          </div>
+        }
       />
-      {podeCriar && (
-        <div className="-mt-3 mb-6">
-          <QuadrosDosColaboradores sectorCode={code} liberado={!bloqueado} alterar={liberarQuadrosAosColaboradores} />
-        </div>
-      )}
 
       {spaces.length === 0 ? (
         <Card>
@@ -95,7 +116,7 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
-          {spaces.map((s, i) => {
+          {comPoderes.map((s, i) => {
             const restantes = s._count.pipelines - s.pipelines.length;
             return (
               // O menu "…" é irmão do <Link>, não filho: <button> dentro de <a>
@@ -106,15 +127,24 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
                 <div className="h-full flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] transition-[border-color,box-shadow,transform] duration-150 hover:border-brand/40 hover:shadow-[var(--c41-shadow-md)] hover:-translate-y-0.5 overflow-hidden">
                   <span className="h-[3px] flex-shrink-0" style={{ background: s.color }} aria-hidden />
                   <Link href={`/setor/${code}/espacos/${s.id}`} className="group block px-4 pt-3.5 pb-3">
-                    <p className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors pr-8 truncate">
-                      {s.name}
+                    <p className="flex items-center gap-2.5 pr-8 min-w-0">
+                      <QuadradoDoEspaco nome={s.name} cor={s.color} icone={s.icon} tamanho="sm" />
+                      <span className="text-card-title font-semibold text-fg group-hover:text-brand transition-colors truncate">
+                        {s.name}
+                      </span>
                     </p>
-                    <p className="mt-1 flex items-center gap-3 text-fs-2 text-fg-muted">
+                    <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-fs-2 text-fg-muted">
                       <span className="inline-flex items-center gap-1">
                         <FolderClosed size={13} /> {s._count.folders} {s._count.folders === 1 ? "pasta" : "pastas"}
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <ListTodo size={13} /> {s._count.pipelines} {s._count.pipelines === 1 ? "tarefa" : "tarefas"}
+                      </span>
+                      {/* A permissão dos colaboradores, à vista de todos: quem só
+                          comenta sabe por que não há "+ Nova tarefa". */}
+                      <span className="inline-flex items-center gap-1" title="Permissão padrão dos colaboradores">
+                        <UserCog size={13} aria-hidden />
+                        <span className="sr-only">Permissão dos colaboradores:</span> {ROTULO_DA_PERMISSAO[s.defaultPermission]}
                       </span>
                     </p>
                   </Link>

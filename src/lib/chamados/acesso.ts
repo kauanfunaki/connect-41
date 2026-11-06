@@ -1,7 +1,8 @@
 import type { AuthContext } from "@/lib/auth/context";
 import { canActOnSector, canManageSector, isFullWrite } from "@/lib/auth/papeis";
 
-export type ConfigDeAcesso = { enabled: boolean; sectorCode: string; requesterSectors: string[] };
+// Todos os setores abrem chamado (05/11/2026): a lista de setores solicitantes saiu.
+export type ConfigDeAcesso = { enabled: boolean; sectorCode: string };
 export type Alvo = { tenantId: string; createdById: string; requesterSectorCode: string; participants: { userId: string }[]; approverIds: string[] };
 export const podeOperar = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && ctx.sectors.includes(config.sectorCode) && canActOnSector(ctx, config.sectorCode);
 export const podeGerenciar = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && canManageSector(ctx, config.sectorCode);
@@ -19,11 +20,11 @@ export function escoposDaBusca(ctx: AuthContext, config: ConfigDeAcesso): Escopo
   return ctx.role === "SECTOR_ADMIN" ? ["chamado", "solicitante"] : ["chamado"];
 }
 export function podeAbrir(ctx: AuthContext, config: ConfigDeAcesso) {
-  return !!ctx.userId && !!ctx.tenantId && config.enabled && !ctx.subscriptionReadOnly && ctx.role !== "READONLY" && (isFullWrite(ctx.role) || ctx.sectors.some(s => config.requesterSectors.includes(s)));
+  return !!ctx.userId && !!ctx.tenantId && config.enabled && !ctx.subscriptionReadOnly && ctx.role !== "READONLY";
 }
 /** De onde a pessoa pode abrir: o campo Setor da tela Novo chamado e o da Ceci (`conferirOrigem` confere de novo ao gravar). */
 export function setoresQuePodemAbrir<T extends { code: string }>(ctx: AuthContext, config: ConfigDeAcesso, ativos: T[]): T[] {
-  return ativos.filter(s => isFullWrite(ctx.role) || (ctx.sectors.includes(s.code) && config.requesterSectors.includes(s.code)));
+  return ativos.filter(s => isFullWrite(ctx.role) || ctx.sectors.includes(s.code));
 }
 export function podeVer(ctx: AuthContext, config: ConfigDeAcesso, chamado: Alvo) {
   return ctx.tenantId === chamado.tenantId && config.enabled && (podeVerInterno(ctx, config) || chamado.createdById === ctx.userId || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(chamado.requesterSectorCode)));

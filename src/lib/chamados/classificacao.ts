@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { gerarComFallback } from "./ia-fallback";
+import { gerarEstruturado } from "@/lib/ai";
 import { categoriasClassificaveis, caminhoDaCategoria } from "./catalogo";
 import type { Categoria, DadosDoChamado } from "./regras";
 
@@ -22,11 +22,11 @@ export async function classificar(c: { tenantId: string; userId: string; draftId
     if (!opcoes.length) throw new Error("Sem categorias ativas.");
     const texto = JSON.stringify({ chamado: dados, conversa: conversa.filter(m => m.role === "user"), categorias: opcoes.map(cat => ({ categoryId: cat.id, caminho: caminhoDaCategoria(categorias, cat.id) })) });
     if (texto.length > 100000) throw new Error("Contexto excedido.");
-    const { valor, origem } = await gerarComFallback({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT_CLASSIFICACAO, texto, nome: "classificacao_chamado", schema: {
+    const { valor } = await gerarEstruturado({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT_CLASSIFICACAO, texto, nome: "classificacao_chamado", schema: {
       type: "object", additionalProperties: false, properties: { categoryId: { anyOf: [{ type: "string", enum: opcoes.map(c => c.id) }, { type: "null" }] }, reason: { type: "string" }, title: { type: "string" }, tags: { type: "array", items: { type: "string" } } }, required: ["categoryId", "reason", "title", "tags"],
     }, maxTokens: 1200, estrito: true, timeoutMs: 20000, store: false, contexto: { userId: c.userId, entityType: "HelpdeskDraft", entityId: c.draftId } });
     const resultado = resultadoSchema.parse(valor);
     if (!resultado.categoryId || !opcoes.some(cat => cat.id === resultado.categoryId)) throw new Error("Categoria inválida ou incerta.");
-    return { ...resultado, tags: limparTags(resultado.tags), origem };
+    return { ...resultado, tags: limparTags(resultado.tags), origem: "principal" as const };
   } catch { return { categoryId: null, reason: "Classificação automática indisponível ou sem contexto suficiente. A equipe fará a classificação.", title: "", tags: [] as string[], origem: null }; }
 }
