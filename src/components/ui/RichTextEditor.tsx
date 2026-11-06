@@ -7,6 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { Bold, Italic, List, ListOrdered, Heading2, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
 import type { EditorView } from "@tiptap/pm/view";
 import { TextSelection } from "@tiptap/pm/state";
+import { alturaDaLinha, destinoDoBloco, indiceDeInsercao, virouArraste, type CaixaDoBloco } from "./arrasteDeBlocos";
 
 type Props = {
   /** Sincroniza um <input type="hidden"> pra submissão via <form>. Omitido
@@ -14,7 +15,8 @@ type Props = {
   name?: string;
   defaultValue?: string;
   // Ativa o puxador de arrastar bloco (estilo Notion) — reordena os nós de
-  // nível 1 do documento (parágrafos, títulos, listas...) por drag-n-drop.
+  // nível 1 do documento (parágrafos, títulos, listas...) arrastando o
+  // puxador (eventos de ponteiro, 06/11/2026: ver `arrasteDeBlocos.ts`).
   // Opt-in: os outros usos deste editor (descrição de tarefa, documento pro
   // cliente) continuam sem isso, só o Manual BPO pediu.
   blockDragHandle?: boolean;
@@ -128,6 +130,24 @@ function moverBloco(view: EditorView, de: number, para: number): boolean {
   return true;
 }
 
+/** A caixa de cada bloco de nível 1, na tela, na ordem do documento. */
+function caixasDosBlocos(view: EditorView): CaixaDoBloco[] {
+  const doc = view.state.doc;
+  const caixas: CaixaDoBloco[] = [];
+  for (let i = 0; i < doc.childCount; i++) {
+    const dom = view.nodeDOM(posForIndex(doc, i));
+    if (dom instanceof HTMLElement) {
+      const r = dom.getBoundingClientRect();
+      caixas.push({ top: r.top, height: r.height });
+    } else {
+      // Sem elemento (raro): uma caixa vazia logo abaixo da anterior, para o índice não escorregar.
+      const anterior = caixas[caixas.length - 1];
+      caixas.push({ top: anterior ? anterior.top + anterior.height : 0, height: 0 });
+    }
+  }
+  return caixas;
+}
+
 function hoveredBlock(view: EditorView, clientX: number, clientY: number) {
   const posInfo = view.posAtCoords({ left: clientX, top: clientY });
   if (!posInfo) return null;
@@ -154,9 +174,14 @@ export function RichTextEditor({
 }: Props) {
   const [html, setHtml] = useState(defaultValue);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  // Ref (não state) porque é lido dentro de callbacks do ProseMirror, que não
-  // re-renderizam o componente React — precisa do valor mais recente na hora.
-  const draggingIndexRef = useRef<number | null>(null);
+  // O arraste em curso (06/11/2026). Ref (não state) porque é lido dentro de
+  // callbacks do ProseMirror e dos eventos de ponteiro, que precisam do valor
+  // mais recente na hora. `ativo` só depois do limiar: antes disso é clique.
+  const arrasteRef = useRef<{ de: number; x: number; y: number; ativo: boolean; insercao: number } | null>(null);
+  // O clique que o navegador dispara depois de soltar um arraste não abre o menu.
+  const acabouDeArrastarRef = useRef(false);
+  // A linha que mostra onde o bloco vai cair, relativa ao wrapper.
+  const [linha, setLinha] = useState<number | null>(null);
   const [handle, setHandle] = useState<{ top: number; index: number } | null>(null);
   // O bloco com o menu "Mover para cima/baixo" aberto.
   const [menuDoBloco, setMenuDoBloco] = useState<number | null>(null);
@@ -179,7 +204,7 @@ export function RichTextEditor({
             },
             handleDOMEvents: {
               mousemove: (view: EditorView, event: Event) => {
-                if (draggingIndexRef.current !== null) return false;
+                if (arrasteRef.current) return false;
                 const e = event as MouseEvent;
                 const wrapper = wrapperRef.current;
                 const hovered = hoveredBlock(view, e.clientX, e.clientY);
@@ -191,34 +216,6 @@ export function RichTextEditor({
                 const wrapperRect = wrapper.getBoundingClientRect();
                 setHandle({ top: rect.top - wrapperRect.top + wrapper.scrollTop, index: hovered.index });
                 return false;
-              },
-              dragover: (_view: EditorView, event: Event) => {
-                if (draggingIndexRef.current !== null) event.preventDefault();
-                return false;
-              },
-              drop: (view: EditorView, event: Event) => {
-                if (draggingIndexRef.current === null) return false;
-                const e = event as DragEvent;
-                e.preventDefault();
-                const fromIndex = draggingIndexRef.current;
-                draggingIndexRef.current = null;
-
-                const hovered = hoveredBlock(view, e.clientX, e.clientY);
-                if (!hovered) return true;
-                const rect = hovered.dom.getBoundingClientRect();
-                const after = e.clientY > rect.top + rect.height / 2;
-                const targetIndex = hovered.index + (after ? 1 : 0);
-                if (targetIndex === fromIndex || targetIndex === fromIndex + 1) return true;
-
-                const doc = view.state.doc;
-                const fromPos = posForIndex(doc, fromIndex);
-                const draggedNode = doc.child(fromIndex);
-                const tr = view.state.tr.delete(fromPos, fromPos + draggedNode.nodeSize);
-                const insertIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
-                const insertPos = posForIndex(tr.doc, insertIndex);
-                tr.insert(insertPos, draggedNode.type.create(draggedNode.attrs, draggedNode.content, draggedNode.marks));
-                view.dispatch(tr.scrollIntoView());
-                return true;
               },
             },
           }
@@ -248,17 +245,66 @@ export function RichTextEditor({
     editorProps,
   });
 
-  function onHandleDragStart(e: React.DragEvent) {
-    if (handle == null) return;
-    draggingIndexRef.current = handle.index;
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", "block");
+  // ─── Arrastar pelo puxador (eventos de ponteiro, 06/11/2026) ───────────────
+  // Apertar e mover passa do limiar → arraste, com a linha de destino; soltar
+  // move o bloco pelo mesmo `moverBloco` do menu. Sem mover → clique (o menu).
+  // Mouse e toque; Esc cancela.
+
+  function cancelarArraste() {
+    if (arrasteRef.current?.ativo) acabouDeArrastarRef.current = true;
+    arrasteRef.current = null;
+    setLinha(null);
   }
 
-  function onHandleDragEnd() {
-    draggingIndexRef.current = null;
+  function onHandlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (e.button !== 0 || handle == null) return;
+    // Sem tirar o foco nem a seleção do texto; a captura segue o ponteiro fora do puxador.
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    arrasteRef.current = { de: handle.index, x: e.clientX, y: e.clientY, ativo: false, insercao: handle.index };
+  }
+
+  function onHandlePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const a = arrasteRef.current;
+    const wrapper = wrapperRef.current;
+    if (!a || !editor || !wrapper) return;
+    if (!a.ativo) {
+      if (!virouArraste(e.clientX - a.x, e.clientY - a.y)) return;
+      a.ativo = true;
+      setMenuDoBloco(null);
+    }
+    const caixas = caixasDosBlocos(editor.view);
+    a.insercao = indiceDeInsercao(caixas, e.clientY);
+    const y = alturaDaLinha(caixas, a.insercao);
+    const wrapperRect = wrapper.getBoundingClientRect();
+    setLinha(y === null ? null : y - wrapperRect.top + wrapper.scrollTop);
+  }
+
+  function onHandlePointerUp(e: React.PointerEvent<HTMLButtonElement>) {
+    const a = arrasteRef.current;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!a?.ativo || !editor) {
+      arrasteRef.current = null;
+      return; // clique: o onClick abre o menu
+    }
+    cancelarArraste();
+    const para = destinoDoBloco(a.de, a.insercao);
+    if (para !== null) moverBloco(editor.view, a.de, para);
     setHandle(null);
   }
+
+  // Esc cancela o arraste em curso.
+  useEffect(() => {
+    if (linha === null) return;
+    const aoTeclar = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return;
+      if (arrasteRef.current?.ativo) acabouDeArrastarRef.current = true;
+      arrasteRef.current = null;
+      setLinha(null);
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, [linha]);
 
   return (
     <div
@@ -271,13 +317,13 @@ export function RichTextEditor({
       // de tentar arrastá-lo. Detectando a saída no wrapper (que contém os
       // dois), mover entre eles não conta como sair.
       onMouseLeave={() => {
-        if (draggingIndexRef.current === null) setHandle(null);
+        if (!arrasteRef.current) setHandle(null);
       }}
-      className={
+      className={`${
         bare
           ? "relative"
           : "relative border border-border-strong rounded-md bg-input-bg overflow-hidden focus-within:border-brand focus-within:shadow-[0_0_0_3px_var(--c41-focus-ring)]"
-      }
+      }${linha !== null ? " select-none cursor-grabbing" : ""}`}
     >
       {!bare && (
         <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
@@ -299,17 +345,26 @@ export function RichTextEditor({
       )}
 
       <EditorContent editor={editor} />
+      {/* Onde o bloco vai cair, durante o arraste. */}
+      {linha !== null && <div aria-hidden className="pointer-events-none absolute left-0 right-0 z-10 h-0.5 rounded-full bg-brand" style={{ top: linha - 1 }} />}
       {blockDragHandle && handle && (
         <button
           type="button"
-          draggable
-          onDragStart={onHandleDragStart}
-          onDragEnd={onHandleDragEnd}
-          onMouseDown={(e) => e.preventDefault()}
-          // Clicar (sem arrastar) abre "Mover para cima/baixo" (03/11/2026).
-          onClick={() => setMenuDoBloco((m) => (m === handle.index ? null : handle.index))}
+          onPointerDown={onHandlePointerDown}
+          onPointerMove={onHandlePointerMove}
+          onPointerUp={onHandlePointerUp}
+          onPointerCancel={cancelarArraste}
+          // Clicar (sem arrastar) abre "Mover para cima/baixo" (03/11/2026); pelo teclado também.
+          onClick={() => {
+            if (acabouDeArrastarRef.current) {
+              acabouDeArrastarRef.current = false;
+              return;
+            }
+            setMenuDoBloco((m) => (m === handle.index ? null : handle.index));
+          }}
           aria-expanded={menuDoBloco === handle.index}
-          style={{ top: handle.top + 2 }}
+          // Sem rolar a página no toque: o dedo arrasta o bloco.
+          style={{ top: handle.top + 2, touchAction: "none" }}
           className={`absolute w-6 h-6 flex items-center justify-center rounded-sm text-fg-muted hover:text-fg hover:bg-surface-hover cursor-grab active:cursor-grabbing ${bare ? "-left-8" : "left-1.5"}`}
           title="Arraste para reordenar, ou clique para mover (Alt+↑/↓)"
           aria-label="Mover bloco"
