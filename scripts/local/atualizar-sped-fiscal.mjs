@@ -15,19 +15,27 @@ const url = new URL(local.DATABASE_URL || "mysql://invalido");
 if (url.protocol !== "mysql:" || !["127.0.0.1", "localhost"].includes(url.hostname) || url.port !== "3307" || url.pathname !== "/connect41") {
   throw new Error("Recusado: esperado somente .env.localdev com connect41 local na porta 3307.");
 }
-const sql = readFileSync("prisma/migrations/20261030120000_sped_fiscal_connect/migration.sql", "utf8");
-const statements = sql.replace(/^\s*--.*$/gm, "").split(";").map(s => s.trim()).filter(Boolean);
-const criacoes = statements.map(statement => {
-  const nome = statement.match(/^CREATE TABLE `(sped_fiscal_[a-z_]+)`\s*\(/)?.[1];
-  if (!nome || /\b(DROP|ALTER|TRUNCATE|RENAME|DELETE|UPDATE|INSERT)\b/i.test(statement)) throw new Error("Migration fora do escopo: permitida somente a criação das tabelas SPED Fiscal.");
-  return { nome, statement };
+// As migrations do SPED Fiscal que só criam tabela: as 11 de 30/10 e a das
+// gerações pela fila do agente (06/11/2026).
+const MIGRATIONS = { "20261030120000_sped_fiscal_connect": 11, "20261106150000_sped_fiscal_generations": 1 };
+const TOTAL = Object.values(MIGRATIONS).reduce((a, b) => a + b, 0);
+const criacoes = Object.entries(MIGRATIONS).flatMap(([pasta, esperadas]) => {
+  const sql = readFileSync(`prisma/migrations/${pasta}/migration.sql`, "utf8");
+  const statements = sql.replace(/^\s*--.*$/gm, "").split(";").map(s => s.trim()).filter(Boolean);
+  const daPasta = statements.map(statement => {
+    const nome = statement.match(/^CREATE TABLE `(sped_fiscal_[a-z_]+)`\s*\(/)?.[1];
+    if (!nome || /\b(DROP|ALTER|TRUNCATE|RENAME|DELETE|UPDATE|INSERT)\b/i.test(statement)) throw new Error("Migration fora do escopo: permitida somente a criação das tabelas SPED Fiscal.");
+    return { nome, statement };
+  });
+  if (daPasta.length !== esperadas) throw new Error(`Esperadas exatamente ${esperadas} tabela(s) do SPED Fiscal em ${pasta}.`);
+  return daPasta;
 });
-if (criacoes.length !== 11 || new Set(criacoes.map(t => t.nome)).size !== 11) throw new Error("Esperadas exatamente as 11 tabelas do SPED Fiscal.");
+if (new Set(criacoes.map(t => t.nome)).size !== TOTAL) throw new Error(`Esperadas exatamente as ${TOTAL} tabelas do SPED Fiscal.`);
 const db = await mariadb.createConnection({ host: url.hostname, port: Number(url.port), user: decodeURIComponent(url.username), password: decodeURIComponent(url.password), database: "connect41", allowPublicKeyRetrieval: true });
 try {
   const tabelas = new Set((await db.query("SELECT table_name AS nome FROM information_schema.tables WHERE table_schema = DATABASE()" )).map(t => t.nome));
   const faltam = criacoes.filter(t => !tabelas.has(t.nome));
-  console.log(`Banco local 3307/connect41: ${11 - faltam.length}/11 tabelas SPED presentes.`);
+  console.log(`Banco local 3307/connect41: ${TOTAL - faltam.length}/${TOTAL} tabelas SPED presentes.`);
   if (!faltam.length) { console.log("SPED Fiscal já preparado. Nenhuma alteração realizada."); }
   else if (!process.argv.includes("--aplicar")) { console.log(`Faltam: ${faltam.map(t => t.nome).join(", ")}\nPara fazer backup e acrescentar somente essas tabelas: node scripts/local/atualizar-sped-fiscal.mjs --aplicar`); }
   else {
@@ -52,6 +60,6 @@ try {
     if (JSON.stringify(antes) !== JSON.stringify(depois)) throw new Error("As contagens existentes mudaram durante a atualização; confira a atividade local. O backup foi preservado.");
     const existentes = new Set((await db.query("SELECT table_name AS nome FROM information_schema.tables WHERE table_schema = DATABASE()")).map(t => t.nome));
     if (criacoes.some(t => !existentes.has(t.nome))) throw new Error("Preparação incompleta. O backup e as tabelas já criadas foram preservados; execute novamente para retomar.");
-    console.log("11/11 tabelas SPED presentes. Registros existentes conferidos e preservados. Sem seeds ou alteração de senhas.");
+    console.log(`${TOTAL}/${TOTAL} tabelas SPED presentes. Registros existentes conferidos e preservados. Sem seeds ou alteração de senhas.`);
   }
 } finally { await db.end(); }

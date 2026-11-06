@@ -156,7 +156,8 @@ const EMPRESA: Ligacao[] = [
 const EMPRESA_SOLTAS: ColunaSolta[] = [
   // A exclusão de um cadastro não autoriza apagar a escrituração nem as
   // revisões fiscais. A retenção desse histórico exige uma operação própria.
-  ...["SpedFiscalProfile", "SpedFiscalBook", "SpedFiscalSupport", "SpedFiscalPeriod", "SpedFiscalCalculation", "SpedFiscalRevision", "SpedFiscalImport"].map((modelo): ColunaSolta => ({ modelo, coluna: "companyId", tratamento: "manter", motivo: "histórico fiscal e revisões preservados; retenção não é exclusão do cadastro" })),
+  // SpedFiscalGeneration (06/11/2026): o arquivo que o agente do motor gerou, guardado com a revisão.
+  ...["SpedFiscalProfile", "SpedFiscalBook", "SpedFiscalSupport", "SpedFiscalPeriod", "SpedFiscalCalculation", "SpedFiscalRevision", "SpedFiscalImport", "SpedFiscalGeneration"].map((modelo): ColunaSolta => ({ modelo, coluna: "companyId", tratamento: "manter", motivo: "histórico fiscal e revisões preservados; retenção não é exclusão do cadastro" })),
   { modelo: "Document", coluna: "entityId", tratamento: "apagar" },
   { modelo: "CustomValue", coluna: "entityId", tratamento: "apagar" },
   { modelo: "Handoff", coluna: "entityId", tratamento: "apagar" },

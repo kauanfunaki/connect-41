@@ -14,6 +14,7 @@ import { competenciaPadrao } from "@/lib/fiscal/motor/estabelecimentos";
 import { apurarPeriodos, conferirApoios, produtosDaBase } from "./calculo";
 import { ajusteSchema, apoioSchema, classificacaoSchema, documentoSchema, itemSchema, parametrosSchema, perfilSchema, periodoSchema, mesesDoPeriodo, chaveCredito, ratearCredito, type ApoioEscriturado, type Classificacao, type ContextoLocal, type DecisaoFiscal, type DocumentoEscriturado, type DocumentoFiscal, type Obrigacao } from "./dominio";
 import type { EtapaDoSped } from "../etapas";
+import type { Escrituracao } from "./escrituracaoXml";
 
 export const MODULOS_DA_ABA = { classificacao: ["fiscal_classificacao"], apuracao: ["fiscal_icms_ipi", "fiscal_contribuicoes"], fechamento: ["fiscal_fechamento"], gerar: ["fiscal_operacao"] } as const;
 export const json = (v: unknown): Prisma.InputJsonValue => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
@@ -168,13 +169,13 @@ export async function gravarDocumento(tx: Prisma.TransactionClient, ctx: AuthCon
   await tx.fiscalDocument.upsert({ where: { tenantId_dedupKey: { tenantId: ctx.tenantId, dedupKey: entrada.identidade } }, create: { tenantId: ctx.tenantId, companyId: empresaEscolhida, type: entrada.tipo, accessKey: /^\d{44}$/.test(entrada.identidade) ? entrada.identidade : null, dedupKey: entrada.identidade, number: entrada.numero, series: entrada.serie || null, issuerName: entrada.nomeEmitente || "Não informado no TXT", issuerDocument: entrada.emitente, recipientName: entrada.nomeDestinatario || null, recipientDocument: entrada.destinatario || null, amount: entrada.valor, issuedAt: new Date(`${entrada.emitidoEm.slice(0, 10)}T00:00:00Z`), competence: entrada.competencia, origin: "UPLOAD", situation: entrada.cancelado ? "CANCELADA" : "AUTORIZADA", completude: entrada.completo ? "COMPLETO" : "PARCIAL", uploadedById: ctx.userId, renderizavel: false, cfops: [...new Set(entrada.itens.map(i => i.cfop).filter(Boolean))].join(",") || null }, update: {} });
   return igual ? "duplicado" : anterior ? "complementado" : "importado";
 }
-export function montarPacote(tela: TelaLocal, base: BaseLocal, obrigacao: Obrigacao, tipo: "0" | "1") {
+export function montarPacote(tela: TelaLocal, base: BaseLocal, obrigacao: Obrigacao, tipo: "0" | "1", escrituracao?: Escrituracao) {
   const c = tela.contexto!;
   if (c.competencia.length !== 7) throw new ErroFiscal("Escolha uma competência mensal para gerar.");
   if (base.perfis.length !== tela.grupo.length) throw new ErroFiscal("Configure o perfil fiscal de todos os estabelecimentos da geração.");
   if (base.perfis.some(p => !p.obrigacoes.includes(obrigacao))) throw new ErroFiscal("Obrigação não habilitada no perfil fiscal.");
   const apuracao = obrigacao === "icms_ipi" ? base.icms : base.contribuicoes;
   if (apuracao.pendencias.length) throw new ErroFiscal(`Confira a apuração antes de gerar: ${apuracao.pendencias[0]}`);
-  const pacote = pacoteGeracaoSchema.parse({ versao: 1, finalidade: "geracao_connect_v1", tenant_id: c.tenantId, raiz: c.raiz, competencia: c.competencia, obrigacao, tipo_sped: tipo, revisao: base.revisao, estabelecimentos: tela.grupo.map(e => ({ id_connect: e.id, cnpj: e.cnpj, nome: e.nome, perfil: base.perfis.find(p => p.companyId === e.id) })), documentos: base.documentos, apoios: base.apoios, decisoes: base.decisoes, parametros: base.periodos, apuracao });
+  const pacote = pacoteGeracaoSchema.parse({ versao: 1, finalidade: "geracao_connect_v1", tenant_id: c.tenantId, raiz: c.raiz, competencia: c.competencia, obrigacao, tipo_sped: tipo, revisao: base.revisao, estabelecimentos: tela.grupo.map(e => ({ id_connect: e.id, cnpj: e.cnpj, nome: e.nome, perfil: base.perfis.find(p => p.companyId === e.id) })), documentos: base.documentos, apoios: base.apoios, decisoes: base.decisoes, parametros: base.periodos, apuracao, ...(escrituracao ? { escrituracao } : {}) });
   return { pacote, ...serializarPacote(pacote) };
 }
