@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getAuthContext, podeExcluir } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
-import { ajusteSchema, apoioSchema, dinheiroSchema, parametrosSchema, perfilSchema, tributacaoSchema } from "@/lib/fiscal/sped/local/dominio";
+import { ajusteSchema, apoioSchema, dinheiroSchema, obrigacoesDoPerfilSchema, parametrosSchema, tributacaoSchema } from "@/lib/fiscal/sped/local/dominio";
 import { autorizar, carregarBase, ErroFiscal, escreverNaRaiz, json, prepararTelaLocal, registrarDecisao, salvarClassificacao } from "@/lib/fiscal/sped/local/servidor";
 import { processarImportacao } from "@/lib/fiscal/sped/local/fila";
 import { gerarComPacote } from "@/lib/fiscal/sped/local/geracao";
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         await registrarDecisao(tx, ctx, c.raiz, "tributacao", chave, { ...(anterior?.data as object ?? {}), ...tributos });
       } else if (r.acao === "perfil") {
         if (!await podeNoModulo(ctx, "fiscal_configuracoes", "gerir")) throw new ErroFiscal("Sem permissão para configurar o perfil fiscal.", 403);
-        const dados = perfilSchema.parse(r.dados);
+        const dados = obrigacoesDoPerfilSchema.parse(r.dados);
         await tx.spedFiscalProfile.upsert({ where: { tenantId_companyId: { tenantId: ctx.tenantId, companyId: empresa.id } }, create: { tenantId: ctx.tenantId, companyId: empresa.id, data: json(dados) }, update: { data: json(dados) } });
         await registrarDecisao(tx, ctx, c.raiz, "perfil", empresa.id, dados);
       } else if (r.acao === "parametros") {

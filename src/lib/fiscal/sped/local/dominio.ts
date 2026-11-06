@@ -48,6 +48,20 @@ export const perfilSchema = z.object({
   obrigacoes: z.array(obrigacaoSchema).min(1), inscricaoEstadual: z.string().max(30).default(""),
 });
 export type PerfilFiscal = z.infer<typeof perfilSchema>;
+// UF, regime e IE vêm do cadastro da empresa; o perfil guardado no SPED só tem as
+// obrigações. Perfis antigos ainda trazem uf/regime/IE no JSON: são ignorados.
+export const obrigacoesDoPerfilSchema = z.object({ obrigacoes: z.array(obrigacaoSchema).min(1) });
+export type CadastroFiscal = { stateCode: string | null; stateRegistration: string | null; taxRegimeKind: string | null };
+const REGIME_DO_CADASTRO: Record<string, PerfilFiscal["regime"]> = { SIMPLES_NACIONAL: "simples", MEI: "simples", LUCRO_PRESUMIDO: "presumido", LUCRO_REAL: "real" };
+/** Junta o cadastro da empresa com as obrigações escolhidas no SPED. `faltando` diz o que completar no cadastro. */
+export function perfilDaEmpresa(cadastro: CadastroFiscal, obrigacoes: Obrigacao[]) {
+  const uf = cadastro.stateCode?.trim().toUpperCase() ?? "";
+  const regime = cadastro.taxRegimeKind ? REGIME_DO_CADASTRO[cadastro.taxRegimeKind] ?? null : null;
+  const faltando: string[] = [];
+  if (!/^[A-Z]{2}$/.test(uf)) faltando.push("UF");
+  if (!regime) faltando.push(cadastro.taxRegimeKind ? "regime compatível com o SPED (simples, presumido ou real)" : "regime tributário");
+  return { uf, regime, inscricaoEstadual: (cadastro.stateRegistration ?? "").slice(0, 30), obrigacoes, faltando };
+}
 export const apoioSchema = z.object({
   identidade: z.string().min(1).max(160), competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
   categoria: z.enum(["rpa", "recibo", "recibo_motorista", "contrato_motorista", "contrato_locacao", "contrato_locacao_imovel", "fatura"]),
