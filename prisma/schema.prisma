@@ -3627,6 +3627,32 @@ model SpedFiscalRevision {
   @@map("sped_fiscal_revisions")
 }
 
+/// A geração do arquivo pela fila do Connect (06/11/2026). O motor roda por
+/// fora: o agente dele busca a tarefa (`RobotTask` do tipo `gerar_sped`), baixa
+/// o pacote da revisão e devolve o TXT em partes. O andamento é o da tarefa;
+/// aqui ficam a revisão pedida e o arquivo que voltou.
+model SpedFiscalGeneration {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  revisionId String @unique @db.VarChar(36)
+  robotTaskId String @unique @db.VarChar(36)
+  /// O Contribuições é da raiz: a tela de qualquer estabelecimento dela mostra a geração.
+  raiz String @db.VarChar(8)
+  competence String @db.VarChar(7)
+  obligation String @db.VarChar(20)
+  /// Preenchidos quando o agente devolve o arquivo e o Connect confere tamanho e SHA-256.
+  fileName String? @db.VarChar(200)
+  filePath String? @db.VarChar(500)
+  fileSha256 String? @db.Char(64)
+  fileBytes Int?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([tenantId, companyId, competence])
+  @@index([tenantId, raiz, competence])
+  @@map("sped_fiscal_generations")
+}
+
 /// Fila retomável: um arquivo por item, aquisição da lease por compare-and-set.
 model SpedFiscalImport {
   id String @id @default(uuid()) @db.VarChar(36)

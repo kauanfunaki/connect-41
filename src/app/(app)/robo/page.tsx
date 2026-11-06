@@ -14,7 +14,7 @@ import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDateTime, formatarNumero } from "@/lib/format";
-import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, maquinaSemSinal, motivoParaPessoa, type StatusDaTarefa } from "@/lib/robo/tarefas";
+import { ROTULO_DO_STATUS, TIPOS_DE_TAREFA, ehTipoDeTarefa, maquinaSemSinal, motivoParaPessoa, tiposDaArea, type StatusDaTarefa } from "@/lib/robo/tarefas";
 import { Aviso } from "@/components/ui/Aviso";
 import type { TomDoSelo } from "@/components/ui/Selo";
 
@@ -46,8 +46,10 @@ export default async function RoboDoSocietarioPage() {
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const prisma = getPrisma();
+  // Só as do Societário: a geração do SPED (06/11/2026) usa a mesma fila e
+  // aparece no Gerar SPED.
   const tarefas = await prisma.robotTask.findMany({
-    where: { tenantId: ctx.tenantId },
+    where: { tenantId: ctx.tenantId, kind: { in: tiposDaArea("societario") } },
     orderBy: { createdAt: "desc" },
     take: 100,
     select: { id: true, kind: true, status: true, companyId: true, machineSlug: true, attempts: true, reason: true, fileId: true, createdAt: true, finishedAt: true },

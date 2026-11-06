@@ -134,6 +134,10 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "fiscal.sped.quarentena.reprocessada": c("pediu ao motor SPED o reprocessamento da quarentena, na execução"),
   "fiscal.sped.pagamentos_apoio.importados": c("importou no motor SPED os pagamentos de apoio"),
   "fiscal.sped.faturas_bpo.importadas": c("importou no motor SPED as faturas do BPO da planilha"),
+  // A geração pela fila do Connect, com o agente do motor (06/11/2026).
+  "fiscal.sped.geracao_pedida": c("pediu a geração do arquivo SPED, que entrou na fila do agente do motor", { comNome: false }),
+  "fiscal.sped.geracao_concluida": o("gerou e devolveu o arquivo SPED pedido na fila", { comNome: false }),
+  "fiscal.sped.geracao_cancelada": e("tirou da fila a geração do arquivo SPED", { comNome: false }),
   "fiscal.sped.upload.criado": c("abriu no motor SPED o envio em partes"),
   "fiscal.sped.upload.concluido": c("concluiu no motor SPED o envio em partes, na"),
   "fiscal.sped.upload.cancelado": x("cancelou no motor SPED o envio em partes"),
@@ -660,6 +664,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   Lead: "lead",
   License: "licença",
   RobotTask: "tarefa do robô",
+  SpedFiscalGeneration: "geração do arquivo SPED",
   Meeting: "reunião",
   ModeloDeObrigacao: "obrigação por regime",
   OAuthAccount: "conta das reuniões",

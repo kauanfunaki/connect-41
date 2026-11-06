@@ -1,20 +1,20 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { randomUUID, createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import bcrypt from "bcryptjs";
 import { XML_FICTICIO } from "./fixture";
 import { lerDocumentoXml, COLUNAS_APOIO } from "./importacao";
 import { csvSeguro } from "./exportacao";
 import type { AuthContext } from "@/lib/auth/context";
-import type { MotorDoEscritorio } from "@/lib/fiscal/motor/servidor";
+import type { PedidoDeGeracao } from "./geracaoPeloAgente";
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
-const m = vi.hoisted(() => ({ ctx: {} as AuthContext, motor: null as MotorDoEscritorio | null, companyId: "" }));
-vi.mock("@/lib/fiscal/motor/servidor", async importOriginal => {
-  const real = await importOriginal<typeof import("@/lib/fiscal/motor/servidor")>();
-  return { ...real, abrirMotor: async () => m.motor, atorDaSessao: async () => ({ id: m.ctx.userId, nome: "Fiscal Fictícia", email: "fiscal.qa@example.invalid", tenant: m.ctx.tenantId }), estabelecimentosDaRaiz: async () => ({ visiveis: [{ id: 3, companyId: m.companyId }] }) };
-});
+const m = vi.hoisted(() => ({ ctx: {} as AuthContext, companyId: "" }));
 vi.mock("@/lib/auth/context", async importOriginal => { const real = await importOriginal<typeof import("@/lib/auth/context")>(); return { ...real, getAuthContext: async () => m.ctx }; });
+// Desde 05/11/2026 (bbec9d0b) quem pode usar a faixa "Trabalhando em" escolhe a empresa só por
+// ela, e a URL não conta. Estes testes passam a empresa pela URL: a pessoa fictícia é de um
+// setor com a faixa desligada, que segue a regra de antes.
+vi.mock("@/lib/empresas/focoServidor", async importOriginal => { const real = await importOriginal<typeof import("@/lib/empresas/focoServidor")>(); return { ...real, podeUsarOFoco: async () => false, lerEmpresaEmFoco: async () => null }; });
 const url = process.env.SPED_FISCAL_TEST_DATABASE_URL;
 const habilitado = !!url;
 if (url) { const u = new URL(url); if (u.hostname !== "127.0.0.1" || u.port !== "33381" || u.pathname !== "/connect41") throw new Error("Testes SPED exigem o banco descartável na porta 33381."); process.env.DATABASE_URL = url; }
@@ -129,23 +129,102 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
     await expect(escreverNaRaiz(m.ctx, "39952818", versao, async tx => { await registrarDecisao(tx, m.ctx, "39952818", "teste", chave, json({ valor: "1.00" })); throw new Error("falha simulada"); })).rejects.toThrow("falha simulada");
     expect(await revisao()).toBe(versao); expect(await getPrisma().spedFiscalDecision.count({ where: { tenantId: dados.tenantId, key: chave } })).toBe(0);
   });
-  it("gera com pacote imutável, reconcilia parte incerta e não repete a execução", async () => {
-    await acao("parametros", { saldoIcms: "0.00", saldoIpi: "0.00", saldoPis: "0.00", saldoCofins: "0.00", receitaBruta: "0.00" }, "apuracao");
-    const { gerarComPacote } = await import("./geracao");
-    const recebidas: number[] = []; let hash = "", erro = true;
-    const criarExecucao = vi.fn(async (_raiz: string, corpo: { pacote_id: string }) => ({ id: 781, pacote_id: corpo.pacote_id, sha256_connect: hash, revisao_connect: await revisao() }));
-    const criarUploadDePacote = vi.fn(async (_raiz: string, corpo: { sha256: string }) => { hash = corpo.sha256; return { id: randomUUID(), tamanho_parte: 8388608, partes_recebidas: recebidas }; });
-    const enviarParteDoUpload = vi.fn(async (_raiz: string, _id: string, n: number) => { recebidas.push(n); if (erro) { erro = false; throw new Error("Resposta perdida depois de receber a parte"); } });
-    m.motor = { escrita: true, raizes: ["39952818"], cliente: { saude: async () => ({ capacidades: ["geracao_connect_v1"] }), criarUploadDePacote, obterUpload: async (raiz: string, id: string) => ({ id, tamanho_parte: 8388608, partes_recebidas: recebidas }), enviarParteDoUpload, concluirPacote: async () => ({ pacote_id: "pacote-ficticio", sha256: hash }), criarExecucao } } as unknown as MotorDoEscritorio;
-    const pedido = { empresa: dados.companyId, competencia: "2026-09", revisao: await revisao(), dados: { obrigacao: "icms_ipi", tipo: "0", chave: randomUUID() } };
-    await expect(gerarComPacote(m.ctx, pedido)).rejects.toThrow("Resposta perdida");
-    const r = await gerarComPacote(m.ctx, pedido); expect(r.execucaoId).toBe(781);
-    expect(criarUploadDePacote).toHaveBeenCalledTimes(1); expect(enviarParteDoUpload).toHaveBeenCalledTimes(1); expect(criarExecucao).toHaveBeenCalledTimes(1);
-    const congelada = await getPrisma().spedFiscalRevision.findUnique({ where: { id: r.revisaoId } });
-    await escreverNaRaiz(m.ctx, "39952818", null, async () => undefined);
-    expect((await gerarComPacote(m.ctx, pedido)).execucaoId).toBe(781); expect(criarExecucao).toHaveBeenCalledTimes(1);
-    expect((await getPrisma().spedFiscalRevision.findUnique({ where: { id: r.revisaoId } }))?.sha256).toBe(congelada?.sha256);
-    expect(await revisao()).toBeGreaterThan(congelada!.revision);
-    m.motor = null;
+  // 06/11/2026: a geração vai para a fila do Connect e o agente do motor vem buscar.
+  describe("geração pela fila, com o agente do motor", () => {
+    const sha = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
+    const chaveDaMaquina = `ops_${"a1".repeat(32)}`;
+    const w = () => ({ tenantId: dados.tenantId, slug: "agente-sped-qa", tokenHash: sha(Buffer.from(chaveDaMaquina)), compartilhado: false });
+    const pedidoNovo = async (tipo: "0" | "1" = "0") => ({ empresa: dados.companyId, competencia: "2026-09", revisao: await revisao(), dados: { obrigacao: "icms_ipi", tipo, chave: randomUUID() } });
+    beforeAll(async () => {
+      const db = getPrisma();
+      await db.tenantModule.upsert({ where: { tenantId_moduleCode: { tenantId: dados.tenantId, moduleCode: "tech_ops_center" } }, create: { tenantId: dados.tenantId, moduleCode: "tech_ops_center", enabled: true }, update: { enabled: true } });
+      await db.opsWatcher.upsert({ where: { tenantId_slug: { tenantId: dados.tenantId, slug: "agente-sped-qa" } }, create: { tenantId: dados.tenantId, slug: "agente-sped-qa", name: "Agente SPED fictício", isActive: true, tokenHash: w().tokenHash }, update: { isActive: true, tokenHash: w().tokenHash } });
+      // Nenhuma geração aberta de uma rodada anterior do laboratório.
+      await db.robotTask.updateMany({ where: { tenantId: dados.tenantId, kind: "gerar_sped", status: { in: ["PENDENTE", "EM_EXECUCAO"] } }, data: { status: "CANCELADA", openKey: null } });
+      await acao("parametros", { saldoIcms: "0.00", saldoIpi: "0.00", saldoPis: "0.00", saldoCofins: "0.00", receitaBruta: "0.00" }, "apuracao");
+    });
+    afterAll(async () => { if (habilitado) await rm(`storage/sped-fiscal/${dados.tenantId}/gerados`, { recursive: true, force: true }); });
+
+    it("pede, a máquina pega, baixa o pacote, devolve em partes, e o arquivo fica para baixar com os mesmos bytes", async () => {
+      const { pedirGeracao, geracoesDaTela } = await import("./geracao");
+      const { pegarProxima, devolverTarefa } = await import("@/lib/robo/servidor");
+      const { pacoteDaTarefa, receberParte } = await import("./geracaoPeloAgente");
+      const pedido = await pedidoNovo();
+      const r = await pedirGeracao(m.ctx, pedido);
+      // A mesma intenção de novo devolve o mesmo pedido; outra intenção para o mesmo arquivo é recusada.
+      expect((await pedirGeracao(m.ctx, pedido)).geracaoId).toBe(r.geracaoId);
+      await expect(pedirGeracao(m.ctx, await pedidoNovo())).rejects.toMatchObject({ status: 409 });
+
+      const { tarefa } = await pegarProxima(w(), ["gerar_sped"]);
+      expect(tarefa?.tipo).toBe("gerar_sped");
+      const d = tarefa!.dados as PedidoDeGeracao;
+      expect(d).toMatchObject({ raiz: "39952818", cnpj: "39952818000140", competencia: "2026-09", obrigacao: "icms_ipi", tipo_sped: "0" });
+
+      // O pacote pela rota, com a chave da máquina: os bytes canônicos do SHA-256 congelado.
+      const { GET: baixarPacote } = await import("@/app/api/ops/watchers/[slug]/tarefas/[id]/pacote/route");
+      const resposta = await baixarPacote(new Request(`http://connect/api/ops/watchers/agente-sped-qa/tarefas/${tarefa!.id}/pacote`, { headers: { authorization: `Bearer ${chaveDaMaquina}` } }), { params: Promise.resolve({ slug: "agente-sped-qa", id: tarefa!.id }) });
+      expect(resposta.status).toBe(200);
+      const pacote = new Uint8Array(await resposta.arrayBuffer());
+      expect(sha(pacote)).toBe(d.sha256); expect(pacote.length).toBe(d.tamanho);
+      expect(JSON.parse(Buffer.from(pacote).toString("utf8"))).toMatchObject({ finalidade: "geracao_connect_v1", competencia: "2026-09", obrigacao: "icms_ipi" });
+      await expect(pacoteDaTarefa({ ...w(), slug: "outra-maquina" }, tarefa!.id)).rejects.toMatchObject({ status: 409 });
+
+      const txt = Buffer.from("|0000|ARQUIVO FICTÍCIO|\r\n|9999|2|\r\n", "latin1");
+      // A primeira parte pela rota, como o agente manda; a segunda direto, repetida para provar que repetir é seguro.
+      const { PUT: enviarParte } = await import("@/app/api/ops/watchers/[slug]/tarefas/[id]/partes/[n]/route");
+      const primeira = new Uint8Array(txt.subarray(0, 10));
+      const viaRota = await enviarParte(new Request(`http://connect/api/ops/watchers/agente-sped-qa/tarefas/${tarefa!.id}/partes/1`, { method: "PUT", headers: { authorization: `Bearer ${chaveDaMaquina}`, "content-type": "application/octet-stream", "content-length": String(primeira.length), "x-parte-sha256": sha(primeira) }, body: primeira }), { params: Promise.resolve({ slug: "agente-sped-qa", id: tarefa!.id, n: "1" }) });
+      expect(viaRota.status).toBe(200);
+      expect(await viaRota.json()).toMatchObject({ numero: 1, tamanho: 10, repetida: false });
+      await receberParte(w(), tarefa!.id, 2, txt.subarray(10), sha(txt.subarray(10)));
+      expect(await receberParte(w(), tarefa!.id, 2, txt.subarray(10), sha(txt.subarray(10)))).toMatchObject({ repetida: true });
+      expect(await devolverTarefa(w(), tarefa!.id, { ok: true, resultado: { arquivo: { nome: "sped fictício.txt", tamanho: txt.length, sha256: sha(txt), partes: 2 } } }, null)).toEqual({ ok: true, status: "CONCLUIDA" });
+      expect(await getPrisma().spedFiscalGeneration.findUnique({ where: { id: r.geracaoId } })).toMatchObject({ fileName: "sped_ficticio.txt", fileSha256: sha(txt), fileBytes: txt.length });
+
+      const tela = await geracoesDaTela(dados.tenantId, { id: dados.companyId, cnpj: "39952818000140" }, "2026-09");
+      expect(tela.geracoes[0]).toMatchObject({ id: r.geracaoId, estado: "CONCLUIDA", aberta: false, arquivo: { bytes: txt.length, sha256: sha(txt) } });
+      expect(tela.agente).toMatchObject({ nome: "Agente SPED fictício", semSinal: false });
+
+      const { GET: baixar } = await import("@/app/api/fiscal/sped/local/gerados/[id]/route");
+      const arquivo = await baixar(new Request(`http://connect/api/fiscal/sped/local/gerados/${r.geracaoId}`), { params: Promise.resolve({ id: r.geracaoId }) });
+      expect(arquivo.status).toBe(200);
+      expect(new Uint8Array(await arquivo.arrayBuffer())).toEqual(new Uint8Array(txt));
+      expect(await getPrisma().auditLog.count({ where: { tenantId: dados.tenantId, action: "fiscal.sped.geracao_concluida", entityId: r.geracaoId } })).toBe(1);
+    });
+
+    it("falha recuperável volta para a fila; na segunda tentativa vai para quem pediu", async () => {
+      const { pedirGeracao } = await import("./geracao");
+      const { pegarProxima, devolverTarefa } = await import("@/lib/robo/servidor");
+      const r = await pedirGeracao(m.ctx, await pedidoNovo("1"));
+      const primeira = await pegarProxima(w(), ["gerar_sped"]);
+      expect(await devolverTarefa(w(), primeira.tarefa!.id, { ok: false, motivo: "A máquina fictícia caiu.", recuperavel: true }, null)).toEqual({ ok: true, status: "PENDENTE" });
+      const segunda = await pegarProxima(w(), ["gerar_sped"]);
+      expect(segunda.tarefa).toMatchObject({ id: primeira.tarefa!.id, tentativa: 2 });
+      expect(await devolverTarefa(w(), segunda.tarefa!.id, { ok: false, motivo: "A máquina fictícia caiu de novo.", recuperavel: true }, null)).toEqual({ ok: true, status: "PRECISA_DE_GENTE" });
+      expect(await getPrisma().notification.count({ where: { tenantId: dados.tenantId, type: "SPED_GERACAO_PARADA", entityId: primeira.tarefa!.id } })).toBe(1);
+      expect((await getPrisma().spedFiscalGeneration.findUnique({ where: { id: r.geracaoId } }))?.fileSha256).toBeNull();
+    });
+
+    it("tira da fila o que a máquina não pegou, e o mesmo arquivo pode ser pedido de novo", async () => {
+      const { pedirGeracao } = await import("./geracao");
+      const r = await pedirGeracao(m.ctx, await pedidoNovo());
+      expect((await acao("cancelar_geracao", { id: r.geracaoId }, "gerar")).status).toBe(200);
+      expect((await acao("cancelar_geracao", { id: r.geracaoId }, "gerar")).status).toBe(409);
+      const { pegarProxima } = await import("@/lib/robo/servidor");
+      expect((await pegarProxima(w(), ["gerar_sped"])).tarefa).toBeNull();
+      const outra = await pedirGeracao(m.ctx, await pedidoNovo());
+      expect(outra.geracaoId).not.toBe(r.geracaoId);
+      expect((await acao("cancelar_geracao", { id: outra.geracaoId }, "gerar")).status).toBe(200);
+    });
+
+    it("a revisão congelada não muda quando os dados mudam depois do pedido", async () => {
+      const { pedirGeracao } = await import("./geracao");
+      const r = await pedirGeracao(m.ctx, await pedidoNovo());
+      const congelada = await getPrisma().spedFiscalRevision.findUnique({ where: { id: r.revisaoId } });
+      await escreverNaRaiz(m.ctx, "39952818", null, async () => undefined);
+      expect((await getPrisma().spedFiscalRevision.findUnique({ where: { id: r.revisaoId } }))?.sha256).toBe(congelada?.sha256);
+      expect(await revisao()).toBeGreaterThan(congelada!.revision);
+      expect((await acao("cancelar_geracao", { id: r.geracaoId }, "gerar")).status).toBe(200);
+    });
   });
 });

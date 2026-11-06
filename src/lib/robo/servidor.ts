@@ -21,6 +21,8 @@ import {
   chaveAberta,
   destinoDaFalha,
   ehTipoDeTarefa,
+  execucaoPerdida,
+  rotuloNaFrase,
   type Devolucao,
   type TipoDeTarefa,
 } from "./tarefas";
@@ -200,14 +202,17 @@ async function criarRodadaDoSima(tenantId: string, agora: Date) {
 
 async function recolherPerdidas(tenantId: string, agora: Date) {
   const prisma = getPrisma();
-  const perdidas = await prisma.robotTask.findMany({
+  // O banco filtra pelo menor prazo; cada tipo confere o seu (06/11/2026: a
+  // geração do SPED tem uma hora, as tarefas do Societário seguem com 15 min).
+  const candidatas = await prisma.robotTask.findMany({
     where: { tenantId, status: "EM_EXECUCAO", claimedAt: { lt: new Date(agora.getTime() - PRAZO_DA_EXECUCAO_MS) } },
-    select: { id: true, kind: true, attempts: true, requestedById: true, companyId: true },
+    select: { id: true, kind: true, attempts: true, requestedById: true, companyId: true, claimedAt: true },
     take: 20,
   });
-  for (const t of perdidas) {
-    if (!ehTipoDeTarefa(t.kind)) continue;
-    await encerrarComFalha(tenantId, t, { motivo: "A máquina pegou a tarefa e não devolveu em 15 minutos.", recuperavel: true }, null);
+  for (const t of candidatas) {
+    if (!ehTipoDeTarefa(t.kind) || !execucaoPerdida(t.claimedAt, agora, t.kind)) continue;
+    const minutos = Math.round(TIPOS_DE_TAREFA[t.kind].prazoMs / 60_000);
+    await encerrarComFalha(tenantId, t, { motivo: `A máquina pegou a tarefa e não devolveu em ${minutos} minutos.`, recuperavel: true }, null);
   }
 }
 
@@ -229,10 +234,14 @@ async function avisarQuemPediu(tenantId: string, t: TarefaAberta, motivo: string
   const empresa = t.companyId
     ? await getPrisma().company.findFirst({ where: { id: t.companyId, tenantId }, select: { name: true, displayName: true } })
     : null;
+  const deQuem = empresa ? ` de ${nomeExibicao(empresa)}` : "";
+  // A geração do SPED (06/11/2026) avisa com o próprio tipo, que leva à tela
+  // do Gerar SPED, e não à do robô do Societário.
+  const fiscal = TIPOS_DE_TAREFA[t.kind].area === "fiscal";
   await notifyUser(t.requestedById, {
     tenantId,
-    type: "ROBO_PRECISA_DE_VOCE",
-    message: `O robô precisa de você: ${TIPOS_DE_TAREFA[t.kind].rotulo.toLowerCase()}${empresa ? ` de ${nomeExibicao(empresa)}` : ""}. ${motivo}`,
+    type: fiscal ? "SPED_GERACAO_PARADA" : "ROBO_PRECISA_DE_VOCE",
+    message: fiscal ? `A geração do SPED${deQuem} parou e precisa de você. ${motivo}` : `O robô precisa de você: ${rotuloNaFrase(t.kind)}${deQuem}. ${motivo}`,
     entityId: t.id,
   }).catch((err) => console.error("[robo] aviso", err instanceof Error ? err.name : "erro"));
 }
@@ -257,11 +266,18 @@ export async function devolverTarefa(w: CredencialAutenticadaOps, id: string, de
     await registrarUsoDoCertificado(w.tenantId, devolucao.certificado.documento, usoDaTarefa(t.kind));
   }
 
+  // A geração do SPED mora no Fiscal e é carregada só quando a tarefa é dela:
+  // o robô do Societário não precisa dela (nem os testes dele).
+  const geracao = t.kind === "gerar_sped" ? await import("@/lib/fiscal/sped/local/geracaoPeloAgente") : null;
+
   if (!devolucao.ok) {
+    // A próxima tentativa começa do zero: as partes desta não servem para ela.
+    if (geracao) await geracao.descartarPartesDaTentativa(w.tenantId, t.id, t.attempts);
     await encerrarComFalha(w.tenantId, t, devolucao, w.slug);
     const depois = await prisma.robotTask.findUnique({ where: { id }, select: { status: true } });
     return { ok: true, status: depois?.status ?? "PENDENTE" };
   }
+  if (geracao) return { ok: true, status: await geracao.concluirGeracaoSped(w, t, devolucao.resultado) };
   if (t.kind === "imprimir_alvara") return { ok: true, status: await concluirAlvara(w, t, devolucao.resultado, arquivo) };
   if (t.kind === "vigiar_ie") return { ok: true, status: await concluirIE(w, t, devolucao.resultado) };
   if (t.kind === "observar_sima") return { ok: true, status: await concluirSima(w, t, devolucao.resultado) };

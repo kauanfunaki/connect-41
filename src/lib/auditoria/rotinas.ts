@@ -8,6 +8,8 @@ export const ROTINAS_DO_SISTEMA = {
   roboDoSocietario: "Robô do Societário",
   agendadorDeEnvios: "Agendador de envios",
   repeticaoDeLancamentos: "Repetição de lançamentos",
+  // A máquina do motor que gera o SPED pela fila do Connect (06/11/2026).
+  agenteDoSped: "Agente do SPED",
 } as const;
 
 export type RotinaDoSistema = keyof typeof ROTINAS_DO_SISTEMA;

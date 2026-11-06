@@ -31,11 +31,11 @@ Documentos que já estavam no acervo antes da escrituração aparecem no Fechame
 
 ## Implantação — responsabilidade do Kauan
 
-1. Revisar a migration aditiva `20261030120000_sped_fiscal_connect`: cria somente tabelas `sped_fiscal_*`. Aplicá-la pelo fluxo autorizado de deploy, antes do código. Nenhuma migration de produção é executada pelo roteiro local.
-2. Manter o volume privado `storage/`, incluindo `storage/sped-fiscal`, persistente e no backup. Originais, anexos e filas não são apagados automaticamente.
-3. Conferir os módulos do escritório e os planos que usam lista restrita. O novo `fiscal_fechamento` é independente; ICMS/IPI e Contribuições mantêm suas permissões. Importação usa `fiscal_acervo`; perfil usa gestão de `fiscal_configuracoes`.
-4. Implementar e homologar o [contrato de geração v1](SPED-GERACAO-CONNECT-V1-KAUAN.md). Só então anunciar `geracao_connect_v1` na saúde do motor.
-5. Homologar separadamente os resultados fiscais com as referências do escritório e a geração/validação/entrega no motor adaptado. A navegação local e o motor simulado não comprovam homologação fiscal ou transmissão real.
+1. Revisar as migrations aditivas `20261030120000_sped_fiscal_connect` e `20261106150000_sped_fiscal_generations`: as duas criam somente tabelas `sped_fiscal_*`. Aplicá-las pelo fluxo autorizado de deploy, **antes** do código: a tela do Gerar lê a tabela das gerações. Nenhuma migration de produção é executada pelo roteiro local.
+2. Manter o volume privado `storage/`, incluindo `storage/sped-fiscal`, persistente e no backup. Originais, anexos, filas e os arquivos gerados (`storage/sped-fiscal/<escritório>/gerados/`) não são apagados automaticamente.
+3. Conferir os módulos do escritório e os planos que usam lista restrita. O novo `fiscal_fechamento` é independente; ICMS/IPI e Contribuições mantêm suas permissões. Importação usa `fiscal_acervo`; perfil usa gestão de `fiscal_configuracoes`. O Gerar SPED usa `fiscal_operacao`, e o agente exige o Ops Center (`tech_ops_center`) ligado.
+4. Cadastrar o agente do motor como automação do Ops Center e implementar no motor o [contrato da geração pelo agente](SPED-GERACAO-PELO-AGENTE.md) (06/11/2026): o Connect guarda o pedido e o agente vem buscar, sem o app do EasyPanel.
+5. Homologar separadamente os resultados fiscais com as referências do escritório e a geração no motor adaptado, com validação no PVA. A navegação local e o agente de teste (`scripts/local/agente-sped-de-teste.mjs`) não comprovam homologação fiscal ou transmissão real.
 
 ## Verificação isolada
 
