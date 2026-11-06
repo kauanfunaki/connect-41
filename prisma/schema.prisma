@@ -690,12 +690,27 @@ model HelpdeskTicket {
   events HelpdeskEvent[]
   approvals HelpdeskApproval[]
   reopenRequests HelpdeskReopenRequest[]
+  views HelpdeskTicketView[]
   @@unique([tenantId, id])
   @@unique([tenantId, draftId])
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
   @@map("helpdesk_tickets")
+}
+
+/// Quando cada pessoa abriu o chamado pela última vez (06/11/2026): é o que
+/// apaga o número do menu — chamado sem responsável ainda não aberto, ou
+/// mudança de outra pessoa num chamado meu depois da minha última visita.
+model HelpdeskTicketView {
+  tenantId String
+  ticketId String
+  userId String
+  viewedAt DateTime @default(now())
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@id([tenantId, ticketId, userId])
+  @@index([tenantId, userId])
+  @@map("helpdesk_ticket_views")
 }
 
 model HelpdeskAssignee {

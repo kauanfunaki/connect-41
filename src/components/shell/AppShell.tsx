@@ -280,7 +280,7 @@ export function AppShell({
   const novasSolicitacoes = useNumeroConferido(solicitacoesNovas, contarSolicitacoesNovas, solicitacoesLigadas && telasDoGeral.includes("solicitacoes"));
   // O número dos Chamados (05/11/2026), no Geral ou no menu do setor que atende.
   const chamadosNoMenu = chamadosLigados || activeSectorModules.some((m) => m.code === "helpdesk");
-  const novosChamados = useNumeroConferido(chamadosNovos, contarChamadosDoMenuAction, chamadosNoMenu);
+  const novosChamados = useNumeroConferido(chamadosNovos, contarChamadosDoMenuAction, chamadosNoMenu, pathname.startsWith("/chamados") ? pathname : undefined);
   const grupoDaTela = grupoDaTelaDaEquipe(pathname);
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
