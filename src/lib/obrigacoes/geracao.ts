@@ -20,6 +20,7 @@ import { feriadosDoEscritorio } from "@/lib/feriados";
 import { hojeIso, dataBR } from "@/lib/datas/calendario";
 import { nomeExibicao } from "@/lib/companyName";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
+import { apagarAtividadeComAnexos } from "@/lib/kanban/exclusaoDeAtividade";
 import { datasDaCompetencia, proximasOcorrencias, rotuloDaCompetencia, type DatasDaObrigacao, type Feriados, type RegraDeData } from "./calendario";
 import { empresaAtende, lerListaJson, planejarGeracao, type EmpresaDaRegra, type RegraDeAplicacao } from "./regra";
 
@@ -203,10 +204,8 @@ export async function gerarObrigacoesPorRegime(
 
       for (const e of plano.remover) {
         try {
-          await prisma.$transaction([
-            prisma.obrigacaoGerada.delete({ where: { id: e.id } }),
-            prisma.pipelineItem.delete({ where: { id: e.pipelineItemId! } }),
-          ]);
+          // A atividade sai com as subatividades e os anexos de todas (06/11/2026), e a obrigação na mesma transação.
+          await apagarAtividadeComAnexos(m.tenantId, e.pipelineItemId!, (tx) => tx.obrigacaoGerada.delete({ where: { id: e.id } }));
           r.removidas++;
         } catch (err) {
           console.error(`[obrigacoes] falha ao tirar a obrigação ${e.id}`, err);
