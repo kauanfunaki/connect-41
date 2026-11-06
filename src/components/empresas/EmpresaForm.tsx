@@ -15,6 +15,7 @@ import { Stepper, type StepStatus } from "@/components/ui/Stepper";
 import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { OPCOES_DE_REGIME } from "@/lib/taxRegime";
+import { ATIVIDADES, DICAS_SPED, PERFIS, atividadePeloCnae, formatarCnae } from "@/lib/empresas/camposSped";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { Aviso } from "@/components/ui/Aviso";
 
@@ -28,7 +29,7 @@ const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto", ACTIVE: "Ativo", INACTIVE: "Inativo", CHURNED: "Cancelado",
 };
 
-const STEP_LABELS = ["Identificação", "Endereço", "Contato", "Dados fiscais", "Responsáveis", "Revisão"];
+const STEP_LABELS = ["Identificação", "Endereço", "Contato", "Dados fiscais", "SPED fiscal", "Responsáveis", "Revisão"];
 
 // Grade das etapas: 1 coluna no celular, 2 no tablet, 4 no desktop. Campo
 // curto (documento, status, inscrição, data) ocupa uma coluna; nome e lista
@@ -64,6 +65,15 @@ export type EmpresaDefaultValues = {
   status?: CompanyStatus;
   source?: string;
   parentCompanyId?: string;
+  codMunicipioIbge?: string;
+  spedCodVersao?: string;
+  spedIndPerfil?: string;
+  spedIndAtividade?: string;
+  contabilistaNome?: string;
+  contabilistaCpf?: string;
+  contabilistaCrc?: string;
+  spedContaContabilPadrao?: string;
+  spedCodObservacaoPadrao?: string;
 };
 
 type Props = {
@@ -121,6 +131,15 @@ export function EmpresaForm({
     cnaeSecundarios: defaultValues?.cnaeSecundarios ?? "",
     source: defaultValues?.source ?? "",
     parentCompanyId: defaultValues?.parentCompanyId ?? "",
+    codMunicipioIbge: defaultValues?.codMunicipioIbge ?? "",
+    spedCodVersao: defaultValues?.spedCodVersao ?? "",
+    spedIndPerfil: defaultValues?.spedIndPerfil ?? "",
+    spedIndAtividade: defaultValues?.spedIndAtividade ?? "",
+    contabilistaNome: defaultValues?.contabilistaNome ?? "",
+    contabilistaCpf: defaultValues?.contabilistaCpf ?? "",
+    contabilistaCrc: defaultValues?.contabilistaCrc ?? "",
+    spedContaContabilPadrao: defaultValues?.spedContaContabilPadrao ?? "",
+    spedCodObservacaoPadrao: defaultValues?.spedCodObservacaoPadrao ?? "",
   }));
 
   const lastStep = STEP_LABELS.length - 1;
@@ -237,6 +256,27 @@ export function EmpresaForm({
         }
       }
 
+      // O que a mesma resposta já trazia e não era usado (06/11/2026): só
+      // preenche campo vazio, para não apagar o que a pessoa já digitou.
+      const seVazio = (name: string, value: string | null | undefined) => {
+        const el = form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+        if (el && el.value.trim()) return;
+        set(name, value ?? undefined);
+      };
+      seVazio("codMunicipioIbge", d.codigo_municipio_ibge ? String(d.codigo_municipio_ibge) : undefined);
+      seVazio("cnaePrincipal", d.cnae_fiscal ? formatarCnae(d.cnae_fiscal) : undefined);
+      seVazio(
+        "cnaeSecundarios",
+        Array.isArray(d.cnaes_secundarios)
+          ? d.cnaes_secundarios
+              .map((c: { codigo?: number | string }) => (c?.codigo ? formatarCnae(c.codigo) : ""))
+              .filter((c: string) => c && c !== "0")
+              .join(", ")
+          : undefined
+      );
+      seVazio("foundationDate", d.data_inicio_atividade);
+      seVazio("spedIndAtividade", atividadePeloCnae(d.cnae_fiscal));
+
       // Regime tributário: a BrasilAPI só informa flags genéricos (MEI/Simples),
       // que não determinam a variante detalhada usada aqui (com/sem funcionário,
       // pró-labore etc.) — fica a cargo do usuário selecionar.
@@ -280,6 +320,8 @@ export function EmpresaForm({
       set("neighborhood",  d.bairro);
       set("city",          d.localidade);
       set("stateCode",     d.uf);
+      // O IBGE vem junto do CEP e acompanha a cidade (06/11/2026).
+      set("codMunicipioIbge", d.ibge);
     } catch {
       // falha silenciosa — usuário preenche manualmente
     }
@@ -478,10 +520,10 @@ export function EmpresaForm({
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
           <FormSection title="Contato">
             <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-3">
-              <CampoForm label="E-mail" htmlFor="email">
+              <CampoForm label="E-mail" htmlFor="email" dica={DICAS_SPED.email}>
                 <Input id="email" name="email" type="email" value={values.email} placeholder="contato@empresa.com.br" />
               </CampoForm>
-              <CampoForm label="Telefone" htmlFor="phone">
+              <CampoForm label="Telefone" htmlFor="phone" dica={DICAS_SPED.phone}>
                 <Input
                   id="phone" name="phone" type="tel" value={values.phone}
                   placeholder="(41) 99999-9999" pattern="[\d\s()\-+]{8,20}" maxLength={20}
@@ -514,7 +556,7 @@ export function EmpresaForm({
                 no resto da linha de baixo. */}
             <FieldGrid columns={GRADE}>
               {!ehPF && (
-                <CampoForm label="Inscrição estadual" htmlFor="stateRegistration">
+                <CampoForm label="Inscrição estadual" htmlFor="stateRegistration" dica={DICAS_SPED.stateRegistration}>
                   <Input id="stateRegistration" name="stateRegistration" type="text" value={values.stateRegistration} placeholder="000.000.000-0" />
                 </CampoForm>
               )}
@@ -549,8 +591,75 @@ export function EmpresaForm({
           </FormSection>
         </div>
 
-        {/* ── 5. Responsáveis e vínculos ────────────────── */}
+        {/* ── 5. SPED fiscal ────────────────────────────── */}
+        {/* Os dados do SPED (06/11/2026). Nada aqui é obrigatório: dá para
+            avançar com tudo vazio. Cada campo tem o "?" com o que é e onde
+            achar o dado — quem cadastra não vai abrir o SPED para conferir.
+            Só de pessoa jurídica: em PF a etapa só explica, e os campos não
+            vão no FormData (como a IE e o CNAE da etapa anterior). */}
         <div data-step={4} className={step === 4 ? "" : "hidden"}>
+          <FormSection title="SPED fiscal">
+            {ehPF ? (
+              <p className="text-helper text-fg-muted italic">
+                A EFD ICMS/IPI é de pessoa jurídica: estes dados não se aplicam a pessoa física.
+              </p>
+            ) : (
+              <>
+                <p className="text-helper text-fg-muted">
+                  Opcional. Dados que vão no SPED da empresa. Passe o mouse no <strong>?</strong> de cada campo para ver onde encontrar a informação.
+                </p>
+                <FieldGrid columns={GRADE}>
+                  <CampoForm label="Versão do leiaute" htmlFor="spedCodVersao" dica={DICAS_SPED.spedCodVersao}>
+                    <Input id="spedCodVersao" name="spedCodVersao" type="text" inputMode="numeric" value={values.spedCodVersao} placeholder="020" maxLength={3} />
+                  </CampoForm>
+                  <CampoForm label="Perfil" htmlFor="spedIndPerfil" dica={DICAS_SPED.spedIndPerfil}>
+                    <Select id="spedIndPerfil" name="spedIndPerfil" value={values.spedIndPerfil}>
+                      <option value="">Selecionar…</option>
+                      {PERFIS.map((p) => (
+                        <option key={p} value={p}>Perfil {p}</option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Indicador de atividade" htmlFor="spedIndAtividade" dica={DICAS_SPED.spedIndAtividade} className="sm:col-span-2">
+                    <Select id="spedIndAtividade" name="spedIndAtividade" value={values.spedIndAtividade}>
+                      <option value="">Selecionar…</option>
+                      {ATIVIDADES.map((a) => (
+                        <option key={a.valor} value={a.valor}>{a.rotulo}</option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Código do município (IBGE)" htmlFor="codMunicipioIbge" dica={DICAS_SPED.codMunicipioIbge}>
+                    <Input id="codMunicipioIbge" name="codMunicipioIbge" type="text" inputMode="numeric" value={values.codMunicipioIbge} placeholder="0000000" maxLength={7} />
+                  </CampoForm>
+                  <CampoForm label="Conta contábil padrão" htmlFor="spedContaContabilPadrao" dica={DICAS_SPED.spedContaContabilPadrao}>
+                    <Input id="spedContaContabilPadrao" name="spedContaContabilPadrao" type="text" value={values.spedContaContabilPadrao} placeholder="3.1.1.02.0001" maxLength={60} />
+                  </CampoForm>
+                  <CampoForm label="Código de observação padrão" htmlFor="spedCodObservacaoPadrao" dica={DICAS_SPED.spedCodObservacaoPadrao} className="sm:col-span-2">
+                    <Input id="spedCodObservacaoPadrao" name="spedCodObservacaoPadrao" type="text" value={values.spedCodObservacaoPadrao} maxLength={60} />
+                  </CampoForm>
+                </FieldGrid>
+              </>
+            )}
+          </FormSection>
+          {!ehPF && (
+            <FormSection title="Contabilista responsável">
+              <FieldGrid columns={GRADE}>
+                <CampoForm label="Nome" htmlFor="contabilistaNome" dica={DICAS_SPED.contabilistaNome} className="sm:col-span-2">
+                  <Input id="contabilistaNome" name="contabilistaNome" type="text" value={values.contabilistaNome} maxLength={100} />
+                </CampoForm>
+                <CampoForm label="CPF" htmlFor="contabilistaCpf" dica={DICAS_SPED.contabilistaCpf}>
+                  <Input id="contabilistaCpf" name="contabilistaCpf" type="text" inputMode="numeric" value={values.contabilistaCpf} placeholder="000.000.000-00" maxLength={14} />
+                </CampoForm>
+                <CampoForm label="CRC" htmlFor="contabilistaCrc" dica={DICAS_SPED.contabilistaCrc}>
+                  <Input id="contabilistaCrc" name="contabilistaCrc" type="text" value={values.contabilistaCrc} placeholder="012345O1PR" maxLength={20} className="uppercase" />
+                </CampoForm>
+              </FieldGrid>
+            </FormSection>
+          )}
+        </div>
+
+        {/* ── 6. Responsáveis e vínculos ────────────────── */}
+        <div data-step={5} className={step === 5 ? "" : "hidden"}>
           <FormSection title="Responsáveis e vínculos">
             <FieldGrid columns={GRADE}>
               <CampoForm label="Origem / Fonte" htmlFor="source" className="sm:col-span-2">
@@ -571,8 +680,8 @@ export function EmpresaForm({
           </FormSection>
         </div>
 
-        {/* ── 6. Revisão e salvar ───────────────────────── */}
-        <div data-step={5} className={step === 5 ? "" : "hidden"}>
+        {/* ── 7. Revisão e salvar ───────────────────────── */}
+        <div data-step={6} className={step === 6 ? "" : "hidden"}>
           <FormSection title="Revisão e salvar">
             <ReviewBlock
               title="Identificação"
@@ -627,9 +736,26 @@ export function EmpresaForm({
                     ]),
               ]}
             />
+            {!ehPF && (
+              <ReviewBlock
+                title="SPED fiscal"
+                onEdit={() => goTo(4)}
+                items={[
+                  { label: "Versão do leiaute", value: values.spedCodVersao },
+                  { label: "Perfil", value: values.spedIndPerfil },
+                  { label: "Indicador de atividade", value: ATIVIDADES.find((a) => a.valor === values.spedIndAtividade)?.rotulo ?? "" },
+                  { label: "Município (IBGE)", value: values.codMunicipioIbge },
+                  { label: "Conta contábil padrão", value: values.spedContaContabilPadrao },
+                  { label: "Código de observação", value: values.spedCodObservacaoPadrao },
+                  { label: "Contabilista", value: values.contabilistaNome },
+                  { label: "CPF do contabilista", value: values.contabilistaCpf ? formatCpf(values.contabilistaCpf) : "" },
+                  { label: "CRC", value: values.contabilistaCrc?.toUpperCase() },
+                ]}
+              />
+            )}
             <ReviewBlock
               title="Responsáveis e vínculos"
-              onEdit={() => goTo(4)}
+              onEdit={() => goTo(5)}
               items={[
                 { label: "Origem", value: values.source },
               ]}

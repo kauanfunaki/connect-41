@@ -77,6 +77,15 @@ export default async function EditarEmpresaPage({
             status:                company.status,
             source:                company.source                ?? undefined,
             parentCompanyId:       company.parentCompanyId        ?? undefined,
+            codMunicipioIbge:        company.codMunicipioIbge        ?? undefined,
+            spedCodVersao:           company.spedCodVersao           ?? undefined,
+            spedIndPerfil:           company.spedIndPerfil           ?? undefined,
+            spedIndAtividade:        company.spedIndAtividade        ?? undefined,
+            contabilistaNome:        company.contabilistaNome        ?? undefined,
+            contabilistaCpf:         company.contabilistaCpf         ?? undefined,
+            contabilistaCrc:         company.contabilistaCrc         ?? undefined,
+            spedContaContabilPadrao: company.spedContaContabilPadrao ?? undefined,
+            spedCodObservacaoPadrao: company.spedCodObservacaoPadrao ?? undefined,
           }}
         />
     </PageContainer>

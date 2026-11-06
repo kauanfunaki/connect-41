@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Building2, CalendarClock, Mail, Palette } from "lucide-react";
+import { Building2, CalendarClock, FileSignature, Mail, Palette } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -14,18 +14,21 @@ import { EXPEDIENTE_PADRAO } from "@/lib/agendaExpediente";
 import { carregarExpedienteDoEscritorio } from "@/lib/agendaExpedienteDb";
 import { AparenciaDoPortalForm } from "@/components/admin/AparenciaDoPortalForm";
 import { FALTA_ATUALIZAR_O_BANCO_DA_APARENCIA, lerAparencia } from "@/lib/aparencia/leitura";
-import { atualizarTenant, salvarAparencia, salvarExpedienteDoEscritorio } from "./actions";
+import { ContabilistaPadraoForm } from "@/components/admin/ContabilistaPadraoForm";
+import { lerContabilistaPadrao } from "@/lib/empresas/contabilistaPadraoDb";
+import { atualizarTenant, salvarAparencia, salvarContabilistaPadrao, salvarExpedienteDoEscritorio } from "./actions";
 
 export default async function TenantPage() {
   const ctx = await getAuthContext();
   if (!isFullWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
-  const [tenant, smtpConfig, expediente, leituraDaAparencia] = await Promise.all([
+  const [tenant, smtpConfig, expediente, leituraDaAparencia, contabilista] = await Promise.all([
     prisma.tenant.findFirst({ where: { id: ctx.tenantId } }),
     prisma.tenantSmtpConfig.findUnique({ where: { tenantId: ctx.tenantId } }),
     carregarExpedienteDoEscritorio(ctx.tenantId),
     lerAparencia(ctx.tenantId),
+    lerContabilistaPadrao(ctx.tenantId),
   ]);
   if (!tenant) notFound();
 
@@ -94,6 +97,19 @@ export default async function TenantPage() {
       >
         <Card className="p-6">
           <ExpedienteForm action={salvarExpedienteDoEscritorio} valor={expediente ?? EXPEDIENTE_PADRAO} />
+        </Card>
+      </SecaoDeConfiguracao>
+
+      {/* O contabilista padrão (06/11/2026): vem preenchido no cadastro de
+          empresa nova, na etapa SPED fiscal. Cada escritório configura o seu. */}
+      <SecaoDeConfiguracao
+        id="contabilista-padrao"
+        titulo="Contabilista responsável"
+        descricao="Quem assina o SPED das empresas, por padrão. Já vem preenchido em empresa nova, e cada empresa pode ter o seu."
+        icone={<FileSignature />}
+      >
+        <Card className="p-6">
+          <ContabilistaPadraoForm action={salvarContabilistaPadrao} valor={contabilista} />
         </Card>
       </SecaoDeConfiguracao>
 

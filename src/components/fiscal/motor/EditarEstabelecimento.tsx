@@ -34,10 +34,18 @@ const GRUPOS: [string, [string, string, number][]][] = [
 const CAMPOS = GRUPOS.flatMap(([, campos]) => campos);
 const ROTULO = new Map(CAMPOS.map(([nome, label]) => [nome, label]));
 
-export function EditarEstabelecimento({ raiz, id, rotulo, valores, atualizadoEm }: { raiz: string; id: number; rotulo: string; valores: Record<string, string>; atualizadoEm: string | null }) {
+/**
+ * `sugestoes` (06/11/2026): o que o cadastro da empresa no Connect já sabe. Entra
+ * só onde o motor está vazio e é enviado como mudança ao salvar — quem cadastra
+ * a empresa não precisa digitar tudo de novo aqui.
+ */
+export function EditarEstabelecimento({ raiz, id, rotulo, valores, sugestoes = {}, atualizadoEm }: { raiz: string; id: number; rotulo: string; valores: Record<string, string>; sugestoes?: Record<string, string>; atualizadoEm: string | null }) {
+  const doCadastro = Object.fromEntries(Object.entries(sugestoes).filter(([k]) => ROTULO.has(k) && !(valores[k] ?? "").trim()));
+  const iniciais = { ...valores, ...doCadastro };
+  const quantasDoCadastro = Object.keys(doCadastro).length;
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
-  const [atuais, setAtuais] = useState(valores);
+  const [atuais, setAtuais] = useState(iniciais);
   const [chave, , depoisDe] = useChaveDeIdempotencia();
   const [erro, setErro] = useState<{ texto: string; campos?: Record<string, string> } | null>(null);
   const [pendente, startTransition] = useTransition();
@@ -54,9 +62,10 @@ export function EditarEstabelecimento({ raiz, id, rotulo, valores, atualizadoEm 
     router.refresh();
   });
   return <>
-    <Button size="xs" variant="secondary" onClick={() => { setAtuais(valores); setErro(null); setAberto(true); }}>Editar</Button>
+    <Button size="xs" variant="secondary" onClick={() => { setAtuais(iniciais); setErro(null); setAberto(true); }}>Editar</Button>
     <Modal open={aberto} title={`Cadastro no motor · ${rotulo}`} onClose={() => setAberto(false)} maxWidth="max-w-3xl">
       <p className="mb-4 text-helper text-fg-secondary">Vai para o registro 0000/0005/0100 dos próximos SPEDs e deixa os já gerados defasados. CNPJ, UF e situação só mudam no painel do motor.</p>
+      {quantasDoCadastro > 0 && <Aviso tom="info" className="mb-4">{quantasDoCadastro === 1 ? "1 campo vazio no motor veio" : `${quantasDoCadastro} campos vazios no motor vieram`} do cadastro da empresa no Connect. Confira e salve para levar ao motor.</Aviso>}
       {GRUPOS.map(([titulo, campos]) => <FormSection key={titulo} title={titulo}><div className="grid gap-4 sm:grid-cols-3">
         {campos.map(([nome, label, max]) => <CampoFiscal key={nome} nome={label} erro={erro?.campos?.[nome]}><Input maxLength={max} inputMode={nome === "dia_vcto_icms" ? "numeric" : undefined} value={atuais[nome] ?? ""} onChange={(e) => setAtuais((a) => ({ ...a, [nome]: e.target.value }))} /></CampoFiscal>)}
       </div></FormSection>)}
