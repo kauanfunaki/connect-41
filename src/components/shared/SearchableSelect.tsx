@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Search, X, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -187,6 +187,34 @@ export function SearchableSelect({
     listaRef.current?.querySelector<HTMLElement>(`[data-indice="${ativa}"]`)?.scrollIntoView({ block: "nearest" });
   }, [ativa, aberto]);
 
+  // A lista é `fixed`, medida pelo campo: com `absolute` ela era cortada por
+  // quem tem `overflow` em volta (o cartão do cadastro da empresa, 05/11/2026).
+  // Sem espaço embaixo, abre para cima.
+  const [posicao, setPosicao] = useState<React.CSSProperties>({});
+  useLayoutEffect(() => {
+    if (!aberto) return;
+    function medir() {
+      const r = gatilhoRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const altura = 340;
+      const embaixo = window.innerHeight - r.bottom;
+      const paraCima = embaixo < altura && r.top > embaixo;
+      setPosicao({
+        position: "fixed",
+        left: r.left,
+        width: r.width,
+        ...(paraCima ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+      });
+    }
+    medir();
+    window.addEventListener("scroll", medir, true);
+    window.addEventListener("resize", medir);
+    return () => {
+      window.removeEventListener("scroll", medir, true);
+      window.removeEventListener("resize", medir);
+    };
+  }, [aberto]);
+
   function abrir() {
     if (lembrarRecentes) setRecentes(lerRecentes(lembrarRecentes));
     setAtiva(0);
@@ -313,7 +341,7 @@ export function SearchableSelect({
       )}
 
       {aberto && (
-        <div className="c41-surgir absolute z-30 mt-1 w-full min-w-[280px] rounded-lg border border-border-strong bg-surface-elevated shadow-lg">
+        <div style={posicao} className="c41-surgir z-50 min-w-[280px] rounded-lg border border-border-strong bg-surface-elevated shadow-lg">
           {/* A busca fica fixa no topo; quem rola é a lista. */}
           <div className="p-2 border-b border-border">
             <Input

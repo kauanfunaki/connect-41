@@ -62,7 +62,7 @@ export async function excluirRascunho(c: Contexto, id: string) {
   if (!await apagarRascunhos(c, [identidade.parse(id)])) throw new Error("Rascunho não encontrado ou já enviado.");
 }
 async function conferirOrigem(c: Contexto, dados: DadosDoChamado) {
-  const valido = isFullWrite(c.ctx.role) || (c.ctx.sectors.includes(dados.requesterSectorCode) && c.config.requesterSectors.includes(dados.requesterSectorCode));
+  const valido = isFullWrite(c.ctx.role) || c.ctx.sectors.includes(dados.requesterSectorCode);
   const setor = await getPrisma().sector.findFirst({ where: { tenantId: c.ctx.tenantId, code: dados.requesterSectorCode, active: true } });
   if (!valido || !setor) throw new Error("Setor solicitante não autorizado.");
 }

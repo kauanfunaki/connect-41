@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ gerar: vi.fn(), ler: vi.fn(), hit: vi.fn() }));
-vi.mock("./ia-fallback", () => ({ gerarComFallback: mocks.gerar }));
+vi.mock("@/lib/ai", () => ({ gerarEstruturado: mocks.gerar }));
 vi.mock("./armazenamento", () => ({ anexosDoChamado: { lerAnexo: mocks.ler } }));
 vi.mock("@/lib/rateLimit", () => ({ hit: mocks.hit }));
 import { analisar, selecionarAnexos, PROMPT, repete, perguntasRespondidas } from "./triagem";
@@ -53,11 +53,6 @@ describe("triagem de chamados", () => {
     const r = await analisar(c, dados, cat, [], [anexo("1")]);
     expect(r.status).toBe("sufficient"); expect(r.attachments).toEqual([expect.objectContaining({ id: "1", name: "1.png", status: "analyzed" })]);
     expect(PROMPT).toContain("não liste anexos");
-  });
-  it("no fallback da Groq, os arquivos ficam como não analisados", async () => {
-    mocks.gerar.mockResolvedValue({ origem: "groq", valor: { status: "needs_information", summary: "Falta contexto", questions: [{ text: "Já aconteceu antes?", options: ["Sim", "Não"] }] } });
-    const r = await analisar(c, dados, cat, [], [anexo("1")]);
-    expect(r.questions[0].options).toEqual(["Sim", "Não"]); expect(r.attachments[0].status).toBe("skipped");
   });
   it.each([new Error("timeout"), new Error("refusal"), new Error("sem chave"), new Error("teto atingido")])("oferece envio sem análise quando o provedor falha: %s", async erro => {
     mocks.gerar.mockRejectedValue(erro); expect((await analisar(c, dados, cat, [], [])).status).toBe("unavailable"); expect(mocks.gerar).toHaveBeenCalledTimes(1);

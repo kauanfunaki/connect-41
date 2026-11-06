@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO, entregaSchema } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -100,5 +100,18 @@ describe("controle interno do Tech", () => {
     expect(diaDoRegistro(new Date("2026-10-27T15:00:00Z"), agora).rotulo).toBe("Terça-feira, 27 de outubro");
     expect(diaDoRegistro(new Date("2025-12-31T15:00:00Z"), agora).rotulo).toBe("Quarta-feira, 31 de dezembro de 2025");
     expect(horaDoRegistro(new Date("2026-10-29T16:34:00Z"))).toBe("13:34");
+  });
+});
+
+describe("PR e commit da entrega (06/11/2026)", () => {
+  it("aceita o endereço do PR e o hash do commit, e recusa o que não é", () => {
+    expect(entregaSchema.safeParse({ prUrl: "https://github.com/o/r/pull/1", commitSha: "a1B2c3d" }).success).toBe(true);
+    expect(entregaSchema.safeParse({ prUrl: "", commitSha: "" }).data).toEqual({ prUrl: null, commitSha: null });
+    expect(entregaSchema.safeParse({ prUrl: "github.com/o/r/pull/1" }).success).toBe(false);
+    expect(entregaSchema.safeParse({ commitSha: "xyz" }).success).toBe(false);
+  });
+  it("conta no histórico em frase", () => {
+    expect(fraseDaAlteracao({ field: "PR", before: null, after: "https://x/pull/1" })).toBe("informou o PR: https://x/pull/1");
+    expect(fraseDaAlteracao({ field: "Commit", before: "abc1234", after: null })).toBe("removeu o Commit (abc1234)");
   });
 });

@@ -15,6 +15,8 @@ import { PerfilForm } from "@/components/configuracoes/PerfilForm";
 import { AlterarSenhaForm } from "@/components/configuracoes/AlterarSenhaForm";
 import { TemaSelector } from "@/components/configuracoes/TemaSelector";
 import { SeletorDePaleta } from "@/components/configuracoes/SeletorDePaleta";
+import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
+import { AZUL_DO_CONNECT } from "@/lib/aparencia/paletas";
 import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
 import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
 import { getVapidPublicKey } from "@/lib/vapid";
@@ -26,6 +28,8 @@ import { accountLinkView } from "@/lib/github/conta";
 import { atualizarMeuPerfil, alterarMinhaSenha, salvarMeuExpediente, desvincularGithub } from "./actions";
 import { TokensDeAcesso } from "@/components/configuracoes/TokensDeAcesso";
 import { listarMeusTokens, listarTokensDoEscritorio } from "@/lib/tokens-pessoais/servidor";
+import { origemDoComando } from "@/lib/tokens-pessoais/regras";
+import { baseDomain, hostSuffix, sectorHost } from "@/lib/auth/activeSector";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_TECH_INTERNO } from "@/lib/tech-interno/regras";
 
@@ -40,7 +44,9 @@ async function dadosDosTokens(ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   ]);
   const host = h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host") || "localhost:3000";
   const proto = h.get("x-forwarded-proto")?.split(",")[0]?.trim() === "http" || host.startsWith("localhost") ? "http" : "https";
-  return { meus, doEscritorio, podeEscrever, origem: `${proto}://${host}`, agora: new Date().toISOString() };
+  // O endereço neutro (`app.`), e não o do setor da página (05/11/2026).
+  const origem = origemDoComando(`${proto}://${host}`, sectorHost(null, baseDomain(), hostSuffix()));
+  return { meus, doEscritorio, podeEscrever, origem, agora: new Date().toISOString() };
 }
 
 // Configurações da conta do próprio usuário — o que antes era só um botão
@@ -52,7 +58,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
   if (!ctx.userId) notFound();
 
   const prisma = getPrisma();
-  const [me, { labels: sectorLabels }, expedientes, github, params] = await Promise.all([
+  const [me, { labels: sectorLabels }, expedientes, github, params, aparencia] = await Promise.all([
     prisma.user.findFirst({
       where: { id: ctx.userId, tenantId: ctx.tenantId },
       select: { name: true, email: true, photoUrl: true, accentColor: true },
@@ -63,6 +69,8 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     // Sem a migration do GitHub aplicada, a tela segue sem a seção.
     accountLinkView(ctx).catch(() => null),
     searchParams,
+    // A cor do escritório, para a bolinha "Do escritório" da paleta (05/11/2026).
+    aparenciaDoEscritorio(ctx.tenantId),
   ]);
   const tokens = await dadosDosTokens(ctx).catch(() => null);
   if (!me) notFound();
@@ -114,7 +122,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
       <SecaoDeConfiguracao titulo="Aparência" descricao="O tema claro, o escuro ou o do seu aparelho, e a paleta de cores, só para você." icone={<Palette />}>
         <div className="flex flex-col gap-6">
           <TemaSelector />
-          <SeletorDePaleta atual={me.accentColor} />
+          <SeletorDePaleta atual={me.accentColor} corDoEscritorio={(aparencia.aparencia.noConnect ? aparencia.aparencia.corPrincipal : null) ?? AZUL_DO_CONNECT} />
         </div>
       </SecaoDeConfiguracao>
 

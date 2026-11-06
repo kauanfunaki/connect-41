@@ -10,8 +10,11 @@ const pipeline = { findFirst: vi.fn() };
 const timeEntry = { findFirst: vi.fn(), update: vi.fn(), delete: vi.fn() };
 const activity = { create: vi.fn() };
 const pipelineStage = { findMany: vi.fn(), delete: vi.fn(), updateMany: vi.fn(), update: vi.fn(), create: vi.fn() };
+// O espaço da lista deixa o colaborador editar (a permissão padrão, 05/11/2026).
+const space = { findUnique: vi.fn(async () => ({ defaultPermission: "EDITAR" })) };
 const prisma = {
   pipeline,
+  space,
   timeEntry,
   activity,
   pipelineStage,

@@ -3,12 +3,12 @@ import type { AuthContext } from "@/lib/auth/context";
 import { podeAbrir, podeVer, podeVerInterno, podeOperar, podeGerenciar, podeResponder, escoposDaBusca } from "./acesso";
 
 const ctx: AuthContext = { userId: "u", tenantId: "t", homeTenantId: "t", role: "SECTOR_USER", sectors: ["fiscal"], activeSector: "fiscal", subscriptionReadOnly: false, canSelfRegularizeSubscription: false };
-const config = { enabled: true, sectorCode: "tech", requesterSectors: ["fiscal"] };
+const config = { enabled: true, sectorCode: "tech" };
 const alvo = { tenantId: "t", createdById: "outro", requesterSectorCode: "fiscal", participants: [], approverIds: [] };
 describe("acesso aos chamados", () => {
-  it("qualquer usuário do setor liberado abre, mas não vê os chamados dos colegas", () => {
+  it("qualquer usuário abre, mas não vê os chamados dos colegas", () => {
     expect(podeAbrir(ctx, config)).toBe(true); expect(podeVer(ctx, config, alvo)).toBe(false);
-    expect(podeAbrir({ ...ctx, sectors: ["contabil"] }, config)).toBe(false);
+    expect(podeAbrir({ ...ctx, sectors: ["contabil"] }, config)).toBe(true);
     expect(podeVer(ctx, config, { ...alvo, createdById: ctx.userId })).toBe(true);
     expect(podeOperar({ ...ctx, role: "ADMIN" }, config)).toBe(false);
   });
@@ -29,9 +29,9 @@ describe("acesso aos chamados", () => {
     expect(podeOperar(equipe, { ...config, sectorCode: "controladoria" })).toBe(false);
     expect(podeVer(equipe, { ...config, sectorCode: "controladoria" }, alvo)).toBe(false);
   });
-  it("remoção de setor bloqueia abertura e preserva o histórico próprio", () => {
-    expect(podeAbrir(ctx, { ...config, requesterSectors: [] })).toBe(false);
-    expect(podeVer(ctx, { ...config, requesterSectors: [] }, { ...alvo, createdById: "u" })).toBe(true);
+  it("qualquer setor abre chamado e vê o que abriu", () => {
+    expect(podeAbrir({ ...ctx, sectors: ["comercial"] }, config)).toBe(true);
+    expect(podeVer(ctx, config, { ...alvo, createdById: "u" })).toBe(true);
   });
   it("setor ativo não amplia nem reduz autorização e papel não substitui tenant", () => {
     expect(podeAbrir({ ...ctx, activeSector: "tech" }, config)).toBe(true);

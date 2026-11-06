@@ -9,12 +9,9 @@ export async function configDoHelpdesk(tenantId: string): Promise<ConfigDeAcesso
   const [enabled, sectorCode] = await Promise.all([isModuleEnabled(tenantId, MODULO), setorDoModulo(tenantId, MODULO)]);
   // Nenhuma tabela nova é consultada com o módulo desligado: a migração pode
   // ser publicada antes da ativação, sem afetar a navegação do escritório.
-  if (!enabled || !sectorCode) return { enabled: false, sectorCode: sectorCode ?? "", requesterSectors: [] };
-  const [setor, rows] = await Promise.all([
-    getPrisma().sector.findFirst({ where: { tenantId, code: sectorCode, active: true } }),
-    getPrisma().helpdeskRequesterSector.findMany({ where: { tenantId } }),
-  ]);
-  return { enabled: !!setor, sectorCode, requesterSectors: rows.map(r => r.sectorCode) };
+  if (!enabled || !sectorCode) return { enabled: false, sectorCode: sectorCode ?? "" };
+  const setor = await getPrisma().sector.findFirst({ where: { tenantId, code: sectorCode, active: true } });
+  return { enabled: !!setor, sectorCode };
 }
 export async function contexto(): Promise<Contexto> {
   const ctx = await getAuthContext();

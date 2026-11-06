@@ -45,6 +45,8 @@ export type IconeDeModulo =
   | "MessageCircle"
   | "MessageSquareWarning"
   | "MessagesSquare"
+  | "Package"
+  | "FileSignature"
   | "Network"
   | "Receipt"
   | "ReceiptText"
@@ -183,6 +185,18 @@ const COM_O_MOTOR = "Opera o motor do SPED Generator quando a integração está
 const SO_LEITURA = "Lê o motor do SPED Generator quando a integração está configurada, e as ações da área continuam no painel do motor; sem ela, mostra a prévia de teste";
 
 export const MODULE_CATALOG: ModuleDef[] = [
+  // O Financeiro da 41 (05/11/2026, decisão do Kauan — fase 1): o setor existia
+  // na semente, sem tela. O BPO é o financeiro dos clientes; este é o de casa.
+  {
+    code: "financeiro_estoque", label: "Estoque", sectorCode: "financeiro",
+    description: "Máquinas e materiais do escritório: com quem está cada um, entradas, saídas, empréstimos, reposição e conferência",
+    defaultEnabled: false, icon: "Package", group: "Operação",
+  },
+  {
+    code: "financeiro_contratos", label: "Contratos e assinaturas", sectorCode: "financeiro",
+    description: "Softwares, serviços e aluguéis que o escritório paga: valor por mês, renovação e quem responde por cada um",
+    defaultEnabled: false, icon: "FileSignature", group: "Contas",
+  },
   {
     code: "contabil_sped", label: "SPED", sectorCode: "contabil",
     description: "De-para e lançamentos de entrada para a Domínio, e o EFD Contribuições gerado pelo motor do SPED",
@@ -208,14 +222,17 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
 
   {
-    code: "tech_github_contributions", label: "GitHub", sectorCode: "tech",
-    description: "Heatmap de commits, pull requests, issues e revisões nos repositórios monitorados",
+    // Produtividade (05/11/2026, opção A da tela 7): o time, as pessoas e o
+    // GitHub como contexto. O código do módulo continua o mesmo.
+    code: "tech_github_contributions", label: "Produtividade", sectorCode: "tech",
+    description: "Pontos entregues, ciclo, retrabalho e chamados do time e de cada pessoa, a saúde do fluxo e a atividade no GitHub como contexto",
     defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
   },
   {
     // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
     code: "tech_entregas", telaMae: "tech_controle_interno", label: "Entregas da Tech", sectorCode: "tech",
-    description: "Entregas validadas pesadas pelo tamanho, tempo de ciclo, retrabalho e chamados, por pessoa e por trimestre",
+    // Desde 05/11/2026 é a lista do que foi entregue; os números foram para a Produtividade.
+    description: "Os itens entregues no período, com tamanho, pontos, ciclo e de onde vieram",
     defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
   {
@@ -805,11 +822,13 @@ export function agruparModulos<T extends { code: string }>(itens: T[]): { grupo:
 // sidebar setorial passou a precisar da mesma informação — duas cópias de um
 // de-para é como um módulo novo aparece no menu e não abre.
 export const MODULE_ROUTES: Record<string, string> = {
+  financeiro_estoque: "/estoque",
+  financeiro_contratos: "/contratos",
   contabil_sped: "/sped-contabil",
   contabil_planejamento: "/planejamento-tributario",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
-  tech_github_contributions: "/github",
+  tech_github_contributions: "/produtividade",
   tech_ops_center:         "/ops",
   tech_entregas: "/controle-interno/entregas",
   helpdesk: "/chamados",

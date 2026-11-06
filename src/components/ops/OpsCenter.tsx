@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, AlertTriangle, Bot, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, KeyRound, Pencil, Plus, RefreshCw, Search, UserRound, X, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, Bot, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, FolderInput, FolderOutput, History, Pencil, Plus, Search, UserRound, X, XCircle } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -158,8 +158,6 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
     {/* Cabeçalho enxuto (26/10/2026): sem subtítulo, sem "Atualizado em" e sem a
         linha de sucessos/avisos/taxa — os números do dia ficam na faixa abaixo. */}
     <PageHeader title={TITULOS[visao]} action={<div className="flex flex-wrap gap-2">
-      {podeGerir && !doCatalogo && <Button size="sm" variant="secondary" href="/admin/integracoes?integracao=ops_center"><KeyRound size={14} /> Integração dos bots</Button>}
-      {!doCatalogo && <IconButton variant="framed" title="Atualizar agora" aria-label="Atualizar agora" onClick={() => void atualizar()} disabled={loading}><RefreshCw size={16} className={loading ? "motion-safe:animate-spin" : ""} /></IconButton>}
       {podeGerir && !doCatalogo && <Button size="sm" onClick={() => editar("novo")}><Plus size={14} /> Novo robô</Button>}
     </div>} />
     {/* O resumo saiu da ação do cabeçalho para a faixa de números do app: lá ele
@@ -178,7 +176,7 @@ export function OpsCenter({ podeGerir, podeAgir }: { podeGerir: boolean; podeAgi
         e Chamados, no lugar das pílulas dentro do bloco. */}
     {!doCatalogo && painel && <Tabs className="mb-4" active={visao} onChange={v => setVisao(v as typeof visao)} tabs={[
       { key: "automations", label: "Robôs", icon: <Activity size={14} aria-hidden />, count: painel.watchers.length },
-      { key: "history", label: "Histórico", icon: <History size={14} aria-hidden />, count: painel.total },
+      { key: "history", label: "Histórico", icon: <History size={14} aria-hidden /> },
     ]} />}
     {!doCatalogo && painel && <div className="rounded-xl border border-border bg-surface-2/60 p-3 sm:p-4">
       {/* Busca e "Minhas automações" à esquerda, como a busca e o "Atribuídos

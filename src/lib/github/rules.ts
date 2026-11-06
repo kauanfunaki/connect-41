@@ -20,6 +20,8 @@ export const filtersSchema = z.object({
   // Por padrão só entram as pessoas que vincularam a conta GitHub em Sua conta;
   // `all=1` mostra também os autores sem vínculo (27/10/2026).
   all: z.enum(["0", "1"]).default("0"),
+  // Só as pessoas de um time (05/11/2026), pelo id do GithubTeam.
+  time: z.string().uuid().optional(),
 });
 export type Filters = z.infer<typeof filtersSchema>;
 export const settingsSchema = z.object({

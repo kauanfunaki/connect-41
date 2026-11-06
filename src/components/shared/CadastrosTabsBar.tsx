@@ -1,5 +1,6 @@
 import { Building2, Handshake, Users } from "lucide-react";
 import { AbasDeLink, type AbaDeLink } from "@/components/ui/AbasDeLink";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { CAMINHO_DOS_FORNECEDORES, type CadastrosTab } from "@/lib/cadastrosNav";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
@@ -9,8 +10,11 @@ const ABAS: AbaDeLink[] = [
   { chave: "pessoas", rotulo: "Pessoas", href: "/pessoas", icone: <Users /> },
 ];
 
-// Barra de abas do topo de /empresas e /pessoas — troca de aba navega para a
-// listagem correspondente (rotas continuam as mesmas de sempre).
+// O cabeçalho de Cadastros: o título "Cadastros", o subtítulo e a ação da aba
+// aberta, e as abas embaixo (05/11/2026, pedido do Kauan) — o padrão das outras
+// telas com abas (Produtividade, Gestão). Eram as abas em cima, com "Cadastros"
+// em versalete, e o título de cada aba ("Empresas") embaixo delas. A troca de
+// aba navega para a listagem correspondente (rotas continuam as mesmas).
 //
 // A aba Clientes saiu em 15/10/2026 (etapa 3 da saída do Cliente): o cadastro
 // é por empresa, e /clientes leva para cá.
@@ -19,13 +23,13 @@ const ABAS: AbaDeLink[] = [
 // `role="tab"` e `router.push`, o erro que o `SegmentedControl` descreve —
 // aba que navega é link com `aria-current`, e abre em nova guia com o meio do
 // mouse.
-export async function CadastrosTabsBar({ active }: { active: CadastrosTab | "fornecedores" }) {
+export async function CadastrosTabsBar({ active, subtitulo, acao }: { active: CadastrosTab | "fornecedores"; subtitulo: string; acao?: React.ReactNode }) {
   const abas = (await podeNoModulo(await getAuthContext(), "bpo_cadastros", "ver")) ? [...ABAS, ABA_DOS_FORNECEDORES] : ABAS;
   return (
-    <div className="mb-5">
-      <p className="c41-rotulo mb-2">Cadastros</p>
-      <AbasDeLink abas={abas} ativa={active} className="" />
-    </div>
+    <>
+      <PageHeader title="Cadastros" subtitle={subtitulo} action={acao} />
+      <AbasDeLink className="mb-6" aria-label="Cadastros" abas={abas} ativa={active} />
+    </>
   );
 }
 

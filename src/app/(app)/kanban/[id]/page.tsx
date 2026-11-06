@@ -1,17 +1,16 @@
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
+import { BotaoNovaTarefa } from "@/components/kanban/NovaTarefaEmLinha";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { moverItem, reordenarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa, excluirItem } from "../actions";
 import { getAuthContext, podeExcluir } from "@/lib/auth/context";
-import { podeEditarQuadrosNoSetor } from "@/lib/kanban/quadrosDosColaboradoresServidor";
+import { poderesNaLista } from "@/lib/kanban/permissaoDoEspacoServidor";
 import { accessiblePipelineWhere, scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 
 function daysSince(d: Date): number {
@@ -57,8 +56,8 @@ export default async function KanbanBoardPage({
 
   if (!pipeline) notFound();
 
-  // Também o colaborador, a não ser que o coordenador bloqueie o setor (28/10/2026).
-  const canAddItem = await podeEditarQuadrosNoSetor(ctx, pipeline.sectorCode);
+  // Criar, mover e editar: quem edita no espaço da lista (05/11/2026).
+  const canAddItem = (await poderesNaLista(ctx, pipeline)).editar;
   // Excluir card e tirar coluna: só o administrador (13/10/2026).
   const canDelete = podeExcluir(ctx);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
@@ -196,12 +195,8 @@ export default async function KanbanBoardPage({
                 defaultName={`${pipeline.name} — cópia`}
               />
             )}
-            <Button
-              href={`/kanban/${id}/novo-item`}
-              variant="primary"
-            >
-              <Plus size={14} /> Nova tarefa
-            </Button>
+            {/* Sem formulário (05/11/2026): abre o campo em linha na primeira coluna. */}
+            <BotaoNovaTarefa />
           </div>
           )
         }

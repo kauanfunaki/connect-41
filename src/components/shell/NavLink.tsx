@@ -97,6 +97,8 @@ export function TituloDoBloco({ nome, primeiro = false, children }: { nome: stri
 
 type NavItemProps = {
   href: string;
+  /** Só o título de um grupo, sem abrir tela (Ops Center, 05/11/2026): as telas ficam nas filhas. */
+  semLink?: boolean;
   icon: React.ReactNode;
   label: string;
   /**
@@ -118,18 +120,13 @@ type NavItemProps = {
    * novas): o número no fim da linha; na faixa, um ponto. Zero não mostra nada.
    */
   contador?: number;
-  menu?: { aberto: boolean; onClick: () => void; painelId: string };
+  /** O item abre a janela ao lado (`PainelDoItem`); `telas`: quantas há nela. */
+  menu?: { aberto: boolean; onClick: () => void; painelId: string; telas?: number };
   /**
    * A área de uso do item no Connect da equipe (28/10/2026) — ver
    * `classeDoItemComArea`. Sem ela, o desenho do portal.
    */
   area?: string;
-  /**
-   * A tela que veio de outra (05/11/2026, "Tela 1 / Tela 2"): recuada embaixo
-   * da mãe, com o fio que liga as duas e o ícone menor. Só na coluna aberta;
-   * na faixa de ícones a filha não aparece (a mãe leva a ela).
-   */
-  recuado?: boolean;
 };
 
 /**
@@ -173,44 +170,19 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area, recuado = false }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area, semLink = false }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
 
-  if (recuado) {
-    if (naFaixa) return null;
-    return (
-      <Link
-        href={href}
-        aria-current={active ? "page" : undefined}
-        data-grupo={area ?? "marca"}
-        data-recuado
-        // O fio vertical passa pelo centro do ícone da mãe (quadrado de 24px que
-        // começa em 0,5rem + 0,75rem); a filha começa depois dele.
-        className={`relative flex items-center gap-2 py-1.5 pr-2.5 -ml-3 pl-[calc(2.25rem+0.75rem)] rounded-r-lg text-ui transition-colors before:absolute before:left-[calc(1.25rem+0.75rem)] before:top-0 before:bottom-0 before:w-px before:bg-border ${
-          active ? "text-fg font-semibold bg-surface-hover" : "font-medium text-fg-secondary hover:text-fg hover:bg-surface-hover"
-        }`}
-      >
-        {active && <BarraAtiva />}
-        <span aria-hidden className={`inline-grid place-items-center size-5 rounded-md flex-shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5 ${active ? "bg-grupo-solid text-on-brand" : "bg-grupo/12 text-grupo"}`}>{icon}</span>
-        <span className="truncate">{label}</span>
-        {contador > 0 && (
-          <span className="ml-auto">
-            <span aria-hidden><Contador valor={contador} tom="alerta" pequeno /></span>
-            <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
-          </span>
-        )}
-      </Link>
-    );
-  }
-
   if (menu) {
     const focarMenu = () => requestAnimationFrame(() => document.getElementById(menu.painelId)?.querySelector<HTMLElement>("[role='menuitem']")?.focus());
+    // A contagem de telas (05/11/2026, opção C): em cinza antes do "›"; na faixa, no nome.
+    const contagem = menu.telas ? `${menu.telas} ${menu.telas === 1 ? "tela" : "telas"}` : null;
     return (
       <button
         type="button"
-        aria-label={naFaixa ? label : undefined}
+        aria-label={naFaixa ? (contagem ? `${label}, ${contagem}` : label) : undefined}
         aria-haspopup="menu"
         aria-expanded={menu.aberto}
         aria-controls={menu.painelId}
@@ -220,8 +192,36 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
         data-grupo={area}
         className={naFaixa ? classeDoItemNaFaixa(active, area) : area !== undefined ? classeDoItemComArea(active, "w-[calc(100%+0.75rem)] text-label font-medium") : classeDoItem(active, "w-[calc(100%+0.75rem)] text-label font-medium")}
       >
-        {naFaixa ? <IconeNaFaixa icon={icon} active={active} comTelas /> : <>{active && <BarraAtiva />}{area !== undefined ? <IconeDaArea icon={icon} active={active} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}<span>{label}</span><span aria-hidden className="ml-auto">›</span></>}
+        {naFaixa ? (
+          <IconeNaFaixa icon={icon} active={active} comTelas />
+        ) : (
+          <>
+            {active && <BarraAtiva />}
+            {area !== undefined ? <IconeDaArea icon={icon} active={active} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
+            <span className="truncate">{label}</span>
+            <span className="ml-auto flex items-center gap-1.5">
+              {contador > 0 && (
+                <>
+                  <span aria-hidden><Contador valor={contador} tom="alerta" pequeno /></span>
+                  <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
+                </>
+              )}
+              {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
+              {contagem && <span className="text-micro tabular-nums font-normal text-fg-muted"><span aria-hidden>{menu.telas}</span><span className="sr-only">, {contagem}</span></span>}
+              <span aria-hidden>›</span>
+            </span>
+          </>
+        )}
       </button>
+    );
+  }
+
+  if (semLink && !naFaixa) {
+    return (
+      <div data-grupo={area ?? grupo ?? undefined} className={`${area !== undefined ? classeDoItemComArea(false, "text-label font-medium") : classeDoItem(false, "text-label font-medium")} cursor-default hover:bg-transparent`}>
+        {area !== undefined ? <IconeDaArea icon={icon} active={false} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
+        {label}
+      </div>
     );
   }
 
@@ -258,124 +258,6 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
           <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
         </span>
       )}
-    </Link>
-  );
-}
-
-export type ItemDeModulo = { code: string; label: string; href: string };
-
-/**
- * Um grupo de telas que abre e fecha no próprio menu (05/11/2026, opção A da
- * página "Ajustes de 05/11"): o nome do grupo em caixa alta, como o "Geral",
- * com a seta e o número de telas em cinza. O número de telas não é pílula —
- * pílula é só para o que pede ação (chamados, solicitações).
- *
- * Só na coluna aberta. Na faixa de ícones não cabe abrir no lugar: lá o grupo
- * segue sendo o ícone com o painel ao lado (`GrupoNavItem`).
- */
-export function GrupoDoMenu({
-  titulo,
-  telas,
-  aberto,
-  temTelaAberta,
-  onAlternar,
-  children,
-}: {
-  titulo: string;
-  telas: number;
-  aberto: boolean;
-  /** A tela aberta é deste grupo — com o grupo fechado, o nome fica em destaque. */
-  temTelaAberta: boolean;
-  onAlternar: () => void;
-  children: React.ReactNode;
-}) {
-  const id = `menu-grupo-${titulo.normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase()}`;
-  const contagem = `${telas} ${telas === 1 ? "tela" : "telas"}`;
-  return (
-    <div>
-      <button
-        type="button"
-        aria-expanded={aberto}
-        aria-controls={id}
-        onClick={onAlternar}
-        className={`group c41-rotulo flex w-full items-center gap-1.5 mt-2 px-2.5 py-1.5 rounded-md transition-colors hover:bg-surface-hover hover:text-fg ${temTelaAberta && !aberto ? "text-fg" : ""}`}
-      >
-        <svg aria-hidden viewBox="0 0 12 12" className={`size-3 flex-shrink-0 transition-transform motion-reduce:transition-none ${aberto ? "rotate-90" : ""}`}>
-          <path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="truncate">{titulo}</span>
-        {temTelaAberta && !aberto && <span aria-hidden className="size-1.5 rounded-full bg-[var(--c41-setor)]" />}
-        <span className="ml-auto text-micro tabular-nums normal-case tracking-normal text-fg-muted">
-          <span aria-hidden>{telas}</span>
-          <span className="sr-only">, {contagem}{temTelaAberta ? ", com a tela aberta" : ""}</span>
-        </span>
-      </button>
-      <div id={id} hidden={!aberto} className="space-y-0.5">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Um grupo de módulos na sidebar — uma linha que **leva** à tela do grupo.
- *
- * Era uma seção que abria e fechava dentro da sidebar, e o Kauan pediu o
- * contrário (17/09): clicar em "Contas" abre `/setor/bpo/grupo/contas`, com as
- * telas de contas e só elas. A sidebar fica com uma linha por grupo — seis no
- * BPO, no lugar de quinze itens — e nada nela muda de tamanho ao clicar.
- *
- * Fica aceso também quando a tela aberta é de um módulo do grupo: quem está em
- * `/pagar` vê "Contas" marcado, que é o que diz onde ele está.
- */
-export function GrupoNavItem({
-  label,
-  href,
-  icon,
-  itens,
-  area,
-}: {
-  label: string;
-  href: string;
-  icon: React.ReactNode;
-  itens: ItemDeModulo[];
-  /** A área de uso do grupo (a da maioria das telas dele) — ver `classeDoItemComArea`. */
-  area?: string;
-}) {
-  const pathname = usePathname();
-  const naFaixa = useNaFaixa();
-  const active = isActivePath(pathname, href) || itens.some((i) => isActivePath(pathname, i.href));
-
-  // Na faixa, a contagem vai para o nome: "Contas, 4 telas".
-  if (naFaixa) {
-    const telas = `${itens.length} ${itens.length === 1 ? "tela" : "telas"}`;
-    return (
-      <Link
-        href={href}
-        aria-current={active ? "page" : undefined}
-        data-grupo={area}
-        {...nomeNaFaixa(`${label}, ${telas}`, `${label} · ${telas}`)}
-        className={classeDoItemNaFaixa(active, area)}
-      >
-        <IconeNaFaixa icon={icon} active={active} comTelas />
-      </Link>
-    );
-  }
-
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      data-grupo={area}
-      className={area !== undefined ? classeDoItemComArea(active, "text-label font-medium") : classeDoItem(active, "text-label font-medium")}
-    >
-      {active && <BarraAtiva />}
-      {area !== undefined ? <IconeDaArea icon={icon} active={active} /> : <span className="flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4">{icon}</span>}
-      <span className="truncate">{label}</span>
-      {/* Sem alfa (07/10/2026): o cinza a 70% dava 3,0:1 e os números quase sumiam. */}
-      <span className={`ml-auto text-micro tabular-nums ${active && area === undefined ? "text-on-brand/80" : "text-fg-muted"}`}>
-        {itens.length}
-      </span>
     </Link>
   );
 }

@@ -9,6 +9,7 @@ import { stripRichText } from "@/lib/richText";
 import { ColunaDoQuadro } from "./ColunaDoQuadro";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
+import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "./NovaTarefaEmLinha";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
@@ -35,7 +36,25 @@ type Props = {
   /** Base do link do card — default `/kanban/{pipelineId}`. Setores com módulo
    * dedicado passariam a própria base aqui — hoje não há nenhum. */
   basePath?: string;
+  /** Quem cria tarefa ganha o "+ Adicionar atividade" em linha no pé de cada coluna (05/11/2026). */
+  criarTarefa?: (stageId: string, title: string) => Promise<void>;
 };
+
+/** O pé da coluna: a criação em linha; a primeira coluna atende ao "+ Nova tarefa" do topo. */
+function NovaNaColuna({ stage, base, criar, primeira }: { stage: Stage; base: string; criar: NonNullable<Props["criarTarefa"]>; primeira: boolean }) {
+  const sinal = useNovaTarefaDoTopo(primeira);
+  return (
+    <div className="px-1 pt-0.5">
+      <NovaTarefaEmLinha
+        stageId={stage.id}
+        nomeDaColuna={stage.name}
+        criar={criar}
+        hrefDoFormulario={`${base}/novo-item?estagio=${encodeURIComponent(stage.id)}`}
+        sinalParaAbrir={sinal}
+      />
+    </div>
+  );
+}
 
 // Cor de Gestão pelo token (era o hex cru, repetido em 15 lugares). Só vai
 // para `style` (bolinha e borda do cartão), então a variável CSS serve.
@@ -46,7 +65,7 @@ function isOverdue(dueDate: string | null, isTerminal?: boolean): boolean {
   return new Date(dueDate).getTime() < Date.now();
 }
 
-export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction, basePath }: Props) {
+export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction, basePath, criarTarefa }: Props) {
   const base = basePath ?? `/kanban/${pipelineId}`;
   // Os cartões vêm da prop e o arraste fica por cima, otimista (auditoria de UX,
   // 30/10/2026). Antes era `useState(initialItems)`, lido só na montagem: a
@@ -79,7 +98,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
 
   return (
     <div className="scroll-x bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-4 h-full overflow-x-auto flex gap-3">
-      {stages.map((stage) => {
+      {stages.map((stage, indice) => {
         const color = stage.color ?? FALLBACK_COLOR;
         const stageItems = items.filter((i) => i.stageId === stage.id);
         const isDragOver = dragOverStage === stage.id;
@@ -205,6 +224,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                 </Link>
               );
             })}
+            {criarTarefa && <NovaNaColuna stage={stage} base={base} criar={criarTarefa} primeira={indice === 0} />}
           </ColunaDoQuadro>
         );
       })}

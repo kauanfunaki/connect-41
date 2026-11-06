@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { Check, ChevronDown, Circle, Eye, Flag, Play, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, Circle, Eye, Flag, Play, Plus, Square, Tag as TagIcon, Timer, Users, Calendar, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { TempoDecorrido } from "@/components/kanban/TempoDecorrido";
 import { Dropdown, DropdownItem } from "@/components/ui/Dropdown";
@@ -14,10 +14,20 @@ import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
-import { formatCalendarDate } from "@/lib/format";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import type { StageDotType } from "@/components/kanban/StageDot";
+import {
+  CAMPOS_EXTRAS,
+  OPCOES_DE_PRIORIDADE,
+  ROTULO_DA_PRIORIDADE,
+  ROTULO_DO_CAMPO_EXTRA,
+  VAZIO,
+  datasNoCampo,
+  extrasVisiveis,
+  prioridadeNoCampo,
+  type CampoExtra,
+} from "@/lib/kanban/camposDaTarefa";
 
 type StageOption = { id: string; name: string; type?: StageDotType };
 
@@ -35,7 +45,6 @@ const TOM_DA_ETAPA: Record<StageDotType, TomDoSelo> = {
 type TagOption = { id: string; name: string; color: string };
 type UserOption = { id: string; name: string };
 
-const PRIORITY_LABEL: Record<number, string> = { 0: "Normal", 1: "Alta", 2: "Urgente" };
 const PRIORITY_COLOR: Record<number, string> = {
   0: "var(--c41-fg-muted)",
   1: "var(--c41-warning)",
@@ -43,12 +52,6 @@ const PRIORITY_COLOR: Record<number, string> = {
 };
 const FREQUENCY_LABEL: Record<string, string> = { DAILY: "Diária", WEEKLY: "Semanal", BIWEEKLY: "Quinzenal", MONTHLY: "Mensal" };
 
-// Pelo `formatCalendarDate` (15/10/2026), como o resto do app: a data vem do
-// campo ("AAAA-MM-DD"), é dia de calendário. Era o `toLocaleDateString` cru,
-// com a trava do lint desligada.
-function formatDateBR(value: string): string {
-  return formatCalendarDate(new Date(value), { day: "2-digit", month: "short" });
-}
 
 function FieldRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
@@ -70,6 +73,10 @@ type Props = {
   stages: StageOption[];
   currentStageId: string;
   moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
+
+  /** "Marcar como concluída" ao lado da situação (05/11/2026); concluída, o aviso verde acima tem o Reabrir. */
+  isCompleted?: boolean;
+  concluirAction?: () => Promise<void>;
 
   dueDate: string | null;
   startDate: string | null;
@@ -100,6 +107,7 @@ type Props = {
 
 export function TaskFieldsPanel({
   canAct, itemId, stages, currentStageId, moveAction,
+  isCompleted = false, concluirAction,
   dueDate, startDate, recurring, recurrenceFrequency, priority, datesAction,
   estimateMinutes, estimateAction,
   activeTimer, currentUserId, startTimerAction, stopTimerAction,
@@ -107,8 +115,9 @@ export function TaskFieldsPanel({
   allUsers, selectedUserIds, assigneeToggleAction,
   selectedWatcherIds, watcherToggleAction,
 }: Props) {
-  const [collapseEmpty, setCollapseEmpty] = useState(false);
-  const [, startTransition] = useTransition();
+  // Os campos extras que a pessoa pediu agora em "Adicionar campo" (05/11/2026).
+  const [extrasPedidos, setExtrasPedidos] = useState<CampoExtra[]>([]);
+  const [concluindo, startTransition] = useTransition();
   const toast = useToast();
 
   // Trocar a situação avisa quando não grava (auditoria de UX, 30/10/2026).
@@ -132,121 +141,79 @@ export function TaskFieldsPanel({
 
   const hasResponsaveis = selectedUsers.length > 0;
   const hasParticipantes = selectedWatchers.length > 0;
-  const hasDatas = !!dueDate || !!startDate;
-  const hasEstimativa = estimateMinutes != null;
   const hasEtiquetas = selectedTags.length > 0;
+  const extras = extrasVisiveis({ participantes: hasParticipantes, estimativa: estimateMinutes != null }, extrasPedidos);
+  const extrasParaPedir = CAMPOS_EXTRAS.filter((c) => !extras.has(c));
 
   return (
     <div className="border-b border-border pb-3 mb-4">
-      {/* Situação — "Status" era o único rótulo em inglês do cartão (07/10/2026). */}
+      {/* Os campos na ordem do ClickUp (05/11/2026): Situação, Datas, Rastrear
+          tempo, Responsáveis, Prioridade e Etiquetas sempre à vista, "Vazio"
+          até alguém preencher; os outros entram por "Adicionar campo".
+          "Status" era o único rótulo em inglês do cartão (07/10/2026). */}
       <FieldRow icon={<Circle size={14} />} label="Situação">
-        {canAct ? (
-          <Dropdown
-            trigger={({ open, toggle }) => (
-              <button
-                type="button"
-                onClick={toggle}
-                aria-expanded={open}
-                aria-label={`Situação: ${currentStageName}. Trocar`}
-                className="inline-flex items-center gap-1 rounded-full text-fg-muted hover:text-fg transition-colors"
-              >
-                <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
-                <ChevronDown size={12} />
-              </button>
-            )}
-          >
-            {stages.map((s) => (
-              <DropdownItem key={s.id} onClick={() => mudarSituacao(s.id)}>
-                <span className="flex items-center justify-between gap-2">
-                  {s.name}
-                  {currentStageId === s.id && <Check size={14} className="text-brand flex-shrink-0" />}
-                </span>
-              </DropdownItem>
-            ))}
-          </Dropdown>
-        ) : (
-          <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
-        )}
+        <span className="inline-flex flex-wrap items-center gap-2">
+          {canAct ? (
+            <Dropdown
+              trigger={({ open, toggle }) => (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={open}
+                  aria-label={`Situação: ${currentStageName}. Trocar`}
+                  className="inline-flex items-center gap-1 rounded-full text-fg-muted hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
+                  <ChevronDown size={12} />
+                </button>
+              )}
+            >
+              {stages.map((s) => (
+                <DropdownItem key={s.id} onClick={() => mudarSituacao(s.id)}>
+                  <span className="flex items-center justify-between gap-2">
+                    {s.name}
+                    {currentStageId === s.id && <Check size={14} className="text-brand flex-shrink-0" />}
+                  </span>
+                </DropdownItem>
+              ))}
+            </Dropdown>
+          ) : (
+            <Selo tom={tomDaSituacao}>{currentStageName}</Selo>
+          )}
+          {/* "Marcar como concluída" ao lado da situação, como no ClickUp
+              (05/11/2026) — era um botão solto acima dos campos. */}
+          {canAct && concluirAction && !isCompleted && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              disabled={concluindo}
+              onClick={() => startTransition(() => concluirAction())}
+              className="hover:text-success-fg hover:border-success/40 hover:bg-success/5"
+            >
+              <CheckCircle2 size={12} /> Marcar como concluída
+            </Button>
+          )}
+        </span>
       </FieldRow>
 
-      {/* Responsáveis */}
-      {(!collapseEmpty || hasResponsaveis) && (
-        <FieldRow icon={<Users size={14} />} label="Responsáveis">
-          {canAct ? (
-            <Dropdown
-              width={260}
-              trigger={({ open, toggle }) => (
-                <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors">
-                  {hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : <span className="text-fg-muted">Vazio</span>}
-                </button>
-              )}
-            >
-              <AssigneeToggleList allUsers={allUsers} selectedIds={selectedUserIds} toggleAction={assigneeToggleAction} />
-            </Dropdown>
-          ) : (
-            <span className="text-fs-3 text-fg">{hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : "—"}</span>
-          )}
-        </FieldRow>
-      )}
-
-      {/* Participantes (observadores) */}
-      {(!collapseEmpty || hasParticipantes) && (
-        <FieldRow icon={<Eye size={14} />} label="Participantes">
-          {canAct ? (
-            <Dropdown
-              width={260}
-              trigger={({ open, toggle }) => (
-                <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors">
-                  {hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : <span className="text-fg-muted">Vazio</span>}
-                </button>
-              )}
-            >
-              <AssigneeToggleList allUsers={allUsers} selectedIds={selectedWatcherIds} toggleAction={watcherToggleAction} />
-            </Dropdown>
-          ) : (
-            <span className="text-fs-3 text-fg">{hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : "—"}</span>
-          )}
-        </FieldRow>
-      )}
-
-      {/* Datas */}
-      {(!collapseEmpty || hasDatas) && (
-        <FieldRow icon={<Calendar size={14} />} label="Datas">
-          {canAct ? (
-            <DatesPopover
-              dueDate={dueDate}
-              startDate={startDate}
-              priority={priority}
-              recurring={recurring}
-              recurrenceFrequency={recurrenceFrequency}
-              datesAction={datesAction}
-            />
-          ) : (
-            <span className="text-fs-3 text-fg flex items-center gap-1.5">
-              {startDate ? formatDateBR(startDate.slice(0, 10)) : "—"} → {dueDate ? formatDateBR(dueDate.slice(0, 10)) : "—"}
-              {recurring && <Repeat size={12} className="text-fg-muted" />}
-            </span>
-          )}
-        </FieldRow>
-      )}
-
-      {/* Prioridade */}
-      <FieldRow icon={<Flag size={14} />} label="Prioridade">
+      <FieldRow icon={<Calendar size={14} />} label="Datas">
         {canAct ? (
-          <PriorityPopover priority={priority} dueDate={dueDate} startDate={startDate} recurring={recurring} recurrenceFrequency={recurrenceFrequency} datesAction={datesAction} />
+          <DatesPopover
+            dueDate={dueDate}
+            startDate={startDate}
+            priority={priority}
+            recurring={recurring}
+            recurrenceFrequency={recurrenceFrequency}
+            datesAction={datesAction}
+          />
         ) : (
-          <span className="text-fs-3 text-fg flex items-center gap-1.5">
-            <Flag size={12} style={{ color: PRIORITY_COLOR[priority] }} /> {PRIORITY_LABEL[priority]}
+          <span className={`text-fs-3 flex items-center gap-1.5 ${startDate || dueDate ? "text-fg" : "text-fg-muted"}`}>
+            {datasNoCampo(startDate, dueDate)}
+            {recurring && <Repeat size={12} className="text-fg-muted" aria-label="Recorrente" />}
           </span>
         )}
       </FieldRow>
-
-      {/* Estimativa de tempo */}
-      {(!collapseEmpty || hasEstimativa) && (
-        <FieldRow icon={<Timer size={14} />} label="Estimativa de tempo">
-          <EstimatePopover canAct={canAct} estimateMinutes={estimateMinutes} estimateAction={estimateAction} />
-        </FieldRow>
-      )}
 
       {/* Rastrear tempo */}
       <FieldRow icon={<Play size={14} />} label="Rastrear tempo">
@@ -277,50 +244,131 @@ export function TaskFieldsPanel({
             <Play size={11} /> Iniciar
           </Button>
         ) : (
-          <span className="text-fs-3 text-fg-muted">—</span>
+          <span className="text-fs-3 text-fg-muted">{VAZIO}</span>
         )}
       </FieldRow>
 
-      {/* Etiquetas */}
-      {(!collapseEmpty || hasEtiquetas) && (
-        <FieldRow icon={<TagIcon size={14} />} label="Etiquetas">
+      <FieldRow icon={<Users size={14} />} label="Responsáveis">
+        {canAct ? (
+          <Dropdown
+            width={260}
+            trigger={({ open, toggle }) => (
+              <button type="button" onClick={toggle} aria-expanded={open} aria-label={`Responsáveis: ${hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : VAZIO}. Trocar`} className="text-fs-3 text-fg hover:text-brand transition-colors text-left">
+                {hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : <span className="text-fg-muted">{VAZIO}</span>}
+              </button>
+            )}
+          >
+            <AssigneeToggleList allUsers={allUsers} selectedIds={selectedUserIds} toggleAction={assigneeToggleAction} />
+          </Dropdown>
+        ) : (
+          <span className={`text-fs-3 ${hasResponsaveis ? "text-fg" : "text-fg-muted"}`}>{hasResponsaveis ? selectedUsers.map((u) => u.name).join(", ") : VAZIO}</span>
+        )}
+      </FieldRow>
+
+      <FieldRow icon={<Flag size={14} />} label="Prioridade">
+        {canAct ? (
+          <PriorityPopover priority={priority} dueDate={dueDate} startDate={startDate} recurring={recurring} recurrenceFrequency={recurrenceFrequency} datesAction={datesAction} />
+        ) : (
+          <MostraPrioridade prioridade={priority} />
+        )}
+      </FieldRow>
+
+      <FieldRow icon={<TagIcon size={14} />} label="Etiquetas">
+        {canAct ? (
+          <Dropdown
+            width={260}
+            trigger={({ open, toggle }) => (
+              <button type="button" onClick={toggle} aria-expanded={open} aria-label={`Etiquetas: ${hasEtiquetas ? selectedTags.map((t) => t.name).join(", ") : VAZIO}. Trocar`} className="flex items-center gap-1 flex-wrap">
+                {hasEtiquetas ? (
+                  selectedTags.map((t) => (
+                    <EtiquetaColorida key={t.id} cor={t.color}>
+                      {t.name}
+                    </EtiquetaColorida>
+                  ))
+                ) : (
+                  <span className="text-fs-3 text-fg-muted">{VAZIO}</span>
+                )}
+              </button>
+            )}
+          >
+            <TagToggleList allTags={allTags} selectedIds={selectedTagIds} toggleAction={tagToggleAction} />
+          </Dropdown>
+        ) : hasEtiquetas ? (
+          <div className="flex items-center gap-1 flex-wrap">
+            {selectedTags.map((t) => (
+              <EtiquetaColorida key={t.id} cor={t.color}>
+                {t.name}
+              </EtiquetaColorida>
+            ))}
+          </div>
+        ) : (
+          <span className="text-fs-3 text-fg-muted">{VAZIO}</span>
+        )}
+      </FieldRow>
+
+      {/* Participantes (observadores) — extra: aparece preenchido ou pedido. */}
+      {extras.has("participantes") && (
+        <FieldRow icon={<Eye size={14} />} label="Participantes">
           {canAct ? (
             <Dropdown
               width={260}
               trigger={({ open, toggle }) => (
-                <button type="button" onClick={toggle} aria-expanded={open} className="flex items-center gap-1 flex-wrap">
-                  {hasEtiquetas ? (
-                    selectedTags.map((t) => (
-                      <EtiquetaColorida key={t.id} cor={t.color}>
-                        {t.name}
-                      </EtiquetaColorida>
-                    ))
-                  ) : (
-                    <span className="text-fs-3 text-fg-muted">Vazio</span>
-                  )}
+                <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors text-left">
+                  {hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : <span className="text-fg-muted">{VAZIO}</span>}
                 </button>
               )}
             >
-              <TagToggleList allTags={allTags} selectedIds={selectedTagIds} toggleAction={tagToggleAction} />
+              <AssigneeToggleList allUsers={allUsers} selectedIds={selectedWatcherIds} toggleAction={watcherToggleAction} />
             </Dropdown>
           ) : (
-            <div className="flex items-center gap-1 flex-wrap">
-              {selectedTags.map((t) => (
-                <EtiquetaColorida key={t.id} cor={t.color}>
-                  {t.name}
-                </EtiquetaColorida>
-              ))}
-            </div>
+            <span className="text-fs-3 text-fg">{hasParticipantes ? selectedWatchers.map((u) => u.name).join(", ") : VAZIO}</span>
           )}
         </FieldRow>
       )}
 
-      {/* Era texto solto (30/09): alternar a lista é ação, então é botão —
-          fantasma, no pé do painel, com o texto alinhado aos rótulos. */}
-      <Button variant="ghost" size="xs" type="button" onClick={() => setCollapseEmpty((v) => !v)} className="mt-1 -ml-2.5 self-start">
-        {collapseEmpty ? "Mostrar todos os campos" : "Recolher campos vazios"}
-      </Button>
+      {extras.has("estimativa") && (
+        <FieldRow icon={<Timer size={14} />} label="Estimativa de tempo">
+          <EstimatePopover canAct={canAct} estimateMinutes={estimateMinutes} estimateAction={estimateAction} />
+        </FieldRow>
+      )}
+
+      {/* "Adicionar campo" (05/11/2026): no lugar do "Recolher campos vazios" —
+          os campos do dia a dia ficam sempre à vista, os outros entram quando
+          alguém precisa. */}
+      {canAct && extrasParaPedir.length > 0 && (
+        <Dropdown
+          width={220}
+          trigger={({ open, toggle }) => (
+            <Button variant="ghost" size="xs" type="button" onClick={toggle} aria-expanded={open} className="mt-1 -ml-2.5">
+              <Plus size={11} /> Adicionar campo
+            </Button>
+          )}
+        >
+          {({ close }) =>
+            extrasParaPedir.map((c) => (
+              <DropdownItem
+                key={c}
+                onClick={() => {
+                  setExtrasPedidos((atual) => [...atual, c]);
+                  close();
+                }}
+              >
+                {ROTULO_DO_CAMPO_EXTRA[c]}
+              </DropdownItem>
+            ))
+          }
+        </Dropdown>
+      )}
     </div>
+  );
+}
+
+function MostraPrioridade({ prioridade }: { prioridade: number }) {
+  if (prioridade <= 0) return <span className="text-fs-3 text-fg-muted">{VAZIO}</span>;
+  return (
+    <span className="text-fs-3 text-fg flex items-center gap-1.5">
+      <Flag size={12} style={{ color: PRIORITY_COLOR[prioridade] }} aria-hidden /> {prioridadeNoCampo(prioridade)}
+    </span>
   );
 }
 
@@ -355,9 +403,16 @@ function DatesPopover({
     <Dropdown
       width={240}
       trigger={({ open, toggle }) => (
-        <button type="button" onClick={toggle} aria-expanded={open} disabled={isPending} className="text-fs-3 text-fg hover:text-brand transition-colors flex items-center gap-1.5">
-          {start ? formatDateBR(start) : "Início"} → {end ? formatDateBR(end) : "Fim"}
-          {recurring && <Repeat size={12} className="text-fg-muted" />}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-label={`Datas: ${datasNoCampo(start || null, end || null)}. Trocar`}
+          disabled={isPending}
+          className={`text-fs-3 hover:text-brand transition-colors flex items-center gap-1.5 ${start || end ? "text-fg" : "text-fg-muted"}`}
+        >
+          {datasNoCampo(start || null, end || null)}
+          {recurring && <Repeat size={12} className="text-fg-muted" aria-hidden />}
         </button>
       )}
     >
@@ -367,7 +422,7 @@ function DatesPopover({
         <CampoForm label="Início" htmlFor={`${uid}-inicio`}>
           <CampoData id={`${uid}-inicio`} value={start} onChange={(v) => { setStart(v); save({ start: v }); }} />
         </CampoForm>
-        <CampoForm label="Fim" htmlFor={`${uid}-fim`}>
+        <CampoForm label="Vencimento" htmlFor={`${uid}-fim`}>
           <CampoData id={`${uid}-fim`} value={end} onChange={(v) => { setEnd(v); save({ end: v }); }} />
         </CampoForm>
         <Checkbox
@@ -411,15 +466,15 @@ function PriorityPopover({
     <Dropdown
       width={160}
       trigger={({ open, toggle }) => (
-        <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 text-fg hover:text-brand transition-colors flex items-center gap-1.5">
-          <Flag size={12} style={{ color: PRIORITY_COLOR[current] }} /> {PRIORITY_LABEL[current]}
+        <button type="button" onClick={toggle} aria-expanded={open} aria-label={`Prioridade: ${prioridadeNoCampo(current)}. Trocar`} className="hover:text-brand transition-colors">
+          <MostraPrioridade prioridade={current} />
         </button>
       )}
     >
-      {[0, 1, 2].map((p) => (
+      {OPCOES_DE_PRIORIDADE.map((p) => (
         <DropdownItem key={p} onClick={() => select(p)}>
           <span className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5"><Flag size={12} style={{ color: PRIORITY_COLOR[p] }} /> {PRIORITY_LABEL[p]}</span>
+            <span className="flex items-center gap-1.5"><Flag size={12} style={{ color: PRIORITY_COLOR[p] }} aria-hidden /> {ROTULO_DA_PRIORIDADE[p]}</span>
             {current === p && <Check size={14} className="text-brand flex-shrink-0" />}
           </span>
         </DropdownItem>
@@ -443,7 +498,7 @@ function EstimatePopover({
       width={160}
       trigger={({ open, toggle }) => (
         <button type="button" onClick={toggle} aria-expanded={open} className="text-fs-3 hover:text-brand transition-colors">
-          {estimateMinutes != null ? <span className="text-fg">{estimateMinutes} min</span> : <span className="text-fg-muted">Vazio</span>}
+          {estimateMinutes != null ? <span className="text-fg">{estimateMinutes} min</span> : <span className="text-fg-muted">{VAZIO}</span>}
         </button>
       )}
     >

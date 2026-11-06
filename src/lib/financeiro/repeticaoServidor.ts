@@ -136,7 +136,7 @@ export async function estenderSeries(p: { hojeKey?: string } = {}): Promise<Resu
     await logAudit({
       tenantId: s.tenantId,
       // Sem pessoa: quem cria é o agendador. A série guarda quem a lançou.
-      userId: "",
+      rotina: "repeticaoDeLancamentos",
       action: "financeiro.entry.created_by_recurrence",
       entityType: "FinanceRecurrence",
       entityId: s.id,

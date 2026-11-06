@@ -1,6 +1,6 @@
 # GitHub
 
-O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. O menu lateral **GitHub** oferece **Geral** (`/github`), **Desenvolvedores** (`/github/desenvolvedores`), **Repositórios** (`/github/repositorios`) e, para quem gerencia o módulo, **Times** (`/github/times`).
+O módulo mostra a atividade diária de cada usuário nos repositórios monitorados pela conta GitHub conectada ao escritório. Conta commits, aberturas de pull requests e issues e revisões submetidas. A conexão fica em **Integrações → GitHub**. Desde 06/11/2026 o módulo se chama **Produtividade** e tem três abas: **Painel** (`/produtividade`, as entregas do time), **Pessoas** (`/produtividade/pessoas`, os desenvolvedores, agrupados por pessoa ou por time; para quem gerencia o módulo, o botão **Times e cores** abre `/produtividade/pessoas/times`) e **GitHub** (`/produtividade/github`, a visão geral; o botão **Ver repositórios** abre `/produtividade/github/repositorios`). Os endereços antigos (`/github/...`) redirecionam.
 
 O módulo `tech_github_contributions` é exclusivo do **Tech**, nasce desligado e respeita o plano contratado. Não pode ser transferido para outro setor. Administradores mantêm o acesso amplo previsto nos papéis do Connect.
 

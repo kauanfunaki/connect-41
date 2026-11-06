@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODULE_CATALOG, MODULE_ROUTES } from "@/lib/module-catalog";
-import { grupoEstaAberto, lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
+import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
 
 // A regra do menu de 05/11/2026 (opção A): grupos por tema em todo setor, grupo
 // de uma tela vira tela solta, e a Tela 2 fica recuada sob a Tela 1.
@@ -26,7 +26,7 @@ describe("montarMenuDoSetor", () => {
   it("Tech: Entregas sob o Controle interno; grupo de uma tela vira tela solta", () => {
     const menu = montarMenuDoSetor(telas("tech_controle_interno", "tech_ceci", "tech_github_contributions", "tech_entregas", "tech_ops_center", "helpdesk", "tech_certificados"));
     expect(desenho(menu)).toEqual([
-      "Operação: GitHub, Ops Center",
+      "Operação: Produtividade, Ops Center",
       "Chamados",
       "Certificados digitais",
       "Desenvolvimento: Controle interno (Entregas da Tech), Ceci",
@@ -51,16 +51,6 @@ describe("montarMenuDoSetor", () => {
     const todas = telas(...MODULE_CATALOG.map((m) => m.code).filter((c) => MODULE_ROUTES[c]));
     const menu = montarMenuDoSetor(todas);
     expect(menu.flatMap(telasDoBloco).map((t) => t.code).sort()).toEqual(todas.map((t) => t.code).sort());
-  });
-});
-
-describe("grupoEstaAberto", () => {
-  it("o grupo da tela aberta começa aberto, os outros fechados, e a escolha da pessoa vale", () => {
-    expect(grupoEstaAberto("Contas", "Contas", {})).toBe(true);
-    expect(grupoEstaAberto("Relatórios", "Contas", {})).toBe(false);
-    expect(grupoEstaAberto("Relatórios", "Contas", { Relatórios: true })).toBe(true);
-    expect(grupoEstaAberto("Contas", "Contas", { Contas: false })).toBe(false);
-    expect(grupoEstaAberto("Contas", null, {})).toBe(false);
   });
 });
 
