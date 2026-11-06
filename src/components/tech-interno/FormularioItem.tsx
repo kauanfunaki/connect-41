@@ -26,6 +26,7 @@ export type ItemDoFormulario = {
   systemMode: "NONE" | "NEW" | "EXISTING"; systemKey: string | null; assigneeId: string | null; dueDate: string | null;
   assigneeName: string | null;
   size: keyof typeof TAMANHOS | null; originItemId: string | null;
+  prUrl: string | null; commitSha: string | null;
 };
 
 const OPCOES_DE_TIPO = Object.entries(TIPOS).map(([valor, rotulo]) => ({ valor, rotulo }));
@@ -143,6 +144,16 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
           {entregas.filter(e => e.id !== item?.id).map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
         </Select>
       </LinhaDiscreta>
+      {/* A entrega no código (06/11/2026): o PR e o commit da mudança,
+          informados ao concluir. Só no item que já existe. */}
+      {item && <>
+        <LinhaDiscreta rotulo="PR" htmlFor="tech-pr" ajuda={item.prUrl ? <a href={item.prUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Abrir o PR</a> : "O endereço do PR da mudança."}>
+          <Input id="tech-pr" name="prUrl" type="url" inputMode="url" maxLength={500} defaultValue={item.prUrl ?? ""} placeholder="https://github.com/…/pull/123" aria-describedby="tech-pr-ajuda" compact />
+        </LinhaDiscreta>
+        <LinhaDiscreta rotulo="Commit" htmlFor="tech-commit" ajuda="O hash do commit da mudança.">
+          <Input id="tech-commit" name="commitSha" maxLength={64} pattern="[0-9a-fA-F]{7,64}" defaultValue={item.commitSha ?? ""} placeholder="a1b2c3d" aria-describedby="tech-commit-ajuda" compact className="font-mono" />
+        </LinhaDiscreta>
+      </>}
     </div>;
 
   return <form className={pagina ? "@container flex flex-col gap-6" : "flex flex-col gap-5"} onSubmit={e => {
@@ -194,7 +205,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
 const GRADE_DISCRETA = "grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 min-w-0";
 
 /** Rótulo à esquerda e o campo à direita, na fonte de apoio: o campo existe, mas não pede atenção. */
-function LinhaDiscreta({ rotulo, htmlFor, ajuda, children }: { rotulo: string; htmlFor: string; ajuda: string; children: React.ReactNode }) {
+function LinhaDiscreta({ rotulo, htmlFor, ajuda, children }: { rotulo: string; htmlFor: string; ajuda: React.ReactNode; children: React.ReactNode }) {
   return <div className={GRADE_DISCRETA}>
     <label htmlFor={htmlFor} className="text-ui font-medium text-fg-secondary">{rotulo}</label>
     {children}

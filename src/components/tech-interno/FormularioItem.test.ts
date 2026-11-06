@@ -14,7 +14,7 @@ afterAll(() => vi.unstubAllGlobals());
 const base = { sistemas: [], users: [{ id: "u1", name: "Pessoa Um" }], entregas: [{ id: "e1", title: "Entrega antiga" }, { id: "i1", title: "O próprio item" }], voltar: "/controle-interno" };
 const item: ItemDoFormulario = {
   id: "i1", version: 3, title: "Botão não salva", description: "Passos…", type: "FEATURE", priority: 3, status: "IN_PROGRESS",
-  systemMode: "NONE", systemKey: null, assigneeId: "u1", assigneeName: "Pessoa Um", dueDate: null, size: "M", originItemId: null,
+  systemMode: "NONE", systemKey: null, assigneeId: "u1", assigneeName: "Pessoa Um", dueDate: null, size: "M", originItemId: null, prUrl: null, commitSha: null,
 };
 type Props = React.ComponentProps<typeof FormularioItem>;
 const html = (extra: Partial<Props> = {}) => renderToStaticMarkup(React.createElement(FormularioItem, { ...base, podeEditar: true, ...extra } as Props));

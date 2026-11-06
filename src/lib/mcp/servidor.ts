@@ -14,7 +14,7 @@ import {
 // Cada chamada chega com o token pessoal; a ferramenta só aparece se o token
 // tem o escopo dela, e age com o acesso de hoje da pessoa dona do token.
 
-export const VERSAO_DO_SERVIDOR_MCP = "1.0.0";
+export const VERSAO_DO_SERVIDOR_MCP = "1.1.0";
 
 const INSTRUCOES = `Servidor do Connect para o Controle interno da equipe Tech: o registro de bugs, melhorias, novas funcionalidades, testes e migrações dos sistemas.
 Tudo o que você faz aqui fica no histórico do item e na Auditoria com o nome da pessoa dona do token.
@@ -22,6 +22,7 @@ Como trabalhar:
 - Antes de criar, procure com listar_itens (campo q) se o item já existe; se existir, comente ou atualize em vez de duplicar.
 - Para preencher sistema, responsável ou "veio de", consulte ver_opcoes: use a "key" do sistema em systemKey e o "id" da pessoa em assigneeId ("me" é a própria pessoa do token).
 - Para alterar, leia o item com ver_item e envie a "version" que veio nele: se outra pessoa mudou o item nesse meio-tempo, a gravação é recusada (conflict) e você deve ler de novo.
+- Ao concluir um item que mudou código, informe o PR (prUrl) e o commit (commitSha) da mudança em mudar_situacao ou atualizar_item.
 - Escreva título e descrição em português, como a equipe escreveria: o que acontece, onde, como reproduzir e o que se espera.`;
 
 const TIPO = z.enum(["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"]).describe("BUG = Bug; IMPROVEMENT = Melhoria (inclui redesign de tela); FEATURE = Nova funcionalidade; TEST = Teste; MIGRATION = Migração.");
@@ -30,6 +31,10 @@ const PRIORIDADE = z.number().int().min(0).max(3).describe("0 = Baixa, 1 = Médi
 const ID = z.string().describe("O id do item (UUID), como veio de listar_itens ou ver_item.");
 const VERSAO = z.number().int().min(0).describe("A version do item lida em ver_item. Recomendado: protege contra gravar por cima de outra pessoa. Sem ela, vale a versão atual.");
 
+const entregaNoCodigo = {
+  prUrl: z.string().max(500).nullable().optional().describe("O endereço do PR da mudança (https://github.com/...). Informe ao concluir. null limpa."),
+  commitSha: z.string().max(64).nullable().optional().describe("O hash do commit da mudança (7 a 40 caracteres hexadecimais). Informe ao concluir. null limpa."),
+};
 const camposEditaveis = {
   description: z.string().max(10000).nullable().optional().describe("Descrição em texto: o que acontece, onde, passos para reproduzir, o esperado. null limpa."),
   priority: PRIORIDADE.optional(),
@@ -38,6 +43,7 @@ const camposEditaveis = {
   assigneeId: z.string().max(191).nullable().optional().describe("O id de uma pessoa de ver_opcoes, ou \"me\" para a pessoa dona do token. null = sem responsável."),
   dueDate: z.string().nullable().optional().describe("Prazo no formato AAAA-MM-DD. null limpa."),
   size: z.enum(["P", "M", "G"]).nullable().optional().describe("Tamanho combinado: P, M ou G. Só quem coordena a Tech define, e só enquanto o item está Pendente."),
+  ...entregaNoCodigo,
   originItemId: z.string().max(191).nullable().optional().describe("\"Veio de\": o id de uma entrega concluída (ver recentDeliveries em ver_opcoes), quando o item nasce dela — por exemplo, um bug de algo já entregue."),
 };
 
@@ -113,10 +119,10 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
 
     server.registerTool("mudar_situacao", {
       title: "Mudar a situação",
-      description: "Move o item de situação (ex.: de Pendente para Em andamento, ou para Em validação ao terminar). Envie a version lida em ver_item.",
-      inputSchema: { id: ID, status: SITUACAO, version: VERSAO.optional() },
+      description: "Move o item de situação (ex.: de Pendente para Em andamento, ou para Concluído ao terminar). Ao concluir, informe o PR e o commit da mudança. Envie a version lida em ver_item.",
+      inputSchema: { id: ID, status: SITUACAO, version: VERSAO.optional(), ...entregaNoCodigo },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    }, ({ id, status, version }) => executar(() => mudarSituacaoParaApi(ator, id, { status, version }, base)));
+    }, ({ id, status, version, prUrl, commitSha }) => executar(() => mudarSituacaoParaApi(ator, id, { status, version, prUrl, commitSha }, base)));
 
     server.registerTool("comentar", {
       title: "Comentar num item",
