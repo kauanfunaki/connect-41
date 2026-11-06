@@ -13,7 +13,7 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { canViewSector } from "@/lib/auth/context";
 import { competenciaPadrao } from "@/lib/fiscal/motor/estabelecimentos";
 import { apurarPeriodos, conferirApoios, produtosDaBase } from "./calculo";
-import { ajusteSchema, apoioSchema, classificacaoSchema, documentoSchema, itemSchema, parametrosSchema, perfilGuardadoSchema, perfilDaEmpresa, perfilSchema, periodoSchema, mesesDoPeriodo, chaveCredito, ratearCredito, type ApoioEscriturado, type Classificacao, type ContextoLocal, type DecisaoFiscal, type DocumentoEscriturado, type DocumentoFiscal, type Obrigacao } from "./dominio";
+import { ajusteSchema, apoioSchema, classificacaoSchema, documentoSchema, itemSchema, parametrosSchema, perfilGuardadoSchema, perfilDaEmpresa, perfilSchema, sentidoNaEmpresa, periodoSchema, mesesDoPeriodo, chaveCredito, ratearCredito, type ApoioEscriturado, type Classificacao, type ContextoLocal, type DecisaoFiscal, type DocumentoEscriturado, type DocumentoFiscal, type Obrigacao } from "./dominio";
 import type { EtapaDoSped } from "../etapas";
 import type { Escrituracao } from "./escrituracaoXml";
 
@@ -79,7 +79,9 @@ export async function carregarBase(tela: TelaLocal) {
       const db = porDoc.get(v.documentId), empresa = tela.grupo.find(e => e.id === v.companyId);
       if (!db || !empresa) return [];
       const d = documentoSchema.parse({ ...db.data as object, itens: itensPorDoc.get(db.id) ?? [] });
-      return [{ ...d, id: db.id, companyId: v.companyId, cnpjEmpresa: empresa.cnpj, sentido: v.direction as "entrada" | "saida", nomeArquivo: db.sourceName }];
+      // O sentido sai da regra, e não do `direction` gravado: a nota de entrada de emissão própria
+      // gravada antes de 06/11/2026 ficou como saída no livro, e assim se corrige sem mexer no banco.
+      return [{ ...d, id: db.id, companyId: v.companyId, cnpjEmpresa: empresa.cnpj, sentido: sentidoNaEmpresa(d, empresa.cnpj), nomeArquivo: db.sourceName }];
     });
     const decisoes: DecisaoFiscal[] = decisoesDb.map(d => ({ chave: d.key, tipo: d.type, dados: d.data as Record<string, unknown>, autor: d.updatedBy, em: d.updatedAt.toISOString() }));
     const apoios: ApoioEscriturado[] = apoiosDb.map(a => ({ ...apoioSchema.parse(a.data), id: a.id, companyId: a.companyId, autor: a.updatedBy, em: a.updatedAt.toISOString() }));
@@ -167,7 +169,7 @@ export async function gravarDocumento(tx: Prisma.TransactionClient, ctx: AuthCon
   }
   for (const empresa of empresas) {
     // O lançamento financeiro existente não é alterado. Cada estabelecimento tem sua escrituração.
-    await tx.spedFiscalBook.upsert({ where: { tenantId_companyId_documentId: { tenantId: ctx.tenantId, companyId: empresa.id, documentId: documentoId! } }, create: { tenantId: ctx.tenantId, companyId: empresa.id, documentId: documentoId!, competence: entrada.competencia, direction: empresa.cnpj === entrada.emitente ? "saida" : "entrada" }, update: {} });
+    await tx.spedFiscalBook.upsert({ where: { tenantId_companyId_documentId: { tenantId: ctx.tenantId, companyId: empresa.id, documentId: documentoId! } }, create: { tenantId: ctx.tenantId, companyId: empresa.id, documentId: documentoId!, competence: entrada.competencia, direction: sentidoNaEmpresa(entrada, empresa.cnpj ?? "") }, update: {} });
   }
   await tx.fiscalDocument.upsert({ where: { tenantId_dedupKey: { tenantId: ctx.tenantId, dedupKey: entrada.identidade } }, create: { tenantId: ctx.tenantId, companyId: empresaEscolhida, type: entrada.tipo, accessKey: /^\d{44}$/.test(entrada.identidade) ? entrada.identidade : null, dedupKey: entrada.identidade, number: entrada.numero, series: entrada.serie || null, issuerName: entrada.nomeEmitente || "Não informado no TXT", issuerDocument: entrada.emitente, recipientName: entrada.nomeDestinatario || null, recipientDocument: entrada.destinatario || null, amount: entrada.valor, issuedAt: new Date(`${entrada.emitidoEm.slice(0, 10)}T00:00:00Z`), competence: entrada.competencia, origin: "UPLOAD", situation: entrada.cancelado ? "CANCELADA" : "AUTORIZADA", completude: entrada.completo ? "COMPLETO" : "PARCIAL", uploadedById: ctx.userId, renderizavel: false, cfops: [...new Set(entrada.itens.map(i => i.cfop).filter(Boolean))].join(",") || null }, update: {} });
   return igual ? "duplicado" : anterior ? "complementado" : "importado";
