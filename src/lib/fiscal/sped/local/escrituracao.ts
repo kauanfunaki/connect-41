@@ -7,9 +7,11 @@
 //   `escrituracaoXml.ts`. Documento sem XML guardado (veio do TXT, ou o arquivo
 //   saiu do disco) fica fora do bloco, e o motor diz qual falta.
 // - Estabelecimento: o cadastro da empresa (endereço, telefone, e-mail) com o
-//   perfil fiscal (município IBGE, perfil, atividade, contador, ICMS). O que o
-//   cadastro não tem e o XML da própria empresa tem (endereço, município) entra
-//   pelo XML. Uma fonte só: o Connect.
+//   perfil da base (`perfilDaEmpresa`), que já traz do cadastro a etapa "SPED
+//   fiscal" (município IBGE, perfil, atividade, contabilista) e do perfil
+//   guardado o ICMS a recolher. Empresa sem contabilista usa o padrão do
+//   escritório. O que o cadastro não tem e o XML da própria empresa tem
+//   (endereço, município) entra pelo XML. Uma fonte só: o Connect.
 
 import "server-only";
 import { readFile } from "node:fs/promises";

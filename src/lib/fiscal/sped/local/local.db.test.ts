@@ -23,7 +23,12 @@ const { autorizar, carregarBase, escreverNaRaiz, gravarDocumento, json, preparar
 const { enfileirarArquivo, processarImportacao } = await import("./fila");
 const { POST } = await import("@/app/api/fiscal/sped/local/acao/route");
 const dados = { tenantId: "", userId: "", companyId: "", filialId: "", outroTenantId: "", outraEmpresaId: "" };
-const PERFIL_DO_ARQUIVO = { uf: "PR", regime: "real", obrigacoes: ["icms_ipi", "contribuicoes"], inscricaoEstadual: "9012345678", codigoMunicipio: "4106902", indPerfil: "A", indAtiv: "1", contadorNome: "CONTADOR FICTICIO", contadorCpf: "98765432100", contadorCrc: "PR-000000/O-0", icmsCodReceita: "1015", icmsDiaVencimento: "12" };
+// O perfil guardado no SPED tem só as obrigações e o ICMS a recolher; UF, regime, IE e a etapa
+// "SPED fiscal" (município, perfil, atividade) vêm do cadastro da empresa (#432, 06/11/2026).
+const PERFIL_DO_ARQUIVO = { obrigacoes: ["icms_ipi", "contribuicoes"], icmsCodReceita: "1015", icmsDiaVencimento: "12" };
+const CADASTRO_DO_ARQUIVO = { stateRegistration: "9012345678", zipCode: "80000-000", codMunicipioIbge: "4106902", spedIndPerfil: "A", spedIndAtividade: "1" };
+// O contabilista fica no padrão do escritório: a empresa sem o seu usa este.
+const CONTABILISTA_DO_ESCRITORIO = { contabilistaNome: "CONTADOR FICTICIO", contabilistaCpf: "98765432100", contabilistaCrc: "PR-000000/O-0" };
 const nome = "SPED Fiscal QA";
 describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
   beforeAll(async () => {
@@ -36,6 +41,8 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
     const empresa = await criarEmpresa(tenant.id, "39952818000140", "EMPRESA FICTÍCIA — Matriz");
     const filial = await criarEmpresa(tenant.id, "39952818000220", "EMPRESA FICTÍCIA — Filial");
     await db.company.update({ where: { id: filial.id }, data: { parentCompanyId: empresa.id } });
+    // UF e regime são do cadastro da empresa desde o #432: sem eles, o perfil fiscal aponta a falta.
+    await db.company.updateMany({ where: { id: { in: [empresa.id, filial.id] } }, data: { stateCode: "PR", taxRegimeKind: "LUCRO_REAL" } });
     const outraEmpresa = await criarEmpresa(outro.id, "39952818000140", "Empresa de outro escritório");
     Object.assign(dados, { tenantId: tenant.id, userId: user.id, companyId: empresa.id, filialId: filial.id, outroTenantId: outro.id, outraEmpresaId: outraEmpresa.id });
     m.companyId = empresa.id;
@@ -143,10 +150,12 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
       // Nenhuma geração aberta de uma rodada anterior do laboratório.
       await db.robotTask.updateMany({ where: { tenantId: dados.tenantId, kind: "gerar_sped", status: { in: ["PENDENTE", "EM_EXECUCAO"] } }, data: { status: "CANCELADA", openKey: null } });
       await acao("parametros", { saldoIcms: "0.00", saldoIpi: "0.00", saldoPis: "0.00", saldoCofins: "0.00", receitaBruta: "0.00" }, "apuracao");
-      // O cadastro que o arquivo exige (bloco `escrituracao`), pelo mesmo caminho da tela. Sem a IE do
-      // perfil e o CEP da empresa, o motor recusa (teste com o motor, sped_generator#59, 06/11/2026).
+      // O cadastro que o arquivo exige (bloco `escrituracao`). Sem a IE e o CEP da empresa, o motor
+      // recusa (teste com o motor, sped_generator#59, 06/11/2026). O ICMS a recolher vai pelo
+      // perfil fiscal, pelo mesmo caminho da tela.
       expect((await acao("perfil", { ...PERFIL_DO_ARQUIVO }, "classificacao")).status).toBe(200);
-      await db.company.update({ where: { id: dados.companyId }, data: { zipCode: "80000-000" } });
+      await db.company.update({ where: { id: dados.companyId }, data: CADASTRO_DO_ARQUIVO });
+      await db.tenantSpedConfig.upsert({ where: { tenantId: dados.tenantId }, create: { tenantId: dados.tenantId, ...CONTABILISTA_DO_ESCRITORIO }, update: CONTABILISTA_DO_ESCRITORIO });
       // A nota de 2026-09 entrou pelo `gravarDocumento` direto, sem arquivo. Aqui ela ganha o XML
       // guardado, com o endereço das duas partes, como sai de uma importação de verdade: sem ele, o
       // pedido nem vai para a fila (conferência de 06/11/2026).
@@ -263,6 +272,16 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
       expect(e.participantes.find((p) => p.documento === "11222333000181")).toMatchObject({ nome: "FORNECEDOR FICTICIO & CIA", ie: "1112223334", codMun: "4113700", endereco: "RUA DO FORNECEDOR" });
       // A empresa fictícia não tem endereço no cadastro: vem do XML em que ela é a destinatária.
       expect(e.estabelecimento).toMatchObject({ razaoSocial: "EMPRESA FICTÍCIA — Matriz", endereco: "RUA DA EMPRESA FICTICIA", numero: "500", codMun: "4106902", indAtiv: "1" });
+      // Sem contabilista próprio vale o do escritório; com um, vale o da empresa, inteiro.
+      expect(e.estabelecimento.contador).toEqual({ nome: "CONTADOR FICTICIO", cpf: "98765432100", crc: "PR-000000/O-0" });
+      const db = getPrisma();
+      await db.company.update({ where: { id: dados.companyId }, data: { contabilistaNome: "CONTABILISTA PROPRIO FICTICIO", contabilistaCpf: null, contabilistaCrc: "SC-000000/O-0" } });
+      try {
+        // O contabilista sai do perfil da base (`perfilDaEmpresa`): relê a base depois de mudar a empresa.
+        expect((await montarEscrituracao(tela, await carregarBase(tela), dados.companyId)).estabelecimento.contador).toEqual({ nome: "CONTABILISTA PROPRIO FICTICIO", cpf: "", crc: "SC-000000/O-0" });
+      } finally {
+        await db.company.update({ where: { id: dados.companyId }, data: { contabilistaNome: null, contabilistaCpf: null, contabilistaCrc: null } });
+      }
     });
 
     // O pacote de verdade para o teste junto com o motor (sped_generator#59): os

@@ -105,7 +105,7 @@ export default async function TenantPage() {
       <SecaoDeConfiguracao
         id="contabilista-padrao"
         titulo="Contabilista responsável"
-        descricao="Quem assina o SPED das empresas, por padrão. Já vem preenchido em empresa nova, e cada empresa pode ter o seu."
+        descricao="Quem assina o SPED das empresas que não têm um contabilista próprio no cadastro. Já vem preenchido em empresa nova."
         icone={<FileSignature />}
       >
         <Card className="p-6">

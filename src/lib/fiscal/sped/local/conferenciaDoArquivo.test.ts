@@ -16,11 +16,10 @@ describe("faltasDoEstabelecimento", () => {
     expect(faltasDoEstabelecimento(completo, "9012345678")).toEqual([]);
   });
 
-  it("separa o que se resolve no perfil fiscal do que se resolve no cadastro da empresa", () => {
-    const faltas = faltasDoEstabelecimento({ ...completo, cep: "", codMun: "41069", contador: { ...completo.contador, crc: "" } }, "");
+  it("tudo do estabelecimento se resolve no cadastro da empresa, na ordem das etapas dele", () => {
+    const faltas = faltasDoEstabelecimento({ ...completo, cep: "", codMun: "41069", indAtiv: "", contador: { ...completo.contador, crc: "" } }, "");
     expect(faltas).toEqual([
-      { onde: "perfil", itens: ["inscrição estadual", "código do município (IBGE)", "CRC do contador"] },
-      { onde: "cadastro", itens: ["CEP"] },
+      { onde: "cadastro", itens: ["CEP", "inscrição estadual", "indicador de atividade", "código do município (IBGE)", "CRC do contabilista"] },
     ]);
   });
 
@@ -41,11 +40,17 @@ describe("faltasDosDocumentos", () => {
     expect(faltasDosDocumentos([doc("e", "40")], esc(["e"], { ...participante, endereco: "" }))).toEqual([{ onde: "importacao", itens: ["o endereço ou o município da outra parte da nota 40"] }]);
     expect(faltasDosDocumentos([doc("e", "40")], esc(["e"]))).toEqual([]);
   });
+
+  it("as duas faltas da importação vêm num grupo só", () => {
+    expect(faltasDosDocumentos([doc("a", "12"), doc("e", "40")], esc(["e"], { ...participante, codMun: "" }))).toEqual([
+      { onde: "importacao", itens: ["o XML da nota 12", "o endereço ou o município da outra parte da nota 40"] },
+    ]);
+  });
 });
 
 describe("mensagemDasFaltas", () => {
   it("diz o que falta e onde, numa frase só", () => {
-    expect(mensagemDasFaltas([{ onde: "perfil", itens: ["inscrição estadual"] }, { onde: "cadastro", itens: ["CEP", "endereço"] }]))
-      .toBe("Antes de gerar o EFD ICMS/IPI, complete no perfil fiscal, inscrição estadual; no cadastro da empresa, CEP, endereço.");
+    expect(mensagemDasFaltas([{ onde: "cadastro", itens: ["CEP", "inscrição estadual"] }, { onde: "importacao", itens: ["o XML da nota 12"] }]))
+      .toBe("Antes de gerar o EFD ICMS/IPI, complete no cadastro da empresa, CEP, inscrição estadual; na importação, o XML da nota 12.");
   });
 });
