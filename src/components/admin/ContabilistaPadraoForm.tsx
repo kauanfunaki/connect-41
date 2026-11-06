@@ -21,8 +21,9 @@ export function ContabilistaPadraoForm({ action, valor }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
   return (
     <form action={formAction} className="space-y-5">
-      <FieldGrid columns="sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr]">
-        <CampoForm label="Nome" htmlFor="contabilista-nome" dica={DICAS_SPED.contabilistaNome}>
+      {/* O cartão é estreito (coluna da direita): nome na linha toda, CPF e CRC lado a lado. */}
+      <FieldGrid columns="sm:grid-cols-2">
+        <CampoForm label="Nome" htmlFor="contabilista-nome" dica={DICAS_SPED.contabilistaNome} className="sm:col-span-2">
           <Input id="contabilista-nome" name="contabilistaNome" defaultValue={valor.contabilistaNome ?? ""} maxLength={100} />
         </CampoForm>
         <CampoForm label="CPF" htmlFor="contabilista-cpf" dica={DICAS_SPED.contabilistaCpf}>
