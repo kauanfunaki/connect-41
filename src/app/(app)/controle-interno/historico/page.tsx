@@ -19,7 +19,8 @@ import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 export const dynamic = "force-dynamic";
 
 // O Histórico é a terceira aba do Controle interno (05/11/2026), ao lado de
-// Lista e Kanban. Mais enxuto: os itens mexidos por último, com título,
+// Lista e Kanban. Só os itens encerrados (Concluído ou Cancelado, 06/11/2026),
+// mexidos por último primeiro, com título,
 // sistema, responsável e situação. O que mudou, campo a campo, fica na linha
 // do tempo do próprio item.
 export default async function HistoricoTechPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -54,7 +55,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
       busca={<DebouncedSearchInput key={q} paramName="q" placeholder="Buscar pelo título do item" />}
       filtros={<FiltrosDaTela naBarra campos={[{ chave: "autor", rotulo: "Quem mexeu", vazioLabel: "Todos", opcoes: autores.map(a => ({ value: a.authorId, label: a.authorName })) }]} />}>
       {!itens.length ? <EmptyState icon={<History />} title={q || autor ? "Nenhum item neste recorte" : "Nada registrado ainda"}
-        description={q || autor ? "Ajuste a busca ou o filtro para ver outros itens." : "Os itens criados ou alterados aparecem aqui, do mais recente para o mais antigo."} />
+        description={q || autor ? "Ajuste a busca ou o filtro para ver outros itens." : "Os itens concluídos ou cancelados aparecem aqui, do mais recente para o mais antigo."} />
         : <>
           <CartoesNoCelular>{itens.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
             <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={linkDoItem(item.id)}>{item.title}</Link>} />
