@@ -94,6 +94,7 @@ Só aparecem as ferramentas do escopo do token.
 | `listar_itens` | ler | lista com filtros (situação, tipo, prioridade, sistema, responsável, busca, atrasados, página) |
 | `ver_item` | ler | um item com comentários, histórico, anexos e a `version` |
 | `ver_opcoes` | ler | tipos, situações, sistemas do Ops Center (`key`), pessoas (`id`), entregas recentes |
+| `resumo_do_periodo` | ler | concluídos, em andamento, planejados e cancelados no dia, na semana, no mês ou no ano (`period`: `day`, `week`, `month`, `year`; `date`: AAAA-MM-DD) |
 | `criar_item` | escrever | cria e devolve o item com o link |
 | `atualizar_item` | escrever | altera só os campos enviados |
 | `mudar_situacao` | escrever | Pendente → Em andamento → Em validação → Concluído / Cancelado |
@@ -102,7 +103,16 @@ Só aparecem as ferramentas do escopo do token.
 
 Exemplos de pedido: "registre um bug no Controle interno: a busca de empresas não acha
 pelo CNPJ, prioridade alta, no sistema do Connect"; "mova para Em validação o item da
-busca por CNPJ e comente o link do PR".
+busca por CNPJ e comente o link do PR"; "o que a Tech concluiu esta semana?".
+
+**O resumo do período** (06/11/2026) responde numa chamada só o que antes pedia ler o
+histórico item a item:
+- concluídos e cancelados contam pela data da última mudança de situação;
+- em andamento é a foto de agora, com `movedInPeriod` dizendo se o item mudou no período;
+- planejados são os pendentes que entraram no período ou vencem nele.
+
+A semana vai de segunda a domingo, e os dias são os de São Paulo. Na tela, é o botão
+"Resumo" no topo do Controle interno, com o texto pronto para colar num canal.
 
 ## 3. API REST
 
@@ -113,6 +123,7 @@ Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
 |---|---|---|
 | `GET /` | ler | filtros na URL: `status` (`OPEN` padrão, `ALL`, `PENDING`…), `type`, `priority` (0–3), `system`, `assignee` (`me`, `none` ou id), `q`, `overdue`, `page` |
 | `GET /opcoes` | ler | — |
+| `GET /resumo` | ler | na URL: `period` (`day`, `week` padrão, `month`, `year`) e `date` (AAAA-MM-DD; padrão hoje) |
 | `GET /{id}` | ler | — |
 | `POST /` | escrever | `title`, `type` obrigatórios; `description`, `priority`, `status`, `systemKey`, `systemMode`, `assigneeId`, `dueDate` (AAAA-MM-DD), `size` (P/M/G), `originItemId` |
 | `PATCH /{id}` | escrever | os campos que mudam, mais `version` |

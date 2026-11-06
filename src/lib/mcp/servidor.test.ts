@@ -8,13 +8,13 @@ import { ID_ITEM, LEITOR, ESCRITOR, itemFalso } from "@/lib/tech-interno/api-fix
 
 const s = vi.hoisted(() => ({
   listarItens: vi.fn(), detalheItem: vi.fn(), opcoesTech: vi.fn(), salvarItem: vi.fn(), mudarSituacaoItem: vi.fn(), comentarItem: vi.fn(),
-  anexarArquivo: vi.fn(), comentarioSalvo: vi.fn(),
+  anexarArquivo: vi.fn(), comentarioSalvo: vi.fn(), resumoTech: vi.fn(),
 }));
 vi.mock("@/lib/tokens-pessoais/servidor", async () => ({ autenticarTokenPessoal: (await import("@/lib/tech-interno/api-fixtures.test-utils")).autenticarFalso }));
 vi.mock("@/lib/tech-interno/servidor", async original => ({
   ...await original<typeof import("@/lib/tech-interno/servidor")>(),
   listarItens: s.listarItens, detalheItem: s.detalheItem, opcoesTech: s.opcoesTech,
-  salvarItem: s.salvarItem, mudarSituacaoItem: s.mudarSituacaoItem, comentarItem: s.comentarItem,
+  salvarItem: s.salvarItem, mudarSituacaoItem: s.mudarSituacaoItem, comentarItem: s.comentarItem, resumoTech: s.resumoTech,
 }));
 vi.mock("@/lib/tech-interno/anexos", () => ({ anexarArquivo: s.anexarArquivo }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ techInternalComment: { findFirstOrThrow: s.comentarioSalvo } }) }));
@@ -77,15 +77,15 @@ describe("servidor MCP: conexão", () => {
 });
 
 describe("servidor MCP: ferramentas por escopo", () => {
-  it("token só de leitura vê só as três de consulta, marcadas como leitura", async () => {
+  it("token só de leitura vê só as quatro de consulta, marcadas como leitura", async () => {
     const { result } = await chamar(LEITOR, "tools/list");
-    expect(result?.tools?.map(t => t.name).sort()).toEqual(["listar_itens", "ver_item", "ver_opcoes"]);
+    expect(result?.tools?.map(t => t.name).sort()).toEqual(["listar_itens", "resumo_do_periodo", "ver_item", "ver_opcoes"]);
     for (const t of result!.tools!) expect(t.annotations?.readOnlyHint, t.name).toBe(true);
   });
 
-  it("token de escrita vê as oito", async () => {
+  it("token de escrita vê as nove", async () => {
     const { result } = await chamar(ESCRITOR, "tools/list");
-    expect(result?.tools?.map(t => t.name).sort()).toEqual(["anexar", "atualizar_item", "comentar", "criar_item", "listar_itens", "mudar_situacao", "ver_item", "ver_opcoes"]);
+    expect(result?.tools?.map(t => t.name).sort()).toEqual(["anexar", "atualizar_item", "comentar", "criar_item", "listar_itens", "mudar_situacao", "resumo_do_periodo", "ver_item", "ver_opcoes"]);
     const criar = result!.tools!.find(t => t.name === "criar_item")!;
     expect(Object.keys(criar.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(["title", "type", "systemKey", "assigneeId", "dueDate"]));
   });
@@ -103,6 +103,35 @@ describe("servidor MCP: as ações", () => {
     expect(isError).toBe(false);
     expect(s.listarItens).toHaveBeenCalledWith(ator, expect.objectContaining({ type: "BUG", assignee: "me", overdue: true, page: 1 }));
     expect(dados).toMatchObject({ total: 1, items: [{ id: ID_ITEM, statusLabel: "Pendente", url: `https://connect.example.test/controle-interno/${ID_ITEM}` }] });
+  });
+
+  it("resumo_do_periodo: semana por padrão, com totais e uma linha curta por item", async () => {
+    const quando = new Date("2026-11-04T13:00:00Z");
+    const base = { title: "Corrigir X", type: "BUG", priority: 2, systemName: "Connect", assigneeName: "Pessoa", dueDate: null, prUrl: "https://github.com/a/b/pull/1", createdAt: quando };
+    s.resumoTech.mockResolvedValue({
+      periodo: "mes", primeiroDia: "2026-11-01", ultimoDia: "2026-11-30", rotulo: "novembro de 2026",
+      concluidos: [{ ...base, id: ID_ITEM, status: "DONE", em: quando }],
+      emAndamento: [{ ...base, id: "outro", status: "VALIDATION", mexidoNoPeriodo: true }],
+      planejados: [], cancelados: [],
+    });
+    const { isError, dados } = await ferramenta(LEITOR, "resumo_do_periodo", { period: "month", date: "2026-11-06" });
+    expect(isError).toBe(false);
+    expect(s.resumoTech).toHaveBeenCalledWith(ator, "mes", "2026-11-06");
+    expect(dados).toMatchObject({
+      period: "month", from: "2026-11-01", to: "2026-11-30", label: "novembro de 2026",
+      totals: { done: 1, inProgress: 1, planned: 0, canceled: 0 },
+      done: [{ id: ID_ITEM, title: "Corrigir X", typeLabel: "Bug", prUrl: "https://github.com/a/b/pull/1", doneAt: quando.toISOString(), url: `https://connect.example.test/controle-interno/${ID_ITEM}` }],
+      inProgress: [{ id: "outro", statusLabel: "Em validação", priorityLabel: "Alta", movedInPeriod: true }],
+    });
+    await ferramenta(LEITOR, "resumo_do_periodo", {});
+    expect(s.resumoTech).toHaveBeenLastCalledWith(ator, "semana", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+  });
+
+  it("resumo_do_periodo recusa data que não existe", async () => {
+    const { isError, dados } = await ferramenta(LEITOR, "resumo_do_periodo", { date: "2026-02-30" });
+    expect(isError).toBe(true);
+    expect(dados).toMatchObject({ error: { code: "validation_error" } });
+    expect(s.resumoTech).not.toHaveBeenCalled();
   });
 
   it("ver_item devolve a version para a próxima alteração", async () => {
