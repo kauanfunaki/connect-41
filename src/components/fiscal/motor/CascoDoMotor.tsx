@@ -45,7 +45,7 @@ export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao
     {contexto && <FiltroDoMotor raizes={motor.raizes} raiz={contexto.raiz} estabelecimentos={mapa.visiveis.map((e) => ({ id: e.id, rotulo: `${e.companyNome} · ${e.uf}${e.matriz ? " · matriz" : ""}${e.ativo ? "" : " · inativo"}` }))} estabelecimentoId={contexto.estabelecimentoId} competencia={contexto.competencia} semEstabelecimento={semEstabelecimento} />}
     <div className="mb-5 flex flex-col gap-3">
       {tela.erro && <div role="alert"><Aviso tom="atencao">{tela.erro}</Aviso></div>}
-      {!motor.escrita && <Aviso tom="info">Escrita do SPED não habilitada: o Connect só consulta o motor. As ações ficam desabilitadas até o token de escrita ser configurado na integração.</Aviso>}
+      {!motor.escrita && <Aviso tom="info">Escrita do SPED não habilitada: o Connect só consulta o motor. As ações ficam desabilitadas até o token de escrita ser configurado na integração. O Gerar SPED não depende dele.</Aviso>}
     </div>
     {!contexto
       ? <EmptyState title="Nenhuma raiz de CNPJ liberada" description="Este escritório ainda não tem raiz de CNPJ sincronizada com o SPED. Peça ao responsável pela integração para liberar a raiz do cliente piloto." />
