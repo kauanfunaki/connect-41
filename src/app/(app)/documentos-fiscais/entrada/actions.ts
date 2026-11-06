@@ -6,6 +6,7 @@ import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerXmlFiscal } from "@/lib/fiscal/xml";
+import { registrarRecusaSemTravar } from "@/lib/fiscal/recusasServidor";
 import { chaveDeDeduplicacao, competenciaDe } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { alcanceDaEquipe } from "../alcance";
@@ -59,10 +60,24 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
 
   for (const arquivo of arquivos) {
     const nome = arquivo.name;
-    const leitura = lerXmlFiscal(await arquivo.text());
+    const xml = await arquivo.text();
+    const leitura = lerXmlFiscal(xml);
 
     if (!leitura.ok) {
       vereditos.push({ arquivo: nome, situacao: "invalido", detalhe: leitura.detalhe });
+      // A recusa fica guardada para a contagem por município (06/11/2026): era o
+      // veredito na tela e mais nada, e ninguém sabia quantas notas caem fora do
+      // ABRASF e do padrão nacional. Não trava a entrada se a gravação falhar.
+      await registrarRecusaSemTravar({
+        tenantId: ctx.tenantId,
+        companyId: empresaEscolhida && empresas.some((e) => e.id === empresaEscolhida) ? empresaEscolhida : null,
+        origem: "entrada",
+        nomeDoArquivo: nome,
+        xml,
+        motivo: leitura.motivo,
+        detalhe: leitura.detalhe,
+        userId: ctx.userId,
+      });
       continue;
     }
     const doc = leitura.documento;
