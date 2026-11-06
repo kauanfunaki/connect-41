@@ -203,6 +203,13 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: true, icon: "FileSpreadsheet", group: "Operação", menuDireto: true,
   },
   {
+    // Planejamento tributário (05/11/2026): o simulador do Connect Tributário (motor R_4.1),
+    // trazido para o Connect. Nasce desligado; o escritório liga em Admin › Módulos.
+    code: "contabil_planejamento", label: "Planejamento tributário", sectorCode: "contabil",
+    description: "Avaliações que comparam Simples, Simples híbrido, Presumido e Real de 2027 a 2033, com relatório para o cliente",
+    defaultEnabled: false, icon: "Landmark", group: "Apuração", menuDireto: true,
+  },
+  {
     // A revisão do fechamento (05/11/2026): o AudTool dentro do Connect, com o
     // motor em src/lib/revisao-contabil e o desenho em docs/REVISAO-CONTABIL.md.
     code: "contabil_revisao", label: "Revisão do fechamento", sectorCode: "contabil",
@@ -825,6 +832,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   financeiro_estoque: "/estoque",
   financeiro_contratos: "/contratos",
   contabil_sped: "/sped-contabil",
+  contabil_planejamento: "/planejamento-tributario",
   contabil_revisao: "/revisao-contabil",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
