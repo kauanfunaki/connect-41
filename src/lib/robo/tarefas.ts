@@ -74,7 +74,9 @@ export const PRAZO_DA_EXECUCAO_MS = 15 * 60 * 1000;
  * `fiscal/sped/local/geracaoPeloAgente.ts`).
  */
 export const TIPOS_DE_TAREFA = {
-  imprimir_alvara: { rotulo: "Imprimir o alvará de Curitiba", area: "societario", repetivel: true, tentativas: 3, prazoMs: PRAZO_DA_EXECUCAO_MS },
+  // 25 min (06/11/2026): cabe a espera de 10 min por alguém no captcha
+  // (`robo/assistencia.ts`) e o resto da impressão, sem a tarefa voltar à fila no meio.
+  imprimir_alvara: { rotulo: "Imprimir o alvará de Curitiba", area: "societario", repetivel: true, tentativas: 3, prazoMs: 25 * 60 * 1000 },
   vigiar_ie: { rotulo: "Ler a situação da inscrição estadual", area: "societario", repetivel: true, tentativas: 3, prazoMs: PRAZO_DA_EXECUCAO_MS },
   observar_sima: { rotulo: "Acompanhar os protocolos do SIMA", area: "societario", repetivel: true, tentativas: 3, prazoMs: PRAZO_DA_EXECUCAO_MS },
   gerar_sped: { rotulo: "Gerar o arquivo SPED", area: "fiscal", repetivel: true, tentativas: 2, prazoMs: 60 * 60 * 1000 },

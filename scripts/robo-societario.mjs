@@ -14,6 +14,9 @@
 //     Curitiba, marca o aceite de acessibilidade (decisão do Kauan, 15/09) e
 //     devolve o PDF. Não decide nada além de "achou o botão de imprimir": o
 //     número, a data e o que fazer com "não encontrado" são decididos no Connect.
+//     No "Não sou um robô" (06/11/2026), pede ajuda ao Connect: no horário
+//     comercial a tela do navegador vai ao vivo para quem pediu, que marca com
+//     o mouse pelo Connect; fora dele, segue para o caminho do PDF.
 //   vigiar_ie — emite o CICAD na Receita do PR, com o certificado da 041 pela
 //     Web PKI, e devolve a "Situação Atual". Ligado só com `vigiarIE.ativo`.
 //   observar_sima — lê "Minhas Solicitações" do SIMA com o certificado da 041
@@ -35,8 +38,9 @@ import { createInterface } from "node:readline";
 import { appendFileSync, mkdirSync, renameSync, statSync } from "node:fs";
 import { access, mkdir, open, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { ajudaPeloConnect } from "./robo-assistencia.mjs";
 
-const VERSAO = "2026-11-05";
+const VERSAO = "2026-11-06";
 const args = new Set(process.argv.slice(2).map((a) => a.split("=")[0]));
 const value = (name, fallback = null) => {
   const hit = process.argv.find((arg) => arg.startsWith(`${name}=`));
@@ -141,6 +145,13 @@ async function devolver(config, id, devolucao, arquivo) {
 
 // ─── uma volta ────────────────────────────────────────────────────────────
 
+/**
+ * Quanto a máquina deixa uma tarefa rodar. O alvará ganhou 20 min (06/11/2026)
+ * para caber a espera de até 10 min por alguém no captcha; o Connect dá 25 min
+ * antes de devolver a tarefa à fila (`TIPOS_DE_TAREFA` em src/lib/robo/tarefas.ts).
+ */
+const PRAZO_NA_MAQUINA_MS = { imprimir_alvara: 20 * 60_000 };
+
 async function umaVolta(config) {
   const tarefa = await pedirTarefa(config);
   await saveState({ ultimaVolta: new Date().toISOString(), ultimoErro: null });
@@ -149,7 +160,7 @@ async function umaVolta(config) {
   const executar = CAPACIDADES[tarefa.tipo];
   let saida;
   try {
-    saida = executar ? await comPrazo(executar(config, tarefa), 10 * 60_000) : { devolucao: { ok: false, motivo: `Esta máquina não sabe executar ${tarefa.tipo}.`, recuperavel: false } };
+    saida = executar ? await comPrazo(executar(config, tarefa), PRAZO_NA_MAQUINA_MS[tarefa.tipo] ?? 10 * 60_000) : { devolucao: { ok: false, motivo: `Esta máquina não sabe executar ${tarefa.tipo}.`, recuperavel: false } };
   } catch (err) {
     // Site fora do ar, tela que demorou, navegador que travou: tenta de novo.
     // O detalhe técnico fica no log da máquina; o Connect mostra a frase.
@@ -228,9 +239,33 @@ const espacos = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 const PENDENTE = /pendente de regulariza|aguardando anu[êe]ncia/i;
 const NAO_ENCONTRADO = /n[ãa]o (foi )?encontrad|n[ãa]o h[áa] alvar/i;
 
-/** Quanto o robô espera alguém marcar o "Não sou um robô" na máquina. */
+/**
+ * Quanto o robô espera alguém marcar o "Não sou um robô" na própria máquina:
+ * no ensaio, e com um Connect que ainda não tem a sessão assistida.
+ */
 const ESPERA_DO_CAPTCHA_MS = 3 * 60_000;
 const CAPTCHA = /n[ãa]o sou um rob[ôo]|ICI Captcha/i;
+
+/** O jeito de antes: espera quem estiver na frente da máquina marcar na janela do Chrome. */
+async function esperarNaMaquina(page, liberado, quem) {
+  log(`${quem}: a prefeitura pediu "Não sou um robô". Marque na janela do Chrome em até ${ESPERA_DO_CAPTCHA_MS / 60_000} minutos.`);
+  await page.bringToFront().catch(() => {});
+  const fim = Date.now() + ESPERA_DO_CAPTCHA_MS;
+  while (Date.now() < fim && !(await liberado())) {
+    if (page.isClosed()) throw new Error("Target page, context or browser has been closed");
+    await page.waitForTimeout(1_000);
+  }
+}
+
+/**
+ * A sessão assistida (06/11/2026): o Connect espelha a tela para alguém marcar
+ * com o mouse. Sem a sessão no Connect (versão anterior, fora do ar), espera
+ * na máquina, como antes. Ver scripts/robo-assistencia.mjs.
+ */
+async function esperarAlguemNoCaptcha(config, tarefa, page, liberado) {
+  const fim = await ajudaPeloConnect({ config, tarefa, page, liberado, log });
+  if (fim === "sem_connect") await esperarNaMaquina(page, liberado, `tarefa ${tarefa.id}`);
+}
 
 /** A caixa do captcha está na página, ou num frame dela? */
 async function temCaptcha(page) {
@@ -259,20 +294,17 @@ async function imprimirAlvara(config, tarefa, { ensaio = false } = {}) {
     await campo.fill(inscricao);
 
     // A caixa "Não sou um robô" (ICI Captcha, desde 03/11/2026) deixa o
-    // Consultar desligado até alguém marcar. O robô não marca: espera alguns
-    // minutos por quem estiver na máquina e, se ninguém marcar, devolve a tela
-    // "captcha" — o Connect manda para o caminho do PDF.
+    // Consultar desligado até alguém marcar. O robô não marca: pede ajuda ao
+    // Connect, que espelha esta tela para uma pessoa marcar com o mouse
+    // (06/11/2026); fora do horário comercial, ou se ninguém marcar no prazo,
+    // devolve a tela "captcha" — o Connect manda para o caminho do PDF.
     const consultar = page.getByRole("button", { name: /consultar/i }).first();
+    const liberado = () => consultar.isEnabled().catch(() => false);
     await page.waitForTimeout(1_500);
     if (await temCaptcha(page)) {
-      log(`tarefa ${tarefa.id}: a prefeitura pediu "Não sou um robô". Marque na janela do Chrome em até ${ESPERA_DO_CAPTCHA_MS / 60_000} minutos.`);
-      await page.bringToFront().catch(() => {});
-      const fim = Date.now() + ESPERA_DO_CAPTCHA_MS;
-      while (Date.now() < fim && !(await consultar.isEnabled().catch(() => false))) {
-        if (page.isClosed()) throw new Error("Target page, context or browser has been closed");
-        await page.waitForTimeout(1_000);
-      }
-      if (!(await consultar.isEnabled().catch(() => false))) {
+      if (ensaio) await esperarNaMaquina(page, liberado, "ensaio");
+      else await esperarAlguemNoCaptcha(config, tarefa, page, liberado);
+      if (!(await liberado())) {
         await capturar(page, ensaio ? "ensaio-do-alvara" : tarefa.id);
         if (ensaio) return { ensaio: { tela: "captcha" } };
         return { devolucao: { ok: true, resultado: { tela: "captcha", texto: (await page.locator("body").innerText().catch(() => "")).slice(0, 20_000) } } };

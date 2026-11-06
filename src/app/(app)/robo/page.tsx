@@ -65,6 +65,19 @@ export default async function RoboDoSocietarioPage() {
     }),
   ]);
   const nomeDaEmpresa = new Map(empresas.map((e) => [e.id, nomeExibicao(e)]));
+  // Parada no captcha esperando alguém (06/11/2026): a linha leva à tela espelhada,
+  // para quem não viu o aviso no sino.
+  const emExecucao = tarefas.filter((t) => t.status === "EM_EXECUCAO").map((t) => t.id);
+  const pedindoAjuda = new Set(
+    emExecucao.length
+      ? (
+          await prisma.robotAssist.findMany({
+            where: { tenantId: ctx.tenantId, taskId: { in: emExecucao }, endedAt: null, deadlineAt: { gt: new Date() } },
+            select: { taskId: true },
+          })
+        ).map((s) => s.taskId)
+      : [],
+  );
   const naFila = tarefas.filter((t) => t.status === "PENDENTE" || t.status === "EM_EXECUCAO").length;
   const paradas = tarefas.filter((t) => t.status === "PRECISA_DE_GENTE").length;
   // A máquina parada (04/11/2026): o robô roda no PC de alguém, e com ele desligado
@@ -153,7 +166,14 @@ export default async function RoboDoSocietarioPage() {
                       {t.attempts > 1 && <span className="block text-micro text-fg-muted mt-1">{t.attempts} tentativas</span>}
                     </td>
                     <td className={`${TD} text-fg-secondary max-w-[44ch]`}>
-                      {t.fileId ? (
+                      {pedindoAjuda.has(t.id) ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span>Parou no &quot;Não sou um robô&quot; e espera alguém marcar.</span>
+                          <Button href={`/robo/assistir/${t.id}`} size="xs">
+                            Resolver o captcha
+                          </Button>
+                        </span>
+                      ) : t.fileId ? (
                         <Button href={`/api/arquivos/${t.fileId}?ver=1`} nativo target="_blank" rel="noopener" variant="secondary" size="xs" title="O PDF fica em Arquivos › Societário">
                           Abrir o PDF
                         </Button>

@@ -433,6 +433,35 @@ model RobotTask {
   @@map("robot_tasks")
 }
 
+/// Sessão assistida do robô (06/11/2026): ele parou num captcha e espelha a tela
+/// do navegador no Connect, para uma pessoa do setor resolver com o mouse.
+///
+/// Uma por tentativa da tarefa. O quadro e os cliques ficam em memória (duram
+/// minutos); aqui fica o que precisa sobreviver: prazo, quem foi chamado, quem
+/// clicou e como terminou.
+model RobotAssist {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  taskId String @db.VarChar(191)
+  /// A tentativa da tarefa (`RobotTask.attempts`) em que o robô pediu ajuda.
+  attempt Int
+  /// Por que parou: hoje só `captcha`.
+  reason String @db.VarChar(40)
+  startedAt DateTime @default(now())
+  deadlineAt DateTime
+  /// Quando o aviso passou de quem pediu para o setor inteiro. Nulo: só quem pediu.
+  escalatedAt DateTime?
+  endedAt DateTime?
+  /// `resolvido`, `prazo` ou `desistiu`.
+  outcome String? @db.VarChar(20)
+  clicks Int @default(0)
+  lastClickById String? @db.VarChar(191)
+  lastClickAt DateTime?
+  @@unique([taskId, attempt])
+  @@index([tenantId, startedAt])
+  @@map("robot_assists")
+}
+
 /// Sites do Tech no Ops Center (28/10/2026): o que já está no ar, com quem
 /// responde por ele. A triagem dos chamados consulta antes de abrir um pedido.
 model OpsSite {

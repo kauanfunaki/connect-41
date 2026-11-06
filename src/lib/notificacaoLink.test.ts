@@ -20,6 +20,12 @@ describe("linkDaNotificacao", () => {
     expect(linkDaNotificacao({ type: "COMMENT", entityType: "COMPANY", entityId: "c1" })).toBe("/empresas/c1");
   });
 
+  it("robô parado no captcha abre a tela espelhada daquela tarefa", () => {
+    expect(linkDaNotificacao({ type: "ROBO_CAPTCHA", entityId: "0b6f3c1e-8d2a-4c6b-9f1e-2a3b4c5d6e7f" })).toBe("/robo/assistir/0b6f3c1e-8d2a-4c6b-9f1e-2a3b4c5d6e7f");
+    expect(linkDaNotificacao({ type: "ROBO_CAPTCHA" })).toBe("/robo");
+    expect(linkDaNotificacao({ type: "ROBO_PRECISA_DE_VOCE", entityId: "t1" })).toBe("/robo");
+  });
+
   it("aviso da Junta sem processo leva à lista de avisos", () => {
     expect(linkDaNotificacao({ type: "AVISO_ORGAO_SEM_PROCESSO" })).toBe("/processos/avisos");
     expect(linkDaNotificacao({ type: "PROCESS_AVISO_JUNTA", entityId: "pr1" })).toBe("/processos/pr1");
