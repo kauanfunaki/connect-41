@@ -1473,6 +1473,10 @@ model Tenant {
   digitalCertificates       DigitalCertificate[]
   digitalCertificateUses    DigitalCertificateUse[]
   digitalCertificateUseDays DigitalCertificateUseDay[]
+  revisaoFechamentos        RevisaoFechamento[]
+  revisaoDocumentos         RevisaoDocumento[]
+  revisaoExecucoes          RevisaoExecucao[]
+  revisaoAcompanhamentos    RevisaoAcompanhamento[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
@@ -2203,6 +2207,7 @@ model Company {
   processFees              ProcessFee[]
   portalUserLinks          PortalUserCompany[]
   announcementLinks        ClientAnnouncementCompany[]
+  revisaoFechamentos       RevisaoFechamento[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -9767,4 +9772,114 @@ model FinanceRecurrence {
   @@index([active, endMode])
   @@index([tenantId, companyId])
   @@map("finance_recurrences")
+}
+
+// ─── Revisão do fechamento contábil (AudTool, Fase 2, 05/11/2026) ────────────
+//
+// O motor mora em src/lib/revisao-contabil/motor (porte do AudTool R_12, Fase 1)
+// e o desenho está em docs/REVISAO-CONTABIL.md. O fechamento é uma empresa do
+// cadastro num período, sem tabela própria de empresas. O documento guarda o que
+// o motor leu do arquivo, e o arquivo fica em storage/revisao-contabil. A
+// execução guarda o resultado inteiro, como o original. O acompanhamento é o que
+// a equipe anota em cada achado de uma execução.
+
+/// Um fechamento em revisão: empresa, período e regime declarado.
+model RevisaoFechamento {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  inicio        DateTime @db.Date
+  fim           DateTime @db.Date
+  /// O rótulo do original (`REGIMES` em src/lib/revisao-contabil/fechamento.ts): o motor lê o texto.
+  regime        String   @db.VarChar(40)
+  enquadramento String   @db.VarChar(60)
+  finalidade    String   @db.VarChar(120)
+  /// Tolerância das conferências, em centavos (0 a 10.000).
+  tolerancia    Int      @default(1)
+  /// Correções de leitura do balancete: "idDoDocumento:linha" → campos em centavos.
+  correcoes     Json?
+  criadoPorId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
+  company    Company            @relation(fields: [companyId], references: [id])
+  documentos RevisaoDocumento[]
+  execucoes  RevisaoExecucao[]
+
+  @@index([tenantId, companyId])
+  @@index([tenantId, fim])
+  @@map("revisao_fechamentos")
+}
+
+/// Um arquivo lido pelo motor. Um ZIP vira um documento por arquivo de dentro.
+model RevisaoDocumento {
+  id           String   @id @default(uuid())
+  tenantId     String
+  fechamentoId String
+  nome         String   @db.VarChar(255)
+  sha256       String   @db.Char(64)
+  tamanho      Int
+  /// `<tenantId>/<uuid>.<ext>` em storage/revisao-contabil.
+  arquivo      String   @db.VarChar(120)
+  /// O tipo que o motor reconheceu ("Balancete", "Razão"…).
+  tipo         String   @db.VarChar(60)
+  interpretado Boolean
+  /// O que o motor extraiu (`Fatos`): a análise lê daqui, sem reler o arquivo.
+  fatos        Json
+  extraidoEm   DateTime
+  /// Entra na próxima análise: é a seleção de versões do original.
+  ativo        Boolean  @default(true)
+  enviadoPorId String?
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id])
+  fechamento RevisaoFechamento @relation(fields: [fechamentoId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, fechamentoId])
+  @@map("revisao_documentos")
+}
+
+/// Uma execução da análise: o resultado do motor e as assinaturas que dizem se ele ainda vale.
+model RevisaoExecucao {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  fechamentoId       String
+  versao             String   @db.VarChar(12)
+  /// SHA-256 do cadastro (empresa e fechamento) e das entradas (documentos, correções e tolerância).
+  assinaturaContexto String   @db.Char(64)
+  assinaturaEntradas String   @db.Char(64)
+  /// A `Execucao` do motor: testes, achados, resumo, matriz do manual e documentos.
+  resultado          Json
+  achados            Int
+  executadaPorId     String?
+  executadaEm        DateTime @default(now())
+
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  fechamento      RevisaoFechamento       @relation(fields: [fechamentoId], references: [id], onDelete: Cascade)
+  acompanhamentos RevisaoAcompanhamento[]
+
+  @@index([tenantId, fechamentoId, executadaEm])
+  @@map("revisao_execucoes")
+}
+
+/// O que a equipe anota num achado. Os ids dos achados ("G01"…) são sequenciais
+/// por execução: uma execução nova começa sem acompanhamento, como no original.
+model RevisaoAcompanhamento {
+  id              String   @id @default(uuid())
+  tenantId        String
+  execucaoId      String
+  achadoId        String   @db.VarChar(20)
+  responsavel     String?  @db.VarChar(120)
+  estado          String   @db.VarChar(40)
+  nota            String?  @db.Text
+  atualizadoPorId String?
+  updatedAt       DateTime @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id])
+  execucao RevisaoExecucao @relation(fields: [execucaoId], references: [id], onDelete: Cascade)
+
+  @@unique([execucaoId, achadoId])
+  @@index([tenantId])
+  @@map("revisao_acompanhamentos")
 }

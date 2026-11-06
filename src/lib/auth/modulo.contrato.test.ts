@@ -34,6 +34,8 @@ const PASTAS = [
   "pessoas/[id]/beneficios",
   "pessoas/[id]/salario",
   "pessoas/[id]/esocial-s2200",
+  // Revisão do fechamento (05/11/2026): nasceu com o gate.
+  "revisao-contabil",
 ];
 
 function arquivos(dir: string): string[] {
