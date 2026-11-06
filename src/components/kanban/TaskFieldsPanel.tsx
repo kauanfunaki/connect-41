@@ -17,6 +17,7 @@ import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import type { StageDotType } from "@/components/kanban/StageDot";
+import { useConcluirComSubatividades } from "@/components/kanban/useConcluirComSubatividades";
 import {
   CAMPOS_EXTRAS,
   OPCOES_DE_PRIORIDADE,
@@ -76,7 +77,11 @@ type Props = {
 
   /** "Marcar como concluída" ao lado da situação (05/11/2026); concluída, o aviso verde acima tem o Reabrir. */
   isCompleted?: boolean;
-  concluirAction?: () => Promise<void>;
+  concluirAction?: (comSubatividades?: boolean) => Promise<void>;
+  /** As subatividades abertas abaixo, em todos os níveis: com alguma, concluir pergunta antes (06/11/2026). */
+  subatividadesAbertas?: number;
+  /** O nome na pergunta de concluir. */
+  nomeDaTarefa?: string;
 
   dueDate: string | null;
   startDate: string | null;
@@ -107,7 +112,7 @@ type Props = {
 
 export function TaskFieldsPanel({
   canAct, itemId, stages, currentStageId, moveAction,
-  isCompleted = false, concluirAction,
+  isCompleted = false, concluirAction, subatividadesAbertas = 0, nomeDaTarefa = "esta atividade",
   dueDate, startDate, recurring, recurrenceFrequency, priority, datesAction,
   estimateMinutes, estimateAction,
   activeTimer, currentUserId, startTimerAction, stopTimerAction,
@@ -117,7 +122,9 @@ export function TaskFieldsPanel({
 }: Props) {
   // Os campos extras que a pessoa pediu agora em "Adicionar campo" (05/11/2026).
   const [extrasPedidos, setExtrasPedidos] = useState<CampoExtra[]>([]);
-  const [concluindo, startTransition] = useTransition();
+  const [mudando, startTransition] = useTransition();
+  const { dialog: perguntaDeConcluir, concluir, pendente: concluindoPelaPergunta } = useConcluirComSubatividades();
+  const concluindo = mudando || concluindoPelaPergunta;
   const toast = useToast();
 
   // Trocar a situação avisa quando não grava (auditoria de UX, 30/10/2026).
@@ -188,12 +195,13 @@ export function TaskFieldsPanel({
               variant="secondary"
               size="xs"
               disabled={concluindo}
-              onClick={() => startTransition(() => concluirAction())}
+              onClick={() => concluir({ nome: nomeDaTarefa, abertas: subatividadesAbertas, concluir: (junto) => concluirAction(junto) })}
               className="hover:text-success-fg hover:border-success/40 hover:bg-success/5"
             >
               <CheckCircle2 size={12} /> Marcar como concluída
             </Button>
           )}
+          {perguntaDeConcluir}
         </span>
       </FieldRow>
 

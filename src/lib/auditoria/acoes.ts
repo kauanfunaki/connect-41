@@ -367,6 +367,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // ── Gestão e Comercial ─────────────────────────────────────────────────────
   "gestao.reatribuir": e("trocou o responsável de"),
   "gestao.limites": e("mudou os prazos de alerta do Painel de Gestão do setor"),
+  // A atividade dos Quadros, com as subatividades que foram junto na cascata
+  // (06/11/2026) — o histórico dela vai junto, e o rastro fica aqui.
+  "kanban.atividade.excluir": x("excluiu a atividade"),
   "valora.parametros": e("mudou os parâmetros do Valora"),
   "valora.proposta.criar": c("criou uma proposta no Valora"),
   "valora.proposta.atualizar": e("editou uma proposta do Valora"),
@@ -812,6 +815,9 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["empresa.socio.", "societario"],
   ["license.", "societario"],
   ["gestao.", "gestao"],
+  // As atividades dos Quadros ficam com a Gestão, como a troca de responsável
+  // do card ("gestao.reatribuir").
+  ["kanban.", "gestao"],
   ["valora.", "gestao"],
   ["lead.", "comercial"],
   ["drive.", "arquivos"],
