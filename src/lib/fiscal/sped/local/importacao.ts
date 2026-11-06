@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { lerXmlFiscal } from "@/lib/fiscal/xml";
 import { apoioSchema, decimal, documentoSchema, somar, unidades, type DocumentoFiscal, type ItemFiscal } from "./dominio";
+import { decodificarEntidades } from "./entidades";
 
 const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, parseTagValue: false, trimValues: true, processEntities: false });
 type Objeto = Record<string, unknown>;
@@ -26,7 +27,8 @@ export function lerDocumentoXml(xml: string): DocumentoFiscal {
   if (Object.keys(nfe).length) itens = lista(nfe.det).map((v, i) => {
     const p = obj(obj(v).prod), imp = obj(obj(v).imposto);
     const valor = somar([s(p.vProd) || "0", s(p.vFrete) || "0", s(p.vSeg) || "0", s(p.vOutro) || "0"]);
-    return { ordem: i + 1, codigo: s(p.cProd), descricao: s(p.xProd), ncm: s(p.NCM), cfop: s(p.CFOP) || null, tipoItem: "99", quantidade: s(p.qCom) || "1", valor: decimal(unidades(valor) - unidades(s(p.vDesc) || "0")), icms: imposto(imp, "ICMS"), ipi: imposto(imp, "IPI"), pis: imposto(imp, "PIS"), cofins: imposto(imp, "COFINS") };
+    // A descrição decodificada (`&amp;` → `&`); o código fica como veio, porque é a chave das decisões já gravadas.
+    return { ordem: i + 1, codigo: s(p.cProd), descricao: decodificarEntidades(s(p.xProd)), ncm: s(p.NCM), cfop: s(p.CFOP) || null, tipoItem: "99", quantidade: s(p.qCom) || "1", valor: decimal(unidades(valor) - unidades(s(p.vDesc) || "0")), icms: imposto(imp, "ICMS"), ipi: imposto(imp, "IPI"), pis: imposto(imp, "PIS"), cofins: imposto(imp, "COFINS") };
   });
   else if (Object.keys(cte).length) itens = [{ ordem: 1, codigo: "SERVICO_TRANSPORTE", descricao: "Serviço de transporte", ncm: "", cfop: s(caminho(cte, "ide", "CFOP")) || null, tipoItem: "09", quantidade: "1", valor: d.valorTotal, icms: imposto(cte.imp, "ICMS"), ipi: { ...tributoVazio(), valor: "0.00", base: "0.00" }, pis: tributoVazio(), cofins: tributoVazio() }];
   else itens = [{ ordem: 1, codigo: "SERVICO", descricao: `Serviço da NFS-e ${d.numero}`, ncm: "", cfop: null, tipoItem: "09", quantidade: "1", valor: d.valorTotal, icms: { ...tributoVazio(), valor: "0.00", base: "0.00" }, ipi: { ...tributoVazio(), valor: "0.00", base: "0.00" }, pis: tributoVazio(), cofins: tributoVazio() }];

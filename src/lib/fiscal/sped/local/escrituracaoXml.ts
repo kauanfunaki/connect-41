@@ -12,11 +12,14 @@
 import { XMLParser } from "fast-xml-parser";
 import { z } from "zod";
 import { decimal, unidades } from "./dominio";
+import { decodificarEntidades } from "./entidades";
 
-const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, parseTagValue: false, trimValues: true, processEntities: true });
+// As entidades saem pelo `decodificarEntidades`, numa passada só, e não pelo parser,
+// que não decodifica as referências numéricas (`&#233;`).
+const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, parseTagValue: false, trimValues: true, processEntities: false });
 type Objeto = Record<string, unknown>;
 const obj = (v: unknown): Objeto => (v && typeof v === "object" && !Array.isArray(v) ? (v as Objeto) : {});
-const s = (v: unknown) => (typeof v === "string" || typeof v === "number" ? String(v) : "");
+const s = (v: unknown) => (typeof v === "string" || typeof v === "number" ? decodificarEntidades(String(v)) : "");
 const lista = (v: unknown): unknown[] => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
 const caminho = (v: unknown, ...p: string[]): unknown => p.reduce<unknown>((n, k) => obj(n)[k], v);
 const dinheiro = (v: unknown): string | null => (/^\d+(\.\d+)?$/.test(s(v)) ? decimal(unidades(s(v))) : null);

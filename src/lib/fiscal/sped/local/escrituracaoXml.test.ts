@@ -24,6 +24,13 @@ describe("lerEscrituracaoXml — NF-e", () => {
 
   it("traz o tipo, o desconto e a informação complementar, com as entidades decodificadas", () => {
     expect(lido.documento).toMatchObject({ tpNF: "1", vDesc: "5.00", infCpl: "Pedido 77 & entrega parcial" });
+    // Referência numérica também (o parser só decodificava as nomeadas).
+    expect(lerEscrituracaoXml(NFE.replace("Pedido 77 &amp;", "Pedido 77 &#x26; caf&#233;"))?.documento.infCpl).toBe("Pedido 77 & café entrega parcial");
+  });
+
+  it("a descrição do item importada vem decodificada; o código fica como veio", () => {
+    expect(lerDocumentoXml(NFE).itens[0]).toMatchObject({ codigo: "A1", descricao: "Peça & acessório" });
+    expect(lerDocumentoXml(NFE.replace("<cProd>A1</cProd>", "<cProd>A&amp;1</cProd>")).itens[0].codigo).toBe("A&amp;1");
   });
 
   it("traz unidade, origem, valor bruto, desconto e ST de cada item, na ordem da escrituração", () => {

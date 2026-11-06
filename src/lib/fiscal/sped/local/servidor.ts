@@ -9,6 +9,7 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { lerContabilistaPadrao } from "@/lib/empresas/contabilistaPadraoDb";
+import { decodificarEntidades } from "./entidades";
 import { getTenantModuleStates } from "@/lib/modules";
 import { canViewSector } from "@/lib/auth/context";
 import { competenciaPadrao } from "@/lib/fiscal/motor/estabelecimentos";
@@ -74,7 +75,9 @@ export async function carregarBase(tela: TelaLocal) {
     const itensDb = await tx.spedFiscalItem.findMany({ where: { tenantId: c.tenantId, documentId: { in: docsDb.map(d => d.id) } }, orderBy: { position: "asc" } });
     const porDoc = new Map(docsDb.map(d => [d.id, d]));
     const itensPorDoc = new Map<string, ReturnType<typeof itemSchema.parse>[]>();
-    for (const i of itensDb) itensPorDoc.set(i.documentId, [...(itensPorDoc.get(i.documentId) ?? []), itemSchema.parse(i.data)]);
+    // A descrição gravada antes de 06/11 pode ter `&amp;` literal (a importação não decodificava): sai decodificada aqui,
+    // sem mexer no banco. Texto já decodificado não muda.
+    for (const i of itensDb) { const item = itemSchema.parse(i.data); itensPorDoc.set(i.documentId, [...(itensPorDoc.get(i.documentId) ?? []), { ...item, descricao: decodificarEntidades(item.descricao) }]); }
     const documentos: DocumentoEscriturado[] = vinculos.flatMap(v => {
       const db = porDoc.get(v.documentId), empresa = tela.grupo.find(e => e.id === v.companyId);
       if (!db || !empresa) return [];
