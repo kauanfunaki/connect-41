@@ -9,6 +9,7 @@ import { MODULO_OPS } from "@/lib/ops/regras";
 import { type EtapaDoSped } from "@/lib/fiscal/sped/etapas";
 import { carregarBase, ErroFiscal, prepararTelaLocal } from "@/lib/fiscal/sped/local/servidor";
 import { SEM_OPS, geracoesDaTela } from "@/lib/fiscal/sped/local/geracao";
+import { faltasDoCadastroParaGerar } from "@/lib/fiscal/sped/local/escrituracao";
 import { EstacaoSped } from "./EstacaoSped";
 import type { GeracaoDaEstacao } from "./AcompanhamentoDaGeracao";
 import { PeriodoLocalSped } from "./PeriodoLocalSped";
@@ -20,13 +21,17 @@ export async function AreaLocalSped({ aba, params }: { aba: EtapaDoSped; params:
   const base = tela.contexto ? await carregarBase(tela) : null;
   // A geração vai para a fila do Connect e o agente do motor vem buscar (06/11/2026): sem
   // chamar o motor aqui. O agente é uma automação do Ops Center, que precisa estar ligado.
-  let geracao: GeracaoDaEstacao = { opsLigado: false, motivo: null, geracoes: [], agente: null };
+  let geracao: GeracaoDaEstacao = { opsLigado: false, motivo: null, geracoes: [], agente: null, faltas: [] };
   if (aba === "gerar" && tela.contexto && tela.empresa) {
-    const [opsLigado, dados] = await Promise.all([
+    // No Gerar, o ICMS/IPI é do estabelecimento e o Contribuições é da raiz (consolidado).
+    const icms = !tela.contexto.consolidado;
+    const [opsLigado, dados, faltas] = await Promise.all([
       isModuleEnabled(tela.ctx.tenantId, MODULO_OPS),
       tela.competencia.length === 7 ? geracoesDaTela(tela.ctx.tenantId, tela.empresa, tela.competencia) : { geracoes: [], agente: null },
+      // O cadastro que o agente exige para o ICMS/IPI, conferido antes do pedido (06/11/2026).
+      icms && base ? faltasDoCadastroParaGerar(tela, base, tela.empresa.id, tela.empresa.cnpj) : [],
     ]);
-    geracao = { opsLigado, motivo: opsLigado ? null : SEM_OPS, ...dados };
+    geracao = { opsLigado, motivo: opsLigado ? null : SEM_OPS, ...dados, faltas };
   }
   const direitos = { importar: await podeNoModulo(tela.ctx, "fiscal_acervo", "agir"), configurar: await podeNoModulo(tela.ctx, "fiscal_configuracoes", "gerir"), entregas: await podeNoModulo(tela.ctx, "fiscal_entregas", "agir"), icms: await podeNoModulo(tela.ctx, "fiscal_icms_ipi", "ver"), contribuicoes: await podeNoModulo(tela.ctx, "fiscal_contribuicoes", "ver") };
   const conteudo = <PageContainer>

@@ -20,7 +20,7 @@ import { formatCnpj, formatInstantDateTime } from "@/lib/format";
 import { uploadComProgresso } from "@/lib/uploadComProgresso";
 import { formatarRaiz } from "./AbrangenciaLocalSped";
 import { dadosDoApoio, FormularioLocalSped, novoApoio, type EdicaoSped } from "./FormularioLocalSped";
-import { CartaoDaGeracao, ROTULO_DA_OBRIGACAO, SinalDoAgente, hrefDoGerado, rotuloDoTipo, useGeracoes, type GeracaoDaEstacao } from "./AcompanhamentoDaGeracao";
+import { CartaoDaGeracao, FaltasDoArquivo, ROTULO_DA_OBRIGACAO, SinalDoAgente, hrefDoGerado, rotuloDoTipo, useGeracoes, type GeracaoDaEstacao } from "./AcompanhamentoDaGeracao";
 import type { BaseLocal } from "@/lib/fiscal/sped/local/servidor";
 import { quadroPorCfop } from "@/lib/fiscal/sped/local/calculo";
 import { reaisExatos, somar, type ContextoLocal, type Obrigacao, type ProdutoFiscal, type DocumentoEscriturado, type ItemFiscal } from "@/lib/fiscal/sped/local/dominio";
@@ -48,6 +48,9 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
   const [tipoSped, setTipoSped] = useState<"0" | "1">("0"), [chaveGeracao, setChaveGeracao] = useState(() => crypto.randomUUID());
   const apuracao = obrigacao === "icms_ipi" ? base.icms : base.contribuicoes;
   const perfil = base.perfis.find(p => p.companyId === empresa.id);
+  const abrirPerfil = () => setEdicao({ tipo: "perfil", dados: perfil ? { ...perfil } : { uf: "", regime: "", obrigacoes: [] } });
+  // O cadastro que o agente exige para o ICMS/IPI (06/11/2026): com falta, o pedido nem vai para a fila.
+  const faltasDoArquivo = obrigacao === "icms_ipi" ? geracao.faltas : [];
   // O andamento das gerações pela fila do Connect (06/11/2026): relido enquanto há uma aberta.
   const vivas = useGeracoes(geracao, { empresa: empresa.id, competencia: contexto.competencia }, aba === "gerar");
   const href = (mudancas: Record<string, string>) => { const q = new URLSearchParams(params); q.set("empresa", empresa.id); q.set("competencia", contexto.competencia); for (const [k, v] of Object.entries(mudancas)) q.set(k, v); return `${caminho}?${q}`; };
@@ -114,7 +117,7 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-helper text-fg-secondary">{empresa.nome} · {formatCnpj(empresa.cnpj)} · revisão {base.revisao}</p>
       <div className="flex flex-wrap gap-2">
-        {direitos.configurar && <Button variant="ghost" size="sm" title="Regime, UF e obrigações da empresa" onClick={() => setEdicao({ tipo: "perfil", dados: perfil ? { ...perfil } : { uf: "", regime: "", obrigacoes: [] } })}><Settings2 size={14} /> Editar perfil fiscal</Button>}
+        {direitos.configurar && <Button variant="ghost" size="sm" title="Regime, UF e obrigações da empresa" onClick={abrirPerfil}><Settings2 size={14} /> Editar perfil fiscal</Button>}
         {aba !== "gerar" && <><Button variant="secondary" size="sm" href={exportar("xlsx")} download title="Baixa a visão aberta desta competência numa planilha Excel"><Download size={14} /> Exportar em Excel</Button><Button variant="ghost" size="sm" href={exportar("csv")} download title="Baixa a visão aberta desta competência num arquivo CSV"><Download size={14} /> Exportar em CSV</Button></>}
       </div>
     </div>
@@ -163,8 +166,9 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
         <h2 className="text-card-title font-semibold">Gerar arquivo da competência</h2>
         <p className="text-ui text-fg-secondary">O pedido congela uma revisão dos dados e entra na fila. O agente do motor gera o arquivo e devolve aqui. {obrigacao === "contribuicoes" ? "Contribuições abrange matriz e filiais da raiz." : "ICMS/IPI usa o estabelecimento selecionado."}</p>
         <Select aria-label="Tipo do arquivo" className="w-56" value={tipoSped} onChange={e => setTipoSped(e.target.value as "0" | "1")}><option value="0">Original</option><option value="1">Substituto / retificação</option></Select>
+        <FaltasDoArquivo faltas={faltasDoArquivo} editarPerfil={direitos.configurar ? abrirPerfil : null} hrefDaEmpresa={`/empresas/${empresa.id}`} />
         <div className="flex flex-wrap items-center gap-3">
-          <Button disabled={!pode || !geracao.opsLigado || ocupado || contexto.competencia.length !== 7 || !!aberta} loading={ocupado} loadingLabel="Pondo na fila…" onClick={() => void acao("gerar", { obrigacao, tipo: tipoSped, chave: chaveGeracao })}>Gerar SPED</Button>
+          <Button disabled={!pode || !geracao.opsLigado || ocupado || contexto.competencia.length !== 7 || !!aberta || faltasDoArquivo.length > 0} loading={ocupado} loadingLabel="Pondo na fila…" onClick={() => void acao("gerar", { obrigacao, tipo: tipoSped, chave: chaveGeracao })}>Gerar SPED</Button>
           {aberta && <span className="text-helper text-fg-secondary">Já há uma geração {aberta.estado === "PENDENTE" ? "na fila" : "executando"} para esta obrigação. Acompanhe abaixo.</span>}
         </div>
         <SinalDoAgente agente={vivas.agente} />

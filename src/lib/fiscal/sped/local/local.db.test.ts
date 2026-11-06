@@ -147,8 +147,32 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
       // perfil e o CEP da empresa, o motor recusa (teste com o motor, sped_generator#59, 06/11/2026).
       expect((await acao("perfil", { ...PERFIL_DO_ARQUIVO }, "classificacao")).status).toBe(200);
       await db.company.update({ where: { id: dados.companyId }, data: { zipCode: "80000-000" } });
+      // A nota de 2026-09 entrou pelo `gravarDocumento` direto, sem arquivo. Aqui ela ganha o XML
+      // guardado, com o endereço das duas partes, como sai de uma importação de verdade: sem ele, o
+      // pedido nem vai para a fila (conferência de 06/11/2026).
+      const relativo = `${dados.tenantId}/qa-nota-2026-09.xml`;
+      await mkdir(`storage/sped-fiscal/${dados.tenantId}`, { recursive: true });
+      await writeFile(`storage/sped-fiscal/${relativo}`, XML_FICTICIO
+        .replace("<xNome>FORNECEDOR FICTICIO</xNome></emit>", "<xNome>FORNECEDOR FICTICIO</xNome><enderEmit><xLgr>RUA DO FORNECEDOR</xLgr><nro>10</nro><xBairro>VILA</xBairro><cMun>4113700</cMun></enderEmit><IE>1112223334</IE></emit>")
+        .replace("<xNome>EMPRESA FICTICIA</xNome></dest>", "<xNome>EMPRESA FICTICIA</xNome><enderDest><xLgr>RUA DA EMPRESA FICTICIA</xLgr><nro>500</nro><xBairro>CENTRO</xBairro><cMun>4106902</cMun></enderDest></dest>"));
+      await db.spedFiscalDocument.update({ where: { tenantId_identity: { tenantId: dados.tenantId, identity: lerDocumentoXml(XML_FICTICIO).identidade } }, data: { sourcePath: relativo } });
     });
     afterAll(async () => { if (habilitado) await rm(`storage/sped-fiscal/${dados.tenantId}/gerados`, { recursive: true, force: true }); });
+
+    it("recusa antes da fila quando falta cadastro, e a tela do Gerar mostra o mesmo", async () => {
+      const db = getPrisma();
+      const { pedirGeracao } = await import("./geracao");
+      const { faltasDoCadastroParaGerar } = await import("./escrituracao");
+      await db.company.update({ where: { id: dados.companyId }, data: { zipCode: null } });
+      try {
+        await expect(pedirGeracao(m.ctx, await pedidoNovo())).rejects.toThrow("Antes de gerar o EFD ICMS/IPI, complete no cadastro da empresa, CEP.");
+        expect(await db.robotTask.count({ where: { tenantId: dados.tenantId, kind: "gerar_sped", status: "PENDENTE" } })).toBe(0);
+        const tela = await prepararTelaLocal({ empresa: dados.companyId, competencia: "2026-09", obrigacao: "icms_ipi" }, "gerar");
+        expect(await faltasDoCadastroParaGerar(tela, await carregarBase(tela), dados.companyId, "39952818000140")).toEqual([{ onde: "cadastro", itens: ["CEP"] }]);
+      } finally {
+        await db.company.update({ where: { id: dados.companyId }, data: { zipCode: "80000-000" } });
+      }
+    });
 
     it("pede, a máquina pega, baixa o pacote, devolve em partes, e o arquivo fica para baixar com os mesmos bytes", async () => {
       const { pedirGeracao, geracoesDaTela } = await import("./geracao");

@@ -22,6 +22,7 @@ import { ErroFiscal, carregarBase, json, montarPacote, prepararTelaLocal } from 
 import { obrigacaoSchema, type Obrigacao } from "./dominio";
 import { serializarPacote } from "./pacote";
 import { montarEscrituracao } from "./escrituracao";
+import { faltasDoEstabelecimento, faltasDosDocumentos, mensagemDasFaltas } from "./conferenciaDoArquivo";
 import type { PedidoDeGeracao } from "./geracaoPeloAgente";
 
 const pedidoSchema = z.object({ obrigacao: obrigacaoSchema, tipo: z.enum(["0", "1"]), chave: z.string().uuid() });
@@ -56,6 +57,13 @@ export async function pedirGeracao(ctx: AuthContext, entrada: { empresa: string;
   // O que o arquivo exige além da apuração: o cadastro do estabelecimento e o que só o XML guardado traz.
   const escrituracao = await montarEscrituracao(tela, base, dono.id);
   const pacote = montarPacote(tela, base, pedido.obrigacao, pedido.tipo, escrituracao);
+  // O que o agente recusaria por falta de dado, dito agora e não depois que a máquina pegar
+  // a tarefa (06/11/2026). Só o ICMS/IPI: é o que o agente gera hoje (sped_generator#59).
+  if (pedido.obrigacao === "icms_ipi") {
+    const perfil = base.perfis.find((p) => p.companyId === dono.id);
+    const faltas = [...faltasDoEstabelecimento(escrituracao.estabelecimento, perfil?.inscricaoEstadual ?? ""), ...faltasDosDocumentos(base.documentos, escrituracao)];
+    if (faltas.length) throw new ErroFiscal(mensagemDasFaltas(faltas));
+  }
   try {
     const r = await db.$transaction(async (tx) => {
       const lock = await tx.spedFiscalRoot.updateMany({ where: { tenantId: ctx.tenantId, raiz: c.raiz, revision: base.revisao }, data: { revision: { increment: 0 } } });

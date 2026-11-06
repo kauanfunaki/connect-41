@@ -121,6 +121,7 @@ O mapeamento de cada campo para o arquivo está em `docs/CONNECT-PACOTE-ICMS.md`
 | `documentos` | O XML guardado, por `id` do documento no pacote. NF-e: `tpNF`, `infCpl`, `vDesc` e, por item (`ordem`), `unidade`, `origem`, `vProd`, `vDesc` e `vICMSST`. CT-e: `tpCTe`, `chaveRef`, `tomador`, `munIni` e `munFim`. |
 
 - **Documento sem XML guardado** (veio do TXT, ou o arquivo saiu do disco) não entra em `documentos`. O motor recusa e diz qual falta.
+- **Conferência antes da fila** (`conferenciaDoArquivo.ts`): no EFD ICMS/IPI, o Connect recusa o pedido quando falta o que o motor exige. Isso vale para o cadastro do estabelecimento (inscrição estadual com dígito, município IBGE, perfil, atividade, contador, razão social, CEP e endereço), para a nota sem o XML guardado e para a outra parte sem endereço ou município. A tela do Gerar mostra as faltas do cadastro antes do clique. Ela espelha `_empresa` e `_participante` do `gerador_connect_icms.py`: mudou lá, muda aqui.
 - **Entidades:** as do XML chegam decodificadas (`&amp;` vira `&`).
 - **Ausência de campo:** desconto e ST ausentes no XML viram `"0.00"`. Campo de cadastro que o Connect não tem vai como texto vazio, e `diaVencimento` vai como `null`.
 - **Revisão antiga:** congelada antes de 06/11/2026, não tem o bloco.

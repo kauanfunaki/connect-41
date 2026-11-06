@@ -15,8 +15,10 @@ import { formatarBytes } from "@/lib/fileSize";
 import { formatInstantDateTime } from "@/lib/format";
 import type { StatusDaTarefa } from "@/lib/robo/tarefas";
 import type { AgenteNaTela, GeracaoNaTela } from "@/lib/fiscal/sped/local/geracao";
+import type { GrupoDeFaltas } from "@/lib/fiscal/sped/local/conferenciaDoArquivo";
 
-export type GeracaoDaEstacao = { opsLigado: boolean; motivo: string | null; geracoes: GeracaoNaTela[]; agente: AgenteNaTela | null };
+/** `faltas`: o cadastro que o agente exige para o ICMS/IPI e ainda não está preenchido (vazio no Contribuições). */
+export type GeracaoDaEstacao = { opsLigado: boolean; motivo: string | null; geracoes: GeracaoNaTela[]; agente: AgenteNaTela | null; faltas: GrupoDeFaltas[] };
 type Estado = Pick<GeracaoDaEstacao, "geracoes" | "agente">;
 
 const INTERVALO_MS = 5000;
@@ -63,6 +65,27 @@ export function useGeracoes(inicial: Estado, consulta: { empresa: string; compet
   }, [ativo, abertas, consulta.empresa, consulta.competencia, inicial, router]);
 
   return { ...atual, erro };
+}
+
+const ONDE_NA_TELA: Record<GrupoDeFaltas["onde"], string> = { perfil: "No perfil fiscal", cadastro: "No cadastro da empresa", importacao: "Na importação" };
+
+/**
+ * O que falta para o agente gerar o EFD ICMS/IPI, dito antes do pedido e com o
+ * caminho para resolver: o perfil fiscal abre aqui mesmo; o cadastro da
+ * empresa, na ficha dela.
+ */
+export function FaltasDoArquivo({ faltas, editarPerfil, hrefDaEmpresa }: { faltas: GrupoDeFaltas[]; editarPerfil: (() => void) | null; hrefDaEmpresa: string }) {
+  if (!faltas.length) return null;
+  return <Aviso tom="atencao">
+    <div className="space-y-2">
+      <p>Para gerar o EFD ICMS/IPI, complete antes:</p>
+      <ul className="list-disc space-y-1 pl-5">{faltas.map((g) => <li key={g.onde}><span className="font-medium">{ONDE_NA_TELA[g.onde]}:</span> {g.itens.join(", ")}.</li>)}</ul>
+      <div className="flex flex-wrap gap-2 pt-1">
+        {editarPerfil && faltas.some((g) => g.onde === "perfil") && <Button size="xs" variant="secondary" onClick={editarPerfil}>Editar perfil fiscal</Button>}
+        {faltas.some((g) => g.onde === "cadastro") && <Button size="xs" variant="ghost" href={hrefDaEmpresa}>Abrir cadastro da empresa</Button>}
+      </div>
+    </div>
+  </Aviso>;
 }
 
 /** A máquina do agente: ligada, sem sinal ou ainda nenhuma. */
