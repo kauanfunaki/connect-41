@@ -349,6 +349,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
   { modelo: "HelpdeskParticipant", coluna: "userId", tratamento: "apagar" },
+  // Última visita ao chamado (número do menu, 06/11/2026): sai com a conta.
+  { modelo: "HelpdeskTicketView", coluna: "userId", tratamento: "apagar" },
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
