@@ -46,22 +46,57 @@ export type DocumentoFiscal = z.infer<typeof documentoSchema>;
 export const perfilSchema = z.object({
   uf: z.string().regex(/^[A-Z]{2}$/), regime: z.enum(["simples", "presumido", "real"]),
   obrigacoes: z.array(obrigacaoSchema).min(1), inscricaoEstadual: z.string().max(30).default(""),
+  // O cadastro do arquivo (0000, 0005, 0100 e E116), 06/11/2026: o motor gera só
+  // pelo pacote. Opcionais: sem eles o motor recusa e diz o que falta.
+  codigoMunicipio: z.string().regex(/^(\d{7})?$/, "Código do município (IBGE): 7 dígitos.").default(""),
+  indPerfil: z.enum(["", "A", "B", "C"]).default(""),
+  indAtiv: z.enum(["", "0", "1"]).default(""),
+  contadorNome: z.string().max(100).default(""),
+  contadorCpf: z.string().regex(/^(\d{11})?$/, "CPF do contador: 11 dígitos.").default(""),
+  contadorCrc: z.string().max(20).default(""),
+  icmsCodReceita: z.string().max(10).default(""),
+  icmsDiaVencimento: z.string().regex(/^((0?[1-9])|([12]\d)|(3[01]))?$/, "Dia do vencimento do ICMS: de 1 a 31.").default(""),
+  codCta: z.string().max(60).default(""),
+  codInf: z.string().max(60).default(""),
 });
 export type PerfilFiscal = z.infer<typeof perfilSchema>;
-// UF, regime e IE vêm do cadastro da empresa; o perfil guardado no SPED só tem as
-// obrigações. Perfis antigos ainda trazem uf/regime/IE no JSON: são ignorados.
-export const obrigacoesDoPerfilSchema = z.object({ obrigacoes: z.array(obrigacaoSchema).min(1) });
-export type CadastroFiscal = { stateCode: string | null; stateRegistration: string | null; taxRegimeKind: string | null };
+// O que vem do cadastro da empresa (UF, IE, regime e os dados do arquivo) não é
+// pedido de novo no SPED. O perfil guardado aqui tem as obrigações e o que o
+// cadastro não tem (código de receita e vencimento do ICMS). Perfis antigos com
+// os outros campos ainda servem de reserva quando o cadastro está vazio.
+export const perfilGuardadoSchema = perfilSchema.partial().extend({ obrigacoes: z.array(obrigacaoSchema).default([]) });
+export const obrigacoesDoPerfilSchema = perfilSchema.pick({ icmsCodReceita: true, icmsDiaVencimento: true }).extend({ obrigacoes: z.array(obrigacaoSchema).min(1) });
+export type CadastroFiscal = {
+  stateCode: string | null; stateRegistration: string | null; taxRegimeKind: string | null;
+  codMunicipioIbge?: string | null; spedIndPerfil?: string | null; spedIndAtividade?: string | null;
+  contabilistaNome?: string | null; contabilistaCpf?: string | null; contabilistaCrc?: string | null;
+  spedContaContabilPadrao?: string | null; spedCodObservacaoPadrao?: string | null;
+};
 const REGIME_DO_CADASTRO: Record<string, PerfilFiscal["regime"]> = { SIMPLES_NACIONAL: "simples", MEI: "simples", LUCRO_PRESUMIDO: "presumido", LUCRO_REAL: "real" };
-/** Junta o cadastro da empresa com as obrigações escolhidas no SPED. `faltando` diz o que completar no cadastro. */
-export function perfilDaEmpresa(cadastro: CadastroFiscal, obrigacoes: Obrigacao[]) {
+const so = <T extends string>(v: string | null | undefined, validos: readonly T[]) => (validos as readonly string[]).includes(v ?? "") ? v as T : undefined;
+/** Junta o cadastro da empresa com o perfil guardado no SPED. `faltando` diz o que completar no cadastro. */
+export function perfilDaEmpresa(cadastro: CadastroFiscal, guardado: z.infer<typeof perfilGuardadoSchema> = { obrigacoes: [] }) {
   const uf = cadastro.stateCode?.trim().toUpperCase() ?? "";
   const regime = cadastro.taxRegimeKind ? REGIME_DO_CADASTRO[cadastro.taxRegimeKind] ?? null : null;
   const faltando: string[] = [];
   if (!/^[A-Z]{2}$/.test(uf)) faltando.push("UF");
   if (!regime) faltando.push(cadastro.taxRegimeKind ? "regime compatível com o SPED (simples, presumido ou real)" : "regime tributário");
-  return { uf, regime, inscricaoEstadual: (cadastro.stateRegistration ?? "").slice(0, 30), obrigacoes, faltando };
+  const ibge = cadastro.codMunicipioIbge?.replace(/\D/g, "") ?? "", cpf = cadastro.contabilistaCpf?.replace(/\D/g, "") ?? "";
+  return {
+    uf, regime, inscricaoEstadual: (cadastro.stateRegistration ?? "").slice(0, 30), obrigacoes: guardado.obrigacoes,
+    codigoMunicipio: /^\d{7}$/.test(ibge) ? ibge : guardado.codigoMunicipio ?? "",
+    indPerfil: so(cadastro.spedIndPerfil, ["A", "B", "C"] as const) ?? guardado.indPerfil ?? "",
+    indAtiv: so(cadastro.spedIndAtividade, ["0", "1"] as const) ?? guardado.indAtiv ?? "",
+    contadorNome: cadastro.contabilistaNome?.trim() || guardado.contadorNome || "",
+    contadorCpf: /^\d{11}$/.test(cpf) ? cpf : guardado.contadorCpf ?? "",
+    contadorCrc: cadastro.contabilistaCrc?.trim() || guardado.contadorCrc || "",
+    codCta: cadastro.spedContaContabilPadrao?.trim() || guardado.codCta || "",
+    codInf: cadastro.spedCodObservacaoPadrao?.trim() || guardado.codInf || "",
+    icmsCodReceita: guardado.icmsCodReceita ?? "", icmsDiaVencimento: guardado.icmsDiaVencimento ?? "",
+    faltando,
+  };
 }
+
 export const apoioSchema = z.object({
   identidade: z.string().min(1).max(160), competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
   categoria: z.enum(["rpa", "recibo", "recibo_motorista", "contrato_motorista", "contrato_locacao", "contrato_locacao_imovel", "fatura"]),

@@ -690,12 +690,27 @@ model HelpdeskTicket {
   events HelpdeskEvent[]
   approvals HelpdeskApproval[]
   reopenRequests HelpdeskReopenRequest[]
+  views HelpdeskTicketView[]
   @@unique([tenantId, id])
   @@unique([tenantId, draftId])
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
   @@map("helpdesk_tickets")
+}
+
+/// Quando cada pessoa abriu o chamado pela última vez (06/11/2026): é o que
+/// apaga o número do menu — chamado sem responsável ainda não aberto, ou
+/// mudança de outra pessoa num chamado meu depois da minha última visita.
+model HelpdeskTicketView {
+  tenantId String
+  ticketId String
+  userId String
+  viewedAt DateTime @default(now())
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@id([tenantId, ticketId, userId])
+  @@index([tenantId, userId])
+  @@map("helpdesk_ticket_views")
 }
 
 model HelpdeskAssignee {
@@ -1492,6 +1507,10 @@ model Tenant {
   digitalCertificates       DigitalCertificate[]
   digitalCertificateUses    DigitalCertificateUse[]
   digitalCertificateUseDays DigitalCertificateUseDay[]
+  revisaoFechamentos        RevisaoFechamento[]
+  revisaoDocumentos         RevisaoDocumento[]
+  revisaoExecucoes          RevisaoExecucao[]
+  revisaoAcompanhamentos    RevisaoAcompanhamento[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
@@ -2241,6 +2260,7 @@ model Company {
   processFees              ProcessFee[]
   portalUserLinks          PortalUserCompany[]
   announcementLinks        ClientAnnouncementCompany[]
+  revisaoFechamentos       RevisaoFechamento[]
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -3645,6 +3665,32 @@ model SpedFiscalRevision {
   @@unique([tenantId, requestKey])
   @@index([tenantId, companyId, competence])
   @@map("sped_fiscal_revisions")
+}
+
+/// A geração do arquivo pela fila do Connect (06/11/2026). O motor roda por
+/// fora: o agente dele busca a tarefa (`RobotTask` do tipo `gerar_sped`), baixa
+/// o pacote da revisão e devolve o TXT em partes. O andamento é o da tarefa;
+/// aqui ficam a revisão pedida e o arquivo que voltou.
+model SpedFiscalGeneration {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  companyId String @db.VarChar(191)
+  revisionId String @unique @db.VarChar(36)
+  robotTaskId String @unique @db.VarChar(36)
+  /// O Contribuições é da raiz: a tela de qualquer estabelecimento dela mostra a geração.
+  raiz String @db.VarChar(8)
+  competence String @db.VarChar(7)
+  obligation String @db.VarChar(20)
+  /// Preenchidos quando o agente devolve o arquivo e o Connect confere tamanho e SHA-256.
+  fileName String? @db.VarChar(200)
+  filePath String? @db.VarChar(500)
+  fileSha256 String? @db.Char(64)
+  fileBytes Int?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([tenantId, companyId, competence])
+  @@index([tenantId, raiz, competence])
+  @@map("sped_fiscal_generations")
 }
 
 /// Fila retomável: um arquivo por item, aquisição da lease por compare-and-set.
@@ -9939,4 +9985,114 @@ model InternalContract {
 
   @@index([tenantId, status, renewalDate])
   @@map("internal_contracts")
+}
+
+// ─── Revisão do fechamento contábil (AudTool, Fase 2, 05/11/2026) ────────────
+//
+// O motor mora em src/lib/revisao-contabil/motor (porte do AudTool R_12, Fase 1)
+// e o desenho está em docs/REVISAO-CONTABIL.md. O fechamento é uma empresa do
+// cadastro num período, sem tabela própria de empresas. O documento guarda o que
+// o motor leu do arquivo, e o arquivo fica em storage/revisao-contabil. A
+// execução guarda o resultado inteiro, como o original. O acompanhamento é o que
+// a equipe anota em cada achado de uma execução.
+
+/// Um fechamento em revisão: empresa, período e regime declarado.
+model RevisaoFechamento {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  inicio        DateTime @db.Date
+  fim           DateTime @db.Date
+  /// O rótulo do original (`REGIMES` em src/lib/revisao-contabil/fechamento.ts): o motor lê o texto.
+  regime        String   @db.VarChar(40)
+  enquadramento String   @db.VarChar(60)
+  finalidade    String   @db.VarChar(120)
+  /// Tolerância das conferências, em centavos (0 a 10.000).
+  tolerancia    Int      @default(1)
+  /// Correções de leitura do balancete: "idDoDocumento:linha" → campos em centavos.
+  correcoes     Json?
+  criadoPorId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
+  company    Company            @relation(fields: [companyId], references: [id])
+  documentos RevisaoDocumento[]
+  execucoes  RevisaoExecucao[]
+
+  @@index([tenantId, companyId])
+  @@index([tenantId, fim])
+  @@map("revisao_fechamentos")
+}
+
+/// Um arquivo lido pelo motor. Um ZIP vira um documento por arquivo de dentro.
+model RevisaoDocumento {
+  id           String   @id @default(uuid())
+  tenantId     String
+  fechamentoId String
+  nome         String   @db.VarChar(255)
+  sha256       String   @db.Char(64)
+  tamanho      Int
+  /// `<tenantId>/<uuid>.<ext>` em storage/revisao-contabil.
+  arquivo      String   @db.VarChar(120)
+  /// O tipo que o motor reconheceu ("Balancete", "Razão"…).
+  tipo         String   @db.VarChar(60)
+  interpretado Boolean
+  /// O que o motor extraiu (`Fatos`): a análise lê daqui, sem reler o arquivo.
+  fatos        Json
+  extraidoEm   DateTime
+  /// Entra na próxima análise: é a seleção de versões do original.
+  ativo        Boolean  @default(true)
+  enviadoPorId String?
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id])
+  fechamento RevisaoFechamento @relation(fields: [fechamentoId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, fechamentoId])
+  @@map("revisao_documentos")
+}
+
+/// Uma execução da análise: o resultado do motor e as assinaturas que dizem se ele ainda vale.
+model RevisaoExecucao {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  fechamentoId       String
+  versao             String   @db.VarChar(12)
+  /// SHA-256 do cadastro (empresa e fechamento) e das entradas (documentos, correções e tolerância).
+  assinaturaContexto String   @db.Char(64)
+  assinaturaEntradas String   @db.Char(64)
+  /// A `Execucao` do motor: testes, achados, resumo, matriz do manual e documentos.
+  resultado          Json
+  achados            Int
+  executadaPorId     String?
+  executadaEm        DateTime @default(now())
+
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  fechamento      RevisaoFechamento       @relation(fields: [fechamentoId], references: [id], onDelete: Cascade)
+  acompanhamentos RevisaoAcompanhamento[]
+
+  @@index([tenantId, fechamentoId, executadaEm])
+  @@map("revisao_execucoes")
+}
+
+/// O que a equipe anota num achado. Os ids dos achados ("G01"…) são sequenciais
+/// por execução: uma execução nova começa sem acompanhamento, como no original.
+model RevisaoAcompanhamento {
+  id              String   @id @default(uuid())
+  tenantId        String
+  execucaoId      String
+  achadoId        String   @db.VarChar(20)
+  responsavel     String?  @db.VarChar(120)
+  estado          String   @db.VarChar(40)
+  nota            String?  @db.Text
+  atualizadoPorId String?
+  updatedAt       DateTime @updatedAt
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id])
+  execucao RevisaoExecucao @relation(fields: [execucaoId], references: [id], onDelete: Cascade)
+
+  @@unique([execucaoId, achadoId])
+  @@index([tenantId])
+  @@map("revisao_acompanhamentos")
 }

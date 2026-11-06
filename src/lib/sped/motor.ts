@@ -701,10 +701,8 @@ export function criarClienteDoMotor(creds: CredenciaisDoMotorV1, deps: Dependenc
     // §14.4 — sessões de upload.
     criarUpload: (raiz: string, corpo: { nome: string; tamanho: number }, escrita: Escrita) =>
       json({ metodo: "POST", caminho: "/uploads", raiz, corpo, escrita, exigeChave: true }, E.uploadSchema),
-    criarUploadDePacote: (raiz: string, corpo: { nome: string; tamanho: number; sha256: string }, escrita: Escrita) =>
-      json({ metodo: "POST", caminho: "/uploads", raiz, corpo: { ...corpo, finalidade: "geracao_connect_v1" }, escrita, exigeChave: true }, E.uploadSchema),
-    concluirPacote: (raiz: string, id: string, sha256: string, escrita: Escrita) =>
-      json({ metodo: "POST", caminho: `/uploads/${idDoUpload(id)}/concluir`, raiz, corpo: { sha256 }, escrita, custo: "pesada" }, z.object({ pacote_id: z.string().min(1), sha256: z.string().regex(/^[0-9a-f]{64}$/) })),
+    // O pacote da geração não passa mais por aqui (06/11/2026): o agente do
+    // motor busca a tarefa na fila do Connect (`fiscal/sped/local/geracao.ts`).
     obterUpload: async (raiz: string, id: string) => json({ metodo: "GET", caminho: `/uploads/${idDoUpload(id)}`, raiz }, E.uploadSchema),
     /**
      * Uma parte, com o corpo **em stream** (do navegador ao motor sem ficar

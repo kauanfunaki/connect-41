@@ -23,7 +23,7 @@ motor e o deploy de produção continuam fora dessas verificações.
 
 Quatro áreas com navegação livre, contexto de empresa/período e componentes do Connect. Classificação, apuração e fechamento persistem no Connect. Geração usa revisão imutável e transporte remoto, condicionado à capacidade `geracao_connect_v1`.
 
-Código, migration aditiva, modelos CSV/XLSX, fila retomável e [guia de operação e execução local](SPED-FISCAL-CONNECT.md) acompanham a implementação. O [contrato para o Kauan](SPED-GERACAO-CONNECT-V1-KAUAN.md) inclui o schema verificável do pacote.
+Código, migration aditiva, modelos CSV/XLSX, fila retomável e [guia de operação e execução local](SPED-FISCAL-CONNECT.md) acompanham a implementação. O contrato para o Kauan incluía o schema verificável do pacote; desde 06/11/2026 a geração é pela fila do Connect, no [contrato do agente](SPED-GERACAO-PELO-AGENTE.md).
 
 ## Ambiente e evidências
 

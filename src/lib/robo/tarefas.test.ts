@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PRAZO_DA_EXECUCAO_MS,
+  TIPOS_DE_TAREFA,
   capacidadesConhecidas,
   chaveAberta,
   destinoDaFalha,
@@ -8,6 +9,8 @@ import {
   execucaoPerdida,
   maquinaSemSinal,
   motivoParaPessoa,
+  rotuloNaFrase,
+  tiposDaArea,
 } from "./tarefas";
 
 // A fila do robô do Societário (30/10/2026): o que volta para a fila e o que
@@ -35,6 +38,35 @@ describe("execucaoPerdida", () => {
     expect(execucaoPerdida(new Date(agora.getTime() - PRAZO_DA_EXECUCAO_MS - 1), agora)).toBe(true);
     expect(execucaoPerdida(new Date(agora.getTime() - 60_000), agora)).toBe(false);
     expect(execucaoPerdida(null, agora)).toBe(false);
+  });
+});
+
+// 06/11/2026: a geração do SPED usa a mesma fila, com prazo e tela próprios.
+describe("gerar_sped na fila do robô", () => {
+  const agora = new Date("2026-11-06T12:00:00Z");
+  it("tem uma hora de prazo; as tarefas do Societário seguem com 15 minutos", () => {
+    const ha20min = new Date(agora.getTime() - 20 * 60_000);
+    expect(execucaoPerdida(ha20min, agora, "gerar_sped")).toBe(false);
+    expect(execucaoPerdida(ha20min, agora, "imprimir_alvara")).toBe(true);
+    expect(execucaoPerdida(new Date(agora.getTime() - 61 * 60_000), agora, "gerar_sped")).toBe(true);
+    for (const tipo of tiposDaArea("societario")) expect(TIPOS_DE_TAREFA[tipo].prazoMs).toBe(PRAZO_DA_EXECUCAO_MS);
+  });
+
+  it("volta para a fila uma vez e, na segunda falha, chama quem pediu", () => {
+    expect(destinoDaFalha({ tipo: "gerar_sped", tentativas: 1, recuperavel: true })).toBe("PENDENTE");
+    expect(destinoDaFalha({ tipo: "gerar_sped", tentativas: 2, recuperavel: true })).toBe("PRECISA_DE_GENTE");
+    expect(destinoDaFalha({ tipo: "gerar_sped", tentativas: 1, recuperavel: false })).toBe("PRECISA_DE_GENTE");
+  });
+
+  it("a tela do Societário não lista a geração, e a máquina só recebe o que pediu", () => {
+    expect(tiposDaArea("societario")).not.toContain("gerar_sped");
+    expect(tiposDaArea("fiscal")).toEqual(["gerar_sped"]);
+    expect(capacidadesConhecidas(["gerar_sped"])).toEqual(["gerar_sped"]);
+  });
+
+  it("no meio da frase, só a primeira letra baixa", () => {
+    expect(rotuloNaFrase("gerar_sped")).toBe("gerar o arquivo SPED");
+    expect(rotuloNaFrase("imprimir_alvara")).toBe("imprimir o alvará de Curitiba");
   });
 });
 

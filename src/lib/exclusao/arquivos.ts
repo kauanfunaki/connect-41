@@ -25,6 +25,7 @@ export type PastaDoStorage =
   | "societario-processos"
   | "drive"
   | "finance-entries"
+  | "revisao-contabil"
   | "resumes";
 
 export type ArquivosDoCadastro = {

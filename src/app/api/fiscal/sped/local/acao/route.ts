@@ -6,20 +6,23 @@ import { getPrisma } from "@/lib/prisma";
 import { ajusteSchema, apoioSchema, dinheiroSchema, obrigacoesDoPerfilSchema, parametrosSchema, tributacaoSchema } from "@/lib/fiscal/sped/local/dominio";
 import { autorizar, carregarBase, ErroFiscal, escreverNaRaiz, json, prepararTelaLocal, registrarDecisao, salvarClassificacao } from "@/lib/fiscal/sped/local/servidor";
 import { processarImportacao } from "@/lib/fiscal/sped/local/fila";
-import { gerarComPacote } from "@/lib/fiscal/sped/local/geracao";
+import { cancelarGeracao, pedirGeracao } from "@/lib/fiscal/sped/local/geracao";
 import { ErroDoMotor } from "@/lib/sped/motor";
 
-const entradaSchema = z.object({ empresa: z.string().min(1), competencia: z.string(), revisao: z.number().int().nonnegative(), aba: z.enum(["classificacao", "apuracao", "fechamento", "gerar"]).optional(), acao: z.enum(["perfil", "parametros", "classificar", "apoio", "ajuste", "tributacao", "remover_ajuste", "processar", "cancelar_importacao", "retomar_importacao", "gerar"]), dados: z.record(z.string(), z.unknown()) });
+const entradaSchema = z.object({ empresa: z.string().min(1), competencia: z.string(), revisao: z.number().int().nonnegative(), aba: z.enum(["classificacao", "apuracao", "fechamento", "gerar"]).optional(), acao: z.enum(["perfil", "parametros", "classificar", "apoio", "ajuste", "tributacao", "remover_ajuste", "processar", "cancelar_importacao", "retomar_importacao", "gerar", "cancelar_geracao"]), dados: z.record(z.string(), z.unknown()) });
 export async function POST(req: Request) {
   try {
     const r = entradaSchema.parse(await req.json());
     const ctx = await getAuthContext();
-    const aba = ["ajuste", "remover_ajuste", "parametros", "tributacao"].includes(r.acao) ? "apuracao" : r.acao === "gerar" ? "gerar" : r.acao === "apoio" ? r.aba === "classificacao" ? "classificacao" : "fechamento" : r.acao === "perfil" || r.acao === "processar" || r.acao === "cancelar_importacao" || r.acao === "retomar_importacao" ? r.aba ?? "classificacao" : "classificacao";
+    const aba = ["ajuste", "remover_ajuste", "parametros", "tributacao"].includes(r.acao) ? "apuracao" : r.acao === "gerar" || r.acao === "cancelar_geracao" ? "gerar" : r.acao === "apoio" ? r.aba === "classificacao" ? "classificacao" : "fechamento" : r.acao === "perfil" || r.acao === "processar" || r.acao === "cancelar_importacao" || r.acao === "retomar_importacao" ? r.aba ?? "classificacao" : "classificacao";
     const empresa = await autorizar(ctx, r.empresa, aba, true);
+    // Cancelar não depende da tela: a geração é procurada pela empresa autorizada.
+    if (r.acao === "cancelar_geracao") return NextResponse.json({ ok: true, ...await cancelarGeracao(ctx, empresa, z.string().uuid().parse(r.dados.id)) });
     const tela = await prepararTelaLocal({ empresa: r.empresa, competencia: r.competencia }, aba);
     if (tela.empresa?.id !== r.empresa) throw new ErroFiscal("A empresa em foco mudou. Atualize a tela antes de salvar.", 409);
     const c = { ...tela.contexto!, revisao: r.revisao };
-    if (r.acao === "gerar") return NextResponse.json({ ok: true, ...await gerarComPacote(ctx, r) });
+    // A geração vai para a fila do Connect; o agente do motor vem buscar (06/11/2026).
+    if (r.acao === "gerar") return NextResponse.json({ ok: true, ...await pedirGeracao(ctx, r) });
     if (r.acao === "processar" || r.acao === "cancelar_importacao" || r.acao === "retomar_importacao") {
       if (!await podeNoModulo(ctx, "fiscal_acervo", "agir")) throw new ErroFiscal("Sem permissão para importar.", 404);
       const id = z.string().uuid().parse(r.dados.id);

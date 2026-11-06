@@ -61,6 +61,7 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
   reatribuir("HelpdeskComment", "authorId", (tx, a) => n(tx.helpdeskComment.updateMany({ where: { tenantId: a.tenantId, authorId: a.id }, data: { authorId: a.para } }))),
   { modelo: "HelpdeskAssignee", acao: "apagar", executar: (tx, a) => n(tx.helpdeskAssignee.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
   { modelo: "HelpdeskParticipant", acao: "apagar", executar: (tx, a) => n(tx.helpdeskParticipant.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
+  { modelo: "HelpdeskTicketView", acao: "apagar", executar: (tx, a) => n(tx.helpdeskTicketView.deleteMany({ where: { tenantId: a.tenantId, userId: a.id } })) },
   // Avaliação de entrevista é uma por avaliador e candidatura: onde quem
   // exclui já avaliou a mesma candidatura, a do usuário excluído sai em vez de
   // passar (passaria a ser uma duplicata).

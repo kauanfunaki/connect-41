@@ -16,20 +16,17 @@ import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton"
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { formatCnpj } from "@/lib/format";
+import { formatCnpj, formatInstantDateTime } from "@/lib/format";
 import { uploadComProgresso } from "@/lib/uploadComProgresso";
 import { formatarRaiz } from "./AbrangenciaLocalSped";
 import { dadosDoApoio, FormularioLocalSped, novoApoio, type EdicaoSped } from "./FormularioLocalSped";
-import { AcoesDoArquivo } from "@/components/fiscal/motor/AcoesDoArquivo";
-import { AcompanhamentoDaExecucao } from "@/components/fiscal/motor/AcompanhamentoDaExecucao";
-import type { ArquivoDoMotor, ExecucaoDoMotor } from "@/lib/sped/motor";
+import { CartaoDaGeracao, FaltasDoArquivo, ROTULO_DA_OBRIGACAO, SinalDoAgente, hrefDoGerado, rotuloDoTipo, useGeracoes, type GeracaoDaEstacao } from "./AcompanhamentoDaGeracao";
 import type { BaseLocal } from "@/lib/fiscal/sped/local/servidor";
 import { quadroPorCfop } from "@/lib/fiscal/sped/local/calculo";
 import { reaisExatos, somar, type ContextoLocal, type Obrigacao, type ProdutoFiscal, type DocumentoEscriturado, type ItemFiscal } from "@/lib/fiscal/sped/local/dominio";
 import type { EtapaDoSped } from "@/lib/fiscal/sped/etapas";
 
-export type MotorDaEstacao = { disponivel: boolean; capaz: boolean; motivo: string | null; arquivos: ArquivoDoMotor[]; execucoes: ExecucaoDoMotor[] };
-type Props = { aba: EtapaDoSped; empresa: { id: string; nome: string; cnpj: string }; contexto: ContextoLocal; base: BaseLocal; pode: boolean; direitos: { importar: boolean; configurar: boolean; entregas: boolean; icms: boolean; contribuicoes: boolean }; grupo: { id: string; nome: string; cnpj: string }[]; vistaInicial?: string; motor: MotorDaEstacao };
+type Props = { aba: EtapaDoSped; empresa: { id: string; nome: string; cnpj: string }; contexto: ContextoLocal; base: BaseLocal; pode: boolean; direitos: { importar: boolean; configurar: boolean; entregas: boolean; icms: boolean; contribuicoes: boolean }; grupo: { id: string; nome: string; cnpj: string }[]; vistaInicial?: string; geracao: GeracaoDaEstacao };
 const reais = reaisExatos;
 const VISTAS: Record<EtapaDoSped, [string, string][]> = {
   classificacao: [["produtos", "Produtos"], ["apoio", "Documentos sem nota"], ["decisoes", "Decisões registradas"]],
@@ -37,7 +34,7 @@ const VISTAS: Record<EtapaDoSped, [string, string][]> = {
   fechamento: [["resumo", "Resumo"], ["documentos", "Documentos"], ["faturamento", "Faturamento"], ["pagamentos", "Pagamentos e contratos"], ["conferencias", "Conferências"]], gerar: [],
 };
 const semAssinatura = () => () => {};
-export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grupo, vistaInicial, motor }: Props) {
+export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grupo, vistaInicial, geracao }: Props) {
   const hidratado = useSyncExternalStore(semAssinatura, () => true, () => false);
   const router = useRouter(), caminho = usePathname(), params = useSearchParams();
   const vista = VISTAS[aba].some(([k]) => k === vistaInicial) ? vistaInicial! : VISTAS[aba][0]?.[0];
@@ -51,6 +48,11 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
   const [tipoSped, setTipoSped] = useState<"0" | "1">("0"), [chaveGeracao, setChaveGeracao] = useState(() => crypto.randomUUID());
   const apuracao = obrigacao === "icms_ipi" ? base.icms : base.contribuicoes;
   const perfil = base.perfis.find(p => p.companyId === empresa.id);
+  const abrirPerfil = () => setEdicao({ tipo: "perfil", dados: { ...perfil, empresaId: empresa.id } });
+  // O cadastro que o agente exige para o ICMS/IPI (06/11/2026): com falta, o pedido nem vai para a fila.
+  const faltasDoArquivo = obrigacao === "icms_ipi" ? geracao.faltas : [];
+  // O andamento das gerações pela fila do Connect (06/11/2026): relido enquanto há uma aberta.
+  const vivas = useGeracoes(geracao, { empresa: empresa.id, competencia: contexto.competencia }, aba === "gerar");
   const href = (mudancas: Record<string, string>) => { const q = new URLSearchParams(params); q.set("empresa", empresa.id); q.set("competencia", contexto.competencia); for (const [k, v] of Object.entries(mudancas)) q.set(k, v); return `${caminho}?${q}`; };
   const exportar = (formato: string) => `/api/fiscal/sped/local/exportar?empresa=${empresa.id}&competencia=${contexto.competencia}&aba=${aba}&obrigacao=${obrigacao}&escopo=${contexto.consolidado ? "raiz" : "empresa"}&vista=${vista ?? ""}&cfop=${params.get("cfop") ?? ""}&formato=${formato}`;
   async function executar(acao: string, dados: Record<string, unknown>, atualizar = true) {
@@ -108,14 +110,14 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
   const produtos = base.produtos.filter(p => `${p.descricao} ${p.codigo} ${p.fornecedor} ${p.ncm}`.toLowerCase().includes(busca.toLowerCase()) && (!cfop || p.cfop?.includes(cfop)) && (filtro === "todos" || filtro === "pendentes" && !p.decidido || filtro === "decididos" && p.decidido || filtro === "simples" && p.simples));
   const documentos = base.documentos.filter(d => `${d.numero} ${d.emitente} ${d.nomeEmitente} ${d.identidade}`.toLowerCase().includes(busca.toLowerCase()));
   const apoio = base.apoios.filter(a => `${a.nome} ${a.documento} ${a.identidade}`.toLowerCase().includes(busca.toLowerCase()));
-  const arquivo = motor.arquivos.find(a => a.obrigacao === obrigacao && a.considerado) ?? motor.arquivos.find(a => a.obrigacao === obrigacao);
-  const aberta = motor.execucoes.find(e => ["pendente", "executando"].includes(e.estado) && e.acao === (obrigacao === "icms_ipi" ? "sped" : "sped_contribuicoes"));
+  const daObrigacao = vivas.geracoes.filter(g => g.obrigacao === obrigacao);
+  const ultima = daObrigacao[0], aberta = daObrigacao.find(g => g.aberta);
   const documento = base.documentos.find(d => d.id === detalhe);
   return <div data-testid="sped-estacao" data-hidratado={hidratado} className="space-y-5 min-w-0">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-helper text-fg-secondary">{empresa.nome} · {formatCnpj(empresa.cnpj)} · revisão {base.revisao}</p>
       <div className="flex flex-wrap gap-2">
-        {direitos.configurar && <Button variant="ghost" size="sm" title="Obrigações da empresa; UF, regime e IE vêm do cadastro" onClick={() => setEdicao({ tipo: "perfil", dados: { ...perfil, empresaId: empresa.id } })}><Settings2 size={14} /> Editar perfil fiscal</Button>}
+        {direitos.configurar && <Button variant="ghost" size="sm" title="Obrigações da empresa; o resto vem do cadastro" onClick={abrirPerfil}><Settings2 size={14} /> Editar perfil fiscal</Button>}
         {aba !== "gerar" && <><Button variant="secondary" size="sm" href={exportar("xlsx")} download title="Baixa a visão aberta desta competência numa planilha Excel"><Download size={14} /> Exportar em Excel</Button><Button variant="ghost" size="sm" href={exportar("csv")} download title="Baixa a visão aberta desta competência num arquivo CSV"><Download size={14} /> Exportar em CSV</Button></>}
       </div>
     </div>
@@ -160,11 +162,20 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
       {vista === "conferencias" && <><Tabela colunas={["Duplicidade potencial", "Ocorrências", "Valor bruto"]} linhas={base.fechamento.duplicatas.map(g => [g[0].nome + " · " + g[0].dataPagamento, String(g.length), reais(g[0].bruto)])} /><Aviso tom="info">Possíveis duplicatas exigem conferência. Nenhum documento é excluído automaticamente.</Aviso></>}
     </>}
     {aba === "gerar" && <>
-      {motor.motivo && <Aviso tom="atencao">{motor.motivo}</Aviso>}
-      <div className="rounded-lg border border-border bg-surface p-5 space-y-4"><h2 className="text-card-title font-semibold">Gerar arquivo da competência</h2><p className="text-ui text-fg-secondary">O pedido envia uma revisão imutável dos dados ao motor. {obrigacao === "contribuicoes" ? "Contribuições abrange matriz e filiais da raiz." : "ICMS/IPI usa o estabelecimento selecionado."}</p><Select aria-label="Tipo do arquivo" className="w-56" value={tipoSped} onChange={e => setTipoSped(e.target.value as "0" | "1")}><option value="0">Original</option><option value="1">Substituto / retificação</option></Select><Button disabled={!pode || !motor.disponivel || !motor.capaz || ocupado || contexto.competencia.length !== 7 || !!aberta} loading={ocupado} loadingLabel="Enviando revisão…" onClick={() => void acao("gerar", { obrigacao, tipo: tipoSped, chave: chaveGeracao })}>Gerar SPED</Button></div>
-      {aberta && <AcompanhamentoDaExecucao raiz={contexto.raiz} inicial={aberta} logInicial="" truncadoInicial={false} />}
-      {arquivo && <div className="rounded-lg border border-border bg-surface p-5 space-y-3"><h2 className="text-card-title">Arquivo vigente · versão {arquivo.versao}</h2><p className="text-ui">{arquivo.nome_arquivo}</p><p className="text-helper text-fg-secondary">Validação: {arquivo.validacao.estado} · Entrega: {arquivo.entrega.estado}</p>{arquivo.revisao_connect !== undefined && arquivo.revisao_connect !== base.revisao && <Aviso tom="atencao">Há alterações no Connect posteriores à revisão usada neste arquivo.</Aviso>}<AcoesDoArquivo raiz={contexto.raiz} id={arquivo.id} hrefDownload={`/api/fiscal/sped/arquivos/${arquivo.id}/download?raiz=${contexto.raiz}`} obrigacao={arquivo.obrigacao} validando={arquivo.validacao.estado === "validando"} entregue={arquivo.entrega.estado === "registrada"} permiteRegerar={false} permiteEntregas={direitos.entregas && motor.disponivel} /></div>}
-      <BlocoRecolhivel titulo="Revisões e versões anteriores"><div className="space-y-4 p-3"><Tabela colunas={["Revisão", "Obrigação", "Criada em", "Execução"]} linhas={base.revisoes.map(r => [String(r.revision), r.obligation, r.createdAt.slice(0, 16).replace("T", " "), r.remoteExecutionId ? `#${r.remoteExecutionId}` : "Envio pendente"])} /><Tabela colunas={["Versão", "Arquivo", "Validação", ""]} linhas={motor.arquivos.filter(a => a.obrigacao === obrigacao && a.id !== arquivo?.id).map(a => [String(a.versao), a.nome_arquivo, a.validacao.estado, <Button key="b" variant="ghost" size="xs" href={`/api/fiscal/sped/arquivos/${a.id}/download?raiz=${contexto.raiz}`} download>Baixar</Button>])} /></div></BlocoRecolhivel>
+      {geracao.motivo && <Aviso tom="atencao">{geracao.motivo}</Aviso>}
+      <div className="rounded-lg border border-border bg-surface p-5 space-y-4">
+        <h2 className="text-card-title font-semibold">Gerar arquivo da competência</h2>
+        <p className="text-ui text-fg-secondary">O pedido congela uma revisão dos dados e entra na fila. O agente do motor gera o arquivo e devolve aqui. {obrigacao === "contribuicoes" ? "Contribuições abrange matriz e filiais da raiz." : "ICMS/IPI usa o estabelecimento selecionado."}</p>
+        <Select aria-label="Tipo do arquivo" className="w-56" value={tipoSped} onChange={e => setTipoSped(e.target.value as "0" | "1")}><option value="0">Original</option><option value="1">Substituto / retificação</option></Select>
+        <FaltasDoArquivo faltas={faltasDoArquivo} editarPerfil={direitos.configurar ? abrirPerfil : null} hrefDaEmpresa={`/empresas/${empresa.id}`} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button disabled={!pode || !geracao.opsLigado || ocupado || contexto.competencia.length !== 7 || !!aberta || faltasDoArquivo.length > 0} loading={ocupado} loadingLabel="Pondo na fila…" onClick={() => void acao("gerar", { obrigacao, tipo: tipoSped, chave: chaveGeracao })}>Gerar SPED</Button>
+          {aberta && <span className="text-helper text-fg-secondary">Já há uma geração {aberta.estado === "PENDENTE" ? "na fila" : "executando"} para esta obrigação. Acompanhe abaixo.</span>}
+        </div>
+        <SinalDoAgente agente={vivas.agente} />
+      </div>
+      {ultima && <CartaoDaGeracao geracao={ultima} agente={vivas.agente} revisaoAtual={base.revisao} pode={pode} erro={vivas.erro} cancelar={id => executar("cancelar_geracao", { id })} />}
+      <BlocoRecolhivel titulo="Gerações anteriores"><div className="p-3"><Tabela colunas={["Revisão", "Arquivo", "Pedida em", "Situação", ""]} linhas={daObrigacao.slice(1).map(g => [String(g.revisao), `${ROTULO_DA_OBRIGACAO[g.obrigacao]} ${rotuloDoTipo(g.tipoSped)}`, formatInstantDateTime(new Date(g.pedidaEm)), g.rotuloDoEstado, g.arquivo ? <Button key="b" variant="ghost" size="xs" href={hrefDoGerado(g.id)} download aria-label={`Baixar ${g.arquivo.nome}`}><Download size={12} /> Baixar</Button> : "—"])} /></div></BlocoRecolhivel>
     </>}
     {aba !== "gerar" && direitos.importar && <BlocoRecolhivel titulo="Importar documentos e consultar resultados"><div className="space-y-4 p-4"><p className="text-ui text-fg-secondary">XML, ZIP, TXT SPED, CSV ou Excel no modelo do Connect. PDFs ficam como anexos para conferência.</p><FileDropzone accept=".xml,.zip,.txt,.csv,.xlsx,.pdf" maxSizeMb={25} multiple arquivos={fila} desabilitado={importando} onAdicionar={files => setFila(f => [...f, ...files.map(file => ({ id: crypto.randomUUID(), file, progresso: 0, estado: "pendente" as const }))])} onRemover={id => setFila(f => f.filter(a => a.id !== id))} /><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => void importar()} disabled={importando || aImportar === 0}><Upload size={14} /> {importando ? "Importando…" : aImportar > 1 ? `Importar ${aImportar} arquivos` : "Importar arquivo"}</Button>{importando && <Button size="sm" variant="secondary" onClick={() => { parar.current = true; }}>Pausar após o lote atual</Button>}<Button variant="ghost" size="sm" href="/api/fiscal/sped/local/modelo?formato=xlsx" download title="Planilha vazia no modelo do Connect, para preencher e importar"><Download size={14} /> Baixar modelo em Excel</Button><Button variant="ghost" size="sm" href="/api/fiscal/sped/local/modelo?formato=csv" download title="Arquivo CSV vazio no modelo do Connect, para preencher e importar"><Download size={14} /> Baixar modelo em CSV</Button></div><Tabela colunas={["Arquivo", "Estado", "Progresso", "Resultado", ""]} linhas={base.importacoes.map(i => [i.name, i.state, `${i.cursor}/${i.total || "?"}`, <Button key="r" size="xs" variant="ghost" onClick={() => setResultadoId(i.id)}>Ver resultados</Button>, ["pendente", "erro", "processando", "cancelado"].includes(i.state) ? <div key="a" className="flex gap-1"><Button size="xs" variant="secondary" disabled={importando} onClick={() => { setImportando(true); parar.current = false; void (async () => { if (i.state === "cancelado") await executar("retomar_importacao", { id: i.id }, false); await processar([i.id]); })().catch(e => setErro(String(e.message))).finally(() => setImportando(false)); }}>Retomar</Button><Button size="xs" variant="ghost" onClick={() => void acao("cancelar_importacao", { id: i.id })}>Cancelar</Button></div> : i.state === "anexo" ? <Button key="p" size="xs" variant="ghost" href={`/api/fiscal/sped/local/anexos/${i.id}?empresa=${empresa.id}`} nativo target="_blank">Abrir PDF</Button> : "—"])} /></div></BlocoRecolhivel>}
     {resultadoId && <SlideOver open title="Resultados da importação" onClose={() => setResultadoId(null)} width="max-w-2xl"><div className="p-5"><Tabela colunas={["Registro", "Situação", "Motivo"]} linhas={resultadosImportacao(base.importacoes.find(i => i.id === resultadoId)?.results)} /></div></SlideOver>}

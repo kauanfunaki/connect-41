@@ -60,10 +60,17 @@ export function caminhoDoEvento(evento: { filename: string; filenameRenamed: str
 
 // `tarefas` e `tarefas/<id>` (30/10/2026): o robô do Societário pede e devolve
 // trabalho com a mesma chave (src/lib/robo/).
+//
+// `tarefas/<id>/pacote` (GET) e `tarefas/<id>/partes/<n>` (PUT), 06/11/2026: o
+// agente do motor do SPED baixa o pacote da revisão e devolve o TXT em partes.
+// Só esses dois métodos nesses dois caminhos; o resto segue exigindo sessão.
+const WATCHER = String.raw`^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*`;
+const INGESTAO_POST = new RegExp(String.raw`${WATCHER}\/(?:heartbeat|arquivos|tarefas|tarefas\/[0-9a-f-]{36})$`);
+const PACOTE_GET = new RegExp(String.raw`${WATCHER}\/tarefas\/[0-9a-f-]{36}\/pacote$`);
+const PARTE_PUT = new RegExp(String.raw`${WATCHER}\/tarefas\/[0-9a-f-]{36}\/partes\/\d{1,5}$`);
 export function ehIngestaoOps(method: string, pathname: string) {
-  return (
-    method === "POST" &&
-    (pathname === "/api/ops/events" ||
-      /^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*\/(?:heartbeat|arquivos|tarefas|tarefas\/[0-9a-f-]{36})$/.test(pathname))
-  );
+  if (method === "POST") return pathname === "/api/ops/events" || INGESTAO_POST.test(pathname);
+  if (method === "GET") return PACOTE_GET.test(pathname);
+  if (method === "PUT") return PARTE_PUT.test(pathname);
+  return false;
 }

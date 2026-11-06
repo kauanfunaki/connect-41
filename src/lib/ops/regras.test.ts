@@ -43,6 +43,21 @@ describe("Ops Center", () => {
     for (const rota of ["/api/ops", "/api/ops/watchers", "/api/ops/events-extra", "/api/ops/watchers/meu_bot/token", "/api/ops/watchers/meu_bot/instability", "/api/ops/watchers/meu_bot/arquivos/x"]) expect(ehIngestaoOps("POST", rota)).toBe(false);
     expect(ehIngestaoOps("GET", "/api/ops/events")).toBe(false);
   });
+  // 06/11/2026: o agente do motor do SPED baixa o pacote e devolve o TXT em partes.
+  it("abre só o pacote (GET) e as partes (PUT) da tarefa para a chave da máquina", () => {
+    const tarefa = "/api/ops/watchers/agente-sped/tarefas/0b6f3c1e-8d2a-4c6b-9f1e-2a3b4c5d6e7f";
+    expect(ehIngestaoOps("GET", `${tarefa}/pacote`)).toBe(true);
+    expect(ehIngestaoOps("PUT", `${tarefa}/partes/1`)).toBe(true);
+    expect(ehIngestaoOps("PUT", `${tarefa}/partes/12345`)).toBe(true);
+    expect(ehIngestaoOps("POST", `${tarefa}/pacote`)).toBe(false);
+    expect(ehIngestaoOps("GET", `${tarefa}/partes/1`)).toBe(false);
+    expect(ehIngestaoOps("PUT", `${tarefa}/partes/abc`)).toBe(false);
+    expect(ehIngestaoOps("PUT", `${tarefa}/partes/123456`)).toBe(false);
+    expect(ehIngestaoOps("GET", `${tarefa}/pacote/extra`)).toBe(false);
+    expect(ehIngestaoOps("GET", "/api/ops/watchers/agente-sped/tarefas/qualquer/pacote")).toBe(false);
+    expect(ehIngestaoOps("DELETE", `${tarefa}/partes/1`)).toBe(false);
+    expect(ehIngestaoOps("GET", "/api/ops/watchers")).toBe(false);
+  });
   it("aceita o filtro de minhas e trata vazios do cadastro", () => {
     expect(filtrosSchema.parse({ mine: "1" }).mine).toBe("1");
     expect(filtrosSchema.safeParse({ page: "-1" }).success).toBe(false);

@@ -12,7 +12,7 @@ export const INTERVALO_DA_CONFERENCIA_MS = 60_000;
  * nada — volta a perguntar quando a pessoa volta. Quando o layout manda outro
  * número (navegação, `router.refresh`), o dele volta a valer.
  */
-export function useNumeroConferido(doLayout: number, buscar: () => Promise<number>, ligado = true): number {
+export function useNumeroConferido(doLayout: number, buscar: () => Promise<number>, ligado = true, reconferirEm?: string): number {
   const [estado, setEstado] = useState({ doLayout, valor: doLayout });
   const valor = estado.doLayout === doLayout ? estado.valor : doLayout;
 
@@ -33,6 +33,12 @@ export function useNumeroConferido(doLayout: number, buscar: () => Promise<numbe
       document.removeEventListener("visibilitychange", aoVoltar);
     };
   }, [ligado]);
+
+  // Confere de novo quando `reconferirEm` muda (06/11/2026): abrir um chamado
+  // apaga o número dele sem esperar o minuto do relógio.
+  useEffect(() => {
+    if (reconferirEm !== undefined) conferir();
+  }, [reconferirEm]);
 
   return valor;
 }

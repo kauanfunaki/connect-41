@@ -24,7 +24,10 @@ export function FormularioLocalSped({ edicao, competencia, onClose, executar, an
     e.preventDefault(); const f = new FormData(e.currentTarget), dados: Record<string, unknown> = Object.fromEntries(f.entries());
     setPendente(true); setErro(null);
     try {
-      if (edicao.tipo === "perfil") dados.obrigacoes = f.getAll("obrigacoes");
+      if (edicao.tipo === "perfil") {
+        dados.obrigacoes = f.getAll("obrigacoes");
+        // Máscara digitada (000.000.000-00, 41.069-02) não vai para o cadastro: só os dígitos.
+      }
       if (edicao.tipo === "classificar") {
         dados.chaves = edicao.chaves;
         dados.classificacao = { tipoItem: f.get("tipoItem"), definicao: f.get("definicao") || null, creditoPisCofins: f.get("creditoPisCofins"), observacao: f.get("observacao") };
@@ -50,7 +53,13 @@ export function FormularioLocalSped({ edicao, competencia, onClose, executar, an
   }
   return <SlideOver open onClose={() => { if (!pendente) onClose(); }} title={titulos[edicao.tipo]} width="max-w-xl">
     <form onSubmit={salvar} className="space-y-5 p-5">
-      {edicao.tipo === "perfil" && <><dl className="grid grid-cols-3 gap-3 text-ui">{[["UF", d.uf], ["Regime", ({ simples: "Simples Nacional", presumido: "Lucro presumido", real: "Lucro real" } as Record<string, string>)[String(d.regime)]], ["Inscrição estadual", d.inscricaoEstadual]].map(([r, v]) => <div key={String(r)}><dt className="text-label">{String(r)}</dt><dd>{v ? String(v) : "—"}</dd></div>)}</dl><p className="text-helper text-fg-secondary">Esses dados vêm do cadastro da empresa. <a className="underline" href={`/empresas/${String(d.empresaId)}`}>Editar no cadastro</a></p><fieldset className="space-y-2"><legend className="text-label mb-2">Obrigações aplicáveis</legend>{[["icms_ipi", "EFD ICMS/IPI"], ["contribuicoes", "EFD Contribuições"]].map(([v, r]) => <div key={v}><Checkbox name="obrigacoes" value={v} label={r} defaultChecked={Array.isArray(d.obrigacoes) && d.obrigacoes.includes(v)} /></div>)}</fieldset></>}
+      {edicao.tipo === "perfil" && <>
+        {/* Tudo o que o cadastro da empresa já tem aparece aqui só para leitura. */}
+        <dl className="grid gap-3 sm:grid-cols-3 text-ui">{([["UF", d.uf], ["Regime", ({ simples: "Simples Nacional", presumido: "Lucro presumido", real: "Lucro real" } as Record<string, string>)[String(d.regime)]], ["Inscrição estadual", d.inscricaoEstadual], ["Município (IBGE)", d.codigoMunicipio], ["Perfil de apresentação", d.indPerfil], ["Atividade", ({ "0": "Industrial ou equiparado", "1": "Outras" } as Record<string, string>)[String(d.indAtiv)]], ["Contador", d.contadorNome], ["CPF do contador", d.contadorCpf], ["CRC do contador", d.contadorCrc]] as [string, unknown][]).map(([r, v]) => <div key={r}><dt className="text-label">{r}</dt><dd>{v ? String(v) : "—"}</dd></div>)}</dl>
+        <p className="text-helper text-fg-secondary">Esses dados vêm do cadastro da empresa. <a className="underline" href={`/empresas/${String(d.empresaId)}`}>Editar no cadastro</a></p>
+        <fieldset className="space-y-2"><legend className="text-label mb-2">Obrigações aplicáveis</legend>{[["icms_ipi", "EFD ICMS/IPI"], ["contribuicoes", "EFD Contribuições"]].map(([v, r]) => <div key={v}><Checkbox name="obrigacoes" value={v} label={r} defaultChecked={Array.isArray(d.obrigacoes) && d.obrigacoes.includes(v)} /></div>)}</fieldset>
+        <div className="grid gap-4 sm:grid-cols-2 border-t border-border pt-4">{campo("icmsCodReceita", "Código de receita do ICMS")}{campo("icmsDiaVencimento", "Dia do vencimento do ICMS")}</div>
+      </>}
       {edicao.tipo === "classificar" && <>
         <Aviso tom="info">A destinação, o CFOP e a decisão de PIS/COFINS valem para este fornecedor e produto na raiz inteira. O crédito de ICMS é desta empresa e período.</Aviso>
         {edicao.produto && <p className="text-ui">{edicao.produto.descricao} · fornecedor {edicao.produto.fornecedor}</p>}

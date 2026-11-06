@@ -83,6 +83,8 @@ const EMPRESA: Ligacao[] = [
   { modelo: "FinanceProject", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["projeto", "projetos"], historico: true },
   { modelo: "Budget", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "DreImport", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["importação da DRE", "importações da DRE"], historico: true },
+  // Revisão do fechamento (05/11/2026): documentos, execuções e acompanhamento vão em cascata; os arquivos, por `arquivosDaEmpresa`.
+  { modelo: "RevisaoFechamento", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["revisão do fechamento", "revisões do fechamento"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },
   { modelo: "DrePublicacao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mês da DRE publicado no portal", "meses da DRE publicados no portal"], historico: true },
   { modelo: "DrePublicacaoEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["marca da foto inicial da DRE", "marcas da foto inicial da DRE"], historico: true },
@@ -154,7 +156,8 @@ const EMPRESA: Ligacao[] = [
 const EMPRESA_SOLTAS: ColunaSolta[] = [
   // A exclusão de um cadastro não autoriza apagar a escrituração nem as
   // revisões fiscais. A retenção desse histórico exige uma operação própria.
-  ...["SpedFiscalProfile", "SpedFiscalBook", "SpedFiscalSupport", "SpedFiscalPeriod", "SpedFiscalCalculation", "SpedFiscalRevision", "SpedFiscalImport"].map((modelo): ColunaSolta => ({ modelo, coluna: "companyId", tratamento: "manter", motivo: "histórico fiscal e revisões preservados; retenção não é exclusão do cadastro" })),
+  // SpedFiscalGeneration (06/11/2026): o arquivo que o agente do motor gerou, guardado com a revisão.
+  ...["SpedFiscalProfile", "SpedFiscalBook", "SpedFiscalSupport", "SpedFiscalPeriod", "SpedFiscalCalculation", "SpedFiscalRevision", "SpedFiscalImport", "SpedFiscalGeneration"].map((modelo): ColunaSolta => ({ modelo, coluna: "companyId", tratamento: "manter", motivo: "histórico fiscal e revisões preservados; retenção não é exclusão do cadastro" })),
   { modelo: "Document", coluna: "entityId", tratamento: "apagar" },
   { modelo: "CustomValue", coluna: "entityId", tratamento: "apagar" },
   { modelo: "Handoff", coluna: "entityId", tratamento: "apagar" },
@@ -349,6 +352,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
   { modelo: "HelpdeskParticipant", coluna: "userId", tratamento: "apagar" },
+  // Última visita ao chamado (número do menu, 06/11/2026): sai com a conta.
+  { modelo: "HelpdeskTicketView", coluna: "userId", tratamento: "apagar" },
   { modelo: "HelpdeskAttachment", coluna: "uploadedById", tratamento: "reatribuir" },
   { modelo: "HelpdeskComment", coluna: "authorId", tratamento: "reatribuir" },
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
@@ -406,6 +411,10 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "AgentRun", coluna: "userId", tratamento: "manter", motivo: "trilha de execução da IA" },
   { modelo: "SerproCall", coluna: "userId", tratamento: "manter", motivo: "trilha de consultas ao Serpro (cobradas por chamada)" },
   { modelo: "DigitalCertificateUse", coluna: "declaradoPorId", tratamento: "manter", motivo: "quem marcou o uso do certificado; a tela não expõe o id" },
+  { modelo: "RevisaoFechamento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem abriu o fechamento em revisão; a tela não mostra" },
+  { modelo: "RevisaoDocumento", coluna: "enviadoPorId", tratamento: "manter", motivo: "quem enviou o documento à revisão; a tela não mostra" },
+  { modelo: "RevisaoExecucao", coluna: "executadaPorId", tratamento: "manter", motivo: "quem executou a análise; a tela mostra o nome só enquanto o usuário existe" },
+  { modelo: "RevisaoAcompanhamento", coluna: "atualizadoPorId", tratamento: "manter", motivo: "quem atualizou o acompanhamento do achado; a tela não mostra" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },
