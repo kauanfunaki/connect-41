@@ -54,7 +54,63 @@ O projeto foi pausado antes da validação pelo time contábil. Continuam **a va
 - `difference` em centavos;
 - `Finding.value` em reais.
 
-A tela da Fase 2 lê esse formato.
+A tela da Fase 2 lê esse formato, e a execução fica gravada nele.
+
+## As telas e o banco (Fase 2)
+
+O módulo é o `contabil_revisao`, "Revisão do fechamento", no setor Contábil, grupo Conferência. Ele nasce **desligado** e é ligado em Setores e módulos. A rota é `/revisao-contabil`.
+
+| Onde | O que é |
+|---|---|
+| `/revisao-contabil` | Os fechamentos em revisão, do mais recente ao mais antigo, com busca por empresa ou CNPJ e o botão "Novo fechamento". |
+| `/revisao-contabil/[id]` | O fechamento, em abas: Documentos, Análise, Inconsistências, Manual e Relatório. |
+| `/revisao-contabil/[id]/documentos/[docId]` | A conferência da leitura de um documento. No balancete, cada linha pode ser corrigida. |
+| `src/app/api/revisao-contabil/` | O envio (um arquivo por requisição, com progresso), o arquivo original e os downloads da execução (`.md`, `.csv`, `.json`). |
+| `src/lib/revisao-contabil/servidor.ts` | O banco. As regras puras ficam em `fechamento.ts` e as listas da tela em `regras-da-tela.ts`. |
+
+**Banco:** a migration `20261106130000_revisao_contabil` só cria tabelas novas.
+
+| Tabela | O que guarda |
+|---|---|
+| `revisao_fechamentos` | Empresa do cadastro, período, regime, enquadramento, finalidade, tolerância (centavos) e correções de leitura. |
+| `revisao_documentos` | Nome, SHA-256, o que o motor leu (`fatos`, em JSON), se entra na análise e o caminho do original em `storage/revisao-contabil/<tenant>/<uuid>.<ext>`. |
+| `revisao_execucoes` | O resultado inteiro do motor e duas assinaturas (SHA-256), uma do cadastro e outra das entradas. |
+| `revisao_acompanhamentos` | Responsável, estado e anotação de cada achado de uma execução. |
+
+**Decisões da Fase 2:**
+- **Empresa:** é a do cadastro do Connect, sem cadastro próprio. Só entra empresa com CNPJ, porque o motor confere o CNPJ de cada documento. A empresa não muda depois de aberto o fechamento.
+- **Regime:** vem como sugestão do cadastro da empresa (`taxRegimeKind`). Imune/isenta, produtor rural e doméstica ficam "Não informado", para quem revisa escolher.
+- **Execução desatualizada:** fica marcada como desatualizada, sem ser apagada.
+  - Mudar o cadastro, um documento, uma correção ou a tolerância faz a tela avisar que a análise não vale mais.
+  - A regra é a do `review-state.mjs`: `contextKey` e `inputKey` em SHA-256.
+- **Acompanhamento:** vale para uma execução. Uma execução nova começa sem acompanhamento, porque os achados são renumerados (G01, G02…), como no original. O das execuções anteriores continua no relatório delas.
+- **Permissões:** trabalhar no fechamento (enviar, corrigir, executar, acompanhar) é "agir" no setor. Excluir o fechamento é "gerir".
+- **Exclusão da empresa:** apaga os fechamentos e os arquivos (`src/lib/exclusao`). Quem abriu, enviou ou executou fica como registro.
+- **Do original que não veio para as telas:**
+  - **"Plano de ação":** virou o acompanhamento na aba Inconsistências.
+  - **"Conciliações":** era a mesma tela genérica.
+  - **"Regras":** era a lista R01–R16. A tolerância está na aba Análise.
+  - **"Manual" do usuário:** virou o artigo da ajuda (`src/lib/ajuda/artigos/contabil.ts`).
+
+**Teste de ponta a ponta (05/11/2026):**
+- **Ambiente:** banco local separado (contêiner `connect41-revisao`, porta 3308) e app na porta 3101.
+- **Arquivos:** só os sintéticos do gabarito.
+- **Camada do servidor:** 21 conferências, por exemplo:
+  - envio, ZIP e `.xls`;
+  - documento desligado, correção e tolerância invalidam a análise;
+  - acompanhamento no relatório;
+  - outro escritório não enxerga o fechamento;
+  - a exclusão apaga linhas e arquivos.
+- **Telas (Playwright no Edge):**
+  - envio;
+  - execução;
+  - acompanhamento;
+  - filtros;
+  - manual;
+  - relatório e os três downloads;
+  - conferência da leitura;
+  - download sem login recusado;
+  - nenhum erro no navegador.
 
 ## Desvios deliberados
 
