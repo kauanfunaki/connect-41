@@ -1,4 +1,4 @@
-import { Columns3, History, List, Plus } from "lucide-react";
+import { CalendarRange, Columns3, History, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 
@@ -19,12 +19,22 @@ export function VisoesDoControle({ ativa, href }: { ativa: VisaoTech; href: (vis
   );
 }
 
+// "Resumo" (06/11/2026): o que foi concluído, está em andamento e está
+// planejado no período. Para todos que veem o Controle interno; "Novo item",
+// só para quem edita.
 export function AcoesDoControle({ podeEditar, novoHref }: { podeEditar: boolean; novoHref: string }) {
-  if (!podeEditar) return null;
   return (
-    <Button href={novoHref}>
-      <Plus size={14} aria-hidden />
-      Novo item
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      <Button href="/controle-interno/resumo" variant="secondary">
+        <CalendarRange size={14} aria-hidden />
+        Resumo
+      </Button>
+      {podeEditar && (
+        <Button href={novoHref}>
+          <Plus size={14} aria-hidden />
+          Novo item
+        </Button>
+      )}
+    </div>
   );
 }

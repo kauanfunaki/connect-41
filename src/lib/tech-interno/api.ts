@@ -2,12 +2,13 @@ import { z } from "zod";
 import { getPrisma } from "@/lib/prisma";
 import { ErroApi } from "@/lib/api-v1/erros";
 import { anexarArquivo } from "./anexos";
+import type { ItemParaResumo } from "./resumo";
 import {
-  ErroTechInterno, salvarItem, mudarSituacaoItem, comentarItem, listarItens, detalheItem, opcoesTech,
+  ErroTechInterno, salvarItem, mudarSituacaoItem, comentarItem, listarItens, detalheItem, opcoesTech, resumoTech,
   type AtorTech, type FalhaTech,
 } from "./servidor";
 import {
-  TIPOS, SITUACOES, PRIORIDADES, TAMANHOS, ROTA_TECH_INTERNO, lerFiltros, chaveDoSistema, nomeDoSistema,
+  TIPOS, SITUACOES, PRIORIDADES, TAMANHOS, ROTA_TECH_INTERNO, lerFiltros, chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo,
 } from "./regras";
 
 // O Controle interno pela API e pelo MCP (05/11/2026, decisão D2). As duas
@@ -112,6 +113,36 @@ export async function opcoesParaApi(ator: AtorTech) {
     systems: o.sistemas.map(s => ({ key: s.chave, name: s.nome, origin: s.origem, active: s.ativo })),
     people: o.users.map(u => ({ id: u.id, name: u.name })),
     recentDeliveries: o.entregas.map(e => ({ id: e.id, title: e.title })),
+  };
+}
+
+// ── Resumo do período ──────────────────────────────────────────────────────
+
+const PERIODOS_DA_API = { day: "dia", week: "semana", month: "mes", year: "ano" } as const;
+export const resumoApiSchema = z.object({
+  period: z.enum(Object.keys(PERIODOS_DA_API) as [keyof typeof PERIODOS_DA_API, ...(keyof typeof PERIODOS_DA_API)[]], { error: "Use um destes períodos: day, week, month, year." }).optional(),
+  date: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "A data vai no formato AAAA-MM-DD.").optional(),
+}).strict();
+
+/**
+ * O resumo do período (06/11/2026): o que foi concluído, o que está em
+ * andamento e o que está planejado, para a IA não ter de ler o histórico item
+ * a item. Uma linha curta por item, com o link; o detalhe fica em ver_item.
+ */
+export async function resumoParaApi(ator: AtorTech, raw: unknown, base: string) {
+  const f = camposValidos(resumoApiSchema, raw ?? {});
+  const dataIso = f.date ?? hojeEmSaoPaulo();
+  if (Number.isNaN(new Date(`${dataIso}T00:00:00Z`).getTime()) || new Date(`${dataIso}T00:00:00Z`).toISOString().slice(0, 10) !== dataIso) throw new ErroApi("validation_error", "Data inválida.");
+  const r = await comAcesso(() => resumoTech(ator, PERIODOS_DA_API[f.period ?? "week"], dataIso));
+  const url = (id: string) => `${base}${ROTA_TECH_INTERNO}/${id}`;
+  const comum = (i: ItemParaResumo) => ({ id: i.id, title: i.title, type: i.type, typeLabel: TIPOS[i.type], system: i.systemName, assignee: i.assigneeName, url: url(i.id) });
+  return {
+    period: f.period ?? "week", from: r.primeiroDia, to: r.ultimoDia, label: r.rotulo,
+    totals: { done: r.concluidos.length, inProgress: r.emAndamento.length, planned: r.planejados.length, canceled: r.cancelados.length },
+    done: r.concluidos.map(i => ({ ...comum(i), prUrl: i.prUrl, doneAt: i.em.toISOString() })),
+    inProgress: r.emAndamento.map(i => ({ ...comum(i), status: i.status, statusLabel: SITUACOES[i.status], priorityLabel: PRIORIDADES[i.priority] ?? null, dueDate: i.dueDate, movedInPeriod: i.mexidoNoPeriodo })),
+    planned: r.planejados.map(i => ({ ...comum(i), priorityLabel: PRIORIDADES[i.priority] ?? null, dueDate: i.dueDate, createdInPeriod: i.entrouNoPeriodo, dueInPeriod: i.prazoNoPeriodo })),
+    canceled: r.cancelados.map(i => ({ ...comum(i), canceledAt: i.em.toISOString() })),
   };
 }
 
