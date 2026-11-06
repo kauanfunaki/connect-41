@@ -36,6 +36,7 @@ export function itemParaApi(item: ItemDaLista, base: string) {
     dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,
     size: item.size, sizeLabel: item.size ? TAMANHOS[item.size] : null,
     origin: item.originItemId ? { id: item.originItemId, title: item.originItem?.title ?? null } : null,
+    prUrl: item.prUrl, commitSha: item.commitSha,
     version: item.version,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
@@ -119,6 +120,7 @@ export async function opcoesParaApi(ator: AtorTech) {
 const camposDoItem = {
   title: z.unknown().optional(), description: z.unknown().optional(), type: z.unknown().optional(), priority: z.unknown().optional(), status: z.unknown().optional(),
   systemMode: z.unknown().optional(), systemKey: z.unknown().optional(), assigneeId: z.unknown().optional(), dueDate: z.unknown().optional(), size: z.unknown().optional(), originItemId: z.unknown().optional(),
+  prUrl: z.unknown().optional(), commitSha: z.unknown().optional(),
 };
 // Campo com nome errado vira erro, e não um campo ignorado em silêncio.
 const criarSchema = z.object(camposDoItem).strict();
@@ -170,6 +172,7 @@ export async function atualizarParaApi(ator: AtorTech, id: string, raw: unknown,
     title: atual.title, description: atual.description, type: atual.type, priority: atual.priority, status: atual.status,
     systemMode: atual.systemMode, systemKey: chaveDoSistema(atual), assigneeId: atual.assigneeId,
     dueDate: atual.dueDate?.toISOString().slice(0, 10) ?? null, size: atual.size, originItemId: atual.originItemId,
+    prUrl: atual.prUrl, commitSha: atual.commitSha,
     ...mudancas,
   });
   const r = await salvarItem(ator, dados, id, version ?? atual.version);
@@ -177,10 +180,10 @@ export async function atualizarParaApi(ator: AtorTech, id: string, raw: unknown,
   return verParaApi(ator, id, base);
 }
 
-const situacaoSchema = z.object({ status: z.unknown().optional(), version: z.unknown().optional() }).strict();
+const situacaoSchema = z.object({ status: z.unknown().optional(), version: z.unknown().optional(), prUrl: z.unknown().optional(), commitSha: z.unknown().optional() }).strict();
 export async function mudarSituacaoParaApi(ator: AtorTech, id: string, raw: unknown, base: string) {
   conferirId(id);
-  const { status, version } = camposValidos(situacaoSchema, raw);
+  const { status, version, ...entrega } = camposValidos(situacaoSchema, raw);
   if (status === undefined) throw new ErroApi("validation_error", `Informe a situação: ${Object.keys(SITUACOES).join(", ")}.`);
   let versao = version;
   if (versao === undefined) {
@@ -188,7 +191,7 @@ export async function mudarSituacaoParaApi(ator: AtorTech, id: string, raw: unkn
     if (!atual) throw new ErroApi("not_found", "Item não encontrado.");
     versao = atual.version;
   }
-  const r = await mudarSituacaoItem(ator, id, status, versao);
+  const r = await mudarSituacaoItem(ator, id, status, versao, Object.fromEntries(Object.entries(entrega).filter(([, v]) => v !== undefined)));
   if ("error" in r) throw erroDoServidor(r);
   return verParaApi(ator, id, base);
 }

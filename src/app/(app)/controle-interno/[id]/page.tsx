@@ -28,7 +28,7 @@ export default async function DetalheTechPage({ params, searchParams }: { params
           id: item.id, version: item.version, title: item.title, description: item.description, type: item.type, priority: item.priority,
           status: item.status, systemMode: item.systemMode, systemKey: chaveDoSistema(item), assigneeId: item.assigneeId,
           assigneeName: item.assignee?.name ?? null, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,
-          size: item.size, originItemId: item.originItemId,
+          size: item.size, originItemId: item.originItemId, prUrl: item.prUrl, commitSha: item.commitSha,
         }} />
         <div className="mt-6 border-t border-border pt-5">
           <AnexosDoItem itemId={item.id} podeEditar={podeEditar} anexos={item.attachments.map(a => ({ id: a.id, fileName: a.fileName, mimeType: a.mimeType, sizeBytes: a.sizeBytes, uploadedByName: a.uploadedByName, createdAt: a.createdAt.toISOString() }))} />
