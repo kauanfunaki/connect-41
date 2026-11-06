@@ -188,7 +188,7 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
         label: "Token de escrita",
         type: "secret",
         required: false,
-        help: "Token de escrita do motor. Sem ele, o Connect só consulta.",
+        help: "Libera as ações das telas antigas do motor. O Gerar SPED não usa: vai pela fila do Connect.",
       },
       {
         name: "accountingWriteToken", label: "Token de escrita contábil", type: "secret", required: false,

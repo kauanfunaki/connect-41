@@ -46,8 +46,11 @@ export function ServicoDoSped({ leitura, escrita }: { leitura: boolean; escrita:
         </Button>
       </div>
       {resultado && <Aviso tom={resultado.ok ? "sucesso" : "perigo"}>{resultado.texto}</Aviso>}
+      {/* 06/11/2026: a geração saiu deste caminho — o Gerar SPED vai pela fila do
+          Connect e o agente do motor busca com a chave do Ops Center. O token de
+          escrita ficou só para as telas antigas do motor. */}
       <p className="text-micro text-fg-muted">
-        Sem o token de escrita, o Connect só consulta o motor: execuções, arquivos e decisões aparecem, e as ações ficam desabilitadas.
+        O Gerar SPED não usa estes tokens: o pedido vai pela fila do Connect, e o agente do motor busca com uma chave do Ops Center. O token de escrita só libera as ações das telas antigas do motor, como executar e gravar decisões. Sem ele, essas telas só consultam.
       </p>
     </Card>
   );
