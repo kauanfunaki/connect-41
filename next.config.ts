@@ -50,6 +50,14 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   turbopack: { root: __dirname },
   experimental: {
+    // Canal de debug do React (só no `next dev`; padrão ligado no 16.2). No
+    // 16.2.7–16.2.x ele dá `location.reload()` quando acha que a página veio
+    // do cache, pelo `transferSize === 0` — e no Firefox esse valor fica 0
+    // enquanto o HTML ainda chega em streaming. A Home (vários Suspense)
+    // recarregava 2–3 vezes a cada F5. Corrigido no Next 16.3 (PR
+    // vercel/next.js#94128); ao subir para 16.3+, esta linha pode sair.
+    // Produção não usa o canal.
+    reactDebugChannel: false,
     // Corpo máximo de Server Action. O padrão do Next é 1 MB, e a recusa
     // acontece ANTES de a action rodar — o import do Omie anunciava 8 MB e,
     // acima de 1 MB, falhava com erro genérico em vez de "arquivo maior que 8
