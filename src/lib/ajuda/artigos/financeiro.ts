@@ -690,7 +690,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Clique na página na lista à esquerda.",
           "Clique no título ou no texto e escreva direto na folha.",
-          "Para mudar um bloco de lugar, arraste o puxador (⋮⋮) à esquerda dele, ou clique no puxador e escolha “Mover para cima” ou “Mover para baixo”. No teclado: Alt+↑ ou Alt+↓.",
+          "Para mudar um bloco de lugar, arraste o puxador (⋮⋮) à esquerda dele: uma linha mostra onde ele vai cair, e Esc cancela. Ou clique no puxador e escolha “Mover para cima” ou “Mover para baixo”. No teclado: Alt+↑ ou Alt+↓.",
           "O texto grava sozinho; o canto de cima mostra “Salvando…” e depois “Salvo”.",
           "Para ilustrar, clique em “Adicionar capa” e escolha uma imagem.",
         ],
