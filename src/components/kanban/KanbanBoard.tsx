@@ -161,7 +161,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
 
                   {item.subtaskTotal !== undefined && item.subtaskTotal > 0 && (
                     <p className="text-kanban-meta text-fg-muted mt-1.5">
-                      {item.subtaskDone}/{item.subtaskTotal} subtarefas
+                      {item.subtaskDone}/{item.subtaskTotal} subatividades
                     </p>
                   )}
 

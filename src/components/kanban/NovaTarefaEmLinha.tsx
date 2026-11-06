@@ -52,15 +52,24 @@ export function useNovaTarefaDoTopo(ativo: boolean, aoPedir?: () => void): numbe
 }
 
 type Props = {
+  /** O que vai para `criar` junto do nome: a coluna, ou o pai da subatividade. */
   stageId: string;
   /** Nome da coluna, para o leitor de tela saber onde a tarefa entra. */
   nomeDaColuna: string;
-  criar: (stageId: string, title: string) => Promise<void>;
-  /** O formulário completo — para a atividade de uma empresa ou pessoa. */
-  hrefDoFormulario: string;
+  /** Com `{ error }`, o campo fica aberto com o nome digitado e o aviso sobe. */
+  criar: (stageId: string, title: string) => Promise<{ error: string } | void>;
+  /** O formulário completo — para a atividade de uma empresa ou pessoa. Sem ele, sem o link. */
+  hrefDoFormulario?: string;
   /** Muda para abrir de fora (o "+ Nova tarefa" do topo). */
   sinalParaAbrir?: number;
+  /** Já nasce aberto — o "+" da linha, que monta o campo embaixo dela (06/11/2026). */
+  abertoAoMontar?: boolean;
+  /** Avisa quando o campo fecha vazio: pelo Esc (o foco pode voltar a quem abriu) ou por clique fora. */
+  aoFechar?: (motivo: "esc" | "fora") => void;
   rotulo?: string;
+  placeholder?: string;
+  /** O nome do campo para o leitor de tela. Padrão: a tarefa nova da coluna. */
+  rotuloDoCampo?: string;
   className?: string;
 };
 
@@ -79,10 +88,18 @@ export function NovaTarefaEmLinha({
   criar,
   hrefDoFormulario,
   sinalParaAbrir = 0,
+  abertoAoMontar = false,
+  aoFechar,
   rotulo = "Adicionar atividade",
+  placeholder = "Nome da tarefa",
+  rotuloDoCampo,
   className = "",
 }: Props) {
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(abertoAoMontar);
+  const fechar = (motivo: "esc" | "fora") => {
+    setAberto(false);
+    aoFechar?.(motivo);
+  };
   const [titulo, setTitulo] = useState("");
   const [pendente, startTransition] = useTransition();
   const caixaRef = useRef<HTMLDivElement>(null);
@@ -112,8 +129,9 @@ export function NovaTarefaEmLinha({
     if (!nome || pendente) return;
     startTransition(async () => {
       try {
-        await criar(stageId, nome);
-        setTitulo("");
+        const r = await criar(stageId, nome);
+        if (r && "error" in r) toast.error(r.error);
+        else setTitulo("");
       } catch {
         toast.error("Não deu para falar com o servidor. A tarefa não foi criada.");
       }
@@ -145,7 +163,7 @@ export function NovaTarefaEmLinha({
       onBlur={(e) => {
         // Fecha ao sair da caixa vazia — mas não ao ir para o "Gravar" ou o link.
         if (caixaRef.current?.contains(e.relatedTarget as Node | null)) return;
-        if (!titulo.trim() && !pendente) setAberto(false);
+        if (!titulo.trim() && !pendente) fechar("fora");
       }}
     >
       <Input
@@ -163,12 +181,12 @@ export function NovaTarefaEmLinha({
             e.preventDefault();
             e.stopPropagation();
             setTitulo("");
-            setAberto(false);
+            fechar("esc");
           }
         }}
         maxLength={200}
-        placeholder="Nome da tarefa"
-        aria-label={`Nome da tarefa nova em ${nomeDaColuna}`}
+        placeholder={placeholder}
+        aria-label={rotuloDoCampo ?? `Nome da tarefa nova em ${nomeDaColuna}`}
         aria-describedby={`${id}-dica`}
         readOnly={pendente}
         className="flex-1 min-w-[12rem]"
@@ -177,10 +195,15 @@ export function NovaTarefaEmLinha({
         {pendente ? "Gravando…" : "Gravar"}
       </Button>
       <span id={`${id}-dica`} className="basis-full text-fs-1 text-fg-muted">
-        Enter grava e abre a próxima · Esc fecha ·{" "}
-        <Link href={hrefDoFormulario} className="underline underline-offset-2 hover:text-brand">
-          criar para uma empresa ou pessoa
-        </Link>
+        Enter grava e abre a próxima · Esc fecha
+        {hrefDoFormulario && (
+          <>
+            {" · "}
+            <Link href={hrefDoFormulario} className="underline underline-offset-2 hover:text-brand">
+              criar para uma empresa ou pessoa
+            </Link>
+          </>
+        )}
       </span>
     </div>
   );

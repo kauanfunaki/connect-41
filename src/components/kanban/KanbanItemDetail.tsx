@@ -15,7 +15,8 @@ import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { AtalhosDoDetalhe, type AtalhoDoDetalhe } from "@/components/kanban/AtalhosDoDetalhe";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
 import { Button } from "@/components/ui/Button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
+import { aceitaSubatividade, ancestrais, contarFilhas, descendentes, montarArvore } from "@/lib/kanban/subatividades";
 import {
   moverItem,
   adicionarNota,
@@ -157,17 +158,17 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     }),
   ]);
 
-  const [parentItem, subtasks, checklistItems, mentionUsers, lastCompletion, links, timeEntries] = await Promise.all([
-    item.parentItemId
-      ? prisma.pipelineItem.findFirst({ where: { id: item.parentItemId, tenantId }, select: { id: true, title: true, entityId: true, entityType: true } })
-      : Promise.resolve(null),
-    item.parentItemId
-      ? Promise.resolve([])
-      : prisma.pipelineItem.findMany({
-          where: { parentItemId: itemId, tenantId },
-          orderBy: { createdAt: "asc" },
-          include: { stage: { select: { name: true, color: true, isTerminal: true, type: true } } },
-        }),
+  const [itensDaLista, checklistItems, mentionUsers, lastCompletion, links, timeEntries] = await Promise.all([
+    // A árvore da lista numa leitura só (06/11/2026): dela saem os pais deste
+    // item (a trilha no topo e o nível dele), as filhas, o "0/1" de cada uma e
+    // o que vai junto ao concluir ou excluir. Só as colunas que a conta usa.
+    prisma.pipelineItem.findMany({
+      where: { pipelineId: item.pipelineId, tenantId },
+      select: {
+        id: true, parentItemId: true, title: true, entityId: true, order: true, createdAt: true,
+        stage: { select: { name: true, color: true, isTerminal: true, type: true } },
+      },
+    }),
     prisma.checklistItem.findMany({ where: { pipelineItemId: itemId, tenantId }, orderBy: { order: "asc" } }),
     // @menção em comentário pode citar qualquer usuário do tenant (não só do
     // setor) — mesma regra do autocomplete de Transferências.
@@ -220,8 +221,17 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     return o.title ?? (o.entityId ? resolvedNames[o.entityId] : null) ?? "(sem título)";
   }
 
-  let parentEntityName: string | null = null;
-  if (parentItem) parentEntityName = nameFor(parentItem);
+  // A árvore: os pais (de cima até o imediato), o nível deste item e as filhas.
+  const porId = new Map(itensDaLista.map((i) => [i.id, i]));
+  const pais = ancestrais(porId, itemId);
+  const profundidade = pais.length;
+  // O item entra como raiz, para a subárvore dele sair inteira e ordenada.
+  const noDoItem = montarArvore(itensDaLista.map((i) => (i.id === itemId ? { ...i, parentItemId: null } : i))).find((n) => n.id === itemId);
+  const filhas = noDoItem?.filhas ?? [];
+  const abaixoDoItem = noDoItem ? descendentes(noDoItem) : [];
+  const concluida = (i: { stage: { isTerminal: boolean } }) => i.stage.isTerminal;
+  // Os pais herdam a empresa do item; o nome deles sai do título ou dela.
+  const nomeDoPai = (p: { title: string | null }) => p.title ?? entity?.name ?? "(sem título)";
 
   const deleteAction = excluirItem.bind(null, id, itemId);
   const addNoteAction = adicionarNota.bind(null, id, itemId);
@@ -321,18 +331,31 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           relação ao X (Ajustes de 27/10/2026). */}
       {isModal && canDelete && (
         <div className="absolute top-4 right-14 z-10 flex h-8 items-center">
-          <DeleteTaskButton entityName={title} deleteAction={deleteAction} />
+          <DeleteTaskButton entityName={title} subatividades={abaixoDoItem.length} deleteAction={deleteAction} />
         </div>
       )}
 
       <div className={isModal ? (canDelete ? "mb-3 pr-40" : "mb-3 pr-12") : "mb-3"}>
-        {item.parentItemId && (
-          <Link
-            href={`${basePath}/itens/${item.parentItemId}`}
-            className="text-fs-2 text-fg-muted hover:text-fg transition-colors inline-block mb-1"
-          >
-            ← Subtarefa de &quot;{parentEntityName}&quot;
-          </Link>
+        {/* Os pais, de cima até o imediato (06/11/2026): com vários níveis, o
+            "← Subtarefa de X" sozinho não dizia onde a subatividade mora. */}
+        {pais.length > 0 && (
+          <nav aria-label="Atividades acima desta" className="mb-1">
+            <ol className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-fs-2 text-fg-muted">
+              <li className="flex-shrink-0">Subatividade de</li>
+              {pais.map((p, i) => (
+                <li key={p.id} className="flex items-center gap-1 min-w-0">
+                  {i > 0 && <ChevronRight size={12} aria-hidden className="flex-shrink-0" />}
+                  <Link
+                    href={`${basePath}/itens/${p.id}`}
+                    title={nomeDoPai(p)}
+                    className="truncate max-w-[16rem] underline-offset-2 hover:text-fg hover:underline transition-colors"
+                  >
+                    {nomeDoPai(p)}
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </nav>
         )}
         <div className="flex items-start justify-between gap-3">
           {/* O `id` dá nome ao modal da tarefa (`KanbanItemModal`): o leitor de
@@ -340,7 +363,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           <h1 id="titulo-da-tarefa" className="text-display leading-tight font-bold text-fg tracking-[-0.015em] mb-1">
             {title}
           </h1>
-          {!isModal && canDelete && <DeleteTaskButton entityName={title} deleteAction={deleteAction} />}
+          {!isModal && canDelete && <DeleteTaskButton entityName={title} subatividades={abaixoDoItem.length} deleteAction={deleteAction} />}
         </div>
         {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
@@ -387,6 +410,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
             moveAction={moverItem}
             isCompleted={isCompleted}
             concluirAction={concluirAction}
+            subatividadesAbertas={abaixoDoItem.filter((s) => !concluida(s)).length}
+            nomeDaTarefa={title}
             dueDate={item.dueDate ? item.dueDate.toISOString() : null}
             startDate={item.startDate ? item.startDate.toISOString() : null}
             recurring={item.recurring}
@@ -420,7 +445,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
           {canAct && (
             <AtalhosDoDetalhe
               atalhos={[
-                ...(!item.parentItemId ? (["subatividades"] as AtalhoDoDetalhe[]) : []),
+                ...(aceitaSubatividade(profundidade) ? (["subatividades"] as AtalhoDoDetalhe[]) : []),
                 "relacionadas",
                 "checklist",
                 "anexos",
@@ -432,13 +457,15 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
               começam fechados com o resumo na linha (15/10/2026). Cada uma só
               aparece se tiver conteúdo ou se o usuário puder criar algo ali. */}
           <div className="flex flex-col gap-2">
-            {!item.parentItemId && (subtasks.length > 0 || canAct) && (
+            {/* Em qualquer nível (06/11/2026; era só na atividade de cima). No
+                último nível, sem filhas, a seção fica para dizer o porquê. */}
+            {(filhas.length > 0 || canAct) && (
               <DetailSection
                 id="secao-subatividades"
                 title="Subatividades"
                 summary={
-                  subtasks.length > 0
-                    ? `${subtasks.filter((s) => s.stage.isTerminal).length}/${subtasks.length}`
+                  filhas.length > 0
+                    ? `${filhas.filter(concluida).length}/${filhas.length}`
                     : undefined
                 }
               >
@@ -447,15 +474,23 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                   canDelete={canDelete}
                   basePath={basePath}
                   pipelineId={id}
-                  subtasks={subtasks.map((s) => ({
-                    id: s.id,
-                    title: s.title ?? "(sem título)",
-                    stageName: s.stage.name,
-                    stageColor: s.stage.color,
-                    isTerminal: s.stage.isTerminal,
-                    stageType: s.stage.type,
-                    priority: s.priority,
-                  }))}
+                  noLimite={!aceitaSubatividade(profundidade)}
+                  subtasks={filhas.map((s) => {
+                    const netas = contarFilhas(s, concluida);
+                    const abaixo = descendentes(s);
+                    return {
+                      id: s.id,
+                      title: s.title ?? "(sem título)",
+                      stageName: s.stage.name,
+                      stageColor: s.stage.color,
+                      isTerminal: s.stage.isTerminal,
+                      stageType: s.stage.type,
+                      filhasConcluidas: netas.concluidas,
+                      filhasTotal: netas.total,
+                      abaixo: abaixo.length,
+                      abertasAbaixo: abaixo.filter((n) => !concluida(n)).length,
+                    };
+                  })}
                   createAction={createSubtaskAction}
                   deleteAction={deleteSubtaskAction}
                   concluirAction={concluirTarefa}

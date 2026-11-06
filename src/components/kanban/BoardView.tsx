@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Columns3, List, X } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
-import { TaskListView, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
+import { TaskListView, type SubtaskRow, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
 import { Select } from "@/components/ui/Select";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton";
@@ -29,11 +29,13 @@ type Props = {
   items: Item[];
   canAct: boolean;
   moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
-  reorderAction: (itemId: string, direction: "up" | "down") => Promise<void>;
+  repositionAction: (itemId: string, alvoId: string) => Promise<{ error: string } | void>;
   renameStageAction: (stageId: string, name: string) => Promise<void>;
   createTaskAction: (stageId: string, title: string) => Promise<void>;
+  /** O "+ Adicionar subatividade" de cada nível da Lista (06/11/2026). */
+  createSubtaskAction: (parentItemId: string, title: string) => Promise<{ error: string } | void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
-  concluirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<void>;
   reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
   /** Só a visão de lista oferece excluir; o quadro Kanban continua sem. */
   deleteAction?: (itemId: string) => Promise<void>;
@@ -62,7 +64,12 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ");
 }
 
-export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, reorderAction, renameStageAction, createTaskAction, priorityAction, concluirAction, reabrirAction, deleteAction }: Props) {
+/** Os nomes de todas as subatividades abaixo, em qualquer nível — a busca acha a atividade por elas. */
+function nomesAbaixo(item: { subtasks?: SubtaskRow[] }): string[] {
+  return (item.subtasks ?? []).flatMap((s) => [s.entityName, ...nomesAbaixo(s)]);
+}
+
+export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, repositionAction, renameStageAction, createTaskAction, createSubtaskAction, priorityAction, concluirAction, reabrirAction, deleteAction }: Props) {
   const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
@@ -102,7 +109,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
         const haystack = [
           item.entityName,
           item.description ? stripHtml(item.description) : "",
-          ...(item.subtasks ?? []).map((s) => s.entityName),
+          ...nomesAbaixo(item),
         ].join(" ").toLowerCase();
         if (!haystack.includes(q)) return false;
       }
@@ -254,9 +261,10 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             createTaskAction={createTaskAction}
             priorityAction={priorityAction}
             moveAction={moveAction}
-            reorderAction={reorderAction}
+            repositionAction={repositionAction}
             concluirAction={concluirAction}
             reabrirAction={reabrirAction}
+            createSubtaskAction={canAct ? createSubtaskAction : undefined}
             deleteAction={deleteAction}
           />
         )}

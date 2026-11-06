@@ -19,8 +19,59 @@ import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { notifyUser } from "@/lib/notifications";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
 import { normalizeAccentColor } from "@/lib/color";
+import { logAudit } from "@/lib/audit";
+import { AVISO_DO_LIMITE, PROFUNDIDADE_MAXIMA, aceitaSubatividade, montarArvore, porOrdem, reposicionar, type NoDaArvore } from "@/lib/kanban/subatividades";
 
 export type PipelineState = { error: string } | null;
+
+// ─── A árvore de subatividades (06/11/2026) ─────────────────────────────────
+// Ver `src/lib/kanban/subatividades.ts`: a regra e o limite moram lá.
+
+// O MySQL para a cascata em 15 níveis encadeados; nada pela tela passa de
+// PROFUNDIDADE_MAXIMA, e a volta é só a guarda contra dado montado à mão.
+const NIVEIS_NA_LEITURA = 15;
+
+/**
+ * Tudo o que fica abaixo do item, em todos os níveis, com a coluna de cada
+ * um. Uma leitura por nível — no máximo PROFUNDIDADE_MAXIMA na prática.
+ */
+async function subarvoreDoItem(tenantId: string, raizId: string): Promise<{ id: string; stageId: string }[]> {
+  const prisma = getPrisma();
+  const out: { id: string; stageId: string }[] = [];
+  const vistos = new Set([raizId]);
+  let fronteira = [raizId];
+  for (let nivel = 0; nivel < NIVEIS_NA_LEITURA && fronteira.length > 0; nivel++) {
+    const filhas = await prisma.pipelineItem.findMany({
+      where: { tenantId, parentItemId: { in: fronteira } },
+      select: { id: true, stageId: true },
+    });
+    const novas = filhas.filter((f) => !vistos.has(f.id));
+    for (const f of novas) vistos.add(f.id);
+    out.push(...novas);
+    fronteira = novas.map((f) => f.id);
+  }
+  return out;
+}
+
+/** A profundidade do item pelo pai dele (0 = a atividade, sem pai), subindo nível a nível. */
+async function profundidadePeloPai(tenantId: string, parentItemId: string | null): Promise<number> {
+  const prisma = getPrisma();
+  const vistos = new Set<string>();
+  let profundidade = 0;
+  let pai = parentItemId;
+  while (pai && !vistos.has(pai) && profundidade <= PROFUNDIDADE_MAXIMA) {
+    vistos.add(pai);
+    profundidade++;
+    const acima = await prisma.pipelineItem.findFirst({ where: { id: pai, tenantId }, select: { parentItemId: true } });
+    pai = acima?.parentItemId ?? null;
+  }
+  return profundidade;
+}
+
+/** "1 subatividade" / "3 subatividades", para o histórico e a auditoria. */
+function quantasSubatividades(n: number): string {
+  return n === 1 ? "1 subatividade" : `${n} subatividades`;
+}
 
 // Destinatários "de interesse" de um item — responsáveis + participantes
 // (watchers). Usado pra notificar quem acompanha a tarefa quando entra um
@@ -391,40 +442,55 @@ export async function moverItem(
   }
 }
 
-// Reordenar dentro do mesmo status (mesmo estágio + mesmo pai, se for
-// subtarefa) — troca adjacente, mesmo mecanismo do reordenarChecklistItem.
-export async function reordenarItem(itemId: string, direction: "up" | "down"): Promise<void> {
+// Soltar uma atividade em cima de outra (06/11/2026): ela vai para o lugar da
+// outra e as do meio andam uma casa. Irmãs são as do mesmo pai — na atividade
+// de cima, também da mesma coluna (a lista agrupa por coluna); na
+// subatividade, de qualquer coluna, porque a lista as mostra juntas embaixo
+// do pai. Mudar de pai pelo arraste não existe: de pais diferentes, recusa.
+//
+// Era `reordenarItem`, que trocava vizinhas uma a uma (um clique do servidor
+// por casa) e não andava quando as duas tinham a mesma `order` — o caso de
+// toda atividade criada pelo "Adicionar atividade", que nasce com 0. Agora as
+// irmãs são renumeradas de 0 em diante numa transação só.
+export async function reposicionarItem(itemId: string, alvoId: string): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
-  if (!tenantId) return;
+  if (!tenantId) return { error: "Sua sessão expirou. Entre de novo para mudar a ordem." };
 
   const prisma = getPrisma();
 
   try {
-    const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
-    if (!item) return;
+    const [item, alvo] = await Promise.all([
+      prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } }),
+      prisma.pipelineItem.findFirst({ where: { id: alvoId, tenantId } }),
+    ]);
+    if (!item || !alvo) return { error: "Esta atividade não existe mais." };
+    if (item.pipelineId !== alvo.pipelineId || item.parentItemId !== alvo.parentItemId) {
+      return { error: "Arrastando, a atividade muda de lugar só entre as do mesmo nível." };
+    }
+    if (item.parentItemId === null && item.stageId !== alvo.stageId) return;
 
     const pipeline = await prisma.pipeline.findFirst({ where: { id: item.pipelineId } });
-    if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
+    if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return { error: "Você não pode mudar a ordem desta lista." };
 
-    const siblings = await prisma.pipelineItem.findMany({
-      where: { tenantId, pipelineId: item.pipelineId, stageId: item.stageId, parentItemId: item.parentItemId },
-      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    const irmas = await prisma.pipelineItem.findMany({
+      where: {
+        tenantId,
+        pipelineId: item.pipelineId,
+        parentItemId: item.parentItemId,
+        ...(item.parentItemId === null ? { stageId: item.stageId } : {}),
+      },
+      select: { id: true, order: true, createdAt: true },
     });
-    const index = siblings.findIndex((i) => i.id === itemId);
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (index === -1 || swapIndex < 0 || swapIndex >= siblings.length) return;
+    const nova = reposicionar(irmas.sort(porOrdem).map((i) => i.id), itemId, alvoId);
+    if (!nova) return;
 
-    const a = siblings[index];
-    const b = siblings[swapIndex];
-    await prisma.$transaction([
-      prisma.pipelineItem.update({ where: { id: a.id }, data: { order: b.order } }),
-      prisma.pipelineItem.update({ where: { id: b.id }, data: { order: a.order } }),
-    ]);
+    await prisma.$transaction(nova.map((id, order) => prisma.pipelineItem.update({ where: { id }, data: { order } })));
 
     revalidatePath(boardPath(pipeline));
   } catch (err) {
-    console.error("[reordenarItem]", err);
+    console.error("[reposicionarItem]", err);
+    return { error: "Não foi possível mudar a ordem. Tente de novo." };
   }
 }
 
@@ -1025,9 +1091,12 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
 
+  // O card tem de ser desta lista — o pipelineId que libera a ação é o dela.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId } });
+  if (!item) return;
+
   try {
-    // O card tem de ser desta lista — o pipelineId que libera a ação é o dela.
-    await prisma.pipelineItem.delete({ where: { id: itemId, tenantId, pipelineId } });
+    await excluirComSubatividades(ctx, item);
   } catch (err) {
     console.error("[excluirItem]", err);
     return;
@@ -1038,32 +1107,92 @@ export async function excluirItem(pipelineId: string, itemId: string): Promise<v
   redirect(base);
 }
 
+/**
+ * Exclui o item — as subatividades de todos os níveis vão junto, pela cascata
+ * do banco (`parentItemId` ON DELETE CASCADE), com o histórico, os anexos e as
+ * horas de cada uma. A tela pergunta antes, dizendo quantas são.
+ *
+ * O histórico de quem foi apagado vai junto com ele, então o rastro fica em
+ * dois lugares (06/11/2026): no histórico do pai, quando o apagado era
+ * subatividade, e na Auditoria, com quantas subatividades foram junto.
+ */
+async function excluirComSubatividades(
+  ctx: { tenantId: string; userId: string | null },
+  item: { id: string; title: string | null; parentItemId: string | null },
+): Promise<void> {
+  const prisma = getPrisma();
+  const abaixo = (await subarvoreDoItem(ctx.tenantId, item.id)).length;
+  const titulo = item.title ?? "(sem título)";
+
+  await prisma.pipelineItem.delete({ where: { id: item.id } });
+
+  if (ctx.userId && item.parentItemId) {
+    await prisma.activity.create({
+      data: {
+        tenantId: ctx.tenantId,
+        pipelineItemId: item.parentItemId,
+        userId: ctx.userId,
+        type: ActivityType.SUBTASK_CHANGE,
+        content: abaixo > 0
+          ? `Subatividade "${titulo}" removida, com ${quantasSubatividades(abaixo)} dentro dela`
+          : `Subatividade "${titulo}" removida`,
+      },
+    });
+  }
+  if (ctx.userId) {
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "kanban.atividade.excluir",
+      entityType: "PipelineItem",
+      entityId: item.id,
+      metadata: { title: titulo, subatividades: abaixo, ...(item.parentItemId ? { pai: item.parentItemId } : {}) },
+    });
+  }
+}
+
 // ─── Subtarefas ────────────────────────────────────────────────────────────
 // Reaproveita a própria PipelineItem (parentItemId) em vez de um modelo novo —
 // uma subtarefa já ganha de graça status (stage), prioridade, prazo,
 // responsável, tags, atividades e anexos, exatamente como um item de topo.
-// Só 1 nível: uma subtarefa não pode ter subtarefas (checado abaixo).
+// Em vários níveis desde 06/11/2026 (era 1): a subatividade também recebe
+// filhas, até PROFUNDIDADE_MAXIMA — ver `src/lib/kanban/subatividades.ts`.
 
-export async function criarSubtarefa(parentItemId: string, title: string): Promise<void> {
+export async function criarSubtarefa(parentItemId: string, title: string): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
-  if (!tenantId || !title.trim()) return;
+  const nome = title.trim();
+  if (!tenantId || !nome) return;
 
   const prisma = getPrisma();
   const parent = await prisma.pipelineItem.findFirst({ where: { id: parentItemId, tenantId } });
-  if (!parent || parent.parentItemId) return; // não achou, ou é subtarefa (só 1 nível)
+  if (!parent) return { error: "Esta atividade não existe mais." };
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: parent.pipelineId } });
-  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
+  if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) {
+    return { error: "Você não pode criar subatividades nesta lista." };
+  }
+
+  if (!aceitaSubatividade(await profundidadePeloPai(tenantId, parent.parentItemId))) {
+    return { error: AVISO_DO_LIMITE };
+  }
 
   try {
     const firstStage = await prisma.pipelineStage.findFirst({
       where: { pipelineId: parent.pipelineId },
       orderBy: { order: "asc" },
     });
-    if (!firstStage) return;
+    if (!firstStage) return { error: "Esta lista não tem colunas." };
 
-    await prisma.pipelineItem.create({
+    // Entra no fim das irmãs (era `order` 0, que a punha antes das que já
+    // tinham ordem manual e travava a troca de lugar com as outras de 0).
+    const ultima = await prisma.pipelineItem.findFirst({
+      where: { tenantId, parentItemId: parent.id },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+
+    const sub = await prisma.pipelineItem.create({
       data: {
         tenantId,
         pipelineId: parent.pipelineId,
@@ -1071,26 +1200,39 @@ export async function criarSubtarefa(parentItemId: string, title: string): Promi
         entityType: parent.entityType,
         entityId: parent.entityId,
         parentItemId: parent.id,
-        title: title.trim(),
+        title: nome,
+        order: (ultima?.order ?? -1) + 1,
       },
     });
 
     if (userId) {
+      // No pai, o que mudou nele; na nova, de onde ela veio — a subatividade
+      // tem histórico próprio e abre como qualquer atividade.
       await prisma.activity.create({
-        data: { tenantId, pipelineItemId: parent.id, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subatividade "${title.trim()}" criada` },
+        data: { tenantId, pipelineItemId: parent.id, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subatividade "${nome}" criada` },
+      });
+      await prisma.activity.create({
+        data: {
+          tenantId,
+          pipelineItemId: sub.id,
+          userId,
+          type: ActivityType.CREATED,
+          content: parent.title ? `Criada como subatividade de "${parent.title}"` : "Criada como subatividade",
+        },
       });
     }
   } catch (err) {
     console.error("[criarSubtarefa]", err);
-    return;
+    return { error: "Não foi possível criar a subatividade. Tente de novo." };
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${parentItemId}`);
+  // O detalhe do pai e a lista, onde ela também aparece embaixo dele.
+  revalidarItem(pipeline, parentItemId);
 }
 
 export async function excluirSubtarefa(parentItemId: string, subtaskId: string): Promise<void> {
   const ctx = await getAuthContext();
-  const { tenantId, userId } = ctx;
+  const { tenantId } = ctx;
   // Excluir subtarefa: só o administrador (13/10/2026). Era o gestor do setor.
   if (!tenantId || !podeExcluir(ctx)) return;
 
@@ -1102,19 +1244,13 @@ export async function excluirSubtarefa(parentItemId: string, subtaskId: string):
   if (!pipeline || !canManageSector(ctx, pipeline.sectorCode)) return;
 
   try {
-    const title = subtask.title ?? "";
-    await prisma.pipelineItem.delete({ where: { id: subtaskId } });
-    if (userId) {
-      await prisma.activity.create({
-        data: { tenantId, pipelineItemId: parentItemId, userId, type: ActivityType.SUBTASK_CHANGE, content: `Subatividade "${title}" removida` },
-      });
-    }
+    await excluirComSubatividades(ctx, subtask);
   } catch (err) {
     console.error("[excluirSubtarefa]", err);
     return;
   }
 
-  revalidatePath(`${boardPath(pipeline)}/itens/${parentItemId}`);
+  revalidarItem(pipeline, parentItemId);
 }
 
 // ─── Checklist ─────────────────────────────────────────────────────────────
@@ -1267,13 +1403,20 @@ export async function reordenarChecklistItem(pipelineItemId: string, checklistIt
 // evento de histórico específico (COMPLETED/REOPENED), distinto do
 // STATUS_CHANGE genérico usado pra mover entre colunas do meio.
 
-export async function concluirTarefa(pipelineId: string, itemId: string): Promise<void> {
+/**
+ * Conclui a atividade. Com `comSubatividades` (06/11/2026), conclui também as
+ * subatividades abertas de todos os níveis abaixo dela — a tela pergunta
+ * antes, quando há alguma aberta, e vem marcado. Sem, o pai é concluído e as
+ * filhas ficam como estão. Cada uma ganha o "concluída" no próprio histórico.
+ */
+export async function concluirTarefa(pipelineId: string, itemId: string, comSubatividades = false): Promise<void> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
   if (!tenantId || !userId) return;
 
   const prisma = getPrisma();
-  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId } });
+  // O item tem de ser desta lista — é ela que libera a ação.
+  const item = await prisma.pipelineItem.findFirst({ where: { id: itemId, tenantId, pipelineId } });
   if (!item) return;
 
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
@@ -1286,10 +1429,36 @@ export async function concluirTarefa(pipelineId: string, itemId: string): Promis
     });
     if (!terminalStage || item.stageId === terminalStage.id) return;
 
+    const terminais = new Set(
+      (await prisma.pipelineStage.findMany({ where: { pipelineId, isTerminal: true }, select: { id: true } })).map((s) => s.id)
+    );
+    const abertas = comSubatividades
+      ? (await subarvoreDoItem(tenantId, itemId)).filter((s) => !terminais.has(s.stageId)).map((s) => s.id)
+      : [];
+
     await prisma.pipelineItem.update({ where: { id: itemId }, data: { stageId: terminalStage.id } });
     await prisma.activity.create({
-      data: { tenantId, pipelineItemId: itemId, userId, type: ActivityType.COMPLETED, content: "Atividade concluída" },
+      data: {
+        tenantId,
+        pipelineItemId: itemId,
+        userId,
+        type: ActivityType.COMPLETED,
+        content: abertas.length > 0 ? `Atividade concluída, com ${quantasSubatividades(abertas.length)} dentro dela` : "Atividade concluída",
+      },
     });
+    if (abertas.length > 0) {
+      const nome = item.title ? `"${item.title}"` : "a atividade de cima";
+      await prisma.pipelineItem.updateMany({ where: { id: { in: abertas }, tenantId }, data: { stageId: terminalStage.id } });
+      await prisma.activity.createMany({
+        data: abertas.map((id) => ({
+          tenantId,
+          pipelineItemId: id,
+          userId,
+          type: ActivityType.COMPLETED,
+          content: `Concluída junto com ${nome}`,
+        })),
+      });
+    }
   } catch (err) {
     console.error("[concluirTarefa]", err);
     return;
@@ -1523,21 +1692,16 @@ export async function duplicarPipeline(
   if (!entityId) return { error: "Selecione a empresa ou pessoa de destino" };
 
   const prisma = getPrisma();
+  // Todos os itens, de todos os níveis: a cópia remonta a árvore inteira
+  // (06/11/2026; copiava a atividade e só o primeiro nível abaixo dela).
   const source = await prisma.pipeline.findFirst({
     where: { id: sourcePipelineId, ...accessiblePipelineWhere(ctx) },
     include: {
       stages: { orderBy: { order: "asc" } },
       items: {
-        where: { parentItemId: null },
         include: {
           tags: { select: { tagId: true } },
           checklist: { orderBy: { order: "asc" } },
-          subtasks: {
-            include: {
-              tags: { select: { tagId: true } },
-              checklist: { orderBy: { order: "asc" } },
-            },
-          },
         },
       },
     },
@@ -1578,50 +1742,36 @@ export async function duplicarPipeline(
       if (newStage) stageMap.set(oldStage.id, newStage.id);
     }
 
-    for (const item of source.items) {
-      const newStageId = stageMap.get(item.stageId);
-      if (!newStageId) continue;
-
-      const newItem = await prisma.pipelineItem.create({
+    // De cima para baixo: o pai nasce antes das filhas, que já apontam para
+    // o id novo dele. A ordem manual vai junto. A subatividade sem coluna
+    // equivalente fica na do pai; a atividade sem coluna fica de fora (com as
+    // filhas), como antes.
+    type ItemDaOrigem = NonNullable<typeof source>["items"][number];
+    const copiar = async (no: NoDaArvore<ItemDaOrigem>, novoPai: { id: string; stageId: string } | null): Promise<void> => {
+      const newStageId = stageMap.get(no.stageId) ?? novoPai?.stageId;
+      if (!newStageId) return;
+      const novo = await prisma.pipelineItem.create({
         data: {
           tenantId,
           pipelineId: newPipelineId,
           stageId: newStageId,
           entityType: source.entityType,
           entityId,
-          title: item.title,
-          description: item.description,
-          priority: item.priority,
-          tags: item.tags.length > 0 ? { create: item.tags.map((t) => ({ tagId: t.tagId })) } : undefined,
+          parentItemId: novoPai?.id ?? null,
+          title: no.title,
+          description: no.description,
+          priority: no.priority,
+          order: no.order,
+          tags: no.tags.length > 0 ? { create: no.tags.map((t) => ({ tagId: t.tagId })) } : undefined,
           checklist:
-            item.checklist.length > 0
-              ? { create: item.checklist.map((c) => ({ tenantId, text: c.text, order: c.order })) }
+            no.checklist.length > 0
+              ? { create: no.checklist.map((c) => ({ tenantId, text: c.text, order: c.order })) }
               : undefined,
         },
       });
-
-      for (const sub of item.subtasks) {
-        const subStageId = stageMap.get(sub.stageId) ?? newStageId;
-        await prisma.pipelineItem.create({
-          data: {
-            tenantId,
-            pipelineId: newPipelineId,
-            stageId: subStageId,
-            entityType: source.entityType,
-            entityId,
-            parentItemId: newItem.id,
-            title: sub.title,
-            description: sub.description,
-            priority: sub.priority,
-            tags: sub.tags.length > 0 ? { create: sub.tags.map((t) => ({ tagId: t.tagId })) } : undefined,
-            checklist:
-              sub.checklist.length > 0
-                ? { create: sub.checklist.map((c) => ({ tenantId, text: c.text, order: c.order })) }
-                : undefined,
-          },
-        });
-      }
-    }
+      for (const filha of no.filhas) await copiar(filha, { id: novo.id, stageId: newStageId });
+    };
+    for (const raiz of montarArvore(source.items)) await copiar(raiz, null);
   } catch (err) {
     console.error("[duplicarPipeline]", err);
     return { error: "Erro ao duplicar a tarefa. Tente novamente." };
