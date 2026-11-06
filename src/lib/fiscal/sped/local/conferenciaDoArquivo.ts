@@ -9,32 +9,33 @@
 
 import type { Escrituracao } from "./escrituracaoXml";
 
-/** Onde a pessoa resolve: o perfil fiscal (nesta tela), o cadastro da empresa ou a importação do XML. */
-export type OndeResolver = "perfil" | "cadastro" | "importacao";
+/** Onde a pessoa resolve: o cadastro da empresa ou a importação do XML. */
+export type OndeResolver = "cadastro" | "importacao";
 export type GrupoDeFaltas = { onde: OndeResolver; itens: string[] };
 
 const SETE_DIGITOS = /^\d{7}$/;
 const vazio = (v: string | null | undefined) => !(v ?? "").trim();
 
 /**
- * O cadastro do estabelecimento que o 0000, o 0005 e o 0100 exigem. A
- * inscrição estadual sem nenhum dígito ("ISENTO") conta como falta, como no
- * motor. O que o Connect completa pelo XML da própria empresa (endereço,
- * município) já vem completado em `est`.
+ * O cadastro do estabelecimento que o 0000, o 0005 e o 0100 exigem, na ordem
+ * das etapas do cadastro da empresa (identificação, endereço, dados fiscais,
+ * SPED fiscal). A inscrição estadual sem nenhum dígito ("ISENTO") conta como
+ * falta, como no motor. O que o Connect completa pelo XML da própria empresa
+ * (endereço, município) e o contabilista padrão do escritório já vêm em `est`.
  */
 export function faltasDoEstabelecimento(est: Escrituracao["estabelecimento"], inscricaoEstadual: string): GrupoDeFaltas[] {
-  const perfil: string[] = [], cadastro: string[] = [];
-  if (!/\d/.test(inscricaoEstadual ?? "")) perfil.push("inscrição estadual");
-  if (!SETE_DIGITOS.test(est.codMun)) perfil.push("código do município (IBGE)");
-  if (vazio(est.indPerfil)) perfil.push("perfil de apresentação");
-  if (vazio(est.indAtiv)) perfil.push("atividade");
-  if (vazio(est.contador.nome)) perfil.push("nome do contador");
-  if (vazio(est.contador.cpf)) perfil.push("CPF do contador");
-  if (vazio(est.contador.crc)) perfil.push("CRC do contador");
-  if (vazio(est.razaoSocial)) cadastro.push("razão social");
-  if (vazio(est.cep)) cadastro.push("CEP");
-  if (vazio(est.endereco)) cadastro.push("endereço");
-  return [...(perfil.length ? [{ onde: "perfil" as const, itens: perfil }] : []), ...(cadastro.length ? [{ onde: "cadastro" as const, itens: cadastro }] : [])];
+  const itens: string[] = [];
+  if (vazio(est.razaoSocial)) itens.push("razão social");
+  if (vazio(est.cep)) itens.push("CEP");
+  if (vazio(est.endereco)) itens.push("endereço");
+  if (!/\d/.test(inscricaoEstadual ?? "")) itens.push("inscrição estadual");
+  if (vazio(est.indPerfil)) itens.push("perfil");
+  if (vazio(est.indAtiv)) itens.push("indicador de atividade");
+  if (!SETE_DIGITOS.test(est.codMun)) itens.push("código do município (IBGE)");
+  if (vazio(est.contador.nome)) itens.push("nome do contabilista");
+  if (vazio(est.contador.cpf)) itens.push("CPF do contabilista");
+  if (vazio(est.contador.crc)) itens.push("CRC do contabilista");
+  return itens.length ? [{ onde: "cadastro", itens }] : [];
 }
 
 type DocumentoDoPacote = { id: string; numero: string; emitente: string; destinatario: string; cnpjEmpresa: string };
@@ -59,15 +60,16 @@ export function faltasDosDocumentos(documentos: readonly DocumentoDoPacote[], es
     const lista = [...numeros].sort((a, b) => a.localeCompare(b, "pt-BR", { numeric: true }));
     return `${lista.slice(0, 3).join(", ")}${lista.length > 3 ? ` e mais ${lista.length - 3}` : ""}`;
   };
-  return [
-    ...(semXml.size ? [{ onde: "importacao" as const, itens: [`${semXml.size === 1 ? "o XML da nota" : `o XML de ${semXml.size} notas`} ${exemplos(semXml)}`] }] : []),
-    ...(semEndereco.size ? [{ onde: "importacao" as const, itens: [`o endereço ou o município da outra parte ${semEndereco.size === 1 ? "da nota" : `de ${semEndereco.size} notas`} ${exemplos(semEndereco)}`] }] : []),
+  const itens = [
+    ...(semXml.size ? [`${semXml.size === 1 ? "o XML da nota" : `o XML de ${semXml.size} notas`} ${exemplos(semXml)}`] : []),
+    ...(semEndereco.size ? [`o endereço ou o município da outra parte ${semEndereco.size === 1 ? "da nota" : `de ${semEndereco.size} notas`} ${exemplos(semEndereco)}`] : []),
   ];
+  return itens.length ? [{ onde: "importacao", itens }] : [];
 }
 
-const ONDE: Record<OndeResolver, string> = { perfil: "no perfil fiscal", cadastro: "no cadastro da empresa", importacao: "na importação" };
+const ONDE: Record<OndeResolver, string> = { cadastro: "no cadastro da empresa", importacao: "na importação" };
 
-/** A frase da recusa: "Antes de gerar, complete no perfil fiscal: …; no cadastro da empresa: …". */
+/** A frase da recusa: "Antes de gerar o EFD ICMS/IPI, complete no cadastro da empresa, …; na importação, …". */
 export function mensagemDasFaltas(grupos: readonly GrupoDeFaltas[]): string {
   const partes = grupos.map((g) => `${ONDE[g.onde]}, ${g.itens.join(", ")}`);
   return `Antes de gerar o EFD ICMS/IPI, complete ${partes.join("; ")}.`;

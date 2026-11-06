@@ -167,7 +167,7 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
         <h2 className="text-card-title font-semibold">Gerar arquivo da competência</h2>
         <p className="text-ui text-fg-secondary">O pedido congela uma revisão dos dados e entra na fila. O agente do motor gera o arquivo e devolve aqui. {obrigacao === "contribuicoes" ? "Contribuições abrange matriz e filiais da raiz." : "ICMS/IPI usa o estabelecimento selecionado."}</p>
         <Select aria-label="Tipo do arquivo" className="w-56" value={tipoSped} onChange={e => setTipoSped(e.target.value as "0" | "1")}><option value="0">Original</option><option value="1">Substituto / retificação</option></Select>
-        <FaltasDoArquivo faltas={faltasDoArquivo} editarPerfil={direitos.configurar ? abrirPerfil : null} hrefDaEmpresa={`/empresas/${empresa.id}`} />
+        <FaltasDoArquivo faltas={faltasDoArquivo} hrefDaEmpresa={`/empresas/${empresa.id}`} />
         <div className="flex flex-wrap items-center gap-3">
           <Button disabled={!pode || !geracao.opsLigado || ocupado || contexto.competencia.length !== 7 || !!aberta || faltasDoArquivo.length > 0} loading={ocupado} loadingLabel="Pondo na fila…" onClick={() => void acao("gerar", { obrigacao, tipo: tipoSped, chave: chaveGeracao })}>Gerar SPED</Button>
           {aberta && <span className="text-helper text-fg-secondary">Já há uma geração {aberta.estado === "PENDENTE" ? "na fila" : "executando"} para esta obrigação. Acompanhe abaixo.</span>}

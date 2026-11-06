@@ -74,22 +74,34 @@ export type CadastroFiscal = {
 };
 const REGIME_DO_CADASTRO: Record<string, PerfilFiscal["regime"]> = { SIMPLES_NACIONAL: "simples", MEI: "simples", LUCRO_PRESUMIDO: "presumido", LUCRO_REAL: "real" };
 const so = <T extends string>(v: string | null | undefined, validos: readonly T[]) => (validos as readonly string[]).includes(v ?? "") ? v as T : undefined;
+export type ContabilistaDoCadastro = Pick<CadastroFiscal, "contabilistaNome" | "contabilistaCpf" | "contabilistaCrc">;
+/**
+ * O contabilista do arquivo (0100) vem inteiro de uma fonte só — nunca o nome
+ * de um com o CRC de outro: o da empresa; senão o do perfil antigo; senão o
+ * padrão do escritório, que só vem preenchido em empresa nova e por isso
+ * precisa valer para as que já existiam.
+ */
+function contabilistaDoArquivo(cadastro: CadastroFiscal, guardado: z.infer<typeof perfilGuardadoSchema>, padrao: ContabilistaDoCadastro | null) {
+  const tem = (c: ContabilistaDoCadastro | null) => !!(c?.contabilistaNome?.trim() || c?.contabilistaCpf?.trim() || c?.contabilistaCrc?.trim());
+  const doGuardado = { contabilistaNome: guardado.contadorNome, contabilistaCpf: guardado.contadorCpf, contabilistaCrc: guardado.contadorCrc };
+  const fonte = tem(cadastro) ? cadastro : tem(doGuardado) ? doGuardado : padrao;
+  const cpf = fonte?.contabilistaCpf?.replace(/\D/g, "") ?? "";
+  return { contadorNome: fonte?.contabilistaNome?.trim() ?? "", contadorCpf: /^\d{11}$/.test(cpf) ? cpf : "", contadorCrc: fonte?.contabilistaCrc?.trim() ?? "" };
+}
 /** Junta o cadastro da empresa com o perfil guardado no SPED. `faltando` diz o que completar no cadastro. */
-export function perfilDaEmpresa(cadastro: CadastroFiscal, guardado: z.infer<typeof perfilGuardadoSchema> = { obrigacoes: [] }) {
+export function perfilDaEmpresa(cadastro: CadastroFiscal, guardado: z.infer<typeof perfilGuardadoSchema> = { obrigacoes: [] }, contabilistaPadrao: ContabilistaDoCadastro | null = null) {
   const uf = cadastro.stateCode?.trim().toUpperCase() ?? "";
   const regime = cadastro.taxRegimeKind ? REGIME_DO_CADASTRO[cadastro.taxRegimeKind] ?? null : null;
   const faltando: string[] = [];
   if (!/^[A-Z]{2}$/.test(uf)) faltando.push("UF");
   if (!regime) faltando.push(cadastro.taxRegimeKind ? "regime compatível com o SPED (simples, presumido ou real)" : "regime tributário");
-  const ibge = cadastro.codMunicipioIbge?.replace(/\D/g, "") ?? "", cpf = cadastro.contabilistaCpf?.replace(/\D/g, "") ?? "";
+  const ibge = cadastro.codMunicipioIbge?.replace(/\D/g, "") ?? "";
   return {
     uf, regime, inscricaoEstadual: (cadastro.stateRegistration ?? "").slice(0, 30), obrigacoes: guardado.obrigacoes,
     codigoMunicipio: /^\d{7}$/.test(ibge) ? ibge : guardado.codigoMunicipio ?? "",
     indPerfil: so(cadastro.spedIndPerfil, ["A", "B", "C"] as const) ?? guardado.indPerfil ?? "",
     indAtiv: so(cadastro.spedIndAtividade, ["0", "1"] as const) ?? guardado.indAtiv ?? "",
-    contadorNome: cadastro.contabilistaNome?.trim() || guardado.contadorNome || "",
-    contadorCpf: /^\d{11}$/.test(cpf) ? cpf : guardado.contadorCpf ?? "",
-    contadorCrc: cadastro.contabilistaCrc?.trim() || guardado.contadorCrc || "",
+    ...contabilistaDoArquivo(cadastro, guardado, contabilistaPadrao),
     codCta: cadastro.spedContaContabilPadrao?.trim() || guardado.codCta || "",
     codInf: cadastro.spedCodObservacaoPadrao?.trim() || guardado.codInf || "",
     icmsCodReceita: guardado.icmsCodReceita ?? "", icmsDiaVencimento: guardado.icmsDiaVencimento ?? "",

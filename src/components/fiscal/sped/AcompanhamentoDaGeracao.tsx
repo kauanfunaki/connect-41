@@ -67,23 +67,24 @@ export function useGeracoes(inicial: Estado, consulta: { empresa: string; compet
   return { ...atual, erro };
 }
 
-const ONDE_NA_TELA: Record<GrupoDeFaltas["onde"], string> = { perfil: "No perfil fiscal", cadastro: "No cadastro da empresa", importacao: "Na importação" };
+const ONDE_NA_TELA: Record<GrupoDeFaltas["onde"], string> = { cadastro: "No cadastro da empresa", importacao: "Na importação" };
 
 /**
  * O que falta para o agente gerar o EFD ICMS/IPI, dito antes do pedido e com o
- * caminho para resolver: o perfil fiscal abre aqui mesmo; o cadastro da
- * empresa, na ficha dela.
+ * caminho para resolver: o cadastro da empresa, na ficha dela (etapas
+ * "Dados fiscais" e "SPED fiscal"). Sem contabilista, lembra que o padrão do
+ * escritório resolve todas as empresas de uma vez.
  */
-export function FaltasDoArquivo({ faltas, editarPerfil, hrefDaEmpresa }: { faltas: GrupoDeFaltas[]; editarPerfil: (() => void) | null; hrefDaEmpresa: string }) {
+export function FaltasDoArquivo({ faltas, hrefDaEmpresa }: { faltas: GrupoDeFaltas[]; hrefDaEmpresa: string }) {
   if (!faltas.length) return null;
+  const doCadastro = faltas.find((g) => g.onde === "cadastro");
+  const semContabilista = !!doCadastro?.itens.some((i) => i.endsWith("do contabilista"));
   return <Aviso tom="atencao">
     <div className="space-y-2">
       <p>Para gerar o EFD ICMS/IPI, complete antes:</p>
       <ul className="list-disc space-y-1 pl-5">{faltas.map((g) => <li key={g.onde}><span className="font-medium">{ONDE_NA_TELA[g.onde]}:</span> {g.itens.join(", ")}.</li>)}</ul>
-      <div className="flex flex-wrap gap-2 pt-1">
-        {editarPerfil && faltas.some((g) => g.onde === "perfil") && <Button size="xs" variant="secondary" onClick={editarPerfil}>Editar perfil fiscal</Button>}
-        {faltas.some((g) => g.onde === "cadastro") && <Button size="xs" variant="ghost" href={hrefDaEmpresa}>Abrir cadastro da empresa</Button>}
-      </div>
+      {semContabilista && <p className="text-helper">O contabilista também pode ficar como padrão do escritório, em Administração › Dados e e-mail de envio. Ele vale para todas as empresas sem contabilista próprio.</p>}
+      {doCadastro && <div className="pt-1"><Button size="xs" variant="secondary" href={hrefDaEmpresa}>Abrir cadastro da empresa</Button></div>}
     </div>
   </Aviso>;
 }

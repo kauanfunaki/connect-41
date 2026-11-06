@@ -8,6 +8,7 @@ import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
+import { lerContabilistaPadrao } from "@/lib/empresas/contabilistaPadraoDb";
 import { getTenantModuleStates } from "@/lib/modules";
 import { canViewSector } from "@/lib/auth/context";
 import { competenciaPadrao } from "@/lib/fiscal/motor/estabelecimentos";
@@ -55,13 +56,15 @@ export type TelaLocal = Awaited<ReturnType<typeof prepararTelaLocal>>;
 export async function carregarBase(tela: TelaLocal) {
   const c = tela.contexto!;
   const ids = tela.grupo.map(e => e.id), meses = mesesDoPeriodo(c.competencia);
+  // O contabilista do escritório vale para a empresa que não tem o seu (06/11/2026).
+  const contabilistaPadrao = await lerContabilistaPadrao(c.tenantId);
   const base = await getPrisma().$transaction(async tx => {
     const [root, vinculos, decisoesDb, apoiosDb, perfis, periodos, importacoes, revisoes, documentosDoAcervo] = await Promise.all([
       tx.spedFiscalRoot.findUnique({ where: { tenantId_raiz: { tenantId: c.tenantId, raiz: c.raiz } } }),
       tx.spedFiscalBook.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids }, competence: { in: meses } } }),
       tx.spedFiscalDecision.findMany({ where: { tenantId: c.tenantId, raiz: c.raiz }, orderBy: { updatedAt: "desc" } }),
       tx.spedFiscalSupport.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids }, competence: { in: meses } } }),
-      tx.spedFiscalProfile.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids } } }).then(async guardados => { const cadastros = await tx.company.findMany({ where: { id: { in: ids } }, select: { id: true, stateCode: true, stateRegistration: true, taxRegimeKind: true, codMunicipioIbge: true, spedIndPerfil: true, spedIndAtividade: true, contabilistaNome: true, contabilistaCpf: true, contabilistaCrc: true, spedContaContabilPadrao: true, spedCodObservacaoPadrao: true } }); return cadastros.map(e => { const g = perfilGuardadoSchema.safeParse(guardados.find(p => p.companyId === e.id)?.data ?? {}); return { companyId: e.id, ...perfilDaEmpresa(e, g.success ? g.data : undefined) }; }); }),
+      tx.spedFiscalProfile.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids } } }).then(async guardados => { const cadastros = await tx.company.findMany({ where: { id: { in: ids } }, select: { id: true, stateCode: true, stateRegistration: true, taxRegimeKind: true, codMunicipioIbge: true, spedIndPerfil: true, spedIndAtividade: true, contabilistaNome: true, contabilistaCpf: true, contabilistaCrc: true, spedContaContabilPadrao: true, spedCodObservacaoPadrao: true } }); return cadastros.map(e => { const g = perfilGuardadoSchema.safeParse(guardados.find(p => p.companyId === e.id)?.data ?? {}); return { companyId: e.id, ...perfilDaEmpresa(e, g.success ? g.data : undefined, contabilistaPadrao) }; }); }),
       tx.spedFiscalPeriod.findMany({ where: { tenantId: c.tenantId, companyId: { in: ids }, competence: { in: meses } } }),
       tx.spedFiscalImport.findMany({ where: { tenantId: c.tenantId, companyId: c.companyId }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, name: true, state: true, cursor: true, total: true, results: true } }),
       tx.spedFiscalRevision.findMany({ where: { tenantId: c.tenantId, companyId: c.companyId, competence: { in: meses } }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, revision: true, sha256: true, obligation: true, competence: true, remoteExecutionId: true, remotePackageId: true, createdAt: true } }),

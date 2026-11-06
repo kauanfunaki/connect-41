@@ -178,7 +178,7 @@ export const DICAS_SPED = {
   spedIndAtividade:
     "0 = industrial ou equiparado a industrial; 1 = outros (comércio, serviço, transporte). Sai do CNAE principal do cartão CNPJ e é sugerido sozinho ao digitar o CNPJ.",
   contabilistaNome:
-    "Contabilista que assina pela empresa. Vem preenchido com o padrão da configuração do escritório, se houver.",
+    "Contabilista que assina pela empresa. Vem preenchido com o padrão da configuração do escritório, se houver. Em branco, o arquivo usa esse padrão.",
   contabilistaCpf: "CPF do contabilista que assina pela empresa, só os números.",
   contabilistaCrc:
     "Registro do contabilista no CRC, como está na carteira: número, tipo e UF (ex.: 012345O1PR; \"O\" = originário).",
