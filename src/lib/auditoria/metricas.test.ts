@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contagemPorTipo, metricasDaAuditoria, opcoesDeArea, pessoasQueAgiram, quandoCurto } from "./metricas";
+import { contagemPorTipo, metricasDaAuditoria, opcoesDeArea, pessoasQueAgiram, quandoCurto, quantasPessoasAgiram } from "./metricas";
 
 const AGORA = new Date("2026-10-14T17:40:00.000Z"); // 14:40 de quarta em São Paulo
 
@@ -63,6 +63,45 @@ describe("pessoas que agiram", () => {
       { valor: "u1", rotulo: "Carla Mendes", total: 5, excluido: false, rotina: false },
       { valor: "nome:Rafael Souza", rotulo: "Rafael Souza", total: 1, excluido: true, rotina: false },
       { valor: "nome:Robô do Societário", rotulo: "Robô do Societário", total: 18, excluido: false, rotina: true },
+      { valor: "sistema", rotulo: "Sistema", total: 4, excluido: false, rotina: true },
     ]);
+  });
+
+  // As linhas de rotina de antes de 05/11/2026 (sem usuário e sem nome) apareciam
+  // como "Sistema" na lista, mas ficavam de fora do filtro (09/11/2026).
+  it("linhas antigas sem usuário e sem nome: uma opção 'Sistema', de rotina, com o total delas", () => {
+    const opcoes = pessoasQueAgiram(
+      [
+        { userId: null, nome: null, total: 7 },
+        { userId: "u2", nome: "Bruno", total: 2 },
+        { userId: null, nome: null, total: 3 },
+      ],
+      new Map([["u2", "Bruno"]])
+    );
+    expect(opcoes.find((p) => p.valor === "sistema")).toEqual({ valor: "sistema", rotulo: "Sistema", total: 10, excluido: false, rotina: true });
+    expect(opcoes).toHaveLength(2);
+  });
+
+  it("usuário com conta sem nome atual nem guardado continua 'Sem nome', não 'Sistema'", () => {
+    expect(pessoasQueAgiram([{ userId: "u3", nome: null, total: 1 }], new Map())).toEqual([
+      { valor: "u3", rotulo: "Sem nome", total: 1, excluido: false, rotina: false },
+    ]);
+  });
+
+  it("'Pessoas que agiram' conta só gente: rotinas e o 'Sistema' ficam de fora", () => {
+    const opcoes = pessoasQueAgiram(
+      [
+        { userId: "u1", nome: "Carla", total: 3 },
+        { userId: null, nome: "Rafael Souza", total: 1 },
+        { userId: null, nome: "Agendador de envios", total: 6 },
+        { userId: null, nome: null, total: 4 },
+      ],
+      new Map([["u1", "Carla"]])
+    );
+    expect(quantasPessoasAgiram(opcoes, null)).toBe(2);
+    expect(quantasPessoasAgiram(opcoes, "u1")).toBe(1);
+    expect(quantasPessoasAgiram(opcoes, "nome:Rafael Souza")).toBe(1);
+    expect(quantasPessoasAgiram(opcoes, "sistema")).toBe(0);
+    expect(quantasPessoasAgiram(opcoes, "nome:Agendador de envios")).toBe(0);
   });
 });
