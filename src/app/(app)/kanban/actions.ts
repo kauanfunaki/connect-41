@@ -22,8 +22,29 @@ import { normalizeAccentColor } from "@/lib/color";
 import { logAudit } from "@/lib/audit";
 import { AVISO_DO_LIMITE, PROFUNDIDADE_MAXIMA, aceitaSubatividade, montarArvore, porOrdem, reposicionar, type NoDaArvore } from "@/lib/kanban/subatividades";
 import { apagarAtividadeComAnexos, subarvoreDoItem } from "@/lib/kanban/exclusaoDeAtividade";
+import { conferirMovimentoDoCartao, moverCartaoDaSolicitacao } from "@/lib/solicitacoes/cartaoServidor";
+import { concluirSolicitacao } from "@/app/(app)/solicitacoes/actions";
 
 export type PipelineState = { error: string } | null;
+
+// ─── O cartão de uma solicitação do cliente (09/11/2026) ─────────────────────
+// A solicitação manda na coluna do cartão (ver src/lib/solicitacoes/cartao.ts).
+// Mover o cartão à mão passa por `conferirMovimentoDoCartao` antes: pôr na
+// concluída conclui a solicitação, e tirar da concluída a encerrada é recusado.
+
+/**
+ * O cartão de uma solicitação chegou à coluna concluída: conclui a solicitação,
+ * pelo `concluirSolicitacao` dela — o mesmo do botão, com o aviso ao cliente e
+ * a auditoria. Se ela recusar (mudou nesse meio-tempo), a solicitação recoloca
+ * o cartão na coluna do status em que está, e a recusa volta para a tela.
+ */
+async function concluirASolicitacaoDoCartao(tenantId: string, userId: string, serviceRequestId: string): Promise<{ error: string } | void> {
+  const r = await concluirSolicitacao(serviceRequestId);
+  if ("error" in r) {
+    await moverCartaoDaSolicitacao(tenantId, serviceRequestId, userId);
+    return { error: r.error };
+  }
+}
 
 // ─── A árvore de subatividades (06/11/2026) ─────────────────────────────────
 // Ver `src/lib/kanban/subatividades.ts`: a regra e o limite moram lá.
@@ -394,6 +415,11 @@ export async function moverItem(
       prisma.pipelineStage.findUnique({ where: { id: newStageId } }),
     ]);
 
+    // Cartão de solicitação: a solicitação decide se ele pode ir (09/11/2026).
+    const daSolicitacao =
+      item.serviceRequestId && toStage ? await conferirMovimentoDoCartao(ctx, item.serviceRequestId, toStage.type) : null;
+    if (daSolicitacao && !daSolicitacao.ok) return { error: daSolicitacao.erro };
+
     await prisma.pipelineItem.update({
       where: { id: itemId },
       data: { stageId: newStageId },
@@ -413,6 +439,10 @@ export async function moverItem(
     const base = boardPath(pipeline);
     revalidatePath(base);
     revalidatePath(`${base}/itens/${itemId}`);
+
+    if (daSolicitacao?.ok && daSolicitacao.concluir && item.serviceRequestId) {
+      return await concluirASolicitacaoDoCartao(tenantId, userId, item.serviceRequestId);
+    }
   } catch (err) {
     console.error("[moverItem]", err);
     return { error: "Não foi possível mover a tarefa. Tente de novo." };
@@ -1386,8 +1416,11 @@ export async function reordenarChecklistItem(pipelineItemId: string, checklistIt
  * subatividades abertas de todos os níveis abaixo dela — a tela pergunta
  * antes, quando há alguma aberta, e vem marcado. Sem, o pai é concluído e as
  * filhas ficam como estão. Cada uma ganha o "concluída" no próprio histórico.
+ *
+ * Devolve `{ error }` quando o cartão é de uma solicitação que não pode ser
+ * concluída por quem pede (09/11/2026) — a tela avisa em vez de não fazer nada.
  */
-export async function concluirTarefa(pipelineId: string, itemId: string, comSubatividades = false): Promise<void> {
+export async function concluirTarefa(pipelineId: string, itemId: string, comSubatividades = false): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
   if (!tenantId || !userId) return;
@@ -1400,12 +1433,19 @@ export async function concluirTarefa(pipelineId: string, itemId: string, comSuba
   const pipeline = await prisma.pipeline.findFirst({ where: { id: pipelineId, tenantId } });
   if (!pipeline || !(await poderesNaLista(ctx, pipeline)).editar) return;
 
+  let concluirASolicitacao = false;
   try {
     const terminalStage = await prisma.pipelineStage.findFirst({
       where: { pipelineId, isTerminal: true },
       orderBy: { order: "desc" },
     });
     if (!terminalStage || item.stageId === terminalStage.id) return;
+
+    if (item.serviceRequestId) {
+      const conferido = await conferirMovimentoDoCartao(ctx, item.serviceRequestId, terminalStage.type);
+      if (!conferido.ok) return { error: conferido.erro };
+      concluirASolicitacao = conferido.concluir;
+    }
 
     const terminais = new Set(
       (await prisma.pipelineStage.findMany({ where: { pipelineId, isTerminal: true }, select: { id: true } })).map((s) => s.id)
@@ -1445,9 +1485,14 @@ export async function concluirTarefa(pipelineId: string, itemId: string, comSuba
   const base = boardPath(pipeline);
   revalidatePath(base);
   revalidatePath(`${base}/itens/${itemId}`);
+
+  if (concluirASolicitacao && item.serviceRequestId) {
+    return concluirASolicitacaoDoCartao(tenantId, userId, item.serviceRequestId);
+  }
 }
 
-export async function reabrirTarefa(pipelineId: string, itemId: string): Promise<void> {
+/** Devolve `{ error }` quando o cartão é de uma solicitação encerrada (09/11/2026): ele fica na concluída. */
+export async function reabrirTarefa(pipelineId: string, itemId: string): Promise<{ error: string } | void> {
   const ctx = await getAuthContext();
   const { tenantId, userId } = ctx;
   if (!tenantId || !userId) return;
@@ -1466,6 +1511,11 @@ export async function reabrirTarefa(pipelineId: string, itemId: string): Promise
     });
     const targetStage = firstStage ?? (await prisma.pipelineStage.findFirst({ where: { pipelineId }, orderBy: { order: "asc" } }));
     if (!targetStage || item.stageId === targetStage.id) return;
+
+    if (item.serviceRequestId) {
+      const conferido = await conferirMovimentoDoCartao(ctx, item.serviceRequestId, targetStage.type);
+      if (!conferido.ok) return { error: conferido.erro };
+    }
 
     await prisma.pipelineItem.update({ where: { id: itemId }, data: { stageId: targetStage.id } });
     await prisma.activity.create({

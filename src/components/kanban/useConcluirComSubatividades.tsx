@@ -9,7 +9,8 @@ type Pedido = {
   nome: string;
   /** As subatividades abertas abaixo, em todos os níveis. */
   abertas: number;
-  concluir: (comSubatividades: boolean) => Promise<void>;
+  /** `{ error }` quando o servidor recusa — o cartão de uma solicitação que a pessoa não pode concluir (09/11/2026). */
+  concluir: (comSubatividades: boolean) => Promise<{ error: string } | void>;
 };
 
 /**
@@ -34,7 +35,8 @@ export function useConcluirComSubatividades() {
     if (p.abertas === 0) {
       startTransition(async () => {
         try {
-          await p.concluir(false);
+          const r = await p.concluir(false);
+          if (r && "error" in r) toast.error(r.error);
         } catch {
           toast.error("Não deu para falar com o servidor. A atividade não foi concluída.");
         }
@@ -51,8 +53,9 @@ export function useConcluirComSubatividades() {
     const p = pedido;
     startTransition(async () => {
       try {
-        await p.concluir(junto);
-        setPedido(null);
+        const r = await p.concluir(junto);
+        if (r && "error" in r) setErro(r.error);
+        else setPedido(null);
       } catch {
         setErro("Não deu para falar com o servidor. Nada foi concluído.");
       }

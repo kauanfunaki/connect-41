@@ -57,8 +57,9 @@ type Props = {
   moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
   /** Soltar uma linha em cima de outra do mesmo nível: ela vai para o lugar da outra. */
   repositionAction: (itemId: string, alvoId: string) => Promise<{ error: string } | void>;
-  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<void>;
-  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  /** `{ error }` quando o servidor recusa — o cartão de uma solicitação (09/11/2026). */
+  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<{ error: string } | void>;
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<{ error: string } | void>;
   /** O "+ Adicionar subatividade" de cada nível. Ausente = sem criar (quem só vê ou comenta). */
   createSubtaskAction?: (parentItemId: string, title: string) => Promise<{ error: string } | void>;
   /** Exclui a tarefa (ou subtarefa — subtarefa cai em cascata pelo parentItemId).
@@ -73,7 +74,8 @@ type Comum = {
   canAct: boolean;
   stages: StageOption[];
   priorityAction: Props["priorityAction"];
-  reabrirAction: Props["reabrirAction"];
+  /** Reabre e avisa quando o servidor recusa (o `reabrirAction` com o aviso já embutido). */
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
   /** Conclui pela pergunta das subatividades abertas (`useConcluirComSubatividades`). */
   concluir: (item: TaskRow | SubtaskRow) => void;
   createSubtaskAction?: Props["createSubtaskAction"];
@@ -852,7 +854,15 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
     canAct,
     stages,
     priorityAction,
-    reabrirAction,
+    // O cartão de uma solicitação encerrada não reabre (09/11/2026): a recusa vira aviso.
+    reabrirAction: async (pipeline, itemId) => {
+      try {
+        const r = await reabrirAction(pipeline, itemId);
+        if (r && "error" in r) toast.error(r.error);
+      } catch {
+        toast.error("Não deu para falar com o servidor. A atividade não foi reaberta.");
+      }
+    },
     createSubtaskAction,
     deleteAction,
     concluir: (item) =>

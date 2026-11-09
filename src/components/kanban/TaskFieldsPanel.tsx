@@ -14,7 +14,7 @@ import { TagToggleList } from "@/components/kanban/TagToggleList";
 import { AssigneeToggleList } from "@/components/kanban/AssigneeToggleList";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
-import { Selo, type TomDoSelo } from "@/components/ui/Selo";
+import { Selo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import type { StageDotType } from "@/components/kanban/StageDot";
 import { useConcluirComSubatividades } from "@/components/kanban/useConcluirComSubatividades";
@@ -23,6 +23,7 @@ import {
   OPCOES_DE_PRIORIDADE,
   ROTULO_DA_PRIORIDADE,
   ROTULO_DO_CAMPO_EXTRA,
+  TOM_DA_ETAPA,
   VAZIO,
   datasNoCampo,
   extrasVisiveis,
@@ -32,17 +33,6 @@ import {
 
 type StageOption = { id: string; name: string; type?: StageDotType };
 
-/**
- * A situação da tarefa no `Selo`, pelo tipo da etapa (15/10/2026): era um
- * botão vermelho em caixa alta em qualquer etapa, até em "Concluído" — e
- * vermelho é só para o que está em perigo.
- */
-const TOM_DA_ETAPA: Record<StageDotType, TomDoSelo> = {
-  NOT_STARTED: "neutro",
-  IN_PROGRESS: "marca",
-  PENDING: "atencao",
-  DONE: "sucesso",
-};
 type TagOption = { id: string; name: string; color: string };
 type UserOption = { id: string; name: string };
 
@@ -77,7 +67,7 @@ type Props = {
 
   /** "Marcar como concluída" ao lado da situação (05/11/2026); concluída, o aviso verde acima tem o Reabrir. */
   isCompleted?: boolean;
-  concluirAction?: (comSubatividades?: boolean) => Promise<void>;
+  concluirAction?: (comSubatividades?: boolean) => Promise<{ error: string } | void>;
   /** As subatividades abertas abaixo, em todos os níveis: com alguma, concluir pergunta antes (06/11/2026). */
   subatividadesAbertas?: number;
   /** O nome na pergunta de concluir. */

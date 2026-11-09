@@ -4,12 +4,14 @@ import { useTransition } from "react";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
+import { useToast } from "@/components/ui/Toast";
 
 type Props = {
   canAct: boolean;
   isCompleted: boolean;
   completedByLabel: string | null; // ex: "Concluída em 22/07 por Ana"
-  reabrirAction: () => Promise<void>;
+  /** `{ error }` quando não reabre — o cartão de uma solicitação encerrada (09/11/2026). */
+  reabrirAction: () => Promise<{ error: string } | void>;
 };
 
 // Botão explícito de conclusão/reabertura — faz o mesmo que arrastar o card
@@ -17,6 +19,18 @@ type Props = {
 // dedicado (COMPLETED/REOPENED), em vez de depender do Kanban.
 export function CompletionBanner({ canAct, isCompleted, completedByLabel, reabrirAction }: Props) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
+
+  function reabrir() {
+    startTransition(async () => {
+      try {
+        const r = await reabrirAction();
+        if (r && "error" in r) toast.error(r.error);
+      } catch {
+        toast.error("Não deu para falar com o servidor. A atividade não foi reaberta.");
+      }
+    });
+  }
 
   if (isCompleted) {
     return (
@@ -30,7 +44,7 @@ export function CompletionBanner({ canAct, isCompleted, completedByLabel, reabri
             variant="secondary"
             size="xs"
             disabled={isPending}
-            onClick={() => startTransition(() => reabrirAction())}
+            onClick={reabrir}
           >
             <RotateCcw size={12} /> Reabrir
           </Button>
