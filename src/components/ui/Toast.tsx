@@ -1,13 +1,30 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { CircleAlert, CircleCheck, Info } from "lucide-react";
+import { ArrowRight, CircleAlert, CircleCheck, Info, X } from "lucide-react";
+import { duracaoDoAviso, entrarNaFila, type TipoDoAviso } from "./filaDeAvisos";
 
-type ToastKind = "success" | "error" | "info";
-type Toast = { id: number; kind: ToastKind; message: string };
+type ToastKind = TipoDoAviso;
+
+/**
+ * O aviso que leva a algum lugar (09/11/2026): a notificação nova que chega com
+ * a pessoa em outra tela. Tudo opcional — `show(mensagem, tipo)` segue igual.
+ */
+export type OpcoesDoAviso = {
+  /** Linha em negrito acima da mensagem (o tipo da notificação, por exemplo). */
+  titulo?: string;
+  /** O clique no aviso faz isto e fecha; sem ele, o clique só fecha. */
+  aoClicar?: () => void;
+  /** O que o clique faz, no fim do aviso: "Abrir". */
+  rotuloDoClique?: string;
+  /** Avisos do mesmo grupo ficam no máximo 3 na tela; o mais antigo sai. */
+  grupo?: string;
+};
+
+type Toast = { id: number; kind: ToastKind; message: string } & OpcoesDoAviso;
 
 type ToastContextValue = {
-  show: (message: string, kind?: ToastKind) => void;
+  show: (message: string, kind?: ToastKind, opcoes?: OpcoesDoAviso) => void;
   success: (message: string) => void;
   error: (message: string) => void;
 };
@@ -24,7 +41,11 @@ export function useToast(): ToastContextValue {
 let nextId = 1;
 
 /**
- * Os avisos que somem sozinhos (5 s; 10 s o de erro; ou no clique).
+ * Os avisos que somem sozinhos (5 s; 10 s o de erro; 9 s o clicável; ou no clique).
+ *
+ * Desde 09/11/2026 o aviso pode levar a algum lugar (`aoClicar`, com o X à
+ * parte para só fechar) e entrar num grupo de no máximo 3 — é o caminho das
+ * notificações novas do sino (ver `filaDeAvisos.ts`).
  *
  * Refeitos em 07/10/2026:
  * - **Opacos.** O fundo era só a tinta de 10% do tom, e o conteúdo de baixo
@@ -49,9 +70,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   // quem está lendo um erro comprido não o vê sumir no meio da frase.
   const [pausado, setPausado] = useState(false);
 
-  const show = useCallback((message: string, kind: ToastKind = "info") => {
+  const show = useCallback((message: string, kind: ToastKind = "info", opcoes?: OpcoesDoAviso) => {
     const id = nextId++;
-    setToasts((prev) => [...prev, { id, kind, message }]);
+    setToasts((prev) => entrarNaFila(prev, { ...opcoes, id, kind, message }));
   }, []);
 
   const value: ToastContextValue = {
@@ -88,12 +109,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Quanto cada aviso fica: o de erro o dobro — é o que a pessoa precisa ler e agir. */
-const DURACAO: Record<ToastKind, number> = { success: 5000, info: 5000, error: 10000 };
-
 function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: boolean; onFechar: (id: number) => void }) {
   // O tempo que falta sobrevive à pausa: voltar do hover não recomeça do zero.
-  const restante = useRef(DURACAO[aviso.kind]);
+  // O clicável fica mais (`duracaoDoAviso`): dá tempo de ler e decidir abrir.
+  const restante = useRef(duracaoDoAviso(aviso.kind, !!aviso.aoClicar));
   useEffect(() => {
     if (pausado) return;
     const inicio = Date.now();
@@ -104,6 +123,53 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
     };
   }, [pausado, aviso.id, onFechar]);
 
+  const icone = (
+    <span aria-hidden className={`flex-shrink-0 mt-px ${COR_DO_ICONE[aviso.kind]}`}>
+      {ICONE[aviso.kind]}
+    </span>
+  );
+  const texto = (
+    <span className="min-w-0">
+      {aviso.titulo && <span className="block font-semibold">{aviso.titulo}</span>}
+      <span className={aviso.titulo ? "block text-fg-secondary line-clamp-3" : undefined}>{aviso.message}</span>
+    </span>
+  );
+
+  // O clicável (09/11/2026): o corpo leva à tela e um X à parte só fecha — um
+  // botão dentro do outro não existe em HTML, e fechar não pode abrir a tela.
+  if (aviso.aoClicar) {
+    const aoClicar = aviso.aoClicar;
+    return (
+      <div className="c41-surgir w-full flex items-start rounded-md border border-border-strong bg-surface-elevated text-ui text-fg shadow-lg">
+        <button
+          type="button"
+          onClick={() => {
+            onFechar(aviso.id);
+            aoClicar();
+          }}
+          className="flex-1 min-w-0 flex items-start gap-2.5 text-left rounded-l-md px-3.5 py-2.5 cursor-pointer transition-colors hover:bg-surface-hover"
+        >
+          {icone}
+          <span className="min-w-0">
+            {texto}
+            <span className="mt-1 inline-flex items-center gap-1 text-helper font-medium text-brand">
+              {aviso.rotuloDoClique ?? "Abrir"} <ArrowRight size={12} aria-hidden />
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onFechar(aviso.id)}
+          aria-label="Fechar aviso"
+          title="Fechar"
+          className="flex-shrink-0 m-1.5 inline-flex size-7 items-center justify-center rounded-md text-fg-muted cursor-pointer transition-colors hover:bg-surface-hover hover:text-fg"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -111,10 +177,8 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
       title="Fechar"
       className="c41-surgir w-full flex items-start gap-2.5 text-left rounded-md border border-border-strong bg-surface-elevated px-3.5 py-2.5 text-ui text-fg shadow-lg"
     >
-      <span aria-hidden className={`flex-shrink-0 mt-px ${COR_DO_ICONE[aviso.kind]}`}>
-        {ICONE[aviso.kind]}
-      </span>
-      <span className="min-w-0">{aviso.message}</span>
+      {icone}
+      {texto}
     </button>
   );
 }

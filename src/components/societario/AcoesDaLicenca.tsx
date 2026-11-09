@@ -8,6 +8,7 @@ import { ItemDoMenu } from "@/components/ui/Popover";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { imprimirAlvaraPeloRobo, revogarLicenca, reativarLicenca } from "@/app/(app)/licencas/actions";
+import { EVENTO_DO_PEDIDO_AO_ROBO } from "@/lib/robo/chamadaNaTela";
 import { LicencaModal, type LicencaParaEditar, type OrgaoDaLicenca } from "./LicencaForm";
 
 type Props = {
@@ -33,6 +34,9 @@ export function AcoesDaLicenca({ licenca, orgaos }: Props) {
         const r = await imprimirAlvaraPeloRobo(licenca.id);
         if ("error" in r) throw new Error(r.error);
         toast.success(r.texto);
+        // A janela do captcha (no layout) passa a conferir de perto na hora:
+        // se o robô parar no "Não sou um robô", ela abre aqui mesmo.
+        window.dispatchEvent(new Event(EVENTO_DO_PEDIDO_AO_ROBO));
       }
     );
   }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const notification = { findMany: vi.fn(), groupBy: vi.fn(), count: vi.fn() };
+const notification = { findMany: vi.fn(), findFirst: vi.fn(), groupBy: vi.fn(), count: vi.fn() };
 const vazio = { findMany: vi.fn().mockResolvedValue([]) };
 const user = { findMany: vi.fn() };
 const notificationHiddenType = { findMany: vi.fn() };
@@ -19,8 +19,19 @@ vi.mock("@/lib/prisma", () => ({
   }),
 }));
 
-const { consultarNotificacoes, contarNaoLidasVisiveis, entidadeDoChip, lerCursor, montarCursor, naoLidasPorAba, ondeDasNotificacoes, tiposOcultos } =
-  await import("./consultas");
+const {
+  consultarNotificacoes,
+  contarNaoLidasVisiveis,
+  entidadeDoChip,
+  lerCursor,
+  marcoDasNotificacoes,
+  montarCursor,
+  naoLidasPorAba,
+  notificacoesNovas,
+  ondeDasNotificacoes,
+  ondeDasNovas,
+  tiposOcultos,
+} = await import("./consultas");
 
 const DONO = { tenantId: "t1", userId: "u1" };
 
@@ -134,5 +145,50 @@ describe("consultas das notificações", () => {
     expect(notification.groupBy.mock.calls[0][0].where).toEqual({ tenantId: "t1", userId: "u1", read: false, archivedAt: null });
     // Tipo oculto não conta em aba nenhuma.
     expect(await naoLidasPorAba(DONO, ["NEW_APPLICATION"])).toEqual({ todas: 3, para_mim: 2, clientes: 0, alertas: 1 });
+  });
+});
+
+describe("o aviso no canto (09/11/2026)", () => {
+  const DESDE = new Date("2026-11-09T14:00:00Z");
+
+  it("só as não lidas da pessoa, depois do marco, sem arquivadas e sem os tipos que ela ocultou", () => {
+    expect(ondeDasNovas(DONO, DESDE, ["ROBO_CAPTCHA"])).toEqual({
+      tenantId: "t1",
+      userId: "u1",
+      read: false,
+      archivedAt: null,
+      createdAt: { gt: DESDE },
+      type: { notIn: ["ROBO_CAPTCHA"] },
+    });
+    expect(ondeDasNovas(DONO, DESDE)).not.toHaveProperty("type");
+  });
+
+  it("as novas vêm prontas para o aviso: título do tipo e o mesmo link do sino", async () => {
+    notification.findMany.mockResolvedValue([
+      linha("n1", { type: "ROBO_CAPTCHA", entityId: "t9", message: "O robô parou no captcha.", createdAt: new Date("2026-11-09T14:01:00Z") }),
+      linha("n2", { type: "TIPO_SEM_LINK" }),
+    ]);
+    const r = await notificacoesNovas(DONO, DESDE, ["COMMENT"], 3);
+    expect(r[0]).toEqual({
+      id: "n1",
+      tipo: "ROBO_CAPTCHA",
+      titulo: "O robô parou no captcha",
+      mensagem: "O robô parou no captcha.",
+      href: "/robo/assistir/t9",
+      lida: false,
+      criadaEm: "2026-11-09T14:01:00.000Z",
+    });
+    expect(r[1].href).toBeNull();
+    const args = notification.findMany.mock.calls[0][0];
+    expect(args.take).toBe(3);
+    expect(args.where).toEqual(ondeDasNovas(DONO, DESDE, ["COMMENT"]));
+    expect(args.orderBy).toEqual([{ createdAt: "desc" }, { id: "desc" }]);
+  });
+
+  it("o marco é a notificação mais nova da pessoa, lida ou não; sem nenhuma, nulo", async () => {
+    notification.findFirst.mockResolvedValueOnce({ createdAt: DESDE }).mockResolvedValueOnce(null);
+    expect(await marcoDasNotificacoes(DONO)).toEqual(DESDE);
+    expect(notification.findFirst.mock.calls[0][0]).toMatchObject({ where: { tenantId: "t1", userId: "u1" }, orderBy: { createdAt: "desc" } });
+    expect(await marcoDasNotificacoes(DONO)).toBeNull();
   });
 });

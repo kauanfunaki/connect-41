@@ -24,6 +24,7 @@ import {
   type MotivoDaAssistencia,
 } from "./assistencia";
 import { enfileirarClique, esquecerSessao, guardarQuadro, retirarCliques, ultimoQuadro } from "./assistenciaAoVivo";
+import { chamaAPessoa, chaveDaSessao, type ChamadasDaPessoa } from "./chamadaNaTela";
 
 const MODULO = "societario_robo";
 export const TIPO_DO_AVISO = "ROBO_CAPTCHA";
@@ -187,6 +188,62 @@ export async function lerAssistencia(ctx: AuthContext, id: string, desde = 0, ag
     ate: s?.deadlineAt.toISOString() ?? null,
     cliques: s?.clicks ?? 0,
     quadro: mostrarQuadro ? { dataUrl: `data:${q.tipo};base64,${Buffer.from(q.bytes).toString("base64")}`, em: q.em.getTime() } : null,
+  };
+}
+
+/** Só as abertas mais recentes: são minutos de vida, e o escritório não tem dezenas ao mesmo tempo. */
+const SESSOES_POR_CONFERENCIA = 20;
+
+/**
+ * As sessões abertas que chamam a pessoa agora, e se ela tem tarefa na fila do
+ * robô (09/11/2026) — o que a janela do captcha do layout precisa para abrir
+ * sozinha e escolher o ritmo da conferência. Quem chama passou antes por
+ * `podeAssistir`, o mesmo portão da tela `/robo/assistir/[id]`.
+ */
+export async function chamadasDaPessoa(ctx: AuthContext, agora = new Date()): Promise<ChamadasDaPessoa> {
+  if (!ctx.tenantId || !ctx.userId) return { naFila: false, sessoes: [] };
+  const db = getPrisma();
+  const tipos = [...TIPOS_COM_ASSISTENCIA];
+  const [naFila, abertas, setores] = await Promise.all([
+    db.robotTask.count({ where: { tenantId: ctx.tenantId, requestedById: ctx.userId, status: { in: ["PENDENTE", "EM_EXECUCAO"] }, kind: { in: tipos } } }),
+    db.robotAssist.findMany({
+      where: { tenantId: ctx.tenantId, endedAt: null, deadlineAt: { gt: agora } },
+      orderBy: { startedAt: "asc" },
+      take: SESSOES_POR_CONFERENCIA,
+      select: { id: true, taskId: true, attempt: true, startedAt: true, deadlineAt: true, escalatedAt: true },
+    }),
+    setoresDoRobo(ctx.tenantId),
+  ]);
+  if (abertas.length === 0) return { naFila: naFila > 0, sessoes: [] };
+
+  // A sessão vale só na tentativa em que a tarefa está e com ela ainda na máquina:
+  // a de uma tentativa que caiu no meio fica aberta até o prazo, sem ninguém do outro lado.
+  const tarefas = await db.robotTask.findMany({
+    where: { tenantId: ctx.tenantId, id: { in: abertas.map((s) => s.taskId) }, status: "EM_EXECUCAO", kind: { in: tipos } },
+    select: { id: true, kind: true, companyId: true, requestedById: true, attempts: true },
+  });
+  const tarefaPorId = new Map(tarefas.map((t) => [t.id, t]));
+  const pessoa = { userId: ctx.userId, doSetor: ctx.sectors.some((s) => setores.includes(s)) };
+  const minhas = abertas.flatMap((s) => {
+    const t = tarefaPorId.get(s.taskId);
+    return t && t.attempts === s.attempt && chamaAPessoa(s, t, pessoa) ? [{ s, t }] : [];
+  });
+  if (minhas.length === 0) return { naFila: naFila > 0, sessoes: [] };
+
+  const idsDasEmpresas = [...new Set(minhas.map(({ t }) => t.companyId).filter((id): id is string => !!id))];
+  const empresas = idsDasEmpresas.length
+    ? await db.company.findMany({ where: { tenantId: ctx.tenantId, id: { in: idsDasEmpresas } }, select: { id: true, name: true, displayName: true } })
+    : [];
+  const nomeDaEmpresa = new Map(empresas.map((e) => [e.id, nomeExibicao(e)]));
+  return {
+    naFila: naFila > 0,
+    sessoes: minhas.map(({ s, t }) => ({
+      chave: chaveDaSessao(s),
+      tarefaId: t.id,
+      oQue: ehTipoDeTarefa(t.kind) ? TIPOS_DE_TAREFA[t.kind].rotulo : t.kind,
+      empresa: t.companyId ? (nomeDaEmpresa.get(t.companyId) ?? null) : null,
+      ate: s.deadlineAt.toISOString(),
+    })),
   };
 }
 
