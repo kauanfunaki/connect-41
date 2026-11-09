@@ -96,3 +96,19 @@ export function avisoDoFim(fim: FimDaChamada): { texto: string; tom: "success" |
   if (fim === "expirada") return { texto: "O prazo do captcha acabou. A tarefa seguiu pelo caminho do PDF.", tom: "info" };
   return { texto: "O robô encerrou a espera do captcha.", tom: "info" };
 }
+
+// ─── a tela do robô (/robo) ─────────────────────────────────────────────────
+
+/** Com tarefa na fila, em execução ou pedindo ajuda: a tela se atualiza em poucos segundos. */
+export const TELA_DO_ROBO_RAPIDA_MS = 5_000;
+/** Sem nada andando: devagar, só para uma tarefa nova pedida em outra tela aparecer. */
+export const TELA_DO_ROBO_LENTA_MS = 60_000;
+
+export function intervaloDaTelaDoRobo(s: { naFila: number; pedindoAjuda: number }): number {
+  return s.naFila > 0 || s.pedindoAjuda > 0 ? TELA_DO_ROBO_RAPIDA_MS : TELA_DO_ROBO_LENTA_MS;
+}
+
+/** Hora de buscar de novo: aba à vista e passado o intervalo desde a última vez. */
+export function horaDeAtualizar(ultimaEm: number, agora: number, visivel: boolean, intervaloMs: number): boolean {
+  return visivel && agora - ultimaEm >= intervaloMs;
+}

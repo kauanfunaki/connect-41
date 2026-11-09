@@ -9,6 +9,7 @@ import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CancelarTarefaDoRobo } from "@/components/societario/CancelarTarefaDoRobo";
+import { AtualizacaoDaTelaDoRobo } from "@/components/robo/AtualizacaoDaTelaDoRobo";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
@@ -87,6 +88,8 @@ export default async function RoboDoSocietarioPage() {
 
   return (
     <PageContainer>
+      {/* Ao vivo (09/11/2026): a tela se busca de novo sozinha, e o botão de resolver o captcha aparece sem F5. */}
+      <AtualizacaoDaTelaDoRobo naFila={naFila} pedindoAjuda={pedindoAjuda.size} />
       <PageHeader
         title="Robô do Societário"
         subtitle="O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje ele imprime o alvará de Curitiba (pedido no ⋯ da licença), lê a situação da inscrição estadual no PR e acompanha os protocolos do SIMA."

@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   CONFERENCIA_LENTA_MS,
   CONFERENCIA_RAPIDA_MS,
+  TELA_DO_ROBO_LENTA_MS,
+  TELA_DO_ROBO_RAPIDA_MS,
   avisoDoFim,
   chamaAPessoa,
   chaveDaSessao,
   ehFimDaChamada,
+  horaDeAtualizar,
   intervaloDaConferencia,
+  intervaloDaTelaDoRobo,
   marcasQueValem,
   naTelaDaTarefa,
   sessaoParaAbrir,
@@ -90,5 +94,19 @@ describe("o fim da sessão", () => {
     expect(avisoDoFim("resolvida")).toEqual({ texto: "Captcha resolvido. O robô seguiu sozinho.", tom: "success" });
     expect(avisoDoFim("expirada").texto).toContain("caminho do PDF");
     expect(avisoDoFim("encerrada").tom).toBe("info");
+  });
+});
+
+describe("a tela do robô ao vivo", () => {
+  it("rápida com tarefa na fila, em execução ou pedindo ajuda; devagar no resto", () => {
+    expect(intervaloDaTelaDoRobo({ naFila: 1, pedindoAjuda: 0 })).toBe(TELA_DO_ROBO_RAPIDA_MS);
+    expect(intervaloDaTelaDoRobo({ naFila: 0, pedindoAjuda: 1 })).toBe(TELA_DO_ROBO_RAPIDA_MS);
+    expect(intervaloDaTelaDoRobo({ naFila: 0, pedindoAjuda: 0 })).toBe(TELA_DO_ROBO_LENTA_MS);
+    expect(TELA_DO_ROBO_RAPIDA_MS).toBeLessThan(TELA_DO_ROBO_LENTA_MS);
+  });
+  it("só atualiza com a aba à vista e passado o intervalo", () => {
+    expect(horaDeAtualizar(0, 5_000, true, 5_000)).toBe(true);
+    expect(horaDeAtualizar(0, 4_999, true, 5_000)).toBe(false);
+    expect(horaDeAtualizar(0, 60_000, false, 5_000)).toBe(false);
   });
 });
