@@ -5,6 +5,7 @@
 
 import { getPrisma } from "@/lib/prisma";
 import type { Decisao } from "./observador";
+import { sincronizarProcesso } from "./conclusaoServidor";
 
 export type ProtocoloParaGravar = { id: string; tenantId: string; stepId: string | null };
 
@@ -26,8 +27,8 @@ export async function aplicarDecisaoDoProtocolo(
   }
 
   if (decisao.tipo === "deferir") {
-    await prisma.$transaction(async (tx) => {
-      await tx.processProtocol.update({
+    const processId = await prisma.$transaction(async (tx) => {
+      const protocolo = await tx.processProtocol.update({
         where: { id: p.id },
         data: {
           outcome: "DEFERIDO",
@@ -38,6 +39,7 @@ export async function aplicarDecisaoDoProtocolo(
           lastCheckedAt: new Date(),
           checkError: null,
         },
+        select: { processId: true },
       });
       if (p.stepId) {
         await tx.processStep.update({
@@ -45,14 +47,16 @@ export async function aplicarDecisaoDoProtocolo(
           data: { status: "CONCLUIDA", doneAt: new Date(), actor: "ROBO" },
         });
       }
+      return protocolo.processId;
     });
+    await sincronizar(processId);
     return "deferido";
   }
 
   // Exigência: fecha o protocolo e devolve a etapa para trabalho humano,
   // exatamente como a ação da tela faz.
-  await prisma.$transaction(async (tx) => {
-    await tx.processProtocol.update({
+  const processId = await prisma.$transaction(async (tx) => {
+    const protocolo = await tx.processProtocol.update({
       where: { id: p.id },
       data: {
         outcome: "EXIGENCIA",
@@ -61,6 +65,7 @@ export async function aplicarDecisaoDoProtocolo(
         lastCheckedAt: new Date(),
         checkError: null,
       },
+      select: { processId: true },
     });
     await tx.processRequirement.create({
       data: { tenantId: p.tenantId, protocolId: p.id, description: decisao.descricao },
@@ -71,8 +76,25 @@ export async function aplicarDecisaoDoProtocolo(
         data: { status: "PENDENTE", doneAt: null },
       });
     }
+    return protocolo.processId;
   });
+  await sincronizar(processId);
   return "exigencia";
+}
+
+/**
+ * O mesmo passo final das actions da tela (09/11/2026): conclui ou reabre o
+ * processo e solta o envio ao cliente quando o deferimento era o que faltava.
+ * Até aqui o observador mudava a etapa e não recalculava nada. Falhar aqui não
+ * desfaz o desfecho já gravado do protocolo — fica no log, e a próxima mudança
+ * de etapa sincroniza de novo.
+ */
+async function sincronizar(processId: string) {
+  try {
+    await sincronizarProcesso(processId);
+  } catch (err) {
+    console.error("[observador] sincronizar processo", processId, err);
+  }
 }
 
 /** A verificação deste protocolo falhou: anota, sem mexer no desfecho. */

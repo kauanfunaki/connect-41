@@ -5,7 +5,7 @@
 
 import { nomeExibicao } from "@/lib/companyName";
 import { usuariosDoPortalDaEmpresa } from "@/lib/financeiro/pendencias/avisos";
-import { sendNovidadeNoProcessoEmail } from "@/lib/email/sendMail";
+import { sendNovidadeNoProcessoEmail, type ResultadoDoAviso } from "@/lib/email/sendMail";
 import { avisarClientePorPush } from "@/lib/portal/avisos";
 
 export type ProcessoParaAviso = {
@@ -16,29 +16,58 @@ export type ProcessoParaAviso = {
   company: { name: string; displayName: string | null };
 };
 
+/** "concluido" (09/11/2026): o robô fechou o envio ao cliente no fim do processo. */
+export type MotivoDoAvisoAoCliente = "mensagem" | "documento" | "concluido";
+
+export type UsuarioParaAviso = { id: string; email: string; name: string };
+
+/** O nome do processo nos avisos: o mesmo da lista do portal (tipo ou título, e a empresa). */
+export function nomeDoProcessoNoAviso(processo: ProcessoParaAviso): string {
+  return `${processo.title || processo.type.name} — ${nomeExibicao(processo.company)}`;
+}
+
+/**
+ * E-mail e push para usuários do portal já escolhidos. Devolve o que o e-mail
+ * conseguiu; o push é best-effort e não entra na conta. Pode lançar — quem
+ * chama decide o que dizer.
+ *
+ * Separado de `avisarClienteDoProcesso` em 09/11/2026: o envio ao cliente no
+ * fim do processo precisa saber se há destinatário **antes** de concluir a
+ * etapa, e não deve ler a lista duas vezes.
+ */
+export async function enviarAvisoDoProcesso(
+  tenantId: string,
+  processo: ProcessoParaAviso,
+  destinatarios: readonly UsuarioParaAviso[],
+  motivo: MotivoDoAvisoAoCliente
+): Promise<ResultadoDoAviso> {
+  const processoNome = nomeDoProcessoNoAviso(processo);
+  const [envio] = await Promise.all([
+    sendNovidadeNoProcessoEmail({
+      tenantId,
+      destinatarios: destinatarios.map((u) => ({ email: u.email, nome: u.name })),
+      processId: processo.id,
+      processoNome,
+      motivo,
+    }),
+    avisarClientePorPush(tenantId, destinatarios.map((u) => u.id), {
+      tipo: "processo",
+      motivo,
+      processoNome,
+      processId: processo.id,
+    }),
+  ]);
+  return envio;
+}
+
 /** Avisa os usuários do portal da empresa. Best-effort: o envio já está gravado. */
-export async function avisarClienteDoProcesso(tenantId: string, processo: ProcessoParaAviso, motivo: "mensagem" | "documento"): Promise<string | null> {
+export async function avisarClienteDoProcesso(tenantId: string, processo: ProcessoParaAviso, motivo: MotivoDoAvisoAoCliente): Promise<string | null> {
   try {
     const destinatarios = await usuariosDoPortalDaEmpresa(tenantId, processo.companyId);
     if (destinatarios.length === 0) {
       return "Nenhum usuário ativo do portal nesta empresa — fica gravado aqui até alguém ter acesso.";
     }
-    const processoNome = `${processo.title || processo.type.name} — ${nomeExibicao(processo.company)}`;
-    const [envio] = await Promise.all([
-      sendNovidadeNoProcessoEmail({
-        tenantId,
-        destinatarios: destinatarios.map((u) => ({ email: u.email, nome: u.name })),
-        processId: processo.id,
-        processoNome,
-        motivo,
-      }),
-      avisarClientePorPush(tenantId, destinatarios.map((u) => u.id), {
-        tipo: "processo",
-        motivo,
-        processoNome,
-        processId: processo.id,
-      }),
-    ]);
+    const envio = await enviarAvisoDoProcesso(tenantId, processo, destinatarios, motivo);
     if (envio.semSmtp) return "Gravado, mas o SMTP deste workspace não está configurado: o cliente só vê ao entrar no portal.";
     if (envio.falhas > 0) return `${envio.falhas} aviso(s) por e-mail falharam. O cliente vê ao entrar no portal.`;
     return null;

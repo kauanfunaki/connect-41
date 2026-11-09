@@ -368,6 +368,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "societario.processo.situacao": e("mudou a situação do processo"),
   "societario.processo.mensagem": o("mandou uma mensagem no processo"),
   "societario.processo.documento": c("anexou documentos ao processo"),
+  // O envio ao cliente no fim do processo, pelo robô (09/11/2026).
+  "societario.processo.envio_ao_cliente": o("avisou o cliente pelo portal e por e-mail do fim do processo"),
+  "societario.processo.envio_com_a_equipe": o("deixou com a equipe o envio ao cliente do processo"),
   "societario.protocolo.cobrado": o("registrou a cobrança do órgão num protocolo parado"),
   "societario.robo.pedido": c("pediu ao robô a impressão do alvará"),
   "societario.robo.cancelada": o("tirou uma tarefa da fila do robô"),

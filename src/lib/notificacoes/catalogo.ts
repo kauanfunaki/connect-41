@@ -133,6 +133,9 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   ROBO_PRECISA_DE_VOCE: p("processo", "warning", "O robô precisa de você"),
   // O robô parou no "Não sou um robô" e espera alguém marcar pelo Connect (06/11/2026).
   ROBO_CAPTCHA: p("processo", "warning", "O robô parou no captcha"),
+  // O envio ao cliente no fim do processo não saiu sozinho, ou saiu sem o
+  // e-mail (09/11/2026): sem usuário no portal, checklist em aberto, SMTP.
+  PROCESS_ENVIO_AO_CLIENTE: p("processo", "warning", "Envio ao cliente precisa de você"),
   // A geração do SPED pela fila do agente do motor parou e chamou quem pediu (06/11/2026).
   SPED_GERACAO_PARADA: p("processo", "warning", "A geração do SPED parou"),
   SOLICITACAO_PRAZO: a("prazo", "danger", "Prazo da solicitação"),
