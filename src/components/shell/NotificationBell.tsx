@@ -67,6 +67,9 @@ function guardarMostrados(ids: string[]): void {
   }
 }
 
+/** O pedido do service worker (`public/sw.js`) para a janela aberta ir à tela do push. */
+type PedidoDeNavegacao = { tipo?: unknown; url?: unknown };
+
 function ajustar(c: Contagens, n: NotificacaoNaTela, delta: number): Contagens {
   return { ...c, todas: Math.max(0, c.todas + delta), [n.aba]: Math.max(0, c[n.aba] + delta) };
 }
@@ -153,6 +156,26 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
       clearInterval(relogio);
     };
   }, []);
+
+  // O clique no push do navegador (09/11/2026): o service worker foca esta
+  // janela e pede a tela do aviso; a navegação é a do próprio app, sem
+  // recarregar a página. A resposta diz ao service worker que deu certo — sem
+  // ela, ele navega a janela do jeito dele.
+  useEffect(() => {
+    const sw = typeof navigator !== "undefined" ? navigator.serviceWorker : undefined;
+    if (!sw) return;
+    function aoReceber(e: MessageEvent) {
+      const pedido = e.data as PedidoDeNavegacao | null;
+      if (pedido?.tipo !== "connect:navegar" || typeof pedido.url !== "string") return;
+      const destino = destinoDoClique({ href: pedido.url });
+      if (!destino) return;
+      e.ports[0]?.postMessage({ ok: true });
+      router.push(destino);
+    }
+    sw.addEventListener("message", aoReceber);
+    sw.startMessages();
+    return () => sw.removeEventListener("message", aoReceber);
+  }, [router]);
 
   // O Esc vem do `PainelFlutuante`, pela pilha de camadas (ver `ui/camadas.ts`).
 
