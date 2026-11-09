@@ -93,6 +93,10 @@ const PUBLIC_PATHS = [
   // AssessmentLink internamente; token inexistente é rate-limited por IP.
   "/teste/",
   "/api/teste/",
+  // Pedido pelo link público (09/11/2026) — quem pede ainda não é cliente e
+  // não tem login. A página e o envio conferem o escritório, o assunto e se o
+  // assunto aceita pedido pelo link; o envio tem anti-robô e limite por IP.
+  "/pedido/",
   // Logo do escritório (só ele: o nome do arquivo é o id do escritório e a rota
   // aceita só imagem). Aparece em telas de quem não tem sessão da equipe — vagas,
   // admissão, teste do candidato e a entrada do portal —, e com 401 a imagem

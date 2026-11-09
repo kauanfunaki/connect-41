@@ -15,6 +15,10 @@ describe("destino da página não encontrada", () => {
     for (const c of ["/admissao/abc", "/d/abc", "/teste/abc"]) expect(destinoDoNaoEncontrado(c)).toEqual({ voltar: true, rotulo: "Voltar" });
   });
 
+  it("o link público de pedido também volta: quem abre não é da equipe nem tem portal (09/11/2026)", () => {
+    for (const c of ["/pedido/escritorio", "/pedido/escritorio/abc/x"]) expect(destinoDoNaoEncontrado(c)).toEqual({ voltar: true, rotulo: "Voltar" });
+  });
+
   it("o resto vai ao início da equipe", () => {
     expect(destinoDoNaoEncontrado("/qualquer/coisa?x=1")).toEqual({ href: "/home", rotulo: "Ir para o início" });
     expect(destinoDoNaoEncontrado(null)).toEqual({ href: "/home", rotulo: "Ir para o início" });

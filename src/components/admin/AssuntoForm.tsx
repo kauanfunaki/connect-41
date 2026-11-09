@@ -11,6 +11,8 @@ import { FormFooter } from "@/components/ui/FormFooter";
 import { PRAZO_MAXIMO, PRAZO_MINIMO } from "@/lib/solicitacoes/regras";
 import { listasDoSetorPorEspaco, type ListaParaOAssunto } from "@/lib/solicitacoes/cartao";
 import { Aviso } from "@/components/ui/Aviso";
+import { Switch } from "@/components/ui/Switch";
+import { LinkPublicoDoAssunto } from "@/components/admin/LinkPublicoDoAssunto";
 
 export type AssuntoValores = {
   id?: string;
@@ -19,6 +21,7 @@ export type AssuntoValores = {
   sectorCode?: string;
   responseDays?: number;
   cardPipelineId?: string | null;
+  publicLink?: boolean;
 };
 
 export function AssuntoForm({
@@ -27,6 +30,7 @@ export function AssuntoForm({
   setores,
   listas,
   valores,
+  linkPublico = null,
 }: {
   action: (prev: AssuntoState, form: FormData) => Promise<AssuntoState>;
   cancelHref: string;
@@ -34,8 +38,16 @@ export function AssuntoForm({
   /** As listas ativas dos Quadros, de todos os setores — o campo mostra as do setor escolhido. */
   listas: ListaParaOAssunto[];
   valores?: AssuntoValores;
+  /**
+   * O link público de pedido deste assunto e o aviso de quando ele não recebe
+   * pedido (09/11/2026). Nulo no assunto novo: o link é do id, que só existe
+   * depois de criar.
+   */
+  linkPublico?: { endereco: string; aviso: string | null } | null;
 }) {
   const [state, formAction, isPending] = useActionState(action, null);
+  const [aceitaLink, setAceitaLink] = useState(valores?.publicLink ?? false);
+  const linkAindaNaoSalvo = aceitaLink && !valores?.publicLink;
   // O setor manda nas listas que o "Cartão no quadro" oferece (09/11/2026):
   // trocar o setor troca as opções, e a lista do setor anterior sai da escolha.
   const [setor, setSetor] = useState(valores?.sectorCode ?? "");
@@ -59,7 +71,7 @@ export function AssuntoForm({
       <CampoForm
         label="Explicação"
         htmlFor="description"
-        helper="Uma linha que ajuda o cliente a escolher. Ex.: Contrato social, certidão, guia, balancete…"
+        helper="Uma linha que ajuda o cliente a escolher; no link público, é a ajuda da mensagem. Ex.: Contrato social, certidão, guia, balancete…"
       >
         <Input id="description" name="description" maxLength={255} defaultValue={valores?.description ?? ""} />
       </CampoForm>
@@ -135,6 +147,35 @@ export function AssuntoForm({
           ))}
         </Select>
       </CampoForm>
+
+      {/* Pedido por link público (09/11/2026): aparece sempre, desligado por
+          padrão. Ligado, o link aparece aqui e na linha do assunto, com Copiar
+          — no assunto novo, só depois de criar, porque o link é do id. */}
+      <div className="flex flex-col gap-1.5">
+        <Switch
+          id="publicLink"
+          name="publicLink"
+          value="1"
+          checked={aceitaLink}
+          onCheckedChange={setAceitaLink}
+          rotulo="Aceita pedido por link público"
+          aria-describedby="publicLink-ajuda"
+        />
+        <p id="publicLink-ajuda" className="text-helper text-fg-muted">
+          Quem ainda não é cliente preenche um formulário pelo link, sem login, e o pedido chega ao setor como solicitação deste assunto,
+          numa empresa prospecto com o nome que a pessoa der. A equipe responde por telefone ou e-mail: a conversa da solicitação não chega
+          a quem não tem portal.
+        </p>
+        {aceitaLink &&
+          (linkPublico ? (
+            <LinkPublicoDoAssunto
+              endereco={linkPublico.endereco}
+              aviso={linkAindaNaoSalvo ? "O link passa a receber pedidos quando você salvar." : linkPublico.aviso}
+            />
+          ) : (
+            <p className="text-helper text-fg-secondary">O link aparece aqui e na lista depois de criar o assunto.</p>
+          ))}
+      </div>
 
       <FormFooter cancelHref={cancelHref} submitLabel={valores?.id ? "Salvar" : "Criar assunto"} pending={isPending} />
     </form>

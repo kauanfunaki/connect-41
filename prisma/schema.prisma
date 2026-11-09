@@ -4910,6 +4910,12 @@ model ServiceRequestSubject {
   label        String   @db.VarChar(120)
   /// Uma linha que ajuda o cliente a escolher ("contrato social, alteração de endereço…").
   description  String?  @db.VarChar(255)
+  /// Aceita pedido por link público (09/11/2026): quem ainda não é cliente
+  /// preenche o formulário em /pedido/[slug do escritório]/[id do assunto], sem
+  /// login, e o pedido vira solicitação deste assunto. Desligado por padrão. O
+  /// id (uuid v4) é o identificador do link: estável e não adivinhável. Ver
+  /// src/lib/solicitacoes/pedidoPublico.ts.
+  publicLink   Boolean  @default(false)
   /// Setor que atende as solicitações deste assunto.
   sectorCode   String   @db.VarChar(40)
   /// Prazo de resposta prometido ao cliente, em dias úteis.

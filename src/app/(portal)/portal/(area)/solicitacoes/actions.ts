@@ -12,6 +12,13 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { nomeExibicao } from "@/lib/companyName";
+import { headers } from "next/headers";
+import { logAudit } from "@/lib/audit";
+import { clientIp, hit } from "@/lib/rateLimit";
+import { avaliarEnvio } from "@/lib/carreiras/antiRobo";
+import type { ResultadoDoPedido } from "@/lib/solicitacoes/linkPublico";
+import { ORIGEM_DO_PEDIDO_PUBLICO, descricaoDoPedido, validarPedido } from "@/lib/solicitacoes/pedidoPublico";
+import { destinoDoPedido, prospectoDoPedido } from "@/lib/solicitacoes/pedidoPublicoServidor";
 import { saoPauloParts } from "@/lib/agenda";
 import { lerDataDoCampo } from "@/lib/societario/datas";
 import { feriadosDoTenant } from "@/lib/societario/fila";
@@ -80,7 +87,12 @@ export async function abrirSolicitacao(formData: FormData): Promise<ResultadoDaA
   return gravarSolicitacao(cliente, empresa, assunto, texto.texto, arquivosDoFormulario(formData, "anexos"));
 }
 
-type ClienteDoPortal = NonNullable<Awaited<ReturnType<typeof clienteAtivoDoPortal>>>;
+/**
+ * Quem abre: o cliente do portal, ou — no pedido pelo link público
+ * (09/11/2026) — ninguém com conta: `usuario.id` nulo, e a solicitação fica
+ * sem autor do portal (ver `enviarPedidoPeloLink`).
+ */
+type QuemAbre = { tenantId: string; usuario: { id: string | null } };
 type AssuntoDaAbertura = { id: string; label: string; sectorCode: string; responseDays: number };
 
 /**
@@ -88,7 +100,7 @@ type AssuntoDaAbertura = { id: string; label: string; sectorCode: string; respon
  * que a sugestão do portal (21/10/2026) também usa.
  */
 async function gravarSolicitacao(
-  cliente: ClienteDoPortal,
+  cliente: QuemAbre,
   empresa: { id: string; name: string; displayName: string | null },
   assunto: AssuntoDaAbertura,
   descricao: string,
@@ -338,5 +350,92 @@ async function assuntoDaSugestao(tenantId: string): Promise<AssuntoDaAbertura | 
     // Duas sugestões ao mesmo tempo: o índice único (tenant, nome) recusa a segunda, que usa a primeira.
     if (!isPrismaUniqueError(err)) throw err;
     return prisma.serviceRequestSubject.findFirst({ where: { tenantId, label: ASSUNTO_DA_SUGESTAO.label, active: true }, select });
+  }
+}
+
+// ─── O pedido pelo link público (09/11/2026) ─────────────────────────────────
+
+/** Pedidos pelo link por IP por hora — o mesmo teto da ficha "Quero ser cliente". */
+const PEDIDOS_PELO_LINK_POR_HORA = 5;
+
+function textoDoForm(form: FormData, nome: string): string | null {
+  const v = form.get(nome);
+  return typeof v === "string" ? v : null;
+}
+
+/**
+ * O pedido de quem ainda não é cliente, pelo link público do assunto: vira
+ * uma solicitação comum, com a mesma numeração, o mesmo prazo e o mesmo aviso
+ * ao setor (e, quando o assunto pede, o mesmo cartão no quadro). Mora aqui, ao
+ * lado do `gravarSolicitacao`, para chamá-lo sem exportá-lo: em arquivo
+ * "use server", toda função exportada é um endpoint que qualquer um chama.
+ *
+ * Sem login e sem captcha: as defesas são as do portal de vagas e da ficha
+ * "Quero ser cliente" — campo-armadilha, carimbo de tempo assinado, envio
+ * rápido demais recebido em silêncio e limite por IP. Robô recebe o mesmo
+ * "recebemos" de uma pessoa, sem número, e nada é gravado.
+ *
+ * A empresa é uma prospecto (ver `prospectoDoPedido`). Nada sai por e-mail
+ * para o endereço digitado (ver `pedidoPublico.ts`): a equipe responde por
+ * telefone ou e-mail, por fora.
+ */
+export async function enviarPedidoPeloLink(form: FormData): Promise<ResultadoDoPedido> {
+  const veredicto = avaliarEnvio({ carimbo: textoDoForm(form, "carimbo"), armadilha: textoDoForm(form, "website"), agora: new Date() });
+  if (veredicto === "robo") return { ok: true, numero: null };
+  if (veredicto === "carimbo_invalido") {
+    return { ok: false, erro: "Esta página ficou aberta por muito tempo. Recarregue a página e envie de novo." };
+  }
+
+  const v = validarPedido({
+    nome: form.get("nome"),
+    email: form.get("email"),
+    telefone: form.get("telefone"),
+    empresa: form.get("empresa"),
+    documento: form.get("documento"),
+    mensagem: form.get("mensagem"),
+    aceite: form.get("aceite"),
+  });
+  if (!v.ok) return { ok: false, erro: v.erro, campo: v.campo };
+
+  // Depois da validação: quem errou um campo e corrigiu não gasta o limite.
+  const ip = clientIp({ headers: await headers() });
+  if (!hit(`pedido-pelo-link:${ip}`, PEDIDOS_PELO_LINK_POR_HORA, 60 * 60_000).allowed) {
+    return { ok: false, erro: "Recebemos vários pedidos deste endereço em pouco tempo. Tente de novo daqui a uma hora." };
+  }
+
+  const destino = await destinoDoPedido(textoDoForm(form, "slug") ?? "", textoDoForm(form, "assunto") ?? "");
+  if (!destino) {
+    return { ok: false, erro: "Este link não está mais recebendo pedidos. Fale com o escritório pelos canais de sempre." };
+  }
+  const { tenantId, assunto } = destino;
+
+  try {
+    const empresa = await prospectoDoPedido(tenantId, v.pedido);
+    const r = await gravarSolicitacao({ tenantId, usuario: { id: null } }, empresa, assunto, descricaoDoPedido(v.pedido), []);
+    if ("error" in r) return { ok: false, erro: r.error };
+
+    // A trilha diz de onde veio: quem age é a rotina do link, não uma pessoa.
+    if (empresa.nova) {
+      await logAudit({
+        tenantId,
+        rotina: "linkPublicoDePedido",
+        action: "company.create",
+        entityType: "Company",
+        entityId: empresa.id,
+        metadata: { name: empresa.name, origem: ORIGEM_DO_PEDIDO_PUBLICO },
+      });
+    }
+    await logAudit({
+      tenantId,
+      rotina: "linkPublicoDePedido",
+      action: "solicitacao.link_publico",
+      entityType: "ServiceRequest",
+      entityId: r.id,
+      metadata: { nome: `nº ${r.numero} · ${assunto.label}`, empresa: empresa.name, empresaNova: empresa.nova },
+    });
+    return { ok: true, numero: r.numero };
+  } catch (err) {
+    console.error("[enviarPedidoPeloLink]", err);
+    return { ok: false, erro: "Não foi possível enviar agora. Tente de novo em alguns minutos." };
   }
 }

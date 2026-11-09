@@ -10,6 +10,9 @@ export const ROTINAS_DO_SISTEMA = {
   repeticaoDeLancamentos: "Repetição de lançamentos",
   // A máquina do motor que gera o SPED pela fila do Connect (06/11/2026).
   agenteDoSped: "Agente do SPED",
+  // O formulário público de pedido (09/11/2026): quem preenche não tem conta,
+  // e a trilha precisa dizer de onde veio a solicitação e a empresa prospecto.
+  linkPublicoDePedido: "Link público de pedido",
 } as const;
 
 export type RotinaDoSistema = keyof typeof ROTINAS_DO_SISTEMA;

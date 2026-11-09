@@ -436,6 +436,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "solicitacao.respondida": o("respondeu a solicitação"),
   "solicitacao.nota_interna": o("deixou uma nota interna na solicitação"),
   "solicitacao.encaminhada": e("encaminhou a outro setor a solicitação"),
+  // Quem age é a rotina "Link público de pedido" (09/11/2026): o interessado não tem conta.
+  "solicitacao.link_publico": c("abriu a solicitação"),
   "clientDocument.create": c("criou o envio do documento"),
   "clientDocument.update": e("editou o envio do documento"),
   "clientDocument.delete": x("excluiu o envio do documento"),
@@ -551,6 +553,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "solicitacao_assunto.update": e("editou o assunto de solicitação", { chaveDoNome: "label" }),
   "solicitacao_assunto.activate": e("reativou o assunto de solicitação", { chaveDoNome: "label" }),
   "solicitacao_assunto.deactivate": e("desativou o assunto de solicitação", { chaveDoNome: "label" }),
+  "solicitacao_assunto.link_publico_ligado": e("ligou o link público de pedido do assunto", { chaveDoNome: "label" }),
+  "solicitacao_assunto.link_publico_desligado": e("desligou o link público de pedido do assunto", { chaveDoNome: "label" }),
   "drive.template_create": c("criou no modelo de pastas a pasta"),
   "drive.template_update": e("editou no modelo de pastas a pasta"),
   "drive.template_enable": e("reativou no modelo de pastas a pasta"),

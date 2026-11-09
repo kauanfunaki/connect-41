@@ -6,6 +6,7 @@
  * - portal do cliente → o portal;
  * - carreiras de uma empresa → as vagas dessa empresa;
  * - links por token (admissão, documento, teste) não têm "início": volta;
+ * - o link público de pedido (09/11/2026) também: quem abre ainda não é cliente;
  * - o resto → o início da equipe.
  */
 export type DestinoDoNaoEncontrado = { href: string; rotulo: string } | { voltar: true; rotulo: string };
@@ -17,6 +18,6 @@ export function destinoDoNaoEncontrado(caminho: string | null | undefined): Dest
   if (primeiro === "carreiras") {
     return segundo ? { href: `/carreiras/${encodeURIComponent(segundo)}`, rotulo: "Ver as vagas" } : { href: "/carreiras", rotulo: "Ver o portal de vagas" };
   }
-  if (primeiro === "admissao" || primeiro === "d" || primeiro === "teste") return { voltar: true, rotulo: "Voltar" };
+  if (primeiro === "admissao" || primeiro === "d" || primeiro === "teste" || primeiro === "pedido") return { voltar: true, rotulo: "Voltar" };
   return { href: "/home", rotulo: "Ir para o início" };
 }
