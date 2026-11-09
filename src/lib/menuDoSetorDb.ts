@@ -3,7 +3,7 @@
 
 import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
-import { lerOrdemDoMenu, ORDEM_PADRAO, type OrdemDoMenu } from "@/lib/menuDoSetor";
+import { lerOrdemDoMenu, ordemEhPadrao, ORDEM_PADRAO, type OrdemDoMenu } from "@/lib/menuDoSetor";
 
 /**
  * A ordem do menu do setor neste escritório; sem linha, a padrão. Uma consulta
@@ -19,7 +19,7 @@ export const lerOrdemDoMenuDoSetor = cache(
         select: { ordem: true },
       });
       const ordem = lerOrdemDoMenu(linha?.ordem);
-      return { ordem, personalizada: ordem.grupos.length > 0 || ordem.telas.length > 0, disponivel: true };
+      return { ordem, personalizada: !ordemEhPadrao(ordem), disponivel: true };
     } catch (err) {
       console.error("[menu] ordem do setor", err);
       return { ordem: ORDEM_PADRAO, personalizada: false, disponivel: false };

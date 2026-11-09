@@ -29,7 +29,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-const { salvarOrdemDoMenu, restaurarOrdemDoMenu } = await import("./ordem-do-menu-actions");
+const { salvarOrdemDoMenu, restaurarOrdemDoMenu, salvarOrdemDoMenuPeloCodigo, restaurarOrdemDoMenuPeloCodigo } = await import("./ordem-do-menu-actions");
 
 beforeEach(() => {
   m.ctx = { tenantId: "t1", userId: "u1", role: "SUPER_ADMIN", sectors: [], subscriptionReadOnly: false };
@@ -69,6 +69,28 @@ describe("voltar à ordem padrão", () => {
     expect(m.apagou).toBe(false);
     m.ctx = { ...m.ctx, role: "SUPER_ADMIN" };
     expect(await restaurarOrdemDoMenu("s1")).toBeNull();
+    expect(m.apagou).toBe(true);
+  });
+});
+
+describe("organizar no próprio menu (09/11/2026)", () => {
+  it("pelo código do setor, com as telas escondidas filtradas pelo catálogo", async () => {
+    expect(await salvarOrdemDoMenuPeloCodigo("societario", JSON.stringify({ grupos: [], telas: [], ocultas: ["societario_robo", "inventada"] }))).toBeNull();
+    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], ocultas: ["societario_robo"] });
+  });
+
+  it("as mesmas travas: só o Super Admin, e setor deste escritório", async () => {
+    m.ctx = { ...m.ctx, role: "ADMIN" };
+    expect(await salvarOrdemDoMenuPeloCodigo("societario", "{}")).toEqual({ error: "Só o Super Admin organiza o menu dos setores." });
+    m.ctx = { ...m.ctx, role: "SUPER_ADMIN" };
+    m.setor = null;
+    expect(await restaurarOrdemDoMenuPeloCodigo("de-outro")).toEqual({ error: "Setor não encontrado neste escritório." });
+    expect(m.gravado).toBeNull();
+    expect(m.apagou).toBe(false);
+  });
+
+  it("restaurar pelo código apaga a ordem do setor", async () => {
+    expect(await restaurarOrdemDoMenuPeloCodigo("societario")).toBeNull();
     expect(m.apagou).toBe(true);
   });
 });

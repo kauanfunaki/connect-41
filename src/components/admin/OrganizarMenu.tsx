@@ -66,13 +66,13 @@ export function OrganizarMenu({ setor, telas, ordemInicial, personalizada, dispo
 
   function moverBloco(i: number, passo: -1 | 1) {
     const nome = nomeDoBloco(blocos[i]!);
-    aplicar({ grupos: trocar(blocos.map((b) => b.grupo), i, i + passo), telas: todasAsTelas(blocos) }, `${nome} ${passo < 0 ? "subiu" : "desceu"} no menu de ${setor}.`);
+    aplicar({ ...ordem, grupos: trocar(blocos.map((b) => b.grupo), i, i + passo), telas: todasAsTelas(blocos) },`${nome} ${passo < 0 ? "subiu" : "desceu"} no menu de ${setor}.`);
   }
 
   /** Troca duas telas de lugar (irmãs: do mesmo grupo, ou filhas da mesma mãe). */
   function moverTela(a: TelaDoMenu, b: TelaDoMenu, passo: -1 | 1) {
     const lista = todasAsTelas(blocos);
-    aplicar({ grupos: blocos.map((x) => x.grupo), telas: trocar(lista, lista.indexOf(a.code), lista.indexOf(b.code)) }, `${a.label} ${passo < 0 ? "subiu" : "desceu"} no menu de ${setor}.`);
+    aplicar({ ...ordem, grupos: blocos.map((x) => x.grupo), telas:trocar(lista, lista.indexOf(a.code), lista.indexOf(b.code)) }, `${a.label} ${passo < 0 ? "subiu" : "desceu"} no menu de ${setor}.`);
   }
 
   function voltarAoPadrao() {

@@ -397,9 +397,22 @@ describe("a ordem do menu escolhida", () => {
     expect(ordemDosGrupos(escolhida)).toEqual(["Licenças", "Operação"]);
   });
 
-  it("“Organizar menu” só para quem pode", () => {
+  // 09/11/2026: organizar no próprio menu — o botão é o rodapé da lateral, e
+  // não mais o link para Admin › Setores no fim da lista.
+  it("“Organizar menu” só para quem pode, no rodapé da lateral", () => {
     expect(lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }))).not.toContain("Organizar menu");
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, podeOrganizarMenu: true }));
-    expect(tagDoLink(aside, "Organizar menu")).toContain('href="/admin/setores?setor=societario#ordem-do-menu"');
+    const rodape = aside.slice(aside.indexOf("</nav>"));
+    expect(rodape).toMatch(/<button[^>]*>[\s\S]*?Organizar menu[\s\S]*?<\/button>/);
+    expect(linksDoMenu(aside).some((l) => l.texto === "Organizar menu")).toBe(false);
+    // Na faixa de ícones não há lugar para organizar.
+    expect(lateral(casco(true, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, podeOrganizarMenu: true }))).not.toContain("Organizar menu");
+  });
+
+  it("a tela escondida pelo olho sai do menu do setor", () => {
+    // Sem Certidões, Licenças fica com uma tela só e deixa de ser grupo.
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: [], telas: [], ocultas: ["societario_certidoes"] } }));
+    expect(ordemDosGrupos(aside)).toEqual(["Operação"]);
+    expect(tagDoLink(aside, "Licenças")).toContain('href="/licencas"');
   });
 });

@@ -34,9 +34,42 @@ export type BlocoDoMenu<T extends TelaDoMenu = TelaDoMenu> =
  * "Organizar menu"): os grupos e as telas, por código. O que não está na lista
  * vem depois, na ordem de sempre (a dos grupos e a do catálogo).
  */
-export type OrdemDoMenu = { grupos: string[]; telas: string[] };
+export type OrdemDoMenu = {
+  grupos: string[];
+  telas: string[];
+  /**
+   * As telas que saem do menu do setor (09/11/2026, "Organizar no próprio
+   * menu"): o olho esconde sem tirar do lugar. Só o menu — o endereço, a busca
+   * e a página "Telas" do setor continuam levando a elas. Ausente = nenhuma.
+   */
+  ocultas?: string[];
+};
 
 export const ORDEM_PADRAO: OrdemDoMenu = { grupos: [], telas: [] };
+
+/** A ordem escolhida mexe na posição de algum grupo ou tela (esconder não conta). */
+export function ordemTemPosicao(ordem: OrdemDoMenu | null | undefined): boolean {
+  return !!ordem && (ordem.grupos.length > 0 || ordem.telas.length > 0);
+}
+
+/** Nada escolhido: nem posição nem tela escondida. */
+export function ordemEhPadrao(ordem: OrdemDoMenu | null | undefined): boolean {
+  return !ordemTemPosicao(ordem) && !(ordem?.ocultas?.length);
+}
+
+/**
+ * As telas que aparecem no menu: fora as escondidas e as filhas de uma mãe
+ * escondida (esconder a tela de cima leva as de dentro junto).
+ */
+export function telasVisiveis<T extends TelaDoMenu>(telas: readonly T[], ordem: OrdemDoMenu | null | undefined): T[] {
+  const ocultas = new Set(ordem?.ocultas ?? []);
+  if (ocultas.size === 0) return [...telas];
+  return telas.filter((t) => {
+    if (ocultas.has(t.code)) return false;
+    const mae = getModuleDef(t.code)?.telaMae;
+    return !(mae && ocultas.has(mae));
+  });
+}
 
 /** Lê a ordem gravada (JSON); qualquer coisa estranha vira a ordem padrão. */
 export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
@@ -46,7 +79,8 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
     if (!v || typeof v !== "object") return ORDEM_PADRAO;
     const lista = (x: unknown) => (Array.isArray(x) ? [...new Set(x.filter((s): s is string => typeof s === "string"))] : []);
     const o = v as Record<string, unknown>;
-    return { grupos: lista(o.grupos), telas: lista(o.telas) };
+    const ocultas = lista(o.ocultas);
+    return { grupos: lista(o.grupos), telas: lista(o.telas), ...(ocultas.length ? { ocultas } : {}) };
   } catch {
     return ORDEM_PADRAO;
   }

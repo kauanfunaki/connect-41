@@ -4,7 +4,6 @@ import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "rea
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
 import {
-  ArrowUpDown,
   BookOpen,
   ChevronRight,
   Home,
@@ -47,7 +46,8 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { slugDoGrupo, ICONE_DO_GRUPO, TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
-import { montarMenuDoSetor, telasDoBloco, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
+import { montarMenuDoSetor, ordemTemPosicao, telasDoBloco, telasVisiveis, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
+import { AvisoDaOrganizacao, MenuEmOrganizacao, RodapeDaOrganizacao, useOrganizarMenu } from "@/components/shell/OrganizarMenuNaLateral";
 import { ItemComJanela } from "@/components/shell/ItemComJanela";
 import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
@@ -295,9 +295,31 @@ export function AppShell({
   const larguraFinal = animando && !naFaixa ? "min-w-[240px]" : "";
 
   // O menu do setor (05/11/2026): os blocos por tema (`montarMenuDoSetor`).
-  const blocosDoSetor = activeSector ? montarMenuDoSetor(activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code)), ordemDoMenu) : [];
+  // As telas escondidas pelo olho do "Organizar menu" (09/11/2026) saem daqui;
+  // no modo de edição elas aparecem apagadas, no lugar delas.
+  const telasDoSetor = activeSector ? activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code)) : [];
   // Com a ordem escolhida pelo super admin, ela vence o "cores juntas" (28/10/2026).
-  const ordemEscolhida = !!ordemDoMenu && (ordemDoMenu.grupos.length > 0 || ordemDoMenu.telas.length > 0);
+  const ordemEscolhida = ordemTemPosicao(ordemDoMenu);
+  const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDoModulo(b.entrada.tela.code) ?? "marca" : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
+  // Chamados e Certificados digitais sempre no fim do menu (05/11/2026).
+  const NO_FIM = ["helpdesk", "tech_certificados"];
+  const posNoFim = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? NO_FIM.indexOf(b.entrada.tela.code) : -1;
+  /** Os blocos na ordem em que o menu mostra: a escolhida ou as cores juntas, e os do fim no fim. */
+  const naOrdemDoMenu = (blocos: BlocoDoMenu<SectorModule>[], escolhida: boolean) => {
+    const ordenados = escolhida ? blocos : agruparPorCor(blocos, areaDoBloco);
+    return [...ordenados.filter((b) => posNoFim(b) < 0), ...ordenados.filter((b) => posNoFim(b) >= 0).sort((x, y) => posNoFim(x) - posNoFim(y))];
+  };
+  const blocosDoMenu = naOrdemDoMenu(montarMenuDoSetor(telasVisiveis(telasDoSetor, ordemDoMenu), ordemDoMenu), ordemEscolhida);
+  // Organizar no próprio menu (09/11/2026): o rodapé da lateral abre o modo de edição.
+  const organizacao = useOrganizarMenu({
+    setor: activeSector,
+    blocosAtuais: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor, ordemDoMenu), ordemEscolhida),
+    blocosPadrao: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor), false),
+    ocultasAtuais: ordemDoMenu?.ocultas ?? [],
+    fixosNoFim: NO_FIM,
+  });
+  const podeOrganizar = !!activeSector && podeOrganizarMenu && telasDoSetor.length > 0;
+  const organizando = podeOrganizar && organizacao.aberto && !naFaixa;
 
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
@@ -641,7 +663,7 @@ export function AppShell({
                     filhas.length === 0 ? (
                       <NavItem key={chave} href={mae.href} exact={mae.exact} ativo={mae.ativo} icon={mae.icon} label={mae.label} contador={mae.contador} area={mae.area} />
                     ) : (
-                      <ItemComJanela key={chave} label={mae.label} icon={mae.icon} area={mae.area} telas={telasDaMae(mae, filhas)} contador={mae.contador} />
+                      <ItemComJanela key={chave} label={mae.label} icon={mae.icon} area={mae.area} telas={telasDaMae(mae, filhas)} contador={mae.contador} aceso={mae.semLink && !!mae.ativo} />
                     );
                   // A mãe e as filhas de uma tela do menu: as telas que vieram dela
                   // (`telaMae`) e as de dentro que têm entrada no menu (`subTelas`).
@@ -661,6 +683,8 @@ export function AppShell({
                   };
 
                   // O SPED do Fiscal junta dez módulos num item só, com as etapas embaixo.
+                  // A mãe é só o título (09/11/2026): o endereço dela (/sped-fiscal) só
+                  // redireciona para a primeira etapa, e listá-la repetia a Classificação.
                   const lateraisDoSped = sped.laterais.map((item) => {
                     const q = new URLSearchParams();
                     for (const campo of ["empresa", "competencia"]) { const valor = params.get(campo); if (valor) q.set(campo, valor); }
@@ -668,16 +692,18 @@ export function AppShell({
                   });
                   const itemSped = sped.laterais.length > 0 && itemComFilhas(
                     "sped",
-                    { label: "SPED", href: sped.href ?? sped.laterais[0].href, icon: <ReceiptText size={16} />, area: "fiscal", ativo: !!areaSpedAtiva(pathname) && !lateraisDoSped.some((l) => l.ativa) },
+                    { label: "SPED", href: sped.href ?? sped.laterais[0].href, icon: <ReceiptText size={16} />, area: "fiscal", ativo: !!areaSpedAtiva(pathname) && !lateraisDoSped.some((l) => l.ativa), semLink: true },
                     lateraisDoSped,
                   );
 
-                  const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDe(b.entrada.tela.code) : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
-                  // Chamados e Certificados digitais sempre no fim do menu (05/11/2026).
-                  const NO_FIM = ["helpdesk", "tech_certificados"];
-                  const posNoFim = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? NO_FIM.indexOf(b.entrada.tela.code) : -1;
-                  const ordenados = ordemEscolhida ? blocosDoSetor : agruparPorCor(blocosDoSetor, areaDoBloco);
-                  const blocosDoMenu = [...ordenados.filter((b) => posNoFim(b) < 0), ...ordenados.filter((b) => posNoFim(b) >= 0).sort((x, y) => posNoFim(x) - posNoFim(y))];
+                  if (organizando) {
+                    return (
+                      <>
+                        <AvisoDaOrganizacao setor={activeSector.label} />
+                        <MenuEmOrganizacao org={organizacao} itemNoTopo={itemSped ? { label: "SPED", icon: <ReceiptText size={15} /> } : undefined} />
+                      </>
+                    );
+                  }
                   return <>{itemSped}{blocosDoMenu.map((b) => {
                     if (b.tipo === "solta") return entrada(b.entrada);
                     // O grupo: a janela com todas as telas dele, a mãe antes das filhas.
@@ -696,16 +722,7 @@ export function AppShell({
                         verTudo={{ href: hrefDoGrupo, rotulo: "Ver as telas do grupo" }}
                       />
                     );
-                  })}{podeOrganizarMenu && !naFaixa && (
-                    <Link
-                      href={`/admin/setores?setor=${encodeURIComponent(activeSector.code)}#ordem-do-menu`}
-                      onClick={() => setMobileOpen(false)}
-                      className="mt-2 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-fs-1 text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
-                    >
-                      <ArrowUpDown size={13} aria-hidden className="flex-shrink-0" />
-                      Organizar menu
-                    </Link>
-                  )}</>;
+                  })}</>;
                 })()}
               </>
             ) : (
@@ -745,6 +762,7 @@ export function AppShell({
             )}
           </nav>
 
+          {podeOrganizar && !naFaixa && <RodapeDaOrganizacao org={organizacao} />}
         </aside>
       </ProvedorDaFaixa>
 
