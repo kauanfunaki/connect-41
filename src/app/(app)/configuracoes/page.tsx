@@ -17,9 +17,6 @@ import { TemaSelector } from "@/components/configuracoes/TemaSelector";
 import { SeletorDePaleta } from "@/components/configuracoes/SeletorDePaleta";
 import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
 import { AZUL_DO_CONNECT } from "@/lib/aparencia/paletas";
-import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
-import { salvarPushSubscription, removerPushSubscription } from "@/app/(app)/notificacoes/actions";
-import { getVapidPublicKey } from "@/lib/vapid";
 import { ExpedienteForm } from "@/components/agenda/ExpedienteForm";
 import { EXPEDIENTE_PADRAO } from "@/lib/agendaExpediente";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
@@ -153,12 +150,18 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
         </SecaoDeConfiguracao>
       )}
 
-      <SecaoDeConfiguracao id="notificacoes" titulo="Notificações" descricao="Avisos no celular e no navegador, e o histórico do que chegou." icone={<Bell />}>
-        <PushNotificationToggle
-          publicKey={getVapidPublicKey()}
-          acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
-        />
-        {/* O cartão-atalho do app (`Card href`): borda azul, sobe 2px. */}
+      <SecaoDeConfiguracao id="notificacoes" titulo="Notificações" descricao="O som, o aviso neste aparelho e o histórico do que chegou." icone={<Bell />}>
+        {/* O interruptor do aviso no aparelho saiu daqui (09/11/2026, pedido do
+            Victor): mora só em Notificações, junto do som e do volume. Aqui
+            fica o caminho. O cartão-atalho do app (`Card href`): borda azul,
+            sobe 2px. */}
+        <Card
+          href="/notificacoes"
+          className="group flex items-center justify-between gap-2 px-3.5 py-2.5"
+        >
+          <span className="text-fs-3 text-fg">Som e aviso neste aparelho</span>
+          <ChevronRight size={16} className="text-fg-muted group-hover:text-fg transition-colors" />
+        </Card>
         <Card
           href="/notificacoes"
           className="group flex items-center justify-between gap-2 px-3.5 py-2.5"

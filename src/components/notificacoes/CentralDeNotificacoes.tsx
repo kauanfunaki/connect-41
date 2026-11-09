@@ -71,7 +71,7 @@ export function CentralDeNotificacoes({
   ocultos: string[];
   /** Veio do atalho "Ajustar" do sino ou das configurações: abre já com as preferências. */
   abrirPreferencias?: boolean;
-  /** O interruptor de push, renderizado no servidor. */
+  /** O som e o aviso no computador, montados pela página (a chave do push vem do servidor). */
   preferencias: React.ReactNode;
 }) {
   const router = useRouter();

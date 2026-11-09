@@ -28,6 +28,8 @@ import {
   type NotificacaoNova,
   type RespostaDasNovas,
 } from "@/lib/notificacoes/avisoNaTela";
+import { audioPronto, destravarAudio, lerPreferenciasDoNavegador, tocaSom, tocarSom } from "@/lib/notificacoes/som";
+import { ICONE_DO_AVISO, registroDoConnect, temAvisoNoComputador } from "@/lib/notificacoes/pushDoNavegador";
 import { INTERVALO_DA_CONFERENCIA_MS } from "./useNumeroConferido";
 
 type Contagens = Record<AbaOuTodas, number>;
@@ -67,8 +69,67 @@ function guardarMostrados(ids: string[]): void {
   }
 }
 
-/** O pedido do service worker (`public/sw.js`) para a janela aberta ir à tela do push. */
-type PedidoDeNavegacao = { tipo?: unknown; url?: unknown };
+/**
+ * Quando alguma aba do Connect conferiu o sino pela última vez, entre as abas.
+ * A aba em segundo plano só confere se nenhuma outra conferiu há pouco: com
+ * cinco abas abertas, uma só pergunta ao servidor.
+ */
+const CHAVE_DA_ULTIMA_CONFERENCIA = "connect:ultima-conferencia";
+
+function outraAbaConferiuHaPouco(): boolean {
+  try {
+    return Date.now() - Number(localStorage.getItem(CHAVE_DA_ULTIMA_CONFERENCIA) ?? 0) < INTERVALO_DA_CONFERENCIA_MS - 10_000;
+  } catch {
+    return false;
+  }
+}
+
+function marcarConferencia(): void {
+  try {
+    localStorage.setItem(CHAVE_DA_ULTIMA_CONFERENCIA, String(Date.now()));
+  } catch {
+    // Sem armazenamento: cada aba confere por conta própria.
+  }
+}
+
+/** A pessoa deixou o Connect mostrar aviso no computador, e o navegador também. */
+function avisaNoComputador(): boolean {
+  return temAvisoNoComputador() && Notification.permission === "granted" && lerPreferenciasDoNavegador().noComputador;
+}
+
+/**
+ * O som e o aviso do computador das notificações que acabaram de chegar
+ * (09/11/2026). O som é um só, mesmo chegando três de uma vez. O aviso do
+ * computador sai quando a pessoa não está olhando o Connect (outra aba, outro
+ * programa) — olhando, o canto da tela basta — e só quando este navegador não
+ * tem push: com push, o aviso do computador já veio por ele.
+ */
+async function anunciar(novas: NotificacaoNova[]): Promise<void> {
+  const p = lerPreferenciasDoNavegador();
+  const tocou = tocaSom(p) ? await tocarSom(p.som, p.volume) : false;
+  if (!avisaNoComputador()) return;
+  if (document.visibilityState === "visible" && document.hasFocus()) return;
+  try {
+    const registro = await registroDoConnect();
+    if (await registro.pushManager?.getSubscription()) return;
+    for (const n of novas) {
+      await registro.showNotification(n.titulo, {
+        body: n.mensagem,
+        icon: ICONE_DO_AVISO,
+        badge: ICONE_DO_AVISO,
+        tag: n.id,
+        data: { url: destinoDoClique(n) ?? "/notificacoes" },
+        // Mudo quando o Connect já tocou, ou quando a pessoa desligou o som.
+        silent: tocou || !tocaSom(p),
+      });
+    }
+  } catch {
+    // O navegador não deixou: o aviso segue no sino e no canto da tela.
+  }
+}
+
+/** Os pedidos do service worker (`public/sw.js`): ir à tela do push clicado, ou conferir o que chegou. */
+type PedidoDoServiceWorker = { tipo?: unknown; url?: unknown };
 
 function ajustar(c: Contagens, n: NotificacaoNaTela, delta: number): Contagens {
   return { ...c, todas: Math.max(0, c.todas + delta), [n.aba]: Math.max(0, c[n.aba] + delta) };
@@ -126,8 +187,16 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   // só marca onde a página começou: o que já existia não vira aviso. Pela rota
   // `/api/notificacoes/novas`, e não por Server Action, como o alerta de reunião.
   const desdeRef = useRef<string | null>(null);
-  const conferir = useEffectEvent(async () => {
-    if (document.visibilityState !== "visible") return;
+  //
+  // Com som ou aviso no computador ligados (09/11/2026), a aba em segundo
+  // plano também confere: é com a pessoa em outro lugar que o som e o aviso
+  // do computador fazem falta. `forcar`: chegou um push, confere já.
+  const conferir = useEffectEvent(async (forcar = false) => {
+    if (document.visibilityState !== "visible" && !forcar) {
+      if (!tocaSom(lerPreferenciasDoNavegador()) && !avisaNoComputador()) return;
+      if (outraAbaConferiuHaPouco()) return;
+    }
+    marcarConferencia();
     try {
       const consulta = desdeRef.current ? `?desde=${encodeURIComponent(desdeRef.current)}` : "";
       const r = await fetch(`/api/notificacoes/novas${consulta}`, { cache: "no-store" });
@@ -142,6 +211,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
       if (mostrar.length === 0) return;
       guardarMostrados(lembrarMostrados(mostrados, mostrar.map((n) => n.id)));
       for (const n of mostrar) avisar(n);
+      void anunciar(mostrar);
     } catch {
       // Rede oscilando: o número e os avisos voltam na próxima conferência.
     }
@@ -165,7 +235,15 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     const sw = typeof navigator !== "undefined" ? navigator.serviceWorker : undefined;
     if (!sw) return;
     function aoReceber(e: MessageEvent) {
-      const pedido = e.data as PedidoDeNavegacao | null;
+      const pedido = e.data as PedidoDoServiceWorker | null;
+      // Chegou um push: o sino confere na hora (o aviso do canto e o som), e
+      // diz ao service worker se o aviso do computador sai mudo — quando o som
+      // é daqui, ou quando a pessoa desligou o som.
+      if (pedido?.tipo === "connect:push") {
+        e.ports[0]?.postMessage({ silenciar: !tocaSom(lerPreferenciasDoNavegador()) || audioPronto() });
+        void conferir(true);
+        return;
+      }
       if (pedido?.tipo !== "connect:navegar" || typeof pedido.url !== "string") return;
       const destino = destinoDoClique({ href: pedido.url });
       if (!destino) return;
@@ -176,6 +254,20 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     sw.startMessages();
     return () => sw.removeEventListener("message", aoReceber);
   }, [router]);
+
+  // O navegador só deixa a página fazer som depois de um gesto da pessoa: o
+  // primeiro clique ou tecla destrava o áudio para os avisos que vierem.
+  useEffect(() => {
+    function destravar() {
+      if (tocaSom(lerPreferenciasDoNavegador())) destravarAudio();
+    }
+    document.addEventListener("pointerdown", destravar);
+    document.addEventListener("keydown", destravar);
+    return () => {
+      document.removeEventListener("pointerdown", destravar);
+      document.removeEventListener("keydown", destravar);
+    };
+  }, []);
 
   // O Esc vem do `PainelFlutuante`, pela pilha de camadas (ver `ui/camadas.ts`).
 

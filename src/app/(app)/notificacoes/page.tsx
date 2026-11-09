@@ -1,7 +1,9 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getAuthContext } from "@/lib/auth/context";
-import Link from "next/link";
 import { CentralDeNotificacoes } from "@/components/notificacoes/CentralDeNotificacoes";
+import { SomEAvisoNoComputador } from "@/components/notificacoes/SomEAvisoNoComputador";
+import { getVapidPublicKey } from "@/lib/vapid";
+import { removerPushSubscription, salvarPushSubscription } from "./actions";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { ehAba } from "@/lib/notificacoes/catalogo";
 import { consultarNotificacoes, naoLidasPorAba, tiposOcultos } from "@/lib/notificacoes/consultas";
@@ -46,16 +48,14 @@ export default async function NotificacoesPage({
         contagens={contagens}
         ocultos={ocultos}
         abrirPreferencias={sp.preferencias === "abrir"}
-        // Os avisos no celular e no navegador moram só em Configurações
-        // (lote 10, 28/10/2026 — item 11 de "Telas e informações repetidas"):
-        // eram o mesmo interruptor em dois lugares. Aqui fica o caminho.
+        // O som (cinco opções e o volume) e o aviso no aparelho se ajustam
+        // aqui (09/11/2026). O interruptor do aviso morava em Configurações
+        // (sua conta) e veio para cá; lá ficou só o atalho.
         preferencias={
-          <p className="px-1 text-fs-2 text-fg-secondary">
-            Avisos no celular e no navegador:{" "}
-            <Link href="/configuracoes#notificacoes" className="text-brand hover:underline">
-              Configurações › Notificações
-            </Link>
-          </p>
+          <SomEAvisoNoComputador
+            publicKey={getVapidPublicKey()}
+            acoes={{ salvar: salvarPushSubscription, remover: removerPushSubscription }}
+          />
         }
       />
     </PageContainer>

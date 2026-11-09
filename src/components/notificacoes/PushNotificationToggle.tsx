@@ -2,15 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  const output = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) output[i] = rawData.charCodeAt(i);
-  return output;
-}
+import { assinarPush, assinaturaAtual, cancelarPush, temPush } from "@/lib/notificacoes/pushDoNavegador";
+import { gravarPreferenciasNoNavegador } from "@/lib/notificacoes/som";
 
 type Status = "unsupported" | "unconfigured" | "loading" | "subscribed" | "unsubscribed" | "denied";
 
@@ -63,7 +56,7 @@ export function PushNotificationToggle({
     let cancelled = false;
 
     async function setup() {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      if (!temPush()) {
         if (!cancelled) setStatus("unsupported");
         return;
       }
@@ -76,8 +69,7 @@ export function PushNotificationToggle({
         return;
       }
       try {
-        const registration = await navigator.serviceWorker.register("/sw.js");
-        const existing = await registration.pushManager.getSubscription();
+        const existing = await assinaturaAtual();
         if (!cancelled) setStatus(existing ? "subscribed" : "unsubscribed");
       } catch {
         if (!cancelled) setStatus("unsupported");
@@ -98,22 +90,18 @@ export function PushNotificationToggle({
       return;
     }
     try {
-      const registration = await navigator.serviceWorker.ready;
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setStatus("denied");
         return;
       }
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
-      const json = subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      const result = await acoes.salvar({ endpoint: json.endpoint, keys: json.keys });
+      const result = await acoes.salvar(await assinarPush(publicKey));
       if (result?.error) {
         setError(result.error);
         return;
       }
+      // O mesmo interruptor do "Aviso no computador" de Notificações (09/11/2026).
+      gravarPreferenciasNoNavegador({ noComputador: true });
       setStatus("subscribed");
     } catch {
       setError("Não foi possível ativar notificações push.");
@@ -123,13 +111,9 @@ export function PushNotificationToggle({
   async function handleUnsubscribe() {
     setError(null);
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        const endpoint = subscription.endpoint;
-        await subscription.unsubscribe();
-        await acoes.remover(endpoint);
-      }
+      const endpoint = await cancelarPush();
+      if (endpoint) await acoes.remover(endpoint);
+      gravarPreferenciasNoNavegador({ noComputador: false });
       setStatus("unsubscribed");
     } catch {
       setError("Não foi possível desativar notificações push.");
