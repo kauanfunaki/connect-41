@@ -12,7 +12,7 @@
 // rodada foi há mais de `INTERVALO_DO_SIMA_HORAS`.
 
 import { z } from "zod";
-import { ABAS, classificarSolicitacao, normalizarProtocolo, protocoloValido } from "@/lib/societario/orgaos/sima";
+import { ABAS, classificarSolicitacao, normalizarProtocolo, protocoloValido, seloDeExigencia } from "@/lib/societario/orgaos/sima";
 import { decidir, type Decisao, type ProtocoloParaVerificar } from "@/lib/societario/observador";
 
 export const INTERVALO_DO_SIMA_HORAS = 6;
@@ -62,14 +62,30 @@ export type LeituraDoProtocoloDoSima =
  * a tela ainda não tinha mostrado também vira falha anotada — nunca palpite.
  */
 export function lerProtocolosDoSima(pendentes: ProtocoloDoSima[], resultado: ResultadoDoSima): LeituraDoProtocoloDoSima[] {
-  const porNumero = new Map(resultado.itens.map((i) => [normalizarProtocolo(i.protocolo), i]));
+  const porNumero = new Map<string, ItemDoSima[]>();
+  for (const i of resultado.itens) {
+    const n = normalizarProtocolo(i.protocolo);
+    porNumero.set(n, [...(porNumero.get(n) ?? []), i]);
+  }
   return pendentes.map((p) => {
-    const item = p.numero ? porNumero.get(normalizarProtocolo(p.numero)) : undefined;
+    const itens = p.numero ? (porNumero.get(normalizarProtocolo(p.numero)) ?? []) : [];
+    const item = leituraQueVale(itens);
     if (!item) {
       return {
         id: p.id,
         tipo: "falha",
         mensagem: `O protocolo ${p.numero ?? "(sem número)"} não aparece em Minhas Solicitações do SIMA no login da 041. Se ele foi aberto com o certificado do cliente, o robô não o enxerga.`,
+      };
+    }
+    // Em Pendente com selo que não é de exigência e, ao mesmo tempo, em Em
+    // análise (CAD-26000013 no ensaio de 09/11/2026). Pendente no SIMA é algo
+    // esperando o requerente, mas o selo diz que o órgão está analisando: quem
+    // decide é uma pessoa olhando o SIMA, não um palpite daqui.
+    if (item.aba === "Pendente" && !seloDeExigencia(item.selo) && itens.some((i) => i.aba === "Em análise")) {
+      return {
+        id: p.id,
+        tipo: "falha",
+        mensagem: `O SIMA mostra o protocolo ${p.numero} em duas abas: em Pendente, com o selo "${item.selo}", e em Em análise. Pendente no SIMA costuma ser algo esperando a 41 (documento, assinatura ou pagamento): confira o protocolo no SIMA.`,
       };
     }
     try {
@@ -78,6 +94,21 @@ export function lerProtocolosDoSima(pendentes: ProtocoloDoSima[], resultado: Res
       return { id: p.id, tipo: "falha", mensagem: err instanceof Error ? err.message : "falha ao ler o selo do SIMA" };
     }
   });
+}
+
+type ItemDoSima = ResultadoDoSima["itens"][number];
+
+/**
+ * Qual leitura vale quando o protocolo aparece em mais de uma aba (09/11/2026:
+ * o ensaio devolveu CAD-26000013 em Pendente e em Em análise). Antes valia a
+ * última da lista, e a decisão dependia da ordem em que a máquina leu as abas.
+ * Agora a ordem é fixa: Finalizado, depois Pendente com selo de exigência,
+ * depois Pendente com outro selo, por último Em análise — o desfecho mais
+ * forte, e o que pede ação do escritório, vêm antes do "segue analisando".
+ */
+function leituraQueVale(itens: ItemDoSima[]): ItemDoSima | undefined {
+  const peso = (i: ItemDoSima) => (i.aba === "Finalizado" ? 0 : i.aba === "Pendente" ? (seloDeExigencia(i.selo) ? 1 : 2) : 3);
+  return [...itens].sort((a, b) => peso(a) - peso(b))[0];
 }
 
 /** Pode criar a próxima rodada? A última tem de ter sido há mais do intervalo. */
