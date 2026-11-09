@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Landmark, History, Wand2 } from "lucide-react";
@@ -648,7 +649,7 @@ async function ExtratoDaConta({
           />
         }
         acoes={
-          <form method="get" action="/conciliacao" className="flex flex-wrap items-center gap-2">
+          <FormularioDeFiltro action="/conciliacao" className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="empresa" value={companyId} />
             <input type="hidden" name="conta" value={conta.id} />
             {situacao.chave !== "pendentes" && <input type="hidden" name="situacao" value={situacao.chave} />}
@@ -666,7 +667,7 @@ async function ExtratoDaConta({
                 Limpar período
               </Button>
             )}
-          </form>
+          </FormularioDeFiltro>
         }
       >
 

@@ -34,6 +34,7 @@ let busca = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   usePathname: () => "/controle-interno",
   useSearchParams: () => busca,
+  useRouter: () => ({ push: () => {} }),
 }));
 
 beforeAll(() => vi.stubGlobal("React", React));

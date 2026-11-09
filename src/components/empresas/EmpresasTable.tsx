@@ -1,5 +1,6 @@
 "use client";
 
+import { useSelecaoDasLinhas } from "@/components/shared/useSelecaoDasLinhas";
 import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { Building2, ChevronRight, CornerDownRight } from "lucide-react";
@@ -76,7 +77,7 @@ export function EmpresasTable({
   // cliente, com uma faixa com o nome de cada um; saiu com o Cliente (etapa 3).
   const nos = montarArvore(companies);
 
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useSelecaoDasLinhas(companies.map((linha) => linha.id));
   // Filiais começam recolhidas: a listagem existe para varrer clientes, e abrir
   // tudo por padrão devolveria a tabela plana que a árvore veio substituir.
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());

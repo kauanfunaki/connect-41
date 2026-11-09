@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { opcoesDeEmpresa, type EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { CampoMes } from "@/components/ui/CampoMes";
@@ -66,7 +67,7 @@ export function FiltroDePeriodo({
 }: Props) {
   const periodo = anoInteiro && ano !== undefined ? ano : mes;
   return (
-    <form method="get" action={acao} className={naFileira ? "contents" : "flex flex-wrap items-center gap-2 mb-4"}>
+    <FormularioDeFiltro action={acao} className={naFileira ? "contents" : "flex flex-wrap items-center gap-2 mb-4"}>
       {Object.entries(extras ?? {}).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
       {empresas && (
         // Com busca, e não `<select>`: a lista de empresas é longa (quase
@@ -103,6 +104,6 @@ export function FiltroDePeriodo({
       <Button type="submit" variant="secondary" size="sm">
         Aplicar
       </Button>
-    </form>
+    </FormularioDeFiltro>
   );
 }

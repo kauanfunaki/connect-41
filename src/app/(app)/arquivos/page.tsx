@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import Link from "next/link";
 import { Building2, CircleAlert, FolderInput, FolderTree, Inbox, Trash2 } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -127,7 +128,7 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
             <h2 id="t-empresas" className="text-section font-semibold text-fg">
               Empresas
             </h2>
-            <form method="get" role="search" className="w-full sm:w-72">
+            <FormularioDeFiltro role="search" className="w-full sm:w-72">
               {/* Com o "limpar" próprio do campo de busca (15/10/2026). */}
               <CampoDeBusca
                 id="arquivos-empresa"
@@ -137,7 +138,7 @@ export default async function ArquivosPage({ searchParams }: { searchParams: Pro
                 placeholder="Nome ou CNPJ"
                 aria-label="Buscar empresa por nome ou CNPJ"
               />
-            </form>
+            </FormularioDeFiltro>
           </div>
           {lista.comNovidade > 0 && (
             <p className="text-micro text-fg-muted -mt-1">

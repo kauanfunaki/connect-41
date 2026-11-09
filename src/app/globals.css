@@ -1181,6 +1181,39 @@ tr.c41-linha:hover > :first-child {
   }
 }
 
+/* ----- Filtro sem recarregar (NavegacaoSemRecarregar, 09/11/2026) -----
+   Enquanto a lista do novo recorte vem do servidor, a de antes continua à
+   vista, esmaecida, e uma barra fina corre no topo do <main>. O esmaecer
+   espera 120 ms para não piscar quando a resposta é rápida; a volta é na
+   hora. A barra do casco (busca, Filtros, etiquetas) não esmaece: é nela que
+   a pessoa acabou de mexer. */
+.c41-atualizando {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: 0;
+  pointer-events: none;
+}
+.c41-atualizando[data-ativo]::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-brand) 35%, var(--color-brand) 65%, transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: c41-atualizando 1.1s ease-in-out infinite, c41-esmaecer .2s .1s backwards;
+}
+@keyframes c41-atualizando { from { background-position: -100% 0; } to { background-position: 200% 0; } }
+.c41-casco > :not(.c41-casco-barra) { transition: opacity .15s ease; }
+.c41-atualizando[data-ativo] ~ * .c41-casco > :not(.c41-casco-barra) {
+  opacity: .55;
+  transition-delay: .12s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .c41-atualizando[data-ativo]::after { animation: none; background-size: 100% 100%; opacity: .6; }
+}
+
 /* ----- Dica do texto cortado (DicaFlutuante): só opacidade — o transform
    posiciona o balão e não pode ser animado junto ----- */
 @keyframes c41-dica-in { from { opacity: 0; } to { opacity: 1; } }

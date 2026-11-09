@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -187,7 +188,7 @@ export default async function ProcessosPage({
           // A busca no desenho de Certificados e do acervo fiscal (07/10/2026):
           // GET, para o link copiado levar a mesma fila. Os filtros escolhidos
           // vão junto nos campos escondidos — sem eles, buscar os apagaria.
-          <form method="get" action="/processos" className="max-w-full">
+          <FormularioDeFiltro action="/processos" className="max-w-full">
             {recorte.chave !== "todos" && <input type="hidden" name="situacao" value={recorte.chave} />}
             {responsavelFiltro && <input type="hidden" name="responsavel" value={responsavelFiltro} />}
             {prioridadeFiltro && <input type="hidden" name="prioridade" value={prioridadeFiltro} />}
@@ -199,7 +200,7 @@ export default async function ProcessosPage({
               aria-label="Buscar processo"
               className="w-80 max-w-full"
             />
-          </form>
+          </FormularioDeFiltro>
         }
         filtros={
           <FiltrosDaTela

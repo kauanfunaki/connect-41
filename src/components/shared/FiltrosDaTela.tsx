@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useOptimistic, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Check, Search, X } from "lucide-react";
 import { FilterButton } from "@/components/ui/FilterButton";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useNavegarSemRecarregar } from "@/components/shared/NavegacaoSemRecarregar";
 
 export type OpcaoDeFiltro = { value: string; label: string };
 
@@ -42,8 +43,10 @@ const COM_BUSCA = 7;
  * troca a tela (`AbasDeLink`); filtro mora aqui, e escolhe-se numa lista com
  * busca, nunca numa fileira de botões.
  *
- * Cada escolha navega na hora (GET), como o filtro de Empresas: a URL continua
- * copiável e o voltar do navegador desfaz. Mudar de filtro volta para a página
+ * Cada escolha navega na hora, como o filtro de Empresas: a URL continua
+ * copiável e o voltar do navegador desfaz. Desde 09/11/2026 sem recarregar a
+ * página (`NavegacaoSemRecarregar`): a etiqueta e a marca da opção mudam na
+ * hora, e a lista de antes fica esmaecida até a nova chegar. Mudar de filtro volta para a página
  * 1 — ficar na página 5 de um filtro que só tem uma abriria a tela vazia.
  */
 export function FiltrosDaTela({
@@ -59,7 +62,13 @@ export function FiltrosDaTela({
   naBarra?: boolean;
 }) {
   const pathname = usePathname();
-  const params = useSearchParams();
+  const paramsDaUrl = useSearchParams();
+  // A escolha aparece na hora (etiqueta, "x", marca da opção), antes de a
+  // lista nova chegar; terminada a navegação, vale a URL de novo.
+  const [queryVisivel, mostrarQuery] = useOptimistic(paramsDaUrl.toString());
+  const params = useMemo(() => new URLSearchParams(queryVisivel), [queryVisivel]);
+  const { ir } = useNavegarSemRecarregar();
+  const aplicar = (url: string) => ir(url, () => mostrarQuery(url.split("?")[1] ?? ""));
   const [campoAberto, setCampoAberto] = useState(campos[0]?.chave ?? "");
   const [busca, setBusca] = useState("");
 
@@ -115,7 +124,7 @@ export function FiltrosDaTela({
           {filtrado && (
             <button
               type="button"
-              onClick={() => window.location.assign(hrefCom(c.chave, ""))}
+              onClick={() => aplicar(hrefCom(c.chave, ""))}
               aria-label={`Tirar o filtro de ${c.rotulo.toLowerCase()}`}
               className="inline-flex items-center justify-center w-5 h-5 rounded-full text-fg-muted hover:text-fg hover:bg-surface-hover"
             >
@@ -206,7 +215,7 @@ export function FiltrosDaTela({
                             aria-selected={escolhida}
                             onClick={() => {
                               close();
-                              window.location.assign(hrefCom(campo.chave, escolhida ? "" : o.value));
+                              aplicar(hrefCom(campo.chave, escolhida ? "" : o.value));
                             }}
                             className={`w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md text-ui transition-colors ${
                               escolhida ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
@@ -241,7 +250,7 @@ export function FiltrosDaTela({
                   q.delete("cursor");
                   for (const k of [...q.keys()]) if (k.startsWith("c_")) q.delete(k);
                   const s = q.toString();
-                  window.location.assign(s ? `${pathname}?${s}` : pathname);
+                  aplicar(s ? `${pathname}?${s}` : pathname);
                 }}
               >
                 Limpar filtros

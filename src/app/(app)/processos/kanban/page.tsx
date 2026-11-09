@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { notFound } from "next/navigation";
 import { List } from "lucide-react";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -95,7 +96,7 @@ export default async function KanbanDeProcessosPage({
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2 min-w-0">
           {/* GET, como na lista: os filtros escolhidos vão junto nos campos
               escondidos — sem eles, buscar os apagaria. */}
-          <form method="get" action="/processos/kanban" className="max-w-full">
+          <FormularioDeFiltro action="/processos/kanban" className="max-w-full">
             {filtro.responsavelId && <input type="hidden" name="responsavel" value={filtro.responsavelId} />}
             {filtro.prioridade && <input type="hidden" name="prioridade" value={filtro.prioridade} />}
             {filtro.tipoId && <input type="hidden" name="tipo" value={filtro.tipoId} />}
@@ -107,7 +108,7 @@ export default async function KanbanDeProcessosPage({
               aria-label="Buscar processo"
               className="w-80 max-w-full"
             />
-          </form>
+          </FormularioDeFiltro>
           {/* Responsável, prioridade e tipo no botão "Filtros" — era um
               formulário com três selects e "Filtrar" (conferência de 30/09). */}
           <FiltrosDaTela

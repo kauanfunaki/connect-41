@@ -1,5 +1,6 @@
 "use client";
 
+import { useSelecaoDasLinhas } from "@/components/shared/useSelecaoDasLinhas";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,7 +57,7 @@ const TH = "px-4 py-3 text-micro font-semibold uppercase tracking-wide text-fg-m
 export function ColaboradoresTable({ linhas, canCreate, mostrarEmpresa = false, definirAtivoPessoasEmMassa }: Props) {
   const router = useRouter();
   const toast = useToast();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useSelecaoDasLinhas(linhas.map((linha) => linha.id));
   const [confirmAlvo, setConfirmAlvo] = useState<{ tipo: "massa" } | { tipo: "linha"; linha: LinhaDaTabelaDeColaboradores } | null>(null);
   const [pending, startTransition] = useTransition();
 

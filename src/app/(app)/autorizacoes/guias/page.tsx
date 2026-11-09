@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { notFound } from "next/navigation";
 import { AlertTriangle, CheckCircle2, FileText, Send } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -50,12 +51,12 @@ export default async function GuiasDoMesPage({ searchParams }: { searchParams: P
         title="Guias do mês"
         subtitle="As guias emitidas pelo Connect que vencem no mês, e onde cada uma está: emitida, enviada, aberta pelo cliente, paga ou vencida."
         action={
-          <form method="get" action="/autorizacoes/guias" className="flex items-center gap-2">
+          <FormularioDeFiltro action="/autorizacoes/guias" className="flex items-center gap-2">
             <CampoMes compact name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />
             <Button type="submit" variant="secondary" size="sm">
               Aplicar
             </Button>
-          </form>
+          </FormularioDeFiltro>
         }
       />
 

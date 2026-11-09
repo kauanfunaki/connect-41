@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ShieldCheck, ShieldAlert, Send, Hourglass } from "lucide-react";
@@ -204,7 +205,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cliente", "clientes")}
         busca={
-          <form method="get" action="/autorizacoes" className="max-w-full">
+          <FormularioDeFiltro action="/autorizacoes" className="max-w-full">
             {recorte !== "todas" && <input type="hidden" name="situacao" value={recorte} />}
             {regime && <input type="hidden" name="regime" value={regime} />}
             <CampoDeBusca
@@ -215,7 +216,7 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
               aria-label="Buscar cliente"
               className="w-72 max-w-full"
             />
-          </form>
+          </FormularioDeFiltro>
         }
         filtros={
           <FiltrosDaTela

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkSemRecarregar } from "@/components/shared/NavegacaoSemRecarregar";
 import { CircleCheck, OctagonAlert, TriangleAlert } from "lucide-react";
 
 /**
@@ -16,8 +17,13 @@ type Props = {
   value: number | string;
   /** Torna o card clicável. Sem href, vira um bloco estático. */
   href?: string;
-  /** Filtros usam navegação completa para não reaproveitar uma árvore RSC de outro recorte. */
-  navegacaoCompleta?: boolean;
+  /**
+   * O cartão é um filtro da lista abaixo (os da `FaixaDeTotais` com `ativo`).
+   * De 09/10 a 09/11/2026 era um `<a>` simples, que recarregava a página
+   * inteira; agora navega sem recarregar e sem rolar a tela, como o
+   * `FiltrosDaTela` (`NavegacaoSemRecarregar`).
+   */
+  filtro?: boolean;
   /** Ícone à esquerda do label — herda a cor do tom. */
   icon?: React.ReactNode;
   /** Texto de apoio ao lado do valor, ex: "+3 este mês", "2 vencidos". */
@@ -116,7 +122,7 @@ export function MetricCard({
   highlight = false,
   ativo = false,
   destaque = false,
-  navegacaoCompleta = false,
+  filtro = false,
   rotuloInteiro = false,
   delay = 0,
 }: Props) {
@@ -175,7 +181,7 @@ export function MetricCard({
 
   // Sem anel de foco próprio: o `:focus-visible` global já desenha o dele.
   if (href) {
-    const Destino = navegacaoCompleta ? "a" : Link;
+    const Destino = filtro ? LinkSemRecarregar : Link;
     return (
       <Destino
         href={href}

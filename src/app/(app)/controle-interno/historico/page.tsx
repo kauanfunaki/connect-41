@@ -60,7 +60,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
           <CartoesNoCelular>{itens.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
             <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={linkDoItem(item.id)}>{item.title}</Link>} />
             <InfoDoCartao>{nomeDoSistema(item, true)}</InfoDoCartao><InfoDoCartao>{item.assignee?.name ?? "Sem responsável"}</InfoDoCartao><InfoDoCartao>Aberto em {data(item.createdAt)} · Fechado em {data(fechadoEm.get(item.id))}</InfoDoCartao>
-            <PeDoCartao><SituacaoTech forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></PeDoCartao>
+            <PeDoCartao><SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></PeDoCartao>
           </Cartao>)}</CartoesNoCelular>
           <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Sistema", "Responsável", "Aberto em", "Fechado em", "Situação"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">{itens.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
@@ -69,7 +69,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
               <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td>
               <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(item.createdAt)}</td>
               <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(fechadoEm.get(item.id))}</td>
-              <td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></td>
+              <td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech key={`${item.id}:${item.version}`} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></td>
             </tr>)}</tbody>
           </table></TabelaNoDesktop>
         </>}

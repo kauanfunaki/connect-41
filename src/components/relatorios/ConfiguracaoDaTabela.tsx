@@ -1,5 +1,6 @@
 "use client";
 
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { useId, useState } from "react";
 import { Select } from "@/components/ui/Select";
 import { CampoMes } from "@/components/ui/CampoMes";
@@ -58,7 +59,7 @@ export function ConfiguracaoDaTabela({ config, empresa }: { config: Configuracao
 
   return (
     <Card className="p-4">
-      <form method="get" action="/tabela-dinamica" className="flex flex-col gap-4">
+      <FormularioDeFiltro action="/tabela-dinamica" className="flex flex-col gap-4">
         {empresa && <input type="hidden" name="empresa" value={empresa} />}
         <input type="hidden" name="linhas" value={linha2 ? `${linha1},${linha2}` : linha1} />
         {semPeriodo && <input type="hidden" name="periodo" value="todos" />}
@@ -145,7 +146,7 @@ export function ConfiguracaoDaTabela({ config, empresa }: { config: Configuracao
             Aplicar
           </Button>
         </div>
-      </form>
+      </FormularioDeFiltro>
     </Card>
   );
 }
