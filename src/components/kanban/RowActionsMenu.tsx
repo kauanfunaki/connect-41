@@ -18,13 +18,14 @@ type Props = {
  * vários níveis, "Subatividades vão junto" escondia quanto se apagava — a
  * cascata do banco leva a árvore inteira, com o histórico de cada uma.
  *
- * Os anexos saíram da frase: o documento da atividade é ligado por
- * `entityType`/`entityId`, sem chave no banco, e não é apagado com ela.
+ * Os anexos voltaram para a frase em 06/11/2026: sem chave no banco, eles
+ * ficavam para trás, e agora `apagarAtividadeComAnexos` apaga os da árvore
+ * inteira, arquivo incluído.
  */
 export function oQueVaiJunto(subatividades: number): string {
-  if (subatividades === 0) return "Os comentários e o histórico vão junto. Esta ação não pode ser desfeita.";
+  if (subatividades === 0) return "Os comentários, os anexos e o histórico vão junto. Esta ação não pode ser desfeita.";
   const quantas = subatividades === 1 ? "A subatividade dentro dela vai junto" : `As ${subatividades} subatividades dentro dela, de todos os níveis, vão junto`;
-  return `${quantas}, com os comentários e o histórico. Esta ação não pode ser desfeita.`;
+  return `${quantas}, com os comentários, os anexos e o histórico. Esta ação não pode ser desfeita.`;
 }
 
 // Menu "…" da linha de tarefa na visão de lista. Até aqui excluir uma tarefa
