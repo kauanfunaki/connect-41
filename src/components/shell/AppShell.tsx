@@ -28,7 +28,6 @@ import {
   X,
   Building2,
   Users,
-  GitBranch,
   Truck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -45,7 +44,7 @@ import {
 } from "@/components/shell/NavLink";
 import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
-import { slugDoGrupo, ICONE_DO_GRUPO, TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
+import { slugDoGrupo, ICONE_DO_GRUPO, MODULO_NO_LUGAR_DOS_QUADROS, TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
 import { montarMenuDoSetor, ordemTemPosicao, pelaOrdem, telasDoBloco, telasVisiveis, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
 import { AvisoDaOrganizacao, GeralEmOrganizacao, MenuEmOrganizacao, RodapeDaOrganizacao, useOrganizarMenu, type ItemDentro } from "@/components/shell/OrganizarMenuNaLateral";
@@ -82,7 +81,6 @@ import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 import { contarChamadosDoMenuAction } from "@/app/(app)/chamados/contagem-actions";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
-import { abaDaProdutividade, ROTAS_DA_PRODUTIVIDADE } from "@/lib/tech-interno/rotasDaProdutividade";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -269,7 +267,7 @@ export function AppShell({
   // invisível.
   const [rolou, setRolou] = useState(false);
   const pathname = usePathname(), params = useSearchParams();
-  // Qual parte do Ops Center está aberta, pela mesma regra da página (OpsCenter).
+  // Qual parte do Orquestrador (o Ops Center) está aberta, pela mesma regra da página (OpsCenter).
   const visaoDoOps = pathname !== "/ops" ? null : params.get("view") ?? (["watcher", "status", "date"].some(k => params.has(k)) || Number(params.get("page")) > 1 ? "history" : "automations");
   // O "?" de cada tela (02/10/2026): com artigo, abre o passo a passo dela e
   // guarda de onde veio para o "Voltar"; sem artigo, a central.
@@ -297,8 +295,10 @@ export function AppShell({
 
   // O menu do setor (05/11/2026): os blocos por tema (`montarMenuDoSetor`).
   // As telas escondidas pelo olho do "Organizar menu" (09/11/2026) saem daqui;
-  // no modo de edição elas aparecem apagadas, no lugar delas.
-  const telasDoSetor = activeSector ? activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code)) : [];
+  // no modo de edição elas aparecem apagadas, no lugar delas. O Controle
+  // interno também sai (09/11/2026): ele é o item Quadros do Geral (`quadrosDoSetor`).
+  const telasDoSetor = activeSector ? activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code) && m.code !== MODULO_NO_LUGAR_DOS_QUADROS) : [];
+  const setorDoMenu = activeSector?.code ?? null;
   // Com a ordem escolhida pelo super admin, ela vence o "cores juntas" (28/10/2026).
   const ordemEscolhida = ordemTemPosicao(ordemDoMenu);
   const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDoModulo(b.entrada.tela.code) ?? "marca" : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
@@ -313,7 +313,7 @@ export function AppShell({
     const ordenados = agruparPorCor(blocos, areaDoBloco);
     return [...ordenados.filter((b) => posNoFim(b) < 0), ...ordenados.filter((b) => posNoFim(b) >= 0).sort((x, y) => posNoFim(x) - posNoFim(y))];
   };
-  const blocosDoMenu = naOrdemDoMenu(montarMenuDoSetor(telasVisiveis(telasDoSetor, ordemDoMenu), ordemDoMenu), ordemEscolhida);
+  const blocosDoMenu = naOrdemDoMenu(montarMenuDoSetor(telasVisiveis(telasDoSetor, ordemDoMenu), ordemDoMenu, setorDoMenu), ordemEscolhida);
 
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
@@ -396,19 +396,24 @@ export function AppShell({
     return escolhida.length > 0 ? pelaOrdem(presentes, (i) => i.chave, escolhida) : agruparPorCor(presentes, (i) => i.area);
   };
   const itensDoGeral = (quadros: ItemDoApoio | null = null) => listaDoGeral(quadros).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
-  // Na Tech, os Quadros são o Controle interno (decisão do Kauan, 05/11/2026):
-  // o item leva até ele, sem acender por conta própria — quem acende é o
-  // Controle interno, no grupo dele.
-  const quadrosDoSetor: ItemDoApoio | null = !activeSector || !noGeral("espacos")
+  // Na Tech, os Quadros são o Controle interno (decisão do Kauan, 05/11/2026).
+  // Desde 09/11/2026 o item é o próprio Controle interno, com o nome, o ícone e
+  // o destaque dele, e a tela sai da lista do setor. Não depende do "Quadros"
+  // ligado no Geral do setor: escondido lá, o Controle interno ficaria sem
+  // entrada no menu. Quem quiser tirá-lo usa o olho do organizador.
+  const controleInterno = activeSectorModules.find((m) => m.code === MODULO_NO_LUGAR_DOS_QUADROS);
+  const quadrosDoSetor: ItemDoApoio | null = !activeSector
     ? null
-    : activeSectorModules.some((m) => m.code === "tech_controle_interno")
-      ? { chave: "quadros", label: "Quadros", href: "/controle-interno", icon: <FolderKanban size={16} />, area: "marca", ativo: false }
-      : { chave: "quadros", label: "Quadros", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) };
+    : controleInterno
+      ? { chave: "quadros", label: controleInterno.label, href: controleInterno.href, icon: <ModuleIcon code={controleInterno.code} />, area: areaDoModulo(controleInterno.code) ?? "marca" }
+      : noGeral("espacos")
+        ? { chave: "quadros", label: "Quadros", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) }
+        : null;
   // Organizar no próprio menu (09/11/2026): o rodapé da lateral abre o modo de edição.
   const organizacao = useOrganizarMenu({
     setor: activeSector,
-    blocosAtuais: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor, ordemDoMenu), ordemEscolhida),
-    blocosPadrao: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor), false),
+    blocosAtuais: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor, ordemDoMenu, setorDoMenu), ordemEscolhida),
+    blocosPadrao: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor, undefined, setorDoMenu), false),
     ocultasAtuais: ordemDoMenu?.ocultas ?? [],
     dentroAtual: ordemDoMenu?.dentro ?? {},
     geralAtual: listaDoGeral(quadrosDoSetor, true, true),
@@ -640,26 +645,20 @@ export function AppShell({
                   };
                   const noContabil = pathname === "/sped-contabil";
                   const contribuicoes = noContabil && grupoContabil({ aba: params.get("aba") ?? undefined, grupo: params.get("grupo") ?? undefined, secao: params.get("secao") ?? params.get("ver") ?? undefined }) === "contribuicoes";
-                  // As telas de dentro de uma tela que têm entrada no menu (as abas
-                  // da Produtividade, do Ops Center, do SPED Contábil e do Painel de
-                  // Gestão): entram na janela dela, como a Tela 2. A primeira aba
-                  // é a própria tela, que abre a janela.
+                  // As telas de dentro de uma tela que têm entrada no menu (as
+                  // partes do Orquestrador, do SPED Contábil e do Painel de Gestão):
+                  // entram na janela dela, como a Tela 2. A primeira aba é a
+                  // própria tela, que abre a janela. A Produtividade saiu daqui em
+                  // 09/11/2026: é uma tela só, com as abas Pessoas e GitHub dentro.
                   const subTelas = (code: string): (TelaDoPainel & { ativa: boolean })[] => {
                     switch (code) {
-                      case "tech_github_contributions":
-                        // A Produtividade (05/11/2026; abas de 06/11): o Painel é a tela de
-                        // entrada; Pessoas (desenvolvedores e times) e GitHub ficam recuados.
-                        // Times e Repositórios abrem por botão dentro deles.
-                        return [
-                          { label: "Pessoas", href: ROTAS_DA_PRODUTIVIDADE.pessoas, icon: <Users />, ativa: abaDaProdutividade(pathname) === "pessoas" },
-                          { label: "GitHub", href: ROTAS_DA_PRODUTIVIDADE.github, icon: <GitBranch />, ativa: abaDaProdutividade(pathname) === "github" },
-                        ];
                       case "tech_ops_center":
-                        // Robôs, Sites e Apps embaixo; o Ops Center é só o título (05/11/2026).
+                        // Robôs, Apps e Sites embaixo; o Orquestrador (era o Ops Center)
+                        // é só o título (05/11/2026; nesta ordem desde 09/11/2026).
                         return [
                           { label: "Robôs", href: "/ops", icon: <Bot />, ativa: visaoDoOps === "automations" || visaoDoOps === "history" },
-                          { label: "Sites", href: "/ops?view=sites", icon: <Globe />, ativa: visaoDoOps === "sites" },
                           { label: "Apps", href: "/ops?view=apps", icon: <AppWindow />, ativa: visaoDoOps === "apps" },
+                          { label: "Sites", href: "/ops?view=sites", icon: <Globe />, ativa: visaoDoOps === "sites" },
                         ];
                       case "contabil_sped":
                         // De-para e lançamentos é um trabalho em etapas (03/11/2026): é a tela de entrada.
@@ -676,7 +675,6 @@ export function AppShell({
                     if (code === "contabil_sped") return noContabil;
                     if (code === "tech_ops_center") return false;
                     if (code === "gestao_painel") return pathname === "/gestao";
-                    if (code === "tech_github_contributions") return abaDaProdutividade(pathname) === "painel";
                     return undefined;
                   };
                   const linkDoContabil = hrefContabil("lancamentos", "entradas");
@@ -684,7 +682,7 @@ export function AppShell({
                   type Filha = { chave: string; label: string; href: string; icon: React.ReactNode; ativa?: boolean };
                   type Mae = { label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean; exact?: boolean; contador?: number; semLink?: boolean };
                   // A janela de uma tela com filhas: a própria tela no alto, depois as filhas.
-                  // Sem a mãe quando ela é só o título (Ops Center, 05/11/2026).
+                  // Sem a mãe quando ela é só o título (o Orquestrador, 05/11/2026).
                   const telasDaMae = (mae: Mae, filhas: Filha[]): TelaDoPainel[] => [
                     ...(mae.semLink ? [] : [{ label: mae.label, href: mae.href, icon: mae.icon, ativa: mae.ativo }]),
                     ...filhas.map((f) => ({ label: f.label, href: f.href, icon: f.icon, ativa: f.ativa })),

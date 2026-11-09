@@ -40,8 +40,9 @@ beforeEach(() => {
 
 describe("salvar a ordem do menu", () => {
   it("o Super Admin grava, e o que não é grupo nem tela do catálogo sai", async () => {
-    expect(await salvarOrdemDoMenu("s1", JSON.stringify({ grupos: ["Licenças", "Inventado"], telas: ["societario_robo", "tela_que_nao_existe"] }))).toBeNull();
-    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: ["Licenças"], telas: ["societario_robo"] });
+    // "Licenças" deixou de ser grupo em 09/11/2026 (virou "Regularização"): sai como um inventado.
+    expect(await salvarOrdemDoMenu("s1", JSON.stringify({ grupos: ["Regularização", "Inventado", "Licenças"], telas: ["societario_robo", "tela_que_nao_existe"] }))).toBeNull();
+    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: ["Regularização"], telas: ["societario_robo"] });
   });
 
   it.each(["ADMIN", "SECTOR_ADMIN", "SECTOR_USER", "READONLY"])("%s não grava", async (role) => {

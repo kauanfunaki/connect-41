@@ -1,4 +1,4 @@
-import { ORDEM_DOS_GRUPOS, getModuleDef, grupoDoModulo, type GrupoDeModulo } from "@/lib/module-catalog";
+import { ORDEM_DOS_GRUPOS, ORDEM_DO_MENU_DO_SETOR, getModuleDef, grupoDoModulo, type GrupoDeModulo } from "@/lib/module-catalog";
 
 // A regra do menu de um setor (05/11/2026, página "Ajustes de 05/11"). Antes
 // eram quatro jeitos: até 8 telas lista solta, mais que isso grupos com
@@ -11,8 +11,9 @@ import { ORDEM_DOS_GRUPOS, getModuleDef, grupoDoModulo, type GrupoDeModulo } fro
 //   `ORDEM_DOS_GRUPOS`;
 // - grupo com uma tela só vira tela solta (não há grupo de um item);
 // - a tela que veio de outra (`telaMae`, "Tela 1 / Tela 2") entra no grupo da
-//   mãe, logo depois dela — Entregas com o Controle interno; Painel, Órgãos e
-//   Relatórios com Processos.
+//   mãe, logo depois dela — as DREs com o DRE do BPO;
+// - o setor que pediu uma ordem própria (Tech e Societário, 09/11/2026) tem os
+//   blocos nela (`ORDEM_DO_MENU_DO_SETOR`).
 //
 // O desenho é a opção C, "o jeito do BPO para todos" (o Kauan trocou a A pela C
 // no mesmo dia): o grupo e a tela com filhas são uma linha com o número de
@@ -147,12 +148,13 @@ export function pelaOrdem<T>(itens: readonly T[], chave: (i: T) => string, ordem
 }
 
 /**
- * Os blocos do menu do setor, na ordem dos grupos. Dentro de cada grupo, a
- * ordem em que as telas chegaram (a do catálogo) — ou a que o super admin
- * escolheu (`ordem`), para os grupos, as telas e as filhas de cada tela.
+ * Os blocos do menu do setor, na ordem dos grupos — a do setor, quando ele tem
+ * uma (`ORDEM_DO_MENU_DO_SETOR`, 09/11/2026), e senão a global. Dentro de cada
+ * grupo, a ordem em que as telas chegaram (a do catálogo) — ou a que o super
+ * admin escolheu (`ordem`), para os grupos, as telas e as filhas de cada tela.
  */
-export function montarMenuDoSetor<T extends TelaDoMenu>(telas: readonly T[], ordem: OrdemDoMenu = ORDEM_PADRAO): BlocoDoMenu<T>[] {
-  const padrao = montarNaOrdemDoCatalogo(telas);
+export function montarMenuDoSetor<T extends TelaDoMenu>(telas: readonly T[], ordem: OrdemDoMenu = ORDEM_PADRAO, setor?: string | null): BlocoDoMenu<T>[] {
+  const padrao = pelaOrdem(montarNaOrdemDoCatalogo(telas), (b) => b.grupo, (setor && ORDEM_DO_MENU_DO_SETOR[setor]) || []);
   const blocos = pelaOrdem(padrao, (b) => b.grupo, ordem.grupos);
   const ordenar = (e: EntradaDoMenu<T>): EntradaDoMenu<T> => ({ tela: e.tela, filhas: pelaOrdem(e.filhas, (f) => f.code, ordem.telas) });
   return blocos.map((b) =>

@@ -58,10 +58,13 @@ describe("esconder do menu", () => {
     expect(alternarOculta(["x", "y"], "x")).toEqual(["y"]);
   });
 
+  // Desde 09/11/2026 o Societário não tem Tela 2 (Painel e Órgãos viraram telas
+  // do grupo Operação): a mãe e as filhas são as do BPO, a DRE e as dela.
   it("a tela escondida e as filhas dela saem do menu; as outras ficam", () => {
-    const filha = MODULE_CATALOG.find((m) => m.sectorCode === "societario" && m.telaMae);
-    if (!filha?.telaMae) throw new Error("o Societário precisa de uma Tela 2");
-    const visiveis = telasVisiveis(soc, { grupos: [], telas: [], ocultas: [filha.telaMae] }).map((t) => t.code);
+    const bpo = MODULE_CATALOG.filter((m) => m.sectorCode === "bpo").map((m) => ({ code: m.code, label: m.label, href: `/${m.code}` }));
+    const filha = MODULE_CATALOG.find((m) => m.sectorCode === "bpo" && m.telaMae);
+    if (!filha?.telaMae) throw new Error("o BPO precisa de uma Tela 2");
+    const visiveis = telasVisiveis(bpo, { grupos: [], telas: [], ocultas: [filha.telaMae] }).map((t) => t.code);
     expect(visiveis).not.toContain(filha.telaMae);
     expect(visiveis).not.toContain(filha.code);
     expect(visiveis.length).toBeGreaterThan(0);

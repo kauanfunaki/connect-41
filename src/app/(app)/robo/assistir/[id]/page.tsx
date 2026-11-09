@@ -20,7 +20,7 @@ export default async function AssistirRoboPage({ params }: { params: Promise<{ i
 
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: "Robô do Societário", href: "/robo" }, { label: "Resolver o captcha" }]} />
+      <Breadcrumb items={[{ label: "Hub de robôs", href: "/robo" }, { label: "Resolver o captcha" }]} />
       <PageHeader title="Resolver o captcha do robô" subtitle={a.empresa ? `${a.oQue} · ${a.empresa}` : a.oQue} />
       <AssistenciaAoVivo tarefaId={a.tarefaId} />
     </PageContainer>

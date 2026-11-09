@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { compile, match } from "next/dist/compiled/path-to-regexp";
 import nextConfig from "../../../next.config";
 import { MODULE_ROUTES } from "@/lib/module-catalog";
-import { abaDaProdutividade, ROTAS_DA_PRODUTIVIDADE, ROTAS_DO_GITHUB } from "./rotasDaProdutividade";
+import { ROTA_PRODUTIVIDADE, ROTAS_DA_PRODUTIVIDADE, ROTAS_DO_GITHUB } from "./rotasDaProdutividade";
 
 // Produtividade da Tech (05/11/2026): o endereço novo e o `/github` antigo.
 
@@ -17,9 +17,11 @@ async function destinoDe(caminho: string): Promise<string | null> {
   return null;
 }
 
-// Desde 06/11/2026: Painel, Pessoas (desenvolvedores e times) e GitHub (Geral + repositórios).
+// Desde 09/11/2026: Pessoas (desenvolvedores e times) e GitHub (Geral + repositórios), sem o Painel.
 describe("os endereços antigos", () => {
   it.each([
+    // O Painel saiu (09/11/2026): o endereço dele abre a aba Pessoas.
+    ["/produtividade", "/produtividade/pessoas"],
     ["/github", "/produtividade/github"],
     ["/github/repositorios", "/produtividade/github/repositorios"],
     ["/github/desenvolvedores", "/produtividade/pessoas"],
@@ -47,17 +49,20 @@ describe("os endereços antigos", () => {
 });
 
 describe("o endereço da Produtividade", () => {
-  it("o módulo abre no Painel", () => {
-    expect(MODULE_ROUTES.tech_github_contributions).toBe(ROTAS_DA_PRODUTIVIDADE.painel);
+  // O endereço do módulo fica na raiz: o menu acende o item em qualquer aba
+  // (`/produtividade/…`), e a raiz abre a aba de entrada.
+  it("o módulo abre na aba Pessoas, a de entrada", async () => {
+    expect(MODULE_ROUTES.tech_github_contributions).toBe(ROTA_PRODUTIVIDADE);
+    expect(await destinoDe(ROTA_PRODUTIVIDADE)).toBe(ROTAS_DA_PRODUTIVIDADE.pessoas);
   });
 
-  it("a aba de cada endereço, para o menu marcar a ativa", () => {
-    expect(abaDaProdutividade("/produtividade")).toBe("painel");
-    expect(abaDaProdutividade("/produtividade/pessoas")).toBe("pessoas");
-    expect(abaDaProdutividade("/produtividade/pessoas/times")).toBe("pessoas");
-    expect(abaDaProdutividade("/produtividade/github")).toBe("github");
-    expect(abaDaProdutividade("/produtividade/github/repositorios")).toBe("github");
-    expect(abaDaProdutividade("/produtividade-x")).toBeNull();
-    expect(abaDaProdutividade("/github")).toBeNull();
+  it("são duas abas: Pessoas e GitHub", () => {
+    expect(Object.keys(ROTAS_DA_PRODUTIVIDADE)).toEqual(["pessoas", "github"]);
+  });
+
+  it("só o endereço exato redireciona; as abas e as telas de dentro, não", async () => {
+    for (const caminho of ["/produtividade/pessoas/times", "/produtividade/github/repositorios", "/produtividade-x"]) {
+      expect(await destinoDe(caminho)).toBeNull();
+    }
   });
 });

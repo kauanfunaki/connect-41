@@ -285,49 +285,94 @@ describe("os itens na faixa, um a um", () => {
 describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () => {
   const SOCIETARIO = { code: "societario", label: "Societário", color: "#D44A3C" };
   const TECH = { code: "tech", label: "Tech", color: "#1A84C2" };
+  // Na ordem do catálogo, como o layout entrega.
   const soc = [
     { code: "societario_licencas", label: "Licenças", href: "/licencas" },
     { code: "societario_certidoes", label: "Certidões", href: "/certidoes" },
-    { code: "societario_painel", label: "Painel", href: "/processos/painel" },
     { code: "societario_processos", label: "Processos", href: "/processos" },
+    { code: "societario_painel", label: "Painel", href: "/processos/painel" },
     { code: "societario_prazos", label: "Exigências e prazos", href: "/exigencias" },
   ];
+  /** Onde o item (link ou grupo) deste nome aparece na lateral aberta. */
+  const posicao = (html: string, nome: string) => {
+    const i = html.indexOf(`>${nome}<`);
+    expect(i, `item "${nome}"`).toBeGreaterThanOrEqual(0);
+    return i;
+  };
 
   it("cada grupo é um botão com o número de telas; acende o da tela aberta", () => {
     rota.atual = "/processos/painel";
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }));
     const grupos = botoesComJanela(aside);
-    expect(grupos.map((g) => g.nome)).toEqual(["Operação", "Licenças"]);
+    expect(grupos.map((g) => g.nome)).toEqual(["Operação", "Regularização"]);
     const operacao = botaoComJanela(aside, "Operação");
-    // Processos, a filha Painel e Exigências e prazos.
-    expect(operacao.telas).toBe(3);
+    // Processos e Painel; Exigências e prazos fica avulsa desde 09/11/2026.
+    expect(operacao.telas).toBe(2);
     expect(operacao.tag).toContain('aria-current="true"');
     expect(operacao.tag).toContain('aria-expanded="false"');
-    expect(botaoComJanela(aside, "Licenças").tag).not.toContain("aria-current");
+    expect(botaoComJanela(aside, "Regularização").tag).not.toContain("aria-current");
     // Nada recuado nem aberto no lugar: as telas ficam na janela.
     expect(aside).not.toContain("data-recuado");
     expect(aside).not.toContain('href="/processos/painel"');
     expect(aside).not.toContain('href="/licencas"');
+    expect(tagDoLink(aside, "Exigências e prazos")).toContain('href="/exigencias"');
   });
 
-  // A Produtividade (05/11/2026): as telas de dentro entram na janela dela.
-  it("tela com telas dentro (Produtividade) abre a janela e acende em qualquer uma delas", () => {
-    rota.atual = "/produtividade/github/repositorios";
-    const modulos = [
-      { code: "tech_github_contributions", label: "Produtividade", href: "/produtividade" },
+  // O pedido do Kauan de 09/11/2026, na ordem dele.
+  it("Societário: Operação (3), Regularização (2), Exigências e prazos, Relatórios e Hub de robôs", () => {
+    const todas = [
+      ...soc.slice(0, 2),
+      { code: "societario_robo", label: "Hub de robôs", href: "/robo" },
+      ...soc.slice(2, 4),
+      { code: "societario_orgaos", label: "Órgãos", href: "/processos/orgaos" },
+      soc[4]!,
+      { code: "societario_relatorios", label: "Relatórios", href: "/processos/relatorios" },
     ];
-    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: modulos }));
-    const produtividade = botaoComJanela(aside, "Produtividade");
-    expect(produtividade.telas).toBe(3);
-    expect(produtividade.tag).toContain('aria-current="true"');
-    expect(aside).not.toContain('href="/produtividade/github"');
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: todas }));
+    expect(botoesComJanela(aside).map((g) => [g.nome, g.telas])).toEqual([["Operação", 3], ["Regularização", 2]]);
+    const ordem = ["Operação", "Regularização", "Exigências e prazos", "Relatórios", "Hub de robôs"].map((n) => posicao(aside, n));
+    expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
+    expect(tagDoLink(aside, "Hub de robôs")).toContain('href="/robo"');
   });
 
-  // O Ops Center é só o título (Victor, 05/11/2026): a janela traz Robôs, Sites e Apps, sem ele.
-  it("Ops Center abre a janela com Robôs, Sites e Apps, sem a própria tela", () => {
+  // O Tech de 09/11/2026: tudo avulso, menos o Orquestrador.
+  it("Tech: Orquestrador, Produtividade, Entregas da Tech, Ceci, Chamados e Certificados digitais", () => {
+    const tech = [
+      { code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" },
+      { code: "tech_ceci", label: "Ceci", href: "/ceci" },
+      { code: "tech_github_contributions", label: "Produtividade", href: "/produtividade" },
+      { code: "tech_entregas", label: "Entregas da Tech", href: "/controle-interno/entregas" },
+      { code: "tech_ops_center", label: "Orquestrador", href: "/ops" },
+      { code: "helpdesk", label: "Chamados", href: "/chamados" },
+      { code: "tech_certificados", label: "Certificados digitais", href: "/certificados" },
+    ];
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: tech }));
+    expect(botoesComJanela(aside).map((g) => [g.nome, g.telas])).toEqual([["Orquestrador", 3]]);
+    const doSetor = aside.slice(aside.indexOf('href="/setor/tech/telas"'));
+    const ordem = ["Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Chamados", "Certificados digitais"].map((n) => posicao(doSetor, n));
+    expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
+    // O Controle interno não está entre as telas do Tech: fica no Geral.
+    expect(doSetor).not.toContain('href="/controle-interno"');
+  });
+
+  // A Produtividade (09/11/2026): uma tela só, com as abas Pessoas e GitHub dentro.
+  it("a Produtividade é um link direto, aceso em qualquer aba dela", () => {
+    const modulos = [{ code: "tech_github_contributions", label: "Produtividade", href: "/produtividade" }];
+    for (const caminho of ["/produtividade/pessoas", "/produtividade/pessoas/times", "/produtividade/github/repositorios"]) {
+      rota.atual = caminho;
+      const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: modulos }));
+      expect(botoesComJanela(aside)).toEqual([]);
+      const link = tagDoLink(aside, "Produtividade");
+      expect(link).toContain('href="/produtividade"');
+      expect(link).toContain('aria-current="page"');
+    }
+  });
+
+  // O Orquestrador (era o Ops Center) é só o título (Victor, 05/11/2026): a janela traz Robôs, Apps e Sites, sem ele.
+  it("Orquestrador abre a janela com Robôs, Apps e Sites, sem a própria tela", () => {
     rota.atual = "/ops";
-    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: [{ code: "tech_ops_center", label: "Ops Center", href: "/ops" }] }));
-    const ops = botaoComJanela(aside, "Ops Center");
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: [{ code: "tech_ops_center", label: "Orquestrador", href: "/ops" }] }));
+    const ops = botaoComJanela(aside, "Orquestrador");
     expect(ops.telas).toBe(3);
     expect(ops.tag).toContain('aria-current="true"');
   });
@@ -360,15 +405,48 @@ describe("o Apoio no Geral", () => {
     expect(tagDoLink(aside, "Quadros")).toContain('href="/setor/dp"');
   });
 
-  it("na Tech, o Quadros leva ao Controle interno e não acende sozinho", () => {
-    rota.atual = "/controle-interno";
-    const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, apoioLigado: { senhas: false, manuais: false }, activeSectorModules: [
+  // 09/11/2026 (pedido do Kauan): o item do Geral é o próprio Controle interno,
+  // e ele sai da lista do Tech.
+  describe("na Tech, o Controle interno fica no lugar dos Quadros", () => {
+    const tech = [
       { code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" },
-    ] }));
-    const quadros = tagDoLink(aside, "Quadros");
-    expect(quadros).toContain('href="/controle-interno"');
-    expect(quadros).not.toContain("aria-current");
-    expect(tagDoLink(aside, "Controle interno")).toContain('aria-current="page"');
+      { code: "tech_entregas", label: "Entregas da Tech", href: "/controle-interno/entregas" },
+    ];
+    const naTech = (extra: Partial<Props> = {}) =>
+      lateral(casco(false, { telasFixadas: [], activeSector: TECH, apoioLigado: { senhas: false, manuais: false }, activeSectorModules: tech, ...extra }));
+
+    it("no Geral, com o nome dele, uma vez só, e aceso na tela dele", () => {
+      rota.atual = "/controle-interno";
+      const aside = naTech();
+      expect(linksDoMenu(aside).map((l) => l.texto)).not.toContain("Quadros");
+      const controle = tagDoLink(aside, "Controle interno");
+      expect(controle).toContain('href="/controle-interno"');
+      expect(controle).toContain('aria-current="page"');
+      expect(aside.split('href="/controle-interno"')).toHaveLength(2);
+      // No Geral: antes do título do Tech, que abre as telas do setor.
+      expect(aside.indexOf('href="/controle-interno"')).toBeLessThan(aside.indexOf('href="/setor/tech/telas"'));
+      expect(tagDoLink(aside, "Entregas da Tech")).not.toContain("aria-current");
+    });
+
+    it("nas Entregas, acende só as Entregas", () => {
+      rota.atual = "/controle-interno/entregas";
+      const aside = naTech();
+      expect(tagDoLink(aside, "Controle interno")).not.toContain("aria-current");
+      expect(tagDoLink(aside, "Entregas da Tech")).toContain('aria-current="page"');
+    });
+
+    it("com os Quadros escondidos no Geral do setor, o Controle interno continua no menu", () => {
+      const aside = naTech({ telasDoGeral: ["cadastros", "transferencias", "agenda"] });
+      expect(tagDoLink(aside, "Controle interno")).toContain('href="/controle-interno"');
+    });
+
+    it("com o Apoio ligado, entra na janela do Apoio no lugar dos Quadros", () => {
+      rota.atual = "/controle-interno";
+      const aside = naTech({ apoioLigado: { senhas: true, manuais: true } });
+      const apoio = botaoComJanela(aside, "Apoio");
+      expect(apoio.telas).toBe(3);
+      expect(apoio.tag).toContain('aria-current="true"');
+    });
   });
 
   it("o número dos Chamados aparece no item do Geral", () => {
@@ -386,15 +464,16 @@ describe("a ordem do menu escolhida", () => {
     { code: "societario_licencas", label: "Licenças", href: "/licencas" },
     { code: "societario_certidoes", label: "Certidões", href: "/certidoes" },
     { code: "societario_processos", label: "Processos", href: "/processos" },
+    { code: "societario_painel", label: "Painel", href: "/processos/painel" },
     { code: "societario_prazos", label: "Exigências e prazos", href: "/exigencias" },
   ];
   const ordemDosGrupos = (html: string) => botoesComJanela(html).map((b) => b.nome);
 
   it("os grupos saem na ordem escolhida", () => {
     const padrao = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }));
-    expect(ordemDosGrupos(padrao)).toEqual(["Operação", "Licenças"]);
-    const escolhida = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: ["Licenças"], telas: [] } }));
-    expect(ordemDosGrupos(escolhida)).toEqual(["Licenças", "Operação"]);
+    expect(ordemDosGrupos(padrao)).toEqual(["Operação", "Regularização"]);
+    const escolhida = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: ["Regularização"], telas: [] } }));
+    expect(ordemDosGrupos(escolhida)).toEqual(["Regularização", "Operação"]);
   });
 
   // 09/11/2026: organizar no próprio menu — o botão é o rodapé da lateral, e
@@ -423,7 +502,7 @@ describe("a ordem do menu escolhida", () => {
     const comChamados = [...soc, { code: "helpdesk", label: "Chamados", href: "/chamados" }];
     const padrao = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: comChamados }));
     expect(padrao.lastIndexOf(">Chamados<")).toBeGreaterThan(padrao.indexOf('aria-label="Operação'));
-    const escolhida = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: comChamados, ordemDoMenu: { grupos: ["Atendimento", "Operação", "Licenças"], telas: [] } }));
+    const escolhida = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: comChamados, ordemDoMenu: { grupos: ["Atendimento", "Operação", "Regularização"], telas: [] } }));
     expect(escolhida.indexOf('href="/chamados"')).toBeLessThan(escolhida.search(/aria-label="Operação|>Operação</));
   });
 
@@ -442,7 +521,7 @@ describe("a ordem do menu escolhida", () => {
   });
 
   it("a tela escondida pelo olho sai do menu do setor", () => {
-    // Sem Certidões, Licenças fica com uma tela só e deixa de ser grupo.
+    // Sem Certidões, Regularização fica com uma tela só e deixa de ser grupo.
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: [], telas: [], ocultas: ["societario_certidoes"] } }));
     expect(ordemDosGrupos(aside)).toEqual(["Operação"]);
     expect(tagDoLink(aside, "Licenças")).toContain('href="/licencas"');

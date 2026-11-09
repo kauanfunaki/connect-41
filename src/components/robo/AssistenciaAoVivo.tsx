@@ -151,7 +151,7 @@ export function AssistenciaAoVivo({ tarefaId, naJanela = false, onEstado }: Prop
         <Aviso tom="atencao">O robô parou de mandar a tela há alguns segundos. A janela dele pode ter sido fechada na máquina do TI; se a tela não voltar, a tarefa segue pelo caminho do PDF no fim do prazo.</Aviso>
       )}
       {estado === "resolvida" && (
-        <Aviso tom="sucesso">Resolvido. O robô seguiu sozinho; o resultado aparece em Robô do Societário.</Aviso>
+        <Aviso tom="sucesso">Resolvido. O robô seguiu sozinho; o resultado aparece no Hub de robôs.</Aviso>
       )}
       {estado === "expirada" && (
         <Aviso tom="atencao">O prazo acabou sem o captcha marcado. A tarefa seguiu pelo caminho do PDF, como antes.</Aviso>
@@ -191,7 +191,7 @@ export function AssistenciaAoVivo({ tarefaId, naJanela = false, onEstado }: Prop
 
       {!aberto && !naJanela && (
         <Button href="/robo" variant="secondary">
-          Voltar ao Robô do Societário
+          Voltar ao Hub de robôs
         </Button>
       )}
     </div>

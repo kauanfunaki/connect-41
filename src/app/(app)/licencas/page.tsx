@@ -108,7 +108,7 @@ export default async function LicencasPage({
                 Botão, e não link de texto, desde 03/11/2026 — e também no menu. */}
             {roboLigado && (
               <Button href="/robo" variant="secondary" size="sm">
-                <Bot size={14} /> Robô
+                <Bot size={14} /> Hub de robôs
               </Button>
             )}
             {/* Importar de planilha (lote B de 03/11/2026), com o modelo do Connect. */}

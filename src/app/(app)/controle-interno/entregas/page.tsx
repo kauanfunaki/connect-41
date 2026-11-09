@@ -33,16 +33,15 @@ function VeioDe({ e }: { e: ItemEntregue }) {
 /**
  * Entregas da Tech (04/11/2026; lista desde 05/11/2026). O que foi entregue
  * no período, item a item, com o tamanho, os pontos e de onde veio. As
- * métricas por pessoa e do time foram para a Produtividade (opção A da tela 7):
- * o Controle interno e as Entregas dizem o que vamos fazer e o que fizemos; a
- * Produtividade mede.
+ * métricas por pessoa e do time foram para o Painel da Produtividade (opção A
+ * da tela 7), que saiu em 09/11/2026: a Produtividade ficou com Pessoas e
+ * GitHub, sem o período daqui.
  */
 export default async function EntregasDaTechPage({ searchParams }: { searchParams: Promise<{ periodo?: string }> }) {
   const { ctx } = await abrirTelaDoModulo("tech_entregas");
   const periodo = lerPeriodo((await searchParams).periodo);
   const [{ inicio, fim, entregues }, veProdutividade] = await Promise.all([entregasDoPeriodo(ctx.tenantId!, periodo), podeNoModulo(ctx, GITHUB_MODULE, "ver")]);
   const totalDePontos = entregues.reduce((s, e) => s + e.pontos, 0);
-  const q = periodo === "trimestre" ? "" : `?periodo=${periodo}`;
 
   return (
     <PageContainer>
@@ -52,7 +51,7 @@ export default async function EntregasDaTechPage({ searchParams }: { searchParam
         action={
           <div className="flex flex-wrap gap-2">
             {veProdutividade && (
-              <Button href={`${ROTA_PRODUTIVIDADE}${q}`} variant="secondary">
+              <Button href={ROTA_PRODUTIVIDADE} variant="secondary">
                 <ChartColumn size={14} aria-hidden />
                 Produtividade
               </Button>
@@ -142,16 +141,6 @@ export default async function EntregasDaTechPage({ searchParams }: { searchParam
       )}
       <p className="mt-4 text-micro text-fg-muted">
         Pontos só na entrega que passou por “Em validação” e tem tamanho. “Retrabalho” são os itens que dizem ter vindo desta entrega.
-        {veProdutividade && (
-          <>
-            {" "}
-            Os números do time e de cada pessoa estão na{" "}
-            <Link href={`${ROTA_PRODUTIVIDADE}${q}`} className="font-medium underline">
-              Produtividade
-            </Link>
-            .
-          </>
-        )}
       </p>
     </PageContainer>
   );

@@ -13,6 +13,8 @@ import type { ActionState } from "@/lib/actionState";
 type Props = {
   /** O nome do setor, para o texto. */
   setor: string;
+  /** O código do setor: a ordem padrão do menu dele (`ORDEM_DO_MENU_DO_SETOR`). */
+  codigoDoSetor?: string;
   /** As telas do menu do setor, na ordem do catálogo. */
   telas: TelaDoMenu[];
   ordemInicial: OrdemDoMenu;
@@ -39,13 +41,13 @@ function trocar<T>(lista: readonly T[], i: number, j: number): T[] {
  * Setas, e não arrastar: dá para fazer só com o teclado e o leitor de tela diz
  * o que mudou.
  */
-export function OrganizarMenu({ setor, telas, ordemInicial, personalizada, disponivel, salvar, restaurar }: Props) {
+export function OrganizarMenu({ setor, codigoDoSetor, telas, ordemInicial, personalizada, disponivel, salvar, restaurar }: Props) {
   const toast = useToast();
   const [isPending, startTransition] = useTransition();
   const [ordem, setOrdem] = useState<OrdemDoMenu>(ordemInicial);
   const [mexeu, setMexeu] = useState(personalizada);
   const [aviso, setAviso] = useState("");
-  const blocos = montarMenuDoSetor(telas, ordem);
+  const blocos = montarMenuDoSetor(telas, ordem, codigoDoSetor);
   const todasAsTelas = (bs: BlocoDoMenu[]) => bs.flatMap(telasDoBloco).map((t) => t.code);
 
   function aplicar(nova: OrdemDoMenu, frase: string) {

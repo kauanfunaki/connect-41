@@ -91,8 +91,8 @@ export default async function RoboDoSocietarioPage() {
       {/* Ao vivo (09/11/2026): a tela se busca de novo sozinha, e o botão de resolver o captcha aparece sem F5. */}
       <AtualizacaoDaTelaDoRobo naFila={naFila} pedindoAjuda={pedindoAjuda.size} />
       <PageHeader
-        title="Robô do Societário"
-        subtitle="O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje ele imprime o alvará de Curitiba (pedido no ⋯ da licença), lê a situação da inscrição estadual no PR e acompanha os protocolos do SIMA."
+        title="Hub de robôs"
+        subtitle="O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje o robô do Societário imprime o alvará de Curitiba (pedido no ⋯ da licença), lê a situação da inscrição estadual no PR e acompanha os protocolos do SIMA."
         action={
           <Button href="/licencas" variant="secondary" size="sm">
             Ir para Licenças

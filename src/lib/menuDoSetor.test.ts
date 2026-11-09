@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { MODULE_CATALOG, MODULE_ROUTES } from "@/lib/module-catalog";
+import { MODULE_CATALOG, MODULE_ROUTES, MODULOS_FORA_DO_MENU, MODULO_NO_LUGAR_DOS_QUADROS } from "@/lib/module-catalog";
 import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
 
 // A regra do menu de 05/11/2026 (opção A): grupos por tema em todo setor, grupo
 // de uma tela vira tela solta, e a Tela 2 fica recuada sob a Tela 1.
 
 const telas = (...codes: string[]) => codes.map((code) => ({ code, label: MODULE_CATALOG.find((m) => m.code === code)!.label, href: MODULE_ROUTES[code]! }));
+/**
+ * As telas do menu de um setor como o layout entrega: na ordem do catálogo, sem
+ * as de fora do menu e sem o Controle interno, que é o Quadros do Geral.
+ */
+const doSetor = (setor: string) =>
+  telas(...MODULE_CATALOG.filter((m) => m.sectorCode === setor && !MODULOS_FORA_DO_MENU.has(m.code) && m.code !== MODULO_NO_LUGAR_DOS_QUADROS).map((m) => m.code));
 /** O menu num formato legível: "Grupo: Mãe (Filha, Filha), Outra" ou "Mãe" solta. */
 const desenho = (blocos: BlocoDoMenu[]) =>
   blocos.map((b) => {
@@ -14,23 +20,34 @@ const desenho = (blocos: BlocoDoMenu[]) =>
   });
 
 describe("montarMenuDoSetor", () => {
-  it("Societário: Processos com Painel, Órgãos e Relatórios embaixo; licenças num grupo", () => {
-    const menu = montarMenuDoSetor(telas("societario_licencas", "societario_certidoes", "societario_robo", "societario_painel", "societario_orgaos", "societario_processos", "societario_prazos", "societario_relatorios"));
-    expect(desenho(menu)).toEqual([
-      "Operação: Processos (Painel, Órgãos, Relatórios), Exigências e prazos",
-      "Licenças: Licenças, Certidões, Robô",
-    ]);
-    expect(menu[0]).toMatchObject({ tipo: "grupo", telas: 5 });
+  // O pedido do Kauan de 09/11/2026, na ordem dele.
+  it("Societário: Operação e Regularização como grupos; Exigências e prazos, Relatórios e Hub de robôs avulsas", () => {
+    const esperado = [
+      "Operação: Processos, Painel, Órgãos",
+      "Regularização: Licenças, Certidões",
+      "Exigências e prazos",
+      "Relatórios",
+      "Hub de robôs",
+    ];
+    const menu = montarMenuDoSetor(doSetor("societario"), undefined, "societario");
+    expect(desenho(menu)).toEqual(esperado);
+    expect(menu[0]).toMatchObject({ tipo: "grupo", telas: 3 });
+    expect(menu[1]).toMatchObject({ tipo: "grupo", telas: 2 });
+    // A ordem global dos grupos já dá a mesma: a do setor só a deixa escrita.
+    expect(desenho(montarMenuDoSetor(doSetor("societario")))).toEqual(esperado);
   });
 
-  it("Tech: Entregas sob o Controle interno; grupo de uma tela vira tela solta", () => {
-    const menu = montarMenuDoSetor(telas("tech_controle_interno", "tech_ceci", "tech_github_contributions", "tech_entregas", "tech_ops_center", "helpdesk", "tech_certificados"));
-    expect(desenho(menu)).toEqual([
-      "Operação: Produtividade, Ops Center",
-      "Chamados",
-      "Certificados digitais",
-      "Desenvolvimento: Controle interno (Entregas da Tech), Ceci",
-    ]);
+  it("Tech: Orquestrador, Produtividade, Entregas da Tech, Ceci, Chamados e Certificados digitais, todos avulsos", () => {
+    const menu = montarMenuDoSetor(doSetor("tech"), undefined, "tech");
+    expect(desenho(menu)).toEqual(["Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Chamados", "Certificados digitais"]);
+    expect(menu.every((b) => b.tipo === "solta")).toBe(true);
+    // Sem o setor, valeria a ordem global dos grupos — por isso a do Tech fica escrita.
+    expect(desenho(montarMenuDoSetor(doSetor("tech")))[1]).not.toBe("Produtividade");
+  });
+
+  it("Tech: o Controle interno não vem na lista do setor — é o Quadros do Geral", () => {
+    expect(doSetor("tech").map((t) => t.code)).not.toContain(MODULO_NO_LUGAR_DOS_QUADROS);
+    expect(MODULE_CATALOG.find((m) => m.code === MODULO_NO_LUGAR_DOS_QUADROS)?.sectorCode).toBe("tech");
   });
 
   it("BPO: as DREs sob a DRE; o grupo Resultado com uma tela vira a DRE solta, com as filhas", () => {
@@ -43,7 +60,6 @@ describe("montarMenuDoSetor", () => {
   });
 
   it("filha sem a mãe no menu (desligada ou em outro setor) aparece como tela comum", () => {
-    expect(desenho(montarMenuDoSetor(telas("tech_ceci", "tech_entregas")))).toEqual(["Desenvolvimento: Ceci, Entregas da Tech"]);
     expect(desenho(montarMenuDoSetor(telas("dre_economica")))).toEqual(["DRE econômica"]);
   });
 
@@ -56,19 +72,29 @@ describe("montarMenuDoSetor", () => {
 
 // Organizar menu (05/11/2026): o super admin escolhe a ordem dos grupos e das telas.
 describe("a ordem escolhida", () => {
-  const soc = telas("societario_licencas", "societario_certidoes", "societario_robo", "societario_painel", "societario_orgaos", "societario_processos", "societario_prazos", "societario_relatorios");
+  const soc = doSetor("societario");
 
   it("grupos e telas na ordem escolhida; o que não está na lista vem depois, na ordem de sempre", () => {
-    const menu = montarMenuDoSetor(soc, { grupos: ["Licenças"], telas: ["societario_robo", "societario_prazos", "societario_relatorios"] });
+    const menu = montarMenuDoSetor(soc, { grupos: ["Regularização", "Automação"], telas: ["societario_certidoes", "societario_orgaos"] }, "societario");
     expect(desenho(menu)).toEqual([
-      "Licenças: Robô, Licenças, Certidões",
-      "Operação: Exigências e prazos, Processos (Relatórios, Painel, Órgãos)",
+      "Regularização: Certidões, Licenças",
+      "Hub de robôs",
+      "Operação: Órgãos, Processos, Painel",
+      "Exigências e prazos",
+      "Relatórios",
     ]);
+  });
+
+  it("a ordem escolhida vence a do setor, e o resto segue a do setor", () => {
+    const menu = montarMenuDoSetor(doSetor("tech"), { grupos: ["Atendimento"], telas: [] }, "tech");
+    expect(desenho(menu)).toEqual(["Chamados", "Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Certificados digitais"]);
   });
 
   it("uma tela não sai do grupo dela nem a filha sai de baixo da mãe, mesmo pedindo", () => {
     const menu = montarMenuDoSetor(soc, { grupos: [], telas: ["societario_painel", "societario_licencas"] });
-    expect(desenho(menu)[0]).toBe("Operação: Processos (Painel, Órgãos, Relatórios), Exigências e prazos");
+    expect(desenho(menu).slice(0, 2)).toEqual(["Operação: Painel, Processos, Órgãos", "Regularização: Licenças, Certidões"]);
+    const bpo = montarMenuDoSetor(telas("bpo_contas_pagar", "bpo_dre", "dre_economica", "dre_analises"), { grupos: [], telas: ["dre_analises", "bpo_contas_pagar"] });
+    expect(desenho(bpo)).toEqual(["Contas a pagar", "DRE (Análises gerenciais, DRE econômica)"]);
   });
 
   it("sem ordem, o menu de antes", () => {
