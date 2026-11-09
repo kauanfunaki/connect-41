@@ -163,7 +163,12 @@ export function MetricCard({
         {comparacao}
         {sub && <span className={`text-micro ${corDoApoio} truncate`}>{sub}</span>}
       </div>
-      {detalhe && <p className={`-mt-0.5 text-micro ${corDoApoio} truncate c41-cortavel`}>{detalhe}</p>}
+      {/* Até duas linhas (09/11/2026): numa linha só, o detalhe comprido era
+          cortado com "…" — no "Gasto no mês" das Certidões sumia o "mínimo de
+          R$ 100,00 no mês", e a dica só aparecia passando o mouse. Na grade
+          da faixa os cartões esticam juntos, então o valor de todos continua
+          na mesma altura. */}
+      {detalhe && <p className={`-mt-0.5 text-micro ${corDoApoio} line-clamp-2 break-words`}>{detalhe}</p>}
     </>
   );
 
