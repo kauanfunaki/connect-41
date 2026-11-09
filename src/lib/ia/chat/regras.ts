@@ -6,6 +6,7 @@
 // passo que aparece enquanto ele consulta.
 
 import type { AiChatAudience, UserRole } from "@/generated/prisma/enums";
+import { ABRIR_PROCESSO, descreverAbertura, detalhesDaAbertura, type DetalheDoCartao } from "@/lib/societario/abertura";
 
 /** Perguntas por pessoa por dia, somando todos os agentes do chat. */
 export const LIMITE_DE_PERGUNTAS_POR_DIA = 30;
@@ -71,7 +72,9 @@ export function contextoDaTela(caminho: string): ContextoDaTela | null {
   if (processo && UUID.test(processo[1]!)) return { tipo: "processo", id: processo[1]! };
   const vaga = /^\/vagas\/([^/]+)(?:\/.*)?$/.exec(limpo);
   if (vaga && UUID.test(vaga[1]!)) return { tipo: "vaga", id: vaga[1]! };
-  const empresa = /^\/empresas\/([^/]+)(?:\/.*)?$/.exec(limpo);
+  // A empresa vista pelo Societário (`/processos/empresas/{id}`) também é a
+  // empresa da tela (09/11/2026) — é dali que se pede "abrir alteração para esta".
+  const empresa = /^(?:\/processos)?\/empresas\/([^/]+)(?:\/.*)?$/.exec(limpo);
   if (empresa && UUID.test(empresa[1]!)) return { tipo: "empresa", id: empresa[1]! };
   const documento = /^\/documentos-fiscais\/([^/]+)\/?$/.exec(limpo);
   if (documento && UUID.test(documento[1]!)) return { tipo: "documento_fiscal", id: documento[1]! };
@@ -86,6 +89,10 @@ const PASSOS: Record<string, string> = {
   ver_processo: "Lendo o processo…",
   propor_concluir_etapa: "Preparando uma sugestão…",
   propor_dispensar_etapa: "Preparando uma sugestão…",
+  tipos_de_processo: "Vendo os tipos de processo…",
+  roteiro_do_tipo: "Lendo o roteiro do processo…",
+  responsaveis_do_societario: "Vendo quem pode responder…",
+  propor_abrir_processo: "Preparando o processo…",
   sugerir_respostas: "Montando a resposta…",
   listar_minhas_telas: "Vendo as telas que você acessa…",
   listar_vagas: "Consultando as vagas…",
@@ -181,7 +188,19 @@ export function opcoesDeRespostaRapida(p: { ferramenta: string; argumentos?: Rec
 export function rotulosDaDecisao(ferramenta: string): { sim: string; nao: string } {
   if (ferramenta === "propor_mover_etapa" || ferramenta === "propor_encerrar_candidatura") return { sim: "Aprovar", nao: "Recusar" };
   if (ferramenta === ABRIR_CHAMADO) return { sim: "Abrir chamado", nao: "Não abrir" };
+  if (ferramenta === ABRIR_PROCESSO) return { sim: "Abrir processo", nao: "Não abrir" };
   return { sim: "Sim, aplicar", nao: "Não, cancelar" };
+}
+
+/**
+ * O que o cartão diz depois do sim, quando a aplicação criou algo com
+ * endereço — o chamado (03/11/2026), o processo (09/11/2026) — e o botão que
+ * leva até ele.
+ */
+export function rotulosDoCriado(ferramenta: string): { feito: string; ver: string } {
+  if (ferramenta === ABRIR_PROCESSO) return { feito: "Processo aberto", ver: "Ver processo" };
+  if (ferramenta === ABRIR_CHAMADO) return { feito: "Chamado aberto", ver: "Ver chamado" };
+  return { feito: "Aplicado", ver: "Abrir" };
 }
 
 // ─── Chamado aberto pela Ceci (03/11/2026) ──────────────────────────────────
@@ -224,8 +243,13 @@ export function chamadoDaProposta(argumentos: Record<string, unknown>) {
  * As linhas que o cartão mostra embaixo da frase: no chamado, o que a pessoa
  * confirma — categoria, título, descrição. A categoria e o setor são os nomes
  * resolvidos no servidor (`alvo` e `setorNome`), não o texto do modelo.
+ *
+ * No processo (09/11/2026), empresa, tipo, responsável, prazo, checklist e o
+ * pedido ao cliente — também com os nomes lidos do banco, ao preparar a
+ * proposta (`detalhesDaAbertura`).
  */
-export function detalhesDaProposta(p: { ferramenta: string; argumentos?: Record<string, unknown>; alvo?: string }): { rotulo: string; texto: string }[] {
+export function detalhesDaProposta(p: { ferramenta: string; argumentos?: Record<string, unknown>; alvo?: string }): DetalheDoCartao[] {
+  if (p.ferramenta === ABRIR_PROCESSO) return detalhesDaAbertura(p.argumentos);
   if (p.ferramenta !== ABRIR_CHAMADO) return [];
   const a = p.argumentos ?? {};
   const nomes = new Map(
@@ -237,7 +261,7 @@ export function detalhesDaProposta(p: { ferramenta: string; argumentos?: Record<
   return [
     { rotulo: "Categoria", texto: p.alvo ?? "categoria não encontrada — peça à Ceci para escolher de novo" },
     { rotulo: "Título", texto: textoDe(a.titulo) },
-    { rotulo: "Descrição", texto: textoDe(a.descricao) },
+    { rotulo: "Descrição", texto: textoDe(a.descricao), longo: true },
     { rotulo: "Setor", texto: textoDe(a.setorNome) || textoDe(a.setor) },
     { rotulo: "Prioridade", texto: PRIORIDADE_EM_PALAVRAS[textoDe(a.prioridade)] ?? "Média" },
     ...campos,
@@ -310,6 +334,7 @@ export function descreverProposta(p: {
   }
   if (p.ferramenta === "abrir_transferencia") return `Abrir uma transferência para ${p.alvo ?? "o setor"}`;
   if (p.ferramenta === ABRIR_CHAMADO) return "Abrir este chamado para o Tech";
+  if (p.ferramenta === ABRIR_PROCESSO) return descreverAbertura(p.argumentos);
   // A Ceci do BPO corrigindo a DRE (30/10/2026).
   if (p.ferramenta === "propor_mover_categoria_na_dre") {
     const empresa = typeof a.empresaNome === "string" && a.empresaNome.trim() ? ` de ${a.empresaNome.trim()}` : "";

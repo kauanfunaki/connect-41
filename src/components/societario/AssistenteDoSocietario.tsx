@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { Sparkles, AlertTriangle, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Textarea";
@@ -10,23 +10,22 @@ import {
   aplicarPropostaDoSocietario,
   type RespostaDoSocietario,
 } from "@/app/(app)/processos/ia-actions";
-import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
 import { Aviso } from "@/components/ui/Aviso";
 import { RespostaDaCeci } from "@/components/ia/RespostaDaCeci";
+import { DetalhesDaProposta } from "@/components/ia/DetalhesDaProposta";
+// A frase e os rótulos do chat da Ceci (09/11/2026): era uma cópia daqui, sem
+// a abertura de processo — os dois cartões dizem o mesmo.
+import { descreverProposta, rotulosDaDecisao, rotulosDoCriado } from "@/lib/ia/chat/regras";
+import { ABRIR_PROCESSO } from "@/lib/societario/abertura";
 
-function descreverProposta(p: PropostaDeEscrita): string {
-  const a = p.argumentos ?? {};
-  const motivo = typeof a.motivo === "string" && a.motivo.trim() ? ` — ${a.motivo.trim()}` : "";
-  if (p.ferramenta === "propor_concluir_etapa") return `Concluir a etapa${motivo}`;
-  if (p.ferramenta === "propor_dispensar_etapa") return `Dispensar a etapa${motivo}`;
-  return p.descricao;
-}
+/** O que aconteceu com cada proposta: aplicada (com o link do que criou, se criou) ou o erro. */
+type Aplicada = { ok: true; link?: string } | { erro: string };
 
 export function AssistenteDoSocietario() {
   const [pergunta, setPergunta] = useState("");
   const [resposta, setResposta] = useState<RespostaDoSocietario | null>(null);
   const [pensando, setPensando] = useState(false);
-  const [aplicadas, setAplicadas] = useState<Record<number, "ok" | string>>({});
+  const [aplicadas, setAplicadas] = useState<Record<number, Aplicada>>({});
   const [aplicando, setAplicando] = useState<number | null>(null);
 
   async function perguntar() {
@@ -49,8 +48,8 @@ export function AssistenteDoSocietario() {
       </h2>
       <p className="text-ui text-fg-secondary max-w-[62ch]">
         Pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para
-        destravar. A Ceci lê os mesmos processos que você vê e{" "}
-        <strong>não altera nada</strong>; toda mudança passa pelo seu “Aplicar”.
+        destravar — ou peça para abrir um processo. A Ceci lê os mesmos processos que você vê e{" "}
+        <strong>não altera nada</strong>; toda mudança passa pelo seu clique na sugestão.
       </p>
 
       <Textarea
@@ -91,34 +90,51 @@ export function AssistenteDoSocietario() {
               </p>
               {propostas.map((p, i) => {
                 const feito = aplicadas[i];
+                const abre = p.ferramenta === ABRIR_PROCESSO;
                 return (
-                  <div
-                    key={i}
-                    className="flex flex-wrap items-center justify-between gap-2 border border-border rounded-md px-3 py-2"
-                  >
-                    <span className="text-ui text-fg">{descreverProposta(p)}</span>
-                    {feito === "ok" ? (
-                      <span className="text-fs-2 text-success-fg">aplicado</span>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {typeof feito === "string" && (
-                          <span className="text-fs-2 text-danger">{feito}</span>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={aplicando === i}
-                          onClick={async () => {
-                            setAplicando(i);
-                            const r = await aplicarPropostaDoSocietario(p);
-                            setAplicadas((a) => ({ ...a, [i]: r ? r.error : "ok" }));
-                            setAplicando(null);
-                          }}
-                        >
-                          {aplicando === i ? "Aplicando…" : "Aplicar"}
-                        </Button>
-                      </div>
-                    )}
+                  <div key={i} className="border border-border rounded-md px-3 py-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-ui text-fg">{descreverProposta(p)}</span>
+                      {feito && "ok" in feito ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span role="status" className="inline-flex items-center gap-1 text-fs-2 font-medium text-success-fg">
+                            <Check size={13} aria-hidden /> {feito.link ? rotulosDoCriado(p.ferramenta).feito : "Aplicado"}
+                          </span>
+                          {feito.link && (
+                            <Button size="sm" variant="secondary" href={feito.link}>
+                              {rotulosDoCriado(p.ferramenta).ver}
+                            </Button>
+                          )}
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {feito && "erro" in feito && (
+                            <span role="alert" className="text-fs-2 text-danger">{feito.erro}</span>
+                          )}
+                          <Button
+                            size="sm"
+                            // Abrir processo é o gesto principal do cartão; concluir e
+                            // dispensar seguem como antes.
+                            variant={abre ? "primary" : "secondary"}
+                            disabled={aplicando === i}
+                            loading={aplicando === i}
+                            loadingLabel={abre ? "Abrindo…" : "Aplicando…"}
+                            onClick={async () => {
+                              setAplicando(i);
+                              const r = await aplicarPropostaDoSocietario(p);
+                              setAplicadas((a) => ({
+                                ...a,
+                                [i]: r && "error" in r ? { erro: r.error } : { ok: true, ...(r && "link" in r ? { link: r.link } : {}) },
+                              }));
+                              setAplicando(null);
+                            }}
+                          >
+                            {abre ? rotulosDaDecisao(p.ferramenta).sim : "Aplicar"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <DetalhesDaProposta p={p} />
                   </div>
                 );
               })}

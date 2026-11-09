@@ -194,12 +194,28 @@ export const AGENT_CATALOG: AgenteDef[] = [
     label: "Ceci · Societário",
     sectorCode: "societario",
     description:
-      "Lê a fila de processos e o detalhe de cada um para responder o coordenador e sugerir o que dá para destravar",
+      "Lê a fila de processos e o detalhe de cada um para responder o coordenador e sugerir o que dá para destravar, e prepara a abertura de processo que a pessoa pedir, para ela aprovar",
     faixa: "padrao",
     escreve: false,
     // `encaminhar_pergunta` é do chat (orquestrador); o cartão da página
     // `/processos` descarta a proposta — ver `perguntarAoSocietario`.
-    ferramentas: ["listar_fila", "ver_processo", "propor_concluir_etapa", "propor_dispensar_etapa", "encaminhar_pergunta", "sugerir_respostas", "atividade_da_equipe", ...DO_TECH],
+    // Abrir processo pela Ceci (09/11/2026): tipos, roteiro vigente, empresa
+    // (`buscar_empresa`, a mesma do Fiscal, do BPO e do DP) e responsáveis.
+    ferramentas: [
+      "listar_fila",
+      "ver_processo",
+      "tipos_de_processo",
+      "roteiro_do_tipo",
+      "responsaveis_do_societario",
+      "buscar_empresa",
+      "propor_abrir_processo",
+      "propor_concluir_etapa",
+      "propor_dispensar_etapa",
+      "encaminhar_pergunta",
+      "sugerir_respostas",
+      "atividade_da_equipe",
+      ...DO_TECH,
+    ],
     tetoMensalCentavos: 30_000,
     tetoMensalChamadas: 800,
     padraoLigado: false,

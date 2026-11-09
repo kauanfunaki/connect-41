@@ -91,10 +91,31 @@ export type ExecutorDeFerramenta = (
   ctx: ContextoDaFerramenta
 ) => Promise<unknown>;
 
+/**
+ * Confere uma escrita **antes** de ela virar proposta, e devolve os argumentos
+ * que a proposta guarda. Erro volta ao modelo como erro de ferramenta.
+ */
+export type PreparadorDeProposta = (
+  argumentos: Record<string, unknown>,
+  ctx: ContextoDaFerramenta
+) => Promise<{ erro: string } | { argumentos: Record<string, unknown> }>;
+
 export type FerramentaRegistrada = {
   def: FerramentaDef;
   /** Ausente nas de escrita: elas não executam, viram proposta. */
   executar?: ExecutorDeFerramenta;
+  /**
+   * Só nas de escrita, e opcional (09/11/2026, abrir processo pela Ceci): lê o
+   * banco no tenant do contexto para conferir os argumentos e acrescentar o
+   * que o cartão mostra — os nomes lidos do banco, não o texto do modelo.
+   * **Não grava**: gravar continua sendo da action que a pessoa dispara.
+   *
+   * Existe porque proposta torta só se descobria no clique, quando a action
+   * recusava — e refazer custava outra pergunta do limite do dia. Conferida
+   * aqui, a recusa volta ao modelo na mesma resposta, e ele corrige ou
+   * pergunta à pessoa.
+   */
+  preparar?: PreparadorDeProposta;
 };
 
 /**

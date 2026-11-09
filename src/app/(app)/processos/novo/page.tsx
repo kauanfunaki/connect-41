@@ -9,19 +9,13 @@ import { getPrisma } from "@/lib/prisma";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { nomeExibicao } from "@/lib/companyName";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import { prazoDoTipo, SITUACOES_QUE_ABREM } from "@/lib/societario/abertura";
 import { abrirProcesso } from "../actions";
 
 const SECTOR = "societario";
 const MODULE = "societario_processos";
 
 export const dynamic = "force-dynamic";
-
-const prazoDoTipo = (t: { variableFlow: boolean; expectedDaysMin: number | null; expectedDaysMax: number | null }) =>
-  t.variableFlow || t.expectedDaysMax === null
-    ? "fluxo variável"
-    : t.expectedDaysMin === t.expectedDaysMax || t.expectedDaysMin === null
-      ? `${t.expectedDaysMax} dias úteis`
-      : `${t.expectedDaysMin} a ${t.expectedDaysMax} dias úteis`;
 
 /**
  * Abrir processo em três passos (04/11/2026, escolha A da página de opções):
@@ -38,7 +32,8 @@ export default async function NovoProcessoPage({ searchParams }: { searchParams:
   const prisma = getPrisma();
 
   const [empresas, tipos, responsaveis] = await Promise.all([
-    prisma.company.findMany({ where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } }, orderBy: { name: "asc" }, select: CAMPOS_DA_EMPRESA_NO_SELETOR }),
+    // As mesmas situações que a Ceci confere ao propor (`SITUACOES_QUE_ABREM`).
+    prisma.company.findMany({ where: { tenantId: ctx.tenantId, status: { in: [...SITUACOES_QUE_ABREM] } }, orderBy: { name: "asc" }, select: CAMPOS_DA_EMPRESA_NO_SELETOR }),
     prisma.processType.findMany({
       where: { tenantId: ctx.tenantId, active: true },
       orderBy: { name: "asc" },
