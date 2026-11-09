@@ -71,7 +71,8 @@ export async function dashboard(tenantId: string, filters: Filters): Promise<Das
       const type = row.type as ContributionType, count = row._sum.count ?? 0, day = byDay.get(row.day) ?? emptyCounts();
       counts[type] += count; day[type] += count; byDay.set(row.day, day);
     }
-    // Todos: a tela mostra os 4 primeiros por pessoa e, por time, soma cada time.
+    // Todos, em ranking: a tela mostra os 4 primeiros por pessoa e, agrupada por time, soma cada time
+    // (com um time escolhido, as pessoas dele uma a uma: ver linhasDaAtividade).
     const leaders = activity;
     const people = await db.githubUser.findMany({ where: { ...userFilter, id: { in: activity.map(row => row.userId) } }, select: { id: true, login: true, externalId: true } });
     const byId = new Map(people.map(person => [person.id, person]));
