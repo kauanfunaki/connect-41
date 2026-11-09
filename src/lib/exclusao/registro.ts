@@ -170,6 +170,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   // A fila do robô do Societário (30/10/2026): o PDF que a tarefa guardou
   // mora nos Arquivos da empresa, que vão junto.
   { modelo: "RobotTask", coluna: "companyId", tratamento: "apagar" },
+  // XML recusado pelo leitor (06/11/2026): o arquivo é da empresa e guarda os dados dela.
+  { modelo: "FiscalXmlRefusal", coluna: "companyId", tratamento: "apagar" },
   // O pedido de situação fiscal da ficha (Serpro, 20/10/2026): sem a empresa, não serve a ninguém.
   { modelo: "SerproPedido", coluna: "companyId", tratamento: "apagar" },
   // Preferência "última empresa aberta": sem a empresa, não vale nada.
@@ -350,6 +352,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "RobotTask", coluna: "requestedById", tratamento: "desligar" },
   // A sessão assistida do captcha (06/11/2026): o nome de quem resolveu fica na auditoria.
   { modelo: "RobotAssist", coluna: "lastClickById", tratamento: "manter", motivo: "quem clicou no captcha pelo Connect; a tela não mostra o id, e a auditoria guarda o nome" },
+  // XML recusado pelo leitor (06/11/2026): só a contagem dos recusados.
+  { modelo: "FiscalXmlRefusal", coluna: "lastSeenById", tratamento: "manter", motivo: "quem enviou o XML recusado por último; a tela não mostra o id" },
   { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
   // O Financeiro da 41 (05/11/2026): o nome fica gravado junto do id.
   { modelo: "InventoryItem", coluna: "holderUserId", tratamento: "manter", motivo: "com quem está o item; o nome fica gravado em holderName e a tela mostra o nome" },

@@ -3921,6 +3921,42 @@ model FiscalDocument {
   @@map("fiscal_documents")
 }
 
+/// XML fiscal que o leitor determinístico (`lerXmlFiscal`) recusou (06/11/2026).
+///
+/// A recusa aparecia para quem enviou e se perdia, e ninguém sabia quantas notas
+/// caem fora do ABRASF e do padrão nacional, nem de quais municípios. Aqui ela
+/// fica guardada, uma linha por arquivo (o SHA-256 junta os reenvios), para a
+/// contagem por município e, depois, para a leitura assistida do resíduo.
+model FiscalXmlRefusal {
+  id String @id @default(uuid()) @db.VarChar(36)
+  tenantId String @db.VarChar(191)
+  /// A empresa escolhida no envio, quando houve. A recusa vem antes de achar a dona pelo CNPJ.
+  companyId String? @db.VarChar(191)
+  /// Por onde chegou: `entrada` (Documentos fiscais) ou `sped_local`.
+  source String @db.VarChar(20)
+  fileName String @db.VarChar(255)
+  sha256 String @db.Char(64)
+  bytes Int
+  /// O `MotivoRecusa` do leitor e o detalhe que ele devolveu, como estavam no último envio.
+  reason String @db.VarChar(40)
+  detail String @db.VarChar(500)
+  /// `nfse`, `nfe`, `cte` ou `desconhecido`, pela raiz e pelos nomes das tags.
+  probableType String @db.VarChar(20)
+  rootTag String? @db.VarChar(80)
+  /// Código IBGE (7 dígitos) achado no XML, o da prestação primeiro. Nulo quando não há.
+  municipalityCode String? @db.Char(7)
+  /// O XML como veio, para a leitura do resíduo. Nulo acima de 1 MiB.
+  xml String? @db.MediumText
+  timesSeen Int @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  lastSeenById String? @db.VarChar(191)
+  @@unique([tenantId, sha256])
+  @@index([tenantId, probableType, municipalityCode])
+  @@index([tenantId, lastSeenAt])
+  @@map("fiscal_xml_refusals")
+}
+
 // ─── Financeiro (Fase 2 · etapa 7) ───────────────────────────────────────────
 
 enum FinanceEntryKind {

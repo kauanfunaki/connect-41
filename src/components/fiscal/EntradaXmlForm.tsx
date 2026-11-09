@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
 import { Button } from "@/components/ui/Button";
+import { Aviso } from "@/components/ui/Aviso";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { FileDropzone, type ArquivoNaFila } from "@/components/ui/FileDropzone";
 import { nomeExibicao } from "@/lib/companyName";
@@ -133,6 +134,16 @@ export function EntradaXmlForm({ empresas, action }: Props) {
             {vereditos.filter((v) => v.situacao === "aceito").length} de {vereditos.length} entraram no acervo.
             Cada arquivo tem seu veredito — nada é aceito ou recusado em bloco.
           </p>
+          {/* O inválido não se perde mais (06/11/2026): fica guardado e entra na
+              contagem por município. A pessoa precisa saber onde ele foi parar. */}
+          {vereditos.some((v) => v.situacao === "invalido") && (
+            <Aviso tom="neutro" className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <span>Os inválidos ficaram guardados em XML recusados, que conta quais municípios fogem do padrão.</span>
+              <Button href="/documentos-fiscais/recusados" variant="secondary" size="xs" className="flex-shrink-0">
+                Ver XML recusados <ArrowRight size={11} />
+              </Button>
+            </Aviso>
+          )}
           <ul className="divide-y divide-border">
             {vereditos.map((v, i) => {
               const ap = APARENCIA[v.situacao];

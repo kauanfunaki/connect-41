@@ -289,6 +289,8 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "SerproPedido", acao: "apagar", executar: (tx, a) => n(tx.serproPedido.deleteMany({ where: daEmpresa(a) })) },
   // A fila do robô do Societário (30/10/2026); o PDF guardado vai com os Arquivos.
   { modelo: "RobotTask", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.robotTask.deleteMany({ where: daEmpresa(a) })) },
+  // XML recusado pelo leitor (06/11/2026): o arquivo guarda os dados da empresa e sai com ela.
+  { modelo: "FiscalXmlRefusal", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.fiscalXmlRefusal.deleteMany({ where: daEmpresa(a) })) },
 
   // Setores contratados, departamentos, cargos, turnos, catálogo de benefícios,
   // sócios, configuração de rescisão e pastas de Arquivos vão em cascata;
