@@ -198,6 +198,11 @@ export function normalizarSelo(selo: string): string {
 
 const EXIGENCIA = new Set(SELOS_DE_EXIGENCIA.map(normalizarSelo));
 
+/** O selo é um dos de exigência da aba Pendente? */
+export function seloDeExigencia(selo: string): boolean {
+  return EXIGENCIA.has(normalizarSelo(selo));
+}
+
 /**
  * Uma solicitação como a lista a mostra: a aba em que o cartão está e o selo
  * dele.
