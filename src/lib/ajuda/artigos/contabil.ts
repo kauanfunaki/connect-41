@@ -67,4 +67,44 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
       "Excluir o fechamento é de quem coordena o setor e apaga os documentos, as análises e o acompanhamento juntos.",
     ],
   },
+  {
+    chave: "contabil_core",
+    titulo: "Contábil Core",
+    caminhos: ["/contabil-core"],
+    resumo:
+      "Importa o extrato bancário em OFX, classifica as transações em lançamentos pelas regras e pelas contrapartes (o NEO) e gera o arquivo de importação de lançamentos do Domínio.",
+    secoes: [
+      {
+        titulo: "Como importar um extrato",
+        passos: [
+          "Na aba “Configurações”, confira se a conta bancária está cadastrada e ligada à conta contábil do banco.",
+          "Na aba “Importações”, escolha a conta bancária e o arquivo OFX e clique em “Importar”.",
+          "Se o arquivo for de outra conta, ele é recusado. Se não disser todos os dados da conta, confira e clique em “É desta conta: importar”.",
+          "Confira o resultado: importadas, já existentes e recusadas por valor suspeito. O aviso de saldo aparece quando o fechamento não bate com o extrato anterior da conta.",
+        ],
+      },
+      {
+        titulo: "Como classificar",
+        passos: [
+          "Na aba “NEO”, escolha a competência e clique em “Rodar o NEO”. As regras classificam primeiro; o que sobra é classificado pela contraparte (CPF/CNPJ ou nome no histórico).",
+          "O que ficou pendente aparece com o motivo. Marque as transações, escolha a conta, escreva o histórico e clique em “Classificar”.",
+          "Para não repetir o trabalho no mês seguinte, cadastre uma regra na aba “Regras” com o trecho do histórico que se repete.",
+          "Para desfazer uma classificação, abra a aba “Extrato” e clique em “Desfazer” na transação. Ela volta para a fila e espera decisão de uma pessoa.",
+        ],
+      },
+      {
+        titulo: "Como gerar o arquivo do Domínio",
+        passos: [
+          "Abra a aba “Registros”, escolha a competência e, se quiser, a conta bancária.",
+          "Escolha TXT para importar no Domínio ou CSV para conferir, e clique em “Baixar arquivo”.",
+          "Leia os avisos: conta sem código reduzido não é importada pelo Domínio.",
+        ],
+      },
+    ],
+    dicas: [
+      "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
+      "Por enquanto só o extrato em OFX é lido. PDF e planilha chegam com os leitores de cada banco.",
+      "Desfazer uma importação inteira é de quem coordena o setor: os lançamentos das transações do arquivo são cancelados antes.",
+    ],
+  },
 ];

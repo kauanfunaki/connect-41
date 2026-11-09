@@ -42,6 +42,13 @@ export async function listarExtrato(tenantId: string, empresaId: string, f: Filt
   return { itens, total };
 }
 
+/** O mês ("AAAA-MM") do último lançamento vivo: a competência que a exportação sugere. */
+export async function ultimoMesComLancamento(tenantId: string, empresaId: string): Promise<string | null> {
+  if (!(await empresaDoTenant(tenantId, empresaId))) return null;
+  const r = await getPrisma().coreRegistro.findFirst({ where: { tenantId, empresaId, deletedAt: null }, orderBy: { dataLancamento: "desc" }, select: { dataLancamento: true } });
+  return r ? r.dataLancamento.toISOString().slice(0, 7) : null;
+}
+
 export async function listarRegistros(tenantId: string, empresaId: string, f: { mes?: string | null; agenciaId?: string | null; pagina?: number }) {
   if (!(await empresaDoTenant(tenantId, empresaId))) return { itens: [], total: 0 };
   const periodo = f.mes ? limitesDoMes(f.mes) : null;

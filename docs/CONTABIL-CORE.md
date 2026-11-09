@@ -41,8 +41,8 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | Fase | Branch | O que entra |
 |---|---|---|
 | 1 | `feat/contabil-core-nucleo` | Este plano. Tabelas do bloco, registro do módulo, motores puros com testes-gabarito: texto, documento no histórico, contraparte por nome, valor confiável, OFX, chave de duplicidade, seleção de regra e projeção do Domínio. |
-| 2 | — | Serviços no servidor (Prisma): cadastros, importação OFX com lote e conferência de saldo, NEO completo (regra, contraparte, decisão) e exportação. Telas de Importações, Extrato, NEO, Classificação e Configurações. |
-| 3 | — | Restante do NEO: cancelamento e reclassificação, composição manual, filas agrupadas, simulação e sugestão de regra; importação de regras e de contrapartes por planilha. |
+| 2 | `feat/contabil-core-telas` | Serviços no servidor (Prisma): cadastros, importação OFX com lote e conferência de saldo, NEO (regra, contraparte, decisão, manual, cancelar, devolver ao automático) e exportação. Telas: Importações, Extrato, NEO, Regras, Contrapartes, Registros e Configurações. |
+| 3 | — | Restante do NEO: reclassificação, composição manual, filas agrupadas, simulação e sugestão de regra; importação de regras, contrapartes e plano de contas por planilha. |
 | 4 | — | Leitores de PDF e planilha por banco, um banco por vez, cada um com arquivos reais (ver "Corpus"). |
 | 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
 
@@ -176,6 +176,11 @@ O padrão é o mesmo do SPED Generator, do Tributário e da Revisão contábil: 
 Toda divergência entra aqui, com o porquê.
 
 1. A exportação do Domínio ordenava só por `data_lancamento`. Com datas iguais, a ordem dependia do PostgreSQL. Aqui ela desempata por `createdAt` e `id`, para que dois cliques gerem o mesmo arquivo.
+2. **Confirmação da conta do extrato.** No original, quando o arquivo não diz todos os dados da conta, a confirmação era um token assinado (HMAC) emitido numa chamada de validação. Aqui a mesma recusa volta para a tela, e a pessoa reenvia o mesmo arquivo com a confirmação explícita. A importação fica na auditoria como `contabil.core.extrato.importado_com_confirmacao`.
+3. **Auditoria da classificação manual.** O original grava uma linha por transação. Aqui vai uma linha por lote (até 200), com os ids das transações nos detalhes.
+4. **Textos que passariam de 500 caracteres** (a descrição "Contrapartida bancária: …" de uma regra longa) são cortados. No PostgreSQL a gravação falhava, e a transação ia para "erro".
+5. **Notas fiscais e comprovantes** chegam com o Bloco C. Até lá, a contraparte é resolvida pelo documento e pelo nome no histórico, que é o caminho do original quando não há nota nem comprovante candidato.
+6. **Cancelamento e "devolver ao automático"** entraram já na Fase 2, porque desfazer uma importação depende deles. A composição manual, as filas agrupadas e a sugestão de regra ficam para a Fase 3.
 
 ## Segurança e boas práticas
 
@@ -245,6 +250,22 @@ Toda divergência entra aqui, com o porquê.
   - o Contábil Core sobe localmente com o `docker-compose.yml` dele e o seed fictício (`scripts/seed_dev.py`);
   - a carga roda contra o banco local do Connect;
   - na produção, quem roda é o Kauan, como nas migrations.
+
+## Como testar localmente (Fase 2)
+
+Pré-requisito: o banco local, montado pelas migrations e com o seed (ver `scripts/local/README.md`).
+
+1. **Ensaios no banco.** Os dois scripts criam e apagam tudo:
+   - `ensaio-banco.ts`: chaves de unicidade e exclusão da empresa;
+   - `ensaio-servicos.ts`: ponta a ponta (cadastros, OFX, NEO, manual, Domínio, desfazer e reimportar).
+
+   ```
+   node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-servicos.ts
+   ```
+
+   O `sem-server-only.cjs` deixa importar os serviços (`import "server-only"`) fora do Next.
+2. **Demonstração.** `preparar-demo-local.ts` liga o módulo no escritório do seed e cria a "Padaria Modelo Teste" com plano, conta, regras, contrapartes e um OFX de janeiro/2026. Rodar de novo volta tudo para pendente.
+3. **Telas.** Com o app no ar (`node scripts/local/com-banco-local.mjs npx next dev -p 3102`), `node scripts/contabil-core/telas-local.mjs <pasta> 3102` passeia pelas abas com o navegador. O roteiro roda o NEO, classifica à mão, baixa o TXT do Domínio, confere as linhas e guarda as capturas.
 
 ## Corpus de arquivos reais (Fase 4)
 
