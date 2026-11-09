@@ -58,6 +58,20 @@ describe("Ops Center", () => {
     expect(ehIngestaoOps("DELETE", `${tarefa}/partes/1`)).toBe(false);
     expect(ehIngestaoOps("GET", "/api/ops/watchers")).toBe(false);
   });
+  // 06/11/2026: o robô parado no captcha pede ajuda, manda a tela e avisa o fim.
+  it("abre a sessão assistida só nos três caminhos e métodos dela", () => {
+    const tarefa = "/api/ops/watchers/robo-societario/tarefas/0b6f3c1e-8d2a-4c6b-9f1e-2a3b4c5d6e7f";
+    expect(ehIngestaoOps("POST", `${tarefa}/assistencia`)).toBe(true);
+    expect(ehIngestaoOps("POST", `${tarefa}/assistencia/fim`)).toBe(true);
+    expect(ehIngestaoOps("PUT", `${tarefa}/tela`)).toBe(true);
+    expect(ehIngestaoOps("GET", `${tarefa}/tela`)).toBe(false);
+    expect(ehIngestaoOps("POST", `${tarefa}/tela`)).toBe(false);
+    expect(ehIngestaoOps("PUT", `${tarefa}/assistencia`)).toBe(false);
+    expect(ehIngestaoOps("GET", `${tarefa}/assistencia`)).toBe(false);
+    expect(ehIngestaoOps("POST", `${tarefa}/assistencia/outra`)).toBe(false);
+    expect(ehIngestaoOps("PUT", `${tarefa}/tela/1`)).toBe(false);
+    expect(ehIngestaoOps("PUT", "/api/ops/watchers/robo-societario/tarefas/qualquer/tela")).toBe(false);
+  });
   it("aceita o filtro de minhas e trata vazios do cadastro", () => {
     expect(filtrosSchema.parse({ mine: "1" }).mine).toBe("1");
     expect(filtrosSchema.safeParse({ page: "-1" }).success).toBe(false);

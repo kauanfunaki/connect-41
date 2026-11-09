@@ -64,10 +64,14 @@ export function caminhoDoEvento(evento: { filename: string; filenameRenamed: str
 // `tarefas/<id>/pacote` (GET) e `tarefas/<id>/partes/<n>` (PUT), 06/11/2026: o
 // agente do motor do SPED baixa o pacote da revisão e devolve o TXT em partes.
 // Só esses dois métodos nesses dois caminhos; o resto segue exigindo sessão.
+//
+// `tarefas/<id>/assistencia` e `…/assistencia/fim` (POST) e `tarefas/<id>/tela`
+// (PUT), 06/11/2026: o robô parado no captcha pede ajuda, manda a tela e avisa
+// quando terminou (src/lib/robo/assistenciaServidor.ts).
 const WATCHER = String.raw`^\/api\/ops\/watchers\/[a-z0-9]+(?:[-_][a-z0-9]+)*`;
-const INGESTAO_POST = new RegExp(String.raw`${WATCHER}\/(?:heartbeat|arquivos|tarefas|tarefas\/[0-9a-f-]{36})$`);
+const INGESTAO_POST = new RegExp(String.raw`${WATCHER}\/(?:heartbeat|arquivos|tarefas|tarefas\/[0-9a-f-]{36}|tarefas\/[0-9a-f-]{36}\/assistencia|tarefas\/[0-9a-f-]{36}\/assistencia\/fim)$`);
 const PACOTE_GET = new RegExp(String.raw`${WATCHER}\/tarefas\/[0-9a-f-]{36}\/pacote$`);
-const PARTE_PUT = new RegExp(String.raw`${WATCHER}\/tarefas\/[0-9a-f-]{36}\/partes\/\d{1,5}$`);
+const PARTE_PUT = new RegExp(String.raw`${WATCHER}\/tarefas\/[0-9a-f-]{36}\/(?:partes\/\d{1,5}|tela)$`);
 export function ehIngestaoOps(method: string, pathname: string) {
   if (method === "POST") return pathname === "/api/ops/events" || INGESTAO_POST.test(pathname);
   if (method === "GET") return PACOTE_GET.test(pathname);

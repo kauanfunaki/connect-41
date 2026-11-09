@@ -109,11 +109,30 @@ npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario
 5. Vai para alguém olhar:
    - "não encontrado" ou "sem alvará": divergência entre a Junta e a prefeitura, decisão de 15/09;
    - "Alvará pendente de regularização, aguardando anuências…" (03/11/2026): a prefeitura ainda não libera a impressão. A frase dela vai para o motivo, e a tarefa não volta para a fila;
-   - a caixa "Não sou um robô" (ICI Captcha, desde 03/11/2026): o robô não marca. Ele traz a janela para a frente e espera 3 minutos por quem estiver na máquina; se ninguém marcar, o motivo traz o link da consulta e a inscrição, para fazer à mão e subir o PDF em Licenças › Editar › Ler do PDF, que preenche número, emissão e validade e guarda o PDF em Arquivos › Societário;
+   - a caixa "Não sou um robô" (ICI Captcha, desde 03/11/2026): o robô não marca. Ele pede ajuda pelo Connect (sessão assistida, seção abaixo). Se ninguém marcar no prazo, ou fora do horário comercial, o motivo traz o link da consulta e a inscrição, para fazer à mão e subir o PDF em Licenças › Editar › Ler do PDF, que preenche número, emissão e validade e guarda o PDF em Arquivos › Societário;
    - texto do aceite diferente: alguém relê antes de o robô aceitar em nome do cliente;
    - PDF que não veio;
    - tela desconhecida.
-6. Site fora do ar, tela que demorou ou janela do navegador fechada: a tarefa volta para a fila, até 3 tentativas. O motivo vai em frase; o erro técnico fica no registro da máquina. Tarefa que a máquina pegou e não devolveu em 15 minutos também volta.
+6. Site fora do ar, tela que demorou ou janela do navegador fechada: a tarefa volta para a fila, até 3 tentativas. O motivo vai em frase; o erro técnico fica no registro da máquina. O alvará que a máquina pegou e não devolveu em 25 minutos também volta (eram 15; subiu em 06/11/2026 para caber a espera do captcha).
+
+## O captcha resolvido pelo Connect (sessão assistida)
+
+Desde 06/11/2026. Quando aparece o "Não sou um robô", o robô deixa de esperar alguém na própria máquina:
+
+1. Pede ajuda ao Connect. **No horário comercial** (segunda a sexta, 8h às 18h de Brasília), o Connect abre a sessão por **10 minutos** e avisa **quem pediu a tarefa**, no sino e no celular. **Fora do horário**, responde "não espere", e a tarefa segue direto para o caminho do PDF.
+2. O Chrome do robô transmite a tela (screencast em JPEG, uns 10 a 100 KB por quadro), e a máquina repassa o quadro mais novo ao Connect.
+3. Quem recebeu o aviso abre **Robô do Societário › Resolver o captcha** (o aviso leva direto), vê a tela ao vivo e clica na caixa. Se aparecer desafio de imagens, clica nas imagens e em Verificar.
+4. O Connect manda o clique ao robô com a resposta do próximo quadro. **Só clique**: não existe caminho para tecla, então pela janela não se digita nada no site. Certificado e senha nunca saem da máquina.
+5. Depois de **2 minutos** sem clique, o aviso vai para **todo o setor** que opera o módulo do robô.
+6. O Consultar liberou: o robô segue sozinho e encerra a sessão. A auditoria grava **quem clicou** como quem resolveu (`societario.robo.assistencia_resolvida`). Sem clique no prazo, a tarefa segue para o caminho do PDF.
+
+A tarefa parada no captcha aparece na lista do Robô do Societário com o botão **Resolver o captcha**, para quem não viu o aviso.
+
+Feriado não está no calendário: num feriado de semana, o robô espera os 10 minutos à toa antes do caminho do PDF.
+
+**Na máquina:** depois do `git pull`, nada a configurar. O programa novo usa `scripts/robo-assistencia.mjs`, que fica na mesma pasta. Com um Connect que ainda não tem a sessão assistida, ele espera na máquina, como antes.
+
+**Teste sem a prefeitura:** `node scripts/local/testar-robo-assistencia.mjs` abre um Chrome sem janela, com uma página local com a caixa num iframe. Um Connect de mentira recebe os quadros e devolve um clique. O teste confere três casos: resolvido, fora do horário e prazo.
 
 ## Por dentro
 
@@ -126,6 +145,9 @@ npm run robo:societario -- --mapear --nome=cicad --config=.local/robo-societario
 | Decisão do alvará | `src/lib/robo/alvara.ts` |
 | Banco | `src/lib/robo/servidor.ts` |
 | Levantamento da página do alvará | `src/lib/societario/orgaos/alvara-curitiba.ts` |
+| Sessão assistida (captcha): pedir ajuda, mandar a tela, encerrar | `POST …/tarefas/<id>/assistencia` (`{ motivo: "captcha" }`), `PUT …/tarefas/<id>/tela` (JPEG; responde `{ encerrar, cliques }`), `POST …/tarefas/<id>/assistencia/fim` (`{ resultado }`) |
+| Regra, memória e banco da sessão assistida | `src/lib/robo/assistencia.ts`, `assistenciaAoVivo.ts`, `assistenciaServidor.ts`; tela em `/robo/assistir/<tarefa>` |
+| Lado da máquina da sessão assistida | `scripts/robo-assistencia.mjs` |
 
 Um órgão novo entra em três lugares, com o mesmo nome de tipo:
 1. `TIPOS_DE_TAREFA`, em `tarefas.ts`, dizendo se é repetível. Tipo que submete algo ao órgão nunca é repetível: repetir abre dois processos lá.

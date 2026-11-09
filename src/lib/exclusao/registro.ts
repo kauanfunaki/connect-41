@@ -350,6 +350,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "GithubOAuthAttempt", coluna: "userId", tratamento: "apagar" },
   { modelo: "UserTaskView", coluna: "userId", tratamento: "apagar" },
   { modelo: "RobotTask", coluna: "requestedById", tratamento: "desligar" },
+  // A sessão assistida do captcha (06/11/2026): o nome de quem resolveu fica na auditoria.
+  { modelo: "RobotAssist", coluna: "lastClickById", tratamento: "manter", motivo: "quem clicou no captcha pelo Connect; a tela não mostra o id, e a auditoria guarda o nome" },
   // XML recusado pelo leitor (06/11/2026): só a contagem dos recusados.
   { modelo: "FiscalXmlRefusal", coluna: "lastSeenById", tratamento: "manter", motivo: "quem enviou o XML recusado por último; a tela não mostra o id" },
   { modelo: "UserTaskView", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o Meu dia da pessoa por último; a tela não expõe o id" },
