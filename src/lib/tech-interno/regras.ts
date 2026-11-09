@@ -46,7 +46,7 @@ export const itemSchema = z.object({
   originItemId: idOpcional,
   ...entregaNoCodigo,
 }).superRefine((v, ctx) => {
-  if (v.systemMode === "EXISTING" && !vinculoDoSistema(v.systemKey)) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Escolha um sistema do Ops Center." });
+  if (v.systemMode === "EXISTING" && !vinculoDoSistema(v.systemKey)) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Escolha um sistema do Orquestrador." });
   if (v.systemMode !== "EXISTING" && v.systemKey) ctx.addIssue({ code: "custom", path: ["systemKey"], message: "Esta opção não permite um sistema cadastrado." });
 });
 export type DadosItem = z.infer<typeof itemSchema>;

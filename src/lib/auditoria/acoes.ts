@@ -66,7 +66,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tech_interno.item.attachment": e("anexou um arquivo ao item do controle interno do Tech"),
   "tech_interno.item.attachment_remove": x("removeu um anexo do item do controle interno do Tech"),
   "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
-  "ops.aviso_fechado": e("fechou o aviso de erro do robô no Ops Center"),
+  "ops.aviso_fechado": e("fechou o aviso de erro do robô no Orquestrador"),
   "token_pessoal.create": c("criou o token de acesso pessoal"),
   "token_pessoal.revoke": e("revogou o token de acesso pessoal"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
@@ -604,7 +604,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   InventoryItem: "item do estoque",
   InternalContract: "contrato do escritório",
   HelpdeskTicket: "chamado",
-  OpsEvent: "evento de robô do Ops Center",
+  OpsEvent: "evento de robô do Orquestrador",
   HelpdeskCategory: "categoria de chamados",
   HelpdeskSlaPolicy: "política de SLA dos chamados",
   TechInternalItem: "item do controle interno",

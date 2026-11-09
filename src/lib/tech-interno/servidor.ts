@@ -172,7 +172,7 @@ async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, ante
     const existe = vinculo.opsWatcherSlug ? await tx.opsWatcher.count({ where: { ...where, slug: vinculo.opsWatcherSlug } })
       : vinculo.opsSiteId ? await tx.opsSite.count({ where: { ...where, id: vinculo.opsSiteId } })
       : vinculo.opsAppId ? await tx.opsApp.count({ where: { ...where, id: vinculo.opsAppId } }) : 0;
-    if (!existe) throw new ErroTechInterno("Escolha um sistema ativo do Ops Center.");
+    if (!existe) throw new ErroTechInterno("Escolha um sistema ativo do Orquestrador.");
   }
   if (dados.assigneeId && dados.assigneeId !== anterior?.assigneeId) {
     const pessoa = await tx.user.findFirst({ where: {

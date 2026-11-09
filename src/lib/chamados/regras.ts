@@ -93,7 +93,7 @@ export type Existente = z.infer<typeof existenteSchema>;
 export const ROTULOS_EXISTENTE = { robo: "robô", site: "site", app: "app" } as const;
 /** A mensagem do assistente que acompanha o cartão: a mesma no servidor e na tela. */
 export function mensagemDoExistente(e: Existente) {
-  const inicio = e.match === "same" ? `Isso parece já existir no Ops Center: o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}` : `Pode ser parecido com o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}, do Ops Center`;
+  const inicio = e.match === "same" ? `Isso parece já existir no Orquestrador: o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}` : `Pode ser parecido com o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}, do Orquestrador`;
   return `${inicio}${e.responsavel ? `, de responsabilidade de ${e.responsavel}` : ""}.${e.reason ? ` ${e.reason}` : ""}`;
 }
 export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(perguntaSchema).max(5), attachments: z.array(coberturaSchema).max(50), existente: existenteSchema.nullable().default(null),

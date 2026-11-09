@@ -59,7 +59,7 @@ export async function pedirImpressaoDoAlvara(tenantId: string, licenseId: string
   if (!pedido.ok) return pedido;
   // A máquina entra como automação do Ops Center: sem o módulo, ela não busca nada.
   if (!(await isModuleEnabled(tenantId, MODULO_OPS))) {
-    return { ok: false, erro: "O robô roda como automação do Ops Center, e o Ops Center está desligado neste escritório." };
+    return { ok: false, erro: "O robô roda como automação do Orquestrador, e o Orquestrador está desligado neste escritório." };
   }
   try {
     await prisma.robotTask.create({

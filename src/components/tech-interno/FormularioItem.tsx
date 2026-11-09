@@ -106,7 +106,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
       <div className="grid grid-cols-1 gap-4 @xs:grid-cols-2">
         {/* Os robôs, sites e apps do Ops Center, com busca: a lista cresce com o
             cadastro de lá (29/10/2026). Inativo só aparece no item que já o usa. */}
-        <CampoForm label="Sistema" htmlFor="tech-system" helper="Do cadastro do Ops Center." className="@xs:col-span-2 @lg:col-span-1"><Select id="tech-system" busca value={sistema} onChange={e => setSistema(e.target.value)}>
+        <CampoForm label="Sistema" htmlFor="tech-system" helper="Do cadastro do Orquestrador." className="@xs:col-span-2 @lg:col-span-1"><Select id="tech-system" busca value={sistema} onChange={e => setSistema(e.target.value)}>
           <option value="NONE">Sem sistema</option><option value="NEW">Novo sistema</option>
           {(Object.keys(ORIGENS_DO_SISTEMA) as OrigemDoSistema[]).map(origem => {
             const daOrigem = sistemas.filter(s => s.origem === origem && (s.ativo || s.chave === item?.systemKey));

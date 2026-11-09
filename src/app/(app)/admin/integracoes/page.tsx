@@ -197,9 +197,9 @@ export default async function IntegracoesPage({
 
     if (podeGerirOps) blocos.push({
       chave: "ops_center",
-      nome: "Ops Center",
+      nome: "Orquestrador",
       icone: <Activity />,
-      descricao: "Uma chave compartilhada pelo escritório para todas as automações do Ops Center.",
+      descricao: "Uma chave compartilhada pelo escritório para todas as automações do Orquestrador.",
       selo: temChaveOps ? { tom: "sucesso", rotulo: "Chave configurada" } : { tom: "neutro", rotulo: "Sem chave" },
       estado: temChaveOps ? "ligada" : "desligada",
       detalhe: "Os bots continuam identificados pelo próprio slug.",
