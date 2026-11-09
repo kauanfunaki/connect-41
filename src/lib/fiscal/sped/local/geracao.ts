@@ -38,7 +38,7 @@ import type { PedidoDeGeracao } from "./geracaoPeloAgente";
 
 const pedidoSchema = z.object({ obrigacao: obrigacaoSchema, tipo: z.enum(["0", "1"]), chave: z.string().uuid() });
 
-export const SEM_OPS = "O agente do SPED roda como automação do Ops Center, e o Ops Center está desligado neste escritório. Ligue o módulo para gerar pelo Connect.";
+export const SEM_OPS = "O agente do SPED roda como automação do Orquestrador, e o Orquestrador está desligado neste escritório. Ligue o módulo para gerar pelo Connect.";
 
 /**
  * Uma geração aberta por arquivo: o índice único da fila recusa a segunda. O

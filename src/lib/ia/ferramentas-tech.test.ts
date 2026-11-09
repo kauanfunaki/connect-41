@@ -74,17 +74,17 @@ describe("sistemas do Ops Center", () => {
       situacao: "sem comunicação",
       hoje: "5 arquivos — 4 com sucesso, 1 com erro, 0 com aviso",
       ultimoArquivo: expect.stringMatching(/^erro em 03\/11\/2026.*Senha do banco expirada$/),
-      link: "[Ver Robô de extratos no Ops Center](/ops?watcher=extratos)",
+      link: "[Ver Robô de extratos no Orquestrador](/ops?watcher=extratos)",
     });
     expect(r.itens.map((i) => i.nome)).toEqual(["Robô de extratos", "Portal do cliente", "Gerador de SPED"]);
-    expect(r.link).toBe("[Abrir o Ops Center](/ops)");
+    expect(r.link).toBe("[Abrir o Orquestrador](/ops)");
   });
 
   it("o tipo filtra e aponta a aba certa", async () => {
     const r = (await sistemas({ busca: "", tipo: "app" }, ctx({ ops: "completo" }))) as { itens: Record<string, unknown>[]; link: string };
     expect(ops.robosComSituacao).not.toHaveBeenCalled();
     expect(r.itens).toEqual([{ tipo: "app", nome: "Gerador de SPED", oQueFaz: "Gera o SPED fiscal", responsavel: "Bruno", repositorio: "org/sped" }]);
-    expect(r.link).toBe("[Abrir o Ops Center](/ops?view=apps)");
+    expect(r.link).toBe("[Abrir o Orquestrador](/ops?view=apps)");
   });
 });
 

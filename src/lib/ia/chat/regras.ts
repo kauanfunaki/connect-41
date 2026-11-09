@@ -112,7 +112,7 @@ const PASSOS: Record<string, string> = {
   propor_mover_etapa: "Preparando uma sugestão…",
   propor_encerrar_candidatura: "Preparando uma sugestão…",
   buscar_nos_manuais: "Procurando nos manuais…",
-  sistemas_do_ops_center: "Consultando o Ops Center…",
+  sistemas_do_ops_center: "Consultando o Orquestrador…",
   categorias_de_chamado: "Vendo as categorias de chamado…",
   propor_abrir_chamado: "Preparando o chamado…",
 };

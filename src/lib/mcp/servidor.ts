@@ -39,8 +39,8 @@ const entregaNoCodigo = {
 const camposEditaveis = {
   description: z.string().max(10000).nullable().optional().describe("Descrição em texto: o que acontece, onde, passos para reproduzir, o esperado. null limpa."),
   priority: PRIORIDADE.optional(),
-  systemKey: z.string().max(191).nullable().optional().describe("A key de um sistema do Ops Center, de ver_opcoes (ex.: \"robo:...\", \"site:...\", \"app:...\"). null = sem sistema."),
-  systemMode: z.enum(["NONE", "EXISTING", "NEW"]).optional().describe("NONE = sem sistema; EXISTING = um sistema do Ops Center (use systemKey); NEW = um sistema que ainda não existe. Opcional: mandar systemKey já basta."),
+  systemKey: z.string().max(191).nullable().optional().describe("A key de um sistema do Orquestrador, de ver_opcoes (ex.: \"robo:...\", \"site:...\", \"app:...\"). null = sem sistema."),
+  systemMode: z.enum(["NONE", "EXISTING", "NEW"]).optional().describe("NONE = sem sistema; EXISTING = um sistema do Orquestrador (use systemKey); NEW = um sistema que ainda não existe. Opcional: mandar systemKey já basta."),
   assigneeId: z.string().max(191).nullable().optional().describe("O id de uma pessoa de ver_opcoes, ou \"me\" para a pessoa dona do token. null = sem responsável."),
   dueDate: z.string().nullable().optional().describe("Prazo no formato AAAA-MM-DD. null limpa."),
   size: z.enum(["P", "M", "G"]).nullable().optional().describe("Tamanho combinado: P, M ou G. Só quem coordena a Tech define, e só enquanto o item está Pendente."),
@@ -98,7 +98,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
 
     server.registerTool("ver_opcoes", {
       title: "Ver as opções dos campos",
-      description: "Os valores aceitos nos campos: tipos, situações, prioridades, tamanhos, os sistemas do Ops Center (key para systemKey), as pessoas que podem ser responsáveis (id para assigneeId) e as entregas recentes (id para originItemId).",
+      description: "Os valores aceitos nos campos: tipos, situações, prioridades, tamanhos, os sistemas do Orquestrador (key para systemKey), as pessoas que podem ser responsáveis (id para assigneeId) e as entregas recentes (id para originItemId).",
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: false },
     }, () => executar(() => opcoesParaApi(ator)));

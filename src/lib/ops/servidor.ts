@@ -19,7 +19,7 @@ export const hashToken = (token: string) => createHash("sha256").update(token).d
 export async function acessoOps(nivel: NivelNoModulo = "ver") {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) throw new ErroOps("Entre novamente para continuar.", 401);
-  if (!await podeNoModulo(ctx, MODULO_OPS, nivel)) throw new ErroOps("Ops Center indisponível para este acesso.", 403);
+  if (!await podeNoModulo(ctx, MODULO_OPS, nivel)) throw new ErroOps("Orquestrador indisponível para este acesso.", 403);
   return ctx;
 }
 
@@ -179,7 +179,7 @@ export async function responsaveisOps(tenantId: string) {
 
 export async function conferirResponsavel(tenantId: string, ownerId: string | null) {
   if (ownerId && !(await responsaveisOps(tenantId)).some(u => u.id === ownerId)) {
-    throw new ErroOps("Escolha um responsável ativo com acesso ao setor do Ops Center.");
+    throw new ErroOps("Escolha um responsável ativo com acesso ao setor do Orquestrador.");
   }
 }
 
@@ -198,7 +198,7 @@ export async function receberEvento(w: CredencialAutenticadaOps, input: unknown)
       if (!atual?.isActive || (!w.compartilhado && atual.tokenHash !== w.tokenHash)) throw new ErroOps("Token revogado.", 401);
       const evento = await tx.opsEvent.create({ data: { ...chave, ...campos, payloadHash, processedAt: processedAt ? new Date(processedAt) : new Date() } });
       const owner = atual.ownerId && campos.status === "ERROR" ? await tx.user.findFirst({ where: { tenantId: w.tenantId, id: atual.ownerId, active: true }, select: { id: true } }) : null;
-      const message = `Erro na automação ${atual.name}. Confira o Ops Center.`;
+      const message = `Erro na automação ${atual.name}. Confira o Orquestrador.`;
       // Evento e aviso no sino são confirmados juntos. Retransmissões não criam outro aviso.
       if (owner) await tx.notification.create({ data: { tenantId: w.tenantId, userId: owner.id, type: "OPS_AUTOMACAO_ERRO", entityId: watcherSlug, message: mensagemQueCabe(message) } });
       return { id: evento.id, ownerId: owner?.id, message };

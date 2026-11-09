@@ -118,7 +118,7 @@ Se atender, como faço para usar?`;
   const [copiado, setCopiado] = useState(false);
   function copiar() { navigator.clipboard.writeText(mensagem).then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); }, () => {}); }
   return <div className="c41-surgir max-w-[85%] rounded-2xl rounded-tl-md border border-brand/30 bg-surface p-4 shadow-xs">
-    <p className="mb-3 text-helper font-medium text-brand">{e.match === "same" ? "Já existe no Ops Center" : "Pode ser parecido, no Ops Center"}</p>
+    <p className="mb-3 text-helper font-medium text-brand">{e.match === "same" ? "Já existe no Orquestrador" : "Pode ser parecido, no Orquestrador"}</p>
     <div className="flex items-start gap-3">
       <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand"><Icone size={20} /></span>
       <div className="min-w-0">

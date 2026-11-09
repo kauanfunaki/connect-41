@@ -103,7 +103,7 @@ const GUARDA_DO_CHAT =
   "balancete, lançamentos contábeis e fechamento contábil; DP = colaboradores, folha, férias, afastamentos e " +
   "rescisões; Ajuda = como usar o Connect.\n" +
   // O Tech na Ceci de todo setor (03/11/2026 — `src/lib/ia/ferramentas-tech.ts`).
-  "Sistemas, robôs, sites e apps do escritório (o Ops Center) e pedidos ao Tech são com você, em qualquer setor — " +
+  "Sistemas, robôs, sites e apps do escritório (o Orquestrador, que se chamava Ops Center) e pedidos ao Tech são com você, em qualquer setor — " +
   "não encaminhe. Para \"já existe algo que faz X?\", \"quem cuida de Y?\" ou \"o robô Z está funcionando?\", " +
   "consulte sistemas_do_ops_center e responda com o nome do sistema, o que ele faz e o responsável; se não achar, diga " +
   "que não há nada parecido cadastrado. Quando a pessoa pedir uma melhoria, a correção de um erro, suporte, um acesso " +

@@ -88,7 +88,7 @@ function roboComSituacao(r: RoboComSituacao) {
       ? { ultimoArquivo: `${STATUS_EM_PALAVRAS[r.ultimoEvento.status]} em ${dataHora(r.ultimoEvento.quando)}${r.ultimoEvento.erro ? ` — ${r.ultimoEvento.erro}` : ""}` }
       : {}),
     ...(r.instabilidade ? { instabilidadeAvisada: `desde ${dataHora(r.instabilidade.desde)}${r.instabilidade.nota ? ` — ${r.instabilidade.nota}` : ""}` } : {}),
-    link: linkDaTela(`Ver ${r.nome} no Ops Center`, `/ops?watcher=${encodeURIComponent(r.slug)}`),
+    link: linkDaTela(`Ver ${r.nome} no Orquestrador`, `/ops?watcher=${encodeURIComponent(r.slug)}`),
   };
 }
 
@@ -97,7 +97,7 @@ export const FERRAMENTAS_DO_TECH: Record<string, FerramentaRegistrada> = {
     def: {
       nome: SISTEMAS_DO_OPS,
       descricao:
-        "Os sistemas que o Tech já entregou e estão no Ops Center: robôs (automações), sites e apps, com o que cada um faz e quem é o responsável; para quem tem acesso ao Ops Center, também a situação dos robôs (no ar, sem comunicação, desativado), os arquivos de hoje e o último erro. Use para \"já existe algo que faz X?\", \"quem cuida de Y?\" e \"o robô Z está funcionando?\", e antes de abrir um chamado de algo novo. Busque com palavras-chave curtas do que a pessoa quer; \"\" lista tudo.",
+        "Os sistemas que o Tech já entregou e estão no Orquestrador (que se chamava Ops Center): robôs (automações), sites e apps, com o que cada um faz e quem é o responsável; para quem tem acesso ao Orquestrador, também a situação dos robôs (no ar, sem comunicação, desativado), os arquivos de hoje e o último erro. Use para \"já existe algo que faz X?\", \"quem cuida de Y?\" e \"o robô Z está funcionando?\", e antes de abrir um chamado de algo novo. Busque com palavras-chave curtas do que a pessoa quer; \"\" lista tudo.",
       parametros: {
         type: "object",
         properties: {
@@ -111,7 +111,7 @@ export const FERRAMENTAS_DO_TECH: Record<string, FerramentaRegistrada> = {
     },
     executar: async (args, ctx) => {
       const nivel = ctx.escopo.ops;
-      if (nivel !== "completo" && nivel !== "catalogo") throw new Error("O Ops Center não está disponível para o seu acesso.");
+      if (nivel !== "completo" && nivel !== "catalogo") throw new Error("O Orquestrador não está disponível para o seu acesso.");
       const busca = typeof args.busca === "string" ? args.busca.trim() : "";
       const tipo = ["robo", "site", "app"].includes(String(args.tipo)) ? String(args.tipo) : "todos";
       const quer = (t: string) => tipo === "todos" || tipo === t;
@@ -124,7 +124,7 @@ export const FERRAMENTAS_DO_TECH: Record<string, FerramentaRegistrada> = {
         return {
           itens: itens.slice(0, MAX_ITENS).map(itemDoCatalogo),
           ...(itens.length > MAX_ITENS ? { aviso: `Mostrando ${MAX_ITENS} de ${itens.length}; refine a busca.` } : {}),
-          acesso: "Só os itens ativos, sem a situação dos robôs: ela fica com quem tem acesso ao Ops Center.",
+          acesso: "Só os itens ativos, sem a situação dos robôs: ela fica com quem tem acesso ao Orquestrador.",
         };
       }
 
@@ -136,7 +136,7 @@ export const FERRAMENTAS_DO_TECH: Record<string, FerramentaRegistrada> = {
       return {
         itens: [...robos.map(roboComSituacao), ...demais.map(itemDoCatalogo)].slice(0, MAX_ITENS),
         ...(total > MAX_ITENS ? { aviso: `Mostrando ${MAX_ITENS} de ${total}; refine a busca.` } : {}),
-        link: linkDaTela("Abrir o Ops Center", tipo === "site" ? "/ops?view=sites" : tipo === "app" ? "/ops?view=apps" : "/ops"),
+        link: linkDaTela("Abrir o Orquestrador", tipo === "site" ? "/ops?view=sites" : tipo === "app" ? "/ops?view=apps" : "/ops"),
       };
     },
   },

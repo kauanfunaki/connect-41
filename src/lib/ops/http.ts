@@ -14,7 +14,7 @@ export async function responderOps(fn: () => Promise<unknown>, duplicado = "Já 
     if (err instanceof SyntaxError) return Response.json({ error: "JSON inválido." }, { status: 400 });
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") return Response.json({ error: duplicado }, { status: 409 });
     console.error("[ops] Falha na operação", err instanceof Error ? err.name : "erro");
-    return Response.json({ error: "Ops Center indisponível. Confira a conexão e a migração do módulo." }, { status: 503 });
+    return Response.json({ error: "Orquestrador indisponível. Confira a conexão e a migração do módulo." }, { status: 503 });
   }
 }
 
