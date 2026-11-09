@@ -54,6 +54,40 @@ describe("lerProtocolosDoSima", () => {
   });
 });
 
+// Ensaio de 09/11/2026: o SIMA devolveu CAD-26000013 em Pendente (selo "Em
+// Análise") e em Em análise. A decisão não pode depender da ordem das abas.
+describe("lerProtocolosDoSima — o mesmo protocolo em mais de uma aba", () => {
+  const ler = (itens: { protocolo: string; aba: "Pendente" | "Em análise" | "Finalizado"; selo: string }[]) =>
+    lerProtocolosDoSima([protocolo("p", "CAD-26000013")], resultadoDoSimaSchema.parse({ itens }))[0]!;
+  const pendenteEmAnalise = { protocolo: "CAD-26000013", aba: "Pendente" as const, selo: "Em Análise" };
+  const emAnalise = { protocolo: "CAD-26000013", aba: "Em análise" as const, selo: "Em Análise" };
+
+  it("Pendente com selo \"Em Análise\" mais Em análise vira nota para conferir, em qualquer ordem", () => {
+    for (const itens of [[pendenteEmAnalise, emAnalise], [emAnalise, pendenteEmAnalise]]) {
+      const l = ler(itens);
+      expect(l).toMatchObject({ id: "p", tipo: "falha" });
+      expect(l.tipo === "falha" && l.mensagem).toMatch(/duas abas.*Pendente.*Em análise.*confira o protocolo no SIMA/);
+    }
+  });
+
+  it("Pendente com selo de exigência vale mais que Em análise", () => {
+    for (const ordem of [0, 1]) {
+      const exigencia = { protocolo: "CAD-26000013", aba: "Pendente" as const, selo: "Aguardando Assinatura" };
+      const l = ler(ordem ? [emAnalise, exigencia] : [exigencia, emAnalise]);
+      expect(l).toEqual({ id: "p", tipo: "decisao", decisao: { tipo: "exigir", descricao: "Aguardando Assinatura" } });
+    }
+  });
+
+  it("Finalizado deferido vale mais que qualquer outra aba", () => {
+    const deferido = { protocolo: "CAD-26000013", aba: "Finalizado" as const, selo: "DEFERIDO" };
+    expect(ler([emAnalise, pendenteEmAnalise, deferido])).toEqual({ id: "p", tipo: "decisao", decisao: { tipo: "deferir" } });
+  });
+
+  it("só em Em análise, mesmo repetido, segue pendente", () => {
+    expect(ler([emAnalise, emAnalise])).toEqual({ id: "p", tipo: "decisao", decisao: { tipo: "segue_pendente" } });
+  });
+});
+
 describe("rodadaDoSimaPodeComecar", () => {
   const agora = new Date("2026-11-03T18:00:00Z");
   it("começa sem rodada anterior ou depois de 6 horas", () => {

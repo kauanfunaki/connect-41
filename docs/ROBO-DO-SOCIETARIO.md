@@ -196,7 +196,8 @@ O Connect decide com `classificarSolicitacao` (`src/lib/societario/orgaos/sima.t
 - **Finalizado DEFERIDO**: conclui o protocolo e a etapa, como feito pelo robô;
 - **Finalizado CANCELADO**: exigência com o motivo do SIMA, e a etapa volta para o setor;
 - **Pendente** com "Aguardando Envio de Documento", "Aguardando Assinatura" ou "Aguardando Pagamento": exigência;
-- selo que a tela ainda não mostrou, ou protocolo que não aparece no login da 041 (aberto com o certificado do cliente): fica anotado no protocolo como falha da verificação, sem mexer no desfecho.
+- selo que a tela ainda não mostrou, ou protocolo que não aparece no login da 041 (aberto com o certificado do cliente): fica anotado no protocolo como falha da verificação, sem mexer no desfecho;
+- **o mesmo protocolo em mais de uma aba** (visto em 09/11/2026: `CAD-26000013` em Pendente, com o selo "Em Análise", e em Em análise): vale, nesta ordem, Finalizado, Pendente com selo de exigência, Pendente com outro selo e Em análise. Pendente com selo que não é de exigência junto com Em análise fica anotado para o setor conferir no SIMA, sem mexer no desfecho.
 
 Antes de ligar, ensaie. O ensaio lê a lista e mostra o que devolveria, sem falar com o Connect:
 
