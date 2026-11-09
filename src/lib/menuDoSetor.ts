@@ -34,9 +34,70 @@ export type BlocoDoMenu<T extends TelaDoMenu = TelaDoMenu> =
  * "Organizar menu"): os grupos e as telas, por código. O que não está na lista
  * vem depois, na ordem de sempre (a dos grupos e a do catálogo).
  */
-export type OrdemDoMenu = { grupos: string[]; telas: string[] };
+export type OrdemDoMenu = {
+  grupos: string[];
+  telas: string[];
+  /**
+   * As telas que saem do menu do setor (09/11/2026, "Organizar no próprio
+   * menu"): o olho esconde sem tirar do lugar. Só o menu — o endereço, a busca
+   * e a página "Telas" do setor continuam levando a elas. Ausente = nenhuma.
+   */
+  ocultas?: string[];
+  /**
+   * A ordem dos itens do Geral neste setor (09/11/2026): só a posição, dentro
+   * do próprio Geral (chaves de `CHAVES_DO_GERAL`). Quem aparece no Geral
+   * continua sendo de Configurações › Setores. Ausente = cores juntas.
+   */
+  geral?: string[];
+  /**
+   * A ordem do que fica DENTRO de cada menu (09/11/2026): por menu (o código da
+   * tela de cima, ou "apoio" no Geral), as chaves das telas de dentro — o
+   * código da tela, ou `sub:<nome>` para as abas com entrada no menu (Robôs,
+   * Sites, Apps…). Só a posição: nada sai de um menu nem entra em outro.
+   */
+  dentro?: Record<string, string[]>;
+  /** Os itens do Geral que saem do menu deste setor (chaves de `CHAVES_DO_GERAL`), pelo olho do organizador. */
+  ocultasGeral?: string[];
+  /**
+   * O que sai de dentro de um menu (09/11/2026), por menu — as mesmas chaves
+   * de `dentro`: as abas com entrada no menu (`sub:<nome>`) e as telas do
+   * Apoio. As telas do catálogo que vieram de outra continuam em `ocultas`.
+   */
+  ocultasDentro?: Record<string, string[]>;
+};
 
 export const ORDEM_PADRAO: OrdemDoMenu = { grupos: [], telas: [] };
+
+/** A ordem escolhida mexe na posição de algum grupo ou tela (esconder não conta). */
+export function ordemTemPosicao(ordem: OrdemDoMenu | null | undefined): boolean {
+  return !!ordem && (ordem.grupos.length > 0 || ordem.telas.length > 0);
+}
+
+/** Nada escolhido: nem posição nem tela escondida. */
+export function ordemEhPadrao(ordem: OrdemDoMenu | null | undefined): boolean {
+  return (
+    !ordemTemPosicao(ordem) &&
+    !(ordem?.ocultas?.length) &&
+    !(ordem?.geral?.length) &&
+    !(ordem?.ocultasGeral?.length) &&
+    Object.keys(ordem?.dentro ?? {}).length === 0 &&
+    Object.keys(ordem?.ocultasDentro ?? {}).length === 0
+  );
+}
+
+/**
+ * As telas que aparecem no menu: fora as escondidas e as filhas de uma mãe
+ * escondida (esconder a tela de cima leva as de dentro junto).
+ */
+export function telasVisiveis<T extends TelaDoMenu>(telas: readonly T[], ordem: OrdemDoMenu | null | undefined): T[] {
+  const ocultas = new Set(ordem?.ocultas ?? []);
+  if (ocultas.size === 0) return [...telas];
+  return telas.filter((t) => {
+    if (ocultas.has(t.code)) return false;
+    const mae = getModuleDef(t.code)?.telaMae;
+    return !(mae && ocultas.has(mae));
+  });
+}
 
 /** Lê a ordem gravada (JSON); qualquer coisa estranha vira a ordem padrão. */
 export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
@@ -46,14 +107,37 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
     if (!v || typeof v !== "object") return ORDEM_PADRAO;
     const lista = (x: unknown) => (Array.isArray(x) ? [...new Set(x.filter((s): s is string => typeof s === "string"))] : []);
     const o = v as Record<string, unknown>;
-    return { grupos: lista(o.grupos), telas: lista(o.telas) };
+    const ocultas = lista(o.ocultas);
+    const geral = lista(o.geral);
+    const porMenu = (x: unknown) => {
+      const r: Record<string, string[]> = {};
+      if (x && typeof x === "object" && !Array.isArray(x)) {
+        for (const [mae, filhas] of Object.entries(x as Record<string, unknown>)) {
+          const l = lista(filhas);
+          if (l.length) r[mae] = l;
+        }
+      }
+      return r;
+    };
+    const dentro = porMenu(o.dentro);
+    const ocultasDentro = porMenu(o.ocultasDentro);
+    const ocultasGeral = lista(o.ocultasGeral);
+    return {
+      grupos: lista(o.grupos),
+      telas: lista(o.telas),
+      ...(ocultas.length ? { ocultas } : {}),
+      ...(geral.length ? { geral } : {}),
+      ...(Object.keys(dentro).length ? { dentro } : {}),
+      ...(ocultasGeral.length ? { ocultasGeral } : {}),
+      ...(Object.keys(ocultasDentro).length ? { ocultasDentro } : {}),
+    };
   } catch {
     return ORDEM_PADRAO;
   }
 }
 
 /** Ordena pela posição na lista escolhida; quem não está nela vai depois, na ordem em que veio. */
-function pelaOrdem<T>(itens: readonly T[], chave: (i: T) => string, ordem: readonly string[]): T[] {
+export function pelaOrdem<T>(itens: readonly T[], chave: (i: T) => string, ordem: readonly string[]): T[] {
   if (ordem.length === 0) return [...itens];
   const pos = new Map(ordem.map((c, i) => [c, i]));
   return itens

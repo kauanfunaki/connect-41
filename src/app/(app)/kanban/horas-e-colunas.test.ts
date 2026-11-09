@@ -20,6 +20,8 @@ const prisma = {
   pipelineStage,
   $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({ pipelineStage })),
 };
+// As ações do Kanban chegam a módulos `server-only` (exclusão de atividade, SPED local).
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));

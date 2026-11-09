@@ -22,6 +22,7 @@ export function ItemComJanela({
   telas,
   verTudo,
   contador,
+  aceso = false,
 }: {
   label: string;
   icon: React.ReactNode;
@@ -32,9 +33,14 @@ export function ItemComJanela({
   verTudo?: { href: string; rotulo: string };
   /** O que pede ação numa das telas (chamados novos), somado. */
   contador?: number;
+  /**
+   * Acende mesmo sem nenhuma tela da janela aberta (09/11/2026): o SPED do
+   * Fiscal, cuja mãe é só o título, segue aceso em SPED gerados e Executar.
+   */
+  aceso?: boolean;
 }) {
   const pathname = usePathname();
-  const ativo = telas.some((t) => t.ativa ?? caminhoDoMenuAtivo(pathname, t.href));
+  const ativo = aceso || telas.some((t) => t.ativa ?? caminhoDoMenuAtivo(pathname, t.href));
   return (
     <PainelDoItem titulo={label} area={area} icone={icon} abrirPorClique telas={telas} verTudo={verTudo}>
       {({ aberto, alternar, painelId }) => (
