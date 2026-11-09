@@ -13,6 +13,8 @@ import { criarConta, ligarEmpresa, salvarAgencia, salvarContraparte, salvarRegra
 import { desfazerImportacao, importarOfx } from "../../src/lib/contabil-core/servidor/importacao";
 import { cancelarClassificacao, classificarManual, listarPendencias, processarNeo } from "../../src/lib/contabil-core/servidor/neo";
 import { gerarArquivoDoDominio } from "../../src/lib/contabil-core/servidor/exportacao";
+import { alterarComposicao, classificarComRegra, filaAgrupada, obterComposicao, reclassificar, simularRegra } from "../../src/lib/contabil-core/servidor/neoAvancado";
+import { dec } from "../../src/lib/contabil-core/motor/decimal";
 import { PLANO_DA_EMPRESA } from "../../src/lib/exclusao/empresa";
 import { executarPlano } from "../../src/lib/exclusao/comum";
 
@@ -117,6 +119,47 @@ async function main() {
     confere("nenhuma partida viva depois de desfazer", vivas === 0, vivas);
     const reimport = await importarOfx(tenantId, user.id, empresaId, agencia.id, "jan.ofx", bytes, false);
     confere("depois de desfeita, o mesmo arquivo entra de novo", reimport.ok && reimport.valor.importadas === 3, reimport);
+
+    // ── Fase 3: reclassificar, compor, simular, agrupar e classificar criando a regra ──
+    valor(await processarNeo(tenantId, empresaId, { agenciaId: null, mes: null }));
+    const tTarifa = await prisma.coreTransacao.findFirstOrThrow({ where: { empresaId, historico: "TARIFA PACOTE SERVICOS", deletedAt: null }, select: { id: true } });
+    valor(await reclassificar(tenantId, user.id, empresaId, { transacaoId: tTarifa.id, contaId: fornecedor.id, descricao: "TARIFA COBRADA PELO FORNECEDOR", motivo: "conta errada" }));
+    const pernasTarifa = await prisma.coreRegistro.findMany({ where: { transacaoId: tTarifa.id, deletedAt: null }, select: { contaId: true, dc: true } });
+    confere("reclassificar troca a conta e mantém um par só", pernasTarifa.length === 2 && pernasTarifa.some((p) => p.dc === "D" && p.contaId === fornecedor.id), pernasTarifa);
+
+    const pix = await prisma.coreTransacao.findFirstOrThrow({ where: { empresaId, historico: { startsWith: "PIX EMITIDO" }, deletedAt: null }, select: { id: true } });
+    const comp = valor(await obterComposicao(tenantId, empresaId, pix.id));
+    const errada = await alterarComposicao(tenantId, user.id, empresaId, {
+      transacaoId: pix.id, lancamentoVigenteId: comp.lancamentoVigenteId, motivo: "juros",
+      componentes: [{ contaId: fornecedor.id, historico: "PRINCIPAL", valor: dec("1000.00") }, { contaId: tarifa.id, historico: "JUROS", valor: dec("199.99") }],
+    });
+    confere("composição que não fecha o valor é recusada", !errada.ok);
+    valor(await alterarComposicao(tenantId, user.id, empresaId, {
+      transacaoId: pix.id, lancamentoVigenteId: comp.lancamentoVigenteId, motivo: "juros",
+      componentes: [{ contaId: fornecedor.id, historico: "PRINCIPAL", valor: dec("1000.00") }, { contaId: tarifa.id, historico: "JUROS", valor: dec("200.00") }],
+    }));
+    confere("composição: dois pares vivos na mesma transação", (await prisma.coreRegistro.count({ where: { transacaoId: pix.id, deletedAt: null } })) === 4);
+    const velha = await alterarComposicao(tenantId, user.id, empresaId, { transacaoId: pix.id, lancamentoVigenteId: comp.lancamentoVigenteId, motivo: "x", componentes: [{ contaId: fornecedor.id, historico: "TUDO", valor: dec("1200.00") }] });
+    confere("composição sobre uma versão velha é recusada", !velha.ok && velha.erro.startsWith("A classificação mudou"), velha);
+    const txtComp = valor(await gerarArquivoDoDominio(tenantId, user.id, empresaId, exportacaoSchema.parse({ mes: "2026-01", formato: "txt" })));
+    confere("no Domínio, cada componente sai com o próprio histórico", txtComp.conteudo.includes(";PRINCIPAL;") && txtComp.conteudo.includes(";JUROS;"), txtComp.conteudo);
+
+    const sim = valor(await simularRegra(tenantId, empresaId, { historico: "tarifa pacote", dc: "D", agenciaId: null, contaId: tarifa.id }));
+    confere("simulação: a tarifa reclassificada aparece como conflito", sim.contabilizadas === 1 && sim.conflitos === 1 && sim.pendencias === 0, sim);
+
+    const fev = OFX("-FEV").replace(/2026010/g, "2026020").replace("TARIFA PACOTE SERVICOS", "PIX EMITIDO OUTRA IF JOSE").replace("CRED PIX CLIENTE NOVO", "PIX RECEBIDO MARIA");
+    const impFev = await importarOfx(tenantId, user.id, empresaId, agencia.id, "fev.ofx", new TextEncoder().encode(fev.replace("Pagamento Pix 11.222.333/0001-81", "PIX EMITIDO OUTRA IF ANA")), false);
+    confere("segundo mês importado", impFev.ok, impFev);
+    valor(await processarNeo(tenantId, empresaId, { agenciaId: null, mes: "2026-02" }));
+    const fila = await filaAgrupada(tenantId, empresaId, { agenciaId: null, mes: "2026-02" });
+    const grupoPix = fila.grupos.find((g) => g.padrao === "pix emitido outra" && g.dc === "D");
+    confere("fila agrupada junta os PIX emitidos", grupoPix?.quantidade === 2, fila.grupos.map((g) => [g.padrao, g.dc, g.quantidade]));
+    const comRegra = valor(await classificarComRegra(
+      tenantId, empresaId,
+      { transacaoIds: [grupoPix!.transacaoIds[0]], contaId: fornecedor.id, descricao: "PAGAMENTO VIA PIX", manterHistorico: false },
+      { historico: "PIX EMITIDO OUTRA IF", agenciaId: null, manterHistorico: true, aplicarNosSemelhantes: true },
+    ));
+    confere("classificar criando a regra: 1 marcada + 1 semelhante pelo NEO", comRegra.classificadas.length === 1 && !!comRegra.regraCriada && comRegra.semelhantes === 1, comRegra);
   } finally {
     await prisma.$transaction((tx) => executarPlano(tx as never, PLANO_DA_EMPRESA, { tenantId, id: company.id }), { timeout: 60_000 });
   }

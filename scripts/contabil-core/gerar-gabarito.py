@@ -462,6 +462,27 @@ for caso in CASOS_TIPO:
     for dc in ("D", "C", "X"):
         chamar("desambiguar_tipos", _desambiguar, [list(c) for c in caso], dc)
 
+# ─── NEO: sugestão de regra pela seleção (neo/consultas.py, Fase 3) ──────
+
+ns_consultas = funcoes_do_fonte(
+    raiz / "src/domain/neo/consultas.py",
+    {"_prefixo_comum_de_palavras"},
+    {"normalizar_para_match": texto.normalizar_para_match},
+)
+SELECOES = [
+    [],
+    ["PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"],
+    ["PIX EMITIDO OUTRA IF JOAO", "PIX EMITIDO OUTRA IF MARIA", "pix emitido outra if jose"],
+    ["TARIFA PACOTE SERVICOS", "TARIFA PACOTE SERVIÇOS JAN", "TARIFA BANCARIA"],
+    ["PAGAMENTO BOLETO", "RECEBIMENTO PIX"],
+    ["  TED   ENVIADA   ACME ", "TED ENVIADA ACME LTDA"],
+    ["CRÉD.TED-STR FORNECEDOR", "CRED TED STR FORNECEDOR B"],
+    ["", "QUALQUER"],
+    ["A B C", "A B C D", "X A B C"],
+]
+for sel in SELECOES:
+    chamar("prefixo_comum_de_palavras", ns_consultas["_prefixo_comum_de_palavras"], sel)
+
 saida.parent.mkdir(parents=True, exist_ok=True)
 saida.write_text(
     json.dumps({"origem": "dev41tech/contabil-core e074176", "chamadas": chamadas}, ensure_ascii=False, indent=1),

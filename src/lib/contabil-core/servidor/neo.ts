@@ -22,7 +22,7 @@ import type { EntradaClassificacaoManual } from "../entradas";
 import { decDoBanco, empresaDoTenant, falha, limitesDoMes, NAO_ENCONTRADA, ok, type Resultado } from "./base";
 import { descricaoDaAgencia } from "./cadastros";
 
-type Tx = Prisma.TransactionClient;
+export type Tx = Prisma.TransactionClient;
 
 export type ResultadoDoNeo = {
   totalPendentes: number;
@@ -33,7 +33,7 @@ export type ResultadoDoNeo = {
   bloqueadasValorSuspeito: number;
 };
 
-type TransacaoLida = { id: string; agenciaId: string; historico: string; dc: string; valor: Prisma.Decimal; data: Date };
+export type TransacaoLida = { id: string; agenciaId: string; historico: string; dc: string; valor: Prisma.Decimal; data: Date };
 
 // ─── Gravação comum ───────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ type TransacaoLida = { id: string; agenciaId: string; historico: string; dc: str
  * `1.1.B.<id>` e vincula, como `_obter_conta_bancaria` — o arquivo do Domínio avisa que ela não tem
  * código reduzido.
  */
-async function contaBancaria(tenantId: string, empresaId: string, agenciaId: string): Promise<string> {
+export async function contaBancaria(tenantId: string, empresaId: string, agenciaId: string): Promise<string> {
   const prisma = getPrisma();
   return prisma.$transaction(async (tx) => {
     const agencia = await tx.coreAgencia.findFirst({ where: { id: agenciaId, tenantId, empresaId, deletedAt: null } });
@@ -64,7 +64,7 @@ async function contaBancaria(tenantId: string, empresaId: string, agenciaId: str
   });
 }
 
-async function gravarPartidas(tx: Tx, base: { tenantId: string; empresaId: string }, t: TransacaoLida, p: Partidas, contaBancoId: string) {
+export async function gravarPartidas(tx: Tx, base: { tenantId: string; empresaId: string }, t: TransacaoLida, p: Partidas, contaBancoId: string) {
   const lancamentoId = randomUUID();
   for (const perna of pernas(p, contaBancoId, t.historico)) {
     const chaves = { deletedAt: null, transacaoId: t.id, lancamentoId, dc: perna.dc, ordemComposicao: null };
@@ -93,7 +93,7 @@ type DadosDaDecisao = {
  * Grava o desfecho. Uma decisão `sem_regra` aberta é ENCERRADA no lugar (atualizada), em vez de ficar
  * órfã enquanto uma linha nova entra — senão a fila "Sem regra" listaria um lançamento já feito.
  */
-async function gravarDecisao(tx: Tx, base: { tenantId: string; empresaId: string }, transacaoId: string, d: DadosDaDecisao) {
+export async function gravarDecisao(tx: Tx, base: { tenantId: string; empresaId: string }, transacaoId: string, d: DadosDaDecisao) {
   const dados = {
     regraId: d.regraId ?? null, contaId: d.contaId ?? null, resultado: d.resultado, estrategia: d.estrategia ?? null,
     motivo: d.motivo == null ? null : corta(d.motivo, 500), contraparteId: d.contraparteId ?? null, contaContraparteId: d.contaContraparteId ?? null,
@@ -106,7 +106,7 @@ async function gravarDecisao(tx: Tx, base: { tenantId: string; empresaId: string
 }
 
 /** Toma a transação pendente para classificar. Falso: outra execução chegou antes. */
-async function tomar(tx: Tx, t: { id: string }, extra: { automatico: boolean }): Promise<boolean> {
+export async function tomar(tx: Tx, t: { id: string }, extra: { automatico: boolean }): Promise<boolean> {
   const r = await tx.coreTransacao.updateMany({
     where: { id: t.id, status: "pendente", deletedAt: null, ...(extra.automatico ? { autoRecusadoEm: null } : {}) },
     // A classificação manual resolve a recusa: um humano decidiu.
