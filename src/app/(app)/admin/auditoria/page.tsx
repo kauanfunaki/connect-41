@@ -25,12 +25,12 @@ import {
   tiposQueBatemComABusca,
 } from "@/lib/auditoria/acoes";
 import { cabecalhoDoDia, contarPorDia, fimDoDia, inicioDoDia, nomeCurtoDoDia, OPCOES_DE_PERIODO, periodoCurto } from "@/lib/auditoria/dias";
-import { DIAS_POR_VEZ, MAIS_POR_VEZ, POR_DIA, hrefDaAuditoria, hrefDoPeriodo, lerFiltros, temFiltro } from "@/lib/auditoria/filtros";
+import { DIAS_POR_VEZ, MAIS_POR_VEZ, POR_DIA, hrefDaAuditoria, hrefDoPeriodo, lerFiltros, ondeDaPessoa, temFiltro } from "@/lib/auditoria/filtros";
 import { fraseDoEvento } from "@/lib/auditoria/frase";
 import { empresaNosDetalhes, fatosDoRegistro, mudancasDoRegistro, nomeNosDetalhes, registroCompleto } from "@/lib/auditoria/metadados";
-import { contagemPorTipo, metricasDaAuditoria, opcoesDeArea, pessoasQueAgiram } from "@/lib/auditoria/metricas";
+import { contagemPorTipo, metricasDaAuditoria, opcoesDeArea, pessoasQueAgiram, quantasPessoasAgiram } from "@/lib/auditoria/metricas";
 import { chaveDoAlvo, resolverReferencias } from "@/lib/auditoria/alvos";
-import { NOME_DO_SISTEMA, ehRotinaDoSistema } from "@/lib/auditoria/rotinas";
+import { NOME_DO_SISTEMA, PESSOA_DO_SISTEMA, ehRotinaDoSistema } from "@/lib/auditoria/rotinas";
 
 type Onde = Prisma.AuditLogWhereInput;
 
@@ -82,12 +82,6 @@ async function ondeDaBusca(tenantId: string, busca: string, de: Date, ate: Date)
   return { OR: ou };
 }
 
-function ondeDaPessoa(pessoa: string | null): Onde {
-  if (!pessoa) return {};
-  if (pessoa.startsWith("nome:")) return { userId: null, actorName: pessoa.slice(5) };
-  return { userId: pessoa };
-}
-
 // Só SUPER_ADMIN acessa — a trilha é informação sensível de todos os setores.
 //
 // Linha do tempo por dia (escolha "Auditoria · B" do Kauan, 14/10/2026), com os
@@ -106,7 +100,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
   const de = inicioDoDia(f.periodo.de);
   const ate = fimDoDia(f.periodo.ate);
   const doPeriodo: Onde = { tenantId, createdAt: { gte: de, lt: ate } };
-  const daPessoa = ondeDaPessoa(f.pessoa);
+  const daPessoa: Onde = ondeDaPessoa(f.pessoa);
   const daBusca: Onde = f.busca ? await ondeDaBusca(tenantId, f.busca, de, ate) : {};
 
   // As ações do recorte (sem área e sem tipo): delas saem as áreas, os tipos e os números.
@@ -147,8 +141,8 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
 
   const metricas = metricasDaAuditoria({
     porAcao,
-    // Robô e agendador não contam como pessoa.
-    pessoas: pessoas.filter((p) => !p.rotina && (!f.pessoa || p.valor === f.pessoa)).length,
+    // Robô, agendador e o "Sistema" não contam como pessoa.
+    pessoas: quantasPessoasAgiram(pessoas, f.pessoa),
     ultimaExclusao: ultimaExclusao?.createdAt ?? null,
     hoje: deHoje,
     agora,
@@ -249,7 +243,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
     {
       chave: "pessoa",
       titulo: "Pessoa",
-      rotulo: f.pessoa ? `Pessoa: ${pessoaAtual?.rotulo ?? "escolhida"}` : "Pessoas: todas",
+      rotulo: f.pessoa ? `Pessoa: ${pessoaAtual?.rotulo ?? (f.pessoa === PESSOA_DO_SISTEMA ? NOME_DO_SISTEMA : "escolhida")}` : "Pessoas: todas",
       ativo: Boolean(f.pessoa),
       opcoes: [
         { valor: "", rotulo: "Todas as pessoas", href: hrefDaAuditoria(f, { pessoa: null }), escolhida: !f.pessoa },

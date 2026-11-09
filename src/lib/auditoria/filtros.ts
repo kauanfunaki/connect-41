@@ -3,10 +3,11 @@
 
 import { AREAS_DA_AUDITORIA, type ChaveDaAreaDaAuditoria, type TipoDaAcao } from "./acoes";
 import { resolverPeriodo, type ChaveDoPeriodo, type Periodo } from "./dias";
+import { PESSOA_DO_SISTEMA } from "./rotinas";
 
 export type FiltrosDaAuditoria = {
   tipo: Exclude<TipoDaAcao, "outro"> | null;
-  /** userId, ou "nome:<nome>" para quem foi excluído. */
+  /** userId, "nome:<nome>" para quem foi excluído, ou "sistema" para as linhas antigas de rotina sem nome. */
   pessoa: string | null;
   area: ChaveDaAreaDaAuditoria | null;
   periodo: Periodo;
@@ -50,6 +51,18 @@ export function lerFiltros(sp: Bruto, hoje: string): FiltrosDaAuditoria {
     ver: inteiro(um(sp.ver), POR_DIA + MAIS_POR_VEZ, POR_DIA, TETO_POR_DIA),
     dias: inteiro(um(sp.dias), DIAS_POR_VEZ, 1, TETO_DE_DIAS),
   };
+}
+
+/**
+ * O filtro "Pessoa" no banco: quem tem conta pelo `userId`; quem foi excluído
+ * pelo nome guardado; "sistema", as linhas antigas de rotina, gravadas sem
+ * usuário e sem nome (09/11/2026).
+ */
+export function ondeDaPessoa(pessoa: string | null): { userId?: string | null; actorName?: string | null } {
+  if (!pessoa) return {};
+  if (pessoa === PESSOA_DO_SISTEMA) return { userId: null, actorName: null };
+  if (pessoa.startsWith("nome:")) return { userId: null, actorName: pessoa.slice(5) };
+  return { userId: pessoa };
 }
 
 /** Os parâmetros do filtro (sem o "mostrar mais"), para montar links. */
