@@ -13,7 +13,6 @@ import { CartaoDeNotificacao } from "@/components/notificacoes/CartaoDeNotificac
 import { AbasDasNotificacoes } from "@/components/notificacoes/AbasDasNotificacoes";
 import {
   arquivarNotificacoes,
-  contarNaoLidas,
   listarNotificacoes,
   marcarLidas,
   marcarTodasLidas,
@@ -21,6 +20,14 @@ import {
 } from "@/app/(app)/notificacoes/actions";
 import type { AbaOuTodas } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela } from "@/lib/notificacoes/consultas";
+import {
+  GRUPO_DAS_NOTIFICACOES,
+  avisosParaMostrar,
+  destinoDoClique,
+  lembrarMostrados,
+  type NotificacaoNova,
+  type RespostaDasNovas,
+} from "@/lib/notificacoes/avisoNaTela";
 import { INTERVALO_DA_CONFERENCIA_MS } from "./useNumeroConferido";
 
 type Contagens = Record<AbaOuTodas, number>;
@@ -39,6 +46,26 @@ type Dados = { itens: NotificacaoNaTela[]; contagens: Contagens; ocultos: number
 // o aviso de quantos tipos a pessoa ocultou, com o atalho para as preferências.
 
 const POR_ABERTURA = 20;
+
+/** Os avisos já mostrados, entre as abas do navegador: o mesmo aviso não aparece de novo na outra. */
+const CHAVE_DOS_MOSTRADOS = "connect:avisos-mostrados";
+
+function lerMostrados(): string[] {
+  try {
+    const lido: unknown = JSON.parse(localStorage.getItem(CHAVE_DOS_MOSTRADOS) ?? "[]");
+    return Array.isArray(lido) ? lido.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarMostrados(ids: string[]): void {
+  try {
+    localStorage.setItem(CHAVE_DOS_MOSTRADOS, JSON.stringify(ids));
+  } catch {
+    // Sem armazenamento: a aba ainda não repete, pelo próprio cursor.
+  }
+}
 
 function ajustar(c: Contagens, n: NotificacaoNaTela, delta: number): Contagens {
   return { ...c, todas: Math.max(0, c.todas + delta), [n.aba]: Math.max(0, c[n.aba] + delta) };
@@ -65,14 +92,60 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   // a lista de uma aba com o título de outra.
   const pedido = useRef(0);
 
+  // Como no `abrir` do sino: marca como lida ANTES de navegar.
+  async function abrirDoAviso(id: string, destino: string) {
+    try {
+      await marcarLidas([id]);
+      setContagemDoTopo((c) => Math.max(0, c - 1));
+    } catch {
+      // Não marcou: a tela abre do mesmo jeito, e a notificação segue não lida no sino.
+    }
+    router.push(destino);
+    router.refresh();
+  }
+
+  /** A notificação nova no canto: com caminho, o clique marca como lida e leva à tela. */
+  function avisar(n: NotificacaoNova) {
+    const destino = destinoDoClique(n);
+    toast.show(n.mensagem, "info", {
+      titulo: n.titulo,
+      grupo: GRUPO_DAS_NOTIFICACOES,
+      ...(destino ? { aoClicar: () => void abrirDoAviso(n.id, destino), rotuloDoClique: "Abrir" } : {}),
+    });
+  }
+
   // Entre uma navegação e outra, voltar à aba do navegador confere o número —
   // e, desde 21/10/2026, também a cada minuto com a aba aberta: a solicitação
   // que chega avisa sem ninguém recarregar a página.
-  const aoVoltar = useEffectEvent(() => {
-    if (document.visibilityState === "visible") void contarNaoLidas().then((v) => setContagemDoTopo(v)).catch(() => {});
+  //
+  // Desde 09/11/2026 a mesma conferência traz as notificações que chegaram e
+  // as mostra no canto da tela (ver `avisoNaTela.ts`). A primeira, ao montar,
+  // só marca onde a página começou: o que já existia não vira aviso. Pela rota
+  // `/api/notificacoes/novas`, e não por Server Action, como o alerta de reunião.
+  const desdeRef = useRef<string | null>(null);
+  const conferir = useEffectEvent(async () => {
+    if (document.visibilityState !== "visible") return;
+    try {
+      const consulta = desdeRef.current ? `?desde=${encodeURIComponent(desdeRef.current)}` : "";
+      const r = await fetch(`/api/notificacoes/novas${consulta}`, { cache: "no-store" });
+      if (!r.ok) return;
+      const d = (await r.json()) as RespostaDasNovas;
+      const primeira = desdeRef.current === null;
+      desdeRef.current = d.cursor;
+      setContagemDoTopo(d.naoLidas);
+      if (primeira) return;
+      const mostrados = lerMostrados();
+      const mostrar = avisosParaMostrar(d.novas, new Set(mostrados));
+      if (mostrar.length === 0) return;
+      guardarMostrados(lembrarMostrados(mostrados, mostrar.map((n) => n.id)));
+      for (const n of mostrar) avisar(n);
+    } catch {
+      // Rede oscilando: o número e os avisos voltam na próxima conferência.
+    }
   });
   useEffect(() => {
-    const ouvir = () => aoVoltar();
+    const ouvir = () => void conferir();
+    ouvir();
     document.addEventListener("visibilitychange", ouvir);
     const relogio = setInterval(ouvir, INTERVALO_DA_CONFERENCIA_MS);
     return () => {

@@ -9,6 +9,7 @@ import { linkDaNotificacao } from "@/lib/notificacaoLink";
 import { nomeExibicao } from "@/lib/companyName";
 import { telefoneLegivel } from "@/lib/whatsapp/conversas";
 import { doTipo, filtroDaAba, ocultosValidos, type Aba, type AbaOuTodas, type IconeDaNotificacao, type Tom } from "./catalogo";
+import type { NotificacaoNova } from "./avisoNaTela";
 
 export type TipoDoChip = "empresa" | "pessoa" | "card" | "processo" | "solicitacao" | "conversa" | "pendencia";
 
@@ -112,6 +113,53 @@ export async function contarNaoLidasVisiveis(dono: Dono, ocultos: string[]): Pro
   return getPrisma().notification.count({
     where: { tenantId: dono.tenantId, userId: dono.userId, read: false, archivedAt: null, ...(ocultos.length ? { type: { notIn: ocultos } } : {}) },
   });
+}
+
+// ─── O aviso no canto (09/11/2026) ─────────────────────────────────────────
+// Ver `avisoNaTela.ts`: o sino confere e mostra o que chegou com a página aberta.
+
+/**
+ * As não lidas que chegaram depois de `desde`: sem as arquivadas e sem os
+ * tipos que a pessoa ocultou nas preferências — tipo oculto não vira aviso.
+ */
+export function ondeDasNovas(dono: Dono, desde: Date, ocultos: string[] = []): Prisma.NotificationWhereInput {
+  return {
+    tenantId: dono.tenantId,
+    userId: dono.userId,
+    read: false,
+    archivedAt: null,
+    createdAt: { gt: desde },
+    ...(ocultos.length ? { type: { notIn: ocultos } } : {}),
+  };
+}
+
+/** A notificação mais nova da pessoa, lida ou não: até ela, tudo "já existia ao abrir a página". */
+export async function marcoDasNotificacoes(dono: Dono): Promise<Date | null> {
+  const n = await getPrisma().notification.findFirst({
+    where: { tenantId: dono.tenantId, userId: dono.userId },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  return n?.createdAt ?? null;
+}
+
+/** As novas desde o marco, das mais novas para as mais antigas, prontas para o aviso. */
+export async function notificacoesNovas(dono: Dono, desde: Date, ocultos: string[], limite: number): Promise<NotificacaoNova[]> {
+  const linhas = await getPrisma().notification.findMany({
+    where: ondeDasNovas(dono, desde, ocultos),
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limite,
+    select: { id: true, type: true, entityType: true, entityId: true, message: true, read: true, createdAt: true },
+  });
+  return linhas.map((n) => ({
+    id: n.id,
+    tipo: n.type,
+    titulo: doTipo(n.type).titulo,
+    mensagem: n.message,
+    href: linkDaNotificacao(n),
+    lida: n.read,
+    criadaEm: n.createdAt.toISOString(),
+  }));
 }
 
 export async function consultarNotificacoes(
