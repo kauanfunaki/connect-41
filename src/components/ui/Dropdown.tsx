@@ -11,6 +11,11 @@ type Props = {
   /** Teto de altura do painel (padrão `max-h-[360px]`). O menu do usuário usa a
    *  altura da tela: com muitos setores, o Sair ficava escondido na rolagem. */
   alturaMaxima?: string;
+  /** O painel não rola nem tem teto de altura: quem rola é uma parte do
+   *  conteúdo, que tem altura própria (a lista de opções do `FiltrosDaTela`,
+   *  09/11/2026). Sem isto, painel e lista rolavam juntos e a rolagem do painel
+   *  escondia a busca no topo. */
+  semRolagem?: boolean;
 };
 
 const FOCAVEL = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
@@ -22,7 +27,7 @@ const FOCAVEL = "button, [href], input, select, textarea, [tabindex]:not([tabind
 // gatilho é de quem chama (render prop), então o atributo é posto aqui, no
 // primeiro elemento focável dele — assim os botões Filtros, ⋯ da ficha, perfil
 // e ajuda ganham o estado sem cada tela repetir.
-export function Dropdown({ trigger, children, align = "left", width = 240, alturaMaxima = "max-h-[360px]" }: Props) {
+export function Dropdown({ trigger, children, align = "left", width = 240, alturaMaxima = "max-h-[360px]", semRolagem = false }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const gatilhoRef = useRef<HTMLSpanElement>(null);
@@ -73,9 +78,11 @@ export function Dropdown({ trigger, children, align = "left", width = 240, altur
       {open && (
         <div
           style={{ width }}
-          className={`c41-surgir scroll-y absolute top-[calc(100%+10px)] max-w-[calc(100vw-2rem)] ${
+          className={`c41-surgir absolute top-[calc(100%+10px)] max-w-[calc(100vw-2rem)] ${
             align === "right" ? "right-0" : "left-0"
-          } bg-surface-elevated border border-border-strong rounded-lg shadow-lg p-3 z-20 ${alturaMaxima} overflow-y-auto text-dropdown`}
+          } bg-surface-elevated border border-border-strong rounded-lg shadow-lg p-3 z-20 ${
+            semRolagem ? "" : `scroll-y ${alturaMaxima} overflow-y-auto`
+          } text-dropdown`}
         >
           {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
         </div>
