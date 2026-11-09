@@ -85,6 +85,9 @@ const EMPRESA: Ligacao[] = [
   { modelo: "DreImport", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["importação da DRE", "importações da DRE"], historico: true },
   // Revisão do fechamento (05/11/2026): documentos, execuções e acompanhamento vão em cascata; os arquivos, por `arquivosDaEmpresa`.
   { modelo: "RevisaoFechamento", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["revisão do fechamento", "revisões do fechamento"], historico: true },
+  // Contábil Core (09/11/2026): a empresa no Contábil Core leva junto plano de contas, contas bancárias,
+  // extratos, regras e lançamentos, apagados em ordem por `PASSOS_DO_CONTABIL_CORE` (sem cascata no banco).
+  { modelo: "CoreEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["empresa no Contábil Core", "empresas no Contábil Core"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },
   { modelo: "DrePublicacao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mês da DRE publicado no portal", "meses da DRE publicados no portal"], historico: true },
   { modelo: "DrePublicacaoEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["marca da foto inicial da DRE", "marcas da foto inicial da DRE"], historico: true },
@@ -430,6 +433,13 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "RevisaoDocumento", coluna: "enviadoPorId", tratamento: "manter", motivo: "quem enviou o documento à revisão; a tela não mostra" },
   { modelo: "RevisaoExecucao", coluna: "executadaPorId", tratamento: "manter", motivo: "quem executou a análise; a tela mostra o nome só enquanto o usuário existe" },
   { modelo: "RevisaoAcompanhamento", coluna: "atualizadoPorId", tratamento: "manter", motivo: "quem atualizou o acompanhamento do achado; a tela não mostra" },
+  // Contábil Core (09/11/2026): trilhas de quem fez, vindas também da carga do sistema antigo.
+  { modelo: "CoreContraparte", coluna: "confirmadoPorId", tratamento: "manter", motivo: "quem confirmou o cadastro da contraparte; trilha contábil" },
+  { modelo: "CoreImportacao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem enviou o extrato; trilha contábil" },
+  { modelo: "CoreImportacao", coluna: "canceladaPorId", tratamento: "manter", motivo: "quem desfez a importação; trilha contábil" },
+  { modelo: "CoreTransacao", coluna: "autoRecusadoPorId", tratamento: "manter", motivo: "quem recusou a classificação automática; trilha contábil" },
+  { modelo: "CoreRegistro", coluna: "canceladoPorId", tratamento: "manter", motivo: "quem cancelou o lançamento; trilha contábil" },
+  { modelo: "CoreExportacao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gerou o arquivo de exportação; trilha contábil" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },

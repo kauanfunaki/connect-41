@@ -46,6 +46,46 @@ export type AlvoEmpresa = { tenantId: string; id: string };
 const daEmpresa = (a: AlvoEmpresa) => ({ tenantId: a.tenantId, companyId: a.id });
 const daEntidade = (a: AlvoEmpresa) => ({ tenantId: a.tenantId, entityType: "COMPANY" as const, entityId: a.id });
 
+/** A empresa do Contábil Core ligada a esta (no máximo uma), como lista para o `in`. */
+async function empresaDoCore(tx: Tx, a: AlvoEmpresa): Promise<string[]> {
+  return (await tx.coreEmpresa.findMany({ where: daEmpresa(a), select: { id: true } })).map((e) => e.id);
+}
+
+function apagarDoCore(modelo: string, apagar: (tx: Tx, where: { tenantId: string; empresaId: { in: string[] } }) => Promise<{ count: number }>): Passo<AlvoEmpresa> {
+  return {
+    modelo,
+    acao: "apagar",
+    executar: async (tx, a) => {
+      const ids = await empresaDoCore(tx, a);
+      return ids.length === 0 ? 0 : n(apagar(tx, { tenantId: a.tenantId, empresaId: { in: ids } }));
+    },
+  };
+}
+
+const PASSOS_DO_CONTABIL_CORE: Passo<AlvoEmpresa>[] = [
+  apagarDoCore("CoreNeoDecisao", (tx, where) => tx.coreNeoDecisao.deleteMany({ where })),
+  apagarDoCore("CoreRegistro", (tx, where) => tx.coreRegistro.deleteMany({ where })),
+  apagarDoCore("CoreTransacao", (tx, where) => tx.coreTransacao.deleteMany({ where })),
+  apagarDoCore("CoreImportacao", (tx, where) => tx.coreImportacao.deleteMany({ where })),
+  apagarDoCore("CoreRegra", (tx, where) => tx.coreRegra.deleteMany({ where })),
+  apagarDoCore("CoreContraparte", (tx, where) => tx.coreContraparte.deleteMany({ where })),
+  apagarDoCore("CoreAgencia", (tx, where) => tx.coreAgencia.deleteMany({ where })),
+  {
+    modelo: "CorePlanoConta",
+    acao: "anular",
+    coluna: "paiId",
+    executar: async (tx, a) => {
+      const ids = await empresaDoCore(tx, a);
+      if (ids.length === 0) return 0;
+      return n(tx.corePlanoConta.updateMany({ where: { tenantId: a.tenantId, empresaId: { in: ids }, paiId: { not: null } }, data: { paiId: null } }));
+    },
+  },
+  apagarDoCore("CorePlanoConta", (tx, where) => tx.corePlanoConta.deleteMany({ where })),
+  apagarDoCore("CorePlanoFaixa", (tx, where) => tx.corePlanoFaixa.deleteMany({ where })),
+  apagarDoCore("CoreExportacao", (tx, where) => tx.coreExportacao.deleteMany({ where })),
+  { modelo: "CoreEmpresa", acao: "apagar", executar: (tx, a) => n(tx.coreEmpresa.deleteMany({ where: daEmpresa(a) })) },
+];
+
 /** As candidaturas às vagas da empresa — saem com ela; o candidato fica. */
 async function candidaturasDaEmpresa(tx: Tx, a: AlvoEmpresa): Promise<string[]> {
   return (
@@ -240,6 +280,11 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "DreImport", acao: "apagar", executar: (tx, a) => n(tx.dreImport.deleteMany({ where: daEmpresa(a) })) },
   // Revisão do fechamento: documentos, execuções e acompanhamento vão em cascata.
   { modelo: "RevisaoFechamento", acao: "apagar", executar: (tx, a) => n(tx.revisaoFechamento.deleteMany({ where: daEmpresa(a) })) },
+  // Contábil Core (09/11/2026): as tabelas core_* não têm cascata (como no
+  // original), então saem de baixo para cima — decisões e lançamentos antes das
+  // transações, que saem antes dos lotes e das contas. O plano de contas solta a
+  // hierarquia antes de sair, porque o MySQL confere a chave linha a linha.
+  ...PASSOS_DO_CONTABIL_CORE,
   { modelo: "DrePublicacao", acao: "apagar", executar: (tx, a) => n(tx.drePublicacao.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "DrePublicacaoEmpresa", acao: "apagar", executar: (tx, a) => n(tx.drePublicacaoEmpresa.deleteMany({ where: daEmpresa(a) })) },
 

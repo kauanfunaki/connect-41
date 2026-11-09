@@ -217,6 +217,14 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: false, icon: "CheckCheck", group: "Conferência", menuDireto: true,
   },
   {
+    // O Contábil Core (09/11/2026): extrato, regras, NEO e arquivo do Domínio,
+    // trazidos de dev41tech/contabil-core por blocos (docs/CONTABIL-CORE.md).
+    // Fica desligado até a virada do Bloco A, com a carga dos dados de produção.
+    code: "contabil_core", label: "Contábil Core", sectorCode: "contabil",
+    description: "Importa extratos, classifica as transações em lançamentos pelas regras (NEO) e gera o arquivo de importação do Domínio",
+    defaultEnabled: false, icon: "BookOpen", group: "Operação", menuDireto: true,
+  },
+  {
     code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
     description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
     defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
@@ -834,6 +842,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   contabil_sped: "/sped-contabil",
   contabil_planejamento: "/planejamento-tributario",
   contabil_revisao: "/revisao-contabil",
+  contabil_core: "/contabil-core",
   tech_controle_interno: "/controle-interno",
   tech_ceci: "/ceci",
   tech_github_contributions: "/produtividade",

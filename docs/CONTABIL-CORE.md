@@ -114,6 +114,11 @@ Todas as tabelas novas têm prefixo `core_` e `tenantId`. Nenhuma tabela existen
 - **Dinheiro:** `Decimal(15,2)`, como na origem. O motor calcula em centavos inteiros e nunca em ponto flutuante.
 - **Data do lançamento:** `@db.Date`. Instantes ficam em `DATETIME(3)` UTC.
 - **Enums do PostgreSQL:** viram `VARCHAR`, com o conjunto de valores validado no código. Assim, valor novo não exige migration.
+- **Chaves estrangeiras:**
+  - Só `core_empresas` aponta para `tenants` e `companies`. Nas outras tabelas, `tenantId` é coluna com índice, e o vínculo com o tenant passa pela empresa. Assim o modelo `Tenant`, que todo módulo edita, não ganha onze relações novas.
+  - Entre as tabelas `core_*` não há cascata, como na origem.
+  - A exclusão da empresa no Connect (`src/lib/exclusao/empresa.ts`) apaga de baixo para cima. Antes de apagar o plano de contas, ela solta a hierarquia (`paiId`), porque o MySQL confere a chave linha a linha.
+- **Pessoas (`…PorId`):** são ids de `User` sem chave estrangeira, como no resto do Connect. Ficam registradas como trilha em `src/lib/exclusao/registro.ts`.
 
 ### Unicidade "só entre as linhas vivas"
 
@@ -127,13 +132,23 @@ No MySQL, nulos não colidem num índice único.
 |---|---|
 | `uq_transacao_empresa_hash_ativo` | `core_transacoes (empresaId, hashAtivo)` |
 | `uq_plano_empresa_codigo_ativo` | `core_plano_contas (empresaId, codigoAtivo)` |
-| `uq_regra_…_ativa` e `uq_regra_…_global` | `core_regras (empresaId, chaveAtiva)`, com chave = `agencia ou "*"` + `\u0001` + `historico_normalizado` |
+| `uq_regra_…_ativa` e `uq_regra_…_global` | `core_regras (empresaId, chaveAtiva)`; a agência, ou `*` para a regra global, entra na chave junto com `historico_normalizado` |
 | `uq_contraparte_empresa_documento_tipo_ativa` | `core_contrapartes (empresaId, chaveAtiva)` |
+| `uq_agencia_empresa_banco_agencia_numero` (único total) | `core_agencias (empresaId, chave)` |
 | `uq_registro_transacao_lancamento_dc_ativo` | `core_registros (transacaoId, chaveAtiva)` |
 | `uq_registro_transacao_dc_padrao_ativo` | `core_registros (transacaoId, chavePadraoAtiva)` |
 | `uq_neo_sem_regra_transacao` | `core_neo_decisoes (transacaoSemRegra)` |
 
-Toda gravação dessas tabelas passa por **uma função só** por tabela (`chaves.ts`), que calcula as colunas a partir da linha, com teste. Gravar por fora dela é erro de revisão.
+**Chave com texto livre vira SHA-256.** A collation do Connect (`utf8mb4_unicode_ci`) ignora acento e maiúscula. Sem o hash, "TARIFÁ" e "tarifa", ou o código "1.1.B.x" e "1.1.b.X", colidiriam no MySQL e não no PostgreSQL, e a carga recusaria dado que a produção aceitou. Com o hash, a igualdade é byte a byte, como no original.
+
+As colunas são calculadas por funções de `src/lib/contabil-core/motor/chaves.ts`, uma por índice, testadas em `chaves.test.ts`. Gravar nessas tabelas sem passar por elas é erro de revisão.
+
+**Ensaio no MySQL:** `scripts/contabil-core/ensaio-banco.ts` roda num banco local e confere três coisas:
+- cada coluna recusa o duplicado vivo;
+- o mesmo valor volta a entrar depois do soft delete;
+- a exclusão da empresa apaga tudo sem esbarrar em chave.
+
+O comando é `node scripts/local/com-banco-local.mjs npx tsx scripts/contabil-core/ensaio-banco.ts`.
 
 ## Fidelidade do porte
 

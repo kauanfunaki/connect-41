@@ -1541,6 +1541,7 @@ model Tenant {
   revisaoDocumentos         RevisaoDocumento[]
   revisaoExecucoes          RevisaoExecucao[]
   revisaoAcompanhamentos    RevisaoAcompanhamento[]
+  coreEmpresas              CoreEmpresa[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
@@ -2295,6 +2296,8 @@ model Company {
   portalUserLinks          PortalUserCompany[]
   announcementLinks        ClientAnnouncementCompany[]
   revisaoFechamentos       RevisaoFechamento[]
+  // Contábil Core: a empresa do Contábil Core ligada a esta (no máximo uma).
+  coreEmpresa              CoreEmpresa?
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -10232,4 +10235,393 @@ model RevisaoAcompanhamento {
   @@unique([execucaoId, achadoId])
   @@index([tenantId])
   @@map("revisao_acompanhamentos")
+}
+
+// ─── Contábil Core, Bloco A (Fase 1, 09/11/2026) ───────────────────────────
+// O Contábil Core (dev41tech/contabil-core) trazido para o Connect como módulo
+// `contabil_core`. Desenho e regras em docs/CONTABIL-CORE.md.
+// - Os ids são os UUIDs originais (os dados de produção são migrados), e a
+//   chave contra duplicidade de transação depende deles.
+// - Os índices únicos PARCIAIS do PostgreSQL viraram colunas calculadas por
+//   src/lib/contabil-core/motor/chaves.ts (`…Ativo`, `chave…`), nulas quando a
+//   linha sai. Toda gravação passa por lá.
+// - Os enums do PostgreSQL viraram VARCHAR com o conjunto validado no código.
+// - Sem cascata entre tabelas (o original não tem): a exclusão da empresa
+//   apaga na ordem certa, em src/lib/exclusao.
+// - Pessoas (`…PorId`) são ids de User sem chave estrangeira, como no resto do
+//   Connect: a carga liga pelo e-mail e deixa nulo quem não existe aqui.
+
+/// Uma empresa no Contábil Core, ligada a uma empresa do cadastro do Connect.
+model CoreEmpresa {
+  id               String    @id @default(uuid())
+  tenantId         String
+  companyId        String    @unique
+  /// CNPJ como estava no Contábil Core (com ou sem máscara), para a carga e a conferência.
+  cnpj             String    @db.VarChar(18)
+  razaoSocial      String    @db.VarChar(300)
+  /// simples_nacional | lucro_presumido | lucro_real
+  regimeTributario String    @db.VarChar(20)
+  ativa            Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  contas       CorePlanoConta[]
+  faixas       CorePlanoFaixa[]
+  agencias     CoreAgencia[]
+  contrapartes CoreContraparte[]
+  regras       CoreRegra[]
+  importacoes  CoreImportacao[]
+  transacoes   CoreTransacao[]
+  registros    CoreRegistro[]
+  decisoes     CoreNeoDecisao[]
+  exportacoes  CoreExportacao[]
+
+  @@unique([tenantId, cnpj])
+  @@map("core_empresas")
+}
+
+/// Plano de contas da empresa (`plano_contas`), hierárquico pelo `paiId`.
+model CorePlanoConta {
+  id                String    @id @default(uuid())
+  tenantId          String
+  empresaId         String
+  /// Código reduzido (o "ID numérico" do MrContador): é o que vai para o arquivo do Domínio.
+  contaNumero       Int?
+  codigo            String    @db.VarChar(30)
+  descricao         String    @db.VarChar(300)
+  tipo              String    @db.VarChar(50)
+  /// A = analítica (aceita lançamento), S = sintética.
+  tipoSa            String    @default("A") @db.Char(1)
+  /// Herança sem leitor no original; mantida para a carga não perder informação.
+  aceitaLancamentos Boolean   @default(true)
+  paiId             String?
+  /// Unicidade de (empresa, código) entre as contas vivas: ver chaves.ts.
+  codigoAtivo       String?   @db.Char(64)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  empresa             CoreEmpresa       @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  pai                 CorePlanoConta?   @relation("CorePlanoHierarquia", fields: [paiId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  filhos              CorePlanoConta[]  @relation("CorePlanoHierarquia")
+  agencias            CoreAgencia[]
+  contrapartes        CoreContraparte[]
+  regras              CoreRegra[]
+  registros           CoreRegistro[]
+  decisoes            CoreNeoDecisao[]  @relation("CoreDecisaoConta")
+  decisoesContraparte CoreNeoDecisao[]  @relation("CoreDecisaoContaContraparte")
+
+  @@unique([empresaId, codigoAtivo])
+  @@index([tenantId, empresaId])
+  @@index([paiId])
+  @@map("core_plano_contas")
+}
+
+/// Faixa de código → tipo contábil, usada na importação do plano sem coluna "Tipo".
+model CorePlanoFaixa {
+  id        String    @id @default(uuid())
+  tenantId  String
+  empresaId String
+  tipo      String    @db.VarChar(50)
+  codigoDe  String    @db.VarChar(30)
+  codigoAte String    @db.VarChar(30)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  empresa CoreEmpresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+
+  @@index([empresaId])
+  @@map("core_plano_faixas")
+}
+
+/// Conta bancária da empresa (`agencias_bancarias`), com a conta contábil do banco.
+model CoreAgencia {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  /// Sigla do banco (BB, ITAU, SICOOB…): escolhe o leitor de extrato.
+  bancoSigla      String    @db.VarChar(20)
+  agencia         String    @db.VarChar(10)
+  numero          String    @db.VarChar(20)
+  digito          String?   @db.VarChar(5)
+  ativa           Boolean   @default(true)
+  contaContabilId String?   @unique
+  /// Unicidade de (empresa, banco, agência, número) comparada byte a byte: ver chaves.ts.
+  chave           String    @db.Char(64)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa       CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  contaContabil CorePlanoConta?  @relation(fields: [contaContabilId], references: [id], onDelete: Restrict)
+  regras        CoreRegra[]
+  importacoes   CoreImportacao[]
+  transacoes    CoreTransacao[]
+  registros     CoreRegistro[]
+
+  @@unique([empresaId, chave])
+  @@index([tenantId, empresaId])
+  @@map("core_agencias")
+}
+
+/// Fornecedor ou cliente por CPF/CNPJ, com a conta contábil padrão (`contrapartes`).
+model CoreContraparte {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  /// fornecedor | cliente | ambos
+  tipo            String    @db.VarChar(12)
+  /// CPF/CNPJ só com dígitos.
+  documento       String    @db.VarChar(14)
+  razaoSocial     String    @db.VarChar(300)
+  nomeFantasia    String?   @db.VarChar(300)
+  contaContabilId String
+  /// manual | nota_fiscal | comprovante | historico_extrato | backfill | relatorio_fiscal
+  origem          String    @default("manual") @db.VarChar(20)
+  /// Campos cadastrais da relação fiscal (endereço, inscrições, contato), de chaves fechadas.
+  dadosCadastrais Json?
+  confirmadoEm    DateTime?
+  confirmadoPorId String?
+  ativa           Boolean   @default(true)
+  /// Unicidade de (empresa, documento, tipo) entre as ativas e vivas: ver chaves.ts.
+  chaveAtiva      String?   @db.Char(64)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa       CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  contaContabil CorePlanoConta   @relation(fields: [contaContabilId], references: [id], onDelete: Restrict)
+  decisoes      CoreNeoDecisao[]
+
+  @@unique([empresaId, chaveAtiva])
+  @@index([empresaId, razaoSocial])
+  @@index([empresaId, documento])
+  @@index([tenantId])
+  @@map("core_contrapartes")
+}
+
+/// Regra de classificação do NEO (`regras`): histórico do extrato → conta contábil.
+model CoreRegra {
+  id                   String    @id @default(uuid())
+  tenantId             String
+  empresaId            String
+  contaId              String
+  /// Nula = vale para qualquer agência da empresa (regra global).
+  agenciaId            String?
+  descricao            String    @db.VarChar(500)
+  historico            String    @db.VarChar(500)
+  /// `strip().lower()` do histórico: só para unicidade (o NEO casa pela forma canônica).
+  historicoNormalizado String    @db.VarChar(500)
+  /// D | C
+  dc                   String    @db.Char(1)
+  /// automatica | manual (a manual não é aplicada pelo motor)
+  tipo                 String    @db.VarChar(12)
+  manterHistorico      Boolean   @default(false)
+  ativa                Boolean   @default(true)
+  /// Unicidade de (empresa, agência ou global, histórico normalizado) entre as ativas: ver chaves.ts.
+  chaveAtiva           String?   @db.Char(64)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
+
+  empresa  CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  conta    CorePlanoConta   @relation(fields: [contaId], references: [id], onDelete: Restrict)
+  agencia  CoreAgencia?     @relation(fields: [agenciaId], references: [id], onDelete: Restrict)
+  decisoes CoreNeoDecisao[]
+
+  @@unique([empresaId, chaveAtiva])
+  @@index([empresaId, ativa, tipo])
+  @@index([tenantId])
+  @@map("core_regras")
+}
+
+/// Um envio de extrato (`extrato_importacoes`): o lote a que as transações pertencem.
+model CoreImportacao {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  empresaId          String
+  agenciaId          String
+  nomeArquivo        String    @db.VarChar(255)
+  /// SHA-256 do arquivo: responde "este arquivo já subiu?". O arquivo em si não é guardado.
+  hashArquivo        String    @db.Char(64)
+  totalNoArquivo     Int       @default(0)
+  importadas         Int       @default(0)
+  duplicadas         Int       @default(0)
+  rejeitadas         Int       @default(0)
+  criadoPorId        String?
+  canceladaEm        DateTime?
+  canceladaPorId     String?
+  motivoCancelamento String?   @db.VarChar(300)
+  /// Saldo de fechamento que o arquivo declara (`<LEDGERBAL>` do OFX) e a data em que vale.
+  saldoDeclarado     Decimal?  @db.Decimal(15, 2)
+  dataSaldoDeclarado DateTime? @db.Date
+  /// Aviso quando o fechamento não bate com o lote anterior da conta (não recusa).
+  alertaSaldo        String?   @db.VarChar(500)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  empresa    CoreEmpresa     @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  agencia    CoreAgencia     @relation(fields: [agenciaId], references: [id], onDelete: Restrict)
+  transacoes CoreTransacao[]
+
+  @@index([empresaId, createdAt])
+  @@index([empresaId, hashArquivo])
+  @@index([agenciaId, dataSaldoDeclarado])
+  @@index([tenantId])
+  @@map("core_importacoes")
+}
+
+/// Transação bancária importada (`transacoes`).
+model CoreTransacao {
+  id                String    @id @default(uuid())
+  tenantId          String
+  empresaId         String
+  agenciaId         String
+  /// O dia impresso no extrato (data de calendário, não instante).
+  data              DateTime  @db.Date
+  /// Sempre positivo: o sinal está em `dc`.
+  valor             Decimal   @db.Decimal(15, 2)
+  /// Saldo após o lançamento, quando a origem informa (o OFX não informa).
+  saldoApos         Decimal?  @db.Decimal(15, 2)
+  historico         String    @db.VarChar(500)
+  /// Posição da linha no arquivo: desempata lançamentos do mesmo dia.
+  ordem             Int?
+  importacaoId      String?
+  /// D | C
+  dc                String    @db.Char(1)
+  /// pendente | processada | erro
+  status            String    @default("pendente") @db.VarChar(12)
+  /// SHA-256 contra duplicidade, igual ao do Python (motor/dedup.ts).
+  hashDedup         String    @db.Char(64)
+  /// `hashDedup` enquanto a transação vive: ver chaves.ts.
+  hashAtivo         String?   @db.Char(64)
+  /// Um humano recusou a classificação automática: o motor não a classifica sozinho.
+  autoRecusadoEm    DateTime?
+  autoRecusadoPorId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  empresa    CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  agencia    CoreAgencia      @relation(fields: [agenciaId], references: [id], onDelete: Restrict)
+  importacao CoreImportacao?  @relation(fields: [importacaoId], references: [id], onDelete: Restrict)
+  registros  CoreRegistro[]
+  decisoes   CoreNeoDecisao[]
+
+  @@unique([empresaId, hashAtivo])
+  @@index([empresaId, status, autoRecusadoEm])
+  @@index([empresaId, data, ordem])
+  @@index([importacaoId])
+  @@index([tenantId])
+  @@map("core_transacoes")
+}
+
+/// Perna de lançamento contábil (`registros_contabeis`): um lançamento são duas, D e C, com o mesmo `lancamentoId`.
+model CoreRegistro {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  empresaId          String
+  transacaoId        String?
+  lancamentoId       String    @db.VarChar(36)
+  /// Ordem do componente numa classificação manual composta; nula = item único.
+  ordemComposicao    Int?
+  contaId            String
+  agenciaId          String
+  descricao          String    @db.VarChar(500)
+  historico          String    @db.VarChar(500)
+  /// A linha crua do banco, intacta: evidência para auditoria e conciliação.
+  historicoExtrato   String    @db.VarChar(500)
+  /// D | C
+  dc                 String    @db.Char(1)
+  tipoRegra          String    @db.VarChar(50)
+  valor              Decimal   @db.Decimal(15, 2)
+  dataLancamento     DateTime
+  canceladoEm        DateTime?
+  canceladoPorId     String?
+  motivoCancelamento String?   @db.VarChar(300)
+  /// Unicidade das pernas vivas da transação: ver chaves.ts.
+  chaveAtiva         String?   @db.VarChar(40)
+  chavePadraoAtiva   String?   @db.Char(1)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  empresa   CoreEmpresa    @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  transacao CoreTransacao? @relation(fields: [transacaoId], references: [id], onDelete: Restrict)
+  conta     CorePlanoConta @relation(fields: [contaId], references: [id], onDelete: Restrict)
+  agencia   CoreAgencia    @relation(fields: [agenciaId], references: [id], onDelete: Restrict)
+
+  @@unique([transacaoId, chaveAtiva])
+  @@unique([transacaoId, chavePadraoAtiva])
+  @@index([empresaId, dataLancamento])
+  @@index([empresaId, canceladoEm])
+  @@index([lancamentoId])
+  @@index([tenantId])
+  @@map("core_registros")
+}
+
+/// O desfecho do NEO para uma transação (`neo_decisoes`).
+model CoreNeoDecisao {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  empresaId          String
+  transacaoId        String
+  regraId            String?
+  contaId            String?
+  contraparteId      String?
+  contaContraparteId String?
+  /// nota_fiscal | comprovante | historico | nome
+  origemEvidencia    String?  @db.VarChar(20)
+  /// Nulo = a medição paralela não foi avaliada; falso = avaliada e concordou.
+  contaDivergente    Boolean?
+  /// associada | sem_regra | erro
+  resultado          String   @db.VarChar(12)
+  /// exato | substring | todas_palavras | contraparte | manual | valor_suspeito
+  estrategia         String?  @db.VarChar(50)
+  motivo             String?  @db.VarChar(500)
+  processadoEm       DateTime @default(now())
+  /// A transação, quando a decisão é `sem_regra` (no máximo uma aberta): ver chaves.ts.
+  transacaoSemRegra  String?  @unique
+
+  empresa          CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  transacao        CoreTransacao    @relation(fields: [transacaoId], references: [id], onDelete: Restrict)
+  regra            CoreRegra?       @relation(fields: [regraId], references: [id], onDelete: Restrict)
+  conta            CorePlanoConta?  @relation("CoreDecisaoConta", fields: [contaId], references: [id], onDelete: Restrict)
+  contraparte      CoreContraparte? @relation(fields: [contraparteId], references: [id], onDelete: Restrict)
+  contaContraparte CorePlanoConta?  @relation("CoreDecisaoContaContraparte", fields: [contaContraparteId], references: [id], onDelete: Restrict)
+
+  @@index([empresaId, resultado])
+  @@index([transacaoId])
+  @@index([tenantId])
+  @@map("core_neo_decisoes")
+}
+
+/// Registro de uma exportação gerada (`export_jobs`): o arquivo sai na hora e não é guardado.
+model CoreExportacao {
+  id             String    @id @default(uuid())
+  tenantId       String
+  empresaId      String
+  /// csv | xlsx | txt
+  formato        String    @db.VarChar(4)
+  /// pendente | processando | concluido | erro
+  status         String    @default("pendente") @db.VarChar(12)
+  filtroDe       DateTime?
+  filtroAte      DateTime?
+  totalRegistros Int?
+  arquivoPath    String?   @db.VarChar(500)
+  erroMsg        String?   @db.VarChar(500)
+  criadoPorId    String?
+  createdAt      DateTime  @default(now())
+  finishedAt     DateTime?
+
+  empresa CoreEmpresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+
+  @@index([empresaId, status])
+  @@index([tenantId])
+  @@map("core_exportacoes")
 }
