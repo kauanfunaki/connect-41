@@ -10,6 +10,10 @@
 // O assunto também diz se a solicitação vira cartão no quadro do setor, e em
 // qual lista (09/11/2026, `cardPipelineId`). A lista tem de ser do setor que
 // atende: o cartão é o trabalho de quem recebe a solicitação.
+//
+// E se aceita pedido por link público (09/11/2026, `publicLink`): ligar ou
+// desligar publica ou tira do ar um formulário aberto a qualquer um, então a
+// troca ganha linha própria na Auditoria, além do "editou".
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -45,6 +49,22 @@ async function listaDoFormulario(tenantId: string, form: FormData, sectorCode: s
 
 const LISTA_INVALIDA = "Escolha uma lista dos Quadros do setor que atende — ou deixe sem cartão.";
 
+/** O interruptor "Aceita pedido por link público": envia "1" ligado e nada desligado. */
+function linkPublicoDoFormulario(form: FormData): boolean {
+  return form.get("publicLink") === "1";
+}
+
+async function registrarTrocaDoLink(ctx: { tenantId: string; userId: string }, id: string, label: string, ligado: boolean) {
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: ligado ? "solicitacao_assunto.link_publico_ligado" : "solicitacao_assunto.link_publico_desligado",
+    entityType: "ServiceRequestSubject",
+    entityId: id,
+    metadata: { label },
+  });
+}
+
 export async function criarAssunto(_prev: AssuntoState, form: FormData): Promise<AssuntoState> {
   const ctx = await administrador();
   if (!ctx) return { error: "Só administrador cadastra assuntos." };
@@ -53,19 +73,24 @@ export async function criarAssunto(_prev: AssuntoState, form: FormData): Promise
   if (!(await setorAtivo(ctx.tenantId, v.dados.sectorCode))) return { error: "Escolha um setor ativo." };
   const cardPipelineId = await listaDoFormulario(ctx.tenantId, form, v.dados.sectorCode);
   if (cardPipelineId === undefined) return { error: LISTA_INVALIDA };
+  const publicLink = linkPublicoDoFormulario(form);
 
   const prisma = getPrisma();
   const ultimo = await prisma.serviceRequestSubject.aggregate({ where: { tenantId: ctx.tenantId }, _max: { order: true } });
+  let id: string;
   try {
-    await prisma.serviceRequestSubject.create({
-      data: { tenantId: ctx.tenantId, ...v.dados, cardPipelineId, order: (ultimo._max.order ?? -1) + 1 },
+    const criado = await prisma.serviceRequestSubject.create({
+      data: { tenantId: ctx.tenantId, ...v.dados, cardPipelineId, publicLink, order: (ultimo._max.order ?? -1) + 1 },
+      select: { id: true },
     });
+    id = criado.id;
   } catch (err) {
     if (isPrismaUniqueError(err)) return { error: `Já existe um assunto "${v.dados.label}".` };
     throw err;
   }
 
-  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.create", entityType: "ServiceRequestSubject", metadata: { label: v.dados.label, setor: v.dados.sectorCode, cartao: cardPipelineId !== null } });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.create", entityType: "ServiceRequestSubject", entityId: id, metadata: { label: v.dados.label, setor: v.dados.sectorCode, cartao: cardPipelineId !== null, linkPublico: publicLink } });
+  if (publicLink) await registrarTrocaDoLink(ctx, id, v.dados.label, true);
   revalidatePath("/admin/assuntos");
   redirect("/admin/assuntos");
 }
@@ -85,18 +110,20 @@ export async function atualizarAssunto(_prev: AssuntoState, form: FormData): Pro
   if (!(await setorAtivo(ctx.tenantId, v.dados.sectorCode))) return { error: "Escolha um setor ativo." };
   const cardPipelineId = await listaDoFormulario(ctx.tenantId, form, v.dados.sectorCode);
   if (cardPipelineId === undefined) return { error: LISTA_INVALIDA };
+  const publicLink = linkPublicoDoFormulario(form);
 
   const prisma = getPrisma();
-  const existe = await prisma.serviceRequestSubject.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
+  const existe = await prisma.serviceRequestSubject.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true, publicLink: true } });
   if (!existe) return { error: "Assunto não encontrado." };
   try {
-    await prisma.serviceRequestSubject.update({ where: { id }, data: { ...v.dados, cardPipelineId } });
+    await prisma.serviceRequestSubject.update({ where: { id }, data: { ...v.dados, cardPipelineId, publicLink } });
   } catch (err) {
     if (isPrismaUniqueError(err)) return { error: `Já existe um assunto "${v.dados.label}".` };
     throw err;
   }
 
-  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.update", entityType: "ServiceRequestSubject", entityId: id, metadata: { label: v.dados.label, setor: v.dados.sectorCode, cartao: cardPipelineId !== null } });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.update", entityType: "ServiceRequestSubject", entityId: id, metadata: { label: v.dados.label, setor: v.dados.sectorCode, cartao: cardPipelineId !== null, linkPublico: publicLink } });
+  if (publicLink !== existe.publicLink) await registrarTrocaDoLink(ctx, id, v.dados.label, publicLink);
   revalidatePath("/admin/assuntos");
   redirect("/admin/assuntos");
 }

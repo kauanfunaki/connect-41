@@ -166,3 +166,25 @@ describe("a `/` do endereço principal é o site (13/10/2026)", () => {
     expect(identidade(res)).toMatchObject({ escritorio: null, papel: null });
   });
 });
+
+describe("o link público de pedido (09/11/2026)", () => {
+  const LINK = "/pedido/escritorio/0b8a3f4e-2c1d-4e5f-9a6b-7c8d9e0f1a2b";
+
+  it("abre sem sessão — quem pede ainda não é cliente", async () => {
+    const res = await proxy(new NextRequest(`http://localhost${LINK}`));
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("e não leva identidade forjada para a página", async () => {
+    const res = await proxy(
+      new NextRequest(`http://localhost${LINK}`, { headers: new Headers({ "x-tenant-id": "escritorio-b", "x-user-role": "SUPER_ADMIN" }) }),
+    );
+    expect(identidade(res)).toMatchObject({ escritorio: null, papel: null });
+  });
+
+  it("só o prefixo do link: `/pedidos` segue pedindo sessão", async () => {
+    const res = await proxy(new NextRequest("http://localhost/pedidos"));
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+  });
+});

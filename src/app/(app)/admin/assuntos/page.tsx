@@ -5,6 +5,9 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getActiveSectors, getSectorMaps } from "@/lib/sectors";
 import { garantirAssuntosPadrao } from "@/lib/solicitacoes/assuntos";
 import { listasParaOsAssuntos } from "@/lib/solicitacoes/cartaoServidor";
+import { avisoDoLinkPublico, enderecoDoPedido } from "@/lib/solicitacoes/linkPublico";
+import { isModuleEnabled } from "@/lib/modules";
+import { LinkPublicoDoAssunto } from "@/components/admin/LinkPublicoDoAssunto";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
@@ -41,11 +44,22 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
   const setores = ativos.map((s) => ({ value: s.code, label: s.label }));
   const emEdicao = editar ? assuntos.find((a) => a.id === editar) : undefined;
 
+  // O link público de pedido de cada assunto (09/11/2026): o slug do
+  // escritório (o do portal de vagas) e o id do assunto, em APP_PUBLIC_URL.
+  const [escritorio, solicitacoesLigadas] = await Promise.all([
+    getPrisma().tenant.findUnique({ where: { id: ctx.tenantId }, select: { slug: true } }),
+    isModuleEnabled(ctx.tenantId, "portal_solicitacoes"),
+  ]);
+  const linkDo = (slug: string, a: { id: string; active: boolean }) => ({
+    endereco: enderecoDoPedido(slug, a.id, process.env.APP_PUBLIC_URL),
+    aviso: avisoDoLinkPublico({ ativo: a.active, solicitacoesLigadas }),
+  });
+
   return (
     <PageContainer>
       <PageHeader
         title="Assuntos das solicitações"
-        subtitle="O que o cliente escolhe ao pedir algo pelo portal. Cada assunto diz o setor que atende e em quantos dias úteis a equipe responde."
+        subtitle="O que o cliente escolhe ao pedir algo pelo portal. Cada assunto diz o setor que atende, em quantos dias úteis a equipe responde e se aceita pedido por link público, de quem ainda não é cliente."
         action={
           <Button href="/admin/assuntos?novo=1">
             <Plus size={14} /> Novo assunto
@@ -77,6 +91,9 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
                   </span>
                 </p>
               )}
+              {/* O link público, com Copiar (09/11/2026) — só quando ligado,
+                  pelo mesmo motivo do cartão: desligado é o padrão. */}
+              {a.publicLink && escritorio && <LinkPublicoDoAssunto {...linkDo(escritorio.slug, a)} />}
             </div>
             <AcoesDoAssunto id={a.id} nome={a.label} ativo={a.active} alternar={alternarAssunto.bind(null, a.id)} />
           </div>
@@ -96,6 +113,7 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
             cancelHref="/admin/assuntos"
             setores={setores}
             listas={listas}
+            linkPublico={escritorio ? linkDo(escritorio.slug, emEdicao) : null}
             valores={{
               id: emEdicao.id,
               label: emEdicao.label,
@@ -103,6 +121,7 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
               sectorCode: emEdicao.sectorCode,
               responseDays: emEdicao.responseDays,
               cardPipelineId: emEdicao.cardPipelineId,
+              publicLink: emEdicao.publicLink,
             }}
           />
         </PainelDeCadastro>
