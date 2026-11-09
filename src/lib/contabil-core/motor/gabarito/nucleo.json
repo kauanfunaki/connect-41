@@ -1,0 +1,8652 @@
+{
+ "origem": "dev41tech/contabil-core e074176",
+ "chamadas": [
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "",
+    1
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "",
+    2
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "",
+    3
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "",
+    5
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "",
+    "D"
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "",
+    "C"
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": "   "
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "   ",
+    1
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "   ",
+    2
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "   ",
+    3
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "   ",
+    5
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": "   "
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "   ",
+    "D"
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "   ",
+    "C"
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "TARIFA"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "TARIFA"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": [
+    "tarifa"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA",
+    1
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA",
+    2
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA",
+    3
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA",
+    5
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "TARIFA"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TARIFA",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF TARIFA"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TARIFA",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF TARIFA"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": "TARIFA COM LIQUIDAÇÃO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": "Tarifa com liquidacao"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": [
+    "tarifa",
+    "com",
+    "liquidacao"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Tarifa com liquidação",
+    1
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Tarifa com liquidação",
+    2
+   ],
+   "kwargs": {},
+   "result": "tarifa com"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Tarifa com liquidação",
+    3
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Tarifa com liquidação",
+    5
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": "Tarifa com liquidação"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Tarifa com liquidação",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF Tarifa com liquidação"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Tarifa com liquidação",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF Tarifa com liquidação"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "TARIFA COM/LIQUIDAÇÃO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "TARIFA  COM/LIQUIDACAO"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": [
+    "tarifa",
+    "com",
+    "liquidacao"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    1
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    2
+   ],
+   "kwargs": {},
+   "result": "tarifa com"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    3
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    5
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "TARIFA  COM/LIQUIDAÇÃO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF TARIFA  COM/LIQUIDAÇÃO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF TARIFA  COM/LIQUIDAÇÃO"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": "TARIFA-BANCARIA PACOTE SERVIÇOS"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": "tarifa-bancaria  pacote\tservicos\n"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": "tarifa bancaria pacote servicos"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": [
+    "tarifa",
+    "bancaria",
+    "pacote",
+    "servicos"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    1
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    2
+   ],
+   "kwargs": {},
+   "result": "tarifa bancaria"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    3
+   ],
+   "kwargs": {},
+   "result": "tarifa bancaria pacote"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    5
+   ],
+   "kwargs": {},
+   "result": "tarifa bancaria pacote servicos"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": "tarifa bancaria pacote servicos"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n"
+   ],
+   "kwargs": {},
+   "result": "tarifa-bancaria  pacote\tserviços\n"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF tarifa-bancaria  pacote\tserviços"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF tarifa-bancaria  pacote\tserviços"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": "PIX EMITIDO OUTRA IF PAGAMENTO PIX 38.924.906 0001-75"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": "pix emitido outra if pagamento pix 38 924 906 0001 75"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": [
+    "pix",
+    "emitido",
+    "outra",
+    "if",
+    "pagamento",
+    "pix",
+    "38",
+    "924",
+    "906",
+    "0001",
+    "75"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    1
+   ],
+   "kwargs": {},
+   "result": "pix"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    2
+   ],
+   "kwargs": {},
+   "result": "pix emitido"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    3
+   ],
+   "kwargs": {},
+   "result": "pix emitido outra"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    5
+   ],
+   "kwargs": {},
+   "result": "pix emitido outra if pagamento"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": [
+    "38924906000175"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": "pix emitido outra if pagamento pix 38 924 906 0001 75"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+   ],
+   "kwargs": {},
+   "result": "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": "pagamento pix 09033833000123 performance engenha pix deb"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": [
+    "pagamento",
+    "pix",
+    "09033833000123",
+    "performance",
+    "engenha",
+    "pix",
+    "deb"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    1
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    2
+   ],
+   "kwargs": {},
+   "result": "pagamento pix"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    3
+   ],
+   "kwargs": {},
+   "result": "pagamento pix performance"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    5
+   ],
+   "kwargs": {},
+   "result": "pagamento pix performance engenha pix"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": [
+    "09033833000123"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": "pagamento pix 09033833000123 performance engenha pix deb"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": "liquidacao boleto sicredi 31052957000105 041 con 252080163"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": [
+    "liquidacao",
+    "boleto",
+    "sicredi",
+    "31052957000105",
+    "041",
+    "con",
+    "252080163"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    1
+   ],
+   "kwargs": {},
+   "result": "liquidacao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    2
+   ],
+   "kwargs": {},
+   "result": "liquidacao boleto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    3
+   ],
+   "kwargs": {},
+   "result": "liquidacao boleto sicredi"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    5
+   ],
+   "kwargs": {},
+   "result": "liquidacao boleto sicredi con"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": [
+    "31052957000105"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": "liquidacao boleto sicredi 31052957000105 041 con 252080163"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+   ],
+   "kwargs": {},
+   "result": "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": "CRED.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": "cred ted str 81 450 538 0001 08 fornecedor exemplo"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": [
+    "cred",
+    "ted",
+    "str",
+    "81",
+    "450",
+    "538",
+    "0001",
+    "08",
+    "fornecedor",
+    "exemplo"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    1
+   ],
+   "kwargs": {},
+   "result": "cred"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    2
+   ],
+   "kwargs": {},
+   "result": "cred ted"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    3
+   ],
+   "kwargs": {},
+   "result": "cred ted str"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    5
+   ],
+   "kwargs": {},
+   "result": "cred ted str fornecedor exemplo"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": [
+    "81450538000108"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": "cred ted str 81 450 538 0001 08 fornecedor exemplo"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+   ],
+   "kwargs": {},
+   "result": "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": "TED 41250201 0001-24 ACME"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": "TED 41250201 0001-24 ACME"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": "ted 41250201 0001 24 acme"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": [
+    "ted",
+    "41250201",
+    "0001",
+    "24",
+    "acme"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    1
+   ],
+   "kwargs": {},
+   "result": "ted"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    2
+   ],
+   "kwargs": {},
+   "result": "ted acme"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    3
+   ],
+   "kwargs": {},
+   "result": "ted acme"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    5
+   ],
+   "kwargs": {},
+   "result": "ted acme"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": [
+    "41250201000124"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": "ted 41250201 0001 24 acme"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "TED 41250201 0001-24 ACME"
+   ],
+   "kwargs": {},
+   "result": "TED 41250201 0001-24 ACME"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF TED 41250201 0001-24 ACME"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF TED 41250201 0001-24 ACME"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": "DOC 41.250.201-0001-24 E 09.033.8330001-23"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": "doc 41 250 201 0001 24 e 09 033 8330001 23"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": [
+    "doc",
+    "41",
+    "250",
+    "201",
+    "0001",
+    "24",
+    "e",
+    "09",
+    "033",
+    "8330001",
+    "23"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    1
+   ],
+   "kwargs": {},
+   "result": "doc"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    2
+   ],
+   "kwargs": {},
+   "result": "doc"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    3
+   ],
+   "kwargs": {},
+   "result": "doc"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    5
+   ],
+   "kwargs": {},
+   "result": "doc"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": [
+    "41250201000124",
+    "09033833000123"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": "doc 41 250 201 0001 24 e 09 033 8330001 23"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+   ],
+   "kwargs": {},
+   "result": "DOC 41.250.201-0001-24 e 09.033.8330001-23"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF DOC 41.250.201-0001-24 e 09.033.8330001-23"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF DOC 41.250.201-0001-24 e 09.033.8330001-23"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": "PIX ***.674.379-** JOAO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": "PIX ***.674.379-** JOAO"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": "pix 674 379 joao"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": [
+    "pix",
+    "674",
+    "379",
+    "joao"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    1
+   ],
+   "kwargs": {},
+   "result": "pix"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    2
+   ],
+   "kwargs": {},
+   "result": "pix joao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    3
+   ],
+   "kwargs": {},
+   "result": "pix joao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    5
+   ],
+   "kwargs": {},
+   "result": "pix joao"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": "pix 674 379 joao"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "PIX ***.674.379-** JOAO"
+   ],
+   "kwargs": {},
+   "result": "PIX ***.674.379-** JOAO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF PIX ***.674.379-** JOAO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF PIX ***.674.379-** JOAO"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": "CPF 123.456.789-09 E CPF 12345678909 REPETIDO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": "CPF 123.456.789-09 e CPF 12345678909 repetido"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": "cpf 123 456 789 09 e cpf 12345678909 repetido"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": [
+    "cpf",
+    "123",
+    "456",
+    "789",
+    "09",
+    "e",
+    "cpf",
+    "12345678909",
+    "repetido"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    1
+   ],
+   "kwargs": {},
+   "result": "cpf"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    2
+   ],
+   "kwargs": {},
+   "result": "cpf cpf"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    3
+   ],
+   "kwargs": {},
+   "result": "cpf cpf repetido"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    5
+   ],
+   "kwargs": {},
+   "result": "cpf cpf repetido"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": [
+    "12345678909"
+   ]
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": "cpf 123 456 789 09 e cpf 12345678909 repetido"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido"
+   ],
+   "kwargs": {},
+   "result": "CPF 123.456.789-09 e CPF 12345678909 repetido"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF CPF 123.456.789-09 e CPF 12345678909 repetido"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF CPF 123.456.789-09 e CPF 12345678909 repetido"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": "12 345 678 9012 34 NÃO É DOCUMENTO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": "12 345 678 9012 34 nao e documento"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": "12 345 678 9012 34 nao e documento"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": [
+    "12",
+    "345",
+    "678",
+    "9012",
+    "34",
+    "nao",
+    "e",
+    "documento"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    1
+   ],
+   "kwargs": {},
+   "result": "nao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    2
+   ],
+   "kwargs": {},
+   "result": "nao documento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    3
+   ],
+   "kwargs": {},
+   "result": "nao documento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    5
+   ],
+   "kwargs": {},
+   "result": "nao documento"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": "12 345 678 9012 34 nao e documento"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "12 345 678 9012 34 não é documento"
+   ],
+   "kwargs": {},
+   "result": "12 345 678 9012 34 não é documento"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF 12 345 678 9012 34 não é documento"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF 12 345 678 9012 34 não é documento"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": "123456789012345678901234 LONGO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": "123456789012345678901234 longo"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": "123456789012345678901234 longo"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": [
+    "123456789012345678901234",
+    "longo"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "123456789012345678901234 longo",
+    1
+   ],
+   "kwargs": {},
+   "result": "longo"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "123456789012345678901234 longo",
+    2
+   ],
+   "kwargs": {},
+   "result": "longo"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "123456789012345678901234 longo",
+    3
+   ],
+   "kwargs": {},
+   "result": "longo"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "123456789012345678901234 longo",
+    5
+   ],
+   "kwargs": {},
+   "result": "longo"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": "123456789012345678901234 longo"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "123456789012345678901234 longo"
+   ],
+   "kwargs": {},
+   "result": "123456789012345678901234 longo"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "123456789012345678901234 longo",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF 123456789012345678901234 longo"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "123456789012345678901234 longo",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF 123456789012345678901234 longo"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": "AÇÃO № ½ FINAL ＡＢＣ １２３"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": "Acao No 1⁄2 final ABC 123"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": "acao no 1 2 final abc 123"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": [
+    "acao",
+    "no",
+    "1",
+    "2",
+    "final",
+    "abc",
+    "123"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    1
+   ],
+   "kwargs": {},
+   "result": "acao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    2
+   ],
+   "kwargs": {},
+   "result": "acao no"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    3
+   ],
+   "kwargs": {},
+   "result": "acao no final"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    5
+   ],
+   "kwargs": {},
+   "result": "acao no final abc"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": "acao no 1 2 final abc 123"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３"
+   ],
+   "kwargs": {},
+   "result": "Ação № ½ ﬁnal ＡＢＣ １２３"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF Ação № ½ ﬁnal ＡＢＣ １２３"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF Ação № ½ ﬁnal ＡＢＣ １２３"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": "CAFÉ SÃO JOÃO — ÇÃO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": "Cafe   Sao Joao — CAO"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": "cafe sao joao cao"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": [
+    "cafe",
+    "sao",
+    "joao",
+    "cao"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Café   São João — ÇÃO",
+    1
+   ],
+   "kwargs": {},
+   "result": "cafe"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Café   São João — ÇÃO",
+    2
+   ],
+   "kwargs": {},
+   "result": "cafe sao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Café   São João — ÇÃO",
+    3
+   ],
+   "kwargs": {},
+   "result": "cafe sao joao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Café   São João — ÇÃO",
+    5
+   ],
+   "kwargs": {},
+   "result": "cafe sao joao cao"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": "cafe sao joao cao"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "Café   São João — ÇÃO"
+   ],
+   "kwargs": {},
+   "result": "Café   São João — ÇÃO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Café   São João — ÇÃO",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF Café   São João — ÇÃO"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Café   São João — ÇÃO",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF Café   São João — ÇÃO"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": "18 02 2026 tarifa com r liquidacao cob000001 1 19 54 881 83"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": [
+    "18",
+    "02",
+    "2026",
+    "tarifa",
+    "com",
+    "r",
+    "liquidacao",
+    "cob000001",
+    "1",
+    "19",
+    "54",
+    "881",
+    "83"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    1
+   ],
+   "kwargs": {},
+   "result": "tarifa"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    2
+   ],
+   "kwargs": {},
+   "result": "tarifa com"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    3
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    5
+   ],
+   "kwargs": {},
+   "result": "tarifa com liquidacao cob000001"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": "18 02 2026 tarifa com r liquidacao cob000001 1 19 54 881 83"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": [
+    {
+     "$dec": "1.19"
+    },
+    {
+     "$dec": "54881.83"
+    }
+   ]
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+   ],
+   "kwargs": {},
+   "result": "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF 18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF 18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": "18/02/2026 PAGAMENTO 1.234,56"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": "18/02/2026 PAGAMENTO 1.234,56"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": "18 02 2026 pagamento 1 234 56"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": [
+    "18",
+    "02",
+    "2026",
+    "pagamento",
+    "1",
+    "234",
+    "56"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    1
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    2
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    3
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    5
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": "18 02 2026 pagamento 1 234 56"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": [
+    {
+     "$dec": "1234.56"
+    }
+   ]
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56"
+   ],
+   "kwargs": {},
+   "result": "18/02/2026 PAGAMENTO 1.234,56"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF 18/02/2026 PAGAMENTO 1.234,56"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF 18/02/2026 PAGAMENTO 1.234,56"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": "valor 10 00 saldo 20 00 outro 30 00"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": [
+    "valor",
+    "10",
+    "00",
+    "saldo",
+    "20",
+    "00",
+    "outro",
+    "30",
+    "00"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    1
+   ],
+   "kwargs": {},
+   "result": "valor"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    2
+   ],
+   "kwargs": {},
+   "result": "valor saldo"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    3
+   ],
+   "kwargs": {},
+   "result": "valor saldo outro"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    5
+   ],
+   "kwargs": {},
+   "result": "valor saldo outro"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": "valor 10 00 saldo 20 00 outro 30 00"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": [
+    {
+     "$dec": "10.00"
+    },
+    {
+     "$dec": "20.00"
+    },
+    {
+     "$dec": "30.00"
+    }
+   ]
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+   ],
+   "kwargs": {},
+   "result": "VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF VALOR 10,00 SALDO 20,00 OUTRO 30,00"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": "RESGATE AUTOMÁTICO CDB"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": "Resgate automatico CDB"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": "resgate automatico cdb"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": [
+    "resgate",
+    "automatico",
+    "cdb"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Resgate automático CDB",
+    1
+   ],
+   "kwargs": {},
+   "result": "resgate"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Resgate automático CDB",
+    2
+   ],
+   "kwargs": {},
+   "result": "resgate automatico"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Resgate automático CDB",
+    3
+   ],
+   "kwargs": {},
+   "result": "resgate automatico cdb"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Resgate automático CDB",
+    5
+   ],
+   "kwargs": {},
+   "result": "resgate automatico cdb"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": "resgate automatico cdb"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "Resgate automático CDB"
+   ],
+   "kwargs": {},
+   "result": "Resgate automático CDB"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Resgate automático CDB",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "Resgate automático CDB"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Resgate automático CDB",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "Resgate automático CDB"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": "APLIC AUTOMATICA"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": "APLIC AUTOMATICA"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": "aplic automatica"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": [
+    "aplic",
+    "automatica"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "APLIC AUTOMATICA",
+    1
+   ],
+   "kwargs": {},
+   "result": "aplic"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "APLIC AUTOMATICA",
+    2
+   ],
+   "kwargs": {},
+   "result": "aplic automatica"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "APLIC AUTOMATICA",
+    3
+   ],
+   "kwargs": {},
+   "result": "aplic automatica"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "APLIC AUTOMATICA",
+    5
+   ],
+   "kwargs": {},
+   "result": "aplic automatica"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": "aplic automatica"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "APLIC AUTOMATICA"
+   ],
+   "kwargs": {},
+   "result": "APLIC AUTOMATICA"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "APLIC AUTOMATICA",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "APLIC AUTOMATICA"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "APLIC AUTOMATICA",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "APLIC AUTOMATICA"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": "APLICAÇÕES FINANCEIRAS"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": "Aplicacoes financeiras"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": "aplicacoes financeiras"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": [
+    "aplicacoes",
+    "financeiras"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Aplicações financeiras",
+    1
+   ],
+   "kwargs": {},
+   "result": "aplicacoes"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Aplicações financeiras",
+    2
+   ],
+   "kwargs": {},
+   "result": "aplicacoes financeiras"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Aplicações financeiras",
+    3
+   ],
+   "kwargs": {},
+   "result": "aplicacoes financeiras"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Aplicações financeiras",
+    5
+   ],
+   "kwargs": {},
+   "result": "aplicacoes financeiras"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": "aplicacoes financeiras"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "Aplicações financeiras"
+   ],
+   "kwargs": {},
+   "result": "Aplicações financeiras"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Aplicações financeiras",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "Aplicações financeiras"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Aplicações financeiras",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "Aplicações financeiras"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF ALUGUEL"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF aluguel"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": "pgto ref aluguel"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": [
+    "pgto",
+    "ref",
+    "aluguel"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REF aluguel",
+    1
+   ],
+   "kwargs": {},
+   "result": "pgto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REF aluguel",
+    2
+   ],
+   "kwargs": {},
+   "result": "pgto ref"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REF aluguel",
+    3
+   ],
+   "kwargs": {},
+   "result": "pgto ref aluguel"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REF aluguel",
+    5
+   ],
+   "kwargs": {},
+   "result": "pgto ref aluguel"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": "pgto ref aluguel"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "PGTO REF aluguel"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF aluguel"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PGTO REF aluguel",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF aluguel"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PGTO REF aluguel",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF aluguel"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF. ENERGIA"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": "pgto  ref. energia"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": "pgto ref energia"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": [
+    "pgto",
+    "ref",
+    "energia"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "pgto  ref. energia",
+    1
+   ],
+   "kwargs": {},
+   "result": "pgto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "pgto  ref. energia",
+    2
+   ],
+   "kwargs": {},
+   "result": "pgto ref"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "pgto  ref. energia",
+    3
+   ],
+   "kwargs": {},
+   "result": "pgto ref energia"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "pgto  ref. energia",
+    5
+   ],
+   "kwargs": {},
+   "result": "pgto ref energia"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": "pgto ref energia"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "pgto  ref. energia"
+   ],
+   "kwargs": {},
+   "result": "pgto  ref. energia"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "pgto  ref. energia",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "pgto  ref. energia"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "pgto  ref. energia",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "pgto  ref. energia"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF NF 10"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF NF 10"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": "valor ref nf 10"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": [
+    "valor",
+    "ref",
+    "nf",
+    "10"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR REF NF 10",
+    1
+   ],
+   "kwargs": {},
+   "result": "valor"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR REF NF 10",
+    2
+   ],
+   "kwargs": {},
+   "result": "valor ref"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR REF NF 10",
+    3
+   ],
+   "kwargs": {},
+   "result": "valor ref nf"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VALOR REF NF 10",
+    5
+   ],
+   "kwargs": {},
+   "result": "valor ref nf"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": "valor ref nf 10"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "VALOR REF NF 10"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF NF 10"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "VALOR REF NF 10",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF NF 10"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "VALOR REF NF 10",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF NF 10"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": "REC REF CLIENTE"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": "REC REF cliente"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": "rec ref cliente"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": [
+    "rec",
+    "ref",
+    "cliente"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "REC REF cliente",
+    1
+   ],
+   "kwargs": {},
+   "result": "rec"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "REC REF cliente",
+    2
+   ],
+   "kwargs": {},
+   "result": "rec ref"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "REC REF cliente",
+    3
+   ],
+   "kwargs": {},
+   "result": "rec ref cliente"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "REC REF cliente",
+    5
+   ],
+   "kwargs": {},
+   "result": "rec ref cliente"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": "rec ref cliente"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "REC REF cliente"
+   ],
+   "kwargs": {},
+   "result": "REC REF cliente"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "REC REF cliente",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "REC REF cliente"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "REC REF cliente",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "REC REF cliente"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": "VLR REF SERVIÇO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": "VLR REF servico"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": "vlr ref servico"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": [
+    "vlr",
+    "ref",
+    "servico"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VLR REF serviço",
+    1
+   ],
+   "kwargs": {},
+   "result": "vlr"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VLR REF serviço",
+    2
+   ],
+   "kwargs": {},
+   "result": "vlr ref"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VLR REF serviço",
+    3
+   ],
+   "kwargs": {},
+   "result": "vlr ref servico"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "VLR REF serviço",
+    5
+   ],
+   "kwargs": {},
+   "result": "vlr ref servico"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": "vlr ref servico"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "VLR REF serviço"
+   ],
+   "kwargs": {},
+   "result": "VLR REF serviço"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "VLR REF serviço",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "VLR REF serviço"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "VLR REF serviço",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VLR REF serviço"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": "PGTO REFERENTE X"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": "PGTO REFERENTE X"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": "pgto referente x"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": [
+    "pgto",
+    "referente",
+    "x"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REFERENTE X",
+    1
+   ],
+   "kwargs": {},
+   "result": "pgto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REFERENTE X",
+    2
+   ],
+   "kwargs": {},
+   "result": "pgto referente"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REFERENTE X",
+    3
+   ],
+   "kwargs": {},
+   "result": "pgto referente"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PGTO REFERENTE X",
+    5
+   ],
+   "kwargs": {},
+   "result": "pgto referente"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": "pgto referente x"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "PGTO REFERENTE X"
+   ],
+   "kwargs": {},
+   "result": "PGTO REFERENTE X"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PGTO REFERENTE X",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF PGTO REFERENTE X"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PGTO REFERENTE X",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF PGTO REFERENTE X"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": "=SOMA(A1:A2)"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": "=SOMA(A1:A2)"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": "soma a1 a2"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": [
+    "soma",
+    "a1",
+    "a2"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "=SOMA(A1:A2)",
+    1
+   ],
+   "kwargs": {},
+   "result": "soma"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "=SOMA(A1:A2)",
+    2
+   ],
+   "kwargs": {},
+   "result": "soma a1"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "=SOMA(A1:A2)",
+    3
+   ],
+   "kwargs": {},
+   "result": "soma a1 a2"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "=SOMA(A1:A2)",
+    5
+   ],
+   "kwargs": {},
+   "result": "soma a1 a2"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": "soma a1 a2"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "=SOMA(A1:A2)"
+   ],
+   "kwargs": {},
+   "result": "'=SOMA(A1:A2)"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "=SOMA(A1:A2)",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF =SOMA(A1:A2)"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "=SOMA(A1:A2)",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF =SOMA(A1:A2)"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": "+55 41 9999"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": "+55 41 9999"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": "55 41 9999"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": [
+    "55",
+    "41",
+    "9999"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "+55 41 9999",
+    1
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "+55 41 9999",
+    2
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "+55 41 9999",
+    3
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "+55 41 9999",
+    5
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": "55 41 9999"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "+55 41 9999"
+   ],
+   "kwargs": {},
+   "result": "'+55 41 9999"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "+55 41 9999",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF +55 41 9999"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "+55 41 9999",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF +55 41 9999"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": "-DESCONTO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": "-desconto"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": "desconto"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": [
+    "desconto"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "-desconto",
+    1
+   ],
+   "kwargs": {},
+   "result": "desconto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "-desconto",
+    2
+   ],
+   "kwargs": {},
+   "result": "desconto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "-desconto",
+    3
+   ],
+   "kwargs": {},
+   "result": "desconto"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "-desconto",
+    5
+   ],
+   "kwargs": {},
+   "result": "desconto"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": "desconto"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "-desconto"
+   ],
+   "kwargs": {},
+   "result": "'-desconto"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "-desconto",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF -desconto"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "-desconto",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF -desconto"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": "@USUARIO"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": "@usuario"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": "usuario"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": [
+    "usuario"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "@usuario",
+    1
+   ],
+   "kwargs": {},
+   "result": "usuario"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "@usuario",
+    2
+   ],
+   "kwargs": {},
+   "result": "usuario"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "@usuario",
+    3
+   ],
+   "kwargs": {},
+   "result": "usuario"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "@usuario",
+    5
+   ],
+   "kwargs": {},
+   "result": "usuario"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": "usuario"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "@usuario"
+   ],
+   "kwargs": {},
+   "result": "'@usuario"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "@usuario",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF @usuario"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "@usuario",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF @usuario"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": "=ESPAÇO ANTES"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": "  =espaco antes"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": "espaco antes"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": [
+    "espaco",
+    "antes"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "  =espaço antes",
+    1
+   ],
+   "kwargs": {},
+   "result": "espaco"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "  =espaço antes",
+    2
+   ],
+   "kwargs": {},
+   "result": "espaco antes"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "  =espaço antes",
+    3
+   ],
+   "kwargs": {},
+   "result": "espaco antes"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "  =espaço antes",
+    5
+   ],
+   "kwargs": {},
+   "result": "espaco antes"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": "espaco antes"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "  =espaço antes"
+   ],
+   "kwargs": {},
+   "result": "'  =espaço antes"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "  =espaço antes",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF =espaço antes"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "  =espaço antes",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF =espaço antes"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": "UNIMED CURITIBA SOC COOP MED"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": "UNIMED CURITIBA SOC COOP MED"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": "unimed curitiba soc coop med"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": [
+    "unimed",
+    "curitiba",
+    "soc",
+    "coop",
+    "med"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    1
+   ],
+   "kwargs": {},
+   "result": "unimed"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    2
+   ],
+   "kwargs": {},
+   "result": "unimed curitiba"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    3
+   ],
+   "kwargs": {},
+   "result": "unimed curitiba soc"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    5
+   ],
+   "kwargs": {},
+   "result": "unimed curitiba soc coop med"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": "unimed curitiba soc coop med"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED"
+   ],
+   "kwargs": {},
+   "result": "UNIMED CURITIBA SOC COOP MED"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF UNIMED CURITIBA SOC COOP MED"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF UNIMED CURITIBA SOC COOP MED"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive parcela 3"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": [
+    "pagamento",
+    "forcecar",
+    "automotive",
+    "parcela",
+    "3"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    1
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    2
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    3
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    5
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive parcela"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive parcela 3"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": "PAGAMENTO FORCECAR AUTOMOTIVE E UNIMED CURITIBA"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": "Pagamento Forcecar Automotive e Unimed Curitiba"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive e unimed curitiba"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": [
+    "pagamento",
+    "forcecar",
+    "automotive",
+    "e",
+    "unimed",
+    "curitiba"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    1
+   ],
+   "kwargs": {},
+   "result": "pagamento"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    2
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    3
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    5
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive unimed curitiba"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": "pagamento forcecar automotive e unimed curitiba"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": "Pagamento Forcecar Automotive e Unimed Curitiba"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF Pagamento Forcecar Automotive e Unimed Curitiba"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF Pagamento Forcecar Automotive e Unimed Curitiba"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": "A B C 1 2 3"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": "A B C 1 2 3"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": "a b c 1 2 3"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": [
+    "a",
+    "b",
+    "c",
+    "1",
+    "2",
+    "3"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "A B C 1 2 3",
+    1
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "A B C 1 2 3",
+    2
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "A B C 1 2 3",
+    3
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "A B C 1 2 3",
+    5
+   ],
+   "kwargs": {},
+   "result": "(sem texto)"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": "a b c 1 2 3"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "A B C 1 2 3"
+   ],
+   "kwargs": {},
+   "result": "A B C 1 2 3"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "A B C 1 2 3",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF A B C 1 2 3"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "A B C 1 2 3",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF A B C 1 2 3"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": "XXXXXXXXXXXXXXXXXXXX"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    1
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    2
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    3
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    5
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx"
+   ],
+   "kwargs": {},
+   "result": "xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF xxxxxxxxxxxxxxxxxxxx"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": "ESPAÇO LARGO FIM"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": " espaco largo fim "
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": "espaco largo fim"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": [
+    "espaco",
+    "largo",
+    "fim"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    " espaço largo　fim ",
+    1
+   ],
+   "kwargs": {},
+   "result": "espaco"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    " espaço largo　fim ",
+    2
+   ],
+   "kwargs": {},
+   "result": "espaco largo"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    " espaço largo　fim ",
+    3
+   ],
+   "kwargs": {},
+   "result": "espaco largo fim"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    " espaço largo　fim ",
+    5
+   ],
+   "kwargs": {},
+   "result": "espaco largo fim"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": "espaco largo fim"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    " espaço largo　fim "
+   ],
+   "kwargs": {},
+   "result": " espaço largo　fim "
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    " espaço largo　fim ",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF espaço largo　fim"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    " espaço largo　fim ",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF espaço largo　fim"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": "𝟘𝟙 DÍGITOS MATEMÁTICOS"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": "01 digitos matematicos"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": "01 digitos matematicos"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": [
+    "01",
+    "digitos",
+    "matematicos"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    1
+   ],
+   "kwargs": {},
+   "result": "digitos"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    2
+   ],
+   "kwargs": {},
+   "result": "digitos matematicos"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    3
+   ],
+   "kwargs": {},
+   "result": "digitos matematicos"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    5
+   ],
+   "kwargs": {},
+   "result": "digitos matematicos"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": "01 digitos matematicos"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos"
+   ],
+   "kwargs": {},
+   "result": "𝟘𝟙 dígitos matemáticos"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF 𝟘𝟙 dígitos matemáticos"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF 𝟘𝟙 dígitos matemáticos"
+  },
+  {
+   "fn": "normalizar_historico_contabil",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": "٣٤٥ DÍGITOS ARÁBICOS 12"
+  },
+  {
+   "fn": "remover_acentos",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": "٣٤٥ digitos arabicos 12"
+  },
+  {
+   "fn": "normalizar_para_match",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": "digitos arabicos 12"
+  },
+  {
+   "fn": "tokens_para_match",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": [
+    "digitos",
+    "arabicos",
+    "12"
+   ]
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    1
+   ],
+   "kwargs": {},
+   "result": "digitos"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    2
+   ],
+   "kwargs": {},
+   "result": "digitos arabicos"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    3
+   ],
+   "kwargs": {},
+   "result": "digitos arabicos"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    5
+   ],
+   "kwargs": {},
+   "result": "digitos arabicos"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": "digitos arabicos 12"
+  },
+  {
+   "fn": "valores_na_linha",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "historico_parece_linha_crua",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "celula_segura",
+   "args": [
+    "٣٤٥ dígitos arábicos 12"
+   ],
+   "kwargs": {},
+   "result": "٣٤٥ dígitos arábicos 12"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    "D"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF ٣٤٥ dígitos arábicos 12"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    "C"
+   ],
+   "kwargs": {},
+   "result": "VALOR REF ٣٤٥ dígitos arábicos 12"
+  },
+  {
+   "fn": "chave_agrupamento_historico",
+   "args": [
+    "TARIFA",
+    0
+   ],
+   "kwargs": {},
+   "error": "ValueError"
+  },
+  {
+   "fn": "historico_para_dominio",
+   "args": [
+    "TARIFA",
+    "X"
+   ],
+   "kwargs": {},
+   "error": "ValueError"
+  },
+  {
+   "fn": "documentos_no_historico",
+   "args": [
+    null
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    null
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Forcecar Automotive Ltda."
+   ],
+   "kwargs": {},
+   "result": "forcecar automotive"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "forcecar automotive"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Cia Brasileira de Alimentos S/A"
+   ],
+   "kwargs": {},
+   "result": "cia brasileira de alimentos"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "cia brasileira de alimentos"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "ABC"
+   ],
+   "kwargs": {},
+   "result": "abc"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "abc"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "ABC Ltda"
+   ],
+   "kwargs": {},
+   "result": "abc"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "abc"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Unimed Curitiba"
+   ],
+   "kwargs": {},
+   "result": "unimed curitiba"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "unimed curitiba"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Supermercado"
+   ],
+   "kwargs": {},
+   "result": "supermercado"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "supermercado"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Mercado"
+   ],
+   "kwargs": {},
+   "result": "mercado"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "mercado"
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "EI"
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Filial Matriz"
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "José da Silva ME"
+   ],
+   "kwargs": {},
+   "result": "jose da silva"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "jose da silva"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "Ótica São Luís EIRELI EPP"
+   ],
+   "kwargs": {},
+   "result": "otica sao luis"
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    "otica sao luis"
+   ],
+   "kwargs": {},
+   "result": true
+  },
+  {
+   "fn": "nucleo_do_nome",
+   "args": [
+    "   "
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "nucleo_utilizavel",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": false
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    [
+     [
+      "a",
+      "forcecar automotive"
+     ],
+     [
+      "b",
+      "unimed curitiba"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    {
+     "contraparte_id": "a",
+     "nucleo": "forcecar automotive"
+    },
+    null
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    [
+     [
+      "a",
+      "forcecar automotive"
+     ],
+     [
+      "b",
+      "unimed curitiba"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    null,
+    "Mais de uma contraparte casa com este histórico (forcecar automotive, unimed curitiba). Classifique manualmente ou ajuste os cadastros."
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "PIX UNIMED CURITIBA",
+    [
+     [
+      "a",
+      "unimed"
+     ],
+     [
+      "a",
+      "unimed curitiba"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    {
+     "contraparte_id": "a",
+     "nucleo": "unimed curitiba"
+    },
+    null
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "PIX UNIMED CURITIBA",
+    [
+     [
+      "a",
+      "abc"
+     ],
+     [
+      "b",
+      "mercado"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    null,
+    null
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "SUPERMERCADO BOM PRECO",
+    [
+     [
+      "a",
+      "supermercado"
+     ],
+     [
+      "b",
+      "mercado bom"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    null,
+    "Mais de uma contraparte casa com este histórico (mercado bom, supermercado). Classifique manualmente ou ajuste os cadastros."
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "SUPERMERCADO BOM PRECO",
+    [
+     [
+      "a",
+      "supermercado"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    {
+     "contraparte_id": "a",
+     "nucleo": "supermercado"
+    },
+    null
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "",
+    [
+     [
+      "a",
+      "forcecar automotive"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    null,
+    null
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "NADA A VER",
+    []
+   ],
+   "kwargs": {},
+   "result": [
+    null,
+    null
+   ]
+  },
+  {
+   "fn": "casar_por_nome",
+   "args": [
+    "PIX JOAO DA SILVA ME",
+    [
+     [
+      "a",
+      "joao da silva"
+     ],
+     [
+      "b",
+      "joao da silva"
+     ]
+    ]
+   ],
+   "kwargs": {},
+   "result": [
+    null,
+    "Mais de uma contraparte casa com este histórico (joao da silva). Classifique manualmente ou ajuste os cadastros."
+   ]
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "   ",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "TARIFA",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "Tarifa com liquidação",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "TARIFA  COM/LIQUIDAÇÃO",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "tarifa-bancaria  pacote\tserviços\n",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "PAGAMENTO PIX 09033833000123 PERFORMANCE ENGENHA PIX_DEB",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "LIQUIDACAO BOLETO SICREDI 31052957000105 041 CON 252080163",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "CRÉD.TED-STR 81.450.538 0001-08 FORNECEDOR EXEMPLO",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "TED 41250201 0001-24 ACME",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "DOC 41.250.201-0001-24 e 09.033.8330001-23",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "PIX ***.674.379-** JOAO",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "CPF 123.456.789-09 e CPF 12345678909 repetido",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "12 345 678 9012 34 não é documento",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "123456789012345678901234 longo",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "Ação № ½ ﬁnal ＡＢＣ １２３",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "Café   São João — ÇÃO",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "54881.83"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 54.881,83) é o último número da linha, que num extrato é o saldo da conta — o valor da transação parece ser R$ 1,19"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "1234.56"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 1.234,56) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "10.00"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 10,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "20.00"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 20,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "30.00"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 30,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "0"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 0,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "-1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "15"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 15,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "999.999"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 1.000,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "18/02/2026 PAGAMENTO 1.234,56",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 1,19) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "54881.83"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 54.881,83) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "1234.56"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 1.234,56) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "10.00"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "20.00"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 20,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "30.00"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 30,00) é o último número da linha, que num extrato é o saldo da conta — o valor da transação parece ser R$ 10,00"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "0"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 0,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "-1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 1,19) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "15"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 15,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "999.999"
+    }
+   ],
+   "kwargs": {},
+   "result": "o valor lido (R$ 1.000,00) não corresponde a nenhum valor da linha do extrato"
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "Resgate automático CDB",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "APLIC AUTOMATICA",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "Aplicações financeiras",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "PGTO REF aluguel",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "pgto  ref. energia",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VALOR REF NF 10",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "REC REF cliente",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "VLR REF serviço",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "PGTO REFERENTE X",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "=SOMA(A1:A2)",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "+55 41 9999",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "-desconto",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "@usuario",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "  =espaço antes",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "UNIMED CURITIBA SOC COOP MED",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "PAGAMENTO FORCECAR AUTOMOTIVE PARCELA 3",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "Pagamento Forcecar Automotive e Unimed Curitiba",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "A B C 1 2 3",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "xxxxxxxxxxxxxxxxxxxx",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    " espaço largo　fim ",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "𝟘𝟙 dígitos matemáticos",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_valor_nao_confiavel",
+   "args": [
+    "٣٤٥ dígitos arábicos 12",
+    {
+     "$dec": "1.19"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "0"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 0,00"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "0.5"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 0,50"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "1"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 1,00"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "1234567.891"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 1.234.567,89"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "1234567.895"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 1.234.567,90"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "1234567.885"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 1.234.567,88"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "-1234.5"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ -1.234,50"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "1000000"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 1.000.000,00"
+  },
+  {
+   "fn": "reais",
+   "args": [
+    {
+     "$dec": "12.345"
+    }
+   ],
+   "kwargs": {},
+   "result": "R$ 12,34"
+  },
+  {
+   "fn": "conferir_fechamento",
+   "args": [],
+   "kwargs": {
+    "saldo_anterior": null,
+    "data_anterior": null,
+    "movimento": {
+     "$dec": "0"
+    },
+    "saldo_declarado": {
+     "$dec": "100.00"
+    },
+    "data_declarada": {
+     "$date": "2026-02-28"
+    }
+   },
+   "result": null
+  },
+  {
+   "fn": "conferir_fechamento",
+   "args": [],
+   "kwargs": {
+    "saldo_anterior": {
+     "$dec": "100.00"
+    },
+    "data_anterior": {
+     "$date": "2026-01-31"
+    },
+    "movimento": {
+     "$dec": "50.00"
+    },
+    "saldo_declarado": {
+     "$dec": "150.00"
+    },
+    "data_declarada": {
+     "$date": "2026-02-28"
+    }
+   },
+   "result": null
+  },
+  {
+   "fn": "conferir_fechamento",
+   "args": [],
+   "kwargs": {
+    "saldo_anterior": {
+     "$dec": "100.00"
+    },
+    "data_anterior": {
+     "$date": "2026-01-31"
+    },
+    "movimento": {
+     "$dec": "50.00"
+    },
+    "saldo_declarado": {
+     "$dec": "149.99"
+    },
+    "data_declarada": {
+     "$date": "2026-02-28"
+    }
+   },
+   "result": "O saldo de fechamento declarado no arquivo (R$ 149,99) não confere: partindo do fechamento anterior desta conta em 31/01/2026 (R$ 100,00) mais R$ 50,00 movimentados neste arquivo, o esperado era R$ 150,00 — diferença de R$ 0,01. Confira se falta importar algum período entre 31/01/2026 e 28/02/2026."
+  },
+  {
+   "fn": "conferir_fechamento",
+   "args": [],
+   "kwargs": {
+    "saldo_anterior": {
+     "$dec": "100.00"
+    },
+    "data_anterior": null,
+    "movimento": {
+     "$dec": "-20.10"
+    },
+    "saldo_declarado": {
+     "$dec": "70.00"
+    },
+    "data_declarada": null
+   },
+   "result": "O saldo de fechamento declarado no arquivo (R$ 70,00) não confere: partindo do fechamento anterior desta conta (R$ 100,00) mais R$ -20,10 movimentados neste arquivo, o esperado era R$ 79,90 — diferença de R$ 9,90. Confira se falta importar algum período entre os dois arquivos."
+  },
+  {
+   "fn": "conferir_fechamento",
+   "args": [],
+   "kwargs": {
+    "saldo_anterior": {
+     "$dec": "100.00"
+    },
+    "data_anterior": {
+     "$date": "2026-01-31"
+    },
+    "movimento": {
+     "$dec": "-20.10"
+    },
+    "saldo_declarado": {
+     "$dec": "70.00"
+    },
+    "data_declarada": null
+   },
+   "result": "O saldo de fechamento declarado no arquivo (R$ 70,00) não confere: partindo do fechamento anterior desta conta em 31/01/2026 (R$ 100,00) mais R$ -20,10 movimentados neste arquivo, o esperado era R$ 79,90 — diferença de R$ 9,90. Confira se falta importar algum período entre os dois arquivos."
+  },
+  {
+   "fn": "conferir_fechamento",
+   "args": [],
+   "kwargs": {
+    "saldo_anterior": {
+     "$dec": "-5000.00"
+    },
+    "data_anterior": {
+     "$date": "2025-12-31"
+    },
+    "movimento": {
+     "$dec": "1234.56"
+    },
+    "saldo_declarado": {
+     "$dec": "-3000.00"
+    },
+    "data_declarada": {
+     "$date": "2026-01-31"
+    }
+   },
+   "result": "O saldo de fechamento declarado no arquivo (R$ -3.000,00) não confere: partindo do fechamento anterior desta conta em 31/12/2025 (R$ -5.000,00) mais R$ 1.234,56 movimentados neste arquivo, o esperado era R$ -3.765,44 — diferença de R$ 765,44. Confira se falta importar algum período entre 31/12/2025 e 31/01/2026."
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "1500.00"
+    }
+   ],
+   "kwargs": {},
+   "result": "1500"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "1500.10"
+    }
+   ],
+   "kwargs": {},
+   "result": "1500,1"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "1500"
+    }
+   ],
+   "kwargs": {},
+   "result": "1500"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "0.10"
+    }
+   ],
+   "kwargs": {},
+   "result": "0,1"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "1234567.891"
+    }
+   ],
+   "kwargs": {},
+   "result": "1234567,891"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "-12.30"
+    }
+   ],
+   "kwargs": {},
+   "result": "-12,3"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "0"
+    }
+   ],
+   "kwargs": {},
+   "result": "0"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "100.000"
+    }
+   ],
+   "kwargs": {},
+   "result": "100"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "1E+2"
+    }
+   ],
+   "kwargs": {},
+   "result": "100"
+  },
+  {
+   "fn": "formatar_valor_br",
+   "args": [
+    {
+     "$dec": "12.5"
+    }
+   ],
+   "kwargs": {},
+   "result": "12,5"
+  },
+  {
+   "fn": "dicts_to_txt",
+   "args": [
+    [
+     {
+      "Data": "05/01/2026",
+      "Cód. Conta Debito": "1026",
+      "Cód. Conta Credito": "5",
+      "Valor": {
+       "$dec": "1500.10"
+      },
+      "Cód. Histórico": "",
+      "Complemento Histórico": "PGTO REF ALUGUEL; JAN",
+      "Inicia Lote": "",
+      "Código Matriz/Filial": "",
+      "Centro de Custo Débito": "",
+      "Centro de Custo Crédito": ""
+     },
+     {
+      "Data": "06/01/2026",
+      "Cód. Conta Debito": "1.1.B.abc",
+      "Cód. Conta Credito": "=1+1",
+      "Valor": {
+       "$dec": "0.50"
+      },
+      "Cód. Histórico": "",
+      "Complemento Histórico": "VALOR REF \"ASPAS\" E\nQUEBRA",
+      "Inicia Lote": "",
+      "Código Matriz/Filial": "",
+      "Centro de Custo Débito": "",
+      "Centro de Custo Crédito": ""
+     },
+     {
+      "Data": "07/01/2026",
+      "Cód. Conta Debito": "7",
+      "Cód. Conta Credito": "8",
+      "Valor": {
+       "$dec": "1000000"
+      },
+      "Cód. Histórico": "",
+      "Complemento Histórico": "-NEGATIVO ÇÃO"
+     }
+    ],
+    [
+     "Data",
+     "Cód. Conta Debito",
+     "Cód. Conta Credito",
+     "Valor",
+     "Cód. Histórico",
+     "Complemento Histórico",
+     "Inicia Lote",
+     "Código Matriz/Filial",
+     "Centro de Custo Débito",
+     "Centro de Custo Crédito"
+    ]
+   ],
+   "kwargs": {},
+   "result": {
+    "$bytes": "efbbbf30352f30312f323032363b313032363b353b313530302c313b3b225047544f2052454620414c554755454c3b204a414e223b3b3b3b0d0a30362f30312f323032363b312e312e422e6162633b273d312b313b302c353b3b2256414c4f52205245462022224153504153222220450a515545425241223b3b3b3b0d0a30372f30312f323032363b373b383b313030303030303b3b272d4e4547415449564f20c387c3834f3b3b3b3b0d0a"
+   }
+  },
+  {
+   "fn": "dicts_to_csv",
+   "args": [
+    [
+     {
+      "Data": "05/01/2026",
+      "Cód. Conta Debito": "1026",
+      "Cód. Conta Credito": "5",
+      "Valor": {
+       "$dec": "1500.10"
+      },
+      "Cód. Histórico": "",
+      "Complemento Histórico": "PGTO REF ALUGUEL; JAN",
+      "Inicia Lote": "",
+      "Código Matriz/Filial": "",
+      "Centro de Custo Débito": "",
+      "Centro de Custo Crédito": ""
+     },
+     {
+      "Data": "06/01/2026",
+      "Cód. Conta Debito": "1.1.B.abc",
+      "Cód. Conta Credito": "=1+1",
+      "Valor": {
+       "$dec": "0.50"
+      },
+      "Cód. Histórico": "",
+      "Complemento Histórico": "VALOR REF \"ASPAS\" E\nQUEBRA",
+      "Inicia Lote": "",
+      "Código Matriz/Filial": "",
+      "Centro de Custo Débito": "",
+      "Centro de Custo Crédito": ""
+     },
+     {
+      "Data": "07/01/2026",
+      "Cód. Conta Debito": "7",
+      "Cód. Conta Credito": "8",
+      "Valor": {
+       "$dec": "1000000"
+      },
+      "Cód. Histórico": "",
+      "Complemento Histórico": "-NEGATIVO ÇÃO"
+     }
+    ],
+    [
+     "Data",
+     "Cód. Conta Debito",
+     "Cód. Conta Credito",
+     "Valor",
+     "Cód. Histórico",
+     "Complemento Histórico",
+     "Inicia Lote",
+     "Código Matriz/Filial",
+     "Centro de Custo Débito",
+     "Centro de Custo Crédito"
+    ]
+   ],
+   "kwargs": {},
+   "result": {
+    "$bytes": "efbbbf446174612c43c3b3642e20436f6e74612044656269746f2c43c3b3642e20436f6e7461204372656469746f2c56616c6f722c43c3b3642e2048697374c3b37269636f2c436f6d706c656d656e746f2048697374c3b37269636f2c496e69636961204c6f74652c43c3b36469676f204d617472697a2f46696c69616c2c43656e74726f20646520437573746f2044c3a96269746f2c43656e74726f20646520437573746f204372c3a96469746f0d0a30352f30312f323032362c313032362c352c313530302e31302c2c5047544f2052454620414c554755454c3b204a414e2c2c2c2c0d0a30362f30312f323032362c312e312e422e6162632c273d312b312c302e35302c2c2256414c4f52205245462022224153504153222220450a515545425241222c2c2c2c0d0a30372f30312f323032362c372c382c313030303030302c2c272d4e4547415449564f20c387c3834f2c2c2c2c0d0a"
+   }
+  },
+  {
+   "fn": "colunas_lancamentos_importacao",
+   "args": [],
+   "kwargs": {},
+   "result": [
+    "Data",
+    "Cód. Conta Debito",
+    "Cód. Conta Credito",
+    "Valor",
+    "Cód. Histórico",
+    "Complemento Histórico",
+    "Inicia Lote",
+    "Código Matriz/Filial",
+    "Centro de Custo Débito",
+    "Centro de Custo Crédito"
+   ]
+  },
+  {
+   "fn": "parse_ofx:sgml",
+   "args": [
+    "OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\nENCODING:USASCII\nCHARSET:1252\n\n<OFX>\n<BANKMSGSRSV1><STMTTRNRS><STMTRS>\n<BANKACCTFROM><BANKID>0756<BRANCHID>1234<ACCTID>98765-4</BANKACCTFROM>\n<BANKTRANLIST>\n<DTSTART>20260101\n<STMTTRN>\n<TRNTYPE>DEBIT\n<DTPOSTED>20260105120000[-3:BRT]\n<TRNAMT>-1500.10\n<FITID>202601050001\n<MEMO>PIX EMITIDO OUTRA IF\n<NAME>Pagamento Pix 38.924.906 0001-75\n</STMTTRN>\n<STMTTRN>\n<TRNTYPE>CREDIT\n<DTPOSTED>20260106\n<TRNAMT>2.500,00\n<FITID>202601060002\n<MEMO>CRÉD.TED-STR\n<NAME>CRÉD.TED-STR\n</STMTTRN>\n<STMTTRN>\n<TRNTYPE>DEBIT\n<DTPOSTED>20260107223000.000[-3:BRT]\n<TRNAMT>-10,5\n<FITID>a\"b\\c ç\n<MEMO>TARIFA   PACOTE\n<NAME>\n</STMTTRN>\n<STMTTRN>\n<TRNTYPE>OTHER\n<DTPOSTED>20260231\n<TRNAMT>-1.00\n<FITID>X1\n<MEMO>DATA INVALIDA\n</STMTTRN>\n<STMTTRN>\n<TRNTYPE>OTHER\n<DTPOSTED>20260110\n<TRNAMT>abc\n<FITID>X2\n</STMTTRN>\n<STMTTRN>\n<DTPOSTED>20260110\n<TRNAMT>-3.00\n<MEMO>SEM FITID\n</STMTTRN>\n<STMTTRN>\n<trntype>debit\n<dtposted>202601111530\n<trnamt>-0.01\n<fitid>min1\n<name>só nome\n</STMTTRN>\n</BANKTRANLIST>\n<LEDGERBAL><BALAMT>9.876,54<DTASOF>20260131</LEDGERBAL>\n<AVAILBAL><BALAMT>1.00<DTASOF>20260131</AVAILBAL>\n</STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>\n"
+   ],
+   "kwargs": {},
+   "result": {
+    "transacoes": [
+     {
+      "fitid": "202601050001",
+      "data": {
+       "$date": "2026-01-05"
+      },
+      "valor": {
+       "$dec": "-1500.10"
+      },
+      "historico": "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 1
+     },
+     {
+      "fitid": "202601060002",
+      "data": {
+       "$date": "2026-01-06"
+      },
+      "valor": {
+       "$dec": "2500.00"
+      },
+      "historico": "CRÉD.TED-STR",
+      "tipo_ofx": "CREDIT",
+      "saldo_apos": null,
+      "ordem": 2
+     },
+     {
+      "fitid": "a\"b\\c ç",
+      "data": {
+       "$date": "2026-01-07"
+      },
+      "valor": {
+       "$dec": "-10.5"
+      },
+      "historico": "TARIFA PACOTE",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 3
+     },
+     {
+      "fitid": "min1",
+      "data": {
+       "$date": "2026-01-11"
+      },
+      "valor": {
+       "$dec": "-0.01"
+      },
+      "historico": "só nome",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 7
+     }
+    ],
+    "total_blocos": 7,
+    "erros": [
+     "Transação 4: data DTPOSTED inválida: 20260231",
+     "Transação 5: valor TRNAMT inválido",
+     "Transação 6: campo(s) obrigatório(s) ausente(s): FITID"
+    ],
+    "saldo_declarado": {
+     "$dec": "9876.54"
+    },
+    "data_saldo": {
+     "$date": "2026-01-31"
+    }
+   }
+  },
+  {
+   "fn": "parse_ofx:sgml_crlf_bom",
+   "args": [
+    "﻿OFXHEADER:100\r\nDATA:OFXSGML\r\nVERSION:102\r\nENCODING:USASCII\r\nCHARSET:1252\r\n\r\n<OFX>\r\n<BANKMSGSRSV1><STMTTRNRS><STMTRS>\r\n<BANKACCTFROM><BANKID>0756<BRANCHID>1234<ACCTID>98765-4</BANKACCTFROM>\r\n<BANKTRANLIST>\r\n<DTSTART>20260101\r\n<STMTTRN>\r\n<TRNTYPE>DEBIT\r\n<DTPOSTED>20260105120000[-3:BRT]\r\n<TRNAMT>-1500.10\r\n<FITID>202601050001\r\n<MEMO>PIX EMITIDO OUTRA IF\r\n<NAME>Pagamento Pix 38.924.906 0001-75\r\n</STMTTRN>\r\n<STMTTRN>\r\n<TRNTYPE>CREDIT\r\n<DTPOSTED>20260106\r\n<TRNAMT>2.500,00\r\n<FITID>202601060002\r\n<MEMO>CRÉD.TED-STR\r\n<NAME>CRÉD.TED-STR\r\n</STMTTRN>\r\n<STMTTRN>\r\n<TRNTYPE>DEBIT\r\n<DTPOSTED>20260107223000.000[-3:BRT]\r\n<TRNAMT>-10,5\r\n<FITID>a\"b\\c ç\r\n<MEMO>TARIFA   PACOTE\r\n<NAME>\r\n</STMTTRN>\r\n<STMTTRN>\r\n<TRNTYPE>OTHER\r\n<DTPOSTED>20260231\r\n<TRNAMT>-1.00\r\n<FITID>X1\r\n<MEMO>DATA INVALIDA\r\n</STMTTRN>\r\n<STMTTRN>\r\n<TRNTYPE>OTHER\r\n<DTPOSTED>20260110\r\n<TRNAMT>abc\r\n<FITID>X2\r\n</STMTTRN>\r\n<STMTTRN>\r\n<DTPOSTED>20260110\r\n<TRNAMT>-3.00\r\n<MEMO>SEM FITID\r\n</STMTTRN>\r\n<STMTTRN>\r\n<trntype>debit\r\n<dtposted>202601111530\r\n<trnamt>-0.01\r\n<fitid>min1\r\n<name>só nome\r\n</STMTTRN>\r\n</BANKTRANLIST>\r\n<LEDGERBAL><BALAMT>9.876,54<DTASOF>20260131</LEDGERBAL>\r\n<AVAILBAL><BALAMT>1.00<DTASOF>20260131</AVAILBAL>\r\n</STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>\r\n"
+   ],
+   "kwargs": {},
+   "result": {
+    "transacoes": [
+     {
+      "fitid": "202601050001",
+      "data": {
+       "$date": "2026-01-05"
+      },
+      "valor": {
+       "$dec": "-1500.10"
+      },
+      "historico": "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 1
+     },
+     {
+      "fitid": "202601060002",
+      "data": {
+       "$date": "2026-01-06"
+      },
+      "valor": {
+       "$dec": "2500.00"
+      },
+      "historico": "CRÉD.TED-STR",
+      "tipo_ofx": "CREDIT",
+      "saldo_apos": null,
+      "ordem": 2
+     },
+     {
+      "fitid": "a\"b\\c ç",
+      "data": {
+       "$date": "2026-01-07"
+      },
+      "valor": {
+       "$dec": "-10.5"
+      },
+      "historico": "TARIFA PACOTE",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 3
+     },
+     {
+      "fitid": "min1",
+      "data": {
+       "$date": "2026-01-11"
+      },
+      "valor": {
+       "$dec": "-0.01"
+      },
+      "historico": "só nome",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 7
+     }
+    ],
+    "total_blocos": 7,
+    "erros": [
+     "Transação 4: data DTPOSTED inválida: 20260231",
+     "Transação 5: valor TRNAMT inválido",
+     "Transação 6: campo(s) obrigatório(s) ausente(s): FITID"
+    ],
+    "saldo_declarado": {
+     "$dec": "9876.54"
+    },
+    "data_saldo": {
+     "$date": "2026-01-31"
+    }
+   }
+  },
+  {
+   "fn": "parse_ofx:sgml_sem_fechamento",
+   "args": [
+    "OFXHEADER:100\n<OFX><BANKTRANLIST>\n<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260301<TRNAMT>-5.00<FITID>A1<MEMO>PRIMEIRA\n<STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20260302<TRNAMT>7.00<FITID>A2<MEMO>SEGUNDA\n</BANKTRANLIST>\n<LEDGERBAL><BALAMT>2<DTASOF>20260302\n<LEDGERBAL><BALAMT>3<DTASOF>20260303\n</OFX>\n"
+   ],
+   "kwargs": {},
+   "result": {
+    "transacoes": [
+     {
+      "fitid": "A1",
+      "data": {
+       "$date": "2026-03-01"
+      },
+      "valor": {
+       "$dec": "-5.00"
+      },
+      "historico": "PRIMEIRA",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 1
+     },
+     {
+      "fitid": "A2",
+      "data": {
+       "$date": "2026-03-02"
+      },
+      "valor": {
+       "$dec": "7.00"
+      },
+      "historico": "SEGUNDA",
+      "tipo_ofx": "CREDIT",
+      "saldo_apos": null,
+      "ordem": 2
+     }
+    ],
+    "total_blocos": 2,
+    "erros": [],
+    "saldo_declarado": {
+     "$dec": "2"
+    },
+    "data_saldo": {
+     "$date": "2026-03-02"
+    }
+   }
+  },
+  {
+   "fn": "parse_ofx:xml",
+   "args": [
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?OFX OFXHEADER=\"200\" VERSION=\"211\"?>\n<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS>\n<BANKTRANLIST>\n<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20260401</DTPOSTED><TRNAMT>-12.34</TRNAMT><FITID>X-1</FITID><MEMO>A &amp; B &#233; &lt;C&gt;</MEMO></STMTTRN>\n<STMTTRN><TRNTYPE>CREDIT</TRNTYPE><DTPOSTED>20260402</DTPOSTED><TRNAMT>100</TRNAMT><FITID>X-2</FITID><NAME>Cliente &quot;Um&quot;</NAME><MEMO></MEMO></STMTTRN>\n<STMTTRN><TRNTYPE>CREDIT</TRNTYPE><DTPOSTED>2026040</DTPOSTED><TRNAMT>1</TRNAMT><FITID>X-3</FITID></STMTTRN>\n</BANKTRANLIST>\n<LEDGERBAL><BALAMT>87.66</BALAMT><DTASOF>20260430</DTASOF></LEDGERBAL>\n</STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>\n"
+   ],
+   "kwargs": {},
+   "result": {
+    "transacoes": [
+     {
+      "fitid": "X-1",
+      "data": {
+       "$date": "2026-04-01"
+      },
+      "valor": {
+       "$dec": "-12.34"
+      },
+      "historico": "A &amp; B é &lt;C&gt;",
+      "tipo_ofx": "DEBIT",
+      "saldo_apos": null,
+      "ordem": 1
+     },
+     {
+      "fitid": "X-2",
+      "data": {
+       "$date": "2026-04-02"
+      },
+      "valor": {
+       "$dec": "100"
+      },
+      "historico": "Cliente \"Um\"",
+      "tipo_ofx": "CREDIT",
+      "saldo_apos": null,
+      "ordem": 2
+     }
+    ],
+    "total_blocos": 3,
+    "erros": [
+     "Transação 3: data DTPOSTED inválida: 2026040"
+    ],
+    "saldo_declarado": {
+     "$dec": "87.66"
+    },
+    "data_saldo": {
+     "$date": "2026-04-30"
+    }
+   }
+  },
+  {
+   "fn": "parse_ofx:xml_invalido",
+   "args": [
+    "<?xml version=\"1.0\"?>\n<OFX><STMTTRN><FITID>1</FITID></OFX>\n"
+   ],
+   "kwargs": {},
+   "error": "OFXParseError"
+  },
+  {
+   "fn": "parse_ofx:xml_sem_ofx",
+   "args": [
+    "<?xml version=\"1.0\"?>\n<NADA/>\n"
+   ],
+   "kwargs": {},
+   "error": "OFXParseError"
+  },
+  {
+   "fn": "parse_ofx:vazio",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": {
+    "transacoes": [],
+    "total_blocos": 0,
+    "erros": [],
+    "saldo_declarado": null,
+    "data_saldo": null
+   }
+  },
+  {
+   "fn": "parse_ofx:sem_transacao",
+   "args": [
+    "<OFX><LEDGERBAL><BALAMT>10<DTASOF>20260101</LEDGERBAL></OFX>"
+   ],
+   "kwargs": {},
+   "result": {
+    "transacoes": [],
+    "total_blocos": 0,
+    "erros": [],
+    "saldo_declarado": {
+     "$dec": "10"
+    },
+    "data_saldo": {
+     "$date": "2026-01-01"
+    }
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105"
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2026-01-05"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "202601051200"
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2026-01-05"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105120000"
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2026-01-05"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105120000.123[-3:BRT]"
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2026-01-05"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105[+5.5:IST]"
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2026-01-05"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "2026010"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20261301"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260230"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20240229"
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2024-02-29"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20230229"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105250000"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    " 20260105 "
+   ],
+   "kwargs": {},
+   "result": {
+    "$date": "2026-01-05"
+   }
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "abc"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105235960"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260105235961"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "00000101"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20261232"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "20260100"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "2026010512"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "parse_data",
+   "args": [
+    "٢٠٢٦٠١٠٥"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "1500.00"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "1500.00"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "1.500,00"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "1500.00"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "1500,5"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "1500.5"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "-0.01"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "-0.01"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    " 12 "
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "12"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "1e3"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "1E+3"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "1_000.5"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "1000.5"
+   }
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "NaN"
+   ],
+   "kwargs": {},
+   "error": "InvalidOperation"
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "Infinity"
+   ],
+   "kwargs": {},
+   "error": "InvalidOperation"
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    ""
+   ],
+   "kwargs": {},
+   "error": "InvalidOperation"
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "1.2.3"
+   ],
+   "kwargs": {},
+   "error": "InvalidOperation"
+  },
+  {
+   "fn": "valor_monetario",
+   "args": [
+    "+7"
+   ],
+   "kwargs": {},
+   "result": {
+    "$dec": "7"
+   }
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    "A",
+    "B"
+   ],
+   "kwargs": {},
+   "result": "A B"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    "PIX",
+    "pix emitido"
+   ],
+   "kwargs": {},
+   "result": "pix emitido"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    "Pagamento",
+    null
+   ],
+   "kwargs": {},
+   "result": "Pagamento"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    null,
+    "Só nome"
+   ],
+   "kwargs": {},
+   "result": "Só nome"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    "  a  b ",
+    " a b "
+   ],
+   "kwargs": {},
+   "result": "a b"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    "CRÉD",
+    "créd"
+   ],
+   "kwargs": {},
+   "result": "CRÉD"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    "STRASSE",
+    "straße"
+   ],
+   "kwargs": {},
+   "result": "STRASSE"
+  },
+  {
+   "fn": "montar_historico",
+   "args": [
+    null,
+    null
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "202601050001"
+   ],
+   "kwargs": {},
+   "result": "b2db76e4e1c27b03b32b69ee1b7f1030c00bf4992b4dc0ad7d6b9b80bb43fcaa"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "PDF0a1b2c3d4e5f"
+   ],
+   "kwargs": {},
+   "result": "bdd28e2bd92045eedf279a21f6f198b8245d06e860f24ced8f35c849cb7b70e5"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    ""
+   ],
+   "kwargs": {},
+   "result": "45da1309d20a8cc2465dac172adf1ec5cdbc7999726ddda5e12e5c84b346d22f"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "a\"b\\c"
+   ],
+   "kwargs": {},
+   "result": "479976ae14accf6fa695668a0cf6beb7b5fe8ef9346cced07861c34814218082"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "ç ã 中 😀"
+   ],
+   "kwargs": {},
+   "result": "07e5a4465138097bf03436464db17dfeb6e90ffcd004ce7ec47082148f30b910"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "tab\there"
+   ],
+   "kwargs": {},
+   "result": "aee3f84f0914dd353816e6a06d5342df032b6549596e617c202cee65a464829d"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "linha\nnova"
+   ],
+   "kwargs": {},
+   "result": "694b4574cb3abdfecfd9ad6124a7e16a2f800a01857275897b37f6c3794b5896"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    " "
+   ],
+   "kwargs": {},
+   "result": "66ca301e32bc600a3e38361524eea76a0d1282958cb6e5249a6d950d33fcd40c"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "1f0e3c1a-7b2d-4c55-9a0e-5d2f8b9c1a00",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "\u0001"
+   ],
+   "kwargs": {},
+   "result": "f6beae872e906a100016534588aa92a75e5f96b738674c76460b0535498961b4"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "202601050001"
+   ],
+   "kwargs": {},
+   "result": "d24efa262c81f9906150ab3d8452835862758bcac478ab4bd9edb71fb79c2188"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "PDF0a1b2c3d4e5f"
+   ],
+   "kwargs": {},
+   "result": "9ee83d93619f36c451b754c58038e00bb959e0dbb90404e3f99f3e08a5cc9ecc"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    ""
+   ],
+   "kwargs": {},
+   "result": "94c3353cc30b28f111406bfbc279f2eefd6529b9515a651c4880ad12d64b5ba8"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "a\"b\\c"
+   ],
+   "kwargs": {},
+   "result": "f34fe2e53a4491e35f03d66b82277dc5af3ad146613d5a62949fac7d59abb60f"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "ç ã 中 😀"
+   ],
+   "kwargs": {},
+   "result": "d348656783e95902d65e941781eb6cc10577df530363331d2bf209bab39395a0"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "tab\there"
+   ],
+   "kwargs": {},
+   "result": "06748deb13cbf183f13ef2358f002e6e8baf7871b9283d55d3d3b460447215db"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "linha\nnova"
+   ],
+   "kwargs": {},
+   "result": "cd5e09a1dd03a8a7a175aef9f9d26b8b6b3ba44dd14fc5a4dc786ff32f9690e9"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    " "
+   ],
+   "kwargs": {},
+   "result": "a25121a6b7d7220b5c518f9741327f862e23d93e60822a62bfd6e028bcedd064"
+  },
+  {
+   "fn": "calcular_hash",
+   "args": [
+    "00000000-0000-0000-0000-000000000000",
+    "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    "\u0001"
+   ],
+   "kwargs": {},
+   "result": "77a6f1ddb47ffb6520f554e3548976c54ac5a25d947305434aa7a64c9fd9d452"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "TARIFA",
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "exato"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "TARIFA",
+    "Tarifa com liquidação"
+   ],
+   "kwargs": {},
+   "result": "substring"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "tarifa liquidacao",
+    "TARIFA COM R LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "todas_palavras"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "LIQUIDACAO TARIFA",
+    "TARIFA COM LIQUIDAÇÃO"
+   ],
+   "kwargs": {},
+   "result": "todas_palavras"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "PIX RECEBIDO",
+    "PIX ENVIADO"
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "",
+    "QUALQUER"
+   ],
+   "kwargs": {},
+   "result": "substring"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "",
+    ""
+   ],
+   "kwargs": {},
+   "result": "exato"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "TAR",
+    "TARIFA"
+   ],
+   "kwargs": {},
+   "result": "substring"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "TARIFA/BANCO",
+    "tarifa banco"
+   ],
+   "kwargs": {},
+   "result": "exato"
+  },
+  {
+   "fn": "estrategia_de_match",
+   "args": [
+    "tarifa tarifa",
+    "tarifa"
+   ],
+   "kwargs": {},
+   "result": "todas_palavras"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "D",
+    "Forcecar Automotive Ltda",
+    null
+   ],
+   "kwargs": {},
+   "result": "PGTO REF FORCECAR AUTOMOTIVE LTDA"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "D",
+    "forcecar  automotive",
+    "123"
+   ],
+   "kwargs": {},
+   "result": "PGTO REF NF 123 - FORCECAR AUTOMOTIVE"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "D",
+    "Ótica São Luís",
+    "  "
+   ],
+   "kwargs": {},
+   "result": "PGTO REF ÓTICA SÃO LUÍS"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "D",
+    "X",
+    " 9 "
+   ],
+   "kwargs": {},
+   "result": "PGTO REF NF 9 - X"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "C",
+    "Forcecar Automotive Ltda",
+    null
+   ],
+   "kwargs": {},
+   "result": "REC REF FORCECAR AUTOMOTIVE LTDA"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "C",
+    "forcecar  automotive",
+    "123"
+   ],
+   "kwargs": {},
+   "result": "REC REF NF 123 - FORCECAR AUTOMOTIVE"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "C",
+    "Ótica São Luís",
+    "  "
+   ],
+   "kwargs": {},
+   "result": "REC REF ÓTICA SÃO LUÍS"
+  },
+  {
+   "fn": "gerar_historico_sugerido",
+   "args": [
+    "C",
+    "X",
+    " 9 "
+   ],
+   "kwargs": {},
+   "result": "REC REF NF 9 - X"
+  },
+  {
+   "fn": "motivo_para_nao_contabilizar",
+   "args": [
+    "18/02/2026 TARIFA COM R LIQUIDACAO COB000001 -1,19 -54.881,83",
+    {
+     "$dec": "54881.83"
+    }
+   ],
+   "kwargs": {},
+   "result": "Valor não confiável: o valor lido (R$ 54.881,83) é o último número da linha, que num extrato é o saldo da conta — o valor da transação parece ser R$ 1,19. Corrija a importação deste extrato antes de classificar."
+  },
+  {
+   "fn": "motivo_para_nao_contabilizar",
+   "args": [
+    "PIX",
+    {
+     "$dec": "10.00"
+    }
+   ],
+   "kwargs": {},
+   "result": null
+  },
+  {
+   "fn": "motivo_para_nao_contabilizar",
+   "args": [
+    "VALOR 10,00 SALDO 20,00 OUTRO 30,00",
+    {
+     "$dec": "15"
+    }
+   ],
+   "kwargs": {},
+   "result": "Valor não confiável: o valor lido (R$ 15,00) não corresponde a nenhum valor da linha do extrato. Corrija a importação deste extrato antes de classificar."
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "manual"
+     ]
+    ],
+    "D"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "manual"
+     ]
+    ],
+    "C"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "manual"
+     ]
+    ],
+    "X"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "cliente",
+      "manual"
+     ]
+    ],
+    "D"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "cliente",
+      "manual"
+     ]
+    ],
+    "C"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "cliente",
+      "manual"
+     ]
+    ],
+    "X"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "cliente",
+      "relatorio_fiscal"
+     ]
+    ],
+    "D"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "cliente",
+      "relatorio_fiscal"
+     ]
+    ],
+    "C"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "cliente",
+      "relatorio_fiscal"
+     ]
+    ],
+    "X"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "relatorio_fiscal"
+     ],
+     [
+      "b",
+      "111",
+      "cliente",
+      "relatorio_fiscal"
+     ]
+    ],
+    "D"
+   ],
+   "kwargs": {},
+   "result": [
+    "a"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "relatorio_fiscal"
+     ],
+     [
+      "b",
+      "111",
+      "cliente",
+      "relatorio_fiscal"
+     ]
+    ],
+    "C"
+   ],
+   "kwargs": {},
+   "result": [
+    "b"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "relatorio_fiscal"
+     ],
+     [
+      "b",
+      "111",
+      "cliente",
+      "relatorio_fiscal"
+     ]
+    ],
+    "X"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "ambos",
+      "manual"
+     ],
+     [
+      "b",
+      "222",
+      "cliente",
+      "relatorio_fiscal"
+     ],
+     [
+      "c",
+      "333",
+      "fornecedor",
+      "backfill"
+     ]
+    ],
+    "D"
+   ],
+   "kwargs": {},
+   "result": [
+    "a",
+    "c"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "ambos",
+      "manual"
+     ],
+     [
+      "b",
+      "222",
+      "cliente",
+      "relatorio_fiscal"
+     ],
+     [
+      "c",
+      "333",
+      "fornecedor",
+      "backfill"
+     ]
+    ],
+    "C"
+   ],
+   "kwargs": {},
+   "result": [
+    "a",
+    "b",
+    "c"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "ambos",
+      "manual"
+     ],
+     [
+      "b",
+      "222",
+      "cliente",
+      "relatorio_fiscal"
+     ],
+     [
+      "c",
+      "333",
+      "fornecedor",
+      "backfill"
+     ]
+    ],
+    "X"
+   ],
+   "kwargs": {},
+   "result": [
+    "a",
+    "c"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "manual"
+     ],
+     [
+      "b",
+      "111",
+      "fornecedor",
+      "manual"
+     ]
+    ],
+    "D"
+   ],
+   "kwargs": {},
+   "result": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "manual"
+     ],
+     [
+      "b",
+      "111",
+      "fornecedor",
+      "manual"
+     ]
+    ],
+    "C"
+   ],
+   "kwargs": {},
+   "result": []
+  },
+  {
+   "fn": "desambiguar_tipos",
+   "args": [
+    [
+     [
+      "a",
+      "111",
+      "fornecedor",
+      "manual"
+     ],
+     [
+      "b",
+      "111",
+      "fornecedor",
+      "manual"
+     ]
+    ],
+    "X"
+   ],
+   "kwargs": {},
+   "result": []
+  }
+ ]
+}
