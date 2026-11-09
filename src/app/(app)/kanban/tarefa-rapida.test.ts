@@ -15,6 +15,8 @@ const activity = { create: vi.fn() };
 const sectorQuadrosBloqueados = { findUnique: vi.fn(async () => null) };
 const space = { findUnique: vi.fn(async () => ({ defaultPermission: "EDITAR" })) };
 const prisma = { pipeline, pipelineStage, pipelineItem, activity, sectorQuadrosBloqueados, space };
+// As ações do Kanban chegam a módulos `server-only` (exclusão de atividade, SPED local).
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn(), notFound: vi.fn() }));
