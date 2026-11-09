@@ -14,7 +14,7 @@ import { sendWebPushToPortalUsers } from "@/lib/webPush";
 export type AvisoDoPortal =
   | { tipo: "pendencia"; motivo: "nova" | "resposta" | "lembrete"; titulo: string; requestId: string }
   | { tipo: "mensagem"; empresaNome: string }
-  | { tipo: "processo"; motivo: "mensagem" | "documento"; processoNome: string; processId: string }
+  | { tipo: "processo"; motivo: "mensagem" | "documento" | "concluido"; processoNome: string; processId: string }
   | { tipo: "aprovacao"; quantidade: number }
   | { tipo: "solicitacao"; motivo: "resposta" | "aguardando" | "concluida"; numero: number; assunto: string; id: string }
   | { tipo: "comunicado"; titulo: string; id: string }
@@ -44,9 +44,14 @@ export function textoDoAviso(aviso: AvisoDoPortal): TextoEmPush {
       };
     case "processo":
       // O nome do processo (tipo e empresa) é o que já aparece na lista do
-      // portal — nada do que foi escrito ou anexado.
+      // portal — nada do que foi escrito ou anexado. "concluido" (09/11/2026) é
+      // o envio ao cliente no fim do processo: os documentos estão na tela.
       return {
-        title: aviso.motivo === "mensagem" ? "Nova mensagem no processo" : "Novo documento no processo",
+        title: {
+          mensagem: "Nova mensagem no processo",
+          documento: "Novo documento no processo",
+          concluido: "Processo concluído",
+        }[aviso.motivo],
         body: aviso.processoNome,
         url: `/portal/processos/${aviso.processId}`,
       };

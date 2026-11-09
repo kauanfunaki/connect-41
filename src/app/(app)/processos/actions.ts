@@ -7,8 +7,8 @@ import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
+import { sincronizarProcesso } from "@/lib/societario/conclusaoServidor";
 import {
-  etapasLiberadas,
   proximaTentativa,
   itensObrigatoriosPendentes,
   transicaoDeSituacao,
@@ -52,57 +52,10 @@ async function contexto() {
   return { erro: null, ctx };
 }
 
-/**
- * Recalcula o ciclo grosso do processo e grava.
- *
- * Só `CONCLUIDO` é derivado aqui: quando nada mais está liberado no roteiro, o
- * processo acabou. O estado fino (exigência, espera) continua sendo lido dos
- * protocolos a cada leitura — ver o comentário em `listarFila`.
- *
- * Roda depois de toda ação que mexe em etapa. Chamar de menos deixaria processo
- * pronto aparecendo como aberto na fila, que é o tipo de mentira que faz alguém
- * parar de confiar na tela.
- */
-async function sincronizarConclusao(processId: string) {
-  const prisma = getPrisma();
-  const processo = await prisma.process.findUnique({
-    where: { id: processId },
-    select: {
-      concludedAt: true,
-      template: {
-        select: {
-          steps: { select: { id: true, position: true, parallelGroup: true, optional: true } },
-        },
-      },
-      steps: { select: { templateStepId: true, status: true } },
-    },
-  });
-  if (!processo) return;
-
-  const liberadas = etapasLiberadas(
-    processo.template.steps.map((s) => ({
-      templateStepId: s.id,
-      position: s.position,
-      parallelGroup: s.parallelGroup,
-      optional: s.optional,
-    })),
-    processo.steps.map((s) => ({ templateStepId: s.templateStepId, status: s.status }))
-  );
-
-  const acabou = liberadas.length === 0;
-  if (acabou && processo.concludedAt === null) {
-    await prisma.process.update({
-      where: { id: processId },
-      data: { status: "CONCLUIDO", concludedAt: new Date() },
-    });
-  } else if (!acabou && processo.concludedAt !== null) {
-    // Reabriu — uma exigência depois de concluído, por exemplo.
-    await prisma.process.update({
-      where: { id: processId },
-      data: { status: "EM_ANDAMENTO", concludedAt: null },
-    });
-  }
-}
+// Toda ação que mexe em etapa termina em `sincronizarProcesso` — o envio ao
+// cliente no fim e a conclusão. Era o `sincronizarConclusao` daqui; foi para
+// `src/lib/societario/conclusaoServidor.ts` em 09/11/2026, para o observador
+// de protocolo passar pelo mesmo ponto.
 
 /**
  * Abre um processo a partir do roteiro publicado do tipo.
@@ -304,7 +257,7 @@ export async function concluirEtapa(stepId: string): Promise<ProcessoState> {
       executedByUserId: ctx.userId ?? null,
     },
   });
-  await sincronizarConclusao(etapa.processId);
+  await sincronizarProcesso(etapa.processId);
 
   revalidatePath(`/processos/${etapa.processId}`);
   revalidatePath("/processos");
@@ -323,7 +276,7 @@ export async function dispensarEtapa(stepId: string): Promise<ProcessoState> {
     where: { id: stepId },
     data: { status: "DISPENSADA", doneAt: new Date(), actor: "PESSOA", executedByUserId: ctx.userId ?? null },
   });
-  await sincronizarConclusao(etapa.processId);
+  await sincronizarProcesso(etapa.processId);
 
   revalidatePath(`/processos/${etapa.processId}`);
   revalidatePath("/processos");
@@ -414,7 +367,7 @@ export async function deferirProtocolo(protocolId: string): Promise<ProcessoStat
       });
     }
   });
-  await sincronizarConclusao(protocolo.processId);
+  await sincronizarProcesso(protocolo.processId);
 
   revalidatePath(`/processos/${protocolo.processId}`);
   revalidatePath("/processos");
@@ -466,7 +419,7 @@ export async function registrarExigencia(
       });
     }
   });
-  await sincronizarConclusao(protocolo.processId);
+  await sincronizarProcesso(protocolo.processId);
 
   await logAudit({
     tenantId: ctx.tenantId,
@@ -509,7 +462,7 @@ const ACOES_DE_SITUACAO = new Set<AcaoDeSituacao>(["aguardar_cliente", "suspende
 /**
  * Pausa, encerra sem conclusão ou retoma o processo.
  *
- * É a única escrita de `status` fora de `sincronizarConclusao`: as situações
+ * É a única escrita de `status` fora de `sincronizarProcesso`: as situações
  * que dependem de decisão de gente (esperar o cliente, suspender, o órgão
  * negou, o cliente desistiu) não se derivam de protocolo. A regra de quem vai
  * para onde está em `transicaoDeSituacao`; a gravação é condicional no status
@@ -548,6 +501,10 @@ export async function mudarSituacaoDoProcesso(
     entityId: processo.id,
     metadata: { de: processo.status, para: t.status, acao, motivo: t.motivo, motivoAnterior: processo.statusReason },
   });
+  // Retomar solta o que a pausa segurou (09/11/2026): o robô não manda o envio
+  // ao cliente com o processo pausado, e sem isto ele só sairia na próxima
+  // mudança de etapa.
+  if (acao === "retomar") await sincronizarProcesso(processo.id);
 
   revalidatePath(`/processos/${processo.id}`);
   revalidatePath("/processos");
@@ -577,6 +534,12 @@ export async function alternarItemDoChecklist(
     where: { id: itemId },
     data: { done: feito, doneAt: feito ? new Date() : null },
   });
+  // O checklist da etapa de envio segura o robô (09/11/2026): marcar o último
+  // item obrigatório, com o resto do processo encerrado, é o que solta o envio.
+  if (feito) {
+    await sincronizarProcesso(item.step.processId);
+    revalidatePath("/processos");
+  }
 
   revalidatePath(`/processos/${item.step.processId}`);
   return null;

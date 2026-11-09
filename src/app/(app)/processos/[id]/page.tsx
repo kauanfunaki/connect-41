@@ -17,6 +17,8 @@ import {
   totalDeVoltas,
   diasUteisEntre,
 } from "@/lib/societario/processo";
+import { DESCRICAO_DO_ENVIO, etapaDeEnvioAoCliente } from "@/lib/societario/envioAoCliente";
+import { ROTINAS_DO_SISTEMA } from "@/lib/auditoria/rotinas";
 import { saoPauloParts } from "@/lib/agenda";
 import { rastroDoDia, seloDaOrigem } from "@/lib/horas/regras";
 import { ResumoDoProcesso } from "@/components/societario/ResumoDoProcesso";
@@ -111,6 +113,7 @@ export default async function ProcessoDetalhePage({
               parallelGroup: true,
               optional: true,
               expectedActor: true,
+              organId: true,
               organ: { select: { name: true } },
             },
             orderBy: { position: "asc" },
@@ -124,6 +127,8 @@ export default async function ProcessoDetalhePage({
           status: true,
           startedAt: true,
           doneAt: true,
+          actor: true,
+          automationRef: true,
           executedBy: { select: { name: true } },
           items: {
             select: {
@@ -177,6 +182,17 @@ export default async function ProcessoDetalhePage({
   );
 
   const instanciaPorTemplate = new Map(processo.steps.map((s) => [s.templateStepId, s]));
+  // A etapa que o robô fecha avisando o cliente (09/11/2026): sem descrição
+  // própria no roteiro, a tela diz à equipe o que vai acontecer com ela.
+  const etapaDoEnvio = etapaDeEnvioAoCliente(
+    processo.template.steps.map((s) => ({
+      templateStepId: s.id,
+      position: s.position,
+      label: s.label,
+      expectedActor: s.expectedActor,
+      organId: s.organId,
+    }))
+  );
   const hoje = new Date();
   const chaveDoDia = (d: Date) => saoPauloParts(d).dateKey;
 
@@ -186,7 +202,7 @@ export default async function ProcessoDetalhePage({
       id: instancia?.id ?? "",
       posicao: passo.position,
       rotulo: passo.label,
-      descricao: passo.description,
+      descricao: passo.description ?? (passo.id === etapaDoEnvio ? DESCRICAO_DO_ENVIO : null),
       grupoParalelo: passo.parallelGroup,
       opcional: passo.optional,
       orgaoNome: passo.organ?.name ?? null,
@@ -199,7 +215,12 @@ export default async function ProcessoDetalhePage({
       diasUteis: instancia?.startedAt
         ? diasUteisEntre(chaveDoDia(instancia.startedAt), chaveDoDia(instancia.doneAt ?? hoje), feriados)
         : null,
-      executadaPor: instancia?.executedBy?.name ?? null,
+      // Concluída pelo robô do envio ao cliente (09/11/2026): o nome da rotina,
+      // o mesmo da Auditoria. Pelo `automationRef`, e não só pelo `actor`: uma
+      // etapa que o robô protocolou e uma pessoa deferiu também fica com ROBO.
+      executadaPor:
+        instancia?.executedBy?.name ??
+        (instancia?.actor === "ROBO" && instancia.automationRef ? ROTINAS_DO_SISTEMA.roboDoSocietario : null),
       itens: (instancia?.items ?? [])
         .slice()
         .sort((a, b) => a.templateItem.position - b.templateItem.position)

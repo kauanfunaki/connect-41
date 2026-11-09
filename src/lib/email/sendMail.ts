@@ -955,8 +955,22 @@ export type SendNovidadeNoProcessoEmailInput = {
   destinatarios: { email: string; nome: string }[];
   processId: string;
   processoNome: string;
-  motivo: "mensagem" | "documento";
+  motivo: "mensagem" | "documento" | "concluido";
 };
+
+// O texto de cada motivo. "concluido" (09/11/2026) é o envio ao cliente no fim
+// do processo, feito pelo robô: só avisa e manda o link da tela do processo,
+// onde estão os documentos — arquivo nenhum vai anexo, pela mesma régua.
+const NOVIDADE_NO_PROCESSO = {
+  mensagem: { assunto: "Nova mensagem no processo", frase: "A equipe deixou uma mensagem no processo", fim: ".", botao: "Abrir no portal" },
+  documento: { assunto: "Novo documento no processo", frase: "A equipe anexou um documento no processo", fim: ".", botao: "Abrir no portal" },
+  concluido: {
+    assunto: "Processo concluído:",
+    frase: "A equipe concluiu o processo",
+    fim: ". Os documentos estão no portal, na página do processo.",
+    botao: "Ver os documentos no portal",
+  },
+} as const;
 
 // Mensagem ou documento da equipe dentro de um processo do Societário. Mesma
 // régua da conversa livre: o e-mail diz que há novidade e em qual processo; o
@@ -965,16 +979,16 @@ export async function sendNovidadeNoProcessoEmail(input: SendNovidadeNoProcessoE
   const baseUrl = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   const marca = await marcaDoEmail(input.tenantId);
   const url = `${baseUrl}/portal/processos/${input.processId}`;
-  const oQue = input.motivo === "mensagem" ? "deixou uma mensagem" : "anexou um documento";
+  const texto = NOVIDADE_NO_PROCESSO[input.motivo];
   const mensagens = input.destinatarios.map((d) => ({
     to: d.email,
-    subject: `${input.motivo === "mensagem" ? "Nova mensagem" : "Novo documento"} no processo ${input.processoNome}`,
+    subject: `${texto.assunto} ${input.processoNome}`,
     html: emailShell(
       `
     <p class="email-text" style="font-size:14px; line-height:1.6; margin:0 0 16px; font-family:Arial,Helvetica,sans-serif;">
-      Olá, ${escapeHtml(d.nome)}. A equipe ${oQue} no processo <strong>${escapeHtml(input.processoNome)}</strong>.
+      Olá, ${escapeHtml(d.nome)}. ${texto.frase} <strong>${escapeHtml(input.processoNome)}</strong>${texto.fim}
     </p>
-    ${botaoDoEmail(url, "Abrir no portal", marca)}
+    ${botaoDoEmail(url, texto.botao, marca)}
   `,
       "Portal do cliente",
       marca

@@ -30,6 +30,13 @@ describe("textoDoAviso", () => {
     expect(d.title).toBe("Novo documento no processo");
   });
 
+  it("no fim do processo, diz que concluiu e leva à tela dele, onde estão os documentos", () => {
+    const t = textoDoAviso({ tipo: "processo", motivo: "concluido", processoNome: "Constituição — ACME", processId: "p1" });
+    expect(t.title).toBe("Processo concluído");
+    expect(t.body).toBe("Constituição — ACME");
+    expect(t.url).toBe("/portal/processos/p1");
+  });
+
   it("na aprovação, leva só a contagem — e concorda em número", () => {
     expect(textoDoAviso({ tipo: "aprovacao", quantidade: 1 }).title).toBe("Conta a pagar aguardando aprovação");
     expect(textoDoAviso({ tipo: "aprovacao", quantidade: 4 }).title).toBe("4 contas a pagar aguardando aprovação");
