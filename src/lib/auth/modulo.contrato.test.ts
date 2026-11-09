@@ -38,6 +38,8 @@ const PASTAS = [
   "planejamento-tributario",
   // Revisão do fechamento (05/11/2026): nasceu com o gate.
   "revisao-contabil",
+  // Contábil Core (09/11/2026): nasceu com o gate.
+  "contabil-core",
 ];
 
 function arquivos(dir: string): string[] {
