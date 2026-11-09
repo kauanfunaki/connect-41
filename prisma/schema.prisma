@@ -2509,6 +2509,8 @@ model Pipeline {
   items                PipelineItem[]
   recurringObligations RecurringObligation[]
   modelosDeObrigacao   ModeloDeObrigacao[]
+  /// Os assuntos das solicitações que viram cartão nesta lista (09/11/2026).
+  assuntosDeSolicitacao ServiceRequestSubject[]
 
   @@index([tenantId, sectorCode])
   @@index([spaceId])
@@ -2571,11 +2573,16 @@ model PipelineItem {
   // futura, não duplicar o motor de RecurringObligation aqui.
   recurring            Boolean             @default(false)
   recurrenceFrequency  RecurringFrequency?
+  /// A solicitação do cliente que este cartão acompanha (09/11/2026). Única:
+  /// um cartão por solicitação, e é o banco que barra o segundo. A solicitação
+  /// manda na coluna do cartão (ver src/lib/solicitacoes/cartao.ts).
+  serviceRequestId     String?             @unique
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
   tenant      Tenant                 @relation(fields: [tenantId], references: [id])
   pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
+  serviceRequest ServiceRequest?     @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
   stage       PipelineStage          @relation(fields: [stageId], references: [id])
   parent      PipelineItem?          @relation("SubTasks", fields: [parentItemId], references: [id], onDelete: Cascade)
   subtasks    PipelineItem[]         @relation("SubTasks")
@@ -4909,11 +4916,15 @@ model ServiceRequestSubject {
   responseDays Int
   active       Boolean  @default(true)
   order        Int      @default(0)
+  /// A lista do setor em que a solicitação deste assunto vira cartão
+  /// (09/11/2026). Nula = não vira cartão, o padrão. Apagar a lista desliga.
+  cardPipelineId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id])
-  requests ServiceRequest[]
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  requests     ServiceRequest[]
+  cardPipeline Pipeline?        @relation(fields: [cardPipelineId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, label])
   @@index([tenantId, active, order])
@@ -4953,6 +4964,8 @@ model ServiceRequest {
   closedBy       User?                      @relation("ServiceRequestClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
   messages       ServiceRequestMessage[]
   attachments    ServiceRequestAttachment[]
+  /// O cartão no quadro do setor, quando o assunto pede (09/11/2026).
+  cartao         PipelineItem?
 
   @@unique([tenantId, number])
   @@index([tenantId, status, sectorCode])

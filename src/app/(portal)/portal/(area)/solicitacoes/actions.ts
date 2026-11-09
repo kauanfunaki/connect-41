@@ -21,6 +21,7 @@ import { validarResposta } from "@/lib/financeiro/pendencias/regras";
 import { anexosDaSolicitacao } from "@/lib/solicitacoes/armazenamento";
 import { somarDiasUteis, transicao, validarAbertura } from "@/lib/solicitacoes/regras";
 import { avisarEquipeDaSolicitacao, responsavelDaEmpresaNoSetor } from "@/lib/solicitacoes/avisos";
+import { criarCartaoDaSolicitacao, moverCartaoDaSolicitacao } from "@/lib/solicitacoes/cartaoServidor";
 import { ASSUNTO_DA_SUGESTAO, validarSugestao } from "@/lib/solicitacoes/sugestao";
 
 const MODULO = "portal_solicitacoes";
@@ -148,6 +149,10 @@ async function gravarSolicitacao(
     throw new Error("Não foi possível numerar a solicitação.");
   }
 
+  // O cartão no quadro do setor, se o assunto pede (09/11/2026). Depois de
+  // gravada: falha no quadro não chega ao cliente.
+  await criarCartaoDaSolicitacao(cliente.tenantId, criada.id);
+
   await avisarEquipeDaSolicitacao(
     {
       tenantId: cliente.tenantId,
@@ -223,6 +228,9 @@ export async function responderSolicitacaoCliente(formData: FormData): Promise<R
     throw err;
   }
 
+  // A resposta do cliente devolve a vez à equipe (ou reabre a concluída): o cartão vai junto.
+  if (t.novo !== s.status) await moverCartaoDaSolicitacao(cliente.tenantId, s.id, null);
+
   await avisarEquipeDaSolicitacao(
     {
       tenantId: cliente.tenantId,
@@ -261,6 +269,8 @@ export async function cancelarSolicitacaoCliente(id: string): Promise<{ error: s
     data: { status: t.novo, closedAt: new Date(), closedById: null },
   });
   if (mudou.count !== 1) return { error: "A solicitação acabou de mudar — atualize a página." };
+
+  await moverCartaoDaSolicitacao(cliente.tenantId, s.id, null);
 
   await avisarEquipeDaSolicitacao(
     {

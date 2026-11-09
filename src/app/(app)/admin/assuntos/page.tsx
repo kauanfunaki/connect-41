@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, SquareKanban } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getActiveSectors, getSectorMaps } from "@/lib/sectors";
 import { garantirAssuntosPadrao } from "@/lib/solicitacoes/assuntos";
+import { listasParaOsAssuntos } from "@/lib/solicitacoes/cartaoServidor";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
@@ -24,14 +25,18 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
   const { novo, editar } = await searchParams;
 
   await garantirAssuntosPadrao(ctx.tenantId);
-  const [assuntos, { labels }, ativos] = await Promise.all([
+  const [assuntos, { labels }, ativos, listas] = await Promise.all([
     getPrisma().serviceRequestSubject.findMany({
       where: { tenantId: ctx.tenantId },
       orderBy: [{ active: "desc" }, { order: "asc" }, { label: "asc" }],
-      include: { _count: { select: { requests: true } } },
+      include: {
+        _count: { select: { requests: true } },
+        cardPipeline: { select: { name: true, active: true, space: { select: { name: true } } } },
+      },
     }),
     getSectorMaps(ctx.tenantId),
     getActiveSectors(ctx.tenantId),
+    listasParaOsAssuntos(ctx.tenantId),
   ]);
   const setores = ativos.map((s) => ({ value: s.code, label: s.label }));
   const emEdicao = editar ? assuntos.find((a) => a.id === editar) : undefined;
@@ -61,6 +66,17 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
                 {labels[a.sectorCode] ?? a.sectorCode} · responde em até {a.responseDays} {a.responseDays === 1 ? "dia útil" : "dias úteis"} ·{" "}
                 {a._count.requests} {a._count.requests === 1 ? "solicitação" : "solicitações"}
               </p>
+              {/* Onde a solicitação vira cartão (09/11/2026) — só quando liga:
+                  "não vira" é o padrão e repetido em toda linha seria ruído. */}
+              {a.cardPipeline && (
+                <p className="flex items-center gap-1.5 text-fs-2 text-fg-secondary mt-0.5 min-w-0">
+                  <SquareKanban size={13} aria-hidden className="flex-shrink-0 text-fg-muted" />
+                  <span className="truncate" title={`${a.cardPipeline.space.name} › ${a.cardPipeline.name}`}>
+                    Vira cartão em {a.cardPipeline.space.name} › {a.cardPipeline.name}
+                    {!a.cardPipeline.active && " (lista desativada: não cria cartão)"}
+                  </span>
+                </p>
+              )}
             </div>
             <AcoesDoAssunto id={a.id} nome={a.label} ativo={a.active} alternar={alternarAssunto.bind(null, a.id)} />
           </div>
@@ -69,7 +85,7 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
 
       {novo === "1" && (
         <PainelDeCadastro titulo="Novo assunto" voltarPara="/admin/assuntos">
-          <AssuntoForm action={criarAssunto} cancelHref="/admin/assuntos" setores={setores} />
+          <AssuntoForm action={criarAssunto} cancelHref="/admin/assuntos" setores={setores} listas={listas} />
         </PainelDeCadastro>
       )}
       {emEdicao && (
@@ -79,12 +95,14 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
             action={atualizarAssunto}
             cancelHref="/admin/assuntos"
             setores={setores}
+            listas={listas}
             valores={{
               id: emEdicao.id,
               label: emEdicao.label,
               description: emEdicao.description,
               sectorCode: emEdicao.sectorCode,
               responseDays: emEdicao.responseDays,
+              cardPipelineId: emEdicao.cardPipelineId,
             }}
           />
         </PainelDeCadastro>

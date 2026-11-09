@@ -35,8 +35,8 @@ type Props = {
   /** O "+ Adicionar subatividade" de cada nível da Lista (06/11/2026). */
   createSubtaskAction: (parentItemId: string, title: string) => Promise<{ error: string } | void>;
   priorityAction: (itemId: string, userId: string, priority: number) => Promise<void>;
-  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<void>;
-  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<{ error: string } | void>;
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<{ error: string } | void>;
   /** Só a visão de lista oferece excluir; o quadro Kanban continua sem. */
   deleteAction?: (itemId: string) => Promise<void>;
 };

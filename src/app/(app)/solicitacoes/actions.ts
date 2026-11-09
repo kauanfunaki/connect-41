@@ -21,6 +21,7 @@ import { anexosDaSolicitacao } from "@/lib/solicitacoes/armazenamento";
 import { podeAgirNaSolicitacao, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { contarNovasDaEquipe } from "@/lib/solicitacoes/consultas";
 import { transicao, DEPOIS_DA_RESPOSTA, type AcaoNaSolicitacao, type DepoisDaResposta } from "@/lib/solicitacoes/regras";
+import { moverCartaoDaSolicitacao } from "@/lib/solicitacoes/cartaoServidor";
 import {
   avisarClienteDaSolicitacao,
   avisarEquipeDaSolicitacao,
@@ -129,6 +130,9 @@ export async function responderSolicitacaoEquipe(formData: FormData): Promise<Re
     throw err;
   }
 
+  // A solicitação manda na coluna do cartão do quadro (09/11/2026).
+  if (t && t.ok && t.novo !== s.status) await moverCartaoDaSolicitacao(ctx.tenantId, s.id, userId);
+
   // "Guardar também em Arquivos": cópia na pasta escolhida, depois de gravado.
   const avisoDaCopia = await guardarTambemNosArquivos(ctx, formData, s.companyId, arquivos);
 
@@ -176,6 +180,10 @@ async function mudarStatus(id: string, acao: Extract<AcaoNaSolicitacao, "ASSUMIR
     data: dados,
   });
   if (mudou.count !== 1) return { error: "A solicitação acabou de mudar — atualize a página." };
+
+  // O cartão do quadro vai para a coluna do status novo (09/11/2026). Quando
+  // foi o próprio cartão que chegou à concluída (`moverItem`), ele já está lá.
+  if (t.novo !== s.status) await moverCartaoDaSolicitacao(ctx.tenantId, s.id, userId);
 
   let aviso: string | null = null;
   if (acao === "CONCLUIR") {

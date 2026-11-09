@@ -318,7 +318,7 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
   const prisma = getPrisma();
   const pipeline = await prisma.pipeline.findFirst({
     where: { id: pipelineId, tenantId },
-    include: { space: true, _count: { select: { items: true, recurringObligations: true, modelosDeObrigacao: true } } },
+    include: { space: true, _count: { select: { items: true, recurringObligations: true, modelosDeObrigacao: true, assuntosDeSolicitacao: true } } },
   });
   if (!pipeline) return { error: "Tarefa não encontrada." };
   if (!canManageSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para excluir esta tarefa." };
@@ -338,6 +338,11 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
   // atividades da carteira nesta tarefa, e o banco recusa apagá-la por baixo.
   if (pipeline._count.modelosDeObrigacao > 0) {
     return { error: "Esta tarefa é destino de obrigações por regime. Aponte-as para outra tarefa antes de excluí-la." };
+  }
+  // E para os assuntos das solicitações que viram cartão nela (09/11/2026): o
+  // banco desligaria o assunto calado, e o setor deixaria de receber os cartões.
+  if (pipeline._count.assuntosDeSolicitacao > 0) {
+    return { error: "Solicitações de clientes viram cartão nesta tarefa. Mude a lista dos assuntos em Configurações › Portal do cliente › Assuntos das solicitações antes de excluí-la." };
   }
 
   try {

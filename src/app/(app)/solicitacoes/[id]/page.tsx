@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { SquareKanban } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { notFound } from "next/navigation";
-import { getAuthContext } from "@/lib/auth/context";
+import { canViewSector, getAuthContext } from "@/lib/auth/context";
+import { cartaoDaSolicitacao } from "@/lib/solicitacoes/cartaoServidor";
+import { TOM_DA_ETAPA } from "@/lib/kanban/camposDaTarefa";
+import { Selo } from "@/components/ui/Selo";
 import { isModuleEnabled } from "@/lib/modules";
 import { getActiveSectors, getSectorMaps } from "@/lib/sectors";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
@@ -33,10 +37,11 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
   // Setor alheio responde "não encontrada", igual a uma que não existe.
   if (!s || !podeVerSolicitacao(ctx, { sectorCode: s.setor, assigneeId: s.assigneeId })) notFound();
   const podeAgir = podeAgirNaSolicitacao(ctx, { sectorCode: s.setor, assigneeId: s.assigneeId });
-  const [ativos, { labels }, destinos] = await Promise.all([
+  const [ativos, { labels }, destinos, cartao] = await Promise.all([
     getActiveSectors(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     podeAgir ? destinosDaEmpresa(ctx, s.empresaId) : Promise.resolve(null),
+    cartaoDaSolicitacao(ctx.tenantId, s.id),
   ]);
   const aberta = emAberto(s.status);
 
@@ -89,6 +94,26 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
                 value={`${formatInstantDateTime(s.encerradaEm)}${s.encerradaPor ? ` · ${s.encerradaPor}` : " · pelo cliente"}`}
                 className="sm:col-span-3"
               />
+            )}
+            {/* O cartão no quadro do setor, quando o assunto liga (09/11/2026).
+                Quem não vê o setor da lista lê onde ele está, sem o link. */}
+            {cartao && (
+              <InfoRow label="Cartão no quadro" className="sm:col-span-3">
+                <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                  {canViewSector(ctx, cartao.sectorCode) ? (
+                    <Link href={cartao.href} title={`Abrir o cartão em ${cartao.lista}`} className="inline-flex items-center gap-1.5 text-brand hover:underline min-w-0 max-w-full">
+                      <SquareKanban size={14} aria-hidden className="flex-shrink-0" />
+                      <span className="truncate">{cartao.lista}</span>
+                    </Link>
+                  ) : (
+                    <span title={cartao.lista} className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
+                      <SquareKanban size={14} aria-hidden className="flex-shrink-0 text-fg-muted" />
+                      <span className="truncate">{cartao.lista}</span>
+                    </span>
+                  )}
+                  <Selo tom={TOM_DA_ETAPA[cartao.colunaTipo]}>{cartao.coluna}</Selo>
+                </span>
+              </InfoRow>
             )}
           </div>
           {podeAgir && (

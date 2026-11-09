@@ -39,8 +39,8 @@ type Props = {
   noLimite?: boolean;
   createAction: (title: string) => Promise<{ error: string } | void>;
   deleteAction: (id: string) => Promise<void>;
-  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<void>;
-  reabrirAction: (pipelineId: string, itemId: string) => Promise<void>;
+  concluirAction: (pipelineId: string, itemId: string, comSubatividades?: boolean) => Promise<{ error: string } | void>;
+  reabrirAction: (pipelineId: string, itemId: string) => Promise<{ error: string } | void>;
 };
 
 const PRIORITY_COLOR: Record<number, string> = {
@@ -107,8 +107,12 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
               type="button"
               disabled={!canAct}
               onClick={() => {
-                if (s.isTerminal) startTransition(() => reabrirAction(pipelineId, s.id));
-                else concluir({ nome: s.title, abertas: s.abertasAbaixo, concluir: (junto) => concluirAction(pipelineId, s.id, junto) });
+                if (s.isTerminal) {
+                  startTransition(async () => {
+                    const r = await reabrirAction(pipelineId, s.id);
+                    if (r && "error" in r) toast.error(r.error);
+                  });
+                } else concluir({ nome: s.title, abertas: s.abertasAbaixo, concluir: (junto) => concluirAction(pipelineId, s.id, junto) });
               }}
               aria-label={s.isTerminal ? "Reabrir subatividade" : "Concluir subatividade"}
               className="group/dot flex-shrink-0 transition-transform hover:scale-125 disabled:cursor-default disabled:hover:scale-100"

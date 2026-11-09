@@ -3,8 +3,23 @@
 // preencher. Só regra, para o teste e para o painel.
 
 import { formatCalendarDate } from "@/lib/format";
+import type { StageType } from "@/generated/prisma/enums";
+import type { TomDoSelo } from "@/components/ui/Selo";
 
 export const VAZIO = "Vazio";
+
+/**
+ * A situação da tarefa no `Selo`, pelo tipo da etapa (15/10/2026): era um
+ * botão vermelho em caixa alta em qualquer etapa, até em "Concluído" — e
+ * vermelho é só para o que está em perigo. Aqui, e não no painel, desde
+ * 09/11/2026: a tela da solicitação mostra a coluna do cartão no mesmo tom.
+ */
+export const TOM_DA_ETAPA: Record<StageType, TomDoSelo> = {
+  NOT_STARTED: "neutro",
+  IN_PROGRESS: "marca",
+  PENDING: "atencao",
+  DONE: "sucesso",
+};
 
 /**
  * Prioridade 0 é "sem prioridade" — a tarefa nasce assim. Era "Normal", e a

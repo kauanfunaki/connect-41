@@ -15,7 +15,11 @@ import { CompletionBanner } from "@/components/kanban/CompletionBanner";
 import { AtalhosDoDetalhe, type AtalhoDoDetalhe } from "@/components/kanban/AtalhosDoDetalhe";
 import { DeleteTaskButton } from "@/components/kanban/DeleteTaskButton";
 import { Button } from "@/components/ui/Button";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight, Inbox } from "lucide-react";
+import { SeloDaSolicitacao } from "@/components/solicitacoes/SelosDaSolicitacao";
+import { podeVerSolicitacao } from "@/lib/solicitacoes/acesso";
+import { emAberto } from "@/lib/solicitacoes/regras";
+import { isModuleEnabled } from "@/lib/modules";
 import { aceitaSubatividade, ancestrais, contarFilhas, descendentes, montarArvore } from "@/lib/kanban/subatividades";
 import {
   moverItem,
@@ -111,11 +115,19 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         tags: { select: { tagId: true } },
         assignees: { select: { userId: true } },
         watchers: { select: { userId: true } },
+        // A solicitação do cliente que o cartão acompanha (09/11/2026).
+        serviceRequest: { select: { id: true, number: true, status: true, sectorCode: true, assigneeId: true } },
       },
     }),
   ]);
 
   if (!pipeline || !item) notFound();
+
+  // O botão da solicitação só leva a ela quem pode abri-la: com o módulo
+  // desligado ou a solicitação encaminhada a outro setor, a tela seria 404.
+  const solicitacao = item.serviceRequest;
+  const abreASolicitacao =
+    !!solicitacao && podeVerSolicitacao(ctx, solicitacao) && (await isModuleEnabled(tenantId, "portal_solicitacoes"));
 
   // Excluir card, subtarefa, comentário e item de checklist é só do
   // administrador desde 13/10/2026 — era o gestor do setor (canManageSector).
@@ -367,17 +379,39 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         </div>
         {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
-        {entity && (
+        {(entity || solicitacao) && (
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            {item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
-            <Button
-              href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
-              variant="secondary"
-              size="xs"
-            >
-              Ver ficha completa <ArrowRight size={11} />
-            </Button>
+            {entity && item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
+            {entity && (
+              <Button
+                href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
+                variant="secondary"
+                size="xs"
+              >
+                Ver ficha completa <ArrowRight size={11} />
+              </Button>
+            )}
+            {/* O cartão nasceu de uma solicitação do cliente (09/11/2026): o
+                caminho até ela, com a situação, ao lado da ficha da empresa. */}
+            {solicitacao &&
+              (abreASolicitacao ? (
+                <Button href={`/solicitacoes/${solicitacao.id}`} variant="secondary" size="xs">
+                  <Inbox size={11} aria-hidden /> Solicitação nº {solicitacao.number}
+                </Button>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-fs-2 text-fg-muted">
+                  <Inbox size={11} aria-hidden /> Solicitação nº {solicitacao.number}
+                </span>
+              ))}
+            {solicitacao && <SeloDaSolicitacao status={solicitacao.status} lado="EQUIPE" />}
           </div>
+        )}
+        {solicitacao && (
+          <p className="mt-1.5 text-fs-2 text-fg-muted">
+            {emAberto(solicitacao.status)
+              ? "A coluna deste cartão segue a situação da solicitação. Pôr na coluna concluída conclui a solicitação e avisa o cliente."
+              : "A solicitação está encerrada, e o cartão fica na coluna concluída. Para reabrir o cartão, reabra a solicitação."}
+          </p>
         )}
       </div>
 

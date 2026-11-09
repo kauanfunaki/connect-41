@@ -6,6 +6,10 @@
 //
 // Não há excluir: solicitações antigas apontam para o assunto, então ele é
 // desativado (some da lista do cliente e continua no histórico).
+//
+// O assunto também diz se a solicitação vira cartão no quadro do setor, e em
+// qual lista (09/11/2026, `cardPipelineId`). A lista tem de ser do setor que
+// atende: o cartão é o trabalho de quem recebe a solicitação.
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -15,6 +19,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getActiveSectors } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
 import { validarAssunto } from "@/lib/solicitacoes/regras";
+import { listaDoAssunto } from "@/lib/solicitacoes/cartaoServidor";
 
 export type AssuntoState = { error: string } | null;
 
@@ -33,25 +38,34 @@ async function setorAtivo(tenantId: string, code: string): Promise<boolean> {
   return (await getActiveSectors(tenantId)).some((s) => s.code === code);
 }
 
+/** A lista do cartão vinda do formulário, conferida. `undefined` = escolha que não vale. */
+async function listaDoFormulario(tenantId: string, form: FormData, sectorCode: string) {
+  return listaDoAssunto(tenantId, String(form.get("cardPipelineId") ?? "").trim(), sectorCode);
+}
+
+const LISTA_INVALIDA = "Escolha uma lista dos Quadros do setor que atende — ou deixe sem cartão.";
+
 export async function criarAssunto(_prev: AssuntoState, form: FormData): Promise<AssuntoState> {
   const ctx = await administrador();
   if (!ctx) return { error: "Só administrador cadastra assuntos." };
   const v = validarAssunto(campos(form));
   if (!v.ok) return { error: v.erro };
   if (!(await setorAtivo(ctx.tenantId, v.dados.sectorCode))) return { error: "Escolha um setor ativo." };
+  const cardPipelineId = await listaDoFormulario(ctx.tenantId, form, v.dados.sectorCode);
+  if (cardPipelineId === undefined) return { error: LISTA_INVALIDA };
 
   const prisma = getPrisma();
   const ultimo = await prisma.serviceRequestSubject.aggregate({ where: { tenantId: ctx.tenantId }, _max: { order: true } });
   try {
     await prisma.serviceRequestSubject.create({
-      data: { tenantId: ctx.tenantId, ...v.dados, order: (ultimo._max.order ?? -1) + 1 },
+      data: { tenantId: ctx.tenantId, ...v.dados, cardPipelineId, order: (ultimo._max.order ?? -1) + 1 },
     });
   } catch (err) {
     if (isPrismaUniqueError(err)) return { error: `Já existe um assunto "${v.dados.label}".` };
     throw err;
   }
 
-  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.create", entityType: "ServiceRequestSubject", metadata: { label: v.dados.label, setor: v.dados.sectorCode } });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.create", entityType: "ServiceRequestSubject", metadata: { label: v.dados.label, setor: v.dados.sectorCode, cartao: cardPipelineId !== null } });
   revalidatePath("/admin/assuntos");
   redirect("/admin/assuntos");
 }
@@ -59,7 +73,8 @@ export async function criarAssunto(_prev: AssuntoState, form: FormData): Promise
 /**
  * Mudar o setor do assunto vale para as próximas solicitações: as abertas
  * continuam no setor em que estão (foram encaminhadas ou estão com alguém).
- * O mesmo para o prazo, que foi prometido ao cliente na abertura.
+ * O mesmo para o prazo, que foi prometido ao cliente na abertura, e para a
+ * lista do cartão: ligar agora não cria cartão para as que já chegaram.
  */
 export async function atualizarAssunto(_prev: AssuntoState, form: FormData): Promise<AssuntoState> {
   const ctx = await administrador();
@@ -68,18 +83,20 @@ export async function atualizarAssunto(_prev: AssuntoState, form: FormData): Pro
   const v = validarAssunto(campos(form));
   if (!v.ok) return { error: v.erro };
   if (!(await setorAtivo(ctx.tenantId, v.dados.sectorCode))) return { error: "Escolha um setor ativo." };
+  const cardPipelineId = await listaDoFormulario(ctx.tenantId, form, v.dados.sectorCode);
+  if (cardPipelineId === undefined) return { error: LISTA_INVALIDA };
 
   const prisma = getPrisma();
   const existe = await prisma.serviceRequestSubject.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
   if (!existe) return { error: "Assunto não encontrado." };
   try {
-    await prisma.serviceRequestSubject.update({ where: { id }, data: v.dados });
+    await prisma.serviceRequestSubject.update({ where: { id }, data: { ...v.dados, cardPipelineId } });
   } catch (err) {
     if (isPrismaUniqueError(err)) return { error: `Já existe um assunto "${v.dados.label}".` };
     throw err;
   }
 
-  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.update", entityType: "ServiceRequestSubject", entityId: id, metadata: { label: v.dados.label, setor: v.dados.sectorCode } });
+  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "solicitacao_assunto.update", entityType: "ServiceRequestSubject", entityId: id, metadata: { label: v.dados.label, setor: v.dados.sectorCode, cartao: cardPipelineId !== null } });
   revalidatePath("/admin/assuntos");
   redirect("/admin/assuntos");
 }
