@@ -20,6 +20,7 @@ import { githubFetch } from "@/lib/github/browser";
 import { TYPE_LABELS, CONTRIBUTION_TYPES, type ContributionType, type DashboardView, type CalendarDay, type DayEvent, type HeatmapUser, type RepositoryHeatmap } from "@/lib/github/types";
 import { dateLabel } from "@/lib/github/calendar";
 import { corDaPessoa, COR_SEM_TIME, type ModoDeCor, type Paleta } from "@/lib/github/cores";
+import { timesDoRepositorio } from "@/lib/github/atividadeDoTime";
 import { ContributionCalendar } from "./ContributionCalendar";
 import { DeveloperAvatar, DeveloperName, GithubOverview, SeloDoTime } from "./GithubOverview";
 import { GithubTimes } from "./GithubTimes";
@@ -69,6 +70,9 @@ function GithubShell({ view, suppliedQuery, canConfigure, conectar, children }: 
 function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }: { initialQuery: string; canConfigure: boolean; conectar: boolean; view: Exclude<View, "teams"> }) {
   // `cor` (pessoa ou time) só muda a pintura: sai da consulta para não reler o painel.
   const modo: ModoDeCor = new URLSearchParams(suppliedQuery).get("cor") === "time" ? "time" : "pessoa";
+  // Com UM time escolhido (09/11/2026), pintar pelo time deixaria tudo de uma cor só:
+  // calendários, cartões e legendas passam a mostrar as pessoas daquele time.
+  const cores: ModoDeCor = modo === "time" && new URLSearchParams(suppliedQuery).get("time") ? "pessoa" : modo;
   const requestParams = new URLSearchParams(suppliedQuery); requestParams.set("view", view); requestParams.delete("cor");
   const initialQuery = requestParams.toString(), path = PATHS[view];
   const [data, setData] = useState<DashboardView | null>(null), [error, setError] = useState<string | null>(null);
@@ -104,9 +108,9 @@ function Dashboard({ initialQuery: suppliedQuery, canConfigure, conectar, view }
     {data?.message && !loading && <Aviso tom="atencao" className="mb-4">{data.message}{canConfigure && <> <Link href="/admin/integracoes?integracao=github" className="font-medium underline">Abrir Integrações</Link></>}</Aviso>}
     {data && !data.message && !loading && <>
       {!data.all && !data.linked && <Aviso tom="info" className="mb-4">Ninguém vinculou a conta GitHub ainda, por isso o painel está vazio. Cada pessoa do Tech vincula a sua em <Link href="/configuracoes#github" className="font-medium underline">Sua conta</Link>.</Aviso>}
-      {view === "general" ? <GithubOverview data={data} query={suppliedQuery} modo={modo} onDay={openTeamDay} />
-        : view === "developers" ? <Developers data={data} filtered={filtered} canConfigure={canConfigure} onDay={openUserDay} pageHref={pageHref} modo={modo} />
-          : <Repositories data={data} onDay={openRepositoryDay} pageHref={pageHref} modo={modo} />}
+      {view === "general" ? <GithubOverview data={data} query={suppliedQuery} modo={cores} onDay={openTeamDay} />
+        : view === "developers" ? <Developers data={data} filtered={filtered} canConfigure={canConfigure} onDay={openUserDay} pageHref={pageHref} modo={cores} />
+          : <Repositories data={data} onDay={openRepositoryDay} pageHref={pageHref} modo={cores} />}
     </>}
     {detail && detailTitle && data && !loading && <DayDetails key={`${detail.kind}:${detail.id}:${detail.day}`} detail={detail} title={detailTitle} query={initialQuery} timezone={data.timezone} onClose={() => setDetail(null)} />}
   </GithubShell>;
@@ -179,7 +183,14 @@ function Repositories({ data, onDay, pageHref, modo }: { data: DashboardView; on
 }
 
 function RepositoryCard({ repo, from, to, onDay, paleta, modo }: { repo: RepositoryHeatmap; from: string; to: string; onDay: (id: string, day: string) => void; paleta: Paleta; modo: ModoDeCor }) {
-  const top = repo.contributors[0]?.total ?? 0;
+  // Com "Times · todos" (09/11/2026), uma linha por time com a soma das pessoas dele.
+  const linhas = modo === "time"
+    ? timesDoRepositorio(repo.contributors, paleta).map(time => ({ id: time.id || "sem-time", total: time.total, counts: time.counts, cor: time.cor,
+      selo: <SeloDoTime nome={time.nome} cor={time.cor} />, nome: <>{time.nome}<span className={styles.developerName}> — {time.pessoas.length} {time.pessoas.length === 1 ? "pessoa" : "pessoas"}</span></> }))
+    : repo.contributors.map(person => ({ id: person.id, total: person.total, counts: person.counts as Record<string, number>, cor: corDaPessoa(person.id, paleta, modo),
+      selo: <DeveloperAvatar login={person.login} />, nome: <DeveloperName login={person.login} name={person.name} /> }));
+  const top = Math.max(0, ...linhas.map(linha => linha.total));
+  const porQuem = modo === "time" ? "time" : "desenvolvedor";
   return <section className={styles.developer}>
     <div className={styles.developerHeading}><div className={styles.developerIdentity}><span aria-hidden className={styles.avatar}><FolderGit2 size={16} /></span><div>
       <h2>{repo.fullName}{repo.private && <Lock size={13} aria-label="Privado" className="ml-2 inline align-baseline text-fg-muted" />}</h2>
@@ -188,15 +199,15 @@ function RepositoryCard({ repo, from, to, onDay, paleta, modo }: { repo: Reposit
     </div>
     <div className={styles.repositoryBody}>
       <ContributionCalendar label={repo.fullName} id={repo.id} from={from} to={to} days={repo.days} onDay={onDay} paleta={paleta} modo={modo} />
-      <div className={styles.contributors} aria-label={`Contribuições por desenvolvedor em ${repo.fullName}`}>
-        <h3>Por desenvolvedor</h3>
-        {!repo.contributors.length ? <p className="text-helper text-fg-muted">Nenhuma contribuição no período.</p>
-          : repo.contributors.map(person => <div key={person.id} className={styles.contributor}
-            title={CONTRIBUTION_TYPES.map(type => `${TYPE_LABELS[type]}: ${person.counts[type]}`).join(" · ")}>
-            <DeveloperAvatar login={person.login} />
-            <span className={styles.contributorName}><DeveloperName login={person.login} name={person.name} /></span>
-            <strong className="tabular-nums">{Number(person.total).toLocaleString("pt-BR")}</strong>
-            <span aria-hidden className={styles.contributorBar}><span style={{ width: `${top ? Math.max(4, person.total / top * 100) : 0}%`, "--bar-color": corDaPessoa(person.id, paleta, modo) } as React.CSSProperties} /></span>
+      <div className={styles.contributors} aria-label={`Contribuições por ${porQuem} em ${repo.fullName}`}>
+        <h3>Por {porQuem}</h3>
+        {!linhas.length ? <p className="text-helper text-fg-muted">Nenhuma contribuição no período.</p>
+          : linhas.map(linha => <div key={linha.id} className={styles.contributor}
+            title={CONTRIBUTION_TYPES.map(type => `${TYPE_LABELS[type]}: ${linha.counts[type] ?? 0}`).join(" · ")}>
+            {linha.selo}
+            <span className={styles.contributorName}>{linha.nome}</span>
+            <strong className="tabular-nums">{Number(linha.total).toLocaleString("pt-BR")}</strong>
+            <span aria-hidden className={styles.contributorBar}><span style={{ width: `${top ? Math.max(4, linha.total / top * 100) : 0}%`, "--bar-color": linha.cor } as React.CSSProperties} /></span>
           </div>)}
       </div>
     </div>

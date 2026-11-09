@@ -27,3 +27,20 @@ export function linhasDaAtividade(leaders: Lider[], paleta: Paleta, modo: ModoDe
   if (modo === "time" && !timeEscolhido) return { tipo: "times", times: timesDaAtividade(leaders, paleta) };
   return { tipo: "pessoas", pessoas: leaders.slice(0, PESSOAS_NO_PAINEL) };
 }
+
+export type Contribuinte = { id: string; total: number; counts: Record<string, number> };
+export type TimeContribuinte<C extends Contribuinte> = { id: string; nome: string; cor: string; total: number; counts: Record<string, number>; pessoas: C[] };
+
+// Aba Repositórios com "Times · todos" (09/11/2026): o "Por desenvolvedor" vira "Por
+// time", somando total e tipos das pessoas de cada time; Sem time por último.
+export function timesDoRepositorio<C extends Contribuinte>(contribuintes: C[], paleta: Paleta): TimeContribuinte<C>[] {
+  const grupos = new Map<string, TimeContribuinte<C>>();
+  for (const pessoa of contribuintes) {
+    const time = paleta.times.find(item => item.id === paleta.pessoas[pessoa.id]?.time), id = time?.id ?? "";
+    const grupo = grupos.get(id) ?? { id, nome: time?.nome ?? "Sem time", cor: time?.cor ?? COR_SEM_TIME, total: 0, counts: {}, pessoas: [] };
+    grupo.total += pessoa.total; grupo.pessoas.push(pessoa);
+    for (const [tipo, n] of Object.entries(pessoa.counts)) grupo.counts[tipo] = (grupo.counts[tipo] ?? 0) + n;
+    grupos.set(id, grupo);
+  }
+  return [...grupos.values()].sort((a, b) => (a.id ? 0 : 1) - (b.id ? 0 : 1) || b.total - a.total);
+}
