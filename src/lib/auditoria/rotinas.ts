@@ -17,6 +17,13 @@ export type RotinaDoSistema = keyof typeof ROTINAS_DO_SISTEMA;
 /** O nome das linhas antigas de rotina, gravadas sem nome nenhum. */
 export const NOME_DO_SISTEMA = "Sistema";
 
+/**
+ * O valor dessas linhas antigas no filtro "Pessoa" (09/11/2026). Não colide com
+ * ninguém: pessoa com conta vai pelo `userId` (um uuid), e quem foi excluído,
+ * por "nome:<nome>".
+ */
+export const PESSOA_DO_SISTEMA = "sistema";
+
 const NOMES = new Set<string>(Object.values(ROTINAS_DO_SISTEMA));
 
 /**

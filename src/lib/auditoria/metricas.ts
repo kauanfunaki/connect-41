@@ -6,7 +6,7 @@
 import { formatInstantTime } from "@/lib/format";
 import { AREAS_DA_AUDITORIA, areaDaAcao, descricaoDaAcao, type ChaveDaAreaDaAuditoria, type TipoDaAcao } from "./acoes";
 import { diaEmSaoPaulo } from "./dias";
-import { ehRotinaDoSistema } from "./rotinas";
+import { NOME_DO_SISTEMA, PESSOA_DO_SISTEMA, ehRotinaDoSistema } from "./rotinas";
 import { dataBR, somarDias } from "@/lib/datas/calendario";
 
 export type ContagemPorAcao = { acao: string; total: number };
@@ -86,14 +86,15 @@ export type OpcaoDePessoa = { valor: string; rotulo: string; total: number; excl
 /**
  * Quem agiu, uma vez por pessoa: o mesmo usuário com nomes diferentes (trocou
  * de nome) soma numa linha só, com o nome atual. Quem foi excluído (sem
- * `userId`) entra pelo nome guardado, com o valor "nome:<nome>".
+ * `userId`) entra pelo nome guardado, com o valor "nome:<nome>". As linhas
+ * antigas de rotina, sem usuário e sem nome, entram como "Sistema" (valor
+ * "sistema"), marcadas como rotina — ficavam de fora do filtro (09/11/2026).
  */
 export function pessoasQueAgiram(atores: readonly Ator[], nomeAtual: ReadonlyMap<string, string>): OpcaoDePessoa[] {
   const porChave = new Map<string, OpcaoDePessoa>();
   for (const a of atores) {
-    const valor = a.userId ?? (a.nome ? `nome:${a.nome}` : null);
-    if (!valor) continue;
-    const rotulo = (a.userId && nomeAtual.get(a.userId)) || a.nome || "Sem nome";
+    const valor = a.userId ?? (a.nome ? `nome:${a.nome}` : PESSOA_DO_SISTEMA);
+    const rotulo = (a.userId && nomeAtual.get(a.userId)) || a.nome || (a.userId ? "Sem nome" : NOME_DO_SISTEMA);
     const atual = porChave.get(valor);
     if (atual) atual.total += a.total;
     else {
@@ -102,4 +103,12 @@ export function pessoasQueAgiram(atores: readonly Ator[], nomeAtual: ReadonlyMap
     }
   }
   return [...porChave.values()].sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { sensitivity: "base" }));
+}
+
+/**
+ * O número "Pessoas que agiram": só gente — robô, agendador e o "Sistema" não
+ * contam. Com uma pessoa escolhida no filtro, só ela (ou nenhuma, se for rotina).
+ */
+export function quantasPessoasAgiram(opcoes: readonly OpcaoDePessoa[], escolhida: string | null): number {
+  return opcoes.filter((p) => !p.rotina && (!escolhida || p.valor === escolhida)).length;
 }

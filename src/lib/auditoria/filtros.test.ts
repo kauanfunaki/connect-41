@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hrefDaAuditoria, hrefDoPeriodo, lerFiltros, temFiltro } from "./filtros";
+import { hrefDaAuditoria, hrefDoPeriodo, lerFiltros, ondeDaPessoa, temFiltro } from "./filtros";
 
 const HOJE = "2026-10-14";
 
@@ -37,5 +37,35 @@ describe("filtros da auditoria na URL", () => {
     expect(hrefDaAuditoria(f)).toBe("/admin/auditoria?tipo=criou&periodo=datas&de=2026-10-01&ate=2026-10-05");
     expect(hrefDoPeriodo(f, "30d")).toBe("/admin/auditoria?tipo=criou&periodo=30d");
     expect(hrefDoPeriodo(f, "7d")).toBe("/admin/auditoria?tipo=criou");
+  });
+
+  it("pessoa 'sistema' vai e volta pela URL", () => {
+    const f = lerFiltros({ area: "fiscal" }, HOJE);
+    const href = hrefDaAuditoria(f, { pessoa: "sistema" });
+    expect(href).toBe("/admin/auditoria?area=fiscal&pessoa=sistema");
+    const lido = lerFiltros(Object.fromEntries(new URLSearchParams(href.split("?")[1])), HOJE);
+    expect(lido.pessoa).toBe("sistema");
+    expect(temFiltro(lido)).toBe(true);
+    expect(hrefDaAuditoria(lido, { pessoa: null })).toBe("/admin/auditoria?area=fiscal");
+  });
+});
+
+describe("filtro de pessoa no banco", () => {
+  it("sem pessoa, sem filtro", () => {
+    expect(ondeDaPessoa(null)).toEqual({});
+  });
+
+  it("quem tem conta pelo userId; quem foi excluído pelo nome guardado", () => {
+    expect(ondeDaPessoa("0b7e2c4a-5d1f-4e8b-9a3c-2f6d8e1b4c7a")).toEqual({ userId: "0b7e2c4a-5d1f-4e8b-9a3c-2f6d8e1b4c7a" });
+    expect(ondeDaPessoa("nome:Rafael Souza")).toEqual({ userId: null, actorName: "Rafael Souza" });
+  });
+
+  it("'sistema': as linhas antigas de rotina, sem usuário e sem nome", () => {
+    expect(ondeDaPessoa("sistema")).toEqual({ userId: null, actorName: null });
+  });
+
+  it("não colide com quem foi excluído com o nome 'Sistema' ou 'sistema'", () => {
+    expect(ondeDaPessoa("nome:Sistema")).toEqual({ userId: null, actorName: "Sistema" });
+    expect(ondeDaPessoa("nome:sistema")).toEqual({ userId: null, actorName: "sistema" });
   });
 });
