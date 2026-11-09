@@ -44,18 +44,24 @@ async function gravar({ ctx, setor }: { ctx: Ctx; setor: Setor }, json: string):
   const geral = (lida.geral ?? []).filter((c) => GERAL.has(c));
   // Dentro de cada menu: só menus que existem (uma tela do catálogo, ou o Apoio
   // do Geral), e chaves curtas — são posições, não dados.
-  const dentro = Object.fromEntries(
-    Object.entries(lida.dentro ?? {})
-      .filter(([mae]) => TELAS.has(mae) || mae === "apoio")
-      .map(([mae, l]) => [mae, l.filter((c) => c.length <= 120).slice(0, 40)] as const)
-      .filter(([, l]) => l.length > 0),
-  );
+  const porMenu = (x: Record<string, string[]> | undefined) =>
+    Object.fromEntries(
+      Object.entries(x ?? {})
+        .filter(([mae]) => TELAS.has(mae) || mae === "apoio")
+        .map(([mae, l]) => [mae, l.filter((c) => c.length <= 120).slice(0, 40)] as const)
+        .filter(([, l]) => l.length > 0),
+    );
+  const dentro = porMenu(lida.dentro);
+  const ocultasDentro = porMenu(lida.ocultasDentro);
+  const ocultasGeral = (lida.ocultasGeral ?? []).filter((c) => GERAL.has(c));
   const ordem = {
     grupos: lida.grupos.filter((g) => GRUPOS.has(g)),
     telas: lida.telas.filter((t) => TELAS.has(t)),
     ...(ocultas.length ? { ocultas } : {}),
     ...(geral.length ? { geral } : {}),
     ...(Object.keys(dentro).length ? { dentro } : {}),
+    ...(ocultasGeral.length ? { ocultasGeral } : {}),
+    ...(Object.keys(ocultasDentro).length ? { ocultasDentro } : {}),
   };
   const chave = { tenantId_sectorCode: { tenantId: ctx.tenantId, sectorCode: setor.code } };
   try {
@@ -75,7 +81,7 @@ async function gravar({ ctx, setor }: { ctx: Ctx; setor: Setor }, json: string):
     action: "sector.menu.ordem",
     entityType: "Sector",
     entityId: setor.id,
-    metadata: { setor: setor.code, grupos: ordem.grupos, telas: ordem.telas, ocultas, geral, dentro },
+    metadata: { setor: setor.code, grupos: ordem.grupos, telas: ordem.telas, ocultas, geral, dentro, ocultasGeral, ocultasDentro },
   });
   revalidatePath("/", "layout");
   return null;

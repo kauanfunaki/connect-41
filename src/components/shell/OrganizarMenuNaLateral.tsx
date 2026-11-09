@@ -17,8 +17,11 @@ import { alternarOculta, moverNaLista, moverNoMenu, ordemDosBlocos, type ListaDo
 // "Restaurar padrão" / "Concluir". Grava na mesma ordem do setor
 // (`SectorMenuOrder`), só o Super Admin, e vale para todos do setor.
 //
-// - O Geral entra também, só para mudar a ordem dentro dele: quem aparece no
-//   Geral continua sendo de Configurações › Setores, então ali não há olho.
+// - O Geral entra também: muda de ordem só dentro dele, e o olho tira o item
+//   do Geral deste setor. Configurações › Setores segue decidindo o que o
+//   setor tem; o olho só esconde do menu.
+// - Dentro de cada menu (as abas com entrada no menu e as telas do Apoio) o
+//   olho também esconde, só ali.
 // - As telas do setor mudam de ordem dentro da lista delas (os blocos, as
 //   telas de um grupo, as filhas de uma tela). Mudar uma tela de grupo, criar
 //   ou renomear seção ficam de fora: os grupos são os temas do catálogo, e a
@@ -48,6 +51,8 @@ export function useOrganizarMenu({
   blocosPadrao,
   ocultasAtuais,
   dentroAtual,
+  ocultasGeralAtual,
+  ocultasDentroAtual,
   geralAtual,
   geralPadrao,
 }: {
@@ -59,6 +64,10 @@ export function useOrganizarMenu({
   ocultasAtuais: string[];
   /** A ordem escolhida do que fica dentro de cada menu. */
   dentroAtual: Record<string, string[]>;
+  /** Os itens do Geral escondidos pelo olho. */
+  ocultasGeralAtual: string[];
+  /** O que está escondido dentro de cada menu (abas e telas do Apoio). */
+  ocultasDentroAtual: Record<string, string[]>;
   /** Os itens do Geral na ordem em que aparecem. */
   geralAtual: ItemDoGeral[];
   /** Os itens do Geral na ordem de sempre (cores juntas). */
@@ -70,6 +79,8 @@ export function useOrganizarMenu({
   const [ocultas, setOcultas] = useState(ocultasAtuais);
   const [geral, setGeral] = useState(geralAtual);
   const [dentro, setDentro] = useState(dentroAtual);
+  const [ocultasGeral, setOcultasGeral] = useState(ocultasGeralAtual);
+  const [ocultasDentro, setOcultasDentro] = useState(ocultasDentroAtual);
   const [mudou, setMudou] = useState(false);
   const [padrao, setPadrao] = useState(false);
   const [aviso, setAviso] = useState("");
@@ -80,6 +91,8 @@ export function useOrganizarMenu({
     setOcultas(ocultasAtuais);
     setGeral(geralAtual);
     setDentro(dentroAtual);
+    setOcultasGeral(ocultasGeralAtual);
+    setOcultasDentro(ocultasDentroAtual);
     setMudou(false);
     setPadrao(false);
     setAviso("");
@@ -104,11 +117,25 @@ export function useOrganizarMenu({
     setAviso(escondida ? `${t.label} sai do menu.` : `${t.label} volta ao menu.`);
   }
 
+  /** O olho de um item do Geral (`mae` ausente) ou de dentro de um menu. */
+  function esconderItem(chave: string, label: string, mae?: string) {
+    const atual = mae ? ocultasDentro[mae] ?? [] : ocultasGeral;
+    const escondida = !atual.includes(chave);
+    const novo = alternarOculta(atual, chave);
+    if (mae) setOcultasDentro((o) => ({ ...o, [mae]: novo }));
+    else setOcultasGeral(novo);
+    setMudou(true);
+    setPadrao(false);
+    setAviso(escondida ? `${label} sai do menu.` : `${label} volta ao menu.`);
+  }
+
   function restaurar() {
     setBlocos(blocosPadrao);
     setOcultas([]);
     setGeral(geralPadrao);
     setDentro({});
+    setOcultasGeral([]);
+    setOcultasDentro({});
     setMudou(true);
     setPadrao(true);
     setAviso("O menu voltou à ordem padrão, com todas as telas. Conclua para gravar.");
@@ -122,7 +149,7 @@ export function useOrganizarMenu({
     startTransition(async () => {
       const r = padrao
         ? await restaurarOrdemDoMenuPeloCodigo(setor.code)
-        : await salvarOrdemDoMenuPeloCodigo(setor.code, JSON.stringify(ordemDosBlocos(blocos, ocultas, geral.map((g) => g.chave), dentro)));
+        : await salvarOrdemDoMenuPeloCodigo(setor.code, JSON.stringify(ordemDosBlocos(blocos, { ocultas, geral: geral.map((g) => g.chave), dentro, ocultasGeral, ocultasDentro })));
       if (r?.error) {
         toast.error(r.error);
         return;
@@ -135,7 +162,10 @@ export function useOrganizarMenu({
   /** O que fica dentro do menu `mae`, na ordem escolhida (ou na que veio). */
   const emOrdem = <T,>(mae: string, itens: readonly T[], chave: (i: T) => string) => pelaOrdem(itens, chave, dentro[mae] ?? []);
 
-  return { aberto, abrir, concluir, restaurar, mover, esconder, emOrdem, blocos, geral, ocultas, salvando, aviso, setor };
+  /** O item está escondido: do Geral (`mae` ausente) ou de dentro de um menu. */
+  const escondido = (chave: string, mae?: string) => (mae ? ocultasDentro[mae] ?? [] : ocultasGeral).includes(chave);
+
+  return { aberto, abrir, concluir, restaurar, mover, esconder, esconderItem, escondido, emOrdem, blocos, geral, ocultas, salvando, aviso, setor };
 }
 
 const chaveDaLista = (l: ListaDoMenu) =>
@@ -167,7 +197,7 @@ export function AvisoDaOrganizacao({ setor }: { setor: string }) {
         Organizando o menu
       </p>
       <p className="mt-1 text-fs-1 leading-snug text-fg-secondary">
-        Segure pelos pontinhos e arraste: cada item muda de ordem só dentro do menu dele. Nas telas de {setor}, o olho esconde a tela sem tirá-la do lugar.
+        Segure pelos pontinhos e arraste: cada item muda de ordem só dentro do menu dele. O olho esconde o item do menu de {setor} sem tirá-lo do lugar.
       </p>
     </div>
   );
@@ -258,16 +288,51 @@ const LINHA = "flex h-9 items-center gap-1.5 rounded-lg border pr-0.5 transition
 
 type Pegador = ReturnType<ReturnType<typeof useArrasto>["pegador"]>;
 
-/** Uma linha sem olho (Geral, abas de uma tela, telas do Apoio). `comoItem`: a linha é a posição na lista. */
-function LinhaSimples({ item, d, comoItem = true }: { item: ItemDentro; d: Pegador | null; comoItem?: boolean }) {
+/** O olho: esconde o item do menu sem tirá-lo do lugar. */
+function Olho({ label, oculta, apagadaPelaMae = false, travado, onClick }: { label: string; oculta: boolean; apagadaPelaMae?: boolean; travado: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      data-nao-arrasta
+      aria-label={`${oculta ? "Mostrar" : "Esconder"} ${label}`}
+      aria-pressed={oculta}
+      title={apagadaPelaMae && !oculta ? "Escondida junto com o item de cima" : undefined}
+      disabled={travado}
+      onClick={onClick}
+      className="grid size-8 flex-shrink-0 place-items-center rounded-md text-fg-secondary transition-colors hover:bg-surface-hover hover:text-fg disabled:opacity-40"
+    >
+      {oculta ? <EyeOff size={15} aria-hidden /> : <Eye size={15} aria-hidden />}
+    </button>
+  );
+}
+
+/**
+ * Uma linha que não é tela do catálogo (Geral, abas de uma tela, telas do
+ * Apoio). `comoItem`: a linha é a posição na lista. Com `olho`, dá para
+ * esconder; `apagada` quando ela ou o item de cima está escondido.
+ */
+function LinhaSimples({
+  item,
+  d,
+  comoItem = true,
+  olho,
+  apagada = false,
+}: {
+  item: ItemDentro;
+  d: Pegador | null;
+  comoItem?: boolean;
+  olho?: React.ReactNode;
+  apagada?: boolean;
+}) {
   return (
     <div
       {...(d ? { ...(comoItem ? d.item : {}), ...d.linha } : {})}
-      className={`${LINHA} border-border bg-surface ${d ? "cursor-grab" : "pl-2"} ${d?.arrastando ? "opacity-40" : ""} ${comoItem ? (d?.marca ?? "") : ""}`}
+      className={`${LINHA} ${apagada ? "border-border-soft bg-surface-2" : "border-border bg-surface"} ${d ? "cursor-grab" : "pl-2"} ${d?.arrastando ? "opacity-40" : ""} ${comoItem ? (d?.marca ?? "") : ""}`}
     >
       {d?.alca}
-      <span aria-hidden className="flex-shrink-0 text-fg-secondary [&>svg]:size-[15px]">{item.icon}</span>
-      <span className="min-w-0 flex-1 truncate text-fs-2 text-fg">{item.label}</span>
+      <span aria-hidden className={`flex-shrink-0 [&>svg]:size-[15px] ${apagada ? "text-fg-muted" : "text-fg-secondary"}`}>{item.icon}</span>
+      <span className={`min-w-0 flex-1 truncate text-fs-2 ${apagada ? "text-fg-muted" : "text-fg"}`}>{item.label}</span>
+      {olho}
     </div>
   );
 }
@@ -292,16 +357,31 @@ export function GeralEmOrganizacao({ org }: { org: OrganizacaoDoMenu }) {
         // O Apoio com mais de uma tela: as de dentro mudam de ordem só ali.
         const filhos = g.filhos && g.filhos.length > 1 ? org.emOrdem(g.chave, g.filhos, (x) => x.chave) : [];
         const chaves = filhos.map((x) => x.chave);
+        const oculto = org.escondido(g.chave);
         return (
           <li key={g.chave} {...(d?.item ?? {})} className={`space-y-1 rounded-lg ${d?.marca ?? ""}`}>
-            <LinhaSimples item={g} d={d} comoItem={false} />
+            <LinhaSimples
+              item={g}
+              d={d}
+              comoItem={false}
+              apagada={oculto}
+              olho={<Olho label={g.label} oculta={oculto} travado={org.salvando} onClick={() => org.esconderItem(g.chave, g.label)} />}
+            />
             {filhos.length > 0 && (
               <ListaDeDentro titulo={g.label}>
-                {filhos.map((x, j) => (
-                  <li key={x.chave}>
-                    <LinhaSimples item={x} d={pegador({ tipo: "dentro", mae: g.chave, chaves }, j, filhos.length, `${g.chave}>${x.chave}`, x.label)} />
-                  </li>
-                ))}
+                {filhos.map((x, j) => {
+                  const xOculto = org.escondido(x.chave, g.chave);
+                  return (
+                    <li key={x.chave}>
+                      <LinhaSimples
+                        item={x}
+                        d={pegador({ tipo: "dentro", mae: g.chave, chaves }, j, filhos.length, `${g.chave}>${x.chave}`, x.label)}
+                        apagada={xOculto || oculto}
+                        olho={<Olho label={x.label} oculta={xOculto} apagadaPelaMae={oculto} travado={org.salvando} onClick={() => org.esconderItem(x.chave, x.label, g.chave)} />}
+                      />
+                    </li>
+                  );
+                })}
               </ListaDeDentro>
             )}
           </li>
@@ -330,23 +410,9 @@ export function MenuEmOrganizacao({
   const { pegador, arrastando } = useArrasto(org);
   const travado = org.salvando;
 
-  const olho = (t: Tela, apagadaPelaMae: boolean) => {
-    const oculta = org.ocultas.includes(t.code);
-    return (
-      <button
-        type="button"
-        data-nao-arrasta
-        aria-label={`${oculta ? "Mostrar" : "Esconder"} ${t.label}`}
-        aria-pressed={oculta}
-        title={apagadaPelaMae && !oculta ? "Escondida junto com a tela de cima" : undefined}
-        disabled={travado}
-        onClick={() => org.esconder(t)}
-        className="grid size-8 flex-shrink-0 place-items-center rounded-md text-fg-secondary transition-colors hover:bg-surface-hover hover:text-fg disabled:opacity-40"
-      >
-        {oculta ? <EyeOff size={15} aria-hidden /> : <Eye size={15} aria-hidden />}
-      </button>
-    );
-  };
+  const olho = (t: Tela, apagadaPelaMae: boolean) => (
+    <Olho label={t.label} oculta={org.ocultas.includes(t.code)} apagadaPelaMae={apagadaPelaMae} travado={travado} onClick={() => org.esconder(t)} />
+  );
 
   /** Uma linha de tela: alça, ícone, nome, olho. `d` são os eventos do arrasto, quando a lista tem mais de um item. */
   const linha = (t: Tela, d: Pegador | null, apagadaPelaMae = false, comoItem = true) => {
@@ -388,7 +454,24 @@ export function MenuEmOrganizacao({
           <ListaDeDentro titulo={e.tela.label}>
             {dentro.map((x, j) => (
               <li key={x.chave}>
-                {x.tela ? linha(x.tela, pegar(j, x, x.tela.label), maeOculta) : <LinhaSimples item={x.item!} d={pegar(j, x, x.item!.label)} />}
+                {x.tela ? (
+                  linha(x.tela, pegar(j, x, x.tela.label), maeOculta)
+                ) : (
+                  <LinhaSimples
+                    item={x.item!}
+                    d={pegar(j, x, x.item!.label)}
+                    apagada={org.escondido(x.chave, e.tela.code) || maeOculta}
+                    olho={
+                      <Olho
+                        label={x.item!.label}
+                        oculta={org.escondido(x.chave, e.tela.code)}
+                        apagadaPelaMae={maeOculta}
+                        travado={travado}
+                        onClick={() => org.esconderItem(x.chave, x.item!.label, e.tela.code)}
+                      />
+                    }
+                  />
+                )}
               </li>
             ))}
           </ListaDeDentro>

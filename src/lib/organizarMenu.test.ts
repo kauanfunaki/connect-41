@@ -47,7 +47,7 @@ describe("mover no menu", () => {
   });
 
   it("as telas escondidas vão na ordem gravada, e nada escondido não grava o campo", () => {
-    expect(ordemDosBlocos(blocos, ["societario_robo"]).ocultas).toEqual(["societario_robo"]);
+    expect(ordemDosBlocos(blocos, { ocultas: ["societario_robo"] }).ocultas).toEqual(["societario_robo"]);
     expect(ordemDosBlocos(blocos)).not.toHaveProperty("ocultas");
   });
 });
@@ -88,9 +88,18 @@ describe("o Geral e o que fica dentro de cada menu (09/11/2026)", () => {
   });
 
   it("a ordem gravada leva o Geral e os menus com alguma ordem", () => {
-    const ordem = ordemDosBlocos(montarMenuDoSetor(soc), [], ["agenda", "cadastros"], { apoio: ["quadros", "senhas"], vazio: [] });
+    const ordem = ordemDosBlocos(montarMenuDoSetor(soc), { geral: ["agenda", "cadastros"], dentro: { apoio: ["quadros", "senhas"], vazio: [] } });
     expect(ordem.geral).toEqual(["agenda", "cadastros"]);
     expect(ordem.dentro).toEqual({ apoio: ["quadros", "senhas"] });
+  });
+
+  it("o olho no Geral e dentro dos menus vai para a ordem gravada, e a leitura volta igual", () => {
+    const ordem = ordemDosBlocos(montarMenuDoSetor(soc), { ocultasGeral: ["agenda"], ocultasDentro: { tech_ops_center: ["sub:Sites"], vazio: [] } });
+    expect(ordem.ocultasGeral).toEqual(["agenda"]);
+    expect(ordem.ocultasDentro).toEqual({ tech_ops_center: ["sub:Sites"] });
+    expect(lerOrdemDoMenu(JSON.stringify(ordem))).toEqual(ordem);
+    expect(ordemEhPadrao({ grupos: [], telas: [], ocultasGeral: ["agenda"] })).toBe(false);
+    expect(ordemEhPadrao({ grupos: [], telas: [], ocultasDentro: { apoio: ["senhas"] } })).toBe(false);
   });
 
   it("mover no Geral ou dentro de um menu não mexe nos blocos do setor", () => {

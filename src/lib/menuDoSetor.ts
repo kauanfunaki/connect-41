@@ -56,6 +56,14 @@ export type OrdemDoMenu = {
    * Sites, Apps…). Só a posição: nada sai de um menu nem entra em outro.
    */
   dentro?: Record<string, string[]>;
+  /** Os itens do Geral que saem do menu deste setor (chaves de `CHAVES_DO_GERAL`), pelo olho do organizador. */
+  ocultasGeral?: string[];
+  /**
+   * O que sai de dentro de um menu (09/11/2026), por menu — as mesmas chaves
+   * de `dentro`: as abas com entrada no menu (`sub:<nome>`) e as telas do
+   * Apoio. As telas do catálogo que vieram de outra continuam em `ocultas`.
+   */
+  ocultasDentro?: Record<string, string[]>;
 };
 
 export const ORDEM_PADRAO: OrdemDoMenu = { grupos: [], telas: [] };
@@ -67,7 +75,14 @@ export function ordemTemPosicao(ordem: OrdemDoMenu | null | undefined): boolean 
 
 /** Nada escolhido: nem posição nem tela escondida. */
 export function ordemEhPadrao(ordem: OrdemDoMenu | null | undefined): boolean {
-  return !ordemTemPosicao(ordem) && !(ordem?.ocultas?.length) && !(ordem?.geral?.length) && Object.keys(ordem?.dentro ?? {}).length === 0;
+  return (
+    !ordemTemPosicao(ordem) &&
+    !(ordem?.ocultas?.length) &&
+    !(ordem?.geral?.length) &&
+    !(ordem?.ocultasGeral?.length) &&
+    Object.keys(ordem?.dentro ?? {}).length === 0 &&
+    Object.keys(ordem?.ocultasDentro ?? {}).length === 0
+  );
 }
 
 /**
@@ -94,19 +109,27 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
     const o = v as Record<string, unknown>;
     const ocultas = lista(o.ocultas);
     const geral = lista(o.geral);
-    const dentro: Record<string, string[]> = {};
-    if (o.dentro && typeof o.dentro === "object" && !Array.isArray(o.dentro)) {
-      for (const [mae, filhas] of Object.entries(o.dentro as Record<string, unknown>)) {
-        const l = lista(filhas);
-        if (l.length) dentro[mae] = l;
+    const porMenu = (x: unknown) => {
+      const r: Record<string, string[]> = {};
+      if (x && typeof x === "object" && !Array.isArray(x)) {
+        for (const [mae, filhas] of Object.entries(x as Record<string, unknown>)) {
+          const l = lista(filhas);
+          if (l.length) r[mae] = l;
+        }
       }
-    }
+      return r;
+    };
+    const dentro = porMenu(o.dentro);
+    const ocultasDentro = porMenu(o.ocultasDentro);
+    const ocultasGeral = lista(o.ocultasGeral);
     return {
       grupos: lista(o.grupos),
       telas: lista(o.telas),
       ...(ocultas.length ? { ocultas } : {}),
       ...(geral.length ? { geral } : {}),
       ...(Object.keys(dentro).length ? { dentro } : {}),
+      ...(ocultasGeral.length ? { ocultasGeral } : {}),
+      ...(Object.keys(ocultasDentro).length ? { ocultasDentro } : {}),
     };
   } catch {
     return ORDEM_PADRAO;

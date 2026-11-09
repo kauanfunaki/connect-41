@@ -317,17 +317,6 @@ export function AppShell({
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
   const noGeral = (tela: TelaDoGeral) => telasDoGeral.includes(tela);
-  const algumaNoGeral = [
-    noGeral("espacos"),
-    apoioLigado.senhas,
-    apoioLigado.manuais,
-    noGeral("cadastros"),
-    noGeral("transferencias"),
-    solicitacoesLigadas && noGeral("solicitacoes"),
-    arquivosLigados && noGeral("arquivos"),
-    chamadosLigados && noGeral("chamados"),
-    noGeral("agenda"),
-  ].some(Boolean);
   // Fornecedores e sacados é aba de Cadastros só para o BPO (21/10/2026). As
   // telas navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
   const telasDeCadastros = telasNavegaveis.some((t) => t.code === "bpo_cadastros") ? [...TELAS_DE_CADASTROS, TELA_DOS_FORNECEDORES] : TELAS_DE_CADASTROS;
@@ -344,8 +333,14 @@ export function AppShell({
     return telas;
   };
   /** As telas do Apoio na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
-  const telasDoApoio = (quadros: ItemDoApoio | null, comAOrdemEscolhida = true) =>
-    pelaOrdem(apoioBruto(quadros), (i) => i.chave, comAOrdemEscolhida && activeSector ? ordemDoMenu?.dentro?.apoio ?? [] : []);
+  // `comAOrdemEscolhida`: a ordem e o olho do organizador (09/11/2026) valem;
+  // `comOcultas`: as escondidas ficam na lista (o organizador mostra todas).
+  const escolhaDoSetor = (comAOrdemEscolhida: boolean) => (comAOrdemEscolhida && activeSector ? ordemDoMenu : undefined);
+  const telasDoApoio = (quadros: ItemDoApoio | null, comAOrdemEscolhida = true, comOcultas = false) => {
+    const escolha = escolhaDoSetor(comAOrdemEscolhida);
+    const ocultas = comOcultas ? [] : escolha?.ocultasDentro?.apoio ?? [];
+    return pelaOrdem(apoioBruto(quadros), (i) => i.chave, escolha?.dentro?.apoio ?? []).filter((i) => !ocultas.includes(i.chave));
+  };
   const blocoDoApoio = (quadros: ItemDoApoio | null) => {
     const telas = telasDoApoio(quadros);
     if (telas.length === 0) return null;
@@ -360,18 +355,19 @@ export function AppShell({
   // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo,
   // que entra no grupo Apoio (05/11/2026). Desde 09/11/2026 o setor pode
   // escolher a ordem do Geral no organizador (`ordemDoMenu.geral`), só dentro dele.
-  const listaDoGeral = (quadros: ItemDoApoio | null = null, comAOrdemEscolhida = true) => {
+  const listaDoGeral = (quadros: ItemDoApoio | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
     const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", quadros?.label].filter(Boolean) as string[];
-    const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; no: React.ReactNode }[] = [
+    const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; existe?: boolean; no: React.ReactNode }[] = [
       {
         chave: "apoio",
         area: "escritorio",
         label: apoio.length === 1 ? apoio[0]! : "Apoio",
         icon: apoio.length === 1 && quadros ? quadros.icon : <BookOpen size={16} />,
-        filhos: telasDoApoio(quadros, comAOrdemEscolhida).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
+        filhos: telasDoApoio(quadros, comAOrdemEscolhida, comOcultas).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
+        existe: apoioBruto(quadros).length > 0,
         no: blocoDoApoio(quadros),
       },
       {
@@ -391,8 +387,11 @@ export function AppShell({
       { chave: "arquivos", area: arquivos, label: "Arquivos", icon: <FolderOpen size={16} />, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
       { chave: "agenda", area: "marca", label: "Agenda", icon: <CalendarDays size={16} />, no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
     ];
-    const presentes = itens.filter((i) => i.no);
-    const escolhida = comAOrdemEscolhida && activeSector ? ordemDoMenu?.geral ?? [] : [];
+    const escolha = escolhaDoSetor(comAOrdemEscolhida);
+    const ocultas = comOcultas ? [] : escolha?.ocultasGeral ?? [];
+    // O Apoio existe mesmo com todas as telas dele escondidas: no organizador ele aparece.
+    const presentes = itens.filter((i) => (i.existe ?? !!i.no) && !ocultas.includes(i.chave) && (comOcultas || !!i.no));
+    const escolhida = escolha?.geral ?? [];
     return escolhida.length > 0 ? pelaOrdem(presentes, (i) => i.chave, escolhida) : agruparPorCor(presentes, (i) => i.area);
   };
   const itensDoGeral = (quadros: ItemDoApoio | null = null) => listaDoGeral(quadros).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
@@ -411,8 +410,10 @@ export function AppShell({
     blocosPadrao: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor), false),
     ocultasAtuais: ordemDoMenu?.ocultas ?? [],
     dentroAtual: ordemDoMenu?.dentro ?? {},
-    geralAtual: listaDoGeral(quadrosDoSetor, true),
-    geralPadrao: listaDoGeral(quadrosDoSetor, false),
+    geralAtual: listaDoGeral(quadrosDoSetor, true, true),
+    geralPadrao: listaDoGeral(quadrosDoSetor, false, true),
+    ocultasGeralAtual: ordemDoMenu?.ocultasGeral ?? [],
+    ocultasDentroAtual: ordemDoMenu?.ocultasDentro ?? {},
   });
   const podeOrganizar = !!activeSector && podeOrganizarMenu && telasDoSetor.length > 0;
   const organizando = podeOrganizar && organizacao.aberto && !naFaixa;
@@ -582,7 +583,7 @@ export function AppShell({
                     (Configurações › Setores) — o Recrutamento sem Solicitações e
                     Transferências, pedido do Kauan. É só o menu: o endereço da
                     tela continua abrindo. Sem nenhuma tela, o título também sai. */}
-                {algumaNoGeral && (
+                {(organizando ? organizacao.geral.length > 0 : listaDoGeral(quadrosDoSetor).length > 0) && (
                   <TituloDoBloco nome="Geral">
                     <p className="c41-rotulo px-2.5 pt-4 pb-1.5">
                       Geral
@@ -701,7 +702,7 @@ export function AppShell({
                     const filhas: Filha[] = pelaOrdem([
                       ...e.filhas.map((f) => ({ chave: f.code, label: f.label, href: f.href, icon: <ModuleIcon code={f.code} /> })),
                       ...subs.map((s) => ({ chave: `sub:${s.label}`, label: s.label, href: s.href, icon: s.icon, ativa: s.ativa })),
-                    ], (f) => f.chave, ordemDoMenu?.dentro?.[e.tela.code] ?? []);
+                    ], (f) => f.chave, ordemDoMenu?.dentro?.[e.tela.code] ?? []).filter((f) => !(ordemDoMenu?.ocultasDentro?.[e.tela.code] ?? []).includes(f.chave));
                     const href = e.tela.code === "contabil_sped" ? linkDoContabil : e.tela.href;
                     const mae: Mae = { label: e.tela.label, href, icon: <ModuleIcon code={e.tela.code} />, area: areaDe(e.tela.code), ativo: ativaSemFilha(e.tela.code, subs), exact: e.tela.href === "/sped-fiscal/motor", semLink: e.tela.code === "tech_ops_center", contador: e.tela.code === "helpdesk" ? novosChamados : undefined };
                     return { mae, filhas };

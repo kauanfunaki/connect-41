@@ -35,19 +35,29 @@ export function moverNaLista<T>(lista: readonly T[], de: number, antesDe: number
 }
 
 /** A ordem que reproduz estes blocos exatamente como estão (grupos e todas as telas). */
+type PorMenu = Readonly<Record<string, readonly string[]>>;
+
+/** Só os menus com alguma coisa, ou nada. */
+function soComItens(x: PorMenu | undefined): Record<string, string[]> | undefined {
+  const menus = Object.entries(x ?? {}).filter(([, l]) => l.length > 0);
+  return menus.length ? Object.fromEntries(menus.map(([m, l]) => [m, [...l]])) : undefined;
+}
+
 export function ordemDosBlocos(
   blocos: readonly BlocoDoMenu<TelaDoMenu>[],
-  ocultas: readonly string[] = [],
-  geral: readonly string[] = [],
-  dentro: Readonly<Record<string, readonly string[]>> = {},
+  extras: { ocultas?: readonly string[]; geral?: readonly string[]; dentro?: PorMenu; ocultasGeral?: readonly string[]; ocultasDentro?: PorMenu } = {},
 ): OrdemDoMenu {
-  const menus = Object.entries(dentro).filter(([, l]) => l.length > 0);
+  const { ocultas = [], geral = [], ocultasGeral = [] } = extras;
+  const dentro = soComItens(extras.dentro);
+  const ocultasDentro = soComItens(extras.ocultasDentro);
   return {
     grupos: blocos.map((b) => b.grupo),
     telas: blocos.flatMap(telasDoBloco).map((t) => t.code),
     ...(ocultas.length ? { ocultas: [...ocultas] } : {}),
     ...(geral.length ? { geral: [...geral] } : {}),
-    ...(menus.length ? { dentro: Object.fromEntries(menus.map(([m, l]) => [m, [...l]])) } : {}),
+    ...(dentro ? { dentro } : {}),
+    ...(ocultasGeral.length ? { ocultasGeral: [...ocultasGeral] } : {}),
+    ...(ocultasDentro ? { ocultasDentro } : {}),
   };
 }
 

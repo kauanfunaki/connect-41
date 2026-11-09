@@ -427,6 +427,20 @@ describe("a ordem do menu escolhida", () => {
     expect(escolhida.indexOf('href="/chamados"')).toBeLessThan(escolhida.search(/aria-label="Operação|>Operação</));
   });
 
+  it("o item do Geral escondido pelo olho sai do Geral deste setor", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: [], telas: [], ocultasGeral: ["agenda"] } }));
+    expect(linksDoMenu(aside).map((l) => l.texto)).not.toContain("Agenda");
+    expect(linksDoMenu(aside).map((l) => l.texto)).toContain("Transferências");
+  });
+
+  it("dentro do Apoio, a tela escondida sai e o Apoio fica com as outras", () => {
+    const apoio = { senhas: true, manuais: true };
+    const todas = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, apoioLigado: apoio }));
+    expect(botaoComJanela(todas, "Apoio").telas).toBe(3);
+    const semSenhas = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, apoioLigado: apoio, ordemDoMenu: { grupos: [], telas: [], ocultasDentro: { apoio: ["senhas"] } } }));
+    expect(botaoComJanela(semSenhas, "Apoio").telas).toBe(2);
+  });
+
   it("a tela escondida pelo olho sai do menu do setor", () => {
     // Sem Certidões, Licenças fica com uma tela só e deixa de ser grupo.
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: [], telas: [], ocultas: ["societario_certidoes"] } }));
