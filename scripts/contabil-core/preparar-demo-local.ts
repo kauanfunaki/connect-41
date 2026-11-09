@@ -26,8 +26,10 @@ DATA:OFXSGML
 <STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260110<TRNAMT>-890.00<FITID>D4<MEMO>PAGTO BOLETO ENERGIA ELETRICA</STMTTRN>
 <STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260112<TRNAMT>-150.00<FITID>D5<MEMO>PIX EMITIDO<NAME>JOAO DA SILVA</STMTTRN>
 <STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20260115<TRNAMT>5320.00<FITID>D6<MEMO>CRED VENDAS CARTAO</STMTTRN>
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260120<TRNAMT>-80.00<FITID>D7<MEMO>PIX EMITIDO OUTRA IF<NAME>MARIA SOUZA</STMTTRN>
+<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260125<TRNAMT>-95.00<FITID>D8<MEMO>PIX EMITIDO OUTRA IF<NAME>CARLOS LIMA</STMTTRN>
 </BANKTRANLIST>
-<LEDGERBAL><BALAMT>3080.60<DTASOF>20260131</LEDGERBAL>
+<LEDGERBAL><BALAMT>2905.60<DTASOF>20260131</LEDGERBAL>
 </STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`;
 
 function valor<T>(r: { ok: true; valor: T } | { ok: false; erro: string }, aceitar = false): T | null {
@@ -79,6 +81,8 @@ async function main() {
   // Recomeço: a demonstração volta com todas as transações pendentes, sem lançamentos nem decisões.
   await prisma.coreNeoDecisao.deleteMany({ where: { empresaId } });
   await prisma.coreRegistro.deleteMany({ where: { empresaId } });
+  // Regras criadas pelos testes de tela saem; as três da demonstração ficam.
+  await prisma.coreRegra.deleteMany({ where: { empresaId, historico: { notIn: ["TARIFA PACOTE", "ENERGIA ELETRICA", "VENDAS CARTAO"] } } });
   await prisma.coreTransacao.updateMany({ where: { empresaId, deletedAt: null }, data: { status: "pendente", autoRecusadoEm: null, autoRecusadoPorId: null } });
 
   const r = await importarOfx(tenantId, user.id, empresaId, agencia, "sicoob-jan-2026.ofx", new TextEncoder().encode(OFX), false);

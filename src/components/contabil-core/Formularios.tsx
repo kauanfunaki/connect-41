@@ -17,6 +17,7 @@ import {
   salvarContaAction,
   salvarContraparteAction,
   salvarRegraAction,
+  criarRegraEAplicarAction,
 } from "@/app/(app)/contabil-core/actions";
 import { ROTULO_DO_REGIME, ROTULO_DO_TIPO_DE_CONTA } from "@/lib/contabil-core/tela";
 
@@ -283,8 +284,8 @@ export function FormularioDaRegra({
       titulo={regra ? "Editar regra" : "Nova regra"}
       novo={!regra}
       rotuloDoBotao="Nova regra"
-      sucesso="Regra salva. Rode o NEO para aplicá-la às pendências."
-      salvar={(d) => salvarRegraAction(empresaId, regra?.id ?? null, d)}
+      sucesso="Regra salva."
+      salvar={(d) => (!regra && d.aplicarAgora === "on" ? criarRegraEAplicarAction(empresaId, d) : salvarRegraAction(empresaId, regra?.id ?? null, d))}
     >
       <CampoForm label="Texto do extrato" htmlFor={`${base}-hist`} required helper="O NEO ignora acento, maiúscula e pontuação; basta o trecho que se repete.">
         <Input id={`${base}-hist`} name="historico" defaultValue={v.historico ?? ""} maxLength={500} autoComplete="off" required />
@@ -307,6 +308,7 @@ export function FormularioDaRegra({
         <SearchableSelect id={`${base}-conta`} name="contaId" options={contas} defaultValue={v.contaId ?? ""} placeholder="Escolha a conta" />
       </CampoForm>
       <Checkbox name="manterHistorico" defaultChecked={v.manterHistorico ?? false} label="Usar o histórico do banco no lançamento" />
+      {!regra && <Checkbox name="aplicarAgora" defaultChecked label="Aplicar agora nas pendências (roda o NEO)" />}
     </Molde>
   );
 }

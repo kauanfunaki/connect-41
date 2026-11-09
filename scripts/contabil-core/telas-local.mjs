@@ -65,19 +65,30 @@ await page.getByRole("button", { name: /Rodar o NEO/ }).click();
 await page.getByText(/pendência\(s\):/).waitFor();
 await page.screenshot({ path: path.join(saida, "neo-depois.png"), fullPage: true });
 
-// Classificação manual da pendência que sobrou (o PIX para pessoa física, que nenhuma regra cobre).
-const pendencias = await page.getByRole("checkbox", { name: /^Marcar PIX/ }).count();
-if (pendencias) {
-  await page.getByRole("checkbox", { name: /^Marcar PIX/ }).first().check();
-  await page.getByLabel("Conta contábil").click();
-  await page.getByRole("option", { name: /Despesas bancárias/ }).click();
-  await page.getByLabel("Histórico do lançamento").fill("PAGAMENTO DIARISTA");
-  await page.getByRole("button", { name: "Classificar", exact: true }).click();
-  await page.getByText(/1 classificada/).first().waitFor();
-}
+// Fase 3: marcar o grupo de PIX, criar a regra pela seleção (com simulação) e aplicar nos semelhantes.
+await page.getByRole("button", { name: /PIX EMITIDO OUTRA IF/ }).first().click();
+await page.getByLabel("Conta contábil").click();
+await page.getByRole("option", { name: /Despesas bancárias/ }).click();
+await page.getByLabel("Histórico do lançamento").fill("PAGAMENTO VIA PIX");
+await page.getByRole("checkbox", { name: "Criar uma regra com esta seleção" }).check();
+assert.equal(await page.getByLabel("Texto da regra").inputValue(), "PIX EMITIDO OUTRA IF", "sugestão pelo trecho comum");
+await page.getByRole("button", { name: "Simular alcance" }).click();
+await page.getByText(/Pega \d+ pendência/).waitFor();
+await page.screenshot({ path: path.join(saida, "neo-regra.png"), fullPage: true });
+await page.getByRole("button", { name: "Classificar e criar a regra" }).click();
+await page.getByText(/regra criada/).first().waitFor();
 
 await abrir("extrato");
 assert.ok(await page.getByText("Classificada").count(), "transações classificadas no extrato");
+// Reclassificar a primeira transação classificada.
+await page.getByRole("button", { name: "Reclassificar" }).first().click();
+await page.getByRole("dialog").getByLabel("Conta contábil").click();
+await page.getByRole("option", { name: /Energia elétrica/ }).click();
+await page.getByRole("dialog").getByLabel("Histórico do lançamento").fill("AJUSTE DE CONTA");
+await page.getByRole("dialog").getByLabel("Motivo").fill("conta errada");
+await page.getByRole("dialog").getByRole("button", { name: "Reclassificar" }).click();
+await page.getByText("Transação reclassificada.").waitFor();
+await page.screenshot({ path: path.join(saida, "extrato.png"), fullPage: true });
 for (const aba of ["regras", "contrapartes", "configuracoes"]) await abrir(aba);
 
 // O arquivo do Domínio, baixado pela tela.
@@ -86,8 +97,8 @@ const [download] = await Promise.all([page.waitForEvent("download"), page.getByR
 const arquivo = path.join(saida, download.suggestedFilename());
 await download.saveAs(arquivo);
 const linhas = readFileSync(arquivo, "utf8").replace(/^﻿/, "").trim().split("\r\n");
-assert.equal(linhas.length, 6, "seis lançamentos no TXT de janeiro");
-assert.ok(linhas.includes("05/01/2026;1026;12;39,9;;PGTO REF TARIFA BANCÁRIA;;;;"), "linha da tarifa no layout do Domínio");
+assert.equal(linhas.length, 7, "sete lançamentos no TXT de janeiro (o PIX para pessoa física segue pendente)");
+assert.ok(linhas.some((l) => l.startsWith("05/01/2026;") && l.endsWith(";39,9;;PGTO REF AJUSTE DE CONTA;;;;")), "linha reclassificada no layout do Domínio");
 await page.screenshot({ path: path.join(saida, "registros.png"), fullPage: true });
 
 await browser.close();

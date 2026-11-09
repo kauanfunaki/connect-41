@@ -235,6 +235,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "contabil.core.neo.processado": o("rodou o NEO do Contábil Core", { comNome: false }),
   "contabil.core.neo.classificacao_manual": e("classificou à mão transações do Contábil Core", { comNome: false }),
   "contabil.core.lancamento.cancelado": x("desfez a classificação da transação"),
+  "contabil.core.lancamento.reclassificado": e("reclassificou a transação"),
+  "contabil.core.composicao.alterada": e("alterou a composição da transação"),
   "contabil.core.neo.liberada": e("devolveu ao NEO automático a transação"),
   "contabil.core.exportacao.gerada": o("gerou o arquivo do Domínio"),
   "contabil.sped.execucao.cancelada": e("cancelou o pedido de Contribuições"),
