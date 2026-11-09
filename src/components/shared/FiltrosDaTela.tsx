@@ -53,8 +53,9 @@ export function FiltrosDaTela({
 }: {
   campos: CampoDeFiltro[];
   className?: string;
-  /** Na barra do `CascoDaTabela` (05/10/2026): o botão fica na ponta direita,
-   *  o painel abre para a esquerda e as etiquetas vêm antes do botão. */
+  /** Na barra do `CascoDaTabela` (05/10/2026): o painel abre para a esquerda,
+   *  preso à ponta direita do botão. Desde 09/11/2026 o botão vem primeiro
+   *  também aqui, com as etiquetas à direita dele. */
   naBarra?: boolean;
 }) {
   const pathname = usePathname();
@@ -126,9 +127,15 @@ export function FiltrosDaTela({
     });
 
   const botao = (
-    <FilterButton activeCount={ativos.length} align={naBarra ? "right" : "left"} width={umSo ? 300 : 460}>
+    <FilterButton activeCount={ativos.length} align={naBarra ? "right" : "left"} width={umSo ? 300 : 460} semRolagem>
       {({ close }) => (
         <div className="flex flex-col gap-2 -m-1">
+          {/* Altura fixa (09/11/2026): quem dá a altura do painel é a coluna dos
+              campos, nunca a lista de opções — trocar de campo não muda o
+              tamanho, e o painel não rola. Só a lista rola, com a busca parada
+              em cima dela. Antes a lista tinha teto de 210px num painel de
+              ~330px (sobrava branco embaixo, com opções escondidas na rolagem),
+              e o painel, com teto de 360px, rolava junto e cortava a busca. */}
           <div className={`flex ${umSo ? "" : "min-h-[248px]"}`}>
             {/* Os campos: cada um diz o que está escolhido nele agora. Com um
                 campo só (o portal), a coluna não tem o que escolher e some. */}
@@ -161,48 +168,61 @@ export function FiltrosDaTela({
 
             {/* As opções do campo escolhido. */}
             {campo && (
-              <div className={`flex-1 min-w-0 flex flex-col gap-1.5 ${umSo ? "" : "pl-2"}`}>
-                {umSo && (
-                  <p className="px-1 c41-rotulo">{campo.rotulo}</p>
-                )}
-                {campo.opcoes.length > COM_BUSCA && (
-                  <Input
-                    compact
-                    autoFocus
-                    icon={<Search />}
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    placeholder={`Buscar ${campo.rotulo.toLowerCase()}…`}
-                    aria-label={`Buscar ${campo.rotulo.toLowerCase()}`}
-                  />
-                )}
-                <ul className="scroll-y max-h-[210px] overflow-y-auto flex flex-col gap-0.5" role="listbox" aria-label={campo.rotulo}>
-                  {[{ value: "", label: campo.vazioLabel ?? "Todos" }, ...opcoesVisiveis].map((o) => {
-                    const escolhida = o.value === valorAtual;
-                    return (
-                      <li key={o.value || "__vazio"}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={escolhida}
-                          onClick={() => {
-                            close();
-                            window.location.assign(hrefCom(campo.chave, escolhida ? "" : o.value));
-                          }}
-                          className={`w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md text-ui transition-colors ${
-                            escolhida ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
-                          }`}
-                        >
-                          <span className="truncate">{o.label}</span>
-                          {escolhida && <Check size={13} className="flex-shrink-0" />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                  {opcoesVisiveis.length === 0 && (
-                    <li className="px-2.5 py-2 text-fs-2 text-fg-muted">Nada encontrado para “{busca}”.</li>
+              <div className={`flex-1 min-w-0 ${umSo ? "" : "relative"}`}>
+                {/* `absolute`: a coluna das opções ocupa a altura que a dos campos
+                    deu, sem entrar na conta dela. Com um campo só não há coluna
+                    ao lado para dar a altura, e a lista mantém o teto próprio. */}
+                <div className={`flex flex-col gap-1.5 ${umSo ? "" : "absolute inset-0 pl-2"}`}>
+                  {umSo && (
+                    <p className="px-1 c41-rotulo">{campo.rotulo}</p>
                   )}
-                </ul>
+                  {campo.opcoes.length > COM_BUSCA && (
+                    <Input
+                      compact
+                      autoFocus
+                      icon={<Search />}
+                      value={busca}
+                      onChange={(e) => setBusca(e.target.value)}
+                      placeholder={`Buscar ${campo.rotulo.toLowerCase()}…`}
+                      aria-label={`Buscar ${campo.rotulo.toLowerCase()}`}
+                    />
+                  )}
+                  {/* `overscroll-contain`: chegar ao fim da lista não passa a
+                      rolagem para a página atrás do painel. */}
+                  <ul
+                    className={`scroll-y overflow-y-auto overscroll-contain flex flex-col gap-0.5 ${
+                      umSo ? "max-h-[210px]" : "flex-1 min-h-0"
+                    }`}
+                    role="listbox"
+                    aria-label={campo.rotulo}
+                  >
+                    {[{ value: "", label: campo.vazioLabel ?? "Todos" }, ...opcoesVisiveis].map((o) => {
+                      const escolhida = o.value === valorAtual;
+                      return (
+                        <li key={o.value || "__vazio"}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={escolhida}
+                            onClick={() => {
+                              close();
+                              window.location.assign(hrefCom(campo.chave, escolhida ? "" : o.value));
+                            }}
+                            className={`w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md text-ui transition-colors ${
+                              escolhida ? "bg-brand-subtle text-brand font-medium" : "text-fg-secondary hover:bg-surface-hover hover:text-fg"
+                            }`}
+                          >
+                            <span className="truncate">{o.label}</span>
+                            {escolhida && <Check size={13} className="flex-shrink-0" />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                    {opcoesVisiveis.length === 0 && (
+                      <li className="px-2.5 py-2 text-fs-2 text-fg-muted">Nada encontrado para “{busca}”.</li>
+                    )}
+                  </ul>
+                </div>
               </div>
             )}
           </div>
@@ -233,19 +253,14 @@ export function FiltrosDaTela({
     </FilterButton>
   );
 
+  // O botão vem sempre primeiro, com as etiquetas à direita dele (09/11/2026,
+  // pedido do Kauan no Controle interno). Na barra as etiquetas vinham antes
+  // do botão, e ele mudava de lugar conforme o que estava filtrado; agora ele
+  // fica parado na frente, e o que está filtrado se lê depois dele.
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${naBarra ? "justify-end" : ""} ${className}`.trim()}>
-      {naBarra ? (
-        <>
-          {etiquetas}
-          {botao}
-        </>
-      ) : (
-        <>
-          {botao}
-          {etiquetas}
-        </>
-      )}
+    <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
+      {botao}
+      {etiquetas}
     </div>
   );
 }

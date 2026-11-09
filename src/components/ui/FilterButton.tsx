@@ -8,6 +8,8 @@ type Props = {
   activeCount?: number;
   align?: "left" | "right";
   width?: number;
+  /** Ver `Dropdown`: o painel não rola, e o conteúdo cuida da própria rolagem. */
+  semRolagem?: boolean;
   children: React.ReactNode | ((props: { close: () => void }) => React.ReactNode);
 };
 
@@ -17,11 +19,12 @@ type Props = {
 // pra virar o padrão único de filtro estruturado do app. Busca por texto
 // continua fora do painel (é "ao vivo", não combina com o padrão
 // aplicar/fechar de filtro estruturado).
-export function FilterButton({ activeCount = 0, align = "right", width = 260, children }: Props) {
+export function FilterButton({ activeCount = 0, align = "right", width = 260, semRolagem = false, children }: Props) {
   return (
     <Dropdown
       align={align}
       width={width}
+      semRolagem={semRolagem}
       trigger={({ open, toggle }) => (
         <button
           type="button"
