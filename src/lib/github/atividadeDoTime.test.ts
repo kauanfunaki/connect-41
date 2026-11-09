@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { linhasDaAtividade, PESSOAS_NO_PAINEL, timesDaAtividade, type Lider } from "./atividadeDoTime";
+import { linhasDaAtividade, PESSOAS_NO_PAINEL, timesDaAtividade, timesDoRepositorio, type Lider } from "./atividadeDoTime";
 import { COR_SEM_TIME, type Paleta } from "./cores";
 
 const paleta: Paleta = {
@@ -43,5 +43,16 @@ describe("Atividade do time no GitHub", () => {
   it("sem ninguém no período, nenhuma linha", () => {
     expect(timesDaAtividade([], paleta)).toEqual([]);
     expect(linhasDaAtividade([], paleta, "time", "dev")).toEqual({ tipo: "pessoas", pessoas: [] });
+  });
+});
+
+describe("Aba Repositórios agrupada por time", () => {
+  const c = (id: string, total: number, commits: number) => ({ id, total, counts: { COMMIT: commits, PULL_REQUEST: total - commits } });
+  it("soma as pessoas de cada time, inclusive por tipo, e deixa Sem time por último", () => {
+    const times = timesDoRepositorio([c("duda", 40, 40), c("ana", 10, 6), c("caio", 12, 12), c("bia", 5, 1)], paleta);
+    expect(times.map(t => [t.nome, t.total])).toEqual([["Desenvolvimento", 15], ["Suporte", 12], ["Sem time", 40]]);
+    expect(times[0]!.counts).toEqual({ COMMIT: 7, PULL_REQUEST: 8 });
+    expect(times[0]!.cor).toBe("#7C5CBF");
+    expect(times[2]!.cor).toBe(COR_SEM_TIME);
   });
 });
