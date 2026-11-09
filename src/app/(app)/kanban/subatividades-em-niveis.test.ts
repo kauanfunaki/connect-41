@@ -132,8 +132,13 @@ const prisma = {
   },
   space: { findUnique: vi.fn(async () => ({ defaultPermission: permissaoDoEspaco })) },
   company: { findFirst: vi.fn(async () => ({ id: "c2" })) },
-  $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+  // Os anexos da árvore (apagarAtividadeComAnexos, 06/11/2026): nenhum neste exemplo.
+  document: { findMany: vi.fn(async () => []), deleteMany: vi.fn(async () => ({ count: 0 })) },
+  // Em lista ou com função (a exclusão com anexos roda numa transação interativa).
+  $transaction: vi.fn(async (ops: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)) => (typeof ops === "function" ? ops(prisma) : Promise.all(ops))),
 };
+// As ações do Kanban chegam a módulos `server-only` (exclusão de atividade, SPED local).
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn(), notFound: vi.fn() }));
@@ -282,7 +287,7 @@ describe("excluir — a cascata leva a árvore, e o rastro fica", () => {
       action: "kanban.atividade.excluir",
       entityType: "PipelineItem",
       entityId: "abril",
-      metadata: { title: "Abril", subatividades: 3, pai: "planilha" },
+      metadata: { title: "Abril", subatividades: 3, anexos: 0, pai: "planilha" },
     }));
   });
 
@@ -299,7 +304,7 @@ describe("excluir — a cascata leva a árvore, e o rastro fica", () => {
     ctx.role = "ADMIN";
     await excluirItem("pl1", "planilha");
     expect(itens).toEqual([]);
-    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ entityId: "planilha", metadata: { title: "Planilha", subatividades: 4 } }));
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ entityId: "planilha", metadata: { title: "Planilha", subatividades: 4, anexos: 0 } }));
   });
 });
 
