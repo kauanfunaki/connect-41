@@ -122,7 +122,7 @@ export function FaixaDeTotais({
           label={i.rotulo}
           value={i.valor}
           href={i.href}
-          navegacaoCompleta={i.ativo !== undefined}
+          filtro={i.ativo !== undefined}
           icon={i.icone}
           detalhe={i.detalhe}
           tom={tomDaClasse(i.tom)}

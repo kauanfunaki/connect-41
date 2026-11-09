@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/ui/Select";
+import { useNavegarSemRecarregar } from "@/components/shared/NavegacaoSemRecarregar";
 
 type Props = {
   companies: { id: string; name: string }[];
@@ -11,9 +12,13 @@ type Props = {
 
 // Select que navega direto ao trocar de valor — usado pra filtrar listas
 // (Vagas, Pessoas) por empresa-cliente sem precisar de um botão "Aplicar".
+// Desde 09/11/2026 sem recarregar a página (`NavegacaoSemRecarregar`).
 export function CompanyFilterSelect({ companies, value, paramName = "companyId", className = "w-auto" }: Props) {
+  const { ir } = useNavegarSemRecarregar();
   return (
     <Select
+      // `key` no valor da URL: voltar no navegador mostra a empresa de antes.
+      key={value}
       compact
       name={paramName}
       defaultValue={value}
@@ -23,7 +28,7 @@ export function CompanyFilterSelect({ companies, value, paramName = "companyId",
         if (e.target.value) url.searchParams.set(paramName, e.target.value);
         else url.searchParams.delete(paramName);
         url.searchParams.delete("page");
-        window.location.href = url.toString();
+        ir(`${url.pathname}${url.search}`);
       }}
     >
       <option value="">Todas as empresas</option>

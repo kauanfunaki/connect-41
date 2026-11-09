@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Activity, AlertTriangle, CalendarClock, CircleSlash, KeyRound, PenLine, Wallet } from "lucide-react";
@@ -315,7 +316,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "certificado", "certificados")}
         busca={
-          <form method="get" action="/certificados" className="max-w-full">
+          <FormularioDeFiltro action="/certificados" className="max-w-full">
             {aba !== PADRAO && <input type="hidden" name="aba" value={aba} />}
             <CampoDeBusca
               compact
@@ -325,7 +326,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
               aria-label="Buscar certificado"
               className="w-80 max-w-full"
             />
-          </form>
+          </FormularioDeFiltro>
         }
         filtros={
           <FiltrosDaTela

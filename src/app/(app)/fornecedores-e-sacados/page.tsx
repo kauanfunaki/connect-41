@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { notFound } from "next/navigation";
 import { Layers, Users, Truck, HandCoins, ListTree, FolderKanban, Percent } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
@@ -374,13 +375,13 @@ export default async function CadastrosFinanceirosPage({
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
         busca={
-          <form method="get" action="/fornecedores-e-sacados" className="max-w-full">
+          <FormularioDeFiltro action="/fornecedores-e-sacados" className="max-w-full">
             <input type="hidden" name="empresa" value={companyId} />
             {aba !== "fornecedores" && <input type="hidden" name="aba" value={aba} />}
             {situacao !== "ativos" && <input type="hidden" name="situacao" value={situacao} />}
             {/* Com a lupa e o "limpar" das outras listas (15/10/2026). */}
             <CampoDeBusca compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome ou documento…" aria-label="Buscar cadastro" className="w-72 max-w-full" />
-          </form>
+          </FormularioDeFiltro>
         }
         filtros={<FiltrosDaTela campos={FILTRO_DA_SITUACAO} naBarra />}
       >

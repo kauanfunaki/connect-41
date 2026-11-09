@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useSelecaoDasLinhas } from "@/components/shared/useSelecaoDasLinhas";
+import { useTransition } from "react";
 import Link from "next/link";
 import { UserSearch } from "lucide-react";
 import { BulkActionBar } from "@/components/shared/BulkActionBar";
@@ -36,7 +37,7 @@ type Props = {
 };
 
 export function CandidatosTable({ candidatos, canCreate, inativarCandidatosEmMassa, opcoesDeTag }: Props) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useSelecaoDasLinhas(candidatos.map((linha) => linha.id));
   const [, startTransition] = useTransition();
   const { dialog, requestConfirm } = useConfirm();
 

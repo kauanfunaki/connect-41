@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ProvedorDaAtualizacao } from "@/components/shared/NavegacaoSemRecarregar";
 import { CircleHelp, CircleUserRound, LogOut, Menu, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
 import { IconButton } from "@/components/ui/IconButton";
@@ -219,7 +220,7 @@ export function PortalShell({
           tabIndex={-1}
           className="c41-atmosfera scroll-y scroll-gutter-stable relative flex-1 overflow-y-auto focus-visible:shadow-none"
         >
-          {children}
+          <ProvedorDaAtualizacao>{children}</ProvedorDaAtualizacao>
         </main>
       </div>
     </div>

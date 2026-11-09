@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { useNavegarSemRecarregar } from "@/components/shared/NavegacaoSemRecarregar";
 import { TIPO_LABEL, DESTINO_LABEL } from "@/lib/fiscal/rotulos";
 import { formatarCompetencia } from "@/lib/format";
 
@@ -20,6 +21,7 @@ import { formatarCompetencia } from "@/lib/format";
  */
 export function BuscaDoAcervo() {
   const params = useSearchParams();
+  const { ir } = useNavegarSemRecarregar();
 
   function buscar(valor: string) {
     const q = new URLSearchParams(params.toString());
@@ -29,9 +31,9 @@ export function BuscaDoAcervo() {
     // tela abrir vazia quando o novo filtro tem menos resultados que a página
     // em que a pessoa estava.
     q.delete("pagina");
-    // Como os cartões e o painel de filtros: faz a consulta completa ao
-    // servidor, sem depender de uma árvore de outro recorte no cache RSC.
-    window.location.assign(`/documentos-fiscais${q.size ? `?${q.toString()}` : ""}`);
+    // Como os cartões e o painel de filtros: consulta o servidor de novo, sem
+    // recarregar a página (09/11/2026; de 13/10 até então recarregava).
+    ir(`/documentos-fiscais${q.size ? `?${q.toString()}` : ""}`);
   }
 
   return (

@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { CalendarClock, FileSignature, Wallet, XCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -121,10 +122,10 @@ export default async function ContratosPage({ searchParams }: { searchParams: Pr
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "contrato", "contratos")}
         busca={
-          <form method="get" action="/contratos" className="max-w-full">
+          <FormularioDeFiltro action="/contratos" className="max-w-full">
             {recorte !== "ativos" && <input type="hidden" name="recorte" value={recorte} />}
             <CampoDeBusca compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome, fornecedor ou responsável…" aria-label="Buscar contrato" className="w-80 max-w-full" />
-          </form>
+          </FormularioDeFiltro>
         }
         filtros={<FiltrosDaTela naBarra campos={[{ chave: "recorte", rotulo: "Recorte", vazioLabel: "Ativos", opcoes: RECORTES.filter((r) => r.chave !== "ativos").map((r) => ({ value: r.chave, label: r.rotulo })) }]} />}
       >

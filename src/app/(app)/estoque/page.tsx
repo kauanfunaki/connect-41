@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import Link from "next/link";
 import { Boxes, ClipboardCheck, PackageMinus, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -108,10 +109,10 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
       <CascoDaTabela
         contagem={contarItens(visiveis.length, "item", "itens")}
         busca={
-          <form method="get" action="/estoque" className="max-w-full">
+          <FormularioDeFiltro action="/estoque" className="max-w-full">
             {recorte !== "todos" && <input type="hidden" name="recorte" value={recorte} />}
             <CampoDeBusca compact name="q" defaultValue={params.q ?? ""} placeholder="Buscar por nome, patrimônio, pessoa ou local…" aria-label="Buscar no estoque" className="w-80 max-w-full" />
-          </form>
+          </FormularioDeFiltro>
         }
         filtros={<FiltrosDaTela naBarra campos={[{ chave: "recorte", rotulo: "Recorte", vazioLabel: "Todos", opcoes: RECORTES.filter((r) => r.chave !== "todos").map((r) => ({ value: r.chave, label: r.rotulo })) }]} />}
       >

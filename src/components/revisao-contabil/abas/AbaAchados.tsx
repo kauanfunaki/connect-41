@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { CircleCheck } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Selo } from "@/components/ui/Selo";
@@ -66,7 +67,7 @@ export function AbaAchados({
   const visiveis = filtrarAchados(achados, filtros);
   return (
     <div className="flex flex-col gap-3">
-      <form method="get" className="flex flex-wrap items-center gap-2">
+      <FormularioDeFiltro className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="aba" value="achados" />
         <div className="min-w-56 flex-1">
           <CampoDeBusca name="q" defaultValue={filtros.q ?? ""} placeholder="Buscar por conta, tema ou responsável…" aria-label="Buscar inconsistências" compact />
@@ -93,7 +94,7 @@ export function AbaAchados({
         <span className="ml-auto text-ui font-semibold text-fg">
           {visiveis.length === achados.length ? `${achados.length} achados` : `${visiveis.length} de ${achados.length} achados`}
         </span>
-      </form>
+      </FormularioDeFiltro>
 
       {visiveis.length === 0 && <EmptyState title="Nenhum achado com estes filtros" description="Limpe a busca ou escolha outra gravidade." />}
 

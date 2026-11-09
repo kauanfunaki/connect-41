@@ -87,6 +87,10 @@ export default async function PendenciasPage({
         action={
           podeAgir ? (
             <NovaPendencia
+              // `key` na empresa do filtro: a tela não remonta ao filtrar
+              // (09/11/2026), e as pastas de "Guardar nos Arquivos" ficavam
+              // as da empresa de antes.
+              key={empresaId ?? ""}
               empresas={empresas}
               empresaPadrao={empresaId ?? undefined}
               lancamento={lancamento}

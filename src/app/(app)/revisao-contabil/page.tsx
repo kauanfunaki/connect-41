@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
@@ -57,9 +58,9 @@ export default async function RevisaoDoFechamentoPage({ searchParams }: { search
         <CascoDaTabela
           contagem={contarItens(fechamentos.length, "fechamento", "fechamentos", fechamentos.length >= 300)}
           busca={
-            <form method="get">
+            <FormularioDeFiltro>
               <CampoDeBusca name="q" defaultValue={q ?? ""} placeholder="Buscar por empresa ou CNPJ…" aria-label="Buscar fechamento" compact />
-            </form>
+            </FormularioDeFiltro>
           }
           buscaAEsquerda
         >

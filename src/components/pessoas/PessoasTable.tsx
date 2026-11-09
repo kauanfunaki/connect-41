@@ -1,5 +1,6 @@
 "use client";
 
+import { useSelecaoDasLinhas } from "@/components/shared/useSelecaoDasLinhas";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Users } from "lucide-react";
@@ -43,7 +44,7 @@ type Props = {
 };
 
 export function PessoasTable({ people, canCreate, showLinkedUser = false, definirAtivoPessoasEmMassa, noCasco = false }: Props) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useSelecaoDasLinhas(people.map((linha) => linha.id));
   // Um diálogo só, servindo a ação em massa e a da linha — duas confirmações separadas
   // divergiriam no texto na primeira alteração.
   const [confirmAlvo, setConfirmAlvo] = useState<{ tipo: "massa" } | { tipo: "linha"; row: Row } | null>(null);

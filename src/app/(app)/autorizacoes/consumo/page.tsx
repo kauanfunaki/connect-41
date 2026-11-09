@@ -1,3 +1,4 @@
+import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -84,12 +85,12 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
         <h2 className="text-section font-semibold text-fg first-letter:uppercase">{nomeDoMes(mes)}</h2>
         {/* O seletor de mês do Connect, por GET como o `FiltroDePeriodo`
             (15/10/2026): eram "‹ Mês anterior" e "Este mês ›" em links de texto. */}
-        <form method="get" action="/autorizacoes/consumo" className="flex items-center gap-2">
+        <FormularioDeFiltro action="/autorizacoes/consumo" className="flex items-center gap-2">
           <CampoMes compact name="mes" defaultValue={mes} max={atual} className="w-40" aria-label="Mês" />
           <Button type="submit" variant="secondary" size="sm">
             Aplicar
           </Button>
-        </form>
+        </FormularioDeFiltro>
       </div>
 
       {/* A faixa de totais, com o custo estimado no cartão azul de número

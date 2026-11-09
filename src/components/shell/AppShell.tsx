@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useSearchParams, usePathname } from "next/navigation";
+import { ProvedorDaAtualizacao } from "@/components/shared/NavegacaoSemRecarregar";
 import {
   BookOpen,
   ChevronRight,
@@ -977,7 +978,9 @@ export function AppShell({
           {/* Anota a tela aberta como recente (no navegador) — é o que o Ctrl+K
               oferece antes de a pessoa digitar. */}
           <RegistroDeTelasRecentes />
-          {children}
+          {/* Os filtros da tela navegam sem recarregar e acendem a barra
+              fina do topo enquanto a lista nova chega (09/11/2026). */}
+          <ProvedorDaAtualizacao>{children}</ProvedorDaAtualizacao>
         </main>
       </div>
     </div>
