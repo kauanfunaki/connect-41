@@ -129,7 +129,10 @@ describe("casco e ficha", () => {
     expect(ler("src/components/shell/AppShell.tsx")).not.toMatch(/foco\??\.atual/);
   });
 
-  it("a ficha da empresa oferece “Trabalhar nesta empresa”", () => {
-    expect(ler("src/app/(app)/empresas/[id]/page.tsx")).toContain("<TrabalharNestaEmpresa");
+  // 09/11/2026: a ficha não repete a faixa — a empresa só se escolhe nela.
+  it("a ficha da empresa não tem mais “Trabalhar nesta empresa” nem “Sair”", () => {
+    expect(ler("src/app/(app)/empresas/[id]/page.tsx")).not.toContain("TrabalharNestaEmpresa");
+    expect(ler("src/components/empresas/CompanyHeader.tsx")).not.toMatch(/\bfoco\b/);
+    expect(ler("src/components/empresas/BotoesDoFoco.tsx")).not.toContain("Trabalhar nesta empresa");
   });
 });
