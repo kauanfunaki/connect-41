@@ -17,7 +17,7 @@ if (url) {
   process.env.DATABASE_URL = url;
 }
 const { getPrisma } = await import("@/lib/prisma");
-const { abrirAssistencia, receberQuadro, encerrarAssistencia, lerAssistencia, cliqueDaPessoa, TIPO_DO_AVISO } = await import("./assistenciaServidor");
+const { abrirAssistencia, receberQuadro, encerrarAssistencia, lerAssistencia, cliqueDaPessoa, chamadasDaPessoa, TIPO_DO_AVISO } = await import("./assistenciaServidor");
 
 const SLUG = "robo-assistencia-qa";
 const d = { tenantId: "", quemPediu: "", colega: "", companyId: "" };
@@ -121,6 +121,35 @@ describe.skipIf(!habilitado)("sessão assistida do robô, com MySQL descartável
     await abrirAssistencia(w, id, "captcha", T0);
     expect(await receberQuadro(w, id, JPEG, "image/jpeg", mais(11 * 60_000))).toEqual({ encerrar: true, cliques: [] });
     expect((await lerAssistencia(ctx, id, 0, mais(11 * 60_000)))?.estado).toBe("expirada");
+  });
+
+  it("a janela do captcha no layout: quem pediu na hora, o setor depois da escalada", async () => {
+    // Segunda 09/11/2026, 11h de Brasília: longe dos prazos dos outros casos.
+    const T1 = new Date("2026-11-09T14:00:00Z");
+    const em1 = (ms: number) => new Date(T1.getTime() + ms);
+    const quemPediu = { ...ctx, userId: d.quemPediu } as AuthContext;
+    const id = await novaTarefa();
+
+    // Na máquina, sem pedir ajuda: na fila de quem pediu, nenhuma janela.
+    expect(await chamadasDaPessoa(quemPediu, T1)).toEqual({ naFila: true, sessoes: [] });
+    expect(await chamadasDaPessoa(ctx, T1)).toEqual({ naFila: false, sessoes: [] });
+
+    // Parou no captcha: a janela chama quem pediu, e só ela.
+    await abrirAssistencia(w, id, "captcha", T1);
+    expect((await chamadasDaPessoa(quemPediu, em1(1_000))).sessoes).toEqual([
+      { chave: expect.any(String), tarefaId: id, oQue: "Imprimir o alvará de Curitiba", empresa: "EMPRESA FICTÍCIA DO ALVARÁ", ate: em1(600_000).toISOString() },
+    ]);
+    expect((await chamadasDaPessoa(ctx, em1(1_000))).sessoes).toEqual([]);
+
+    // Escalada: o setor passa a ser chamado; quem não é do setor, não.
+    await receberQuadro(w, id, JPEG, "image/jpeg", em1(121_000));
+    expect((await chamadasDaPessoa(ctx, em1(122_000))).sessoes.map((s) => s.tarefaId)).toEqual([id]);
+    expect((await chamadasDaPessoa({ ...ctx, sectors: ["fiscal"] } as AuthContext, em1(122_000))).sessoes).toEqual([]);
+    expect((await chamadasDaPessoa({ ...ctx, tenantId: "outro-escritorio" } as AuthContext, em1(122_000))).sessoes).toEqual([]);
+
+    // Resolvida: some de todas as janelas.
+    await encerrarAssistencia(w, id, "resolvido", em1(130_000));
+    expect((await chamadasDaPessoa(quemPediu, em1(131_000))).sessoes).toEqual([]);
   });
 
   it("só a máquina que está com a tarefa; outro escritório não enxerga", async () => {

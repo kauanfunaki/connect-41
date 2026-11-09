@@ -5,7 +5,7 @@
 // cada clique como fração da imagem. Só mouse, de propósito: não existe caminho
 // para tecla, então pela janela não se digita nada no site do órgão.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { MousePointerClick } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
@@ -39,7 +39,20 @@ function minutosAte(ate: string | null, agora: number): string | null {
   return `até ${hora} (${min === 1 ? "1 minuto" : `${min} minutos`})`;
 }
 
-export function AssistenciaAoVivo({ tarefaId }: { tarefaId: string }) {
+type Props = {
+  tarefaId: string;
+  /**
+   * Dentro da janela que abre sozinha no layout (09/11/2026): sem o botão de
+   * voltar ao robô, porque a janela fecha sozinha quando a sessão termina.
+   */
+  naJanela?: boolean;
+  /** Cada leitura do estado — a janela do layout fecha quando ele deixa de ser aberto. */
+  onEstado?: (estado: Estado) => void;
+};
+
+export function AssistenciaAoVivo({ tarefaId, naJanela = false, onEstado }: Props) {
+  // Fora das dependências do laço: a função que vem por prop muda a cada render.
+  const avisarEstado = useEffectEvent((estado: Estado) => onEstado?.(estado));
   const [leitura, setLeitura] = useState<Leitura | null>(null);
   const [quadro, setQuadro] = useState<Leitura["quadro"]>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -65,6 +78,7 @@ export function AssistenciaAoVivo({ tarefaId }: { tarefaId: string }) {
         if (!vivo) return;
         setLeitura(dados);
         setAgora(Date.now());
+        avisarEstado(dados.estado);
         if (dados.quadro) {
           desdeRef.current = dados.quadro.em;
           setQuadro(dados.quadro);
@@ -175,7 +189,7 @@ export function AssistenciaAoVivo({ tarefaId }: { tarefaId: string }) {
         </div>
       )}
 
-      {!aberto && (
+      {!aberto && !naJanela && (
         <Button href="/robo" variant="secondary">
           Voltar ao Robô do Societário
         </Button>

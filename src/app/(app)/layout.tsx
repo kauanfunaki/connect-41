@@ -36,6 +36,8 @@ import { alcanceDoFoco } from "@/lib/empresas/foco";
 import { FaixaDoFoco, ProvedorDoFoco } from "@/components/empresas/FaixaDoFoco";
 import { contarNovasDaEquipe } from "@/lib/solicitacoes/consultas";
 import { setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { podeAssistir } from "@/lib/robo/assistenciaServidor";
+import { ChamadaDoRobo } from "@/components/robo/ChamadaDoRobo";
 
 export default async function AppLayout({
   children,
@@ -72,6 +74,7 @@ export default async function AppLayout({
     { aparencia },
     foco,
     podeFocar,
+    chamadaDoRobo,
   ] = await Promise.all([
     getSectorMaps(tenantId),
     getTenantModuleStates(tenantId),
@@ -123,6 +126,14 @@ export default async function AppLayout({
       console.error("[layout] pode usar o foco", err);
       return false;
     }),
+    // A janela do captcha do robô (09/11/2026) só monta para quem passa no
+    // portão da tela do robô: quem não pode resolver nem pergunta ao servidor.
+    ctx.userId
+      ? podeAssistir(ctx).catch((err) => {
+          console.error("[layout] janela do captcha do robô", err);
+          return false;
+        })
+      : Promise.resolve(false),
   ]);
   const visibleSectors = setoresDoSeletor({
     userSectors: sectors,
@@ -261,6 +272,7 @@ export default async function AppLayout({
         <SessionKeeper />
         <TutorialDaEquipe />
         <MeetingAlertOverlay />
+        {chamadaDoRobo && <ChamadaDoRobo />}
         <AvisoDeVersaoNova />
         <DicaFlutuante />
         {children}
