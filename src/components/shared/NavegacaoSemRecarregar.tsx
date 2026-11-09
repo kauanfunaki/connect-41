@@ -63,6 +63,9 @@ export function ProvedorDaAtualizacao({ children }: { children: ReactNode }) {
  * `ir(url)` troca a URL pelo roteador, sem recarregar e sem rolar a tela.
  * `antes` roda dentro da mesma transição — é onde o `FiltrosDaTela` mostra a
  * escolha na hora (`useOptimistic`), antes de a lista nova chegar.
+ * `substituir` troca a entrada do histórico em vez de criar outra: a busca
+ * que filtra enquanto se digita (Arquivos, 09/11/2026) não deixa uma entrada
+ * por pausa da digitação no voltar do navegador.
  */
 export function useNavegarSemRecarregar() {
   const router = useRouter();
@@ -73,10 +76,11 @@ export function useNavegarSemRecarregar() {
   const iniciar = contexto?.iniciar ?? iniciarLocal;
   return {
     pendente: contexto?.pendente ?? pendenteLocal,
-    ir(url: string, antes?: () => void) {
+    ir(url: string, antes?: () => void, { substituir = false }: { substituir?: boolean } = {}) {
       iniciar(() => {
         antes?.();
-        router.push(url, { scroll: false });
+        if (substituir) router.replace(url, { scroll: false });
+        else router.push(url, { scroll: false });
       });
     },
   };

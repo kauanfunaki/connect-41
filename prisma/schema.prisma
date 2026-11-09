@@ -9830,6 +9830,13 @@ model DriveFile {
 
   @@index([tenantId, folderId])
   @@index([tenantId, deletedAt])
+  // A busca em todas as empresas (09/11/2026, src/lib/drive/buscaServidor.ts)
+  // lista os mais recentes primeiro e para nos 50: com a data no índice, o
+  // MySQL anda nele de trás para a frente e para no limite, em vez de ordenar
+  // todos os arquivos do escritório a cada busca. O [tenantId, deletedAt] de
+  // cima é o começo deste e ficou: tirá-lo faz o Prisma derrubar e recriar a
+  // chave estrangeira do tenant, o que no MySQL copia a tabela inteira.
+  @@index([tenantId, deletedAt, createdAt])
   // A limpeza da lixeira (src/lib/drive/lixeira.ts) varre todos os escritórios.
   @@index([deletedAt])
   @@index([tenantId, uploadedByPortalUserId, createdAt])
