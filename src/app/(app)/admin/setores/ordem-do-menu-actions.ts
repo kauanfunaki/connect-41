@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/actionState";
 import { MODULE_CATALOG, ORDEM_DOS_GRUPOS } from "@/lib/module-catalog";
 import { lerOrdemDoMenu } from "@/lib/menuDoSetor";
+import { CHAVES_DO_GERAL } from "@/lib/organizarMenu";
 
 // Organizar menu (05/11/2026, pedido do Kauan): o super admin ordena os grupos
 // e as telas do menu de cada setor. Só a ordem: quem vê cada tela continua
@@ -19,6 +20,7 @@ import { lerOrdemDoMenu } from "@/lib/menuDoSetor";
 const SO_SUPER_ADMIN = "Só o Super Admin organiza o menu dos setores.";
 const GRUPOS = new Set<string>(ORDEM_DOS_GRUPOS);
 const TELAS = new Set(MODULE_CATALOG.map((m) => m.code));
+const GERAL = new Set<string>(CHAVES_DO_GERAL);
 
 type Setor = { id: string; code: string; label: string };
 type Ctx = { tenantId: string; userId: string };
@@ -39,10 +41,21 @@ async function preparar(onde: { id: string } | { code: string }): Promise<{ ctx:
 async function gravar({ ctx, setor }: { ctx: Ctx; setor: Setor }, json: string): Promise<ActionState> {
   const lida = lerOrdemDoMenu(json);
   const ocultas = (lida.ocultas ?? []).filter((t) => TELAS.has(t));
+  const geral = (lida.geral ?? []).filter((c) => GERAL.has(c));
+  // Dentro de cada menu: só menus que existem (uma tela do catálogo, ou o Apoio
+  // do Geral), e chaves curtas — são posições, não dados.
+  const dentro = Object.fromEntries(
+    Object.entries(lida.dentro ?? {})
+      .filter(([mae]) => TELAS.has(mae) || mae === "apoio")
+      .map(([mae, l]) => [mae, l.filter((c) => c.length <= 120).slice(0, 40)] as const)
+      .filter(([, l]) => l.length > 0),
+  );
   const ordem = {
     grupos: lida.grupos.filter((g) => GRUPOS.has(g)),
     telas: lida.telas.filter((t) => TELAS.has(t)),
     ...(ocultas.length ? { ocultas } : {}),
+    ...(geral.length ? { geral } : {}),
+    ...(Object.keys(dentro).length ? { dentro } : {}),
   };
   const chave = { tenantId_sectorCode: { tenantId: ctx.tenantId, sectorCode: setor.code } };
   try {
@@ -62,7 +75,7 @@ async function gravar({ ctx, setor }: { ctx: Ctx; setor: Setor }, json: string):
     action: "sector.menu.ordem",
     entityType: "Sector",
     entityId: setor.id,
-    metadata: { setor: setor.code, grupos: ordem.grupos, telas: ordem.telas, ocultas },
+    metadata: { setor: setor.code, grupos: ordem.grupos, telas: ordem.telas, ocultas, geral, dentro },
   });
   revalidatePath("/", "layout");
   return null;

@@ -46,8 +46,8 @@ import { ModuleIcon, Icone } from "@/components/shared/ModuleIcon";
 import { RegistroDeTelasRecentes } from "@/components/shell/TelasRecentes";
 import { slugDoGrupo, ICONE_DO_GRUPO, TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
 import { caminhoDoMenuAtivo, quadrosAtivo } from "@/lib/caminhoDoMenu";
-import { montarMenuDoSetor, ordemTemPosicao, telasDoBloco, telasVisiveis, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
-import { AvisoDaOrganizacao, MenuEmOrganizacao, RodapeDaOrganizacao, useOrganizarMenu } from "@/components/shell/OrganizarMenuNaLateral";
+import { montarMenuDoSetor, ordemTemPosicao, pelaOrdem, telasDoBloco, telasVisiveis, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu } from "@/lib/menuDoSetor";
+import { AvisoDaOrganizacao, GeralEmOrganizacao, MenuEmOrganizacao, RodapeDaOrganizacao, useOrganizarMenu, type ItemDentro } from "@/components/shell/OrganizarMenuNaLateral";
 import { ItemComJanela } from "@/components/shell/ItemComJanela";
 import { CAMINHO_DOS_FORNECEDORES } from "@/lib/cadastrosNav";
 import type { TelaNavegavel } from "@/lib/buscaDeTelas";
@@ -301,25 +301,18 @@ export function AppShell({
   // Com a ordem escolhida pelo super admin, ela vence o "cores juntas" (28/10/2026).
   const ordemEscolhida = ordemTemPosicao(ordemDoMenu);
   const areaDoBloco = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? areaDoModulo(b.entrada.tela.code) ?? "marca" : areaDoGrupoDeTelas(telasDoBloco(b).map((t) => t.code)) ?? "marca";
-  // Chamados e Certificados digitais sempre no fim do menu (05/11/2026).
+  // Chamados e Certificados digitais no fim do menu (05/11/2026) — na ordem
+  // padrão. Desde 09/11/2026 a ordem escolhida no organizador vence: eles
+  // mudam de lugar como qualquer tela.
   const NO_FIM = ["helpdesk", "tech_certificados"];
   const posNoFim = (b: BlocoDoMenu<SectorModule>) => b.tipo === "solta" ? NO_FIM.indexOf(b.entrada.tela.code) : -1;
-  /** Os blocos na ordem em que o menu mostra: a escolhida ou as cores juntas, e os do fim no fim. */
+  /** Os blocos na ordem em que o menu mostra: a escolhida, ou as cores juntas com os do fim no fim. */
   const naOrdemDoMenu = (blocos: BlocoDoMenu<SectorModule>[], escolhida: boolean) => {
-    const ordenados = escolhida ? blocos : agruparPorCor(blocos, areaDoBloco);
+    if (escolhida) return blocos;
+    const ordenados = agruparPorCor(blocos, areaDoBloco);
     return [...ordenados.filter((b) => posNoFim(b) < 0), ...ordenados.filter((b) => posNoFim(b) >= 0).sort((x, y) => posNoFim(x) - posNoFim(y))];
   };
   const blocosDoMenu = naOrdemDoMenu(montarMenuDoSetor(telasVisiveis(telasDoSetor, ordemDoMenu), ordemDoMenu), ordemEscolhida);
-  // Organizar no próprio menu (09/11/2026): o rodapé da lateral abre o modo de edição.
-  const organizacao = useOrganizarMenu({
-    setor: activeSector,
-    blocosAtuais: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor, ordemDoMenu), ordemEscolhida),
-    blocosPadrao: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor), false),
-    ocultasAtuais: ordemDoMenu?.ocultas ?? [],
-    fixosNoFim: NO_FIM,
-  });
-  const podeOrganizar = !!activeSector && podeOrganizarMenu && telasDoSetor.length > 0;
-  const organizando = podeOrganizar && organizacao.aberto && !naFaixa;
 
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
@@ -342,12 +335,19 @@ export function AppShell({
   // senhas, Repositório de manuais e Quadros, para todo setor — cada setor vê
   // os seus. Com uma tela só, ela fica solta (a regra dos grupos do menu).
   type ItemDoApoio = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean };
-  const blocoDoApoio = (quadros: ItemDoApoio | null) => {
+  const apoioBruto = (quadros: ItemDoApoio | null): ItemDoApoio[] => {
     const telas: ItemDoApoio[] = [
       ...(apoioLigado.senhas ? [{ chave: "senhas", label: "Repositório de senhas", href: "/senhas", icon: <ModuleIcon code="bpo_senhas" />, area: areaDoModulo("bpo_senhas") ?? "marca" }] : []),
       ...(apoioLigado.manuais ? [{ chave: "manuais", label: "Repositório de manuais", href: "/manuais", icon: <ModuleIcon code="bpo_manual" />, area: areaDoModulo("bpo_manual") ?? "marca" }] : []),
       ...(quadros ? [quadros] : []),
     ];
+    return telas;
+  };
+  /** As telas do Apoio na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
+  const telasDoApoio = (quadros: ItemDoApoio | null, comAOrdemEscolhida = true) =>
+    pelaOrdem(apoioBruto(quadros), (i) => i.chave, comAOrdemEscolhida && activeSector ? ordemDoMenu?.dentro?.apoio ?? [] : []);
+  const blocoDoApoio = (quadros: ItemDoApoio | null) => {
+    const telas = telasDoApoio(quadros);
     if (telas.length === 0) return null;
     const acesa = (i: ItemDoApoio) => i.ativo ?? caminhoDoMenuAtivo(pathname, i.href);
     const item = (i: ItemDoApoio) => <NavItem key={i.chave} href={i.href} ativo={i.ativo} icon={i.icon} label={i.label} area={i.area} />;
@@ -358,30 +358,65 @@ export function AppShell({
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
   // O Geral com as cores juntas (28/10/2026): os azuis — sem área e Chamados —
   // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo,
-  // que entra no grupo Apoio (05/11/2026).
-  const itensDoGeral = (quadros: ItemDoApoio | null = null) => {
+  // que entra no grupo Apoio (05/11/2026). Desde 09/11/2026 o setor pode
+  // escolher a ordem do Geral no organizador (`ordemDoMenu.geral`), só dentro dele.
+  const listaDoGeral = (quadros: ItemDoApoio | null = null, comAOrdemEscolhida = true) => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
-    const itens: { chave: string; area: string; no: React.ReactNode }[] = [
-      { chave: "apoio", area: "escritorio", no: blocoDoApoio(quadros) },
+    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", quadros?.label].filter(Boolean) as string[];
+    const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; no: React.ReactNode }[] = [
+      {
+        chave: "apoio",
+        area: "escritorio",
+        label: apoio.length === 1 ? apoio[0]! : "Apoio",
+        icon: apoio.length === 1 && quadros ? quadros.icon : <BookOpen size={16} />,
+        filhos: telasDoApoio(quadros, comAOrdemEscolhida).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
+        no: blocoDoApoio(quadros),
+      },
       {
         chave: "cadastros",
         area: "marca",
+        label: "Cadastros",
+        icon: <ContactRound size={16} />,
         no: noGeral("cadastros") && (
           <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} area="marca" icone={<ContactRound />}>
             <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
           </PainelDoItem>
         ),
       },
-      { chave: "transferencias", area: "marca", no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
-      { chave: "solicitacoes", area: solicitacoes, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
-      { chave: "chamados", area: chamados, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
-      { chave: "arquivos", area: arquivos, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
-      { chave: "agenda", area: "marca", no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
+      { chave: "transferencias", area: "marca", label: "Transferências", icon: <ArrowRightLeft size={16} />, no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
+      { chave: "solicitacoes", area: solicitacoes, label: "Solicitações", icon: <Inbox size={16} />, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
+      { chave: "chamados", area: chamados, label: "Chamados", icon: <ModuleIcon code="helpdesk" />, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
+      { chave: "arquivos", area: arquivos, label: "Arquivos", icon: <FolderOpen size={16} />, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
+      { chave: "agenda", area: "marca", label: "Agenda", icon: <CalendarDays size={16} />, no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
     ];
-    return agruparPorCor(itens.filter((i) => i.no), (i) => i.area).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
+    const presentes = itens.filter((i) => i.no);
+    const escolhida = comAOrdemEscolhida && activeSector ? ordemDoMenu?.geral ?? [] : [];
+    return escolhida.length > 0 ? pelaOrdem(presentes, (i) => i.chave, escolhida) : agruparPorCor(presentes, (i) => i.area);
   };
+  const itensDoGeral = (quadros: ItemDoApoio | null = null) => listaDoGeral(quadros).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
+  // Na Tech, os Quadros são o Controle interno (decisão do Kauan, 05/11/2026):
+  // o item leva até ele, sem acender por conta própria — quem acende é o
+  // Controle interno, no grupo dele.
+  const quadrosDoSetor: ItemDoApoio | null = !activeSector || !noGeral("espacos")
+    ? null
+    : activeSectorModules.some((m) => m.code === "tech_controle_interno")
+      ? { chave: "quadros", label: "Quadros", href: "/controle-interno", icon: <FolderKanban size={16} />, area: "marca", ativo: false }
+      : { chave: "quadros", label: "Quadros", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) };
+  // Organizar no próprio menu (09/11/2026): o rodapé da lateral abre o modo de edição.
+  const organizacao = useOrganizarMenu({
+    setor: activeSector,
+    blocosAtuais: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor, ordemDoMenu), ordemEscolhida),
+    blocosPadrao: naOrdemDoMenu(montarMenuDoSetor(telasDoSetor), false),
+    ocultasAtuais: ordemDoMenu?.ocultas ?? [],
+    dentroAtual: ordemDoMenu?.dentro ?? {},
+    geralAtual: listaDoGeral(quadrosDoSetor, true),
+    geralPadrao: listaDoGeral(quadrosDoSetor, false),
+  });
+  const podeOrganizar = !!activeSector && podeOrganizarMenu && telasDoSetor.length > 0;
+  const organizando = podeOrganizar && organizacao.aberto && !naFaixa;
+
   useEffect(() => {
     if (!mobileOpen) return;
     function tecla(e: KeyboardEvent) {
@@ -527,6 +562,8 @@ export function AppShell({
                     A identidade do setor não é mais um rótulo solto no topo: ela
                     está no seletor acima (com a cor) e volta como título das telas
                     do setor, que é onde diz de quem são aqueles grupos. */}
+                {/* O aviso do organizador no topo do menu, como no desenho (09/11/2026). */}
+                {organizando && <AvisoDaOrganizacao setor={activeSector.label} />}
                 <NavItem href="/home" icon={<Home size={16} />} label="Início" area="marca" />
                 <NavItem href="/tarefas" icon={<CalendarCheck size={16} />} label="Meu dia" area="marca" />
 
@@ -552,16 +589,7 @@ export function AppShell({
                     </p>
                   </TituloDoBloco>
                 )}
-                {/* Na Tech, os Quadros são o Controle interno (decisão do Kauan,
-                    05/11/2026): o item leva até ele, sem acender por conta
-                    própria — quem acende é o Controle interno, no grupo dele. */}
-                {itensDoGeral(
-                  !noGeral("espacos")
-                    ? null
-                    : activeSectorModules.some((m) => m.code === "tech_controle_interno")
-                      ? { chave: "quadros", label: "Quadros", href: "/controle-interno", icon: <FolderKanban size={16} />, area: "marca", ativo: false }
-                      : { chave: "quadros", label: "Quadros", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) }
-                )}
+                {organizando ? <GeralEmOrganizacao org={organizacao} /> : itensDoGeral(quadrosDoSetor)}
 
                 <TelasFixadas telas={telasFixadas} />
 
@@ -669,10 +697,11 @@ export function AppShell({
                   // (`telaMae`) e as de dentro que têm entrada no menu (`subTelas`).
                   const partesDaEntrada = (e: EntradaDoMenu<SectorModule>): { mae: Mae; filhas: Filha[] } => {
                     const subs = subTelas(e.tela.code);
-                    const filhas: Filha[] = [
+                    // A ordem de dentro escolhida no organizador (09/11/2026), por menu.
+                    const filhas: Filha[] = pelaOrdem([
                       ...e.filhas.map((f) => ({ chave: f.code, label: f.label, href: f.href, icon: <ModuleIcon code={f.code} /> })),
-                      ...subs.map((s) => ({ chave: s.href, label: s.label, href: s.href, icon: s.icon, ativa: s.ativa })),
-                    ];
+                      ...subs.map((s) => ({ chave: `sub:${s.label}`, label: s.label, href: s.href, icon: s.icon, ativa: s.ativa })),
+                    ], (f) => f.chave, ordemDoMenu?.dentro?.[e.tela.code] ?? []);
                     const href = e.tela.code === "contabil_sped" ? linkDoContabil : e.tela.href;
                     const mae: Mae = { label: e.tela.label, href, icon: <ModuleIcon code={e.tela.code} />, area: areaDe(e.tela.code), ativo: ativaSemFilha(e.tela.code, subs), exact: e.tela.href === "/sped-fiscal/motor", semLink: e.tela.code === "tech_ops_center", contador: e.tela.code === "helpdesk" ? novosChamados : undefined };
                     return { mae, filhas };
@@ -699,8 +728,11 @@ export function AppShell({
                   if (organizando) {
                     return (
                       <>
-                        <AvisoDaOrganizacao setor={activeSector.label} />
-                        <MenuEmOrganizacao org={organizacao} itemNoTopo={itemSped ? { label: "SPED", icon: <ReceiptText size={15} /> } : undefined} />
+                        <MenuEmOrganizacao
+                          org={organizacao}
+                          itemNoTopo={itemSped ? { label: "SPED", icon: <ReceiptText size={15} /> } : undefined}
+                          subsDe={(code) => subTelas(code).map((t) => ({ chave: `sub:${t.label}`, label: t.label, icon: t.icon }))}
+                        />
                       </>
                     );
                   }

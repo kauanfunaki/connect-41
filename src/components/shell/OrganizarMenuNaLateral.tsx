@@ -6,22 +6,35 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { restaurarOrdemDoMenuPeloCodigo, salvarOrdemDoMenuPeloCodigo } from "@/app/(app)/admin/setores/ordem-do-menu-actions";
-import { telasDoBloco, type BlocoDoMenu, type EntradaDoMenu, type TelaDoMenu } from "@/lib/menuDoSetor";
+import { pelaOrdem, type BlocoDoMenu, type EntradaDoMenu, type TelaDoMenu } from "@/lib/menuDoSetor";
 import { alternarOculta, moverNaLista, moverNoMenu, ordemDosBlocos, type ListaDoMenu } from "@/lib/organizarMenu";
 
 // Organizar no próprio menu (09/11/2026, pedido do Victor; desenho "A ·
 // Organizar no próprio menu" do artefato "Organizar menu lateral"). O
 // "Organizar menu" saiu do fim da lista — onde levava a Admin › Setores — e
-// virou o rodapé da lateral: o menu do setor entra em modo de edição ali
-// mesmo, com a alça de pontinhos para arrastar, o olho para esconder sem tirar
-// do lugar e "Restaurar padrão" / "Concluir". Grava na mesma ordem do setor
+// virou o rodapé da lateral: o menu entra em modo de edição ali mesmo, com a
+// alça de pontinhos para arrastar, o olho para esconder sem tirar do lugar e
+// "Restaurar padrão" / "Concluir". Grava na mesma ordem do setor
 // (`SectorMenuOrder`), só o Super Admin, e vale para todos do setor.
 //
-// O que fica de fora, de propósito: mudar uma tela de grupo, criar ou
-// renomear seção. Os grupos são os temas do catálogo, e a regra do menu
-// (`menuDoSetor.ts`) é que a tela fica no grupo dela.
+// - O Geral entra também, só para mudar a ordem dentro dele: quem aparece no
+//   Geral continua sendo de Configurações › Setores, então ali não há olho.
+// - As telas do setor mudam de ordem dentro da lista delas (os blocos, as
+//   telas de um grupo, as filhas de uma tela). Mudar uma tela de grupo, criar
+//   ou renomear seção ficam de fora: os grupos são os temas do catálogo, e a
+//   regra do menu (`menuDoSetor.ts`) é que a tela fica no grupo dela.
+// - O arrasto é por eventos de ponteiro, e não o arrastar e soltar nativo do
+//   HTML: o nativo não pegava nas linhas com botão dentro, e não funciona com
+//   toque. Com o mouse, qualquer ponto da linha segura (menos o olho); no toque,
+//   só a alça, para o dedo ainda rolar o menu.
 
 type Tela = TelaDoMenu;
+
+/** Uma tela de dentro de um menu que não é tela do catálogo (Robôs, Sites… ou as do Apoio). */
+export type ItemDentro = { chave: string; label: string; icon: React.ReactNode };
+
+/** Um item do Geral no organizador: a chave de `CHAVES_DO_GERAL`, o nome, o ícone e, no Apoio, as telas de dentro. */
+export type ItemDoGeral = { chave: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[] };
 
 export type OrganizacaoDoMenu = ReturnType<typeof useOrganizarMenu>;
 
@@ -34,7 +47,9 @@ export function useOrganizarMenu({
   blocosAtuais,
   blocosPadrao,
   ocultasAtuais,
-  fixosNoFim,
+  dentroAtual,
+  geralAtual,
+  geralPadrao,
 }: {
   setor: { code: string; label: string } | null;
   /** O menu como está, já com as telas escondidas (para mostrá-las apagadas). */
@@ -42,25 +57,29 @@ export function useOrganizarMenu({
   /** O menu sem nada escolhido — o "Restaurar padrão". */
   blocosPadrao: BlocoDoMenu<Tela>[];
   ocultasAtuais: string[];
-  /** As telas soltas que ficam sempre no fim (Chamados, Certificados): não arrastam. */
-  fixosNoFim: readonly string[];
+  /** A ordem escolhida do que fica dentro de cada menu. */
+  dentroAtual: Record<string, string[]>;
+  /** Os itens do Geral na ordem em que aparecem. */
+  geralAtual: ItemDoGeral[];
+  /** Os itens do Geral na ordem de sempre (cores juntas). */
+  geralPadrao: ItemDoGeral[];
 }) {
   const toast = useToast();
   const [aberto, setAberto] = useState(false);
   const [blocos, setBlocos] = useState(blocosAtuais);
   const [ocultas, setOcultas] = useState(ocultasAtuais);
+  const [geral, setGeral] = useState(geralAtual);
+  const [dentro, setDentro] = useState(dentroAtual);
   const [mudou, setMudou] = useState(false);
   const [padrao, setPadrao] = useState(false);
   const [aviso, setAviso] = useState("");
   const [salvando, startTransition] = useTransition();
 
-  const fixo = (b: BlocoDoMenu<Tela>) => b.tipo === "solta" && fixosNoFim.includes(b.entrada.tela.code);
-  const moveis = blocos.filter((b) => !fixo(b));
-  const fixos = blocos.filter(fixo);
-
   function abrir() {
     setBlocos(blocosAtuais);
     setOcultas(ocultasAtuais);
+    setGeral(geralAtual);
+    setDentro(dentroAtual);
     setMudou(false);
     setPadrao(false);
     setAviso("");
@@ -69,11 +88,9 @@ export function useOrganizarMenu({
 
   function mover(lista: ListaDoMenu, de: number, antesDe: number, rotulo: string) {
     if (antesDe === de || antesDe === de + 1) return;
-    setBlocos((atual) => {
-      const m = atual.filter((b) => !fixo(b));
-      const f = atual.filter(fixo);
-      return lista.tipo === "blocos" ? [...moverNaLista(m, de, antesDe), ...f] : moverNoMenu(atual, lista, de, antesDe);
-    });
+    if (lista.tipo === "geral") setGeral((g) => moverNaLista(g, de, antesDe));
+    else if (lista.tipo === "dentro") setDentro((d) => ({ ...d, [lista.mae]: moverNaLista(lista.chaves, de, antesDe) }));
+    else setBlocos((atual) => moverNoMenu(atual, lista, de, antesDe));
     setMudou(true);
     setPadrao(false);
     setAviso(`${rotulo} ${antesDe < de ? "subiu" : "desceu"}.`);
@@ -90,6 +107,8 @@ export function useOrganizarMenu({
   function restaurar() {
     setBlocos(blocosPadrao);
     setOcultas([]);
+    setGeral(geralPadrao);
+    setDentro({});
     setMudou(true);
     setPadrao(true);
     setAviso("O menu voltou à ordem padrão, com todas as telas. Conclua para gravar.");
@@ -103,7 +122,7 @@ export function useOrganizarMenu({
     startTransition(async () => {
       const r = padrao
         ? await restaurarOrdemDoMenuPeloCodigo(setor.code)
-        : await salvarOrdemDoMenuPeloCodigo(setor.code, JSON.stringify(ordemDosBlocos(blocos, ocultas)));
+        : await salvarOrdemDoMenuPeloCodigo(setor.code, JSON.stringify(ordemDosBlocos(blocos, ocultas, geral.map((g) => g.chave), dentro)));
       if (r?.error) {
         toast.error(r.error);
         return;
@@ -113,14 +132,31 @@ export function useOrganizarMenu({
     });
   }
 
-  return { aberto, abrir, concluir, restaurar, mover, esconder, moveis, fixos, ocultas, salvando, aviso, setor };
+  /** O que fica dentro do menu `mae`, na ordem escolhida (ou na que veio). */
+  const emOrdem = <T,>(mae: string, itens: readonly T[], chave: (i: T) => string) => pelaOrdem(itens, chave, dentro[mae] ?? []);
+
+  return { aberto, abrir, concluir, restaurar, mover, esconder, emOrdem, blocos, geral, ocultas, salvando, aviso, setor };
 }
 
-/** O que está sendo arrastado e onde vai cair. `lista` é a chave da lista (`chaveDaLista`). */
-type Arrasto = { lista: string; de: number; code: string } | null;
-type Alvo = { lista: string; antesDe: number } | null;
+const chaveDaLista = (l: ListaDoMenu) =>
+  l.tipo === "blocos" || l.tipo === "geral" ? l.tipo : l.tipo === "grupo" ? `grupo:${l.grupo}` : `${l.tipo}:${l.mae}`;
 
-const chaveDaLista = (l: ListaDoMenu) => (l.tipo === "blocos" ? "blocos" : l.tipo === "grupo" ? `grupo:${l.grupo}` : `filhas:${l.mae}`);
+/** O que está sendo arrastado: a lista, a posição de onde saiu e a de onde vai cair. */
+type Arrasto = { lista: ListaDoMenu; chave: string; de: number; code: string; rotulo: string; y0: number; andou: boolean; antesDe: number | null };
+
+/**
+ * Onde o ponteiro cai na lista: antes do primeiro item cuja metade de cima
+ * fica abaixo dele; passou de todos, no fim. Os itens são os elementos com
+ * `data-lista` igual à chave, na ordem da tela.
+ */
+function posicaoNoPonto(chave: string, y: number): number {
+  const itens = [...document.querySelectorAll<HTMLElement>(`[data-lista="${CSS.escape(chave)}"]`)];
+  const i = itens.findIndex((el) => {
+    const r = el.getBoundingClientRect();
+    return y < r.top + r.height / 2;
+  });
+  return i < 0 ? itens.length : i;
+}
 
 /** O aviso do topo do modo de edição. */
 export function AvisoDaOrganizacao({ setor }: { setor: string }) {
@@ -131,73 +167,67 @@ export function AvisoDaOrganizacao({ setor }: { setor: string }) {
         Organizando o menu
       </p>
       <p className="mt-1 text-fs-1 leading-snug text-fg-secondary">
-        Segure pelos pontinhos à esquerda e arraste. O olho esconde a tela do menu de {setor} sem tirá-la do lugar.
+        Segure pelos pontinhos e arraste: cada item muda de ordem só dentro do menu dele. Nas telas de {setor}, o olho esconde a tela sem tirá-la do lugar.
       </p>
     </div>
   );
 }
 
 /**
- * O menu do setor em modo de edição: as mesmas linhas do menu, uma por tela,
- * na ordem em que vão ficar. Cada lista arrasta só dentro dela (os blocos, as
- * telas de um grupo, as filhas de uma tela); a alça também anda com as setas
- * do teclado.
+ * O arrasto, compartilhado pelo Geral e pelo menu do setor: cada um chama
+ * `useArrasto` e espalha `pegador(...)` nas linhas.
  */
-export function MenuEmOrganizacao({ org, itemNoTopo }: { org: OrganizacaoDoMenu; itemNoTopo?: { label: string; icon: React.ReactNode } }) {
-  const [arrasto, setArrasto] = useState<Arrasto>(null);
-  const [alvo, setAlvo] = useState<Alvo>(null);
-  // A alça segurada: a linha só arrasta quando o arrasto começa nela.
-  const [presa, setPresa] = useState<string | null>(null);
+function useArrasto(org: OrganizacaoDoMenu) {
+  const [arrasto, setArrasto] = useState<Arrasto | null>(null);
   const travado = org.salvando;
 
-  const soltar = () => {
-    setPresa(null);
-    setArrasto(null);
-    setAlvo(null);
-  };
-
-  /** Os eventos de uma linha que arrasta dentro de `lista`, na posição `i` de `total`. */
-  const arrastavel = (lista: ListaDoMenu, i: number, code: string, rotulo: string) => {
+  /** Os eventos e a aparência de um item que arrasta dentro de `lista`, na posição `i` de `total`. */
+  function pegador(lista: ListaDoMenu, i: number, total: number, code: string, rotulo: string) {
     const chave = chaveDaLista(lista);
-    const naMesma = arrasto?.lista === chave;
+    const meu = arrasto?.code === code && arrasto.chave === chave;
+    const alvo = arrasto?.andou && arrasto.chave === chave ? arrasto.antesDe : null;
+    const marca = alvo === i ? "shadow-[0_-3px_0_0_var(--color-brand)]" : alvo === i + 1 && alvo === total ? "shadow-[0_3px_0_0_var(--color-brand)]" : "";
     return {
-      draggable: !travado,
-      onDragStart: (e: React.DragEvent) => {
-        if (presa !== code || travado) {
+      /** Vai no elemento que conta como uma posição da lista (a linha, ou o grupo inteiro). */
+      item: { "data-lista": chave, "data-i": i },
+      marca,
+      arrastando: meu && !!arrasto?.andou,
+      /** Vai na linha que segura o arrasto. */
+      linha: {
+        onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+          if (travado || e.button !== 0) return;
+          const alvoDoToque = e.target as Element;
+          if (alvoDoToque.closest("[data-nao-arrasta]")) return;
+          // No toque, só a alça segura: o resto da linha rola o menu.
+          if (e.pointerType !== "mouse" && !alvoDoToque.closest("[data-alca]")) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setArrasto({ lista, chave, de: i, code, rotulo, y0: e.clientY, andou: false, antesDe: null });
+        },
+        onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+          if (!arrasto || arrasto.code !== code) return;
+          const andou = arrasto.andou || Math.abs(e.clientY - arrasto.y0) > 4;
+          if (!andou) return;
           e.preventDefault();
-          return;
-        }
-        e.stopPropagation();
-        try {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", code);
-        } catch {
-          /* alguns navegadores não deixam: o arrasto segue pelo estado */
-        }
-        setArrasto({ lista: chave, de: i, code });
+          // Perto da borda, o menu rola sozinho.
+          const nav = e.currentTarget.closest("nav");
+          if (nav) {
+            const r = nav.getBoundingClientRect();
+            if (e.clientY < r.top + 36) nav.scrollTop -= 10;
+            else if (e.clientY > r.bottom - 36) nav.scrollTop += 10;
+          }
+          const antesDe = posicaoNoPonto(arrasto.chave, e.clientY);
+          if (!arrasto.andou || antesDe !== arrasto.antesDe) setArrasto({ ...arrasto, andou: true, antesDe });
+        },
+        onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+          // O destino sai do ponto onde soltou, e não do último movimento
+          // guardado: num arrasto rápido o estado ainda não acompanhou.
+          if (arrasto && arrasto.code === code && (arrasto.andou || Math.abs(e.clientY - arrasto.y0) > 4)) {
+            org.mover(arrasto.lista, arrasto.de, posicaoNoPonto(arrasto.chave, e.clientY), arrasto.rotulo);
+          }
+          setArrasto(null);
+        },
+        onPointerCancel: () => setArrasto(null),
       },
-      onDragEnd: soltar,
-      onDragOver: (e: React.DragEvent) => {
-        if (!naMesma) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const r = e.currentTarget.getBoundingClientRect();
-        const antesDe = e.clientY > r.top + r.height / 2 ? i + 1 : i;
-        if (alvo?.lista !== chave || alvo.antesDe !== antesDe) setAlvo({ lista: chave, antesDe });
-      },
-      onDrop: (e: React.DragEvent) => {
-        if (!naMesma || !arrasto) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const r = e.currentTarget.getBoundingClientRect();
-        org.mover(lista, arrasto.de, e.clientY > r.top + r.height / 2 ? i + 1 : i, rotuloDe(arrasto.code));
-        soltar();
-      },
-      /** A barrinha azul em cima ou embaixo da linha onde o item vai cair. */
-      marca: naMesma && arrasto?.code !== code && alvo?.lista === chave
-        ? alvo.antesDe === i ? "shadow-[0_-3px_0_0_var(--color-brand)]" : alvo.antesDe === i + 1 ? "shadow-[0_3px_0_0_var(--color-brand)]" : ""
-        : "",
-      arrastando: arrasto?.code === code,
       alca: (
         <button
           type="button"
@@ -205,8 +235,6 @@ export function MenuEmOrganizacao({ org, itemNoTopo }: { org: OrganizacaoDoMenu;
           aria-label={`Mover ${rotulo}`}
           title="Segure e arraste, ou use as setas"
           disabled={travado}
-          onPointerDown={() => setPresa(code)}
-          onPointerUp={() => setPresa(null)}
           onKeyDown={(e) => {
             const passo = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
             if (!passo) return;
@@ -215,26 +243,99 @@ export function MenuEmOrganizacao({ org, itemNoTopo }: { org: OrganizacaoDoMenu;
             // A alça continua com o foco depois de a linha mudar de lugar.
             requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-alca="${CSS.escape(code)}"]`)?.focus());
           }}
-          className="grid h-9 w-6 flex-shrink-0 cursor-grab place-items-center rounded-md text-fg-muted transition-colors hover:text-fg active:cursor-grabbing disabled:cursor-default"
+          className="grid h-9 w-6 flex-shrink-0 cursor-grab touch-none place-items-center rounded-md text-fg-muted transition-colors hover:text-fg active:cursor-grabbing disabled:cursor-default"
         >
           <GripVertical size={15} aria-hidden />
         </button>
       ),
     };
-  };
-
-  const rotulos = new Map<string, string>();
-  for (const b of [...org.moveis, ...org.fixos]) {
-    rotulos.set(`grupo:${b.grupo}`, `O grupo ${b.grupo}`);
-    for (const t of telasDoBloco(b)) rotulos.set(t.code, t.label);
   }
-  const rotuloDe = (code: string) => rotulos.get(code) ?? code;
+
+  return { pegador, arrastando: !!arrasto?.andou };
+}
+
+const LINHA = "flex h-9 items-center gap-1.5 rounded-lg border pr-0.5 transition-[opacity,box-shadow]";
+
+type Pegador = ReturnType<ReturnType<typeof useArrasto>["pegador"]>;
+
+/** Uma linha sem olho (Geral, abas de uma tela, telas do Apoio). `comoItem`: a linha é a posição na lista. */
+function LinhaSimples({ item, d, comoItem = true }: { item: ItemDentro; d: Pegador | null; comoItem?: boolean }) {
+  return (
+    <div
+      {...(d ? { ...(comoItem ? d.item : {}), ...d.linha } : {})}
+      className={`${LINHA} border-border bg-surface ${d ? "cursor-grab" : "pl-2"} ${d?.arrastando ? "opacity-40" : ""} ${comoItem ? (d?.marca ?? "") : ""}`}
+    >
+      {d?.alca}
+      <span aria-hidden className="flex-shrink-0 text-fg-secondary [&>svg]:size-[15px]">{item.icon}</span>
+      <span className="min-w-0 flex-1 truncate text-fs-2 text-fg">{item.label}</span>
+    </div>
+  );
+}
+
+/** A lista recuada do que fica dentro de um menu. */
+function ListaDeDentro({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <ul aria-label={`Telas dentro de ${titulo}`} className="ml-3 space-y-1 border-l border-border pl-2">
+      {children}
+    </ul>
+  );
+}
+
+/** O Geral em modo de edição: só a ordem, dentro dele. */
+export function GeralEmOrganizacao({ org }: { org: OrganizacaoDoMenu }) {
+  const { pegador, arrastando } = useArrasto(org);
+  if (org.geral.length === 0) return null;
+  return (
+    <ul aria-label="Geral" className={`space-y-1 ${arrastando ? "cursor-grabbing select-none" : ""}`}>
+      {org.geral.map((g, i) => {
+        const d = org.geral.length > 1 ? pegador({ tipo: "geral" }, i, org.geral.length, `geral:${g.chave}`, g.label) : null;
+        // O Apoio com mais de uma tela: as de dentro mudam de ordem só ali.
+        const filhos = g.filhos && g.filhos.length > 1 ? org.emOrdem(g.chave, g.filhos, (x) => x.chave) : [];
+        const chaves = filhos.map((x) => x.chave);
+        return (
+          <li key={g.chave} {...(d?.item ?? {})} className={`space-y-1 rounded-lg ${d?.marca ?? ""}`}>
+            <LinhaSimples item={g} d={d} comoItem={false} />
+            {filhos.length > 0 && (
+              <ListaDeDentro titulo={g.label}>
+                {filhos.map((x, j) => (
+                  <li key={x.chave}>
+                    <LinhaSimples item={x} d={pegador({ tipo: "dentro", mae: g.chave, chaves }, j, filhos.length, `${g.chave}>${x.chave}`, x.label)} />
+                  </li>
+                ))}
+              </ListaDeDentro>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * O menu do setor em modo de edição: as mesmas linhas do menu, uma por tela,
+ * na ordem em que vão ficar. Cada lista arrasta só dentro dela (os blocos, as
+ * telas de um grupo, o que fica dentro de uma tela); a alça também anda com as setas
+ * do teclado.
+ */
+export function MenuEmOrganizacao({
+  org,
+  itemNoTopo,
+  subsDe = () => [],
+}: {
+  org: OrganizacaoDoMenu;
+  itemNoTopo?: { label: string; icon: React.ReactNode };
+  /** As abas de uma tela que têm entrada no menu (Robôs, Sites, Apps…), com a chave `sub:<nome>`. */
+  subsDe?: (code: string) => ItemDentro[];
+}) {
+  const { pegador, arrastando } = useArrasto(org);
+  const travado = org.salvando;
 
   const olho = (t: Tela, apagadaPelaMae: boolean) => {
     const oculta = org.ocultas.includes(t.code);
     return (
       <button
         type="button"
+        data-nao-arrasta
         aria-label={`${oculta ? "Mostrar" : "Esconder"} ${t.label}`}
         aria-pressed={oculta}
         title={apagadaPelaMae && !oculta ? "Escondida junto com a tela de cima" : undefined}
@@ -247,83 +348,91 @@ export function MenuEmOrganizacao({ org, itemNoTopo }: { org: OrganizacaoDoMenu;
     );
   };
 
-  const cadeado = (dica: string) => (
-    <span title={dica} className="grid size-8 flex-shrink-0 place-items-center text-fg-muted">
-      <Lock size={13} role="img" aria-label={dica} />
-    </span>
-  );
-
-  /** Uma linha de tela: alça (ou nada), ícone, nome, olho. */
-  const linha = (t: Tela, opcoes: { lista?: ListaDoMenu; i?: number; apagadaPelaMae?: boolean; fixa?: string }) => {
-    const oculta = org.ocultas.includes(t.code) || !!opcoes.apagadaPelaMae;
-    const d = opcoes.lista ? arrastavel(opcoes.lista, opcoes.i!, t.code, t.label) : null;
+  /** Uma linha de tela: alça, ícone, nome, olho. `d` são os eventos do arrasto, quando a lista tem mais de um item. */
+  const linha = (t: Tela, d: Pegador | null, apagadaPelaMae = false, comoItem = true) => {
+    const oculta = org.ocultas.includes(t.code) || apagadaPelaMae;
     return (
       <div
-        key={t.code}
-        {...(d ? { draggable: d.draggable, onDragStart: d.onDragStart, onDragEnd: d.onDragEnd, onDragOver: d.onDragOver, onDrop: d.onDrop } : {})}
-        className={`flex h-9 items-center gap-1.5 rounded-lg border pr-0.5 transition-[opacity,box-shadow] ${
-          oculta ? "border-border-soft bg-surface-2" : "border-border bg-surface"
-        } ${d?.arrastando ? "opacity-40" : ""} ${d?.marca ?? ""} ${d ? "" : "pl-2"}`}
+        {...(d ? { ...(comoItem ? d.item : {}), ...d.linha } : {})}
+        className={`${LINHA} ${oculta ? "border-border-soft bg-surface-2" : "border-border bg-surface"} ${d ? "cursor-grab" : "pl-2"} ${
+          d?.arrastando ? "opacity-40" : ""
+        } ${comoItem ? (d?.marca ?? "") : ""}`}
       >
         {d?.alca}
         <span aria-hidden className={`flex-shrink-0 ${oculta ? "text-fg-muted" : "text-fg-secondary"}`}>
           <ModuleIcon code={t.code} size={15} />
         </span>
         <span className={`min-w-0 flex-1 truncate text-fs-2 ${oculta ? "text-fg-muted" : "text-fg"}`}>{t.label}</span>
-        {opcoes.fixa && cadeado(opcoes.fixa)}
-        {olho(t, !!opcoes.apagadaPelaMae)}
+        {olho(t, apagadaPelaMae)}
       </div>
     );
   };
 
-  /** A tela e, recuadas embaixo, as que vieram dela. */
-  const entrada = (e: EntradaDoMenu<Tela>, lista: ListaDoMenu | undefined, i: number, fixa?: string) => {
+  /** A tela e, recuadas embaixo, as que vieram dela. `d` arrasta a tela com as filhas. */
+  const entrada = (e: EntradaDoMenu<Tela>, d: Pegador | null) => {
     const maeOculta = org.ocultas.includes(e.tela.code);
+    // O que fica dentro da tela: as que vieram dela e as abas com entrada no
+    // menu, juntas, na ordem escolhida — mudam de lugar só ali dentro.
+    const dentro = org.emOrdem(
+      e.tela.code,
+      [...e.filhas.map((f) => ({ chave: f.code, tela: f as Tela | null, item: null as ItemDentro | null })), ...subsDe(e.tela.code).map((x) => ({ chave: x.chave, tela: null, item: x }))],
+      (x) => x.chave,
+    );
+    const chaves = dentro.map((x) => x.chave);
+    const pegar = (j: number, x: (typeof dentro)[number], rotulo: string) =>
+      dentro.length > 1 ? pegador({ tipo: "dentro", mae: e.tela.code, chaves }, j, dentro.length, `${e.tela.code}>${x.chave}`, rotulo) : null;
     return (
-      <li key={e.tela.code} className="space-y-1">
-        {linha(e.tela, { lista, i, fixa })}
-        {e.filhas.length > 0 && (
-          <ul aria-label={`Telas dentro de ${e.tela.label}`} className="ml-3 space-y-1 border-l border-border pl-2">
-            {e.filhas.map((f, j) => (
-              <li key={f.code}>{linha(f, { lista: e.filhas.length > 1 ? { tipo: "filhas", mae: e.tela.code } : undefined, i: j, apagadaPelaMae: maeOculta })}</li>
+      <div {...(d?.item ?? {})} className={`space-y-1 rounded-lg ${d?.marca ?? ""}`}>
+        {linha(e.tela, d, false, false)}
+        {dentro.length > 0 && (
+          <ListaDeDentro titulo={e.tela.label}>
+            {dentro.map((x, j) => (
+              <li key={x.chave}>
+                {x.tela ? linha(x.tela, pegar(j, x, x.tela.label), maeOculta) : <LinhaSimples item={x.item!} d={pegar(j, x, x.item!.label)} />}
+              </li>
             ))}
-          </ul>
+          </ListaDeDentro>
         )}
-      </li>
+      </div>
     );
   };
 
-  const bloco = (b: BlocoDoMenu<Tela>, i: number, fixa?: string) => {
-    const lista: ListaDoMenu | undefined = fixa || org.moveis.length < 2 ? undefined : { tipo: "blocos" };
-    if (b.tipo === "solta") return <ul key={b.grupo} className="space-y-1">{entrada(b.entrada, lista, i, fixa)}</ul>;
-    const d = lista ? arrastavel(lista, i, `grupo:${b.grupo}`, `o grupo ${b.grupo}`) : null;
+  const variosBlocos = org.blocos.length > 1;
+  const bloco = (b: BlocoDoMenu<Tela>, i: number) => {
+    if (b.tipo === "solta") {
+      const d = variosBlocos ? pegador({ tipo: "blocos" }, i, org.blocos.length, b.entrada.tela.code, b.entrada.tela.label) : null;
+      return <li key={b.grupo}>{entrada(b.entrada, d)}</li>;
+    }
+    const d = variosBlocos ? pegador({ tipo: "blocos" }, i, org.blocos.length, `grupo:${b.grupo}`, `o grupo ${b.grupo}`) : null;
     return (
-      <div key={b.grupo} className={`rounded-lg transition-[opacity,box-shadow] ${d?.arrastando ? "opacity-40" : ""}`}>
-        <div
-          {...(d ? { draggable: d.draggable, onDragStart: d.onDragStart, onDragEnd: d.onDragEnd, onDragOver: d.onDragOver, onDrop: d.onDrop } : {})}
-          className={`flex items-center gap-1.5 rounded-md pt-2.5 pb-1 ${d?.marca ?? ""}`}
-        >
+      <li key={b.grupo} {...(d?.item ?? {})} className={`rounded-lg transition-[opacity,box-shadow] ${d?.arrastando ? "opacity-40" : ""} ${d?.marca ?? ""}`}>
+        <div {...(d?.linha ?? {})} className={`flex items-center gap-1.5 rounded-md pt-2.5 pb-1 ${d ? "cursor-grab" : ""}`}>
           {d?.alca}
           <span className="c41-rotulo min-w-0 flex-1 truncate">{b.grupo}</span>
         </div>
         <ul aria-label={`Grupo ${b.grupo}`} className="space-y-1">
-          {b.entradas.map((e, j) => entrada(e, b.entradas.length > 1 ? { tipo: "grupo", grupo: b.grupo } : undefined, j))}
+          {b.entradas.map((e, j) => (
+            <li key={e.tela.code}>{entrada(e, b.entradas.length > 1 ? pegador({ tipo: "grupo", grupo: b.grupo }, j, b.entradas.length, e.tela.code, e.tela.label) : null)}</li>
+          ))}
         </ul>
-      </div>
+      </li>
     );
   };
 
   return (
-    <div className="space-y-1.5 pt-1" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAlvo(null); }}>
+    <div className={`space-y-1.5 pt-1 ${arrastando ? "cursor-grabbing select-none" : ""}`}>
       {itemNoTopo && (
-        <div className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface pl-2 pr-0.5">
+        <div className={`${LINHA} border-border bg-surface pl-2`}>
           <span aria-hidden className="flex-shrink-0 text-fg-secondary [&>svg]:size-[15px]">{itemNoTopo.icon}</span>
           <span className="min-w-0 flex-1 truncate text-fs-2 text-fg">{itemNoTopo.label}</span>
-          {cadeado("Sempre no topo")}
+          <span title="Sempre no topo" className="grid size-8 flex-shrink-0 place-items-center text-fg-muted">
+            <Lock size={13} role="img" aria-label="Sempre no topo" />
+          </span>
         </div>
       )}
-      {org.moveis.map((b, i) => bloco(b, i))}
-      {org.fixos.map((b, i) => bloco(b, i, "Fica sempre no fim do menu"))}
+      <ul aria-label="Telas do setor" className="space-y-1.5">
+        {org.blocos.map((b, i) => bloco(b, i))}
+      </ul>
       <p role="status" aria-live="polite" className="sr-only">
         {org.aviso}
       </p>

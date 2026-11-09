@@ -74,3 +74,28 @@ describe("esconder do menu", () => {
     expect(ordemEhPadrao({ grupos: [], telas: [] })).toBe(true);
   });
 });
+
+describe("o Geral e o que fica dentro de cada menu (09/11/2026)", () => {
+  it("lê e grava só listas de texto, por menu", () => {
+    expect(lerOrdemDoMenu('{"grupos":[],"telas":[],"geral":["agenda"],"dentro":{"tech_ops_center":["sub:Apps","sub:Robôs",3],"vazio":[],"ruim":"x"}}')).toEqual({
+      grupos: [],
+      telas: [],
+      geral: ["agenda"],
+      dentro: { tech_ops_center: ["sub:Apps", "sub:Robôs"] },
+    });
+    expect(ordemEhPadrao({ grupos: [], telas: [], dentro: { apoio: ["quadros"] } })).toBe(false);
+    expect(ordemEhPadrao({ grupos: [], telas: [], geral: ["agenda"] })).toBe(false);
+  });
+
+  it("a ordem gravada leva o Geral e os menus com alguma ordem", () => {
+    const ordem = ordemDosBlocos(montarMenuDoSetor(soc), [], ["agenda", "cadastros"], { apoio: ["quadros", "senhas"], vazio: [] });
+    expect(ordem.geral).toEqual(["agenda", "cadastros"]);
+    expect(ordem.dentro).toEqual({ apoio: ["quadros", "senhas"] });
+  });
+
+  it("mover no Geral ou dentro de um menu não mexe nos blocos do setor", () => {
+    const blocos = montarMenuDoSetor(soc);
+    expect(moverNoMenu(blocos, { tipo: "geral" }, 0, 2)).toEqual(blocos);
+    expect(moverNoMenu(blocos, { tipo: "dentro", mae: "apoio", chaves: ["a", "b"] }, 0, 2)).toEqual(blocos);
+  });
+});

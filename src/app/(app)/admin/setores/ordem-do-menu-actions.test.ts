@@ -89,6 +89,12 @@ describe("organizar no próprio menu (09/11/2026)", () => {
     expect(m.apagou).toBe(false);
   });
 
+  it("o Geral e a ordem de dentro: só chaves e menus que existem", async () => {
+    const json = JSON.stringify({ grupos: [], telas: [], geral: ["agenda", "inventado"], dentro: { tech_ops_center: ["sub:Apps"], menu_que_nao_existe: ["x"], apoio: ["quadros"] } });
+    expect(await salvarOrdemDoMenuPeloCodigo("tech", json)).toBeNull();
+    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], geral: ["agenda"], dentro: { tech_ops_center: ["sub:Apps"], apoio: ["quadros"] } });
+  });
+
   it("restaurar pelo código apaga a ordem do setor", async () => {
     expect(await restaurarOrdemDoMenuPeloCodigo("societario")).toBeNull();
     expect(m.apagou).toBe(true);

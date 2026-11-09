@@ -9,8 +9,17 @@ import { telasDoBloco, type BlocoDoMenu, type EntradaDoMenu, type OrdemDoMenu, t
 // outra fica embaixo da tela de origem. Por isso cada arrasto mexe numa lista
 // só — os blocos do menu, as telas de um grupo ou as filhas de uma tela.
 
-/** Onde o arrasto acontece. */
-export type ListaDoMenu = { tipo: "blocos" } | { tipo: "grupo"; grupo: string } | { tipo: "filhas"; mae: string };
+/** Onde o arrasto acontece. O Geral só muda de ordem dentro dele mesmo. */
+export type ListaDoMenu =
+  | { tipo: "geral" }
+  | { tipo: "blocos" }
+  | { tipo: "grupo"; grupo: string }
+  | { tipo: "filhas"; mae: string }
+  /** O que fica dentro de um menu (as filhas e as abas da tela, ou o Apoio), na ordem da tela. */
+  | { tipo: "dentro"; mae: string; chaves: string[] };
+
+/** Os itens do Geral que o organizador ordena (as chaves do `itensDoGeral` do AppShell). */
+export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "chamados", "arquivos", "agenda"] as const;
 
 /**
  * Tira o item `de` e põe antes do que estava em `antesDe` (0 a `lista.length`,
@@ -26,11 +35,19 @@ export function moverNaLista<T>(lista: readonly T[], de: number, antesDe: number
 }
 
 /** A ordem que reproduz estes blocos exatamente como estão (grupos e todas as telas). */
-export function ordemDosBlocos(blocos: readonly BlocoDoMenu<TelaDoMenu>[], ocultas: readonly string[] = []): OrdemDoMenu {
+export function ordemDosBlocos(
+  blocos: readonly BlocoDoMenu<TelaDoMenu>[],
+  ocultas: readonly string[] = [],
+  geral: readonly string[] = [],
+  dentro: Readonly<Record<string, readonly string[]>> = {},
+): OrdemDoMenu {
+  const menus = Object.entries(dentro).filter(([, l]) => l.length > 0);
   return {
     grupos: blocos.map((b) => b.grupo),
     telas: blocos.flatMap(telasDoBloco).map((t) => t.code),
     ...(ocultas.length ? { ocultas: [...ocultas] } : {}),
+    ...(geral.length ? { geral: [...geral] } : {}),
+    ...(menus.length ? { dentro: Object.fromEntries(menus.map(([m, l]) => [m, [...l]])) } : {}),
   };
 }
 
@@ -40,6 +57,7 @@ function comFilhas<T extends TelaDoMenu>(e: EntradaDoMenu<T>, mae: string, de: n
 
 /** Os blocos depois de um arrasto numa das listas do menu. */
 export function moverNoMenu<T extends TelaDoMenu>(blocos: readonly BlocoDoMenu<T>[], lista: ListaDoMenu, de: number, antesDe: number): BlocoDoMenu<T>[] {
+  if (lista.tipo === "geral" || lista.tipo === "dentro") return [...blocos];
   if (lista.tipo === "blocos") return moverNaLista(blocos, de, antesDe);
   return blocos.map((b): BlocoDoMenu<T> => {
     if (lista.tipo === "grupo") {
