@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Clock3, Building2, User, UserSearch, SquareKanban, SquareCheck, Briefcase, FileText } from "lucide-react";
+import { Search, X, Clock3, Building2, User, UserSearch, SquareKanban, SquareCheck, Briefcase, FileText, FolderSearch } from "lucide-react";
 import { boardPath } from "@/lib/kanbanPaths";
 import { IconButton } from "@/components/ui/IconButton";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
@@ -21,9 +21,13 @@ type SearchResults = {
   tarefas: { id: string; name: string; href: string }[];
   /** Processos do Societário (07/10/2026). Opcional: a resposta antiga não traz. */
   processos?: { id: string; name: string; detalhe?: string }[];
+  /** Arquivos do Drive (09/11/2026), com a pasta onde abrem e a empresa no detalhe. Opcional, idem. */
+  arquivos?: { id: string; name: string; detalhe: string; href: string }[];
+  /** Há mais arquivos do que os 5 da lista: o grupo ganha o "Buscar nos Arquivos". */
+  arquivosMais?: boolean;
 };
 
-const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [], processos: [] };
+const EMPTY: SearchResults = { companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [], processos: [], arquivos: [] };
 
 /** Uma linha do painel: o que as setas percorrem e o Enter abre. */
 type Opcao = { chave: string; href: string; rotulo: string; detalhe?: string; icone: React.ReactNode };
@@ -51,8 +55,12 @@ function documentHref(entityType: DocumentEntityType, entityId: string): string 
  *
  * Cada tipo com o seu ícone (07/10/2026): as telas tinham, os resultados de
  * dado não, e a lista misturava os dois sem distinção.
+ *
+ * Os arquivos do Drive (09/11/2026) vêm antes dos documentos das fichas, que
+ * são a tabela antiga. Quando há mais que os cinco, a última linha do grupo
+ * leva à busca em todas as empresas dos Arquivos com o mesmo termo.
  */
-function montarGrupos(telas: TelaNavegavel[], r: SearchResults): Grupo[] {
+function montarGrupos(telas: TelaNavegavel[], r: SearchResults, termo: string): Grupo[] {
   const ic = (Icone: typeof Building2) => <Icone size={16} />;
   return [
     {
@@ -75,6 +83,15 @@ function montarGrupos(telas: TelaNavegavel[], r: SearchResults): Grupo[] {
     { rotulo: "Tarefas", opcoes: r.pipelines.map((p) => ({ chave: `kanban-${p.id}`, href: boardPath(p), rotulo: p.name, icone: ic(SquareKanban) })) },
     { rotulo: "Atividades", opcoes: r.tarefas.map((t) => ({ chave: `tarefa-${t.id}`, href: t.href, rotulo: t.name, icone: ic(SquareCheck) })) },
     { rotulo: "Vagas", opcoes: r.vagas.map((v) => ({ chave: `vaga-${v.id}`, href: `/vagas/${v.id}`, rotulo: v.name, icone: ic(Briefcase) })) },
+    {
+      rotulo: "Arquivos",
+      opcoes: [
+        ...(r.arquivos ?? []).map((a) => ({ chave: `arquivo-${a.id}`, href: a.href, rotulo: a.name, detalhe: a.detalhe, icone: <ModuleIcon code="arquivos" /> })),
+        ...(r.arquivosMais
+          ? [{ chave: "arquivos-todos", href: `/arquivos?q=${encodeURIComponent(termo)}`, rotulo: `Buscar “${termo}” nos Arquivos`, icone: ic(FolderSearch) }]
+          : []),
+      ],
+    },
     {
       rotulo: "Documentos",
       opcoes: r.documentos.map((d) => ({ chave: `documento-${d.id}`, href: documentHref(d.entityType, d.entityId), rotulo: d.name, icone: ic(FileText) })),
@@ -224,7 +241,7 @@ export function GlobalSearch({
 
   const buscando = termo.length >= 2;
   const grupos: Grupo[] = buscando
-    ? montarGrupos(telasEncontradas, results)
+    ? montarGrupos(telasEncontradas, results, termoDosResultados)
     : telasRecentes.length > 0
       ? [
           {
@@ -293,7 +310,7 @@ export function GlobalSearch({
       return;
     }
     if (termoDosResultados !== termo) return;
-    const primeiro = montarGrupos([], results)[0]?.opcoes[0];
+    const primeiro = montarGrupos([], results, termoDosResultados)[0]?.opcoes[0];
     if (primeiro) {
       e.preventDefault();
       go(primeiro.href);
@@ -356,7 +373,9 @@ export function GlobalSearch({
                     >
                       <span className="flex-shrink-0 text-fg-muted [&>svg]:w-4 [&>svg]:h-4">{o.icone}</span>
                       <span className="truncate">{o.rotulo}</span>
-                      {o.detalhe && <span className="ml-auto flex-shrink-0 text-micro text-fg-muted">{o.detalhe}</span>}
+                      {/* Até 45% da linha: o detalhe do arquivo é o nome da
+                          empresa, que pode ser longo e espremia o do arquivo. */}
+                      {o.detalhe && <span className="ml-auto flex-shrink-0 max-w-[45%] truncate text-micro text-fg-muted">{o.detalhe}</span>}
                     </button>
                   );
                 })}

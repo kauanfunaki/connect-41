@@ -7,8 +7,15 @@ import { boardPath } from "@/lib/kanbanPaths";
 import { digitsOnly } from "@/lib/validation/common";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
+import { arquivosParaABuscaDoTopo } from "@/lib/drive/buscaServidor";
 
 const LIMIT = 5;
+
+// Os arquivos do Drive entram na busca em 09/11/2026, com a régua dos
+// Arquivos (src/lib/drive/busca.ts). A tabela antiga `Document` continua:
+// ainda guarda os documentos das fichas de pessoa (ASO, CNH), de vaga e os
+// da ficha da empresa que o "Do Connect" lista — as duas fontes somam, cada
+// uma no seu grupo.
 
 // O processo do Societário entra na busca (07/10/2026): achar "a Ótica
 // Alvorada" na fila de 174 processos importados exigia rolar ou abrir o funil.
@@ -34,7 +41,18 @@ export async function GET(req: NextRequest) {
 
   const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) {
-    return NextResponse.json({ companies: [], people: [], candidatos: [], pipelines: [], vagas: [], documentos: [], tarefas: [], processos: [] });
+    return NextResponse.json({
+      companies: [],
+      people: [],
+      candidatos: [],
+      pipelines: [],
+      vagas: [],
+      documentos: [],
+      tarefas: [],
+      processos: [],
+      arquivos: [],
+      arquivosMais: false,
+    });
   }
 
   const prisma = getPrisma();
@@ -42,7 +60,7 @@ export async function GET(req: NextRequest) {
   // A ficha do candidato só abre para quem alcança o módulo de Candidatos
   // (02/10/2026); listar para os outros levaria a um 404.
   const [veCandidatos, veProcessos] = await Promise.all([podeNoModulo(ctx, "recrutamento_candidatos", "ver"), abreProcessos(ctx)]);
-  const [companies, people, candidatos, pipelines, vagas, documentos, tarefaItems, processos] = await Promise.all([
+  const [companies, people, candidatos, pipelines, vagas, documentos, tarefaItems, processos, arquivos] = await Promise.all([
     prisma.company.findMany({
       where: {
         ...(await scopedCompanyWhere(ctx)),
@@ -132,6 +150,9 @@ export async function GET(req: NextRequest) {
           },
         })
       : Promise.resolve([]),
+    // Pelo nome do arquivo só: a empresa já tem o grupo dela aqui. Abre na
+    // pasta onde o arquivo está.
+    arquivosParaABuscaDoTopo(ctx, q),
   ]);
 
   const tarefaEntityIds = { COMPANY: new Set<string>(), PERSON: new Set<string>() };
@@ -167,5 +188,7 @@ export async function GET(req: NextRequest) {
       name: `${nomeExibicao(p.company)} · ${p.type.name}${p.title ? ` · ${p.title}` : ""}`,
       detalhe: ENCERRADO[p.status],
     })),
+    arquivos: arquivos.itens,
+    arquivosMais: arquivos.mais,
   });
 }

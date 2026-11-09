@@ -74,6 +74,33 @@ export type NavegadorNaTela = {
 /** Resultado de uma busca por nome dentro de uma empresa (ou das pastas internas). */
 export type ResultadoDaBusca = ArquivoNaTela & { pastaId: string; pastaRotulo: string };
 
+/** O arquivo é o PDF de uma guia ou o comprovante de uma certidão emitida pelo Connect. */
+export type VinculoDoArquivo = "guia" | "certidao";
+
+/** Um arquivo achado na busca em todas as empresas (09/11/2026, src/lib/drive/busca.ts). */
+export type ArquivoAchado = {
+  id: string;
+  nome: string;
+  tamanho: number;
+  /** PDF ou imagem: abre no navegador em vez de baixar. */
+  previa: boolean;
+  enviadoEm: string;
+  /** A dona da pasta; `null` nas pastas internas do escritório. */
+  empresa: { id: string; nome: string; cnpj: string | null } | null;
+  pastaId: string;
+  /** "Fiscal › 2026": o caminho da pasta, da raiz da empresa até ela. */
+  pastaRotulo: string;
+  vinculo: VinculoDoArquivo | null;
+};
+
+/** O nome da raiz das pastas que não são de nenhuma empresa. */
+export const ROTULO_DAS_INTERNAS = "Pastas do escritório";
+
+/** Onde abre a pasta do arquivo achado: nos Arquivos da empresa, ou nas pastas do escritório. */
+export function enderecoDoAchado(a: Pick<ArquivoAchado, "empresa" | "pastaId">): string {
+  return enderecoDaPasta(a.empresa ? `/arquivos/empresa/${a.empresa.id}` : "/arquivos/internas", a.pastaId);
+}
+
 /** O nome do campo "Guardar também em Arquivos" nos formulários dos módulos (lido por src/lib/drive/guardarTambem.ts). */
 export const CAMPO_DA_PASTA = "guardarEmPasta";
 
