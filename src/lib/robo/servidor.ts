@@ -78,7 +78,7 @@ export async function pedirImpressaoDoAlvara(tenantId: string, licenseId: string
     throw err;
   }
   await logAudit({ tenantId, ...pessoaOuRotina(userId, "roboDoSocietario"), action: "societario.robo.pedido", entityType: "License", entityId: licenca.id, metadata: { tipo: "imprimir_alvara" } });
-  return { ok: true, texto: "Pedido ao robô. Ele imprime quando a máquina do TI buscar a próxima tarefa; acompanhe em Robô do Societário." };
+  return { ok: true, texto: "Pedido ao robô. Ele imprime quando a máquina do TI buscar a próxima tarefa; acompanhe no Hub de robôs." };
 }
 
 /** Tira da fila uma tarefa que a máquina ainda não pegou. */

@@ -76,10 +76,13 @@ export type GrupoDeModulo =
   | "Documentos"
   | "Apuração"
   | "Conferência"
-  | "Licenças"
+  | "Regularização"
+  | "Prazos"
   | "Desenvolvimento"
   | "Resultado"
   | "Relatórios"
+  | "Automação"
+  | "Inteligência artificial"
   | "Cadastros"
   | "Apoio";
 
@@ -104,10 +107,14 @@ export const ORDEM_DOS_GRUPOS: readonly GrupoDeModulo[] = [
   "Documentos",
   "Apuração",
   "Conferência",
-  "Licenças",
+  // Era "Licenças" até 09/11/2026: Licenças e Certidões, no Societário.
+  "Regularização",
+  "Prazos",
   "Desenvolvimento",
   "Resultado",
   "Relatórios",
+  "Automação",
+  "Inteligência artificial",
   "Cadastros",
   "Apoio",
 ];
@@ -126,13 +133,42 @@ export const ICONE_DO_GRUPO: Record<GrupoDeModulo, IconeDeModulo> = {
   Documentos: "ReceiptText",
   Apuração: "FileSpreadsheet",
   Conferência: "CheckCheck",
-  Licenças: "BadgeCheck",
+  Regularização: "BadgeCheck",
+  Prazos: "AlarmClock",
   Desenvolvimento: "GraduationCap",
   Resultado: "ChartColumn",
   Relatórios: "ChartPie",
+  Automação: "Workflow",
+  "Inteligência artificial": "Bot",
   Cadastros: "Building2",
   Apoio: "BookOpen",
 };
+
+/**
+ * A ordem do menu de um setor, quando o setor pediu uma ordem dele (09/11/2026,
+ * pedido do Kauan): a base que vale antes da ordem escolhida no "Organizar
+ * menu". Os grupos que não estão na lista vêm depois, na ordem de
+ * `ORDEM_DOS_GRUPOS`. Cada grupo aqui é um bloco do menu — um grupo de uma tela
+ * só vira tela avulsa.
+ *
+ * - Tech: Orquestrador, Produtividade, Entregas da Tech, Ceci, Chamados e
+ *   Certificados digitais. O Controle interno não entra: fica no Geral, no
+ *   lugar dos Quadros (`MODULO_NO_LUGAR_DOS_QUADROS`).
+ * - Societário: Operação, Regularização, Exigências e prazos, Relatórios e Hub
+ *   de robôs.
+ */
+export const ORDEM_DO_MENU_DO_SETOR: Readonly<Record<string, readonly GrupoDeModulo[]>> = {
+  tech: ["Operação", "Relatórios", "Desenvolvimento", "Inteligência artificial", "Atendimento", "Documentos"],
+  societario: ["Operação", "Regularização", "Prazos", "Relatórios", "Automação"],
+};
+
+/**
+ * O módulo que ocupa o lugar dos Quadros no Geral (09/11/2026, pedido do
+ * Kauan): na Tech, o item Quadros do Geral é o Controle interno — com o nome,
+ * o ícone e o destaque dele —, e por isso ele sai da lista de telas do setor.
+ * Desde 05/11/2026 o Quadros da Tech já levava ao Controle interno.
+ */
+export const MODULO_NO_LUGAR_DOS_QUADROS = "tech_controle_interno";
 
 /**
  * O grupo como valor de URL: "Banco e caixa" → `banco-e-caixa`.
@@ -140,7 +176,8 @@ export const ICONE_DO_GRUPO: Record<GrupoDeModulo, IconeDeModulo> = {
  * Sem acento e sem espaço porque vira segmento de rota
  * (`/setor/bpo/grupo/banco-e-caixa`). O rótulo continua sendo a fonte: quem
  * renomear um grupo muda o endereço junto, e link antigo cai no `notFound`, que
- * é melhor que abrir a tela de outro grupo.
+ * é melhor que abrir a tela de outro grupo — a não ser que ganhe um
+ * redirecionamento no next.config (`licencas` → `regularizacao`, 09/11/2026).
  */
 export function slugDoGrupo(grupo: GrupoDeModulo): string {
   return grupo
@@ -231,28 +268,33 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     // Acompanhar a Ceci (lote C dos ajustes de 03/11/2026): avaliações, processamento e o que pede atenção.
+    // Avulsa no menu do Tech desde 09/11/2026: saiu do grupo Desenvolvimento.
     code: "tech_ceci", label: "Ceci", sectorCode: "tech",
     description: "Como a Ceci está indo: respostas boas e ruins por semana, tempo, erros e custo das chamadas, e o que pede atenção",
-    defaultEnabled: false, icon: "Bot", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
+    defaultEnabled: false, icon: "Bot", group: "Inteligência artificial", menuDireto: true, fixedSector: true,
   },
 
   {
-    // Produtividade (05/11/2026, opção A da tela 7): o time, as pessoas e o
-    // GitHub como contexto. O código do módulo continua o mesmo.
+    // Produtividade (05/11/2026, opção A da tela 7). Desde 09/11/2026 são duas
+    // abas, Pessoas (a de entrada) e GitHub: o Painel com os números do time
+    // saiu, a pedido do Kauan. O código do módulo continua o mesmo.
     code: "tech_github_contributions", label: "Produtividade", sectorCode: "tech",
-    description: "Pontos entregues, ciclo, retrabalho e chamados do time e de cada pessoa, a saúde do fluxo e a atividade no GitHub como contexto",
-    defaultEnabled: false, icon: "ChartColumn", group: "Operação", menuDireto: true, fixedSector: true,
+    description: "Cada desenvolvedor e cada time no GitHub, e a atividade do time nos repositórios",
+    defaultEnabled: false, icon: "ChartColumn", group: "Relatórios", menuDireto: true, fixedSector: true,
   },
   {
     // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
-    code: "tech_entregas", telaMae: "tech_controle_interno", label: "Entregas da Tech", sectorCode: "tech",
-    // Desde 05/11/2026 é a lista do que foi entregue; os números foram para a Produtividade.
+    // Tela avulsa desde 09/11/2026: o Controle interno, de onde ela vinha, foi para o Geral.
+    code: "tech_entregas", label: "Entregas da Tech", sectorCode: "tech",
+    // Desde 05/11/2026 é a lista do que foi entregue.
     description: "Os itens entregues no período, com tamanho, pontos, ciclo e de onde vieram",
     defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
   {
-    code: "tech_ops_center", label: "Ops Center", sectorCode: "tech",
-    description: "Automações, sinal de atividade, resultados de processamento e instabilidades",
+    // O Orquestrador (09/11/2026; era "Ops Center"): no menu, só o título, com
+    // Robôs, Apps e Sites dentro (ver `subTelas`, no AppShell).
+    code: "tech_ops_center", label: "Orquestrador", sectorCode: "tech",
+    description: "Robôs, apps e sites do escritório: sinal de atividade, resultados de processamento e instabilidades",
     defaultEnabled: false, icon: "Workflow", group: "Operação", menuDireto: true,
   },
   {
@@ -536,6 +578,11 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Apoio",
     menuDireto: true,
   },
+  // O menu do Societário (09/11/2026, pedido do Kauan): Operação (Processos,
+  // Painel e Órgãos), Regularização (Licenças e Certidões), e avulsas
+  // Exigências e prazos, Relatórios e Hub de robôs — nessa ordem (ver
+  // `ORDEM_DO_MENU_DO_SETOR`). Cada avulsa tem um grupo só dela: grupo de uma
+  // tela só vira tela solta no menu (`menuDoSetor.ts`).
   {
     code: "societario_licencas",
     label: "Licenças",
@@ -543,7 +590,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Alvará, sanitária, ambiental e AVCB — o que fica valendo, e a fila de renovação",
     defaultEnabled: false,
     icon: "BadgeCheck",
-    group: "Licenças",
+    group: "Regularização",
   },
   {
     code: "societario_certidoes",
@@ -552,23 +599,35 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Federal, FGTS, trabalhista, estadual e municipal da carteira, a cada trimestre, pela InfoSimples",
     defaultEnabled: false,
     icon: "CheckCheck",
-    group: "Licenças",
+    group: "Regularização",
   },
   // A tela do robô (30/10/2026) só se abria pelo link "Robô" de Licenças. No
-  // menu desde 03/11/2026. Desligado por padrão: o robô é a máquina do TI de
-  // um escritório, não uma tela de todo cliente do Connect.
+  // menu desde 03/11/2026; "Hub de robôs" desde 09/11/2026 (era "Robô").
+  // Desligado por padrão: o robô é a máquina do TI de um escritório, não uma
+  // tela de todo cliente do Connect.
   {
     code: "societario_robo",
-    label: "Robô",
+    label: "Hub de robôs",
     sectorCode: "societario",
     description: "A fila do robô do Societário na máquina do TI: o alvará de Curitiba impresso e o que parou para alguém olhar",
     defaultEnabled: false,
     icon: "Bot",
-    group: "Licenças",
+    group: "Automação",
   },
-  // Painel e visão por órgão (04/11/2026, lote D dos ajustes de 03/11 — escolhas A).
+  // Painel e Órgãos (04/11/2026, lote D dos ajustes de 03/11 — escolhas A)
+  // vinham recuados debaixo de Processos; desde 09/11/2026 são as outras duas
+  // telas do grupo Operação, nesta ordem.
   {
-    code: "societario_painel", telaMae: "societario_processos",
+    code: "societario_processos",
+    label: "Processos",
+    sectorCode: "societario",
+    description: "Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo",
+    defaultEnabled: true,
+    icon: "Workflow",
+    group: "Operação",
+  },
+  {
+    code: "societario_painel",
     label: "Painel",
     sectorCode: "societario",
     description: "O dia do setor numa tela: seis números e a fila do que fazer hoje",
@@ -577,21 +636,12 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Operação",
   },
   {
-    code: "societario_orgaos", telaMae: "societario_processos",
+    code: "societario_orgaos",
     label: "Órgãos",
     sectorCode: "societario",
     description: "Onde os processos esperam: protocolos por órgão, parados, resposta média e voltas",
     defaultEnabled: true,
     icon: "Landmark",
-    group: "Operação",
-  },
-  {
-    code: "societario_processos",
-    label: "Processos",
-    sectorCode: "societario",
-    description: "Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo",
-    defaultEnabled: true,
-    icon: "Workflow",
     group: "Operação",
   },
   // Os três abaixo são telas sobre o motor de processos — não têm dado próprio.
@@ -614,10 +664,10 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Exigências abertas de todos os processos e a agenda unificada de prazos",
     defaultEnabled: true,
     icon: "AlarmClock",
-    group: "Operação",
+    group: "Prazos",
   },
   {
-    code: "societario_relatorios", telaMae: "societario_processos",
+    code: "societario_relatorios",
     label: "Relatórios",
     sectorCode: "societario",
     description: "SLA por tipo, voltas de exigência, produtividade por responsável e custo em taxas",

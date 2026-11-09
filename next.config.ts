@@ -100,6 +100,12 @@ const nextConfig: NextConfig = {
       { source: "/produtividade/github/desenvolvedores", destination: "/produtividade/pessoas", permanent: false },
       { source: "/produtividade/github/times", destination: "/produtividade/pessoas/times", permanent: false },
       { source: "/github/:caminho*", destination: "/produtividade/github/:caminho*", permanent: false },
+      // Desde 09/11/2026 a Produtividade é Pessoas e GitHub, sem o Painel: o
+      // endereço do módulo (o do menu, da busca e dos links antigos do Painel)
+      // abre a aba Pessoas. Só o endereço exato — as abas ficam embaixo dele.
+      { source: "/produtividade", destination: "/produtividade/pessoas", permanent: false },
+      // O grupo "Licenças" do Societário virou "Regularização" (09/11/2026).
+      { source: "/setor/:code/grupo/licencas", destination: "/setor/:code/grupo/regularizacao", permanent: false },
       // O Fiscal (05/11/2026), como o SPED do Contábil: as quatro etapas do
       // SPED na raiz de /sped-fiscal, e as telas do motor embaixo, em /motor.
       // A ordem importa: /fiscal/sped antes da regra geral de /fiscal.

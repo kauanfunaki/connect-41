@@ -18,7 +18,7 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { getAllSectors } from "@/lib/sectors";
 import { getTenantModuleStates, lerSetoresLigados } from "@/lib/modules";
-import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES, MODULOS_FORA_DO_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
+import { MODULOS_DO_MENU_GERAL, MODULOS_NAS_SOLICITACOES, MODULOS_FORA_DO_MENU, MODULO_NO_LUGAR_DOS_QUADROS, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { MODULOS_SPED } from "@/lib/fiscal/menu-sped";
 import { telasDoMenuDoSetor } from "@/lib/telasDoMenuDoSetor";
 import { lerOrdemDoMenuDoSetor } from "@/lib/menuDoSetorDb";
@@ -107,14 +107,15 @@ export default async function SetoresPage({
   }));
 
   // Organizar menu (05/11/2026): as telas do menu do setor, pela mesma regra do
-  // layout (`telasDoMenuDoSetor`), sem as do SPED, que ficam num item só, no alto.
+  // layout (`telasDoMenuDoSetor`), sem as do SPED, que ficam num item só, no
+  // alto, e sem o Controle interno, que é o Quadros do Geral (09/11/2026).
   const helpdesk = modulos.find((m) => m.code === "helpdesk");
   const telasDoMenu = escolhido
     ? telasDoMenuDoSetor(modulos, escolhido.code, {
         chamadosNoSetor: !!helpdesk?.enabled && chamadosNoMenuDoSetor(escolhido.code, helpdesk.sectorCode),
         solicitacoesLigadas: modulos.some((m) => m.code === "portal_solicitacoes" && m.enabled),
         semMenu: MODULOS_FORA_DO_MENU,
-      }).filter((t) => !MODULOS_SPED.has(t.code))
+      }).filter((t) => !MODULOS_SPED.has(t.code) && t.code !== MODULO_NO_LUGAR_DOS_QUADROS)
     : [];
   const ordemDoMenu = escolhido && ctx.role === "SUPER_ADMIN" ? await lerOrdemDoMenuDoSetor(ctx.tenantId, escolhido.code) : null;
 
@@ -262,6 +263,7 @@ export default async function SetoresPage({
                 <OrganizarMenu
                   key={escolhido.code}
                   setor={escolhido.label}
+                  codigoDoSetor={escolhido.code}
                   telas={telasDoMenu}
                   ordemInicial={ordemDoMenu.ordem}
                   personalizada={ordemDoMenu.personalizada}

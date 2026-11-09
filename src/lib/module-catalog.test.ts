@@ -15,9 +15,12 @@ import {
   MODULOS_NAS_SOLICITACOES,
   FORA_DO_MENU_COM_SOLICITACOES,
   TELAS_DO_BPO_NAS_SOLICITACOES,
+  ORDEM_DO_MENU_DO_SETOR,
+  MODULO_NO_LUGAR_DOS_QUADROS,
   chamadosNoMenuDoSetor,
 } from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
+import nextConfig from "../../next.config";
 
 // O comentário do próprio `module-catalog.ts` conta o defeito que estes testes
 // existem para impedir: "duas cópias de um de-para é como um módulo novo aparece
@@ -205,5 +208,38 @@ describe("grupos dos módulos", () => {
     expect(grupos.indexOf("Resultado")).toBeGreaterThan(grupos.indexOf("Banco e caixa"));
     // Quinze telas em cinco ou seis grupos: é o que tira a lista única da sidebar.
     expect(grupos.length).toBeGreaterThanOrEqual(5);
+  });
+});
+
+// O menu do Tech e do Societário (09/11/2026, pedido do Kauan).
+describe("o menu do Tech e do Societário", () => {
+  it("a ordem de cada setor só tem grupos que existem, cada um uma vez, e usados pelo setor", () => {
+    for (const [setor, grupos] of Object.entries(ORDEM_DO_MENU_DO_SETOR)) {
+      expect(new Set(grupos).size).toBe(grupos.length);
+      for (const g of grupos) {
+        expect(ORDEM_DOS_GRUPOS).toContain(g);
+        expect(MODULE_CATALOG.some((m) => m.group === g && m.sectorCode === setor), `${setor}: ${g}`).toBe(true);
+      }
+    }
+  });
+
+  it("no Tech, cada tela do menu tem um grupo só dela — todas avulsas, menos o Controle interno, que vai para o Geral", () => {
+    const doMenu = getModulesForSector("tech").filter((m) => m.code !== MODULO_NO_LUGAR_DOS_QUADROS);
+    expect(new Set(doMenu.map((m) => m.group)).size).toBe(doMenu.length);
+    expect(getModuleDef(MODULO_NO_LUGAR_DOS_QUADROS)?.label).toBe("Controle interno");
+  });
+
+  it("os nomes novos: Orquestrador e Hub de robôs; nenhuma tela do Tech ou do Societário recuada", () => {
+    expect(getModuleDef("tech_ops_center")?.label).toBe("Orquestrador");
+    expect(getModuleDef("societario_robo")?.label).toBe("Hub de robôs");
+    expect(MODULE_ROUTES.societario_robo).toBe("/robo");
+    expect(MODULE_CATALOG.filter((m) => (m.sectorCode === "tech" || m.sectorCode === "societario") && m.telaMae).map((m) => m.code)).toEqual([]);
+  });
+
+  it("o grupo Licenças virou Regularização, e o endereço antigo do grupo leva ao novo", async () => {
+    expect(grupoDoSlug("licencas")).toBeNull();
+    expect(grupoDoSlug("regularizacao")).toBe("Regularização");
+    const regra = ((await nextConfig.redirects?.()) ?? []).find((r) => r.source === "/setor/:code/grupo/licencas");
+    expect(regra?.destination).toBe(`/setor/:code/grupo/${slugDoGrupo("Regularização")}`);
   });
 });
