@@ -6,7 +6,7 @@ import type { AtorDoToken } from "@/lib/tokens-pessoais/servidor";
 import type { Escopo } from "@/lib/tokens-pessoais/regras";
 import {
   listarParaApi, verParaApi, opcoesParaApi, criarParaApi, atualizarParaApi, mudarSituacaoParaApi,
-  comentarParaApi, anexarParaApi, arquivoDoBase64,
+  comentarParaApi, anexarParaApi, arquivoDoBase64, resumoParaApi,
 } from "@/lib/tech-interno/api";
 
 // O servidor MCP do Connect (05/11/2026, decisão D2): as mesmas ações da API
@@ -14,12 +14,13 @@ import {
 // Cada chamada chega com o token pessoal; a ferramenta só aparece se o token
 // tem o escopo dela, e age com o acesso de hoje da pessoa dona do token.
 
-export const VERSAO_DO_SERVIDOR_MCP = "1.1.0";
+export const VERSAO_DO_SERVIDOR_MCP = "1.2.0";
 
 const INSTRUCOES = `Servidor do Connect para o Controle interno da equipe Tech: o registro de bugs, melhorias, novas funcionalidades, testes e migrações dos sistemas.
 Tudo o que você faz aqui fica no histórico do item e na Auditoria com o nome da pessoa dona do token.
 Como trabalhar:
 - Antes de criar, procure com listar_itens (campo q) se o item já existe; se existir, comente ou atualize em vez de duplicar.
+- Para saber o que já foi feito, o que está em andamento e o que está planejado num dia, semana, mês ou ano, use resumo_do_periodo em vez de ler item por item.
 - Para preencher sistema, responsável ou "veio de", consulte ver_opcoes: use a "key" do sistema em systemKey e o "id" da pessoa em assigneeId ("me" é a própria pessoa do token).
 - Para alterar, leia o item com ver_item e envie a "version" que veio nele: se outra pessoa mudou o item nesse meio-tempo, a gravação é recusada (conflict) e você deve ler de novo.
 - Ao concluir um item que mudou código, informe o PR (prUrl) e o commit (commitSha) da mudança em mudar_situacao ou atualizar_item.
@@ -84,6 +85,16 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
       inputSchema: { id: ID },
       annotations: { readOnlyHint: true, openWorldHint: false },
     }, ({ id }) => executar(() => verParaApi(ator, id, base)));
+
+    server.registerTool("resumo_do_periodo", {
+      title: "Resumo do período",
+      description: "O que foi concluído, o que está em andamento e o que está planejado no dia, na semana, no mês ou no ano, numa resposta só. Use para saber o que a equipe já fez num período, em vez de ler o histórico item a item. Concluídos e cancelados contam pela data da mudança de situação; em andamento é a foto de agora; planejados são os pendentes que entraram no período ou vencem nele.",
+      inputSchema: {
+        period: z.enum(["day", "week", "month", "year"]).optional().describe("day, week (segunda a domingo; padrão), month ou year."),
+        date: z.string().optional().describe("Uma data dentro do período, AAAA-MM-DD. Padrão: hoje, em São Paulo."),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    }, args => executar(() => resumoParaApi(ator, args, base)));
 
     server.registerTool("ver_opcoes", {
       title: "Ver as opções dos campos",

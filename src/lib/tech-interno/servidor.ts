@@ -7,8 +7,9 @@ import { intervaloMes } from "./agenda";
 import {
   MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
   CONFLITO, SEM_VINCULO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
-  vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, type DadosItem, type Filtros, type SistemaTech,
+  vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, type DadosItem, type Filtros, type SistemaTech, type Alteracao,
 } from "./regras";
+import { intervaloDoResumo, montarResumo, type PeriodoDoResumo } from "./resumo";
 
 /** O tipo do erro, para a API responder com o código e o status certos; as telas usam só a mensagem. */
 export type CodigoTech = "forbidden" | "not_found" | "conflict" | "validation_error" | "internal_error";
@@ -271,4 +272,43 @@ export async function historicoTech(ctx: AuthContext, filtros: { pagina: number;
     ]);
     return { total, pages, page, changes, autores };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+}
+
+/**
+ * O resumo do período (06/11/2026): concluídos, em andamento, planejados e
+ * cancelados no dia, na semana, no mês ou no ano que contém `dataIso`. A
+ * regra é `montarResumo` (`resumo.ts`); aqui só a busca, com o mesmo acesso de
+ * ver da lista. Lê os itens mexidos no período, os em andamento e os pendentes
+ * que entraram ou vencem nele, e o histórico de "Situação" de cada um.
+ */
+export async function resumoTech(ctx: AuthContext, periodo: PeriodoDoResumo, dataIso: string) {
+  await conferirAcesso(ctx, "ver");
+  const intervalo = intervaloDoResumo(periodo, dataIso);
+  const db = getPrisma(), tenantId = ctx.tenantId;
+  const mexidos = await db.techInternalChange.findMany({
+    where: { tenantId, createdAt: { gte: intervalo.inicio, lt: intervalo.fim } }, distinct: ["itemId"], select: { itemId: true }, take: 5000,
+  });
+  const itens = await db.techInternalItem.findMany({
+    where: { tenantId, OR: [
+      { id: { in: mexidos.map(m => m.itemId) } },
+      { status: { in: ["IN_PROGRESS", "VALIDATION"] } },
+      { status: "PENDING", OR: [
+        { createdAt: { gte: intervalo.inicio, lt: intervalo.fim } },
+        { dueDate: { gte: new Date(`${intervalo.primeiroDia}T00:00:00Z`), lte: new Date(`${intervalo.ultimoDia}T00:00:00Z`) } },
+      ] },
+    ] },
+    include: incluir, take: 5000,
+  });
+  const mudancas = itens.length ? await db.techInternalChange.findMany({
+    where: { tenantId, itemId: { in: itens.map(i => i.id) } }, select: { itemId: true, createdAt: true, changes: true },
+  }) : [];
+  const resumo = montarResumo(
+    itens.map(i => ({
+      id: i.id, title: i.title, type: i.type, status: i.status, priority: i.priority, systemName: nomeDoSistema(i),
+      assigneeName: i.assignee?.name ?? null, dueDate: i.dueDate?.toISOString().slice(0, 10) ?? null, prUrl: i.prUrl, createdAt: i.createdAt,
+    })),
+    mudancas.map(m => ({ itemId: m.itemId, createdAt: m.createdAt, changes: (Array.isArray(m.changes) ? m.changes : []) as unknown as Alteracao[] })),
+    intervalo,
+  );
+  return { periodo, ...intervalo, ...resumo };
 }

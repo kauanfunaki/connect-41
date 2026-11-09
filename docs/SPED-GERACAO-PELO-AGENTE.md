@@ -131,6 +131,28 @@ Regras de leitura:
 - O ICMS/IPI é por estabelecimento. O Contribuições usa os estabelecimentos da raiz, com a identificação em cada documento.
 - O hash é o SHA-256 do JSON em UTF-8, sem BOM e sem quebra de linha no fim, com as chaves de todos os objetos em ordem pelo código UTF-16; os arrays mantêm a ordem. A implementação de referência é `serializarPacote`, em `src/lib/fiscal/sped/local/pacote.ts`. Não confira o hash de uma reserialização com outra ordem, outros espaços ou outro escape.
 
+### Tamanho do pacote
+
+Medido em 06/11/2026 com CT-e fictícios, pelo `serializarPacote` de verdade: cerca de **1.160 bytes por CT-e**, somando o documento, o item e a parte dele no bloco `escrituracao`.
+
+| CT-e no mês | Pacote |
+|---|---|
+| 50 mil | 55 MiB |
+| 100 mil | 111 MiB |
+| 300 mil | 332 MiB |
+| 1 milhão | 1,1 GiB |
+
+Como o pacote é montado e guardado hoje, há dois tetos:
+- **O `max_allowed_packet` do MySQL:** a revisão inteira vai numa coluna JSON, num INSERT só. No padrão de 64 MiB, isso dá cerca de 58 mil CT-e. Acima do limite, o MySQL fecha a conexão, e o Prisma só vê `ECONNRESET` (conferido no laboratório). Por isso o pedido lê o `@@max_allowed_packet` do banco e recusa antes, com o número de documentos e o tamanho na mensagem.
+- **A string do Node:** o `JSON.stringify` não passa de uns 512 MiB, cerca de 460 mil CT-e. Também vira mensagem clara.
+
+Na montagem, 200 mil CT-e levaram 2,8 s e cerca de 620 MiB de memória. Ficaram fora da medida a leitura da base (`carregarBase`, numa transação de 30 s) e a releitura de um XML por documento para o bloco `escrituracao`. O `json.load` do pacote inteiro no agente também não foi medido.
+
+Uma competência com mais CT-e que isso (o motor fala em mais de um milhão num mês cheio) precisa de outro desenho, e a escolha é do Kauan:
+- **pacote em partes:** os documentos em lotes, baixados um a um pelo agente;
+- **CT-e resumido:** só o que o D100 e o D190 pedem;
+- **subir o `max_allowed_packet`:** só leva o teto até o da string do Node.
+
 ## Testar sem o motor
 
 `scripts/local/agente-sped-de-teste.mjs` faz o papel do agente contra um Connect **local**: pede a tarefa, baixa e confere o pacote, devolve um TXT fictício em partes e conclui. O arquivo aparece para baixar no Gerar SPED. Ele recusa qualquer endereço que não seja local, porque concluiria tarefas de verdade com um arquivo falso.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { apoioSchema, decimal, parametrosSchema, percentual, ratearCredito, reaisExatos, somar, unidades, type DecisaoFiscal } from "./dominio";
+import { apoioSchema, decimal, parametrosSchema, percentual, ratearCredito, reaisExatos, sentidoNaEmpresa, somar, unidades, type DecisaoFiscal } from "./dominio";
 import { apurarBase, apurarPeriodos, cfopEfetivo, conferirApoios, produtosDaBase } from "./calculo";
 import { lerCsv, lerDocumentoXml, lerDocumentosTxt, lerLinhasApoio, COLUNAS_APOIO } from "./importacao";
 import { serializarPacote } from "./pacote";
@@ -20,6 +20,17 @@ describe("normalização e prioridade da fonte", () => {
   it("aceita namespaces sem tratar identificadores como número", () => { const d = lerDocumentoXml(XML_FICTICIO.replace('<cProd>A1</cProd>', '<cProd>000001</cProd>')); expect(d.itens[0].codigo).toBe("000001"); });
   it("recusa entidades externas e XML inválido", () => { expect(() => lerDocumentoXml('<!DOCTYPE a SYSTEM "file:///etc/passwd"><a/>')).toThrow(); expect(() => lerDocumentoXml("inválido")).toThrow(); });
   it("lê o TXT de referência sem duplicar C170 e C190", () => { const ds = lerDocumentosTxt(ARQUIVO_ICMS_DE_TESTE, "17122471000175"); expect(ds).toHaveLength(6); expect(ds[0].itens).toHaveLength(2); expect(ds[0].competencia).toBe("2026-09"); expect(ds[3]).toMatchObject({ numero: "900", valor: "10000.00", identidade: "12345678901234567890123456789012345678901234" }); expect(() => lerDocumentosTxt(ARQUIVO_ICMS_DE_TESTE, "39952818000140")).toThrow(/CNPJ/); });
+  it("CFOP que já é de entrada (nota de entrada de emissão própria) vale como veio", () => { expect(cfopEfetivo("1102", "40112090", "entrada", "xml", null)).toBe("1102"); expect(cfopEfetivo("2101", "", "entrada", "xml", { tipoItem: "07", definicao: "556", creditoPisCofins: "N", observacao: "" })).toBe("2556"); });
+  it("nota da própria empresa é saída, menos a de entrada de emissão própria (CFOP 1, 2 ou 3)", () => {
+    const empresa = "39952818000140", item = (cfop: string | null) => ({ cfop });
+    expect(sentidoNaEmpresa({ emitente: "11222333000181", itens: [item("5102")] }, empresa)).toBe("entrada");
+    expect(sentidoNaEmpresa({ emitente: empresa, itens: [item("5102"), item("6102")] }, empresa)).toBe("saida");
+    expect(sentidoNaEmpresa({ emitente: empresa, itens: [item("1102"), item("2102")] }, empresa)).toBe("entrada");
+    // Sem CFOP (NFS-e), CFOP misturado ou sem itens: fica a regra de quem emitiu.
+    expect(sentidoNaEmpresa({ emitente: empresa, itens: [item(null)] }, empresa)).toBe("saida");
+    expect(sentidoNaEmpresa({ emitente: empresa, itens: [item("1102"), item("5102")] }, empresa)).toBe("saida");
+    expect(sentidoNaEmpresa({ emitente: empresa, itens: [] }, empresa)).toBe("saida");
+  });
   it("preserva o prefixo do emitente e o desempate por NCM da origem", () => { expect(cfopEfetivo("5656", "27101921", "entrada", "xml", null)).toBe("1653"); expect(cfopEfetivo("6102", "40112090", "entrada", "xml", null)).toBe("2126"); expect(cfopEfetivo("9999", "", "entrada", "xml", null)).toBeNull(); expect(cfopEfetivo("5102", "", "entrada", "xml", { tipoItem: "07", definicao: "556", creditoPisCofins: "N", observacao: "" })).toBe("1556"); });
   it("lê CSV com aspas e mantém CPF com zero inicial", () => { const csv = csvSeguro([...COLUNAS_APOIO], [["R1", "2026-09", "recibo", "01234567890", 'Pessoa; "Exemplo"', "2026-09-15", "100.00", "90.00"]]); const ds = lerLinhasApoio(lerCsv(csv)); expect(ds[0]).toMatchObject({ documento: "01234567890", nome: 'Pessoa; "Exemplo"', decisao: "pendente" }); expect(() => lerLinhasApoio([["errado"]])).toThrow(/modelo/); });
 });

@@ -43,6 +43,20 @@ export const documentoSchema = z.object({
   referencias: z.record(z.string(), z.string()).default({}),
 });
 export type DocumentoFiscal = z.infer<typeof documentoSchema>;
+/**
+ * O sentido do documento na escrituração de uma empresa (06/11/2026). Emitido
+ * por outro é entrada. Emitido pela própria empresa é saída, menos a nota de
+ * entrada de emissão própria (`tpNF` 0: compra de produtor rural, importação,
+ * devolução de quem não emite): o CFOP dela é de entrada (1, 2 ou 3), e a
+ * SEFAZ recusa NF-e em que o CFOP contradiz o `tpNF`. Sem CFOP (NFS-e) ou com
+ * CFOP misturado, fica a regra de quem emitiu. Antes, toda nota da própria
+ * empresa virava saída — achado no teste com o motor (sped_generator#59).
+ */
+export function sentidoNaEmpresa(documento: { emitente: string; itens: { cfop: string | null }[] }, cnpjEmpresa: string): "entrada" | "saida" {
+  if (documento.emitente !== cnpjEmpresa) return "entrada";
+  const cfops = documento.itens.map(i => i.cfop).filter((c): c is string => !!c);
+  return cfops.length > 0 && cfops.every(c => /^[123]/.test(c)) ? "entrada" : "saida";
+}
 export const perfilSchema = z.object({
   uf: z.string().regex(/^[A-Z]{2}$/), regime: z.enum(["simples", "presumido", "real"]),
   obrigacoes: z.array(obrigacaoSchema).min(1), inscricaoEstadual: z.string().max(30).default(""),

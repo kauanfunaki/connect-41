@@ -9,7 +9,7 @@ import { camposDoMotorPeloCadastro } from "@/lib/empresas/camposSped";
 
 const CAMPOS_DO_CADASTRO = {
   id: true, name: true, tradeName: true, stateRegistration: true, zipCode: true, addressStreet: true, addressNumber: true,
-  addressComplement: true, neighborhood: true, phone: true, email: true, codMunicipioIbge: true, spedCodVersao: true,
+  addressComplement: true, neighborhood: true, phone: true, email: true, codMunicipioIbge: true,
   spedIndPerfil: true, spedIndAtividade: true, contabilistaNome: true, contabilistaCpf: true, contabilistaCrc: true,
   spedContaContabilPadrao: true, spedCodObservacaoPadrao: true,
 } as const;
