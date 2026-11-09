@@ -24,6 +24,7 @@
 
 import { getPrisma } from "../src/lib/prisma";
 import type { ProcessActor } from "../src/generated/prisma/enums";
+import { CAMINHO_DO_PROCEC, ETAPA_DO_PROTOCOLO_DO_ALVARA } from "../src/lib/societario/roteiroDoAlvara";
 
 const aplicar = process.argv.includes("--aplicar");
 
@@ -101,7 +102,14 @@ const ROTEIRO_BAIXA: EtapaSeed[] = [
 // lista ordenada não expressa, e o motor resolve sem caso especial.
 const ROTEIRO_ALVARA: EtapaSeed[] = [
   { position: 1, label: "Reunir informações da empresa, atividade e imóvel", actor: "PESSOA" },
-  { position: 2, label: "Emissão da taxa / protocolo", actor: "INTEGRACAO", organ: "Prefeitura" },
+  {
+    position: 2,
+    label: ETAPA_DO_PROTOCOLO_DO_ALVARA,
+    // O PROCEC como caminho alternativo (09/11/2026) — ver roteiroDoAlvara.ts.
+    description: CAMINHO_DO_PROCEC,
+    actor: "INTEGRACAO",
+    organ: "Prefeitura",
+  },
   { position: 3, label: "Qual licença é necessária?", actor: "PESSOA" },
   {
     position: 4,
