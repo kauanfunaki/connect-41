@@ -4,7 +4,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { Contador } from "@/components/ui/Contador";
-import { Plus, Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle } from "lucide-react";
+import { Plus, Sparkles, Mail, Columns3, AlertTriangle, Landmark, Loader, UserRound, PauseCircle, ListOrdered } from "lucide-react";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
+import { podeNoModulo } from "@/lib/auth/modulo";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
@@ -72,6 +75,8 @@ export default async function ProcessosPage({
   const setorDoSocietario = setoresDoSocietario[0];
   const coordena = canManageSector(ctx, setoresDoSocietario);
   const propostasDaIa = coordena ? await contarPendentesDoSetor(ctx.tenantId, setorDoSocietario) : 0;
+  // Os roteiros (09/11/2026) pedem o mesmo nível que a tela deles: "gerir".
+  const editaRoteiros = await podeNoModulo(ctx, MODULE, "gerir");
 
   // Os filtros da URL só valem quando são valores conhecidos: o parâmetro é
   // texto do usuário, e um id desconhecido viraria uma fila vazia sem motivo.
@@ -157,6 +162,15 @@ export default async function ProcessosPage({
           <Plus size={14} />
           Abrir processo
         </Button>
+        {/* Configuração de pouco uso, no "⋯" e não num quinto botão (09/11/2026):
+            o cabeçalho já tem a fila do dia. 36px, na altura dos botões ao lado. */}
+        {editaRoteiros && (
+          <MenuDeMaisAcoes rotulo="Mais ações dos processos" size="md" width={300} sempreMenu classeDoGatilho="h-9! w-9!">
+            <ItemDoMenu href="/processos/roteiros" icone={<ListOrdered />} descricao="Etapas, órgãos e checklist de cada tipo de processo.">
+              Roteiros dos processos
+            </ItemDoMenu>
+          </MenuDeMaisAcoes>
+        )}
         </div>
         }
       />

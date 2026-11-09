@@ -101,6 +101,14 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
         select: { id: true, title: true, companyId: true, type: { select: { name: true } } },
       })
     ).map((r) => ({ id: r.id, nome: r.title || r.type.name, href: `/processos/${r.id}`, empresaId: r.companyId })),
+  // A versão publicada pela tela de roteiros (09/11/2026) leva à tela do roteiro do tipo.
+  ProcessTemplate: async (tenantId, ids) =>
+    (
+      await getPrisma().processTemplate.findMany({
+        where: { tenantId, id: { in: ids } },
+        select: { id: true, version: true, typeId: true, type: { select: { name: true } } },
+      })
+    ).map((r) => ({ id: r.id, nome: `${r.type.name}, versão ${r.version}`, href: `/processos/roteiros/${r.typeId}`, empresaId: null })),
   Lead: async (tenantId, ids) =>
     (await getPrisma().lead.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
       id: r.id,
