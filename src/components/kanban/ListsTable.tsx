@@ -3,6 +3,7 @@ import { Folder as FolderIcon } from "lucide-react";
 import { formatCalendarDate } from "@/lib/format";
 import { DeleteEntityMenu } from "@/components/kanban/DeleteEntityMenu";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
+import { confirmacaoDaExclusaoDaTarefa } from "@/lib/kanban/exclusaoDeTarefa";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 export type ListRow = {
@@ -10,7 +11,10 @@ export type ListRow = {
   name: string;
   color: string | null;
   done: number;
+  /** As atividades da tarefa — as de cima, sem as subatividades. */
   total: number;
+  /** As subatividades de todos os níveis, para a confirmação de excluir (10/11/2026). */
+  subatividades: number;
   startDate: Date | null;
   endDate: Date | null;
   /** A pasta da lista, na tabela do espaço; `null` é a lista solta. */
@@ -20,10 +24,11 @@ export type ListRow = {
 type Props = {
   lists: ListRow[];
   basePath: string;
-  /** Quando presente, cada linha ganha o menu "…" com Excluir lista. Recebe a
+  /** Quando presente, cada linha ganha o menu "…" com Excluir tarefa. Recebe a
    * server action crua (não uma closure): quem passa é um Server Component, e
-   * ali só o `.bind` de uma action consegue atravessar a fronteira. */
-  deleteAction?: (pipelineId: string) => Promise<PipelineState>;
+   * ali só o `.bind` de uma action consegue atravessar a fronteira. A tarefa
+   * com atividades vai com o nome digitado (`confirmacao`). */
+  deleteAction?: (pipelineId: string, confirmacao?: string) => Promise<PipelineState>;
   /**
    * Mostra a coluna "Pasta", com o link para ela (a tabela do espaço, que traz
    * todas as listas — Ajustes 15/10, G3). O endereço da pasta é este + o id.
@@ -150,7 +155,12 @@ export function ListsTable({ lists, basePath, deleteAction, pastaBasePath }: Pro
                   </td>
                   {deleteAction && (
                     <td className="px-4 py-2.5">
-                      <DeleteEntityMenu kind="tarefa" name={l.name} action={deleteAction.bind(null, l.id)} />
+                      <DeleteEntityMenu
+                        kind="tarefa"
+                        name={l.name}
+                        action={deleteAction.bind(null, l.id)}
+                        emMassa={confirmacaoDaExclusaoDaTarefa(l.name, { atividades: l.total, subatividades: l.subatividades })}
+                      />
                     </td>
                   )}
                 </LinhaFiltravel>
