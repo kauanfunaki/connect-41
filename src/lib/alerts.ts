@@ -7,7 +7,7 @@
 // acknowledgedAt + polling no client), que é mais preciso que um cron diário.
 import { getPrisma } from "@/lib/prisma";
 import { notifySector, notifyUser } from "@/lib/notifications";
-import { HANDOFF_PARADA_DIAS, tituloDaTransferencia } from "@/lib/handoffs";
+import { HANDOFF_PARADA_DIAS, SITUACOES_COM_O_SETOR, tituloDaTransferencia } from "@/lib/handoffs";
 import { sectorLabel } from "@/lib/sectors";
 import { statusPrazoPagamento } from "@/lib/rescisaoChecklist";
 import { calcularValidade } from "@/lib/relatoriosRH";
@@ -199,7 +199,9 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
   const pendentes = await prisma.handoffSector.findMany({
     where: {
       tenantId,
-      status: { not: "DONE" },
+      // Só a parte que está com o setor (nova ou resolvendo). A devolvida
+      // (10/11/2026) espera quem pediu, e não conta como parada no destino.
+      status: { in: SITUACOES_COM_O_SETOR },
       createdAt: { lte: limit },
       handoff: { views: { none: {} } },
     },

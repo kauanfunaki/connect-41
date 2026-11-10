@@ -7,6 +7,7 @@ import {
   canReadSectorInstruction,
   HANDOFF_PARADA_DIAS,
   HANDOFF_PRIORITY_TOM,
+  HANDOFF_STATUS_LABEL,
   HANDOFF_STATUS_TOM,
   SEM_ASSUNTO,
   setorParado,
@@ -27,6 +28,14 @@ describe("aggregateHandoffStatus", () => {
 
   it("todos novos continua Nova", () => {
     expect(aggregateHandoffStatus(["NEW", "NEW"])).toBe("NEW");
+  });
+
+  // "Devolvida" (10/11/2026): a parte devolvida vence as outras — a
+  // transferência espera quem pediu responder.
+  it("uma parte devolvida deixa a transferência Devolvida, mesmo com as outras finalizadas", () => {
+    expect(aggregateHandoffStatus(["RETURNED"])).toBe("RETURNED");
+    expect(aggregateHandoffStatus(["DONE", "RETURNED"])).toBe("RETURNED");
+    expect(aggregateHandoffStatus(["NEW", "IN_PROGRESS", "RETURNED"])).toBe("RETURNED");
   });
 });
 
@@ -59,7 +68,7 @@ function casa(t: Transferencia, filtro: Filtro): boolean {
   });
 }
 
-const SITUACOES: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS", "DONE"];
+const SITUACOES: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS", "DONE", "RETURNED"];
 
 function combinacoes(ate: number): HandoffSectorStatus[][] {
   const todas: HandoffSectorStatus[][] = [[]];
@@ -74,8 +83,8 @@ function combinacoes(ate: number): HandoffSectorStatus[][] {
 describe("whereDaSituacao", () => {
   const casos = combinacoes(3);
 
-  it("cobre as 40 combinações de 0 a 3 setores", () => {
-    expect(casos).toHaveLength(1 + 3 + 9 + 27);
+  it("cobre as 85 combinações de 0 a 3 setores, com a devolvida", () => {
+    expect(casos).toHaveLength(1 + 4 + 16 + 64);
   });
 
   it.each(casos.map((c) => [c.join(", ") || "sem setor", c] as const))(
@@ -145,8 +154,11 @@ describe("prioridade e situação no tom do Selo", () => {
     expect(HANDOFF_PRIORITY_TOM).toEqual({ LOW: "neutro", MEDIUM: "marca", HIGH: "atencao", URGENT: "perigo" });
   });
 
-  it("o sinal do setor: nova âmbar, resolvendo azul, finalizada verde", () => {
-    expect(HANDOFF_STATUS_TOM).toEqual({ NEW: "atencao", IN_PROGRESS: "marca", DONE: "sucesso" });
+  it("o sinal do setor: nova âmbar, resolvendo azul, finalizada verde, devolvida vermelha", () => {
+    expect(HANDOFF_STATUS_TOM).toEqual({ NEW: "atencao", IN_PROGRESS: "marca", DONE: "sucesso", RETURNED: "perigo" });
+    expect(HANDOFF_STATUS_LABEL.RETURNED).toBe("Devolvida");
+    // O vermelho não repete o âmbar da "Nova": as duas ficam lado a lado na faixa.
+    expect(new Set(Object.values(HANDOFF_STATUS_TOM)).size).toBe(4);
   });
 });
 
@@ -166,6 +178,11 @@ describe("transferência parada", () => {
 
   it("setor finalizado nunca está parado", () => {
     expect(setorParado({ status: "DONE", createdAt: diasAtras(30) }, agora)).toBe(false);
+  });
+
+  it("a parte devolvida espera quem pediu, e não conta como parada no setor", () => {
+    expect(setorParado({ status: "RETURNED", createdAt: diasAtras(30) }, agora)).toBe(false);
+    expect(transferenciaParada([{ status: "RETURNED", createdAt: diasAtras(30) }], agora)).toBe(false);
   });
 
   it("basta um setor parado para a transferência estar parada", () => {

@@ -1,85 +1,246 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Eye, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { getAuthContext, canManageSector, isFullAccess } from "@/lib/auth/context";
+import { getAuthContext, isFullAccess } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { TextoComLinks } from "@/components/shared/TextoComLinks";
+import { AvatarImage } from "@/components/shared/AvatarImage";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { TextoComLinks } from "@/components/shared/TextoComLinks";
-import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
-import { SectorChip } from "@/components/ui/SectorChip";
-import { AssigneeSelect } from "@/components/transferencias/AssigneeSelect";
-import { SectorStatusSelect } from "@/components/transferencias/SectorStatusSelect";
-import { atualizarStatusSetor, atribuirResponsavelSetor, registrarVisualizacao } from "../actions";
+import { AndamentoDosSetores, type ColunaDoAndamento } from "@/components/transferencias/AndamentoDosSetores";
+import { AtividadeDaTransferencia, type ItemNaTela } from "@/components/transferencias/AtividadeDaTransferencia";
+import { ComentarNaTransferencia } from "@/components/transferencias/ComentarNaTransferencia";
+import { DevolvidaAoPedido } from "@/components/transferencias/DevolvidaAoPedido";
+import { EditarTransferencia } from "@/components/transferencias/EditarTransferencia";
+import { ParteDoSetor } from "@/components/transferencias/ParteDoSetor";
+import { formatCpf, formatDocumento, formatInstantDate, formatInstantDateTime } from "@/lib/format";
+import { nomeExibicao } from "@/lib/companyName";
+import { tempoRelativo } from "@/lib/notificacoes/tempo";
+import { registrarVisualizacao } from "../actions";
 import {
   aggregateHandoffStatus,
   canReadSectorInstruction,
-  HANDOFF_STATUS_LABEL,
-  HANDOFF_STATUS_BADGE,
   HANDOFF_PRIORITY_LABEL,
   HANDOFF_PRIORITY_TOM,
+  HANDOFF_STATUS_BADGE,
+  HANDOFF_STATUS_LABEL,
+  HANDOFF_STATUS_TOM,
   tituloDaTransferencia,
 } from "@/lib/handoffs";
+import { acoesDaParte, aoSetor, podeComentar, podeEditarATransferencia, podeMudarResponsaveis } from "@/lib/handoffTransicoes";
+import {
+  fraseDoItem,
+  itensDaAtividade,
+  resumoDaParte,
+  rotuloDoTexto,
+  setorDeQuemAgiu,
+  trechosComMencao,
+  ultimaDevolucao,
+} from "@/lib/handoffAtividade";
 
-export default async function HandoffDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+const DATA_E_HORA: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" };
+
+/**
+ * A transferência aberta (10/11/2026, pedido do Kauan — Controle interno
+ * melhoria-591, escolha "B · Andamento no topo e a conversa ao lado"):
+ * - no topo, a faixa com o andamento de cada setor de destino;
+ * - à esquerda, a descrição e a Atividade (comentários com @ e o histórico);
+ * - à direita, a parte de cada setor em que quem olha pode agir (instrução,
+ *   responsáveis, Começar / Finalizar / Devolver), o cartão "Devolvida" para
+ *   quem pediu responder e reenviar, e os detalhes.
+ * No celular, uma coluna na ordem de leitura: faixa, a minha parte, descrição,
+ * Atividade, detalhes. As regras estão em src/lib/handoffTransicoes.ts e o
+ * texto da Atividade em src/lib/handoffAtividade.ts.
+ */
+export default async function HandoffDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getAuthContext();
-
   const prisma = getPrisma();
+
   const handoff = await prisma.handoff.findFirst({
     where: { id, ...scopedHandoffWhere(ctx) },
     include: {
-      requester: { select: { name: true } },
+      requester: { select: { id: true, name: true, photoUrl: true } },
       sectors: {
         orderBy: { createdAt: "asc" },
         include: {
-          assignees: {
-            orderBy: { createdAt: "asc" },
-            include: { user: { select: { id: true, name: true } } },
-          },
+          assignees: { orderBy: { createdAt: "asc" }, include: { user: { select: { id: true, name: true, photoUrl: true } } } },
+        },
+      },
+      events: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          type: true,
+          userId: true,
+          handoffSectorId: true,
+          body: true,
+          createdAt: true,
+          user: { select: { sectors: { select: { sectorCode: true } } } },
         },
       },
     },
   });
-
   if (!handoff) notFound();
 
   if (ctx.userId) await registrarVisualizacao(handoff.id);
 
-  const entity =
+  const [entidade, { labels: sectorLabels }, pessoasDoEscritorio, views] = await Promise.all([
     handoff.entityType === "COMPANY"
-      ? await prisma.company.findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { id: true, name: true } })
-      : await prisma.person.findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { id: true, name: true } });
+      ? prisma.company
+          .findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { name: true, displayName: true, kind: true, cnpj: true, cpf: true } })
+          .then((c) => (c ? { nome: nomeExibicao(c), documento: formatDocumento(c.kind, c.cnpj, c.cpf), rotuloDoDocumento: c.kind === "PESSOA_FISICA" ? "CPF" : "CNPJ" } : null))
+      : prisma.person
+          .findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { name: true, cpf: true } })
+          .then((p) => (p ? { nome: p.name, documento: formatCpf(p.cpf), rotuloDoDocumento: "CPF" } : null)),
+    getSectorMaps(ctx.tenantId),
+    // Os nomes e as fotos de quem aparece na Atividade e na faixa, e a lista do
+    // "@" (só os ativos). Os inativos ficam para pintar a menção antiga.
+    prisma.user.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, photoUrl: true, active: true },
+    }),
+    prisma.handoffView.findMany({
+      where: { handoffId: handoff.id },
+      include: { user: { select: { name: true, photoUrl: true } } },
+      orderBy: { viewedAt: "desc" },
+    }),
+  ]);
 
-  const entityHref = handoff.entityType === "COMPANY" ? `/empresas/${handoff.entityId}` : `/pessoas/${handoff.entityId}`;
-  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
-  const aggregate = aggregateHandoffStatus(handoff.sectors.map((s) => s.status));
+  const agora = new Date();
+  const rotulo = (codigo: string) => sectorLabel(sectorLabels, codigo);
+  const pessoaPorId = new Map(pessoasDoEscritorio.map((u) => [u.id, u]));
+  const nome = (userId: string) => pessoaPorId.get(userId)?.name ?? "Usuário removido";
   const titulo = tituloDaTransferencia(handoff);
+  const origem = rotulo(handoff.fromSector);
+  const aggregate = aggregateHandoffStatus(handoff.sectors.map((s) => s.status));
+  const pedido = { requestedBy: handoff.requestedBy, fromSector: handoff.fromSector };
+  const entityHref = handoff.entityType === "COMPANY" ? `/empresas/${handoff.entityId}` : `/pessoas/${handoff.entityId}`;
+  const eventos = handoff.events.map((e) => ({
+    id: e.id,
+    type: e.type,
+    userId: e.userId,
+    handoffSectorId: e.handoffSectorId,
+    body: e.body,
+    createdAt: e.createdAt,
+  }));
+  const mencionaveis = pessoasDoEscritorio.filter((u) => u.active).map((u) => ({ id: u.id, name: u.name }));
 
-  // Opções de responsável por setor — só carrega pros setores que o usuário
-  // coordena (o select nem aparece pros demais). Sempre membros do setor.
-  const manageableSectors = handoff.sectors.filter((s) => canManageSector(ctx, s.sectorCode));
-  const assigneeOptionsBySector = Object.fromEntries(
+  // ─── Cada parte, com o que quem olha pode fazer nela ──────────────────────
+  const partes = handoff.sectors.map((s) => {
+    const responsaveis = s.assignees.map((a) => a.user.id);
+    const acoes = acoesDaParte(ctx, { sectorCode: s.sectorCode, status: s.status, responsaveis }, pedido);
+    return {
+      s,
+      responsaveis,
+      doLadoDoSetor: acoes.filter((a) => a !== "reenviar"),
+      podeReenviar: acoes.includes("reenviar"),
+      mudaResponsaveis: podeMudarResponsaveis(ctx, s),
+      doMeuSetor: ctx.sectors.includes(s.sectorCode) || responsaveis.includes(ctx.userId),
+      resumo: resumoDaParte({ ...s, responsaveis }, eventos, nome, agora),
+    };
+  });
+
+  const colunas: ColunaDoAndamento[] = partes.map((p) => ({
+    id: p.s.id,
+    setor: rotulo(p.s.sectorCode),
+    status: p.s.status,
+    resumo: p.resumo,
+    doMeuSetor: p.doMeuSetor,
+  }));
+
+  // As partes em que a pessoa age, a do setor dela primeiro.
+  const minhasPartes = partes
+    .filter((p) => p.doLadoDoSetor.length > 0 || p.mudaResponsaveis)
+    .sort((a, b) => Number(b.doMeuSetor) - Number(a.doMeuSetor));
+  const opcoesPorSetor = Object.fromEntries(
     await Promise.all(
-      manageableSectors.map(async (s) => [s.sectorCode, await getSectorUsers(ctx.tenantId, s.sectorCode)] as const)
+      minhasPartes.filter((p) => p.mudaResponsaveis).map(async (p) => [p.s.sectorCode, await getSectorUsers(ctx.tenantId, p.s.sectorCode)] as const)
     )
   );
+  const devolvidasParaMim = partes.filter((p) => p.podeReenviar);
 
-  const views = await prisma.handoffView.findMany({
-    where: { handoffId: handoff.id },
-    include: { user: { select: { name: true } } },
-    orderBy: { viewedAt: "desc" },
+  // ─── A Atividade ──────────────────────────────────────────────────────────
+  const setoresDe = new Map(handoff.events.map((e) => [e.userId, e.user.sectors.map((x) => x.sectorCode)]));
+  const contextoDoSetor = {
+    requestedBy: handoff.requestedBy,
+    fromSector: handoff.fromSector,
+    partes: partes.map((p) => ({ sectorCode: p.s.sectorCode, responsaveis: p.responsaveis })),
+  };
+  const nomesParaMencao = pessoasDoEscritorio.map((u) => u.name);
+  const itens: ItemNaTela[] = itensDaAtividade(handoff, handoff.sectors, eventos).map((item) => {
+    const pessoa = item.autorId ? pessoaPorId.get(item.autorId) : undefined;
+    const setorDoAutor = item.autorId
+      ? setorDeQuemAgiu(item.autorId, item.setorDaParte, { ...contextoDoSetor, setoresDaPessoa: setoresDe.get(item.autorId) ?? [] })
+      : null;
+    return {
+      chave: item.chave,
+      tipo: item.tipo,
+      autor: item.autorId ? { nome: pessoa?.name ?? "Usuário removido", foto: pessoa?.photoUrl ?? null } : null,
+      setorDoAutor: setorDoAutor ? rotulo(setorDoAutor) : null,
+      frase: fraseDoItem(item, rotulo),
+      trechos: item.texto ? (item.tipo === "COMMENT" ? trechosComMencao(item.texto, nomesParaMencao) : [{ texto: item.texto, mencao: false }]) : null,
+      rotuloDoTexto: rotuloDoTexto(item.tipo),
+      relativo: tempoRelativo(item.quando, agora),
+      exato: formatInstantDateTime(item.quando, DATA_E_HORA),
+      iso: item.quando.toISOString(),
+      deduzido: item.deduzido,
+    };
   });
+
+  const eu = pessoaPorId.get(ctx.userId);
+  const comenta = podeComentar(ctx);
+  const edita = podeEditarATransferencia(ctx, pedido);
+  const temCartaoAoLado = minhasPartes.length > 0 || devolvidasParaMim.length > 0;
+
+  const detalhes = (className: string) => (
+    <Card as="section" aria-label="Detalhes" className={`p-5 ${className}`}>
+      <h2 className="text-section font-semibold text-fg mb-3">Detalhes</h2>
+      <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 gap-y-2.5 text-ui">
+        <dt className="text-fg-muted">{handoff.entityType === "COMPANY" ? "Empresa" : "Pessoa"}</dt>
+        <dd className="min-w-0 break-words">
+          {entidade ? (
+            <Link href={entityHref} className="font-medium text-fg hover:text-brand transition-colors">
+              {entidade.nome}
+            </Link>
+          ) : (
+            <span className="text-fg-muted">(removido)</span>
+          )}
+        </dd>
+        <dt className="text-fg-muted">{entidade?.rotuloDoDocumento ?? (handoff.entityType === "COMPANY" ? "CNPJ" : "CPF")}</dt>
+        <dd className="tabular-nums text-fg-secondary">{entidade?.documento ?? "—"}</dd>
+        <dt className="text-fg-muted">Pedida por</dt>
+        <dd className="min-w-0 break-words text-fg-secondary">
+          {handoff.requester.name} · {origem}
+        </dd>
+        <dt className="text-fg-muted">Aberta em</dt>
+        <dd className="text-fg-secondary">{formatInstantDateTime(handoff.createdAt, DATA_E_HORA)}</dd>
+        <dt className="text-fg-muted">Viram</dt>
+        <dd>
+          {views.length === 0 ? (
+            <span className="text-fg-muted">Ninguém ainda.</span>
+          ) : (
+            <>
+              <ul className="flex flex-wrap gap-1" aria-hidden>
+                {views.map((v) => (
+                  <li key={v.id} title={`${v.user.name}, em ${formatInstantDateTime(v.viewedAt, DATA_E_HORA)}`} className="inline-flex">
+                    <AvatarImage src={v.user.photoUrl} name={v.user.name} size={26} fontSize={10} />
+                  </li>
+                ))}
+              </ul>
+              <span className="sr-only">{views.map((v) => `${v.user.name}, em ${formatInstantDateTime(v.viewedAt, DATA_E_HORA)}`).join("; ")}</span>
+            </>
+          )}
+        </dd>
+      </dl>
+    </Card>
+  );
 
   return (
     <PageContainer>
@@ -90,178 +251,134 @@ export default async function HandoffDetailPage({
         ]}
       />
 
-      {/* O cabeçalho de registro de trabalho do processo e do lead — PageHeader
-          com a situação no `meta` (padrão aceito em 08/10/2026). Desde
-          10/11/2026 o título é o assunto (o pedido), e a empresa ou pessoa vai
-          para o subtítulo, com quem pediu e de qual setor; as transferências de
-          antes, sem assunto, ficam com "Transferência". O resto da tela muda no
-          próximo passo do redesenho. */}
       <PageHeader
         title={titulo}
         subtitle={
           <>
-            {entity ? (
+            {entidade ? (
               <Link href={entityHref} className="font-medium text-fg hover:text-brand transition-colors">
-                {entity.name}
+                {entidade.nome}
               </Link>
             ) : (
               <span className="text-fg-muted">(removido)</span>
             )}
-            {" · "}pedida por {handoff.requester.name} ({sectorLabel(sectorLabels, handoff.fromSector)}) em{" "}
+            {" · "}pedida por {handoff.requester.name} ({origem}) em{" "}
             {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
           </>
         }
         meta={
           <>
-            <span className="inline-flex items-center gap-2 flex-wrap">
-              <SectorChip label={sectorLabels[handoff.fromSector] ?? handoff.fromSector} color={sectorColors[handoff.fromSector] ?? "#586577"} />
-              <ArrowRight size={14} className="text-fg-muted flex-shrink-0" aria-label="para" />
-              {handoff.sectors.map((s) => (
-                <SectorChip
-                  key={s.sectorCode}
-                  label={sectorLabels[s.sectorCode] ?? s.sectorCode}
-                  color={sectorColors[s.sectorCode] ?? "#586577"}
-                />
-              ))}
-            </span>
             <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
-            <Selo tom={HANDOFF_PRIORITY_TOM[handoff.priority]}>
-              Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}
-            </Selo>
+            <Selo tom={HANDOFF_PRIORITY_TOM[handoff.priority]}>Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}</Selo>
           </>
+        }
+        // Sem o "⋯": não há, por ora, ação secundária para pôr nele.
+        action={
+          edita ? (
+            <EditarTransferencia
+              handoffId={handoff.id}
+              inicial={{ subject: handoff.subject ?? "", description: handoff.description ?? "", priority: handoff.priority }}
+              pessoas={mencionaveis}
+            />
+          ) : undefined
         }
       />
 
-      {/* "Informações adicionais" só aparece nas transferências que a têm: o
-          campo saiu do formulário em 10/11/2026, e a nova não escreve nele. */}
-      <Card className="p-5 mb-4">
-        {handoff.message && (
-          <>
-            <h2 className="text-section font-semibold text-fg mb-2">Informações adicionais</h2>
-            <p className="text-body text-fg-secondary whitespace-pre-wrap mb-5">
-              <TextoComLinks texto={handoff.message} />
-            </p>
-          </>
-        )}
-        <h2 className="text-section font-semibold text-fg mb-2">Descrição</h2>
-        {handoff.description ? (
-          <p className="text-body text-fg-secondary whitespace-pre-wrap">
-            <TextoComLinks texto={handoff.description} />
-          </p>
-        ) : (
-          <p className="text-body text-fg-muted italic">Sem descrição.</p>
-        )}
-      </Card>
+      <AndamentoDosSetores colunas={colunas} />
 
-      {/* Um card por setor de destino: instrução, situação e responsável. */}
-      <div className="space-y-3 mb-4">
-        {handoff.sectors.map((s) => {
-          const canManage = canManageSector(ctx, s.sectorCode);
-          // Qualquer um dos responsáveis pode mexer no status. A coluna antiga
-          // `assignedTo` foi dropada: a migration 20260730120000 copiou todo
-          // assignedTo não-nulo pra cá, então ela não tinha nada a mais.
-          const isAssignee = s.assignees.some((a) => a.user.id === ctx.userId);
-          const canUpdateStatus = (canManage || isAssignee) && ctx.role !== "READONLY";
-          const assigneeNames = s.assignees.map((a) => a.user.name);
-          // Instrução é dirigida a UM setor — ver a transferência não dá
-          // direito de ler o que foi dito a outro. O card fica, o texto não.
-          const podeLerInstrucao = canReadSectorInstruction({
-            fullAccess: isFullAccess(ctx.role),
-            userId: ctx.userId,
-            requestedBy: handoff.requestedBy,
-            userSectors: ctx.sectors,
-            sectorCode: s.sectorCode,
-            isAssignee,
-          });
-          const sectorLabel = sectorLabels[s.sectorCode] ?? s.sectorCode;
-          return (
-            <Card key={s.id} className="p-5">
-              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <SectorChip
-                    label={sectorLabel}
-                    color={sectorColors[s.sectorCode] ?? "#586577"}
-                  />
-                  {!canUpdateStatus && (
-                    <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[s.status])}>{HANDOFF_STATUS_LABEL[s.status]}</Selo>
-                  )}
-                </div>
-                {canUpdateStatus && (
-                  <SectorStatusSelect action={atualizarStatusSetor.bind(null, s.id)} current={s.status} />
-                )}
-              </div>
+      {/* Na mesa, duas colunas; no celular, uma, na ordem de leitura. O lado
+          vem antes no código para "a minha parte" aparecer logo depois da faixa
+          no celular; os detalhes aparecem duas vezes (um de cada lado) e cada
+          um some numa largura. */}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1.7fr)_minmax(18rem,1fr)] lg:items-start">
+        <div className={`${temCartaoAoLado ? "flex" : "hidden lg:flex"} min-w-0 flex-col gap-5 lg:col-start-2 lg:row-start-1`}>
+          {devolvidasParaMim.map((p) => {
+            const devolucao = ultimaDevolucao(eventos, p.s.id);
+            return (
+              <DevolvidaAoPedido
+                key={`devolvida-${p.s.id}`}
+                parteId={p.s.id}
+                setor={rotulo(p.s.sectorCode)}
+                origem={origem}
+                motivo={devolucao?.body ?? null}
+                quem={devolucao ? nome(devolucao.userId) : null}
+                quando={devolucao ? formatInstantDateTime(devolucao.createdAt, DATA_E_HORA) : null}
+              />
+            );
+          })}
+          {minhasPartes.map((p) => {
+            const isAssignee = p.responsaveis.includes(ctx.userId);
+            return (
+              <ParteDoSetor
+                key={p.s.id}
+                parteId={p.s.id}
+                setor={rotulo(p.s.sectorCode)}
+                origem={origem}
+                status={p.s.status}
+                situacao={{ rotulo: HANDOFF_STATUS_LABEL[p.s.status], tom: HANDOFF_STATUS_TOM[p.s.status] }}
+                instrucao={p.s.instruction}
+                // A instrução é dirigida a UM setor — ver a transferência não dá
+                // direito de ler o que foi dito a outro (achado de 24/08/2026).
+                podeLerInstrucao={canReadSectorInstruction({
+                  fullAccess: isFullAccess(ctx.role),
+                  userId: ctx.userId,
+                  requestedBy: handoff.requestedBy,
+                  userSectors: ctx.sectors,
+                  sectorCode: p.s.sectorCode,
+                  isAssignee,
+                })}
+                acoes={p.doLadoDoSetor}
+                responsaveis={p.s.assignees.map((a) => ({ id: a.user.id, nome: a.user.name, foto: a.user.photoUrl }))}
+                opcoesDeResponsavel={p.mudaResponsaveis ? (opcoesPorSetor[p.s.sectorCode] ?? []) : null}
+                doMeuSetor={p.doMeuSetor}
+                nota={
+                  p.s.status === "RETURNED"
+                    ? `Devolvida ${aoSetor(origem)}. A parte volta para cá quando quem pediu responder e reenviar.`
+                    : null
+                }
+              />
+            );
+          })}
+          {detalhes("hidden lg:block")}
+        </div>
 
-              {!podeLerInstrucao ? (
-                <p className="text-body text-fg-muted italic mb-3 flex items-center gap-1.5">
-                  <Lock size={14} aria-hidden className="shrink-0" />
-                  Instrução restrita ao setor {sectorLabel}.
-                </p>
-              ) : s.instruction ? (
-                <p className="text-body text-fg-secondary whitespace-pre-wrap mb-3">{s.instruction}</p>
-              ) : (
-                <p className="text-body text-fg-muted italic mb-3">Sem instrução específica para este setor.</p>
-              )}
-
-              <div className="flex items-center gap-2 pt-3 border-t border-border flex-wrap">
-                <span className="text-fs-2 text-fg-muted">
-                  {assigneeNames.length > 1 ? "Responsáveis:" : "Responsável:"}
-                </span>
-                {canManage ? (
-                  <>
-                    {/* AssigneeSelect troca por UM responsável (substitui a
-                        lista). Com vários definidos na criação, os nomes ficam
-                        visíveis ao lado pra não sumirem da tela.
-                        O selecionado é o primeiro da lista, que é exatamente o
-                        que a coluna `assignedTo` guardava antes de ser dropada
-                        — `assignees` vem ordenado por createdAt. */}
-                    <AssigneeSelect
-                      action={atribuirResponsavelSetor.bind(null, s.id)}
-                      options={assigneeOptionsBySector[s.sectorCode] ?? []}
-                      currentAssigneeId={s.assignees[0]?.user.id ?? null}
-                    />
-                    {assigneeNames.length > 1 && (
-                      <span className="text-fs-2 text-fg-muted">
-                        + {assigneeNames.slice(1).join(", ")}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-fs-2 text-fg">
-                    {assigneeNames.length > 0 ? assigneeNames.join(", ") : "Sem responsável"}
-                  </span>
-                )}
-                {/* Só faz sentido mostrar a data de finalização quando o setor de
-                    fato finalizou — dados migrados do modelo antigo podiam ter
-                    resolvedAt preenchido em setor ainda "Resolvendo". */}
-                {s.status === "DONE" && s.resolvedAt && (
-                  <span className="text-fs-2 text-fg-muted ml-auto">
-                    Finalizada em {formatInstantDateTime(s.resolvedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                )}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {views.length > 0 && (
-        <Card className="p-5">
-          <h2 className="text-section font-semibold text-fg mb-2 flex items-center gap-2">
-            <Eye size={16} className="text-fg-muted" />
-            Visualizado por
-          </h2>
-          <div className="space-y-1.5">
-            {views.map((v) => (
-              <p key={v.id} className="text-fs-3 text-fg-secondary">
-                <span className="font-medium text-fg">{v.user.name}</span>{" "}
-                <span className="text-fg-muted">
-                  em {formatInstantDateTime(v.viewedAt, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </span>
+        <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
+          <Card as="section" aria-labelledby="titulo-descricao" className="p-5 space-y-3">
+            <h2 id="titulo-descricao" className="text-section font-semibold text-fg">
+              Descrição
+            </h2>
+            {handoff.description ? (
+              <p className="text-ui text-fg-secondary whitespace-pre-wrap break-words">
+                <TextoComLinks texto={handoff.description} />
               </p>
-            ))}
-          </div>
-        </Card>
-      )}
+            ) : (
+              <p className="text-ui text-fg-muted italic">Sem descrição.</p>
+            )}
+            {/* "Informações adicionais" só nas transferências que a têm: o campo
+                saiu do formulário em 10/11/2026, e a nova não escreve nele. */}
+            {handoff.message && (
+              <>
+                <h3 className="text-label font-semibold text-fg pt-2">Informações adicionais</h3>
+                <p className="text-ui text-fg-secondary whitespace-pre-wrap break-words">
+                  <TextoComLinks texto={handoff.message} />
+                </p>
+              </>
+            )}
+          </Card>
+
+          <Card as="section" aria-labelledby="titulo-atividade" className="p-5 space-y-4">
+            <h2 id="titulo-atividade" className="text-section font-semibold text-fg">
+              Atividade
+            </h2>
+            {comenta && eu && (
+              <ComentarNaTransferencia handoffId={handoff.id} eu={{ nome: eu.name, foto: eu.photoUrl }} pessoas={mencionaveis} />
+            )}
+            <AtividadeDaTransferencia itens={itens} />
+          </Card>
+
+          {detalhes("lg:hidden")}
+        </div>
+      </div>
     </PageContainer>
   );
 }

@@ -27,7 +27,17 @@ describe("linkDaNotificacao", () => {
   });
 
   it("aviso de transferência novo abre a transferência; o de antes, com empresa ou pessoa, abre a ficha", () => {
-    for (const type of ["HANDOFF_RECEIVED", "HANDOFF_ASSIGNED", "HANDOFF_MENTION", "HANDOFF_SECTOR_DONE", "HANDOFF_STALE"]) {
+    for (const type of [
+      "HANDOFF_RECEIVED",
+      "HANDOFF_ASSIGNED",
+      "HANDOFF_MENTION",
+      "HANDOFF_SECTOR_DONE",
+      "HANDOFF_STALE",
+      // A transferência aberta (10/11/2026).
+      "HANDOFF_RETURNED",
+      "HANDOFF_RESENT",
+      "HANDOFF_COMMENT",
+    ]) {
       expect(linkDaNotificacao({ type, entityType: null, entityId: "h1" })).toBe("/transferencias/h1");
     }
     expect(linkDaNotificacao({ type: "HANDOFF_RECEIVED", entityType: "COMPANY", entityId: "c1" })).toBe("/empresas/c1");
