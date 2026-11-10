@@ -73,6 +73,12 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "ops.aviso_fechado": e("fechou o aviso de erro do robô no Orquestrador"),
   "token_pessoal.create": c("criou o token de acesso pessoal"),
   "token_pessoal.revoke": e("revogou o token de acesso pessoal"),
+  // A Academia (10/11/2026): o que quem administra cadastra.
+  "academia.texto.create": c("cadastrou o texto de digitação da Academia"),
+  "academia.texto.update": e("editou o texto de digitação da Academia"),
+  "academia.questao.create": c("cadastrou a questão de lógica da Academia"),
+  "academia.questao.update": e("editou a questão de lógica da Academia"),
+  "academia.premio.update": e("definiu o prêmio do mês da Academia", { comNome: false }),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
@@ -675,6 +681,9 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   HelpdeskSlaPolicy: "política de SLA dos chamados",
   TechInternalItem: "item do controle interno",
   PersonalApiToken: "token de acesso",
+  AcademiaTexto: "texto da Academia",
+  AcademiaQuestao: "questão da Academia",
+  AcademiaPremio: "prêmio do mês da Academia",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   AvaliacaoTributaria: "avaliação tributária",
@@ -860,6 +869,8 @@ export const AREAS_DA_AUDITORIA: Readonly<Record<ChaveDaAreaDaAuditoria, { rotul
 const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]> = [
   ["helpdesk.", "chamados"],
   ["tech_interno.", "tech"],
+  // A Academia (10/11/2026) é administrada pela Tech.
+  ["academia.", "tech"],
   ["estoque.", "financeiro"],
   ["contrato_interno.", "financeiro"],
   ["ops.", "tech"],

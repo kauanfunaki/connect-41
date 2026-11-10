@@ -298,6 +298,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: false, icon: "Workflow", group: "Operação", menuDireto: true,
   },
   {
+    // A Academia (10/11/2026, pedido do Kauan): testes de digitação, de números
+    // e de lógica, com ranking do mês. É de toda a equipe (o chapéu de
+    // formatura no topo, e não um item de setor); a Tech liga, desliga e
+    // administra. Nasce desligada: liga depois da importação do Hub.
+    code: "academia", label: "Academia", sectorCode: "tech",
+    description: "Testes de digitação, de digitação de números e de lógica, com ranking do mês entre os colegas e certificado para o pódio",
+    defaultEnabled: false, icon: "GraduationCap", group: "Apoio", fixedSector: true,
+  },
+  {
     code: "helpdesk", label: "Chamados", sectorCode: "tech",
     description: "Helpdesk interno: solicitações dos setores, atendimento, SLA e triagem conversacional por IA",
     defaultEnabled: false, icon: "Ticket", group: "Atendimento",
@@ -898,6 +907,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   tech_github_contributions: "/produtividade",
   tech_ops_center:         "/ops",
   tech_entregas: "/controle-interno/entregas",
+  academia: "/academia",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
   portal_solicitacoes:     "/solicitacoes",
@@ -974,11 +984,18 @@ export const MODULE_ROUTES: Record<string, string> = {
 export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastros"]);
 
 /**
+ * Módulos de toda a equipe, de qualquer setor, inclusive o Somente leitura
+ * (10/11/2026): a Academia. Não entram no menu de setor nenhum — a entrada é
+ * o chapéu de formatura no topo — e aparecem no Ctrl+K para todos.
+ */
+export const MODULOS_DE_TODA_A_EQUIPE: ReadonlySet<string> = new Set(["academia"]);
+
+/**
  * Módulos cuja tela fica no menu **Geral**, e não na lista de telas do setor
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual"]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", ...MODULOS_DE_TODA_A_EQUIPE]);
 
 /**
  * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e

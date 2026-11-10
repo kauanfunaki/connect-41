@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MODULE_CATALOG, MODULE_ROUTES, MODULOS_FORA_DO_MENU, MODULO_NO_LUGAR_DOS_QUADROS } from "@/lib/module-catalog";
+import { MODULE_CATALOG, MODULE_ROUTES, MODULOS_DE_TODA_A_EQUIPE, MODULOS_FORA_DO_MENU, MODULO_NO_LUGAR_DOS_QUADROS } from "@/lib/module-catalog";
 import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
 
 // A regra do menu de 05/11/2026 (opção A): grupos por tema em todo setor, grupo
@@ -8,10 +8,11 @@ import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } fro
 const telas = (...codes: string[]) => codes.map((code) => ({ code, label: MODULE_CATALOG.find((m) => m.code === code)!.label, href: MODULE_ROUTES[code]! }));
 /**
  * As telas do menu de um setor como o layout entrega: na ordem do catálogo, sem
- * as de fora do menu e sem o Controle interno, que é o Quadros do Geral.
+ * as de fora do menu, sem o Controle interno, que é o Quadros do Geral, e sem
+ * a Academia (10/11/2026), que é de toda a equipe e mora no topo.
  */
 const doSetor = (setor: string) =>
-  telas(...MODULE_CATALOG.filter((m) => m.sectorCode === setor && !MODULOS_FORA_DO_MENU.has(m.code) && m.code !== MODULO_NO_LUGAR_DOS_QUADROS).map((m) => m.code));
+  telas(...MODULE_CATALOG.filter((m) => m.sectorCode === setor && !MODULOS_FORA_DO_MENU.has(m.code) && !MODULOS_DE_TODA_A_EQUIPE.has(m.code) && m.code !== MODULO_NO_LUGAR_DOS_QUADROS).map((m) => m.code));
 /** O menu num formato legível: "Grupo: Mãe (Filha, Filha), Outra" ou "Mãe" solta. */
 const desenho = (blocos: BlocoDoMenu[]) =>
   blocos.map((b) => {

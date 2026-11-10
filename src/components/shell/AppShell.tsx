@@ -72,6 +72,7 @@ import { TrocaDeContexto } from "@/components/shell/TrocaDeContexto";
 import { SECTOR_ICONS } from "@/components/shell/iconesDosSetores";
 import { chaveDoCaminho, type ParDeCaminho } from "@/lib/ajuda/caminho";
 import { BotaoDeAjuda } from "@/components/shell/BotaoDeAjuda";
+import { AcademiaNoTopo } from "@/components/academia/AcademiaNoTopo";
 import { TODAS_AS_TELAS_DO_GERAL, type TelaDoGeral } from "@/lib/menuGeral";
 import { grupoContabil } from "@/lib/contabil/navegacao";
 import { areaSpedAtiva, menuSped, MODULOS_SPED } from "@/lib/fiscal/menu-sped";
@@ -166,6 +167,8 @@ type Props = {
    * e de manuais, no grupo Apoio do Geral, para todo setor (cada um vê os seus).
    */
   apoioLigado?: { senhas: boolean; manuais: boolean };
+  /** A Academia ligada no escritório (10/11/2026): o chapéu de formatura no topo, antes do tema. */
+  academiaLigada?: boolean;
   /** A ordem do menu do setor que o super admin escolheu (05/11/2026); sem ela, a do catálogo. */
   ordemDoMenu?: OrdemDoMenu;
   /** Mostra "Organizar menu" no fim das telas do setor — só o Super Admin. */
@@ -218,6 +221,7 @@ export function AppShell({
   chamadosLigados = false,
   chamadosNovos = 0,
   apoioLigado = { senhas: false, manuais: false },
+  academiaLigada = false,
   ordemDoMenu,
   podeOrganizarMenu = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
@@ -901,6 +905,10 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
+            {/* A Academia (10/11/2026, pedido do Kauan): o chapéu de formatura
+                antes do tema, com o painel do mês. A pílula da sequência de
+                dias (Fase 2) entra pelo `selo` do `AcademiaNoTopo`. */}
+            {academiaLigada && <AcademiaNoTopo naAcademia={pathname === "/academia" || pathname.startsWith("/academia/")} />}
             <ThemeToggle />
             {/* Ajuda (30/09): o caminho curto para a central /ajuda, ao lado de
                 notificação, configurações e perfil. Desde 05/10 a setinha ao

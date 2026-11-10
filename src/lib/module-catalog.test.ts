@@ -10,6 +10,7 @@ import {
   getModuleDef,
   getModulesForSector,
   MODULOS_DO_MENU_GERAL,
+  MODULOS_DE_TODA_A_EQUIPE,
   MODULOS_FORA_DO_MENU,
   MODULOS_NAS_SOLICITACOES,
   FORA_DO_MENU_COM_SOLICITACOES,
@@ -19,6 +20,7 @@ import {
   chamadosNoMenuDoSetor,
 } from "./module-catalog";
 import { DEFAULT_SECTORS } from "./sector-constants";
+import { telasDoMenuDoSetor } from "./telasDoMenuDoSetor";
 import nextConfig from "../../next.config";
 
 // O comentário do próprio `module-catalog.ts` conta o defeito que estes testes
@@ -26,6 +28,17 @@ import nextConfig from "../../next.config";
 // no menu e não abre". O catálogo e as rotas são essas duas cópias.
 
 describe("catálogo de módulos", () => {
+  // A Academia (10/11/2026): de toda a equipe, administrada pela Tech, com o
+  // chapéu no topo — fora do menu de qualquer setor.
+  it("Academia: fixa no Tech, nasce desligada, de toda a equipe e fora do menu do setor", () => {
+    expect(getModuleDef("academia")).toMatchObject({ sectorCode: "tech", fixedSector: true, defaultEnabled: false, icon: "GraduationCap" });
+    expect(MODULE_ROUTES.academia).toBe("/academia");
+    expect(MODULOS_DE_TODA_A_EQUIPE.has("academia")).toBe(true);
+    expect(MODULOS_DO_MENU_GERAL.has("academia")).toBe(true);
+    const estados = [{ code: "academia", label: "Academia", enabled: true, sectorCodes: ["tech"] }];
+    expect(telasDoMenuDoSetor(estados, "tech", { chamadosNoSetor: true, solicitacoesLigadas: true, semMenu: new Set() })).toEqual([]);
+  });
+
   it("GitHub é exclusivo do Tech e nasce desligado", () => {
     expect(getModuleDef("tech_github_contributions")).toMatchObject({ sectorCode: "tech", fixedSector: true, defaultEnabled: false });
     expect(MODULE_ROUTES.tech_github_contributions).toBe("/produtividade");

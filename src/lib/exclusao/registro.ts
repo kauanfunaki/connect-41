@@ -357,6 +357,11 @@ const USUARIO: Ligacao[] = [
   // Os cartões do topo do Início que a pessoa escolheu (10/11/2026): preferência
   // dela, sem nada para passar a ninguém — sai junto com a conta.
   { modelo: "UserHomeCards", campo: "user", fk: "userId", tratamento: "cascata" },
+  // A Academia (10/11/2026): os resultados e as rodadas são da própria pessoa
+  // e não do escritório — saem junto com a conta, como as notificações.
+  { modelo: "AcademiaResultado", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["resultado da Academia", "resultados da Academia"] },
+  { modelo: "AcademiaSessao", campo: "user", fk: "userId", tratamento: "cascata" },
+  { modelo: "AcademiaPreferencia", campo: "user", fk: "userId", tratamento: "cascata" },
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
@@ -395,6 +400,11 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "PersonalApiToken", coluna: "revokedById", tratamento: "manter", motivo: "quem revogou o token de outra pessoa (o administrador); a tela não expõe o id" },
   { modelo: "TechInternalAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
   { modelo: "TechInternalAcceptanceCheck", coluna: "checkedById", tratamento: "manter", motivo: "quem conferiu o ponto do critério de aceite no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
+  // A Academia (10/11/2026): quem cadastrou o texto ou a questão e quem gravou o
+  // prêmio do mês. A tela não mostra; a auditoria guarda o nome.
+  { modelo: "AcademiaTexto", coluna: "createdById", tratamento: "manter", motivo: "quem cadastrou o texto da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "AcademiaQuestao", coluna: "createdById", tratamento: "manter", motivo: "quem cadastrou a questão da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "AcademiaPremio", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o prêmio do mês da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },
