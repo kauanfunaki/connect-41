@@ -14,6 +14,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
   items: { stage: { isTerminal: boolean } }[];
+  _count: { items: number };
 }): ListRow {
   return {
     id: p.id,
@@ -22,6 +23,8 @@ function toListRow(p: {
     startDate: p.startDate,
     endDate: p.endDate,
     total: p.items.length,
+    // `items` são só as de cima; a contagem leva todos os níveis.
+    subatividades: p._count.items - p.items.length,
     done: p.items.filter((i) => i.stage.isTerminal).length,
   };
 }
@@ -53,6 +56,7 @@ export default async function SectorFolderPage({ params }: { params: Promise<{ c
     select: {
       id: true, name: true, color: true, startDate: true, endDate: true,
       items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
+      _count: { select: { items: true } },
     },
   });
 

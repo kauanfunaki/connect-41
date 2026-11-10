@@ -20,6 +20,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 function toListRow(p: {
   id: string; name: string; color: string | null; startDate: Date | null; endDate: Date | null;
   items: { stage: { isTerminal: boolean } }[];
+  _count: { items: number };
   folder: { id: string; name: string } | null;
 }): ListRow {
   return {
@@ -29,6 +30,8 @@ function toListRow(p: {
     startDate: p.startDate,
     endDate: p.endDate,
     total: p.items.length,
+    // `items` são só as de cima; a contagem leva todos os níveis.
+    subatividades: p._count.items - p.items.length,
     done: p.items.filter((i) => i.stage.isTerminal).length,
     pasta: p.folder ? { id: p.folder.id, nome: p.folder.name } : null,
   };
@@ -66,6 +69,7 @@ export default async function SectorSpacePage({ params }: { params: Promise<{ co
   const pipelineSelect = {
     id: true, name: true, color: true, startDate: true, endDate: true,
     items: { where: { parentItemId: null }, select: { stage: { select: { isTerminal: true } } } },
+    _count: { select: { items: true } },
     folder: { select: { id: true, name: true } },
   } as const;
 

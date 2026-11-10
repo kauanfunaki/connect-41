@@ -406,6 +406,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // A atividade dos Quadros, com as subatividades que foram junto na cascata
   // (06/11/2026) — o histórico dela vai junto, e o rastro fica aqui.
   "kanban.atividade.excluir": x("excluiu a atividade"),
+  // A tarefa dos Quadros com as atividades dentro (10/11/2026): os detalhes
+  // guardam quantas atividades, subatividades e anexos foram junto.
+  "kanban.tarefa.excluir": x("excluiu a tarefa"),
   "valora.parametros": e("mudou os parâmetros do Valora"),
   "valora.proposta.criar": c("criou uma proposta no Valora"),
   "valora.proposta.atualizar": e("editou uma proposta do Valora"),
@@ -741,6 +744,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   OAuthAccount: "conta das reuniões",
   OmieEmissao: "emissão de NFS-e",
   Person: "pessoa",
+  Pipeline: "tarefa",
   PipelineItem: "atividade",
   PortalApprovalLimit: "alçada de aprovação",
   PortalTelaBloqueada: "tela do portal",

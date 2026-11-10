@@ -9,6 +9,9 @@ import { parseHexColor } from "@/lib/color";
 import { boardPath } from "@/lib/kanbanPaths";
 import { lerPermissao, PERMISSAO_PADRAO, ROTULO_DA_PERMISSAO, poderesNoEspaco } from "@/lib/kanban/permissaoDoEspaco";
 import { colunasDoModelo, lerIcone, modeloDeEspaco } from "@/lib/kanban/modelosDeEspaco";
+import { apagarTarefaComAtividades, type TarefaApagada } from "@/lib/kanban/exclusaoDeAtividade";
+import { NOME_DA_TAREFA_NAO_CONFERE, TAREFA_GANHOU_ATIVIDADES } from "@/lib/kanban/exclusaoDeTarefa";
+import { confirmacaoConfere } from "@/lib/exclusaoConfirmada";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 
 // Estágios padrão usados pelas Listas criadas pelo fluxo simplificado
@@ -237,11 +240,16 @@ export async function criarListaNoLocalEscolhido(prev: PipelineState, form: Form
 }
 
 // ─── Exclusão ──────────────────────────────────────────────────────────────
-// Espaço → Pasta → Lista → Tarefa é uma hierarquia, e as três exclusões abaixo
-// se recusam a apagar container que ainda tem coisa dentro. Cascata seria uma
-// destruição em massa disparada por um clique, sem lixeira pra desfazer —
-// exigir esvaziar antes é a mesma regra que a exclusão de estágio já aplica
-// ("Mova as tarefas de X antes de excluir esse estágio").
+// Espaço → Pasta → Tarefa → Atividade é uma hierarquia, e o espaço e a pasta
+// se recusam a sair com coisa dentro. Cascata seria uma destruição em massa
+// disparada por um clique, sem lixeira pra desfazer — exigir esvaziar antes é
+// a mesma regra que a exclusão de estágio já aplica ("Mova as tarefas de X
+// antes de excluir esse estágio").
+//
+// A tarefa é a exceção (10/11/2026): sai com as atividades dentro, como a
+// atividade já saía com as subatividades. Apagar atividade por atividade era o
+// único caminho, e a confirmação forte — os números e o nome digitado — faz o
+// papel do "esvazie antes".
 //
 // Excluir é só do administrador (13/10/2026) — antes era o gestor do setor,
 // o mesmo teto de quem cria. Criar segue com o gestor.
@@ -309,7 +317,18 @@ export async function excluirPasta(folderId: string): Promise<PipelineState> {
   return null;
 }
 
-export async function excluirLista(pipelineId: string): Promise<PipelineState> {
+/**
+ * Exclui a tarefa com tudo o que tem dentro (10/11/2026): as atividades, as
+ * subatividades de todos os níveis, os comentários, o histórico, as horas e os
+ * anexos, numa transação; os arquivos saem do disco depois do commit
+ * (`apagarTarefaComAtividades`). Antes, a tarefa com atividade era recusada.
+ *
+ * Com atividade dentro, `confirmacao` é o nome da tarefa digitado na janela e
+ * tem de conferir — a tela pede, e a action não confia só nela. Continuam
+ * travando a configuração que aponta para a tarefa: obrigações recorrentes,
+ * obrigações por regime e assuntos de solicitação.
+ */
+export async function excluirLista(pipelineId: string, confirmacao?: string): Promise<PipelineState> {
   const ctx = await getAuthContext();
   const { tenantId } = ctx;
   if (!tenantId) return { error: "Não autenticado" };
@@ -323,11 +342,6 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
   if (!pipeline) return { error: "Tarefa não encontrada." };
   if (!canManageSector(ctx, pipeline.sectorCode)) return { error: "Sem permissão para excluir esta tarefa." };
 
-  if (pipeline._count.items > 0) {
-    return {
-      error: `Exclua as ${pipeline._count.items === 1 ? "atividade" : `${pipeline._count.items} atividades`} desta tarefa antes de excluí-la.`,
-    };
-  }
   // Obrigação recorrente aponta pra Lista e continuaria gerando tarefa num
   // destino que não existe mais — some da checagem de "vazio" porque não é
   // conteúdo visível no board, mas trava a exclusão do mesmo jeito.
@@ -345,13 +359,38 @@ export async function excluirLista(pipelineId: string): Promise<PipelineState> {
     return { error: "Solicitações de clientes viram cartão nesta tarefa. Mude a lista dos assuntos em Configurações › Portal do cliente › Assuntos das solicitações antes de excluí-la." };
   }
 
+  // Exclusão em massa: o nome digitado tem de conferir. A tarefa vazia segue
+  // com a confirmação simples, que não manda nome.
+  if (pipeline._count.items > 0) {
+    if (confirmacao === undefined) return { error: TAREFA_GANHOU_ATIVIDADES };
+    if (!confirmacaoConfere(confirmacao, [pipeline.name])) return { error: NOME_DA_TAREFA_NAO_CONFERE };
+  }
+
+  let apagada: TarefaApagada;
   try {
-    // Os estágios são cascata da própria Lista (onDelete: Cascade em
-    // PipelineStage) — sem itens, não sobra nada mais pendurado.
-    await prisma.pipeline.delete({ where: { id: pipelineId } });
+    apagada = await apagarTarefaComAtividades(tenantId, pipelineId);
   } catch (err) {
     console.error("[excluirLista]", err);
-    return { error: "Erro ao excluir a tarefa." };
+    return { error: "Erro ao excluir a tarefa. Nada foi apagado." };
+  }
+
+  // O histórico das atividades vai junto com elas: o rastro fica na Auditoria,
+  // com os números.
+  if (ctx.userId) {
+    await logAudit({
+      tenantId,
+      userId: ctx.userId,
+      action: "kanban.tarefa.excluir",
+      entityType: "Pipeline",
+      entityId: pipelineId,
+      metadata: {
+        name: pipeline.name,
+        setor: pipeline.sectorCode,
+        atividades: apagada.atividades,
+        subatividades: apagada.subatividades,
+        anexos: apagada.anexos,
+      },
+    });
   }
 
   revalidatePath(`/setor/${pipeline.sectorCode}/espacos/${pipeline.spaceId}`);
