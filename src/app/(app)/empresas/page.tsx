@@ -1,7 +1,7 @@
 import { Building2, Plus } from "lucide-react";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
@@ -153,17 +153,20 @@ export default async function EmpresasPage({
 
   return (
     <PageContainer>
-      <CadastrosTabsBar
-        active="empresas"
-        subtitulo="As empresas atendidas pelo escritório."
-        acao={<>{canCreate && (
+      {/* Título da própria tela (10/11/2026, pedido do Kauan): Empresas é um
+          item do grupo Cadastros no menu lateral, sem a fileira de abas
+          Empresas/Pessoas no alto. */}
+      <PageHeader
+        title="Empresas"
+        subtitle="As empresas atendidas pelo escritório."
+        action={canCreate ? (
           <Button
             href="/empresas/nova"
             variant="primary"
           >
             <Plus size={14} /> Nova empresa
           </Button>
-        )}</>}
+        ) : undefined}
       />
 
       <div id="cadastros-content">

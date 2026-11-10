@@ -1,23 +1,12 @@
 import { PageContainer } from "@/components/shared/PageContainer";
+import { SkeletonPageHeader } from "@/components/shared/SkeletonParts";
 
 export default function LoadingPessoas() {
   return (
     <PageContainer>
-      <div className="mb-5">
-        <div className="c41-skeleton w-20 h-3 mb-2" />
-        <div className="flex items-center gap-1">
-          <div className="c41-skeleton w-20 h-8 rounded-md" />
-          <div className="c41-skeleton w-20 h-8 rounded-md" />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between mb-6">
-        <div className="space-y-2">
-          <div className="c41-skeleton w-32 h-6" />
-          <div className="c41-skeleton w-48 h-3.5" />
-        </div>
-        <div className="c41-skeleton w-32 h-9 rounded-md" />
-      </div>
+      {/* Só o cabeçalho, nas medidas do PageHeader (10/11/2026): a fileira de
+          abas Empresas/Pessoas saiu, e a tela é um item do grupo Cadastros. */}
+      <SkeletonPageHeader comAcao />
 
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
         <div className="border-b border-border bg-table-header-bg h-11" />

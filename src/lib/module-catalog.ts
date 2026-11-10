@@ -965,10 +965,11 @@ export const MODULE_ROUTES: Record<string, string> = {
 };
 
 /**
- * Módulos que moram numa aba de **Cadastros**, no menu Geral, e não na lista de
- * telas do setor dono (21/10/2026). Diferente de Solicitações e Arquivos, a aba
- * só aparece, e a tela só abre, para quem vê o setor do módulo: Fornecedores e
- * sacados é do BPO, e repetia no menu dele o "Cadastros" do Geral.
+ * Módulos que moram em **Cadastros**, no menu Geral, e não na lista de telas
+ * do setor dono (21/10/2026; eram aba, e desde 10/11/2026 são uma tela do grupo
+ * Cadastros no menu lateral). Diferente de Solicitações e Arquivos, a tela só
+ * aparece, e só abre, para quem vê o setor do módulo: Fornecedores e sacados é
+ * do BPO, e repetia no menu dele o "Cadastros" do Geral.
  */
 export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastros"]);
 

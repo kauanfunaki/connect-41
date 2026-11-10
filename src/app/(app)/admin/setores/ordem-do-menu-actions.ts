@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import type { ActionState } from "@/lib/actionState";
 import { MODULE_CATALOG, ORDEM_DOS_GRUPOS } from "@/lib/module-catalog";
 import { lerOrdemDoMenu } from "@/lib/menuDoSetor";
-import { CHAVES_DO_GERAL } from "@/lib/organizarMenu";
+import { CHAVES_DO_GERAL, GRUPOS_DO_GERAL } from "@/lib/organizarMenu";
 
 // Organizar menu (05/11/2026, pedido do Kauan): o super admin ordena os grupos
 // e as telas do menu de cada setor. Só a ordem: quem vê cada tela continua
@@ -21,6 +21,7 @@ const SO_SUPER_ADMIN = "Só o Super Admin organiza o menu dos setores.";
 const GRUPOS = new Set<string>(ORDEM_DOS_GRUPOS);
 const TELAS = new Set(MODULE_CATALOG.map((m) => m.code));
 const GERAL = new Set<string>(CHAVES_DO_GERAL);
+const GRUPOS_DE_DENTRO_DO_GERAL = new Set<string>(GRUPOS_DO_GERAL);
 
 type Setor = { id: string; code: string; label: string };
 type Ctx = { tenantId: string; userId: string };
@@ -42,12 +43,13 @@ async function gravar({ ctx, setor }: { ctx: Ctx; setor: Setor }, json: string):
   const lida = lerOrdemDoMenu(json);
   const ocultas = (lida.ocultas ?? []).filter((t) => TELAS.has(t));
   const geral = (lida.geral ?? []).filter((c) => GERAL.has(c));
-  // Dentro de cada menu: só menus que existem (uma tela do catálogo, ou o Apoio
-  // do Geral), e chaves curtas — são posições, não dados.
+  // Dentro de cada menu: só menus que existem (uma tela do catálogo, ou um
+  // grupo do Geral — o Apoio e, desde 10/11/2026, os Cadastros), e chaves
+  // curtas — são posições, não dados.
   const porMenu = (x: Record<string, string[]> | undefined) =>
     Object.fromEntries(
       Object.entries(x ?? {})
-        .filter(([mae]) => TELAS.has(mae) || mae === "apoio")
+        .filter(([mae]) => TELAS.has(mae) || GRUPOS_DE_DENTRO_DO_GERAL.has(mae))
         .map(([mae, l]) => [mae, l.filter((c) => c.length <= 120).slice(0, 40)] as const)
         .filter(([, l]) => l.length > 0),
     );
