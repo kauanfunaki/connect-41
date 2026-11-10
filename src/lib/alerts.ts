@@ -7,6 +7,8 @@
 // acknowledgedAt + polling no client), que é mais preciso que um cron diário.
 import { getPrisma } from "@/lib/prisma";
 import { notifySector, notifyUser } from "@/lib/notifications";
+import { HANDOFF_PARADA_DIAS, tituloDaTransferencia } from "@/lib/handoffs";
+import { sectorLabel } from "@/lib/sectors";
 import { statusPrazoPagamento } from "@/lib/rescisaoChecklist";
 import { calcularValidade } from "@/lib/relatoriosRH";
 import { saoPauloParts } from "@/lib/agenda";
@@ -66,7 +68,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const VACATION_WARNING_DAYS = DIAS_DO_AVISO_DAS_FERIAS;
 const PROBATION_CHECKPOINTS = [40, 45, 85, 90] as const; // dias desde a admissão (5 dias de antecedência + no dia)
 const EXAM_WARNING_DAYS = 15;
-const HANDOFF_STALE_DAYS = 3;
+// Mora em src/lib/handoffs.ts desde 10/11/2026: o relógio âmbar da lista de
+// transferências usa o mesmo número.
+const HANDOFF_STALE_DAYS = HANDOFF_PARADA_DIAS;
 const DOCUMENT_WARNING_DAYS = 30;
 const ADMISSAO_PENDENTE_DAYS = 5; // link gerado, colaborador ainda não preencheu
 const ADMISSAO_CONFERENCIA_DAYS = 2; // colaborador preencheu, DP ainda não concluiu
@@ -200,17 +204,26 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
       handoff: { views: { none: {} } },
     },
     include: {
-      handoff: { select: { entityType: true, entityId: true, createdAt: true } },
+      handoff: { select: { id: true, subject: true, createdAt: true } },
       assignees: { select: { userId: true } },
     },
   });
+  if (pendentes.length === 0) return 0;
+
+  // O nome do setor, e não o código (10/11/2026, pedido do Kauan): o aviso
+  // dizia "no setor fiscal". Inclui os inativos, como o getSectorMaps.
+  const setores = await prisma.sector.findMany({ where: { tenantId }, select: { code: true, label: true } });
+  const rotulos = Object.fromEntries(setores.map((s) => [s.code, s.label]));
 
   let sent = 0;
   for (const hs of pendentes) {
     const key = `HANDOFF_STALE:${hs.id}`;
     if (!(await tryDispatch(tenantId, key, today))) continue;
     const dias = daysBetween(hs.handoff.createdAt, today);
-    const message = `Transferência parada há ${dias} dia(s) sem visualização no setor ${hs.sectorCode}.`;
+    const message = `Transferência "${tituloDaTransferencia(hs.handoff)}" parada há ${dias} dia(s) sem visualização no setor ${sectorLabel(rotulos, hs.sectorCode)}.`;
+    // O aviso abre a transferência (10/11/2026): o id dela, sem `entityType` —
+    // ver `linkDaNotificacao`.
+    const alvo = { entityType: undefined, entityId: hs.handoff.id };
     if (hs.assignees.length > 0) {
       // Um aviso por responsável — com `assignedTo` só o primeiro era avisado,
       // e os demais designados nunca ficavam sabendo que a transferência parou.
@@ -219,8 +232,7 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
           tenantId,
           type: "HANDOFF_STALE",
           message,
-          entityType: hs.handoff.entityType,
-          entityId: hs.handoff.entityId,
+          ...alvo,
         });
       }
     } else {
@@ -228,8 +240,7 @@ async function checkHandoffsParados(tenantId: string, today: Date): Promise<numb
         tenantId,
         type: "HANDOFF_STALE",
         message,
-        entityType: hs.handoff.entityType,
-        entityId: hs.handoff.entityId,
+        ...alvo,
       });
     }
     sent++;

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Eye, Lock } from "lucide-react";
 import { getPrisma } from "@/lib/prisma";
-import { getSectorMaps } from "@/lib/sectors";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { getAuthContext, canManageSector, isFullAccess } from "@/lib/auth/context";
 import { scopedHandoffWhere } from "@/lib/auth/scope";
@@ -23,7 +23,8 @@ import {
   HANDOFF_STATUS_LABEL,
   HANDOFF_STATUS_BADGE,
   HANDOFF_PRIORITY_LABEL,
-  HANDOFF_PRIORITY_BADGE,
+  HANDOFF_PRIORITY_TOM,
+  tituloDaTransferencia,
 } from "@/lib/handoffs";
 
 export default async function HandoffDetailPage({
@@ -63,6 +64,7 @@ export default async function HandoffDetailPage({
   const entityHref = handoff.entityType === "COMPANY" ? `/empresas/${handoff.entityId}` : `/pessoas/${handoff.entityId}`;
   const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
   const aggregate = aggregateHandoffStatus(handoff.sectors.map((s) => s.status));
+  const titulo = tituloDaTransferencia(handoff);
 
   // Opções de responsável por setor — só carrega pros setores que o usuário
   // coordena (o select nem aparece pros demais). Sempre membros do setor.
@@ -84,26 +86,28 @@ export default async function HandoffDetailPage({
       <Breadcrumb
         items={[
           { label: "Transferências", href: "/transferencias" },
-          { label: entity?.name ?? "(removido)", truncate: true },
+          { label: titulo, truncate: true },
         ]}
       />
 
       {/* O cabeçalho de registro de trabalho do processo e do lead — PageHeader
-          com a situação no `meta` (padrão aceito em 08/10/2026). Era um cartão
-          próprio, com o nome em 18px e sem título de página (h1). */}
+          com a situação no `meta` (padrão aceito em 08/10/2026). Desde
+          10/11/2026 o título é o assunto (o pedido), e a empresa ou pessoa vai
+          para o subtítulo, com quem pediu e de qual setor; as transferências de
+          antes, sem assunto, ficam com "Transferência". O resto da tela muda no
+          próximo passo do redesenho. */}
       <PageHeader
-        title={
-          entity ? (
-            <Link href={entityHref} className="hover:text-brand transition-colors">
-              {entity.name}
-            </Link>
-          ) : (
-            <span className="text-fg-muted">(removido)</span>
-          )
-        }
+        title={titulo}
         subtitle={
           <>
-            Solicitado por {handoff.requester.name} em{" "}
+            {entity ? (
+              <Link href={entityHref} className="font-medium text-fg hover:text-brand transition-colors">
+                {entity.name}
+              </Link>
+            ) : (
+              <span className="text-fg-muted">(removido)</span>
+            )}
+            {" · "}pedida por {handoff.requester.name} ({sectorLabel(sectorLabels, handoff.fromSector)}) em{" "}
             {formatInstantDate(handoff.createdAt, { day: "2-digit", month: "long", year: "numeric" })}
           </>
         }
@@ -121,29 +125,31 @@ export default async function HandoffDetailPage({
               ))}
             </span>
             <Selo tom={tomDaVariante(HANDOFF_STATUS_BADGE[aggregate])}>{HANDOFF_STATUS_LABEL[aggregate]}</Selo>
-            <Selo tom={tomDaVariante(HANDOFF_PRIORITY_BADGE[handoff.priority])}>
+            <Selo tom={HANDOFF_PRIORITY_TOM[handoff.priority]}>
               Prioridade {HANDOFF_PRIORITY_LABEL[handoff.priority].toLowerCase()}
             </Selo>
           </>
         }
       />
 
+      {/* "Informações adicionais" só aparece nas transferências que a têm: o
+          campo saiu do formulário em 10/11/2026, e a nova não escreve nele. */}
       <Card className="p-5 mb-4">
-        <h2 className="text-section font-semibold text-fg mb-2">Informações adicionais</h2>
-        {handoff.message ? (
-          <p className="text-body text-fg-secondary whitespace-pre-wrap">
-            <TextoComLinks texto={handoff.message} />
-          </p>
-        ) : (
-          <p className="text-body text-fg-muted italic">Nenhuma informação geral adicionada.</p>
-        )}
-        {handoff.description && (
+        {handoff.message && (
           <>
-            <h2 className="text-section font-semibold text-fg mb-2 mt-5">Descrição</h2>
-            <p className="text-body text-fg-secondary whitespace-pre-wrap">
-              <TextoComLinks texto={handoff.description} />
+            <h2 className="text-section font-semibold text-fg mb-2">Informações adicionais</h2>
+            <p className="text-body text-fg-secondary whitespace-pre-wrap mb-5">
+              <TextoComLinks texto={handoff.message} />
             </p>
           </>
+        )}
+        <h2 className="text-section font-semibold text-fg mb-2">Descrição</h2>
+        {handoff.description ? (
+          <p className="text-body text-fg-secondary whitespace-pre-wrap">
+            <TextoComLinks texto={handoff.description} />
+          </p>
+        ) : (
+          <p className="text-body text-fg-muted italic">Sem descrição.</p>
         )}
       </Card>
 

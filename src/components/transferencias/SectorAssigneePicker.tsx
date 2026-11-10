@@ -9,9 +9,19 @@ import { Dropdown } from "@/components/ui/Dropdown";
 type UserOption = { id: string; name: string };
 
 type Props = {
-  name: string;
+  /** Sem `name`, o seletor não escreve campos no formulário — quem controla escreve. */
+  name?: string;
   options: UserOption[];
   defaultValue?: string[];
+  /**
+   * Controlado (10/11/2026): a nova transferência em três passos guarda os
+   * responsáveis de cada setor no próprio estado, para o passo de revisão
+   * mostrá-los e para não perdê-los quando o bloco do setor fecha.
+   */
+  value?: string[];
+  onChange?: (ids: string[]) => void;
+  /** O nome do botão para o leitor de tela, quando há um seletor por setor ("Responsáveis do Fiscal"). */
+  rotulo?: string;
 };
 
 // Mesmo padrão de busca+lista do AssigneeToggleList (Kanban), agora também
@@ -19,8 +29,14 @@ type Props = {
 // A diferença pro Kanban é que aqui a transferência ainda não existe, então não
 // há action assíncrona por clique: cada selecionado vira um campo hidden que vai
 // junto no submit do formulário inteiro (o servidor lê com form.getAll).
-export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props) {
-  const [selectedIds, setSelectedIds] = useState<string[]>(defaultValue);
+export function SectorAssigneePicker({ name, options, defaultValue = [], value, onChange, rotulo }: Props) {
+  const [interno, setInterno] = useState<string[]>(defaultValue);
+  const selectedIds = value ?? interno;
+  const setSelectedIds = (proximo: string[] | ((anterior: string[]) => string[])) => {
+    const ids = typeof proximo === "function" ? proximo(selectedIds) : proximo;
+    if (value === undefined) setInterno(ids);
+    onChange?.(ids);
+  };
   const [query, setQuery] = useState("");
 
   const selectedUsers = options.filter((u) => selectedIds.includes(u.id));
@@ -54,7 +70,9 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
             type="button"
             onClick={toggleOpen}
             aria-expanded={open}
-            className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border text-fs-2 transition-colors ${
+            aria-label={rotulo ? `${rotulo}: ${label}` : undefined}
+            // 44px no celular, para o dedo (10/11/2026); 32px na mesa.
+            className={`inline-flex items-center gap-1.5 h-11 sm:h-8 px-2.5 rounded-md border text-fs-2 transition-colors ${
               selectedUsers.length > 0
                 ? "border-border-strong text-fg"
                 : "border-dashed border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
@@ -125,9 +143,7 @@ export function SectorAssigneePicker({ name, options, defaultValue = [] }: Props
         </button>
       )}
 
-      {selectedIds.map((id) => (
-        <input key={id} type="hidden" name={name} value={id} />
-      ))}
+      {name && selectedIds.map((id) => <input key={id} type="hidden" name={name} value={id} />)}
     </div>
   );
 }

@@ -78,6 +78,8 @@ const ICONE_DO_CHIP: Record<TipoDoChip, typeof Bell> = {
   solicitacao: Inbox,
   conversa: MessageCircle,
   pendencia: FileText,
+  // Aviso de transferência que aponta para ela (10/11/2026): o mesmo ícone do tipo.
+  transferencia: ArrowLeftRight,
 };
 
 export function IconeDaNotificacao({ icone, tom, tamanho = 34 }: { icone: IconeDaNotificacao; tom: Tom; tamanho?: number }) {

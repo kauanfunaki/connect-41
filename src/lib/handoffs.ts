@@ -23,12 +23,80 @@ export const HANDOFF_PRIORITY_LABEL: Record<HandoffPriority, string> = {
   URGENT: "Urgente",
 };
 
-export const HANDOFF_PRIORITY_BADGE: Record<HandoffPriority, "info" | "success" | "warning" | "danger"> = {
-  LOW: "success",
-  MEDIUM: "info",
-  HIGH: "warning",
-  URGENT: "danger",
+// O tom do Selo de cada prioridade (10/11/2026, pedido do Kauan): Baixa em
+// cinza, Média em azul, Alta em âmbar, Urgente em vermelho. Era um mapa de
+// variantes do Badge com Baixa em verde — a cor de "ok", que fazia a
+// transferência de prioridade baixa parecer resolvida.
+export const HANDOFF_PRIORITY_TOM: Record<HandoffPriority, "neutro" | "marca" | "atencao" | "perigo"> = {
+  LOW: "neutro",
+  MEDIUM: "marca",
+  HIGH: "atencao",
+  URGENT: "perigo",
 };
+
+// O tom do sinal de cada setor na lista (10/11/2026): nova em âmbar (espera
+// alguém começar), resolvendo em azul, finalizada em verde — os mesmos tons de
+// HANDOFF_STATUS_BADGE, no vocabulário do Selo.
+export const HANDOFF_STATUS_TOM: Record<HandoffSectorStatus, "atencao" | "marca" | "sucesso"> = {
+  NEW: "atencao",
+  IN_PROGRESS: "marca",
+  DONE: "sucesso",
+};
+
+/**
+ * Dias com um setor sem finalizar para a transferência contar como parada
+ * (10/11/2026, pedido do Kauan). É o número do aviso de "transferência parada"
+ * (`checkHandoffsParados`, em src/lib/alerts.ts), que passou a ler daqui: o
+ * relógio âmbar da lista e o aviso do sino mudam juntos.
+ */
+export const HANDOFF_PARADA_DIAS = 3;
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+/** Um setor de destino parado: ainda não finalizou e chegou há HANDOFF_PARADA_DIAS dias ou mais. */
+export function setorParado(setor: { status: HandoffSectorStatus; createdAt: Date }, agora: Date): boolean {
+  return setor.status !== "DONE" && agora.getTime() - setor.createdAt.getTime() >= HANDOFF_PARADA_DIAS * DIA_MS;
+}
+
+/** A transferência está parada quando algum setor de destino está (o relógio âmbar da lista). */
+export function transferenciaParada(setores: { status: HandoffSectorStatus; createdAt: Date }[], agora: Date): boolean {
+  return setores.some((s) => setorParado(s, agora));
+}
+
+/** O texto de quem não tem assunto: as transferências de antes de 10/11/2026. */
+export const SEM_ASSUNTO = "Sem assunto";
+
+/**
+ * O assunto guardado, sem espaço sobrando; null quando não há (transferência
+ * de antes de 10/11/2026). Quem mostra decide o que pôr no lugar: a lista
+ * escreve "Sem assunto" apagado, o detalhe usa "Transferência" no título.
+ */
+export function assuntoDaTransferencia(h: { subject?: string | null }): string | null {
+  const assunto = h.subject?.replace(/\s+/g, " ").trim();
+  return assunto ? assunto : null;
+}
+
+/** O título da transferência aberta: o assunto, ou "Transferência" nas antigas. */
+export function tituloDaTransferencia(h: { subject?: string | null }): string {
+  return assuntoDaTransferencia(h) ?? "Transferência";
+}
+
+/** O tamanho máximo do assunto — o da coluna `handoffs.subject`. */
+export const ASSUNTO_MAXIMO = 160;
+
+/**
+ * Quanto tempo a transferência está aberta, na coluna "Aberta há" da lista
+ * (10/11/2026): "5 min", "4 h", "1 dia", "12 dias". Sem o "há", que está no
+ * cabeçalho da coluna.
+ */
+export function abertaHa(desde: Date, agora: Date): string {
+  const minutos = Math.max(0, Math.floor((agora.getTime() - desde.getTime()) / 60_000));
+  if (minutos < 60) return `${Math.max(1, minutos)} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? "1 dia" : `${dias} dias`;
+}
 
 export const HANDOFF_PRIORITY_OPTIONS: { value: HandoffPriority; label: string }[] = [
   { value: "LOW", label: "Baixa" },

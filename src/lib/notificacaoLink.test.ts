@@ -26,6 +26,17 @@ describe("linkDaNotificacao", () => {
     expect(linkDaNotificacao({ type: "ROBO_PRECISA_DE_VOCE", entityId: "t1" })).toBe("/robo");
   });
 
+  it("aviso de transferência novo abre a transferência; o de antes, com empresa ou pessoa, abre a ficha", () => {
+    for (const type of ["HANDOFF_RECEIVED", "HANDOFF_ASSIGNED", "HANDOFF_MENTION", "HANDOFF_SECTOR_DONE", "HANDOFF_STALE"]) {
+      expect(linkDaNotificacao({ type, entityType: null, entityId: "h1" })).toBe("/transferencias/h1");
+    }
+    expect(linkDaNotificacao({ type: "HANDOFF_RECEIVED", entityType: "COMPANY", entityId: "c1" })).toBe("/empresas/c1");
+    expect(linkDaNotificacao({ type: "HANDOFF_ASSIGNED", entityType: "PERSON", entityId: "p1" })).toBe("/pessoas/p1");
+    expect(linkDaNotificacao({ type: "HANDOFF_RECEIVED", entityType: null, entityId: null })).toBeNull();
+    // A conversa passada no WhatsApp não é transferência entre setores.
+    expect(linkDaNotificacao({ type: "WHATSAPP_HANDOFF", entityId: "t1" })).toBe("/whatsapp/t1");
+  });
+
   it("aviso da Junta sem processo leva à lista de avisos", () => {
     expect(linkDaNotificacao({ type: "AVISO_ORGAO_SEM_PROCESSO" })).toBe("/processos/avisos");
     expect(linkDaNotificacao({ type: "PROCESS_AVISO_JUNTA", entityId: "pr1" })).toBe("/processos/pr1");

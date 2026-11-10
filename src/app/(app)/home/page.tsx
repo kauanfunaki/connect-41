@@ -22,6 +22,8 @@ import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffAbas";
+import { assuntoDaTransferencia, SEM_ASSUNTO } from "@/lib/handoffs";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
@@ -127,11 +129,15 @@ export default async function HomePage() {
   const fourteenDaysAgo = daysFromNow(-14);
   const monthStart = startOfMonth();
 
-  const incomingHandoffWhere = isFullAccess(ctx.role)
-    ? { tenantId: ctx.tenantId, sectors: { some: { status: "NEW" as const } } }
-    : ctx.sectors.length > 0
-      ? { tenantId: ctx.tenantId, sectors: { some: { status: "NEW" as const, sectorCode: { in: ctx.sectors } } } }
-      : null;
+  // O número "Transferências" e o painel "Transferências para o seu setor" são
+  // a aba "Para o meu setor" da lista, com o mesmo filtro (10/11/2026, pedido
+  // do Kauan): antes o número contava Novas + Resolvendo de tudo o que a pessoa
+  // via, e o clique abria só as Novas. Sem caixa de setor (quem não é de setor
+  // nenhum), os dois ficam vazios.
+  const quemVe = quemVeAsTransferencias(ctx);
+  const incomingHandoffWhere = abasVisiveis(quemVe).includes("setor")
+    ? { AND: [scopedHandoffWhere(ctx), whereDaAba("setor", quemVe)] }
+    : null;
 
   const [
     me,
@@ -153,9 +159,7 @@ export default async function HomePage() {
     prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
     // No lugar da contagem de pessoas (08/10, escolha 7A): ver `lib/home/indicadores`.
     solicitacoesComRespostaAtrasada(ctx, now),
-    prisma.handoff.count({
-      where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { status: { not: "DONE" } } } }] },
-    }),
+    incomingHandoffWhere ? prisma.handoff.count({ where: incomingHandoffWhere }) : Promise.resolve(0),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
       select: {
@@ -203,7 +207,6 @@ export default async function HomePage() {
           orderBy: { createdAt: "desc" },
           take: 4,
           include: {
-            requester: { select: { name: true } },
             sectors: { select: { sectorCode: true }, orderBy: { createdAt: "asc" } },
           },
         })
@@ -247,7 +250,7 @@ export default async function HomePage() {
   const hojeCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate >= todayStart && i.dueDate <= todayEnd).length;
 
   // Nomes das entidades referenciadas (Company ou Person) — item de "Meu dia",
-  // atividade recente e transferências a revisar, tudo numa só rodada.
+  // atividade recente e transferências para o setor, tudo numa só rodada.
   const companyIds = new Set<string>();
   const personIds = new Set<string>();
   for (const i of meuDiaItems) {
@@ -497,7 +500,8 @@ export default async function HomePage() {
           sub={vencidosCount > 0 ? `${numero(vencidosCount)} atrasada${vencidosCount !== 1 ? "s" : ""}` : undefined}
         />
         <MetricCard
-          href="/transferencias?status=NEW"
+          // Abre a aba que ele conta (10/11/2026).
+          href="/transferencias?aba=setor"
           icon={<ArrowRightLeft size={16} />}
           label="Transferências"
           value={pendingHandoffsCount}
@@ -505,7 +509,7 @@ export default async function HomePage() {
           // O tom pela situação, e não o `highlight` antigo (15/10/2026):
           // transferência em aberto espera alguém — âmbar.
           tom={pendingHandoffsCount > 0 ? "atencao" : undefined}
-          sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
+          sub={pendingHandoffsCount > 0 ? "para o seu setor" : undefined}
         />
         {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número
             que pede ação — o cliente esperando a primeira resposta da equipe
@@ -587,25 +591,36 @@ export default async function HomePage() {
 
     transferencias: (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-section font-semibold text-fg mb-3.5">Transferências a revisar</h2>
+        {/* As quatro mais recentes da aba "Para o meu setor" (10/11/2026): o
+            título diz o que é, e o botão "Abrir" diz o que faz — "Revisar"
+            prometia uma ação que a tela não tem. */}
+        <h2 className="text-section font-semibold text-fg mb-3.5">Transferências para o seu setor</h2>
         {incomingHandoffsRaw.length === 0 ? (
           <p className="text-body text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
         ) : (
           <div className="space-y-3">
-            {incomingHandoffsRaw.map((h) => (
-              <div key={h.id} className="flex items-center justify-between gap-3">
-                <p className="text-body text-fg truncate min-w-0">
-                  {sectorLabels[h.fromSector] ?? h.fromSector} →{" "}
-                  {h.sectors.map((s) => sectorLabels[s.sectorCode] ?? s.sectorCode).join(", ")}
-                  {" · "}
-                  <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
-                  <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
-                </p>
-                <Button href={`/transferencias/${h.id}`} variant="secondary" size="xs" className="flex-shrink-0">
-                  Revisar
-                </Button>
-              </div>
-            ))}
+            {incomingHandoffsRaw.map((h) => {
+              const assunto = assuntoDaTransferencia(h);
+              return (
+                <div key={h.id} className="flex items-center justify-between gap-3">
+                  <p className="text-body text-fg truncate min-w-0">
+                    <span className={assunto ? "font-medium" : "text-fg-muted"}>{assunto ?? SEM_ASSUNTO}</span>
+                    {" · "}
+                    {entityNames[h.entityId] ?? "(removido)"}
+                    <span className="text-fg-muted">
+                      {" · "}
+                      {sectorLabel(sectorLabels, h.fromSector)} →{" "}
+                      {h.sectors.map((s) => sectorLabel(sectorLabels, s.sectorCode)).join(", ")}
+                      {" · "}
+                      {formatRelativeTime(h.createdAt)}
+                    </span>
+                  </p>
+                  <Button href={`/transferencias/${h.id}`} variant="secondary" size="xs" className="flex-shrink-0">
+                    Abrir
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

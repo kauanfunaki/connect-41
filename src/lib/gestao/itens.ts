@@ -8,6 +8,8 @@
 import { getPrisma } from "@/lib/prisma";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
+import { sectorLabel } from "@/lib/sectors";
+import { assuntoDaTransferencia } from "@/lib/handoffs";
 import {
   classificar,
   limitesDoSetor,
@@ -297,16 +299,27 @@ async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeIte
       updatedAt: true,
       resolvedAt: true,
       assignees: { select: { userId: true } },
-      handoff: { select: { fromSector: true, message: true, description: true } },
+      handoff: { select: { fromSector: true, subject: true, message: true, description: true } },
     },
     take: TETO,
   });
+  // O nome do setor de origem, e não o código (10/11/2026, pedido do Kauan):
+  // a Gestão mostrava "Transferência de fiscal". Só quando há o que mostrar.
+  const rotulos =
+    lista.length > 0
+      ? Object.fromEntries(
+          (await getPrisma().sector.findMany({ where: { tenantId }, select: { code: true, label: true } })).map((s) => [s.code, s.label])
+        )
+      : {};
   return lista.map((h) => {
-    const assunto = (h.handoff.description ?? h.handoff.message ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+    // O assunto guardado (desde 10/11/2026) vem primeiro; as de antes seguem
+    // com o começo da descrição.
+    const assunto =
+      assuntoDaTransferencia(h.handoff) ?? (h.handoff.description ?? h.handoff.message ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
     return {
       origem: "TRANSFERENCIA",
       id: h.id,
-      titulo: `Transferência de ${h.handoff.fromSector}${assunto ? ` — ${assunto}` : ""}`,
+      titulo: `Transferência de ${sectorLabel(rotulos, h.handoff.fromSector)}${assunto ? ` — ${assunto}` : ""}`,
       setor: h.sectorCode,
       responsaveis: h.assignees.map((a) => a.userId),
       estado: h.status === "DONE" ? "CONCLUIDO" : h.status === "IN_PROGRESS" ? "ANDAMENTO" : "NAO_INICIADO",

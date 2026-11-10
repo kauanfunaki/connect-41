@@ -109,6 +109,9 @@ describe("consultas das notificações", () => {
     expect(entidadeDoChip({ type: "COMMENT", entityType: "COMPANY", entityId: "c1" })).toEqual({ tipo: "empresa", id: "c1" });
     expect(entidadeDoChip({ type: "MENTION", entityId: "i1" })).toEqual({ tipo: "card", id: "i1" });
     expect(entidadeDoChip({ type: "GESTAO_ALERTA" })).toBeNull();
+    // Aviso de transferência novo (10/11/2026) aponta para ela; o de antes, para a empresa.
+    expect(entidadeDoChip({ type: "HANDOFF_RECEIVED", entityType: null, entityId: "h1" })).toEqual({ tipo: "transferencia", id: "h1" });
+    expect(entidadeDoChip({ type: "HANDOFF_RECEIVED", entityType: "COMPANY", entityId: "c1" })).toEqual({ tipo: "empresa", id: "c1" });
   });
 
   it("página com 'carregar mais' e chips resolvidos", async () => {

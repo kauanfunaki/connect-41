@@ -10,38 +10,62 @@ import { getSectorMaps } from "@/lib/sectors";
 import { notifySector, notifyUser } from "@/lib/notifications";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { logAudit } from "@/lib/audit";
+import { assuntoParaGravar } from "@/lib/handoffTemplates";
+import { ASSUNTO_MAXIMO, tituloDaTransferencia } from "@/lib/handoffs";
 
-export type HandoffState = { error: string } | null;
+/**
+ * O campo que causou o erro (10/11/2026): a nova transferência em três passos
+ * volta ao passo dele e mostra a frase junto do campo, e não solta no meio do
+ * formulário. `geral` é o erro que não é de campo nenhum (falha ao gravar).
+ */
+export type CampoDaTransferencia = "entidade" | "assunto" | "prioridade" | "origem" | "setores" | "geral";
+
+export type HandoffState = { error: string; campo?: CampoDaTransferencia } | null;
 
 const PRIORITIES: HandoffPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 const SECTOR_STATUSES: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS", "DONE"];
 
-// Cria UMA transferência com informações gerais (message/description, válidas
-// para todos os setores) + uma instrução específica por setor de destino —
-// formato do dia a dia no Acessórias, sem precisar abrir N transferências.
+// Os avisos de transferência apontam para a própria transferência desde
+// 10/11/2026 (pedido do Kauan): `entityId` é o id dela e `entityType` fica
+// vazio — é assim que `linkDaNotificacao` reconhece o aviso novo e abre
+// /transferencias/<id>. Os de antes guardavam a empresa ou a pessoa e continuam
+// abrindo a ficha. O `EntityType` do banco só tem COMPANY e PERSON; acrescentar
+// um valor mexeria na coluna de `handoffs` e na tabela grande de notificações.
+function alvoDoAviso(handoffId: string) {
+  return { entityType: undefined, entityId: handoffId };
+}
+
+// Cria UMA transferência com informações gerais (description, válida para
+// todos os setores) + uma instrução específica por setor de destino — formato
+// do dia a dia no Acessórias, sem precisar abrir N transferências.
 export async function criarHandoff(
   _prev: HandoffState,
   form: FormData
 ): Promise<HandoffState> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado" };
+  if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado", campo: "geral" };
 
-  const entityType = form.get("entityType") as EntityType;
-  const entityId = form.get("entityId") as string;
+  const entityTypeRaw = form.get("entityType");
+  const entityType: EntityType | null = entityTypeRaw === "COMPANY" || entityTypeRaw === "PERSON" ? entityTypeRaw : null;
+  const entityId = ((form.get("entityId") as string | null) ?? "").trim();
   const fromSector = (form.get("fromSector") as string)?.trim();
   const priorityRaw = (form.get("priority") as string) || "MEDIUM";
-  const message = (form.get("message") as string)?.trim() || null;
   const description = (form.get("description") as string)?.trim() || null;
   const toSectors = Array.from(new Set(form.getAll("toSectors").map((s) => String(s).trim()).filter(Boolean)));
+  // O assunto (10/11/2026): o rótulo do modelo escolhido ou o texto de "Outro
+  // assunto". As "Informações adicionais" (`message`) saíram do formulário;
+  // as transferências novas não escrevem mais nela.
+  const assunto = assuntoParaGravar(form.get("subject") as string | null, form.get("templateKey") as string | null, ASSUNTO_MAXIMO);
 
-  if (!entityId || !entityType) return { error: "Entidade inválida." };
-  if (!fromSector) return { error: "Selecione o setor de origem." };
-  if (toSectors.length === 0) return { error: "Selecione pelo menos um setor de destino." };
-  if (toSectors.includes(fromSector)) return { error: "O setor de origem não pode estar entre os destinos." };
-  if (!PRIORITIES.includes(priorityRaw as HandoffPriority)) return { error: "Prioridade inválida." };
+  if (!entityId || !entityType) return { error: "Escolha a empresa ou a pessoa.", campo: "entidade" };
+  if (!assunto) return { error: "Escolha um assunto ou escreva o seu em “Outro assunto”.", campo: "assunto" };
+  if (!PRIORITIES.includes(priorityRaw as HandoffPriority)) return { error: "Prioridade inválida.", campo: "prioridade" };
+  if (!fromSector) return { error: "Escolha o setor que pede a transferência.", campo: "origem" };
+  if (toSectors.length === 0) return { error: "Escolha pelo menos um setor para receber.", campo: "setores" };
+  if (toSectors.includes(fromSector)) return { error: "O setor que pede não pode estar entre os que recebem.", campo: "setores" };
   const priority = priorityRaw as HandoffPriority;
   if (!canManageSector(ctx, fromSector)) {
-    return { error: "Sem permissão para solicitar transferência a partir deste setor." };
+    return { error: "Sem permissão para pedir transferência a partir deste setor.", campo: "origem" };
   }
 
   const prisma = getPrisma();
@@ -51,7 +75,7 @@ export async function criarHandoff(
     where: { tenantId: ctx.tenantId, code: { in: toSectors }, active: true },
     select: { code: true },
   });
-  if (validSectors.length !== toSectors.length) return { error: "Setor de destino inválido." };
+  if (validSectors.length !== toSectors.length) return { error: "Um dos setores escolhidos não está mais ativo.", campo: "setores" };
 
   // Confere que a entidade está dentro do escopo de quem solicita.
   const scope = entityType === "COMPANY" ? await scopedCompanyWhere(ctx) : await scopedPersonWhere(ctx);
@@ -59,7 +83,7 @@ export async function criarHandoff(
     entityType === "COMPANY"
       ? await prisma.company.findFirst({ where: { id: entityId, ...scope } })
       : await prisma.person.findFirst({ where: { id: entityId, ...scope } });
-  if (!entity) return { error: "Empresa/Pessoa não encontrada ou fora do seu escopo." };
+  if (!entity) return { error: "Empresa ou pessoa não encontrada, ou fora do seu escopo.", campo: "entidade" };
 
   // Responsável por setor (opcional) — mesma regra de elegibilidade de
   // atribuirResponsavelSetor: precisa ser membro DO PRÓPRIO setor de destino
@@ -96,7 +120,8 @@ export async function criarHandoff(
         entityType,
         entityId,
         requestedBy: ctx.userId,
-        message,
+        subject: assunto.subject,
+        templateKey: assunto.templateKey,
         description,
         priority,
         sectors: {
@@ -114,7 +139,7 @@ export async function criarHandoff(
     handoffId = created.id;
   } catch (err) {
     console.error("[criarHandoff]", err);
-    return { error: "Erro ao solicitar transferência. Tente novamente." };
+    return { error: "Não foi possível enviar a transferência. Tente de novo.", campo: "geral" };
   }
 
   await logAudit({
@@ -123,18 +148,18 @@ export async function criarHandoff(
     action: "handoff.create",
     entityType: "Handoff",
     entityId: handoffId,
-    metadata: { fromSector, toSectors, priority },
+    metadata: { fromSector, toSectors, priority, templateKey: assunto.templateKey },
   });
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+  const alvo = alvoDoAviso(handoffId);
   await Promise.all(
     toSectors.map((sectorCode) =>
       notifySector(sectorCode, {
         tenantId: ctx.tenantId,
         type: "HANDOFF_RECEIVED",
-        message: `Nova transferência de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}"`,
-        entityType,
-        entityId,
+        message: `Nova transferência de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}": ${assunto.subject}`,
+        ...alvo,
         // Quem pediu — a foto no sino (05/10/2026). Vale para os avisos abaixo.
         actorUserId: ctx.userId,
       })
@@ -153,19 +178,18 @@ export async function criarHandoff(
       notifyUser(userId, {
         tenantId: ctx.tenantId,
         type: "HANDOFF_ASSIGNED",
-        message: "Você foi definido como responsável por uma transferência",
-        entityType,
-        entityId,
+        message: `Você é responsável pela transferência "${assunto.subject}" (${entity.name})`,
+        ...alvo,
         actorUserId: ctx.userId,
       })
     )
   );
 
-  // "@Nome Completo" em Informações adicionais/Descrição/instruções por setor
-  // vira uma notificação de verdade pra pessoa referenciada — não é só texto
-  // solto (ver src/lib/handoffMentions.ts e MentionTextarea).
+  // "@Nome Completo" na Descrição/instruções por setor vira uma notificação de
+  // verdade pra pessoa referenciada — não é só texto solto (ver
+  // src/lib/handoffMentions.ts e MentionTextarea).
   const instructionTexts = toSectors.map((sectorCode) => form.get(`instruction_${sectorCode}`) as string | null);
-  const mentionedUserIds = await findMentionedUserIds(ctx.tenantId, [message, description, ...instructionTexts]);
+  const mentionedUserIds = await findMentionedUserIds(ctx.tenantId, [description, ...instructionTexts]);
   await Promise.all(
     mentionedUserIds
       .filter((userId) => userId !== ctx.userId)
@@ -173,16 +197,17 @@ export async function criarHandoff(
         notifyUser(userId, {
           tenantId: ctx.tenantId,
           type: "HANDOFF_MENTION",
-          message: `Você foi mencionado em uma transferência para "${entity.name}"`,
-          entityType,
-          entityId,
+          message: `Você foi mencionado na transferência "${assunto.subject}" para "${entity.name}"`,
+          ...alvo,
           actorUserId: ctx.userId,
         })
       )
   );
 
   revalidatePath("/transferencias");
-  redirect("/transferencias");
+  // Depois de enviar, abre a transferência criada (10/11/2026, pedido do
+  // Kauan): voltar para a lista deixava a pessoa procurando o que acabou de fazer.
+  redirect(`/transferencias/${handoffId}`);
 }
 
 export type HandoffActionResult = { error: string } | null;
@@ -202,7 +227,7 @@ export async function atualizarStatusSetor(
   const sector = await prisma.handoffSector.findFirst({
     where: { id: handoffSectorId, tenantId: ctx.tenantId },
     include: {
-      handoff: { select: { id: true, requestedBy: true, entityType: true, entityId: true } },
+      handoff: { select: { id: true, requestedBy: true, subject: true } },
       assignees: { select: { userId: true } },
     },
   });
@@ -240,9 +265,8 @@ export async function atualizarStatusSetor(
     await notifyUser(sector.handoff.requestedBy, {
       tenantId: ctx.tenantId,
       type: "HANDOFF_SECTOR_DONE",
-      message: `${sectorLabels[sector.sectorCode] ?? sector.sectorCode} finalizou a parte dele na sua transferência`,
-      entityType: sector.handoff.entityType,
-      entityId: sector.handoff.entityId,
+      message: `${sectorLabels[sector.sectorCode] ?? sector.sectorCode} finalizou a parte dele na transferência "${tituloDaTransferencia(sector.handoff)}"`,
+      ...alvoDoAviso(sector.handoff.id),
       actorUserId: ctx.userId,
     });
   }
@@ -266,7 +290,7 @@ export async function atribuirResponsavelSetor(
   const prisma = getPrisma();
   const sector = await prisma.handoffSector.findFirst({
     where: { id: handoffSectorId, tenantId: ctx.tenantId },
-    include: { handoff: { select: { id: true, entityType: true, entityId: true } } },
+    include: { handoff: { select: { id: true, subject: true } } },
   });
   if (!sector) return { error: "Transferência não encontrada." };
   if (!canManageSector(ctx, sector.sectorCode)) {
@@ -313,9 +337,8 @@ export async function atribuirResponsavelSetor(
     await notifyUser(userId, {
       tenantId: ctx.tenantId,
       type: "HANDOFF_ASSIGNED",
-      message: "Você foi definido como responsável por uma transferência",
-      entityType: sector.handoff.entityType,
-      entityId: sector.handoff.entityId,
+      message: `Você é responsável pela transferência "${tituloDaTransferencia(sector.handoff)}"`,
+      ...alvoDoAviso(sector.handoff.id),
       actorUserId: ctx.userId,
     });
   }
