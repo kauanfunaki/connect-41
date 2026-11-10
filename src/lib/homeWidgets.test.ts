@@ -16,7 +16,7 @@ describe("parseHomeWidgets", () => {
   });
 
   it("formato novo: respeita os ocultos e acrescenta só o que nunca foi visto", () => {
-    const raw = serializeHomeWidgets(["meu-dia", "painel-contas"], ["painel-tarefas", "indicadores"]);
+    const raw = serializeHomeWidgets(["meu-dia", "painel-contas"], ["painel-tarefas"]);
     const lidos = parseHomeWidgets(raw);
     expect(lidos.slice(0, 2)).toEqual(["meu-dia", "painel-contas"]);
     expect(lidos).not.toContain("painel-tarefas");
@@ -25,49 +25,40 @@ describe("parseHomeWidgets", () => {
   });
 });
 
-describe("faixa de destaques (06/10)", () => {
-  it("nasce visível, por último no topo — colada nos painéis — inclusive para quem já personalizou", () => {
-    const opts = { showRestricted: false };
-    expect(visibleWidgets("top", DEFAULT_HOME_WIDGETS, opts)).toEqual(["proxima-reuniao", "destaques"]);
-    const antiga = parseHomeWidgets(serializeHomeWidgets(["proxima-reuniao", "indicadores", "meu-dia"], ["agenda"]));
-    expect(visibleWidgets("top", antiga, opts)).toEqual(["proxima-reuniao", "destaques"]);
-  });
-
-  it("pode ser ocultada como qualquer bloco", () => {
-    const raw = serializeHomeWidgets(["indicadores"], ["destaques"]);
-    expect(visibleWidgets("top", parseHomeWidgets(raw), { showRestricted: false })).not.toContain("destaques");
-  });
-});
-
-describe("indicadores abaixo dos painéis (08/10, escolha 7A)", () => {
+// Os cartões coringa (10/11/2026, pedido do Kauan) tiraram do catálogo a faixa
+// "Destaques" e os "Indicadores". Quem já tinha personalizado guardou as duas
+// chaves — visíveis ou ocultas, no formato antigo ou no novo — e o layout dele
+// tem de continuar de pé, só sem elas.
+describe("chaves que saíram do catálogo (destaques e indicadores, 10/11/2026)", () => {
   const opts = { showRestricted: false };
 
-  it("saem do topo e vêm depois dos painéis, no padrão", () => {
-    expect(visibleWidgets("top", DEFAULT_HOME_WIDGETS, opts)).not.toContain("indicadores");
-    expect(visibleWidgets("abaixo-dos-paineis", DEFAULT_HOME_WIDGETS, opts)).toEqual(["indicadores"]);
+  it("somem da lista do Personalizar e do topo", () => {
+    expect(widgetsDisponiveis(opts)).not.toContain("destaques");
+    expect(widgetsDisponiveis(opts)).not.toContain("indicadores");
+    expect(visibleWidgets("top", DEFAULT_HOME_WIDGETS, opts)).toEqual(["proxima-reuniao"]);
   });
 
-  it("a preferência gravada continua valendo: visível desce junto, oculto segue oculto", () => {
-    // Formato antigo (só a lista dos visíveis, até 30/09), com os Indicadores primeiro.
-    const antigaComIndicadores = parseHomeWidgets(JSON.stringify(["indicadores", "proxima-reuniao", "meu-dia", "agenda"]));
-    expect(visibleWidgets("abaixo-dos-paineis", antigaComIndicadores, opts)).toEqual(["indicadores"]);
-    expect(visibleWidgets("top", antigaComIndicadores, opts)).toEqual(["proxima-reuniao", "destaques"]);
-    expect(visibleWidgets("main", antigaComIndicadores, opts)).toEqual(["meu-dia"]);
+  it("formato antigo com os Indicadores primeiro: o resto continua na ordem salva", () => {
+    const antiga = parseHomeWidgets(JSON.stringify(["indicadores", "proxima-reuniao", "meu-dia", "agenda"]));
+    expect(antiga).not.toContain("indicadores");
+    expect(visibleWidgets("top", antiga, opts)).toEqual(["proxima-reuniao"]);
+    expect(visibleWidgets("main", antiga, opts)).toEqual(["meu-dia"]);
+    expect(visibleWidgets("side", antiga, opts)[0]).toBe("agenda");
+  });
 
-    const antigaSemIndicadores = parseHomeWidgets(JSON.stringify(["proxima-reuniao", "meu-dia"]));
-    expect(visibleWidgets("abaixo-dos-paineis", antigaSemIndicadores, opts)).toEqual([]);
-
-    // Formato novo: a ordem de cada faixa é a salva; o oculto não volta.
-    const nova = parseHomeWidgets(serializeHomeWidgets(["destaques", "indicadores", "agenda", "atividade"], ["proxima-reuniao"]));
-    expect(visibleWidgets("top", nova, opts)).toEqual(["destaques"]);
-    expect(visibleWidgets("abaixo-dos-paineis", nova, opts)).toEqual(["indicadores"]);
+  it("formato novo com as duas visíveis ou ocultas: a ordem e os ocultos dos outros blocos valem", () => {
+    // Como foi gravado antes de 10/11/2026 (`serializeHomeWidgets` já não aceita as duas chaves).
+    const nova = parseHomeWidgets(JSON.stringify({ visiveis: ["destaques", "indicadores", "agenda", "atividade"], ocultos: ["proxima-reuniao"] }));
+    expect(nova).not.toContain("destaques");
+    expect(nova).not.toContain("indicadores");
+    expect(visibleWidgets("top", nova, opts)).toEqual([]);
     expect(visibleWidgets("side", nova, opts).slice(0, 2)).toEqual(["agenda", "atividade"]);
-    const ocultos = parseHomeWidgets(serializeHomeWidgets(["destaques"], ["indicadores"]));
-    expect(visibleWidgets("abaixo-dos-paineis", ocultos, opts)).toEqual([]);
-  });
 
-  it("continuam na lista do Personalizar, para quem quiser ligar ou desligar", () => {
-    expect(widgetsDisponiveis(opts)).toContain("indicadores");
+    // Gravado direto, sem passar por `serializeHomeWidgets` (que já descarta).
+    const cru = parseHomeWidgets(JSON.stringify({ visiveis: ["meu-dia", "destaques"], ocultos: ["indicadores", "agenda"] }));
+    expect(cru[0]).toBe("meu-dia");
+    expect(cru).not.toContain("agenda");
+    expect(cru).not.toContain("destaques");
   });
 });
 

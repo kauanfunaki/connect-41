@@ -10,17 +10,35 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Início",
     caminhos: ["/home"],
     resumo:
-      "O resumo do seu trabalho e do escritório: indicadores, painéis dos setores, o seu dia, as transferências que esperam o seu setor e as próximas reuniões.",
+      "O resumo do seu trabalho e do escritório: quatro números do seu setor no topo, painéis dos setores, o seu dia, as transferências que esperam o seu setor e as próximas reuniões.",
     secoes: [
       {
         titulo: "Como ler o Início",
         passos: [
           "Clique em “Início”, no topo da barra lateral. O logo do Connect, acima do menu, também leva ao Início.",
-          "No alto ficam os indicadores “Empresas ativas”, “Atrasadas / hoje”, “Transferências” e “Pessoas cadastradas”. Clique em um deles para abrir a lista correspondente.",
-          "Logo abaixo, a faixa “Destaques” mostra os três números que mais pedem a sua atenção — em vermelho, o que está vencido ou atrasado. Clique num cartão para abrir a tela de onde ele vem.",
+          "No alto ficam quatro cartões com os números do seu setor — no BPO, por exemplo, contas vencidas e aprovações; em “Todos os setores”, tarefas atrasadas, transferências, solicitações atrasadas e empresas ativas.",
+          "Cada cartão mostra o número de agora, quanto ele mudou desde ontem (a seta para cima ou para baixo, em verde quando melhorou e em vermelho quando piorou) e uma linha com os últimos dias. Cartão novo mostra “sem histórico ainda” até juntar alguns dias.",
+          "O cartão fica vermelho quando há algo atrasado ou vencido e âmbar quando há algo esperando você. Clique no cartão para abrir a tela de onde o número vem.",
           "Depois vêm os painéis com gráficos, como “Atividades por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abri-lo.",
           "Em “Transferências para o seu setor”, clique em “Abrir” para ver a transferência que espera o seu setor.",
+        ],
+      },
+      {
+        titulo: "Como trocar um cartão do topo",
+        passos: [
+          "Passe o mouse sobre o cartão e clique no lápis, no canto de cima. No celular e no modo “Personalizar”, o lápis já aparece.",
+          "Em “Trocar este cartão”, busque pelo nome ou escolha na lista. Os números estão agrupados por setor, com o valor de agora ao lado; o atual tem um visto.",
+          "Clique no número que você quer ver no lugar. Se ele já estava em outro cartão, os dois trocam de lugar.",
+          "Para desfazer, abra o lápis do cartão e clique em “Voltar ao do setor”.",
+        ],
+      },
+      {
+        titulo: "Como definir os cartões do seu setor (coordenação)",
+        passos: [
+          "Entre no setor pelo seletor do topo.",
+          "Clique no lápis do cartão e, em “Para quem”, escolha o padrão do setor (por exemplo, “Padrão do BPO”).",
+          "Escolha o número. Todo mundo do setor passa a ver esse cartão, menos quem já trocou aquele cartão só para si.",
         ],
       },
       {
@@ -43,6 +61,9 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "A personalização vale só para você: os colegas continuam vendo o Início do jeito deles.",
+      "Os cartões do topo valem por setor: quem trabalha em dois setores tem quatro cartões em cada um.",
+      "A lista do lápis só mostra os números das telas que você pode abrir.",
+      "Só quem coordena o setor, o administrador e o Super Admin mudam o padrão do setor. A troca fica registrada na Auditoria.",
       "O botão “Criar” aparece para administradores e gestores de setor, só com as opções que o perfil permite.",
       "O bloco “Visão do workspace” aparece só para quem coordena setor ou administra o escritório.",
     ],

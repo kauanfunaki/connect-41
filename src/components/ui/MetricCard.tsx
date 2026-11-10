@@ -69,6 +69,18 @@ type Props = {
    * dica.
    */
   rotuloInteiro?: boolean;
+  /**
+   * O que vai embaixo de tudo, na largura do cartão — a linha da tendência dos
+   * cartões do topo do Início (10/11/2026).
+   */
+  rodape?: React.ReactNode;
+  /**
+   * Uma ação no canto de cima, fora do link do cartão (botão dentro de link
+   * não é HTML válido) — o lápis dos cartões do Início (10/11/2026). O rótulo
+   * reserva o espaço dela. O cartão ganha o grupo `group/cartao`, para a ação
+   * aparecer ao passar o mouse.
+   */
+  canto?: React.ReactNode;
   /** Atraso do stagger de entrada, em ms. */
   delay?: number;
 };
@@ -124,6 +136,8 @@ export function MetricCard({
   destaque = false,
   filtro = false,
   rotuloInteiro = false,
+  rodape,
+  canto,
   delay = 0,
 }: Props) {
   const tomEfetivo: TomDaMetrica | undefined = tom ?? (highlight ? "atencao" : undefined);
@@ -143,7 +157,7 @@ export function MetricCard({
           </span>
         )}
         <p
-          className={`min-w-0 text-helper leading-snug ${corDoRotulo} ${
+          className={`min-w-0 text-helper leading-snug ${corDoRotulo} ${canto ? "pr-8" : ""} ${
             rotuloInteiro ? "min-h-[2lh] whitespace-normal break-words" : "truncate max-sm:whitespace-normal max-sm:line-clamp-2 c41-cortavel"
           }`}
         >
@@ -169,6 +183,7 @@ export function MetricCard({
           da faixa os cartões esticam juntos, então o valor de todos continua
           na mesma altura. */}
       {detalhe && <p className={`-mt-0.5 text-micro ${corDoApoio} line-clamp-2 break-words`}>{detalhe}</p>}
+      {rodape}
     </>
   );
 
@@ -181,13 +196,16 @@ export function MetricCard({
     : ativo
       ? "bg-brand-subtle border-brand ring-2 ring-brand"
       : "bg-surface border-border";
-  const cls = `reveal-in min-w-0 border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${fundo}`;
+  // Com ação no canto, o cartão mora dentro de uma caixa que é o item da grade:
+  // ele estica até a altura dela, para os cartões da faixa ficarem iguais.
+  const cls = `reveal-in min-w-0 border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${canto ? "h-full" : ""} ${fundo}`;
   const atual = ativo ? ("true" as const) : undefined;
 
   // Sem anel de foco próprio: o `:focus-visible` global já desenha o dele.
+  let cartao: React.ReactNode;
   if (href) {
     const Destino = filtro ? LinkSemRecarregar : Link;
-    return (
+    cartao = (
       <Destino
         href={href}
         aria-current={atual}
@@ -197,10 +215,18 @@ export function MetricCard({
         {content}
       </Destino>
     );
+  } else {
+    cartao = (
+      <div aria-current={atual} style={{ animationDelay: `${delay}ms` }} className={cls}>
+        {content}
+      </div>
+    );
   }
+  if (!canto) return cartao;
   return (
-    <div aria-current={atual} style={{ animationDelay: `${delay}ms` }} className={cls}>
-      {content}
+    <div className="group/cartao relative min-w-0">
+      {cartao}
+      <div className="absolute top-2 right-2">{canto}</div>
     </div>
   );
 }
