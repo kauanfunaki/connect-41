@@ -15,8 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_APOIO, MODULOS_FORA_DO_MENU, MODULOS_SEM_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
-import { bancoFiscalLocal } from "@/lib/fiscal/local/ambiente";
+import { getModuleRoute, MODULOS_DO_APOIO, MODULOS_FORA_DO_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
@@ -176,7 +175,7 @@ export default async function AppLayout({
   // fiscal local): ali o caminho é o Acervo. Em produção a prévia mostra
   // "Processamento fiscal indisponível", e sem esta exceção a tela ficava sem
   // entrada nenhuma (21/10/2026).
-  const semMenu: ReadonlySet<string> = new Set([...MODULOS_FORA_DO_MENU, ...(bancoFiscalLocal() ? MODULOS_SEM_MENU : [])]);
+  const semMenu: ReadonlySet<string> = MODULOS_FORA_DO_MENU;
   // A fila das solicitações do portal mora no menu Geral (ver MODULOS_DO_MENU_GERAL).
   const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   // As solicitações novas (21/10/2026): o número do item Solicitações do menu.

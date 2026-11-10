@@ -1027,8 +1027,8 @@ export const FORA_DO_MENU_COM_SOLICITACOES: ReadonlySet<string> = new Set([...MO
  */
 export const MODULOS_FORA_DO_MENU: ReadonlySet<string> = new Set(["societario_minha_area"]);
 
-/** Funcionalidades acessadas por fluxos internos, sem entrada na navegação. */
-export const MODULOS_SEM_MENU: ReadonlySet<string> = new Set(["fiscal_documentos"]);
+// MODULOS_SEM_MENU saiu (10/11/2026): tirava Documentos fiscais do menu só no banco
+// fiscal local, e a tela é aberta pelo menu do Fiscal como em produção.
 
 export function getModuleRoute(code: string): string | undefined {
   return MODULE_ROUTES[code];

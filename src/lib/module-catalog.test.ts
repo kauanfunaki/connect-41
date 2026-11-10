@@ -10,7 +10,6 @@ import {
   getModuleDef,
   getModulesForSector,
   MODULOS_DO_MENU_GERAL,
-  MODULOS_SEM_MENU,
   MODULOS_FORA_DO_MENU,
   MODULOS_NAS_SOLICITACOES,
   FORA_DO_MENU_COM_SOLICITACOES,
@@ -67,7 +66,7 @@ describe("catálogo de módulos", () => {
   });
 
   it("as telas do menu Geral e as sem menu são do catálogo", () => {
-    const fora = [...MODULOS_DO_MENU_GERAL, ...MODULOS_SEM_MENU, ...MODULOS_FORA_DO_MENU].filter((code) => !getModuleDef(code));
+    const fora = [...MODULOS_DO_MENU_GERAL, ...MODULOS_FORA_DO_MENU].filter((code) => !getModuleDef(code));
     expect(fora).toEqual([]);
   });
 
