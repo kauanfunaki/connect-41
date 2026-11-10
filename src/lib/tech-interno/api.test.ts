@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ID_ITEM, LEITOR, ESCRITOR, itemFalso } from "./api-fixtures.test-utils";
+import { ID_ITEM, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "./api-fixtures.test-utils";
 
 // As rotas da API pública do Controle interno (`/api/v1/controle-interno`),
 // chamadas como o Next chama, com o servidor do Controle interno de mentira:
@@ -86,7 +86,7 @@ describe("listar e ver", () => {
     expect(json).toEqual({
       total: 1, page: 1, pages: 1,
       items: [{
-        id: ID_ITEM, title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.",
+        id: ID_ITEM, title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.", acceptanceCriteria: CRITERIO_FALSO,
         type: "BUG", typeLabel: "Bug", priority: 2, priorityLabel: "Alta", status: "PENDING", statusLabel: "Pendente",
         system: { mode: "EXISTING", key: "site:site-1", name: "Site fictício" },
         assignee: { id: "pessoa-1", name: "Pessoa fictícia" }, dueDate: "2026-11-20", size: null, sizeLabel: null, origin: null,
@@ -119,7 +119,16 @@ describe("listar e ver", () => {
       comments: [{ id: "c-1", author: "Pessoa fictícia", body: "Comentário fictício.", createdAt: "2026-11-05T15:00:00.000Z" }],
       history: [{ version: 3, author: "Pessoa fictícia", changes: [{ field: "Título" }] }],
       attachments: [],
+      acceptanceCriteria: CRITERIO_FALSO,
     });
+    // Só a marca que ainda vale: a do ponto 2 é de um texto reescrito.
+    expect(json.acceptanceChecks).toEqual([{ position: 1, text: "A busca acha pelo CNPJ com e sem máscara.", checkedBy: "Pessoa fictícia", checkedAt: "2026-11-05T15:00:00.000Z" }]);
+  });
+
+  it("item sem critério de aceite: o campo vem null e não há pontos conferidos", async () => {
+    s.detalheItem.mockResolvedValue(itemFalso({ acceptanceCriteria: null }));
+    const { json } = await corpo(await item.GET(pedido(`/${ID_ITEM}`, { token: LEITOR }), params()));
+    expect(json).toMatchObject({ acceptanceCriteria: null, acceptanceChecks: [] });
   });
 
   it("item de outro escritório ou inexistente: 404, sem dizer qual", async () => {
@@ -172,9 +181,18 @@ describe("criar e atualizar", () => {
     const r = await item.PATCH(pedido(`/${ID_ITEM}`, { token: ESCRITOR, metodo: "PATCH", corpo: { priority: 3, version: 2 } }), params());
     expect(r.status).toBe(200);
     expect(s.salvarItem).toHaveBeenCalledWith(ator, {
-      title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.", type: "BUG", priority: 3, status: "PENDING",
+      title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.", acceptanceCriteria: CRITERIO_FALSO, type: "BUG", priority: 3, status: "PENDING",
       systemMode: "EXISTING", systemKey: "site:site-1", assigneeId: "pessoa-1", dueDate: "2026-11-20", size: null, originItemId: null,
     }, ID_ITEM, 2);
+  });
+
+  it("o critério de aceite entra e sai pelo campo próprio, sem mexer na descrição", async () => {
+    await item.PATCH(pedido(`/${ID_ITEM}`, { token: ESCRITOR, metodo: "PATCH", corpo: { acceptanceCriteria: "Mudança: nova.", version: 3 } }), params());
+    expect(s.salvarItem.mock.calls[0][1]).toMatchObject({ acceptanceCriteria: "Mudança: nova.", description: "Passos fictícios." });
+    await item.PATCH(pedido(`/${ID_ITEM}`, { token: ESCRITOR, metodo: "PATCH", corpo: { acceptanceCriteria: null } }), params());
+    expect(s.salvarItem.mock.calls[1][1]).toMatchObject({ acceptanceCriteria: null, description: "Passos fictícios." });
+    await colecao.POST(pedido("", { token: ESCRITOR, metodo: "POST", corpo: { title: "Novo", type: "BUG", acceptanceCriteria: "Passos:\n1. x" } }));
+    expect(s.salvarItem.mock.calls[2][1]).toEqual({ title: "Novo", type: "BUG", acceptanceCriteria: "Passos:\n1. x" });
   });
 
   it("PATCH sem version usa a atual; trocar o modo do sistema limpa a chave antiga", async () => {

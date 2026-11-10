@@ -27,10 +27,13 @@ export const autenticarFalso = vi.fn(async (request: Request, escopo?: Escopo) =
   return atorDe(escopos);
 });
 
+export const CRITERIO_FALSO = "CRITÉRIO DE ACEITE (10/11/2026)\nMudança: PR fictício.\nAprovado quando:\n- A busca acha pelo CNPJ com e sem máscara.\n- A lista mostra o CNPJ.";
+
 export function itemFalso(sobre: Record<string, unknown> = {}) {
   const quando = new Date("2026-11-05T15:00:00Z");
   return {
     id: ID_ITEM, tenantId: "esc-a", title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.",
+    acceptanceCriteria: CRITERIO_FALSO,
     type: "BUG", priority: 2, status: "PENDING", systemMode: "EXISTING",
     toolId: null, opsWatcherSlug: null, opsSiteId: "site-1", opsAppId: null,
     assigneeId: "pessoa-1", dueDate: new Date("2026-11-20T00:00:00Z"), size: null, originItemId: null, version: 3,
@@ -40,6 +43,11 @@ export function itemFalso(sobre: Record<string, unknown> = {}) {
     comments: [{ id: "c-1", authorName: "Pessoa fictícia", body: "Comentário fictício.", createdAt: quando }],
     changes: [{ version: 3, authorName: "Pessoa fictícia", createdAt: quando, changes: [{ field: "Título", before: null, after: "x" }] }],
     attachments: [],
+    // A marca do ponto 2 é de um texto que já foi reescrito: não vale mais.
+    acceptanceChecks: [
+      { position: 1, text: "A busca acha pelo CNPJ com e sem máscara.", checkedByName: "Pessoa fictícia", createdAt: quando },
+      { position: 2, text: "Texto antigo do ponto.", checkedByName: "Pessoa fictícia", createdAt: quando },
+    ],
     ...sobre,
   };
 }

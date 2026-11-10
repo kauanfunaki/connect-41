@@ -81,6 +81,12 @@ model TechInternalItem {
   /// ao concluir o item — pela tela, pela API ou pelo MCP.
   prUrl         String?                @db.VarChar(500)
   commitSha     String?                @db.VarChar(64)
+  /// O critério de aceite (10/11/2026): o que se confere para concluir o item
+  /// — Mudança, Antes de testar, Onde testar, Passos, Aprovado quando —, num
+  /// campo próprio, fora da descrição. O formato é o de
+  /// `src/lib/tech-interno/criterioDeAceite.ts`; texto fora dele aparece como
+  /// texto simples.
+  acceptanceCriteria String?             @db.Text
   version       Int                    @default(0)
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
@@ -95,6 +101,7 @@ model TechInternalItem {
   comments      TechInternalComment[]
   changes       TechInternalChange[]
   attachments   TechInternalAttachment[]
+  acceptanceChecks TechInternalAcceptanceCheck[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status, priority, dueDate])
@@ -159,6 +166,29 @@ model TechInternalAttachment {
 
   @@index([tenantId, itemId, createdAt])
   @@map("tech_internal_attachments")
+}
+
+/// A conferência do "Aprovado quando" do critério de aceite (10/11/2026): uma
+/// linha por ponto marcado, com quem marcou e quando. Marca não muda a version
+/// do item, como o comentário. Vale enquanto o ponto daquela posição tiver o
+/// mesmo texto: reescrito o critério, a marca deixa de aparecer e o ponto pede
+/// conferência de novo.
+model TechInternalAcceptanceCheck {
+  id            String   @id @default(uuid())
+  tenantId      String
+  itemId        String
+  /// A posição do ponto na lista "Aprovado quando", a partir de 1.
+  position      Int
+  /// O texto do ponto quando foi marcado.
+  text          String   @db.Text
+  checkedById   String
+  checkedByName String   @db.VarChar(120)
+  createdAt     DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  item          TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
+
+  @@unique([tenantId, itemId, position])
+  @@map("tech_internal_acceptance_checks")
 }
 
 /// Conta compartilhada do escritório. A credencial existe somente em TenantIntegration.configEnc.
@@ -1361,6 +1391,7 @@ model Tenant {
   techInternalComments TechInternalComment[]
   techInternalChanges TechInternalChange[]
   techInternalAttachments TechInternalAttachment[]
+  techInternalAcceptanceChecks TechInternalAcceptanceCheck[]
   opsWatchers             OpsWatcher[]
   opsSites                OpsSite[]
   opsApps                 OpsApp[]

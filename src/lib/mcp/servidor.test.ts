@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ID_ITEM, LEITOR, ESCRITOR, itemFalso } from "@/lib/tech-interno/api-fixtures.test-utils";
+import { ID_ITEM, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "@/lib/tech-interno/api-fixtures.test-utils";
 
 // O servidor MCP de ponta a ponta pela rota `/api/mcp`, com o SDK de verdade
 // (JSON-RPC sobre Streamable HTTP, sem sessão) e o servidor do Controle
@@ -87,7 +87,12 @@ describe("servidor MCP: ferramentas por escopo", () => {
     const { result } = await chamar(ESCRITOR, "tools/list");
     expect(result?.tools?.map(t => t.name).sort()).toEqual(["anexar", "atualizar_item", "comentar", "criar_item", "listar_itens", "mudar_situacao", "resumo_do_periodo", "ver_item", "ver_opcoes"]);
     const criar = result!.tools!.find(t => t.name === "criar_item")!;
-    expect(Object.keys(criar.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(["title", "type", "systemKey", "assigneeId", "dueDate"]));
+    expect(Object.keys(criar.inputSchema.properties ?? {})).toEqual(expect.arrayContaining(["title", "type", "systemKey", "assigneeId", "dueDate", "acceptanceCriteria"]));
+    // O critério de aceite tem campo próprio (10/11/2026): as ferramentas dizem que ele não vai na descrição.
+    const atualizar = result!.tools!.find(t => t.name === "atualizar_item")! as unknown as { description: string; inputSchema: { properties: Record<string, { description?: string }> } };
+    expect(atualizar.inputSchema.properties.acceptanceCriteria.description).toContain("Aprovado quando");
+    expect(atualizar.inputSchema.properties.description.description).toContain("não vai aqui");
+    expect(atualizar.description).toContain("acceptanceCriteria");
   });
 
   it("chamar uma ferramenta de escrita com token de leitura não age", async () => {
@@ -137,6 +142,15 @@ describe("servidor MCP: as ações", () => {
   it("ver_item devolve a version para a próxima alteração", async () => {
     const { dados } = await ferramenta(LEITOR, "ver_item", { id: ID_ITEM });
     expect(dados).toMatchObject({ id: ID_ITEM, version: 3, comments: [{ id: "c-1" }] });
+  });
+
+  it("ver_item traz o critério de aceite e os pontos conferidos; atualizar_item grava o critério", async () => {
+    const { dados } = await ferramenta(LEITOR, "ver_item", { id: ID_ITEM });
+    expect(dados).toMatchObject({ acceptanceCriteria: CRITERIO_FALSO, acceptanceChecks: [{ position: 1, checkedBy: "Pessoa fictícia" }] });
+    await ferramenta(ESCRITOR, "atualizar_item", { id: ID_ITEM, version: 3, acceptanceCriteria: "Mudança: x\nAprovado quando:\n- y" });
+    expect(s.salvarItem).toHaveBeenCalledWith(ator, expect.objectContaining({ acceptanceCriteria: "Mudança: x\nAprovado quando:\n- y", description: "Passos fictícios." }), ID_ITEM, 3);
+    await ferramenta(ESCRITOR, "criar_item", { title: "Novo", type: "BUG", acceptanceCriteria: "Passos:\n1. z" });
+    expect(s.salvarItem).toHaveBeenLastCalledWith(ator, { title: "Novo", type: "BUG", acceptanceCriteria: "Passos:\n1. z" });
   });
 
   it("criar_item age com a pessoa do token e a mesma regra das telas", async () => {

@@ -65,6 +65,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "tech_interno.item.comment": e("comentou no item do controle interno do Tech"),
   "tech_interno.item.attachment": e("anexou um arquivo ao item do controle interno do Tech"),
   "tech_interno.item.attachment_remove": x("removeu um anexo do item do controle interno do Tech"),
+  // A conferência do "Aprovado quando" do critério de aceite (10/11/2026).
+  "tech_interno.item.acceptance_check": e("conferiu um ponto do critério de aceite do item do controle interno do Tech"),
+  "tech_interno.item.acceptance_uncheck": e("desmarcou um ponto conferido do critério de aceite do item do controle interno do Tech"),
   "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   "ops.aviso_fechado": e("fechou o aviso de erro do robô no Orquestrador"),
   "token_pessoal.create": c("criou o token de acesso pessoal"),

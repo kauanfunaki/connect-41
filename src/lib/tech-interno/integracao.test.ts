@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({ auth: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Banco descartável não configurado."); return db; } }));
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
-import { salvarItem, comentarItem, listarItens, detalheItem, opcoesTech, mudarSituacaoItem, historicoTech } from "./servidor";
+import { salvarItem, comentarItem, listarItens, detalheItem, opcoesTech, mudarSituacaoItem, historicoTech, conferirCriterio } from "./servidor";
 
 describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   let tenantId: string, outroTenant: string, tech: string, gestor: string, fiscal: string, admin: string, externo: string, readonly: string;
@@ -42,6 +42,7 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   afterAll(async () => {
     if (!db) return;
     for (const t of [tenantId, outroTenant].filter(Boolean)) {
+      await db.techInternalAcceptanceCheck.deleteMany({ where: { tenantId: t } });
       await db.techInternalAttachment.deleteMany({ where: { tenantId: t } }); await db.techInternalComment.deleteMany({ where: { tenantId: t } }); await db.techInternalChange.deleteMany({ where: { tenantId: t } });
       await db.techInternalItem.deleteMany({ where: { tenantId: t } }); await db.techInternalTool.deleteMany({ where: { tenantId: t } });
       await db.opsSite.deleteMany({ where: { tenantId: t } }); await db.opsApp.deleteMany({ where: { tenantId: t } }); await db.opsWatcher.deleteMany({ where: { tenantId: t } });
@@ -106,6 +107,25 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     const item = await detalheItem(ctx, itemId); expect(item!.comments).toHaveLength(2); expect(item!.version).toBe(0);
     expect(item!.comments[0].authorName).toContain("Pessoa fictícia");
     expect(await comentarItem(ctx, itemId, " ")).toHaveProperty("error");
+  });
+  it("critério de aceite: campo próprio no histórico; a conferência fica com quem marcou e não muda a versão", async () => {
+    assumir(contexto()); const criterio = "Mudança: x\nAprovado quando:\n- A lista abre.\n- O filtro fica.", title = `Critério ${randomUUID()}`;
+    const itemId = id(await salvarItem(ctx, criar({ title, description: "Contexto.", acceptanceCriteria: criterio })));
+    expect(await conferirCriterio(ctx, itemId, 1, "A lista abre.", true)).toMatchObject({ ok: true });
+    expect(await conferirCriterio(ctx, itemId, 1, "A lista abre.", true)).toMatchObject({ ok: true }); // de novo: fica a primeira
+    expect(await conferirCriterio(ctx, itemId, 2, "Texto que a tela não mostrava.", true)).toMatchObject({ code: "conflict" });
+    let item = await detalheItem(ctx, itemId);
+    expect(item).toMatchObject({ version: 0, description: "Contexto.", acceptanceCriteria: criterio });
+    expect(item!.acceptanceChecks).toEqual([expect.objectContaining({ position: 1, text: "A lista abre.", checkedById: tech, checkedByName: "Pessoa fictícia SECTOR_USER" })]);
+    expect(await salvarItem(ctx, criar({ title, description: "Contexto.", acceptanceCriteria: "Aprovado quando:\n- Outro ponto." }), itemId, 0)).toMatchObject({ ok: true });
+    item = await detalheItem(ctx, itemId);
+    expect(item!.changes[0].changes).toEqual([{ field: "Critério de aceite", before: criterio, after: "Aprovado quando:\n- Outro ponto." }]);
+    expect(await conferirCriterio(ctx, itemId, 1, "Outro ponto.", true)).toMatchObject({ ok: true });
+    expect((await detalheItem(ctx, itemId))!.acceptanceChecks).toEqual([expect.objectContaining({ position: 1, text: "Outro ponto." })]);
+    expect(await conferirCriterio(ctx, itemId, 1, "Outro ponto.", false)).toMatchObject({ ok: true });
+    expect((await detalheItem(ctx, itemId))!.acceptanceChecks).toEqual([]);
+    expect((await listarItens(ctx, lerFiltros({ q: "Outro ponto" }))).items.map(i => i.id)).toEqual([itemId]);
+    assumir(contexto(readonly, "READONLY", ["fiscal"])); expect(await conferirCriterio(ctx, itemId, 1, "Outro ponto.", true)).toHaveProperty("error");
   });
   it("os sistemas vêm do Ops Center: robôs, sites e apps; inativos preservam vínculos", async () => {
     assumir(contexto()); const sufixo = randomUUID().slice(0, 8);

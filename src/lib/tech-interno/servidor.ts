@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
@@ -6,10 +7,11 @@ import { logAudit } from "@/lib/audit";
 import { intervaloMes } from "./agenda";
 import {
   MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
-  CONFLITO, SEM_VINCULO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
+  CONFLITO, SEM_VINCULO, CAMPO_DO_CRITERIO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
   vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, type DadosItem, type Filtros, type SistemaTech, type Alteracao,
 } from "./regras";
 import { intervaloDoResumo, montarResumo, type PeriodoDoResumo } from "./resumo";
+import { lerCriterioDeAceite, mesmoTexto } from "./criterioDeAceite";
 
 /** O tipo do erro, para a API responder com o código e o status certos; as telas usam só a mensagem. */
 export type CodigoTech = "forbidden" | "not_found" | "conflict" | "validation_error" | "internal_error";
@@ -95,7 +97,8 @@ export function whereDosItens(tenantId: string, userId: string, filtros: Filtros
     ...(filtros.system ? filtros.system === "NONE" || filtros.system === "NEW" ? { systemMode: filtros.system } : { systemMode: "EXISTING", ...vinculoDoSistema(filtros.system) ?? { ...SEM_VINCULO, toolId: filtros.system } } : {}),
     ...(filtros.assignee ? { assigneeId: filtros.assignee === "me" ? userId : filtros.assignee === "none" ? null : filtros.assignee } : {}),
     ...(filtros.overdue ? { dueDate: { lt: new Date(hojeEmSaoPaulo()) }, AND: { status: { in: [...EM_ABERTO] } } } : {}),
-    ...(filtros.q ? { OR: [{ title: { contains: filtros.q } }, { description: { contains: filtros.q } }] } : {}),
+    // O critério de aceite saiu da descrição (10/11/2026): a busca olha os dois.
+    ...(filtros.q ? { OR: [{ title: { contains: filtros.q } }, { description: { contains: filtros.q } }, { acceptanceCriteria: { contains: filtros.q } }] } : {}),
   };
 }
 export async function listarItens(ctx: AuthContext, filtros: Filtros) {
@@ -151,12 +154,56 @@ export async function detalheItem(ctx: AuthContext, id: string) {
   await conferirAcesso(ctx, "ver");
   return getPrisma().techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: {
     ...incluir, comments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }, changes: { orderBy: { version: "desc" } }, attachments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
+    acceptanceChecks: { orderBy: { position: "asc" } },
   } });
+}
+
+const conferenciaSchema = z.object({
+  posicao: z.number().int().min(1).max(500),
+  texto: z.string().max(10000),
+  marcado: z.boolean(),
+});
+/**
+ * Marca ou desmarca um ponto do "Aprovado quando" (10/11/2026). A marca é do
+ * item, com quem marcou, e não muda a version — como o comentário. `texto` é o
+ * ponto como a tela mostrou: se o critério mudou nesse meio-tempo, recusa, para
+ * ninguém marcar um ponto que já não é o mesmo. Marcar o que já está marcado
+ * (outra pessoa, ao mesmo tempo) mantém a marca de quem chegou primeiro.
+ */
+export async function conferirCriterio(ctx: AtorTech, id: string, posicao: unknown, texto: unknown, marcado: unknown): Promise<ResultadoTech> {
+  try {
+    await conferirAcesso(ctx, "agir");
+    const parsed = conferenciaSchema.safeParse({ posicao, texto, marcado });
+    if (!parsed.success) return { error: "Ponto de conferência inválido.", code: "validation_error" };
+    const { posicao: position } = parsed.data;
+    const result = await getPrisma().$transaction(async tx => {
+      const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { title: true, acceptanceCriteria: true } });
+      if (!item) throw new ErroTechInterno("Item não encontrado.", "not_found");
+      const ponto = lerCriterioDeAceite(item.acceptanceCriteria)?.pontos.find(p => p.posicao === position);
+      if (!ponto || !mesmoTexto(ponto.texto, parsed.data.texto)) throw new ErroTechInterno("O critério de aceite mudou desde que a página abriu. Atualize a página e confira de novo.", "conflict");
+      const where = { tenantId: ctx.tenantId, itemId: id, position };
+      if (!parsed.data.marcado) {
+        const { count } = await tx.techInternalAcceptanceCheck.deleteMany({ where });
+        return count ? { title: item.title, ponto: ponto.texto } : null;
+      }
+      // A marca de um texto antigo nesta posição sai; a de agora fica.
+      await tx.techInternalAcceptanceCheck.deleteMany({ where: { ...where, NOT: { text: ponto.texto } } });
+      const pessoa = await autor(tx, ctx);
+      const { count } = await tx.techInternalAcceptanceCheck.createMany({
+        data: [{ ...where, text: ponto.texto, checkedById: pessoa.authorId, checkedByName: pessoa.authorName }], skipDuplicates: true,
+      });
+      return count ? { title: item.title, ponto: ponto.texto } : null;
+    });
+    if (result) await registrar(ctx, parsed.data.marcado ? "tech_interno.item.acceptance_check" : "tech_interno.item.acceptance_uncheck", id, {
+      title: result.title, ponto: result.ponto.length > 300 ? `${result.ponto.slice(0, 299)}…` : result.ponto, posicao: position,
+    });
+    return { ok: true, id };
+  } catch (e) { return erroDaOperacao(e); }
 }
 
 function valoresLegiveis(item: ItemCompleto): Record<string, string | null> {
   return {
-    "Título": item.title, "Descrição": item.description, "Tipo": TIPOS[item.type],
+    "Título": item.title, "Descrição": item.description, [CAMPO_DO_CRITERIO]: item.acceptanceCriteria, "Tipo": TIPOS[item.type],
     "Prioridade": PRIORIDADES[item.priority], "Situação": SITUACOES[item.status],
     "Sistema": nomeDoSistema(item),
     "Responsável": item.assignee?.name ?? null, "Prazo": item.dueDate?.toISOString().slice(0, 10) ?? null,

@@ -92,7 +92,7 @@ Só aparecem as ferramentas do escopo do token.
 | Ferramenta | Escopo | O que faz |
 |---|---|---|
 | `listar_itens` | ler | lista com filtros (situação, tipo, prioridade, sistema, responsável, busca, atrasados, página) |
-| `ver_item` | ler | um item com comentários, histórico, anexos e a `version` |
+| `ver_item` | ler | um item com o critério de aceite (`acceptanceCriteria`), os pontos já conferidos (`acceptanceChecks`), comentários, histórico, anexos e a `version` |
 | `ver_opcoes` | ler | tipos, situações, sistemas do Ops Center (`key`), pessoas (`id`), entregas recentes |
 | `resumo_do_periodo` | ler | concluídos, em andamento, planejados e cancelados no dia, na semana, no mês ou no ano (`period`: `day`, `week`, `month`, `year`; `date`: AAAA-MM-DD) |
 | `criar_item` | escrever | cria e devolve o item com o link |
@@ -114,6 +114,29 @@ histórico item a item:
 A semana vai de segunda a domingo, e os dias são os de São Paulo. Na tela, é o botão
 "Resumo" no topo do Controle interno, com o texto pronto para colar num canal.
 
+**O critério de aceite** (10/11/2026) tem campo próprio, `acceptanceCriteria`, fora da
+descrição: em `criar_item` e `atualizar_item` (e no `POST`/`PATCH` da API). Um rótulo
+por linha:
+
+```
+CRITÉRIO DE ACEITE (dd/mm/aaaa)      ← opcional
+Mudança: …
+Termos: …                            ← opcional
+Antes de testar: …
+Onde testar: …
+Passos:
+1. …
+Aprovado quando:
+- …
+Observação: …                        ← opcional
+```
+
+A tela do item mostra o critério numa seção própria, com os passos numerados e cada
+linha de "Aprovado quando" como um ponto para marcar; as marcas ficam salvas, com quem
+marcou. Ao reescrever o critério, mande o texto inteiro: o anterior fica no histórico do
+item, e a marca de um ponto reescrito deixa de valer. A descrição continua com o
+contexto (o que acontece, onde, o esperado).
+
 ## 3. API REST
 
 Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
@@ -125,7 +148,7 @@ Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
 | `GET /opcoes` | ler | — |
 | `GET /resumo` | ler | na URL: `period` (`day`, `week` padrão, `month`, `year`) e `date` (AAAA-MM-DD; padrão hoje) |
 | `GET /{id}` | ler | — |
-| `POST /` | escrever | `title`, `type` obrigatórios; `description`, `priority`, `status`, `systemKey`, `systemMode`, `assigneeId`, `dueDate` (AAAA-MM-DD), `size` (P/M/G), `originItemId` |
+| `POST /` | escrever | `title`, `type` obrigatórios; `description`, `acceptanceCriteria`, `priority`, `status`, `systemKey`, `systemMode`, `assigneeId`, `dueDate` (AAAA-MM-DD), `size` (P/M/G), `originItemId`, `prUrl`, `commitSha` |
 | `PATCH /{id}` | escrever | os campos que mudam, mais `version` |
 | `POST /{id}/situacao` | escrever | `{ "status": "IN_PROGRESS", "version": 3 }` |
 | `POST /{id}/comentarios` | escrever | `{ "body": "texto" }` |

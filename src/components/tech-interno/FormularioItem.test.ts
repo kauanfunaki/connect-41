@@ -13,7 +13,7 @@ afterAll(() => vi.unstubAllGlobals());
 
 const base = { sistemas: [], users: [{ id: "u1", name: "Pessoa Um" }], entregas: [{ id: "e1", title: "Entrega antiga" }, { id: "i1", title: "O próprio item" }], voltar: "/controle-interno" };
 const item: ItemDoFormulario = {
-  id: "i1", version: 3, title: "Botão não salva", description: "Passos…", type: "FEATURE", priority: 3, status: "IN_PROGRESS",
+  id: "i1", version: 3, title: "Botão não salva", description: "Passos…", acceptanceCriteria: "Mudança: fictícia.\nAprovado quando:\n- Salva.", type: "FEATURE", priority: 3, status: "IN_PROGRESS",
   systemMode: "NONE", systemKey: null, assigneeId: "u1", assigneeName: "Pessoa Um", dueDate: null, size: "M", originItemId: null, prUrl: null, commitSha: null,
 };
 type Props = React.ComponentProps<typeof FormularioItem>;
@@ -114,6 +114,21 @@ describe("FormularioItem — tela do item (disposição compacta)", () => {
     const h = compacta();
     expect(h).toContain("Entrega antiga");
     expect(h).not.toContain("O próprio item");
+  });
+  it("o critério de aceite tem campo próprio, depois da descrição, com o texto do item", () => {
+    const h = compacta();
+    const descricao = h.indexOf('id="tech-description"'), criterio = h.indexOf('id="tech-criteria"');
+    expect(criterio).toBeGreaterThan(descricao);
+    expect(/<textarea[^>]*id="tech-criteria"[^>]*>/.exec(h)?.[0]).toContain('name="acceptanceCriteria"');
+    expect(h).toContain("Mudança: fictícia.\nAprovado quando:\n- Salva.</textarea>");
+    // No item novo também, com o modelo do formato no campo vazio.
+    const novo = html();
+    expect(novo).toContain('name="acceptanceCriteria"');
+    expect(novo).toMatch(/<textarea[^>]*id="tech-criteria"[^>]*placeholder="Mudança: …/);
+  });
+  it("na edição, o Cancelar volta para a visualização do item", () => {
+    const h = compacta({ aoTerminar: "/controle-interno/i1" });
+    expect(h).toMatch(/href="\/controle-interno\/i1"[^>]*>Cancelar/);
   });
   it("somente consulta: tudo desligado e sem botões de envio", () => {
     const h = compacta({ podeEditar: false });

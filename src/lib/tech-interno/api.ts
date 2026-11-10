@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { ErroApi } from "@/lib/api-v1/erros";
 import { anexarArquivo } from "./anexos";
 import type { ItemParaResumo } from "./resumo";
+import { lerCriterioDeAceite, marcasQueValem } from "./criterioDeAceite";
 import {
   ErroTechInterno, salvarItem, mudarSituacaoItem, comentarItem, listarItens, detalheItem, opcoesTech, resumoTech,
   type AtorTech, type FalhaTech,
@@ -29,6 +30,8 @@ export function itemParaApi(item: ItemDaLista, base: string) {
     id: item.id,
     title: item.title,
     description: item.description,
+    // O critério de aceite em campo próprio (10/11/2026), fora da descrição.
+    acceptanceCriteria: item.acceptanceCriteria,
     type: item.type, typeLabel: TIPOS[item.type],
     priority: item.priority, priorityLabel: PRIORIDADES[item.priority] ?? null,
     status: item.status, statusLabel: SITUACOES[item.status],
@@ -47,8 +50,11 @@ export function itemParaApi(item: ItemDaLista, base: string) {
 export type ItemApi = ReturnType<typeof itemParaApi>;
 
 function detalheParaApi(item: Item, base: string) {
+  // Só as marcas que ainda valem: as do ponto que não foi reescrito.
+  const marcas = marcasQueValem(lerCriterioDeAceite(item.acceptanceCriteria)?.pontos ?? [], item.acceptanceChecks);
   return {
     ...itemParaApi(item, base),
+    acceptanceChecks: [...marcas.values()].map(m => ({ position: m.position, text: m.text, checkedBy: m.checkedByName, checkedAt: m.createdAt.toISOString() })),
     comments: item.comments.map(c => ({ id: c.id, author: c.authorName, body: c.body, createdAt: c.createdAt.toISOString() })),
     history: item.changes.map(h => ({ version: h.version, author: h.authorName, createdAt: h.createdAt.toISOString(), changes: h.changes })),
     attachments: item.attachments.map(a => ({
@@ -149,7 +155,7 @@ export async function resumoParaApi(ator: AtorTech, raw: unknown, base: string) 
 // ── Criar e atualizar ──────────────────────────────────────────────────────
 
 const camposDoItem = {
-  title: z.unknown().optional(), description: z.unknown().optional(), type: z.unknown().optional(), priority: z.unknown().optional(), status: z.unknown().optional(),
+  title: z.unknown().optional(), description: z.unknown().optional(), acceptanceCriteria: z.unknown().optional(), type: z.unknown().optional(), priority: z.unknown().optional(), status: z.unknown().optional(),
   systemMode: z.unknown().optional(), systemKey: z.unknown().optional(), assigneeId: z.unknown().optional(), dueDate: z.unknown().optional(), size: z.unknown().optional(), originItemId: z.unknown().optional(),
   prUrl: z.unknown().optional(), commitSha: z.unknown().optional(),
 };
@@ -200,7 +206,8 @@ export async function atualizarParaApi(ator: AtorTech, id: string, raw: unknown,
   if (mudancas.systemKey !== undefined && mudancas.systemMode === undefined) mudancas.systemMode = mudancas.systemKey ? "EXISTING" : "NONE";
   if (mudancas.systemMode !== undefined && mudancas.systemMode !== "EXISTING" && mudancas.systemKey === undefined) mudancas.systemKey = null;
   const dados = comAtalhos(ator, {
-    title: atual.title, description: atual.description, type: atual.type, priority: atual.priority, status: atual.status,
+    // O critério vai junto: sem ele, mexer em outro campo apagaria o critério.
+    title: atual.title, description: atual.description, acceptanceCriteria: atual.acceptanceCriteria, type: atual.type, priority: atual.priority, status: atual.status,
     systemMode: atual.systemMode, systemKey: chaveDoSistema(atual), assigneeId: atual.assigneeId,
     dueDate: atual.dueDate?.toISOString().slice(0, 10) ?? null, size: atual.size, originItemId: atual.originItemId,
     prUrl: atual.prUrl, commitSha: atual.commitSha,
