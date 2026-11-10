@@ -365,7 +365,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um fornecedor ou sacado",
         passos: [
-          "Abra “Cadastros” na barra lateral e clique na aba “Fornecedores e sacados”. A aba só aparece para quem é do BPO.",
+          "Na barra lateral, clique em “Cadastros” e escolha “Fornecedores e sacados”. A tela só aparece para quem é do BPO.",
           "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Clique em “Novo cadastro”.",
           "Preencha “Nome” e, se tiver, “CPF ou CNPJ” e “E-mail”.",
@@ -649,7 +649,27 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Preencha o “Título”, como e-CAC ou o nome do banco.",
           "Escolha a “Empresa”, ou deixe “Geral (sem empresa)” para uma credencial do setor.",
           "Preencha “Usuário”, “Senha” e, se quiser, “URL” e “Notas”.",
+          "Em “Quem pode ver a senha”, escolha “Todos do setor”, “Todos do setor, menos…” ou “Só eu (pessoal)”.",
           "Clique em “Criar”.",
+        ],
+      },
+      {
+        titulo: "Guardar uma senha só sua",
+        passos: [
+          "Clique em “Nova credencial” e preencha os dados.",
+          "Em “Quem pode ver a senha”, escolha “Só eu (pessoal)”.",
+          "Clique em “Criar”. A credencial aparece na lista com o selo “Pessoal”.",
+          "Só você vê os dados, revela, copia e edita. O Administrador vê só que ela existe (o título e o seu nome) e nunca a senha.",
+        ],
+      },
+      {
+        titulo: "Esconder uma senha do setor de algumas pessoas",
+        passos: [
+          "Ao cadastrar ou editar a credencial, em “Quem pode ver a senha”, escolha “Todos do setor, menos…”.",
+          "Em “Quem não vê a senha”, digite o nome e escolha a pessoa. Repita para cada uma.",
+          "Clique em “Criar” ou “Salvar”.",
+          "As pessoas marcadas não veem a credencial na lista e não conseguem revelar a senha. Na lista, a coordenação vê o selo “Restrita” com quantas pessoas não veem; pare o mouse em cima para ver os nomes.",
+          "Para liberar de novo, edite e escolha “Todos do setor”, ou tire a pessoa da lista.",
         ],
       },
       {
@@ -663,8 +683,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Cada vez que alguém revela uma senha, o acesso fica registrado.",
-      "Cadastrar e editar é da coordenação do setor. Excluir é só do Administrador ou do Super Admin, e não pode ser desfeito.",
+      "Cada vez que alguém revela uma senha, o acesso fica registrado, também na Auditoria.",
+      "Credencial do setor: cadastrar, editar e marcar quem não vê é da coordenação do setor. Excluir é só do Administrador ou do Super Admin, e não pode ser desfeito.",
+      "Credencial pessoal: qualquer pessoa do setor cadastra a sua. Só quem cadastrou edita e exclui; o Administrador também pode excluí-la (quando alguém sai da equipe), sem nunca ver a senha.",
+      "O Administrador e o Super Admin não podem ser marcados em “Todos do setor, menos…”: eles gerenciam todas as credenciais do setor.",
+      "Para ver só as pessoais ou só as do setor, use o funil da coluna “Quem vê”.",
     ],
   },
 

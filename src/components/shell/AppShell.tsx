@@ -37,7 +37,6 @@ import { GlobalSearch } from "@/components/shell/GlobalSearch";
 import {
   NavItem,
   SectorNavItem,
-  CadastrosNavItem,
   ProvedorDaFaixa,
   TituloDoBloco,
   nomeNaFaixa,
@@ -63,7 +62,8 @@ import {
   TELA_GRANDE,
 } from "@/lib/menuLateral";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { PainelDoItem, type TelaDoPainel } from "@/components/shell/PainelDoItem";
+import type { TelaDoPainel } from "@/components/shell/PainelDoItem";
+import type { GrupoDoGeral } from "@/lib/organizarMenu";
 import { ABAS_DA_GESTAO } from "@/components/gestao/AbasDaGestao";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
@@ -88,13 +88,6 @@ type SectorModule = { code: string; label: string; href: string };
 
 // O que o painel ao lado da sidebar mostra para os itens que têm telas dentro
 // (pedido de 30/09, referência do HubStrom).
-const TELAS_DE_CADASTROS: TelaDoPainel[] = [
-  { label: "Empresas", href: "/empresas", icon: <Building2 /> },
-  { label: "Pessoas", href: "/pessoas", icon: <Users /> },
-];
-// Só entra no painel de quem vê o BPO (21/10/2026): a mesma regra do Ctrl+K,
-// que já traz a tela só para quem a abre (ver `telasDeCadastros`).
-const TELA_DOS_FORNECEDORES: TelaDoPainel = { label: "Fornecedores e sacados", href: CAMINHO_DOS_FORNECEDORES, icon: <Truck /> };
 const TELAS_DA_GESTAO: TelaDoPainel[] = ABAS_DA_GESTAO.map((a) => ({ label: a.rotulo, href: a.href, icon: a.icone }));
 
 /**
@@ -318,45 +311,60 @@ export function AppShell({
   // O Geral por setor (14/10/2026): o que o setor escondeu não entra. Início e
   // Meu dia ficam fora desta conta — aparecem sempre.
   const noGeral = (tela: TelaDoGeral) => telasDoGeral.includes(tela);
-  // Fornecedores e sacados é aba de Cadastros só para o BPO (21/10/2026). As
-  // telas navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
-  const telasDeCadastros = telasNavegaveis.some((t) => t.code === "bpo_cadastros") ? [...TELAS_DE_CADASTROS, TELA_DOS_FORNECEDORES] : TELAS_DE_CADASTROS;
+  /** Uma tela de um grupo do Geral (Apoio, Cadastros). */
+  type ItemDoGrupo = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean };
+  // Cadastros é um grupo do Geral como o Apoio (10/11/2026, pedido do Kauan):
+  // cada tela é um item da janela ao lado, aberta no clique e no toque, e não
+  // mais uma aba no alto da página — antes só o mouse parado mostrava que
+  // havia mais telas. Sem área de uso (28/10/2026): Cadastros é de todas as
+  // áreas. Fornecedores e sacados só para quem vê o BPO (21/10/2026); as telas
+  // navegáveis já vêm filtradas pelo setor e pelo módulo ligado.
+  const cadastrosBruto = (): ItemDoGrupo[] => [
+    { chave: "empresas", label: "Empresas", href: "/empresas", icon: <Building2 />, area: "marca" },
+    { chave: "pessoas", label: "Pessoas", href: "/pessoas", icon: <Users />, area: "marca" },
+    ...(telasNavegaveis.some((t) => t.code === "bpo_cadastros")
+      ? [{ chave: "fornecedores", label: "Fornecedores e sacados", href: CAMINHO_DOS_FORNECEDORES, icon: <Truck />, area: "marca" }]
+      : []),
+  ];
   // O grupo Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de
   // senhas, Repositório de manuais e Quadros, para todo setor — cada setor vê
   // os seus. Com uma tela só, ela fica solta (a regra dos grupos do menu).
-  type ItemDoApoio = { chave: string; label: string; href: string; icon: React.ReactNode; area: string; ativo?: boolean };
-  const apoioBruto = (quadros: ItemDoApoio | null): ItemDoApoio[] => {
-    const telas: ItemDoApoio[] = [
+  const apoioBruto = (quadros: ItemDoGrupo | null): ItemDoGrupo[] => {
+    const telas: ItemDoGrupo[] = [
       ...(apoioLigado.senhas ? [{ chave: "senhas", label: "Repositório de senhas", href: "/senhas", icon: <ModuleIcon code="bpo_senhas" />, area: areaDoModulo("bpo_senhas") ?? "marca" }] : []),
       ...(apoioLigado.manuais ? [{ chave: "manuais", label: "Repositório de manuais", href: "/manuais", icon: <ModuleIcon code="bpo_manual" />, area: areaDoModulo("bpo_manual") ?? "marca" }] : []),
       ...(quadros ? [quadros] : []),
     ];
     return telas;
   };
-  /** As telas do Apoio na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
+  /** As telas de um grupo do Geral (Apoio, Cadastros) na ordem escolhida no organizador (09/11/2026), ou na de sempre. */
   // `comAOrdemEscolhida`: a ordem e o olho do organizador (09/11/2026) valem;
   // `comOcultas`: as escondidas ficam na lista (o organizador mostra todas).
   const escolhaDoSetor = (comAOrdemEscolhida: boolean) => (comAOrdemEscolhida && activeSector ? ordemDoMenu : undefined);
-  const telasDoApoio = (quadros: ItemDoApoio | null, comAOrdemEscolhida = true, comOcultas = false) => {
+  const telasDoGrupo = (grupo: GrupoDoGeral, bruto: ItemDoGrupo[], comAOrdemEscolhida = true, comOcultas = false) => {
     const escolha = escolhaDoSetor(comAOrdemEscolhida);
-    const ocultas = comOcultas ? [] : escolha?.ocultasDentro?.apoio ?? [];
-    return pelaOrdem(apoioBruto(quadros), (i) => i.chave, escolha?.dentro?.apoio ?? []).filter((i) => !ocultas.includes(i.chave));
+    const ocultas = comOcultas ? [] : escolha?.ocultasDentro?.[grupo] ?? [];
+    return pelaOrdem(bruto, (i) => i.chave, escolha?.dentro?.[grupo] ?? []).filter((i) => !ocultas.includes(i.chave));
   };
-  const blocoDoApoio = (quadros: ItemDoApoio | null) => {
-    const telas = telasDoApoio(quadros);
+  const telasDoApoio = (quadros: ItemDoGrupo | null, comAOrdemEscolhida = true, comOcultas = false) =>
+    telasDoGrupo("apoio", apoioBruto(quadros), comAOrdemEscolhida, comOcultas);
+  const telasDeCadastros = (comAOrdemEscolhida = true, comOcultas = false) => telasDoGrupo("cadastros", cadastrosBruto(), comAOrdemEscolhida, comOcultas);
+  /** O grupo no menu: nenhuma tela, nada; uma, ela solta; mais de uma, a janela ao lado. */
+  const blocoDoGrupo = (telas: ItemDoGrupo[], grupo: { label: string; icon: React.ReactNode; area: string }) => {
     if (telas.length === 0) return null;
-    const acesa = (i: ItemDoApoio) => i.ativo ?? caminhoDoMenuAtivo(pathname, i.href);
-    const item = (i: ItemDoApoio) => <NavItem key={i.chave} href={i.href} ativo={i.ativo} icon={i.icon} label={i.label} area={i.area} />;
+    const acesa = (i: ItemDoGrupo) => i.ativo ?? caminhoDoMenuAtivo(pathname, i.href);
+    const item = (i: ItemDoGrupo) => <NavItem key={i.chave} href={i.href} ativo={i.ativo} icon={i.icon} label={i.label} area={i.area} />;
     if (telas.length === 1) return item(telas[0]!);
     // Mais de uma: a janela ao lado, como os grupos do setor (05/11/2026, opção C).
-    return <ItemComJanela label="Apoio" icon={<BookOpen size={16} />} area="escritorio" telas={telas.map((i) => ({ label: i.label, href: i.href, icon: i.icon, ativa: acesa(i) }))} />;
+    return <ItemComJanela label={grupo.label} icon={grupo.icon} area={grupo.area} telas={telas.map((i) => ({ label: i.label, href: i.href, icon: i.icon, ativa: acesa(i) }))} />;
   };
+  const blocoDoApoio = (quadros: ItemDoGrupo | null) => blocoDoGrupo(telasDoApoio(quadros), { label: "Apoio", icon: <BookOpen size={16} />, area: "escritorio" });
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
   // O Geral com as cores juntas (28/10/2026): os azuis — sem área e Chamados —
   // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo,
   // que entra no grupo Apoio (05/11/2026). Desde 09/11/2026 o setor pode
   // escolher a ordem do Geral no organizador (`ordemDoMenu.geral`), só dentro dele.
-  const listaDoGeral = (quadros: ItemDoApoio | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
+  const listaDoGeral = (quadros: ItemDoGrupo | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
@@ -376,11 +384,10 @@ export function AppShell({
         area: "marca",
         label: "Cadastros",
         icon: <ContactRound size={16} />,
-        no: noGeral("cadastros") && (
-          <PainelDoItem titulo="Cadastros" telas={telasDeCadastros} area="marca" icone={<ContactRound />}>
-            <CadastrosNavItem icon={<ContactRound size={16} />} label="Cadastros" />
-          </PainelDoItem>
-        ),
+        filhos: telasDeCadastros(comAOrdemEscolhida, comOcultas).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
+        // Como o Apoio: com todas as telas escondidas pelo olho, ainda aparece no organizador.
+        existe: noGeral("cadastros"),
+        no: noGeral("cadastros") && blocoDoGrupo(telasDeCadastros(), { label: "Cadastros", icon: <ContactRound size={16} />, area: "marca" }),
       },
       { chave: "transferencias", area: "marca", label: "Transferências", icon: <ArrowRightLeft size={16} />, no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
       { chave: "solicitacoes", area: solicitacoes, label: "Solicitações", icon: <Inbox size={16} />, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
@@ -395,14 +402,14 @@ export function AppShell({
     const escolhida = escolha?.geral ?? [];
     return escolhida.length > 0 ? pelaOrdem(presentes, (i) => i.chave, escolhida) : agruparPorCor(presentes, (i) => i.area);
   };
-  const itensDoGeral = (quadros: ItemDoApoio | null = null) => listaDoGeral(quadros).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
+  const itensDoGeral = (quadros: ItemDoGrupo | null = null) => listaDoGeral(quadros).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
   // Na Tech, os Quadros são o Controle interno (decisão do Kauan, 05/11/2026).
   // Desde 09/11/2026 o item é o próprio Controle interno, com o nome, o ícone e
   // o destaque dele, e a tela sai da lista do setor. Não depende do "Quadros"
   // ligado no Geral do setor: escondido lá, o Controle interno ficaria sem
   // entrada no menu. Quem quiser tirá-lo usa o olho do organizador.
   const controleInterno = activeSectorModules.find((m) => m.code === MODULO_NO_LUGAR_DOS_QUADROS);
-  const quadrosDoSetor: ItemDoApoio | null = !activeSector
+  const quadrosDoSetor: ItemDoGrupo | null = !activeSector
     ? null
     : controleInterno
       ? { chave: "quadros", label: controleInterno.label, href: controleInterno.href, icon: <ModuleIcon code={controleInterno.code} />, area: areaDoModulo(controleInterno.code) ?? "marca" }

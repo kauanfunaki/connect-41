@@ -72,13 +72,13 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
     titulo: "Contábil Core",
     caminhos: ["/contabil-core"],
     resumo:
-      "Importa o extrato bancário em OFX ou PDF, classifica as transações em lançamentos pelas regras e pelas contrapartes (o NEO) e gera o arquivo de importação de lançamentos do Domínio.",
+      "Importa o extrato bancário em OFX, PDF ou planilha, classifica as transações em lançamentos pelas regras e pelas contrapartes (o NEO) e gera o arquivo de importação de lançamentos do Domínio.",
     secoes: [
       {
         titulo: "Como importar um extrato",
         passos: [
           "Na aba “Configurações”, confira se a conta bancária está cadastrada e ligada à conta contábil do banco.",
-          "Na aba “Importações”, escolha a conta bancária e o arquivo (OFX ou PDF) e clique em “Importar”.",
+          "Na aba “Importações”, escolha a conta bancária e o arquivo (OFX, PDF ou planilha) e clique em “Importar”.",
           "Se o arquivo for de outra conta, ele é recusado. Se não disser todos os dados da conta, confira e clique em “É desta conta: importar”.",
           "Confira o resultado: importadas, já existentes e recusadas por valor suspeito. O aviso de saldo aparece quando o fechamento não bate com o extrato anterior da conta.",
         ],
@@ -104,7 +104,8 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
     dicas: [
       "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
       "O PDF é lido pelo leitor do banco cadastrado na conta (BB, Bradesco, Itaú, Caixa, Sicredi, Sicoob, Santander, Inter, Stone e outros) e só entra se os saldos do extrato fecharem com os lançamentos.",
-      "PDF que é imagem (sem texto selecionável) e planilha do banco ainda não são lidos: importe o OFX da conta.",
+      "Na planilha (.xlsx, .xls ou .csv), o Connect acha as colunas pelo cabeçalho (Data, Histórico, Crédito, Débito, Valor, Saldo), e o saldo de cada linha confere os lançamentos.",
+      "PDF que é imagem (sem texto selecionável) ainda não é lido: importe o OFX ou a planilha da conta.",
       "Desfazer uma importação inteira é de quem coordena o setor: os lançamentos das transações do arquivo são cancelados antes.",
     ],
   },

@@ -1510,6 +1510,7 @@ model Tenant {
   chatwootConnections       ChatwootConnection[]
   bpoCredentials            BpoCredential[]
   bpoCredentialViews        BpoCredentialView[]
+  bpoCredentialRestrictions BpoCredentialRestriction[]
   chatwootAgentLinks        ChatwootAgentLink[]
   chatwootSenderRoles       ChatwootSenderRole[]
   fiscalDocuments           FiscalDocument[]
@@ -2010,6 +2011,7 @@ model User {
   linkedPerson                Person?
   bpoCredentialsCreated       BpoCredential[]
   bpoCredentialViews          BpoCredentialView[]
+  bpoCredentialRestrictions   BpoCredentialRestriction[]
   chatwootAgentLinks          ChatwootAgentLink[]
   preference                  UserPreference?
   pinnedModules               UserPinnedModule[]
@@ -7596,6 +7598,17 @@ model UserAgendaView {
   @@map("user_agenda_views")
 }
 
+/// Quem vê uma senha do Repositório (10/11/2026, pedido do Kauan).
+/// SETOR: todo o setor da credencial, menos as pessoas marcadas em
+/// `BpoCredentialRestriction` ("todos do setor, menos…"). PESSOAL: só quem
+/// cadastrou vê a linha, revela e edita; o Administrador e o Super Admin veem
+/// que ela existe (título e dono), nunca revelam, e podem excluí-la — a
+/// limpeza de quando alguém sai do escritório.
+enum BpoCredentialVisibility {
+  SETOR
+  PESSOAL
+}
+
 // Repositório de Senhas do BPO — centraliza credenciais que hoje ficam
 // espalhadas em .txt (login de portais, bancos, sistemas de clientes).
 // Empresa é opcional (permite credencial geral do setor, sem cliente
@@ -7616,6 +7629,9 @@ model BpoCredential {
   url         String?  @db.VarChar(255)
   notes       String?  @db.Text
   createdById String
+  /// Quem vê a senha (10/11/2026, pedido do Kauan) — ver
+  /// `BpoCredentialVisibility`. As que já existiam ficam SETOR: nada muda nelas.
+  visibility  BpoCredentialVisibility @default(SETOR)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -7623,6 +7639,8 @@ model BpoCredential {
   company   Company?            @relation(fields: [companyId], references: [id])
   createdBy User                @relation(fields: [createdById], references: [id])
   views     BpoCredentialView[]
+  /// As pessoas do setor que não veem esta credencial (10/11/2026).
+  restrictions BpoCredentialRestriction[]
 
   @@index([tenantId, companyId])
   @@index([tenantId, sectorCode])
@@ -7786,6 +7804,28 @@ model BpoCredentialView {
 
   @@index([credentialId])
   @@map("bpo_credential_views")
+}
+
+// "Todos do setor, menos…" (10/11/2026, pedido do Kauan): as pessoas do setor
+// que NÃO veem uma credencial do setor. Quem coordena o setor marca; quem está
+// marcado não vê a linha na lista, e revelar recusa. O Administrador e o Super
+// Admin não entram (gerenciam tudo), nem quem cadastrou. Só vale para
+// credencial SETOR — a pessoal já é só do dono. Sair do escritório leva as
+// marcas da pessoa junto (Cascade): não há o que passar a outra pessoa.
+model BpoCredentialRestriction {
+  id           String   @id @default(uuid())
+  tenantId     String
+  credentialId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  credential BpoCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([credentialId, userId])
+  @@index([tenantId, userId])
+  @@map("bpo_credential_restrictions")
 }
 
 // ─── Societário: o motor de processos ────────────────────────────────────────

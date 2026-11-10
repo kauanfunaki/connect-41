@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PainelFlutuante } from "@/components/ui/PainelFlutuante";
 import { useToast } from "@/components/ui/Toast";
-import { CartaoDeNotificacao } from "@/components/notificacoes/CartaoDeNotificacao";
+import { AvisoDaNotificacao, CartaoDeNotificacao } from "@/components/notificacoes/CartaoDeNotificacao";
 import { AbasDasNotificacoes } from "@/components/notificacoes/AbasDasNotificacoes";
 import {
   arquivarNotificacoes,
@@ -189,11 +189,22 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
    * O aviso da conferência no canto (um só, ver `avisoDoCanto`). A notificação
    * que chegou sozinha: com caminho, o clique marca como lida e leva à tela. O
    * resumo de várias (10/11/2026): mesmo desenho, e o clique abre o sino.
+   *
+   * Desde 10/11/2026 o aviso desenha o mesmo conteúdo do cartão do sino
+   * (`AvisoDaNotificacao`): ícone e tom do catálogo, título, frase, quem fez,
+   * origem e hora. O resumo usa o mesmo desenho, com o ícone do sino.
    */
   function avisar(aviso: AvisoDoCanto) {
     if (aviso.tipo === "resumo") {
       const { titulo, mensagem } = textoDoResumo(aviso);
-      toast.show(mensagem, "info", { titulo, grupo: GRUPO_DAS_NOTIFICACOES, aoClicar: abrirOSino, rotuloDoClique: "Ver no sino" });
+      const resumo = { icone: "sino", tom: "brand", titulo, mensagem, lida: false, criadaEm: new Date().toISOString(), chip: null, autor: null } as const;
+      toast.show(mensagem, "info", {
+        titulo,
+        grupo: GRUPO_DAS_NOTIFICACOES,
+        aoClicar: abrirOSino,
+        rotuloDoClique: "Ver no sino",
+        corpo: <AvisoDaNotificacao n={resumo} />,
+      });
       return;
     }
     const n = aviso.notificacao;
@@ -201,6 +212,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     toast.show(n.mensagem, "info", {
       titulo: n.titulo,
       grupo: GRUPO_DAS_NOTIFICACOES,
+      corpo: <AvisoDaNotificacao n={n} />,
       ...(destino ? { aoClicar: () => void abrirDoAviso(n.id, destino), rotuloDoClique: "Abrir" } : {}),
     });
   }

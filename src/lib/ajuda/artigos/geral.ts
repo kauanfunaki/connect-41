@@ -114,7 +114,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como encontrar uma empresa",
         passos: [
-          "Abra “Cadastros” na barra lateral. A tela tem as abas “Empresas” e “Pessoas”; fique em “Empresas”.",
+          "Na barra lateral, clique em “Cadastros” e escolha “Empresas”.",
           "Digite parte do nome ou do ID no campo “Buscar por nome ou ID…”.",
           "Para trocar o status mostrado, clique em “Filtros” e escolha “Ativo”, “Prospecto”, “Inativo”, “Cancelado” ou “Todos, incluindo inativos”.",
           "Para filtrar por regime ou cidade, clique no funil ao lado do título das colunas “Regime” e “Localização” e marque os valores.",
@@ -191,7 +191,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como encontrar uma pessoa",
         passos: [
-          "Abra “Cadastros” na barra lateral e clique na aba “Pessoas”.",
+          "Na barra lateral, clique em “Cadastros” e escolha “Pessoas”.",
           "Digite parte do nome no campo “Buscar por nome…”.",
           "Para ver quem está inativo, clique em “Filtros” e, em “Situação”, escolha “Inativos” ou “Todos”.",
           "Clique no nome para abrir a ficha.",
@@ -516,7 +516,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como acompanhar a fila",
         passos: [
-          "Abra “Solicitações” na barra lateral. A aba “Solicitações dos clientes” mostra as que estão em aberto.",
+          "Abra “Solicitações” na barra lateral. A aba “Recebidas” mostra as que estão em aberto.",
           "Use os cartões “Novas”, “Minhas”, “Resposta atrasada” e “Aguardando cliente” para abrir cada recorte.",
           "Clique em “Filtros” para escolher a “Situação”, o “Setor”, a “Empresa” ou só as com resposta atrasada.",
           "Em cada linha, confira a data em “Resposta até” e o selo do prazo: “No prazo”, “Responder hoje” ou “Resposta atrasada”.",

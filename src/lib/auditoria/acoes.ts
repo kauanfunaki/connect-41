@@ -333,6 +333,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "bpoCredential.create": c("cadastrou no repositório a senha"),
   "bpoCredential.update": e("editou no repositório a senha"),
   "bpoCredential.delete": x("excluiu do repositório a senha"),
+  // Cada vez que alguém revela uma senha do cofre (10/11/2026): só o título nos detalhes, nunca a senha.
+  "bpoCredential.reveal": o("revelou do repositório a senha"),
   "integration.omie.financeiro": o("trouxe do Omie o financeiro da empresa"),
   "integration.omie.virada": o("virou do Omie para o Connect o financeiro da empresa"),
   "integration.omie.virada_desfeita": o("desfez a virada do Omie da empresa"),

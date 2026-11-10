@@ -103,6 +103,14 @@ function botaoComJanela(html: string, nome: string) {
   return b!;
 }
 
+/**
+ * Os grupos do menu do setor: os botões com janela sem os do Geral, que
+ * aparecem em todo setor — o Apoio e, desde 10/11/2026, os Cadastros.
+ */
+function gruposDoSetor(html: string) {
+  return botoesComJanela(html).filter((b) => b.nome !== "Apoio" && b.nome !== "Cadastros");
+}
+
 /** Os links do menu: tag de abertura e o texto visível de dentro (sem as tags). */
 function linksDoMenu(html: string): { tag: string; texto: string }[] {
   const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
@@ -140,8 +148,11 @@ describe("menu recolhido: a faixa de ícones", () => {
   });
 
   it("cada item é só o ícone, com o nome no aria-label e na dica à direita", () => {
-    const links = linksDoMenu(lateral(casco(true)));
-    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadros", "Cadastros", "Transferências", "Agenda", "Apuração", "Colaboradores", "Horas extras"]);
+    const aside = lateral(casco(true));
+    const links = linksDoMenu(aside);
+    // Cadastros é um grupo desde 10/11/2026: botão com a janela, e não link.
+    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadros", "Transferências", "Agenda", "Apuração", "Colaboradores", "Horas extras"]);
+    expect(botaoComJanela(aside, "Cadastros").telas).toBe(2);
     for (const l of links) {
       expect(l.texto).toBe("");
       const nome = /aria-label="([^"]*)"/.exec(l.tag)![1];
@@ -175,8 +186,8 @@ describe("menu recolhido: a faixa de ícones", () => {
 
   it("item com telas dentro (Cadastros) ganha o pontinho; os outros não", () => {
     const aside = lateral(casco(true));
-    const cadastros = aside.slice(aside.indexOf('aria-label="Cadastros"'));
-    expect(cadastros.slice(0, cadastros.indexOf("</a>"))).toContain('data-marca="telas"');
+    const cadastros = aside.slice(aside.indexOf('aria-label="Cadastros, 2 telas"'));
+    expect(cadastros.slice(0, cadastros.indexOf("</button>"))).toContain('data-marca="telas"');
     const inicio = aside.slice(aside.indexOf('aria-label="Início"'));
     expect(inicio.slice(0, inicio.indexOf("</a>"))).not.toContain('data-marca="telas"');
   });
@@ -303,7 +314,7 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
   it("cada grupo é um botão com o número de telas; acende o da tela aberta", () => {
     rota.atual = "/processos/painel";
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }));
-    const grupos = botoesComJanela(aside);
+    const grupos = gruposDoSetor(aside);
     expect(grupos.map((g) => g.nome)).toEqual(["Operação", "Regularização"]);
     const operacao = botaoComJanela(aside, "Operação");
     // Processos e Painel; Exigências e prazos fica avulsa desde 09/11/2026.
@@ -329,7 +340,7 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
       { code: "societario_relatorios", label: "Relatórios", href: "/processos/relatorios" },
     ];
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: todas }));
-    expect(botoesComJanela(aside).map((g) => [g.nome, g.telas])).toEqual([["Operação", 3], ["Regularização", 2]]);
+    expect(gruposDoSetor(aside).map((g) => [g.nome, g.telas])).toEqual([["Operação", 3], ["Regularização", 2]]);
     const ordem = ["Operação", "Regularização", "Exigências e prazos", "Relatórios", "Hub de robôs"].map((n) => posicao(aside, n));
     expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
     expect(tagDoLink(aside, "Hub de robôs")).toContain('href="/robo"');
@@ -347,7 +358,7 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
       { code: "tech_certificados", label: "Certificados digitais", href: "/certificados" },
     ];
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: tech }));
-    expect(botoesComJanela(aside).map((g) => [g.nome, g.telas])).toEqual([["Orquestrador", 3]]);
+    expect(gruposDoSetor(aside).map((g) => [g.nome, g.telas])).toEqual([["Orquestrador", 3]]);
     const doSetor = aside.slice(aside.indexOf('href="/setor/tech/telas"'));
     const ordem = ["Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Chamados", "Certificados digitais"].map((n) => posicao(doSetor, n));
     expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
@@ -361,7 +372,7 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
     for (const caminho of ["/produtividade/pessoas", "/produtividade/pessoas/times", "/produtividade/github/repositorios"]) {
       rota.atual = caminho;
       const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: modulos }));
-      expect(botoesComJanela(aside)).toEqual([]);
+      expect(gruposDoSetor(aside)).toEqual([]);
       const link = tagDoLink(aside, "Produtividade");
       expect(link).toContain('href="/produtividade"');
       expect(link).toContain('aria-current="page"');
@@ -380,7 +391,7 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
   it("tela sem filhas continua um link direto", () => {
     rota.atual = "/exigencias";
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: [soc[4]!, soc[0]!] }));
-    expect(botoesComJanela(aside)).toEqual([]);
+    expect(gruposDoSetor(aside)).toEqual([]);
     expect(tagDoLink(aside, "Exigências e prazos")).toContain('aria-current="page"');
   });
 });
@@ -456,6 +467,52 @@ describe("o Apoio no Geral", () => {
   });
 });
 
+// Cadastros como grupo do Geral (10/11/2026, pedido do Kauan): era um link para
+// a última aba, e só o mouse parado mostrava as outras telas. Agora é a janela
+// ao lado, como o Apoio — no clique, no toque e na faixa de ícones também.
+describe("Cadastros no Geral", () => {
+  const FORNECEDORES = { code: "bpo_cadastros", label: "Fornecedores e sacados", href: "/fornecedores-e-sacados", setor: "BPO" };
+
+  it("Empresas e Pessoas na janela de Cadastros, acesa em qualquer tela delas", () => {
+    for (const caminho of ["/empresas", "/empresas/e1/cargos", "/pessoas", "/pessoas/p1"]) {
+      rota.atual = caminho;
+      const aside = lateral(casco(false, { telasFixadas: [] }));
+      const cadastros = botaoComJanela(aside, "Cadastros");
+      expect(cadastros.telas, caminho).toBe(2);
+      expect(cadastros.tag, caminho).toContain('aria-current="true"');
+      expect(cadastros.tag).toContain('aria-expanded="false"');
+      // As telas ficam na janela, que começa fechada.
+      expect(aside).not.toContain('href="/empresas"');
+      expect(aside).not.toContain('href="/pessoas"');
+    }
+  });
+
+  it("fora das telas de Cadastros, o grupo fica apagado", () => {
+    rota.atual = "/agenda";
+    expect(botaoComJanela(lateral(casco(false, { telasFixadas: [] })), "Cadastros").tag).not.toContain("aria-current");
+  });
+
+  it("quem vê o BPO tem Fornecedores e sacados na janela; os outros não", () => {
+    rota.atual = "/fornecedores-e-sacados";
+    const doBpo = botaoComJanela(lateral(casco(false, { telasFixadas: [], telasNavegaveis: [FORNECEDORES] })), "Cadastros");
+    expect(doBpo.telas).toBe(3);
+    expect(doBpo.tag).toContain('aria-current="true"');
+    expect(botaoComJanela(lateral(casco(false, { telasFixadas: [] })), "Cadastros").telas).toBe(2);
+  });
+
+  it("na faixa de ícones também é o botão da janela, com a contagem no nome", () => {
+    rota.atual = "/pessoas";
+    const cadastros = botaoComJanela(lateral(casco(true, { telasFixadas: [] })), "Cadastros");
+    expect(cadastros.tag).toContain('aria-label="Cadastros, 2 telas"');
+    expect(cadastros.tag).toContain('aria-current="true"');
+  });
+
+  it("escondido no Geral do setor, some do menu", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], telasDoGeral: ["transferencias", "agenda"] }));
+    expect(botoesComJanela(aside).map((b) => b.nome)).not.toContain("Cadastros");
+  });
+});
+
 // Organizar menu (05/11/2026): a ordem do super admin vale no menu, e o link
 // "Organizar menu" aparece só para ele.
 describe("a ordem do menu escolhida", () => {
@@ -467,7 +524,7 @@ describe("a ordem do menu escolhida", () => {
     { code: "societario_painel", label: "Painel", href: "/processos/painel" },
     { code: "societario_prazos", label: "Exigências e prazos", href: "/exigencias" },
   ];
-  const ordemDosGrupos = (html: string) => botoesComJanela(html).map((b) => b.nome);
+  const ordemDosGrupos = (html: string) => gruposDoSetor(html).map((b) => b.nome);
 
   it("os grupos saem na ordem escolhida", () => {
     const padrao = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc }));
@@ -518,6 +575,14 @@ describe("a ordem do menu escolhida", () => {
     expect(botaoComJanela(todas, "Apoio").telas).toBe(3);
     const semSenhas = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, apoioLigado: apoio, ordemDoMenu: { grupos: [], telas: [], ocultasDentro: { apoio: ["senhas"] } } }));
     expect(botaoComJanela(semSenhas, "Apoio").telas).toBe(2);
+  });
+
+  // Os Cadastros são grupo do Geral como o Apoio (10/11/2026): o olho vale dentro deles.
+  it("dentro de Cadastros, a tela escondida sai; sobrando uma, ela fica solta", () => {
+    const semPessoas = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, ordemDoMenu: { grupos: [], telas: [], ocultasDentro: { cadastros: ["pessoas"] } } }));
+    expect(botoesComJanela(semPessoas).map((b) => b.nome)).not.toContain("Cadastros");
+    expect(tagDoLink(semPessoas, "Empresas")).toContain('href="/empresas"');
+    expect(semPessoas).not.toContain('href="/pessoas"');
   });
 
   it("a tela escondida pelo olho sai do menu do setor", () => {

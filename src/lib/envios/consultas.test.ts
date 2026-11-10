@@ -10,8 +10,15 @@ const clientDocumentRecipient = { findMany: vi.fn(), create: vi.fn(), update: vi
 const clientDocumentView = { create: vi.fn() };
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ clientDocument, clientDocumentRecipient, clientDocumentView }) }));
 
-const { abrirEnvioDoCliente, aceitarEnvioDoCliente, enviosAguardandoAceite, enviosDoCliente, linhaDoClienteNoEnvio, envioDoCliente } =
-  await import("./consultas");
+const {
+  abrirEnvioDoCliente,
+  aceitarEnvioDoCliente,
+  enviosAguardandoAceite,
+  enviosDoCliente,
+  linhaDoClienteNoEnvio,
+  listarEnviosDaEquipe,
+  envioDoCliente,
+} = await import("./consultas");
 
 const ESCOPO = { tenantId: "escritorio-a", companyIds: ["empresa-1", "empresa-2"] };
 const PROVA = { ipAddress: "200.1.2.3", userAgent: "Navegador" };
