@@ -26,7 +26,7 @@ import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffA
 import { assuntoDaTransferencia, SEM_ASSUNTO } from "@/lib/handoffs";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
-import { boardPath } from "@/lib/kanbanPaths";
+import { enderecoDaTarefa, enderecoDe } from "@/lib/enderecoCurto";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 import { HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
 import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
@@ -164,6 +164,7 @@ export default async function HomePage() {
       where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
       select: {
         id: true,
+        number: true,
         entityId: true,
         entityType: true,
         title: true,
@@ -182,7 +183,7 @@ export default async function HomePage() {
       include: {
         user: { select: { id: true, name: true } },
         pipelineItem: {
-          select: { id: true, pipelineId: true, entityId: true, entityType: true, pipeline: { select: { sectorCode: true } } },
+          select: { id: true, number: true, pipelineId: true, entityId: true, entityType: true, pipeline: { select: { sectorCode: true } } },
         },
       },
     }),
@@ -281,6 +282,7 @@ export default async function HomePage() {
     pipelineId: string;
     pipelineSectorCode: string;
     pipelineItemId: string;
+    pipelineItemNumber: number;
     label: string;
     count: number;
     createdAt: Date;
@@ -298,6 +300,7 @@ export default async function HomePage() {
         pipelineId: a.pipelineItem.pipelineId,
         pipelineSectorCode: a.pipelineItem.pipeline.sectorCode,
         pipelineItemId: a.pipelineItem.id,
+        pipelineItemNumber: a.pipelineItem.number,
         label: ACTIVITY_LABEL[a.type] ?? "atualizou",
         count: 1,
         createdAt: a.createdAt,
@@ -562,7 +565,7 @@ export default async function HomePage() {
               return (
                 <Link
                   key={item.id}
-                  href={`${boardPath({ id: item.pipelineId })}/itens/${item.id}`}
+                  href={enderecoDaTarefa(item.pipelineId, item)}
                   className="flex items-center justify-between gap-3 py-2 group"
                 >
                   <span className="text-body text-fg group-hover:text-brand transition-colors truncate min-w-0">
@@ -615,7 +618,7 @@ export default async function HomePage() {
                       {formatRelativeTime(h.createdAt)}
                     </span>
                   </p>
-                  <Button href={`/transferencias/${h.id}`} variant="secondary" size="xs" className="flex-shrink-0">
+                  <Button href={enderecoDe("transferencia", h)} variant="secondary" size="xs" className="flex-shrink-0">
                     Abrir
                   </Button>
                 </div>
@@ -686,7 +689,7 @@ export default async function HomePage() {
         ) : (
           <div className="space-y-3">
             {activityGroups.map((g) => (
-              <Link key={g.id} href={`${boardPath({ id: g.pipelineId })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
+              <Link key={g.id} href={enderecoDaTarefa(g.pipelineId, { id: g.pipelineItemId, number: g.pipelineItemNumber })} className="flex items-start gap-2.5 group">
                 <AvatarImage src={null} name={g.userName} size={24} bordered={false} fontSize={11} className="mt-0.5" />
                 <div className="min-w-0">
                   <p className="text-body text-fg-secondary leading-snug">

@@ -20,6 +20,8 @@ import type { Prioridade } from "./prioridade";
 
 export type LinhaDaFila = {
   id: string;
+  /** O número do processo: o link vai pelo endereço curto, /processos/processo-12 (10/11/2026). */
+  numero?: number;
   tipoNome: string;
   empresaId: string;
   empresaNome: string;
@@ -156,6 +158,7 @@ export async function listarFila(
     },
     select: {
       id: true,
+      number: true,
       startedAt: true,
       concludedAt: true,
       status: true,
@@ -198,6 +201,7 @@ export async function listarFila(
 
     return {
       id: p.id,
+      numero: p.number,
       tipoNome: p.type.name,
       empresaId: p.company.id,
       empresaNome: nomeExibicao(p.company),

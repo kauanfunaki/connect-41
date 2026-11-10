@@ -62,7 +62,7 @@ export default async function PessoasPage({
       orderBy: { name: "asc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { currentCompany: { select: { id: true, name: true } }, linkedUser: { select: { id: true, name: true } } },
+      include: { currentCompany: { select: { id: true, number: true, name: true } }, linkedUser: { select: { id: true, name: true } } },
     }),
     prisma.person.count({ where }),
   ]);
@@ -139,6 +139,7 @@ export default async function PessoasPage({
         <PessoasTable
           people={people.map((p) => ({
             id: p.id,
+            number: p.number,
             name: p.name,
             active: p.active,
             cpf: p.cpf,
@@ -146,6 +147,7 @@ export default async function PessoasPage({
             photoUrl: p.photoUrl,
             companyName: p.currentCompany?.name ?? null,
             companyId: p.currentCompany?.id ?? null,
+            companyNumber: p.currentCompany?.number ?? null,
             createdAtLabel: formatInstantDate(p.createdAt),
             linkedUserName: p.linkedUser?.name ?? null,
           }))}

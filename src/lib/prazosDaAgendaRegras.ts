@@ -9,6 +9,7 @@ import { ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
 import { riscoDeMulta } from "@/lib/obrigacoes/riscoDeMulta";
 import type { Feriados } from "@/lib/obrigacoes/calendario";
 import { fonteDoTipo, tipoAtrasa, type FonteDaAgenda, type TipoDePrazo } from "@/lib/fontesDaAgenda";
+import { enderecoDaTarefa } from "@/lib/enderecoCurto";
 
 export type { TipoDePrazo, FonteDaAgenda };
 
@@ -176,6 +177,8 @@ export type ObrigacaoParaAgenda = {
   /** A atividade do quadro: é ela que se abre, e é o escopo dela que decide quem vê. */
   pipelineId: string;
   itemId: string;
+  /** O número da atividade: o link vai pelo endereço curto, tarefa-77 (10/11/2026). */
+  itemNumero?: number;
 };
 
 /**
@@ -192,7 +195,7 @@ export function prazoDaObrigacao(o: ObrigacaoParaAgenda, hoje: string, feriados:
     titulo: o.modelo,
     detalhe: [o.empresa, `prazo interno ${diaMes(o.prazoInterno)}`].join(" · "),
     setor: o.setor,
-    href: `/kanban/${o.pipelineId}/itens/${o.itemId}`,
+    href: enderecoDaTarefa(o.pipelineId, { id: o.itemId, number: o.itemNumero }),
     grupo: o.modelo,
     atrasada: estaAtrasado("obrigacao", o.dataLegal, hoje),
     riscoDeMulta: riscoDeMulta(o.dataLegal, hoje, feriados) !== null,

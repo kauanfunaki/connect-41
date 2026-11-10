@@ -235,6 +235,7 @@ export default async function EmpresasPage({
         <EmpresasTable
           companies={companies.map((c) => ({
             id: c.id,
+            number: c.number,
             name: c.name,
             displayName: c.displayName,
             externalId: c.externalId,

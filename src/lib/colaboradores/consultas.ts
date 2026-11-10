@@ -16,6 +16,8 @@ const DE_CLIENTE = { type: PersonType.COLABORADOR, isInternal: false } as const;
 /** O que a linha da tabela mostra. */
 const CAMPOS_DA_LINHA = {
   id: true,
+  // O do endereço curto da ficha, /pessoas/pessoa-12 (10/11/2026).
+  number: true,
   name: true,
   active: true,
   cpf: true,
@@ -24,7 +26,7 @@ const CAMPOS_DA_LINHA = {
   admissionDate: true,
   employmentStatus: true,
   cargo: { select: { name: true } },
-  currentCompany: { select: { id: true, name: true, displayName: true } },
+  currentCompany: { select: { id: true, number: true, name: true, displayName: true } },
 } as const;
 
 async function base(ctx: AuthContext) {

@@ -13,6 +13,7 @@ import { mensagemComPropostas } from "@/lib/ia/chat/conversas";
 import { lerPropostas } from "@/lib/ia/chat/regras";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { modelosPorUso } from "@/lib/handoffTemplates";
+import { endereco } from "@/lib/enderecoCurto";
 
 export default async function NovoHandoffPage({
   searchParams,
@@ -110,12 +111,13 @@ export default async function NovoHandoffPage({
     const scope = entityType === "COMPANY" ? await scopedCompanyWhere(ctx) : await scopedPersonWhere(ctx);
     const entity =
       entityType === "COMPANY"
-        ? await prisma.company.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true, displayName: true, cnpj: true } })
-        : await prisma.person.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true } });
+        ? await prisma.company.findFirst({ where: { id: entityId, ...scope }, select: { id: true, number: true, name: true, displayName: true, cnpj: true } })
+        : await prisma.person.findFirst({ where: { id: entityId, ...scope }, select: { id: true, number: true, name: true } });
 
     if (!entity) notFound();
 
-    const backHref = entityType === "COMPANY" ? `/empresas/${entityId}` : `/pessoas/${entityId}`;
+    // A volta para a ficha pelo endereço curto (10/11/2026, pedido do Kauan).
+    const backHref = endereco(entityType === "COMPANY" ? "empresa" : "pessoa", entity.number);
     const entityCnpj: string | null = "cnpj" in entity ? (entity.cnpj as string | null) : null;
     const apelido = "displayName" in entity ? (entity.displayName as string | null)?.trim() : null;
     const entityName = apelido || entity.name;
