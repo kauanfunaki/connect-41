@@ -87,7 +87,9 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
     return { ok: true, link };
   }
 
-  let r: { error: string } | null;
+  // `link`: o que a aplicação criou e o cartão aponta — o processo aberto pela
+  // Ceci do Societário (09/11/2026).
+  let r: { error: string } | { link: string } | null;
   if (m.conversation.agentCode === "assistente_do_societario") {
     r = await aplicarPropostaDoSocietario({ ferramenta: p.ferramenta, descricao: p.descricao, argumentos: p.argumentos });
   } else if (m.conversation.agentCode === "assistente_do_recrutamento") {
@@ -106,10 +108,11 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
   } else {
     r = { error: "Neste setor, a Ceci não aplica propostas." };
   }
-  if (r) return r;
+  if (r && "error" in r) return r;
 
-  await marcarPropostaAplicada(m.id, propostas, indice);
-  return { ok: true };
+  const link = r?.link;
+  await marcarPropostaAplicada(m.id, propostas, indice, link);
+  return { ok: true, ...(link ? { link } : {}) };
 }
 
 /** O "Não" do cartão de decisão (02/10/2026): grava `recusada` na proposta. */

@@ -1,8 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { gravarMensagem, processoNoEscopo } from "@/lib/societario/conversa";
-import { avisarClienteDoProcesso } from "@/lib/societario/avisoAoCliente";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, podeExcluir } from "@/lib/auth/context";
@@ -35,8 +33,10 @@ import {
 } from "@/lib/societario/arquivamento";
 import { salvarGuia, lerGuia } from "@/lib/societario/guias";
 import { sendTaxaAoClienteEmail } from "@/lib/email/sendMail";
-import { setoresDoModulo } from "@/lib/modules";
+import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { lerFormularioDaTaxa } from "@/lib/societario/taxa-form";
+import { abrirProcessoNoServidor } from "@/lib/societario/aberturaServidor";
+import { lerAberturaParaAplicar, MAX_PEDIDO } from "@/lib/societario/abertura";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -58,144 +58,81 @@ async function contexto() {
 // de protocolo passar pelo mesmo ponto.
 
 /**
- * Abre um processo a partir do roteiro publicado do tipo.
+ * Abre um processo pela abertura guiada (`/processos/novo`).
  *
- * As etapas e os itens de checklist são instanciados **na abertura**, e não sob
- * demanda: a versão do roteiro fica congelada no `templateId`, e criar etapa
- * depois faria um processo antigo herdar um roteiro novo no meio do caminho.
+ * A gravação é `abrirProcessoNoServidor` (09/11/2026), a mesma da proposta da
+ * Ceci; aqui fica só o que é da tela: ler o formulário e ir para o processo.
  */
 export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promise<ProcessoState> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
 
-  const companyId = (form.get("companyId") as string)?.trim();
-  const typeId = (form.get("typeId") as string)?.trim();
-  if (!companyId) return { error: "Escolha a empresa." };
-  if (!typeId) return { error: "Escolha o tipo de processo." };
-
-  // Responsável só pode ser alguém do Societário (ou admin). Sem o campo no
-  // formulário, fica com quem abriu — que é como era antes de o campo existir.
-  const responsaveis = await getSectorUsers(ctx.tenantId, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR);
-  const validos = new Set(responsaveis.map((r) => r.id));
+  // Sem o campo de responsável no formulário, fica com quem abriu — que é como
+  // era antes de o campo existir.
   const informouResponsavel = form.has("ownerUserId");
-  if (!informouResponsavel && ctx.userId) validos.add(ctx.userId);
-  const lido = lerDadosDoProcesso(
+  const pedido = String(form.get("pedido") ?? "").trim().slice(0, MAX_PEDIDO);
+  const r = await abrirProcessoNoServidor(
+    { tenantId: ctx.tenantId, userId: ctx.userId },
     {
-      titulo: form.get("title"),
-      responsavelId: informouResponsavel ? form.get("ownerUserId") : (ctx.userId ?? ""),
-      prioridade: form.get("priority"),
-      prazoCombinado: form.get("dueAt"),
-    },
-    validos
-  );
-  if (!lido.ok) return { error: lido.erro };
-  const dados = lido.dados;
-  // Abertura guiada (04/11/2026): os itens do checklist que o escritório já
-  // tem nascem marcados, e o pedido do resto vai ao cliente pelo portal.
-  const jaTemos = new Set(form.getAll("jaTemos").map(String).filter((v) => v.length > 0 && v.length <= 64));
-  const pedido = String(form.get("pedido") ?? "").trim().slice(0, 5000);
-  const pedirAoCliente = form.get("pedirAoCliente") === "1" && pedido.length > 0;
-
-  const prisma = getPrisma();
-
-  const template = await prisma.processTemplate.findFirst({
-    where: { tenantId: ctx.tenantId, typeId, published: true },
-    orderBy: { version: "desc" },
-    select: {
-      id: true,
-      type: { select: { name: true } },
-      steps: {
-        select: { id: true, items: { select: { id: true } } },
-        orderBy: { position: "asc" },
+      empresaId: String(form.get("companyId") ?? "").trim(),
+      tipoId: String(form.get("typeId") ?? "").trim(),
+      campos: {
+        titulo: form.get("title"),
+        responsavelId: informouResponsavel ? form.get("ownerUserId") : (ctx.userId ?? ""),
+        prioridade: form.get("priority"),
+        prazoCombinado: form.get("dueAt"),
       },
-    },
-  });
-  if (!template) {
-    return { error: "Este tipo de processo não tem roteiro publicado. Configure antes de abrir." };
-  }
-  if (template.steps.length === 0) {
-    return { error: "O roteiro publicado não tem etapas." };
-  }
-
-  // A empresa precisa ser do tenant — sem esta conferência, um id de outro
-  // cliente abriria processo aqui dentro.
-  const empresa = await prisma.company.findFirst({
-    where: { id: companyId, tenantId: ctx.tenantId },
-    select: { id: true },
-  });
-  if (!empresa) return { error: "Empresa não encontrada." };
-
-  let processoId: string;
-  try {
-    processoId = await prisma.$transaction(
-      async (tx) => {
-        const processo = await tx.process.create({
-          data: {
-            tenantId: ctx.tenantId!,
-            companyId,
-            typeId,
-            templateId: template.id,
-            ownerUserId: dados.responsavelId,
-            title: dados.titulo,
-            priority: dados.prioridade,
-            dueAt: dados.prazoCombinado,
-          },
-          select: { id: true },
-        });
-
-        for (const passo of template.steps) {
-          const etapa = await tx.processStep.create({
-            data: {
-              tenantId: ctx.tenantId!,
-              processId: processo.id,
-              templateStepId: passo.id,
-            },
-            select: { id: true },
-          });
-          for (const item of passo.items) {
-            const temos = jaTemos.has(item.id);
-            await tx.processChecklistItem.create({
-              data: {
-                tenantId: ctx.tenantId!,
-                stepId: etapa.id,
-                templateItemId: item.id,
-                ...(temos ? { done: true, doneAt: new Date() } : {}),
-              },
-            });
-          }
-        }
-        return processo.id;
-      },
-      { timeout: 60_000, maxWait: 30_000 }
-    );
-  } catch (err) {
-    console.error("[abrirProcesso]", err);
-    return { error: "Erro ao abrir o processo." };
-  }
-
-  await logAudit({
-    tenantId: ctx.tenantId,
-    userId: ctx.userId,
-    action: "process.open",
-    entityType: "Process",
-    entityId: processoId,
-    metadata: { tipo: template.type.name, companyId, prioridade: dados.prioridade, jaTemos: jaTemos.size, pedidoAoCliente: pedirAoCliente },
-  });
-
-  // O pedido ao cliente vai na conversa do processo, que ele vê no portal e
-  // recebe por e-mail. Best-effort: o processo já está aberto.
-  if (pedirAoCliente) {
-    try {
-      await gravarMensagem({ tenantId: ctx.tenantId, processId: processoId, autor: { userId: ctx.userId || null }, corpo: pedido, anexos: [] });
-      const proc = await processoNoEscopo({ tenantId: ctx.tenantId, companyIds: null }, processoId);
-      if (proc) await avisarClienteDoProcesso(ctx.tenantId, proc, "mensagem");
-    } catch (err) {
-      console.error("[abrirProcesso] pedido ao cliente", processoId, err);
+      aceitarQuemAbre: !informouResponsavel,
+      jaTemos: form.getAll("jaTemos").map(String),
+      pedidoAoCliente: form.get("pedirAoCliente") === "1" && pedido.length > 0 ? pedido : null,
+      origem: { tipo: "tela" },
     }
-  }
+  );
+  if (!r.ok) return { error: r.erro };
 
   revalidatePath("/processos");
-  redirect(`/processos/${processoId}`);
+  redirect(`/processos/${r.processoId}`);
+}
+
+/**
+ * Abre o processo que a Ceci propôs no chat, quando a pessoa aprova o cartão
+ * (09/11/2026).
+ *
+ * As mesmas portas da tela: o setor que opera o módulo (`contexto`, o mesmo
+ * da abertura guiada) e o módulo ligado (o que a página `/processos/novo`
+ * confere). Os argumentos são lidos de novo, e a gravação refaz tenant,
+ * empresa, tipo, roteiro e responsável — a proposta não vale como prova de
+ * nada. Devolve o id para o cartão apontar o processo; não redireciona, porque
+ * quem chama é o chat.
+ */
+export async function abrirProcessoPelaCeci(argumentos: unknown): Promise<{ error: string } | { processoId: string }> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Os processos do Societário estão desligados neste escritório." };
+
+  const lido = lerAberturaParaAplicar(argumentos);
+  // As propostas chegam conferidas (`prepararAbertura`); a que não passa aqui
+  // veio torta de fora do chat, e o detalhe técnico não ajuda quem clicou.
+  if (!lido.ok) return { error: "A proposta ficou incompleta. Peça à Ceci para montar de novo." };
+  const a = lido.dados;
+
+  const r = await abrirProcessoNoServidor(
+    { tenantId: ctx.tenantId, userId: ctx.userId },
+    {
+      empresaId: a.empresaId,
+      tipoId: a.tipoId,
+      campos: { titulo: a.titulo, responsavelId: a.responsavelId, prioridade: a.prioridade, prazoCombinado: a.prazo },
+      aceitarQuemAbre: false,
+      jaTemos: a.jaTemos,
+      pedidoAoCliente: a.pedidoAoCliente || null,
+      origem: { tipo: "ceci", roteiroId: a.roteiroId ?? null },
+    }
+  );
+  if (!r.ok) return { error: r.erro };
+
+  revalidatePath("/processos");
+  revalidatePath("/processos/kanban");
+  return { processoId: r.processoId };
 }
 
 /** Carrega a etapa conferindo o tenant. Devolve null quando não é de quem pediu. */

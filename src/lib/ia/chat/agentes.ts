@@ -470,7 +470,9 @@ export async function contextoParaOAgente(
   if (!tela || !ctx.tenantId) return null;
   const tenantId = ctx.tenantId;
   if (tela.tipo === "empresa" || tela.tipo === "documento_fiscal") {
-    if (tela.tipo === "empresa" && !["assistente_do_fiscal", "assistente_do_bpo", "assistente_do_dp"].includes(agentCode)) return null;
+    // O Societário entrou em 09/11/2026: "abrir alteração para esta empresa",
+    // com a ficha aberta, é a empresa da tela.
+    if (tela.tipo === "empresa" && !["assistente_do_fiscal", "assistente_do_bpo", "assistente_do_dp", "assistente_do_societario"].includes(agentCode)) return null;
     if (tela.tipo === "documento_fiscal" && agentCode !== "assistente_do_fiscal") return null;
     if (tela.tipo === "empresa") {
       const e = await getPrisma().company.findFirst({ where: { id: tela.id, tenantId }, select: { id: true, name: true, displayName: true } });

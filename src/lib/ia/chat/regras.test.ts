@@ -11,6 +11,7 @@ import {
   chamadoDaProposta,
   detalhesDaProposta,
   rotulosDaDecisao,
+  rotulosDoCriado,
 } from "./regras";
 import { normalizarHistorico, MAX_TURNOS_DO_HISTORICO } from "@/lib/ia/laco";
 
@@ -157,7 +158,7 @@ describe("chamado proposto pela Ceci", () => {
     expect(detalhesDaProposta(p)).toEqual([
       { rotulo: "Categoria", texto: "Desenvolvimento › Bug | Correção" },
       { rotulo: "Título", texto: "Erro ao gerar a DRE" },
-      { rotulo: "Descrição", texto: "A DRE de outubro não abre.\nAparece tela branca." },
+      { rotulo: "Descrição", texto: "A DRE de outubro não abre.\nAparece tela branca.", longo: true },
       { rotulo: "Setor", texto: "BPO" },
       { rotulo: "Prioridade", texto: "Alta" },
       { rotulo: "Tela", texto: "DRE" },
@@ -175,5 +176,58 @@ describe("chamado proposto pela Ceci", () => {
     ]);
     expect(ok!.link).toBe("/chamados/abc");
     expect(fora!.link).toBeUndefined();
+  });
+});
+
+describe("processo proposto pela Ceci (09/11/2026)", () => {
+  const argumentos = {
+    tipoId: "t",
+    empresaId: "e",
+    responsavelId: "",
+    titulo: "",
+    prioridade: "URGENTE",
+    prazo: "",
+    jaTemos: [],
+    pedidoAoCliente: "Olá!",
+    roteiroId: "r",
+    resumo: {
+      tipo: "Constituição",
+      versao: 1,
+      etapas: 4,
+      empresa: "Transportes Exemplo",
+      documento: null,
+      responsavel: null,
+      jaTemos: [],
+      aPedir: ["Contrato social"],
+      emAndamento: 0,
+    },
+  };
+  const p = { ferramenta: "propor_abrir_processo", descricao: "", argumentos };
+
+  it("o cartão diz o tipo e a empresa, com os botões de abrir", () => {
+    expect(descreverProposta(p)).toBe("Abrir processo de Constituição para Transportes Exemplo");
+    expect(rotulosDaDecisao("propor_abrir_processo")).toEqual({ sim: "Abrir processo", nao: "Não abrir" });
+    expect(detalhesDaProposta(p).map((d) => d.rotulo)).toEqual(["Empresa", "Tipo", "Responsável", "Prioridade", "Prazo combinado", "Checklist", "Pedido ao cliente"]);
+    expect(detalhesDaProposta(p).find((d) => d.rotulo === "Prioridade")!.texto).toBe("Urgente");
+  });
+
+  it("depois do sim, o cartão aponta o processo (e o chamado, o chamado)", () => {
+    expect(rotulosDoCriado("propor_abrir_processo")).toEqual({ feito: "Processo aberto", ver: "Ver processo" });
+    expect(rotulosDoCriado("propor_abrir_chamado")).toEqual({ feito: "Chamado aberto", ver: "Ver chamado" });
+    expect(rotulosDoCriado("propor_concluir_etapa").feito).toBe("Aplicado");
+    const [aplicada] = lerPropostas([{ ...p, aplicada: true, link: "/processos/abc" }]);
+    expect(aplicada!.link).toBe("/processos/abc");
+  });
+
+  it("o passo que aparece enquanto ela monta", () => {
+    expect(textoDoPasso("roteiro_do_tipo")).toMatch(/roteiro/);
+    expect(textoDoPasso("propor_abrir_processo")).toBe("Preparando o processo…");
+  });
+
+  it("a ficha da empresa no Societário também é a empresa da tela", () => {
+    const v = "3f1c2a4b-1111-4222-8333-444455556666";
+    expect(contextoDaTela(`/processos/empresas/${v}`)).toEqual({ tipo: "empresa", id: v });
+    expect(contextoDaTela(`/processos/${v}`)).toEqual({ tipo: "processo", id: v });
+    expect(contextoDaTela("/processos/empresas")).toEqual({ tipo: "tela", caminho: "/processos/empresas" });
   });
 });

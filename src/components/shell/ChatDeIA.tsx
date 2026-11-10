@@ -49,12 +49,13 @@ import {
 import { formatInstantDateTime } from "@/lib/format";
 import type { AgenteDoChat } from "@/lib/ia/chat/agentes";
 import type { ConversaNaLista, MensagemNaTela } from "@/lib/ia/chat/conversas";
+import { DetalhesDaProposta } from "@/components/ia/DetalhesDaProposta";
 import {
   descreverProposta,
-  detalhesDaProposta,
   MOTIVOS_DO_NAO,
   opcoesDeRespostaRapida,
   rotulosDaDecisao,
+  rotulosDoCriado,
   SUGERIR_RESPOSTAS,
   type Avaliacao,
   type MotivoDoNao,
@@ -1144,8 +1145,8 @@ function CartoesDeDecisao({
         return (
           <div key={i} className={`rounded-lg border px-3 py-2.5 ${p.aplicada ? "border-success/40 bg-success-bg/40" : p.recusada ? "border-border bg-surface-2/40" : "border-border bg-surface"}`}>
             <p className={`text-ui ${p.recusada ? "text-fg-muted line-through" : "text-fg"}`}>{descreverProposta(p)}</p>
-            {/* O chamado (03/11/2026): o que a pessoa confirma antes do sim. */}
-            <DetalhesDaProposta p={p} />
+            {/* O chamado (03/11/2026) e o processo (09/11/2026): o que a pessoa confirma antes do sim. */}
+            <DetalhesDaProposta p={p} apagado={p.recusada} />
             <div className="mt-2 flex items-center justify-end gap-2">
               {p.ferramenta === "abrir_transferencia" ? (
                 // Não aplica daqui: abre o formulário preenchido, e a pessoa
@@ -1156,11 +1157,11 @@ function CartoesDeDecisao({
               ) : p.aplicada ? (
                 <>
                   <span className="inline-flex items-center gap-1 text-fs-2 font-medium text-success-fg">
-                    <Check size={13} /> {p.link ? "Chamado aberto" : "Aplicado"}
+                    <Check size={13} /> {p.link ? rotulosDoCriado(p.ferramenta).feito : "Aplicado"}
                   </span>
                   {p.link && (
                     <Button size="xs" variant="secondary" href={p.link}>
-                      Ver chamado
+                      {rotulosDoCriado(p.ferramenta).ver}
                     </Button>
                   )}
                 </>
@@ -1182,22 +1183,6 @@ function CartoesDeDecisao({
       })}
       <p className="text-micro text-fg-muted">Precisa de outra opção? É só dizer.</p>
     </div>
-  );
-}
-
-/** As linhas do cartão de chamado: categoria, título, descrição, setor e prioridade. */
-function DetalhesDaProposta({ p }: { p: MensagemNaTela["propostas"][number] }) {
-  const detalhes = detalhesDaProposta(p);
-  if (detalhes.length === 0) return null;
-  return (
-    <dl className={`mt-2 space-y-1.5 border-t border-border pt-2 ${p.recusada ? "opacity-60" : ""}`}>
-      {detalhes.map((d) => (
-        <div key={d.rotulo}>
-          <dt className="text-micro text-fg-muted">{d.rotulo}</dt>
-          <dd className={`text-fs-2 text-fg ${d.rotulo === "Descrição" ? "max-h-40 overflow-y-auto whitespace-pre-line" : "break-words"}`}>{d.texto}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }
 

@@ -3,7 +3,8 @@
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { conversarComAgente } from "@/lib/ai";
 import type { PropostaDeEscrita } from "@/lib/ia/ferramentas";
-import { concluirEtapa, dispensarEtapa } from "./actions";
+import { abrirProcessoPelaCeci, concluirEtapa, dispensarEtapa } from "./actions";
+import { ABRIR_PROCESSO } from "@/lib/societario/abertura";
 import { setoresDoModulo } from "@/lib/modules";
 import { SISTEMA_DO_SOCIETARIO as SISTEMA } from "@/lib/societario/assistente";
 
@@ -54,11 +55,20 @@ export async function perguntarAoSocietario(pergunta: string): Promise<RespostaD
  * `concluirEtapa` e `dispensarEtapa` refazem tudo por conta própria — tenant,
  * setor, e a regra de que etapa de órgão não fecha à mão. Se esta função
  * gravasse direto, a fronteira seria só um diálogo de confirmação.
+ *
+ * Abrir processo (09/11/2026) vai por `abrirProcessoPelaCeci`, a mesma
+ * gravação da abertura guiada; devolve o link do processo, para o cartão
+ * apontar.
  */
 export async function aplicarPropostaDoSocietario(
   proposta: PropostaDeEscrita
-): Promise<{ error: string } | null> {
+): Promise<{ error: string } | { link: string } | null> {
   const args = proposta.argumentos ?? {};
+  if (proposta.ferramenta === ABRIR_PROCESSO) {
+    const r = await abrirProcessoPelaCeci(args);
+    return "error" in r ? r : { link: `/processos/${r.processoId}` };
+  }
+
   const stepId = typeof args.stepId === "string" ? args.stepId.trim() : "";
   if (!stepId) return { error: "Proposta sem etapa." };
 

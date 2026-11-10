@@ -227,6 +227,70 @@ describe("a fronteira da escrita", () => {
     expect(r.propostas).toHaveLength(1);
   });
 
+  // A conferência de antes da proposta (09/11/2026, abrir processo pela Ceci):
+  // recusa volta ao modelo, aceite troca os argumentos pelos conferidos — e em
+  // nenhum dos dois casos a escrita executa.
+  it("escrita com `preparar`: recusa volta ao modelo como erro, sem proposta", async () => {
+    const preparar = vi.fn(async () => ({ erro: "empresa não encontrada" }));
+    FERRAMENTAS["criar_tarefa"] = {
+      def: { nome: "criar_tarefa", descricao: "escrita de teste", parametros: { type: "object" }, natureza: "escrita" },
+      preparar,
+    };
+    const vistos: string[] = [];
+    let i = 0;
+    const respostas = [
+      resposta([{ type: "tool_use", id: "t1", name: "criar_tarefa", input: { empresaId: "x" } }]),
+      resposta([{ type: "text", text: "qual empresa?" }]),
+    ];
+
+    const r = await rodar(agente(["criar_tarefa"]), async (messages) => {
+      vistos.push(JSON.stringify(messages));
+      return respostas[Math.min(i++, 1)]!;
+    });
+
+    expect(preparar).toHaveBeenCalledWith({ empresaId: "x" }, { tenantId: "t1", userId: "u1", escopo: { vagaId: "v1" } });
+    expect(r.propostas).toEqual([]);
+    expect(vistos[1]).toContain("empresa não encontrada");
+    expect(vistos[1]).toContain("nada foi registrado");
+    expect(vistos[1]).not.toContain(AVISO_DE_PROPOSTA);
+  });
+
+  it("escrita com `preparar`: a proposta guarda os argumentos conferidos, não os do modelo", async () => {
+    FERRAMENTAS["criar_tarefa"] = {
+      def: { nome: "criar_tarefa", descricao: "escrita de teste", parametros: { type: "object" }, natureza: "escrita" },
+      preparar: async (args) => ({ argumentos: { ...args, resumo: { empresa: "ACME" } } }),
+    };
+    const r = await rodar(
+      agente(["criar_tarefa"]),
+      roteiro(
+        resposta([{ type: "tool_use", id: "t1", name: "criar_tarefa", input: { empresaId: "e1" } }]),
+        resposta([{ type: "text", text: "fim" }])
+      )
+    );
+    expect(r.propostas).toEqual([
+      { ferramenta: "criar_tarefa", descricao: "escrita de teste", argumentos: { empresaId: "e1", resumo: { empresa: "ACME" } } },
+    ]);
+  });
+
+  it("escrita com `preparar` que explode não derruba a conversa nem vira proposta", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    FERRAMENTAS["criar_tarefa"] = {
+      def: { nome: "criar_tarefa", descricao: "escrita de teste", parametros: { type: "object" }, natureza: "escrita" },
+      preparar: async () => {
+        throw new Error("banco fora do ar");
+      },
+    };
+    const r = await rodar(
+      agente(["criar_tarefa"]),
+      roteiro(
+        resposta([{ type: "tool_use", id: "t1", name: "criar_tarefa", input: {} }]),
+        resposta([{ type: "text", text: "não consegui preparar" }])
+      )
+    );
+    expect(r.valor).toBe("não consegui preparar");
+    expect(r.propostas).toEqual([]);
+  });
+
   // Mesmo um agente marcado como `escreve` no catálogo não grava pelo laço:
   // a fronteira é estrutural, não uma flag.
   it("agente marcado como escritor também só propõe", async () => {

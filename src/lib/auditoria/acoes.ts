@@ -355,6 +355,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
 
   // ── Societário ─────────────────────────────────────────────────────────────
   "process.open": c("abriu o processo"),
+  // A proposta da Ceci no chat, aprovada pela pessoa (09/11/2026).
+  "process.open_ceci": c("aprovou a proposta da Ceci e abriu o processo"),
   "process.update": e("editou o processo"),
   "process.protocol": e("registrou o protocolo do processo"),
   "process.requirement": e("registrou uma exigência no processo"),

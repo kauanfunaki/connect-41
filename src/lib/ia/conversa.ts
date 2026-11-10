@@ -201,7 +201,23 @@ async function atenderPedido(
   // gravado — ver o cabeçalho de `ferramentas.ts`. A única exceção é o
   // `registro` que está em `REGISTROS_AUTOMATICOS`.
   if (viraProposta(fdef, executar) || !executar) {
-    propostas.push({ ferramenta: fdef.nome, descricao: fdef.descricao, argumentos });
+    // A conferência de antes da proposta (`preparar`, 09/11/2026): só lê, e a
+    // recusa volta ao modelo como qualquer erro de ferramenta.
+    let argumentosDaProposta = argumentos;
+    const preparar = veredito.ferramenta.preparar;
+    if (preparar) {
+      try {
+        const preparada = await preparar(argumentos, ctx);
+        if ("erro" in preparada) {
+          return { id, erro: true, conteudo: resultadoParaOModelo(`Proposta recusada, nada foi registrado: ${preparada.erro}`) };
+        }
+        argumentosDaProposta = preparada.argumentos;
+      } catch (err) {
+        console.error("[ia] conferência da proposta falhou", fdef.nome, err);
+        return { id, erro: true, conteudo: resultadoParaOModelo("Falhou ao conferir a proposta; nada foi registrado. Tente de novo.") };
+      }
+    }
+    propostas.push({ ferramenta: fdef.nome, descricao: fdef.descricao, argumentos: argumentosDaProposta });
     return { id, erro: false, conteudo: AVISO_DE_PROPOSTA };
   }
 
