@@ -21,6 +21,7 @@ import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import type { AuthContext } from "@/lib/auth/context";
 import { scopedHandoffWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
 import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffAbas";
+import { SITUACOES_COM_O_SETOR } from "@/lib/handoffs";
 import { getTenantModuleStates } from "@/lib/modules";
 import { getActiveSectors } from "@/lib/sectors";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
@@ -179,11 +180,14 @@ const transferenciasDaCaixa = cache((ctx: AuthContext) =>
   })
 );
 
-/** O que chegou para um setor e ele ainda não finalizou (a aba "Para o meu setor" com aquele setor). */
+/**
+ * O que chegou para um setor e está com ele — nova ou resolvendo; a devolvida
+ * está com quem pediu (a regra da aba "Para o meu setor", 10/11/2026).
+ */
 const transferenciasParaOSetor = cache((ctx: AuthContext, setor: string) =>
   tentar(`transferências para ${setor}`, () =>
     getPrisma().handoff.count({
-      where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { sectorCode: setor, status: { not: "DONE" } } } }] },
+      where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { sectorCode: setor, status: { in: SITUACOES_COM_O_SETOR } } } }] },
     })
   )
 );
