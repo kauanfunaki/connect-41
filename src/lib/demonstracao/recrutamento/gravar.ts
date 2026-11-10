@@ -8,6 +8,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
+import { numerosEmSequencia, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { camposDoRegime } from "@/lib/taxRegime";
 import { scoreQuiz } from "@/lib/quiz";
 import { DOMINIO_FICTICIO } from "./documentos";
@@ -114,8 +115,11 @@ export async function gravarDemonstracao(
 
   // Sem Cliente desde 15/10/2026 (etapa 3 da saída do Cliente): até aqui cada
   // empresa ganhava um grupo de cliente com o mesmo nome.
+  // O número de cada empresa e pessoa no escritório, em sequência, o do
+  // endereço curto (10/11/2026, pedido do Kauan). A trava do escritório fica
+  // com esta transação até o fim.
   await tx.company.createMany({
-    data: plano.empresas.map((e) => ({
+    data: numerosEmSequencia(await proximoNumero(tx, "empresa", tenantId), plano.empresas.map((e) => ({
       id: get(empresa, e.chave),
       tenantId,
       name: e.name,
@@ -133,7 +137,7 @@ export async function gravarDemonstracao(
       // ACTIVE: o seletor de empresa (Colaboradores de clientes) só lista as ativas.
       status: "ACTIVE" as const,
       source: FONTE_DA_DEMO,
-    })),
+    }))),
   });
   await tx.cargo.createMany({
     data: plano.cargos.map((c) => ({ id: get(cargo, c.chave), tenantId, companyId: get(empresa, c.empresa), name: c.name, area: c.area })),
@@ -143,7 +147,7 @@ export async function gravarDemonstracao(
   });
 
   await tx.person.createMany({
-    data: plano.pessoas.map((p) => ({
+    data: numerosEmSequencia(await proximoNumero(tx, "pessoa", tenantId), plano.pessoas.map((p) => ({
       id: get(pessoa, p.chave),
       tenantId,
       type: p.type,
@@ -169,7 +173,7 @@ export async function gravarDemonstracao(
       dismissalDate: p.dismissalDate,
       currentSalary: p.currentSalary,
       createdAt: p.createdAt,
-    })),
+    }))),
   });
   await tx.personTag.createMany({
     data: plano.pessoas.flatMap((p) => p.etiquetas.map((nome) => ({ personId: get(pessoa, p.chave), tagId: get(etiqueta, nome) }))),

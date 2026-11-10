@@ -4,6 +4,7 @@
 
 import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
 import { isModuleEnabled } from "@/lib/modules";
 import { lerAparencia } from "@/lib/aparencia/leitura";
 import { formatPhone } from "@/lib/format";
@@ -83,9 +84,12 @@ export async function prospectoDoPedido(tenantId: string, p: PedidoValido): Prom
     select: { id: true, name: true, displayName: true },
   });
   if (existente) return { ...existente, nova: false };
-  const nova = await prisma.company.create({
+  // O número da empresa no escritório, o do endereço curto
+  // /empresas/empresa-301 (10/11/2026, pedido do Kauan).
+  const nova = await criarComNumero("empresa", tenantId, (tx, number) => tx.company.create({
     data: {
       tenantId,
+      number,
       name: p.empresa,
       email: p.email,
       phone: formatPhone(p.telefone),
@@ -93,6 +97,6 @@ export async function prospectoDoPedido(tenantId: string, p: PedidoValido): Prom
       source: ORIGEM_DO_PEDIDO_PUBLICO,
     },
     select: { id: true, name: true, displayName: true },
-  });
+  }));
   return { ...nova, nova: true };
 }

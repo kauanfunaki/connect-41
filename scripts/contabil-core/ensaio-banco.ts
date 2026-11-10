@@ -11,6 +11,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { agenciaChave, codigoAtivo, hashAtivo, historicoNormalizado, regraChaveAtiva } from "../../src/lib/contabil-core/motor/chaves";
 import { hashDedup } from "../../src/lib/contabil-core/motor/dedup";
 import { PLANO_DA_EMPRESA } from "../../src/lib/exclusao/empresa";
@@ -36,7 +37,7 @@ async function recusa(promessa: Promise<unknown>): Promise<boolean> {
 async function main() {
   const tenant = await prisma.tenant.findFirstOrThrow({ select: { id: true } });
   const company = await prisma.company.create({
-    data: { tenantId: tenant.id, name: "Empresa Ensaio Contábil Core LTDA", cnpj: "00.000.000/0001-91" } as never,
+    data: { tenantId: tenant.id, number: await proximoNumero(prisma, "empresa", tenant.id), name: "Empresa Ensaio Contábil Core LTDA", cnpj: "00.000.000/0001-91" } as never,
     select: { id: true },
   });
   const tenantId = tenant.id;

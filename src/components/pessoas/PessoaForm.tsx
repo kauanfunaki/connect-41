@@ -168,6 +168,8 @@ export function PessoaForm({
   // falha de upload não desfaz o cadastro: avisa e mantém o usuário aqui, com os
   // arquivos ainda na lista pra tentar de novo ou seguir sem eles.
   const createdId = state && "createdId" in state ? state.createdId : null;
+  // A ficha nova abre no endereço curto, /pessoas/pessoa-12 (10/11/2026, pedido do Kauan).
+  const fichaCriada = state && "createdId" in state ? state.endereco : null;
   const uploadStartedRef = useRef(false);
 
   useEffect(() => {
@@ -176,7 +178,7 @@ export function PessoaForm({
 
     (async () => {
       if (pendingDocs.length === 0) {
-        router.push(`/pessoas/${createdId}`);
+        router.push(fichaCriada ?? `/pessoas/${createdId}`);
         return;
       }
       setIsUploading(true);
@@ -193,7 +195,7 @@ export function PessoaForm({
             throw new Error(payload?.error ?? "Erro ao enviar documento.");
           }
         }
-        router.push(`/pessoas/${createdId}`);
+        router.push(fichaCriada ?? `/pessoas/${createdId}`);
       } catch (err) {
         setUploadError(
           `A pessoa foi cadastrada, mas houve erro ao enviar os documentos: ${
@@ -206,7 +208,7 @@ export function PessoaForm({
         setIsUploading(false);
       }
     })();
-  }, [createdId, pendingDocs, router]);
+  }, [createdId, fichaCriada, pendingDocs, router]);
   // Etapa mais distante já alcançada — permite pular pra frente de volta pra
   // uma etapa já preenchida, mesmo depois de voltar pra uma etapa anterior.
   // Editando uma pessoa já cadastrada, todos os passos já têm dado — começa

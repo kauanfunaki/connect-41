@@ -16,6 +16,7 @@
 // que os alertas avisam. A data legal vai na descrição e em ObrigacaoGerada.
 
 import { getPrisma } from "@/lib/prisma";
+import { comNovaTentativa, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { feriadosDoEscritorio } from "@/lib/feriados";
 import { hojeIso, dataBR } from "@/lib/datas/calendario";
 import { nomeExibicao } from "@/lib/companyName";
@@ -236,7 +237,7 @@ export async function gerarObrigacoesPorRegime(
         const responsavel = porId.get(companyId)?.responsaveis[m.sectorCode] ?? null;
         const texto = textoDaAtividade(m.nome, m.descricao, regraDeData.periodicidade, datas);
         try {
-          await prisma.$transaction(async (tx) => {
+          await comNovaTentativa(() => prisma.$transaction(async (tx) => {
             // A linha primeiro: a chave única barra a duplicata antes de a atividade nascer.
             const linha = await tx.obrigacaoGerada.create({
               data: {
@@ -251,6 +252,9 @@ export async function gerarObrigacoesPorRegime(
             const item = await tx.pipelineItem.create({
               data: {
                 tenantId: m.tenantId,
+                // O número da tarefa no escritório (10/11/2026, pedido do Kauan): o
+                // do endereço curto /kanban/itens/tarefa-77.
+                number: await proximoNumero(tx, "tarefa", m.tenantId),
                 pipelineId: m.pipelineId,
                 stageId,
                 entityType: "COMPANY",
@@ -262,7 +266,7 @@ export async function gerarObrigacoesPorRegime(
               },
             });
             await tx.obrigacaoGerada.update({ where: { id: linha.id }, data: { pipelineItemId: item.id } });
-          });
+          }));
           r.criadas++;
         } catch (err) {
           if (isPrismaUniqueError(err)) continue; // outra passada criou ao mesmo tempo

@@ -5,6 +5,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { comNovaTentativa, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { PersonEmploymentStatus, PersonType, RecruitmentStage } from "@/generated/prisma/enums";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
@@ -213,13 +214,15 @@ export async function cadastrarEVincularCandidato(vagaId: string, form: FormData
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
+    // O número da pessoa no escritório (10/11/2026, pedido do Kauan): o
+    // candidato entra na sequência de /pessoas/pessoa-12.
+    await comNovaTentativa(() => prisma.$transaction(async (tx) => {
       const pessoa = await tx.person.create({
-        data: { tenantId: v.tenantId, type: PersonType.CANDIDATO, name: nome, email, phone: telefone },
+        data: { tenantId: v.tenantId, number: await proximoNumero(tx, "pessoa", v.tenantId), type: PersonType.CANDIDATO, name: nome, email, phone: telefone },
         select: { id: true },
       });
       await tx.candidatura.create({ data: { tenantId: v.tenantId, vagaId, personId: pessoa.id, origin, resumeUrl } });
-    });
+    }));
   } catch (err) {
     if (caminhoDoArquivo) await unlink(caminhoDoArquivo).catch(() => {});
     console.error("[cadastrarEVincularCandidato]", err);

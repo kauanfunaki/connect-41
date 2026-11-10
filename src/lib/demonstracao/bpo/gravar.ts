@@ -10,6 +10,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
+import { numerosEmSequencia, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { camposDoRegime } from "@/lib/taxRegime";
 import { somarDias } from "@/lib/datas/calendario";
 import { FONTE_DA_DEMO, MARCA, SETOR, contagemDoPlano, type Autor, type ChaveDaEmpresa, type PlanoDoBpo, type Quem, type Responsavel } from "./plano";
@@ -138,8 +139,13 @@ export async function gravarDemonstracaoDoBpo(
     status: "ACTIVE" as const,
     source: FONTE_DA_DEMO,
   });
-  await tx.company.createMany({ data: plano.empresas.filter((e) => !e.matriz).map(dadosDaEmpresa) });
-  await tx.company.createMany({ data: plano.empresas.filter((e) => e.matriz).map(dadosDaEmpresa) });
+  // O número de cada uma no escritório, em sequência, o do endereço curto
+  // /empresas/empresa-301 (10/11/2026, pedido do Kauan). A trava do
+  // escritório fica com esta transação até o fim.
+  const matrizes = plano.empresas.filter((e) => !e.matriz).map(dadosDaEmpresa);
+  await tx.company.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "empresa", tenantId), matrizes) });
+  const filiais = plano.empresas.filter((e) => e.matriz).map(dadosDaEmpresa);
+  await tx.company.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "empresa", tenantId), filiais) });
 
   // ── Acesso do portal: ligado direto à matriz, com as filiais; senha que ninguém conhece ──
   const portalId = novo("portal");
@@ -346,7 +352,7 @@ export async function gravarDemonstracaoDoBpo(
 
   // ── Pedidos ao cliente e conversa ─────────────────────────────────────────
   await tx.clientRequest.createMany({
-    data: plano.pendencias.map((p) => ({
+    data: numerosEmSequencia(await proximoNumero(tx, "pendencia", tenantId), plano.pendencias.map((p) => ({
       id: novo(`pendencia:${p.chave}`),
       tenantId,
       companyId: empresa(p.empresa),
@@ -361,7 +367,7 @@ export async function gravarDemonstracaoDoBpo(
       resolvedAt: p.resolvidoEm ? new Date(p.resolvidoEm) : null,
       resolvedById: p.resolvidoEm ? pessoas.apresentador : null,
       createdAt: new Date(p.criadoEm),
-    })),
+    }))),
   });
   await tx.clientRequestMessage.createMany({
     data: plano.pendencias.flatMap((p) =>
@@ -579,8 +585,10 @@ export async function gravarDemonstracaoDoBpo(
     createdAt: new Date(c.criadoEm),
     updatedAt: new Date(c.atualizadoEm),
   });
-  await tx.pipelineItem.createMany({ data: q.cards.filter((c) => !c.pai).map(dadosDoCard) });
-  await tx.pipelineItem.createMany({ data: q.cards.filter((c) => c.pai).map(dadosDoCard) });
+  const deTopo = q.cards.filter((c) => !c.pai).map(dadosDoCard);
+  await tx.pipelineItem.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "tarefa", tenantId), deTopo) });
+  const subatividades = q.cards.filter((c) => c.pai).map(dadosDoCard);
+  await tx.pipelineItem.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "tarefa", tenantId), subatividades) });
   await tx.pipelineItemAssignee.createMany({
     data: q.cards.flatMap((c) => [...new Set(c.responsaveis.map(responsavel))].map((userId) => ({ pipelineItemId: id(c.chave), userId }))),
   });

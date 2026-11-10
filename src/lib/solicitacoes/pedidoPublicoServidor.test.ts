@@ -7,7 +7,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const tenant = { findUnique: vi.fn() };
 const serviceRequestSubject = { findFirst: vi.fn() };
 const company = { findFirst: vi.fn(), create: vi.fn() };
-const prisma = { tenant, serviceRequestSubject, company };
+// A empresa nova nasce numa transação, com o número do endereço curto
+// (10/11/2026): sem empresa no escritório, o número é 1.
+const prisma: Record<string, unknown> = { tenant, serviceRequestSubject, company, $queryRaw: async () => [] };
+prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
 const modulo = { ligado: true };
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
@@ -106,6 +109,7 @@ describe("prospectoDoPedido", () => {
     });
     expect(company.create.mock.calls[0][0].data).toEqual({
       tenantId: "t1",
+      number: 1,
       name: "Padaria Exemplo",
       email: "maria@exemplo.com.br",
       phone: "(41) 99999-0000",

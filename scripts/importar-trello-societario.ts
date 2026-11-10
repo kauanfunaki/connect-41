@@ -126,6 +126,7 @@
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../src/lib/prisma";
+import { numerosEmSequencia, proximoNumero } from "../src/lib/enderecoCurtoNumeracao";
 import { setorDoModulo } from "../src/lib/modules";
 import {
   CODIGOS_DOS_TIPOS,
@@ -321,7 +322,9 @@ async function main() {
         );
         const novos = lote.filter((x) => !ja.has(x.cartao.shortLink));
         const dados = montarLinhas(tenant.id, novos, itensDaEtapa);
-        if (dados.processos.length > 0) await tx.process.createMany({ data: dados.processos });
+        // O número de cada processo no escritório, em sequência, o do endereço
+        // curto /processos/processo-12 (10/11/2026, pedido do Kauan).
+        if (dados.processos.length > 0) await tx.process.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "processo", tenant.id), dados.processos) });
         if (dados.etapas.length > 0) await tx.processStep.createMany({ data: dados.etapas });
         if (dados.itens.length > 0) await tx.processChecklistItem.createMany({ data: dados.itens });
         if (dados.protocolos.length > 0) await tx.processProtocol.createMany({ data: dados.protocolos });

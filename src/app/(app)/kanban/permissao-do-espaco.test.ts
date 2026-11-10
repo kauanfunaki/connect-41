@@ -58,6 +58,8 @@ const prisma: unknown = new Proxy(
       if (nome === "$transaction") {
         return async (x: unknown) => (typeof x === "function" ? x(prisma) : Promise.all(x as Promise<unknown>[]));
       }
+      // A trava e o último número do endereço curto (10/11/2026): nenhum.
+      if (nome === "$queryRaw") return async () => [];
       return modelo(nome);
     },
   },

@@ -14,7 +14,10 @@ const activity = { create: vi.fn() };
 // espaço (PR à parte), pelo espaço. As duas leituras liberam aqui.
 const sectorQuadrosBloqueados = { findUnique: vi.fn(async () => null) };
 const space = { findUnique: vi.fn(async () => ({ defaultPermission: "EDITAR" })) };
-const prisma = { pipeline, pipelineStage, pipelineItem, activity, sectorQuadrosBloqueados, space };
+// A tarefa nasce numa transação, com o número do endereço curto (10/11/2026):
+// sem tarefa no escritório, o número é 1.
+const prisma: Record<string, unknown> = { pipeline, pipelineStage, pipelineItem, activity, sectorQuadrosBloqueados, space, $queryRaw: async () => [] };
+prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
 // As ações do Kanban chegam a módulos `server-only` (exclusão de atividade, SPED local).
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
@@ -52,7 +55,7 @@ describe("criarTarefaRapida", () => {
     await criarTarefaRapida("pl1", "st2", "  Conferir extrato de outubro  ");
     expect(pipelineItem.create).toHaveBeenCalledTimes(1);
     expect(pipelineItem.create).toHaveBeenCalledWith({
-      data: { tenantId: "t1", pipelineId: "pl1", stageId: "st2", title: "Conferir extrato de outubro" },
+      data: { tenantId: "t1", number: 1, pipelineId: "pl1", stageId: "st2", title: "Conferir extrato de outubro" },
     });
     // O histórico diz onde ela nasceu.
     expect(activity.create).toHaveBeenCalledWith({

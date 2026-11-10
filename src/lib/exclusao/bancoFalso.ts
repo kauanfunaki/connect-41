@@ -31,6 +31,10 @@ export function criarBancoFalso(regras: Regras = {}) {
             return fn(banco);
           };
         }
+        // A trava do escritório e a leitura do último número do endereço curto
+        // (10/11/2026, `proximoNumero`): no banco falso, nenhuma linha — o
+        // número começa em 1. Não entra nas chamadas: não é escrita.
+        if (nome === "$queryRaw") return async () => [];
         return new Proxy(
           {},
           {

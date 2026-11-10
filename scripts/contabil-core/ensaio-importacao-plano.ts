@@ -10,6 +10,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { contaSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa } from "../../src/lib/contabil-core/servidor/cadastros";
 import { importarPlano } from "../../src/lib/contabil-core/servidor/importacaoPlano";
@@ -50,7 +51,7 @@ async function main() {
   const tenant = await prisma.tenant.findFirstOrThrow({ select: { id: true } });
   const tenantId = tenant.id;
   const company = await prisma.company.create({
-    data: { tenantId, name: "Empresa Ensaio Plano LTDA", cnpj: "12.345.678/0001-95" } as never,
+    data: { tenantId, number: await proximoNumero(prisma, "empresa", tenantId), name: "Empresa Ensaio Plano LTDA", cnpj: "12.345.678/0001-95" } as never,
     select: { id: true },
   });
 

@@ -47,7 +47,7 @@ export function NovaPendencia({
   const router = useRouter();
   const [aberto, setAberto] = useState(abertoDeInicio);
   const [erro, setErro] = useState<string | null>(null);
-  const [criada, setCriada] = useState<{ id: string; aviso: string } | null>(null);
+  const [criada, setCriada] = useState<{ endereco: string; aviso: string } | null>(null);
   // A empresa escolhida, para o "Guardar também em Arquivos" buscar as pastas dela.
   const [empresaId, setEmpresaId] = useState<string | null>(lancamento?.companyId ?? empresaPadrao ?? null);
   const [pendente, startTransition] = useTransition();
@@ -77,7 +77,7 @@ export function NovaPendencia({
               <Button variant="secondary" onClick={fechar}>
                 Fechar
               </Button>
-              <Button href={`/pendencias/${criada.id}`}>Abrir pendência</Button>
+              <Button href={criada.endereco}>Abrir pendência</Button>
             </div>
           </div>
         ) : (
@@ -90,8 +90,8 @@ export function NovaPendencia({
               startTransition(async () => {
                 const r = await criarPendencia(dados);
                 if ("error" in r) setErro(r.error);
-                else if (r.aviso) setCriada({ id: r.id, aviso: r.aviso });
-                else router.push(`/pendencias/${r.id}`);
+                else if (r.aviso) setCriada({ endereco: r.endereco, aviso: r.aviso });
+                else router.push(r.endereco);
               });
             }}
           >
