@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { notFound, redirect } from "next/navigation";
 import { Upload, FileText, Truck, Hourglass, CheckCircle2, EyeOff, FileX2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -9,7 +10,9 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
-import { listarDocumentos, competenciasDisponiveis, resumoPorDestino } from "@/lib/fiscal/data";
+import { listarPaginaDoAcervo, contarDocumentos, competenciasDisponiveis, resumoPorDestino, type Contagem, type FiltroDoAcervo } from "@/lib/fiscal/data";
+import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
+import { SkeletonMetrics } from "@/components/shared/SkeletonParts";
 import { AcervoTable, PaginacaoDoAcervo } from "@/components/fiscal/AcervoTable";
 import { BuscaDoAcervo, FiltrosDoAcervo } from "@/components/fiscal/AcervoFiltros";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
@@ -105,14 +108,32 @@ export default async function DocumentosFiscaisPage({
   };
   const pagina = Math.max(1, Number(params.pagina) || 1);
 
-  // O alcance é a empresa escolhida: lista, contagens e competências só dela.
-  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, resumo] = await Promise.all([
-    listarDocumentos(alcance, filtro, pagina),
+  // A tabela não espera a contagem (10/11/2026): a página (51 linhas) sai já, e
+  // o total, os cartões e a última página entram quando a contagem chega, cada
+  // um no seu `<Suspense>`. A contagem é uma promessa só, dividida entre eles.
+  const [{ documentos, temProxima, porPagina }, competencias] = await Promise.all([
+    listarPaginaDoAcervo(alcance, filtro, pagina),
     competenciasDisponiveis(alcance),
-    resumoPorDestino(alcance, { ...filtro, destino: undefined }),
   ]);
+  const contagem = contarDocumentos(alcance, filtro);
+  // Na tela vazia ninguém espera a contagem: sem isto, um erro nela viraria
+  // rejeição sem tratamento. Quem espera (`await contagem`) continua recebendo o erro.
+  contagem.catch(() => undefined);
 
-  const semNenhum = total === 0 && !params.q && !params.competencia && !params.tipo && !params.destino;
+  // Página além do fim (link antigo, ou a última esvaziou): volta para a última.
+  if (pagina > 1 && documentos.length === 0) {
+    const { total } = await contagem;
+    if (total > 0) {
+      const q = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) if (k !== "pagina" && typeof v === "string" && v) q.set(k, v);
+      const ultima = Math.ceil(total / porPagina);
+      if (ultima > 1) q.set("pagina", String(ultima));
+      redirect(`/documentos-fiscais${q.size ? `?${q}` : ""}`);
+    }
+  }
+
+  const semFiltro = !params.q && !params.competencia && !params.tipo && !params.destino;
+  const semNenhum = documentos.length === 0 && pagina === 1 && semFiltro;
 
   // O cartão de destino é atalho para o recorte, mantendo os outros filtros; o
   // do recorte ativo volta para todos (o mesmo gesto de /processos).
@@ -145,25 +166,19 @@ export default async function DocumentosFiscaisPage({
         </Card>
       ) : (
         <>
-          {/* Eram três células coladas numa grade de 1px; viraram os cartões do
-              padrão (30/09), e cada um abre o recorte do destino que conta. */}
-          <FaixaDeTotais
-            itens={(["PENDENTE", "LANCADO", "IGNORADO"] as const).map((d) => ({
-              rotulo: d === "PENDENTE" ? "Pendentes de decisão" : d === "LANCADO" ? "Lançados" : "Ignorados",
-              valor: `${INTEIRO.format(resumo[d].total)}${resumo[d].limitado ? "+" : ""}`,
-              icone: d === "PENDENTE" ? <Hourglass /> : d === "LANCADO" ? <CheckCircle2 /> : <EyeOff />,
-              tom: d === "LANCADO" ? "text-success-fg" : d === "IGNORADO" ? "text-fg-muted" : undefined,
-              detalhe: params.destino === d ? "mostrando agora" : undefined,
-              ativo: params.destino === d,
-              href: hrefDoDestino(d),
-            }))}
-          />
+          <Suspense fallback={<SkeletonMetrics cartoes={3} />}>
+            <CartoesDoAcervo alcance={alcance} filtro={filtro} destinoAtivo={params.destino} hrefDoDestino={hrefDoDestino} />
+          </Suspense>
 
           {/* Contagem, busca e filtros na barra do casco (07/10/2026), como as
               filas irmãs de 05/10 — eram uma fileira acima da tabela, a
               contagem só aparecia no rodapé e o vazio era um cartão à parte. */}
           <CascoDaTabela
-            contagem={contarItens(total, "documento", "documentos", totalLimitado)}
+            contagem={
+              <Suspense fallback={<span className="text-fg-muted">Contando…</span>}>
+                <ContagemDoAcervo contagem={contagem} />
+              </Suspense>
+            }
             busca={<BuscaDoAcervo />}
             filtros={<FiltrosDoAcervo competencias={competencias} />}
           >
@@ -178,16 +193,55 @@ export default async function DocumentosFiscaisPage({
             )}
           </CascoDaTabela>
 
-          <PaginacaoDoAcervo
-            total={total}
-            totalLimitado={totalLimitado}
-            temProxima={temProxima}
-            pagina={pagina}
-            porPagina={porPagina}
-            filtrosDaUrl={params}
-          />
+          <Suspense fallback={<PaginacaoDoAcervo temProxima={temProxima} pagina={pagina} porPagina={porPagina} filtrosDaUrl={params} />}>
+            <PaginacaoContada contagem={contagem} temProxima={temProxima} pagina={pagina} porPagina={porPagina} filtrosDaUrl={params} />
+          </Suspense>
         </>
       )}
     </PageContainer>
+  );
+}
+
+// As partes que esperam contagem, cada uma no seu `<Suspense>` (10/11/2026).
+
+async function ContagemDoAcervo({ contagem }: { contagem: Promise<Contagem> }) {
+  const { total, limitado } = await contagem;
+  return <>{contarItens(total, "documento", "documentos", limitado)}</>;
+}
+
+async function PaginacaoContada({
+  contagem,
+  ...resto
+}: { contagem: Promise<Contagem>; temProxima: boolean; pagina: number; porPagina: number; filtrosDaUrl: Record<string, string | undefined> }) {
+  const { total, limitado } = await contagem;
+  return <PaginacaoDoAcervo total={total} totalLimitado={limitado} {...resto} />;
+}
+
+// Eram três células coladas numa grade de 1px; viraram os cartões do padrão
+// (30/09), e cada um abre o recorte do destino que conta.
+async function CartoesDoAcervo({
+  alcance,
+  filtro,
+  destinoAtivo,
+  hrefDoDestino,
+}: {
+  alcance: AlcanceFiscal;
+  filtro: FiltroDoAcervo;
+  destinoAtivo: string | undefined;
+  hrefDoDestino: (destino: string) => string;
+}) {
+  const resumo = await resumoPorDestino(alcance, { ...filtro, destino: undefined });
+  return (
+    <FaixaDeTotais
+      itens={(["PENDENTE", "LANCADO", "IGNORADO"] as const).map((d) => ({
+        rotulo: d === "PENDENTE" ? "Pendentes de decisão" : d === "LANCADO" ? "Lançados" : "Ignorados",
+        valor: `${INTEIRO.format(resumo[d].total)}${resumo[d].limitado ? "+" : ""}`,
+        icone: d === "PENDENTE" ? <Hourglass /> : d === "LANCADO" ? <CheckCircle2 /> : <EyeOff />,
+        tom: d === "LANCADO" ? "text-success-fg" : d === "IGNORADO" ? "text-fg-muted" : undefined,
+        detalhe: destinoAtivo === d ? "mostrando agora" : undefined,
+        ativo: destinoAtivo === d,
+        href: hrefDoDestino(d),
+      }))}
+    />
   );
 }

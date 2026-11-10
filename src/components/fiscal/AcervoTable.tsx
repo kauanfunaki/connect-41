@@ -16,9 +16,10 @@ import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import type { LinhaDoAcervo } from "@/lib/fiscal/data";
 
 type PropsDaPaginacao = {
-  total: number;
+  /** Sem `total`, a contagem ainda não chegou (10/11/2026): vale só o "tem próxima". */
+  total?: number;
   /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
-  totalLimitado: boolean;
+  totalLimitado?: boolean;
   temProxima: boolean;
   pagina: number;
   porPagina: number;
@@ -175,7 +176,7 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
 export function PaginacaoDoAcervo({ total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: PropsDaPaginacao) {
   // Com a contagem no teto não se sabe qual é a última página — só se existe a
   // próxima. Com filtro de empresa e competência ela volta a ser exata.
-  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
+  const ultimaPagina = total === undefined || totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
 
   // O link carrega os filtros da URL junto. Paginar e perder o filtro é o jeito
   // mais rápido de a pessoa achar que os dados sumiram.
