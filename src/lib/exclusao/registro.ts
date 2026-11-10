@@ -354,6 +354,9 @@ const USUARIO: Ligacao[] = [
   // "Todos do setor, menos…" do cofre (10/11/2026): a marca de que ele não vê
   // uma senha não tem o que passar a ninguém — sai junto com a conta.
   { modelo: "BpoCredentialRestriction", campo: "user", fk: "userId", tratamento: "cascata" },
+  // Os cartões do topo do Início que a pessoa escolheu (10/11/2026): preferência
+  // dela, sem nada para passar a ninguém — sai junto com a conta.
+  { modelo: "UserHomeCards", campo: "user", fk: "userId", tratamento: "cascata" },
   // A Academia (10/11/2026): os resultados e as rodadas são da própria pessoa
   // e não do escritório — saem junto com a conta, como as notificações.
   { modelo: "AcademiaResultado", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["resultado da Academia", "resultados da Academia"] },
@@ -383,6 +386,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "InternalContract", coluna: "createdById", tratamento: "manter", motivo: "autor do cadastro do contrato; a tela não expõe o id" },
   { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
   { modelo: "SectorAgendaView", coluna: "updatedById", tratamento: "manter", motivo: "quem mudou a Agenda do setor por último; a tela não expõe o id, e a auditoria guarda o nome" },
+  // O padrão dos cartões do Início do setor (10/11/2026): a troca fica na auditoria, com o nome.
+  { modelo: "SectorHomeCards", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou por último o padrão dos cartões do Início do setor; a tela não expõe o id e a auditoria guarda o nome" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },

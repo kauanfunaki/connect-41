@@ -10,9 +10,10 @@ import { useToast } from "@/components/ui/Toast";
 import type { HomeWidgetKey, HomeWidgetSlot } from "@/lib/homeWidgets";
 import type { ActionState } from "@/lib/actionState";
 
-// A ordem da tela, de cima para baixo (os Indicadores descem para depois dos
-// painéis em 08/10 — escolha 7A do Kauan).
-const FAIXAS: HomeWidgetSlot[] = ["top", "paineis", "abaixo-dos-paineis", "main", "side"];
+// A ordem da tela, de cima para baixo, depois dos cartões do topo. A faixa
+// entre os painéis e as colunas (a dos Indicadores, 08/10) saiu com eles em
+// 10/11/2026.
+const FAIXAS: HomeWidgetSlot[] = ["top", "paineis", "main", "side"];
 
 export type LayoutDoInicio = Record<HomeWidgetSlot, HomeWidgetKey[]>;
 
@@ -41,16 +42,20 @@ function mover(lista: HomeWidgetKey[], de: number, para: number): HomeWidgetKey[
  * Os blocos chegam prontos do servidor, só os visíveis — o escondido nem é
  * montado. Trazido de volta, ele aparece ao concluir, quando a tela recarrega.
  * A página remonta este componente quando o layout salvo muda (`key`).
+ *
+ * Os quatro cartões do topo (10/11/2026) ficam fora da arrumação: sempre logo
+ * abaixo do cabeçalho, e cada um se troca pelo lápis dele. Na edição eles
+ * continuam clicáveis, com o lápis sempre à vista (`data-editando`).
  */
 export function InicioEditavel({
   titulo,
   subtitulo,
   data,
   criar,
+  cartoes,
   layout,
   nos,
   disponiveis,
-  comDestaques,
   salvar,
   restaurar,
 }: {
@@ -60,13 +65,14 @@ export function InicioEditavel({
   data: string;
   /** O "Criar" do cabeçalho. */
   criar: React.ReactNode;
+  /** Os cartões coringa do topo, já montados no servidor. */
+  cartoes: React.ReactNode;
   /** Os visíveis de cada faixa, na ordem salva. */
   layout: LayoutDoInicio;
   /** Os blocos visíveis, já montados no servidor. */
   nos: Partial<Record<HomeWidgetKey, React.ReactNode>>;
   /** Os blocos que esta pessoa pode ligar, com o nome e a faixa de cada um. */
   disponiveis: { key: HomeWidgetKey; rotulo: string; faixa: HomeWidgetSlot }[];
-  comDestaques: boolean;
   salvar: (keys: HomeWidgetKey[], ocultos: HomeWidgetKey[]) => Promise<ActionState>;
   restaurar: () => Promise<ActionState>;
 }) {
@@ -240,7 +246,8 @@ export function InicioEditavel({
           <SlidersHorizontal size={16} className="flex-shrink-0 text-brand" aria-hidden />
           <p className="font-semibold text-fg">Editando o Início</p>
           <p className="min-w-0 text-fs-2 text-fg-secondary">
-            Arraste os blocos para trocar a ordem e use o olho para esconder. Vale só para você.
+            Arraste os blocos para trocar a ordem e use o olho para esconder. Nos cartões do topo, o lápis troca o número.
+            Vale só para você.
           </p>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button variant="ghost" size="sm" onClick={voltarAoPadrao} disabled={pendente}>
@@ -259,23 +266,26 @@ export function InicioEditavel({
         </div>
       )}
 
+      {/* Os cartões coringa (10/11/2026): a primeira coisa embaixo do
+          cabeçalho, fora da arrumação e nunca `inert`. */}
+      <div className="group/inicio" data-editando={editando ? "true" : undefined}>
+        {cartoes}
+      </div>
+
       {chaves("top").map((k) => bloco(k, "top"))}
 
       {/* Painéis: a grade de gráficos (30/09). Duas colunas até telas bem
           largas — com a sidebar, três painéis a 1440px apertam as barras.
-          Com a faixa de destaques em cima (06/10), os gráficos ficam mais
-          baixos: o número que manda já está na faixa. */}
+          Com os números em cima (a faixa de destaques em 06/10, os cartões do
+          topo desde 10/11/2026), os gráficos ficam mais baixos. */}
       {chaves("paineis").length > 0 && (
         <div
-          data-compacto={comDestaques ? "true" : undefined}
+          data-compacto="true"
           className="group/grade grid grid-cols-1 lg:grid-cols-2 min-[1760px]:grid-cols-3 gap-4 mb-4 items-stretch"
         >
           {chaves("paineis").map((k) => bloco(k, "paineis"))}
         </div>
       )}
-
-      {/* Entre os painéis e as colunas: os Indicadores (08/10, escolha 7A). */}
-      {chaves("abaixo-dos-paineis").map((k) => bloco(k, "abaixo-dos-paineis"))}
 
       {/* Corpo: coluna principal (meu trabalho) + coluna lateral */}
       {(chaves("main").length > 0 || chaves("side").length > 0) && (
