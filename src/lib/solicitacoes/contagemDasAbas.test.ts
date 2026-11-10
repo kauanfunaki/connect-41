@@ -9,7 +9,6 @@ import type { AuthContext } from "@/lib/auth/context";
 const m = vi.hoisted(() => ({
   contarDaEquipe: vi.fn(),
   contarPendencias: vi.fn(),
-  contarEnviosDaEquipe: vi.fn(),
   contarFilaDeAprovacoes: vi.fn(),
   empresaDaFilaDeAprovacoes: vi.fn(),
   getActiveSectors: vi.fn(),
@@ -17,13 +16,11 @@ const m = vi.hoisted(() => ({
 }));
 vi.mock("./consultas", () => ({ contarDaEquipe: m.contarDaEquipe }));
 vi.mock("@/lib/financeiro/pendencias/consultas", () => ({ contarPendencias: m.contarPendencias }));
-vi.mock("@/lib/envios/consultas", () => ({ contarEnviosDaEquipe: m.contarEnviosDaEquipe }));
 vi.mock("@/lib/financeiro/aprovacao/filaServidor", () => ({
   contarFilaDeAprovacoes: m.contarFilaDeAprovacoes,
   empresaDaFilaDeAprovacoes: m.empresaDaFilaDeAprovacoes,
 }));
 vi.mock("@/lib/sectors", () => ({ getActiveSectors: m.getActiveSectors }));
-vi.mock("@/lib/auth/scope", () => ({ scopedCompanyWhere: async (ctx: AuthContext) => ({ tenantId: ctx.tenantId }) }));
 vi.mock("@/lib/financeiro/pendencias/setor", async (original) => ({
   ...(await original<typeof import("@/lib/financeiro/pendencias/setor")>()),
   setorPadraoDasPendencias: m.setorPadraoDasPendencias,
@@ -52,7 +49,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.contarDaEquipe.mockResolvedValue(5);
   m.contarPendencias.mockResolvedValue(2);
-  m.contarEnviosDaEquipe.mockResolvedValue(9);
   m.contarFilaDeAprovacoes.mockResolvedValue(3);
   m.empresaDaFilaDeAprovacoes.mockResolvedValue({ foco: null, empresaId: null });
   m.getActiveSectors.mockResolvedValue([{ code: "bpo" }, { code: "dp" }, { code: "fiscal" }]);
@@ -63,7 +59,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("contarAsAbasDoAtendimento", () => {
   it("colaborador do DP: cada aba conta o filtro padrão da tela, no recorte dele", async () => {
-    expect(await contarAsAbasDoAtendimento(ctx("SECTOR_USER", ["dp"]), SEM_BPO)).toEqual({ solicitacoes: 5, pedidos: 2, envios: 9 });
+    expect(await contarAsAbasDoAtendimento(ctx("SECTOR_USER", ["dp"]), SEM_BPO)).toEqual({ solicitacoes: 5, pedidos: 2 });
     // Solicitações: "Em aberto", nos setores dele e no que está com ele.
     expect(m.contarDaEquipe).toHaveBeenCalledWith({ tenantId: "t1", setores: ["dp"], userId: "u1" }, "abertas");
     // Pedidos: "Em andamento", nos setores dele — sem as antigas sem setor, que são do BPO.
@@ -71,13 +67,12 @@ describe("contarAsAbasDoAtendimento", () => {
       { tenantId: "t1", companyIds: null, setores: { codigos: ["dp"], incluiSemSetor: false } },
       "andamento"
     );
-    // Envios: "Todas", nas empresas que ele enxerga.
-    expect(m.contarEnviosDaEquipe).toHaveBeenCalledWith({ tenantId: "t1", empresas: { tenantId: "t1" } });
   });
 
-  it("Comunicados fica sem balão: é o arquivo do que já foi avisado, nada espera a equipe", async () => {
+  it("Comunicados e Envios ficam sem balão: nada neles espera a equipe e o número só cresceria", async () => {
     const contagem = await contarAsAbasDoAtendimento(ctx("ADMIN", []), COM_BPO);
     expect(contagem).not.toHaveProperty("comunicados");
+    expect(contagem).not.toHaveProperty("envios");
   });
 
   it("as abas do BPO só contam para quem as vê", async () => {
@@ -95,7 +90,7 @@ describe("contarAsAbasDoAtendimento", () => {
       escopo.setores.codigos.length === 1 ? 6 : 2
     );
     const contagem = await contarAsAbasDoAtendimento(ctx("SECTOR_USER", ["bpo", "dp"]), COM_BPO);
-    expect(contagem).toEqual({ solicitacoes: 5, pedidos: 2, envios: 9, pendencias: 6, aprovacoes: 3 });
+    expect(contagem).toEqual({ solicitacoes: 5, pedidos: 2, pendencias: 6, aprovacoes: 3 });
     expect(m.contarPendencias).toHaveBeenCalledWith(
       { tenantId: "t1", companyIds: null, setores: { codigos: ["bpo"], incluiSemSetor: true } },
       "andamento"
@@ -121,11 +116,9 @@ describe("contarAsAbasDoAtendimento", () => {
 
   it("a contagem que falha deixa só a aba dela sem número", async () => {
     const erro = vi.spyOn(console, "error").mockImplementation(() => {});
-    m.contarEnviosDaEquipe.mockRejectedValue(new Error("pool timeout"));
     m.getActiveSectors.mockRejectedValue(new Error("pool timeout"));
     const contagem = await contarAsAbasDoAtendimento(ctx("SECTOR_USER", ["bpo"]), COM_BPO);
     expect(contagem).toEqual({ solicitacoes: 5, pendencias: 2, aprovacoes: 3 });
-    expect(erro).toHaveBeenCalledWith("[abasDoAtendimento] contagem indisponível: envios", expect.any(Error));
     expect(erro).toHaveBeenCalledWith("[abasDoAtendimento] contagem indisponível: pedidos", expect.any(Error));
   });
 

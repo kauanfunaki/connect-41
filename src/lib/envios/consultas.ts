@@ -55,16 +55,6 @@ function whereDosEnviosDaEquipe(alcance: AlcanceDosEnvios, filtros: { empresaId:
 }
 
 /**
- * Quantos a lista mostra sem filtro — a tela abre em "Todas" as situações e
- * todas as empresas. É o balão da aba "Envios" (10/11/2026, pedido do Kauan:
- * balão como nos Chamados): o mesmo `where`, contado no banco; a lista para
- * em `LIMITE_DA_LISTA`, o balão não.
- */
-export async function contarEnviosDaEquipe(alcance: AlcanceDosEnvios): Promise<number> {
-  return getPrisma().clientDocument.count({ where: whereDosEnviosDaEquipe(alcance, { empresaId: null }) });
-}
-
-/**
  * Os envios das empresas que a pessoa enxerga, o mais novo primeiro. O
  * alcance chega pronto de quem chama (`scopedCompanyWhere`, o mesmo de quando
  * a lista morava na ficha da empresa); a situação sai da prova de cada

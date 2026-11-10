@@ -7,14 +7,14 @@
 // sem carregar linha. As abas contam em paralelo e falham sozinhas: a aba fica
 // sem número, e a tela não cai.
 //
-// Comunicados fica sem balão: é o arquivo do que já foi avisado a vários
-// clientes de uma vez, e nada nele espera a equipe — o número só cresceria.
+// Comunicados e Envios ficam sem balão: Comunicados é o arquivo do que já foi
+// avisado a vários clientes de uma vez, e a tela de Envios abre em "Todas" —
+// o número seria o total de documentos já mandados. Nos dois, nada espera a
+// equipe e o número só cresceria (10/11/2026).
 
 import { unstable_rethrow } from "next/navigation";
 import type { AuthContext } from "@/lib/auth/context";
-import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getActiveSectors } from "@/lib/sectors";
-import { contarEnviosDaEquipe } from "@/lib/envios/consultas";
 import { contarPendencias } from "@/lib/financeiro/pendencias/consultas";
 import { dosSetores, setorPadraoDasPendencias, soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { contarFilaDeAprovacoes, empresaDaFilaDeAprovacoes } from "@/lib/financeiro/aprovacao/filaServidor";
@@ -55,8 +55,6 @@ export async function contarAsAbasDoAtendimento(ctx: AuthContext, doBpo: Readonl
       const codigos = setoresAtivosDaFila(ativos, setores).map((s) => s.code);
       return contarPendencias({ tenantId, companyIds: null, setores: dosSetores(codigos, padrao) }, "andamento");
     }),
-    // Situação "Todas", nas empresas que a pessoa enxerga.
-    contar("envios", async () => contarEnviosDaEquipe({ tenantId, empresas: await scopedCompanyWhere(ctx) })),
     // "Em andamento", só do setor do módulo (e as sem setor, de antes de 01/10).
     doBpo.has("pendencias")
       ? contar("pendencias", async () =>
