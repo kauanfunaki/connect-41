@@ -10,8 +10,16 @@ const clientDocumentRecipient = { findMany: vi.fn(), create: vi.fn(), update: vi
 const clientDocumentView = { create: vi.fn() };
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ clientDocument, clientDocumentRecipient, clientDocumentView }) }));
 
-const { abrirEnvioDoCliente, aceitarEnvioDoCliente, enviosAguardandoAceite, enviosDoCliente, linhaDoClienteNoEnvio, envioDoCliente } =
-  await import("./consultas");
+const {
+  abrirEnvioDoCliente,
+  aceitarEnvioDoCliente,
+  contarEnviosDaEquipe,
+  enviosAguardandoAceite,
+  enviosDoCliente,
+  linhaDoClienteNoEnvio,
+  listarEnviosDaEquipe,
+  envioDoCliente,
+} = await import("./consultas");
 
 const ESCOPO = { tenantId: "escritorio-a", companyIds: ["empresa-1", "empresa-2"] };
 const PROVA = { ipAddress: "200.1.2.3", userAgent: "Navegador" };
@@ -217,5 +225,26 @@ describe("o aceite pelo portal", () => {
       erro: "O aceite deste documento já foi registrado.",
     });
     expect(clientDocumentView.create).not.toHaveBeenCalled();
+  });
+});
+
+// O balão da aba "Envios" das Solicitações (10/11/2026, pedido do Kauan:
+// balão como nos Chamados): a tela abre em "Todas" as situações e empresas, e
+// o balão conta o mesmo where da lista, no banco — a lista para em 500.
+describe("contarEnviosDaEquipe", () => {
+  const ALCANCE = { tenantId: "escritorio-a", empresas: { tenantId: "escritorio-a" } };
+
+  it("conta os envios das empresas que a pessoa enxerga", async () => {
+    clientDocument.count.mockResolvedValue(812);
+    expect(await contarEnviosDaEquipe(ALCANCE)).toBe(812);
+    expect(clientDocument.count).toHaveBeenCalledWith({ where: { tenantId: "escritorio-a", company: { tenantId: "escritorio-a" } } });
+  });
+
+  it("é o where da lista aberta sem empresa", async () => {
+    clientDocument.findMany.mockResolvedValue([]);
+    clientDocument.count.mockResolvedValue(0);
+    await listarEnviosDaEquipe(ALCANCE, { empresaId: null });
+    await contarEnviosDaEquipe(ALCANCE);
+    expect(clientDocument.count.mock.calls[0][0].where).toEqual(clientDocument.findMany.mock.calls[0][0].where);
   });
 });

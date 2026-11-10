@@ -15,6 +15,16 @@ export function setoresDaFila(ctx: AuthContext): string[] | null {
   return isFullAccess(ctx.role) ? null : ctx.sectors;
 }
 
+/**
+ * Os setores ativos que a fila da pessoa alcança: as opções do filtro de setor
+ * e, sem setor escolhido, o recorte dos Pedidos ao cliente. Saiu das telas em
+ * 10/11/2026, quando o balão da aba "Pedidos ao cliente" passou a contar pelo
+ * mesmo recorte (pedido do Kauan: balão como nos Chamados).
+ */
+export function setoresAtivosDaFila<S extends { code: string }>(ativos: readonly S[], setores: readonly string[] | null): S[] {
+  return ativos.filter((s) => setores === null || setores.includes(s.code));
+}
+
 export function podeVerSolicitacao(ctx: AuthContext, s: AlvoDoAcesso): boolean {
   return canViewSector(ctx, s.sectorCode) || (!!ctx.userId && s.assigneeId === ctx.userId);
 }

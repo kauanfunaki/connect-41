@@ -4,10 +4,11 @@ import { AbasDeLink, type AbaDeLink } from "@/components/ui/AbasDeLink";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { TELAS_DO_BPO_NAS_SOLICITACOES } from "@/lib/module-catalog";
+import { contarAsAbasDoAtendimento, type AbaDoAtendimento } from "@/lib/solicitacoes/contagemDasAbas";
 
-export type AbaDoAtendimento = "solicitacoes" | "pedidos" | "comunicados" | "envios" | "pendencias" | "aprovacoes";
+export type { AbaDoAtendimento };
 
-const ABAS: AbaDeLink[] = [
+const ABAS: (AbaDeLink & { chave: AbaDoAtendimento })[] = [
   { chave: "solicitacoes", rotulo: "Solicitações dos clientes", href: "/solicitacoes", icone: <Inbox /> },
   { chave: "pedidos", rotulo: "Pedidos ao cliente", href: "/solicitacoes/pedidos", icone: <MessageSquareMore /> },
   { chave: "comunicados", rotulo: "Comunicados", href: "/solicitacoes/comunicados", icone: <Megaphone /> },
@@ -27,11 +28,20 @@ const ABAS: AbaDeLink[] = [
  * módulo ligado); para os outros a aba nem aparece, e o endereço dá 404.
  *
  * Aba, e não pílula (02/10): cada uma troca a tela — a regra de 30/09.
+ *
+ * Cada aba com o balão da quantidade, como nos Chamados (10/11/2026, pedido
+ * do Kauan): o número é o que a lista da aba mostra ao abrir, para quem está
+ * olhando, inclusive o zero — ver `contarAsAbasDoAtendimento`.
  */
 export async function AbasDoAtendimento({ ativa }: { ativa: AbaDoAtendimento }) {
   const ctx = await getAuthContext();
-  const doBpo = await Promise.all(
-    TELAS_DO_BPO_NAS_SOLICITACOES.map(async (t) => ((await podeNoModulo(ctx, t.modulo, "ver")) ? [{ chave: t.chave, rotulo: t.rotulo, href: t.href, icone: <ModuleIcon code={t.modulo} /> }] : []))
-  );
-  return <AbasDeLink ativa={ativa} abas={[...ABAS, ...doBpo.flat()]} />;
+  const doBpo = (
+    await Promise.all(TELAS_DO_BPO_NAS_SOLICITACOES.map(async (t) => ((await podeNoModulo(ctx, t.modulo, "ver")) ? [t] : [])))
+  ).flat();
+  const contagem = await contarAsAbasDoAtendimento(ctx, new Set(doBpo.map((t) => t.chave)));
+  const abas: (AbaDeLink & { chave: AbaDoAtendimento })[] = [
+    ...ABAS,
+    ...doBpo.map((t) => ({ chave: t.chave, rotulo: t.rotulo, href: t.href, icone: <ModuleIcon code={t.modulo} /> })),
+  ];
+  return <AbasDeLink ativa={ativa} abas={abas.map((a) => ({ ...a, contagem: contagem[a.chave] }))} />;
 }

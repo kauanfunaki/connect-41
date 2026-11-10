@@ -53,6 +53,20 @@ function whereDoEscopo(e: EscopoDePendencias): Prisma.ClientRequestWhereInput {
   return e.setores ? { AND: [base, whereDoRecorteDeSetor(e.setores)] } : base;
 }
 
+function whereDoRecorte(recorte: RecorteDePendencia): Prisma.ClientRequestWhereInput {
+  const status = STATUS_DO_RECORTE[recorte];
+  return status ? { status: { in: status } } : {};
+}
+
+/**
+ * Quantas a fila mostra num recorte, sem empresa nem "só vencidas" — o balão
+ * das abas "Pedidos ao cliente" e "Pendências do BPO" (10/11/2026, pedido do
+ * Kauan: balão como nos Chamados). O mesmo `where` da lista, contado no banco.
+ */
+export async function contarPendencias(escopo: EscopoDePendencias, recorte: RecorteDePendencia): Promise<number> {
+  return getPrisma().clientRequest.count({ where: { AND: [whereDoEscopo(escopo), whereDoRecorte(recorte)] } });
+}
+
 /** Meia-noite de hoje em São Paulo: prazo (meio-dia UTC do dia) antes disso é de um dia que já passou. */
 function inicioDeHoje(agora: Date): Date {
   return new Date(`${saoPauloParts(agora).dateKey}T00:00:00-03:00`);
@@ -86,19 +100,13 @@ export async function listarPendencias(
   const prisma = getPrisma();
   const base = whereDoEscopo(escopo);
   const daEmpresa: Prisma.ClientRequestWhereInput = filtro.empresaId ? { companyId: filtro.empresaId } : {};
-  const statusDoRecorte = STATUS_DO_RECORTE[filtro.recorte];
   const vencida: Prisma.ClientRequestWhereInput = {
     status: { in: ["ABERTA", "RESPONDIDA"] },
     dueDate: { lt: inicioDeHoje(agora) },
   };
 
   const where: Prisma.ClientRequestWhereInput = {
-    AND: [
-      base,
-      daEmpresa,
-      statusDoRecorte ? { status: { in: statusDoRecorte } } : {},
-      filtro.vencidas ? vencida : {},
-    ],
+    AND: [base, daEmpresa, whereDoRecorte(filtro.recorte), filtro.vencidas ? vencida : {}],
   };
 
   const [linhas, porStatus, vencidas] = await Promise.all([

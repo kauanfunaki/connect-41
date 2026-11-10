@@ -16,11 +16,11 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } f
 import { NovaPendencia } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_PRAZO, ROTULO_DO_STATUS, ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
 import { dosSetores, setorDaPendencia, setorPadraoDasPendencias, MODULO_DO_CANAL } from "@/lib/financeiro/pendencias/setor";
-import { setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { setoresAtivosDaFila, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +45,12 @@ export default async function PedidosAoClientePage({
   const vencidas = params.vencidas === "1";
   const setoresDaPessoa = setoresDaFila(ctx);
   const [empresas, ativos, { labels }, padrao] = await Promise.all([
-    empresasDoSeletor(ctx.tenantId),
+    empresasAtivasDoSeletor(ctx.tenantId),
     getActiveSectors(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     setorPadraoDasPendencias(ctx.tenantId),
   ]);
-  const opcoesDeSetor = ativos.filter((s) => setoresDaPessoa === null || setoresDaPessoa.includes(s.code));
+  const opcoesDeSetor = setoresAtivosDaFila(ativos, setoresDaPessoa);
   const setor = params.setor && opcoesDeSetor.some((s) => s.code === params.setor) ? params.setor : null;
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const podePedirEm = opcoesDeSetor.filter((s) => canActOnSector(ctx, s.code)).map((s) => ({ code: s.code, label: s.label }));

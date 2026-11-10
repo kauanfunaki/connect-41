@@ -16,7 +16,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { saoPauloParts } from "@/lib/agenda";
 import { NovaPendencia, type LancamentoVinculado } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
 import { soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { ROTULO_DO_TIPO, ROTULO_DO_STATUS, ROTULO_DO_PRAZO } from "@/lib/financeiro/pendencias/regras";
@@ -55,7 +55,7 @@ export default async function PendenciasPage({
   const params = await searchParams;
   const recorte: RecorteDePendencia = RECORTES_DE_PENDENCIA.find((r) => r.chave === params.recorte)?.chave ?? "andamento";
   const vencidas = params.vencidas === "1";
-  const empresas = await empresasDoSeletor(ctx.tenantId);
+  const empresas = await empresasAtivasDoSeletor(ctx.tenantId);
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const agora = new Date();
 

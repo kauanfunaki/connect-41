@@ -15,8 +15,8 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { SeloDaSolicitacao, SeloDoPrazoDeResposta } from "@/components/solicitacoes/SelosDaSolicitacao";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
-import { setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
+import { setoresAtivosDaFila, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { listarParaEquipe, RECORTES_DA_EQUIPE, type RecorteDaEquipe } from "@/lib/solicitacoes/consultas";
 import { ROTULO_DA_RESPOSTA, ROTULO_PARA_EQUIPE } from "@/lib/solicitacoes/regras";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
@@ -43,11 +43,11 @@ export default async function SolicitacoesPage({
   const atrasadas = params.atrasadas === "1";
   const setoresDaPessoa = setoresDaFila(ctx);
   const [empresas, ativos, { labels }] = await Promise.all([
-    empresasDoSeletor(ctx.tenantId),
+    empresasAtivasDoSeletor(ctx.tenantId),
     getActiveSectors(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
   ]);
-  const opcoesDeSetor = ativos.filter((s) => setoresDaPessoa === null || setoresDaPessoa.includes(s.code));
+  const opcoesDeSetor = setoresAtivosDaFila(ativos, setoresDaPessoa);
   const setor = params.setor && opcoesDeSetor.some((s) => s.code === params.setor) ? params.setor : null;
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const agora = new Date();

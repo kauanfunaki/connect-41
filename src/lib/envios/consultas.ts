@@ -43,6 +43,27 @@ export type LinhaDoEnvio = {
   lembrete: string | null;
 };
 
+/** O alcance da equipe: as empresas que a pessoa enxerga (`scopedCompanyWhere`). */
+export type AlcanceDosEnvios = { tenantId: string; empresas: Prisma.CompanyWhereInput };
+
+function whereDosEnviosDaEquipe(alcance: AlcanceDosEnvios, filtros: { empresaId: string | null }): Prisma.ClientDocumentWhereInput {
+  return {
+    tenantId: alcance.tenantId,
+    company: alcance.empresas,
+    ...(filtros.empresaId ? { companyId: filtros.empresaId } : {}),
+  };
+}
+
+/**
+ * Quantos a lista mostra sem filtro — a tela abre em "Todas" as situações e
+ * todas as empresas. É o balão da aba "Envios" (10/11/2026, pedido do Kauan:
+ * balão como nos Chamados): o mesmo `where`, contado no banco; a lista para
+ * em `LIMITE_DA_LISTA`, o balão não.
+ */
+export async function contarEnviosDaEquipe(alcance: AlcanceDosEnvios): Promise<number> {
+  return getPrisma().clientDocument.count({ where: whereDosEnviosDaEquipe(alcance, { empresaId: null }) });
+}
+
 /**
  * Os envios das empresas que a pessoa enxerga, o mais novo primeiro. O
  * alcance chega pronto de quem chama (`scopedCompanyWhere`, o mesmo de quando
@@ -50,15 +71,11 @@ export type LinhaDoEnvio = {
  * destinatário.
  */
 export async function listarEnviosDaEquipe(
-  alcance: { tenantId: string; empresas: Prisma.CompanyWhereInput },
+  alcance: AlcanceDosEnvios,
   filtros: { empresaId: string | null }
 ): Promise<{ linhas: LinhaDoEnvio[]; limitado: boolean }> {
   const lista = await getPrisma().clientDocument.findMany({
-    where: {
-      tenantId: alcance.tenantId,
-      company: alcance.empresas,
-      ...(filtros.empresaId ? { companyId: filtros.empresaId } : {}),
-    },
+    where: whereDosEnviosDaEquipe(alcance, filtros),
     orderBy: { createdAt: "desc" },
     take: LIMITE_DA_LISTA + 1,
     select: {
