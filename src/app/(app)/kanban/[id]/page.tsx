@@ -2,6 +2,8 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
+import { carregarQuadro, type ItemDoQuadro } from "@/lib/kanban/carregarQuadro";
+import { lerLimiteDeConcluidas } from "@/lib/kanban/concluidasDoQuadro";
 import { getSectorMaps } from "@/lib/sectors";
 import { BoardView } from "@/components/kanban/BoardView";
 import { BotaoNovaTarefa } from "@/components/kanban/NovaTarefaEmLinha";
@@ -21,33 +23,27 @@ function daysSince(d: Date): number {
 
 export default async function KanbanBoardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ concluidas?: string | string[] }>;
 }) {
   const { id } = await params;
+  const limiteDeConcluidas = lerLimiteDeConcluidas((await searchParams).concluidas);
   const ctx = await getAuthContext();
 
   const prisma = getPrisma();
-  const pipeline = await prisma.pipeline.findFirst({
+  // Só o que a tela mostra (10/11/2026): abertos inteiros, das colunas
+  // concluídas as mais recentes, subatividades só abaixo do que veio — ver
+  // `carregarQuadro`. A árvore se monta aqui embaixo, como desde 06/11/2026.
+  const quadro = await carregarQuadro({
+    tenantId: ctx.tenantId,
     where: { id, ...accessiblePipelineWhere(ctx) },
-    include: {
-      space: { select: { id: true, name: true } },
-      folder: { select: { id: true, name: true } },
-      stages: { orderBy: { order: "asc" } },
-      // Todos os níveis numa leitura só (06/11/2026): a árvore se monta aqui
-      // embaixo. Subatividade não vira card solto no Kanban nem linha de topo
-      // na Lista — aparece dentro do pai, nível a nível.
-      items: {
-        include: {
-          stage: { select: { name: true, isTerminal: true } },
-          tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
-          assignees: { include: { user: { select: { id: true, name: true } } } },
-        },
-      },
-    },
+    limiteDeConcluidas,
   });
 
-  if (!pipeline) notFound();
+  if (!quadro) notFound();
+  const { pipeline, itens: carregados, concluidas, ultimaMudancaDeEtapa, ultimaAtividade, criador } = quadro;
 
   // Criar, mover e editar: quem edita no espaço da lista (05/11/2026).
   const canAddItem = (await poderesNaLista(ctx, pipeline)).editar;
@@ -63,7 +59,7 @@ export default async function KanbanBoardPage({
   // Resolve nomes das entidades (Company ou Person) referenciadas pelos itens
   // — nem todo item tem entidade (tarefa sem empresa/pessoa associada).
   // A subatividade herda a empresa/pessoa do pai: sem repetir o id na busca.
-  const entityIds = [...new Set(pipeline.items.map((i) => i.entityId).filter((v): v is string => v != null))];
+  const entityIds = [...new Set(carregados.map((i) => i.entityId).filter((v): v is string => v != null))];
   const entityNames: Record<string, string> = {};
 
   if (entityIds.length > 0) {
@@ -82,44 +78,7 @@ export default async function KanbanBoardPage({
     }
   }
 
-  // Última mudança de estágio de cada item (mais recente primeiro) — usada pra
-  // calcular "X dias na etapa" sem precisar de campo novo no schema.
-  const [lastStageChanges, recentActivityAnyType] = await Promise.all([
-    prisma.activity.findMany({
-      where: { tenantId: ctx.tenantId, type: "STATUS_CHANGE", pipelineItem: { pipelineId: id } },
-      orderBy: { createdAt: "desc" },
-      select: { pipelineItemId: true, createdAt: true },
-    }),
-    // última atividade (qualquer tipo) por item — usada pra linha única do card
-    // no board, e pra achar quem criou cada item (type CREATED) sem query extra.
-    prisma.activity.findMany({
-      where: { tenantId: ctx.tenantId, pipelineItem: { pipelineId: id } },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      select: { pipelineItemId: true, type: true, content: true, user: { select: { id: true, name: true } } },
-    }),
-  ]);
-
-  const ACTIVITY_LABEL: Record<string, string> = {
-    NOTE: "Nota", STATUS_CHANGE: "Mudou de etapa", DOCUMENT: "Anexou documento",
-    HANDOFF: "Transferência", MENTION: "Menção", CREATED: "Criado",
-    PRIORITY_CHANGE: "Mudou prioridade", DUE_DATE_CHANGE: "Mudou prazo",
-    DESCRIPTION_CHANGE: "Editou descrição", ASSIGNEE_CHANGE: "Mudou responsável", TAG_CHANGE: "Mudou etiqueta",
-  };
-  const lastActivityByItem: Record<string, string> = {};
-  const creatorByItem: Record<string, { id: string; name: string }> = {};
-  for (const a of recentActivityAnyType) {
-    if (!(a.pipelineItemId in lastActivityByItem)) {
-      lastActivityByItem[a.pipelineItemId] = a.content?.trim() ? a.content : (ACTIVITY_LABEL[a.type] ?? a.type);
-    }
-    if (a.type === "CREATED") creatorByItem[a.pipelineItemId] = a.user;
-  }
-
-  const lastChangeByItem: Record<string, Date> = {};
-  for (const c of lastStageChanges) {
-    if (!(c.pipelineItemId in lastChangeByItem)) lastChangeByItem[c.pipelineItemId] = c.createdAt;
-  }
-  type No = NoDaArvore<(typeof pipeline.items)[number]>;
+  type No = NoDaArvore<ItemDoQuadro>;
   const nomeDe = (i: No) => i.title ?? (i.entityId ? entityNames[i.entityId] : null) ?? "(sem título)";
   // A subatividade, em qualquer nível, com as filhas dela já dentro.
   const subatividade = (s: No): SubtaskRow => ({
@@ -135,7 +94,7 @@ export default async function KanbanBoardPage({
     assignees: s.assignees.map((a) => ({ id: a.user.id, name: a.user.name, priority: a.priority })),
     subtasks: s.filhas.map(subatividade),
   });
-  const items = montarArvore(pipeline.items).map((i) => {
+  const items = montarArvore(carregados).map((i) => {
     // O "x/y" do card do Kanban: as filhas diretas, como o contador da Lista.
     const filhas = contarFilhas(i, (f) => f.stage.isTerminal);
     return {
@@ -147,10 +106,10 @@ export default async function KanbanBoardPage({
       tags: i.tags.map((t) => ({ id: t.tag.id, name: t.tag.name, color: t.tag.color })),
       assignees: i.assignees.map((a) => ({ id: a.user.id, name: a.user.name, priority: a.priority })),
       recurring: i.recurring,
-      daysInStage: daysSince(lastChangeByItem[i.id] ?? i.createdAt),
-      lastActivity: lastActivityByItem[i.id] ?? null,
+      daysInStage: daysSince(ultimaMudancaDeEtapa[i.id] ?? i.createdAt),
+      lastActivity: ultimaAtividade[i.id] ?? null,
       description: i.description,
-      creator: creatorByItem[i.id] ?? null,
+      creator: criador[i.id] ?? null,
       subtaskTotal: filhas.total,
       subtaskDone: filhas.concluidas,
       subtasks: i.filhas.map(subatividade),
@@ -211,6 +170,8 @@ export default async function KanbanBoardPage({
           basePath={`/kanban/${id}`}
           stages={pipeline.stages.map((s) => ({ id: s.id, name: s.name, color: s.color, isTerminal: s.isTerminal, type: s.type }))}
           items={items}
+          concluidas={concluidas}
+          limiteDeConcluidas={limiteDeConcluidas}
           canAct={canAddItem}
           moveAction={moverItem}
           repositionAction={reposicionarItem}

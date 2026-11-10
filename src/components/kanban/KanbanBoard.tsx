@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition, type ReactNode } from "react";
 import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 import { Selo } from "@/components/ui/Selo";
@@ -38,6 +38,8 @@ type Props = {
   basePath?: string;
   /** Quem cria tarefa ganha o "+ Adicionar atividade" em linha no pé de cada coluna (05/11/2026). */
   criarTarefa?: (stageId: string, title: string) => Promise<void>;
+  /** O pé da coluna depois dos cartões — o "Ver mais concluídas" (10/11/2026). */
+  rodapeDaColuna?: (stageId: string) => ReactNode;
 };
 
 /** O pé da coluna: a criação em linha; a primeira coluna atende ao "+ Nova tarefa" do topo. */
@@ -65,7 +67,7 @@ function isOverdue(dueDate: string | null, isTerminal?: boolean): boolean {
   return new Date(dueDate).getTime() < Date.now();
 }
 
-export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction, basePath, criarTarefa }: Props) {
+export function KanbanBoard({ pipelineId, stages, items: initialItems, moveAction, basePath, criarTarefa, rodapeDaColuna }: Props) {
   const base = basePath ?? `/kanban/${pipelineId}`;
   // Os cartões vêm da prop e o arraste fica por cima, otimista (auditoria de UX,
   // 30/10/2026). Antes era `useState(initialItems)`, lido só na montagem: a
@@ -102,6 +104,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
         const color = stage.color ?? FALLBACK_COLOR;
         const stageItems = items.filter((i) => i.stageId === stage.id);
         const isDragOver = dragOverStage === stage.id;
+        const rodape = rodapeDaColuna?.(stage.id);
 
         return (
           <ColunaDoQuadro
@@ -224,6 +227,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
                 </Link>
               );
             })}
+            {rodape && <div className="px-1 pt-0.5">{rodape}</div>}
             {criarTarefa && <NovaNaColuna stage={stage} base={base} criar={criarTarefa} primeira={indice === 0} />}
           </ColunaDoQuadro>
         );
