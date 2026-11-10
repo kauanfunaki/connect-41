@@ -217,8 +217,25 @@ function coluna(ref: string): number {
 /** Limite de descompressão: um extrato de verdade fica muito abaixo disto (bomba de zip). */
 const MAX_DESCOMPRIMIDO = 200 * 1024 * 1024;
 
+/** Uma folha lida: o título e as linhas de `iter_rows(values_only=True)`. */
+export type FolhaXlsx = { nome: string; linhas: Celula[][] };
+
+export type OpcoesXlsx = {
+  /** "primeira": `wb.worksheets[0]`; "todas": `wb.worksheets`; "ativa": `wb.active`. */
+  folhas: "primeira" | "todas" | "ativa";
+  /** `iter_rows(max_row=...)`: linhas a mais que isso viram vazias até o limite. */
+  maxLinha?: number;
+  /** `iter_rows(max_col=...)`: cada linha sai com exatamente esse número de colunas. */
+  maxColuna?: number;
+};
+
 /** As linhas da primeira folha, como `iter_rows(values_only=True)` do openpyxl. */
 export function linhasDoXlsx(bytes: Uint8Array): Celula[][] {
+  return lerXlsx(bytes, { folhas: "primeira" })[0]?.linhas ?? [];
+}
+
+/** O xlsx como o `load_workbook(read_only=True, data_only=True)` do openpyxl, com `reset_dimensions()`. */
+export function lerXlsx(bytes: Uint8Array, opcoes: OpcoesXlsx): FolhaXlsx[] {
   let arquivos: Record<string, Uint8Array>;
   try {
     let total = 0;
@@ -249,12 +266,22 @@ export function linhasDoXlsx(bytes: Uint8Array): Celula[][] {
   for (const r of filhos(busca(rels, "Relationships") ?? rels, "Relationship")) {
     alvos.set(r.atributos.Id, { tipo: r.atributos.Type ?? "", alvo: r.atributos.Target ?? "" });
   }
-  const folhas = filhos(busca(workbook, "sheets") ?? workbook, "sheet");
-  const primeira = folhas
-    .map((f) => alvos.get(f.atributos.id))
-    .find((r) => r && r.tipo.endsWith("/worksheet"));
-  if (!primeira) throw new ErroXlsx("A planilha não tem folha de dados.");
-  const caminhoDaFolha = caminho("xl/workbook.xml", primeira.alvo);
+  const todas = filhos(busca(workbook, "sheets") ?? workbook, "sheet").map((f) => ({
+    nome: f.atributos.name ?? "",
+    rel: alvos.get(f.atributos.id),
+  }));
+  const ehFolha = (f: (typeof todas)[number]) => !!f.rel && f.rel.tipo.endsWith("/worksheet");
+  let escolhidas: typeof todas;
+  if (opcoes.folhas === "ativa") {
+    // `wb.active`: o índice `activeTab` da primeira `workbookView`, entre TODAS as folhas.
+    const vista = busca(workbook, "workbookView");
+    const ativa = todas[Number(vista?.atributos.activeTab ?? 0)] ?? todas[0];
+    escolhidas = ativa && ehFolha(ativa) ? [ativa] : [];
+  } else {
+    escolhidas = todas.filter(ehFolha);
+    if (opcoes.folhas === "primeira") escolhidas = escolhidas.slice(0, 1);
+  }
+  if (!escolhidas.length) throw new ErroXlsx("A planilha não tem folha de dados.");
 
   // Textos compartilhados.
   const compartilhados: string[] = [];
@@ -284,17 +311,38 @@ export function linhasDoXlsx(bytes: Uint8Array): Celula[][] {
     }
   }
 
-  const folhaXml = ler(caminhoDaFolha);
-  if (folhaXml === null) throw new ErroXlsx(`There is no item named '${caminhoDaFolha}' in the archive`);
-  const folha = lerXml(folhaXml);
+  return escolhidas.map((f) => {
+    const caminhoDaFolha = caminho("xl/workbook.xml", f.rel!.alvo);
+    const folhaXml = ler(caminhoDaFolha);
+    if (folhaXml === null) throw new ErroXlsx(`There is no item named '${caminhoDaFolha}' in the archive`);
+    return { nome: f.nome, linhas: linhasDaFolha(lerXml(folhaXml), compartilhados, datas, duracoes, epoca1904, opcoes) };
+  });
+}
+
+/** `ReadOnlyWorksheet._cells_by_row` + `_get_row`, com `values_only=True`. */
+function linhasDaFolha(
+  folha: No,
+  compartilhados: string[],
+  datas: Set<number>,
+  duracoes: Set<number>,
+  epoca1904: boolean,
+  opcoes: OpcoesXlsx,
+): Celula[][] {
   const dados = busca(folha, "sheetData");
   if (!dados) return [];
+  const maxLinha = opcoes.maxLinha;
+  const maxColuna = opcoes.maxColuna;
+  // Com `max_col`, a linha vazia tem largura fixa; sem ele, é uma tupla vazia.
+  const vazia = (): Celula[] => (maxColuna ? new Array<Celula>(maxColuna).fill(null) : []);
 
   const linhas: Celula[][] = [];
   let contadorDeLinha = 0;
   let esperada = 1;
+  let ultima = 0;
   for (const row of filhos(dados, "row")) {
     contadorDeLinha = row.atributos.r ? Number(row.atributos.r) : contadorDeLinha + 1;
+    ultima = contadorDeLinha;
+    if (maxLinha !== undefined && contadorDeLinha > maxLinha) break;
     let contadorDeColuna = 0;
     const celulas: { coluna: number; valor: Celula }[] = [];
     for (const c of filhos(row, "c")) {
@@ -328,14 +376,19 @@ export function linhasDoXlsx(bytes: Uint8Array): Celula[][] {
       celulas.push({ coluna: contadorDeColuna, valor });
     }
     // Linhas que faltam no XML saem vazias.
-    for (; esperada < contadorDeLinha; esperada++) linhas.push([]);
+    for (; esperada < contadorDeLinha; esperada++) linhas.push(vazia());
     if (esperada <= contadorDeLinha) {
-      const largura = celulas.length ? celulas[celulas.length - 1].coluna : 0;
-      const linha: Celula[] = new Array(largura).fill(null);
-      for (const c of celulas) if (c.coluna >= 1 && c.coluna <= largura) linha[c.coluna - 1] = c.valor;
-      linhas.push(linha);
+      if (!celulas.length && !maxColuna) linhas.push([]);
+      else {
+        const largura = maxColuna ?? celulas[celulas.length - 1].coluna;
+        const linha: Celula[] = new Array<Celula>(largura).fill(null);
+        for (const c of celulas) if (c.coluna >= 1 && c.coluna <= largura) linha[c.coluna - 1] = c.valor;
+        linhas.push(linha);
+      }
       esperada++;
     }
   }
+  // Com `max_row` e mais linhas no arquivo, as que faltam até o limite saem vazias.
+  if (maxLinha !== undefined && maxLinha < ultima) for (; esperada <= maxLinha; esperada++) linhas.push(vazia());
   return linhas;
 }
