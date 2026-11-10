@@ -11,6 +11,7 @@ import { listarExtrato, listarRegistros, POR_PAGINA, ultimoMesComLancamento } fr
 import { moeda, moedaComSinal, ROTULO_DO_TIPO_DE_CONTA, rotuloDaAgencia, rotuloDaConta } from "@/lib/contabil-core/tela";
 import { AlternarAgencia, AlternarRegra, CancelarClassificacao, DesfazerImportacao, ExcluirConta } from "./Botoes";
 import { EnvioDeExtrato } from "./EnvioDeExtrato";
+import { ImportarCadastro } from "./ImportarCadastro";
 import { Exportar } from "./Exportar";
 import { Filtros } from "./Filtros";
 import { FormularioDaAgencia, FormularioDaConta, FormularioDaContraparte, FormularioDaRegra } from "./Formularios";
@@ -258,7 +259,12 @@ export async function AbaRegras({ c }: { c: ContextoDaAba }) {
     <div>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <Filtros empresaId={c.empresaId} aba="regras" agenciaId={c.agenciaId} agencias={opcoesDeAgencia} busca={c.busca} />
-        {c.podeAgir && <FormularioDaRegra empresaId={c.empresaId} contas={opcoesDeConta} agencias={opcoesDeAgencia} />}
+        {c.podeAgir && (
+          <div className="flex flex-wrap gap-2">
+            <ImportarCadastro tipo="regras" empresaId={c.empresaId} agencias={opcoesDeAgencia} />
+            <FormularioDaRegra empresaId={c.empresaId} contas={opcoesDeConta} agencias={opcoesDeAgencia} />
+          </div>
+        )}
       </div>
       {regras.length === 0 ? (
         <p className="text-sm text-fg-muted">Nenhuma regra cadastrada.</p>
@@ -312,7 +318,12 @@ export async function AbaContrapartes({ c }: { c: ContextoDaAba }) {
     <div>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <Filtros empresaId={c.empresaId} aba="contrapartes" busca={c.busca} />
-        {c.podeAgir && <FormularioDaContraparte empresaId={c.empresaId} contas={opcoesDeConta} />}
+        {c.podeAgir && (
+          <div className="flex flex-wrap gap-2">
+            <ImportarCadastro tipo="contrapartes" empresaId={c.empresaId} />
+            <FormularioDaContraparte empresaId={c.empresaId} contas={opcoesDeConta} />
+          </div>
+        )}
       </div>
       {contrapartes.length === 0 ? (
         <p className="text-sm text-fg-muted">Nenhuma contraparte cadastrada.</p>
@@ -454,7 +465,12 @@ export async function AbaConfiguracoes({ c }: { c: ContextoDaAba }) {
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Plano de contas</h2>
-          {c.podeGerir && <FormularioDaConta empresaId={c.empresaId} contas={todasAsContas} />}
+          {c.podeGerir && (
+            <div className="flex flex-wrap gap-2">
+              <ImportarCadastro tipo="plano" empresaId={c.empresaId} />
+              <FormularioDaConta empresaId={c.empresaId} contas={todasAsContas} />
+            </div>
+          )}
         </div>
         {contas.length === 0 ? (
           <p className="text-sm text-fg-muted">Plano de contas vazio. Ele chega com a carga dos dados, ou cadastre as contas aqui.</p>

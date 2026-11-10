@@ -43,7 +43,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | 1 | `feat/contabil-core-nucleo` | Este plano. Tabelas do bloco, registro do módulo, motores puros com testes-gabarito: texto, documento no histórico, contraparte por nome, valor confiável, OFX, chave de duplicidade, seleção de regra e projeção do Domínio. |
 | 2 | `feat/contabil-core-telas` | Serviços no servidor (Prisma): cadastros, importação OFX com lote e conferência de saldo, NEO (regra, contraparte, decisão, manual, cancelar, devolver ao automático) e exportação. Telas: Importações, Extrato, NEO, Regras, Contrapartes, Registros e Configurações. |
 | 3 | `feat/contabil-core-neo` | Restante do NEO: reclassificação, composição manual (ADR-017), fila agrupada por padrão, simulação e sugestão de regra pela seleção, classificar criando a regra, criar regra e aplicar. |
-| 3b | — | Importação por planilha, com prévia e confirmação: regras (modelo de seis colunas), contrapartes (relações fiscais, ADR-016) e plano de contas. Inclui decidir como ler o `.xls` antigo (BIFF8). |
+| 3b | `feat/contabil-core-cadastros` | Importação por planilha: regras (modelo de seis colunas) e contrapartes (relações fiscais, ADR-016) com prévia e confirmação, e plano de contas direto, como no original. Ver "Fase 3b". |
 | 4 | `feat/contabil-core-extratos` | Extrato em PDF: o texto extraído como o pdfplumber, os 22 leitores por banco, o leitor genérico, o período e as conferências de saldo, e a importação de PDF. Ver "Fase 4". |
 | 4b | `feat/contabil-core-planilhas` | Extrato em planilha (`planilha_parser.py`): leitores próprios de .xlsx, .xls (BIFF8) e .csv, e a importação. Ver "Fase 4b". |
 | 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
@@ -188,6 +188,9 @@ Toda divergência entra aqui, com o porquê.
 9. **Leitura por IA (Fase 4).** O original tem duas camadas depois dos leitores: o texto do PDF enviado ao GPT, quando nenhum leitor reconhece o banco, e a imagem de cada página enviada ao Vision, quando o PDF não tem texto. Elas não vêm: o PDF que só elas leriam é recusado com uma frase que manda importar o OFX. Se o time sentir falta, entram pelo `src/lib/ia`, com o consentimento por escritório.
 10. **Falha inesperada de um leitor (Fase 4).** Os leitores reproduzem o original até nos tropeços (o Cresol, por exemplo, lança `IndexError` quando a última linha do arquivo é um lançamento sem descrição). No original o job falhava com o erro cru; aqui vira recusa com a frase "O leitor do … não conseguiu ler este arquivo".
 11. **Conferência da conta no PDF (Fase 4).** O original lê o topo de cada página com o PyMuPDF; aqui vem do mesmo texto dos leitores, recortado na mesma altura (230 pontos ou 32% da página). As linhas podem sair agrupadas de outro jeito, mas o que se procura são os rótulos "Agência", "Conta" e o nome do banco.
+12. **Comprovante da prévia (Fase 3b).** O original usa um JWT de 15 minutos; aqui é um HMAC com o segredo do Connect derivado para este uso (`servidor/previa.ts`), que amarra também o escritório. A confirmação recebe o arquivo de novo e refaz a análise dentro da trava; a recusa de comprovante de outra pessoa ou empresa usa uma frase só.
+13. **O que no original virava erro 500 (Fase 3b)** agora é recusa com frase: `.xls` com o arquivo composto corrompido, CSV do plano com `\r` solto, número de conta infinito ou acima do inteiro do banco.
+14. **Importação do plano de contas (Fase 3b).** As contas novas são gravadas numa transação só, já com o pai, em vez de um savepoint por conta: um erro inesperado do banco desfaz a importação inteira, e não só a linha. A falha por linha que o original conhecia (número acima do inteiro) é conferida antes. "A conta tem lançamentos" conta os registros do NEO; as transações de cartão, que o original também olhava, ainda não existem no Connect.
 
 ## Segurança e boas práticas
 
@@ -334,6 +337,24 @@ Como no original: as linhas antes do cabeçalho da tabela (até 80) ou, no CSV, 
 ### Testes e comparação
 
 O gabarito (`extrato/gabarito.json`) ganhou as funções do `planilha_parser`, o `csv.Sniffer` e arquivos inventados gerados pelo openpyxl, pelo xlwt e em CSV com aspas, tabulação, só CR, BOM e latin-1. A comparação local com planilhas reais usa os mesmos `corpus_extratos.py` e `corpus-extratos.ts`.
+
+## Fase 3b: regras, contrapartes e plano de contas por planilha
+
+| Importação | Arquivo | Como entra | Porte |
+|---|---|---|---|
+| Regras | modelo de seis colunas (DEBITO, CREDITO, HISTORICO CONTABIL, PADRAO DO EXTRATO, BANCO, COPIAR DO EXTRATO), .xlsx ou .xls | prévia e confirmação | `cadastro/relatorioRegras.ts`, `servidor/importacaoRegras.ts` |
+| Contrapartes | relação de clientes ou de fornecedores do sistema fiscal, .xlsx ou .xls | prévia e confirmação, com o CNPJ da empresa conferido | `cadastro/relatorioContrapartes.ts`, `cadastro/dadosCadastrais.ts`, `servidor/importacaoContrapartes.ts` |
+| Plano de contas | .xlsx (folha ativa) ou .csv | direto, com o resultado por linha | `cadastro/planilhaDoPlano.ts`, `cadastro/loteDoPlano.ts`, `servidor/importacaoPlano.ts` |
+
+- **Leitura comum** (`planilha/excel.ts`): todas as folhas, com os limites do original (25 MB, 20 folhas, 10.000 linhas, 100 colunas, 500.000 células, conferência do zip). No `.xls`, a correção estrita do defeito dos relatórios do sistema fiscal: o BOUNDSHEET aponta para registros BLANK logo antes do BOF da folha, e o xlrd recusa. Os relatórios reais com esse defeito são lidos como no original.
+- **Prévia e confirmação:** cada linha sai pronta, já existente, em conflito ou inválida, com o motivo. "Importar" manda o mesmo arquivo de novo com o comprovante; o servidor trava a empresa (e as contas, regras e contrapartes citadas), refaz a análise e só grava se o comprovante e a análise ainda baterem. Nada é gravado na prévia.
+- **Tela:** um componente (`ImportarCadastro.tsx`) e uma rota (`/api/contabil-core/cadastros`) para os três. Regras e contrapartes pedem `agir`; o plano de contas, `gerir`. A auditoria registra `contabil.core.regras.importadas`, `contabil.core.contrapartes.importadas` e `contabil.core.plano.importado`.
+
+### Testes
+
+- Gabaritos do Python original sobre planilhas inventadas: `gabarito_regras.py` (leitura comum e modelo de regras), `gabarito_contrapartes.py` (32 planilhas e os dados cadastrais), `gabarito_plano.py` (54 planilhas e 15 lotes rodados no `importar_lote` original com banco de mentira).
+- Ensaios no banco local: `ensaio-importacao-regras.ts`, `ensaio-importacao-contrapartes.ts` e `ensaio-importacao-plano.ts`.
+- Comparação local com as relações fiscais reais (fora do git): as 5 iguais ao original.
 
 ## Fase 1: escopo e aceite
 
