@@ -20,6 +20,15 @@ type Props = {
    * modelo longo não fica escondido atrás da rolagem.
    */
   crescer?: boolean;
+  /**
+   * Ctrl+Enter (ou ⌘+Enter) envia (10/11/2026): o comentário da transferência
+   * aberta, como a caixa de mensagem dos Chamados. Com a lista de nomes
+   * aberta, o Enter continua escolhendo o nome.
+   */
+  onCtrlEnter?: () => void;
+  disabled?: boolean;
+  maxLength?: number;
+  "aria-label"?: string;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
 };
@@ -43,6 +52,10 @@ export function MentionTextarea({
   onChange,
   users,
   crescer = false,
+  onCtrlEnter,
+  disabled,
+  maxLength,
+  "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
   "aria-invalid": ariaInvalid,
 }: Props) {
@@ -120,6 +133,12 @@ export function MentionTextarea({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (onCtrlEnter && e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      setOpen(false);
+      onCtrlEnter();
+      return;
+    }
     if (!open || matches.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -144,6 +163,9 @@ export function MentionTextarea({
         rows={rows}
         placeholder={placeholder}
         value={value}
+        disabled={disabled}
+        maxLength={maxLength}
+        aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid}
         onChange={handleChange}

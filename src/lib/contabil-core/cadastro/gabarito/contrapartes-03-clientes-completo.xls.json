@@ -1,0 +1,106 @@
+{
+ "tipo": "cliente",
+ "planilha": "RELAÇÃO DE CLIENTES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "codigo",
+  "conta",
+  "conta_fornecedor",
+  "nome",
+  "razao_social",
+  "documento",
+  "uf",
+  "endereco",
+  "complemento",
+  "numero",
+  "cep",
+  "inscricao_estadual",
+  "fax",
+  "telefone",
+  "ddd",
+  "agropecuario",
+  "contribuinte_icms",
+  "tipo_inscricao",
+  "bairro",
+  "inscricao_municipal",
+  "pais",
+  "varejista_consumidor_final",
+  "data_cadastro",
+  "municipio"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "22222222222",
+   "razao_social": "CLIENTE GAMA INDÚSTRIA FICTÍCIA LTDA",
+   "nome_fantasia": "CLIENTE GAMA",
+   "conta_numero": 777,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "3"
+    ],
+    [
+     "uf",
+     "SC"
+    ],
+    [
+     "endereco",
+     "AVENIDA TESTE"
+    ],
+    [
+     "cep",
+     "00000000"
+    ],
+    [
+     "telefone",
+     "4833334444"
+    ],
+    [
+     "agropecuario",
+     "1"
+    ],
+    [
+     "contribuinte_icms",
+     "0"
+    ],
+    [
+     "data_cadastro",
+     "2023-12-31 00:00:00"
+    ],
+    [
+     "municipio",
+     "FLORIANÓPOLIS"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 9,
+   "documento": "12345678901",
+   "razao_social": "CLIENTE DELTA FICTÍCIA",
+   "nome_fantasia": null,
+   "conta_numero": 778,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "4.5"
+    ],
+    [
+     "varejista_consumidor_final",
+     "S"
+    ],
+    [
+     "data_cadastro",
+     "2023-01-02 13:45:30"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

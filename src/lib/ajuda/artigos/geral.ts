@@ -70,9 +70,19 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ver as reuniões e os prazos da semana",
         passos: [
           "Na coluna da direita, veja “Próximas reuniões” e clique em “Entrar” para abrir a chamada.",
-          "Em “Prazos da semana”, confira os vencimentos dos seus setores nos próximos 7 dias, dia a dia.",
-          "Clique em “Abrir agenda” para ver a semana inteira na Agenda.",
+          "Em “Prazos da semana”, confira os vencimentos dos seus setores nos próximos 7 dias, dia a dia. Entram só as fontes que estão ligadas na sua Agenda.",
+          "Clique em “Abrir agenda” para ver tudo na Agenda.",
           "Para ver as tarefas de todos os seus setores, clique em “Todas as tarefas”, no topo da tela.",
+        ],
+      },
+      {
+        titulo: "Como escolher o que o Meu dia mostra",
+        passos: [
+          "Clique em “Configurar”, no topo da tela. Uma faixa abre logo abaixo do título.",
+          "Em “Nas listas”, ligue ou desligue o que entra nas listas: atividades dos Quadros, processos, pendências com o cliente, solicitações e transferências.",
+          "Em “Ao lado”, ligue ou desligue os blocos da direita: “Próximas reuniões”, “No Societário, com você” e “Prazos da semana”.",
+          "Clique em “Concluir” para salvar. Para voltar ao que o seu setor usa, clique em “Voltar ao padrão do setor”.",
+          "Quem coordena um setor escolhe também, em “Configurando o Meu dia de”, o padrão do setor ou o de alguém da equipe.",
         ],
       },
       {
@@ -88,6 +98,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     dicas: [
       "A opção “Meu time” só aparece para quem coordena setor ou administra o escritório.",
       "Com um setor escolhido no menu, as duas visões mostram só aquele setor.",
+      "O que você escolhe vale mais que o padrão do setor. Quem está em mais de um setor vê a soma do que os setores mostram.",
+      "No setor que não faz reuniões, “Próximas reuniões” começa desligado. Se você tem reuniões mesmo assim, ligue o bloco em “Configurar”.",
     ],
   },
 
@@ -253,24 +265,44 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Abra “Transferências” na barra lateral.",
           "As abas separam o que chegou para o seu setor (“Para o meu setor”), o que está com você (“Comigo”), o que você ou o seu setor pediu (“Enviadas”) e as finalizadas. O número na aba é quantas há em cada uma.",
           "Use a busca para achar pelo assunto, pela empresa ou pelo CNPJ, e o “Filtros” para escolher a prioridade, o setor que recebe ou o responsável.",
-          "Na coluna “Setores”, cada setor tem o seu sinal: nova, resolvendo ou finalizada. O ponto azul antes do assunto marca a transferência que você ainda não abriu, e o relógio âmbar, a que tem setor sem finalizar há 3 dias ou mais.",
-          "Clique em uma transferência para ver a descrição, a instrução de cada setor, os responsáveis e quem já visualizou.",
+          "Na coluna “Setores”, cada setor tem o seu sinal: nova, resolvendo, finalizada ou devolvida. O ponto azul antes do assunto marca a transferência que você ainda não abriu, e o relógio âmbar, a que tem setor sem finalizar há 3 dias ou mais. O selo vermelho “Devolvida” marca a que um setor devolveu para quem pediu responder.",
+          "Clique em uma transferência para abri-la. No alto, a faixa mostra cada setor: com quem está e desde quando, quem finalizou, ou o motivo da devolução. O seu setor aparece destacado.",
         ],
       },
       {
         titulo: "Como atender uma transferência que chegou ao seu setor",
         passos: [
           "Abra a transferência pela aba “Para o meu setor”, pelo aviso no sino ou pelo botão “Abrir”, no Início.",
-          "No cartão do seu setor, leia a instrução.",
-          "Se você coordena o setor, escolha o “Responsável”.",
-          "Mude a situação do setor para “Resolvendo” ao começar e para “Finalizada” ao terminar.",
+          "No cartão “Parte do” seu setor, à direita (no celular, logo abaixo da faixa), leia a instrução.",
+          "Se você coordena o setor, use “Responsáveis” para pôr ou tirar pessoas. Quem entra recebe um aviso; quem já estava não é avisado de novo.",
+          "Clique em “Começar” quando o setor começar a trabalhar e em “Finalizar a parte” quando terminar.",
+          "Se falta algo de quem pediu (um documento, uma informação), clique em “Devolver”, escreva o motivo e confirme. A parte volta para quem pediu, que é avisado, e sai da sua caixa até ser reenviada.",
+          "Se a parte foi finalizada por engano, clique em “Reabrir a parte”.",
+        ],
+      },
+      {
+        titulo: "Como responder uma transferência devolvida",
+        passos: [
+          "Abra a transferência pelo aviso no sino ou pela aba “Enviadas”, onde ela aparece com o selo “Devolvida”.",
+          "No cartão “Devolvida pelo” setor, leia o motivo.",
+          "Escreva a sua resposta e clique em “Responder e reenviar”. A parte volta a ser nova para o setor, e quem responde por ela é avisado.",
+        ],
+      },
+      {
+        titulo: "Como comentar numa transferência",
+        passos: [
+          "Abra a transferência e vá até “Atividade”.",
+          "Escreva o comentário. Digite @ e escolha o nome para chamar um colega, que recebe um aviso.",
+          "Clique em “Comentar” ou aperte Ctrl+Enter. Quem pediu e os responsáveis dos setores recebem um aviso.",
+          "Abaixo da caixa fica o histórico, do mais novo para o mais antigo: quem pediu, começou, finalizou, devolveu, reenviou e comentou. Passe o mouse na hora para ver a data exata.",
         ],
       },
     ],
     dicas: [
-      "A transferência fica “Nova” enquanto nenhum setor começou, “Finalizada” quando todos terminaram e “Resolvendo” no meio do caminho.",
-      "Abrir transferência é para administradores e gestores de setor. A situação de cada setor é mudada pelo gestor daquele setor ou por quem é responsável.",
+      "A transferência fica “Nova” enquanto nenhum setor começou, “Finalizada” quando todos terminaram e “Resolvendo” no meio do caminho. Se algum setor devolveu a parte dele, ela fica “Devolvida” até quem pediu responder.",
+      "Abrir transferência é para administradores e gestores de setor. Os botões de cada setor são do gestor daquele setor ou de quem é responsável. Responder uma devolução e editar o assunto, a descrição e a prioridade é de quem pediu, do gestor do setor que pediu e dos administradores.",
       "A instrução escrita para um setor só aparece para esse setor, para quem abriu a transferência e para os administradores.",
+      "As transferências abertas antes de 10/11/2026 não têm histórico completo: a Atividade mostra o pedido e as finalizações pelas datas guardadas, com a marca “antes do histórico”.",
     ],
   },
 
@@ -280,15 +312,48 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Agenda",
     caminhos: ["/agenda"],
     resumo:
-      "O calendário com os prazos dos seus setores (vencimentos, prazos combinados, férias e exames) e as suas reuniões, em visão de dia, semana ou mês.",
+      "Os prazos dos seus setores (obrigações, guias, atividades, contas, processos, férias e outros) e as suas reuniões: a lista do que vence, o mês inteiro e as grades de dia e de semana.",
     secoes: [
       {
         titulo: "Como navegar pela agenda",
         passos: [
           "Abra “Agenda” na barra lateral.",
-          "Escolha a visão em “Dia”, “Semana” ou “Mês”.",
+          "Escolha a visão em “Prazos”, “Dia”, “Semana” ou “Mês”. Da próxima vez, a Agenda abre na última visão que você escolheu.",
           "Use as setas para ir ao período anterior ou ao próximo, e “Hoje” para voltar à data atual. O ícone de calendário ao lado (“Escolher data”) leva direto a uma data.",
-          "As cores dos prazos seguem a legenda dos setores, acima do calendário. Clique em um prazo para abrir o item.",
+          "Clique em um prazo para abrir o item na tela de onde ele vem.",
+        ],
+      },
+      {
+        titulo: "Como ver o que vence",
+        passos: [
+          "Clique em “Prazos”. A lista mostra o que vence de hoje a 30 dias, separado por dia.",
+          "No alto aparecem os “Atrasados”: o que venceu nos últimos 30 dias e continua em aberto.",
+          "Cada linha mostra de onde o prazo vem (a etiqueta colorida), o que é, a empresa e quem cuida. O selo “atrasada” avisa o que já passou do prazo, e “risco de multa”, a obrigação perto da data legal.",
+          "Quando várias iguais vencem no mesmo dia, elas aparecem juntas, como “DCTFWeb · 6 empresas”. Clique em “Ver as 6” para abrir a lista.",
+        ],
+      },
+      {
+        titulo: "Como ver o mês",
+        passos: [
+          "Clique em “Mês”. Cada dia mostra até dois prazos ou reuniões; o “+” diz quantos ainda há.",
+          "Clique em um dia para ver tudo dele ao lado do calendário. O dia de hoje tem um contorno.",
+          "Pelo teclado, as setas andam pelos dias e o dia escolhido abre ao lado.",
+        ],
+      },
+      {
+        titulo: "Como escolher de onde vêm os prazos",
+        passos: [
+          "Acima da agenda ficam os botões das fontes: “Obrigações”, “Guias”, “Tarefas” e as outras que você pode ver.",
+          "Clique em um botão para tirar ou trazer de volta os prazos daquela fonte. A escolha fica salva para você.",
+          "Para voltar ao padrão do seu setor, clique em “Restaurar padrão”, ao lado dos botões.",
+        ],
+      },
+      {
+        titulo: "Como dizer se o setor faz reuniões (coordenador)",
+        passos: [
+          "Clique na sua foto, no alto da tela, e em “Sua conta”.",
+          "Em “Agenda do setor”, escolha o setor, se ele usa reuniões e quais fontes a Agenda mostra para quem é dele.",
+          "Clique em “Salvar”. Para voltar ao padrão (usa reuniões e mostra todas as fontes), clique em “Restaurar padrão”.",
         ],
       },
       {
@@ -319,9 +384,13 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
+      "No setor que não faz reuniões, a Agenda abre em “Prazos” e o Meu dia começa sem “Próximas reuniões”. As visões de dia e de semana continuam a um clique.",
+      "Cada fonte só aparece para quem abre a tela de onde ela vem: as guias, para quem vê Guias do mês; as obrigações, para quem vê o quadro da atividade.",
+      "Os botões que você liga e desliga valem também para “Prazos da semana”, no Meu dia.",
       "O horário padrão do escritório é definido por um administrador, em Configurações › Horário da Agenda.",
       "Quando o horário passa da meia-noite, a madrugada aparece na coluna do dia anterior: uma reunião à 1:00 de terça fica na coluna de segunda. Os prazos continuam no dia do calendário.",
       "Reunião fora do horário exibido não some: a grade avisa quantas ficaram de fora, e elas aparecem na visão de mês.",
+      "O administrador também muda a Agenda de cada setor em Configurações › Setores e módulos.",
       "Para agendar, conecte antes a sua conta Google ou Microsoft: a janela de nova reunião traz o link “Configurações → Integrações”.",
       "Se aparecer o aviso de conta expirada, clique em “Reconectar agora”. Sem isso, as reuniões novas ficam sem link.",
       "Só gestores de setor e administradores criam reuniões. Cada pessoa vê as reuniões que criou ou para as quais foi chamada.",

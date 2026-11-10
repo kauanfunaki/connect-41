@@ -241,6 +241,9 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "contabil.core.regra.editada": e("editou a regra do NEO"),
   "contabil.core.regra.desativada": e("desativou a regra do NEO"),
   "contabil.core.regra.reativada": e("reativou a regra do NEO"),
+  "contabil.core.regras.importadas": c("importou por planilha regras do NEO na empresa"),
+  "contabil.core.contrapartes.importadas": c("importou da relação fiscal contrapartes na empresa"),
+  "contabil.core.plano.importado": c("importou por planilha o plano de contas da empresa"),
   "contabil.core.extrato.importado": c("importou no Contábil Core o extrato"),
   "contabil.core.extrato.importado_com_confirmacao": c("confirmou a conta e importou no Contábil Core o extrato"),
   "contabil.core.importacao.desfeita": x("desfez a importação do extrato"),
@@ -502,6 +505,15 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "handoff.assign": e("definiu o responsável da transferência"),
   "handoff.sector.assign": e("definiu quem cuida da transferência no setor"),
   "handoff.sector.status": e("mudou a situação da transferência no setor"),
+  // A transferência aberta (10/11/2026): os botões da parte de cada setor, o
+  // comentário e a edição do pedido.
+  "handoff.sector.start": e("começou a parte de um setor na transferência"),
+  "handoff.sector.finish": e("finalizou a parte de um setor na transferência"),
+  "handoff.sector.return": e("devolveu a quem pediu a parte de um setor na transferência"),
+  "handoff.sector.resend": e("respondeu e reenviou ao setor a parte devolvida da transferência"),
+  "handoff.sector.reopen": e("reabriu a parte de um setor na transferência"),
+  "handoff.comment": e("comentou na transferência"),
+  "handoff.edit": e("editou a transferência"),
   "meeting.create": c("agendou a reunião"),
   "meeting.update": e("editou a reunião"),
   "meeting.delete": x("cancelou a reunião"),
@@ -534,6 +546,11 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "sector.menu.reset": e("voltou ao padrão o menu Geral do setor"),
   "sector.menu.ordem": e("organizou o menu do setor"),
   "sector.menu.ordem_padrao": e("voltou à ordem padrão o menu do setor"),
+  // Agenda e Meu dia por setor (10/11/2026): o coordenador do setor também configura.
+  "sector.agenda.update": e("mudou a Agenda (reuniões e fontes de prazo) do setor", { chaveDoNome: "setor" }),
+  "sector.agenda.reset": e("voltou ao padrão a Agenda do setor", { chaveDoNome: "setor" }),
+  "sector.meu_dia.update": e("mudou o padrão do Meu dia do setor", { chaveDoNome: "setor" }),
+  "sector.meu_dia.reset": e("voltou ao padrão o Meu dia do setor", { chaveDoNome: "setor" }),
   // Os Quadros do setor (28/10/2026): o coordenador bloqueia ou libera a criação e a edição pelos colaboradores.
   "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores nos Quadros do setor"),
   "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores nos Quadros do setor"),

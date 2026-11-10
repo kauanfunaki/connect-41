@@ -1,0 +1,28 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "１２３４５６７８０００１９５",
+ "campos_reconhecidos": [
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "cep",
+  "documento"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "66666666000166",
+   "razao_social": "FORNECEDOR FOLHA DOIS",
+   "nome_fantasia": null,
+   "conta_numero": 5,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

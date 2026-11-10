@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock } from "lucide-react";
 import { MeetingItem } from "./MeetingItem";
 import { PrazoItem, type SetoresDaAgenda } from "./PrazoItem";
-import type { PrazoDaAgenda } from "@/lib/prazosDaAgenda";
+import type { PrazoDaAgenda } from "@/lib/prazosDaAgendaRegras";
 import { addDaysToKey, weekdayLabel, dayNumber } from "@/lib/agenda";
 import {
   colunaDoInstante,

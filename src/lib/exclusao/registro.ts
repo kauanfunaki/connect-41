@@ -241,6 +241,9 @@ const USUARIO: Ligacao[] = [
   { modelo: "Document", campo: "uploadedBy", fk: "uploadedById", tratamento: "reatribuir", rotulo: ["documento anexado", "documentos anexados"], historico: true },
   { modelo: "ClientDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["documento enviado ao cliente", "documentos enviados ao cliente"], historico: true },
   { modelo: "Handoff", campo: "requester", fk: "requestedBy", tratamento: "reatribuir", rotulo: ["transferência pedida", "transferências pedidas"], historico: true },
+  // A Atividade da transferência aberta (10/11/2026): comentário, devolução,
+  // começo e fim de parte passam para quem exclui, como os comentários dos Quadros.
+  { modelo: "HandoffEvent", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação em transferência", "comentários e movimentações em transferências"], historico: true },
   { modelo: "Meeting", campo: "createdBy", fk: "createdByUserId", tratamento: "reatribuir", rotulo: ["reunião criada", "reuniões criadas"], historico: true },
   { modelo: "Evaluation", campo: "evaluator", fk: "evaluatorUserId", tratamento: "reatribuir", rotulo: ["avaliação de desempenho feita", "avaliações de desempenho feitas"], historico: true },
   { modelo: "InterviewScorecard", campo: "evaluator", fk: "evaluatorUserId", tratamento: "reatribuir", rotulo: ["avaliação de entrevista", "avaliações de entrevista"], historico: true },
@@ -339,6 +342,8 @@ const USUARIO: Ligacao[] = [
   { modelo: "OAuthAccount", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PushSubscription", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserAgendaConfig", campo: "user", fk: "userId", tratamento: "cascata" },
+  // A Agenda da pessoa (10/11/2026): as fontes escondidas e a última visão; sai junto.
+  { modelo: "UserAgendaView", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPinnedModule", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPreference", campo: "user", fk: "userId", tratamento: "cascata" },
   // Vínculo da conta GitHub feito em Sua conta (27/10/2026): sai junto com a pessoa.
@@ -377,6 +382,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "InternalContract", coluna: "ownerUserId", tratamento: "manter", motivo: "quem responde pelo contrato; o nome fica gravado em ownerName e a tela mostra o nome" },
   { modelo: "InternalContract", coluna: "createdById", tratamento: "manter", motivo: "autor do cadastro do contrato; a tela não expõe o id" },
   { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
+  { modelo: "SectorAgendaView", coluna: "updatedById", tratamento: "manter", motivo: "quem mudou a Agenda do setor por último; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },

@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "tipo_nao_identificado",
+  "mensagem": "Não foi possível identificar se a relação é de clientes ou fornecedores."
+ }
+}

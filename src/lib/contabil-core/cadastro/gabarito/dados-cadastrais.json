@@ -1,0 +1,353 @@
+[
+ {
+  "entrada": {},
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": null,
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "endereco": "  Rua Fictícia  ",
+   "municipio": "  "
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": null,
+    "endereco": "Rua Fictícia",
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "uf": "PR"
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": "PR",
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "uf": " PR "
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": "PR",
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "uf": "PRR"
+  },
+  "saida": {
+   "erro": "uf"
+  }
+ },
+ {
+  "entrada": {
+   "uf": "Ü̈"
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": "Ü̈",
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "uf": "😀😀"
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": "😀😀",
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "uf": "😀😀😀"
+  },
+  "saida": {
+   "erro": "uf"
+  }
+ },
+ {
+  "entrada": {
+   "cep": "  123  "
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": null,
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": "123",
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "ddd": "123456"
+  },
+  "saida": {
+   "erro": "ddd"
+  }
+ },
+ {
+  "entrada": {
+   "codigo": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+   "bairro": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  },
+  "saida": {
+   "ok": {
+    "codigo": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+    "uf": null,
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "codigo": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+   "bairro": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  },
+  "saida": {
+   "erro": "codigo"
+  }
+ },
+ {
+  "entrada": {
+   "campo_inventado": "x"
+  },
+  "saida": {
+   "erro": "campo_inventado"
+  }
+ },
+ {
+  "entrada": {
+   "campo_inventado": "x",
+   "uf": "PRR"
+  },
+  "saida": {
+   "erro": "uf"
+  }
+ },
+ {
+  "entrada": {
+   "zeta": "1",
+   "alfa": "2"
+  },
+  "saida": {
+   "erro": "zeta"
+  }
+ },
+ {
+  "entrada": {
+   "codigo": null,
+   "pais": "BRASIL"
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": null,
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": null,
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": "BRASIL",
+    "varejista_consumidor_final": null,
+    "data_cadastro": null,
+    "municipio": null
+   }
+  }
+ },
+ {
+  "entrada": {
+   "municipio": "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+   "codigo": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+  },
+  "saida": {
+   "erro": "codigo"
+  }
+ },
+ {
+  "entrada": {
+   "varejista_consumidor_final": "N",
+   "data_cadastro": "2024-03-05 00:00:00",
+   "telefone": "4133334444"
+  },
+  "saida": {
+   "ok": {
+    "codigo": null,
+    "uf": null,
+    "endereco": null,
+    "complemento": null,
+    "numero": null,
+    "cep": null,
+    "inscricao_estadual": null,
+    "fax": null,
+    "telefone": "4133334444",
+    "ddd": null,
+    "agropecuario": null,
+    "contribuinte_icms": null,
+    "tipo_inscricao": null,
+    "bairro": null,
+    "inscricao_municipal": null,
+    "pais": null,
+    "varejista_consumidor_final": "N",
+    "data_cadastro": "2024-03-05 00:00:00",
+    "municipio": null
+   }
+  }
+ }
+]

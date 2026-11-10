@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "arquivo_vazio",
+  "mensagem": "O arquivo enviado está vazio."
+ }
+}

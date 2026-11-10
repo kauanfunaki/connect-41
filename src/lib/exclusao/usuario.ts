@@ -97,6 +97,10 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
   reatribuir("Handoff", "requestedBy", (tx, a) =>
     n(tx.handoff.updateMany({ where: { tenantId: a.tenantId, requestedBy: a.id }, data: { requestedBy: a.para } }))
   ),
+  // A Atividade da transferência aberta (10/11/2026).
+  reatribuir("HandoffEvent", "userId", (tx, a) =>
+    n(tx.handoffEvent.updateMany({ where: { tenantId: a.tenantId, userId: a.id }, data: { userId: a.para } }))
+  ),
   reatribuir("Meeting", "createdByUserId", (tx, a) =>
     n(tx.meeting.updateMany({ where: { tenantId: a.tenantId, createdByUserId: a.id }, data: { createdByUserId: a.para } }))
   ),

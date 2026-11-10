@@ -1,0 +1,131 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "codigo",
+  "uf",
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "endereco",
+  "complemento",
+  "numero",
+  "cep",
+  "documento",
+  "inscricao_estadual",
+  "telefone",
+  "ddd",
+  "fax",
+  "agropecuario",
+  "contribuinte_icms",
+  "tipo_inscricao",
+  "bairro",
+  "inscricao_municipal",
+  "pais",
+  "data_cadastro",
+  "municipio"
+ ],
+ "campos_ignorados": [
+  "Observação particular",
+  "Coluna Nova"
+ ],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "11111111111111",
+   "razao_social": "FORNECEDOR BETA SERVIÇOS FICTÍCIOS LTDA",
+   "nome_fantasia": "FORNECEDOR BETA",
+   "conta_numero": 1501,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "12"
+    ],
+    [
+     "uf",
+     "PR"
+    ],
+    [
+     "endereco",
+     "RUA EXEMPLO"
+    ],
+    [
+     "complemento",
+     "SALA 2"
+    ],
+    [
+     "numero",
+     "100"
+    ],
+    [
+     "cep",
+     "00000000"
+    ],
+    [
+     "inscricao_estadual",
+     "ISENTO"
+    ],
+    [
+     "telefone",
+     "33334444"
+    ],
+    [
+     "ddd",
+     "41"
+    ],
+    [
+     "fax",
+     "33335555"
+    ],
+    [
+     "agropecuario",
+     "N"
+    ],
+    [
+     "contribuinte_icms",
+     "S"
+    ],
+    [
+     "tipo_inscricao",
+     "CNPJ"
+    ],
+    [
+     "bairro",
+     "CENTRO"
+    ],
+    [
+     "inscricao_municipal",
+     "123"
+    ],
+    [
+     "pais",
+     "BRASIL"
+    ],
+    [
+     "data_cadastro",
+     "2024-03-05 00:00:00"
+    ],
+    [
+     "municipio",
+     "CURITIBA"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 9,
+   "documento": "22222222000122",
+   "razao_social": "FORNECEDOR GAMA FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 1502,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

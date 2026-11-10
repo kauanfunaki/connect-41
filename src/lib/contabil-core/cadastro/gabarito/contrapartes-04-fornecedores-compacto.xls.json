@@ -1,0 +1,43 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "cep",
+  "documento"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "33333333333333",
+   "razao_social": "FORNECEDOR DELTA COMÉRCIO FICTÍCIO LTDA",
+   "nome_fantasia": "FORNECEDOR DELTA",
+   "conta_numero": 909,
+   "dados_cadastrais": [
+    [
+     "cep",
+     "00000000"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 9,
+   "documento": null,
+   "razao_social": "FORNECEDOR SEM DOCUMENTO",
+   "nome_fantasia": null,
+   "conta_numero": 910,
+   "dados_cadastrais": [],
+   "documento_valido": false,
+   "erro_documento": "documento_ausente"
+  }
+ ]
+}

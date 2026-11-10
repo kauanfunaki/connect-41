@@ -322,7 +322,9 @@ async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeIte
       titulo: `Transferência de ${sectorLabel(rotulos, h.handoff.fromSector)}${assunto ? ` — ${assunto}` : ""}`,
       setor: h.sectorCode,
       responsaveis: h.assignees.map((a) => a.userId),
-      estado: h.status === "DONE" ? "CONCLUIDO" : h.status === "IN_PROGRESS" ? "ANDAMENTO" : "NAO_INICIADO",
+      // A devolvida (10/11/2026) espera quem pediu responder: na Gestão é
+      // "pausada" — parada de propósito, sem alerta de parado para o setor.
+      estado: h.status === "DONE" ? "CONCLUIDO" : h.status === "IN_PROGRESS" ? "ANDAMENTO" : h.status === "RETURNED" ? "PAUSADO" : "NAO_INICIADO",
       ultimaMovimentacao: h.updatedAt,
       prazo: null,
       concluidoEm: h.resolvedAt,

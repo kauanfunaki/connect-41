@@ -3,15 +3,32 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
-import type { EntityType, HandoffPriority, HandoffSectorStatus } from "@/generated/prisma/enums";
+import type { EntityType, HandoffPriority } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
-import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
-import { getSectorMaps } from "@/lib/sectors";
+import { scopedCompanyWhere, scopedHandoffWhere, scopedPersonWhere } from "@/lib/auth/scope";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { notifySector, notifyUser } from "@/lib/notifications";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { logAudit } from "@/lib/audit";
 import { assuntoParaGravar } from "@/lib/handoffTemplates";
-import { ASSUNTO_MAXIMO, tituloDaTransferencia } from "@/lib/handoffs";
+import { ASSUNTO_MAXIMO, HANDOFF_PRIORITY_LABEL, HANDOFF_STATUS_LABEL, tituloDaTransferencia } from "@/lib/handoffs";
+import {
+  TRANSICOES,
+  destinatariosDoComentario,
+  diferencaDeResponsaveis,
+  ehAcaoNaParte,
+  juntarNomes,
+  podeAgirNaParte,
+  podeComentar,
+  podeEditarATransferencia,
+  podeMudarResponsaveis,
+  proximaSituacao,
+  resumir,
+  resumoDosResponsaveis,
+  textoDaAcao,
+  textoDoComentario,
+  type AcaoNaParte,
+} from "@/lib/handoffTransicoes";
 
 /**
  * O campo que causou o erro (10/11/2026): a nova transferência em três passos
@@ -23,7 +40,6 @@ export type CampoDaTransferencia = "entidade" | "assunto" | "prioridade" | "orig
 export type HandoffState = { error: string; campo?: CampoDaTransferencia } | null;
 
 const PRIORITIES: HandoffPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
-const SECTOR_STATUSES: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS", "DONE"];
 
 // Os avisos de transferência apontam para a própria transferência desde
 // 10/11/2026 (pedido do Kauan): `entityId` é o id dela e `entityType` fica
@@ -134,6 +150,8 @@ export async function criarHandoff(
             },
           })),
         },
+        // O primeiro item da Atividade (10/11/2026, pedido do Kauan): "pediu a transferência".
+        events: { create: { tenantId: ctx.tenantId, type: "CREATED", userId: ctx.userId } },
       },
     });
     handoffId = created.id;
@@ -210,118 +228,230 @@ export async function criarHandoff(
   redirect(`/transferencias/${handoffId}`);
 }
 
-export type HandoffActionResult = { error: string } | null;
+/** O retorno das ações da transferência aberta: a tela mostra o erro ou o aviso de sucesso. */
+export type ResultadoDaTransferencia = { ok: true } | { ok: false; erro: string };
 
-// Atualiza a situação da transferência PARA UM SETOR (Nova / Resolvendo /
-// Finalizada). Pode mudar: a coordenação do setor (canManageSector) ou o
-// colaborador designado como responsável daquela instrução.
-export async function atualizarStatusSetor(
+const falha = (erro: string): ResultadoDaTransferencia => ({ ok: false, erro });
+
+// A situação mudou entre a pessoa olhar e clicar (outra pessoa agiu antes).
+class SituacaoMudou extends Error {}
+
+// O código da auditoria de cada botão da parte (10/11/2026).
+const ACAO_DA_AUDITORIA: Record<AcaoNaParte, string> = {
+  comecar: "handoff.sector.start",
+  finalizar: "handoff.sector.finish",
+  devolver: "handoff.sector.return",
+  reenviar: "handoff.sector.resend",
+  reabrir: "handoff.sector.reopen",
+};
+
+const SEM_PERMISSAO_NA_PARTE = {
+  destino: "Só quem coordena o setor ou é responsável pela parte pode fazer isso.",
+  pedido: "Só quem pediu, a coordenação do setor de origem ou um administrador pode responder e reenviar.",
+};
+
+/** A coordenação do setor de origem: recebe o aviso da devolução junto com quem pediu. */
+async function coordenacaoDoSetor(tenantId: string, sectorCode: string): Promise<string[]> {
+  const us = await getPrisma().user.findMany({
+    where: { tenantId, active: true, role: "SECTOR_ADMIN", sectors: { some: { sectorCode } } },
+    select: { id: true },
+  });
+  return us.map((u) => u.id);
+}
+
+function revalidarATransferencia(handoffId: string) {
+  revalidatePath(`/transferencias/${handoffId}`);
+  revalidatePath("/transferencias");
+}
+
+/**
+ * Os botões da parte de um setor (10/11/2026, pedido do Kauan — no lugar do
+ * seletor de situação): Começar, Finalizar, Devolver (com o motivo), Responder
+ * e reenviar (com a resposta) e Reabrir. As regras de quem pode e de onde
+ * cada ação parte estão em src/lib/handoffTransicoes.ts.
+ */
+export async function mudarAParte(
   handoffSectorId: string,
-  status: HandoffSectorStatus
-): Promise<HandoffActionResult> {
+  acao: AcaoNaParte,
+  texto?: string | null
+): Promise<ResultadoDaTransferencia> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !ctx.userId) return { error: "Não autenticado." };
-  if (!SECTOR_STATUSES.includes(status)) return { error: "Situação inválida." };
+  if (!ctx.tenantId || !ctx.userId) return falha("Não autenticado.");
+  if (!ehAcaoNaParte(acao)) return falha("Ação inválida.");
+  const validado = textoDaAcao(acao, texto);
+  if (!validado.ok) return falha(validado.erro);
 
   const prisma = getPrisma();
-  const sector = await prisma.handoffSector.findFirst({
+  const parte = await prisma.handoffSector.findFirst({
     where: { id: handoffSectorId, tenantId: ctx.tenantId },
     include: {
-      handoff: { select: { id: true, requestedBy: true, subject: true } },
+      handoff: { select: { id: true, requestedBy: true, fromSector: true, subject: true } },
       assignees: { select: { userId: true } },
     },
   });
-  if (!sector) return { error: "Transferência não encontrada." };
+  if (!parte) return falha("Transferência não encontrada.");
 
-  // Todos os responsáveis do setor podem mexer no status, não só o primeiro:
-  // ler `assignedTo` aqui deixava o 2º..Nº designado sem permissão.
-  const allowed =
-    canManageSector(ctx, sector.sectorCode) || sector.assignees.some((a) => a.userId === ctx.userId);
-  if (!allowed || ctx.role === "READONLY") {
-    return { error: "Sem permissão para atualizar a situação deste setor." };
-  }
+  const para = proximaSituacao(acao, parte.status);
+  if (!para) return falha(`Esta parte está ${HANDOFF_STATUS_LABEL[parte.status].toLowerCase()} agora. Atualize a página.`);
+  const regra = { sectorCode: parte.sectorCode, status: parte.status, responsaveis: parte.assignees.map((a) => a.userId) };
+  if (!podeAgirNaParte(acao, ctx, regra, parte.handoff)) return falha(SEM_PERMISSAO_NA_PARTE[TRANSICOES[acao].lado]);
 
   try {
-    await prisma.handoffSector.update({
-      where: { id: sector.id },
-      data: { status, resolvedAt: status === "DONE" ? new Date() : null },
+    await prisma.$transaction(async (tx) => {
+      // Só muda se a situação ainda for a que a pessoa viu: dois cliques ao
+      // mesmo tempo (o setor finaliza enquanto quem pediu reenvia) não passam
+      // um por cima do outro.
+      const mudou = await tx.handoffSector.updateMany({
+        where: { id: parte.id, tenantId: ctx.tenantId, status: parte.status },
+        data: { status: para, resolvedAt: para === "DONE" ? new Date() : null },
+      });
+      if (mudou.count !== 1) throw new SituacaoMudou();
+      await tx.handoffEvent.create({
+        data: {
+          tenantId: ctx.tenantId,
+          handoffId: parte.handoff.id,
+          handoffSectorId: parte.id,
+          type: TRANSICOES[acao].evento,
+          userId: ctx.userId,
+          body: validado.texto,
+        },
+      });
     });
   } catch (err) {
-    console.error("[atualizarStatusSetor]", err);
-    return { error: "Erro ao atualizar a situação. Tente novamente." };
+    if (err instanceof SituacaoMudou) return falha("A situação desta parte mudou enquanto você olhava. Atualize a página.");
+    console.error("[mudarAParte]", err);
+    return falha("Não foi possível gravar. Tente de novo.");
   }
 
   await logAudit({
     tenantId: ctx.tenantId,
     userId: ctx.userId,
-    action: "handoff.sector.status",
+    action: ACAO_DA_AUDITORIA[acao],
     entityType: "Handoff",
-    entityId: sector.handoff.id,
-    metadata: { sectorCode: sector.sectorCode, status },
+    entityId: parte.handoff.id,
+    metadata: { sectorCode: parte.sectorCode, de: parte.status, para },
   });
 
-  if (status === "DONE" && sector.handoff.requestedBy !== ctx.userId) {
-    const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
-    await notifyUser(sector.handoff.requestedBy, {
+  const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
+  const setor = sectorLabel(sectorLabels, parte.sectorCode);
+  const origem = sectorLabel(sectorLabels, parte.handoff.fromSector);
+  const titulo = tituloDaTransferencia(parte.handoff);
+  const alvo = alvoDoAviso(parte.handoff.id);
+
+  if (acao === "finalizar" && parte.handoff.requestedBy !== ctx.userId) {
+    await notifyUser(parte.handoff.requestedBy, {
       tenantId: ctx.tenantId,
       type: "HANDOFF_SECTOR_DONE",
-      message: `${sectorLabels[sector.sectorCode] ?? sector.sectorCode} finalizou a parte dele na transferência "${tituloDaTransferencia(sector.handoff)}"`,
-      ...alvoDoAviso(sector.handoff.id),
+      message: `${setor} finalizou a parte dele na transferência "${titulo}"`,
+      ...alvo,
       actorUserId: ctx.userId,
     });
   }
 
-  revalidatePath(`/transferencias/${sector.handoff.id}`);
-  revalidatePath("/transferencias");
-  return null;
+  // A devolução vai para quem pediu e para a coordenação do setor de origem —
+  // quem pode responder e reenviar.
+  if (acao === "devolver") {
+    const quem = new Set([parte.handoff.requestedBy, ...(await coordenacaoDoSetor(ctx.tenantId, parte.handoff.fromSector))]);
+    quem.delete(ctx.userId);
+    await Promise.all(
+      [...quem].map((userId) =>
+        notifyUser(userId, {
+          tenantId: ctx.tenantId,
+          type: "HANDOFF_RETURNED",
+          message: `${setor} devolveu a transferência "${titulo}": ${resumir(validado.texto ?? "", 140)}`,
+          ...alvo,
+          actorUserId: ctx.userId,
+        })
+      )
+    );
+  }
+
+  // O reenvio vai para quem responde pela parte; sem responsável, para o setor.
+  if (acao === "reenviar") {
+    const responsaveis = regra.responsaveis.filter((id) => id !== ctx.userId);
+    const mensagem = `${origem} respondeu e reenviou a transferência "${titulo}": ${resumir(validado.texto ?? "", 140)}`;
+    if (regra.responsaveis.length > 0) {
+      await Promise.all(
+        responsaveis.map((userId) =>
+          notifyUser(userId, { tenantId: ctx.tenantId, type: "HANDOFF_RESENT", message: mensagem, ...alvo, actorUserId: ctx.userId })
+        )
+      );
+    } else {
+      await notifySector(parte.sectorCode, { tenantId: ctx.tenantId, type: "HANDOFF_RESENT", message: mensagem, ...alvo, actorUserId: ctx.userId });
+    }
+  }
+
+  revalidarATransferencia(parte.handoff.id);
+  return { ok: true };
 }
 
-// Designa (ou remove) o responsável pela instrução de um setor. Restrito à
-// coordenação do setor, e o designado precisa ser DO PRÓPRIO setor (a
-// coordenadora do Fiscal designa alguém do Fiscal, nunca de outro setor) —
-// ADMIN/SUPER_ADMIN também são elegíveis, pois gerenciam todos os setores.
-export async function atribuirResponsavelSetor(
-  handoffSectorId: string,
-  userId: string | null
-): Promise<HandoffActionResult> {
+/**
+ * Os responsáveis da parte de um setor, vários (10/11/2026, pedido do Kauan).
+ * Recebe a lista inteira e grava só a diferença: quem já era responsável fica
+ * como estava (com a data de quando entrou) e não é avisado de novo. A troca
+ * de antes apagava a lista e gravava uma pessoa só — perdia quem veio da
+ * criação. Restrito a quem gerencia o setor de destino; quem entra precisa
+ * ser do setor (ou administrador).
+ */
+export async function definirResponsaveisDaParte(handoffSectorId: string, userIds: string[]): Promise<ResultadoDaTransferencia> {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId) return { error: "Não autenticado." };
+  if (!ctx.tenantId || !ctx.userId) return falha("Não autenticado.");
+  const depois = [...new Set((Array.isArray(userIds) ? userIds : []).filter((id): id is string => typeof id === "string" && id.length > 0))];
+  if (depois.length > 50) return falha("Escolha até 50 responsáveis.");
 
   const prisma = getPrisma();
-  const sector = await prisma.handoffSector.findFirst({
+  const parte = await prisma.handoffSector.findFirst({
     where: { id: handoffSectorId, tenantId: ctx.tenantId },
-    include: { handoff: { select: { id: true, subject: true } } },
+    include: {
+      handoff: { select: { id: true, subject: true } },
+      assignees: { select: { userId: true, user: { select: { name: true } } } },
+    },
   });
-  if (!sector) return { error: "Transferência não encontrada." };
-  if (!canManageSector(ctx, sector.sectorCode)) {
-    return { error: "Sem permissão para atribuir responsável neste setor." };
-  }
+  if (!parte) return falha("Transferência não encontrada.");
+  if (!podeMudarResponsaveis(ctx, parte)) return falha("Só quem coordena o setor pode mudar os responsáveis desta parte.");
 
-  if (userId) {
-    const assignee = await prisma.user.findFirst({
-      where: {
-        id: userId,
-        tenantId: ctx.tenantId,
-        active: true,
-        OR: [{ role: { in: ["SUPER_ADMIN", "ADMIN"] } }, { sectors: { some: { sectorCode: sector.sectorCode } } }],
-      },
-      select: { id: true },
-    });
-    if (!assignee) return { error: "O responsável precisa ser um membro deste setor." };
-  }
+  const antes = parte.assignees.map((a) => a.userId);
+  const { entram, saem } = diferencaDeResponsaveis(antes, depois);
+  if (entram.length === 0 && saem.length === 0) return { ok: true };
+
+  // Só quem entra passa pela regra do setor: quem já era responsável e saiu
+  // do setor depois continua na lista até alguém tirá-lo.
+  const elegiveis = entram.length
+    ? await prisma.user.findMany({
+        where: {
+          id: { in: entram },
+          tenantId: ctx.tenantId,
+          active: true,
+          OR: [{ role: { in: ["SUPER_ADMIN", "ADMIN"] } }, { sectors: { some: { sectorCode: parte.sectorCode } } }],
+        },
+        select: { id: true, name: true },
+      })
+    : [];
+  if (elegiveis.length !== entram.length) return falha("O responsável precisa ser um membro deste setor.");
+
+  const nomeDe = new Map([...parte.assignees.map((a) => [a.userId, a.user.name] as const), ...elegiveis.map((u) => [u.id, u.name] as const)]);
+  const nomes = (ids: string[]) => ids.map((id) => nomeDe.get(id) ?? "Usuário removido");
 
   try {
-    // Esta action é de troca única — quem define vários é o formulário de
-    // criação — então a lista é substituída inteira.
     await prisma.$transaction([
-      prisma.handoffSectorAssignee.deleteMany({ where: { handoffSectorId: sector.id } }),
-      ...(userId
-        ? [prisma.handoffSectorAssignee.create({ data: { handoffSectorId: sector.id, userId } })]
+      ...(saem.length ? [prisma.handoffSectorAssignee.deleteMany({ where: { handoffSectorId: parte.id, userId: { in: saem } } })] : []),
+      ...(entram.length
+        ? [prisma.handoffSectorAssignee.createMany({ data: entram.map((userId) => ({ handoffSectorId: parte.id, userId })), skipDuplicates: true })]
         : []),
+      prisma.handoffEvent.create({
+        data: {
+          tenantId: ctx.tenantId,
+          handoffId: parte.handoff.id,
+          handoffSectorId: parte.id,
+          type: "ASSIGNEES_CHANGED",
+          userId: ctx.userId,
+          body: resumoDosResponsaveis(nomes(entram), nomes(saem)),
+        },
+      }),
     ]);
   } catch (err) {
-    console.error("[atribuirResponsavelSetor]", err);
-    return { error: "Erro ao atribuir responsável. Tente novamente." };
+    console.error("[definirResponsaveisDaParte]", err);
+    return falha("Não foi possível mudar os responsáveis. Tente de novo.");
   }
 
   await logAudit({
@@ -329,22 +459,184 @@ export async function atribuirResponsavelSetor(
     userId: ctx.userId,
     action: "handoff.sector.assign",
     entityType: "Handoff",
-    entityId: sector.handoff.id,
-    metadata: { sectorCode: sector.sectorCode, assignedTo: userId },
+    entityId: parte.handoff.id,
+    metadata: { sectorCode: parte.sectorCode, entram, saem },
   });
 
-  if (userId && userId !== ctx.userId) {
-    await notifyUser(userId, {
-      tenantId: ctx.tenantId,
-      type: "HANDOFF_ASSIGNED",
-      message: `Você é responsável pela transferência "${tituloDaTransferencia(sector.handoff)}"`,
-      ...alvoDoAviso(sector.handoff.id),
-      actorUserId: ctx.userId,
+  // Só quem entrou é avisado — e não quem se pôs na lista.
+  await Promise.all(
+    entram
+      .filter((userId) => userId !== ctx.userId)
+      .map((userId) =>
+        notifyUser(userId, {
+          tenantId: ctx.tenantId,
+          type: "HANDOFF_ASSIGNED",
+          message: `Você é responsável pela transferência "${tituloDaTransferencia(parte.handoff)}"`,
+          ...alvoDoAviso(parte.handoff.id),
+          actorUserId: ctx.userId,
+        })
+      )
+  );
+
+  revalidarATransferencia(parte.handoff.id);
+  return { ok: true };
+}
+
+/**
+ * O comentário da Atividade (10/11/2026, pedido do Kauan): a dúvida sobre a
+ * transferência fica nela, e não no WhatsApp. "@Nome" avisa a pessoa
+ * (HANDOFF_MENTION); quem pediu e os responsáveis de todas as partes recebem
+ * HANDOFF_COMMENT. Quem escreveu não é avisado.
+ */
+export async function comentarNaTransferencia(handoffId: string, texto: string): Promise<ResultadoDaTransferencia> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId) return falha("Não autenticado.");
+  if (!podeComentar(ctx)) return falha("Quem só lê não comenta.");
+  const validado = textoDoComentario(texto);
+  if (!validado.ok) return falha(validado.erro);
+
+  const prisma = getPrisma();
+  const handoff = await prisma.handoff.findFirst({
+    where: { id: handoffId, ...scopedHandoffWhere(ctx) },
+    select: { id: true, subject: true, requestedBy: true, sectors: { select: { assignees: { select: { userId: true } } } } },
+  });
+  if (!handoff) return falha("Transferência não encontrada.");
+
+  try {
+    await prisma.handoffEvent.create({
+      data: { tenantId: ctx.tenantId, handoffId: handoff.id, type: "COMMENT", userId: ctx.userId, body: validado.texto },
     });
+  } catch (err) {
+    console.error("[comentarNaTransferencia]", err);
+    return falha("Não foi possível comentar. Tente de novo.");
   }
 
-  revalidatePath(`/transferencias/${sector.handoff.id}`);
-  return null;
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "handoff.comment",
+    entityType: "Handoff",
+    entityId: handoff.id,
+  });
+
+  const [autor, mencionados] = await Promise.all([
+    prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }),
+    findMentionedUserIds(ctx.tenantId, [validado.texto]),
+  ]);
+  const destino = destinatariosDoComentario({
+    autor: ctx.userId,
+    requestedBy: handoff.requestedBy,
+    responsaveis: handoff.sectors.flatMap((s) => s.assignees.map((a) => a.userId)),
+    mencionados,
+  });
+  const quem = autor?.name ?? "Alguém";
+  const titulo = tituloDaTransferencia(handoff);
+  const alvo = alvoDoAviso(handoff.id);
+  await Promise.all([
+    ...destino.comentario.map((userId) =>
+      notifyUser(userId, {
+        tenantId: ctx.tenantId,
+        type: "HANDOFF_COMMENT",
+        message: `${quem} comentou na transferência "${titulo}": ${resumir(validado.texto ?? "", 140)}`,
+        ...alvo,
+        actorUserId: ctx.userId,
+      })
+    ),
+    ...destino.mencao.map((userId) =>
+      notifyUser(userId, {
+        tenantId: ctx.tenantId,
+        type: "HANDOFF_MENTION",
+        message: `${quem} mencionou você na transferência "${titulo}"`,
+        ...alvo,
+        actorUserId: ctx.userId,
+      })
+    ),
+  ]);
+
+  revalidatePath(`/transferencias/${handoff.id}`);
+  return { ok: true };
+}
+
+export type DadosDaEdicao = { subject: string; description: string; priority: HandoffPriority };
+
+/** O tamanho da descrição na edição — a coluna é TEXT; o teto é para a tela. */
+const DESCRICAO_MAXIMA = 10_000;
+
+/**
+ * "Editar" no cabeçalho da transferência aberta (10/11/2026, pedido do
+ * Kauan): assunto, descrição e prioridade, pelo lado de quem pediu (quem
+ * pediu, a coordenação do setor de origem, o administrador). Vira um item da
+ * Atividade ("editou a transferência"), e quem passou a ser mencionado na
+ * descrição é avisado.
+ */
+export async function editarTransferencia(handoffId: string, dados: DadosDaEdicao): Promise<ResultadoDaTransferencia> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId) return falha("Não autenticado.");
+
+  const subject = (dados?.subject ?? "").replace(/\s+/g, " ").trim();
+  const description = (dados?.description ?? "").trim() || null;
+  if (!subject) return falha("Escreva o assunto.");
+  if (subject.length > ASSUNTO_MAXIMO) return falha(`O assunto pode ter até ${ASSUNTO_MAXIMO} caracteres.`);
+  if (description && description.length > DESCRICAO_MAXIMA) return falha("A descrição está longa demais.");
+  if (!PRIORITIES.includes(dados?.priority)) return falha("Prioridade inválida.");
+
+  const prisma = getPrisma();
+  const handoff = await prisma.handoff.findFirst({
+    where: { id: handoffId, ...scopedHandoffWhere(ctx) },
+    select: { id: true, subject: true, description: true, priority: true, requestedBy: true, fromSector: true },
+  });
+  if (!handoff) return falha("Transferência não encontrada.");
+  if (!podeEditarATransferencia(ctx, handoff)) return falha("Só quem pediu, a coordenação do setor de origem ou um administrador edita a transferência.");
+
+  const campos: string[] = [];
+  if (subject !== (handoff.subject ?? "")) campos.push("o assunto");
+  if ((description ?? "") !== (handoff.description ?? "")) campos.push("a descrição");
+  if (dados.priority !== handoff.priority) campos.push(`a prioridade para ${HANDOFF_PRIORITY_LABEL[dados.priority]}`);
+  if (campos.length === 0) return { ok: true };
+
+  try {
+    await prisma.$transaction([
+      prisma.handoff.update({ where: { id: handoff.id }, data: { subject, description, priority: dados.priority } }),
+      prisma.handoffEvent.create({
+        data: { tenantId: ctx.tenantId, handoffId: handoff.id, type: "EDITED", userId: ctx.userId, body: `Mudou ${juntarNomes(campos)}.` },
+      }),
+    ]);
+  } catch (err) {
+    console.error("[editarTransferencia]", err);
+    return falha("Não foi possível salvar. Tente de novo.");
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "handoff.edit",
+    entityType: "Handoff",
+    entityId: handoff.id,
+    metadata: { campos },
+  });
+
+  // Quem já estava mencionado na descrição de antes não é avisado de novo.
+  if (description !== handoff.description) {
+    const [agora, antes] = await Promise.all([
+      findMentionedUserIds(ctx.tenantId, [description]),
+      findMentionedUserIds(ctx.tenantId, [handoff.description]),
+    ]);
+    const novos = agora.filter((id) => !antes.includes(id) && id !== ctx.userId);
+    await Promise.all(
+      novos.map((userId) =>
+        notifyUser(userId, {
+          tenantId: ctx.tenantId,
+          type: "HANDOFF_MENTION",
+          message: `Você foi mencionado na transferência "${subject}"`,
+          ...alvoDoAviso(handoff.id),
+          actorUserId: ctx.userId,
+        })
+      )
+    );
+  }
+
+  revalidarATransferencia(handoff.id);
+  return { ok: true };
 }
 
 export async function registrarVisualizacao(id: string): Promise<void> {

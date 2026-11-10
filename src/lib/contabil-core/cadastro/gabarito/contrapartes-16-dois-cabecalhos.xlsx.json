@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "cabecalho_ambiguo",
+  "mensagem": "O arquivo possui mais de um cabeçalho de relação reconhecível."
+ }
+}

@@ -561,9 +561,13 @@ class DocumentoComposto {
   }
 
   /** `locate_named_stream`: o stream e onde ele começa (contíguo, é o próprio arquivo). */
-  localizar(nome: string): { mem: Uint8Array; base: number } | null {
+  localizar(nome: string): { mem: Uint8Array; base: number; tamanho: number } | null {
     const no = this.procurar(nome);
     if (!no) return null;
+    return { ...this.localizarNo(no, nome), tamanho: no.tamanho };
+  }
+
+  private localizarNo(no: NoDiretorio, nome: string): { mem: Uint8Array; base: number } {
     if (no.tamanho > this.tamDados) {
       throw erro(
         "CompDocError",
@@ -1862,6 +1866,18 @@ export function lerXls(bytes: Uint8Array): LivroXls {
     return { nome, linhas: new Folha(livro).ler() };
   });
   return { datemode: livro.datemode, folhas };
+}
+
+/**
+ * O stream "Workbook" (ou "Book") do arquivo OLE2, no tamanho que o diretório declara: o
+ * `memoria[inicio:inicio + tamanho]` de `CompDoc.locate_named_stream`. `null` se não houver.
+ * Serve à correção dos relatórios fiscais (`_corrigir_boundsheets_com_blanks`).
+ */
+export function streamDoLivro(bytes: Uint8Array): Uint8Array | null {
+  const cd = new DocumentoComposto(bytes);
+  const achado = cd.localizar("Workbook") ?? cd.localizar("Book");
+  if (!achado) return null;
+  return achado.mem.slice(achado.base, achado.base + achado.tamanho);
 }
 
 // ─── Datas (xldate.py) ──────────────────────────────────────────────────────
