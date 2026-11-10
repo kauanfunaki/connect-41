@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ID_ITEM, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "./api-fixtures.test-utils";
+import { ID_ITEM, ID_CURTO, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "./api-fixtures.test-utils";
 
 // As rotas da API pública do Controle interno (`/api/v1/controle-interno`),
 // chamadas como o Next chama, com o servidor do Controle interno de mentira:
@@ -8,13 +8,13 @@ import { ID_ITEM, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "./api-fixt
 
 const s = vi.hoisted(() => ({
   listarItens: vi.fn(), detalheItem: vi.fn(), opcoesTech: vi.fn(), salvarItem: vi.fn(), mudarSituacaoItem: vi.fn(), comentarItem: vi.fn(),
-  anexarArquivo: vi.fn(), comentarioSalvo: vi.fn(),
+  anexarArquivo: vi.fn(), comentarioSalvo: vi.fn(), idDoItem: vi.fn(),
 }));
 vi.mock("@/lib/tokens-pessoais/servidor", async () => ({ autenticarTokenPessoal: (await import("./api-fixtures.test-utils")).autenticarFalso }));
 vi.mock("./servidor", async original => ({
   ...await original<typeof import("./servidor")>(),
   listarItens: s.listarItens, detalheItem: s.detalheItem, opcoesTech: s.opcoesTech,
-  salvarItem: s.salvarItem, mudarSituacaoItem: s.mudarSituacaoItem, comentarItem: s.comentarItem,
+  salvarItem: s.salvarItem, mudarSituacaoItem: s.mudarSituacaoItem, comentarItem: s.comentarItem, idDoItem: s.idDoItem,
 }));
 vi.mock("./anexos", () => ({ anexarArquivo: s.anexarArquivo }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ techInternalComment: { findFirstOrThrow: s.comentarioSalvo } }) }));
@@ -47,6 +47,8 @@ beforeEach(() => {
   s.listarItens.mockResolvedValue({ total: 1, pages: 1, page: 1, items: [itemFalso()] });
   s.salvarItem.mockResolvedValue({ ok: true, id: ID_ITEM });
   s.mudarSituacaoItem.mockResolvedValue({ ok: true, id: ID_ITEM });
+  // O id curto acha o item pelo número; o uuid passa direto (como `idDoItem`).
+  s.idDoItem.mockImplementation(async (_ator: unknown, id: string) => (id.toLowerCase() === ID_CURTO || id === ID_ITEM ? ID_ITEM : id === "melhoria-3" ? "entrega-3" : null));
 });
 
 describe("autenticação nas rotas", () => {
@@ -86,12 +88,12 @@ describe("listar e ver", () => {
     expect(json).toEqual({
       total: 1, page: 1, pages: 1,
       items: [{
-        id: ID_ITEM, title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.", acceptanceCriteria: CRITERIO_FALSO,
+        id: ID_ITEM, number: 7, shortId: ID_CURTO, title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.", acceptanceCriteria: CRITERIO_FALSO,
         type: "BUG", typeLabel: "Bug", priority: 2, priorityLabel: "Alta", status: "PENDING", statusLabel: "Pendente",
         system: { mode: "EXISTING", key: "site:site-1", name: "Site fictício" },
         assignee: { id: "pessoa-1", name: "Pessoa fictícia" }, dueDate: "2026-11-20", size: null, sizeLabel: null, origin: null,
         version: 3, createdAt: "2026-11-05T15:00:00.000Z", updatedAt: "2026-11-05T15:00:00.000Z",
-        url: `https://connect.example.test/controle-interno/${ID_ITEM}`,
+        url: "https://connect.example.test/controle-interno/bug-7",
       }],
     });
   });
@@ -137,6 +139,20 @@ describe("listar e ver", () => {
     expect(await corpo(await item.GET(pedido("/nao-e-uuid", { token: LEITOR }), params("nao-e-uuid")))).toMatchObject({ status: 404 });
   });
 
+  it("o id curto vale no lugar do uuid, e o \"Veio de\" vem com o id e o link curtos", async () => {
+    s.detalheItem.mockResolvedValue(itemFalso({ originItemId: "entrega-3", originItem: { title: "Entrega fictícia", type: "IMPROVEMENT", number: 3 } }));
+    const { status, json } = await corpo(await item.GET(pedido(`/${ID_CURTO}`, { token: LEITOR }), params(ID_CURTO)));
+    expect(status).toBe(200);
+    expect(s.detalheItem).toHaveBeenCalledWith(ator, ID_CURTO);
+    expect(json).toMatchObject({
+      id: ID_ITEM, number: 7, shortId: ID_CURTO, url: "https://connect.example.test/controle-interno/bug-7",
+      origin: { id: "entrega-3", title: "Entrega fictícia", shortId: "melhoria-3", url: "https://connect.example.test/controle-interno/melhoria-3" },
+    });
+    // O que não é uuid nem id curto não chega a procurar.
+    expect(await corpo(await item.GET(pedido("/tarefa-7", { token: LEITOR }), params("tarefa-7")))).toMatchObject({ status: 404, json: { error: { code: "not_found" } } });
+    expect(s.detalheItem).toHaveBeenCalledTimes(1);
+  });
+
   it("sem acesso ao módulo: 403 forbidden", async () => {
     const { ErroTechInterno } = await import("./servidor");
     s.listarItens.mockRejectedValue(new ErroTechInterno("Controle interno indisponível para este acesso.", "forbidden"));
@@ -144,11 +160,11 @@ describe("listar e ver", () => {
   });
 
   it("opções: sistemas com a key, pessoas com o id", async () => {
-    s.opcoesTech.mockResolvedValue({ sistemas: [{ chave: "robo:robo-1", nome: "Robô fictício", origem: "robo", ativo: true }], users: [{ id: "pessoa-1", name: "Pessoa fictícia" }], entregas: [{ id: "e-1", title: "Entrega fictícia" }] });
+    s.opcoesTech.mockResolvedValue({ sistemas: [{ chave: "robo:robo-1", nome: "Robô fictício", origem: "robo", ativo: true }], users: [{ id: "pessoa-1", name: "Pessoa fictícia" }], entregas: [{ id: "e-1", title: "Entrega fictícia", type: "IMPROVEMENT", number: 3 }] });
     const { json } = await corpo(await opcoes.GET(pedido("/opcoes", { token: LEITOR })));
     expect(json).toMatchObject({
       systems: [{ key: "robo:robo-1", name: "Robô fictício", origin: "robo", active: true }],
-      people: [{ id: "pessoa-1", name: "Pessoa fictícia" }], recentDeliveries: [{ id: "e-1", title: "Entrega fictícia" }],
+      people: [{ id: "pessoa-1", name: "Pessoa fictícia" }], recentDeliveries: [{ id: "e-1", shortId: "melhoria-3", title: "Entrega fictícia" }],
       types: { BUG: "Bug" }, priorities: { 0: "Baixa", 3: "Urgente" },
     });
   });
@@ -203,6 +219,17 @@ describe("criar e atualizar", () => {
     expect(s.salvarItem.mock.calls[1][1]).toMatchObject({ systemMode: "NONE", systemKey: null });
   });
 
+  it("PATCH pelo id curto grava no uuid do item lido; o \"Veio de\" aceita o id curto da entrega", async () => {
+    await item.PATCH(pedido("/BUG-7", { token: ESCRITOR, metodo: "PATCH", corpo: { priority: 3, version: 3 } }), params("BUG-7"));
+    expect(s.detalheItem).toHaveBeenCalledWith(ator, "BUG-7");
+    expect(s.salvarItem).toHaveBeenLastCalledWith(ator, expect.objectContaining({ priority: 3 }), ID_ITEM, 3);
+    await colecao.POST(pedido("", { token: ESCRITOR, metodo: "POST", corpo: { title: "Bug da entrega", type: "BUG", originItemId: "melhoria-3" } }));
+    expect(s.salvarItem).toHaveBeenLastCalledWith(ator, { title: "Bug da entrega", type: "BUG", originItemId: "entrega-3" });
+    // Id curto que não acha entrega segue como veio: a regra das telas recusa com a mensagem do "Veio de".
+    await colecao.POST(pedido("", { token: ESCRITOR, metodo: "POST", corpo: { title: "x", type: "BUG", originItemId: "melhoria-99" } }));
+    expect(s.salvarItem).toHaveBeenLastCalledWith(ator, { title: "x", type: "BUG", originItemId: "melhoria-99" });
+  });
+
   it("conflito de versão: 409 com a mensagem das telas", async () => {
     s.salvarItem.mockResolvedValue({ error: CONFLITO, code: "conflict" });
     expect(await corpo(await item.PATCH(pedido(`/${ID_ITEM}`, { token: ESCRITOR, metodo: "PATCH", corpo: { title: "x", version: 1 } }), params())))
@@ -211,6 +238,21 @@ describe("criar e atualizar", () => {
 });
 
 describe("situação, comentário e anexo", () => {
+  it("pelo id curto: situação, comentário e anexo agem no uuid do item; id curto sem item é 404", async () => {
+    await situacao.POST(pedido(`/${ID_CURTO}/situacao`, { token: ESCRITOR, metodo: "POST", corpo: { status: "VALIDATION", version: 3 } }), params(ID_CURTO));
+    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "VALIDATION", 3, {});
+    s.comentarItem.mockResolvedValue({ ok: true, id: ID_ITEM, commentId: "c-9" });
+    s.comentarioSalvo.mockResolvedValue({ id: "c-9", authorName: "Pessoa fictícia", body: "Feito.", createdAt: new Date("2026-11-05T16:00:00Z") });
+    expect(await corpo(await comentarios.POST(pedido(`/${ID_CURTO}/comentarios`, { token: ESCRITOR, metodo: "POST", corpo: { body: "Feito." } }), params(ID_CURTO)))).toMatchObject({ status: 201, json: { itemId: ID_ITEM } });
+    expect(s.comentarItem).toHaveBeenCalledWith(ator, ID_ITEM, "Feito.");
+    s.anexarArquivo.mockResolvedValue({ ok: true, valor: { id: "a-1", nome: "erro.png" } });
+    const form = new FormData(); form.append("arquivo", new File(["x"], "erro.png", { type: "image/png" }));
+    await anexos.POST(pedido(`/${ID_CURTO}/anexos`, { token: ESCRITOR, metodo: "POST", corpo: form }), params(ID_CURTO));
+    expect(s.anexarArquivo).toHaveBeenCalledWith(ator, ID_ITEM, expect.any(File));
+    expect(await corpo(await situacao.POST(pedido("/bug-404/situacao", { token: ESCRITOR, metodo: "POST", corpo: { status: "DONE" } }), params("bug-404")))).toMatchObject({ status: 404, json: { error: { code: "not_found" } } });
+    expect(s.mudarSituacaoItem).toHaveBeenCalledTimes(1);
+  });
+
   it("muda a situação com a version enviada, ou com a atual quando não vem", async () => {
     await situacao.POST(pedido(`/${ID_ITEM}/situacao`, { token: ESCRITOR, metodo: "POST", corpo: { status: "IN_PROGRESS", version: 3 } }), params());
     expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "IN_PROGRESS", 3, {});

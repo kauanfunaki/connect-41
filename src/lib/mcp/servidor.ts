@@ -14,7 +14,7 @@ import {
 // Cada chamada chega com o token pessoal; a ferramenta só aparece se o token
 // tem o escopo dela, e age com o acesso de hoje da pessoa dona do token.
 
-export const VERSAO_DO_SERVIDOR_MCP = "1.3.0";
+export const VERSAO_DO_SERVIDOR_MCP = "1.4.0";
 
 const INSTRUCOES = `Servidor do Connect para o Controle interno da equipe Tech: o registro de bugs, melhorias, novas funcionalidades, testes e migrações dos sistemas.
 Tudo o que você faz aqui fica no histórico do item e na Auditoria com o nome da pessoa dona do token.
@@ -22,6 +22,7 @@ Como trabalhar:
 - Antes de criar, procure com listar_itens (campo q) se o item já existe; se existir, comente ou atualize em vez de duplicar.
 - Para saber o que já foi feito, o que está em andamento e o que está planejado num dia, semana, mês ou ano, use resumo_do_periodo em vez de ler item por item.
 - Para preencher sistema, responsável ou "veio de", consulte ver_opcoes: use a "key" do sistema em systemKey e o "id" da pessoa em assigneeId ("me" é a própria pessoa do token).
+- Cada item tem um id curto, como "bug-123" ou "melhoria-45" (shortId), aceito no lugar do id em toda ferramenta. O link do item (url) é o endereço curto: passe esse para as pessoas.
 - Para alterar, leia o item com ver_item e envie a "version" que veio nele: se outra pessoa mudou o item nesse meio-tempo, a gravação é recusada (conflict) e você deve ler de novo.
 - Ao concluir um item que mudou código, informe o PR (prUrl) e o commit (commitSha) da mudança em mudar_situacao ou atualizar_item.
 - O critério de aceite (como testar e quando o item está aprovado) vai no campo acceptanceCriteria, não na descrição. Ao reescrevê-lo, mande o critério inteiro no lugar do anterior, que fica no histórico do item; a descrição continua com o contexto.
@@ -30,7 +31,7 @@ Como trabalhar:
 const TIPO = z.enum(["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"]).describe("BUG = Bug; IMPROVEMENT = Melhoria (inclui redesign de tela); FEATURE = Nova funcionalidade; TEST = Teste; MIGRATION = Migração.");
 const SITUACAO = z.enum(["PENDING", "IN_PROGRESS", "VALIDATION", "DONE", "CANCELED"]).describe("PENDING = Pendente; IN_PROGRESS = Em andamento; VALIDATION = Em validação; DONE = Concluído; CANCELED = Cancelado.");
 const PRIORIDADE = z.number().int().min(0).max(3).describe("0 = Baixa, 1 = Média (padrão), 2 = Alta, 3 = Urgente.");
-const ID = z.string().describe("O id do item (UUID), como veio de listar_itens ou ver_item.");
+const ID = z.string().describe("O id do item: o curto (shortId, ex.: \"bug-123\") ou o UUID (id), como vieram de listar_itens ou ver_item. O número é o que vale: um prefixo de tipo antigo também acha o item.");
 const VERSAO = z.number().int().min(0).describe("A version do item lida em ver_item. Recomendado: protege contra gravar por cima de outra pessoa. Sem ela, vale a versão atual.");
 
 const entregaNoCodigo = {
@@ -51,7 +52,7 @@ const camposEditaveis = {
   dueDate: z.string().nullable().optional().describe("Prazo no formato AAAA-MM-DD. null limpa."),
   size: z.enum(["P", "M", "G"]).nullable().optional().describe("Tamanho combinado: P, M ou G. Só quem coordena a Tech define, e só enquanto o item está Pendente."),
   ...entregaNoCodigo,
-  originItemId: z.string().max(191).nullable().optional().describe("\"Veio de\": o id de uma entrega concluída (ver recentDeliveries em ver_opcoes), quando o item nasce dela — por exemplo, um bug de algo já entregue."),
+  originItemId: z.string().max(191).nullable().optional().describe("\"Veio de\": o id ou o id curto (ex.: \"melhoria-45\") de uma entrega concluída (ver recentDeliveries em ver_opcoes), quando o item nasce dela — por exemplo, um bug de algo já entregue."),
 };
 
 function resultado(dados: unknown): CallToolResult {
@@ -78,7 +79,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
         priority: PRIORIDADE.optional(),
         system: z.string().max(191).optional().describe("A key de um sistema (de ver_opcoes), NONE (sem sistema) ou NEW (sistema novo)."),
         assignee: z.string().max(191).optional().describe("O id de uma pessoa, \"me\" (a dona do token) ou \"none\" (sem responsável)."),
-        q: z.string().max(200).optional().describe("Busca no título, na descrição e no critério de aceite."),
+        q: z.string().max(200).optional().describe("Busca no título, na descrição e no critério de aceite; um id curto (\"bug-123\") acha também o item desse número."),
         overdue: z.boolean().optional().describe("true = só os em aberto com prazo vencido."),
         page: z.number().int().min(1).optional().describe("Página, a partir de 1."),
       },
@@ -104,7 +105,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
 
     server.registerTool("ver_opcoes", {
       title: "Ver as opções dos campos",
-      description: "Os valores aceitos nos campos: tipos, situações, prioridades, tamanhos, os sistemas do Orquestrador (key para systemKey), as pessoas que podem ser responsáveis (id para assigneeId) e as entregas recentes (id para originItemId).",
+      description: "Os valores aceitos nos campos: tipos, situações, prioridades, tamanhos, os sistemas do Orquestrador (key para systemKey), as pessoas que podem ser responsáveis (id para assigneeId) e as entregas recentes (id ou shortId para originItemId).",
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: false },
     }, () => executar(() => opcoesParaApi(ator)));
@@ -113,7 +114,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
   if (pode("controle-interno:escrever")) {
     server.registerTool("criar_item", {
       title: "Criar um item",
-      description: "Cria um item no Controle interno (bug, melhoria, nova funcionalidade, teste ou migração) e devolve o item criado, com o link para abrir no Connect. Procure antes com listar_itens para não duplicar. O critério de aceite vai em acceptanceCriteria, não na descrição.",
+      description: "Cria um item no Controle interno (bug, melhoria, nova funcionalidade, teste ou migração) e devolve o item criado, com o id curto (shortId) e o link curto para abrir no Connect (url). Procure antes com listar_itens para não duplicar. O critério de aceite vai em acceptanceCriteria, não na descrição.",
       inputSchema: {
         title: z.string().min(1).max(200).describe("Título curto e específico, em português."),
         type: TIPO,

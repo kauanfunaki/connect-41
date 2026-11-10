@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, hojeEmSaoPaulo } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, enderecoDoItem, hojeEmSaoPaulo } from "@/lib/tech-interno/regras";
 import { PERIODOS_DO_RESUMO, deslocarPeriodo, ehPeriodoDoResumo, resumoEmTexto, type ItemParaResumo, type PeriodoDoResumo } from "@/lib/tech-interno/resumo";
 import { resumoTech } from "@/lib/tech-interno/servidor";
 import { formatInstantDate } from "@/lib/format";
@@ -32,7 +32,7 @@ function Linha({ item, detalhe }: { item: ItemParaResumo; detalhe: React.ReactNo
   return (
     <li className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
-        <Link href={`${ROTA_TECH_INTERNO}/${item.id}`} className="text-fg font-medium underline-offset-2 hover:text-brand hover:underline break-words">
+        <Link href={enderecoDoItem(item)} className="text-fg font-medium underline-offset-2 hover:text-brand hover:underline break-words">
           {item.title}
         </Link>
         <p className="text-helper text-fg-secondary">{contexto}</p>
@@ -64,7 +64,7 @@ export default async function ResumoTechPage({ searchParams }: { searchParams: P
   const h = await headers();
   const host = h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host") || "";
   const base = host ? `${h.get("x-forwarded-proto")?.split(",")[0]?.trim() === "http" ? "http" : "https"}://${host}` : "";
-  const texto = resumoEmTexto(`${NOME_DO_PERIODO[periodo]} de ${r.rotulo}`, r, (id) => `${base}${ROTA_TECH_INTERNO}/${id}`);
+  const texto = resumoEmTexto(`${NOME_DO_PERIODO[periodo]} de ${r.rotulo}`, r, (item) => `${base}${enderecoDoItem(item)}`);
   const nada = !r.concluidos.length && !r.emAndamento.length && !r.planejados.length && !r.cancelados.length;
 
   return (

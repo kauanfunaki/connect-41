@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deslocarPeriodo, intervaloDoResumo, montarResumo, resumoEmTexto, type ItemParaResumo } from "./resumo";
+import { enderecoDoItem } from "./regras";
 
 describe("intervaloDoResumo", () => {
   it("dia, semana (segunda a domingo), mês e ano, da meia-noite de São Paulo", () => {
@@ -29,7 +30,7 @@ describe("intervaloDoResumo", () => {
 describe("montarResumo", () => {
   const intervalo = intervaloDoResumo("semana", "2026-11-06"); // 02/11 a 08/11
   const item = (id: string, status: ItemParaResumo["status"], extra: Partial<ItemParaResumo> = {}): ItemParaResumo => ({
-    id, title: `Item ${id}`, type: "BUG", status, priority: 1, systemName: null, assigneeName: null, dueDate: null, prUrl: null, createdAt: new Date("2026-10-01T12:00:00Z"), ...extra,
+    id, number: 1, title: `Item ${id}`, type: "BUG", status, priority: 1, systemName: null, assigneeName: null, dueDate: null, prUrl: null, createdAt: new Date("2026-10-01T12:00:00Z"), ...extra,
   });
   const sit = (itemId: string, quando: string, de: string | null, para: string) => ({ itemId, createdAt: new Date(quando), changes: [{ field: "Situação", before: de, after: para }] });
 
@@ -64,9 +65,9 @@ describe("montarResumo", () => {
   });
 
   it("o texto para colar agrupa e leva o link e o PR", () => {
-    const r = montarResumo([item("feito", "DONE", { prUrl: "https://github.com/x/y/pull/1" })], [sit("feito", "2026-11-04T13:00:00Z", "Em validação", "Concluído")], intervalo);
-    expect(resumoEmTexto(intervalo.rotulo, r, (id) => `https://app/ci/${id}`)).toBe(
-      "Controle interno — 02/11 a 08/11/2026\n\nConcluídos (1)\n- Item feito (PR: https://github.com/x/y/pull/1) — https://app/ci/feito",
+    const r = montarResumo([item("feito", "DONE", { number: 7, prUrl: "https://github.com/x/y/pull/1" })], [sit("feito", "2026-11-04T13:00:00Z", "Em validação", "Concluído")], intervalo);
+    expect(resumoEmTexto(intervalo.rotulo, r, (i) => `https://app${enderecoDoItem(i)}`)).toBe(
+      "Controle interno — 02/11 a 08/11/2026\n\nConcluídos (1)\n- Item feito (PR: https://github.com/x/y/pull/1) — https://app/controle-interno/bug-7",
     );
   });
 });

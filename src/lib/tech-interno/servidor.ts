@@ -8,7 +8,8 @@ import { intervaloMes } from "./agenda";
 import {
   MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
   CONFLITO, SEM_VINCULO, CAMPO_DO_CRITERIO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
-  vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, type DadosItem, type Filtros, type SistemaTech, type Alteracao,
+  vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, enderecoDoItem, ehUuid, lerIdCurto,
+  type DadosItem, type Filtros, type SistemaTech, type Alteracao,
 } from "./regras";
 import { intervaloDoResumo, montarResumo, type PeriodoDoResumo } from "./resumo";
 import { lerCriterioDeAceite, mesmoTexto } from "./criterioDeAceite";
@@ -21,6 +22,8 @@ export class ErroTechInterno extends Error {
 type Tx = Prisma.TransactionClient;
 export type FalhaTech = { error: string; code: CodigoTech };
 export type ResultadoTech = { ok: true; id: string } | FalhaTech;
+/** O item salvo, com o endereço curto de agora (o tipo pode ter mudado na edição). */
+export type ItemSalvo = { ok: true; id: string; endereco: string } | FalhaTech;
 /**
  * Quem age (05/11/2026): a pessoa da sessão, nas telas, ou a pessoa dona do
  * token pessoal, na API e no MCP — a mesma regra para os dois. `via` marca na
@@ -30,7 +33,7 @@ export type ResultadoTech = { ok: true; id: string } | FalhaTech;
 export type AtorTech = AuthContext & { via?: { tokenId: string; tokenName: string } };
 const conflito = (): FalhaTech => ({ error: CONFLITO, code: "conflict" });
 const doOps = { select: { name: true, isActive: true } } as const;
-const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } }, originItem: { select: { title: true } } } as const;
+const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } }, originItem: { select: { title: true, type: true, number: true } } } as const;
 type ItemCompleto = Prisma.TechInternalItemGetPayload<{ include: typeof incluir }>;
 
 async function conferirAcesso(ctx: AuthContext, nivel: NivelNoModulo) {
@@ -80,12 +83,14 @@ export async function opcoesTech(ctx: AuthContext) {
   ];
   // As entregas recentes, para o "Veio de" do bug (04/11/2026).
   const entregas = await db.techInternalItem.findMany({
-    where: { tenantId, status: "DONE" }, select: { id: true, title: true }, orderBy: { updatedAt: "desc" }, take: 200,
+    where: { tenantId, status: "DONE" }, select: { id: true, title: true, type: true, number: true }, orderBy: { updatedAt: "desc" }, take: 200,
   });
   return { sistemas, users, entregas };
 }
 
 export function whereDosItens(tenantId: string, userId: string, filtros: Filtros): Prisma.TechInternalItemWhereInput {
+  // O id curto na busca ("bug-123", 10/11/2026) acha o item pelo número.
+  const curto = filtros.q ? lerIdCurto(filtros.q) : null;
   return {
     tenantId,
     // No Kanban, sem filtro, todas as situações: as colunas Concluído e Cancelado
@@ -98,7 +103,7 @@ export function whereDosItens(tenantId: string, userId: string, filtros: Filtros
     ...(filtros.assignee ? { assigneeId: filtros.assignee === "me" ? userId : filtros.assignee === "none" ? null : filtros.assignee } : {}),
     ...(filtros.overdue ? { dueDate: { lt: new Date(hojeEmSaoPaulo()) }, AND: { status: { in: [...EM_ABERTO] } } } : {}),
     // O critério de aceite saiu da descrição (10/11/2026): a busca olha os dois.
-    ...(filtros.q ? { OR: [{ title: { contains: filtros.q } }, { description: { contains: filtros.q } }, { acceptanceCriteria: { contains: filtros.q } }] } : {}),
+    ...(filtros.q ? { OR: [{ title: { contains: filtros.q } }, { description: { contains: filtros.q } }, { acceptanceCriteria: { contains: filtros.q } }, ...curto ? [{ number: curto.numero }] : []] } : {}),
   };
 }
 export async function listarItens(ctx: AuthContext, filtros: Filtros) {
@@ -150,9 +155,29 @@ export async function mudarSituacaoItem(ctx: AtorTech, id: string, raw: unknown,
     return { ok: true, id };
   } catch (e) { return erroDaOperacao(e); }
 }
-export async function detalheItem(ctx: AuthContext, id: string) {
+/**
+ * Onde achar o item (10/11/2026): pelo uuid ou pelo id curto ("bug-123"). O
+ * id curto acha pelo número, que é único no escritório — o prefixo de um tipo
+ * antigo ainda acha o item; quem confere o prefixo é a rota, que passa para o
+ * endereço de agora. Qualquer outra coisa não é item.
+ */
+function ondeDoItem(tenantId: string, idOuCurto: string): Prisma.TechInternalItemWhereInput | null {
+  if (ehUuid(idOuCurto)) return { tenantId, id: idOuCurto };
+  const curto = lerIdCurto(idOuCurto);
+  return curto ? { tenantId, number: curto.numero } : null;
+}
+/** O uuid do item, a partir do uuid ou do id curto, para as ações que gravam (API e MCP). */
+export async function idDoItem(ctx: AuthContext, idOuCurto: string): Promise<string | null> {
+  if (ehUuid(idOuCurto)) return idOuCurto;
   await conferirAcesso(ctx, "ver");
-  return getPrisma().techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: {
+  const where = ondeDoItem(ctx.tenantId, idOuCurto);
+  return where ? (await getPrisma().techInternalItem.findFirst({ where, select: { id: true } }))?.id ?? null : null;
+}
+export async function detalheItem(ctx: AuthContext, idOuCurto: string) {
+  await conferirAcesso(ctx, "ver");
+  const where = ondeDoItem(ctx.tenantId, idOuCurto);
+  if (!where) return null;
+  return getPrisma().techInternalItem.findFirst({ where, include: {
     ...incluir, comments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }, changes: { orderBy: { version: "desc" } }, attachments: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] },
     acceptanceChecks: { orderBy: { position: "asc" } },
   } });
@@ -230,7 +255,44 @@ async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, ante
   }
 }
 
-export async function salvarItem(ctx: AtorTech, raw: unknown, id?: string, versao?: unknown): Promise<ResultadoTech> {
+/**
+ * O próximo número do escritório (10/11/2026), o do endereço curto.
+ *
+ * Duas criações ao mesmo tempo no mesmo escritório fazem fila na linha do
+ * escritório (`tenants … FOR UPDATE`, a mesma trava dos chamados): vale também
+ * para o escritório ainda sem item, em que não há linha de item para travar.
+ * O último número é lido pela própria consulta com trava, que enxerga o que a
+ * criação da frente acabou de confirmar — uma leitura comum depois da trava
+ * leria a foto do começo da transação, que já fez leituras antes (o pagamento
+ * em dobro de 19/10/2026). A unique (tenantId, number) fica de rede: se ainda
+ * assim dois itens pegarem o mesmo número, a criação que perde refaz a
+ * transação (`comNovaTentativa`).
+ */
+async function proximoNumero(tx: Tx, tenantId: string): Promise<number> {
+  await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${tenantId} FOR UPDATE`;
+  const [ultimo] = await tx.$queryRaw<{ numero: number | bigint }[]>`SELECT \`number\` AS numero FROM tech_internal_items WHERE tenantId = ${tenantId} ORDER BY \`number\` DESC LIMIT 1 FOR UPDATE`;
+  return (ultimo ? Number(ultimo.numero) : 0) + 1;
+}
+const TENTATIVAS_DA_CRIACAO = 3;
+/**
+ * A criação que encontra outra no mesmo número (a unique recusa, P2002) ou num
+ * impasse de trava do MySQL (P2034) refaz a transação inteira, que lê o número
+ * de novo. A edição não repete: lá o conflito é de version, e quem decide é a
+ * pessoa.
+ */
+async function comNovaTentativa<T>(criando: boolean, gravar: () => Promise<T>): Promise<T> {
+  for (let tentativa = 1; ; tentativa++) {
+    try {
+      return await gravar();
+    } catch (e) {
+      const corrida = e instanceof Prisma.PrismaClientKnownRequestError && (e.code === "P2002" || e.code === "P2034");
+      if (!criando || !corrida) throw e;
+      if (tentativa >= TENTATIVAS_DA_CRIACAO) throw new ErroTechInterno("Outros itens foram criados ao mesmo tempo e este não chegou a ser salvo. Tente de novo.", "conflict");
+    }
+  }
+}
+
+export async function salvarItem(ctx: AtorTech, raw: unknown, id?: string, versao?: unknown): Promise<ItemSalvo> {
   try {
     await conferirAcesso(ctx, "agir");
     const parsed = itemSchema.safeParse(raw);
@@ -238,7 +300,7 @@ export async function salvarItem(ctx: AtorTech, raw: unknown, id?: string, versa
     const version = id ? versaoSchema.safeParse(versao) : null;
     if (id && (!version?.success || versao === null || versao === undefined || versao === "")) return conflito();
     const dados = parsed.data, { systemKey, ...campos } = dados;
-    const result = await getPrisma().$transaction(async tx => {
+    const result = await comNovaTentativa(!id, () => getPrisma().$transaction(async tx => {
       const anterior = id ? await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, include: incluir }) : null;
       if (id && !anterior) throw new ErroTechInterno("Item não encontrado.", "not_found");
       if (anterior && anterior.version !== (version?.success ? version.data : -1)) throw new ErroTechInterno(CONFLITO, "conflict");
@@ -262,7 +324,8 @@ export async function salvarItem(ctx: AtorTech, raw: unknown, id?: string, versa
         if (atualizado.count !== 1) throw new ErroTechInterno(CONFLITO, "conflict");
         item = await tx.techInternalItem.findUniqueOrThrow({ where: { id: anterior.id }, include: incluir });
       } else {
-        item = await tx.techInternalItem.create({ data: { ...data, tenantId: ctx.tenantId }, include: incluir });
+        // O número sai por último, logo antes de gravar: a trava fica o menor tempo possível.
+        item = await tx.techInternalItem.create({ data: { ...data, tenantId: ctx.tenantId, number: await proximoNumero(tx, ctx.tenantId) }, include: incluir });
       }
       const changes = diferencas(anterior ? valoresLegiveis(anterior) : null, valoresLegiveis(item));
       // Uma mudança de vínculo com o mesmo nome continua sendo mudança real.
@@ -276,10 +339,10 @@ export async function salvarItem(ctx: AtorTech, raw: unknown, id?: string, versa
       if (changes.length || !anterior) await tx.techInternalChange.create({ data: {
         tenantId: ctx.tenantId, itemId: item.id, version: item.version, changes, ...await autor(tx, ctx),
       } });
-      return { ok: true as const, id: item.id, title: item.title, campos: changes.map(c => c.field).join(", ") };
-    });
+      return { ok: true as const, id: item.id, title: item.title, campos: changes.map(c => c.field).join(", "), endereco: enderecoDoItem(item) };
+    }));
     if (!id || result.campos) await registrar(ctx, id ? "tech_interno.item.update" : "tech_interno.item.create", result.id, { title: result.title, ...(id ? { campos: result.campos } : {}) });
-    return { ok: true, id: result.id };
+    return { ok: true, id: result.id, endereco: result.endereco };
   } catch (e) { return erroDaOperacao(e); }
 }
 
@@ -351,7 +414,7 @@ export async function resumoTech(ctx: AuthContext, periodo: PeriodoDoResumo, dat
   }) : [];
   const resumo = montarResumo(
     itens.map(i => ({
-      id: i.id, title: i.title, type: i.type, status: i.status, priority: i.priority, systemName: nomeDoSistema(i),
+      id: i.id, number: i.number, title: i.title, type: i.type, status: i.status, priority: i.priority, systemName: nomeDoSistema(i),
       assigneeName: i.assignee?.name ?? null, dueDate: i.dueDate?.toISOString().slice(0, 10) ?? null, prUrl: i.prUrl, createdAt: i.createdAt,
     })),
     mudancas.map(m => ({ itemId: m.itemId, createdAt: m.createdAt, changes: (Array.isArray(m.changes) ? m.changes : []) as unknown as Alteracao[] })),

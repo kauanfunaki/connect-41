@@ -28,7 +28,7 @@ for (const sector of ["tech", "contabil", "fiscal"]) await db.query("INSERT INTO
 await db.query("INSERT INTO user_sectors (userId,sectorCode) VALUES (?,'contabil')", [userId]);
 for (const code of ["tech_controle_interno", "tech_ops_center"]) await db.query("INSERT INTO tenant_modules (id,tenantId,moduleCode,enabled,updatedAt) VALUES (?,?,?,true,NOW(3))", [randomUUID(), tenantId, code]);
 const dated = randomUUID(), undated = randomUUID();
-for (const [id, title, dueDate] of [[dated, "Bug com prazo fictício", "2026-10-23"], [undated, "Melhoria sem prazo fictícia", null]]) await db.query("INSERT INTO tech_internal_items (id,tenantId,title,type,priority,status,systemMode,dueDate,version,updatedAt) VALUES (?,?,?,'BUG',1,'PENDING','NONE',?,0,NOW(3))", [id, tenantId, title, dueDate]);
+for (const [id, numero, title, dueDate] of [[dated, 1, "Bug com prazo fictício", "2026-10-23"], [undated, 2, "Melhoria sem prazo fictícia", null]]) await db.query("INSERT INTO tech_internal_items (id,tenantId,`number`,title,type,priority,status,systemMode,dueDate,version,updatedAt) VALUES (?,?,?,?,'BUG',1,'PENDING','NONE',?,0,NOW(3))", [id, tenantId, numero, title, dueDate]);
 await db.query("INSERT INTO ops_watchers (tenantId,slug,name,isActive,version,updatedAt) VALUES (?,'bot_ficticio','Bot fictício',true,0,NOW(3))", [tenantId]);
 const secret = "teste-local-tech-ops-sem-integracoes-33383", base = "http://127.0.0.1:33383";
 const system = Object.fromEntries(["PATH", "Path", "SystemRoot", "WINDIR", "TEMP", "TMP", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "COMSPEC", "PATHEXT"].flatMap(k => process.env[k] ? [[k, process.env[k]]] : []));

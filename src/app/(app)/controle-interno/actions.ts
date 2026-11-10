@@ -8,32 +8,38 @@ import { getAuthContext } from "@/lib/auth/context";
 
 // As telas agem com a pessoa da sessão; a API e o MCP, com a dona do token
 // pessoal — a mesma regra do servidor (05/11/2026). O que volta para a tela é
-// só `ok`/`id` ou a mensagem de erro, como antes.
+// só `ok`/`id` ou a mensagem de erro, como antes; o salvar devolve também o
+// endereço curto do item (10/11/2026).
 type Resposta = { ok: true; id: string } | { error: string };
-export async function salvarItemTech(id: string | undefined, form: FormData): Promise<Resposta> {
+// A tela do item em qualquer endereço (10/11/2026): o curto de agora, o de um
+// tipo anterior e o antigo, com o uuid, que passam para ele. O padrão da rota
+// leva o grupo `(app)`, como o arquivo da página.
+const revalidarItens = () => revalidatePath(`/(app)${ROTA_TECH_INTERNO}/[id]`, "page");
+/** Salva o item; `endereco` é o endereço curto de agora, para a tela ir até ele. */
+export async function salvarItemTech(id: string | undefined, form: FormData): Promise<{ ok: true; id: string; endereco: string } | { error: string }> {
   const result = await salvarItem(await getAuthContext(), Object.fromEntries(form), id, form.get("version"));
-  if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidatePath(`${ROTA_TECH_INTERNO}/${result.id}`); return { ok: true, id: result.id }; }
+  if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidarItens(); return { ok: true, id: result.id, endereco: result.endereco }; }
   return { error: result.error };
 }
 export async function comentarItemTech(id: string, form: FormData): Promise<Resposta> {
   const result = await comentarItem(await getAuthContext(), id, form.get("body"));
-  if ("ok" in result) { revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id }; }
+  if ("ok" in result) { revalidarItens(); return { ok: true, id }; }
   return { error: result.error };
 }
 export async function mudarSituacaoTech(id: string, status: string, version: number, entrega?: { prUrl?: string; commitSha?: string }): Promise<Resposta> {
   const result = await mudarSituacaoItem(await getAuthContext(), id, status, version, entrega);
-  if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id: result.id }; }
+  if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidarItens(); return { ok: true, id: result.id }; }
   return { error: result.error };
 }
 /** Marca ou desmarca um ponto do "Aprovado quando" do critério de aceite (10/11/2026). */
 export async function conferirCriterioTech(id: string, posicao: number, texto: string, marcado: boolean): Promise<Resposta> {
   const result = await conferirCriterio(await getAuthContext(), id, posicao, texto, marcado);
-  if ("ok" in result) { revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id }; }
+  if ("ok" in result) { revalidarItens(); return { ok: true, id }; }
   return { error: result.error };
 }
 export async function removerAnexoTech(id: string): Promise<{ error: string } | null> {
   const result = await removerAnexo(await getAuthContext(), id);
   if (!result.ok) return { error: result.erro };
-  revalidatePath(`${ROTA_TECH_INTERNO}/${result.valor.itemId}`);
+  revalidarItens();
   return null;
 }

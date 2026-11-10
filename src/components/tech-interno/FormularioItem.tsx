@@ -17,7 +17,8 @@ import { PilulasDeEscolha } from "@/components/tech-interno/PilulasDeEscolha";
 import { uploadComProgresso } from "@/lib/uploadComProgresso";
 import { ACCEPT_DO_DRIVE } from "@/lib/drive/tipoDoArquivo";
 import { salvarItemTech, comentarItemTech } from "@/app/(app)/controle-interno/actions";
-import { TIPOS, PRIORIDADES, SITUACOES, TAMANHOS, ROTA_TECH_INTERNO, ORIGENS_DO_SISTEMA, comVolta, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
+import { TIPOS, PRIORIDADES, SITUACOES, TAMANHOS, ORIGENS_DO_SISTEMA, type SistemaTech, type OrigemDoSistema } from "@/lib/tech-interno/regras";
+import { useVoltaDaLista } from "@/components/tech-interno/VoltaDaLista";
 
 type Pessoa = { id: string; name: string };
 export type ItemDoFormulario = {
@@ -50,19 +51,24 @@ const MODELO_DO_CRITERIO = "Mudança: …\nAntes de testar: …\nOnde testar: �
  *
  * O critério de aceite (10/11/2026) tem campo próprio, logo depois da
  * descrição. `aoTerminar`: na edição de um item que já existe, para onde
- * "Salvar alterações" e "Cancelar" levam — a visualização do item.
+ * "Cancelar" leva — a visualização do item; "Salvar alterações" vai ao
+ * endereço curto que o servidor devolve, que muda junto com o tipo.
+ *
+ * Sem `aoTerminar` (o item novo), "Cancelar" volta para a lista de onde a
+ * pessoa veio (`useVoltaDaLista`, 10/11/2026), e o item criado abre no
+ * endereço curto dele.
  */
-export function FormularioItem({ item, sistemas, users, entregas = [], podeEditar, podeDefinirTamanho = false, voltar = ROTA_TECH_INTERNO, disposicao = "pagina", aoTerminar }: {
+export function FormularioItem({ item, sistemas, users, entregas = [], podeEditar, podeDefinirTamanho = false, disposicao = "pagina", aoTerminar }: {
   item?: ItemDoFormulario; sistemas: SistemaTech[]; users: Pessoa[];
   /** As entregas concluídas, para o "Veio de" (04/11/2026). */
   entregas?: { id: string; title: string }[];
   podeEditar: boolean;
   /** Quem coordena a Tech define o tamanho (04/11/2026). */
   podeDefinirTamanho?: boolean;
-  voltar?: string;
   disposicao?: "pagina" | "compacta";
   aoTerminar?: string;
 }) {
+  const voltar = useVoltaDaLista();
   // O tamanho trava quando o item sai de Pendente (04/11/2026, lote D).
   const tamanhoTravado = !podeDefinirTamanho || (item ? item.status !== "PENDING" : false);
   const router = useRouter();
@@ -184,9 +190,9 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
           setFila(f => f.map(x => x.id === a.id ? (up.ok ? { ...x, estado: "concluido", progresso: 100 } : { ...x, estado: "erro", erro: up.erro }) : x));
         }
         show(item ? "Alterações salvas." : falhas ? `Item criado, mas ${falhas === 1 ? "um anexo não foi enviado" : `${falhas} anexos não foram enviados`}. Anexe de novo na tela do item.` : "Item criado.", falhas ? "error" : "success");
-        if (!item) router.replace(comVolta(`${ROTA_TECH_INTERNO}/${r.id}`, voltar));
-        // Salvou a edição: volta para a visualização do item (10/11/2026).
-        else if (aoTerminar) router.replace(aoTerminar);
+        // O item criado abre no endereço curto; a edição salva volta para a
+        // visualização (10/11/2026), no endereço de agora — o tipo pode ter mudado.
+        if (!item || aoTerminar) router.replace(r.endereco);
         else router.refresh();
       } catch { setErro("Não foi possível confirmar o salvamento. Atualize a página antes de tentar novamente."); }
     });

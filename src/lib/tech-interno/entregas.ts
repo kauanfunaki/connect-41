@@ -9,7 +9,7 @@
 // Puro — testado; quem busca é `entregasDoPeriodo`.
 
 import { getPrisma } from "@/lib/prisma";
-import { PESO_DO_TAMANHO, SITUACOES, TAMANHOS, type Alteracao } from "./regras";
+import { PESO_DO_TAMANHO, SITUACOES, TAMANHOS, enderecoDoItem, type Alteracao } from "./regras";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -167,6 +167,9 @@ export type ItemEntregue = {
   originTitle: string | null;
   /** Quantos itens dizem ter vindo deste: o retrabalho que ele gerou. */
   retrabalho: number;
+  /** O endereço curto do item e o do item de onde veio (10/11/2026, `enderecoDoItem`). */
+  endereco: string;
+  originEndereco: string | null;
 };
 
 /**
@@ -176,7 +179,7 @@ export type ItemEntregue = {
  * os pontos por semana.
  */
 export function itensEntregues(
-  itens: (ItemParaEntregas & { originTitle?: string | null })[],
+  itens: (ItemParaEntregas & { originTitle?: string | null; endereco: string; originEndereco?: string | null })[],
   mudancas: MudancaParaEntregas[],
   inicio: Date,
   fim: Date
@@ -203,6 +206,8 @@ export function itensEntregues(
       originItemId: item.originItemId,
       originTitle: item.originTitle ?? null,
       retrabalho: derivados.get(item.id) ?? 0,
+      endereco: item.endereco,
+      originEndereco: item.originItemId ? item.originEndereco ?? null : null,
     });
   }
   return lista.sort((a, b) => b.concluidoEm.getTime() - a.concluidoEm.getTime() || a.title.localeCompare(b.title, "pt-BR"));
@@ -234,7 +239,7 @@ export async function entregasDoPeriodo(tenantId: string, periodo: PeriodoDasEnt
     prisma.techInternalItem.findMany({
       // Concluídos que mexeram desde o início do período, mais os que dizem vir de algum.
       where: { tenantId, OR: [{ status: "DONE", updatedAt: { gte: inicio } }, { originItemId: { not: null } }] },
-      select: { id: true, title: true, status: true, size: true, assigneeId: true, originItemId: true, createdAt: true, assignee: { select: { name: true } }, originItem: { select: { title: true } } },
+      select: { id: true, number: true, type: true, title: true, status: true, size: true, assigneeId: true, originItemId: true, createdAt: true, assignee: { select: { name: true } }, originItem: { select: { title: true, type: true, number: true } } },
       take: 5000,
     }),
     prisma.helpdeskSlaCycle.findMany({
@@ -257,7 +262,10 @@ export async function entregasDoPeriodo(tenantId: string, periodo: PeriodoDasEnt
   for (const a of atribuicoes) quemNoChamado.set(a.ticketId, [...(quemNoChamado.get(a.ticketId) ?? []), a.userId]);
   const pessoas = await prisma.user.findMany({ where: { id: { in: [...new Set(atribuicoes.map((a) => a.userId))] } }, select: { id: true, name: true } });
   const nomes = new Map(pessoas.map((p) => [p.id, p.name]));
-  const itensLidos = itens.map((i) => ({ ...i, assigneeName: i.assignee?.name ?? null, originTitle: i.originItem?.title ?? null }));
+  const itensLidos = itens.map((i) => ({
+    ...i, assigneeName: i.assignee?.name ?? null, originTitle: i.originItem?.title ?? null,
+    endereco: enderecoDoItem(i), originEndereco: i.originItem ? enderecoDoItem(i.originItem) : null,
+  }));
   const mudancasLidas = mudancas.map((m) => ({ itemId: m.itemId, createdAt: m.createdAt, changes: (Array.isArray(m.changes) ? m.changes : []) as unknown as Alteracao[] }));
   const chamados = chamadosBrutos.map((c) => ({ userIds: quemNoChamado.get(c.ticketId) ?? [], resolvedAt: c.resolvedAt!, resolutionDueAt: c.resolutionDueAt, cycleNumber: c.cycleNumber }));
   return {

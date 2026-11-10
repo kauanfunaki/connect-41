@@ -15,7 +15,8 @@ import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/Nav
 import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, comVolta, nomeDoSistema, LINK_DO_ITEM } from "@/lib/tech-interno/regras";
+import { LembrarDaLista } from "@/components/tech-interno/VoltaDaLista";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, hojeEmSaoPaulo, lerFiltros, enderecoDoItem, nomeDoSistema, LINK_DO_ITEM } from "@/lib/tech-interno/regras";
 import { setoresDoModulo } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +38,10 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
     q.set("page", String(page)); return `${ROTA_TECH_INTERNO}?${q}`;
   };
   const hoje = hojeEmSaoPaulo();
+  // O recorte que está à vista, para o "Voltar para a lista" do item. Fica na
+  // aba do navegador (`LembrarDaLista`), não mais no endereço do item (10/11/2026).
   const atual = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "voltar") atual.set(k, v);
-  const voltar = atual.toString() ? `${ROTA_TECH_INTERNO}?${atual}` : ROTA_TECH_INTERNO, href = (destino: string) => comVolta(destino, voltar);
+  const voltar = atual.toString() ? `${ROTA_TECH_INTERNO}?${atual}` : ROTA_TECH_INTERNO;
   const hrefVisao = (view: string, month = filtros.month) => {
     if (view === "historico") return `${ROTA_TECH_INTERNO}/historico`;
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "page" && k !== "pagina") q.set(k, v);
@@ -51,8 +54,9 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const nomeSistema = (item: typeof lista.items[number]) => nomeDoSistema(item, true);
   // O Kanban ocupa a altura da tela, sem rolagem de lado (lote C de 03/11/2026).
   return <PageContainer className={view === "kanban" ? "h-full flex flex-col" : ""}>
+    <LembrarDaLista endereco={voltar} />
     <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech."
-      action={<AcoesDoControle podeEditar={podeEditar} novoHref={href(`${ROTA_TECH_INTERNO}/novo`)} />} />
+      action={<AcoesDoControle podeEditar={podeEditar} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
     <div className="flex-shrink-0"><VisoesDoControle ativa={view} href={v => hrefVisao(v)} /></div>
     <CascoDaTabela className={view === "kanban" ? "flex min-h-0 flex-1 flex-col" : ""} buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[
       { chave: "situacao", rotulo: "Situação", vazioLabel: view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
@@ -62,16 +66,16 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
       { chave: "responsavel", rotulo: "Responsável", opcoes: [{ value: "me", label: "Comigo" }, { value: "none", label: "Sem responsável" }, ...opcoes.users.map(u => ({ value: u.id, label: u.name }))] },
       { chave: "atrasados", rotulo: "Prazo", vazioLabel: "Todos", opcoes: [{ value: "1", label: "Atrasados" }] },
     ]} />}>
-      {view === "kanban" ? <div className="min-h-0 flex-1 rounded-lg border border-border bg-surface"><VisoesTech voltar={voltar} today={hoje} canEdit={podeEditar} items={lista.items.map(item => ({ id: item.id, title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /></div> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
+      {view === "kanban" ? <div className="min-h-0 flex-1 rounded-lg border border-border bg-surface"><VisoesTech today={hoje} canEdit={podeEditar} items={lista.items.map(item => ({ id: item.id, endereco: enderecoDoItem(item), title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /></div> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
         <CartoesNoCelular>{lista.items.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
-          <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={href(`${ROTA_TECH_INTERNO}/${item.id}`)}>{item.title}</Link>} />
+          <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={enderecoDoItem(item)}>{item.title}</Link>} />
           <InfoDoCartao>{TIPOS[item.type]} · {PRIORIDADES[item.priority]}</InfoDoCartao><InfoDoCartao>{nomeSistema(item)}</InfoDoCartao>
           <InfoDoCartao>{item.assignee?.name ?? "Sem responsável"} · {prazoDoItem(item)}</InfoDoCartao>
           <PeDoCartao><SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></PeDoCartao>
         </Cartao>)}</CartoesNoCelular>
         <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Tipo", "Prioridade", "Sistema", "Situação", "Responsável", "Prazo"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-border">{lista.items.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
-            <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={href(`${ROTA_TECH_INTERNO}/${item.id}`)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
+            <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={enderecoDoItem(item)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
             <td className="px-4 py-3">{TIPOS[item.type]}</td><td className={`px-4 py-3 ${item.priority >= 2 ? "font-semibold" : ""}`}>{PRIORIDADES[item.priority]}</td>
             <td className="px-4 py-3 break-words max-w-48">{nomeSistema(item)}</td><td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech key={`${item.id}:${item.version}`} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></td>
             <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td><td className="px-4 py-3 whitespace-nowrap">{prazoDoItem(item)}</td>

@@ -68,7 +68,7 @@ function Itens({ itens, detalhe }: { itens: ItemDoFluxo[]; detalhe: (i: ItemDoFl
     <ul className="flex flex-col divide-y divide-border-soft text-fs-2">
       {itens.slice(0, MOSTRAR).map((i) => (
         <li key={i.id} className="flex min-w-0 items-baseline justify-between gap-3 py-1.5">
-          <Link href={`${ROTA_TECH_INTERNO}/${i.id}`} className="min-w-0 truncate rounded-sm font-medium text-fg underline-offset-2 hover:text-brand hover:underline" title={i.title}>
+          <Link href={i.endereco} className="min-w-0 truncate rounded-sm font-medium text-fg underline-offset-2 hover:text-brand hover:underline" title={i.title}>
             {i.title}
           </Link>
           <span className="shrink-0 text-fg-muted tnum">{detalhe(i)}</span>

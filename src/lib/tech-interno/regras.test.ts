@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { alcancaModulo } from "@/lib/auth/modulo";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, comVolta, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO, entregaSchema } from "./regras";
+import { CONFLITO, MODULO_TECH_INTERNO, itemSchema, lerFiltros, destinoDeVolta, idCurtoDoItem, enderecoDoItem, lerIdCurto, ehUuid, diferencas, hojeEmSaoPaulo, comentarioSchema, fraseDaAlteracao, vinculoDoSistema, chaveDoSistema, nomeDoSistema, diaDoRegistro, horaDoRegistro, SEM_VINCULO, entregaSchema } from "./regras";
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
 vi.mock("@/lib/modules", () => ({ isModuleEnabled: vi.fn(), setorDoModulo: vi.fn() }));
@@ -65,9 +65,24 @@ describe("controle interno do Tech", () => {
     expect(destinoDeVolta("/controle-interno?visao=kanban&tipo=BUG&page=2")).toBe("/controle-interno?visao=kanban&tipo=BUG&page=2");
     expect(destinoDeVolta("/controle-interno")).toBe("/controle-interno");
     for (const ruim of ["https://exemplo.test", "//exemplo.test", "/tech/controle-internox", "/controle-interno?a=1//b", "/controle-interno?\\a", ["/controle-interno?a=1"], undefined]) expect(destinoDeVolta(ruim)).toBe("/controle-interno");
-    expect(comVolta("/controle-interno/abc", "/controle-interno")).toBe("/controle-interno/abc");
-    expect(comVolta("/controle-interno/abc", "/controle-interno?visao=kanban")).toBe("/controle-interno/abc?voltar=%2Fcontrole-interno%3Fvisao%3Dkanban");
     expect(destinoDeVolta(decodeURIComponent("%2Fcontrole-interno%3Fvisao%3Dkanban"))).toBe("/controle-interno?visao=kanban");
+    // O Histórico é uma das visões da lista (10/11/2026): o item aberto de lá volta para lá.
+    expect(destinoDeVolta("/controle-interno/historico")).toBe("/controle-interno/historico");
+    expect(destinoDeVolta("/controle-interno/historico?q=busca&page=2")).toBe("/controle-interno/historico?q=busca&page=2");
+    for (const ruim of ["/controle-interno/bug-1", "/controle-interno/novo", "/controle-interno/historicox", "/controle-interno/historico/x"]) expect(destinoDeVolta(ruim)).toBe("/controle-interno");
+  });
+  it("o endereço curto do item: prefixo do tipo de agora e o número do escritório", () => {
+    expect(idCurtoDoItem({ type: "BUG", number: 123 })).toBe("bug-123");
+    expect(enderecoDoItem({ type: "IMPROVEMENT", number: 45 })).toBe("/controle-interno/melhoria-45");
+    expect([["FEATURE", "funcionalidade"], ["TEST", "teste"], ["MIGRATION", "migracao"]].map(([type, prefixo]) => [idCurtoDoItem({ type: type as "FEATURE", number: 1 }), prefixo])).toEqual([["funcionalidade-1", "funcionalidade"], ["teste-1", "teste"], ["migracao-1", "migracao"]]);
+  });
+  it("lê o id curto de volta, sem diferença de maiúsculas, e recusa o resto", () => {
+    expect(lerIdCurto("bug-123")).toEqual({ tipo: "BUG", numero: 123 });
+    expect(lerIdCurto(" Melhoria-45 ")).toEqual({ tipo: "IMPROVEMENT", numero: 45 });
+    expect(lerIdCurto("migracao-2147483647")).toEqual({ tipo: "MIGRATION", numero: 2147483647 });
+    for (const ruim of ["bug-0", "bug-012", "bug-", "bug-1.5", "bug--1", "tarefa-3", "bug-2147483648", "bug-99999999999", "bug_3", "/controle-interno/bug-3", "11111111-2222-4333-8444-555555555555"]) expect(lerIdCurto(ruim), ruim).toBeNull();
+    expect(ehUuid("11111111-2222-4333-8444-555555555555")).toBe(true);
+    expect(ehUuid("bug-1")).toBe(false);
   });
   it("registra só campos alterados e preserva valor anterior", () => {
     expect(diferencas({ Prazo: null, Título: "Antes" }, { Prazo: null, Título: "Depois" })).toEqual([{ field: "Título", before: "Antes", after: "Depois" }]);

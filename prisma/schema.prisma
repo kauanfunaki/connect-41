@@ -56,6 +56,12 @@ enum TechInternalSize {
 model TechInternalItem {
   id            String                 @id @default(uuid())
   tenantId      String
+  /// O número do item no escritório (10/11/2026): uma sequência só para todos
+  /// os tipos, na ordem de criação. É o do endereço curto do item,
+  /// /controle-interno/bug-123 — o prefixo vem do tipo de agora (ver
+  /// `enderecoDoItem`, src/lib/tech-interno/regras.ts). Sai na criação, dentro
+  /// da transação (`proximoNumero`, src/lib/tech-interno/servidor.ts).
+  number        Int
   title         String                 @db.VarChar(200)
   description   String?                @db.Text
   type          TechInternalType
@@ -104,6 +110,7 @@ model TechInternalItem {
   acceptanceChecks TechInternalAcceptanceCheck[]
 
   @@unique([tenantId, id])
+  @@unique([tenantId, number])
   @@index([tenantId, status, priority, dueDate])
   @@index([tenantId, toolId])
   @@index([tenantId, opsWatcherSlug])
