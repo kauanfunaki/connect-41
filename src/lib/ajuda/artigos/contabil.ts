@@ -72,13 +72,13 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
     titulo: "Contábil Core",
     caminhos: ["/contabil-core"],
     resumo:
-      "Importa o extrato bancário em OFX, classifica as transações em lançamentos pelas regras e pelas contrapartes (o NEO) e gera o arquivo de importação de lançamentos do Domínio.",
+      "Importa o extrato bancário em OFX ou PDF, classifica as transações em lançamentos pelas regras e pelas contrapartes (o NEO) e gera o arquivo de importação de lançamentos do Domínio.",
     secoes: [
       {
         titulo: "Como importar um extrato",
         passos: [
           "Na aba “Configurações”, confira se a conta bancária está cadastrada e ligada à conta contábil do banco.",
-          "Na aba “Importações”, escolha a conta bancária e o arquivo OFX e clique em “Importar”.",
+          "Na aba “Importações”, escolha a conta bancária e o arquivo (OFX ou PDF) e clique em “Importar”.",
           "Se o arquivo for de outra conta, ele é recusado. Se não disser todos os dados da conta, confira e clique em “É desta conta: importar”.",
           "Confira o resultado: importadas, já existentes e recusadas por valor suspeito. O aviso de saldo aparece quando o fechamento não bate com o extrato anterior da conta.",
         ],
@@ -103,7 +103,8 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
-      "Por enquanto só o extrato em OFX é lido. PDF e planilha chegam com os leitores de cada banco.",
+      "O PDF é lido pelo leitor do banco cadastrado na conta (BB, Bradesco, Itaú, Caixa, Sicredi, Sicoob, Santander, Inter, Stone e outros) e só entra se os saldos do extrato fecharem com os lançamentos.",
+      "PDF que é imagem (sem texto selecionável) e planilha do banco ainda não são lidos: importe o OFX da conta.",
       "Desfazer uma importação inteira é de quem coordena o setor: os lançamentos das transações do arquivo são cancelados antes.",
     ],
   },

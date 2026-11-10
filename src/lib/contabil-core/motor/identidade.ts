@@ -83,6 +83,44 @@ export function identidadeDoOfx(conteudo: string): Identidade {
   return r;
 }
 
+const CONTA_RE = /\b(?:CONTA(?: CORRENTE)?|C\/C)\s*[:;]?\s*([\d.]+(?:-[\dX])?)/g;
+const AGENCIA_RE = /\b(?:AGENCIA|AG\.)\s*[:;]?\s*([\d.]+(?:-[\dX])?)/g;
+const BANCOS_NO_TEXTO: [string, string][] = [
+  ["BANCO DO BRASIL", "BB"], ["ITAU", "ITAU"], ["BRADESCO", "BRADESCO"], ["SICREDI", "SICREDI"], ["SICOOB", "SICOOB"],
+  ["SANTANDER", "SANTANDER"], ["GRAFENO", "GRAFENO"], ["CAIXA ECONOMICA", "CAIXA"], ["NUBANK", "NUBANK"],
+];
+// Corta o cabeçalho no início da tabela, para não tomar uma contraparte como titular.
+const INICIO_DA_TABELA = /^\s*(?:Data\s*$|\d{2}[./-]\d{2}(?:[./-]\d{2,4})?\b)/im;
+
+/**
+ * O caminho do PDF de `extrair`: o topo de cada página (até 230 pontos ou 32% da altura), cortado
+ * no início da tabela. O original lê esse topo com o PyMuPDF; aqui vem do mesmo texto que os
+ * leitores usam, recortado na mesma altura (as linhas podem sair agrupadas de outro jeito, mas o que
+ * se procura são os rótulos "Agência", "Conta" e o nome do banco).
+ */
+export function identidadeDoPdf(topos: readonly string[]): Identidade {
+  const r: Identidade = { banco: null, agencia: null, conta: null, multiplasContas: false };
+  const cabecalhos: string[] = [];
+  const contas = new Set<string>();
+  for (const topo of topos) {
+    const m = INICIO_DA_TABELA.exec(topo);
+    const trecho = m ? topo.slice(0, m.index) : topo;
+    cabecalhos.push(trecho);
+    for (const c of normalizar(trecho).matchAll(CONTA_RE)) contas.add(numero(c[1]));
+  }
+  r.multiplasContas = contas.size > 1;
+  const texto = normalizar(cabecalhos.join("\n"));
+  const agencias = [...texto.matchAll(AGENCIA_RE)].map((m) => m[1]);
+  const todasContas = [...texto.matchAll(CONTA_RE)].map((m) => m[1]);
+  r.agencia = agencias[0] ?? null;
+  r.conta = todasContas[0] ?? null;
+  r.multiplasContas ||= new Set(todasContas.map((c) => numero(c))).size > 1 || new Set(agencias.map((a) => numero(a.split("-")[0]))).size > 1;
+  const encontrados = new Set(BANCOS_NO_TEXTO.filter(([rotulo]) => new RegExp(`\\b${rotulo}\\b`).test(texto)).map(([, sigla]) => sigla));
+  r.multiplasContas ||= encontrados.size > 1;
+  if (encontrados.size === 1) r.banco = [...encontrados][0];
+  return r;
+}
+
 /** Só os dígitos (e X de dígito verificador), sem zeros à esquerda: "0001.234-X" → "1234X". */
 export function numero(valor: string | null | undefined): string {
   const t = normalizar((valor ?? "").replace(/[^\dXx]/g, "")).replace(/^0+/, "");

@@ -44,7 +44,8 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | 2 | `feat/contabil-core-telas` | Serviços no servidor (Prisma): cadastros, importação OFX com lote e conferência de saldo, NEO (regra, contraparte, decisão, manual, cancelar, devolver ao automático) e exportação. Telas: Importações, Extrato, NEO, Regras, Contrapartes, Registros e Configurações. |
 | 3 | `feat/contabil-core-neo` | Restante do NEO: reclassificação, composição manual (ADR-017), fila agrupada por padrão, simulação e sugestão de regra pela seleção, classificar criando a regra, criar regra e aplicar. |
 | 3b | — | Importação por planilha, com prévia e confirmação: regras (modelo de seis colunas), contrapartes (relações fiscais, ADR-016) e plano de contas. Inclui decidir como ler o `.xls` antigo (BIFF8). |
-| 4 | — | Leitores de PDF e planilha por banco, um banco por vez, cada um com arquivos reais (ver "Corpus"). |
+| 4 | `feat/contabil-core-extratos` | Extrato em PDF: o texto extraído como o pdfplumber, os 22 leitores por banco, o leitor genérico, o período e as conferências de saldo, e a importação de PDF. Ver "Fase 4". |
+| 4b | — | Planilha bancária (`planilha_parser.py`, xlsx/xls/csv) e novos layouts que o corpus trouxer. |
 | 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
 
 ## Arquitetura no Connect
@@ -184,6 +185,9 @@ Toda divergência entra aqui, com o porquê.
 6. **Cancelamento e "devolver ao automático"** entraram já na Fase 2, porque desfazer uma importação depende deles.
 7. **Classificar criando a regra da seleção.** No original, tudo acontecia numa transação de banco: se o cadastro da regra falhasse, a classificação do lote também voltava. Aqui cada transação classificada é a sua, então a regra é conferida antes de qualquer gravação: seleção de um lado só e padrão ainda livre. Se outra pessoa cadastrar o mesmo padrão nesse intervalo, as transações ficam classificadas e a tela avisa que a regra não foi criada.
 8. **A fila agrupada** considera as pendências que o NEO já viu (com decisão `sem_regra`), como o original. Na tela, o grupo marca só as pendências que estão listadas (as 500 primeiras da seleção).
+9. **Leitura por IA (Fase 4).** O original tem duas camadas depois dos leitores: o texto do PDF enviado ao GPT, quando nenhum leitor reconhece o banco, e a imagem de cada página enviada ao Vision, quando o PDF não tem texto. Elas não vêm: o PDF que só elas leriam é recusado com uma frase que manda importar o OFX. Se o time sentir falta, entram pelo `src/lib/ia`, com o consentimento por escritório.
+10. **Falha inesperada de um leitor (Fase 4).** Os leitores reproduzem o original até nos tropeços (o Cresol, por exemplo, lança `IndexError` quando a última linha do arquivo é um lançamento sem descrição). No original o job falhava com o erro cru; aqui vira recusa com a frase "O leitor do … não conseguiu ler este arquivo".
+11. **Conferência da conta no PDF (Fase 4).** O original lê o topo de cada página com o PyMuPDF; aqui vem do mesmo texto dos leitores, recortado na mesma altura (230 pontos ou 32% da página). As linhas podem sair agrupadas de outro jeito, mas o que se procura são os rótulos "Agência", "Conta" e o nome do banco.
 
 ## Segurança e boas práticas
 
@@ -275,6 +279,37 @@ Pré-requisito: o banco local, montado pelas migrations e com o seed (ver `scrip
 - **Pasta compartilhada:** fora do git, separada por `banco/layout/`. Qualquer colaborador pode acrescentar arquivos.
 - **Regra para começar um banco:** pelo menos um arquivo real de cada layout desse banco, junto com o resultado do Contábil Core para o mesmo arquivo (as transações importadas). É o gabarito daquele banco.
 - **Teste local:** um script lê a pasta e compara o TypeScript com o gabarito. Ele não entra na suíte do CI, porque o CI não tem os arquivos. A suíte usa só os casos sintéticos.
+
+## Fase 4: extrato em PDF
+
+### O texto do PDF
+
+Os leitores do original dependem do texto exato do pdfplumber: um espaço a mais ou uma linha juntada muda o que a regex encontra. O `textContent` do pdf.js não serve, porque entrega pedaços já juntados; medido em 11 extratos reais, 97% a 100% das linhas batiam, e no BB, que é lido caractere a caractere, só metade.
+
+Por isso a extração tem duas partes:
+
+| Arquivo | O que faz |
+|---|---|
+| `src/lib/contabil-core/pdf/caracteres.ts` | Interpreta os operadores de texto de cada página (pdf.js, pacote `unpdf`) com as contas do pdfminer: matriz do texto × CTM, largura × tamanho × escala, Tc, Tw, TJ, `q`/`Q` guardando também o estado do texto, formulário com estado novo, página girada e a descida AFM das fontes padrão. |
+| `src/lib/contabil-core/pdf/plumber.ts` | O agrupamento do pdfplumber 0.11: linhas por `top` com 3 pontos de tolerância, palavras por distância, ligaduras, texto girado, e o `extract_text` (palavras na ordem em que saem, linhas por vizinhança). |
+
+Medido nos mesmos 11 extratos: 10 saem idênticos, página a página e palavra a palavra, em 0,03 a 0,3 s cada. A posição difere da do pdfminer em menos de 0,0001 ponto, porque o pdf.js guarda a matriz em precisão simples.
+
+### Os leitores
+
+`src/lib/contabil-core/extrato/`: `comum.ts` (`_comum.py`), `periodo.ts`, `leitura.ts` (leitor genérico, conferências de saldo e recusas), `leitores/` (os 22 bancos, na ordem do original) e `pdf.ts` (o fluxo do `parse_pdf`: leitor do banco, depois o genérico).
+
+O teste-gabarito (`extrato/gabarito.test.ts`) repete 581 chamadas gravadas da suíte Python original por `scripts/contabil-core/gabarito_extrato.py`, um plugin do pytest. Os poucos CNPJs e nomes com cara de reais nos dados dos testes são trocados por fictícios, e a chamada é repetida com a entrada trocada. O agrupamento do pdfplumber tem gabarito próprio (`gabarito_plumber.py`), e o intérprete é testado num PDF inventado gerado pelo PyMuPDF (`gabarito_pdf_ficticio.py`).
+
+### Comparação com os extratos reais
+
+`scripts/contabil-core/corpus_extratos.py` grava o que o original lê de cada PDF; `corpus-extratos.ts` lê os mesmos arquivos com o porte e compara transação a transação, inclusive o `fitid`, que entra na chave de duplicidade. Na primeira rodada (10/11/2026), com 11 extratos do escritório:
+
+- 9 idênticos: BB, Bradesco, três do Itaú, Cresol, Grafeno e Santander (cerca de 5.700 lançamentos), e um recusado com a mesma frase;
+- um Bradesco formado por dois PDFs colados no mesmo arquivo: o pdfminer lê a primeira cópia e o pdf.js a segunda, que tem o cabeçalho da empresa em cada página. O leitor do Bradesco faz o mesmo nos dois; muda só a cópia lida;
+- uma página sem texto: o original iria para a leitura por imagem (divergência 9).
+
+Os arquivos ficam fora do git. Para rodar de novo, ver o cabeçalho dos dois scripts.
 
 ## Fase 1: escopo e aceite
 

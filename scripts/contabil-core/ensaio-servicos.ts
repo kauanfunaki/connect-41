@@ -7,10 +7,11 @@
 // Uso (o preload deixa importar os módulos com "server-only" fora do Next):
 //   node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-servicos.ts
 
+import { readFileSync } from "node:fs";
 import { getPrisma } from "../../src/lib/prisma";
 import { agenciaSchema, contaSchema, contraparteSchema, exportacaoSchema, regraSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarAgencia, salvarContraparte, salvarRegra } from "../../src/lib/contabil-core/servidor/cadastros";
-import { desfazerImportacao, importarOfx } from "../../src/lib/contabil-core/servidor/importacao";
+import { desfazerImportacao, importarExtrato } from "../../src/lib/contabil-core/servidor/importacao";
 import { cancelarClassificacao, classificarManual, listarPendencias, processarNeo } from "../../src/lib/contabil-core/servidor/neo";
 import { gerarArquivoDoDominio } from "../../src/lib/contabil-core/servidor/exportacao";
 import { alterarComposicao, classificarComRegra, filaAgrupada, obterComposicao, reclassificar, simularRegra } from "../../src/lib/contabil-core/servidor/neoAvancado";
@@ -74,16 +75,33 @@ async function main() {
     // Importação
     const bytes = new TextEncoder().encode(OFX());
     const outraConta = valor(await salvarAgencia(tenantId, empresaId, null, agenciaSchema.parse({ bancoSigla: "ITAU", agencia: "1", numero: "2" })));
-    const divergente = await importarOfx(tenantId, user.id, empresaId, outraConta.id, "jan.ofx", bytes, false);
+    const divergente = await importarExtrato(tenantId, user.id, empresaId, outraConta.id, "jan.ofx", bytes, false);
     confere("extrato de outra conta é recusado", !divergente.ok && divergente.erro.startsWith("Extrato de outra conta"), divergente);
 
-    const imp = await importarOfx(tenantId, user.id, empresaId, agencia.id, "jan.ofx", bytes, false);
+    const imp = await importarExtrato(tenantId, user.id, empresaId, agencia.id, "jan.ofx", bytes, false);
     const r1 = valor(imp.ok ? { ok: true as const, valor: imp.valor } : { ok: false as const, erro: imp.erro });
     confere("importou 3, recusou a de valor suspeito", r1.importadas === 3 && r1.rejeitadas === 1 && r1.totalNoArquivo === 4, r1);
-    const de_novo = await importarOfx(tenantId, user.id, empresaId, agencia.id, "jan-de-novo.ofx", bytes, false);
+    const de_novo = await importarExtrato(tenantId, user.id, empresaId, agencia.id, "jan-de-novo.ofx", bytes, false);
     confere("o mesmo arquivo de novo é recusado", !de_novo.ok && de_novo.erro.startsWith("Este arquivo já foi importado"), de_novo);
-    const outroArquivo = await importarOfx(tenantId, user.id, empresaId, agencia.id, "jan-v2.ofx", new TextEncoder().encode(OFX() + "\n"), false);
+    const outroArquivo = await importarExtrato(tenantId, user.id, empresaId, agencia.id, "jan-v2.ofx", new TextEncoder().encode(OFX() + "\n"), false);
     confere("arquivo diferente com as mesmas transações: tudo duplicado", outroArquivo.ok && outroArquivo.valor.importadas === 0 && outroArquivo.valor.duplicadas === 3, outroArquivo);
+
+    // Extrato em PDF (Fase 4): o PDF inventado do teste, lido pelo leitor genérico.
+    const pdf = new Uint8Array(readFileSync("src/lib/contabil-core/pdf/gabarito/extrato-ficticio.pdf"));
+    const contaPdf = valor(await salvarAgencia(tenantId, empresaId, null, agenciaSchema.parse({ bancoSigla: "999", agencia: "0001", numero: "12345", digito: "6" })));
+    const pdfOutraConta = await importarExtrato(tenantId, user.id, empresaId, outraConta.id, "ficticio.pdf", pdf, false);
+    confere("PDF de outra conta é recusado", !pdfOutraConta.ok && pdfOutraConta.erro.startsWith("Extrato de outra conta"), pdfOutraConta);
+    const pdfSemConfirmar = await importarExtrato(tenantId, user.id, empresaId, contaPdf.id, "ficticio.pdf", pdf, false);
+    confere("PDF sem o banco no cabeçalho pede confirmação", !pdfSemConfirmar.ok && pdfSemConfirmar.precisaConfirmar === true, pdfSemConfirmar);
+    const pdfImportado = await importarExtrato(tenantId, user.id, empresaId, contaPdf.id, "ficticio.pdf", pdf, true);
+    confere("PDF confirmado: 3 lançamentos", pdfImportado.ok && pdfImportado.valor.importadas === 3 && pdfImportado.valor.identidadeConfirmada, pdfImportado);
+    const saldos = await prisma.coreTransacao.findMany({ where: { agenciaId: contaPdf.id }, orderBy: { ordem: "asc" }, select: { saldoApos: true, dc: true } });
+    confere("PDF: saldo após cada lançamento gravado", saldos.map((s) => `${s.dc}${s.saldoApos}`).join(" ") === "C1500 D1460.1 D760.1", saldos);
+    const naoExtrato = await importarExtrato(tenantId, user.id, empresaId, contaPdf.id, "x.txt", new TextEncoder().encode("nada"), false);
+    confere("arquivo que não é OFX nem PDF é recusado", !naoExtrato.ok && naoExtrato.erro.includes("nem um PDF"), naoExtrato);
+    // Sai antes do NEO, para não mudar as contas da fila abaixo.
+    await prisma.coreTransacao.deleteMany({ where: { agenciaId: contaPdf.id } });
+    await prisma.coreImportacao.deleteMany({ where: { agenciaId: contaPdf.id } });
 
     // NEO
     const neo = valor(await processarNeo(tenantId, empresaId, { agenciaId: null, mes: "2026-01" }));
@@ -117,7 +135,7 @@ async function main() {
     confere("desfazer a importação apaga as 3 transações e cancela os lançamentos", desfeita.transacoes === 3 && desfeita.lancamentos === 2, desfeita);
     const vivas = await prisma.coreRegistro.count({ where: { empresaId, deletedAt: null } });
     confere("nenhuma partida viva depois de desfazer", vivas === 0, vivas);
-    const reimport = await importarOfx(tenantId, user.id, empresaId, agencia.id, "jan.ofx", bytes, false);
+    const reimport = await importarExtrato(tenantId, user.id, empresaId, agencia.id, "jan.ofx", bytes, false);
     confere("depois de desfeita, o mesmo arquivo entra de novo", reimport.ok && reimport.valor.importadas === 3, reimport);
 
     // ── Fase 3: reclassificar, compor, simular, agrupar e classificar criando a regra ──
@@ -148,7 +166,7 @@ async function main() {
     confere("simulação: a tarifa reclassificada aparece como conflito", sim.contabilizadas === 1 && sim.conflitos === 1 && sim.pendencias === 0, sim);
 
     const fev = OFX("-FEV").replace(/2026010/g, "2026020").replace("TARIFA PACOTE SERVICOS", "PIX EMITIDO OUTRA IF JOSE").replace("CRED PIX CLIENTE NOVO", "PIX RECEBIDO MARIA");
-    const impFev = await importarOfx(tenantId, user.id, empresaId, agencia.id, "fev.ofx", new TextEncoder().encode(fev.replace("Pagamento Pix 11.222.333/0001-81", "PIX EMITIDO OUTRA IF ANA")), false);
+    const impFev = await importarExtrato(tenantId, user.id, empresaId, agencia.id, "fev.ofx", new TextEncoder().encode(fev.replace("Pagamento Pix 11.222.333/0001-81", "PIX EMITIDO OUTRA IF ANA")), false);
     confere("segundo mês importado", impFev.ok, impFev);
     valor(await processarNeo(tenantId, empresaId, { agenciaId: null, mes: "2026-02" }));
     const fila = await filaAgrupada(tenantId, empresaId, { agenciaId: null, mes: "2026-02" });
