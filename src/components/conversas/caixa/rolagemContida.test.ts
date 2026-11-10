@@ -42,7 +42,7 @@ describe("áreas que rolam na caixa de conversas contêm o que é absoluto", () 
   });
 
   it("a lista de mensagens que abre no fim", () => {
-    const html = renderToStaticMarkup(React.createElement(RolarParaOFim, { quantas: 1 } as React.ComponentProps<typeof RolarParaOFim>, "oi"));
+    const html = renderToStaticMarkup(React.createElement(RolarParaOFim, { fim: "m1" } as React.ComponentProps<typeof RolarParaOFim>, "oi"));
     const rolagens = classesDaRolagem(html);
     expect(rolagens).toHaveLength(1);
     expect(rolagens[0]!.split(" ")).toContain("relative");

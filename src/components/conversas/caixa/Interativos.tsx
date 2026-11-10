@@ -193,15 +193,27 @@ export function AbasDoPainel({ abas, inicial }: { abas: AbaDoPainel[]; inicial?:
  * A lista de mensagens: abre no fim (a mais nova) e acompanha mensagem nova.
  * Antes de pintar (`useLayoutEffect`): a conversa aberta já aparece no fim, sem
  * mostrar o começo por um instante.
+ *
+ * `fim` é a mensagem mais nova: só quando ela muda a lista vai para o fim.
+ * Mensagens antigas carregadas no topo (10/11/2026) não mexem no que a pessoa
+ * está lendo: a rolagem compensa a altura que entrou em cima. A compensação é
+ * feita à mão (`overflow-anchor: none`) porque o Safari não ancora sozinho, e
+ * no Chrome a âncora do navegador somaria com a nossa.
  */
-export function RolarParaOFim({ children, quantas, className = "" }: { children: ReactNode; quantas: number; className?: string }) {
+export function RolarParaOFim({ children, fim, className = "" }: { children: ReactNode; fim: string | null; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const fimAntes = useRef<string | null | undefined>(undefined);
+  const alturaAntes = useRef(0);
   useLayoutEffect(() => {
     const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [quantas]);
+    if (!el) return;
+    if (fimAntes.current !== fim) el.scrollTop = el.scrollHeight;
+    else el.scrollTop += el.scrollHeight - alturaAntes.current;
+    fimAntes.current = fim;
+    alturaAntes.current = el.scrollHeight;
+  });
   return (
-    <div ref={ref} className={`relative overflow-y-auto scroll-y ${className}`.trim()}>
+    <div ref={ref} className={`relative overflow-y-auto scroll-y [overflow-anchor:none] ${className}`.trim()}>
       {children}
     </div>
   );
