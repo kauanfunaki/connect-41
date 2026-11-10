@@ -157,17 +157,29 @@ export async function notificacoesNovas(dono: Dono, desde: Date, ocultos: string
     where: ondeDasNovas(dono, desde, ocultos),
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limite,
-    select: { id: true, type: true, entityType: true, entityId: true, message: true, read: true, createdAt: true },
+    select: { id: true, type: true, entityType: true, entityId: true, actorUserId: true, message: true, read: true, createdAt: true },
   });
-  return linhas.map((n) => ({
-    id: n.id,
-    tipo: n.type,
-    titulo: doTipo(n.type).titulo,
-    mensagem: n.message,
-    href: linkDaNotificacao(n),
-    lida: n.read,
-    criadaEm: n.createdAt.toISOString(),
-  }));
+  // O chip e o autor, como no cartão do sino (10/11/2026): o aviso do canto
+  // desenha o mesmo conteúdo. Sem novas, nenhuma consulta a mais.
+  const [chips, autores] = linhas.length
+    ? await Promise.all([chipsDasNotificacoes(dono.tenantId, linhas), autoresDasNotificacoes(linhas)])
+    : [new Map(), new Map()];
+  return linhas.map((n) => {
+    const t = doTipo(n.type);
+    return {
+      id: n.id,
+      tipo: n.type,
+      icone: t.icone,
+      tom: t.tom,
+      titulo: t.titulo,
+      mensagem: n.message,
+      href: linkDaNotificacao(n),
+      lida: n.read,
+      criadaEm: n.createdAt.toISOString(),
+      chip: chips.get(n.id) ?? null,
+      autor: (n.actorUserId && autores.get(n.actorUserId)) || null,
+    };
+  });
 }
 
 export async function consultarNotificacoes(

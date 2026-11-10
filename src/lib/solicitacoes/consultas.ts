@@ -80,6 +80,34 @@ export type ContadoresDaFila = { novas: number; minhas: number; atrasadas: numbe
 
 const LIMITE_DA_LISTA = 500;
 
+/** O status de cada recorte da fila. "Minhas" é o em aberto que está com a pessoa. */
+export function whereDoRecorteDaEquipe(recorte: RecorteDaEquipe, userId: string): Prisma.ServiceRequestWhereInput {
+  switch (recorte) {
+    case "abertas":
+      return { status: { in: EM_ABERTO } };
+    case "novas":
+      return { status: "ABERTA" };
+    case "minhas":
+      return { status: { in: EM_ABERTO }, assigneeId: userId };
+    case "aguardando":
+      return { status: "AGUARDANDO_CLIENTE" };
+    case "encerradas":
+      return { status: { in: ENCERRADAS } };
+    case "todas":
+      return {};
+  }
+}
+
+/**
+ * Quantas a fila da pessoa mostra num recorte, sem setor nem empresa
+ * filtrados — o balão da aba "Recebidas" (10/11/2026, pedido
+ * do Kauan: balão como nos Chamados), no recorte padrão da tela. Mesmo
+ * `where` da lista, contado no banco: a lista para em 500, o balão não.
+ */
+export async function contarDaEquipe(escopo: EscopoDaEquipe, recorte: RecorteDaEquipe): Promise<number> {
+  return getPrisma().serviceRequest.count({ where: { AND: [whereDaEquipe(escopo), whereDoRecorteDaEquipe(recorte, escopo.userId)] } });
+}
+
 /**
  * A fila da equipe. Os contadores ignoram o recorte (são o mapa da fila, como
  * na pendência), mas respeitam setor e empresa filtrados.
@@ -99,18 +127,9 @@ export async function listarParaEquipe(
   };
   const atrasadas = whereDaRespostaAtrasada(agora);
 
-  const doRecorte: Record<RecorteDaEquipe, Prisma.ServiceRequestWhereInput> = {
-    abertas: { status: { in: EM_ABERTO } },
-    novas: { status: "ABERTA" },
-    minhas: { status: { in: EM_ABERTO }, assigneeId: escopo.userId },
-    aguardando: { status: "AGUARDANDO_CLIENTE" },
-    encerradas: { status: { in: ENCERRADAS } },
-    todas: {},
-  };
-
   const [linhas, novas, minhas, nAtrasadas, aguardando] = await Promise.all([
     prisma.serviceRequest.findMany({
-      where: { AND: [base, filtros.atrasadas ? atrasadas : doRecorte[filtros.recorte]] },
+      where: { AND: [base, filtros.atrasadas ? atrasadas : whereDoRecorteDaEquipe(filtros.recorte, escopo.userId)] },
       orderBy: [{ lastMessageAt: "desc" }],
       take: LIMITE_DA_LISTA + 1,
       select: {
@@ -128,7 +147,7 @@ export async function listarParaEquipe(
       },
     }),
     prisma.serviceRequest.count({ where: { AND: [base, { status: "ABERTA" }] } }),
-    prisma.serviceRequest.count({ where: { AND: [base, doRecorte.minhas] } }),
+    prisma.serviceRequest.count({ where: { AND: [base, whereDoRecorteDaEquipe("minhas", escopo.userId)] } }),
     prisma.serviceRequest.count({ where: { AND: [base, atrasadas] } }),
     prisma.serviceRequest.count({ where: { AND: [base, { status: "AGUARDANDO_CLIENTE" }] } }),
   ]);

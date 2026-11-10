@@ -1,8 +1,8 @@
 import "server-only";
 
-// Importação de extrato OFX (Fase 2, 09/11/2026) e PDF (Fase 4, 10/11/2026): porte de
-// `ExtratoService.importar_ofx`, de `importar_transacoes_raw`, de `extrato/importacoes.py` e da
-// conferência de identidade da conta. A planilha bancária entra na Fase 4b.
+// Importação de extrato OFX (Fase 2, 09/11/2026), PDF (Fase 4) e planilha (Fase 4b, 10/11/2026):
+// porte de `ExtratoService.importar_ofx`, de `importar_transacoes_raw`, de `extrato/importacoes.py`
+// e da conferência de identidade da conta.
 //
 // A ordem é a do original:
 // 1. a conta do arquivo confere com a escolhida (outra conta recusa; sem dados suficientes, exige
@@ -21,10 +21,12 @@ import { conferirFechamento } from "../motor/conferencia";
 import { hashAtivo } from "../motor/chaves";
 import { modulo, naoNegativo, somaTodos, type Dec } from "../motor/decimal";
 import { hashDedup, hashDoArquivo } from "../motor/dedup";
-import { conferirIdentidade, identidadeDoOfx, identidadeDoPdf } from "../motor/identidade";
+import { conferirIdentidade, identidadeDaPlanilha, identidadeDoOfx, identidadeDoPdf } from "../motor/identidade";
 import { ErroOfx, lerOfx, type TransacaoOfx } from "../motor/ofx";
 import { abrirPdf, lerExtratoPdf, type PdfAberto } from "../extrato/pdf";
 import { ErroDeLeitura } from "../extrato/leitura";
+import { ErroDePlanilha, EXTENSOES, lerLinhas, lerPlanilha } from "../extrato/planilha";
+import { strPy } from "../planilha/celula";
 import { historicoPareceLinhaCrua, motivoValorNaoConfiavel } from "../motor/valorConfiavel";
 import { corta } from "@/lib/revisao-contabil/motor/py";
 import { dataDoDia, decDoBanco, dia, empresaDoTenant, falha, NAO_ENCONTRADA, ok, paraBanco, type Resultado } from "./base";
@@ -74,7 +76,15 @@ export function parecePdf(bytes: Uint8Array): boolean {
   return bytes[i] === 0x25 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x44 && bytes[i + 3] === 0x46;
 }
 
-/** O que a leitura entrega, venha de OFX ou de PDF. */
+/** O arquivo é planilha pela extensão ou pela assinatura (zip do xlsx, OLE do xls). */
+export function parecePlanilha(bytes: Uint8Array, nome: string): boolean {
+  const n = nome.toLowerCase();
+  if (EXTENSOES.some((e) => n.endsWith(e))) return true;
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) return true;
+  return bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+}
+
+/** O que a leitura entrega, venha de OFX, PDF ou planilha. */
 type Leitura = {
   transacoes: TransacaoOfx[];
   totalNoArquivo: number;
@@ -101,10 +111,19 @@ export async function importarExtrato(
 
   // O tipo vem do conteúdo, não da extensão.
   const ehPdf = parecePdf(bytes);
+  const ehPlanilha = !ehPdf && parecePlanilha(bytes, nomeArquivo);
   let pdf: PdfAberto | null = null;
   let texto = "";
   let identidade;
-  if (ehPdf) {
+  if (ehPlanilha) {
+    try {
+      identidade = ehTexto(bytes)
+        ? identidadeDaPlanilha(null, new TextDecoder("utf-8").decode(bytes))
+        : identidadeDaPlanilha(lerLinhas(bytes, nomeArquivo).map((l) => l.filter((c) => c !== null).map(strPy)), null);
+    } catch (e) {
+      return { ok: false, erro: `Planilha inválida: Não foi possível abrir a planilha: ${e instanceof Error ? e.message : String(e)}` };
+    }
+  } else if (ehPdf) {
     try {
       pdf = await abrirPdf(bytes);
     } catch (e) {
@@ -115,7 +134,7 @@ export async function importarExtrato(
   } else {
     texto = decodificar(bytes);
     if (!pareceOfx(texto)) {
-      return { ok: false, erro: "Este arquivo não é um OFX nem um PDF. Planilha bancária ainda não é lida no Connect: importe o OFX ou o PDF do extrato." };
+      return { ok: false, erro: "Este arquivo não é um extrato que o Connect lê: envie o OFX, o PDF ou a planilha do banco (.xlsx, .xls ou .csv)." };
     }
     identidade = identidadeDoOfx(texto);
   }
@@ -154,7 +173,15 @@ export async function importarExtrato(
   });
 
   let leitura: Leitura;
-  if (pdf) {
+  if (ehPlanilha) {
+    try {
+      const transacoes = lerPlanilha(bytes, nomeArquivo);
+      leitura = { transacoes, totalNoArquivo: transacoes.length, erros: [], saldoDeclarado: null, dataSaldo: null, semHistorico: () => "EXTRATO PDF" };
+    } catch (e) {
+      if (e instanceof ErroDePlanilha) return { ok: false, erro: `Planilha inválida: ${e.message}` };
+      throw e;
+    }
+  } else if (pdf) {
     try {
       // O leitor vem da sigla da agência cadastrada; o PDF só confirma.
       const lido = lerExtratoPdf(pdf, agencia.bancoSigla);
@@ -314,4 +341,10 @@ export async function desfazerImportacao(
     },
     { timeout: 60_000 },
   );
+}
+
+/** Para a conferência da conta, o original decide pelo conteúdo: nem zip nem OLE é texto (CSV). */
+function ehTexto(bytes: Uint8Array): boolean {
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) return false;
+  return !(bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0);
 }

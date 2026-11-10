@@ -7,6 +7,10 @@ import { dec, texto as textoDec, type Dec } from "../motor/decimal";
 import * as comum from "./comum";
 import * as leitura from "./leitura";
 import * as periodo from "./periodo";
+import * as planilha from "./planilha";
+import { reprFloat, type Celula } from "../planilha/celula";
+import { farejar, linhasDoCsv } from "../planilha/csv";
+import { linhasDoXlsx } from "../planilha/xlsx";
 import type { Bloco, Transacao } from "./comum";
 import type { Leitor } from "./leitores/tipos";
 
@@ -112,6 +116,67 @@ const tabela: Record<string, Fn> = {
 
 const PULAR = Symbol("pular");
 
+// ─── Planilha: células com o tipo do Python ────────────────────────────────
+
+function celulaDoPython(v: unknown): Celula {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string") return v;
+  if (typeof v === "boolean") return { tipo: "bool", valor: v };
+  if (typeof v === "number") return { tipo: "int", valor: BigInt(v) };
+  const o = v as Record<string, string>;
+  if ("$int" in o) return { tipo: "int", valor: BigInt(o.$int) };
+  if ("$f" in o) return { tipo: "float", valor: Number(o.$f) };
+  if ("$dt" in o) return { tipo: "datahora", valor: o.$dt };
+  if ("$date" in o) return { tipo: "datahora", valor: o.$date };
+  if ("$time" in o) return { tipo: "hora", valor: o.$time };
+  if ("$td" in o) return { tipo: "duracao", valor: o.$td };
+  throw new Error(`célula sem tradução: ${JSON.stringify(v)}`);
+}
+
+function celulaParaPython(c: Celula): unknown {
+  if (c === null || typeof c === "string") return c;
+  switch (c.tipo) {
+    case "int":
+      return c.valor > BigInt(2 ** 53) || c.valor < -BigInt(2 ** 53) ? { $int: c.valor.toString() } : Number(c.valor);
+    case "float":
+      return { $f: reprFloat(c.valor) };
+    case "bool":
+      return c.valor;
+    case "datahora":
+      return c.valor.length === 10 ? { $date: c.valor } : { $dt: c.valor };
+    case "hora":
+      return { $time: c.valor };
+    case "duracao":
+      return { $td: c.valor };
+  }
+}
+
+const bytesDe = (v: unknown) => Buffer.from((v as { $bytes: string }).$bytes, "hex");
+const linhasParaPython = (linhas: Celula[][]) => linhas.map((l) => l.map(celulaParaPython));
+
+/** As funções de planilha recebem a entrada crua (sem `decodificar`) e devolvem já no formato do Python. */
+const tabelaDePlanilha: Record<string, (args: unknown[]) => unknown> = {
+  "planilha_parser._linhas_xlsx": ([b]) => linhasParaPython(linhasDoXlsx(bytesDe(b))),
+  "planilha_parser._linhas_csv": ([b]) => linhasDoCsv(bytesDe(b)),
+  "planilha_parser._chave": ([v]) => planilha.chave(celulaDoPython(v)),
+  "planilha_parser._para_decimal": ([v]) => codificar(planilha.paraDecimal(celulaDoPython(v))),
+  "planilha_parser._para_data": ([v, ano]) => {
+    const d = planilha.paraData(celulaDoPython(v), ano as number);
+    return d === null ? null : { $date: d };
+  },
+  "planilha_parser._mapear_colunas": ([l]) => {
+    const m = planilha.mapearColunas((l as unknown[]).map(celulaDoPython));
+    return m ? Object.fromEntries(m) : null;
+  },
+  "planilha_parser._decrescente": ([l]) => planilha.decrescente(decodificar(l) as planilha.LinhaDeMovimento[]),
+  "planilha_parser._ajustar_pelo_saldo": ([s, l]) => codificar(planilha.ajustarPeloSaldo((decodificar(s) as Dec | null) ?? null, decodificar(l) as planilha.LinhaDeMovimento[])),
+  "planilha_parser.parse_planilha": ([b, nome, ano]) => codificar(planilha.lerPlanilha(bytesDe(b), nome as string, (ano as number | null) ?? null)),
+  "csv.sniff": ([amostra]) => {
+    const d = farejar(amostra as string);
+    return d ? [d.delimitador, d.aspas, d.aspasDuplas, d.pularEspacoInicial] : null;
+  },
+};
+
 async function chamar(fn: string, args: unknown[], kw: Record<string, unknown>): Promise<unknown> {
   if (tabela[fn]) return tabela[fn](args, kw);
   const [modulo, metodo] = fn.split(".");
@@ -141,7 +206,7 @@ function semFloat(v: unknown): unknown {
   return v;
 }
 
-const ERRO_DO_PYTHON: Record<string, string> = { ErroDeLeitura: "PDFParseError" };
+const ERRO_DO_PYTHON: Record<string, string> = { ErroDeLeitura: "PDFParseError", ErroDePlanilha: "PlanilhaParseError", ErroCsv: "Error" };
 
 describe("gabarito dos leitores de extrato (Python original)", () => {
   const porFn = new Map<string, Registro[]>();
@@ -149,23 +214,25 @@ describe("gabarito dos leitores de extrato (Python original)", () => {
   for (const [fn, lista] of porFn) {
     it(`${fn} (${lista.length})`, async () => {
       let comparados = 0;
+      const daPlanilha = Object.hasOwn(tabelaDePlanilha, fn) ? tabelaDePlanilha[fn] : undefined;
       for (const r of lista) {
-        const args = decodificar(r.args) as unknown[];
-        const kw = decodificar(r.kwargs) as Record<string, unknown>;
         let obtido: unknown;
         let erro: { tipo: string; mensagem: string } | undefined;
         try {
-          obtido = await chamar(fn, args, kw);
+          obtido = daPlanilha ? daPlanilha(r.args) : await chamar(fn, decodificar(r.args) as unknown[], decodificar(r.kwargs) as Record<string, unknown>);
         } catch (e) {
           const err = e as Error;
           erro = { tipo: ERRO_DO_PYTHON[err.name] ?? err.name, mensagem: err.message };
         }
         if (obtido === PULAR) return; // leitor ainda não portado
         comparados++;
-        if (r.error) expect(erro, `${fn} ${JSON.stringify(r.args).slice(0, 200)}`).toEqual(r.error);
+        const onde = `${fn} ${JSON.stringify(r.args).slice(0, 200)}`;
+        if (r.error) expect(erro, onde).toEqual(r.error);
         else {
-          expect(erro, `${fn} lançou: ${erro?.mensagem}`).toBeUndefined();
-          expect(codificarResultado(fn, obtido), `${fn} ${JSON.stringify(r.args).slice(0, 200)}`).toEqual(semFloat(r.result));
+          expect(erro, `${onde} lançou: ${erro?.mensagem}`).toBeUndefined();
+          // Nas funções de planilha o float é comparado pelo `repr` (o tipo importa); nas outras, pelo número.
+          if (daPlanilha) expect(obtido, onde).toEqual(r.result);
+          else expect(codificarResultado(fn, obtido), onde).toEqual(semFloat(r.result));
         }
       }
       expect(comparados).toBe(lista.length);

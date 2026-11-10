@@ -2,24 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useContext, useSyncExternalStore } from "react";
-import { CADASTROS_LAST_TAB_KEY, CAMINHO_DOS_FORNECEDORES, type CadastrosTab } from "@/lib/cadastrosNav";
+import { createContext, useContext } from "react";
 import { caminhoDoMenuAtivo as isActivePath } from "@/lib/caminhoDoMenu";
 import { Contador } from "@/components/ui/Contador";
-
-function subscribeToStorage(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
-}
-
-function getLastTabSnapshot(): CadastrosTab {
-  const stored = window.localStorage.getItem(CADASTROS_LAST_TAB_KEY);
-  return stored === "pessoas" ? "pessoas" : "empresas";
-}
-
-function getLastTabServerSnapshot(): CadastrosTab {
-  return "empresas";
-}
 
 // ─── A faixa de ícones (14/10/2026) ─────────────────────────────────────────
 //
@@ -258,48 +243,6 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
           <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
         </span>
       )}
-    </Link>
-  );
-}
-
-type CadastrosNavItemProps = {
-  icon: React.ReactNode;
-  label: string;
-};
-
-// Item único da sidebar para as áreas de Empresas e Pessoas (agrupadas em
-// "Cadastros"). Fica ativo em qualquer rota /empresas/* ou /pessoas/*, e leva
-// para a última aba visitada (persistida via CadastrosTabSync), com Empresas
-// como padrão na ausência dessa informação. Fornecedores e sacados, a aba do
-// BPO (21/10/2026), também acende o item.
-export function CadastrosNavItem({ icon, label }: CadastrosNavItemProps) {
-  const pathname = usePathname();
-  const naFaixa = useNaFaixa();
-  const lastTab = useSyncExternalStore(subscribeToStorage, getLastTabSnapshot, getLastTabServerSnapshot);
-
-  const active = isActivePath(pathname, "/empresas") || isActivePath(pathname, "/pessoas") || isActivePath(pathname, CAMINHO_DOS_FORNECEDORES);
-  const href = `/${lastTab}`;
-
-  if (naFaixa) {
-    return (
-      <Link href={href} aria-current={active ? "page" : undefined} data-grupo="marca" {...nomeNaFaixa(label)} className={classeDoItemNaFaixa(active, "marca")}>
-        <IconeNaFaixa icon={icon} active={active} comTelas />
-      </Link>
-    );
-  }
-
-  // Sem área de uso (28/10/2026): Cadastros é de todas as áreas.
-  return (
-    <Link
-      href={href}
-      // `aria-current` também no menu aberto, como na faixa (30/10/2026).
-      aria-current={active ? "page" : undefined}
-      data-grupo="marca"
-      className={classeDoItemComArea(active, "text-label font-medium")}
-    >
-      {active && <BarraAtiva />}
-      <IconeDaArea icon={icon} active={active} />
-      {label}
     </Link>
   );
 }

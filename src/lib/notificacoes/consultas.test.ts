@@ -166,26 +166,40 @@ describe("o aviso no canto (09/11/2026)", () => {
     expect(ondeDasNovas(DONO, DESDE)).not.toHaveProperty("type");
   });
 
-  it("as novas vêm prontas para o aviso: título do tipo e o mesmo link do sino", async () => {
+  it("as novas vêm prontas para o aviso: o mesmo conteúdo do cartão do sino e o mesmo link", async () => {
     notification.findMany.mockResolvedValue([
       linha("n1", { type: "ROBO_CAPTCHA", entityId: "t9", message: "O robô parou no captcha.", createdAt: new Date("2026-11-09T14:01:00Z") }),
       linha("n2", { type: "TIPO_SEM_LINK" }),
+      linha("n3", { type: "COMMENT", entityType: "COMPANY", entityId: "c1", actorUserId: "u9" }),
     ]);
+    user.findMany.mockResolvedValue([{ id: "u9", name: "Ana Souza", photoUrl: "/f.png" }]);
     const r = await notificacoesNovas(DONO, DESDE, ["COMMENT"], 3);
     expect(r[0]).toEqual({
       id: "n1",
       tipo: "ROBO_CAPTCHA",
+      icone: "processo",
+      tom: "warning",
       titulo: "O robô parou no captcha",
       mensagem: "O robô parou no captcha.",
       href: "/robo/assistir/t9",
       lida: false,
       criadaEm: "2026-11-09T14:01:00.000Z",
+      chip: null,
+      autor: null,
     });
     expect(r[1].href).toBeNull();
+    expect(r[1]).toMatchObject({ icone: "sino", tom: "neutral", titulo: "Aviso" });
+    expect(r[2]).toMatchObject({ chip: { rotulo: "Acme", tipo: "empresa" }, autor: { nome: "Ana Souza", foto: "/f.png" } });
     const args = notification.findMany.mock.calls[0][0];
     expect(args.take).toBe(3);
     expect(args.where).toEqual(ondeDasNovas(DONO, DESDE, ["COMMENT"]));
     expect(args.orderBy).toEqual([{ createdAt: "desc" }, { id: "desc" }]);
+  });
+
+  it("sem novas, nenhuma consulta de chip ou autor", async () => {
+    notification.findMany.mockResolvedValue([]);
+    expect(await notificacoesNovas(DONO, DESDE, [], 3)).toEqual([]);
+    expect(user.findMany).not.toHaveBeenCalled();
   });
 
   it("o marco é a notificação mais nova da pessoa, lida ou não; sem nenhuma, nulo", async () => {

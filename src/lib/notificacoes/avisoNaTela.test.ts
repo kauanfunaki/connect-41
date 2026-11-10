@@ -17,11 +17,15 @@ import {
 const nova = (id: string, minuto: number, extra: Partial<NotificacaoNova> = {}): NotificacaoNova => ({
   id,
   tipo: "ROBO_CAPTCHA",
+  icone: "alerta",
+  tom: "warning",
   titulo: "O robô parou no captcha",
   mensagem: "Abra e marque com o mouse.",
   href: `/robo/assistir/${id}`,
   lida: false,
   criadaEm: new Date(Date.UTC(2026, 10, 9, 14, minuto)).toISOString(),
+  chip: null,
+  autor: null,
   ...extra,
 });
 
