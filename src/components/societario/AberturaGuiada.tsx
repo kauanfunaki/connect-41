@@ -198,17 +198,23 @@ export function AberturaGuiada({
             ← Voltar
           </Button>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Cada botão com a sua `key` (10/11/2026): sem ela, o React reaproveitava o
+                mesmo <button> ao passar do passo 2 para o 3 e só trocava o `type` de
+                "button" para "submit" — dentro do próprio clique. O navegador então
+                enviava o formulário, e o pedido ao cliente aparecia por um instante e o
+                processo abria sem revisão. O mesmo que o EmpresaForm resolveu com
+                `key="next"`/`key="submit"`. */}
             {passo < 2 && passo > 0 && (
-              <Button type="submit" variant="secondary" loading={pendente} loadingLabel="Abrindo…">
+              <Button key="abrir-sem-pedido" type="submit" variant="secondary" loading={pendente} loadingLabel="Abrindo…">
                 Abrir sem pedir nada
               </Button>
             )}
             {passo < 2 ? (
-              <Button type="button" onClick={() => setPasso((p) => p + 1)} disabled={!podeSeguir}>
+              <Button key="continuar" type="button" onClick={() => setPasso((p) => p + 1)} disabled={!podeSeguir}>
                 Continuar →
               </Button>
             ) : (
-              <Button type="submit" loading={pendente} loadingLabel="Abrindo…">
+              <Button key="abrir" type="submit" loading={pendente} loadingLabel="Abrindo…">
                 Abrir processo
               </Button>
             )}
