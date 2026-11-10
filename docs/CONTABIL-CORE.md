@@ -45,7 +45,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | 3 | `feat/contabil-core-neo` | Restante do NEO: reclassificação, composição manual (ADR-017), fila agrupada por padrão, simulação e sugestão de regra pela seleção, classificar criando a regra, criar regra e aplicar. |
 | 3b | — | Importação por planilha, com prévia e confirmação: regras (modelo de seis colunas), contrapartes (relações fiscais, ADR-016) e plano de contas. Inclui decidir como ler o `.xls` antigo (BIFF8). |
 | 4 | `feat/contabil-core-extratos` | Extrato em PDF: o texto extraído como o pdfplumber, os 22 leitores por banco, o leitor genérico, o período e as conferências de saldo, e a importação de PDF. Ver "Fase 4". |
-| 4b | — | Planilha bancária (`planilha_parser.py`, xlsx/xls/csv) e novos layouts que o corpus trouxer. |
+| 4b | `feat/contabil-core-planilhas` | Extrato em planilha (`planilha_parser.py`): leitores próprios de .xlsx, .xls (BIFF8) e .csv, e a importação. Ver "Fase 4b". |
 | 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
 
 ## Arquitetura no Connect
@@ -310,6 +310,30 @@ O teste-gabarito (`extrato/gabarito.test.ts`) repete 581 chamadas gravadas da su
 - uma página sem texto: o original iria para a leitura por imagem (divergência 9).
 
 Os arquivos ficam fora do git. Para rodar de novo, ver o cabeçalho dos dois scripts.
+
+## Fase 4b: extrato em planilha
+
+O leitor é o `planilha_parser.py`: acha as colunas pelo cabeçalho (Data, Histórico, Crédito, Débito, Valor, Saldo, Razão social, CPF/CNPJ), separa as seções por `SALDO ANTERIOR`, desvira a planilha decrescente, corrige pelo saldo o sinal do valor impresso sem sinal e descarta a linha que não move o saldo. O resultado passa pela mesma cadeia de saldos do PDF. Porte em `src/lib/contabil-core/extrato/planilha.ts`.
+
+### O tipo de cada célula importa
+
+O original faz `Decimal(str(valor))` e põe `str(celula)` no histórico, e o `fitid` é o hash de `str(valor)`. O openpyxl devolve "1500" como `int` e o xlrd devolve todo número como `float` ("1500.0"). Um porte que tratasse todo número do mesmo jeito mudaria o `fitid` e, com ele, a chave de duplicidade dos dados migrados. Por isso cada leitor devolve o tipo que a biblioteca do original devolveria (`planilha/celula.ts`), e `strPy` escreve como o `str()` do Python.
+
+| Arquivo | O que reproduz |
+|---|---|
+| `planilha/xlsx.ts` | O openpyxl em `read_only` + `data_only`: a primeira folha, `int`/`float` pelo texto do número, data pelo formato do estilo (`is_date_format`), hora e duração, linhas que faltam no XML. Zip pelo `fflate`, com teto de descompressão. |
+| `planilha/xls.ts` | O xlrd (decisão do Angelo, 10/11/2026: leitor próprio, sem biblioteca nova): arquivo composto OLE2, BIFF8, textos compartilhados com CONTINUE, RK/MULRK, fórmula com valor guardado e a classificação de data pelo formato. |
+| `planilha/csv.ts` | UTF-8 com ou sem BOM e latin-1; o `csv.Sniffer` do Python (entre ";", "," e tabulação) e a máquina de estados do leitor do `_csv.c`. |
+
+O leitor de `.xls` serve também à Fase 3b (relatórios de clientes e fornecedores do sistema fiscal).
+
+### Conferência da conta
+
+Como no original: as linhas antes do cabeçalho da tabela (até 80) ou, no CSV, o texto antes da linha que começa com "data;". Aqui vale a primeira folha, que é a que o leitor do extrato lê (o original olhava todas as folhas).
+
+### Testes e comparação
+
+O gabarito (`extrato/gabarito.json`) ganhou as funções do `planilha_parser`, o `csv.Sniffer` e arquivos inventados gerados pelo openpyxl, pelo xlwt e em CSV com aspas, tabulação, só CR, BOM e latin-1. A comparação local com planilhas reais usa os mesmos `corpus_extratos.py` e `corpus-extratos.ts`.
 
 ## Fase 1: escopo e aceite
 

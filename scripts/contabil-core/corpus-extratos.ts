@@ -1,4 +1,5 @@
-// Corpus de extratos reais (Fase 4, 10/11/2026): compara a leitura do porte com a do original.
+// Corpus de extratos reais (Fases 4 e 4b, 10/11/2026): compara a leitura do porte com a do original,
+// em PDF e em planilha (.xlsx, .xls, .csv).
 //
 // O `corpus_extratos.py` grava o que o Contábil Core original lê de cada PDF; este script lê os
 // mesmos arquivos com `abrirPdf` + `lerExtratoPdf` e compara transação a transação (fitid, data,
@@ -6,12 +7,13 @@
 // do git; a saída só diz quantas linhas bateram e mostra a primeira diferença de cada arquivo.
 //
 // Uso:
-//   npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/corpus-extratos.ts <saida-do-python.json> <arquivo.pdf>...
+//   npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/corpus-extratos.ts <saida-do-python.json> <arquivo>...
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { texto as textoDec } from "../../src/lib/contabil-core/motor/decimal";
 import { ErroDeLeitura } from "../../src/lib/contabil-core/extrato/leitura";
 import { abrirPdf, lerExtratoPdf } from "../../src/lib/contabil-core/extrato/pdf";
+import { ErroDePlanilha, EXTENSOES, lerPlanilha } from "../../src/lib/contabil-core/extrato/planilha";
 
 type LinhaPy = { fitid: string; data: string; valor: string; historico: string; tipo: string; saldo: string | null; ordem: number | null };
 type Esperado = { transacoes?: LinhaPy[]; erro?: string };
@@ -31,8 +33,10 @@ const esperado = JSON.parse(readFileSync(saidaPy, "utf8")) as Record<string, Esp
     let obtido: Esperado;
     const t0 = Date.now();
     try {
-      const aberto = await abrirPdf(new Uint8Array(readFileSync(pdf)));
-      const { transacoes, leitor } = lerExtratoPdf(aberto, null);
+      const bytes = new Uint8Array(readFileSync(pdf));
+      const ehPlanilha = EXTENSOES.some((e) => nome.toLowerCase().endsWith(e));
+      // Planilha com o ano de referência fixo, como o `corpus_extratos.py`.
+      const { transacoes, leitor } = ehPlanilha ? { transacoes: lerPlanilha(bytes, nome, 2026), leitor: "planilha" } : lerExtratoPdf(await abrirPdf(bytes), null);
       obtido = {
         transacoes: transacoes.map((t) => ({
           fitid: t.fitid, data: t.data, valor: textoDec(t.valor), historico: t.historico, tipo: t.tipoOfx,
@@ -41,7 +45,7 @@ const esperado = JSON.parse(readFileSync(saidaPy, "utf8")) as Record<string, Esp
       };
       process.stdout.write(`[${leitor}] `);
     } catch (e) {
-      if (!(e instanceof ErroDeLeitura)) throw e;
+      if (!(e instanceof ErroDeLeitura) && !(e instanceof ErroDePlanilha)) throw e;
       obtido = { erro: e.message };
     }
     const ms = Date.now() - t0;

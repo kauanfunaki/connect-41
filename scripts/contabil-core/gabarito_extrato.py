@@ -22,7 +22,7 @@ import json
 import os
 import re
 import types
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 chamadas: dict[str, dict] = {}
@@ -77,12 +77,20 @@ def sanitizar(v):
 
 
 def codificar(v):
+    if isinstance(v, int) and not isinstance(v, bool) and abs(v) > 2**53:
+        return {"$int": str(v)}
     if isinstance(v, bool) or v is None or isinstance(v, (int, str)):
         return v
     if isinstance(v, float):
         return {"$f": repr(v)}
     if isinstance(v, Decimal):
         return {"$dec": str(v)}
+    if isinstance(v, datetime):
+        return {"$dt": str(v)}
+    if isinstance(v, time):
+        return {"$time": str(v)}
+    if isinstance(v, timedelta):
+        return {"$td": str(v)}
     if isinstance(v, date):
         return {"$date": v.isoformat()}
     if isinstance(v, bytes):
@@ -150,6 +158,13 @@ def pytest_configure(config):  # noqa: ARG001
         envolver(_comum, fn, f"_comum.{fn}")
     for fn in ("fim_do_periodo", "ajustar_virada_de_ano"):
         envolver(periodo, fn, f"periodo.{fn}")
+    from src.domain.extrato import planilha_parser
+
+    for fn in (
+        "parse_planilha", "_linhas_xlsx", "_linhas_xls", "_linhas_csv", "_mapear_colunas",
+        "_para_data", "_para_decimal", "_ajustar_pelo_saldo", "_decrescente", "_chave",
+    ):
+        envolver(planilha_parser, fn, f"planilha_parser.{fn}")
     for fn in (
         "_parse_linhas_multipagina", "_fracao_legivel", "_documento_de_outro_tipo",
         "_recusa_de_adaptador_vazio", "_validar_blocos", "_validar_cadeia_de_saldos",
@@ -215,11 +230,115 @@ def chamadas_diretas():
     ], date(2023, 6, 30)], {})
 
 
+def planilhas_inventadas():
+    """Arquivos inventados para os leitores de planilha: tipos de célula, datas, CSVs estranhos."""
+    import csv
+    import io
+
+    import openpyxl
+    import xlwt
+
+    from src.domain.extrato import planilha_parser as pp
+
+    def xlsx(linhas, formatos=None, folha_antes=False):
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        if folha_antes:
+            ws.title = "Capa"
+            ws.append(["nada aqui"])
+            ws = wb.create_sheet("Extrato")
+        for linha in linhas:
+            ws.append(linha)
+        for coord, fmt in (formatos or {}).items():
+            ws[coord].number_format = fmt
+        b = io.BytesIO()
+        wb.save(b)
+        return b.getvalue()
+
+    def xls(linhas, estilos=None):
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet("Extrato")
+        for i, linha in enumerate(linhas):
+            for j, v in enumerate(linha):
+                if v is None:
+                    continue
+                estilo = (estilos or {}).get((i, j))
+                if estilo:
+                    ws.write(i, j, v, xlwt.easyxf(num_format_str=estilo))
+                else:
+                    ws.write(i, j, v)
+        b = io.BytesIO()
+        wb.save(b)
+        return b.getvalue()
+
+    cab = ["Data", "Histórico", "Documento", "Crédito", "Débito", "Saldo"]
+    numeros = [
+        cab,
+        [datetime(2026, 6, 30), "SALDO ANTERIOR", None, None, None, 1000],
+        [datetime(2026, 7, 1, 10, 30), "PIX RECEBIDO ALFA", 3560100, 250.5, None, 1250.5],
+        [datetime(2026, 7, 2), "TARIFA", 12345678901234567890, None, 9.9, 1240.6],
+        [date(2026, 7, 3), "TED ENVIADA BETA", "  0042 ", None, -40, 1200.6],
+        [datetime(2026, 7, 4), "CRED JUROS", True, 0.1 + 0.2, None, 1200.9],
+        [None, None, None, None, None, None],
+        [datetime(2026, 7, 5), "SALDO ATUAL", None, None, None, 1200.9],
+    ]
+    arquivos = [
+        ("numeros.xlsx", xlsx(numeros, {"F2": "#,##0.00", "A3": "dd/mm/yyyy hh:mm", "B9": "@"})),
+        ("formatos.xlsx", xlsx([
+            ["Data", "Descrição", "Valor", "Saldo", "Hora", "Duração"],
+            [45474, "SERIAL COMO DATA", 10, 10, 0.5, 1.25],
+            [45475.75, "COM HORA", -5, 5, 0.999, 30],
+        ], {"A2": "dd/mm/yyyy", "A3": "d-mmm-yy h:mm", "E2": "h:mm:ss", "E3": "hh:mm", "F2": "[h]:mm:ss", "F3": "[mm]:ss", "C2": '"R$" #,##0.00;[Red]-"R$" #,##0.00'})),
+        ("segunda-folha.xlsx", xlsx(numeros, folha_antes=True)),
+        ("extrato.xls", xls([
+            ["Extrato"],
+            ["Data", "Lançamento", "Dcto.", "Crédito (R$)", "Débito (R$)", "Saldo (R$)"],
+            ["30/06/2026", "SALDO ANTERIOR", None, None, None, 1000.0],
+            [46204.0, "RENTAB", 3560100, 250, None, 1250],
+            [46205.5, "PIX ENVIADO ALFA LTDA", "2019261", None, 100.25, 1149.75],
+            [46206.0, "BOOL", True, 1, None, 1150.75],
+        ], {(3, 0): "dd/mm/yyyy", (4, 0): "dd/mm/yyyy hh:mm", (5, 0): "dd/mm/yy"})),
+    ]
+    csvs = {
+        "ponto-e-virgula.csv": "Data;Descrição;Valor;Saldo\r\n01/07/2026;PIX RECEBIDO;1.250,00;1.250,00\r\n02/07/2026;TARIFA;-9,90;1.240,10\r\n",
+        "virgula-aspas.csv": 'Data,Descrição,Valor,Saldo\n01/07/2026,"PIX, RECEBIDO ""ALFA""","1.250,00","1.250,00"\n02/07/2026,"TARIFA",-9.90,1240.10\n',
+        "tab.csv": "Data\tHistórico\tValor\tSaldo\n01/07/2026\tPIX  RECEBIDO\t1250,00\t1250,00\n\n02/07/2026\tTARIFA\t-9,90\t1240,10",
+        "so-cr.csv": "Data;Lançamento;Valor;Saldo\r01/07/2026;PIX;10,00;10,00\r02/07/2026;TARIFA;-1,00;9,00\r",
+        "aspas-quebra.csv": 'Data;Histórico;Valor;Saldo\n01/07/2026;"PIX\nEM DUAS LINHAS";10,00;10,00\n02/07/2026;"ABERTA;-1,00;9,00\n',
+        "espaco-inicial.csv": 'Data, Histórico, Valor, Saldo\n01/07/2026, "PIX", 10.00, 10.00\n02/07/2026, "TARIFA", -1.00, 9.00\n',
+        "uma-coluna.csv": "Data\n01/07/2026\n",
+        "aspas-simples.csv": "Data;Histórico;Valor;Saldo\n01/07/2026;'PIX ALFA';10,00;10,00\n",
+    }
+    for nome, b in arquivos:
+        _registrar("planilha_parser._linhas_xlsx" if nome.endswith("xlsx") else "planilha_parser._linhas_xls",
+                   pp._linhas_xlsx if nome.endswith("xlsx") else pp._linhas_xls, [b], {})
+        _registrar("planilha_parser.parse_planilha", pp.parse_planilha, [b, nome, 2026], {})
+    for nome, texto in csvs.items():
+        for codificacao in ("utf-8", "utf-8-sig", "latin-1"):
+            b = texto.encode(codificacao)
+            _registrar("planilha_parser._linhas_csv", pp._linhas_csv, [b], {})
+            _registrar("planilha_parser.parse_planilha", pp.parse_planilha, [b, nome, 2026], {})
+    # O Sniffer sozinho, nas amostras dos CSVs e em umas a mais.
+    amostras = list(csvs.values()) + [
+        "a;b;c\n1;2;3\n4;5;6\n", "a,b;c\n1,2;3\n", "x\ty\n1\t2\n3\t4\n", "", "sem separador nenhum\nnem aqui\n",
+        '"a";"b"\n"1";"2"\n', "a; b; c\n1; 2; 3\n", "1,5;2,5\n3,5;4,5\n5,5;6,5\n",
+    ]
+    for amostra in amostras:
+        def farejar(s):
+            try:
+                d = csv.Sniffer().sniff(s, delimiters=";,\t")
+            except csv.Error:
+                return None
+            return [d.delimiter, d.quotechar, bool(d.doublequote), bool(d.skipinitialspace)]
+        _registrar("csv.sniff", farejar, [amostra], {})
+
+
 def pytest_unconfigure(config):  # noqa: ARG001
     saida = os.environ.get("GABARITO_SAIDA")
     if not saida:
         return
     chamadas_diretas()
+    planilhas_inventadas()
     registros = sorted(chamadas.values(), key=lambda r: (r["fn"], json.dumps(r["args"], ensure_ascii=False)))
     with open(saida, "w", encoding="utf-8", newline="\n") as f:
         json.dump(registros, f, ensure_ascii=False, indent=0)
