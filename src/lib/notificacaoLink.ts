@@ -12,8 +12,9 @@ type NotificacaoParaLink = {
 
 /**
  * O aviso aponta para a própria transferência (HANDOFF_RECEIVED, _ASSIGNED,
- * _MENTION, _SECTOR_DONE, _STALE gravados desde 10/11/2026): tipo HANDOFF_,
- * o id dela e nenhum `entityType`. O WHATSAPP_HANDOFF não começa com HANDOFF_.
+ * _MENTION, _SECTOR_DONE, _STALE gravados desde 10/11/2026, e _RETURNED,
+ * _RESENT e _COMMENT, da transferência aberta): tipo HANDOFF_, o id dela e
+ * nenhum `entityType`. O WHATSAPP_HANDOFF não começa com HANDOFF_.
  */
 export function ehAvisoDaTransferencia(n: NotificacaoParaLink): boolean {
   return n.type.startsWith("HANDOFF_") && !n.entityType && Boolean(n.entityId);

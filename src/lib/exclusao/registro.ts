@@ -241,6 +241,9 @@ const USUARIO: Ligacao[] = [
   { modelo: "Document", campo: "uploadedBy", fk: "uploadedById", tratamento: "reatribuir", rotulo: ["documento anexado", "documentos anexados"], historico: true },
   { modelo: "ClientDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["documento enviado ao cliente", "documentos enviados ao cliente"], historico: true },
   { modelo: "Handoff", campo: "requester", fk: "requestedBy", tratamento: "reatribuir", rotulo: ["transferência pedida", "transferências pedidas"], historico: true },
+  // A Atividade da transferência aberta (10/11/2026): comentário, devolução,
+  // começo e fim de parte passam para quem exclui, como os comentários dos Quadros.
+  { modelo: "HandoffEvent", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação em transferência", "comentários e movimentações em transferências"], historico: true },
   { modelo: "Meeting", campo: "createdBy", fk: "createdByUserId", tratamento: "reatribuir", rotulo: ["reunião criada", "reuniões criadas"], historico: true },
   { modelo: "Evaluation", campo: "evaluator", fk: "evaluatorUserId", tratamento: "reatribuir", rotulo: ["avaliação de desempenho feita", "avaliações de desempenho feitas"], historico: true },
   { modelo: "InterviewScorecard", campo: "evaluator", fk: "evaluatorUserId", tratamento: "reatribuir", rotulo: ["avaliação de entrevista", "avaliações de entrevista"], historico: true },

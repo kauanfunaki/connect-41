@@ -3,7 +3,7 @@ import type { HandoffPriority } from "@/generated/prisma/enums";
 import type { AuthContext } from "@/lib/auth/context";
 import { sectorScope } from "@/lib/auth/activeSector";
 import { isFullAccess } from "@/lib/auth/papeis";
-import { whereDaSituacao } from "@/lib/handoffs";
+import { SITUACOES_COM_O_SETOR, whereDaSituacao } from "@/lib/handoffs";
 
 // As abas da caixa de entrada de /transferencias (10/11/2026, escolha "B ·
 // Caixa de entrada em tabela" do Kauan). Cada aba é um filtro do banco, sempre
@@ -75,23 +75,32 @@ export function lerAba(valor: string | undefined | null, q: QuemVeAsTransferenci
 /** Sentinela de "não pode ver nada": um `in: []` devolveria zero linhas por acidente. */
 const NENHUM = "__none__";
 
+/** Algum setor de destino ainda sem finalizar — devolvido incluído (está com quem pediu). */
 const ALGUM_SETOR_ABERTO: Prisma.HandoffWhereInput = { sectors: { some: { status: { not: "DONE" } } } };
+
+/**
+ * A parte que está com o setor de destino: nova ou resolvendo (10/11/2026). A
+ * devolvida sai de "Para o meu setor" e de "Comigo" — ela está com quem pediu
+ * até ele responder e reenviar — e aparece em "Enviadas".
+ */
+const COM_O_SETOR = { in: SITUACOES_COM_O_SETOR };
 
 /** O filtro do banco de cada aba — somar sempre ao `scopedHandoffWhere`. */
 export function whereDaAba(aba: AbaDaTransferencia, q: QuemVeAsTransferencias): Prisma.HandoffWhereInput {
   switch (aba) {
-    // Chegou para um setor da caixa e esse setor ainda não finalizou a parte dele.
+    // Chegou para um setor da caixa e a parte está com ele (nova ou resolvendo).
     case "setor": {
       const setores = setoresDaCaixa(q);
-      if (setores === null) return ALGUM_SETOR_ABERTO;
-      return { sectors: { some: { sectorCode: { in: setores.length > 0 ? setores : [NENHUM] }, status: { not: "DONE" } } } };
+      if (setores === null) return { sectors: { some: { status: COM_O_SETOR } } };
+      return { sectors: { some: { sectorCode: { in: setores.length > 0 ? setores : [NENHUM] }, status: COM_O_SETOR } } };
     }
-    // A fila pessoal: a pessoa é responsável por um setor que ainda não finalizou.
+    // A fila pessoal: a pessoa é responsável por uma parte que está com o setor.
     case "comigo":
-      return { sectors: { some: { status: { not: "DONE" }, assignees: { some: { userId: q.userId || NENHUM } } } } };
+      return { sectors: { some: { status: COM_O_SETOR, assignees: { some: { userId: q.userId || NENHUM } } } } };
     // Pedida pela pessoa ou pelo setor dela (o ativo, quando há; senão os dela —
     // nunca "todos", que para o administrador repetiria a caixa inteira), com
-    // algum setor de destino ainda sem finalizar.
+    // algum setor de destino ainda sem finalizar. A devolvida entra aqui: é a
+    // vez de quem pediu responder (a lista a marca com o selo "Devolvida").
     case "enviadas": {
       const origem = q.setorAtivo ? [q.setorAtivo] : q.setores;
       return {

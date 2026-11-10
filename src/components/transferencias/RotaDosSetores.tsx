@@ -7,12 +7,18 @@ import { HANDOFF_STATUS_LABEL } from "@/lib/handoffs";
 // (10/11/2026, lista "Caixa de entrada em tabela" do Kauan): nova é o círculo
 // tracejado em âmbar (espera alguém começar), resolvendo é o meio círculo
 // cheio em azul, finalizada é o círculo com ✓ em verde. Os desenhos vêm da
-// página de decisão; as cores são os tons de letra do app.
+// página de decisão; as cores são os tons de letra do app. Devolvida
+// (10/11/2026) é o círculo com a seta que volta (o "corner-up-left"), em
+// vermelho: a parte voltou para quem pediu.
 const COR_DO_SINAL: Record<HandoffSectorStatus, string> = {
   NEW: "text-warning-fg",
   IN_PROGRESS: "text-brand",
   DONE: "text-success-fg",
+  RETURNED: "text-danger",
 };
+
+/** A ordem dos sinais na legenda: o caminho da parte, e a devolução no fim. */
+const ORDEM_DA_LEGENDA: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS", "DONE", "RETURNED"];
 
 /** O desenho do sinal, sem texto: quem usa põe o nome da situação ao lado (legenda) ou no chip. */
 export function SinalDoSetor({ status, tamanho = 13 }: { status: HandoffSectorStatus; tamanho?: number }) {
@@ -40,6 +46,13 @@ export function SinalDoSetor({ status, tamanho = 13 }: { status: HandoffSectorSt
         <>
           <circle cx="12" cy="12" r="9" />
           <path d="m8.5 12 2.5 2.5 4.5-5" />
+        </>
+      )}
+      {status === "RETURNED" && (
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m11 8.5-3 3 3 3" />
+          <path d="M8 11.5h4.5a3 3 0 0 1 3 3v1.5" />
         </>
       )}
     </svg>
@@ -94,7 +107,7 @@ export function LegendaDosSinais({ comNaoLida = true }: { comNaoLida?: boolean }
           ainda não aberta por você
         </span>
       )}
-      {(["NEW", "IN_PROGRESS", "DONE"] as const).map((s) => (
+      {ORDEM_DA_LEGENDA.map((s) => (
         <span key={s} className="inline-flex items-center gap-1">
           <SinalDoSetor status={s} />
           {HANDOFF_STATUS_LABEL[s].toLowerCase()}

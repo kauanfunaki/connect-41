@@ -29,7 +29,10 @@ import {
   HANDOFF_PRIORITY_LABEL,
   HANDOFF_PRIORITY_OPTIONS,
   HANDOFF_PRIORITY_TOM,
+  HANDOFF_STATUS_LABEL,
+  HANDOFF_STATUS_TOM,
   SEM_ASSUNTO,
+  SITUACOES_COM_O_SETOR,
 } from "@/lib/handoffs";
 import {
   ABAS_DA_TRANSFERENCIA,
@@ -69,7 +72,7 @@ const VAZIO_DA_ABA: Record<AbaDaTransferencia, { titulo: string; texto: string }
   },
   enviadas: {
     titulo: "Nenhuma transferência enviada em aberto",
-    texto: "O que você ou o seu setor pediu a outros setores fica aqui até todos finalizarem.",
+    texto: "O que você ou o seu setor pediu a outros setores fica aqui até todos finalizarem. A devolvida para você responder também aparece aqui.",
   },
   finalizadas: {
     titulo: "Nenhuma transferência finalizada",
@@ -213,6 +216,7 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
       abertaHa: abertaHa(h.createdAt, agora),
       abertaEm: formatInstantDate(h.createdAt, { day: "2-digit", month: "long", year: "numeric" }),
       parada: transferenciaParada(h.sectors, agora),
+      devolvida: h.sectors.some((s) => s.status === "RETURNED"),
     };
   });
 
@@ -350,12 +354,18 @@ type Linha = {
   abertaHa: string;
   abertaEm: string;
   parada: boolean;
+  /** Algum setor devolveu a parte a quem pediu (10/11/2026). */
+  devolvida: boolean;
 };
 
-/** O assunto como link esticado sobre a linha (ou o cartão), com o ponto de "ainda não aberta". */
+/**
+ * O assunto como link esticado sobre a linha (ou o cartão), com o ponto de
+ * "ainda não aberta" e, quando um setor devolveu a parte, o selo "Devolvida"
+ * (10/11/2026): em "Enviadas" é o que pede resposta de quem pediu.
+ */
 function Assunto({ linha }: { linha: Linha }) {
   return (
-    <span className="inline-flex items-center gap-2 min-w-0">
+    <span className="inline-flex items-center gap-2 min-w-0 flex-wrap">
       {linha.naoLida ? (
         <span aria-hidden className="size-[7px] flex-shrink-0 rounded-full bg-brand" title="Ainda não aberta por você" />
       ) : (
@@ -369,7 +379,13 @@ function Assunto({ linha }: { linha: Linha }) {
       >
         {linha.naoLida && <span className="sr-only">Ainda não aberta por você: </span>}
         {linha.assunto ?? <span className="font-normal text-fg-muted">{SEM_ASSUNTO}</span>}
+        {linha.devolvida && <span className="sr-only"> (devolvida: espera resposta de quem pediu)</span>}
       </Link>
+      {linha.devolvida && (
+        <span aria-hidden className="relative z-10 inline-flex" title="Um setor devolveu a parte dele: espera a resposta de quem pediu">
+          <Selo tom={HANDOFF_STATUS_TOM.RETURNED}>{HANDOFF_STATUS_LABEL.RETURNED}</Selo>
+        </span>
+      )}
     </span>
   );
 }
@@ -428,11 +444,13 @@ type SetorDaLinha = {
  */
 function responsaveisDaLinha(aba: AbaDaTransferencia, setores: SetorDaLinha[], quem: QuemVeAsTransferencias): Pessoa[] {
   let daVez = setores;
+  // A parte que está com o setor (nova ou resolvendo) — a mesma regra das abas;
+  // a devolvida está com quem pediu (10/11/2026).
   if (aba === "setor") {
     const caixa = setoresDaCaixa(quem);
-    daVez = setores.filter((s) => s.status !== "DONE" && (caixa === null || caixa.includes(s.sectorCode)));
+    daVez = setores.filter((s) => SITUACOES_COM_O_SETOR.includes(s.status) && (caixa === null || caixa.includes(s.sectorCode)));
   } else if (aba === "comigo") {
-    daVez = setores.filter((s) => s.status !== "DONE" && s.assignees.some((a) => a.user.id === quem.userId));
+    daVez = setores.filter((s) => SITUACOES_COM_O_SETOR.includes(s.status) && s.assignees.some((a) => a.user.id === quem.userId));
   }
   const vistos = new Map<string, Pessoa>();
   for (const s of daVez) for (const a of s.assignees) if (!vistos.has(a.user.id)) vistos.set(a.user.id, a.user);

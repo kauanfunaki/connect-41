@@ -496,6 +496,15 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "handoff.assign": e("definiu o responsável da transferência"),
   "handoff.sector.assign": e("definiu quem cuida da transferência no setor"),
   "handoff.sector.status": e("mudou a situação da transferência no setor"),
+  // A transferência aberta (10/11/2026): os botões da parte de cada setor, o
+  // comentário e a edição do pedido.
+  "handoff.sector.start": e("começou a parte de um setor na transferência"),
+  "handoff.sector.finish": e("finalizou a parte de um setor na transferência"),
+  "handoff.sector.return": e("devolveu a quem pediu a parte de um setor na transferência"),
+  "handoff.sector.resend": e("respondeu e reenviou ao setor a parte devolvida da transferência"),
+  "handoff.sector.reopen": e("reabriu a parte de um setor na transferência"),
+  "handoff.comment": e("comentou na transferência"),
+  "handoff.edit": e("editou a transferência"),
   "meeting.create": c("agendou a reunião"),
   "meeting.update": e("editou a reunião"),
   "meeting.delete": x("cancelou a reunião"),

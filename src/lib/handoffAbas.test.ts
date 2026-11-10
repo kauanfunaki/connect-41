@@ -92,6 +92,9 @@ const ACERVO: Record<string, Transferencia> = {
   pedidaPeloFiscal: t({ fromSector: "fiscal", sectors: [setor("dp", "IN_PROGRESS")] }),
   pedidaPorMimFinalizada: t({ requestedBy: EU, sectors: [setor("contabil", "DONE"), setor("dp", "DONE")] }),
   finalizadaDoFiscal: t({ sectors: [setor("fiscal", "DONE")] }),
+  // Devolvidas (10/11/2026): a parte está com quem pediu.
+  fiscalDevolveu: t({ sectors: [setor("fiscal", "RETURNED", [EU])] }),
+  fiscalDevolveuAMim: t({ requestedBy: EU, fromSector: "dp", sectors: [setor("fiscal", "RETURNED"), setor("contabil", "DONE")] }),
 };
 
 function quaisCasam(aba: AbaDaTransferencia, quem: QuemVeAsTransferencias): string[] {
@@ -121,14 +124,21 @@ describe("aba Para o meu setor", () => {
     expect(quaisCasam("setor", { ...DE_DOIS_SETORES, setorAtivo: "fiscal" })).toEqual(["paraOFiscalNova", "paraOFiscalResolvendo"]);
   });
 
-  it("o administrador em Todos os setores vê tudo o que tem setor em aberto", () => {
+  it("o administrador em Todos os setores vê tudo o que tem parte com algum setor (nova ou resolvendo)", () => {
     expect(setoresDaCaixa(ADMIN_EM_TODOS)).toBeNull();
     expect(quaisCasam("setor", ADMIN_EM_TODOS)).toEqual(
       Object.entries(ACERVO)
-        .filter(([, x]) => x.sectors.some((s) => s.status !== "DONE"))
+        .filter(([, x]) => x.sectors.some((s) => s.status === "NEW" || s.status === "IN_PROGRESS"))
         .map(([n]) => n)
         .sort()
     );
+  });
+
+  it("a parte devolvida sai da caixa do setor: está com quem pediu", () => {
+    for (const quem of [DO_FISCAL, DE_DOIS_SETORES, ADMIN_EM_TODOS]) {
+      expect(quaisCasam("setor", quem)).not.toContain("fiscalDevolveu");
+      expect(quaisCasam("setor", quem)).not.toContain("fiscalDevolveuAMim");
+    }
   });
 
   it("quem não tem setor nenhum não vê nada (e a aba nem aparece)", () => {
@@ -146,24 +156,33 @@ describe("aba Comigo", () => {
   it("não depende do setor ativo", () => {
     expect(quaisCasam("comigo", { ...DO_FISCAL, setorAtivo: "fiscal" })).toEqual(["comigoNoContabil"]);
   });
+
+  it("a parte devolvida sai de Comigo, mesmo com a pessoa responsável por ela", () => {
+    expect(ACERVO.fiscalDevolveu.sectors[0].assignees).toContain(EU);
+    expect(quaisCasam("comigo", DO_FISCAL)).not.toContain("fiscalDevolveu");
+  });
 });
 
 describe("aba Enviadas", () => {
-  it("é o que a pessoa ou o setor dela pediu, com algum setor em aberto", () => {
-    expect(quaisCasam("enviadas", DO_FISCAL)).toEqual(["pedidaPeloFiscal", "pedidaPorMim"]);
+  it("é o que a pessoa ou o setor dela pediu, com algum setor em aberto — devolvida incluída", () => {
+    expect(quaisCasam("enviadas", DO_FISCAL)).toEqual(["fiscalDevolveuAMim", "pedidaPeloFiscal", "pedidaPorMim"]);
   });
 
   it("para o administrador em Todos os setores, só o que ele pediu — não a casa inteira", () => {
-    expect(quaisCasam("enviadas", ADMIN_EM_TODOS)).toEqual(["pedidaPorMim"]);
+    expect(quaisCasam("enviadas", ADMIN_EM_TODOS)).toEqual(["fiscalDevolveuAMim", "pedidaPorMim"]);
   });
 
   it("com setor ativo, a origem é o setor ativo", () => {
-    expect(quaisCasam("enviadas", { ...DE_DOIS_SETORES, setorAtivo: "contabil" })).toEqual(["pedidaPorMim"]);
+    expect(quaisCasam("enviadas", { ...DE_DOIS_SETORES, setorAtivo: "contabil" })).toEqual(["fiscalDevolveuAMim", "pedidaPorMim"]);
+  });
+
+  it("a devolvida que outro setor pediu não entra nas Enviadas de quem não pediu", () => {
+    expect(quaisCasam("enviadas", DO_FISCAL)).not.toContain("fiscalDevolveu");
   });
 });
 
 describe("aba Finalizadas", () => {
-  it("é a transferência em que todos os setores finalizaram", () => {
+  it("é a transferência em que todos os setores finalizaram — a devolvida não", () => {
     expect(quaisCasam("finalizadas", DO_FISCAL)).toEqual(["finalizadaDoFiscal", "pedidaPorMimFinalizada"]);
   });
 });

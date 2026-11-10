@@ -3,17 +3,24 @@ import type { HandoffPriority, HandoffSectorStatus } from "@/generated/prisma/en
 
 // Vocabulário do dia a dia (item 6 do levantamento): a transferência nasce
 // "Nova", vira "Resolvendo" quando algum setor começa a trabalhar e
-// "Finalizada" quando todos terminam.
+// "Finalizada" quando todos terminam. "Devolvida" (10/11/2026, pedido do
+// Kauan): um setor devolveu a parte dele a quem pediu, com o motivo.
 export const HANDOFF_STATUS_LABEL: Record<HandoffSectorStatus, string> = {
   NEW: "Nova",
   IN_PROGRESS: "Resolvendo",
   DONE: "Finalizada",
+  RETURNED: "Devolvida",
 };
 
-export const HANDOFF_STATUS_BADGE: Record<HandoffSectorStatus, "warning" | "info" | "success"> = {
+// "Devolvida" em vermelho (10/11/2026): é a única situação que trava o setor
+// e pede ação de quem pediu. O âmbar já é da "Nova" — duas situações com a
+// mesma cor na faixa e no sinal da lista ficariam ambíguas —, e o cinza
+// (`neutro`) é, pela regra do Selo, de situação encerrada, que não pede nada.
+export const HANDOFF_STATUS_BADGE: Record<HandoffSectorStatus, "warning" | "info" | "success" | "danger"> = {
   NEW: "warning",
   IN_PROGRESS: "info",
   DONE: "success",
+  RETURNED: "danger",
 };
 
 export const HANDOFF_PRIORITY_LABEL: Record<HandoffPriority, string> = {
@@ -35,13 +42,21 @@ export const HANDOFF_PRIORITY_TOM: Record<HandoffPriority, "neutro" | "marca" | 
 };
 
 // O tom do sinal de cada setor na lista (10/11/2026): nova em âmbar (espera
-// alguém começar), resolvendo em azul, finalizada em verde — os mesmos tons de
-// HANDOFF_STATUS_BADGE, no vocabulário do Selo.
-export const HANDOFF_STATUS_TOM: Record<HandoffSectorStatus, "atencao" | "marca" | "sucesso"> = {
+// alguém começar), resolvendo em azul, finalizada em verde, devolvida em
+// vermelho — os mesmos tons de HANDOFF_STATUS_BADGE, no vocabulário do Selo.
+export const HANDOFF_STATUS_TOM: Record<HandoffSectorStatus, "atencao" | "marca" | "sucesso" | "perigo"> = {
   NEW: "atencao",
   IN_PROGRESS: "marca",
   DONE: "sucesso",
+  RETURNED: "perigo",
 };
+
+/**
+ * As situações em que a parte está COM o setor de destino (10/11/2026): nova
+ * ou resolvendo. A devolvida está com quem pediu, e a finalizada, com ninguém.
+ * É o que as abas "Para o meu setor" e "Comigo" e o aviso de parada olham.
+ */
+export const SITUACOES_COM_O_SETOR: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS"];
 
 /**
  * Dias com um setor sem finalizar para a transferência contar como parada
@@ -53,9 +68,13 @@ export const HANDOFF_PARADA_DIAS = 3;
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
-/** Um setor de destino parado: ainda não finalizou e chegou há HANDOFF_PARADA_DIAS dias ou mais. */
+/**
+ * Um setor de destino parado: a parte está com ele (nova ou resolvendo) e
+ * chegou há HANDOFF_PARADA_DIAS dias ou mais. A devolvida não conta
+ * (10/11/2026): ela espera quem pediu, e não o setor.
+ */
 export function setorParado(setor: { status: HandoffSectorStatus; createdAt: Date }, agora: Date): boolean {
-  return setor.status !== "DONE" && agora.getTime() - setor.createdAt.getTime() >= HANDOFF_PARADA_DIAS * DIA_MS;
+  return SITUACOES_COM_O_SETOR.includes(setor.status) && agora.getTime() - setor.createdAt.getTime() >= HANDOFF_PARADA_DIAS * DIA_MS;
 }
 
 /** A transferência está parada quando algum setor de destino está (o relógio âmbar da lista). */
@@ -105,9 +124,12 @@ export const HANDOFF_PRIORITY_OPTIONS: { value: HandoffPriority; label: string }
   { value: "URGENT", label: "Urgente" },
 ];
 
-// Status agregado da transferência a partir dos status por setor.
+// Status agregado da transferência a partir dos status por setor. Uma parte
+// devolvida vence as outras (10/11/2026): a transferência espera quem pediu
+// responder, e é isso que o Selo do cabeçalho e o sinal da lista têm de dizer.
 export function aggregateHandoffStatus(statuses: HandoffSectorStatus[]): HandoffSectorStatus {
   if (statuses.length === 0) return "NEW";
+  if (statuses.some((s) => s === "RETURNED")) return "RETURNED";
   if (statuses.every((s) => s === "DONE")) return "DONE";
   if (statuses.every((s) => s === "NEW")) return "NEW";
   return "IN_PROGRESS";
@@ -115,7 +137,7 @@ export function aggregateHandoffStatus(statuses: HandoffSectorStatus[]): Handoff
 
 // A mesma regra de `aggregateHandoffStatus`, escrita como filtro do banco, para
 // a lista de /transferencias paginar no servidor em vez de ler tudo e filtrar
-// em JS (10/11/2026). Exatamente um dos três casa com cada transferência —
+// em JS (10/11/2026). Exatamente um dos quatro casa com cada transferência —
 // `handoffs.test.ts` confere contra a função, de 0 a 3 setores.
 // No Prisma, `every` numa relação vazia é verdadeiro: por isso "Nova" pega a
 // transferência sem setor nenhum, e "Finalizada" precisa do `some: {}`.
@@ -125,11 +147,14 @@ export function whereDaSituacao(status: HandoffSectorStatus): Prisma.HandoffWher
       return { sectors: { every: { status: "NEW" } } };
     case "DONE":
       return { sectors: { some: {}, every: { status: "DONE" } } };
+    case "RETURNED":
+      return { sectors: { some: { status: "RETURNED" } } };
     case "IN_PROGRESS":
       return {
         AND: [
           { sectors: { some: { status: { not: "NEW" } } } },
           { sectors: { some: { status: { not: "DONE" } } } },
+          { sectors: { every: { status: { not: "RETURNED" } } } },
         ],
       };
   }

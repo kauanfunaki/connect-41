@@ -68,6 +68,11 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   HANDOFF_ASSIGNED: p("transferencia", "brand", "Transferência para você"),
   HANDOFF_MENTION: p("mencao", "brand", "Mencionado numa transferência"),
   HANDOFF_SECTOR_DONE: p("aprovado", "success", "Transferência concluída"),
+  // A transferência aberta (10/11/2026, pedido do Kauan): o setor devolveu a
+  // parte a quem pediu, quem pediu respondeu e reenviou, e o comentário.
+  HANDOFF_RETURNED: p("recusado", "danger", "Transferência devolvida"),
+  HANDOFF_RESENT: p("transferencia", "brand", "Transferência reenviada"),
+  HANDOFF_COMMENT: p("comentario", "info", "Comentário numa transferência"),
   MENTION: p("mencao", "brand", "Você foi mencionado"),
   COMMENT: p("comentario", "info", "Novo comentário"),
   INTERVIEW_SCHEDULED: p("agenda", "info", "Entrevista agendada"),
