@@ -560,6 +560,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "sector.agenda.reset": e("voltou ao padrão a Agenda do setor", { chaveDoNome: "setor" }),
   "sector.meu_dia.update": e("mudou o padrão do Meu dia do setor", { chaveDoNome: "setor" }),
   "sector.meu_dia.reset": e("voltou ao padrão o Meu dia do setor", { chaveDoNome: "setor" }),
+  // O padrão dos cartões do topo do Início do setor (10/11/2026); a troca pessoal não vai à trilha.
+  "sector.inicio.cartao": e("trocou um cartão do Início do setor", { chaveDoNome: "setor" }),
   // Os Quadros do setor (28/10/2026): o coordenador bloqueia ou libera a criação e a edição pelos colaboradores.
   "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores nos Quadros do setor"),
   "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores nos Quadros do setor"),

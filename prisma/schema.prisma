@@ -1590,6 +1590,8 @@ model Tenant {
   inventoryMovements        InventoryMovement[]
   internalContracts         InternalContract[]
   sectorMenuOrders          SectorMenuOrder[]
+  sectorHomeCards           SectorHomeCards[]
+  userHomeCards             UserHomeCards[]
   robotTasks                RobotTask[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
@@ -1773,6 +1775,49 @@ model SectorMenuOrder {
 
   @@unique([tenantId, sectorCode])
   @@map("sector_menu_orders")
+}
+
+// Os cartões coringa do topo do Início (10/11/2026, pedido do Kauan). O
+// catálogo vive em código (src/lib/home/cartoes.ts); aqui ficam só as
+// escolhas, em JSON com as quatro posições — a chave do cartão ou null ("vale
+// o de cima"). Chave que sair do catálogo é descartada na leitura, sem mexer
+// nas outras posições. Precedência: a pessoa > o padrão do setor > o código.
+
+/// O padrão do setor: o que o coordenador do setor (ou o admin) escolheu para
+/// os quatro cartões de quem está no setor. Sem linha, o padrão do código.
+model SectorHomeCards {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  cards       String   @db.Text
+  /// Quem gravou por último (a troca fica também na auditoria).
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@map("sector_home_cards")
+}
+
+/// A escolha de uma pessoa, por setor ativo ("" em "Todos os setores"): quem
+/// é de dois setores tem quatro cartões em cada um. Sai junto com a pessoa.
+model UserHomeCards {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String
+  sectorCode String   @default("") @db.VarChar(40)
+  cards      String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, sectorCode])
+  @@index([tenantId])
+  @@map("user_home_cards")
 }
 
 // Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —
@@ -2050,6 +2095,7 @@ model User {
   bpoCredentialsCreated       BpoCredential[]
   bpoCredentialViews          BpoCredentialView[]
   bpoCredentialRestrictions   BpoCredentialRestriction[]
+  homeCards                   UserHomeCards[]
   chatwootAgentLinks          ChatwootAgentLink[]
   preference                  UserPreference?
   pinnedModules               UserPinnedModule[]
@@ -7410,7 +7456,9 @@ model ObrigacaoGerada {
 
   @@unique([modeloId, companyId, competencia])
   @@index([tenantId, companyId])
-  // A data legal na Agenda (10/11/2026): a busca do mês é por período.
+  // A data legal na Agenda (10/11/2026): a busca do mês é por período. O
+  // cartão "Obrigações em risco de multa" do Início (10/11/2026) usa o mesmo
+  // índice para ler só a janela perto da data legal.
   @@index([tenantId, dataLegal])
   @@map("obrigacoes_geradas")
 }

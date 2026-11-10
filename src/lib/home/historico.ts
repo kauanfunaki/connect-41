@@ -17,12 +17,15 @@
 //
 // Custo, por abertura da Home:
 // - leitura: uma consulta por requisição (`cache()`), pela chave primária
-//   (tenant, escopo ∈ {"", o da pessoa}, métrica ∈ lista, dia ≥ 8 semanas) —
-//   no máximo 18 métricas × 56 dias ≈ 1 mil linhas pequenas;
+//   (tenant, escopo ∈ {"", o da pessoa}, métrica ∈ lista, dia ≥ 8 semanas).
+//   Com os cartões do topo (10/11/2026) a lista passou de 18 para ~60
+//   métricas, mas só vêm linhas das que já têm foto: os 4 cartões e os
+//   painéis de cada pessoa, ou seja, poucas centenas a 2-3 mil linhas pequenas;
 // - gravação: depois da resposta (`after()`), um upsert pela chave primária
 //   por métrica que mudou desde a última foto do dia; número parado não grava.
 // Sem a tabela (migration não rodada), tudo isso vira nada: os painéis ficam
-// sem selo e sem linha, e o erro vai para o log.
+// sem selo e sem linha, os cartões dizem "sem histórico ainda", e o erro vai
+// para o log.
 
 import { cache } from "react";
 import { after } from "next/server";
@@ -90,27 +93,48 @@ export function precarregarHistoricoDaHome(ctx: AuthContext): void {
 /**
  * A tendência de cada número pedido e, com `gravar`, a foto de hoje de cada
  * um que mudou — agendada para depois da resposta. Quem grava é o painel
- * (sabe os números dele); a faixa de destaques só lê.
+ * (sabe os números dele).
  */
 export async function tendenciasDaHome(
   ctx: AuthContext,
   valores: Partial<Record<MetricaDaHome, number>>,
   { gravar = true }: { gravar?: boolean } = {}
 ): Promise<Partial<Record<MetricaDaHome, Tendencia>>> {
-  if (!ctx.tenantId) return {};
+  const lidas = await fotosDosNumeros(ctx, valores, { gravar });
+  if (!lidas) return {};
+  const resultado: Partial<Record<MetricaDaHome, Tendencia>> = {};
+  for (const [metrica, fotos] of Object.entries(lidas.fotos) as [MetricaDaHome, Foto[]][]) {
+    const tendencia = montarTendencia(fotos, lidas.hojeKey, valores[metrica]!, METRICAS[metrica]);
+    if (tendencia) resultado[metrica] = tendencia;
+  }
+  return resultado;
+}
+
+/**
+ * As fotos dos dias anteriores de cada número pedido e, com `gravar`, a de
+ * hoje de cada um que mudou. Os cartões do topo (10/11/2026) montam com elas a
+ * variação desde ontem e a linha deles; os painéis, o selo e a linha das oito
+ * semanas (`tendenciasDaHome`). Uma leitura por requisição para todos, pelo
+ * `cache()`. `null` quando o histórico não está disponível (sem a tabela).
+ */
+export async function fotosDosNumeros(
+  ctx: AuthContext,
+  valores: Partial<Record<MetricaDaHome, number>>,
+  { gravar = true }: { gravar?: boolean } = {}
+): Promise<{ hojeKey: string; fotos: Partial<Record<MetricaDaHome, Foto[]>> } | null> {
+  if (!ctx.tenantId) return null;
   const pessoal = escopoPessoal(ctx);
   const historico = await historicoDaHome(ctx.tenantId, pessoal);
-  if (!historico) return {};
+  if (!historico) return null;
 
-  const resultado: Partial<Record<MetricaDaHome, Tendencia>> = {};
+  const resultado: Partial<Record<MetricaDaHome, Foto[]>> = {};
   const fotosDeHoje: { metric: MetricaDaHome; scope: string; value: number }[] = [];
   for (const [metrica, valor] of Object.entries(valores)) {
     if (!ehMetricaDaHome(metrica) || valor === undefined || !Number.isFinite(valor)) continue;
     const escopo = escopoDa(metrica, pessoal);
     if (escopo === null) continue;
     const fotos = historico.fotos.get(chaveDa(metrica, escopo)) ?? [];
-    const tendencia = montarTendencia(fotos, historico.hojeKey, valor, METRICAS[metrica]);
-    if (tendencia) resultado[metrica] = tendencia;
+    resultado[metrica] = fotos;
     const deHoje = fotos.find((f) => f.dia === historico.hojeKey);
     if (gravar && deHoje?.valor !== valor) fotosDeHoje.push({ metric: metrica, scope: escopo, value: Math.round(valor) });
   }
@@ -135,5 +159,5 @@ export async function tendenciasDaHome(
       if (falha) console.error("[home] foto dos números não gravada", (falha as PromiseRejectedResult).reason);
     });
   }
-  return resultado;
+  return { hojeKey: historico.hojeKey, fotos: resultado };
 }
