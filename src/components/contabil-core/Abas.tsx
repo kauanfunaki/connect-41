@@ -5,6 +5,8 @@ import { formatCalendarDate, formatCnpj, formatCpf, formatInstantDateTime } from
 import { listarAgencias, listarContas, listarContrapartes, listarRegras } from "@/lib/contabil-core/servidor/cadastros";
 import { listarImportacoes } from "@/lib/contabil-core/servidor/importacao";
 import { listarPendencias } from "@/lib/contabil-core/servidor/neo";
+import { filaAgrupada } from "@/lib/contabil-core/servidor/neoAvancado";
+import { texto as textoDec } from "@/lib/contabil-core/motor/decimal";
 import { listarExtrato, listarRegistros, POR_PAGINA, ultimoMesComLancamento } from "@/lib/contabil-core/servidor/consultas";
 import { moeda, moedaComSinal, ROTULO_DO_TIPO_DE_CONTA, rotuloDaAgencia, rotuloDaConta } from "@/lib/contabil-core/tela";
 import { AlternarAgencia, AlternarRegra, CancelarClassificacao, DesfazerImportacao, ExcluirConta } from "./Botoes";
@@ -13,6 +15,7 @@ import { Exportar } from "./Exportar";
 import { Filtros } from "./Filtros";
 import { FormularioDaAgencia, FormularioDaConta, FormularioDaContraparte, FormularioDaRegra } from "./Formularios";
 import { FilaDoNeo, ProcessarNeo } from "./Neo";
+import { Compor, Reclassificar } from "./Lancamento";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
 // confere tenant e empresa) e passam para o navegador só o que a tela mostra.
@@ -141,7 +144,7 @@ const ROTULO_STATUS: Record<string, { texto: string; tom: "neutro" | "sucesso" |
 };
 
 export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
-  const [{ opcoesDeAgencia }, { itens, total }] = await Promise.all([
+  const [{ opcoesDeAgencia, opcoesDeConta }, { itens, total }] = await Promise.all([
     opcoes(c),
     listarExtrato(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes, busca: c.busca, status: c.status, pagina: c.pagina }),
   ]);
@@ -180,7 +183,13 @@ export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
                   <td className="py-2">
                     <span className="flex items-center gap-2">
                       <Selo tom={ROTULO_STATUS[t.status]?.tom ?? "neutro"}>{ROTULO_STATUS[t.status]?.texto ?? t.status}</Selo>
-                      {t.status === "processada" && c.podeAgir && <CancelarClassificacao empresaId={c.empresaId} transacaoId={t.id} />}
+                      {t.status === "processada" && c.podeAgir && (
+                        <>
+                          <Reclassificar empresaId={c.empresaId} transacaoId={t.id} contas={opcoesDeConta} />
+                          <Compor empresaId={c.empresaId} transacaoId={t.id} contas={opcoesDeConta} />
+                          <CancelarClassificacao empresaId={c.empresaId} transacaoId={t.id} />
+                        </>
+                      )}
                     </span>
                   </td>
                 </tr>
@@ -197,10 +206,13 @@ export async function AbaExtrato({ c }: { c: ContextoDaAba }) {
 // ─── NEO ──────────────────────────────────────────────────────────────────
 
 export async function AbaNeo({ c }: { c: ContextoDaAba }) {
-  const [{ opcoesDeAgencia, opcoesDeConta }, pendencias] = await Promise.all([
+  const [{ opcoesDeAgencia, opcoesDeConta }, pendencias, fila] = await Promise.all([
     opcoes(c),
     listarPendencias(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes, busca: c.busca }),
+    filaAgrupada(c.tenantId, c.empresaId, { agenciaId: c.agenciaId, mes: c.mes }),
   ]);
+  // Os grupos marcam só o que está na tela (as 500 primeiras pendências da seleção).
+  const naTela = new Set(pendencias.map((p) => p.id));
   return (
     <div className="flex flex-col gap-4">
       <Filtros empresaId={c.empresaId} aba="neo" mes={c.mes} agenciaId={c.agenciaId} agencias={opcoesDeAgencia} busca={c.busca} />
@@ -208,6 +220,20 @@ export async function AbaNeo({ c }: { c: ContextoDaAba }) {
       <FilaDoNeo
         empresaId={c.empresaId}
         contas={opcoesDeConta}
+        agencias={opcoesDeAgencia}
+        parcial={fila.parcial}
+        grupos={fila.grupos
+          .filter((g) => g.quantidade > 1)
+          .map((g) => ({
+            chave: `${g.padrao}|${g.dc}`,
+            rotulo: g.rotulo,
+            dc: g.dc,
+            quantidade: g.quantidade,
+            total: moeda(textoDec(g.valorTotal)),
+            contas: g.agenciaIds.length,
+            transacaoIds: g.transacaoIds.filter((id) => naTela.has(id)),
+          }))
+          .filter((g) => g.transacaoIds.length > 0)}
         pendencias={pendencias.map((p) => ({
           id: p.id,
           data: formatCalendarDate(p.data),

@@ -11,10 +11,12 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
 import { useToast } from "@/components/ui/Toast";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
-import { classificarManualAction, processarNeoAction } from "@/app/(app)/contabil-core/actions";
+import { classificarComRegraAction, classificarManualAction, processarNeoAction, simularRegraAction } from "@/app/(app)/contabil-core/actions";
+import { prefixoComumDePalavras } from "@/lib/contabil-core/motor/fila";
 import { LiberarParaAutomatico } from "./Botoes";
 
-// O NEO na tela (Fase 2, 09/11/2026): rodar o motor sobre as pendências e classificar à mão o que ficou.
+// O NEO na tela: rodar o motor sobre as pendências e classificar o que ficou (Fase 2), com a fila
+// agrupada por padrão, a regra da seleção e a simulação de alcance (Fase 3, 09/11/2026).
 
 export function ProcessarNeo({ empresaId, agenciaId, mes }: { empresaId: string; agenciaId: string | null; mes: string | null }) {
   const [pendente, startTransition] = useTransition();
@@ -58,59 +60,135 @@ export type Pendencia = {
   recusadaPorPessoa: boolean;
 };
 
-export function FilaDoNeo({ empresaId, pendencias, contas }: { empresaId: string; pendencias: Pendencia[]; contas: Opcao[] }) {
+export type GrupoDaTela = { chave: string; rotulo: string; dc: string; quantidade: number; total: string; contas: number; transacaoIds: string[] };
+
+type Simulacao = { pendencias: number; amostras: string[]; contabilizadas: number; conflitos: number; amostrasDeConflito: string[] };
+
+export function FilaDoNeo({
+  empresaId,
+  pendencias,
+  contas,
+  agencias,
+  grupos,
+  parcial,
+}: {
+  empresaId: string;
+  pendencias: Pendencia[];
+  contas: Opcao[];
+  agencias: Opcao[];
+  grupos: GrupoDaTela[];
+  parcial: boolean;
+}) {
   const base = useId();
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
   const [contaId, setContaId] = useState("");
   const [historico, setHistorico] = useState("");
   const [manter, setManter] = useState(false);
+  const [criarRegra, setCriarRegra] = useState(false);
+  const [textoDaRegra, setTextoDaRegra] = useState<string | null>(null);
+  const [agenciaDaRegra, setAgenciaDaRegra] = useState("");
+  const [aplicar, setAplicar] = useState(true);
+  const [simulacao, setSimulacao] = useState<Simulacao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [bloqueios, setBloqueios] = useState<{ transacaoId: string; motivo: string }[]>([]);
   const [pendente, startTransition] = useTransition();
   const router = useRouter();
   const toast = useToast();
 
-  const lados = useMemo(() => new Set(pendencias.filter((p) => marcadas.has(p.id)).map((p) => p.dc)), [pendencias, marcadas]);
+  const selecionadas = useMemo(() => pendencias.filter((p) => marcadas.has(p.id)), [pendencias, marcadas]);
+  const lados = useMemo(() => new Set(selecionadas.map((p) => p.dc)), [selecionadas]);
+  // A sugestão sai da PRIMEIRA linha marcada, como no original; o contador pode editar.
+  const sugestao = useMemo(() => prefixoComumDePalavras(selecionadas.map((p) => p.historico)), [selecionadas]);
+  const regra = textoDaRegra ?? sugestao;
 
-  function alternar(id: string) {
+  function marcar(ids: string[], ligar: boolean) {
+    setSimulacao(null);
+    setTextoDaRegra(null);
     setMarcadas((m) => {
       const n = new Set(m);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      for (const id of ids) {
+        if (ligar) n.add(id);
+        else n.delete(id);
+      }
       return n;
+    });
+  }
+
+  function simular() {
+    setErro(null);
+    startTransition(async () => {
+      const r = await simularRegraAction(empresaId, { historico: regra, dc: lados.size === 1 ? [...lados][0] : "", agenciaId: agenciaDaRegra, contaId });
+      if ("error" in r) return setErro(r.error);
+      setSimulacao(r.simulacao);
     });
   }
 
   function classificar() {
     setErro(null);
     setBloqueios([]);
+    const pedido = { transacaoIds: selecionadas.map((p) => p.id), contaId, descricao: historico, manterHistorico: manter };
     startTransition(async () => {
-      const r = await classificarManualAction(empresaId, { transacaoIds: [...marcadas], contaId, descricao: historico, manterHistorico: manter });
-      if ("error" in r) return setErro(r.error);
-      const v = r.resultado;
-      setBloqueios(v.bloqueadas);
+      if (criarRegra) {
+        const r = await classificarComRegraAction(empresaId, { ...pedido, regra: { historico: regra, agenciaId: agenciaDaRegra, manterHistorico: manter, aplicarNosSemelhantes: aplicar } });
+        if ("error" in r) return setErro(r.error);
+        const v = r.resultado;
+        setBloqueios(v.bloqueadas);
+        toast.success(
+          `${v.classificadas.length} classificada(s)` +
+            (v.regraCriada ? `; regra criada${v.semelhantes !== null ? `, ${v.semelhantes} semelhante(s) classificada(s) pelo NEO` : ""}` : "; a regra não pôde ser criada") +
+            ".",
+        );
+      } else {
+        const r = await classificarManualAction(empresaId, pedido);
+        if ("error" in r) return setErro(r.error);
+        const v = r.resultado;
+        setBloqueios(v.bloqueadas);
+        toast.success(`${v.classificadas.length} classificada(s)${v.ignoradas.length ? `, ${v.ignoradas.length} já não estava(m) pendente(s)` : ""}.`);
+      }
       setMarcadas(new Set());
-      toast.success(`${v.classificadas.length} classificada(s)${v.ignoradas.length ? `, ${v.ignoradas.length} já não estava(m) pendente(s)` : ""}.`);
+      setSimulacao(null);
+      setTextoDaRegra(null);
       router.refresh();
     });
   }
 
-  if (!pendencias.length) {
-    return <p className="text-sm text-fg-muted">Nenhuma pendência nesta seleção.</p>;
-  }
+  if (!pendencias.length) return <p className="text-sm text-fg-muted">Nenhuma pendência nesta seleção.</p>;
 
   return (
     <div className="flex flex-col gap-3">
+      {grupos.length > 0 && (
+        <section aria-label="Pendências por padrão" className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Por padrão de histórico</p>
+          {parcial && <p className="text-micro text-fg-muted">A fila é grande: os grupos descrevem as 10.000 primeiras pendências. Filtre por mês ou conta.</p>}
+          <div className="flex flex-wrap gap-2">
+            {grupos.map((g) => {
+              const todas = g.transacaoIds.every((id) => marcadas.has(id));
+              return (
+                <button
+                  key={g.chave}
+                  type="button"
+                  onClick={() => marcar(g.transacaoIds, !todas)}
+                  className={`rounded-md border px-2 py-1 text-left text-micro ${todas ? "border-brand bg-brand/8" : "border-border bg-surface"}`}
+                  aria-pressed={todas}
+                >
+                  <span className="block font-medium">{g.rotulo}</span>
+                  <span className="text-fg-muted">
+                    {g.dc === "D" ? "Débito" : "Crédito"} · {g.quantidade} · {g.total}
+                    {g.contas > 1 ? ` · ${g.contas} contas bancárias` : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
               <th className="py-2 pr-2 w-8">
-                <Checkbox
-                  aria-label="Marcar todas"
-                  checked={marcadas.size === pendencias.length}
-                  onChange={(e) => setMarcadas(e.target.checked ? new Set(pendencias.map((p) => p.id)) : new Set())}
-                />
+                <Checkbox aria-label="Marcar todas" checked={marcadas.size === pendencias.length} onChange={(e) => marcar(pendencias.map((p) => p.id), e.target.checked)} />
               </th>
               <th className="py-2 pr-3 font-medium">Data</th>
               <th className="py-2 pr-3 font-medium">Histórico do banco</th>
@@ -122,7 +200,7 @@ export function FilaDoNeo({ empresaId, pendencias, contas }: { empresaId: string
             {pendencias.map((p) => (
               <tr key={p.id} className="border-b border-border last:border-0 align-top">
                 <td className="py-2 pr-2">
-                  <Checkbox aria-label={`Marcar ${p.historico}`} checked={marcadas.has(p.id)} onChange={() => alternar(p.id)} />
+                  <Checkbox aria-label={`Marcar ${p.historico}`} checked={marcadas.has(p.id)} onChange={(e) => marcar([p.id], e.target.checked)} />
                 </td>
                 <td className="py-2 pr-3 whitespace-nowrap tabular-nums">{p.data}</td>
                 <td className="py-2 pr-3">{p.historico}</td>
@@ -148,19 +226,51 @@ export function FilaDoNeo({ empresaId, pendencias, contas }: { empresaId: string
         <p className="mb-3 text-sm font-medium">
           Classificar à mão {marcadas.size ? `(${marcadas.size} marcada${marcadas.size > 1 ? "s" : ""})` : ""}
         </p>
-        {lados.size > 1 && <Aviso tom="atencao">A seleção mistura débito e crédito. Confira se a mesma conta vale para os dois lados.</Aviso>}
+        {lados.size > 1 && <Aviso tom="atencao">A seleção mistura débito e crédito. Confira se a mesma conta vale para os dois lados; regra não pode ser criada.</Aviso>}
         <div className="grid gap-3 sm:grid-cols-2">
           <CampoForm label="Conta contábil" htmlFor={`${base}-conta`} required>
-            <SearchableSelect id={`${base}-conta`} name="contaId" options={contas} defaultValue={contaId} onChange={setContaId} placeholder="Escolha a conta" />
+            <SearchableSelect id={`${base}-conta`} name="contaId" options={contas} defaultValue={contaId} onChange={(v) => { setContaId(v); setSimulacao(null); }} placeholder="Escolha a conta" />
           </CampoForm>
           <CampoForm label="Histórico do lançamento" htmlFor={`${base}-hist`} required={!manter}>
             <Input id={`${base}-hist`} value={historico} onChange={(e) => setHistorico(e.target.value)} maxLength={500} disabled={manter} autoComplete="off" />
           </CampoForm>
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-3 flex flex-wrap gap-4">
           <Checkbox checked={manter} onChange={(e) => setManter(e.target.checked)} label="Usar o histórico do banco de cada transação" />
-          <Button type="button" onClick={classificar} disabled={!marcadas.size || !contaId} loading={pendente} loadingLabel="Classificando…">
-            Classificar
+          <Checkbox checked={criarRegra} disabled={lados.size > 1} onChange={(e) => setCriarRegra(e.target.checked)} label="Criar uma regra com esta seleção" />
+        </div>
+
+        {criarRegra && (
+          <div className="mt-3 flex flex-col gap-3 rounded-md border border-border p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <CampoForm label="Texto da regra" htmlFor={`${base}-regra`} required helper="Sugerido pelo trecho que todas as marcadas têm em comum.">
+                <Input id={`${base}-regra`} value={regra} onChange={(e) => { setTextoDaRegra(e.target.value); setSimulacao(null); }} maxLength={500} autoComplete="off" />
+              </CampoForm>
+              <CampoForm label="Conta bancária da regra" htmlFor={`${base}-ag`} helper="Vazio: vale para todos os bancos.">
+                <SearchableSelect id={`${base}-ag`} name="agenciaId" options={agencias} defaultValue={agenciaDaRegra} onChange={(v) => { setAgenciaDaRegra(v); setSimulacao(null); }} placeholder="Todos os bancos" vazioLabel="Todos os bancos" />
+              </CampoForm>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Checkbox checked={aplicar} onChange={(e) => setAplicar(e.target.checked)} label="Aplicar também nas pendências semelhantes" />
+              <Button type="button" size="sm" variant="secondary" onClick={simular} disabled={!contaId || regra.trim().length < 2 || lados.size !== 1} loading={pendente}>
+                Simular alcance
+              </Button>
+            </div>
+            {simulacao && (
+              <Aviso tom={simulacao.conflitos ? "atencao" : "info"}>
+                <p>
+                  Pega {simulacao.pendencias} pendência(s) e casaria com {simulacao.contabilizadas} já contabilizada(s)
+                  {simulacao.conflitos ? `, ${simulacao.conflitos} delas numa conta diferente` : ""}.
+                </p>
+                {simulacao.amostrasDeConflito.length > 0 && <p className="mt-1 text-micro">Em outra conta: {simulacao.amostrasDeConflito.join("; ")}</p>}
+              </Aviso>
+            )}
+          </div>
+        )}
+
+        <div className="mt-3 flex justify-end">
+          <Button type="button" onClick={classificar} disabled={!marcadas.size || !contaId || (criarRegra && regra.trim().length < 2)} loading={pendente} loadingLabel="Classificando…">
+            {criarRegra ? "Classificar e criar a regra" : "Classificar"}
           </Button>
         </div>
         {erro && (

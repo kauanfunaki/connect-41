@@ -27,6 +27,18 @@ import {
 } from "@/lib/contabil-core/servidor/cadastros";
 import { desfazerImportacao } from "@/lib/contabil-core/servidor/importacao";
 import { cancelarClassificacao, classificarManual, liberarParaAutomatico, processarNeo, type ResultadoDoNeo, type ResultadoManual } from "@/lib/contabil-core/servidor/neo";
+import {
+  alterarComposicao,
+  classificarComRegra,
+  criarRegraEAplicar,
+  obterComposicao,
+  reclassificar,
+  simularRegra,
+  type Composicao,
+  type ResultadoComRegra,
+  type Simulacao,
+} from "@/lib/contabil-core/servidor/neoAvancado";
+import { valorDoComponente } from "@/lib/contabil-core/motor/fila";
 
 // As ações do Contábil Core (Fase 2, 09/11/2026). Trabalhar (cadastrar regra e contraparte,
 // classificar, cancelar uma classificação) é "agir" no setor. Mexer na estrutura da empresa — pôr a
@@ -269,4 +281,123 @@ export async function liberarParaAutomaticoAction(empresaId: unknown, transacaoI
   await logAudit({ tenantId: c.tenantId, userId: c.userId, action: "contabil.core.neo.liberada", entityType: "CoreTransacao", entityId: t, metadata: { nome: r.valor.historico } });
   revalidatePath(ROTA);
   return { ok: true };
+}
+
+// ─── Fase 3: reclassificar, compor, simular e classificar criando a regra ─
+
+export async function reclassificarAction(empresaId: unknown, form: unknown): Promise<Retorno> {
+  const c = await contexto("agir");
+  if (!c) return { error: SEM_ACESSO };
+  const e = id(empresaId);
+  const f = objeto(form);
+  const t = id(f.transacaoId);
+  const conta = id(f.contaId);
+  const descricao = String(f.descricao ?? "").trim().slice(0, 500);
+  const motivo = String(f.motivo ?? "").trim().slice(0, 300);
+  if (!e || !t) return { error: "Transação não informada." };
+  if (!conta) return { error: "Escolha a conta contábil." };
+  if (descricao.length < 2) return { error: "Informe o histórico do lançamento." };
+  if (motivo.length < 3) return { error: "Diga por que a classificação está sendo trocada." };
+  const r = await reclassificar(c.tenantId, c.userId, e, { transacaoId: t, contaId: conta, descricao, motivo });
+  if (!r.ok) return { error: r.erro };
+  await logAudit({ tenantId: c.tenantId, userId: c.userId, action: "contabil.core.lancamento.reclassificado", entityType: "CoreTransacao", entityId: t, metadata: { nome: r.valor.historico, contaId: conta, historico: descricao, motivo } });
+  revalidatePath(ROTA);
+  return { ok: true };
+}
+
+export async function obterComposicaoAction(empresaId: unknown, transacaoId: unknown): Promise<Retorno<{ composicao: Composicao }>> {
+  const c = await contexto("agir");
+  if (!c) return { error: SEM_ACESSO };
+  const e = id(empresaId);
+  const t = id(transacaoId);
+  if (!e || !t) return { error: "Transação não informada." };
+  const r = await obterComposicao(c.tenantId, e, t);
+  return r.ok ? { ok: true, composicao: r.valor } : { error: r.erro };
+}
+
+export async function alterarComposicaoAction(empresaId: unknown, form: unknown): Promise<Retorno> {
+  const c = await contexto("agir");
+  if (!c) return { error: SEM_ACESSO };
+  const e = id(empresaId);
+  const f = objeto(form);
+  const t = id(f.transacaoId);
+  const vigente = id(f.lancamentoVigenteId);
+  const motivo = String(f.motivo ?? "").trim().slice(0, 300);
+  if (!e || !t || !vigente) return { error: "Transação não informada." };
+  if (motivo.length < 3) return { error: "Diga por que a composição está sendo alterada." };
+  const brutos = Array.isArray(f.componentes) ? f.componentes.slice(0, 50) : [];
+  const componentes = [];
+  for (const b of brutos) {
+    const x = objeto(b);
+    const conta = id(x.contaId);
+    const valor = valorDoComponente(String(x.valor ?? ""));
+    if (!conta) return { error: "Escolha a conta de cada componente." };
+    if (!valor) return { error: "Informe um valor positivo com no máximo dois decimais em cada componente." };
+    componentes.push({ contaId: conta, historico: String(x.historico ?? "").slice(0, 500), valor });
+  }
+  const r = await alterarComposicao(c.tenantId, c.userId, e, { transacaoId: t, lancamentoVigenteId: vigente, componentes, motivo });
+  if (!r.ok) return { error: r.erro };
+  await logAudit({ tenantId: c.tenantId, userId: c.userId, action: "contabil.core.composicao.alterada", entityType: "CoreTransacao", entityId: t, metadata: { motivo, antes: r.valor.antes, depois: r.valor.depois } });
+  revalidatePath(ROTA);
+  return { ok: true };
+}
+
+export async function simularRegraAction(empresaId: unknown, form: unknown): Promise<Retorno<{ simulacao: Simulacao }>> {
+  const c = await contexto("agir");
+  if (!c) return { error: SEM_ACESSO };
+  const e = id(empresaId);
+  const f = objeto(form);
+  const conta = id(f.contaId);
+  const historico = String(f.historico ?? "").trim();
+  const dc = f.dc === "C" ? "C" : f.dc === "D" ? "D" : null;
+  if (!e) return { error: "Empresa não informada." };
+  if (!conta) return { error: "Escolha a conta contábil." };
+  if (historico.length < 2 || historico.length > 500) return { error: "O texto da regra precisa de 2 a 500 caracteres." };
+  if (!dc) return { error: "A seleção mistura débito e crédito: uma regra vale para um lado só." };
+  const r = await simularRegra(c.tenantId, e, { historico, dc, agenciaId: id(f.agenciaId), contaId: conta });
+  return r.ok ? { ok: true, simulacao: r.valor } : { error: r.erro };
+}
+
+export async function classificarComRegraAction(empresaId: unknown, form: unknown): Promise<Retorno<{ resultado: ResultadoComRegra }>> {
+  const c = await contexto("agir");
+  if (!c) return { error: SEM_ACESSO };
+  const e = id(empresaId);
+  if (!e) return { error: "Empresa não informada." };
+  const f = objeto(form);
+  const v = classificacaoManualSchema.safeParse(f);
+  if (!v.success) return { error: primeiroErro(v.error) };
+  const r0 = objeto(f.regra);
+  const historico = String(r0.historico ?? "").trim();
+  if (historico.length < 2 || historico.length > 500) return { error: "O texto da regra precisa de 2 a 500 caracteres." };
+  const r = await classificarComRegra(c.tenantId, e, v.data, {
+    historico, agenciaId: id(r0.agenciaId), manterHistorico: r0.manterHistorico === true, aplicarNosSemelhantes: r0.aplicarNosSemelhantes === true,
+  });
+  if (!r.ok) return { error: r.erro };
+  if (r.valor.classificadas.length) {
+    await logAudit({
+      tenantId: c.tenantId, userId: c.userId, action: "contabil.core.neo.classificacao_manual", entityType: "CoreEmpresa", entityId: e,
+      metadata: { contaId: v.data.contaId, historico: v.data.manterHistorico ? "(o do banco)" : v.data.descricao, transacoes: r.valor.classificadas },
+    });
+  }
+  if (r.valor.regraCriada) {
+    await logAudit({ tenantId: c.tenantId, userId: c.userId, action: "contabil.core.regra.criada", entityType: "CoreRegra", entityId: r.valor.regraCriada, metadata: { nome: historico, semelhantes: r.valor.semelhantes } });
+  }
+  revalidatePath(ROTA);
+  return { ok: true, resultado: r.valor };
+}
+
+export async function criarRegraEAplicarAction(empresaId: unknown, form: unknown): Promise<Retorno<{ associadas: number }>> {
+  const c = await contexto("agir");
+  if (!c) return { error: SEM_ACESSO };
+  const e = id(empresaId);
+  if (!e) return { error: "Empresa não informada." };
+  const f = objeto(form);
+  const v = regraSchema.safeParse(f);
+  if (!v.success) return { error: primeiroErro(v.error) };
+  const mes = typeof f.mes === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(f.mes) ? f.mes : null;
+  const r = await criarRegraEAplicar(c.tenantId, e, v.data, mes);
+  if (!r.ok) return { error: r.erro };
+  await logAudit({ tenantId: c.tenantId, userId: c.userId, action: "contabil.core.regra.criada", entityType: "CoreRegra", entityId: r.valor.regraId, metadata: { nome: v.data.historico, aplicadaEm: r.valor.associadas } });
+  revalidatePath(ROTA);
+  return { ok: true, associadas: r.valor.associadas };
 }

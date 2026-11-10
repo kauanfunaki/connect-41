@@ -8647,6 +8647,104 @@
    ],
    "kwargs": {},
    "result": []
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    []
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+    ]
+   ],
+   "kwargs": {},
+   "result": "PIX EMITIDO OUTRA IF Pagamento Pix 38.924.906 0001-75"
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "PIX EMITIDO OUTRA IF JOAO",
+     "PIX EMITIDO OUTRA IF MARIA",
+     "pix emitido outra if jose"
+    ]
+   ],
+   "kwargs": {},
+   "result": "PIX EMITIDO OUTRA IF"
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "TARIFA PACOTE SERVICOS",
+     "TARIFA PACOTE SERVIÇOS JAN",
+     "TARIFA BANCARIA"
+    ]
+   ],
+   "kwargs": {},
+   "result": "TARIFA"
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "PAGAMENTO BOLETO",
+     "RECEBIMENTO PIX"
+    ]
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "  TED   ENVIADA   ACME ",
+     "TED ENVIADA ACME LTDA"
+    ]
+   ],
+   "kwargs": {},
+   "result": "TED ENVIADA ACME"
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "CRÉD.TED-STR FORNECEDOR",
+     "CRED TED STR FORNECEDOR B"
+    ]
+   ],
+   "kwargs": {},
+   "result": "CRÉD.TED-STR FORNECEDOR"
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "",
+     "QUALQUER"
+    ]
+   ],
+   "kwargs": {},
+   "result": ""
+  },
+  {
+   "fn": "prefixo_comum_de_palavras",
+   "args": [
+    [
+     "A B C",
+     "A B C D",
+     "X A B C"
+    ]
+   ],
+   "kwargs": {},
+   "result": "A B C"
   }
  ]
 }

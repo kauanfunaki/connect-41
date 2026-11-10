@@ -42,7 +42,8 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 |---|---|---|
 | 1 | `feat/contabil-core-nucleo` | Este plano. Tabelas do bloco, registro do módulo, motores puros com testes-gabarito: texto, documento no histórico, contraparte por nome, valor confiável, OFX, chave de duplicidade, seleção de regra e projeção do Domínio. |
 | 2 | `feat/contabil-core-telas` | Serviços no servidor (Prisma): cadastros, importação OFX com lote e conferência de saldo, NEO (regra, contraparte, decisão, manual, cancelar, devolver ao automático) e exportação. Telas: Importações, Extrato, NEO, Regras, Contrapartes, Registros e Configurações. |
-| 3 | — | Restante do NEO: reclassificação, composição manual, filas agrupadas, simulação e sugestão de regra; importação de regras, contrapartes e plano de contas por planilha. |
+| 3 | `feat/contabil-core-neo` | Restante do NEO: reclassificação, composição manual (ADR-017), fila agrupada por padrão, simulação e sugestão de regra pela seleção, classificar criando a regra, criar regra e aplicar. |
+| 3b | — | Importação por planilha, com prévia e confirmação: regras (modelo de seis colunas), contrapartes (relações fiscais, ADR-016) e plano de contas. Inclui decidir como ler o `.xls` antigo (BIFF8). |
 | 4 | — | Leitores de PDF e planilha por banco, um banco por vez, cada um com arquivos reais (ver "Corpus"). |
 | 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
 
@@ -180,7 +181,9 @@ Toda divergência entra aqui, com o porquê.
 3. **Auditoria da classificação manual.** O original grava uma linha por transação. Aqui vai uma linha por lote (até 200), com os ids das transações nos detalhes.
 4. **Textos que passariam de 500 caracteres** (a descrição "Contrapartida bancária: …" de uma regra longa) são cortados. No PostgreSQL a gravação falhava, e a transação ia para "erro".
 5. **Notas fiscais e comprovantes** chegam com o Bloco C. Até lá, a contraparte é resolvida pelo documento e pelo nome no histórico, que é o caminho do original quando não há nota nem comprovante candidato.
-6. **Cancelamento e "devolver ao automático"** entraram já na Fase 2, porque desfazer uma importação depende deles. A composição manual, as filas agrupadas e a sugestão de regra ficam para a Fase 3.
+6. **Cancelamento e "devolver ao automático"** entraram já na Fase 2, porque desfazer uma importação depende deles.
+7. **Classificar criando a regra da seleção.** No original, tudo acontecia numa transação de banco: se o cadastro da regra falhasse, a classificação do lote também voltava. Aqui cada transação classificada é a sua, então a regra é conferida antes de qualquer gravação: seleção de um lado só e padrão ainda livre. Se outra pessoa cadastrar o mesmo padrão nesse intervalo, as transações ficam classificadas e a tela avisa que a regra não foi criada.
+8. **A fila agrupada** considera as pendências que o NEO já viu (com decisão `sem_regra`), como o original. Na tela, o grupo marca só as pendências que estão listadas (as 500 primeiras da seleção).
 
 ## Segurança e boas práticas
 
@@ -257,7 +260,7 @@ Pré-requisito: o banco local, montado pelas migrations e com o seed (ver `scrip
 
 1. **Ensaios no banco.** Os dois scripts criam e apagam tudo:
    - `ensaio-banco.ts`: chaves de unicidade e exclusão da empresa;
-   - `ensaio-servicos.ts`: ponta a ponta (cadastros, OFX, NEO, manual, Domínio, desfazer e reimportar).
+   - `ensaio-servicos.ts`: ponta a ponta (cadastros, OFX, NEO, manual, Domínio, desfazer e reimportar; e, desde a Fase 3, reclassificar, compor, simular, agrupar e classificar criando a regra).
 
    ```
    node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-servicos.ts

@@ -14,6 +14,7 @@ import { dec, texto as decTexto, type Dec } from "./decimal";
 import { hashDedup } from "./dedup";
 import { documentosNoHistorico } from "./documentoNoHistorico";
 import { COLUNAS_LANCAMENTOS_IMPORTACAO, celulaSegura, formatarValorBr, historicoParaDominio, linhasParaCsv, linhasParaTxt, type Linha } from "./dominio";
+import { prefixoComumDePalavras } from "./fila";
 import { lerData, lerOfx, montarHistorico, valorMonetario } from "./ofx";
 import { desambiguarTiposPorDocumento, estrategiaDeMatch, gerarHistoricoSugerido, motivoParaNaoContabilizar, type Dc } from "./regras";
 import { chaveAgrupamentoHistorico, normalizarHistoricoContabil, normalizarParaMatch, removerAcentos, tokensParaMatch } from "./texto";
@@ -102,6 +103,7 @@ const IMPLEMENTACOES: Record<string, (args: unknown[], kw: Record<string, unknow
   estrategia_de_match: ([r, t]) => estrategiaDeMatch(r as string, t as string),
   gerar_historico_sugerido: ([dc, razao, nf]) => gerarHistoricoSugerido(dc as Dc, razao as string, nf as string | null),
   motivo_para_nao_contabilizar: ([h, v]) => motivoParaNaoContabilizar({ historico: h as string, valor: v as Dec }),
+  prefixo_comum_de_palavras: ([h]) => prefixoComumDePalavras(h as string[]),
   desambiguar_tipos: ([lista, dc]) =>
     desambiguarTiposPorDocumento(
       (lista as [string, string, string, string][]).map(([id, documento, tipo, origem]) => ({ id, documento, tipo, origem })),
