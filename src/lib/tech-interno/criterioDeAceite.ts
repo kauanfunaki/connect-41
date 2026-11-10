@@ -73,6 +73,28 @@ function rotuloDaLinha(linha: string): { rotulo: RotuloDoCriterio; resto: string
   return { rotulo, resto: linha.slice(linha.indexOf(":") + 1).trim() };
 }
 
+/**
+ * "1) Abra. 2) Clique. 3) Confira." numa linha só vira três itens (10/11/2026):
+ * alguns critérios chegaram assim, e a tela mostrava um passo só, enorme. Só
+ * quando a linha começa pelo 1 e os números seguem em ordem, com o mesmo sinal.
+ */
+function itensDaLinha(texto: string): string[] {
+  const primeiro = /^\s*1\s*([.)])\s+/.exec(texto);
+  if (!primeiro) return [texto.trim()];
+  const sinal = primeiro[1] === "." ? "\\." : "\\)";
+  const itens: string[] = [];
+  let resto = texto.slice(primeiro[0].length);
+  for (let n = 2; n < 100; n++) {
+    const proximo = new RegExp(`\\s${n}\\s*${sinal}\\s+`).exec(resto);
+    if (!proximo) break;
+    itens.push(resto.slice(0, proximo.index).trim());
+    resto = resto.slice(proximo.index + proximo[0].length);
+  }
+  itens.push(resto.trim());
+  return itens.filter(Boolean);
+}
+const comecaPeloUm = (texto: string) => /^\s*1\s*[.)]\s/.test(texto);
+
 /** Junta as linhas de um bloco: sem linhas vazias nas pontas, com o recuo de cada linha preservado. */
 function juntar(linhas: string[]): string {
   return linhas.join("\n").replace(/^(?:[ \t]*\n)+/, "").trimEnd();
@@ -109,14 +131,16 @@ export function lerCriterioDeAceite(bruto: string | null | undefined): CriterioL
     if (comRotulo) {
       achouRotulo = true;
       if (comRotulo.rotulo === "Passos" || comRotulo.rotulo === "Aprovado quando") {
-        const itens = comRotulo.resto ? [NUMERO.exec(comRotulo.resto)?.[1] ?? MARCADOR.exec(comRotulo.resto)?.[1] ?? comRotulo.resto] : [];
+        const itens = !comRotulo.resto ? []
+          : comecaPeloUm(comRotulo.resto) ? itensDaLinha(comRotulo.resto)
+          : [NUMERO.exec(comRotulo.resto)?.[1] ?? MARCADOR.exec(comRotulo.resto)?.[1] ?? comRotulo.resto];
         abrir({ tipo: comRotulo.rotulo === "Passos" ? "passos" : "conferencia", itens });
       } else abrir({ tipo: "campo", rotulo: comRotulo.rotulo, linhas: comRotulo.resto ? [comRotulo.resto] : [] });
     } else if (bloco?.tipo === "passos" || bloco?.tipo === "conferencia") {
       const novo = NUMERO.exec(linha)?.[1] ?? MARCADOR.exec(linha)?.[1];
       // Marcador recuado debaixo de um item é detalhe dele, não um item novo.
       const detalhe = /^\s/.test(linha) && bloco.itens.length > 0;
-      if (novo !== undefined && !detalhe) bloco.itens.push(novo.trim());
+      if (novo !== undefined && !detalhe) bloco.itens.push(...(comecaPeloUm(linha) ? itensDaLinha(linha) : [novo.trim()]));
       else if (!bloco.itens.length) bloco.itens.push(linha.trim());
       else if (!depoisDeLinhaVazia) bloco.itens[bloco.itens.length - 1] += `\n${linha.trim()}`;
       // Um parágrafo depois de uma linha vazia não é mais da lista.
