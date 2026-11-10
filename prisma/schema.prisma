@@ -1040,11 +1040,18 @@ enum ActivityType {
 }
 
 // Situação da transferência em cada setor de destino:
-// NEW = "Nova", IN_PROGRESS = "Resolvendo", DONE = "Finalizada".
+// NEW = "Nova", IN_PROGRESS = "Resolvendo", DONE = "Finalizada",
+// RETURNED = "Devolvida".
+//
+// RETURNED (10/11/2026, pedido do Kauan): o setor de destino devolveu a parte
+// dele a quem pediu, com o motivo (no HandoffEvent). Quem pediu responde e
+// reenvia, e a parte volta a NEW. Fica no FIM do enum de propósito: assim o
+// ALTER do MySQL só acrescenta um valor à coluna, sem reescrever a ordem.
 enum HandoffSectorStatus {
   NEW
   IN_PROGRESS
   DONE
+  RETURNED
 }
 
 enum HandoffPriority {
@@ -1052,6 +1059,24 @@ enum HandoffPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+// O que aconteceu na transferência, para a "Atividade" da transferência aberta
+// (10/11/2026, pedido do Kauan). CREATED = pediu; STARTED = começou a parte;
+// DONE = finalizou a parte; RETURNED = devolveu a parte a quem pediu;
+// RESENT = respondeu e reenviou; COMMENT = comentou; ASSIGNEES_CHANGED = mudou
+// os responsáveis da parte; EDITED = editou assunto, descrição ou prioridade;
+// REOPENED = reabriu a parte finalizada.
+enum HandoffEventType {
+  CREATED
+  STARTED
+  DONE
+  RETURNED
+  RESENT
+  COMMENT
+  ASSIGNEES_CHANGED
+  EDITED
+  REOPENED
 }
 
 enum AiProvider {
@@ -1481,6 +1506,7 @@ model Tenant {
   evaluations               Evaluation[]
   evaluationScores          EvaluationScore[]
   handoffViews              HandoffView[]
+  handoffEvents             HandoffEvent[]
   checklistItems            ChecklistItem[]
   timeEntries               TimeEntry[]
   spaces                    Space[]
@@ -2000,6 +2026,7 @@ model User {
   handoffs                    Handoff[]                  @relation("HandoffRequester")
   handoffSectorAssignees      HandoffSectorAssignee[]
   handoffViews                HandoffView[]
+  handoffEvents               HandoffEvent[]
   notifications               Notification[]
   notificationHiddenTypes     NotificationHiddenType[]
   pushSubscriptions           PushSubscription[]
@@ -6865,6 +6892,7 @@ model Handoff {
   requester User            @relation("HandoffRequester", fields: [requestedBy], references: [id])
   views     HandoffView[]
   sectors   HandoffSector[]
+  events    HandoffEvent[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
@@ -6888,6 +6916,7 @@ model HandoffSector {
   tenant    Tenant                  @relation(fields: [tenantId], references: [id])
   handoff   Handoff                 @relation(fields: [handoffId], references: [id], onDelete: Cascade)
   assignees HandoffSectorAssignee[]
+  events    HandoffEvent[]
 
   @@unique([handoffId, sectorCode])
   @@index([tenantId, sectorCode, status])
@@ -6932,6 +6961,39 @@ model HandoffView {
   @@unique([handoffId, userId])
   @@index([tenantId])
   @@map("handoff_views")
+}
+
+// A "Atividade" da transferência aberta (10/11/2026, pedido do Kauan, escolha
+// "B · Andamento no topo e a conversa ao lado"): o pedido, cada começo,
+// finalização, devolução e reenvio de uma parte, os comentários (com @) e as
+// mudanças de responsáveis e de dados. As transferências de antes não têm
+// eventos: a tela deduz "pediu" e "finalizou" das datas guardadas, sem
+// preenchimento retroativo (src/lib/handoffAtividade.ts).
+//
+// Quem agiu é obrigatório; na exclusão do usuário o evento passa para o
+// administrador que exclui, como os comentários dos Quadros e dos Chamados
+// (src/lib/exclusao/registro.ts).
+model HandoffEvent {
+  id              String           @id @default(uuid())
+  tenantId        String
+  handoffId       String
+  /// A parte do setor a que o evento se refere. Nulo no pedido, no comentário
+  /// e na edição, que são da transferência inteira.
+  handoffSectorId String?
+  type            HandoffEventType
+  userId          String
+  /// O texto do comentário, o motivo da devolução, a resposta do reenvio, ou o
+  /// resumo do que mudou (responsáveis, dados). Nulo em começar e finalizar.
+  body            String?          @db.Text
+  createdAt       DateTime         @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  handoff       Handoff        @relation(fields: [handoffId], references: [id], onDelete: Cascade)
+  handoffSector HandoffSector? @relation(fields: [handoffSectorId], references: [id], onDelete: SetNull)
+  user          User           @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, handoffId, createdAt])
+  @@map("handoff_events")
 }
 
 // Trilha de auditoria — quem fez o quê, quando. Somente leitura pela UI
