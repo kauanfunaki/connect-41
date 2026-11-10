@@ -21,7 +21,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { hojeIso } from "@/lib/datas/calendario";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatCnpj } from "@/lib/format";
-import { certidoesDaCarteira, ehRegular, gastoDoMesEmCentavos, TIPOS_DE_CERTIDAO, type SituacaoDaCertidao, type TipoDeCertidao } from "./regras";
+import { certidoesDaCarteira, consultasCobradas, ehRegular, gastoDoMesEmCentavos, servicosRecusados, TIPOS_DE_CERTIDAO, type SituacaoDaCertidao, type TipoDeCertidao } from "./regras";
 import { casaComABusca, estadoDaCertidao, POR_PAGINA, RECORTES, recortesDaEmpresa, type CertidaoQueVale, type Recorte } from "./lista-regras";
 import type { CertidaoNaTela } from "./servidor";
 
@@ -55,8 +55,11 @@ export type ListaDasCertidoes = {
   contagens: Record<Recorte, number>;
   /** A carteira inteira do escopo, sem a busca: a faixa do topo. */
   totais: TotaisDaCarteira;
+  /** As consultas do mês que a InfoSimples cobra — as do extrato dela. */
   consultasNoMes: number;
   gastoNoMesCentavos: number;
+  /** Serviços em que a última consulta do mês foi recusa do token (601/603), com a hora dela. */
+  servicosRecusados: { tipo: TipoDeCertidao; em: Date }[];
 };
 
 const ATIVAS: Prisma.CompanyWhereInput = { status: "ACTIVE" };
@@ -92,7 +95,7 @@ export async function listaDasCertidoes(
           orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
-    prisma.certidao.findMany({ where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } }, select: { tipo: true, situacao: true, mensagem: true } }),
+    prisma.certidao.findMany({ where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } }, select: { tipo: true, situacao: true, mensagem: true, createdAt: true } }),
   ]);
   // Do mais novo para o mais velho: a primeira de cada chave é a que vale.
   const vale = new Map<string, NonNullable<CertidaoQueVale>>();
@@ -178,6 +181,7 @@ export async function listaDasCertidoes(
     };
   });
 
+  const recusados = servicosRecusados(doMes);
   return {
     linhas,
     total: doRecorte.length,
@@ -185,7 +189,11 @@ export async function listaDasCertidoes(
     totalDePaginas,
     contagens,
     totais,
-    consultasNoMes: doMes.length,
+    consultasNoMes: consultasCobradas(doMes),
     gastoNoMesCentavos: gastoDoMesEmCentavos(doMes),
+    servicosRecusados: TIPOS_DE_CERTIDAO.flatMap((tipo) => {
+      const em = recusados.get(tipo);
+      return em ? [{ tipo, em }] : [];
+    }),
   };
 }

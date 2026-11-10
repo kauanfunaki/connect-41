@@ -16,10 +16,10 @@ import { acessoAsCertidoes } from "@/lib/certidoes/acesso";
 import { conexaoDaInfoSimples } from "@/lib/certidoes/servidor";
 import { listaDasCertidoes } from "@/lib/certidoes/lista";
 import { DIAS_PARA_VENCER, lerRecorte, RECORTES, ROTULO_DO_RECORTE, type Recorte } from "@/lib/certidoes/lista-regras";
-import { FRANQUIA_EM_CENTAVOS } from "@/lib/certidoes/regras";
+import { FRANQUIA_EM_CENTAVOS, ROTULO_DA_CERTIDAO } from "@/lib/certidoes/regras";
 import { hojeIso } from "@/lib/datas/calendario";
 import { moeda } from "@/lib/financeiro/formato";
-import { formatarNumero } from "@/lib/format";
+import { formatarNumero, formatInstantDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +54,8 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
     conexaoDaInfoSimples(acesso.tenantId),
   ]);
   const { totais } = lista;
+  const recusados = lista.servicosRecusados;
+  const ultimaRecusa = recusados.reduce<Date | null>((maior, r) => (!maior || r.em > maior ? r.em : maior), null);
 
   const href = (p: { recorte?: Recorte; pagina?: number }) => {
     const q = new URLSearchParams();
@@ -70,6 +72,15 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
       <PageHeader title="Certidões" subtitle="Federal, FGTS, trabalhista, estadual e municipal de cada empresa, renovadas sozinhas a cada trimestre." />
 
       {!conexao.pronta && <Aviso tom="atencao" className="mb-4">{conexao.motivo} Sem ela, a rotina não roda e não dá para emitir pela tela.</Aviso>}
+      {/* Token recusado para um serviço (10/11/2026): em novembro a InfoSimples
+          parou de aceitar o token nas federais, e ninguém viu — só o gasto subia. */}
+      {conexao.pronta && ultimaRecusa && (
+        <Aviso tom="atencao" className="mb-4">
+          A InfoSimples recusou o token para {new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(recusados.map((r) => ROTULO_DA_CERTIDAO[r.tipo]))} na última
+          consulta ({formatInstantDateTime(ultimaRecusa)}). O token não tem acesso {recusados.length === 1 ? "a esse serviço" : "a esses serviços"} ou chegou ao limite de
+          uso posto nele: confira no painel da InfoSimples. A rotina segue com as outras certidões e tenta de novo a cada 6 horas.
+        </Aviso>
+      )}
 
       <FaixaDeTotais
         className="mb-6"
@@ -89,12 +100,13 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
           },
           { rotulo: "Sem certidão", valor: formatarNumero(totais.semCertidao, 0), detalhe: "ainda não consultadas ou não saíram", icone: <FileText /> },
           // O gasto do mês contra o teto (04/11/2026): o preço real de cada certidão,
-          // sem as que o órgão não respondeu, que a InfoSimples não cobra.
+          // só as consultas que a InfoSimples cobra (10/11/2026: sem token recusado,
+          // tempo esgotado e órgão fora do ar), como no extrato dela.
           {
             rotulo: "Gasto no mês",
             valor: moeda(lista.gastoNoMesCentavos),
             detalhe: [
-              `${lista.consultasNoMes} ${lista.consultasNoMes === 1 ? "consulta" : "consultas"}`,
+              `${formatarNumero(lista.consultasNoMes, 0)} ${lista.consultasNoMes === 1 ? "consulta cobrada" : "consultas cobradas"}`,
               conexao.pronta ? `teto de ${moeda(conexao.tetoCentavos)}` : null,
               `mínimo de ${moeda(FRANQUIA_EM_CENTAVOS)} no mês`,
             ]

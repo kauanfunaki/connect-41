@@ -25,9 +25,12 @@ import {
   lerCertidao,
   mesDoTrimestre,
   nomeDoComprovante,
+  consultasCobradas,
   gastoDoMesEmCentavos,
   PRECO_EM_CENTAVOS,
+  recusaDoToken,
   ROTULO_DA_CERTIDAO,
+  servicosRecusados,
   SETORES_DO_AVISO,
   TIPOS_DE_CERTIDAO,
   trimestreDe,
@@ -47,6 +50,13 @@ const TEMPO_DA_CONSULTA_S = 120;
 const TENTATIVAS_NO_TRIMESTRE = 3;
 /** Depois de uma que não saiu, quanto esperar para tentar de novo. */
 const ESPERA_DEPOIS_DE_FALHA_MS = 20 * 60 * 60_000;
+/**
+ * Token recusado para um serviço (601/603): a rotina deixa aquele serviço de
+ * lado por este tempo e tenta uma vez de novo. A recusa não custa (a
+ * InfoSimples não cobra), mas em 03–04/11/2026 a rotina bateu a cada 5 minutos,
+ * empresa por empresa, e gastou tentativas do trimestre de 292 delas.
+ */
+const PAUSA_DEPOIS_DA_RECUSA_MS = 6 * 60 * 60_000;
 
 // ─── A rede ──────────────────────────────────────────────────────────────────
 
@@ -230,7 +240,9 @@ const ATIVAS: Prisma.CompanyWhereInput = { status: "ACTIVE" };
 /**
  * A passada do agendador: as certidões do trimestre que ainda faltam, das
  * empresas cujo mês já chegou (as de meses anteriores que não saíram entram
- * junto), um lote por vez, dentro do teto. Token recusado para a rotina.
+ * junto), um lote por vez, dentro do teto. Token recusado para o serviço
+ * deixa só aquele serviço de lado (`PAUSA_DEPOIS_DA_RECUSA_MS`); os outros
+ * seguem, e a recusa não gasta tentativa da empresa.
  */
 export async function rotinaDasCertidoes(tenantId: string, opcoes: OpcoesDasCertidoes = {}): Promise<number> {
   if (!(await isModuleEnabled(tenantId, MODULO_CERTIDOES))) return 0;
@@ -251,11 +263,12 @@ export async function rotinaDasCertidoes(tenantId: string, opcoes: OpcoesDasCert
   const doMes = certidoesDaCarteira(empresas).filter((c) => grupoDaEmpresa(c.companyId) === mes);
   if (!doMes.length) return 0;
 
-  const feitas = await prisma.certidao.findMany({ where: { tenantId, trimestre }, select: { companyId: true, tipo: true, situacao: true, createdAt: true } });
+  const feitas = await prisma.certidao.findMany({ where: { tenantId, trimestre }, select: { companyId: true, tipo: true, situacao: true, mensagem: true, createdAt: true } });
   const chave = (companyId: string, tipo: string) => `${companyId}:${tipo}`;
   const saiu = new Set(feitas.filter((f) => f.situacao !== "NAO_SAIU").map((f) => chave(f.companyId, f.tipo)));
   const falhas = new Map<string, { vezes: number; ultima: number }>();
-  for (const f of feitas.filter((x) => x.situacao === "NAO_SAIU")) {
+  // A recusa do token é do serviço, não da empresa: não conta como tentativa dela.
+  for (const f of feitas.filter((x) => x.situacao === "NAO_SAIU" && !recusaDoToken(x))) {
     const k = chave(f.companyId, f.tipo);
     const antes = falhas.get(k) ?? { vezes: 0, ultima: 0 };
     falhas.set(k, { vezes: antes.vezes + 1, ultima: Math.max(antes.ultima, f.createdAt.getTime()) });
@@ -267,12 +280,17 @@ export async function rotinaDasCertidoes(tenantId: string, opcoes: OpcoesDasCert
     return !f || (f.vezes < TENTATIVAS_NO_TRIMESTRE && agora.getTime() - f.ultima >= ESPERA_DEPOIS_DE_FALHA_MS);
   });
 
+  const pausados = new Set<TipoDeCertidao>();
+  for (const [tipo, em] of servicosRecusados(feitas)) if (agora.getTime() - em.getTime() < PAUSA_DEPOIS_DA_RECUSA_MS) pausados.add(tipo);
+
   let feitasAgora = 0;
-  for (const c of pendentes.slice(0, LOTE)) {
+  for (const c of pendentes) {
+    if (feitasAgora >= LOTE) break;
+    if (pausados.has(c.tipo)) continue;
     if (!(await cabeNoTeto(tenantId, conexao.tetoCentavos, hoje, c.tipo))) break;
     const r = await emitirCertidao({ tenantId, companyId: c.companyId, tipo: c.tipo, token: conexao.token, userId: null, trimestre, opcoes });
     feitasAgora++;
-    if (!r.ok && r.configuracao) break;
+    if (!r.ok && r.configuracao) pausados.add(c.tipo);
   }
   return feitasAgora;
 }
@@ -383,7 +401,7 @@ export async function quadroDasCertidoes(tenantId: string, escopoDaEmpresa: Pris
       : Promise.resolve([]),
     prisma.certidao.findMany({ where: { tenantId, createdAt: { gte: inicioDoMes(hoje) } }, select: { tipo: true, situacao: true, mensagem: true } }),
   ]);
-  const consultasNoMes = doMes.length;
+  const consultasNoMes = consultasCobradas(doMes);
   const gastoNoMesCentavos = gastoDoMesEmCentavos(doMes);
 
   // Os registros vêm do mais novo: o primeiro de cada chave é a última consulta;
