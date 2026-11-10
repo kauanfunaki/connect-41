@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { certidoesDaCarteira, consultaCobrada, dataDaInfoSimples, gastoDoMesEmCentavos, grupoDaEmpresa, lerCertidao, mesDoTrimestre, nomeDoComprovante, PRECO_EM_CENTAVOS, trimestreDe } from "./regras";
+import { certidoesDaCarteira, consultaCobrada, consultasCobradas, dataDaInfoSimples, gastoDoMesEmCentavos, recusaDoToken, servicosRecusados, grupoDaEmpresa, lerCertidao, mesDoTrimestre, nomeDoComprovante, PRECO_EM_CENTAVOS, trimestreDe } from "./regras";
 
 // As regras puras das certidões (28/10/2026): quem precisa de quê, o trimestre
 // e a leitura de cada consulta, com os campos das páginas da InfoSimples.
@@ -88,6 +88,11 @@ describe("a leitura de cada consulta", () => {
   it("erros: token recusado para a rotina, site fora tenta de novo, o resto não", () => {
     expect(lerCertidao("FEDERAL", { code: 601, code_message: "Token inválido" })).toEqual({ tipo: "nao_saiu", mensagem: "Token inválido (código 601)", tentarDeNovo: false, configuracao: true });
     expect(lerCertidao("FEDERAL", { code: 615, code_message: "Site indisponível" })).toMatchObject({ tentarDeNovo: true, configuracao: false });
+    // Aviso longo: o código fica no fim mesmo assim — é por ele que o gasto sabe se foi cobrada.
+    const longa = lerCertidao("FEDERAL", { code: 603, code_message: "x".repeat(600) });
+    expect(longa).toMatchObject({ tipo: "nao_saiu", configuracao: true });
+    expect(longa.tipo === "nao_saiu" && longa.mensagem.length).toBe(500);
+    expect(longa.tipo === "nao_saiu" && longa.mensagem.endsWith("(código 603)")).toBe(true);
     expect(lerCertidao("FEDERAL", { code: 612, code_message: "Sem resultado" })).toMatchObject({ tentarDeNovo: false });
     expect(lerCertidao("FEDERAL", { code_message: "Sem resposta da InfoSimples: timeout" })).toMatchObject({ tentarDeNovo: true, mensagem: "Sem resposta da InfoSimples: timeout" });
     expect(lerCertidao("FEDERAL", { code: 200, data: [] })).toMatchObject({ tipo: "nao_saiu" });
@@ -106,6 +111,63 @@ describe("o custo das consultas (04/11/2026)", () => {
     expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "Site indisponível (código 615)" })).toBe(false);
     expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "Nada consta (código 612)" })).toBe(true);
     expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "A InfoSimples respondeu sem a certidão." })).toBe(true);
+    expect(consultaCobrada({ situacao: "NAO_SAIU", mensagem: "A InfoSimples respondeu sem a certidão. (código 200)" })).toBe(true);
+  });
+
+  // 10/11/2026: o cartão dizia R$ 99,90 e 534 consultas; o extrato da InfoSimples, R$ 21,35 e 80.
+  it("pela tabela da InfoSimples: token recusado e sem resposta não são cobrados; 611 e 620 são", () => {
+    const nao = (mensagem: string) => consultaCobrada({ situacao: "NAO_SAIU", mensagem });
+    expect(nao("O token informado não tem autorização de acesso ao serviço. (código 603)")).toBe(false);
+    expect(nao("Token inválido (código 601)")).toBe(false);
+    expect(nao("Sem resposta da InfoSimples: fetch failed")).toBe(false);
+    expect(nao("Os dados estão incompletos no site de origem. (código 611)")).toBe(true);
+    expect(nao("O site de origem emitiu um erro que provavelmente não mudará em breve. (código 620)")).toBe(true);
+    expect(nao("Parâmetro inválido (código 607)")).toBe(true);
+    // Fora da tabela: conta, por cautela com o teto.
+    expect(nao("Código novo (código 699)")).toBe(true);
+  });
+
+  it("as consultas de novembro: 534 registros, 80 cobradas e R$ 21,35, como no extrato", () => {
+    const linhas = (n: number, tipo: string, situacao: string, codigo?: number) =>
+      Array.from({ length: n }, () => ({ tipo, situacao, mensagem: codigo ? `Aviso da InfoSimples (código ${codigo})` : null }));
+    const novembro = [
+      ...linhas(139, "ESTADUAL_PR", "NAO_SAIU", 605),
+      ...linhas(103, "FEDERAL", "NAO_SAIU", 603),
+      ...linhas(100, "FGTS", "NAO_SAIU", 603),
+      ...linhas(89, "TRABALHISTA", "NAO_SAIU", 603),
+      ...linhas(25, "TRABALHISTA", "NEGATIVA"),
+      ...linhas(21, "FGTS", "NEGATIVA"),
+      ...linhas(18, "FEDERAL", "NAO_SAIU", 615),
+      ...linhas(14, "FEDERAL", "NEGATIVA"),
+      ...linhas(7, "FEDERAL", "POSITIVA_COM_EFEITO"),
+      ...linhas(4, "FEDERAL", "NAO_SAIU", 611),
+      ...linhas(4, "FGTS", "NAO_SAIU", 620),
+      ...linhas(4, "ESTADUAL_PR", "NEGATIVA"),
+      ...linhas(1, "CURITIBA", "NAO_SAIU", 615),
+      ...linhas(1, "FGTS", "NAO_SAIU", 605),
+      ...linhas(1, "ESTADUAL_PR", "NAO_SAIU", 620),
+      { tipo: "ESTADUAL_PR", situacao: "NAO_SAIU", mensagem: "Sem resposta da InfoSimples: fetch failed" },
+      { tipo: "ESTADUAL_PR", situacao: "NAO_SAIU", mensagem: "Sem resposta da InfoSimples: The operation was aborted due to timeout" },
+      { tipo: "ESTADUAL_PR", situacao: "NAO_SAIU", mensagem: "Sem resposta da InfoSimples: Unexpected token '<'" },
+    ];
+    expect(novembro).toHaveLength(534);
+    expect(consultasCobradas(novembro)).toBe(80);
+    expect(gastoDoMesEmCentavos(novembro)).toBe(2135);
+  });
+
+  it("a recusa do token é do serviço: vale a última consulta de cada um", () => {
+    const em = (h: number) => new Date(`2026-11-04T${String(h).padStart(2, "0")}:00:00-03:00`);
+    const recusa = { situacao: "NAO_SAIU", mensagem: "Sem acesso ao serviço (código 603)" };
+    expect(recusaDoToken(recusa)).toBe(true);
+    expect(recusaDoToken({ situacao: "NAO_SAIU", mensagem: "Tempo esgotado (código 605)" })).toBe(false);
+    const r = servicosRecusados([
+      { tipo: "FEDERAL", ...recusa, createdAt: em(10) },
+      { tipo: "FGTS", ...recusa, createdAt: em(10) },
+      { tipo: "FGTS", situacao: "NEGATIVA", mensagem: null, createdAt: em(11) },
+      { tipo: "ESTADUAL_PR", situacao: "NAO_SAIU", mensagem: "Tempo esgotado (código 605)", createdAt: em(12) },
+    ]);
+    expect([...r.keys()]).toEqual(["FEDERAL"]);
+    expect(r.get("FEDERAL")).toEqual(em(10));
   });
 
   it("o gasto do mês soma o preço de cada certidão cobrada", () => {

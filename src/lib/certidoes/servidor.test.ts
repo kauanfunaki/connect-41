@@ -140,9 +140,29 @@ describe("a rotina do trimestre", () => {
     expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: NOVEMBRO })).toBe(0);
   });
 
-  it("token recusado: para na primeira", async () => {
-    const { t } = transporte(() => ({ code: 601, code_message: "Token inválido" }));
-    expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: DEZEMBRO })).toBe(1);
+  it("token recusado num serviço: só ele fica de lado, por 6 horas, sem gastar tentativa da empresa (10/11/2026)", async () => {
+    const federais = ["receita-federal/pgfn", "caixa/regularidade", "tribunal/tst/cndt"];
+    const { t, chamadas } = transporte((caminho) => (federais.includes(caminho) ? { code: 603, code_message: "Sem acesso ao serviço" } : negativa()));
+    const passada = async (iso: string, tr = t) => {
+      const antes = m.certidao.linhas.length;
+      const feitas = await rotinaDasCertidoes(TENANT, { transporte: tr, agora: () => new Date(iso) });
+      m.certidao.linhas.slice(antes).forEach((c) => (c.createdAt = new Date(iso)));
+      return feitas;
+    };
+    // As três federais recusam; a estadual e a de Curitiba saem na mesma passada.
+    expect(await passada("2026-10-10T12:00:00-03:00")).toBe(5);
+    expect(m.certidao.linhas.filter((c) => c.situacao !== "NAO_SAIU").map((c) => c.tipo).sort()).toEqual(["CURITIBA", "ESTADUAL_PR"]);
+    // Cinco minutos depois, nada: os serviços recusados estão na pausa.
+    expect(await passada("2026-10-10T12:05:00-03:00")).toBe(0);
+    // Passadas as 6 horas, tenta de novo — a recusa não contou como falha da empresa (que esperaria 20 horas).
+    expect(await passada("2026-10-10T18:30:00-03:00")).toBe(3);
+    // Mais de três recusas não tiram a empresa do trimestre: com o token arrumado, as três saem.
+    await passada("2026-10-11T01:00:00-03:00");
+    await passada("2026-10-11T07:30:00-03:00");
+    expect(chamadas).toHaveLength(14);
+    const { t: arrumado } = transporte(negativa);
+    expect(await passada("2026-10-11T14:00:00-03:00", arrumado)).toBe(3);
+    expect(m.certidao.linhas.filter((c) => c.situacao !== "NAO_SAIU")).toHaveLength(5);
   });
 
   it("a que não saiu tenta de novo no dia seguinte, até três vezes", async () => {
@@ -166,8 +186,8 @@ describe("a rotina do trimestre", () => {
     expect(chamadas).toHaveLength(9);
   });
 
-  it("o teto conta o preço real de cada certidão: R$ 0,54 dá duas consultas no mês", async () => {
-    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,54" }) };
+  it("o teto conta o preço real de cada certidão: R$ 0,56 dá a federal e o FGTS no mês", async () => {
+    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,56" }) };
     m.padroesDaCertidao.createdAt = OUTUBRO();
     const { t } = transporte(negativa);
     expect(await rotinaDasCertidoes(TENANT, { transporte: t, agora: OUTUBRO })).toBe(2);
@@ -175,10 +195,10 @@ describe("a rotina do trimestre", () => {
   });
 
   it("a que o órgão não respondeu não conta no teto: a InfoSimples não cobra", async () => {
-    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,27" }) };
+    m.conexao = { enabled: true, configEnc: JSON.stringify({ token: "x", tetoMensal: "0,30" }) };
     m.padroesDaCertidao.createdAt = OUTUBRO();
     const { t, chamadas } = transporte((caminho) => (caminho === "sefaz/pr/certidao-debitos" ? { code: 605, code_message: "Tempo esgotado" } : negativa()));
-    // A estadual falha sem custo; das outras quatro, só uma cabe em R$ 0,27.
+    // A estadual falha sem custo; das outras quatro, só a federal cabe em R$ 0,30.
     await rotinaDasCertidoes(TENANT, { transporte: t, agora: OUTUBRO });
     expect(m.certidao.linhas.filter((c) => c.situacao !== "NAO_SAIU")).toHaveLength(1);
     expect(chamadas.length).toBeGreaterThanOrEqual(1);

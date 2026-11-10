@@ -152,24 +152,38 @@ export function dataDaInfoSimples(v: unknown): string | null {
 const primeiro = (d: Objeto, ...campos: string[]) => campos.map((c) => texto(d[c])).find((v) => v !== null) ?? null;
 const primeiraData = (d: Objeto, ...campos: string[]) => campos.map((c) => dataDaInfoSimples(d[c])).find((v) => v !== null) ?? null;
 
-/** Token recusado: não adianta tentar a carteira inteira. */
+/**
+ * Token recusado para o serviço — 601, não autenticou; 603, sem acesso ao
+ * serviço, inativo ou no limite de uso do token. Não adianta tentar a carteira
+ * inteira: a rotina para aquele serviço até a próxima tentativa.
+ */
 const DE_CONFIGURACAO = new Set([601, 603]);
 /** Do lado de lá (site fora, captcha, limite): tenta de novo mais tarde. */
 const PASSAGEIROS = new Set([600, 605, 609, 610, 613, 614, 615, 617, 618, 619, 620]);
+/**
+ * Os códigos que a InfoSimples não cobra: a coluna "Há cobrança?" da tabela de
+ * códigos de resposta da documentação da API (v2.2.40, 01/10/2026). Cobra
+ * 200, 606, 607, 608, 611, 612, 619 e 620; um código fora da tabela conta,
+ * por cautela com o teto.
+ */
+const NAO_COBRADOS = new Set([600, 601, 602, 603, 604, 605, 609, 610, 613, 614, 615, 617, 618, 621, 622]);
 
 export function lerCertidao(tipo: TipoDeCertidao, r: RespostaDaInfoSimples): Leitura {
   const code = Number(r.code);
   const aviso = texto(r.code_message) ?? (Array.isArray(r.errors) ? r.errors.map(texto).filter(Boolean).join(" ") : null);
   if (code !== 200) {
+    // O código fica sempre no fim, mesmo com aviso longo: é por ele que o gasto
+    // do mês sabe se a consulta foi cobrada.
+    const sufixo = Number.isFinite(code) ? ` (código ${code})` : "";
     return {
       tipo: "nao_saiu",
-      mensagem: `${aviso ?? "A InfoSimples não respondeu."}${Number.isFinite(code) ? ` (código ${code})` : ""}`.slice(0, 500),
+      mensagem: `${(aviso ?? "A InfoSimples não respondeu.").slice(0, 500 - sufixo.length)}${sufixo}`,
       tentarDeNovo: PASSAGEIROS.has(code) || !Number.isFinite(code),
       configuracao: DE_CONFIGURACAO.has(code),
     };
   }
   const d = objeto(Array.isArray(r.data) ? r.data[0] : null);
-  if (!d) return { tipo: "nao_saiu", mensagem: "A InfoSimples respondeu sem a certidão.", tentarDeNovo: true, configuracao: false };
+  if (!d) return { tipo: "nao_saiu", mensagem: "A InfoSimples respondeu sem a certidão. (código 200)", tentarDeNovo: true, configuracao: false };
 
   const recibos = Array.isArray(r.site_receipts) ? r.site_receipts.map(texto).filter((u): u is string => !!u && u.startsWith("https://")) : [];
   const efeito = ["tipo", "situacao", "titulo", "consta", "certidao", "mensagem"].some((c) => /EFEITO/.test(semAcento(texto(d[c]) ?? "")));
@@ -205,13 +219,15 @@ export function nomeDoComprovante(tipo: TipoDeCertidao, empresa: string, dia: st
  * consultas custaram R$ 4,86: R$ 0,27 cada, e não os R$ 0,20 da faixa. O teto
  * contava R$ 0,20 e deixaria passar uns 35% acima do combinado.
  *
- * Por ora todas na média medida, arredondada para cima; quando o extrato da
- * InfoSimples disser o adicional de cada uma, entra aqui o valor dela.
+ * O preço de cada uma saiu do extrato de uso de 2026/11 da InfoSimples (10/11/2026):
+ * 25 PGFN por R$ 7,50, 25 FGTS por R$ 6,50, 25 TST por R$ 6,00 e 5 SEFAZ/PR
+ * por R$ 1,35. A de Curitiba ainda não apareceu no extrato e fica na média
+ * medida em 04/11.
  */
 export const PRECO_EM_CENTAVOS: Record<TipoDeCertidao, number> = {
-  FEDERAL: 27,
-  FGTS: 27,
-  TRABALHISTA: 27,
+  FEDERAL: 30,
+  FGTS: 26,
+  TRABALHISTA: 24,
   ESTADUAL_PR: 27,
   CURITIBA: 27,
 };
@@ -225,23 +241,63 @@ const codigoNaMensagem = (mensagem: string | null): number | null => {
   return m ? Number(m[1]) : null;
 };
 
+type RegistroDaConsulta = { tipo: string; situacao: string; mensagem: string | null };
+
 /**
- * A consulta foi cobrada? A InfoSimples não cobra falha técnica, tempo
- * esgotado nem órgão fora do ar — os códigos que a rotina já trata como
- * passageiros. Cobra o resto, inclusive "nada consta". Na dúvida, conta.
+ * A consulta foi cobrada? Pela tabela da InfoSimples (`NAO_COBRADOS`): a
+ * certidão que saiu é cobrada, e também os erros que ela cobra, como dados
+ * incompletos no órgão (611) e erro que não muda tão cedo (620). Não cobra
+ * token recusado (603), tempo esgotado (605) nem órgão fora do ar (615).
+ * Sem código nenhum, a InfoSimples não chegou a responder — também não cobra.
+ *
+ * Antes (04/11) só os passageiros ficavam de fora, e o 603 entrava. Em
+ * novembro o token parou de responder às federais com 603; a rotina tentou a
+ * cada 5 minutos, e as 292 recusas contaram como cobradas: R$ 99,90 de gasto e
+ * 534 consultas na tela, contra R$ 21,35 e 80 consultas no extrato. O teto
+ * fechou e a rotina parou em 04/11.
  */
-export function consultaCobrada(r: { situacao: string; mensagem: string | null }): boolean {
+export function consultaCobrada(r: Pick<RegistroDaConsulta, "situacao" | "mensagem">): boolean {
   if (r.situacao !== "NAO_SAIU") return true;
+  // Respondeu 200 sem a certidão: cobrada. As gravadas antes de 10/11 não têm o código.
+  if (/^A InfoSimples respondeu sem a certidão/.test(r.mensagem ?? "")) return true;
   const codigo = codigoNaMensagem(r.mensagem);
-  return codigo === null || !PASSAGEIROS.has(codigo);
+  return codigo !== null && !NAO_COBRADOS.has(codigo);
+}
+
+/** As consultas do mês que a InfoSimples cobra — as que o extrato dela lista. */
+export function consultasCobradas(registros: RegistroDaConsulta[]): number {
+  return registros.filter(consultaCobrada).length;
 }
 
 /** O gasto estimado do mês, pelo preço de cada certidão cobrada. */
-export function gastoDoMesEmCentavos(registros: { tipo: string; situacao: string; mensagem: string | null }[]): number {
+export function gastoDoMesEmCentavos(registros: RegistroDaConsulta[]): number {
   let total = 0;
   for (const r of registros) {
     if (!consultaCobrada(r)) continue;
     total += PRECO_EM_CENTAVOS[r.tipo as TipoDeCertidao] ?? Math.max(...Object.values(PRECO_EM_CENTAVOS));
   }
   return total;
+}
+
+/** A InfoSimples recusou o token para este serviço (601 ou 603)? */
+export function recusaDoToken(r: Pick<RegistroDaConsulta, "situacao" | "mensagem">): boolean {
+  if (r.situacao !== "NAO_SAIU") return false;
+  const codigo = codigoNaMensagem(r.mensagem);
+  return codigo !== null && DE_CONFIGURACAO.has(codigo);
+}
+
+/**
+ * Os serviços cuja última consulta foi uma recusa do token, com a hora dela.
+ * A recusa vale para o serviço, não para a empresa: o token não tem acesso ou
+ * passou do limite de uso que alguém pôs nele no painel da InfoSimples.
+ */
+export function servicosRecusados(registros: (RegistroDaConsulta & { createdAt: Date })[]): Map<TipoDeCertidao, Date> {
+  const ultima = new Map<string, RegistroDaConsulta & { createdAt: Date }>();
+  for (const r of registros) {
+    const antes = ultima.get(r.tipo);
+    if (!antes || r.createdAt > antes.createdAt) ultima.set(r.tipo, r);
+  }
+  const recusados = new Map<TipoDeCertidao, Date>();
+  for (const [tipo, r] of ultima) if (recusaDoToken(r)) recusados.set(tipo as TipoDeCertidao, r.createdAt);
+  return recusados;
 }
