@@ -52,7 +52,8 @@ export type OrdemDoMenu = {
   geral?: string[];
   /**
    * A ordem do que fica DENTRO de cada menu (09/11/2026): por menu (o código da
-   * tela de cima, ou "apoio" no Geral), as chaves das telas de dentro — o
+   * tela de cima, ou um grupo do Geral — "apoio" e, desde 10/11/2026,
+   * "cadastros"; ver `GRUPOS_DO_GERAL`), as chaves das telas de dentro — o
    * código da tela, ou `sub:<nome>` para as abas com entrada no menu (Robôs,
    * Sites, Apps…). Só a posição: nada sai de um menu nem entra em outro.
    */
@@ -62,7 +63,7 @@ export type OrdemDoMenu = {
   /**
    * O que sai de dentro de um menu (09/11/2026), por menu — as mesmas chaves
    * de `dentro`: as abas com entrada no menu (`sub:<nome>`) e as telas do
-   * Apoio. As telas do catálogo que vieram de outra continuam em `ocultas`.
+   * Apoio e dos Cadastros. As telas do catálogo que vieram de outra continuam em `ocultas`.
    */
   ocultasDentro?: Record<string, string[]>;
 };

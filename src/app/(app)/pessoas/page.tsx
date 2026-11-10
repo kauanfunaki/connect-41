@@ -8,7 +8,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { PessoasFilterButton } from "@/components/pessoas/PessoasFilterButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
@@ -80,17 +80,20 @@ export default async function PessoasPage({
 
   return (
     <PageContainer>
-      <CadastrosTabsBar
-        active="pessoas"
-        subtitulo="Os funcionários internos do escritório."
-        acao={<>{canCreate && (
+      {/* Título da própria tela (10/11/2026, pedido do Kauan): Pessoas é um
+          item do grupo Cadastros no menu lateral, sem a fileira de abas
+          Empresas/Pessoas no alto. */}
+      <PageHeader
+        title="Pessoas"
+        subtitle="Os funcionários internos do escritório."
+        action={canCreate ? (
           <Button
             href="/pessoas/nova?internal=1"
             variant="primary"
           >
             <Plus size={14} /> Nova pessoa
           </Button>
-        )}</>}
+        ) : undefined}
       />
 
       <div id="cadastros-content">
