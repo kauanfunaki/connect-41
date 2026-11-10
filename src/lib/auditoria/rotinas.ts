@@ -13,6 +13,9 @@ export const ROTINAS_DO_SISTEMA = {
   // O formulário público de pedido (09/11/2026): quem preenche não tem conta,
   // e a trilha precisa dizer de onde veio a solicitação e a empresa prospecto.
   linkPublicoDePedido: "Link público de pedido",
+  // A triagem dos chamados depois do envio (10/11/2026): roda fora da
+  // requisição de quem abriu, pela tela ou pela retomada do motor de alertas.
+  triagemDeChamados: "Triagem automática dos chamados",
 } as const;
 
 export type RotinaDoSistema = keyof typeof ROTINAS_DO_SISTEMA;

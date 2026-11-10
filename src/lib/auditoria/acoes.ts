@@ -47,6 +47,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "github.team_delete": x("excluiu um time do GitHub"),
   "helpdesk.created": c("abriu o chamado"),
   "helpdesk.updated": e("atualizou o chamado"),
+  "helpdesk.triaged": e("concluiu a triagem do chamado"),
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),

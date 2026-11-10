@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BellRing, CircleCheck, CirclePause, CircleX, Hourglass, Inbox, ListOrdered, LoaderCircle, MessageSquareText, type LucideIcon } from "lucide-react";
+import { BellRing, CircleCheck, CirclePause, CircleX, Hourglass, Inbox, ListOrdered, LoaderCircle, MessageSquareText, ScanSearch, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { AvatarImage } from "@/components/shared/AvatarImage";
@@ -18,7 +18,7 @@ import { TOM_DA_PRIORIDADE, TOM_DA_SITUACAO } from "@/lib/chamados/tons";
 // dica do balão ao lado de "comentou".
 
 const ICONE_DA_SITUACAO: Record<Status, LucideIcon> = {
-  ABERTO: Inbox, NA_FILA: ListOrdered, EM_ANDAMENTO: LoaderCircle,
+  AGUARDANDO_TRIAGEM: ScanSearch, ABERTO: Inbox, NA_FILA: ListOrdered, EM_ANDAMENTO: LoaderCircle,
   AGUARDANDO_USUARIO: Hourglass, AGUARDANDO_APROVACAO: Hourglass, AGUARDANDO_REQUERENTE: Hourglass,
   STANDBY: CirclePause, RESOLVIDO: CircleCheck, CANCELADO: CircleX,
 };

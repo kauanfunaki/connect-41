@@ -8,6 +8,8 @@ import { fechado, type Prioridade, type Status } from "./regras";
  * reforça, nunca é a única pista.
  */
 export const TOM_DA_SITUACAO: Record<Status, TomDoSelo> = {
+  // Passageira (10/11/2026): a triagem roda em segundos, e o chamado ainda não está na fila.
+  AGUARDANDO_TRIAGEM: "neutro",
   ABERTO: "marca",
   NA_FILA: "marca",
   EM_ANDAMENTO: "marca",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, tituloDaDescricao, perguntaAtual } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, tituloDaDescricao, triagemSchema, textoDaTriagem, avisoDaTriagem, resultadoDaTriagem, intervaloDaTriagem, SITUACOES_MANUAIS, STATUS, ROTULOS, emTriagem } from "./regras";
 import { minutosUteisEntre, somarMinutosUteis } from "./sla";
 
 const dados = dadosSchema.parse({ title: "Acesso ao sistema", description: "Preciso de acesso ao sistema de atendimento para trabalhar.", categoryId: "cat", requesterSectorCode: "fiscal" });
@@ -40,7 +40,7 @@ describe("SLA do Hub em Brasília", () => {
     expect(somarMinutosUteis(new Date("2018-11-02T19:30:00.000Z"), 60).toISOString()).toBe("2018-11-05T10:30:00.000Z");
   });
 });
-describe("abertura sem título e perguntas uma por vez", () => {
+describe("abertura sem título", () => {
   it("aceita rascunho sem título e tira um título curto da descrição", () => {
     expect(dadosRascunhoSchema.parse({ description: "Pedido", requesterSectorCode: "fiscal" }).title).toBe("");
     expect(tituloDaDescricao("\n  Automatizar   a conferência de extratos\nRequisitos: ...")).toBe("Automatizar a conferência de extratos");
@@ -48,12 +48,34 @@ describe("abertura sem título e perguntas uma por vez", () => {
     expect(longo.length).toBeLessThanOrEqual(81); expect(longo.endsWith("…")).toBe(true); expect(longo).not.toContain("palavra …");
     expect(tituloDaDescricao("ok")).toBe("Chamado: ok");
   });
-  it("acha a pergunta em aberto pela última mensagem do assistente", () => {
-    const p = parecerSchema.parse({ status: "needs_information", summary: "Faltam dados.", questions: ["Qual sistema?", "Desde quando?", "Quem é afetado?"], attachments: [] });
-    expect(perguntaAtual(p, [{ role: "assistant", body: "Faltam dados.\n\nQual sistema?" }])).toEqual({ indice: 0, total: 3 });
-    expect(perguntaAtual(p, [{ role: "assistant", body: "Faltam dados.\n\nQual sistema?" }, { role: "user", body: "ERP" }, { role: "assistant", body: "Desde quando?" }])).toEqual({ indice: 1, total: 3 });
-    expect(perguntaAtual(p, [{ role: "user", body: "Sem pergunta ainda" }])).toBeNull();
+  it("lê o parecer antigo, com pergunta em texto, para os chamados da conversa com a IA", () => {
+    const p = parecerSchema.parse({ status: "needs_information", summary: "Faltam dados.", questions: ["Qual sistema?"], attachments: [] });
     expect(p.questions[0]).toEqual({ text: "Qual sistema?", options: [] });
-    expect(perguntaAtual({ ...p, status: "sufficient", questions: [] }, [{ role: "assistant", body: "Qual sistema?" }])).toBeNull();
+  });
+});
+describe("triagem depois do envio", () => {
+  it("Aguardando triagem é situação da triagem, não da equipe", () => {
+    expect(STATUS).toContain("AGUARDANDO_TRIAGEM"); expect(ROTULOS.AGUARDANDO_TRIAGEM).toBe("Aguardando triagem");
+    expect(SITUACOES_MANUAIS).not.toContain("AGUARDANDO_TRIAGEM"); expect(SITUACOES_MANUAIS).toHaveLength(STATUS.length - 1);
+    expect(emTriagem("AGUARDANDO_TRIAGEM")).toBe(true); expect(emTriagem("ABERTO")).toBe(false);
+  });
+  it("separa falha de falta de contexto na frase e no aviso", () => {
+    const falha = triagemSchema.parse({ semCategoria: "falha" }), incerto = triagemSchema.parse({ semCategoria: "incerto" });
+    expect(textoDaTriagem(falha)).toContain("falhou"); expect(textoDaTriagem(falha)).not.toContain("contexto");
+    expect(textoDaTriagem(incerto)).toContain("não identificou a categoria"); expect(textoDaTriagem(incerto)).not.toContain("falhou");
+    expect(avisoDaTriagem(falha, "Pedido")).toBe("A triagem automática falhou; a equipe vai classificar: Pedido");
+    expect(avisoDaTriagem(incerto, "Pedido")).toBe("A triagem não identificou a categoria; a equipe vai classificar: Pedido");
+    expect(resultadoDaTriagem(falha)).toBe("a_classificar");
+  });
+  it("classificado e já existente: um resultado por aviso, o que já existe primeiro", () => {
+    const classificado = triagemSchema.parse({ categoria: "Desenvolvimento › Nova Automação" });
+    expect(resultadoDaTriagem(classificado)).toBe("classificado");
+    expect(avisoDaTriagem(classificado, "Pedido")).toBe("Triagem concluída, chamado classificado em Desenvolvimento › Nova Automação: Pedido");
+    const existente = { ref: "robo:x", tipo: "robo" as const, nome: "Robô fictício", responsavel: null, endereco: null, noOps: null, detalhe: null, match: "similar" as const, reason: "" };
+    const ambos = triagemSchema.parse({ categoria: "Desenvolvimento › Nova Automação", existente });
+    expect(resultadoDaTriagem(ambos)).toBe("existe"); expect(avisoDaTriagem(ambos, "Pedido")).toBe("Pode já existir no Orquestrador: o robô Robô fictício. Chamado: Pedido");
+  });
+  it("confere de 3 em 3 segundos no primeiro minuto e depois de 15 em 15", () => {
+    expect(intervaloDaTriagem(0)).toBe(3000); expect(intervaloDaTriagem(59_999)).toBe(3000); expect(intervaloDaTriagem(60_000)).toBe(15000);
   });
 });

@@ -26,6 +26,14 @@ describe("linha do tempo do chamado", () => {
     expect(descreverEvento({ type: "deadline", actorId: "ana", data: { motivo: "Depende do fornecedor" } }, nome).detalhe).toBe("Depende do fornecedor");
     expect(descreverEvento({ type: "sla", actorId: null, data: {} }, nome).texto).toBe("O prazo de atendimento venceu");
   });
+  it("descreve o fim da triagem pelo resultado", () => {
+    const robo = { ref: "robo:x", tipo: "robo", nome: "Robô fictício", responsavel: null, endereco: null, noOps: null, detalhe: null, match: "same", reason: "Faz a mesma conversão." };
+    expect(descreverEvento({ type: "triagem", actorId: null, data: { existente: robo, categoria: "Desenvolvimento › Nova Automação" } }, nome)).toEqual({ texto: "A triagem automática encontrou no Orquestrador o robô Robô fictício e classificou o chamado em Desenvolvimento › Nova Automação", detalhe: "Faz a mesma conversão." });
+    expect(descreverEvento({ type: "triagem", actorId: null, data: { categoria: "Suporte › Treinamento" } }, nome).texto).toBe("A triagem automática classificou o chamado em Suporte › Treinamento");
+    const semCategoria = descreverEvento({ type: "triagem", actorId: null, data: { semCategoria: "falha" } }, nome);
+    expect(semCategoria.texto).toBe("A triagem automática deixou o chamado para a equipe classificar"); expect(semCategoria.detalhe).toContain("falhou");
+    expect(descreverEvento({ type: "created", actorId: "ana", data: { triagem: true } }, nome).texto).toBe("Ana abriu o chamado");
+  });
   it("mostra o tamanho do arquivo", () => {
     expect(tamanhoDoArquivo(512)).toBe("512 B");
     expect(tamanhoDoArquivo(2048)).toBe("2 KB");

@@ -1,7 +1,7 @@
 // Conversa do chamado como uma linha do tempo só (26/10/2026): mensagens,
 // arquivos e eventos em ordem. Compartilhado com o navegador; não importa o banco.
 import { formatInstantDateTime, formatarNumero } from "@/lib/format";
-import { ROTULOS, ROTULOS_PRIORIDADE, type Prioridade, type Status } from "./regras";
+import { ROTULOS, ROTULOS_EXISTENTE, ROTULOS_PRIORIDADE, textoDaTriagem, triagemSchema, type Prioridade, type Status } from "./regras";
 import { ROTULOS_EVENTO } from "./eventos";
 
 type Quando = Date | string;
@@ -56,6 +56,14 @@ export function descreverEvento(e: Pick<EventoDaLinha, "type" | "actorId" | "dat
     case "sla": return { texto: "O prazo de atendimento venceu" };
     case "category": return { texto: `${quem} alterou a categoria` };
     case "details": return { texto: `${quem} atualizou os dados do chamado` };
+    case "triagem": {
+      const t = triagemSchema.safeParse(d);
+      if (!t.success) return { texto: "A triagem automática terminou" };
+      const { existente, categoria } = t.data;
+      if (existente) return { texto: `A triagem automática encontrou no Orquestrador o ${ROTULOS_EXISTENTE[existente.tipo]} ${existente.nome}${categoria ? ` e classificou o chamado em ${categoria}` : ""}`, ...(existente.reason ? { detalhe: existente.reason } : {}) };
+      if (categoria) return { texto: `A triagem automática classificou o chamado em ${categoria}` };
+      return { texto: "A triagem automática deixou o chamado para a equipe classificar", detalhe: textoDaTriagem(t.data) };
+    }
     default: return { texto: `${quem} · ${ROTULOS_EVENTO[e.type] ?? "Atualização"}` };
   }
 }
