@@ -778,6 +778,46 @@ export function getHandoffTemplate(key: string): HandoffTemplate | undefined {
   return HANDOFF_TEMPLATES.find((t) => t.key === key);
 }
 
+// A ordem dos blocos de assunto na nova transferência (10/11/2026, pedido do
+// Kauan): os mais usados no escritório primeiro, contados pela coluna
+// `handoffs.templateKey`. Empate — e o começo, quando a coluna ainda está vazia
+// — segue estes seis, os do desenho escolhido, e depois a ordem da lista.
+const DESTAQUE_PADRAO: HandoffTemplateKey[] = [
+  "BAIXA_CNPJ",
+  "ALTERACAO_CONTRATUAL",
+  "ABERTURA_NOVA_EMPRESA",
+  "INCLUSAO_CNAE",
+  "SETUP_MIGRACAO",
+  "REGULARIZACAO_MUNICIPAL_ESTADUAL",
+];
+
+/** Os 16 modelos, do mais usado para o menos; `usos` é a contagem por `templateKey`. */
+export function modelosPorUso(usos: Record<string, number>): HandoffTemplate[] {
+  const padrao = (t: HandoffTemplate) => {
+    const i = DESTAQUE_PADRAO.indexOf(t.key);
+    return i === -1 ? DESTAQUE_PADRAO.length + HANDOFF_TEMPLATES.indexOf(t) : i;
+  };
+  return [...HANDOFF_TEMPLATES].sort((a, b) => (usos[b.key] ?? 0) - (usos[a.key] ?? 0) || padrao(a) - padrao(b));
+}
+
+/**
+ * O assunto que a nova transferência grava (10/11/2026): com um modelo válido,
+ * o rótulo dele e a chave; sem modelo ("Outro assunto"), o texto livre, sem
+ * chave. Null quando não há nem um nem outro — o assunto é obrigatório. O texto
+ * passa do tamanho da coluna (160) só se alguém montar o envio à mão; aí corta.
+ */
+export function assuntoParaGravar(
+  textoLivre: string | null | undefined,
+  chaveDoModelo: string | null | undefined,
+  maximo = 160
+): { subject: string; templateKey: HandoffTemplateKey | null } | null {
+  const modelo = chaveDoModelo ? getHandoffTemplate(chaveDoModelo) : undefined;
+  if (modelo) return { subject: modelo.label, templateKey: modelo.key };
+  const texto = (textoLivre ?? "").replace(/\s+/g, " ").trim();
+  if (!texto) return null;
+  return { subject: texto.slice(0, maximo).trimEnd(), templateKey: null };
+}
+
 // Substitui só [EMPRESA]/[CNPJ] pelo que já está selecionado no formulário —
 // os demais placeholders (responsável, prazo, valor...) não são deriváveis de
 // nenhum campo existente e ficam para preenchimento manual, por design.

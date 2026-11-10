@@ -1,9 +1,7 @@
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Card } from "@/components/ui/Card";
 import { HandoffForm } from "@/components/transferencias/HandoffForm";
 import { criarHandoff } from "../actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -14,6 +12,7 @@ import type { EntityType } from "@/generated/prisma/enums";
 import { mensagemComPropostas } from "@/lib/ia/chat/conversas";
 import { lerPropostas } from "@/lib/ia/chat/regras";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
+import { modelosPorUso } from "@/lib/handoffTemplates";
 
 export default async function NovoHandoffPage({
   searchParams,
@@ -29,14 +28,38 @@ export default async function NovoHandoffPage({
   const canCreate = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
   if (!canCreate) notFound();
 
-  const { options: allSectorOptions } = await getSectorMaps(ctx.tenantId);
+  const prisma = getPrisma();
+  const [{ options: allSectorOptions, colors: sectorColors }, usos] = await Promise.all([
+    getSectorMaps(ctx.tenantId),
+    // Quantas vezes cada modelo foi usado no escritório: os mais usados abrem
+    // a lista de assuntos (10/11/2026).
+    prisma.handoff.groupBy({
+      by: ["templateKey"],
+      where: { tenantId: ctx.tenantId, templateKey: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
   const fromSectorOptions = isFullWrite(ctx.role)
     ? allSectorOptions
     : allSectorOptions.filter((s) => ctx.sectors.includes(s.value));
 
   if (fromSectorOptions.length === 0) notFound();
 
-  const prisma = getPrisma();
+  // A origem já preenchida (10/11/2026, pedido do Kauan): o setor ativo, ou o
+  // único setor da pessoa entre os que ela pode usar. Com um setor só para
+  // escolher, o formulário a mostra sem seletor.
+  const proprios = fromSectorOptions.filter((s) => ctx.sectors.includes(s.value));
+  const fromSectorInicial =
+    ctx.activeSector && fromSectorOptions.some((s) => s.value === ctx.activeSector)
+      ? ctx.activeSector
+      : proprios.length === 1
+        ? proprios[0].value
+        : undefined;
+
+  const toSectorOptions = allSectorOptions.map((s) => ({ ...s, color: sectorColors[s.value] ?? "#586577" }));
+  const ordemDosModelos = modelosPorUso(
+    Object.fromEntries(usos.filter((u) => u.templateKey).map((u) => [u.templateKey as string, u._count._all]))
+  ).map((t) => t.key);
 
   // Lista de usuários pra autocomplete de "@menção" na Descrição — qualquer
   // usuário ativo do tenant pode ser referenciado, não só quem já atua no
@@ -50,7 +73,7 @@ export default async function NovoHandoffPage({
 
   // Elegíveis a responsável por setor de destino — não dá pra saber de
   // antemão quais setores o usuário vai marcar no form, então busca pra
-  // todos os setores possíveis (mesma lista que os checkboxes de destino usam).
+  // todos os setores possíveis (mesma lista que os setores de destino usam).
   const assigneeOptionsBySector = Object.fromEntries(
     await Promise.all(allSectorOptions.map(async (s) => [s.value, await getSectorUsers(ctx.tenantId, s.value)] as const))
   );
@@ -70,31 +93,39 @@ export default async function NovoHandoffPage({
     }
   }
 
-  // Modo 1: entidade pré-selecionada (veio do botão "Solicitar Handoff" na ficha)
+  const comum = {
+    action: criarHandoff,
+    fromSectorOptions,
+    fromSectorInicial,
+    toSectorOptions,
+    mentionUsers,
+    assigneeOptionsBySector,
+    inicial,
+    ordemDosModelos,
+  };
+
+  // Modo 1: entidade pré-selecionada (veio do "Solicitar transferência" na ficha)
   if (entityId) {
     const entityType = entityTypeRaw === "PERSON" ? "PERSON" : "COMPANY";
     const scope = entityType === "COMPANY" ? await scopedCompanyWhere(ctx) : await scopedPersonWhere(ctx);
     const entity =
       entityType === "COMPANY"
-        ? await prisma.company.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true, cnpj: true } })
+        ? await prisma.company.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true, displayName: true, cnpj: true } })
         : await prisma.person.findFirst({ where: { id: entityId, ...scope }, select: { id: true, name: true } });
 
     if (!entity) notFound();
 
     const backHref = entityType === "COMPANY" ? `/empresas/${entityId}` : `/pessoas/${entityId}`;
     const entityCnpj: string | null = "cnpj" in entity ? (entity.cnpj as string | null) : null;
+    const apelido = "displayName" in entity ? (entity.displayName as string | null)?.trim() : null;
+    const entityName = apelido || entity.name;
 
     return (
-      <FormShell backHref={backHref} backLabel={entity.name}>
+      <FormShell backHref={backHref} backLabel={entityName}>
         <HandoffForm
-          action={criarHandoff}
-          fromSectorOptions={fromSectorOptions}
-          toSectorOptions={allSectorOptions}
+          {...comum}
           cancelHref={backHref}
-          fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName: entity.name, entityCnpj }}
-          mentionUsers={mentionUsers}
-          assigneeOptionsBySector={assigneeOptionsBySector}
-          inicial={inicial}
+          fixedEntity={{ entityType: entityType as EntityType, entityId: entity.id, entityName, entityCnpj }}
         />
       </FormShell>
     );
@@ -116,21 +147,14 @@ export default async function NovoHandoffPage({
 
   return (
     <FormShell backHref="/transferencias" backLabel="Transferências">
-      <HandoffForm
-        action={criarHandoff}
-        fromSectorOptions={fromSectorOptions}
-        toSectorOptions={allSectorOptions}
-        cancelHref="/transferencias"
-        companies={companies}
-        people={people}
-        mentionUsers={mentionUsers}
-        assigneeOptionsBySector={assigneeOptionsBySector}
-        inicial={inicial}
-      />
+      <HandoffForm {...comum} cancelHref="/transferencias" companies={companies} people={people} />
     </FormShell>
   );
 }
 
+// Só a trilha em cima do cartão (10/11/2026): o título "Nova transferência" e
+// os três passos moram dentro do cartão, centralizados, como no desenho
+// escolhido e no Novo processo.
 function FormShell({
   backHref,
   backLabel,
@@ -142,10 +166,8 @@ function FormShell({
 }) {
   return (
     <PageContainer>
-      <Breadcrumb items={[{ label: backLabel, href: backHref, truncate: true }, { label: "Solicitar transferência" }]} />
-      <PageHeader title="Solicitar transferência" />
-
-      <Card className="p-6">{children}</Card>
+      <Breadcrumb items={[{ label: backLabel, href: backHref, truncate: true }, { label: "Nova transferência" }]} />
+      {children}
     </PageContainer>
   );
 }

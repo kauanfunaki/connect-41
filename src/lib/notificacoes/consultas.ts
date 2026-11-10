@@ -5,13 +5,14 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { linkDaNotificacao } from "@/lib/notificacaoLink";
+import { ehAvisoDaTransferencia, linkDaNotificacao } from "@/lib/notificacaoLink";
+import { tituloDaTransferencia } from "@/lib/handoffs";
 import { nomeExibicao } from "@/lib/companyName";
 import { telefoneLegivel } from "@/lib/whatsapp/conversas";
 import { doTipo, filtroDaAba, ocultosValidos, type Aba, type AbaOuTodas, type IconeDaNotificacao, type Tom } from "./catalogo";
 import type { NotificacaoNova } from "./avisoNaTela";
 
-export type TipoDoChip = "empresa" | "pessoa" | "card" | "processo" | "solicitacao" | "conversa" | "pendencia";
+export type TipoDoChip = "empresa" | "pessoa" | "card" | "processo" | "solicitacao" | "conversa" | "pendencia" | "transferencia";
 
 export type NotificacaoNaTela = {
   id: string;
@@ -58,6 +59,8 @@ export function entidadeDoChip(n: {
   if (n.type.startsWith("PROCESS_")) return { tipo: "processo", id };
   if (n.type.startsWith("SOLICITACAO_")) return { tipo: "solicitacao", id };
   if (n.type === "client_request_answered") return { tipo: "pendencia", id };
+  // Aviso de transferência gravado desde 10/11/2026: o chip é o assunto dela.
+  if (ehAvisoDaTransferencia(n)) return { tipo: "transferencia", id };
   if (n.entityType === "COMPANY") return { tipo: "empresa", id };
   if (n.entityType === "PERSON") return { tipo: "pessoa", id };
   // Menção e comentário em card sem empresa nem pessoa guardam o id do card.
@@ -255,7 +258,7 @@ async function chipsDasNotificacoes(
   const prisma = getPrisma();
   const vazio = Promise.resolve([] as never[]);
 
-  const [empresas, pessoas, cards, processos, solicitacoes, conversas, pendencias] = await Promise.all([
+  const [empresas, pessoas, cards, processos, solicitacoes, conversas, pendencias, transferencias] = await Promise.all([
     ids("empresa").length ? prisma.company.findMany({ where: { tenantId, id: { in: ids("empresa") } }, select: { id: true, name: true, displayName: true } }) : vazio,
     ids("pessoa").length ? prisma.person.findMany({ where: { tenantId, id: { in: ids("pessoa") } }, select: { id: true, name: true } }) : vazio,
     ids("card").length ? prisma.pipelineItem.findMany({ where: { tenantId, id: { in: ids("card") } }, select: { id: true, title: true } }) : vazio,
@@ -265,6 +268,7 @@ async function chipsDasNotificacoes(
     ids("solicitacao").length ? prisma.serviceRequest.findMany({ where: { tenantId, id: { in: ids("solicitacao") } }, select: { id: true, number: true } }) : vazio,
     ids("conversa").length ? prisma.whatsappThread.findMany({ where: { tenantId, id: { in: ids("conversa") } }, select: { id: true, waPhone: true, personId: true } }) : vazio,
     ids("pendencia").length ? prisma.clientRequest.findMany({ where: { tenantId, id: { in: ids("pendencia") } }, select: { id: true, title: true } }) : vazio,
+    ids("transferencia").length ? prisma.handoff.findMany({ where: { tenantId, id: { in: ids("transferencia") } }, select: { id: true, subject: true } }) : vazio,
   ]);
 
   // Conversa ligada a uma pessoa mostra o nome; sem vínculo, o telefone.
@@ -282,6 +286,7 @@ async function chipsDasNotificacoes(
   for (const s of solicitacoes) rotulos.set(`solicitacao:${s.id}`, `Solicitação nº ${s.number}`);
   for (const c of conversas) rotulos.set(`conversa:${c.id}`, (c.personId && nomeDaPessoa.get(c.personId)) || telefoneLegivel(c.waPhone));
   for (const p of pendencias) rotulos.set(`pendencia:${p.id}`, p.title);
+  for (const t of transferencias) rotulos.set(`transferencia:${t.id}`, tituloDaTransferencia(t));
 
   const r = new Map<string, { rotulo: string; tipo: TipoDoChip }>();
   for (const { n, e } of alvos) {
