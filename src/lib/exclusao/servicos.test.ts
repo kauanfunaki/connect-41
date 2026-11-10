@@ -418,4 +418,24 @@ describe("usuário", () => {
       where: { tenantId: "t1", userId: "u2" },
     });
   });
+
+  it("a senha pessoal do cofre sai com a conta; as do setor passam para quem exclui (10/11/2026)", async () => {
+    const b = escritorio({
+      contar: (delegado, where) => (delegado === "bpoCredential" ? (where.visibility === "PESSOAL" ? 2 : 5) : undefined),
+    });
+    const previa = await previaDoUsuario(prisma(b.banco), "t1", "u2", ADMIN);
+    expect(previa!.itens).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ texto: "3 senhas do cofre do BPO", efeito: "reatribuir" }),
+        expect.objectContaining({ texto: "2 senhas pessoais do cofre (saem junto: só ele as via)", efeito: "apagar", historico: true }),
+      ])
+    );
+
+    const r = await excluirUsuarioDeVez(prisma(b.banco), { tenantId: "t1", ator: ADMIN, id: "u2", modo: "completo", confirmacao: "Bruno Teste" });
+    expect(r.ok).toBe(true);
+    const apagouPessoais = b.chamadas.findIndex((c) => c.delegado === "bpoCredential" && c.metodo === "deleteMany");
+    expect(b.chamadas[apagouPessoais].args).toEqual({ where: { tenantId: "t1", createdById: "u2", visibility: "PESSOAL" } });
+    // Antes de passar o resto: senão a pessoal iria para o administrador.
+    expect(apagouPessoais).toBeLessThan(indice(b.chamadas, "bpoCredential", "updateMany"));
+  });
 });

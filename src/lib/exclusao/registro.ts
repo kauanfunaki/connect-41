@@ -250,6 +250,9 @@ const USUARIO: Ligacao[] = [
   { modelo: "Budget", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "ManualDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["manual do BPO", "manuais do BPO"], historico: true },
   { modelo: "ManualPage", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["página de manual", "páginas de manual"], historico: true },
+  // As do setor passam; as PESSOAIS dele (10/11/2026) saem antes, num passo
+  // próprio do plano (`usuario.ts`): só ele as via, e passá-las a quem exclui
+  // entregaria ao administrador senhas que a regra nunca o deixou revelar.
   { modelo: "BpoCredential", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["senha do cofre do BPO", "senhas do cofre do BPO"], historico: true },
   { modelo: "ValoraProposta", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["proposta do Valora", "propostas do Valora"], historico: true },
 
@@ -343,6 +346,9 @@ const USUARIO: Ligacao[] = [
   { modelo: "LocalFiscalScenario", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserSector", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserTenantAccess", campo: "user", fk: "userId", tratamento: "cascata" },
+  // "Todos do setor, menos…" do cofre (10/11/2026): a marca de que ele não vê
+  // uma senha não tem o que passar a ninguém — sai junto com a conta.
+  { modelo: "BpoCredentialRestriction", campo: "user", fk: "userId", tratamento: "cascata" },
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
