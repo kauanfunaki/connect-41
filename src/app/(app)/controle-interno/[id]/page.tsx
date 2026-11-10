@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
-import { ArrowLeft, ExternalLink, History, MessageSquare, Paperclip, PencilLine, Plus } from "lucide-react";
+import { ExternalLink, History, MessageSquare, Paperclip, PencilLine, Plus } from "lucide-react";
 import {
   MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, TIPOS, PRIORIDADES, TAMANHOS, EM_ABERTO,
-  destinoDeVolta, comVolta, chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo, type Alteracao,
+  chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo, enderecoDoItem, idCurtoDoItem, type Alteracao,
 } from "@/lib/tech-interno/regras";
 import { CORES_DO_TIPO } from "@/lib/tech-interno/cores";
 import { lerCriterioDeAceite, marcasQueValem } from "@/lib/tech-interno/criterioDeAceite";
@@ -14,6 +14,7 @@ import { CriterioDeAceite, type MarcaDoPonto } from "@/components/tech-interno/C
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { MudancasDoRegistro } from "@/components/tech-interno/MudancasDoRegistro";
 import { AnexosDoItem } from "@/components/tech-interno/AnexosDoItem";
+import { VoltarParaALista } from "@/components/tech-interno/VoltaDaLista";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
@@ -38,18 +39,24 @@ type Item = NonNullable<Awaited<ReturnType<typeof detalheItem>>>;
  *
  * No celular, uma coluna na ordem de leitura: critério, detalhes (com a
  * situação), comentários, histórico e, por fim, a descrição e os anexos.
+ *
+ * O endereço é o curto (10/11/2026): /controle-interno/bug-123. O antigo, com
+ * o uuid (e o `?voltar=` que ia junto), e o de um tipo anterior do item
+ * continuam abrindo e passam para o de agora; o `?editar=1` vai junto. A
+ * volta para a lista não viaja mais no endereço (`VoltarParaALista`).
  */
 export default async function DetalheTechPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO), { id } = await params, busca = await searchParams;
-  const voltar = destinoDeVolta(busca.voltar), querEditar = busca.editar === "1";
+  const querEditar = busca.editar === "1";
   const [item, opcoes, podeEditar, podeDefinirTamanho] = await Promise.all([
     detalheItem(ctx, id), querEditar ? opcoesTech(ctx) : null, podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir"),
   ]);
   if (!item) notFound();
+  const verHref = enderecoDoItem(item), editarHref = `${verHref}?editar=1`;
+  if (`${ROTA_TECH_INTERNO}/${id}` !== verHref || busca.voltar !== undefined) redirect(querEditar ? editarHref : verHref);
   const editando = podeEditar && !!opcoes;
-  const verHref = comVolta(`${ROTA_TECH_INTERNO}/${item.id}`, voltar), editarHref = comVolta(`${ROTA_TECH_INTERNO}/${item.id}?editar=1`, voltar);
 
-  const voltarParaLista = <Button variant="secondary" href={voltar}><ArrowLeft size={14} aria-hidden />Voltar para a lista</Button>;
+  const voltarParaLista = <VoltarParaALista />;
   const comentariosEHistorico = <>
     <Card as="section" aria-labelledby="tech-comentarios" className="min-w-0 p-5 flex flex-col gap-4">
       <h2 id="tech-comentarios" className="text-card-title font-semibold text-fg">Comentários{item.comments.length ? ` (${item.comments.length})` : ""}</h2>
@@ -68,10 +75,10 @@ export default async function DetalheTechPage({ params, searchParams }: { params
   </>;
 
   if (editando) return <PageContainer>
-    <PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`Editando o item criado em ${formatInstantDateTime(item.createdAt)}.`} action={voltarParaLista} />
+    <PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`${idCurtoDoItem(item)} · Editando o item criado em ${formatInstantDateTime(item.createdAt)}.`} action={voltarParaLista} />
     <Colunas
       principal={<Card as="section" aria-label="Dados do item" className="min-w-0 p-5">
-        <FormularioItem key={`${item.id}:${item.version}`} disposicao="compacta" {...opcoes} podeEditar podeDefinirTamanho={podeDefinirTamanho} voltar={voltar} aoTerminar={verHref} item={{
+        <FormularioItem key={`${item.id}:${item.version}`} disposicao="compacta" {...opcoes} podeEditar podeDefinirTamanho={podeDefinirTamanho} aoTerminar={verHref} item={{
           id: item.id, version: item.version, title: item.title, description: item.description, acceptanceCriteria: item.acceptanceCriteria, type: item.type, priority: item.priority,
           status: item.status, systemMode: item.systemMode, systemKey: chaveDoSistema(item), assigneeId: item.assigneeId,
           assigneeName: item.assignee?.name ?? null, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,
@@ -86,7 +93,7 @@ export default async function DetalheTechPage({ params, searchParams }: { params
   const marcas: Record<number, MarcaDoPonto> = Object.fromEntries([...marcasQueValem(lerCriterioDeAceite(item.acceptanceCriteria)?.pontos ?? [], item.acceptanceChecks)]
     .map(([posicao, m]) => [posicao, { por: m.checkedByName, quando: formatInstantDateTime(m.createdAt) }]));
   return <PageContainer>
-    <PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`Criado em ${formatInstantDateTime(item.createdAt)}`}
+    <PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`${idCurtoDoItem(item)} · Criado em ${formatInstantDateTime(item.createdAt)}`}
       action={<div className="flex flex-wrap gap-2">{voltarParaLista}{podeEditar && <Button variant="secondary" href={editarHref}><PencilLine size={14} aria-hidden />Editar</Button>}</div>} />
     <Colunas
       principal={<Card className="min-w-0 p-5">
@@ -104,7 +111,7 @@ export default async function DetalheTechPage({ params, searchParams }: { params
       lateral={<>
         <Card as="section" aria-labelledby="tech-detalhes" className="min-w-0 p-5 flex flex-col gap-4">
           <h2 id="tech-detalhes" className="text-card-title font-semibold text-fg">Detalhes</h2>
-          <DadosDoItem item={item} podeEditar={podeEditar} voltar={voltar} />
+          <DadosDoItem item={item} podeEditar={podeEditar} />
         </Card>
         {comentariosEHistorico}
       </>} />
@@ -143,7 +150,7 @@ function linkDoCommit(prUrl: string | null, sha: string) {
 }
 
 /** Os campos do item, para ler: a situação muda aqui mesmo; o resto, no "Editar". */
-function DadosDoItem({ item, podeEditar, voltar }: { item: Item; podeEditar: boolean; voltar: string }) {
+function DadosDoItem({ item, podeEditar }: { item: Item; podeEditar: boolean }) {
   const prazo = item.dueDate?.toISOString().slice(0, 10) ?? null;
   const atrasado = !!prazo && prazo < hojeEmSaoPaulo() && (EM_ABERTO as readonly string[]).includes(item.status);
   const commit = item.commitSha ? linkDoCommit(item.prUrl, item.commitSha) : null;
@@ -156,7 +163,7 @@ function DadosDoItem({ item, podeEditar, voltar }: { item: Item; podeEditar: boo
     ["Prazo", prazo ? <span key="z" className={atrasado ? "font-medium text-danger" : undefined}>{formatCalendarDate(item.dueDate!)}{atrasado ? " · Atrasado" : ""}</span> : vazio("Sem prazo")],
     ["Tamanho", item.size ? `${item.size} · ${TAMANHOS[item.size]}` : vazio("Sem tamanho")],
     ["Veio de", item.originItemId
-      ? <Link key="o" href={comVolta(`${ROTA_TECH_INTERNO}/${item.originItemId}`, voltar)} className={`${LINK} break-words [overflow-wrap:anywhere]`}>{item.originItem?.title ?? "Entrega de origem"}</Link>
+      ? <Link key="o" href={item.originItem ? enderecoDoItem(item.originItem) : `${ROTA_TECH_INTERNO}/${item.originItemId}`} className={`${LINK} break-words [overflow-wrap:anywhere]`}>{item.originItem?.title ?? "Entrega de origem"}</Link>
       : vazio("Não veio de uma entrega")],
     ["PR", item.prUrl
       ? <a key="r" href={item.prUrl} target="_blank" rel="noopener noreferrer" title={item.prUrl} className={`${LINK} inline-flex max-w-full items-center gap-1`}><span className="truncate">{rotuloDoPr(item.prUrl)}</span><ExternalLink size={12} aria-hidden className="shrink-0" /><span className="sr-only"> (abre em outra aba)</span></a>

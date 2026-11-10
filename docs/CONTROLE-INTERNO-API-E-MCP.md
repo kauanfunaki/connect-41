@@ -95,7 +95,7 @@ Só aparecem as ferramentas do escopo do token.
 | `ver_item` | ler | um item com o critério de aceite (`acceptanceCriteria`), os pontos já conferidos (`acceptanceChecks`), comentários, histórico, anexos e a `version` |
 | `ver_opcoes` | ler | tipos, situações, sistemas do Ops Center (`key`), pessoas (`id`), entregas recentes |
 | `resumo_do_periodo` | ler | concluídos, em andamento, planejados e cancelados no dia, na semana, no mês ou no ano (`period`: `day`, `week`, `month`, `year`; `date`: AAAA-MM-DD) |
-| `criar_item` | escrever | cria e devolve o item com o link |
+| `criar_item` | escrever | cria e devolve o item com o id curto (`shortId`) e o link curto (`url`) |
 | `atualizar_item` | escrever | altera só os campos enviados |
 | `mudar_situacao` | escrever | Pendente → Em andamento → Em validação → Concluído / Cancelado |
 | `comentar` | escrever | comentário no item |
@@ -137,6 +137,20 @@ marcou. Ao reescrever o critério, mande o texto inteiro: o anterior fica no his
 item, e a marca de um ponto reescrito deixa de valer. A descrição continua com o
 contexto (o que acontece, onde, o esperado).
 
+**O id curto** (10/11/2026): cada item tem um número no escritório, uma sequência só
+para todos os tipos, e o endereço curto vem do tipo e do número —
+`/controle-interno/bug-123`, `/controle-interno/melhoria-45`. Os prefixos são `bug`,
+`melhoria`, `funcionalidade`, `teste` e `migracao`.
+
+- Todo item da resposta traz `number` (o número), `shortId` (`"bug-123"`) e `url`, que
+  passa a ser o endereço curto. O `origin` ("Veio de") e as `recentDeliveries` também
+  trazem o `shortId`.
+- Toda ferramenta e toda rota com `{id}` aceitam o `shortId` no lugar do UUID; o
+  `originItemId` também. O número é o que vale: se o tipo do item mudou, o prefixo
+  antigo ainda acha o item, e a tela passa para o endereço de agora.
+- A busca (`q`) com um id curto acha também o item desse número.
+- O endereço antigo, com o UUID, continua abrindo e passa para o curto.
+
 ## 3. API REST
 
 Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
@@ -147,7 +161,7 @@ Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
 | `GET /` | ler | filtros na URL: `status` (`OPEN` padrão, `ALL`, `PENDING`…), `type`, `priority` (0–3), `system`, `assignee` (`me`, `none` ou id), `q`, `overdue`, `page` |
 | `GET /opcoes` | ler | — |
 | `GET /resumo` | ler | na URL: `period` (`day`, `week` padrão, `month`, `year`) e `date` (AAAA-MM-DD; padrão hoje) |
-| `GET /{id}` | ler | — |
+| `GET /{id}` | ler | — (`{id}` é o UUID ou o id curto, como `bug-123`, aqui e nas rotas abaixo) |
 | `POST /` | escrever | `title`, `type` obrigatórios; `description`, `acceptanceCriteria`, `priority`, `status`, `systemKey`, `systemMode`, `assigneeId`, `dueDate` (AAAA-MM-DD), `size` (P/M/G), `originItemId`, `prUrl`, `commitSha` |
 | `PATCH /{id}` | escrever | os campos que mudam, mais `version` |
 | `POST /{id}/situacao` | escrever | `{ "status": "IN_PROGRESS", "version": 3 }` |
@@ -155,7 +169,8 @@ Base: `https://app.useconnect.com.br/api/v1/controle-interno`. Cabeçalho
 | `POST /{id}/anexos` | escrever | `multipart/form-data`, campo `arquivo` |
 
 Atalhos: `"assigneeId": "me"` é a pessoa do token; `systemKey` sem `systemMode` é um
-sistema do Ops Center. Campo com nome errado é recusado (não é ignorado em silêncio).
+sistema do Ops Center; `originItemId` aceita o id curto da entrega. Campo com nome
+errado é recusado (não é ignorado em silêncio).
 
 `version`: mande a que veio no item lido. Se outra pessoa alterou o item no meio-tempo,
 a resposta é `409 conflict` — leia de novo e refaça. Sem `version`, vale a versão
@@ -171,7 +186,10 @@ curl -s -X POST "https://app.useconnect.com.br/api/v1/controle-interno" \
   -H "Authorization: Bearer $CONNECT_TOKEN" -H "Content-Type: application/json" \
   -d '{"title":"Busca de empresas não acha pelo CNPJ","type":"BUG","priority":2,"assigneeId":"me"}'
 
-curl -s -X POST "https://app.useconnect.com.br/api/v1/controle-interno/ID-DO-ITEM/anexos" \
+curl -s "https://app.useconnect.com.br/api/v1/controle-interno/bug-123" \
+  -H "Authorization: Bearer $CONNECT_TOKEN"
+
+curl -s -X POST "https://app.useconnect.com.br/api/v1/controle-interno/bug-123/anexos" \
   -H "Authorization: Bearer $CONNECT_TOKEN" -F "arquivo=@erro-na-tela.png"
 ```
 

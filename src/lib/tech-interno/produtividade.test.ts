@@ -25,6 +25,8 @@ const entregue = (p: Partial<ItemEntregue>): ItemEntregue => ({
   originItemId: null,
   originTitle: null,
   retrabalho: 0,
+  endereco: "/controle-interno/bug-1",
+  originEndereco: null,
   ...p,
 });
 const aberto = (p: Partial<ItemAberto>): ItemAberto => ({
@@ -36,13 +38,14 @@ const aberto = (p: Partial<ItemAberto>): ItemAberto => ({
   assigneeName: "Ana",
   createdAt: d("2026-10-01"),
   ultimaMexidaEm: d("2026-11-04"),
+  endereco: "/controle-interno/bug-2",
   ...p,
 });
 const AGORA = d("2026-11-05");
 
 describe("itens entregues", () => {
-  const item = (p: Partial<ItemParaEntregas>): ItemParaEntregas => ({
-    id: "i1", title: "Item", status: "DONE", size: "G", assigneeId: "ana", assigneeName: "Ana", originItemId: null, createdAt: d("2026-10-01"), ...p,
+  const item = (p: Partial<ItemParaEntregas>): ItemParaEntregas & { endereco: string } => ({
+    endereco: `/controle-interno/bug-${p.id ?? "i1"}`, id: "i1", title: "Item", status: "DONE", size: "G", assigneeId: "ana", assigneeName: "Ana", originItemId: null, createdAt: d("2026-10-01"), ...p,
   });
   const validado = (id: string, fim = "2026-10-06") => [mud(id, "2026-10-02", "Pendente", "Em andamento"), mud(id, "2026-10-04", "Em andamento", "Em validação"), mud(id, fim, "Em validação", "Concluído")];
 
@@ -50,7 +53,7 @@ describe("itens entregues", () => {
     const lista = itensEntregues(
       [
         { ...item({ id: "a", size: "G" }), originTitle: null },
-        { ...item({ id: "b", size: "P", originItemId: "x" }), originTitle: "Tela de login" },
+        { ...item({ id: "b", size: "P", originItemId: "x" }), originTitle: "Tela de login", originEndereco: "/controle-interno/melhoria-3" },
         item({ id: "c", size: "M" }),
         item({ id: "bug", status: "PENDING", originItemId: "a" }),
         item({ id: "fora", size: "G" }),
@@ -61,7 +64,8 @@ describe("itens entregues", () => {
     );
     expect(lista.map((e) => e.id)).toEqual(["a", "b", "c"]);
     expect(lista[0]).toMatchObject({ pontos: 8, validado: true, cicloDias: 6, retrabalho: 1 });
-    expect(lista[1]).toMatchObject({ pontos: 1, originItemId: "x", originTitle: "Tela de login" });
+    expect(lista[1]).toMatchObject({ pontos: 1, originItemId: "x", originTitle: "Tela de login", endereco: "/controle-interno/bug-b", originEndereco: "/controle-interno/melhoria-3" });
+    expect(lista[0]).toMatchObject({ endereco: "/controle-interno/bug-a", originEndereco: null });
     expect(lista[2]).toMatchObject({ pontos: 0, validado: false, cicloDias: null });
   });
 });

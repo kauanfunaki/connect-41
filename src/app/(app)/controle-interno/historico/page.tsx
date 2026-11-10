@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { History } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
-import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, LINK_DO_ITEM, SITUACOES, nomeDoSistema, type Alteracao } from "@/lib/tech-interno/regras";
+import { MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, LINK_DO_ITEM, SITUACOES, nomeDoSistema, enderecoDoItem, type Alteracao } from "@/lib/tech-interno/regras";
 import { getPrisma } from "@/lib/prisma";
 import { formatInstantDate } from "@/lib/format";
 import { historicoTech } from "@/lib/tech-interno/servidor";
@@ -15,6 +15,7 @@ import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/NavegacaoTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
+import { LembrarDaLista } from "@/components/tech-interno/VoltaDaLista";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +46,11 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
     if ((m.changes as unknown as Alteracao[]).some(c => c.field === "Situação" && c.after === SITUACOES[item.status])) fechadoEm.set(m.itemId, m.createdAt);
   }
   const data = (d: Date | undefined) => d ? formatInstantDate(d) : "—";
-  const linkDoItem = (id: string) => `${ROTA_TECH_INTERNO}/${id}`;
   const hrefVisao = (v: string) => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`;
+  // O item aberto daqui volta para o Histórico, no mesmo recorte (10/11/2026).
+  const aquiComPagina = page > 1 ? hrefPagina(page) : `${ROTA_TECH_INTERNO}/historico${aqui.toString() ? `?${aqui}` : ""}`;
   return <PageContainer>
+    <LembrarDaLista endereco={aquiComPagina} />
     <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech."
       action={<AcoesDoControle podeEditar={podeEditar} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
     <VisoesDoControle ativa="historico" href={hrefVisao} />
@@ -58,13 +61,13 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
         description={q || autor ? "Ajuste a busca ou o filtro para ver outros itens." : "Os itens concluídos ou cancelados aparecem aqui, do mais recente para o mais antigo."} />
         : <>
           <CartoesNoCelular>{itens.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
-            <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={linkDoItem(item.id)}>{item.title}</Link>} />
+            <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={enderecoDoItem(item)}>{item.title}</Link>} />
             <InfoDoCartao>{nomeDoSistema(item, true)}</InfoDoCartao><InfoDoCartao>{item.assignee?.name ?? "Sem responsável"}</InfoDoCartao><InfoDoCartao>Aberto em {data(item.createdAt)} · Fechado em {data(fechadoEm.get(item.id))}</InfoDoCartao>
             <PeDoCartao><SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={false} /></PeDoCartao>
           </Cartao>)}</CartoesNoCelular>
           <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Sistema", "Responsável", "Aberto em", "Fechado em", "Situação"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">{itens.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
-              <td className="px-4 py-3 min-w-48 max-w-md break-words"><Link href={linkDoItem(item.id)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
+              <td className="px-4 py-3 min-w-48 max-w-md break-words"><Link href={enderecoDoItem(item)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
               <td className="px-4 py-3 break-words max-w-48">{nomeDoSistema(item, true)}</td>
               <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td>
               <td className="px-4 py-3 whitespace-nowrap tabular-nums">{data(item.createdAt)}</td>

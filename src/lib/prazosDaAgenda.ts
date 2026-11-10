@@ -19,7 +19,7 @@ import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/ce
 import { soDoSetorPadrao, whereDoRecorteDeSetor } from "@/lib/financeiro/pendencias/setor";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { setoresDoModulo } from "@/lib/modules";
-import { EM_ABERTO, MODULO_TECH_INTERNO, ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
+import { EM_ABERTO, MODULO_TECH_INTERNO, ROTA_TECH_INTERNO, enderecoDoItem } from "@/lib/tech-interno/regras";
 
 export type TipoDePrazo =
   | "tech"
@@ -392,7 +392,7 @@ async function prazosDoTech(ctx: AuthContext, tenantId: string, de: string, ate:
       status: { in: [...EM_ABERTO] },
       dueDate: { gte: new Date(`${de}T00:00:00Z`), lte: new Date(`${ate}T00:00:00Z`) },
     },
-    select: { id: true, title: true, dueDate: true, assignee: { select: { name: true } } },
+    select: { id: true, number: true, type: true, title: true, dueDate: true, assignee: { select: { name: true } } },
     take: 500,
   });
   return itens.map((t) => ({
@@ -402,6 +402,7 @@ async function prazosDoTech(ctx: AuthContext, tenantId: string, de: string, ate:
     titulo: t.title,
     detalhe: t.assignee?.name ?? "sem responsável",
     setor,
-    href: `${ROTA_TECH_INTERNO}/${t.id}`,
+    // O endereço curto do item (10/11/2026).
+    href: enderecoDoItem(t),
   }));
 }

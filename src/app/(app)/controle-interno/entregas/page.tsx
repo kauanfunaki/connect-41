@@ -22,9 +22,9 @@ const pontos = (e: ItemEntregue) => (e.validado ? (e.size ? `${e.pontos}` : "0")
 const ciclo = (e: ItemEntregue) => (e.cicloDias === null ? "—" : `${formatarNumero(e.cicloDias, 1)} dias`);
 
 function VeioDe({ e }: { e: ItemEntregue }) {
-  if (!e.originItemId) return <span className="text-fg-muted">—</span>;
+  if (!e.originEndereco) return <span className="text-fg-muted">—</span>;
   return (
-    <Link href={`${ROTA_TECH_INTERNO}/${e.originItemId}`} className="relative z-10 rounded-sm text-fg-secondary underline-offset-2 hover:text-brand hover:underline break-words">
+    <Link href={e.originEndereco} className="relative z-10 rounded-sm text-fg-secondary underline-offset-2 hover:text-brand hover:underline break-words">
       {e.originTitle ?? "Item de origem"}
     </Link>
   );
@@ -81,7 +81,7 @@ export default async function EntregasDaTechPage({ searchParams }: { searchParam
               <Cartao key={e.id} className="relative">
                 <TopoDoCartao
                   nome={
-                    <Link href={`${ROTA_TECH_INTERNO}/${e.id}`} className={`text-fg hover:text-brand ${LINK_DO_ITEM}`}>
+                    <Link href={e.endereco} className={`text-fg hover:text-brand ${LINK_DO_ITEM}`}>
                       {e.title}
                     </Link>
                   }
@@ -115,7 +115,7 @@ export default async function EntregasDaTechPage({ searchParams }: { searchParam
                 {entregues.map((e) => (
                   <tr key={e.id} className="relative border-b border-border-soft tabular-nums hover:bg-surface-hover">
                     <th scope="row" className="px-3 py-2 text-left font-medium">
-                      <Link href={`${ROTA_TECH_INTERNO}/${e.id}`} className={`text-fg underline-offset-2 hover:text-brand hover:underline break-words ${LINK_DO_ITEM}`}>
+                      <Link href={e.endereco} className={`text-fg underline-offset-2 hover:text-brand hover:underline break-words ${LINK_DO_ITEM}`}>
                         {e.title}
                       </Link>
                     </th>

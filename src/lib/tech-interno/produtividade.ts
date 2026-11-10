@@ -8,7 +8,7 @@
 // Puro — testado em `produtividade.test.ts`; quem busca é `fluxoAberto`.
 
 import { getPrisma } from "@/lib/prisma";
-import { SITUACOES, TAMANHOS, type Alteracao } from "./regras";
+import { SITUACOES, TAMANHOS, enderecoDoItem, type Alteracao } from "./regras";
 import { entregasDoPeriodo, PERIODOS_DAS_ENTREGAS, type ItemEntregue, type MudancaParaEntregas, type PeriodoDasEntregas } from "./entregas";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -125,9 +125,11 @@ export type ItemAberto = {
   createdAt: Date;
   /** A última mexida: edição, mudança de situação ou comentário. */
   ultimaMexidaEm: Date;
+  /** O endereço curto (10/11/2026, `enderecoDoItem`). */
+  endereco: string;
 };
 
-export type ItemDoFluxo = { id: string; title: string; status: ItemAberto["status"]; assigneeName: string; dias: number };
+export type ItemDoFluxo = { id: string; title: string; status: ItemAberto["status"]; assigneeName: string; dias: number; endereco: string };
 
 export type SaudeDoFluxo = {
   /** Em aberto sem tamanho; `comecados` são os que já saíram de Pendente (o tamanho trava ali). */
@@ -160,17 +162,20 @@ const doMaisVelho = (a: ItemDoFluxo, b: ItemDoFluxo) => b.dias - a.dias || a.tit
 
 export function saudeDoFluxo(abertos: ItemAberto[], mudancas: MudancaParaEntregas[], entregues: ItemEntregue[], agora: Date): SaudeDoFluxo {
   const nome = (i: ItemAberto) => i.assigneeName ?? "Sem responsável";
+  const doFluxo = (i: ItemAberto, desde: Date): ItemDoFluxo => ({
+    id: i.id, title: i.title, status: i.status, assigneeName: nome(i), dias: diasEntre(desde, agora), endereco: i.endereco,
+  });
   const semTamanho = abertos
     .filter((i) => !i.size)
-    .map((i) => ({ id: i.id, title: i.title, status: i.status, assigneeName: nome(i), dias: diasEntre(i.createdAt, agora) }))
+    .map((i) => doFluxo(i, i.createdAt))
     .sort(doMaisVelho);
   const parados = abertos
     .filter((i) => i.status !== "PENDING" && diasEntre(i.ultimaMexidaEm, agora) > DIAS_PARADO)
-    .map((i) => ({ id: i.id, title: i.title, status: i.status, assigneeName: nome(i), dias: diasEntre(i.ultimaMexidaEm, agora) }))
+    .map((i) => doFluxo(i, i.ultimaMexidaEm))
     .sort(doMaisVelho);
   const emValidacao = abertos
     .filter((i) => i.status === "VALIDATION")
-    .map((i) => ({ id: i.id, title: i.title, status: i.status, assigneeName: nome(i), dias: diasEntre(entrouNaSituacao(i, mudancas), agora) }))
+    .map((i) => doFluxo(i, entrouNaSituacao(i, mudancas)))
     .sort(doMaisVelho);
   const andamento = new Map<string, { chave: string; nome: string; total: number }>();
   for (const i of abertos) {
@@ -197,7 +202,7 @@ export async function fluxoAberto(tenantId: string): Promise<{ abertos: ItemAber
   const prisma = getPrisma();
   const itens = await prisma.techInternalItem.findMany({
     where: { tenantId, status: { in: ["PENDING", "IN_PROGRESS", "VALIDATION"] } },
-    select: { id: true, title: true, status: true, size: true, assigneeId: true, createdAt: true, updatedAt: true, assignee: { select: { name: true } } },
+    select: { id: true, number: true, type: true, title: true, status: true, size: true, assigneeId: true, createdAt: true, updatedAt: true, assignee: { select: { name: true } } },
     take: 2000,
   });
   const ids = itens.map((i) => i.id);
@@ -220,6 +225,7 @@ export async function fluxoAberto(tenantId: string): Promise<{ abertos: ItemAber
       assigneeName: i.assignee?.name ?? null,
       createdAt: i.createdAt,
       ultimaMexidaEm: maisRecente(i.updatedAt, ultimaMudanca.get(i.id), ultimoComentario.get(i.id)),
+      endereco: enderecoDoItem(i),
     })),
     mudancas: mudancas.map((m) => ({ itemId: m.itemId, createdAt: m.createdAt, changes: (Array.isArray(m.changes) ? m.changes : []) as unknown as Alteracao[] })),
   };

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ID_ITEM, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "@/lib/tech-interno/api-fixtures.test-utils";
+import { ID_ITEM, ID_CURTO, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "@/lib/tech-interno/api-fixtures.test-utils";
 
 // O servidor MCP de ponta a ponta pela rota `/api/mcp`, com o SDK de verdade
 // (JSON-RPC sobre Streamable HTTP, sem sessão) e o servidor do Controle
@@ -8,13 +8,13 @@ import { ID_ITEM, LEITOR, ESCRITOR, CRITERIO_FALSO, itemFalso } from "@/lib/tech
 
 const s = vi.hoisted(() => ({
   listarItens: vi.fn(), detalheItem: vi.fn(), opcoesTech: vi.fn(), salvarItem: vi.fn(), mudarSituacaoItem: vi.fn(), comentarItem: vi.fn(),
-  anexarArquivo: vi.fn(), comentarioSalvo: vi.fn(), resumoTech: vi.fn(),
+  anexarArquivo: vi.fn(), comentarioSalvo: vi.fn(), resumoTech: vi.fn(), idDoItem: vi.fn(),
 }));
 vi.mock("@/lib/tokens-pessoais/servidor", async () => ({ autenticarTokenPessoal: (await import("@/lib/tech-interno/api-fixtures.test-utils")).autenticarFalso }));
 vi.mock("@/lib/tech-interno/servidor", async original => ({
   ...await original<typeof import("@/lib/tech-interno/servidor")>(),
   listarItens: s.listarItens, detalheItem: s.detalheItem, opcoesTech: s.opcoesTech,
-  salvarItem: s.salvarItem, mudarSituacaoItem: s.mudarSituacaoItem, comentarItem: s.comentarItem, resumoTech: s.resumoTech,
+  salvarItem: s.salvarItem, mudarSituacaoItem: s.mudarSituacaoItem, comentarItem: s.comentarItem, resumoTech: s.resumoTech, idDoItem: s.idDoItem,
 }));
 vi.mock("@/lib/tech-interno/anexos", () => ({ anexarArquivo: s.anexarArquivo }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ techInternalComment: { findFirstOrThrow: s.comentarioSalvo } }) }));
@@ -50,6 +50,7 @@ beforeEach(() => {
   s.listarItens.mockResolvedValue({ total: 1, pages: 1, page: 1, items: [itemFalso()] });
   s.salvarItem.mockResolvedValue({ ok: true, id: ID_ITEM });
   s.mudarSituacaoItem.mockResolvedValue({ ok: true, id: ID_ITEM });
+  s.idDoItem.mockImplementation(async (_ator: unknown, id: string) => (id === ID_CURTO || id === ID_ITEM ? ID_ITEM : null));
 });
 
 describe("servidor MCP: conexão", () => {
@@ -107,7 +108,7 @@ describe("servidor MCP: as ações", () => {
     const { isError, dados } = await ferramenta(LEITOR, "listar_itens", { type: "BUG", assignee: "me", overdue: true, page: 1 });
     expect(isError).toBe(false);
     expect(s.listarItens).toHaveBeenCalledWith(ator, expect.objectContaining({ type: "BUG", assignee: "me", overdue: true, page: 1 }));
-    expect(dados).toMatchObject({ total: 1, items: [{ id: ID_ITEM, statusLabel: "Pendente", url: `https://connect.example.test/controle-interno/${ID_ITEM}` }] });
+    expect(dados).toMatchObject({ total: 1, items: [{ id: ID_ITEM, shortId: ID_CURTO, statusLabel: "Pendente", url: "https://connect.example.test/controle-interno/bug-7" }] });
   });
 
   it("resumo_do_periodo: semana por padrão, com totais e uma linha curta por item", async () => {
@@ -115,8 +116,8 @@ describe("servidor MCP: as ações", () => {
     const base = { title: "Corrigir X", type: "BUG", priority: 2, systemName: "Connect", assigneeName: "Pessoa", dueDate: null, prUrl: "https://github.com/a/b/pull/1", createdAt: quando };
     s.resumoTech.mockResolvedValue({
       periodo: "mes", primeiroDia: "2026-11-01", ultimoDia: "2026-11-30", rotulo: "novembro de 2026",
-      concluidos: [{ ...base, id: ID_ITEM, status: "DONE", em: quando }],
-      emAndamento: [{ ...base, id: "outro", status: "VALIDATION", mexidoNoPeriodo: true }],
+      concluidos: [{ ...base, id: ID_ITEM, number: 7, status: "DONE", em: quando }],
+      emAndamento: [{ ...base, id: "outro", number: 8, status: "VALIDATION", mexidoNoPeriodo: true }],
       planejados: [], cancelados: [],
     });
     const { isError, dados } = await ferramenta(LEITOR, "resumo_do_periodo", { period: "month", date: "2026-11-06" });
@@ -125,8 +126,8 @@ describe("servidor MCP: as ações", () => {
     expect(dados).toMatchObject({
       period: "month", from: "2026-11-01", to: "2026-11-30", label: "novembro de 2026",
       totals: { done: 1, inProgress: 1, planned: 0, canceled: 0 },
-      done: [{ id: ID_ITEM, title: "Corrigir X", typeLabel: "Bug", prUrl: "https://github.com/a/b/pull/1", doneAt: quando.toISOString(), url: `https://connect.example.test/controle-interno/${ID_ITEM}` }],
-      inProgress: [{ id: "outro", statusLabel: "Em validação", priorityLabel: "Alta", movedInPeriod: true }],
+      done: [{ id: ID_ITEM, title: "Corrigir X", typeLabel: "Bug", prUrl: "https://github.com/a/b/pull/1", doneAt: quando.toISOString(), shortId: ID_CURTO, url: "https://connect.example.test/controle-interno/bug-7" }],
+      inProgress: [{ id: "outro", shortId: "bug-8", url: "https://connect.example.test/controle-interno/bug-8", statusLabel: "Em validação", priorityLabel: "Alta", movedInPeriod: true }],
     });
     await ferramenta(LEITOR, "resumo_do_periodo", {});
     expect(s.resumoTech).toHaveBeenLastCalledWith(ator, "semana", expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
@@ -137,6 +138,22 @@ describe("servidor MCP: as ações", () => {
     expect(isError).toBe(true);
     expect(dados).toMatchObject({ error: { code: "validation_error" } });
     expect(s.resumoTech).not.toHaveBeenCalled();
+  });
+
+  it("o id curto vale em ver_item, atualizar_item, mudar_situacao e comentar; o url é o curto", async () => {
+    const { dados } = await ferramenta(LEITOR, "ver_item", { id: ID_CURTO });
+    expect(s.detalheItem).toHaveBeenCalledWith(ator, ID_CURTO);
+    expect(dados).toMatchObject({ id: ID_ITEM, number: 7, shortId: ID_CURTO, url: "https://connect.example.test/controle-interno/bug-7" });
+    await ferramenta(ESCRITOR, "atualizar_item", { id: ID_CURTO, version: 3, priority: 3 });
+    expect(s.salvarItem).toHaveBeenLastCalledWith(ator, expect.objectContaining({ priority: 3 }), ID_ITEM, 3);
+    await ferramenta(ESCRITOR, "mudar_situacao", { id: ID_CURTO, status: "VALIDATION", version: 3 });
+    expect(s.mudarSituacaoItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "VALIDATION", 3, {});
+    s.comentarItem.mockResolvedValue({ ok: true, id: ID_ITEM, commentId: "c-9" });
+    s.comentarioSalvo.mockResolvedValue({ id: "c-9", authorName: "Pessoa fictícia", body: "Feito.", createdAt: new Date("2026-11-05T16:00:00Z") });
+    await ferramenta(ESCRITOR, "comentar", { id: ID_CURTO, body: "Feito." });
+    expect(s.comentarItem).toHaveBeenLastCalledWith(ator, ID_ITEM, "Feito.");
+    const sem = await ferramenta(ESCRITOR, "mudar_situacao", { id: "bug-404", status: "DONE" });
+    expect(sem).toMatchObject({ isError: true, dados: { error: { code: "not_found" } } });
   });
 
   it("ver_item devolve a version para a próxima alteração", async () => {

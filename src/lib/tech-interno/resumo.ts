@@ -68,6 +68,8 @@ export function deslocarPeriodo(periodo: PeriodoDoResumo, dataIso: string, passo
 
 export type ItemParaResumo = {
   id: string;
+  /** O número do item no escritório, o do endereço curto (10/11/2026). */
+  number: number;
   title: string;
   type: keyof typeof TIPOS;
   status: keyof typeof SITUACOES;
@@ -128,8 +130,8 @@ export function montarResumo(itens: ItemParaResumo[], mudancas: MudancaParaEntre
 }
 
 /** O resumo em texto, para colar num canal: uma linha por item, agrupado. */
-export function resumoEmTexto(rotulo: string, r: ResumoDoPeriodo, linkDoItem: (id: string) => string): string {
-  const linha = (i: ItemParaResumo, extra = "") => `- ${i.title}${extra} — ${linkDoItem(i.id)}`;
+export function resumoEmTexto(rotulo: string, r: ResumoDoPeriodo, linkDoItem: (item: ItemParaResumo) => string): string {
+  const linha = (i: ItemParaResumo, extra = "") => `- ${i.title}${extra} — ${linkDoItem(i)}`;
   const bloco = (titulo: string, linhas: string[]) => (linhas.length ? [`${titulo} (${linhas.length})`, ...linhas, ""] : []);
   return [
     `Controle interno — ${rotulo}`,

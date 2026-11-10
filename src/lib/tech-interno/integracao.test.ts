@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({ auth: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => { if (!db) throw new Error("Banco descartável não configurado."); return db; } }));
 vi.mock("@/lib/auth/context", async original => ({ ...await original<typeof import("@/lib/auth/context")>(), getAuthContext: mocks.auth }));
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
-import { salvarItem, comentarItem, listarItens, detalheItem, opcoesTech, mudarSituacaoItem, historicoTech, conferirCriterio } from "./servidor";
+import { salvarItem, comentarItem, listarItens, detalheItem, opcoesTech, mudarSituacaoItem, historicoTech, conferirCriterio, idDoItem } from "./servidor";
 
 describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   let tenantId: string, outroTenant: string, tech: string, gestor: string, fiscal: string, admin: string, externo: string, readonly: string;
@@ -60,6 +60,32 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
       expect(item).toMatchObject({ type, priority: 1, status: "PENDING", systemMode: "NONE", dueDate: null, assigneeId: null, version: 0 });
       expect(item!.changes).toHaveLength(1); expect(item!.changes[0].authorId).toBe(tech);
     }
+  });
+  it("o número do item: sequência por escritório, endereço curto e criações ao mesmo tempo (10/11/2026)", async () => {
+    // O outro escritório tem a sequência dele, a partir do 1.
+    assumir(contexto(externo, "SECTOR_USER", ["tech"], outroTenant));
+    const deFora = await detalheItem(ctx, id(await salvarItem(ctx, criar())));
+    expect(deFora!.number).toBe(1);
+    assumir(contexto());
+    const antes = (await db!.techInternalItem.aggregate({ where: { tenantId }, _max: { number: true } }))._max.number ?? 0;
+    // Seis criações ao mesmo tempo: números seguidos, sem repetir e sem erro.
+    const ids = await Promise.all(Array.from({ length: 6 }, async () => id(await salvarItem(ctx, criar()))));
+    const numeros = (await db!.techInternalItem.findMany({ where: { id: { in: ids } }, select: { number: true } })).map(i => i.number).sort((a, b) => a - b);
+    expect(numeros).toEqual([1, 2, 3, 4, 5, 6].map(n => antes + n));
+    const item = (await detalheItem(ctx, ids[0]))!, curto = `bug-${item.number}`;
+    expect((await detalheItem(ctx, curto))!.id).toBe(item.id);
+    // O número é o que vale: o prefixo de outro tipo acha o mesmo item (a tela passa para o de agora).
+    expect((await detalheItem(ctx, `MELHORIA-${item.number}`))!.id).toBe(item.id);
+    expect(await idDoItem(ctx, curto)).toBe(item.id);
+    expect(await detalheItem(ctx, "bug-999999")).toBeNull();
+    expect(await detalheItem(ctx, "qualquer-coisa")).toBeNull();
+    expect((await detalheItem(ctx, `bug-${deFora!.number}`))?.id).not.toBe(deFora!.id);
+    expect((await listarItens(ctx, lerFiltros({ q: curto }))).items.map(i => i.id)).toContain(item.id);
+    // Mudar o tipo muda o prefixo do endereço; o número fica.
+    expect(await salvarItem(ctx, { title: item.title, type: "IMPROVEMENT" }, item.id, item.version)).toMatchObject({ ok: true, endereco: `/controle-interno/melhoria-${item.number}` });
+    expect((await detalheItem(ctx, item.id))!.number).toBe(item.number);
+    // O outro escritório volta a ficar sem item: o teste de isolamento conta com isso.
+    await db!.techInternalChange.deleteMany({ where: { itemId: deFora!.id } }); await db!.techInternalItem.delete({ where: { id: deFora!.id } });
   });
   it("Kanban altera situação com histórico, conflito entre abas e bloqueio de somente leitura", async () => {
     assumir(contexto()); const itemId = id(await salvarItem(ctx, criar()));
@@ -205,7 +231,7 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
   });
   it("filtra combinações, atrasados e estados especiais; pagina 50 itens com ordem estável", async () => {
     assumir(contexto()); const prefixo = randomUUID();
-    await db!.techInternalItem.createMany({ data: Array.from({ length: 53 }, (_, i) => ({ tenantId, title: `${prefixo} ${i}`, type: "TEST" as const, priority: 3, systemMode: "NEW" as const, assigneeId: tech, dueDate: new Date("2020-01-01") })) });
+    await db!.techInternalItem.createMany({ data: Array.from({ length: 53 }, (_, i) => ({ tenantId, number: 100000 + i, title: `${prefixo} ${i}`, type: "TEST" as const, priority: 3, systemMode: "NEW" as const, assigneeId: tech, dueDate: new Date("2020-01-01") })) });
     const filtros = lerFiltros({ q: prefixo, tipo: "TEST", prioridade: "3", sistema: "NEW", responsavel: "me", atrasados: "1" });
     const primeira = await listarItens(ctx, filtros), segunda = await listarItens(ctx, { ...filtros, page: 2 });
     expect(primeira).toMatchObject({ total: 53, page: 1, pages: 2 }); expect(primeira.items).toHaveLength(50); expect(segunda.items).toHaveLength(3);

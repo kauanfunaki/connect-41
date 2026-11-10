@@ -6,6 +6,8 @@ import type { Escopo } from "@/lib/tokens-pessoais/regras";
 // tokens de mentira e um item completo, como o detalheItem devolve.
 
 export const ID_ITEM = "11111111-2222-4333-8444-555555555555";
+/** O id curto do mesmo item (10/11/2026): o bug número 7 do escritório. */
+export const ID_CURTO = "bug-7";
 export const LEITOR = `c41_${"0a".repeat(32)}`;
 export const ESCRITOR = `c41_${"0b".repeat(32)}`;
 
@@ -32,7 +34,7 @@ export const CRITERIO_FALSO = "CRITÉRIO DE ACEITE (10/11/2026)\nMudança: PR fi
 export function itemFalso(sobre: Record<string, unknown> = {}) {
   const quando = new Date("2026-11-05T15:00:00Z");
   return {
-    id: ID_ITEM, tenantId: "esc-a", title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.",
+    id: ID_ITEM, number: 7, tenantId: "esc-a", title: "Busca de empresas não acha pelo CNPJ", description: "Passos fictícios.",
     acceptanceCriteria: CRITERIO_FALSO,
     type: "BUG", priority: 2, status: "PENDING", systemMode: "EXISTING",
     toolId: null, opsWatcherSlug: null, opsSiteId: "site-1", opsAppId: null,

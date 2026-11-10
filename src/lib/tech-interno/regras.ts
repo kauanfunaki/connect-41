@@ -8,6 +8,33 @@ export const ROTA_TECH_INTERNO = "/controle-interno";
 export const LINK_DO_ITEM = "after:absolute after:inset-0 after:content-['']";
 export const TAMANHO_PAGINA = 50;
 export const TIPOS = { BUG: "Bug", IMPROVEMENT: "Melhoria", FEATURE: "Nova funcionalidade", TEST: "Teste", MIGRATION: "Migração" } as const;
+export type TipoTech = keyof typeof TIPOS;
+
+/**
+ * O endereço curto do item (10/11/2026, pedido do Kauan):
+ * /controle-interno/bug-123 no lugar do uuid. O número é do escritório, uma
+ * sequência só para todos os tipos; o prefixo vem do tipo de agora. Se o tipo
+ * do item muda, o endereço com o prefixo antigo continua achando o item pelo
+ * número e passa para o novo. Toda tela, a API e o MCP montam o link por aqui.
+ */
+export const PREFIXO_DO_TIPO: Record<TipoTech, string> = { BUG: "bug", IMPROVEMENT: "melhoria", FEATURE: "funcionalidade", TEST: "teste", MIGRATION: "migracao" };
+type NumeroDoItem = { type: TipoTech; number: number };
+/** "bug-123": o id curto, como aparece no endereço e na API. */
+export const idCurtoDoItem = (item: NumeroDoItem) => `${PREFIXO_DO_TIPO[item.type]}-${item.number}`;
+/** "/controle-interno/bug-123": o endereço do item no Connect. */
+export const enderecoDoItem = (item: NumeroDoItem) => `${ROTA_TECH_INTERNO}/${idCurtoDoItem(item)}`;
+const ID_CURTO = new RegExp(`^(${Object.values(PREFIXO_DO_TIPO).join("|")})-([1-9][0-9]{0,9})$`, "i");
+const MAIOR_NUMERO = 2147483647;
+/** Lê "bug-123" (sem diferença de maiúsculas): o número e o tipo do prefixo, ou null. */
+export function lerIdCurto(valor: string): { tipo: TipoTech; numero: number } | null {
+  const [, prefixo, digitos] = ID_CURTO.exec(valor.trim()) ?? [];
+  const numero = Number(digitos);
+  if (!prefixo || !Number.isSafeInteger(numero) || numero > MAIOR_NUMERO) return null;
+  const tipo = (Object.keys(PREFIXO_DO_TIPO) as TipoTech[]).find(t => PREFIXO_DO_TIPO[t] === prefixo.toLowerCase())!;
+  return { tipo, numero };
+}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const ehUuid = (valor: string) => UUID.test(valor);
 export const SITUACOES = { PENDING: "Pendente", IN_PROGRESS: "Em andamento", VALIDATION: "Em validação", DONE: "Concluído", CANCELED: "Cancelado" } as const;
 export const PRIORIDADES = ["Baixa", "Média", "Alta", "Urgente"] as const;
 export const EM_ABERTO = ["PENDING", "IN_PROGRESS", "VALIDATION"] as const;
@@ -99,13 +126,14 @@ export function lerFiltros(params: Record<string, string | string[] | undefined>
 }
 export type Filtros = ReturnType<typeof lerFiltros>;
 // O "Voltar para a lista" volta ao recorte de onde a pessoa saiu — visão, filtros
-// e página (26/10/2026). Só aceita a própria lista; o resto cai na lista limpa.
+// e página (26/10/2026). Desde 10/11/2026 o recorte não viaja mais no endereço
+// do item (`?voltar=`): a lista o guarda na aba do navegador (`VoltaDaLista`),
+// e o Histórico também, que é uma das visões dela. Só aceita essas duas telas;
+// o resto cai na lista limpa.
 export function destinoDeVolta(raw: unknown): string {
   if (typeof raw !== "string" || raw.length > 2000 || /[\\\s]|\/\//.test(raw)) return ROTA_TECH_INTERNO;
-  return raw === ROTA_TECH_INTERNO || raw.startsWith(`${ROTA_TECH_INTERNO}?`) ? raw : ROTA_TECH_INTERNO;
-}
-export function comVolta(href: string, voltar: string) {
-  return voltar === ROTA_TECH_INTERNO ? href : `${href}${href.includes("?") ? "&" : "?"}voltar=${encodeURIComponent(voltar)}`;
+  const tela = raw.split("?")[0];
+  return tela === ROTA_TECH_INTERNO || tela === `${ROTA_TECH_INTERNO}/historico` ? raw : ROTA_TECH_INTERNO;
 }
 export function hojeEmSaoPaulo(agora = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);

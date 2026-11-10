@@ -5,11 +5,12 @@ import { anexarArquivo } from "./anexos";
 import type { ItemParaResumo } from "./resumo";
 import { lerCriterioDeAceite, marcasQueValem } from "./criterioDeAceite";
 import {
-  ErroTechInterno, salvarItem, mudarSituacaoItem, comentarItem, listarItens, detalheItem, opcoesTech, resumoTech,
+  ErroTechInterno, salvarItem, mudarSituacaoItem, comentarItem, listarItens, detalheItem, opcoesTech, resumoTech, idDoItem,
   type AtorTech, type FalhaTech,
 } from "./servidor";
 import {
-  TIPOS, SITUACOES, PRIORIDADES, TAMANHOS, ROTA_TECH_INTERNO, lerFiltros, chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo,
+  TIPOS, SITUACOES, PRIORIDADES, TAMANHOS, lerFiltros, chaveDoSistema, nomeDoSistema, hojeEmSaoPaulo,
+  enderecoDoItem, idCurtoDoItem, ehUuid, lerIdCurto,
 } from "./regras";
 
 // O Controle interno pela API e pelo MCP (05/11/2026, decisão D2). As duas
@@ -24,10 +25,17 @@ import {
 type Item = NonNullable<Awaited<ReturnType<typeof detalheItem>>>;
 type ItemDaLista = Awaited<ReturnType<typeof listarItens>>["items"][number];
 
-/** Um item como a API devolve: códigos estáveis e, ao lado, o rótulo em português. */
+/**
+ * Um item como a API devolve: códigos estáveis e, ao lado, o rótulo em
+ * português. Desde 10/11/2026, o número do item no escritório (`number`), o
+ * id curto (`shortId`, "bug-123", aceito no lugar do id em toda rota e
+ * ferramenta) e o `url` no endereço curto.
+ */
 export function itemParaApi(item: ItemDaLista, base: string) {
   return {
     id: item.id,
+    number: item.number,
+    shortId: idCurtoDoItem(item),
     title: item.title,
     description: item.description,
     // O critério de aceite em campo próprio (10/11/2026), fora da descrição.
@@ -39,12 +47,16 @@ export function itemParaApi(item: ItemDaLista, base: string) {
     assignee: item.assigneeId ? { id: item.assigneeId, name: item.assignee?.name ?? null } : null,
     dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null,
     size: item.size, sizeLabel: item.size ? TAMANHOS[item.size] : null,
-    origin: item.originItemId ? { id: item.originItemId, title: item.originItem?.title ?? null } : null,
+    origin: item.originItemId ? {
+      id: item.originItemId, title: item.originItem?.title ?? null,
+      shortId: item.originItem ? idCurtoDoItem(item.originItem) : null,
+      url: item.originItem ? `${base}${enderecoDoItem(item.originItem)}` : null,
+    } : null,
     prUrl: item.prUrl, commitSha: item.commitSha,
     version: item.version,
     createdAt: item.createdAt.toISOString(),
     updatedAt: item.updatedAt.toISOString(),
-    url: `${base}${ROTA_TECH_INTERNO}/${item.id}`,
+    url: `${base}${enderecoDoItem(item)}`,
   };
 }
 export type ItemApi = ReturnType<typeof itemParaApi>;
@@ -72,9 +84,17 @@ export function erroDoServidor(falha: FalhaTech | ErroTechInterno): ErroApi {
 async function comAcesso<T>(fn: () => Promise<T>): Promise<T> {
   try { return await fn(); } catch (e) { throw e instanceof ErroTechInterno ? erroDoServidor(e) : e; }
 }
-const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// O item se pede pelo uuid ou pelo id curto ("bug-123", 10/11/2026). O
+// número é o que vale: o prefixo de um tipo anterior também acha o item.
 function conferirId(id: string) {
-  if (!ID.test(id)) throw new ErroApi("not_found", "Item não encontrado.");
+  if (typeof id !== "string" || (!ehUuid(id) && !lerIdCurto(id))) throw new ErroApi("not_found", "Item não encontrado.");
+}
+/** O uuid do item pedido, para as ações que gravam. */
+async function uuidDoItem(ator: AtorTech, id: string): Promise<string> {
+  conferirId(id);
+  const uuid = await comAcesso(() => idDoItem(ator, id));
+  if (!uuid) throw new ErroApi("not_found", "Item não encontrado.");
+  return uuid;
 }
 
 // ── Listar ─────────────────────────────────────────────────────────────────
@@ -118,7 +138,7 @@ export async function opcoesParaApi(ator: AtorTech) {
     types: TIPOS, statuses: SITUACOES, priorities: Object.fromEntries(PRIORIDADES.map((p, i) => [i, p])), sizes: TAMANHOS,
     systems: o.sistemas.map(s => ({ key: s.chave, name: s.nome, origin: s.origem, active: s.ativo })),
     people: o.users.map(u => ({ id: u.id, name: u.name })),
-    recentDeliveries: o.entregas.map(e => ({ id: e.id, title: e.title })),
+    recentDeliveries: o.entregas.map(e => ({ id: e.id, shortId: idCurtoDoItem(e), title: e.title })),
   };
 }
 
@@ -140,8 +160,7 @@ export async function resumoParaApi(ator: AtorTech, raw: unknown, base: string) 
   const dataIso = f.date ?? hojeEmSaoPaulo();
   if (Number.isNaN(new Date(`${dataIso}T00:00:00Z`).getTime()) || new Date(`${dataIso}T00:00:00Z`).toISOString().slice(0, 10) !== dataIso) throw new ErroApi("validation_error", "Data inválida.");
   const r = await comAcesso(() => resumoTech(ator, PERIODOS_DA_API[f.period ?? "week"], dataIso));
-  const url = (id: string) => `${base}${ROTA_TECH_INTERNO}/${id}`;
-  const comum = (i: ItemParaResumo) => ({ id: i.id, title: i.title, type: i.type, typeLabel: TIPOS[i.type], system: i.systemName, assignee: i.assigneeName, url: url(i.id) });
+  const comum = (i: ItemParaResumo) => ({ id: i.id, shortId: idCurtoDoItem(i), title: i.title, type: i.type, typeLabel: TIPOS[i.type], system: i.systemName, assignee: i.assigneeName, url: `${base}${enderecoDoItem(i)}` });
   return {
     period: f.period ?? "week", from: r.primeiroDia, to: r.ultimoDia, label: r.rotulo,
     totals: { done: r.concluidos.length, inProgress: r.emAndamento.length, planned: r.planejados.length, canceled: r.cancelados.length },
@@ -173,18 +192,21 @@ function camposValidos<T extends z.ZodType>(schema: T, raw: unknown): z.output<T
 }
 /**
  * Atalhos para quem escreve à mão ou pela IA: "assigneeId": "me" é a própria
- * pessoa do token; "systemKey" sem "systemMode" é um sistema do Ops Center.
+ * pessoa do token; "systemKey" sem "systemMode" é um sistema do Ops Center;
+ * "originItemId" aceita o id curto da entrega ("bug-12", 10/11/2026).
  */
-function comAtalhos(ator: AtorTech, dados: Record<string, unknown>) {
+async function comAtalhos(ator: AtorTech, dados: Record<string, unknown>) {
   const r = { ...dados };
   if (r.assigneeId === "me") r.assigneeId = ator.userId;
   if (r.systemKey && r.systemMode === undefined) r.systemMode = "EXISTING";
   if (r.systemMode !== undefined && r.systemMode !== "EXISTING" && r.systemKey === undefined) r.systemKey = null;
+  // Id curto que não acha item segue como veio: o servidor recusa com a mensagem do "Veio de".
+  if (typeof r.originItemId === "string" && lerIdCurto(r.originItemId)) r.originItemId = await comAcesso(() => idDoItem(ator, r.originItemId as string)) ?? r.originItemId;
   return r;
 }
 
 export async function criarParaApi(ator: AtorTech, raw: unknown, base: string) {
-  const dados = comAtalhos(ator, camposValidos(criarSchema, raw));
+  const dados = await comAtalhos(ator, camposValidos(criarSchema, raw));
   const r = await salvarItem(ator, dados);
   if ("error" in r) throw erroDoServidor(r);
   return verParaApi(ator, r.id, base);
@@ -198,6 +220,7 @@ export async function criarParaApi(ator: AtorTech, raw: unknown, base: string) {
 export async function atualizarParaApi(ator: AtorTech, id: string, raw: unknown, base: string) {
   conferirId(id);
   const { version, ...campos } = camposValidos(atualizarSchema, raw);
+  // `id` pode ser o curto: daqui em diante vale o uuid do item lido.
   const atual = await comAcesso(() => detalheItem(ator, id));
   if (!atual) throw new ErroApi("not_found", "Item não encontrado.");
   const mudancas: Record<string, unknown> = Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined));
@@ -205,7 +228,7 @@ export async function atualizarParaApi(ator: AtorTech, id: string, raw: unknown,
   // trocar o modo sem mandar a chave limpa a chave antiga.
   if (mudancas.systemKey !== undefined && mudancas.systemMode === undefined) mudancas.systemMode = mudancas.systemKey ? "EXISTING" : "NONE";
   if (mudancas.systemMode !== undefined && mudancas.systemMode !== "EXISTING" && mudancas.systemKey === undefined) mudancas.systemKey = null;
-  const dados = comAtalhos(ator, {
+  const dados = await comAtalhos(ator, {
     // O critério vai junto: sem ele, mexer em outro campo apagaria o critério.
     title: atual.title, description: atual.description, acceptanceCriteria: atual.acceptanceCriteria, type: atual.type, priority: atual.priority, status: atual.status,
     systemMode: atual.systemMode, systemKey: chaveDoSistema(atual), assigneeId: atual.assigneeId,
@@ -213,16 +236,17 @@ export async function atualizarParaApi(ator: AtorTech, id: string, raw: unknown,
     prUrl: atual.prUrl, commitSha: atual.commitSha,
     ...mudancas,
   });
-  const r = await salvarItem(ator, dados, id, version ?? atual.version);
+  const r = await salvarItem(ator, dados, atual.id, version ?? atual.version);
   if ("error" in r) throw erroDoServidor(r);
-  return verParaApi(ator, id, base);
+  return verParaApi(ator, atual.id, base);
 }
 
 const situacaoSchema = z.object({ status: z.unknown().optional(), version: z.unknown().optional(), prUrl: z.unknown().optional(), commitSha: z.unknown().optional() }).strict();
-export async function mudarSituacaoParaApi(ator: AtorTech, id: string, raw: unknown, base: string) {
-  conferirId(id);
+export async function mudarSituacaoParaApi(ator: AtorTech, idPedido: string, raw: unknown, base: string) {
+  conferirId(idPedido);
   const { status, version, ...entrega } = camposValidos(situacaoSchema, raw);
   if (status === undefined) throw new ErroApi("validation_error", `Informe a situação: ${Object.keys(SITUACOES).join(", ")}.`);
+  const id = await uuidDoItem(ator, idPedido);
   let versao = version;
   if (versao === undefined) {
     const atual = await comAcesso(() => detalheItem(ator, id));
@@ -237,9 +261,10 @@ export async function mudarSituacaoParaApi(ator: AtorTech, id: string, raw: unkn
 // ── Comentar e anexar ──────────────────────────────────────────────────────
 
 const comentarioSchema = z.object({ body: z.unknown().optional() }).strict();
-export async function comentarParaApi(ator: AtorTech, id: string, raw: unknown) {
-  conferirId(id);
+export async function comentarParaApi(ator: AtorTech, idPedido: string, raw: unknown) {
+  conferirId(idPedido);
   const { body } = camposValidos(comentarioSchema, raw);
+  const id = await uuidDoItem(ator, idPedido);
   const r = await comentarItem(ator, id, body);
   if ("error" in r) throw erroDoServidor(r);
   const c = await getPrisma().techInternalComment.findFirstOrThrow({ where: { id: r.commentId, tenantId: ator.tenantId } });
@@ -247,9 +272,10 @@ export async function comentarParaApi(ator: AtorTech, id: string, raw: unknown) 
 }
 
 const CODIGO_DO_STATUS = { 400: "validation_error", 401: "forbidden", 403: "forbidden", 404: "not_found" } as const;
-export async function anexarParaApi(ator: AtorTech, id: string, arquivo: File, base: string) {
-  conferirId(id);
+export async function anexarParaApi(ator: AtorTech, idPedido: string, arquivo: File, base: string) {
+  conferirId(idPedido);
   if (!arquivo.size) throw new ErroApi("validation_error", "O arquivo está vazio.");
+  const id = await uuidDoItem(ator, idPedido);
   const r = await anexarArquivo(ator, id, arquivo);
   if (!r.ok) throw new ErroApi(CODIGO_DO_STATUS[r.status as keyof typeof CODIGO_DO_STATUS] ?? "validation_error", r.erro);
   return { id: r.valor.id, itemId: id, fileName: r.valor.nome, url: `${base}/api/tech-interno/anexos/${r.valor.id}` };

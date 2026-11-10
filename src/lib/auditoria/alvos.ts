@@ -11,6 +11,7 @@ import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL } from "@/lib/fiscal/rotulos";
 import { getModuleDef } from "@/lib/module-catalog";
+import { enderecoDoItem } from "@/lib/tech-interno/regras";
 import { empresaNosDetalhes, idsCitados } from "./metadados";
 
 export type Referencia = { entityType: string | null; entityId: string | null; metadata: unknown };
@@ -256,6 +257,14 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
       nome: r.nickname,
       href: null,
       empresaId: r.companyId,
+    })),
+  // O item do Controle interno abre no endereço curto (10/11/2026), com o título de agora.
+  TechInternalItem: async (tenantId, ids) =>
+    (await getPrisma().techInternalItem.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, title: true, type: true, number: true } })).map((r) => ({
+      id: r.id,
+      nome: r.title,
+      href: enderecoDoItem(r),
+      empresaId: null,
     })),
 };
 
