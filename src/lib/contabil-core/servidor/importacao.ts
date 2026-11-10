@@ -1,8 +1,8 @@
 import "server-only";
 
-// Importação de extrato OFX (Fase 2, 09/11/2026): porte de `ExtratoService.importar_ofx`,
-// `extrato/importacoes.py` e da conferência de identidade da conta. PDF e planilha entram com os
-// leitores por banco (Fase 4).
+// Importação de extrato OFX (Fase 2, 09/11/2026) e PDF (Fase 4, 10/11/2026): porte de
+// `ExtratoService.importar_ofx`, de `importar_transacoes_raw`, de `extrato/importacoes.py` e da
+// conferência de identidade da conta. A planilha bancária entra na Fase 4b.
 //
 // A ordem é a do original:
 // 1. a conta do arquivo confere com a escolhida (outra conta recusa; sem dados suficientes, exige
@@ -19,10 +19,12 @@ import { getPrisma } from "@/lib/prisma";
 import { formatInstantDate } from "@/lib/format";
 import { conferirFechamento } from "../motor/conferencia";
 import { hashAtivo } from "../motor/chaves";
-import { modulo, naoNegativo, somaTodos } from "../motor/decimal";
+import { modulo, naoNegativo, somaTodos, type Dec } from "../motor/decimal";
 import { hashDedup, hashDoArquivo } from "../motor/dedup";
-import { conferirIdentidade, identidadeDoOfx } from "../motor/identidade";
-import { ErroOfx, lerOfx } from "../motor/ofx";
+import { conferirIdentidade, identidadeDoOfx, identidadeDoPdf } from "../motor/identidade";
+import { ErroOfx, lerOfx, type TransacaoOfx } from "../motor/ofx";
+import { abrirPdf, lerExtratoPdf, type PdfAberto } from "../extrato/pdf";
+import { ErroDeLeitura } from "../extrato/leitura";
 import { historicoPareceLinhaCrua, motivoValorNaoConfiavel } from "../motor/valorConfiavel";
 import { corta } from "@/lib/revisao-contabil/motor/py";
 import { dataDoDia, decDoBanco, dia, empresaDoTenant, falha, NAO_ENCONTRADA, ok, paraBanco, type Resultado } from "./base";
@@ -65,7 +67,25 @@ export function pareceOfx(texto: string): boolean {
   return inicio.includes("OFXHEADER") || inicio.includes("<OFX>") || /<\?OFX/.test(inicio);
 }
 
-export async function importarOfx(
+/** O arquivo é um PDF pelo conteúdo (a assinatura `%PDF` no começo). */
+export function parecePdf(bytes: Uint8Array): boolean {
+  let i = 0;
+  while (i < bytes.length && i < 1024 && (bytes[i] === 0x20 || bytes[i] === 0x09 || bytes[i] === 0x0a || bytes[i] === 0x0d)) i++;
+  return bytes[i] === 0x25 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x44 && bytes[i + 3] === 0x46;
+}
+
+/** O que a leitura entrega, venha de OFX ou de PDF. */
+type Leitura = {
+  transacoes: TransacaoOfx[];
+  totalNoArquivo: number;
+  erros: string[];
+  saldoDeclarado: Dec | null;
+  dataSaldo: string | null;
+  /** Histórico quando a linha vem sem: o tipo no OFX, "EXTRATO PDF" no PDF (como o original). */
+  semHistorico: (t: TransacaoOfx) => string;
+};
+
+export async function importarExtrato(
   tenantId: string,
   userId: string,
   empresaId: string,
@@ -79,13 +99,29 @@ export async function importarOfx(
   const agencia = await prisma.coreAgencia.findFirst({ where: { id: agenciaId, tenantId, empresaId, deletedAt: null } });
   if (!agencia) return { ok: false, erro: "Conta bancária não encontrada nesta empresa." };
 
-  const texto = decodificar(bytes);
-  if (!pareceOfx(texto)) {
-    return { ok: false, erro: "Este arquivo não é um OFX. Por enquanto o Connect lê só extrato em OFX; PDF e planilha continuam no Contábil Core." };
+  // O tipo vem do conteúdo, não da extensão.
+  const ehPdf = parecePdf(bytes);
+  let pdf: PdfAberto | null = null;
+  let texto = "";
+  let identidade;
+  if (ehPdf) {
+    try {
+      pdf = await abrirPdf(bytes);
+    } catch (e) {
+      if (e instanceof ErroDeLeitura) return { ok: false, erro: e.message };
+      throw e;
+    }
+    identidade = identidadeDoPdf(pdf.topos);
+  } else {
+    texto = decodificar(bytes);
+    if (!pareceOfx(texto)) {
+      return { ok: false, erro: "Este arquivo não é um OFX nem um PDF. Planilha bancária ainda não é lida no Connect: importe o OFX ou o PDF do extrato." };
+    }
+    identidade = identidadeDoOfx(texto);
   }
 
   // 1. A conta do arquivo.
-  const conferencia = conferirIdentidade(identidadeDoOfx(texto), agencia);
+  const conferencia = conferirIdentidade(identidade, agencia);
   if (conferencia.estado === "DIVERGENTE") return { ok: false, erro: `Extrato de outra conta. ${conferencia.mensagens.join(" ")}` };
   if (conferencia.estado === "CONFIRMAR" && !confirmarConta) {
     return {
@@ -111,27 +147,39 @@ export async function importarOfx(
     };
   }
 
-  // 3. O lote, antes da leitura.
+  // 3. O lote, antes da leitura: a tentativa fica registrada mesmo se o arquivo for recusado.
   const lote = await prisma.coreImportacao.create({
     data: { tenantId, empresaId, agenciaId, nomeArquivo: corta(nomeArquivo || "sem-nome", 255), hashArquivo, criadoPorId: userId },
     select: { id: true },
   });
 
-  let leitura;
-  try {
-    leitura = lerOfx(texto);
-  } catch (e) {
-    if (e instanceof ErroOfx) return { ok: false, erro: `Arquivo OFX inválido: ${e.message}` };
-    throw e;
+  let leitura: Leitura;
+  if (pdf) {
+    try {
+      // O leitor vem da sigla da agência cadastrada; o PDF só confirma.
+      const lido = lerExtratoPdf(pdf, agencia.bancoSigla);
+      leitura = { transacoes: lido.transacoes, totalNoArquivo: lido.transacoes.length, erros: [], saldoDeclarado: null, dataSaldo: null, semHistorico: () => "EXTRATO PDF" };
+    } catch (e) {
+      if (e instanceof ErroDeLeitura) return { ok: false, erro: `Arquivo PDF inválido: ${e.message}` };
+      throw e;
+    }
+  } else {
+    try {
+      const lido = lerOfx(texto);
+      if (lido.totalBlocos === 0) return { ok: false, erro: "Nenhuma transação encontrada no arquivo OFX." };
+      leitura = { transacoes: lido.transacoes, totalNoArquivo: lido.totalBlocos, erros: lido.erros, saldoDeclarado: lido.saldoDeclarado, dataSaldo: lido.dataSaldo, semHistorico: (t) => t.tipoOfx };
+    } catch (e) {
+      if (e instanceof ErroOfx) return { ok: false, erro: `Arquivo OFX inválido: ${e.message}` };
+      throw e;
+    }
   }
-  if (leitura.totalBlocos === 0) return { ok: false, erro: "Nenhuma transação encontrada no arquivo OFX." };
 
   // 4. As transações.
   const motivosRejeicao: string[] = [];
   let rejeitadas = 0;
   let duplicadas = 0;
   const vistos = new Set<string>();
-  const novas: { hash: string; t: (typeof leitura.transacoes)[number] }[] = [];
+  const novas: { hash: string; t: TransacaoOfx }[] = [];
   for (const t of leitura.transacoes) {
     const motivo = motivoValorNaoConfiavel(t.historico, t.valor);
     if (motivo) {
@@ -163,7 +211,8 @@ export async function importarOfx(
             tenantId, empresaId, agenciaId, importacaoId: lote.id,
             data: dataDoDia(t.data),
             valor: paraBanco(modulo(t.valor)),
-            historico: corta(t.historico || t.tipoOfx, 500),
+            saldoApos: t.saldoApos ? paraBanco(t.saldoApos) : null,
+            historico: corta(t.historico || leitura.semHistorico(t), 500),
             dc: naoNegativo(t.valor) ? "C" : "D",
             ordem: t.ordem,
             hashDedup: hash,
@@ -176,7 +225,7 @@ export async function importarOfx(
     : 0;
   duplicadas += paraGravar.length - gravadas;
 
-  // 5. O saldo declarado contra o lote anterior da conta (a âncora é o período anterior, não o envio anterior).
+  // 5. O saldo declarado (só o OFX traz) contra o lote anterior da conta.
   let alertaSaldo: string | null = null;
   if (leitura.saldoDeclarado && leitura.dataSaldo) {
     const ancora = await prisma.coreImportacao.findFirst({
@@ -199,7 +248,7 @@ export async function importarOfx(
   await prisma.coreImportacao.update({
     where: { id: lote.id },
     data: {
-      totalNoArquivo: leitura.totalBlocos, importadas: gravadas, duplicadas, rejeitadas,
+      totalNoArquivo: leitura.totalNoArquivo, importadas: gravadas, duplicadas, rejeitadas,
       saldoDeclarado: leitura.saldoDeclarado ? paraBanco(leitura.saldoDeclarado) : null,
       dataSaldoDeclarado: leitura.dataSaldo ? dataDoDia(leitura.dataSaldo) : null,
       alertaSaldo,
@@ -209,7 +258,7 @@ export async function importarOfx(
   return {
     ok: true,
     valor: {
-      importacaoId: lote.id, totalNoArquivo: leitura.totalBlocos, importadas: gravadas, duplicadas, erros: leitura.erros.length,
+      importacaoId: lote.id, totalNoArquivo: leitura.totalNoArquivo, importadas: gravadas, duplicadas, erros: leitura.erros.length,
       rejeitadas, motivosRejeicao, errosDeLeitura: leitura.erros, alertaSaldo, identidadeConfirmada: conferencia.estado === "CONFIRMAR",
     },
   };

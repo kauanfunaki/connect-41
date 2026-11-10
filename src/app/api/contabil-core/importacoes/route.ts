@@ -3,7 +3,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
 import { ehUuid } from "@/lib/contabil-core/entradas";
-import { importarOfx, MB_POR_EXTRATO } from "@/lib/contabil-core/servidor/importacao";
+import { importarExtrato, MB_POR_EXTRATO } from "@/lib/contabil-core/servidor/importacao";
 
 export const runtime = "nodejs";
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   try {
     const bytes = new Uint8Array(await arquivo.arrayBuffer());
     if (bytes.length > MB_POR_EXTRATO * 1024 * 1024) return NextResponse.json({ error: `O arquivo passa de ${MB_POR_EXTRATO} MB.` }, { status: 400 });
-    const r = await importarOfx(ctx.tenantId, ctx.userId, empresaId.toLowerCase(), agenciaId.toLowerCase(), arquivo.name, bytes, confirmarConta);
+    const r = await importarExtrato(ctx.tenantId, ctx.userId, empresaId.toLowerCase(), agenciaId.toLowerCase(), arquivo.name, bytes, confirmarConta);
     if (!r.ok) return NextResponse.json({ error: r.erro, precisaConfirmar: r.precisaConfirmar ?? false }, { status: r.precisaConfirmar ? 409 : 400 });
     const v = r.valor;
     await logAudit({

@@ -9,7 +9,7 @@
 import { getPrisma } from "../../src/lib/prisma";
 import { agenciaSchema, contaSchema, contraparteSchema, regraSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarAgencia, salvarContraparte, salvarRegra } from "../../src/lib/contabil-core/servidor/cadastros";
-import { importarOfx } from "../../src/lib/contabil-core/servidor/importacao";
+import { importarExtrato } from "../../src/lib/contabil-core/servidor/importacao";
 
 const prisma = getPrisma();
 const CNPJ = "45.723.174/0001-10";
@@ -85,7 +85,7 @@ async function main() {
   await prisma.coreRegra.deleteMany({ where: { empresaId, historico: { notIn: ["TARIFA PACOTE", "ENERGIA ELETRICA", "VENDAS CARTAO"] } } });
   await prisma.coreTransacao.updateMany({ where: { empresaId, deletedAt: null }, data: { status: "pendente", autoRecusadoEm: null, autoRecusadoPorId: null } });
 
-  const r = await importarOfx(tenantId, user.id, empresaId, agencia, "sicoob-jan-2026.ofx", new TextEncoder().encode(OFX), false);
+  const r = await importarExtrato(tenantId, user.id, empresaId, agencia, "sicoob-jan-2026.ofx", new TextEncoder().encode(OFX), false);
   console.log(r.ok ? `extrato: ${r.valor.importadas} importadas` : `extrato: ${r.erro}`);
   console.log(`pronto: /contabil-core?empresa=${empresaId}`);
 }
