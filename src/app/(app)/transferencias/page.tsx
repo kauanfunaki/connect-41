@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ArrowRightLeft, ArrowRight, Inbox, Loader, CheckCircle2, Plus } from "lucide-react";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
+import { Pagination } from "@/components/shared/Pagination";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -15,6 +17,7 @@ import { formatInstantDate, formatarNumero } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   aggregateHandoffStatus,
+  whereDaSituacao,
   HANDOFF_STATUS_LABEL,
   HANDOFF_STATUS_BADGE,
   HANDOFF_PRIORITY_LABEL,
@@ -28,44 +31,82 @@ const FILTER_TABS: { value: HandoffSectorStatus; label: string }[] = [
   { value: "DONE", label: "Finalizadas" },
 ];
 
+/** Transferências por página — a lista pagina no servidor desde 10/11/2026. */
+const POR_PAGINA = 50;
+
+type Contagens = Record<HandoffSectorStatus, number>;
+
 export default async function HandoffsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; prioridade?: string }>;
+  searchParams: Promise<{ status?: string; prioridade?: string; pagina?: string }>;
 }) {
-  const { status, prioridade } = await searchParams;
+  const { status, prioridade, pagina } = await searchParams;
   const ctx = await getAuthContext();
   const canCreate = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
-  const { labels: sectorLabels, colors: sectorColors } = await getSectorMaps(ctx.tenantId);
 
-  const statusFilter =
-    status && ["NEW", "IN_PROGRESS", "DONE"].includes(status) ? (status as HandoffSectorStatus) : "NEW";
-
-  const prisma = getPrisma();
-  const allHandoffs = await prisma.handoff.findMany({
-    where: scopedHandoffWhere(ctx),
-    orderBy: { createdAt: "desc" },
-    include: {
-      requester: { select: { name: true } },
-      sectors: { select: { sectorCode: true, status: true }, orderBy: { createdAt: "asc" } },
-    },
-  });
-
-  // Status agregado (Nova = nenhum setor começou; Finalizada = todos terminaram;
-  // Resolvendo = qualquer coisa no meio) — derivado dos setores, não armazenado.
+  const statusValido =
+    status && ["NEW", "IN_PROGRESS", "DONE"].includes(status) ? (status as HandoffSectorStatus) : null;
+  const statusFilter = statusValido ?? "NEW";
   const prioridadeFiltro = prioridade && prioridade in HANDOFF_PRIORITY_LABEL ? (prioridade as HandoffPriority) : null;
-  const naPrioridade = allHandoffs.filter((h) => !prioridadeFiltro || h.priority === prioridadeFiltro);
-  const contagem: Record<HandoffSectorStatus, number> = { NEW: 0, IN_PROGRESS: 0, DONE: 0 };
-  for (const h of naPrioridade) contagem[aggregateHandoffStatus(h.sectors.map((s) => s.status))]++;
-  const handoffs = naPrioridade.filter(
-    (h) => aggregateHandoffStatus(h.sectors.map((s) => s.status)) === statusFilter
-  );
+  const pedida = Math.max(1, Number.parseInt(pagina ?? "1", 10) || 1);
+
+  // Situação e prioridade filtram no banco (10/11/2026): a tela lia todas as
+  // transferências, finalizadas inclusive, e filtrava em JS. A situação é a de
+  // `aggregateHandoffStatus` (Nova = nenhum setor começou; Finalizada = todos
+  // terminaram; Resolvendo = o meio), escrita como filtro em `whereDaSituacao`.
+  const whereDa = (s: HandoffSectorStatus) => ({
+    AND: [scopedHandoffWhere(ctx), prioridadeFiltro ? { priority: prioridadeFiltro } : {}, whereDaSituacao(s)],
+  });
+  const prisma = getPrisma();
+
+  // As três contagens começam já, sem a lista esperar por elas: os cartões e o
+  // "Página X de N" aguardam dentro do Suspense.
+  const contagens: Promise<Contagens> = Promise.all(
+    FILTER_TABS.map((t) => prisma.handoff.count({ where: whereDa(t.value) }))
+  ).then(([NEW, IN_PROGRESS, DONE]) => ({ NEW, IN_PROGRESS, DONE }));
+  // Se a lista falhar antes de os Suspense lerem a promessa, a falha da
+  // contagem não fica solta; quem lê `contagens` continua recebendo o erro.
+  contagens.catch(() => {});
+
+  const buscarPagina = (p: number) =>
+    prisma.handoff.findMany({
+      where: whereDa(statusFilter),
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (p - 1) * POR_PAGINA,
+      take: POR_PAGINA,
+      include: {
+        requester: { select: { name: true } },
+        sectors: { select: { sectorCode: true, status: true }, orderBy: { createdAt: "asc" } },
+      },
+    });
+
+  const [{ labels: sectorLabels, colors: sectorColors }, primeira] = await Promise.all([
+    getSectorMaps(ctx.tenantId),
+    buscarPagina(pedida),
+  ]);
+  // Página além do fim (link antigo, a última esvaziou): mostra a última que
+  // existe. Só aqui a lista espera a contagem.
+  let handoffs = primeira;
+  if (handoffs.length === 0 && pedida > 1) {
+    const ultima = ultimaPagina((await contagens)[statusFilter]);
+    if (ultima < pedida) handoffs = await buscarPagina(ultima);
+  }
+
   const hrefDaSituacao = (s: HandoffSectorStatus) =>
     status === s
       ? `/transferencias${prioridadeFiltro ? `?prioridade=${prioridadeFiltro}` : ""}`
       : `/transferencias?status=${s}${prioridadeFiltro ? `&prioridade=${prioridadeFiltro}` : ""}`;
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    if (statusValido) q.set("status", statusValido);
+    if (prioridadeFiltro) q.set("prioridade", prioridadeFiltro);
+    if (p > 1) q.set("pagina", String(p));
+    const s = q.toString();
+    return s ? `/transferencias?${s}` : "/transferencias";
+  };
 
-  // Resolve nomes das entidades (Company ou Person)
+  // Resolve nomes das entidades (Company ou Person) — só os da página aberta.
   const companyIds = handoffs.filter((h) => h.entityType === "COMPANY").map((h) => h.entityId);
   const personIds = handoffs.filter((h) => h.entityType === "PERSON").map((h) => h.entityId);
 
@@ -98,18 +139,11 @@ export default async function HandoffsPage({
       />
       {/* As três situações em cartão, com a contagem, e cada uma leva à sua
           lista — eram pílulas, que a conferência de 30/09 reprovou como filtro.
-          A situação e a prioridade escolhem-se também no "Filtros". */}
-      <FaixaDeTotais
-        itens={FILTER_TABS.map((t) => ({
-          rotulo: t.label,
-          valor: formatarNumero(contagem[t.value], 0),
-          icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
-          tom: t.value === "NEW" ? (contagem.NEW > 0 ? "text-warning-fg" : undefined) : t.value === "DONE" ? "text-success-fg" : undefined,
-          detalhe: t.value === status ? "mostrando agora" : undefined,
-          ativo: t.value === status,
-          href: hrefDaSituacao(t.value),
-        }))}
-      />
+          A situação e a prioridade escolhem-se também no "Filtros". Desde
+          10/11/2026 a contagem chega depois da lista (Suspense). */}
+      <Suspense fallback={<CartoesDasSituacoes status={status} hrefDaSituacao={hrefDaSituacao} />}>
+        <CartoesComContagem contagens={contagens} status={status} hrefDaSituacao={hrefDaSituacao} />
+      </Suspense>
       <FiltrosDaTela
         className="mb-4"
         campos={[
@@ -183,6 +217,80 @@ export default async function HandoffsPage({
           })}
         </div>
       )}
+      <Suspense fallback={null}>
+        <Paginador contagens={contagens} situacao={statusFilter} pedida={pedida} hrefDaPagina={hrefDaPagina} />
+      </Suspense>
     </PageContainer>
+  );
+}
+
+function ultimaPagina(total: number) {
+  return Math.max(1, Math.ceil(total / POR_PAGINA));
+}
+
+/** Os três cartões de situação; sem `contagens`, o lugar deles enquanto contam. */
+function CartoesDasSituacoes({
+  contagens,
+  status,
+  hrefDaSituacao,
+}: {
+  contagens?: Contagens;
+  status: string | undefined;
+  hrefDaSituacao: (s: HandoffSectorStatus) => string;
+}) {
+  return (
+    <FaixaDeTotais
+      itens={FILTER_TABS.map((t) => ({
+        rotulo: t.label,
+        valor: contagens ? formatarNumero(contagens[t.value], 0) : "—",
+        icone: t.value === "NEW" ? <Inbox /> : t.value === "IN_PROGRESS" ? <Loader /> : <CheckCircle2 />,
+        tom:
+          t.value === "NEW"
+            ? contagens && contagens.NEW > 0
+              ? "text-warning-fg"
+              : undefined
+            : t.value === "DONE"
+              ? "text-success-fg"
+              : undefined,
+        detalhe: t.value === status ? "mostrando agora" : undefined,
+        ativo: t.value === status,
+        href: hrefDaSituacao(t.value),
+      }))}
+    />
+  );
+}
+
+async function CartoesComContagem({
+  contagens,
+  ...props
+}: {
+  contagens: Promise<Contagens>;
+  status: string | undefined;
+  hrefDaSituacao: (s: HandoffSectorStatus) => string;
+}) {
+  return <CartoesDasSituacoes contagens={await contagens} {...props} />;
+}
+
+async function Paginador({
+  contagens,
+  situacao,
+  pedida,
+  hrefDaPagina,
+}: {
+  contagens: Promise<Contagens>;
+  situacao: HandoffSectorStatus;
+  pedida: number;
+  hrefDaPagina: (p: number) => string;
+}) {
+  const total = (await contagens)[situacao];
+  const totalPages = ultimaPagina(total);
+  return (
+    <Pagination
+      page={Math.min(pedida, totalPages)}
+      totalPages={totalPages}
+      buildHref={hrefDaPagina}
+      total={total}
+      rotulo="transferências"
+    />
   );
 }
