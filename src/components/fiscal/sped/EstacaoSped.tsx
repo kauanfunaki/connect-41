@@ -2,7 +2,7 @@
 import { iconeDaAbaFiscal } from "@/components/fiscal/iconeDaAbaFiscal";
 import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Download, FileText, Plus, Settings2, Upload } from "lucide-react";
+import { ArchiveRestore, Download, FileText, Plus, Settings2, Upload } from "lucide-react";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { Aviso } from "@/components/ui/Aviso";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
@@ -16,7 +16,7 @@ import { FilterButton, FilterButtonSection } from "@/components/ui/FilterButton"
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { SlideOver } from "@/components/ui/SlideOver";
-import { formatCnpj, formatInstantDateTime } from "@/lib/format";
+import { formatCnpj, formatInstantDateTime, formatarNumero } from "@/lib/format";
 import { uploadComProgresso } from "@/lib/uploadComProgresso";
 import { formatarRaiz } from "./AbrangenciaLocalSped";
 import { dadosDoApoio, FormularioLocalSped, novoApoio, type EdicaoSped } from "./FormularioLocalSped";
@@ -24,7 +24,19 @@ import { CartaoDaGeracao, FaltasDoArquivo, ROTULO_DA_OBRIGACAO, SinalDoAgente, h
 import type { BaseLocal } from "@/lib/fiscal/sped/local/servidor";
 import { quadroPorCfop } from "@/lib/fiscal/sped/local/calculo";
 import { reaisExatos, somar, type ContextoLocal, type Obrigacao, type ProdutoFiscal, type DocumentoEscriturado, type ItemFiscal } from "@/lib/fiscal/sped/local/dominio";
-import type { EtapaDoSped } from "@/lib/fiscal/sped/etapas";
+import { hrefDoSped, type EtapaDoSped } from "@/lib/fiscal/sped/etapas";
+import type { ContadoresDoAcervo } from "@/lib/fiscal/sped/local/acervo";
+import type { RespostaDoAcervo, ResumoDoAcervo } from "@/lib/fiscal/sped/local/acervoServidor";
+
+/** O andamento do "Trazer do acervo" na tela: o resumo da primeira volta e a soma dos lotes. */
+type ResultadoDoAcervo = { resumo: ResumoDoAcervo; contadores: ContadoresDoAcervo; pedidos: number; retomados: number; lidos: number; recusados: number; restantes: number; pausado: boolean; erro: string | null; em: string };
+const numero = (n: number) => formatarNumero(n, 0);
+/**
+ * O último "Trazer do acervo" de cada recorte (empresa, competência, abrangência). A estação
+ * remonta quando a revisão muda — e cada XML lido muda a revisão —, então o resultado fica
+ * fora dela para sobreviver ao refresh do fim. Só o navegador escreve aqui.
+ */
+const acervosDaSessao = new Map<string, ResultadoDoAcervo>();
 
 type Props = { aba: EtapaDoSped; empresa: { id: string; nome: string; cnpj: string }; contexto: ContextoLocal; base: BaseLocal; pode: boolean; direitos: { importar: boolean; configurar: boolean; entregas: boolean; icms: boolean; contribuicoes: boolean }; grupo: { id: string; nome: string; cnpj: string }[]; vistaInicial?: string; geracao: GeracaoDaEstacao };
 const reais = reaisExatos;
@@ -42,6 +54,9 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
   const [selecionados, setSelecionados] = useState<string[]>([]), [edicao, setEdicao] = useState<EdicaoSped | null>(null), [detalhe, setDetalhe] = useState<string | null>(null), [resultadoId, setResultadoId] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null), [erro, setErro] = useState<string | null>(null), [ocupado, setOcupado] = useState(false), [importando, setImportando] = useState(false);
   const parar = useRef(false), [fila, setFila] = useState<ArquivoNaFila[]>([]);
+  const chaveDoAcervo = `${empresa.id}:${contexto.competencia}:${contexto.consolidado ? "raiz" : "empresa"}`;
+  const [acervo, setAcervoNaTela] = useState<ResultadoDoAcervo | null>(() => acervosDaSessao.get(chaveDoAcervo) ?? null), [trazendo, setTrazendo] = useState(false);
+  const setAcervo = (r: ResultadoDoAcervo) => { acervosDaSessao.set(chaveDoAcervo, r); setAcervoNaTela(r); };
   const aImportar = fila.filter(a => a.estado !== "concluido").length;
   const naFila = (id: string, mudanca: Partial<ArquivoNaFila>) => setFila(f => f.map(a => a.id === id ? { ...a, ...mudanca } : a));
   const [obrigacao, setObrigacao] = useState<Obrigacao>(params.get("obrigacao") === "contribuicoes" || !direitos.icms ? "contribuicoes" : "icms_ipi");
@@ -59,7 +74,7 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
     setErro(null);
     const r = await fetch("/api/fiscal/sped/local/acao", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ empresa: empresa.id, competencia: contexto.competencia, revisao: base.revisao, aba, acao, dados }) });
     const resposta = await r.json();
-    if (!r.ok) throw new Error(resposta.error ?? "Não foi possível concluir a ação.");
+    if (!r.ok) throw Object.assign(new Error(resposta.error ?? "Não foi possível concluir a ação."), { status: r.status });
     if (atualizar) { setMensagem(resposta.mensagem ?? "Operação concluída."); router.refresh(); }
     return resposta;
   }
@@ -94,6 +109,70 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
       setMensagem(parar.current ? "Importação pausada. Os registros concluídos foram preservados." : "Importação concluída. Confira os resultados por arquivo.");
     } catch(e) { setErro(e instanceof Error ? e.message : "Falha na importação."); } finally { setImportando(false); router.refresh(); }
   }
+  /**
+   * Uma importação do acervo, lida como no envio manual. O XML que a leitura recusa (422) não
+   * para a rodada: fica com o motivo nos resultados da importação, e a próxima segue.
+   */
+  async function lerDoAcervo(id: string, dona: string): Promise<"lido" | "recusado"> {
+    let estado = "pendente";
+    try {
+      while (!parar.current && ["pendente", "processando"].includes(estado)) {
+        estado = (await executar("processar", { id, empresa: dona }, false)).estado;
+        if (estado === "processando") break; // Outro executor tem a lease.
+      }
+    } catch (e) { if ((e as { status?: number }).status === 422) return "recusado"; throw e; }
+    return "lido";
+  }
+  /**
+   * Trazer do acervo (10/11/2026): pede ao motor os XMLs do acervo que ainda não estão na
+   * escrituração, um lote por vez, e lê cada lote na fila como um envio manual.
+   */
+  async function trazerDoAcervo() {
+    if (importando) return;
+    setImportando(true); setTrazendo(true); parar.current = false; setErro(null); setMensagem("Conferindo o acervo desta competência…");
+    let depois: string | null = null, tamanho = 500, total: ResultadoDoAcervo | null = null;
+    const mostrar = (mudanca: Partial<ResultadoDoAcervo>) => { if (total) { total = { ...total, ...mudanca }; setAcervo(total); } };
+    const ler = async (ids: string[], dona: string) => {
+      for (const id of ids) {
+        if (parar.current || !total) break;
+        setMensagem(`Lendo os XMLs na escrituração: ${numero(total.lidos + total.recusados + 1)} de ${numero(total.contadores.naFila + total.retomados)}…`);
+        const r = await lerDoAcervo(id, dona);
+        mostrar(r === "lido" ? { lidos: total.lidos + 1 } : { recusados: total.recusados + 1 });
+      }
+    };
+    try {
+      for (;;) {
+        const r = await fetch("/api/fiscal/sped/local/acervo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ empresa: empresa.id, competencia: contexto.competencia, aba, escopo: contexto.consolidado ? "raiz" : "empresa", obrigacao, depois, tamanho }) });
+        const corpo = await r.json().catch(() => ({})) as Partial<RespostaDoAcervo> & { error?: string };
+        if (!r.ok || !corpo.resumo) throw new Error(corpo.error ?? "Não foi possível trazer do acervo.");
+        if (!total) {
+          const retomados = (corpo.retomar ?? []).reduce((s, g) => s + g.ids.length, 0);
+          total = { resumo: corpo.resumo, contadores: { naFila: 0, semXml: 0, naoEncontrados: 0, grandesDemais: 0, cteFora: 0 }, pedidos: 0, retomados, lidos: 0, recusados: 0, restantes: corpo.resumo.aPedir, pausado: false, erro: null, em: new Date().toISOString() };
+          setAcervo(total);
+          // O que uma rodada anterior deixou na fila é lido antes de pedir mais ao motor.
+          for (const g of corpo.retomar ?? []) await ler(g.ids, g.empresa);
+        }
+        if (!corpo.lote || parar.current) { mostrar({ restantes: corpo.restantes ?? 0 }); break; }
+        depois = corpo.depois ?? null; tamanho = corpo.tamanho ?? tamanho;
+        const c = corpo.lote.contadores;
+        mostrar({ pedidos: total.pedidos + corpo.lote.pedidos, contadores: { naFila: total.contadores.naFila + c.naFila, semXml: total.contadores.semXml + c.semXml, naoEncontrados: total.contadores.naoEncontrados + c.naoEncontrados, grandesDemais: total.contadores.grandesDemais + c.grandesDemais, cteFora: total.contadores.cteFora + c.cteFora }, restantes: corpo.restantes ?? 0 });
+        await ler(corpo.lote.ids, corpo.lote.empresa);
+        if (parar.current || !corpo.restantes) break;
+        setMensagem(`Pedindo ao motor os XMLs: ${numero(total.pedidos)} de ${numero(total.resumo.aPedir)} documento(s)…`);
+      }
+      mostrar({ pausado: parar.current });
+      setMensagem(null);
+    } catch (e) {
+      const motivo = e instanceof Error ? e.message : "Não foi possível trazer do acervo.";
+      // Com a rodada começada, o erro fica no painel: o refresh do fim remonta a tela e levaria o aviso solto.
+      setMensagem(null);
+      if (total) mostrar({ erro: motivo }); else setErro(motivo);
+    } finally { setImportando(false); setTrazendo(false); router.refresh(); }
+  }
+  const botaoDoAcervo = (variant: "primary" | "secondary") => <div className="flex flex-wrap items-center gap-2">
+    <Button size="sm" variant={variant} disabled={importando} loading={trazendo} loadingLabel="Trazendo do acervo…" onClick={() => void trazerDoAcervo()} title={contexto.consolidado ? "Pede ao motor os XMLs do acervo da matriz e das filiais do grupo, nesta competência" : "Pede ao motor os XMLs do acervo desta empresa, nesta competência"}><ArchiveRestore size={14} /> Trazer do acervo</Button>
+    {trazendo && <Button size="sm" variant="ghost" onClick={() => { parar.current = true; }}>Pausar após o documento atual</Button>}
+  </div>;
   function classificar(produtos: ProdutoFiscal[]) {
     const p = produtos[0];
     setEdicao({ tipo: "classificar", chaves: produtos.map(p => p.chave), produto: produtos.length === 1 ? p : undefined, dados: produtos.length === 1 ? { ...(p.classificacao ?? { tipoItem: p.tipoItem, definicao: p.cfop?.slice(1) ?? "", creditoPisCofins: "", observacao: "" }), credito: p.creditoDecidido } : { tipoItem: "__manter__", creditoPisCofins: "__manter__", definicao: "", observacao: "" } });
@@ -123,7 +202,11 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
     </div>
     {!!perfil?.faltando.length && <Aviso tom="atencao">Complete no <a className="underline" href={`/empresas/${empresa.id}`}>cadastro da empresa</a>: {perfil.faltando.join(", ")}. Você já pode importar e conferir os documentos.</Aviso>}
     {!perfil?.obrigacoes.length && <Aviso tom="atencao">Escolha no perfil fiscal as obrigações da empresa. Você já pode importar e conferir os documentos.</Aviso>}
-    {base.acervo.length > 0 && <Aviso tom="atencao">Há {base.acervo.length} documento(s) no acervo do Connect ainda sem itens nesta escrituração. Eles aparecem no Fechamento e não entram nos valores apurados até a importação dos itens.</Aviso>}
+    {base.acervo.length > 0 && <Aviso tom="atencao"><div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <span className="min-w-0 flex-1 basis-80">Há {numero(base.acervo.length)} documento(s) no acervo do Connect ainda sem itens nesta escrituração. Eles aparecem no Fechamento e não entram nos valores apurados até a importação dos itens.{aba === "gerar" && direitos.importar && <> <a className="underline" href={hrefDoSped("fechamento", { empresa: empresa.id, competencia: contexto.competencia }, { escopo: contexto.consolidado ? "raiz" : null })}>Trazer do acervo no Fechamento</a>.</>}</span>
+      {aba !== "gerar" && direitos.importar && botaoDoAcervo("secondary")}
+    </div></Aviso>}
+    {acervo && <PainelDoAcervo resultado={acervo} trazendo={trazendo} />}
     {/* A escolha da abrangência fica junto da empresa e do período, no topo (AbrangenciaLocalSped). */}
     {(aba === "fechamento" || aba === "apuracao") && contexto.consolidado && <p className="text-ui text-fg-secondary">Somando a matriz e as filiais da raiz {formatarRaiz(contexto.raiz)}: {grupo.map(e => e.nome).join(", ")}</p>}
     {aba === "gerar" && obrigacao === "contribuicoes" && contexto.consolidado && <p className="text-ui text-fg-secondary">Consolidado da raiz {contexto.raiz}: {grupo.map(e => `${e.nome} (${e.cnpj})`).join(", ")}</p>}
@@ -177,11 +260,37 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
       {ultima && <CartaoDaGeracao geracao={ultima} agente={vivas.agente} revisaoAtual={base.revisao} pode={pode} erro={vivas.erro} cancelar={id => executar("cancelar_geracao", { id })} />}
       <BlocoRecolhivel titulo="Gerações anteriores"><div className="p-3"><Tabela colunas={["Revisão", "Arquivo", "Pedida em", "Situação", ""]} linhas={daObrigacao.slice(1).map(g => [String(g.revisao), `${ROTULO_DA_OBRIGACAO[g.obrigacao]} ${rotuloDoTipo(g.tipoSped)}`, formatInstantDateTime(new Date(g.pedidaEm)), g.rotuloDoEstado, g.arquivo ? <Button key="b" variant="ghost" size="xs" href={hrefDoGerado(g.id)} download aria-label={`Baixar ${g.arquivo.nome}`}><Download size={12} /> Baixar</Button> : "—"])} /></div></BlocoRecolhivel>
     </>}
-    {aba !== "gerar" && direitos.importar && <BlocoRecolhivel titulo="Importar documentos e consultar resultados"><div className="space-y-4 p-4"><p className="text-ui text-fg-secondary">XML, ZIP, TXT SPED, CSV ou Excel no modelo do Connect. PDFs ficam como anexos para conferência.</p><FileDropzone accept=".xml,.zip,.txt,.csv,.xlsx,.pdf" maxSizeMb={25} multiple arquivos={fila} desabilitado={importando} onAdicionar={files => setFila(f => [...f, ...files.map(file => ({ id: crypto.randomUUID(), file, progresso: 0, estado: "pendente" as const }))])} onRemover={id => setFila(f => f.filter(a => a.id !== id))} /><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => void importar()} disabled={importando || aImportar === 0}><Upload size={14} /> {importando ? "Importando…" : aImportar > 1 ? `Importar ${aImportar} arquivos` : "Importar arquivo"}</Button>{importando && <Button size="sm" variant="secondary" onClick={() => { parar.current = true; }}>Pausar após o lote atual</Button>}<Button variant="ghost" size="sm" href="/api/fiscal/sped/local/modelo?formato=xlsx" download title="Planilha vazia no modelo do Connect, para preencher e importar"><Download size={14} /> Baixar modelo em Excel</Button><Button variant="ghost" size="sm" href="/api/fiscal/sped/local/modelo?formato=csv" download title="Arquivo CSV vazio no modelo do Connect, para preencher e importar"><Download size={14} /> Baixar modelo em CSV</Button></div><Tabela colunas={["Arquivo", "Estado", "Progresso", "Resultado", ""]} linhas={base.importacoes.map(i => [i.name, i.state, `${i.cursor}/${i.total || "?"}`, <Button key="r" size="xs" variant="ghost" onClick={() => setResultadoId(i.id)}>Ver resultados</Button>, ["pendente", "erro", "processando", "cancelado"].includes(i.state) ? <div key="a" className="flex gap-1"><Button size="xs" variant="secondary" disabled={importando} onClick={() => { setImportando(true); parar.current = false; void (async () => { if (i.state === "cancelado") await executar("retomar_importacao", { id: i.id }, false); await processar([i.id]); })().catch(e => setErro(String(e.message))).finally(() => setImportando(false)); }}>Retomar</Button><Button size="xs" variant="ghost" onClick={() => void acao("cancelar_importacao", { id: i.id })}>Cancelar</Button></div> : i.state === "anexo" ? <Button key="p" size="xs" variant="ghost" href={`/api/fiscal/sped/local/anexos/${i.id}?empresa=${empresa.id}`} nativo target="_blank">Abrir PDF</Button> : "—"])} /></div></BlocoRecolhivel>}
+    {aba !== "gerar" && direitos.importar && <BlocoRecolhivel titulo="Importar documentos e consultar resultados"><div className="space-y-4 p-4"><div className="space-y-2 border-b border-border-soft pb-4"><p className="text-ui text-fg-secondary">Do acervo do Connect: os documentos que o índice do motor trouxe entram aqui pelo XML guardado no motor, sem baixar arquivo{contexto.consolidado ? ", na matriz e nas filiais do grupo" : ""}. Os que já estão na escrituração ou na fila ficam de fora.</p>{botaoDoAcervo("secondary")}</div><p className="text-ui text-fg-secondary">XML, ZIP, TXT SPED, CSV ou Excel no modelo do Connect. PDFs ficam como anexos para conferência.</p><FileDropzone accept=".xml,.zip,.txt,.csv,.xlsx,.pdf" maxSizeMb={25} multiple arquivos={fila} desabilitado={importando} onAdicionar={files => setFila(f => [...f, ...files.map(file => ({ id: crypto.randomUUID(), file, progresso: 0, estado: "pendente" as const }))])} onRemover={id => setFila(f => f.filter(a => a.id !== id))} /><div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => void importar()} disabled={importando || aImportar === 0}><Upload size={14} /> {importando ? "Importando…" : aImportar > 1 ? `Importar ${aImportar} arquivos` : "Importar arquivo"}</Button>{importando && <Button size="sm" variant="secondary" onClick={() => { parar.current = true; }}>Pausar após o lote atual</Button>}<Button variant="ghost" size="sm" href="/api/fiscal/sped/local/modelo?formato=xlsx" download title="Planilha vazia no modelo do Connect, para preencher e importar"><Download size={14} /> Baixar modelo em Excel</Button><Button variant="ghost" size="sm" href="/api/fiscal/sped/local/modelo?formato=csv" download title="Arquivo CSV vazio no modelo do Connect, para preencher e importar"><Download size={14} /> Baixar modelo em CSV</Button></div><Tabela colunas={["Arquivo", "Estado", "Progresso", "Resultado", ""]} linhas={base.importacoes.map(i => [i.name, i.state, `${i.cursor}/${i.total || "?"}`, <Button key="r" size="xs" variant="ghost" onClick={() => setResultadoId(i.id)}>Ver resultados</Button>, ["pendente", "erro", "processando", "cancelado"].includes(i.state) ? <div key="a" className="flex gap-1"><Button size="xs" variant="secondary" disabled={importando} onClick={() => { setImportando(true); parar.current = false; void (async () => { if (i.state === "cancelado") await executar("retomar_importacao", { id: i.id }, false); await processar([i.id]); })().catch(e => setErro(String(e.message))).finally(() => setImportando(false)); }}>Retomar</Button><Button size="xs" variant="ghost" onClick={() => void acao("cancelar_importacao", { id: i.id })}>Cancelar</Button></div> : i.state === "anexo" ? <Button key="p" size="xs" variant="ghost" href={`/api/fiscal/sped/local/anexos/${i.id}?empresa=${empresa.id}`} nativo target="_blank">Abrir PDF</Button> : "—"])} /></div></BlocoRecolhivel>}
     {resultadoId && <SlideOver open title="Resultados da importação" onClose={() => setResultadoId(null)} width="max-w-2xl"><div className="p-5"><Tabela colunas={["Registro", "Situação", "Motivo"]} linhas={resultadosImportacao(base.importacoes.find(i => i.id === resultadoId)?.results)} /></div></SlideOver>}
     {edicao && <FormularioLocalSped edicao={edicao} competencia={contexto.competencia} executar={async (a, d) => { await executar(a, d); }} onClose={() => setEdicao(null)} anexos={base.importacoes.filter(i => i.state === "anexo")} />}
     {documento && <SlideOver open title={`Documento ${documento.numero}`} onClose={() => setDetalhe(null)} width="max-w-3xl"><div className="space-y-4 p-5"><p className="text-ui">{documento.nomeArquivo} · {documento.identidade}</p><p className="text-ui">Emitente {formatCnpj(documento.emitente)} · Destinatário {formatCnpj(documento.destinatario)}</p><Tabela colunas={["Item", "NCM", "CFOP original", "Valor", "ICMS", "PIS", "COFINS", ""]} linhas={documento.itens.map(i => [i.descricao, i.ncm, i.cfop, reais(i.valor), reais(i.icms.valor), reais(i.pis.valor), reais(i.cofins.valor), pode && documento.companyId === empresa.id && contexto.competencia.length === 7 ? <Button key="editar" size="xs" variant="secondary" onClick={() => editarTributacao(documento, i)}>Decisão fiscal</Button> : "—"])} /><Aviso tom="info">Os valores originais permanecem preservados. As decisões fiscais são registradas separadamente.</Aviso></div></SlideOver>}
   </div>;
+}
+/** O que o "Trazer do acervo" fez: os quatro números pedidos e, embaixo, só o que aconteceu de fora do comum. */
+function PainelDoAcervo({ resultado: r, trazendo }: { resultado: ResultadoDoAcervo; trazendo: boolean }) {
+  const situacao = trazendo ? "em andamento" : r.erro ? "interrompido" : r.pausado ? "pausado" : r.restantes > 0 ? "interrompido" : "concluído";
+  // O CT-e de saída costuma não estar no motor (só o renderizado ou de frete tomado): o que pode ser CT-e não é alerta.
+  const cteNaoAchados = Math.min(r.contadores.cteFora, r.contadores.naoEncontrados);
+  const extras = [
+    r.contadores.cteFora > 0 && `${numero(r.contadores.cteFora)} CT-e não vieram do motor, o que é esperado: o motor só guarda o CT-e já renderizado ou de frete tomado, então o CT-e de saída costuma ficar de fora`,
+    r.resumo.naFila > 0 && `${numero(r.resumo.naFila)} já tinham ido para a fila antes${r.retomados > 0 ? `; ${numero(r.retomados)} que ainda não tinham sido lidos foram lidos agora` : ""}`,
+    r.recusados > 0 && `${numero(r.recusados)} recusado(s) na leitura do XML: o motivo está em Importar documentos › Ver resultados`,
+    r.contadores.grandesDemais > 0 && `${numero(r.contadores.grandesDemais)} com XML acima de 25 MiB, que a importação não aceita`,
+    r.resumo.semIdentificador > 0 && `${numero(r.resumo.semIdentificador)} sem o identificador do motor gravado no acervo (sincronize o SPED de novo)`,
+    !trazendo && r.pausado && "pausado: o que já entrou na fila foi preservado; clique em Trazer do acervo para continuar",
+    !trazendo && !r.pausado && r.restantes > 0 && `faltam ${numero(r.restantes)} para pedir ao motor; clique em Trazer do acervo para continuar`,
+  ].filter((t): t is string => typeof t === "string");
+  return <section aria-labelledby="titulo-trazer-do-acervo" className="space-y-3 rounded-lg border border-border bg-surface p-4">
+    <h2 id="titulo-trazer-do-acervo" className="text-ui font-semibold">Trazer do acervo · {situacao}<span className="font-normal text-fg-secondary"> · {formatInstantDateTime(new Date(r.em))}</span></h2>
+    {r.erro && <Aviso tom="perigo">{r.erro}</Aviso>}
+    <FaixaDeTotais destaque={false} className="" itens={[
+      { rotulo: "Entraram na fila", valor: numero(r.contadores.naFila), detalhe: `${numero(r.lidos)} lido(s) na escrituração` },
+      { rotulo: "Sem XML no motor", valor: numero(r.contadores.semXml), tom: r.contadores.semXml > 0 ? "text-warning-fg" : undefined },
+      { rotulo: "Não achados no motor", valor: numero(r.contadores.naoEncontrados), tom: r.contadores.naoEncontrados > cteNaoAchados ? "text-warning-fg" : undefined, detalhe: cteNaoAchados > 0 ? `até ${numero(cteNaoAchados)} são CT-e, o esperado` : undefined },
+      { rotulo: "Já na escrituração", valor: numero(r.resumo.naEscrituracao) },
+    ]} />
+    {extras.length > 0 && <ul className="list-disc space-y-1 pl-5 text-helper text-fg-secondary">{extras.map(t => <li key={t}>{t[0].toUpperCase() + t.slice(1)}.</li>)}</ul>}
+  </section>;
 }
 function Tabela({ colunas, linhas, chave = "" }: { colunas: string[]; linhas: ReactNode[][]; chave?: string }) {
   const [pagina, setPagina] = useState(0);

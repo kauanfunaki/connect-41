@@ -138,6 +138,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "fiscal.sped.geracao_pedida": c("pediu a geração do arquivo SPED, que entrou na fila do agente do motor", { comNome: false }),
   "fiscal.sped.geracao_concluida": o("gerou e devolveu o arquivo SPED pedido na fila", { comNome: false }),
   "fiscal.sped.geracao_cancelada": e("tirou da fila a geração do arquivo SPED", { comNome: false }),
+  // O acervo do índice levado à escrituração pelos XMLs do motor (10/11/2026).
+  "fiscal.sped.acervo.trazido": c("trouxe do acervo para a escrituração do SPED os XMLs da empresa"),
   "fiscal.sped.upload.criado": c("abriu no motor SPED o envio em partes"),
   "fiscal.sped.upload.concluido": c("concluiu no motor SPED o envio em partes, na"),
   "fiscal.sped.upload.cancelado": x("cancelou no motor SPED o envio em partes"),

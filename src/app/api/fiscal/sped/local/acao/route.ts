@@ -26,7 +26,13 @@ export async function POST(req: Request) {
     if (r.acao === "processar" || r.acao === "cancelar_importacao" || r.acao === "retomar_importacao") {
       if (!await podeNoModulo(ctx, "fiscal_acervo", "agir")) throw new ErroFiscal("Sem permissão para importar.", 404);
       const id = z.string().uuid().parse(r.dados.id);
-      if (r.acao === "processar") return NextResponse.json({ ok: true, ...await processarImportacao(ctx, empresa, id) });
+      if (r.acao === "processar") {
+        // O acervo do consolidado entra na fila de cada empresa do grupo (10/11/2026): a importação
+        // de uma filial é processada em nome dela, desde que seja da mesma raiz e esteja na abrangência.
+        const outra = typeof r.dados.empresa === "string" && r.dados.empresa !== empresa.id ? await autorizar(ctx, r.dados.empresa, aba, true) : null;
+        if (outra && outra.cnpj.slice(0, 8) !== empresa.cnpj.slice(0, 8)) throw new ErroFiscal("Importação não encontrada.", 404);
+        return NextResponse.json({ ok: true, ...await processarImportacao(ctx, outra ?? empresa, id) });
+      }
       if (r.acao === "retomar_importacao") { await getPrisma().spedFiscalImport.updateMany({ where: { id, tenantId: ctx.tenantId, companyId: empresa.id, state: "cancelado" }, data: { state: "pendente" } }); return NextResponse.json({ ok: true }); }
       await getPrisma().spedFiscalImport.updateMany({ where: { id, tenantId: ctx.tenantId, companyId: empresa.id, state: { in: ["pendente", "processando", "erro"] } }, data: { state: "cancelado", leaseOwner: null, leaseUntil: null } });
       return NextResponse.json({ ok: true });

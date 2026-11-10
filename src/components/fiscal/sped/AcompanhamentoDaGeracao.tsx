@@ -91,7 +91,7 @@ export function FaltasDoArquivo({ faltas, hrefDaEmpresa }: { faltas: GrupoDeFalt
 
 /** A máquina do agente: ligada, sem sinal ou ainda nenhuma. */
 export function SinalDoAgente({ agente }: { agente: AgenteNaTela | null }) {
-  if (!agente) return <p className="text-helper text-fg-secondary">Nenhuma máquina buscou geração neste escritório ainda. O pedido fica na fila até o agente do motor buscar.</p>;
+  if (!agente) return <p className="text-helper text-fg-secondary">Nenhuma automação do agente do SPED encontrada no Orquestrador deste escritório. O pedido fica na fila até o agente do motor buscar.</p>;
   return <p className="flex flex-wrap items-center gap-2 text-helper text-fg-secondary">
     <Selo tom={agente.semSinal ? "atencao" : "sucesso"}>{agente.semSinal ? "Agente sem sinal" : "Agente ligado"}</Selo>
     <span>{agente.nome}{agente.ultimoSinal ? `, último sinal em ${quando(agente.ultimoSinal)}` : ", sem sinal registrado"}</span>
