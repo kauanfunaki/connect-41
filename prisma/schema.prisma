@@ -1422,6 +1422,12 @@ enum TrainingParticipantStatus {
 model Tenant {
   opsApiKeys OpsApiKey[]
   personalApiTokens PersonalApiToken[]
+  academiaTextos AcademiaTexto[]
+  academiaQuestoes AcademiaQuestao[]
+  academiaSessoes AcademiaSessao[]
+  academiaResultados AcademiaResultado[]
+  academiaPreferencias AcademiaPreferencia[]
+  academiaPremios AcademiaPremio[]
   techInternalTools TechInternalTool[]
   techInternalItems TechInternalItem[]
   techInternalComments TechInternalComment[]
@@ -1953,6 +1959,9 @@ model Subscription {
 model User {
   techInternalAssignments TechInternalItem[]
   personalApiTokens       PersonalApiToken[]
+  academiaSessoes         AcademiaSessao[]
+  academiaResultados      AcademiaResultado[]
+  academiaPreferencia     AcademiaPreferencia?
   opsWatchers                 OpsWatcher[]
   opsSites                    OpsSite[]
   opsApps                     OpsApp[]
@@ -10870,4 +10879,154 @@ model CoreExportacao {
   @@index([empresaId, status])
   @@index([tenantId])
   @@map("core_exportacoes")
+}
+
+// ─── Academia (Fase 1, 10/11/2026, pedido do Kauan) ─────────────────────────
+//
+// A área de aprendizado da equipe: digitação, digitação de números e lógica,
+// com ranking do mês e certificado para o pódio. Paridade com os testes do
+// 41 Hub (que segue no ar); o histórico de lá entra pela importação em
+// `scripts/academia/importar-do-hub.ts` (colunas `origemHubId`).
+//
+// `teste` é "digitacao" | "numeros" | "logica" e `nivel` é "facil" | "medio" |
+// "dificil", em texto e não em enum do banco: a Fase 2 traz testes novos
+// (desafio do dia), e um valor novo não pede ALTER. Quem confere os valores é
+// `src/lib/academia/regras.ts`.
+
+/// Os textos do teste de digitação, por nível. Quem cadastra é o administrador da Academia.
+model AcademiaTexto {
+  id          String   @id @default(uuid())
+  tenantId    String
+  nivel       String   @db.VarChar(10)
+  conteudo    String   @db.Text
+  ativo       Boolean  @default(true)
+  /// O id do texto no 41 Hub: a importação não duplica ao rodar de novo.
+  origemHubId String?  @db.VarChar(64)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, origemHubId])
+  @@index([tenantId, nivel, ativo])
+  @@map("academia_textos")
+}
+
+/// As questões do teste de lógica. Imagem no enunciado e, se quiser, em cada alternativa.
+model AcademiaQuestao {
+  id           String   @id @default(uuid())
+  tenantId     String
+  nivel        String   @db.VarChar(10)
+  enunciado    String   @db.Text
+  /// `/api/academia/imagens/<arquivo>` — o arquivo mora em `storage/academia/<tenantId>/`.
+  imagemUrl    String?  @db.VarChar(255)
+  /// `[{ texto?, imagemUrl? }]`, de 2 a 6, cada uma com texto ou imagem.
+  alternativas Json
+  /// A posição da alternativa certa em `alternativas` (a partir de 0). Nunca vai para a tela do teste.
+  correta      Int
+  ativo        Boolean  @default(true)
+  origemHubId  String?  @db.VarChar(64)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, origemHubId])
+  @@index([tenantId, nivel, ativo])
+  @@map("academia_questoes")
+}
+
+/// Uma rodada servida pelo servidor: o que foi mostrado, o nonce e até quando vale.
+model AcademiaSessao {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+  teste       String    @db.VarChar(12)
+  nivel       String    @db.VarChar(10)
+  /// Valendo para o ranking (uma por dia, por nível, por teste) ou treino livre.
+  valendo     Boolean
+  /// O dia (São Paulo, "AAAA-MM-DD") da tentativa valendo; nulo no treino. É a
+  /// chave única abaixo que garante uma tentativa valendo por dia, mesmo com
+  /// duas abas começando ao mesmo tempo.
+  diaValendo  String?   @db.Char(10)
+  nonce       String    @unique @db.Char(32)
+  /// O que foi servido (o texto, ou as questões com a certa): a correção usa
+  /// esta foto, e não o cadastro, que o administrador pode mudar no meio.
+  payload     Json
+  startedAt   DateTime  @default(now())
+  expiresAt   DateTime
+  submittedAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teste, nivel, diaValendo])
+  @@index([tenantId, userId, startedAt])
+  @@map("academia_sessoes")
+}
+
+/// O resultado de uma rodada. O ranking lê só os `valendo`, sempre de um mês e de um teste.
+model AcademiaResultado {
+  id          String   @id @default(uuid())
+  tenantId    String
+  userId      String
+  /// O setor da pessoa quando fez o teste (o filtro de setor do ranking).
+  sectorCode  String?  @db.VarChar(40)
+  teste       String   @db.VarChar(12)
+  nivel       String   @db.VarChar(10)
+  /// "AAAA-MM", em São Paulo.
+  mes         String   @db.Char(7)
+  /// Palavras por minuto (digitação e números).
+  ppm         Int?
+  /// Acertos e total de questões (lógica).
+  acertos     Int?
+  total       Int?
+  precisao    Decimal  @db.Decimal(5, 2)
+  duracaoMs   Int
+  valendo     Boolean
+  /// "connect" ou "hub" (importado do 41 Hub).
+  origem      String   @default("connect") @db.VarChar(10)
+  sessaoId    String?  @unique
+  origemHubId String?  @db.VarChar(64)
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, origemHubId])
+  @@index([tenantId, teste, mes, valendo, nivel])
+  @@index([userId, teste, mes])
+  @@map("academia_resultados")
+}
+
+/// A escolha da pessoa de aparecer (ou não) no ranking. Sem linha, aparece.
+model AcademiaPreferencia {
+  id                String   @id @default(uuid())
+  tenantId          String
+  userId            String   @unique
+  aparecerNoRanking Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, aparecerNoRanking])
+  @@map("academia_preferencias")
+}
+
+/// O prêmio do mês, em texto livre ("Top 3 ganham chocolate"), definido pelo administrador.
+model AcademiaPremio {
+  id          String   @id @default(uuid())
+  tenantId    String
+  mes         String   @db.Char(7)
+  texto       String   @db.VarChar(200)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, mes])
+  @@map("academia_premios")
 }
