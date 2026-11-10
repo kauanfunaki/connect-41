@@ -89,9 +89,9 @@ export function AberturaGuiada({
   return (
     <form action={action} className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start">
       <div className="flex min-w-0 flex-col gap-4">
-        {/* Os passos */}
+        {/* Os passos, centralizados no cartão (Kauan, 10/11/2026). */}
         <Card className="p-4">
-          <ol className="flex flex-wrap items-center gap-3">
+          <ol className="flex flex-wrap items-center justify-center gap-3">
             {PASSOS.map((p, i) => (
               <li key={p} className="flex items-center gap-2">
                 <span
