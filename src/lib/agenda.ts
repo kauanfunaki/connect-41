@@ -108,14 +108,25 @@ export function fullDayLabel(dateKey: string): string {
 
 // ── Visões da Agenda ────────────────────────────────────────────────────────
 // A grade de dia e a de semana são a mesma coisa com 1 ou 7 colunas; a de mês
-// é uma grade separada, sem eixo de horas.
+// é uma grade separada, sem eixo de horas. "Prazos" (10/11/2026, pedido do
+// Kauan) é a lista do que vence, dia a dia, para o setor que não faz reunião:
+// de hoje a 30 dias, e as setas andam 31 dias.
 
-export type AgendaView = "dia" | "semana" | "mes";
+export type AgendaView = "prazos" | "dia" | "semana" | "mes";
 
-const AGENDA_VIEWS: AgendaView[] = ["dia", "semana", "mes"];
+export const AGENDA_VIEWS: readonly AgendaView[] = ["prazos", "dia", "semana", "mes"];
 
-export function parseAgendaView(raw: string | undefined): AgendaView {
-  return AGENDA_VIEWS.includes(raw as AgendaView) ? (raw as AgendaView) : "semana";
+/** Quantos dias a lista de Prazos cobre: o dia de referência e os 30 seguintes. */
+export const DIAS_DA_LISTA_DE_PRAZOS = 31;
+
+/** A visão escrita na URL ou gravada no banco; `null` quando não é uma visão. */
+export function lerVisaoDaAgenda(raw: string | null | undefined): AgendaView | null {
+  return AGENDA_VIEWS.includes(raw as AgendaView) ? (raw as AgendaView) : null;
+}
+
+/** A visão da URL, ou `padrao` quando ela não diz (desde 10/11/2026 o padrão sai do setor e da pessoa). */
+export function parseAgendaView(raw: string | undefined, padrao: AgendaView = "semana"): AgendaView {
+  return lerVisaoDaAgenda(raw) ?? padrao;
 }
 
 // Data de referência da URL — inválida ou ausente cai em hoje, então
@@ -135,6 +146,7 @@ export function parseAgendaDate(raw: string | undefined): string {
 // completas a partir da segunda que contém o dia 1º — mesma grade do
 // MiniCalendar, altura estável ao trocar de mês).
 export function agendaDayKeys(view: AgendaView, dateKey: string): string[] {
+  if (view === "prazos") return Array.from({ length: DIAS_DA_LISTA_DE_PRAZOS }, (_, i) => addDaysToKey(dateKey, i));
   if (view === "dia") return [dateKey];
   if (view === "semana") return weekDayKeys(mondayOfWeek(dateKey));
   const firstMonday = mondayOfWeek(firstOfMonth(dateKey));
@@ -159,6 +171,7 @@ export function addMonthsToKey(dateKey: string, months: number): string {
 
 // Passo das setinhas de navegação, por visão.
 export function shiftAgendaDate(view: AgendaView, dateKey: string, direction: -1 | 1): string {
+  if (view === "prazos") return addDaysToKey(dateKey, direction * DIAS_DA_LISTA_DE_PRAZOS);
   if (view === "dia") return addDaysToKey(dateKey, direction);
   if (view === "semana") return addDaysToKey(dateKey, direction * 7);
   return addMonthsToKey(firstOfMonth(dateKey), direction);
@@ -168,9 +181,26 @@ export function shiftAgendaDate(view: AgendaView, dateKey: string, direction: -1
 // cruza a virada do mês continua nomeada pelo mês em que começa (era assim
 // antes das visões existirem).
 export function agendaTitle(view: AgendaView, dateKey: string): string {
+  if (view === "prazos") return intervaloLabel(dateKey, addDaysToKey(dateKey, DIAS_DA_LISTA_DE_PRAZOS - 1));
   if (view === "dia") return fullDayLabel(dateKey);
   if (view === "semana") return monthYearLabel(mondayOfWeek(dateKey));
   return monthYearLabel(dateKey);
+}
+
+// "10 de novembro a 10 de dezembro de 2026"; com a virada do ano, o ano vai
+// nos dois lados.
+export function intervaloLabel(de: string, ate: string): string {
+  const [ya, ma, da] = de.split("-").map(Number);
+  const [yb, mb, db] = ate.split("-").map(Number);
+  const inicio = ya === yb ? `${da} de ${MONTH_LABEL[ma - 1]}` : `${da} de ${MONTH_LABEL[ma - 1]} de ${ya}`;
+  return `${inicio} a ${db} de ${MONTH_LABEL[mb - 1]} de ${yb}`;
+}
+
+// "Terça, 10 de novembro" — o título de cada dia da lista de Prazos.
+export function diaDaListaLabel(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const weekday = WEEKDAY_FULL[new Date(Date.UTC(year, month - 1, day)).getUTCDay()].replace("-feira", "");
+  return `${weekday}, ${day} de ${MONTH_LABEL[month - 1]}`;
 }
 
 export function isSameMonth(a: string, b: string): boolean {

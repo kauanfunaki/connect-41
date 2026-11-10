@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { useToast } from "@/components/ui/Toast";
-import { TASK_WIDGETS, type TaskWidgetKey } from "@/lib/taskWidgets";
+import { TASK_WIDGETS, type TaskWidgetGrupo, type TaskWidgetKey } from "@/lib/taskWidgets";
 import type { ActionState } from "@/lib/actionState";
 
 const semAssinatura = () => () => {};
@@ -35,6 +35,12 @@ type Props = {
 
 const chaveDo = (a: AlvoDoMeuDia) => (a.tipo === "pessoa" ? `p:${a.id}` : `s:${a.code}`);
 
+/** Os interruptores em dois grupos (10/11/2026): o que entra nas listas e os blocos ao lado. */
+const GRUPOS: { grupo: TaskWidgetGrupo; titulo: string }[] = [
+  { grupo: "origem", titulo: "Nas listas" },
+  { grupo: "bloco", titulo: "Ao lado" },
+];
+
 // Configuração da tela /tarefas.
 //
 // Na própria tela desde 20/10/2026 (escolha 11A dos Ajustes de 15/10, a mesma
@@ -42,7 +48,9 @@ const chaveDo = (a: AlvoDoMeuDia) => (a.tipo === "pessoa" ? `p:${a.id}` : `s:${a
 // bloco e Concluir. Desde 28/10/2026 não é mais só do Super Admin, nem só por
 // setor (decisão do Kauan): cada pessoa personaliza o seu, o coordenador
 // configura o da equipe e Admin e Super Admin, o de qualquer um e o padrão de
-// cada setor — o "Para quem" escolhe. Sem ordem: a do catálogo.
+// cada setor — o "Para quem" escolhe. Desde 10/11/2026 o coordenador também
+// configura o padrão dos setores dele, e tudo o que a tela monta desliga: as
+// origens das listas e os blocos ao lado. Sem ordem: a do catálogo.
 export function ConfigurarTarefasButton({ alvos, salvarPessoa, restaurarPessoa, salvarSetor, restaurarSetor }: Props) {
   const [aberto, setAberto] = useState(false);
   const [chave, setChave] = useState(() => (alvos[0] ? chaveDo(alvos[0]) : ""));
@@ -103,7 +111,7 @@ export function ConfigurarTarefasButton({ alvos, salvarPessoa, restaurarPessoa, 
   const temOQueRestaurar = alvo.tipo === "setor" || alvo.proprio;
   const explicacao =
     alvo.tipo === "setor"
-      ? "O padrão de quem é do setor e não tem configuração própria — quem participa de mais de um vê a soma dos blocos."
+      ? "O padrão de quem é do setor e não tem configuração própria — quem participa de mais de um vê a soma dos blocos. O setor que não usa reuniões começa sem “Próximas reuniões”."
       : alvo.eu
         ? "Só para você. Vale mais que o padrão do setor; o coordenador também pode ajustar o seu."
         : `Só para ${alvo.rotulo}. Vale mais que o padrão do setor, e a pessoa também pode ajustar.`;
@@ -161,13 +169,20 @@ export function ConfigurarTarefasButton({ alvos, salvarPessoa, restaurarPessoa, 
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        {TASK_WIDGETS.map((def) => (
-          <span key={def.key} title={def.description} className="inline-flex">
-            <Switch checked={selected.includes(def.key)} onCheckedChange={() => toggle(def.key)} rotulo={def.label} />
-          </span>
-        ))}
-      </div>
+      {GRUPOS.map((g) => (
+        <div key={g.grupo} role="group" aria-labelledby={`meu-dia-${g.grupo}`} className="flex flex-col gap-2">
+          <p id={`meu-dia-${g.grupo}`} className="c41-rotulo">
+            {g.titulo}
+          </p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {TASK_WIDGETS.filter((def) => def.grupo === g.grupo).map((def) => (
+              <span key={def.key} title={def.description} className="inline-flex">
+                <Switch checked={selected.includes(def.key)} onCheckedChange={() => toggle(def.key)} rotulo={def.label} />
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
       {selected.length === 0 && (
         <p className="text-fs-2 text-warning-fg">
           Sem nenhum bloco ligado, este Meu dia abre numa tela vazia. É uma escolha válida — só não é acidente.

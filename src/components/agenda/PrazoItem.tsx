@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { BadgeCheck, Briefcase, FileSignature, FileWarning, HandCoins, KeyRound, Landmark, ListTodo, MessageSquareWarning, Palmtree, Receipt, Stethoscope, Wrench } from "lucide-react";
-import type { PrazoDaAgenda, TipoDePrazo } from "@/lib/prazosDaAgenda";
+import { BadgeCheck, Briefcase, CreditCard, FileSignature, FileWarning, HandCoins, KeyRound, Landmark, ListTodo, MessageSquareWarning, Palmtree, Receipt, Scale, Stethoscope, Wrench } from "lucide-react";
+import type { PrazoDaAgenda, TipoDePrazo } from "@/lib/prazosDaAgendaRegras";
 
 /** Nome e cor de cada setor, do cadastro do tenant. */
 export type SetoresDaAgenda = Record<string, { rotulo: string; cor: string }>;
@@ -21,6 +21,9 @@ const ICONE: Record<TipoDePrazo, React.ReactNode> = {
   exigencia: <FileWarning />,
   taxa: <Landmark />,
   licenca: <BadgeCheck />,
+  // As fontes novas de 10/11/2026: a data legal da obrigação e a guia a pagar.
+  obrigacao: <Scale />,
+  guia: <CreditCard />,
 };
 
 /**

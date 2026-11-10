@@ -1497,6 +1497,7 @@ model Tenant {
   societarioConfig          TenantSocietarioConfig?
   quadrosBloqueados         SectorQuadrosBloqueados[]
   userAgendaConfigs         UserAgendaConfig[]
+  userAgendaViews           UserAgendaView[]
   userTaskViews             UserTaskView[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -1549,6 +1550,7 @@ model Tenant {
   budgets                   Budget[]
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
+  sectorAgendaViews         SectorAgendaView[]
   sectorMenuViews           SectorMenuView[]
   inventoryItems            InventoryItem[]
   inventoryMovements        InventoryMovement[]
@@ -1608,18 +1610,13 @@ model Tenant {
   @@map("tenants")
 }
 
-// Quais blocos a tela /tarefas monta para cada setor.
-//
-// Diferente da personalização da Home (UserPreference.homeWidgets), que é
-// preferência pessoal e cada um mexe na sua: aqui a configuração é do
-// workspace e só o SUPER_ADMIN edita. A razão é que o conteúdo de /tarefas não
-// é gosto, é a definição do que conta como obrigação daquele setor — hoje todo
-// mundo vê reuniões, transferências e cards de kanban, mas conforme cada setor
-// ganha os próprios módulos, um setor pode não usar nenhum dos três.
-//
-// Ausência de linha = padrão do catálogo (tudo visível), então um setor novo
-// nasce funcionando sem ninguém precisar configurar nada. Quem pertence a mais
-// de um setor vê a UNIÃO dos blocos dos seus setores.
+// ─── Meu dia (/tarefas): os blocos e as origens que a tela monta ────────────
+// O conteúdo do Meu dia não é só gosto: é o que conta como trabalho daquele
+// setor, e nem todo setor usa reuniões, transferências ou processos. Por isso
+// há o padrão do setor (SectorTaskView) e o da pessoa (UserTaskView), com a
+// pessoa valendo mais. Ausência de linha = padrão do catálogo
+// (src/lib/taskWidgets.ts), então um setor novo nasce funcionando. Quem
+// pertence a mais de um setor vê a UNIÃO dos blocos dos seus setores.
 /// O Meu dia de uma pessoa (28/10/2026): os blocos que ela vê, quando tem
 /// configuração própria — gravada por ela, pelo coordenador de um setor dela
 /// ou pelo admin (ver src/lib/meuDia/configuracao.ts). Vale mais que a do
@@ -1641,11 +1638,20 @@ model UserTaskView {
   @@map("user_task_views")
 }
 
+// O padrão do Meu dia de cada setor. O comentário de cima é de quando só o
+// SUPER_ADMIN editava: desde 28/10/2026 Admin e Super Admin, e desde
+// 10/11/2026 (pedido do Kauan) também o coordenador do setor (SECTOR_ADMIN
+// dele) — ver src/lib/meuDia/configuracao.ts. A precedência é pessoa
+// (UserTaskView) > setor (esta) > código (src/lib/taskWidgets.ts), chave a
+// chave. Sem linha, o padrão do código, que desliga "Próximas reuniões" no
+// setor que não usa reuniões (SectorAgendaView.usaReunioes).
 model SectorTaskView {
   id         String   @id @default(uuid())
   tenantId   String
   sectorCode String   @db.VarChar(40)
-  // JSON com as chaves visíveis, ex. ["transferencias","reunioes"]. Texto e
+  // JSON com as chaves visíveis. Até 10/11/2026 era uma lista, ex.
+  // ["transferencias","reunioes"]; desde então é { visiveis, conhecidas }, para
+  // bloco novo não sumir de quem já tinha salvo (ver parseTaskWidgets). Texto e
   // não tabela de junção pelo mesmo motivo de homeWidgets: o catálogo vive em
   // código, e chave desconhecida é descartada na leitura.
   widgets    String   @db.Text
@@ -1657,6 +1663,31 @@ model SectorTaskView {
   @@unique([tenantId, sectorCode])
   @@index([tenantId])
   @@map("sector_task_views")
+}
+
+// A Agenda de cada setor (10/11/2026, pedido do Kauan): "tem setores que não
+// fazem reuniões". O coordenador do setor (SECTOR_ADMIN dele), o Admin ou o
+// Super Admin diz se o setor usa reuniões e quais fontes de prazo a Agenda
+// mostra por padrão. Sem linha, o padrão do código: usa reuniões e mostra todas
+// as fontes — a Agenda de antes desta tabela. Regras em src/lib/agendaDoSetor.ts.
+model SectorAgendaView {
+  id            String   @id @default(uuid())
+  tenantId      String
+  sectorCode    String   @db.VarChar(40)
+  /// Falso: a Agenda abre em Prazos e o Meu dia nasce sem "Próximas reuniões".
+  usaReunioes   Boolean  @default(true)
+  /// JSON com as fontes DESLIGADAS, ex. ["contas","dp"]. As desligadas, e não
+  /// as ligadas, para fonte nova aparecer também em quem já configurou. Nulo =
+  /// todas ligadas. Chave desconhecida é descartada na leitura.
+  fontesOcultas String?  @db.Text
+  updatedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@map("sector_agenda_views")
 }
 
 // Quais telas do grupo "Geral" do menu lateral ficam ESCONDIDAS para cada
@@ -1969,6 +2000,7 @@ model User {
   meetingsCreated             Meeting[]                  @relation("MeetingCreatedBy")
   meetingAttendances          MeetingAttendee[]
   agendaConfigs               UserAgendaConfig[]
+  agendaViews                 UserAgendaView[]
   clientDocumentsCreated      ClientDocument[]
   recurringObligations        RecurringObligation[]
   admissaoLinksCreated        AdmissaoLink[]
@@ -7305,6 +7337,8 @@ model ObrigacaoGerada {
 
   @@unique([modeloId, companyId, competencia])
   @@index([tenantId, companyId])
+  // A data legal na Agenda (10/11/2026): a busca do mês é por período.
+  @@index([tenantId, dataLegal])
   @@map("obrigacoes_geradas")
 }
 
@@ -7549,6 +7583,31 @@ model UserAgendaConfig {
   @@unique([userId, tenantId])
   @@index([tenantId])
   @@map("user_agenda_configs")
+}
+
+/// A Agenda de uma pessoa (10/11/2026): as fontes de prazo que ela desligou e
+/// a última visão que escolheu (prazos, dia, semana ou mês). Nulo = segue o
+/// padrão dos setores dela (SectorAgendaView) e, sem ele, o do código. Tabela
+/// própria, e não colunas em UserAgendaConfig, pela ordem do deploy: coluna nova
+/// lida antes da migration derrubaria o horário da grade; tabela nova quebra só
+/// o que é novo. Por tenant, como o horário: as fontes dependem dos módulos de
+/// cada escritório.
+model UserAgendaView {
+  id            String   @id @default(uuid())
+  tenantId      String
+  userId        String
+  /// JSON com as fontes desligadas por ela, como SectorAgendaView.fontesOcultas.
+  fontesOcultas String?  @db.Text
+  /// "prazos", "dia", "semana" ou "mes". Valor desconhecido é ignorado na leitura.
+  visao         String?  @db.VarChar(10)
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("user_agenda_views")
 }
 
 /// Quem vê uma senha do Repositório (10/11/2026, pedido do Kauan).
