@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
-import { MODULE_CATALOG, getModuleDef, type ModuleDef } from "@/lib/module-catalog";
+import { MODULE_CATALOG, MODULOS_DE_TODA_A_EQUIPE, getModuleDef, type ModuleDef } from "@/lib/module-catalog";
 import { resolverSetorDoModulo, resolverSetoresDoModulo } from "@/lib/modulo-setor";
 
 // `sectorCode` já vem resolvido para o tenant (ver `src/lib/modulo-setor.ts`);
@@ -158,7 +158,9 @@ const setoresDoModuloNaRequisicao = cache(async (tenantId: string, code: string)
 // mostrar um setor sem nenhum módulo plugado nele.
 export async function getSectorsWithEnabledModules(tenantId: string): Promise<Set<string>> {
   const states = await getTenantModuleStates(tenantId);
-  return new Set(states.filter((s) => s.enabled).flatMap((s) => s.sectorCodes));
+  // A Academia (10/11/2026) é de toda a equipe e não entra em menu de setor:
+  // ligada sozinha, não faz o Tech aparecer na troca de setor com o menu vazio.
+  return new Set(states.filter((s) => s.enabled && !MODULOS_DE_TODA_A_EQUIPE.has(s.code)).flatMap((s) => s.sectorCodes));
 }
 
 export async function setModuleEnabled(tenantId: string, code: string, enabled: boolean): Promise<void> {

@@ -29,6 +29,8 @@ import { origemDoComando } from "@/lib/tokens-pessoais/regras";
 import { baseDomain, hostSuffix, sectorHost } from "@/lib/auth/activeSector";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_TECH_INTERNO } from "@/lib/tech-interno/regras";
+import { MODULO_ACADEMIA } from "@/lib/academia/regras";
+import { isModuleEnabled } from "@/lib/modules";
 import { AgendaDoSetorForm } from "@/components/agenda/AgendaDoSetorForm";
 import { agendaDosSetores, fontesDoEscritorio } from "@/lib/agendaDoSetorServidor";
 import { agendaDosSetoresNaTela } from "@/lib/agendaDoSetor";
@@ -54,14 +56,16 @@ async function dadosDaAgendaDoSetor(ctx: Awaited<ReturnType<typeof getAuthContex
  */
 async function dadosDosTokens(ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   if (!await podeNoModulo(ctx, MODULO_TECH_INTERNO, "ver")) return null;
-  const [meus, doEscritorio, podeEscrever, h] = await Promise.all([
+  const [meus, doEscritorio, podeEscrever, h, academiaLigada] = await Promise.all([
     listarMeusTokens(ctx), listarTokensDoEscritorio(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), headers(),
+    // O token só do ranking da Academia (10/11/2026), para o post do Slack.
+    isModuleEnabled(ctx.tenantId, MODULO_ACADEMIA),
   ]);
   const host = h.get("x-forwarded-host")?.split(",")[0]?.trim() || h.get("host") || "localhost:3000";
   const proto = h.get("x-forwarded-proto")?.split(",")[0]?.trim() === "http" || host.startsWith("localhost") ? "http" : "https";
   // O endereço neutro (`app.`), e não o do setor da página (05/11/2026).
   const origem = origemDoComando(`${proto}://${host}`, sectorHost(null, baseDomain(), hostSuffix()));
-  return { meus, doEscritorio, podeEscrever, origem, agora: new Date().toISOString() };
+  return { meus, doEscritorio, podeEscrever, academiaLigada, origem, agora: new Date().toISOString() };
 }
 
 // Configurações da conta do próprio usuário — o que antes era só um botão

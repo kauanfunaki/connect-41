@@ -994,4 +994,57 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Trate o token como uma senha: não cole em chat, e-mail ou repositório.",
     ],
   },
+
+  // ─── Academia (10/11/2026) ─────────────────────────────────────────────────
+  {
+    chave: "academia",
+    titulo: "Academia",
+    caminhos: ["/academia"],
+    resumo:
+      "Testes de digitação, de digitação de números e de lógica para treinar e disputar com os colegas, com ranking do mês, prêmio e certificado para o pódio. Nada daqui entra em avaliação de desempenho.",
+    secoes: [
+      {
+        titulo: "Como fazer um teste",
+        passos: [
+          "Clique no chapéu de formatura, no alto da tela, e em “Treinar” — ou abra “Testes” dentro da Academia.",
+          "No cartão do teste, escolha “Valendo” (conta para o ranking) ou “Treino livre” (sem limite, fora do ranking).",
+          "Escolha o nível — Fácil, Médio ou Difícil — e clique em “Começar”.",
+          "Na digitação e nos números, o relógio de 60 segundos começa na primeira tecla. Colar não vale, e o que ficar sem digitar desconta da precisão.",
+          "Na lógica, são 10 questões em 3 minutos. Use os números no alto para pular entre as questões e “Enviar respostas” no fim; quando o tempo acaba, o que estiver marcado é enviado.",
+        ],
+      },
+      {
+        titulo: "A tentativa valendo do dia",
+        passos: [
+          "Valendo, cada nível de cada teste tem uma tentativa por dia. O cartão do teste mostra quais já foram usadas hoje.",
+          "A tentativa conta assim que o texto ou as questões aparecem, mesmo se você sair no meio.",
+          "Quer treinar mais? Use o “Treino livre”: os mesmos testes, sem limite.",
+        ],
+      },
+      {
+        titulo: "Como funciona o ranking",
+        passos: [
+          "Abra “Ranking” e escolha o teste nas abas; filtre por mês, nível e setor.",
+          "A lista mostra os 10 primeiros e a sua linha, se você estiver abaixo deles.",
+          "Na digitação, a ordem é pelas palavras por minuto descontada a precisão; na lógica, pela precisão, e o empate vai para quem fez menos tentativas e em menos tempo.",
+          "Para sair do ranking, desligue “Aparecer no ranking”. Você some da lista dos colegas e do post do ranking, e passa a ver só os seus números.",
+          "Quem fica entre os 3 primeiros de um mês encerrado baixa o certificado de destaque em PDF, no aviso que aparece no ranking daquele mês.",
+        ],
+      },
+      {
+        titulo: "Como administrar (Administrador e coordenação da Tech)",
+        passos: [
+          "Abra a aba “Administração” da Academia.",
+          "Em “Textos de digitação”, cadastre e edite os textos de cada nível. Para não sortear mais um texto, desligue em vez de excluir.",
+          "Em “Questões de lógica”, escreva o enunciado, ponha uma imagem se precisar e cadastre de 2 a 6 alternativas — cada uma com texto, imagem ou os dois — marcando a certa.",
+          "Em “Prêmio do mês”, escreva o prêmio do mês (por exemplo, “Top 3 ganham chocolate”). Ele aparece no painel do topo, no Início e no ranking.",
+        ],
+      },
+    ],
+    dicas: [
+      "O Somente leitura vê a Academia e o ranking, mas não faz os testes.",
+      "As imagens das questões aceitam JPG, PNG e WEBP de até 4 MB.",
+      "Descreva no enunciado o que a imagem mostra: é o que o leitor de tela lê.",
+    ],
+  },
 ];

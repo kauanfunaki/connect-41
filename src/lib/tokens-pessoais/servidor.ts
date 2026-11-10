@@ -6,6 +6,7 @@ import { podeNoModulo } from "@/lib/auth/modulo";
 import { isModuleEnabled } from "@/lib/modules";
 import { isSubscriptionReadOnly } from "@/lib/subscription-policy";
 import { MODULO_TECH_INTERNO } from "@/lib/tech-interno/regras";
+import { MODULO_ACADEMIA } from "@/lib/academia/regras";
 import type { AtorTech } from "@/lib/tech-interno/servidor";
 import { ErroApi } from "@/lib/api-v1/erros";
 import {
@@ -77,7 +78,12 @@ export async function criarTokenPessoal(ctx: AuthContext, raw: unknown): Promise
   if (scopes.includes("controle-interno:escrever") && !await podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir")) {
     throw new ErroApi("forbidden", "Você não pode criar nem alterar itens do Controle interno, então o token também não pode.");
   }
+  // A tela dos tokens mora no Controle interno, e só quem o vê cria token.
   if (!await podeNoModulo(ctx, MODULO_TECH_INTERNO, "ver")) throw new ErroApi("forbidden", "O Controle interno não está disponível para você.");
+  // O ranking da Academia (10/11/2026) é de toda a equipe: basta o módulo ligado.
+  if (scopes.includes("academia:ler") && !await isModuleEnabled(ctx.tenantId, MODULO_ACADEMIA)) {
+    throw new ErroApi("forbidden", "A Academia está desligada neste escritório.");
+  }
 
   const db = getPrisma(), agora = new Date();
   const ativos = await db.personalApiToken.count({ where: { tenantId: ctx.tenantId, userId: ctx.userId, revokedAt: null, expiresAt: { gt: agora } } });
@@ -144,7 +150,14 @@ export async function autenticarTokenPessoal(request: Request, escopo?: Escopo):
   if (!registro.tenant.active || isSubscriptionReadOnly(registro.tenant.subscription?.status)) {
     throw new ErroApi("office_unavailable", "O escritório deste token está indisponível ou com a assinatura somente leitura.");
   }
-  if (!await isModuleEnabled(registro.tenantId, MODULO_TECH_INTERNO)) throw new ErroApi("module_disabled", "O Controle interno está desligado neste escritório.");
+  // O módulo que vale é o do escopo da rota (10/11/2026): o ranking da Academia
+  // pede a Academia ligada, e não o Controle interno. Sem escopo (o MCP), o
+  // Controle interno, como antes.
+  if (escopo === "academia:ler") {
+    if (!await isModuleEnabled(registro.tenantId, MODULO_ACADEMIA)) throw new ErroApi("module_disabled", "A Academia está desligada neste escritório.");
+  } else if (!await isModuleEnabled(registro.tenantId, MODULO_TECH_INTERNO)) {
+    throw new ErroApi("module_disabled", "O Controle interno está desligado neste escritório.");
+  }
   const escopos = lerEscopos(registro.scopes);
   if (escopo && !escopos.includes(escopo)) throw new ErroApi("insufficient_scope", `Este token não tem o escopo "${escopo}". Crie um token com esse escopo para esta ação.`);
 
