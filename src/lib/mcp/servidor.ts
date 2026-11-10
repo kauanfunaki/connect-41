@@ -14,7 +14,7 @@ import {
 // Cada chamada chega com o token pessoal; a ferramenta só aparece se o token
 // tem o escopo dela, e age com o acesso de hoje da pessoa dona do token.
 
-export const VERSAO_DO_SERVIDOR_MCP = "1.2.0";
+export const VERSAO_DO_SERVIDOR_MCP = "1.3.0";
 
 const INSTRUCOES = `Servidor do Connect para o Controle interno da equipe Tech: o registro de bugs, melhorias, novas funcionalidades, testes e migrações dos sistemas.
 Tudo o que você faz aqui fica no histórico do item e na Auditoria com o nome da pessoa dona do token.
@@ -24,6 +24,7 @@ Como trabalhar:
 - Para preencher sistema, responsável ou "veio de", consulte ver_opcoes: use a "key" do sistema em systemKey e o "id" da pessoa em assigneeId ("me" é a própria pessoa do token).
 - Para alterar, leia o item com ver_item e envie a "version" que veio nele: se outra pessoa mudou o item nesse meio-tempo, a gravação é recusada (conflict) e você deve ler de novo.
 - Ao concluir um item que mudou código, informe o PR (prUrl) e o commit (commitSha) da mudança em mudar_situacao ou atualizar_item.
+- O critério de aceite (como testar e quando o item está aprovado) vai no campo acceptanceCriteria, não na descrição. Ao reescrevê-lo, mande o critério inteiro no lugar do anterior, que fica no histórico do item; a descrição continua com o contexto.
 - Escreva título e descrição em português, como a equipe escreveria: o que acontece, onde, como reproduzir e o que se espera.`;
 
 const TIPO = z.enum(["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"]).describe("BUG = Bug; IMPROVEMENT = Melhoria (inclui redesign de tela); FEATURE = Nova funcionalidade; TEST = Teste; MIGRATION = Migração.");
@@ -37,7 +38,12 @@ const entregaNoCodigo = {
   commitSha: z.string().max(64).nullable().optional().describe("O hash do commit da mudança (7 a 40 caracteres hexadecimais). Informe ao concluir. null limpa."),
 };
 const camposEditaveis = {
-  description: z.string().max(10000).nullable().optional().describe("Descrição em texto: o que acontece, onde, passos para reproduzir, o esperado. null limpa."),
+  description: z.string().max(10000).nullable().optional().describe("Descrição em texto: o que acontece, onde, passos para reproduzir, o esperado. O critério de aceite não vai aqui: vai em acceptanceCriteria. null limpa."),
+  acceptanceCriteria: z.string().max(10000).nullable().optional().describe(
+    "O critério de aceite, em campo próprio (não na descrição): o que se confere para dar o item por aprovado. A tela mostra numa seção à parte, com os passos numerados e cada linha de \"Aprovado quando\" como um ponto para marcar. "
+    + "Formato, um rótulo por linha: \"CRITÉRIO DE ACEITE (dd/mm/aaaa)\" (opcional, a data em que foi escrito); \"Mudança: …\" (PR, se tem migration); \"Termos: …\" (opcional); \"Antes de testar: …\"; \"Onde testar: …\"; "
+    + "\"Passos:\" e, nas linhas seguintes, \"1. …\", \"2. …\"; \"Aprovado quando:\" e, nas linhas seguintes, \"- …\"; \"Observação: …\" (opcional). "
+    + "Ao reescrever, mande o critério inteiro: o anterior fica no histórico do item, e as marcas dos pontos reescritos deixam de valer. null limpa."),
   priority: PRIORIDADE.optional(),
   systemKey: z.string().max(191).nullable().optional().describe("A key de um sistema do Orquestrador, de ver_opcoes (ex.: \"robo:...\", \"site:...\", \"app:...\"). null = sem sistema."),
   systemMode: z.enum(["NONE", "EXISTING", "NEW"]).optional().describe("NONE = sem sistema; EXISTING = um sistema do Orquestrador (use systemKey); NEW = um sistema que ainda não existe. Opcional: mandar systemKey já basta."),
@@ -72,7 +78,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
         priority: PRIORIDADE.optional(),
         system: z.string().max(191).optional().describe("A key de um sistema (de ver_opcoes), NONE (sem sistema) ou NEW (sistema novo)."),
         assignee: z.string().max(191).optional().describe("O id de uma pessoa, \"me\" (a dona do token) ou \"none\" (sem responsável)."),
-        q: z.string().max(200).optional().describe("Busca no título e na descrição."),
+        q: z.string().max(200).optional().describe("Busca no título, na descrição e no critério de aceite."),
         overdue: z.boolean().optional().describe("true = só os em aberto com prazo vencido."),
         page: z.number().int().min(1).optional().describe("Página, a partir de 1."),
       },
@@ -81,7 +87,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
 
     server.registerTool("ver_item", {
       title: "Ver um item",
-      description: "Mostra um item com todos os campos, a version atual, os comentários, o histórico de alterações e os anexos.",
+      description: "Mostra um item com todos os campos — inclusive o critério de aceite (acceptanceCriteria) e os pontos de \"Aprovado quando\" já conferidos, com quem conferiu (acceptanceChecks) —, a version atual, os comentários, o histórico de alterações e os anexos.",
       inputSchema: { id: ID },
       annotations: { readOnlyHint: true, openWorldHint: false },
     }, ({ id }) => executar(() => verParaApi(ator, id, base)));
@@ -107,7 +113,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
   if (pode("controle-interno:escrever")) {
     server.registerTool("criar_item", {
       title: "Criar um item",
-      description: "Cria um item no Controle interno (bug, melhoria, nova funcionalidade, teste ou migração) e devolve o item criado, com o link para abrir no Connect. Procure antes com listar_itens para não duplicar.",
+      description: "Cria um item no Controle interno (bug, melhoria, nova funcionalidade, teste ou migração) e devolve o item criado, com o link para abrir no Connect. Procure antes com listar_itens para não duplicar. O critério de aceite vai em acceptanceCriteria, não na descrição.",
       inputSchema: {
         title: z.string().min(1).max(200).describe("Título curto e específico, em português."),
         type: TIPO,
@@ -119,7 +125,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
 
     server.registerTool("atualizar_item", {
       title: "Atualizar um item",
-      description: "Altera os campos enviados de um item; os outros ficam como estão. Envie a version lida em ver_item. Cada alteração entra no histórico do item com o nome da pessoa dona do token.",
+      description: "Altera os campos enviados de um item; os outros ficam como estão. Envie a version lida em ver_item. Cada alteração entra no histórico do item com o nome da pessoa dona do token. O critério de aceite vai em acceptanceCriteria, não na descrição.",
       inputSchema: {
         id: ID, version: VERSAO.optional(),
         title: z.string().min(1).max(200).optional(), type: TIPO.optional(), status: SITUACAO.optional(),

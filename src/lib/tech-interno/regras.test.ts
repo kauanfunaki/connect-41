@@ -19,6 +19,12 @@ describe("controle interno do Tech", () => {
   });
   it.each(["PENDING", "IN_PROGRESS", "VALIDATION", "DONE", "CANCELED"])("aceita a situação %s", status => expect(itemSchema.parse({ ...minimo, status }).status).toBe(status));
   it.each([0, 1, 2, 3])("aceita prioridade %i", priority => expect(itemSchema.parse({ ...minimo, priority: String(priority) }).priority).toBe(priority));
+  it("o critério de aceite é opcional, separado da descrição, e vazio vira null", () => {
+    expect(itemSchema.parse(minimo).acceptanceCriteria).toBeNull();
+    expect(itemSchema.parse({ ...minimo, acceptanceCriteria: "  " }).acceptanceCriteria).toBeNull();
+    expect(itemSchema.parse({ ...minimo, description: "Contexto.", acceptanceCriteria: " Mudança: x " })).toMatchObject({ description: "Contexto.", acceptanceCriteria: "Mudança: x" });
+    expect(itemSchema.safeParse({ ...minimo, acceptanceCriteria: "x".repeat(10001) }).success).toBe(false);
+  });
   it("diferencia sem sistema, novo sistema e sistema do Ops Center", () => {
     expect(itemSchema.parse({ ...minimo, systemMode: "NEW" }).systemKey).toBeNull();
     expect(itemSchema.parse({ ...minimo, systemMode: "EXISTING", systemKey: "site:id" }).systemKey).toBe("site:id");
@@ -91,6 +97,11 @@ describe("controle interno do Tech", () => {
     expect(fraseDaAlteracao({ field: "Descrição", before: "a", after: "b" })).toBe("editou a descrição");
     expect(fraseDaAlteracao({ field: "Vínculo do responsável", before: "id-1", after: "id-2" })).not.toContain("id-");
     expect(fraseDaAlteracao({ field: "Prioridade", before: null, after: "Alta" }, true)).toBe("Prioridade: Alta");
+    // O critério de aceite (10/11/2026) conta em frase, como a descrição.
+    expect(fraseDaAlteracao({ field: "Critério de aceite", before: null, after: "Mudança: x" })).toBe("adicionou o critério de aceite");
+    expect(fraseDaAlteracao({ field: "Critério de aceite", before: "a", after: "b" })).toBe("editou o critério de aceite");
+    expect(fraseDaAlteracao({ field: "Critério de aceite", before: "a", after: null })).toBe("removeu o critério de aceite");
+    expect(fraseDaAlteracao({ field: "Critério de aceite", before: null, after: "a" }, true)).toBe("Critério de aceite: preenchido");
   });
   it("agrupa o histórico por dia em São Paulo: hoje, ontem e o dia por extenso", () => {
     const agora = new Date("2026-10-29T15:00:00Z");

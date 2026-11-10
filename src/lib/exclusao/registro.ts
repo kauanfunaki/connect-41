@@ -377,6 +377,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "HelpdeskEvent", coluna: "actorId", tratamento: "manter", motivo: "histórico dos eventos de atendimento" },
   { modelo: "PersonalApiToken", coluna: "revokedById", tratamento: "manter", motivo: "quem revogou o token de outra pessoa (o administrador); a tela não expõe o id" },
   { modelo: "TechInternalAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
+  { modelo: "TechInternalAcceptanceCheck", coluna: "checkedById", tratamento: "manter", motivo: "quem conferiu o ponto do critério de aceite no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },

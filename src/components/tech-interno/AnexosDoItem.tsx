@@ -34,7 +34,7 @@ export function AnexosDoItem({ itemId, anexos, podeEditar }: { itemId: string; a
 
   return <section aria-labelledby="tech-anexos" className="flex flex-col gap-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 id="tech-anexos" className="text-section-title font-semibold text-fg">Anexos{anexos.length ? ` (${anexos.length})` : ""}</h2>
+      <h2 id="tech-anexos" className="text-card-title font-semibold text-fg">Anexos{anexos.length ? ` (${anexos.length})` : ""}</h2>
       {podeEditar && !enviando && <Button variant="secondary" size="sm" onClick={() => setEnviando(true)}><Paperclip size={14} aria-hidden />Anexar arquivos</Button>}
     </div>
     {enviando && <EnvioDeArquivos url={URL_DOS_ANEXOS} campos={{ itemId }} onCancelar={() => setEnviando(false)}

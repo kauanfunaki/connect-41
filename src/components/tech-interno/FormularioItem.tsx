@@ -21,7 +21,7 @@ import { TIPOS, PRIORIDADES, SITUACOES, TAMANHOS, ROTA_TECH_INTERNO, ORIGENS_DO_
 
 type Pessoa = { id: string; name: string };
 export type ItemDoFormulario = {
-  id: string; version: number; title: string; description: string | null;
+  id: string; version: number; title: string; description: string | null; acceptanceCriteria: string | null;
   type: keyof typeof TIPOS; priority: number; status: keyof typeof SITUACOES;
   systemMode: "NONE" | "NEW" | "EXISTING"; systemKey: string | null; assigneeId: string | null; dueDate: string | null;
   assigneeName: string | null;
@@ -31,6 +31,8 @@ export type ItemDoFormulario = {
 
 const OPCOES_DE_TIPO = Object.entries(TIPOS).map(([valor, rotulo]) => ({ valor, rotulo }));
 const OPCOES_DE_PRIORIDADE = PRIORIDADES.map((rotulo, i) => ({ valor: String(i), rotulo }));
+/** O formato do critério de aceite, como dica no campo vazio (10/11/2026). */
+const MODELO_DO_CRITERIO = "Mudança: …\nAntes de testar: …\nOnde testar: …\nPassos:\n1. …\n2. …\nAprovado quando:\n- …\n- …";
 
 /**
  * O formulário do item do Controle interno.
@@ -45,8 +47,12 @@ const OPCOES_DE_PRIORIDADE = PRIORIDADES.map((rotulo, i) => ({ valor: String(i),
  * `compacta` (a tela do item, que já divide a largura com o histórico): uma
  * coluna, com os detalhes logo abaixo do título — é o que mais se muda ali —
  * e a descrição depois. Mesmas peças, sem cartão dentro de cartão.
+ *
+ * O critério de aceite (10/11/2026) tem campo próprio, logo depois da
+ * descrição. `aoTerminar`: na edição de um item que já existe, para onde
+ * "Salvar alterações" e "Cancelar" levam — a visualização do item.
  */
-export function FormularioItem({ item, sistemas, users, entregas = [], podeEditar, podeDefinirTamanho = false, voltar = ROTA_TECH_INTERNO, disposicao = "pagina" }: {
+export function FormularioItem({ item, sistemas, users, entregas = [], podeEditar, podeDefinirTamanho = false, voltar = ROTA_TECH_INTERNO, disposicao = "pagina", aoTerminar }: {
   item?: ItemDoFormulario; sistemas: SistemaTech[]; users: Pessoa[];
   /** As entregas concluídas, para o "Veio de" (04/11/2026). */
   entregas?: { id: string; title: string }[];
@@ -55,6 +61,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
   podeDefinirTamanho?: boolean;
   voltar?: string;
   disposicao?: "pagina" | "compacta";
+  aoTerminar?: string;
 }) {
   // O tamanho trava quando o item sai de Pendente (04/11/2026, lote D).
   const tamanhoTravado = !podeDefinirTamanho || (item ? item.status !== "PENDING" : false);
@@ -90,6 +97,12 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
   </CampoForm>;
   const descricao = <CampoForm label="Descrição" htmlFor="tech-description" helper={pagina ? "Onde acontece, o que se esperava e os passos para ver de novo." : undefined}>
     <Textarea id="tech-description" name="description" rows={pagina ? 12 : 6} maxLength={10000} defaultValue={item?.description ?? ""} />
+  </CampoForm>;
+  // O critério de aceite fora da descrição (10/11/2026): o modelo aparece no
+  // campo vazio, e cada linha de "Aprovado quando" vira um ponto para marcar.
+  const criterio = <CampoForm label="Critério de aceite" htmlFor="tech-criteria"
+    helper="Opcional. Um rótulo por linha: Mudança, Antes de testar, Onde testar, Passos (1., 2.) e Aprovado quando (- …). Cada linha de Aprovado quando vira um ponto para conferir no item.">
+    <Textarea id="tech-criteria" name="acceptanceCriteria" rows={pagina ? 8 : 10} maxLength={10000} defaultValue={item?.acceptanceCriteria ?? ""} placeholder={MODELO_DO_CRITERIO} />
   </CampoForm>;
   const evidencias = !item && podeEditar && <div role="group" aria-labelledby="tech-anexos-rotulo" aria-describedby="tech-anexos-ajuda" className="flex flex-col gap-1.5 min-w-0">
     <span id="tech-anexos-rotulo" className="text-label font-medium leading-5 text-fg">Evidências <span className="font-normal text-fg-muted">(opcional)</span></span>
@@ -172,6 +185,8 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
         }
         show(item ? "Alterações salvas." : falhas ? `Item criado, mas ${falhas === 1 ? "um anexo não foi enviado" : `${falhas} anexos não foram enviados`}. Anexe de novo na tela do item.` : "Item criado.", falhas ? "error" : "success");
         if (!item) router.replace(comVolta(`${ROTA_TECH_INTERNO}/${r.id}`, voltar));
+        // Salvou a edição: volta para a visualização do item (10/11/2026).
+        else if (aoTerminar) router.replace(aoTerminar);
         else router.refresh();
       } catch { setErro("Não foi possível confirmar o salvamento. Atualize a página antes de tentar novamente."); }
     });
@@ -182,13 +197,13 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
     <fieldset disabled={!podeEditar || pendente} className="contents">
       {pagina
         ? <div className="grid grid-cols-1 items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <Card as="section" aria-label="O que é o item" className="min-w-0 p-5 flex flex-col gap-5">{titulo}{descricao}{evidencias}</Card>
+          <Card as="section" aria-label="O que é o item" className="min-w-0 p-5 flex flex-col gap-5">{titulo}{descricao}{criterio}{evidencias}</Card>
           <Card as="section" aria-labelledby="tech-detalhes" className="min-w-0 p-5 flex flex-col gap-5">
             <h2 id="tech-detalhes" className="text-card-title font-semibold text-fg">Detalhes</h2>
             {detalhes}{linhasDiscretas}
           </Card>
         </div>
-        : <>{titulo}{detalhes}{descricao}{linhasDiscretas}</>}
+        : <>{titulo}{detalhes}{descricao}{criterio}{linhasDiscretas}</>}
     </fieldset>
     {!podeEditar ? <p className="text-helper text-fg-muted text-right">Acesso somente para consulta.</p>
       : pagina
@@ -198,7 +213,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
         ? <div className="sticky bottom-0 z-10 -mx-6 -mb-6 border-t border-border bg-surface px-6 py-3">
           <FormFooter semDivisoria pending={pendente} submitLabel={item ? "Salvar alterações" : "Criar item"} pendingLabel={item ? undefined : "Criando…"} cancelHref={voltar} erro={erro || undefined} />
         </div>
-        : <FormFooter pending={pendente} submitLabel={item ? "Salvar alterações" : "Criar item"} pendingLabel={item ? undefined : "Criando…"} cancelHref={voltar} erro={erro || undefined} />}
+        : <FormFooter pending={pendente} submitLabel={item ? "Salvar alterações" : "Criar item"} pendingLabel={item ? undefined : "Criando…"} cancelHref={item && aoTerminar ? aoTerminar : voltar} erro={erro || undefined} />}
   </form>;
 }
 

@@ -35,6 +35,8 @@ const dia = z.iso.date({ error: "Informe uma data válida." }).refine(v => v >= 
 export const itemSchema = z.object({
   title: z.string().trim().min(1, "Informe o título.").max(200, "O título deve ter até 200 caracteres."),
   description: opcional(10000),
+  // O critério de aceite num campo próprio (10/11/2026), fora da descrição.
+  acceptanceCriteria: opcional(10000),
   type: z.enum(["BUG", "IMPROVEMENT", "FEATURE", "TEST", "MIGRATION"], { error: "Escolha o tipo." }),
   priority: z.coerce.number({ error: "Prioridade inválida." }).int("Prioridade inválida.").min(0, "Prioridade inválida.").max(3, "Prioridade inválida.").default(1),
   status: z.enum(["PENDING", "IN_PROGRESS", "VALIDATION", "DONE", "CANCELED"], { error: "Situação inválida." }).default("PENDING"),
@@ -110,6 +112,10 @@ export function hojeEmSaoPaulo(agora = new Date()) {
 }
 
 export type Alteracao = { field: string; before: string | null; after: string | null };
+/** O nome do campo do critério de aceite no histórico do item (10/11/2026). */
+export const CAMPO_DO_CRITERIO = "Critério de aceite";
+/** Campos de texto longo: o histórico conta em frase ("editou a descrição"), sem o antes → depois. */
+export const CAMPOS_DE_TEXTO_LONGO: readonly string[] = ["Descrição", CAMPO_DO_CRITERIO];
 export function diferencas(antes: Record<string, string | null> | null, depois: Record<string, string | null>): Alteracao[] {
   return Object.entries(depois).filter(([campo, valor]) => !antes || antes[campo] !== valor)
     .map(([field, after]) => ({ field, before: antes?.[field] ?? null, after }));
@@ -121,7 +127,8 @@ const ARTIGO: Record<string, string> = { "Situação": "a situação", "Tipo": "
 export const diaLegivel = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split("-").reverse().join("/") : v;
 export function fraseDaAlteracao({ field, before, after }: Alteracao, criacao = false): string {
   const antes = before && diaLegivel(before), depois = after && diaLegivel(after);
-  if (criacao) return `${field}: ${field === "Descrição" ? "preenchida" : depois ?? "não informado"}`;
+  if (criacao) return `${field}: ${field === "Descrição" ? "preenchida" : field === CAMPO_DO_CRITERIO ? "preenchido" : depois ?? "não informado"}`;
+  if (field === CAMPO_DO_CRITERIO) return !antes ? "adicionou o critério de aceite" : !depois ? "removeu o critério de aceite" : "editou o critério de aceite";
   if (field === "Vínculo do sistema") return "trocou o sistema por outro com o mesmo nome";
   if (field === "Vínculo do responsável") return "trocou o responsável por outra pessoa com o mesmo nome";
   if (field === "Título") return `renomeou de “${antes ?? ""}” para “${depois ?? ""}”`;

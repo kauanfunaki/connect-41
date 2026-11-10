@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { salvarItem, comentarItem, mudarSituacaoItem } from "@/lib/tech-interno/servidor";
+import { salvarItem, comentarItem, mudarSituacaoItem, conferirCriterio } from "@/lib/tech-interno/servidor";
 import { ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
 import { removerAnexo } from "@/lib/tech-interno/anexos";
 import { getAuthContext } from "@/lib/auth/context";
@@ -23,6 +23,12 @@ export async function comentarItemTech(id: string, form: FormData): Promise<Resp
 export async function mudarSituacaoTech(id: string, status: string, version: number, entrega?: { prUrl?: string; commitSha?: string }): Promise<Resposta> {
   const result = await mudarSituacaoItem(await getAuthContext(), id, status, version, entrega);
   if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id: result.id }; }
+  return { error: result.error };
+}
+/** Marca ou desmarca um ponto do "Aprovado quando" do critério de aceite (10/11/2026). */
+export async function conferirCriterioTech(id: string, posicao: number, texto: string, marcado: boolean): Promise<Resposta> {
+  const result = await conferirCriterio(await getAuthContext(), id, posicao, texto, marcado);
+  if ("ok" in result) { revalidatePath(`${ROTA_TECH_INTERNO}/${id}`); return { ok: true, id }; }
   return { error: result.error };
 }
 export async function removerAnexoTech(id: string): Promise<{ error: string } | null> {
