@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
 import { buscarNoDrive, destinosDaEmpresa, empresaDoDrive, navegadorDaEquipe, pastaDeEnviados } from "@/lib/drive/servidor";
 import { anexosDoConnect } from "@/lib/drive/doConnect";
-import { enderecoDaPasta, trilhaDaPasta } from "@/lib/drive/tela";
+import { enderecoDaPasta, paginaPedida, trilhaDaPasta } from "@/lib/drive/tela";
 import { PastaDoConnect } from "@/components/arquivos/PastaDoConnect";
 import { abrirArquivos } from "../../acesso";
 
@@ -15,18 +15,19 @@ import { abrirArquivos } from "../../acesso";
  * Os Arquivos de uma empresa (09/10/2026): as pastas do modelo, "Enviados pelo
  * cliente" e o que a equipe criar. `?pasta=` abre uma pasta; `?pasta=enviados`
  * é o atalho do aviso de arquivo novo do cliente; `?busca=` procura pelo nome
- * em todas as pastas da empresa.
+ * em todas as pastas da empresa; `?pagina=` é a página dos arquivos da pasta
+ * aberta (100 por vez, desde 10/11/2026).
  */
 export default async function ArquivosDaEmpresaPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ pasta?: string; busca?: string }>;
+  searchParams: Promise<{ pasta?: string; busca?: string; pagina?: string }>;
 }) {
   const ctx = await abrirArquivos();
   const { id } = await params;
-  const { pasta, busca } = await searchParams;
+  const { pasta, busca, pagina } = await searchParams;
 
   // "Do Connect": os anexos dos módulos, só leitura, por origem.
   if (pasta === "do-connect" && !busca) {
@@ -58,7 +59,7 @@ export default async function ArquivosDaEmpresaPage({
 
   const pastaId = pasta === "enviados" ? await pastaDeEnviados(ctx.tenantId, id).catch(() => null) : pasta || null;
   const [dados, resultados] = await Promise.all([
-    navegadorDaEquipe(ctx, id, busca ? null : pastaId),
+    navegadorDaEquipe(ctx, id, busca ? null : pastaId, paginaPedida(pagina)),
     busca ? buscarNoDrive(ctx, id, busca) : Promise.resolve(null),
   ]);
   if (!dados?.empresa) notFound();

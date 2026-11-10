@@ -42,6 +42,38 @@ export type DestinoNaTela = { id: string; rotulo: string; caminhoIds: string[] }
 
 export type SetorNaTela = { code: string; label: string };
 
+/**
+ * A página de arquivos aberta numa pasta (10/11/2026): o servidor traz só
+ * `porPagina` arquivos; `total` é o da pasta inteira. As pastas vêm inteiras,
+ * no topo de toda página.
+ */
+export type Paginacao = { pagina: number; total: number; porPagina: number };
+
+/** Arquivos por página na tela da equipe e no portal do cliente. */
+export const ARQUIVOS_POR_PAGINA_DA_EQUIPE = 100;
+export const ARQUIVOS_POR_PAGINA_DO_PORTAL = 50;
+
+/** O `?pagina=` da URL como número inteiro de 1 em diante: lixo, zero ou negativo é a primeira. */
+export function paginaPedida(pagina: number | string | null | undefined): number {
+  const n = Math.floor(Number(pagina));
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
+/**
+ * A página que dá para mostrar: a pedida, sem passar da última. Página além do
+ * fim — o último arquivo da última página foi para a lixeira, ou o link é
+ * antigo — cai na última que tem arquivos; pasta sem arquivos é a página 1.
+ */
+export function paginaValida(pagina: number, total: number, porPagina: number): number {
+  const ultima = Math.max(1, Math.ceil(total / porPagina));
+  return Math.min(paginaPedida(pagina), ultima);
+}
+
+/** Quantas páginas a pasta tem (pelo menos uma). */
+export function totalDePaginas(p: Paginacao): number {
+  return Math.max(1, Math.ceil(p.total / p.porPagina));
+}
+
 export type NavegadorNaTela = {
   /** Empresa dona, ou `null` nas pastas internas do escritório. */
   empresa: { id: string; nome: string } | null;
@@ -60,7 +92,9 @@ export type NavegadorNaTela = {
   /** Da raiz até a pasta aberta, inclusive. */
   caminho: { id: string; nome: string }[];
   subpastas: PastaNaTela[];
+  /** Só os da página aberta; o total da pasta está em `paginacao`. */
   arquivos: ArquivoNaTela[];
+  paginacao: Paginacao;
   /** Pode enviar, criar pasta, renomear, mover e excluir aqui. */
   podeMexer: boolean;
   /** Setores a que quem vê pode restringir uma pasta nova. */

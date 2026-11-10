@@ -6,17 +6,34 @@ import type { AuthContext } from "@/lib/auth/context";
 // dele — o caminho da pasta decide se o cliente (ou a pessoa da equipe) vê.
 const estado: { pastas: unknown[]; arquivo: unknown; pasta: unknown } = { pastas: [], arquivo: null, pasta: null };
 
+// Os arquivos da pasta aberta (10/11/2026): `count` diz o total da pasta e
+// `findMany` devolve uma linha por arquivo da fatia pedida — o que se confere
+// é o `skip`/`take`/`orderBy` que chega ao banco.
+const banco = vi.hoisted(() => ({ total: 0, count: vi.fn(), findMany: vi.fn() }));
+
 vi.mock("@/lib/prisma", () => ({
   getPrisma: () => ({
     driveFolder: {
       findMany: async () => estado.pastas,
       findFirst: async () => estado.pasta,
+      createMany: async () => ({ count: 0 }),
     },
-    driveFile: { findFirst: async () => estado.arquivo },
+    driveFolderSeen: { upsert: async () => ({}) },
+    driveTemplateFolder: { count: async () => 1, findMany: async () => [] },
+    company: { findFirst: async () => ({ id: "emp", name: "Empresa", displayName: null }) },
+    driveFile: {
+      findFirst: async () => estado.arquivo,
+      count: banco.count,
+      findMany: banco.findMany,
+      groupBy: async () => [],
+      aggregate: async () => ({ _count: { _all: banco.total }, _sum: { sizeBytes: 0 } }),
+    },
   }),
 }));
 
-const { arquivoParaOCliente, pastaParaAEquipe } = await import("./servidor");
+vi.mock("@/lib/sectors", () => ({ getAllSectors: async () => [] }));
+
+const { arquivoParaOCliente, navegadorDaEquipe, navegadorDoCliente, pastaParaAEquipe } = await import("./servidor");
 
 const pasta = (id: string, parentId: string | null, extra: Record<string, unknown> = {}) => ({
   id,
@@ -108,5 +125,76 @@ describe("pastaParaAEquipe", () => {
     estado.pasta = pasta("2026", "guias");
     const alvo = await pastaParaAEquipe(ctx("SECTOR_USER", ["bpo"]), "2026");
     expect(alvo?.caminho.map((p) => p.id)).toEqual(["guias", "2026"]);
+  });
+});
+
+describe("arquivos da pasta aberta, por página", () => {
+  const linha = (i: number) => ({
+    id: `a${i}`,
+    name: `arquivo-${i}.pdf`,
+    sizeBytes: 1,
+    mimeType: "application/pdf",
+    createdAt: new Date("2026-11-10T12:00:00Z"),
+    expiresAt: null,
+    folderId: "fiscal",
+    uploadedByPortalUserId: null,
+    uploadedByUser: null,
+    uploadedByPortal: null,
+    _count: { accesses: 0 },
+    accesses: [],
+  });
+
+  beforeEach(() => {
+    banco.total = 250;
+    banco.count.mockReset().mockImplementation(async () => banco.total);
+    banco.findMany.mockReset().mockImplementation(async ({ skip, take }: { skip: number; take: number }) =>
+      Array.from({ length: Math.max(0, Math.min(take, banco.total - skip)) }, (_, i) => linha(skip + i))
+    );
+  });
+
+  it("equipe: 100 por página, por nome e id, e o total da pasta", async () => {
+    const dados = await navegadorDaEquipe(ctx("ADMIN"), null, "fiscal", 3);
+    expect(banco.count).toHaveBeenCalledWith({ where: { tenantId: "t", folderId: "fiscal", deletedAt: null } });
+    expect(banco.findMany).toHaveBeenCalledTimes(1);
+    expect(banco.findMany.mock.calls[0][0]).toMatchObject({
+      where: { tenantId: "t", folderId: "fiscal", deletedAt: null },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      skip: 200,
+      take: 100,
+    });
+    expect(dados?.paginacao).toEqual({ pagina: 3, total: 250, porPagina: 100 });
+    expect(dados?.arquivos).toHaveLength(50);
+    // As pastas não paginam: as filhas vêm em toda página.
+    expect(dados?.subpastas).toEqual([]);
+  });
+
+  it("equipe: página além do fim busca de novo a última", async () => {
+    const dados = await navegadorDaEquipe(ctx("ADMIN"), null, "fiscal", 9);
+    expect(banco.findMany).toHaveBeenCalledTimes(2);
+    expect(banco.findMany.mock.calls[1][0]).toMatchObject({ skip: 200, take: 100 });
+    expect(dados?.paginacao.pagina).toBe(3);
+    expect(dados?.arquivos).toHaveLength(50);
+  });
+
+  it("equipe: no primeiro nível não há arquivo para contar nem buscar", async () => {
+    const dados = await navegadorDaEquipe(ctx("ADMIN"), null, null, 4);
+    expect(banco.count).not.toHaveBeenCalled();
+    expect(banco.findMany).not.toHaveBeenCalled();
+    expect(dados?.paginacao).toEqual({ pagina: 1, total: 0, porPagina: 100 });
+    expect(dados?.subpastas.map((p) => p.id)).toEqual(expect.arrayContaining(["guias", "fiscal", "dp"]));
+  });
+
+  it("portal: 50 por página, os mais novos primeiro", async () => {
+    const dados = await navegadorDoCliente("t", "emp", "guias", "cliente", 2);
+    expect(banco.count).toHaveBeenCalledWith({ where: { tenantId: "t", folderId: "guias", deletedAt: null } });
+    expect(banco.findMany.mock.calls[0][0]).toMatchObject({
+      where: { tenantId: "t", folderId: "guias", deletedAt: null },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: 50,
+      take: 50,
+    });
+    expect(dados?.paginacao).toEqual({ pagina: 2, total: 250, porPagina: 50 });
+    expect(dados?.arquivos).toHaveLength(50);
+    expect(dados?.subpastas.map((p) => p.id)).toEqual(["2026"]);
   });
 });
