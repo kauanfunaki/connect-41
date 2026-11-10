@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import type { HandoffPriority, HandoffSectorStatus } from "@/generated/prisma/enums";
 
 // Vocabulário do dia a dia (item 6 do levantamento): a transferência nasce
@@ -42,6 +43,28 @@ export function aggregateHandoffStatus(statuses: HandoffSectorStatus[]): Handoff
   if (statuses.every((s) => s === "DONE")) return "DONE";
   if (statuses.every((s) => s === "NEW")) return "NEW";
   return "IN_PROGRESS";
+}
+
+// A mesma regra de `aggregateHandoffStatus`, escrita como filtro do banco, para
+// a lista de /transferencias paginar no servidor em vez de ler tudo e filtrar
+// em JS (10/11/2026). Exatamente um dos três casa com cada transferência —
+// `handoffs.test.ts` confere contra a função, de 0 a 3 setores.
+// No Prisma, `every` numa relação vazia é verdadeiro: por isso "Nova" pega a
+// transferência sem setor nenhum, e "Finalizada" precisa do `some: {}`.
+export function whereDaSituacao(status: HandoffSectorStatus): Prisma.HandoffWhereInput {
+  switch (status) {
+    case "NEW":
+      return { sectors: { every: { status: "NEW" } } };
+    case "DONE":
+      return { sectors: { some: {}, every: { status: "DONE" } } };
+    case "IN_PROGRESS":
+      return {
+        AND: [
+          { sectors: { some: { status: { not: "NEW" } } } },
+          { sectors: { some: { status: { not: "DONE" } } } },
+        ],
+      };
+  }
 }
 
 // Quem pode LER a instrução escrita para um setor.
