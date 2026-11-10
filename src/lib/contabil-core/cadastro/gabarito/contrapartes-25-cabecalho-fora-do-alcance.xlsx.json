@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "cabecalho_nao_encontrado",
+  "mensagem": "Não foi encontrado um cabeçalho com Razão Social e CPF/CNPJ nas primeiras 30 linhas."
+ }
+}

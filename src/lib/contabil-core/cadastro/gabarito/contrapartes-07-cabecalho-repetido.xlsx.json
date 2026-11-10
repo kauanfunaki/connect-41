@@ -1,0 +1,358 @@
+{
+ "tipo": "cliente",
+ "planilha": "RELAÇÃO DE CLIENTES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "codigo",
+  "conta",
+  "conta_fornecedor",
+  "nome",
+  "razao_social",
+  "documento"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "00000000001",
+   "razao_social": "CLIENTE FICTÍCIO 01",
+   "nome_fantasia": null,
+   "conta_numero": 201,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 9,
+   "documento": "00000000002",
+   "razao_social": "CLIENTE FICTÍCIO 02",
+   "nome_fantasia": null,
+   "conta_numero": 202,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 10,
+   "documento": "00000000003",
+   "razao_social": "CLIENTE FICTÍCIO 03",
+   "nome_fantasia": null,
+   "conta_numero": 203,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 11,
+   "documento": "00000000004",
+   "razao_social": "CLIENTE FICTÍCIO 04",
+   "nome_fantasia": null,
+   "conta_numero": 204,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 12,
+   "documento": "00000000005",
+   "razao_social": "CLIENTE FICTÍCIO 05",
+   "nome_fantasia": null,
+   "conta_numero": 205,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 13,
+   "documento": "00000000006",
+   "razao_social": "CLIENTE FICTÍCIO 06",
+   "nome_fantasia": null,
+   "conta_numero": 206,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 14,
+   "documento": "00000000007",
+   "razao_social": "CLIENTE FICTÍCIO 07",
+   "nome_fantasia": null,
+   "conta_numero": 207,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 15,
+   "documento": "00000000008",
+   "razao_social": "CLIENTE FICTÍCIO 08",
+   "nome_fantasia": null,
+   "conta_numero": 208,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 16,
+   "documento": "00000000009",
+   "razao_social": "CLIENTE FICTÍCIO 09",
+   "nome_fantasia": null,
+   "conta_numero": 209,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 17,
+   "documento": "00000000010",
+   "razao_social": "CLIENTE FICTÍCIO 10",
+   "nome_fantasia": null,
+   "conta_numero": 210,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 18,
+   "documento": "00000000011",
+   "razao_social": "CLIENTE FICTÍCIO 11",
+   "nome_fantasia": null,
+   "conta_numero": 211,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 19,
+   "documento": "00000000012",
+   "razao_social": "CLIENTE FICTÍCIO 12",
+   "nome_fantasia": null,
+   "conta_numero": 212,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 20,
+   "documento": "00000000013",
+   "razao_social": "CLIENTE FICTÍCIO 13",
+   "nome_fantasia": null,
+   "conta_numero": 213,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 21,
+   "documento": "00000000014",
+   "razao_social": "CLIENTE FICTÍCIO 14",
+   "nome_fantasia": null,
+   "conta_numero": 214,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 22,
+   "documento": "00000000015",
+   "razao_social": "CLIENTE FICTÍCIO 15",
+   "nome_fantasia": null,
+   "conta_numero": 215,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 23,
+   "documento": "00000000016",
+   "razao_social": "CLIENTE FICTÍCIO 16",
+   "nome_fantasia": null,
+   "conta_numero": 216,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 24,
+   "documento": "00000000017",
+   "razao_social": "CLIENTE FICTÍCIO 17",
+   "nome_fantasia": null,
+   "conta_numero": 217,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 25,
+   "documento": "00000000018",
+   "razao_social": "CLIENTE FICTÍCIO 18",
+   "nome_fantasia": null,
+   "conta_numero": 218,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 26,
+   "documento": "00000000019",
+   "razao_social": "CLIENTE FICTÍCIO 19",
+   "nome_fantasia": null,
+   "conta_numero": 219,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 27,
+   "documento": "00000000020",
+   "razao_social": "CLIENTE FICTÍCIO 20",
+   "nome_fantasia": null,
+   "conta_numero": 220,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 28,
+   "documento": "00000000021",
+   "razao_social": "CLIENTE FICTÍCIO 21",
+   "nome_fantasia": null,
+   "conta_numero": 221,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 29,
+   "documento": "00000000022",
+   "razao_social": "CLIENTE FICTÍCIO 22",
+   "nome_fantasia": null,
+   "conta_numero": 222,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 30,
+   "documento": "00000000023",
+   "razao_social": "CLIENTE FICTÍCIO 23",
+   "nome_fantasia": null,
+   "conta_numero": 223,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 31,
+   "documento": "00000000024",
+   "razao_social": "CLIENTE FICTÍCIO 24",
+   "nome_fantasia": null,
+   "conta_numero": 224,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 32,
+   "documento": "00000000025",
+   "razao_social": "CLIENTE FICTÍCIO 25",
+   "nome_fantasia": null,
+   "conta_numero": 225,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 33,
+   "documento": "00000000026",
+   "razao_social": "CLIENTE FICTÍCIO 26",
+   "nome_fantasia": null,
+   "conta_numero": 226,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 34,
+   "documento": "00000000027",
+   "razao_social": "CLIENTE FICTÍCIO 27",
+   "nome_fantasia": null,
+   "conta_numero": 227,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 35,
+   "documento": "00000000028",
+   "razao_social": "CLIENTE FICTÍCIO 28",
+   "nome_fantasia": null,
+   "conta_numero": 228,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 36,
+   "documento": "00000000029",
+   "razao_social": "CLIENTE FICTÍCIO 29",
+   "nome_fantasia": null,
+   "conta_numero": 229,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 37,
+   "documento": "00000000030",
+   "razao_social": "CLIENTE FICTÍCIO 30",
+   "nome_fantasia": null,
+   "conta_numero": 230,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 39,
+   "documento": null,
+   "razao_social": null,
+   "nome_fantasia": null,
+   "conta_numero": null,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "Empresa:"
+    ]
+   ],
+   "documento_valido": false,
+   "erro_documento": "documento_ausente"
+  },
+  {
+   "numero_linha": 40,
+   "documento": null,
+   "razao_social": null,
+   "nome_fantasia": null,
+   "conta_numero": null,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "RELAÇÃO DE CLIENTES"
+    ]
+   ],
+   "documento_valido": false,
+   "erro_documento": "documento_ausente"
+  },
+  {
+   "numero_linha": 42,
+   "documento": "99999999999",
+   "razao_social": "CLIENTE FICTÍCIO PÁGINA DOIS",
+   "nome_fantasia": null,
+   "conta_numero": 300,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

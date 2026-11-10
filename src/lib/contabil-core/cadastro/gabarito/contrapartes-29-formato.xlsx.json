@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "formato_nao_suportado",
+  "mensagem": "Envie uma planilha Excel nos formatos XLSX ou XLS."
+ }
+}

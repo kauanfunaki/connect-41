@@ -1,0 +1,81 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "codigo",
+  "uf",
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "endereco",
+  "complemento",
+  "numero",
+  "cep",
+  "documento",
+  "inscricao_estadual",
+  "telefone",
+  "ddd",
+  "fax",
+  "agropecuario",
+  "contribuinte_icms",
+  "tipo_inscricao",
+  "bairro",
+  "inscricao_municipal",
+  "pais",
+  "data_cadastro",
+  "municipio"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "20000000000101",
+   "razao_social": "FORNECEDOR XLS FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 610,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "1"
+    ],
+    [
+     "agropecuario",
+     "1"
+    ],
+    [
+     "contribuinte_icms",
+     "0.25"
+    ],
+    [
+     "data_cadastro",
+     "1999-12-31 00:00:00"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 9,
+   "documento": "20000000000102",
+   "razao_social": "FORNECEDOR XLS DOIS",
+   "nome_fantasia": null,
+   "conta_numero": 611,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "2"
+    ],
+    [
+     "data_cadastro",
+     "2026-11-10 08:00:01"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

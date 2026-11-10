@@ -1,0 +1,25 @@
+{
+ "tipo": "cliente",
+ "planilha": "Planilha1",
+ "titulo": "Relação de Clientes — por código",
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "conta",
+  "razao_social",
+  "documento"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "12345678901",
+   "razao_social": "CLIENTE COM TÍTULO",
+   "nome_fantasia": null,
+   "conta_numero": 1,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

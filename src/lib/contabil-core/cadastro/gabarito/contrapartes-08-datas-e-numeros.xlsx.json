@@ -1,0 +1,179 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "codigo",
+  "uf",
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "endereco",
+  "complemento",
+  "numero",
+  "cep",
+  "documento",
+  "inscricao_estadual",
+  "telefone",
+  "ddd",
+  "fax",
+  "agropecuario",
+  "contribuinte_icms",
+  "tipo_inscricao",
+  "bairro",
+  "inscricao_municipal",
+  "pais",
+  "data_cadastro",
+  "municipio"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "10000000000101",
+   "razao_social": "FORNECEDOR A FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 501,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "100000000000000000000"
+    ],
+    [
+     "agropecuario",
+     "S"
+    ],
+    [
+     "contribuinte_icms",
+     "N"
+    ],
+    [
+     "data_cadastro",
+     "2024-03-05 14:30:15.123000"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 9,
+   "documento": "10000000000102",
+   "razao_social": "FORNECEDOR B FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 501,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "12.5"
+    ],
+    [
+     "data_cadastro",
+     "10:30:00"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 10,
+   "documento": "10000000000103",
+   "razao_social": "FORNECEDOR C FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": null,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "0"
+    ],
+    [
+     "telefone",
+     "0.3"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 11,
+   "documento": "10000000000104",
+   "razao_social": "FORNECEDOR D FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 0,
+   "dados_cadastrais": [
+    [
+     "codigo",
+     "1.5e-07"
+    ],
+    [
+     "telefone",
+     "123456789012345696"
+    ]
+   ],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 12,
+   "documento": "10000000000105",
+   "razao_social": "FORNECEDOR E FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": null,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 13,
+   "documento": "10000000000106",
+   "razao_social": "FORNECEDOR F FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 3000000000,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 14,
+   "documento": "10000000000107",
+   "razao_social": "FORNECEDOR G FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 501,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 15,
+   "documento": "10000000000108",
+   "razao_social": "X",
+   "nome_fantasia": null,
+   "conta_numero": 42,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 16,
+   "documento": "10000000000109",
+   "razao_social": "FORNECEDOR H FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": null,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  },
+  {
+   "numero_linha": 17,
+   "documento": "10000000000110",
+   "razao_social": "FORNECEDOR I FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 10000000000000000,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}
