@@ -92,8 +92,9 @@ export function soma(a: Dec, b: Dec): Dec {
   return { negativo: r < BigInt(0), coeficiente: r < BigInt(0) ? -r : r, expoente: e };
 }
 
-/** `-d` */
+/** `-d`: como no Python, o oposto de zero é zero positivo (`-Decimal("0.00")` dá `0.00`). */
 export function oposto(d: Dec): Dec {
+  if (d.coeficiente === BigInt(0)) return { ...d, negativo: false };
   return { ...d, negativo: !d.negativo };
 }
 
