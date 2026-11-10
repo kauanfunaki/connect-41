@@ -21,14 +21,17 @@ type Janela = {
 };
 
 /** Uma janela aberta; `responde`: a página do Connect atende o pedido de navegar (o sino montado). */
-function janela(caminho: string, { responde = true, focused = false, origem = ORIGEM } = {}): Janela {
+function janela(
+  caminho: string,
+  { responde = true, focused = false, origem = ORIGEM, resposta = { ok: true } as Record<string, unknown> } = {}
+): Janela {
   const j: Janela = {
     url: `${origem}${caminho}`,
     focused,
     visibilityState: focused ? "visible" : "hidden",
     focus: vi.fn(async () => j),
     postMessage: vi.fn((_msg: unknown, portas: { postMessage: (m: unknown) => void }[]) => {
-      if (responde) portas[0].postMessage({ ok: true });
+      if (responde) portas[0].postMessage(resposta);
     }),
     navigate: vi.fn(async (url: string) => ({ ...j, url })),
   };
@@ -70,11 +73,66 @@ function carregarSw(janelas: Janela[]) {
     await vi.advanceTimersByTimeAsync(2000);
     await espera;
   }
-  return { clients, clicar };
+  /** Chega um push; devolve as opções com que o aviso do computador foi mostrado. */
+  async function receber(dados: { title: string; body: string; url: string }) {
+    let espera: Promise<unknown> = Promise.resolve();
+    ouvintes.push({
+      data: { json: () => dados, text: () => "" },
+      waitUntil: (p: Promise<unknown>) => {
+        espera = p;
+      },
+    });
+    await vi.advanceTimersByTimeAsync(1000);
+    await espera;
+    return self.registration.showNotification.mock.calls[0] as [string, { silent: boolean; data: { url: string } }];
+  }
+  return { clients, clicar, receber };
 }
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
+
+describe("o som do push (public/sw.js)", () => {
+  const push = { title: "Chamado novo", body: "Abriram um chamado.", url: "/chamados/c1" };
+
+  it("sem o Connect aberto: o aviso sai com o som do sistema", async () => {
+    const { receber } = carregarSw([]);
+    const [titulo, opcoes] = await receber(push);
+    expect(titulo).toBe("Chamado novo");
+    expect(opcoes.silent).toBe(false);
+    expect(opcoes.data.url).toBe("/chamados/c1");
+  });
+
+  it("com o Connect aberto cuidando do som: o aviso sai mudo, e a página é avisada", async () => {
+    const aberta = janela("/licencas", { resposta: { silenciar: true } });
+    const { receber } = carregarSw([aberta]);
+    const [, opcoes] = await receber(push);
+    expect(aberta.postMessage).toHaveBeenCalledWith({ tipo: "connect:push" }, expect.anything());
+    expect(opcoes.silent).toBe(true);
+  });
+
+  it("a página não responde, ou diz que não consegue tocar: fica o som do sistema", async () => {
+    const calada = janela("/licencas", { responde: false });
+    const semAudio = janela("/empresas", { resposta: { silenciar: false } });
+    const { receber } = carregarSw([calada, semAudio]);
+    const [, opcoes] = await receber(push);
+    expect(opcoes.silent).toBe(false);
+  });
+
+  it("push do portal não pergunta à janela da equipe, e vice-versa", async () => {
+    const equipe = janela("/licencas", { resposta: { silenciar: true } });
+    const { receber } = carregarSw([equipe]);
+    const [, opcoes] = await receber({ ...push, url: "/portal/pendencias" });
+    expect(equipe.postMessage).not.toHaveBeenCalled();
+    expect(opcoes.silent).toBe(false);
+
+    const portal = janela("/portal", { resposta: { silenciar: true } });
+    const outro = carregarSw([portal]);
+    const [, daEquipe] = await outro.receber(push);
+    expect(portal.postMessage).not.toHaveBeenCalled();
+    expect(daEquipe.silent).toBe(false);
+  });
+});
 
 describe("o clique no push do navegador (public/sw.js)", () => {
   it("com o Connect aberto: foca a janela e leva à tela do aviso pela navegação do app", async () => {

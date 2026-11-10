@@ -19,15 +19,56 @@ self.addEventListener("push", (event) => {
     }
   }
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      data: { url: data.url },
-    })
-  );
+  event.waitUntil(mostrarPush(data));
 });
+
+// O som do push (09/11/2026): com o Connect da equipe aberto, quem faz o som é
+// a página — o som que a pessoa escolheu em Notificações, no volume dela —, e
+// o aviso do computador sai mudo, para não tocar dois. A página também confere
+// o sino na hora, em vez de esperar o minuto. Sem página aberta (ou sem
+// resposta), o aviso toca o som do próprio sistema, como sempre.
+
+/** Quanto o service worker espera a página dizer que cuida do som. */
+const ESPERA_DO_SOM_MS = 400;
+
+function avisarQueChegou(janela) {
+  return new Promise((resolve) => {
+    const canal = new MessageChannel();
+    const desistir = setTimeout(() => resolve(false), ESPERA_DO_SOM_MS);
+    canal.port1.onmessage = (e) => {
+      clearTimeout(desistir);
+      resolve(e.data?.silenciar === true);
+    };
+    try {
+      janela.postMessage({ tipo: "connect:push" }, [canal.port2]);
+    } catch {
+      clearTimeout(desistir);
+      resolve(false);
+    }
+  });
+}
+
+async function mostrarPush(data) {
+  let mudo = false;
+  try {
+    const destino = new URL(data.url || "/notificacoes", self.location.origin);
+    if (!doPortal(destino.href)) {
+      const janelas = (await self.clients.matchAll({ type: "window", includeUncontrolled: true })).filter(
+        (c) => new URL(c.url).origin === self.location.origin && !doPortal(c.url)
+      );
+      mudo = (await Promise.all(janelas.map(avisarQueChegou))).some(Boolean);
+    }
+  } catch {
+    // Não deu para perguntar: o aviso sai com o som do sistema.
+  }
+  return self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    data: { url: data.url },
+    silent: mudo,
+  });
+}
 
 // O clique no aviso (09/11/2026): com uma janela do Connect já aberta (mesma
 // origem), ela vem para a frente e vai para a tela do aviso. Janela nova só
