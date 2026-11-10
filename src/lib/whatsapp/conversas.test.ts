@@ -6,6 +6,14 @@ import {
   podeEncerrar,
   ordenarConversas,
   telefoneLegivel,
+  anterioresAo,
+  paginaDeMensagens,
+  contarSemResposta,
+  resumoPorConversa,
+  mesclarMensagens,
+  intercalarEncerramentos,
+  MENSAGENS_POR_VEZ,
+  type CursorDeMensagem,
   SITUACAO_LABEL,
   SITUACAO_TOM,
   type ConversaParaTela,
@@ -205,5 +213,133 @@ describe("telefoneLegivel", () => {
   // para quem vai ligar.
   it("número de fora sai como veio", () => {
     expect(telefoneLegivel("351912345678")).toBe("+351912345678");
+  });
+});
+
+// ── Paginação da conversa ────────────────────────────────────────────────────
+
+type Msg = { id: string; createdAt: Date; direction: "ENTRADA" | "SAIDA"; threadId: string; body: string };
+
+/** `n` mensagens, uma por minuto, a partir de `inicio`. */
+function mensagens(n: number, over: (i: number) => Partial<Msg> = () => ({})): Msg[] {
+  const inicio = Date.parse("2026-11-01T12:00:00Z");
+  return Array.from({ length: n }, (_, i) => ({
+    id: `m${String(i).padStart(4, "0")}`,
+    createdAt: new Date(inicio + i * 60_000),
+    direction: i % 2 === 0 ? "ENTRADA" : "SAIDA",
+    threadId: "t1",
+    body: `mensagem ${i}`,
+    ...over(i),
+  }));
+}
+
+/** O que o banco faz com o `where` de `anterioresAo`, o `orderBy` (data, id) desc e o `take`. */
+function consultar(todas: Msg[], cursor: CursorDeMensagem | null, take: number): Msg[] {
+  let antes = todas;
+  if (cursor) {
+    const [porData, noMesmoInstante] = anterioresAo(cursor).OR;
+    antes = todas.filter(
+      (m) =>
+        m.createdAt.getTime() < porData.createdAt.lt.getTime() ||
+        (m.createdAt.getTime() === noMesmoInstante.createdAt.getTime() && m.id < noMesmoInstante.id.lt)
+    );
+  }
+  return [...antes]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))
+    .slice(0, take);
+}
+
+describe("paginaDeMensagens", () => {
+  // O bug: com `asc` e teto, uma conversa longa mostrava as mais ANTIGAS.
+  it("150 mensagens: vêm as 100 mais novas, em ordem crescente, avisando que há anteriores", () => {
+    const todas = mensagens(150);
+    const p = paginaDeMensagens(consultar(todas, null, MENSAGENS_POR_VEZ + 1));
+    expect(p.mensagens).toHaveLength(100);
+    expect(p.mensagens[0]!.id).toBe("m0050");
+    expect(p.mensagens.at(-1)!.id).toBe("m0149");
+    expect(p.mensagens.map((m) => m.id)).toEqual(todas.slice(50).map((m) => m.id));
+    expect(p.temAnteriores).toBe(true);
+  });
+
+  it("conversa curta vem inteira, sem anteriores", () => {
+    const p = paginaDeMensagens(consultar(mensagens(30), null, MENSAGENS_POR_VEZ + 1));
+    expect(p.mensagens).toHaveLength(30);
+    expect(p.temAnteriores).toBe(false);
+  });
+
+  it("a página seguinte pelo cursor traz o resto, e no fim não há mais anteriores", () => {
+    const todas = mensagens(150);
+    const primeira = paginaDeMensagens(consultar(todas, null, MENSAGENS_POR_VEZ + 1));
+    const m0 = primeira.mensagens[0]!;
+    const segunda = paginaDeMensagens(consultar(todas, { em: m0.createdAt, id: m0.id }, MENSAGENS_POR_VEZ + 1));
+    expect(segunda.mensagens.map((m) => m.id)).toEqual(todas.slice(0, 50).map((m) => m.id));
+    expect(segunda.temAnteriores).toBe(false);
+  });
+
+  // O robô responde em lote: várias mensagens no mesmo milissegundo. Só pela
+  // data, as do mesmo instante que caíssem na virada da página sumiriam (lt)
+  // ou repetiriam (lte).
+  it("o cursor desempata createdAt igual pelo id: nada some nem repete entre as páginas", () => {
+    const mesmoInstante = new Date("2026-11-01T12:00:00Z");
+    const todas = mensagens(7, () => ({ createdAt: mesmoInstante }));
+    const vistas: string[] = [];
+    let cursor: CursorDeMensagem | null = null;
+    for (let volta = 0; volta < 10; volta++) {
+      const p: { mensagens: Msg[]; temAnteriores: boolean } = paginaDeMensagens(consultar(todas, cursor, 3), 2);
+      vistas.unshift(...p.mensagens.map((m) => m.id));
+      if (!p.temAnteriores) break;
+      cursor = { em: p.mensagens[0]!.createdAt, id: p.mensagens[0]!.id };
+    }
+    expect(vistas).toEqual(todas.map((m) => m.id));
+  });
+});
+
+describe("sem resposta", () => {
+  it("conta as de entrada depois da última resposta, pelas mais novas", () => {
+    // Antigas: muita entrada sem resposta; depois uma resposta; depois 3 novas.
+    const todas = [
+      ...mensagens(10, () => ({ direction: "ENTRADA" })),
+      ...mensagens(1, () => ({ id: "resp", direction: "SAIDA", createdAt: new Date("2026-11-02T12:00:00Z") })),
+      ...mensagens(3, (i) => ({ id: `novo${i}`, direction: "ENTRADA", createdAt: new Date(Date.parse("2026-11-03T12:00:00Z") + i * 60_000) })),
+    ];
+    expect(contarSemResposta(consultar(todas, null, 21))).toBe(3);
+  });
+
+  it("na lista, cada conversa tem a sua última mensagem e as suas sem resposta, mesmo misturadas", () => {
+    const a = mensagens(5, (i) => ({ threadId: "a", id: `a${i}`, direction: i < 3 ? "SAIDA" : "ENTRADA" }));
+    const b = mensagens(4, (i) => ({ threadId: "b", id: `b${i}`, direction: i === 3 ? "SAIDA" : "ENTRADA" }));
+    const tudoDesc = [...a, ...b].sort((x, y) => y.createdAt.getTime() - x.createdAt.getTime());
+    const r = resumoPorConversa(tudoDesc);
+    expect(r.get("a")).toEqual({ ultima: { body: "mensagem 4", createdAt: a[4]!.createdAt }, naoRespondidas: 2 });
+    expect(r.get("b")).toEqual({ ultima: { body: "mensagem 3", createdAt: b[3]!.createdAt }, naoRespondidas: 0 });
+    expect(r.has("c")).toBe(false);
+  });
+});
+
+describe("mesclarMensagens", () => {
+  it("junta sem repetir, na ordem da tela, e a versão nova de cada id vence", () => {
+    const [m0, m1, m2, m3] = mensagens(4);
+    const atualizada = { ...m2!, body: "status mudou" };
+    const r = mesclarMensagens([m0!, m1!, m2!], [atualizada, m3!]);
+    expect(r.map((m) => m.id)).toEqual(["m0000", "m0001", "m0002", "m0003"]);
+    expect(r[2]!.body).toBe("status mudou");
+  });
+});
+
+describe("intercalarEncerramentos", () => {
+  const ms = mensagens(4);
+  const antes = { em: new Date("2026-10-01T00:00:00Z") };
+  const noMeio = { em: new Date(ms[1]!.createdAt.getTime() + 1) };
+  const tipos = (itens: ReturnType<typeof intercalarEncerramentos<Msg, { em: Date }>>) =>
+    itens.map((i) => (i.tipo === "mensagem" ? i.mensagem.id : `fim-${i.indice}`));
+
+  it("com a conversa inteira, a marca antiga fica antes da primeira mensagem", () => {
+    expect(tipos(intercalarEncerramentos(ms, [antes, noMeio], false))).toEqual(["fim-0", "m0000", "m0001", "fim-1", "m0002", "m0003"]);
+  });
+
+  // Sem isto, todo atendimento encerrado antes da página carregada aparecia
+  // empilhado no topo, como se tivesse acontecido ali.
+  it("com anteriores por carregar, a marca de antes da primeira carregada espera", () => {
+    expect(tipos(intercalarEncerramentos(ms, [antes, noMeio], true))).toEqual(["m0000", "m0001", "fim-1", "m0002", "m0003"]);
   });
 });

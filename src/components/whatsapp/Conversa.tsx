@@ -45,10 +45,13 @@ import {
   podeEncerrar,
   podeTransferir,
   telefoneLegivel,
+  intercalarEncerramentos,
+  mesclarMensagens,
   SITUACAO_LABEL,
   SITUACAO_TOM,
 } from "@/lib/whatsapp/conversas";
 import {
+  mensagensAnteriores,
   responderConversa,
   devolverAoRobo,
   assumirConversa,
@@ -94,6 +97,41 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
   const [desfecho, setDesfecho] = useState("");
   const [transferindo, setTransferindo] = useState(false);
   const [paraQuem, setParaQuem] = useState("");
+
+  // As anteriores que a pessoa pediu. `base` é a página das mais novas que o
+  // servidor mandou por último: quando ela muda (mensagem nova, ação), o que
+  // saiu dela fica nas `antigas` — senão abriria um buraco entre as duas.
+  const [carregadas, setCarregadas] = useState<{ base: Mensagem[]; antigas: Mensagem[]; temAnteriores: boolean | null }>({
+    base: conversa.mensagens,
+    antigas: [],
+    temAnteriores: null,
+  });
+  if (carregadas.base !== conversa.mensagens) {
+    setCarregadas({
+      base: conversa.mensagens,
+      antigas: carregadas.antigas.length > 0 ? mesclarMensagens(carregadas.antigas, carregadas.base) : [],
+      temAnteriores: carregadas.temAnteriores,
+    });
+  }
+  const mensagens = carregadas.antigas.length > 0 ? mesclarMensagens(carregadas.antigas, conversa.mensagens) : conversa.mensagens;
+  const temAnteriores = carregadas.temAnteriores ?? conversa.temAnteriores;
+  const [carregandoAnteriores, setCarregandoAnteriores] = useState(false);
+
+  async function carregarAnteriores() {
+    const primeira = mensagens[0];
+    if (!primeira) return;
+    setCarregandoAnteriores(true);
+    setErro(null);
+    try {
+      const r = await mensagensAnteriores(conversa.id, { em: primeira.createdAt, id: primeira.id });
+      if ("error" in r) setErro(r.error);
+      else setCarregadas((c) => ({ ...c, antigas: mesclarMensagens(r.mensagens, c.antigas), temAnteriores: r.temAnteriores }));
+    } catch {
+      setErro("Não deu para falar com o servidor. Confira a conexão e tente de novo.");
+    } finally {
+      setCarregandoAnteriores(false);
+    }
+  }
 
   const situacao = situacaoDaConversa(conversa, agora);
   const resposta = podeResponder(conversa, agora);
@@ -360,15 +398,22 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
   // cada três mensagens lidas (14/10/2026).
   const abaConversa = (
     <>
-      <RolarParaOFim quantas={conversa.mensagens.length} className="flex-1 min-h-0 flex flex-col gap-2 px-4 sm:px-5 py-3">
+      <RolarParaOFim fim={mensagens.at(-1)?.id ?? null} className="flex-1 min-h-0 flex flex-col gap-2 px-4 sm:px-5 py-3">
         {/* Conversa curta encosta embaixo, perto da caixa de escrever, como num
             app de mensagem. Margem automática, e não `justify-end`: com este,
             o começo de uma conversa longa ficaria fora do alcance da rolagem. */}
         <div aria-hidden className="mt-auto" />
-        {conversa.mensagens.length === 0 ? (
+        {temAnteriores && mensagens.length > 0 && (
+          <div className="flex justify-center pb-1">
+            <Button size="sm" variant="secondary" disabled={carregandoAnteriores} onClick={() => void carregarAnteriores()}>
+              {carregandoAnteriores ? "Carregando…" : "Carregar mensagens anteriores"}
+            </Button>
+          </div>
+        )}
+        {mensagens.length === 0 ? (
           <p className="text-ui text-fg-muted py-6 text-center">Nenhuma mensagem ainda.</p>
         ) : (
-          comMarcasDeEncerramento(conversa, (m) => {
+          comMarcasDeEncerramento(mensagens, conversa.encerramentos, temAnteriores, (m) => {
             const minha = m.direction === "SAIDA";
             return (
               <div key={m.id} className={minha ? "self-end max-w-[80%]" : "self-start max-w-[80%]"}>
@@ -520,7 +565,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
       </ol>
     );
 
-  const ultima = conversa.mensagens.at(-1)?.createdAt ?? conversa.ultimaMensagemEm;
+  const ultima = mensagens.at(-1)?.createdAt ?? conversa.ultimaMensagemEm;
 
   return (
     <PainelDeConversa
@@ -554,7 +599,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
     >
       <AbasDoPainel
         abas={[
-          { chave: "conversa", rotulo: "Conversa", icone: <MessageCircle />, contagem: conversa.mensagens.length, conteudo: abaConversa, cheia: true },
+          { chave: "conversa", rotulo: "Conversa", icone: <MessageCircle />, contagem: conversa.totalMensagens, conteudo: abaConversa, cheia: true },
           { chave: "candidatura", rotulo: conversa.candidaturaId ? "Candidatura" : "Ligar à candidatura", icone: <ClipboardList />, conteudo: abaCandidatura },
           { chave: "historico", rotulo: "Atendimentos encerrados", icone: <Archive />, contagem: conversa.encerramentos.length, conteudo: abaHistorico },
         ]}
@@ -567,27 +612,26 @@ type Mensagem = ConversaDetalhada["mensagens"][number];
 
 /**
  * As mensagens com uma linha onde cada atendimento terminou: é o que mostra,
- * numa conversa longa, que o "oi" de hoje abriu um atendimento novo.
+ * numa conversa longa, que o "oi" de hoje abriu um atendimento novo. Com
+ * mensagens anteriores por carregar, as marcas de antes da primeira carregada
+ * esperam (`intercalarEncerramentos`).
  */
-function comMarcasDeEncerramento(conversa: ConversaDetalhada, mensagem: (m: Mensagem) => ReactNode): ReactNode[] {
-  const marcas = conversa.encerramentos;
-  const itens: ReactNode[] = [];
-  let k = 0;
-  const marca = (i: number) => {
-    const e = marcas[i]!;
+function comMarcasDeEncerramento(
+  mensagens: Mensagem[],
+  encerramentos: ConversaDetalhada["encerramentos"],
+  temAnteriores: boolean,
+  mensagem: (m: Mensagem) => ReactNode
+): ReactNode[] {
+  return intercalarEncerramentos(mensagens, encerramentos, temAnteriores).map((item) => {
+    if (item.tipo === "mensagem") return mensagem(item.mensagem);
+    const e = item.encerramento;
     return (
-      <div key={`fim-${i}`} className="flex items-center gap-2 my-1 text-micro text-fg-muted" role="separator">
+      <div key={`fim-${item.indice}`} className="flex items-center gap-2 my-1 text-micro text-fg-muted" role="separator">
         <span className="h-px flex-1 bg-border" />
         Atendimento encerrado · {rotuloDoDesfecho(e.desfecho)}
         {e.por ? ` · por ${e.por}` : ""} · {formatInstantDateTime(e.em)}
         <span className="h-px flex-1 bg-border" />
       </div>
     );
-  };
-  for (const m of conversa.mensagens) {
-    while (k < marcas.length && marcas[k]!.em <= m.createdAt) itens.push(marca(k++));
-    itens.push(mensagem(m));
-  }
-  while (k < marcas.length) itens.push(marca(k++));
-  return itens;
+  });
 }

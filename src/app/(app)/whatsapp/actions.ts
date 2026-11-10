@@ -19,6 +19,7 @@ import {
   type ResultadoDoLote,
 } from "@/lib/whatsapp/conversas";
 import { pessoasDoAtendimento } from "@/lib/whatsapp/equipe";
+import { lerMensagensAnteriores, type MensagemNaTela } from "@/lib/whatsapp/data";
 import { notifyUser } from "@/lib/notifications";
 import { desfechoDaTela, LIMPEZA_AO_ENCERRAR, type Desfecho } from "@/lib/whatsapp/atendimentos";
 import { atendimentoAberto, fecharAtendimentos, garantirAtendimentoAberto } from "@/lib/whatsapp/atendimentos-dados";
@@ -464,4 +465,21 @@ export async function desvincularCandidatura(threadId: string): Promise<AcaoNaCo
 
   revalidatePath(`/whatsapp/${thread.id}`);
   return { success: true };
+}
+
+/**
+ * O "Carregar mensagens anteriores" da conversa: as mensagens antes da mais
+ * antiga que a tela já mostra. Só leitura, com a mesma permissão das ações.
+ */
+export async function mensagensAnteriores(
+  threadId: string,
+  cursor: { em: Date | string; id: string }
+): Promise<{ error: string } | { mensagens: MensagemNaTela[]; temAnteriores: boolean }> {
+  const em = new Date(cursor?.em);
+  if (Number.isNaN(em.getTime()) || typeof cursor?.id !== "string" || !cursor.id) {
+    return { error: "Não deu para saber de onde continuar. Recarregue a conversa." };
+  }
+  const aberta = await abrirConversa(threadId);
+  if (!aberta.ok) return { error: aberta.erro };
+  return lerMensagensAnteriores(aberta.tenantId, aberta.thread.id, { em, id: cursor.id });
 }

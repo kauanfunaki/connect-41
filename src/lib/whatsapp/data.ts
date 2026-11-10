@@ -2,8 +2,19 @@
 
 import type { Faixa } from "@/lib/recrutamento/triagem";
 import type { Respostas } from "@/lib/recrutamento/respostas";
+import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { ordenarConversas, type ConversaParaTela } from "@/lib/whatsapp/conversas";
+import {
+  anterioresAo,
+  contarSemResposta,
+  ordenarConversas,
+  paginaDeMensagens,
+  resumoPorConversa,
+  MENSAGENS_DO_RESUMO,
+  MENSAGENS_POR_VEZ,
+  type ConversaParaTela,
+  type CursorDeMensagem,
+} from "@/lib/whatsapp/conversas";
 import { JANELA_LIVRE_EM_HORAS } from "@/lib/whatsapp/decisao";
 import { janelaDoCodigo, CODIGOS_DE_WHATSAPP, provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 import { avaliarConexao, contarEsperandoRobo, type SaudeDaConexao } from "@/lib/whatsapp/saude";
@@ -50,8 +61,8 @@ function janelaDe(janelas: Map<string, number | null>, integrationId: string): n
 /**
  * As conversas de um cliente, já na ordem da fila.
  *
- * Uma consulta para as threads e uma para a última mensagem de cada — e não uma
- * por thread. Com o piloto rodando, "uma por linha" é o que transforma uma tela
+ * Uma consulta para as threads e as últimas mensagens de todas de uma vez
+ * (`ultimasDeCadaConversa`) — e não uma por thread. Com o piloto rodando, "uma por linha" é o que transforma uma tela
  * de trinta conversas em sessenta viagens ao banco.
  */
 export async function listarConversas(tenantId: string, agora: Date): Promise<LinhaDeConversa[]> {
@@ -77,11 +88,7 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
 
   const ids = threads.map((t) => t.id);
   const [ultimas, candidaturas, janelas] = await Promise.all([
-    prisma.whatsappMessage.findMany({
-      where: { threadId: { in: ids } },
-      orderBy: { createdAt: "desc" },
-      select: { threadId: true, body: true, createdAt: true, direction: true },
-    }),
+    ultimasDeCadaConversa(ids),
     prisma.candidatura.findMany({
       where: {
         tenantId,
@@ -95,28 +102,11 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
     ),
   ]);
 
-  // A consulta veio em ordem decrescente, então a primeira de cada thread é a
-  // última mensagem, e as de ENTRADA antes da primeira SAIDA são exatamente as
-  // que ninguém respondeu. `fechada` marca onde parar de contar.
-  const ultimaPorThread = new Map<string, { body: string; createdAt: Date }>();
-  const naoRespondidas = new Map<string, number>();
-  const fechada = new Set<string>();
-  for (const m of ultimas) {
-    if (!ultimaPorThread.has(m.threadId)) {
-      ultimaPorThread.set(m.threadId, { body: m.body, createdAt: m.createdAt });
-    }
-    if (fechada.has(m.threadId)) continue;
-    if (m.direction === "ENTRADA") {
-      naoRespondidas.set(m.threadId, (naoRespondidas.get(m.threadId) ?? 0) + 1);
-    } else {
-      fechada.add(m.threadId);
-    }
-  }
-
+  const resumo = resumoPorConversa(ultimas);
   const candidaturaPorId = new Map(candidaturas.map((c) => [c.id, c]));
 
   const linhas: LinhaDeConversa[] = threads.map((t) => {
-    const ultima = ultimaPorThread.get(t.id) ?? null;
+    const ultima = resumo.get(t.id)?.ultima ?? null;
     const c = t.candidaturaId ? candidaturaPorId.get(t.candidaturaId) : null;
     return {
       id: t.id,
@@ -132,12 +122,39 @@ export async function listarConversas(tenantId: string, agora: Date): Promise<Li
       candidaturaId: t.candidaturaId,
       janelaLivreHoras: janelaDe(janelas, t.integrationId),
       atendimentoEncerradoEm: t.atendimentos[0]?.encerradoEm ?? null,
-      naoRespondidas: naoRespondidas.get(t.id) ?? 0,
+      naoRespondidas: resumo.get(t.id)?.naoRespondidas ?? 0,
       responsavel: t.assignedTo ? { id: t.assignedTo.id, nome: t.assignedTo.name } : null,
     };
   });
 
   return ordenarConversas(linhas, agora);
+}
+
+/**
+ * As últimas `MENSAGENS_DO_RESUMO` mensagens de cada conversa, em ordem
+ * decrescente. Antes a lista lia todas as mensagens das 200 conversas para
+ * achar a última de cada uma.
+ *
+ * O `ROW_NUMBER()` (MySQL 8) roda só sobre o índice `(threadId, createdAt)` —
+ * que no InnoDB já carrega o id —, sem tocar no texto das mensagens; o texto
+ * vem depois, só das escolhidas, pelo Prisma (que também cuida das datas e do
+ * fuso, o que a consulta crua não faz).
+ */
+async function ultimasDeCadaConversa(threadIds: string[]) {
+  const prisma = getPrisma();
+  const escolhidas = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT r.id FROM (
+      SELECT id, ROW_NUMBER() OVER (PARTITION BY threadId ORDER BY createdAt DESC, id DESC) AS n
+        FROM whatsapp_messages
+       WHERE threadId IN (${Prisma.join(threadIds)})
+    ) AS r
+    WHERE r.n <= ${MENSAGENS_DO_RESUMO}`;
+  if (escolhidas.length === 0) return [];
+  return prisma.whatsappMessage.findMany({
+    where: { id: { in: escolhidas.map((e) => e.id) } },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    select: { threadId: true, body: true, createdAt: true, direction: true },
+  });
 }
 
 export type MensagemNaTela = {
@@ -165,7 +182,12 @@ export type FichaDaCandidatura = {
 };
 
 export type ConversaDetalhada = LinhaDeConversa & {
+  /** As `MENSAGENS_POR_VEZ` mais novas, em ordem crescente. As anteriores vêm por `lerMensagensAnteriores`. */
   mensagens: MensagemNaTela[];
+  /** Há mensagens mais antigas que as carregadas. */
+  temAnteriores: boolean;
+  /** Todas as mensagens da conversa, carregadas ou não: a contagem da aba. */
+  totalMensagens: number;
   ficha: FichaDaCandidatura | null;
   /**
    * Vínculo automático por telefone + nome (`src/lib/whatsapp/vinculo.ts`):
@@ -207,24 +229,16 @@ export async function lerConversa(
   });
   if (!thread) return null;
 
-  const [mensagens, candidatura, janelas] = await Promise.all([
+  const [maisNovas, totalMensagens, candidatura, janelas] = await Promise.all([
     prisma.whatsappMessage.findMany({
       where: { threadId, tenantId },
-      orderBy: { createdAt: "asc" },
-      take: 300,
-      select: {
-        id: true,
-        direction: true,
-        body: true,
-        createdAt: true,
-        status: true,
-        error: true,
-        agentRunId: true,
-        automatica: true,
-        mediaUrl: true,
-        mediaFileName: true,
-      },
+      // Das mais novas para trás: com `asc` e teto, uma conversa longa mostrava
+      // as mais antigas e escondia as novas.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: MENSAGENS_POR_VEZ + 1,
+      select: SELECT_DA_MENSAGEM,
     }),
+    prisma.whatsappMessage.count({ where: { threadId, tenantId } }),
     thread.candidaturaId
       ? prisma.candidatura.findFirst({
           where: { id: thread.candidaturaId, tenantId },
@@ -248,13 +262,10 @@ export async function lerConversa(
     janelasDasConexoes(tenantId, [thread.integrationId]),
   ]);
 
+  const { mensagens, temAnteriores } = paginaDeMensagens(maisNovas);
   const ultima = mensagens.length > 0 ? mensagens[mensagens.length - 1]! : null;
   const ultimoAtendimento = thread.atendimentos.length > 0 ? thread.atendimentos[thread.atendimentos.length - 1]! : null;
-  let naoRespondidas = 0;
-  for (let i = mensagens.length - 1; i >= 0; i--) {
-    if (mensagens[i]!.direction !== "ENTRADA") break;
-    naoRespondidas++;
-  }
+  const naoRespondidas = contarSemResposta(maisNovas);
 
   return {
     id: thread.id,
@@ -306,18 +317,68 @@ export async function lerConversa(
           },
         }
       : null,
-    mensagens: mensagens.map((m) => ({
-      id: m.id,
-      direction: m.direction,
-      body: m.body,
-      createdAt: m.createdAt,
-      status: m.status,
-      error: m.error,
-      // Texto fixo do Connect conta como do assistente: para o candidato, foi
-      // o assistente que escreveu. "time" fica só para o que uma pessoa mandou.
-      doRobo: m.agentRunId !== null || m.automatica,
-      anexo: m.mediaUrl ? { nome: m.mediaFileName ?? "curriculo.pdf" } : null,
-    })),
+    mensagens: mensagens.map(mensagemNaTela),
+    temAnteriores,
+    totalMensagens,
+  };
+}
+
+/**
+ * As `porVez` mensagens imediatamente anteriores ao cursor (a mais antiga já
+ * na tela), em ordem crescente — o "Carregar mensagens anteriores".
+ */
+export async function lerMensagensAnteriores(
+  tenantId: string,
+  threadId: string,
+  cursor: CursorDeMensagem,
+  porVez = MENSAGENS_POR_VEZ
+): Promise<{ mensagens: MensagemNaTela[]; temAnteriores: boolean }> {
+  const maisNovas = await getPrisma().whatsappMessage.findMany({
+    where: { threadId, tenantId, ...anterioresAo(cursor) },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: porVez + 1,
+    select: SELECT_DA_MENSAGEM,
+  });
+  const { mensagens, temAnteriores } = paginaDeMensagens(maisNovas, porVez);
+  return { mensagens: mensagens.map(mensagemNaTela), temAnteriores };
+}
+
+const SELECT_DA_MENSAGEM = {
+  id: true,
+  direction: true,
+  body: true,
+  createdAt: true,
+  status: true,
+  error: true,
+  agentRunId: true,
+  automatica: true,
+  mediaUrl: true,
+  mediaFileName: true,
+} as const;
+
+function mensagemNaTela(m: {
+  id: string;
+  direction: "ENTRADA" | "SAIDA";
+  body: string;
+  createdAt: Date;
+  status: string | null;
+  error: string | null;
+  agentRunId: string | null;
+  automatica: boolean;
+  mediaUrl: string | null;
+  mediaFileName: string | null;
+}): MensagemNaTela {
+  return {
+    id: m.id,
+    direction: m.direction,
+    body: m.body,
+    createdAt: m.createdAt,
+    status: m.status,
+    error: m.error,
+    // Texto fixo do Connect conta como do assistente: para o candidato, foi
+    // o assistente que escreveu. "time" fica só para o que uma pessoa mandou.
+    doRobo: m.agentRunId !== null || m.automatica,
+    anexo: m.mediaUrl ? { nome: m.mediaFileName ?? "curriculo.pdf" } : null,
   };
 }
 

@@ -278,3 +278,118 @@ export function telefoneLegivel(waPhone: string): string {
   // esconderia que o número é estrangeiro, e isso importa para quem vai ligar.
   return `+${d}`;
 }
+
+// ── Paginação da conversa (10/11/2026) ─────────────────────────────────────
+//
+// A conversa lia as mensagens em ordem crescente com teto de 300: numa conversa
+// longa, a tela mostrava as 300 MAIS ANTIGAS e as novas sumiam. Agora ela abre
+// nas mais novas e traz as anteriores sob pedido, por cursor.
+
+/** Quantas mensagens a conversa traz de cada vez. */
+export const MENSAGENS_POR_VEZ = 100;
+
+/**
+ * Quantas das mais novas de cada conversa a lista lê para a última mensagem e
+ * as sem resposta. Mais de 20 seguidas sem resposta já é "muitas"; a 21ª só
+ * deixa o número passar de 20.
+ */
+export const MENSAGENS_DO_RESUMO = 21;
+
+/** Onde a página carregada começa: a mensagem mais antiga dela. */
+export type CursorDeMensagem = { em: Date; id: string };
+
+/**
+ * O filtro das mensagens anteriores ao cursor, na mesma ordem da tela (data,
+ * depois id). O id desempata: duas mensagens no mesmo milissegundo (o robô
+ * responde em lote) não podem sumir nem aparecer duas vezes entre as páginas.
+ */
+export function anterioresAo(c: CursorDeMensagem): { OR: [{ createdAt: { lt: Date } }, { createdAt: Date; id: { lt: string } }] } {
+  return { OR: [{ createdAt: { lt: c.em } }, { createdAt: c.em, id: { lt: c.id } }] };
+}
+
+/**
+ * Uma página a partir das mais novas. Recebe até `porVez + 1` mensagens em
+ * ordem decrescente (a sobra só diz se há anteriores) e devolve `porVez` em
+ * ordem crescente, como a tela mostra.
+ */
+export function paginaDeMensagens<T>(maisNovasPrimeiro: T[], porVez = MENSAGENS_POR_VEZ): { mensagens: T[]; temAnteriores: boolean } {
+  return { mensagens: maisNovasPrimeiro.slice(0, porVez).reverse(), temAnteriores: maisNovasPrimeiro.length > porVez };
+}
+
+/** As mensagens de ENTRADA no fim da conversa, depois da última SAIDA. Em ordem decrescente. */
+export function contarSemResposta(maisNovasPrimeiro: { direction: string }[]): number {
+  let n = 0;
+  for (const m of maisNovasPrimeiro) {
+    if (m.direction !== "ENTRADA") break;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * A última mensagem e as sem resposta de cada conversa, para a lista. As
+ * mensagens de cada conversa vêm em ordem decrescente (as de conversas
+ * diferentes podem vir misturadas).
+ */
+export function resumoPorConversa(
+  maisNovasPrimeiro: { threadId: string; body: string; createdAt: Date; direction: string }[]
+): Map<string, { ultima: { body: string; createdAt: Date }; naoRespondidas: number }> {
+  const resumo = new Map<string, { ultima: { body: string; createdAt: Date }; naoRespondidas: number }>();
+  // `respondida` marca onde parar de contar: as de ENTRADA antes da primeira
+  // SAIDA são exatamente as que ninguém respondeu.
+  const respondida = new Set<string>();
+  for (const m of maisNovasPrimeiro) {
+    let r = resumo.get(m.threadId);
+    if (!r) {
+      r = { ultima: { body: m.body, createdAt: m.createdAt }, naoRespondidas: 0 };
+      resumo.set(m.threadId, r);
+    }
+    if (respondida.has(m.threadId)) continue;
+    if (m.direction === "ENTRADA") r.naoRespondidas++;
+    else respondida.add(m.threadId);
+  }
+  return resumo;
+}
+
+/**
+ * Junta as mensagens já carregadas com as que chegaram, sem repetir: a versão
+ * mais nova de cada id vence (a situação de envio muda depois), e a ordem é a
+ * da tela — data, depois id.
+ */
+export function mesclarMensagens<T extends { id: string; createdAt: Date }>(antigas: T[], novas: T[]): T[] {
+  const porId = new Map<string, T>();
+  for (const m of antigas) porId.set(m.id, m);
+  for (const m of novas) porId.set(m.id, m);
+  return [...porId.values()].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/**
+ * As mensagens intercaladas com as marcas de fim de atendimento, em ordem.
+ * Enquanto há mensagens anteriores por carregar, as marcas de antes da
+ * primeira carregada ficam de fora: não dá para saber onde caem, e elas
+ * apareceriam todas empilhadas no topo.
+ */
+export function intercalarEncerramentos<M extends { createdAt: Date }, E extends { em: Date }>(
+  mensagens: M[],
+  encerramentos: E[],
+  temAnteriores: boolean
+): ({ tipo: "mensagem"; mensagem: M } | { tipo: "encerramento"; encerramento: E; indice: number })[] {
+  const itens: ({ tipo: "mensagem"; mensagem: M } | { tipo: "encerramento"; encerramento: E; indice: number })[] = [];
+  let k = 0;
+  const primeira = mensagens[0];
+  if (temAnteriores && primeira) {
+    while (k < encerramentos.length && encerramentos[k]!.em <= primeira.createdAt) k++;
+  }
+  for (const m of mensagens) {
+    while (k < encerramentos.length && encerramentos[k]!.em <= m.createdAt) {
+      itens.push({ tipo: "encerramento", encerramento: encerramentos[k]!, indice: k });
+      k++;
+    }
+    itens.push({ tipo: "mensagem", mensagem: m });
+  }
+  while (k < encerramentos.length) {
+    itens.push({ tipo: "encerramento", encerramento: encerramentos[k]!, indice: k });
+    k++;
+  }
+  return itens;
+}
