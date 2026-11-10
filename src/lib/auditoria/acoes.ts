@@ -79,6 +79,15 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "academia.questao.create": c("cadastrou a questão de lógica da Academia"),
   "academia.questao.update": e("editou a questão de lógica da Academia"),
   "academia.premio.update": e("definiu o prêmio do mês da Academia", { comNome: false }),
+  // O Repositório de fluxos (10/11/2026): pastas, fluxos, versões e arquivos.
+  "fluxo.pasta.create": c("criou a pasta do Repositório de fluxos"),
+  "fluxo.pasta.update": e("renomeou a pasta do Repositório de fluxos"),
+  "fluxo.pasta.delete": x("excluiu a pasta do Repositório de fluxos"),
+  "fluxo.create": c("criou o fluxo"),
+  "fluxo.versao": e("salvou uma versão do fluxo"),
+  "fluxo.delete": x("excluiu o fluxo"),
+  "fluxo.anexo.create": c("anexou ao fluxo o arquivo"),
+  "fluxo.anexo.delete": x("excluiu do fluxo o arquivo"),
   // ── Cadastros ──────────────────────────────────────────────────────────────
   "company.create": c("criou a empresa"),
   "company.update": e("editou a empresa"),
@@ -682,6 +691,9 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   AcademiaTexto: "texto da Academia",
   AcademiaQuestao: "questão da Academia",
   AcademiaPremio: "prêmio do mês da Academia",
+  FlowFolder: "pasta do Repositório de fluxos",
+  FlowDoc: "fluxo",
+  FlowAttachment: "arquivo do fluxo",
   AccessAuthorization: "autorização de acesso",
   AccessAuthorizationGrantee: "quem recebe as autorizações",
   AvaliacaoTributaria: "avaliação tributária",
@@ -869,6 +881,8 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["tech_interno.", "tech"],
   // A Academia (10/11/2026) é administrada pela Tech.
   ["academia.", "tech"],
+  // O Repositório de fluxos (10/11/2026) é documentação da casa, de todo setor: vai com os Arquivos.
+  ["fluxo.", "arquivos"],
   ["estoque.", "financeiro"],
   ["contrato_interno.", "financeiro"],
   ["ops.", "tech"],

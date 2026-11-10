@@ -166,7 +166,7 @@ type Props = {
    * As telas do Apoio ligadas no escritório (05/11/2026): Repositório de senhas
    * e de manuais, no grupo Apoio do Geral, para todo setor (cada um vê os seus).
    */
-  apoioLigado?: { senhas: boolean; manuais: boolean };
+  apoioLigado?: { senhas: boolean; manuais: boolean; fluxos?: boolean };
   /** A Academia ligada no escritório (10/11/2026): o chapéu de formatura no topo, antes do tema. */
   academiaLigada?: boolean;
   /** A ordem do menu do setor que o super admin escolheu (05/11/2026); sem ela, a do catálogo. */
@@ -337,6 +337,8 @@ export function AppShell({
     const telas: ItemDoGrupo[] = [
       ...(apoioLigado.senhas ? [{ chave: "senhas", label: "Repositório de senhas", href: "/senhas", icon: <ModuleIcon code="bpo_senhas" />, area: areaDoModulo("bpo_senhas") ?? "marca" }] : []),
       ...(apoioLigado.manuais ? [{ chave: "manuais", label: "Repositório de manuais", href: "/manuais", icon: <ModuleIcon code="bpo_manual" />, area: areaDoModulo("bpo_manual") ?? "marca" }] : []),
+      // O Repositório de fluxos (10/11/2026), ao lado dos manuais.
+      ...(apoioLigado.fluxos ? [{ chave: "fluxos", label: "Repositório de fluxos", href: "/fluxos", icon: <ModuleIcon code="bpo_fluxos" />, area: areaDoModulo("bpo_fluxos") ?? "marca" }] : []),
       ...(quadros ? [quadros] : []),
     ];
     return telas;
@@ -372,7 +374,7 @@ export function AppShell({
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
-    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", quadros?.label].filter(Boolean) as string[];
+    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", quadros?.label].filter(Boolean) as string[];
     const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; existe?: boolean; no: React.ReactNode }[] = [
       {
         chave: "apoio",

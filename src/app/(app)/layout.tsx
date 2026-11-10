@@ -197,7 +197,8 @@ export default async function AppLayout({
   // O Apoio do Geral (05/11/2026): Senhas e Manuais para todo setor, cada um
   // com os seus — quem pode agir em algum setor vê (a tela decide qual).
   const doApoio = (code: string) => moduleStates.some((m) => m.code === code && m.enabled) && ctx.role !== "READONLY";
-  const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual") };
+  // O Repositório de fluxos (10/11/2026) entra no mesmo grupo, com a mesma regra.
+  const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual"), fluxos: doApoio("bpo_fluxos") };
   // A Academia (10/11/2026): de toda a equipe, inclusive o Somente leitura. O
   // chapéu de formatura do topo só aparece com o módulo ligado.
   const academiaLigada = moduleStates.some((m) => m.code === "academia" && m.enabled);

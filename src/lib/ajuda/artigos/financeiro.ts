@@ -733,6 +733,67 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Repositório de fluxos (10/11/2026) ───────────────────────────────────
+  {
+    chave: "bpo_fluxos",
+    titulo: "Repositório de fluxos",
+    caminhos: ["/fluxos"],
+    resumo:
+      "Os fluxogramas e as metodologias de cada setor. O setor escreve as etapas em lista — início, etapas, decisões com o Sim e o Não, voltas e fim — e o Connect desenha o fluxograma sozinho, com quem executa cada etapa.",
+    secoes: [
+      {
+        titulo: "Criar uma pasta e um fluxo",
+        passos: [
+          "No pé da coluna de pastas, à esquerda, clique em “Nova pasta”, dê o nome do processo (por exemplo, “Admissão”) e clique em “Criar pasta”.",
+          "Dentro da pasta, clique em “Fluxo” (ou em “Novo fluxo”, no topo), dê o nome e escolha a pasta.",
+          "Clique em “Criar e escrever as etapas”: o fluxo abre na edição, já com o Início e o Fim.",
+        ],
+      },
+      {
+        titulo: "Escrever as etapas",
+        passos: [
+          "Use os botões “Etapa”, “Decisão”, “Volta” e “Fim”, abaixo da lista. A etapa nova entra antes do Fim.",
+          "Clique numa etapa para abrir: escreva o nome, quem executa (pessoa e setor, robô, integração ou cliente), o prazo, o que entra, o que sai, o que fazer se der erro e a tela do Connect onde ela se faz.",
+          "Sem destino escolhido, cada etapa segue para a seguinte da lista. Para mudar, use “Depois vai para”.",
+          "Numa decisão, escolha para onde vai o “Sim” e para onde vai o “Não”.",
+          "Para uma volta (refazer depois de uma pendência, por exemplo), use “Volta”, ou escolha em “Depois vai para” uma etapa de cima. O desenho mostra a volta tracejada.",
+          "Mude a ordem com as setas de subir e descer, ou arrastando o puxador (⋮⋮) com o mouse. O desenho, à direita, se monta sozinho a cada mudança.",
+        ],
+      },
+      {
+        titulo: "Salvar uma versão",
+        passos: [
+          "Escreva a “Metodologia”: como o setor toca o processo e por quê.",
+          "Escolha o “Dono” do fluxo. O “Revisado em” já vem com a data de hoje.",
+          "Clique em “Salvar versão”. Se faltar algo (uma decisão sem o “Não”, uma etapa sem nome), a etapa abre com o campo marcado.",
+          "Para desistir, clique em “Cancelar”. Sair da tela com mudança não salva pede confirmação.",
+        ],
+      },
+      {
+        titulo: "Ler um fluxo",
+        passos: [
+          "Clique no fluxo, na coluna à esquerda.",
+          "Clique numa etapa do desenho (ou chegue a ela com o Tab e aperte Enter): ao lado aparecem o prazo, o que entra, o que sai, o que fazer se der erro e o link para abrir a tela no Connect.",
+          "Use “Anterior” e “Próxima” para andar pelas etapas. O Esc devolve o foco para a etapa no desenho.",
+          "No celular, a lista das etapas vem primeiro e o desenho embaixo, numa caixa que rola de lado.",
+          "Para ver uma versão antiga, abra “Versões” e clique em “Ver esta versão”.",
+        ],
+      },
+      {
+        titulo: "Anexar arquivos",
+        passos: [
+          "Em “Arquivos”, clique em “Anexar arquivo” e escolha um PDF, uma imagem (PNG, JPG, WEBP) ou um .drawio, de até 10 MB.",
+          "Clique no nome do PDF ou da imagem para abrir numa aba; use o botão de baixar para guardar o arquivo.",
+        ],
+      },
+    ],
+    dicas: [
+      "Cada setor vê só os seus fluxos. Em “Todos os setores”, quem alcança mais de um escolhe o setor pelas abas do topo.",
+      "Etapa que nenhum caminho alcança a partir do Início aparece tracejada, no pé do desenho, com um aviso.",
+      "Excluir pasta, fluxo ou arquivo é só do Administrador ou do Super Admin e não pode ser desfeito. Excluir uma pasta remove os fluxos dela, com as versões e os arquivos.",
+    ],
+  },
+
   // ─── DRE (caixa) ──────────────────────────────────────────────────────────
   {
     chave: "bpo_dre",
