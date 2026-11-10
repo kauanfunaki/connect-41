@@ -60,7 +60,7 @@ function whereDoRecorte(recorte: RecorteDePendencia): Prisma.ClientRequestWhereI
 
 /**
  * Quantas a fila mostra num recorte, sem empresa nem "só vencidas" — o balão
- * das abas "Pedidos ao cliente" e "Pendências do BPO" (10/11/2026, pedido do
+ * das abas "Pedidos" e "Pendências" das Solicitações (10/11/2026, pedido do
  * Kauan: balão como nos Chamados). O mesmo `where` da lista, contado no banco.
  */
 export async function contarPendencias(escopo: EscopoDePendencias, recorte: RecorteDePendencia): Promise<number> {

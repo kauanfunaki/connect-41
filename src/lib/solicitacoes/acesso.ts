@@ -18,7 +18,7 @@ export function setoresDaFila(ctx: AuthContext): string[] | null {
 /**
  * Os setores ativos que a fila da pessoa alcança: as opções do filtro de setor
  * e, sem setor escolhido, o recorte dos Pedidos ao cliente. Saiu das telas em
- * 10/11/2026, quando o balão da aba "Pedidos ao cliente" passou a contar pelo
+ * 10/11/2026, quando o balão da aba "Pedidos" passou a contar pelo
  * mesmo recorte (pedido do Kauan: balão como nos Chamados).
  */
 export function setoresAtivosDaFila<S extends { code: string }>(ativos: readonly S[], setores: readonly string[] | null): S[] {

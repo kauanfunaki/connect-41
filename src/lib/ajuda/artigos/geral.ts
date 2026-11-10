@@ -467,7 +467,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como acompanhar a fila",
         passos: [
-          "Abra “Solicitações” na barra lateral. A aba “Solicitações dos clientes” mostra as que estão em aberto.",
+          "Abra “Solicitações” na barra lateral. A aba “Recebidas” mostra as que estão em aberto.",
           "Use os cartões “Novas”, “Minhas”, “Resposta atrasada” e “Aguardando cliente” para abrir cada recorte.",
           "Clique em “Filtros” para escolher a “Situação”, o “Setor”, a “Empresa” ou só as com resposta atrasada.",
           "Em cada linha, confira a data em “Resposta até” e o selo do prazo: “No prazo”, “Responder hoje” ou “Resposta atrasada”.",

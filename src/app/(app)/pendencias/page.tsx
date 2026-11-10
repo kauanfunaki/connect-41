@@ -61,7 +61,7 @@ export default async function PendenciasPage({
 
   const [{ linhas, contadores, limitado }, lancamento] = await Promise.all([
     // Só as do setor do módulo (e as de antes de 01/10, sem setor): os pedidos
-    // dos outros setores ficam em Solicitações › Pedidos ao cliente.
+    // dos outros setores ficam em Solicitações › Pedidos.
     listarPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(setor) }, { recorte, empresaId, vencidas }, agora),
     podeAgir && params.lancamento ? lancamentoParaVincular(ctx.tenantId, params.lancamento) : Promise.resolve(null),
   ]);

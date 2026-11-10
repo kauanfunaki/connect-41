@@ -8,9 +8,12 @@ import { contarAsAbasDoAtendimento, type AbaDoAtendimento } from "@/lib/solicita
 
 export type { AbaDoAtendimento };
 
+// Uma palavra por aba (10/11/2026, decisão do Kauan), com a largura pelo
+// conteúdo: "Recebidas" era "Solicitações dos clientes" e "Pedidos" era
+// "Pedidos ao cliente". O título de cada tela usa a mesma palavra da aba.
 const ABAS: (AbaDeLink & { chave: AbaDoAtendimento })[] = [
-  { chave: "solicitacoes", rotulo: "Solicitações dos clientes", href: "/solicitacoes", icone: <Inbox /> },
-  { chave: "pedidos", rotulo: "Pedidos ao cliente", href: "/solicitacoes/pedidos", icone: <MessageSquareMore /> },
+  { chave: "solicitacoes", rotulo: "Recebidas", href: "/solicitacoes", icone: <Inbox /> },
+  { chave: "pedidos", rotulo: "Pedidos", href: "/solicitacoes/pedidos", icone: <MessageSquareMore /> },
   { chave: "comunicados", rotulo: "Comunicados", href: "/solicitacoes/comunicados", icone: <Megaphone /> },
   { chave: "envios", rotulo: "Envios", href: "/solicitacoes/envios", icone: <FileSignature /> },
 ];

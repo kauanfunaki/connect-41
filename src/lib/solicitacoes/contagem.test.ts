@@ -28,7 +28,7 @@ describe("contarNovasDaEquipe", () => {
   });
 });
 
-// O balão da aba "Solicitações dos clientes" (10/11/2026): o que a fila mostra
+// O balão da aba "Recebidas" (10/11/2026): o que a fila mostra
 // ao abrir — o recorte "Em aberto" —, contado no banco com o where da lista.
 describe("contarDaEquipe", () => {
   const EM_ABERTO = { status: { in: ["ABERTA", "EM_ANDAMENTO", "AGUARDANDO_CLIENTE"] } };

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// O balão das abas "Pedidos ao cliente" e "Pendências do BPO" (10/11/2026,
+// O balão das abas "Pedidos" e "Pendências" das Solicitações (10/11/2026,
 // pedido do Kauan: balão como nos Chamados): o que a fila mostra ao abrir — o
 // recorte "Em andamento", sem empresa —, contado no banco com o mesmo where da
 // lista, sem carregar linha.

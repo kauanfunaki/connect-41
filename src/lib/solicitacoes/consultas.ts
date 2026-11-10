@@ -100,7 +100,7 @@ export function whereDoRecorteDaEquipe(recorte: RecorteDaEquipe, userId: string)
 
 /**
  * Quantas a fila da pessoa mostra num recorte, sem setor nem empresa
- * filtrados — o balão da aba "Solicitações dos clientes" (10/11/2026, pedido
+ * filtrados — o balão da aba "Recebidas" (10/11/2026, pedido
  * do Kauan: balão como nos Chamados), no recorte padrão da tela. Mesmo
  * `where` da lista, contado no banco: a lista para em 500, o balão não.
  */

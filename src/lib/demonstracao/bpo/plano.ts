@@ -1611,7 +1611,7 @@ export function montarDemonstracaoDoBpo(agora: Date): PlanoDoBpo {
       {
         title: "Como pedir um documento ao cliente",
         content:
-          "<p>Em <strong>Solicitações › Pedidos ao cliente</strong>, abra um pedido com prazo. O cliente vê no portal e responde por lá; a conversa fica guardada no pedido.</p>",
+          "<p>Em <strong>Solicitações › Pedidos</strong>, abra um pedido com prazo. O cliente vê no portal e responde por lá; a conversa fica guardada no pedido.</p>",
       },
       {
         title: "Fechamento do mês",
