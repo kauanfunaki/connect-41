@@ -11,14 +11,19 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { excluirCargo } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export default async function CargosPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: companyId } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/cargos");
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
   const canManage = canWrite(ctx.role);
 
   const prisma = getPrisma();
@@ -33,7 +38,7 @@ export default async function CargosPage({
     orderBy: { name: "asc" },
   });
 
-  const novoHref = `/empresas/${companyId}/cargos/novo`;
+  const novoHref = `${fichaDaEmpresa}/cargos/novo`;
 
   return (
     <PageContainer>
@@ -41,7 +46,7 @@ export default async function CargosPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
           { label: "Cargos" },
         ]}
       />
@@ -83,7 +88,7 @@ export default async function CargosPage({
                 {c.area && <p className="text-fs-2 text-fg-muted">{c.area}</p>}
               </div>
               {canManage && (
-                <AcoesDoCadastro editarHref={`/empresas/${companyId}/cargos/${c.id}/editar`} excluir={podeExcluir(ctx) ? excluirCargo.bind(null, c.id, companyId) : undefined} nome={c.name} />
+                <AcoesDoCadastro editarHref={`${fichaDaEmpresa}/cargos/${c.id}/editar`} excluir={podeExcluir(ctx) ? excluirCargo.bind(null, c.id, companyId) : undefined} nome={c.name} />
               )}
             </div>
           ))}

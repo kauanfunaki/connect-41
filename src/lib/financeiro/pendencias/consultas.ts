@@ -74,6 +74,8 @@ function inicioDeHoje(agora: Date): Date {
 
 export type LinhaDePendencia = {
   id: string;
+  /** O número no escritório: o link da equipe vai pelo endereço curto, pendencia-9 (10/11/2026). */
+  numero: number;
   titulo: string;
   tipo: TipoDaPendencia;
   status: StatusDaPendencia;
@@ -114,6 +116,7 @@ export async function listarPendencias(
       where,
       select: {
         id: true,
+        number: true,
         title: true,
         kind: true,
         status: true,
@@ -136,6 +139,7 @@ export async function listarPendencias(
   return {
     linhas: linhas.slice(0, LIMITE_DA_LISTA).map((l) => ({
       id: l.id,
+      numero: l.number,
       titulo: l.title,
       tipo: l.kind,
       status: l.status,
@@ -193,6 +197,8 @@ export async function pendenciasAguardandoCliente(escopo: EscopoDePendencias): P
 
 export type PendenciaDetalhada = {
   id: string;
+  /** O número no escritório, o do endereço curto pendencia-9 (10/11/2026). */
+  numero: number;
   titulo: string;
   descricao: string | null;
   tipo: TipoDaPendencia;
@@ -233,6 +239,7 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
     where: { ...whereDoEscopo(escopo), id },
     select: {
       id: true,
+      number: true,
       title: true,
       description: true,
       kind: true,
@@ -269,6 +276,7 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
 
   return {
     id: p.id,
+    numero: p.number,
     titulo: p.title,
     descricao: p.description,
     tipo: p.kind,

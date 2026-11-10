@@ -22,6 +22,8 @@ import { formatCpf, formatDocumento, formatInstantDate, formatInstantDateTime } 
 import { nomeExibicao } from "@/lib/companyName";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
 import { registrarVisualizacao } from "../actions";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
+import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
 import {
   aggregateHandoffStatus,
   canReadSectorInstruction,
@@ -57,9 +59,17 @@ const DATA_E_HORA: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short"
  * Atividade, detalhes. As regras estão em src/lib/handoffTransicoes.ts e o
  * texto da Atividade em src/lib/handoffAtividade.ts.
  */
-export default async function HandoffDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function HandoffDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const ctx = await getAuthContext();
+  // O endereço curto (10/11/2026, pedido do Kauan): /transferencias/transferencia-8.
+  // O do uuid passa para ele; quem confere se a pessoa vê é o escopo abaixo.
+  const { id } = await abrirPeloEndereco("transferencia", ctx.tenantId, (await params).id, await searchParams);
   const prisma = getPrisma();
 
   const handoff = await prisma.handoff.findFirst({
@@ -93,11 +103,11 @@ export default async function HandoffDetailPage({ params }: { params: Promise<{ 
   const [entidade, { labels: sectorLabels }, pessoasDoEscritorio, views] = await Promise.all([
     handoff.entityType === "COMPANY"
       ? prisma.company
-          .findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { name: true, displayName: true, kind: true, cnpj: true, cpf: true } })
-          .then((c) => (c ? { nome: nomeExibicao(c), documento: formatDocumento(c.kind, c.cnpj, c.cpf), rotuloDoDocumento: c.kind === "PESSOA_FISICA" ? "CPF" : "CNPJ" } : null))
+          .findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { number: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } })
+          .then((c) => (c ? { numero: c.number, nome: nomeExibicao(c), documento: formatDocumento(c.kind, c.cnpj, c.cpf), rotuloDoDocumento: c.kind === "PESSOA_FISICA" ? "CPF" : "CNPJ" } : null))
       : prisma.person
-          .findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { name: true, cpf: true } })
-          .then((p) => (p ? { nome: p.name, documento: formatCpf(p.cpf), rotuloDoDocumento: "CPF" } : null)),
+          .findFirst({ where: { id: handoff.entityId, tenantId: ctx.tenantId }, select: { number: true, name: true, cpf: true } })
+          .then((p) => (p ? { numero: p.number, nome: p.name, documento: formatCpf(p.cpf), rotuloDoDocumento: "CPF" } : null)),
     getSectorMaps(ctx.tenantId),
     // Os nomes e as fotos de quem aparece na Atividade e na faixa, e a lista do
     // "@" (só os ativos). Os inativos ficam para pintar a menção antiga.
@@ -121,7 +131,7 @@ export default async function HandoffDetailPage({ params }: { params: Promise<{ 
   const origem = rotulo(handoff.fromSector);
   const aggregate = aggregateHandoffStatus(handoff.sectors.map((s) => s.status));
   const pedido = { requestedBy: handoff.requestedBy, fromSector: handoff.fromSector };
-  const entityHref = handoff.entityType === "COMPANY" ? `/empresas/${handoff.entityId}` : `/pessoas/${handoff.entityId}`;
+  const entityHref = enderecoDe(handoff.entityType === "COMPANY" ? "empresa" : "pessoa", { id: handoff.entityId, number: entidade?.numero });
   const eventos = handoff.events.map((e) => ({
     id: e.id,
     type: e.type,
@@ -255,6 +265,9 @@ export default async function HandoffDetailPage({ params }: { params: Promise<{ 
         title={titulo}
         subtitle={
           <>
+            {/* O id curto, discreto, como no Controle interno (10/11/2026, pedido do Kauan). */}
+            {idCurto("transferencia", handoff.number)}
+            {" · "}
             {entidade ? (
               <Link href={entityHref} className="font-medium text-fg hover:text-brand transition-colors">
                 {entidade.nome}

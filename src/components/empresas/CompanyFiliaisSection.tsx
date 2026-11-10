@@ -8,9 +8,11 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { formatCnpj } from "@/lib/format";
 import { nomeExibicao } from "@/lib/companyName";
 import type { CompanyStatus } from "@/generated/prisma/enums";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 type Empresa = {
   id: string;
+  number?: number;
   name: string;
   displayName: string | null;
   cnpj: string | null;
@@ -21,7 +23,7 @@ type Empresa = {
 
 type Props = {
   /** A matriz desta empresa, quando ela própria é filial. */
-  matriz: { id: string; name: string; displayName: string | null; cnpj: string | null } | null;
+  matriz: { id: string; number?: number; name: string; displayName: string | null; cnpj: string | null } | null;
   filiais: Empresa[];
   statusLabel: Record<CompanyStatus, string>;
   statusColor: Record<CompanyStatus, string>;
@@ -53,7 +55,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
       {matriz && (
         <Card className="p-5">
           <h2 className="text-section font-semibold text-fg mb-3">Esta empresa é filial de</h2>
-          <Link href={`/empresas/${matriz.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+          <Link href={enderecoDe("empresa", matriz)} className="font-medium text-fg hover:text-brand transition-colors">
             {nomeExibicao(matriz)}
           </Link>
           {matriz.cnpj && (
@@ -72,7 +74,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
               rolava de lado. O cartão inteiro leva à ficha da filial. */}
           <CartoesNoCelular>
             {filiais.map((f) => (
-              <Link key={f.id} href={`/empresas/${f.id}`} className="block">
+              <Link key={f.id} href={enderecoDe("empresa", f)} className="block">
                 <Cartao className="hover:border-brand/40 transition-colors">
                   <TopoDoCartao nome={nomeExibicao(f)} />
                   <InfoDoCartao className="tnum">{formatCnpj(f.cnpj)}</InfoDoCartao>
@@ -108,7 +110,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
                   {filiais.map((f) => (
                     <LinhaFiltravel key={f.id} id={f.id} className="border-b border-border">
                       <td className="px-5 py-3">
-                        <Link href={`/empresas/${f.id}`} className="font-medium text-fg hover:text-brand transition-colors">
+                        <Link href={enderecoDe("empresa", f)} className="font-medium text-fg hover:text-brand transition-colors">
                           {nomeExibicao(f)}
                         </Link>
                       </td>

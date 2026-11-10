@@ -11,6 +11,8 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { canViewSensitiveField } from "@/lib/auth/sensitiveFields";
 import { getPersonSectors, getApplicableCustomFields } from "@/lib/customFields";
 import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 function toDateInput(d: Date | null): string | undefined {
   return d ? d.toISOString().slice(0, 10) : undefined;
@@ -21,8 +23,11 @@ export default async function EditarPessoaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/editar");
+  const fichaDaPessoa = endereco("pessoa", numeroDaPessoa);
   if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
@@ -56,6 +61,7 @@ export default async function EditarPessoaPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Editar"
       />
@@ -63,7 +69,7 @@ export default async function EditarPessoaPage({
 
         <PessoaForm
           action={atualizarPessoa}
-          cancelHref={`/pessoas/${id}`}
+          cancelHref={`${fichaDaPessoa}`}
           companies={companies}
           cargos={cargos}
           departments={departments}

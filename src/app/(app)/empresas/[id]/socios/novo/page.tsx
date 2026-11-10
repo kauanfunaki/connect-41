@@ -7,10 +7,15 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { criarSocio } from "../actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco as enderecoCurto } from "@/lib/enderecoCurto";
 
 export default async function NovoSocioPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: companyId } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/socios/novo");
+  const fichaDaEmpresa = enderecoCurto("empresa", numeroDaEmpresa);
   if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
@@ -46,8 +51,8 @@ export default async function NovoSocioPage({ params }: { params: Promise<{ id: 
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Sócios", href: `/empresas/${companyId}/socios` },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
+          { label: "Sócios", href: `${fichaDaEmpresa}/socios` },
           { label: "Novo" },
         ]}
       />
@@ -60,7 +65,7 @@ export default async function NovoSocioPage({ params }: { params: Promise<{ id: 
             action={criarSocio}
             companyId={companyId}
             enderecoDaEmpresa={endereco}
-            cancelHref={`/empresas/${companyId}/socios`}
+            cancelHref={`${fichaDaEmpresa}/socios`}
           />
         </div>
       </div>

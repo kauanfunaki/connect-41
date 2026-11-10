@@ -21,17 +21,27 @@ import { moeda } from "@/lib/financeiro/formato";
 import { responderPendenciaEquipe } from "../actions";
 import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
 import { destinosDaEmpresa } from "@/lib/drive/servidor";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
+import { idCurto } from "@/lib/enderecoCurto";
 
 export const dynamic = "force-dynamic";
 
 
-export default async function PendenciaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PendenciaPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId) notFound();
   const regua = await reguaDasPendencias(ctx.tenantId);
   if (!regua.ligados) notFound();
 
-  const { id } = await params;
+  // O endereço curto (10/11/2026, pedido do Kauan): /pendencias/pendencia-9. O
+  // do uuid passa para ele; o setor da pendência é conferido abaixo.
+  const { id } = await abrirPeloEndereco("pendencia", ctx.tenantId, (await params).id, await searchParams);
   const agora = new Date();
   const [p, lembretes, { labels }] = await Promise.all([
     carregarPendencia({ tenantId: ctx.tenantId, companyIds: null }, id, agora),
@@ -55,7 +65,7 @@ export default async function PendenciaPage({ params }: { params: Promise<{ id: 
         title={p.titulo}
         subtitle={
           <>
-            {p.empresaNome} · {ROTULO_DO_TIPO[p.tipo]} · {labels[setor] ?? setor}
+            {idCurto("pendencia", p.numero)} · {p.empresaNome} · {ROTULO_DO_TIPO[p.tipo]} · {labels[setor] ?? setor}
             {p.prazo && <> · prazo {formatInstantDate(p.prazo)}</>}
           </>
         }

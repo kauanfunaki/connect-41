@@ -1,17 +1,20 @@
 import { Briefcase, Building2, Gift, Clock, Wallet, FileCheck, Scale, Users } from "lucide-react";
 import { OperationsLinkList, type OperationLink } from "@/components/shared/OperationsLinkList";
 import { rotaDosEnvios } from "@/lib/envios/regras";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 type Props = {
   companyId: string;
+  /** Com o número, as telas da ficha vão pelo endereço curto, /empresas/empresa-301/socios (10/11/2026). */
+  numero?: number;
 };
 
 // Os caminhos vão inteiros (sem o `/` do começo, que a lista acrescenta) desde
 // que "Envios ao cliente" passou a levar para fora da ficha (08/10/2026): o
 // antigo "Documentos para cliente" era uma tela solta aqui dentro, e agora é a
 // aba "Envios" da central de Solicitações, já filtrada nesta empresa.
-function links(companyId: string): OperationLink[] {
-  const daFicha = (resto: string) => `empresas/${companyId}/${resto}`;
+function links(companyId: string, numero?: number): OperationLink[] {
+  const daFicha = (resto: string) => `${enderecoDe("empresa", { id: companyId, number: numero }).slice(1)}/${resto}`;
   return [
     { href: daFicha("socios"), label: "Sócios", description: "Quadro societário e endereço de cada sócio", icon: <Users size={16} /> },
     { href: daFicha("cargos"), label: "Cargos", description: "Catálogo de cargos da empresa", icon: <Briefcase size={16} /> },
@@ -29,6 +32,6 @@ function links(companyId: string): OperationLink[] {
   ];
 }
 
-export function CompanyOperationsSection({ companyId }: Props) {
-  return <OperationsLinkList basePath="" links={links(companyId)} />;
+export function CompanyOperationsSection({ companyId, numero }: Props) {
+  return <OperationsLinkList basePath="" links={links(companyId, numero)} />;
 }

@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { PainelDeCadastro } from "@/components/admin/PainelDeCadastro";
 import { DepartmentForm } from "@/components/empresas/DepartmentForm";
 import { excluirDepartment, criarDepartment, atualizarDepartment } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export default async function DepartamentosPage({
   params,
@@ -21,10 +23,13 @@ export default async function DepartamentosPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ novo?: string; editar?: string }>;
 }) {
-  const { id: companyId } = await params;
+  const { id: idDaRota } = await params;
   // Criar e editar no painel ao lado (lote 5, 28/10/2026) — ver `PainelDeCadastro`.
   const { novo, editar } = await searchParams;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/departamentos", { novo, editar });
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
   const canManage = canWrite(ctx.role);
 
   const prisma = getPrisma();
@@ -39,7 +44,7 @@ export default async function DepartamentosPage({
     orderBy: { name: "asc" },
   });
 
-  const listaHref = `/empresas/${companyId}/departamentos`;
+  const listaHref = `${fichaDaEmpresa}/departamentos`;
   const novoHref = `${listaHref}?novo=1`;
   const emEdicao = canManage && editar ? departments.find((x) => x.id === editar) : undefined;
 
@@ -49,7 +54,7 @@ export default async function DepartamentosPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
           { label: "Departamentos" },
         ]}
       />

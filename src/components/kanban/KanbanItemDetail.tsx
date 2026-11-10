@@ -59,6 +59,7 @@ import { accessiblePipelineWhere } from "@/lib/auth/scope";
 import { getSectorUsers } from "@/lib/sectorUsers";
 import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { duracaoDoLancamento } from "@/lib/horas/edicao";
+import { alvoDoEndereco, endereco, enderecoDe, idCurto, segmentoDaTarefa } from "@/lib/enderecoCurto";
 
 const ACTIVITY_LABEL: Record<string, string> = {
   NOTE: "Nota",
@@ -94,9 +95,14 @@ type Props = {
 // Conteúdo do detalhe de um item de Kanban — usado tanto pela rota completa
 // (/kanban/[id]/itens/[itemId]) quanto pelo modal interceptado que abre sobre
 // o quadro, evitando duplicar a busca de dados e o JSX entre as duas.
-export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Props) {
+export async function KanbanItemDetail({ id, itemId: itemDaRota, showBreadcrumb = true }: Props) {
   const ctx = await getAuthContext();
   const tenantId = ctx.tenantId;
+  // A tarefa pelo uuid ou pelo id curto, tarefa-77 (10/11/2026, pedido do
+  // Kauan): o modal sobre o quadro não redireciona; a página cheia passa o
+  // endereço do uuid para o curto antes de chegar aqui.
+  const alvo = alvoDoEndereco("tarefa", itemDaRota);
+  if (!alvo) notFound();
 
   const prisma = getPrisma();
   const [pipeline, item] = await Promise.all([
@@ -110,7 +116,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
       },
     }),
     prisma.pipelineItem.findFirst({
-      where: { id: itemId, tenantId },
+      where: { ...alvo, tenantId },
       include: {
         tags: { select: { tagId: true } },
         assignees: { select: { userId: true } },
@@ -122,6 +128,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   ]);
 
   if (!pipeline || !item) notFound();
+  const itemId = item.id;
 
   // O botão da solicitação só leva a ela quem pode abri-la: com o módulo
   // desligado ou a solicitação encaminhada a outro setor, a tela seria 404.
@@ -144,8 +151,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     !item.entityId
       ? Promise.resolve(null)
       : item.entityType === "COMPANY"
-        ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } })
-        : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, name: true } }),
+        ? prisma.company.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, number: true, name: true } })
+        : prisma.person.findFirst({ where: { id: item.entityId, tenantId }, select: { id: true, number: true, name: true } }),
     prisma.activity.findMany({
       where: { pipelineItemId: itemId, tenantId },
       orderBy: { createdAt: "desc" },
@@ -165,7 +172,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     // qualquer item do mesmo pipeline, exceto o próprio.
     prisma.pipelineItem.findMany({
       where: { pipelineId: id, tenantId, id: { not: itemId } },
-      select: { id: true, title: true, entityId: true, entityType: true },
+      select: { id: true, number: true, title: true, entityId: true, entityType: true },
       take: 200,
     }),
   ]);
@@ -177,7 +184,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     prisma.pipelineItem.findMany({
       where: { pipelineId: item.pipelineId, tenantId },
       select: {
-        id: true, parentItemId: true, title: true, entityId: true, order: true, createdAt: true,
+        id: true, number: true, parentItemId: true, title: true, entityId: true, order: true, createdAt: true,
         stage: { select: { name: true, color: true, isTerminal: true, type: true } },
       },
     }),
@@ -196,8 +203,8 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
     prisma.pipelineItemLink.findMany({
       where: { tenantId, OR: [{ pipelineItemId: itemId }, { linkedItemId: itemId }] },
       include: {
-        pipelineItem: { select: { id: true, title: true, entityId: true, entityType: true } },
-        linkedItem: { select: { id: true, title: true, entityId: true, entityType: true } },
+        pipelineItem: { select: { id: true, number: true, title: true, entityId: true, entityType: true } },
+        linkedItem: { select: { id: true, number: true, title: true, entityId: true, entityType: true } },
       },
     }),
     // Horas apontadas no card (13/10/2026): a lista com "Editar" — o cronômetro
@@ -272,7 +279,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
   const editTimeEntryAction = editarLancamentoTempo.bind(null, id, itemId);
   const deleteTimeEntryAction = excluirLancamentoTempo.bind(null, id, itemId);
 
-  const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${o.id}` }));
+  const taskCandidates: TaskMentionCandidate[] = otherItems.map((o) => ({ id: o.id, name: nameFor(o), href: `${basePath}/itens/${segmentoDaTarefa(o)}` }));
 
   // Monta o feed: comentários (NOTE) de topo + eventos, com respostas
   // aninhadas sob cada comentário. Edita o autor (como o `editarNota` exige);
@@ -358,7 +365,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                 <li key={p.id} className="flex items-center gap-1 min-w-0">
                   {i > 0 && <ChevronRight size={12} aria-hidden className="flex-shrink-0" />}
                   <Link
-                    href={`${basePath}/itens/${p.id}`}
+                    href={`${basePath}/itens/${segmentoDaTarefa(p)}`}
                     title={nomeDoPai(p)}
                     className="truncate max-w-[16rem] underline-offset-2 hover:text-fg hover:underline transition-colors"
                   >
@@ -379,33 +386,34 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
         </div>
         {/* "Ver ficha completa" era link azul (30/09): botão não é link. O nome
             da empresa/pessoa segue ao lado quando a tarefa tem título próprio. */}
-        {(entity || solicitacao) && (
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            {entity && item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
-            {entity && (
-              <Button
-                href={item.entityType === "COMPANY" ? `/empresas/${entity.id}` : `/pessoas/${entity.id}`}
-                variant="secondary"
-                size="xs"
-              >
-                Ver ficha completa <ArrowRight size={11} />
+        {/* A linha fica sempre: o id curto da tarefa (tarefa-77), discreto, vem
+            primeiro, como no Controle interno (10/11/2026, pedido do Kauan). */}
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          <span className="text-fs-2 text-fg-muted tnum">{idCurto("tarefa", item.number)}</span>
+          {entity && item.title && <span className="text-fs-3 text-fg-muted">{entity.name}</span>}
+          {entity && (
+            <Button
+              href={enderecoDe(item.entityType === "COMPANY" ? "empresa" : "pessoa", entity)}
+              variant="secondary"
+              size="xs"
+            >
+              Ver ficha completa <ArrowRight size={11} />
+            </Button>
+          )}
+          {/* O cartão nasceu de uma solicitação do cliente (09/11/2026): o
+              caminho até ela, com a situação, ao lado da ficha da empresa. */}
+          {solicitacao &&
+            (abreASolicitacao ? (
+              <Button href={endereco("solicitacao", solicitacao.number)} variant="secondary" size="xs">
+                <Inbox size={11} aria-hidden /> Solicitação nº {solicitacao.number}
               </Button>
-            )}
-            {/* O cartão nasceu de uma solicitação do cliente (09/11/2026): o
-                caminho até ela, com a situação, ao lado da ficha da empresa. */}
-            {solicitacao &&
-              (abreASolicitacao ? (
-                <Button href={`/solicitacoes/${solicitacao.id}`} variant="secondary" size="xs">
-                  <Inbox size={11} aria-hidden /> Solicitação nº {solicitacao.number}
-                </Button>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-fs-2 text-fg-muted">
-                  <Inbox size={11} aria-hidden /> Solicitação nº {solicitacao.number}
-                </span>
-              ))}
-            {solicitacao && <SeloDaSolicitacao status={solicitacao.status} lado="EQUIPE" />}
-          </div>
-        )}
+            ) : (
+              <span className="inline-flex items-center gap-1 text-fs-2 text-fg-muted">
+                <Inbox size={11} aria-hidden /> Solicitação nº {solicitacao.number}
+              </span>
+            ))}
+          {solicitacao && <SeloDaSolicitacao status={solicitacao.status} lado="EQUIPE" />}
+        </div>
         {solicitacao && (
           <p className="mt-1.5 text-fs-2 text-fg-muted">
             {emAberto(solicitacao.status)
@@ -514,6 +522,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                     const abaixo = descendentes(s);
                     return {
                       id: s.id,
+                      number: s.number,
                       title: s.title ?? "(sem título)",
                       stageName: s.stage.name,
                       stageColor: s.stage.color,
@@ -542,7 +551,7 @@ export async function KanbanItemDetail({ id, itemId, showBreadcrumb = true }: Pr
                 <LinkedItemsSection
                   canAct={canAct}
                   basePath={basePath}
-                  links={relatedItems.map((r) => ({ id: r.id, name: nameFor(r) }))}
+                  links={relatedItems.map((r) => ({ id: r.id, number: r.number, name: nameFor(r) }))}
                   candidates={taskCandidates}
                   createAction={createLinkAction}
                   deleteAction={deleteLinkAction}

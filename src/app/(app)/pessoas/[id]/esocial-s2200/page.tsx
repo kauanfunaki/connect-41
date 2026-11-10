@@ -12,14 +12,17 @@ import { formatCalendarDate, formatarNumero } from "@/lib/format";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CheckCircle2, CircleDashed } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function EsocialS2200Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/esocial-s2200");
   const canViewSalary = await canViewSensitiveField(ctx, "SALARIO");
 
   const prisma = getPrisma();
@@ -70,6 +73,7 @@ export default async function EsocialS2200Page({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="eSocial S-2200"
         aba="trabalhista"

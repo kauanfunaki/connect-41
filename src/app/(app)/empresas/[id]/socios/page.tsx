@@ -22,6 +22,8 @@ import { estadoDosAgentes } from "@/lib/ia/data";
 import { LerContratoSocial } from "@/components/societario/ia/LerContratoSocial";
 import { lerContratoSocialAction } from "@/app/(app)/processos/ia/actions";
 import { AGENTE_CONTRATO } from "@/lib/societario/iaDoSetor";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco as enderecoCurto } from "@/lib/enderecoCurto";
 
 const PERCENTUAL = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 });
 const INTEIRO = new Intl.NumberFormat("pt-BR");
@@ -57,8 +59,11 @@ function endereco(s: {
 }
 
 export default async function SociosPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: companyId } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/socios");
+  const fichaDaEmpresa = enderecoCurto("empresa", numeroDaEmpresa);
   const podeEditar = canWrite(ctx.role);
 
   const prisma = getPrisma();
@@ -80,7 +85,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
   const soma = somaDasParticipacoes(participacoes);
   const resideNoLocal = algumSocioResideNoEndereco(company, socios);
 
-  const novoHref = `/empresas/${companyId}/socios/novo`;
+  const novoHref = `${fichaDaEmpresa}/socios/novo`;
 
   // Ler contrato social pela IA: da coordenação do Societário (decisão de 28/09).
   const coordenaSocietario =
@@ -95,7 +100,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
           { label: "Sócios" },
         ]}
       />
@@ -167,7 +172,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                       socioId={s.id}
                       companyId={companyId}
                       nome={s.name}
-                      editarHref={`/empresas/${companyId}/socios/${s.id}/editar`}
+                      editarHref={`${fichaDaEmpresa}/socios/${s.id}/editar`}
                       excluir={podeExcluir(ctx) ? excluirSocio.bind(null, s.id, companyId) : undefined}
                       registrarSaida={registrarSaida}
                     />
@@ -194,7 +199,7 @@ export default async function SociosPage({ params }: { params: Promise<{ id: str
                       </p>
                     </div>
                     {podeEditar && (
-                      <Button href={`/empresas/${companyId}/socios/${s.id}/editar`} variant="secondary" size="xs" className="shrink-0">
+                      <Button href={`${fichaDaEmpresa}/socios/${s.id}/editar`} variant="secondary" size="xs" className="shrink-0">
                         <Pencil size={11} /> Editar
                       </Button>
                     )}
