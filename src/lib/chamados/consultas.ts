@@ -2,7 +2,7 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { podeAbrir, podeVerInterno, podeVer, escoposDaBusca, type EscopoDaBusca } from "./acesso";
 import type { Contexto } from "./contexto";
-import { categoriaSchema, dadosRascunhoSchema, parecerSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
+import { categoriaSchema, dadosRascunhoSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
 
 export const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 export async function temAcessoAoModulo(c: Contexto) {
@@ -80,7 +80,8 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   const padrao = podeVerInterno(c.ctx, c.config) ? "fila" : "abertos";
   const estadosPorAba: Record<string, Prisma.HelpdeskTicketWhereInput> = {
     abertos: { status: { notIn: ["RESOLVIDO", "CANCELADO"] } },
-    fila: { status: { in: ["ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] } },
+    // O chamado em triagem já aparece na fila (10/11/2026): a equipe vê o que chegou, mesmo antes da categoria.
+    fila: { status: { in: ["AGUARDANDO_TRIAGEM", "ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] } },
     aguardando: { status: { in: ["AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE"] } },
     pausa: { status: "STANDBY" },
     historico: { status: { in: ["RESOLVIDO", "CANCELADO"] } },
@@ -146,8 +147,9 @@ export function resumoRascunho(payload: unknown) {
   const dados = dadosRascunhoSchema.safeParse(payload);
   return !dados.success ? "Novo chamado" : dados.data.title || tituloDaDescricao(dados.data.description);
 }
-export function parecerAtual(d: { version: number; reviewVersion: number | null; review: unknown }) {
-  const r = parecerSchema.safeParse(d.review); return d.reviewVersion === d.version && r.success ? r.data : null;
+/** A situação e a versão do chamado, para a tela conferir sem recarregar tudo se a triagem terminou. */
+export async function situacaoDoChamado(c: Contexto, id: string) {
+  return getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, select: { status: true, version: true } });
 }
 export async function indicadores(c: Contexto) {
   const rows = await getPrisma().helpdeskTicket.findMany({ where: whereVisivel(c), select: { status: true, priority: true, requesterSectorCode: true, createdAt: true, closedAt: true, assignees: true, cycles: true } });

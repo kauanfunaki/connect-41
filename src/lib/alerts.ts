@@ -1023,6 +1023,9 @@ async function checkProtocolosParados(tenantId: string, today: Date): Promise<nu
 
 async function runForTenant(tenantId: string, today: Date): Promise<TenantResult> {
   const checks: Array<[string, () => Promise<number>]> = [
+    // Não é alerta: retoma a triagem de chamado que ficou em "Aguardando
+    // triagem" (10/11/2026). Vem antes de "chamados", que despacha os avisos.
+    ["chamados em triagem", async () => (await import("@/lib/chamados/triagem-servidor")).retomarTriagens(tenantId)],
     ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
     ["probation", () => checkProbationDeadlines(tenantId, today)],

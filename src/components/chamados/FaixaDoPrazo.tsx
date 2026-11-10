@@ -1,6 +1,6 @@
 import { AlertTriangle, Ban, CheckCircle2, CircleCheck, OctagonAlert, Pause, Timer } from "lucide-react";
 import type { PainelDoPrazo, TomDoPrazo } from "@/lib/chamados/painelDoPrazo";
-import { STATUS, ROTULOS, fechado, type Status } from "@/lib/chamados/regras";
+import { SITUACOES_MANUAIS, ROTULOS, fechado, type Status } from "@/lib/chamados/regras";
 
 // A cor da barra e do rótulo por tom. O rótulo ("No prazo", "Atrasado"…) e o
 // ícone vão sempre junto da barra: a cor reforça, nunca é a única pista.
@@ -35,7 +35,8 @@ export function FaixaDoPrazo({ painel, ciclo, idDoTitulo }: { painel: PainelDoPr
   </div>;
 }
 
-const EM_CURSO = STATUS.filter(s => !fechado(s));
+// "Aguardando triagem" não é botão: só a triagem automática põe e tira o chamado dela.
+const EM_CURSO = SITUACOES_MANUAIS.filter(s => !fechado(s));
 const BOTAO = "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-button-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-[var(--c41-disabled-op)] max-sm:h-10";
 // O ativo no desenho do `SegmentedControl tone="brand"`: o segmento grava um
 // dado do chamado, e a borda por dentro é o que mostra qual está escolhido.

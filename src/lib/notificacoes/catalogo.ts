@@ -60,6 +60,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   CHAMADO_ATUALIZADO: p("solicitacao", "info", "Atualização no chamado"),
   CHAMADO_INTERNO: p("comentario", "info", "Atualização interna no chamado"),
   CHAMADO_AGUARDANDO_VOCE: p("solicitacao", "warning", "Chamado aguardando sua resposta"),
+  // O resultado da triagem que roda depois do envio (10/11/2026), para quem abriu.
+  CHAMADO_TRIADO: p("solicitacao", "info", "Triagem do chamado concluída"),
   CHAMADO_SLA: a("prazo", "warning", "Prazo de chamado vencido"),
   // ── Para mim ──
   HANDOFF_RECEIVED: p("transferencia", "brand", "Transferência recebida"),

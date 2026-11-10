@@ -1,11 +1,17 @@
 import { z } from "zod";
 
 export const MODULO = "helpdesk";
-export const STATUS = ["ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY", "RESOLVIDO", "CANCELADO"] as const;
+// "Aguardando triagem" (10/11/2026): o chamado da tela nasce nela e sai quando a
+// triagem automática termina. Só a triagem tira o chamado dela — não é uma
+// situação que a equipe escolhe (`SITUACOES_MANUAIS`).
+export const STATUS = ["AGUARDANDO_TRIAGEM", "ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY", "RESOLVIDO", "CANCELADO"] as const;
 export type Status = (typeof STATUS)[number];
+export const SITUACOES_MANUAIS = STATUS.filter(s => s !== "AGUARDANDO_TRIAGEM");
+export const emTriagem = (status: string) => status === "AGUARDANDO_TRIAGEM";
 export const PRIORIDADES = ["BAIXA", "MEDIA", "ALTA", "URGENTE"] as const;
 export type Prioridade = (typeof PRIORIDADES)[number];
 export const ROTULOS: Record<Status, string> = {
+  AGUARDANDO_TRIAGEM: "Aguardando triagem",
   ABERTO: "Aberto", NA_FILA: "Na fila", EM_ANDAMENTO: "Em andamento", AGUARDANDO_USUARIO: "Aguardando usuário",
   AGUARDANDO_APROVACAO: "Aguardando aprovação", AGUARDANDO_REQUERENTE: "Aguardando requerente", STANDBY: "Em espera", RESOLVIDO: "Resolvido", CANCELADO: "Cancelado",
 };
@@ -50,13 +56,6 @@ export function tituloDaDescricao(descricao: string) {
   const curto = linha.length <= 80 ? linha : `${linha.slice(0, 80).replace(/\s+\S*$/, "")}…`;
   return curto.length >= 3 ? curto : `Chamado: ${curto || "sem descrição"}`;
 }
-/** A pergunta em aberto é a última que o assistente fez: as perguntas do parecer vão uma por mensagem. */
-export function perguntaAtual(parecer: Parecer | null, mensagens: { role: string; body: string }[]) {
-  if (parecer?.status !== "needs_information") return null;
-  const ultima = [...mensagens].reverse().find(m => m.role === "assistant")?.body ?? "";
-  const indice = parecer.questions.findIndex(q => ultima.endsWith(q.text));
-  return indice < 0 ? null : { indice, total: parecer.questions.length };
-}
 
 export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, anexos: { attachmentKey: string | null; mimeType: string }[]) {
   if (!categoria.active) throw new Error("Esta categoria está desativada.");
@@ -96,6 +95,50 @@ export function mensagemDoExistente(e: Existente) {
   const inicio = e.match === "same" ? `Isso parece já existir no Orquestrador: o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}` : `Pode ser parecido com o ${ROTULOS_EXISTENTE[e.tipo]} ${e.nome}, do Orquestrador`;
   return `${inicio}${e.responsavel ? `, de responsabilidade de ${e.responsavel}` : ""}.${e.reason ? ` ${e.reason}` : ""}`;
 }
+
+// ── Triagem depois do envio (10/11/2026) ────────────────────────────────────
+// O resultado fica no evento "triagem" do chamado: o que já existe no
+// Orquestrador e a categoria. Sem categoria, o motivo separa a falha (a IA não
+// respondeu) da falta de contexto (respondeu sem conseguir classificar) — até
+// aqui as duas saíam na mesma frase, e quem abriu não sabia qual tinha sido.
+export const MOTIVOS_SEM_CATEGORIA = ["falha", "incerto", "formulario", "aprovador"] as const;
+export type MotivoSemCategoria = (typeof MOTIVOS_SEM_CATEGORIA)[number];
+export const triagemSchema = z.object({
+  existente: existenteSchema.nullable().default(null),
+  /** O caminho da categoria escolhida ("Desenvolvimento › Nova Automação"); nulo = A classificar. */
+  categoria: z.string().max(400).nullable().default(null),
+  semCategoria: z.enum(MOTIVOS_SEM_CATEGORIA).nullable().default(null),
+  /** A justificativa da classificação, para a equipe. */
+  justificativa: z.string().max(500).default(""),
+});
+export type Triagem = z.infer<typeof triagemSchema>;
+export type ResultadoDaTriagem = "existe" | "classificado" | "a_classificar";
+/** Um resultado por aviso: o que já existe vem antes da categoria. */
+export const resultadoDaTriagem = (t: Triagem): ResultadoDaTriagem => t.existente ? "existe" : t.categoria ? "classificado" : "a_classificar";
+const SEM_CATEGORIA: Record<MotivoSemCategoria, string> = {
+  falha: "A triagem automática falhou e não chegou a analisar o pedido. A equipe vai classificar o chamado.",
+  incerto: "A triagem automática não identificou a categoria só pela descrição. A equipe vai classificar o chamado e pode pedir mais detalhes na conversa.",
+  formulario: "A categoria indicada pela triagem pede informações que o pedido não tem. A equipe vai classificar o chamado e pedir o que faltar.",
+  aprovador: "A categoria indicada pela triagem exige aprovação, e não há aprovador configurado. A equipe vai classificar o chamado.",
+};
+/** A frase da tela do chamado, a mesma para quem abriu e para a equipe. */
+export function textoDaTriagem(t: Triagem): string {
+  if (t.existente) return `${mensagemDoExistente(t.existente)} O chamado segue com a equipe.`;
+  if (t.categoria) return `A triagem automática classificou o chamado em ${t.categoria}. Ele está com a equipe.`;
+  return SEM_CATEGORIA[t.semCategoria ?? "falha"];
+}
+/** O aviso do sino e do push para quem abriu: o resultado e o título do chamado. */
+export function avisoDaTriagem(t: Triagem, titulo: string): string {
+  if (t.existente) return `${t.existente.match === "same" ? "Já existe no Orquestrador" : "Pode já existir no Orquestrador"}: o ${ROTULOS_EXISTENTE[t.existente.tipo]} ${t.existente.nome}. Chamado: ${titulo}`;
+  if (t.categoria) return `Triagem concluída, chamado classificado em ${t.categoria}: ${titulo}`;
+  return `${t.semCategoria === "falha" ? "A triagem automática falhou" : "A triagem não identificou a categoria"}; a equipe vai classificar: ${titulo}`;
+}
+/** De quanto em quanto a tela do chamado confere se a triagem terminou: rápido no primeiro minuto, devagar depois. */
+export const intervaloDaTriagem = (desdeMs: number) => desdeMs < 60_000 ? 3_000 : 15_000;
+
+// O parecer da conversa com a IA (28/10 a 10/11/2026). A abertura não conversa
+// mais, mas os chamados desse período guardam o parecer no rascunho, e a equipe
+// o lê na tela do chamado.
 export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_information", "unavailable"]), summary: z.string().min(1).max(1500), questions: z.array(perguntaSchema).max(5), attachments: z.array(coberturaSchema).max(50), existente: existenteSchema.nullable().default(null),
   // O chamado montado pela IA para a revisão (28/10/2026): descrição final, com as
   // respostas da conversa, e os anexos que seguem. A pessoa edita tudo na etapa 3.
@@ -103,4 +146,3 @@ export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_inf
   if ((v.status === "sufficient" && v.questions.length) || (v.status === "needs_information" && !v.questions.length)) ctx.addIssue({ code: "custom", message: "Parecer inconsistente." });
 });
 export type Parecer = z.infer<typeof parecerSchema>;
-export const indisponivel = (summary = "Não foi possível analisar agora. Tente novamente ou envie sem análise."): Parecer => ({ status: "unavailable", summary, questions: [], attachments: [], existente: null, final: null });

@@ -19,15 +19,16 @@ import { EditarDadosDoChamado } from "./EditarDadosDoChamado";
 import { FaixaDoPrazo, SituacaoEmBotoes } from "./FaixaDoPrazo";
 import { LinhaDoTempo, LinkDoAnexo } from "./LinhaDoTempo";
 import { SeletorDePessoas } from "./SeletorDePessoas";
+import { ResultadoDaTriagem, TriagemEmAndamento } from "./ResultadoDaTriagem";
 import { mudar } from "@/app/(app)/chamados/actions";
-import { ROTULOS, ROTULOS_PRIORIDADE, fechado, parecerSchema, type DadosDoChamado } from "@/lib/chamados/regras";
+import { ROTULOS, ROTULOS_PRIORIDADE, emTriagem, fechado, parecerSchema, triagemSchema, type DadosDoChamado } from "@/lib/chamados/regras";
 import type { detalhe } from "@/lib/chamados/consultas";
 import { montarLinhaDoTempo } from "@/lib/chamados/linhaDoTempo";
 import { painelDoPrazo } from "@/lib/chamados/painelDoPrazo";
 
 type Chamado = Awaited<ReturnType<typeof detalhe>>;
 type Usuario = { id: string; name: string; atendente: boolean };
-type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean } };
+type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean } };
 const data = (v: Date | string) => formatInstantDateTime(new Date(v));
 // A linha de ação do pé do cartão "Atendimento": o cabeçalho do Accordion
 // ocupando a linha, em azul de ação, com a seta na ponta.
@@ -49,8 +50,11 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
   const agora = useAgora(agoraDoServidor);
   const dadosAtuais: DadosDoChamado = { title: t.title, description: t.description, categoryId: t.categoryId, requesterSectorCode: t.requesterSectorCode, priority: t.priority, requestData: t.requestData as Record<string, string>, tags: t.tags as string[] };
   const nome = (id: string) => usuarios.find(u => u.id === id)?.name ?? "Usuário indisponível";
-  const ciclo = t.cycles[0], encerrado = fechado(t.status);
+  const ciclo = t.cycles[0], encerrado = fechado(t.status), triando = emTriagem(t.status);
   const prazo = painelDoPrazo(ciclo, t.status, agora);
+  // O resultado da triagem depois do envio (10/11/2026): o último evento "triagem".
+  const eventoDaTriagem = triagemSchema.safeParse(t.events.find(e => e.type === "triagem")?.data);
+  const triagem = eventoDaTriagem.success ? eventoDaTriagem.data : null;
   const parecer = parecerSchema.safeParse(t.draft.review);
   // Cada parecer já vira mensagem do assistente (resumo + perguntas); repetir o
   // resumo embaixo duplicava o texto quando a análise aprovava o chamado.
@@ -85,7 +89,8 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
       onSalvar={dados => void executar(() => mudar(t.id, t.version, "dados", dados)).then(ok => { if (ok) setEditar(false); })} />}
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
       <div className="min-w-0 space-y-5">
-        <Card className="p-5 space-y-4"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold text-fg">Solicitação</h2>{p.operar && !encerrado && <Button variant="ghost" size="sm" onClick={() => { setErro(""); setEditar(true); }}><PencilLine size={14} aria-hidden />Editar dados</Button>}</div>
+        {triando ? <TriagemEmAndamento id={t.id} version={t.version} /> : triagem && <ResultadoDaTriagem triagem={triagem} pedido={t.description} podeVerOps={p.verOrquestrador} souQuemAbriu={t.createdById === eu} />}
+        <Card className="p-5 space-y-4"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold text-fg">Solicitação</h2>{p.operar && !encerrado && !triando && <Button variant="ghost" size="sm" onClick={() => { setErro(""); setEditar(true); }}><PencilLine size={14} aria-hidden />Editar dados</Button>}</div>
           <p className="whitespace-pre-wrap break-words text-ui text-fg-secondary">{t.description}</p>
           {Object.entries(t.requestData as Record<string, string>).map(([key, valor]) => <div key={key} className="text-ui"><span className="font-semibold text-fg">{categorias.find(c => c.id === t.categoryId)?.formSchema.find(f => f.key === key)?.label ?? key}: </span><span className="whitespace-pre-wrap break-words text-fg-secondary">{valor}</span></div>)}
           {!!(t.tags as string[]).length && <p className="text-helper text-fg-muted">Tags: {(t.tags as string[]).join(", ")}</p>}
@@ -96,8 +101,12 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
           {linha.length ? <LinhaDoTempo itens={linha} nome={nome} /> : <p className="text-ui text-fg-muted">Ainda não há mensagens de atendimento.</p>}
           {p.responder && <CaixaDeMensagem chamado={{ id: t.id, draftId: t.draftId, version: t.version }} podeInterno={p.operar} />}
         </Card>
-        {/* A conversa com a IA é material da equipe, como as notas internas. */}
-        {p.interno && <Card className="p-5"><Accordion titulo="Conversa da triagem" classeDoCabecalho="font-semibold text-fg"><p className="my-3 text-helper text-fg-muted">As mensagens abaixo complementam a descrição original.</p>{t.draft.messages.map(m => <div key={m.id} className="my-3 rounded-md bg-surface-hover p-3"><p className="text-helper font-semibold text-fg">{m.role === "user" ? "Solicitante" : "Assistente"}</p><p className="whitespace-pre-wrap break-words text-ui text-fg-secondary">{m.body}</p></div>)}{parecer.success && <div className="space-y-2 text-helper text-fg-secondary">{!resumoNaConversa && <p>{parecer.data.summary}</p>}{parecer.data.attachments.map(a => <p key={a.id}><strong>{a.name}:</strong> {a.reason}</p>)}</div>}{!t.draft.messages.length && <p className="mt-3 text-ui text-fg-muted">Chamado enviado sem conversa de triagem.</p>}</Accordion></Card>}
+        {/* A triagem é material da equipe, como as notas internas: a justificativa
+            da classificação e, nos chamados de 28/10 a 10/11, a conversa com a IA. */}
+        {p.interno && <Card className="p-5"><Accordion titulo={t.draft.messages.length ? "Conversa da triagem" : "Triagem automática"} classeDoCabecalho="font-semibold text-fg">
+          {triagem && <dl className="my-3 space-y-2 text-ui"><div><dt className="text-helper font-semibold text-fg">Classificação</dt><dd className="text-fg-secondary">{triagem.categoria ?? "A classificar"}{triagem.justificativa ? ` — ${triagem.justificativa}` : ""}</dd></div><div><dt className="text-helper font-semibold text-fg">Orquestrador</dt><dd className="text-fg-secondary">{triagem.existente ? `${triagem.existente.match === "same" ? "Já existe" : "Parecido"}: ${triagem.existente.nome}${triagem.existente.reason ? ` — ${triagem.existente.reason}` : ""}` : "Nada cadastrado faz o pedido."}</dd></div></dl>}
+          {triando && <p className="my-3 text-ui text-fg-muted">A triagem ainda está rodando.</p>}
+          {!!t.draft.messages.length && <p className="my-3 text-helper text-fg-muted">As mensagens abaixo complementam a descrição original.</p>}{t.draft.messages.map(m => <div key={m.id} className="my-3 rounded-md bg-surface-hover p-3"><p className="text-helper font-semibold text-fg">{m.role === "user" ? "Solicitante" : "Assistente"}</p><p className="whitespace-pre-wrap break-words text-ui text-fg-secondary">{m.body}</p></div>)}{parecer.success && <div className="space-y-2 text-helper text-fg-secondary">{!resumoNaConversa && <p>{parecer.data.summary}</p>}{parecer.data.attachments.map(a => <p key={a.id}><strong>{a.name}:</strong> {a.reason}</p>)}</div>}{!t.draft.messages.length && !triagem && !triando && <p className="mt-3 text-ui text-fg-muted">Chamado enviado sem triagem automática.</p>}</Accordion></Card>}
         {!!t.reopenRequests.length && <Card className="p-5"><Accordion titulo="Histórico de reaberturas" classeDoCabecalho="font-semibold text-fg">{t.reopenRequests.map(r => <div key={r.id} className="my-3 space-y-2 border-b border-border pb-3 text-ui text-fg-secondary"><p className="text-helper">Pedido por {nome(r.requestedById)} em {data(r.createdAt)} · {r.status === "PENDING" ? "Pendente" : r.status === "APPROVED" ? "Aceito" : "Recusado"}</p><p className="whitespace-pre-wrap break-words">{r.reason}</p>{r.decidedById && <><p className="text-helper">Decisão de {nome(r.decidedById)}{r.decidedAt ? " em " + data(r.decidedAt) : ""}</p><p className="whitespace-pre-wrap break-words">{r.note}</p></>}</div>)}</Accordion></Card>}
       </div>
       <div className="min-w-0 space-y-5">
@@ -105,7 +114,8 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
         <Card as="section" aria-labelledby="titulo-atendimento" className="overflow-hidden border-grupo/30!">
           <FaixaDoPrazo painel={prazo} ciclo={ciclo?.cycleNumber ?? null} idDoTitulo="titulo-atendimento" />
           <div className="space-y-4 p-5">
-            {p.operar && !encerrado && <SituacaoEmBotoes atual={situacao} disabled={busy} onTrocar={trocarSituacao} onEncerrar={setFinalPedido} />}
+            {/* Durante a triagem a situação é dela (10/11/2026): os botões voltam quando ela termina. */}
+            {p.operar && !encerrado && !triando && <SituacaoEmBotoes atual={situacao} disabled={busy} onTrocar={trocarSituacao} onEncerrar={setFinalPedido} />}
             <SeletorDePessoas titulo="Responsáveis" selecionados={responsaveis} nome={nome} vazio="" disabled={busy || encerrado}
               opcoes={p.gerenciar ? atendentes : atendentes.filter(u => u.id === eu)}
               onAdicionar={p.operar && !encerrado ? id => p.gerenciar ? acao("responsaveis", [...responsaveis, id]) : acao("assumir", null) : undefined}

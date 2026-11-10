@@ -628,6 +628,10 @@ enum HelpdeskStatus {
   STANDBY
   RESOLVIDO
   CANCELADO
+  /// O chamado acabou de ser enviado pela tela e a triagem automática roda
+  /// depois da resposta (10/11/2026). No fim do enum de propósito: acrescentar
+  /// no fim é só metadado no MySQL, sem reescrever a tabela.
+  AGUARDANDO_TRIAGEM
 }
 
 enum HelpdeskPriority {

@@ -1,5 +1,5 @@
 import { saoPauloParts } from "@/lib/agenda";
-import { fechado } from "./regras";
+import { emTriagem, fechado } from "./regras";
 import { minutosUteisEntre } from "./sla";
 
 /**
@@ -64,6 +64,7 @@ export function duracao(minutos: number): string {
 export function painelDoPrazo(ciclo: CicloDoPainel | undefined, status: string, agora: Date): PainelDoPrazo {
   if (!ciclo) {
     if (fechado(status)) return { titulo: "Chamado encerrado", restante: null, primeiraResposta: null, usado: null, tom: "resolvido", rotulo: "Encerrado" };
+    if (emTriagem(status)) return { titulo: "Triagem em andamento", restante: "O SLA começa depois, quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem SLA" };
     return { titulo: "SLA ainda não começou", restante: "Começa quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem SLA" };
   }
   const aberto = data(ciclo.openedAt), vence = data(ciclo.resolutionDueAt);
