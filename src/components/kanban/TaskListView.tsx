@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight, ChevronDown, Plus, Repeat } from "lucide-react";
 import { IconButton } from "@/components/ui/IconButton";
@@ -65,6 +65,8 @@ type Props = {
   /** Exclui a tarefa (ou subtarefa — subtarefa cai em cascata pelo parentItemId).
    * Ausente = sem opção de excluir, para quem não administra o setor. */
   deleteAction?: (itemId: string) => Promise<void>;
+  /** O pé do grupo depois das linhas — o "Ver mais concluídas" (10/11/2026). */
+  rodapeDoGrupo?: (stageId: string) => ReactNode;
 };
 
 /** O que toda linha da árvore usa igual, em qualquer nível. */
@@ -700,7 +702,7 @@ function AddTaskInline({
 
 function StageGroup({
   stage, items, comum, renameStageAction, createTaskAction,
-  dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow, primeiro = false,
+  dragId, onDragStartRow, onDragEndRow, onDropStage, onDropOnRow, primeiro = false, rodape,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -714,6 +716,7 @@ function StageGroup({
   onDropOnRow: (targetId: string) => void;
   /** O primeiro grupo atende ao "+ Nova tarefa" do topo. */
   primeiro?: boolean;
+  rodape?: ReactNode;
 }) {
   const { basePath, canAct } = comum;
   const [collapsed, setCollapsed] = useState(false);
@@ -766,6 +769,14 @@ function StageGroup({
             </tr>
           )}
 
+          {rodape && (
+            <tr>
+              <td colSpan={5} className="py-1.5" style={{ paddingLeft: CONTENT_OFFSET }}>
+                {rodape}
+              </td>
+            </tr>
+          )}
+
           {canAct && (
             <tr>
               <td colSpan={5} className="py-1.5" style={{ paddingLeft: CONTENT_OFFSET }}>
@@ -781,7 +792,7 @@ function StageGroup({
 
 function StageGroupCards({
   stage, items, comum, renameStageAction, createTaskAction, moveAction,
-  primeiro = false,
+  primeiro = false, rodape,
 }: {
   stage: StageOption;
   items: TaskRow[];
@@ -790,6 +801,7 @@ function StageGroupCards({
   createTaskAction: Props["createTaskAction"];
   moveAction: Props["moveAction"];
   primeiro?: boolean;
+  rodape?: ReactNode;
 }) {
   const { basePath, canAct } = comum;
   const [collapsed, setCollapsed] = useState(false);
@@ -813,6 +825,8 @@ function StageGroupCards({
           {items.map((item) => (
             <TaskCard key={item.id} item={item} comum={comum} moveAction={moveAction} />
           ))}
+
+          {rodape && <div className="px-1 pt-0.5">{rodape}</div>}
 
           {canAct && (
             <div className="px-1 pt-0.5">
@@ -842,7 +856,7 @@ const MAX_SCROLL_SPEED = 18;
 // fixas somavam ~340px de largura reservada e esmagavam o título no celular.
 // Os cards perdem o drag-and-drop — que já não funcionava no toque — e ganham
 // um select de status no lugar.
-export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, createSubtaskAction, priorityAction, moveAction: moverNoServidor, repositionAction, concluirAction, reabrirAction, deleteAction }: Props) {
+export function TaskListView({ basePath, pipelineId, stages, items, canAct, renameStageAction, createTaskAction, createSubtaskAction, priorityAction, moveAction: moverNoServidor, repositionAction, concluirAction, reabrirAction, deleteAction, rodapeDoGrupo }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const toast = useToast();
@@ -1058,6 +1072,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 renameStageAction={renameStageAction}
                 createTaskAction={createTaskAction}
                 moveAction={moveAction}
+                rodape={rodapeDoGrupo?.(stage.id)}
               />
             ))}
           </div>
@@ -1107,6 +1122,7 @@ export function TaskListView({ basePath, pipelineId, stages, items, canAct, rena
                 onDragEndRow={() => setDragId(null)}
                 onDropStage={handleDropStage}
                 onDropOnRow={handleDropOnRow}
+                rodape={rodapeDoGrupo?.(stage.id)}
               />
             ))}
           </table>

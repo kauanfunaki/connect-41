@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Columns3, List, X } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { TaskListView, type SubtaskRow, type TaskRow, type StageOption } from "@/components/kanban/TaskListView";
@@ -11,6 +12,8 @@ import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { contarItens } from "@/components/shared/CascoDaTabela";
 import { formatarNumero } from "@/lib/format";
+import { temMaisConcluidas, type ResumoDaConcluida } from "@/lib/kanban/concluidasDoQuadro";
+import { VerMaisConcluidas, enderecoComMaisConcluidas } from "@/components/kanban/VerMaisConcluidas";
 
 type Item = TaskRow & {
   tags?: { id: string; name: string; color: string }[];
@@ -27,6 +30,10 @@ type Props = {
   basePath: string;
   stages: StageOption[];
   items: Item[];
+  /** Por coluna concluída, o total e quantas vieram — a página traz só as mais recentes (10/11/2026). */
+  concluidas: Record<string, ResumoDaConcluida>;
+  /** O `?concluidas=N` em vigor; o "Ver mais" pede o próximo passo. */
+  limiteDeConcluidas: number;
   canAct: boolean;
   moveAction: (itemId: string, newStageId: string) => Promise<{ error: string } | void>;
   repositionAction: (itemId: string, alvoId: string) => Promise<{ error: string } | void>;
@@ -69,7 +76,7 @@ function nomesAbaixo(item: { subtasks?: SubtaskRow[] }): string[] {
   return (item.subtasks ?? []).flatMap((s) => [s.entityName, ...nomesAbaixo(s)]);
 }
 
-export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAction, repositionAction, renameStageAction, createTaskAction, createSubtaskAction, priorityAction, concluirAction, reabrirAction, deleteAction }: Props) {
+export function BoardView({ pipelineId, basePath, stages, items, concluidas, limiteDeConcluidas, canAct, moveAction, repositionAction, renameStageAction, createTaskAction, createSubtaskAction, priorityAction, concluirAction, reabrirAction, deleteAction }: Props) {
   const [view, setView] = useState<"board" | "list">("list");
   const [search, setSearch] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
@@ -126,6 +133,13 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
   }, [items, search, assigneeFilter, creatorFilter, tagFilter, priorityFilter, dueFilter]);
 
   const activeFilterCount = [search, assigneeFilter, creatorFilter, tagFilter, priorityFilter, dueFilter].filter(Boolean).length;
+
+  // O pé de cada coluna concluída: mais um passo de concluídas pela URL.
+  const hrefDeMais = enderecoComMaisConcluidas(basePath, limiteDeConcluidas);
+  const rodapeDaColuna = (stageId: string) =>
+    temMaisConcluidas(concluidas[stageId]) ? <VerMaisConcluidas resumo={concluidas[stageId]} href={hrefDeMais} /> : null;
+  // A busca e os filtros olham só o que veio: as concluídas antigas ficam fora.
+  const concluidasForaDaTela = Object.values(concluidas).reduce((n, c) => n + Math.max(0, c.total - c.mostradas), 0);
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -240,6 +254,21 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
         </div>
       </div>
 
+      {activeFilterCount > 0 && concluidasForaDaTela > 0 && (
+        <p className="text-fs-1 text-fg-muted mb-2 flex-shrink-0">
+          A busca e os filtros olham só as concluídas mais recentes: {formatarNumero(concluidasForaDaTela, 0)}{" "}
+          {concluidasForaDaTela === 1 ? "concluída mais antiga fica" : "concluídas mais antigas ficam"} de fora.
+          {hrefDeMais && (
+            <>
+              {" "}
+              <Link href={hrefDeMais} scroll={false} className="font-medium text-brand hover:underline">
+                Ver mais concluídas
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
       <div className="flex-1 min-h-0">
         {view === "board" ? (
           <KanbanBoard
@@ -249,6 +278,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             items={filtered}
             moveAction={moveAction}
             criarTarefa={canAct ? createTaskAction : undefined}
+            rodapeDaColuna={rodapeDaColuna}
           />
         ) : (
           <TaskListView
@@ -266,6 +296,7 @@ export function BoardView({ pipelineId, basePath, stages, items, canAct, moveAct
             reabrirAction={reabrirAction}
             createSubtaskAction={canAct ? createSubtaskAction : undefined}
             deleteAction={deleteAction}
+            rodapeDoGrupo={rodapeDaColuna}
           />
         )}
       </div>
