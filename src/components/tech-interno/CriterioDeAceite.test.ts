@@ -63,6 +63,14 @@ describe("CriterioDeAceite", () => {
     expect(h).not.toContain("Escrever o critério");
   });
 
+  it("linhas com \"- \" num campo saem como lista, sem o hífen; o resto continua parágrafo", () => {
+    const h = html({ texto: ["Antes de testar:", "- Merge e deploy do #10.", "- Conferir o token no painel.", "Depois disso, abra a tela.", "Passos:", "1. Abra."].join("\n") });
+    const lista = /<ul class="[^"]*list-disc[^"]*">(.*?)<\/ul>/.exec(h);
+    expect(lista?.[1]).toBe("<li class=\"break-words [overflow-wrap:anywhere]\">Merge e deploy do #10.</li><li class=\"break-words [overflow-wrap:anywhere]\">Conferir o token no painel.</li>");
+    expect(h).not.toContain("- Merge");
+    expect(h).toContain(">Depois disso, abra a tela.</p>");
+  });
+
   it("texto fora do formato aparece como texto simples", () => {
     const h = html({ texto: "Testar a tela e ver se salva." });
     expect(h).toContain("Testar a tela e ver se salva.");

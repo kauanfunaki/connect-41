@@ -78,6 +78,19 @@ describe("lerCriterioDeAceite", () => {
     ]);
   });
 
+  it("passos numa linha só (\"1) … 2) … 3) …\") viram um item cada; número solto no meio da frase não quebra", () => {
+    const lido = estruturado(lerCriterioDeAceite([
+      "Passos: 1) Abra um chamado. 2) Confira a tela, sem F5. 3) Espere o aviso.",
+      "Aprovado quando:",
+      "1. O chamado nasce. 2. A tela muda sozinha.",
+      "- O aviso chega em 2) minutos, uma vez só.",
+    ].join("\n")));
+    expect(lido.blocos).toEqual([
+      { tipo: "passos", itens: ["Abra um chamado.", "Confira a tela, sem F5.", "Espere o aviso."] },
+      { tipo: "conferencia", pontos: [{ posicao: 1, texto: "O chamado nasce." }, { posicao: 2, texto: "A tela muda sozinha." }, { posicao: 3, texto: "O aviso chega em 2) minutos, uma vez só." }] },
+    ]);
+  });
+
   it("os pontos contam de 1 em diante mesmo com dois blocos de Aprovado quando", () => {
     const lido = estruturado(lerCriterioDeAceite("Aprovado quando:\n- a\nObservação: x\nAprovado quando:\n- b\n- c"));
     expect(lido.pontos).toEqual([{ posicao: 1, texto: "a" }, { posicao: 2, texto: "b" }, { posicao: 3, texto: "c" }]);

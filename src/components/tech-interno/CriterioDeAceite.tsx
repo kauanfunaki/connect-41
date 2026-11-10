@@ -151,22 +151,33 @@ function Bloco({ bloco, otimistas, podeEditar, alternar }: {
   </div>;
 }
 
+/** "- item" (ou "• item") na margem: vira item de lista, sem o marcador. */
+const MARCADOR_NA_MARGEM = /^ ?[-•*–]\s+(.*)$/;
+
 /**
  * O texto de um campo, de um passo ou de um parágrafo, com as quebras de linha
- * de quem escreveu. Linhas recuadas (o comando a rodar) saem em bloco de código.
+ * de quem escreveu. Linhas recuadas (o comando a rodar) saem em bloco de código,
+ * e as linhas com "- " na margem saem em lista (10/11/2026: no "Antes de testar"
+ * apareciam com o hífen, como texto corrido).
  */
 function TextoComCodigo({ texto, apoio = false }: { texto: string; apoio?: boolean }) {
-  const partes: { codigo: boolean; linhas: string[] }[] = [];
+  const partes: { tipo: "codigo" | "lista" | "texto"; linhas: string[] }[] = [];
   for (const linha of texto.split("\n")) {
-    const codigo = /^( {2,}|\t)\S/.test(linha), ultima = partes.at(-1);
-    if (ultima && ultima.codigo === codigo) ultima.linhas.push(linha);
-    else partes.push({ codigo, linhas: [linha] });
+    const item = MARCADOR_NA_MARGEM.exec(linha);
+    const tipo = /^( {2,}|\t)\S/.test(linha) ? "codigo" : item ? "lista" : "texto", ultima = partes.at(-1);
+    const conteudo = item ? item[1] : linha;
+    if (ultima && ultima.tipo === tipo) ultima.linhas.push(conteudo);
+    else partes.push({ tipo, linhas: [conteudo] });
   }
   const classe = apoio ? "text-ui text-fg-secondary" : "text-body text-fg";
   return <div className="flex min-w-0 flex-col gap-1.5">
-    {partes.map((p, i) => p.codigo
+    {partes.map((p, i) => p.tipo === "codigo"
       ? <pre key={i} className="overflow-x-auto rounded-md bg-surface-2 px-3 py-2 font-mono text-ui text-fg"><code>{recuar(p.linhas).join("\n")}</code></pre>
-      : <p key={i} className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${classe}`}>{p.linhas.join("\n")}</p>)}
+      : p.tipo === "lista"
+        ? <ul key={i} className={`flex list-disc flex-col gap-1 pl-5 marker:text-fg-muted ${classe}`}>
+          {p.linhas.map((l, j) => <li key={j} className="break-words [overflow-wrap:anywhere]">{l}</li>)}
+        </ul>
+        : <p key={i} className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${classe}`}>{p.linhas.join("\n")}</p>)}
   </div>;
 }
 
