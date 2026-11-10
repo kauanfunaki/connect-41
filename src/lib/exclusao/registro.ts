@@ -336,6 +336,8 @@ const USUARIO: Ligacao[] = [
   { modelo: "OAuthAccount", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PushSubscription", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserAgendaConfig", campo: "user", fk: "userId", tratamento: "cascata" },
+  // A Agenda da pessoa (10/11/2026): as fontes escondidas e a última visão; sai junto.
+  { modelo: "UserAgendaView", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPinnedModule", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPreference", campo: "user", fk: "userId", tratamento: "cascata" },
   // Vínculo da conta GitHub feito em Sua conta (27/10/2026): sai junto com a pessoa.
@@ -366,6 +368,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "InternalContract", coluna: "ownerUserId", tratamento: "manter", motivo: "quem responde pelo contrato; o nome fica gravado em ownerName e a tela mostra o nome" },
   { modelo: "InternalContract", coluna: "createdById", tratamento: "manter", motivo: "autor do cadastro do contrato; a tela não expõe o id" },
   { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
+  { modelo: "SectorAgendaView", coluna: "updatedById", tratamento: "manter", motivo: "quem mudou a Agenda do setor por último; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },

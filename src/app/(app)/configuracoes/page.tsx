@@ -2,13 +2,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SecaoDeConfiguracao } from "@/components/configuracoes/SecaoDeConfiguracao";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock, GitBranch, Bot } from "lucide-react";
+import { ChevronRight, UserRound, ShieldCheck, KeyRound, Palette, Bell, Settings2, CalendarClock, CalendarCog, GitBranch, Bot } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { menuDasConfiguracoes } from "@/lib/configuracoes/areas";
-import { getSectorMaps, sectorLabel } from "@/lib/sectors";
+import { getActiveSectors, getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { ROLE_LABELS } from "@/lib/roles";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PerfilForm } from "@/components/configuracoes/PerfilForm";
@@ -29,6 +29,24 @@ import { origemDoComando } from "@/lib/tokens-pessoais/regras";
 import { baseDomain, hostSuffix, sectorHost } from "@/lib/auth/activeSector";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_TECH_INTERNO } from "@/lib/tech-interno/regras";
+import { AgendaDoSetorForm } from "@/components/agenda/AgendaDoSetorForm";
+import { agendaDosSetores, fontesDoEscritorio } from "@/lib/agendaDoSetorServidor";
+import { agendaDosSetoresNaTela } from "@/lib/agendaDoSetor";
+import { setoresQueConfigura } from "@/lib/meuDia/configuracao";
+import { restaurarAgendaDoSetor, salvarAgendaDoSetor } from "../agenda/preferencias-actions";
+
+/**
+ * A Agenda dos setores que a pessoa coordena (10/11/2026, pedido do Kauan): se
+ * o setor usa reuniões e as fontes de prazo padrão. O coordenador não abre
+ * Setores e módulos, por isso a escolha mora aqui também; o administrador vê
+ * todos os setores. Nulo: a pessoa não configura setor nenhum.
+ */
+async function dadosDaAgendaDoSetor(ctx: Awaited<ReturnType<typeof getAuthContext>>) {
+  const setores = setoresQueConfigura(ctx, await getActiveSectors(ctx.tenantId));
+  if (setores.length === 0) return null;
+  const [{ porSetor, disponivel }, fontes] = await Promise.all([agendaDosSetores(ctx.tenantId), fontesDoEscritorio(ctx.tenantId)]);
+  return { setores: agendaDosSetoresNaTela(setores, porSetor), fontes, disponivel };
+}
 
 /**
  * Os tokens de acesso (05/11/2026): quem vê o Controle interno, para a IA
@@ -69,7 +87,7 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     // A cor do escritório, para a bolinha "Do escritório" da paleta (05/11/2026).
     aparenciaDoEscritorio(ctx.tenantId),
   ]);
-  const tokens = await dadosDosTokens(ctx).catch(() => null);
+  const [tokens, agendaDoSetor] = await Promise.all([dadosDosTokens(ctx).catch(() => null), dadosDaAgendaDoSetor(ctx)]);
   if (!me) notFound();
   const doEscritorio = expedientes.escritorio ?? EXPEDIENTE_PADRAO;
 
@@ -132,6 +150,23 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
           doEscritorio={{ expediente: doEscritorio, seguindo: expedientes.pessoa === null }}
         />
       </SecaoDeConfiguracao>
+
+      {agendaDoSetor && (
+        <SecaoDeConfiguracao
+          id="agenda-do-setor"
+          titulo={agendaDoSetor.setores.length > 1 ? "Agenda dos setores" : "Agenda do setor"}
+          descricao="Para quem é do setor: se ele usa reuniões e quais fontes de prazo a Agenda mostra. Cada pessoa ainda pode mudar as dela."
+          icone={<CalendarCog />}
+        >
+          <AgendaDoSetorForm
+            setores={agendaDoSetor.setores}
+            fontes={agendaDoSetor.fontes}
+            disponivel={agendaDoSetor.disponivel}
+            salvar={salvarAgendaDoSetor}
+            restaurar={restaurarAgendaDoSetor}
+          />
+        </SecaoDeConfiguracao>
+      )}
 
       {github && (
         <SecaoDeConfiguracao id="github" titulo="GitHub" descricao="Sua conta do GitHub, para o painel de contribuições mostrar o seu nome ao lado do login." icone={<GitBranch />}>

@@ -62,6 +62,12 @@ type PorUrl<K extends string> = Comum<K> & {
   /** Com `href`, o segmento vira <Link>: mesmo desenho, estado na URL. */
   items: (SegmentItem<K> & { href: string })[];
   onChange?: undefined;
+  /**
+   * Avisa quem usa que a pessoa escolheu outro segmento, sem tirar a
+   * navegação do <Link> (10/11/2026): a Agenda guarda a última visão escolhida
+   * para abrir nela da próxima vez.
+   */
+  onNavigate?: (key: K) => void;
 };
 
 // Caixa e segmento vieram medidos dos dois call-sites, que tinham a MESMA
@@ -133,8 +139,9 @@ export function SegmentedControl<K extends string>({
   label,
   tone = "neutral",
   onChange,
+  onNavigate,
   className = "",
-}: PorEstado<K> | PorUrl<K>) {
+}: (PorEstado<K> & { onNavigate?: undefined }) | PorUrl<K>) {
   return (
     <div role="group" aria-label={label} className={`${CAIXA} ${className}`.trim()}>
       {items.map((item) => {
@@ -158,6 +165,7 @@ export function SegmentedControl<K extends string>({
             href={item.href}
             title={item.title}
             aria-current={ativo ? "page" : undefined}
+            onClick={ativo || !onNavigate ? undefined : () => onNavigate(item.key)}
             className={classe}
           >
             {conteudo}

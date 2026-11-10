@@ -18,16 +18,18 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { Contador } from "@/components/ui/Contador";
 import { ConfigurarTarefasButton, ID_DA_FAIXA_DO_MEU_DIA, type AlvoDoMeuDia } from "@/components/tarefas/ConfigurarTarefasButton";
-import { blocosDaPessoa, podeConfigurarAPessoa, podeConfigurarOSetor } from "@/lib/meuDia/configuracao";
+import { blocosDaPessoa, blocosDoSetor, podeConfigurarAPessoa, setoresQueConfigura } from "@/lib/meuDia/configuracao";
 import { meuDiaDasPessoas } from "@/lib/meuDia/configuracaoServidor";
 import { LinhaDoDia } from "@/components/tarefas/LinhaDoDia";
 import { PrazoItem } from "@/components/agenda/PrazoItem";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, scopedSectors } from "@/lib/auth/context";
+import { getAuthContext, isFullWrite, scopedSectors } from "@/lib/auth/context";
 import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
-import { parseTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
+import { padraoDoSetor, type TaskWidgetKey } from "@/lib/taskWidgets";
+import { agendaDosSetores, agendaResolvida } from "@/lib/agendaDoSetorServidor";
+import { AGENDA_DO_SETOR_PADRAO } from "@/lib/agendaDoSetor";
 import { itensDaGestao } from "@/lib/gestao/itens";
-import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa } from "@/lib/gestao/regras";
+import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa, type Origem } from "@/lib/gestao/regras";
 import { LinhasDeSituacao, type LinhaDeSituacao, type Segmento } from "@/components/shared/Graficos";
 import { nomesDasPessoas } from "@/lib/gestao/telas";
 import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
@@ -66,6 +68,15 @@ export const dynamic = "force-dynamic";
 /** Quantos itens cada bloco mostra antes do "+N". */
 const POR_BLOCO = 8;
 
+/** O interruptor de cada origem das listas (10/11/2026: todas desligam). */
+const CHAVE_DA_ORIGEM: Record<Origem, TaskWidgetKey> = {
+  CARD: "cards-kanban",
+  PROCESSO: "processos",
+  PENDENCIA: "pendencias",
+  SOLICITACAO: "solicitacoes",
+  TRANSFERENCIA: "transferencias",
+};
+
 // Meu dia (30/09) — a antiga tela de Tarefas, virada na primeira tela do
 // expediente. Pedido do Kauan: ao começar o dia, a pessoa abre aqui para ver o
 // que precisa fazer; é a Gestão (que mede tudo o que está rodando) em escala
@@ -75,9 +86,10 @@ const POR_BLOCO = 8;
 // transferência —, com a mesma régua de parado e de prazo (`classificar`).
 // "Meu" é onde a pessoa responde; "Meu time" são os setores que ela coordena.
 //
-// A configuração por setor (SectorTaskView, do SUPER_ADMIN) continua valendo:
-// sem "transferências" ou sem "cards", essas origens saem; sem "reuniões", o
-// bloco de reuniões sai.
+// O que entra é configurável (SectorTaskView e UserTaskView, ver
+// src/lib/meuDia/configuracao.ts): desde 10/11/2026 (pedido do Kauan) cada
+// origem das listas e cada bloco ao lado desliga, e o setor que não usa
+// reuniões nasce sem "Próximas reuniões". Bloco desligado nem é buscado.
 type ItemDoDia = Awaited<ReturnType<typeof itensDaGestao>>[number];
 
 /** Um bloco do Meu dia: título, contagem e os itens (até POR_BLOCO). */
@@ -190,19 +202,23 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
       ? [ctx.activeSector]
       : "todos";
 
-  const [{ labels, colors }, taskViews] = await Promise.all([
+  const [{ labels, colors }, taskViews, { porSetor: agendaPorSetor }] = await Promise.all([
     getSectorMaps(ctx.tenantId),
     prisma.sectorTaskView.findMany({ where: { tenantId: ctx.tenantId }, select: { sectorCode: true, widgets: true } }),
+    agendaDosSetores(ctx.tenantId),
   ]);
+  // O padrão do código depende de o setor usar reuniões (10/11/2026).
+  const usaDoSetor = (code: string) => (agendaPorSetor[code] ?? AGENDA_DO_SETOR_PADRAO).usaReunioes;
+  const padraoDoSetorCode = (code: string) => padraoDoSetor(usaDoSetor(code));
   const configBySector: Record<string, TaskWidgetKey[]> = {};
-  for (const v of taskViews) configBySector[v.sectorCode] = parseTaskWidgets(v.widgets);
+  for (const v of taskViews) configBySector[v.sectorCode] = blocosDoSetor(v.widgets, usaDoSetor(v.sectorCode));
 
   // Quem configura o Meu dia de quem (28/10/2026): cada um o seu, o
-  // coordenador o da equipe, Admin e Super Admin o de qualquer um e o padrão de
-  // cada setor. A configuração da pessoa vale mais que a do setor.
-  const setorAdmin = podeConfigurarOSetor(ctx);
+  // coordenador o da equipe e, desde 10/11/2026, o padrão dos setores dele;
+  // Admin e Super Admin o de qualquer um e o padrão de cada setor. A
+  // configuração da pessoa vale mais que a do setor.
   const daEquipe =
-    setorAdmin || ctx.role === "SECTOR_ADMIN"
+    isFullWrite(ctx.role) || ctx.role === "SECTOR_ADMIN"
       ? (
           await prisma.user.findMany({
             where: { tenantId: ctx.tenantId, active: true, id: { not: ctx.userId } },
@@ -214,8 +230,12 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
           .filter((u) => podeConfigurarAPessoa(ctx, u))
       : [];
   const proprios = await meuDiaDasPessoas(ctx.tenantId, [ctx.userId, ...daEquipe.map((u) => u.id)].filter(Boolean));
-  const visiveis = new Set(blocosDaPessoa(proprios.get(ctx.userId), scopedSectors(ctx) ?? ctx.sectors, configBySector));
+  const visiveis = new Set(blocosDaPessoa(proprios.get(ctx.userId), scopedSectors(ctx) ?? ctx.sectors, configBySector, padraoDoSetorCode));
   const mostraReunioes = visiveis.has("reunioes");
+  const mostraPrazos = visiveis.has("prazos-semana");
+  // O "Padrão do setor" do Configurar: o admin, todos; o coordenador, os dele.
+  const configuraSetor = !!ctx.userId && (isFullWrite(ctx.role) || ctx.role === "SECTOR_ADMIN");
+  const setoresDoPadrao = configuraSetor ? setoresQueConfigura(ctx, await getActiveSectors(ctx.tenantId)) : [];
 
   const alvosDoMeuDia: AlvoDoMeuDia[] = ctx.userId
     ? [
@@ -225,17 +245,15 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
           id: u.id,
           rotulo: u.nome,
           eu: false,
-          blocos: blocosDaPessoa(proprios.get(u.id), u.sectors, configBySector),
+          blocos: blocosDaPessoa(proprios.get(u.id), u.sectors, configBySector, padraoDoSetorCode),
           proprio: proprios.has(u.id),
         })),
-        ...(setorAdmin
-          ? (await getActiveSectors(ctx.tenantId)).map((s): AlvoDoMeuDia => ({
-              tipo: "setor",
-              code: s.code,
-              rotulo: s.label,
-              blocos: configBySector[s.code] ?? blocosDaPessoa(null, [s.code], {}),
-            }))
-          : []),
+        ...setoresDoPadrao.map((s): AlvoDoMeuDia => ({
+          tipo: "setor",
+          code: s.code,
+          rotulo: s.label,
+          blocos: configBySector[s.code] ?? padraoDoSetorCode(s.code),
+        })),
       ]
     : [];
 
@@ -253,14 +271,15 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
           select: { id: true, title: true, startAt: true, meetingUrl: true },
         })
       : Promise.resolve([]),
-    prazosDoPeriodo(ctx, hojeKey, addDaysToKey(hojeKey, 6)),
+    // As fontes ligadas na Agenda da pessoa valem aqui também (10/11/2026):
+    // quem desligou as férias lá não as quer no Meu dia.
+    mostraPrazos
+      ? agendaResolvida(ctx).then((a) => prazosDoPeriodo(ctx, hojeKey, addDaysToKey(hojeKey, 6), { fontes: a.ligadas, hoje: hojeKey }))
+      : Promise.resolve([]),
   ]);
-  const societario = visaoTime ? null : await doSocietario(ctx, hojeKey);
+  const societario = visaoTime || !visiveis.has("societario") ? null : await doSocietario(ctx, hojeKey);
 
-  const itens = todos.filter(
-    (x) =>
-      (x.item.origem !== "TRANSFERENCIA" || visiveis.has("transferencias")) && (x.item.origem !== "CARD" || visiveis.has("cards-kanban"))
-  );
+  const itens = todos.filter((x) => visiveis.has(CHAVE_DA_ORIGEM[x.item.origem]));
   const resumo = resumirDia(itens, agora);
   const agoraLista = pedeAgora(itens);
   const andandoLista = andando(itens);
@@ -453,42 +472,46 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             </section>
           )}
 
-          <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
-            <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
-              <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
-                <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
-              </h2>
-              {/* Botão, como o "Entrar" das reuniões (15/10/2026): era link de texto. */}
-              <Button href="/agenda?view=semana" variant="secondary" size="xs">
-                Abrir agenda
-              </Button>
-            </header>
-            {diasComPrazo.length === 0 ? (
-              <p className="px-4 py-5 text-body text-fg-muted">
-                <Sparkles size={14} className="inline -mt-0.5 mr-1 text-fg-muted" />
-                Nenhum prazo nos seus setores nos próximos 7 dias.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {diasComPrazo.map((dia) => (
-                  <li key={dia} className="px-4 py-2.5">
-                    <p className="mb-1.5 c41-rotulo">
-                      {dia === hojeKey
-                        ? "Hoje"
-                        : dia === addDaysToKey(hojeKey, 1)
-                          ? "Amanhã"
-                          : `${weekdayLabel(dia)}, ${formatCalendarDate(new Date(`${dia}T12:00:00Z`), { day: "2-digit", month: "2-digit" })}`}
-                    </p>
-                    <div className="space-y-1">
-                      {prazosPorDia.get(dia)!.slice(0, 5).map((p) => (
-                        <PrazoItem key={p.chave} prazo={p} setores={setores} />
-                      ))}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          {mostraPrazos && (
+            <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
+              <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
+                <h2 className="flex items-center gap-2 text-card-title font-semibold text-fg">
+                  <CalendarDays size={16} className="text-fg-muted" /> Prazos da semana
+                </h2>
+                {/* Botão, como o "Entrar" das reuniões (15/10/2026): era link de
+                    texto. Abre na visão da pessoa (10/11/2026): a lista de Prazos
+                    para quem não usa reuniões, a semana para quem usa. */}
+                <Button href="/agenda" variant="secondary" size="xs">
+                  Abrir agenda
+                </Button>
+              </header>
+              {diasComPrazo.length === 0 ? (
+                <p className="px-4 py-5 text-body text-fg-muted">
+                  <Sparkles size={14} className="inline -mt-0.5 mr-1 text-fg-muted" />
+                  Nenhum prazo nos seus setores nos próximos 7 dias.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {diasComPrazo.map((dia) => (
+                    <li key={dia} className="px-4 py-2.5">
+                      <p className="mb-1.5 c41-rotulo">
+                        {dia === hojeKey
+                          ? "Hoje"
+                          : dia === addDaysToKey(hojeKey, 1)
+                            ? "Amanhã"
+                            : `${weekdayLabel(dia)}, ${formatCalendarDate(new Date(`${dia}T12:00:00Z`), { day: "2-digit", month: "2-digit" })}`}
+                      </p>
+                      <div className="space-y-1">
+                        {prazosPorDia.get(dia)!.slice(0, 5).map((p) => (
+                          <PrazoItem key={p.chave} prazo={p} setores={setores} />
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
         </div>
       </div>
     </PageContainer>
