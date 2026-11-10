@@ -5,7 +5,7 @@
 // de vazamento silencioso em erro de compilação. Ver src/lib/fiscal/alcance.ts.
 
 import { getPrisma } from "@/lib/prisma";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import type {
   FiscalDocumentType,
   FiscalDocumentDestination,
@@ -55,8 +55,102 @@ const MESES_NO_FILTRO = 36;
  *
  * Aumentar o buffer pool devolveria a contagem exata; é decisão de infra, e o
  * teto continua valendo com ela — a tabela cresce todo mês.
+ *
+ * **Desde 10/11/2026 o teto é a exceção.** O índice `fiscal_documents_contagem_idx`
+ * (tenant, empresa, `removedAtOrigin`, competência, destino, situação, tipo) faz a
+ * contagem de empresas ler só o índice, sem abrir linha — e a tela sempre abre
+ * numa empresa (13/10/2026). Ver `contagemExata`: o teto fica para o escritório
+ * inteiro (a IA da equipe) e para a busca por texto, que lê linha de qualquer jeito.
  */
 const TETO_DA_CONTAGEM = 1000;
+
+/**
+ * A contagem pode ser exata (sem teto)? Sim quando o alcance é de empresas e não
+ * há busca por texto: todo o resto do filtro está no índice da contagem. `parte`
+ * (o CNPJ de um lado da nota) não está, mas o motor só o manda junto de empresa e
+ * competência, e aí são poucas linhas.
+ */
+export function contagemExata(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): boolean {
+  return alcance.tipo === "EMPRESAS" && !filtro.busca?.trim();
+}
+
+/** As linhas do `groupBy` por destino viram o resumo, com zero no destino que não veio. */
+export function resumoDosGrupos(
+  grupos: readonly { destination: FiscalDocumentDestination; _count: { _all: number } }[]
+): Record<FiscalDocumentDestination, Contagem> {
+  const total = (d: FiscalDocumentDestination) => grupos.find((g) => g.destination === d)?._count._all ?? 0;
+  return {
+    PENDENTE: { total: total("PENDENTE"), limitado: false },
+    LANCADO: { total: total("LANCADO"), limitado: false },
+    IGNORADO: { total: total("IGNORADO"), limitado: false },
+  };
+}
+
+/**
+ * As empresas que a contagem exata percorre: as do alcance, ou só a do filtro
+ * quando ela está nele (a do filtro nunca amplia o alcance — ver `whereDoFiltro`).
+ */
+function empresasDaContagem(alcance: Extract<AlcanceFiscal, { tipo: "EMPRESAS" }>, filtro: FiltroDoAcervo): string[] {
+  if (!filtro.companyId) return alcance.companyIds;
+  return alcance.companyIds.includes(filtro.companyId) ? [filtro.companyId] : [];
+}
+
+/** O resto do filtro (tirando empresa e busca) em SQL, para a contagem pelo índice. */
+function condicoesDaContagem(filtro: FiltroDoAcervo, situacao?: FiscalDocumentSituation): Prisma.Sql {
+  const partes = [Prisma.sql`removedAtOrigin = false`];
+  if (filtro.competencia) partes.push(Prisma.sql`competence = ${filtro.competencia}`);
+  if (filtro.tipo) partes.push(Prisma.sql`type = ${filtro.tipo}`);
+  if (filtro.destino) partes.push(Prisma.sql`destination = ${filtro.destino}`);
+  const sit = situacao ?? filtro.situacao;
+  if (sit) partes.push(Prisma.sql`situation = ${sit}`);
+  if (filtro.parte) {
+    partes.push(
+      filtro.parte.lado === "emitente"
+        ? Prisma.sql`issuerDocument = ${filtro.parte.documento}`
+        : Prisma.sql`recipientDocument = ${filtro.parte.documento}`
+    );
+  }
+  return Prisma.join(partes, " AND ");
+}
+
+// Uma consulta por empresa com o índice escolhido à mão, como as competências
+// (ver `competenciasDisponiveis`): medido no banco local em 10/11/2026, o MySQL
+// deixado por conta própria contava pelo unique de `dedupKey` ou por
+// (tenant, situação, destino) e abria cada linha — o mesmo erro de estimativa.
+// O nome do índice está fixado no schema com `map:`.
+async function contarExato(alcance: Extract<AlcanceFiscal, { tipo: "EMPRESAS" }>, filtro: FiltroDoAcervo): Promise<number> {
+  const prisma = getPrisma();
+  const condicoes = condicoesDaContagem(filtro);
+  const porEmpresa = await Promise.all(
+    empresasDaContagem(alcance, filtro).map(
+      (companyId) => prisma.$queryRaw<{ n: bigint | number }[]>`
+        SELECT COUNT(*) AS n
+        FROM fiscal_documents FORCE INDEX (fiscal_documents_contagem_idx)
+        WHERE tenantId = ${alcance.tenantId} AND companyId = ${companyId} AND ${condicoes}`
+    )
+  );
+  return porEmpresa.reduce((soma, linhas) => soma + Number(linhas[0]?.n ?? 0), 0);
+}
+
+async function resumoExato(
+  alcance: Extract<AlcanceFiscal, { tipo: "EMPRESAS" }>,
+  filtro: FiltroDoAcervo
+): Promise<Record<FiscalDocumentDestination, Contagem>> {
+  const prisma = getPrisma();
+  const condicoes = condicoesDaContagem(filtro, "AUTORIZADA");
+  const porEmpresa = await Promise.all(
+    empresasDaContagem(alcance, filtro).map(
+      (companyId) => prisma.$queryRaw<{ destination: FiscalDocumentDestination; n: bigint | number }[]>`
+        SELECT destination, COUNT(*) AS n
+        FROM fiscal_documents FORCE INDEX (fiscal_documents_contagem_idx)
+        WHERE tenantId = ${alcance.tenantId} AND companyId = ${companyId} AND ${condicoes}
+        GROUP BY destination`
+    )
+  );
+  const somados = new Map<FiscalDocumentDestination, number>();
+  for (const linha of porEmpresa.flat()) somados.set(linha.destination, (somados.get(linha.destination) ?? 0) + Number(linha.n));
+  return resumoDosGrupos([...somados].map(([destination, n]) => ({ destination, _count: { _all: n } })));
+}
 
 /** Um total que pode ter parado no teto — `limitado` quer dizer "há mais do que isso". */
 export type Contagem = { total: number; limitado: boolean };
@@ -117,72 +211,80 @@ export function whereDoFiltro(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): P
   };
 }
 
-export type LinhaDoAcervo = Awaited<ReturnType<typeof listarDocumentos>>["documentos"][number];
+export type LinhaDoAcervo = Awaited<ReturnType<typeof listarPaginaDoAcervo>>["documentos"][number];
 
+/**
+ * Só a página, sem contar (10/11/2026): a tela mostra a tabela com isto e a
+ * contagem chega depois, num `<Suspense>` — ver `documentos-fiscais/page.tsx`.
+ */
+export async function listarPaginaDoAcervo(
+  alcance: AlcanceFiscal,
+  filtro: FiltroDoAcervo = {},
+  pagina = 1
+) {
+  const linhas = await getPrisma().fiscalDocument.findMany({
+    where: whereDoFiltro(alcance, filtro),
+    // Emissão desc é a ordem que o fiscal lê: o que chegou por último é o que
+    // está pendente de decisão. `id` desempata para a paginação não repetir
+    // linha quando duas notas têm o mesmo instante.
+    orderBy: [{ issuedAt: "desc" }, { id: "desc" }],
+    skip: (pagina - 1) * POR_PAGINA,
+    // Uma a mais só para saber se existe a próxima página — é o que o botão
+    // "Próxima" usa enquanto a contagem não chegou (ou parou no teto).
+    take: POR_PAGINA + 1,
+    select: {
+      id: true,
+      type: true,
+      accessKey: true,
+      number: true,
+      series: true,
+      issuerName: true,
+      issuerDocument: true,
+      recipientName: true,
+      recipientDocument: true,
+      amount: true,
+      issuedAt: true,
+      competence: true,
+      origin: true,
+      situation: true,
+      destination: true,
+      completude: true,
+      renderizavel: true,
+      company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
+    },
+  });
+  return { documentos: linhas.slice(0, POR_PAGINA), temProxima: linhas.length > POR_PAGINA, pagina, porPagina: POR_PAGINA };
+}
+
+/** A página e a contagem juntas — o portal, a IA e o motor leem assim. */
 export async function listarDocumentos(
   alcance: AlcanceFiscal,
   filtro: FiltroDoAcervo = {},
   pagina = 1
 ) {
-  const prisma = getPrisma();
-  const where = whereDoFiltro(alcance, filtro);
-
-  const [linhas, contagem] = await Promise.all([
-    prisma.fiscalDocument.findMany({
-      where,
-      // Emissão desc é a ordem que o fiscal lê: o que chegou por último é o que
-      // está pendente de decisão. `id` desempata para a paginação não repetir
-      // linha quando duas notas têm o mesmo instante.
-      orderBy: [{ issuedAt: "desc" }, { id: "desc" }],
-      skip: (pagina - 1) * POR_PAGINA,
-      // Uma a mais só para saber se existe a próxima página — é o que o botão
-      // "Próxima" usa quando a contagem parou no teto e não diz onde o fim está.
-      take: POR_PAGINA + 1,
-      select: {
-        id: true,
-        type: true,
-        accessKey: true,
-        number: true,
-        series: true,
-        issuerName: true,
-        issuerDocument: true,
-        recipientName: true,
-        recipientDocument: true,
-        amount: true,
-        issuedAt: true,
-        competence: true,
-        origin: true,
-        situation: true,
-        destination: true,
-        completude: true,
-        renderizavel: true,
-        company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
-      },
-    }),
-    contar(where),
-  ]);
-
+  const [daPagina, contagem] = await Promise.all([listarPaginaDoAcervo(alcance, filtro, pagina), contarDocumentos(alcance, filtro)]);
   return {
-    documentos: linhas.slice(0, POR_PAGINA),
-    temProxima: linhas.length > POR_PAGINA,
+    ...daPagina,
     total: contagem.total,
     /** A contagem parou no teto: há mais de `total` documentos. */
     totalLimitado: contagem.limitado,
-    pagina,
-    porPagina: POR_PAGINA,
   };
 }
 
 /**
  * Só o número, sem a lista — o atalho de documentos do Início do portal
- * (05/10). Com o mesmo teto da lista: o Início é a primeira tela depois do
- * login, e foi a contagem sem teto que levou o portal a 2 minutos em 18/09.
+ * (05/10). O Início é a primeira tela depois do login, e foi a contagem lendo
+ * linha que levou o portal a 2 minutos em 18/09: exata só pelo índice da
+ * contagem (ver `contagemExata`).
  */
 export async function contarDocumentos(alcance: AlcanceFiscal, filtro: FiltroDoAcervo = {}): Promise<Contagem> {
+  if (alcance.tipo === "EMPRESAS" && contagemExata(alcance, filtro)) {
+    return { total: await contarExato(alcance, filtro), limitado: false };
+  }
   return contar(whereDoFiltro(alcance, filtro));
 }
 
-/** Conta até o teto — ver `TETO_DA_CONTAGEM`. */
+/** Até o teto — ver `TETO_DA_CONTAGEM`. A exata é `contarExato`. */
 async function contar(where: Prisma.FiscalDocumentWhereInput): Promise<Contagem> {
   const prisma = getPrisma();
   const linhas = await prisma.fiscalDocument.findMany({ where, select: { id: true }, take: TETO_DA_CONTAGEM + 1 });
@@ -284,8 +386,10 @@ export async function resumoPorDestino(
   filtro: FiltroDoAcervo = {}
 ): Promise<Record<FiscalDocumentDestination, Contagem>> {
   const where: Prisma.FiscalDocumentWhereInput = { ...whereDoFiltro(alcance, filtro), situation: "AUTORIZADA" };
-  // Uma contagem com teto por destino, e não um `groupBy`: o `groupBy` conta
-  // tudo, e contar tudo é o que levava 90 s — ver `TETO_DA_CONTAGEM`.
+  // Exata: um GROUP BY por empresa, que o índice da contagem responde sem abrir
+  // linha (10/11/2026). Sem ela, uma contagem com teto por destino — contar tudo
+  // lendo linha é o que levava 90 s (ver `TETO_DA_CONTAGEM`).
+  if (alcance.tipo === "EMPRESAS" && contagemExata(alcance, filtro)) return resumoExato(alcance, filtro);
   const [PENDENTE, LANCADO, IGNORADO] = await Promise.all(
     (["PENDENTE", "LANCADO", "IGNORADO"] as const).map((destination) => contar({ ...where, destination }))
   );

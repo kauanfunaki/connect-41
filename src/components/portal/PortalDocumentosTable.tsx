@@ -114,9 +114,10 @@ export function PortalDocumentosTable({ documentos }: { documentos: LinhaDoAcerv
 }
 
 type PropsDaPaginacao = {
-  total: number;
+  /** Sem `total`, a contagem ainda não chegou (10/11/2026): vale só o "tem próxima". */
+  total?: number;
   /** A contagem parou no teto — ver `TETO_DA_CONTAGEM` em src/lib/fiscal/data.ts. */
-  totalLimitado: boolean;
+  totalLimitado?: boolean;
   temProxima: boolean;
   pagina: number;
   porPagina: number;
@@ -130,8 +131,8 @@ type PropsDaPaginacao = {
  */
 export function PaginacaoDosDocumentos({ total, totalLimitado, temProxima, pagina, porPagina, filtrosDaUrl }: PropsDaPaginacao) {
   // Com a contagem no teto não se sabe qual é a última página — só se existe a
-  // próxima. Quem tem mais de mil documentos navega pela competência.
-  const ultimaPagina = totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
+  // próxima. Desde 10/11/2026 a contagem só para no teto com busca por texto.
+  const ultimaPagina = total === undefined || totalLimitado ? null : Math.max(1, Math.ceil(total / porPagina));
 
   // O link leva os filtros da URL junto: paginar e perder a competência faria
   // a lista parecer outra.

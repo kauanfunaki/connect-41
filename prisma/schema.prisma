@@ -3914,6 +3914,11 @@ model FiscalDocument {
   // quebra a home do portal.
   @@index([tenantId, companyId, competence], map: "fiscal_documents_tenantId_companyId_competence_idx")
   @@index([tenantId, companyId, destination])
+  // A contagem do acervo (10/11/2026): tudo o que o filtro da tela compara por
+  // igualdade, com `removedAtOrigin` — toda listagem o filtra e nenhum índice o
+  // tinha, então contar abria cada linha (ver TETO_DA_CONTAGEM em
+  // src/lib/fiscal/data.ts). Com ele, `count` e o `groupBy` por destino leem só o índice.
+  @@index([tenantId, companyId, removedAtOrigin, competence, destination, situation, type], map: "fiscal_documents_contagem_idx")
   // A listagem COM filtro de empresa, na ordem da tela (data de emissão):
   // até 28/10/2026 só havia (empresa, competência), e a ordenação por data
   // dentro da empresa era feita fora do índice.

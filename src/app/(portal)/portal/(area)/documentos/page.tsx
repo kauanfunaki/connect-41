@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
-import { listarDocumentos, competenciasDisponiveis } from "@/lib/fiscal/data";
+import { listarPaginaDoAcervo, contarDocumentos, competenciasDisponiveis, type Contagem } from "@/lib/fiscal/data";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Card } from "@/components/ui/Card";
@@ -39,17 +40,32 @@ export default async function PortalDocumentosPage({
   const empresaId = params.empresa && companyIds.includes(params.empresa) ? params.empresa : undefined;
   const filtro = { competencia: params.competencia || undefined, companyId: empresaId };
 
-  const [{ documentos, total, totalLimitado, temProxima, porPagina }, competencias, empresas] = await Promise.all([
-    listarDocumentos(alcance, filtro, pagina),
+  // A tabela não espera a contagem (10/11/2026), como no acervo da equipe.
+  const [{ documentos, temProxima, porPagina }, competencias, empresas] = await Promise.all([
+    listarPaginaDoAcervo(alcance, filtro, pagina),
     competenciasDisponiveis(empresaId ? { tipo: "EMPRESAS", tenantId: sessao.tenantId, companyIds: [empresaId] } : alcance),
     companyIds.length > 1 ? empresasDoSeletor(sessao.tenantId, companyIds) : Promise.resolve([]),
   ]);
+  const contagem = contarDocumentos(alcance, filtro);
+  contagem.catch(() => undefined); // na tela vazia ninguém a espera
+
+  // Página além do fim (link antigo): volta para a última.
+  if (pagina > 1 && documentos.length === 0) {
+    const { total } = await contagem;
+    if (total > 0) {
+      const q = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) if (k !== "pagina" && v) q.set(k, v);
+      const ultima = Math.ceil(total / porPagina);
+      if (ultima > 1) q.set("pagina", String(ultima));
+      redirect(`/portal/documentos${q.size ? `?${q}` : ""}`);
+    }
+  }
 
   return (
     <PageContainer>
       <PortalCabecalho titulo="Documentos fiscais" descricao="Notas emitidas e recebidas pelas suas empresas." />
 
-      {total === 0 && !params.competencia && !empresaId ? (
+      {documentos.length === 0 && pagina === 1 && !params.competencia && !empresaId ? (
         <Card>
           <EmptyState
             icon={<FileText />}
@@ -63,7 +79,11 @@ export default async function PortalDocumentosPage({
               contagem e o "Filtros" na barra — o botão ficava sozinho acima da
               tabela, e a contagem só aparecia no pé —, e a paginação embaixo. */}
           <CascoDaTabela
-            contagem={contarItens(total, "documento", "documentos", totalLimitado)}
+            contagem={
+              <Suspense fallback={<span className="text-fg-muted">Contando…</span>}>
+                <ContagemDosDocumentos contagem={contagem} />
+              </Suspense>
+            }
             filtros={<PortalCompetenciaFiltro competencias={competencias} empresas={empresas} naBarra />}
           >
             {documentos.length === 0 ? (
@@ -77,17 +97,25 @@ export default async function PortalDocumentosPage({
             )}
           </CascoDaTabela>
           {documentos.length > 0 && (
-            <PaginacaoDosDocumentos
-              total={total}
-              totalLimitado={totalLimitado}
-              temProxima={temProxima}
-              pagina={pagina}
-              porPagina={porPagina}
-              filtrosDaUrl={params}
-            />
+            <Suspense fallback={<PaginacaoDosDocumentos temProxima={temProxima} pagina={pagina} porPagina={porPagina} filtrosDaUrl={params} />}>
+              <PaginacaoContada contagem={contagem} temProxima={temProxima} pagina={pagina} porPagina={porPagina} filtrosDaUrl={params} />
+            </Suspense>
           )}
         </>
       )}
     </PageContainer>
   );
+}
+
+async function ContagemDosDocumentos({ contagem }: { contagem: Promise<Contagem> }) {
+  const { total, limitado } = await contagem;
+  return <>{contarItens(total, "documento", "documentos", limitado)}</>;
+}
+
+async function PaginacaoContada({
+  contagem,
+  ...resto
+}: { contagem: Promise<Contagem>; temProxima: boolean; pagina: number; porPagina: number; filtrosDaUrl: Record<string, string | undefined> }) {
+  const { total, limitado } = await contagem;
+  return <PaginacaoDosDocumentos total={total} totalLimitado={limitado} {...resto} />;
 }
