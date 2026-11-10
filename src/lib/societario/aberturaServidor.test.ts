@@ -35,8 +35,9 @@ vi.mock("@/lib/prisma", () => {
     return valor();
   };
   const tx = {
-    // A trava do escritório e o último número do endereço curto (10/11/2026): nenhum, o processo é o nº 1.
-    $queryRaw: async () => [],
+    // O contador do endereço curto (10/11/2026): em 0, o processo é o nº 1.
+    $queryRaw: async () => [{ ultimo: 0 }],
+    $executeRaw: async () => 1,
     process: { create: grava("process") },
     processStep: { create: grava("processStep") },
     processChecklistItem: { create: grava("processChecklistItem") },

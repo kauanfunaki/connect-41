@@ -16,8 +16,10 @@ type Tx = Prisma.TransactionClient;
  * endereço curto reaproveita esse número.
  */
 export type TelaNumerada = Exclude<TelaCurta, "solicitacao">;
+/** As telas do contador: as do endereço curto e o Controle interno (bug-123), que usa o mesmo contador. */
+export type TelaDoContador = TelaNumerada | "controle-interno";
 // Nome fixo, nunca vindo de fora: entra cru no SQL (`Prisma.raw`).
-const TABELA: Record<TelaNumerada, string> = {
+const TABELA: Record<TelaDoContador, string> = {
   empresa: "companies",
   pessoa: "people",
   chamado: "helpdesk_tickets",
@@ -25,39 +27,68 @@ const TABELA: Record<TelaNumerada, string> = {
   transferencia: "handoffs",
   pendencia: "client_requests",
   tarefa: "pipeline_items",
+  "controle-interno": "tech_internal_items",
 };
 
 /**
- * O próximo número da tela no escritório, o do endereço curto. É a mesma
- * técnica do Controle interno (`proximoNumero`, src/lib/tech-interno/servidor.ts):
+ * Reserva `quantos` números seguidos da tela no escritório e devolve o
+ * primeiro. Decisão do Kauan (10/11/2026): o número nunca é reaproveitado, nem
+ * quando o registro de maior número é excluído — por isso ele sai do contador
+ * da tela (`short_address_counters`), e não do maior número que sobrou na
+ * tabela.
  *
- * Duas criações ao mesmo tempo no mesmo escritório fazem fila na linha do
- * escritório (`tenants … FOR UPDATE`, a trava dos chamados) — vale também para
- * o escritório ainda sem nenhum registro, em que não há linha para travar. O
- * último número é lido pela própria consulta com trava, que enxerga o que a
- * criação da frente acabou de confirmar: uma leitura comum depois da trava
- * leria a foto do começo da transação, se ela já tiver lido algo antes (o
- * pagamento em dobro de 19/10/2026). A unique (tenantId, number) fica de rede
- * (`comNovaTentativa`).
+ * Na transação de quem cria:
+ * 1. trava a linha do contador e lê o último número pela própria consulta com
+ *    trava (`FOR UPDATE`), que enxerga o que a criação da frente acabou de
+ *    confirmar — uma leitura comum leria a foto do começo da transação, se ela
+ *    já tiver lido algo antes (o pagamento em dobro de 19/10/2026);
+ * 2. sem a linha (escritório sem nenhum registro na tela quando a migration
+ *    rodou), cria a linha a partir do maior número da tabela e trava de novo;
+ * 3. avança o contador.
+ * Duas criações ao mesmo tempo na mesma tela do escritório fazem fila na
+ * linha do contador, e a trava segue com a transação até o fim. A unique
+ * (tenantId, number) fica de rede (`comNovaTentativa`).
  *
- * Para criar vários de uma vez (importação, demonstração), o primeiro número
- * é este e os seguintes, em sequência (`numerosEmSequencia`): a trava segue
- * com a transação até o fim, e ninguém mais numera no escritório enquanto isso.
- *
- * Fora de uma transação (os scripts de carga local, que rodam sozinhos), a
- * trava vale só para a própria consulta e o número é o maior + 1.
+ * Fora de uma transação (os scripts de carga local, que rodam sozinhos), cada
+ * consulta vale por si: não há outra criação para disputar o número.
  */
-export async function proximoNumero(tx: Tx, tela: TelaNumerada, tenantId: string): Promise<number> {
-  await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${tenantId} FOR UPDATE`;
-  const [ultimo] = await tx.$queryRaw<{ numero: number | bigint }[]>(
-    Prisma.sql`SELECT \`number\` AS numero FROM ${Prisma.raw(TABELA[tela])} WHERE tenantId = ${tenantId} ORDER BY \`number\` DESC LIMIT 1 FOR UPDATE`
+export async function reservarNumeros(tx: Tx, tela: TelaDoContador, tenantId: string, quantos: number): Promise<number> {
+  if (!Number.isInteger(quantos) || quantos < 1) throw new Error(`Quantidade de números inválida: ${quantos}.`);
+  const travar = () =>
+    tx.$queryRaw<{ ultimo: number | bigint }[]>(
+      Prisma.sql`SELECT ultimo FROM short_address_counters WHERE tenantId = ${tenantId} AND tela = ${tela} FOR UPDATE`
+    );
+  let [linha] = await travar();
+  if (!linha) {
+    await tx.$executeRaw(
+      Prisma.sql`INSERT INTO short_address_counters (tenantId, tela, ultimo, updatedAt) SELECT ${tenantId}, ${tela}, COALESCE(MAX(\`number\`), 0), NOW(3) FROM ${Prisma.raw(TABELA[tela])} WHERE tenantId = ${tenantId} ON DUPLICATE KEY UPDATE ultimo = ultimo`
+    );
+    [linha] = await travar();
+    if (!linha) throw new Error(`O contador do endereço curto (${tela}) não foi criado.`);
+  }
+  await tx.$executeRaw(
+    Prisma.sql`UPDATE short_address_counters SET ultimo = ultimo + ${quantos}, updatedAt = NOW(3) WHERE tenantId = ${tenantId} AND tela = ${tela}`
   );
-  return (ultimo ? Number(ultimo.numero) : 0) + 1;
+  return Number(linha.ultimo) + 1;
+}
+
+/** O próximo número da tela no escritório, o do endereço curto (`reservarNumeros` de um). */
+export function proximoNumero(tx: Tx, tela: TelaDoContador, tenantId: string): Promise<number> {
+  return reservarNumeros(tx, tela, tenantId, 1);
 }
 
 /** Os números de uma leva, em sequência a partir do primeiro reservado. */
 export function numerosEmSequencia<T extends object>(primeiro: number, registros: readonly T[]): (T & { number: number })[] {
   return registros.map((r, i) => ({ ...r, number: primeiro + i }));
+}
+
+/**
+ * Uma leva inteira de uma vez (importação, demonstração): reserva o bloco
+ * todo no contador e numera em sequência. Leva vazia não mexe no contador.
+ */
+export async function numerarLeva<T extends object>(tx: Tx, tela: TelaDoContador, tenantId: string, registros: readonly T[]): Promise<(T & { number: number })[]> {
+  if (registros.length === 0) return [];
+  return numerosEmSequencia(await reservarNumeros(tx, tela, tenantId, registros.length), registros);
 }
 
 const codigo = (e: unknown) => (typeof e === "object" && e !== null && "code" in e ? (e as { code?: unknown }).code : undefined);

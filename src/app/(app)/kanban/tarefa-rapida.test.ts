@@ -15,8 +15,8 @@ const activity = { create: vi.fn() };
 const sectorQuadrosBloqueados = { findUnique: vi.fn(async () => null) };
 const space = { findUnique: vi.fn(async () => ({ defaultPermission: "EDITAR" })) };
 // A tarefa nasce numa transação, com o número do endereço curto (10/11/2026):
-// sem tarefa no escritório, o número é 1.
-const prisma: Record<string, unknown> = { pipeline, pipelineStage, pipelineItem, activity, sectorQuadrosBloqueados, space, $queryRaw: async () => [] };
+// com o contador da tela em 0, o número é 1.
+const prisma: Record<string, unknown> = { pipeline, pipelineStage, pipelineItem, activity, sectorQuadrosBloqueados, space, $queryRaw: async () => [{ ultimo: 0 }], $executeRaw: async () => 1 };
 prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
 // As ações do Kanban chegam a módulos `server-only` (exclusão de atividade, SPED local).
 vi.mock("server-only", () => ({}));

@@ -10,7 +10,8 @@
 -- número na ordem em que foram criados, de 1 em diante em cada escritório (o
 -- id desempata dois do mesmo instante), e só depois ela passa a obrigatória,
 -- com o número único no escritório. Registro novo recebe o número na criação,
--- pelo app (`proximoNumero`, src/lib/enderecoCurtoNumeracao.ts).
+-- pelo app, do contador da tela (`reservarNumeros`,
+-- src/lib/enderecoCurtoNumeracao.ts) — ver o fim deste arquivo.
 
 -- Empresas
 ALTER TABLE `companies` ADD COLUMN `number` INTEGER NULL;
@@ -88,3 +89,42 @@ JOIN (
 SET i.`number` = t.n;
 ALTER TABLE `pipeline_items` MODIFY `number` INTEGER NOT NULL;
 CREATE UNIQUE INDEX `pipeline_items_tenantId_number_key` ON `pipeline_items`(`tenantId`, `number`);
+
+-- O contador do endereço curto (10/11/2026, pedido do Kauan): o último número
+-- dado em cada tela do escritório. O número nunca é reaproveitado, nem quando
+-- o registro de maior número é excluído — a criação reserva o próximo aqui, e
+-- não pelo maior número que sobrou na tabela. Vale também para o Controle
+-- interno (tela "controle-interno"), que numerava pelo maior + 1 desde
+-- 20261110170000_numero_do_item_tech e tinha o mesmo problema.
+-- CreateTable
+CREATE TABLE `short_address_counters` (
+    `tenantId` VARCHAR(191) NOT NULL,
+    `tela` VARCHAR(30) NOT NULL,
+    `ultimo` INTEGER NOT NULL,
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`tenantId`, `tela`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `short_address_counters` ADD CONSTRAINT `short_address_counters_tenantId_fkey` FOREIGN KEY (`tenantId`) REFERENCES `tenants`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- O ponto de partida de cada escritório: o maior número de cada tela, já
+-- preenchido acima. Escritório sem nenhum registro na tela ganha a linha na
+-- primeira criação, pelo app (a partir do maior número da tabela, que é 0).
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'empresa', MAX(`number`), NOW(3) FROM `companies` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'pessoa', MAX(`number`), NOW(3) FROM `people` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'chamado', MAX(`number`), NOW(3) FROM `helpdesk_tickets` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'processo', MAX(`number`), NOW(3) FROM `processes` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'transferencia', MAX(`number`), NOW(3) FROM `handoffs` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'pendencia', MAX(`number`), NOW(3) FROM `client_requests` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'tarefa', MAX(`number`), NOW(3) FROM `pipeline_items` GROUP BY `tenantId`;
+INSERT INTO `short_address_counters` (`tenantId`, `tela`, `ultimo`, `updatedAt`)
+SELECT `tenantId`, 'controle-interno', MAX(`number`), NOW(3) FROM `tech_internal_items` GROUP BY `tenantId`;

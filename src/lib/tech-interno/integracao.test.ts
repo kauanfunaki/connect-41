@@ -45,6 +45,8 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
       await db.techInternalAcceptanceCheck.deleteMany({ where: { tenantId: t } });
       await db.techInternalAttachment.deleteMany({ where: { tenantId: t } }); await db.techInternalComment.deleteMany({ where: { tenantId: t } }); await db.techInternalChange.deleteMany({ where: { tenantId: t } });
       await db.techInternalItem.deleteMany({ where: { tenantId: t } }); await db.techInternalTool.deleteMany({ where: { tenantId: t } });
+      // O contador do endereço curto (10/11/2026) aponta para o escritório.
+      await db.shortAddressCounter.deleteMany({ where: { tenantId: t } });
       await db.opsSite.deleteMany({ where: { tenantId: t } }); await db.opsApp.deleteMany({ where: { tenantId: t } }); await db.opsWatcher.deleteMany({ where: { tenantId: t } });
       await db.userSector.deleteMany({ where: { user: { tenantId: t } } }); await db.user.deleteMany({ where: { tenantId: t } });
       await db.auditLog.deleteMany({ where: { tenantId: t } }); await db.tenantModule.deleteMany({ where: { tenantId: t } }); await db.sector.deleteMany({ where: { tenantId: t } }); await db.tenant.delete({ where: { id: t } });
@@ -67,12 +69,20 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     const deFora = await detalheItem(ctx, id(await salvarItem(ctx, criar())));
     expect(deFora!.number).toBe(1);
     assumir(contexto());
-    const antes = (await db!.techInternalItem.aggregate({ where: { tenantId }, _max: { number: true } }))._max.number ?? 0;
+    // O número sai do contador da tela (10/11/2026), e não do maior que sobrou na tabela.
+    const contador = { tenantId_tela: { tenantId, tela: "controle-interno" } };
+    const antes = (await db!.shortAddressCounter.findUnique({ where: contador }))?.ultimo ?? 0;
     // Seis criações ao mesmo tempo: números seguidos, sem repetir e sem erro.
     const ids = await Promise.all(Array.from({ length: 6 }, async () => id(await salvarItem(ctx, criar()))));
     const numeros = (await db!.techInternalItem.findMany({ where: { id: { in: ids } }, select: { number: true } })).map(i => i.number).sort((a, b) => a - b);
     expect(numeros).toEqual([1, 2, 3, 4, 5, 6].map(n => antes + n));
-    const item = (await detalheItem(ctx, ids[0]))!, curto = `bug-${item.number}`;
+    // O número nunca volta: excluído o de maior número, o próximo segue adiante.
+    const ultimo = (await db!.techInternalItem.findFirstOrThrow({ where: { tenantId, number: antes + 6 }, select: { id: true } })).id;
+    await db!.techInternalChange.deleteMany({ where: { itemId: ultimo } }); await db!.techInternalItem.delete({ where: { id: ultimo } });
+    const depois = await detalheItem(ctx, id(await salvarItem(ctx, criar())));
+    expect(depois!.number).toBe(antes + 7);
+    expect((await db!.shortAddressCounter.findUnique({ where: contador }))?.ultimo).toBe(antes + 7);
+    const item = (await detalheItem(ctx, ids.find(i => i !== ultimo)!))!, curto = `bug-${item.number}`;
     expect((await detalheItem(ctx, curto))!.id).toBe(item.id);
     // O número é o que vale: o prefixo de outro tipo acha o mesmo item (a tela passa para o de agora).
     expect((await detalheItem(ctx, `MELHORIA-${item.number}`))!.id).toBe(item.id);

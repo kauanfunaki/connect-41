@@ -123,8 +123,8 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
       if (!aprovadores.length) throw new Error("Não há aprovador ativo para esta categoria/setor. Peça ao administrador para configurar um aprovador diferente do solicitante.");
     }
     // O número do chamado no escritório, o do endereço curto /chamados/chamado-45
-    // (10/11/2026, pedido do Kauan). A trava do escritório já está com esta
-    // transação (`travarEscritorio`); a leitura do último número é com trava.
+    // (10/11/2026, pedido do Kauan), reservado no contador da tela, que fica
+    // travado até o fim desta transação.
     const number = await proximoNumero(tx, "chamado", tenantId);
     const ticket = await tx.helpdeskTicket.create({ data: { tenantId, number, draftId: id, title: dados.title, description: dados.description, categoryId: dados.categoryId, requesterSectorCode: dados.requesterSectorCode, createdById: c.ctx.userId, priority: dados.priority, requestData: json(dados.requestData), tags: dados.tags, approverIds: aprovadores, approvalRequired: comAprovacao, approvalStatus: comAprovacao ? "PENDING" : "NOT_REQUIRED", status: triagem ? "AGUARDANDO_TRIAGEM" : comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO" } });
     await tx.helpdeskAttachment.updateMany({ where: { tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });

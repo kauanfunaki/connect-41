@@ -10,7 +10,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
-import { numerosEmSequencia, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
+import { numerarLeva } from "@/lib/enderecoCurtoNumeracao";
 import { camposDoRegime } from "@/lib/taxRegime";
 import { somarDias } from "@/lib/datas/calendario";
 import { FONTE_DA_DEMO, MARCA, SETOR, contagemDoPlano, type Autor, type ChaveDaEmpresa, type PlanoDoBpo, type Quem, type Responsavel } from "./plano";
@@ -140,12 +140,12 @@ export async function gravarDemonstracaoDoBpo(
     source: FONTE_DA_DEMO,
   });
   // O número de cada uma no escritório, em sequência, o do endereço curto
-  // /empresas/empresa-301 (10/11/2026, pedido do Kauan). A trava do
-  // escritório fica com esta transação até o fim.
+  // /empresas/empresa-301 (10/11/2026, pedido do Kauan): cada leva reserva o
+  // bloco inteiro no contador da tela, que fica travado até o fim da transação.
   const matrizes = plano.empresas.filter((e) => !e.matriz).map(dadosDaEmpresa);
-  await tx.company.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "empresa", tenantId), matrizes) });
+  await tx.company.createMany({ data: await numerarLeva(tx, "empresa", tenantId, matrizes) });
   const filiais = plano.empresas.filter((e) => e.matriz).map(dadosDaEmpresa);
-  await tx.company.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "empresa", tenantId), filiais) });
+  await tx.company.createMany({ data: await numerarLeva(tx, "empresa", tenantId, filiais) });
 
   // ── Acesso do portal: ligado direto à matriz, com as filiais; senha que ninguém conhece ──
   const portalId = novo("portal");
@@ -352,7 +352,7 @@ export async function gravarDemonstracaoDoBpo(
 
   // ── Pedidos ao cliente e conversa ─────────────────────────────────────────
   await tx.clientRequest.createMany({
-    data: numerosEmSequencia(await proximoNumero(tx, "pendencia", tenantId), plano.pendencias.map((p) => ({
+    data: await numerarLeva(tx, "pendencia", tenantId, plano.pendencias.map((p) => ({
       id: novo(`pendencia:${p.chave}`),
       tenantId,
       companyId: empresa(p.empresa),
@@ -586,9 +586,9 @@ export async function gravarDemonstracaoDoBpo(
     updatedAt: new Date(c.atualizadoEm),
   });
   const deTopo = q.cards.filter((c) => !c.pai).map(dadosDoCard);
-  await tx.pipelineItem.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "tarefa", tenantId), deTopo) });
+  await tx.pipelineItem.createMany({ data: await numerarLeva(tx, "tarefa", tenantId, deTopo) });
   const subatividades = q.cards.filter((c) => c.pai).map(dadosDoCard);
-  await tx.pipelineItem.createMany({ data: numerosEmSequencia(await proximoNumero(tx, "tarefa", tenantId), subatividades) });
+  await tx.pipelineItem.createMany({ data: await numerarLeva(tx, "tarefa", tenantId, subatividades) });
   await tx.pipelineItemAssignee.createMany({
     data: q.cards.flatMap((c) => [...new Set(c.responsaveis.map(responsavel))].map((userId) => ({ pipelineItemId: id(c.chave), userId }))),
   });

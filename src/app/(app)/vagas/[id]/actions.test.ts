@@ -10,8 +10,9 @@ const m = vi.hoisted(() => {
     person: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     candidatura: { create: vi.fn() },
     $transaction: vi.fn(),
-    // A trava e o último número do endereço curto (10/11/2026): nenhum, a pessoa é a nº 1.
-    $queryRaw: vi.fn(async () => []),
+    // O contador do endereço curto (10/11/2026): em 0, a pessoa é a nº 1.
+    $queryRaw: vi.fn(async () => [{ ultimo: 0 }]),
+    $executeRaw: vi.fn(async () => 1),
   };
   return {
     db,

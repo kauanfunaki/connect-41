@@ -8,7 +8,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
-import { numerosEmSequencia, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
+import { numerarLeva } from "@/lib/enderecoCurtoNumeracao";
 import { camposDoRegime } from "@/lib/taxRegime";
 import { scoreQuiz } from "@/lib/quiz";
 import { DOMINIO_FICTICIO } from "./documentos";
@@ -116,10 +116,10 @@ export async function gravarDemonstracao(
   // Sem Cliente desde 15/10/2026 (etapa 3 da saída do Cliente): até aqui cada
   // empresa ganhava um grupo de cliente com o mesmo nome.
   // O número de cada empresa e pessoa no escritório, em sequência, o do
-  // endereço curto (10/11/2026, pedido do Kauan). A trava do escritório fica
-  // com esta transação até o fim.
+  // endereço curto (10/11/2026, pedido do Kauan): cada leva reserva o bloco
+  // inteiro no contador da tela, que fica travado até o fim da transação.
   await tx.company.createMany({
-    data: numerosEmSequencia(await proximoNumero(tx, "empresa", tenantId), plano.empresas.map((e) => ({
+    data: await numerarLeva(tx, "empresa", tenantId, plano.empresas.map((e) => ({
       id: get(empresa, e.chave),
       tenantId,
       name: e.name,
@@ -147,7 +147,7 @@ export async function gravarDemonstracao(
   });
 
   await tx.person.createMany({
-    data: numerosEmSequencia(await proximoNumero(tx, "pessoa", tenantId), plano.pessoas.map((p) => ({
+    data: await numerarLeva(tx, "pessoa", tenantId, plano.pessoas.map((p) => ({
       id: get(pessoa, p.chave),
       tenantId,
       type: p.type,

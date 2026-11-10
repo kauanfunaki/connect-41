@@ -8,8 +8,8 @@ const tenant = { findUnique: vi.fn() };
 const serviceRequestSubject = { findFirst: vi.fn() };
 const company = { findFirst: vi.fn(), create: vi.fn() };
 // A empresa nova nasce numa transação, com o número do endereço curto
-// (10/11/2026): sem empresa no escritório, o número é 1.
-const prisma: Record<string, unknown> = { tenant, serviceRequestSubject, company, $queryRaw: async () => [] };
+// (10/11/2026): com o contador da tela em 0, o número é 1.
+const prisma: Record<string, unknown> = { tenant, serviceRequestSubject, company, $queryRaw: async () => [{ ultimo: 0 }], $executeRaw: async () => 1 };
 prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
 const modulo = { ligado: true };
 

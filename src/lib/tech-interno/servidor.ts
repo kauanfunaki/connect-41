@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import { proximoNumero as proximoNumeroDoContador } from "@/lib/enderecoCurtoNumeracao";
 import type { AuthContext } from "@/lib/auth/context";
 import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
@@ -258,20 +259,18 @@ async function conferirVinculos(tx: Tx, ctx: AuthContext, dados: DadosItem, ante
 /**
  * O próximo número do escritório (10/11/2026), o do endereço curto.
  *
- * Duas criações ao mesmo tempo no mesmo escritório fazem fila na linha do
- * escritório (`tenants … FOR UPDATE`, a mesma trava dos chamados): vale também
- * para o escritório ainda sem item, em que não há linha de item para travar.
- * O último número é lido pela própria consulta com trava, que enxerga o que a
- * criação da frente acabou de confirmar — uma leitura comum depois da trava
- * leria a foto do começo da transação, que já fez leituras antes (o pagamento
- * em dobro de 19/10/2026). A unique (tenantId, number) fica de rede: se ainda
- * assim dois itens pegarem o mesmo número, a criação que perde refaz a
+ * Sai do contador da tela "controle-interno", o mesmo das outras telas do
+ * Connect (`proximoNumero`, src/lib/enderecoCurtoNumeracao.ts): decisão do
+ * Kauan em 10/11/2026, o número nunca é reaproveitado, nem quando o item de
+ * maior número é excluído — o "maior + 1" pela tabela devolvia o número dele.
+ * Duas criações ao mesmo tempo fazem fila na linha do contador, travada até o
+ * fim da transação e lida pela própria consulta com trava (a foto antiga do
+ * pagamento em dobro de 19/10/2026). A unique (tenantId, number) fica de rede:
+ * se ainda assim dois itens pegarem o mesmo número, a criação que perde refaz a
  * transação (`comNovaTentativa`).
  */
-async function proximoNumero(tx: Tx, tenantId: string): Promise<number> {
-  await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${tenantId} FOR UPDATE`;
-  const [ultimo] = await tx.$queryRaw<{ numero: number | bigint }[]>`SELECT \`number\` AS numero FROM tech_internal_items WHERE tenantId = ${tenantId} ORDER BY \`number\` DESC LIMIT 1 FOR UPDATE`;
-  return (ultimo ? Number(ultimo.numero) : 0) + 1;
+function proximoNumero(tx: Tx, tenantId: string): Promise<number> {
+  return proximoNumeroDoContador(tx, "controle-interno", tenantId);
 }
 const TENTATIVAS_DA_CRIACAO = 3;
 /**

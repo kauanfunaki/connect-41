@@ -8,8 +8,8 @@ const pipeline = { findFirst: vi.fn() };
 const pipelineItem = { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() };
 const activity = { create: vi.fn() };
 // O cartão nasce numa transação, com o número do endereço curto (10/11/2026):
-// sem tarefa no escritório, o número é 1.
-const prisma: Record<string, unknown> = { serviceRequest, pipeline, pipelineItem, activity, $queryRaw: async () => [] };
+// com o contador da tela em 0, o número é 1.
+const prisma: Record<string, unknown> = { serviceRequest, pipeline, pipelineItem, activity, $queryRaw: async () => [{ ultimo: 0 }], $executeRaw: async () => 1 };
 prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));

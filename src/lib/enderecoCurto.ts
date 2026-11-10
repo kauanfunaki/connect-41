@@ -5,8 +5,9 @@
  * mesma ideia do Controle interno (/controle-interno/bug-123,
  * src/lib/tech-interno/regras.ts), estendida ao resto do Connect.
  *
- * O número é um por tela e por escritório, sai na criação e nunca muda (ver
- * `proximoNumero`, src/lib/enderecoCurtoNumeracao.ts). O endereço antigo, com o
+ * O número é um por tela e por escritório, sai na criação do contador da tela,
+ * nunca muda e nunca é reaproveitado (ver `reservarNumeros`,
+ * src/lib/enderecoCurtoNumeracao.ts). O endereço antigo, com o
  * uuid, continua abrindo: a tela passa para o curto. Este arquivo é só regra —
  * sem Prisma —, para servir também aos componentes "use client".
  */
