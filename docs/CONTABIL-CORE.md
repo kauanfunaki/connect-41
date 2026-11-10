@@ -46,7 +46,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | 3b | `feat/contabil-core-cadastros` | Importação por planilha: regras (modelo de seis colunas) e contrapartes (relações fiscais, ADR-016) com prévia e confirmação, e plano de contas direto, como no original. Ver "Fase 3b". |
 | 4 | `feat/contabil-core-extratos` | Extrato em PDF: o texto extraído como o pdfplumber, os 22 leitores por banco, o leitor genérico, o período e as conferências de saldo, e a importação de PDF. Ver "Fase 4". |
 | 4b | `feat/contabil-core-planilhas` | Extrato em planilha (`planilha_parser.py`): leitores próprios de .xlsx, .xls (BIFF8) e .csv, e a importação. Ver "Fase 4b". |
-| 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
+| 5 | `feat/contabil-core-carga` | Carga dos dados do Contábil Core como espelho (cópia de mão única que pode ser repetida), com conferência e ensaio local. Ver "Carga dos dados". |
 
 ## Arquitetura no Connect
 
@@ -236,30 +236,60 @@ Toda divergência entra aqui, com o porquê.
 
 - **Nenhum arquivo de cliente no git:** nem extrato, nem planilha, nem dump. Os gabaritos são gerados com dados fictícios, ou anonimizados antes de gravar.
 - **A carga (Fase 5):**
-  - lê a produção com um usuário **somente leitura**; o repositório de origem já tem `scripts/criar_usuario_restrito.sql`;
+  - lê a produção com um usuário **somente leitura** (`scripts/contabil-core/usuario-somente-leitura.sql`), numa transação `READ ONLY`;
   - recebe a conexão por variável de ambiente, nunca por argumento ou arquivo versionado;
   - não imprime credencial nem dado de cliente no terminal.
 
-## Carga dos dados (Fase 5, resumo)
+## Carga dos dados (Fase 5)
 
-- **Ordem:** `core_empresas` → plano de contas → faixas → agências → contrapartes → regras → importações → transações → decisões → registros → exportações.
-- **Idempotente:** `upsert` pelo UUID original. Rodar duas vezes não duplica nada, e é assim que se ensaia antes da virada.
-- **Empresas:**
-  - cada `empresas.cnpj` é ligada à `Company` do mesmo tenant pelo CNPJ;
-  - empresa sem par no Connect para a carga com a lista, e o time decide: criar a empresa ou ignorar.
-- **Usuários:**
-  - `criado_por`, `cancelado_por` e similares são ligados ao `User` pelo e-mail;
-  - quem não existe no Connect fica nulo, e a carga lista os nomes.
-- **Auditoria antiga:** `audit_logs` vai para `AuditLog` com a ação prefixada `contabil.core.legado.`, preservando a data.
-- **Conferência depois da carga:**
-  - contagem por tabela e por empresa;
-  - soma de `valor` por empresa e mês, nas transações e nos registros;
-  - recálculo da chave de duplicidade de uma amostra, que tem de bater com a gravada;
-  - exportação do Domínio de um mês de cada empresa, comparada byte a byte com a do Contábil Core.
-- **Ensaio:**
-  - o Contábil Core sobe localmente com o `docker-compose.yml` dele e o seed fictício (`scripts/seed_dev.py`);
-  - a carga roda contra o banco local do Connect;
-  - na produção, quem roda é o Kauan, como nas migrations.
+### Decisões (Angelo, 10/11/2026)
+
+- O Connect contábil entra em vigor provavelmente em 2027. Até lá o time segue no Contábil Core, e a virada acontece **uma vez só, com todos os blocos**. Não há uso real do Connect contábil antes disso, então não há dado criado lá para conciliar com a carga.
+- Por isso a carga agora é um **espelho**: cópia de mão única, Contábil Core → Connect, que pode ser repetida. Serve para validar o porte com os dados reais. Na virada, ela roda uma última vez, já com as tabelas dos outros blocos.
+- A carga lê **direto do PostgreSQL** do original, com usuário somente leitura (`scripts/contabil-core/usuario-somente-leitura.sql`) e a conexão por variável de ambiente. O pacote `pg` é dependência de desenvolvimento, só do script.
+
+### Como funciona (`scripts/contabil-core/carga.ts`, `src/lib/contabil-core/carga/mapear.ts`)
+
+- **Ordem:** empresa → plano de contas (sem o pai; o pai numa segunda passada) → faixas → agências → contrapartes → regras → importações → transações → decisões do NEO → partidas → exportações.
+- **Idempotente:** cada linha entra com o UUID do original (`upsert`). Rodar de novo atualiza o espelho, sem duplicar. O que alguém editar no Connect numa empresa espelhada é sobrescrito na rodada seguinte.
+- **Retrato consistente:** a leitura é uma transação `REPEATABLE READ READ ONLY` no original.
+- **Empresas:** ligadas à `Company` do escritório de destino (`CARGA_TENANT_ID`) pelos dígitos do CNPJ. Empresa sem par, com mais de um par, ou já ligada no Contábil Core do Connect com outro cadastro fica de fora e vai para o relatório.
+- **Pessoas:** "criado por", "cancelado por" e similares são ligados ao `User` pelo e-mail; sem par, ficam nulos e vão para o relatório.
+- **Colunas de unicidade** (`codigoAtivo`, `chaveAtiva`, `hashAtivo`, `chave`, `transacaoSemRegra`…): calculadas pelas mesmas funções que o Connect usa ao gravar (`motor/chaves.ts`).
+- **Recusa por linha:** um lote de 200 que o banco recusa é refeito linha a linha, e só a linha que bateu fica de fora, nomeada no relatório.
+- **Saída:** o terminal mostra contagens e o CNPJ mascarado; o que identifica empresa ou pessoa vai para o relatório, um arquivo local (por padrão na pasta temporária) que não vai para o git.
+- **Fica para a virada:** o `audit_logs` do original (`contabil.core.legado.*`) e as tabelas dos Blocos B, C e D.
+- **Limite do espelho:** linha apagada de verdade no original (não por `deleted_at`) continua no Connect. O original apaga por `deleted_at` em quase tudo.
+
+### Conferência (`scripts/contabil-core/conferir-carga.ts`)
+
+Só lê, dos dois lados, para cada empresa espelhada:
+
+- contagem por tabela (total e vivas);
+- soma por mês e lado (D/C) das transações vivas e das partidas vigentes;
+- com `--dominio=<pasta>`, o TXT do Domínio que o Connect gera, comparado byte a byte com o baixado do Contábil Core (Exportar › Lançamentos para importação, TXT), nomeado `<CNPJ>_<AAAA-MM>.txt`.
+
+A ideia do plano de recalcular a chave de duplicidade não se sustenta: o original não guarda o `fitid` da transação, só o hash. A carga copia o hash como está, e é ele que barra o mesmo extrato reimportado depois da virada.
+
+### Como rodar
+
+```
+# na produção (Kauan): o usuário somente leitura no PostgreSQL do original (usuario-somente-leitura.sql), depois
+export CARGA_ORIGEM_URL=postgres://contabil_carga_leitura:...@host:porta/banco   # CARGA_ORIGEM_SSL=1 se for por TLS
+export CARGA_TENANT_ID=<id do escritório no Connect>
+npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/carga.ts                       # simula
+npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/carga.ts --gravar              # grava
+npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/conferir-carga.ts [--dominio=<pasta>]
+```
+
+### Ensaio local
+
+1. Um PostgreSQL local para o original (porta 5435) e as migrations dele (`alembic upgrade head`).
+2. `scripts/contabil-core/povoar_core_local.py`: dados **inventados** pelos serviços do próprio original (importar OFX, NEO, classificação manual, cancelamento, reclassificação, composição, desfazer importação e exportação). Grava o TXT do Domínio de cada empresa e mês, que é o gabarito da conferência. Uma empresa tem par no Connect; a outra não, de propósito.
+3. `scripts/contabil-core/preparar-ensaio-carga.ts`: cria no Connect local a empresa com par.
+4. A carga (simular e gravar duas vezes) e a conferência.
+
+Resultado em 10/11/2026: tudo igual ao original, inclusive o TXT do Domínio byte a byte; a segunda rodada não duplicou nem recusou nada.
 
 ## Como testar localmente (Fase 2)
 
