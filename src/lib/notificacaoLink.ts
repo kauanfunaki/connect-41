@@ -10,6 +10,15 @@ type NotificacaoParaLink = {
   entityId?: string | null;
 };
 
+/**
+ * O aviso aponta para a própria transferência (HANDOFF_RECEIVED, _ASSIGNED,
+ * _MENTION, _SECTOR_DONE, _STALE gravados desde 10/11/2026): tipo HANDOFF_,
+ * o id dela e nenhum `entityType`. O WHATSAPP_HANDOFF não começa com HANDOFF_.
+ */
+export function ehAvisoDaTransferencia(n: NotificacaoParaLink): boolean {
+  return n.type.startsWith("HANDOFF_") && !n.entityType && Boolean(n.entityId);
+}
+
 export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (n.type === "OPS_AUTOMACAO_ERRO" && n.entityId) return `/ops?watcher=${encodeURIComponent(n.entityId)}&status=ERROR`;
   // Aviso de órgão sem processo ligado: vai para a lista, onde a pessoa escolhe.
@@ -45,6 +54,10 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Arquivo com vencimento: o id é o da pasta, e /arquivos/pasta/[id] leva à
   // tela certa (da empresa ou das internas).
   if (n.type === "DRIVE_FILE_EXPIRING") return `/arquivos/pasta/${n.entityId}`;
+  // Aviso de transferência (10/11/2026, pedido do Kauan): o novo guarda o id
+  // da transferência, sem `entityType`, e abre ela. O de antes guardava a
+  // empresa ou a pessoa (com `entityType`) e segue abrindo a ficha, logo abaixo.
+  if (ehAvisoDaTransferencia(n)) return `/transferencias/${n.entityId}`;
   if (n.entityType === "COMPANY") return `/empresas/${n.entityId}`;
   if (n.entityType === "PERSON") return `/pessoas/${n.entityId}`;
   // Menção e comentário guardam o id do card (desde 02/10/2026): o card solto,

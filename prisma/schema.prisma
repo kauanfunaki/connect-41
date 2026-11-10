@@ -6765,8 +6765,20 @@ model Handoff {
   entityType  EntityType
   entityId    String
   requestedBy String
+  /// "Informações adicionais". Desde 10/11/2026 (pedido do Kauan) a nova
+  /// transferência não escreve mais aqui — o formulário em três passos só tem a
+  /// Descrição —, e as antigas continuam mostrando o que tinham.
   message     String?         @db.Text
   description String?         @db.Text
+  /// O assunto (10/11/2026, pedido do Kauan): o rótulo do modelo escolhido
+  /// ("Baixa de CNPJ") ou o texto de "Outro assunto". É o título na lista e no
+  /// detalhe. Nulo nas transferências de antes, que aparecem como "Sem
+  /// assunto": não há preenchimento retroativo.
+  subject     String?         @db.VarChar(160)
+  /// Qual modelo de src/lib/handoffTemplates.ts foi usado, quando foi
+  /// (10/11/2026, pedido do Kauan): ordena os mais usados na nova
+  /// transferência. Nulo no "Outro assunto" e nas transferências de antes.
+  templateKey String?         @db.VarChar(60)
   priority    HandoffPriority @default(MEDIUM)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt

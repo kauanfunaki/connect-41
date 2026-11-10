@@ -20,7 +20,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Logo abaixo, a faixa “Destaques” mostra os três números que mais pedem a sua atenção — em vermelho, o que está vencido ou atrasado. Clique num cartão para abrir a tela de onde ele vem.",
           "Depois vêm os painéis com gráficos, como “Atividades por prazo”, e os painéis dos setores que você enxerga.",
           "No bloco “Meu dia”, clique em um item para abri-lo.",
-          "Em “Transferências a revisar”, clique em “Revisar” para abrir a transferência que espera o seu setor.",
+          "Em “Transferências para o seu setor”, clique em “Abrir” para ver a transferência que espera o seu setor.",
         ],
       },
       {
@@ -235,32 +235,32 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Transferências",
     caminhos: ["/transferencias"],
     resumo:
-      "O jeito de passar o assunto de uma empresa ou pessoa de um setor para outro, com prioridade, instrução e responsável por setor, e acompanhar até a finalização.",
+      "O jeito de passar o assunto de uma empresa ou pessoa de um setor para outro, com assunto, prioridade, instrução e responsável por setor, e acompanhar até a finalização.",
     secoes: [
       {
         titulo: "Como abrir uma transferência",
         passos: [
-          "Clique em “+ Nova Transferência” na tela de Transferências, ou em “Solicitar Transferência” na ficha da empresa ou da pessoa.",
-          "Se quiser, escolha um “Modelo de solicitação”: ele preenche a descrição e, quando indica, os setores de destino.",
-          "Escolha o “Tipo” (empresa ou pessoa) e qual é, o “Setor de origem” e a “Prioridade”.",
-          "Marque os “Setores de destino” e escreva a “Descrição”. Digite @ para mencionar um colega, que recebe uma notificação.",
-          "Em “Instrução por setor”, escreva o que cada setor precisa fazer e, se quiser, clique em “Definir responsáveis”.",
-          "Clique em “Solicitar Transferência”.",
+          "Clique em “+ Nova transferência” na tela de Transferências, ou em “Solicitar transferência” na ficha da empresa ou da pessoa.",
+          "No passo 1, escolha a empresa ou a pessoa (vindo da ficha, ela já vem escolhida), o assunto e a prioridade. Cada bloco de assunto é um modelo: ele marca os setores e escreve as instruções. “Ver os 16 modelos” mostra todos, e “Outro assunto” deixa você escrever o seu.",
+          "Clique em “Continuar”. No passo 2, confira os setores que recebem, abra cada setor para escrever a instrução e escolher os responsáveis, e escreva a “Descrição”. Digite @ para mencionar um colega, que recebe uma notificação.",
+          "Clique em “Continuar”. No passo 3, confira o que cada setor vai receber: o aviso âmbar marca o setor sem instrução ou sem responsável.",
+          "Clique em “Enviar transferência”. A transferência criada abre em seguida.",
         ],
       },
       {
         titulo: "Como acompanhar as transferências",
         passos: [
           "Abra “Transferências” na barra lateral.",
-          "Os cartões “Novas”, “Resolvendo” e “Finalizadas” mostram quantas há em cada situação. Clique em um para ver a lista.",
-          "Para filtrar por prioridade, clique em “Filtros” e escolha em “Prioridade”.",
+          "As abas separam o que chegou para o seu setor (“Para o meu setor”), o que está com você (“Comigo”), o que você ou o seu setor pediu (“Enviadas”) e as finalizadas. O número na aba é quantas há em cada uma.",
+          "Use a busca para achar pelo assunto, pela empresa ou pelo CNPJ, e o “Filtros” para escolher a prioridade, o setor que recebe ou o responsável.",
+          "Na coluna “Setores”, cada setor tem o seu sinal: nova, resolvendo ou finalizada. O ponto azul antes do assunto marca a transferência que você ainda não abriu, e o relógio âmbar, a que tem setor sem finalizar há 3 dias ou mais.",
           "Clique em uma transferência para ver a descrição, a instrução de cada setor, os responsáveis e quem já visualizou.",
         ],
       },
       {
         titulo: "Como atender uma transferência que chegou ao seu setor",
         passos: [
-          "Abra a transferência pela lista ou pelo botão “Revisar”, no Início.",
+          "Abra a transferência pela aba “Para o meu setor”, pelo aviso no sino ou pelo botão “Abrir”, no Início.",
           "No cartão do seu setor, leia a instrução.",
           "Se você coordena o setor, escolha o “Responsável”.",
           "Mude a situação do setor para “Resolvendo” ao começar e para “Finalizada” ao terminar.",

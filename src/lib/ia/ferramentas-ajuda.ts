@@ -33,7 +33,7 @@ export const TELAS_GERAIS = [
   // do Kauan), sem abas no alto: aqui também, uma por tela, cada uma com o seu artigo.
   { tela: "Empresas", caminho: "/empresas", descricao: "As empresas atendidas pelo escritório, no grupo Cadastros do menu." },
   { tela: "Pessoas", caminho: "/pessoas", descricao: "Os funcionários internos do escritório, no grupo Cadastros do menu." },
-  { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto para outro setor, com prazo e prioridade." },
+  { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto de uma empresa ou pessoa para outro setor, com prioridade, instrução e responsável por setor; as abas separam o que chegou para o seu setor, o que está com você e o que você pediu." },
   {
     tela: "Solicitações",
     caminho: "/solicitacoes",

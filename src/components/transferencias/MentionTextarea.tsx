@@ -1,19 +1,31 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/Textarea";
 
 export type MentionUser = { id: string; name: string };
 
 type Props = {
   id: string;
-  name: string;
+  /** Sem `name`, o campo não vai no envio — quem controla o valor escreve o campo. */
+  name?: string;
   rows?: number;
   placeholder?: string;
   value: string;
   onChange: (value: string) => void;
   users: MentionUser[];
+  /**
+   * Cresce com o texto, das `rows` até `ALTURA_MAXIMA` (10/11/2026): a
+   * Descrição da nova transferência começa com 6 linhas em vez de 16, e o
+   * modelo longo não fica escondido atrás da rolagem.
+   */
+  crescer?: boolean;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
 };
+
+/** Até onde o campo cresce; daí em diante rola. */
+const ALTURA_MAXIMA = 480;
 
 // Textarea com autocomplete de "@nome" — não é um editor rich text, o texto
 // final continua sendo puro (mesmo campo `description: String? @db.Text` de
@@ -22,8 +34,32 @@ type Props = {
 // (ver extractMentionedUserIds em src/lib/handoffMentions.ts) — por isso é
 // importante que o nome inserido pelo autocomplete bata exatamente com o
 // nome cadastrado do usuário.
-export function MentionTextarea({ id, name, rows = 16, placeholder, value, onChange, users }: Props) {
+export function MentionTextarea({
+  id,
+  name,
+  rows = 16,
+  placeholder,
+  value,
+  onChange,
+  users,
+  crescer = false,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
+}: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // A altura acompanha o texto. Com o campo escondido (scrollHeight 0) não
+  // mexe, para não deixá-lo com altura zero.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!crescer || !el) return;
+    el.style.height = "auto";
+    if (el.scrollHeight === 0) {
+      el.style.height = "";
+      return;
+    }
+    el.style.height = `${Math.min(el.scrollHeight + 2, ALTURA_MAXIMA)}px`;
+    el.style.overflowY = el.scrollHeight > ALTURA_MAXIMA ? "auto" : "hidden";
+  }, [value, crescer]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [triggerIndex, setTriggerIndex] = useState<number | null>(null);
@@ -108,6 +144,8 @@ export function MentionTextarea({ id, name, rows = 16, placeholder, value, onCha
         rows={rows}
         placeholder={placeholder}
         value={value}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={() => {

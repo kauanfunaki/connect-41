@@ -139,7 +139,8 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   },
   {
     key: "transferencias",
-    label: "Transferências a revisar",
+    // O mesmo título do painel no Início (10/11/2026).
+    label: "Transferências para o seu setor",
     description: "Transferências aguardando o seu setor.",
     slot: "main",
   },
