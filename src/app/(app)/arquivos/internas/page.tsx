@@ -4,19 +4,20 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NavegadorDeArquivos } from "@/components/arquivos/NavegadorDeArquivos";
 import { buscarNoDrive, navegadorDaEquipe } from "@/lib/drive/servidor";
-import { trilhaDaPasta } from "@/lib/drive/tela";
+import { paginaPedida, trilhaDaPasta } from "@/lib/drive/tela";
 import { abrirArquivos } from "../acesso";
 
 /**
  * As pastas do escritório que não são de nenhuma empresa (09/10/2026): modelos,
  * manuais, contratos da casa. Nunca vão para o portal; uma pasta de setor só o
- * setor vê, como nas empresas.
+ * setor vê, como nas empresas. `?pagina=` é a página dos arquivos da pasta
+ * aberta (100 por vez, desde 10/11/2026).
  */
-export default async function PastasDoEscritorioPage({ searchParams }: { searchParams: Promise<{ pasta?: string; busca?: string }> }) {
+export default async function PastasDoEscritorioPage({ searchParams }: { searchParams: Promise<{ pasta?: string; busca?: string; pagina?: string }> }) {
   const ctx = await abrirArquivos();
-  const { pasta, busca } = await searchParams;
+  const { pasta, busca, pagina } = await searchParams;
   const [dados, resultados] = await Promise.all([
-    navegadorDaEquipe(ctx, null, busca ? null : pasta || null),
+    navegadorDaEquipe(ctx, null, busca ? null : pasta || null, paginaPedida(pagina)),
     busca ? buscarNoDrive(ctx, null, busca) : Promise.resolve(null),
   ]);
   if (!dados) notFound();

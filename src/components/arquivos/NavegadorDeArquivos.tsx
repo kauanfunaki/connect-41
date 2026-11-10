@@ -23,6 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { Pagination } from "@/components/shared/Pagination";
 import { Button } from "@/components/ui/Button";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -34,7 +35,7 @@ import { useConfirm } from "@/components/ui/useConfirm";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatCalendarDate, formatInstantDateTime } from "@/lib/format";
 import { situacaoDoVencimento } from "@/lib/drive/regras";
-import { enderecoDaPasta, rotuloDeItens, trilhaDaPasta, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
+import { enderecoDaPasta, rotuloDeItens, totalDePaginas, trilhaDaPasta, type ArquivoNaTela, type NavegadorNaTela, type PastaNaTela, type ResultadoDaBusca } from "@/lib/drive/tela";
 import {
   alterarSetorDaPasta,
   compartilharPasta,
@@ -140,7 +141,8 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
   const trilha = trilhaDaPasta(dados, base, rotuloDaRaiz);
   const paiDaAtual = dados.caminho.length > 1 ? dados.caminho[dados.caminho.length - 2].id : null;
 
-  const vazio = dados.subpastas.length === 0 && dados.arquivos.length === 0;
+  // Pelo total da pasta, não pelos arquivos desta página (10/11/2026).
+  const vazio = dados.subpastas.length === 0 && dados.paginacao.total === 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -362,6 +364,18 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
                 />
               ))}
             </ul>
+          )}
+
+          {/* Os arquivos vêm por página (10/11/2026); as pastas, todas, no topo de cada uma.
+              Abrir outra pasta é um link sem `pagina`: começa na primeira. */}
+          {pasta && (
+            <Pagination
+              page={dados.paginacao.pagina}
+              totalPages={totalDePaginas(dados.paginacao)}
+              total={dados.paginacao.total}
+              rotulo="arquivos"
+              buildHref={(n) => enderecoDaPasta(base, pasta.id, n > 1 ? { pagina: String(n) } : undefined)}
+            />
           )}
         </>
       )}

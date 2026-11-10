@@ -17,7 +17,8 @@ import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatInstantDateTime } from "@/lib/format";
-import { rotuloDeItens } from "@/lib/drive/tela";
+import { paginaPedida, rotuloDeItens, totalDePaginas } from "@/lib/drive/tela";
+import { Pagination } from "@/components/shared/Pagination";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
 import { navegadorDoCliente } from "@/lib/drive/servidor";
 
@@ -29,22 +30,24 @@ const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "sho
  * Arquivos no portal do cliente (09/10/2026): as pastas que o escritório
  * compartilhou com ele, por empresa, e o envio para "Enviados pelo cliente".
  * O cliente vê e baixa (um arquivo, ou a pasta inteira num zip — desde 13/10);
- * não muda nem apaga nada do que o escritório organizou.
+ * não muda nem apaga nada do que o escritório organizou. `?pagina=` é a página
+ * dos arquivos da pasta aberta (50 por vez, desde 10/11/2026).
  */
-export default async function PortalArquivosPage({ searchParams }: { searchParams: Promise<{ empresa?: string; pasta?: string }> }) {
+export default async function PortalArquivosPage({ searchParams }: { searchParams: Promise<{ empresa?: string; pasta?: string; pagina?: string }> }) {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has(MODULO_ARQUIVOS)) notFound();
   if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/arquivos")) return <TelaIndisponivel />;
 
   const empresas = await empresasDoSeletor(cliente.tenantId, cliente.companyIds);
-  const { empresa: pedida, pasta } = await searchParams;
+  const { empresa: pedida, pasta, pagina } = await searchParams;
   // Com uma empresa só, não há o que escolher: abre direto as pastas dela.
   const selecionada = empresas.find((e) => e.id === pedida) ?? (empresas.length === 1 ? empresas[0] : null);
-  const dados = selecionada ? await navegadorDoCliente(cliente.tenantId, selecionada.id, pasta || null, cliente.usuario.id) : null;
+  const dados = selecionada ? await navegadorDoCliente(cliente.tenantId, selecionada.id, pasta || null, cliente.usuario.id, paginaPedida(pagina)) : null;
   if (selecionada && !dados) notFound();
 
-  const endereco = (pastaId: string | null) =>
-    `/portal/arquivos?empresa=${selecionada?.id ?? ""}${pastaId ? `&pasta=${pastaId}` : ""}`;
+  // Sem `pagina`, a pasta abre na primeira: trocar de pasta zera a página.
+  const endereco = (pastaId: string | null, pagina = 1) =>
+    `/portal/arquivos?empresa=${selecionada?.id ?? ""}${pastaId ? `&pasta=${pastaId}` : ""}${pagina > 1 ? `&pagina=${pagina}` : ""}`;
 
   return (
     <PageContainer>
@@ -83,7 +86,7 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                     ]}
                   />
                 </div>
-                {dados.pasta && (dados.subpastas.length > 0 || dados.arquivos.length > 0) && (
+                {dados.pasta && (dados.subpastas.length > 0 || dados.paginacao.total > 0) && (
                   <BaixarPastaEmZip url={`/portal/arquivos/pasta/${dados.pasta.id}/zip`} />
                 )}
                 <EnviarArquivosDoCliente companyId={dados.empresa.id} empresaNome={dados.empresa.nome} />
@@ -93,7 +96,7 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                 <p className="text-fs-3 text-fg-secondary">O que você envia para o escritório fica aqui.</p>
               )}
 
-              {dados.subpastas.length === 0 && dados.arquivos.length === 0 ? (
+              {dados.subpastas.length === 0 && dados.paginacao.total === 0 ? (
                 <Card>
                   <EmptyState
                     icon={<FolderOpen />}
@@ -160,6 +163,15 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                     </li>
                   ))}
                 </ul>
+              )}
+              {dados.pasta && (
+                <Pagination
+                  page={dados.paginacao.pagina}
+                  totalPages={totalDePaginas(dados.paginacao)}
+                  total={dados.paginacao.total}
+                  rotulo="arquivos"
+                  buildHref={(n) => endereco(dados.pasta!.id, n)}
+                />
               )}
             </>
           )}

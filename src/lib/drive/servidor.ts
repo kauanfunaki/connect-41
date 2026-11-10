@@ -37,7 +37,18 @@ import {
   raizesDoCliente,
   type PastaDoDrive,
 } from "./regras";
-import type { ArquivoNaTela, DestinoNaTela, NavegadorNaTela, PastaNaTela, ResultadoDaBusca } from "./tela";
+import {
+  ARQUIVOS_POR_PAGINA_DA_EQUIPE,
+  ARQUIVOS_POR_PAGINA_DO_PORTAL,
+  paginaPedida,
+  paginaValida,
+  type ArquivoNaTela,
+  type DestinoNaTela,
+  type NavegadorNaTela,
+  type Paginacao,
+  type PastaNaTela,
+  type ResultadoDaBusca,
+} from "./tela";
 
 /** Um arquivo por envio: o Drive manda arquivo a arquivo, com progresso de cada um. */
 export const armazenamentoDoDrive = criarArmazenamento("drive", { validar: validarArquivoDoDrive, maximoPorEnvio: 1 });
@@ -182,15 +193,38 @@ function arquivoNaTela(a: ArquivoDoBanco): ArquivoNaTela {
 }
 
 /**
+ * Uma página dos arquivos de uma pasta (10/11/2026): conta a pasta e busca a
+ * página pedida ao mesmo tempo; se ela passou do fim (o último arquivo da
+ * última página foi para a lixeira), busca de novo a última que existe.
+ */
+async function paginaDeArquivos<T>(
+  pagina: number,
+  porPagina: number,
+  contar: () => Promise<number>,
+  buscar: (skip: number, take: number) => Promise<T[]>
+): Promise<{ arquivos: T[]; paginacao: Paginacao }> {
+  const pedida = paginaPedida(pagina);
+  const [total, daPedida] = await Promise.all([contar(), buscar((pedida - 1) * porPagina, porPagina)]);
+  const valida = paginaValida(pedida, total, porPagina);
+  const arquivos = valida === pedida ? daPedida : await buscar((valida - 1) * porPagina, porPagina);
+  return { arquivos, paginacao: { pagina: valida, total, porPagina } };
+}
+
+/** O primeiro nível não tem arquivos soltos: só pastas. */
+const semArquivos = <T>(porPagina: number) => Promise.resolve({ arquivos: [] as T[], paginacao: { pagina: 1, total: 0, porPagina } });
+
+/**
  * O que a tela da equipe mostra numa pasta (ou no primeiro nível, com
  * `pastaId` nulo). `null` quando a empresa não é do escritório, a pasta não
  * existe, está na lixeira ou é de um setor fora do alcance — a página responde
- * 404 nos três casos, sem dizer qual.
+ * 404 nos três casos, sem dizer qual. Os arquivos vêm só os da `pagina`
+ * (100 por página, por nome); as subpastas, todas.
  */
 export async function navegadorDaEquipe(
   ctx: AuthContext,
   companyId: string | null,
-  pastaId: string | null
+  pastaId: string | null,
+  pagina = 1
 ): Promise<NavegadorNaTela | null> {
   const prisma = getPrisma();
   const tenantId = ctx.tenantId;
@@ -230,14 +264,24 @@ export async function navegadorDaEquipe(
     posicao
   );
 
-  const [arquivosDoBanco, contagem, todosOsSetores, uso] = await Promise.all([
-    pastaId
-      ? prisma.driveFile.findMany({
-          where: { tenantId, folderId: pastaId, deletedAt: null },
-          orderBy: { name: "asc" },
-          select: SELECT_ARQUIVO,
-        })
-      : Promise.resolve([] as ArquivoDoBanco[]),
+  const naPasta = pastaId ? { tenantId, folderId: pastaId, deletedAt: null } : null;
+  const [daPagina, contagem, todosOsSetores, uso] = await Promise.all([
+    naPasta
+      ? paginaDeArquivos(
+          pagina,
+          ARQUIVOS_POR_PAGINA_DA_EQUIPE,
+          () => prisma.driveFile.count({ where: naPasta }),
+          (skip, take) =>
+            prisma.driveFile.findMany({
+              where: naPasta,
+              // O id desempata nomes iguais: sem ele, um arquivo pode pular de página.
+              orderBy: [{ name: "asc" }, { id: "asc" }],
+              skip,
+              take,
+              select: SELECT_ARQUIVO,
+            })
+        )
+      : semArquivos<ArquivoDoBanco>(ARQUIVOS_POR_PAGINA_DA_EQUIPE),
     filhas.length
       ? prisma.driveFile.groupBy({
           by: ["folderId"],
@@ -294,7 +338,8 @@ export async function navegadorDaEquipe(
     },
     caminho: caminho.map((p) => ({ id: p.id, nome: p.name })),
     subpastas,
-    arquivos: (arquivosDoBanco as ArquivoDoBanco[]).map(arquivoNaTela),
+    arquivos: (daPagina.arquivos as ArquivoDoBanco[]).map(arquivoNaTela),
+    paginacao: daPagina.paginacao,
     podeMexer: atual ? podeMexerNoCaminho(ctx, caminho) : podeMexerNoDrive(ctx),
     setores,
     destinos,
@@ -448,7 +493,9 @@ export type NavegadorDoCliente = {
   pasta: { id: string; nome: string; enviados: boolean } | null;
   caminho: { id: string; nome: string }[];
   subpastas: { id: string; nome: string; itens: number; enviados: boolean }[];
+  /** Só os da página aberta; o total da pasta está em `paginacao`. */
   arquivos: { id: string; nome: string; tamanho: number; previa: boolean; enviadoEm: string; seu: boolean }[];
+  paginacao: Paginacao;
   enviadosId: string | null;
 };
 
@@ -456,13 +503,15 @@ export type NavegadorDoCliente = {
  * O que o cliente vê numa empresa: no primeiro nível, as pastas compartilhadas;
  * dentro de uma, o que está nela. `null` quando a pasta não está compartilhada
  * (nem por cima) ou está na lixeira. A empresa já vem conferida contra o
- * alcance do cliente por quem chama.
+ * alcance do cliente por quem chama. Os arquivos vêm só os da `pagina` (50
+ * por página, os mais novos primeiro).
  */
 export async function navegadorDoCliente(
   tenantId: string,
   companyId: string,
   pastaId: string | null,
-  portalUserId: string
+  portalUserId: string,
+  pagina = 1
 ): Promise<NavegadorDoCliente | null> {
   const prisma = getPrisma();
   const empresa = await empresaDoDrive(tenantId, companyId);
@@ -484,14 +533,25 @@ export async function navegadorDoCliente(
     posicao
   );
 
-  const [arquivos, contagem] = await Promise.all([
-    atual
-      ? prisma.driveFile.findMany({
-          where: { tenantId, folderId: atual.id, deletedAt: null },
-          orderBy: [{ createdAt: "desc" }],
-          select: { id: true, name: true, sizeBytes: true, mimeType: true, createdAt: true, uploadedByPortalUserId: true },
-        })
-      : Promise.resolve([]),
+  const naPasta = atual ? { tenantId, folderId: atual.id, deletedAt: null } : null;
+  const [daPagina, contagem] = await Promise.all([
+    naPasta
+      ? paginaDeArquivos(
+          pagina,
+          ARQUIVOS_POR_PAGINA_DO_PORTAL,
+          () => prisma.driveFile.count({ where: naPasta }),
+          (skip, take) =>
+            prisma.driveFile.findMany({
+              where: naPasta,
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              skip,
+              take,
+              select: { id: true, name: true, sizeBytes: true, mimeType: true, createdAt: true, uploadedByPortalUserId: true },
+            })
+        )
+      : semArquivos<{ id: string; name: string; sizeBytes: number; mimeType: string; createdAt: Date; uploadedByPortalUserId: string | null }>(
+          ARQUIVOS_POR_PAGINA_DO_PORTAL
+        ),
     filhas.length
       ? prisma.driveFile.groupBy({
           by: ["folderId"],
@@ -516,7 +576,8 @@ export async function navegadorDoCliente(
       itens: (porPasta.get(p.id) ?? 0) + (subPorPasta.get(p.id) ?? 0),
       enviados: p.systemKey === CHAVE_ENVIADOS,
     })),
-    arquivos: arquivos.map((a) => ({
+    paginacao: daPagina.paginacao,
+    arquivos: daPagina.arquivos.map((a) => ({
       id: a.id,
       nome: a.name,
       tamanho: a.sizeBytes,
