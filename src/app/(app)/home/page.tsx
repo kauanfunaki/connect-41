@@ -1,27 +1,19 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import {
-  Building2,
-  Clock,
-  ArrowRightLeft,
-  MessageSquareWarning,
-  ChevronRight,
-  Video,
-  ExternalLink,
-} from "lucide-react";
+import { ChevronRight, Video, ExternalLink } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { MetricCard } from "@/components/ui/MetricCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { InicioEditavel, type LayoutDoInicio } from "@/components/home/InicioEditavel";
+import { CartoesDoTopo } from "@/components/home/CartoesDoTopo";
+import { FaixaDeCartoesCarregando } from "@/components/home/FaixaDeCartoes";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
-import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
-import { scopedCompanyWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffAbas";
 import { assuntoDaTransferencia, SEM_ASSUNTO } from "@/lib/handoffs";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
@@ -29,11 +21,8 @@ import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { boardPath } from "@/lib/kanbanPaths";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 import { HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
-import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
-import { contarTarefas } from "@/lib/home/paineis";
+import { acessoDosPaineis } from "@/lib/home/acessoDosPaineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
-import { solicitacoesComRespostaAtrasada } from "@/lib/home/indicadores";
-import { FaixaCarregando, FaixaDeDestaques, type SetorDoDestaque } from "@/components/home/FaixaDeDestaques";
 import {
   PainelCarregando,
   PainelDeCertificados,
@@ -64,13 +53,6 @@ function nowDate(): Date {
 function daysFromNow(days: number): Date {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d;
-}
-
-function startOfMonth(): Date {
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
   return d;
 }
 
@@ -127,25 +109,22 @@ export default async function HomePage() {
   const todayEnd = new Date(now);
   todayEnd.setHours(23, 59, 59, 999);
   const fourteenDaysAgo = daysFromNow(-14);
-  const monthStart = startOfMonth();
 
-  // O número "Transferências" e o painel "Transferências para o seu setor" são
-  // a aba "Para o meu setor" da lista, com o mesmo filtro (10/11/2026, pedido
-  // do Kauan): antes o número contava Novas + Resolvendo de tudo o que a pessoa
-  // via, e o clique abria só as Novas. Sem caixa de setor (quem não é de setor
-  // nenhum), os dois ficam vazios.
+  // O painel "Transferências para o seu setor" é a aba "Para o meu setor" da
+  // lista, com o mesmo filtro (10/11/2026, pedido do Kauan) — e o cartão
+  // "Transferências para o meu setor" do topo conta o mesmo (`cartoesServidor`).
+  // Sem caixa de setor (quem não é de setor nenhum), fica vazio.
   const quemVe = quemVeAsTransferencias(ctx);
   const incomingHandoffWhere = abasVisiveis(quemVe).includes("setor")
     ? { AND: [scopedHandoffWhere(ctx), whereDaAba("setor", quemVe)] }
     : null;
 
+  // Os números dos cartões do topo (empresas ativas, solicitações atrasadas,
+  // transferências…) saíram daqui em 10/11/2026: cada cartão conta o seu, e só
+  // os quatro que a pessoa tem no topo (`components/home/CartoesDoTopo`).
   const [
     me,
     tenant,
-    companyActiveCount,
-    newCompaniesThisMonth,
-    solicitacoesAtrasadas,
-    pendingHandoffsCount,
     openPipelineItemsRaw,
     recentActivitiesRaw,
     activityCreatedDates,
@@ -155,11 +134,6 @@ export default async function HomePage() {
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
-    prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), status: "ACTIVE" } }),
-    prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
-    // No lugar da contagem de pessoas (08/10, escolha 7A): ver `lib/home/indicadores`.
-    solicitacoesComRespostaAtrasada(ctx, now),
-    incomingHandoffWhere ? prisma.handoff.count({ where: incomingHandoffWhere }) : Promise.resolve(0),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
       select: {
@@ -248,6 +222,12 @@ export default async function HomePage() {
 
   const vencidosCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate < todayStart).length;
   const hojeCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate >= todayStart && i.dueDate <= todayEnd).length;
+  // As atrasadas por setor, da mesma lista: os cartões "Tarefas atrasadas" do
+  // Fiscal e do Contábil (10/11/2026) não contam de novo no banco.
+  const atrasadasPorSetor: Record<string, number> = {};
+  for (const i of openPipelineItemsRaw) {
+    if (i.dueDate && i.dueDate < todayStart) atrasadasPorSetor[i.pipeline.sectorCode] = (atrasadasPorSetor[i.pipeline.sectorCode] ?? 0) + 1;
+  }
 
   // Nomes das entidades referenciadas (Company ou Person) — item de "Meu dia",
   // atividade recente e transferências para o setor, tudo numa só rodada.
@@ -308,7 +288,7 @@ export default async function HomePage() {
 
   // Widget "seus setores" — só setores com módulo habilitado; métrica agora é
   // volume de trabalho (abertos/vencidos), não "N módulos disponíveis".
-  const [{ labels: sectorLabels, colors: sectorColors }, sectorsWithModules, paineis] = await Promise.all([
+  const [{ labels: sectorLabels, colors: sectorColors, options: sectorOptions }, sectorsWithModules, paineis] = await Promise.all([
     getSectorMaps(ctx.tenantId),
     getSectorsWithEnabledModules(ctx.tenantId),
     acessoDosPaineis(ctx),
@@ -380,32 +360,27 @@ export default async function HomePage() {
   const disponiveis = widgetsDisponiveis(restrictedOpts);
   const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
   const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
-  const abaixoDosPaineis = visibleWidgets("abaixo-dos-paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
-  // Faixa de destaques (06/10): os números saem só dos painéis que estão na
-  // Home desta pessoa — com acesso e não ocultos em "Personalizar". Painel
-  // oculto não é consultado, nem pela faixa.
   const escopoDasTarefas = ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : "Seus setores";
-  const paineisNaHome = new Map<HomeWidgetKey, AcessoDoPainel>();
-  const setoresDosDestaques: Partial<Record<HomeWidgetKey, SetorDoDestaque>> = {
-    "painel-tarefas": {
-      rotulo: escopoDasTarefas,
-      cor: ctx.activeSector ? (sectorColors[ctx.activeSector] ?? "var(--c41-brand)") : "var(--c41-brand)",
-    },
-  };
-  for (const chave of painelWidgets) {
-    const acesso = paineis.get(chave);
-    if (!acesso) continue;
-    paineisNaHome.set(chave, acesso);
-    setoresDosDestaques[chave] = { rotulo: sectorLabel(sectorLabels, acesso.setor), cor: sectorColors[acesso.setor] ?? "#586577" };
-  }
-  const tarefasNaHome = painelWidgets.includes("painel-tarefas");
-  const contagemDasTarefas = contarTarefas(openPipelineItemsRaw, todayStart, todayEnd);
-  const comDestaques = topWidgets.includes("destaques");
   // O histórico dos números (selo e linha, 06/10) começa a ser lido já, em
-  // paralelo às consultas dos painéis — uma leitura só para todos eles.
-  if (painelWidgets.length > 0) precarregarHistoricoDaHome(ctx);
+  // paralelo às consultas dos painéis — uma leitura só para eles e para os
+  // cartões do topo, que sempre estão na tela (10/11/2026).
+  precarregarHistoricoDaHome(ctx);
+
+  // Os quatro cartões coringa do topo (10/11/2026, pedido do Kauan): no lugar
+  // da faixa "Destaques" e dos "Indicadores". Ficam fora do "Personalizar" —
+  // cada um se troca pelo lápis dele — e entram por último, sem atrasar a tela.
+  const cartoesDoTopo = (
+    <Suspense fallback={<FaixaDeCartoesCarregando />}>
+      <CartoesDoTopo
+        ctx={ctx}
+        previos={{ tarefas: { atrasadas: vencidosCount, hoje: hojeCount, atrasadasPorSetor } }}
+        setores={sectorOptions.map((s) => ({ code: s.value, label: s.label }))}
+        setorAtivoRotulo={ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : null}
+      />
+    </Suspense>
+  );
 
   // Painéis de setor (30/09): cada um com a própria consulta, dentro de um
   // Suspense — a Home aparece sem esperar o mais lento, e o painel entra
@@ -430,22 +405,6 @@ export default async function HomePage() {
   // hoje) continua sendo null como antes — a preferência só decide se ele
   // *pode* aparecer, não força um card vazio.
   const widgetNodes: Record<HomeWidgetKey, React.ReactNode> = {
-    // Espera os painéis que resume — mas pelo `cache()` deles, sem consulta nova.
-    destaques: (
-      <Suspense fallback={<FaixaCarregando quantos={paineisNaHome.size + (tarefasNaHome ? 1 : 0)} />}>
-        <FaixaDeDestaques
-          ctx={ctx}
-          paineis={paineisNaHome}
-          tarefas={
-            tarefasNaHome
-              ? { atrasadas: contagemDasTarefas.atrasada, hoje: contagemDasTarefas.hoje, abertas: openPipelineItemsRaw.length }
-              : undefined
-          }
-          setores={setoresDosDestaques}
-        />
-      </Suspense>
-    ),
-
     // Em Suspense desde 06/10: o painel lê o histórico do número (selo e linha).
     "painel-tarefas": (
       <Suspense fallback={<PainelCarregando />}>
@@ -466,68 +425,6 @@ export default async function HomePage() {
     "painel-dp": painelDoSetor("painel-dp", PainelDoDP),
     "painel-recrutamento": painelDoSetor("painel-recrutamento", PainelDeRecrutamento),
     "painel-certificados": painelDoSetor("painel-certificados", PainelDeCertificados),
-
-    // Abaixo dos painéis desde 08/10 (escolha 7A do Kauan): a faixa de
-    // destaques abre a tela, e isto é o resumo de consulta. Sem o canal de
-    // solicitações do portal, o quarto cartão não existe e a grade fica em três.
-    indicadores: (
-      <div
-        className={`grid grid-cols-2 gap-3 mb-4 ${
-          solicitacoesAtrasadas
-            ? "sm:grid-cols-4"
-            : "sm:grid-cols-3 [&>:nth-child(3)]:col-span-2 sm:[&>:nth-child(3)]:col-span-1"
-        }`}
-      >
-        {/* O MetricCard formata o número em pt-BR (1.234). "Atrasadas", e não
-            "vencidos" (07/10): é o termo do painel de tarefas e da faixa para o
-            mesmo número — e a mesma cor: vermelho quando há atrasada, âmbar
-            quando só há as de hoje, como na faixa e no painel. */}
-        <MetricCard
-          href="/empresas"
-          icon={<Building2 size={16} />}
-          label="Empresas ativas"
-          value={companyActiveCount}
-          delay={0}
-          sub={newCompaniesThisMonth > 0 ? `+${numero(newCompaniesThisMonth)} este mês` : undefined}
-        />
-        <MetricCard
-          href="/kanban"
-          icon={<Clock size={16} />}
-          label="Atrasadas / hoje"
-          value={vencidosCount + hojeCount}
-          delay={40}
-          tom={vencidosCount > 0 ? "critico" : hojeCount > 0 ? "atencao" : undefined}
-          sub={vencidosCount > 0 ? `${numero(vencidosCount)} atrasada${vencidosCount !== 1 ? "s" : ""}` : undefined}
-        />
-        <MetricCard
-          // Abre a aba que ele conta (10/11/2026).
-          href="/transferencias?aba=setor"
-          icon={<ArrowRightLeft size={16} />}
-          label="Transferências"
-          value={pendingHandoffsCount}
-          delay={80}
-          // O tom pela situação, e não o `highlight` antigo (15/10/2026):
-          // transferência em aberto espera alguém — âmbar.
-          tom={pendingHandoffsCount > 0 ? "atencao" : undefined}
-          sub={pendingHandoffsCount > 0 ? "para o seu setor" : undefined}
-        />
-        {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número
-            que pede ação — o cliente esperando a primeira resposta da equipe
-            além do prazo prometido. O porquê da escolha está em
-            `lib/home/indicadores`. Leva à fila no recorte "resposta atrasada". */}
-        {solicitacoesAtrasadas && (
-          <MetricCard
-            href={solicitacoesAtrasadas.href}
-            icon={<MessageSquareWarning size={16} />}
-            label="Solicitações atrasadas"
-            value={solicitacoesAtrasadas.quantas}
-            delay={120}
-            tom={solicitacoesAtrasadas.quantas > 0 ? "critico" : undefined}
-            sub={solicitacoesAtrasadas.quantas > 0 ? "sem resposta no prazo" : undefined}
-          />
-        )}
-      </div>
-    ),
 
     "proxima-reuniao": nextMeeting && (
       <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-lg px-4 py-3 mb-4">
@@ -744,7 +641,6 @@ export default async function HomePage() {
   const layout: LayoutDoInicio = {
     top: topWidgets,
     paineis: painelWidgets,
-    "abaixo-dos-paineis": abaixoDosPaineis,
     main: mainWidgets,
     side: sideWidgets,
   };
@@ -770,10 +666,10 @@ export default async function HomePage() {
             canCreateTransfer={canCreateTransfer}
           />
         }
+        cartoes={cartoesDoTopo}
         layout={layout}
         nos={nos}
         disponiveis={HOME_WIDGETS.filter((w) => disponiveis.includes(w.key)).map((w) => ({ key: w.key, rotulo: w.label, faixa: w.slot }))}
-        comDestaques={comDestaques}
         salvar={salvarWidgetsHome}
         restaurar={restaurarWidgetsHome}
       />

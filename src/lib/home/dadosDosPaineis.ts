@@ -1,19 +1,20 @@
 // As consultas dos painéis da Home (06/10). Moravam dentro de cada painel; a
-// faixa de destaques (opção C) precisa dos mesmos números, e consultar duas
-// vezes numa Home que já é a tela mais aberta do Connect estava fora de
-// questão. Cada uma é `cache()` do React: a faixa e o painel pedem os mesmos
-// dados na mesma requisição e o banco é consultado uma vez só.
+// faixa de destaques (06/10 a 10/11/2026) e depois os cartões coringa do topo
+// (`cartoesServidor.ts`) precisam dos mesmos números, e consultar duas vezes
+// numa Home que já é a tela mais aberta do Connect estava fora de questão.
+// Cada uma é `cache()` do React: o cartão e o painel pedem os mesmos dados na
+// mesma requisição e o banco é consultado uma vez só.
 //
 // Os argumentos são primitivos (ou o mesmo `ctx` que a Home repassa), porque
 // é pela identidade deles que o `cache()` reconhece a mesma chamada.
 //
 // Um painel que falha não derruba a Home (07/10, auditoria dos gráficos): a
 // consulta que lança devolve `null`, o painel mostra o aviso no lugar dele e
-// a faixa de destaques segue com os números dos outros. Era o `error.tsx` da
+// os cartões do topo seguem com os números dos outros. Era o `error.tsx` da
 // rota que trocava a tela inteira por "Não foi possível carregar o resumo" —
 // por causa, por exemplo, da fila do Societário. O mesmo desenho do Início do
-// portal (`BlocosDoInicio`). Como o `null` também passa pelo `cache()`, a
-// faixa e o painel concordam sobre o que faltou, e o erro vai uma vez ao log.
+// portal (`BlocosDoInicio`). Como o `null` também passa pelo `cache()`, o
+// cartão e o painel concordam sobre o que faltou, e o erro vai uma vez ao log.
 
 import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
@@ -30,9 +31,6 @@ import { computeFunnelConversion } from "@/lib/recruitmentFunnel";
 import { listarCertificados } from "@/lib/certificados/servidor";
 import { AFASTAMENTO_ENCERRADO } from "@/lib/situacoesDoDP";
 import { atuaisPorDocumento, situacaoDoCertificado } from "@/lib/certificados/certificados";
-import type { HomeWidgetKey } from "@/lib/homeWidgets";
-import type { AcessoDoPainel } from "./acessoDosPaineis";
-import type { NumerosDaHome } from "./destaques";
 import { aPagarPorSemana, carteiraPorFaixa, contarFerias, faixasDasPendencias, type Soma } from "./paineis";
 import { FERIAS_EM_ABERTO } from "@/lib/ferias/regras";
 import { ADMISSAO_EM_ANDAMENTO, DESLIGAMENTO_EM_PROCESSO } from "@/lib/dp/contagens";
@@ -163,53 +161,6 @@ export const dadosDosCertificados = cache((tenantId: string) =>
   })
 );
 
-// ─── Faixa de destaques ────────────────────────────────────────────────────
-
-/**
- * Os números dos painéis que estão na Home desta pessoa — e só deles: o
- * painel que ela não alcança (ou ocultou em "Personalizar") não é consultado
- * aqui. Como as funções acima são `cache()`, isto não custa consulta nova: é
- * o mesmo resultado que o painel usa logo abaixo. Painel cuja consulta falhou
- * (`null`) fica fora da faixa, como se não estivesse na Home.
- */
-export async function numerosDaHome(
-  ctx: AuthContext,
-  paineis: ReadonlyMap<HomeWidgetKey, AcessoDoPainel>,
-  tarefas: NumerosDaHome["tarefas"]
-): Promise<NumerosDaHome> {
-  const contas = paineis.get("painel-contas");
-  const pendencias = paineis.get("painel-pendencias");
-  const verCarteira = paineis.has("painel-contas") || paineis.has("painel-semanas");
-
-  const [carteira, pend, processos, dp, recrutamento, certificados] = await Promise.all([
-    verCarteira ? dadosDaCarteira(ctx.tenantId) : null,
-    pendencias
-      ? dadosDasPendencias(ctx.tenantId, pendencias.modulos.has("bpo_pendencias"), pendencias.modulos.has("bpo_aprovacoes"))
-      : null,
-    paineis.has("painel-processos") ? dadosDosProcessos(ctx.tenantId) : null,
-    paineis.has("painel-dp") ? dadosDoDP(ctx.tenantId) : null,
-    paineis.has("painel-recrutamento") ? dadosDoRecrutamento(ctx) : null,
-    paineis.has("painel-certificados") ? dadosDosCertificados(ctx.tenantId) : null,
-  ]);
-
-  return {
-    tarefas,
-    contas:
-      contas && carteira
-        ? {
-            verPagar: contas.modulos.has("bpo_contas_pagar"),
-            verReceber: contas.modulos.has("bpo_contas_receber"),
-            pagar: carteira.pagar,
-            receber: carteira.receber,
-          }
-        : undefined,
-    semanas: paineis.has("painel-semanas") && carteira ? { estaSemana: carteira.semanas[0] } : undefined,
-    pendencias: pend ?? undefined,
-    processos: processos
-      ? { abertos: processos.fila.length, estourados: processos.estourados, noLimite: processos.noLimite }
-      : undefined,
-    dp: dp ? { feriasVencidas: dp.ferias.vencidas, feriasAVencer: dp.ferias.aVencer } : undefined,
-    recrutamento: recrutamento ? { vagas: recrutamento.vagas, candidaturas: recrutamento.funil.total } : undefined,
-    certificados: certificados ? { vencidos: certificados.vencido, aRenovar: certificados.a_renovar } : undefined,
-  };
-}
+// A faixa de destaques lia daqui os números dos painéis (`numerosDaHome`, de
+// 06/10); saiu com ela em 10/11/2026. Os cartões do topo chamam as consultas
+// acima direto (`cartoesServidor.ts`).

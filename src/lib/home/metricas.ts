@@ -1,7 +1,7 @@
-// Os números que a Home destaca (06/10): cada um com um nome fixo, que é a
-// identidade dele na faixa de destaques e a chave do histórico (a foto diária
-// em `home_metric_snapshots`). Renomear uma chave daqui é perder o histórico
-// dela — trate como coluna.
+// Os números que a Home acompanha (06/10): cada um com um nome fixo, que é a
+// identidade dele nos painéis e nos cartões do topo (10/11/2026) e a chave do
+// histórico (a foto diária em `home_metric_snapshots`, coluna de 40 letras).
+// Renomear uma chave daqui é perder o histórico dela — trate como coluna.
 
 export type FormatoDaMetrica = "moeda" | "contagem";
 
@@ -55,6 +55,66 @@ export const METRICAS = {
   // Certificados
   certificados_vencidos: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
   certificados_a_renovar: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+
+  // ── Cartões coringa do topo (10/11/2026, pedido do Kauan) ──────────────────
+  // Cada cartão do catálogo (`cartoes.ts`) é uma métrica daqui, com a mesma
+  // chave: é o que dá a linha dos últimos dias e o "+2 desde ontem". Os que já
+  // existiam acima (aprovações, processos estourados, férias, vagas) são
+  // reaproveitados porque saem da mesma consulta que o painel usa —
+  // a foto do cartão e a do painel são o mesmo número. Os que contam outra
+  // coisa ganharam chave nova, mesmo com nome parecido (os certificados "para
+  // renovar" do cartão somam os vencidos, como a aba "Renovar" da tela).
+  // Os pessoais dependem de quem olha (o escopo do kanban, da caixa de
+  // transferências, da fila de solicitações), como as tarefas do painel.
+  tarefas_atrasadas_hoje: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  transferencias_setor: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  transferencias_enviadas: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  solicitacoes_atrasadas: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  empresas_ativas: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  chamados_que_abri: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  // BPO
+  contas_pagar_vencidas: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  contas_pagar_semana: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  contas_receber_vencidas: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  // Todas as em aberto com o cliente, vencidas incluídas (a `pendencias_abertas`
+  // do painel conta só as que ainda estão no prazo).
+  pendencias_cliente: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  linhas_a_conciliar: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  // Fiscal e Contábil
+  obrigacoes_risco_fiscal: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  obrigacoes_risco_contabil: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  guias_vencem_semana: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  autorizacoes_a_validar: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  xml_recusados: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  tarefas_atrasadas_fiscal: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  tarefas_atrasadas_contabil: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  transferencias_contabil: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  // Societário
+  exigencias_abertas: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  licencas_a_renovar: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  protocolos_parados: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  // DP
+  admissoes_andamento: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  rescisoes_andamento: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  exames_pendentes: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  // Recrutamento — pelo escopo de /vagas, como as vagas abertas.
+  candidaturas_triagem: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  entrevistas_semana: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  // A foto é o numerador ("12" de "12 de 32"): a variação diz quantas passaram
+  // a mais, e por isso é neutra — o total também muda.
+  conversao_funil: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  // Tech
+  chamados_na_fila: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  chamados_atrasados: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  certificados_renovar: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  itens_em_validacao: { formato: "contagem", sentido: "menor-e-melhor", escopo: "escritorio" },
+  // Comercial
+  leads_novos: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  leads_em_contato: { formato: "contagem", sentido: "neutro", escopo: "escritorio" },
+  // Controladoria — a fila de solicitações de quem olha.
+  solicitacoes_novas: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
+  solicitacoes_aguardando_cliente: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  solicitacoes_minhas: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
 } as const satisfies Record<string, DefinicaoDaMetrica>;
 
 export type MetricaDaHome = keyof typeof METRICAS;

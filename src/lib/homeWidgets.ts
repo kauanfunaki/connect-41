@@ -3,10 +3,12 @@
 // escolhe aqui decide o que a página monta, então a lista precisa ser
 // compartilhada entre servidor (page.tsx) e client (modal de personalização).
 
+// "destaques" e "indicadores" saíram em 10/11/2026 (pedido do Kauan): os
+// quatro cartões coringa do topo (`lib/home/cartoes.ts`) ficaram no lugar dos
+// dois. A preferência gravada com essas chaves continua lida — chave que não
+// existe mais é descartada em `limpar`, sem mexer no resto do layout.
 export type HomeWidgetKey =
-  | "indicadores"
   | "proxima-reuniao"
-  | "destaques"
   | "meu-dia"
   | "transferencias"
   | "workspace"
@@ -22,15 +24,15 @@ export type HomeWidgetKey =
   | "painel-recrutamento"
   | "painel-certificados";
 
-// Onde o bloco mora no layout. "top" ocupa a largura toda acima das colunas;
-// "paineis" é a grade de gráficos logo abaixo (30/09, a leitura "Power BI"
-// pedida pelo Kauan); "abaixo-dos-paineis" é a faixa larga entre os painéis e
-// as colunas (08/10, onde os Indicadores passaram a morar); "main" é a coluna
-// larga da esquerda; "side" é a coluna estreita da direita.
+// Onde o bloco mora no layout. "top" ocupa a largura toda acima das colunas,
+// logo abaixo dos cartões do topo; "paineis" é a grade de gráficos (30/09, a
+// leitura "Power BI" pedida pelo Kauan); "main" é a coluna larga da esquerda;
+// "side" é a coluna estreita da direita. A faixa "abaixo-dos-paineis" (08/10,
+// a casa dos Indicadores) saiu com eles em 10/11/2026.
 // A ordem escolhida pelo usuário só reordena dentro da própria faixa — mover
 // "Agenda" pra antes de "Meu dia" não muda de coluna, e isso é proposital: o
 // layout de duas colunas é do Design System, não uma preferência.
-export type HomeWidgetSlot = "top" | "paineis" | "abaixo-dos-paineis" | "main" | "side";
+export type HomeWidgetSlot = "top" | "paineis" | "main" | "side";
 
 export type HomeWidgetDef = {
   key: HomeWidgetKey;
@@ -47,27 +49,14 @@ export type HomeWidgetDef = {
 };
 
 export const HOME_WIDGETS: HomeWidgetDef[] = [
-  // Os Indicadores saíram do topo (escolha do Kauan na página de decisões,
-  // 08/10/2026 — 7A, "destaques primeiro"): a Home abria com quatro números
-  // de consulta, "Pessoas cadastradas" entre eles, antes da faixa que diz o
-  // que pede a pessoa. Moram agora abaixo dos painéis (ver o item deles, mais
-  // abaixo). O lugar é do layout, não da preferência: quem já personalizou
-  // continua com os mesmos blocos visíveis e ocultos e com a mesma ordem
-  // dentro de cada faixa — só os Indicadores descem.
+  // Os quatro números do topo não são bloco daqui (10/11/2026, pedido do
+  // Kauan): os cartões coringa ficam sempre logo abaixo do cabeçalho, e cada
+  // um se troca pelo lápis dele (`components/home/FaixaDeCartoes`). O que eram
+  // a faixa "Destaques" (06/10) e os "Indicadores" (08/10) virou isso.
   {
     key: "proxima-reuniao",
     label: "Próxima reunião",
     description: "Faixa com a próxima reunião do dia e o link de entrada.",
-    slot: "top",
-  },
-  // Por último no topo (06/10): fica colada nos painéis que ela resume — e é
-  // onde um bloco novo entra para quem já personalizou, então todo mundo a vê
-  // no mesmo lugar. Sem os Indicadores em cima (08/10), é ela que abre a tela;
-  // a reunião do dia, quando há, é uma linha só acima dela.
-  {
-    key: "destaques",
-    label: "Destaques",
-    description: "Os três números que mais pedem você agora, dos painéis da sua Home.",
     slot: "top",
   },
   {
@@ -126,12 +115,6 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
     doSetor: true,
   },
   {
-    key: "indicadores",
-    label: "Indicadores",
-    description: "Empresas ativas, atividades atrasadas, transferências e solicitações atrasadas.",
-    slot: "abaixo-dos-paineis",
-  },
-  {
     key: "meu-dia",
     label: "Meu dia",
     description: "Atividades atribuídas a você ou com prazo.",
@@ -183,7 +166,7 @@ export const DEFAULT_HOME_WIDGETS: HomeWidgetKey[] = HOME_WIDGETS.map((w) => w.k
  * lista foi ocultado pelo usuário; o que veio depois é novo e aparece.
  */
 const CHAVES_DO_FORMATO_ANTIGO: HomeWidgetKey[] = [
-  "indicadores",
+  // "indicadores" também era dessa época; saiu do catálogo em 10/11/2026.
   "proxima-reuniao",
   "meu-dia",
   "transferencias",
