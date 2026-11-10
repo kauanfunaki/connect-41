@@ -143,6 +143,11 @@ export async function marcoDasNotificacoes(dono: Dono): Promise<Date | null> {
   return n?.createdAt ?? null;
 }
 
+/** Quantas novas chegaram desde o marco: a lista do aviso traz só as mais novas (10/11/2026). */
+export async function contarNovas(dono: Dono, desde: Date, ocultos: string[]): Promise<number> {
+  return getPrisma().notification.count({ where: ondeDasNovas(dono, desde, ocultos) });
+}
+
 /** As novas desde o marco, das mais novas para as mais antigas, prontas para o aviso. */
 export async function notificacoesNovas(dono: Dono, desde: Date, ocultos: string[], limite: number): Promise<NotificacaoNova[]> {
   const linhas = await getPrisma().notification.findMany({
