@@ -99,7 +99,6 @@ const INICIO_DA_TABELA = /^\s*(?:Data\s*$|\d{2}[./-]\d{2}(?:[./-]\d{2,4})?\b)/im
  * se procura são os rótulos "Agência", "Conta" e o nome do banco).
  */
 export function identidadeDoPdf(topos: readonly string[]): Identidade {
-  const r: Identidade = { banco: null, agencia: null, conta: null, multiplasContas: false };
   const cabecalhos: string[] = [];
   const contas = new Set<string>();
   for (const topo of topos) {
@@ -108,8 +107,31 @@ export function identidadeDoPdf(topos: readonly string[]): Identidade {
     cabecalhos.push(trecho);
     for (const c of normalizar(trecho).matchAll(CONTA_RE)) contas.add(numero(c[1]));
   }
-  r.multiplasContas = contas.size > 1;
-  const texto = normalizar(cabecalhos.join("\n"));
+  return identidadeDoTexto(cabecalhos.join("\n"), contas.size > 1);
+}
+
+/**
+ * O caminho da planilha de `extrair`: as linhas de cada folha antes do cabeçalho da tabela (até 80),
+ * ou, no CSV, o texto antes da linha que começa com "data;" (até 3000 caracteres). Aqui vale a
+ * folha que o leitor do extrato lê, a primeira (o original olhava todas).
+ */
+export function identidadeDaPlanilha(linhas: readonly (readonly string[])[] | null, textoCsv: string | null): Identidade {
+  if (textoCsv !== null) {
+    const m = /^\s*data[;,\t]/im.exec(textoCsv);
+    return identidadeDoTexto([...(m ? textoCsv.slice(0, m.index) : textoCsv)].slice(0, 3000).join(""), false);
+  }
+  const antes: string[] = [];
+  for (const celulas of (linhas ?? []).slice(0, 80)) {
+    const chave = normalizar(celulas.join(" "));
+    if (chave.includes("DATA") && ["VALOR", "DEBITO", "CREDITO"].some((c) => chave.includes(c))) break;
+    antes.push(celulas.join(" "));
+  }
+  return identidadeDoTexto(antes.join("\n"), false);
+}
+
+function identidadeDoTexto(bruto: string, multiplas: boolean): Identidade {
+  const r: Identidade = { banco: null, agencia: null, conta: null, multiplasContas: multiplas };
+  const texto = normalizar(bruto);
   const agencias = [...texto.matchAll(AGENCIA_RE)].map((m) => m[1]);
   const todasContas = [...texto.matchAll(CONTA_RE)].map((m) => m[1]);
   r.agencia = agencias[0] ?? null;
