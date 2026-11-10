@@ -7,6 +7,7 @@
 // **nada** (`IN ()`), nunca para tudo — um cliente sem empresa vinculada não
 // pode herdar o tenant inteiro por uma cláusula vazia.
 
+import { cache } from "react";
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { addDaysToKey, saoPauloParts } from "@/lib/agenda";
@@ -206,6 +207,15 @@ export async function empresasDoSeletor(tenantId: string, ids?: string[]): Promi
     .map((c) => ({ id: c.id, nome: nomeExibicao(c), logoUrl: c.logoUrl, cnpj: c.cnpj, matrizId: c.parentCompanyId }))
     .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
+
+/**
+ * As empresas ativas do seletor, uma vez por requisição (10/11/2026): o balão
+ * da aba "Aprovações" das Solicitações conta a fila na empresa que ela abriria,
+ * e as telas da central já leem a mesma lista para o filtro — sem o `cache`,
+ * seriam duas idas ao banco pelas ~400 empresas. Não mexa no que volta: é o
+ * mesmo array para todos na requisição.
+ */
+export const empresasAtivasDoSeletor = cache((tenantId: string) => empresasDoSeletor(tenantId));
 
 export type ContaDoPortal = {
   id: string;

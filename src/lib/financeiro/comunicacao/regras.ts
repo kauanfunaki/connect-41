@@ -89,6 +89,6 @@ export function ordenarConversas<T extends { resumo: ResumoDaConversa; empresaNo
  * por uma solicitação, que tem número, prazo e responsável.
  */
 export const CONVERSA_SO_PARA_CONSULTA = {
-  equipe: "A conversa virou histórico. Para falar com o cliente, use as Solicitações (Pedidos ao cliente).",
+  equipe: "A conversa virou histórico. Para falar com o cliente, use as Solicitações, na aba Pedidos.",
   cliente: "A conversa virou histórico. Para falar com a equipe, abra uma solicitação.",
 } as const;
