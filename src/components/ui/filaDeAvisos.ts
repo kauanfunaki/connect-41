@@ -10,8 +10,12 @@ export const DURACAO_DO_AVISO: Record<TipoDoAviso, number> = { success: 5000, in
 /** O aviso que leva a algum lugar fica mais: dá tempo de ler e decidir clicar. */
 export const DURACAO_DO_CLICAVEL = 9000;
 
-/** Avisos do mesmo grupo (as notificações novas, por exemplo) na tela ao mesmo tempo. */
-export const MAXIMO_POR_GRUPO = 3;
+/**
+ * Avisos do mesmo grupo (as notificações novas, por exemplo) na tela ao mesmo
+ * tempo. Eram 3 até 10/11/2026: com o resumo "N avisos novos", cada conferência
+ * do sino põe um só, e dois juntos já é o caso raro (dois push em seguida).
+ */
+export const MAXIMO_POR_GRUPO = 2;
 
 export function duracaoDoAviso(tipo: TipoDoAviso, clicavel: boolean): number {
   return clicavel ? Math.max(DURACAO_DO_AVISO[tipo], DURACAO_DO_CLICAVEL) : DURACAO_DO_AVISO[tipo];

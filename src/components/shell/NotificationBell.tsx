@@ -22,9 +22,12 @@ import type { AbaOuTodas } from "@/lib/notificacoes/catalogo";
 import type { NotificacaoNaTela } from "@/lib/notificacoes/consultas";
 import {
   GRUPO_DAS_NOTIFICACOES,
-  avisosParaMostrar,
+  anuncioDaConferencia,
+  avisoDoCanto,
   destinoDoClique,
   lembrarMostrados,
+  textoDoResumo,
+  type AvisoDoCanto,
   type NotificacaoNova,
   type RespostaDasNovas,
 } from "@/lib/notificacoes/avisoNaTela";
@@ -49,23 +52,37 @@ type Dados = { itens: NotificacaoNaTela[]; contagens: Contagens; ocultos: number
 
 const POR_ABERTURA = 20;
 
-/** Os avisos já mostrados, entre as abas do navegador: o mesmo aviso não aparece de novo na outra. */
+/** Os avisos já mostrados no canto, entre as abas do navegador: o mesmo aviso não aparece de novo na outra. */
 const CHAVE_DOS_MOSTRADOS = "connect:avisos-mostrados";
+/**
+ * As notificações que já tocaram o som e o aviso no computador, entre as abas
+ * (10/11/2026). À parte dos mostrados: a aba em segundo plano anuncia na hora,
+ * mas o canto da tela fica para quando a pessoa olhar o Connect.
+ */
+const CHAVE_DOS_ANUNCIADOS = "connect:avisos-anunciados";
 
-function lerMostrados(): string[] {
+/**
+ * A cópia na memória da aba: sem armazenamento (navegador que bloqueia), a aba
+ * em segundo plano — que confere de novo a mesma lista — não toca de novo.
+ */
+const naMemoria = new Map<string, string[]>();
+
+function lerIds(chave: string): string[] {
   try {
-    const lido: unknown = JSON.parse(localStorage.getItem(CHAVE_DOS_MOSTRADOS) ?? "[]");
-    return Array.isArray(lido) ? lido.filter((x): x is string => typeof x === "string") : [];
+    const lido: unknown = JSON.parse(localStorage.getItem(chave) ?? "null");
+    if (Array.isArray(lido)) return lido.filter((x): x is string => typeof x === "string");
   } catch {
-    return [];
+    // Sem armazenamento: vale a cópia da memória.
   }
+  return naMemoria.get(chave) ?? [];
 }
 
-function guardarMostrados(ids: string[]): void {
+function guardarIds(chave: string, ids: string[]): void {
+  naMemoria.set(chave, ids);
   try {
-    localStorage.setItem(CHAVE_DOS_MOSTRADOS, JSON.stringify(ids));
+    localStorage.setItem(chave, JSON.stringify(ids));
   } catch {
-    // Sem armazenamento: a aba ainda não repete, pelo próprio cursor.
+    // Sem armazenamento: fica a cópia da memória, só desta aba.
   }
 }
 
@@ -168,14 +185,36 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
     router.refresh();
   }
 
-  /** A notificação nova no canto: com caminho, o clique marca como lida e leva à tela. */
-  function avisar(n: NotificacaoNova) {
+  /**
+   * O aviso da conferência no canto (um só, ver `avisoDoCanto`). A notificação
+   * que chegou sozinha: com caminho, o clique marca como lida e leva à tela. O
+   * resumo de várias (10/11/2026): mesmo desenho, e o clique abre o sino.
+   */
+  function avisar(aviso: AvisoDoCanto) {
+    if (aviso.tipo === "resumo") {
+      const { titulo, mensagem } = textoDoResumo(aviso);
+      toast.show(mensagem, "info", { titulo, grupo: GRUPO_DAS_NOTIFICACOES, aoClicar: abrirOSino, rotuloDoClique: "Ver no sino" });
+      return;
+    }
+    const n = aviso.notificacao;
     const destino = destinoDoClique(n);
     toast.show(n.mensagem, "info", {
       titulo: n.titulo,
       grupo: GRUPO_DAS_NOTIFICACOES,
       ...(destino ? { aoClicar: () => void abrirDoAviso(n.id, destino), rotuloDoClique: "Abrir" } : {}),
     });
+  }
+
+  /**
+   * O clique no resumo: o sino aberto na aba de todas, onde as que chegaram
+   * estão no topo, sem marcar nada como lido — a pessoa ainda não as viu. O
+   * foco vai para o botão do sino, como quando ela mesma o abre.
+   */
+  function abrirOSino() {
+    setAba("todas");
+    setAberto(true);
+    void carregar("todas");
+    ancoraRef.current?.querySelector<HTMLElement>("button")?.focus();
   }
 
   // Entre uma navegação e outra, voltar à aba do navegador confere o número —
@@ -191,7 +230,16 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
   // Com som ou aviso no computador ligados (09/11/2026), a aba em segundo
   // plano também confere: é com a pessoa em outro lugar que o som e o aviso
   // do computador fazem falta. `forcar`: chegou um push, confere já.
-  const conferir = useEffectEvent(async (forcar = false) => {
+  //
+  // A pilha de avisos de quem voltava ao Connect (10/11/2026):
+  // - a aba em segundo plano só anuncia (o som e o aviso no computador) e não
+  //   anda o cursor. O canto fica para quando a pessoa voltar: a conferência
+  //   de então traz tudo o que chegou desde a última vez que ela olhou — já
+  //   sem o que ela leu em outra aba — e põe um aviso só, o da notificação ou
+  //   o resumo "N avisos novos";
+  // - uma conferência por vez: a pedida no meio de outra (vários push juntos)
+  //   roda logo depois, uma vez só, em vez de cada uma pôr o seu aviso.
+  async function conferirUmaVez(forcar: boolean) {
     if (document.visibilityState !== "visible" && !forcar) {
       if (!tocaSom(lerPreferenciasDoNavegador()) && !avisaNoComputador()) return;
       if (outraAbaConferiuHaPouco()) return;
@@ -202,18 +250,44 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
       const r = await fetch(`/api/notificacoes/novas${consulta}`, { cache: "no-store" });
       if (!r.ok) return;
       const d = (await r.json()) as RespostaDasNovas;
-      const primeira = desdeRef.current === null;
-      desdeRef.current = d.cursor;
       setContagemDoTopo(d.naoLidas);
-      if (primeira) return;
-      const mostrados = lerMostrados();
-      const mostrar = avisosParaMostrar(d.novas, new Set(mostrados));
-      if (mostrar.length === 0) return;
-      guardarMostrados(lembrarMostrados(mostrados, mostrar.map((n) => n.id)));
-      for (const n of mostrar) avisar(n);
-      void anunciar(mostrar);
+      if (desdeRef.current === null) {
+        desdeRef.current = d.cursor;
+        return;
+      }
+      const anunciados = lerIds(CHAVE_DOS_ANUNCIADOS);
+      const anuncio = anuncioDaConferencia(d.novas, new Set(anunciados));
+      if (anuncio.anunciadas.length > 0) {
+        guardarIds(CHAVE_DOS_ANUNCIADOS, lembrarMostrados(anunciados, anuncio.anunciadas));
+        void anunciar(anuncio.anunciar);
+      }
+      if (document.visibilityState !== "visible") return;
+      desdeRef.current = d.cursor;
+      const mostrados = lerIds(CHAVE_DOS_MOSTRADOS);
+      const { aviso, mostradas } = avisoDoCanto(d, new Set(mostrados));
+      if (!aviso) return;
+      guardarIds(CHAVE_DOS_MOSTRADOS, lembrarMostrados(mostrados, mostradas));
+      avisar(aviso);
     } catch {
       // Rede oscilando: o número e os avisos voltam na próxima conferência.
+    }
+  }
+
+  const conferindo = useRef(false);
+  const pedidoDeConferir = useRef<{ forcar: boolean } | null>(null);
+  function tirarPedido() {
+    const p = pedidoDeConferir.current;
+    pedidoDeConferir.current = null;
+    return p;
+  }
+  const conferir = useEffectEvent(async (forcar = false) => {
+    pedidoDeConferir.current = { forcar: forcar || !!pedidoDeConferir.current?.forcar };
+    if (conferindo.current) return;
+    conferindo.current = true;
+    try {
+      for (let p = tirarPedido(); p; p = tirarPedido()) await conferirUmaVez(p.forcar);
+    } finally {
+      conferindo.current = false;
     }
   });
   useEffect(() => {

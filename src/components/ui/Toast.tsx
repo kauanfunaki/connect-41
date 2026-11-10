@@ -17,7 +17,7 @@ export type OpcoesDoAviso = {
   aoClicar?: () => void;
   /** O que o clique faz, no fim do aviso: "Abrir". */
   rotuloDoClique?: string;
-  /** Avisos do mesmo grupo ficam no máximo 3 na tela; o mais antigo sai. */
+  /** Avisos do mesmo grupo ficam no máximo 2 na tela; o mais antigo sai. Os sem grupo não contam. */
   grupo?: string;
 };
 
@@ -44,8 +44,8 @@ let nextId = 1;
  * Os avisos que somem sozinhos (5 s; 10 s o de erro; 9 s o clicável; ou no clique).
  *
  * Desde 09/11/2026 o aviso pode levar a algum lugar (`aoClicar`, com o X à
- * parte para só fechar) e entrar num grupo de no máximo 3 — é o caminho das
- * notificações novas do sino (ver `filaDeAvisos.ts`).
+ * parte para só fechar) e entrar num grupo de no máximo 2 (3 até 10/11) — é o
+ * caminho das notificações novas do sino (ver `filaDeAvisos.ts`).
  *
  * Refeitos em 07/10/2026:
  * - **Opacos.** O fundo era só a tinta de 10% do tom, e o conteúdo de baixo

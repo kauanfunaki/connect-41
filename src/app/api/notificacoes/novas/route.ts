@@ -1,6 +1,6 @@
 import { getAuthContext } from "@/lib/auth/context";
-import { contarNaoLidasVisiveis, marcoDasNotificacoes, notificacoesNovas, tiposOcultos } from "@/lib/notificacoes/consultas";
-import { MAXIMO_DE_AVISOS, cursorDepois, lerDesde, type RespostaDasNovas } from "@/lib/notificacoes/avisoNaTela";
+import { contarNaoLidasVisiveis, contarNovas, marcoDasNotificacoes, notificacoesNovas, tiposOcultos } from "@/lib/notificacoes/consultas";
+import { JANELA_DA_CONFERENCIA, cursorDepois, lerDesde, type RespostaDasNovas } from "@/lib/notificacoes/avisoNaTela";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,12 +22,17 @@ export async function GET(request: Request) {
   const ocultos = await tiposOcultos(dono);
   const [naoLidas, novas, marco] = await Promise.all([
     contarNaoLidasVisiveis(dono, ocultos),
-    desde ? notificacoesNovas(dono, desde, ocultos, MAXIMO_DE_AVISOS) : Promise.resolve([]),
+    desde ? notificacoesNovas(dono, desde, ocultos, JANELA_DA_CONFERENCIA) : Promise.resolve([]),
     desde ? Promise.resolve(null) : marcoDasNotificacoes(dono),
   ]);
+  // Quantas chegaram, para o resumo "N avisos novos" (10/11/2026). Só conta
+  // quando a lista veio cheia — abaixo dela, a lista já é tudo, e o minuto de
+  // cada aba não ganha uma consulta a mais.
+  const total = desde && novas.length >= JANELA_DA_CONFERENCIA ? await contarNovas(dono, desde, ocultos) : novas.length;
   const resposta: RespostaDasNovas = {
     naoLidas,
     novas,
+    total,
     cursor: desde ? cursorDepois(desde.toISOString(), novas) : (marco ?? new Date(0)).toISOString(),
   };
   return Response.json(resposta, { headers: { "Cache-Control": "private, no-store" } });

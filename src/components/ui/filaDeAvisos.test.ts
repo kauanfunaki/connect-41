@@ -8,10 +8,14 @@ describe("entrarNaFila (os avisos do canto)", () => {
     const fila: A[] = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
     expect(entrarNaFila(fila, { id: 5 }).map((a) => a.id)).toEqual([1, 2, 3, 4, 5]);
   });
-  it("no mesmo grupo, no máximo 3: o mais antigo do grupo sai", () => {
-    const fila: A[] = [{ id: 1, grupo: "n" }, { id: 2 }, { id: 3, grupo: "n" }, { id: 4, grupo: "n" }];
-    expect(MAXIMO_POR_GRUPO).toBe(3);
-    expect(entrarNaFila(fila, { id: 5, grupo: "n" }).map((a) => a.id)).toEqual([2, 3, 4, 5]);
+  it("no mesmo grupo, no máximo 2: o mais antigo do grupo sai", () => {
+    const fila: A[] = [{ id: 1, grupo: "n" }, { id: 2 }, { id: 3, grupo: "n" }];
+    expect(MAXIMO_POR_GRUPO).toBe(2);
+    expect(entrarNaFila(fila, { id: 4, grupo: "n" }).map((a) => a.id)).toEqual([2, 3, 4]);
+  });
+  it("os avisos de ação da tela (sem grupo) não contam nem saem pelo grupo", () => {
+    const fila: A[] = [{ id: 1 }, { id: 2, grupo: "n" }, { id: 3 }, { id: 4, grupo: "n" }, { id: 5 }];
+    expect(entrarNaFila(fila, { id: 6, grupo: "n" }).map((a) => a.id)).toEqual([1, 3, 4, 5, 6]);
   });
   it("abaixo do máximo, ninguém sai", () => {
     const fila: A[] = [{ id: 1, grupo: "n" }];
