@@ -17,7 +17,8 @@ import { isModuleEnabled } from "@/lib/modules";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { logAudit } from "@/lib/audit";
 import { MODULO_OPS } from "@/lib/ops/regras";
-import { ROTULO_DO_STATUS, chaveAberta, maquinaSemSinal, type StatusDaTarefa } from "@/lib/robo/tarefas";
+import { ROTULO_DO_STATUS, chaveAberta, type StatusDaTarefa } from "@/lib/robo/tarefas";
+import { PREFIXO_DO_AGENTE_SPED, agenteDoSinal, type AgenteNaTela } from "./agente";
 import { ErroFiscal, carregarBase, json, montarPacote, prepararTelaLocal } from "./servidor";
 import { obrigacaoSchema, type Obrigacao } from "./dominio";
 import { cabeNoBanco, ehPacoteGrandeDemais, mensagemDoPacoteGrande, serializarPacote } from "./pacote";
@@ -156,14 +157,15 @@ export type GeracaoNaTela = {
   concluidaEm: string | null;
 };
 
-export type AgenteNaTela = { nome: string; ultimoSinal: string | null; semSinal: boolean };
+export type { AgenteNaTela } from "./agente";
 
 const ESTADOS = new Set<string>(Object.keys(ROTULO_DO_STATUS));
 
 /**
  * As gerações da empresa na competência, com o andamento da fila, e o sinal
- * da última máquina que pegou uma geração no escritório. Leve: a tela relê
- * isto a cada poucos segundos enquanto há geração aberta.
+ * da última máquina que pegou uma geração no escritório — ou, antes da
+ * primeira, da automação do agente do SPED (`agenteDoSinal`). Leve: a tela
+ * relê isto a cada poucos segundos enquanto há geração aberta.
  */
 export async function geracoesDaTela(tenantId: string, empresa: { id: string; cnpj: string }, competencia: string): Promise<{ geracoes: GeracaoNaTela[]; agente: AgenteNaTela | null }> {
   const db = getPrisma();
@@ -174,7 +176,11 @@ export async function geracoesDaTela(tenantId: string, empresa: { id: string; cn
     db.robotTask.findFirst({ where: { tenantId, kind: "gerar_sped", machineSlug: { not: null } }, orderBy: { claimedAt: "desc" }, select: { machineSlug: true } }),
   ]);
   const slugs = [...new Set([...tarefas.map((t) => t.machineSlug), ultima?.machineSlug].filter((s): s is string => !!s))];
-  const maquinas = slugs.length ? await db.opsWatcher.findMany({ where: { tenantId, slug: { in: slugs } }, select: { slug: true, name: true, lastHeartbeatAt: true } }) : [];
+  // Com as máquinas das tarefas, a automação do agente do SPED: é ela que dá o sinal antes da primeira geração (10/11/2026).
+  const maquinas = await db.opsWatcher.findMany({
+    where: { tenantId, OR: [...(slugs.length ? [{ slug: { in: slugs } }] : []), { isActive: true, slug: { startsWith: PREFIXO_DO_AGENTE_SPED } }] },
+    select: { slug: true, name: true, isActive: true, lastHeartbeatAt: true },
+  });
   const porTarefa = new Map(tarefas.map((t) => [t.id, t]));
   const porRevisao = new Map(revisoes.map((r) => [r.id, r.revision]));
   const nomeDaMaquina = (slug: string | null) => (slug ? maquinas.find((m) => m.slug === slug)?.name ?? slug : null);
@@ -200,7 +206,5 @@ export async function geracoesDaTela(tenantId: string, empresa: { id: string; cn
       concluidaEm: g.finishedAt?.toISOString() ?? null,
     }];
   });
-  const m = ultima?.machineSlug ? maquinas.find((x) => x.slug === ultima.machineSlug) : null;
-  const agente = m ? { nome: m.name, ultimoSinal: m.lastHeartbeatAt?.toISOString() ?? null, semSinal: maquinaSemSinal(m.lastHeartbeatAt, new Date()) } : null;
-  return { geracoes, agente };
+  return { geracoes, agente: agenteDoSinal(ultima?.machineSlug ?? null, maquinas, new Date()) };
 }

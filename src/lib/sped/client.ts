@@ -307,3 +307,103 @@ export async function obterPdf(
   }
   return resposta.arrayBuffer();
 }
+
+/** Um documento como a rota de XML em lote o pede: o mesmo par de `/documentos/{tipo}/{identificador}`. */
+export type DocumentoParaXml = { tipo: "nfe" | "cte" | "nfse"; identificador: string };
+
+/** O zip da rota de XML em lote e a conta que o motor faz dele, nos cabeçalhos. */
+export type XmlsDoMotor = {
+  bytes: Uint8Array<ArrayBuffer>;
+  /** `X-Documentos-Pedidos`. */
+  pedidos: number;
+  /** `X-Documentos-No-Zip`: os que vieram, um arquivo `<tipo>/<identificador>.xml` cada. */
+  noZip: number;
+  /** `X-Sem-Xml`: catalogados no índice, sem XML guardado. */
+  semXml: number;
+  /** `X-Nao-Encontrados`: o motor não tem, ou não nesta raiz. */
+  naoEncontrados: number;
+};
+
+/** O teto do contrato da rota de XML em lote. */
+export const MAXIMO_DE_XMLS_POR_PEDIDO = 500;
+// O zip de 500 XMLs é montado do armazenamento comprimido do motor: leva mais que uma leitura de índice.
+const TIMEOUT_DOS_XMLS_MS = 120_000;
+
+/**
+ * Os XMLs de até 500 documentos, num zip (10/11/2026).
+ *
+ * `POST /api/integracao/documentos/xml`, com a mesma credencial de leitura das
+ * outras rotas. É o que leva o acervo à escrituração do SPED sem ninguém baixar
+ * e subir arquivo: o zip entra na fila de importação como um envio manual.
+ *
+ * Os contadores vêm dos cabeçalhos `X-…`. Sem um deles, o pedido não falha:
+ * os pedidos são os que mandamos, o que falta conta zero e o "no zip" é a
+ * diferença.
+ *
+ * 404 (ou 405) é o motor sem a rota — ainda sem o deploy dela —, e vira
+ * `ErroDoSped` com o código `rota_de_xml_ausente`, para a tela dizer isso em
+ * vez de "documento não encontrado".
+ */
+export async function obterXmls(
+  creds: CredenciaisSped,
+  cnpjRaiz: string,
+  documentos: readonly DocumentoParaXml[]
+): Promise<XmlsDoMotor> {
+  if (!/^\d{8}$/.test(cnpjRaiz)) throw new ErroDoSped(0, "corpo_invalido", "raiz de CNPJ inválida para o pedido de XML");
+  if (documentos.length < 1 || documentos.length > MAXIMO_DE_XMLS_POR_PEDIDO) {
+    throw new ErroDoSped(0, "corpo_invalido", `o pedido de XML leva de 1 a ${MAXIMO_DE_XMLS_POR_PEDIDO} documentos`);
+  }
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), TIMEOUT_DOS_XMLS_MS);
+  try {
+    let resposta: Response;
+    try {
+      resposta = await fetch(`${creds.baseUrl}/api/integracao/documentos/xml`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${creds.token}`, "Content-Type": "application/json", Accept: "application/zip" },
+        body: JSON.stringify({ cnpj_raiz: cnpjRaiz, documentos: documentos.map((d) => ({ tipo: d.tipo, identificador: d.identificador })) }),
+        signal: controle.signal,
+        cache: "no-store",
+      });
+    } catch (err) {
+      const motivo = err instanceof Error && err.name === "AbortError" ? "tempo esgotado" : "falha de rede";
+      throw new ErroDoSped(0, null, `${motivo} ao chamar documentos/xml`);
+    }
+
+    if (!resposta.ok) {
+      let codigo: string | null = null;
+      let detalhe = resposta.statusText;
+      try {
+        const { codigo: c, mensagem } = extrairErro((await resposta.json()) as CorpoDeErro);
+        codigo = c;
+        detalhe = mensagem ?? detalhe;
+      } catch {
+        // corpo não-JSON: fica o statusText
+      }
+      if (resposta.status === 404 || resposta.status === 405) {
+        throw new ErroDoSped(resposta.status, "rota_de_xml_ausente", `SPED ${resposta.status}: o motor não tem a rota de XML em lote`);
+      }
+      throw new ErroDoSped(resposta.status, codigo, `SPED ${resposta.status}: ${codigo ?? detalhe}`);
+    }
+
+    let bytes: Uint8Array<ArrayBuffer>;
+    try {
+      bytes = new Uint8Array(await resposta.arrayBuffer());
+    } catch (err) {
+      const motivo = err instanceof Error && err.name === "AbortError" ? "tempo esgotado" : "falha de rede";
+      throw new ErroDoSped(0, null, `${motivo} ao receber o zip de documentos/xml`);
+    }
+    const numero = (nome: string): number | null => {
+      const bruto = resposta.headers.get(nome);
+      if (bruto === null || !/^\s*\d+\s*$/.test(bruto)) return null;
+      return Number(bruto.trim());
+    };
+    const pedidos = numero("X-Documentos-Pedidos") ?? documentos.length;
+    const semXml = numero("X-Sem-Xml") ?? 0;
+    const naoEncontrados = numero("X-Nao-Encontrados") ?? 0;
+    const noZip = numero("X-Documentos-No-Zip") ?? Math.max(0, pedidos - semXml - naoEncontrados);
+    return { bytes, pedidos, noZip, semXml, naoEncontrados };
+  } finally {
+    clearTimeout(relogio);
+  }
+}
