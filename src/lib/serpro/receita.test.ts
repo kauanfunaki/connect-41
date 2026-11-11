@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { corpoDoPedido, lerResposta, tagDaRequisicao, type RespostaLida } from "./regras";
-import { eventoNovo, gruposDeEventos, lerMatriz, lerSolicitacao, lerTipoDoPedido, pedidoDeObtencao, pedidoDeSolicitacao, tipoDoPedido } from "./eventos";
+import { amostraDosDados, eventoNovo, gruposDeEventos, lerMatriz, lerSolicitacao, lerTipoDoPedido, pedidoDeObtencao, pedidoDeSolicitacao, tipoDoPedido } from "./eventos";
 import { assuntoDoSocietario, instanteDaReceita, lerDetalhe, lerIndicador, lerLista, montarAssunto, montarCorpo, pedidoDaLista, pedidoDoIndicador } from "./caixaPostal";
 import { ESPERA_DO_PROTOCOLO_EM_CACHE_MS, FOLGA_MS, nomeDoRelatorio, passoDoProtocolo, passoDoRelatorio, pedidoDoProtocolo } from "./sitfis";
 import type { ResultadoDaChamada } from "./cliente";
@@ -77,6 +77,36 @@ describe("os Eventos de Atualização", () => {
       dados: { protocolo: "p1", esperaMs: 10000 },
     });
     expect(lerSolicitacao(lerResposta(429, ""))).toMatchObject({ ok: false });
+  });
+
+  // bug-624 (11/11/2026): na produção o pedido voltava 200 com o Aviso-005 e o
+  // protocolo não era achado. O formato real não ficou guardado: a leitura
+  // aceita as formas plausíveis.
+  it("acha o protocolo em texto codificado duas vezes, com aspas escapadas, chave em outra caixa ou aninhado", () => {
+    const comAviso = (dados: unknown) =>
+      lerResposta(200, JSON.stringify({
+        dados,
+        mensagens: [
+          { codigo: "[Sucesso-EVENTOSATUALIZACAO]", texto: "Requisição efetuada com sucesso." },
+          { codigo: "[Aviso-EVENTOSATUALIZACAO-005]", texto: "998 requisições restantes para consultas de eventos do tipo E0301 para PJ." },
+        ],
+      }));
+    const interno = JSON.stringify({ protocolo: "a1b2c3d4-0000-1111-2222-333344445555", TempoEsperaMedioEmMs: 4200, TempoLimiteEmMin: 20 });
+    const esperado = { ok: true, dados: { protocolo: "a1b2c3d4-0000-1111-2222-333344445555", esperaMs: 6200 } };
+    expect(lerSolicitacao(comAviso(JSON.stringify(interno)))).toEqual(esperado);
+    expect(lerSolicitacao(comAviso(JSON.stringify(interno).slice(0, -3)))).toEqual(esperado);
+    expect(lerSolicitacao(comAviso({ Protocolo: "a1b2c3d4-0000-1111-2222-333344445555", tempoEsperaMedioEmMs: 4200 }))).toEqual(esperado);
+    expect(lerSolicitacao(comAviso({ resultado: [{ protocolo: "a1b2c3d4-0000-1111-2222-333344445555", TempoEsperaMedioEmMs: 4200 }] }))).toEqual(esperado);
+  });
+
+  it("sem protocolo, o erro traz um trecho do `dados` sem os números de CPF/CNPJ", () => {
+    const r = lerSolicitacao(lerResposta(200, JSON.stringify({ dados: JSON.stringify({ situacao: "recebido", contribuinte: "11222333000181" }) })));
+    expect(r).toMatchObject({ ok: false });
+    const erro = (r as { erro: string }).erro;
+    expect(erro).toContain("situacao");
+    expect(erro).not.toContain("11222333000181");
+    expect(amostraDosDados(null)).toBe("null");
+    expect(amostraDosDados("")).toBe("(vazio)");
   });
 
   it("lê a matriz: dia, nada, e o \"x\" de quem não tem autorização", () => {
