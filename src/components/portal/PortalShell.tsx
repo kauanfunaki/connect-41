@@ -1,14 +1,17 @@
 "use client";
 
-import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ProvedorDaAtualizacao } from "@/components/shared/NavegacaoSemRecarregar";
 import { CircleHelp, CircleUserRound, LogOut, Menu, X } from "lucide-react";
 import { NavItem, classeDoItem } from "@/components/shell/NavLink";
+import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
-import { GRUPO_DA_SECAO, SECOES_DO_PORTAL, grupoDoCaminho, telasVisiveis } from "@/lib/portal/telas";
+import { GRUPO_DA_SECAO, grupoDoCaminho, menuDoPortal, telasVisiveis, type TelaDoPortal } from "@/lib/portal/telas";
+import { oQueOContadorDiz, type ContadoresDoMenu, type TelaComContador } from "@/lib/portal/contadoresDoMenu";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
 import { SugestaoDoPortal } from "./SugestaoDoPortal";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
@@ -25,6 +28,8 @@ function assinarTela(aviso: () => void) {
 const lerTela = () => window.matchMedia(TELA_GRANDE).matches;
 const lerTelaNoServidor = () => true;
 
+const ID_DO_ABRIR_MENU = "abrir-menu-do-portal";
+
 /**
  * A moldura do portal: sidebar com as telas, no lugar das abas no topo.
  *
@@ -40,6 +45,7 @@ export function PortalShell({
   bloqueadas = [],
   logo = null,
   sugestao = false,
+  contadores = {},
   children,
 }: {
   grupoNome: string | null;
@@ -51,29 +57,57 @@ export function PortalShell({
   logo?: { src: string; nome: string } | null;
   /** O botão "Sugestão ou problema" no rodapé (21/10/2026) — com as solicitações ligadas. */
   sugestao?: boolean;
+  /** Quantas coisas esperam o cliente nas telas que pedem ação (11/11/2026, P09). */
+  contadores?: ContadoresDoMenu;
   children: React.ReactNode;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   // O grupo da tela aberta (21/10/2026): o traço do título, o brilho e o
   // cartão do número pegam a cor dele (ver `[data-grupo]` no globals.css).
   const grupoDaTela = grupoDoCaminho(usePathname());
-  const visiveis = telasVisiveis(new Set(modulos), new Set(bloqueadas));
+  const menu = menuDoPortal(telasVisiveis(new Set(modulos), new Set(bloqueadas)));
   // A gaveta fechada (abaixo de lg) só saía da tela com translate: os links
   // seguiam no Tab e no leitor de tela (TalkBack, VoiceOver). `inert` tira os
   // dois; Esc fecha. Junto com o AppShell (07/10/2026), para os dois não
   // divergirem.
   const telaGrande = useSyncExternalStore(assinarTela, lerTela, lerTelaNoServidor);
   const gavetaFechada = !telaGrande && !menuAberto;
+  // Com a gaveta aberta no celular, o resto da tela fica inerte (11/11/2026,
+  // P28): o Tab e o leitor de tela não escapam para o conteúdo atrás do véu.
+  const gavetaPorCima = !telaGrande && menuAberto;
+
+  function fecharMenu() {
+    setMenuAberto(false);
+    setConfirmandoSaida(false);
+  }
+
   useEffect(() => {
     if (!menuAberto) return;
     function tecla(e: KeyboardEvent) {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       e.preventDefault();
       setMenuAberto(false);
+      setConfirmandoSaida(false);
     }
     document.addEventListener("keydown", tecla);
     return () => document.removeEventListener("keydown", tecla);
   }, [menuAberto]);
+
+  // O foco acompanha a gaveta (11/11/2026, P28): ao abrir, vai ao primeiro
+  // item do menu — antes ficava no botão escondido atrás do véu; ao fechar,
+  // volta ao "Abrir menu", de onde a pessoa saiu. Só no celular: no
+  // computador a coluna é fixa e não abre nem fecha.
+  const estavaAberto = useRef(false);
+  useEffect(() => {
+    if (telaGrande) return;
+    if (menuAberto) {
+      document.querySelector<HTMLElement>("#menu-do-portal nav a")?.focus();
+    } else if (estavaAberto.current) {
+      document.getElementById(ID_DO_ABRIR_MENU)?.focus();
+    }
+    estavaAberto.current = menuAberto;
+  }, [menuAberto, telaGrande]);
 
   return (
     // `h-dvh`, e não `h-screen` (07/10/2026): no navegador do celular 100vh é
@@ -81,7 +115,7 @@ export function PortalShell({
     <div className="flex h-dvh overflow-hidden bg-canvas" data-grupo={grupoDaTela ?? undefined}>
       <PularParaOConteudo />
       {menuAberto && (
-        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMenuAberto(false)} aria-hidden="true" />
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={fecharMenu} aria-hidden="true" />
       )}
 
       <aside
@@ -96,7 +130,7 @@ export function PortalShell({
               segue no menu: para o cliente, o item escrito é o caminho óbvio. */}
           <Link
             href="/portal"
-            onClick={() => setMenuAberto(false)}
+            onClick={fecharMenu}
             aria-label="Ir para o Início"
             className="inline-flex min-w-0 max-w-[184px] items-center rounded-md px-2 py-1 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
           >
@@ -124,7 +158,7 @@ export function PortalShell({
               span: o IconButton já é `relative`, e `absolute` nele dependeria da
               ordem do CSS para vencer. */}
           <span className="flex lg:hidden absolute right-2 top-1/2 -translate-y-1/2">
-            <IconButton onClick={() => setMenuAberto(false)} aria-label="Fechar menu">
+            <IconButton onClick={fecharMenu} aria-label="Fechar menu">
               <X size={18} />
             </IconButton>
           </span>
@@ -138,60 +172,56 @@ export function PortalShell({
         </div>
 
         <nav
-          onClick={() => setMenuAberto(false)}
+          onClick={fecharMenu}
           className="scroll-y scroll-gutter-stable flex-1 overflow-y-auto px-3 py-4 space-y-0.5"
           aria-label="Portal"
         >
-          {visiveis
-            .filter((i) => i.secao === null)
-            .map((i) => (
-              // Exato só o Início: "/portal" é o começo de todas as outras, e
-              // acenderia junto.
-              <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} exact={i.href === "/portal"} grupo={i.grupo} />
-            ))}
-          {SECOES_DO_PORTAL.map((secao) => {
-            const itens = visiveis.filter((i) => i.secao === secao);
-            if (itens.length === 0) return null;
+          {/* O Início, e logo abaixo o que pede ação do cliente (11/11/2026,
+              P10 — ficava no fim, em "Com a equipe"), com o número do que
+              espera por ele (P09). Exato só o Início: "/portal" é o começo de
+              todas as outras, e acenderia junto. */}
+          {menu.topo.map((i) => (
+            <ItemDoMenu key={i.href} tela={i} contadores={contadores} />
+          ))}
+          {menu.secoes.map(({ secao, telas }) => (
             // Fragmento, e não <div>: os itens ficam filhos diretos do <nav> e
             // ganham o mesmo `space-y-0.5` do resto — dentro da div eles
             // encostavam um no outro, como na sidebar do Connect não acontece.
-            return (
-              <Fragment key={secao}>
-                {/* O pontinho na cor do grupo da seção (21/10/2026), como o do
-                    setor no `Painel` da Home. */}
-                <p data-grupo={GRUPO_DA_SECAO[secao]} className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 c41-rotulo">
-                  <span aria-hidden className="size-1.5 flex-shrink-0 rounded-full bg-grupo" />
-                  {secao}
-                </p>
-                {itens.map((i) => (
-                  <NavItem key={i.href} href={i.href} icon={iconeDaTela(i)} label={i.rotulo} grupo={i.grupo} />
-                ))}
-              </Fragment>
-            );
-          })}
+            <Fragment key={secao}>
+              {/* O pontinho na cor do grupo da seção (21/10/2026), como o do
+                  setor no `Painel` da Home. */}
+              <p data-grupo={GRUPO_DA_SECAO[secao]} className="flex items-center gap-1.5 px-2.5 pt-4 pb-1.5 c41-rotulo">
+                <span aria-hidden className="size-1.5 flex-shrink-0 rounded-full bg-grupo" />
+                {secao}
+              </p>
+              {telas.map((i) => (
+                <ItemDoMenu key={i.href} tela={i} contadores={contadores} />
+              ))}
+            </Fragment>
+          ))}
         </nav>
 
         {/* Ajuda no rodapé, junto do sair: vale para qualquer tela, e no menu
             de telas ela se misturaria com o trabalho. "Minha conta" (senha,
             empresas e tema) entra acima das duas pelo mesmo motivo — escolha
             do Kauan na página de decisões, 08/10/2026. */}
-        <div className="border-t border-border px-3 py-3 flex-shrink-0 space-y-0.5" onClick={() => setMenuAberto(false)}>
-          <NavItem href="/portal/conta" icon={<CircleUserRound />} label="Minha conta" />
-          <NavItem href="/portal/ajuda" icon={<CircleHelp />} label="Ajuda" />
-          {sugestao && <SugestaoDoPortal />}
-          <form action={sairDoPortal}>
-            <button
-              type="submit"
-              className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-fs-4 font-medium")}
-            >
-              <LogOut size={16} className="flex-shrink-0" />
-              Sair
-            </button>
-          </form>
+        <div className="border-t border-border px-3 py-3 flex-shrink-0">
+          <div className="space-y-0.5" onClick={fecharMenu}>
+            <NavItem href="/portal/conta" icon={<CircleUserRound />} label="Minha conta" />
+            <NavItem href="/portal/ajuda" icon={<CircleHelp />} label="Ajuda" />
+            {sugestao && <SugestaoDoPortal />}
+          </div>
+          {/* O "Sair" separado por um fio e com confirmação (11/11/2026, P39):
+              encostado em Minha conta e Ajuda, um toque torto no celular
+              tirava a pessoa do portal — e com "lembrar de mim", ela nem
+              lembrava a senha. A confirmação é aqui mesmo, no lugar do botão. */}
+          <div className="mt-2 border-t border-border pt-2">
+            <SairDoPortal confirmando={confirmandoSaida} onConfirmar={setConfirmandoSaida} />
+          </div>
         </div>
       </aside>
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div inert={gavetaPorCima} className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Só no celular: é onde mora o botão do menu. No desktop a sidebar já
             está à vista, e uma barra vazia no topo só roubaria altura. */}
         <header className="lg:hidden h-14 flex-shrink-0 flex items-center gap-2 border-b border-border bg-topbar-bg px-4">
@@ -199,6 +229,7 @@ export function PortalShell({
               puxado para a borda para o ícone seguir alinhado ao conteúdo. Diz
               se a gaveta está aberta e qual ela é. */}
           <IconButton
+            id={ID_DO_ABRIR_MENU}
             size="xl"
             className="-ml-2.5"
             onClick={() => setMenuAberto(true)}
@@ -224,5 +255,88 @@ export function PortalShell({
         </main>
       </div>
     </div>
+  );
+}
+
+/** Um item do menu, com o número do que espera o cliente quando a tela tem. */
+function ItemDoMenu({ tela, contadores }: { tela: TelaDoPortal; contadores: ContadoresDoMenu }) {
+  const n = contadores[tela.href as TelaComContador] ?? 0;
+  return (
+    <NavItem
+      href={tela.href}
+      icon={iconeDaTela(tela)}
+      label={tela.rotulo}
+      exact={tela.href === "/portal"}
+      grupo={tela.grupo}
+      contador={n}
+      contadorDiz={n > 0 ? oQueOContadorDiz(tela.href, n) : undefined}
+    />
+  );
+}
+
+const ID_DO_SAIR = "sair-do-portal";
+const ID_DO_CANCELAR_SAIDA = "cancelar-saida-do-portal";
+
+/**
+ * O "Sair" com confirmação no próprio lugar (11/11/2026, P39) — sem
+ * `window.confirm`, que no app instalado abre uma caixa do sistema fora do
+ * desenho. O foco vai ao "Cancelar" (o caminho seguro) e volta ao "Sair" se a
+ * pessoa desistir; Esc também desiste, sem fechar a gaveta.
+ */
+function SairDoPortal({ confirmando, onConfirmar }: { confirmando: boolean; onConfirmar: (sim: boolean) => void }) {
+  const estavaConfirmando = useRef(false);
+  useEffect(() => {
+    if (confirmando) document.getElementById(ID_DO_CANCELAR_SAIDA)?.focus();
+    else if (estavaConfirmando.current) document.getElementById(ID_DO_SAIR)?.focus();
+    estavaConfirmando.current = confirmando;
+  }, [confirmando]);
+
+  if (!confirmando) {
+    return (
+      <button
+        id={ID_DO_SAIR}
+        type="button"
+        onClick={() => onConfirmar(true)}
+        className={classeDoItem(false, "w-[calc(100%+0.75rem)] text-fs-4 font-medium")}
+      >
+        <LogOut size={16} className="flex-shrink-0" />
+        Sair
+      </button>
+    );
+  }
+
+  return (
+    <div
+      role="group"
+      aria-labelledby="sair-do-portal-pergunta"
+      onKeyDown={(e) => {
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        onConfirmar(false);
+      }}
+      className="rounded-lg border border-border bg-surface px-3 py-3"
+    >
+      <p id="sair-do-portal-pergunta" className="text-ui font-medium text-fg">
+        Sair do portal?
+      </p>
+      <p className="mt-0.5 text-helper text-fg-muted">Para voltar, você entra de novo com seu e-mail e senha.</p>
+      <div className="mt-3 flex gap-2">
+        <Button id={ID_DO_CANCELAR_SAIDA} type="button" variant="secondary" size="sm" className="flex-1 justify-center" onClick={() => onConfirmar(false)}>
+          Cancelar
+        </Button>
+        <form action={sairDoPortal} className="flex flex-1">
+          <BotaoDeSair />
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function BotaoDeSair() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="danger" size="sm" loading={pending} loadingLabel="Saindo…" className="w-full justify-center">
+      Sair
+    </Button>
   );
 }
