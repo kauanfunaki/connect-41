@@ -40,6 +40,8 @@ const PASTAS = [
   "revisao-contabil",
   // Contábil Core (09/11/2026): nasceu com o gate.
   "contabil-core",
+  // Contratos e honorários (11/11/2026, vindo do Aditiva Pronto): nasceu com o gate.
+  "honorarios",
 ];
 
 function arquivos(dir: string): string[] {
