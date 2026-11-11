@@ -114,6 +114,12 @@ const PUBLIC_PATHS = [
   // rota responde ao desafio de verificação, comparando o verify token em
   // tempo constante (ver src/lib/whatsapp/assinatura.ts).
   "/api/integrations/whatsapp/webhook/",
+  // Robô da auditoria de contratos (11/11/2026, vindo do Aditiva Pronto): o
+  // programa do PC da rede, sem sessão. Quem autentica é a rota, pelo token da
+  // automação `auditoria_contratos` do Ops Center (src/lib/honorarios/robo.ts),
+  // e o módulo precisa estar ligado. Os caminhos são os do Aditiva, para o robô
+  // não mudar.
+  "/api/audit/robot/",
 ];
 
 // Headers de identidade que SÓ podem ser setados por este proxy. Qualquer
