@@ -17,6 +17,9 @@ import { enviarLinkParaCriarSenha, trocarSenhaDoPortal } from "./actions";
 import { montarTutorialDoPortal } from "@/lib/tutorial/servidor";
 import { BotaoVerTutorial } from "@/components/tutorial/TutorialDoPrimeiroAcesso";
 import { concluirTutorialDoPortal } from "@/app/(portal)/portal/tutorial-actions";
+import { PushNotificationToggle } from "@/components/notificacoes/PushNotificationToggle";
+import { getVapidPublicKey } from "@/lib/vapid";
+import { salvarPushDoPortal, removerPushDoPortal } from "@/app/(portal)/portal/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +70,7 @@ export default async function MinhaContaDoPortalPage() {
     <PageContainer>
       <PortalCabecalho
         titulo="Minha conta"
-        descricao="A sua senha, as empresas do seu acesso e o tema do portal."
+        descricao="A sua senha, as empresas do seu acesso, os avisos e o tema do portal."
         somenteLeitura={false}
       />
 
@@ -109,6 +112,23 @@ export default async function MinhaContaDoPortalPage() {
         {lista.length > 0 && (
           <p className="mt-2 text-helper text-fg-muted">Para incluir ou tirar uma empresa do seu acesso, fale com o escritório.</p>
         )}
+      </section>
+
+      {/* Os avisos do aparelho também aqui (11/11/2026, P27): o botão só
+          existia no fim do Início, e quem queria desligar não achava. É o
+          mesmo componente e as mesmas ações do Início. Quando o navegador não
+          tem push, o cartão some sozinho e fica só a frase do e-mail. */}
+      <section aria-labelledby="conta-avisos" className="mb-8 max-w-3xl">
+        <TituloDeSecao id="conta-avisos">Avisos</TituloDeSecao>
+        <p className="mb-3 text-helper text-fg-muted">
+          O aviso por e-mail chega sempre que a equipe precisar de você. Neste aparelho, você também pode receber um aviso na tela.
+        </p>
+        <PushNotificationToggle
+          publicKey={getVapidPublicKey()}
+          acoes={{ salvar: salvarPushDoPortal, remover: removerPushDoPortal }}
+          descricao="Avisamos neste aparelho quando houver pendência, mensagem ou conta a aprovar. O que é avisado fica só aqui dentro."
+          semChaves="esconder"
+        />
       </section>
 
       <section aria-labelledby="conta-tema" className="mb-8 max-w-3xl">
