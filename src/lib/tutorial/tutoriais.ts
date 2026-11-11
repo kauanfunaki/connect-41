@@ -379,8 +379,8 @@ export function tutorialDoPortal(o: OpcoesDoPortal): Tutorial {
           chave: "processos",
           icone: "processo",
           titulo: "Os processos das suas empresas",
-          texto: "Em Processos, acompanhe etapa por etapa a abertura, as alterações, a baixa e as licenças das suas empresas.",
-          itens: tem("/portal/exigencias") ? ["Em Exigências fica o que os órgãos pediram."] : [],
+          texto: "Em Processos, acompanhe etapa por etapa a abertura, as alterações, o encerramento e as licenças das suas empresas.",
+          itens: tem("/portal/exigencias") ? ["Em “O que os órgãos pediram” fica o que cada órgão exigiu, e a equipe resolve."] : [],
         }
       : null,
     {

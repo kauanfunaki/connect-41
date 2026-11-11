@@ -160,7 +160,8 @@ describe("tutorial do portal", () => {
   });
 
   it("processos do Societário", () => {
-    expect(textoDe(portal(["societario_processos"]), "processos")).toContain("Exigências");
+    // O menu chama a tela de "O que os órgãos pediram" desde 11/11/2026 (P38).
+    expect(textoDe(portal(["societario_processos"]), "processos")).toContain("O que os órgãos pediram");
     expect(chaves(portal([]))).not.toContain("processos");
   });
 
