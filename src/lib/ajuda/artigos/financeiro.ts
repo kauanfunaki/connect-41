@@ -518,7 +518,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Enviar uma mensagem",
         passos: [
           "Com a conversa aberta, escreva no campo “Mensagem”.",
-          "Para anexar, clique em “Escolher arquivo” ou arraste o arquivo. Use “Outro anexo” para mandar mais de um.",
+          "Para anexar, clique em “Escolher arquivo” ou arraste os arquivos: dá para escolher vários de uma vez, e “Tirar” remove um da lista.",
           "Clique em “Enviar mensagem”.",
           "O cliente recebe um e-mail avisando que há mensagem nova e lê o conteúdo no portal.",
         ],

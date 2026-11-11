@@ -78,9 +78,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "O primeiro acesso, com uma senha que só você sabe.",
     icone: "entrar",
     passos: [
-      "Quando o escritório libera o seu acesso, chega um e-mail com o botão Redefinir senha. Clique nele.",
-      "Escolha a sua senha, com ao menos 8 caracteres, repita em Confirme a senha e clique em Salvar senha.",
-      "Clique em Entrar no portal, digite o seu e-mail e a senha e clique em Entrar. Marque Lembrar de mim para não precisar entrar de novo por 30 dias neste aparelho.",
+      "Quando o escritório libera o seu acesso, chega um e-mail com o botão Redefinir senha. Toque nele.",
+      "Escolha a sua senha, com ao menos 8 caracteres, repita em Confirme a senha e toque em Salvar senha.",
+      "Toque em Entrar no portal, digite o seu e-mail e a senha e toque em Entrar. Marque Lembrar de mim para não precisar entrar de novo por 30 dias neste aparelho.",
       "Se o seu e-mail tem acesso a mais de um cliente, escolha em qual você quer entrar.",
       "O link do e-mail vale por uma hora. Se ele vencer, use Esqueci minha senha na tela de entrada.",
     ],
@@ -92,7 +92,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "O Início mostra o que a equipe precisa de você e o resumo das suas empresas.",
     icone: "inicio",
     passos: [
-      "Ao entrar no portal, você chega ao Início. Para voltar a ele, clique em Início no menu ou no logo.",
+      "Ao entrar no portal, você chega ao Início. Para voltar a ele, toque em Início no menu ou no logo.",
       "Em \"O que precisa de você\" aparece o que espera a sua resposta ou aprovação, com o número e um botão que leva direto à tela.",
       "Quando não há nada esperando, aparece \"Nada esperando por você\".",
       {
@@ -125,7 +125,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Para saber na hora quando a equipe precisar de você.",
     icone: "sino",
     passos: [
-      "No Início, no quadro \"Notificações no navegador\", no fim da tela, clique em Ativar.",
+      "Em Minha conta, na parte Avisos (ou no fim do Início), toque em Ativar no quadro \"Notificações no navegador\".",
       "Quando o navegador perguntar, permita as notificações.",
       "No iPhone, os avisos só chegam com o portal instalado na tela de início.",
       "O aviso diz só que há algo novo, nunca o valor ou o conteúdo. O detalhe fica aqui dentro do portal.",
@@ -142,17 +142,17 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     icone: "ceci",
     soComCeci: true,
     passos: [
-      "Clique na Ceci, no canto de baixo da tela, para abrir o chat. Ela aparece em todas as telas do portal.",
+      "Toque na Ceci, no canto de baixo da tela, para abrir o chat. Ela aparece em todas as telas do portal.",
       "Escreva a sua pergunta e aperte Enter, ou toque numa das sugestões. Por exemplo: \"O que vence esta semana?\", \"Tenho alguma pendência?\" ou \"Em que pé está a alteração do contrato?\".",
       "A Ceci consulta o que o portal já mostra das suas empresas: pendências, contas a pagar e a receber, processos, notas fiscais e solicitações. Quando a resposta tem uma tela, aparece um botão para abri-la.",
       {
-        texto: "Quando você precisa de algo da equipe, a Ceci prepara uma solicitação. Clique em Revisar e enviar: a tela de Nova solicitação abre preenchida. Confira, ajuste o que quiser e clique em Enviar solicitação.",
+        texto: "Quando você precisa de algo da equipe, a Ceci prepara uma solicitação. Toque em Revisar e enviar: a tela de Nova solicitação abre preenchida. Confira, ajuste o que quiser e toque em Enviar solicitação.",
         modulos: ["portal_solicitacoes"],
         telas: ["/portal/solicitacoes"],
       },
       "A Ceci só consulta. Ela não envia nada sozinha, não paga, não aprova, não responde pendência e não muda cadastro.",
       "Ela é uma inteligência artificial e pode errar. Antes de decidir algo importante, confira na tela ou fale com a equipe.",
-      "Cada acesso faz até {perguntas} perguntas por dia. Para começar outra conversa, clique em + no topo do chat.",
+      "Cada acesso faz até {perguntas} perguntas por dia. Para começar outra conversa, toque em + no topo do chat.",
     ],
   },
   {
@@ -163,9 +163,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     modulos: ["portal_solicitacoes"],
     telas: ["/portal/solicitacoes"],
     passos: [
-      "Abra Solicitações e clique em Nova solicitação.",
+      "Abra Solicitações e toque em Nova solicitação.",
       "Escolha a empresa, se tiver mais de uma, e o assunto. Cada assunto mostra em quantos dias úteis a equipe responde.",
-      "Conte o que você precisa, anexe os arquivos e clique em Enviar solicitação.",
+      "Conte o que você precisa, anexe os arquivos e toque em Enviar solicitação.",
       "A solicitação ganha um número, e você é avisado por e-mail quando a equipe responder. A conversa continua ali mesmo.",
       "Quando a equipe precisar de algo seu, a solicitação fica como \"Aguardando você\". Se não precisar mais, use Cancelar solicitação.",
     ],
@@ -178,9 +178,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     modulos: ["portal_solicitacoes"],
     telas: ["/portal/solicitacoes"],
     passos: [
-      "No rodapé do menu, clique em Sugestão ou problema.",
+      "No rodapé do menu, toque em Sugestão ou problema.",
       "Dê uma nota de 1 a 5 para o portal e conte o que aconteceu ou o que você sugere. A equipe recebe junto a tela em que você estava.",
-      "Clique em Enviar. A mensagem vira uma solicitação, com número, e a resposta chega por ela, em Solicitações.",
+      "Toque em Enviar. A mensagem vira uma solicitação, com número, e a resposta chega por ela, em Solicitações.",
     ],
   },
   {
@@ -193,7 +193,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     passos: [
       "Quando o escritório manda um comunicado, você recebe um e-mail e o aviso aparece no Início, em \"O que precisa de você\".",
       "Abra Comunicados. Os que você ainda não leu aparecem destacados, com a etiqueta Novo.",
-      "Clique para ler o texto inteiro e baixar os anexos.",
+      "Toque para ler o texto inteiro e baixar os anexos.",
       { texto: "Dúvida sobre um comunicado? Abra uma solicitação.", telas: ["/portal/solicitacoes"] },
     ],
   },
@@ -208,8 +208,8 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     telas: ["/portal/envios"],
     passos: [
       "Abra Documentos do escritório. Os que você ainda não abriu aparecem destacados, com a etiqueta Novo.",
-      "Clique no documento para ler o texto. Se houver anexo, clique em Baixar anexo.",
-      "Quando o documento pede o seu aceite, ele aparece no Início, em \"O que precisa de você\". Confira o Nome completo, marque \"Li e concordo\" e clique em Assinar documento.",
+      "Toque no documento para ler o texto. Se houver anexo, toque em Baixar anexo.",
+      "Quando o documento pede o seu aceite, ele aparece no Início, em \"O que precisa de você\". Confira o Nome completo, marque \"Li e concordo\" e toque em Assinar documento.",
       "Ficam registrados o seu nome, a data e a hora. Basta um aceite por documento: depois dele, a tela mostra quem aceitou e quando.",
       "Se o documento também chegou por e-mail, o link do e-mail abre o mesmo documento.",
     ],
@@ -223,8 +223,8 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     telas: ["/portal/arquivos"],
     passos: [
       "Abra Arquivos. Se você tem mais de uma empresa, escolha a empresa no topo.",
-      "Clique numa pasta para ver o que tem dentro. PDF e imagem abrem no navegador; os outros arquivos são baixados.",
-      "Para mandar arquivos ao escritório, clique em Enviar arquivos, arraste os arquivos ou clique para escolher, e depois em Enviar. Eles vão para a pasta Enviados pelo cliente, e a equipe é avisada.",
+      "Toque numa pasta para ver o que tem dentro. PDF e imagem abrem no navegador; os outros arquivos são baixados.",
+      "Para mandar arquivos ao escritório, toque em Enviar arquivos, arraste os arquivos ou toque para escolher, e depois em Enviar. Eles vão para a pasta Enviados pelo cliente, e a equipe é avisada.",
       "Cada arquivo pode ter até 10 MB. Vale PDF, imagem, XML, Word, Excel, ZIP e texto (TXT, CSV, OFX).",
     ],
   },
@@ -237,9 +237,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     modulos: ["bpo_pendencias", "portal_solicitacoes"],
     telas: ["/portal/pendencias"],
     passos: [
-      "Abra Pendências, ou clique em Responder no Início. Os pedidos que esperam você aparecem como \"Aguardando você\", com o prazo.",
-      "Clique no pedido para ver o que a equipe precisa.",
-      "Escreva em Mensagem, anexe os arquivos em Anexos e clique em Enviar resposta.",
+      "Abra Pendências, ou toque em Responder no Início. Os pedidos que esperam você aparecem como \"Aguardando você\", com o prazo.",
+      "Toque no pedido para ver o que a equipe precisa.",
+      "Escreva em Mensagem, anexe os arquivos em Anexos e toque em Enviar resposta.",
       "A equipe é avisada na hora. O pedido fica como Respondida até a equipe dar como resolvido.",
       "Se o prazo passar sem resposta, você recebe um lembrete.",
     ],
@@ -253,10 +253,10 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     telas: ["/portal/aprovacoes"],
     passos: [
       "Abra Aprovações para ver as contas que esperam você.",
-      "Clique em Aprovar na conta, ou marque várias e clique em Aprovar selecionadas.",
+      "Toque em Aprovar na conta, ou marque várias e toque em Aprovar selecionadas.",
       "\"Marcar todas dentro do meu teto\" seleciona de uma vez as contas que você pode aprovar.",
       "Uma conta \"Fora do teto\" passa do valor que você pode aprovar e precisa de alguém da sua empresa com teto maior.",
-      "Para reprovar, clique em Reprovar e escreva o motivo. Ele vai para quem lançou a conta.",
+      "Para reprovar, toque em Reprovar e escreva o motivo. Ele vai para quem lançou a conta.",
     ],
   },
   {
@@ -270,7 +270,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     passos: [
       "Abra Conversa e escolha a empresa, se tiver mais de uma.",
       "Escreva em Mensagem e, se quiser, anexe arquivos em Anexos.",
-      "Clique em Enviar mensagem. A equipe é avisada na hora e responde aqui mesmo.",
+      "Toque em Enviar mensagem. A equipe é avisada na hora e responde aqui mesmo.",
     ],
   },
   {
@@ -281,11 +281,11 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     modulos: ["societario_processos"],
     telas: ["/portal/processos"],
     passos: [
-      "Abra Processos e clique no processo.",
+      "Abra Processos e toque no processo.",
       "Em Etapas, veja o que já foi feito, o que falta e a previsão.",
-      "Em Documentos, descreva e anexe o que a equipe pediu e clique em Guardar documentos.",
-      "Em Conversa com a equipe, escreva e clique em Enviar mensagem.",
-      { texto: "Em Exigências ficam os ajustes que os órgãos pediram nos processos das suas empresas.", telas: ["/portal/exigencias"] },
+      "Em Documentos, descreva e anexe o que a equipe pediu e toque em Guardar documentos.",
+      "Em Conversa com a equipe, escreva e toque em Enviar mensagem.",
+      { texto: "Na tela O que os órgãos pediram ficam os ajustes que a Junta, a Receita ou a prefeitura pediram nos processos das suas empresas.", telas: ["/portal/exigencias"] },
     ],
   },
   {
@@ -306,9 +306,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
         modulos: ["bpo_fluxo_caixa"],
         telas: ["/portal/fluxo-de-caixa"],
       },
-      { texto: "Relatório mostra o mês consolidado por empresa.", modulos: ["bpo_fluxo_caixa"], telas: ["/portal/relatorios"] },
+      { texto: "Resumo do mês por empresa mostra o mês de cada empresa numa página só.", modulos: ["bpo_fluxo_caixa"], telas: ["/portal/relatorios"] },
       {
-        texto: "A DRE mostra o resultado de cada empresa, mês a mês. Para ver os doze meses lado a lado, abra o campo do mês e escolha “Ano inteiro”.",
+        texto: "A DRE (Resultado do mês) mostra o resultado de cada empresa, mês a mês. Para ver os doze meses lado a lado, abra o campo do mês e escolha “Ano inteiro”.",
         modulos: ["bpo_dre"],
         telas: ["/portal/dre"],
       },
@@ -327,7 +327,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     icone: "documentos",
     telas: ["/portal/documentos"],
     passos: [
-      "Abra Documentos fiscais no menu, ou clique em \"Ver documentos fiscais\" nos Atalhos do Início.",
+      "Abra Documentos fiscais no menu, ou toque em \"Ver documentos fiscais\" nos Atalhos do Início.",
       "Em Filtros, escolha o mês em Competência para ver só as notas dele. Quem tem mais de uma empresa também escolhe a Empresa.",
       "Se faltar alguma nota que você esperava ver, fale com a equipe.",
     ],
@@ -351,9 +351,9 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Em Minha conta: a sua senha, as empresas do seu acesso e o tema claro ou escuro.",
     icone: "conta",
     passos: [
-      "No menu, clique em Minha conta, logo acima de Ajuda e Sair.",
-      "Em Senha, digite a senha atual e a nova, com ao menos 8 caracteres. Repita a nova em Confirme a nova senha e clique em Salvar senha.",
-      "Entra com o Google e nunca criou uma senha, ou esqueceu a atual? Clique em Enviar link para criar senha e abra o link que chega no seu e-mail.",
+      "No menu, toque em Minha conta, logo acima de Ajuda e Sair.",
+      "Em Senha, digite a senha atual e a nova, com ao menos 8 caracteres. Repita a nova em Confirme a nova senha e toque em Salvar senha.",
+      "Entra com o Google e nunca criou uma senha, ou esqueceu a atual? Toque em Enviar link para criar senha e abra o link que chega no seu e-mail.",
       "Em Empresas, veja as empresas que o seu acesso enxerga. Para incluir ou tirar uma, fale com o escritório.",
       "Em Tema, escolha Do aparelho, Claro ou Escuro. Do aparelho segue o tema do seu celular ou computador.",
     ],
@@ -364,7 +364,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     resumo: "Uma senha nova pelo e-mail, sem precisar falar com ninguém.",
     icone: "senha",
     passos: [
-      "Na tela de entrada do portal, clique em Esqueci minha senha.",
+      "Na tela de entrada do portal, toque em Esqueci minha senha.",
       "Digite o seu e-mail e abra o link que chega na sua caixa de entrada.",
       "Escolha a senha nova e entre de novo.",
     ],

@@ -23,8 +23,12 @@ export function PageHeader({ title, subtitle, action, meta }: Props) {
             diz de quem ela é sem ocupar uma linha de texto. Fora de setor, e no
             portal, é o azul da marca. */}
         <span aria-hidden className="block h-[3px] w-7 rounded-full bg-[var(--c41-setor)] mb-3" />
-        {/* O título na letra da área de uso, no Connect da equipe (28/10/2026, `--c41-titulo`). */}
-        <h1 className="text-display font-bold text-[var(--c41-titulo,var(--c41-fg))] tracking-[-0.02em] leading-tight">{title}</h1>
+        {/* O título na letra da área de uso, no Connect da equipe (28/10/2026, `--c41-titulo`).
+            No celular um degrau abaixo (11/11/2026, polimento do portal): os
+            30px do `display` quebravam o título em três linhas e empurravam a
+            tela para baixo. Vale para o Connect da equipe também — no celular
+            dele o problema é o mesmo; do `sm` para cima nada muda. */}
+        <h1 className="text-title sm:text-display font-bold text-[var(--c41-titulo,var(--c41-fg))] tracking-[-0.02em] leading-tight">{title}</h1>
         {/* Subtítulo em 14px e no cinza do texto de apoio, não no "mudo" (revisão
             de 05/10: o Kauan achava títulos e descrições apagados demais). */}
         {subtitle && <p className="text-label text-fg-secondary mt-2 max-w-[78ch] leading-relaxed">{subtitle}</p>}

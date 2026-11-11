@@ -89,6 +89,15 @@ function Entrada({
     window.addEventListener("pageshow", destravar);
     return () => window.removeEventListener("pageshow", destravar);
   }, []);
+  // O foco no e-mail só com mouse (11/11/2026, P41): no celular o `autoFocus`
+  // abria o teclado assim que a tela carregava, e ele cobria o título e o
+  // "Entrar" — a pessoa nem via onde estava. Com ponteiro fino (computador), o
+  // foco segue indo direto ao campo.
+  useEffect(() => {
+    if (estadoInicial && "escolher" in estadoInicial) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    document.getElementById("email")?.focus();
+  }, [estadoInicial]);
 
   // Segundo passo: a senha (ou o Google) conferiu em mais de um cliente. A
   // senha não volta para a tela — o token da escolha já carrega as contas
@@ -138,7 +147,7 @@ function Entrada({
 
       <form action={formAction} className="space-y-4">
         <CampoForm label="E-mail" htmlFor="email" required>
-          <Input id="email" name="email" type="email" autoComplete="username" required autoFocus />
+          <Input id="email" name="email" type="email" autoComplete="username" required />
         </CampoForm>
 
         <CampoForm label="Senha" htmlFor="senha" required>
@@ -190,19 +199,27 @@ function Entrada({
         </>
       )}
 
-      <p className="mt-4 text-helper text-fg-muted text-center">
-        <Link href="/portal/esqueci-senha" className="text-brand hover:underline">
-          Esqueci minha senha
-        </Link>
-        {" · "}
-        <Link href="/portal/privacidade" className="text-brand hover:underline">
-          Privacidade
-        </Link>
-      </p>
+      {/* Polimento do portal (11/11/2026, P07): eram dois links de 13px na
+          mesma linha, "Esqueci minha senha · Privacidade", com uns 18px de alvo
+          cada — no celular o dedo acertava o vizinho. O "Esqueci" vira botão
+          fantasma da largura do cartão (é a saída de quem travou na senha); a
+          Privacidade desce para o pé, sozinha, longe dos botões. */}
+      <Button href="/portal/esqueci-senha" variant="ghost" className="mt-3 w-full justify-center">
+        Esqueci minha senha
+      </Button>
 
       {/* 05/10/2026: quem ainda não é cliente chega ao login e não tinha para
           onde ir. Botão, e não link (regra de 05/10): é a outra saída da tela. */}
       {fichaDisponivel && <NaoPossuiConta />}
+
+      <p className="mt-5 text-center">
+        <Link
+          href="/portal/privacidade"
+          className="inline-flex min-h-11 items-center rounded-md px-2 text-helper text-fg-muted underline-offset-2 hover:text-fg hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        >
+          Privacidade
+        </Link>
+      </p>
     </Card>
   );
 }

@@ -133,7 +133,7 @@ describe("a ajuda (passosDoPortal)", () => {
   it("linhas que apontam para outra tela bloqueada saem do passo", () => {
     const passos = passosDoPortal(TODOS, { variasEmpresas: false, bloqueadas: new Set(["/portal/exigencias", "/portal/solicitacoes"]) });
     const processo = passos.find((p) => p.chave === "processo")!;
-    expect(processo.passos.some((l) => l.includes("Exigências"))).toBe(false);
+    expect(processo.passos.some((l) => l.includes("O que os órgãos pediram"))).toBe(false);
     const comunicado = passos.find((p) => p.chave === "comunicado")!;
     expect(comunicado.passos.some((l) => l.includes("Abra uma solicitação"))).toBe(false);
   });

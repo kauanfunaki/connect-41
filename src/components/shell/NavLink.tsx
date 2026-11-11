@@ -105,6 +105,11 @@ type NavItemProps = {
    * novas): o número no fim da linha; na faixa, um ponto. Zero não mostra nada.
    */
   contador?: number;
+  /**
+   * O que o leitor de tela lê depois do nome, no lugar de "3 novas" (portal,
+   * 11/11/2026): "Pendências, 3 esperando você".
+   */
+  contadorDiz?: string;
   /** O item abre a janela ao lado (`PainelDoItem`); `telas`: quantas há nela. */
   menu?: { aberto: boolean; onClick: () => void; painelId: string; telas?: number };
   /**
@@ -155,7 +160,7 @@ function BarraAtiva() {
   return <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full bg-[var(--c41-setor)]" />;
 }
 
-export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, menu, area, semLink = false }: NavItemProps) {
+export function NavItem({ href, icon, label, exact = false, ativo, comTelas = false, grupo, contador = 0, contadorDiz, menu, area, semLink = false }: NavItemProps) {
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
@@ -224,6 +229,10 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
       href={href}
       aria-current={active ? "page" : undefined}
       data-grupo={area ?? grupo ?? undefined}
+      // A marca para o alvo de toque de 44px do portal (`.c41-toque` no
+      // globals.css, 11/11/2026): o item é `flex`, e a regra só pegava
+      // `a.inline-flex` — no celular ele ficava com 36px.
+      data-item-do-menu=""
       className={area !== undefined ? classeDoItemComArea(active, "text-label font-medium") : classeDoItem(active, "text-label font-medium")}
     >
       {active && <BarraAtiva />}
@@ -236,11 +245,11 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
       {contador > 0 && (
         // Texto `sr-only` em vez de `aria-label` no span, que não é lido com
         // segurança (30/10/2026): "Solicitações, 3 novas".
-        <span className="ml-auto">
+        <span className="ml-auto flex-shrink-0">
           <span aria-hidden>
             <Contador valor={contador} tom={active && area === undefined ? "neutro" : "alerta"} pequeno />
           </span>
-          <span className="sr-only">, {contador} {contador === 1 ? "nova" : "novas"}</span>
+          <span className="sr-only">, {contadorDiz ?? `${contador} ${contador === 1 ? "nova" : "novas"}`}</span>
         </span>
       )}
     </Link>

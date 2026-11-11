@@ -65,7 +65,17 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     grupo: "fiscal",
     descricao: "Notas emitidas e recebidas pelas suas empresas.",
   },
-  { href: "/portal/dre", rotulo: "DRE", modulo: "bpo_dre", secao: "Financeiro", grupo: "financeiro", descricao: "Demonstrativo de resultado por empresa e mês." },
+  // Os nomes em palavras do cliente (polimento do portal, 11/11/2026): "DRE" e
+  // "Relatório" não diziam o que havia dentro. A sigla fica entre parênteses —
+  // é como o contador fala com ele — e a Ajuda explica o termo.
+  {
+    href: "/portal/dre",
+    rotulo: "Resultado do mês (DRE)",
+    modulo: "bpo_dre",
+    secao: "Financeiro",
+    grupo: "financeiro",
+    descricao: "Demonstrativo de resultado por empresa e mês.",
+  },
   {
     href: "/portal/fluxo-de-caixa",
     rotulo: "Fluxo de caixa",
@@ -74,7 +84,14 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     grupo: "financeiro",
     descricao: "O que entrou e saiu nos últimos seis meses, e o que vence daqui para frente.",
   },
-  { href: "/portal/relatorios", rotulo: "Relatório", modulo: "bpo_fluxo_caixa", secao: "Financeiro", grupo: "financeiro", descricao: "O mês consolidado por empresa." },
+  {
+    href: "/portal/relatorios",
+    rotulo: "Resumo do mês por empresa",
+    modulo: "bpo_fluxo_caixa",
+    secao: "Financeiro",
+    grupo: "financeiro",
+    descricao: "O mês consolidado por empresa.",
+  },
   { href: "/portal/pagar", rotulo: "Contas a pagar", modulo: "bpo_contas_pagar", secao: "Financeiro", grupo: "financeiro", descricao: "O que suas empresas têm a pagar." },
   { href: "/portal/receber", rotulo: "Contas a receber", modulo: "bpo_contas_receber", secao: "Financeiro", grupo: "financeiro", descricao: "O que suas empresas têm a receber." },
   {
@@ -91,15 +108,18 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     modulo: "societario_processos",
     secao: "Societário",
     grupo: "processos",
-    descricao: "Abertura, alterações, baixa e licenças das suas empresas.",
+    // "Encerramento da empresa", e não "baixa" (11/11/2026, P22): para o
+    // cliente, baixa é de conta paga.
+    descricao: "Abertura, alterações, encerramento da empresa e licenças.",
   },
   {
     href: "/portal/exigencias",
-    rotulo: "Exigências",
+    // "Exigências" é a palavra da Junta e da prefeitura (11/11/2026, P38).
+    rotulo: "O que os órgãos pediram",
     modulo: "societario_processos",
     secao: "Societário",
     grupo: "processos",
-    descricao: "O que os órgãos pediram nos processos das suas empresas.",
+    descricao: "Documentos e correções que a Junta, a Receita ou a prefeitura pediram nos processos das suas empresas.",
   },
   {
     href: "/portal/solicitacoes",
@@ -170,6 +190,34 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     ocultaCom: "portal_solicitacoes",
   },
 ];
+
+/**
+ * As telas que pedem uma ação do cliente (polimento do portal, 11/11/2026,
+ * P10): no menu sobem para logo depois do Início, nesta ordem — ficavam no fim,
+ * em "Com a equipe", abaixo de todo o financeiro. A seção delas não muda (a
+ * lista da administração e o tutorial seguem agrupando por ela); só o menu do
+ * cliente as tira de lá.
+ */
+export const TELAS_QUE_PEDEM_ACAO: readonly string[] = ["/portal/pendencias", "/portal/aprovacoes", "/portal/solicitacoes"];
+
+export type MenuDoPortal = {
+  /** O Início, as que pedem ação e as outras telas gerais, sem título em cima. */
+  topo: TelaDoPortal[];
+  secoes: { secao: SecaoDoPortal; telas: TelaDoPortal[] }[];
+};
+
+/** Como o menu do portal arruma as telas visíveis (ver `TELAS_QUE_PEDEM_ACAO`). */
+export function menuDoPortal(visiveis: readonly TelaDoPortal[]): MenuDoPortal {
+  const pedemAcao = TELAS_QUE_PEDEM_ACAO.flatMap((href) => visiveis.filter((t) => t.href === href));
+  const noTopo = new Set(TELAS_QUE_PEDEM_ACAO);
+  const gerais = visiveis.filter((t) => t.secao === null);
+  return {
+    topo: [...gerais.filter((t) => t.href === "/portal"), ...pedemAcao, ...gerais.filter((t) => t.href !== "/portal")],
+    secoes: SECOES_DO_PORTAL.map((secao) => ({ secao, telas: visiveis.filter((t) => t.secao === secao && !noTopo.has(t.href)) })).filter(
+      (s) => s.telas.length > 0
+    ),
+  };
+}
 
 /**
  * As telas que nunca se bloqueiam: o Início é a porta de entrada (e o "Voltar

@@ -5,6 +5,7 @@ import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { GlossarioDoPortal } from "@/components/portal/GlossarioDoPortal";
 import { iconeDaTela } from "@/components/portal/iconeDaTela";
 import { CentralDeAjuda, type PassoDaAjuda, type TelaDaAjuda } from "@/components/ajuda/CentralDeAjuda";
 import { sessaoAtivaDoPortal } from "@/app/(portal)/usuario";
@@ -105,7 +106,12 @@ export default async function AjudaDoPortalPage() {
         exemploDeBusca="Ex.: aprovar pagamento, senha, celular…"
         focarBusca={false}
         rodape={
-          // O `Card` (07/10/2026): era ele escrito à mão.
+          <>
+          {/* Os termos do escritório explicados (11/11/2026, P31), antes do
+              "Não achou": quem não entendeu uma palavra acha aqui sem precisar
+              perguntar. Outras telas levam direto ao termo (`linkDoTermo`). */}
+          <GlossarioDoPortal />
+          {/* O `Card` (07/10/2026): era ele escrito à mão. */}
           <Card as="section" className="flex flex-wrap items-center justify-between gap-4 p-5">
             <div className="min-w-0 flex-1 basis-64">
               <p className="text-card-title font-semibold text-fg">Não achou o que procurava?</p>
@@ -128,6 +134,7 @@ export default async function AjudaDoPortalPage() {
               </Button>
             )}
           </Card>
+          </>
         }
       />
     </PageContainer>

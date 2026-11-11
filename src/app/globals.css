@@ -1391,7 +1391,9 @@ tr.c41-linha:hover > :first-child {
    de `.c41-toque`: no computador nada muda. `min-height`/`min-width`, e não
    `height`, para o controle crescer sem desmontar o que já tem altura maior. */
 @media (pointer: coarse) {
-  .c41-toque :is(button, [role="button"], [role="combobox"], select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]), a.inline-flex) {
+  /* `[data-item-do-menu]` (11/11/2026): o item do menu é `flex`, e não
+     `inline-flex` — sem a marca, ficava com 36px no celular. */
+  .c41-toque :is(button, [role="button"], [role="combobox"], select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]), a.inline-flex, [data-item-do-menu]) {
     min-height: 44px;
   }
   .c41-toque :is(button, [role="button"], a.inline-flex) {
