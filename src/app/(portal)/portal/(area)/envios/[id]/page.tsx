@@ -13,6 +13,7 @@ import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
 import { telaBloqueadaNoPortal, telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
 import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { clientIp } from "@/lib/rateLimit";
+import { getPrisma } from "@/lib/prisma";
 import { sanitizeDocumentHtml } from "@/lib/clientDocuments";
 import { abrirEnvioDoCliente } from "@/lib/envios/consultas";
 import { rotaDoArquivoNoPortal } from "@/lib/envios/regras";
@@ -35,7 +36,7 @@ export default async function PortalEnvioPage({ params }: { params: Promise<{ id
 
   const { id } = await params;
   const h = await headers();
-  const [envio, bloqueadas] = await Promise.all([
+  const [envio, bloqueadas, empresaDoEnvio] = await Promise.all([
     abrirEnvioDoCliente(
       { tenantId: cliente.tenantId, companyIds: cliente.companyIds },
       cliente.usuario.email,
@@ -43,10 +44,21 @@ export default async function PortalEnvioPage({ params }: { params: Promise<{ id
       { ipAddress: clientIp({ headers: h }), userAgent: h.get("user-agent") }
     ),
     telasBloqueadasDoPortal(cliente.tenantId),
+    // A empresa do envio, para a dúvida já sair com ela escolhida. No mesmo
+    // escopo do cliente: envio de outra empresa não devolve nada.
+    getPrisma().clientDocument.findFirst({
+      where: { id, tenantId: cliente.tenantId, companyId: { in: cliente.companyIds } },
+      select: { companyId: true },
+    }),
   ]);
   if (!envio) notFound();
   // A "Nova solicitação" só com a tela liberada pelo escritório (14/10/2026).
   const podePedir = !bloqueadas.has("/portal/solicitacoes");
+  // A dúvida já sai com a empresa e o documento (11/11/2026) — abria em branco,
+  // e o cliente tinha de contar de novo de qual documento falava. A página da
+  // solicitação só aceita a empresa se for do acesso dele.
+  const pedidoDaDuvida = new URLSearchParams({ descricao: `Tenho uma dúvida sobre o documento "${envio.titulo}": ` });
+  if (empresaDoEnvio) pedidoDaDuvida.set("empresa", empresaDoEnvio.companyId);
 
   return (
     <PageContainer>
@@ -101,9 +113,9 @@ export default async function PortalEnvioPage({ params }: { params: Promise<{ id
 
       {podePedir && (
         <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          <p className="text-fs-2 text-fg-muted">Dúvida sobre este documento?</p>
-          <Button href="/portal/solicitacoes/nova" variant="secondary" size="sm">
-            Nova solicitação
+          <p className="text-helper text-fg-muted">Dúvida sobre este documento?</p>
+          <Button href={`/portal/solicitacoes/nova?${pedidoDaDuvida}`} variant="secondary" size="sm" className="max-sm:h-11 max-sm:px-4">
+            Perguntar à equipe
           </Button>
         </div>
       )}

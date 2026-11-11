@@ -186,7 +186,9 @@ export function conferirSolicitacao(
   const assunto = assuntos.find((a) => a.id === assuntoId);
   if (!empresa || !assunto || !bruta) return null;
   const descricao = bruta.slice(0, Math.min(CARACTERES_DA_SOLICITACAO, LIMITE_DA_DESCRICAO));
-  const q = new URLSearchParams({ empresa: empresa.id, assunto: assunto.id, descricao });
+  // `de=ceci` (11/11/2026): é o que faz a tela dizer "A Ceci preencheu". Outros
+  // caminhos também abrem a tela preenchida (a dúvida sobre um documento, P30).
+  const q = new URLSearchParams({ empresa: empresa.id, assunto: assunto.id, descricao, de: "ceci" });
   return { empresaNome: empresa.nome, assunto: assunto.label, descricao, href: `/portal/solicitacoes/nova?${q.toString()}` };
 }
 

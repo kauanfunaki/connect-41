@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { etapasParaCliente, progressoDasEtapas, situacaoParaCliente, textoDaPrevisao } from "./portal";
+import { SITUACAO_PARA_CLIENTE, etapasParaCliente, progressoDasEtapas, situacaoParaCliente, textoDaPrevisao } from "./portal";
 
 describe("situacaoParaCliente", () => {
   it("cancelado e indeferido vencem a situação derivada", () => {
     expect(situacaoParaCliente("EM_ANDAMENTO", "CANCELADO")).toBe("CANCELADO");
     expect(situacaoParaCliente("EM_EXIGENCIA", "INDEFERIDO")).toBe("INDEFERIDO");
     expect(situacaoParaCliente("EM_EXIGENCIA", "EM_ANDAMENTO")).toBe("EM_EXIGENCIA");
+  });
+});
+
+describe("SITUACAO_PARA_CLIENTE", () => {
+  it("sem a palavra da equipe: nada de protocolado nem indeferido (11/11/2026)", () => {
+    const textos = Object.values(SITUACAO_PARA_CLIENTE).flatMap((s) => [s.rotulo, s.explicacao]).join(" ").toLowerCase();
+    expect(textos).not.toMatch(/protocol|indeferid/);
+    expect(SITUACAO_PARA_CLIENTE.INDEFERIDO.rotulo).toBe("Negado pelo órgão");
   });
 });
 

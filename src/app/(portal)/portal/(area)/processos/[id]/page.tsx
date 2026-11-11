@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { CircleCheck, CircleDot, Circle } from "lucide-react";
+import { CircleCheck, CircleDot, Circle, Upload } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { BackButton } from "@/components/shared/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -49,6 +50,8 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
   const situacao = SITUACAO_PARA_CLIENTE[p.situacao];
   const abertas = p.exigencias.filter((e) => !e.resolvidaEm);
   const resolvidas = p.exigencias.filter((e) => e.resolvidaEm);
+  // O envio de documentos só existe com a conversa do processo.
+  const aguardandoVoce = p.situacao === "AGUARDANDO_CLIENTE" && !!conversa;
 
   return (
     <PageContainer>
@@ -90,7 +93,19 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
               <span className="font-medium text-fg">Motivo:</span> {p.motivo}
             </Aviso>
           )}
-          <p className="text-fs-2 text-fg-muted">{p.previsao}</p>
+          <p className="text-helper text-fg-muted">{p.previsao}</p>
+          {/* "Aguardando você" com a ação no topo (11/11/2026): o texto dizia
+              "o motivo está abaixo" e o envio ficava no fim da página, depois
+              das etapas e das taxas. Um `<a>` simples (`nativo`), e não o
+              `<Link>`: o salto de âncora do navegador leva o foco à seção
+              (`tabIndex={-1}` lá embaixo), e o teclado e o leitor de tela
+              continuam de onde o olho foi. */}
+          {aguardandoVoce && (
+            <Button href="#enviar-documentos" nativo size="lg" className="mt-2 w-full sm:w-auto sm:self-start max-sm:h-11">
+              <Upload size={16} aria-hidden className="shrink-0" />
+              Enviar o que falta
+            </Button>
+          )}
         </Card>
 
         {/* Títulos de seção no desenho do Início (`TituloDeSecao`, 08/10/2026):
@@ -101,9 +116,10 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
             <div className="flex flex-col gap-2">
               {abertas.map((e) => (
                 <Card key={e.id} className="p-4 flex flex-col gap-1 border-warning/40">
-                  <span className="text-fs-2 font-semibold text-warning-fg">{e.orgao}</span>
+                  {/* 13px, e não 12 (11/11/2026): é o que o cliente precisa ler para agir. */}
+                  <span className="text-ui font-semibold text-warning-fg">{e.orgao}</span>
                   <p className="text-ui text-fg whitespace-pre-line break-words">{e.descricao}</p>
-                  <span className="text-fs-2 text-fg-muted">
+                  <span className="text-helper text-fg-muted">
                     Pedida em {formatInstantDate(e.abertaEm)}
                     {e.prazo ? ` · prazo do órgão ${formatInstantDate(e.prazo)}` : ""}
                   </span>
@@ -127,7 +143,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
                         {e.rotulo}
                         {e.orgao ? <span className="text-fg-muted"> · {e.orgao}</span> : null}
                       </span>
-                      <span className="text-fs-2 text-fg-muted whitespace-nowrap">{STATUS_DA_ETAPA_PARA_CLIENTE[status]}</span>
+                      <span className="text-ui text-fg-muted whitespace-nowrap">{STATUS_DA_ETAPA_PARA_CLIENTE[status]}</span>
                     </li>
                   );
                 })}
@@ -148,11 +164,11 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
                 {p.taxas.map((t) => (
                   <li
                     key={t.id}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7rem_8.5rem] items-center gap-x-3 gap-y-0.5 px-2 py-2 border-b border-border-soft last:border-0"
+                    className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7rem_9.5rem] items-center gap-x-3 gap-y-0.5 px-2 py-2 border-b border-border-soft last:border-0"
                   >
                     <span className="text-ui text-fg break-words">{t.descricao}</span>
                     <span className="text-ui font-medium tabular-nums text-right whitespace-nowrap">{moeda(t.centavos)}</span>
-                    <span className="text-fs-2 text-fg-muted whitespace-nowrap">
+                    <span className="text-helper text-fg-muted whitespace-nowrap">
                       {t.pagaEm
                         ? `paga em ${formatInstantDate(t.pagaEm)}`
                         : t.vencimento
@@ -176,7 +192,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
                     <span className="text-ui text-fg break-words">
                       <span className="font-medium">{e.orgao}:</span> {e.descricao}
                     </span>
-                    <span className="text-fs-2 text-fg-muted">resolvida em {formatInstantDate(e.resolvidaEm!)}</span>
+                    <span className="text-helper text-fg-muted">resolvida em {formatInstantDate(e.resolvidaEm!)}</span>
                   </li>
                 ))}
               </ul>
@@ -186,7 +202,16 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
 
         {conversa && (
           <>
-            <section aria-labelledby="documentos">
+            {/* Destino do "Enviar o que falta": focável só por programa
+                (`tabIndex={-1}`) para o salto de âncora levar o foco; o anel
+                (`:target`) mostra onde a página parou; `scroll-mt` deixa
+                espaço para o anel acima do título. */}
+            <section
+              id="enviar-documentos"
+              tabIndex={-1}
+              aria-labelledby="documentos"
+              className="scroll-mt-4 rounded-lg outline-none target:ring-2 target:ring-brand/40 target:ring-offset-4 target:ring-offset-canvas"
+            >
               <TituloDeSecao id="documentos">Documentos</TituloDeSecao>
               <Card className="p-4">
                 <DocumentosDoProcesso
@@ -204,7 +229,7 @@ export default async function PortalProcessoPage({ params }: { params: Promise<{
               <TituloDeSecao id="conversa">Conversa com a equipe</TituloDeSecao>
               <Card className="p-4 flex flex-col gap-4">
                 {conversa.limitada && (
-                  <p className="text-fs-2 text-fg-muted">Mostrando só as mensagens mais recentes.</p>
+                  <p className="text-helper text-fg-muted">Mostrando só as mensagens mais recentes.</p>
                 )}
                 {conversa.mensagens.length > 0 ? (
                   <ConversaDaPendencia

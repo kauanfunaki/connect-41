@@ -20,18 +20,23 @@ export type SituacaoParaCliente = SituacaoDoProcesso | "CANCELADO" | "INDEFERIDO
 
 export const SITUACAO_PARA_CLIENTE: Record<SituacaoParaCliente, { rotulo: string; explicacao: string }> = {
   EM_ANDAMENTO: { rotulo: "Em andamento", explicacao: "A equipe está preparando o processo." },
-  AGUARDANDO_ORGAO: { rotulo: "Aguardando o órgão", explicacao: "Já foi protocolado e está em análise no órgão." },
+  // Sem "protocolado" nem "indeferido" (11/11/2026): é a palavra da equipe, e o
+  // cliente lia sem saber o que queria dizer.
+  AGUARDANDO_ORGAO: { rotulo: "Aguardando o órgão", explicacao: "Já foi entregue ao órgão e está em análise lá." },
   EM_EXIGENCIA: {
     rotulo: "Exigência do órgão",
     explicacao: "O órgão pediu um ajuste. A equipe resolve e avisa se precisar de algo seu.",
   },
   AGUARDANDO_CLIENTE: {
     rotulo: "Aguardando você",
-    explicacao: "O processo está parado esperando algo seu. A equipe já pediu; o motivo está abaixo.",
+    // O envio fica no fim da página: o detalhe põe o botão "Enviar o que
+    // falta" logo embaixo deste texto (11/11/2026), e o texto não promete mais
+    // "o motivo está abaixo".
+    explicacao: "O processo está parado esperando algo seu. A equipe já disse o que falta — é só enviar por aqui.",
   },
   SUSPENSO: { rotulo: "Suspenso", explicacao: "O processo está parado. Fale com a equipe para retomar." },
   CONCLUIDO: { rotulo: "Concluído", explicacao: "Processo encerrado." },
-  INDEFERIDO: { rotulo: "Indeferido", explicacao: "O órgão negou o pedido. O motivo está abaixo." },
+  INDEFERIDO: { rotulo: "Negado pelo órgão", explicacao: "O órgão negou o pedido. O motivo está abaixo." },
   CANCELADO: { rotulo: "Cancelado", explicacao: "Processo encerrado sem conclusão." },
 };
 
