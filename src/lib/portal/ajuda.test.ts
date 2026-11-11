@@ -74,6 +74,13 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
     expect(linhas(["societario_processos"]).some((l) => l.startsWith("Em Processos"))).toBe(true);
   });
 
+  it("os passos dizem “toque”, e não “clique”: o portal é usado no celular (11/11/2026)", () => {
+    const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
+    const texto = todos.flatMap((p) => [p.titulo, p.resumo, ...p.passos]).join("\n");
+    expect(texto).not.toMatch(/\bclique\b/i);
+    expect(texto).toMatch(/\bToque em\b/);
+  });
+
   it("todo passo que aparece tem ao menos uma linha", () => {
     const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
     // 16 desde 09/10/2026 (o passo dos Arquivos); 17 desde 21/10/2026, com a sugestão do portal.
