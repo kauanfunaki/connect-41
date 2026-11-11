@@ -330,17 +330,23 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
   },
   {
     code: "whatsapp_atendimento_evolution",
-    label: "WhatsApp do escritório (Evolution, testes)",
+    label: "WhatsApp do escritório (Evolution)",
     caminhoDoWebhook: "/api/integrations/whatsapp/webhook/{id}",
     vendor: "Evolution API (self-hosted)",
     natureza: "API",
     sectorCode: "controladoria",
     description:
-      "Número comum numa instância da Evolution API — para testar o Atendimento antes do número oficial. Não use com clientes de verdade",
+      "O número do escritório numa instância da Evolution API, conectado pelo QR code como aparelho a mais do WhatsApp — enquanto o número não vai para a Meta. Use uma instância só do Connect e deixe \"Ler mensagens\" desligado nela",
     defaultEnabled: false,
     campos: [
       { name: "baseUrl", label: "URL da Evolution", type: "url", required: true, help: "Ex.: https://evo.suaempresa.com.br — sem barra no fim." },
-      { name: "instance", label: "Nome da instância", type: "text", required: true },
+      {
+        name: "instance",
+        label: "Nome da instância",
+        type: "text",
+        required: true,
+        help: "Uma instância só do Connect: o Connect troca o webhook dela, e uma instância usada por outro sistema deixaria de avisar esse sistema.",
+      },
       { name: "apiKey", label: "API key", type: "secret", required: true, help: "O token da instância (ou a chave global)." },
       {
         name: "webhookSecret",

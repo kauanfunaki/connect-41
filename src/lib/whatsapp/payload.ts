@@ -48,10 +48,10 @@ function str(v: unknown): string | null {
 export function lerMensagens(payload: unknown): {
   mensagens: MensagemRecebida[];
   /** Mensagens que chegaram mas não são texto: id, tipo e a legenda, quando há. */
-  ignoradas: { waMessageId: string; tipo: string; de: string; legenda?: string }[];
+  ignoradas: { waMessageId: string; tipo: string; de: string; legenda?: string; midia?: { referencia: unknown; mimetype: string | null; nomeDoArquivo: string | null } }[];
 } {
   const mensagens: MensagemRecebida[] = [];
-  const ignoradas: { waMessageId: string; tipo: string; de: string; legenda?: string }[] = [];
+  const ignoradas: { waMessageId: string; tipo: string; de: string; legenda?: string; midia?: { referencia: unknown; mimetype: string | null; nomeDoArquivo: string | null } }[] = [];
 
   const raiz = obj(payload);
   if (!raiz) return { mensagens, ignoradas };
@@ -85,8 +85,17 @@ export function lerMensagens(payload: unknown): {
         const tipo = str(m.type) ?? "desconhecido";
         if (tipo !== "text") {
           // Imagem, vídeo e documento trazem a legenda dentro do próprio tipo.
-          const legenda = str(obj(m[tipo])?.caption);
-          ignoradas.push({ waMessageId: id, tipo, de, ...(legenda ? { legenda } : {}) });
+          const corpo = obj(m[tipo]);
+          const legenda = str(corpo?.caption);
+          // O id da mídia na Meta, para quem sabe baixar (o Atendimento, 11/11/2026).
+          const midiaId = str(corpo?.id);
+          ignoradas.push({
+            waMessageId: id,
+            tipo,
+            de,
+            ...(legenda ? { legenda } : {}),
+            ...(midiaId ? { midia: { referencia: { id: midiaId }, mimetype: str(corpo?.mime_type), nomeDoArquivo: str(corpo?.filename) } } : {}),
+          });
           continue;
         }
 

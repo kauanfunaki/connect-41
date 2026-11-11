@@ -1022,7 +1022,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Academia",
     caminhos: ["/academia"],
     resumo:
-      "Testes de digitação, de digitação de números e de lógica para treinar e disputar com os colegas, com ranking do mês, prêmio e certificado para o pódio. Nada daqui entra em avaliação de desempenho.",
+      "Testes de digitação, de digitação de números, de lógica e de atalhos para treinar e disputar com os colegas, com desafio do dia, meta pessoal, ranking do mês e de evolução, Hall dos campeões e certificado para o pódio. Nada daqui entra em avaliação de desempenho.",
     secoes: [
       {
         titulo: "Como fazer um teste",
@@ -1058,12 +1058,47 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Abra a aba “Administração” da Academia.",
           "Em “Textos de digitação”, cadastre e edite os textos de cada nível. Para não sortear mais um texto, desligue em vez de excluir.",
           "Em “Questões de lógica”, escreva o enunciado, ponha uma imagem se precisar e cadastre de 2 a 6 alternativas — cada uma com texto, imagem ou os dois — marcando a certa.",
-          "Em “Prêmio do mês”, escreva o prêmio do mês (por exemplo, “Top 3 ganham chocolate”). Ele aparece no painel do topo, no Início e no ranking.",
+          "Em “Prêmio do mês”, escreva o prêmio do pódio (por exemplo, “Top 3 ganham chocolate”) e, se quiser, o da maior evolução. Eles aparecem no painel do topo, no Início e no ranking, e ficam gravados no Hall dos campeões quando o mês fecha.",
+        ],
+      },
+      {
+        titulo: "Desafio do dia e sequência",
+        passos: [
+          "No Início da Academia (ou no painel do chapéu), clique em “Fazer o desafio”: é 1 minuto de digitação, com o mesmo texto para toda a equipe no dia.",
+          "Uma vez por dia. Fazer o desafio conta a sua sequência de dias; o resultado não entra no ranking do mês.",
+          "Sábado e domingo não quebram a sequência, e um dia útil perdido por semana é perdoado.",
+          "A partir de 2 dias seguidos, a chama com o número aparece embaixo do chapéu de formatura.",
+        ],
+      },
+      {
+        titulo: "Atalhos do Excel e do Connect",
+        passos: [
+          "Em “Testes”, abra “Atalhos do Excel e do Connect” e escolha o nível: o Médio inclui os do Fácil, e o Difícil, todos.",
+          "A tela pede uma ação (“Copiar”, “Buscar no Connect”…) e você aperta o atalho. Cada atalho apertado passa para a próxima ação.",
+          "Vale quantos acertos você faz em 60 segundos. No fim, aparece o atalho certo de cada erro.",
+        ],
+      },
+      {
+        titulo: "Meta pessoal",
+        passos: [
+          "No Início da Academia, em “Sua meta”, clique em “Definir uma meta”.",
+          "Escolha o teste, o nível (ou qualquer um), o alvo — PPM na digitação, acertos na lógica e nos atalhos — e o prazo.",
+          "O progresso é o seu melhor resultado valendo desde que a meta foi definida, e aparece também no painel do chapéu. Só você vê a sua meta.",
+        ],
+      },
+      {
+        titulo: "Evolução, placar por setor e Hall dos campeões",
+        passos: [
+          "No “Ranking”, troque a visão para “Evolução”: quem mais melhorou no mês contra a própria média dos 3 meses anteriores, com pelo menos 3 tentativas valendo no mês.",
+          "Em “Por setor”, a média do melhor de cada pessoa do setor. Só entram setores com pelo menos 3 pessoas no mês.",
+          "O “Hall dos campeões” guarda o pódio de cada teste e a maior evolução de cada mês encerrado, com o prêmio.",
+          "No ranking geral do mês, na evolução e no Hall, o botão “Parabéns” manda um aviso para o colega — um por pessoa, mês e tipo.",
         ],
       },
     ],
     dicas: [
       "O Somente leitura vê a Academia e o ranking, mas não faz os testes.",
+      "Com “Aparecer no ranking” desligado, você também some da evolução, do placar por setor e do Hall, e não manda nem recebe parabéns.",
       "As imagens das questões aceitam JPG, PNG e WEBP de até 4 MB.",
       "Descreva no enunciado o que a imagem mostra: é o que o leitor de tela lê.",
     ],

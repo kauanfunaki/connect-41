@@ -15,6 +15,11 @@
 //   - Todos os níveis: soma ponderada (fácil 1 · médio 2 · difícil 3) da
 //     precisão do melhor de cada nível — tentar o nível mais difícil sempre
 //     soma, nunca dilui; depois menos tentativas, depois o menor tempo médio.
+// Atalhos (Fase 2, 11/11/2026)
+//   - Num nível: o melhor de cada pessoa pelos acertos no minuto (empate, a
+//     maior precisão, depois o menor tempo).
+//   - Todos os níveis: a média dos acertos ponderada pelo nível, com os pesos
+//     da digitação (fácil 1,0 · médio 1,4 · difícil 1,8).
 //
 // Quem desligou "Aparecer no ranking" sai antes da conta: as posições dos
 // outros ficam seguidas, sem buraco.
@@ -65,6 +70,12 @@ function melhorDaDigitacao(a: LinhaDoResultado, b: LinhaDoResultado): boolean {
 function melhorDaLogica(a: LinhaDoResultado, b: LinhaDoResultado): boolean {
   return a.precisao > b.precisao || (a.precisao === b.precisao && a.duracaoMs < b.duracaoMs);
 }
+/** Atalhos (Fase 2): mais acertos no minuto; empate, a maior precisão, depois o menor tempo. */
+function melhorDosAtalhos(a: LinhaDoResultado, b: LinhaDoResultado): boolean {
+  const [x, y] = [a.acertos ?? 0, b.acertos ?? 0];
+  return x > y || (x === y && (a.precisao > b.precisao || (a.precisao === b.precisao && a.duracaoMs < b.duracaoMs)));
+}
+const melhorDo = (teste: Teste) => (teste === "logica" ? melhorDaLogica : teste === "atalhos" ? melhorDosAtalhos : melhorDaDigitacao);
 
 type PorPessoa = { tentativas: number; porNivel: Map<Nivel, LinhaDoResultado> };
 
@@ -89,6 +100,31 @@ const porDificuldade = (a: LinhaDoResultado, b: LinhaDoResultado) => ORDEM_DO_NI
 export function montarRanking(teste: Teste, linhas: readonly LinhaDoResultado[], nivel: Nivel | null): PosicaoNoRanking[] {
   const doNivel = nivel ? linhas.filter((l) => l.nivel === nivel) : linhas;
   const semPosicao: Omit<PosicaoNoRanking, "posicao">[] = [];
+
+  // Atalhos (Fase 2): num nível, os acertos do melhor resultado; em "Todos",
+  // a média dos acertos ponderada pelo nível, com os pesos da digitação.
+  if (teste === "atalhos") {
+    for (const [userId, p] of agrupar(doNivel, melhorDosAtalhos)) {
+      const melhores = [...p.porNivel.values()].sort(porDificuldade);
+      const maisDificil = melhores[melhores.length - 1];
+      let acertos = 0, total = 0, precisao = 0, pesos = 0;
+      for (const m of melhores) {
+        const peso = nivel ? 1 : PESO_DA_DIGITACAO[m.nivel];
+        acertos += (m.acertos ?? 0) * peso;
+        total += (m.total ?? 0) * peso;
+        precisao += m.precisao * peso;
+        pesos += peso;
+      }
+      semPosicao.push({
+        userId, nivel: maisDificil.nivel, niveis: melhores.map((m) => m.nivel), sectorCode: maisDificil.sectorCode, ppm: null,
+        acertos: Math.round(acertos / pesos), total: Math.round(total / pesos), precisao: Math.round((precisao / pesos) * 10) / 10,
+        pontos: duas(acertos / pesos), tentativas: p.tentativas, duracaoMs: maisDificil.duracaoMs,
+      });
+    }
+    const ordem = (a: (typeof semPosicao)[number], b: (typeof semPosicao)[number]) =>
+      b.pontos - a.pontos || b.precisao - a.precisao || a.duracaoMs - b.duracaoMs || a.userId.localeCompare(b.userId);
+    return semPosicao.sort(ordem).map((p, i) => ({ ...p, posicao: i + 1 }));
+  }
 
   if (teste !== "logica") {
     for (const [userId, p] of agrupar(doNivel, melhorDaDigitacao)) {
@@ -180,16 +216,22 @@ export function temCertificado(ranking: readonly PosicaoNoRanking[], userId: str
  * e dos cartões. Digitação e números pelo PPM líquido; lógica pela precisão.
  */
 export function melhorDoMes(teste: Teste, linhas: readonly LinhaDoResultado[]): LinhaDoResultado | null {
-  const melhor = teste === "logica" ? melhorDaLogica : melhorDaDigitacao;
+  const melhor = melhorDo(teste);
   let m: LinhaDoResultado | null = null;
   for (const l of linhas) if (!m || melhor(l, m)) m = l;
   return m;
 }
 
-/** O resultado em uma linha de texto: "62 PPM · 96%" ou "8 de 10 · 80%". */
+/** O número principal, sem a precisão: "62 PPM", "8 de 10" ou "23 acertos". */
+export function numeroEmTexto(teste: Teste, r: { ppm: number | null; acertos: number | null; total: number | null }): string {
+  if (teste === "logica") return `${r.acertos ?? 0} de ${r.total ?? 0}`;
+  if (teste === "atalhos") return `${r.acertos ?? 0} ${r.acertos === 1 ? "acerto" : "acertos"}`;
+  return `${r.ppm ?? 0} PPM`;
+}
+
+/** O resultado em uma linha de texto: "62 PPM · 96%", "8 de 10 · 80%" ou "23 acertos · 92%". */
 export function resultadoEmTexto(teste: Teste, r: { ppm: number | null; acertos: number | null; total: number | null; precisao: number }): string {
-  const pct = `${formatarPrecisao(r.precisao)}%`;
-  return teste === "logica" ? `${r.acertos ?? 0} de ${r.total ?? 0} · ${pct}` : `${r.ppm ?? 0} PPM · ${pct}`;
+  return `${numeroEmTexto(teste, r)} · ${formatarPrecisao(r.precisao)}%`;
 }
 /** 96 → "96"; 96,5 → "96,5". */
 export const formatarPrecisao = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ","));

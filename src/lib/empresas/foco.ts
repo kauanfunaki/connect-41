@@ -54,6 +54,16 @@ export const TELAS_DO_FOCO = [
   "/colaboradores-clientes",
   "/aprovacoes",
   "/comunicacao",
+  // DP 2 (11/11/2026): as telas de uma empresa, uma a uma. `/dp2` inteiro não
+  // pode entrar — a regra casa pelo começo do endereço, e o painel e os
+  // cadastros do escritório (tabelas, rubricas, convenções) passariam a seguir
+  // a faixa.
+  "/dp2/competencia",
+  "/dp2/colaboradores",
+  "/dp2/ferias",
+  "/dp2/decimo-terceiro",
+  "/dp2/rescisoes",
+  "/dp2/configuracao",
 ] as const;
 
 /**
@@ -102,6 +112,13 @@ export const MODULOS_DO_FOCO: ReadonlySet<string> = new Set([
   "contabil_sped",
   "fiscal_documentos",
   "recrutamento_colaboradores_clientes",
+  // 11/11/2026: as telas de empresa do DP 2.
+  "dp2_competencia",
+  "dp2_colaboradores",
+  "dp2_ferias",
+  "dp2_decimo",
+  "dp2_rescisoes",
+  "dp2_configuracao",
 ]);
 
 /**

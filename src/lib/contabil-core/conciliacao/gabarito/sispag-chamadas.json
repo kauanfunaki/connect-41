@@ -1,0 +1,3359 @@
+[
+{
+"fn": "sispag._data",
+"args": [
+"  -0,00 "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+" "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+" 08/04/2025 "
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+""
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"-1.234,56"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"-inf"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"0"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"00/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"01/00/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"01/01/0000"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"01/01/0001"
+],
+"kwargs": {},
+"result": {
+"$date": "0001-01-01"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"01/01/٢٠٢٥"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-01-01"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"01/13/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"08-04-2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"08/04/2025 10:00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"08/04/2025"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"08/04/25"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1,5"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1.234,56"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1.5"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1/1/1"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"12345678901234567890123456,7"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1E-3"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1_000"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1e25"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1e26"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1e3"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"1٢/01/2025"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-01-12"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"2025-04-08"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"29/02/2023"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"29/02/2024"
+],
+"kwargs": {},
+"result": {
+"$date": "2024-02-29"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"31/02/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"31/12/9999"
+],
+"kwargs": {},
+"result": {
+"$date": "9999-12-31"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"8/4/2025"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+"Infinity"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"R$ 1,00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"abc"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"sNaN"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"٠١/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+"٣,٥"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+0
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+1
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+false
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+null
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+true
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$date": "2025-04-08"
+}
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$dt": "2025-04-08 00:00:00"
+}
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$dt": "2025-04-08 23:59:59"
+}
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "-0.0"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "0.0"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "0.125"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "0.30000000000000004"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "150.5"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "1e+16"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "1e-07"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$f": "2.675"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$int": "123456789012345678901234567890"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$td": "0:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$td": "1 day, 2:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._data",
+"args": [
+{
+"$time": "10:30:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"  -0,00 "
+],
+"kwargs": {},
+"result": {
+"$dec": "-0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+" "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+" 08/04/2025 "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+""
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"-1.234,56"
+],
+"kwargs": {},
+"result": {
+"$dec": "-1234.56"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"-inf"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"0"
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"00/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"01/00/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"01/01/0000"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"01/01/0001"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"01/01/٢٠٢٥"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"01/13/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"08-04-2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"08/04/2025 10:00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"08/04/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"08/04/25"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1,5"
+],
+"kwargs": {},
+"result": {
+"$dec": "1.50"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1.234,56"
+],
+"kwargs": {},
+"result": {
+"$dec": "1234.56"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1.5"
+],
+"kwargs": {},
+"result": {
+"$dec": "15.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1/1/1"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"12345678901234567890123456,7"
+],
+"kwargs": {},
+"result": {
+"$dec": "12345678901234567890123456.70"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1E-3"
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1_000"
+],
+"kwargs": {},
+"result": {
+"$dec": "1000.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1e25"
+],
+"kwargs": {},
+"result": {
+"$dec": "10000000000000000000000000.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1e26"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1e3"
+],
+"kwargs": {},
+"result": {
+"$dec": "1000.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"1٢/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"2025-04-08"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"29/02/2023"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"29/02/2024"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"31/02/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"31/12/9999"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"8/4/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"Infinity"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"R$ 1,00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"abc"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"sNaN"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"٠١/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+"٣,٥"
+],
+"kwargs": {},
+"result": {
+"$dec": "3.50"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+0
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+1
+],
+"kwargs": {},
+"result": {
+"$dec": "1.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+false
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+null
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+true
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$date": "2025-04-08"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$dt": "2025-04-08 00:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$dt": "2025-04-08 23:59:59"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "-0.0"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "-0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "0.0"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "0.125"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.12"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "0.30000000000000004"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.30"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "150.5"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "150.50"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "1e+16"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "10000000000000000.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "1e-07"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$f": "2.675"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "2.68"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$int": "123456789012345678901234567890"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "InvalidOperation",
+"mensagem": "[<class 'decimal.InvalidOperation'>]"
+}
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$td": "0:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$td": "1 day, 2:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._decimal",
+"args": [
+{
+"$time": "10:30:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[
+"Data",
+"Lançamento",
+"Razão Social",
+"CPF/CNPJ",
+"Valor (R$)",
+"Saldo (R$)"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[
+"Data",
+"Lançamento",
+"Razão Social",
+"Valor",
+"Saldo"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[
+"Favorecido",
+null,
+0,
+"Tipo de pagamento x",
+"DATA DO PAGAMENTO",
+"valor",
+"valor 2"
+]
+],
+"kwargs": {},
+"result": {
+"favorecido": 0,
+"tipo": 3,
+"data": 4,
+"valor": 5
+}
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[
+"data",
+"lancamento",
+"razao social",
+"cpf",
+"valor",
+"saldo",
+"data"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[
+"favorecido",
+"cpf",
+"tipo de pagamento",
+"data do pagamento",
+"valor",
+"status"
+]
+],
+"kwargs": {},
+"result": {
+"favorecido": 0,
+"documento": 1,
+"tipo": 2,
+"data": 3,
+"valor": 4,
+"status": 5
+}
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[
+"favorecido",
+"data do pagamento",
+"valor"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._mapear",
+"args": [
+[]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"  Favorecido  "
+],
+"kwargs": {},
+"result": "favorecido"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+""
+],
+"kwargs": {},
+"result": ""
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"Agência/Conta:"
+],
+"kwargs": {},
+"result": "agencia/conta:"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"Ação\tÚNICA\n"
+],
+"kwargs": {},
+"result": "acao\tunica"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"FAVORECIDO / BENEFICIÁRIO"
+],
+"kwargs": {},
+"result": "favorecido / beneficiario"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"Razão  Social"
+],
+"kwargs": {},
+"result": "razao  social"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"SALDO TOTAL DISPONÍVEL DIA"
+],
+"kwargs": {},
+"result": "saldo total disponivel dia"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"x y"
+],
+"kwargs": {},
+"result": "x y"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"İstanbul"
+],
+"kwargs": {},
+"result": "istanbul"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"ǅ"
+],
+"kwargs": {},
+"result": "dz"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"Σ ΟΔΟΣ"
+],
+"kwargs": {},
+"result": "σ οδος"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"ẞ"
+],
+"kwargs": {},
+"result": "ß"
+},
+{
+"fn": "sispag._sem_acento",
+"args": [
+"ﬁ"
+],
+"kwargs": {},
+"result": "fi"
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-anterior-repetido.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-anterior-sem-saldo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-aplicacao-divergente.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-aplicacao-primeiro-dia.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-base.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-base.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-cabecalho-deslocado.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-cabecalho-deslocado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-capa-e-extrato.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-capa-e-extrato.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-data-ilegivel-sem-texto.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-data-ilegivel.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-dimensao-menor.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-duas-tabelas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-fora-do-periodo-depois.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-fora-do-periodo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-linha-desconhecida.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-linha-desconhecida.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-linha-em-branco.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-nao-fecha-grande.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-nao-fecha-negativo.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-nao-fecha-resgate.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-pdf.pdf"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Envie a consulta de pagamentos do SISPAG em XLS ou XLSX."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-pendente-no-fim.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-periodo-invalido.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-periodo-uma-data.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-resgate-no-meio.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-sem-anterior-sem-saldos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-sem-anterior.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-sem-cabecalho.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-sem-movimentos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-sem-periodo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-sem-tabela-duas-folhas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-so-cabecalho.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-1db3a25aae0b.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "",
+"cnpj": "",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-02-05"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ALFA",
+"documento": "***",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-35e1722ad617.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-5243f5c079c6.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-631aba7bded7.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-d0bda3080543.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-eda3b130eccb.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-f4f77bc6ca52.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-suite-f9c1936757a2.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-textos.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-textos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-tres-dias.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-tres-dias.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-valor-e-saldo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-zero-negativo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "detalhado-zip-quebrado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-basico.xls"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "150.50"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ALFA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "40213.70"
+},
+"tipo": "Boleto outros bancos",
+"favorecido": "BETA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": false
+},
+{
+"data": {
+"$date": "2025-04-09"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX Transferências",
+"favorecido": "GAMA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": false
+},
+{
+"data": {
+"$date": "2025-04-01"
+},
+"valor": {
+"$dec": "367.92"
+},
+"tipo": "TED",
+"favorecido": "DELTA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.00"
+},
+"tipo": "Conta Corrente",
+"favorecido": "EPSILON",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.30"
+},
+"tipo": "PIX",
+"favorecido": "ZETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "2.68"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.12"
+},
+"tipo": "Conta Corrente",
+"favorecido": "TETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "10000000000000000.00"
+},
+"tipo": "Conta Corrente",
+"favorecido": "IOTA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "5.00"
+},
+"tipo": "",
+"favorecido": "",
+"documento": "",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-basico.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "150.50"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ALFA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "40213.70"
+},
+"tipo": "Boleto outros bancos",
+"favorecido": "BETA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": false
+},
+{
+"data": {
+"$date": "2025-04-09"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX Transferências",
+"favorecido": "GAMA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": false
+},
+{
+"data": {
+"$date": "2025-04-01"
+},
+"valor": {
+"$dec": "367.92"
+},
+"tipo": "TED",
+"favorecido": "DELTA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.00"
+},
+"tipo": "Conta Corrente",
+"favorecido": "EPSILON",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.30"
+},
+"tipo": "PIX",
+"favorecido": "ZETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "2.68"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.12"
+},
+"tipo": "Conta Corrente",
+"favorecido": "TETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "10000000000000000.00"
+},
+"tipo": "Conta Corrente",
+"favorecido": "IOTA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "5.00"
+},
+"tipo": "",
+"favorecido": "",
+"documento": "",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-cabecalho-deslocado.xls"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1.50"
+},
+"tipo": "PIX",
+"favorecido": "ALFA",
+"documento": "1",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-cabecalho-deslocado.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1.50"
+},
+"tipo": "PIX",
+"favorecido": "ALFA",
+"documento": "1",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "3.00"
+},
+"tipo": "TED",
+"favorecido": "BETA",
+"documento": "2",
+"efetuado": false
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-colunas-demais.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "A folha \"Folha1\" excede o limite de 128 colunas. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-colunas-demais.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "A folha \"xl/worksheets/sheet1.xml\" excede o limite de 128 colunas. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-consolidado-sem-acento.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-consolidado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Este arquivo é um extrato consolidado, não a consulta detalhada do SISPAG. Importe-o em Extrato Bancário e escolha Comparar com Extrato bancário. Os valores dos lotes não identificam seus pagamentos individuais."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-coordenada-invalida.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-dimensao-celulas-demais.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "O arquivo excede o limite de 500000 células. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-dimensao-colunas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "A folha \"xl/worksheets/sheet1.xml\" excede o limite de 128 colunas. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-dimensao-linhas-demais.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "O arquivo excede o limite de 20000 linhas entre todas as folhas. Divida o Razão por período ou conta."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-dimensao-menor.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "150.50"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ALFA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "40213.70"
+},
+"tipo": "Boleto outros bancos",
+"favorecido": "BETA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": false
+},
+{
+"data": {
+"$date": "2025-04-09"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX Transferências",
+"favorecido": "GAMA FICTICIO",
+"documento": "***.331.078-**",
+"efetuado": false
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-dimensao-sem-ref.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-duas-folhas.xls"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "ALFA",
+"documento": "***.331.078-**",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-duas-folhas.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 1-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "ALFA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "2.00"
+},
+"tipo": "PIX",
+"favorecido": "BETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "3.00"
+},
+"tipo": "PIX",
+"favorecido": "GAMA",
+"documento": "***.331.078-**",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-numero-gigante.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "InvalidOperation",
+"mensagem": "[<class 'decimal.InvalidOperation'>]"
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-ole-quebrado.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-sem-pagamentos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "A consulta de pagamentos não tem nenhum pagamento."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-sem-status.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "0001 / 1-1",
+"cnpj": "11111111000111",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "ALFA",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.50"
+},
+"tipo": "PIX",
+"favorecido": "GAMA",
+"documento": "",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-sem-tipo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não encontrei a tabela de pagamentos (colunas favorecido, tipo de pagamento, data do pagamento e valor). Envie a consulta de pagamentos do SISPAG."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-suite-54f41d9f36ef.bin"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Envie a consulta de pagamentos do SISPAG em XLS ou XLSX."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-suite-6facea37b199.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não encontrei a tabela de pagamentos (colunas favorecido, tipo de pagamento, data do pagamento e valor). Envie a consulta de pagamentos do SISPAG."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-suite-a6537f155a77.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "150.50"
+},
+"tipo": "Conta Corrente",
+"favorecido": "FULANO DE TAL",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "40213.70"
+},
+"tipo": "Boleto outros bancos",
+"favorecido": "BOLETO EXEMPLO",
+"documento": "***.331.078-**",
+"efetuado": false
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-suite-d478e9a91ea2.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX Transferências",
+"favorecido": "A",
+"documento": "***.331.078-**",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-suite-e59603446dd7.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "",
+"cnpj": "",
+"pagamentos": [
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 0",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 1",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 2",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 3",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 4",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 5",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 6",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 7",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 8",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 9",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 10",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 11",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 12",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 13",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 14",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 15",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 16",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 17",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 18",
+"documento": "",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2026-06-01"
+},
+"valor": {
+"$dec": "10.00"
+},
+"tipo": "PIX",
+"favorecido": "Favorecido 19",
+"documento": "",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-texto-gigante.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "BETA",
+"documento": "***.331.078-**",
+"efetuado": true
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-texto.csv"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Envie a consulta de pagamentos do SISPAG em XLS ou XLSX."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-textos.xls"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1234.56"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ALFA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "150.00"
+},
+"tipo": "PIX",
+"favorecido": "BETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "123456.00"
+},
+"tipo": "PIX",
+"favorecido": "DELTA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1000.50"
+},
+"tipo": "PIX",
+"favorecido": "ZETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"tipo": "PIX",
+"favorecido": "ETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.00"
+},
+"tipo": "PIX",
+"favorecido": "KAPA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.00"
+},
+"tipo": "PIX",
+"favorecido": "LAMBDA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2024-02-29"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "NI",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2024-02-29"
+},
+"valor": {
+"$dec": "3.50"
+},
+"tipo": "PIX",
+"favorecido": "XI",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-01-01"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "OMICRON",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-01-12"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "PI",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "2.00"
+},
+"tipo": "678.0",
+"favorecido": "12345.0",
+"documento": "***.331.078-**",
+"efetuado": false
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-textos.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"conta": "7285 / 12287-0",
+"cnpj": "12345678000195",
+"pagamentos": [
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1234.56"
+},
+"tipo": "Conta Corrente",
+"favorecido": "ALFA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "150.00"
+},
+"tipo": "PIX",
+"favorecido": "BETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "123456.00"
+},
+"tipo": "PIX",
+"favorecido": "DELTA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1000.50"
+},
+"tipo": "PIX",
+"favorecido": "ZETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"tipo": "PIX",
+"favorecido": "ETA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.00"
+},
+"tipo": "PIX",
+"favorecido": "KAPA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "0.00"
+},
+"tipo": "PIX",
+"favorecido": "LAMBDA",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2024-02-29"
+},
+"valor": {
+"$dec": "3.50"
+},
+"tipo": "PIX",
+"favorecido": "XI",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-01-01"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "OMICRON",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-01-12"
+},
+"valor": {
+"$dec": "1.00"
+},
+"tipo": "PIX",
+"favorecido": "PI",
+"documento": "***.331.078-**",
+"efetuado": true
+},
+{
+"data": {
+"$date": "2025-04-08"
+},
+"valor": {
+"$dec": "2.00"
+},
+"tipo": "678",
+"favorecido": "12345",
+"documento": "***.331.078-**",
+"efetuado": false
+}
+]
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-vazio.bin"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Envie a consulta de pagamentos do SISPAG em XLS ou XLSX."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-vazio.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não encontrei a tabela de pagamentos (colunas favorecido, tipo de pagamento, data do pagamento e valor). Envie a consulta de pagamentos do SISPAG."
+}
+},
+{
+"fn": "sispag.ler_sispag",
+"args": [
+{
+"$arquivo": "sispag-zip-quebrado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "SispagInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+}
+]

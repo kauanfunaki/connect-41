@@ -17,6 +17,7 @@ import {
   FileClock,
   FileX,
   Funnel,
+  GraduationCap,
   HandCoins,
   Hourglass,
   Inbox,
@@ -107,6 +108,7 @@ const ICONES: Record<IconeDoCartao, LucideIcon> = {
   contato: MessagesSquare,
   caixa: Inbox,
   minhas: UserCheck,
+  academia: GraduationCap,
 };
 
 /** A cor da linha: a do tom quando o número pede atenção; senão, a da marca. */
@@ -345,6 +347,7 @@ function Cartao({
       value={numero.texto}
       icon={<Icone />}
       tom={numero.tom ?? undefined}
+      detalhe={numero.detalhe}
       delay={ordem * 40}
       canto={lapis}
       // O total da fração ("de 42") vem logo depois do número, e a variação

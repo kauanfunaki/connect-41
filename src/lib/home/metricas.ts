@@ -115,6 +115,8 @@ export const METRICAS = {
   solicitacoes_novas: { formato: "contagem", sentido: "menor-e-melhor", escopo: "pessoal" },
   solicitacoes_aguardando_cliente: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
   solicitacoes_minhas: { formato: "contagem", sentido: "neutro", escopo: "pessoal" },
+  // A Academia (Fase 2, 11/11/2026): a sequência de dias do desafio do dia de quem olha.
+  academia_desafio_do_dia: { formato: "contagem", sentido: "maior-e-melhor", escopo: "pessoal" },
 } as const satisfies Record<string, DefinicaoDaMetrica>;
 
 export type MetricaDaHome = keyof typeof METRICAS;

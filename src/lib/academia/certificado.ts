@@ -47,9 +47,10 @@ const dataLonga = (d: Date) =>
 /** O que o certificado escreve, linha a linha. */
 export function linhasDoCertificado(d: DadosDoCertificado): ConteudoDoCertificado {
   const caixas =
-    d.teste === "logica"
+    d.teste === "logica" || d.teste === "atalhos"
       ? [
-          { valor: `${d.acertos ?? 0} de ${d.total ?? 0}`, rotulo: "ACERTOS" },
+          // Atalhos (Fase 2): os acertos no minuto, sem o total.
+          { valor: d.teste === "atalhos" ? String(d.acertos ?? 0) : `${d.acertos ?? 0} de ${d.total ?? 0}`, rotulo: d.teste === "atalhos" ? "ACERTOS EM 60 SEGUNDOS" : "ACERTOS" },
           { valor: `${formatarPrecisao(d.precisao)}%`, rotulo: "PRECISÃO" },
         ]
       : [

@@ -77,6 +77,8 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   COMMENT: p("comentario", "info", "Novo comentário"),
   INTERVIEW_SCHEDULED: p("agenda", "info", "Entrevista agendada"),
   SOLICITACAO_ENCAMINHADA: p("solicitacao", "brand", "Solicitação encaminhada"),
+  // O "Parabéns" de um colega no Hall ou no ranking da Academia (Fase 2, 11/11/2026).
+  ACADEMIA_PARABENS: p("aprovado", "success", "Parabéns de um colega"),
 
   // ── Clientes ──
   COMPANY_MESSAGE: c("mensagem", "info", "Mensagem do cliente"),

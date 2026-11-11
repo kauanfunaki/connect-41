@@ -18,7 +18,11 @@ export const MODULO_ACADEMIA = "academia";
  */
 export const SETOR_DA_ACADEMIA = "tech";
 
-export const TESTES = ["digitacao", "numeros", "logica"] as const;
+/**
+ * Os testes do ranking. "atalhos" veio na Fase 2 (11/11/2026): a tela pede uma
+ * ação e a pessoa aperta o atalho (`atalhos.ts`).
+ */
+export const TESTES = ["digitacao", "numeros", "logica", "atalhos"] as const;
 export type Teste = (typeof TESTES)[number];
 export const NIVEIS = ["facil", "medio", "dificil"] as const;
 export type Nivel = (typeof NIVEIS)[number];
@@ -27,16 +31,26 @@ export const ROTULO_DO_TESTE: Record<Teste, string> = {
   digitacao: "Digitação",
   numeros: "Digitação de números",
   logica: "Lógica",
+  atalhos: "Atalhos do Excel e do Connect",
 };
 /** O rótulo curto, para abas e cartões de métrica. */
-export const ROTULO_CURTO_DO_TESTE: Record<Teste, string> = { digitacao: "Digitação", numeros: "Números", logica: "Lógica" };
+export const ROTULO_CURTO_DO_TESTE: Record<Teste, string> = { digitacao: "Digitação", numeros: "Números", logica: "Lógica", atalhos: "Atalhos" };
 export const ROTULO_DO_NIVEL: Record<Nivel, string> = { facil: "Fácil", medio: "Médio", dificil: "Difícil" };
 
 export const ehTeste = (v: unknown): v is Teste => typeof v === "string" && (TESTES as readonly string[]).includes(v);
 export const ehNivel = (v: unknown): v is Nivel => typeof v === "string" && (NIVEIS as readonly string[]).includes(v);
 
-/** O teste é de digitar (ppm e precisão) ou de responder (acertos)? */
-export const ehDeDigitar = (t: Teste) => t !== "logica";
+/** O teste é de digitar (ppm e precisão) ou de responder (acertos: lógica e atalhos)? */
+export const ehDeDigitar = (t: Teste) => t === "digitacao" || t === "numeros";
+
+/**
+ * O desafio do dia (Fase 2, 11/11/2026): 1 minuto de digitação, o mesmo texto
+ * para todo mundo no dia. Grava sessão e resultado com este `teste`, fora dos
+ * `TESTES` — não entra no ranking do mês, e é ele que conta a sequência.
+ */
+export const TESTE_DO_DESAFIO = "desafio";
+/** A validade da sessão do desafio: a mesma da digitação. */
+export const VALIDADE_DO_DESAFIO_MS = 3 * 60_000;
 
 // ─── Tempos (paridade com o Hub) ─────────────────────────────────────────────
 
@@ -45,8 +59,10 @@ export const TEMPO_DA_DIGITACAO_S = 60;
 /** O relógio da lógica: 3 minutos para 10 questões (como no Hub). */
 export const TEMPO_DA_LOGICA_S = 180;
 export const QUESTOES_POR_RODADA = 10;
-/** Até quando a sessão aceita o envio: 3 min na digitação e 6 min na lógica (Hub). */
-export const VALIDADE_DA_SESSAO_MS: Record<Teste, number> = { digitacao: 3 * 60_000, numeros: 3 * 60_000, logica: 6 * 60_000 };
+/** O relógio dos atalhos (Fase 2): 60 s a partir do primeiro atalho, como a digitação. */
+export const TEMPO_DOS_ATALHOS_S = 60;
+/** Até quando a sessão aceita o envio: 3 min na digitação e nos atalhos, 6 min na lógica (Hub). */
+export const VALIDADE_DA_SESSAO_MS: Record<Teste, number> = { digitacao: 3 * 60_000, numeros: 3 * 60_000, logica: 6 * 60_000, atalhos: 3 * 60_000 };
 
 // ─── Quem pode ───────────────────────────────────────────────────────────────
 
