@@ -9,6 +9,7 @@ import { PORTAL_COOKIE } from "@/lib/auth/portal";
 import { cookieDaSessaoDoPortal, querLembrar } from "@/lib/auth/sessaoDoPortal";
 import { cookieDoEscritorioDoPortal } from "@/lib/portal/marcaNaEntrada";
 import { CAMINHO_DO_COOKIE_DA_ESCOLHA, COOKIE_DA_ESCOLHA } from "@/lib/auth/googleDoPortal";
+import { CAMINHO_DO_COOKIE_DA_EMPRESA, COOKIE_DA_EMPRESA_DO_PORTAL } from "@/lib/portal/empresaEscolhida";
 import { MAX_CONTAS_POR_EMAIL } from "@/app/(portal)/usuario";
 import { nomesDasContasNoLogin } from "@/lib/portal/empresasDaContaDb";
 import { clientIp, hit, reset } from "@/lib/rateLimit";
@@ -154,5 +155,9 @@ async function iniciarSessao(
 export async function sairDoPortal(): Promise<void> {
   const store = await cookies();
   store.delete(PORTAL_COOKIE);
+  // A empresa escolhida (11/11/2026) sai junto: no aparelho de outra pessoa,
+  // ela não deve abrir já na empresa de quem saiu. O caminho é o do cookie —
+  // sem ele, o navegador não apagaria o de `/portal`.
+  store.set(COOKIE_DA_EMPRESA_DO_PORTAL, "", { path: CAMINHO_DO_COOKIE_DA_EMPRESA, maxAge: 0 });
   redirect("/portal/login");
 }

@@ -14,15 +14,25 @@ const LIMITE = 500;
  * `comAnexos` traz o boleto, a nota ou o que mais a equipe anexou à conta
  * (P03, 11/11/2026): o cliente vê o documento antes de aprovar. Só a tela de
  * Aprovações pede — o Início só conta as contas.
+ *
+ * `empresaId` (11/11/2026) é a empresa escolhida no seletor do portal: estreita
+ * as contas, nunca o escopo — empresa fora do acesso é ignorada. O limite de
+ * aprovação segue lido em todas as empresas do acesso: `temAlcada` diz se o
+ * cliente aprova alguma coisa, não só nesta empresa.
  */
-export async function aprovacoesDoCliente(escopo: EscopoFinanceiro, portalUserId: string, { comAnexos = false }: { comAnexos?: boolean } = {}) {
+export async function aprovacoesDoCliente(
+  escopo: EscopoFinanceiro,
+  portalUserId: string,
+  { comAnexos = false, empresaId }: { comAnexos?: boolean; empresaId?: string | null } = {}
+) {
   const companyIds = escopo.companyIds ?? [];
+  const daLista = empresaId && companyIds.includes(empresaId) ? [empresaId] : companyIds;
   const prisma = getPrisma();
   const [contas, alcadas] = await Promise.all([
     prisma.financeEntry.findMany({
       where: {
         tenantId: escopo.tenantId,
-        companyId: { in: companyIds },
+        companyId: { in: daLista },
         kind: "PAGAR",
         approvalStatus: "AGUARDANDO",
         status: { not: "CANCELADO" },

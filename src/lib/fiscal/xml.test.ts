@@ -243,7 +243,8 @@ const nacional = `<?xml version="1.0"?><NFSe xmlns="http://www.sped.fazenda.gov.
   <DPS><infDPS>
     <serie>5</serie><nDPS>88</nDPS><dCompet>2026-09-01</dCompet>
     <toma><CNPJ>39952818000140</CNPJ><xNome>ZAHRA PERFUMES LTDA</xNome></toma>
-    <serv><valores><vServPrest><vServ>1800.00</vServ></vServPrest></valores></serv>
+    <serv><cServ><cTribNac>010101</cTribNac><xDescServ>SERVICO</xDescServ></cServ></serv>
+    <valores><vServPrest><vServ>1800.00</vServ></vServPrest></valores>
   </infDPS></DPS>
 </infNFSe></NFSe>`;
 
@@ -257,6 +258,19 @@ const cancelada = `<?xml version="1.0"?><CompNfse>
 </CompNfse>`;
 
 describe("NFS-e", () => {
+  // bug-627 (11/11/2026): no layout nacional real o `valores` é irmão do `serv`
+  // dentro do infDPS. O leitor só olhava dentro do `serv`, e 1.760 NFS-e de 196
+  // municípios foram recusadas com "valor do serviço ausente".
+  it("padrão nacional: o valor do serviço vem do infDPS › valores, e o formato antigo continua lido", () => {
+    expect(extraido(nacional).valorTotal).toBe("1800.00");
+    const antigo = nacional.replace(
+      /<serv>[\s\S]*?<\/serv>\s*<valores>[\s\S]*?<\/valores>/,
+      "<serv><valores><vServPrest><vServ>1800.00</vServ></vServPrest></valores></serv>"
+    );
+    expect(antigo).not.toBe(nacional);
+    expect(extraido(antigo).valorTotal).toBe("1800.00");
+  });
+
   it("lê o ABRASF 2.x dentro do envelope de consulta", () => {
     const d = extraido(abrasf2);
     expect(d.tipo).toBe("NFSE");
@@ -439,8 +453,8 @@ const nacionalRetido = (p: { vLiq?: string; tpRetPisCofins?: string; tpRetISSQN?
   <DPS><infDPS>
     <serie>5</serie><nDPS>90</nDPS><dCompet>2026-10-01</dCompet>
     <toma><CNPJ>11444777000161</CNPJ><xNome>TOMADORA EXEMPLO LTDA</xNome></toma>
-    <serv><valores><vServPrest><vServ>1000.00</vServ></vServPrest></valores></serv>
-    <valores><trib>
+    <serv><cServ><cTribNac>010101</cTribNac><xDescServ>SERVICO</xDescServ></cServ></serv>
+    <valores><vServPrest><vServ>1000.00</vServ></vServPrest><trib>
       <tribMun><tribISSQN>1</tribISSQN><tpRetISSQN>${p.tpRetISSQN ?? "2"}</tpRetISSQN></tribMun>
       <tribFed>
         <piscofins><CST>01</CST><vPis>6.50</vPis><vCofins>30.00</vCofins><tpRetPisCofins>${p.tpRetPisCofins ?? "1"}</tpRetPisCofins></piscofins>

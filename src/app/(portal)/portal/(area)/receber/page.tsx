@@ -6,9 +6,9 @@ import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortalReceberPage() {
+export default async function PortalReceberPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
   const sessao = await sessaoAtivaDoPortal();
   if (!sessao) redirect("/portal/login");
   if (await telaBloqueadaNoPortal(sessao.tenantId, "/portal/receber")) return <TelaIndisponivel />;
-  return <PortalContas kind="RECEBER" />;
+  return <PortalContas kind="RECEBER" empresaPedida={(await searchParams).empresa} />;
 }
