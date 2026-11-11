@@ -60,9 +60,11 @@ export default async function PortalLoginPage({ searchParams }: { searchParams: 
         : mensagemDoGoogle("escolha-expirou", { fichaDisponivel })
       : mensagemDoGoogle(google, { fichaDisponivel });
 
+  // "Entre no portal", e não "Bem-vindo de volta" (11/11/2026, P41): a mesma
+  // tela recebe quem nunca entrou — o convite do escritório traz para cá.
   return (
     <MolduraDoPortal
-      titulo="Bem-vindo de volta"
+      titulo="Entre no portal"
       subtitulo="Acompanhe a sua empresa com o escritório: documentos, pendências, aprovações e processos."
       marca={marca}
     >
