@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { lerXmlFiscal } from "@/lib/fiscal/xml";
+import { competenciaDaEmissao } from "@/lib/fiscal/documentos";
 import { apoioSchema, decimal, documentoSchema, somar, unidades, type DocumentoFiscal, type ItemFiscal } from "./dominio";
 import { decodificarEntidades } from "./entidades";
 
@@ -32,7 +33,7 @@ export function lerDocumentoXml(xml: string): DocumentoFiscal {
   });
   else if (Object.keys(cte).length) itens = [{ ordem: 1, codigo: "SERVICO_TRANSPORTE", descricao: "Serviço de transporte", ncm: "", cfop: s(caminho(cte, "ide", "CFOP")) || null, tipoItem: "09", quantidade: "1", valor: d.valorTotal, icms: imposto(cte.imp, "ICMS"), ipi: { ...tributoVazio(), valor: "0.00", base: "0.00" }, pis: tributoVazio(), cofins: tributoVazio() }];
   else itens = [{ ordem: 1, codigo: "SERVICO", descricao: `Serviço da NFS-e ${d.numero}`, ncm: "", cfop: null, tipoItem: "09", quantidade: "1", valor: d.valorTotal, icms: { ...tributoVazio(), valor: "0.00", base: "0.00" }, ipi: { ...tributoVazio(), valor: "0.00", base: "0.00" }, pis: tributoVazio(), cofins: tributoVazio() }];
-  return documentoSchema.parse({ identidade: d.chaveAcesso ?? `NFSE:${d.emitente.documento}:${d.serie}:${d.numero}:${d.competenciaDeclarada ?? d.emitidoEm.toISOString().slice(0, 7)}`, tipo: d.tipo, numero: d.numero, serie: d.serie, emitente: d.emitente.documento ?? "", destinatario: d.destinatario.documento ?? "", nomeEmitente: d.emitente.nome ?? "", nomeDestinatario: d.destinatario.nome ?? "", emitidoEm: d.emitidoEm.toISOString().slice(0, 10), competencia: d.competenciaDeclarada ?? d.emitidoEm.toISOString().slice(0, 7), valor: d.valorTotal, cancelado: d.cancelada, fonte: "xml", completo: itens.length > 0, itens });
+  return documentoSchema.parse({ identidade: d.chaveAcesso ?? `NFSE:${d.emitente.documento}:${d.serie}:${d.numero}:${d.competenciaDeclarada ?? competenciaDaEmissao(d.emitidoEmLocal)}`, tipo: d.tipo, numero: d.numero, serie: d.serie, emitente: d.emitente.documento ?? "", destinatario: d.destinatario.documento ?? "", nomeEmitente: d.emitente.nome ?? "", nomeDestinatario: d.destinatario.nome ?? "", emitidoEm: d.emitidoEmLocal, competencia: d.competenciaDeclarada ?? competenciaDaEmissao(d.emitidoEmLocal), valor: d.valorTotal, cancelado: d.cancelada, fonte: "xml", completo: itens.length > 0, itens });
 }
 const doSped = (v = "") => v ? decimal(unidades(v.replace(",", "."))) : "0.00";
 /** Carrega documentos, nunca usa E110/M para substituir o cálculo. Campos irrecuperáveis ficam nulos. */

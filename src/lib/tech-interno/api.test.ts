@@ -125,6 +125,9 @@ describe("listar e ver", () => {
     });
     // Só a marca que ainda vale: a do ponto 2 é de um texto reescrito.
     expect(json.acceptanceChecks).toEqual([{ position: 1, text: "A busca acha pelo CNPJ com e sem máscara.", checkedBy: "Pessoa fictícia", checkedAt: "2026-11-05T15:00:00.000Z" }]);
+    // O "Conferir" do PR (11/11/2026) vem à parte, e não se mistura ao "Aprovado quando".
+    expect(json.preTestChecks).toEqual([]);
+    expect(json.deliveryChecks).toEqual([{ check: "pr", checkedBy: "Pessoa fictícia", checkedAt: "2026-11-05T15:00:00.000Z" }]);
   });
 
   it("item sem critério de aceite: o campo vem null e não há pontos conferidos", async () => {

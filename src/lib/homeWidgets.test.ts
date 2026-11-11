@@ -62,6 +62,40 @@ describe("chaves que saíram do catálogo (destaques e indicadores, 10/11/2026)"
   });
 });
 
+// melhoria-597 (11/11/2026): com "Usa reuniões" desligado em todos os setores da
+// pessoa, "Próxima reunião" e "Agenda" nascem desligados no Início.
+describe("setor que não usa reuniões", () => {
+  const opts = { showRestricted: false };
+
+  it("sem preferência, os blocos de reunião não aparecem", () => {
+    const lidos = parseHomeWidgets(null, false);
+    expect(lidos).not.toContain("proxima-reuniao");
+    expect(lidos).not.toContain("agenda");
+    expect(lidos).toContain("meu-dia");
+    expect(visibleWidgets("top", lidos, opts)).toEqual([]);
+  });
+
+  it("preferência gravada antes (formato antigo ou sem versão): segue o setor", () => {
+    const antiga = parseHomeWidgets(JSON.stringify(["agenda", "meu-dia", "proxima-reuniao"]), false);
+    expect(antiga).toEqual(expect.not.arrayContaining(["agenda", "proxima-reuniao"]));
+    expect(antiga[0]).toBe("meu-dia");
+    const semVersao = parseHomeWidgets(JSON.stringify({ visiveis: ["agenda", "meu-dia"], ocultos: [] }), false);
+    expect(semVersao).not.toContain("agenda");
+  });
+
+  it("ligado pela pessoa no Personalizar (versão 2): vale", () => {
+    const raw = serializeHomeWidgets(["agenda", "meu-dia"], ["proxima-reuniao"]);
+    const lidos = parseHomeWidgets(raw, false);
+    expect(lidos.slice(0, 2)).toEqual(["agenda", "meu-dia"]);
+    expect(lidos).not.toContain("proxima-reuniao");
+  });
+
+  it("quem usa reuniões continua vendo tudo", () => {
+    expect(parseHomeWidgets(null, true)).toEqual(DEFAULT_HOME_WIDGETS);
+    expect(parseHomeWidgets(JSON.stringify(["agenda", "meu-dia"]), true)[0]).toBe("agenda");
+  });
+});
+
 describe("painéis de setor", () => {
   it("só aparecem (e só são listados) com acesso", () => {
     const semAcesso = { showRestricted: false };

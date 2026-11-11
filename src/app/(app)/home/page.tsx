@@ -12,7 +12,9 @@ import { CartoesDoTopo } from "@/components/home/CartoesDoTopo";
 import { FaixaDeCartoesCarregando } from "@/components/home/FaixaDeCartoes";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
 import { getPrisma } from "@/lib/prisma";
-import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
+import { getAuthContext, canWrite, isFullWrite, isFullAccess, scopedSectors } from "@/lib/auth/context";
+import { agendaDosSetores } from "@/lib/agendaDoSetorServidor";
+import { usaReunioes } from "@/lib/agendaDoSetor";
 import { scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
 import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffAbas";
 import { assuntoDaTransferencia, SEM_ASSUNTO } from "@/lib/handoffs";
@@ -20,7 +22,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
 import { enderecoDaTarefa, enderecoDe } from "@/lib/enderecoCurto";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
-import { HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
+import { BLOCOS_DE_REUNIAO, HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
 import { acessoDosPaineis } from "@/lib/home/acessoDosPaineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
 import {
@@ -119,6 +121,40 @@ export default async function HomePage() {
     ? { AND: [scopedHandoffWhere(ctx), whereDaAba("setor", quemVe)] }
     : null;
 
+  // Leitura tolerante a falha de propósito: a Home é a primeira tela depois
+  // do login e a tabela `user_preferences` só passa a existir depois do
+  // `prisma db push`. Sem o catch, esquecer o push derrubaria a Home do time
+  // inteiro por causa de uma preferência cosmética — assim ela só volta ao
+  // layout padrão e o erro fica no log do servidor.
+  const preferenciaP = ctx.userId
+    ? prisma.userPreference
+        .findUnique({ where: { userId: ctx.userId }, select: { homeWidgets: true } })
+        .catch((err: unknown) => {
+          console.error("[HomePage] preferência de widgets indisponível", err);
+          return null;
+        })
+    : Promise.resolve(null);
+
+  // Os blocos escolhidos dependem de os setores da pessoa usarem reuniões
+  // (melhoria-597, 11/11/2026): quem não usa não vê "Próxima reunião" nem
+  // "Agenda" até ligar pelo Personalizar, e aí a consulta das reuniões nem roda.
+  const blocosP = Promise.all([preferenciaP, agendaDosSetores(ctx.tenantId)]).then(([preferencia, { porSetor }]) =>
+    parseHomeWidgets(preferencia?.homeWidgets, usaReunioes(scopedSectors(ctx) ?? ctx.sectors, porSetor))
+  );
+  const reunioesP = blocosP.then((blocos) =>
+    ctx.userId && blocos.some((k) => BLOCOS_DE_REUNIAO.includes(k))
+      ? prisma.meeting.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            startAt: { gte: now },
+            OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
+          },
+          orderBy: { startAt: "asc" },
+          take: 4,
+        })
+      : []
+  );
+
   // Os números dos cartões do topo (empresas ativas, solicitações atrasadas,
   // transferências…) saíram daqui em 10/11/2026: cada cartão conta o seu, e só
   // os quatro que a pessoa tem no topo (`components/home/CartoesDoTopo`).
@@ -130,7 +166,7 @@ export default async function HomePage() {
     activityCreatedDates,
     upcomingMeetings,
     incomingHandoffsRaw,
-    homePreference,
+    selectedWidgets,
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
@@ -165,17 +201,7 @@ export default async function HomePage() {
       where: { tenantId: ctx.tenantId, pipelineItem: { pipeline: scopedPipelineWhere(ctx) }, createdAt: { gte: fourteenDaysAgo } },
       select: { createdAt: true },
     }),
-    ctx.userId
-      ? prisma.meeting.findMany({
-          where: {
-            tenantId: ctx.tenantId,
-            startAt: { gte: now },
-            OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
-          },
-          orderBy: { startAt: "asc" },
-          take: 4,
-        })
-      : Promise.resolve([]),
+    reunioesP,
     incomingHandoffWhere
       ? prisma.handoff.findMany({
           where: incomingHandoffWhere,
@@ -186,22 +212,8 @@ export default async function HomePage() {
           },
         })
       : Promise.resolve([]),
-    // Leitura tolerante a falha de propósito: a Home é a primeira tela depois
-    // do login e a tabela `user_preferences` só passa a existir depois do
-    // `prisma db push`. Sem o catch, esquecer o push derrubaria a Home do time
-    // inteiro por causa de uma preferência cosmética — assim ela só volta ao
-    // layout padrão e o erro fica no log do servidor.
-    ctx.userId
-      ? prisma.userPreference
-          .findUnique({ where: { userId: ctx.userId }, select: { homeWidgets: true } })
-          .catch((err: unknown) => {
-            console.error("[HomePage] preferência de widgets indisponível", err);
-            return null;
-          })
-      : Promise.resolve(null),
+    blocosP,
   ]);
-
-  const selectedWidgets = parseHomeWidgets(homePreference?.homeWidgets);
 
   // "Meu dia" — itens atribuídos a mim (qualquer prazo) unidos com todo item
   // com prazo definido no meu escopo (inclui vencidos, que a versão antiga

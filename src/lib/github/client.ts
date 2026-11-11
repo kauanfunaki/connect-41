@@ -31,7 +31,8 @@ export class GithubClient {
     if (url.origin !== API_ORIGIN || !path.startsWith("/") || path.startsWith("//")) throw new GithubError("Endereço de API inválido.");
     let response: Response;
     try {
-      response = await this.fetcher(url, { headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${this.token}`, "X-GitHub-Api-Version": API_VERSION },
+      response = await this.fetcher(url, { // Sem token (string vazia), a consulta vai sem autorização: só lê o que é público (11/11/2026, o "Conferir" do Controle interno).
+        headers: { Accept: "application/vnd.github+json", ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}), "X-GitHub-Api-Version": API_VERSION },
         cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000) });
     } catch { throw new GithubError("Não foi possível consultar o GitHub. A sincronização será retomada.", 503, new Date(Date.now() + 60000), "network"); }
     if (!response.ok) {

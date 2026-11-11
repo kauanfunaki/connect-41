@@ -17,7 +17,14 @@ import { decDoBanco, dia, empresaDoTenant, falha, limitesDoMes, NAO_ENCONTRADA, 
 
 export type ArquivoGerado = { nome: string; conteudo: string; tipo: string; linhas: number; avisos: string[] };
 
-export async function gerarArquivoDoDominio(tenantId: string, userId: string, empresaId: string, f: EntradaExportacao): Promise<Resultado<ArquivoGerado>> {
+/** `registrar: false` gera o arquivo sem gravar o histórico da exportação (a conferência da carga só lê). */
+export async function gerarArquivoDoDominio(
+  tenantId: string,
+  userId: string | null,
+  empresaId: string,
+  f: EntradaExportacao,
+  opcoes: { registrar?: boolean } = {},
+): Promise<Resultado<ArquivoGerado>> {
   const empresa = await empresaDoTenant(tenantId, empresaId);
   if (!empresa) return falha(NAO_ENCONTRADA);
   const prisma = getPrisma();
@@ -59,9 +66,11 @@ export async function gerarArquivoDoDominio(tenantId: string, userId: string, em
   }
   if (arquivo.lancamentosSemPar) avisos.push(`${arquivo.lancamentosSemPar} lançamento(s) sem débito e crédito ficaram de fora.`);
 
-  await prisma.coreExportacao.create({
-    data: { tenantId, empresaId, formato: f.formato, status: "concluido", filtroDe: inicio, filtroAte: ate, totalRegistros: arquivo.linhas.length, criadoPorId: userId, finishedAt: new Date() },
-  });
+  if (opcoes.registrar !== false) {
+    await prisma.coreExportacao.create({
+      data: { tenantId, empresaId, formato: f.formato, status: "concluido", filtroDe: inicio, filtroAte: ate, totalRegistros: arquivo.linhas.length, criadoPorId: userId, finishedAt: new Date() },
+    });
+  }
 
   const cnpj = empresa.cnpj.replace(/\D/g, "");
   return ok({

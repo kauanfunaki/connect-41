@@ -14,7 +14,7 @@ import {
 // Cada chamada chega com o token pessoal; a ferramenta só aparece se o token
 // tem o escopo dela, e age com o acesso de hoje da pessoa dona do token.
 
-export const VERSAO_DO_SERVIDOR_MCP = "1.4.0";
+export const VERSAO_DO_SERVIDOR_MCP = "1.5.0";
 
 const INSTRUCOES = `Servidor do Connect para o Controle interno da equipe Tech: o registro de bugs, melhorias, novas funcionalidades, testes e migrações dos sistemas.
 Tudo o que você faz aqui fica no histórico do item e na Auditoria com o nome da pessoa dona do token.
@@ -88,7 +88,7 @@ export function criarServidorMcp(ator: AtorDoToken, base: string): McpServer {
 
     server.registerTool("ver_item", {
       title: "Ver um item",
-      description: "Mostra um item com todos os campos — inclusive o critério de aceite (acceptanceCriteria) e os pontos de \"Aprovado quando\" já conferidos, com quem conferiu (acceptanceChecks) —, a version atual, os comentários, o histórico de alterações e os anexos.",
+      description: "Mostra um item com todos os campos — inclusive o critério de aceite (acceptanceCriteria), os pontos de \"Aprovado quando\" já conferidos, com quem conferiu (acceptanceChecks), os pontos de \"Antes de testar\" já marcados (preTestChecks) e o que o \"Conferir\" do PR conferiu sozinho: pr (mergeado), migration:<pasta> (aplicada) e no-ar (deliveryChecks) —, a version atual, os comentários, o histórico de alterações e os anexos.",
       inputSchema: { id: ID },
       annotations: { readOnlyHint: true, openWorldHint: false },
     }, ({ id }) => executar(() => verParaApi(ator, id, base)));
