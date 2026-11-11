@@ -145,7 +145,7 @@ describe("tutorial do portal", () => {
     const t = portal(["bpo_aprovacoes", "bpo_contas_pagar", "bpo_dre"]);
     expect(chaves(t)).toContain("aprovacoes");
     expect(chaves(t)).not.toContain("financeiro");
-    expect(textoDe(t, "aprovacoes")).toContain("Em Financeiro, no menu, você acompanha: DRE e Contas a pagar.");
+    expect(textoDe(t, "aprovacoes")).toContain("Em Financeiro, no menu, você acompanha: Resultado do mês (DRE) e Contas a pagar.");
   });
 
   it("só aprovações, sem tela de financeiro: sem a linha do financeiro", () => {
@@ -156,7 +156,7 @@ describe("tutorial do portal", () => {
   it("financeiro sem aprovações: o passo lista as telas do menu, como o menu as chama", () => {
     const t = portal(["bpo_fluxo_caixa", "bpo_contas_receber", "bpo_cobranca"]);
     expect(chaves(t)).toContain("financeiro");
-    expect(textoDe(t, "financeiro")).toContain("Fluxo de caixa, Relatório, Contas a receber e Cobrança");
+    expect(textoDe(t, "financeiro")).toContain("Fluxo de caixa, Resumo do mês por empresa, Contas a receber e Cobrança");
   });
 
   it("processos do Societário", () => {

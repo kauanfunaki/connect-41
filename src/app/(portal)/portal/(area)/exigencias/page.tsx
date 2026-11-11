@@ -45,7 +45,12 @@ export default async function PortalExigenciasPage({
 
   return (
     <PageContainer>
-      <PortalCabecalho titulo="Exigências" descricao="O que os órgãos pediram nos processos das suas empresas." />
+      {/* O título nas palavras do cliente (11/11/2026, P38): "Exigências" é
+          como a Junta chama. O mesmo nome do menu (`telas.ts`). */}
+      <PortalCabecalho
+        titulo="O que os órgãos pediram"
+        descricao="Documentos e correções que a Junta, a Receita ou a prefeitura pediram nos processos das suas empresas."
+      />
 
       {/* Abertas/resolvidas é filtro da mesma lista: mora no "Filtros"
           (regra da conferência de 30/09). */}
@@ -58,7 +63,7 @@ export default async function PortalExigenciasPage({
         <Card>
           <EmptyState
             icon={<TriangleAlert />}
-            title={recorte === "abertas" ? "Nenhuma exigência aberta" : "Nenhuma exigência resolvida"}
+            title={recorte === "abertas" ? "Nenhum pedido em aberto" : "Nenhum pedido resolvido"}
             description="Quando um órgão pedir ajuste num processo, o pedido aparece aqui."
           />
         </Card>
