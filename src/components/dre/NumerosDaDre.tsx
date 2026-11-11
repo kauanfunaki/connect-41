@@ -6,7 +6,10 @@
 // telas irmãs, com a comparação com o mês anterior quando ele tem movimento —
 // sem mês anterior, sem comparação: zero de "não houve" não é base.
 
-import { FaixaDeTotais, type ItemDeTotal } from "@/components/ui/FaixaDeTotais";
+import { BotaoDaDica } from "@/components/dre/BotaoDaDica";
+import { FaixaDeTotais, indiceDoDestaque, type ItemDeTotal } from "@/components/ui/FaixaDeTotais";
+import { MetricCard, type TomDaMetrica } from "@/components/ui/MetricCard";
+import { dicaDaLinha } from "@/lib/dre/dicasDaDre";
 import type { ResultadoDoDre } from "@/lib/dre/calculo";
 import { valorDaLinha, fracaoDaLinha, modeloDoResultado } from "@/lib/dre/economica";
 import { quantoMudou } from "@/lib/home/tendencia";
@@ -68,17 +71,65 @@ export function itensDosNumerosDaDre(
   ];
 }
 
+/** As linhas dos quatro números, na ordem de `itensDosNumerosDaDre`. */
+export function codigosDosNumerosDaDre(resultado: ResultadoDoDre): string[] {
+  const modelo = modeloDoResultado(resultado);
+  return ["receita_bruta", "margem_contribuicao", modelo.linhaOperacional, modelo.linhaDoResultado];
+}
+
+/** O tom do cartão pela classe que o item traz — só os dois que a DRE usa. */
+function tomDoCartao(tom: string | undefined): TomDaMetrica | undefined {
+  if (tom?.includes("danger")) return "critico";
+  if (tom?.includes("muted")) return "neutro";
+  return undefined;
+}
+
 export function NumerosDaDre({
   resultado,
   regime,
   anterior = null,
   className,
+  dicas = false,
 }: {
   resultado: ResultadoDoDre;
   regime: "caixa" | "competencia";
   /** O mês anterior, quando ele teve movimento. Sem ele, os números vão sem comparação. */
   anterior?: AnteriorDaDre | null;
   className?: string;
+  /**
+   * Um "?" no canto de cada cartão, com a frase do que é aquele número
+   * (11/11/2026, P16) — a DRE do cliente: "Margem de contribuição" e "EBITDA"
+   * não diziam nada ao dono da empresa. A equipe segue com a faixa de sempre.
+   */
+  dicas?: boolean;
 }) {
-  return <FaixaDeTotais itens={itensDosNumerosDaDre(resultado, regime, anterior)} className={className} />;
+  const itens = itensDosNumerosDaDre(resultado, regime, anterior);
+  if (!dicas) return <FaixaDeTotais itens={itens} className={className} />;
+
+  // A mesma grade e o mesmo destaque da `FaixaDeTotais` (quatro cartões: dois
+  // por linha, quatro do `xl` em diante), com a dica no `canto` do cartão — a
+  // faixa não tem onde pô-la.
+  const codigos = codigosDosNumerosDaDre(resultado);
+  const principal = indiceDoDestaque(itens);
+  return (
+    <div className={`grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 ${className ?? "mb-5"}`.trim()}>
+      {itens.map((i, n) => {
+        const dica = dicaDaLinha(codigos[n] ?? "");
+        const destaque = n === principal;
+        return (
+          <MetricCard
+            key={i.rotulo}
+            label={i.rotulo}
+            value={i.valor}
+            detalhe={i.detalhe}
+            tom={tomDoCartao(i.tom)}
+            iconeDoTom={false}
+            destaque={destaque}
+            delay={n * 40}
+            canto={dica ? <BotaoDaDica rotulo={i.rotulo} dica={dica} sobreAzul={destaque} /> : undefined}
+          />
+        );
+      })}
+    </div>
+  );
 }
