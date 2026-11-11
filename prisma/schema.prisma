@@ -11528,3 +11528,23 @@ model FlowAttachment {
   @@index([flowDocId])
   @@map("flow_attachments")
 }
+
+/// Um modelo aprovado pela Meta (11/11/2026): o único jeito de retomar a
+/// conversa depois de 24 h sem mensagem do cliente. O texto é cadastrado aqui
+/// igual ao aprovado lá, com {{1}}, {{2}}…; o {{1}} recebe a assinatura de quem manda.
+model AtendimentoModelo {
+  id         String  @id @default(uuid())
+  tenantId   String
+  rotulo     String  @db.VarChar(80)
+  /// O nome do modelo na Meta, exatamente como foi aprovado (minúsculas e _).
+  nomeNaMeta String  @db.VarChar(120)
+  idioma     String  @default("pt_BR") @db.VarChar(10)
+  texto      String  @db.Text
+  ativo      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, ativo])
+  @@map("atendimento_modelos")
+}

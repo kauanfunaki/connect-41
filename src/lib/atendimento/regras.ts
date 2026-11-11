@@ -166,6 +166,38 @@ export function preencherCampos(texto: string, c: CamposDaMensagem): string {
     .trim();
 }
 
+// ─── Modelos da Meta ─────────────────────────────────────────────────────────
+
+/** Quantas variáveis o modelo tem: o maior {{n}} do texto. */
+export function variaveisDoModelo(texto: string): number {
+  let maior = 0;
+  for (const m of texto.matchAll(/\{\{\s*(\d{1,2})\s*\}\}/g)) maior = Math.max(maior, Number(m[1]));
+  return maior;
+}
+
+/** O nome do modelo na Meta: minúsculas, números e sublinhado. */
+export function nomeDeModeloValido(nome: string): boolean {
+  return /^[a-z0-9_]{1,120}$/.test(nome);
+}
+
+/**
+ * Os parâmetros que vão à Meta: o {{1}} é sempre a assinatura de quem manda
+ * (a regra de toda mensagem sair assinada vale também no modelo), e os outros,
+ * na ordem, o que a pessoa preencheu. Variável sem valor vai como "-": a Meta
+ * recusa parâmetro vazio.
+ */
+export function parametrosDoModelo(texto: string, assinatura: string, preenchidos: readonly string[]): string[] {
+  const total = variaveisDoModelo(texto);
+  if (total === 0) return [];
+  const valores = [assinatura, ...preenchidos.map((v) => v.replace(/\s+/g, " ").trim())];
+  return Array.from({ length: total }, (_, i) => (valores[i] ?? "").trim() || "-");
+}
+
+/** O texto como o cliente lê, para guardar na conversa. */
+export function textoDoModelo(texto: string, parametros: readonly string[]): string {
+  return texto.replace(/\{\{\s*(\d{1,2})\s*\}\}/g, (_, n: string) => parametros[Number(n) - 1] ?? "");
+}
+
 // ─── Recortes da lista ───────────────────────────────────────────────────────
 
 export const RECORTES_DA_TRIAGEM = ["triagem", "pedidos", "minhas", "todas"] as const;

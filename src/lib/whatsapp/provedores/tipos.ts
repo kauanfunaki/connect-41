@@ -58,7 +58,20 @@ export type MensagemIgnorada = {
   documento?: DocumentoRecebido;
   /** Legenda da imagem, do vídeo ou do arquivo — entra na conversa junto. */
   legenda?: string;
+  /**
+   * Qualquer mídia (imagem, áudio, vídeo, documento, figurinha), para quem sabe
+   * guardar todas — o Atendimento do escritório (11/11/2026). O Recrutamento não
+   * lê este campo: lá continua valendo só o `documento`. `referencia` é opaca,
+   * como a do documento: o que o provedor precisa de volta para baixar.
+   */
+  midia?: { referencia: unknown; mimetype: string | null; nomeDoArquivo: string | null };
 };
+
+/** Um arquivo para mandar: os bytes, o tipo conferido e o nome que o cliente vê. */
+export type MidiaParaEnviar = { bytes: Buffer; mimetype: string; nomeDoArquivo: string; legenda: string | null };
+
+/** Um modelo aprovado pela Meta, com os valores das variáveis na ordem ({{1}}, {{2}}…). */
+export type ModeloParaEnviar = { nome: string; idioma: string; parametros: string[]; textoPreenchido: string };
 
 export type MidiaBaixada =
   | { ok: true; bytes: Buffer; mimetype: string | null; nomeDoArquivo: string | null }
@@ -136,6 +149,16 @@ export interface ProvedorWhatsapp {
    * Não lança.
    */
   baixarMidia?(config: ConfigDoProvedor, referencia: unknown): Promise<MidiaBaixada>;
+
+  /** Manda um arquivo. Ausente = o provedor não sabe (a tela recusa o anexo). Não lança. */
+  enviarMidia?(config: ConfigDoProvedor, paraE164: string, midia: MidiaParaEnviar): Promise<ResultadoDoEnvio>;
+
+  /**
+   * Manda um modelo aprovado — o único jeito de retomar a conversa depois da
+   * janela de 24 h na Meta. Ausente = o provedor não tem modelos (a Evolution),
+   * e quem chama manda o `textoPreenchido` como texto comum. Não lança.
+   */
+  enviarModelo?(config: ConfigDoProvedor, paraE164: string, modelo: ModeloParaEnviar): Promise<ResultadoDoEnvio>;
 }
 
 /**

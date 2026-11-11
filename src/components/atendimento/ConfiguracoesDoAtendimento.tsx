@@ -18,6 +18,8 @@ import {
   reordenarDesfechosAction,
   salvarConfiguracaoAction,
   salvarMensagemPadraoAction,
+  salvarModeloAction,
+  removerModeloAction,
   type Resultado,
 } from "@/app/(app)/atendimento/actions";
 
@@ -35,6 +37,7 @@ type Config = {
 };
 type Setor = { code: string; label: string; cor: string };
 type Desfecho = { id: string; label: string; ativo: boolean; ordem: number };
+type Modelo = { id: string; rotulo: string; nomeNaMeta: string; idioma: string; texto: string; ativo: boolean };
 type Mensagem = { id: string; titulo: string; sectorCode: string | null; texto: string; ativo: boolean };
 
 const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -79,6 +82,7 @@ export function ConfiguracoesDoAtendimento(p: {
   setores: Setor[];
   desfechos: Desfecho[];
   mensagens: Mensagem[];
+  modelos: Modelo[];
 }) {
   const [c, setC] = useState<Config>(p.config);
   const { ocupado, rodar } = useAcao();
@@ -196,6 +200,7 @@ export function ConfiguracoesDoAtendimento(p: {
 
       <Desfechos desfechos={p.desfechos} />
       <MensagensPadrao mensagens={p.mensagens} setores={p.setores} />
+      <ModelosDaMeta modelos={p.modelos} />
     </div>
   );
 }
@@ -368,6 +373,80 @@ function MensagensPadrao({ mensagens, setores }: { mensagens: Mensagem[]; setore
           )}
           <Button type="submit" loading={ocupado} disabled={!form.titulo.trim() || !form.texto.trim()}>
             {form.id ? "Salvar mensagem" : "Criar mensagem"}
+          </Button>
+        </div>
+      </form>
+    </Bloco>
+  );
+}
+
+function ModelosDaMeta({ modelos }: { modelos: Modelo[] }) {
+  const vazio: Modelo = { id: "", rotulo: "", nomeNaMeta: "", idioma: "pt_BR", texto: "", ativo: true };
+  const [form, setForm] = useState<Modelo>(vazio);
+  const { ocupado, rodar } = useAcao();
+  return (
+    <Bloco
+      titulo="Modelos da Meta"
+      texto="Usados no “Retomar conversa”, depois de 24 h sem mensagem do cliente. Cadastre igual ao aprovado na Meta; o {{1}} recebe a assinatura de quem manda."
+    >
+      {modelos.length > 0 && (
+        <ul className="flex flex-col rounded-lg border border-border bg-surface overflow-hidden">
+          {modelos.map((m) => (
+            <li key={m.id} className="flex items-start gap-3 px-3 py-2.5 border-t border-border first:border-t-0">
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span className="text-ui font-medium">
+                  {m.rotulo} {!m.ativo && <span className="text-fg-muted font-normal">(desligado)</span>}
+                </span>
+                <span className="text-micro text-fg-muted">
+                  {m.nomeNaMeta} · {m.idioma}
+                </span>
+                <span className="text-micro text-fg-secondary truncate">{m.texto}</span>
+              </div>
+              <button type="button" className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-surface-hover" aria-label={"Editar " + m.rotulo} onClick={() => setForm(m)}>
+                <Pencil size={15} />
+              </button>
+              <button type="button" className="inline-flex items-center justify-center w-8 h-8 rounded-md text-danger hover:bg-danger/8" aria-label={"Remover " + m.rotulo} onClick={() => rodar(() => removerModeloAction(m.id), "Modelo removido.")}>
+                <Trash2 size={15} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          rodar(() => salvarModeloAction({ ...form, id: form.id || null }), form.id ? "Modelo salvo." : "Modelo cadastrado.", () => setForm(vazio));
+        }}
+      >
+        <b className="text-ui">{form.id ? "Editar modelo" : "Novo modelo"}</b>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex-[2_1_12rem] flex flex-col gap-1 text-ui font-semibold">
+            Nome na tela
+            <Input value={form.rotulo} onChange={(e) => setForm({ ...form, rotulo: e.target.value })} maxLength={80} placeholder="Continuar o atendimento" />
+          </label>
+          <label className="flex-[2_1_12rem] flex flex-col gap-1 text-ui font-semibold">
+            Nome na Meta
+            <Input value={form.nomeNaMeta} onChange={(e) => setForm({ ...form, nomeNaMeta: e.target.value })} maxLength={120} placeholder="retomar_atendimento" />
+          </label>
+          <label className="flex-[1_1_6rem] flex flex-col gap-1 text-ui font-semibold">
+            Idioma
+            <Input value={form.idioma} onChange={(e) => setForm({ ...form, idioma: e.target.value })} maxLength={10} />
+          </label>
+        </div>
+        <label className="flex flex-col gap-1 text-ui font-semibold">
+          Texto aprovado
+          <Textarea rows={3} value={form.texto} onChange={(e) => setForm({ ...form, texto: e.target.value })} placeholder="*{{1}}*&#10;Olá! Ainda precisamos de {{2}} para seguir com o seu atendimento. Pode responder por aqui?" />
+        </label>
+        <Checkbox id="atd-modelo-ligado" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} label="Ligado" />
+        <div className="flex justify-end gap-2">
+          {form.id && (
+            <Button variant="ghost" onClick={() => setForm(vazio)}>
+              Cancelar
+            </Button>
+          )}
+          <Button type="submit" loading={ocupado} disabled={!form.rotulo.trim() || !form.nomeNaMeta.trim() || !form.texto.trim()}>
+            {form.id ? "Salvar modelo" : "Cadastrar modelo"}
           </Button>
         </div>
       </form>

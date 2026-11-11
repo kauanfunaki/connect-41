@@ -101,3 +101,101 @@ export async function enviarNoAtendimento(p: {
 
   return r.ok ? { ok: true, mensagemId: linha.id } : { ok: false, erro: r.erro, mensagemId: linha.id };
 }
+
+type Envio = { ok: true; mensagemId: string } | { ok: false; erro: string; mensagemId: string };
+
+/** Grava a linha de um arquivo já guardado, manda com a assinatura na legenda, e fecha a linha. */
+export async function enviarArquivoNoAtendimento(p: {
+  tenantId: string;
+  conversaId: string;
+  cicloId: string;
+  waPhone: string;
+  conexao: ConexaoDoAtendimento;
+  arquivo: { bytes: Buffer; fileUrl: string; fileName: string; mimeType: string };
+  legenda: string;
+  assinatura: string;
+  senderUserId: string;
+}): Promise<Envio> {
+  const prisma = getPrisma();
+  const agora = new Date();
+  const linha = await prisma.atendimentoMensagem.create({
+    data: {
+      tenantId: p.tenantId,
+      conversaId: p.conversaId,
+      cicloId: p.cicloId,
+      direcao: "SAIDA",
+      body: p.legenda,
+      status: "PENDENTE",
+      senderUserId: p.senderUserId,
+      assinatura: p.assinatura,
+      midiaTipo: "arquivo",
+      midiaPath: p.arquivo.fileUrl,
+      midiaNome: p.arquivo.fileName.slice(0, 180),
+      midiaMime: p.arquivo.mimeType.slice(0, 100),
+      createdAt: agora,
+    },
+    select: { id: true },
+  });
+  const r = p.conexao.provedor.enviarMidia
+    ? await p.conexao.provedor.enviarMidia(p.conexao.config, p.waPhone, {
+        bytes: p.arquivo.bytes,
+        mimetype: p.arquivo.mimeType,
+        nomeDoArquivo: p.arquivo.fileName,
+        legenda: textoAssinado(p.assinatura, p.legenda || p.arquivo.fileName),
+      })
+    : ({ ok: false, erro: "Este número não manda arquivos." } as const);
+  await prisma.atendimentoMensagem.update({
+    where: { id: linha.id },
+    data: r.ok ? { status: "ENVIADA", waMessageId: r.waMessageId, erro: null } : { status: "FALHOU", erro: r.erro.slice(0, 500) },
+  });
+  await prisma.atendimentoConversa.update({ where: { id: p.conversaId }, data: { lastMessageAt: agora } });
+  return r.ok ? { ok: true, mensagemId: linha.id } : { ok: false, erro: r.erro, mensagemId: linha.id };
+}
+
+/**
+ * Manda um modelo aprovado. Na Meta vai como modelo; no provedor sem modelos
+ * (a Evolution, sem janela), vai o texto preenchido como mensagem comum.
+ */
+export async function enviarModeloNoAtendimento(p: {
+  tenantId: string;
+  conversaId: string;
+  cicloId: string;
+  waPhone: string;
+  conexao: ConexaoDoAtendimento;
+  modelo: { nomeNaMeta: string; idioma: string };
+  parametros: string[];
+  textoPreenchido: string;
+  assinatura: string;
+  senderUserId: string;
+}): Promise<Envio> {
+  const prisma = getPrisma();
+  const agora = new Date();
+  const linha = await prisma.atendimentoMensagem.create({
+    data: {
+      tenantId: p.tenantId,
+      conversaId: p.conversaId,
+      cicloId: p.cicloId,
+      direcao: "SAIDA",
+      body: p.textoPreenchido,
+      status: "PENDENTE",
+      senderUserId: p.senderUserId,
+      assinatura: p.assinatura,
+      createdAt: agora,
+    },
+    select: { id: true },
+  });
+  const r = p.conexao.provedor.enviarModelo
+    ? await p.conexao.provedor.enviarModelo(p.conexao.config, p.waPhone, {
+        nome: p.modelo.nomeNaMeta,
+        idioma: p.modelo.idioma,
+        parametros: p.parametros,
+        textoPreenchido: p.textoPreenchido,
+      })
+    : await p.conexao.provedor.enviarTexto(p.conexao.config, p.waPhone, p.textoPreenchido);
+  await prisma.atendimentoMensagem.update({
+    where: { id: linha.id },
+    data: r.ok ? { status: "ENVIADA", waMessageId: r.waMessageId, erro: null } : { status: "FALHOU", erro: r.erro.slice(0, 500) },
+  });
+  await prisma.atendimentoConversa.update({ where: { id: p.conversaId }, data: { lastMessageAt: agora } });
+  return r.ok ? { ok: true, mensagemId: linha.id } : { ok: false, erro: r.erro, mensagemId: linha.id };
+}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Lock, Send, UserRound, Zap } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Download, Lock, Paperclip, Send, UserRound, X, Zap } from "lucide-react";
 import { AcaoRapida, BarraDoPainel, PainelDeConversa } from "@/components/conversas/caixa/Caixa";
 import { NavegacaoPorTeclado } from "@/components/conversas/caixa/Interativos";
 import { Button } from "@/components/ui/Button";
@@ -14,7 +14,9 @@ import { useToast } from "@/components/ui/Toast";
 import type { DetalheDoAtendimento } from "@/lib/atendimento/consultas";
 import { formatInstantDate, formatInstantTime } from "@/lib/format";
 import { ROTULO_DA_SITUACAO, noRecorte, preencherCampos } from "@/lib/atendimento/regras";
-import { anotarAction, assumirAction, responderAction, type Resultado } from "@/app/(app)/atendimento/actions";
+import { anotarAction, assumirAction, responderAction, retomarConversaAction, type Resultado } from "@/app/(app)/atendimento/actions";
+import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
 import { useCaixaDoAtendimento } from "./CaixaDoAtendimento";
 import { PainelDeEncaminhar, PainelDoContato, JanelaDeEncerrar, JanelaDeTransferir, FaixaDoPedido } from "./AcoesDoAtendimento";
 
@@ -122,7 +124,7 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
             <Escrever d={d} aoAssumir={() => rodar(() => assumirAction(d.ciclo.id), "Conversa assumida.")} ocupado={ocupado} />
           </div>
           <aside className="hidden xl:flex w-72 shrink-0 flex-col gap-4 border-l border-border-soft p-4 overflow-y-auto scroll-y" aria-label="Cliente e caminho da conversa">
-            <Cliente d={d} />
+            <Cliente d={d} aoConvidar={() => setAberto("contato")} />
             <Caminho d={d} />
           </aside>
         </div>
@@ -187,7 +189,26 @@ function Balao({ m }: { m: DetalheDoAtendimento["mensagens"][number] }) {
           {m.automatica ? " · automática" : ""}
         </p>
       )}
-      <p className={`text-ui text-fg whitespace-pre-wrap break-words ${m.midia ? "italic text-fg-secondary" : ""}`}>{m.texto}</p>
+      {m.arquivo &&
+        (m.arquivo.imagem ? (
+          <a href={`/api/atendimento/anexos/${m.id}`} className="block my-1" title={`Baixar ${m.arquivo.nome}`}>
+            {/* Imagem guardada pelo Connect, servida pela rota autenticada: sem otimização do Next. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/atendimento/anexos/${m.id}?ver=1`} alt={m.arquivo.nome} className="max-h-60 max-w-full rounded-md border border-border object-contain bg-surface" />
+          </a>
+        ) : (
+          <a
+            href={`/api/atendimento/anexos/${m.id}`}
+            className="my-1 flex items-center gap-2.5 rounded-md border border-border bg-surface px-2.5 py-2 text-ui text-fg hover:border-brand/40"
+          >
+            <Paperclip size={16} className="text-fg-muted shrink-0" aria-hidden />
+            <span className="min-w-0 truncate font-medium">{m.arquivo.nome}</span>
+            <Download size={14} className="ml-auto text-fg-muted shrink-0" aria-hidden />
+          </a>
+        ))}
+      {m.texto && (m.arquivo ? m.texto !== m.arquivo.nome : true) && (
+        <p className={`text-ui text-fg whitespace-pre-wrap break-words ${m.midia && !m.arquivo ? "italic text-fg-secondary" : ""}`}>{m.texto}</p>
+      )}
       <p className="text-micro text-fg-muted text-right mt-0.5">
         {hora(m.quando)}
         {saida && m.status === "FALHOU" && <span className="text-danger"> · não saiu{m.erro ? `: ${m.erro}` : ""}</span>}
@@ -205,6 +226,8 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
   const [modoEscolhido, setModo] = useState<"cliente" | "nota">("cliente");
   const modo = podeCliente ? modoEscolhido : "nota";
   const [texto, setTexto] = useState("");
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const campoDoArquivo = useRef<HTMLInputElement>(null);
   const [enviando, iniciar] = useTransition();
   const [padroesAbertos, setPadroesAbertos] = useState(false);
   const router = useRouter();
@@ -227,6 +250,28 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
 
   function enviar() {
     const t = texto.trim();
+    if (arquivo && modo === "cliente") {
+      // O arquivo vai pela rota (até 16 MB), com o texto como legenda.
+      iniciar(async () => {
+        const form = new FormData();
+        form.append("cicloId", d.ciclo.id);
+        form.append("legenda", t);
+        form.append("arquivo", arquivo);
+        let r: { ok: boolean; erro?: string };
+        try {
+          r = (await (await fetch("/api/atendimento/anexos", { method: "POST", body: form })).json()) as { ok: boolean; erro?: string };
+        } catch {
+          r = { ok: false, erro: "Não deu para falar com o servidor. Confira a conexão e tente de novo." };
+        }
+        if (!r.ok) toast.error(r.erro ?? "O arquivo não saiu.");
+        else {
+          setTexto("");
+          setArquivo(null);
+        }
+        router.refresh();
+      });
+      return;
+    }
     if (!t) return;
     iniciar(async () => {
       const r = modo === "cliente" ? await responderAction(d.ciclo.id, t) : await anotarAction(d.ciclo.id, t);
@@ -284,6 +329,17 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
           </div>
         )}
         {d.pode.responder && !d.janela.ok && d.janela.motivo && <Aviso>{d.janela.motivo}</Aviso>}
+        {d.pode.responder && !d.janela.ok && <RetomarConversa d={d} />}
+        {arquivo && modo === "cliente" && (
+          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-ui">
+            <Paperclip size={14} className="text-fg-muted shrink-0" aria-hidden />
+            <span className="min-w-0 truncate">{arquivo.name}</span>
+            <span className="text-micro text-fg-muted shrink-0">o texto abaixo vai como legenda</span>
+            <button type="button" onClick={() => setArquivo(null)} className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md hover:bg-surface-hover" aria-label="Tirar o arquivo">
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <Textarea
           id={`resposta-${d.ciclo.id}`}
           aria-label={modo === "cliente" ? "Resposta ao cliente" : "Nota interna"}
@@ -300,6 +356,23 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
           disabled={enviando || (modo === "cliente" && !podeCliente)}
         />
         <div className="flex flex-wrap items-center gap-2">
+          {modo === "cliente" && podeCliente && d.enviaArquivo && (
+            <>
+              <input
+                ref={campoDoArquivo}
+                type="file"
+                className="sr-only"
+                aria-label="Anexar arquivo"
+                onChange={(e) => {
+                  setArquivo(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+              <Button size="sm" variant="ghost" onClick={() => campoDoArquivo.current?.click()} disabled={enviando}>
+                <Paperclip size={14} /> Anexar
+              </Button>
+            </>
+          )}
           {d.mensagensPadrao.length > 0 && (
             <div className="relative">
               <Button size="sm" variant="ghost" onClick={() => setPadroesAbertos((x) => !x)} aria-expanded={padroesAbertos}>
@@ -330,7 +403,7 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
           )}
           <span className="flex-1" />
           <span className="hidden sm:inline text-micro text-fg-muted">Enter envia · Shift+Enter quebra a linha</span>
-          <Button size="sm" onClick={enviar} loading={enviando} loadingLabel="Enviando…" disabled={!texto.trim() || (modo === "cliente" && !podeCliente)}>
+          <Button size="sm" onClick={enviar} loading={enviando} loadingLabel="Enviando…" disabled={(!texto.trim() && !(arquivo && modo === "cliente")) || (modo === "cliente" && !podeCliente)}>
             <Send size={14} /> {modo === "cliente" ? "Enviar" : "Anotar"}
           </Button>
         </div>
@@ -339,7 +412,7 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
   );
 }
 
-function Cliente({ d }: { d: DetalheDoAtendimento }) {
+function Cliente({ d, aoConvidar }: { d: DetalheDoAtendimento; aoConvidar: () => void }) {
   const linhas: [string, string][] = [];
   if (d.contato.empresa) {
     linhas.push(["Empresa", d.contato.empresa.nome]);
@@ -372,6 +445,11 @@ function Cliente({ d }: { d: DetalheDoAtendimento }) {
         <Link href={`/empresas/${d.contato.empresa.id}`} className="text-ui font-medium text-brand hover:underline">
           Abrir a ficha da empresa
         </Link>
+      )}
+      {d.contato.empresa && !d.contato.temPortal && d.pode.convidar && (
+        <Button size="sm" variant="secondary" className="self-start" onClick={aoConvidar}>
+          Convidar para o portal
+        </Button>
       )}
     </section>
   );
@@ -438,5 +516,62 @@ function Caminho({ d }: { d: DetalheDoAtendimento }) {
         </button>
       )}
     </section>
+  );
+}
+
+/**
+ * Passadas 24 h sem mensagem do cliente, só sai modelo aprovado pela Meta. O
+ * {{1}} do modelo é a assinatura de quem manda; as outras variáveis, a pessoa preenche.
+ */
+function RetomarConversa({ d }: { d: DetalheDoAtendimento }) {
+  const [modeloId, setModeloId] = useState(d.modelos[0]?.id ?? "");
+  const [valores, setValores] = useState<Record<string, string>>({});
+  const [enviando, iniciar] = useTransition();
+  const router = useRouter();
+  const toast = useToast();
+  const modelo = d.modelos.find((m) => m.id === modeloId) ?? null;
+
+  if (d.modelos.length === 0) {
+    return <p className="text-micro text-fg-muted">Nenhum modelo da Meta cadastrado. Cadastre nas configurações do Atendimento para retomar a conversa.</p>;
+  }
+  const extras = modelo ? Array.from({ length: Math.max(0, modelo.variaveis - 1) }, (_, i) => i + 2) : [];
+  const assinatura = `${d.ciclo.responsavel?.nome ?? "Você"} · ${d.ciclo.setor?.label ?? d.setorDaTriagem.label}`;
+  const previa = modelo
+    ? modelo.texto.replace(/\{\{\s*(\d{1,2})\s*\}\}/g, (_, n: string) => (n === "1" ? assinatura : valores[n]?.trim() || `{{${n}}}`))
+    : "";
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+      <b className="text-ui">Retomar conversa</b>
+      <Select aria-label="Modelo" value={modeloId} onChange={(e) => setModeloId(e.target.value)}>
+        {d.modelos.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.rotulo}
+          </option>
+        ))}
+      </Select>
+      {extras.map((n) => (
+        <Input key={n} aria-label={`Variável ${n}`} placeholder={`Valor do {{${n}}}`} value={valores[n] ?? ""} onChange={(e) => setValores({ ...valores, [n]: e.target.value })} />
+      ))}
+      {modelo && <p className="text-micro text-fg-secondary whitespace-pre-wrap rounded-md bg-brand-subtle px-2.5 py-2">{previa}</p>}
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          loading={enviando}
+          loadingLabel="Enviando…"
+          disabled={!modelo}
+          onClick={() =>
+            iniciar(async () => {
+              const r = await retomarConversaAction(d.ciclo.id, modeloId, extras.map((n) => valores[n] ?? ""));
+              if (!r.ok) toast.error(r.erro);
+              else toast.success("Modelo enviado. Quando o cliente responder, a conversa abre de novo.");
+              router.refresh();
+            })
+          }
+        >
+          <Send size={14} /> Enviar modelo
+        </Button>
+      </div>
+    </div>
   );
 }
