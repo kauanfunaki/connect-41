@@ -83,6 +83,8 @@ export default async function KanbanBoardPage({
   // A subatividade, em qualquer nível, com as filhas dela já dentro.
   const subatividade = (s: No): SubtaskRow => ({
     id: s.id,
+    // O número: o card abre pelo endereço curto, tarefa-77 (10/11/2026).
+    number: s.number,
     stageId: s.stageId,
     entityName: nomeDe(s),
     stageName: s.stage.name,
@@ -99,6 +101,7 @@ export default async function KanbanBoardPage({
     const filhas = contarFilhas(i, (f) => f.stage.isTerminal);
     return {
       id: i.id,
+      number: i.number,
       stageId: i.stageId,
       entityName: nomeDe(i),
       priority: i.priority,

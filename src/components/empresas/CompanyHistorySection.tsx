@@ -3,10 +3,11 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivityTimeline, type ActivityEntry } from "@/components/shared/ActivityTimeline";
-import { boardPath } from "@/lib/kanbanPaths";
+import { enderecoDaTarefa } from "@/lib/enderecoCurto";
 
 type PipelineEntry = {
   id: string;
+  number?: number;
   pipelineId: string;
   pipelineName: string;
   pipelineSectorCode: string;
@@ -37,7 +38,7 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
           // O `Button` com `href` (15/10/2026), e não pílulas-link montadas à mão.
           <div className="flex flex-wrap gap-2">
             {pipelineItems.map((p) => (
-              <Button key={p.id} href={`${boardPath({ id: p.pipelineId })}/itens/${p.id}`} variant="secondary" size="sm">
+              <Button key={p.id} href={enderecoDaTarefa(p.pipelineId, p)} variant="secondary" size="sm">
                 {p.pipelineName}
                 <span className="font-normal text-fg-muted">· {p.stageName}</span>
               </Button>

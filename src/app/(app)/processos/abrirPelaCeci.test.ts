@@ -8,7 +8,7 @@ const m = vi.hoisted(() => ({
   ctx: { tenantId: "t1" as string | null, userId: "u1", role: "SECTOR_USER", sectors: ["societario"], subscriptionReadOnly: false },
   ligado: true,
   chamadas: [] as unknown[][],
-  resultado: { ok: true, processoId: "p-novo" } as { ok: true; processoId: string } | { ok: false; erro: string },
+  resultado: { ok: true, processoId: "p-novo", endereco: "/processos/processo-7" } as { ok: true; processoId: string; endereco: string } | { ok: false; erro: string },
 }));
 
 vi.mock("@/lib/auth/context", async () => {
@@ -49,7 +49,7 @@ beforeEach(() => {
   m.ctx = { tenantId: "t1", userId: "u1", role: "SECTOR_USER", sectors: ["societario"], subscriptionReadOnly: false };
   m.ligado = true;
   m.chamadas = [];
-  m.resultado = { ok: true, processoId: "p-novo" };
+  m.resultado = { ok: true, processoId: "p-novo", endereco: "/processos/processo-7" };
 });
 
 describe("quem pode aprovar", () => {
@@ -78,7 +78,7 @@ describe("quem pode aprovar", () => {
 
 describe("o que vai para a gravação", () => {
   it("os campos da proposta, no tenant da sessão, com as conferências da Ceci", async () => {
-    expect(await abrirProcessoPelaCeci({ ...PROPOSTA, tenantId: "OUTRO" })).toEqual({ processoId: "p-novo" });
+    expect(await abrirProcessoPelaCeci({ ...PROPOSTA, tenantId: "OUTRO" })).toEqual({ processoId: "p-novo", endereco: "/processos/processo-7" });
     expect(m.chamadas).toEqual([
       [
         { tenantId: "t1", userId: "u1" },

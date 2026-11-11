@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "cabecalho_ambiguo",
+  "mensagem": "O cabeçalho possui duas colunas para o mesmo campo."
+ }
+}

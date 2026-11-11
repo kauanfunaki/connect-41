@@ -44,9 +44,14 @@ describe("token pessoal: regras sem banco", () => {
     expect(situacaoDoToken({ expiresAt: new Date("2026-01-01"), revokedAt: new Date("2025-12-01") }, agora)).toBe("revogado");
   });
 
-  it("o proxy libera só a API do Controle interno e o MCP", () => {
-    for (const p of ["/api/mcp", "/api/v1/controle-interno", "/api/v1/controle-interno/abc", "/api/v1/controle-interno/abc/anexos"]) expect(ehRotaDeTokenPessoal(p), p).toBe(true);
-    for (const p of ["/api/mcpx", "/api/mcp/outra", "/api/v1/controle-internox", "/api/v1/outro", "/api/tech-interno/anexos", "/controle-interno"]) expect(ehRotaDeTokenPessoal(p), p).toBe(false);
+  it("o proxy libera só a API do Controle interno, o ranking da Academia e o MCP", () => {
+    for (const p of ["/api/mcp", "/api/v1/controle-interno", "/api/v1/controle-interno/abc", "/api/v1/controle-interno/abc/anexos", "/api/v1/academia/ranking"]) expect(ehRotaDeTokenPessoal(p), p).toBe(true);
+    for (const p of ["/api/mcpx", "/api/mcp/outra", "/api/v1/controle-internox", "/api/v1/outro", "/api/tech-interno/anexos", "/controle-interno", "/api/v1/academia", "/api/academia/imagens", "/academia/ranking"]) expect(ehRotaDeTokenPessoal(p), p).toBe(false);
+  });
+
+  it("o escopo da Academia é só leitura e não puxa o do Controle interno", () => {
+    expect(escoposEfetivos(["academia:ler"])).toEqual(["academia:ler"]);
+    expect(lerEscopos("academia:ler,controle-interno:ler")).toEqual(["controle-interno:ler", "academia:ler"]);
   });
 });
 

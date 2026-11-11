@@ -23,6 +23,7 @@
 import fs from "node:fs";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { proximoNumero } from "../src/lib/enderecoCurtoNumeracao";
 import { CompanyStatus, PersonType } from "../src/generated/prisma/enums";
 import { lerPlanilhaAcessorias, planejarImportacao } from "../src/lib/importAcessorias";
 import { camposDoRegime } from "../src/lib/taxRegime";
@@ -136,6 +137,8 @@ async function main() {
     await prisma.company.create({
       data: {
         tenantId: tenant.id,
+        // O número no escritório, o do endereço curto (10/11/2026).
+        number: await proximoNumero(prisma, "empresa", tenant.id),
         name: e.name,
         displayName: e.displayName,
         tradeName: e.tradeName,
@@ -199,6 +202,7 @@ async function main() {
     await prisma.person.create({
       data: {
         tenantId: tenant.id,
+        number: await proximoNumero(prisma, "pessoa", tenant.id),
         name: c.name,
         email: c.email,
         phone: c.phone,

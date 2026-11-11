@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "tipo_ambiguo",
+  "mensagem": "O arquivo mistura indicadores de relação de clientes e fornecedores."
+ }
+}

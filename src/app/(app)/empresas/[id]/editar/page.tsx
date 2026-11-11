@@ -9,14 +9,19 @@ import { getAuthContext, canWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { getCompanySectors, getApplicableCustomFields } from "@/lib/customFields";
 import { getMatrizOptions } from "@/lib/companyHierarchyDb";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export default async function EditarEmpresaPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/editar (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/editar");
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
   if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
@@ -36,7 +41,7 @@ export default async function EditarEmpresaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${id}`, truncate: true },
+          { label: company.name, href: fichaDaEmpresa, truncate: true },
           { label: "Editar" },
         ]}
       />
@@ -45,7 +50,7 @@ export default async function EditarEmpresaPage({
 
       <EmpresaForm
           action={atualizarEmpresa}
-          cancelHref={`/empresas/${id}`}
+          cancelHref={fichaDaEmpresa}
           customFields={customFields}
           matrizOptions={matrizOptions}
           defaultValues={{

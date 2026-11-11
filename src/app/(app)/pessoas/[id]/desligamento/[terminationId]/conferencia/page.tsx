@@ -27,6 +27,8 @@ import type { ReferenciaProps } from "@/components/rescisao/ItemConferenciaRow";
 import { salvarItemConferencia, salvarDadosRescisao } from "./actions";
 import { Selo } from "@/components/ui/Selo";
 import { Aviso } from "@/components/ui/Aviso";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 /** `null` fica `null`: sem valor, o rótulo some em vez de virar travessão. Troca
  *  por `formatarReais` de lib/format.ts quando a base o criar (DRG-01, 07/10). */
@@ -39,8 +41,11 @@ export default async function ConferenciaRescisaoPage({
 }: {
   params: Promise<{ id: string; terminationId: string }>;
 }) {
-  const { id, terminationId } = await params;
+  const { id: idDaRota, terminationId } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_colaboradores");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, `/desligamento/${terminationId}/conferencia`);
+  const fichaDaPessoa = endereco("pessoa", numeroDaPessoa);
   const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
@@ -135,8 +140,8 @@ export default async function ConferenciaRescisaoPage({
             label: person.isInternal ? "Pessoas" : "Colaboradores de clientes",
             href: person.isInternal ? "/pessoas" : "/colaboradores-clientes",
           },
-          { label: person.name, href: `/pessoas/${id}?tab=trabalhista`, truncate: true },
-          { label: "Desligamento", href: `/pessoas/${id}/desligamento` },
+          { label: person.name, href: `${fichaDaPessoa}?tab=trabalhista`, truncate: true },
+          { label: "Desligamento", href: `${fichaDaPessoa}/desligamento` },
           { label: "Conferência" },
         ]}
       />
@@ -311,7 +316,7 @@ export default async function ConferenciaRescisaoPage({
         <Card className="p-5 mb-4">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
             <h2 className="text-section font-semibold text-fg">Férias em aberto (base de conferência)</h2>
-            <Button href={`/pessoas/${id}/ferias`} variant="secondary" size="xs">
+            <Button href={`${fichaDaPessoa}/ferias`} variant="secondary" size="xs">
               <Palmtree size={12} />
               Abrir módulo de férias
             </Button>

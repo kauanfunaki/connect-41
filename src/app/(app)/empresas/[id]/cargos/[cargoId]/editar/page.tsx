@@ -8,14 +8,19 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { atualizarCargo } from "../../actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export default async function EditarCargoPage({
   params,
 }: {
   params: Promise<{ id: string; cargoId: string }>;
 }) {
-  const { id: companyId, cargoId } = await params;
+  const { id: idDaRota, cargoId } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, `/cargos/${cargoId}/editar`);
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
   if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
@@ -43,8 +48,8 @@ export default async function EditarCargoPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Cargos", href: `/empresas/${companyId}/cargos` },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
+          { label: "Cargos", href: `${fichaDaEmpresa}/cargos` },
           { label: "Editar" },
         ]}
       />
@@ -56,7 +61,7 @@ export default async function EditarCargoPage({
           <CargoForm
             action={atualizarCargo}
             companyId={companyId}
-            cancelHref={`/empresas/${companyId}/cargos`}
+            cancelHref={`${fichaDaEmpresa}/cargos`}
             familiasExistentes={familias.map((f) => f.family!).filter(Boolean)}
             defaultValues={{
               id: cargo.id,

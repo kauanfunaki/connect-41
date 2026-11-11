@@ -91,7 +91,7 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
   if (!r.ok) return { error: r.erro };
 
   revalidatePath("/processos");
-  redirect(`/processos/${r.processoId}`);
+  redirect(r.endereco);
 }
 
 /**
@@ -105,7 +105,7 @@ export async function abrirProcesso(_prev: ProcessoState, form: FormData): Promi
  * nada. Devolve o id para o cartão apontar o processo; não redireciona, porque
  * quem chama é o chat.
  */
-export async function abrirProcessoPelaCeci(argumentos: unknown): Promise<{ error: string } | { processoId: string }> {
+export async function abrirProcessoPelaCeci(argumentos: unknown): Promise<{ error: string } | { processoId: string; endereco: string }> {
   const { erro, ctx } = await contexto();
   if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { error: "Os processos do Societário estão desligados neste escritório." };
@@ -132,7 +132,8 @@ export async function abrirProcessoPelaCeci(argumentos: unknown): Promise<{ erro
 
   revalidatePath("/processos");
   revalidatePath("/processos/kanban");
-  return { processoId: r.processoId };
+  // O endereço curto vai junto (10/11/2026): é para onde o cartão do chat aponta.
+  return { processoId: r.processoId, endereco: r.endereco };
 }
 
 /** Carrega a etapa conferindo o tenant. Devolve null quando não é de quem pediu. */

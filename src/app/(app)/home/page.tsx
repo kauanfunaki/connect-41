@@ -1,37 +1,28 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import {
-  Building2,
-  Clock,
-  ArrowRightLeft,
-  MessageSquareWarning,
-  ChevronRight,
-  Video,
-  ExternalLink,
-} from "lucide-react";
+import { ChevronRight, Video, ExternalLink } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { MetricCard } from "@/components/ui/MetricCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { QuickCreateMenu } from "@/components/shared/QuickCreateMenu";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { InicioEditavel, type LayoutDoInicio } from "@/components/home/InicioEditavel";
+import { CartoesDoTopo } from "@/components/home/CartoesDoTopo";
+import { FaixaDeCartoesCarregando } from "@/components/home/FaixaDeCartoes";
 import { HorizontalBarChart, TrendChart } from "@/components/shared/Charts";
-import { numero } from "@/components/shared/Graficos";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canWrite, isFullWrite, isFullAccess } from "@/lib/auth/context";
-import { scopedCompanyWhere, scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { scopedPipelineWhere, scopedHandoffWhere } from "@/lib/auth/scope";
+import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffAbas";
+import { assuntoDaTransferencia, SEM_ASSUNTO } from "@/lib/handoffs";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { getSectorsWithEnabledModules } from "@/lib/modules";
-import { boardPath } from "@/lib/kanbanPaths";
+import { enderecoDaTarefa, enderecoDe } from "@/lib/enderecoCurto";
 import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/format";
 import { HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
-import { acessoDosPaineis, type AcessoDoPainel } from "@/lib/home/acessoDosPaineis";
-import { contarTarefas } from "@/lib/home/paineis";
+import { acessoDosPaineis } from "@/lib/home/acessoDosPaineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
-import { solicitacoesComRespostaAtrasada } from "@/lib/home/indicadores";
-import { FaixaCarregando, FaixaDeDestaques, type SetorDoDestaque } from "@/components/home/FaixaDeDestaques";
 import {
   PainelCarregando,
   PainelDeCertificados,
@@ -62,13 +53,6 @@ function nowDate(): Date {
 function daysFromNow(days: number): Date {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d;
-}
-
-function startOfMonth(): Date {
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
   return d;
 }
 
@@ -125,21 +109,22 @@ export default async function HomePage() {
   const todayEnd = new Date(now);
   todayEnd.setHours(23, 59, 59, 999);
   const fourteenDaysAgo = daysFromNow(-14);
-  const monthStart = startOfMonth();
 
-  const incomingHandoffWhere = isFullAccess(ctx.role)
-    ? { tenantId: ctx.tenantId, sectors: { some: { status: "NEW" as const } } }
-    : ctx.sectors.length > 0
-      ? { tenantId: ctx.tenantId, sectors: { some: { status: "NEW" as const, sectorCode: { in: ctx.sectors } } } }
-      : null;
+  // O painel "Transferências para o seu setor" é a aba "Para o meu setor" da
+  // lista, com o mesmo filtro (10/11/2026, pedido do Kauan) — e o cartão
+  // "Transferências para o meu setor" do topo conta o mesmo (`cartoesServidor`).
+  // Sem caixa de setor (quem não é de setor nenhum), fica vazio.
+  const quemVe = quemVeAsTransferencias(ctx);
+  const incomingHandoffWhere = abasVisiveis(quemVe).includes("setor")
+    ? { AND: [scopedHandoffWhere(ctx), whereDaAba("setor", quemVe)] }
+    : null;
 
+  // Os números dos cartões do topo (empresas ativas, solicitações atrasadas,
+  // transferências…) saíram daqui em 10/11/2026: cada cartão conta o seu, e só
+  // os quatro que a pessoa tem no topo (`components/home/CartoesDoTopo`).
   const [
     me,
     tenant,
-    companyActiveCount,
-    newCompaniesThisMonth,
-    solicitacoesAtrasadas,
-    pendingHandoffsCount,
     openPipelineItemsRaw,
     recentActivitiesRaw,
     activityCreatedDates,
@@ -149,17 +134,11 @@ export default async function HomePage() {
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
-    prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), status: "ACTIVE" } }),
-    prisma.company.count({ where: { ...(await scopedCompanyWhere(ctx)), createdAt: { gte: monthStart } } }),
-    // No lugar da contagem de pessoas (08/10, escolha 7A): ver `lib/home/indicadores`.
-    solicitacoesComRespostaAtrasada(ctx, now),
-    prisma.handoff.count({
-      where: { AND: [scopedHandoffWhere(ctx), { sectors: { some: { status: { not: "DONE" } } } }] },
-    }),
     prisma.pipelineItem.findMany({
       where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
       select: {
         id: true,
+        number: true,
         entityId: true,
         entityType: true,
         title: true,
@@ -178,7 +157,7 @@ export default async function HomePage() {
       include: {
         user: { select: { id: true, name: true } },
         pipelineItem: {
-          select: { id: true, pipelineId: true, entityId: true, entityType: true, pipeline: { select: { sectorCode: true } } },
+          select: { id: true, number: true, pipelineId: true, entityId: true, entityType: true, pipeline: { select: { sectorCode: true } } },
         },
       },
     }),
@@ -203,7 +182,6 @@ export default async function HomePage() {
           orderBy: { createdAt: "desc" },
           take: 4,
           include: {
-            requester: { select: { name: true } },
             sectors: { select: { sectorCode: true }, orderBy: { createdAt: "asc" } },
           },
         })
@@ -245,9 +223,15 @@ export default async function HomePage() {
 
   const vencidosCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate < todayStart).length;
   const hojeCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate >= todayStart && i.dueDate <= todayEnd).length;
+  // As atrasadas por setor, da mesma lista: os cartões "Tarefas atrasadas" do
+  // Fiscal e do Contábil (10/11/2026) não contam de novo no banco.
+  const atrasadasPorSetor: Record<string, number> = {};
+  for (const i of openPipelineItemsRaw) {
+    if (i.dueDate && i.dueDate < todayStart) atrasadasPorSetor[i.pipeline.sectorCode] = (atrasadasPorSetor[i.pipeline.sectorCode] ?? 0) + 1;
+  }
 
   // Nomes das entidades referenciadas (Company ou Person) — item de "Meu dia",
-  // atividade recente e transferências a revisar, tudo numa só rodada.
+  // atividade recente e transferências para o setor, tudo numa só rodada.
   const companyIds = new Set<string>();
   const personIds = new Set<string>();
   for (const i of meuDiaItems) {
@@ -278,6 +262,7 @@ export default async function HomePage() {
     pipelineId: string;
     pipelineSectorCode: string;
     pipelineItemId: string;
+    pipelineItemNumber: number;
     label: string;
     count: number;
     createdAt: Date;
@@ -295,6 +280,7 @@ export default async function HomePage() {
         pipelineId: a.pipelineItem.pipelineId,
         pipelineSectorCode: a.pipelineItem.pipeline.sectorCode,
         pipelineItemId: a.pipelineItem.id,
+        pipelineItemNumber: a.pipelineItem.number,
         label: ACTIVITY_LABEL[a.type] ?? "atualizou",
         count: 1,
         createdAt: a.createdAt,
@@ -305,7 +291,7 @@ export default async function HomePage() {
 
   // Widget "seus setores" — só setores com módulo habilitado; métrica agora é
   // volume de trabalho (abertos/vencidos), não "N módulos disponíveis".
-  const [{ labels: sectorLabels, colors: sectorColors }, sectorsWithModules, paineis] = await Promise.all([
+  const [{ labels: sectorLabels, colors: sectorColors, options: sectorOptions }, sectorsWithModules, paineis] = await Promise.all([
     getSectorMaps(ctx.tenantId),
     getSectorsWithEnabledModules(ctx.tenantId),
     acessoDosPaineis(ctx),
@@ -377,32 +363,27 @@ export default async function HomePage() {
   const disponiveis = widgetsDisponiveis(restrictedOpts);
   const topWidgets = visibleWidgets("top", selectedWidgets, restrictedOpts);
   const painelWidgets = visibleWidgets("paineis", selectedWidgets, restrictedOpts);
-  const abaixoDosPaineis = visibleWidgets("abaixo-dos-paineis", selectedWidgets, restrictedOpts);
   const mainWidgets = visibleWidgets("main", selectedWidgets, restrictedOpts);
   const sideWidgets = visibleWidgets("side", selectedWidgets, restrictedOpts);
-  // Faixa de destaques (06/10): os números saem só dos painéis que estão na
-  // Home desta pessoa — com acesso e não ocultos em "Personalizar". Painel
-  // oculto não é consultado, nem pela faixa.
   const escopoDasTarefas = ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : "Seus setores";
-  const paineisNaHome = new Map<HomeWidgetKey, AcessoDoPainel>();
-  const setoresDosDestaques: Partial<Record<HomeWidgetKey, SetorDoDestaque>> = {
-    "painel-tarefas": {
-      rotulo: escopoDasTarefas,
-      cor: ctx.activeSector ? (sectorColors[ctx.activeSector] ?? "var(--c41-brand)") : "var(--c41-brand)",
-    },
-  };
-  for (const chave of painelWidgets) {
-    const acesso = paineis.get(chave);
-    if (!acesso) continue;
-    paineisNaHome.set(chave, acesso);
-    setoresDosDestaques[chave] = { rotulo: sectorLabel(sectorLabels, acesso.setor), cor: sectorColors[acesso.setor] ?? "#586577" };
-  }
-  const tarefasNaHome = painelWidgets.includes("painel-tarefas");
-  const contagemDasTarefas = contarTarefas(openPipelineItemsRaw, todayStart, todayEnd);
-  const comDestaques = topWidgets.includes("destaques");
   // O histórico dos números (selo e linha, 06/10) começa a ser lido já, em
-  // paralelo às consultas dos painéis — uma leitura só para todos eles.
-  if (painelWidgets.length > 0) precarregarHistoricoDaHome(ctx);
+  // paralelo às consultas dos painéis — uma leitura só para eles e para os
+  // cartões do topo, que sempre estão na tela (10/11/2026).
+  precarregarHistoricoDaHome(ctx);
+
+  // Os quatro cartões coringa do topo (10/11/2026, pedido do Kauan): no lugar
+  // da faixa "Destaques" e dos "Indicadores". Ficam fora do "Personalizar" —
+  // cada um se troca pelo lápis dele — e entram por último, sem atrasar a tela.
+  const cartoesDoTopo = (
+    <Suspense fallback={<FaixaDeCartoesCarregando />}>
+      <CartoesDoTopo
+        ctx={ctx}
+        previos={{ tarefas: { atrasadas: vencidosCount, hoje: hojeCount, atrasadasPorSetor } }}
+        setores={sectorOptions.map((s) => ({ code: s.value, label: s.label }))}
+        setorAtivoRotulo={ctx.activeSector ? sectorLabel(sectorLabels, ctx.activeSector) : null}
+      />
+    </Suspense>
+  );
 
   // Painéis de setor (30/09): cada um com a própria consulta, dentro de um
   // Suspense — a Home aparece sem esperar o mais lento, e o painel entra
@@ -427,22 +408,6 @@ export default async function HomePage() {
   // hoje) continua sendo null como antes — a preferência só decide se ele
   // *pode* aparecer, não força um card vazio.
   const widgetNodes: Record<HomeWidgetKey, React.ReactNode> = {
-    // Espera os painéis que resume — mas pelo `cache()` deles, sem consulta nova.
-    destaques: (
-      <Suspense fallback={<FaixaCarregando quantos={paineisNaHome.size + (tarefasNaHome ? 1 : 0)} />}>
-        <FaixaDeDestaques
-          ctx={ctx}
-          paineis={paineisNaHome}
-          tarefas={
-            tarefasNaHome
-              ? { atrasadas: contagemDasTarefas.atrasada, hoje: contagemDasTarefas.hoje, abertas: openPipelineItemsRaw.length }
-              : undefined
-          }
-          setores={setoresDosDestaques}
-        />
-      </Suspense>
-    ),
-
     // Em Suspense desde 06/10: o painel lê o histórico do número (selo e linha).
     "painel-tarefas": (
       <Suspense fallback={<PainelCarregando />}>
@@ -463,67 +428,6 @@ export default async function HomePage() {
     "painel-dp": painelDoSetor("painel-dp", PainelDoDP),
     "painel-recrutamento": painelDoSetor("painel-recrutamento", PainelDeRecrutamento),
     "painel-certificados": painelDoSetor("painel-certificados", PainelDeCertificados),
-
-    // Abaixo dos painéis desde 08/10 (escolha 7A do Kauan): a faixa de
-    // destaques abre a tela, e isto é o resumo de consulta. Sem o canal de
-    // solicitações do portal, o quarto cartão não existe e a grade fica em três.
-    indicadores: (
-      <div
-        className={`grid grid-cols-2 gap-3 mb-4 ${
-          solicitacoesAtrasadas
-            ? "sm:grid-cols-4"
-            : "sm:grid-cols-3 [&>:nth-child(3)]:col-span-2 sm:[&>:nth-child(3)]:col-span-1"
-        }`}
-      >
-        {/* O MetricCard formata o número em pt-BR (1.234). "Atrasadas", e não
-            "vencidos" (07/10): é o termo do painel de tarefas e da faixa para o
-            mesmo número — e a mesma cor: vermelho quando há atrasada, âmbar
-            quando só há as de hoje, como na faixa e no painel. */}
-        <MetricCard
-          href="/empresas"
-          icon={<Building2 size={16} />}
-          label="Empresas ativas"
-          value={companyActiveCount}
-          delay={0}
-          sub={newCompaniesThisMonth > 0 ? `+${numero(newCompaniesThisMonth)} este mês` : undefined}
-        />
-        <MetricCard
-          href="/kanban"
-          icon={<Clock size={16} />}
-          label="Atrasadas / hoje"
-          value={vencidosCount + hojeCount}
-          delay={40}
-          tom={vencidosCount > 0 ? "critico" : hojeCount > 0 ? "atencao" : undefined}
-          sub={vencidosCount > 0 ? `${numero(vencidosCount)} atrasada${vencidosCount !== 1 ? "s" : ""}` : undefined}
-        />
-        <MetricCard
-          href="/transferencias?status=NEW"
-          icon={<ArrowRightLeft size={16} />}
-          label="Transferências"
-          value={pendingHandoffsCount}
-          delay={80}
-          // O tom pela situação, e não o `highlight` antigo (15/10/2026):
-          // transferência em aberto espera alguém — âmbar.
-          tom={pendingHandoffsCount > 0 ? "atencao" : undefined}
-          sub={pendingHandoffsCount > 0 ? "em aberto" : undefined}
-        />
-        {/* No lugar de "Pessoas cadastradas" (08/10, escolha 7A): um número
-            que pede ação — o cliente esperando a primeira resposta da equipe
-            além do prazo prometido. O porquê da escolha está em
-            `lib/home/indicadores`. Leva à fila no recorte "resposta atrasada". */}
-        {solicitacoesAtrasadas && (
-          <MetricCard
-            href={solicitacoesAtrasadas.href}
-            icon={<MessageSquareWarning size={16} />}
-            label="Solicitações atrasadas"
-            value={solicitacoesAtrasadas.quantas}
-            delay={120}
-            tom={solicitacoesAtrasadas.quantas > 0 ? "critico" : undefined}
-            sub={solicitacoesAtrasadas.quantas > 0 ? "sem resposta no prazo" : undefined}
-          />
-        )}
-      </div>
-    ),
 
     "proxima-reuniao": nextMeeting && (
       <div className="flex items-center justify-between gap-3 bg-brand-subtle border border-brand/20 rounded-lg px-4 py-3 mb-4">
@@ -558,7 +462,7 @@ export default async function HomePage() {
               return (
                 <Link
                   key={item.id}
-                  href={`${boardPath({ id: item.pipelineId })}/itens/${item.id}`}
+                  href={enderecoDaTarefa(item.pipelineId, item)}
                   className="flex items-center justify-between gap-3 py-2 group"
                 >
                   <span className="text-body text-fg group-hover:text-brand transition-colors truncate min-w-0">
@@ -587,25 +491,36 @@ export default async function HomePage() {
 
     transferencias: (
       <div className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] p-5">
-        <h2 className="text-section font-semibold text-fg mb-3.5">Transferências a revisar</h2>
+        {/* As quatro mais recentes da aba "Para o meu setor" (10/11/2026): o
+            título diz o que é, e o botão "Abrir" diz o que faz — "Revisar"
+            prometia uma ação que a tela não tem. */}
+        <h2 className="text-section font-semibold text-fg mb-3.5">Transferências para o seu setor</h2>
         {incomingHandoffsRaw.length === 0 ? (
           <p className="text-body text-fg-muted">Nenhuma transferência aguardando o seu setor.</p>
         ) : (
           <div className="space-y-3">
-            {incomingHandoffsRaw.map((h) => (
-              <div key={h.id} className="flex items-center justify-between gap-3">
-                <p className="text-body text-fg truncate min-w-0">
-                  {sectorLabels[h.fromSector] ?? h.fromSector} →{" "}
-                  {h.sectors.map((s) => sectorLabels[s.sectorCode] ?? s.sectorCode).join(", ")}
-                  {" · "}
-                  <span className="font-medium">{entityNames[h.entityId] ?? "(removido)"}</span>
-                  <span className="text-fg-muted">{" · "}{h.requester.name} · {formatRelativeTime(h.createdAt)}</span>
-                </p>
-                <Button href={`/transferencias/${h.id}`} variant="secondary" size="xs" className="flex-shrink-0">
-                  Revisar
-                </Button>
-              </div>
-            ))}
+            {incomingHandoffsRaw.map((h) => {
+              const assunto = assuntoDaTransferencia(h);
+              return (
+                <div key={h.id} className="flex items-center justify-between gap-3">
+                  <p className="text-body text-fg truncate min-w-0">
+                    <span className={assunto ? "font-medium" : "text-fg-muted"}>{assunto ?? SEM_ASSUNTO}</span>
+                    {" · "}
+                    {entityNames[h.entityId] ?? "(removido)"}
+                    <span className="text-fg-muted">
+                      {" · "}
+                      {sectorLabel(sectorLabels, h.fromSector)} →{" "}
+                      {h.sectors.map((s) => sectorLabel(sectorLabels, s.sectorCode)).join(", ")}
+                      {" · "}
+                      {formatRelativeTime(h.createdAt)}
+                    </span>
+                  </p>
+                  <Button href={enderecoDe("transferencia", h)} variant="secondary" size="xs" className="flex-shrink-0">
+                    Abrir
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -671,7 +586,7 @@ export default async function HomePage() {
         ) : (
           <div className="space-y-3">
             {activityGroups.map((g) => (
-              <Link key={g.id} href={`${boardPath({ id: g.pipelineId })}/itens/${g.pipelineItemId}`} className="flex items-start gap-2.5 group">
+              <Link key={g.id} href={enderecoDaTarefa(g.pipelineId, { id: g.pipelineItemId, number: g.pipelineItemNumber })} className="flex items-start gap-2.5 group">
                 <AvatarImage src={null} name={g.userName} size={24} bordered={false} fontSize={11} className="mt-0.5" />
                 <div className="min-w-0">
                   <p className="text-body text-fg-secondary leading-snug">
@@ -729,7 +644,6 @@ export default async function HomePage() {
   const layout: LayoutDoInicio = {
     top: topWidgets,
     paineis: painelWidgets,
-    "abaixo-dos-paineis": abaixoDosPaineis,
     main: mainWidgets,
     side: sideWidgets,
   };
@@ -755,10 +669,10 @@ export default async function HomePage() {
             canCreateTransfer={canCreateTransfer}
           />
         }
+        cartoes={cartoesDoTopo}
         layout={layout}
         nos={nos}
         disponiveis={HOME_WIDGETS.filter((w) => disponiveis.includes(w.key)).map((w) => ({ key: w.key, rotulo: w.label, faixa: w.slot }))}
-        comDestaques={comDestaques}
         salvar={salvarWidgetsHome}
         restaurar={restaurarWidgetsHome}
       />

@@ -1,6 +1,6 @@
 // "Recentes" no picker de vincular tarefa — últimos itens vinculados pelo
-// usuário, guardados no navegador (mesmo padrão de connect41:cadastros:lastTab
-// em cadastrosNav.ts). Sem schema novo; não é compartilhado entre dispositivos.
+// usuário, guardados no navegador. Sem schema novo; não é compartilhado entre
+// dispositivos.
 const STORAGE_KEY = "connect41:kanban:recentLinks";
 const MAX_RECENT = 8;
 

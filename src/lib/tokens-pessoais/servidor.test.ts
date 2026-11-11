@@ -114,6 +114,25 @@ describe("autenticar pelo token pessoal", () => {
     expect(await codigo(autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`), "controle-interno:ler"))).toBe("ok");
   });
 
+  // O ranking da Academia (10/11/2026): o escopo próprio, e o módulo que vale é
+  // o da Academia — não o do Controle interno.
+  it("o ranking da Academia pede o escopo academia:ler e a Academia ligada", async () => {
+    m.findUnique.mockResolvedValue(registro({ scopes: "academia:ler" }));
+    expect(await codigo(autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`), "academia:ler"))).toBe("ok");
+    expect(m.moduloLigado).toHaveBeenLastCalledWith("esc-a", "academia");
+    // O token só da Academia não abre o Controle interno.
+    expect(await codigo(autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`), "controle-interno:ler"))).toBe("403 insufficient_scope");
+    // Academia desligada derruba; o Controle interno desligado não importa aqui.
+    m.moduloLigado.mockImplementation((_t: string, modulo: string) => Promise.resolve(modulo !== "academia"));
+    expect(await codigo(autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`), "academia:ler"))).toBe("403 module_disabled");
+    m.moduloLigado.mockImplementation((_t: string, modulo: string) => Promise.resolve(modulo === "academia"));
+    expect(await codigo(autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`), "academia:ler"))).toBe("ok");
+  });
+
+  it("o token do Controle interno não lê o ranking da Academia", async () => {
+    expect(await codigo(autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`), "academia:ler"))).toBe("403 insufficient_scope");
+  });
+
   it("o último uso grava no máximo uma vez por minuto, e falhar ao gravar não barra a chamada", async () => {
     m.findUnique.mockResolvedValue(registro({ lastUsedAt: new Date(AGORA - 5_000) }));
     await autenticarTokenPessoal(pedido(`Bearer ${TOKEN}`));
@@ -153,6 +172,16 @@ describe("criar e revogar", () => {
     expect(await codigo(criarTokenPessoal(ctx(), { name: "x", scopes: ["controle-interno:escrever"], days: 30 }))).toBe("403 forbidden");
     expect(await codigo(criarTokenPessoal(ctx({ tenantId: "esc-b" }), { name: "x", scopes: ["controle-interno:ler"], days: 30 }))).toBe("403 forbidden");
     expect(m.create).not.toHaveBeenCalled();
+  });
+
+  it("o token do ranking da Academia só nasce com a Academia ligada", async () => {
+    m.count.mockResolvedValue(0);
+    m.create.mockImplementation(({ data }) => Promise.resolve(salvo(data)));
+    m.moduloLigado.mockResolvedValue(false);
+    expect(await codigo(criarTokenPessoal(ctx(), { name: "n8n", scopes: ["academia:ler"], days: 90 }))).toBe("403 forbidden");
+    m.moduloLigado.mockResolvedValue(true);
+    const r = await criarTokenPessoal(ctx(), { name: "n8n", scopes: ["academia:ler"], days: 90 });
+    expect(r.registro.scopes).toEqual(["academia:ler"]);
   });
 
   it("para no teto de tokens ativos", async () => {

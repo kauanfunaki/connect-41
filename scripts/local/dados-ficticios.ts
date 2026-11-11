@@ -16,6 +16,7 @@
 // administrador e dois processos com ele — ver as funções no fim do arquivo.
 
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { carregarDadosDeExemplo, FONTE } from "../dados-de-exemplo/gerador";
 
 async function main() {
@@ -159,6 +160,7 @@ async function processoDoClienteDoPortal(p: ReturnType<typeof getPrisma>, tenant
   const processo = await p.process.create({
     data: {
       tenantId,
+      number: await proximoNumero(p, "processo", tenantId),
       companyId: empresa.id,
       typeId: tipo.id,
       templateId: modelo.id,

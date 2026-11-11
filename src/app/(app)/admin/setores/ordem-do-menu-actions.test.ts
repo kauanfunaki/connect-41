@@ -91,9 +91,10 @@ describe("organizar no próprio menu (09/11/2026)", () => {
   });
 
   it("o Geral e a ordem de dentro: só chaves e menus que existem", async () => {
-    const json = JSON.stringify({ grupos: [], telas: [], geral: ["agenda", "inventado"], dentro: { tech_ops_center: ["sub:Apps"], menu_que_nao_existe: ["x"], apoio: ["quadros"] } });
+    // Os Cadastros são grupo do Geral desde 10/11/2026, como o Apoio.
+    const json = JSON.stringify({ grupos: [], telas: [], geral: ["agenda", "inventado"], dentro: { tech_ops_center: ["sub:Apps"], menu_que_nao_existe: ["x"], apoio: ["quadros"], cadastros: ["pessoas", "empresas"] } });
     expect(await salvarOrdemDoMenuPeloCodigo("tech", json)).toBeNull();
-    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], geral: ["agenda"], dentro: { tech_ops_center: ["sub:Apps"], apoio: ["quadros"] } });
+    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], geral: ["agenda"], dentro: { tech_ops_center: ["sub:Apps"], apoio: ["quadros"], cadastros: ["pessoas", "empresas"] } });
   });
 
   it("escondidos do Geral e de dentro dos menus: só chaves e menus que existem", async () => {

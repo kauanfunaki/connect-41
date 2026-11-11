@@ -22,6 +22,15 @@ export type ListaDoMenu =
 export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "atendimento", "chamados", "arquivos", "agenda"] as const;
 
 /**
+ * Os itens do Geral que são grupo, com telas dentro que o organizador ordena e
+ * esconde (a chave em `dentro` e `ocultasDentro`): o Apoio (05/11/2026) e os
+ * Cadastros (10/11/2026, pedido do Kauan — Empresas, Pessoas e, no BPO,
+ * Fornecedores e sacados).
+ */
+export const GRUPOS_DO_GERAL = ["apoio", "cadastros"] as const;
+export type GrupoDoGeral = (typeof GRUPOS_DO_GERAL)[number];
+
+/**
  * Tira o item `de` e põe antes do que estava em `antesDe` (0 a `lista.length`,
  * contado na lista ANTES de tirar). `antesDe` igual a `de` ou `de + 1` não muda nada.
  */

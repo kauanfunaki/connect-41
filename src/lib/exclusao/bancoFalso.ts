@@ -31,6 +31,11 @@ export function criarBancoFalso(regras: Regras = {}) {
             return fn(banco);
           };
         }
+        // O contador do endereço curto (10/11/2026, `reservarNumeros`): no banco
+        // falso, a linha do contador está em 0 — o número começa em 1. Não
+        // entra nas chamadas: só o contador muda, e ele não é da demonstração.
+        if (nome === "$queryRaw") return async () => [{ ultimo: 0 }];
+        if (nome === "$executeRaw") return async () => 1;
         return new Proxy(
           {},
           {

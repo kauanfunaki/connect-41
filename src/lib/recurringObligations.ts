@@ -7,6 +7,7 @@
 // dias diferentes). Obrigação criada no meio do período gera o item do
 // período corrente na próxima execução (até 15min).
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
 import { nacionaisEmUso } from "@/lib/feriados";
 import { notifyUser, notifySector } from "@/lib/notifications";
 import { formatCalendarDate } from "@/lib/format";
@@ -131,9 +132,12 @@ export async function generateRecurringObligations(): Promise<{ generated: numbe
         continue;
       }
 
-      await prisma.pipelineItem.create({
+      // O número da tarefa no escritório, o do endereço curto
+      // /kanban/itens/tarefa-77 (10/11/2026, pedido do Kauan).
+      await criarComNumero("tarefa", ob.tenantId, (tx, number) => tx.pipelineItem.create({
         data: {
           tenantId: ob.tenantId,
+          number,
           pipelineId: ob.pipelineId,
           stageId: firstStage.id,
           entityType: "COMPANY",
@@ -142,7 +146,7 @@ export async function generateRecurringObligations(): Promise<{ generated: numbe
           description: ob.description ? `${ob.title}\n\n${ob.description}` : ob.title,
           assignees: ob.responsibleId ? { create: [{ userId: ob.responsibleId }] } : undefined,
         },
-      });
+      }));
 
       const message = `Obrigação "${ob.title}" (${ob.company.name}) gerada — vence em ${formatCalendarDate(dueDate)}.`;
       if (ob.responsibleId) {

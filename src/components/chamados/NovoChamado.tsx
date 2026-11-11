@@ -67,7 +67,7 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
     void executar("abrindo", async () => {
       const d = await rascunhoAtual();
       const r = await abrirChamado(d.id, d.version); if (!r.ok) throw new Error(r.error);
-      router.push(`/chamados/${r.valor.ticketId}`);
+      router.push(r.valor.endereco);
     });
   }
   function subir(file: File) {

@@ -31,7 +31,7 @@ import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
-import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { FormEncargosDaEmpresa } from "@/components/financeiro/FormEncargos";
 import { descricaoDaRegra, regraDasColunas, regraNoCampo } from "@/lib/financeiro/baixa/encargos";
 
@@ -144,15 +144,16 @@ export default async function CadastrosFinanceirosPage({
 
   // A ação da tela vai no cabeçalho, como em pendências e no resto do app
   // (08/10/2026): o "Novo cadastro" ficava à direita da fileira do filtro.
-  // Aba de Cadastros desde 21/10/2026: a barra de Empresas e Pessoas vem em cima.
+  // Era aba de Cadastros (21/10/2026), com a barra de Empresas e Pessoas em
+  // cima; desde 10/11/2026 (pedido do Kauan) é um item do grupo Cadastros no
+  // menu lateral, com o título dela. As abas de baixo (Fornecedores, Sacados…)
+  // continuam: são desta tela.
   const comAcao = (action?: React.ReactNode) => (
-    <>
-      <CadastrosTabsBar
-        active="fornecedores"
-        subtitulo="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
-        acao={action}
-      />
-    </>
+    <PageHeader
+      title="Fornecedores e sacados"
+      subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
+      action={action}
+    />
   );
   const cabecalho = comAcao();
   // Trocar de empresa conserva a aba; a busca é da empresa anterior e fica para trás.

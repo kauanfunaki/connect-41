@@ -7,6 +7,7 @@ import {
   pontosDaLinha,
   quantoMudou,
   tomDaVariacao,
+  variacaoDesdeOntem,
   type Foto,
 } from "./tendencia";
 import { METRICAS } from "./metricas";
@@ -151,5 +152,53 @@ describe("montarTendencia", () => {
     const t = montarTendencia([foto("2026-09-10", 8), foto("2026-09-20", 9)], HOJE, 10, METRICAS.tarefas_atrasadas)!;
     expect(t.selo).toBeNull();
     expect(t.linha).toHaveLength(3);
+  });
+});
+
+// Os cartões do topo do Início (10/11/2026, pedido do Kauan): "+2 desde
+// ontem", verde quando é o lado bom, vermelho quando é o ruim e neutro quando
+// está igual — com seta e texto, não só a cor.
+describe("variacaoDesdeOntem", () => {
+  const atrasadas = METRICAS.tarefas_atrasadas_hoje; // menor é melhor
+  const empresas = METRICAS.empresas_ativas; // neutro
+
+  it("subiu desde ontem num número em que menor é melhor: piorou (vermelho)", () => {
+    expect(variacaoDesdeOntem([foto("2026-10-05", 5)], HOJE, 7, atrasadas)).toEqual({
+      direcao: "subiu",
+      texto: "+2 desde ontem",
+      tom: "ruim",
+      descricao: "Subiu 2 desde ontem — piorou.",
+    });
+  });
+
+  it("caiu: melhorou (verde), com o sinal de menos tipográfico", () => {
+    const v = variacaoDesdeOntem([foto("2026-10-05", 8)], HOJE, 7, atrasadas)!;
+    expect(v.direcao).toBe("caiu");
+    expect(v.texto).toBe("−1 desde ontem");
+    expect(v.tom).toBe("bom");
+  });
+
+  it("igual a ontem: neutro", () => {
+    expect(variacaoDesdeOntem([foto("2026-10-05", 3)], HOJE, 3, atrasadas)).toMatchObject({
+      direcao: "igual",
+      texto: "igual a ontem",
+      tom: "neutro",
+    });
+  });
+
+  it("número sem lado bom (empresas ativas): a mudança fica neutra", () => {
+    expect(variacaoDesdeOntem([foto("2026-10-05", 390)], HOJE, 394, empresas)).toMatchObject({ texto: "+4 desde ontem", tom: "neutro" });
+  });
+
+  it("sem foto de ontem, a mais recente dos últimos 4 dias (segunda compara com sexta)", () => {
+    // 05/10/2026 é segunda; a sexta anterior é 02/10.
+    const v = variacaoDesdeOntem([foto("2026-10-02", 10), foto("2026-09-25", 1)], "2026-10-05", 12, atrasadas)!;
+    expect(v.texto).toBe("+2 em 3 dias");
+  });
+
+  it("sem foto na janela (ou só a de hoje): nada a comparar", () => {
+    expect(variacaoDesdeOntem([], HOJE, 3, atrasadas)).toBeNull();
+    expect(variacaoDesdeOntem([foto(HOJE, 2)], HOJE, 3, atrasadas)).toBeNull();
+    expect(variacaoDesdeOntem([foto("2026-09-29", 2)], HOJE, 3, atrasadas)).toBeNull();
   });
 });

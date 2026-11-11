@@ -57,6 +57,8 @@ describe.skipIf(!url)("token pessoal com MySQL descartável", () => {
     for (const t of [tenantId, outroTenant]) {
       await db.techInternalComment.deleteMany({ where: { tenantId: t } }); await db.techInternalChange.deleteMany({ where: { tenantId: t } });
       await db.techInternalItem.deleteMany({ where: { tenantId: t } }); await db.personalApiToken.deleteMany({ where: { tenantId: t } });
+      // O contador do endereço curto (10/11/2026) aponta para o escritório.
+      await db.shortAddressCounter.deleteMany({ where: { tenantId: t } });
       await db.userSector.deleteMany({ where: { user: { tenantId: t } } }); await db.auditLog.deleteMany({ where: { tenantId: t } });
       await db.user.deleteMany({ where: { tenantId: t } }); await db.tenantModule.deleteMany({ where: { tenantId: t } });
       await db.sector.deleteMany({ where: { tenantId: t } }); await db.tenant.delete({ where: { id: t } });

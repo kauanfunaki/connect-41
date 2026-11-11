@@ -89,6 +89,8 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   tech_github_contributions: "escritorio",
   tech_ops_center: "escritorio",
   tech_certificados: "escritorio",
+  // A Academia (10/11/2026): da equipe, e não de um cliente.
+  academia: "escritorio",
   gestao_painel: "escritorio",
   // O Financeiro da 41 (05/11/2026): é da casa, e não o dinheiro do cliente.
   financeiro_estoque: "escritorio",
@@ -101,6 +103,8 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   // Apoio do BPO (senhas e manual): ferramenta da equipe, não do cliente.
   bpo_senhas: "escritorio",
   bpo_manual: "escritorio",
+  // O Repositório de fluxos (10/11/2026), do mesmo grupo Apoio.
+  bpo_fluxos: "escritorio",
 };
 
 /**

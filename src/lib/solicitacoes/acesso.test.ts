@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AuthContext } from "@/lib/auth/context";
-import { podeAgirNaSolicitacao, podeVerSolicitacao, setoresDaFila } from "./acesso";
+import { podeAgirNaSolicitacao, podeVerSolicitacao, setoresAtivosDaFila, setoresDaFila } from "./acesso";
 
 // Perfis simulados: a conta do Kauan é administrador e vê tudo, então o que
 // importa provar é o colaborador de um ou dois setores.
@@ -70,5 +70,27 @@ describe("acesso às solicitações", () => {
   it("sem usuário (sessão sem id) não vira responsável de nada", () => {
     const c = ctx("SECTOR_USER", ["dp"], { userId: "" });
     expect(podeVerSolicitacao(c, { sectorCode: "fiscal", assigneeId: "" })).toBe(false);
+  });
+});
+
+// O filtro de setor das telas e o recorte do balão dos Pedidos ao cliente
+// (10/11/2026): os setores ativos que a fila alcança.
+describe("setoresAtivosDaFila", () => {
+  const ativos = [{ code: "bpo" }, { code: "dp" }, { code: "fiscal" }];
+
+  it("colaborador fica com os setores dele que estão ativos", () => {
+    expect(setoresAtivosDaFila(ativos, setoresDaFila(ctx("SECTOR_USER", ["dp", "fiscal"])))).toEqual([{ code: "dp" }, { code: "fiscal" }]);
+  });
+
+  it("setor da pessoa que foi desativado não entra", () => {
+    expect(setoresAtivosDaFila(ativos, ["dp", "societario"])).toEqual([{ code: "dp" }]);
+  });
+
+  it("administrador fica com todos os ativos", () => {
+    expect(setoresAtivosDaFila(ativos, setoresDaFila(ctx("ADMIN", [])))).toEqual(ativos);
+  });
+
+  it("colaborador sem setor não alcança nenhum", () => {
+    expect(setoresAtivosDaFila(ativos, [])).toEqual([]);
   });
 });

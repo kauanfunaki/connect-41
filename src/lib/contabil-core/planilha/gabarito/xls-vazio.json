@@ -1,0 +1,1 @@
+{"erro": {"tipo": "TypeError", "mensagem": "expected str, bytes or os.PathLike object, not NoneType"}}

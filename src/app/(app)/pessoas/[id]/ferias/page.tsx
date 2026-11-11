@@ -11,14 +11,17 @@ import { AddFeriasForm } from "@/components/pessoas/AddFeriasForm";
 import { FeriasRow } from "@/components/pessoas/FeriasRow";
 import { formatCalendarDate } from "@/lib/format";
 import { criarFerias, atualizarFerias, excluirFerias } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function FeriasPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_colaboradores");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/ferias");
   const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
@@ -40,6 +43,7 @@ export default async function FeriasPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Férias"
         aba="trabalhista"

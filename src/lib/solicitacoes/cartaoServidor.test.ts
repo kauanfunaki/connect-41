@@ -7,7 +7,10 @@ const serviceRequest = { findFirst: vi.fn() };
 const pipeline = { findFirst: vi.fn() };
 const pipelineItem = { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() };
 const activity = { create: vi.fn() };
-const prisma = { serviceRequest, pipeline, pipelineItem, activity };
+// O cartão nasce numa transação, com o número do endereço curto (10/11/2026):
+// com o contador da tela em 0, o número é 1.
+const prisma: Record<string, unknown> = { serviceRequest, pipeline, pipelineItem, activity, $queryRaw: async () => [{ ultimo: 0 }], $executeRaw: async () => 1 };
+prisma.$transaction = async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma);
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -46,6 +49,7 @@ describe("criarCartaoDaSolicitacao", () => {
     expect(pipelineItem.create).toHaveBeenCalledWith({
       data: {
         tenantId: "t1",
+        number: 1,
         pipelineId: "pl1",
         stageId: "nova",
         entityType: "COMPANY",

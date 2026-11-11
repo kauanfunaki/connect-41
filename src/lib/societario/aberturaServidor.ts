@@ -11,6 +11,8 @@
 // `abertura.ts`, que o cartão do chat importa sem levar o Prisma junto.
 
 import { getPrisma } from "@/lib/prisma";
+import { comNovaTentativa, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
+import { endereco } from "@/lib/enderecoCurto";
 import { logAudit } from "@/lib/audit";
 import { getSectorUsers, type SectorUser } from "@/lib/sectorUsers";
 import { setoresDoModulo } from "@/lib/modules";
@@ -152,7 +154,8 @@ export type PedidoDeAbertura = {
   origem: { tipo: "tela" } | { tipo: "ceci"; roteiroId: string | null };
 };
 
-export type ResultadoDaAbertura = { ok: true; processoId: string } | { ok: false; erro: string };
+/** `endereco` é o curto do processo aberto, /processos/processo-12 (10/11/2026). */
+export type ResultadoDaAbertura = { ok: true; processoId: string; endereco: string } | { ok: false; erro: string };
 
 /**
  * Abre um processo a partir do roteiro publicado do tipo.
@@ -231,12 +234,16 @@ export async function abrirProcessoNoServidor(
   }
 
   let processoId: string;
+  let numero: number;
   try {
-    processoId = await prisma.$transaction(
+    // O número do processo no escritório, o do endereço curto
+    // /processos/processo-12 (10/11/2026, pedido do Kauan).
+    ({ id: processoId, number: numero } = await comNovaTentativa(() => prisma.$transaction(
       async (tx) => {
         const processo = await tx.process.create({
           data: {
             tenantId,
+            number: await proximoNumero(tx, "processo", tenantId),
             companyId: empresaId,
             typeId,
             templateId: template.id,
@@ -245,7 +252,7 @@ export async function abrirProcessoNoServidor(
             priority: dados.prioridade,
             dueAt: dados.prazoCombinado,
           },
-          select: { id: true },
+          select: { id: true, number: true },
         });
 
         for (const passo of template.steps) {
@@ -269,10 +276,10 @@ export async function abrirProcessoNoServidor(
             });
           }
         }
-        return processo.id;
+        return processo;
       },
       { timeout: 60_000, maxWait: 30_000 }
-    );
+    )));
   } catch (err) {
     console.error("[abrirProcesso]", err);
     return { ok: false, erro: "Erro ao abrir o processo." };
@@ -301,5 +308,5 @@ export async function abrirProcessoNoServidor(
     }
   }
 
-  return { ok: true, processoId };
+  return { ok: true, processoId, endereco: endereco("processo", numero) };
 }

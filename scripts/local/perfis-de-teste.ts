@@ -9,6 +9,7 @@
 // um suporte (SUPER_ADMIN) com acesso a um segundo escritório fictício.
 
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { hashPassword } from "../../src/lib/auth/password";
 
 export const PERFIS = [
@@ -75,7 +76,7 @@ async function main() {
   console.log("perfil suporte.teste@exemplo.invalido: SUPER_ADMIN com 2 escritórios");
 
   if (!(await p.person.findFirst({ where: { tenantId: tenant.id, name: "Joana Exemplo", type: "COLABORADOR" } }))) {
-    await p.person.create({ data: { tenantId: tenant.id, name: "Joana Exemplo", type: "COLABORADOR" } });
+    await p.person.create({ data: { tenantId: tenant.id, number: await proximoNumero(p, "pessoa", tenant.id), name: "Joana Exemplo", type: "COLABORADOR" } });
     console.log("colaboradora fictícia criada");
   }
   await p.$disconnect();

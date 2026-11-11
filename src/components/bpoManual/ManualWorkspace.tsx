@@ -50,7 +50,8 @@ const ICON_CHOICES = [
 // O conteúdo do seletor de ícone. O painel é o `Popover` do app desde
 // 08/10/2026 — era um popover feito à mão (`fixed inset-0` para o clique fora
 // e `absolute` com `shadow-lg` do Tailwind, fora da escala de sombras), sem Esc.
-function IconPicker({ value, onChange, onClose }: { value: string | null; onChange: (icon: string | null) => void; onClose: () => void }) {
+// Exportado (10/11/2026): as pastas do Repositório de fluxos usam o mesmo seletor.
+export function IconPicker({ value, onChange, onClose }: { value: string | null; onChange: (icon: string | null) => void; onClose: () => void }) {
   return (
     <>
       <div className="grid grid-cols-6 gap-0.5">
@@ -86,7 +87,8 @@ function IconPicker({ value, onChange, onClose }: { value: string | null; onChan
 // tela, "Repositório de manuais" (30px), e invertia a hierarquia. Agora o
 // título da página é `--fs-title` (22), e o conteúdo desce a partir dele: h1
 // em 18, h2 em 16, h3 em 15 com peso — o corpo segue em 15 (`--fs-body`).
-const READING_CLASS =
+// Exportada (10/11/2026): a metodologia do Repositório de fluxos lê igual.
+export const READING_CLASS =
   "text-body text-fg leading-[1.75] " +
   "[&_p]:my-3 [&_p:first-child]:mt-0 " +
   // h1 e pre não têm botão na toolbar, mas a allowlist do sanitizador aceita

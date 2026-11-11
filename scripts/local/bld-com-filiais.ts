@@ -9,6 +9,7 @@
 
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { camposDoRegime } from "../../src/lib/taxRegime";
 
 const SLUG_DO_TENANT = "41tech";
@@ -61,7 +62,7 @@ async function main() {
     };
     const empresa: { id: string } = existente
       ? await p.company.update({ where: { id: existente.id }, data: dados, select: { id: true } })
-      : await p.company.create({ data: { tenantId: tenant.id, cnpj, ...camposDoRegime("LUCRO_PRESUMIDO"), ...dados }, select: { id: true } });
+      : await p.company.create({ data: { tenantId: tenant.id, number: await proximoNumero(p, "empresa", tenant.id), cnpj, ...camposDoRegime("LUCRO_PRESUMIDO"), ...dados }, select: { id: true } });
     if (u.ordem === 1) matrizId = empresa.id;
     console.log(`${existente ? "atualizada" : "criada"}: ${dados.displayName} (${cnpj})`);
   }

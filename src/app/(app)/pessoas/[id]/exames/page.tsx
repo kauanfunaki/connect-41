@@ -11,14 +11,17 @@ import { AddExameForm } from "@/components/pessoas/AddExameForm";
 import { ExameRow } from "@/components/pessoas/ExameRow";
 import { formatCalendarDate } from "@/lib/format";
 import { criarExame, atualizarExame, excluirExame } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function ExamesPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_colaboradores");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/exames");
   const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
@@ -40,6 +43,7 @@ export default async function ExamesPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Exames admissionais"
         aba="trabalhista"

@@ -16,8 +16,9 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { saoPauloParts } from "@/lib/agenda";
 import { NovaPendencia, type LancamentoVinculado } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import { soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { ROTULO_DO_TIPO, ROTULO_DO_STATUS, ROTULO_DO_PRAZO } from "@/lib/financeiro/pendencias/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
@@ -55,13 +56,13 @@ export default async function PendenciasPage({
   const params = await searchParams;
   const recorte: RecorteDePendencia = RECORTES_DE_PENDENCIA.find((r) => r.chave === params.recorte)?.chave ?? "andamento";
   const vencidas = params.vencidas === "1";
-  const empresas = await empresasDoSeletor(ctx.tenantId);
+  const empresas = await empresasAtivasDoSeletor(ctx.tenantId);
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const agora = new Date();
 
   const [{ linhas, contadores, limitado }, lancamento] = await Promise.all([
     // Só as do setor do módulo (e as de antes de 01/10, sem setor): os pedidos
-    // dos outros setores ficam em Solicitações › Pedidos ao cliente.
+    // dos outros setores ficam em Solicitações › Pedidos.
     listarPendencias({ tenantId: ctx.tenantId, companyIds: null, setores: soDoSetorPadrao(setor) }, { recorte, empresaId, vencidas }, agora),
     podeAgir && params.lancamento ? lancamentoParaVincular(ctx.tenantId, params.lancamento) : Promise.resolve(null),
   ]);
@@ -176,7 +177,7 @@ export default async function PendenciasPage({
           <CartoesNoCelular>
             {linhas.map((l) => (
               <Cartao key={l.id}>
-                <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                <Link href={enderecoDe("pendencia", { id: l.id, number: l.numero })} className="font-medium text-brand hover:underline break-words">
                   {l.titulo}
                 </Link>
                 <InfoDoCartao className="mt-0.5 break-words">
@@ -243,7 +244,7 @@ export default async function PendenciasPage({
                 {linhas.map((l) => (
                   <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">
-                      <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
+                      <Link href={enderecoDe("pendencia", { id: l.id, number: l.numero })} className="font-medium text-brand hover:underline">
                         {l.titulo}
                       </Link>
                       <span className="block text-micro text-fg-muted">

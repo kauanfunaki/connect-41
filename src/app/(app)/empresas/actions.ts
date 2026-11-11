@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
+import { endereco } from "@/lib/enderecoCurto";
 import { CompanyStatus, CompanyKind } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { canWriteEntity } from "@/lib/auth/policy";
@@ -141,14 +143,17 @@ export async function criarEmpresa(
   const matrizError = await validarMatriz(ctx.tenantId, null, data.parentCompanyId);
   if (matrizError) return { error: matrizError };
 
-  const prisma = getPrisma();
   let id: string;
+  let number: number;
 
   try {
-    const company = await prisma.company.create({
-      data: { tenantId: ctx.tenantId, ...data },
-    });
-    id = company.id;
+    // O número da empresa no escritório, o do endereço curto
+    // /empresas/empresa-301 (10/11/2026, pedido do Kauan).
+    const tenantId = ctx.tenantId;
+    const company = await criarComNumero("empresa", tenantId, (tx, numero) =>
+      tx.company.create({ data: { tenantId, number: numero, ...data }, select: { id: true, number: true } })
+    );
+    ({ id, number } = company);
   } catch (err) {
     console.error("[criarEmpresa]", err);
     return { error: "Erro ao criar empresa. Tente novamente." };
@@ -163,7 +168,7 @@ export async function criarEmpresa(
     metadata: { name: data.name },
   });
 
-  redirect(`/empresas/${id}`);
+  redirect(endereco("empresa", number));
 }
 
 export async function atualizarEmpresa(
@@ -183,7 +188,7 @@ export async function atualizarEmpresa(
 
   const existing = await prisma.company.findFirst({
     where: { id, ...(await scopedCompanyWhere(ctx)) },
-    select: { id: true },
+    select: { id: true, number: true },
   });
   if (!existing) return { error: "Empresa não encontrada ou fora do seu escopo." };
 
@@ -216,7 +221,7 @@ export async function atualizarEmpresa(
   await saveCustomFieldValues(ctx.tenantId, id, applicableFields, form);
 
   revalidatePath(`/empresas/${id}`);
-  redirect(`/empresas/${id}`);
+  redirect(endereco("empresa", existing.number));
 }
 
 // A exclusão de uma empresa saiu daqui em 13/10/2026: é o diálogo

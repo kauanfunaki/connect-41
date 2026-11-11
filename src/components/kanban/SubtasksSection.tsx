@@ -12,9 +12,12 @@ import { useToast } from "@/components/ui/Toast";
 import { oQueVaiJunto } from "@/components/kanban/RowActionsMenu";
 import { useConcluirComSubatividades } from "@/components/kanban/useConcluirComSubatividades";
 import { AVISO_DO_LIMITE } from "@/lib/kanban/subatividades";
+import { segmentoDaTarefa } from "@/lib/enderecoCurto";
 
 export type SubtaskData = {
   id: string;
+  /** O número da tarefa: o link vai pelo endereço curto, tarefa-77 (10/11/2026). */
+  number?: number;
   title: string;
   stageName: string;
   stageColor: string | null;
@@ -124,7 +127,7 @@ export function SubtasksSection({ canAct, canDelete, basePath, pipelineId, subta
               />
             </button>
             <Link
-              href={`${basePath}/itens/${s.id}`}
+              href={`${basePath}/itens/${segmentoDaTarefa(s)}`}
               className="flex-1 min-w-0 flex items-center gap-2 text-fs-3 text-fg hover:text-brand transition-colors"
             >
               <span className={`truncate ${s.isTerminal ? "text-fg-muted" : ""}`}>{s.title}</span>

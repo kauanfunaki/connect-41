@@ -14,6 +14,8 @@ import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { abrirCompetencia } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 const STATUS_LABEL: Record<PayrollStatus, string> = {
   PENDENTE:       "Pendente",
@@ -44,8 +46,11 @@ export default async function FolhaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: companyId } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/folha");
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
   const canManage = canWrite(ctx.role);
   const canViewPayroll = await canViewSensitiveField(ctx, "SALARIO");
 
@@ -69,7 +74,7 @@ export default async function FolhaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
           { label: "Folha de pagamento" },
         ]}
       />
@@ -93,7 +98,7 @@ export default async function FolhaPage({
           {competencias.map((c) => (
             <Link
               key={c.id}
-              href={`/empresas/${companyId}/folha/${c.id}`}
+              href={`${fichaDaEmpresa}/folha/${c.id}`}
               className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors"
             >
               <p className="text-fs-3 text-fg">{MONTH_LABEL[c.month - 1]}/{c.year}</p>

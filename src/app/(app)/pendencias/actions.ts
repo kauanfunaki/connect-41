@@ -10,6 +10,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { comNovaTentativa, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
+import { endereco } from "@/lib/enderecoCurto";
 import type { Prisma } from "@/generated/prisma/client";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled } from "@/lib/modules";
@@ -37,7 +39,8 @@ import {
   setorPadraoDasPendencias,
 } from "@/lib/financeiro/pendencias/setor";
 
-export type ResultadoDaPendencia = { error: string } | { ok: true; id: string; aviso: string | null };
+/** `endereco` é o curto, /pendencias/pendencia-9 (10/11/2026): é para onde a tela vai depois de criar. */
+export type ResultadoDaPendencia = { error: string } | { ok: true; id: string; endereco: string; aviso: string | null };
 export type Resultado = { error: string } | { ok: true; aviso: string | null };
 
 /** Erro de regra dentro da transação: aborta o que já foi gravado e vira mensagem. */
@@ -119,11 +122,16 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
   if (!gravados.ok) return { error: gravados.erro };
 
   let id: string;
+  let numero: number;
   try {
-    id = await c.prisma.$transaction(async (tx) => {
+    // O número da pendência no escritório, o do endereço curto
+    // /pendencias/pendencia-9 (10/11/2026, pedido do Kauan): sai dentro da
+    // transação, e a gravação inteira se refaz se perder a corrida do número.
+    ({ id, number: numero } = await comNovaTentativa(() => c.prisma.$transaction(async (tx) => {
       const criada = await tx.clientRequest.create({
         data: {
           tenantId: c.tenantId,
+          number: await proximoNumero(tx, "pendencia", c.tenantId),
           companyId: empresa.id,
           kind: v.dados.kind,
           title: v.dados.title,
@@ -134,7 +142,7 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
           sectorCode: setor,
           createdById: c.userId,
         },
-        select: { id: true },
+        select: { id: true, number: true },
       });
       // Anexo da abertura (o modelo de planilha, a guia a conferir) entra sem
       // mensagem: a descrição da pendência é o texto que ele acompanha.
@@ -143,8 +151,8 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
           data: gravados.anexos.map((a) => ({ requestId: criada.id, uploadedByUserId: c.userId, ...a })),
         });
       }
-      return criada.id;
-    });
+      return criada;
+    })));
   } catch (err) {
     await apagarAnexosGravados(gravados.anexos);
     throw err;
@@ -180,7 +188,7 @@ export async function criarPendencia(formData: FormData): Promise<ResultadoDaPen
   });
 
   revalidar(id);
-  return { ok: true, id, aviso: [resumoDoAviso(aviso), avisoDaCopia].filter(Boolean).join(" ") || null };
+  return { ok: true, id, endereco: endereco("pendencia", numero), aviso: [resumoDoAviso(aviso), avisoDaCopia].filter(Boolean).join(" ") || null };
 }
 
 /**

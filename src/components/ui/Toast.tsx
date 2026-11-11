@@ -19,6 +19,13 @@ export type OpcoesDoAviso = {
   rotuloDoClique?: string;
   /** Avisos do mesmo grupo ficam no máximo 2 na tela; o mais antigo sai. Os sem grupo não contam. */
   grupo?: string;
+  /**
+   * O desenho do aviso no lugar do ícone do tipo e do texto (10/11/2026): a
+   * notificação nova vem com o mesmo rosto e texto do cartão do sino
+   * (`AvisoDaNotificacao`). A mensagem segue valendo para o leitor de tela, e
+   * o clique e o X continuam do aviso; sem rótulo "Abrir" embaixo.
+   */
+  corpo?: React.ReactNode;
 };
 
 type Toast = { id: number; kind: ToastKind; message: string } & OpcoesDoAviso;
@@ -128,7 +135,7 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
       {ICONE[aviso.kind]}
     </span>
   );
-  const texto = (
+  const texto = aviso.corpo ? null : (
     <span className="min-w-0">
       {aviso.titulo && <span className="block font-semibold">{aviso.titulo}</span>}
       <span className={aviso.titulo ? "block text-fg-secondary line-clamp-3" : undefined}>{aviso.message}</span>
@@ -147,15 +154,21 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
             onFechar(aviso.id);
             aoClicar();
           }}
-          className="flex-1 min-w-0 flex items-start gap-2.5 text-left rounded-l-md px-3.5 py-2.5 cursor-pointer transition-colors hover:bg-surface-hover"
+          className={`flex-1 min-w-0 flex items-start text-left rounded-l-md cursor-pointer transition-colors hover:bg-surface-hover ${
+            aviso.corpo ? "px-3 py-3" : "gap-2.5 px-3.5 py-2.5"
+          }`}
         >
-          {icone}
-          <span className="min-w-0">
-            {texto}
-            <span className="mt-1 inline-flex items-center gap-1 text-helper font-medium text-brand">
-              {aviso.rotuloDoClique ?? "Abrir"} <ArrowRight size={12} aria-hidden />
-            </span>
-          </span>
+          {aviso.corpo ?? (
+            <>
+              {icone}
+              <span className="min-w-0">
+                {texto}
+                <span className="mt-1 inline-flex items-center gap-1 text-helper font-medium text-brand">
+                  {aviso.rotuloDoClique ?? "Abrir"} <ArrowRight size={12} aria-hidden />
+                </span>
+              </span>
+            </>
+          )}
         </button>
         <button
           type="button"
@@ -175,10 +188,16 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
       type="button"
       onClick={() => onFechar(aviso.id)}
       title="Fechar"
-      className="c41-surgir w-full flex items-start gap-2.5 text-left rounded-md border border-border-strong bg-surface-elevated px-3.5 py-2.5 text-ui text-fg shadow-lg"
+      className={`c41-surgir w-full flex items-start text-left rounded-md border border-border-strong bg-surface-elevated text-ui text-fg shadow-lg ${
+        aviso.corpo ? "px-3 py-3" : "gap-2.5 px-3.5 py-2.5"
+      }`}
     >
-      {icone}
-      {texto}
+      {aviso.corpo ?? (
+        <>
+          {icone}
+          {texto}
+        </>
+      )}
     </button>
   );
 }

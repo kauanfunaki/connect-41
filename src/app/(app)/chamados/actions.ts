@@ -8,6 +8,7 @@ import { triarChamado } from "@/lib/chamados/triagem-servidor";
 import { motivoDaFalha } from "@/lib/chamados/falhaDaIa";
 import { salvarPolitica } from "@/lib/chamados/configuracao";
 import { removerAnexoRascunho } from "@/lib/chamados/anexos";
+import { endereco } from "@/lib/enderecoCurto";
 
 async function executar<T>(fn: () => Promise<T>) {
   try { const valor = await fn(); revalidatePath("/chamados", "layout"); return { ok: true as const, valor }; }
@@ -29,12 +30,13 @@ export async function retirarAnexo(draftId: string, id: string, version: number)
 export async function abrirChamado(id: string, version: number) {
   return executar(async () => {
     const c = await contexto();
-    const { ticketId } = await enviarRascunho(c, id, version);
+    const { ticketId, numero } = await enviarRascunho(c, id, version);
     const tenantId = c.ctx.tenantId;
     after(async () => {
       try { await triarChamado(tenantId, ticketId); }
       catch (err) { console.error(`[chamados] triagem do chamado ${ticketId} (escritório ${tenantId}) não terminou; o motor de alertas retoma: ${motivoDaFalha(err)}`); }
     });
-    return { ticketId };
+    // A tela vai ao endereço curto do chamado, /chamados/chamado-45 (10/11/2026, pedido do Kauan).
+    return { ticketId, endereco: endereco("chamado", numero) };
   });
 }

@@ -136,6 +136,9 @@ const prisma = {
   document: { findMany: vi.fn(async () => []), deleteMany: vi.fn(async () => ({ count: 0 })) },
   // Em lista ou com função (a exclusão com anexos roda numa transação interativa).
   $transaction: vi.fn(async (ops: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)) => (typeof ops === "function" ? ops(prisma) : Promise.all(ops))),
+  // O contador do endereço curto (10/11/2026): em 0, a tarefa é a nº 1.
+  $queryRaw: vi.fn(async () => [{ ultimo: 0 }]),
+  $executeRaw: vi.fn(async () => 1),
 };
 // As ações do Kanban chegam a módulos `server-only` (exclusão de atividade, SPED local).
 vi.mock("server-only", () => ({}));

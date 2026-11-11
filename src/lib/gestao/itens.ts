@@ -8,6 +8,9 @@
 import { getPrisma } from "@/lib/prisma";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
+import { sectorLabel } from "@/lib/sectors";
+import { assuntoDaTransferencia } from "@/lib/handoffs";
+import { enderecoDaTarefa, enderecoDe } from "@/lib/enderecoCurto";
 import {
   classificar,
   limitesDoSetor,
@@ -70,6 +73,7 @@ async function processos(tenantId: string, agora: Date, filtro: FiltroDeItens): 
     },
     select: {
       id: true,
+      number: true,
       title: true,
       status: true,
       dueAt: true,
@@ -109,7 +113,8 @@ async function processos(tenantId: string, agora: Date, filtro: FiltroDeItens): 
       ultimaMovimentacao: maisRecente(p.updatedAt, ...p.steps.map((s) => s.updatedAt), p.protocols[0]?.updatedAt, p.messages[0]?.createdAt),
       prazo: p.dueAt,
       concluidoEm: p.concludedAt,
-      href: `/processos/${p.id}`,
+      // Os links pelo endereço curto (10/11/2026, pedido do Kauan).
+      href: enderecoDe("processo", p),
       empresaId: p.companyId,
     };
   });
@@ -131,6 +136,7 @@ async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Prom
     },
     select: {
       id: true,
+      number: true,
       title: true,
       entityType: true,
       entityId: true,
@@ -169,7 +175,7 @@ async function cards(tenantId: string, agora: Date, filtro: FiltroDeItens): Prom
       ultimaMovimentacao: ultima,
       prazo: c.dueDate,
       concluidoEm: estado === "CONCLUIDO" ? c.updatedAt : null,
-      href: `/kanban/${c.pipelineId}/itens/${c.id}`,
+      href: enderecoDaTarefa(c.pipelineId, c),
       empresaId: c.entityType === "COMPANY" ? c.entityId : null,
     };
   });
@@ -190,6 +196,7 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
     },
     select: {
       id: true,
+      number: true,
       title: true,
       status: true,
       dueDate: true,
@@ -216,7 +223,7 @@ async function pendencias(tenantId: string, agora: Date, filtro: FiltroDeItens):
       ultimaMovimentacao: r.updatedAt,
       prazo: r.dueDate,
       concluidoEm: r.resolvedAt,
-      href: `/pendencias/${r.id}`,
+      href: enderecoDe("pendencia", r),
       empresaId: r.companyId,
     }));
 }
@@ -275,7 +282,7 @@ async function solicitacoes(tenantId: string, agora: Date, filtro: FiltroDeItens
     ultimaMovimentacao: s.updatedAt,
     prazo: s.firstResponseAt ? null : s.responseDue,
     concluidoEm: s.closedAt,
-    href: `/solicitacoes/${s.id}`,
+    href: enderecoDe("solicitacao", s),
     empresaId: s.companyId,
   }));
 }
@@ -297,23 +304,36 @@ async function transferencias(tenantId: string, agora: Date, filtro: FiltroDeIte
       updatedAt: true,
       resolvedAt: true,
       assignees: { select: { userId: true } },
-      handoff: { select: { fromSector: true, message: true, description: true } },
+      handoff: { select: { number: true, fromSector: true, subject: true, message: true, description: true } },
     },
     take: TETO,
   });
+  // O nome do setor de origem, e não o código (10/11/2026, pedido do Kauan):
+  // a Gestão mostrava "Transferência de fiscal". Só quando há o que mostrar.
+  const rotulos =
+    lista.length > 0
+      ? Object.fromEntries(
+          (await getPrisma().sector.findMany({ where: { tenantId }, select: { code: true, label: true } })).map((s) => [s.code, s.label])
+        )
+      : {};
   return lista.map((h) => {
-    const assunto = (h.handoff.description ?? h.handoff.message ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+    // O assunto guardado (desde 10/11/2026) vem primeiro; as de antes seguem
+    // com o começo da descrição.
+    const assunto =
+      assuntoDaTransferencia(h.handoff) ?? (h.handoff.description ?? h.handoff.message ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
     return {
       origem: "TRANSFERENCIA",
       id: h.id,
-      titulo: `Transferência de ${h.handoff.fromSector}${assunto ? ` — ${assunto}` : ""}`,
+      titulo: `Transferência de ${sectorLabel(rotulos, h.handoff.fromSector)}${assunto ? ` — ${assunto}` : ""}`,
       setor: h.sectorCode,
       responsaveis: h.assignees.map((a) => a.userId),
-      estado: h.status === "DONE" ? "CONCLUIDO" : h.status === "IN_PROGRESS" ? "ANDAMENTO" : "NAO_INICIADO",
+      // A devolvida (10/11/2026) espera quem pediu responder: na Gestão é
+      // "pausada" — parada de propósito, sem alerta de parado para o setor.
+      estado: h.status === "DONE" ? "CONCLUIDO" : h.status === "IN_PROGRESS" ? "ANDAMENTO" : h.status === "RETURNED" ? "PAUSADO" : "NAO_INICIADO",
       ultimaMovimentacao: h.updatedAt,
       prazo: null,
       concluidoEm: h.resolvedAt,
-      href: `/transferencias/${h.handoffId}`,
+      href: enderecoDe("transferencia", { id: h.handoffId, number: h.handoff.number }),
     };
   });
 }

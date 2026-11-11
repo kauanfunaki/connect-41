@@ -31,6 +31,7 @@
 // - reuniões na agenda (opcional: sem Google, são só leitura).
 
 import type { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero, type TelaNumerada } from "../../src/lib/enderecoCurtoNumeracao";
 import { camposDoRegime } from "../../src/lib/taxRegime";
 import { aplicarAjustes, calcular, MODELO_41, normalizarPerfil, type AjusteSetor, type ParametrosPreco } from "../../src/lib/valora/motor";
 
@@ -87,6 +88,9 @@ export async function carregarDadosDeExemplo(
   opcoes: { reunioes: boolean; log?: (m: string) => void }
 ): Promise<void> {
   const log = opcoes.log ?? console.log;
+  // O número de cada registro no escritório, o do endereço curto (10/11/2026,
+  // pedido do Kauan): /empresas/empresa-301, /pessoas/pessoa-12…
+  const numeroNovo = (tela: TelaNumerada) => proximoNumero(p, tela, tenantId);
   // Quem aparece como autor (transferências, propostas): o administrador do
   // escritório, ou a primeira pessoa ativa dele. Escritório sem ninguém — o
   // Teste da produção, em que quem entra é o suporte, vindo de outro
@@ -133,6 +137,7 @@ export async function carregarDadosDeExemplo(
     const c = await p.company.create({
       data: {
         tenantId,
+        number: await numeroNovo("empresa"),
         name: e.nome,
         tradeName: e.fantasia,
         cnpj: cnpj(e.base),
@@ -180,6 +185,7 @@ export async function carregarDadosDeExemplo(
     const novo = await p.person.create({
       data: {
         tenantId,
+        number: await numeroNovo("pessoa"),
         name: c.nome,
         type: "COLABORADOR",
         email: `${c.nome.split(" ")[0].toLowerCase()}.${i}@exemplo.invalido`,
@@ -196,7 +202,7 @@ export async function carregarDadosDeExemplo(
   }
   // Internos da 41 (a tela /pessoas).
   for (const nome of ["Ana Beatriz Correia", "Lucas Ferraz", "Sofia Albuquerque"]) {
-    await p.person.create({ data: { tenantId, name: nome, type: "COLABORADOR", isInternal: true, employmentStatus: "ATIVO", admissionDate: dia(-500), email: `${nome.split(" ")[0].toLowerCase()}.interno@exemplo.invalido` } });
+    await p.person.create({ data: { tenantId, number: await numeroNovo("pessoa"), name: nome, type: "COLABORADOR", isInternal: true, employmentStatus: "ATIVO", admissionDate: dia(-500), email: `${nome.split(" ")[0].toLowerCase()}.interno@exemplo.invalido` } });
   }
 
   const ferias: { quem: string; status: "PLANEJADA" | "SOLICITADA" | "APROVADA" | "PROGRAMADA" | "EM_GOZO"; aquisitivoFim: number; inicio?: number }[] = [
@@ -227,7 +233,7 @@ export async function carregarDadosDeExemplo(
 
   await p.termination.create({ data: { tenantId, personId: pessoa["Carlos Eduardo Lima"], type: "SEM_JUSTA_CAUSA", noticeType: "INDENIZADO", terminationDate: dia(4), status: "EM_CALCULO", reason: "Redução do quadro" } });
   const desligado = await p.person.create({
-    data: { tenantId, name: "Sérgio Antunes", type: "COLABORADOR", currentCompanyId: empresa.mercado, admissionDate: dia(-700), dismissalDate: dia(-12), employmentStatus: "DESLIGADO", email: "sergio.antunes@exemplo.invalido" },
+    data: { tenantId, number: await numeroNovo("pessoa"), name: "Sérgio Antunes", type: "COLABORADOR", currentCompanyId: empresa.mercado, admissionDate: dia(-700), dismissalDate: dia(-12), employmentStatus: "DESLIGADO", email: "sergio.antunes@exemplo.invalido" },
   });
   await p.termination.create({ data: { tenantId, personId: desligado.id, type: "VOLUNTARIO", noticeType: "TRABALHADO", terminationDate: dia(-12), status: "FINALIZADO", finalizedAt: dia(-10), reason: "Pedido de demissão" } });
   await p.termination.create({ data: { tenantId, personId: pessoa["Aline Fernandes"], type: "EXPERIENCIA", noticeType: "NAO_APLICAVEL", terminationDate: dia(10), status: "DOCUMENTACAO_PENDENTE" } });
@@ -282,6 +288,7 @@ export async function carregarDadosDeExemplo(
     const proc = await p.process.create({
       data: {
         tenantId,
+        number: await numeroNovo("processo"),
         companyId: empresa[params.em],
         typeId,
         templateId: modelo.id,
@@ -394,14 +401,14 @@ export async function carregarDadosDeExemplo(
     { nome: "Felipe Carvalho", vaga: "dev", etapa: "TRIAGEM", origem: "Portal de vagas" },
   ];
   {
-    const contratado = await p.person.create({ data: { tenantId, name: "Lucas Andrade", type: "CANDIDATO", email: "lucas.andrade@exemplo.invalido" } });
+    const contratado = await p.person.create({ data: { tenantId, number: await numeroNovo("pessoa"), name: "Lucas Andrade", type: "CANDIDATO", email: "lucas.andrade@exemplo.invalido" } });
     await p.candidatura.create({
       data: { tenantId, vagaId: vagas.auxiliar.id, personId: contratado.id, stage: "CONTRATADO", status: "CONTRATADO", hiredAt: dia(-8), origin: "Indicação", createdAt: dia(-20) },
     });
   }
   for (const [i, c] of CANDIDATOS.entries()) {
     const pessoaCandidata = await p.person.create({
-      data: { tenantId, name: c.nome, type: "CANDIDATO", email: `${c.nome.split(" ")[0].toLowerCase()}.candidato${i}@exemplo.invalido`, phone: `(41) 98${String(700 + i * 13)}-${String(2200 + i * 41)}` },
+      data: { tenantId, number: await numeroNovo("pessoa"), name: c.nome, type: "CANDIDATO", email: `${c.nome.split(" ")[0].toLowerCase()}.candidato${i}@exemplo.invalido`, phone: `(41) 98${String(700 + i * 13)}-${String(2200 + i * 41)}` },
     });
     await p.candidatura.create({
       data: {
@@ -439,7 +446,7 @@ export async function carregarDadosDeExemplo(
   const cartoes: { id: string; quem: string[] }[] = [];
   async function cartao(q: { pipe: string; etapas: string[] }, c: { em: Chave; titulo: string; etapa: number; prazo: number; quem: string[]; prioridade?: number; comentario?: { autor: string; texto: string } }) {
     const item = await p.pipelineItem.create({
-      data: { tenantId, pipelineId: q.pipe, stageId: q.etapas[c.etapa], entityType: "COMPANY", entityId: empresa[c.em], title: `${c.titulo} — ${EMPRESAS.find((e) => e.chave === c.em)?.fantasia}`, dueDate: dia(c.prazo), priority: c.prioridade ?? 0 },
+      data: { tenantId, number: await numeroNovo("tarefa"), pipelineId: q.pipe, stageId: q.etapas[c.etapa], entityType: "COMPANY", entityId: empresa[c.em], title: `${c.titulo} — ${EMPRESAS.find((e) => e.chave === c.em)?.fantasia}`, dueDate: dia(c.prazo), priority: c.prioridade ?? 0 },
     });
     for (const userId of c.quem) await p.pipelineItemAssignee.create({ data: { pipelineItemId: item.id, userId } });
     if (c.comentario) await p.activity.create({ data: { tenantId, pipelineItemId: item.id, userId: c.comentario.autor, type: "NOTE", content: c.comentario.texto } });
@@ -468,7 +475,7 @@ export async function carregarDadosDeExemplo(
   // ── Transferências ──────────────────────────────────────────────────────
   async function transferencia(params: { de: string; em: Chave; mensagem: string; prioridade: "LOW" | "MEDIUM" | "HIGH" | "URGENT"; destinos: { setor: string; status: "NEW" | "IN_PROGRESS" | "DONE"; quem?: string; instrucao: string }[] }) {
     const h = await p.handoff.create({
-      data: { tenantId, fromSector: params.de, entityType: "COMPANY", entityId: empresa[params.em], requestedBy: adminId, message: params.mensagem, priority: params.prioridade },
+      data: { tenantId, number: await numeroNovo("transferencia"), fromSector: params.de, entityType: "COMPANY", entityId: empresa[params.em], requestedBy: adminId, message: params.mensagem, priority: params.prioridade },
     });
     for (const d of params.destinos) {
       const hs = await p.handoffSector.create({

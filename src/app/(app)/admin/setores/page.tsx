@@ -30,6 +30,10 @@ import { atualizarSetor, criarSetor } from "./actions";
 import { setoresDoFoco } from "@/lib/empresas/foco";
 import { alternarModulo, ligarModuloAoSetor, transferirModulo } from "./modulos-actions";
 import { alternarTelaDoGeral, restaurarMenuGeral } from "./menu-geral-actions";
+import { AgendaDoSetorForm } from "@/components/agenda/AgendaDoSetorForm";
+import { agendaDosSetores, fontesDoEscritorio } from "@/lib/agendaDoSetorServidor";
+import { agendaDosSetoresNaTela } from "@/lib/agendaDoSetor";
+import { restaurarAgendaDoSetor, salvarAgendaDoSetor } from "../../agenda/preferencias-actions";
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
@@ -55,7 +59,7 @@ export default async function SetoresPage({
   const { setor: setorPedido, novo, editar } = await searchParams;
 
   const prisma = getPrisma();
-  const [sectors, ocultasDoGeral, modulos, pessoasPorSetor, setoresLigados] = await Promise.all([
+  const [sectors, ocultasDoGeral, modulos, pessoasPorSetor, setoresLigados, agendas, fontesDaAgenda] = await Promise.all([
     getAllSectors(ctx.tenantId),
     lerOcultasDoGeral(ctx.tenantId),
     getTenantModuleStates(ctx.tenantId),
@@ -65,6 +69,9 @@ export default async function SetoresPage({
       _count: { _all: true },
     }),
     lerSetoresLigados(ctx.tenantId),
+    // A Agenda de cada setor (10/11/2026): reuniões e fontes de prazo.
+    agendaDosSetores(ctx.tenantId),
+    fontesDoEscritorio(ctx.tenantId),
   ]);
   const quantasPessoas = new Map(pessoasPorSetor.map((p) => [p.sectorCode, p._count._all]));
   const emEdicao = editar ? sectors.find((s) => s.id === editar) : undefined;
@@ -286,6 +293,28 @@ export default async function SetoresPage({
                 podeEditar={podeConfigurarMenuGeral(ctx)}
                 alternar={alternarTelaDoGeral.bind(null, escolhido.id)}
                 restaurar={restaurarMenuGeral.bind(null, escolhido.id)}
+              />
+            </Card>
+
+            {/* A Agenda do setor (10/11/2026, pedido do Kauan): o mesmo
+                formulário que o coordenador tem em Sua conta. */}
+            <Card as="section" aria-labelledby="agenda-do-setor-titulo" className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <h2 id="agenda-do-setor-titulo" className="text-card-title font-semibold text-fg">
+                  Agenda e Meu dia
+                </h2>
+                <p className="text-body text-fg-secondary">
+                  Se {escolhido.label} usa reuniões e quais fontes de prazo a Agenda mostra para quem é do setor. O
+                  coordenador do setor também muda isto, em Sua conta.
+                </p>
+              </div>
+              <AgendaDoSetorForm
+                key={escolhido.code}
+                setores={agendaDosSetoresNaTela([escolhido], agendas.porSetor)}
+                fontes={fontesDaAgenda}
+                disponivel={agendas.disponivel}
+                salvar={salvarAgendaDoSetor}
+                restaurar={restaurarAgendaDoSetor}
               />
             </Card>
 

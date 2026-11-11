@@ -167,6 +167,69 @@ export function pontosDaLinha(
   }));
 }
 
+// ─── Cartões do topo (10/11/2026, pedido do Kauan — opção "B · Número com a
+// tendência") ────────────────────────────────────────────────────────────────
+// O cartão mostra a variação desde ontem ("+2 desde ontem") e a linha dos
+// últimos dias, mais curta que a do painel: no cartão cabe pouca largura, e
+// duas semanas já dizem para onde o número vai.
+
+/** A linha do cartão cobre duas semanas, hoje incluído. */
+export const JANELA_DO_CARTAO_DIAS = 14;
+
+export type DirecaoDaVariacao = "subiu" | "caiu" | "igual";
+
+export type Variacao = {
+  direcao: DirecaoDaVariacao;
+  /** "+2 desde ontem", "−1 em 3 dias", "igual a ontem". */
+  texto: string;
+  tom: TomDaTendencia;
+  /** A frase para leitor de tela: "Subiu 2 desde ontem — piorou." */
+  descricao: string;
+};
+
+/** O sinal de menos tipográfico (U+2212), o do desenho aprovado. */
+const MENOS = "−";
+
+/**
+ * Quanto o número mudou desde a última foto antes de hoje — a de ontem, ou a
+ * mais recente dos últimos 4 dias (segunda-feira compara com sexta). Sem foto
+ * nessa janela, `null`: o cartão diz "sem histórico ainda" em vez de inventar.
+ */
+export function variacaoDesdeOntem(
+  fotos: readonly Foto[],
+  hojeKey: string,
+  atual: number,
+  def: { formato: FormatoDaMetrica; sentido: SentidoDaMetrica }
+): Variacao | null {
+  if (!Number.isFinite(atual)) return null;
+  let anterior: Comparacao | null = null;
+  for (const f of fotos) {
+    if (!Number.isFinite(f.valor)) continue;
+    const dias = diasEntre(f.dia, hojeKey);
+    if (!Number.isFinite(dias) || dias < 1 || dias > RECENTE_ATE_DIAS) continue;
+    if (!anterior || dias < anterior.dias) anterior = { valor: f.valor, dias };
+  }
+  if (!anterior) return null;
+
+  const delta = atual - anterior.valor;
+  const periodo = periodoDaComparacao(anterior.dias);
+  const tom = tomDaVariacao(delta, def.sentido);
+  const quanto = quantoMudou(atual, anterior.valor, def.formato);
+  if (quanto === null) {
+    const texto = anterior.dias === 1 ? "igual a ontem" : `sem mudança ${periodo}`;
+    return { direcao: "igual", texto, tom, descricao: `${texto[0].toUpperCase()}${texto.slice(1)}.` };
+  }
+  const subiu = delta > 0;
+  const texto = `${subiu ? "+" : MENOS}${quanto} ${periodo}`;
+  const juizo = tom === "bom" ? " — melhorou" : tom === "ruim" ? " — piorou" : "";
+  return {
+    direcao: subiu ? "subiu" : "caiu",
+    texto,
+    tom,
+    descricao: `${subiu ? "Subiu" : "Caiu"} ${quanto} ${periodo}${juizo}.`,
+  };
+}
+
 export type Tendencia = { selo: Selo | null; linha: PontoDaLinha[] | null };
 
 /** Selo e linha juntos; `null` quando não há nem um nem outro. */

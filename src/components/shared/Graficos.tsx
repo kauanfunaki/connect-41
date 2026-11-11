@@ -103,11 +103,11 @@ function valorFalado(s: Segmento): string {
   return s.detalhe ? `${numero(s.valor)} (${s.detalhe})` : numero(s.valor);
 }
 
-// Gráfico mais baixo (06/10): com a faixa de destaques em cima, a grade dos
+// Gráfico mais baixo (06/10): com os números em cima — a faixa de destaques
+// até 10/11/2026, os cartões coringa do topo desde então —, a grade dos
 // painéis leva `data-compacto` (grupo `grade`, na Home) e a rosca e as
-// colunas encolhem — o número que manda já está na faixa. O mesmo quando o
-// painel ganha a linha da tendência (grupo `painel`): o gráfico de situação
-// fica menor, embaixo dela.
+// colunas encolhem. O mesmo quando o painel ganha a linha da tendência (grupo
+// `painel`): o gráfico de situação fica menor, embaixo dela.
 const COMPACTO_ROSCA = "group-data-[compacto=true]/grade:size-[112px] group-data-[compacto=true]/painel:size-[112px]";
 const COMPACTO_COLUNAS = "group-data-[compacto=true]/grade:h-28 group-data-[compacto=true]/painel:h-28";
 
@@ -154,18 +154,19 @@ export function Sparkline({
 }: {
   pontos: readonly { x: number; y: number }[];
   cor?: string;
-  /** "faixa": branca translúcida, para o cartão cheio da faixa de destaques. */
-  variante?: "painel" | "faixa";
+  /**
+   * "cartao": traço fino e área mais clara, para os cartões do topo do Início
+   * (10/11/2026) — a linha acompanha o número sem competir com ele. Substituiu
+   * a "faixa" branca da faixa de destaques, que saiu junto com ela.
+   */
+  variante?: "painel" | "cartao";
   className?: string;
 }) {
   if (pontos.length < 2) return null;
+  const fino = variante === "cartao";
   // Margem para o traço e o ponto não encostarem na borda.
   const y = (v: number) => 0.14 + (1 - v) * 0.72;
-  const traco = variante === "faixa" ? "rgb(255 255 255 / .75)" : cor;
-  const area =
-    variante === "faixa"
-      ? "linear-gradient(to bottom, rgb(255 255 255 / .22), rgb(255 255 255 / 0))"
-      : `linear-gradient(to bottom, color-mix(in srgb, ${cor} 24%, transparent), transparent)`;
+  const area = `linear-gradient(to bottom, color-mix(in srgb, ${cor} ${fino ? 14 : 24}%, transparent), transparent)`;
   const caminho = pontos.map((p, i) => `${i === 0 ? "M" : "L"}${(p.x * 100).toFixed(2)},${(y(p.y) * 100).toFixed(2)}`).join(" ");
   const recorte = `polygon(${pontos.map((p) => `${(p.x * 100).toFixed(2)}% ${(y(p.y) * 100).toFixed(2)}%`).join(", ")}, 100% 100%, 0% 100%)`;
   const ultimo = pontos[pontos.length - 1];
@@ -174,11 +175,19 @@ export function Sparkline({
     <div className={`relative ${className}`} aria-hidden>
       <div className="absolute inset-0" style={{ clipPath: recorte, background: area }} />
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
-        <path d={caminho} fill="none" stroke={traco} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <path
+          d={caminho}
+          fill="none"
+          stroke={cor}
+          strokeWidth={fino ? "1.5" : "2"}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
       <span
-        className={`absolute size-2 rounded-full -translate-x-1/2 -translate-y-1/2 ${variante === "faixa" ? "bg-white" : "ring-2 ring-surface"}`}
-        style={{ left: `${ultimo.x * 100}%`, top: `${y(ultimo.y) * 100}%`, background: variante === "faixa" ? undefined : cor }}
+        className={`absolute rounded-full -translate-x-1/2 -translate-y-1/2 ring-2 ring-surface ${fino ? "size-1.5" : "size-2"}`}
+        style={{ left: `${ultimo.x * 100}%`, top: `${y(ultimo.y) * 100}%`, background: cor }}
       />
     </div>
   );

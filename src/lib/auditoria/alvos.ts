@@ -12,6 +12,7 @@ import { nomeExibicao } from "@/lib/companyName";
 import { TIPO_LABEL } from "@/lib/fiscal/rotulos";
 import { getModuleDef } from "@/lib/module-catalog";
 import { enderecoDoItem } from "@/lib/tech-interno/regras";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import { empresaNosDetalhes, idsCitados } from "./metadados";
 
 export type Referencia = { entityType: string | null; entityId: string | null; metadata: unknown };
@@ -37,17 +38,18 @@ type Buscador = (tenantId: string, ids: string[]) => Promise<Array<{ id: string 
 /** Como achar cada tipo de cadastro que tem nome ou tela. Tipo fora daqui fica com o nome guardado na linha. */
 const BUSCADORES: Readonly<Record<string, Buscador>> = {
   Company: async (tenantId, ids) =>
-    (await getPrisma().company.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true, displayName: true } })).map((r) => ({
+    (await getPrisma().company.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, number: true, name: true, displayName: true } })).map((r) => ({
       id: r.id,
       nome: nomeExibicao(r),
-      href: `/empresas/${r.id}`,
+      // Os links pelo endereço curto (10/11/2026, pedido do Kauan).
+      href: enderecoDe("empresa", r),
       empresaId: null,
     })),
   Person: async (tenantId, ids) =>
-    (await getPrisma().person.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, name: true } })).map((r) => ({
+    (await getPrisma().person.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, number: true, name: true } })).map((r) => ({
       id: r.id,
       nome: r.name,
-      href: `/pessoas/${r.id}`,
+      href: enderecoDe("pessoa", r),
       empresaId: null,
     })),
   User: async (tenantId, ids) =>
@@ -99,9 +101,9 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
     (
       await getPrisma().process.findMany({
         where: { tenantId, id: { in: ids } },
-        select: { id: true, title: true, companyId: true, type: { select: { name: true } } },
+        select: { id: true, number: true, title: true, companyId: true, type: { select: { name: true } } },
       })
-    ).map((r) => ({ id: r.id, nome: r.title || r.type.name, href: `/processos/${r.id}`, empresaId: r.companyId })),
+    ).map((r) => ({ id: r.id, nome: r.title || r.type.name, href: enderecoDe("processo", r), empresaId: r.companyId })),
   // A versão publicada pela tela de roteiros (09/11/2026) leva à tela do roteiro do tipo.
   ProcessTemplate: async (tenantId, ids) =>
     (
@@ -121,14 +123,14 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
     (await getPrisma().serviceRequest.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, number: true, companyId: true } })).map((r) => ({
       id: r.id,
       nome: `nº ${r.number}`,
-      href: `/solicitacoes/${r.id}`,
+      href: enderecoDe("solicitacao", r),
       empresaId: r.companyId,
     })),
   ClientRequest: async (tenantId, ids) =>
-    (await getPrisma().clientRequest.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, title: true, companyId: true } })).map((r) => ({
+    (await getPrisma().clientRequest.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, number: true, title: true, companyId: true } })).map((r) => ({
       id: r.id,
       nome: r.title,
-      href: `/pendencias/${r.id}`,
+      href: enderecoDe("pendencia", r),
       empresaId: r.companyId,
     })),
   ClientDocument: async (tenantId, ids) =>
@@ -139,10 +141,10 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
       empresaId: r.companyId,
     })),
   Handoff: async (tenantId, ids) =>
-    (await getPrisma().handoff.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true } })).map((r) => ({
+    (await getPrisma().handoff.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, number: true } })).map((r) => ({
       id: r.id,
       nome: null,
-      href: `/transferencias/${r.id}`,
+      href: enderecoDe("transferencia", r),
       empresaId: null,
     })),
   Candidatura: async (tenantId, ids) =>

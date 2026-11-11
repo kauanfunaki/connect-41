@@ -53,6 +53,20 @@ function whereDoEscopo(e: EscopoDePendencias): Prisma.ClientRequestWhereInput {
   return e.setores ? { AND: [base, whereDoRecorteDeSetor(e.setores)] } : base;
 }
 
+function whereDoRecorte(recorte: RecorteDePendencia): Prisma.ClientRequestWhereInput {
+  const status = STATUS_DO_RECORTE[recorte];
+  return status ? { status: { in: status } } : {};
+}
+
+/**
+ * Quantas a fila mostra num recorte, sem empresa nem "só vencidas" — o balão
+ * das abas "Pedidos" e "Pendências" das Solicitações (10/11/2026, pedido do
+ * Kauan: balão como nos Chamados). O mesmo `where` da lista, contado no banco.
+ */
+export async function contarPendencias(escopo: EscopoDePendencias, recorte: RecorteDePendencia): Promise<number> {
+  return getPrisma().clientRequest.count({ where: { AND: [whereDoEscopo(escopo), whereDoRecorte(recorte)] } });
+}
+
 /** Meia-noite de hoje em São Paulo: prazo (meio-dia UTC do dia) antes disso é de um dia que já passou. */
 function inicioDeHoje(agora: Date): Date {
   return new Date(`${saoPauloParts(agora).dateKey}T00:00:00-03:00`);
@@ -60,6 +74,8 @@ function inicioDeHoje(agora: Date): Date {
 
 export type LinhaDePendencia = {
   id: string;
+  /** O número no escritório: o link da equipe vai pelo endereço curto, pendencia-9 (10/11/2026). */
+  numero: number;
   titulo: string;
   tipo: TipoDaPendencia;
   status: StatusDaPendencia;
@@ -86,19 +102,13 @@ export async function listarPendencias(
   const prisma = getPrisma();
   const base = whereDoEscopo(escopo);
   const daEmpresa: Prisma.ClientRequestWhereInput = filtro.empresaId ? { companyId: filtro.empresaId } : {};
-  const statusDoRecorte = STATUS_DO_RECORTE[filtro.recorte];
   const vencida: Prisma.ClientRequestWhereInput = {
     status: { in: ["ABERTA", "RESPONDIDA"] },
     dueDate: { lt: inicioDeHoje(agora) },
   };
 
   const where: Prisma.ClientRequestWhereInput = {
-    AND: [
-      base,
-      daEmpresa,
-      statusDoRecorte ? { status: { in: statusDoRecorte } } : {},
-      filtro.vencidas ? vencida : {},
-    ],
+    AND: [base, daEmpresa, whereDoRecorte(filtro.recorte), filtro.vencidas ? vencida : {}],
   };
 
   const [linhas, porStatus, vencidas] = await Promise.all([
@@ -106,6 +116,7 @@ export async function listarPendencias(
       where,
       select: {
         id: true,
+        number: true,
         title: true,
         kind: true,
         status: true,
@@ -128,6 +139,7 @@ export async function listarPendencias(
   return {
     linhas: linhas.slice(0, LIMITE_DA_LISTA).map((l) => ({
       id: l.id,
+      numero: l.number,
       titulo: l.title,
       tipo: l.kind,
       status: l.status,
@@ -185,6 +197,8 @@ export async function pendenciasAguardandoCliente(escopo: EscopoDePendencias): P
 
 export type PendenciaDetalhada = {
   id: string;
+  /** O número no escritório, o do endereço curto pendencia-9 (10/11/2026). */
+  numero: number;
   titulo: string;
   descricao: string | null;
   tipo: TipoDaPendencia;
@@ -225,6 +239,7 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
     where: { ...whereDoEscopo(escopo), id },
     select: {
       id: true,
+      number: true,
       title: true,
       description: true,
       kind: true,
@@ -261,6 +276,7 @@ export async function carregarPendencia(escopo: EscopoDePendencias, id: string, 
 
   return {
     id: p.id,
+    numero: p.number,
     titulo: p.title,
     descricao: p.description,
     tipo: p.kind,

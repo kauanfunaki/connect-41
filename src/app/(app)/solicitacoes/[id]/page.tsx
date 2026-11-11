@@ -24,15 +24,25 @@ import { emAberto } from "@/lib/solicitacoes/regras";
 import { responderSolicitacaoEquipe } from "../actions";
 import { CampoGuardarNosArquivos } from "@/components/arquivos/CampoGuardarNosArquivos";
 import { destinosDaEmpresa } from "@/lib/drive/servidor";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export const dynamic = "force-dynamic";
 
 /** Uma solicitação vista pela equipe: o pedido, o prazo prometido, a conversa (com as notas internas) e as ações. */
-export default async function SolicitacaoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SolicitacaoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, "portal_solicitacoes"))) notFound();
 
-  const { id } = await params;
+  // O endereço curto (10/11/2026, pedido do Kauan): /solicitacoes/solicitacao-12,
+  // com o número do protocolo. O do uuid passa para ele.
+  const { id } = await abrirPeloEndereco("solicitacao", ctx.tenantId, (await params).id, await searchParams);
   const s = await carregarSolicitacao({ lado: "EQUIPE", tenantId: ctx.tenantId }, id, new Date());
   // Setor alheio responde "não encontrada", igual a uma que não existe.
   if (!s || !podeVerSolicitacao(ctx, { sectorCode: s.setor, assigneeId: s.assigneeId })) notFound();
@@ -62,7 +72,7 @@ export default async function SolicitacaoPage({ params }: { params: Promise<{ id
         subtitle={
           <>
             {s.assunto} ·{" "}
-            <Link href={`/empresas/${s.empresaId}`} className="hover:underline">
+            <Link href={endereco("empresa", s.empresaNumero)} className="hover:underline">
               {s.empresaNome}
             </Link>{" "}
             · {labels[s.setor] ?? s.setor}

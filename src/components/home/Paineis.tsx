@@ -33,13 +33,13 @@ import {
 // Os painéis da Home (30/09). Cada um é um server component assíncrono com a
 // própria consulta, montado dentro de um <Suspense> na Home: a página não
 // espera o mais lento para aparecer, e cada painel entra quando o dado chega.
-// As consultas moram em `dadosDosPaineis.ts` (06/10), com `cache()`: a faixa
-// de destaques lê os mesmos números sem consultar de novo.
+// As consultas moram em `dadosDosPaineis.ts` (06/10), com `cache()`: os
+// cartões do topo (10/11/2026) leem os mesmos números sem consultar de novo.
 //
 // Tendência (06/10, opção A): cada painel passa os números dele para
 // `tendenciasDaHome`, que devolve o selo e a linha do número principal e
-// agenda a foto de hoje — por isso o painel entrega também os números que só
-// a faixa de destaques mostra (o histórico deles nasce aqui).
+// agenda a foto de hoje — por isso o painel entrega também números que ele
+// não desenha (eram os da faixa de destaques; o histórico deles segue).
 
 /** Nome e cor do setor, já resolvidos pela Home. */
 export type SetorDoPainel = { rotulo: string; cor: string };

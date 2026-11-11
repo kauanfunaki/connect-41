@@ -15,11 +15,12 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { SeloDaSolicitacao, SeloDoPrazoDeResposta } from "@/components/solicitacoes/SelosDaSolicitacao";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
-import { setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
+import { setoresAtivosDaFila, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { listarParaEquipe, RECORTES_DA_EQUIPE, type RecorteDaEquipe } from "@/lib/solicitacoes/consultas";
 import { ROTULO_DA_RESPOSTA, ROTULO_PARA_EQUIPE } from "@/lib/solicitacoes/regras";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { endereco } from "@/lib/enderecoCurto";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +44,11 @@ export default async function SolicitacoesPage({
   const atrasadas = params.atrasadas === "1";
   const setoresDaPessoa = setoresDaFila(ctx);
   const [empresas, ativos, { labels }] = await Promise.all([
-    empresasDoSeletor(ctx.tenantId),
+    empresasAtivasDoSeletor(ctx.tenantId),
     getActiveSectors(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
   ]);
-  const opcoesDeSetor = ativos.filter((s) => setoresDaPessoa === null || setoresDaPessoa.includes(s.code));
+  const opcoesDeSetor = setoresAtivosDaFila(ativos, setoresDaPessoa);
   const setor = params.setor && opcoesDeSetor.some((s) => s.code === params.setor) ? params.setor : null;
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const agora = new Date();
@@ -75,7 +76,7 @@ export default async function SolicitacoesPage({
   return (
     <PageContainer>
       <PageHeader
-        title="Solicitações dos clientes"
+        title="Solicitações recebidas"
         subtitle="O que os clientes pedem pelo portal. Cada setor vê as suas, com o prazo de resposta prometido ao cliente."
       />
 
@@ -151,7 +152,7 @@ export default async function SolicitacoesPage({
             <CartoesNoCelular>
               {linhas.map((l) => (
                 <Cartao key={l.id}>
-                  <Link href={`/solicitacoes/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                  <Link href={endereco("solicitacao", l.numero)} className="font-medium text-brand hover:underline break-words">
                     Nº {l.numero} · {l.assunto}
                   </Link>
                   <InfoDoCartao className="mt-0.5 break-words">
@@ -224,7 +225,7 @@ export default async function SolicitacoesPage({
                     {linhas.map((l) => (
                       <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                         <td className="py-2.5 pr-3">
-                          <Link href={`/solicitacoes/${l.id}`} className="font-medium text-brand hover:underline">
+                          <Link href={endereco("solicitacao", l.numero)} className="font-medium text-brand hover:underline">
                             Nº {l.numero} · {l.assunto}
                           </Link>
                           <span className="block text-fs-1 text-fg-muted">

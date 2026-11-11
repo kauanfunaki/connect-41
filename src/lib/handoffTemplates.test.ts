@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { HANDOFF_TEMPLATES, getHandoffTemplate, renderHandoffTemplate, matchSectorsForTemplate } from "./handoffTemplates";
+import {
+  HANDOFF_TEMPLATES,
+  assuntoParaGravar,
+  getHandoffTemplate,
+  renderHandoffTemplate,
+  matchSectorsForTemplate,
+  modelosPorUso,
+} from "./handoffTemplates";
 
 describe("HANDOFF_TEMPLATES", () => {
   it("tem 16 modelos, todos com key e label únicos", () => {
@@ -83,5 +90,50 @@ describe("matchSectorsForTemplate", () => {
 
   it("retorna lista vazia para key desconhecida", () => {
     expect(matchSectorsForTemplate("INEXISTENTE", sectorOptions)).toEqual([]);
+  });
+});
+
+// A ordem dos blocos de assunto e o assunto gravado (10/11/2026).
+describe("modelosPorUso", () => {
+  it("sem uso nenhum, abre com os seis do desenho escolhido e depois a ordem da lista", () => {
+    const ordem = modelosPorUso({}).map((t) => t.key);
+    expect(ordem.slice(0, 6)).toEqual([
+      "BAIXA_CNPJ",
+      "ALTERACAO_CONTRATUAL",
+      "ABERTURA_NOVA_EMPRESA",
+      "INCLUSAO_CNAE",
+      "SETUP_MIGRACAO",
+      "REGULARIZACAO_MUNICIPAL_ESTADUAL",
+    ]);
+    expect(ordem).toHaveLength(16);
+    expect(new Set(ordem).size).toBe(16);
+  });
+
+  it("o mais usado no escritório vem primeiro; empate segue a ordem padrão", () => {
+    const ordem = modelosPorUso({ FECHAMENTO_MENSAL_BPO: 9, INCLUSAO_CNAE: 2, BAIXA_CNPJ: 2 }).map((t) => t.key);
+    expect(ordem.slice(0, 3)).toEqual(["FECHAMENTO_MENSAL_BPO", "BAIXA_CNPJ", "INCLUSAO_CNAE"]);
+  });
+});
+
+describe("assuntoParaGravar", () => {
+  it("com um modelo, grava o rótulo dele e a chave — o texto livre não entra", () => {
+    expect(assuntoParaGravar("qualquer coisa", "BAIXA_CNPJ")).toEqual({ subject: "Baixa de CNPJ", templateKey: "BAIXA_CNPJ" });
+  });
+
+  it("sem modelo, grava o texto de Outro assunto, limpo, sem chave", () => {
+    expect(assuntoParaGravar("  Troca do   contador ", "")).toEqual({ subject: "Troca do contador", templateKey: null });
+  });
+
+  it("chave que não é modelo vale como sem modelo", () => {
+    expect(assuntoParaGravar("Outro", "NAO_EXISTE")).toEqual({ subject: "Outro", templateKey: null });
+  });
+
+  it("sem modelo e sem texto não há assunto (é obrigatório)", () => {
+    expect(assuntoParaGravar("   ", null)).toBeNull();
+    expect(assuntoParaGravar(null, undefined)).toBeNull();
+  });
+
+  it("corta no tamanho da coluna", () => {
+    expect(assuntoParaGravar("a".repeat(300), null, 160)?.subject).toHaveLength(160);
   });
 });

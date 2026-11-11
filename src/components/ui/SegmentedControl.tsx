@@ -51,6 +51,12 @@ type Comum<K extends string> = {
    */
   tone?: Tom;
   className?: string;
+  /**
+   * 44px de altura no celular, para o dedo; 32px do `sm` para cima
+   * (10/11/2026, a prioridade da nova transferência). Fora de formulário, numa
+   * barra de ferramentas, fica o padrão.
+   */
+  tocavel?: boolean;
 };
 
 type PorEstado<K extends string> = Comum<K> & {
@@ -62,6 +68,12 @@ type PorUrl<K extends string> = Comum<K> & {
   /** Com `href`, o segmento vira <Link>: mesmo desenho, estado na URL. */
   items: (SegmentItem<K> & { href: string })[];
   onChange?: undefined;
+  /**
+   * Avisa quem usa que a pessoa escolheu outro segmento, sem tirar a
+   * navegação do <Link> (10/11/2026): a Agenda guarda a última visão escolhida
+   * para abrir nela da próxima vez.
+   */
+  onNavigate?: (key: K) => void;
 };
 
 // Caixa e segmento vieram medidos dos dois call-sites, que tinham a MESMA
@@ -77,7 +89,7 @@ type PorUrl<K extends string> = Comum<K> & {
 // uma camada para o anel não ficar embaixo do vizinho.
 const CAIXA = "inline-flex rounded-md border border-border flex-shrink-0";
 const SEGMENTO =
-  "h-8 px-3 flex items-center gap-1.5 text-fs-2 font-medium border-l border-border first:border-l-0 first:rounded-l-[calc(var(--radius-md)-1px)] last:rounded-r-[calc(var(--radius-md)-1px)] focus-visible:relative focus-visible:z-10 transition-colors";
+  "px-3 flex items-center gap-1.5 text-fs-2 font-medium border-l border-border first:border-l-0 first:rounded-l-[calc(var(--radius-md)-1px)] last:rounded-r-[calc(var(--radius-md)-1px)] focus-visible:relative focus-visible:z-10 transition-colors";
 // A borda por dentro não é enfeite: no controle original o ativo tinha
 // `border-brand` junto do fundo, e é ela que fazia o trabalho de mostrar qual
 // está selecionado — `--c41-brand-subtle` é 8% de opacidade, fraco demais para
@@ -133,15 +145,17 @@ export function SegmentedControl<K extends string>({
   label,
   tone = "neutral",
   onChange,
+  onNavigate,
   className = "",
-}: PorEstado<K> | PorUrl<K>) {
+  tocavel = false,
+}: (PorEstado<K> & { onNavigate?: undefined }) | PorUrl<K>) {
   return (
     <div role="group" aria-label={label} className={`${CAIXA} ${className}`.trim()}>
       {items.map((item) => {
         const ativo = item.key === active;
         // O tom do item ganha do tom do grupo: o grupo diz a linguagem
         // padrão, o item diz a cor daquele estado específico.
-        const classe = `${SEGMENTO} ${ativo ? ATIVO[item.tone ?? tone] : INATIVO}`;
+        const classe = `${SEGMENTO} ${tocavel ? "h-11 sm:h-8" : "h-8"} ${ativo ? ATIVO[item.tone ?? tone] : INATIVO}`;
         const conteudo = (
           <>
             {item.icon}
@@ -158,6 +172,7 @@ export function SegmentedControl<K extends string>({
             href={item.href}
             title={item.title}
             aria-current={ativo ? "page" : undefined}
+            onClick={ativo || !onNavigate ? undefined : () => onNavigate(item.key)}
             className={classe}
           >
             {conteudo}

@@ -10,12 +10,15 @@ import { ColunaDoQuadro } from "./ColunaDoQuadro";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { EtiquetaColorida } from "@/components/ui/EtiquetaColorida";
 import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "./NovaTarefaEmLinha";
+import { segmentoDaTarefa } from "@/lib/enderecoCurto";
 
 type Stage = { id: string; name: string; color: string | null; isTerminal?: boolean };
 type Tag = { id: string; name: string; color: string };
 type Assignee = { id: string; name: string };
 type Item = {
   id: string;
+  /** O número: o card abre pelo endereço curto, tarefa-77 (10/11/2026). */
+  number?: number;
   stageId: string;
   entityName: string;
   priority: number;
@@ -131,7 +134,7 @@ export function KanbanBoard({ pipelineId, stages, items: initialItems, moveActio
               return (
                 <Link
                   key={item.id}
-                  href={`${base}/itens/${item.id}`}
+                  href={`${base}/itens/${segmentoDaTarefa(item)}`}
                   draggable
                   onMouseDown={() => setSelectedId(item.id)}
                   onDragStart={(e) => {

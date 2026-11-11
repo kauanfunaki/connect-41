@@ -1,0 +1,28 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA XLS FICTÍCIA",
+ "empresa_documento": "12345678000195",
+ "campos_reconhecidos": [
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "cep",
+  "documento"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "50000000000101",
+   "razao_social": "FORNECEDOR FICTÍCIO",
+   "nome_fantasia": null,
+   "conta_numero": 1,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

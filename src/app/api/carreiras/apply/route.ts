@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
 import { hit, clientIp } from "@/lib/rateLimit";
 import { avisarSobreAVaga } from "@/lib/recrutamento/avisos";
 import { PersonType } from "@/generated/prisma/enums";
@@ -137,9 +138,13 @@ export async function POST(req: NextRequest) {
       },
     });
   } else {
-    person = await prisma.person.create({
+    // O número da pessoa no escritório (10/11/2026, pedido do Kauan): o
+    // candidato entra na sequência de /pessoas/pessoa-12.
+    const tenantId = tenant.id;
+    person = await criarComNumero("pessoa", tenantId, (tx, number) => tx.person.create({
       data: {
-        tenantId: tenant.id,
+        tenantId,
+        number,
         type: PersonType.CANDIDATO,
         name,
         email,
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
         stateCode: stateCode && /^[A-Z]{2}$/.test(stateCode) ? stateCode : null,
       },
       select: { id: true },
-    });
+    }));
   }
 
   const existing = await prisma.candidatura.findUnique({

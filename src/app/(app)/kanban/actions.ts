@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
 import { PipelineEntityType, ActivityType, RecurringFrequency, StageType } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector, podeExcluir, SO_ADMIN_EXCLUI } from "@/lib/auth/context";
 import { poderesNoEspaco } from "@/lib/kanban/permissaoDoEspaco";
@@ -224,9 +225,12 @@ export async function criarItem(
     });
     if (!firstStage) return { error: "Estágio inválido ou tarefa sem estágios configurados" };
 
-    const item = await prisma.pipelineItem.create({
+    // O número da tarefa no escritório, o do endereço curto
+    // /kanban/itens/tarefa-77 (10/11/2026, pedido do Kauan).
+    const item = await criarComNumero("tarefa", tenantId, (tx, number) => tx.pipelineItem.create({
       data: {
         tenantId,
+        number,
         pipelineId,
         stageId: firstStage.id,
         entityType: entityType as PipelineEntityType | null,
@@ -238,7 +242,7 @@ export async function criarItem(
         tags: tagIds.length > 0 ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
         assignees: assigneeIds.length > 0 ? { create: assigneeIds.map((userId) => ({ userId })) } : undefined,
       },
-    });
+    }));
 
     if (userId) {
       await prisma.activity.create({
@@ -272,9 +276,9 @@ export async function criarTarefaRapida(pipelineId: string, stageId: string, tit
   if (!stage) return;
 
   try {
-    const item = await prisma.pipelineItem.create({
-      data: { tenantId, pipelineId, stageId, title: trimmed },
-    });
+    const item = await criarComNumero("tarefa", tenantId, (tx, number) => tx.pipelineItem.create({
+      data: { tenantId, number, pipelineId, stageId, title: trimmed },
+    }));
     if (userId) {
       await prisma.activity.create({
         data: { tenantId, pipelineItemId: item.id, userId, type: ActivityType.CREATED, content: `Criado em "${stage.name}"` },
@@ -1200,9 +1204,10 @@ export async function criarSubtarefa(parentItemId: string, title: string): Promi
       select: { order: true },
     });
 
-    const sub = await prisma.pipelineItem.create({
+    const sub = await criarComNumero("tarefa", tenantId, (tx, number) => tx.pipelineItem.create({
       data: {
         tenantId,
+        number,
         pipelineId: parent.pipelineId,
         stageId: firstStage.id,
         entityType: parent.entityType,
@@ -1211,7 +1216,7 @@ export async function criarSubtarefa(parentItemId: string, title: string): Promi
         title: nome,
         order: (ultima?.order ?? -1) + 1,
       },
-    });
+    }));
 
     if (userId) {
       // No pai, o que mudou nele; na nova, de onde ela veio — a subatividade
@@ -1778,9 +1783,11 @@ export async function duplicarPipeline(
     const copiar = async (no: NoDaArvore<ItemDaOrigem>, novoPai: { id: string; stageId: string } | null): Promise<void> => {
       const newStageId = stageMap.get(no.stageId) ?? novoPai?.stageId;
       if (!newStageId) return;
-      const novo = await prisma.pipelineItem.create({
+      // Cada cópia ganha o próprio número (10/11/2026, pedido do Kauan).
+      const novo = await criarComNumero("tarefa", tenantId, (tx, number) => tx.pipelineItem.create({
         data: {
           tenantId,
+          number,
           pipelineId: newPipelineId,
           stageId: newStageId,
           entityType: source.entityType,
@@ -1796,7 +1803,7 @@ export async function duplicarPipeline(
               ? { create: no.checklist.map((c) => ({ tenantId, text: c.text, order: c.order })) }
               : undefined,
         },
-      });
+      }));
       for (const filha of no.filhas) await copiar(filha, { id: novo.id, stageId: newStageId });
     };
     for (const raiz of montarArvore(source.items)) await copiar(raiz, null);

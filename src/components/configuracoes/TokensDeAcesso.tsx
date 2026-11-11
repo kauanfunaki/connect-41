@@ -22,12 +22,16 @@ import { criarTokenAction, revogarTokenAction } from "@/app/(app)/configuracoes/
 // do Controle interno em nome dela. O token aparece uma vez, com o comando do
 // Claude Code já pronto; a lista mostra o que existe e revoga na hora.
 
-type Acesso = "escrever" | "ler";
+// "academia" (10/11/2026): só o ranking da Academia, para o fluxo do n8n que
+// posta o ranking do mês no Slack.
+type Acesso = "escrever" | "ler" | "academia";
 const ESCOPOS_DO_ACESSO: Record<Acesso, Escopo[]> = {
   escrever: ["controle-interno:ler", "controle-interno:escrever"],
   ler: ["controle-interno:ler"],
+  academia: ["academia:ler"],
 };
-const ROTULO_DO_ACESSO = (t: TokenListado) => t.scopes.includes("controle-interno:escrever") ? "Consulta e registra" : "Só consulta";
+const ROTULO_DO_ACESSO = (t: TokenListado) =>
+  t.scopes.includes("controle-interno:escrever") ? "Consulta e registra" : t.scopes.includes("controle-interno:ler") ? "Só consulta" : "Ranking da Academia";
 const AJUDA = "/ajuda/geral:tokens-de-acesso";
 const DIA = 864e5;
 
@@ -46,11 +50,13 @@ function selo(t: TokenListado, agora: number): { variante: VarianteDoBadge; text
   return faltam <= 7 ? { variante: "warning", texto: "Vence em breve" } : { variante: "success", texto: "Ativo" };
 }
 
-export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial, podeEscrever, origem, agora: agoraIso }: {
+export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial, podeEscrever, academiaLigada = false, origem, agora: agoraIso }: {
   meus: TokenListado[];
   /** Só para o administrador: os ativos de todo o escritório. */
   doEscritorio: TokenListado[] | null;
   podeEscrever: boolean;
+  /** A Academia está ligada: aparece a opção do token só do ranking. */
+  academiaLigada?: boolean;
   /** O endereço do Connect, para o comando do Claude Code. */
   origem: string;
   /** A hora do servidor: o "usado há" e o "vence em breve" saem iguais no servidor e no navegador. */
@@ -149,6 +155,9 @@ export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial
               disabled: !podeEscrever,
             },
             { valor: "ler", rotulo: "Só consultar", descricao: "Lista e abre itens, sem alterar nada." },
+            ...(academiaLigada
+              ? [{ valor: "academia" as const, rotulo: "Ranking da Academia", descricao: "Só lê o ranking do mês da Academia (o post do Slack). Não abre o Controle interno." }]
+              : []),
           ]}
         />
         <div className="flex flex-wrap items-end gap-3">

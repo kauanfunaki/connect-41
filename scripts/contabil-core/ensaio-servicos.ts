@@ -9,6 +9,7 @@
 
 import { readFileSync } from "node:fs";
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { agenciaSchema, contaSchema, contraparteSchema, exportacaoSchema, regraSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarAgencia, salvarContraparte, salvarRegra } from "../../src/lib/contabil-core/servidor/cadastros";
 import { desfazerImportacao, importarExtrato } from "../../src/lib/contabil-core/servidor/importacao";
@@ -49,7 +50,7 @@ async function main() {
   const user = await prisma.user.findFirstOrThrow({ where: { tenantId: tenant.id }, select: { id: true } });
   const tenantId = tenant.id;
   const company = await prisma.company.create({
-    data: { tenantId, name: "Empresa Ensaio Serviços LTDA", cnpj: "12.345.678/0001-95" } as never,
+    data: { tenantId, number: await proximoNumero(prisma, "empresa", tenantId), name: "Empresa Ensaio Serviços LTDA", cnpj: "12.345.678/0001-95" } as never,
     select: { id: true },
   });
 
@@ -98,7 +99,18 @@ async function main() {
     const saldos = await prisma.coreTransacao.findMany({ where: { agenciaId: contaPdf.id }, orderBy: { ordem: "asc" }, select: { saldoApos: true, dc: true } });
     confere("PDF: saldo após cada lançamento gravado", saldos.map((s) => `${s.dc}${s.saldoApos}`).join(" ") === "C1500 D1460.1 D760.1", saldos);
     const naoExtrato = await importarExtrato(tenantId, user.id, empresaId, contaPdf.id, "x.txt", new TextEncoder().encode("nada"), false);
-    confere("arquivo que não é OFX nem PDF é recusado", !naoExtrato.ok && naoExtrato.erro.includes("nem um PDF"), naoExtrato);
+    confere("arquivo que não é OFX, PDF nem planilha é recusado", !naoExtrato.ok && naoExtrato.erro.startsWith("Este arquivo não é um extrato"), naoExtrato);
+    // Extrato em planilha (Fase 4b): CSV inventado, com a conta no cabeçalho.
+    const csv = new TextEncoder().encode(
+      "Agência: 0001 Conta: 12345-6\r\nData;Lançamento;Crédito (R$);Débito (R$);Saldo (R$)\r\n31/01/2026;SALDO ANTERIOR;;;100,00\r\n" +
+        "02/02/2026;PIX RECEBIDO ALFA;50,00;;150,00\r\n03/02/2026;TARIFA;;10,00;140,00\r\n04/02/2026;SALDO DO DIA;;;140,00\r\n",
+    );
+    const csvImportado = await importarExtrato(tenantId, user.id, empresaId, contaPdf.id, "extrato.csv", csv, true);
+    confere("CSV: 2 lançamentos, sem o saldo anterior nem o do dia", csvImportado.ok && csvImportado.valor.importadas === 2, csvImportado);
+    const csvErrado = await importarExtrato(tenantId, user.id, empresaId, contaPdf.id, "errado.csv", new TextEncoder().encode("Data;Valor;Saldo\r\n01/03/2026;10,00;10,00\r\n02/03/2026;5,00;99,00\r\n"), true);
+    confere("CSV cujo saldo não caminha é recusado", !csvErrado.ok && csvErrado.erro.startsWith("Planilha inválida: Extração incompleta"), csvErrado);
+    const csvOutraConta = await importarExtrato(tenantId, user.id, empresaId, outraConta.id, "extrato.csv", csv, false);
+    confere("CSV de outra conta é recusado", !csvOutraConta.ok && csvOutraConta.erro.startsWith("Extrato de outra conta"), csvOutraConta);
     // Sai antes do NEO, para não mudar as contas da fila abaixo.
     await prisma.coreTransacao.deleteMany({ where: { agenciaId: contaPdf.id } });
     await prisma.coreImportacao.deleteMany({ where: { agenciaId: contaPdf.id } });

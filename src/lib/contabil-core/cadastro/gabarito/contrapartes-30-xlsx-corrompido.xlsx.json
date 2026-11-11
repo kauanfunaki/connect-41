@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "xlsx_invalido",
+  "mensagem": "O arquivo XLSX está corrompido."
+ }
+}
