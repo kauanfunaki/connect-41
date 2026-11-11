@@ -11,6 +11,7 @@ import { podeNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
 import { getPrisma } from "@/lib/prisma";
 import { nomeDeQuemFez, rodarAcao, type ResultadoDaAcao } from "@/lib/honorarios/acesso";
+import { moeda } from "@/lib/honorarios/rotulos";
 import { marcaSemPastaSchema, vincularPastaSchema } from "@/lib/honorarios/regras/auditPayload";
 import { alterarMarcaSemPasta, alterarVinculo, solicitarSincronizacao } from "@/lib/honorarios/servidor/auditSyncService";
 import { confirmarAcessorias, informarValor, removerValorInformado } from "@/lib/honorarios/servidor/honorariosService";
@@ -182,7 +183,7 @@ export async function usarValorDoAcessorias(entrada: unknown): Promise<Resultado
       entityId: d.companyId,
       metadata: { nome, valor },
     });
-    return `${nome ?? "Empresa"}: vale o valor do Acessórias (${valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}).`;
+    return `${nome ?? "Empresa"}: vale o valor do Acessórias (${moeda(valor)}).`;
   });
   recarregar();
   return r;

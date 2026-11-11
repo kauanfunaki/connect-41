@@ -40,7 +40,7 @@ export function TabelaDeContratos({ empresas, raizUnc, filtrado }: { empresas: E
       <table className="w-full min-w-[860px]">
         <thead>
           <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
-            <th className="w-8 py-2" aria-label="Detalhes" />
+            <th className="w-8 py-2"><span className="sr-only">Detalhes</span></th>
             <th className="py-2 pr-3 font-medium">Empresa</th>
             <th className="py-2 pr-3 font-medium">Situação</th>
             <th className="py-2 pr-3 font-medium">Contrato escolhido</th>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { pedirVarredura } from "@/app/(app)/honorarios/actions";
 import { dataHora, tempoRelativo } from "@/lib/honorarios/rotulos";
+import { formatarNumero } from "@/lib/format";
 import type { StatusAuditoria } from "@/lib/honorarios/servidor/auditSyncService";
 
 /**
@@ -48,14 +49,14 @@ export function SituacaoDaVarredura({ status, podeAgir }: { status: StatusAudito
   if (ativo?.status === "pendente") {
     principal = "Aguardando o robô começar a varredura…";
   } else if (ativo?.status === "executando") {
-    principal = `Varrendo as pastas da rede: ${ativo.pastasRecebidas.toLocaleString("pt-BR")} de ${
-      ativo.pastasTotal?.toLocaleString("pt-BR") ?? "…"
-    } · ${ativo.arquivosRecebidos.toLocaleString("pt-BR")} arquivos até agora`;
+    principal = `Varrendo as pastas da rede: ${formatarNumero(ativo.pastasRecebidas, 0)} de ${
+      ativo.pastasTotal ? formatarNumero(ativo.pastasTotal, 0) : "…"
+    } · ${formatarNumero(ativo.arquivosRecebidos, 0)} arquivos até agora`;
     if (ativo.pastasTotal) progresso = Math.min(100, Math.round((ativo.pastasRecebidas / ativo.pastasTotal) * 100));
   } else if (ultimoConcluido) {
     principal = `Última varredura ${tempoRelativo(ultimoConcluido.concluidoEm ?? ultimoConcluido.solicitadoEm)}${
       ultimoConcluido.origem === "agendado" ? " (automática)" : ""
-    } · ${ultimoConcluido.pastasRecebidas.toLocaleString("pt-BR")} pastas · ${ultimoConcluido.arquivosRecebidos.toLocaleString("pt-BR")} arquivos`;
+    } · ${formatarNumero(ultimoConcluido.pastasRecebidas, 0)} pastas · ${formatarNumero(ultimoConcluido.arquivosRecebidos, 0)} arquivos`;
   } else {
     principal = "Nenhuma varredura ainda. O robô da rede lê as pastas de contrato e manda o que achou.";
   }

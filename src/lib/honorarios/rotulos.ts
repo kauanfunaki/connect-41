@@ -3,6 +3,7 @@
 // página (servidor) e aos componentes do navegador.
 
 import type { TomDoSelo } from "@/components/ui/Selo";
+import { formatCalendarDate, formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import type { AlertaHonorario, ComparacaoAcessorias, EstadoTexto, SituacaoHonorario } from "./regras/honorariosRegras";
 import type { MotivoStatusContrato, StatusContrato } from "./regras/auditContratosStatus";
 import type { StatusAditivo } from "./regras/auditAditivosStatus";
@@ -151,16 +152,16 @@ export const ROTULO_ASSINATURA: Record<SinalAssinatura, string> = {
 const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 export const moeda = (v: number | null | undefined) => (v === null || v === undefined ? "—" : BRL.format(v));
 
-/** "AAAA-MM-DD" (data do texto) ou Date → "dd/mm/aaaa". A data só com dia vale meio-dia, para o fuso não virar o dia. */
+/** "AAAA-MM-DD" (data do texto, sem fuso) ou um instante → "dd/mm/aaaa". */
 export function dataCurta(d: string | Date | null | undefined): string {
   if (!d) return "—";
-  const data = typeof d === "string" ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T12:00:00` : d) : d;
-  return data.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) return formatCalendarDate(new Date(`${d}T00:00:00Z`));
+  return formatInstantDate(new Date(d));
 }
 
 export function dataHora(d: string | Date | null | undefined): string {
   if (!d) return "—";
-  return new Date(d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
+  return formatInstantDateTime(new Date(d));
 }
 
 /** "agora há pouco", "há 5 min", "há 3 h" ou "em 11/11/2026 14:30". */
