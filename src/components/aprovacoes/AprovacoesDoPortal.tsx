@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -24,20 +24,63 @@ export type ContaParaAprovar = {
   empresa: string;
   vencimento: Date;
   valorCentavos: number;
-  /** Calculado no servidor com a alçada vigente; a action confere de novo. */
+  /** Calculado no servidor com o limite de aprovação vigente; a action confere de novo. */
   dentroDoTeto: boolean;
+  /** O boleto, a nota ou o que mais a equipe anexou à conta (P03, 11/11/2026). */
+  anexos: { id: string; nome: string }[];
 };
 
-/** Dentro ou fora do teto é a situação da conta para quem aprova: o `Selo` miúdo (escolha 2A, 08/10/2026). */
-function SeloDoTeto({ dentro }: { dentro: boolean }) {
-  return dentro ? <Selo tom="sucesso">Dentro do teto</Selo> : <Selo tom="atencao">Fora do teto</Selo>;
+/**
+ * Dentro ou acima do limite é a situação da conta para quem aprova: o `Selo`
+ * miúdo (escolha 2A, 08/10/2026). "Teto" virou "limite" em 11/11/2026 (P04):
+ * é a palavra do cliente. Sem limite cadastrado, a conta é só acompanhamento.
+ */
+function SeloDoLimite({ dentro, temLimite }: { dentro: boolean; temLimite: boolean }) {
+  if (!temLimite) return <Selo tom="neutro">Só acompanhamento</Selo>;
+  return dentro ? <Selo tom="sucesso">Dentro do seu limite</Selo> : <Selo tom="atencao">Acima do seu limite</Selo>;
+}
+
+const rotuloDoLimite = (dentro: boolean, temLimite: boolean) =>
+  !temLimite ? "Só acompanhamento" : dentro ? "Dentro do seu limite" : "Acima do seu limite";
+
+/**
+ * O boleto ou a nota da conta, antes do "Aprovar" (P03, 11/11/2026): o cliente
+ * aprovava sem ver o documento. Baixa pela rota do portal, que confere o
+ * escopo. Sem anexo, nada — botão que não leva a lugar nenhum só confunde.
+ * Com mais de um, um botão por arquivo, com o nome na dica.
+ */
+function AnexosDaConta({ anexos, noCartao = false }: { anexos: ContaParaAprovar["anexos"]; noCartao?: boolean }) {
+  if (anexos.length === 0) return null;
+  return (
+    <>
+      {anexos.map((a, i) => {
+        // O nome acessível começa pelo texto à vista (WCAG 2.5.3) e diz o arquivo.
+        const rotulo = anexos.length === 1 ? "Ver boleto/nota" : `Ver anexo ${i + 1}`;
+        return (
+          <Button
+            key={a.id}
+            href={`/portal/aprovacoes/anexos/${a.id}`}
+            download
+            variant="secondary"
+            size={noCartao ? "lg" : "xs"}
+            className={noCartao ? "h-11 flex-1 min-w-[calc(50%-0.25rem)]" : ""}
+            aria-label={`${rotulo}: ${a.nome}`}
+            data-dica={a.nome}
+          >
+            <FileText size={noCartao ? 16 : 12} aria-hidden />
+            {rotulo}
+          </Button>
+        );
+      })}
+    </>
+  );
 }
 
 /**
  * A lista do cliente, com aprovação em lote.
  *
- * Só dá para marcar o que está dentro do teto: marcar o que o servidor vai
- * recusar de qualquer jeito só adia a frustração. O que está fora aparece, com
+ * Só dá para marcar o que está dentro do limite: marcar o que o servidor vai
+ * recusar de qualquer jeito só adia a frustração. O que está acima aparece, com
  * o selo, porque saber que existe uma conta esperando outra pessoa também é
  * informação.
  *
@@ -45,12 +88,25 @@ function SeloDoTeto({ dentro }: { dentro: boolean }) {
  * contagem e o total à esquerda, o "Marcar todas" e o "Aprovar selecionadas" à
  * direita — eram uma fileira solta acima da lista.
  *
+ * No celular (P23, 11/11/2026), o "Aprovar" do lote vai para uma barra fixa no
+ * rodapé, que aparece quando há conta marcada: no topo, ficava fora da tela
+ * depois de marcar cartões lá embaixo.
+ *
  * O resultado sai num aviso que some sozinho (`useToast`, anunciado pelo leitor
  * de tela): era um parágrafo de 12px acima da lista, e no celular, depois de
  * aprovar um cartão lá embaixo, ficava fora da tela. O que não pôde ser
  * aprovado, com o motivo, fica num aviso fixo acima da lista até a próxima ação.
  */
-export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar[]; vazio: React.ReactNode }) {
+export function AprovacoesDoPortal({
+  contas,
+  vazio,
+  temLimite = true,
+}: {
+  contas: ContaParaAprovar[];
+  vazio: React.ReactNode;
+  /** O cliente tem limite de aprovação em alguma empresa. Sem ele, a lista é só para acompanhar. */
+  temLimite?: boolean;
+}) {
   const toast = useToast();
   const { dialog, requestConfirm } = useConfirm();
   const [marcadas, setMarcadas] = useState<Set<string>>(new Set());
@@ -64,6 +120,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
   const aprovaveis = useMemo(() => contas.filter((c) => c.dentroDoTeto && naTela.has(c.id)), [contas, naTela]);
   const marcadasNaTela = new Set([...marcadas].filter((id) => naTela.has(id)));
   const totalMarcado = contas.filter((c) => marcadasNaTela.has(c.id)).reduce((s, c) => s + c.valorCentavos, 0);
+  const qtdMarcada = marcadasNaTela.size;
 
   function alternar(id: string) {
     setMarcadas((atual) => {
@@ -76,22 +133,28 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
 
   function aprovar(ids: string[], titulo: string) {
     setIgnoradas(null);
-    requestConfirm({ title: titulo, description: "Aprovar libera a baixa pela equipe.", confirmLabel: "Aprovar" }, async () => {
-      const r = await aprovarContas(ids);
-      if ("error" in r) throw new Error(r.error);
-      setMarcadas(new Set());
-      const aprovadas = `${r.aprovadas} ${r.aprovadas === 1 ? "conta aprovada" : "contas aprovadas"}`;
-      if (r.ignoradas === 0) {
-        toast.success(`${aprovadas}. A equipe foi avisada.`);
-        return;
+    requestConfirm(
+      { title: titulo, description: "Depois da sua aprovação, a equipe faz o pagamento.", confirmLabel: "Aprovar" },
+      async () => {
+        const r = await aprovarContas(ids);
+        if ("error" in r) throw new Error(r.error);
+        setMarcadas(new Set());
+        const aprovadas = `${r.aprovadas} ${r.aprovadas === 1 ? "conta aprovada" : "contas aprovadas"}`;
+        if (r.ignoradas === 0) {
+          toast.success(`${aprovadas}. A equipe foi avisada.`);
+          return;
+        }
+        const naoPuderam = `${r.ignoradas} não ${r.ignoradas === 1 ? "pôde ser aprovada" : "puderam ser aprovadas"}`;
+        setIgnoradas(`${naoPuderam}: ${r.motivos.join(" ")}`);
+        const resumo = `${aprovadas} · ${naoPuderam}. O motivo está no topo da lista.`;
+        if (r.aprovadas > 0) toast.success(resumo);
+        else toast.error(resumo);
       }
-      const naoPuderam = `${r.ignoradas} não ${r.ignoradas === 1 ? "pôde ser aprovada" : "puderam ser aprovadas"}`;
-      setIgnoradas(`${naoPuderam}: ${r.motivos.join(" ")}`);
-      const resumo = `${aprovadas} · ${naoPuderam}. O motivo está no topo da lista.`;
-      if (r.aprovadas > 0) toast.success(resumo);
-      else toast.error(resumo);
-    });
+    );
   }
+
+  const aprovarMarcadas = () =>
+    aprovar([...marcadasNaTela], `Aprovar ${qtdMarcada} ${qtdMarcada === 1 ? "conta" : "contas"} (${moeda(totalMarcado)})?`);
 
   async function reprovar(id: string, motivo: string) {
     setIgnoradas(null);
@@ -103,34 +166,26 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
   const acoesDoLote =
     aprovaveis.length > 0 ? (
       <>
-        {/* O rótulo inteiro é o alvo, com 40px de altura no celular — a caixa
+        {/* O rótulo inteiro é o alvo, com 44px de altura no celular — a caixa
             sozinha tem 18px. */}
-        <label className="inline-flex min-h-10 md:min-h-0 items-center gap-2 text-label leading-5 text-fg-secondary cursor-pointer">
+        <label className="inline-flex min-h-11 md:min-h-0 items-center gap-2 text-label leading-5 text-fg-secondary cursor-pointer">
           <Checkbox
             checked={aprovaveis.every((c) => marcadas.has(c.id))}
             onChange={(e) => setMarcadas(e.target.checked ? new Set(aprovaveis.map((c) => c.id)) : new Set())}
           />
-          Marcar todas dentro do meu teto
+          Marcar todas que você pode aprovar
         </label>
-        <Button
-          size="sm"
-          variant="success"
-          className="max-md:h-10"
-          disabled={marcadasNaTela.size === 0}
-          onClick={() =>
-            aprovar(
-              [...marcadasNaTela],
-              `Aprovar ${marcadasNaTela.size} ${marcadasNaTela.size === 1 ? "conta" : "contas"} (${moeda(totalMarcado)})?`
-            )
-          }
-        >
+        {/* No celular quem aprova o lote é a barra do rodapé. */}
+        <Button size="sm" variant="success" className="max-md:hidden" disabled={qtdMarcada === 0} onClick={aprovarMarcadas}>
           <CheckCircle2 size={14} /> Aprovar selecionadas
         </Button>
       </>
     ) : undefined;
 
   return (
-    <div>
+    // Com a barra do rodapé à vista, a lista ganha respiro embaixo: o último
+    // cartão não fica atrás dela.
+    <div className={qtdMarcada > 0 ? "max-md:pb-28" : undefined}>
       {ignoradas && (
         <Aviso tom="atencao" className="mb-3">
           {ignoradas}
@@ -153,7 +208,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                 Alvos de toque (07/10/2026): a caixa de marcar ganha uma área de
                 44px em volta (era 18px) e os dois botões vão para o tamanho
                 `lg`, de 40px, lado a lado na largura do cartão — eram `xs`, de
-                28px. A tabela do computador fica como estava. */}
+                28px. O boleto/nota vem antes deles (P03): ver, depois decidir. */}
             <CartoesNoCelular>
               {contas.map((c) => (
                 <Cartao key={c.id}>
@@ -170,16 +225,21 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                         vence {formatInstantDate(c.vencimento)} · {c.empresa}
                       </InfoDoCartao>
                       <PeDoCartao>
-                        <SeloDoTeto dentro={c.dentroDoTeto} />
+                        <SeloDoLimite dentro={c.dentroDoTeto} temLimite={temLimite} />
                       </PeDoCartao>
                     </div>
                   </div>
+                  {c.anexos.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <AnexosDaConta anexos={c.anexos} noCartao />
+                    </div>
+                  )}
                   {c.dentroDoTeto ? (
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className={`${c.anexos.length > 0 ? "mt-2" : "mt-3"} grid grid-cols-2 gap-2`}>
                       <Button
                         size="lg"
                         variant="success"
-                        className="w-full"
+                        className="w-full h-11"
                         onClick={() => aprovar([c.id], `Aprovar ${c.fornecedor} (${moeda(c.valorCentavos)})?`)}
                       >
                         <CheckCircle2 size={16} /> Aprovar
@@ -188,7 +248,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                         entryId={c.id}
                         descricao={`${c.fornecedor} · ${moeda(c.valorCentavos)} · ${c.empresa}`}
                         tamanho="lg"
-                        className="w-full"
+                        className="w-full h-11"
                         acao={reprovar}
                       />
                     </div>
@@ -209,7 +269,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                   vencimento: saoPauloParts(c.vencimento).dateKey,
                   fornecedor: c.fornecedor,
                   empresa: c.empresa,
-                  teto: c.dentroDoTeto ? "Dentro do teto" : "Fora do teto",
+                  limite: rotuloDoLimite(c.dentroDoTeto, temLimite),
                 },
               }))}
             >
@@ -229,7 +289,7 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                       </th>
                       <th className="py-2 pr-3">Valor</th>
                       <th className="py-2 pr-3">
-                        <FiltroDaColuna rotulo="Teto" chave="teto" align="right" />
+                        <FiltroDaColuna rotulo="Limite" chave="limite" align="right" />
                       </th>
                       <th className="py-2"></th>
                     </tr>
@@ -250,27 +310,30 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
                         <td className="py-2.5 pr-3 text-fg-secondary">{c.empresa}</td>
                         <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
                         <td className="py-2.5 pr-3">
-                          <SeloDoTeto dentro={c.dentroDoTeto} />
+                          <SeloDoLimite dentro={c.dentroDoTeto} temLimite={temLimite} />
                         </td>
                         <td className="py-2.5">
-                          {c.dentroDoTeto ? (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <Button
-                                size="xs"
-                                variant="success"
-                                onClick={() => aprovar([c.id], `Aprovar ${c.fornecedor} (${moeda(c.valorCentavos)})?`)}
-                              >
-                                <CheckCircle2 size={12} /> Aprovar
-                              </Button>
-                              <ReprovarComMotivo
-                                entryId={c.id}
-                                descricao={`${c.fornecedor} · ${moeda(c.valorCentavos)} · ${c.empresa}`}
-                                acao={reprovar}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-ui text-fg-muted">Outra pessoa aprova</span>
-                          )}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <AnexosDaConta anexos={c.anexos} />
+                            {c.dentroDoTeto ? (
+                              <>
+                                <Button
+                                  size="xs"
+                                  variant="success"
+                                  onClick={() => aprovar([c.id], `Aprovar ${c.fornecedor} (${moeda(c.valorCentavos)})?`)}
+                                >
+                                  <CheckCircle2 size={12} /> Aprovar
+                                </Button>
+                                <ReprovarComMotivo
+                                  entryId={c.id}
+                                  descricao={`${c.fornecedor} · ${moeda(c.valorCentavos)} · ${c.empresa}`}
+                                  acao={reprovar}
+                                />
+                              </>
+                            ) : (
+                              <span className="text-ui text-fg-muted">Outra pessoa aprova</span>
+                            )}
+                          </div>
                         </td>
                       </LinhaFiltravel>
                     ))}
@@ -281,6 +344,24 @@ export function AprovacoesDoPortal({ contas, vazio }: { contas: ContaParaAprovar
           </>
         )}
       </CascoDaTabela>
+
+      {/* A barra do lote no celular (P23): fixa no rodapé, acima da área do
+          gesto do sistema (`safe-area-inset-bottom`), só com conta marcada. O
+          respiro à direita é o lugar do botão da Ceci, que mora no mesmo canto. */}
+      {qtdMarcada > 0 && (
+        <div
+          role="region"
+          aria-label="Contas marcadas"
+          className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface shadow-lg pl-4 pr-20 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+        >
+          <Button size="lg" variant="success" className="w-full h-11" onClick={aprovarMarcadas}>
+            <CheckCircle2 size={16} aria-hidden />
+            <span className="truncate">
+              Aprovar {qtdMarcada} <span className="tabular-nums">({moeda(totalMarcado)})</span>
+            </span>
+          </Button>
+        </div>
+      )}
       {dialog}
     </div>
   );

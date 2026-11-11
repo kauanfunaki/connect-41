@@ -14,14 +14,18 @@ import { moeda } from "@/lib/financeiro/formato";
 
 export const dynamic = "force-dynamic";
 
+const quantas = (n: number) => `${n} ${n === 1 ? "conta" : "contas"}`;
+
 /** Contas a pagar das empresas do cliente esperando aprovação. */
 export default async function PortalAprovacoesPage() {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_aprovacoes")) notFound();
   if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/aprovacoes")) return <TelaIndisponivel />;
 
-  const { contas, temAlcada } = await aprovacoesDoCliente(escopo, sessao.sub);
-  const dentro = contas.filter((c) => c.dentroDoTeto);
+  const { contas, temAlcada } = await aprovacoesDoCliente(escopo, sessao.sub, { comAnexos: true });
+  const suas = contas.filter((c) => c.dentroDoTeto);
+  const deOutros = contas.filter((c) => !c.dentroDoTeto);
+  const soma = (lista: typeof contas) => moeda(lista.reduce((s, c) => s + c.valorCentavos, 0));
 
   return (
     <PageContainer>
@@ -31,26 +35,36 @@ export default async function PortalAprovacoesPage() {
         somenteLeitura={false}
       />
 
+      {/* Dois cartões (P36, 11/11/2026): eram quatro — "Aguardando", "Dentro do
+          seu teto", "Valor dentro do teto" e "Valor total" —, quase o mesmo
+          número dito de quatro jeitos. Cada cartão diz quanto e quantas: o que
+          o cliente aprova e o que espera outra pessoa. */}
       <FaixaDeTotais
         itens={[
-          { rotulo: "Aguardando", valor: String(contas.length) },
-          { rotulo: "Dentro do seu teto", valor: String(dentro.length), tom: dentro.length > 0 ? "text-warning" : "" },
-          { rotulo: "Valor dentro do teto", valor: moeda(dentro.reduce((s, c) => s + c.valorCentavos, 0)) },
-          { rotulo: "Valor total aguardando", valor: moeda(contas.reduce((s, c) => s + c.valorCentavos, 0)), tom: "text-fg-muted" },
+          {
+            rotulo: "Para você aprovar",
+            valor: soma(suas),
+            detalhe: quantas(suas.length),
+            tom: suas.length > 0 ? "text-warning" : undefined,
+          },
+          { rotulo: "Com outra pessoa", valor: soma(deOutros), detalhe: quantas(deOutros.length), tom: "text-fg-muted" },
         ]}
       />
 
       {/* Aviso neutro (07/10/2026): era um parágrafo cinza de 12px, logo onde o
-          cliente procurava o botão de aprovar. */}
+          cliente procurava o botão de aprovar. "Alçada" virou "limite de
+          aprovação" em 11/11/2026 (P04). */}
       {!temAlcada && (
         <Aviso tom="neutro" className="mb-3">
-          Você não tem alçada de aprovação cadastrada — as contas aparecem aqui só para acompanhamento.
+          Você ainda não tem um limite de aprovação cadastrado: as contas aparecem aqui só para você acompanhar. Para aprovar,
+          fale com o escritório.
         </Aviso>
       )}
 
       {/* A lista vazia entra no casco, como em Pendências: a barra diz "0 contas". */}
       <AprovacoesDoPortal
         contas={contas}
+        temLimite={temAlcada}
         vazio={
           <EmptyState
             icon={<ShieldCheck />}

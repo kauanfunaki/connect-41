@@ -10,7 +10,12 @@ import { whereDaAlcadaValida } from "./servidor";
 
 const LIMITE = 500;
 
-export async function aprovacoesDoCliente(escopo: EscopoFinanceiro, portalUserId: string) {
+/**
+ * `comAnexos` traz o boleto, a nota ou o que mais a equipe anexou à conta
+ * (P03, 11/11/2026): o cliente vê o documento antes de aprovar. Só a tela de
+ * Aprovações pede — o Início só conta as contas.
+ */
+export async function aprovacoesDoCliente(escopo: EscopoFinanceiro, portalUserId: string, { comAnexos = false }: { comAnexos?: boolean } = {}) {
   const companyIds = escopo.companyIds ?? [];
   const prisma = getPrisma();
   const [contas, alcadas] = await Promise.all([
@@ -30,6 +35,7 @@ export async function aprovacoesDoCliente(escopo: EscopoFinanceiro, portalUserId
         companyId: true,
         counterparty: { select: { name: true } },
         company: { select: { name: true, displayName: true } },
+        attachments: comAnexos ? { select: { id: true, fileName: true }, orderBy: { createdAt: "asc" } } : false,
       },
       orderBy: [{ dueDate: "asc" }, { id: "asc" }],
       take: LIMITE,
@@ -52,6 +58,7 @@ export async function aprovacoesDoCliente(escopo: EscopoFinanceiro, portalUserId
         vencimento: c.dueDate,
         valorCentavos,
         dentroDoTeto: dentroDoTeto(teto.get(c.companyId) ?? null, valorCentavos),
+        anexos: (c.attachments ?? []).map((a) => ({ id: a.id, nome: a.fileName })),
       };
     }),
   };
