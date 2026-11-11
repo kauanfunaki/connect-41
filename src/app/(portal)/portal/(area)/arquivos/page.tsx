@@ -8,6 +8,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { SemEmpresaNoAcesso } from "@/components/portal/SemEmpresaNoAcesso";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 import { IconeDoArquivo } from "@/components/arquivos/IconeDoArquivo";
 import { EnviarArquivosDoCliente } from "@/components/arquivos/EnviarArquivosDoCliente";
 import { BaixarPastaEmZip } from "@/components/arquivos/BaixarPastaEmZip";
@@ -27,6 +30,14 @@ export const dynamic = "force-dynamic";
 const QUANDO: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" };
 
 /**
+ * O nome de pasta ou arquivo sem sumir (11/11/2026, P25): era `truncate` puro,
+ * e "Contrato social consolidado 2026…" não se lia inteiro em lugar nenhum. No
+ * celular quebra em até duas linhas (nome de arquivo sem espaço quebra no meio);
+ * do `sm` em diante fica numa linha, e o que cortar abre a dica com o nome todo.
+ */
+const NOME_INTEIRO = "truncate c41-cortavel max-sm:whitespace-normal max-sm:break-words max-sm:line-clamp-2";
+
+/**
  * Arquivos no portal do cliente (09/10/2026): as pastas que o escritório
  * compartilhou com ele, por empresa, e o envio para "Enviados pelo cliente".
  * O cliente vê e baixa (um arquivo, ou a pasta inteira num zip — desde 13/10);
@@ -40,8 +51,10 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
 
   const empresas = await empresasDoSeletor(cliente.tenantId, cliente.companyIds);
   const { empresa: pedida, pasta, pagina } = await searchParams;
-  // Com uma empresa só, não há o que escolher: abre direto as pastas dela.
-  const selecionada = empresas.find((e) => e.id === pedida) ?? (empresas.length === 1 ? empresas[0] : null);
+  // A da URL, ou a guardada da última escolha no portal (11/11/2026, P12). Com
+  // uma empresa só, não há o que escolher: abre direto as pastas dela.
+  const escolhida = empresaDaTela(pedida, await empresaGuardadaDoPortal(), empresas.map((e) => e.id));
+  const selecionada = empresas.find((e) => e.id === escolhida) ?? (empresas.length === 1 ? empresas[0] : null);
   const dados = selecionada ? await navegadorDoCliente(cliente.tenantId, selecionada.id, pasta || null, cliente.usuario.id, paginaPedida(pagina)) : null;
   if (selecionada && !dados) notFound();
 
@@ -58,18 +71,16 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
       />
 
       {empresas.length === 0 ? (
-        <Card>
-          <EmptyState icon={<FolderOpen />} title="Nenhuma empresa no seu acesso" />
-        </Card>
+        <SemEmpresaNoAcesso tenantId={cliente.tenantId} modulos={cliente.modulos} icone={<FolderOpen />} />
       ) : (
         <div className="flex flex-col gap-4">
           {empresas.length > 1 && (
-            <SeletorDeEmpresaQueNavega empresas={empresas} empresaId={selecionada?.id ?? null} acao="/portal/arquivos" />
+            <SeletorDeEmpresaQueNavega empresas={empresas} empresaId={selecionada?.id ?? null} acao="/portal/arquivos" className="" />
           )}
 
           {!selecionada || !dados ? (
             <Card>
-              <EmptyState icon={<FolderOpen />} title="Escolha a empresa" description="As pastas são de cada empresa." />
+              <EmptyState icon={<FolderOpen />} title="Escolha a empresa" description="As pastas são de cada empresa: escolha uma no campo Empresa, acima." />
             </Card>
           ) : (
             <>
@@ -89,7 +100,10 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                 {dados.pasta && (dados.subpastas.length > 0 || dados.paginacao.total > 0) && (
                   <BaixarPastaEmZip url={`/portal/arquivos/pasta/${dados.pasta.id}/zip`} />
                 )}
-                <EnviarArquivosDoCliente companyId={dados.empresa.id} empresaNome={dados.empresa.nome} />
+                {/* `key` pela empresa: a troca de empresa não remonta a página
+                    (navega sem recarregar), e o envio não pode ficar com a fila
+                    de arquivos escolhidos para a anterior. */}
+                <EnviarArquivosDoCliente key={dados.empresa.id} companyId={dados.empresa.id} empresaNome={dados.empresa.nome} />
               </div>
 
               {dados.pasta?.enviados && (
@@ -118,7 +132,13 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                       <li key={p.id}>
                         <Link href={endereco(p.id)} className="flex items-center gap-3 px-3 py-3 hover:bg-surface-hover transition-colors">
                           <Icone size={18} className={p.enviados ? "text-brand shrink-0" : "text-fg-muted shrink-0"} aria-hidden />
-                          <span className="min-w-0 flex-1 text-fs-3 font-medium text-fg truncate">{p.nome}</span>
+                          {/* Nome inteiro (P25): no celular quebra em até duas
+                              linhas; do `sm` em diante numa linha, e o que
+                              cortar ganha a dica com o nome todo
+                              (`c41-cortavel`, o jeito do `MetricCard`). */}
+                          <span className={`min-w-0 flex-1 text-fs-3 font-medium text-fg ${NOME_INTEIRO}`}>
+                            {p.nome}
+                          </span>
                           <span className="text-micro text-fg-muted tabular-nums shrink-0">{rotuloDeItens(p.itens)}</span>
                         </Link>
                       </li>
@@ -132,7 +152,7 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                           href={`/portal/arquivos/${a.id}${a.previa ? "?ver=1" : ""}`}
                           target={a.previa ? "_blank" : undefined}
                           rel="noreferrer"
-                          className="block text-fs-3 font-medium text-fg hover:text-brand transition-colors truncate"
+                          className={`block text-fs-3 font-medium text-fg hover:text-brand transition-colors ${NOME_INTEIRO}`}
                         >
                           {a.nome}
                         </a>
@@ -143,7 +163,9 @@ export default async function PortalArquivosPage({ searchParams }: { searchParam
                       {/* O `IconButton` (15/10/2026), num `<a>` simples (`nativo`):
                           são rotas de arquivo, que o `<Link>` pré-carregaria.
                           Tinham um hover azul próprio. */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      {/* `gap-2` (P45): a 4px, "Abrir" e "Baixar" ficavam
+                          colados, e o dedo acertava o vizinho. */}
+                      <div className="flex items-center gap-2 shrink-0">
                         {a.previa && (
                           <IconButton
                             href={`/portal/arquivos/${a.id}?ver=1`}
