@@ -113,16 +113,19 @@ function lerEvento(payload: unknown): EventoRecebido {
     // Grupo, status e canal não são conversa com um candidato.
     if (jid.endsWith("@g.us") || jid.endsWith("@broadcast") || jid.endsWith("@newsletter")) continue;
 
-    const de = (jid.split("@")[0] ?? "").replace(/\D/g, "").slice(0, 20);
+    // Contato com o telefone escondido (`@lid`): a Evolution 2.3 manda o número
+    // de verdade em `remoteJidAlt` (ou `senderPn`) quando o WhatsApp informa.
+    const alternativo = [str(chave.remoteJidAlt), str(chave.senderPn)].find((x) => x?.endsWith("@s.whatsapp.net")) ?? null;
+    const jidDoNumero = jid.endsWith("@lid") && alternativo ? alternativo : jid;
+    const de = (jidDoNumero.split("@")[0] ?? "").replace(/\D/g, "").slice(0, 20);
     if (!de) continue;
     const waMessageId = idDaMensagem(instancia, id);
 
-    // A Evolution troca `@lid` pelo número (`remoteJidAlt`) quando o WhatsApp
-    // informa. Quando não informa, não há telefone para responder — e o
-    // candidato ficar sem resposta sem ninguém saber é o pior desfecho. Vai
-    // para uma pessoa, com o motivo.
-    if (jid.endsWith("@lid")) {
-      ignoradas.push({ waMessageId, tipo: "contato sem número visível (@lid)", de });
+    // Sem o número, não há telefone para responder — e o candidato ficar sem
+    // resposta sem ninguém saber é o pior desfecho. Vai para uma pessoa, com o
+    // motivo. O `de` aqui é o identificador, não um telefone.
+    if (jidDoNumero.endsWith("@lid")) {
+      ignoradas.push({ waMessageId, tipo: "contato sem número visível (@lid)", de, semNumero: true });
       continue;
     }
 

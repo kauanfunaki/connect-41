@@ -125,6 +125,12 @@ describe("mídia na entrada", () => {
     expect(prisma.atendimentoMensagem.update).toHaveBeenCalledWith(expect.objectContaining({ data: { midiaPath: "t1/x.pdf", midiaNome: "guia.pdf", midiaMime: "application/pdf" } }));
   });
 
+  it("telefone escondido (@lid) não abre conversa", async () => {
+    expect(await atenderMidia(conexao, provedor, { waMessageId: "wl1", tipo: "contato sem número visível (@lid)", de: "123456789012345", semNumero: true })).toBe("sem_numero");
+    expect(prisma.atendimentoContato.upsert).not.toHaveBeenCalled();
+    expect(prisma.atendimentoMensagem.create).not.toHaveBeenCalled();
+  });
+
   it("se não der para baixar, a mensagem fica, dizendo que chegou um arquivo", async () => {
     const baixarMidia = vi.fn().mockResolvedValue({ ok: false, erro: "fora do ar" });
     const r = await atenderMidia(conexao, { ...provedor, baixarMidia }, { waMessageId: "wm2", tipo: "image", de: "5541988887777", midia: { referencia: { id: "m2" }, mimetype: "image/jpeg", nomeDoArquivo: null } });

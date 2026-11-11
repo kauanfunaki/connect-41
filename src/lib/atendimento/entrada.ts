@@ -44,7 +44,10 @@ export function atenderEntrada(conexao: ConexaoDoWebhook, provedor: ProvedorWhat
  * mensagem, que leva a legenda como texto. Se não der para baixar, a conversa
  * mostra que chegou um arquivo, e a pessoa pede de novo ou pelo portal.
  */
-export function atenderMidia(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, m: MensagemIgnorada) {
+export async function atenderMidia(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, m: MensagemIgnorada) {
+  // Telefone escondido pelo WhatsApp: abrir conversa com o identificador seria
+  // responder para um número que não é o do cliente.
+  if (m.semNumero) return "sem_numero" as const;
   const tipo = rotuloDaMidia(m.tipo);
   const legenda = m.legenda?.trim() ?? "";
   const nome = m.midia?.nomeDoArquivo ?? m.documento?.nomeDoArquivo ?? null;

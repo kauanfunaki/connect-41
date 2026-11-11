@@ -95,8 +95,11 @@ export function ConfiguracoesDoAtendimento(p: {
         {p.conexoes.length === 0 ? (
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-ui">
             <span className="flex-1">Nenhuma conexão do Atendimento ainda.</span>
+            <Button href="/admin/integracoes?integracao=whatsapp_atendimento_evolution" variant="secondary" size="sm">
+              Conectar pela Evolution
+            </Button>
             <Button href="/admin/integracoes?integracao=whatsapp_atendimento" variant="secondary" size="sm">
-              Abrir Integrações
+              Conectar pela Meta
             </Button>
           </div>
         ) : (
