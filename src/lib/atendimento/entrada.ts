@@ -155,10 +155,13 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     config: lerConfig(conexao.configEnc),
   };
 
-  // PARAR: confirma uma vez e silencia. Quem escreve de novo volta.
+  const config = await lerConfiguracao(tenantId);
+
+  // PARAR: confirma uma vez e silencia. Quem escreve de novo volta. Com as
+  // respostas automáticas desligadas, só marca, sem responder.
   if (!c.midiaTipo && pediuParaSair(c.texto)) {
     await prisma.atendimentoConversa.update({ where: { id: conversa.id }, data: { optedOutAt: agora } });
-    await enviarNoAtendimento({
+    if (config.respostasAutomaticas) await enviarNoAtendimento({
       tenantId,
       conversaId: conversa.id,
       cicloId: null,
@@ -175,7 +178,6 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     await prisma.atendimentoConversa.update({ where: { id: conversa.id }, data: { optedOutAt: null } });
   }
 
-  const config = await lerConfiguracao(tenantId);
   const ultimo = await prisma.atendimentoCiclo.findFirst({
     where: { conversaId: conversa.id },
     orderBy: { abertoEm: "desc" },
@@ -229,7 +231,7 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
   });
   await prisma.atendimentoMensagem.update({ where: { id: mensagemId }, data: { cicloId: ciclo.id } });
 
-  const automatica = mensagemDeChegada(config, agora);
+  const automatica = config.respostasAutomaticas ? mensagemDeChegada(config, agora) : null;
   if (automatica) {
     await enviarNoAtendimento({
       tenantId,

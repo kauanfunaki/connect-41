@@ -55,6 +55,7 @@ export default async function ConfiguracoesDoAtendimentoPage() {
           fechaAs: config.fechaAs,
           boasVindas: config.boasVindas ?? "",
           foraDoHorario: config.foraDoHorario ?? "",
+          respostasAutomaticas: config.respostasAutomaticas,
           diasParaReabrir: config.diasParaReabrir,
           setores: marcados,
           ceciLigada: config.ceciLigada,

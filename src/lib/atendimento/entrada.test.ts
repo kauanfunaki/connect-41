@@ -14,6 +14,7 @@ const avisarTriagem = vi.fn();
 const avisarResposta = vi.fn();
 const enviarNoAtendimento = vi.fn();
 let moduloLigado = true;
+let respostasAutomaticas = true;
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("@/lib/integracoes/data", () => ({ lerConfig: () => ({}) }));
@@ -26,6 +27,7 @@ vi.mock("./dados", () => ({
     fechaAs: "23:59",
     boasVindas: "Olá! Já respondemos.",
     foraDoHorario: null,
+    respostasAutomaticas,
     diasParaReabrir: 7,
   }),
   nomesDosContatos: async () => () => ({ titulo: "Rafael", subtitulo: null, empresa: null, pessoa: null }),
@@ -45,6 +47,7 @@ const msg = (texto: string, id = "wa1") => ({ waMessageId: id, de: "554198888777
 beforeEach(() => {
   vi.clearAllMocks();
   moduloLigado = true;
+  respostasAutomaticas = true;
   prisma.atendimentoContato.findUnique.mockResolvedValue(null);
   prisma.atendimentoContato.upsert.mockResolvedValue({ id: "ct1", waPhone: "5541988887777", nomeNoWhatsapp: "Rafael", nome: null, companyId: null, personId: null });
   prisma.atendimentoConversa.upsert.mockResolvedValue({ id: "cv1", optedOutAt: null });
@@ -81,6 +84,15 @@ describe("entrada do Atendimento", () => {
     expect(prisma.atendimentoConversa.update).toHaveBeenCalledWith(expect.objectContaining({ data: { optedOutAt: expect.any(Date) } }));
     expect(enviarNoAtendimento).toHaveBeenCalledTimes(1);
     expect(prisma.atendimentoCiclo.create).not.toHaveBeenCalled();
+  });
+
+  it("com as respostas automáticas desligadas, a conversa chega na triagem e nada sai sozinho", async () => {
+    respostasAutomaticas = false;
+    expect(await atenderEntrada(conexao, provedor, msg("Oi, quero abrir uma empresa"))).toBe("triagem");
+    expect(avisarTriagem).toHaveBeenCalled();
+    expect(await atenderEntrada(conexao, provedor, msg("PARAR", "wa2"))).toBe("parou");
+    expect(prisma.atendimentoConversa.update).toHaveBeenCalledWith(expect.objectContaining({ data: { optedOutAt: expect.any(Date) } }));
+    expect(enviarNoAtendimento).not.toHaveBeenCalled();
   });
 
   it("conversa aguardando o cliente volta para em atendimento e avisa o responsável", async () => {

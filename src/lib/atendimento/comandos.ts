@@ -355,6 +355,7 @@ export async function salvarConfiguracao(
     fechaAs: string;
     boasVindas: string;
     foraDoHorario: string;
+    respostasAutomaticas: boolean;
     diasParaReabrir: number;
     setores: string[];
     ceciLigada: boolean;
@@ -382,6 +383,7 @@ export async function salvarConfiguracao(
       fechaAs: p.fechaAs,
       boasVindas: p.boasVindas.trim().slice(0, 1000) || null,
       foraDoHorario: p.foraDoHorario.trim().slice(0, 1000) || null,
+      respostasAutomaticas: p.respostasAutomaticas === true,
       diasParaReabrir: p.diasParaReabrir,
       setores: setores.length > 0 ? setores : undefined,
       ceciLigada: p.ceciLigada,

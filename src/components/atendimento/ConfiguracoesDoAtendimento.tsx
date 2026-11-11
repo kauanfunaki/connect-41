@@ -31,6 +31,7 @@ type Config = {
   fechaAs: string;
   boasVindas: string;
   foraDoHorario: string;
+  respostasAutomaticas: boolean;
   diasParaReabrir: number;
   setores: string[];
   ceciLigada: boolean;
@@ -179,6 +180,15 @@ export function ConfiguracoesDoAtendimento(p: {
             <CampoHora id="atd-fecha" value={c.fechaAs} onChange={(v) => mudar({ fechaAs: v })} />
           </div>
         </div>
+        <div className="rounded-lg border border-border bg-surface px-4 py-3">
+          <Checkbox
+            id="atd-automaticas"
+            checked={c.respostasAutomaticas}
+            onChange={(e) => mudar({ respostasAutomaticas: e.target.checked })}
+            label="Mandar respostas automáticas"
+            helper="Desligado, o Connect não manda nada sozinho: nem boas-vindas, nem fora do horário, nem a confirmação de quem pede para parar. As conversas chegam e ficam na triagem do mesmo jeito."
+          />
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1 text-ui font-semibold">
             Boas-vindas
@@ -189,7 +199,7 @@ export function ConfiguracoesDoAtendimento(p: {
             <Textarea rows={3} value={c.foraDoHorario} onChange={(e) => mudar({ foraDoHorario: e.target.value })} placeholder="Nosso atendimento é de segunda a sexta, das 8h às 18h. Respondemos assim que abrirmos." />
           </label>
         </div>
-        <p className="text-micro text-fg-muted">Texto vazio = não manda nada.</p>
+        <p className="text-micro text-fg-muted">Só saem com as respostas automáticas ligadas. Texto vazio = não manda nada.</p>
       </Bloco>
 
       <div className="flex justify-end py-4 border-t border-border">

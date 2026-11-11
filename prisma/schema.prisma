@@ -11051,6 +11051,11 @@ model AtendimentoConfig {
   boasVindas    String? @db.Text
   foraDoHorario String? @db.Text
 
+  /// Desligado (padrão), o Connect não manda nada sozinho: nem boas-vindas, nem
+  /// fora do horário, nem a confirmação do PARAR. Serve para ligar o número e só
+  /// acompanhar as conversas (11/11/2026, pedido do Victor).
+  respostasAutomaticas Boolean @default(false)
+
   /// Cliente que volta a escrever até N dias depois de encerrar cai com o mesmo
   /// setor e a mesma pessoa; depois disso, passa pela triagem de novo.
   diasParaReabrir Int @default(7)
