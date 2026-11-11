@@ -102,6 +102,28 @@ describe("os Eventos de Atualização do dia", () => {
     expect(t.doServico("SOLICEVENTOSPJ132")).toHaveLength(3);
   });
 
+  // bug-624 (11/11/2026): sem protocolo, cada ciclo pedia de novo (~510 por dia).
+  it("pedido sem protocolo legível fica gravado como ILEGIVEL e não se repete no mesmo dia", async () => {
+    const semProtocolo = { status: 200, corpo: JSON.stringify({ status: 200, dados: "{\"situacao\":\"desconhecida\"}", mensagens: [{ codigo: "[Sucesso-EVENTOSATUALIZACAO]", texto: "ok" }] }) };
+    const t = dia({ SOLICEVENTOSPJ132: () => semProtocolo });
+    await acompanharNoSerpro(TENANT, opcoes(t.transporte));
+    expect(t.doServico("SOLICEVENTOSPJ132")).toHaveLength(3);
+    expect(t.doServico("OBTEREVENTOSPJ134")).toHaveLength(0);
+    const pedidos = m.banco.tabelas.serproPedido.linhas;
+    expect(pedidos).toHaveLength(3);
+    expect(pedidos.every((p) => p.situacao === "ILEGIVEL" && String(p.erro).includes("situacao"))).toBe(true);
+
+    // O ciclo seguinte, no mesmo dia, não pede de novo.
+    relogio = new Date(relogio.getTime() + 5 * 60_000);
+    await acompanharNoSerpro(TENANT, opcoes(t.transporte));
+    expect(t.doServico("SOLICEVENTOSPJ132")).toHaveLength(3);
+
+    // No dia seguinte, sim.
+    relogio = new Date("2026-10-21T10:00:00-03:00");
+    await acompanharNoSerpro(TENANT, opcoes(t.transporte));
+    expect(t.doServico("SOLICEVENTOSPJ132")).toHaveLength(6);
+  });
+
   it("o resultado fica no Serpro só 20 minutos; o 202 tenta de novo no próximo ciclo", async () => {
     const t = dia({ OBTEREVENTOSPJ134: (n) => (n < 3 ? { status: 202, corpo: "" } : MATRIZ_DE_EVENTOS) });
     await acompanharNoSerpro(TENANT, opcoes(t.transporte));
