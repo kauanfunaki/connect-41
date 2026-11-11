@@ -136,10 +136,15 @@ export function FichaQueroSerCliente({ carimbo, escritorio, action }: Props) {
         </div>
 
         <div className="flex flex-col gap-1">
+          {/* O erro do aceite ligado à caixa (11/11/2026, P44): `aria-invalid`
+              e `aria-describedby` fazem o leitor de tela ler o motivo ao
+              chegar nela, e o `role="alert"` anuncia quando ele aparece. */}
           <Checkbox
             id="ficha-aceite"
             name="aceite"
             value="1"
+            aria-invalid={erroDo("aceite") ? true : undefined}
+            aria-describedby={erroDo("aceite") ? "ficha-aceite-erro" : undefined}
             label={
               <>
                 Li e aceito a{" "}
@@ -150,7 +155,11 @@ export function FichaQueroSerCliente({ carimbo, escritorio, action }: Props) {
               </>
             }
           />
-          {erroDo("aceite") && <p className="pl-[26px] text-helper font-medium text-danger">{erroDo("aceite")}</p>}
+          {erroDo("aceite") && (
+            <p id="ficha-aceite-erro" role="alert" className="pl-[26px] text-helper font-medium text-danger">
+              {erroDo("aceite")}
+            </p>
+          )}
         </div>
 
         {/* O erro do formulário no `Aviso` (07/10/2026), como o login e a senha nova. */}

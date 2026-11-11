@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
 import { FormFooter } from "@/components/ui/FormFooter";
+import { useToast } from "@/components/ui/Toast";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { CampoDeAnexos } from "./CampoDeAnexos";
@@ -41,9 +43,29 @@ export function ResponderPendencia({
   // sem controlar input de arquivo por estado, que o navegador não deixa.
   const [versao, setVersao] = useState(0);
   const [pendente, startTransition] = useTransition();
+  const toast = useToast();
+  const noPortal = usePathname().startsWith("/portal");
+  // No formulário, que remonta a cada envio: o efeito roda depois da troca e
+  // já pega o novo.
+  const caixa = useRef<HTMLFormElement>(null);
+
+  // Depois de enviar (11/11/2026, P08): o campo só esvaziava, sem dizer nada,
+  // e a mensagem nova entrava acima da caixa, fora da tela no celular — a
+  // pessoa não sabia se tinha ido. Agora a tela rola até ela. A conversa é a
+  // lista (`<ol>`, a `ConversaDaPendencia`) logo antes desta caixa, nas quatro
+  // telas que a usam (pendência, solicitação, processo e conversa); sem
+  // lista, a caixa fica onde está.
+  useEffect(() => {
+    if (versao === 0 || !caixa.current) return;
+    const quadro = requestAnimationFrame(() => {
+      if (caixa.current) rolarAteAMensagemNova(caixa.current);
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [versao]);
 
   return (
     <form
+      ref={caixa}
       key={versao}
       className="flex flex-col gap-4"
       onSubmit={(e) => {
@@ -59,6 +81,9 @@ export function ResponderPendencia({
           }
           setVersao((v) => v + 1);
           if (r.aviso) setAviso(r.aviso);
+          // "A equipe foi avisada" só no portal e só quando o aviso saiu: com
+          // `aviso`, algo do envio falhou e a nota diz o quê.
+          toast.success(noPortal && !r.aviso ? "Mensagem enviada. A equipe foi avisada." : "Mensagem enviada.");
         });
       }}
     >
@@ -85,4 +110,18 @@ export function ResponderPendencia({
       />
     </form>
   );
+}
+
+/**
+ * Rola até a última mensagem da conversa que fica antes da caixa de resposta —
+ * a que acabou de entrar. A conversa é o `<ol>` mais próximo antes da caixa.
+ */
+function rolarAteAMensagemNova(caixa: HTMLElement) {
+  const antes = Array.from(document.querySelectorAll("ol")).filter(
+    (ol) => !ol.contains(caixa) && ol.compareDocumentPosition(caixa) & Node.DOCUMENT_POSITION_FOLLOWING
+  );
+  const nova = antes.at(-1)?.lastElementChild;
+  if (!(nova instanceof HTMLElement)) return;
+  const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  nova.scrollIntoView({ block: "center", behavior: suave ? "smooth" : "auto" });
 }

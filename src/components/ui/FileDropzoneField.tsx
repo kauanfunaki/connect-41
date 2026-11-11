@@ -156,17 +156,28 @@ export function FileDropzoneField({
           >
             <UploadCloud size={compacto ? 15 : 18} />
           </span>
+          {/* No toque, sem "arraste" (11/11/2026, P35): no celular não há o
+              que arrastar, e a frase longa cortava os formatos e o limite no
+              "…". A ação numa linha e os formatos na de baixo, sem cortar. */}
           {compacto ? (
-            <span className="min-w-0 flex-1 text-helper text-fg-muted truncate">
-              <span className="text-brand underline underline-offset-2">Escolher arquivo</span> ou
-              arraste aqui · {formatosLegiveis} · até {maxSizeMb} MB
+            <span className="min-w-0 flex-1">
+              <span className="block text-ui text-fg">
+                <span className="pointer-coarse:hidden">
+                  <span className="text-brand underline underline-offset-2">Escolher arquivo</span> ou arraste aqui
+                </span>
+                <span className="hidden text-brand underline underline-offset-2 pointer-coarse:inline">Toque para escolher</span>
+              </span>
+              <span className="block text-helper text-fg-muted">
+                {formatosLegiveis} · até {maxSizeMb} MB
+              </span>
             </span>
           ) : (
             <>
-              <span className="text-body text-fg">
+              <span className="text-body text-fg pointer-coarse:hidden">
                 Arraste o arquivo aqui ou{" "}
                 <span className="text-brand underline underline-offset-2">clique para escolher</span>
               </span>
+              <span className="hidden text-body text-brand underline underline-offset-2 pointer-coarse:inline">Toque para escolher o arquivo</span>
               <span className="text-helper text-fg-muted">
                 {formatosLegiveis} · até {maxSizeMb} MB
               </span>
