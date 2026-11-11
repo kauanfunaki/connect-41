@@ -1,0 +1,310 @@
+// Auditoria Aditivos (Fase 2A) — relatório por empresa e exportação XLSX.
+// Lê a última sincronização concluída, aplica o classificador e a regra de status
+// (auditAditivosStatus) e cruza com os termos gerados pelo próprio app.
+
+import { planilhaDeTabela } from './planilha';
+import * as base from './auditRepository';
+import * as repo from './auditAditivosRepository';
+import { paraJobDTO, type JobDTO } from './auditSyncService';
+import {
+  arquivoEmDistrato, ehSubpastaDistrato, paraDistratoDTO, textoDoDistrato, type DistratoDTO,
+} from '../regras/auditDistrato';
+import { carregarDistratos } from './auditDistratoService';
+import { classificarAditivo, type ArquivoParaClassificar } from '../regras/auditAditivosClassificador';
+import {
+  calcularStatusAditivo, STATUS_ADITIVO,
+  type ArquivoClassificado, type PastaDaEmpresa, type SituacaoDocumento, type StatusAditivo,
+} from '../regras/auditAditivosStatus';
+
+const FUSO = 'America/Sao_Paulo';
+
+export const ROTULO_STATUS: Record<StatusAditivo, string> = {
+  SEM_VINCULO:        'Sem pasta vinculada',
+  SEM_PASTA_CONTRATO: 'Sem subpasta de contrato',
+  SEM_ADITIVO:        'Sem aditivo do ano',
+  SO_DOCX:            'Só o Word (não enviado)',
+  PDF_SEM_ASSINATURA: 'PDF sem assinatura',
+  ASSINADO_PELO_NOME: 'Assinado (pelo nome)',
+  ASSINADO_DIGITAL:   'Assinado digitalmente',
+  DISTRATO:           'Distrato',
+};
+
+export type AlertaAditivo = 'gerado_no_app_sem_arquivo';
+
+export interface ArquivoResumo {
+  nomePasta:       string;
+  caminhoRelativo: string;
+  nome:            string;
+  formato:         string;
+  assinatura:      string;
+  icp:             boolean;
+  decimoTerceiro:  boolean;
+  honorario:       boolean;
+  ano:             number;
+  anoFonte:        'nome' | 'data_do_arquivo';
+  modificadoEm:    Date;
+}
+
+export interface EmpresaAditivo {
+  empresa: { id: string; razaoSocial: string; cnpj: string; responsavel: string | null };
+  status:                 StatusAditivo;
+  emDia:                  boolean;
+  pastas:                 { nomePasta: string; subpastasContrato: string[] }[];
+  aditivosDoAno:          ArquivoResumo[];
+  outrosAditivos:         ArquivoResumo[];
+  ultimoAnoComAditivo:    number | null;
+  /** Termo de 13º do ano, quando existe na pasta. null = não tem, o que não é pendência. */
+  decimoTerceiro:         { situacao: SituacaoDocumento; assinado: boolean; arquivos: ArquivoResumo[] } | null;
+  geradosNoApp:           number;
+  ultimoGeradoNoApp:      Date | null;
+  alertas:                AlertaAditivo[];
+  /** Distrato da prestação de serviços (tira das pendências) e avisos de BPO/social. */
+  distrato:               DistratoDTO | null;
+}
+
+export interface RelatorioAditivos {
+  job:             JobDTO | null;
+  anoReferencia:   number;
+  anosDisponiveis: number[];
+  raizUnc:         string;
+  resumo: {
+    empresas:              number;
+    emDia:                 number;
+    porStatus:             Record<StatusAditivo, number>;
+    geradoNoAppSemArquivo: number;
+    /** Marcadas como "sem pasta na rede de propósito": ficam fora do relatório. */
+    marcadasSemPasta:      number;
+    /** Empresas com termo de 13º no ano, e quantas delas com o 13º assinado. */
+    decimoTerceiro:        { empresas: number; assinados: number };
+    /** Empresas com distrato: ficam na lista, mas fora das pendências e do percentual. */
+    distratos:             number;
+  };
+  empresas: EmpresaAditivo[];
+}
+
+export function anoAtual(agora = new Date()): number {
+  return Number(new Intl.DateTimeFormat('en-CA', { timeZone: FUSO, year: 'numeric' }).format(agora));
+}
+
+/** Início do ano em São Paulo (UTC-3, sem horário de verão): 1º/jan 00:00 local = 03:00Z. */
+const inicioDoAno = (ano: number) => new Date(Date.UTC(ano, 0, 1, 3, 0, 0));
+
+function resumirArquivo(a: ArquivoClassificado): ArquivoResumo {
+  const c = a.classificacao;
+  return {
+    nomePasta:       a.nomePasta,
+    caminhoRelativo: a.caminhoRelativo,
+    nome:            a.nome,
+    formato:         c.formato,
+    assinatura:      c.assinatura,
+    icp:             c.icp,
+    decimoTerceiro:  c.decimoTerceiro,
+    honorario:       c.honorario,
+    ano:             c.ano,
+    anoFonte:        c.anoFonte,
+    modificadoEm:    a.modificadoEm,
+  };
+}
+
+const porStatusZerado = () =>
+  Object.fromEntries(STATUS_ADITIVO.map((s) => [s, 0])) as Record<StatusAditivo, number>;
+
+export async function montarRelatorioAditivos(anoReferencia: number): Promise<RelatorioAditivos> {
+  const [ultimo, config] = await Promise.all([base.buscarUltimoConcluido(), base.obterConfig()]);
+  const vazio: RelatorioAditivos = {
+    job: null, anoReferencia, anosDisponiveis: [anoReferencia], raizUnc: config.raizUnc,
+    resumo: {
+      empresas: 0, emDia: 0, porStatus: porStatusZerado(), geradoNoAppSemArquivo: 0, marcadasSemPasta: 0,
+      decimoTerceiro: { empresas: 0, assinados: 0 }, distratos: 0,
+    },
+    empresas: [],
+  };
+  if (!ultimo) return vazio;
+
+  const [pastas, vinculos, arquivos, todasAtivas, gerados, marcas] = await Promise.all([
+    base.listarPastasDoJob(ultimo.id),
+    base.listarVinculos(),
+    repo.listarArquivosDoJob(ultimo.id),
+    repo.listarEmpresasAtivas(),
+    repo.contarGeradosNoApp(inicioDoAno(anoReferencia), inicioDoAno(anoReferencia + 1)),
+    base.listarMarcasSemPasta(),
+  ]);
+
+  // Arquivos agrupados por pasta.
+  const arquivosPorPasta = new Map<string, ArquivoParaClassificar[]>();
+  for (const a of arquivos) {
+    if (arquivoEmDistrato(a.caminho_relativo)) continue; // distrato tem regra própria
+    const lista = arquivosPorPasta.get(a.nome_pasta) ?? [];
+    lista.push({
+      nome:            a.nome,
+      caminhoRelativo: a.caminho_relativo,
+      ext:             a.ext,
+      modificadoEm:    a.modificado_em,
+      pdfAssinado:     a.pdf_assinado === null ? null : !!a.pdf_assinado,
+      pdfMarca:        a.pdf_marca,
+    });
+    arquivosPorPasta.set(a.nome_pasta, lista);
+  }
+
+  // Pastas da última sincronização agrupadas pela empresa vinculada.
+  const pastaPorNome = new Map(pastas.map((p) => [p.nome_pasta, p]));
+  const pastasPorEmpresa = new Map<string, PastaDaEmpresa[]>();
+  for (const v of vinculos) {
+    if (v.tipo === 'ignorado' || !v.company_id) continue;
+    const p = pastaPorNome.get(v.nome_pasta);
+    if (!p) continue; // vínculo de pasta que não apareceu na última varredura
+    const lista = pastasPorEmpresa.get(v.company_id) ?? [];
+    lista.push({
+      nomePasta:         p.nome_pasta,
+      subpastasContrato: (Array.isArray(p.subpastas_contrato) ? p.subpastas_contrato : []).filter((s) => !ehSubpastaDistrato(s)),
+      arquivos:          arquivosPorPasta.get(p.nome_pasta) ?? [],
+    });
+    pastasPorEmpresa.set(v.company_id, lista);
+  }
+
+  // Marcada como "sem pasta" e de fato sem pasta vinculada: fora da auditoria.
+  // Se ganhou pasta depois, volta a ser avaliada normalmente.
+  const marcadas = new Set(marcas.map((m) => m.company_id));
+  const foraDaAuditoria = (id: string) => marcadas.has(id) && !pastasPorEmpresa.has(id);
+  const empresas = todasAtivas.filter((e) => !foraDaAuditoria(e.id));
+
+  const distratos = await carregarDistratos(arquivos, new Map(
+    [...pastasPorEmpresa].map(([id, ps]) => [id, ps.map((p) => p.nomePasta)]),
+  ));
+
+  const ordem = new Map(STATUS_ADITIVO.map((s, i) => [s, i]));
+  const linhas: EmpresaAditivo[] = empresas.map((e) => {
+    const suas = pastasPorEmpresa.get(e.id) ?? [];
+    const r = calcularStatusAditivo(suas, anoReferencia);
+    const g = gerados.get(e.id);
+    const d = distratos.get(e.id) ?? null;
+    const comDistrato = !!d?.efetivo;
+    const alertas: AlertaAditivo[] = [];
+    if (g && r.aditivosDoAno.length === 0 && !comDistrato) alertas.push('gerado_no_app_sem_arquivo');
+
+    return {
+      empresa:                { id: e.id, razaoSocial: e.razao_social, cnpj: e.cnpj, responsavel: e.responsavel },
+      status:                 comDistrato ? 'DISTRATO' : r.status,
+      emDia:                  comDistrato ? false : r.emDia,
+      pastas:                 suas.map((p) => ({ nomePasta: p.nomePasta, subpastasContrato: p.subpastasContrato })),
+      aditivosDoAno:          r.aditivosDoAno.map(resumirArquivo),
+      outrosAditivos:         r.outrosAditivos.map(resumirArquivo),
+      ultimoAnoComAditivo:    r.ultimoAnoComAditivo,
+      decimoTerceiro:         r.decimoTerceiro
+        ? { situacao: r.decimoTerceiro.situacao, assinado: r.decimoTerceiro.assinado, arquivos: r.decimoTerceiro.arquivos.map(resumirArquivo) }
+        : null,
+      geradosNoApp:           g?.qtd ?? 0,
+      ultimoGeradoNoApp:      g?.ultimo ?? null,
+      alertas,
+      distrato:               paraDistratoDTO(d),
+    };
+  });
+  linhas.sort((a, b) =>
+    ordem.get(a.status)! - ordem.get(b.status)! ||
+    a.empresa.razaoSocial.localeCompare(b.empresa.razaoSocial, 'pt-BR'));
+
+  // Anos que aparecem nos aditivos de qualquer pasta da varredura, para o seletor da tela.
+  const anos = new Set<number>([anoReferencia, anoAtual()]);
+  for (const lista of arquivosPorPasta.values()) {
+    for (const a of lista) {
+      const c = classificarAditivo(a);
+      if (c.ehAditivo) anos.add(c.ano);
+    }
+  }
+
+  const porStatus = porStatusZerado();
+  for (const l of linhas) porStatus[l.status]++;
+
+  return {
+    job:             paraJobDTO(ultimo),
+    anoReferencia,
+    anosDisponiveis: [...anos].sort((a, b) => b - a),
+    raizUnc:         config.raizUnc,
+    resumo: {
+      empresas:              linhas.length,
+      emDia:                 linhas.filter((l) => l.emDia).length,
+      porStatus,
+      geradoNoAppSemArquivo: linhas.filter((l) => l.alertas.includes('gerado_no_app_sem_arquivo')).length,
+      marcadasSemPasta:      todasAtivas.length - empresas.length,
+      decimoTerceiro: {
+        empresas:  linhas.filter((l) => l.decimoTerceiro).length,
+        assinados: linhas.filter((l) => l.decimoTerceiro?.assinado).length,
+      },
+      distratos: porStatus.DISTRATO,
+    },
+    empresas: linhas,
+  };
+}
+
+// ── Filtros (tela e exportação usam os mesmos) ────────────────────
+
+export interface FiltrosAditivos {
+  status?:      StatusAditivo | 'em_dia' | 'pendente';
+  /** undefined = todos · '__none__' = sem responsável · nome = só dele */
+  responsavel?: string;
+  busca?:       string;
+  /** Só empresas com algum alerta (ex.: gerado no app, mas não está na pasta). */
+  soAlerta?:    boolean;
+  /** 'com' = só quem tem 13º no ano · 'pendente' = tem 13º, mas ainda sem assinatura. */
+  decimo?:      'com' | 'pendente';
+}
+
+const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+export function filtrarEmpresas(empresas: EmpresaAditivo[], f: FiltrosAditivos): EmpresaAditivo[] {
+  const termo = f.busca ? semAcento(f.busca.trim()) : '';
+  const digitos = f.busca?.replace(/\D/g, '') ?? '';
+  return empresas.filter((e) => {
+    if (f.soAlerta && !e.alertas.length) return false;
+    if (f.decimo === 'com' && !e.decimoTerceiro) return false;
+    if (f.decimo === 'pendente' && (!e.decimoTerceiro || e.decimoTerceiro.assinado)) return false;
+    if (f.status === 'em_dia' && !e.emDia) return false;
+    if (f.status === 'pendente' && (e.emDia || e.status === 'DISTRATO')) return false;
+    if (f.status && f.status !== 'em_dia' && f.status !== 'pendente' && e.status !== f.status) return false;
+    if (f.responsavel === '__none__' && e.empresa.responsavel) return false;
+    if (f.responsavel && f.responsavel !== '__none__' && e.empresa.responsavel !== f.responsavel) return false;
+    if (termo) {
+      const nome = semAcento(e.empresa.razaoSocial);
+      const cnpj = e.empresa.cnpj.replace(/\D/g, '');
+      const pasta = e.pastas.some((p) => semAcento(p.nomePasta).includes(termo));
+      if (!nome.includes(termo) && !pasta && !(digitos.length >= 3 && cnpj.includes(digitos))) return false;
+    }
+    return true;
+  });
+}
+
+// ── Exportação ────────────────────────────────────────────────────
+
+const ROTULO_ASSINATURA: Record<string, string> = {
+  digital:       'digital',
+  pelo_nome:     'pelo nome',
+  declarada_sem: 'sem assinatura (no nome)',
+  nenhuma:       'sem assinatura',
+  nao_se_aplica: 'Word',
+};
+
+export function gerarXlsxAditivos(rel: RelatorioAditivos, empresas: EmpresaAditivo[]): Promise<Buffer> {
+  const cabecalho = [
+    'Empresa', 'CNPJ', 'Responsável', 'Status', 'Em dia',
+    'Pasta(s) na rede', `Aditivos de ${rel.anoReferencia}`, 'Arquivos',
+    'Último ano com aditivo', `13º de ${rel.anoReferencia}`,
+    `Gerados no app em ${rel.anoReferencia}`, 'Alerta', 'Distrato',
+  ];
+  const linhas = empresas.map((e) => [
+    e.empresa.razaoSocial,
+    e.empresa.cnpj,
+    e.empresa.responsavel ?? '',
+    ROTULO_STATUS[e.status],
+    e.emDia ? 'Sim' : 'Não',
+    e.pastas.map((p) => p.nomePasta).join('; '),
+    e.aditivosDoAno.length,
+    e.aditivosDoAno.map((a) => `${a.nome} (${ROTULO_ASSINATURA[a.assinatura] ?? a.assinatura})`).join('; '),
+    e.ultimoAnoComAditivo ?? '',
+    e.decimoTerceiro ? ROTULO_STATUS[e.decimoTerceiro.situacao] : '',
+    e.geradosNoApp,
+    e.alertas.includes('gerado_no_app_sem_arquivo') ? 'Gerado no app, mas não está na pasta' : '',
+    textoDoDistrato(e.distrato),
+  ]);
+
+  return planilhaDeTabela(`Aditivos ${rel.anoReferencia}`, cabecalho, linhas);
+}

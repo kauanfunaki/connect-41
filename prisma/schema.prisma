@@ -2515,6 +2515,10 @@ model Company {
   // regra é o tipo, não o banco.
   driveFolders          DriveFolder[]
   driveDaRede           DriveNetworkFile[]
+  honorarioVinculos     HonorarioVinculoPasta[]
+  honorarioSemPasta     HonorarioEmpresaSemPasta?
+  honorarioManual       HonorarioManual?
+  honorarioEnvios       HonorarioAcessoriasEnvio[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
   // separados, e não um sobre um campo só de documento: o par (tenant, CPF) e
@@ -11930,4 +11934,245 @@ model AtendimentoModelo {
 
   @@index([tenantId, ativo])
   @@map("atendimento_modelos")
+}
+
+// ─── Honorários (vindo do Aditiva Pronto, migracao-622, 11/11/2026) ─────────
+//
+// Auditoria dos contratos de prestação de serviço: o robô de um PC da rede lê
+// as pastas de contrato de cada empresa, manda o inventário e o texto
+// dos contratos e aditivos, e o Connect acha o honorário de cada empresa e
+// compara com o do Acessórias. As regras são as do Aditiva, copiadas em
+// src/lib/honorarios/regras (com os testes de lá).
+//
+// Os textos de situação (status, origem, tipo) ficam nas mesmas palavras
+// minúsculas do Aditiva ("pendente", "auto", "ok"…), em VarChar: as regras
+// copiadas comparam com elas, e a carga dos dados do Aditiva (fase 3) entra
+// sem tradução.
+
+/// Configuração da auditoria por escritório (o `au_config` de linha única).
+model HonorarioConfig {
+  tenantId              String   @id
+  raizUnc               String   @db.VarChar(300)
+  pastaInicial          String   @db.VarChar(300)
+  pastaFinal            String   @db.VarChar(300)
+  regexSubpastaContrato String   @db.VarChar(500)
+  /// "HH:MM" no horário de Brasília; nulo = sem sincronização automática.
+  horarioAgendado       String?  @db.VarChar(5)
+  updatedAt             DateTime @updatedAt
+
+  @@map("hon_config")
+}
+
+/// Uma varredura das pastas pelo robô.
+model HonorarioSyncJob {
+  id                String    @id @default(uuid())
+  tenantId          String
+  /// pendente | executando | concluido | erro
+  status            String    @db.VarChar(12)
+  /// manual | agendado
+  origem            String    @db.VarChar(10)
+  /// Igual ao tenantId enquanto o job está pendente ou executando, nulo
+  /// depois: o índice único garante um job ativo por escritório (no Aditiva
+  /// era uma coluna gerada, que o Prisma não descreve).
+  ativoTenantId     String?   @unique @db.VarChar(36)
+  solicitadoEm      DateTime  @db.DateTime(3)
+  iniciadoEm        DateTime? @db.DateTime(3)
+  ultimoLoteEm      DateTime? @db.DateTime(3)
+  concluidoEm       DateTime? @db.DateTime(3)
+  roboHost          String?   @db.VarChar(100)
+  pastasTotal       Int?
+  pastasRecebidas   Int       @default(0)
+  arquivosRecebidos Int       @default(0)
+  erro              String?   @db.Text
+
+  pastas   HonorarioPasta[]
+
+  @@index([tenantId, status, solicitadoEm])
+  @@map("hon_sync_jobs")
+}
+
+/// Último sinal de vida de cada robô.
+model HonorarioRobo {
+  tenantId String
+  host     String   @db.VarChar(100)
+  versao   String?  @db.VarChar(30)
+  vistoEm  DateTime @db.DateTime(3)
+
+  @@id([tenantId, host])
+  @@map("hon_robos")
+}
+
+/// Pasta de empresa vista numa varredura.
+model HonorarioPasta {
+  id                BigInt  @id @default(autoincrement())
+  jobId             String
+  nomePasta         String  @db.VarChar(300)
+  /// SHA-256 do nome exato: o Aditiva comparava com collation binária
+  /// (maiúscula e acento contam), e o hash dá a mesma unicidade sem ela.
+  nomePastaHash     String  @db.Char(64)
+  subpastasContrato Json
+  erro              String? @db.VarChar(1000)
+
+  job      HonorarioSyncJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  arquivos HonorarioArquivo[]
+
+  @@unique([jobId, nomePastaHash])
+  @@map("hon_pastas")
+}
+
+/// Arquivo das subpastas de contrato de uma pasta, numa varredura.
+model HonorarioArquivo {
+  id              BigInt   @id @default(autoincrement())
+  jobId           String
+  pastaId         BigInt
+  caminhoRelativo String   @db.VarChar(1000)
+  nome            String   @db.VarChar(300)
+  ext             String   @db.VarChar(20)
+  tamanho         BigInt
+  modificadoEm    DateTime
+  /// PDF com assinatura digital (/ByteRange); nulo = não é PDF.
+  pdfAssinado     Boolean?
+  /// "icp" quando a assinatura é ICP-Brasil.
+  pdfMarca        String?  @db.VarChar(20)
+
+  pasta HonorarioPasta @relation(fields: [pastaId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("hon_arquivos")
+}
+
+/// Vínculo pasta ↔ empresa. Sobrevive às varreduras.
+model HonorarioVinculoPasta {
+  id            String   @id @default(uuid())
+  tenantId      String
+  nomePasta     String   @db.VarChar(300)
+  nomePastaHash String   @db.Char(64)
+  companyId     String?
+  /// auto | confirmado | ignorado
+  tipo          String   @db.VarChar(12)
+  vinculadoEm   DateTime
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, nomePastaHash])
+  @@index([companyId])
+  @@map("hon_vinculos_pasta")
+}
+
+/// Empresa que não tem pasta de contrato (sai das pendências).
+model HonorarioEmpresaSemPasta {
+  companyId String   @id
+  tenantId  String
+  motivo    String?  @db.VarChar(300)
+  marcadoEm DateTime @db.DateTime(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("hon_empresas_sem_pasta")
+}
+
+/// Texto que o robô extraiu de um contrato ou aditivo e o que o leitor achou nele.
+model HonorarioTexto {
+  id                   String    @id @default(uuid())
+  tenantId             String
+  /// SHA-256 de `nomePasta + "\n" + caminhoRelativo` (a chave do Aditiva).
+  chave                String    @db.Char(64)
+  nomePasta            String    @db.VarChar(300)
+  caminhoRelativo      String    @db.VarChar(1000)
+  modificadoEm         DateTime
+  tamanho              BigInt
+  /// ok | sem_texto | erro
+  status               String    @db.VarChar(10)
+  paginas              Int?      @db.SmallInt
+  texto                String?   @db.MediumText
+  erro                 String?   @db.VarChar(500)
+  extraidoEm           DateTime  @db.DateTime(3)
+  roboVersao           String?   @db.VarChar(30)
+  leitorVersao         Int       @default(0) @db.SmallInt
+  /// contrato | aditivo | outro
+  tipoDocumento        String?   @db.VarChar(10)
+  dataDocumento        DateTime? @db.Date
+  honorario            Decimal?  @db.Decimal(12, 2)
+  adicionalFuncionario Decimal?  @db.Decimal(12, 2)
+  /// novo_valor | valor_mensal | mencao
+  formaLeitura         String?   @db.VarChar(20)
+  condicional          Boolean?
+  trecho               String?   @db.VarChar(600)
+  /// CNPJs citados no documento, separados por vírgula ("" = lido e sem CNPJ).
+  cnpjs                String?   @db.VarChar(600)
+
+  @@unique([tenantId, chave])
+  @@index([tenantId, leitorVersao])
+  @@map("hon_textos")
+}
+
+/// Honorário informado à mão (vence o lido do documento).
+model HonorarioManual {
+  companyId    String   @id
+  tenantId     String
+  valor        Decimal  @db.Decimal(12, 2)
+  /// Arquivo de onde o valor foi tirado.
+  documento    String?  @db.VarChar(1000)
+  observacao   String?  @db.VarChar(300)
+  /// digitado | acessorias ("Acessórias está certo")
+  origem       String   @default("digitado") @db.VarChar(12)
+  /// Nome de quem informou (no Aditiva, a conta do setor).
+  informadoPor String   @db.VarChar(150)
+  informadoEm  DateTime @db.DateTime(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("hon_manuais")
+}
+
+/// Última leitura das empresas no Acessórias (trocada inteira a cada "Conferir").
+model HonorarioAcessoriasEmpresa {
+  id            String   @id @default(uuid())
+  tenantId      String
+  cnpjDigitos   String   @db.VarChar(14)
+  /// Como o Acessórias devolve (com máscara).
+  identificador String   @db.VarChar(20)
+  acessoriasId  String?  @db.VarChar(20)
+  razao         String?  @db.VarChar(300)
+  situacao      String?  @db.VarChar(50)
+  honorario     Decimal? @db.Decimal(12, 2)
+  lidoEm        DateTime @db.DateTime(3)
+
+  @@unique([tenantId, cnpjDigitos])
+  @@map("hon_acessorias_empresas")
+}
+
+/// Envio de honorário ao Acessórias, com a ficha de antes e de depois.
+model HonorarioAcessoriasEnvio {
+  id            String    @id @default(uuid())
+  tenantId      String
+  companyId     String
+  cnpjDigitos   String    @db.VarChar(14)
+  razaoSocial   String    @db.VarChar(300)
+  valorAnterior Decimal?  @db.Decimal(12, 2)
+  valorEnviado  Decimal   @db.Decimal(12, 2)
+  /// documento | manual
+  fonte         String    @db.VarChar(10)
+  documento     String?   @db.VarChar(1000)
+  /// Quem enviou (nome da pessoa; no Aditiva, a conta do setor).
+  conta         String    @db.VarChar(150)
+  ip            String?   @db.VarChar(64)
+  /// ok | erro
+  status        String    @db.VarChar(5)
+  erro          String?   @db.VarChar(1000)
+  /// Campos da ficha que mudaram além do honorário: trava os envios até alguém conferir.
+  outrosCampos  Json?
+  fichaAntes    Json?
+  fichaDepois   Json?
+  enviadoEm     DateTime  @db.DateTime(3)
+  conferidoEm   DateTime? @db.DateTime(3)
+  conferidoPor  String?   @db.VarChar(150)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, enviadoEm])
+  @@index([companyId, enviadoEm])
+  @@map("hon_acessorias_envios")
 }
