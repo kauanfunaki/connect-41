@@ -118,6 +118,11 @@ const EMPRESA: Ligacao[] = [
   { modelo: "BenefitCatalog", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["benefício cadastrado", "benefícios cadastrados"] },
   { modelo: "CompanyPartner", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["sócio", "sócios"] },
   { modelo: "CompanyRescisaoConfig", campo: "company", fk: "companyId", tratamento: "cascata" },
+  // DP 2 (11/11/2026): a folha calculada da empresa (lançamentos, cálculos e
+  // comparativos vão juntos com a competência), a configuração e os contratos.
+  { modelo: "Dp2Competencia", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["competência do DP 2", "competências do DP 2"], historico: true },
+  { modelo: "Dp2EmpresaConfig", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "Dp2Vinculo", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["contrato do DP 2", "contratos do DP 2"], historico: true },
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
@@ -209,6 +214,11 @@ const PESSOA: Ligacao[] = [
   { modelo: "AdmissaoLink", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["link de admissão digital", "links de admissão digital"] },
   { modelo: "Dependente", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["dependente", "dependentes"] },
   { modelo: "PersonTag", campo: "person", fk: "personId", tratamento: "cascata" },
+  // DP 2 (11/11/2026): o contrato e a folha calculada da pessoa.
+  { modelo: "Dp2Vinculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["contrato do DP 2", "contratos do DP 2"], historico: true },
+  { modelo: "Dp2Evento", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["lançamento do DP 2", "lançamentos do DP 2"], historico: true },
+  { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
+  { modelo: "Dp2Comparativo", campo: "person", fk: "personId", tratamento: "cascata" },
 
   { modelo: "ChatwootContactLink", campo: "person", fk: "personId", tratamento: "desligar" },
 ];
@@ -374,6 +384,12 @@ const USUARIO: Ligacao[] = [
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  // DP 2 (11/11/2026): quem abriu, fechou, lançou ou importou fica como histórico; a auditoria guarda o nome.
+  { modelo: "Dp2TabelaOficial", coluna: "criadaPorId", tratamento: "manter", motivo: "quem gravou a tabela; a auditoria guarda o nome" },
+  { modelo: "Dp2Competencia", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a competência; a auditoria guarda o nome" },
+  { modelo: "Dp2Competencia", coluna: "fechadaPorId", tratamento: "manter", motivo: "quem fechou a folha; a auditoria guarda o nome" },
+  { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
+  { modelo: "Dp2Comparativo", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os valores da Domínio; a tela não mostra o id" },
   // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
   { modelo: "AtendimentoCiclo", coluna: "assignedToId", tratamento: "manter", motivo: "histórico do atendimento; a tela mostra Alguém da equipe e qualquer pessoa do setor pode assumir" },
   { modelo: "AtendimentoCiclo", coluna: "encerradoPorId", tratamento: "manter", motivo: "histórico do atendimento; a auditoria guarda o nome" },
