@@ -20,6 +20,7 @@ import { setoresAtivosDaFila, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { listarParaEquipe, RECORTES_DA_EQUIPE, type RecorteDaEquipe } from "@/lib/solicitacoes/consultas";
 import { ROTULO_DA_RESPOSTA, ROTULO_PARA_EQUIPE } from "@/lib/solicitacoes/regras";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { endereco } from "@/lib/enderecoCurto";
 
 export const dynamic = "force-dynamic";
 
@@ -151,7 +152,7 @@ export default async function SolicitacoesPage({
             <CartoesNoCelular>
               {linhas.map((l) => (
                 <Cartao key={l.id}>
-                  <Link href={`/solicitacoes/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                  <Link href={endereco("solicitacao", l.numero)} className="font-medium text-brand hover:underline break-words">
                     Nº {l.numero} · {l.assunto}
                   </Link>
                   <InfoDoCartao className="mt-0.5 break-words">
@@ -224,7 +225,7 @@ export default async function SolicitacoesPage({
                     {linhas.map((l) => (
                       <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                         <td className="py-2.5 pr-3">
-                          <Link href={`/solicitacoes/${l.id}`} className="font-medium text-brand hover:underline">
+                          <Link href={endereco("solicitacao", l.numero)} className="font-medium text-brand hover:underline">
                             Nº {l.numero} · {l.assunto}
                           </Link>
                           <span className="block text-fs-1 text-fg-muted">

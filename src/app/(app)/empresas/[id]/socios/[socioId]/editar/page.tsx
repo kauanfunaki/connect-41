@@ -8,14 +8,19 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { atualizarSocio } from "../../actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco as enderecoCurto } from "@/lib/enderecoCurto";
 
 export default async function EditarSocioPage({
   params,
 }: {
   params: Promise<{ id: string; socioId: string }>;
 }) {
-  const { id: companyId, socioId } = await params;
+  const { id: idDaRota, socioId } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, `/socios/${socioId}/editar`);
+  const fichaDaEmpresa = enderecoCurto("empresa", numeroDaEmpresa);
   if (!canWrite(ctx.role)) notFound();
 
   const prisma = getPrisma();
@@ -56,8 +61,8 @@ export default async function EditarSocioPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Sócios", href: `/empresas/${companyId}/socios` },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
+          { label: "Sócios", href: `${fichaDaEmpresa}/socios` },
           { label: socio.name, truncate: true },
         ]}
       />
@@ -70,7 +75,7 @@ export default async function EditarSocioPage({
             action={atualizarSocio}
             companyId={companyId}
             enderecoDaEmpresa={endereco}
-            cancelHref={`/empresas/${companyId}/socios`}
+            cancelHref={`${fichaDaEmpresa}/socios`}
             defaultValues={{
               id: socio.id,
               name: socio.name,

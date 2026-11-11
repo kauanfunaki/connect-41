@@ -12,14 +12,17 @@ import { AddAfastamentoForm } from "@/components/pessoas/AddAfastamentoForm";
 import { AfastamentoRow } from "@/components/pessoas/AfastamentoRow";
 import { formatCalendarDate } from "@/lib/format";
 import { criarAfastamento, atualizarAfastamento, excluirAfastamento } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function AfastamentosPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_afastamentos");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/afastamentos");
   const canEdit = canManageSector(ctx, setor);
   const canViewMedical = await canViewSensitiveField(ctx, "DADOS_MEDICOS");
 
@@ -42,6 +45,7 @@ export default async function AfastamentosPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Afastamentos"
         aba="trabalhista"

@@ -11,6 +11,7 @@
 
 import ExcelJS from "exceljs";
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { contaSchema, contraparteSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarContraparte } from "../../src/lib/contabil-core/servidor/cadastros";
 import { analisarContrapartes, confirmarContrapartes } from "../../src/lib/contabil-core/servidor/importacaoContrapartes";
@@ -59,7 +60,7 @@ async function main() {
   const user = await prisma.user.findFirstOrThrow({ where: { tenantId: tenant.id }, select: { id: true } });
   const tenantId = tenant.id;
   const company = await prisma.company.create({
-    data: { tenantId, name: "Empresa Ensaio Contrapartes LTDA", cnpj: CNPJ_EMPRESA } as never,
+    data: { tenantId, number: await proximoNumero(prisma, "empresa", tenantId), name: "Empresa Ensaio Contrapartes LTDA", cnpj: CNPJ_EMPRESA } as never,
     select: { id: true },
   });
 

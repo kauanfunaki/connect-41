@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
+import { endereco } from "@/lib/enderecoCurto";
 import type { EntityType, HandoffPriority } from "@/generated/prisma/enums";
 import { getAuthContext, canManageSector } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedHandoffWhere, scopedPersonWhere } from "@/lib/auth/scope";
@@ -128,10 +130,15 @@ export async function criarHandoff(
   }
 
   let handoffId: string;
+  let numero: number;
   try {
-    const created = await prisma.handoff.create({
+    // O número da transferência no escritório, o do endereço curto
+    // /transferencias/transferencia-8 (10/11/2026, pedido do Kauan).
+    const tenantId = ctx.tenantId;
+    const created = await criarComNumero("transferencia", tenantId, (tx, number) => tx.handoff.create({
       data: {
-        tenantId: ctx.tenantId,
+        tenantId,
+        number,
         fromSector,
         entityType,
         entityId,
@@ -153,8 +160,10 @@ export async function criarHandoff(
         // O primeiro item da Atividade (10/11/2026, pedido do Kauan): "pediu a transferência".
         events: { create: { tenantId: ctx.tenantId, type: "CREATED", userId: ctx.userId } },
       },
-    });
+      select: { id: true, number: true },
+    }));
     handoffId = created.id;
+    numero = created.number;
   } catch (err) {
     console.error("[criarHandoff]", err);
     return { error: "Não foi possível enviar a transferência. Tente de novo.", campo: "geral" };
@@ -225,7 +234,7 @@ export async function criarHandoff(
   revalidatePath("/transferencias");
   // Depois de enviar, abre a transferência criada (10/11/2026, pedido do
   // Kauan): voltar para a lista deixava a pessoa procurando o que acabou de fazer.
-  redirect(`/transferencias/${handoffId}`);
+  redirect(endereco("transferencia", numero));
 }
 
 /** O retorno das ações da transferência aberta: a tela mostra o erro ou o aviso de sucesso. */

@@ -4,6 +4,7 @@
 //   node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-importacao-regras.ts
 import ExcelJS from "exceljs";
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { agenciaSchema, contaSchema, regraSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarAgencia, salvarRegra } from "../../src/lib/contabil-core/servidor/cadastros";
 import { analisarRegras, confirmarRegras } from "../../src/lib/contabil-core/servidor/importacaoRegras";
@@ -34,7 +35,7 @@ async function main() {
   const tenant = await prisma.tenant.findFirstOrThrow({ select: { id: true } });
   const user = await prisma.user.findFirstOrThrow({ where: { tenantId: tenant.id }, select: { id: true } });
   const tenantId = tenant.id;
-  const company = await prisma.company.create({ data: { tenantId, name: "Empresa Ensaio Regras LTDA", cnpj: "12.345.678/0001-95" } as never, select: { id: true } });
+  const company = await prisma.company.create({ data: { tenantId, number: await proximoNumero(prisma, "empresa", tenantId), name: "Empresa Ensaio Regras LTDA", cnpj: "12.345.678/0001-95" } as never, select: { id: true } });
   try {
     const empresaId = valor(await ligarEmpresa(tenantId, company.id, "simples_nacional")).id;
     const tarifa = valor(await criarConta(tenantId, empresaId, contaSchema.parse({ codigo: "3.4.2.05", descricao: "Tarifas bancárias", tipo: "despesa", contaNumero: 1026 })));

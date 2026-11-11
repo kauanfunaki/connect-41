@@ -4,6 +4,7 @@ import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { ColunaDoQuadro } from "@/components/kanban/ColunaDoQuadro";
 import { formatInstantDate } from "@/lib/format";
 import type { LinhaDaFila } from "@/lib/societario/fila";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
@@ -47,7 +48,7 @@ export function KanbanDeProcessos({ colunas, agora }: Props) {
               return (
                 <Link
                   key={l.id}
-                  href={`/processos/${l.id}`}
+                  href={enderecoDe("processo", { id: l.id, number: l.numero })}
                   className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface p-3 hover:border-border-strong hover:bg-surface-hover transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">

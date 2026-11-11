@@ -3,11 +3,11 @@ import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, canActOnSector, type AuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
 import { podeNoModulo } from "@/lib/auth/modulo";
-import { boardPath } from "@/lib/kanbanPaths";
 import { digitsOnly } from "@/lib/validation/common";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { nomeExibicao } from "@/lib/companyName";
 import { arquivosParaABuscaDoTopo } from "@/lib/drive/buscaServidor";
+import { enderecoDaTarefa, lerIdCurto } from "@/lib/enderecoCurto";
 
 const LIMIT = 5;
 
@@ -57,6 +57,12 @@ export async function GET(req: NextRequest) {
 
   const prisma = getPrisma();
   const cnpjDigits = digitsOnly(q);
+  // O id curto na busca (10/11/2026, pedido do Kauan): "empresa-301",
+  // "pessoa-12", "processo-12" ou "tarefa-77" acham o registro pelo número.
+  const porNumero = (tela: "empresa" | "pessoa" | "processo" | "tarefa") => {
+    const n = lerIdCurto(tela, q);
+    return n === null ? [] : [{ number: n }];
+  };
   // A ficha do candidato só abre para quem alcança o módulo de Candidatos
   // (02/10/2026); listar para os outros levaria a um 404.
   const [veCandidatos, veProcessos] = await Promise.all([podeNoModulo(ctx, "recrutamento_candidatos", "ver"), abreProcessos(ctx)]);
@@ -72,17 +78,18 @@ export async function GET(req: NextRequest) {
           // pedaço (raiz do CNPJ, começo do CPF), então não dá para trocar
           // por igualdade mesmo agora que existem os índices únicos.
           ...(cnpjDigits ? [{ cnpj: { contains: cnpjDigits } }, { cpf: { contains: cnpjDigits } }] : []),
+          ...porNumero("empresa"),
         ],
       },
       orderBy: { name: "asc" },
       take: LIMIT,
-      select: { id: true, name: true },
+      select: { id: true, number: true, name: true },
     }),
     prisma.person.findMany({
-      where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR", name: { contains: q } },
+      where: { ...(await scopedPersonWhere(ctx)), type: "COLABORADOR", OR: [{ name: { contains: q } }, ...porNumero("pessoa")] },
       orderBy: { name: "asc" },
       take: LIMIT,
-      select: { id: true, name: true },
+      select: { id: true, number: true, name: true },
     }),
     veCandidatos
       ? prisma.person.findMany({
@@ -119,11 +126,11 @@ export async function GET(req: NextRequest) {
     prisma.pipelineItem.findMany({
       where: {
         pipeline: scopedPipelineWhere(ctx),
-        OR: [{ title: { contains: q } }, { description: { contains: q } }],
+        OR: [{ title: { contains: q } }, { description: { contains: q } }, ...porNumero("tarefa")],
       },
       orderBy: { updatedAt: "desc" },
       take: LIMIT,
-      select: { id: true, title: true, entityId: true, entityType: true, pipeline: { select: { id: true, sectorCode: true } } },
+      select: { id: true, number: true, title: true, entityId: true, entityType: true, pipeline: { select: { id: true, sectorCode: true } } },
     }),
     // Processo: pela empresa (razão social ou apelido), pelo tipo ou pelo
     // título que diferencia dois do mesmo tipo. Os encerrados também — o
@@ -137,12 +144,14 @@ export async function GET(req: NextRequest) {
               { company: { name: { contains: q } } },
               { company: { displayName: { contains: q } } },
               { type: { name: { contains: q } } },
+              ...porNumero("processo"),
             ],
           },
           orderBy: { updatedAt: "desc" },
           take: LIMIT,
           select: {
             id: true,
+            number: true,
             title: true,
             status: true,
             company: { select: { name: true, displayName: true } },
@@ -181,10 +190,11 @@ export async function GET(req: NextRequest) {
     tarefas: tarefaItems.map((t) => ({
       id: t.id,
       name: t.title ?? (t.entityId ? tarefaEntityNames[t.entityId] : null) ?? "(sem título)",
-      href: `${boardPath(t.pipeline)}/itens/${t.id}`,
+      href: enderecoDaTarefa(t.pipeline.id, t),
     })),
     processos: processos.map((p) => ({
       id: p.id,
+      number: p.number,
       name: `${nomeExibicao(p.company)} · ${p.type.name}${p.title ? ` · ${p.title}` : ""}`,
       detalhe: ENCERRADO[p.status],
     })),

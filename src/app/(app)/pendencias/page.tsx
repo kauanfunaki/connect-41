@@ -18,6 +18,7 @@ import { NovaPendencia, type LancamentoVinculado } from "@/components/pendencias
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import { soDoSetorPadrao } from "@/lib/financeiro/pendencias/setor";
 import { ROTULO_DO_TIPO, ROTULO_DO_STATUS, ROTULO_DO_PRAZO } from "@/lib/financeiro/pendencias/regras";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
@@ -176,7 +177,7 @@ export default async function PendenciasPage({
           <CartoesNoCelular>
             {linhas.map((l) => (
               <Cartao key={l.id}>
-                <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                <Link href={enderecoDe("pendencia", { id: l.id, number: l.numero })} className="font-medium text-brand hover:underline break-words">
                   {l.titulo}
                 </Link>
                 <InfoDoCartao className="mt-0.5 break-words">
@@ -243,7 +244,7 @@ export default async function PendenciasPage({
                 {linhas.map((l) => (
                   <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                     <td className="py-2.5 pr-3">
-                      <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
+                      <Link href={enderecoDe("pendencia", { id: l.id, number: l.numero })} className="font-medium text-brand hover:underline">
                         {l.titulo}
                       </Link>
                       <span className="block text-micro text-fg-muted">

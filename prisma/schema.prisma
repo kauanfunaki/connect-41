@@ -599,6 +599,24 @@ model PersonalApiToken {
   @@map("personal_api_tokens")
 }
 
+/// O contador do endereço curto (10/11/2026, pedido do Kauan): o último número
+/// dado em cada tela do escritório — empresa, pessoa, chamado, processo,
+/// transferencia, pendencia, tarefa e controle-interno. O número nunca é
+/// reaproveitado, nem quando o registro de maior número é excluído: a criação
+/// reserva o próximo aqui, com a linha travada na transação
+/// (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts), e não pelo maior
+/// número que sobrou na tabela.
+model ShortAddressCounter {
+  tenantId  String
+  tela      String   @db.VarChar(30)
+  ultimo    Int
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@id([tenantId, tela])
+  @@map("short_address_counters")
+}
+
 model OpsEvent {
   id String @id @default(uuid())
   tenantId String
@@ -730,6 +748,9 @@ model HelpdeskTriageMessage {
 model HelpdeskTicket {
   id String @id @default(uuid())
   tenantId String
+  /// O número no escritório, o do endereço curto (10/11/2026): /chamados/chamado-45.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number Int
   draftId String @unique
   title String @db.VarChar(255)
   description String @db.Text
@@ -763,6 +784,7 @@ model HelpdeskTicket {
   views HelpdeskTicketView[]
   @@unique([tenantId, id])
   @@unique([tenantId, draftId])
+  @@unique([tenantId, number])
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
@@ -1422,6 +1444,7 @@ enum TrainingParticipantStatus {
 model Tenant {
   opsApiKeys OpsApiKey[]
   personalApiTokens PersonalApiToken[]
+  shortAddressCounters ShortAddressCounter[]
   academiaTextos AcademiaTexto[]
   academiaQuestoes AcademiaQuestao[]
   academiaSessoes AcademiaSessao[]
@@ -2262,6 +2285,9 @@ model PasswordResetToken {
 model Company {
   id                    String        @id @default(uuid())
   tenantId              String
+  /// O número no escritório, o do endereço curto (10/11/2026): /empresas/empresa-301.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number                Int
   // Identificação
   name                  String        @db.VarChar(180) // Razão Social
   tradeName             String?       @db.VarChar(180) // Nome Fantasia
@@ -2476,6 +2502,7 @@ model Company {
   // o par (tenant, CNPJ) são espaços de identidade distintos, e um CPF nunca
   // colide com um CNPJ por ter 11 dígitos contra 14.
   @@unique([tenantId, cpf])
+  @@unique([tenantId, number])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, taxRegimeKind])
@@ -2508,6 +2535,9 @@ model CompanyService {
 model Person {
   id                      String     @id @default(uuid())
   tenantId                String
+  /// O número no escritório, o do endereço curto (10/11/2026): /pessoas/pessoa-12.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number                  Int
   name                    String     @db.VarChar(180)
   cpf                     String?    @db.VarChar(14)
   email                   String?    @db.VarChar(120)
@@ -2586,6 +2616,7 @@ model Person {
   tags                 PersonTag[]
 
   @@unique([tenantId, cpf])
+  @@unique([tenantId, number])
   @@index([tenantId])
   @@index([tenantId, type])
   @@index([tenantId, isInternal])
@@ -2697,6 +2728,9 @@ model PipelineStage {
 model PipelineItem {
   id                   String              @id @default(uuid())
   tenantId             String
+  /// O número no escritório, o do endereço curto (10/11/2026): /kanban/itens/tarefa-77.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number               Int
   pipelineId           String
   stageId              String
   // Opcional — nem toda tarefa está associada a uma empresa/pessoa específica
@@ -2756,6 +2790,7 @@ model PipelineItem {
   meetings    Meeting[]
   obrigacaoGerada ObrigacaoGerada?
 
+  @@unique([tenantId, number])
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
   @@index([parentItemId])
@@ -4835,6 +4870,9 @@ enum ClientRequestStatus {
 model ClientRequest {
   id             String              @id @default(uuid())
   tenantId       String
+  /// O número no escritório, o do endereço curto (10/11/2026): /pendencias/pendencia-9.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number         Int
   companyId      String
   kind           ClientRequestKind
   title          String              @db.VarChar(160)
@@ -4864,6 +4902,7 @@ model ClientRequest {
   attachments  ClientRequestAttachment[]
   reminders    ClientRequestReminder[]
 
+  @@unique([tenantId, number])
   @@index([tenantId, status, dueDate])
   @@index([tenantId, companyId, status])
   @@index([financeEntryId])
@@ -6875,6 +6914,9 @@ model InterviewScorecard {
 model Handoff {
   id          String          @id @default(uuid())
   tenantId    String
+  /// O número no escritório, o do endereço curto (10/11/2026): /transferencias/transferencia-8.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number      Int
   fromSector  String          @db.VarChar(40)
   entityType  EntityType
   entityId    String
@@ -6903,6 +6945,7 @@ model Handoff {
   sectors   HandoffSector[]
   events    HandoffEvent[]
 
+  @@unique([tenantId, number])
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
   @@map("handoffs")
@@ -8178,6 +8221,9 @@ model ProcessTemplateChecklistItem {
 model Process {
   id         String @id @default(uuid())
   tenantId   String
+  /// O número no escritório, o do endereço curto (10/11/2026): /processos/processo-12.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number     Int
   companyId  String
   typeId     String
   /// Versão congelada do roteiro (ver ProcessTemplate).
@@ -8230,6 +8276,7 @@ model Process {
   avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
 
+  @@unique([tenantId, number])
   @@index([tenantId, status])
   @@index([tenantId, companyId])
   @@index([tenantId, typeId, startedAt])

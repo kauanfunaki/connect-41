@@ -4,6 +4,8 @@
 // montavam o mesmo link cada um do seu jeito, e só conheciam empresa e pessoa.
 // A conversa do WhatsApp não é nenhuma das duas — vai pelo tipo.
 
+import { enderecoDe, type TelaCurta } from "@/lib/enderecoCurto";
+
 type NotificacaoParaLink = {
   type: string;
   entityType?: string | null;
@@ -20,7 +22,13 @@ export function ehAvisoDaTransferencia(n: NotificacaoParaLink): boolean {
   return n.type.startsWith("HANDOFF_") && !n.entityType && Boolean(n.entityId);
 }
 
-export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
+/**
+ * `numero`: o número do registro da notificação, quando quem chama já o leu
+ * (o chip do sino, 10/11/2026) — o link sai pelo endereço curto. Sem ele, o
+ * link fica com o uuid, que abre igual e passa para o curto. Só vale se a tela
+ * do número for a mesma do link.
+ */
+export function linkDaNotificacao(n: NotificacaoParaLink, numero?: { tela: TelaCurta; numero: number } | null): string | null {
   if (n.type === "OPS_AUTOMACAO_ERRO" && n.entityId) return `/ops?watcher=${encodeURIComponent(n.entityId)}&status=ERROR`;
   // Aviso de órgão sem processo ligado: vai para a lista, onde a pessoa escolhe.
   if (n.type === "AVISO_ORGAO_SEM_PROCESSO") return "/processos/avisos";
@@ -42,13 +50,15 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // só, sem conversa própria, e abre a lista das que estão com a pessoa.
   if (n.type === "WHATSAPP_HANDOFF" && !n.entityId) return "/whatsapp?ver=minhas";
   if (!n.entityId) return null;
-  if (n.type.startsWith("CHAMADO_")) return `/chamados/${n.entityId}`;
+  const id = n.entityId;
+  const de = (tela: TelaCurta) => enderecoDe(tela, { id, number: numero?.tela === tela ? numero.numero : null });
+  if (n.type.startsWith("CHAMADO_")) return de("chamado");
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
-  if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;
-  if (n.type.startsWith("SOLICITACAO_")) return `/solicitacoes/${n.entityId}`;
+  if (n.type.startsWith("PROCESS_")) return de("processo");
+  if (n.type.startsWith("SOLICITACAO_")) return de("solicitacao");
   // Lead novo do Comercial (05/10/2026): abre a ficha do lead.
   if (n.type.startsWith("LEAD_")) return `/leads/${n.entityId}`;
-  if (n.type === "client_request_answered") return `/pendencias/${n.entityId}`;
+  if (n.type === "client_request_answered") return de("pendencia");
   // Arquivo que o cliente mandou pelo portal (09/10/2026): abre a pasta
   // "Enviados pelo cliente" da empresa — `pasta=enviados` é resolvido na página.
   if (n.type === "ARQUIVO_DO_CLIENTE") return `/arquivos/empresa/${n.entityId}?pasta=enviados`;
@@ -58,12 +68,12 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   // Aviso de transferência (10/11/2026, pedido do Kauan): o novo guarda o id
   // da transferência, sem `entityType`, e abre ela. O de antes guardava a
   // empresa ou a pessoa (com `entityType`) e segue abrindo a ficha, logo abaixo.
-  if (ehAvisoDaTransferencia(n)) return `/transferencias/${n.entityId}`;
-  if (n.entityType === "COMPANY") return `/empresas/${n.entityId}`;
-  if (n.entityType === "PERSON") return `/pessoas/${n.entityId}`;
+  if (ehAvisoDaTransferencia(n)) return de("transferencia");
+  if (n.entityType === "COMPANY") return de("empresa");
+  if (n.entityType === "PERSON") return de("pessoa");
   // Menção e comentário guardam o id do card (desde 02/10/2026): o card solto,
   // sem empresa nem pessoa, gerava notificação que não abria nada. A rota
   // acha a lista do card e redireciona.
-  if (n.type === "MENTION" || n.type === "COMMENT" || n.type === "OBRIGACAO_MULTA") return `/kanban/itens/${n.entityId}`;
+  if (n.type === "MENTION" || n.type === "COMMENT" || n.type === "OBRIGACAO_MULTA") return de("tarefa");
   return null;
 }

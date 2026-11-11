@@ -9,6 +9,7 @@
 
 import { readFileSync } from "node:fs";
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { agenciaSchema, contaSchema, contraparteSchema, exportacaoSchema, regraSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarAgencia, salvarContraparte, salvarRegra } from "../../src/lib/contabil-core/servidor/cadastros";
 import { desfazerImportacao, importarExtrato } from "../../src/lib/contabil-core/servidor/importacao";
@@ -49,7 +50,7 @@ async function main() {
   const user = await prisma.user.findFirstOrThrow({ where: { tenantId: tenant.id }, select: { id: true } });
   const tenantId = tenant.id;
   const company = await prisma.company.create({
-    data: { tenantId, name: "Empresa Ensaio Serviços LTDA", cnpj: "12.345.678/0001-95" } as never,
+    data: { tenantId, number: await proximoNumero(prisma, "empresa", tenantId), name: "Empresa Ensaio Serviços LTDA", cnpj: "12.345.678/0001-95" } as never,
     select: { id: true },
   });
 

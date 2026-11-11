@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import { proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { isFullWrite } from "@/lib/auth/papeis";
 import { logAudit } from "@/lib/audit";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestao, exigirOperacao, type Contexto } from "./contexto";
@@ -86,7 +87,7 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
   c = { ...c, config: await configDoHelpdesk(c.ctx.tenantId) };
   if (!c.config.enabled) throw new Error("O módulo de chamados não está disponível neste escritório.");
   const d = await rascunho(c, id);
-  if (d.ticket) return { ticketId: d.ticket.id };
+  if (d.ticket) return { ticketId: d.ticket.id, numero: d.ticket.number };
   exigirAbertura(c);
   if (d.version !== version) throw desatualizado();
   const triagem = modo === "triagem", tenantId = c.ctx.tenantId;
@@ -103,10 +104,10 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     validarFormulario(dados, (await categoriaAtual(tenantId, dados.categoryId)).categoria, d.attachments);
   }
   await conferirOrigem(c, dados);
-  const ticketId = await getPrisma().$transaction(async tx => {
+  const { ticketId, numero } = await getPrisma().$transaction(async tx => {
     await travarEscritorio(tx, tenantId);
     const existente = await tx.helpdeskTicket.findFirst({ where: { tenantId, draftId: id } });
-    if (existente) return existente.id;
+    if (existente) return { ticketId: existente.id, numero: existente.number };
     const reservou = await tx.helpdeskDraft.updateMany({ where: { id, tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { submittedAt: new Date(), version: { increment: 1 }, analysisToken: null } });
     if (reservou.count !== 1) throw desatualizado();
     // Revalida dentro da transação: categoria e anexos podem ter mudado enquanto
@@ -121,14 +122,19 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
       aprovadores = await aprovadoresDaCategoria(tx, tenantId, cat, dados.requesterSectorCode, c.ctx.userId);
       if (!aprovadores.length) throw new Error("Não há aprovador ativo para esta categoria/setor. Peça ao administrador para configurar um aprovador diferente do solicitante.");
     }
-    const ticket = await tx.helpdeskTicket.create({ data: { tenantId, draftId: id, title: dados.title, description: dados.description, categoryId: dados.categoryId, requesterSectorCode: dados.requesterSectorCode, createdById: c.ctx.userId, priority: dados.priority, requestData: json(dados.requestData), tags: dados.tags, approverIds: aprovadores, approvalRequired: comAprovacao, approvalStatus: comAprovacao ? "PENDING" : "NOT_REQUIRED", status: triagem ? "AGUARDANDO_TRIAGEM" : comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO" } });
+    // O número do chamado no escritório, o do endereço curto /chamados/chamado-45
+    // (10/11/2026, pedido do Kauan), reservado no contador da tela, que fica
+    // travado até o fim desta transação.
+    const number = await proximoNumero(tx, "chamado", tenantId);
+    const ticket = await tx.helpdeskTicket.create({ data: { tenantId, number, draftId: id, title: dados.title, description: dados.description, categoryId: dados.categoryId, requesterSectorCode: dados.requesterSectorCode, createdById: c.ctx.userId, priority: dados.priority, requestData: json(dados.requestData), tags: dados.tags, approverIds: aprovadores, approvalRequired: comAprovacao, approvalStatus: comAprovacao ? "PENDING" : "NOT_REQUIRED", status: triagem ? "AGUARDANDO_TRIAGEM" : comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO" } });
     await tx.helpdeskAttachment.updateMany({ where: { tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });
     if (!triagem && cat.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: cat.checklistTemplate.map(i => ({ tenantId, ticketId: ticket.id, key: i.key, label: i.label })) });
     if (comAprovacao) await tx.helpdeskApproval.create({ data: { tenantId, ticketId: ticket.id, cycleNumber: 1 } });
     await evento(tx, tenantId, ticket.id, c.ctx.userId, "created", triagem ? { triagem: true } : { revisadoPelaPessoa: true, classificacao: (d.payload as Record<string, unknown>)._classificacao });
-    return ticket.id;
+    return { ticketId: ticket.id, numero: number };
   });
-  await depois(c, ticketId, "created"); return { ticketId };
+  // O número vai junto (10/11/2026): a tela e a Ceci levam ao endereço curto.
+  await depois(c, ticketId, "created"); return { ticketId, numero };
 }
 /** O envio da tela Novo chamado: o chamado nasce em "Aguardando triagem". */
 export function enviarRascunho(c: Contexto, id: string, version: number) {

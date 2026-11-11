@@ -17,9 +17,12 @@ import { useToast } from "@/components/ui/Toast";
 import { maskCpf } from "@/lib/format";
 import { SITUACAO_DO_VINCULO } from "@/lib/colaboradores/situacao";
 import type { PersonEmploymentStatus } from "@/generated/prisma/enums";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 export type LinhaDaTabelaDeColaboradores = {
   id: string;
+  /** O número da pessoa: os links vão pelo endereço curto, /pessoas/pessoa-12 (10/11/2026). */
+  number?: number;
   name: string;
   /** O cadastro — inativo é arquivado, e só aparece com o filtro. */
   active: boolean;
@@ -29,7 +32,7 @@ export type LinhaDaTabelaDeColaboradores = {
   situacao: PersonEmploymentStatus;
   /** "03/03/2021", já formatado no servidor (data de calendário). */
   admissao: string | null;
-  empresa: { id: string; nome: string } | null;
+  empresa: { id: string; number?: number; nome: string } | null;
 };
 
 type Props = {
@@ -110,7 +113,7 @@ export function ColaboradoresTable({ linhas, canCreate, mostrarEmpresa = false, 
 
   function nome(p: LinhaDaTabelaDeColaboradores, tamanho: 28 | 32) {
     return (
-      <Link href={`/pessoas/${p.id}`} className="flex items-center gap-2.5 min-w-0 font-medium text-fg hover:text-brand transition-colors">
+      <Link href={enderecoDe("pessoa", p)} className="flex items-center gap-2.5 min-w-0 font-medium text-fg hover:text-brand transition-colors">
         <AvatarImage src={p.photoUrl} name={p.name} size={tamanho} shape="circle" fontSize={tamanho === 28 ? 11 : 12} />
         <span className="min-w-0 break-words">{p.name}</span>
         {/* O cadastro inativo só aparece com o filtro — e precisa se distinguir. */}
@@ -121,7 +124,7 @@ export function ColaboradoresTable({ linhas, canCreate, mostrarEmpresa = false, 
 
   function empresa(p: LinhaDaTabelaDeColaboradores) {
     return p.empresa ? (
-      <Link href={`/empresas/${p.empresa.id}`} className="hover:text-brand transition-colors">
+      <Link href={enderecoDe("empresa", p.empresa)} className="hover:text-brand transition-colors">
         {p.empresa.nome}
       </Link>
     ) : (
@@ -131,7 +134,7 @@ export function ColaboradoresTable({ linhas, canCreate, mostrarEmpresa = false, 
 
   function acoes(p: LinhaDaTabelaDeColaboradores) {
     return canCreate ? (
-      <AcoesDeLinha foraDeOperacao={!p.active} onToggle={() => toggleAtivo(p)} editarHref={`/pessoas/${p.id}/editar`} />
+      <AcoesDeLinha foraDeOperacao={!p.active} onToggle={() => toggleAtivo(p)} editarHref={`${enderecoDe("pessoa", p)}/editar`} />
     ) : null;
   }
 

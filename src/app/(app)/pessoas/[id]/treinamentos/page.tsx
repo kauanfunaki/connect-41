@@ -13,14 +13,17 @@ import { formatCalendarDate } from "@/lib/format";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SITUACAO_DO_PARTICIPANTE, COR_DO_PARTICIPANTE, SeloDoDP } from "@/components/pessoas/rotulosDoDP";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function TreinamentosPessoaPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx } = await abrirTelaDoModulo("dp_treinamentos");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/treinamentos");
 
   const prisma = getPrisma();
   const person = await prisma.person.findFirst({
@@ -40,6 +43,7 @@ export default async function TreinamentosPessoaPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Treinamentos"
         aba="trabalhista"

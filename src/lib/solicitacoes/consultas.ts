@@ -276,6 +276,8 @@ export type SolicitacaoDetalhada = {
   respondidaEm: Date | null;
   situacao: SituacaoDaResposta;
   empresaId: string;
+  /** O número da empresa, para o link pelo endereço curto (10/11/2026). */
+  empresaNumero: number;
   empresaNome: string;
   responsavel: { id: string; nome: string } | null;
   abertaPor: string;
@@ -319,7 +321,7 @@ export async function carregarSolicitacao(
       closedAt: true,
       assigneeId: true,
       subject: { select: { label: true } },
-      company: { select: { id: true, name: true, displayName: true } },
+      company: { select: { id: true, number: true, name: true, displayName: true } },
       assignee: { select: { id: true, name: true } },
       openedByPortal: { select: { name: true } },
       closedBy: { select: { name: true } },
@@ -355,6 +357,7 @@ export async function carregarSolicitacao(
     respondidaEm: s.firstResponseAt,
     situacao: situacaoDaResposta(s, agora),
     empresaId: s.company.id,
+    empresaNumero: s.company.number,
     empresaNome: nomeExibicao(s.company),
     responsavel: s.assignee ? { id: s.assignee.id, nome: s.assignee.name } : null,
     assigneeId: s.assigneeId,

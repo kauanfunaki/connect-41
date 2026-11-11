@@ -18,6 +18,8 @@ import { CompetenciaStatusForm } from "@/components/folha/CompetenciaStatusForm"
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { detectPayrollAnomalies } from "@/lib/payrollAnomalies";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 const MONTH_LABEL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -29,8 +31,11 @@ export default async function CompetenciaPage({
 }: {
   params: Promise<{ id: string; competencyId: string }>;
 }) {
-  const { id: companyId, competencyId } = await params;
+  const { id: idDaRota, competencyId } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, `/folha/${competencyId}`);
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
   const canManage = canWrite(ctx.role);
   const canViewPayroll = await canViewSensitiveField(ctx, "SALARIO");
 
@@ -77,8 +82,8 @@ export default async function CompetenciaPage({
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
-          { label: "Folha", href: `/empresas/${companyId}/folha` },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
+          { label: "Folha", href: `${fichaDaEmpresa}/folha` },
           { label: `${MONTH_LABEL[competencia.month - 1]}/${competencia.year}` },
         ]}
       />

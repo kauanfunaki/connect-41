@@ -27,6 +27,7 @@
 //   sujaria o vídeo.
 
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { hashPassword } from "../../src/lib/auth/password";
 import { DEFAULT_SECTORS } from "../../src/lib/sector-constants";
 import { encryptSecret } from "../../src/lib/crypto";
@@ -81,7 +82,7 @@ async function main() {
   const filial = "TRANSPORTES MODELO LTDA — FILIAL SUL";
   if (matriz && !(await p.company.findFirst({ where: { tenantId, name: filial } }))) {
     await p.company.create({
-      data: { tenantId, name: filial, displayName: "Transportes Modelo — Filial Sul", status: "ACTIVE", parentCompanyId: matriz.id },
+      data: { tenantId, number: await proximoNumero(p, "empresa", tenantId), name: filial, displayName: "Transportes Modelo — Filial Sul", status: "ACTIVE", parentCompanyId: matriz.id },
     });
     console.log("filial da empresa do acesso criada");
   }

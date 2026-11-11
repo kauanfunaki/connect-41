@@ -34,6 +34,7 @@ import { MODULO_AUTORIZACOES } from "@/lib/autorizacoes/regras";
 import { feriadosDoEscritorio } from "@/lib/feriados";
 import { hojeIso } from "@/lib/datas/calendario";
 import { FONTES_DA_AGENDA, type FonteDaAgenda } from "@/lib/fontesDaAgenda";
+import { enderecoDaTarefa, enderecoDe } from "@/lib/enderecoCurto";
 import {
   agruparPrazos,
   estaAtrasado,
@@ -154,6 +155,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
           },
           select: {
             id: true,
+            number: true,
             title: true,
             dueDate: true,
             pipelineId: true,
@@ -183,14 +185,14 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
             dueDate: noPeriodo,
             ...whereDoRecorteDeSetor(soDoSetorPadrao(pendencias.setor)),
           },
-          select: { id: true, title: true, dueDate: true, company: { select: { name: true, displayName: true } } },
+          select: { id: true, number: true, title: true, dueDate: true, company: { select: { name: true, displayName: true } } },
           take: 1000,
         })
       : Promise.resolve([]),
     processos
       ? prisma.process.findMany({
           where: { tenantId, status: { notIn: ["CONCLUIDO", "CANCELADO", "INDEFERIDO"] }, dueAt: noPeriodo },
-          select: { id: true, dueAt: true, type: { select: { name: true } }, company: { select: { name: true, displayName: true } } },
+          select: { id: true, number: true, dueAt: true, type: { select: { name: true } }, company: { select: { name: true, displayName: true } } },
           take: 1000,
         })
       : Promise.resolve([]),
@@ -225,7 +227,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
             id: true,
             description: true,
             dueAt: true,
-            protocol: { select: { process: { select: { id: true, company: { select: { name: true, displayName: true } } } } } },
+            protocol: { select: { process: { select: { id: true, number: true, company: { select: { name: true, displayName: true } } } } } },
           },
           take: 1000,
         })
@@ -262,7 +264,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
             prazoInterno: true,
             modelo: { select: { nome: true, sectorCode: true } },
             company: { select: { name: true, displayName: true } },
-            pipelineItem: { select: { id: true, pipelineId: true } },
+            pipelineItem: { select: { id: true, number: true, pipelineId: true } },
           },
           take: 3000,
         })
@@ -313,7 +315,8 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
         titulo: c.title ?? empresa ?? "Atividade sem título",
         detalhe: [c.title ? empresa : undefined, pessoas || c.pipeline.name].filter(Boolean).join(" · "),
         setor: c.pipeline.sectorCode,
-        href: `/kanban/${c.pipelineId}/itens/${c.id}`,
+        // Os links pelo endereço curto (10/11/2026, pedido do Kauan).
+        href: enderecoDaTarefa(c.pipelineId, c),
       }),
     );
   }
@@ -339,7 +342,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
         titulo: r.title,
         detalhe: nomeExibicao(r.company),
         setor: pendencias!.setor,
-        href: `/pendencias/${r.id}`,
+        href: enderecoDe("pendencia", r),
       }),
     );
   }
@@ -352,7 +355,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
         titulo: p.type.name,
         detalhe: nomeExibicao(p.company),
         setor: processos!.setor,
-        href: `/processos/${p.id}`,
+        href: enderecoDe("processo", p),
       }),
     );
   }
@@ -365,7 +368,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
         titulo: e.description,
         detalhe: nomeExibicao(e.protocol.process.company),
         setor: processos!.setor,
-        href: `/processos/${e.protocol.process.id}`,
+        href: enderecoDe("processo", e.protocol.process),
       }),
     );
   }
@@ -463,6 +466,7 @@ export async function prazosDoPeriodo(ctx: AuthContext, de: string, ate: string,
             empresa: nomeExibicao(o.company),
             pipelineId: o.pipelineItem.pipelineId,
             itemId: o.pipelineItem.id,
+            itemNumero: o.pipelineItem.number,
           },
           hoje,
           feriados,

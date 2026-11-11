@@ -66,7 +66,7 @@ export async function aplicarPropostaDoSocietario(
   const args = proposta.argumentos ?? {};
   if (proposta.ferramenta === ABRIR_PROCESSO) {
     const r = await abrirProcessoPelaCeci(args);
-    return "error" in r ? r : { link: `/processos/${r.processoId}` };
+    return "error" in r ? r : { link: r.endereco };
   }
 
   const stepId = typeof args.stepId === "string" ? args.stepId.trim() : "";

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { AuthContext } from "@/lib/auth/context";
 import type { CredencialAutenticadaOps } from "@/lib/ops/servidor";
+import { proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 
 // A sessão assistida do robô (06/11/2026) no MySQL descartável do laboratório
 // (porta 33381), com dados fictícios. Roda pelo lançador:
@@ -45,7 +46,7 @@ describe.skipIf(!habilitado)("sessão assistida do robô, com MySQL descartável
     const colega = await pessoa("colega.qa@example.invalid", "Colega Fictícia");
     await db.sector.upsert({ where: { tenantId_code: { tenantId: tenant.id, code: "societario" } }, create: { tenantId: tenant.id, code: "societario", label: "Societário" }, update: {} });
     for (const u of [quemPediu, colega]) await db.userSector.upsert({ where: { userId_sectorCode: { userId: u.id, sectorCode: "societario" } }, create: { userId: u.id, sectorCode: "societario" }, update: {} });
-    const empresa = (await db.company.findFirst({ where: { tenantId: tenant.id, cnpj: "11222333000181" } })) ?? (await db.company.create({ data: { tenantId: tenant.id, cnpj: "11222333000181", name: "EMPRESA FICTÍCIA DO ALVARÁ" } }));
+    const empresa = (await db.company.findFirst({ where: { tenantId: tenant.id, cnpj: "11222333000181" } })) ?? (await db.company.create({ data: { tenantId: tenant.id, number: await proximoNumero(db, "empresa", tenant.id), cnpj: "11222333000181", name: "EMPRESA FICTÍCIA DO ALVARÁ" } }));
     await db.opsWatcher.upsert({ where: { tenantId_slug: { tenantId: tenant.id, slug: SLUG } }, create: { tenantId: tenant.id, slug: SLUG, name: "Robô fictício" }, update: { lastHeartbeatAt: null } });
     Object.assign(d, { tenantId: tenant.id, quemPediu: quemPediu.id, colega: colega.id, companyId: empresa.id });
     w = { tenantId: tenant.id, slug: SLUG, tokenHash: "x".repeat(64), compartilhado: false };

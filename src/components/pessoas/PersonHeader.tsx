@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Selo } from "@/components/ui/Selo";
 import { SITUACAO_DO_VINCULO } from "@/lib/colaboradores/situacao";
+import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
 
 const TYPE_LABEL: Record<PersonType, string> = {
   CANDIDATO: "Candidato",
@@ -27,6 +28,8 @@ const TYPE_VARIANT: Record<PersonType, "info" | "success"> = {
 
 type Props = {
   id: string;
+  /** O número da pessoa no escritório: o id curto (pessoa-12) no cabeçalho e os links pelo endereço curto (10/11/2026). */
+  numero?: number;
   name: string;
   photoUrl: string | null;
   type: PersonType;
@@ -35,6 +38,7 @@ type Props = {
   email: string | null;
   phone: string | null;
   companyId: string | null;
+  companyNumero?: number | null;
   companyName: string | null;
   canEdit: boolean;
   canRequestHandoff: boolean;
@@ -46,6 +50,7 @@ type Props = {
 // (card rounded-lg, avatar à esquerda, metadados com ícones, ações à direita).
 export function PersonHeader({
   id,
+  numero,
   name,
   photoUrl,
   type,
@@ -54,12 +59,14 @@ export function PersonHeader({
   email,
   phone,
   companyId,
+  companyNumero,
   companyName,
   canEdit,
   canRequestHandoff,
   podeExcluir,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const ficha = enderecoDe("pessoa", { id, number: numero });
 
   async function copyCpf() {
     if (!cpf) return;
@@ -86,6 +93,8 @@ export function PersonHeader({
             </div>
 
             <div className="flex items-center gap-4 flex-wrap mt-2.5">
+              {/* O id curto, discreto, como no Controle interno (10/11/2026, pedido do Kauan). */}
+              {numero !== undefined && <span className="text-helper text-fg-muted tnum">{idCurto("pessoa", numero)}</span>}
               {cpf && (
                 <Button
                   variant="linkMuted"
@@ -101,7 +110,7 @@ export function PersonHeader({
               {cpf && <span role="status" className="sr-only">{copied ? "CPF copiado." : ""}</span>}
               {companyId && companyName && (
                 <Link
-                  href={`/empresas/${companyId}`}
+                  href={enderecoDe("empresa", { id: companyId, number: companyNumero })}
                   className="inline-flex items-center gap-1.5 text-helper text-fg-muted hover:text-fg transition-colors"
                 >
                   <Building2 size={14} />
@@ -139,7 +148,7 @@ export function PersonHeader({
             </Button>
           )}
           {canEdit && (
-            <Button href={`/pessoas/${id}/editar`} variant="secondary" size="sm">
+            <Button href={`${ficha}/editar`} variant="secondary" size="sm">
               <Pencil size={14} />
               Editar
             </Button>

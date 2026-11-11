@@ -7,6 +7,7 @@ import { lerDocumentoXml, COLUNAS_APOIO } from "./importacao";
 import { csvSeguro } from "./exportacao";
 import type { AuthContext } from "@/lib/auth/context";
 import type { PedidoDeGeracao } from "./geracaoPeloAgente";
+import { proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
 const m = vi.hoisted(() => ({ ctx: {} as AuthContext, companyId: "" }));
@@ -37,7 +38,7 @@ describe.skipIf(!habilitado)("SPED Fiscal com MySQL descartável real", () => {
     const outro = await db.tenant.upsert({ where: { slug: "sped-fiscal-qa-outro" }, create: { name: "Outro escritório fictício", slug: "sped-fiscal-qa-outro" }, update: {} });
     const user = await db.user.upsert({ where: { tenantId_email: { tenantId: tenant.id, email: "fiscal.qa@example.invalid" } }, create: { tenantId: tenant.id, name: "Fiscal Fictícia", email: "fiscal.qa@example.invalid", passwordHash: await bcrypt.hash("SpedFiscalQA-Only-2026", 4), role: "ADMIN" }, update: {} });
     await db.sector.upsert({ where: { tenantId_code: { tenantId: tenant.id, code: "fiscal" } }, create: { tenantId: tenant.id, code: "fiscal", label: "Fiscal" }, update: {} });
-    const criarEmpresa = async (tenantId: string, cnpj: string, name: string) => await db.company.findFirst({ where: { tenantId, cnpj } }) ?? await db.company.create({ data: { tenantId, cnpj, name } });
+    const criarEmpresa = async (tenantId: string, cnpj: string, name: string) => await db.company.findFirst({ where: { tenantId, cnpj } }) ?? await db.company.create({ data: { tenantId, number: await proximoNumero(db, "empresa", tenantId), cnpj, name } });
     const empresa = await criarEmpresa(tenant.id, "39952818000140", "EMPRESA FICTÍCIA — Matriz");
     const filial = await criarEmpresa(tenant.id, "39952818000220", "EMPRESA FICTÍCIA — Filial");
     await db.company.update({ where: { id: filial.id }, data: { parentCompanyId: empresa.id } });

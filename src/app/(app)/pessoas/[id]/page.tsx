@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { PessoaBreadcrumb } from "@/components/pessoas/PessoaBreadcrumb";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
+import { endereco, enderecoDe } from "@/lib/enderecoCurto";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PersonHeader } from "@/components/pessoas/PersonHeader";
 import { PersonDetailTabs } from "@/components/pessoas/PersonDetailTabs";
@@ -99,11 +101,17 @@ const MODULO_DO_ATALHO: Record<string, string> = {
 
 export default async function PessoaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // O endereço curto (10/11/2026, pedido do Kauan): /pessoas/pessoa-12. O
+  // endereço com o uuid passa para ele, com a aba e o resto da query.
+  const { id, number: numeroDaPessoa } = await abrirPeloEndereco("pessoa", ctx.tenantId, idDaRota, await searchParams);
+  const fichaDaPessoa = endereco("pessoa", numeroDaPessoa);
   const canEdit = canWrite(ctx.role);
   const canRequestHandoff = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
   const modulosDosAtalhos = [...new Set(Object.values(MODULO_DO_ATALHO))];
@@ -118,7 +126,7 @@ export default async function PessoaPage({
     prisma.person.findFirst({
       where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
       include: {
-        currentCompany: { select: { id: true, name: true } },
+        currentCompany: { select: { id: true, number: true, name: true } },
         cargo: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
       },
@@ -258,7 +266,7 @@ export default async function PessoaPage({
         <div className={GRADE}>
           <InfoRow label="Empresa atual" className="sm:col-span-2">
             {person.currentCompany ? (
-              <Link href={`/empresas/${person.currentCompany.id}`} className="text-brand hover:underline">
+              <Link href={enderecoDe("empresa", person.currentCompany)} className="text-brand hover:underline">
                 {person.currentCompany.name}
               </Link>
             ) : (
@@ -272,7 +280,7 @@ export default async function PessoaPage({
       </Card>
 
       {person.type === "COLABORADOR" && atalhosDoVinculo.length > 0 && (
-        <OperationsLinkList basePath={`/pessoas/${id}`} links={atalhosDoVinculo} />
+        <OperationsLinkList basePath={fichaDaPessoa} links={atalhosDoVinculo} />
       )}
     </div>
   );
@@ -328,7 +336,7 @@ export default async function PessoaPage({
       )}
 
       {person.type === "COLABORADOR" && atalhosTrabalhistas.length > 0 && (
-        <OperationsLinkList basePath={`/pessoas/${id}`} links={atalhosTrabalhistas} />
+        <OperationsLinkList basePath={fichaDaPessoa} links={atalhosTrabalhistas} />
       )}
 
       {/* Campos Adicionais (setoriais) */}
@@ -372,6 +380,7 @@ export default async function PessoaPage({
       entityLabel="pessoa"
       pipelineItems={pipelineItems.map((p) => ({
         id: p.id,
+        number: p.number,
         pipelineId: p.pipeline.id,
         pipelineName: p.pipeline.name,
         pipelineSectorCode: p.pipeline.sectorCode,
@@ -392,10 +401,11 @@ export default async function PessoaPage({
     <PageContainer>
       {/* A lista de origem depende de quem é a pessoa (ver PessoaBreadcrumb);
           era uma cópia à mão da mesma trilha das sub-páginas até 30/09. */}
-      <PessoaBreadcrumb isInternal={person.isInternal} personId={id} personName={person.name} />
+      <PessoaBreadcrumb isInternal={person.isInternal} personId={id} numero={numeroDaPessoa} personName={person.name} />
 
       <PersonHeader
         id={id}
+        numero={numeroDaPessoa}
         name={person.name}
         photoUrl={person.photoUrl}
         type={person.type}
@@ -404,6 +414,7 @@ export default async function PessoaPage({
         email={person.email}
         phone={person.phone}
         companyId={person.currentCompany?.id ?? null}
+        companyNumero={person.currentCompany?.number ?? null}
         companyName={person.currentCompany?.name ?? null}
         canEdit={canEdit}
         canRequestHandoff={canRequestHandoff}

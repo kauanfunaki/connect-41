@@ -7,6 +7,7 @@
 //   node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/preparar-demo-local.ts
 
 import { getPrisma } from "../../src/lib/prisma";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { agenciaSchema, contaSchema, contraparteSchema, regraSchema } from "../../src/lib/contabil-core/entradas";
 import { criarConta, ligarEmpresa, salvarAgencia, salvarContraparte, salvarRegra } from "../../src/lib/contabil-core/servidor/cadastros";
 import { importarExtrato } from "../../src/lib/contabil-core/servidor/importacao";
@@ -50,7 +51,7 @@ async function main() {
 
   let company = await prisma.company.findFirst({ where: { tenantId, cnpj: CNPJ }, select: { id: true } });
   company ??= await prisma.company.create({
-    data: { tenantId, name: "Padaria Modelo Teste LTDA", cnpj: CNPJ, taxRegimeKind: "SIMPLES_NACIONAL" } as never,
+    data: { tenantId, number: await proximoNumero(prisma, "empresa", tenantId), name: "Padaria Modelo Teste LTDA", cnpj: CNPJ, taxRegimeKind: "SIMPLES_NACIONAL" } as never,
     select: { id: true },
   });
   const ligada = await prisma.coreEmpresa.findFirst({ where: { companyId: company.id }, select: { id: true } });

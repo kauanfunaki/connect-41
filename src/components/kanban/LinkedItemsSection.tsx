@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/Input";
 import { getRecentLinkedIds, pushRecentLinkedId } from "@/lib/kanbanRecentLinks";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
+import { segmentoDaTarefa } from "@/lib/enderecoCurto";
 
-export type LinkedItem = { id: string; name: string };
+// `number`: o link vai pelo endereço curto, tarefa-77 (10/11/2026).
+export type LinkedItem = { id: string; number?: number; name: string };
 export type LinkCandidate = { id: string; name: string };
 
 type Props = {
@@ -47,7 +49,7 @@ export function LinkedItemsSection({ canAct, basePath, links, candidates, create
         <div className="divide-y divide-border mb-3">
           {links.map((l) => (
             <div key={l.id} className="flex items-center justify-between gap-2 py-1.5 group">
-              <Link href={`${basePath}/itens/${l.id}`} className="text-fs-3 text-fg hover:text-brand transition-colors truncate">
+              <Link href={`${basePath}/itens/${segmentoDaTarefa(l)}`} className="text-fs-3 text-fg hover:text-brand transition-colors truncate">
                 {l.name}
               </Link>
               {canAct && (

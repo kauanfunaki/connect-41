@@ -11,13 +11,18 @@ import { getActiveSectors } from "@/lib/sectors";
 import { categoriaSchema } from "@/lib/chamados/regras";
 import { podeNoModulo } from "@/lib/auth/modulo";
 import { MODULO_OPS } from "@/lib/ops/regras";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
+import { idCurto } from "@/lib/enderecoCurto";
 
 export const dynamic = "force-dynamic";
-export default async function DetalhePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DetalhePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const c = await contexto().catch(() => null); if (!c) notFound();
-  const { id } = await params, t = await detalhe(c, id).catch(() => null); if (!t) notFound();
+  // O endereço curto (10/11/2026, pedido do Kauan): /chamados/chamado-45. O do
+  // uuid passa para ele; quem confere se a pessoa vê o chamado é o `detalhe`.
+  const { id } = await abrirPeloEndereco("chamado", c.ctx.tenantId, (await params).id, await searchParams);
+  const t = await detalhe(c, id).catch(() => null); if (!t) notFound();
   // Abrir o chamado apaga o número dele no menu (06/11/2026). Falhar aqui não impede a tela.
   const [cats, users, setores, verOrquestrador] = await Promise.all([categorias(c, true), usuarios(c), getActiveSectors(c.ctx.tenantId), podeNoModulo(c.ctx, MODULO_OPS, "ver").catch(() => false), marcarChamadoVisto(c, t.id).catch(() => {})]);
   const alvo = { ...t, approverIds: strings(t.approverIds) };
-  return <PageContainer><PageHeader title={t.title} subtitle="Acompanhe o atendimento e consulte as informações da solicitação." action={<Button href="/chamados" variant="secondary">Voltar aos chamados</Button>} /><DetalheDoChamado key={t.version} chamado={t} eu={c.ctx.userId} agora={new Date().toISOString()} usuarios={users.map(u => ({ id: u.id, name: u.name, atendente: u.role !== "READONLY" && u.sectors.some(s => s.sectorCode === c.config.sectorCode) }))} categorias={cats.map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id }))} setores={setores.map(s => ({ code: s.code, label: s.label }))} permissoes={{ operar: podeOperar(c.ctx, c.config), gerenciar: podeGerenciar(c.ctx, c.config), interno: podeVerInterno(c.ctx, c.config), responder: podeResponder(c.ctx, c.config, alvo, t.status, false), aprovar: t.createdById !== c.ctx.userId && !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY" && (isFullWrite(c.ctx.role) || alvo.approverIds.includes(c.ctx.userId)), escrever: !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY", verOrquestrador }} /></PageContainer>;
+  return <PageContainer><PageHeader title={t.title} subtitle={`${idCurto("chamado", t.number)} · Acompanhe o atendimento e consulte as informações da solicitação.`} action={<Button href="/chamados" variant="secondary">Voltar aos chamados</Button>} /><DetalheDoChamado key={t.version} chamado={t} eu={c.ctx.userId} agora={new Date().toISOString()} usuarios={users.map(u => ({ id: u.id, name: u.name, atendente: u.role !== "READONLY" && u.sectors.some(s => s.sectorCode === c.config.sectorCode) }))} categorias={cats.map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id }))} setores={setores.map(s => ({ code: s.code, label: s.label }))} permissoes={{ operar: podeOperar(c.ctx, c.config), gerenciar: podeGerenciar(c.ctx, c.config), interno: podeVerInterno(c.ctx, c.config), responder: podeResponder(c.ctx, c.config, alvo, t.status, false), aprovar: t.createdById !== c.ctx.userId && !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY" && (isFullWrite(c.ctx.role) || alvo.approverIds.includes(c.ctx.userId)), escrever: !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY", verOrquestrador }} /></PageContainer>;
 }

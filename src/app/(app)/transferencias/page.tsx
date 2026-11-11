@@ -21,6 +21,7 @@ import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedHandoffWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { nomeExibicao } from "@/lib/companyName";
 import { formatInstantDate } from "@/lib/format";
+import { endereco } from "@/lib/enderecoCurto";
 import {
   abertaHa,
   assuntoDaTransferencia,
@@ -138,6 +139,7 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
       take: POR_PAGINA,
       select: {
         id: true,
+        number: true,
         subject: true,
         fromSector: true,
         entityType: true,
@@ -205,7 +207,8 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
     const pessoas = responsaveisDaLinha(aba, h.sectors, quem);
     return {
       id: h.id,
-      href: `/transferencias/${h.id}`,
+      // O endereço curto (10/11/2026, pedido do Kauan): /transferencias/transferencia-8.
+      href: endereco("transferencia", h.number),
       assunto,
       naoLida: h.views.length === 0,
       entidade: entityNames[h.entityId] ?? null,

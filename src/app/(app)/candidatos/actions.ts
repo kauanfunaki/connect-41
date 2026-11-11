@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
@@ -48,13 +49,15 @@ export async function criarCandidato(
 
   const data = candidatoData(form);
 
-  const prisma = getPrisma();
   let id: string;
 
   try {
-    const person = await prisma.person.create({
-      data: { tenantId: ctx.tenantId, type: PersonType.CANDIDATO, ...data },
-    });
+    // O número da pessoa no escritório (10/11/2026, pedido do Kauan): o
+    // candidato entra na mesma sequência de /pessoas/pessoa-12.
+    const tenantId = ctx.tenantId;
+    const person = await criarComNumero("pessoa", tenantId, (tx, number) =>
+      tx.person.create({ data: { tenantId, number, type: PersonType.CANDIDATO, ...data } })
+    );
     id = person.id;
   } catch (err) {
     if (isPrismaUniqueError(err)) {

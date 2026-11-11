@@ -13,14 +13,19 @@ import { formatInstantDate } from "@/lib/format";
 import { resumirConferencia } from "@/lib/rescisaoChecklist";
 import { podeRegistrarDesligamento } from "@/lib/situacoesDoDP";
 import { criarDesligamento, atualizarDesligamento, excluirDesligamento } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export default async function DesligamentoPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_colaboradores");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/desligamento");
+  const fichaDaPessoa = endereco("pessoa", numeroDaPessoa);
   const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
@@ -43,6 +48,7 @@ export default async function DesligamentoPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Desligamento"
         aba="trabalhista"
@@ -74,7 +80,7 @@ export default async function DesligamentoPage({
                         }
                       : null,
                   }}
-                  conferenciaHref={`/pessoas/${id}/desligamento/${t.id}/conferencia`}
+                  conferenciaHref={`${fichaDaPessoa}/desligamento/${t.id}/conferencia`}
                   updateAction={atualizarDesligamento.bind(null, id, t.id)}
                   removeAction={podeExcluir(ctx) ? excluirDesligamento.bind(null, id, t.id) : undefined}
                   canManage={canEdit}

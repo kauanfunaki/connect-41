@@ -8,19 +8,22 @@ import { IconButton } from "@/components/ui/IconButton";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { useTelasRecentes } from "@/components/shell/TelasRecentes";
 import { buscarTelas, type TelaNavegavel } from "@/lib/buscaDeTelas";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 type DocumentEntityType = "PERSON" | "COMPANY" | "VAGA" | "PIPELINE_ITEM";
 
+// `number`: o link vai pelo endereço curto, /empresas/empresa-301 (10/11/2026).
+// Opcional: a resposta de antes não traz, e o link com o uuid abre igual.
 type SearchResults = {
-  companies: { id: string; name: string }[];
-  people: { id: string; name: string }[];
+  companies: { id: string; number?: number; name: string }[];
+  people: { id: string; number?: number; name: string }[];
   candidatos: { id: string; name: string }[];
   pipelines: { id: string; name: string; sectorCode: string }[];
   vagas: { id: string; name: string }[];
   documentos: { id: string; name: string; entityType: DocumentEntityType; entityId: string }[];
   tarefas: { id: string; name: string; href: string }[];
   /** Processos do Societário (07/10/2026). Opcional: a resposta antiga não traz. */
-  processos?: { id: string; name: string; detalhe?: string }[];
+  processos?: { id: string; number?: number; name: string; detalhe?: string }[];
   /** Arquivos do Drive (09/11/2026), com a pasta onde abrem e a empresa no detalhe. Opcional, idem. */
   arquivos?: { id: string; name: string; detalhe: string; href: string }[];
   /** Há mais arquivos do que os 5 da lista: o grupo ganha o "Buscar nos Arquivos". */
@@ -67,18 +70,18 @@ function montarGrupos(telas: TelaNavegavel[], r: SearchResults, termo: string): 
       rotulo: "Telas",
       opcoes: telas.map((t) => ({ chave: `tela-${t.code}`, href: t.href, rotulo: t.label, detalhe: t.setor, icone: <ModuleIcon code={t.code} /> })),
     },
-    { rotulo: "Empresas", opcoes: r.companies.map((c) => ({ chave: `empresa-${c.id}`, href: `/empresas/${c.id}`, rotulo: c.name, icone: ic(Building2) })) },
+    { rotulo: "Empresas", opcoes: r.companies.map((c) => ({ chave: `empresa-${c.id}`, href: enderecoDe("empresa", c), rotulo: c.name, icone: ic(Building2) })) },
     {
       rotulo: "Processos",
       opcoes: (r.processos ?? []).map((p) => ({
         chave: `processo-${p.id}`,
-        href: `/processos/${p.id}`,
+        href: enderecoDe("processo", p),
         rotulo: p.name,
         detalhe: p.detalhe,
         icone: <ModuleIcon code="societario_processos" />,
       })),
     },
-    { rotulo: "Pessoas", opcoes: r.people.map((p) => ({ chave: `pessoa-${p.id}`, href: `/pessoas/${p.id}`, rotulo: p.name, icone: ic(User) })) },
+    { rotulo: "Pessoas", opcoes: r.people.map((p) => ({ chave: `pessoa-${p.id}`, href: enderecoDe("pessoa", p), rotulo: p.name, icone: ic(User) })) },
     { rotulo: "Candidatos", opcoes: r.candidatos.map((c) => ({ chave: `candidato-${c.id}`, href: `/candidatos/${c.id}`, rotulo: c.name, icone: ic(UserSearch) })) },
     { rotulo: "Tarefas", opcoes: r.pipelines.map((p) => ({ chave: `kanban-${p.id}`, href: boardPath(p), rotulo: p.name, icone: ic(SquareKanban) })) },
     { rotulo: "Atividades", opcoes: r.tarefas.map((t) => ({ chave: `tarefa-${t.id}`, href: t.href, rotulo: t.name, icone: ic(SquareCheck) })) },
