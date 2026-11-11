@@ -78,22 +78,72 @@ export function lerTipoDoPedido(t: string): { evento: Evento; tipo: Grupo["tipo"
  * O protocolo e quanto esperar. A demonstração devolve o `dados` cortado no
  * meio ("…\"TempoLimiteEmMin\":5", sem fechar a chave): sem conseguir ler o
  * JSON, os dois campos saem do texto.
+ *
+ * bug-624 (11/11/2026): na produção o pedido voltava 200, com "[Sucesso]" e
+ * "[Aviso-EVENTOSATUALIZACAO-005]" (só o aviso das requisições restantes), e
+ * esta leitura não achava o protocolo — de 30/10 a 11/11, nenhum resultado foi
+ * buscado. O formato real não ficou guardado; por isso a busca agora aceita o
+ * `dados` em qualquer das formas plausíveis: objeto, texto com JSON (uma ou
+ * duas vezes, com aspas escapadas), lista, campo aninhado e a chave com outra
+ * caixa. Sem protocolo, o erro leva um trecho do `dados` (sem os números de
+ * CPF/CNPJ) para o próximo diagnóstico.
  */
 export function lerSolicitacao(r: RespostaLida): Leitura<{ protocolo: string; esperaMs: number }> {
   if (r.status !== 200) return { ok: false, erro: `O Serpro respondeu ${r.status} ao pedido de eventos.` };
-  const d = r.dados;
-  let protocolo: string | null = null;
-  let espera: number | null = null;
-  if (d && typeof d === "object" && !Array.isArray(d)) {
-    const o = d as Record<string, unknown>;
-    protocolo = typeof o.protocolo === "string" ? o.protocolo : null;
-    espera = Number(o.TempoEsperaMedioEmMs) || null;
-  } else if (typeof d === "string") {
-    protocolo = /"protocolo"\s*:\s*"([^"]+)"/.exec(d)?.[1] ?? null;
-    espera = Number(/"TempoEsperaMedioEmMs"\s*:\s*(\d+)/.exec(d)?.[1]) || null;
-  }
-  if (!protocolo) return { ok: false, erro: "O Serpro não devolveu o protocolo dos eventos." };
+  const { protocolo, espera } = acharProtocolo(r.dados);
+  if (!protocolo) return { ok: false, erro: `O Serpro não devolveu o protocolo dos eventos. dados: ${amostraDosDados(r.dados)}` };
   return { ok: true, dados: { protocolo, esperaMs: Math.max(espera ?? 0, ESPERA_MINIMA_MS) + FOLGA_MS } };
+}
+
+const PROTOCOLO_NO_TEXTO = /\\*"protocolo\\*"\s*:\s*\\*"([^"\\]{6,})/i;
+const ESPERA_NO_TEXTO = /\\*"TempoEsperaMedioEmMs\\*"\s*:\s*(\d+)/i;
+
+/** O protocolo e o tempo de espera, onde quer que venham no `dados` — ver `lerSolicitacao`. */
+function acharProtocolo(d: unknown, nivel = 0): { protocolo: string | null; espera: number | null } {
+  const nada = { protocolo: null, espera: null };
+  if (d === null || d === undefined || nivel > 4) return nada;
+  if (typeof d === "string") {
+    const texto = d.trim();
+    if (texto.startsWith("{") || texto.startsWith("[") || texto.startsWith("\"")) {
+      try {
+        const dentro = acharProtocolo(JSON.parse(texto), nivel + 1);
+        if (dentro.protocolo) return dentro;
+      } catch {
+        // Cortado ou escapado: segue pelo texto.
+      }
+    }
+    return { protocolo: PROTOCOLO_NO_TEXTO.exec(texto)?.[1] ?? null, espera: Number(ESPERA_NO_TEXTO.exec(texto)?.[1]) || null };
+  }
+  if (Array.isArray(d)) {
+    for (const item of d) {
+      const achado = acharProtocolo(item, nivel + 1);
+      if (achado.protocolo) return achado;
+    }
+    return nada;
+  }
+  if (typeof d === "object") {
+    const o = d as Record<string, unknown>;
+    const chave = (nome: string) => Object.keys(o).find((k) => k.toLowerCase() === nome.toLowerCase());
+    const p = chave("protocolo");
+    const e = chave("TempoEsperaMedioEmMs");
+    if (p && typeof o[p] === "string" && (o[p] as string).trim()) return { protocolo: (o[p] as string).trim(), espera: e ? Number(o[e]) || null : null };
+    for (const valor of Object.values(o)) {
+      const achado = acharProtocolo(valor, nivel + 1);
+      if (achado.protocolo) return achado;
+    }
+  }
+  return nada;
+}
+
+/** Um trecho do `dados` para o erro, com os números de CPF/CNPJ trocados por "#". */
+export function amostraDosDados(d: unknown): string {
+  let texto: string;
+  try {
+    texto = typeof d === "string" ? d : JSON.stringify(d) ?? String(d);
+  } catch {
+    texto = String(d);
+  }
+  return texto.replace(/\d{11,14}/g, "#").slice(0, 300) || "(vazio)";
 }
 
 export type LinhaDaMatriz = { documento: string; ultimoEm: string | null; semAcesso: boolean };

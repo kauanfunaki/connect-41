@@ -1457,6 +1457,10 @@ model Tenant {
   academiaResultados AcademiaResultado[]
   academiaPreferencias AcademiaPreferencia[]
   academiaPremios AcademiaPremio[]
+  academiaMetas AcademiaMeta[]
+  academiaCampeoes AcademiaCampeao[]
+  academiaMesesFechados AcademiaMesFechado[]
+  academiaParabens AcademiaParabens[]
   flowFolders FlowFolder[]
   flowDocs FlowDoc[]
   techInternalTools TechInternalTool[]
@@ -2038,7 +2042,11 @@ model User {
   academiaSessoes         AcademiaSessao[]
   academiaResultados      AcademiaResultado[]
   academiaPreferencia     AcademiaPreferencia?
-  opsWatchers                 OpsWatcher[]
+  academiaMeta            AcademiaMeta?
+  academiaCampeoes        AcademiaCampeao[]
+  academiaParabensEnviados  AcademiaParabens[] @relation("AcademiaParabensDe")
+  academiaParabensRecebidos AcademiaParabens[] @relation("AcademiaParabensPara")
+  opsWatchers                OpsWatcher[]
   opsSites                    OpsSite[]
   opsApps                     OpsApp[]
   id           String   @id @default(uuid())
@@ -2434,6 +2442,9 @@ model Company {
   cargos                   Cargo[]
   vagas                    Vaga[]
   payrollCompetencies      PayrollCompetency[]
+  dp2Config                Dp2EmpresaConfig?
+  dp2Vinculos              Dp2Vinculo[]
+  dp2Competencias          Dp2Competencia[]
   rescisaoConfig           CompanyRescisaoConfig?
   benefitCatalogs          BenefitCatalog[]
   workShifts               WorkShift[]
@@ -2612,6 +2623,10 @@ model Person {
   absences             Absence[]
   terminations         Termination[]
   payrollEntries       PayrollEntry[]
+  dp2Vinculo           Dp2Vinculo?
+  dp2Eventos           Dp2Evento[]
+  dp2Calculos          Dp2Calculo[]
+  dp2Comparativos      Dp2Comparativo[]
   overtimeEntries      OvertimeEntry[]
   benefitAssignments   BenefitAssignment[]
   scheduleEntries      ScheduleEntry[]
@@ -6619,6 +6634,266 @@ model PayrollEntry {
   @@unique([competencyId, personId])
   @@index([tenantId, personId])
   @@map("payroll_entries")
+}
+
+// ─── DP 2 (11/11/2026) ──────────────────────────────────────────────────────
+//
+// O setor novo, criado do zero ao lado do DP de sempre (que continua no ar):
+// aqui o Connect CALCULA a folha, em vez de só conferir o que vem pronto da
+// Domínio. Estudo e fases em funcionalidade-621 do Controle interno.
+//
+// Os "tipos" e "situações" são texto (VarChar), como nas Guias: valor novo não
+// pede migration. Os nomes válidos moram em `src/lib/dp2/`.
+
+/// Uma versão de tabela oficial (INSS, IRRF, salário mínimo, salário-família)
+/// gravada pelo escritório. Sem linha aqui, vale a tabela embutida no código
+/// (`src/lib/dp2/tabelas.ts`); a linha existe para quando a lei muda antes de
+/// o código ser atualizado.
+model Dp2TabelaOficial {
+  id          String   @id @default(uuid())
+  tenantId    String
+  /// "INSS", "IRRF", "SALARIO_MINIMO" ou "SALARIO_FAMILIA".
+  tipo        String   @db.VarChar(20)
+  /// "AAAA-MM": a primeira competência em que a tabela vale.
+  vigencia    String   @db.VarChar(7)
+  /// O conteúdo, no formato do tipo (ver `tabelas.ts`).
+  dados       Json
+  observacao  String?  @db.VarChar(500)
+  criadaPorId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, tipo, vigencia])
+  @@map("dp2_tabelas_oficiais")
+}
+
+/// Rubrica do escritório: provento, desconto ou informativa. As do motor têm
+/// `papel` (salário, hora extra…) e nascem da lista padrão; as livres (`papel`
+/// nulo) são de valor informado pelo DP.
+model Dp2Rubrica {
+  id              String   @id @default(uuid())
+  tenantId        String
+  codigo          String   @db.VarChar(10)
+  nome            String   @db.VarChar(120)
+  /// "PROVENTO", "DESCONTO" ou "INFORMATIVA".
+  tipo            String   @db.VarChar(12)
+  /// O que o motor faz com ela ("SALARIO", "HE50"…); nulo = rubrica livre.
+  papel           String?  @db.VarChar(30)
+  /// Como se lança no mês: "VALOR", "HORAS" ou "DIAS".
+  lancamento      String   @default("VALOR") @db.VarChar(10)
+  /// Natureza da rubrica no eSocial (tabela 3), para a fase do eSocial.
+  naturezaEsocial String?  @db.VarChar(4)
+  incideInss      Boolean  @default(true)
+  incideFgts      Boolean  @default(true)
+  incideIrrf      Boolean  @default(true)
+  /// Entra na média de variáveis de férias, 13º e rescisão.
+  entraNaMedia    Boolean  @default(false)
+  contaDebito     String?  @db.VarChar(40)
+  contaCredito    String?  @db.VarChar(40)
+  ativa           Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  eventos Dp2Evento[]
+
+  @@unique([tenantId, codigo])
+  @@index([tenantId, papel])
+  @@map("dp2_rubricas")
+}
+
+/// Convenção coletiva: o que muda o cálculo (percentuais de hora extra e de
+/// adicional noturno) e o piso, para conferência.
+model Dp2Convencao {
+  id             String   @id @default(uuid())
+  tenantId       String
+  nome           String   @db.VarChar(160)
+  sindicato      String?  @db.VarChar(160)
+  /// Mês da data-base (1 a 12).
+  dataBase       Int?
+  /// "AAAA-MM-DD".
+  vigenciaInicio String?  @db.VarChar(10)
+  vigenciaFim    String?  @db.VarChar(10)
+  piso           Decimal? @db.Decimal(12, 2)
+  he50           Decimal  @default(50) @db.Decimal(6, 2)
+  he100          Decimal  @default(100) @db.Decimal(6, 2)
+  noturno        Decimal  @default(20) @db.Decimal(6, 2)
+  observacoes    String?  @db.Text
+  ativa          Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  empresas Dp2EmpresaConfig[]
+
+  @@index([tenantId])
+  @@map("dp2_convencoes")
+}
+
+/// Como o DP 2 calcula uma empresa: convenção e encargos patronais.
+model Dp2EmpresaConfig {
+  id                String   @id @default(uuid())
+  tenantId          String
+  companyId         String   @unique
+  convencaoId       String?
+  /// Simples Nacional (anexos I a III e V): a contribuição patronal vai no DAS.
+  patronalNoDas     Boolean  @default(false)
+  /// RAT/SAT em %: 1, 2 ou 3.
+  ratAliquota       Decimal  @default(2) @db.Decimal(5, 2)
+  fap               Decimal  @default(1) @db.Decimal(6, 4)
+  /// Terceiros (salário-educação, Sistema S…) em %.
+  terceirosAliquota Decimal  @default(5.8) @db.Decimal(5, 2)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  convencao Dp2Convencao? @relation(fields: [convencaoId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([convencaoId])
+  @@map("dp2_empresas_config")
+}
+
+/// O contrato do colaborador para o cálculo: salário e o que muda a folha dele.
+/// A pessoa (admissão, desligamento, CPF) continua no cadastro de pessoas.
+model Dp2Vinculo {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  companyId            String
+  personId             String   @unique
+  salarioBase          Decimal  @db.Decimal(12, 2)
+  /// "MENSAL" ou "HORISTA" (no horista, `salarioBase` é o valor da hora).
+  tipoSalario          String   @default("MENSAL") @db.VarChar(10)
+  horasMensais         Int      @default(220)
+  dependentesIrrf      Int      @default(0)
+  filhosSalarioFamilia Int      @default(0)
+  /// "NENHUM", "MINIMO" (10%), "MEDIO" (20%) ou "MAXIMO" (40%), sobre o salário mínimo.
+  insalubridade        String   @default("NENHUM") @db.VarChar(10)
+  periculosidade       Boolean  @default(false)
+  valeTransporte       Boolean  @default(false)
+  aprendiz             Boolean  @default(false)
+  observacoes          String?  @db.Text
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  person  Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([companyId])
+  @@map("dp2_vinculos")
+}
+
+/// Competência do DP 2: a folha mensal ou uma parcela do 13º de uma empresa.
+model Dp2Competencia {
+  id           String    @id @default(uuid())
+  tenantId     String
+  companyId    String
+  ano          Int
+  mes          Int
+  /// "MENSAL", "DECIMO_1" (1ª parcela do 13º) ou "DECIMO_2" (2ª parcela).
+  tipo         String    @default("MENSAL") @db.VarChar(10)
+  /// "ABERTA", "CALCULADA" ou "FECHADA".
+  situacao     String    @default("ABERTA") @db.VarChar(10)
+  abertaPorId  String?
+  calculadaEm  DateTime?
+  fechadaEm    DateTime?
+  fechadaPorId String?
+  /// Os totais do último cálculo (proventos, líquido, encargos…), para as listas.
+  totais       Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventos      Dp2Evento[]
+  calculos     Dp2Calculo[]
+  comparativos Dp2Comparativo[]
+
+  @@unique([companyId, ano, mes, tipo])
+  @@index([tenantId, ano, mes])
+  @@map("dp2_competencias")
+}
+
+/// Um lançamento variável do mês: horas extras, faltas, comissão…
+model Dp2Evento {
+  id            String   @id @default(uuid())
+  tenantId      String
+  competenciaId String
+  personId      String
+  rubricaId     String
+  /// Horas ou dias, nas rubricas lançadas assim.
+  quantidade    Decimal? @db.Decimal(10, 2)
+  /// Valor, nas rubricas de valor informado.
+  valor         Decimal? @db.Decimal(12, 2)
+  /// "DP", "PORTAL" ou "PONTO".
+  origem        String   @default("DP") @db.VarChar(10)
+  observacao    String?  @db.VarChar(300)
+  criadoPorId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+  rubrica     Dp2Rubrica     @relation(fields: [rubricaId], references: [id])
+
+  @@index([competenciaId, personId])
+  @@index([rubricaId])
+  @@index([personId])
+  @@map("dp2_eventos")
+}
+
+/// O resultado do motor para uma pessoa na competência, com a memória de cálculo.
+model Dp2Calculo {
+  id            String   @id @default(uuid())
+  tenantId      String
+  competenciaId String
+  personId      String
+  proventos     Decimal  @db.Decimal(12, 2)
+  descontos     Decimal  @db.Decimal(12, 2)
+  liquido       Decimal  @db.Decimal(12, 2)
+  baseInss      Decimal  @db.Decimal(12, 2)
+  inss          Decimal  @db.Decimal(12, 2)
+  baseIrrf      Decimal  @db.Decimal(12, 2)
+  irrf          Decimal  @db.Decimal(12, 2)
+  baseFgts      Decimal  @db.Decimal(12, 2)
+  fgts          Decimal  @db.Decimal(12, 2)
+  /// As linhas do holerite, cada uma com a memória ("2.500,00 ÷ 220 h × 1,5 × 10 h").
+  itens         Json
+  /// Os passos do INSS e do IRRF.
+  memoria       Json
+  encargos      Json
+  provisoes     Json
+  alertas       Json
+  calculadoEm   DateTime @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([competenciaId, personId])
+  @@index([personId])
+  @@map("dp2_calculos")
+}
+
+/// Os valores da Domínio para a mesma pessoa e competência, enquanto o DP 2
+/// roda em paralelo: o comparativo mostra a diferença linha a linha.
+model Dp2Comparativo {
+  id             String   @id @default(uuid())
+  tenantId       String
+  competenciaId  String
+  personId       String
+  proventos      Decimal? @db.Decimal(12, 2)
+  descontos      Decimal? @db.Decimal(12, 2)
+  liquido        Decimal? @db.Decimal(12, 2)
+  inss           Decimal? @db.Decimal(12, 2)
+  irrf           Decimal? @db.Decimal(12, 2)
+  fgts           Decimal? @db.Decimal(12, 2)
+  importadoPorId String?
+  importadoEm    DateTime @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([competenciaId, personId])
+  @@index([personId])
+  @@map("dp2_comparativos")
 }
 
 model OvertimeEntry {
@@ -11051,6 +11326,11 @@ model AtendimentoConfig {
   boasVindas    String? @db.Text
   foraDoHorario String? @db.Text
 
+  /// Desligado (padrão), o Connect não manda nada sozinho: nem boas-vindas, nem
+  /// fora do horário, nem a confirmação do PARAR. Serve para ligar o número e só
+  /// acompanhar as conversas (11/11/2026, pedido do Victor).
+  respostasAutomaticas Boolean @default(false)
+
   /// Cliente que volta a escrever até N dias depois de encerrar cai com o mesmo
   /// setor e a mesma pessoa; depois disso, passa pela triagem de novo.
   diasParaReabrir Int @default(7)
@@ -11379,9 +11659,12 @@ model AcademiaResultado {
   nivel       String   @db.VarChar(10)
   /// "AAAA-MM", em São Paulo.
   mes         String   @db.Char(7)
+  /// "AAAA-MM-DD", em São Paulo (Fase 2, 11/11/2026): é por ele que o desafio
+  /// do dia conta a sequência. Nulo nos resultados de antes da Fase 2.
+  dia         String?  @db.Char(10)
   /// Palavras por minuto (digitação e números).
   ppm         Int?
-  /// Acertos e total de questões (lógica).
+  /// Acertos e total de questões (lógica), ou de pedidos respondidos (atalhos).
   acertos     Int?
   total       Int?
   precisao    Decimal  @db.Decimal(5, 2)
@@ -11399,6 +11682,7 @@ model AcademiaResultado {
   @@unique([tenantId, origemHubId])
   @@index([tenantId, teste, mes, valendo, nivel])
   @@index([userId, teste, mes])
+  @@index([userId, teste, dia])
   @@map("academia_resultados")
 }
 
@@ -11422,7 +11706,10 @@ model AcademiaPremio {
   id          String   @id @default(uuid())
   tenantId    String
   mes         String   @db.Char(7)
+  /// O prêmio do pódio (top 3 de cada teste). Vazio quando só há o da evolução.
   texto       String   @db.VarChar(200)
+  /// O prêmio da maior evolução do mês (Fase 2, 11/11/2026).
+  textoEvolucao String? @db.VarChar(200)
   updatedById String?
   updatedAt   DateTime @updatedAt
 
@@ -11430,6 +11717,96 @@ model AcademiaPremio {
 
   @@unique([tenantId, mes])
   @@map("academia_premios")
+}
+
+// ─── Academia (Fase 2, 11/11/2026, Controle interno funcionalidade-594) ─────
+//
+// Desafio do dia e sequência (sem tabela nova: sessão e resultado com teste
+// "desafio" e a coluna `dia`), atalhos (teste "atalhos"), meta pessoal, Hall
+// dos campeões e parabéns entre colegas. Conquistas e placar por setor saem
+// do que já está gravado.
+
+/// A meta pessoal: uma por pessoa ("60 PPM na digitação até 30/11"). Trocar substitui.
+model AcademiaMeta {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String   @unique
+  teste     String   @db.VarChar(12)
+  /// Nulo: vale qualquer nível.
+  nivel     String?  @db.VarChar(10)
+  /// PPM (digitação e números) ou acertos (lógica e atalhos).
+  alvo      Int
+  /// "AAAA-MM-DD".
+  prazo     String   @db.Char(10)
+  /// O progresso conta os resultados valendo a partir daqui.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("academia_metas")
+}
+
+/// O Hall dos campeões: o pódio de cada teste e a maior evolução de um mês
+/// encerrado, gravados quando o mês fecha (ver `src/lib/academia/hall.ts`).
+model AcademiaCampeao {
+  id        String   @id @default(uuid())
+  tenantId  String
+  mes       String   @db.Char(7)
+  /// Um teste ("digitacao"…) ou "evolucao".
+  categoria String   @db.VarChar(12)
+  posicao   Int
+  userId    String
+  /// O teste do resultado (na evolução, o teste em que a pessoa mais evoluiu).
+  teste     String   @db.VarChar(12)
+  /// O resultado como ficou: "62 PPM · 96%", "+18% em Digitação (54 PPM)".
+  valor     String   @db.VarChar(80)
+  /// O prêmio do mês, como estava quando o mês fechou.
+  premio    String?  @db.VarChar(200)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, mes, categoria, posicao])
+  @@index([userId, categoria])
+  @@map("academia_campeoes")
+}
+
+/// A marca de que o Hall de um mês já foi gravado (mesmo sem campeão nenhum).
+model AcademiaMesFechado {
+  id        String   @id @default(uuid())
+  tenantId  String
+  mes       String   @db.Char(7)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, mes])
+  @@map("academia_meses_fechados")
+}
+
+/// "Parabéns" de um colega no Hall ou no ranking: um por quem manda, quem
+/// recebe, mês e tipo (o teste ou "evolucao"). Avisa quem recebe no sino.
+model AcademiaParabens {
+  id         String   @id @default(uuid())
+  tenantId   String
+  deUserId   String
+  paraUserId String
+  mes        String   @db.Char(7)
+  tipo       String   @db.VarChar(12)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  de     User   @relation("AcademiaParabensDe", fields: [deUserId], references: [id], onDelete: Cascade)
+  para   User   @relation("AcademiaParabensPara", fields: [paraUserId], references: [id], onDelete: Cascade)
+
+  @@unique([deUserId, paraUserId, mes, tipo])
+  @@index([paraUserId, mes])
+  @@index([tenantId, mes, tipo])
+  @@map("academia_parabens")
 }
 
 // ─── Repositório de fluxos (10/11/2026, pedido do Kauan) ────────────────────
@@ -11533,4 +11910,24 @@ model FlowAttachment {
 
   @@index([flowDocId])
   @@map("flow_attachments")
+}
+
+/// Um modelo aprovado pela Meta (11/11/2026): o único jeito de retomar a
+/// conversa depois de 24 h sem mensagem do cliente. O texto é cadastrado aqui
+/// igual ao aprovado lá, com {{1}}, {{2}}…; o {{1}} recebe a assinatura de quem manda.
+model AtendimentoModelo {
+  id         String  @id @default(uuid())
+  tenantId   String
+  rotulo     String  @db.VarChar(80)
+  /// O nome do modelo na Meta, exatamente como foi aprovado (minúsculas e _).
+  nomeNaMeta String  @db.VarChar(120)
+  idioma     String  @default("pt_BR") @db.VarChar(10)
+  texto      String  @db.Text
+  ativo      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, ativo])
+  @@map("atendimento_modelos")
 }

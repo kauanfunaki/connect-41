@@ -131,3 +131,31 @@ describe("certificado e o melhor do mês", () => {
     expect(melhorDoMes("logica", [])).toBeNull();
   });
 });
+
+// Atalhos (Fase 2, 11/11/2026): acertos no minuto.
+const ata = (userId: string, nivel: Nivel, acertos: number, total: number, duracaoMs = 60_000): LinhaDoResultado => ({
+  userId, nivel, sectorCode: "dp", ppm: null, acertos, total, precisao: Math.round((acertos / total) * 10_000) / 100, duracaoMs,
+});
+
+describe("atalhos", () => {
+  it("num nível, o melhor pelos acertos; empate, a precisão", () => {
+    const r = montarRanking("atalhos", [ata("ana", "medio", 20, 25), ata("ana", "medio", 22, 30), ata("bia", "medio", 22, 24), ata("caio", "facil", 40, 40)], "medio");
+    expect(r.map((p) => [p.posicao, p.userId, p.acertos, p.pontos])).toEqual([
+      [1, "bia", 22, 22],
+      [2, "ana", 22, 22],
+    ]);
+  });
+
+  it("em todos os níveis, a média ponderada dos acertos (pesos da digitação)", () => {
+    const [p] = montarRanking("atalhos", [ata("ana", "facil", 20, 20), ata("ana", "dificil", 10, 20)], null);
+    // (20 × 1,0 + 10 × 1,8) ÷ 2,8 = 13,57
+    expect(p.pontos).toBe(13.57);
+    expect(p.acertos).toBe(14);
+    expect(p.nivel).toBe("dificil");
+  });
+
+  it("o texto do resultado e o melhor do mês", () => {
+    const m = melhorDoMes("atalhos", [ata("ana", "facil", 12, 15), ata("ana", "facil", 18, 20)]);
+    expect(resultadoEmTexto("atalhos", m!)).toBe("18 acertos · 90%");
+  });
+});

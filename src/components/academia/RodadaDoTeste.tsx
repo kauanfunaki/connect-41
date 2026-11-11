@@ -13,6 +13,7 @@ import { DESCRICAO_DO_TESTE } from "./descricoes";
 import { IconeDoTeste } from "./IconeDoTeste";
 import { RodadaDeDigitacao } from "./RodadaDeDigitacao";
 import { RodadaDeLogica } from "./RodadaDeLogica";
+import { RodadaDeAtalhos } from "./RodadaDeAtalhos";
 import { ResultadoDaRodada } from "./ResultadoDaRodada";
 
 type Modo = "valendo" | "treino";
@@ -77,6 +78,7 @@ export function RodadaDoTeste({
     return <ResultadoDaRodada teste={teste} resultado={resultado} onDeNovo={deNovo} />;
   }
   if (rodada) {
+    if (rodada.teste === "atalhos") return <RodadaDeAtalhos rodada={rodada} onFim={setResultado} />;
     return rodada.teste === "logica" ? (
       <RodadaDeLogica rodada={rodada} onFim={setResultado} />
     ) : (
@@ -140,7 +142,9 @@ export function RodadaDoTeste({
             <p className="text-helper text-fg-muted">
               {teste === "logica"
                 ? `${QUESTOES_POR_RODADA} questões em ${TEMPO_DA_LOGICA_S / 60} minutos. O relógio começa assim que as questões aparecem.`
-                : "60 segundos, contados a partir da primeira tecla. Colar não vale."}
+                : teste === "atalhos"
+                  ? "60 segundos, contados a partir do primeiro atalho. O Médio inclui os do Fácil, e o Difícil inclui todos. Atalhos de Windows; no Excel, os do Excel em português (o do inglês também vale quando é comum)."
+                  : "60 segundos, contados a partir da primeira tecla. Colar não vale."}
             </p>
           </div>
 
