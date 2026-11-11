@@ -18,6 +18,7 @@ import { cadastroPeloTelefone, lerConfiguracao, nomesDosContatos } from "./dados
 import { avisarResposta, avisarTriagem } from "./avisos";
 import { ASSINATURA_AUTOMATICA, decidirChegada, mensagemDeChegada, previa, situacaoAoReabrir, type Situacao } from "./regras";
 import { enviarNoAtendimento, type ConexaoDoAtendimento } from "./transporte";
+import { arquivosDoAtendimento, rotuloDaMidia } from "./midia";
 
 export type ConexaoDoWebhook = { id: string; tenantId: string; integrationCode: string; enabled: boolean; configEnc: string };
 
@@ -30,19 +31,8 @@ type Chegada = {
   texto: string;
   nomeDoPerfil: string | null;
   midiaTipo: string | null;
-};
-
-const ROTULO_DA_MIDIA: Record<string, string> = {
-  image: "imagem",
-  audio: "áudio",
-  video: "vídeo",
-  document: "documento",
-  sticker: "figurinha",
-  imageMessage: "imagem",
-  audioMessage: "áudio",
-  videoMessage: "vídeo",
-  documentMessage: "documento",
-  stickerMessage: "figurinha",
+  /** A mídia para baixar e guardar, quando o provedor sabe (11/11/2026). */
+  midia?: MensagemIgnorada["midia"];
 };
 
 export function atenderEntrada(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, m: MensagemRecebida) {
@@ -50,16 +40,47 @@ export function atenderEntrada(conexao: ConexaoDoWebhook, provedor: ProvedorWhat
 }
 
 /**
- * Áudio, imagem, documento. Por enquanto entra na conversa como aviso de que
- * chegou um arquivo (com a legenda), e a pessoa pede pelo portal se precisar;
- * baixar e guardar o arquivo chega com os anexos.
+ * Áudio, imagem, documento: o arquivo é baixado e guardado na própria
+ * mensagem, que leva a legenda como texto. Se não der para baixar, a conversa
+ * mostra que chegou um arquivo, e a pessoa pede de novo ou pelo portal.
  */
 export function atenderMidia(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, m: MensagemIgnorada) {
-  const tipo = ROTULO_DA_MIDIA[m.tipo] ?? "arquivo";
-  const nome = m.documento?.nomeDoArquivo ? ` (${m.documento.nomeDoArquivo})` : "";
-  const legenda = m.legenda?.trim();
-  const texto = `Arquivo recebido: ${tipo}${nome}${legenda ? `\n${legenda}` : ""}`;
-  return receber(conexao, provedor, { waMessageId: m.waMessageId, de: m.de, texto, nomeDoPerfil: null, midiaTipo: m.tipo.slice(0, 30) });
+  const tipo = rotuloDaMidia(m.tipo);
+  const legenda = m.legenda?.trim() ?? "";
+  const nome = m.midia?.nomeDoArquivo ?? m.documento?.nomeDoArquivo ?? null;
+  const texto = legenda || `Arquivo recebido: ${tipo}${nome ? ` (${nome})` : ""}`;
+  return receber(conexao, provedor, { waMessageId: m.waMessageId, de: m.de, texto, nomeDoPerfil: null, midiaTipo: m.tipo.slice(0, 30), midia: m.midia });
+}
+
+/** Baixa e guarda o arquivo da mensagem. Nunca lança: falhar aqui não pode perder a mensagem. */
+async function guardarMidia(
+  tenantId: string,
+  mensagemId: string,
+  provedor: ProvedorWhatsapp,
+  configEnc: string,
+  c: Chegada
+): Promise<void> {
+  if (!c.midia || !provedor.baixarMidia) return;
+  try {
+    const r = await provedor.baixarMidia(lerConfig(configEnc), c.midia.referencia);
+    if (!r.ok) {
+      console.error("[atendimento:midia] não baixou", mensagemId, r.erro);
+      return;
+    }
+    const nome = r.nomeDoArquivo ?? c.midia.nomeDoArquivo ?? `${rotuloDaMidia(c.midiaTipo ?? "")}`;
+    const g = await arquivosDoAtendimento.gravarAnexos(tenantId, [new File([new Uint8Array(r.bytes)], nome)]);
+    if (!g.ok) {
+      console.error("[atendimento:midia] recusada", mensagemId, g.erro);
+      return;
+    }
+    const a = g.anexos[0]!;
+    await getPrisma().atendimentoMensagem.update({
+      where: { id: mensagemId },
+      data: { midiaPath: a.fileUrl, midiaNome: a.fileName.slice(0, 180), midiaMime: a.mimeType.slice(0, 100) },
+    });
+  } catch (err) {
+    console.error("[atendimento:midia] falha", mensagemId, err);
+  }
 }
 
 function receber(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, c: Chegada): Promise<DesfechoDaEntrada> {
@@ -122,6 +143,7 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     if (typeof err === "object" && err && "code" in err && (err as { code: string }).code === "P2002") return "repetida";
     throw err;
   }
+  await guardarMidia(tenantId, mensagemId, provedor, conexao.configEnc, c);
 
   await prisma.atendimentoConversa.update({ where: { id: conversa.id }, data: { lastInboundAt: agora, lastMessageAt: agora } });
 
@@ -133,10 +155,13 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     config: lerConfig(conexao.configEnc),
   };
 
-  // PARAR: confirma uma vez e silencia. Quem escreve de novo volta.
+  const config = await lerConfiguracao(tenantId);
+
+  // PARAR: confirma uma vez e silencia. Quem escreve de novo volta. Com as
+  // respostas automáticas desligadas, só marca, sem responder.
   if (!c.midiaTipo && pediuParaSair(c.texto)) {
     await prisma.atendimentoConversa.update({ where: { id: conversa.id }, data: { optedOutAt: agora } });
-    await enviarNoAtendimento({
+    if (config.respostasAutomaticas) await enviarNoAtendimento({
       tenantId,
       conversaId: conversa.id,
       cicloId: null,
@@ -153,7 +178,6 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     await prisma.atendimentoConversa.update({ where: { id: conversa.id }, data: { optedOutAt: null } });
   }
 
-  const config = await lerConfiguracao(tenantId);
   const ultimo = await prisma.atendimentoCiclo.findFirst({
     where: { conversaId: conversa.id },
     orderBy: { abertoEm: "desc" },
@@ -207,7 +231,7 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
   });
   await prisma.atendimentoMensagem.update({ where: { id: mensagemId }, data: { cicloId: ciclo.id } });
 
-  const automatica = mensagemDeChegada(config, agora);
+  const automatica = config.respostasAutomaticas ? mensagemDeChegada(config, agora) : null;
   if (automatica) {
     await enviarNoAtendimento({
       tenantId,

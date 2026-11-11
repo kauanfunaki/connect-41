@@ -14,6 +14,7 @@ const avisarTriagem = vi.fn();
 const avisarResposta = vi.fn();
 const enviarNoAtendimento = vi.fn();
 let moduloLigado = true;
+let respostasAutomaticas = true;
 
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => prisma }));
 vi.mock("@/lib/integracoes/data", () => ({ lerConfig: () => ({}) }));
@@ -26,14 +27,17 @@ vi.mock("./dados", () => ({
     fechaAs: "23:59",
     boasVindas: "Olá! Já respondemos.",
     foraDoHorario: null,
+    respostasAutomaticas,
     diasParaReabrir: 7,
   }),
   nomesDosContatos: async () => () => ({ titulo: "Rafael", subtitulo: null, empresa: null, pessoa: null }),
 }));
 vi.mock("./avisos", () => ({ avisarTriagem: (...a: unknown[]) => avisarTriagem(...a), avisarResposta: (...a: unknown[]) => avisarResposta(...a) }));
+const gravarAnexos = vi.fn();
+vi.mock("./midia", () => ({ rotuloDaMidia: (t: string) => (t === "image" ? "imagem" : "arquivo"), arquivosDoAtendimento: { gravarAnexos: (...a: unknown[]) => gravarAnexos(...a) } }));
 vi.mock("./transporte", () => ({ enviarNoAtendimento: (...a: unknown[]) => enviarNoAtendimento(...a) }));
 
-const { atenderEntrada } = await import("./entrada");
+const { atenderEntrada, atenderMidia } = await import("./entrada");
 const { provedorDaIntegracao } = await import("@/lib/whatsapp/provedores");
 
 const conexao = { id: "int1", tenantId: "t1", integrationCode: "whatsapp_atendimento_evolution", enabled: true, configEnc: "" };
@@ -43,6 +47,7 @@ const msg = (texto: string, id = "wa1") => ({ waMessageId: id, de: "554198888777
 beforeEach(() => {
   vi.clearAllMocks();
   moduloLigado = true;
+  respostasAutomaticas = true;
   prisma.atendimentoContato.findUnique.mockResolvedValue(null);
   prisma.atendimentoContato.upsert.mockResolvedValue({ id: "ct1", waPhone: "5541988887777", nomeNoWhatsapp: "Rafael", nome: null, companyId: null, personId: null });
   prisma.atendimentoConversa.upsert.mockResolvedValue({ id: "cv1", optedOutAt: null });
@@ -81,6 +86,15 @@ describe("entrada do Atendimento", () => {
     expect(prisma.atendimentoCiclo.create).not.toHaveBeenCalled();
   });
 
+  it("com as respostas automáticas desligadas, a conversa chega na triagem e nada sai sozinho", async () => {
+    respostasAutomaticas = false;
+    expect(await atenderEntrada(conexao, provedor, msg("Oi, quero abrir uma empresa"))).toBe("triagem");
+    expect(avisarTriagem).toHaveBeenCalled();
+    expect(await atenderEntrada(conexao, provedor, msg("PARAR", "wa2"))).toBe("parou");
+    expect(prisma.atendimentoConversa.update).toHaveBeenCalledWith(expect.objectContaining({ data: { optedOutAt: expect.any(Date) } }));
+    expect(enviarNoAtendimento).not.toHaveBeenCalled();
+  });
+
   it("conversa aguardando o cliente volta para em atendimento e avisa o responsável", async () => {
     prisma.atendimentoCiclo.findFirst.mockResolvedValue({ id: "cl9", situacao: "AGUARDANDO_CLIENTE", sectorCode: "fiscal", assignedToId: "ana", encerradoEm: null });
     prisma.atendimentoCiclo.update.mockResolvedValue({ id: "cl9", situacao: "EM_ATENDIMENTO", sectorCode: "fiscal", assignedToId: "ana" });
@@ -96,5 +110,26 @@ describe("entrada do Atendimento", () => {
     expect(await atenderEntrada(conexao, provedor, msg("Oi de novo"))).toBe("reaberta");
     expect(prisma.atendimentoCiclo.create.mock.calls[0]![0].data).toMatchObject({ situacao: "EM_ATENDIMENTO", sectorCode: "fiscal", assignedToId: "ana" });
     expect(avisarResposta).toHaveBeenCalledWith(expect.objectContaining({ paraUserId: "ana" }));
+  });
+});
+
+describe("mídia na entrada", () => {
+  it("baixa, guarda e liga o arquivo à mensagem, com a legenda como texto", async () => {
+    const baixarMidia = vi.fn().mockResolvedValue({ ok: true, bytes: Buffer.from("%PDF-1.7"), mimetype: "application/pdf", nomeDoArquivo: "guia.pdf" });
+    gravarAnexos.mockResolvedValue({ ok: true, anexos: [{ fileName: "guia.pdf", fileUrl: "t1/x.pdf", mimeType: "application/pdf", sizeBytes: 8 }] });
+    const comMidia = { ...provedor, baixarMidia };
+    const r = await atenderMidia(conexao, comMidia, { waMessageId: "wm1", tipo: "document", de: "5541988887777", legenda: "segue a guia", midia: { referencia: { id: "m1" }, mimetype: "application/pdf", nomeDoArquivo: "guia.pdf" } });
+    expect(r).toBe("triagem");
+    expect(prisma.atendimentoMensagem.create.mock.calls[0]![0].data).toMatchObject({ body: "segue a guia", midiaTipo: "document" });
+    expect(baixarMidia).toHaveBeenCalledWith({}, { id: "m1" });
+    expect(prisma.atendimentoMensagem.update).toHaveBeenCalledWith(expect.objectContaining({ data: { midiaPath: "t1/x.pdf", midiaNome: "guia.pdf", midiaMime: "application/pdf" } }));
+  });
+
+  it("se não der para baixar, a mensagem fica, dizendo que chegou um arquivo", async () => {
+    const baixarMidia = vi.fn().mockResolvedValue({ ok: false, erro: "fora do ar" });
+    const r = await atenderMidia(conexao, { ...provedor, baixarMidia }, { waMessageId: "wm2", tipo: "image", de: "5541988887777", midia: { referencia: { id: "m2" }, mimetype: "image/jpeg", nomeDoArquivo: null } });
+    expect(r).toBe("triagem");
+    expect(prisma.atendimentoMensagem.create.mock.calls[0]![0].data.body).toBe("Arquivo recebido: imagem");
+    expect(gravarAnexos).not.toHaveBeenCalled();
   });
 });

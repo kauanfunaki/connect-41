@@ -22,7 +22,8 @@ import {
   setoresDaPessoa,
 } from "./acesso";
 import { desfechosDoEscritorio, lerConfiguracao, mensagensPadraoPara, nomesDosContatos, setoresQueAtendem, telefoneLegivel } from "./dados";
-import { DIAS_DAS_ENCERRADAS, previa, recortesDe, type CartaoParaRecorte, type Recorte, type Situacao } from "./regras";
+import { abreNaTela } from "./midia";
+import { DIAS_DAS_ENCERRADAS, variaveisDoModelo, previa, recortesDe, type CartaoParaRecorte, type Recorte, type Situacao } from "./regras";
 import { conexaoPeloId, podeEnviarNaConversa } from "./transporte";
 
 const LIMITE_DA_LISTA = 300;
@@ -180,12 +181,12 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
   const contato = ciclo.conversa.contato;
   const setorDaConversa = ciclo.sectorCode ?? c.cfg.triagem;
 
-  const [mensagens, conexao, nomeDe, empresa, desfechos, padrao, pessoasDoSetor, temPortal] = await Promise.all([
+  const [mensagens, conexao, nomeDe, empresa, desfechos, padrao, pessoasDoSetor, temPortal, modelos] = await Promise.all([
     prisma.atendimentoMensagem.findMany({
       where: { conversaId: ciclo.conversaId },
       orderBy: { createdAt: "desc" },
       take: LIMITE_DE_MENSAGENS,
-      select: { id: true, cicloId: true, direcao: true, body: true, status: true, erro: true, senderUserId: true, assinatura: true, interna: true, automatica: true, midiaTipo: true, createdAt: true },
+      select: { id: true, cicloId: true, direcao: true, body: true, status: true, erro: true, senderUserId: true, assinatura: true, interna: true, automatica: true, midiaTipo: true, midiaPath: true, midiaNome: true, midiaMime: true, createdAt: true },
     }),
     conexaoPeloId(tenantId, ciclo.conversa.integrationId),
     nomesDosContatos(tenantId, [contato]),
@@ -200,6 +201,7 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       orderBy: { name: "asc" },
     }),
     contato.companyId ? prisma.portalUserCompany.count({ where: { tenantId, companyId: contato.companyId } }) : Promise.resolve(0),
+    prisma.atendimentoModelo.findMany({ where: { tenantId, ativo: true }, orderBy: { rotulo: "asc" }, select: { id: true, rotulo: true, texto: true } }),
   ]);
 
   const idsDeGente = new Set<string>();
@@ -256,6 +258,7 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       interna: m.interna,
       automatica: m.automatica,
       midia: !!m.midiaTipo,
+      arquivo: m.midiaPath ? { nome: m.midiaNome ?? "arquivo", mime: m.midiaMime ?? "", imagem: abreNaTela(m.midiaMime) } : null,
       quando: m.createdAt.toISOString(),
     })),
     caminho: ciclo.movimentos.map((mv) => ({
@@ -289,6 +292,8 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       e.atendem.map((code) => [code, pessoasDoSetor.filter((p) => p.sectors.some((s) => s.sectorCode === code)).map((p) => ({ id: p.id, nome: p.name }))])
     ) as Record<string, { id: string; nome: string }[]>,
     desfechos: desfechos.map((d) => ({ id: d.id, label: d.label })),
+    modelos: modelos.map((m) => ({ id: m.id, rotulo: m.rotulo, texto: m.texto, variaveis: variaveisDoModelo(m.texto) })),
+    enviaArquivo: !!conexao?.provedor.enviarMidia,
     mensagensPadrao: padrao.map((m) => ({ id: m.id, titulo: m.titulo, texto: m.texto, setor: rotulo(m.sectorCode) })),
     pode: {
       assumir: podeAssumir(c.ctx, c.cfg, alvo),
@@ -298,6 +303,7 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       pedirEncaminhamento: podePedirEncaminhamento(c.ctx, c.cfg, alvo) && !pedido,
       decidirPedido: !!pedido && podeDecidirPedido(c.ctx, c.cfg),
       vincular: podeAgirNoCiclo(c.ctx, c.cfg, alvo),
+      convidar: ehDaTriagem(c.ctx, c.cfg) && !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY" && ciclo.situacao !== "ENCERRADO",
     },
     eu: { id: c.ctx.userId },
   };

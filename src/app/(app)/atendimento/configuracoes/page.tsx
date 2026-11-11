@@ -18,12 +18,13 @@ export default async function ConfiguracoesDoAtendimentoPage() {
   const c = await contextoDaTela();
   if (!c || !podeConfigurar(c.ctx, c.cfg)) notFound();
   const tenantId = c.ctx.tenantId;
-  const [config, maps, conexoes, desfechos, mensagens] = await Promise.all([
+  const [config, maps, conexoes, desfechos, mensagens, modelos] = await Promise.all([
     lerConfiguracao(tenantId),
     getSectorMaps(tenantId),
     conexoesDoEscritorio(tenantId),
     desfechosDoEscritorio(tenantId, true),
     getPrisma().atendimentoMensagemPadrao.findMany({ where: { tenantId }, orderBy: [{ titulo: "asc" }] }),
+    getPrisma().atendimentoModelo.findMany({ where: { tenantId }, orderBy: [{ rotulo: "asc" }] }),
   ]);
   const ativos = maps.options.map((o) => o.value);
   const marcados = setoresQueAtendem(config.setores, ativos, c.cfg.triagem);
@@ -54,12 +55,14 @@ export default async function ConfiguracoesDoAtendimentoPage() {
           fechaAs: config.fechaAs,
           boasVindas: config.boasVindas ?? "",
           foraDoHorario: config.foraDoHorario ?? "",
+          respostasAutomaticas: config.respostasAutomaticas,
           diasParaReabrir: config.diasParaReabrir,
           setores: marcados,
           ceciLigada: config.ceciLigada,
         }}
         setores={maps.options.filter((o) => o.value !== c.cfg.triagem).map((o) => ({ code: o.value, label: o.label, cor: maps.colors[o.value] ?? "#586577" }))}
         desfechos={desfechos}
+        modelos={modelos.map((m) => ({ id: m.id, rotulo: m.rotulo, nomeNaMeta: m.nomeNaMeta, idioma: m.idioma, texto: m.texto, ativo: m.ativo }))}
         mensagens={mensagens.map((m) => ({ id: m.id, titulo: m.titulo, sectorCode: m.sectorCode, texto: m.texto, ativo: m.ativo }))}
       />
     </PageContainer>

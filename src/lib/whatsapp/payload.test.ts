@@ -77,6 +77,14 @@ describe("lerMensagens", () => {
     expect(ignoradas.map((i) => i.tipo)).toEqual(["audio", "image"]);
   });
 
+  // O Atendimento do escritório guarda a mídia (11/11/2026): o id vai junto.
+  it("a mídia traz o id, o tipo e o nome do arquivo", () => {
+    const { ignoradas } = lerMensagens(
+      envelope([{ id: "w4", from: "5541988887777", timestamp: "1789000000", type: "document", document: { id: "d1", mime_type: "application/pdf", filename: "guia.pdf" } }])
+    );
+    expect(ignoradas[0]?.midia).toEqual({ referencia: { id: "d1" }, mimetype: "application/pdf", nomeDoArquivo: "guia.pdf" });
+  });
+
   it("a legenda da imagem vem junto", () => {
     const { ignoradas } = lerMensagens(
       envelope([{ id: "w3", from: "5541988887777", timestamp: "1789000000", type: "image", image: { id: "i", caption: "comprovante" } }])

@@ -97,6 +97,16 @@ describe("Evolution · lerEvento", () => {
     expect(r.ignoradas[0]?.legenda).toBe("meu certificado");
   });
 
+  // O Atendimento do escritório guarda qualquer mídia (11/11/2026); o Recrutamento só lê o `documento`.
+  it("imagem e áudio trazem a mídia para baixar, sem virar documento", () => {
+    const r = provedorEvolucao.lerEvento(
+      upsert(texto({ messageType: "audioMessage", message: { audioMessage: { mimetype: "audio/ogg; codecs=opus" } } }))
+    );
+    expect(r.ignoradas[0]?.midia?.mimetype).toBe("audio/ogg; codecs=opus");
+    expect(r.ignoradas[0]?.midia?.referencia).toMatchObject({ message: { audioMessage: {} } });
+    expect(r.ignoradas[0]?.documento).toBeUndefined();
+  });
+
   it("reação não é pergunta de ninguém: nem mensagem, nem ignorada", () => {
     const r = provedorEvolucao.lerEvento(upsert(texto({ messageType: "reactionMessage", message: {} })));
     expect(r.mensagens).toEqual([]);
