@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 export default async function NovaSolicitacaoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ empresa?: string; assunto?: string; descricao?: string }>;
+  searchParams: Promise<{ empresa?: string; assunto?: string; descricao?: string; de?: string }>;
 }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("portal_solicitacoes")) notFound();
@@ -44,7 +44,9 @@ export default async function NovaSolicitacaoPage({
     assuntoId: assuntos.some((a) => a.id === pedido.assunto) ? pedido.assunto : undefined,
     descricao: typeof pedido.descricao === "string" ? pedido.descricao.slice(0, LIMITE_DA_DESCRICAO) : undefined,
   };
-  const daCeci = !!(inicial.empresaId || inicial.assuntoId || inicial.descricao);
+  // Só o link da Ceci traz `de=ceci` (11/11/2026). A dúvida sobre um documento
+  // (P30) também abre a tela preenchida, e ali o aviso da Ceci seria falso.
+  const daCeci = pedido.de === "ceci" && !!(inicial.empresaId || inicial.assuntoId || inicial.descricao);
 
   return (
     <PageContainer>

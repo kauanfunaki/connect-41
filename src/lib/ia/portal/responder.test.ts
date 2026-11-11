@@ -133,7 +133,7 @@ describe("a solicitação preparada", () => {
     expect(r.solicitacao.assunto).toBe("Documentos");
     const url = new URL(r.solicitacao.href, "https://x");
     expect(url.pathname).toBe("/portal/solicitacoes/nova");
-    expect(Object.fromEntries(url.searchParams)).toEqual({ empresa: "a-filial", assunto: "as-1", descricao: "Preciso do informe de rendimentos de 2025." });
+    expect(Object.fromEntries(url.searchParams)).toEqual({ empresa: "a-filial", assunto: "as-1", descricao: "Preciso do informe de rendimentos de 2025.", de: "ceci" });
   });
 
   it("empresa de fora, assunto que não existe ou descrição vazia: nada", () => {
