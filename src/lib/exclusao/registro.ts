@@ -244,6 +244,9 @@ const USUARIO: Ligacao[] = [
   { modelo: "Document", campo: "uploadedBy", fk: "uploadedById", tratamento: "reatribuir", rotulo: ["documento anexado", "documentos anexados"], historico: true },
   { modelo: "ClientDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["documento enviado ao cliente", "documentos enviados ao cliente"], historico: true },
   { modelo: "Handoff", campo: "requester", fk: "requestedBy", tratamento: "reatribuir", rotulo: ["transferência pedida", "transferências pedidas"], historico: true },
+  // A Atividade da transferência aberta (10/11/2026): comentário, devolução,
+  // começo e fim de parte passam para quem exclui, como os comentários dos Quadros.
+  { modelo: "HandoffEvent", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação em transferência", "comentários e movimentações em transferências"], historico: true },
   { modelo: "Meeting", campo: "createdBy", fk: "createdByUserId", tratamento: "reatribuir", rotulo: ["reunião criada", "reuniões criadas"], historico: true },
   { modelo: "Evaluation", campo: "evaluator", fk: "evaluatorUserId", tratamento: "reatribuir", rotulo: ["avaliação de desempenho feita", "avaliações de desempenho feitas"], historico: true },
   { modelo: "InterviewScorecard", campo: "evaluator", fk: "evaluatorUserId", tratamento: "reatribuir", rotulo: ["avaliação de entrevista", "avaliações de entrevista"], historico: true },
@@ -253,6 +256,9 @@ const USUARIO: Ligacao[] = [
   { modelo: "Budget", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["orçamento", "orçamentos"], historico: true },
   { modelo: "ManualDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["manual do BPO", "manuais do BPO"], historico: true },
   { modelo: "ManualPage", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["página de manual", "páginas de manual"], historico: true },
+  // As do setor passam; as PESSOAIS dele (10/11/2026) saem antes, num passo
+  // próprio do plano (`usuario.ts`): só ele as via, e passá-las a quem exclui
+  // entregaria ao administrador senhas que a regra nunca o deixou revelar.
   { modelo: "BpoCredential", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["senha do cofre do BPO", "senhas do cofre do BPO"], historico: true },
   { modelo: "ValoraProposta", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["proposta do Valora", "propostas do Valora"], historico: true },
 
@@ -339,6 +345,8 @@ const USUARIO: Ligacao[] = [
   { modelo: "OAuthAccount", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PushSubscription", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserAgendaConfig", campo: "user", fk: "userId", tratamento: "cascata" },
+  // A Agenda da pessoa (10/11/2026): as fontes escondidas e a última visão; sai junto.
+  { modelo: "UserAgendaView", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPinnedModule", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserPreference", campo: "user", fk: "userId", tratamento: "cascata" },
   // Vínculo da conta GitHub feito em Sua conta (27/10/2026): sai junto com a pessoa.
@@ -346,6 +354,17 @@ const USUARIO: Ligacao[] = [
   { modelo: "LocalFiscalScenario", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserSector", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "UserTenantAccess", campo: "user", fk: "userId", tratamento: "cascata" },
+  // "Todos do setor, menos…" do cofre (10/11/2026): a marca de que ele não vê
+  // uma senha não tem o que passar a ninguém — sai junto com a conta.
+  { modelo: "BpoCredentialRestriction", campo: "user", fk: "userId", tratamento: "cascata" },
+  // Os cartões do topo do Início que a pessoa escolheu (10/11/2026): preferência
+  // dela, sem nada para passar a ninguém — sai junto com a conta.
+  { modelo: "UserHomeCards", campo: "user", fk: "userId", tratamento: "cascata" },
+  // A Academia (10/11/2026): os resultados e as rodadas são da própria pessoa
+  // e não do escritório — saem junto com a conta, como as notificações.
+  { modelo: "AcademiaResultado", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["resultado da Academia", "resultados da Academia"] },
+  { modelo: "AcademiaSessao", campo: "user", fk: "userId", tratamento: "cascata" },
+  { modelo: "AcademiaPreferencia", campo: "user", fk: "userId", tratamento: "cascata" },
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
@@ -378,6 +397,9 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "InternalContract", coluna: "ownerUserId", tratamento: "manter", motivo: "quem responde pelo contrato; o nome fica gravado em ownerName e a tela mostra o nome" },
   { modelo: "InternalContract", coluna: "createdById", tratamento: "manter", motivo: "autor do cadastro do contrato; a tela não expõe o id" },
   { modelo: "SectorMenuOrder", coluna: "updatedById", tratamento: "manter", motivo: "quem organizou o menu do setor por último; a tela não expõe o id" },
+  { modelo: "SectorAgendaView", coluna: "updatedById", tratamento: "manter", motivo: "quem mudou a Agenda do setor por último; a tela não expõe o id, e a auditoria guarda o nome" },
+  // O padrão dos cartões do Início do setor (10/11/2026): a troca fica na auditoria, com o nome.
+  { modelo: "SectorHomeCards", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou por último o padrão dos cartões do Início do setor; a tela não expõe o id e a auditoria guarda o nome" },
   { modelo: "HelpdeskDraft", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskTicket", coluna: "createdById", tratamento: "reatribuir" },
   { modelo: "HelpdeskAssignee", coluna: "userId", tratamento: "apagar" },
@@ -390,6 +412,20 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "PersonalApiToken", coluna: "revokedById", tratamento: "manter", motivo: "quem revogou o token de outra pessoa (o administrador); a tela não expõe o id" },
   { modelo: "TechInternalAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
   { modelo: "TechInternalAcceptanceCheck", coluna: "checkedById", tratamento: "manter", motivo: "quem conferiu o ponto do critério de aceite no Controle interno; a tela mostra o nome gravado junto, como nos comentários" },
+  // A Academia (10/11/2026): quem cadastrou o texto ou a questão e quem gravou o
+  // prêmio do mês. A tela não mostra; a auditoria guarda o nome.
+  { modelo: "AcademiaTexto", coluna: "createdById", tratamento: "manter", motivo: "quem cadastrou o texto da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "AcademiaQuestao", coluna: "createdById", tratamento: "manter", motivo: "quem cadastrou a questão da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "AcademiaPremio", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o prêmio do mês da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
+  // O Repositório de fluxos (10/11/2026): quem criou, editou, salvou a versão e
+  // anexou, e o dono do fluxo. A tela mostra o nome de quem existe (a versão
+  // guarda o nome junto); sem a pessoa, mostra “—” e o setor escolhe outro dono.
+  { modelo: "FlowFolder", coluna: "createdById", tratamento: "manter", motivo: "quem criou a pasta do Repositório de fluxos; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "FlowDoc", coluna: "createdById", tratamento: "manter", motivo: "quem criou o fluxo; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "FlowDoc", coluna: "updatedById", tratamento: "manter", motivo: "quem salvou a última versão do fluxo; a tela não expõe o id, e a versão guarda o nome" },
+  { modelo: "FlowDoc", coluna: "ownerUserId", tratamento: "manter", motivo: "o dono do fluxo; a tela mostra o nome de quem existe, e sem a pessoa mostra “—” até o setor escolher outro" },
+  { modelo: "FlowVersion", coluna: "savedById", tratamento: "manter", motivo: "quem salvou a versão do fluxo; o nome fica gravado em savedByName e a tela mostra o nome" },
+  { modelo: "FlowAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo ao fluxo; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },

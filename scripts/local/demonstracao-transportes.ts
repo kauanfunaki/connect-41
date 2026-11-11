@@ -15,6 +15,7 @@
 
 import { PrismaClient } from "../../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { proximoNumero } from "../../src/lib/enderecoCurtoNumeracao";
 import { randomBytes } from "node:crypto";
 import { camposDoRegime } from "../../src/lib/taxRegime";
 
@@ -44,6 +45,7 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
   const empresa = await p.company.create({
     data: {
       tenantId,
+      number: await proximoNumero(p, "empresa", tenantId),
       name: `${MARCA} TRANSPORTES MODELO LTDA`,
       displayName: `${MARCA} Transportes Modelo`,
       cnpj: "11222333000181",
@@ -369,6 +371,7 @@ async function criar(p: PrismaClient, tenantId: string, autorId: string, outroAu
     await p.clientRequest.create({
       data: {
         tenantId,
+        number: await proximoNumero(p, "pendencia", tenantId),
         companyId: empresa.id,
         kind: r.tipo,
         title: `${MARCA} ${r.titulo}`,

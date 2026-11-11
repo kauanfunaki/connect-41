@@ -76,7 +76,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
       const setor = setores.find(s => s.code === t.requesterSectorCode);
       const posicao = dados.posicoes.get(t.id);
       const autoria = { createdById: t.createdById, responsaveis: t.assignees.map(a => a.userId), equipe };
-      return <CartaoDoChamado key={t.id} id={t.id} titulo={t.title} status={t.status} prioridade={t.priority} version={t.version} criadoEm={t.createdAt}
+      return <CartaoDoChamado key={t.id} id={t.id} numero={t.number} titulo={t.title} status={t.status} prioridade={t.priority} version={t.version} criadoEm={t.createdAt}
         categoria={caminhoDaCategoria(cats, t.categoryId) || t.category.name} corCategoria={corDaCategoria(t.categoryId)}
         setor={{ rotulo: setor?.label ?? t.requesterSectorCode, cor: setor?.color ?? "var(--c41-fg-muted)" }}
         responsaveis={t.assignees.map(a => ({ id: a.userId, nome: nome(a.userId) }))}

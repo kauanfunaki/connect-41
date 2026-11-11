@@ -27,6 +27,7 @@ const POR_PAGINA = 50;
 function paraALinha(p: LinhaDeColaborador): LinhaDaTabelaDeColaboradores {
   return {
     id: p.id,
+    number: p.number,
     name: p.name,
     active: p.active,
     cpf: p.cpf,
@@ -35,7 +36,7 @@ function paraALinha(p: LinhaDeColaborador): LinhaDaTabelaDeColaboradores {
     situacao: p.employmentStatus,
     // Data de calendário (meia-noite UTC), como a ficha mostra.
     admissao: p.admissionDate ? formatCalendarDate(p.admissionDate) : null,
-    empresa: p.currentCompany ? { id: p.currentCompany.id, nome: nomeExibicao(p.currentCompany) } : null,
+    empresa: p.currentCompany ? { id: p.currentCompany.id, number: p.currentCompany.number, nome: nomeExibicao(p.currentCompany) } : null,
   };
 }
 

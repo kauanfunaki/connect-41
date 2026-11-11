@@ -3,9 +3,11 @@ import { ArrowRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 type PersonEntry = {
   id: string;
+  number?: number;
   name: string;
   type: "COLABORADOR" | "CANDIDATO";
 };
@@ -33,7 +35,7 @@ export function CompanyPeopleSection({ companyId, people }: Props) {
           {people.map((p) => (
             <Link
               key={p.id}
-              href={`/pessoas/${p.id}`}
+              href={enderecoDe("pessoa", p)}
               className="flex items-center justify-between gap-3 px-1 py-2.5 hover:bg-surface-hover rounded-md transition-colors"
             >
               <span className="min-w-0 truncate text-body text-fg">{p.name}</span>

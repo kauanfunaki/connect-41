@@ -14,6 +14,9 @@
 // abre o sino. A aba em segundo plano não põe nada no canto — ninguém veria —
 // e o que chegou fica para a conferência de quando a pessoa voltar.
 
+import type { IconeDaNotificacao, Tom } from "./catalogo";
+import type { TipoDoChip } from "./consultas";
+
 /** Avisos no computador por conferência (o som é um só): os das mais novas. */
 export const MAXIMO_DE_AVISOS = 3;
 /**
@@ -28,15 +31,24 @@ export const GRUPO_DAS_NOTIFICACOES = "notificacoes";
 /** Quantos ids já mostrados a aba guarda (entre abas, no navegador). */
 export const MOSTRADOS_GUARDADOS = 50;
 
+/**
+ * A notificação que chegou, com o que o aviso do canto desenha (10/11/2026):
+ * o mesmo conteúdo do cartão do sino — ícone e tom do catálogo, título, frase,
+ * quem fez, a origem (chip) e a hora.
+ */
 export type NotificacaoNova = {
   id: string;
   tipo: string;
+  icone: IconeDaNotificacao;
+  tom: Tom;
   titulo: string;
   mensagem: string;
   href: string | null;
   lida: boolean;
   /** ISO. */
   criadaEm: string;
+  chip: { rotulo: string; tipo: TipoDoChip } | null;
+  autor: { nome: string; foto: string | null } | null;
 };
 
 /**

@@ -7,8 +7,10 @@ import { getMeetingIntegrationHealth } from "@/lib/integrations/health";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { AgendaCalendar } from "@/components/agenda/AgendaCalendar";
 import { criarReuniaoAvulsa, editarReuniaoAvulsa, excluirReuniaoAvulsa } from "./actions";
+import { lembrarVisaoDaAgenda, restaurarFontesDaAgenda, salvarFontesDaAgenda } from "./preferencias-actions";
 import {
   saoPauloParts,
+  addDaysToKey,
   agendaDayKeys,
   parseAgendaView,
   parseAgendaDate,
@@ -17,21 +19,30 @@ import Link from "next/link";
 import { descreverExpediente, intervaloDaBusca } from "@/lib/agendaExpediente";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
+import { agendaResolvida, agendaDosSetores } from "@/lib/agendaDoSetorServidor";
+import { fontesOcultasDaPessoa } from "@/lib/agendaDoSetor";
+import { scopedSectors } from "@/lib/auth/context";
 import { getSectorMaps } from "@/lib/sectors";
 import { Aviso } from "@/components/ui/Aviso";
 
+/** Os atrasados que a lista de Prazos busca para trás de hoje: um mês basta para o que ainda pede ação. */
+const DIAS_DE_ATRASO = 30;
+
 const VIEW_HELPER: Record<string, string> = {
+  prazos: "O que vence nos seus setores, dia a dia — e os atrasados no alto.",
   dia: "Os prazos e as reuniões do dia — clique num horário vazio para agendar.",
   semana: "Os prazos dos seus setores e as suas reuniões da semana.",
-  mes: "O mês inteiro de relance — clique no dia para abrir a visão de dia.",
+  mes: "O mês com os prazos e as reuniões de cada dia — clique no dia para ver tudo dele ao lado.",
 };
 const VIEW_HELPER_SEM_REUNIAO: Record<string, string> = {
+  prazos: "O que vence nos seus setores, dia a dia — e os atrasados no alto.",
   dia: "Os prazos do dia nos seus setores: vencimentos, prazos combinados, férias e exames.",
   semana: "Os prazos da semana nos seus setores: vencimentos, prazos combinados, férias e exames.",
-  mes: "Os prazos do mês nos seus setores — clique no dia para ver tudo dele.",
+  mes: "Os prazos do mês nos seus setores — clique no dia para ver tudo dele ao lado.",
 };
 
-// Agenda interativa em três visões (dia, semana e mês).
+// Agenda interativa em quatro visões (prazos, dia, semana e mês) — Prazos desde
+// 10/11/2026, para o setor que não faz reunião (ver src/lib/agendaDoSetor.ts).
 //
 // 30/09: deixou de ser só de reuniões (e só de coordenadores). O Kauan pediu
 // para ver se ela servia aos outros setores; serve — agora ela mostra os
@@ -51,29 +62,43 @@ export default async function AgendaPage({
   const ctx = await getAuthContext();
   const podeAgendar = canManageMeetings(ctx);
 
-  const view = parseAgendaView(viewRaw);
+  // A Agenda da pessoa (10/11/2026, pedido do Kauan): sem "?view=", abre na
+  // última visão que ela escolheu; sem escolha, em Prazos para o setor que não
+  // usa reuniões e em Semana para o que usa. As fontes ligadas decidem o que
+  // se busca. Regras em src/lib/agendaDoSetor.ts.
+  const [agenda, { porSetor }] = await Promise.all([agendaResolvida(ctx), agendaDosSetores(ctx.tenantId)]);
+  const view = parseAgendaView(viewRaw, agenda.visaoInicial);
   const dateKey = parseAgendaDate(dateRaw);
   const days = agendaDayKeys(view, dateKey);
   const todayKey = saoPauloParts(new Date()).dateKey;
+  const de = days[0];
+  const ate = days[days.length - 1];
+  // Na lista de Prazos que passa por hoje, os atrasados dos últimos 30 dias
+  // vêm junto, para o grupo "Atrasados" no alto.
+  const buscaDe =
+    view === "prazos" && de <= todayKey && todayKey <= ate ? [de, addDaysToKey(todayKey, -DIAS_DE_ATRASO)].sort()[0] : de;
   // Expediente (05/10): o horário da grade de dia/semana. Vem antes da busca
   // porque, passando da meia-noite, a coluna do último dia entra no seguinte.
   const { efetivo: expediente } = await carregarExpedientes(ctx.tenantId, ctx.userId);
-  const busca = intervaloDaBusca(expediente, days[0], days[days.length - 1]);
+  const busca = intervaloDaBusca(expediente, de, ate);
 
   const prisma = getPrisma();
   const [meetingsRaw, oauthAccounts, allUsers, companies, prazos, { labels, colors }] = await Promise.all([
-    prisma.meeting.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        startAt: { gte: busca.inicio, lt: busca.fim },
-        OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
-      },
-      orderBy: { startAt: "asc" },
-      include: {
-        attendees: { include: { user: { select: { id: true, name: true } } } },
-        company: { select: { id: true, name: true, externalId: true } },
-      },
-    }),
+    // A lista de Prazos não mostra reunião: nem busca.
+    view === "prazos"
+      ? Promise.resolve([])
+      : prisma.meeting.findMany({
+          where: {
+            tenantId: ctx.tenantId,
+            startAt: { gte: busca.inicio, lt: busca.fim },
+            OR: [{ createdByUserId: ctx.userId }, { attendees: { some: { userId: ctx.userId } } }],
+          },
+          orderBy: { startAt: "asc" },
+          include: {
+            attendees: { include: { user: { select: { id: true, name: true } } } },
+            company: { select: { id: true, name: true, externalId: true } },
+          },
+        }),
     // Conta conectada, pessoas e empresas só servem para criar reunião.
     podeAgendar
       ? prisma.oAuthAccount.findMany({ where: { tenantId: ctx.tenantId, userId: ctx.userId }, select: { provider: true } })
@@ -92,9 +117,11 @@ export default async function AgendaPage({
           select: { id: true, name: true, logoUrl: true, cnpj: true, parentCompanyId: true },
         })
       : Promise.resolve([]),
-    prazosDoPeriodo(ctx, days[0], days[days.length - 1]),
+    prazosDoPeriodo(ctx, buscaDe, ate, { fontes: agenda.ligadas, hoje: todayKey }),
     getSectorMaps(ctx.tenantId),
   ]);
+  // Para onde "Restaurar padrão" volta: o padrão dos setores, sem a escolha da pessoa.
+  const padraoDasFontes = fontesOcultasDaPessoa(null, scopedSectors(ctx) ?? ctx.sectors, porSetor);
   const setores = Object.fromEntries(Object.keys(labels).map((code) => [code, { rotulo: labels[code], cor: colors[code] ?? "#586577" }]));
   // A legenda só com os setores que têm prazo à vista.
   const setoresComPrazo = Array.from(new Set(prazos.map((p) => p.setor))).filter((code) => setores[code]);
@@ -142,13 +169,13 @@ export default async function AgendaPage({
     <PageContainer className="h-full flex flex-col">
       <AgendaCalendar
         titulo="Agenda"
-        subtitulo={(podeAgendar ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]}
+        subtitulo={(podeAgendar && agenda.usaReunioes ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]}
         antesDaGrade={
           <>
             {/* O horário da grade vem de Configurações › Agenda e a tela não
                 dizia (lote 10, 28/10/2026 — item 11 de "Telas e informações
                 repetidas"). Só na visão de dia e de semana, que têm grade. */}
-            {view !== "mes" && (
+            {(view === "dia" || view === "semana") && (
               <p className="mb-2 -mt-1 text-fs-2 text-fg-muted">
                 Horário da grade: {descreverExpediente(expediente)}.{" "}
                 <Link href="/configuracoes#agenda" className="text-brand hover:underline">
@@ -156,7 +183,9 @@ export default async function AgendaPage({
                 </Link>
               </p>
             )}
-            {setoresComPrazo.length > 0 && (
+            {/* A cor por setor é a das grades de horas; em Prazos e Mês a cor é
+                a da fonte, e os botões das fontes fazem de legenda. */}
+            {(view === "dia" || view === "semana") && setoresComPrazo.length > 0 && (
               <ul className="mb-3 -mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-fs-2 text-fg-secondary" aria-label="Setores dos prazos">
                 {setoresComPrazo.map((code) => (
                   <li key={code} className="inline-flex items-center gap-1.5">
@@ -186,6 +215,7 @@ export default async function AgendaPage({
         view={view}
         dateKey={dateKey}
         days={calendarDays}
+        hoje={todayKey}
         meetings={meetings}
         createAction={criarReuniaoAvulsa}
         editAction={editarReuniaoAvulsa}
@@ -198,6 +228,16 @@ export default async function AgendaPage({
         prazos={prazos}
         setores={setores}
         podeAgendar={podeAgendar}
+        usaReunioes={agenda.usaReunioes}
+        fontes={{
+          acessiveis: agenda.acessiveis,
+          ocultas: agenda.fontes.ocultas,
+          origem: agenda.fontes.origem,
+          padrao: padraoDasFontes,
+        }}
+        salvarFontes={salvarFontesDaAgenda}
+        restaurarFontes={restaurarFontesDaAgenda}
+        lembrarVisao={lembrarVisaoDaAgenda}
         expediente={expediente}
         setorInicial={setorRaw && setores[setorRaw] ? setorRaw : null}
       />

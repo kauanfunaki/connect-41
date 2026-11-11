@@ -71,7 +71,8 @@ try{
   await db.query("INSERT INTO users (id,tenantId,name,email,passwordHash,role,updatedAt) VALUES (?,?,?,?,?,'ADMIN',NOW(3))",[user,tenant,"Pessoa fiscal",user+"@example.test","sem-login-real"]);
   await db.query("INSERT INTO sectors (id,tenantId,code,label,color,updatedAt) VALUES (?,?,'fiscal','Fiscal','#C5374B',NOW(3))",[randomUUID(),tenant]);
   await db.query("INSERT INTO user_sectors (userId,sectorCode) VALUES (?,'fiscal')",[user]);
-  for(const cnpj of ["17122471000175","17122471000256"])await db.query("INSERT INTO companies (id,tenantId,name,cnpj,updatedAt) VALUES (?,?,?,?,NOW(3))",[randomUUID(),tenant,"Empresa EFD local",cnpj]);
+  // O número da empresa no escritório, o do endereço curto (10/11/2026): o escritório é novo, então 1 e 2.
+  for(const [i,cnpj] of ["17122471000175","17122471000256"].entries())await db.query("INSERT INTO companies (id,tenantId,`number`,name,cnpj,updatedAt) VALUES (?,?,?,?,?,NOW(3))",[randomUUID(),tenant,i+1,"Empresa EFD local",cnpj]);
   await db.query("INSERT INTO sped_sync_roots (tenantId,cnpjRaiz) VALUES (?,'17122471')",[tenant]);
   await db.query("INSERT INTO tenant_integrations (id,tenantId,integrationCode,instanceKey,enabled,configEnc,updatedAt) VALUES (?,?,'sped','default',true,?,NOW(3))",[randomUUID(),tenant,cifrar({baseUrl:"http://127.0.0.1:33386",serviceToken:leitura,serviceTokenEscrita:escrita})]);
   await new Promise((resolve,reject)=>{apiFixture.once("error",reject);apiFixture.listen(33386,"127.0.0.1",resolve);});

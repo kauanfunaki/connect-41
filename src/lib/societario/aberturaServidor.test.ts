@@ -28,13 +28,16 @@ const m = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => {
   const grava = (modelo: string) => async (args: { data: Record<string, unknown> }) => {
     m.gravados.push({ modelo, data: args.data });
-    return { id: `${modelo}-${++m.ids}` };
+    return { id: `${modelo}-${++m.ids}`, number: args.data.number };
   };
   const consulta = <T,>(modelo: string, valor: () => T) => async (args: Record<string, unknown>) => {
     m.consultas.push({ modelo, args });
     return valor();
   };
   const tx = {
+    // O contador do endereço curto (10/11/2026): em 0, o processo é o nº 1.
+    $queryRaw: async () => [{ ultimo: 0 }],
+    $executeRaw: async () => 1,
     process: { create: grava("process") },
     processStep: { create: grava("processStep") },
     processChecklistItem: { create: grava("processChecklistItem") },
@@ -98,10 +101,11 @@ beforeEach(() => {
 
 describe("a abertura pela tela continua igual", () => {
   it("cria o processo, as etapas e o checklist, com o que já temos marcado", async () => {
-    expect(await abrirProcessoNoServidor(QUEM, pedido())).toEqual({ ok: true, processoId: "process-1" });
+    expect(await abrirProcessoNoServidor(QUEM, pedido())).toEqual({ ok: true, processoId: "process-1", endereco: "/processos/processo-1" });
     expect(gravados("process")).toEqual([
       {
         tenantId: "t1",
+        number: 1,
         companyId: "empresa-1",
         typeId: "tipo-1",
         templateId: "roteiro-v3",
@@ -183,7 +187,7 @@ describe("a abertura pela Ceci confere o que a tela garante na hora", () => {
 
   it("grava como a tela, com a auditoria dizendo que veio da proposta", async () => {
     const r = await abrirProcessoNoServidor(QUEM, pedido({ origem: pelaCeci(), pedidoAoCliente: "Olá!" }));
-    expect(r).toEqual({ ok: true, processoId: "process-1" });
+    expect(r).toEqual({ ok: true, processoId: "process-1", endereco: "/processos/processo-1" });
     expect(m.auditoria).toEqual([expect.objectContaining({ action: "process.open_ceci", entityId: "process-1", userId: "u-quem-abre" })]);
     expect(m.mensagens).toHaveLength(1);
   });

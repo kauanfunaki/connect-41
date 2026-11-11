@@ -10,6 +10,7 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { formatDocumento, formatPhone } from "@/lib/format";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { Button } from "@/components/ui/Button";
+import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
 
 const STATUS_LABEL: Record<CompanyStatus, string> = {
   PROSPECT: "Prospecto",
@@ -29,6 +30,8 @@ const STATUS_COLOR: Record<CompanyStatus, string> = {
 
 type Props = {
   id: string;
+  /** O número da empresa no escritório: o id curto (empresa-301) no cabeçalho e o "Editar" pelo endereço curto (10/11/2026). */
+  numero?: number;
   name: string;
   tradeName: string | null;
   kind: "PESSOA_JURIDICA" | "PESSOA_FISICA";
@@ -50,6 +53,7 @@ type Props = {
 
 export function CompanyHeader({
   id,
+  numero,
   name,
   tradeName,
   kind,
@@ -180,6 +184,8 @@ export function CompanyHeader({
             {tradeName && <p className="text-body text-fg-secondary mt-0.5">{tradeName}</p>}
 
             <div className="flex items-center gap-4 flex-wrap mt-2.5">
+              {/* O id curto, discreto, como no Controle interno (10/11/2026, pedido do Kauan). */}
+              {numero !== undefined && <span className="text-helper text-fg-muted tnum">{idCurto("empresa", numero)}</span>}
               {documento && (
                 <Button
                   variant="linkMuted"
@@ -230,7 +236,7 @@ export function CompanyHeader({
             </Button>
           )}
           {canEdit && (
-            <Button href={`/empresas/${id}/editar`} variant="secondary" size="sm">
+            <Button href={`${enderecoDe("empresa", { id, number: numero })}/editar`} variant="secondary" size="sm">
               <Pencil size={14} />
               Editar
             </Button>

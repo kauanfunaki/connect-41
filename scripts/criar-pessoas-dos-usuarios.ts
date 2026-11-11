@@ -28,6 +28,7 @@
 
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { proximoNumero } from "../src/lib/enderecoCurtoNumeracao";
 import { normalizarNomeAtendente } from "../src/lib/chatwoot/evaluation";
 
 const aplicar = process.argv.includes("--aplicar");
@@ -139,6 +140,8 @@ AMBÍGUAS — decidir à mão (${ambiguas.length}):`);
     await prisma.person.create({
       data: {
         tenantId: TENANT_41_TECH,
+        // O número da pessoa no escritório, o do endereço curto (10/11/2026).
+        number: await proximoNumero(prisma, "pessoa", TENANT_41_TECH),
         name: c.user.name,
         email: c.user.email,
         type: "COLABORADOR",

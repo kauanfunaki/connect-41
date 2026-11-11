@@ -365,7 +365,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Cadastrar um fornecedor ou sacado",
         passos: [
-          "Abra “Cadastros” na barra lateral e clique na aba “Fornecedores e sacados”. A aba só aparece para quem é do BPO.",
+          "Na barra lateral, clique em “Cadastros” e escolha “Fornecedores e sacados”. A tela só aparece para quem é do BPO.",
           "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
           "Clique em “Novo cadastro”.",
           "Preencha “Nome” e, se tiver, “CPF ou CNPJ” e “E-mail”.",
@@ -649,7 +649,27 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Preencha o “Título”, como e-CAC ou o nome do banco.",
           "Escolha a “Empresa”, ou deixe “Geral (sem empresa)” para uma credencial do setor.",
           "Preencha “Usuário”, “Senha” e, se quiser, “URL” e “Notas”.",
+          "Em “Quem pode ver a senha”, escolha “Todos do setor”, “Todos do setor, menos…” ou “Só eu (pessoal)”.",
           "Clique em “Criar”.",
+        ],
+      },
+      {
+        titulo: "Guardar uma senha só sua",
+        passos: [
+          "Clique em “Nova credencial” e preencha os dados.",
+          "Em “Quem pode ver a senha”, escolha “Só eu (pessoal)”.",
+          "Clique em “Criar”. A credencial aparece na lista com o selo “Pessoal”.",
+          "Só você vê os dados, revela, copia e edita. O Administrador vê só que ela existe (o título e o seu nome) e nunca a senha.",
+        ],
+      },
+      {
+        titulo: "Esconder uma senha do setor de algumas pessoas",
+        passos: [
+          "Ao cadastrar ou editar a credencial, em “Quem pode ver a senha”, escolha “Todos do setor, menos…”.",
+          "Em “Quem não vê a senha”, digite o nome e escolha a pessoa. Repita para cada uma.",
+          "Clique em “Criar” ou “Salvar”.",
+          "As pessoas marcadas não veem a credencial na lista e não conseguem revelar a senha. Na lista, a coordenação vê o selo “Restrita” com quantas pessoas não veem; pare o mouse em cima para ver os nomes.",
+          "Para liberar de novo, edite e escolha “Todos do setor”, ou tire a pessoa da lista.",
         ],
       },
       {
@@ -663,8 +683,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "Cada vez que alguém revela uma senha, o acesso fica registrado.",
-      "Cadastrar e editar é da coordenação do setor. Excluir é só do Administrador ou do Super Admin, e não pode ser desfeito.",
+      "Cada vez que alguém revela uma senha, o acesso fica registrado, também na Auditoria.",
+      "Credencial do setor: cadastrar, editar e marcar quem não vê é da coordenação do setor. Excluir é só do Administrador ou do Super Admin, e não pode ser desfeito.",
+      "Credencial pessoal: qualquer pessoa do setor cadastra a sua. Só quem cadastrou edita e exclui; o Administrador também pode excluí-la (quando alguém sai da equipe), sem nunca ver a senha.",
+      "O Administrador e o Super Admin não podem ser marcados em “Todos do setor, menos…”: eles gerenciam todas as credenciais do setor.",
+      "Para ver só as pessoais ou só as do setor, use o funil da coluna “Quem vê”.",
     ],
   },
 
@@ -707,6 +730,67 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Excluir documento, página ou capa é só do Administrador ou do Super Admin e não pode ser desfeito. Excluir um documento remove todas as páginas dele.",
+    ],
+  },
+
+  // ─── Repositório de fluxos (10/11/2026) ───────────────────────────────────
+  {
+    chave: "bpo_fluxos",
+    titulo: "Repositório de fluxos",
+    caminhos: ["/fluxos"],
+    resumo:
+      "Os fluxogramas e as metodologias de cada setor. O setor escreve as etapas em lista — início, etapas, decisões com o Sim e o Não, voltas e fim — e o Connect desenha o fluxograma sozinho, com quem executa cada etapa.",
+    secoes: [
+      {
+        titulo: "Criar uma pasta e um fluxo",
+        passos: [
+          "No pé da coluna de pastas, à esquerda, clique em “Nova pasta”, dê o nome do processo (por exemplo, “Admissão”) e clique em “Criar pasta”.",
+          "Dentro da pasta, clique em “Fluxo” (ou em “Novo fluxo”, no topo), dê o nome e escolha a pasta.",
+          "Clique em “Criar e escrever as etapas”: o fluxo abre na edição, já com o Início e o Fim.",
+        ],
+      },
+      {
+        titulo: "Escrever as etapas",
+        passos: [
+          "Use os botões “Etapa”, “Decisão”, “Volta” e “Fim”, abaixo da lista. A etapa nova entra antes do Fim.",
+          "Clique numa etapa para abrir: escreva o nome, quem executa (pessoa e setor, robô, integração ou cliente), o prazo, o que entra, o que sai, o que fazer se der erro e a tela do Connect onde ela se faz.",
+          "Sem destino escolhido, cada etapa segue para a seguinte da lista. Para mudar, use “Depois vai para”.",
+          "Numa decisão, escolha para onde vai o “Sim” e para onde vai o “Não”.",
+          "Para uma volta (refazer depois de uma pendência, por exemplo), use “Volta”, ou escolha em “Depois vai para” uma etapa de cima. O desenho mostra a volta tracejada.",
+          "Mude a ordem com as setas de subir e descer, ou arrastando o puxador (⋮⋮) com o mouse. O desenho, à direita, se monta sozinho a cada mudança.",
+        ],
+      },
+      {
+        titulo: "Salvar uma versão",
+        passos: [
+          "Escreva a “Metodologia”: como o setor toca o processo e por quê.",
+          "Escolha o “Dono” do fluxo. O “Revisado em” já vem com a data de hoje.",
+          "Clique em “Salvar versão”. Se faltar algo (uma decisão sem o “Não”, uma etapa sem nome), a etapa abre com o campo marcado.",
+          "Para desistir, clique em “Cancelar”. Sair da tela com mudança não salva pede confirmação.",
+        ],
+      },
+      {
+        titulo: "Ler um fluxo",
+        passos: [
+          "Clique no fluxo, na coluna à esquerda.",
+          "Clique numa etapa do desenho (ou chegue a ela com o Tab e aperte Enter): ao lado aparecem o prazo, o que entra, o que sai, o que fazer se der erro e o link para abrir a tela no Connect.",
+          "Use “Anterior” e “Próxima” para andar pelas etapas. O Esc devolve o foco para a etapa no desenho.",
+          "No celular, a lista das etapas vem primeiro e o desenho embaixo, numa caixa que rola de lado.",
+          "Para ver uma versão antiga, abra “Versões” e clique em “Ver esta versão”.",
+        ],
+      },
+      {
+        titulo: "Anexar arquivos",
+        passos: [
+          "Em “Arquivos”, clique em “Anexar arquivo” e escolha um PDF, uma imagem (PNG, JPG, WEBP) ou um .drawio, de até 10 MB.",
+          "Clique no nome do PDF ou da imagem para abrir numa aba; use o botão de baixar para guardar o arquivo.",
+        ],
+      },
+    ],
+    dicas: [
+      "Cada setor vê só os seus fluxos. Em “Todos os setores”, quem alcança mais de um escolhe o setor pelas abas do topo.",
+      "Etapa que nenhum caminho alcança a partir do Início aparece tracejada, no pé do desenho, com um aviso.",
+      "Excluir pasta, fluxo ou arquivo é só do Administrador ou do Super Admin e não pode ser desfeito. Excluir uma pasta remove os fluxos dela, com as versões e os arquivos.",
     ],
   },
 

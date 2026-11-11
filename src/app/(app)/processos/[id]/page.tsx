@@ -58,6 +58,8 @@ import { avisosPendentes } from "@/lib/societario/avisos";
 import { HorasDoProcesso } from "@/components/societario/HorasDoProcesso";
 import { ObservacoesDoProcesso } from "@/components/societario/ObservacoesDoProcesso";
 import { apagarHorasDoProcesso, editarHorasDoProcesso, iniciarCronometroDoProcesso, lancarHorasNoProcesso, pararCronometroDoProcesso } from "../horas-actions";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
+import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
 // setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -68,14 +70,18 @@ export const dynamic = "force-dynamic";
 
 export default async function ProcessoDetalhePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const ctx = await getAuthContext();
   if (!ctx.tenantId || !canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
-  const { id } = await params;
+  // O endereço curto (10/11/2026, pedido do Kauan): /processos/processo-12. O
+  // do uuid passa para ele, com a query (a âncora `#…` o navegador mantém).
+  const { id, number: numeroDoProcesso } = await abrirPeloEndereco("processo", ctx.tenantId, (await params).id, await searchParams);
   const prisma = getPrisma();
 
   // O tenant entra no `where`, não numa conferência depois de buscar: buscar
@@ -96,7 +102,7 @@ export default async function ProcessoDetalhePage({
       ownerUserId: true,
       activeTimerUserId: true,
       activeTimerStartedAt: true,
-      company: { select: { id: true, name: true, displayName: true } },
+      company: { select: { id: true, number: true, name: true, displayName: true } },
       owner: { select: { id: true, name: true } },
       type: {
         select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
@@ -349,7 +355,7 @@ export default async function ProcessoDetalhePage({
           alinhado ao traço do setor, não ao título. */}
       <PageHeader
         title={`${processo.type.name} — ${empresaNome}`}
-        subtitle={processo.title ?? undefined}
+        subtitle={[idCurto("processo", numeroDoProcesso), processo.title].filter(Boolean).join(" · ")}
         action={
           <EditarDadosDoProcesso
             processoId={processo.id}
@@ -425,7 +431,7 @@ export default async function ProcessoDetalhePage({
           <Button href={`/processos/empresas/${processo.company.id}`} variant="secondary" size="xs">
             Visão societária
           </Button>
-          <Button href={`/empresas/${processo.company.id}`} variant="secondary" size="xs">
+          <Button href={enderecoDe("empresa", processo.company)} variant="secondary" size="xs">
             Abrir empresa
           </Button>
           </>

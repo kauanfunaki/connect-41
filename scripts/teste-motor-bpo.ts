@@ -33,6 +33,7 @@
 // tenant não é trabalho de bancada de teste.
 
 import { getPrisma } from "@/lib/prisma";
+import { proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { saoPauloParts } from "@/lib/agenda";
 import { instanteDaData } from "@/lib/financeiro/periodo";
 import {
@@ -195,6 +196,7 @@ async function a1(tenantId: string) {
   const empresa = await prisma.company.create({
     data: {
       tenantId,
+      number: await proximoNumero(prisma, "empresa", tenantId),
       name: `${MARCA} ACME COMERCIO LTDA`,
       cnpj: "11222333000181",
       zipCode: "80010-010",
@@ -734,6 +736,7 @@ async function a6(tenantId: string, c: Cadastros) {
   const vencida = await prisma.clientRequest.create({
     data: {
       tenantId,
+      number: await proximoNumero(prisma, "pendencia", tenantId),
       companyId: c.empresa.id,
       kind: "DOCUMENTO",
       title: `${MARCA} Enviar o extrato de ${COMPETENCIA}`,
@@ -1432,6 +1435,7 @@ async function a13(tenantId: string, c: Cadastros) {
   const processo = await prisma.process.create({
     data: {
       tenantId,
+      number: await proximoNumero(prisma, "processo", tenantId),
       companyId: c.empresa.id,
       typeId: template.typeId,
       templateId: template.id,

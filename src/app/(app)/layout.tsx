@@ -15,7 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
-import { getModuleRoute, MODULOS_DO_APOIO, MODULOS_FORA_DO_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
+import { getModuleRoute, MODULOS_DE_TODA_A_EQUIPE, MODULOS_DO_APOIO, MODULOS_FORA_DO_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
 import { baseDomain, hostSuffix, setoresDoSeletor } from "@/lib/auth/activeSector";
@@ -210,10 +210,14 @@ export default async function AppLayout({
   // O Apoio do Geral (05/11/2026): Senhas e Manuais para todo setor, cada um
   // com os seus — quem pode agir em algum setor vê (a tela decide qual).
   const doApoio = (code: string) => moduleStates.some((m) => m.code === code && m.enabled) && ctx.role !== "READONLY";
-  const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual") };
+  // O Repositório de fluxos (10/11/2026) entra no mesmo grupo, com a mesma regra.
+  const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual"), fluxos: doApoio("bpo_fluxos") };
+  // A Academia (10/11/2026): de toda a equipe, inclusive o Somente leitura. O
+  // chapéu de formatura do topo só aparece com o módulo ligado.
+  const academiaLigada = moduleStates.some((m) => m.code === "academia" && m.enabled);
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
-      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : m.code === "atendimento" ? true : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
+      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : MODULOS_DE_TODA_A_EQUIPE.has(m.code) || m.code === "atendimento" ? true : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
       .map((m) => ({
         code: m.code,
         label: m.label,
@@ -272,6 +276,7 @@ export default async function AppLayout({
         atendimentoLigado={atendimentoLigado}
         atendimentoNovos={atendimentoNovos}
         apoioLigado={apoioLigado}
+        academiaLigada={academiaLigada}
         ordemDoMenu={ordemDoMenu}
         podeOrganizarMenu={role === "SUPER_ADMIN"}
         telasDoGeral={telasDoGeral}

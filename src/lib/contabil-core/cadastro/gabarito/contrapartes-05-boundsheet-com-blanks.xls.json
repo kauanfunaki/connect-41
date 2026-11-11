@@ -1,0 +1,28 @@
+{
+ "tipo": "fornecedor",
+ "planilha": "RELAÇÃO DE FORNECEDORES",
+ "titulo": null,
+ "empresa": "EMPRESA FICTÍCIA DE TESTES LTDA",
+ "empresa_documento": "99999999000099",
+ "campos_reconhecidos": [
+  "conta",
+  "conta_cliente",
+  "nome",
+  "razao_social",
+  "cep",
+  "documento"
+ ],
+ "campos_ignorados": [],
+ "linhas": [
+  {
+   "numero_linha": 8,
+   "documento": "44444444444444",
+   "razao_social": "FORNECEDOR ÉPSILON FICTÍCIO LTDA",
+   "nome_fantasia": "FORNECEDOR ÉPSILON",
+   "conta_numero": 1234,
+   "dados_cadastrais": [],
+   "documento_valido": true,
+   "erro_documento": null
+  }
+ ]
+}

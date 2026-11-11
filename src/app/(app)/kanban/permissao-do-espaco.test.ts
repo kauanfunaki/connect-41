@@ -58,6 +58,9 @@ const prisma: unknown = new Proxy(
       if (nome === "$transaction") {
         return async (x: unknown) => (typeof x === "function" ? x(prisma) : Promise.all(x as Promise<unknown>[]));
       }
+      // O contador do endereço curto (10/11/2026): em 0, a tarefa é a nº 1.
+      if (nome === "$queryRaw") return async () => [{ ultimo: 0 }];
+      if (nome === "$executeRaw") return async () => 1;
       return modelo(nome);
     },
   },

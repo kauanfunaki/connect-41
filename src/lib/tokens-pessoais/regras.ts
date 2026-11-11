@@ -16,6 +16,8 @@ export const FORMATO_DO_TOKEN = /^c41_[a-f0-9]{64}$/;
 export const ESCOPOS = {
   "controle-interno:ler": "Ler itens do Controle interno",
   "controle-interno:escrever": "Criar e atualizar itens, comentar e anexar no Controle interno",
+  // A Academia (10/11/2026): o fluxo do n8n que posta o ranking do mês no Slack.
+  "academia:ler": "Ler o ranking da Academia",
 } as const;
 export type Escopo = keyof typeof ESCOPOS;
 export const LISTA_DE_ESCOPOS = Object.keys(ESCOPOS) as Escopo[];
@@ -58,7 +60,13 @@ export function tokenDoCabecalho(authorization: string | null): string | null {
  * deixa passar só estas sem a sessão da equipe (e sem cabeçalho de identidade).
  */
 export function ehRotaDeTokenPessoal(pathname: string) {
-  return pathname === "/api/mcp" || pathname === "/api/v1/controle-interno" || pathname.startsWith("/api/v1/controle-interno/");
+  return (
+    pathname === "/api/mcp" ||
+    pathname === "/api/v1/controle-interno" ||
+    pathname.startsWith("/api/v1/controle-interno/") ||
+    // O ranking da Academia (10/11/2026), para o post do Slack pelo n8n.
+    pathname.startsWith("/api/v1/academia/")
+  );
 }
 
 export type SituacaoDoToken = "ativo" | "vencido" | "revogado";

@@ -11,12 +11,17 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { RescisaoConfigForm } from "@/components/rescisao/RescisaoConfigForm";
 import { resolveRescisaoConfig } from "@/lib/rescisao/config";
 import { salvarConfigEmpresa } from "@/app/(app)/admin/rescisao/actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
+import { endereco } from "@/lib/enderecoCurto";
 
 export const metadata = { title: "Cálculo de rescisão" };
 
 export default async function EmpresaRescisaoConfigPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: companyId } = await params;
+  const { id: idDaRota } = await params;
   const ctx = await getAuthContext();
+  // A empresa pelo uuid ou pelo id curto, /empresas/empresa-301/… (10/11/2026, pedido do Kauan).
+  const { id: companyId, number: numeroDaEmpresa } = await registroDaRota("empresa", ctx.tenantId, idDaRota, "/rescisao-config");
+  const fichaDaEmpresa = endereco("empresa", numeroDaEmpresa);
 
   const prisma = getPrisma();
   const company = await prisma.company.findFirst({
@@ -47,7 +52,7 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
         items={[
           { label: "Cadastros", href: "/empresas" },
           { label: "Empresas", href: "/empresas" },
-          { label: company.name, href: `/empresas/${companyId}?tab=operations`, truncate: true },
+          { label: company.name, href: `${fichaDaEmpresa}?tab=operations`, truncate: true },
           { label: "Cálculo de rescisão" },
         ]}
       />

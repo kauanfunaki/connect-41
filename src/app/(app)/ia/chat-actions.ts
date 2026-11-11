@@ -27,6 +27,7 @@ import { abrirPelaCeci } from "@/lib/chamados/comandos";
 import { aplicarPropostaDoSocietario } from "@/app/(app)/processos/ia-actions";
 import { aplicarPropostaDoBpo } from "@/app/(app)/dre/ia-actions";
 import { aplicarProposta as aplicarPropostaDaVaga } from "@/app/(app)/vagas/[id]/ia-actions";
+import { endereco } from "@/lib/enderecoCurto";
 
 async function dono() {
   const ctx = await getAuthContext();
@@ -75,13 +76,14 @@ export async function aplicarPropostaDoChat(mensagemId: string, indice: number):
   // ferramenta, e não pelo setor da conversa. Vai pela mesma abertura da tela
   // Novo chamado, que refaz quem pode abrir, setor, categoria e formulário.
   if (p.ferramenta === ABRIR_CHAMADO) {
-    let ticketId: string;
+    let numero: number;
     try {
-      ({ ticketId } = await abrirPelaCeci(await contextoDosChamados(), chamadoDaProposta(p.argumentos)));
+      ({ numero } = await abrirPelaCeci(await contextoDosChamados(), chamadoDaProposta(p.argumentos)));
     } catch (err) {
       return { error: err instanceof ZodError ? "O chamado ficou incompleto (título com 3 letras ou mais, descrição, categoria e setor). Peça à Ceci para refazer." : err instanceof Error ? err.message : "Não foi possível abrir o chamado." };
     }
-    const link = `/chamados/${ticketId}`;
+    // O cartão da conversa leva ao endereço curto do chamado (10/11/2026, pedido do Kauan).
+    const link = endereco("chamado", numero);
     await marcarPropostaAplicada(m.id, propostas, indice, link);
     revalidatePath("/chamados", "layout");
     return { ok: true, link };

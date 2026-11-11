@@ -36,6 +36,7 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
     prisma.handoff.findMany({
       where: { tenantId: ctx.tenantId, entityType: "COMPANY", entityId: companyId, createdAt: { gte: since } },
       select: {
+        subject: true,
         message: true,
         description: true,
         priority: true,
@@ -69,7 +70,9 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
   }
   for (const h of handoffs) {
     const dest = h.sectors.map((s) => `${s.sectorCode}:${s.status}`).join(", ");
-    lines.push(`[Transferência] ${formatInstantDate(h.createdAt)} — de ${h.fromSector} para ${dest} · prioridade ${h.priority}${h.message ? ` · "${h.message.slice(0, 160)}"` : ""}`);
+    // O assunto, desde 10/11/2026; as novas não escrevem mais `message`.
+    const resumo = h.subject ?? h.message;
+    lines.push(`[Transferência] ${formatInstantDate(h.createdAt)} — de ${h.fromSector} para ${dest} · prioridade ${h.priority}${resumo ? ` · "${resumo.slice(0, 160)}"` : ""}`);
   }
   for (const i of items) {
     lines.push(`[Kanban ${i.pipeline.name} · ${i.pipeline.sectorCode}] etapa "${i.stage.name}"${i.dueDate ? ` · vence ${formatCalendarDate(i.dueDate)}` : ""}${i.description ? ` · ${i.description.slice(0, 160)}` : ""}`);

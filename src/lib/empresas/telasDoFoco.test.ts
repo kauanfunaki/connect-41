@@ -30,7 +30,6 @@ const TELAS = [
   "src/app/(app)/dre/economica/page.tsx",
   "src/app/(app)/dre/analises/page.tsx",
   "src/app/(app)/dre/orcamento/page.tsx",
-  "src/app/(app)/aprovacoes/page.tsx",
   "src/app/(app)/sped-contabil/page.tsx",
   "src/app/(app)/documentos-fiscais/page.tsx",
   "src/app/(app)/colaboradores-clientes/page.tsx",
@@ -78,6 +77,16 @@ describe("telas do foco", () => {
   it("o SPED Fiscal escolhe a empresa com o foco, e a fileira recebe o foco da tela", () => {
     expect(ler("src/lib/fiscal/sped/local/servidor.ts")).toContain("comFoco: true");
     expect(ler("src/components/fiscal/sped/AreaLocalSped.tsx")).toContain("foco={tela.foco}");
+  });
+
+  // A escolha das Aprovações mora em `filaServidor.ts` desde 10/11/2026: o
+  // balão da aba "Aprovações" das Solicitações conta a fila na mesma empresa.
+  it("as Aprovações escolhem a empresa com o foco, num lugar só com o balão da aba", () => {
+    expect(ler("src/lib/financeiro/aprovacao/filaServidor.ts")).toContain("comFoco: true");
+    const fonte = ler("src/app/(app)/aprovacoes/page.tsx");
+    expect(fonte).toContain("empresaDaFilaDeAprovacoes(params.empresa)");
+    expect(fonte).toContain("foco={foco}");
+    expect(fonte).not.toMatch(/SeletorDeEmpresa|navegaSozinho/);
   });
 
   it("a Conversa com o cliente segue o foco", () => {

@@ -298,6 +298,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     defaultEnabled: false, icon: "Workflow", group: "Operação", menuDireto: true,
   },
   {
+    // A Academia (10/11/2026, pedido do Kauan): testes de digitação, de números
+    // e de lógica, com ranking do mês. É de toda a equipe (o chapéu de
+    // formatura no topo, e não um item de setor); a Tech liga, desliga e
+    // administra. Nasce desligada: liga depois da importação do Hub.
+    code: "academia", label: "Academia", sectorCode: "tech",
+    description: "Testes de digitação, de digitação de números e de lógica, com ranking do mês entre os colegas e certificado para o pódio",
+    defaultEnabled: false, icon: "GraduationCap", group: "Apoio", fixedSector: true,
+  },
+  {
     code: "helpdesk", label: "Chamados", sectorCode: "tech",
     description: "Helpdesk interno: solicitações dos setores, atendimento, SLA e triagem conversacional por IA",
     defaultEnabled: false, icon: "Ticket", group: "Atendimento",
@@ -541,6 +550,18 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Instruções internas escritas pelos colaboradores para alinhamento em ausências e férias",
     defaultEnabled: true,
     icon: "BookOpen",
+    group: "Apoio",
+  },
+  // O Repositório de fluxos (10/11/2026, pedido do Kauan): os fluxogramas e as
+  // metodologias de cada setor, ao lado das senhas e dos manuais. Como eles,
+  // liga e desliga no BPO de Setores e módulos, e cada setor vê os seus.
+  {
+    code: "bpo_fluxos",
+    label: "Repositório de fluxos",
+    sectorCode: "bpo",
+    description: "Fluxogramas e metodologias de cada setor: a lista de etapas vira desenho, com quem executa, prazo e a tela do Connect de cada etapa",
+    defaultEnabled: true,
+    icon: "Workflow",
     group: "Apoio",
   },
   {
@@ -910,6 +931,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   tech_github_contributions: "/produtividade",
   tech_ops_center:         "/ops",
   tech_entregas: "/controle-interno/entregas",
+  academia: "/academia",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
   atendimento:             "/atendimento",
@@ -938,7 +960,8 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_senhas:              "/senhas",
   bpo_dre:                 "/dre",
   bpo_manual:              "/manuais",
-  fiscal_documentos:       "/documentos-fiscais",
+  bpo_fluxos:              "/fluxos",
+  fiscal_documentos:      "/documentos-fiscais",
   fiscal_autorizacoes:     "/autorizacoes",
   fiscal_painel:           "/sped-fiscal/motor",
   fiscal_classificacao:    "/sped-fiscal/motor/classificacao",
@@ -978,27 +1001,36 @@ export const MODULE_ROUTES: Record<string, string> = {
 };
 
 /**
- * Módulos que moram numa aba de **Cadastros**, no menu Geral, e não na lista de
- * telas do setor dono (21/10/2026). Diferente de Solicitações e Arquivos, a aba
- * só aparece, e a tela só abre, para quem vê o setor do módulo: Fornecedores e
- * sacados é do BPO, e repetia no menu dele o "Cadastros" do Geral.
+ * Módulos que moram em **Cadastros**, no menu Geral, e não na lista de telas
+ * do setor dono (21/10/2026; eram aba, e desde 10/11/2026 são uma tela do grupo
+ * Cadastros no menu lateral). Diferente de Solicitações e Arquivos, a tela só
+ * aparece, e só abre, para quem vê o setor do módulo: Fornecedores e sacados é
+ * do BPO, e repetia no menu dele o "Cadastros" do Geral.
  */
 export const MODULOS_NOS_CADASTROS: ReadonlySet<string> = new Set(["bpo_cadastros"]);
+
+/**
+ * Módulos de toda a equipe, de qualquer setor, inclusive o Somente leitura
+ * (10/11/2026): a Academia. Não entram no menu de setor nenhum — a entrada é
+ * o chapéu de formatura no topo — e aparecem no Ctrl+K para todos.
+ */
+export const MODULOS_DE_TODA_A_EQUIPE: ReadonlySet<string> = new Set(["academia"]);
 
 /**
  * Módulos cuja tela fica no menu **Geral**, e não na lista de telas do setor
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", "atendimento", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual"]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", "atendimento", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", "bpo_fluxos", ...MODULOS_DE_TODA_A_EQUIPE]);
 
 /**
  * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e
  * Repositório de manuais deixaram de ser do BPO e viraram um grupo do Geral,
  * para todo setor, junto dos Quadros. Cada setor vê os seus (cofre por setor).
  * O módulo segue ligado e desligado pelo escritório, no BPO de Setores e módulos.
+ * O Repositório de fluxos entrou no grupo em 10/11/2026.
  */
-export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual"] as const;
+export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual", "bpo_fluxos"] as const;
 
 /**
  * Chamados fica no Geral para todo setor, menos o que atende os chamados
@@ -1017,9 +1049,12 @@ export function chamadosNoMenuDoSetor(setorAtivo: string | null, setorDosChamado
  * (21/10/2026), como Fornecedores e sacados nos Cadastros: saem do menu do BPO
  * e aparecem como aba de /solicitacoes só para quem vê o módulo. Com o módulo
  * das Solicitações desligado, voltam ao menu do setor — senão sumiriam.
+ *
+ * Rótulo de uma palavra desde 10/11/2026 (decisão do Kauan): "Pendências" era
+ * "Pendências do BPO".
  */
 export const TELAS_DO_BPO_NAS_SOLICITACOES = [
-  { modulo: "bpo_pendencias", chave: "pendencias", rotulo: "Pendências do BPO", href: "/pendencias" },
+  { modulo: "bpo_pendencias", chave: "pendencias", rotulo: "Pendências", href: "/pendencias" },
   { modulo: "bpo_aprovacoes", chave: "aprovacoes", rotulo: "Aprovações", href: "/aprovacoes" },
 ] as const;
 export const MODULOS_NAS_SOLICITACOES: ReadonlySet<string> = new Set(TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.modulo));

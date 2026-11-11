@@ -20,12 +20,12 @@ import { saoPauloParts } from "@/lib/agenda";
 import { DecisaoDaEquipe } from "@/components/aprovacoes/DecisaoDaEquipe";
 import { HistoricoDaAprovacao, SeloDaAprovacao, type EventoDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
 import { NovaAlcada, AlternarAlcada } from "@/components/aprovacoes/FormAlcada";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
-import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { podeDecidir, podeEnviarParaAprovacao } from "@/lib/financeiro/aprovacao/regras";
 import { MODULO_DE_APROVACOES } from "@/lib/financeiro/aprovacao/servidor";
+import { SITUACOES_DA_FILA, situacaoDaFila, whereDaFilaDeAprovacoes, type SituacaoDaFila } from "@/lib/financeiro/aprovacao/fila";
+import { empresaDaFilaDeAprovacoes } from "@/lib/financeiro/aprovacao/filaServidor";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { usuariosAtivosDasEmpresas } from "@/lib/portal/empresasDaContaDb";
 
@@ -33,12 +33,6 @@ export const dynamic = "force-dynamic";
 
 const MODULE = MODULO_DE_APROVACOES;
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
-
-const SITUACOES = [
-  { chave: "aguardando", rotulo: "Aguardando", status: ["AGUARDANDO"] },
-  { chave: "reprovadas", rotulo: "Reprovadas", status: ["REPROVADO"] },
-  { chave: "todas", rotulo: "Aguardando e reprovadas", status: ["AGUARDANDO", "REPROVADO"] },
-] as const;
 
 const LIMITE = 500;
 
@@ -62,12 +56,10 @@ export default async function AprovacoesPage({
 
   const params = await searchParams;
   const aba = params.aba === "alcadas" && gerencia ? "alcadas" : "fila";
-  const empresas = await empresasDoSeletor(ctx.tenantId);
-  // A empresa vem da faixa (05/11/2026): a do foco, ou todas sem foco. Com a
-  // base inteira (matriz e filiais), a fila fica na empresa em foco — a
-  // alçada é de cada empresa.
-  const { empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { permitirTodas: true, comFoco: true });
-  const empresaId = empresa?.id ?? foco?.companyId ?? null;
+  // A empresa vem da faixa (05/11/2026): a do foco, ou todas sem foco. A
+  // escolha mora em `empresaDaFilaDeAprovacoes` desde 10/11/2026, com o balão
+  // da aba "Aprovações" das Solicitações, que conta a fila nesta mesma empresa.
+  const { foco, empresaId } = await empresaDaFilaDeAprovacoes(params.empresa);
 
   const abas = [
     { chave: "fila", rotulo: "Fila", href: `/aprovacoes${empresaId ? `?empresa=${empresaId}` : ""}`, icone: <ListChecks /> },
@@ -100,7 +92,7 @@ export default async function AprovacoesPage({
           tenantId={ctx.tenantId}
           userId={ctx.userId}
           empresaId={empresaId}
-          situacao={SITUACOES.find((s) => s.chave === params.situacao) ?? SITUACOES[2]}
+          situacao={situacaoDaFila(params.situacao)}
           podeAgir={podeAgir}
           gerencia={gerencia}
         />
@@ -122,12 +114,12 @@ async function Fila({
   tenantId: string;
   userId: string;
   empresaId: string | null;
-  situacao: (typeof SITUACOES)[number];
+  situacao: SituacaoDaFila;
   podeAgir: boolean;
   gerencia: boolean;
 }) {
   const prisma = getPrisma();
-  const base = { tenantId, kind: "PAGAR" as const, status: { not: "CANCELADO" as const }, ...(empresaId ? { companyId: empresaId } : {}) };
+  const base = whereDaFilaDeAprovacoes(tenantId, empresaId);
   const [linhas, contagem] = await Promise.all([
     prisma.financeEntry.findMany({
       where: { ...base, approvalStatus: { in: [...situacao.status] } },
@@ -247,7 +239,7 @@ async function Fila({
                 chave: "situacao",
                 rotulo: "Situação",
                 vazioLabel: "Aguardando e reprovadas",
-                opcoes: SITUACOES.filter((s) => s.chave !== "todas").map((s) => ({ value: s.chave, label: s.rotulo })),
+                opcoes: SITUACOES_DA_FILA.filter((s) => s.chave !== "todas").map((s) => ({ value: s.chave, label: s.rotulo })),
               },
             ]}
           />

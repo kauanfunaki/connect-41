@@ -78,6 +78,8 @@ const ICONE_DO_CHIP: Record<TipoDoChip, typeof Bell> = {
   solicitacao: Inbox,
   conversa: MessageCircle,
   pendencia: FileText,
+  // Aviso de transferência que aponta para ela (10/11/2026): o mesmo ícone do tipo.
+  transferencia: ArrowLeftRight,
 };
 
 export function IconeDaNotificacao({ icone, tom, tamanho = 34 }: { icone: IconeDaNotificacao; tom: Tom; tamanho?: number }) {
@@ -93,8 +95,17 @@ export function IconeDaNotificacao({ icone, tom, tamanho = 34 }: { icone: IconeD
   );
 }
 
+/**
+ * O conteúdo que o cartão do sino e o aviso do canto da tela desenham igual
+ * (10/11/2026): o aviso do canto usa estes mesmos pedaços (`AvisoDaNotificacao`).
+ */
+export type ConteudoDaNotificacao = Pick<
+  NotificacaoNaTela,
+  "icone" | "tom" | "titulo" | "mensagem" | "lida" | "criadaEm" | "chip" | "autor"
+>;
+
 /** A foto de quem fez, com o ícone do tipo num selo no canto; sem autor, só o ícone. */
-function RostoDaNotificacao({ n }: { n: NotificacaoNaTela }) {
+function RostoDaNotificacao({ n }: { n: ConteudoDaNotificacao }) {
   if (!n.autor) return <IconeDaNotificacao icone={n.icone} tom={n.tom} />;
   const Icone = ICONES[n.icone];
   return (
@@ -105,6 +116,54 @@ function RostoDaNotificacao({ n }: { n: NotificacaoNaTela }) {
         <span className={`size-full inline-flex items-center justify-center rounded-full ${TONS[n.tom]}`}>
           <Icone size={10} />
         </span>
+      </span>
+    </span>
+  );
+}
+
+/** Título com o ponto de não lida, a frase e a linha de quem, origem e quando. */
+function TextoDaNotificacao({ n, semTempo = false }: { n: ConteudoDaNotificacao; semTempo?: boolean }) {
+  const Chip = n.chip ? ICONE_DO_CHIP[n.chip.tipo] : null;
+  return (
+    <>
+      <span className="flex items-baseline gap-2">
+        <span className={`text-fs-3 text-fg truncate ${n.lida ? "font-medium" : "font-semibold"}`}>{n.titulo}</span>
+        {/* Texto para o leitor de tela: `aria-label` num span sem papel não é
+            lido com segurança, e o "não lida" ficava só no ponto azul (30/10/2026). */}
+        {!n.lida && (
+          <>
+            <span aria-hidden className="flex-shrink-0 size-1.5 rounded-full bg-brand translate-y-[-1px]" />
+            <span className="sr-only">(não lida)</span>
+          </>
+        )}
+      </span>
+      <span className="block text-fs-3 text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
+      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+        {n.autor && <span className="text-fs-1 font-medium text-fg-secondary">{n.autor.nome}</span>}
+        {/* A origem é categoria: o `Badge` neutro, com o ícone (15/10/2026) —
+            era uma pílula montada aqui. */}
+        {n.chip && Chip && (
+          <Badge variant="neutral" className="max-w-full min-w-0 gap-1">
+            <Chip size={11} className="flex-shrink-0" />
+            <span className="truncate">{n.chip.rotulo}</span>
+          </Badge>
+        )}
+        {!semTempo && <span className="text-fs-1 text-fg-muted tabular-nums">{tempoRelativo(new Date(n.criadaEm))}</span>}
+      </span>
+    </>
+  );
+}
+
+/**
+ * O aviso do canto da tela (10/11/2026): o mesmo rosto e o mesmo texto do
+ * cartão, sem as ações do hover — o `Toast` põe o clique e o X para fechar.
+ */
+export function AvisoDaNotificacao({ n }: { n: ConteudoDaNotificacao }) {
+  return (
+    <span className="flex items-start gap-3">
+      <RostoDaNotificacao n={n} />
+      <span className="min-w-0 flex-1">
+        <TextoDaNotificacao n={n} />
       </span>
     </span>
   );
@@ -124,7 +183,6 @@ type Props = {
 };
 
 export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, onRemover, semTempo = false, selecao }: Props) {
-  const Chip = n.chip ? ICONE_DO_CHIP[n.chip.tipo] : null;
   return (
     <div
       className={`group relative flex items-start gap-3 rounded-lg px-3 py-3 transition-colors ${
@@ -146,30 +204,7 @@ export function CartaoDeNotificacao({ n, onAbrir, onAlternarLida, onArquivar, on
         onClick={() => onAbrir(n)}
         className="min-w-0 flex-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-md"
       >
-        <span className="flex items-baseline gap-2">
-          <span className={`text-fs-3 text-fg truncate ${n.lida ? "font-medium" : "font-semibold"}`}>{n.titulo}</span>
-          {/* Texto para o leitor de tela: `aria-label` num span sem papel não é
-              lido com segurança, e o "não lida" ficava só no ponto azul (30/10/2026). */}
-          {!n.lida && (
-            <>
-              <span aria-hidden className="flex-shrink-0 size-1.5 rounded-full bg-brand translate-y-[-1px]" />
-              <span className="sr-only">(não lida)</span>
-            </>
-          )}
-        </span>
-        <span className="block text-fs-3 text-fg-secondary leading-snug mt-0.5 line-clamp-2">{n.mensagem}</span>
-        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          {n.autor && <span className="text-fs-1 font-medium text-fg-secondary">{n.autor.nome}</span>}
-          {/* A origem é categoria: o `Badge` neutro, com o ícone (15/10/2026) —
-              era uma pílula montada aqui. */}
-          {n.chip && Chip && (
-            <Badge variant="neutral" className="max-w-full min-w-0 gap-1">
-              <Chip size={11} className="flex-shrink-0" />
-              <span className="truncate">{n.chip.rotulo}</span>
-            </Badge>
-          )}
-          {!semTempo && <span className="text-fs-1 text-fg-muted tabular-nums">{tempoRelativo(new Date(n.criadaEm))}</span>}
-        </span>
+        <TextoDaNotificacao n={n} semTempo={semTempo} />
       </button>
       {/* Ações no hover (e no foco, para o teclado). Sempre visíveis no toque. */}
       <span className="flex-shrink-0 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">

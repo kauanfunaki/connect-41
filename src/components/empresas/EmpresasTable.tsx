@@ -22,9 +22,12 @@ import { FiltroDaColunaNaUrl } from "@/components/shared/FiltroDeColunas";
 import type { OpcaoDoFunil } from "@/lib/filtrosDaListaDeEmpresas";
 import type { ResultadoEmMassa } from "@/lib/exclusao/tipos";
 import { ResultadoDaExclusaoEmMassa } from "@/components/exclusao/ResultadoEmMassa";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 type Row = {
   id: string;
+  /** O número da empresa: os links vão pelo endereço curto, /empresas/empresa-301 (10/11/2026). */
+  number?: number;
   name: string;
   displayName: string | null;
   externalId: string | null;
@@ -102,7 +105,7 @@ export function EmpresasTable({
       <AcoesDeLinha
         foraDeOperacao={FORA_DE_OPERACAO.includes(c.status)}
         onToggle={() => toggleAtivo(c)}
-        editarHref={`/empresas/${c.id}/editar`}
+        editarHref={`${enderecoDe("empresa", c)}/editar`}
       />
     );
   }
@@ -144,7 +147,7 @@ export function EmpresasTable({
               <CornerDownRight size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
             ) : null}
             <Link
-              href={`/empresas/${c.id}`}
+              href={enderecoDe("empresa", c)}
               className="flex items-center gap-2.5 min-w-0 font-medium text-fg hover:text-brand transition-colors"
             >
               <AvatarImage src={c.logoUrl} name={nomeExibicao(c)} size={28} shape="lg" fontSize={11} />
@@ -242,7 +245,7 @@ export function EmpresasTable({
             />
           )}
           <Link
-            href={`/empresas/${c.id}`}
+            href={enderecoDe("empresa", c)}
             className="flex items-start gap-2.5 min-w-0 flex-1 text-fg"
           >
             <AvatarImage src={c.logoUrl} name={nomeExibicao(c)} size={32} shape="lg" fontSize={12} />

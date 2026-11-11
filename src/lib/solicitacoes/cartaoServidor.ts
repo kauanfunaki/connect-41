@@ -8,6 +8,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
+import { enderecoDaTarefa } from "@/lib/enderecoCurto";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { nomeExibicao } from "@/lib/companyName";
 import { isModuleEnabled } from "@/lib/modules";
@@ -66,9 +68,12 @@ export async function criarCartaoDaSolicitacao(tenantId: string, requestId: stri
       return;
     }
 
-    const item = await prisma.pipelineItem.create({
+    // O cartão é uma tarefa do quadro: ganha o número do escritório, o do
+    // endereço curto /kanban/itens/tarefa-77 (10/11/2026, pedido do Kauan).
+    const item = await criarComNumero("tarefa", tenantId, (tx, number) => tx.pipelineItem.create({
       data: {
         tenantId,
+        number,
         pipelineId: lista.id,
         stageId: coluna.id,
         entityType: "COMPANY",
@@ -79,7 +84,7 @@ export async function criarCartaoDaSolicitacao(tenantId: string, requestId: stri
         assignees: s.assigneeId ? { create: [{ userId: s.assigneeId }] } : undefined,
       },
       select: { id: true },
-    });
+    }));
     revalidarCartao(lista.id, item.id);
   } catch (err) {
     if (isPrismaUniqueError(err)) return; // outra chamada criou o cartão ao mesmo tempo
@@ -149,6 +154,7 @@ export async function cartaoDaSolicitacao(tenantId: string, requestId: string): 
     where: { tenantId, serviceRequestId: requestId },
     select: {
       id: true,
+      number: true,
       stage: { select: { name: true, type: true } },
       pipeline: { select: { id: true, name: true, sectorCode: true, space: { select: { name: true } } } },
     },
@@ -156,7 +162,7 @@ export async function cartaoDaSolicitacao(tenantId: string, requestId: string): 
   if (!c) return null;
   return {
     id: c.id,
-    href: `${boardPath(c.pipeline)}/itens/${c.id}`,
+    href: enderecoDaTarefa(c.pipeline.id, c),
     lista: `${c.pipeline.space.name} › ${c.pipeline.name}`,
     coluna: c.stage.name,
     colunaTipo: c.stage.type,

@@ -8,7 +8,7 @@ import { scopedPersonWhere } from "@/lib/auth/scope";
 import { PessoasTable } from "@/components/pessoas/PessoasTable";
 import { PessoasFilterButton } from "@/components/pessoas/PessoasFilterButton";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { CadastrosTabsBar } from "@/components/shared/CadastrosTabsBar";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
@@ -62,7 +62,7 @@ export default async function PessoasPage({
       orderBy: { name: "asc" },
       skip: (pageNum - 1) * PER_PAGE,
       take: PER_PAGE,
-      include: { currentCompany: { select: { id: true, name: true } }, linkedUser: { select: { id: true, name: true } } },
+      include: { currentCompany: { select: { id: true, number: true, name: true } }, linkedUser: { select: { id: true, name: true } } },
     }),
     prisma.person.count({ where }),
   ]);
@@ -80,17 +80,20 @@ export default async function PessoasPage({
 
   return (
     <PageContainer>
-      <CadastrosTabsBar
-        active="pessoas"
-        subtitulo="Os funcionários internos do escritório."
-        acao={<>{canCreate && (
+      {/* Título da própria tela (10/11/2026, pedido do Kauan): Pessoas é um
+          item do grupo Cadastros no menu lateral, sem a fileira de abas
+          Empresas/Pessoas no alto. */}
+      <PageHeader
+        title="Pessoas"
+        subtitle="Os funcionários internos do escritório."
+        action={canCreate ? (
           <Button
             href="/pessoas/nova?internal=1"
             variant="primary"
           >
             <Plus size={14} /> Nova pessoa
           </Button>
-        )}</>}
+        ) : undefined}
       />
 
       <div id="cadastros-content">
@@ -136,6 +139,7 @@ export default async function PessoasPage({
         <PessoasTable
           people={people.map((p) => ({
             id: p.id,
+            number: p.number,
             name: p.name,
             active: p.active,
             cpf: p.cpf,
@@ -143,6 +147,7 @@ export default async function PessoasPage({
             photoUrl: p.photoUrl,
             companyName: p.currentCompany?.name ?? null,
             companyId: p.currentCompany?.id ?? null,
+            companyNumber: p.currentCompany?.number ?? null,
             createdAtLabel: formatInstantDate(p.createdAt),
             linkedUserName: p.linkedUser?.name ?? null,
           }))}

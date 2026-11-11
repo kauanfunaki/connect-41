@@ -8,6 +8,7 @@ import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
 import { idadeDaAtividade, prazoRelativo, type Atividade } from "@/lib/chamados/atividade";
 import { ROTULOS, ROTULOS_PRIORIDADE, fechado, type Prioridade, type Status } from "@/lib/chamados/regras";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import { TOM_DA_PRIORIDADE, TOM_DA_SITUACAO } from "@/lib/chamados/tons";
 
 // O cartão da lista de chamados (proposta C, escolhida em 03/11/2026): à
@@ -35,7 +36,8 @@ const TEXTO_DO_TOM: Record<TomDoSelo, string> = {
 const TOM_DA_IDADE = { recente: "sucesso", normal: "neutro", parada: "atencao" } as const;
 
 type Props = {
-  id: string; titulo: string; status: string; prioridade: string; version: number; criadoEm: Date;
+  /** `numero`: o link vai pelo endereço curto, /chamados/chamado-45 (10/11/2026). */
+  id: string; numero?: number; titulo: string; status: string; prioridade: string; version: number; criadoEm: Date;
   categoria: string; corCategoria: string; setor: { rotulo: string; cor: string };
   responsaveis: { id: string; nome: string }[];
   prazo?: { vence: Date; pausado: boolean; atrasado: boolean };
@@ -78,7 +80,7 @@ export function CartaoDoChamado(p: Props) {
     </div>
     <div className="flex min-w-0 flex-col gap-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <Link href={`/chamados/${p.id}`} className="min-w-0 break-words text-label font-semibold text-fg after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] hover:text-brand hover:underline">{p.titulo}</Link>
+        <Link href={enderecoDe("chamado", { id: p.id, number: p.numero })} className="min-w-0 break-words text-label font-semibold text-fg after:absolute after:inset-0 after:rounded-[inherit] after:content-[''] hover:text-brand hover:underline">{p.titulo}</Link>
         <span data-dica={`Última atividade em ${formatInstantDateTime(p.ultimaAtividade)}`} className="relative z-10 shrink-0"><Selo tom={tomDaAtividade} className="font-semibold">{tempoRelativo(p.ultimaAtividade, p.agora)}</Selo></span>
       </div>
       <p className="flex flex-wrap items-center gap-1.5 text-helper">

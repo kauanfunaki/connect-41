@@ -14,9 +14,12 @@ import { useToast } from "@/components/ui/Toast";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { maskCpf } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
+import { enderecoDe } from "@/lib/enderecoCurto";
 
 type Row = {
   id: string;
+  /** O número da pessoa: os links vão pelo endereço curto, /pessoas/pessoa-12 (10/11/2026). */
+  number?: number;
   name: string;
   active: boolean;
   cpf: string | null;
@@ -24,6 +27,7 @@ type Row = {
   photoUrl: string | null;
   companyName: string | null;
   companyId: string | null;
+  companyNumber?: number | null;
   createdAtLabel: string;
   linkedUserName: string | null;
 };
@@ -128,7 +132,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
               className="mt-1.5"
             />
           )}
-          <Link href={`/pessoas/${p.id}`} className="flex items-start gap-2.5 min-w-0 flex-1 text-fg">
+          <Link href={enderecoDe("pessoa", p)} className="flex items-start gap-2.5 min-w-0 flex-1 text-fg">
             <AvatarImage src={p.photoUrl} name={p.name} size={32} shape="circle" fontSize={12} />
             <span className="flex flex-col min-w-0">
               <span className="font-medium break-words">{p.name}</span>
@@ -156,7 +160,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
           {showLinkedUser ? (
             p.linkedUserName ?? <span className="text-fg-muted">não vinculada</span>
           ) : p.companyId ? (
-            <Link href={`/empresas/${p.companyId}`} className="text-brand hover:underline">
+            <Link href={enderecoDe("empresa", { id: p.companyId, number: p.companyNumber })} className="text-brand hover:underline">
               {p.companyName}
             </Link>
           ) : (
@@ -169,7 +173,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
             <AcoesDeLinha
               foraDeOperacao={!p.active}
               onToggle={() => toggleAtivo(p)}
-              editarHref={`/pessoas/${p.id}/editar`}
+              editarHref={`${enderecoDe("pessoa", p)}/editar`}
             />
           </div>
         )}
@@ -237,7 +241,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <Link href={`/pessoas/${p.id}`} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
+                    <Link href={enderecoDe("pessoa", p)} className="flex items-center gap-2.5 font-medium text-fg hover:text-brand transition-colors">
                       <AvatarImage src={p.photoUrl} name={p.name} size={28} shape="circle" fontSize={11} />
                       {p.name}
                     </Link>
@@ -254,7 +258,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                     {showLinkedUser ? (
                       p.linkedUserName ?? <span className="text-fg-muted">Não vinculado</span>
                     ) : p.companyId ? (
-                      <Link href={`/empresas/${p.companyId}`} className="hover:text-brand transition-colors">
+                      <Link href={enderecoDe("empresa", { id: p.companyId, number: p.companyNumber })} className="hover:text-brand transition-colors">
                         {p.companyName}
                       </Link>
                     ) : (
@@ -267,7 +271,7 @@ export function PessoasTable({ people, canCreate, showLinkedUser = false, defini
                       <AcoesDeLinha
                         foraDeOperacao={!p.active}
                         onToggle={() => toggleAtivo(p)}
-                        editarHref={`/pessoas/${p.id}/editar`}
+                        editarHref={`${enderecoDe("pessoa", p)}/editar`}
                       />
                     )}
                   </td>

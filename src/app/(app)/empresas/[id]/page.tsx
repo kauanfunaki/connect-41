@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { getPrisma } from "@/lib/prisma";
+import { abrirPeloEndereco } from "@/lib/enderecoCurtoServidor";
 import { adicionarServico, atribuirResponsavelServico } from "../actions";
 import { getAuthContext, canWrite, isFullWrite, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
@@ -68,11 +69,16 @@ const STATUS_COLOR: Record<CompanyStatus, string> = {
 
 export default async function EmpresaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { id } = await params;
+  const { id: segmento } = await params;
   const ctx = await getAuthContext();
+  // O endereço curto (10/11/2026, pedido do Kauan): /empresas/empresa-301. O
+  // endereço com o uuid passa para ele, com a aba e o resto da query.
+  const { id } = await abrirPeloEndereco("empresa", ctx.tenantId, segmento, await searchParams);
   const canEdit = canWrite(ctx.role);
   const canRequestHandoff = isFullWrite(ctx.role) || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.length > 0);
 
@@ -82,10 +88,10 @@ export default async function EmpresaPage({
     include: {
       services: { orderBy: { createdAt: "asc" } },
       people: { orderBy: { name: "asc" }, take: 10 },
-      parent: { select: { id: true, name: true, displayName: true, cnpj: true } },
+      parent: { select: { id: true, number: true, name: true, displayName: true, cnpj: true } },
       filiais: {
         orderBy: { name: "asc" },
-        select: { id: true, name: true, displayName: true, cnpj: true, status: true, city: true, stateCode: true },
+        select: { id: true, number: true, name: true, displayName: true, cnpj: true, status: true, city: true, stateCode: true },
       },
     },
   });
@@ -182,6 +188,7 @@ export default async function EmpresaPage({
 
       <CompanyHeader
         id={company.id}
+        numero={company.number}
         name={nomeExibicao(company)}
         tradeName={razaoSocialSecundaria(company) ?? company.tradeName}
         kind={company.kind}
@@ -265,7 +272,7 @@ export default async function EmpresaPage({
           />
         }
         people={<CompanyPeopleSection companyId={company.id} people={company.people} />}
-        operations={<CompanyOperationsSection companyId={company.id} />}
+        operations={<CompanyOperationsSection companyId={company.id} numero={company.number} />}
         documents={
           arquivos ? undefined : (
             <DocumentsSection
@@ -309,6 +316,7 @@ export default async function EmpresaPage({
           <CompanyHistorySection
             pipelineItems={pipelineItems.map((p) => ({
               id: p.id,
+              number: p.number,
               pipelineId: p.pipeline.id,
               pipelineName: p.pipeline.name,
               pipelineSectorCode: p.pipeline.sectorCode,

@@ -18,16 +18,19 @@ import { useToast } from "@/components/ui/Toast";
 import { NovaTarefaEmLinha, useNovaTarefaDoTopo } from "@/components/kanban/NovaTarefaEmLinha";
 import { useConcluirComSubatividades } from "@/components/kanban/useConcluirComSubatividades";
 import { aceitaSubatividade } from "@/lib/kanban/subatividades";
+import { segmentoDaTarefa } from "@/lib/enderecoCurto";
 
 export type AssigneeRow = { id: string; name: string; priority: number };
 /** A subatividade, em qualquer nível — com as filhas dela em `subtasks` (06/11/2026). */
+// `number`: o card abre pelo endereço curto, tarefa-77 (10/11/2026).
 export type SubtaskRow = {
-  id: string; stageId: string; entityName: string; stageName: string; isTerminal: boolean; priority: number;
+  id: string; number?: number; stageId: string; entityName: string; stageName: string; isTerminal: boolean; priority: number;
   assignees?: AssigneeRow[]; dueDate?: string | null; tags?: { id: string; name: string; color: string }[]; recurring?: boolean;
   subtasks?: SubtaskRow[];
 };
 export type TaskRow = {
   id: string;
+  number?: number;
   stageId: string;
   entityName: string;
   priority: number;
@@ -308,7 +311,7 @@ function Row({
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Link
-                href={`${basePath}/itens/${item.id}`}
+                href={`${basePath}/itens/${segmentoDaTarefa(item)}`}
                 // Cortado, o nome inteiro sai na dica (o `DicaFlutuante` cuida do
                 // `.truncate` em tabela) — no 5º nível o recuo já come 100px dele.
                 className={`text-fs-3 text-fg group-hover:text-brand transition-colors truncate min-w-0 ${isTerminal ? "text-fg-muted" : ""}`}
@@ -496,7 +499,7 @@ function TaskCard({
           </button>
 
           <Link
-            href={`${basePath}/itens/${item.id}`}
+            href={`${basePath}/itens/${segmentoDaTarefa(item)}`}
             className={`flex-1 min-w-0 text-fs-3 leading-snug ${isTerminal ? "text-fg-muted" : "text-fg"}`}
           >
             {item.entityName}

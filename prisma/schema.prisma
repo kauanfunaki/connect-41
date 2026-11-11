@@ -599,6 +599,24 @@ model PersonalApiToken {
   @@map("personal_api_tokens")
 }
 
+/// O contador do endereço curto (10/11/2026, pedido do Kauan): o último número
+/// dado em cada tela do escritório — empresa, pessoa, chamado, processo,
+/// transferencia, pendencia, tarefa e controle-interno. O número nunca é
+/// reaproveitado, nem quando o registro de maior número é excluído: a criação
+/// reserva o próximo aqui, com a linha travada na transação
+/// (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts), e não pelo maior
+/// número que sobrou na tabela.
+model ShortAddressCounter {
+  tenantId  String
+  tela      String   @db.VarChar(30)
+  ultimo    Int
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@id([tenantId, tela])
+  @@map("short_address_counters")
+}
+
 model OpsEvent {
   id String @id @default(uuid())
   tenantId String
@@ -730,6 +748,9 @@ model HelpdeskTriageMessage {
 model HelpdeskTicket {
   id String @id @default(uuid())
   tenantId String
+  /// O número no escritório, o do endereço curto (10/11/2026): /chamados/chamado-45.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number Int
   draftId String @unique
   title String @db.VarChar(255)
   description String @db.Text
@@ -763,6 +784,7 @@ model HelpdeskTicket {
   views HelpdeskTicketView[]
   @@unique([tenantId, id])
   @@unique([tenantId, draftId])
+  @@unique([tenantId, number])
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
@@ -1040,11 +1062,18 @@ enum ActivityType {
 }
 
 // Situação da transferência em cada setor de destino:
-// NEW = "Nova", IN_PROGRESS = "Resolvendo", DONE = "Finalizada".
+// NEW = "Nova", IN_PROGRESS = "Resolvendo", DONE = "Finalizada",
+// RETURNED = "Devolvida".
+//
+// RETURNED (10/11/2026, pedido do Kauan): o setor de destino devolveu a parte
+// dele a quem pediu, com o motivo (no HandoffEvent). Quem pediu responde e
+// reenvia, e a parte volta a NEW. Fica no FIM do enum de propósito: assim o
+// ALTER do MySQL só acrescenta um valor à coluna, sem reescrever a ordem.
 enum HandoffSectorStatus {
   NEW
   IN_PROGRESS
   DONE
+  RETURNED
 }
 
 enum HandoffPriority {
@@ -1052,6 +1081,24 @@ enum HandoffPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+// O que aconteceu na transferência, para a "Atividade" da transferência aberta
+// (10/11/2026, pedido do Kauan). CREATED = pediu; STARTED = começou a parte;
+// DONE = finalizou a parte; RETURNED = devolveu a parte a quem pediu;
+// RESENT = respondeu e reenviou; COMMENT = comentou; ASSIGNEES_CHANGED = mudou
+// os responsáveis da parte; EDITED = editou assunto, descrição ou prioridade;
+// REOPENED = reabriu a parte finalizada.
+enum HandoffEventType {
+  CREATED
+  STARTED
+  DONE
+  RETURNED
+  RESENT
+  COMMENT
+  ASSIGNEES_CHANGED
+  EDITED
+  REOPENED
 }
 
 enum AiProvider {
@@ -1397,6 +1444,15 @@ enum TrainingParticipantStatus {
 model Tenant {
   opsApiKeys OpsApiKey[]
   personalApiTokens PersonalApiToken[]
+  shortAddressCounters ShortAddressCounter[]
+  academiaTextos AcademiaTexto[]
+  academiaQuestoes AcademiaQuestao[]
+  academiaSessoes AcademiaSessao[]
+  academiaResultados AcademiaResultado[]
+  academiaPreferencias AcademiaPreferencia[]
+  academiaPremios AcademiaPremio[]
+  flowFolders FlowFolder[]
+  flowDocs FlowDoc[]
   techInternalTools TechInternalTool[]
   techInternalItems TechInternalItem[]
   techInternalComments TechInternalComment[]
@@ -1481,6 +1537,7 @@ model Tenant {
   evaluations               Evaluation[]
   evaluationScores          EvaluationScore[]
   handoffViews              HandoffView[]
+  handoffEvents             HandoffEvent[]
   checklistItems            ChecklistItem[]
   timeEntries               TimeEntry[]
   spaces                    Space[]
@@ -1497,6 +1554,7 @@ model Tenant {
   societarioConfig          TenantSocietarioConfig?
   quadrosBloqueados         SectorQuadrosBloqueados[]
   userAgendaConfigs         UserAgendaConfig[]
+  userAgendaViews           UserAgendaView[]
   userTaskViews             UserTaskView[]
   clientDocuments           ClientDocument[]
   smtpConfig                TenantSmtpConfig?
@@ -1509,6 +1567,7 @@ model Tenant {
   chatwootConnections       ChatwootConnection[]
   bpoCredentials            BpoCredential[]
   bpoCredentialViews        BpoCredentialView[]
+  bpoCredentialRestrictions BpoCredentialRestriction[]
   chatwootAgentLinks        ChatwootAgentLink[]
   chatwootSenderRoles       ChatwootSenderRole[]
   fiscalDocuments           FiscalDocument[]
@@ -1548,11 +1607,14 @@ model Tenant {
   budgets                   Budget[]
   agentEvaluationSummaries  AgentEvaluationSummary[]
   sectorTaskViews           SectorTaskView[]
+  sectorAgendaViews         SectorAgendaView[]
   sectorMenuViews           SectorMenuView[]
   inventoryItems            InventoryItem[]
   inventoryMovements        InventoryMovement[]
   internalContracts         InternalContract[]
   sectorMenuOrders          SectorMenuOrder[]
+  sectorHomeCards           SectorHomeCards[]
+  userHomeCards             UserHomeCards[]
   robotTasks                RobotTask[]
   processOrgans             ProcessOrgan[]
   processTypes              ProcessType[]
@@ -1607,18 +1669,13 @@ model Tenant {
   @@map("tenants")
 }
 
-// Quais blocos a tela /tarefas monta para cada setor.
-//
-// Diferente da personalização da Home (UserPreference.homeWidgets), que é
-// preferência pessoal e cada um mexe na sua: aqui a configuração é do
-// workspace e só o SUPER_ADMIN edita. A razão é que o conteúdo de /tarefas não
-// é gosto, é a definição do que conta como obrigação daquele setor — hoje todo
-// mundo vê reuniões, transferências e cards de kanban, mas conforme cada setor
-// ganha os próprios módulos, um setor pode não usar nenhum dos três.
-//
-// Ausência de linha = padrão do catálogo (tudo visível), então um setor novo
-// nasce funcionando sem ninguém precisar configurar nada. Quem pertence a mais
-// de um setor vê a UNIÃO dos blocos dos seus setores.
+// ─── Meu dia (/tarefas): os blocos e as origens que a tela monta ────────────
+// O conteúdo do Meu dia não é só gosto: é o que conta como trabalho daquele
+// setor, e nem todo setor usa reuniões, transferências ou processos. Por isso
+// há o padrão do setor (SectorTaskView) e o da pessoa (UserTaskView), com a
+// pessoa valendo mais. Ausência de linha = padrão do catálogo
+// (src/lib/taskWidgets.ts), então um setor novo nasce funcionando. Quem
+// pertence a mais de um setor vê a UNIÃO dos blocos dos seus setores.
 /// O Meu dia de uma pessoa (28/10/2026): os blocos que ela vê, quando tem
 /// configuração própria — gravada por ela, pelo coordenador de um setor dela
 /// ou pelo admin (ver src/lib/meuDia/configuracao.ts). Vale mais que a do
@@ -1640,11 +1697,20 @@ model UserTaskView {
   @@map("user_task_views")
 }
 
+// O padrão do Meu dia de cada setor. O comentário de cima é de quando só o
+// SUPER_ADMIN editava: desde 28/10/2026 Admin e Super Admin, e desde
+// 10/11/2026 (pedido do Kauan) também o coordenador do setor (SECTOR_ADMIN
+// dele) — ver src/lib/meuDia/configuracao.ts. A precedência é pessoa
+// (UserTaskView) > setor (esta) > código (src/lib/taskWidgets.ts), chave a
+// chave. Sem linha, o padrão do código, que desliga "Próximas reuniões" no
+// setor que não usa reuniões (SectorAgendaView.usaReunioes).
 model SectorTaskView {
   id         String   @id @default(uuid())
   tenantId   String
   sectorCode String   @db.VarChar(40)
-  // JSON com as chaves visíveis, ex. ["transferencias","reunioes"]. Texto e
+  // JSON com as chaves visíveis. Até 10/11/2026 era uma lista, ex.
+  // ["transferencias","reunioes"]; desde então é { visiveis, conhecidas }, para
+  // bloco novo não sumir de quem já tinha salvo (ver parseTaskWidgets). Texto e
   // não tabela de junção pelo mesmo motivo de homeWidgets: o catálogo vive em
   // código, e chave desconhecida é descartada na leitura.
   widgets    String   @db.Text
@@ -1656,6 +1722,31 @@ model SectorTaskView {
   @@unique([tenantId, sectorCode])
   @@index([tenantId])
   @@map("sector_task_views")
+}
+
+// A Agenda de cada setor (10/11/2026, pedido do Kauan): "tem setores que não
+// fazem reuniões". O coordenador do setor (SECTOR_ADMIN dele), o Admin ou o
+// Super Admin diz se o setor usa reuniões e quais fontes de prazo a Agenda
+// mostra por padrão. Sem linha, o padrão do código: usa reuniões e mostra todas
+// as fontes — a Agenda de antes desta tabela. Regras em src/lib/agendaDoSetor.ts.
+model SectorAgendaView {
+  id            String   @id @default(uuid())
+  tenantId      String
+  sectorCode    String   @db.VarChar(40)
+  /// Falso: a Agenda abre em Prazos e o Meu dia nasce sem "Próximas reuniões".
+  usaReunioes   Boolean  @default(true)
+  /// JSON com as fontes DESLIGADAS, ex. ["contas","dp"]. As desligadas, e não
+  /// as ligadas, para fonte nova aparecer também em quem já configurou. Nulo =
+  /// todas ligadas. Chave desconhecida é descartada na leitura.
+  fontesOcultas String?  @db.Text
+  updatedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@map("sector_agenda_views")
 }
 
 // Quais telas do grupo "Geral" do menu lateral ficam ESCONDIDAS para cada
@@ -1707,6 +1798,49 @@ model SectorMenuOrder {
 
   @@unique([tenantId, sectorCode])
   @@map("sector_menu_orders")
+}
+
+// Os cartões coringa do topo do Início (10/11/2026, pedido do Kauan). O
+// catálogo vive em código (src/lib/home/cartoes.ts); aqui ficam só as
+// escolhas, em JSON com as quatro posições — a chave do cartão ou null ("vale
+// o de cima"). Chave que sair do catálogo é descartada na leitura, sem mexer
+// nas outras posições. Precedência: a pessoa > o padrão do setor > o código.
+
+/// O padrão do setor: o que o coordenador do setor (ou o admin) escolheu para
+/// os quatro cartões de quem está no setor. Sem linha, o padrão do código.
+model SectorHomeCards {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  cards       String   @db.Text
+  /// Quem gravou por último (a troca fica também na auditoria).
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, sectorCode])
+  @@map("sector_home_cards")
+}
+
+/// A escolha de uma pessoa, por setor ativo ("" em "Todos os setores"): quem
+/// é de dois setores tem quatro cartões em cada um. Sai junto com a pessoa.
+model UserHomeCards {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String
+  sectorCode String   @default("") @db.VarChar(40)
+  cards      String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, sectorCode])
+  @@index([tenantId])
+  @@map("user_home_cards")
 }
 
 // Acesso de um SUPER_ADMIN a um tenant além do seu próprio (User.tenantId) —
@@ -1895,6 +2029,9 @@ model Subscription {
 model User {
   techInternalAssignments TechInternalItem[]
   personalApiTokens       PersonalApiToken[]
+  academiaSessoes         AcademiaSessao[]
+  academiaResultados      AcademiaResultado[]
+  academiaPreferencia     AcademiaPreferencia?
   opsWatchers                 OpsWatcher[]
   opsSites                    OpsSite[]
   opsApps                     OpsApp[]
@@ -1923,6 +2060,7 @@ model User {
   handoffs                    Handoff[]                  @relation("HandoffRequester")
   handoffSectorAssignees      HandoffSectorAssignee[]
   handoffViews                HandoffView[]
+  handoffEvents               HandoffEvent[]
   notifications               Notification[]
   notificationHiddenTypes     NotificationHiddenType[]
   pushSubscriptions           PushSubscription[]
@@ -1968,6 +2106,7 @@ model User {
   meetingsCreated             Meeting[]                  @relation("MeetingCreatedBy")
   meetingAttendances          MeetingAttendee[]
   agendaConfigs               UserAgendaConfig[]
+  agendaViews                 UserAgendaView[]
   clientDocumentsCreated      ClientDocument[]
   recurringObligations        RecurringObligation[]
   admissaoLinksCreated        AdmissaoLink[]
@@ -1978,6 +2117,8 @@ model User {
   linkedPerson                Person?
   bpoCredentialsCreated       BpoCredential[]
   bpoCredentialViews          BpoCredentialView[]
+  bpoCredentialRestrictions   BpoCredentialRestriction[]
+  homeCards                   UserHomeCards[]
   chatwootAgentLinks          ChatwootAgentLink[]
   preference                  UserPreference?
   pinnedModules               UserPinnedModule[]
@@ -2146,6 +2287,9 @@ model PasswordResetToken {
 model Company {
   id                    String        @id @default(uuid())
   tenantId              String
+  /// O número no escritório, o do endereço curto (10/11/2026): /empresas/empresa-301.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number                Int
   // Identificação
   name                  String        @db.VarChar(180) // Razão Social
   tradeName             String?       @db.VarChar(180) // Nome Fantasia
@@ -2360,6 +2504,7 @@ model Company {
   // o par (tenant, CNPJ) são espaços de identidade distintos, e um CPF nunca
   // colide com um CNPJ por ter 11 dígitos contra 14.
   @@unique([tenantId, cpf])
+  @@unique([tenantId, number])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, taxRegimeKind])
@@ -2392,6 +2537,9 @@ model CompanyService {
 model Person {
   id                      String     @id @default(uuid())
   tenantId                String
+  /// O número no escritório, o do endereço curto (10/11/2026): /pessoas/pessoa-12.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number                  Int
   name                    String     @db.VarChar(180)
   cpf                     String?    @db.VarChar(14)
   email                   String?    @db.VarChar(120)
@@ -2470,6 +2618,7 @@ model Person {
   tags                 PersonTag[]
 
   @@unique([tenantId, cpf])
+  @@unique([tenantId, number])
   @@index([tenantId])
   @@index([tenantId, type])
   @@index([tenantId, isInternal])
@@ -2581,6 +2730,9 @@ model PipelineStage {
 model PipelineItem {
   id                   String              @id @default(uuid())
   tenantId             String
+  /// O número no escritório, o do endereço curto (10/11/2026): /kanban/itens/tarefa-77.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number               Int
   pipelineId           String
   stageId              String
   // Opcional — nem toda tarefa está associada a uma empresa/pessoa específica
@@ -2640,6 +2792,7 @@ model PipelineItem {
   meetings    Meeting[]
   obrigacaoGerada ObrigacaoGerada?
 
+  @@unique([tenantId, number])
   @@index([tenantId, pipelineId])
   @@index([tenantId, entityType, entityId])
   @@index([parentItemId])
@@ -4719,6 +4872,9 @@ enum ClientRequestStatus {
 model ClientRequest {
   id             String              @id @default(uuid())
   tenantId       String
+  /// O número no escritório, o do endereço curto (10/11/2026): /pendencias/pendencia-9.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number         Int
   companyId      String
   kind           ClientRequestKind
   title          String              @db.VarChar(160)
@@ -4748,6 +4904,7 @@ model ClientRequest {
   attachments  ClientRequestAttachment[]
   reminders    ClientRequestReminder[]
 
+  @@unique([tenantId, number])
   @@index([tenantId, status, dueDate])
   @@index([tenantId, companyId, status])
   @@index([financeEntryId])
@@ -6759,12 +6916,27 @@ model InterviewScorecard {
 model Handoff {
   id          String          @id @default(uuid())
   tenantId    String
+  /// O número no escritório, o do endereço curto (10/11/2026): /transferencias/transferencia-8.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number      Int
   fromSector  String          @db.VarChar(40)
   entityType  EntityType
   entityId    String
   requestedBy String
+  /// "Informações adicionais". Desde 10/11/2026 (pedido do Kauan) a nova
+  /// transferência não escreve mais aqui — o formulário em três passos só tem a
+  /// Descrição —, e as antigas continuam mostrando o que tinham.
   message     String?         @db.Text
   description String?         @db.Text
+  /// O assunto (10/11/2026, pedido do Kauan): o rótulo do modelo escolhido
+  /// ("Baixa de CNPJ") ou o texto de "Outro assunto". É o título na lista e no
+  /// detalhe. Nulo nas transferências de antes, que aparecem como "Sem
+  /// assunto": não há preenchimento retroativo.
+  subject     String?         @db.VarChar(160)
+  /// Qual modelo de src/lib/handoffTemplates.ts foi usado, quando foi
+  /// (10/11/2026, pedido do Kauan): ordena os mais usados na nova
+  /// transferência. Nulo no "Outro assunto" e nas transferências de antes.
+  templateKey String?         @db.VarChar(60)
   priority    HandoffPriority @default(MEDIUM)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -6773,7 +6945,9 @@ model Handoff {
   requester User            @relation("HandoffRequester", fields: [requestedBy], references: [id])
   views     HandoffView[]
   sectors   HandoffSector[]
+  events    HandoffEvent[]
 
+  @@unique([tenantId, number])
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
   @@map("handoffs")
@@ -6796,6 +6970,7 @@ model HandoffSector {
   tenant    Tenant                  @relation(fields: [tenantId], references: [id])
   handoff   Handoff                 @relation(fields: [handoffId], references: [id], onDelete: Cascade)
   assignees HandoffSectorAssignee[]
+  events    HandoffEvent[]
 
   @@unique([handoffId, sectorCode])
   @@index([tenantId, sectorCode, status])
@@ -6840,6 +7015,39 @@ model HandoffView {
   @@unique([handoffId, userId])
   @@index([tenantId])
   @@map("handoff_views")
+}
+
+// A "Atividade" da transferência aberta (10/11/2026, pedido do Kauan, escolha
+// "B · Andamento no topo e a conversa ao lado"): o pedido, cada começo,
+// finalização, devolução e reenvio de uma parte, os comentários (com @) e as
+// mudanças de responsáveis e de dados. As transferências de antes não têm
+// eventos: a tela deduz "pediu" e "finalizou" das datas guardadas, sem
+// preenchimento retroativo (src/lib/handoffAtividade.ts).
+//
+// Quem agiu é obrigatório; na exclusão do usuário o evento passa para o
+// administrador que exclui, como os comentários dos Quadros e dos Chamados
+// (src/lib/exclusao/registro.ts).
+model HandoffEvent {
+  id              String           @id @default(uuid())
+  tenantId        String
+  handoffId       String
+  /// A parte do setor a que o evento se refere. Nulo no pedido, no comentário
+  /// e na edição, que são da transferência inteira.
+  handoffSectorId String?
+  type            HandoffEventType
+  userId          String
+  /// O texto do comentário, o motivo da devolução, a resposta do reenvio, ou o
+  /// resumo do que mudou (responsáveis, dados). Nulo em começar e finalizar.
+  body            String?          @db.Text
+  createdAt       DateTime         @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  handoff       Handoff        @relation(fields: [handoffId], references: [id], onDelete: Cascade)
+  handoffSector HandoffSector? @relation(fields: [handoffSectorId], references: [id], onDelete: SetNull)
+  user          User           @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, handoffId, createdAt])
+  @@map("handoff_events")
 }
 
 // Trilha de auditoria — quem fez o quê, quando. Somente leitura pela UI
@@ -7291,6 +7499,10 @@ model ObrigacaoGerada {
 
   @@unique([modeloId, companyId, competencia])
   @@index([tenantId, companyId])
+  // A data legal na Agenda (10/11/2026): a busca do mês é por período. O
+  // cartão "Obrigações em risco de multa" do Início (10/11/2026) usa o mesmo
+  // índice para ler só a janela perto da data legal.
+  @@index([tenantId, dataLegal])
   @@map("obrigacoes_geradas")
 }
 
@@ -7537,6 +7749,42 @@ model UserAgendaConfig {
   @@map("user_agenda_configs")
 }
 
+/// A Agenda de uma pessoa (10/11/2026): as fontes de prazo que ela desligou e
+/// a última visão que escolheu (prazos, dia, semana ou mês). Nulo = segue o
+/// padrão dos setores dela (SectorAgendaView) e, sem ele, o do código. Tabela
+/// própria, e não colunas em UserAgendaConfig, pela ordem do deploy: coluna nova
+/// lida antes da migration derrubaria o horário da grade; tabela nova quebra só
+/// o que é novo. Por tenant, como o horário: as fontes dependem dos módulos de
+/// cada escritório.
+model UserAgendaView {
+  id            String   @id @default(uuid())
+  tenantId      String
+  userId        String
+  /// JSON com as fontes desligadas por ela, como SectorAgendaView.fontesOcultas.
+  fontesOcultas String?  @db.Text
+  /// "prazos", "dia", "semana" ou "mes". Valor desconhecido é ignorado na leitura.
+  visao         String?  @db.VarChar(10)
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@map("user_agenda_views")
+}
+
+/// Quem vê uma senha do Repositório (10/11/2026, pedido do Kauan).
+/// SETOR: todo o setor da credencial, menos as pessoas marcadas em
+/// `BpoCredentialRestriction` ("todos do setor, menos…"). PESSOAL: só quem
+/// cadastrou vê a linha, revela e edita; o Administrador e o Super Admin veem
+/// que ela existe (título e dono), nunca revelam, e podem excluí-la — a
+/// limpeza de quando alguém sai do escritório.
+enum BpoCredentialVisibility {
+  SETOR
+  PESSOAL
+}
+
 // Repositório de Senhas do BPO — centraliza credenciais que hoje ficam
 // espalhadas em .txt (login de portais, bancos, sistemas de clientes).
 // Empresa é opcional (permite credencial geral do setor, sem cliente
@@ -7557,6 +7805,9 @@ model BpoCredential {
   url         String?  @db.VarChar(255)
   notes       String?  @db.Text
   createdById String
+  /// Quem vê a senha (10/11/2026, pedido do Kauan) — ver
+  /// `BpoCredentialVisibility`. As que já existiam ficam SETOR: nada muda nelas.
+  visibility  BpoCredentialVisibility @default(SETOR)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -7564,6 +7815,8 @@ model BpoCredential {
   company   Company?            @relation(fields: [companyId], references: [id])
   createdBy User                @relation(fields: [createdById], references: [id])
   views     BpoCredentialView[]
+  /// As pessoas do setor que não veem esta credencial (10/11/2026).
+  restrictions BpoCredentialRestriction[]
 
   @@index([tenantId, companyId])
   @@index([tenantId, sectorCode])
@@ -7727,6 +7980,28 @@ model BpoCredentialView {
 
   @@index([credentialId])
   @@map("bpo_credential_views")
+}
+
+// "Todos do setor, menos…" (10/11/2026, pedido do Kauan): as pessoas do setor
+// que NÃO veem uma credencial do setor. Quem coordena o setor marca; quem está
+// marcado não vê a linha na lista, e revelar recusa. O Administrador e o Super
+// Admin não entram (gerenciam tudo), nem quem cadastrou. Só vale para
+// credencial SETOR — a pessoal já é só do dono. Sair do escritório leva as
+// marcas da pessoa junto (Cascade): não há o que passar a outra pessoa.
+model BpoCredentialRestriction {
+  id           String   @id @default(uuid())
+  tenantId     String
+  credentialId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  credential BpoCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([credentialId, userId])
+  @@index([tenantId, userId])
+  @@map("bpo_credential_restrictions")
 }
 
 // ─── Societário: o motor de processos ────────────────────────────────────────
@@ -7948,6 +8223,9 @@ model ProcessTemplateChecklistItem {
 model Process {
   id         String @id @default(uuid())
   tenantId   String
+  /// O número no escritório, o do endereço curto (10/11/2026): /processos/processo-12.
+  /// Sai na criação e nunca muda (`reservarNumeros`, src/lib/enderecoCurtoNumeracao.ts).
+  number     Int
   companyId  String
   typeId     String
   /// Versão congelada do roteiro (ver ProcessTemplate).
@@ -8000,6 +8278,7 @@ model Process {
   avisos    AvisoDeOrgao[]
   documents ProcessDocument[]
 
+  @@unique([tenantId, number])
   @@index([tenantId, status])
   @@index([tenantId, companyId])
   @@index([tenantId, typeId, startedAt])
@@ -10995,4 +11274,257 @@ model AtendimentoMensagemPadrao {
 
   @@index([tenantId, ativo])
   @@map("atendimento_mensagens_padrao")
+}
+
+// ─── Academia (Fase 1, 10/11/2026, pedido do Kauan) ─────────────────────────
+//
+// A área de aprendizado da equipe: digitação, digitação de números e lógica,
+// com ranking do mês e certificado para o pódio. Paridade com os testes do
+// 41 Hub (que segue no ar); o histórico de lá entra pela importação em
+// `scripts/academia/importar-do-hub.ts` (colunas `origemHubId`).
+//
+// `teste` é "digitacao" | "numeros" | "logica" e `nivel` é "facil" | "medio" |
+// "dificil", em texto e não em enum do banco: a Fase 2 traz testes novos
+// (desafio do dia), e um valor novo não pede ALTER. Quem confere os valores é
+// `src/lib/academia/regras.ts`.
+
+/// Os textos do teste de digitação, por nível. Quem cadastra é o administrador da Academia.
+model AcademiaTexto {
+  id          String   @id @default(uuid())
+  tenantId    String
+  nivel       String   @db.VarChar(10)
+  conteudo    String   @db.Text
+  ativo       Boolean  @default(true)
+  /// O id do texto no 41 Hub: a importação não duplica ao rodar de novo.
+  origemHubId String?  @db.VarChar(64)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, origemHubId])
+  @@index([tenantId, nivel, ativo])
+  @@map("academia_textos")
+}
+
+/// As questões do teste de lógica. Imagem no enunciado e, se quiser, em cada alternativa.
+model AcademiaQuestao {
+  id           String   @id @default(uuid())
+  tenantId     String
+  nivel        String   @db.VarChar(10)
+  enunciado    String   @db.Text
+  /// `/api/academia/imagens/<arquivo>` — o arquivo mora em `storage/academia/<tenantId>/`.
+  imagemUrl    String?  @db.VarChar(255)
+  /// `[{ texto?, imagemUrl? }]`, de 2 a 6, cada uma com texto ou imagem.
+  alternativas Json
+  /// A posição da alternativa certa em `alternativas` (a partir de 0). Nunca vai para a tela do teste.
+  correta      Int
+  ativo        Boolean  @default(true)
+  origemHubId  String?  @db.VarChar(64)
+  createdById  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, origemHubId])
+  @@index([tenantId, nivel, ativo])
+  @@map("academia_questoes")
+}
+
+/// Uma rodada servida pelo servidor: o que foi mostrado, o nonce e até quando vale.
+model AcademiaSessao {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+  teste       String    @db.VarChar(12)
+  nivel       String    @db.VarChar(10)
+  /// Valendo para o ranking (uma por dia, por nível, por teste) ou treino livre.
+  valendo     Boolean
+  /// O dia (São Paulo, "AAAA-MM-DD") da tentativa valendo; nulo no treino. É a
+  /// chave única abaixo que garante uma tentativa valendo por dia, mesmo com
+  /// duas abas começando ao mesmo tempo.
+  diaValendo  String?   @db.Char(10)
+  nonce       String    @unique @db.Char(32)
+  /// O que foi servido (o texto, ou as questões com a certa): a correção usa
+  /// esta foto, e não o cadastro, que o administrador pode mudar no meio.
+  payload     Json
+  startedAt   DateTime  @default(now())
+  expiresAt   DateTime
+  submittedAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teste, nivel, diaValendo])
+  @@index([tenantId, userId, startedAt])
+  @@map("academia_sessoes")
+}
+
+/// O resultado de uma rodada. O ranking lê só os `valendo`, sempre de um mês e de um teste.
+model AcademiaResultado {
+  id          String   @id @default(uuid())
+  tenantId    String
+  userId      String
+  /// O setor da pessoa quando fez o teste (o filtro de setor do ranking).
+  sectorCode  String?  @db.VarChar(40)
+  teste       String   @db.VarChar(12)
+  nivel       String   @db.VarChar(10)
+  /// "AAAA-MM", em São Paulo.
+  mes         String   @db.Char(7)
+  /// Palavras por minuto (digitação e números).
+  ppm         Int?
+  /// Acertos e total de questões (lógica).
+  acertos     Int?
+  total       Int?
+  precisao    Decimal  @db.Decimal(5, 2)
+  duracaoMs   Int
+  valendo     Boolean
+  /// "connect" ou "hub" (importado do 41 Hub).
+  origem      String   @default("connect") @db.VarChar(10)
+  sessaoId    String?  @unique
+  origemHubId String?  @db.VarChar(64)
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, origemHubId])
+  @@index([tenantId, teste, mes, valendo, nivel])
+  @@index([userId, teste, mes])
+  @@map("academia_resultados")
+}
+
+/// A escolha da pessoa de aparecer (ou não) no ranking. Sem linha, aparece.
+model AcademiaPreferencia {
+  id                String   @id @default(uuid())
+  tenantId          String
+  userId            String   @unique
+  aparecerNoRanking Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, aparecerNoRanking])
+  @@map("academia_preferencias")
+}
+
+/// O prêmio do mês, em texto livre ("Top 3 ganham chocolate"), definido pelo administrador.
+model AcademiaPremio {
+  id          String   @id @default(uuid())
+  tenantId    String
+  mes         String   @db.Char(7)
+  texto       String   @db.VarChar(200)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, mes])
+  @@map("academia_premios")
+}
+
+// ─── Repositório de fluxos (10/11/2026, pedido do Kauan) ────────────────────
+//
+// Os fluxogramas e as metodologias de cada setor, no Apoio, ao lado das senhas
+// e dos manuais: pastas → fluxos, como o Repositório de manuais. O desenho não
+// é guardado — o setor escreve a lista de etapas (`steps`) e o Connect desenha
+// sozinho (`src/lib/fluxos/desenho.ts`). Cada "Salvar versão N" grava uma
+// `FlowVersion` com a lista daquele momento.
+//
+// Os ids de pessoa (`createdById`, `ownerUserId`…) não têm chave estrangeira,
+// como na Academia: a tela mostra o nome de quem existe, e a exclusão de
+// usuário os mantém (ver `COLUNAS_SOLTAS` em src/lib/exclusao/registro.ts).
+
+/// Pasta do Repositório de fluxos, de um setor (10/11/2026).
+model FlowFolder {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  title       String   @db.VarChar(160)
+  /// Emoji opcional, como o das pastas dos manuais.
+  icon        String?  @db.VarChar(8)
+  order       Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id])
+  flows  FlowDoc[]
+
+  @@index([tenantId, sectorCode])
+  @@map("flow_folders")
+}
+
+/// Um fluxo: a metodologia em texto, a lista de etapas (o desenho sai dela) e os arquivos (10/11/2026).
+model FlowDoc {
+  id          String    @id @default(uuid())
+  tenantId    String
+  folderId    String
+  title       String    @db.VarChar(160)
+  /// O "Dono" do fluxo: quem responde por ele no setor.
+  ownerUserId String?
+  /// "Revisado em": a data (sem hora) da última revisão do processo.
+  reviewedAt  DateTime? @db.Date
+  /// A versão em vigor. 0 = criado e ainda sem "Salvar versão".
+  version     Int       @default(0)
+  /// HTML do editor dos manuais, sanitizado no servidor.
+  methodology String?   @db.Text
+  /// A lista de etapas (`Etapa[]` de src/lib/fluxos/etapas.ts), já validada.
+  steps       Json
+  order       Int       @default(0)
+  createdById String
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  folder      FlowFolder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  versions    FlowVersion[]
+  attachments FlowAttachment[]
+
+  @@index([tenantId, folderId])
+  @@map("flow_docs")
+}
+
+/// Uma versão salva do fluxo ("Salvar versão N"): a foto do que valia, para o histórico (10/11/2026).
+model FlowVersion {
+  id          String    @id @default(uuid())
+  flowDocId   String
+  version     Int
+  title       String    @db.VarChar(160)
+  steps       Json
+  methodology String?   @db.Text
+  reviewedAt  DateTime? @db.Date
+  savedById   String
+  /// O nome de quem salvou, gravado junto: o histórico não depende da pessoa continuar no escritório.
+  savedByName String    @db.VarChar(160)
+  savedAt     DateTime  @default(now())
+
+  flowDoc FlowDoc @relation(fields: [flowDocId], references: [id], onDelete: Cascade)
+
+  @@unique([flowDocId, version])
+  @@map("flow_versions")
+}
+
+/// Arquivo anexado a um fluxo: PDF, imagem ou .drawio, em `storage/fluxos/<tenantId>/` (10/11/2026).
+model FlowAttachment {
+  id           String   @id @default(uuid())
+  flowDocId    String
+  /// O nome que aparece na lista (o original, limpo).
+  fileName     String   @db.VarChar(200)
+  /// O tipo conferido pelos bytes no envio.
+  mime         String   @db.VarChar(80)
+  size         Int
+  /// `<uuid>.<ext>`, dentro de `storage/fluxos/<tenantId>/`.
+  storagePath  String   @db.VarChar(255)
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  flowDoc FlowDoc @relation(fields: [flowDocId], references: [id], onDelete: Cascade)
+
+  @@index([flowDocId])
+  @@map("flow_attachments")
 }

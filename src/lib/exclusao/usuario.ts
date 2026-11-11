@@ -97,6 +97,10 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
   reatribuir("Handoff", "requestedBy", (tx, a) =>
     n(tx.handoff.updateMany({ where: { tenantId: a.tenantId, requestedBy: a.id }, data: { requestedBy: a.para } }))
   ),
+  // A Atividade da transferência aberta (10/11/2026).
+  reatribuir("HandoffEvent", "userId", (tx, a) =>
+    n(tx.handoffEvent.updateMany({ where: { tenantId: a.tenantId, userId: a.id }, data: { userId: a.para } }))
+  ),
   reatribuir("Meeting", "createdByUserId", (tx, a) =>
     n(tx.meeting.updateMany({ where: { tenantId: a.tenantId, createdByUserId: a.id }, data: { createdByUserId: a.para } }))
   ),
@@ -124,6 +128,16 @@ export const PLANO_DO_USUARIO: readonly Passo<AlvoUsuario>[] = [
   reatribuir("ManualPage", "createdById", (tx, a) =>
     n(tx.manualPage.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))
   ),
+  // A senha PESSOAL do cofre (10/11/2026, pedido do Kauan) é da própria conta,
+  // como as sessões e as preferências: só o dono a revelava, e o administrador
+  // nunca. Passá-la a quem exclui (a regra de tudo o que ele criou) daria ao
+  // administrador justamente o que a regra nega — então ela sai antes, e quem a
+  // viu e as marcas vão em cascata. As do setor continuam passando, abaixo.
+  {
+    modelo: "BpoCredential",
+    acao: "apagar",
+    executar: (tx, a) => n(tx.bpoCredential.deleteMany({ where: { tenantId: a.tenantId, createdById: a.id, visibility: "PESSOAL" } })),
+  },
   reatribuir("BpoCredential", "createdById", (tx, a) =>
     n(tx.bpoCredential.updateMany({ where: { tenantId: a.tenantId, createdById: a.id }, data: { createdById: a.para } }))
   ),
@@ -277,9 +291,10 @@ async function fichaLigada(db: Tx, tenantId: string, id: string) {
 }
 
 async function previaDe(db: Tx, tenantId: string, u: UsuarioDaPrevia, ator: Ator): Promise<Previa> {
-  const [contagens, notas, requisitos, pastas, pedidosOmie, cancelamentosOmie, importacoesDre, empresas, vagas, cronometros, ficha, bloqueio, nomeDeQuemExclui] =
+  const [contagensDasLigacoes, senhasPessoais, notas, requisitos, pastas, pedidosOmie, cancelamentosOmie, importacoesDre, empresas, vagas, cronometros, ficha, bloqueio, nomeDeQuemExclui] =
     await juntos(db, [
       () => contarLigacoes(db, LIGACOES.User, u.id),
+      () => db.bpoCredential.count({ where: { tenantId, createdById: u.id, visibility: "PESSOAL" } }),
       () => db.candidaturaNota.count({ where: { tenantId, createdById: u.id } }),
       () => db.vagaRequisitos.count({ where: { tenantId, createdById: u.id } }),
       () => db.driveFolder.count({ where: { tenantId, createdById: u.id } }),
@@ -296,6 +311,13 @@ async function previaDe(db: Tx, tenantId: string, u: UsuarioDaPrevia, ator: Ator
       () => nomeDoAtor(db, ator.id),
   ]);
 
+  // As senhas pessoais saem, não passam (10/11/2026): tiradas da contagem de
+  // "passa para você" e mostradas numa linha própria, abaixo.
+  const contagens = contagensDasLigacoes.map((c) =>
+    c.ligacao.modelo === "BpoCredential" && c.ligacao.fk === "createdById"
+      ? { ...c, quantidade: Math.max(0, c.quantidade - senhasPessoais) }
+      : c
+  );
   const semAutor = somaSemRotulo(contagens, "desligar");
   const itens = [
     ...itensDasContagens(contagens),
@@ -306,6 +328,8 @@ async function previaDe(db: Tx, tenantId: string, u: UsuarioDaPrevia, ator: Ator
       item("OmieEmissao.pedidoPorId", pedidosOmie, ["nota pedida ao Omie", "notas pedidas ao Omie"], "reatribuir", true),
       item("OmieEmissao.canceladaPorId", cancelamentosOmie, ["cancelamento de nota no Omie", "cancelamentos de nota no Omie"], "reatribuir", true),
       item("DreImport.importedById", importacoesDre, ["importação da DRE", "importações da DRE"], "reatribuir", true),
+      // Histórico: some de vez uma senha que só ele conhecia — pede o nome digitado.
+      item("BpoCredential.pessoal", senhasPessoais, ["senha pessoal do cofre (sai junto: só ele a via)", "senhas pessoais do cofre (saem junto: só ele as via)"], "apagar", true),
       item("Company.responsibleUserId", empresas, ["empresa em que ele é o responsável (fica sem responsável)", "empresas em que ele é o responsável (ficam sem responsável)"], "desligar"),
       item("Vaga.responsibleUserId", vagas, ["vaga sob responsabilidade dele (fica sem responsável)", "vagas sob responsabilidade dele (ficam sem responsável)"], "desligar"),
       item("activeTimerUserId", cronometros, ["cronômetro ligado (é desligado)", "cronômetros ligados (são desligados)"], "desligar"),

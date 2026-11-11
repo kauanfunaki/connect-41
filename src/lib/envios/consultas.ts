@@ -43,6 +43,17 @@ export type LinhaDoEnvio = {
   lembrete: string | null;
 };
 
+/** O alcance da equipe: as empresas que a pessoa enxerga (`scopedCompanyWhere`). */
+export type AlcanceDosEnvios = { tenantId: string; empresas: Prisma.CompanyWhereInput };
+
+function whereDosEnviosDaEquipe(alcance: AlcanceDosEnvios, filtros: { empresaId: string | null }): Prisma.ClientDocumentWhereInput {
+  return {
+    tenantId: alcance.tenantId,
+    company: alcance.empresas,
+    ...(filtros.empresaId ? { companyId: filtros.empresaId } : {}),
+  };
+}
+
 /**
  * Os envios das empresas que a pessoa enxerga, o mais novo primeiro. O
  * alcance chega pronto de quem chama (`scopedCompanyWhere`, o mesmo de quando
@@ -50,15 +61,11 @@ export type LinhaDoEnvio = {
  * destinatário.
  */
 export async function listarEnviosDaEquipe(
-  alcance: { tenantId: string; empresas: Prisma.CompanyWhereInput },
+  alcance: AlcanceDosEnvios,
   filtros: { empresaId: string | null }
 ): Promise<{ linhas: LinhaDoEnvio[]; limitado: boolean }> {
   const lista = await getPrisma().clientDocument.findMany({
-    where: {
-      tenantId: alcance.tenantId,
-      company: alcance.empresas,
-      ...(filtros.empresaId ? { companyId: filtros.empresaId } : {}),
-    },
+    where: whereDosEnviosDaEquipe(alcance, filtros),
     orderBy: { createdAt: "desc" },
     take: LIMITE_DA_LISTA + 1,
     select: {

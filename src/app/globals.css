@@ -875,15 +875,13 @@ input[type="search"]::-webkit-search-decoration {
   --c41-grupo:       var(--c41-brand);
   --c41-grupo-fg:    var(--c41-brand);
   --c41-grupo-solid: var(--c41-brand-solid);
-  /* Faixa de destaques da Home (06/10, opção C): cartão cheio, letra branca,
-     igual nos dois temas. Azul é o volume; o vinho é o alerta (vencido,
-     atrasado, estourado). Branco sobre o tom mais claro de cada degradê:
-     7,0:1 no azul e 5,8:1 no vinho; o texto de apoio vai a 90% de branco,
-     que ainda passa (5,0:1 no vinho). */
+  /* Cartão cheio em degradê azul, letra branca, igual nos dois temas: o
+     fundo do bloco de abertura do site do Connect (SiteDoConnect). Nasceu na
+     faixa de destaques da Home (06/10), que saiu em 10/11/2026 junto com o
+     vinho do alerta (`--c41-destaque-alerta-*`) — a cor não conversava com o
+     resto do Connect. Branco sobre o brand-700: 7,0:1. */
   --c41-destaque-de:         var(--c41-brand-700);
   --c41-destaque-ate:        var(--c41-brand-900);
-  --c41-destaque-alerta-de:  #B23A4F;
-  --c41-destaque-alerta-ate: #6E1F31;
   /* O número principal de cada tela (paleta B "Mais azul", escolha do Kauan em
      13/10/2026): o primeiro cartão da FaixaDeTotais, cheio de azul com letra
      branca. Mais claro que a faixa da Home: branco sobre o brand-600 dá 5,46:1. */

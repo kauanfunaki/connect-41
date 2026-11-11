@@ -16,11 +16,12 @@ import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } f
 import { NovaPendencia } from "@/components/pendencias/NovaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { AbasDoAtendimento } from "@/components/solicitacoes/AbasDoAtendimento";
-import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresasAtivasDoSeletor } from "@/lib/financeiro/consultas";
 import { listarPendencias, RECORTES_DE_PENDENCIA, type RecorteDePendencia } from "@/lib/financeiro/pendencias/consultas";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import { ROTULO_DO_PRAZO, ROTULO_DO_STATUS, ROTULO_DO_TIPO } from "@/lib/financeiro/pendencias/regras";
 import { dosSetores, setorDaPendencia, setorPadraoDasPendencias, MODULO_DO_CANAL } from "@/lib/financeiro/pendencias/setor";
-import { setoresDaFila } from "@/lib/solicitacoes/acesso";
+import { setoresAtivosDaFila, setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +46,12 @@ export default async function PedidosAoClientePage({
   const vencidas = params.vencidas === "1";
   const setoresDaPessoa = setoresDaFila(ctx);
   const [empresas, ativos, { labels }, padrao] = await Promise.all([
-    empresasDoSeletor(ctx.tenantId),
+    empresasAtivasDoSeletor(ctx.tenantId),
     getActiveSectors(ctx.tenantId),
     getSectorMaps(ctx.tenantId),
     setorPadraoDasPendencias(ctx.tenantId),
   ]);
-  const opcoesDeSetor = ativos.filter((s) => setoresDaPessoa === null || setoresDaPessoa.includes(s.code));
+  const opcoesDeSetor = setoresAtivosDaFila(ativos, setoresDaPessoa);
   const setor = params.setor && opcoesDeSetor.some((s) => s.code === params.setor) ? params.setor : null;
   const empresaId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : null;
   const podePedirEm = opcoesDeSetor.filter((s) => canActOnSector(ctx, s.code)).map((s) => ({ code: s.code, label: s.label }));
@@ -160,7 +161,7 @@ export default async function PedidosAoClientePage({
             <CartoesNoCelular>
               {linhas.map((l) => (
                 <Cartao key={l.id}>
-                  <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline break-words">
+                  <Link href={enderecoDe("pendencia", { id: l.id, number: l.numero })} className="font-medium text-brand hover:underline break-words">
                     {l.titulo}
                   </Link>
                   <InfoDoCartao className="mt-0.5 break-words">
@@ -226,7 +227,7 @@ export default async function PedidosAoClientePage({
                     {linhas.map((l) => (
                       <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border-soft hover:bg-surface-hover transition-colors">
                         <td className="py-2.5 pr-3">
-                          <Link href={`/pendencias/${l.id}`} className="font-medium text-brand hover:underline">
+                          <Link href={enderecoDe("pendencia", { id: l.id, number: l.numero })} className="font-medium text-brand hover:underline">
                             {l.titulo}
                           </Link>
                           <span className="block text-fs-1 text-fg-muted">

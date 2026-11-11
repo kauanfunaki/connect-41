@@ -58,7 +58,7 @@ export async function categoriaAtual(tenantId: string, id: string) {
   return { row, categoria: categoriaSchema.parse(row) };
 }
 export async function rascunho(c: Contexto, id: string) {
-  const d = await getPrisma().helpdeskDraft.findFirst({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId }, include: { ticket: { select: { id: true } }, messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, attachments: { where: { ticketId: null }, orderBy: { createdAt: "asc" } } } });
+  const d = await getPrisma().helpdeskDraft.findFirst({ where: { id, tenantId: c.ctx.tenantId, createdById: c.ctx.userId }, include: { ticket: { select: { id: true, number: true } }, messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, attachments: { where: { ticketId: null }, orderBy: { createdAt: "asc" } } } });
   if (!d) throw new Error("Rascunho não encontrado.");
   return d;
 }

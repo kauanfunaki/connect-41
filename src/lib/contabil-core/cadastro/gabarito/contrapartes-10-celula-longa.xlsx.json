@@ -1,0 +1,6 @@
+{
+ "erro": {
+  "motivo": "celula_excede_limite",
+  "mensagem": "A planilha possui uma célula de texto maior que o limite permitido."
+ }
+}

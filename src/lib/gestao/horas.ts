@@ -7,6 +7,7 @@ import { nomeExibicao } from "@/lib/companyName";
 import { configDoValora } from "@/lib/valora/servidor";
 import { custoDaHora, type Apontamento, type CustoDaHora } from "@/lib/gestao/custo";
 import { podeVerSetor } from "@/lib/gestao/regras";
+import { enderecoDaTarefa, enderecoDe } from "@/lib/enderecoCurto";
 
 export type LinhaDeHora = Apontamento & {
   id: string;
@@ -50,10 +51,10 @@ export async function horasDoPeriodo(tenantId: string, recorte: "todos" | string
       loggedOn: true,
       source: true,
       pipelineItem: {
-        select: { id: true, title: true, entityType: true, entityId: true, pipelineId: true, pipeline: { select: { sectorCode: true, name: true } } },
+        select: { id: true, number: true, title: true, entityType: true, entityId: true, pipelineId: true, pipeline: { select: { sectorCode: true, name: true } } },
       },
       process: {
-        select: { id: true, companyId: true, type: { select: { name: true } }, company: { select: { name: true, displayName: true } } },
+        select: { id: true, number: true, companyId: true, type: { select: { name: true } }, company: { select: { name: true, displayName: true } } },
       },
     },
   });
@@ -70,7 +71,8 @@ export async function horasDoPeriodo(tenantId: string, recorte: "todos" | string
         dia: e.loggedOn,
         nota: e.note,
         titulo: `${e.process.type.name} — ${nomeExibicao(e.process.company)}`,
-        href: `/processos/${e.process.id}`,
+        // Os links pelo endereço curto (10/11/2026, pedido do Kauan).
+        href: enderecoDe("processo", e.process),
       });
     } else if (e.pipelineItem) {
       const c = e.pipelineItem;
@@ -84,7 +86,7 @@ export async function horasDoPeriodo(tenantId: string, recorte: "todos" | string
         dia: e.loggedOn,
         nota: e.note,
         titulo: `${c.title ?? "Card"} — ${c.pipeline.name}`,
-        href: `/kanban/${c.pipelineId}/itens/${c.id}`,
+        href: enderecoDaTarefa(c.pipelineId, c),
       });
     }
   }

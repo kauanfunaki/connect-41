@@ -29,8 +29,11 @@ export const CAMINHO_DOS_QUADROS = "/setor/{setor}";
 export const TELAS_GERAIS = [
   { tela: "Início", caminho: "/home", descricao: "Resumo do dia com os painéis dos seus setores; o botão Personalizar escolhe o que aparece." },
   { tela: "Meu dia", caminho: "/tarefas", descricao: "O que é seu para hoje: o que venceu, o que vence, o que parou e o que está andando, de todos os setores. Coordenador vê também o time." },
-  { tela: "Cadastros", caminho: "/empresas", descricao: "Empresas e pessoas do escritório." },
-  { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto para outro setor, com prazo e prioridade." },
+  // Cada tela de Cadastros é um item do grupo no menu desde 10/11/2026 (pedido
+  // do Kauan), sem abas no alto: aqui também, uma por tela, cada uma com o seu artigo.
+  { tela: "Empresas", caminho: "/empresas", descricao: "As empresas atendidas pelo escritório, no grupo Cadastros do menu." },
+  { tela: "Pessoas", caminho: "/pessoas", descricao: "Os funcionários internos do escritório, no grupo Cadastros do menu." },
+  { tela: "Transferências", caminho: "/transferencias", descricao: "Passar um assunto de uma empresa ou pessoa para outro setor, com prioridade, instrução e responsável por setor; as abas separam o que chegou para o seu setor, o que está com você e o que você pediu." },
   {
     tela: "Solicitações",
     caminho: "/solicitacoes",

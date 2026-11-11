@@ -14,14 +14,17 @@ import { formatCalendarDate, formatarReais } from "@/lib/format";
 // existia (Valora); troca pelo `formatarReais` de lib/format.ts quando a base
 // o criar (auditoria DRG-01, 07/10/2026).
 import { registrarReajuste } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function SalarioPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx } = await abrirTelaDoModulo("dp_colaboradores");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/salario");
   const canViewBank = await canViewSensitiveField(ctx, "DADOS_BANCARIOS");
   const canViewSalary = await canViewSensitiveField(ctx, "SALARIO");
   if (!canViewBank && !canViewSalary) notFound();
@@ -60,6 +63,7 @@ export default async function SalarioPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Salário"
         aba="trabalhista"

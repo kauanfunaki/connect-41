@@ -8,6 +8,7 @@ import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDate } from "@/lib/format";
 import type { LinhaDaFila } from "@/lib/societario/fila";
+import { enderecoDe } from "@/lib/enderecoCurto";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
 import { prazoCombinado } from "@/lib/societario/dados-do-processo";
@@ -142,7 +143,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
     <>
       <CartoesNoCelular>
         {linhas.map((l) => (
-          <Link key={l.id} href={`/processos/${l.id}`} className="block">
+          <Link key={l.id} href={enderecoDe("processo", { id: l.id, number: l.numero })} className="block">
             <Cartao className="hover:border-brand/40 transition-colors">
               <TopoDoCartao nome={l.empresaNome} />
               <InfoDoCartao>
@@ -221,7 +222,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                 <LinhaFiltravel key={l.id} id={l.id} className="border-b border-border align-top">
                   <td className="px-4 py-3 min-w-0">
                     <Link
-                      href={`/processos/${l.id}`}
+                      href={enderecoDe("processo", { id: l.id, number: l.numero })}
                       className="block font-semibold text-fg hover:text-brand transition-colors truncate"
                       title={l.empresaNome}
                     >
@@ -254,7 +255,7 @@ export function ProcessosFila({ linhas, filtrado, agora }: Props) {
                   </td>
                   <td className="px-4 py-3 text-fg-muted whitespace-nowrap">{formatInstantDate(l.iniciadoEm)}</td>
                   <td className="px-4 py-3">
-                    <Button href={`/processos/${l.id}`} variant="secondary" size="xs">
+                    <Button href={enderecoDe("processo", { id: l.id, number: l.numero })} variant="secondary" size="xs">
                       Abrir <ArrowRight size={12} />
                     </Button>
                   </td>

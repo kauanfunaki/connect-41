@@ -5,13 +5,15 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import { linkDaNotificacao } from "@/lib/notificacaoLink";
+import { ehAvisoDaTransferencia, linkDaNotificacao } from "@/lib/notificacaoLink";
+import type { TelaCurta } from "@/lib/enderecoCurto";
+import { tituloDaTransferencia } from "@/lib/handoffs";
 import { nomeExibicao } from "@/lib/companyName";
 import { telefoneLegivel } from "@/lib/whatsapp/conversas";
 import { doTipo, filtroDaAba, ocultosValidos, type Aba, type AbaOuTodas, type IconeDaNotificacao, type Tom } from "./catalogo";
 import type { NotificacaoNova } from "./avisoNaTela";
 
-export type TipoDoChip = "empresa" | "pessoa" | "card" | "processo" | "solicitacao" | "conversa" | "pendencia";
+export type TipoDoChip = "empresa" | "pessoa" | "card" | "processo" | "solicitacao" | "conversa" | "pendencia" | "transferencia";
 
 export type NotificacaoNaTela = {
   id: string;
@@ -58,6 +60,8 @@ export function entidadeDoChip(n: {
   if (n.type.startsWith("PROCESS_")) return { tipo: "processo", id };
   if (n.type.startsWith("SOLICITACAO_")) return { tipo: "solicitacao", id };
   if (n.type === "client_request_answered") return { tipo: "pendencia", id };
+  // Aviso de transferência gravado desde 10/11/2026: o chip é o assunto dela.
+  if (ehAvisoDaTransferencia(n)) return { tipo: "transferencia", id };
   if (n.entityType === "COMPANY") return { tipo: "empresa", id };
   if (n.entityType === "PERSON") return { tipo: "pessoa", id };
   // Menção e comentário em card sem empresa nem pessoa guardam o id do card.
@@ -154,17 +158,29 @@ export async function notificacoesNovas(dono: Dono, desde: Date, ocultos: string
     where: ondeDasNovas(dono, desde, ocultos),
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limite,
-    select: { id: true, type: true, entityType: true, entityId: true, message: true, read: true, createdAt: true },
+    select: { id: true, type: true, entityType: true, entityId: true, actorUserId: true, message: true, read: true, createdAt: true },
   });
-  return linhas.map((n) => ({
-    id: n.id,
-    tipo: n.type,
-    titulo: doTipo(n.type).titulo,
-    mensagem: n.message,
-    href: linkDaNotificacao(n),
-    lida: n.read,
-    criadaEm: n.createdAt.toISOString(),
-  }));
+  // O chip e o autor, como no cartão do sino (10/11/2026): o aviso do canto
+  // desenha o mesmo conteúdo. Sem novas, nenhuma consulta a mais.
+  const [{ chips, numeros }, autores] = linhas.length
+    ? await Promise.all([chipsDasNotificacoes(dono.tenantId, linhas), autoresDasNotificacoes(linhas)])
+    : [{ chips: new Map(), numeros: new Map() }, new Map()];
+  return linhas.map((n) => {
+    const t = doTipo(n.type);
+    return {
+      id: n.id,
+      tipo: n.type,
+      icone: t.icone,
+      tom: t.tom,
+      titulo: t.titulo,
+      mensagem: n.message,
+      href: linkDaNotificacao(n, numeros.get(n.id)),
+      lida: n.read,
+      criadaEm: n.createdAt.toISOString(),
+      chip: chips.get(n.id) ?? null,
+      autor: (n.actorUserId && autores.get(n.actorUserId)) || null,
+    };
+  });
 }
 
 export async function consultarNotificacoes(
@@ -183,7 +199,7 @@ export async function consultarNotificacoes(
     take: limite + 1,
   });
   const pagina = linhas.slice(0, limite);
-  const [chips, autores] = await Promise.all([chipsDasNotificacoes(dono.tenantId, pagina), autoresDasNotificacoes(pagina)]);
+  const [{ chips, numeros }, autores] = await Promise.all([chipsDasNotificacoes(dono.tenantId, pagina), autoresDasNotificacoes(pagina)]);
   return {
     itens: pagina.map((n) => {
       const t = doTipo(n.type);
@@ -196,7 +212,7 @@ export async function consultarNotificacoes(
         titulo: t.titulo,
         mensagem: n.message,
         lida: n.read,
-        href: linkDaNotificacao(n),
+        href: linkDaNotificacao(n, numeros.get(n.id)),
         criadaEm: n.createdAt.toISOString(),
         chip: chips.get(n.id) ?? null,
         autor: (n.actorUserId && autores.get(n.actorUserId)) || null,
@@ -246,25 +262,46 @@ async function autoresDasNotificacoes(linhas: { actorUserId: string | null }[]):
  * texto, então o chip não mostra nada que a pessoa já não lesse; o link é que
  * respeita o escopo, e quem barra é a tela de destino.
  */
+/** A tela do endereço curto de cada chip: o número lido aqui vira o link (10/11/2026). */
+const TELA_DO_CHIP: Partial<Record<TipoDoChip, TelaCurta>> = {
+  empresa: "empresa",
+  pessoa: "pessoa",
+  card: "tarefa",
+  processo: "processo",
+  solicitacao: "solicitacao",
+  pendencia: "pendencia",
+  transferencia: "transferencia",
+};
+
+/**
+ * O rótulo do chip de cada notificação e, de carona na mesma leitura, o número
+ * do registro (10/11/2026, pedido do Kauan): o link sai pelo endereço curto sem
+ * consulta a mais.
+ */
 async function chipsDasNotificacoes(
   tenantId: string,
   linhas: { id: string; type: string; entityType: string | null; entityId: string | null }[]
-): Promise<Map<string, { rotulo: string; tipo: TipoDoChip }>> {
+): Promise<{ chips: Map<string, { rotulo: string; tipo: TipoDoChip }>; numeros: Map<string, { tela: TelaCurta; numero: number }> }> {
   const alvos = linhas.map((n) => ({ n, e: entidadeDoChip(n) })).filter((x): x is { n: (typeof linhas)[number]; e: { tipo: TipoDoChip; id: string } } => x.e !== null);
   const ids = (tipo: TipoDoChip) => [...new Set(alvos.filter((x) => x.e.tipo === tipo).map((x) => x.e.id))];
   const prisma = getPrisma();
   const vazio = Promise.resolve([] as never[]);
 
-  const [empresas, pessoas, cards, processos, solicitacoes, conversas, pendencias] = await Promise.all([
-    ids("empresa").length ? prisma.company.findMany({ where: { tenantId, id: { in: ids("empresa") } }, select: { id: true, name: true, displayName: true } }) : vazio,
-    ids("pessoa").length ? prisma.person.findMany({ where: { tenantId, id: { in: ids("pessoa") } }, select: { id: true, name: true } }) : vazio,
-    ids("card").length ? prisma.pipelineItem.findMany({ where: { tenantId, id: { in: ids("card") } }, select: { id: true, title: true } }) : vazio,
+  // O chamado não tem chip, mas o link dele também vai pelo endereço curto:
+  // o número dos chamados da página numa leitura só (10/11/2026).
+  const idsDeChamado = [...new Set(linhas.filter((n) => n.type.startsWith("CHAMADO_") && n.entityId).map((n) => n.entityId!))];
+  const [empresas, pessoas, cards, processos, solicitacoes, conversas, pendencias, transferencias, chamados] = await Promise.all([
+    ids("empresa").length ? prisma.company.findMany({ where: { tenantId, id: { in: ids("empresa") } }, select: { id: true, number: true, name: true, displayName: true } }) : vazio,
+    ids("pessoa").length ? prisma.person.findMany({ where: { tenantId, id: { in: ids("pessoa") } }, select: { id: true, number: true, name: true } }) : vazio,
+    ids("card").length ? prisma.pipelineItem.findMany({ where: { tenantId, id: { in: ids("card") } }, select: { id: true, number: true, title: true } }) : vazio,
     ids("processo").length
-      ? prisma.process.findMany({ where: { tenantId, id: { in: ids("processo") } }, select: { id: true, title: true, company: { select: { name: true, displayName: true } } } })
+      ? prisma.process.findMany({ where: { tenantId, id: { in: ids("processo") } }, select: { id: true, number: true, title: true, company: { select: { name: true, displayName: true } } } })
       : vazio,
     ids("solicitacao").length ? prisma.serviceRequest.findMany({ where: { tenantId, id: { in: ids("solicitacao") } }, select: { id: true, number: true } }) : vazio,
     ids("conversa").length ? prisma.whatsappThread.findMany({ where: { tenantId, id: { in: ids("conversa") } }, select: { id: true, waPhone: true, personId: true } }) : vazio,
-    ids("pendencia").length ? prisma.clientRequest.findMany({ where: { tenantId, id: { in: ids("pendencia") } }, select: { id: true, title: true } }) : vazio,
+    ids("pendencia").length ? prisma.clientRequest.findMany({ where: { tenantId, id: { in: ids("pendencia") } }, select: { id: true, number: true, title: true } }) : vazio,
+    ids("transferencia").length ? prisma.handoff.findMany({ where: { tenantId, id: { in: ids("transferencia") } }, select: { id: true, number: true, subject: true } }) : vazio,
+    idsDeChamado.length ? prisma.helpdeskTicket.findMany({ where: { tenantId, id: { in: idsDeChamado } }, select: { id: true, number: true } }) : vazio,
   ]);
 
   // Conversa ligada a uma pessoa mostra o nome; sem vínculo, o telefone.
@@ -282,11 +319,33 @@ async function chipsDasNotificacoes(
   for (const s of solicitacoes) rotulos.set(`solicitacao:${s.id}`, `Solicitação nº ${s.number}`);
   for (const c of conversas) rotulos.set(`conversa:${c.id}`, (c.personId && nomeDaPessoa.get(c.personId)) || telefoneLegivel(c.waPhone));
   for (const p of pendencias) rotulos.set(`pendencia:${p.id}`, p.title);
+  for (const t of transferencias) rotulos.set(`transferencia:${t.id}`, tituloDaTransferencia(t));
 
-  const r = new Map<string, { rotulo: string; tipo: TipoDoChip }>();
+  const numeroDe = new Map<string, number>();
+  for (const lista of [
+    empresas.map((x) => [`empresa:${x.id}`, x.number] as const),
+    pessoas.map((x) => [`pessoa:${x.id}`, x.number] as const),
+    cards.map((x) => [`card:${x.id}`, x.number] as const),
+    processos.map((x) => [`processo:${x.id}`, x.number] as const),
+    solicitacoes.map((x) => [`solicitacao:${x.id}`, x.number] as const),
+    pendencias.map((x) => [`pendencia:${x.id}`, x.number] as const),
+    transferencias.map((x) => [`transferencia:${x.id}`, x.number] as const),
+  ]) {
+    for (const [chave, numero] of lista) if (typeof numero === "number") numeroDe.set(chave, numero);
+  }
+
+  const chips = new Map<string, { rotulo: string; tipo: TipoDoChip }>();
+  const numeros = new Map<string, { tela: TelaCurta; numero: number }>();
   for (const { n, e } of alvos) {
     const rotulo = rotulos.get(`${e.tipo}:${e.id}`);
-    if (rotulo) r.set(n.id, { rotulo, tipo: e.tipo });
+    if (rotulo) chips.set(n.id, { rotulo, tipo: e.tipo });
+    const tela = TELA_DO_CHIP[e.tipo], numero = numeroDe.get(`${e.tipo}:${e.id}`);
+    if (tela && numero !== undefined) numeros.set(n.id, { tela, numero });
   }
-  return r;
+  const numeroDoChamado = new Map(chamados.map((t) => [t.id, t.number]));
+  for (const n of linhas) {
+    const numero = n.type.startsWith("CHAMADO_") && n.entityId ? numeroDoChamado.get(n.entityId) : undefined;
+    if (numero !== undefined) numeros.set(n.id, { tela: "chamado", numero });
+  }
+  return { chips, numeros };
 }

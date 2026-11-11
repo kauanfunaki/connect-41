@@ -6,16 +6,15 @@ import { getAuthContext } from "@/lib/auth/context";
 import { serializeTaskWidgets, type TaskWidgetKey } from "@/lib/taskWidgets";
 import type { ActionState } from "@/lib/actionState";
 import { isPrismaMissingTableError } from "@/lib/prismaErrors";
-import type { UserRole } from "@/generated/prisma/enums";
+import { logAudit } from "@/lib/audit";
 import { podeConfigurarAPessoa, podeConfigurarOSetor } from "@/lib/meuDia/configuracao";
 
 // O padrão do setor: Admin e Super Admin desde 28/10/2026 (era só o Super
-// Admin). O Meu dia de cada pessoa — dela, do coordenador para a equipe, do
-// admin para qualquer um — está em `salvarMeuDiaDaPessoa`, abaixo. A action é
-// a barreira real; o que a faixa mostra é só cortesia.
-function podeConfigurar(role: UserRole): boolean {
-  return podeConfigurarOSetor({ role });
-}
+// Admin) e, desde 10/11/2026 (pedido do Kauan), também o coordenador do setor
+// (SECTOR_ADMIN dele). O Meu dia de cada pessoa — dela, do coordenador para a
+// equipe, do admin para qualquer um — está em `salvarMeuDiaDaPessoa`, abaixo.
+// A action é a barreira real; o que a faixa mostra é só cortesia.
+const SEM_PERMISSAO_NO_SETOR = "Só o coordenador do setor, o Admin ou o Super Admin configuram o padrão do setor.";
 
 const FALTA_A_MIGRATION =
   "Falta atualizar o banco para guardar o Meu dia de cada pessoa (a migration “meu_dia_por_pessoa”). Até lá vale o do setor.";
@@ -78,8 +77,8 @@ export async function salvarWidgetsSetor(
 ): Promise<ActionState> {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
-  if (!podeConfigurar(ctx.role)) return { error: "Só Admin e Super Admin configuram o padrão do setor." };
   if (!sectorCode) return { error: "Setor não informado." };
+  if (!podeConfigurarOSetor(ctx, sectorCode)) return { error: SEM_PERMISSAO_NO_SETOR };
 
   const prisma = getPrisma();
 
@@ -87,7 +86,7 @@ export async function salvarWidgetsSetor(
   // criaria uma configuração órfã que nunca seria lida por ninguém.
   const setor = await prisma.sector.findFirst({
     where: { tenantId: ctx.tenantId, code: sectorCode },
-    select: { id: true },
+    select: { id: true, label: true },
   });
   if (!setor) return { error: "Setor não encontrado neste workspace." };
 
@@ -104,6 +103,16 @@ export async function salvarWidgetsSetor(
     return { error: "Erro ao salvar a configuração do Meu dia." };
   }
 
+  // Na auditoria desde que o coordenador também configura (10/11/2026).
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "sector.meu_dia.update",
+    entityType: "Sector",
+    entityId: setor.id,
+    metadata: { setor: setor.label, blocos: keys.join(", ") },
+  });
+
   revalidatePath("/tarefas");
   return null;
 }
@@ -113,15 +122,24 @@ export async function salvarWidgetsSetor(
 export async function restaurarWidgetsSetor(sectorCode: string): Promise<ActionState> {
   const ctx = await getAuthContext();
   if (!ctx.userId || !ctx.tenantId) return { error: "Não autenticado" };
-  if (!podeConfigurar(ctx.role)) return { error: "Só Admin e Super Admin configuram o padrão do setor." };
+  if (!podeConfigurarOSetor(ctx, sectorCode)) return { error: SEM_PERMISSAO_NO_SETOR };
 
+  const prisma = getPrisma();
   try {
-    const prisma = getPrisma();
     await prisma.sectorTaskView.deleteMany({ where: { tenantId: ctx.tenantId, sectorCode } });
   } catch (err) {
     console.error("[restaurarWidgetsSetor]", err);
     return { error: "Erro ao restaurar o Meu dia." };
   }
+  const setor = await prisma.sector.findFirst({ where: { tenantId: ctx.tenantId, code: sectorCode }, select: { id: true, label: true } });
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "sector.meu_dia.reset",
+    entityType: "Sector",
+    entityId: setor?.id ?? sectorCode,
+    metadata: { setor: setor?.label ?? sectorCode },
+  });
 
   revalidatePath("/tarefas");
   return null;

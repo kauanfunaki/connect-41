@@ -92,7 +92,7 @@ const PRIMEIROS_PASSOS: Passo[] = [
     passos: [
       "Clique no nome do escritório e do setor, na barra do topo, e escolha o setor na janela “Trocar de setor ou escritório”.",
       "Em \"Todos os setores\", clique no nome do setor em \"Meus setores\" para entrar nele.",
-      "Passe o mouse em Cadastros ou num grupo do setor (como Contas) para ver as telas dele ao lado, sem abrir. Com o menu recolhido em ícones, o mouse mostra só o nome, e o clique abre a tela.",
+      "Clique em Cadastros ou num grupo do setor (como Contas), ou pare o mouse sobre ele, para ver as telas dele ao lado; o número antes do “›” diz quantas são. Com o menu recolhido em ícones, o clique também abre a lista.",
     ],
   },
   {

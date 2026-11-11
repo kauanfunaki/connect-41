@@ -10,6 +10,9 @@ const m = vi.hoisted(() => {
     person: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     candidatura: { create: vi.fn() },
     $transaction: vi.fn(),
+    // O contador do endereço curto (10/11/2026): em 0, a pessoa é a nº 1.
+    $queryRaw: vi.fn(async () => [{ ultimo: 0 }]),
+    $executeRaw: vi.fn(async () => 1),
   };
   return {
     db,
@@ -152,6 +155,7 @@ describe("cadastrarEVincularCandidato", () => {
     expect(m.db.person.create).toHaveBeenCalledWith({
       data: {
         tenantId: "escritorio-a",
+        number: 1,
         type: "CANDIDATO",
         name: "Renata Alves",
         email: "renata.alves@exemplo.com",

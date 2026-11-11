@@ -11,14 +11,17 @@ import { AddHoraExtraForm } from "@/components/pessoas/AddHoraExtraForm";
 import { HoraExtraRow } from "@/components/pessoas/HoraExtraRow";
 import { formatCalendarDate } from "@/lib/format";
 import { criarHoraExtra, atualizarHoraExtra, excluirHoraExtra } from "./actions";
+import { registroDaRota } from "@/lib/enderecoCurtoServidor";
 
 export default async function HorasExtrasPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: idDaRota } = await params;
   const { ctx, setor } = await abrirTelaDoModulo("dp_horas_extras");
+  // A pessoa pelo uuid ou pelo id curto, /pessoas/pessoa-12/… (10/11/2026, pedido do Kauan).
+  const { id, number: numeroDaPessoa } = await registroDaRota("pessoa", ctx.tenantId, idDaRota, "/horas-extras");
   const canEdit = canManageSector(ctx, setor);
 
   const prisma = getPrisma();
@@ -40,6 +43,7 @@ export default async function HorasExtrasPage({
       <PessoaBreadcrumb
         isInternal={person.isInternal}
         personId={id}
+        numero={numeroDaPessoa}
         personName={person.name}
         atual="Horas extras"
         aba="trabalhista"

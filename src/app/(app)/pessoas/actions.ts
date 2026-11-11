@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
+import { criarComNumero } from "@/lib/enderecoCurtoNumeracao";
+import { endereco } from "@/lib/enderecoCurto";
 import { PersonType, PersonEmploymentStatus } from "@/generated/prisma/enums";
 import { getAuthContext } from "@/lib/auth/context";
 import { canWriteEntity } from "@/lib/auth/policy";
@@ -21,7 +23,8 @@ export type PessoaState = ActionState;
 // existe e que ele pode subir os documentos represados e navegar. Tipo à parte
 // para não alargar o retorno de atualizarPessoa/excluirPessoa, que continuam
 // no ActionState comum.
-export type PessoaCreateState = ActionState | { createdId: string };
+// `endereco` é o curto da ficha, /pessoas/pessoa-12 (10/11/2026).
+export type PessoaCreateState = ActionState | { createdId: string; endereco: string };
 
 async function pessoaData(form: FormData, ctx: Awaited<ReturnType<typeof getAuthContext>>) {
   const [canBank, canSalary] = await Promise.all([
@@ -92,12 +95,17 @@ export async function criarPessoa(
 
   const data = await pessoaData(form, ctx);
 
-  const prisma = getPrisma();
   let id: string;
+  let number: number;
 
   try {
-    const person = await prisma.person.create({ data: { tenantId: ctx.tenantId, ...data } });
-    id = person.id;
+    // O número da pessoa no escritório, o do endereço curto
+    // /pessoas/pessoa-12 (10/11/2026, pedido do Kauan).
+    const tenantId = ctx.tenantId;
+    const person = await criarComNumero("pessoa", tenantId, (tx, numero) =>
+      tx.person.create({ data: { tenantId, number: numero, ...data }, select: { id: true, number: true } })
+    );
+    ({ id, number } = person);
   } catch (err) {
     if (isPrismaUniqueError(err)) {
       return { error: "Já existe uma pessoa cadastrada com este CPF." };
@@ -119,7 +127,7 @@ export async function criarPessoa(
   // segura os arquivos escolhidos em memória (não existe entityId antes de a
   // pessoa existir) e precisa do id pra subir os anexos logo depois. Quem navega
   // pra ficha é o próprio formulário, terminado o upload.
-  return { createdId: id };
+  return { createdId: id, endereco: endereco("pessoa", number) };
 }
 
 export async function atualizarPessoa(
@@ -142,7 +150,7 @@ export async function atualizarPessoa(
 
   const existing = await prisma.person.findFirst({
     where: { id, type: PersonType.COLABORADOR, ...(await scopedPersonWhere(ctx)) },
-    select: { id: true },
+    select: { id: true, number: true },
   });
   if (!existing) return { error: "Pessoa não encontrada ou fora do seu escopo." };
 
@@ -170,7 +178,7 @@ export async function atualizarPessoa(
   await saveCustomFieldValues(ctx.tenantId, id, applicableFields, form);
 
   revalidatePath(`/pessoas/${id}`);
-  redirect(`/pessoas/${id}`);
+  redirect(endereco("pessoa", existing.number));
 }
 
 // A exclusão de uma pessoa saiu daqui em 13/10/2026: é o diálogo

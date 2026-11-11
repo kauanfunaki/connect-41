@@ -36,7 +36,7 @@ type Tela = TelaDoMenu;
 /** Uma tela de dentro de um menu que não é tela do catálogo (Robôs, Sites… ou as do Apoio). */
 export type ItemDentro = { chave: string; label: string; icon: React.ReactNode };
 
-/** Um item do Geral no organizador: a chave de `CHAVES_DO_GERAL`, o nome, o ícone e, no Apoio, as telas de dentro. */
+/** Um item do Geral no organizador: a chave de `CHAVES_DO_GERAL`, o nome, o ícone e, nos grupos (Apoio, Cadastros), as telas de dentro. */
 export type ItemDoGeral = { chave: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[] };
 
 export type OrganizacaoDoMenu = ReturnType<typeof useOrganizarMenu>;
@@ -354,7 +354,7 @@ export function GeralEmOrganizacao({ org }: { org: OrganizacaoDoMenu }) {
     <ul aria-label="Geral" className={`space-y-1 ${arrastando ? "cursor-grabbing select-none" : ""}`}>
       {org.geral.map((g, i) => {
         const d = org.geral.length > 1 ? pegador({ tipo: "geral" }, i, org.geral.length, `geral:${g.chave}`, g.label) : null;
-        // O Apoio com mais de uma tela: as de dentro mudam de ordem só ali.
+        // Um grupo (o Apoio, os Cadastros) com mais de uma tela: as de dentro mudam de ordem só ali.
         const filhos = g.filhos && g.filhos.length > 1 ? org.emOrdem(g.chave, g.filhos, (x) => x.chave) : [];
         const chaves = filhos.map((x) => x.chave);
         const oculto = org.escondido(g.chave);
