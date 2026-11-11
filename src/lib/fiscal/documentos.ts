@@ -10,16 +10,30 @@ import { digitsOnly } from "@/lib/validation/common";
 export type TipoDocumento = "NFE" | "NFCE" | "CTE" | "NFSE";
 
 /**
- * Competência do documento: o mês a que ele pertence, "AAAA-MM".
+ * Competência do documento lido do XML: o mês a que ele pertence, "AAAA-MM".
  *
  * String e não data porque é **agrupador de mês**, não instante. Guardar como
  * data obrigaria toda consulta de tela a truncar, o que joga fora o índice.
  *
- * Usa a data em UTC de propósito: `issuedAt` já vem do XML com fuso
- * (`dhEmi` traz -03:00), e o instante é o mesmo em qualquer lugar. Reinterpretar
- * no fuso do servidor faria a mesma nota cair em competências diferentes
- * conforme onde o Connect estivesse rodando — e virada de mês é exatamente onde
- * isso aparece.
+ * Sai do **dia local da emissão** (`emitidoEmLocal` de src/lib/fiscal/xml.ts),
+ * e não do instante em UTC (bug-473, 11/11/2026). Até então valia o UTC, e uma
+ * NF-e de 30/09 às 22h em Brasília entrava em outubro no acervo e no SPED.
+ * Fiscalmente a nota é de setembro: é o dia impresso nela. O dia local vem do
+ * texto do XML, que já traz o fuso de quem emitiu, então o resultado não
+ * depende do fuso do servidor — o motivo de antes ter sido UTC continua
+ * atendido.
+ */
+export function competenciaDaEmissao(emitidoEmLocal: string): string {
+  return emitidoEmLocal.slice(0, 7);
+}
+
+/**
+ * Competência a partir de uma **data sem hora** guardada como meia-noite UTC
+ * ("2026-09-30" vira 2026-09-30T00:00Z): a data digitada na edição do
+ * documento, e o `issuedAt` das notas que vêm do índice do SPED.
+ *
+ * Não serve para o instante de um XML: em UTC a nota das 22h do último dia já
+ * está no mês seguinte. Para XML, `competenciaDaEmissao`.
  */
 export function competenciaDe(emitidoEm: Date): string {
   const ano = emitidoEm.getUTCFullYear();

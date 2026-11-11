@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   competenciaDe,
+  competenciaDaEmissao,
   chaveDeDeduplicacao,
   direcaoDoLancamento,
   contaParaOFinanceiro,
@@ -11,19 +12,24 @@ const CHAVE = "41260917122471000175550010000001231123456781";
 const BLD = "17122471000175";
 const ZAHRA = "39952818000140";
 
-describe("competenciaDe", () => {
+describe("competenciaDe (data sem hora)", () => {
   it("agrupa por mês no formato AAAA-MM", () => {
-    expect(competenciaDe(new Date("2026-09-01T10:30:00-03:00"))).toBe("2026-09");
+    expect(competenciaDe(new Date("2026-09-30"))).toBe("2026-09");
+    expect(competenciaDe(new Date("2026-10-01"))).toBe("2026-10");
     expect(competenciaDe(new Date("2026-01-15T12:00:00Z"))).toBe("2026-01");
   });
+});
 
-  // Virada de mês é onde o fuso aparece: às 22h de 30/09 em -03:00 já é 01/10
-  // em UTC, e a nota tem de cair sempre na mesma competência, rode o Connect
-  // onde rodar.
-  it("usa UTC — a mesma nota não muda de competência conforme o servidor", () => {
-    const naVirada = new Date("2026-09-30T22:00:00-03:00");
-    expect(naVirada.toISOString()).toBe("2026-10-01T01:00:00.000Z");
-    expect(competenciaDe(naVirada)).toBe("2026-10");
+// bug-473 (11/11/2026): a regra de 03/09 usava o UTC do instante, e a nota das
+// 22h de 30/09 em Brasília caía em outubro. A competência é o dia impresso na nota.
+describe("competenciaDaEmissao", () => {
+  it("a nota das 22h do último dia fica no mês dela, não no seguinte", () => {
+    expect(new Date("2026-09-30T22:00:00-03:00").toISOString()).toBe("2026-10-01T01:00:00.000Z");
+    expect(competenciaDaEmissao("2026-09-30")).toBe("2026-09");
+  });
+
+  it("vale também para o 1º do mês de manhã", () => {
+    expect(competenciaDaEmissao("2026-10-01")).toBe("2026-10");
   });
 });
 
