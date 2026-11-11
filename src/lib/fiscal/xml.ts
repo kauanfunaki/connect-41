@@ -510,6 +510,10 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
   const valorTotal =
     texto(caminho(inf, "Servico", "Valores", "ValorServicos")) ??
     texto(caminho(decl, "Servico", "Valores", "ValorServicos")) ??
+    // Padrão nacional: `valores` é irmão de `serv` dentro do infDPS (o layout
+    // real, conferido nas 1.760 notas recusadas de 10/11/2026, bug-627). O
+    // caminho dentro de `serv` fica por compatibilidade com o que já era lido.
+    texto(caminho(dps, "valores", "vServPrest", "vServ")) ??
     texto(caminho(dps, "serv", "valores", "vServPrest", "vServ")) ??
     texto(caminho(inf, "valores", "vServ"));
   if (!valorTotal) return recusa("campo_obrigatorio_ausente", "valor do serviço ausente");
@@ -534,6 +538,7 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
   const liquidoDeclarado = centavos(
     texto(filho(valores, "ValorLiquidoNfse")) ??
       texto(caminho(inf, "ValoresNfse", "ValorLiquidoNfse")) ??
+      texto(caminho(dps, "valores", "vLiq")) ??
       texto(caminho(dps, "serv", "valores", "vLiq")) ??
       // O padrão nacional declara o líquido nos valores da própria nota.
       texto(caminho(inf, "valores", "vLiq"))
