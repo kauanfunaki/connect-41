@@ -19,7 +19,7 @@ export type ListaDoMenu =
   | { tipo: "dentro"; mae: string; chaves: string[] };
 
 /** Os itens do Geral que o organizador ordena (as chaves do `itensDoGeral` do AppShell). */
-export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "chamados", "arquivos", "agenda"] as const;
+export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "atendimento", "chamados", "arquivos", "agenda"] as const;
 
 /**
  * Tira o item `de` e põe antes do que estava em `antesDe` (0 a `lista.length`,

@@ -26,6 +26,8 @@ import { agentesDoChat } from "@/lib/ia/chat/agentes";
 import { PARES_DE_CAMINHO } from "@/lib/ajuda/artigos";
 import { configDoHelpdesk } from "@/lib/chamados/contexto";
 import { contarChamadosDoMenu, temAcessoAoModulo } from "@/lib/chamados/consultas";
+import { contextoDaTela } from "@/lib/atendimento/contexto";
+import { contarParaMenu } from "@/lib/atendimento/consultas";
 import { telasDoMenuDoSetor } from "@/lib/telasDoMenuDoSetor";
 import { lerOrdemDoMenuDoSetor } from "@/lib/menuDoSetorDb";
 import { aparenciaDoEscritorio } from "@/lib/aparencia/leitura";
@@ -180,7 +182,10 @@ export default async function AppLayout({
   const solicitacoesLigadas = moduleStates.some((m) => m.code === "portal_solicitacoes" && m.enabled);
   // As solicitações novas (21/10/2026): o número do item Solicitações do menu.
   // O número dos Chamados (05/11/2026): o que pede ação de quem olha — ver `contarChamadosDoMenu`.
-  const [telasDoGeral, chamadosLigados, solicitacoesNovas, chamadosNovos] = await Promise.all([
+  // O Atendimento (10/11/2026): a aba é de todos com o módulo ligado; o número
+  // é o que espera alguém agir (ver `contarParaMenu`).
+  const atendimentoLigado = moduleStates.some((m) => m.code === "atendimento" && m.enabled);
+  const [telasDoGeral, chamadosLigados, solicitacoesNovas, chamadosNovos, atendimentoNovos] = await Promise.all([
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
     temAcessoAoModulo({ ctx, config: helpdeskConfig }),
     solicitacoesLigadas && ctx.userId
@@ -193,6 +198,14 @@ export default async function AppLayout({
       console.error("[layout] chamados do menu", err);
       return 0;
     }),
+    atendimentoLigado
+      ? contextoDaTela()
+          .then((c) => (c ? contarParaMenu(c) : 0))
+          .catch((err) => {
+            console.error("[layout] atendimento do menu", err);
+            return 0;
+          })
+      : Promise.resolve(0),
   ]);
   // O Apoio do Geral (05/11/2026): Senhas e Manuais para todo setor, cada um
   // com os seus — quem pode agir em algum setor vê (a tela decide qual).
@@ -200,7 +213,7 @@ export default async function AppLayout({
   const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual") };
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
-      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
+      .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : m.code === "atendimento" ? true : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
       .map((m) => ({
         code: m.code,
         label: m.label,
@@ -256,6 +269,8 @@ export default async function AppLayout({
         arquivosLigados={arquivosLigados}
         chamadosLigados={chamadosLigados && !chamadosNoSetor}
         chamadosNovos={chamadosLigados ? chamadosNovos : 0}
+        atendimentoLigado={atendimentoLigado}
+        atendimentoNovos={atendimentoNovos}
         apoioLigado={apoioLigado}
         ordemDoMenu={ordemDoMenu}
         podeOrganizarMenu={role === "SUPER_ADMIN"}

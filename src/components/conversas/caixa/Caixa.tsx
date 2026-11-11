@@ -26,9 +26,25 @@ import { BotaoCopiar, CabecalhoDoPainel, NavegacaoPorTeclado } from "./Interativ
  * A caixa: preenche o resto da coluna do `PageContainer` (`flex-1`). Abaixo de
  * 24rem de altura a página volta a rolar, em vez de espremer a conversa.
  */
-export function CaixaDeConversas({ lista, painel, aberta }: { lista: ReactNode; painel: ReactNode; aberta: boolean }) {
+export function CaixaDeConversas({
+  lista,
+  painel,
+  aberta,
+  listaRecolhida = false,
+}: {
+  lista: ReactNode;
+  painel: ReactNode;
+  aberta: boolean;
+  /**
+   * A lista vira uma faixa estreita no computador (Atendimento, 10/11/2026):
+   * quem passa o dia numa conversa ganha espaço sem perder as outras de vista.
+   * No celular não muda nada.
+   */
+  listaRecolhida?: boolean;
+}) {
+  const colunas = listaRecolhida ? "lg:grid-cols-[56px_minmax(0,1fr)]" : "lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]";
   return (
-    <div className="flex-1 min-h-[24rem] grid grid-rows-[minmax(0,1fr)] gap-4 lg:gap-x-3 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+    <div className={`flex-1 min-h-[24rem] grid grid-rows-[minmax(0,1fr)] gap-4 lg:gap-x-3 ${colunas}`}>
       <div className={`${aberta ? "hidden lg:flex" : "flex"} flex-col min-h-0 min-w-0`}>{lista}</div>
       <div className={`${aberta ? "flex" : "hidden lg:flex"} flex-col min-h-0 min-w-0`}>{painel}</div>
     </div>

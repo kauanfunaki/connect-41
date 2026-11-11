@@ -173,6 +173,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   // A fila do robô do Societário (30/10/2026): o PDF que a tarefa guardou
   // mora nos Arquivos da empresa, que vão junto.
   { modelo: "RobotTask", coluna: "companyId", tratamento: "apagar" },
+  // O contato do Atendimento (10/11/2026) volta a ser só um telefone.
+  { modelo: "AtendimentoContato", coluna: "companyId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; empresa que some vira só o nome do WhatsApp na tela" },
   // XML recusado pelo leitor (06/11/2026): o arquivo é da empresa e guarda os dados dela.
   { modelo: "FiscalXmlRefusal", coluna: "companyId", tratamento: "apagar" },
   // O pedido de situação fiscal da ficha (Serpro, 20/10/2026): sem a empresa, não serve a ninguém.
@@ -218,6 +220,7 @@ const PESSOA_SOLTAS: ColunaSolta[] = [
   { modelo: "Notification", coluna: "entityId", tratamento: "apagar" },
   { modelo: "PipelineItem", coluna: "entityId", tratamento: "desligar" },
   { modelo: "WhatsappThread", coluna: "personId", tratamento: "desligar" },
+  { modelo: "AtendimentoContato", coluna: "personId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; pessoa que some vira só o nome do WhatsApp na tela" },
   { modelo: "WhatsappThread", coluna: "linkPendingPersonId", tratamento: "desligar" },
   { modelo: "WhatsappThread", coluna: "candidaturaId", tratamento: "desligar" },
   // O resumo do currículo lido pela IA na ficha do candidato (14/10/2026): sai
@@ -346,6 +349,15 @@ const USUARIO: Ligacao[] = [
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [
+  // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
+  { modelo: "AtendimentoCiclo", coluna: "assignedToId", tratamento: "manter", motivo: "histórico do atendimento; a tela mostra Alguém da equipe e qualquer pessoa do setor pode assumir" },
+  { modelo: "AtendimentoCiclo", coluna: "encerradoPorId", tratamento: "manter", motivo: "histórico do atendimento; a auditoria guarda o nome" },
+  { modelo: "AtendimentoMovimento", coluna: "porUserId", tratamento: "manter", motivo: "o caminho da conversa é histórico; a tela mostra só o nome, que some com a pessoa" },
+  { modelo: "AtendimentoMovimento", coluna: "paraUserId", tratamento: "manter", motivo: "o caminho da conversa é histórico; a tela mostra só o nome, que some com a pessoa" },
+  { modelo: "AtendimentoPedido", coluna: "decididoPorId", tratamento: "manter", motivo: "histórico do pedido; a auditoria guarda o nome" },
+  { modelo: "AtendimentoPedido", coluna: "pedidoPorId", tratamento: "manter", motivo: "o pedido de encaminhamento é histórico do atendimento; a tela mostra 'Alguém da equipe' quando a pessoa sai" },
+  { modelo: "AtendimentoMensagem", coluna: "senderUserId", tratamento: "manter", motivo: "a assinatura da mensagem guarda o nome como o cliente leu; o id fica só para o histórico" },
+  { modelo: "AtendimentoConfig", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a configuração por último; a tela não mostra o id" },
   { modelo: "DrePublicacao", coluna: "publicadoPorId", tratamento: "manter", motivo: "a publicação guarda o nome de quem publicou (publicadoPorNome), como a auditoria" },
   { modelo: "GithubConnection", coluna: "githubUserId", tratamento: "manter", motivo: "identidade externa do GitHub, sem vínculo com User do Connect" },
   { modelo: "GithubAccountLease", coluna: "githubUserId", tratamento: "manter", motivo: "coordenação por identidade externa do GitHub, não por usuário do Connect" },

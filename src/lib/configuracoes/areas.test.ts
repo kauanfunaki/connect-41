@@ -54,6 +54,7 @@ describe("menu das configurações por papel", () => {
       "Plano de contas",
       "Cálculo de rescisão",
       "Chamados internos",
+      "Atendimento",
     ]);
     // Competências saiu daqui em 20/10/2026: é uma aba de Avaliações de
     // desempenho, de quem gere o módulo (escolha 8A).
@@ -66,7 +67,8 @@ describe("menu das configurações por papel", () => {
     // também o catálogo de Chamados internos e as Obrigações por regime (22/10),
     // e os Envios ao cliente do Portal (23/10).
     const total = Object.values(telasDoMenu(ADMIN_AUTO)).flat().length;
-    expect(total).toBe(19 + 1 + 1 - 3 + 1 + 1 + 1);
+    // E o Atendimento, o WhatsApp do escritório (10/11/2026).
+    expect(total).toBe(19 + 1 + 1 - 3 + 1 + 1 + 1 + 1);
     expect(telasDoMenu(ADMIN)["Setores e módulos"]).toEqual(["Setores e módulos", "Campos customizados", "Tags"]);
   });
 

@@ -112,7 +112,7 @@ export async function apontarAvisosParaOConnect(
     if (!integracao) return { error: "Conexão não encontrada." };
     const def = integracaoDoCatalogo(integracao.integrationCode);
     if (!def?.caminhoDoWebhook) return { error: "Esta conexão não recebe avisos." };
-    if (integracao.integrationCode !== "whatsapp_recrutamento_evolution") {
+    if (integracao.integrationCode !== "whatsapp_recrutamento_evolution" && integracao.integrationCode !== "whatsapp_atendimento_evolution") {
       return { error: "Na Meta, a URL do webhook é do app, no painel de desenvolvedor: troque por lá, com a URL mostrada aqui." };
     }
     urlNova = urlDoAviso(urlPublica, def.caminhoDoWebhook.replace("{id}", integracao.id));

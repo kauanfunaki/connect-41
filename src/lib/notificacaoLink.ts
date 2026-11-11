@@ -34,6 +34,8 @@ export function linkDaNotificacao(n: NotificacaoParaLink): string | null {
   if (!n.entityId) return null;
   if (n.type.startsWith("CHAMADO_")) return `/chamados/${n.entityId}`;
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
+  // O Atendimento (10/11/2026): o id é o do ciclo, e o link abre a conversa.
+  if (n.type.startsWith("ATENDIMENTO_")) return `/atendimento/${n.entityId}`;
   if (n.type.startsWith("PROCESS_")) return `/processos/${n.entityId}`;
   if (n.type.startsWith("SOLICITACAO_")) return `/solicitacoes/${n.entityId}`;
   // Lead novo do Comercial (05/10/2026): abre a ficha do lead.
