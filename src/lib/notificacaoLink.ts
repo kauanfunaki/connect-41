@@ -54,6 +54,8 @@ export function linkDaNotificacao(n: NotificacaoParaLink, numero?: { tela: TelaC
   const de = (tela: TelaCurta) => enderecoDe(tela, { id, number: numero?.tela === tela ? numero.numero : null });
   if (n.type.startsWith("CHAMADO_")) return de("chamado");
   if (n.type.startsWith("WHATSAPP_")) return `/whatsapp/${n.entityId}`;
+  // O Atendimento (10/11/2026): o id é o do ciclo, e o link abre a conversa.
+  if (n.type.startsWith("ATENDIMENTO_")) return `/atendimento/${n.entityId}`;
   if (n.type.startsWith("PROCESS_")) return de("processo");
   if (n.type.startsWith("SOLICITACAO_")) return de("solicitacao");
   // Lead novo do Comercial (05/10/2026): abre a ficha do lead.

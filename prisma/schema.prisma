@@ -10978,6 +10978,304 @@ model CoreExportacao {
   @@map("core_exportacoes")
 }
 
+// ─── Atendimento (10/11/2026) ────────────────────────────────────────────────
+//
+// A caixa do WhatsApp oficial do ESCRITÓRIO, no menu Geral: todo contato novo
+// cai na triagem da Controladoria, que responde ou encaminha ao setor; o setor
+// assume e resolve. Tabelas próprias, e não as `Whatsapp*` do Recrutamento: lá
+// as telas e as ações filtram só pelo escritório, e um segundo número nas
+// mesmas tabelas apareceria no /whatsapp dos recrutadores. Do Recrutamento
+// vem só o transporte (provedores, webhook, fila). Ids de usuário e de
+// empresa são texto, sem chave estrangeira, como em `WhatsappThread`.
+
+enum AtendimentoSituacao {
+  /// Chegou e ninguém da triagem decidiu ainda para onde vai.
+  TRIAGEM
+  /// Encaminhada a um setor, esperando alguém de lá assumir.
+  NO_SETOR
+  EM_ATENDIMENTO
+  /// A última palavra foi nossa. Volta sozinha para EM_ATENDIMENTO quando o cliente responde.
+  AGUARDANDO_CLIENTE
+  ENCERRADO
+}
+
+enum AtendimentoContatoTipo {
+  /// Telefone que o Connect ainda não sabe de quem é.
+  DESCONHECIDO
+  /// Ligado a uma empresa ou pessoa do cadastro.
+  CLIENTE
+  /// Ainda não é cliente (quer abrir empresa, trocar de contador…).
+  NOVO
+}
+
+enum AtendimentoMovimentoTipo {
+  CHEGOU
+  ASSUMIU
+  ENCAMINHOU
+  TRANSFERIU
+  PEDIU
+  APROVOU
+  RECUSOU
+  AGUARDANDO
+  ENCERROU
+  REABRIU
+  VINCULOU
+}
+
+enum AtendimentoPedidoStatus {
+  PENDENTE
+  APROVADO
+  RECUSADO
+}
+
+/// O jeito de cada escritório atender. Uma linha por escritório, criada na primeira leitura.
+model AtendimentoConfig {
+  id       String @id @default(uuid())
+  tenantId String @unique
+
+  /// A conexão do número do escritório, em `TenantIntegration`. Nulo = ainda não conectado.
+  integrationId String?
+
+  /// Dias de atendimento, 0 = domingo, separados por vírgula.
+  diasDaSemana String @default("1,2,3,4,5") @db.VarChar(20)
+  abreAs       String @default("08:00") @db.VarChar(5)
+  fechaAs      String @default("18:00") @db.VarChar(5)
+
+  /// Saem assinadas como "Atendimento 41". Vazio = não manda.
+  boasVindas    String? @db.Text
+  foraDoHorario String? @db.Text
+
+  /// Cliente que volta a escrever até N dias depois de encerrar cai com o mesmo
+  /// setor e a mesma pessoa; depois disso, passa pela triagem de novo.
+  diasParaReabrir Int @default(7)
+
+  /// Os setores que aparecem no "Encaminhar". Nulo = todos os ativos.
+  setores Json?
+
+  /// A Ceci registra uma sugestão de setor em cada triagem, só para medir o
+  /// acerto. Ninguém vê a sugestão na conversa.
+  ceciLigada Boolean @default(false)
+
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("atendimento_configs")
+}
+
+/// Quem está do outro lado de um telefone. Um por número no escritório.
+model AtendimentoContato {
+  id       String @id @default(uuid())
+  tenantId String
+
+  /// E.164 sem "+", como a Meta manda.
+  waPhone        String  @db.VarChar(20)
+  /// O nome que a pessoa pôs no próprio perfil do WhatsApp. Não é cadastro.
+  nomeNoWhatsapp String? @db.VarChar(120)
+
+  tipo      AtendimentoContatoTipo @default(DESCONHECIDO)
+  companyId String?
+  personId  String?
+  /// Para contato novo: o nome que a Controladoria anotou e o interesse.
+  nome      String?                @db.VarChar(120)
+  interesse String?                @db.VarChar(60)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversas AtendimentoConversa[]
+
+  @@unique([tenantId, waPhone])
+  @@index([tenantId, companyId])
+  @@map("atendimento_contatos")
+}
+
+/// A conversa de um telefone com um número do escritório. Atravessa vários ciclos.
+model AtendimentoConversa {
+  id            String @id @default(uuid())
+  tenantId      String
+  integrationId String
+  waPhone       String @db.VarChar(20)
+  contatoId     String
+
+  /// Última mensagem RECEBIDA: o relógio da janela de 24 h da Meta.
+  lastInboundAt DateTime?
+  /// Última mensagem em qualquer sentido. Ordena a lista.
+  lastMessageAt DateTime?
+  /// Pediu para parar. Nada sai daqui até a pessoa escrever de novo.
+  optedOutAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contato   AtendimentoContato    @relation(fields: [contatoId], references: [id], onDelete: Cascade)
+  ciclos    AtendimentoCiclo[]
+  mensagens AtendimentoMensagem[]
+
+  @@unique([integrationId, waPhone])
+  @@index([tenantId, lastMessageAt])
+  @@map("atendimento_conversas")
+}
+
+/// Um atendimento: de quando o cliente escreve até alguém encerrar.
+model AtendimentoCiclo {
+  id         String @id @default(uuid())
+  tenantId   String
+  conversaId String
+
+  situacao   AtendimentoSituacao @default(TRIAGEM)
+  /// O setor com quem a conversa está. Nulo na triagem.
+  sectorCode String?             @db.VarChar(40)
+
+  assignedToId String?
+  assignedAt   DateTime?
+
+  abertoEm       DateTime  @default(now())
+  encerradoEm    DateTime?
+  encerradoPorId String?
+  desfechoId     String?
+  /// O texto do desfecho no encerramento (o da lista ou o que a pessoa escreveu em "Outro").
+  desfechoTexto  String?   @db.VarChar(120)
+  resumo         String?   @db.Text
+
+  /// A sugestão interna da Ceci e o setor que a triagem escolheu, lado a lado,
+  /// para medir o acerto. Não aparece na conversa.
+  ceciSectorCode    String? @db.VarChar(40)
+  ceciRunId         String? @db.VarChar(191)
+  triagemSectorCode String? @db.VarChar(40)
+
+  conversa   AtendimentoConversa    @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  movimentos AtendimentoMovimento[]
+  pedidos    AtendimentoPedido[]
+
+  @@index([tenantId, situacao, sectorCode])
+  @@index([tenantId, assignedToId, situacao])
+  @@index([conversaId, abertoEm])
+  @@map("atendimento_ciclos")
+}
+
+/// Uma mensagem, nos dois sentidos, ou uma nota interna da equipe.
+model AtendimentoMensagem {
+  id         String  @id @default(uuid())
+  tenantId   String
+  conversaId String
+  cicloId    String?
+
+  direcao WhatsappDirection
+  body    String            @db.Text
+
+  /// O id do provedor. Único: é o que torna o webhook idempotente.
+  waMessageId String?             @unique @db.VarChar(120)
+  status      WhatsappSendStatus?
+  erro        String?             @db.VarChar(500)
+
+  /// Quem escreveu, quando foi uma pessoa da equipe.
+  senderUserId String?
+  /// "Nome · Setor" como saiu no WhatsApp, guardado na hora do envio: o nome ou
+  /// o setor da pessoa podem mudar depois, e a conversa mostra o que o cliente leu.
+  assinatura   String? @db.VarChar(160)
+
+  /// Nota interna: fica na conversa, nunca vai para o cliente.
+  interna    Boolean @default(false)
+  /// Texto fixo mandado pelo Connect (boas-vindas, fora do horário, PARAR).
+  automatica Boolean @default(false)
+
+  /// Mídia que veio ou foi, quando houver. O caminho é gerado pelo Connect.
+  midiaTipo String? @db.VarChar(30)
+  midiaPath String? @db.VarChar(255)
+  midiaNome String? @db.VarChar(180)
+  midiaMime String? @db.VarChar(100)
+
+  createdAt DateTime @default(now())
+
+  conversa AtendimentoConversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+
+  @@index([conversaId, createdAt])
+  @@index([cicloId])
+  @@map("atendimento_mensagens")
+}
+
+/// O caminho da conversa: cada passagem, de onde, para onde, quem e por quê.
+model AtendimentoMovimento {
+  id       String @id @default(uuid())
+  tenantId String
+  cicloId  String
+
+  tipo       AtendimentoMovimentoTipo
+  deSector   String?                  @db.VarChar(40)
+  paraSector String?                  @db.VarChar(40)
+  porUserId  String?
+  paraUserId String?
+  nota       String?                  @db.Text
+
+  createdAt DateTime @default(now())
+
+  ciclo AtendimentoCiclo @relation(fields: [cicloId], references: [id], onDelete: Cascade)
+
+  @@index([cicloId, createdAt])
+  @@map("atendimento_movimentos")
+}
+
+/// Um setor pede para passar a conversa a outro, e a triagem aprova. Um pendente por ciclo.
+model AtendimentoPedido {
+  id       String @id @default(uuid())
+  tenantId String
+  cicloId  String
+
+  deSector      String  @db.VarChar(40)
+  /// Nulo = "A definir": a triagem escolhe o setor.
+  paraSector    String? @db.VarChar(40)
+  motivo        String  @db.Text
+  avisarCliente Boolean @default(true)
+  pedidoPorId   String
+
+  status        AtendimentoPedidoStatus @default(PENDENTE)
+  decididoPorId String?
+  /// Na aprovação, o setor que ficou (pode ser outro que o pedido); na recusa, nulo.
+  setorAprovado String?                 @db.VarChar(40)
+  nota          String?                 @db.Text
+  decididoEm    DateTime?
+
+  createdAt DateTime @default(now())
+
+  ciclo AtendimentoCiclo @relation(fields: [cicloId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@index([cicloId, status])
+  @@map("atendimento_pedidos")
+}
+
+/// As opções do "Encerrar atendimento". "Outro" não mora aqui: é fixo na tela.
+model AtendimentoDesfecho {
+  id       String  @id @default(uuid())
+  tenantId String
+  label    String  @db.VarChar(60)
+  ativo    Boolean @default(true)
+  ordem    Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, label])
+  @@index([tenantId, ativo, ordem])
+  @@map("atendimento_desfechos")
+}
+
+/// Texto pronto que a equipe usa na conversa. Sem setor = vale para todos.
+model AtendimentoMensagemPadrao {
+  id         String  @id @default(uuid())
+  tenantId   String
+  titulo     String  @db.VarChar(80)
+  sectorCode String? @db.VarChar(40)
+  texto      String  @db.Text
+  ativo      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, ativo])
+  @@map("atendimento_mensagens_padrao")
+}
+
 // ─── Academia (Fase 1, 10/11/2026, pedido do Kauan) ─────────────────────────
 //
 // A área de aprendizado da equipe: digitação, digitação de números e lógica,

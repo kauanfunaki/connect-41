@@ -42,7 +42,7 @@ export function podeConfigurarMenuGeral(ctx: { role: UserRole; subscriptionReadO
 }
 
 /** As telas do Geral que podem ser escondidas. Início e Meu dia nunca. */
-export type TelaDoGeral = "espacos" | "cadastros" | "transferencias" | "solicitacoes" | "arquivos" | "agenda" | "chamados";
+export type TelaDoGeral = "espacos" | "cadastros" | "transferencias" | "solicitacoes" | "atendimento" | "arquivos" | "agenda" | "chamados";
 
 export type DefDaTelaDoGeral = {
   chave: TelaDoGeral;
@@ -88,6 +88,12 @@ export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
     rotulo: "Solicitações",
     descricao: "O que os clientes pedem pelo portal, por assunto e setor.",
     modulo: "portal_solicitacoes",
+  },
+  {
+    chave: "atendimento",
+    rotulo: "Atendimento",
+    descricao: "O WhatsApp do escritório: a triagem da Controladoria e as conversas de cada setor.",
+    modulo: "atendimento",
   },
   {
     chave: "arquivos",

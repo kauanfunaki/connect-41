@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createHmac } from "crypto";
-import { CODIGOS_DE_WHATSAPP, provedorDaIntegracao, janelaDoCodigo } from "./index";
+import { CODIGOS_COM_WEBHOOK, CODIGOS_DE_WHATSAPP, CODIGOS_DO_ATENDIMENTO, ehDoAtendimento, provedorDaIntegracao, janelaDoCodigo } from "./index";
 import { provedorMeta } from "./meta";
 import { INTEGRATION_CATALOG } from "@/lib/integracoes/catalogo";
 import { JANELA_LIVRE_EM_HORAS } from "../decisao";
@@ -28,6 +28,22 @@ describe("registro de provedores de WhatsApp", () => {
   it("código desconhecido não tem provedor e fica com a janela mais restritiva", () => {
     expect(provedorDaIntegracao("nao_existe")).toBeNull();
     expect(janelaDoCodigo("nao_existe")).toBe(JANELA_LIVRE_EM_HORAS);
+  });
+
+  // O número do escritório (Atendimento, 10/11/2026) usa os mesmos provedores
+  // com outro código, e o código é o que separa as duas caixas.
+  it("os códigos do Atendimento estão no catálogo, não se confundem com os do Recrutamento e têm provedor", () => {
+    const codigos = INTEGRATION_CATALOG.map((i) => i.code);
+    for (const c of CODIGOS_DO_ATENDIMENTO) {
+      expect(codigos, c).toContain(c);
+      expect(CODIGOS_DE_WHATSAPP).not.toContain(c);
+      expect(ehDoAtendimento(c)).toBe(true);
+      expect(provedorDaIntegracao(c)?.codigo).toBe(c);
+    }
+    for (const c of CODIGOS_DE_WHATSAPP) expect(ehDoAtendimento(c)).toBe(false);
+    expect(CODIGOS_COM_WEBHOOK).toEqual([...CODIGOS_DE_WHATSAPP, ...CODIGOS_DO_ATENDIMENTO]);
+    expect(janelaDoCodigo("whatsapp_atendimento")).toBe(24);
+    expect(janelaDoCodigo("whatsapp_atendimento_evolution")).toBeNull();
   });
 
   it("a Meta tem janela de 24h", () => {

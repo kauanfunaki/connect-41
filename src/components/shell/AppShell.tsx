@@ -81,6 +81,7 @@ import { GRUPOS } from "@/lib/aparencia/cores";
 import { useNumeroConferido } from "./useNumeroConferido";
 import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 import { contarChamadosDoMenuAction } from "@/app/(app)/chamados/contagem-actions";
+import { contarAtendimentoDoMenuAction } from "@/app/(app)/atendimento/contagem-actions";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
@@ -162,6 +163,10 @@ type Props = {
   chamadosLigados?: boolean;
   /** O que pede ação nos Chamados (05/11/2026): o número no item, conferido a cada minuto. */
   chamadosNovos?: number;
+  /** O Atendimento (10/11/2026): a aba do WhatsApp do escritório, para todos com o módulo ligado. */
+  atendimentoLigado?: boolean;
+  /** O que espera alguém agir no Atendimento: triagem, pedidos e "sem responsável" dos setores da pessoa. */
+  atendimentoNovos?: number;
   /**
    * As telas do Apoio ligadas no escritório (05/11/2026): Repositório de senhas
    * e de manuais, no grupo Apoio do Geral, para todo setor (cada um vê os seus).
@@ -220,6 +225,8 @@ export function AppShell({
   arquivosLigados = false,
   chamadosLigados = false,
   chamadosNovos = 0,
+  atendimentoLigado = false,
+  atendimentoNovos = 0,
   apoioLigado = { senhas: false, manuais: false },
   academiaLigada = false,
   ordemDoMenu,
@@ -277,6 +284,7 @@ export function AppShell({
   // O número dos Chamados (05/11/2026), no Geral ou no menu do setor que atende.
   const chamadosNoMenu = chamadosLigados || activeSectorModules.some((m) => m.code === "helpdesk");
   const novosChamados = useNumeroConferido(chamadosNovos, contarChamadosDoMenuAction, chamadosNoMenu, pathname.startsWith("/chamados") ? pathname : undefined);
+  const novosAtendimentos = useNumeroConferido(atendimentoNovos, contarAtendimentoDoMenuAction, atendimentoLigado, pathname.startsWith("/atendimento") ? pathname : undefined);
   const grupoDaTela = grupoDaTelaDaEquipe(pathname);
   const tenantAtual = accessibleTenants.find((t) => t.id === tenantId);
   const podeTrocar = sectors.length > 1 || accessibleTenants.length > 1;
@@ -373,6 +381,7 @@ export function AppShell({
   const listaDoGeral = (quadros: ItemDoGrupo | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
+    const atendimento = areaDoModulo("atendimento") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
     const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", quadros?.label].filter(Boolean) as string[];
     const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; existe?: boolean; no: React.ReactNode }[] = [
@@ -397,6 +406,7 @@ export function AppShell({
       },
       { chave: "transferencias", area: "marca", label: "Transferências", icon: <ArrowRightLeft size={16} />, no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
       { chave: "solicitacoes", area: solicitacoes, label: "Solicitações", icon: <Inbox size={16} />, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
+      { chave: "atendimento", area: atendimento, label: "Atendimento", icon: <ModuleIcon code="atendimento" />, no: atendimentoLigado && noGeral("atendimento") && <NavItem href="/atendimento" icon={<ModuleIcon code="atendimento" />} label="Atendimento" contador={novosAtendimentos} area={atendimento} /> },
       { chave: "chamados", area: chamados, label: "Chamados", icon: <ModuleIcon code="helpdesk" />, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
       { chave: "arquivos", area: arquivos, label: "Arquivos", icon: <FolderOpen size={16} />, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
       { chave: "agenda", area: "marca", label: "Agenda", icon: <CalendarDays size={16} />, no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },

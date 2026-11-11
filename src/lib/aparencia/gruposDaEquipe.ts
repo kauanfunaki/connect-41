@@ -64,6 +64,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   portal_solicitacoes: "atendimento",
   arquivos: "atendimento",
   controladoria_conversas: "atendimento",
+  atendimento: "atendimento",
   comercial_leads: "atendimento",
   // Pessoas: o ciclo do colaborador e o que se lê dele.
   dp_colaboradores: "pessoas",

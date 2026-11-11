@@ -19,7 +19,7 @@ export type ListaDoMenu =
   | { tipo: "dentro"; mae: string; chaves: string[] };
 
 /** Os itens do Geral que o organizador ordena (as chaves do `itensDoGeral` do AppShell). */
-export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "chamados", "arquivos", "agenda"] as const;
+export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "atendimento", "chamados", "arquivos", "agenda"] as const;
 
 /**
  * Os itens do Geral que são grupo, com telas dentro que o organizador ordena e

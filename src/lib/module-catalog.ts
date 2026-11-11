@@ -324,6 +324,18 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Atendimento",
   },
   {
+    // A caixa do WhatsApp oficial do escritório (10/11/2026, aprovado pelo
+    // Kauan): fica no menu Geral para todos; a Controladoria faz a triagem e
+    // encaminha aos setores. Desligado até o número estar conectado.
+    code: "atendimento",
+    label: "Atendimento",
+    sectorCode: "controladoria",
+    description: "O WhatsApp do escritório: a triagem da Controladoria encaminha cada conversa ao setor, e toda mensagem sai assinada",
+    defaultEnabled: false,
+    icon: "MessageCircle",
+    group: "Atendimento",
+  },
+  {
     // O portal como caminho único entre a 41 e o cliente (01/10): o cliente
     // abre a solicitação escolhendo o assunto, e o assunto diz o setor que
     // atende. Fica na Controladoria (atendimento) para ser ligado e desligado
@@ -922,6 +934,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   academia: "/academia",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
+  atendimento:             "/atendimento",
   portal_solicitacoes:     "/solicitacoes",
   societario_painel: "/processos/painel",
   societario_orgaos: "/processos/orgaos",
@@ -1008,7 +1021,7 @@ export const MODULOS_DE_TODA_A_EQUIPE: ReadonlySet<string> = new Set(["academia"
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", "bpo_fluxos", ...MODULOS_DE_TODA_A_EQUIPE]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", "atendimento", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", "bpo_fluxos", ...MODULOS_DE_TODA_A_EQUIPE]);
 
 /**
  * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e

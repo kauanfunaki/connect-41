@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { lerConfig } from "@/lib/integracoes/data";
-import { CODIGOS_DE_WHATSAPP, provedorDaIntegracao } from "@/lib/whatsapp/provedores";
+import { CODIGOS_COM_WEBHOOK, ehDoAtendimento, provedorDaIntegracao } from "@/lib/whatsapp/provedores";
 import { atenderMensagem, tratarNaoTexto, type Conexao } from "@/lib/whatsapp/atendimento";
+import { atenderEntrada, atenderMidia } from "@/lib/atendimento/entrada";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ const MAX_BODY_BYTES = 256 * 1024;
 async function carregarConexao(integrationId: string): Promise<Conexao | null> {
   const prisma = getPrisma();
   const linha = await prisma.tenantIntegration.findFirst({
-    where: { id: integrationId, integrationCode: { in: CODIGOS_DE_WHATSAPP } },
+    where: { id: integrationId, integrationCode: { in: CODIGOS_COM_WEBHOOK } },
     select: { id: true, tenantId: true, integrationCode: true, enabled: true, configEnc: true },
   });
   return linha ?? null;
@@ -82,6 +83,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ int
 
   // Confirmação de entrega e leitura é a maior parte do volume. Sai cedo.
   if (evento.somenteStatus) return NextResponse.json({ ok: true });
+
+  // O número do escritório (Atendimento, 10/11/2026) desvia aqui: nada do
+  // atendimento de candidato roda para ele. Mesma regra de idempotência, pelo
+  // `waMessageId` único de `AtendimentoMensagem`.
+  if (ehDoAtendimento(conexao.integrationCode)) {
+    for (const m of evento.mensagens) {
+      try {
+        console.info("[atendimento:webhook]", m.waMessageId, await atenderEntrada(conexao, provedor, m));
+      } catch (err) {
+        console.error("[atendimento:webhook] falha ao receber", m.waMessageId, err);
+      }
+    }
+    for (const i of evento.ignoradas) {
+      try {
+        console.info("[atendimento:webhook]", i.waMessageId, await atenderMidia(conexao, provedor, i));
+      } catch (err) {
+        console.error("[atendimento:webhook] falha ao receber mídia", i.waMessageId, err);
+      }
+    }
+    return NextResponse.json({ ok: true });
+  }
 
   // ─── Por que o processamento é aguardado, e não solto em background ────────
   //

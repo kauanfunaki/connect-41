@@ -123,7 +123,7 @@ export function ConfiguracaoDaIntegracao({
       )}
       {/* Na Evolution, o Connect troca o endereço lá sozinho (21/10); na Meta,
           a URL é do app, no painel de desenvolvedor. */}
-      {!soLigar && i.caminhoDoWebhook && urlPublica && i.id && i.code === "whatsapp_recrutamento_evolution" && (
+      {!soLigar && i.caminhoDoWebhook && urlPublica && i.id && (i.code === "whatsapp_recrutamento_evolution" || i.code === "whatsapp_atendimento_evolution") && (
         <div>
           <ApontarAvisos alvo={{ tipo: "whatsapp", integrationId: i.id }} />
         </div>

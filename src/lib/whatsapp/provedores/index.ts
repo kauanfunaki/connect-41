@@ -11,11 +11,31 @@ import type { ProvedorWhatsapp } from "./tipos";
 
 const REGISTRO: ProvedorWhatsapp[] = [provedorMeta, provedorEvolucao];
 
-/** Os `integrationCode` que são conexão de WhatsApp. */
+/**
+ * O número do escritório, no Atendimento (10/11/2026): os mesmos provedores,
+ * com outro código. O código é o que separa as duas caixas — o webhook desvia
+ * por ele, e nada do atendimento de candidato roda para estes números.
+ */
+const REGISTRO_DO_ATENDIMENTO: ProvedorWhatsapp[] = [
+  { ...provedorMeta, codigo: "whatsapp_atendimento" },
+  { ...provedorEvolucao, codigo: "whatsapp_atendimento_evolution" },
+];
+
+/** Os `integrationCode` que são conexão de WhatsApp do Recrutamento. */
 export const CODIGOS_DE_WHATSAPP: string[] = REGISTRO.map((p) => p.codigo);
 
+/** Os `integrationCode` do número do escritório, no Atendimento. */
+export const CODIGOS_DO_ATENDIMENTO: string[] = REGISTRO_DO_ATENDIMENTO.map((p) => p.codigo);
+
+/** Todo código que recebe webhook de WhatsApp: os dois atendimentos. */
+export const CODIGOS_COM_WEBHOOK: string[] = [...CODIGOS_DE_WHATSAPP, ...CODIGOS_DO_ATENDIMENTO];
+
+export function ehDoAtendimento(codigo: string): boolean {
+  return CODIGOS_DO_ATENDIMENTO.includes(codigo);
+}
+
 export function provedorDaIntegracao(codigo: string): ProvedorWhatsapp | null {
-  return REGISTRO.find((p) => p.codigo === codigo) ?? null;
+  return REGISTRO.find((p) => p.codigo === codigo) ?? REGISTRO_DO_ATENDIMENTO.find((p) => p.codigo === codigo) ?? null;
 }
 
 /**

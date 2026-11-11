@@ -256,6 +256,14 @@ export const AREAS: readonly AreaDeConfiguracao[] = [
         rota: "/admin/modulos/helpdesk",
         acesso: "admin",
       },
+      {
+        chave: "atendimento",
+        rotulo: "Atendimento",
+        descricao: "O WhatsApp do escritório: número, horário, desfechos e mensagens padrão.",
+        href: "/atendimento/configuracoes",
+        rota: "/admin/modulos/atendimento",
+        acesso: "admin",
+      },
     ],
   },
   {

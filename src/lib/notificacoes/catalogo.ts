@@ -86,6 +86,13 @@ export const CATALOGO: Record<string, TipoNoCatalogo> = {
   CANDIDATE_DATA_DELETION: c("alerta", "danger", "Pedido de exclusão de dados"),
   ADMISSAO_PREENCHIDA: c("documento", "success", "Admissão preenchida"),
   TESTE_RESPONDIDO: c("documento", "success", "Teste respondido"),
+  // O Atendimento, o WhatsApp do escritório (10/11/2026).
+  ATENDIMENTO_NOVO: c("whatsapp", "success", "Atendimento novo na triagem"),
+  ATENDIMENTO_RESPOSTA: c("whatsapp", "success", "Cliente respondeu"),
+  ATENDIMENTO_ENCAMINHADO: p("transferencia", "brand", "Atendimento encaminhado ao seu setor"),
+  ATENDIMENTO_TRANSFERIDO: p("transferencia", "brand", "Conversa transferida para você"),
+  ATENDIMENTO_PEDIDO: p("transferencia", "warning", "Pedido de encaminhamento"),
+  ATENDIMENTO_PEDIDO_DECIDIDO: p("aprovado", "info", "Pedido de encaminhamento decidido"),
   WHATSAPP_MESSAGE: c("whatsapp", "success", "WhatsApp: mensagem nova"),
   WHATSAPP_HANDOFF: c("whatsapp", "warning", "WhatsApp: precisa de alguém"),
   SOLICITACAO_NOVA: c("solicitacao", "info", "Nova solicitação"),
