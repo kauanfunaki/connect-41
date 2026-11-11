@@ -15,7 +15,7 @@ import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
-import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { ANCORA_DO_SELETOR_DO_INICIO, empresaDaTela } from "@/lib/portal/empresaEscolhida";
 import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 import {
   AtalhosDoInicio,
@@ -105,7 +105,12 @@ export default async function InicioDoPortalPage({
 
       {/* Só para quem tem mais de uma empresa: o Início olha todas, ou a
           escolhida. Troca ao escolher, sem "Aplicar" (P11): não há mês junto. */}
-      {empresas.length > 1 && <SeletorDeEmpresaQueNavega acao="/portal" empresas={empresas} empresaId={empresaId} permitirTodas />}
+      {/* A âncora é o destino do selo da empresa no topo (11/11/2026). */}
+      {empresas.length > 1 && (
+        <div id={ANCORA_DO_SELETOR_DO_INICIO} className="scroll-mt-4">
+          <SeletorDeEmpresaQueNavega acao="/portal" empresas={empresas} empresaId={empresaId} permitirTodas />
+        </div>
+      )}
 
       <Suspense fallback={<BlocoCarregando baixo className="mb-4" />}>
         <PrecisaDeVoce escopo={escopo} portalUserId={sessao.sub} empresasDaConta={companyIds} atencao={blocos.atencao} />

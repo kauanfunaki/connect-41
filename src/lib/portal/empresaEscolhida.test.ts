@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { empresaDaTela, enderecoComEmpresa, mesPorExtensoDoPortal } from "./empresaEscolhida";
+import {
+  empresaAtivaDoPortal,
+  empresaDaTela,
+  empresaGuardadaNoNavegador,
+  enderecoComEmpresa,
+  mesPorExtensoDoPortal,
+} from "./empresaEscolhida";
 
 describe("empresaDaTela", () => {
   const minhas = ["a", "b"];
@@ -43,6 +49,43 @@ describe("enderecoComEmpresa", () => {
 
   it("não deixa o `manter` trocar a empresa", () => {
     expect(enderecoComEmpresa("/portal", "x", { empresa: "y" })).toBe("/portal?empresa=x");
+  });
+});
+
+describe("empresaGuardadaNoNavegador", () => {
+  it("acha o cookie da empresa no meio dos outros", () => {
+    expect(empresaGuardadaNoNavegador("tema=escuro; portal_empresa=abc%20d; outro=1")).toBe("abc d");
+    expect(empresaGuardadaNoNavegador("portal_empresa=x")).toBe("x");
+  });
+
+  it("sem o cookie, vazio ou estragado, nenhuma", () => {
+    expect(empresaGuardadaNoNavegador("")).toBeNull();
+    expect(empresaGuardadaNoNavegador("tema=escuro")).toBeNull();
+    expect(empresaGuardadaNoNavegador("portal_empresa=")).toBeNull();
+    expect(empresaGuardadaNoNavegador("portal_empresa=%E0%A4%A")).toBeNull();
+    // Nome que só começa igual não é o cookie.
+    expect(empresaGuardadaNoNavegador("portal_empresa_velho=x")).toBeNull();
+  });
+});
+
+describe("empresaAtivaDoPortal", () => {
+  const duas = [
+    { id: "a", nome: "Empresa A" },
+    { id: "b", nome: "Empresa B" },
+  ];
+
+  it("a guardada, com o nome", () => {
+    expect(empresaAtivaDoPortal(null, "b", duas)).toEqual({ id: "b", nome: "Empresa B" });
+  });
+
+  it("a da URL vence a guardada, como nas telas", () => {
+    expect(empresaAtivaDoPortal("a", "b", duas)?.id).toBe("a");
+  });
+
+  it("empresa fora do acesso, nada escolhido ou uma empresa só: nenhuma", () => {
+    expect(empresaAtivaDoPortal(null, "outra", duas)).toBeNull();
+    expect(empresaAtivaDoPortal(null, null, duas)).toBeNull();
+    expect(empresaAtivaDoPortal(null, "a", [duas[0]])).toBeNull();
   });
 });
 

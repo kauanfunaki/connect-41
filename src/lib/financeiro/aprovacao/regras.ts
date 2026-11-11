@@ -88,7 +88,23 @@ export function motivoDoBloqueioDeBaixa(conta: { approvalStatus: StatusDeAprovac
   return null;
 }
 
-export type Veredito = { pode: true } | { pode: false; motivo: string };
+/**
+ * Por que a decisão foi recusada, numa chave (11/11/2026). `motivo` é o texto
+ * da equipe; o portal fala com o cliente com outras palavras ("limite de
+ * aprovação", e não "teto" e "alçada"), e as escolhe pela chave em
+ * `motivoParaOCliente` — o texto da equipe não muda.
+ */
+export type RecusaDaDecisao =
+  | "CANCELADA"
+  | "NAO_AGUARDA"
+  | "SO_COORDENACAO"
+  | "QUEM_LANCOU"
+  | "SEM_LIMITE"
+  | "ACIMA_DO_LIMITE"
+  | "SEM_MOTIVO"
+  | "MOTIVO_LONGO";
+
+export type Veredito = { pode: true } | { pode: false; motivo: string; recusa?: RecusaDaDecisao };
 
 /**
  * A equipe pode enviar (ou reenviar) esta conta para aprovação?
@@ -122,10 +138,14 @@ export const TAMANHO_MINIMO_DO_MOTIVO = 3;
 export const TAMANHO_MAXIMO_DO_MOTIVO = 1_000;
 
 /** O motivo da reprovação, limpo — ou o erro. Reprovar sem dizer por quê deixa a equipe sem o que corrigir. */
-export function validarMotivo(motivo: string | null | undefined): { ok: true; motivo: string } | { ok: false; erro: string } {
+export function validarMotivo(
+  motivo: string | null | undefined
+): { ok: true; motivo: string } | { ok: false; erro: string; recusa: "SEM_MOTIVO" | "MOTIVO_LONGO" } {
   const m = (motivo ?? "").trim();
-  if (m.length < TAMANHO_MINIMO_DO_MOTIVO) return { ok: false, erro: "Diga o motivo da reprovação." };
-  if (m.length > TAMANHO_MAXIMO_DO_MOTIVO) return { ok: false, erro: `Motivo com mais de ${TAMANHO_MAXIMO_DO_MOTIVO} caracteres.` };
+  if (m.length < TAMANHO_MINIMO_DO_MOTIVO) return { ok: false, erro: "Diga o motivo da reprovação.", recusa: "SEM_MOTIVO" };
+  if (m.length > TAMANHO_MAXIMO_DO_MOTIVO) {
+    return { ok: false, erro: `Motivo com mais de ${TAMANHO_MAXIMO_DO_MOTIVO} caracteres.`, recusa: "MOTIVO_LONGO" };
+  }
   return { ok: true, motivo: m };
 }
 
@@ -141,28 +161,52 @@ export function podeDecidir(
   decisao: Decisao,
   motivo?: string | null
 ): Veredito {
-  if (conta.status === "CANCELADO") return { pode: false, motivo: "Lançamento cancelado — não há o que aprovar." };
+  if (conta.status === "CANCELADO") return { pode: false, motivo: "Lançamento cancelado — não há o que aprovar.", recusa: "CANCELADA" };
   if (conta.approvalStatus !== "AGUARDANDO") {
-    return { pode: false, motivo: "Só se aprova ou reprova conta que está aguardando aprovação." };
+    return { pode: false, motivo: "Só se aprova ou reprova conta que está aguardando aprovação.", recusa: "NAO_AGUARDA" };
   }
 
   if (quem.tipo === "EQUIPE") {
-    if (!quem.gerenciaOSetor) return { pode: false, motivo: "Só a coordenação do setor aprova pela equipe." };
+    if (!quem.gerenciaOSetor) return { pode: false, motivo: "Só a coordenação do setor aprova pela equipe.", recusa: "SO_COORDENACAO" };
     if (conta.createdById !== null && conta.createdById === quem.userId) {
-      return { pode: false, motivo: "Quem lançou a conta não pode aprová-la nem reprová-la." };
+      return { pode: false, motivo: "Quem lançou a conta não pode aprová-la nem reprová-la.", recusa: "QUEM_LANCOU" };
     }
   } else {
-    if (quem.tetoCentavos === null) return { pode: false, motivo: "Você não tem alçada de aprovação nesta empresa." };
+    if (quem.tetoCentavos === null) {
+      return { pode: false, motivo: "Você não tem alçada de aprovação nesta empresa.", recusa: "SEM_LIMITE" };
+    }
     if (!dentroDoTeto(quem.tetoCentavos, conta.valorCentavos)) {
-      return { pode: false, motivo: "O valor passa do seu teto de aprovação nesta empresa." };
+      return { pode: false, motivo: "O valor passa do seu teto de aprovação nesta empresa.", recusa: "ACIMA_DO_LIMITE" };
     }
   }
 
   if (decisao === "REPROVAR") {
     const v = validarMotivo(motivo);
-    if (!v.ok) return { pode: false, motivo: v.erro };
+    if (!v.ok) return { pode: false, motivo: v.erro, recusa: v.recusa };
   }
   return { pode: true };
+}
+
+/**
+ * O porquê da recusa nas palavras do cliente (11/11/2026, P04): "limite de
+ * aprovação", e não "teto" nem "alçada"; "conta", e não "lançamento". As
+ * recusas que só a equipe encontra (coordenação, quem lançou) ficam numa frase
+ * neutra — o portal não chega nelas, mas, se chegar, não fala de dentro.
+ */
+const RECUSA_PARA_O_CLIENTE: Record<RecusaDaDecisao, string> = {
+  CANCELADA: "Esta conta foi cancelada pela equipe — não há o que aprovar.",
+  NAO_AGUARDA: "Esta conta já foi decidida e não está mais esperando aprovação.",
+  SO_COORDENACAO: "Você não pode decidir esta conta.",
+  QUEM_LANCOU: "Você não pode decidir esta conta.",
+  SEM_LIMITE: "Você não tem limite de aprovação nesta empresa.",
+  ACIMA_DO_LIMITE: "O valor passa do seu limite de aprovação nesta empresa.",
+  SEM_MOTIVO: "Diga o motivo da reprovação.",
+  MOTIVO_LONGO: `O motivo passa de ${new Intl.NumberFormat("pt-BR").format(TAMANHO_MAXIMO_DO_MOTIVO)} caracteres. Escreva mais curto.`,
+};
+
+/** O texto da recusa para o portal; sem chave, o texto que veio (o da equipe). */
+export function motivoParaOCliente(recusa: { motivo: string; recusa?: RecusaDaDecisao }): string {
+  return recusa.recusa ? RECUSA_PARA_O_CLIENTE[recusa.recusa] : recusa.motivo;
 }
 
 export type AlcadaParaAviso = { portalUserId: string; companyId: string; tetoCentavos: number; email: string; nome: string };
@@ -204,13 +248,13 @@ export function avisosPorAprovador(
 export function separarLote<T extends { id: string; status: StatusDoLancamento; approvalStatus: StatusDeAprovacao; valorCentavos: number; companyId: string }>(
   contas: T[],
   tetoPorEmpresa: Map<string, number>
-): { aprovaveis: T[]; ignoradas: { id: string; motivo: string }[] } {
+): { aprovaveis: T[]; ignoradas: { id: string; motivo: string; recusa?: RecusaDaDecisao }[] } {
   const aprovaveis: T[] = [];
-  const ignoradas: { id: string; motivo: string }[] = [];
+  const ignoradas: { id: string; motivo: string; recusa?: RecusaDaDecisao }[] = [];
   for (const c of contas) {
     const v = podeDecidir({ ...c, createdById: null }, { tipo: "PORTAL", tetoCentavos: tetoPorEmpresa.get(c.companyId) ?? null }, "APROVAR");
     if (v.pode) aprovaveis.push(c);
-    else ignoradas.push({ id: c.id, motivo: v.motivo });
+    else ignoradas.push({ id: c.id, motivo: v.motivo, recusa: v.recusa });
   }
   return { aprovaveis, ignoradas };
 }

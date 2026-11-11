@@ -12,7 +12,7 @@ import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { nomeExibicao } from "@/lib/companyName";
-import { podeDecidir, separarLote, validarMotivo } from "@/lib/financeiro/aprovacao/regras";
+import { motivoParaOCliente, podeDecidir, separarLote, validarMotivo } from "@/lib/financeiro/aprovacao/regras";
 import { avisarCriador, MODULO_DE_APROVACOES, whereDaAlcadaValida } from "@/lib/financeiro/aprovacao/servidor";
 
 export type ResultadoDoLote = { error: string } | { ok: true; aprovadas: number; ignoradas: number; motivos: string[] };
@@ -109,7 +109,8 @@ export async function aprovarContas(entryIds: string[]): Promise<ResultadoDoLote
   }
 
   revalidar();
-  const motivos = [...new Set(ignoradas.map((i) => i.motivo))];
+  // O porquê nas palavras do cliente ("limite de aprovação"), não nas da equipe.
+  const motivos = [...new Set(ignoradas.map(motivoParaOCliente))];
   if (naoEncontradas > 0) motivos.push("Alguma conta escolhida não foi encontrada.");
   return { ok: true, aprovadas: aprovadas.length, ignoradas: ids.length - aprovadas.length, motivos };
 }
@@ -123,7 +124,7 @@ export async function reprovarConta(entryId: string, motivoBruto: string): Promi
   const conta = contas[0];
   if (!conta) return { error: "Conta não encontrada." };
   const v = podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: tetoPorEmpresa.get(conta.companyId) ?? null }, "REPROVAR", motivoBruto);
-  if (!v.pode) return { error: v.motivo };
+  if (!v.pode) return { error: motivoParaOCliente(v) };
   const motivo = (validarMotivo(motivoBruto) as { ok: true; motivo: string }).motivo;
 
   const prisma = getPrisma();

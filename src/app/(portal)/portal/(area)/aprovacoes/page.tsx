@@ -11,18 +11,28 @@ import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
 import { moeda } from "@/lib/financeiro/formato";
+import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 
 export const dynamic = "force-dynamic";
 
 const quantas = (n: number) => `${n} ${n === 1 ? "conta" : "contas"}`;
 
 /** Contas a pagar das empresas do cliente esperando aprovação. */
-export default async function PortalAprovacoesPage() {
+export default async function PortalAprovacoesPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
   const { sessao, escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has("bpo_aprovacoes")) notFound();
   if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/aprovacoes")) return <TelaIndisponivel />;
 
-  const { contas, temAlcada } = await aprovacoesDoCliente(escopo, sessao.sub, { comAnexos: true });
+  // A empresa escolhida no portal vale aqui também (11/11/2026): da URL ou a
+  // guardada, e só se for do acesso — senão, todas as do cliente.
+  const doAcesso = escopo.companyIds ?? [];
+  const empresas = doAcesso.length > 1 ? await empresasDoSeletor(escopo.tenantId, doAcesso) : [];
+  const empresaId = empresaDaTela((await searchParams).empresa, await empresaGuardadaDoPortal(), empresas.map((e) => e.id));
+
+  const { contas, temAlcada } = await aprovacoesDoCliente(escopo, sessao.sub, { comAnexos: true, empresaId });
   const suas = contas.filter((c) => c.dentroDoTeto);
   const deOutros = contas.filter((c) => !c.dentroDoTeto);
   const soma = (lista: typeof contas) => moeda(lista.reduce((s, c) => s + c.valorCentavos, 0));
@@ -34,6 +44,10 @@ export default async function PortalAprovacoesPage() {
         descricao="Contas a pagar que só são pagas depois da sua aprovação."
         somenteLeitura={false}
       />
+
+      {empresas.length > 1 && (
+        <SeletorDeEmpresaQueNavega acao="/portal/aprovacoes" empresas={empresas} empresaId={empresaId} permitirTodas />
+      )}
 
       {/* Dois cartões (P36, 11/11/2026): eram quatro — "Aguardando", "Dentro do
           seu teto", "Valor dentro do teto" e "Valor total" —, quase o mesmo
@@ -61,8 +75,11 @@ export default async function PortalAprovacoesPage() {
         </Aviso>
       )}
 
-      {/* A lista vazia entra no casco, como em Pendências: a barra diz "0 contas". */}
+      {/* A lista vazia entra no casco, como em Pendências: a barra diz "0 contas".
+          Recomeça na troca de empresa (a troca não remonta a página): o que
+          estava marcado e o funil eram das contas da anterior. */}
       <AprovacoesDoPortal
+        key={empresaId ?? "todas"}
         contas={contas}
         temLimite={temAlcada}
         vazio={

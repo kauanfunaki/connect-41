@@ -20,6 +20,8 @@ import { moeda } from "@/lib/financeiro/formato";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import type { EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import {
   PARAMETRO_DA_SITUACAO,
   PARAMETRO_DO_VENCIMENTO,
@@ -70,11 +72,17 @@ export type TotaisDaTela = {
  * sem ida ao servidor, e o voltar do celular desfaz. Os cartões do topo são
  * atalhos do mesmo recorte — "Vencido" mostra as vencidas, e tocar de novo tira.
  * A busca fica só na tela: é digitação, não endereço.
+ *
+ * A empresa (11/11/2026) é o seletor único do portal, logo abaixo do cabeçalho,
+ * como no Fluxo de caixa e na Cobrança. Ela, sim, vai ao servidor — os totais
+ * do topo são somados no banco — e leva junto a situação e o mês do recorte.
  */
 export function ListaDeContasDoPortal({
   contas,
   totais,
   aPagar,
+  empresas = [],
+  empresaId = null,
   variasEmpresas,
   linkDaAprovacao,
   limitada,
@@ -84,6 +92,10 @@ export function ListaDeContasDoPortal({
   contas: ContaDoPortal[];
   totais: TotaisDaTela;
   aPagar: boolean;
+  /** As empresas do cliente; com mais de uma, entra o seletor de empresa. */
+  empresas?: (EmpresaParaEscolher & { nome: string })[];
+  /** A empresa que a lista mostra (`empresaDaTela`); `null` = todas. */
+  empresaId?: string | null;
   variasEmpresas: boolean;
   linkDaAprovacao: boolean;
   /** A consulta parou no teto: há mais contas do que a lista mostra. */
@@ -193,6 +205,16 @@ export function ListaDeContasDoPortal({
 
   return (
     <>
+      {empresas.length > 1 && (
+        <SeletorDeEmpresaQueNavega
+          acao={pathname}
+          empresas={empresas}
+          empresaId={empresaId}
+          permitirTodas
+          manter={{ [PARAMETRO_DA_SITUACAO]: filtro.situacao, [PARAMETRO_DO_VENCIMENTO]: filtro.vencimento }}
+        />
+      )}
+
       {/* O tom de cada cartão é o da tela da equipe (07/10): vencido e o que
           vence hoje só ganham cor acima de zero; o pago é neutro e diz desde
           quando soma. Desde 11/11 são atalhos do recorte da lista. */}
@@ -275,8 +297,10 @@ export function ListaDeContasDoPortal({
 
             {/* Funil nas colunas (02/10), como na tela da equipe: refina o que
                 o recorte da barra deixou. A empresa entra no funil da
-                contraparte só quando aparece na célula. */}
+                contraparte só quando aparece na célula. Recomeça na troca
+                de empresa: o funil guardado era das contas da anterior. */}
             <TabelaFiltravel
+              key={empresaId ?? "todas"}
               linhas={visiveis.map((c) => ({
                 id: c.id,
                 valores: {

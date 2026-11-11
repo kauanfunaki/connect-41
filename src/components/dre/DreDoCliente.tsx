@@ -105,7 +105,8 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
           className="mb-4"
           dicas
         />
-        <RelatorioDoDre resultado={regime === "caixa" ? resultado : comRotulosEconomicos(resultado)} />
+        {/* A dica de cada linha (11/11/2026), como na DRE do ano do cliente. */}
+        <RelatorioDoDre resultado={regime === "caixa" ? resultado : comRotulosEconomicos(resultado)} dicas />
       </>
     );
   }

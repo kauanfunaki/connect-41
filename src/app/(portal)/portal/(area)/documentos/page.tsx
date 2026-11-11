@@ -14,6 +14,8 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { PortalDocumentosTable, PaginacaoDosDocumentos } from "@/components/portal/PortalDocumentosTable";
 import { PortalCompetenciaFiltro } from "@/components/portal/PortalCompetenciaFiltro";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 
 // Acervo fiscal visto pelo cliente. **Só leitura**, e por construção: não há
 // entrada de XML nem decisão de destino aqui, e as actions que fazem essas
@@ -35,9 +37,12 @@ export default async function PortalDocumentosPage({
   const params = await searchParams;
   const alcance = await alcanceDoCliente(sessao);
   const pagina = Math.max(1, Number(params.pagina) || 1);
-  // A empresa escolhida no Início vem junto (05/10) — e só vale se for do grupo.
+  // A empresa escolhida no portal vale aqui também (11/11/2026): a da URL ou a
+  // guardada no cookie, e só se for do grupo — senão, todas as do cliente.
   const companyIds = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];
-  const empresaId = params.empresa && companyIds.includes(params.empresa) ? params.empresa : undefined;
+  // Com uma empresa só não há o que escolher: a lista é a dela de qualquer jeito.
+  const empresaId =
+    companyIds.length > 1 ? (empresaDaTela(params.empresa, await empresaGuardadaDoPortal(), companyIds) ?? undefined) : undefined;
   const filtro = { competencia: params.competencia || undefined, companyId: empresaId };
 
   // A tabela não espera a contagem (10/11/2026), como no acervo da equipe.
@@ -84,13 +89,17 @@ export default async function PortalDocumentosPage({
                 <ContagemDosDocumentos contagem={contagem} />
               </Suspense>
             }
-            filtros={<PortalCompetenciaFiltro competencias={competencias} empresas={empresas} naBarra />}
+            filtros={<PortalCompetenciaFiltro competencias={competencias} empresas={empresas} empresaId={empresaId ?? null} naBarra />}
           >
             {documentos.length === 0 ? (
               <EmptyState
                 icon={<FileText />}
                 title={params.competencia ? "Nenhum documento nesta competência" : "Nenhum documento desta empresa"}
-                description={params.competencia ? "Escolha outro mês." : "Escolha outra empresa nos filtros."}
+                description={
+                  params.competencia
+                    ? "Escolha outro mês."
+                    : "Escolha outra empresa, ou “Todas as empresas”, no campo Empresa acima da lista."
+                }
               />
             ) : (
               <PortalDocumentosTable documentos={documentos} />

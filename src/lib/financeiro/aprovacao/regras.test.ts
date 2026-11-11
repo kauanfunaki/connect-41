@@ -12,6 +12,7 @@ import {
   avisosPorAprovador,
   separarLote,
   lerTeto,
+  motivoParaOCliente,
   type StatusDoLancamento,
 } from "./regras";
 
@@ -125,7 +126,7 @@ describe("podeDecidir", () => {
 
   it("segregação: quem criou não aprova nem reprova", () => {
     const r = podeDecidir(conta, { tipo: "EQUIPE", userId: "ana", gerenciaOSetor: true }, "APROVAR");
-    expect(r).toEqual({ pode: false, motivo: expect.stringMatching(/Quem lançou/) });
+    expect(r).toEqual({ pode: false, motivo: expect.stringMatching(/Quem lançou/), recusa: "QUEM_LANCOU" });
     expect(podeDecidir(conta, { tipo: "EQUIPE", userId: "ana", gerenciaOSetor: true }, "REPROVAR", "motivo ok").pode).toBe(false);
   });
 
@@ -215,5 +216,45 @@ describe("separarLote", () => {
     expect(r.aprovaveis.map((c) => c.id)).toEqual(["1"]);
     expect(r.ignoradas.map((c) => c.id)).toEqual(["2", "3", "4"]);
     expect(r.ignoradas.every((c) => c.motivo.length > 0)).toBe(true);
+    expect(r.ignoradas.map((c) => c.recusa)).toEqual(["ACIMA_DO_LIMITE", "SEM_LIMITE", "NAO_AGUARDA"]);
+  });
+});
+
+describe("motivoParaOCliente", () => {
+  const conta = { status: "CONFERIDO" as StatusDoLancamento, approvalStatus: "AGUARDANDO" as const, valorCentavos: 500_000, createdById: null };
+  const recusa = (v: ReturnType<typeof podeDecidir>) => {
+    if (v.pode) throw new Error("devia recusar");
+    return v;
+  };
+
+  it("o portal fala em limite de aprovação; a equipe segue com o texto dela", () => {
+    const acima = recusa(podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: 1 }, "APROVAR"));
+    expect(acima.motivo).toBe("O valor passa do seu teto de aprovação nesta empresa.");
+    expect(motivoParaOCliente(acima)).toBe("O valor passa do seu limite de aprovação nesta empresa.");
+
+    const sem = recusa(podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: null }, "APROVAR"));
+    expect(sem.motivo).toMatch(/alçada/);
+    expect(motivoParaOCliente(sem)).toBe("Você não tem limite de aprovação nesta empresa.");
+  });
+
+  it("nenhuma frase do cliente fala em teto, alçada ou lançamento", () => {
+    const vereditos = [
+      podeDecidir({ ...conta, status: "CANCELADO" }, { tipo: "PORTAL", tetoCentavos: 1_000_000 }, "APROVAR"),
+      podeDecidir({ ...conta, approvalStatus: "APROVADO" }, { tipo: "PORTAL", tetoCentavos: 1_000_000 }, "APROVAR"),
+      podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: null }, "APROVAR"),
+      podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: 1 }, "APROVAR"),
+      podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: 1_000_000 }, "REPROVAR", ""),
+      podeDecidir(conta, { tipo: "PORTAL", tetoCentavos: 1_000_000 }, "REPROVAR", "x".repeat(1_001)),
+      podeDecidir(conta, { tipo: "EQUIPE", userId: "bia", gerenciaOSetor: false }, "APROVAR"),
+      podeDecidir({ ...conta, createdById: "bia" }, { tipo: "EQUIPE", userId: "bia", gerenciaOSetor: true }, "APROVAR"),
+    ].map(recusa);
+    for (const v of vereditos) {
+      expect(v.recusa).toBeDefined();
+      expect(motivoParaOCliente(v)).not.toMatch(/teto|alçada|lançamento|lançou|coordenação/i);
+    }
+  });
+
+  it("sem chave, o texto que veio", () => {
+    expect(motivoParaOCliente({ motivo: "Outro motivo." })).toBe("Outro motivo.");
   });
 });
