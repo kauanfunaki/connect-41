@@ -1,6 +1,6 @@
 // O ranking da Academia pela API pública (10/11/2026, pedido do Kauan): o
 // fluxo do n8n que posta no Slack lê daqui (o Kauan aponta o fluxo depois).
-// GET /api/v1/academia/ranking?mes=AAAA-MM&teste=digitacao|numeros|logica
+// GET /api/v1/academia/ranking?mes=AAAA-MM&teste=digitacao|numeros|logica|atalhos
 // Contrato em docs/ACADEMIA-API.md.
 //
 // Só entra quem deixou "Aparecer no ranking" ligado — quem desligou não sai

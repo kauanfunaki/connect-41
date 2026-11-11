@@ -365,6 +365,12 @@ const USUARIO: Ligacao[] = [
   { modelo: "AcademiaResultado", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["resultado da Academia", "resultados da Academia"] },
   { modelo: "AcademiaSessao", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "AcademiaPreferencia", campo: "user", fk: "userId", tratamento: "cascata" },
+  // A Academia, fase 2 (11/11/2026): a meta, o lugar no Hall dos campeões e os
+  // parabéns (mandados e recebidos) também são da pessoa — saem com a conta.
+  { modelo: "AcademiaMeta", campo: "user", fk: "userId", tratamento: "cascata" },
+  { modelo: "AcademiaCampeao", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["lugar no Hall da Academia", "lugares no Hall da Academia"] },
+  { modelo: "AcademiaParabens", campo: "de", fk: "deUserId", tratamento: "cascata" },
+  { modelo: "AcademiaParabens", campo: "para", fk: "paraUserId", tratamento: "cascata" },
 ];
 
 const USUARIO_SOLTAS: ColunaSolta[] = [

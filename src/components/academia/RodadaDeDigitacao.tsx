@@ -167,7 +167,9 @@ export function RodadaDeDigitacao({ rodada, onFim }: { rodada: Rodada; onFim: (r
           <Selo tom="neutro" className="tabular-nums">
             {digitado.length} de {texto.length} caracteres
           </Selo>
-          <Selo tom={rodada.valendo ? "marca" : "neutro"}>{rodada.valendo ? "Valendo" : "Treino livre"} · {ROTULO_DO_NIVEL[rodada.nivel]}</Selo>
+          <Selo tom={rodada.valendo ? "marca" : "neutro"}>
+            {rodada.desafio ? "Desafio do dia" : `${rodada.valendo ? "Valendo" : "Treino livre"} · ${ROTULO_DO_NIVEL[rodada.nivel]}`}
+          </Selo>
         </div>
         <Button variant="secondary" size="sm" onClick={() => void finalizar()} disabled={estado !== "rodando"} className="min-h-11 sm:min-h-0">
           <Square size={13} aria-hidden /> Finalizar

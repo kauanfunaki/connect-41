@@ -16,7 +16,7 @@ Crie o token em **Configurações › Sua conta › Tokens de acesso**, opção 
 
 | Parâmetro | Obrigatório | Valores |
 | --- | --- | --- |
-| `teste` | sim | `digitacao`, `numeros` ou `logica` |
+| `teste` | sim | `digitacao`, `numeros`, `logica` ou `atalhos` (desde 11/11/2026) |
 | `mes` | não | `AAAA-MM` (padrão: o mês de hoje, em São Paulo) |
 | `nivel` | não | `facil`, `medio` ou `dificil` (sem ele: todos os níveis) |
 | `limite` | não | 1 a 50 (padrão 10) |

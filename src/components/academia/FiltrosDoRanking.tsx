@@ -16,6 +16,7 @@ export function FiltrosDoRanking({
   setor,
   meses,
   setores,
+  visao,
 }: {
   teste: Teste;
   mes: string;
@@ -23,15 +24,19 @@ export function FiltrosDoRanking({
   setor: string | null;
   meses: string[];
   setores: { value: string; label: string }[];
+  /** Fase 2: "evolucao" e "setores" usam só o mês (o recorte é o ranking geral). */
+  visao?: "mes" | "evolucao" | "setores";
 }) {
   const router = useRouter();
   const [, iniciar] = useTransition();
   const id = useId();
+  const soMes = visao === "evolucao" || visao === "setores";
 
   function ir(mudou: { mes?: string; nivel?: string; setor?: string }) {
     const p = new URLSearchParams({ teste, mes: mudou.mes ?? mes });
-    const novoNivel = mudou.nivel ?? nivel ?? "";
-    const novoSetor = mudou.setor ?? setor ?? "";
+    if (soMes && visao) p.set("visao", visao);
+    const novoNivel = soMes ? "" : (mudou.nivel ?? nivel ?? "");
+    const novoSetor = soMes ? "" : (mudou.setor ?? setor ?? "");
     if (novoNivel) p.set("nivel", novoNivel);
     if (novoSetor) p.set("setor", novoSetor);
     iniciar(() => router.push(`/academia/ranking?${p.toString()}`, { scroll: false }));
@@ -51,28 +56,32 @@ export function FiltrosDoRanking({
           ))}
         </Select>
       </div>
-      <div className={campo}>
-        <label htmlFor={`${id}-nivel`} className={rotulo}>Nível</label>
-        <Select id={`${id}-nivel`} value={nivel ?? ""} onChange={(e) => ir({ nivel: e.target.value })} className="w-full sm:w-44">
-          <option value="">Todos os níveis</option>
-          {NIVEIS.map((n) => (
-            <option key={n} value={n}>
-              {ROTULO_DO_NIVEL[n]}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div className={campo}>
-        <label htmlFor={`${id}-setor`} className={rotulo}>Setor</label>
-        <Select id={`${id}-setor`} value={setor ?? ""} onChange={(e) => ir({ setor: e.target.value })} className="w-full sm:w-52">
-          <option value="">Todos os setores</option>
-          {setores.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </Select>
-      </div>
+      {!soMes && (
+        <>
+          <div className={campo}>
+            <label htmlFor={`${id}-nivel`} className={rotulo}>Nível</label>
+            <Select id={`${id}-nivel`} value={nivel ?? ""} onChange={(e) => ir({ nivel: e.target.value })} className="w-full sm:w-44">
+              <option value="">Todos os níveis</option>
+              {NIVEIS.map((n) => (
+                <option key={n} value={n}>
+                  {ROTULO_DO_NIVEL[n]}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className={campo}>
+            <label htmlFor={`${id}-setor`} className={rotulo}>Setor</label>
+            <Select id={`${id}-setor`} value={setor ?? ""} onChange={(e) => ir({ setor: e.target.value })} className="w-full sm:w-52">
+              <option value="">Todos os setores</option>
+              {setores.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </>
+      )}
     </div>
   );
 }
