@@ -363,6 +363,21 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Documentos",
   },
   {
+    // Contratos e honorários (11/11/2026, migracao-622): a auditoria que vivia
+    // no Aditiva Pronto. O robô de um PC da rede lê as pastas de contrato de
+    // cada empresa, e a tela mostra o honorário de cada uma, o contrato e o
+    // aditivo do ano, comparando com o Acessórias. É da Controladoria e o
+    // Societário também usa ("Também em"). Desligado até a carga dos dados do
+    // Aditiva e o robô apontarem para o Connect.
+    code: "controladoria_honorarios",
+    label: "Contratos e honorários",
+    sectorCode: "controladoria",
+    description: "O honorário de cada empresa lido do contrato e dos aditivos na pasta da rede, comparado com o Acessórias, e a situação do contrato e do aditivo do ano",
+    defaultEnabled: false,
+    icon: "FileSignature",
+    group: "Conferência",
+  },
+  {
     // Primeiro módulo do Comercial (05/10/2026): quem quer ser cliente, vindo
     // da ficha "Quero ser cliente" do portal. Ligado por padrão — sem lead
     // chegando, a tela só explica como eles chegam. Converter o lead em empresa
@@ -1028,6 +1043,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   academia: "/academia",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",
+  controladoria_honorarios: "/honorarios",
   atendimento:             "/atendimento",
   portal_solicitacoes:     "/solicitacoes",
   societario_painel: "/processos/painel",

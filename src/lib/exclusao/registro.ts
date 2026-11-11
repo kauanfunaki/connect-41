@@ -128,6 +128,14 @@ const EMPRESA: Ligacao[] = [
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
   // O registro do que o robô da pasta de rede já trouxe (21/10/2026) vai junto com a empresa.
   { modelo: "DriveNetworkFile", campo: "company", fk: "companyId", tratamento: "cascata" },
+  // Honorários (vindos do Aditiva Pronto, 11/11/2026). O vínculo da pasta fica,
+  // sem a empresa, e volta para as pendências da tela Pastas; o valor informado
+  // à mão e a marca de "sem pasta" saem com a empresa; o histórico de envios ao
+  // Acessórias conta como histórico.
+  { modelo: "HonorarioVinculoPasta", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["pasta de contrato (fica sem empresa)", "pastas de contrato (ficam sem empresa)"] },
+  { modelo: "HonorarioEmpresaSemPasta", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "HonorarioManual", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["honorário informado à mão", "honorários informados à mão"] },
+  { modelo: "HonorarioAcessoriasEnvio", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["envio de honorário ao Acessórias", "envios de honorário ao Acessórias"], historico: true },
   // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
   // a conta continua (com as outras empresas dela, ou sem nenhuma). O
   // comunicado já enviado fica, sem esta empresa entre os destinatários.
