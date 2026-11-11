@@ -5,8 +5,8 @@
 // tabelas não mudam.
 
 import { JANELA_LIVRE_EM_HORAS } from "../decisao";
-import { provedorMeta } from "./meta";
-import { provedorEvolucao } from "./evolucao";
+import { baixarMidiaDaMeta, enviarMidiaPelaMeta, enviarModeloPelaMeta, provedorMeta } from "./meta";
+import { enviarMidiaPelaEvolution, provedorEvolucao } from "./evolucao";
 import type { ProvedorWhatsapp } from "./tipos";
 
 const REGISTRO: ProvedorWhatsapp[] = [provedorMeta, provedorEvolucao];
@@ -17,8 +17,15 @@ const REGISTRO: ProvedorWhatsapp[] = [provedorMeta, provedorEvolucao];
  * por ele, e nada do atendimento de candidato roda para estes números.
  */
 const REGISTRO_DO_ATENDIMENTO: ProvedorWhatsapp[] = [
-  { ...provedorMeta, codigo: "whatsapp_atendimento" },
-  { ...provedorEvolucao, codigo: "whatsapp_atendimento_evolution" },
+  // Mídia nos dois sentidos e modelos (11/11/2026): só aqui, o Recrutamento segue igual.
+  {
+    ...provedorMeta,
+    codigo: "whatsapp_atendimento",
+    baixarMidia: baixarMidiaDaMeta,
+    enviarMidia: enviarMidiaPelaMeta,
+    enviarModelo: enviarModeloPelaMeta,
+  },
+  { ...provedorEvolucao, codigo: "whatsapp_atendimento_evolution", enviarMidia: enviarMidiaPelaEvolution },
 ];
 
 /** Os `integrationCode` que são conexão de WhatsApp do Recrutamento. */

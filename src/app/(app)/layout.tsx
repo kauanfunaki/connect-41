@@ -15,6 +15,7 @@ import { telasFixadasVisiveis } from "@/lib/telasFixadas";
 import { getPrisma } from "@/lib/prisma";
 import { contarNaoLidasVisiveis, tiposOcultos } from "@/lib/notificacoes/consultas";
 import { getSectorsWithEnabledModules, getTenantModuleStates } from "@/lib/modules";
+import { sequenciaDaPessoa } from "@/lib/academia/servidor";
 import { getModuleRoute, MODULOS_DE_TODA_A_EQUIPE, MODULOS_DO_APOIO, MODULOS_FORA_DO_MENU, chamadosNoMenuDoSetor } from "@/lib/module-catalog";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
 import { telasDoGeralDaPessoa } from "@/lib/menuGeralDb";
@@ -185,7 +186,10 @@ export default async function AppLayout({
   // O Atendimento (10/11/2026): a aba é de todos com o módulo ligado; o número
   // é o que espera alguém agir (ver `contarParaMenu`).
   const atendimentoLigado = moduleStates.some((m) => m.code === "atendimento" && m.enabled);
-  const [telasDoGeral, chamadosLigados, solicitacoesNovas, chamadosNovos, atendimentoNovos] = await Promise.all([
+  // A Academia (10/11/2026): de toda a equipe, inclusive o Somente leitura. O
+  // chapéu de formatura do topo só aparece com o módulo ligado.
+  const academiaLigada = moduleStates.some((m) => m.code === "academia" && m.enabled);
+  const [telasDoGeral, chamadosLigados, solicitacoesNovas, chamadosNovos, atendimentoNovos, academiaSequencia] = await Promise.all([
     telasDoGeralDaPessoa({ ...ctx, activeSector: activeSector?.code ?? null }),
     temAcessoAoModulo({ ctx, config: helpdeskConfig }),
     solicitacoesLigadas && ctx.userId
@@ -206,15 +210,22 @@ export default async function AppLayout({
             return 0;
           })
       : Promise.resolve(0),
+    // A sequência do desafio do dia (Academia, Fase 2, 11/11/2026): a chama do
+    // chapéu do topo. Uma leitura pelo índice; se falhar, o chapéu fica sem chama.
+    academiaLigada && ctx.userId
+      ? sequenciaDaPessoa(ctx.userId)
+          .then((s) => s.atual)
+          .catch((err) => {
+            console.error("[layout] sequência da Academia", err);
+            return 0;
+          })
+      : Promise.resolve(0),
   ]);
   // O Apoio do Geral (05/11/2026): Senhas e Manuais para todo setor, cada um
   // com os seus — quem pode agir em algum setor vê (a tela decide qual).
   const doApoio = (code: string) => moduleStates.some((m) => m.code === code && m.enabled) && ctx.role !== "READONLY";
   // O Repositório de fluxos (10/11/2026) entra no mesmo grupo, com a mesma regra.
   const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual"), fluxos: doApoio("bpo_fluxos") };
-  // A Academia (10/11/2026): de toda a equipe, inclusive o Somente leitura. O
-  // chapéu de formatura do topo só aparece com o módulo ligado.
-  const academiaLigada = moduleStates.some((m) => m.code === "academia" && m.enabled);
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
       .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : MODULOS_DE_TODA_A_EQUIPE.has(m.code) || m.code === "atendimento" ? true : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
@@ -277,6 +288,7 @@ export default async function AppLayout({
         atendimentoNovos={atendimentoNovos}
         apoioLigado={apoioLigado}
         academiaLigada={academiaLigada}
+        academiaSequencia={academiaSequencia}
         ordemDoMenu={ordemDoMenu}
         podeOrganizarMenu={role === "SUPER_ADMIN"}
         telasDoGeral={telasDoGeral}

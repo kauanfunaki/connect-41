@@ -2,14 +2,15 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { CartoesNoCelular, TabelaNoDesktop } from "@/components/shared/ListaResponsiva";
 import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DO_NIVEL, ehDeDigitar, type Teste } from "@/lib/academia/regras";
-import { formatarPrecisao } from "@/lib/academia/ranking";
+import { formatarPrecisao, numeroEmTexto } from "@/lib/academia/ranking";
 import type { LinhaDaTela } from "@/lib/academia/tipos";
+import { BotaoDeParabens, type ParabensDaLinha } from "./BotaoDeParabens";
 
 // O ranking na tela (10/11/2026, pedido do Kauan): o topo e a linha de quem
 // olha, quando ela está abaixo — nunca o fim da lista. Duas formas: a lista
 // curta (o lado do Início, e o celular) e a tabela da página do ranking.
 
-const numero = (teste: Teste, l: LinhaDaTela) => (ehDeDigitar(teste) ? `${l.ppm ?? 0} PPM` : `${l.acertos ?? 0} de ${l.total ?? 0}`);
+const numero = (teste: Teste, l: LinhaDaTela) => numeroEmTexto(teste, l);
 
 function Posicao({ l }: { l: LinhaDaTela }) {
   return (
@@ -29,8 +30,17 @@ function Nome({ l }: { l: LinhaDaTela }) {
   );
 }
 
+type PropsDaLista = {
+  teste: Teste;
+  topo: LinhaDaTela[];
+  eu: LinhaDaTela | null;
+  rotulo: string;
+  /** O "Parabéns" nas linhas dos colegas (Fase 2); sem ele, nenhum botão. */
+  parabens?: ParabensDaLinha;
+};
+
 /** A lista curta: posição, nome, número e precisão. */
-export function ListaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; topo: LinhaDaTela[]; eu: LinhaDaTela | null; rotulo: string }) {
+export function ListaDoRanking({ teste, topo, eu, rotulo, parabens }: PropsDaLista) {
   const linha = (l: LinhaDaTela) => (
     <li key={l.userId} className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 ${l.eu ? "bg-brand-subtle" : ""}`} aria-current={l.eu ? "true" : undefined}>
       <Posicao l={l} />
@@ -42,6 +52,7 @@ export function ListaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; topo
         <span className="block font-semibold text-fg">{numero(teste, l)}</span>
         <span className="block text-helper text-fg-muted">{formatarPrecisao(l.precisao)}%</span>
       </span>
+      {parabens && !l.eu && <BotaoDeParabens paraUserId={l.userId} nome={l.nome} parabens={parabens} />}
     </li>
   );
   return (
@@ -58,7 +69,7 @@ export function ListaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; topo
 }
 
 /** A tabela da página do ranking (computador) e a lista no celular. */
-export function TabelaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; topo: LinhaDaTela[]; eu: LinhaDaTela | null; rotulo: string }) {
+export function TabelaDoRanking({ teste, topo, eu, rotulo, parabens }: PropsDaLista) {
   const linhas = eu ? [...topo, eu] : topo;
   return (
     <>
@@ -72,6 +83,7 @@ export function TabelaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; top
               <th scope="col" className="py-2 pr-3">Nível</th>
               <th scope="col" className="py-2 pr-3 text-right">{ehDeDigitar(teste) ? "PPM" : "Acertos"}</th>
               <th scope="col" className="py-2 pr-3 text-right">Precisão</th>
+              {parabens?.podeMandar && <th scope="col" className="py-2 pr-1 w-28"><span className="sr-only">Parabéns</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -87,6 +99,9 @@ export function TabelaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; top
                 <td className="py-2.5 pr-3 text-ui text-fg-secondary">{l.niveis.length > 1 ? l.niveis.map((n) => ROTULO_DO_NIVEL[n]).join(", ") : ROTULO_DO_NIVEL[l.nivel]}</td>
                 <td className="py-2.5 pr-3 text-right text-ui font-semibold tabular-nums">{numero(teste, l)}</td>
                 <td className="py-2.5 pr-3 text-right text-ui tabular-nums">{formatarPrecisao(l.precisao)}%</td>
+                {parabens?.podeMandar && (
+                  <td className="py-1.5 pr-1 text-right">{!l.eu && <BotaoDeParabens paraUserId={l.userId} nome={l.nome} parabens={parabens} />}</td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -94,7 +109,7 @@ export function TabelaDoRanking({ teste, topo, eu, rotulo }: { teste: Teste; top
       </TabelaNoDesktop>
       <CartoesNoCelular>
         <div className="rounded-lg border border-border bg-surface p-2">
-          <ListaDoRanking teste={teste} topo={topo} eu={eu} rotulo={rotulo} />
+          <ListaDoRanking teste={teste} topo={topo} eu={eu} rotulo={rotulo} parabens={parabens} />
         </div>
       </CartoesNoCelular>
     </>

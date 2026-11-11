@@ -73,6 +73,17 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   dp_escalas: "pessoas",
   dp_treinamentos: "pessoas",
   dp_avaliacoes: "pessoas",
+  // DP 2 (11/11/2026): o DP que calcula a folha.
+  dp2_painel: "pessoas",
+  dp2_competencia: "pessoas",
+  dp2_colaboradores: "pessoas",
+  dp2_ferias: "pessoas",
+  dp2_decimo: "pessoas",
+  dp2_rescisoes: "pessoas",
+  dp2_configuracao: "pessoas",
+  dp2_tabelas: "pessoas",
+  dp2_rubricas: "pessoas",
+  dp2_convencoes: "pessoas",
   gestao_cargos_salarios: "pessoas",
   gestao_indicadores_rh: "pessoas",
   // Recrutamento.

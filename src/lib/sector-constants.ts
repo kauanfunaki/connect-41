@@ -24,6 +24,10 @@ export const DEFAULT_SECTORS = [
   // controle interno. Tenants antigos ganham o setor pela migration
   // 20260930200000_setor_controladoria.
   { code: "controladoria", label: "Controladoria", color: "#B8327A" },
+  // 11/11/2026: o DP que calcula a folha (funcionalidade-621), ao lado do DP
+  // de sempre. Tenants antigos ganham o setor pela migration
+  // 20261111100000_dp2_fase_0_1.
+  { code: "dp2", label: "DP 2", color: "#5B3FA6" },
 ];
 
 // Label canônico por código de setor. Serve para telas GLOBAIS (não escopadas a

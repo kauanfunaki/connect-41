@@ -1,0 +1,3967 @@
+[
+{
+"fn": "detalhado._data",
+"args": [
+"  -0,00 "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+" "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+" 08/04/2025 "
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+""
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"-1.234,56"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"-inf"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"0"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"00/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"01/00/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"01/01/0000"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"01/01/0001"
+],
+"kwargs": {},
+"result": {
+"$date": "0001-01-01"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"01/01/٢٠٢٥"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-01-01"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"01/13/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"08-04-2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"08/04/2025 10:00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"08/04/2025"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"08/04/25"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1,5"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1.234,56"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1.5"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1/1/1"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"12345678901234567890123456,7"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1E-3"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1_000"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1e25"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1e26"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1e3"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"1٢/01/2025"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-01-12"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"2025-04-08"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"29/02/2023"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"29/02/2024"
+],
+"kwargs": {},
+"result": {
+"$date": "2024-02-29"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"31/02/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"31/12/9999"
+],
+"kwargs": {},
+"result": {
+"$date": "9999-12-31"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"8/4/2025"
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+"Infinity"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"R$ 1,00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"abc"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"sNaN"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"٠١/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+"٣,٥"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+0
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+1
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+false
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+null
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+true
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$date": "2025-04-08"
+}
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$dt": "2025-04-08 00:00:00"
+}
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$dt": "2025-04-08 23:59:59"
+}
+],
+"kwargs": {},
+"result": {
+"$date": "2025-04-08"
+}
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "-0.0"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "0.0"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "0.125"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "0.30000000000000004"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "150.5"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "1e+16"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "1e-07"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$f": "2.675"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$int": "123456789012345678901234567890"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$td": "0:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$td": "1 day, 2:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._data",
+"args": [
+{
+"$time": "10:30:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"  -0,00 "
+],
+"kwargs": {},
+"result": {
+"$dec": "-0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+" "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+" 08/04/2025 "
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+""
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"-1.234,56"
+],
+"kwargs": {},
+"result": {
+"$dec": "-1234.56"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"-inf"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"0"
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"00/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"01/00/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"01/01/0000"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"01/01/0001"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"01/01/٢٠٢٥"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"01/13/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"08-04-2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"08/04/2025 10:00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"08/04/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"08/04/25"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1,5"
+],
+"kwargs": {},
+"result": {
+"$dec": "1.50"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1.234,56"
+],
+"kwargs": {},
+"result": {
+"$dec": "1234.56"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1.5"
+],
+"kwargs": {},
+"result": {
+"$dec": "15.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1/1/1"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"12345678901234567890123456,7"
+],
+"kwargs": {},
+"result": {
+"$dec": "12345678901234567890123456.70"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1E-3"
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1_000"
+],
+"kwargs": {},
+"result": {
+"$dec": "1000.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1e25"
+],
+"kwargs": {},
+"result": {
+"$dec": "10000000000000000000000000.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1e26"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1e3"
+],
+"kwargs": {},
+"result": {
+"$dec": "1000.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"1٢/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"2025-04-08"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"29/02/2023"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"29/02/2024"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"31/02/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"31/12/9999"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"8/4/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"Infinity"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"R$ 1,00"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"abc"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"sNaN"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"٠١/01/2025"
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+"٣,٥"
+],
+"kwargs": {},
+"result": {
+"$dec": "3.50"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+0
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+1
+],
+"kwargs": {},
+"result": {
+"$dec": "1.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+false
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+null
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+true
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$date": "2025-04-08"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$dt": "2025-04-08 00:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$dt": "2025-04-08 23:59:59"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "-0.0"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "-0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "0.0"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "0.125"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.12"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "0.30000000000000004"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.30"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "150.5"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "150.50"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "1e+16"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "10000000000000000.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "1e-07"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "0.00"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$f": "2.675"
+}
+],
+"kwargs": {},
+"result": {
+"$dec": "2.68"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$int": "123456789012345678901234567890"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "InvalidOperation",
+"mensagem": "[<class 'decimal.InvalidOperation'>]"
+}
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$td": "0:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$td": "1 day, 2:00:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._decimal",
+"args": [
+{
+"$time": "10:30:00"
+}
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[
+"Data",
+"Lançamento",
+"Razão Social",
+"CPF/CNPJ",
+"Valor (R$)",
+"Saldo (R$)"
+]
+],
+"kwargs": {},
+"result": {
+"data": 0,
+"lancamento": 1,
+"razao_social": 2,
+"documento": 3,
+"valor": 4,
+"saldo": 5
+}
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[
+"Data",
+"Lançamento",
+"Razão Social",
+"Valor",
+"Saldo"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[
+"Favorecido",
+null,
+0,
+"Tipo de pagamento x",
+"DATA DO PAGAMENTO",
+"valor",
+"valor 2"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[
+"data",
+"lancamento",
+"razao social",
+"cpf",
+"valor",
+"saldo",
+"data"
+]
+],
+"kwargs": {},
+"result": {
+"data": 0,
+"lancamento": 1,
+"razao_social": 2,
+"documento": 3,
+"valor": 4,
+"saldo": 5
+}
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[
+"favorecido",
+"cpf",
+"tipo de pagamento",
+"data do pagamento",
+"valor",
+"status"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[
+"favorecido",
+"data do pagamento",
+"valor"
+]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._mapear",
+"args": [
+[]
+],
+"kwargs": {},
+"result": null
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "-0.00"
+}
+],
+"kwargs": {},
+"result": "R$ -0,00"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "-1234567.50"
+}
+],
+"kwargs": {},
+"result": "R$ -1.234.567,50"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "-213896.43"
+}
+],
+"kwargs": {},
+"result": "R$ -213.896,43"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "0"
+}
+],
+"kwargs": {},
+"result": "R$ 0,00"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "0.005"
+}
+],
+"kwargs": {},
+"result": "R$ 0,00"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "1000"
+}
+],
+"kwargs": {},
+"result": "R$ 1.000,00"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "1234567.5"
+}
+],
+"kwargs": {},
+"result": "R$ 1.234.567,50"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "8400000"
+}
+],
+"kwargs": {},
+"result": "R$ 8.400.000,00"
+},
+{
+"fn": "detalhado._moeda",
+"args": [
+{
+"$dec": "999.995"
+}
+],
+"kwargs": {},
+"result": "R$ 1.000,00"
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+""
+],
+"kwargs": {},
+"result": [
+null,
+null
+]
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+"01/01/2025 a 02/01/2025 a 03/01/2025"
+],
+"kwargs": {},
+"result": [
+null,
+null
+]
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+"01/01/2025 até 31/01/2025"
+],
+"kwargs": {},
+"result": [
+{
+"$date": "2025-01-01"
+},
+{
+"$date": "2025-01-31"
+}
+]
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+"01/01/2025"
+],
+"kwargs": {},
+"result": [
+null,
+null
+]
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+"1/1/2025 até 31/01/2025"
+],
+"kwargs": {},
+"result": [
+null,
+null
+]
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+"31/02/2025 - 01/03/2025"
+],
+"kwargs": {},
+"result": [
+null,
+{
+"$date": "2025-03-01"
+}
+]
+},
+{
+"fn": "detalhado._periodo",
+"args": [
+"١٢/٠١/٢٠٢٥ até 31/01/2025"
+],
+"kwargs": {},
+"result": [
+null,
+{
+"$date": "2025-01-31"
+}
+]
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"  Favorecido  "
+],
+"kwargs": {},
+"result": "favorecido"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+""
+],
+"kwargs": {},
+"result": ""
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"Agência/Conta:"
+],
+"kwargs": {},
+"result": "agencia/conta:"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"Ação\tÚNICA\n"
+],
+"kwargs": {},
+"result": "acao unica"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"FAVORECIDO / BENEFICIÁRIO"
+],
+"kwargs": {},
+"result": "favorecido / beneficiario"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"Razão  Social"
+],
+"kwargs": {},
+"result": "razao social"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"SALDO TOTAL DISPONÍVEL DIA"
+],
+"kwargs": {},
+"result": "saldo total disponivel dia"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"x y"
+],
+"kwargs": {},
+"result": "x y"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"İstanbul"
+],
+"kwargs": {},
+"result": "istanbul"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"ǅ"
+],
+"kwargs": {},
+"result": "dz"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"Σ ΟΔΟΣ"
+],
+"kwargs": {},
+"result": "σ οδος"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"ẞ"
+],
+"kwargs": {},
+"result": "ß"
+},
+{
+"fn": "detalhado._sem_acento",
+"args": [
+"ﬁ"
+],
+"kwargs": {},
+"result": "fi"
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-anterior-repetido.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: o saldo anterior deve aparecer uma vez, antes dos movimentos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-anterior-sem-saldo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: o saldo anterior deve aparecer uma vez, antes dos movimentos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-aplicacao-divergente.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 03/01/2025 o saldo da aplicação automática é R$ 500,00, diferente do total menos a conta corrente do dia anterior (R$ 799,00)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-aplicacao-primeiro-dia.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "800.00"
+},
+"dias_conferidos": 1,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-base.xls"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-base.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-cabecalho-deslocado.xls"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-cabecalho-deslocado.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-capa-e-extrato.xls"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-capa-e-extrato.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-data-ilegivel-sem-texto.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: data ausente ou ilegível em \"linha sem texto\"."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-data-ilegivel.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: data ausente ou ilegível em \"PIX RECEBIDO\"."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-dimensao-menor.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-duas-tabelas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O arquivo tem mais de uma folha com lançamentos. Envie um extrato por arquivo."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-fora-do-periodo-depois.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "2 movimento(s) fora do período declarado no extrato (primeiro na linha 17)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-fora-do-periodo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "3 movimento(s) fora do período declarado no extrato (primeiro na linha 12)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-linha-desconhecida.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: \"SALDO BLOQUEADO\" não tem valor e não é um saldo conhecido do extrato detalhado. O arquivo não foi lido para não omitir movimentos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-linha-desconhecida.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: \"SALDO BLOQUEADO\" não tem valor e não é um saldo conhecido do extrato detalhado. O arquivo não foi lido para não omitir movimentos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-linha-em-branco.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 24: data ausente ou ilegível em \"linha sem texto\"."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-nao-fecha-grande.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 02/01/2025 o saldo total impresso é R$ -213.896,43, mas os movimentos lidos levam a R$ 8.400.000,00. O arquivo não foi importado para não registrar uma leitura incompleta."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-nao-fecha-negativo.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 02/01/2025 o saldo total impresso é R$ 0,00, mas os movimentos lidos levam a R$ -1.234.567,00. O arquivo não foi importado para não registrar uma leitura incompleta."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-nao-fecha-resgate.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 03/01/2025 o saldo total impresso é R$ 750,00, mas os movimentos lidos levam a R$ 550,00. O arquivo não foi importado para não registrar uma leitura incompleta."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-pdf.pdf"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Envie o extrato detalhado do Itaú em XLS ou XLSX."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-pendente-no-fim.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "2 movimento(s) após o último saldo total não puderam ser conferidos. Envie o extrato completo do período."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-periodo-invalido.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": null,
+"periodo_fim": {
+"$date": "2025-01-28"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-periodo-uma-data.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": null,
+"periodo_fim": null,
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-resgate-no-meio.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "150.00"
+},
+"dias_conferidos": 1,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "50.00"
+},
+"lancamento": "PIX RES APLIC AUT",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-sem-anterior-sem-saldos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O extrato não informa o SALDO ANTERIOR."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-sem-anterior.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O extrato não informa o SALDO ANTERIOR; sem ele os saldos não podem ser conferidos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-sem-cabecalho.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "",
+"agencia": "",
+"conta": "",
+"periodo_inicio": null,
+"periodo_fim": null,
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 3,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 4,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 5,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 8,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 9,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-sem-movimentos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O extrato detalhado não tem movimentos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-sem-periodo.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": null,
+"periodo_fim": null,
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 11,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 16,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 17,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-sem-tabela-duas-folhas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-so-cabecalho.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O extrato não informa o SALDO ANTERIOR."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-1db3a25aae0b.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-35e1722ad617.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 03/01/2025 o saldo da aplicação automática é R$ 500,00, diferente do total menos a conta corrente do dia anterior (R$ 799,00)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-5243f5c079c6.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: \"SALDO BLOQUEADO\" não tem valor e não é um saldo conhecido do extrato detalhado. O arquivo não foi lido para não omitir movimentos."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-631aba7bded7.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 02/01/2025 o saldo total impresso é R$ 800,00, mas os movimentos lidos levam a R$ 1.000,00. O arquivo não foi importado para não registrar uma leitura incompleta."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-d0bda3080543.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Em 03/01/2025 o saldo total impresso é R$ 750,00, mas os movimentos lidos levam a R$ 550,00. O arquivo não foi importado para não registrar uma leitura incompleta."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-eda3b130eccb.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "3 movimento(s) fora do período declarado no extrato (primeiro na linha 12)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-f4f77bc6ca52.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "1 movimento(s) após o último saldo total não puderam ser conferidos. Envie o extrato completo do período."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-suite-f9c1936757a2.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA EXEMPLO",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-28"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "AQUISICAO FORNECEDORES",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR ALFA LTDA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR BETA LTDA",
+"documento": "22.222.222/0001-22",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "FORNECEDOR GAMA LTDA",
+"documento": "33.333.333/0001-33",
+"linha": 17,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-textos.xls"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "Aquisicao  Fornecedores",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "ALFA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS",
+"razao_social": "123.0",
+"documento": "45678901234.0",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "res aplic aut",
+"razao_social": "",
+"documento": "",
+"linha": 17,
+"resgate_aplicacao": true
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PIX",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-textos.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "550.00"
+},
+"dias_conferidos": 2,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "1000.00"
+},
+"lancamento": "Aquisicao  Fornecedores",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-100.00"
+},
+"lancamento": "PAGAMENTOS A FORNECEDORES",
+"razao_social": "ALFA",
+"documento": "11.111.111/0001-11",
+"linha": 13,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-200.00"
+},
+"lancamento": "PAGAMENTOS",
+"razao_social": "123",
+"documento": "45678901234",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "200.00"
+},
+"lancamento": "res aplic aut",
+"razao_social": "",
+"documento": "",
+"linha": 17,
+"resgate_aplicacao": true
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-250.00"
+},
+"lancamento": "PIX",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-tres-dias.xls"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "1.00"
+},
+"dias_conferidos": 3,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "3706427.14"
+},
+"lancamento": "PIX RECEBIDO",
+"razao_social": "CLIENTE FICTICIO SA",
+"documento": "99.999.999/0001-99",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-0.01"
+},
+"lancamento": "SISPAG FORNECEDORES",
+"razao_social": "FORNECEDOR DELTA",
+"documento": "***.123.456-**",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "3920323.56"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 17,
+"resgate_aplicacao": true
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "10.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-3920323.56"
+},
+"lancamento": "PAGAMENTO FOLHA",
+"razao_social": "",
+"documento": "",
+"linha": 19,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-06"
+},
+"valor": {
+"$dec": "213797.43"
+},
+"lancamento": "PIX RECEBIDO",
+"razao_social": "",
+"documento": "",
+"linha": 23,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-tres-dias.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "100.00"
+},
+"saldo_final": {
+"$dec": "1.00"
+},
+"dias_conferidos": 3,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "3706427.14"
+},
+"lancamento": "PIX RECEBIDO",
+"razao_social": "CLIENTE FICTICIO SA",
+"documento": "99.999.999/0001-99",
+"linha": 12,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-0.01"
+},
+"lancamento": "SISPAG FORNECEDORES",
+"razao_social": "FORNECEDOR DELTA",
+"documento": "***.123.456-**",
+"linha": 14,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "3920323.56"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 17,
+"resgate_aplicacao": true
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "10.00"
+},
+"lancamento": "RES APLIC AUT MAIS",
+"razao_social": "",
+"documento": "",
+"linha": 18,
+"resgate_aplicacao": true
+},
+{
+"data": {
+"$date": "2025-01-03"
+},
+"valor": {
+"$dec": "-3920323.56"
+},
+"lancamento": "PAGAMENTO FOLHA",
+"razao_social": "",
+"documento": "",
+"linha": 19,
+"resgate_aplicacao": false
+},
+{
+"data": {
+"$date": "2025-01-06"
+},
+"valor": {
+"$dec": "213797.43"
+},
+"lancamento": "PIX RECEBIDO",
+"razao_social": "",
+"documento": "",
+"linha": 23,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-valor-e-saldo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Linha 22: movimento com valor e saldo na mesma linha não segue o modelo do extrato detalhado reconhecido."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-zero-negativo.xlsx"
+}
+],
+"kwargs": {},
+"result": {
+"nome": "EMPRESA FICTICIA",
+"agencia": "7285",
+"conta": "0012287-0",
+"periodo_inicio": {
+"$date": "2025-01-01"
+},
+"periodo_fim": {
+"$date": "2025-01-31"
+},
+"saldo_anterior": {
+"$dec": "5.00"
+},
+"saldo_final": {
+"$dec": "-0.00"
+},
+"dias_conferidos": 1,
+"movimentos": [
+{
+"data": {
+"$date": "2025-01-02"
+},
+"valor": {
+"$dec": "-5.00"
+},
+"lancamento": "PIX",
+"razao_social": "",
+"documento": "",
+"linha": 12,
+"resgate_aplicacao": false
+}
+]
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "detalhado-zip-quebrado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-basico.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-basico.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-cabecalho-deslocado.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-cabecalho-deslocado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-colunas-demais.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "A folha \"Folha1\" excede o limite de 128 colunas. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-colunas-demais.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "A folha \"xl/worksheets/sheet1.xml\" excede o limite de 128 colunas. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-consolidado-sem-acento.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-consolidado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-coordenada-invalida.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-dimensao-celulas-demais.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O arquivo excede o limite de 500000 células. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-dimensao-colunas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "A folha \"xl/worksheets/sheet1.xml\" excede o limite de 128 colunas. Remova áreas vazias formatadas ou divida o Razão."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-dimensao-linhas-demais.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "O arquivo excede o limite de 20000 linhas entre todas as folhas. Divida o Razão por período ou conta."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-dimensao-menor.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-dimensao-sem-ref.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-duas-folhas.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-duas-folhas.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-numero-gigante.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-ole-quebrado.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-sem-pagamentos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-sem-status.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-sem-tipo.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-suite-54f41d9f36ef.bin"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Envie o extrato detalhado do Itaú em XLS ou XLSX."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-suite-6facea37b199.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-suite-a6537f155a77.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-suite-d478e9a91ea2.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-suite-e59603446dd7.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-texto-gigante.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-texto.csv"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Envie o extrato detalhado do Itaú em XLS ou XLSX."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-textos.xls"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-textos.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-vazio.bin"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Envie o extrato detalhado do Itaú em XLS ou XLSX."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-vazio.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não encontrei a tabela do extrato detalhado (colunas Data, Lançamento, Razão Social, CPF/CNPJ, Valor e Saldo)."
+}
+},
+{
+"fn": "detalhado.ler_extrato_detalhado",
+"args": [
+{
+"$arquivo": "sispag-zip-quebrado.xlsx"
+}
+],
+"kwargs": {},
+"error": {
+"tipo": "ExtratoDetalhadoInvalido",
+"mensagem": "Não foi possível abrir a planilha do Razão auxiliar."
+}
+}
+]

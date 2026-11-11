@@ -306,6 +306,25 @@ describe("montarCartaoPronto", () => {
     const c = montarCartaoPronto({ def: funil, numero: { valor: 18, total: 42 }, fotos: null, hojeKey, quem: quem(), amb });
     expect(c.numero).toEqual({ texto: "18", apoio: "de 42", tom: null });
   });
+
+  it("o cartão da Academia (Fase 2): a sequência, o apoio e a linha de baixo, sem cor", () => {
+    const academia = definicaoDoCartao("academia_desafio_do_dia")!;
+    const c = montarCartaoPronto({
+      def: academia, numero: { valor: 3, apoio: "dias seguidos", detalhe: "Desafio de hoje feito" }, fotos: null, hojeKey, quem: quem(), amb,
+    });
+    expect(c.numero).toEqual({ texto: "3", apoio: "dias seguidos", detalhe: "Desafio de hoje feito", tom: null });
+    expect(c.href).toBe("/academia/desafio");
+  });
+});
+
+describe("o cartão da Academia (Fase 2)", () => {
+  it("aparece para qualquer setor e perfil, só com o módulo ligado, e fora de todo padrão", () => {
+    const comAcademia: AmbienteDosCartoes = { ...ambiente(), modulos: new Map([...ambiente().modulos, ["academia", { ligado: true, setores: ["tech"] }]]) };
+    expect(chavesQueVe(quem({ sectors: ["fiscal"], role: "READONLY" }), comAcademia)).toContain("academia_desafio_do_dia");
+    expect(chavesQueVe(quem({ sectors: ["fiscal"] }))).not.toContain("academia_desafio_do_dia");
+    const padroes = [PADRAO_DE_TODOS, ...Object.values(PADRAO_POR_SETOR)].flat();
+    expect(padroes).not.toContain("academia_desafio_do_dia");
+  });
 });
 
 describe("lista do lápis", () => {

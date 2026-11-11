@@ -43,6 +43,8 @@ import { chaveDaAutorizacao } from "@/lib/autorizacoes/regras";
 
 /** Os eventos do dia saem a partir desta hora (São Paulo): pega a noite e o começo do expediente. */
 export const HORA_DOS_EVENTOS = 7;
+/** O pedido de eventos que voltou sem protocolo legível: conta como pedido no dia (bug-624). */
+export const SEM_PROTOCOLO = "ILEGIVEL";
 /** O resultado dos eventos fica guardado no Serpro por 20 minutos. */
 const VALIDADE_DO_RESULTADO_MS = 20 * 60_000;
 /** O agendador segura o pedido por este tempo enquanto trabalha nele (a trava). */
@@ -102,7 +104,25 @@ async function pedirEventosDoDia(tenantId: string, o: Required<Pick<OpcoesDoSerp
         continue;
       }
       const lida = lerSolicitacao(r.resposta);
-      if (!lida.ok) continue;
+      if (!lida.ok) {
+        // bug-624 (11/11/2026): sem protocolo, o pedido do dia fica gravado como
+        // ILEGIVEL, com o trecho do `dados` no erro. Antes não ficava nada, e cada
+        // ciclo pedia de novo: ~510 pedidos por dia, de 30/10 a 11/11, sem nenhum
+        // resultado. Não é FALHOU de propósito — o FALHOU volta a ser pedido no
+        // mesmo dia (ver `jaPedidos`); o ILEGIVEL só no dia seguinte.
+        await prisma.serproPedido.create({
+          data: {
+            tenantId,
+            tipo,
+            contribuinte: `lote:${grupo.documentos.length}`,
+            situacao: SEM_PROTOCOLO,
+            proximaTentativa: o.agora(),
+            dia: hoje,
+            erro: lida.erro.slice(0, 500),
+          },
+        });
+        continue;
+      }
       await prisma.serproPedido.create({
         data: {
           tenantId,
