@@ -7,7 +7,7 @@ import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { logAudit } from "@/lib/audit";
 import { lerXmlFiscal } from "@/lib/fiscal/xml";
 import { registrarRecusaSemTravar } from "@/lib/fiscal/recusasServidor";
-import { chaveDeDeduplicacao, competenciaDe } from "@/lib/fiscal/documentos";
+import { chaveDeDeduplicacao, competenciaDaEmissao } from "@/lib/fiscal/documentos";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { alcanceDaEquipe } from "../alcance";
 import { acharPorDedupKey } from "@/lib/fiscal/data";
@@ -121,7 +121,7 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
     // A competência declarada vence a data de emissão, e só NFS-e tem uma.
     // Serviço prestado em agosto e faturado em setembro pertence a agosto — que
     // é o mês que o contador fecha.
-    const competencia = doc.competenciaDeclarada ?? competenciaDe(doc.emitidoEm);
+    const competencia = doc.competenciaDeclarada ?? competenciaDaEmissao(doc.emitidoEmLocal);
     const dedupKey = chaveDeDeduplicacao({
       tipo: doc.tipo,
       chaveAcesso: doc.chaveAcesso,

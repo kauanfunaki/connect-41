@@ -47,8 +47,10 @@ export function itemFalso(sobre: Record<string, unknown> = {}) {
     attachments: [],
     // A marca do ponto 2 é de um texto que já foi reescrito: não vale mais.
     acceptanceChecks: [
-      { position: 1, text: "A busca acha pelo CNPJ com e sem máscara.", checkedByName: "Pessoa fictícia", createdAt: quando },
-      { position: 2, text: "Texto antigo do ponto.", checkedByName: "Pessoa fictícia", createdAt: quando },
+      { section: "aprovado", position: 1, text: "A busca acha pelo CNPJ com e sem máscara.", checkedByName: "Pessoa fictícia", createdAt: quando },
+      { section: "aprovado", position: 2, text: "Texto antigo do ponto.", checkedByName: "Pessoa fictícia", createdAt: quando },
+      // O "Conferir" do PR (11/11/2026) conferiu o merge.
+      { section: "auto", position: 1, text: "pr", checkedByName: "Pessoa fictícia", createdAt: quando },
     ],
     ...sobre,
   };

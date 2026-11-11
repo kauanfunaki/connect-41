@@ -14,6 +14,7 @@
 // número da nota.
 
 import { XMLParser } from "fast-xml-parser";
+import { hojeIso } from "@/lib/datas/calendario";
 import { centavosDaDuplicata, duplicatasParaGravar, type DuplicataDaNota } from "./duplicatas";
 
 export type TipoDocumentoFiscal = "NFE" | "NFCE" | "CTE" | "NFSE";
@@ -43,6 +44,18 @@ export type DocumentoFiscalExtraido = {
   numero: string;
   serie: string;
   emitidoEm: Date;
+  /**
+   * O dia da emissão, "AAAA-MM-DD", **no fuso da própria nota** (bug-473,
+   * 11/11/2026).
+   *
+   * `emitidoEm` é o instante, e em UTC uma NF-e de 30/09 às 22h (-03:00) já é
+   * 01/10. A competência e a data da escrituração são o dia local: é o que está
+   * impresso no DANFE e o mês que o contador fecha. Vem dos 10 primeiros
+   * caracteres de `dhEmi`/`dEmi`/`DataEmissao`, que já trazem o fuso de quem
+   * emitiu (AM e AC inclusive). Ver `competenciaDaEmissao` em
+   * src/lib/fiscal/documentos.ts.
+   */
+  emitidoEmLocal: string;
   emitente: ParteDoDocumento;
   destinatario: ParteDoDocumento;
   /**
@@ -283,11 +296,25 @@ function duplicatasDaNfe(inf: unknown, ide: unknown): DuplicataDaNota[] | null {
   return duplicatasParaGravar([{ numero: null, vencimento: emissao, valor }]) ?? [];
 }
 
-function dataDeEmissao(ide: unknown): Date | null {
+function dataDeEmissao(ide: unknown): { instante: Date; local: string } | null {
   const bruto = texto(filho(ide, "dhEmi")) ?? texto(filho(ide, "dEmi"));
   if (!bruto) return null;
   const d = new Date(bruto);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return Number.isNaN(d.getTime()) ? null : { instante: d, local: diaLocalDaEmissao(bruto, d) };
+}
+
+/**
+ * O dia da emissão no fuso da nota, "AAAA-MM-DD" — ver `emitidoEmLocal`.
+ *
+ * O texto do XML já está no fuso de quem emitiu ("2026-09-30T22:00:00-03:00"),
+ * então o corte é a resposta, sem converter nada. Só quando o texto não começa
+ * por uma data ISO (formato que `new Date` ainda aceitou) cai no horário de
+ * Brasília, que é o fuso da maior parte das notas do escritório.
+ */
+export function diaLocalDaEmissao(bruto: string, instante: Date): string {
+  const recorte = bruto.trim().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(recorte)) return recorte;
+  return hojeIso(instante);
 }
 
 /**
@@ -569,6 +596,7 @@ function lerNfse(comp: unknown, raiz: unknown): ResultadoLeitura {
       numero,
       serie: serie ?? "",
       emitidoEm,
+      emitidoEmLocal: diaLocalDaEmissao(emissaoBruta, emitidoEm),
       emitente,
       destinatario,
       valorTotal,
@@ -637,9 +665,9 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
   const ide = filho(inf, "ide");
   const numero = texto(filho(ide, "nNF"));
   const serie = texto(filho(ide, "serie"));
-  const emitidoEm = dataDeEmissao(ide);
+  const emissao = dataDeEmissao(ide);
   if (!numero) return recusa("campo_obrigatorio_ausente", "ide/nNF ausente");
-  if (!emitidoEm) return recusa("campo_obrigatorio_ausente", "ide/dhEmi ausente ou inválida");
+  if (!emissao) return recusa("campo_obrigatorio_ausente", "ide/dhEmi ausente ou inválida");
 
   // O total fica em ICMSTot/vNF. `vProd` é só a soma das mercadorias, sem
   // frete, seguro nem desconto — usar ele daria uma nota mais barata do que a
@@ -659,7 +687,8 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
       chaveAcesso: chave,
       numero,
       serie: serie ?? "0",
-      emitidoEm,
+      emitidoEm: emissao.instante,
+      emitidoEmLocal: emissao.local,
       emitente: parte(filho(inf, "emit")),
       // NFC-e ao consumidor não identificado não tem `dest` — é venda de
       // balcão, e isso é normal, não erro.
@@ -693,9 +722,9 @@ function lerCte(cte: unknown): ResultadoLeitura {
   const ide = filho(inf, "ide");
   const numero = texto(filho(ide, "nCT"));
   const serie = texto(filho(ide, "serie"));
-  const emitidoEm = dataDeEmissao(ide);
+  const emissao = dataDeEmissao(ide);
   if (!numero) return recusa("campo_obrigatorio_ausente", "ide/nCT ausente");
-  if (!emitidoEm) return recusa("campo_obrigatorio_ausente", "ide/dhEmi ausente ou inválida");
+  if (!emissao) return recusa("campo_obrigatorio_ausente", "ide/dhEmi ausente ou inválida");
 
   const valorTotal = texto(caminho(inf, "vPrest", "vTPrest"));
   if (!valorTotal) return recusa("campo_obrigatorio_ausente", "vPrest/vTPrest ausente");
@@ -714,7 +743,8 @@ function lerCte(cte: unknown): ResultadoLeitura {
       chaveAcesso: chave,
       numero,
       serie: serie ?? "0",
-      emitidoEm,
+      emitidoEm: emissao.instante,
+      emitidoEmLocal: emissao.local,
       emitente: parte(filho(inf, "emit")),
       destinatario: tomador !== undefined ? parte(tomador) : parte(filho(inf, "dest")),
       valorTotal,

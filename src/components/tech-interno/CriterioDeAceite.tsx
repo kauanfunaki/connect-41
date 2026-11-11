@@ -11,8 +11,13 @@ import { lerCriterioDeAceite, type BlocoDoCriterio, type PontoDeConferencia } fr
 
 /** Quem conferiu o ponto e quando, já no texto da tela. */
 export type MarcaDoPonto = { por: string; quando: string };
-type Marcas = Record<number, MarcaDoPonto | null>;
-type Mudanca = { posicao: number; marca: MarcaDoPonto | null };
+/** Uma conferência que o "Conferir" do PR faz sozinho (11/11/2026): PR mergeado, migration aplicada, no ar. */
+export type ConferenciaAutomatica = { chave: string; rotulo: string; marca: MarcaDoPonto | null };
+type Secao = "aprovado" | "antes";
+/** As marcas na tela, por "secao:posicao". */
+type Marcas = Record<string, MarcaDoPonto | null>;
+type Mudanca = { chave: string; marca: MarcaDoPonto | null };
+const chaveDoPonto = (secao: Secao, posicao: number) => `${secao}:${posicao}`;
 
 // Enquanto grava, o ponto aparece marcado (ou desmarcado) na hora; se o
 // servidor recusar, volta sozinho ao que estava.
@@ -26,13 +31,21 @@ const SALVANDO: MarcaDoPonto = { por: "", quando: "" };
  * atravessar o deploy, e quem volta ao item vê onde parou e quem conferiu o
  * quê. Quem só vê o módulo vê as marcas, sem marcar.
  *
+ * Desde 11/11/2026 (funcionalidade-579) o "Antes de testar" também é lista para
+ * marcar, com as conferências do "Conferir" do PR no topo — essas o Connect
+ * marca sozinho, e ninguém marca à mão.
+ *
  * Texto fora do formato aparece como texto simples, sem quebrar a tela.
  */
-export function CriterioDeAceite({ itemId, texto, marcas, podeEditar, editarHref, concluido = false }: {
+export function CriterioDeAceite({ itemId, texto, marcas, marcasDoPreparo = {}, automaticas = [], podeEditar, editarHref, concluido = false }: {
   itemId: string;
   texto: string | null;
-  /** As marcas que valem, por posição do ponto (a partir de 1). */
+  /** As marcas do "Aprovado quando" que valem, por posição do ponto (a partir de 1). */
   marcas: Record<number, MarcaDoPonto>;
+  /** As do "Antes de testar", por posição. */
+  marcasDoPreparo?: Record<number, MarcaDoPonto>;
+  /** O que o "Conferir" do PR confere, na ordem, com a marca da última conferência. */
+  automaticas?: ConferenciaAutomatica[];
   podeEditar: boolean;
   /** A edição do item, para escrever o critério que ainda não existe. */
   editarHref?: string;
@@ -42,19 +55,25 @@ export function CriterioDeAceite({ itemId, texto, marcas, podeEditar, editarHref
   const lido = lerCriterioDeAceite(texto);
   const toast = useToast();
   const [, iniciar] = useTransition();
-  const [otimistas, aplicar] = useOptimistic<Marcas, Mudanca>(marcas, (atuais, { posicao, marca }) => ({ ...atuais, [posicao]: marca }));
+  const iniciais: Marcas = {
+    ...Object.fromEntries(Object.entries(marcas).map(([p, m]) => [chaveDoPonto("aprovado", Number(p)), m])),
+    ...Object.fromEntries(Object.entries(marcasDoPreparo).map(([p, m]) => [chaveDoPonto("antes", Number(p)), m])),
+  };
+  const [otimistas, aplicar] = useOptimistic<Marcas, Mudanca>(iniciais, (atuais, { chave, marca }) => ({ ...atuais, [chave]: marca }));
   const pontos = lido?.pontos ?? [];
-  const conferidos = pontos.filter(p => otimistas[p.posicao]).length;
+  const conferidos = pontos.filter(p => otimistas[chaveDoPonto("aprovado", p.posicao)]).length;
 
-  function alternar(ponto: PontoDeConferencia, marcar: boolean) {
+  function alternar(ponto: PontoDeConferencia, marcar: boolean, secao: Secao) {
     iniciar(async () => {
-      aplicar({ posicao: ponto.posicao, marca: marcar ? SALVANDO : null });
+      aplicar({ chave: chaveDoPonto(secao, ponto.posicao), marca: marcar ? SALVANDO : null });
       try {
-        const r = await conferirCriterioTech(itemId, ponto.posicao, ponto.texto, marcar);
+        const r = await conferirCriterioTech(itemId, ponto.posicao, ponto.texto, marcar, secao);
         if ("error" in r) toast.error(r.error);
       } catch { toast.error("Não foi possível confirmar a marca. Atualize a página antes de tentar de novo."); }
     });
   }
+  const preparoSolto = automaticas.length > 0 && !lido?.preparo.length;
+  const props = { otimistas, podeEditar, alternar, automaticas };
 
   return <section aria-labelledby="tech-criterio" className="flex flex-col gap-4">
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
@@ -71,32 +90,31 @@ export function CriterioDeAceite({ itemId, texto, marcas, podeEditar, editarHref
       : !lido.estruturado
         ? <TextoComCodigo texto={lido.texto} />
         : <>
-          {agrupar(lido.blocos).map((grupo, i) => grupo.tipo === "campos"
+          {agrupar(lido.blocos, preparoSolto).map((grupo, i) => grupo.tipo === "campos"
             ? <dl key={i} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
               {grupo.campos.map((c, j) => <Fragment key={j}>
                 <dt className="text-ui font-medium text-fg-secondary sm:pt-0.5">{c.rotulo}</dt>
-                <dd className="-mt-2 min-w-0 sm:mt-0">
-                  {/* "Antes de testar" com algo a fazer (migration, módulo a ligar) não pode passar batido. */}
-                  {c.rotulo === "Antes de testar" && !/^nada\b/i.test(c.texto.trim())
-                    ? <div className="flex items-start gap-2 rounded-md border border-warning/25 bg-warning/8 px-3 py-2">
-                      <TriangleAlert size={16} aria-hidden className="mt-0.5 shrink-0 text-warning-fg" />
-                      <div className="min-w-0 flex-1"><TextoComCodigo texto={c.texto} /></div>
-                    </div>
-                    : <TextoComCodigo texto={c.texto} />}
-                </dd>
+                {/* "Antes de testar" com algo a fazer virou lista para marcar (Preparo); aqui só o "nada". */}
+                <dd className="-mt-2 min-w-0 sm:mt-0"><TextoComCodigo texto={c.texto} /></dd>
               </Fragment>)}
             </dl>
-            : <Bloco key={i} bloco={grupo.bloco} otimistas={otimistas} podeEditar={podeEditar} alternar={alternar} />)}
+            : <Bloco key={i} bloco={grupo.bloco} {...props} />)}
           {pontos.length > 0 && conferidos === pontos.length && <p className="flex items-center gap-1.5 text-ui font-medium text-success-fg">
             <CircleCheck size={16} aria-hidden className="shrink-0" />{concluido ? "Tudo conferido." : "Tudo conferido. Para fechar o item, mude a situação para Concluído."}
           </p>}
         </>}
+    {/* Sem critério, ou em texto livre: as conferências do PR aparecem mesmo assim. */}
+    {preparoSolto && (!lido || !lido.estruturado) && <Bloco bloco={{ tipo: "preparo", pontos: [] }} {...props} />}
   </section>;
 }
 
 type Grupo = { tipo: "campos"; campos: Extract<BlocoDoCriterio, { tipo: "campo" }>[] } | { tipo: "bloco"; bloco: Exclude<BlocoDoCriterio, { tipo: "campo" }> };
-/** Rótulos seguidos viram uma lista só, alinhada; o resto fica na ordem em que foi escrito. */
-function agrupar(blocos: BlocoDoCriterio[]): Grupo[] {
+/**
+ * Rótulos seguidos viram uma lista só, alinhada; o resto fica na ordem em que
+ * foi escrito. `comPreparo`: o critério não tem "Antes de testar" para marcar,
+ * mas há conferências do PR — elas entram antes dos passos.
+ */
+function agrupar(blocos: BlocoDoCriterio[], comPreparo = false): Grupo[] {
   const grupos: Grupo[] = [];
   for (const b of blocos) {
     const ultimo = grupos.at(-1);
@@ -104,13 +122,20 @@ function agrupar(blocos: BlocoDoCriterio[]): Grupo[] {
     else if (ultimo?.tipo === "campos") ultimo.campos.push(b);
     else grupos.push({ tipo: "campos", campos: [b] });
   }
+  if (comPreparo) {
+    const antes = grupos.findIndex(g => g.tipo === "bloco" && (g.bloco.tipo === "passos" || g.bloco.tipo === "conferencia"));
+    grupos.splice(antes === -1 ? grupos.length : antes, 0, { tipo: "bloco", bloco: { tipo: "preparo", pontos: [] } });
+  }
   return grupos;
 }
 
-function Bloco({ bloco, otimistas, podeEditar, alternar }: {
-  bloco: Exclude<BlocoDoCriterio, { tipo: "campo" }>; otimistas: Marcas; podeEditar: boolean;
-  alternar: (ponto: PontoDeConferencia, marcar: boolean) => void;
-}) {
+type PropsDoBloco = {
+  otimistas: Marcas; podeEditar: boolean; automaticas: ConferenciaAutomatica[];
+  alternar: (ponto: PontoDeConferencia, marcar: boolean, secao: Secao) => void;
+};
+
+function Bloco({ bloco, otimistas, podeEditar, alternar, automaticas }: PropsDoBloco & { bloco: Exclude<BlocoDoCriterio, { tipo: "campo" }> }) {
+  if (bloco.tipo === "preparo") return <Preparo pontos={bloco.pontos} otimistas={otimistas} podeEditar={podeEditar} alternar={alternar} automaticas={automaticas} />;
   if (bloco.tipo === "texto") return <TextoComCodigo texto={bloco.texto} />;
   if (bloco.tipo === "contexto") return <Accordion titulo={<span className="text-ui font-medium text-fg-secondary">Contexto anterior</span>} classeDoConteudo="pt-2">
     <TextoComCodigo texto={bloco.texto} apoio />
@@ -124,7 +149,7 @@ function Bloco({ bloco, otimistas, podeEditar, alternar }: {
       </li>)}
     </ol>
   </div>;
-  const conferidos = bloco.pontos.filter(p => otimistas[p.posicao]).length;
+  const conferidos = bloco.pontos.filter(p => otimistas[chaveDoPonto("aprovado", p.posicao)]).length;
   const idDoTitulo = `tech-aprovado-${bloco.pontos[0].posicao}`;
   return <div className="flex flex-col gap-2">
     <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -132,21 +157,65 @@ function Bloco({ bloco, otimistas, podeEditar, alternar }: {
       <span className="text-helper tabular-nums text-fg-muted" aria-live="polite">{conferidos} de {bloco.pontos.length} conferido{bloco.pontos.length === 1 ? "" : "s"}</span>
     </div>
     <ul aria-labelledby={idDoTitulo} className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border">
-      {bloco.pontos.map(ponto => {
-        const marca = otimistas[ponto.posicao] ?? null, id = `tech-ponto-${ponto.posicao}`;
-        const salvando = marca === SALVANDO;
-        // O nome do ponto é o texto dele; quem conferiu vai como descrição.
-        return <li key={ponto.posicao} className={`flex gap-3 px-3 py-2.5 ${podeEditar ? "hover:bg-surface-hover" : ""} ${marca ? "bg-success/5" : ""}`.trim()}>
+      {bloco.pontos.map(ponto => <PontoParaMarcar key={ponto.posicao} secao="aprovado" ponto={ponto} otimistas={otimistas} podeEditar={podeEditar} alternar={alternar} />)}
+    </ul>
+  </div>;
+}
+
+/** Um ponto com a caixa de marcar e, marcado, quem marcou e quando. */
+function PontoParaMarcar({ secao, ponto, otimistas, podeEditar, alternar }: Pick<PropsDoBloco, "otimistas" | "podeEditar" | "alternar"> & { secao: Secao; ponto: PontoDeConferencia }) {
+  const marca = otimistas[chaveDoPonto(secao, ponto.posicao)] ?? null;
+  const id = secao === "aprovado" ? `tech-ponto-${ponto.posicao}` : `tech-preparo-${ponto.posicao}`;
+  const salvando = marca === SALVANDO;
+  // O nome do ponto é o texto dele; quem conferiu vai como descrição.
+  return <li className={`flex gap-3 px-3 py-2.5 ${podeEditar ? "hover:bg-surface-hover" : ""} ${marca ? "bg-success/5" : ""}`.trim()}>
+    <span className="flex h-6 shrink-0 items-center">
+      <Checkbox id={id} checked={!!marca} disabled={!podeEditar} aria-labelledby={secao === "antes" ? `${id}-texto` : undefined}
+        aria-describedby={marca ? `${id}-quem` : undefined} onChange={e => alternar(ponto, e.currentTarget.checked, secao)} />
+    </span>
+    <div className="min-w-0 flex-1">
+      {/* O ponto do "Antes de testar" pode trazer o comando a rodar (bloco de código), que não cabe num <label>. */}
+      {secao === "antes"
+        ? <div id={`${id}-texto`}><TextoComCodigo texto={ponto.texto} /></div>
+        : <label htmlFor={id} className={`block whitespace-pre-wrap break-words text-body text-fg [overflow-wrap:anywhere] ${podeEditar ? "cursor-pointer" : ""}`.trim()}>{ponto.texto}</label>}
+      {marca && <p id={`${id}-quem`} className="mt-0.5 text-helper text-fg-muted">{salvando ? "Salvando…" : `${secao === "antes" ? "Feito" : "Conferido"} por ${marca.por} em ${marca.quando}`}</p>}
+    </div>
+  </li>;
+}
+
+/**
+ * O "Antes de testar" (11/11/2026, funcionalidade-579): no topo, o que o
+ * "Conferir" do PR confere sozinho (a caixa é só leitura); embaixo, os pontos
+ * escritos no critério, para a pessoa marcar. Com algo por fazer, a seção fica
+ * em destaque de atenção — não pode passar batida.
+ */
+function Preparo({ pontos, otimistas, podeEditar, alternar, automaticas }: PropsDoBloco & { pontos: PontoDeConferencia[] }) {
+  const total = automaticas.length + pontos.length;
+  const feitos = automaticas.filter(a => a.marca).length + pontos.filter(p => otimistas[chaveDoPonto("antes", p.posicao)]).length;
+  const pendente = feitos < total;
+  return <div className="flex flex-col gap-2">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+      <h3 id="tech-antes-de-testar" className="flex items-center gap-1.5 text-ui font-semibold text-fg-secondary">
+        {pendente && <TriangleAlert size={14} aria-hidden className="shrink-0 text-warning-fg" />}Antes de testar
+      </h3>
+      <span className="text-helper tabular-nums text-fg-muted" aria-live="polite">{feitos} de {total} feito{total === 1 ? "" : "s"}</span>
+    </div>
+    <ul aria-labelledby="tech-antes-de-testar" className={`flex flex-col divide-y overflow-hidden rounded-md border ${pendente ? "divide-warning/20 border-warning/30" : "divide-border border-border"}`}>
+      {automaticas.map(a => {
+        const id = `tech-auto-${a.chave}`;
+        return <li key={a.chave} className={`flex gap-3 px-3 py-2.5 ${a.marca ? "bg-success/5" : "bg-warning/5"}`}>
           <span className="flex h-6 shrink-0 items-center">
-            <Checkbox id={id} checked={!!marca} disabled={!podeEditar}
-              aria-describedby={marca ? `${id}-quem` : undefined} onChange={e => alternar(ponto, e.currentTarget.checked)} />
+            <Checkbox id={id} checked={!!a.marca} disabled aria-describedby={`${id}-quem`} />
           </span>
           <div className="min-w-0 flex-1">
-            <label htmlFor={id} className={`block whitespace-pre-wrap break-words text-body text-fg [overflow-wrap:anywhere] ${podeEditar ? "cursor-pointer" : ""}`.trim()}>{ponto.texto}</label>
-            {marca && <p id={`${id}-quem`} className="mt-0.5 text-helper text-fg-muted">{salvando ? "Salvando…" : `Conferido por ${marca.por} em ${marca.quando}`}</p>}
+            <label htmlFor={id} className="block break-words text-body text-fg [overflow-wrap:anywhere]">{a.rotulo}</label>
+            <p id={`${id}-quem`} className="mt-0.5 text-helper text-fg-muted">
+              {a.marca ? `Conferido pelo Connect em ${a.marca.quando}, a pedido de ${a.marca.por}` : "O Connect confere sozinho: use o Conferir, junto ao PR."}
+            </p>
           </div>
         </li>;
       })}
+      {pontos.map(ponto => <PontoParaMarcar key={ponto.posicao} secao="antes" ponto={ponto} otimistas={otimistas} podeEditar={podeEditar} alternar={alternar} />)}
     </ul>
   </div>;
 }

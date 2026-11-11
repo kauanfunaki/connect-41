@@ -8,9 +8,12 @@ import {
 } from "@/lib/tech-interno/regras";
 import { CORES_DO_TIPO } from "@/lib/tech-interno/cores";
 import { lerCriterioDeAceite, marcasQueValem } from "@/lib/tech-interno/criterioDeAceite";
+import { conferenciasDoItem, rotuloDaConferencia } from "@/lib/tech-interno/conferenciaDaEntrega";
+import { repositorioDoConnect } from "@/lib/tech-interno/conferenciaDaEntregaServidor";
 import { detalheItem, opcoesTech } from "@/lib/tech-interno/servidor";
 import { FormularioItem, FormularioComentario } from "@/components/tech-interno/FormularioItem";
-import { CriterioDeAceite, type MarcaDoPonto } from "@/components/tech-interno/CriterioDeAceite";
+import { CriterioDeAceite, type ConferenciaAutomatica, type MarcaDoPonto } from "@/components/tech-interno/CriterioDeAceite";
+import { ConferirEntrega } from "@/components/tech-interno/ConferirEntrega";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { MudancasDoRegistro } from "@/components/tech-interno/MudancasDoRegistro";
 import { AnexosDoItem } from "@/components/tech-interno/AnexosDoItem";
@@ -89,15 +92,25 @@ export default async function DetalheTechPage({ params, searchParams }: { params
       lateral={comentariosEHistorico} />
   </PageContainer>;
 
-  // As marcas do "Aprovado quando" que ainda valem: as do ponto que não foi reescrito.
-  const marcas: Record<number, MarcaDoPonto> = Object.fromEntries([...marcasQueValem(lerCriterioDeAceite(item.acceptanceCriteria)?.pontos ?? [], item.acceptanceChecks)]
-    .map(([posicao, m]) => [posicao, { por: m.checkedByName, quando: formatInstantDateTime(m.createdAt) }]));
+  // As marcas que ainda valem: as do ponto que não foi reescrito. "Aprovado
+  // quando" e "Antes de testar" contam as posições à parte (11/11/2026).
+  const lido = lerCriterioDeAceite(item.acceptanceCriteria);
+  const daSecao = (secao: string) => item.acceptanceChecks.filter(m => m.section === secao);
+  const naTela = (m: Item["acceptanceChecks"][number]): MarcaDoPonto => ({ por: m.checkedByName, quando: formatInstantDateTime(m.createdAt) });
+  const marcas: Record<number, MarcaDoPonto> = Object.fromEntries([...marcasQueValem(lido?.pontos ?? [], daSecao("aprovado"))].map(([posicao, m]) => [posicao, naTela(m)]));
+  const marcasDoPreparo: Record<number, MarcaDoPonto> = Object.fromEntries([...marcasQueValem(lido?.preparo ?? [], daSecao("antes"))].map(([posicao, m]) => [posicao, naTela(m)]));
+  // O que o "Conferir" do PR confere sozinho, com a marca da última conferência.
+  const auto = daSecao("auto");
+  const automaticas: ConferenciaAutomatica[] = conferenciasDoItem(item, repositorioDoConnect(), auto.map(m => m.text)).map(chave => {
+    const marca = auto.find(m => m.text === chave);
+    return { chave, rotulo: rotuloDaConferencia(chave), marca: marca ? naTela(marca) : null };
+  });
   return <PageContainer>
     <PageHeader title={<span className="break-words [overflow-wrap:anywhere]">{item.title}</span>} subtitle={`${idCurtoDoItem(item)} · Criado em ${formatInstantDateTime(item.createdAt)}`}
       action={<div className="flex flex-wrap gap-2">{voltarParaLista}{podeEditar && <Button variant="secondary" href={editarHref}><PencilLine size={14} aria-hidden />Editar</Button>}</div>} />
     <Colunas
       principal={<Card className="min-w-0 p-5">
-        <CriterioDeAceite itemId={item.id} texto={item.acceptanceCriteria} marcas={marcas} podeEditar={podeEditar} editarHref={editarHref} concluido={item.status === "DONE"} />
+        <CriterioDeAceite itemId={item.id} texto={item.acceptanceCriteria} marcas={marcas} marcasDoPreparo={marcasDoPreparo} automaticas={automaticas} podeEditar={podeEditar} editarHref={editarHref} concluido={item.status === "DONE"} />
       </Card>}
       abaixo={<Card className="min-w-0 p-5 flex flex-col gap-6">
         <section aria-labelledby="tech-descricao" className="flex flex-col gap-2">
@@ -166,8 +179,12 @@ function DadosDoItem({ item, podeEditar }: { item: Item; podeEditar: boolean }) 
       ? <Link key="o" href={item.originItem ? enderecoDoItem(item.originItem) : `${ROTA_TECH_INTERNO}/${item.originItemId}`} className={`${LINK} break-words [overflow-wrap:anywhere]`}>{item.originItem?.title ?? "Entrega de origem"}</Link>
       : vazio("Não veio de uma entrega")],
     ["PR", item.prUrl
-      ? <a key="r" href={item.prUrl} target="_blank" rel="noopener noreferrer" title={item.prUrl} className={`${LINK} inline-flex max-w-full items-center gap-1`}><span className="truncate">{rotuloDoPr(item.prUrl)}</span><ExternalLink size={12} aria-hidden className="shrink-0" /><span className="sr-only"> (abre em outra aba)</span></a>
-      : vazio("Não informado")],
+      ? <span key="r" className="inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-1">
+        <a href={item.prUrl} target="_blank" rel="noopener noreferrer" title={item.prUrl} className={`${LINK} inline-flex max-w-full items-center gap-1`}><span className="truncate">{rotuloDoPr(item.prUrl)}</span><ExternalLink size={12} aria-hidden className="shrink-0" /><span className="sr-only"> (abre em outra aba)</span></a>
+        {/* Confere o PR, a migration e o deploy (11/11/2026); o resultado aparece no "Antes de testar". */}
+        {podeEditar && <ConferirEntrega itemId={item.id} />}
+      </span>
+      : item.commitSha && podeEditar ? <span key="r" className="inline-flex items-center gap-3">{vazio("Não informado")}<ConferirEntrega itemId={item.id} /></span> : vazio("Não informado")],
     ["Commit", item.commitSha
       ? commit
         ? <a key="c" href={commit} target="_blank" rel="noopener noreferrer" title={item.commitSha} className={`${LINK} inline-flex items-center gap-1 font-mono`}>{item.commitSha.slice(0, 7)}<ExternalLink size={12} aria-hidden className="shrink-0" /><span className="sr-only"> (abre em outra aba)</span></a>

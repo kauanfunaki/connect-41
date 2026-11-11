@@ -493,3 +493,33 @@ describe("NFS-e — retenções por tributo", () => {
     for (const xml of [nfce, cte, abrasf1, nacional]) expect(extraido(xml).retencoesPorTributo).toBeNull();
   });
 });
+
+// bug-473 (11/11/2026): a competência sai do dia local da emissão, não do UTC.
+describe("emitidoEmLocal", () => {
+  const comEmissao = (xml: string, de: string, para: string) => xml.split(de).join(para);
+
+  it("NF-e das 22h do último dia em Brasília fica no dia dela", () => {
+    const d = extraido(comEmissao(nfe(), "2026-09-01T10:30:00-03:00", "2026-09-30T22:00:00-03:00"));
+    expect(d.emitidoEm.toISOString()).toBe("2026-10-01T01:00:00.000Z");
+    expect(d.emitidoEmLocal).toBe("2026-09-30");
+  });
+
+  it("respeita o fuso de quem emitiu (AM, -04:00; AC, -05:00)", () => {
+    expect(extraido(comEmissao(nfe(), "2026-09-01T10:30:00-03:00", "2026-09-30T20:30:00-04:00")).emitidoEmLocal).toBe("2026-09-30");
+    expect(extraido(comEmissao(cte, "2026-09-03T08:15:00-03:00", "2026-09-30T19:10:00-05:00")).emitidoEmLocal).toBe("2026-09-30");
+  });
+
+  it("NF-e antiga com dEmi só de data", () => {
+    const d = extraido(comEmissao(nfe(), "<dhEmi>2026-09-01T10:30:00-03:00</dhEmi>", "<dEmi>2026-09-30</dEmi>"));
+    expect(d.emitidoEmLocal).toBe("2026-09-30");
+  });
+
+  it("NFS-e: o dia da DataEmissao", () => {
+    const d = extraido(abrasf2);
+    expect(d.emitidoEmLocal).toBe("2026-09-05");
+  });
+
+  it("o 1º do mês de manhã continua no mês dele", () => {
+    expect(extraido(comEmissao(nfe(), "2026-09-01T10:30:00-03:00", "2026-10-01T08:00:00-03:00")).emitidoEmLocal).toBe("2026-10-01");
+  });
+});

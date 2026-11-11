@@ -184,7 +184,13 @@ model TechInternalAcceptanceCheck {
   id            String   @id @default(uuid())
   tenantId      String
   itemId        String
-  /// A posição do ponto na lista "Aprovado quando", a partir de 1.
+  /// A seção do critério (11/11/2026, funcionalidade-579): "aprovado" (o
+  /// "Aprovado quando"), "antes" (o "Antes de testar", marcado pela pessoa) ou
+  /// "auto" (o que o "Conferir" do PR confere sozinho: PR mergeado, migration
+  /// aplicada, no ar — o `text` é a chave da conferência, ver
+  /// src/lib/tech-interno/conferenciaDaEntrega.ts).
+  section       String   @default("aprovado") @db.VarChar(10)
+  /// A posição do ponto na lista da seção, a partir de 1.
   position      Int
   /// O texto do ponto quando foi marcado.
   text          String   @db.Text
@@ -194,7 +200,7 @@ model TechInternalAcceptanceCheck {
   tenant        Tenant   @relation(fields: [tenantId], references: [id])
   item          TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
 
-  @@unique([tenantId, itemId, position])
+  @@unique([tenantId, itemId, section, position])
   @@map("tech_internal_acceptance_checks")
 }
 
