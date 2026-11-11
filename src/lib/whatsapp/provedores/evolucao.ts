@@ -28,6 +28,7 @@ import type {
   MensagemIgnorada,
   MensagemRecebida,
   MidiaBaixada,
+  MidiaParaEnviar,
   ProvedorWhatsapp,
   ResultadoDoEnvio,
 } from "./tipos";
@@ -112,16 +113,19 @@ function lerEvento(payload: unknown): EventoRecebido {
     // Grupo, status e canal não são conversa com um candidato.
     if (jid.endsWith("@g.us") || jid.endsWith("@broadcast") || jid.endsWith("@newsletter")) continue;
 
-    const de = (jid.split("@")[0] ?? "").replace(/\D/g, "").slice(0, 20);
+    // Contato com o telefone escondido (`@lid`): a Evolution 2.3 manda o número
+    // de verdade em `remoteJidAlt` (ou `senderPn`) quando o WhatsApp informa.
+    const alternativo = [str(chave.remoteJidAlt), str(chave.senderPn)].find((x) => x?.endsWith("@s.whatsapp.net")) ?? null;
+    const jidDoNumero = jid.endsWith("@lid") && alternativo ? alternativo : jid;
+    const de = (jidDoNumero.split("@")[0] ?? "").replace(/\D/g, "").slice(0, 20);
     if (!de) continue;
     const waMessageId = idDaMensagem(instancia, id);
 
-    // A Evolution troca `@lid` pelo número (`remoteJidAlt`) quando o WhatsApp
-    // informa. Quando não informa, não há telefone para responder — e o
-    // candidato ficar sem resposta sem ninguém saber é o pior desfecho. Vai
-    // para uma pessoa, com o motivo.
-    if (jid.endsWith("@lid")) {
-      ignoradas.push({ waMessageId, tipo: "contato sem número visível (@lid)", de });
+    // Sem o número, não há telefone para responder — e o candidato ficar sem
+    // resposta sem ninguém saber é o pior desfecho. Vai para uma pessoa, com o
+    // motivo. O `de` aqui é o identificador, não um telefone.
+    if (jidDoNumero.endsWith("@lid")) {
+      ignoradas.push({ waMessageId, tipo: "contato sem número visível (@lid)", de, semNumero: true });
       continue;
     }
 
@@ -141,7 +145,13 @@ function lerEvento(payload: unknown): EventoRecebido {
       // A legenda entra na conversa: "[imagem] meu certificado".
       const legenda =
         str(obj(mensagem?.imageMessage)?.caption) ?? str(obj(mensagem?.videoMessage)?.caption) ?? (doc ? str(doc.caption) : null);
+      // Qualquer mídia, para o Atendimento (11/11/2026); o Recrutamento só lê o `documento`.
+      const corpoDaMidia =
+        doc ?? obj(mensagem?.imageMessage) ?? obj(mensagem?.audioMessage) ?? obj(mensagem?.videoMessage) ?? obj(mensagem?.stickerMessage);
       ignoradas.push({
+        ...(corpoDaMidia
+          ? { midia: { referencia: { key: chave, message: mensagem }, mimetype: str(corpoDaMidia.mimetype), nomeDoArquivo: str(corpoDaMidia.fileName) } }
+          : {}),
         waMessageId,
         tipo: tipo ?? "desconhecido",
         de,
@@ -337,6 +347,59 @@ async function baixarMidia(config: ConfigDoProvedor, referencia: unknown): Promi
   } catch (err) {
     const abortou = err instanceof Error && err.name === "AbortError";
     return { ok: false, erro: abortou ? "tempo esgotado ao baixar o arquivo" : err instanceof Error ? err.message : "falha de rede" };
+  } finally {
+    clearTimeout(relogio);
+  }
+}
+
+/** O `mediatype` da Evolution pelo tipo do arquivo. */
+export function tipoDeMidiaDaEvolution(mimetype: string): "image" | "video" | "audio" | "document" {
+  if (mimetype.startsWith("image/")) return "image";
+  if (mimetype.startsWith("video/")) return "video";
+  if (mimetype.startsWith("audio/")) return "audio";
+  return "document";
+}
+
+/**
+ * Manda um arquivo pela Evolution (`/message/sendMedia`, base64 no corpo). Usado
+ * pelo Atendimento do escritório (11/11/2026); o Recrutamento não manda arquivo.
+ */
+export async function enviarMidiaPelaEvolution(config: ConfigDoProvedor, paraE164: string, midia: MidiaParaEnviar): Promise<ResultadoDoEnvio> {
+  const base = (config.baseUrl ?? "").replace(/\/+$/, "");
+  const instancia = config.instance ?? "";
+  const apiKey = config.apiKey ?? "";
+  if (!base || !instancia || !apiKey) {
+    return { ok: false, erro: "Conexão da Evolution incompleta: URL, instância ou apikey." };
+  }
+  const controle = new AbortController();
+  const relogio = setTimeout(() => controle.abort(), TIMEOUT_DA_MIDIA_MS);
+  try {
+    const res = await fetch(`${base}/message/sendMedia/${encodeURIComponent(instancia)}`, {
+      method: "POST",
+      headers: { apikey: apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        number: paraE164,
+        mediatype: tipoDeMidiaDaEvolution(midia.mimetype),
+        mimetype: midia.mimetype,
+        caption: midia.legenda ?? undefined,
+        media: midia.bytes.toString("base64"),
+        fileName: midia.nomeDoArquivo,
+      }),
+      signal: controle.signal,
+      cache: "no-store",
+    });
+    const corpo = await res.text();
+    if (!res.ok) return { ok: false, erro: `Evolution ${res.status}: ${corpo.slice(0, 400)}` };
+    let id: string | null = null;
+    try {
+      id = (JSON.parse(corpo) as { key?: { id?: string } }).key?.id ?? null;
+    } catch {
+      // sucesso sem rastreio
+    }
+    return { ok: true, waMessageId: id ? idDaMensagem(instancia, id) : null };
+  } catch (err) {
+    const abortou = err instanceof Error && err.name === "AbortError";
+    return { ok: false, erro: abortou ? "tempo esgotado ao enviar o arquivo" : err instanceof Error ? err.message : "falha de rede" };
   } finally {
     clearTimeout(relogio);
   }

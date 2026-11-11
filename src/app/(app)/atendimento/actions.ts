@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { contexto } from "@/lib/atendimento/contexto";
 import * as cmd from "@/lib/atendimento/comandos";
+import * as midia from "@/lib/atendimento/comandosDeMidia";
 import { buscarEmpresas } from "@/lib/atendimento/consultas";
 
 export type Resultado = { ok: true } | { ok: false; erro: string };
@@ -92,4 +93,22 @@ export async function salvarMensagemPadraoAction(p: { id: string | null; titulo:
 
 export async function removerMensagemPadraoAction(id: string) {
   return rodar((c) => cmd.removerMensagemPadrao(c, id));
+}
+
+// ─── Modelos da Meta e convite para o portal (11/11/2026) ────────────────────
+
+export async function retomarConversaAction(cicloId: string, modeloId: string, preenchidos: string[]) {
+  return rodar((c) => midia.retomarConversa(c, cicloId, modeloId, preenchidos));
+}
+
+export async function convidarParaOPortalAction(p: { cicloId: string; nome: string; email: string }) {
+  return rodar((c) => midia.convidarParaOPortal(c, p));
+}
+
+export async function salvarModeloAction(p: { id: string | null; rotulo: string; nomeNaMeta: string; idioma: string; texto: string; ativo: boolean }) {
+  return rodar((c) => midia.salvarModelo(c, p));
+}
+
+export async function removerModeloAction(id: string) {
+  return rodar((c) => midia.removerModelo(c, id));
 }

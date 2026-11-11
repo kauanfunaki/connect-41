@@ -44,6 +44,7 @@ import { PRAZO_PAGAMENTO_DIAS } from "@/lib/rescisaoChecklist";
 import { situacaoDoCertificado } from "@/lib/certificados/certificados";
 import { dadosDasPendencias, dadosDoDP, dadosDoRecrutamento, dadosDosProcessos } from "./dadosDosPaineis";
 import { solicitacoesComRespostaAtrasada } from "./indicadores";
+import { cartaoDaAcademia } from "@/lib/academia/hallServidor";
 import { fotosDosNumeros } from "./historico";
 import type { MetricaDaHome } from "./metricas";
 import {
@@ -603,6 +604,8 @@ async function numeroDoCartao(
       const l = await m("leads", () => leads(t));
       return l ? { valor: chave === "leads_novos" ? l.novos : l.emContato } : null;
     }
+    case "academia_desafio_do_dia":
+      return ctx.userId ? cartaoDaAcademia(ctx) : null;
     default:
       return null;
   }

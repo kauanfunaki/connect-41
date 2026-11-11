@@ -174,6 +174,8 @@ type Props = {
   apoioLigado?: { senhas: boolean; manuais: boolean; fluxos?: boolean };
   /** A Academia ligada no escritório (10/11/2026): o chapéu de formatura no topo, antes do tema. */
   academiaLigada?: boolean;
+  /** A sequência de dias do desafio do dia (Academia, Fase 2): a chama do chapéu, de 2 dias em diante. */
+  academiaSequencia?: number;
   /** A ordem do menu do setor que o super admin escolheu (05/11/2026); sem ela, a do catálogo. */
   ordemDoMenu?: OrdemDoMenu;
   /** Mostra "Organizar menu" no fim das telas do setor — só o Super Admin. */
@@ -229,6 +231,7 @@ export function AppShell({
   atendimentoNovos = 0,
   apoioLigado = { senhas: false, manuais: false },
   academiaLigada = false,
+  academiaSequencia = 0,
   ordemDoMenu,
   podeOrganizarMenu = false,
   telasDoGeral = TODAS_AS_TELAS_DO_GERAL,
@@ -920,7 +923,7 @@ export function AppShell({
             {/* A Academia (10/11/2026, pedido do Kauan): o chapéu de formatura
                 antes do tema, com o painel do mês. A pílula da sequência de
                 dias (Fase 2) entra pelo `selo` do `AcademiaNoTopo`. */}
-            {academiaLigada && <AcademiaNoTopo naAcademia={pathname === "/academia" || pathname.startsWith("/academia/")} />}
+            {academiaLigada && <AcademiaNoTopo naAcademia={pathname === "/academia" || pathname.startsWith("/academia/")} sequencia={academiaSequencia} />}
             <ThemeToggle />
             {/* Ajuda (30/09): o caminho curto para a central /ajuda, ao lado de
                 notificação, configurações e perfil. Desde 05/10 a setinha ao

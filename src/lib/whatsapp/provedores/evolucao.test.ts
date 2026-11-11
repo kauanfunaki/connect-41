@@ -97,6 +97,16 @@ describe("Evolution · lerEvento", () => {
     expect(r.ignoradas[0]?.legenda).toBe("meu certificado");
   });
 
+  // O Atendimento do escritório guarda qualquer mídia (11/11/2026); o Recrutamento só lê o `documento`.
+  it("imagem e áudio trazem a mídia para baixar, sem virar documento", () => {
+    const r = provedorEvolucao.lerEvento(
+      upsert(texto({ messageType: "audioMessage", message: { audioMessage: { mimetype: "audio/ogg; codecs=opus" } } }))
+    );
+    expect(r.ignoradas[0]?.midia?.mimetype).toBe("audio/ogg; codecs=opus");
+    expect(r.ignoradas[0]?.midia?.referencia).toMatchObject({ message: { audioMessage: {} } });
+    expect(r.ignoradas[0]?.documento).toBeUndefined();
+  });
+
   it("reação não é pergunta de ninguém: nem mensagem, nem ignorada", () => {
     const r = provedorEvolucao.lerEvento(upsert(texto({ messageType: "reactionMessage", message: {} })));
     expect(r.mensagens).toEqual([]);
@@ -110,6 +120,13 @@ describe("Evolution · lerEvento", () => {
     expect(r.mensagens).toEqual([]);
     expect(r.ignoradas).toHaveLength(1);
     expect(r.ignoradas[0]!.tipo).toContain("@lid");
+    expect(r.ignoradas[0]!.semNumero).toBe(true);
+  });
+
+  it("contato @lid com o número em remoteJidAlt vira conversa normal com o telefone", () => {
+    const r = provedorEvolucao.lerEvento(upsert(texto({}, { remoteJid: "123456789012345@lid", remoteJidAlt: "5541977776666@s.whatsapp.net" })));
+    expect(r.ignoradas).toEqual([]);
+    expect(r.mensagens[0]!.de).toBe("5541977776666");
   });
 
   it("texto vazio vira ignorada, não string vazia", () => {

@@ -110,3 +110,23 @@ describe("recortes", () => {
     expect(noRecorte(c({ pedidoPendente: true }), "pedidos", quem)).toBe(true);
   });
 });
+
+import { nomeDeModeloValido, parametrosDoModelo, textoDoModelo, variaveisDoModelo } from "./regras";
+
+describe("modelos da Meta", () => {
+  const texto = "*{{1}}*\nOlá! Ainda precisamos de {{2}} para seguir com o atendimento de {{3}}.";
+  it("conta as variáveis pelo maior {{n}}", () => {
+    expect(variaveisDoModelo(texto)).toBe(3);
+    expect(variaveisDoModelo("sem nada")).toBe(0);
+  });
+  it("o {{1}} é a assinatura, e variável sem valor vai como -", () => {
+    expect(parametrosDoModelo(texto, "Ana Ribeiro · Fiscal", ["a folha de ponto", ""])).toEqual(["Ana Ribeiro · Fiscal", "a folha de ponto", "-"]);
+  });
+  it("monta o texto como o cliente lê", () => {
+    expect(textoDoModelo(texto, ["Ana · Fiscal", "o extrato", "outubro"])).toBe("*Ana · Fiscal*\nOlá! Ainda precisamos de o extrato para seguir com o atendimento de outubro.");
+  });
+  it("nome na Meta só com minúsculas, números e _", () => {
+    expect(nomeDeModeloValido("retomar_atendimento_2")).toBe(true);
+    expect(nomeDeModeloValido("Retomar atendimento")).toBe(false);
+  });
+});

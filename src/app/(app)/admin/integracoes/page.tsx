@@ -63,7 +63,7 @@ const ICONE_DO_CODIGO: Record<string, React.ReactNode> = {
   whatsapp_recrutamento: <MessageSquareText />,
   whatsapp_recrutamento_evolution: <FlaskConical />,
   whatsapp_atendimento: <MessageSquareText />,
-  whatsapp_atendimento_evolution: <FlaskConical />,
+  whatsapp_atendimento_evolution: <MessageSquareText />,
   sima_curitiba: <Leaf />,
   serpro_integra_contador: <ShieldCheck />,
 };

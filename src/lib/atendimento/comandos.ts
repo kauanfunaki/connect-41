@@ -31,11 +31,11 @@ import { conexaoPeloId, enviarNoAtendimento, podeEnviarNaConversa } from "./tran
 
 const MAX_TEXTO = 4_000;
 
-function exigir(condicao: boolean, frase: string): asserts condicao {
+export function exigir(condicao: boolean, frase: string): asserts condicao {
   if (!condicao) throw new Error(frase);
 }
 
-async function carregar(c: Contexto, cicloId: string) {
+export async function carregar(c: Contexto, cicloId: string) {
   const ciclo = await getPrisma().atendimentoCiclo.findFirst({
     where: { id: cicloId, tenantId: c.ctx.tenantId },
     include: { conversa: { include: { contato: true } } },
@@ -44,24 +44,24 @@ async function carregar(c: Contexto, cicloId: string) {
   return ciclo;
 }
 
-const alvo = (ciclo: { sectorCode: string | null; assignedToId: string | null; situacao: string }) => ({
+export const alvo = (ciclo: { sectorCode: string | null; assignedToId: string | null; situacao: string }) => ({
   sectorCode: ciclo.sectorCode,
   assignedToId: ciclo.assignedToId,
   situacao: ciclo.situacao as Situacao,
 });
 
-async function nomeDoUsuario(tenantId: string, userId: string) {
+export async function nomeDoUsuario(tenantId: string, userId: string) {
   const u = await getPrisma().user.findFirst({ where: { id: userId, tenantId }, select: { name: true } });
   return u?.name ?? "Equipe";
 }
 
-async function rotuloDoSetor(tenantId: string, code: string | null) {
+export async function rotuloDoSetor(tenantId: string, code: string | null) {
   if (!code) return null;
   const maps = await getSectorMaps(tenantId);
   return sectorLabel(maps.labels, code);
 }
 
-async function nomeDoCliente(tenantId: string, contato: Parameters<Awaited<ReturnType<typeof nomesDosContatos>>>[0]) {
+export async function nomeDoCliente(tenantId: string, contato: Parameters<Awaited<ReturnType<typeof nomesDosContatos>>>[0]) {
   return (await nomesDosContatos(tenantId, [contato]))(contato).titulo;
 }
 
@@ -355,6 +355,7 @@ export async function salvarConfiguracao(
     fechaAs: string;
     boasVindas: string;
     foraDoHorario: string;
+    respostasAutomaticas: boolean;
     diasParaReabrir: number;
     setores: string[];
     ceciLigada: boolean;
@@ -382,6 +383,7 @@ export async function salvarConfiguracao(
       fechaAs: p.fechaAs,
       boasVindas: p.boasVindas.trim().slice(0, 1000) || null,
       foraDoHorario: p.foraDoHorario.trim().slice(0, 1000) || null,
+      respostasAutomaticas: p.respostasAutomaticas === true,
       diasParaReabrir: p.diasParaReabrir,
       setores: setores.length > 0 ? setores : undefined,
       ceciLigada: p.ceciLigada,
