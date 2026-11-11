@@ -1,0 +1,203 @@
+// Cliente da API do Acessórias (https://api.acessorias.com/documentation), vindo do Aditiva Pronto.
+// Só o servidor fala com o Acessórias: o token nunca vai ao navegador. No Connect o token é do
+// escritório, guardado cifrado em Administração › Integrações ("Acessórias — honorários"), e
+// chega aqui como `ConexaoAcessorias` — no Aditiva vinha de ACESSORIAS_API_TOKEN.
+// Limite da API: 100 requisições por minuto (janela deslizante). As chamadas saem em fila, uma a
+// cada 700 ms (~85/min), compartilhada por toda operação deste servidor.
+
+import { getPrisma } from "@/lib/prisma";
+import { lerConfig } from "@/lib/integracoes/data";
+import { logger } from "./log";
+
+const URL_PADRAO = "https://api.acessorias.com";
+const INTERVALO_MS = 700;
+const TEMPO_LIMITE_MS = 20_000;
+
+/** O código da integração no catálogo (src/lib/integracoes/catalogo.ts). */
+export const INTEGRACAO_ACESSORIAS = "acessorias";
+
+export class ErroAcessorias extends Error {
+  constructor(
+    message: string,
+    public readonly status: number | null,
+  ) {
+    super(message);
+    this.name = "ErroAcessorias";
+  }
+}
+
+export type ConexaoAcessorias = { token: string; base: string };
+
+export type SituacaoDaConexao = { pronta: true; conexao: ConexaoAcessorias } | { pronta: false; motivo: string };
+
+/** A conexão do escritório com o Acessórias, ou o que falta para ela existir. */
+export async function conexaoDoEscritorio(tenantId: string): Promise<SituacaoDaConexao> {
+  const c = await getPrisma().tenantIntegration.findUnique({
+    where: { tenantId_integrationCode_instanceKey: { tenantId, integrationCode: INTEGRACAO_ACESSORIAS, instanceKey: "default" } },
+    select: { enabled: true, configEnc: true },
+  });
+  if (!c) return { pronta: false, motivo: "A integração com o Acessórias não está configurada em Administração › Integrações." };
+  if (!c.enabled) return { pronta: false, motivo: "A integração com o Acessórias está desligada em Administração › Integrações." };
+  const config = lerConfig(c.configEnc);
+  const token = (config.token ?? "").trim();
+  if (token.length < 16) return { pronta: false, motivo: "Falta o token da API do Acessórias em Administração › Integrações." };
+  const base = (config.url?.trim() || URL_PADRAO).replace(/\/+$/, "");
+  return { pronta: true, conexao: { token, base } };
+}
+
+let proximaVez = 0;
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Reserva a vez na fila (todas as chamadas passam por aqui). */
+async function aguardarVez(): Promise<void> {
+  const agora = Date.now();
+  const minha = Math.max(agora, proximaVez);
+  proximaVez = minha + INTERVALO_MS;
+  if (minha > agora) await esperar(minha - agora);
+}
+
+async function chamar(c: ConexaoAcessorias, metodo: "GET" | "POST", caminho: string, corpo?: FormData): Promise<{ status: number; dados: unknown }> {
+  for (let tentativa = 1; ; tentativa++) {
+    await aguardarVez();
+    let resposta: Response;
+    try {
+      resposta = await fetch(`${c.base}${caminho}`, {
+        method: metodo,
+        headers: { Authorization: `Bearer ${c.token}`, Accept: "application/json" },
+        body: corpo,
+        signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
+      });
+    } catch (err) {
+      if (tentativa < 3) {
+        await esperar(2000 * tentativa);
+        continue;
+      }
+      throw new ErroAcessorias(`Sem resposta do Acessórias: ${(err as Error).message}`, null);
+    }
+
+    const texto = await resposta.text();
+    let dados: unknown = texto;
+    try {
+      dados = texto ? JSON.parse(texto) : null;
+    } catch {
+      /* resposta não é JSON */
+    }
+
+    if (resposta.status === 429 && tentativa < 4) {
+      logger.warn("[acessorias] limite de requisições atingido; aguardando 30 s");
+      await esperar(30_000);
+      continue;
+    }
+    if (resposta.status >= 500 && tentativa < 3) {
+      await esperar(2000 * tentativa);
+      continue;
+    }
+    return { status: resposta.status, dados };
+  }
+}
+
+/** Valor da primeira chave (sem diferenciar maiúscula) que casa com o padrão. */
+function campo(dados: unknown, padrao: RegExp): unknown {
+  if (!dados || typeof dados !== "object" || Array.isArray(dados)) return undefined;
+  const achada = Object.keys(dados as object).find((k) => padrao.test(k));
+  return achada === undefined ? undefined : (dados as Record<string, unknown>)[achada];
+}
+
+const comoTexto = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v)).trim().slice(0, 300);
+
+/**
+ * O Acessórias responde erro com HTTP 200 e `{"Erro": "…"}` no corpo (documentação da API),
+ * não com código HTTP de erro. Devolve a mensagem, ou null se não há erro.
+ */
+export function erroNoCorpo(dados: unknown): string | null {
+  const v = campo(dados, /^(erro|erros|error|errors)$/i);
+  return v === undefined || v === null || v === "" ? null : comoTexto(v);
+}
+
+export function mensagemDe(dados: unknown, status: number): string {
+  const erro = erroNoCorpo(dados);
+  if (erro) return erro;
+  const msg = campo(dados, /^(msg|message|mensagem)$/i);
+  if (msg !== undefined && msg !== null && msg !== "") return comoTexto(msg);
+  if (typeof dados === "string" && dados.trim()) return dados.trim().slice(0, 300);
+  return `O Acessórias respondeu HTTP ${status}.`;
+}
+
+/** "Empresa não encontrada", "Nenhuma empresa…": fim de lista ou CNPJ que não existe lá. */
+const NAO_ENCONTRADA = /n[aã]o\s+(foi\s+)?encontrad|nenhum|inexistente|not\s+found/i;
+
+/** Ficha da empresa como o Acessórias devolve (chaves em PascalCase: Identificador, Razao, Honorario…). */
+export type FichaAcessorias = Record<string, unknown> & {
+  ID?: string | number;
+  Identificador?: string;
+  Razao?: string;
+  Fantasia?: string;
+  Status?: string;
+  Honorario?: string | number | null;
+};
+
+function ehFicha(x: unknown): x is FichaAcessorias {
+  return !!x && typeof x === "object" && typeof (x as FichaAcessorias).Identificador === "string";
+}
+
+/** Ficha completa (dados cadastrais, IEs, contatos e departamentos), para comparar antes/depois. */
+export async function buscarEmpresa(c: ConexaoAcessorias, cnpjDigitos: string): Promise<FichaAcessorias | null> {
+  if (!/^\d{11,14}$/.test(cnpjDigitos)) throw new ErroAcessorias("CNPJ/CPF inválido.", null);
+  const { status, dados } = await chamar(c, "GET", `/companies/${cnpjDigitos}/?registrationData&stateRegistrations&contacts&departments`);
+  if (status === 404) return null;
+  if (status >= 400) throw new ErroAcessorias(mensagemDe(dados, status), status);
+  const erro = erroNoCorpo(dados);
+  if (erro) {
+    if (NAO_ENCONTRADA.test(erro)) return null;
+    throw new ErroAcessorias(erro, status);
+  }
+  if (ehFicha(dados)) return dados;
+  if (Array.isArray(dados) && ehFicha(dados[0])) return dados[0];
+  return null;
+}
+
+/** Uma página do ListAll (20 por página). Lista vazia = acabou. */
+export async function listarPagina(c: ConexaoAcessorias, pagina: number): Promise<FichaAcessorias[]> {
+  const { status, dados } = await chamar(c, "GET", `/companies/ListAll/?Pagina=${pagina}`);
+  if (status === 404) return [];
+  if (status >= 400) throw new ErroAcessorias(mensagemDe(dados, status), status);
+  const erro = erroNoCorpo(dados);
+  if (erro) {
+    // Fim da paginação costuma vir assim; qualquer outro erro também encerra a leitura,
+    // mas fica no log para não passar despercebido.
+    if (!NAO_ENCONTRADA.test(erro)) logger.warn(`[acessorias] ListAll página ${pagina}: ${erro}`);
+    return [];
+  }
+  const lista = Array.isArray(dados)
+    ? dados
+    : dados && typeof dados === "object"
+      ? (Object.values(dados as Record<string, unknown>).find(Array.isArray) ?? Object.values(dados as Record<string, unknown>))
+      : [];
+  return (lista as unknown[]).filter(ehFicha);
+}
+
+/**
+ * POST /companies: cria OU atualiza pelo identificador. Só chame com empresa que já existe.
+ * Devolve a mensagem do Acessórias ("Empresa 214 atualizada com sucesso!"). Erro vem como
+ * HTTP 200 com `{"Erro": "…"}` e vira exceção aqui.
+ */
+export async function gravarEmpresa(c: ConexaoAcessorias, campos: Record<string, string>): Promise<string> {
+  const corpo = new FormData();
+  for (const [k, v] of Object.entries(campos)) corpo.append(k, v);
+  const { status, dados } = await chamar(c, "POST", "/companies", corpo);
+  const erro = erroNoCorpo(dados);
+  if (status >= 400 || erro) throw new ErroAcessorias(erro ?? mensagemDe(dados, status), status);
+  return mensagemDe(dados, status);
+}
+
+/** Honorário da ficha em número ("1412.00" → 1412). */
+export function honorarioDaFicha(f: FichaAcessorias | null): number | null {
+  if (!f || f.Honorario === null || f.Honorario === undefined || f.Honorario === "") return null;
+  const n = Number(String(f.Honorario).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Só para os testes: zera a fila. */
+export function _zerarFila(): void {
+  proximaVez = 0;
+}

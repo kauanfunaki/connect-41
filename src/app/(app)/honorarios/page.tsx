@@ -15,6 +15,9 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
 import { TabelaDeHonorarios } from "@/components/honorarios/TabelaDeHonorarios";
+import { QuadroDoAcessorias } from "@/components/honorarios/QuadroDoAcessorias";
+import { HistoricoDeEnvios } from "@/components/honorarios/HistoricoDeEnvios";
+import { estado as estadoDoAcessorias, listarEnvios } from "@/lib/honorarios/servidor/acessoriasService";
 import { formatarNumero } from "@/lib/format";
 
 const POR_PAGINA = 50;
@@ -23,9 +26,9 @@ type Busca = { situacao?: string; foto?: string; acessorias?: string; responsave
 
 export default async function HonorariosPage({ searchParams }: { searchParams: Promise<Busca> }) {
   const { ctx } = await abrirTelaDoModulo("controladoria_honorarios");
-  const [{ podeAgir }, [relatorio, status]] = await Promise.all([
+  const [{ podeAgir, podeGerir }, [relatorio, status, acessorias, envios]] = await Promise.all([
     permissoesNosHonorarios(ctx),
-    noEscritorioDe(ctx, () => Promise.all([montarRelatorioHonorarios(), obterStatus()])),
+    noEscritorioDe(ctx, () => Promise.all([montarRelatorioHonorarios(), obterStatus(), estadoDoAcessorias(), listarEnvios(50)])),
   ]);
   const q = await searchParams;
 
@@ -59,6 +62,7 @@ export default async function HonorariosPage({ searchParams }: { searchParams: P
         <SemVarredura texto="Assim que o robô terminar a primeira varredura das pastas, os documentos começam a ser lidos." />
       ) : (
         <>
+          <QuadroDoAcessorias estado={acessorias} resumo={relatorio.resumo.acessorias} podeAgir={podeAgir} podeGerir={podeGerir} />
           <FaixaDeTotais
             itens={[
               {
@@ -137,9 +141,23 @@ export default async function HonorariosPage({ searchParams }: { searchParams: P
               />
             }
           >
-            <TabelaDeHonorarios empresas={daPagina} podeAgir={podeAgir} filtrado={filtradas.length === 0 && relatorio.empresas.length > 0} />
+            <TabelaDeHonorarios
+              empresas={daPagina}
+              podeAgir={podeAgir}
+              filtrado={filtradas.length === 0 && relatorio.empresas.length > 0}
+              envio={{
+                podeEnviar: podeGerir && acessorias.configurado,
+                bloqueado: acessorias.bloqueio
+                  ? "Envios travados: confira o aviso no topo"
+                  : acessorias.operacao?.executando
+                    ? "Há uma operação com o Acessórias em andamento"
+                    : null,
+                loteLiberado: acessorias.envioLoteLiberado,
+              }}
+            />
           </CascoDaTabela>
           <Pagination page={pagina} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={filtradas.length} rotulo="empresas" />
+          {acessorias.configurado && <HistoricoDeEnvios envios={envios} />}
         </>
       )}
     </PageContainer>

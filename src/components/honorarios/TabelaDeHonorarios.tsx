@@ -4,6 +4,7 @@ import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { AlertTriangle, Camera, ChevronRight, CircleCheck, Dot, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
@@ -24,6 +25,7 @@ import type { DocumentoResumo, EmpresaHonorario } from "@/lib/honorarios/servido
 import { removerHonorarioInformado } from "@/app/(app)/honorarios/actions";
 import { AvisoDistrato } from "./AvisoDistrato";
 import { DialogoDoValor, DialogoAcessoriasCerto } from "./DialogosDoHonorario";
+import { DialogoDeEnvio, DialogoDeLote } from "./DialogosDoAcessorias";
 
 const tipoMinusculo = (d: DocumentoResumo) => ROTULO_TIPO_DOCUMENTO[d.tipo].toLowerCase();
 const dataDoDoc = (d: DocumentoResumo) => dataCurta(d.data ?? d.modificadoEm);
@@ -40,9 +42,44 @@ function origemDoValor(e: EmpresaHonorario): string | null {
 
 const ehGrave = (a: EmpresaHonorario["alertas"][number]) => !ALERTAS_INFORMATIVOS.has(a);
 
-export function TabelaDeHonorarios({ empresas, podeAgir, filtrado }: { empresas: EmpresaHonorario[]; podeAgir: boolean; filtrado: boolean }) {
+/** O que a pessoa pode fazer com o Acessórias nesta tela. */
+export type EnvioNaTela = {
+  /** Pode enviar (nível "gerir") e a integração está pronta. */
+  podeEnviar: boolean;
+  /** Envios travados por um envio que mexeu em outros campos, ou operação em andamento. */
+  bloqueado: string | null;
+  /** O lote só libera depois de um envio individual limpo. */
+  loteLiberado: boolean;
+};
+
+/** Dá para atualizar no Acessórias: tem valor, não é distrato e está diferente (ou ninguém conferiu). */
+export const podeAtualizar = (e: EmpresaHonorario) =>
+  e.situacao !== "DISTRATO" && e.valor !== null && (e.acessorias.comparacao === "DIFERENTE" || e.acessorias.comparacao === "NAO_CONFERIDO");
+
+export function TabelaDeHonorarios({
+  empresas,
+  podeAgir,
+  filtrado,
+  envio = { podeEnviar: false, bloqueado: null, loteLiberado: false },
+}: {
+  empresas: EmpresaHonorario[];
+  podeAgir: boolean;
+  filtrado: boolean;
+  envio?: EnvioNaTela;
+}) {
   const [aberta, setAberta] = useState<string | null>(null);
-  const [dialogo, setDialogo] = useState<{ tipo: "valor" | "acessorias"; empresa: EmpresaHonorario } | null>(null);
+  const [dialogo, setDialogo] = useState<{ tipo: "valor" | "acessorias" | "enviar"; empresa: EmpresaHonorario } | null>(null);
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [lote, setLote] = useState(false);
+  const selecionaveis = envio.podeEnviar ? empresas.filter(podeAtualizar) : [];
+  const escolhidas = selecionaveis.filter((e) => selecionadas.has(e.empresa.id));
+  const alternar = (id: string) =>
+    setSelecionadas((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
 
   if (!empresas.length) {
     return filtrado ? (
@@ -52,12 +89,55 @@ export function TabelaDeHonorarios({ empresas, podeAgir, filtrado }: { empresas:
     );
   }
 
+  const diferentes = selecionaveis.filter((e) => e.acessorias.comparacao === "DIFERENTE");
+  const semPendencia = selecionaveis.filter((e) => e.situacao === "LIDO" || e.situacao === "MANUAL");
+
   return (
     <>
+      {selecionaveis.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-label" role="group" aria-label="Envio em lote ao Acessórias">
+          {diferentes.length > 0 && (
+            <Button
+              variant="ghost"
+              size="xs"
+              title="Todas as empresas desta página cujo honorário está diferente no Acessórias"
+              onClick={() => setSelecionadas(new Set(diferentes.map((e) => e.empresa.id)))}
+            >
+              Selecionar as diferentes ({diferentes.length})
+            </Button>
+          )}
+          {semPendencia.length > 0 && (
+            <Button variant="ghost" size="xs" onClick={() => setSelecionadas(new Set(semPendencia.map((e) => e.empresa.id)))}>
+              Selecionar as sem pendência ({semPendencia.length})
+            </Button>
+          )}
+          {escolhidas.length > 0 && (
+            <Button variant="ghost" size="xs" onClick={() => setSelecionadas(new Set())}>
+              Limpar seleção
+            </Button>
+          )}
+          <Button
+            size="xs"
+            disabled={!escolhidas.length || !!envio.bloqueado || !envio.loteLiberado}
+            title={envio.bloqueado ?? (!envio.loteLiberado ? "Libera depois do primeiro envio de uma empresa só, conferido no Acessórias" : undefined)}
+            onClick={() => setLote(true)}
+          >
+            Atualizar {escolhidas.length} no Acessórias
+          </Button>
+          {!envio.loteLiberado && (
+            <span className="text-micro text-fg-muted">O envio em lote libera depois do primeiro envio de uma empresa só, conferido no Acessórias.</span>
+          )}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px]">
           <thead>
             <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
+              {selecionaveis.length > 0 && (
+                <th className="w-8 py-2">
+                  <span className="sr-only">Selecionar para o envio em lote</span>
+                </th>
+              )}
               <th className="w-8 py-2"><span className="sr-only">Detalhes</span></th>
               <th className="py-2 pr-3 font-medium">Empresa</th>
               <th className="py-2 pr-3 font-medium text-right">Honorário</th>
@@ -79,6 +159,17 @@ export function TabelaDeHonorarios({ empresas, podeAgir, filtrado }: { empresas:
               return (
                 <Fragment key={id}>
                   <tr className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
+                    {selecionaveis.length > 0 && (
+                      <td className="py-3.5">
+                        {podeAtualizar(e) && (
+                          <Checkbox
+                            checked={selecionadas.has(id)}
+                            onChange={() => alternar(id)}
+                            aria-label={`Selecionar ${e.empresa.razaoSocial} para o envio em lote`}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td className="py-2.5">
                       <button
                         type="button"
@@ -154,6 +245,17 @@ export function TabelaDeHonorarios({ empresas, podeAgir, filtrado }: { empresas:
                               Acessórias está certo
                             </Button>
                           )}
+                          {envio.podeEnviar && podeAtualizar(e) && (
+                            <Button
+                              variant="secondary"
+                              size="xs"
+                              disabled={!!envio.bloqueado}
+                              title={envio.bloqueado ?? "Atualiza o honorário desta empresa no Acessórias"}
+                              onClick={() => setDialogo({ tipo: "enviar", empresa: e })}
+                            >
+                              Atualizar
+                            </Button>
+                          )}
                           <Button variant="secondary" size="xs" onClick={() => setDialogo({ tipo: "valor", empresa: e })}>
                             {e.manual ? "Alterar valor" : e.situacao === "CONFERIR" ? "Conferir valor" : "Informar valor"}
                           </Button>
@@ -164,7 +266,7 @@ export function TabelaDeHonorarios({ empresas, podeAgir, filtrado }: { empresas:
                   {expandida && (
                     <tr className="border-b border-border-soft bg-surface-2/50">
                       <td />
-                      <td colSpan={5} className="py-3 pr-3">
+                      <td colSpan={selecionaveis.length > 0 ? 6 : 5} className="py-3 pr-3">
                         <DetalhesDaEmpresa empresa={e} podeAgir={podeAgir} />
                       </td>
                     </tr>
@@ -178,6 +280,17 @@ export function TabelaDeHonorarios({ empresas, podeAgir, filtrado }: { empresas:
 
       {dialogo?.tipo === "valor" && <DialogoDoValor empresa={dialogo.empresa} aoFechar={() => setDialogo(null)} />}
       {dialogo?.tipo === "acessorias" && <DialogoAcessoriasCerto empresa={dialogo.empresa} aoFechar={() => setDialogo(null)} />}
+      {dialogo?.tipo === "enviar" && <DialogoDeEnvio empresa={dialogo.empresa} aoFechar={() => setDialogo(null)} />}
+      {lote && (
+        <DialogoDeLote
+          empresas={escolhidas}
+          aoFechar={() => setLote(false)}
+          aoEnviar={() => {
+            setLote(false);
+            setSelecionadas(new Set());
+          }}
+        />
+      )}
     </>
   );
 }
