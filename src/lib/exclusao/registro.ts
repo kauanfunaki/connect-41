@@ -405,6 +405,15 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "AcademiaTexto", coluna: "createdById", tratamento: "manter", motivo: "quem cadastrou o texto da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "AcademiaQuestao", coluna: "createdById", tratamento: "manter", motivo: "quem cadastrou a questão da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "AcademiaPremio", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou o prêmio do mês da Academia; a tela não expõe o id, e a auditoria guarda o nome" },
+  // O Repositório de fluxos (10/11/2026): quem criou, editou, salvou a versão e
+  // anexou, e o dono do fluxo. A tela mostra o nome de quem existe (a versão
+  // guarda o nome junto); sem a pessoa, mostra “—” e o setor escolhe outro dono.
+  { modelo: "FlowFolder", coluna: "createdById", tratamento: "manter", motivo: "quem criou a pasta do Repositório de fluxos; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "FlowDoc", coluna: "createdById", tratamento: "manter", motivo: "quem criou o fluxo; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "FlowDoc", coluna: "updatedById", tratamento: "manter", motivo: "quem salvou a última versão do fluxo; a tela não expõe o id, e a versão guarda o nome" },
+  { modelo: "FlowDoc", coluna: "ownerUserId", tratamento: "manter", motivo: "o dono do fluxo; a tela mostra o nome de quem existe, e sem a pessoa mostra “—” até o setor escolher outro" },
+  { modelo: "FlowVersion", coluna: "savedById", tratamento: "manter", motivo: "quem salvou a versão do fluxo; o nome fica gravado em savedByName e a tela mostra o nome" },
+  { modelo: "FlowAttachment", coluna: "uploadedById", tratamento: "manter", motivo: "quem anexou o arquivo ao fluxo; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "DominioAccountMap", coluna: "updatedById", tratamento: "manter", motivo: "quem mexeu no de-para da Domínio; a tela não expõe o id" },
   { modelo: "DominioExportacao", coluna: "createdById", tratamento: "manter", motivo: "quem baixou a planilha da Domínio; a tela mostra o nome, e sem a pessoa mostra “—”" },
   { modelo: "ContabilRegra", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou a regra do de-para contábil; a tela não expõe o id" },

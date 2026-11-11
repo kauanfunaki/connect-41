@@ -1451,6 +1451,8 @@ model Tenant {
   academiaResultados AcademiaResultado[]
   academiaPreferencias AcademiaPreferencia[]
   academiaPremios AcademiaPremio[]
+  flowFolders FlowFolder[]
+  flowDocs FlowDoc[]
   techInternalTools TechInternalTool[]
   techInternalItems TechInternalItem[]
   techInternalComments TechInternalComment[]
@@ -11124,4 +11126,107 @@ model AcademiaPremio {
 
   @@unique([tenantId, mes])
   @@map("academia_premios")
+}
+
+// ─── Repositório de fluxos (10/11/2026, pedido do Kauan) ────────────────────
+//
+// Os fluxogramas e as metodologias de cada setor, no Apoio, ao lado das senhas
+// e dos manuais: pastas → fluxos, como o Repositório de manuais. O desenho não
+// é guardado — o setor escreve a lista de etapas (`steps`) e o Connect desenha
+// sozinho (`src/lib/fluxos/desenho.ts`). Cada "Salvar versão N" grava uma
+// `FlowVersion` com a lista daquele momento.
+//
+// Os ids de pessoa (`createdById`, `ownerUserId`…) não têm chave estrangeira,
+// como na Academia: a tela mostra o nome de quem existe, e a exclusão de
+// usuário os mantém (ver `COLUNAS_SOLTAS` em src/lib/exclusao/registro.ts).
+
+/// Pasta do Repositório de fluxos, de um setor (10/11/2026).
+model FlowFolder {
+  id          String   @id @default(uuid())
+  tenantId    String
+  sectorCode  String   @db.VarChar(40)
+  title       String   @db.VarChar(160)
+  /// Emoji opcional, como o das pastas dos manuais.
+  icon        String?  @db.VarChar(8)
+  order       Int      @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id])
+  flows  FlowDoc[]
+
+  @@index([tenantId, sectorCode])
+  @@map("flow_folders")
+}
+
+/// Um fluxo: a metodologia em texto, a lista de etapas (o desenho sai dela) e os arquivos (10/11/2026).
+model FlowDoc {
+  id          String    @id @default(uuid())
+  tenantId    String
+  folderId    String
+  title       String    @db.VarChar(160)
+  /// O "Dono" do fluxo: quem responde por ele no setor.
+  ownerUserId String?
+  /// "Revisado em": a data (sem hora) da última revisão do processo.
+  reviewedAt  DateTime? @db.Date
+  /// A versão em vigor. 0 = criado e ainda sem "Salvar versão".
+  version     Int       @default(0)
+  /// HTML do editor dos manuais, sanitizado no servidor.
+  methodology String?   @db.Text
+  /// A lista de etapas (`Etapa[]` de src/lib/fluxos/etapas.ts), já validada.
+  steps       Json
+  order       Int       @default(0)
+  createdById String
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  folder      FlowFolder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  versions    FlowVersion[]
+  attachments FlowAttachment[]
+
+  @@index([tenantId, folderId])
+  @@map("flow_docs")
+}
+
+/// Uma versão salva do fluxo ("Salvar versão N"): a foto do que valia, para o histórico (10/11/2026).
+model FlowVersion {
+  id          String    @id @default(uuid())
+  flowDocId   String
+  version     Int
+  title       String    @db.VarChar(160)
+  steps       Json
+  methodology String?   @db.Text
+  reviewedAt  DateTime? @db.Date
+  savedById   String
+  /// O nome de quem salvou, gravado junto: o histórico não depende da pessoa continuar no escritório.
+  savedByName String    @db.VarChar(160)
+  savedAt     DateTime  @default(now())
+
+  flowDoc FlowDoc @relation(fields: [flowDocId], references: [id], onDelete: Cascade)
+
+  @@unique([flowDocId, version])
+  @@map("flow_versions")
+}
+
+/// Arquivo anexado a um fluxo: PDF, imagem ou .drawio, em `storage/fluxos/<tenantId>/` (10/11/2026).
+model FlowAttachment {
+  id           String   @id @default(uuid())
+  flowDocId    String
+  /// O nome que aparece na lista (o original, limpo).
+  fileName     String   @db.VarChar(200)
+  /// O tipo conferido pelos bytes no envio.
+  mime         String   @db.VarChar(80)
+  size         Int
+  /// `<uuid>.<ext>`, dentro de `storage/fluxos/<tenantId>/`.
+  storagePath  String   @db.VarChar(255)
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  flowDoc FlowDoc @relation(fields: [flowDocId], references: [id], onDelete: Cascade)
+
+  @@index([flowDocId])
+  @@map("flow_attachments")
 }

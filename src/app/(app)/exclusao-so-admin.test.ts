@@ -42,6 +42,9 @@ const registro = () => ({
   // A página do manual é do setor do documento dela desde 05/11/2026 (o
   // `sectorCode` de cima vale também para a credencial: cofre por setor).
   document: { sectorCode: "setor" },
+  // O fluxo é do setor da pasta dele, e o anexo do setor do fluxo (10/11/2026).
+  folder: { sectorCode: "setor" },
+  flowDoc: { folder: { sectorCode: "setor" } },
   _count: { items: 0, folders: 0, pipelines: 0, recurringObligations: 0, modelosDeObrigacao: 0, links: 0 },
 });
 
@@ -130,6 +133,7 @@ const socios = await import("./empresas/[id]/socios/actions");
 const fiscal = await import("./documentos-fiscais/[id]/editar");
 const senhas = await import("./senhas/actions");
 const manual = await import("./manuais/actions");
+const fluxos = await import("./fluxos/actions");
 const modelosDeTeste = await import("./testes/templates/actions");
 const testes = await import("./testes/actions");
 const campos = await import("./admin/campos/actions");
@@ -169,6 +173,9 @@ const acoes: [string, () => Promise<unknown>][] = [
   ["BPO › senha do cofre", () => senhas.excluirCredencial("cr1")],
   ["BPO › página do manual", () => manual.excluirPaginaManual("pg1")],
   ["BPO › documento do manual", () => manual.excluirDocumentoManual("md1")],
+  ["Apoio › pasta de fluxos", () => fluxos.excluirPastaDeFluxos("ff1")],
+  ["Apoio › fluxo", () => fluxos.excluirFluxo("fd1")],
+  ["Apoio › arquivo do fluxo", () => fluxos.excluirAnexoDoFluxo("fa1")],
   ["Configuração › campo personalizado", () => campos.excluirCampo("cf1")],
   ["Configuração › tag", () => tags.excluirTag("tg1")],
   ["Agenda › reunião avulsa", () => agenda.excluirReuniaoAvulsa("m1")],

@@ -540,6 +540,18 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "BookOpen",
     group: "Apoio",
   },
+  // O Repositório de fluxos (10/11/2026, pedido do Kauan): os fluxogramas e as
+  // metodologias de cada setor, ao lado das senhas e dos manuais. Como eles,
+  // liga e desliga no BPO de Setores e módulos, e cada setor vê os seus.
+  {
+    code: "bpo_fluxos",
+    label: "Repositório de fluxos",
+    sectorCode: "bpo",
+    description: "Fluxogramas e metodologias de cada setor: a lista de etapas vira desenho, com quem executa, prazo e a tela do Connect de cada etapa",
+    defaultEnabled: true,
+    icon: "Workflow",
+    group: "Apoio",
+  },
   {
     code: "fiscal_documentos",
     label: "Documentos fiscais",
@@ -935,7 +947,8 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_senhas:              "/senhas",
   bpo_dre:                 "/dre",
   bpo_manual:              "/manuais",
-  fiscal_documentos:       "/documentos-fiscais",
+  bpo_fluxos:              "/fluxos",
+  fiscal_documentos:      "/documentos-fiscais",
   fiscal_autorizacoes:     "/autorizacoes",
   fiscal_painel:           "/sped-fiscal/motor",
   fiscal_classificacao:    "/sped-fiscal/motor/classificacao",
@@ -995,15 +1008,16 @@ export const MODULOS_DE_TODA_A_EQUIPE: ReadonlySet<string> = new Set(["academia"
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", ...MODULOS_DE_TODA_A_EQUIPE]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", "bpo_fluxos", ...MODULOS_DE_TODA_A_EQUIPE]);
 
 /**
  * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e
  * Repositório de manuais deixaram de ser do BPO e viraram um grupo do Geral,
  * para todo setor, junto dos Quadros. Cada setor vê os seus (cofre por setor).
  * O módulo segue ligado e desligado pelo escritório, no BPO de Setores e módulos.
+ * O Repositório de fluxos entrou no grupo em 10/11/2026.
  */
-export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual"] as const;
+export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual", "bpo_fluxos"] as const;
 
 /**
  * Chamados fica no Geral para todo setor, menos o que atende os chamados

@@ -102,6 +102,8 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   // Apoio do BPO (senhas e manual): ferramenta da equipe, não do cliente.
   bpo_senhas: "escritorio",
   bpo_manual: "escritorio",
+  // O Repositório de fluxos (10/11/2026), do mesmo grupo Apoio.
+  bpo_fluxos: "escritorio",
 };
 
 /**
