@@ -161,6 +161,28 @@ const KNOWN_KEYS = new Set<string>(HOME_WIDGETS.map((w) => w.key));
 export const DEFAULT_HOME_WIDGETS: HomeWidgetKey[] = HOME_WIDGETS.map((w) => w.key);
 
 /**
+ * Os blocos de reunião do Início (melhoria-597, 11/11/2026). Na pessoa cujos
+ * setores não usam reuniões (`usaReunioes` de src/lib/agendaDoSetor.ts, o
+ * mesmo "Usa reuniões" que já tira as reuniões do Meu dia e abre a Agenda em
+ * Prazos), eles nascem desligados. A pessoa ainda pode ligá-los pelo
+ * Personalizar.
+ */
+export const BLOCOS_DE_REUNIAO: readonly HomeWidgetKey[] = ["proxima-reuniao", "agenda"];
+
+/** O Início de quem nunca personalizou: tudo, menos as reuniões para quem não as usa. */
+export function padraoDoInicio(usaReunioes: boolean): HomeWidgetKey[] {
+  return usaReunioes ? DEFAULT_HOME_WIDGETS : DEFAULT_HOME_WIDGETS.filter((k) => !BLOCOS_DE_REUNIAO.includes(k));
+}
+
+/**
+ * A versão da preferência gravada. A 2 (11/11/2026) é a primeira salva já com
+ * os blocos de reunião desligados para quem não usa reuniões: nela, um bloco de
+ * reunião visível foi ligado pela pessoa, e vale. Numa gravação anterior ele
+ * estava visível só porque era o padrão de todo mundo, então segue o setor.
+ */
+const VERSAO_DA_PREFERENCIA = 2;
+
+/**
  * Os blocos que existiam quando a preferência era só a lista dos visíveis
  * (até 30/09). Numa preferência nesse formato, o que é daqui e não está na
  * lista foi ocultado pelo usuário; o que veio depois é novo e aparece.
@@ -199,30 +221,41 @@ function limpar(valores: unknown): HomeWidgetKey[] {
  *
  * Nunca confia no conteúdo da coluna: JSON quebrado, chave de widget que já
  * não existe ou duplicada caem fora em vez de derrubar a Home.
+ *
+ * `usaReunioes` falso (os setores da pessoa não usam reuniões) tira os blocos
+ * de reunião do padrão e de toda preferência gravada antes da versão 2 — ver
+ * `VERSAO_DA_PREFERENCIA`.
  */
-export function parseHomeWidgets(raw: string | null | undefined): HomeWidgetKey[] {
-  if (!raw) return DEFAULT_HOME_WIDGETS;
+export function parseHomeWidgets(raw: string | null | undefined, usaReunioes = true): HomeWidgetKey[] {
+  const padrao = padraoDoInicio(usaReunioes);
+  if (!raw) return padrao;
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return DEFAULT_HOME_WIDGETS;
+    return padrao;
   }
 
   let visiveis: HomeWidgetKey[];
   let ocultos: HomeWidgetKey[];
+  let versao = 1;
   if (Array.isArray(parsed)) {
     visiveis = limpar(parsed);
     ocultos = CHAVES_DO_FORMATO_ANTIGO.filter((k) => !visiveis.includes(k));
   } else if (parsed && typeof parsed === "object" && Array.isArray((parsed as { visiveis?: unknown }).visiveis)) {
     visiveis = limpar((parsed as { visiveis: unknown }).visiveis);
     ocultos = limpar((parsed as { ocultos?: unknown }).ocultos).filter((k) => !visiveis.includes(k));
+    const v = (parsed as { versao?: unknown }).versao;
+    if (typeof v === "number") versao = v;
   } else {
-    return DEFAULT_HOME_WIDGETS;
+    return padrao;
   }
 
-  const novos = DEFAULT_HOME_WIDGETS.filter((k) => !visiveis.includes(k) && !ocultos.includes(k));
+  if (!usaReunioes && versao < VERSAO_DA_PREFERENCIA) {
+    visiveis = visiveis.filter((k) => !BLOCOS_DE_REUNIAO.includes(k));
+  }
+  const novos = padrao.filter((k) => !visiveis.includes(k) && !ocultos.includes(k));
   return [...visiveis, ...novos];
 }
 
@@ -234,7 +267,7 @@ export function parseHomeWidgets(raw: string | null | undefined): HomeWidgetKey[
 export function serializeHomeWidgets(visiveis: HomeWidgetKey[], ocultos: HomeWidgetKey[]): string {
   const v = limpar(visiveis);
   const o = limpar(ocultos).filter((k) => !v.includes(k));
-  return JSON.stringify({ visiveis: v, ocultos: o });
+  return JSON.stringify({ versao: VERSAO_DA_PREFERENCIA, visiveis: v, ocultos: o });
 }
 
 // Ordena os widgets de uma faixa conforme a escolha do usuário, descartando os
