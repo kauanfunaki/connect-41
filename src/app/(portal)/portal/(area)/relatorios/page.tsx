@@ -9,7 +9,7 @@ import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { dadosDoConsolidado, nomesDasEmpresas } from "@/lib/financeiro/consultas";
 import { consolidarPorEmpresa } from "@/lib/financeiro/fluxo";
 import { competenciaValida, competenciaDoInstante } from "@/lib/financeiro/periodo";
-import { formatarCompetencia } from "@/lib/format";
+import { mesPorExtensoDoPortal } from "@/lib/portal/empresaEscolhida";
 import { saoPauloParts } from "@/lib/agenda";
 
 export const dynamic = "force-dynamic";
@@ -32,16 +32,19 @@ export default async function PortalRelatoriosPage({
 
   return (
     <PageContainer>
+      {/* "Resumo do mês por empresa" no lugar de "Consolidado" (P19): o
+          cliente não fala a língua do fechamento. */}
       <PortalCabecalho
-        titulo="Relatório"
-        descricao={`Consolidado por empresa em ${formatarCompetencia(mes)}.`}
+        titulo="Resumo do mês por empresa"
+        descricao={`Quanto cada empresa pagou e recebeu em ${mesPorExtensoDoPortal(mes)}, e as contas vencidas.`}
       />
       <FiltroDePeriodo acao="/portal/relatorios" mes={mes} />
-      <TabelaDoConsolidado linhas={linhas} nomes={nomes} />
+      <TabelaDoConsolidado linhas={linhas} nomes={nomes} noPortal />
       {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
-          cabeçalho de tabela, numa explicação que o cliente lê no celular. */}
+          cabeçalho de tabela, numa explicação que o cliente lê no celular.
+          Sem "data da baixa" (P19): palavra da equipe. */}
       <p className="text-helper text-fg-muted mt-2">
-        Pago e recebido pela data da baixa. Vencidas é a posição de hoje.
+        Pago e recebido contam pela data em que foram pagos ou recebidos. As vencidas são as de hoje.
       </p>
     </PageContainer>
   );

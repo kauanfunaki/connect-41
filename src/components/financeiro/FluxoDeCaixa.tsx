@@ -45,7 +45,7 @@ function reaisCurtos(centavos: number): string {
  * com saída alta é outro mês que entrada baixa com saída baixa, com o mesmo
  * saldo.
  */
-function GraficoDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
+function GraficoDoRealizado({ meses, noPortal }: { meses: MesDoFluxo[]; noPortal: boolean }) {
   if (meses.length === 0) return null;
   const periodo = meses.length === 1 ? meses[0]!.rotulo : `${meses[0]!.rotulo} a ${meses.at(-1)!.rotulo}`;
   return (
@@ -61,7 +61,8 @@ function GraficoDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
         }))}
         formatar={moeda}
         formatarCurto={reaisCurtos}
-        vazio="Nenhuma entrada ou saída baixada no período."
+        // "Baixada" é palavra da equipe; o cliente lê "paga ou recebida" (P20).
+        vazio={noPortal ? "Nada foi pago nem recebido no período." : "Nenhuma entrada ou saída baixada no período."}
       />
     </Card>
   );
@@ -72,10 +73,14 @@ function GraficoDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
  * celular). O gráfico mora aqui dentro, e não na página, para o portal — que
  * usa este mesmo componente — recebê-lo sem mudar a tela dele.
  */
-export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
+export function TabelaDoRealizado({ meses, noPortal = false }: { meses: MesDoFluxo[]; noPortal?: boolean }) {
+  // No portal (11/11/2026, P33) rótulo e valor dos cartões do celular em 13px
+  // (`text-ui`): em 11–12px o dono da empresa não lia o número no celular. A
+  // equipe segue com o cartão denso de sempre.
+  const rotuloDoPar = noPortal ? "text-ui" : undefined;
   return (
     <>
-      <GraficoDoRealizado meses={meses} />
+      <GraficoDoRealizado meses={meses} noPortal={noPortal} />
       {/* No celular, um cartão por mês (02/10/2026): a tabela de cinco colunas
           rolava de lado no portal e cortava os títulos. A troca é em `md`, e o
           cartão é o `Cartao`, como nas outras listas (08/10/2026): em `sm`,
@@ -87,14 +92,14 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-medium text-fg">{m.rotulo}</span>
               <span className="text-right">
-                <span className="block text-micro text-fg-muted">Acumulado</span>
+                <span className={`block ${rotuloDoPar ?? "text-micro"} text-fg-muted`}>Acumulado</span>
                 <span className={`tabular-nums font-semibold ${tomDoSaldo(m.saldoAcumulado)}`}>{moeda(m.saldoAcumulado)}</span>
               </span>
             </div>
             <dl className="mt-2 grid grid-cols-3 gap-2">
-              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} tom={m.entradas === 0 ? "text-fg-muted" : undefined} />
-              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} tom={m.saidas === 0 ? "text-fg-muted" : undefined} />
-              <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoSaldo(m.saldoDoMes)} />
+              <ParNoCartao rotulo="Entradas" valor={moeda(m.entradas)} tom={m.entradas === 0 ? "text-fg-muted" : undefined} tamanho={rotuloDoPar} />
+              <ParNoCartao rotulo="Saídas" valor={moeda(m.saidas)} tom={m.saidas === 0 ? "text-fg-muted" : undefined} tamanho={rotuloDoPar} />
+              <ParNoCartao rotulo="Saldo do mês" valor={moeda(m.saldoDoMes)} tom={tomDoSaldo(m.saldoDoMes)} tamanho={rotuloDoPar} />
             </dl>
             </Cartao>
           </li>
@@ -130,12 +135,15 @@ export function TabelaDoRealizado({ meses }: { meses: MesDoFluxo[] }) {
   );
 }
 
-/** Rótulo em cima e valor embaixo — os cartões que fazem as vezes da tabela no celular. */
-function ParNoCartao({ rotulo, valor, tom = "text-fg" }: { rotulo: string; valor: React.ReactNode; tom?: string }) {
+/**
+ * Rótulo em cima e valor embaixo — os cartões que fazem as vezes da tabela no
+ * celular. `tamanho` troca o 11/12px da equipe pelo do portal (`text-ui`).
+ */
+function ParNoCartao({ rotulo, valor, tom = "text-fg", tamanho }: { rotulo: string; valor: React.ReactNode; tom?: string; tamanho?: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-micro text-fg-muted">{rotulo}</dt>
-      <dd className={`text-fs-2 tabular-nums ${tom}`}>{valor}</dd>
+      <dt className={`${tamanho ?? "text-micro"} text-fg-muted`}>{rotulo}</dt>
+      <dd className={`${tamanho ?? "text-fs-2"} tabular-nums ${tom}`}>{valor}</dd>
     </div>
   );
 }
@@ -149,19 +157,42 @@ function ParNoCartao({ rotulo, valor, tom = "text-fg" }: { rotulo: string; valor
  * da escala. Compacto de propósito — são seis janelas lado a lado, com duas
  * linhas de apoio cada, o que a `FaixaDeTotais` não comporta.
  */
-export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao: Projecao; saldoInicial?: number | null }) {
+export function CartoesDaProjecao({
+  projecao,
+  saldoInicial = null,
+  noPortal = false,
+}: {
+  projecao: Projecao;
+  saldoInicial?: number | null;
+  /**
+   * O cliente lendo (11/11/2026): rótulo e apoio em 13px (`text-ui`, P33), e o
+   * aviso dos vencidos sem "baixados", palavra da equipe (P20).
+   */
+  noPortal?: boolean;
+}) {
+  const apoio = noPortal ? "text-ui" : "text-micro";
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {projecao.janelas.map((j) => (
           <Card key={j.dias} className="p-3">
-            <p className="text-micro text-fg-muted">Até {j.dias} dias</p>
+            <p className={`${apoio} text-fg-muted`}>Até {j.dias} dias</p>
             <p className={`text-section font-semibold tabular-nums mt-0.5 ${tomDoSaldo(j.saldo)}`}>{moeda(j.saldo)}</p>
-            <p className="text-micro text-fg-muted tabular-nums">
-              +{moeda(j.entradas)} / −{moeda(j.saidas)}
+            <p className={`${apoio} text-fg-muted tabular-nums`}>
+              {noPortal ? (
+                // Sem a barra solta: "+R$ 10 / −R$ 4" não dizia o que era cada lado.
+                <>
+                  <span className="block">Entra {moeda(j.entradas)}</span>
+                  <span className="block">Sai {moeda(j.saidas)}</span>
+                </>
+              ) : (
+                <>
+                  +{moeda(j.entradas)} / −{moeda(j.saidas)}
+                </>
+              )}
             </p>
             {saldoInicial !== null && (
-              <p className="text-micro tabular-nums mt-1 text-fg-muted">
+              <p className={`${apoio} tabular-nums mt-1 text-fg-muted`}>
                 Saldo projetado: <span className={tomDoSaldo(saldoInicial + j.saldo)}>{moeda(saldoInicial + j.saldo)}</span>
               </p>
             )}
@@ -170,8 +201,17 @@ export function CartoesDaProjecao({ projecao, saldoInicial = null }: { projecao:
       </div>
       {(projecao.vencidos.entradas > 0 || projecao.vencidos.saidas > 0) && (
         <p className="text-helper text-warning-fg mt-3">
-          Fora das janelas: {moeda(projecao.vencidos.entradas)} a receber e {moeda(projecao.vencidos.saidas)} a pagar já
-          vencidos (ou com a previsão já passada) e não baixados.
+          {noPortal ? (
+            <>
+              Fora das janelas: {moeda(projecao.vencidos.entradas)} a receber e {moeda(projecao.vencidos.saidas)} a pagar
+              que já venceram e ainda não foram pagos ou recebidos.
+            </>
+          ) : (
+            <>
+              Fora das janelas: {moeda(projecao.vencidos.entradas)} a receber e {moeda(projecao.vencidos.saidas)} a pagar já
+              vencidos (ou com a previsão já passada) e não baixados.
+            </>
+          )}
         </p>
       )}
     </>
@@ -232,12 +272,16 @@ export function TabelaDoConsolidado({
   linhas,
   nomes,
   linkParaContas,
+  noPortal = false,
 }: {
   linhas: LinhaDoConsolidado[];
   nomes: Map<string, string>;
   /** Na tela interna, a vencida leva à lista. No portal, não há para onde levar. */
   linkParaContas?: boolean;
+  /** No portal, os cartões do celular em 13px, como no Fluxo de caixa (P33). */
+  noPortal?: boolean;
 }) {
+  const tamanho = noPortal ? "text-ui" : undefined;
   // No cartão e com ícone, como os vazios das outras telas do portal (15/10/2026):
   // solto, o vazio flutuava no fundo da página.
   if (linhas.length === 0) {
@@ -267,11 +311,11 @@ export function TabelaDoConsolidado({
             <Cartao>
             <p className="font-medium text-fg">{nomes.get(l.companyId) ?? "—"}</p>
             <dl className="mt-2 grid grid-cols-3 gap-2">
-              <ParNoCartao rotulo="Pago no mês" valor={moeda(l.pago)} />
-              <ParNoCartao rotulo="Recebido" valor={moeda(l.recebido)} />
-              <ParNoCartao rotulo="Saldo" valor={moeda(l.saldo)} tom={tomDoSaldo(l.saldo)} />
-              <ParNoCartao rotulo="Vencidas a pagar" valor={vencidas(l.companyId, l.vencidasPagar, "/pagar")} />
-              <ParNoCartao rotulo="Vencidas a receber" valor={vencidas(l.companyId, l.vencidasReceber, "/receber")} />
+              <ParNoCartao rotulo="Pago no mês" valor={moeda(l.pago)} tamanho={tamanho} />
+              <ParNoCartao rotulo="Recebido" valor={moeda(l.recebido)} tamanho={tamanho} />
+              <ParNoCartao rotulo="Saldo" valor={moeda(l.saldo)} tom={tomDoSaldo(l.saldo)} tamanho={tamanho} />
+              <ParNoCartao rotulo="Vencidas a pagar" valor={vencidas(l.companyId, l.vencidasPagar, "/pagar")} tamanho={tamanho} />
+              <ParNoCartao rotulo="Vencidas a receber" valor={vencidas(l.companyId, l.vencidasReceber, "/receber")} tamanho={tamanho} />
             </dl>
             </Cartao>
           </li>
