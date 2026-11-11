@@ -6,7 +6,9 @@ import { PortalCabecalho } from "./PortalCabecalho";
 import { ListaDeContasDoPortal } from "./ListaDeContasDoPortal";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
-import { contasDoEscopo, totaisDoEscopo } from "@/lib/financeiro/consultas";
+import { contasDoEscopo, empresasDoSeletor, totaisDoEscopo } from "@/lib/financeiro/consultas";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 import { saoPauloParts } from "@/lib/agenda";
 import { formatarCompetencia } from "@/lib/format";
 import { competenciaDoInstante } from "@/lib/financeiro/periodo";
@@ -29,15 +31,23 @@ const LIMITE = 500;
  * Filtros) moram em `ListaDeContasDoPortal`, de cliente: o recorte filtra no
  * navegador, sem ida ao servidor. Aqui fica só a leitura.
  */
-export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
+export async function PortalContas({ kind, empresaPedida }: { kind: "PAGAR" | "RECEBER"; empresaPedida?: string }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   const modulo = kind === "PAGAR" ? "bpo_contas_pagar" : "bpo_contas_receber";
   if (!modulos.has(modulo)) notFound();
 
+  // A empresa escolhida no portal vale aqui também (11/11/2026), como no Fluxo
+  // de caixa: a da URL ou a guardada, e só se for do acesso — senão, todas as
+  // do cliente. O recorte só estreita o escopo; nunca sai dele.
+  const doAcesso = escopo.companyIds ?? [];
+  const empresas = doAcesso.length > 1 ? await empresasDoSeletor(escopo.tenantId, doAcesso) : [];
+  const empresaId = empresaDaTela(empresaPedida, await empresaGuardadaDoPortal(), empresas.map((e) => e.id));
+  const recorte = empresaId ? { ...escopo, companyIds: [empresaId] } : escopo;
+
   const hojeKey = saoPauloParts(new Date()).dateKey;
   const [contas, totais, bloqueadas] = await Promise.all([
-    contasDoEscopo(escopo, kind, hojeKey),
-    totaisDoEscopo(escopo, kind, hojeKey),
+    contasDoEscopo(recorte, kind, hojeKey),
+    totaisDoEscopo(recorte, kind, hojeKey),
     telasBloqueadasDoPortal(escopo.tenantId),
   ]);
   // A empresa do cliente só aparece quando o acesso cobre mais de uma — ele
@@ -68,6 +78,8 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
           pagoDesde: totais.pagoDesde ? `desde ${formatarCompetencia(competenciaDoInstante(totais.pagoDesde))}` : undefined,
         }}
         aPagar={aPagar}
+        empresas={empresas}
+        empresaId={empresaId}
         variasEmpresas={variasEmpresas}
         linkDaAprovacao={linkDaAprovacao}
         limitada={contas.length >= LIMITE}
