@@ -39,11 +39,20 @@ export function RankingDoInicio({ resumo }: { resumo: ResumoDaAcademia }) {
       ) : (
         <ListaDoRanking teste={teste} topo={r.topo} eu={r.eu} rotulo={`Ranking de ${ROTULO_CURTO_DO_TESTE[teste]} em ${mes}`} />
       )}
-      {resumo.premio && (
+      {(resumo.premio || resumo.premioDaEvolucao) && (
         <p className="flex items-start gap-1.5 rounded-md bg-surface-2 px-3 py-2 text-ui text-fg-secondary">
           <Gift size={15} aria-hidden className="mt-0.5 flex-shrink-0 text-brand" />
           <span>
-            <span className="font-medium text-fg">Prêmio do mês:</span> {resumo.premio}
+            {resumo.premio && (
+              <span className="block">
+                <span className="font-medium text-fg">Prêmio do mês:</span> {resumo.premio}
+              </span>
+            )}
+            {resumo.premioDaEvolucao && (
+              <span className="block">
+                <span className="font-medium text-fg">Maior evolução:</span> {resumo.premioDaEvolucao}
+              </span>
+            )}
           </span>
         </p>
       )}

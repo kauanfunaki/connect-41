@@ -19,19 +19,22 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import {
-  MODULO_ACADEMIA, NIVEIS, QUESTOES_POR_RODADA, ROTULO_DO_NIVEL, ROTULO_DO_TESTE, TESTES, VALIDADE_DA_SESSAO_MS,
-  diaDoInstante, diaValendoDaSessao, ehNivel, mesDoInstante, motivoSemTeste, podeAdministrarAcademia, podeFazerTeste,
-  setorDoResultado, type Nivel, type Teste,
+  MODULO_ACADEMIA, NIVEIS, QUESTOES_POR_RODADA, ROTULO_DO_NIVEL, ROTULO_DO_TESTE, TESTES, TESTE_DO_DESAFIO, VALIDADE_DA_SESSAO_MS,
+  VALIDADE_DO_DESAFIO_MS, diaDoInstante, diaValendoDaSessao, ehNivel, mesDoInstante, motivoSemTeste, podeAdministrarAcademia,
+  podeFazerTeste, setorDoResultado, type Nivel, type Teste,
 } from "./regras";
 import { avaliarDigitacao } from "./digitacao";
 import { gerarTextoDeNumeros } from "./numeros";
 import { avaliarLogica, embaralhar, lerAlternativas, questaoSchema } from "./logica";
+import { atalhoPorId, avaliarAtalhos, sortearPedidos } from "./atalhos";
+import { indiceDoDesafio, sequenciaDeDias, type Sequencia } from "./sequencia";
+import { metaDaPessoa } from "./metaServidor";
 import {
   melhorDoMes, montarRanking, posicaoDe, recorteDoRanking, semQuemSaiu,
   type LinhaDoResultado, type PosicaoNoRanking,
 } from "./ranking";
 import type {
-  LinhaDaTela, QuestaoNaTela, RankingNaTela, ResultadoDoEnvio, ResumoDaAcademia, ResumoDoTeste, RodadaServida, TextoNaTela,
+  DesafioDeHoje, LinhaDaTela, QuestaoNaTela, RankingNaTela, ResultadoDoEnvio, ResumoDaAcademia, ResumoDoTeste, RodadaServida, TextoNaTela,
 } from "./tipos";
 
 type Quem = Pick<AuthContext, "userId" | "tenantId" | "homeTenantId" | "role" | "sectors" | "subscriptionReadOnly" | "activeSector">;
@@ -76,7 +79,7 @@ async function linhasDoMes(tenantId: string, f: Filtro): Promise<LinhaDoResultad
 }
 
 /** Quem desligou "Aparecer no ranking" neste escritório (lista curta). */
-async function foraDoRanking(tenantId: string): Promise<Set<string>> {
+export async function foraDoRanking(tenantId: string): Promise<Set<string>> {
   const prefs = await getPrisma().academiaPreferencia.findMany({ where: { tenantId, aparecerNoRanking: false }, select: { userId: true } });
   return new Set(prefs.map((p) => p.userId));
 }
@@ -87,10 +90,14 @@ export async function apareceNoRanking(ctx: Pick<Quem, "userId">): Promise<boole
 }
 
 /** Os rótulos dos setores, uma leitura por requisição (o Início monta seis recortes). */
-const rotulosDosSetores = cache(async (tenantId: string) => (await getSectorMaps(tenantId)).labels);
+export const rotulosDosSetores = cache(async (tenantId: string) => (await getSectorMaps(tenantId)).labels);
 
 /** Nome, foto e o rótulo do setor só das linhas que vão para a tela. */
-async function comNomes(tenantId: string, posicoes: PosicaoNoRanking[], userId: string | null): Promise<LinhaDaTela[]> {
+export async function comNomes<T extends { userId: string; sectorCode: string | null }>(
+  tenantId: string,
+  posicoes: T[],
+  userId: string | null,
+): Promise<(T & { nome: string; fotoUrl: string | null; setor: string | null; eu: boolean })[]> {
   if (posicoes.length === 0) return [];
   const [pessoas, labels] = await Promise.all([
     getPrisma().user.findMany({ where: { tenantId, id: { in: posicoes.map((p) => p.userId) } }, select: { id: true, name: true, photoUrl: true } }),
@@ -133,7 +140,7 @@ async function usadosHoje(ctx: Pick<Quem, "userId">, agora: Date): Promise<Recor
     where: { userId: ctx.userId, diaValendo: diaDoInstante(agora) },
     select: { teste: true, nivel: true },
   });
-  const r: Record<Teste, Nivel[]> = { digitacao: [], numeros: [], logica: [] };
+  const r: Record<Teste, Nivel[]> = { digitacao: [], numeros: [], logica: [], atalhos: [] };
   for (const s of sessoes) if ((TESTES as readonly string[]).includes(s.teste) && ehNivel(s.nivel)) r[s.teste as Teste].push(s.nivel);
   return r;
 }
@@ -147,7 +154,9 @@ async function disponibilidade(tenantId: string): Promise<ResumoDaAcademia["disp
   ]);
   const tem = (grupos: { nivel: string; _count: { _all: number } }[]) =>
     Object.fromEntries(NIVEIS.map((n) => [n, grupos.some((g) => g.nivel === n && g._count._all > 0)])) as Record<Nivel, boolean>;
-  return { digitacao: tem(textos), numeros: { facil: true, medio: true, dificil: true }, logica: tem(questoes) };
+  const sempre = { facil: true, medio: true, dificil: true };
+  // Atalhos (Fase 2): o banco é do código, então sempre há o que servir.
+  return { digitacao: tem(textos), numeros: sempre, logica: tem(questoes), atalhos: sempre };
 }
 
 /** Para a tela de um teste: os níveis já usados hoje e onde há o que servir — sem ler ranking. */
@@ -156,9 +165,95 @@ export async function estadoDoTeste(ctx: Pick<Quem, "tenantId" | "userId">, test
   return { usadosHoje: usados[teste], disponivel: disponivel[teste] };
 }
 
+/**
+ * Os prêmios do mês: o do pódio (top 3 de cada teste) e o da maior evolução
+ * (Fase 2). Texto vazio vira nulo.
+ */
+export async function premiosDoMes(tenantId: string, mes: string): Promise<{ podio: string | null; evolucao: string | null }> {
+  const p = await getPrisma().academiaPremio.findUnique({ where: { tenantId_mes: { tenantId, mes } }, select: { texto: true, textoEvolucao: true } });
+  return { podio: p?.texto || null, evolucao: p?.textoEvolucao || null };
+}
+
 export async function premioDoMes(tenantId: string, mes: string): Promise<string | null> {
-  const p = await getPrisma().academiaPremio.findUnique({ where: { tenantId_mes: { tenantId, mes } }, select: { texto: true } });
-  return p?.texto ?? null;
+  return (await premiosDoMes(tenantId, mes)).podio;
+}
+
+// ─── Desafio do dia e sequência (Fase 2) ─────────────────────────────────────
+
+/** Os dias com o desafio feito (a pessoa faz no máximo um por dia). */
+async function diasDoDesafio(userId: string): Promise<string[]> {
+  const linhas = await getPrisma().academiaResultado.findMany({
+    where: { userId, teste: TESTE_DO_DESAFIO, dia: { not: null } },
+    select: { dia: true },
+    orderBy: { dia: "desc" },
+    take: 2000,
+  });
+  return linhas.flatMap((l) => (l.dia ? [l.dia] : []));
+}
+
+/** A sequência de dias de quem olha. Barata: uma leitura pelo índice (userId, teste, dia). */
+export async function sequenciaDaPessoa(userId: string, agora: Date = new Date()): Promise<Sequencia> {
+  return sequenciaDeDias(await diasDoDesafio(userId), diaDoInstante(agora));
+}
+
+/** O texto do desafio do dia: o mesmo para todo o escritório (`indiceDoDesafio`). */
+async function textoDoDesafio(tenantId: string, dia: string): Promise<{ id: string; nivel: string; conteudo: string } | null> {
+  const db = getPrisma();
+  const where = { tenantId, ativo: true };
+  const quantos = await db.academiaTexto.count({ where });
+  if (quantos === 0) return null;
+  return db.academiaTexto.findFirst({ where, orderBy: { id: "asc" }, skip: indiceDoDesafio(dia, quantos), select: { id: true, nivel: true, conteudo: true } });
+}
+
+export async function desafioDeHoje(ctx: Pick<Quem, "tenantId" | "userId">, agora: Date = new Date()): Promise<DesafioDeHoje> {
+  const dia = diaDoInstante(agora);
+  const db = getPrisma();
+  const [quantos, hoje, sessao, sequencia] = await Promise.all([
+    db.academiaTexto.count({ where: { tenantId: ctx.tenantId, ativo: true } }),
+    db.academiaResultado.findFirst({ where: { userId: ctx.userId, teste: TESTE_DO_DESAFIO, dia }, select: { ppm: true, precisao: true } }),
+    db.academiaSessao.findFirst({ where: { userId: ctx.userId, teste: TESTE_DO_DESAFIO, diaValendo: dia }, select: { id: true } }),
+    sequenciaDaPessoa(ctx.userId, agora),
+  ]);
+  return {
+    disponivel: quantos > 0,
+    feitoHoje: Boolean(hoje),
+    usadoHoje: Boolean(sessao),
+    resultado: hoje ? { ppm: hoje.ppm ?? 0, precisao: Number(hoje.precisao) } : null,
+    sequencia,
+  };
+}
+
+/**
+ * Começa o desafio do dia: uma vez por dia, valendo, com o texto do dia. Como
+ * no teste valendo, começar conta — a sessão grava o dia, e a chave única
+ * (userId, teste, nivel, diaValendo) deixa entrar uma só.
+ */
+export async function comecarDesafio(ctx: Quem): Promise<RodadaServida | { erro: string }> {
+  if (!(await ligada(ctx))) return { erro: "A Academia não está disponível." };
+  if (!podeFazerTeste(ctx)) return { erro: motivoSemTeste(ctx) };
+  const db = getPrisma();
+  const agora = new Date();
+  const dia = diaDoInstante(agora);
+  const usada = await db.academiaSessao.findFirst({ where: { userId: ctx.userId, teste: TESTE_DO_DESAFIO, diaValendo: dia }, select: { id: true } });
+  if (usada) return { erro: "Você já fez o desafio de hoje. Amanhã tem outro!" };
+  const escolhido = await textoDoDesafio(ctx.tenantId, dia);
+  if (!escolhido || !ehNivel(escolhido.nivel)) return { erro: "Ainda não há textos de digitação para o desafio. Peça a quem administra a Academia para cadastrar." };
+  const texto = escolhido.conteudo.replace(/\r\n/g, "\n").trim();
+  const nonce = randomBytes(16).toString("hex");
+  const expiraEm = new Date(agora.getTime() + VALIDADE_DO_DESAFIO_MS);
+  try {
+    const sessao = await db.academiaSessao.create({
+      data: {
+        tenantId: ctx.tenantId, userId: ctx.userId, teste: TESTE_DO_DESAFIO, nivel: escolhido.nivel, valendo: true, diaValendo: dia, nonce,
+        payload: { tipo: "texto", texto, textoId: escolhido.id }, startedAt: agora, expiresAt: expiraEm,
+      },
+      select: { id: true },
+    });
+    return { teste: "digitacao", desafio: true, sessaoId: sessao.id, nonce, nivel: escolhido.nivel, valendo: true, texto, expiraEm: expiraEm.toISOString() };
+  } catch (e) {
+    if (isPrismaUniqueError(e)) return { erro: "Você já fez o desafio de hoje. Amanhã tem outro!" };
+    throw e;
+  }
 }
 
 /**
@@ -169,12 +264,14 @@ export async function premioDoMes(tenantId: string, mes: string): Promise<string
 export async function resumoDaAcademia(ctx: Pick<Quem, "tenantId" | "userId">, opcoes: { topo?: number; agora?: Date } = {}): Promise<ResumoDaAcademia> {
   const agora = opcoes.agora ?? new Date();
   const mes = mesDoInstante(agora);
-  const [porTeste, aparece, usados, premio, disponivel] = await Promise.all([
+  const [porTeste, aparece, usados, premios, disponivel, desafio, meta] = await Promise.all([
     Promise.all(TESTES.map((teste) => rankingDoMes(ctx.tenantId, { teste, mes, nivel: null, setor: null }))),
     apareceNoRanking(ctx),
     usadosHoje(ctx, agora),
-    premioDoMes(ctx.tenantId, mes),
+    premiosDoMes(ctx.tenantId, mes),
     disponibilidade(ctx.tenantId),
+    desafioDeHoje(ctx, agora),
+    metaDaPessoa(ctx, agora),
   ]);
 
   const testes = {} as Record<Teste, ResumoDoTeste>;
@@ -202,7 +299,7 @@ export async function resumoDaAcademia(ctx: Pick<Quem, "tenantId" | "userId">, o
     };
     if (minha && (!melhorPosicao || minha.posicao < melhorPosicao.posicao)) melhorPosicao = { teste, posicao: minha.posicao, participantes: ranking.length };
   }
-  return { mes, aparece, premio, testes, melhorPosicao, disponivel };
+  return { mes, aparece, premio: premios.podio, premioDaEvolucao: premios.evolucao, testes, melhorPosicao, disponivel, desafio, meta };
 }
 
 // ─── Rodadas ─────────────────────────────────────────────────────────────────
@@ -211,7 +308,10 @@ const comecarSchema = z.object({ teste: z.enum(TESTES), nivel: z.enum(NIVEIS), v
 
 type Payload =
   | { tipo: "texto"; texto: string; textoId?: string; semente?: number }
-  | { tipo: "questoes"; questoes: { id: string; correta: number }[] };
+  | { tipo: "questoes"; questoes: { id: string; correta: number }[] }
+  // Atalhos (Fase 2): os ids dos pedidos, na ordem servida. As teclas certas
+  // ficam no código (`BANCO_DE_ATALHOS`), e não na tela.
+  | { tipo: "atalhos"; pedidos: string[] };
 
 /**
  * Serve uma rodada: escolhe o texto (ou gera o de números, ou sorteia as
@@ -238,8 +338,20 @@ export async function comecarRodada(ctx: Quem, raw: unknown): Promise<RodadaServ
   }
 
   let payload: Payload;
-  let paraTela: { texto: string } | { questoes: Extract<RodadaServida, { teste: "logica" }>["questoes"] };
-  if (teste === "numeros") {
+  let paraTela:
+    | { texto: string }
+    | { questoes: Extract<RodadaServida, { teste: "logica" }>["questoes"] }
+    | { pedidos: Extract<RodadaServida, { teste: "atalhos" }>["pedidos"] };
+  if (teste === "atalhos") {
+    const pedidos = sortearPedidos(nivel, () => randomInt(1_000_000) / 1_000_000);
+    payload = { tipo: "atalhos", pedidos };
+    paraTela = {
+      pedidos: pedidos.flatMap((id) => {
+        const a = atalhoPorId(id);
+        return a ? [{ id: a.id, acao: a.acao, onde: a.onde }] : [];
+      }),
+    };
+  } else if (teste === "numeros") {
     const semente = randomInt(2 ** 31 - 1);
     const texto = gerarTextoDeNumeros(nivel, semente);
     payload = { tipo: "texto", texto, semente };
@@ -278,6 +390,7 @@ export async function comecarRodada(ctx: Quem, raw: unknown): Promise<RodadaServ
       select: { id: true },
     });
     const base = { sessaoId: sessao.id, nonce, nivel, valendo, expiraEm: expiraEm.toISOString() };
+    if ("pedidos" in paraTela) return { ...base, teste: "atalhos", pedidos: paraTela.pedidos };
     return "texto" in paraTela
       ? { ...base, teste: teste as "digitacao" | "numeros", texto: paraTela.texto }
       : { ...base, teste: "logica", questoes: paraTela.questoes };
@@ -313,6 +426,12 @@ const envioDaLogicaSchema = z.object({
   respostas: z.array(z.number().int().min(0).max(20).nullable()).max(50),
   duracaoMs: z.number().finite().min(0).max(30 * 60_000),
 });
+const envioDosAtalhosSchema = z.object({
+  sessaoId: z.string().min(1).max(64),
+  nonce: z.string().length(32),
+  respostas: z.array(z.string().max(40).nullable()).max(200),
+  duracaoMs: z.number().finite().min(0).max(30 * 60_000),
+});
 
 const mesmoNonce = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
@@ -322,9 +441,10 @@ const mesmoNonce = (a: string, b: string) => a.length === b.length && timingSafe
  * Envio recusado pela correção também fecha a sessão — sem reenviar com outros
  * números.
  */
-type SessaoFechada = { id: string; teste: Teste; nivel: Nivel; valendo: boolean; payload: Payload | null; startedAt: Date };
+type TesteDaSessao = Teste | typeof TESTE_DO_DESAFIO;
+type SessaoFechada = { id: string; teste: TesteDaSessao; nivel: Nivel; valendo: boolean; payload: Payload | null; startedAt: Date };
 
-async function fecharSessao(ctx: Quem, sessaoId: string, nonce: string, testes: readonly Teste[], agora: Date): Promise<{ erro: string } | { sessao: SessaoFechada }> {
+async function fecharSessao(ctx: Quem, sessaoId: string, nonce: string, testes: readonly TesteDaSessao[], agora: Date): Promise<{ erro: string } | { sessao: SessaoFechada }> {
   const db = getPrisma();
   const s = await db.academiaSessao.findFirst({
     where: { id: sessaoId, tenantId: ctx.tenantId, userId: ctx.userId },
@@ -335,21 +455,27 @@ async function fecharSessao(ctx: Quem, sessaoId: string, nonce: string, testes: 
   if (agora.getTime() > s.expiresAt.getTime()) return { erro: "O tempo desta rodada acabou. Comece outra." };
   const { count } = await db.academiaSessao.updateMany({ where: { id: s.id, submittedAt: null }, data: { submittedAt: agora } });
   if (count === 0) return { erro: "Esta rodada já foi enviada." };
-  return { sessao: { id: s.id, teste: s.teste as Teste, nivel: s.nivel, valendo: s.valendo, payload: s.payload as unknown as Payload | null, startedAt: s.startedAt } };
+  return { sessao: { id: s.id, teste: s.teste as TesteDaSessao, nivel: s.nivel, valendo: s.valendo, payload: s.payload as unknown as Payload | null, startedAt: s.startedAt } };
 }
 
+/** O mês e o dia do resultado, em São Paulo — o dia conta a sequência do desafio (Fase 2). */
+const quandoDoResultado = (agora: Date) => ({ mes: mesDoInstante(agora), dia: diaDoInstante(agora) });
+
+/** Digitação, números e o desafio do dia (que é digitação, com o texto do dia). */
 export async function enviarDigitacao(ctx: Quem, raw: unknown): Promise<ResultadoDoEnvio> {
   if (!(await ligada(ctx))) return { ok: false, erro: "A Academia não está disponível." };
   const parsed = envioDaDigitacaoSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, erro: "Envio inválido. Comece de novo." };
   const agora = new Date();
-  const fechada = await fecharSessao(ctx, parsed.data.sessaoId, parsed.data.nonce, ["digitacao", "numeros"], agora);
+  const fechada = await fecharSessao(ctx, parsed.data.sessaoId, parsed.data.nonce, ["digitacao", "numeros", TESTE_DO_DESAFIO], agora);
   if ("erro" in fechada) return { ok: false, erro: fechada.erro };
   const { sessao } = fechada;
   if (sessao.payload?.tipo !== "texto") return { ok: false, erro: "Rodada não encontrada. Comece de novo." };
+  const desafio = sessao.teste === TESTE_DO_DESAFIO;
+  const teste: "digitacao" | "numeros" = sessao.teste === "numeros" ? "numeros" : "digitacao";
 
   const r = avaliarDigitacao({
-    teste: sessao.teste,
+    teste,
     servido: sessao.payload.texto,
     digitado: parsed.data.digitado,
     duracaoDoNavegadorMs: parsed.data.duracaoMs,
@@ -361,10 +487,43 @@ export async function enviarDigitacao(ctx: Quem, raw: unknown): Promise<Resultad
   await getPrisma().academiaResultado.create({
     data: {
       tenantId: ctx.tenantId, userId: ctx.userId, sectorCode: setorDoResultado(ctx), teste: sessao.teste, nivel: sessao.nivel,
-      mes: mesDoInstante(agora), ppm: r.ppm, precisao: r.precisao, duracaoMs: r.duracaoMs, valendo: sessao.valendo, sessaoId: sessao.id,
+      ...quandoDoResultado(agora), ppm: r.ppm, precisao: r.precisao, duracaoMs: r.duracaoMs, valendo: sessao.valendo, sessaoId: sessao.id,
     },
   });
-  return { ok: true, teste: sessao.teste, nivel: sessao.nivel, valendo: sessao.valendo, ppm: r.ppm, acertos: null, total: null, precisao: r.precisao, duracaoMs: r.duracaoMs };
+  const base = { ok: true as const, teste, nivel: sessao.nivel, valendo: sessao.valendo, ppm: r.ppm, acertos: null, total: null, precisao: r.precisao, duracaoMs: r.duracaoMs };
+  return desafio ? { ...base, desafio: { sequencia: await sequenciaDaPessoa(ctx.userId, agora) } } : base;
+}
+
+/** Atalhos (Fase 2): as teclas apertadas, na ordem dos pedidos servidos. */
+export async function enviarAtalhos(ctx: Quem, raw: unknown): Promise<ResultadoDoEnvio> {
+  if (!(await ligada(ctx))) return { ok: false, erro: "A Academia não está disponível." };
+  const parsed = envioDosAtalhosSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, erro: "Envio inválido. Comece de novo." };
+  const agora = new Date();
+  const fechada = await fecharSessao(ctx, parsed.data.sessaoId, parsed.data.nonce, ["atalhos"], agora);
+  if ("erro" in fechada) return { ok: false, erro: fechada.erro };
+  const { sessao } = fechada;
+  if (sessao.payload?.tipo !== "atalhos") return { ok: false, erro: "Rodada não encontrada. Comece de novo." };
+
+  const r = avaliarAtalhos({
+    pedidos: sessao.payload.pedidos,
+    respostas: parsed.data.respostas,
+    duracaoDoNavegadorMs: parsed.data.duracaoMs,
+    decorridoNoServidorMs: agora.getTime() - sessao.startedAt.getTime(),
+  });
+  if (!r.ok) return { ok: false, erro: `Resultado descartado: ${r.motivo}` };
+  if (r.total === 0) return { ok: false, erro: "Nenhum atalho respondido: a rodada não conta." };
+
+  await getPrisma().academiaResultado.create({
+    data: {
+      tenantId: ctx.tenantId, userId: ctx.userId, sectorCode: setorDoResultado(ctx), teste: "atalhos", nivel: sessao.nivel,
+      ...quandoDoResultado(agora), acertos: r.acertos, total: r.total, precisao: r.precisao, duracaoMs: r.duracaoMs, valendo: sessao.valendo, sessaoId: sessao.id,
+    },
+  });
+  return {
+    ok: true, teste: "atalhos", nivel: sessao.nivel, valendo: sessao.valendo, ppm: null, acertos: r.acertos, total: r.total,
+    precisao: r.precisao, duracaoMs: r.duracaoMs, correcao: r.correcao,
+  };
 }
 
 export async function enviarLogica(ctx: Quem, raw: unknown): Promise<ResultadoDoEnvio> {
@@ -388,7 +547,7 @@ export async function enviarLogica(ctx: Quem, raw: unknown): Promise<ResultadoDo
   await getPrisma().academiaResultado.create({
     data: {
       tenantId: ctx.tenantId, userId: ctx.userId, sectorCode: setorDoResultado(ctx), teste: "logica", nivel: sessao.nivel,
-      mes: mesDoInstante(agora), acertos: r.acertos, total: r.total, precisao: r.precisao, duracaoMs: r.duracaoMs, valendo: sessao.valendo, sessaoId: sessao.id,
+      ...quandoDoResultado(agora), acertos: r.acertos, total: r.total, precisao: r.precisao, duracaoMs: r.duracaoMs, valendo: sessao.valendo, sessaoId: sessao.id,
     },
   });
   return { ok: true, teste: "logica", nivel: sessao.nivel, valendo: sessao.valendo, ppm: null, acertos: r.acertos, total: r.total, precisao: r.precisao, duracaoMs: r.duracaoMs };
@@ -484,33 +643,41 @@ export async function salvarQuestao(ctx: Quem, raw: unknown): Promise<{ ok: true
   return { ok: true };
 }
 
-/** Os prêmios dos meses pedidos, para a tela de administração. */
-export async function premiosDosMeses(tenantId: string, meses: string[]): Promise<Record<string, string>> {
-  const linhas = await getPrisma().academiaPremio.findMany({ where: { tenantId, mes: { in: meses } }, select: { mes: true, texto: true } });
-  return Object.fromEntries(linhas.map((l) => [l.mes, l.texto]));
+/** Os prêmios dos meses pedidos (o do pódio e o da maior evolução), para a tela de administração. */
+export async function premiosDosMeses(tenantId: string, meses: string[]): Promise<Record<string, { podio: string; evolucao: string }>> {
+  const linhas = await getPrisma().academiaPremio.findMany({ where: { tenantId, mes: { in: meses } }, select: { mes: true, texto: true, textoEvolucao: true } });
+  return Object.fromEntries(linhas.map((l) => [l.mes, { podio: l.texto, evolucao: l.textoEvolucao ?? "" }]));
 }
 
 const premioSchema = z.object({
   mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Escolha o mês."),
   texto: z.string().trim().max(200, "Use até 200 caracteres."),
+  // Fase 2: o prêmio da maior evolução. Sem o campo (tela antiga), fica como está.
+  textoEvolucao: z.string().trim().max(200, "Use até 200 caracteres.").optional(),
 });
 
-/** Grava o prêmio do mês; texto vazio tira o prêmio. */
+/** Grava os prêmios do mês; os dois vazios tiram o prêmio do mês. */
 export async function salvarPremio(ctx: Quem, raw: unknown): Promise<{ ok: true } | { erro: string }> {
   if (!(await podeAdministrar(ctx))) return SEM_PERMISSAO;
   const parsed = premioSchema.safeParse(raw);
   if (!parsed.success) return { erro: parsed.error.issues[0].message };
   const { mes, texto } = parsed.data;
   const db = getPrisma();
-  if (!texto) {
+  const atual = await db.academiaPremio.findUnique({ where: { tenantId_mes: { tenantId: ctx.tenantId, mes } }, select: { textoEvolucao: true } });
+  const textoEvolucao = parsed.data.textoEvolucao ?? atual?.textoEvolucao ?? "";
+  if (!texto && !textoEvolucao) {
     await db.academiaPremio.deleteMany({ where: { tenantId: ctx.tenantId, mes } });
   } else {
+    const dados = { texto, textoEvolucao: textoEvolucao || null, updatedById: ctx.userId };
     await db.academiaPremio.upsert({
       where: { tenantId_mes: { tenantId: ctx.tenantId, mes } },
-      create: { tenantId: ctx.tenantId, mes, texto, updatedById: ctx.userId },
-      update: { texto, updatedById: ctx.userId },
+      create: { tenantId: ctx.tenantId, mes, ...dados },
+      update: dados,
     });
   }
-  await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "academia.premio.update", entityType: "AcademiaPremio", entityId: mes, metadata: { mes, texto: texto || null } });
+  await logAudit({
+    tenantId: ctx.tenantId, userId: ctx.userId, action: "academia.premio.update", entityType: "AcademiaPremio", entityId: mes,
+    metadata: { mes, texto: texto || null, textoEvolucao: textoEvolucao || null },
+  });
   return { ok: true };
 }

@@ -1457,6 +1457,10 @@ model Tenant {
   academiaResultados AcademiaResultado[]
   academiaPreferencias AcademiaPreferencia[]
   academiaPremios AcademiaPremio[]
+  academiaMetas AcademiaMeta[]
+  academiaCampeoes AcademiaCampeao[]
+  academiaMesesFechados AcademiaMesFechado[]
+  academiaParabens AcademiaParabens[]
   flowFolders FlowFolder[]
   flowDocs FlowDoc[]
   techInternalTools TechInternalTool[]
@@ -2038,7 +2042,11 @@ model User {
   academiaSessoes         AcademiaSessao[]
   academiaResultados      AcademiaResultado[]
   academiaPreferencia     AcademiaPreferencia?
-  opsWatchers                 OpsWatcher[]
+  academiaMeta            AcademiaMeta?
+  academiaCampeoes        AcademiaCampeao[]
+  academiaParabensEnviados  AcademiaParabens[] @relation("AcademiaParabensDe")
+  academiaParabensRecebidos AcademiaParabens[] @relation("AcademiaParabensPara")
+  opsWatchers                OpsWatcher[]
   opsSites                    OpsSite[]
   opsApps                     OpsApp[]
   id           String   @id @default(uuid())
@@ -11379,9 +11387,12 @@ model AcademiaResultado {
   nivel       String   @db.VarChar(10)
   /// "AAAA-MM", em São Paulo.
   mes         String   @db.Char(7)
+  /// "AAAA-MM-DD", em São Paulo (Fase 2, 11/11/2026): é por ele que o desafio
+  /// do dia conta a sequência. Nulo nos resultados de antes da Fase 2.
+  dia         String?  @db.Char(10)
   /// Palavras por minuto (digitação e números).
   ppm         Int?
-  /// Acertos e total de questões (lógica).
+  /// Acertos e total de questões (lógica), ou de pedidos respondidos (atalhos).
   acertos     Int?
   total       Int?
   precisao    Decimal  @db.Decimal(5, 2)
@@ -11399,6 +11410,7 @@ model AcademiaResultado {
   @@unique([tenantId, origemHubId])
   @@index([tenantId, teste, mes, valendo, nivel])
   @@index([userId, teste, mes])
+  @@index([userId, teste, dia])
   @@map("academia_resultados")
 }
 
@@ -11422,7 +11434,10 @@ model AcademiaPremio {
   id          String   @id @default(uuid())
   tenantId    String
   mes         String   @db.Char(7)
+  /// O prêmio do pódio (top 3 de cada teste). Vazio quando só há o da evolução.
   texto       String   @db.VarChar(200)
+  /// O prêmio da maior evolução do mês (Fase 2, 11/11/2026).
+  textoEvolucao String? @db.VarChar(200)
   updatedById String?
   updatedAt   DateTime @updatedAt
 
@@ -11430,6 +11445,96 @@ model AcademiaPremio {
 
   @@unique([tenantId, mes])
   @@map("academia_premios")
+}
+
+// ─── Academia (Fase 2, 11/11/2026, Controle interno funcionalidade-594) ─────
+//
+// Desafio do dia e sequência (sem tabela nova: sessão e resultado com teste
+// "desafio" e a coluna `dia`), atalhos (teste "atalhos"), meta pessoal, Hall
+// dos campeões e parabéns entre colegas. Conquistas e placar por setor saem
+// do que já está gravado.
+
+/// A meta pessoal: uma por pessoa ("60 PPM na digitação até 30/11"). Trocar substitui.
+model AcademiaMeta {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String   @unique
+  teste     String   @db.VarChar(12)
+  /// Nulo: vale qualquer nível.
+  nivel     String?  @db.VarChar(10)
+  /// PPM (digitação e números) ou acertos (lógica e atalhos).
+  alvo      Int
+  /// "AAAA-MM-DD".
+  prazo     String   @db.Char(10)
+  /// O progresso conta os resultados valendo a partir daqui.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("academia_metas")
+}
+
+/// O Hall dos campeões: o pódio de cada teste e a maior evolução de um mês
+/// encerrado, gravados quando o mês fecha (ver `src/lib/academia/hall.ts`).
+model AcademiaCampeao {
+  id        String   @id @default(uuid())
+  tenantId  String
+  mes       String   @db.Char(7)
+  /// Um teste ("digitacao"…) ou "evolucao".
+  categoria String   @db.VarChar(12)
+  posicao   Int
+  userId    String
+  /// O teste do resultado (na evolução, o teste em que a pessoa mais evoluiu).
+  teste     String   @db.VarChar(12)
+  /// O resultado como ficou: "62 PPM · 96%", "+18% em Digitação (54 PPM)".
+  valor     String   @db.VarChar(80)
+  /// O prêmio do mês, como estava quando o mês fechou.
+  premio    String?  @db.VarChar(200)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, mes, categoria, posicao])
+  @@index([userId, categoria])
+  @@map("academia_campeoes")
+}
+
+/// A marca de que o Hall de um mês já foi gravado (mesmo sem campeão nenhum).
+model AcademiaMesFechado {
+  id        String   @id @default(uuid())
+  tenantId  String
+  mes       String   @db.Char(7)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, mes])
+  @@map("academia_meses_fechados")
+}
+
+/// "Parabéns" de um colega no Hall ou no ranking: um por quem manda, quem
+/// recebe, mês e tipo (o teste ou "evolucao"). Avisa quem recebe no sino.
+model AcademiaParabens {
+  id         String   @id @default(uuid())
+  tenantId   String
+  deUserId   String
+  paraUserId String
+  mes        String   @db.Char(7)
+  tipo       String   @db.VarChar(12)
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  de     User   @relation("AcademiaParabensDe", fields: [deUserId], references: [id], onDelete: Cascade)
+  para   User   @relation("AcademiaParabensPara", fields: [paraUserId], references: [id], onDelete: Cascade)
+
+  @@unique([deUserId, paraUserId, mes, tipo])
+  @@index([paraUserId, mes])
+  @@index([tenantId, mes, tipo])
+  @@map("academia_parabens")
 }
 
 // ─── Repositório de fluxos (10/11/2026, pedido do Kauan) ────────────────────

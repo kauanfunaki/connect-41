@@ -8,8 +8,33 @@ import { Card } from "@/components/ui/Card";
 import { ROTULO_DO_NIVEL, ROTULO_DO_TESTE, ehDeDigitar, type Teste } from "@/lib/academia/regras";
 import { formatarPrecisao } from "@/lib/academia/ranking";
 import type { ResultadoDoEnvio } from "@/lib/academia/tipos";
+import type { CorrecaoDoPedido } from "@/lib/academia/atalhos";
 
 const segundos = (ms: number) => `${Math.round(ms / 1000)} s`;
+
+/** Os erros da rodada de atalhos, um por ação (a mesma ação errada duas vezes aparece uma vez). */
+function ErrosDosAtalhos({ correcao }: { correcao: CorrecaoDoPedido[] }) {
+  const porAcao = new Map<string, CorrecaoDoPedido>();
+  for (const c of correcao) if (!c.acertou && !porAcao.has(c.id)) porAcao.set(c.id, c);
+  const erros = [...porAcao.values()];
+  if (erros.length === 0) return <p className="text-ui text-fg-secondary">Nenhum erro. Mão no teclado!</p>;
+  return (
+    <section aria-labelledby="erros-titulo" className="flex flex-col gap-2">
+      <h3 id="erros-titulo" className="text-body font-semibold text-fg">Para treinar</h3>
+      <ul className="flex flex-col divide-y divide-border-soft rounded-md border border-border">
+        {erros.map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-ui">
+            <span className="text-fg">{c.acao}</span>
+            <span className="flex items-center gap-2 tabular-nums">
+              {c.respondida && <span className="text-helper text-fg-muted">você apertou {c.respondida}</span>}
+              <kbd className="rounded-sm border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-helper font-semibold text-fg">{c.certa}</kbd>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 /**
  * O resultado da rodada (10/11/2026): os números que o servidor conferiu, se
@@ -69,6 +94,8 @@ export function ResultadoDaRodada({ teste, resultado, onDeNovo }: { teste: Teste
           </div>
         ))}
       </dl>
+      {/* Atalhos (Fase 2): os erros, com o atalho certo — é aí que se aprende. */}
+      {resultado.correcao && <ErrosDosAtalhos correcao={resultado.correcao} />}
       <div className="flex flex-wrap gap-2">
         <Button onClick={onDeNovo} className="min-h-11 sm:min-h-0">
           <RotateCcw size={14} aria-hidden /> {resultado.valendo ? "Fazer outra rodada" : "Treinar de novo"}

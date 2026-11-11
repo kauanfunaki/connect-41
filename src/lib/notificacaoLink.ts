@@ -49,6 +49,8 @@ export function linkDaNotificacao(n: NotificacaoParaLink, numero?: { tela: TelaC
   // Várias conversas do WhatsApp passadas de uma vez (02/10/2026): o aviso é um
   // só, sem conversa própria, e abre a lista das que estão com a pessoa.
   if (n.type === "WHATSAPP_HANDOFF" && !n.entityId) return "/whatsapp?ver=minhas";
+  // O "Parabéns" de um colega na Academia (11/11/2026): o Início dela mostra quantos chegaram.
+  if (n.type === "ACADEMIA_PARABENS") return "/academia";
   if (!n.entityId) return null;
   const id = n.entityId;
   const de = (tela: TelaCurta) => enderecoDe(tela, { id, number: numero?.tela === tela ? numero.numero : null });

@@ -303,7 +303,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
     // formatura no topo, e não um item de setor); a Tech liga, desliga e
     // administra. Nasce desligada: liga depois da importação do Hub.
     code: "academia", label: "Academia", sectorCode: "tech",
-    description: "Testes de digitação, de digitação de números e de lógica, com ranking do mês entre os colegas e certificado para o pódio",
+    description: "Testes de digitação, de números, de lógica e de atalhos, com desafio do dia, ranking do mês e de evolução entre os colegas, Hall dos campeões e certificado para o pódio",
     defaultEnabled: false, icon: "GraduationCap", group: "Apoio", fixedSector: true,
   },
   {

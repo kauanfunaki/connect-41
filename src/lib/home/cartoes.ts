@@ -52,6 +52,10 @@ export type NumeroDoCartao = {
    * "atrasadas e de hoje", as vencidas das pendências. Decide o tom.
    */
   alerta?: number;
+  /** O texto ao lado do número no lugar da fração ("dias seguidos"). */
+  apoio?: string;
+  /** Uma linha embaixo do número (o desafio de hoje e o campeão do mês, na Academia). */
+  detalhe?: string;
 };
 
 /** Os tons do MetricCard que o cartão usa: a cor só no que pede atenção. */
@@ -91,7 +95,8 @@ export type IconeDoCartao =
   | "lead"
   | "contato"
   | "caixa"
-  | "minhas";
+  | "minhas"
+  | "academia";
 
 export type DefinicaoDoCartao = {
   chave: MetricaDaHome;
@@ -147,6 +152,13 @@ const temCaixaDeSetor: DefinicaoDoCartao["pode"] = (quem) => {
 const comSolicitacoes: DefinicaoDoCartao["pode"] = (_quem, amb) => !!amb.modulos.get("portal_solicitacoes")?.ligado;
 
 const comChamados: DefinicaoDoCartao["pode"] = (_quem, amb) => amb.helpdesk.ligado;
+
+/**
+ * A Academia (Fase 2, 11/11/2026) é de toda a equipe, de qualquer setor,
+ * inclusive o Somente leitura (`MODULOS_DE_TODA_A_EQUIPE`): basta o módulo
+ * ligado. O setor do catálogo (Tech) só liga e desliga.
+ */
+const comAcademia: DefinicaoDoCartao["pode"] = (_quem, amb) => !!amb.modulos.get("academia")?.ligado;
 
 /** A fila inteira dos chamados: a equipe do setor responsável e o administrador (`podeVerInterno`). */
 const equipeDosChamados: DefinicaoDoCartao["pode"] = (quem, amb) =>
@@ -616,6 +628,19 @@ export const CATALOGO_DE_CARTOES: readonly DefinicaoDoCartao[] = [
     tom: TOM.nenhum,
     href: naFila("minhas"),
   },
+  // A Academia (Fase 2, 11/11/2026, Controle interno funcionalidade-594): um
+  // cartão discreto, em "Todos os setores" e fora de todo padrão — entra pelo
+  // lápis. O número é a sequência de dias do desafio do dia; embaixo, o
+  // desafio de hoje e quem está na frente no mês. Sem cor: não pede ação.
+  {
+    chave: "academia_desafio_do_dia",
+    rotulo: "Desafio do dia da Academia",
+    setor: TODOS,
+    icone: "academia",
+    pode: comAcademia,
+    tom: TOM.nenhum,
+    href: fixo("/academia/desafio"),
+  },
 ];
 
 const POR_CHAVE = new Map<string, DefinicaoDoCartao>(CATALOGO_DE_CARTOES.map((d) => [d.chave, d]));
@@ -815,8 +840,10 @@ export type CartaoPronto = {
   numero: {
     /** "1.234", "R$ 12.300,00". */
     texto: string;
-    /** "de 42", na fração. */
+    /** "de 42", na fração; ou o apoio que o número trouxe ("dias seguidos"). */
     apoio?: string;
+    /** A linha embaixo do número, quando o cartão tem uma. */
+    detalhe?: string;
     tom: TomDoCartao | null;
   } | null;
   /** "+2 desde ontem"; `null` sem foto de ontem (ou dos últimos dias). */
@@ -860,11 +887,11 @@ export function montarCartaoPronto({
   if (!numero || !Number.isFinite(numero.valor)) return { ...base, numero: null, variacao: null, linha: null };
   const metrica = METRICAS[def.chave];
   const texto = metrica.formato === "moeda" ? moeda(numero.valor) : NUMERO.format(numero.valor);
-  const apoio = def.fracao && numero.total !== undefined ? `de ${NUMERO.format(numero.total)}` : undefined;
+  const apoio = def.fracao && numero.total !== undefined ? `de ${NUMERO.format(numero.total)}` : numero.apoio;
   const linha = fotos ? pontosDaLinha(fotos, hojeKey, numero.valor, JANELA_DO_CARTAO_DIAS) : null;
   return {
     ...base,
-    numero: { texto, ...(apoio ? { apoio } : {}), tom: def.tom(numero) },
+    numero: { texto, ...(apoio ? { apoio } : {}), ...(numero.detalhe ? { detalhe: numero.detalhe } : {}), tom: def.tom(numero) },
     variacao: fotos ? variacaoDesdeOntem(fotos, hojeKey, numero.valor, metrica) : null,
     linha: linha ? linha.map((p) => ({ x: p.x, y: p.y })) : null,
   };
