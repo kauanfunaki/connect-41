@@ -12176,3 +12176,31 @@ model HonorarioAcessoriasEnvio {
   @@index([companyId, enviadoEm])
   @@map("hon_acessorias_envios")
 }
+
+/// Conferência ou envio em lote com o Acessórias. No Aditiva o andamento vivia na memória do
+/// processo e sumia num reinício; aqui fica gravado. Uma operação ativa por escritório
+/// (`ativoTenantId`); a que para de dar sinal (servidor reiniciou no meio) é dada como
+/// interrompida e libera a próxima.
+model HonorarioAcessoriasOperacao {
+  id            String    @id @default(uuid())
+  tenantId      String
+  /// conferir | enviar_lote
+  tipo          String    @db.VarChar(12)
+  /// Quem pediu (nome da pessoa).
+  conta         String    @db.VarChar(150)
+  /// Igual ao tenantId enquanto a operação roda; nulo depois.
+  ativoTenantId String?   @unique @db.VarChar(36)
+  iniciadaEm    DateTime  @db.DateTime(3)
+  /// Último sinal de vida da operação (a cada empresa lida ou enviada).
+  atualizadaEm  DateTime  @db.DateTime(3)
+  concluidaEm   DateTime? @db.DateTime(3)
+  total         Int?
+  feitos        Int       @default(0)
+  erros         Int       @default(0)
+  mensagem      String?   @db.VarChar(500)
+  /// Resultado de cada empresa do envio em lote.
+  resultados    Json?
+
+  @@index([tenantId, iniciadaEm])
+  @@map("hon_acessorias_operacoes")
+}

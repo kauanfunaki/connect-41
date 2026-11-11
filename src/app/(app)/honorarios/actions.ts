@@ -5,6 +5,7 @@
 // entrada, a Auditoria e o recarregar das telas.
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getAuthContext } from "@/lib/auth/context";
 import { podeNoModulo } from "@/lib/auth/modulo";
@@ -15,6 +16,7 @@ import { moeda } from "@/lib/honorarios/rotulos";
 import { marcaSemPastaSchema, vincularPastaSchema } from "@/lib/honorarios/regras/auditPayload";
 import { alterarMarcaSemPasta, alterarVinculo, solicitarSincronizacao } from "@/lib/honorarios/servidor/auditSyncService";
 import { confirmarAcessorias, informarValor, removerValorInformado } from "@/lib/honorarios/servidor/honorariosService";
+import { conferirTudo, enviarLote, enviarUma, liberarEnvios } from "@/lib/honorarios/servidor/acessoriasService";
 
 const SEM_PERMISSAO = "Você não tem permissão para isso em Contratos e honorários.";
 
@@ -184,6 +186,111 @@ export async function usarValorDoAcessorias(entrada: unknown): Promise<Resultado
       metadata: { nome, valor },
     });
     return `${nome ?? "Empresa"}: vale o valor do Acessórias (${moeda(valor)}).`;
+  });
+  recarregar();
+  return r;
+}
+
+// ── Acessórias (F4) ─────────────────────────────────────────────────
+
+/** IP de quem enviou, como o Aditiva guardava no histórico (atrás do proxy do EasyPanel). */
+async function ipDoPedido(): Promise<string | null> {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+}
+
+/** Lê todas as empresas do Acessórias (em segundo plano) para comparar com o honorário do Connect. */
+export async function conferirNoAcessorias(): Promise<ResultadoDaAcao> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { ok: false, erro: "Entre de novo no Connect." };
+  if (!(await podeNoModulo(ctx, "controladoria_honorarios", "agir"))) return { ok: false, erro: SEM_PERMISSAO };
+  const conta = await nomeDeQuemFez(ctx);
+  const r = await rodarAcao(ctx, async () => {
+    await conferirTudo(conta);
+    await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId, action: "honorario.acessorias.conferir", entityType: "Company", entityId: "acessorias" });
+    return "Conferência com o Acessórias começou. O andamento aparece no quadro do Acessórias.";
+  });
+  recarregar();
+  return r;
+}
+
+const envioSchema = z.object({ companyId: z.string().uuid(), valorEsperado: z.number().positive() });
+
+/** Atualiza o honorário de UMA empresa no Acessórias, com a ficha lida antes e depois. */
+export async function enviarAoAcessorias(entrada: unknown): Promise<ResultadoDaAcao & { resultado?: "ok" | "erro" | "ignorado" }> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { ok: false, erro: "Entre de novo no Connect." };
+  if (!(await podeNoModulo(ctx, "controladoria_honorarios", "gerir"))) return { ok: false, erro: SEM_PERMISSAO };
+  const lido = envioSchema.safeParse(entrada);
+  if (!lido.success) return { ok: false, erro: "Pedido inválido." };
+  const { companyId, valorEsperado } = lido.data;
+  const [conta, ip] = await Promise.all([nomeDeQuemFez(ctx), ipDoPedido()]);
+  let resultado: "ok" | "erro" | "ignorado" | undefined;
+  const r = await rodarAcao(ctx, async () => {
+    const envio = await enviarUma(conta, ip, companyId, valorEsperado);
+    resultado = envio.status;
+    const nome = await nomeDaEmpresa(ctx.tenantId, companyId);
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "honorario.acessorias.enviar",
+      entityType: "Company",
+      entityId: companyId,
+      metadata: { nome, valor: valorEsperado, resultado: envio.status },
+    });
+    return envio.mensagem;
+  });
+  recarregar();
+  return { ...r, ...(resultado ? { resultado } : {}) };
+}
+
+const loteSchema = z.object({ itens: z.array(envioSchema).min(1).max(1000) });
+
+/** Começa o envio em lote ao Acessórias (em segundo plano). */
+export async function enviarLoteAoAcessorias(entrada: unknown): Promise<ResultadoDaAcao> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { ok: false, erro: "Entre de novo no Connect." };
+  if (!(await podeNoModulo(ctx, "controladoria_honorarios", "gerir"))) return { ok: false, erro: SEM_PERMISSAO };
+  const lido = loteSchema.safeParse(entrada);
+  if (!lido.success) return { ok: false, erro: "Pedido inválido." };
+  const [conta, ip] = await Promise.all([nomeDeQuemFez(ctx), ipDoPedido()]);
+  const r = await rodarAcao(ctx, async () => {
+    const n = await enviarLote(conta, ip, lido.data.itens);
+    await logAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: "honorario.acessorias.lote",
+      entityType: "Company",
+      entityId: "acessorias",
+      metadata: { empresas: n },
+    });
+    return `Envio de ${n} empresa(s) começou. O andamento aparece no quadro do Acessórias.`;
+  });
+  recarregar();
+  return r;
+}
+
+/** "Já conferi no Acessórias": libera os envios travados por um envio que mexeu em outros campos. */
+export async function liberarEnviosAoAcessorias(envioId: string): Promise<ResultadoDaAcao> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId) return { ok: false, erro: "Entre de novo no Connect." };
+  if (!(await podeNoModulo(ctx, "controladoria_honorarios", "gerir"))) return { ok: false, erro: SEM_PERMISSAO };
+  if (!z.string().uuid().safeParse(envioId).success) return { ok: false, erro: "Envio inválido." };
+  const conta = await nomeDeQuemFez(ctx);
+  const r = await rodarAcao(ctx, async () => {
+    const envio = await getPrisma().honorarioAcessoriasEnvio.findFirst({ where: { id: envioId, tenantId: ctx.tenantId }, select: { companyId: true, razaoSocial: true } });
+    await liberarEnvios(conta, envioId);
+    if (envio) {
+      await logAudit({
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        action: "honorario.acessorias.liberar",
+        entityType: "Company",
+        entityId: envio.companyId,
+        metadata: { nome: envio.razaoSocial },
+      });
+    }
+    return "Envios liberados.";
   });
   recarregar();
   return r;

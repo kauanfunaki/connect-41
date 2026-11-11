@@ -458,6 +458,35 @@ export const INTEGRATION_CATALOG: IntegracaoDef[] = [
     ],
   },
   {
+    // Honorários no Acessórias (12/11/2026, vindo do Aditiva Pronto): a tela
+    // "Contratos e honorários" lê o honorário de cada empresa no Acessórias e
+    // atualiza lá o valor conferido. O token era o ACESSORIAS_API_TOKEN do
+    // servidor do Aditiva; aqui é do escritório.
+    code: "acessorias",
+    label: "Acessórias — honorários",
+    vendor: "Acessórias",
+    natureza: "API",
+    sectorCode: "controladoria",
+    description: "Lê e atualiza o honorário de cada empresa no Acessórias, a partir de Contratos e honorários",
+    defaultEnabled: false,
+    campos: [
+      {
+        name: "token",
+        label: "Token da API",
+        type: "secret",
+        required: true,
+        help: "No Acessórias, em Configurações › API. O token altera empresas lá: guarde só aqui.",
+      },
+      {
+        name: "url",
+        label: "Endereço da API",
+        type: "url",
+        required: false,
+        help: "Deixe em branco para usar https://api.acessorias.com.",
+      },
+    ],
+  },
+  {
     // Certidões pelo Connect (28/10/2026): federal, FGTS, trabalhista, estadual
     // do PR e municipal de Curitiba, consultadas no site de cada órgão.
     code: "infosimples",
