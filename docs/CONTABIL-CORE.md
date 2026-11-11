@@ -48,6 +48,74 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | 4b | `feat/contabil-core-planilhas` | Extrato em planilha (`planilha_parser.py`): leitores próprios de .xlsx, .xls (BIFF8) e .csv, e a importação. Ver "Fase 4b". |
 | 5 | — | Carga dos dados de produção: script, ensaio local, conferência e roteiro da virada. |
 
+## Bloco B: conciliação bancária contábil
+
+### Decisões (Angelo, 11/11/2026)
+
+- A conciliação Razão × extrato vira uma **aba do módulo Contábil Core**: a mesma empresa, as mesmas contas bancárias e os mesmos extratos. O módulo "Conciliação" que o Connect já tem é a do financeiro do BPO (contas a pagar e receber contra o banco) e continua separado.
+- Do ConcilPro entra agora **só o leitor de Razão em planilha** (`concilpro/planilha.py`), que a leitura do Razão de uma conta banco reaproveita. O ConcilPro inteiro (Razão de fornecedores, IA, consolidação) fica para o Bloco D.
+
+### O que o original faz
+
+- **Só relata.** Nenhum lançamento é criado, estornado ou marcado: a análise e os ajustes ficam com o contador.
+- **Três conferências antes de cruzar:** o CNPJ do Razão é o da empresa; a conta do Razão é a conta contábil vinculada à conta bancária; o extrato importado cobre o período do Razão (senão, aviso).
+- **Cruzamento em camadas:** mesmo dia e valor; mesmo valor em outro dia (até N dias); agrupado (vários de um lado somam um do outro); lote do SISPAG; lote do dia; duplicidade; valor divergente; o que sobra só no Razão ou só no extrato. Dentro do mesmo dia e valor, o par é decidido pela semelhança do histórico.
+- **SISPAG:** a consulta de pagamentos do Itaú compõe a linha "Sispag Fornecedores" do extrato (o banco junta por dia e por tipo).
+- **Extrato detalhado do Itaú:** o extrato com favorecido e CPF/CNPJ por linha, com o saldo de cada dia conferido.
+- **Revisão manual e financeiro:** decisões e vínculos salvos com versão (contra decisões concorrentes) e a conferência de documentos do financeiro (relatório financeiro, Omie, contas a pagar e receber), sempre como evidência, nunca como lançamento.
+
+### Fases do Bloco B
+
+| Fase | Branch | O que entra |
+|---|---|---|
+| B1 | `feat/contabil-core-conciliacao-motores` | Motores puros com gabarito: leitores do Razão (planilha e PDF) e do Razão de apoio, SISPAG, extrato detalhado, cruzamento e composição dos lotes do SISPAG. Sem tela e sem migration. |
+| B2 | — | Conciliação de ponta a ponta: as três conferências, a aba "Conciliação" e o relatório em planilha. |
+| B3 | — | Revisão manual salva (decisões e vínculos com versão). Migration. |
+| B4 | — | Conferência do financeiro: documentos, análises salvas e sugestões. Migration. |
+| B5 | — | As tabelas do Bloco B na carga (espelho). |
+
+### Fase B1: os motores
+
+Em `src/lib/contabil-core/conciliacao/`, sem tela, sem banco e sem migration:
+
+| Arquivo | Porte de |
+|---|---|
+| `razao.ts`, `razaoPdf.ts`, `razaoXlsx.ts`, `razaoTipos.ts` | `conciliacao_bancaria/razao.py`: o Razão de uma conta banco (planilha ou PDF), com o total conferido |
+| `razaoPlanilha.ts` | `concilpro/planilha.py` (e as três funções de `parser.py` que ele usa): o leitor do ConcilPro |
+| `apoio.ts`, `folhas.ts` | `conciliacao_bancaria/apoio.py`: o Razão auxiliar de outras contas e a leitura das folhas com limites, usada também pelos dois seguintes |
+| `sispag.ts` | a consulta de pagamentos do SISPAG (Itaú) |
+| `extratoDetalhado.ts` | o extrato detalhado do Itaú, com o saldo de cada dia conferido |
+| `cruzamento.ts` | `cruzamento.py`: as camadas do cruzamento Razão × extrato |
+| `composicao.ts` | a composição das linhas "Sispag" do extrato e as parcelas iguais |
+
+Os gabaritos foram gerados por `gabarito_razao.py`, `gabarito_sispag.py` e `gabarito_cruzamento.py`. Cada um é um plugin do pytest: grava cada chamada da suíte do original e acrescenta milhares de casos inventados. Ao todo são 7.341 chamadas, todas iguais no porte:
+
+- 852 nos leitores de Razão;
+- 462 no SISPAG e no extrato detalhado;
+- 6.027 no cruzamento e na composição.
+
+Nomes com cara de reais foram trocados por fictícios, inclusive dentro dos bytes das planilhas. Conferência com arquivos reais (só contagens, nada no git):
+
+- 6 Razões em planilha;
+- 6 consultas SISPAG;
+- 1 extrato detalhado com 5.060 movimentos.
+
+Todos saíram iguais ao original, inclusive nas recusas.
+
+Divergências do B1, todas fora do caminho normal:
+
+- **Leitura:**
+  - Os leitores de Razão são assíncronos e recebem de fora o leitor de PDF (`razaoPdf.ts`, só no servidor). Se o PDF não abre, a mensagem é a do pdf.js, com o mesmo prefixo do original.
+  - As planilhas são lidas de uma vez, não folha a folha. Muda só qual frase aparece quando duas folhas têm defeitos diferentes.
+  - XML malformado de forma incomum dentro do .xlsx pode ser lido, enquanto o openpyxl recusaria.
+  - Chartsheets não contam no limite de 32 folhas.
+- **Valores:**
+  - O texto "NaN" numa célula de valor é tratado como ilegível, porque o `Dec` não representa NaN.
+  - Somas acima de 28 dígitos ficam exatas; o `Decimal` do Python arredondaria.
+- **Cruzamento:**
+  - O `IGNORECASE` do Python casa "I" com "ı" e "İ". Os padrões trazem essas letras de forma explícita.
+  - As chaves por valor usam o valor normalizado ("10.0" e "10.00" são a mesma chave, como no Python).
+
 ## Arquitetura no Connect
 
 ### Módulo
