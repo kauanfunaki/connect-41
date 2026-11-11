@@ -63,7 +63,7 @@ export default async function PortalDocumentosPage({
 
   return (
     <PageContainer>
-      <PortalCabecalho titulo="Documentos fiscais" descricao="Notas emitidas e recebidas pelas suas empresas." />
+      <PortalCabecalho titulo="Documentos fiscais" descricao="As notas de venda e de compra das suas empresas." />
 
       {documentos.length === 0 && pagina === 1 && !params.competencia && !empresaId ? (
         <Card>
