@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,6 +14,7 @@ import { GRUPO_DA_SECAO, grupoDoCaminho, menuDoPortal, telasVisiveis, type TelaD
 import { oQueOContadorDiz, type ContadoresDoMenu, type TelaComContador } from "@/lib/portal/contadoresDoMenu";
 import { sairDoPortal } from "@/app/(portal)/portal/login/actions";
 import { SugestaoDoPortal } from "./SugestaoDoPortal";
+import { EmpresaAtivaNoTopo, type EmpresaDoTopo } from "./EmpresaAtivaNoTopo";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
 
 // A partir de lg a lateral é coluna fixa; abaixo, gaveta. No servidor vale
@@ -46,6 +47,8 @@ export function PortalShell({
   logo = null,
   sugestao = false,
   contadores = {},
+  empresasDoAcesso = [],
+  empresaGuardada = null,
   children,
 }: {
   grupoNome: string | null;
@@ -59,6 +62,10 @@ export function PortalShell({
   sugestao?: boolean;
   /** Quantas coisas esperam o cliente nas telas que pedem ação (11/11/2026, P09). */
   contadores?: ContadoresDoMenu;
+  /** As empresas do acesso, com mais de uma — o selo da empresa escolhida (11/11/2026). */
+  empresasDoAcesso?: EmpresaDoTopo[];
+  /** O cookie da empresa como o servidor o leu, para o selo não piscar na hidratação. */
+  empresaGuardada?: string | null;
   children: React.ReactNode;
 }) {
   const [menuAberto, setMenuAberto] = useState(false);
@@ -169,6 +176,11 @@ export function PortalShell({
           <p className="text-ui font-medium text-fg truncate mt-0.5" title={grupoNome ?? undefined}>
             {grupoNome ?? "Suas empresas"}
           </p>
+          {/* A empresa escolhida, quando há (11/11/2026): no computador é o
+              único lugar do topo, já que lá não há a barra do celular. */}
+          <Suspense fallback={null}>
+            <EmpresaAtivaNoTopo empresas={empresasDoAcesso} guardadaNoServidor={empresaGuardada} variante="lateral" onIr={fecharMenu} />
+          </Suspense>
         </div>
 
         <nav
@@ -239,7 +251,10 @@ export function PortalShell({
           >
             <Menu size={20} />
           </IconButton>
-          <span className="text-fs-4 font-medium text-fg truncate">{grupoNome ?? "Portal do cliente"}</span>
+          <span className="min-w-0 text-fs-4 font-medium text-fg truncate">{grupoNome ?? "Portal do cliente"}</span>
+          <Suspense fallback={null}>
+            <EmpresaAtivaNoTopo empresas={empresasDoAcesso} guardadaNoServidor={empresaGuardada} variante="barra" />
+          </Suspense>
         </header>
         {/* O `relative` faz do <main> o bloco de contenção dos elementos com
           `position: absolute` da página (o campo de arquivo escondido com

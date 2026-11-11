@@ -16,6 +16,8 @@ import { sugestaoLigada } from "@/lib/solicitacoes/sugestaoServidor";
 import { alcanceDoCliente } from "@/app/(portal)/alcance";
 import { telasVisiveis } from "@/lib/portal/telas";
 import { contadoresDoMenu } from "@/lib/portal/contadoresDoMenuServidor";
+import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 
 // A moldura de quem já entrou no portal: sidebar com as telas, o nome do
 // acesso (a empresa, ou a primeira e quantas mais — era o nome do Cliente até
@@ -69,12 +71,25 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
   // solicitações e comunicados esperam o cliente — só das telas do menu dele e
   // só das empresas do acesso. Também não derrubam nada (ver o carregador).
   const telasDoMenu = new Set(telasVisiveis(modulos, bloqueadas).map((t) => t.href));
-  const [comSugestao, contadores] = await Promise.all([
+  // A empresa escolhida no topo (11/11/2026): só com mais de uma empresa no
+  // acesso — com uma, não há o que escolher. O selo confere a escolha contra
+  // esta lista; falha aqui só esconde o selo.
+  const companyIds = alcance?.tipo === "EMPRESAS" ? alcance.companyIds : [];
+  const [comSugestao, contadores, empresasDoAcesso, empresaGuardada] = await Promise.all([
     sugestaoLigada(sessao.tenantId, modulos, bloqueadas).catch((err) => {
       console.error("[portal] sugestão", err);
       return false;
     }),
-    contadoresDoMenu(sessao.tenantId, sessao.sub, alcance?.tipo === "EMPRESAS" ? alcance.companyIds : [], telasDoMenu),
+    contadoresDoMenu(sessao.tenantId, sessao.sub, companyIds, telasDoMenu),
+    companyIds.length > 1
+      ? empresasDoSeletor(sessao.tenantId, companyIds)
+          .then((lista) => lista.map((e) => ({ id: e.id, nome: e.nome })))
+          .catch((err) => {
+            console.error("[portal] empresas do topo", err);
+            return [];
+          })
+      : [],
+    empresaGuardadaDoPortal(),
   ]);
 
   return (
@@ -87,6 +102,8 @@ export default async function AreaDoClienteLayout({ children }: { children: Reac
         logo={logo}
         sugestao={comSugestao}
         contadores={contadores}
+        empresasDoAcesso={empresasDoAcesso}
+        empresaGuardada={empresaGuardada}
       >
         {children}
         {/* Folga no fim da página para o botão flutuante da Ceci (48px no canto),

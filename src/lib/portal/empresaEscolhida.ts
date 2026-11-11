@@ -16,6 +16,10 @@
 export const COOKIE_DA_EMPRESA_DO_PORTAL = "portal_empresa";
 export const CAMINHO_DO_COOKIE_DA_EMPRESA = "/portal";
 const UM_ANO = 60 * 60 * 24 * 365;
+/** O aviso de que a escolha mudou, para quem mostra a empresa fora da tela (o selo do topo). */
+export const EVENTO_DA_EMPRESA_DO_PORTAL = "portal-empresa";
+/** A âncora do seletor no Início, para onde o selo da empresa no topo leva. */
+export const ANCORA_DO_SELETOR_DO_INICIO = "escolher-empresa";
 
 /**
  * A empresa que a tela mostra: a da URL, se veio e é do acesso; senão a
@@ -64,6 +68,43 @@ export function guardarEmpresaDoPortal(empresaId: string | null): void {
   const valor = empresaId ? encodeURIComponent(empresaId) : "";
   const idade = empresaId ? UM_ANO : 0;
   document.cookie = `${COOKIE_DA_EMPRESA_DO_PORTAL}=${valor}; path=${CAMINHO_DO_COOKIE_DA_EMPRESA}; max-age=${idade}; samesite=lax`;
+  // O selo da empresa no topo do portal escuta a troca: a moldura não é
+  // desenhada de novo a cada navegação, e cookie não avisa quando muda.
+  window.dispatchEvent(new Event(EVENTO_DA_EMPRESA_DO_PORTAL));
+}
+
+/**
+ * A empresa guardada, lida do `document.cookie` (no navegador). Crua, como a
+ * do servidor (`empresaGuardadaDoPortal`): quem usa passa por `empresaDaTela`.
+ */
+export function empresaGuardadaNoNavegador(cookies: string): string | null {
+  for (const par of cookies.split(";")) {
+    const i = par.indexOf("=");
+    if (i < 0 || par.slice(0, i).trim() !== COOKIE_DA_EMPRESA_DO_PORTAL) continue;
+    const bruto = par.slice(i + 1).trim();
+    if (!bruto) return null;
+    try {
+      return decodeURIComponent(bruto);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * A empresa que o topo do portal anuncia (11/11/2026): a mesma regra das telas
+ * (`empresaDaTela`, a URL vence o cookie, só empresa do acesso), com o nome.
+ * Com uma empresa só, nenhuma — não há o que lembrar ao cliente.
+ */
+export function empresaAtivaDoPortal<E extends { id: string; nome: string }>(
+  pedida: string | null | undefined,
+  guardada: string | null | undefined,
+  doAcesso: readonly E[]
+): E | null {
+  if (doAcesso.length < 2) return null;
+  const id = empresaDaTela(pedida, guardada, doAcesso.map((e) => e.id));
+  return id ? (doAcesso.find((e) => e.id === id) ?? null) : null;
 }
 
 const MES_POR_EXTENSO = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });

@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   update: vi.fn(),
   verifyPassword: vi.fn(),
   ip: "10.0.0.1",
+  cookies: { set: vi.fn(), get: vi.fn(), delete: vi.fn() },
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -14,7 +15,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-forwarded-for": m.ip }),
-  cookies: async () => ({ set: vi.fn(), get: vi.fn(), delete: vi.fn() }),
+  cookies: async () => m.cookies,
 }));
 vi.mock("next/navigation", () => ({
   redirect: (destino: string) => {
@@ -32,7 +33,7 @@ vi.mock("@/lib/auth/googleDoPortal", () => ({ COOKIE_DA_ESCOLHA: "escolha", CAMI
 vi.mock("@/app/(portal)/usuario", () => ({ MAX_CONTAS_POR_EMAIL: 10 }));
 vi.mock("@/lib/portal/empresasDaContaDb", () => ({ nomesDasContasNoLogin: async () => new Map() }));
 
-const { entrarNoPortal } = await import("./actions");
+const { entrarNoPortal, sairDoPortal } = await import("./actions");
 
 const CONTA = {
   id: "c1",
@@ -87,5 +88,13 @@ describe("limite de tentativas na entrada do portal", () => {
     m.findMany.mockResolvedValue([]);
     for (let i = 0; i < 20; i++) expect(await tentar(`varredura${i}@cliente.com`, "x")).toEqual(INVALIDO);
     expect(await tentar("varredura-final@cliente.com", "x")).toEqual(MUITAS);
+  });
+});
+
+describe("sair do portal", () => {
+  it("apaga a sessão e a empresa escolhida, no caminho do cookie dela", async () => {
+    await expect(sairDoPortal()).rejects.toThrow("REDIRECT:/portal/login");
+    expect(m.cookies.delete).toHaveBeenCalledWith("portal");
+    expect(m.cookies.set).toHaveBeenCalledWith("portal_empresa", "", { path: "/portal", maxAge: 0 });
   });
 });
