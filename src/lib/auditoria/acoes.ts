@@ -383,6 +383,19 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
 
   // ── DP ─────────────────────────────────────────────────────────────────────
   "termination.check": e("marcou um item da conferência do desligamento"),
+  // DP 2 (11/11/2026): o DP que calcula a folha.
+  "folha.competencia_aberta": c("abriu uma competência do DP 2"),
+  "folha.competencia_calculada": o("calculou a folha da competência no DP 2"),
+  "folha.competencia_fechada": e("fechou a competência do DP 2"),
+  "folha.competencia_reaberta": e("reabriu a competência do DP 2"),
+  "folha.evento_lancado": c("lançou um evento na competência do DP 2"),
+  "folha.evento_removido": x("retirou um lançamento da competência do DP 2"),
+  "folha.comparativo_importado": o("importou os valores da Domínio para comparar no DP 2"),
+  "folha.vinculo_salvo": e("salvou o contrato do colaborador no DP 2"),
+  "folha.empresa_configurada": e("configurou a empresa no DP 2"),
+  "folha.tabela_salva": e("gravou uma tabela oficial no DP 2"),
+  "folha.rubrica_salva": e("salvou a rubrica do DP 2"),
+  "folha.convencao_salva": e("salvou a convenção coletiva do DP 2"),
 
   // ── Recrutamento ───────────────────────────────────────────────────────────
   "vaga.acesso_recrutadores": e("mudou quem vê a vaga"),
@@ -843,6 +856,11 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   TenantModule: "módulo",
   TenantRescisaoConfig: "cálculo de rescisão do escritório",
   Termination: "desligamento",
+  Dp2Competencia: "competência do DP 2",
+  Dp2Evento: "lançamento do DP 2",
+  Dp2TabelaOficial: "tabela oficial do DP 2",
+  Dp2Rubrica: "rubrica do DP 2",
+  Dp2Convencao: "convenção coletiva",
   User: "usuário",
   Vaga: "vaga",
   ValoraConfig: "parâmetros do Valora",
@@ -935,6 +953,7 @@ const AREA_POR_PREFIXO: ReadonlyArray<readonly [string, ChaveDaAreaDaAuditoria]>
   ["integration.omie.virada", "bpo"],
   ["integration.omie.nfse_", "bpo"],
   ["termination.", "dp"],
+  ["folha.", "dp"],
   // As competências das avaliações de desempenho, desde 20/10/2026 dentro do
   // módulo do DP (eram das Configurações).
   ["competency.", "dp"],
