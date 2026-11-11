@@ -92,7 +92,7 @@ Só aparecem as ferramentas do escopo do token.
 | Ferramenta | Escopo | O que faz |
 |---|---|---|
 | `listar_itens` | ler | lista com filtros (situação, tipo, prioridade, sistema, responsável, busca, atrasados, página) |
-| `ver_item` | ler | um item com o critério de aceite (`acceptanceCriteria`), os pontos já conferidos (`acceptanceChecks`), comentários, histórico, anexos e a `version` |
+| `ver_item` | ler | um item com o critério de aceite (`acceptanceCriteria`), os pontos já conferidos (`acceptanceChecks`), os do "Antes de testar" já marcados (`preTestChecks`), o que o "Conferir" do PR conferiu (`deliveryChecks`), comentários, histórico, anexos e a `version` |
 | `ver_opcoes` | ler | tipos, situações, sistemas do Ops Center (`key`), pessoas (`id`), entregas recentes |
 | `resumo_do_periodo` | ler | concluídos, em andamento, planejados e cancelados no dia, na semana, no mês ou no ano (`period`: `day`, `week`, `month`, `year`; `date`: AAAA-MM-DD) |
 | `criar_item` | escrever | cria e devolve o item com o id curto (`shortId`) e o link curto (`url`) |
@@ -136,6 +136,24 @@ linha de "Aprovado quando" como um ponto para marcar; as marcas ficam salvas, co
 marcou. Ao reescrever o critério, mande o texto inteiro: o anterior fica no histórico do
 item, e a marca de um ponto reescrito deixa de valer. A descrição continua com o
 contexto (o que acontece, onde, o esperado).
+
+**O "Antes de testar" e o "Conferir"** (11/11/2026): o "Antes de testar" também é
+lista para marcar. Cada linha com "- " na margem é um ponto, com o comando recuado
+junto dela; sem marcador, o texto inteiro é um ponto só. "Antes de testar: nada" não
+tem o que marcar. As marcas vêm em `preTestChecks`, com a posição contada à parte
+das do "Aprovado quando".
+
+Junto ao PR, o botão "Conferir" confere sozinho três coisas:
+- o PR mergeado, no GitHub, com a conta conectada em Integrações ou sem token, quando
+  o repositório é público;
+- cada migration citada no critério, na descrição ou entre os arquivos do PR, aplicada
+  no banco (`_prisma_migrations`);
+- se o merge está no ar: o commit do deploy de produção (o `GIT_SHA` do build) contém
+  o commit do merge.
+
+A migration e o "no ar" só valem para PR do repositório do Connect (`CONNECT_REPOSITORIO`,
+padrão `kauanfunaki/connect-41`). O resultado da última conferência vem em
+`deliveryChecks`: só as que deram certo, como `pr`, `migration:<pasta>` e `no-ar`.
 
 **O id curto** (10/11/2026): cada item tem um número no escritório, uma sequência só
 para todos os tipos, e o endereço curto vem do tipo e do número —

@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { salvarItem, comentarItem, mudarSituacaoItem, conferirCriterio } from "@/lib/tech-interno/servidor";
+import { salvarItem, comentarItem, mudarSituacaoItem, conferirCriterio, conferirEntrega } from "@/lib/tech-interno/servidor";
+import type { ResultadoDaConferencia } from "@/lib/tech-interno/conferenciaDaEntrega";
 import { ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
 import { removerAnexo } from "@/lib/tech-interno/anexos";
 import { getAuthContext } from "@/lib/auth/context";
@@ -31,10 +32,16 @@ export async function mudarSituacaoTech(id: string, status: string, version: num
   if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); revalidarItens(); return { ok: true, id: result.id }; }
   return { error: result.error };
 }
-/** Marca ou desmarca um ponto do "Aprovado quando" do critério de aceite (10/11/2026). */
-export async function conferirCriterioTech(id: string, posicao: number, texto: string, marcado: boolean): Promise<Resposta> {
-  const result = await conferirCriterio(await getAuthContext(), id, posicao, texto, marcado);
+/** Marca ou desmarca um ponto do "Aprovado quando" (10/11/2026) ou do "Antes de testar" (11/11/2026). */
+export async function conferirCriterioTech(id: string, posicao: number, texto: string, marcado: boolean, secao: "aprovado" | "antes" = "aprovado"): Promise<Resposta> {
+  const result = await conferirCriterio(await getAuthContext(), id, posicao, texto, marcado, secao);
   if ("ok" in result) { revalidarItens(); return { ok: true, id }; }
+  return { error: result.error };
+}
+/** O "Conferir" junto ao PR (11/11/2026): PR mergeado, migration aplicada e no ar. */
+export async function conferirEntregaTech(id: string): Promise<{ ok: true; resumo: string; resultados: ResultadoDaConferencia[] } | { error: string }> {
+  const result = await conferirEntrega(await getAuthContext(), id);
+  if ("ok" in result) { revalidarItens(); return { ok: true, resumo: result.resumo, resultados: result.resultados }; }
   return { error: result.error };
 }
 export async function removerAnexoTech(id: string): Promise<{ error: string } | null> {

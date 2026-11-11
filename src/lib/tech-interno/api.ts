@@ -62,11 +62,20 @@ export function itemParaApi(item: ItemDaLista, base: string) {
 export type ItemApi = ReturnType<typeof itemParaApi>;
 
 function detalheParaApi(item: Item, base: string) {
-  // Só as marcas que ainda valem: as do ponto que não foi reescrito.
-  const marcas = marcasQueValem(lerCriterioDeAceite(item.acceptanceCriteria)?.pontos ?? [], item.acceptanceChecks);
+  // Só as marcas que ainda valem: as do ponto que não foi reescrito. Cada seção
+  // conta as posições à parte (11/11/2026).
+  const lido = lerCriterioDeAceite(item.acceptanceCriteria);
+  const daSecao = (secao: string) => item.acceptanceChecks.filter(m => m.section === secao);
+  const paraApi = (m: Item["acceptanceChecks"][number]) => ({ position: m.position, text: m.text, checkedBy: m.checkedByName, checkedAt: m.createdAt.toISOString() });
+  const marcas = marcasQueValem(lido?.pontos ?? [], daSecao("aprovado"));
+  const doPreparo = marcasQueValem(lido?.preparo ?? [], daSecao("antes"));
   return {
     ...itemParaApi(item, base),
-    acceptanceChecks: [...marcas.values()].map(m => ({ position: m.position, text: m.text, checkedBy: m.checkedByName, checkedAt: m.createdAt.toISOString() })),
+    acceptanceChecks: [...marcas.values()].map(paraApi),
+    // O "Antes de testar" marcado pela pessoa, e o que o "Conferir" do PR conferiu
+    // sozinho ("pr", "migration:<pasta>", "no-ar"), da última conferência.
+    preTestChecks: [...doPreparo.values()].map(paraApi),
+    deliveryChecks: daSecao("auto").map(m => ({ check: m.text, checkedBy: m.checkedByName, checkedAt: m.createdAt.toISOString() })),
     comments: item.comments.map(c => ({ id: c.id, author: c.authorName, body: c.body, createdAt: c.createdAt.toISOString() })),
     history: item.changes.map(h => ({ version: h.version, author: h.authorName, createdAt: h.createdAt.toISOString(), changes: h.changes })),
     attachments: item.attachments.map(a => ({

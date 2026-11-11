@@ -69,6 +69,10 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // A conferência do "Aprovado quando" do critério de aceite (10/11/2026).
   "tech_interno.item.acceptance_check": e("conferiu um ponto do critério de aceite do item do controle interno do Tech"),
   "tech_interno.item.acceptance_uncheck": e("desmarcou um ponto conferido do critério de aceite do item do controle interno do Tech"),
+  // O "Antes de testar" marcado e o "Conferir" do PR (11/11/2026).
+  "tech_interno.item.pretest_check": e("marcou um ponto do \"Antes de testar\" do item do controle interno do Tech"),
+  "tech_interno.item.pretest_uncheck": e("desmarcou um ponto do \"Antes de testar\" do item do controle interno do Tech"),
+  "tech_interno.item.delivery_check": e("conferiu o PR, a migration e o deploy do item do controle interno do Tech"),
   "helpdesk.ai_fallback": e("configurou a IA alternativa dos chamados"),
   "ops.aviso_fechado": e("fechou o aviso de erro do robô no Orquestrador"),
   "token_pessoal.create": c("criou o token de acesso pessoal"),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lerCriterioDeAceite, marcasQueValem, mesmoTexto, planejarMigracao, separarCriterioDaDescricao, type CriterioLido } from "./criterioDeAceite";
+import { lerCriterioDeAceite, marcasQueValem, mesmoTexto, planejarMigracao, pontosDoPreparo, separarCriterioDaDescricao, type CriterioLido } from "./criterioDeAceite";
 
 // Textos fictícios, no formato que a equipe escreve desde 09/11/2026.
 const BLOCO = [
@@ -29,13 +29,14 @@ describe("lerCriterioDeAceite", () => {
     expect(lido.blocos).toEqual([
       { tipo: "campo", rotulo: "Mudança", texto: "PR #10, na main desde 10/11. Sem migration." },
       { tipo: "campo", rotulo: "Termos", texto: "o painel é a tela de acompanhamento." },
-      { tipo: "campo", rotulo: "Antes de testar", texto: "ligar o módulo em Configurações." },
+      { tipo: "preparo", pontos: [{ posicao: 1, texto: "ligar o módulo em Configurações." }] },
       { tipo: "campo", rotulo: "Onde testar", texto: "produção › Controle interno." },
       { tipo: "passos", itens: ["Abra um item.", "Clique em Editar."] },
       { tipo: "conferencia", pontos: [{ posicao: 1, texto: "O item abre em visualização." }, { posicao: 2, texto: "O Editar leva ao formulário." }] },
       { tipo: "campo", rotulo: "Observação", texto: "vale também no celular." },
     ]);
     expect(lido.pontos.map(p => p.posicao)).toEqual([1, 2]);
+    expect(lido.preparo).toEqual([{ posicao: 1, texto: "ligar o módulo em Configurações." }]);
   });
 
   it("sem o cabeçalho também vale; rótulo sem acento e em outra caixa é reconhecido", () => {
@@ -55,7 +56,7 @@ describe("lerCriterioDeAceite", () => {
     ].join("\n")));
     expect(lido.blocos).toEqual([
       { tipo: "campo", rotulo: "Mudança", texto: "PR #20.\nAjuste de 10/11: o rodapé também mudou." },
-      { tipo: "campo", rotulo: "Antes de testar", texto: "rodar a migration antes do deploy:\n  npx prisma generate\n  npx prisma migrate deploy\nRótulo desconhecido: fica no campo de cima." },
+      { tipo: "preparo", pontos: [{ posicao: 1, texto: "rodar a migration antes do deploy:\n  npx prisma generate\n  npx prisma migrate deploy\nRótulo desconhecido: fica no campo de cima." }] },
     ]);
   });
 
@@ -111,9 +112,34 @@ describe("lerCriterioDeAceite", () => {
   });
 
   it("texto fora do formato aparece como texto simples, sem quebrar", () => {
-    expect(lerCriterioDeAceite("Testar a tela e ver se salva.\nSem rótulo nenhum.")).toEqual({ estruturado: false, data: null, texto: "Testar a tela e ver se salva.\nSem rótulo nenhum.", pontos: [] });
-    expect(lerCriterioDeAceite("CRITÉRIO DE ACEITE (01/02/2026)\r\nSó um texto.")).toEqual({ estruturado: false, data: "01/02/2026", texto: "Só um texto.", pontos: [] });
+    expect(lerCriterioDeAceite("Testar a tela e ver se salva.\nSem rótulo nenhum.")).toEqual({ estruturado: false, data: null, texto: "Testar a tela e ver se salva.\nSem rótulo nenhum.", pontos: [], preparo: [] });
+    expect(lerCriterioDeAceite("CRITÉRIO DE ACEITE (01/02/2026)\r\nSó um texto.")).toEqual({ estruturado: false, data: "01/02/2026", texto: "Só um texto.", pontos: [], preparo: [] });
     expect(lerCriterioDeAceite("Passos para ver: clique.\n1. não é lista")).toMatchObject({ estruturado: false });
+  });
+
+  // funcionalidade-579 (11/11/2026): o "Antes de testar" vira lista para marcar.
+  it("Antes de testar: cada \"- \" na margem é um ponto, com o comando recuado junto; \"nada\" não tem o que marcar", () => {
+    const lido = estruturado(lerCriterioDeAceite([
+      "Antes de testar:",
+      "- rodar a migration:",
+      "    npx prisma migrate deploy",
+      "- ligar o módulo em Configurações.",
+      "Aprovado quando:",
+      "- a",
+    ].join("\n")));
+    expect(lido.preparo).toEqual([
+      { posicao: 1, texto: "rodar a migration:\n    npx prisma migrate deploy" },
+      { posicao: 2, texto: "ligar o módulo em Configurações." },
+    ]);
+    expect(lido.pontos).toEqual([{ posicao: 1, texto: "a" }]);
+    const nada = estruturado(lerCriterioDeAceite("Antes de testar: nada.\nAprovado quando:\n- a"));
+    expect(nada.preparo).toEqual([]);
+    expect(nada.blocos[0]).toEqual({ tipo: "campo", rotulo: "Antes de testar", texto: "nada." });
+  });
+
+  it("pontosDoPreparo: texto sem marcador é um ponto só", () => {
+    expect(pontosDoPreparo("entrar com a conta do Fiscal.\nE abrir a tela.")).toEqual(["entrar com a conta do Fiscal.\nE abrir a tela."]);
+    expect(pontosDoPreparo("")).toEqual([]);
   });
 
   it("sem texto, não há critério", () => {

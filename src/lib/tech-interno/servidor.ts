@@ -14,6 +14,8 @@ import {
 } from "./regras";
 import { intervaloDoResumo, montarResumo, type PeriodoDoResumo } from "./resumo";
 import { lerCriterioDeAceite, mesmoTexto } from "./criterioDeAceite";
+import { resumoDaConferencia, type ResultadoDaConferencia } from "./conferenciaDaEntrega";
+import { comGithub, commitQueEstaRodando, conferirItem, repositorioDoConnect, situacaoDasMigrations } from "./conferenciaDaEntregaServidor";
 
 /** O tipo do erro, para a API responder com o código e o status certos; as telas usam só a mensagem. */
 export type CodigoTech = "forbidden" | "not_found" | "conflict" | "validation_error" | "internal_error";
@@ -184,30 +186,41 @@ export async function detalheItem(ctx: AuthContext, idOuCurto: string) {
   } });
 }
 
+/**
+ * As seções das marcas (11/11/2026): "aprovado" é o "Aprovado quando", "antes"
+ * o "Antes de testar" marcado pela pessoa, "auto" o que o "Conferir" conferiu
+ * sozinho (`conferirEntrega`). Ver `TechInternalAcceptanceCheck.section`.
+ */
+export const SECOES_DA_MARCA = ["aprovado", "antes", "auto"] as const;
+export type SecaoDaMarca = (typeof SECOES_DA_MARCA)[number];
+
 const conferenciaSchema = z.object({
   posicao: z.number().int().min(1).max(500),
   texto: z.string().max(10000),
   marcado: z.boolean(),
+  secao: z.enum(["aprovado", "antes"]),
 });
 /**
- * Marca ou desmarca um ponto do "Aprovado quando" (10/11/2026). A marca é do
- * item, com quem marcou, e não muda a version — como o comentário. `texto` é o
- * ponto como a tela mostrou: se o critério mudou nesse meio-tempo, recusa, para
- * ninguém marcar um ponto que já não é o mesmo. Marcar o que já está marcado
- * (outra pessoa, ao mesmo tempo) mantém a marca de quem chegou primeiro.
+ * Marca ou desmarca um ponto do "Aprovado quando" (10/11/2026) ou, desde
+ * 11/11/2026, do "Antes de testar". A marca é do item, com quem marcou, e não
+ * muda a version — como o comentário. `texto` é o ponto como a tela mostrou:
+ * se o critério mudou nesse meio-tempo, recusa, para ninguém marcar um ponto
+ * que já não é o mesmo. Marcar o que já está marcado (outra pessoa, ao mesmo
+ * tempo) mantém a marca de quem chegou primeiro.
  */
-export async function conferirCriterio(ctx: AtorTech, id: string, posicao: unknown, texto: unknown, marcado: unknown): Promise<ResultadoTech> {
+export async function conferirCriterio(ctx: AtorTech, id: string, posicao: unknown, texto: unknown, marcado: unknown, secao: unknown = "aprovado"): Promise<ResultadoTech> {
   try {
     await conferirAcesso(ctx, "agir");
-    const parsed = conferenciaSchema.safeParse({ posicao, texto, marcado });
+    const parsed = conferenciaSchema.safeParse({ posicao, texto, marcado, secao });
     if (!parsed.success) return { error: "Ponto de conferência inválido.", code: "validation_error" };
-    const { posicao: position } = parsed.data;
+    const { posicao: position, secao: section } = parsed.data;
     const result = await getPrisma().$transaction(async tx => {
       const item = await tx.techInternalItem.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { title: true, acceptanceCriteria: true } });
       if (!item) throw new ErroTechInterno("Item não encontrado.", "not_found");
-      const ponto = lerCriterioDeAceite(item.acceptanceCriteria)?.pontos.find(p => p.posicao === position);
+      const lido = lerCriterioDeAceite(item.acceptanceCriteria);
+      const ponto = (section === "antes" ? lido?.preparo : lido?.pontos)?.find(p => p.posicao === position);
       if (!ponto || !mesmoTexto(ponto.texto, parsed.data.texto)) throw new ErroTechInterno("O critério de aceite mudou desde que a página abriu. Atualize a página e confira de novo.", "conflict");
-      const where = { tenantId: ctx.tenantId, itemId: id, position };
+      const where = { tenantId: ctx.tenantId, itemId: id, section, position };
       if (!parsed.data.marcado) {
         const { count } = await tx.techInternalAcceptanceCheck.deleteMany({ where });
         return count ? { title: item.title, ponto: ponto.texto } : null;
@@ -220,10 +233,47 @@ export async function conferirCriterio(ctx: AtorTech, id: string, posicao: unkno
       });
       return count ? { title: item.title, ponto: ponto.texto } : null;
     });
-    if (result) await registrar(ctx, parsed.data.marcado ? "tech_interno.item.acceptance_check" : "tech_interno.item.acceptance_uncheck", id, {
+    const acao = section === "antes"
+      ? parsed.data.marcado ? "tech_interno.item.pretest_check" : "tech_interno.item.pretest_uncheck"
+      : parsed.data.marcado ? "tech_interno.item.acceptance_check" : "tech_interno.item.acceptance_uncheck";
+    if (result) await registrar(ctx, acao, id, {
       title: result.title, ponto: result.ponto.length > 300 ? `${result.ponto.slice(0, 299)}…` : result.ponto, posicao: position,
     });
     return { ok: true, id };
+  } catch (e) { return erroDaOperacao(e); }
+}
+
+export type ConferenciaFeita = { ok: true; id: string; resultados: ResultadoDaConferencia[]; resumo: string } | FalhaTech;
+/**
+ * O "Conferir" junto ao PR (11/11/2026, funcionalidade-579): confere o PR no
+ * GitHub, as migrations no banco e se o merge está no ar
+ * (conferenciaDaEntrega.ts), e grava o que deu certo como marcas da seção
+ * "auto", com quem pediu. O que não deu certo sai da seção — a marca diz o que
+ * valia na última conferência. Não muda a version do item.
+ */
+export async function conferirEntrega(ctx: AtorTech, id: string): Promise<ConferenciaFeita> {
+  try {
+    await conferirAcesso(ctx, "agir");
+    const db = getPrisma();
+    const item = await db.techInternalItem.findFirst({
+      where: { id, tenantId: ctx.tenantId },
+      select: { title: true, prUrl: true, commitSha: true, acceptanceCriteria: true, description: true, acceptanceChecks: { where: { section: "auto" }, select: { text: true } } },
+    });
+    if (!item) return { error: "Item não encontrado.", code: "not_found" };
+    const resultados = await comGithub(ctx.tenantId, pedir => conferirItem(item, item.acceptanceChecks.map(m => m.text), {
+      repositorio: repositorioDoConnect(), deploy: commitQueEstaRodando(), pedir, migrations: situacaoDasMigrations,
+    }));
+    await db.$transaction(async tx => {
+      const pessoa = await autor(tx, ctx);
+      await tx.techInternalAcceptanceCheck.deleteMany({ where: { tenantId: ctx.tenantId, itemId: id, section: "auto" } });
+      const ok = resultados.filter(r => r.ok);
+      if (ok.length) await tx.techInternalAcceptanceCheck.createMany({ data: ok.map((r, i) => ({
+        tenantId: ctx.tenantId, itemId: id, section: "auto", position: i + 1, text: r.chave, checkedById: pessoa.authorId, checkedByName: pessoa.authorName,
+      })) });
+    });
+    const resumo = resumoDaConferencia(resultados);
+    await registrar(ctx, "tech_interno.item.delivery_check", id, { title: item.title, resultado: resumo.length > 300 ? `${resumo.slice(0, 299)}…` : resumo });
+    return { ok: true, id, resultados, resumo };
   } catch (e) { return erroDaOperacao(e); }
 }
 

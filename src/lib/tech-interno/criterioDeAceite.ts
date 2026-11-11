@@ -29,21 +29,27 @@
 export type CampoDoCriterio = "Mudança" | "Termos" | "Antes de testar" | "Onde testar" | "Observação";
 type RotuloDoCriterio = CampoDoCriterio | "Passos" | "Aprovado quando";
 
-/** Um ponto do "Aprovado quando". `posicao` conta a partir de 1, na ordem do texto. */
+/**
+ * Um ponto para marcar: do "Aprovado quando" ou do "Antes de testar". `posicao`
+ * conta a partir de 1, na ordem do texto, separada em cada uma das duas seções.
+ */
 export type PontoDeConferencia = { posicao: number; texto: string };
 
 export type BlocoDoCriterio =
   | { tipo: "campo"; rotulo: CampoDoCriterio; texto: string }
   | { tipo: "passos"; itens: string[] }
   | { tipo: "conferencia"; pontos: PontoDeConferencia[] }
+  /** O "Antes de testar" com algo a fazer, como lista para marcar (11/11/2026, funcionalidade-579). */
+  | { tipo: "preparo"; pontos: PontoDeConferencia[] }
   /** Texto sem rótulo: antes do primeiro rótulo, ou um parágrafo solto depois de uma lista. */
   | { tipo: "texto"; texto: string }
   /** O que veio depois de "— Contexto anterior —", quando alguém colou o bloco inteiro no campo. */
   | { tipo: "contexto"; texto: string };
 
+/** `pontos` são os do "Aprovado quando"; `preparo`, os do "Antes de testar". */
 export type CriterioLido =
-  | { estruturado: true; data: string | null; blocos: BlocoDoCriterio[]; pontos: PontoDeConferencia[] }
-  | { estruturado: false; data: string | null; texto: string; pontos: PontoDeConferencia[] };
+  | { estruturado: true; data: string | null; blocos: BlocoDoCriterio[]; pontos: PontoDeConferencia[]; preparo: PontoDeConferencia[] }
+  | { estruturado: false; data: string | null; texto: string; pontos: PontoDeConferencia[]; preparo: PontoDeConferencia[] };
 
 const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
 /** Para comparar o texto de um ponto: sem diferença de espaço nem de quebra de linha. */
@@ -94,6 +100,28 @@ function itensDaLinha(texto: string): string[] {
   return itens.filter(Boolean);
 }
 const comecaPeloUm = (texto: string) => /^\s*1\s*[.)]\s/.test(texto);
+
+/** "Antes de testar: nada" (ou "Nada a fazer…") não tem o que marcar. */
+const SEM_PREPARO = /^nada\b/i;
+/** "- item" (ou "• item") na margem — no máximo um espaço antes do marcador. */
+const MARCADOR_NA_MARGEM = /^ ?[-•*–]\s+(.*)$/;
+
+/**
+ * Os pontos do "Antes de testar" (11/11/2026, funcionalidade-579): cada linha
+ * com "- " na margem é um ponto; sem marcador, o texto inteiro é um ponto só.
+ * Linha recuada (o comando a rodar) e linha que continua a de cima ficam no
+ * ponto em que estão, com a quebra de linha.
+ */
+export function pontosDoPreparo(texto: string): string[] {
+  const pontos: string[] = [];
+  for (const linha of texto.split("\n")) {
+    const item = MARCADOR_NA_MARGEM.exec(linha);
+    if (item) pontos.push(item[1].trim());
+    else if (!pontos.length) pontos.push(linha.trim());
+    else pontos[pontos.length - 1] += `\n${linha}`;
+  }
+  return pontos.map(p => p.trimEnd()).filter(p => p.trim());
+}
 
 /** Junta as linhas de um bloco: sem linhas vazias nas pontas, com o recuo de cada linha preservado. */
 function juntar(linhas: string[]): string {
@@ -154,14 +182,18 @@ export function lerCriterioDeAceite(bruto: string | null | undefined): CriterioL
 
   if (!achouRotulo) {
     const resto = juntar(linhas.slice(inicio));
-    return { estruturado: false, data, texto: resto, pontos: [] };
+    return { estruturado: false, data, texto: resto, pontos: [], preparo: [] };
   }
-  let posicao = 0;
-  const pontos: PontoDeConferencia[] = [];
+  let posicao = 0, posicaoDoPreparo = 0;
+  const pontos: PontoDeConferencia[] = [], preparo: PontoDeConferencia[] = [];
   const prontos: BlocoDoCriterio[] = [];
   // Rótulo sem nada escrito ("Termos:" sozinho) não vira seção vazia.
   for (const b of blocos) {
-    if (b.tipo === "campo" || b.tipo === "texto") {
+    if (b.tipo === "campo" && b.rotulo === "Antes de testar" && juntar(b.linhas) && !SEM_PREPARO.test(juntar(b.linhas).trim())) {
+      const doBloco = pontosDoPreparo(juntar(b.linhas)).map(texto => ({ posicao: ++posicaoDoPreparo, texto }));
+      preparo.push(...doBloco);
+      prontos.push({ tipo: "preparo", pontos: doBloco });
+    } else if (b.tipo === "campo" || b.tipo === "texto") {
       const texto = juntar(b.linhas);
       if (texto) prontos.push(b.tipo === "campo" ? { tipo: "campo", rotulo: b.rotulo, texto } : { tipo: "texto", texto });
     } else if (b.tipo === "passos") { if (b.itens.length) prontos.push({ tipo: "passos", itens: b.itens }); }
@@ -172,7 +204,7 @@ export function lerCriterioDeAceite(bruto: string | null | undefined): CriterioL
     }
   }
   if (contexto) prontos.push({ tipo: "contexto", texto: contexto });
-  return { estruturado: true, data, blocos: prontos, pontos };
+  return { estruturado: true, data, blocos: prontos, pontos, preparo };
 }
 
 /**
