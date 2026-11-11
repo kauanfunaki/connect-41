@@ -1,38 +1,15 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileDown, Wallet } from "lucide-react";
-import { SeloDaAprovacao } from "@/components/aprovacoes/HistoricoDaAprovacao";
+import { Wallet } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import type { VarianteDoBadge } from "@/components/ui/Badge";
-import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
 import { PortalCabecalho } from "./PortalCabecalho";
+import { ListaDeContasDoPortal } from "./ListaDeContasDoPortal";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telasBloqueadasDoPortal } from "@/lib/portal/telasBloqueadas";
-import { contasDoEscopo, totaisDoEscopo, type ContaDoPortal } from "@/lib/financeiro/consultas";
-import type { SituacaoDaConta } from "@/lib/financeiro/contas";
+import { contasDoEscopo, totaisDoEscopo } from "@/lib/financeiro/consultas";
 import { saoPauloParts } from "@/lib/agenda";
-import { formatInstantDate, formatarCompetencia } from "@/lib/format";
+import { formatarCompetencia } from "@/lib/format";
 import { competenciaDoInstante } from "@/lib/financeiro/periodo";
-import { moeda } from "@/lib/financeiro/formato";
-import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-
-// Os nomes da equipe (`ContasTable`), para o cliente e o escritório falarem
-// da mesma conta com a mesma palavra (07/10/2026): era "Liquidada", ao lado do
-// cartão "Pago"/"Recebido" da própria tela. A conta a receber é "Recebida".
-// Cancelada no selo neutro: no azul do `info`, era a mesma cor de "A vencer"
-// na mesma coluna. O mapa é daqui, e não importado de `ContasTable`, que traz
-// as ações de baixa — esta tela é só leitura por construção.
-const SITUACAO: Record<SituacaoDaConta, { rotulo: string; variante: VarianteDoBadge }> = {
-  VENCIDA: { rotulo: "Vencida", variante: "danger" },
-  VENCE_HOJE: { rotulo: "Vence hoje", variante: "warning" },
-  A_VENCER: { rotulo: "A vencer", variante: "info" },
-  PAGA: { rotulo: "Paga", variante: "success" },
-  CANCELADA: { rotulo: "Cancelada", variante: "neutral" },
-};
 
 /** O limite da consulta (`contasDoEscopo`): as 500 de vencimento mais recente. */
 const LIMITE = 500;
@@ -47,6 +24,10 @@ const LIMITE = 500;
  *
  * Os totais do topo são somados no banco, sobre todas as contas do escopo
  * (07/10) — eram a soma da lista, que para nas 500 de vencimento mais recente.
+ *
+ * Desde 11/11/2026 (P02) a lista, os cartões do topo e o recorte (busca e
+ * Filtros) moram em `ListaDeContasDoPortal`, de cliente: o recorte filtra no
+ * navegador, sem ida ao servidor. Aqui fica só a leitura.
  */
 export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
@@ -66,9 +47,6 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
   // A aprovação é de conta a pagar; o link só existe se a tela de aprovações
   // existir para este cliente — e se o escritório já a liberou (14/10/2026).
   const linkDaAprovacao = aPagar && modulos.has("bpo_aprovacoes") && !bloqueadas.has("/portal/aprovacoes");
-  const rotuloDa = (s: SituacaoDaConta) => (s === "PAGA" && !aPagar ? "Recebida" : SITUACAO[s].rotulo);
-  const quitadaEm = aPagar ? "pago em" : "recebido em";
-  const tela = aPagar ? "pagar" : "receber";
 
   return (
     <PageContainer>
@@ -77,183 +55,35 @@ export async function PortalContas({ kind }: { kind: "PAGAR" | "RECEBER" }) {
         descricao={aPagar ? "O que suas empresas têm a pagar." : "O que suas empresas têm a receber."}
       />
 
-      {/* O tom de cada cartão é o da tela da equipe (07/10): vencido e o que
-          vence hoje só ganham cor acima de zero; o pago é neutro e diz desde
-          quando soma — sem isso, "Pago R$ 10.483,00" não dizia de quando. */}
-      <FaixaDeTotais
-        itens={[
-          { rotulo: "Em aberto", valor: moeda(totais.emAberto) },
-          { rotulo: "Vencido", valor: moeda(totais.vencido), tom: totais.vencido > 0 ? "text-danger" : undefined },
-          { rotulo: "Vence hoje", valor: moeda(totais.venceHoje), tom: totais.venceHoje > 0 ? "text-warning" : undefined },
-          {
-            rotulo: aPagar ? "Pago" : "Recebido",
-            valor: moeda(totais.pago),
-            tom: "text-fg-muted",
-            // O mês no formato do app ("Out/26"), e não "10/2026", que é só da
-            // família da DRE (15/10/2026).
-            detalhe: totais.pagoDesde ? `desde ${formatarCompetencia(competenciaDoInstante(totais.pagoDesde))}` : undefined,
-          },
-        ]}
+      <ListaDeContasDoPortal
+        contas={contas}
+        totais={{
+          emAberto: totais.emAberto,
+          vencido: totais.vencido,
+          venceHoje: totais.venceHoje,
+          pago: totais.pago,
+          // O mês no formato do app ("Out/26"), e não "10/2026", que é só da
+          // família da DRE (15/10/2026). Sem isso, "Pago R$ 10.483,00" não
+          // dizia de quando.
+          pagoDesde: totais.pagoDesde ? `desde ${formatarCompetencia(competenciaDoInstante(totais.pagoDesde))}` : undefined,
+        }}
+        aPagar={aPagar}
+        variasEmpresas={variasEmpresas}
+        linkDaAprovacao={linkDaAprovacao}
+        limitada={contas.length >= LIMITE}
+        limite={LIMITE}
+        vazio={
+          <EmptyState
+            icon={<Wallet />}
+            title={aPagar ? "Nenhuma conta a pagar" : "Nenhuma conta a receber"}
+            description={
+              aPagar
+                ? "Quando a equipe lançar as contas da sua empresa, elas aparecem aqui com o vencimento e a situação."
+                : "Quando a equipe lançar o que sua empresa tem a receber, aparece aqui com o vencimento e a situação."
+            }
+          />
+        }
       />
-
-      {/* No casco da tabela (07/10/2026), como Pendências do portal e a tela da
-          equipe: a contagem na barra e a lista vazia dentro dele. */}
-      <CascoDaTabela contagem={contarItens(contas.length, "conta", "contas", contas.length >= LIMITE)}>
-      {contas.length === 0 ? (
-        <EmptyState
-          icon={<Wallet />}
-          title={aPagar ? "Nenhuma conta a pagar" : "Nenhuma conta a receber"}
-          description={
-            aPagar
-              ? "Quando a equipe lançar as contas da sua empresa, elas aparecem aqui com o vencimento e a situação."
-              : "Quando a equipe lançar o que sua empresa tem a receber, aparece aqui com o vencimento e a situação."
-          }
-        />
-      ) : (
-        <>
-        {/* Abaixo de md, cartões. O portal é a tela que o cliente abre no
-            celular — a tabela de 760px obrigava a rolar de lado para chegar ao
-            valor, que é o que ele veio ver. */}
-        <CartoesNoCelular>
-          {contas.map((c) => (
-            <Cartao key={c.id}>
-              <TopoDoCartao nome={c.contraparteNome} valor={moeda(c.valorCentavos)} />
-              {c.descricao && <InfoDoCartao className="break-words">{c.descricao}</InfoDoCartao>}
-              <InfoDoCartao className="mt-1 tabular-nums">
-                vence {formatInstantDate(c.vencimento)}
-                {c.pagoEm && ` · ${quitadaEm} ${formatInstantDate(c.pagoEm)}`}
-              </InfoDoCartao>
-              {(variasEmpresas || c.categoriaNome) && (
-                <InfoDoCartao className="break-words">
-                  {[variasEmpresas ? c.empresaNome : null, c.categoriaNome].filter(Boolean).join(" · ")}
-                </InfoDoCartao>
-              )}
-              <PeDoCartao>
-                <Selo tom={tomDaVariante(SITUACAO[c.situacao].variante)}>{rotuloDa(c.situacao)}</Selo>
-                <LinksDosRecibos baixas={c.baixas} tela={tela} />
-                {c.aprovacao &&
-                  (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
-                    <Link href="/portal/aprovacoes" className="inline-flex" title="Abrir as aprovações">
-                      <SeloDaAprovacao status={c.aprovacao} />
-                    </Link>
-                  ) : (
-                    <SeloDaAprovacao status={c.aprovacao} />
-                  ))}
-              </PeDoCartao>
-            </Cartao>
-          ))}
-        </CartoesNoCelular>
-
-        {/* Funil nas colunas (02/10), como na tela da equipe: a lista vem
-            inteira (até 500), então filtra no navegador. A empresa entra no
-            funil da contraparte só quando aparece na célula. */}
-        <TabelaFiltravel
-          linhas={contas.map((c) => ({
-            id: c.id,
-            valores: {
-              vencimento: c.vencimentoKey,
-              contraparte: c.contraparteNome,
-              empresa: c.empresaNome,
-              categoria: c.categoriaNome ?? "",
-              situacao: rotuloDa(c.situacao),
-            },
-          }))}
-        >
-        <TabelaNoDesktop padrao>
-          <table className="w-full min-w-[720px] text-ui">
-            <thead>
-              <tr>
-                <th className="py-2 pr-3">
-                  <FiltroDaColuna rotulo="Vencimento" chave="vencimento" tipo="data" />
-                </th>
-                <th className="py-2 pr-3">
-                  <FiltroDaColuna
-                    rotulo={aPagar ? "Fornecedor" : "Cliente"}
-                    campos={[
-                      { chave: "contraparte", rotulo: aPagar ? "Fornecedor" : "Cliente" },
-                      ...(variasEmpresas ? [{ chave: "empresa", rotulo: "Empresa" }] : []),
-                    ]}
-                  />
-                </th>
-                <th className="py-2 pr-3">
-                  <FiltroDaColuna rotulo="Categoria" chave="categoria" />
-                </th>
-                <th className="py-2 pr-3">Valor</th>
-                <th className="py-2">
-                  <FiltroDaColuna rotulo="Situação" chave="situacao" align="right" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {contas.map((c) => (
-                <LinhaFiltravel key={c.id} id={c.id} className="border-b border-border-soft">
-                  <td className="py-2.5 pr-3 tabular-nums whitespace-nowrap">
-                    {formatInstantDate(c.vencimento)}
-                    {c.pagoEm && <span className="block text-micro text-fg-muted">{quitadaEm} {formatInstantDate(c.pagoEm)}</span>}
-                  </td>
-                  <td className="py-2.5 pr-3">
-                    <span className="font-medium">{c.contraparteNome}</span>
-                    {c.descricao && <span className="block text-micro text-fg-muted truncate max-w-[240px]">{c.descricao}</span>}
-                    {variasEmpresas && <span className="block text-micro text-fg-muted truncate max-w-[240px]">{c.empresaNome}</span>}
-                  </td>
-                  <td className="py-2.5 pr-3 text-fg-secondary">{c.categoriaNome ?? "—"}</td>
-                  <td className="py-2.5 pr-3 tabular-nums font-medium">{moeda(c.valorCentavos)}</td>
-                  <td className="py-2.5">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Selo tom={tomDaVariante(SITUACAO[c.situacao].variante)}>{rotuloDa(c.situacao)}</Selo>
-                      <LinksDosRecibos baixas={c.baixas} tela={tela} />
-                      {/* O mesmo selo que a equipe vê: "vencida" sem ele parece descuido do
-                          escritório, quando a conta está esperando a aprovação do próprio cliente. */}
-                      {c.aprovacao &&
-                        (c.aprovacao === "AGUARDANDO" && linkDaAprovacao ? (
-                          <Link href="/portal/aprovacoes" className="inline-flex" title="Abrir as aprovações">
-                            <SeloDaAprovacao status={c.aprovacao} />
-                          </Link>
-                        ) : (
-                          <SeloDaAprovacao status={c.aprovacao} />
-                        ))}
-                    </div>
-                  </td>
-                </LinhaFiltravel>
-              ))}
-            </tbody>
-          </table>
-        </TabelaNoDesktop>
-        </TabelaFiltravel>
-
-        {/* Filho direto do casco: no computador vira o pé do cartão. */}
-        {contas.length >= LIMITE && (
-          <p className="text-helper text-fg-muted mt-3">
-            Mostrando as {LIMITE} contas de vencimento mais recente. Os totais do topo somam todas.
-          </p>
-        )}
-        </>
-      )}
-      </CascoDaTabela>
     </PageContainer>
-  );
-}
-
-/**
- * O recibo de cada baixa da conta (22/10/2026): o mesmo PDF que a equipe tira
- * na janela da baixa, sem a observação interna. Com mais de uma baixa
- * (pagamento em partes), um recibo por baixa, numerados pela ordem.
- */
-function LinksDosRecibos({ baixas, tela }: { baixas: ContaDoPortal["baixas"]; tela: "pagar" | "receber" }) {
-  if (baixas.length === 0) return null;
-  return (
-    <>
-      {baixas.map((b, i) => (
-        <a
-          key={b.id}
-          href={`/portal/${tela}/recibos/${b.id}`}
-          download
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-brand hover:underline"
-          title={`Baixar o recibo de ${moeda(b.caixaCentavos)} de ${formatInstantDate(b.pagoEm)} em PDF`}
-        >
-          <FileDown size={12} aria-hidden /> {baixas.length > 1 ? `Recibo ${i + 1}` : "Recibo"}
-        </a>
-      ))}
-    </>
   );
 }
