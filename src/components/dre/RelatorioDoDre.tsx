@@ -7,6 +7,8 @@ type Props = {
   resultado: ResultadoDoDre;
   /** Só na equipe: o "Mover" de cada categoria (ver `TabelaDaDre`). */
   mover?: { companyId: string; modelo: CodigoDoModelo };
+  /** Só no portal: a frase do que é cada linha (ver `TabelaDaDre`). */
+  dicas?: boolean;
 };
 
 /**
@@ -14,11 +16,11 @@ type Props = {
  * do cliente. A tabela é de cliente, pelas linhas que abrem nas categorias
  * (13/10/2026); daqui vão só as linhas e o detalhe delas.
  */
-export function RelatorioDoDre({ resultado, mover }: Props) {
+export function RelatorioDoDre({ resultado, mover, dicas = false }: Props) {
   return (
     <Card className="p-0 overflow-hidden">
       <div className="overflow-x-auto">
-        <TabelaDaDre linhas={resultado.linhas} detalhe={resultado.porCategoria} mover={mover} />
+        <TabelaDaDre linhas={resultado.linhas} detalhe={resultado.porCategoria} mover={mover} dicas={dicas} />
       </div>
     </Card>
   );
