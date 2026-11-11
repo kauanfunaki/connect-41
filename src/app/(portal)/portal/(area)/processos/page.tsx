@@ -29,7 +29,8 @@ const encerrado = (p: ProcessoNoPortal) => ["CONCLUIDO", "CANCELADO", "INDEFERID
 
 /**
  * Os processos societários das empresas do cliente: abertura, alteração,
- * baixa, alvará. O que ele quer saber é "em que pé está", então a situação e a
+ * baixa, alvará. Na tela, "encerramento" no lugar de "baixa" (11/11/2026): para
+ * o cliente, baixa é de conta paga. O que ele quer saber é "em que pé está", então a situação e a
  * previsão vêm na linha; o resto fica no detalhe.
  */
 export default async function PortalProcessosPage({
@@ -63,7 +64,7 @@ export default async function PortalProcessosPage({
           e escreve para a equipe. */}
       <PortalCabecalho
         titulo="Processos"
-        descricao="Abertura, alterações, baixa e licenças das suas empresas."
+        descricao="Abertura, alterações, encerramento e licenças das suas empresas."
         somenteLeitura={false}
       />
 
