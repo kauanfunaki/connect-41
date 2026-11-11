@@ -30,14 +30,14 @@ enum TechInternalSystemMode {
 }
 
 model TechInternalTool {
-  id        String   @id @default(uuid())
+  id        String             @id @default(uuid())
   tenantId  String
-  name      String   @db.VarChar(120)
-  active    Boolean  @default(true)
-  version   Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  name      String             @db.VarChar(120)
+  active    Boolean            @default(true)
+  version   Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  tenant    Tenant             @relation(fields: [tenantId], references: [id])
   items     TechInternalItem[]
 
   @@unique([tenantId, id])
@@ -54,60 +54,60 @@ enum TechInternalSize {
 }
 
 model TechInternalItem {
-  id            String                 @id @default(uuid())
-  tenantId      String
+  id                 String                        @id @default(uuid())
+  tenantId           String
   /// O número do item no escritório (10/11/2026): uma sequência só para todos
   /// os tipos, na ordem de criação. É o do endereço curto do item,
   /// /controle-interno/bug-123 — o prefixo vem do tipo de agora (ver
   /// `enderecoDoItem`, src/lib/tech-interno/regras.ts). Sai na criação, dentro
   /// da transação (`proximoNumero`, src/lib/tech-interno/servidor.ts).
-  number        Int
-  title         String                 @db.VarChar(200)
-  description   String?                @db.Text
-  type          TechInternalType
-  priority      Int                    @default(1)
-  status        TechInternalStatus     @default(PENDING)
-  systemMode    TechInternalSystemMode @default(NONE)
+  number             Int
+  title              String                        @db.VarChar(200)
+  description        String?                       @db.Text
+  type               TechInternalType
+  priority           Int                           @default(1)
+  status             TechInternalStatus            @default(PENDING)
+  systemMode         TechInternalSystemMode        @default(NONE)
   /// Cadastro próprio anterior (até 29/10/2026): só os vínculos já gravados.
-  toolId        String?
+  toolId             String?
   /// O sistema vem do Ops Center (29/10/2026): um robô, um site ou um app.
-  opsWatcherSlug String?               @db.VarChar(60)
-  opsSiteId     String?
-  opsAppId      String?
-  assigneeId    String?
-  dueDate       DateTime?              @db.Date
+  opsWatcherSlug     String?                       @db.VarChar(60)
+  opsSiteId          String?
+  opsAppId           String?
+  assigneeId         String?
+  dueDate            DateTime?                     @db.Date
   /// O tamanho combinado antes de começar (04/11/2026, lote D): P = 1, M = 3,
   /// G = 8 nas entregas. Quem coordena a Tech define; trava quando o item sai
   /// de Pendente — picar o item em dez não soma tamanho.
-  size          TechInternalSize?
+  size               TechInternalSize?
   /// A entrega de onde este item veio (o bug que nasce de uma entrega): é o
   /// retrabalho das Entregas da Tech.
-  originItemId  String?
+  originItemId       String?
   /// A entrega no código (06/11/2026): o PR e o commit da mudança, informados
   /// ao concluir o item — pela tela, pela API ou pelo MCP.
-  prUrl         String?                @db.VarChar(500)
-  commitSha     String?                @db.VarChar(64)
+  prUrl              String?                       @db.VarChar(500)
+  commitSha          String?                       @db.VarChar(64)
   /// O critério de aceite (10/11/2026): o que se confere para concluir o item
   /// — Mudança, Antes de testar, Onde testar, Passos, Aprovado quando —, num
   /// campo próprio, fora da descrição. O formato é o de
   /// `src/lib/tech-interno/criterioDeAceite.ts`; texto fora dele aparece como
   /// texto simples.
-  acceptanceCriteria String?             @db.Text
-  version       Int                    @default(0)
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
-  tool          TechInternalTool?      @relation(fields: [tenantId, toolId], references: [tenantId, id], onDelete: Restrict)
-  opsWatcher    OpsWatcher?            @relation(fields: [tenantId, opsWatcherSlug], references: [tenantId, slug], onDelete: Restrict)
-  opsSite       OpsSite?               @relation(fields: [tenantId, opsSiteId], references: [tenantId, id], onDelete: Restrict)
-  opsApp        OpsApp?                @relation(fields: [tenantId, opsAppId], references: [tenantId, id], onDelete: Restrict)
-  assignee      User?                  @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-  originItem    TechInternalItem?      @relation("OrigemDoItemTech", fields: [originItemId], references: [id], onDelete: SetNull)
-  derivedItems  TechInternalItem[]     @relation("OrigemDoItemTech")
-  comments      TechInternalComment[]
-  changes       TechInternalChange[]
-  attachments   TechInternalAttachment[]
-  acceptanceChecks TechInternalAcceptanceCheck[]
+  acceptanceCriteria String?                       @db.Text
+  version            Int                           @default(0)
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  tenant             Tenant                        @relation(fields: [tenantId], references: [id])
+  tool               TechInternalTool?             @relation(fields: [tenantId, toolId], references: [tenantId, id], onDelete: Restrict)
+  opsWatcher         OpsWatcher?                   @relation(fields: [tenantId, opsWatcherSlug], references: [tenantId, slug], onDelete: Restrict)
+  opsSite            OpsSite?                      @relation(fields: [tenantId, opsSiteId], references: [tenantId, id], onDelete: Restrict)
+  opsApp             OpsApp?                       @relation(fields: [tenantId, opsAppId], references: [tenantId, id], onDelete: Restrict)
+  assignee           User?                         @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  originItem         TechInternalItem?             @relation("OrigemDoItemTech", fields: [originItemId], references: [id], onDelete: SetNull)
+  derivedItems       TechInternalItem[]            @relation("OrigemDoItemTech")
+  comments           TechInternalComment[]
+  changes            TechInternalChange[]
+  attachments        TechInternalAttachment[]
+  acceptanceChecks   TechInternalAcceptanceCheck[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, number])
@@ -122,14 +122,14 @@ model TechInternalItem {
 }
 
 model TechInternalComment {
-  id         String   @id @default(uuid())
+  id         String           @id @default(uuid())
   tenantId   String
   itemId     String
   authorId   String
-  authorName String   @db.VarChar(120)
-  body       String   @db.Text
-  createdAt  DateTime @default(now())
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  authorName String           @db.VarChar(120)
+  body       String           @db.Text
+  createdAt  DateTime         @default(now())
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
   item       TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
 
   @@index([tenantId, itemId, createdAt])
@@ -137,16 +137,16 @@ model TechInternalComment {
 }
 
 model TechInternalChange {
-  id         String   @id @default(uuid())
+  id         String           @id @default(uuid())
   tenantId   String
   itemId     String
   authorId   String
-  authorName String   @db.VarChar(120)
+  authorName String           @db.VarChar(120)
   /// Versão resultante e valores legíveis no momento da alteração.
   version    Int
   changes    Json
-  createdAt  DateTime @default(now())
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt  DateTime         @default(now())
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
   item       TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
 
   @@unique([tenantId, itemId, version])
@@ -158,17 +158,17 @@ model TechInternalChange {
 /// Imagens, PDFs e outros arquivos do item (05/11/2026). O arquivo fica em
 /// `storage/tech-interno/<tenantId>/`, e só sai pela rota autenticada.
 model TechInternalAttachment {
-  id             String   @id @default(uuid())
+  id             String           @id @default(uuid())
   tenantId       String
   itemId         String
   uploadedById   String
-  uploadedByName String   @db.VarChar(120)
-  fileName       String   @db.VarChar(255)
-  fileUrl        String   @db.VarChar(255)
-  mimeType       String   @db.VarChar(120)
+  uploadedByName String           @db.VarChar(120)
+  fileName       String           @db.VarChar(255)
+  fileUrl        String           @db.VarChar(255)
+  mimeType       String           @db.VarChar(120)
   sizeBytes      Int
-  createdAt      DateTime @default(now())
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt      DateTime         @default(now())
+  tenant         Tenant           @relation(fields: [tenantId], references: [id])
   item           TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
 
   @@index([tenantId, itemId, createdAt])
@@ -181,17 +181,17 @@ model TechInternalAttachment {
 /// mesmo texto: reescrito o critério, a marca deixa de aparecer e o ponto pede
 /// conferência de novo.
 model TechInternalAcceptanceCheck {
-  id            String   @id @default(uuid())
+  id            String           @id @default(uuid())
   tenantId      String
   itemId        String
   /// A posição do ponto na lista "Aprovado quando", a partir de 1.
   position      Int
   /// O texto do ponto quando foi marcado.
-  text          String   @db.Text
+  text          String           @db.Text
   checkedById   String
-  checkedByName String   @db.VarChar(120)
-  createdAt     DateTime @default(now())
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  checkedByName String           @db.VarChar(120)
+  createdAt     DateTime         @default(now())
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
   item          TechInternalItem @relation(fields: [tenantId, itemId], references: [tenantId, id])
 
   @@unique([tenantId, itemId, position])
@@ -200,92 +200,96 @@ model TechInternalAcceptanceCheck {
 
 /// Conta compartilhada do escritório. A credencial existe somente em TenantIntegration.configEnc.
 model GithubConnection {
-  id                   String @id @default(uuid())
-  tenantId             String
-  integrationId        String @unique
-  githubUserId         String? @db.VarChar(100)
-  login                String? @db.VarChar(100)
-  connectedBy          String?
-  status               String @default("disconnected") @db.VarChar(30)
-  generation           Int @default(0)
-  timezone             String @default("America/Sao_Paulo") @db.VarChar(80)
-  intervalMinutes      Int @default(30)
-  nextSyncAt           DateTime?
-  verifiedAt           DateTime?
-  inventoryAt          DateTime?
-  lastError            String? @db.VarChar(500)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  integration          TenantIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-  repositories         GithubRepository[]
-  users                GithubUser[]
-  jobs                 GithubSyncJob[]
+  id              String             @id @default(uuid())
+  tenantId        String
+  integrationId   String             @unique
+  githubUserId    String?            @db.VarChar(100)
+  login           String?            @db.VarChar(100)
+  connectedBy     String?
+  status          String             @default("disconnected") @db.VarChar(30)
+  generation      Int                @default(0)
+  timezone        String             @default("America/Sao_Paulo") @db.VarChar(80)
+  intervalMinutes Int                @default(30)
+  nextSyncAt      DateTime?
+  verifiedAt      DateTime?
+  inventoryAt     DateTime?
+  lastError       String?            @db.VarChar(500)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  integration     TenantIntegration  @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  repositories    GithubRepository[]
+  users           GithubUser[]
+  jobs            GithubSyncJob[]
+
   @@index([tenantId, status])
   @@map("github_connections")
 }
 
 model GithubRepository {
-  id                   String @id @default(uuid())
-  tenantId             String
-  connectionId         String
-  externalId           String @db.VarChar(100)
-  owner                String @db.VarChar(100)
-  name                 String @db.VarChar(100)
-  fullName             String @db.VarChar(210)
-  defaultBranch        String @db.VarChar(255)
-  private              Boolean @default(false)
-  fork                 Boolean @default(false)
-  archived             Boolean @default(false)
-  selected             Boolean @default(false)
-  accessible           Boolean @default(true)
-  accessCheckedAt      DateTime?
-  discoveredIn         String? @db.VarChar(40)
-  lastError            String? @db.VarChar(500)
-  createdAt            DateTime @default(now())
-  connection           GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  contributions        GithubContribution[]
-  daily                GithubDailyContribution[]
-  jobs                 GithubSyncJob[]
+  id              String                    @id @default(uuid())
+  tenantId        String
+  connectionId    String
+  externalId      String                    @db.VarChar(100)
+  owner           String                    @db.VarChar(100)
+  name            String                    @db.VarChar(100)
+  fullName        String                    @db.VarChar(210)
+  defaultBranch   String                    @db.VarChar(255)
+  private         Boolean                   @default(false)
+  fork            Boolean                   @default(false)
+  archived        Boolean                   @default(false)
+  selected        Boolean                   @default(false)
+  accessible      Boolean                   @default(true)
+  accessCheckedAt DateTime?
+  discoveredIn    String?                   @db.VarChar(40)
+  lastError       String?                   @db.VarChar(500)
+  createdAt       DateTime                  @default(now())
+  connection      GithubConnection          @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  contributions   GithubContribution[]
+  daily           GithubDailyContribution[]
+  jobs            GithubSyncJob[]
+
   @@unique([connectionId, externalId])
   @@index([tenantId, connectionId, selected, accessible])
   @@map("github_repositories")
 }
 
 model GithubUser {
-  id                   String @id @default(uuid())
-  tenantId             String
-  connectionId         String
-  externalId           String @db.VarChar(100)
-  login                String @db.VarChar(100)
-  name                 String? @db.VarChar(200)
-  isBot                Boolean @default(false)
-  unidentified         Boolean @default(false)
-  tracked              Boolean @default(false)
-  connection           GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  contributions        GithubContribution[]
-  daily                GithubDailyContribution[]
+  id            String                    @id @default(uuid())
+  tenantId      String
+  connectionId  String
+  externalId    String                    @db.VarChar(100)
+  login         String                    @db.VarChar(100)
+  name          String?                   @db.VarChar(200)
+  isBot         Boolean                   @default(false)
+  unidentified  Boolean                   @default(false)
+  tracked       Boolean                   @default(false)
+  connection    GithubConnection          @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  contributions GithubContribution[]
+  daily         GithubDailyContribution[]
+
   @@unique([connectionId, externalId])
   @@index([tenantId, connectionId, login])
   @@map("github_users")
 }
 
 model GithubContribution {
-  id                   String @id @default(uuid())
-  tenantId             String
-  repositoryId         String
-  userId               String
-  type                 String @db.VarChar(20)
-  externalId           String @db.VarChar(100)
-  occurredAt           DateTime
-  day                  String @db.Char(10)
-  url                  String @db.VarChar(1000)
-  number               Int?
+  id           String           @id @default(uuid())
+  tenantId     String
+  repositoryId String
+  userId       String
+  type         String           @db.VarChar(20)
+  externalId   String           @db.VarChar(100)
+  occurredAt   DateTime
+  day          String           @db.Char(10)
+  url          String           @db.VarChar(1000)
+  number       Int?
   /// Primeira linha da mensagem do commit ou título do PR/issue (27/10/2026).
-  title                String? @db.VarChar(300)
-  current              Boolean @default(true)
-  seenIn               String? @db.VarChar(40)
-  repository           GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  user                 GithubUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String?          @db.VarChar(300)
+  current      Boolean          @default(true)
+  seenIn       String?          @db.VarChar(40)
+  repository   GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user         GithubUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([repositoryId, type, externalId])
   @@index([tenantId, repositoryId, day, current])
   @@index([tenantId, userId, day, type])
@@ -293,15 +297,16 @@ model GithubContribution {
 }
 
 model GithubDailyContribution {
-  id                   String @id @default(uuid())
-  tenantId             String
-  repositoryId         String
-  userId               String
-  day                  String @db.Char(10)
-  type                 String @db.VarChar(20)
-  count                Int
-  repository           GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  user                 GithubUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String           @id @default(uuid())
+  tenantId     String
+  repositoryId String
+  userId       String
+  day          String           @db.Char(10)
+  type         String           @db.VarChar(20)
+  count        Int
+  repository   GithubRepository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user         GithubUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([repositoryId, userId, day, type])
   @@index([tenantId, userId, day])
   @@index([tenantId, repositoryId, day])
@@ -310,24 +315,25 @@ model GithubDailyContribution {
 
 /// Uma tarefa por recurso; cursor e cobertura sobrevivem a reinícios e à conclusão de um lote.
 model GithubSyncJob {
-  id                   String @id @default(uuid())
-  tenantId             String
-  connectionId         String
-  repositoryId         String?
-  key                  String @db.VarChar(150)
-  resource             String @db.VarChar(20)
-  state                String @default("queued") @db.VarChar(20)
-  generation           Int
-  priority             Int @default(10)
-  cursor               Json?
-  coveredFrom          DateTime?
-  coveredThrough       DateTime?
-  nextAttemptAt        DateTime @default(now())
-  attempts             Int @default(0)
-  error                String? @db.VarChar(500)
-  updatedAt            DateTime @updatedAt
-  connection           GithubConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  repository           GithubRepository? @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  id             String            @id @default(uuid())
+  tenantId       String
+  connectionId   String
+  repositoryId   String?
+  key            String            @db.VarChar(150)
+  resource       String            @db.VarChar(20)
+  state          String            @default("queued") @db.VarChar(20)
+  generation     Int
+  priority       Int               @default(10)
+  cursor         Json?
+  coveredFrom    DateTime?
+  coveredThrough DateTime?
+  nextAttemptAt  DateTime          @default(now())
+  attempts       Int               @default(0)
+  error          String?           @db.VarChar(500)
+  updatedAt      DateTime          @updatedAt
+  connection     GithubConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  repository     GithubRepository? @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
   @@unique([connectionId, key])
   @@index([state, nextAttemptAt, priority])
   @@index([tenantId, connectionId, generation])
@@ -336,24 +342,26 @@ model GithubSyncJob {
 
 /// Lease compartilhada entre conexões da mesma identidade GitHub; também coordena pausa por rate limit.
 model GithubAccountLease {
-  githubUserId         String @id @db.VarChar(100)
-  owner                String? @db.VarChar(40)
-  expiresAt            DateTime?
-  nextAttemptAt        DateTime?
+  githubUserId  String    @id @db.VarChar(100)
+  owner         String?   @db.VarChar(40)
+  expiresAt     DateTime?
+  nextAttemptAt DateTime?
+
   @@map("github_account_leases")
 }
 
 model GithubOAuthAttempt {
-  stateHash            String @id @db.Char(64)
-  connectionId         String
-  tenantId             String
-  userId               String
-  sessionHash          String @db.Char(64)
-  verifierEnc          String @db.Text
-  generation           Int
-  expiresAt            DateTime
+  stateHash    String   @id @db.Char(64)
+  connectionId String
+  tenantId     String
+  userId       String
+  sessionHash  String   @db.Char(64)
+  verifierEnc  String   @db.Text
+  generation   Int
+  expiresAt    DateTime
   /// "connection": a conta do escritório em Integrações; "account": a pessoa vinculando a própria conta em Sua conta.
-  purpose              String @default("connection") @db.VarChar(20)
+  purpose      String   @default("connection") @db.VarChar(20)
+
   @@index([expiresAt])
   @@map("github_oauth_attempts")
 }
@@ -361,13 +369,14 @@ model GithubOAuthAttempt {
 /// A conta GitHub de uma pessoa do Connect, vinculada por ela em Sua conta (27/10/2026).
 /// O painel junta pelo ID estável do GitHub (`externalId`), não pelo login.
 model GithubAccountLink {
-  id                   String @id @default(uuid())
-  tenantId             String
-  userId               String @unique
-  externalId           String @db.VarChar(100)
-  login                String @db.VarChar(100)
-  linkedAt             DateTime @default(now())
-  user                 User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String   @unique
+  externalId String   @db.VarChar(100)
+  login      String   @db.VarChar(100)
+  linkedAt   DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([tenantId, externalId])
   @@map("github_account_links")
 }
@@ -375,14 +384,15 @@ model GithubAccountLink {
 /// Times do GitHub montados pelo coordenador do Tech (04/11/2026): nome e cor;
 /// a cor pinta os dias do calendário no modo "Cor por time".
 model GithubTeam {
-  id                   String @id @default(uuid())
-  tenantId             String
-  name                 String @db.VarChar(80)
-  color                String @db.VarChar(7)
-  position             Int @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  people               GithubPerson[]
+  id        String         @id @default(uuid())
+  tenantId  String
+  name      String         @db.VarChar(80)
+  color     String         @db.VarChar(7)
+  position  Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  people    GithubPerson[]
+
   @@unique([tenantId, name])
   @@map("github_teams")
 }
@@ -391,41 +401,43 @@ model GithubTeam {
 /// (`externalId`), não pelo `GithubUser.id`: este é por conexão e se refaz quando
 /// a conta do escritório é trocada. Cor vazia = cor automática da paleta.
 model GithubPerson {
-  id                   String @id @default(uuid())
-  tenantId             String
-  externalId           String @db.VarChar(100)
-  login                String @db.VarChar(100)
-  color                String? @db.VarChar(7)
-  teamId               String?
-  team                 GithubTeam? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  id         String      @id @default(uuid())
+  tenantId   String
+  externalId String      @db.VarChar(100)
+  login      String      @db.VarChar(100)
+  color      String?     @db.VarChar(7)
+  teamId     String?
+  team       GithubTeam? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
   @@unique([tenantId, externalId])
   @@index([tenantId, teamId])
   @@map("github_people")
 }
 
 model OpsWatcher {
-  tenantId String
-  ownerId String?
-  slug String @db.VarChar(60)
-  name String @db.VarChar(120)
-  description String? @db.VarChar(1000)
-  client String? @db.VarChar(120)
-  folderInput String? @db.VarChar(1000)
-  folderOutput String? @db.VarChar(1000)
-  isActive Boolean @default(true)
-  version Int @default(0)
-  tokenHash String? @unique @db.Char(64)
-  lastHeartbeatAt DateTime?
+  tenantId              String
+  ownerId               String?
+  slug                  String             @db.VarChar(60)
+  name                  String             @db.VarChar(120)
+  description           String?            @db.VarChar(1000)
+  client                String?            @db.VarChar(120)
+  folderInput           String?            @db.VarChar(1000)
+  folderOutput          String?            @db.VarChar(1000)
+  isActive              Boolean            @default(true)
+  version               Int                @default(0)
+  tokenHash             String?            @unique @db.Char(64)
+  lastHeartbeatAt       DateTime?
   instabilityReportedAt DateTime?
-  instabilityReportedBy String? @db.VarChar(191)
-  instabilityNote String? @db.Text
-  instabilityTicketId String? @db.VarChar(191)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  owner User? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  events OpsEvent[]
-  techItems TechInternalItem[]
+  instabilityReportedBy String?            @db.VarChar(191)
+  instabilityNote       String?            @db.Text
+  instabilityTicketId   String?            @db.VarChar(191)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  tenant                Tenant             @relation(fields: [tenantId], references: [id])
+  owner                 User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  events                OpsEvent[]
+  techItems             TechInternalItem[]
+
   @@id([tenantId, slug])
   @@index([tenantId, ownerId])
   @@map("ops_watchers")
@@ -464,7 +476,8 @@ model RobotTask {
   requestedById String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId, status, createdAt])
   @@index([tenantId, createdAt])
   @@map("robot_tasks")
@@ -477,23 +490,24 @@ model RobotTask {
 /// minutos); aqui fica o que precisa sobreviver: prazo, quem foi chamado, quem
 /// clicou e como terminou.
 model RobotAssist {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  taskId String @db.VarChar(191)
+  id            String    @id @default(uuid()) @db.VarChar(36)
+  tenantId      String    @db.VarChar(191)
+  taskId        String    @db.VarChar(191)
   /// A tentativa da tarefa (`RobotTask.attempts`) em que o robô pediu ajuda.
-  attempt Int
+  attempt       Int
   /// Por que parou: hoje só `captcha`.
-  reason String @db.VarChar(40)
-  startedAt DateTime @default(now())
-  deadlineAt DateTime
+  reason        String    @db.VarChar(40)
+  startedAt     DateTime  @default(now())
+  deadlineAt    DateTime
   /// Quando o aviso passou de quem pediu para o setor inteiro. Nulo: só quem pediu.
-  escalatedAt DateTime?
-  endedAt DateTime?
+  escalatedAt   DateTime?
+  endedAt       DateTime?
   /// `resolvido`, `prazo` ou `desistiu`.
-  outcome String? @db.VarChar(20)
-  clicks Int @default(0)
-  lastClickById String? @db.VarChar(191)
-  lastClickAt DateTime?
+  outcome       String?   @db.VarChar(20)
+  clicks        Int       @default(0)
+  lastClickById String?   @db.VarChar(191)
+  lastClickAt   DateTime?
+
   @@unique([taskId, attempt])
   @@index([tenantId, startedAt])
   @@map("robot_assists")
@@ -502,19 +516,20 @@ model RobotAssist {
 /// Sites do Tech no Ops Center (28/10/2026): o que já está no ar, com quem
 /// responde por ele. A triagem dos chamados consulta antes de abrir um pedido.
 model OpsSite {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   tenantId    String
   ownerId     String?
-  name        String   @db.VarChar(120)
-  url         String   @db.VarChar(500)
-  description String?  @db.VarChar(2000)
-  isActive    Boolean  @default(true)
-  version     Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  name        String             @db.VarChar(120)
+  url         String             @db.VarChar(500)
+  description String?            @db.VarChar(2000)
+  isActive    Boolean            @default(true)
+  version     Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  owner       User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   techItems   TechInternalItem[]
+
   @@unique([tenantId, id])
   @@unique([tenantId, name])
   @@index([tenantId, ownerId])
@@ -525,20 +540,21 @@ model OpsSite {
 /// GitHub pelo nome completo (owner/nome): a lista de repositórios é recriada
 /// quando a conexão muda, então não há chave estrangeira.
 model OpsApp {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   tenantId    String
   ownerId     String?
-  name        String   @db.VarChar(120)
-  repository  String?  @db.VarChar(210)
-  url         String?  @db.VarChar(500)
-  description String?  @db.VarChar(2000)
-  isActive    Boolean  @default(true)
-  version     Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  name        String             @db.VarChar(120)
+  repository  String?            @db.VarChar(210)
+  url         String?            @db.VarChar(500)
+  description String?            @db.VarChar(2000)
+  isActive    Boolean            @default(true)
+  version     Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  owner       User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   techItems   TechInternalItem[]
+
   @@unique([tenantId, id])
   @@unique([tenantId, name])
   @@index([tenantId, ownerId])
@@ -548,25 +564,27 @@ model OpsApp {
 /// Credencial única do escritório para todos os bots do Ops Center.
 /// O token em texto aparece somente na geração; o banco guarda seu hash.
 model OpsApiCredential {
-  tenantId String @id
-  tokenHash String? @unique @db.Char(64)
-  version Int @default(0)
+  tenantId  String   @id
+  tokenHash String?  @unique @db.Char(64)
+  version   Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
   @@map("ops_api_credentials")
 }
 
 /// Chaves adicionais, com revogação individual. A chave original é preservada.
 model OpsApiKey {
-  id String @id @default(uuid())
-  tenantId String
-  name String @db.VarChar(120)
-  tokenHash String? @unique @db.Char(64)
-  version Int @default(0)
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String   @db.VarChar(120)
+  tokenHash String?  @unique @db.Char(64)
+  version   Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
   @@index([tenantId, createdAt])
   @@map("ops_api_keys")
 }
@@ -600,24 +618,25 @@ model PersonalApiToken {
 }
 
 model OpsEvent {
-  id String @id @default(uuid())
-  tenantId String
-  watcherSlug String @db.VarChar(60)
-  eventId String @db.VarChar(100)
-  payloadHash String @db.Char(64)
-  filename String @db.VarChar(1000)
-  filenameRenamed String? @db.VarChar(1000)
-  status String @db.VarChar(10)
-  errorMessage String? @db.Text
-  client String? @db.VarChar(120)
-  n8nExecutionId String? @db.VarChar(120)
-  processedAt DateTime
-  receivedAt DateTime @default(now())
+  id              String     @id @default(uuid())
+  tenantId        String
+  watcherSlug     String     @db.VarChar(60)
+  eventId         String     @db.VarChar(100)
+  payloadHash     String     @db.Char(64)
+  filename        String     @db.VarChar(1000)
+  filenameRenamed String?    @db.VarChar(1000)
+  status          String     @db.VarChar(10)
+  errorMessage    String?    @db.Text
+  client          String?    @db.VarChar(120)
+  n8nExecutionId  String?    @db.VarChar(120)
+  processedAt     DateTime
+  receivedAt      DateTime   @default(now())
   /// Aviso fechado no card do robô (28/10/2026): some para toda a equipe; o
   /// evento continua no histórico com quem fechou e quando.
-  dismissedAt DateTime?
-  dismissedBy String? @db.VarChar(191)
-  watcher OpsWatcher @relation(fields: [tenantId, watcherSlug], references: [tenantId, slug])
+  dismissedAt     DateTime?
+  dismissedBy     String?    @db.VarChar(191)
+  watcher         OpsWatcher @relation(fields: [tenantId, watcherSlug], references: [tenantId, slug])
+
   @@unique([tenantId, watcherSlug, eventId])
   @@index([tenantId, processedAt])
   @@index([tenantId, status, processedAt])
@@ -649,34 +668,36 @@ enum HelpdeskPriority {
 }
 
 model HelpdeskRequesterSector {
-  tenantId String
+  tenantId   String
   sectorCode String @db.VarChar(40)
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant     Tenant @relation(fields: [tenantId], references: [id])
+
   @@id([tenantId, sectorCode])
   @@map("helpdesk_requester_sectors")
 }
 
 model HelpdeskCategory {
-  id String @id @default(uuid())
-  tenantId String
-  name String @db.VarChar(120)
-  parentId String?
-  active Boolean @default(true)
-  version Int @default(0)
-  descriptionTemplate String @db.Text
-  templateApplyMode String @default("replace_if_empty") @db.VarChar(30)
-  formSchema Json
+  id                  String             @id @default(uuid())
+  tenantId            String
+  name                String             @db.VarChar(120)
+  parentId            String?
+  active              Boolean            @default(true)
+  version             Int                @default(0)
+  descriptionTemplate String             @db.Text
+  templateApplyMode   String             @default("replace_if_empty") @db.VarChar(30)
+  formSchema          Json
   requiredAttachments Json
-  checklistTemplate Json
-  requiresApproval Boolean @default(false)
-  approvalMode String @default("REQUESTER_COORDINATOR") @db.VarChar(30)
-  approvalUserIds Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  parent HelpdeskCategory? @relation("HelpdeskCategoryTree", fields: [tenantId, parentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
-  children HelpdeskCategory[] @relation("HelpdeskCategoryTree")
-  tickets HelpdeskTicket[]
+  checklistTemplate   Json
+  requiresApproval    Boolean            @default(false)
+  approvalMode        String             @default("REQUESTER_COORDINATOR") @db.VarChar(30)
+  approvalUserIds     Json
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  tenant              Tenant             @relation(fields: [tenantId], references: [id])
+  parent              HelpdeskCategory?  @relation("HelpdeskCategoryTree", fields: [tenantId, parentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  children            HelpdeskCategory[] @relation("HelpdeskCategoryTree")
+  tickets             HelpdeskTicket[]
+
   @@unique([tenantId, id])
   @@unique([tenantId, name])
   @@index([tenantId, active])
@@ -684,83 +705,87 @@ model HelpdeskCategory {
 }
 
 model HelpdeskSlaPolicy {
-  tenantId String
-  priority HelpdeskPriority
+  tenantId             String
+  priority             HelpdeskPriority
   firstResponseMinutes Int
-  resolutionMinutes Int
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  resolutionMinutes    Int
+  tenant               Tenant           @relation(fields: [tenantId], references: [id])
+
   @@id([tenantId, priority])
   @@map("helpdesk_sla_policies")
 }
 
 model HelpdeskDraft {
-  id String @id @default(uuid())
-  tenantId String
-  createdById String
-  version Int @default(0)
-  payload Json
-  review Json?
-  reviewVersion Int?
-  analysisToken String?
+  id                String                  @id @default(uuid())
+  tenantId          String
+  createdById       String
+  version           Int                     @default(0)
+  payload           Json
+  review            Json?
+  reviewVersion     Int?
+  analysisToken     String?
   analysisStartedAt DateTime?
-  submittedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  ticket HelpdeskTicket?
-  messages HelpdeskTriageMessage[]
-  attachments HelpdeskAttachment[]
+  submittedAt       DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id])
+  ticket            HelpdeskTicket?
+  messages          HelpdeskTriageMessage[]
+  attachments       HelpdeskAttachment[]
+
   @@unique([tenantId, id])
   @@index([tenantId, createdById, submittedAt])
   @@map("helpdesk_drafts")
 }
 
 model HelpdeskTriageMessage {
-  id String @id @default(uuid())
-  tenantId String
-  draftId String
-  role String @db.VarChar(20)
-  body String @db.Text
-  createdAt DateTime @default(now())
-  draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id], onDelete: Cascade)
+  id        String        @id @default(uuid())
+  tenantId  String
+  draftId   String
+  role      String        @db.VarChar(20)
+  body      String        @db.Text
+  createdAt DateTime      @default(now())
+  draft     HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id], onDelete: Cascade)
+
   @@index([tenantId, draftId, createdAt])
   @@map("helpdesk_triage_messages")
 }
 
 model HelpdeskTicket {
-  id String @id @default(uuid())
-  tenantId String
-  draftId String @unique
-  title String @db.VarChar(255)
-  description String @db.Text
-  categoryId String
-  requesterSectorCode String @db.VarChar(40)
-  createdById String
-  status HelpdeskStatus @default(ABERTO)
-  priority HelpdeskPriority @default(MEDIA)
-  requestData Json
-  tags Json
-  approverIds Json
-  approvalRequired Boolean @default(false)
-  approvalStatus String @default("NOT_REQUIRED") @db.VarChar(20)
-  queueOrder Int?
-  version Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  closedAt DateTime?
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id])
-  category HelpdeskCategory @relation(fields: [tenantId, categoryId], references: [tenantId, id])
-  assignees HelpdeskAssignee[]
-  participants HelpdeskParticipant[]
-  comments HelpdeskComment[]
-  attachments HelpdeskAttachment[]
-  checklist HelpdeskChecklistItem[]
-  cycles HelpdeskSlaCycle[]
-  events HelpdeskEvent[]
-  approvals HelpdeskApproval[]
-  reopenRequests HelpdeskReopenRequest[]
-  views HelpdeskTicketView[]
+  id                  String                  @id @default(uuid())
+  tenantId            String
+  draftId             String                  @unique
+  title               String                  @db.VarChar(255)
+  description         String                  @db.Text
+  categoryId          String
+  requesterSectorCode String                  @db.VarChar(40)
+  createdById         String
+  status              HelpdeskStatus          @default(ABERTO)
+  priority            HelpdeskPriority        @default(MEDIA)
+  requestData         Json
+  tags                Json
+  approverIds         Json
+  approvalRequired    Boolean                 @default(false)
+  approvalStatus      String                  @default("NOT_REQUIRED") @db.VarChar(20)
+  queueOrder          Int?
+  version             Int                     @default(0)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  closedAt            DateTime?
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id])
+  draft               HelpdeskDraft           @relation(fields: [tenantId, draftId], references: [tenantId, id])
+  category            HelpdeskCategory        @relation(fields: [tenantId, categoryId], references: [tenantId, id])
+  assignees           HelpdeskAssignee[]
+  participants        HelpdeskParticipant[]
+  comments            HelpdeskComment[]
+  attachments         HelpdeskAttachment[]
+  checklist           HelpdeskChecklistItem[]
+  cycles              HelpdeskSlaCycle[]
+  events              HelpdeskEvent[]
+  approvals           HelpdeskApproval[]
+  reopenRequests      HelpdeskReopenRequest[]
+  views               HelpdeskTicketView[]
+
   @@unique([tenantId, id])
   @@unique([tenantId, draftId])
   @@index([tenantId, status, queueOrder])
@@ -775,9 +800,10 @@ model HelpdeskTicket {
 model HelpdeskTicketView {
   tenantId String
   ticketId String
-  userId String
-  viewedAt DateTime @default(now())
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  userId   String
+  viewedAt DateTime       @default(now())
+  ticket   HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@id([tenantId, ticketId, userId])
   @@index([tenantId, userId])
   @@map("helpdesk_ticket_views")
@@ -786,8 +812,9 @@ model HelpdeskTicketView {
 model HelpdeskAssignee {
   tenantId String
   ticketId String
-  userId String
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  userId   String
+  ticket   HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@id([tenantId, ticketId, userId])
   @@map("helpdesk_assignees")
 }
@@ -795,23 +822,25 @@ model HelpdeskAssignee {
 model HelpdeskParticipant {
   tenantId String
   ticketId String
-  userId String
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  userId   String
+  ticket   HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@id([tenantId, ticketId, userId])
   @@map("helpdesk_participants")
 }
 
 model HelpdeskComment {
-  id String @id @default(uuid())
-  tenantId String
-  ticketId String
-  authorId String
-  requestId String
-  body String @db.Text
-  internal Boolean @default(false)
-  createdAt DateTime @default(now())
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  id          String               @id @default(uuid())
+  tenantId    String
+  ticketId    String
+  authorId    String
+  requestId   String
+  body        String               @db.Text
+  internal    Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  ticket      HelpdeskTicket       @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
   attachments HelpdeskAttachment[]
+
   @@unique([tenantId, id])
   @@unique([tenantId, ticketId, requestId])
   @@index([tenantId, ticketId, createdAt])
@@ -819,23 +848,24 @@ model HelpdeskComment {
 }
 
 model HelpdeskAttachment {
-  id String @id @default(uuid())
-  tenantId String
-  draftId String
-  ticketId String?
-  commentId String?
-  uploadedById String
-  sha256 String @db.VarChar(64)
-  attachmentKey String? @db.VarChar(80)
-  fileName String @db.VarChar(255)
-  fileUrl String @db.VarChar(255)
-  mimeType String @db.VarChar(120)
-  sizeBytes Int
-  internal Boolean @default(false)
-  createdAt DateTime @default(now())
-  draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id], onDelete: Cascade)
-  ticket HelpdeskTicket? @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
-  comment HelpdeskComment? @relation(fields: [tenantId, commentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  id            String           @id @default(uuid())
+  tenantId      String
+  draftId       String
+  ticketId      String?
+  commentId     String?
+  uploadedById  String
+  sha256        String           @db.VarChar(64)
+  attachmentKey String?          @db.VarChar(80)
+  fileName      String           @db.VarChar(255)
+  fileUrl       String           @db.VarChar(255)
+  mimeType      String           @db.VarChar(120)
+  sizeBytes     Int
+  internal      Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  draft         HelpdeskDraft    @relation(fields: [tenantId, draftId], references: [tenantId, id], onDelete: Cascade)
+  ticket        HelpdeskTicket?  @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  comment       HelpdeskComment? @relation(fields: [tenantId, commentId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+
   @@unique([tenantId, id])
   @@index([tenantId, draftId])
   @@index([tenantId, ticketId])
@@ -843,50 +873,53 @@ model HelpdeskAttachment {
 }
 
 model HelpdeskChecklistItem {
-  id String @id @default(uuid())
+  id       String         @id @default(uuid())
   tenantId String
   ticketId String
-  key String @db.VarChar(80)
-  label String @db.VarChar(255)
-  done Boolean @default(false)
+  key      String         @db.VarChar(80)
+  label    String         @db.VarChar(255)
+  done     Boolean        @default(false)
   doneById String?
-  doneAt DateTime?
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  doneAt   DateTime?
+  ticket   HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@unique([tenantId, ticketId, key])
   @@map("helpdesk_checklist_items")
 }
 
 model HelpdeskSlaCycle {
-  id String @id @default(uuid())
-  tenantId String
-  ticketId String
-  cycleNumber Int
-  openedAt DateTime
+  id                 String         @id @default(uuid())
+  tenantId           String
+  ticketId           String
+  cycleNumber        Int
+  openedAt           DateTime
   firstResponseDueAt DateTime
-  resolutionDueAt DateTime
-  firstResponseAt DateTime?
-  resolvedAt DateTime?
-  pausedAt DateTime?
-  pausedMinutes Int @default(0)
-  manualDeadline Boolean @default(false)
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  resolutionDueAt    DateTime
+  firstResponseAt    DateTime?
+  resolvedAt         DateTime?
+  pausedAt           DateTime?
+  pausedMinutes      Int            @default(0)
+  manualDeadline     Boolean        @default(false)
+  ticket             HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@unique([tenantId, ticketId, cycleNumber])
   @@index([tenantId, resolvedAt, resolutionDueAt])
   @@map("helpdesk_sla_cycles")
 }
 
 model HelpdeskEvent {
-  id String @id @default(uuid())
-  tenantId String
-  ticketId String
-  actorId String?
-  type String @db.VarChar(60)
-  data Json
-  internal Boolean @default(false)
-  dedupKey String? @db.VarChar(191)
+  id           String         @id @default(uuid())
+  tenantId     String
+  ticketId     String
+  actorId      String?
+  type         String         @db.VarChar(60)
+  data         Json
+  internal     Boolean        @default(false)
+  dedupKey     String?        @db.VarChar(191)
   dispatchedAt DateTime?
-  createdAt DateTime @default(now())
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+  ticket       HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@unique([tenantId, dedupKey])
   @@index([tenantId, ticketId, createdAt])
   @@index([tenantId, dispatchedAt, createdAt])
@@ -894,32 +927,34 @@ model HelpdeskEvent {
 }
 
 model HelpdeskApproval {
-  id String @id @default(uuid())
-  tenantId String
-  ticketId String
+  id          String         @id @default(uuid())
+  tenantId    String
+  ticketId    String
   cycleNumber Int
-  status String @default("PENDING") @db.VarChar(20)
+  status      String         @default("PENDING") @db.VarChar(20)
   decidedById String?
-  note String? @db.Text
-  createdAt DateTime @default(now())
-  decidedAt DateTime?
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  note        String?        @db.Text
+  createdAt   DateTime       @default(now())
+  decidedAt   DateTime?
+  ticket      HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@unique([tenantId, ticketId, cycleNumber])
   @@map("helpdesk_approvals")
 }
 
 model HelpdeskReopenRequest {
-  id String @id @default(uuid())
-  tenantId String
-  ticketId String
+  id            String         @id @default(uuid())
+  tenantId      String
+  ticketId      String
   requestedById String
-  reason String @db.Text
-  status String @default("PENDING") @db.VarChar(20)
-  decidedById String?
-  note String? @db.Text
-  createdAt DateTime @default(now())
-  decidedAt DateTime?
-  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  reason        String         @db.Text
+  status        String         @default("PENDING") @db.VarChar(20)
+  decidedById   String?
+  note          String?        @db.Text
+  createdAt     DateTime       @default(now())
+  decidedAt     DateTime?
+  ticket        HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
   @@index([tenantId, ticketId, status])
   @@map("helpdesk_reopen_requests")
 }
@@ -1395,33 +1430,33 @@ enum TrainingParticipantStatus {
 // ─── Tenancy + Auth ──────────────────────────────────────────────────────────
 
 model Tenant {
-  opsApiKeys OpsApiKey[]
-  personalApiTokens PersonalApiToken[]
-  techInternalTools TechInternalTool[]
-  techInternalItems TechInternalItem[]
-  techInternalComments TechInternalComment[]
-  techInternalChanges TechInternalChange[]
-  techInternalAttachments TechInternalAttachment[]
+  opsApiKeys                   OpsApiKey[]
+  personalApiTokens            PersonalApiToken[]
+  techInternalTools            TechInternalTool[]
+  techInternalItems            TechInternalItem[]
+  techInternalComments         TechInternalComment[]
+  techInternalChanges          TechInternalChange[]
+  techInternalAttachments      TechInternalAttachment[]
   techInternalAcceptanceChecks TechInternalAcceptanceCheck[]
-  opsWatchers             OpsWatcher[]
-  opsSites                OpsSite[]
-  opsApps                 OpsApp[]
-  opsApiCredential        OpsApiCredential?
-  helpdeskRequesterSectors HelpdeskRequesterSector[]
-  helpdeskCategories       HelpdeskCategory[]
-  helpdeskSlaPolicies      HelpdeskSlaPolicy[]
-  helpdeskDrafts           HelpdeskDraft[]
-  helpdeskTickets          HelpdeskTicket[]
-  id             String         @id @default(uuid())
-  name           String         @db.VarChar(120)
-  cnpj           String?        @unique @db.VarChar(18)
-  slug           String         @unique @db.VarChar(60)
-  plan           String         @default("starter") @db.VarChar(40)
-  managementMode ManagementMode @default(MANAGED)
-  logoUrl        String?        @db.VarChar(255)
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  opsWatchers                  OpsWatcher[]
+  opsSites                     OpsSite[]
+  opsApps                      OpsApp[]
+  opsApiCredential             OpsApiCredential?
+  helpdeskRequesterSectors     HelpdeskRequesterSector[]
+  helpdeskCategories           HelpdeskCategory[]
+  helpdeskSlaPolicies          HelpdeskSlaPolicy[]
+  helpdeskDrafts               HelpdeskDraft[]
+  helpdeskTickets              HelpdeskTicket[]
+  id                           String                        @id @default(uuid())
+  name                         String                        @db.VarChar(120)
+  cnpj                         String?                       @unique @db.VarChar(18)
+  slug                         String                        @unique @db.VarChar(60)
+  plan                         String                        @default("starter") @db.VarChar(40)
+  managementMode               ManagementMode                @default(MANAGED)
+  logoUrl                      String?                       @db.VarChar(255)
+  active                       Boolean                       @default(true)
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
 
   subscription              Subscription?
   users                     User[]
@@ -1593,17 +1628,18 @@ model Tenant {
   candidatoAcessos          CandidatoAcesso[]
   leads                     Lead[]
 
-  driveFolders              DriveFolder[]
-  driveFiles                DriveFile[]
-  driveTemplateFolders      DriveTemplateFolder[]
-  accessAuthorizations      AccessAuthorization[]
+  driveFolders               DriveFolder[]
+  driveFiles                 DriveFile[]
+  driveTemplateFolders       DriveTemplateFolder[]
+  accessAuthorizations       AccessAuthorization[]
   accessAuthorizationGrantee AccessAuthorizationGrantee?
-  serproCalls               SerproCall[]
-  serproEventos             SerproEvento[]
-  serproPedidos             SerproPedido[]
-  serproMensagens           SerproMensagem[]
-  serproTermo               SerproTermo?
-  omieEmissoes              OmieEmissao[]
+  serproCalls                SerproCall[]
+  serproEventos              SerproEvento[]
+  serproPedidos              SerproPedido[]
+  serproMensagens            SerproMensagem[]
+  serproTermo                SerproTermo?
+  omieEmissoes               OmieEmissao[]
+
   @@map("tenants")
 }
 
@@ -1732,13 +1768,13 @@ model UserTenantAccess {
 // UserSector, CompanyService, Pipeline, Handoff. O código não muda após criado
 // pois já pode estar espalhado nesses registros; label/cor/ordem são editáveis.
 model Sector {
-  id        String   @id @default(uuid())
-  tenantId  String
-  code      String   @db.VarChar(40)
-  label     String   @db.VarChar(80)
-  color     String   @default("#586577") @db.VarChar(7)
-  active    Boolean  @default(true)
-  order     Int      @default(0)
+  id               String   @id @default(uuid())
+  tenantId         String
+  code             String   @db.VarChar(40)
+  label            String   @db.VarChar(80)
+  color            String   @default("#586577") @db.VarChar(7)
+  active           Boolean  @default(true)
+  order            Int      @default(0)
   /// Limites dos alertas da Gestão (29/09/2026, vindos do painel 41-gestao):
   /// depois de quantos dias sem movimentação um processo ou card deste setor
   /// conta como parado, e com quantos dias de antecedência o prazo avisa.
@@ -1748,9 +1784,9 @@ model Sector {
   /// "Trabalhar numa empresa por vez" neste setor (29/10/2026), a chave de
   /// Configurações › Setores. Nulo = ligado, o de antes da chave; só vale nos
   /// setores cujas telas seguem o foco (`setoresDoFoco`, hoje o BPO).
-  companyFocus Boolean?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  companyFocus     Boolean?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
@@ -1895,109 +1931,110 @@ model Subscription {
 model User {
   techInternalAssignments TechInternalItem[]
   personalApiTokens       PersonalApiToken[]
-  opsWatchers                 OpsWatcher[]
-  opsSites                    OpsSite[]
-  opsApps                     OpsApp[]
-  id           String   @id @default(uuid())
-  tenantId     String
-  name         String   @db.VarChar(120)
-  email        String   @db.VarChar(120)
-  passwordHash String   @db.VarChar(255)
-  photoUrl     String?  @db.VarChar(255)
+  opsWatchers             OpsWatcher[]
+  opsSites                OpsSite[]
+  opsApps                 OpsApp[]
+  id                      String             @id @default(uuid())
+  tenantId                String
+  name                    String             @db.VarChar(120)
+  email                   String             @db.VarChar(120)
+  passwordHash            String             @db.VarChar(255)
+  photoUrl                String?            @db.VarChar(255)
   /// A paleta da pessoa (30/10/2026): a cor de destaque, em hex. Nula usa a
   /// do escritório. Ver `src/lib/aparencia/paletas.ts`.
-  accentColor  String?  @db.VarChar(7)
-  role         UserRole @default(SECTOR_USER)
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  accentColor             String?            @db.VarChar(7)
+  role                    UserRole           @default(SECTOR_USER)
+  active                  Boolean            @default(true)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
-  tenant                      Tenant                     @relation(fields: [tenantId], references: [id])
-  sectors                     UserSector[]
-  assignedItems               PipelineItemAssignee[]
-  watchedItems                PipelineItemWatcher[]
-  timeEntries                 TimeEntry[]
-  manualDocuments             ManualDocument[]
-  manualPages                 ManualPage[]
-  activities                  Activity[]
-  handoffs                    Handoff[]                  @relation("HandoffRequester")
-  handoffSectorAssignees      HandoffSectorAssignee[]
-  handoffViews                HandoffView[]
-  notifications               Notification[]
-  notificationHiddenTypes     NotificationHiddenType[]
-  pushSubscriptions           PushSubscription[]
-  tenantAccess                UserTenantAccess[]
-  uploadedDocuments           Document[]
-  evaluationsGiven            Evaluation[]
-  auditLogs                   AuditLog[]
-  responsibleFor              CompanyService[]           @relation("CompanyServiceResponsible")
-  oauthAccounts               OAuthAccount[]
-  fiscalDocumentsUploaded     FiscalDocument[]
-  localFiscalScenarios         LocalFiscalScenario[]
-  financeEntriesCreated       FinanceEntry[]             @relation("FinanceEntryCreatedBy")
-  financeEntriesReviewed      FinanceEntry[]             @relation("FinanceEntryReviewedBy")
-  bankStatementImports        BankStatementImport[]      @relation("BankStatementImportedBy")
-  bankTransactionsReconciled  BankTransaction[]          @relation("BankTransactionReconciledBy")
-  bankTransactionMatches      BankTransactionMatch[]     @relation("BankTransactionMatchCreatedBy")
-  financeEntryPaymentsCreated FinanceEntryPayment[]      @relation("FinanceEntryPaymentCreatedBy")
-  clientRequestsCreated       ClientRequest[]            @relation("ClientRequestCreatedBy")
-  clientRequestsResolved      ClientRequest[]            @relation("ClientRequestResolvedBy")
-  clientRequestMessages       ClientRequestMessage[]     @relation("ClientRequestMessageAuthorUser")
-  clientRequestAttachments    ClientRequestAttachment[]  @relation("ClientRequestAttachmentUser")
-  financeEntryAttachments     FinanceEntryAttachment[]   @relation("FinanceEntryAttachmentUser")
-  companyMessages             CompanyMessage[]           @relation("CompanyMessageAuthorUser")
-  serviceRequestsAssigned     ServiceRequest[]           @relation("ServiceRequestAssignee")
-  serviceRequestsClosed       ServiceRequest[]           @relation("ServiceRequestClosedBy")
-  serviceRequestMessages      ServiceRequestMessage[]    @relation("ServiceRequestMessageAuthorUser")
-  serviceRequestAttachments   ServiceRequestAttachment[] @relation("ServiceRequestAttachmentUser")
-  clientAnnouncementsCreated  ClientAnnouncement[]       @relation("ClientAnnouncementCreatedBy")
-  processMessages             ProcessMessage[]           @relation("ProcessMessageAuthorUser")
-  processDocuments            ProcessDocument[]          @relation("ProcessDocumentUser")
-  agentConversations          AgentConversation[]
-  financeApprovalEvents       FinanceApprovalEvent[]     @relation("FinanceApprovalEventUser")
-  financeEntriesLost          FinanceEntry[]             @relation("FinanceEntryLossBy")
-  financeEntriesCollecting    FinanceEntry[]             @relation("FinanceEntryCollectionOwner")
-  collectionContacts          CollectionContact[]        @relation("CollectionContactUser")
-  collectionAgreementsCreated CollectionAgreement[]      @relation("CollectionAgreementCreatedBy")
-  collectionAgreementsClosed  CollectionAgreement[]      @relation("CollectionAgreementClosedBy")
-  collectionEvents            CollectionEvent[]          @relation("CollectionEventUser")
-  collectionReminderConfigs   CollectionReminderConfig[] @relation("CollectionReminderConfigUpdatedBy")
-  collectionReminderOptOuts   CollectionReminderOptOut[] @relation("CollectionReminderOptOutCreatedBy")
-  budgetsCreated              Budget[]                   @relation("BudgetCreatedBy")
-  budgetsApproved             Budget[]                   @relation("BudgetApprovedBy")
-  meetingsCreated             Meeting[]                  @relation("MeetingCreatedBy")
-  meetingAttendances          MeetingAttendee[]
-  agendaConfigs               UserAgendaConfig[]
-  clientDocumentsCreated      ClientDocument[]
-  recurringObligations        RecurringObligation[]
-  admissaoLinksCreated        AdmissaoLink[]
-  assessmentLinksCreated      AssessmentLink[]
-  assessmentTemplatesCreated  AssessmentTemplate[]
-  terminationChecksDone       TerminationCheck[]
-  interviewScorecards         InterviewScorecard[]
-  linkedPerson                Person?
-  bpoCredentialsCreated       BpoCredential[]
-  bpoCredentialViews          BpoCredentialView[]
-  chatwootAgentLinks          ChatwootAgentLink[]
-  preference                  UserPreference?
-  pinnedModules               UserPinnedModule[]
-  valoraPropostas             ValoraProposta[]
+  tenant                         Tenant                      @relation(fields: [tenantId], references: [id])
+  sectors                        UserSector[]
+  assignedItems                  PipelineItemAssignee[]
+  watchedItems                   PipelineItemWatcher[]
+  timeEntries                    TimeEntry[]
+  manualDocuments                ManualDocument[]
+  manualPages                    ManualPage[]
+  activities                     Activity[]
+  handoffs                       Handoff[]                   @relation("HandoffRequester")
+  handoffSectorAssignees         HandoffSectorAssignee[]
+  handoffViews                   HandoffView[]
+  notifications                  Notification[]
+  notificationHiddenTypes        NotificationHiddenType[]
+  pushSubscriptions              PushSubscription[]
+  tenantAccess                   UserTenantAccess[]
+  uploadedDocuments              Document[]
+  evaluationsGiven               Evaluation[]
+  auditLogs                      AuditLog[]
+  responsibleFor                 CompanyService[]            @relation("CompanyServiceResponsible")
+  oauthAccounts                  OAuthAccount[]
+  fiscalDocumentsUploaded        FiscalDocument[]
+  localFiscalScenarios           LocalFiscalScenario[]
+  financeEntriesCreated          FinanceEntry[]              @relation("FinanceEntryCreatedBy")
+  financeEntriesReviewed         FinanceEntry[]              @relation("FinanceEntryReviewedBy")
+  bankStatementImports           BankStatementImport[]       @relation("BankStatementImportedBy")
+  bankTransactionsReconciled     BankTransaction[]           @relation("BankTransactionReconciledBy")
+  bankTransactionMatches         BankTransactionMatch[]      @relation("BankTransactionMatchCreatedBy")
+  financeEntryPaymentsCreated    FinanceEntryPayment[]       @relation("FinanceEntryPaymentCreatedBy")
+  clientRequestsCreated          ClientRequest[]             @relation("ClientRequestCreatedBy")
+  clientRequestsResolved         ClientRequest[]             @relation("ClientRequestResolvedBy")
+  clientRequestMessages          ClientRequestMessage[]      @relation("ClientRequestMessageAuthorUser")
+  clientRequestAttachments       ClientRequestAttachment[]   @relation("ClientRequestAttachmentUser")
+  financeEntryAttachments        FinanceEntryAttachment[]    @relation("FinanceEntryAttachmentUser")
+  companyMessages                CompanyMessage[]            @relation("CompanyMessageAuthorUser")
+  serviceRequestsAssigned        ServiceRequest[]            @relation("ServiceRequestAssignee")
+  serviceRequestsClosed          ServiceRequest[]            @relation("ServiceRequestClosedBy")
+  serviceRequestMessages         ServiceRequestMessage[]     @relation("ServiceRequestMessageAuthorUser")
+  serviceRequestAttachments      ServiceRequestAttachment[]  @relation("ServiceRequestAttachmentUser")
+  clientAnnouncementsCreated     ClientAnnouncement[]        @relation("ClientAnnouncementCreatedBy")
+  processMessages                ProcessMessage[]            @relation("ProcessMessageAuthorUser")
+  processDocuments               ProcessDocument[]           @relation("ProcessDocumentUser")
+  agentConversations             AgentConversation[]
+  financeApprovalEvents          FinanceApprovalEvent[]      @relation("FinanceApprovalEventUser")
+  financeEntriesLost             FinanceEntry[]              @relation("FinanceEntryLossBy")
+  financeEntriesCollecting       FinanceEntry[]              @relation("FinanceEntryCollectionOwner")
+  collectionContacts             CollectionContact[]         @relation("CollectionContactUser")
+  collectionAgreementsCreated    CollectionAgreement[]       @relation("CollectionAgreementCreatedBy")
+  collectionAgreementsClosed     CollectionAgreement[]       @relation("CollectionAgreementClosedBy")
+  collectionEvents               CollectionEvent[]           @relation("CollectionEventUser")
+  collectionReminderConfigs      CollectionReminderConfig[]  @relation("CollectionReminderConfigUpdatedBy")
+  collectionReminderOptOuts      CollectionReminderOptOut[]  @relation("CollectionReminderOptOutCreatedBy")
+  budgetsCreated                 Budget[]                    @relation("BudgetCreatedBy")
+  budgetsApproved                Budget[]                    @relation("BudgetApprovedBy")
+  meetingsCreated                Meeting[]                   @relation("MeetingCreatedBy")
+  meetingAttendances             MeetingAttendee[]
+  agendaConfigs                  UserAgendaConfig[]
+  clientDocumentsCreated         ClientDocument[]
+  recurringObligations           RecurringObligation[]
+  admissaoLinksCreated           AdmissaoLink[]
+  assessmentLinksCreated         AssessmentLink[]
+  assessmentTemplatesCreated     AssessmentTemplate[]
+  terminationChecksDone          TerminationCheck[]
+  interviewScorecards            InterviewScorecard[]
+  linkedPerson                   Person?
+  bpoCredentialsCreated          BpoCredential[]
+  bpoCredentialViews             BpoCredentialView[]
+  chatwootAgentLinks             ChatwootAgentLink[]
+  preference                     UserPreference?
+  pinnedModules                  UserPinnedModule[]
+  valoraPropostas                ValoraProposta[]
   avaliacoesTributariasCriadas   AvaliacaoTributaria[]       @relation("AvaliacaoTributariaCriadaPor")
   avaliacoesTributariasAlteradas AvaliacaoTributaria[]       @relation("AvaliacaoTributariaAlteradaPor")
   versoesDeAvaliacaoTributaria   AvaliacaoTributariaVersao[] @relation("AvaliacaoTributariaVersaoAutor")
-  ownedProcesses              Process[]                  @relation("ProcessOwner")
-  executedProcessSteps        ProcessStep[]              @relation("ProcessStepExecutor")
-  whatsappThreadsAssumidas    WhatsappThread[]           @relation("WhatsappThreadResponsavel")
-  whatsappAtendimentosEncerrados WhatsappAtendimento[]   @relation("WhatsappAtendimentoEncerradoPor")
-  avisosDeOrgaoRevisados      AvisoDeOrgao[]             @relation("AvisoDeOrgaoRevisor")
-  propostasPedidas            AgentProposal[]            @relation("AgentProposalPedidaPor")
-  propostasRevisadas          AgentProposal[]            @relation("AgentProposalRevisadaPor")
-  vagasPermitidas             VagaRecrutador[]           @relation("VagaRecrutadorUsuario")
-  vagasRecrutadoresDefinidos  VagaRecrutador[]           @relation("VagaRecrutadorDefinidoPor")
-  leadsAtribuidos             Lead[]                     @relation("LeadResponsavel")
+  ownedProcesses                 Process[]                   @relation("ProcessOwner")
+  executedProcessSteps           ProcessStep[]               @relation("ProcessStepExecutor")
+  whatsappThreadsAssumidas       WhatsappThread[]            @relation("WhatsappThreadResponsavel")
+  whatsappAtendimentosEncerrados WhatsappAtendimento[]       @relation("WhatsappAtendimentoEncerradoPor")
+  avisosDeOrgaoRevisados         AvisoDeOrgao[]              @relation("AvisoDeOrgaoRevisor")
+  propostasPedidas               AgentProposal[]             @relation("AgentProposalPedidaPor")
+  propostasRevisadas             AgentProposal[]             @relation("AgentProposalRevisadaPor")
+  vagasPermitidas                VagaRecrutador[]            @relation("VagaRecrutadorUsuario")
+  vagasRecrutadoresDefinidos     VagaRecrutador[]            @relation("VagaRecrutadorDefinidoPor")
+  leadsAtribuidos                Lead[]                      @relation("LeadResponsavel")
 
-  driveFilesEnviados          DriveFile[]                @relation("DriveFileEnviadoPor")
-  githubLink                  GithubAccountLink?
+  driveFilesEnviados DriveFile[]        @relation("DriveFileEnviadoPor")
+  githubLink         GithubAccountLink?
+
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("users")
@@ -2056,8 +2093,8 @@ enum PasswordResetSubject {
 ///    próprio; o verificador interno o recusa e vice-versa. Uma sessão não vira
 ///    a outra nem por engano de cookie.
 model PortalUser {
-  id            String @id @default(uuid())
-  tenantId      String
+  id       String @id @default(uuid())
+  tenantId String
   // `clientGroupId` saiu do schema em 21/10/2026 (etapa 3 da saída do
   // Cliente), e do banco na etapa 4 — ver as migrations
   // 20261021180000_cliente_sem_chaves e 20261021210000_cliente_fora_do_banco.
@@ -2071,24 +2108,25 @@ model PortalUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  empresas    PortalUserCompany[]
+  tenant   Tenant              @relation(fields: [tenantId], references: [id])
+  empresas PortalUserCompany[]
 
-  clientRequestMessages    ClientRequestMessage[]    @relation("ClientRequestMessageAuthorPortal")
-  clientRequestAttachments ClientRequestAttachment[] @relation("ClientRequestAttachmentPortal")
-  companyMessages          CompanyMessage[]          @relation("CompanyMessageAuthorPortal")
+  clientRequestMessages     ClientRequestMessage[]     @relation("ClientRequestMessageAuthorPortal")
+  clientRequestAttachments  ClientRequestAttachment[]  @relation("ClientRequestAttachmentPortal")
+  companyMessages           CompanyMessage[]           @relation("CompanyMessageAuthorPortal")
   serviceRequestsOpened     ServiceRequest[]           @relation("ServiceRequestOpenedByPortal")
   serviceRequestMessages    ServiceRequestMessage[]    @relation("ServiceRequestMessageAuthorPortal")
   serviceRequestAttachments ServiceRequestAttachment[] @relation("ServiceRequestAttachmentPortal")
   announcementReads         ClientAnnouncementRead[]
-  processMessages          ProcessMessage[]          @relation("ProcessMessageAuthorPortal")
-  processDocuments         ProcessDocument[]         @relation("ProcessDocumentPortal")
-  approvalLimits           PortalApprovalLimit[]
-  financeApprovalEvents    FinanceApprovalEvent[]    @relation("FinanceApprovalEventPortal")
-  pushSubscriptions        PortalPushSubscription[]
+  processMessages           ProcessMessage[]           @relation("ProcessMessageAuthorPortal")
+  processDocuments          ProcessDocument[]          @relation("ProcessDocumentPortal")
+  approvalLimits            PortalApprovalLimit[]
+  financeApprovalEvents     FinanceApprovalEvent[]     @relation("FinanceApprovalEventPortal")
+  pushSubscriptions         PortalPushSubscription[]
 
-  driveFilesEnviados       DriveFile[]               @relation("DriveFileEnviadoPeloCliente")
-  driveAcessos             DriveFileAccess[]
+  driveFilesEnviados DriveFile[]       @relation("DriveFileEnviadoPeloCliente")
+  driveAcessos       DriveFileAccess[]
+
   @@unique([tenantId, email])
   @@map("portal_users")
 }
@@ -2144,88 +2182,88 @@ model PasswordResetToken {
 // saíram do banco na etapa 4 (20261021210000_cliente_fora_do_banco).
 
 model Company {
-  id                    String        @id @default(uuid())
-  tenantId              String
+  id                         String         @id @default(uuid())
+  tenantId                   String
   // Identificação
-  name                  String        @db.VarChar(180) // Razão Social
-  tradeName             String?       @db.VarChar(180) // Nome Fantasia
+  name                       String         @db.VarChar(180) // Razão Social
+  tradeName                  String?        @db.VarChar(180) // Nome Fantasia
   // Como a empresa é chamada NO SISTEMA. Existe porque razão social não
   // distingue estabelecimento: matriz e filial da BLD têm a mesma, e a
   // listagem ficava com duas linhas idênticas. Aqui vai "BLD MOGI - SP".
   // Opcional, com fallback para a razão social — ver `nomeExibicao()` em
   // src/lib/companyName.ts, que é por onde toda tela deve passar.
-  displayName           String?       @db.VarChar(180)
+  displayName                String?        @db.VarChar(180)
   // PJ ou PF. O default cobre as 397 empresas existentes sem backfill: todas
   // são pessoa jurídica. Quem lê isto para decidir rótulo de tela deve passar
   // por src/lib/companyTaxId.ts, não comparar o enum na mão.
-  kind                  CompanyKind   @default(PESSOA_JURIDICA)
-  cnpj                  String?       @db.VarChar(18)
+  kind                       CompanyKind    @default(PESSOA_JURIDICA)
+  cnpj                       String?        @db.VarChar(18)
   // Documento do cliente pessoa física. Fica em coluna própria em vez de
   // dividir a de CNPJ: guardar CPF num campo chamado `cnpj` cobra caro depois,
   // e o casamento do XML fiscal precisa saber qual dos dois está lendo.
-  cpf                   String?       @db.VarChar(14)
-  taxRegime             String?       @db.VarChar(100) // Regime Tributário — algumas opções (ex: "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários") passam de 60 chars, causavam P2000 ao salvar
+  cpf                        String?        @db.VarChar(14)
+  taxRegime                  String?        @db.VarChar(100) // Regime Tributário — algumas opções (ex: "Simples Nacional - Comércio ou Serviço - Com Pró-labore - Com Funcionários") passam de 60 chars, causavam P2000 ao salvar
   // Os quatro abaixo são derivados de `taxRegime` a cada gravação — nunca
   // escritos à mão. Toda escrita de `taxRegime` passa por `camposDoRegime()`
   // (src/lib/taxRegime.ts), que devolve os cinco campos juntos.
-  taxRegimeKind         TaxRegimeKind?
+  taxRegimeKind              TaxRegimeKind?
   /// "Sem Movimento" ou "Inativa": não há apuração nem guia no mês.
-  taxNoMovement         Boolean       @default(false)
+  taxNoMovement              Boolean        @default(false)
   /// Com funcionários. NULL quando o rótulo não diz (Presumido e Real não dizem).
-  taxHasEmployees       Boolean?
+  taxHasEmployees            Boolean?
   /// Com pró-labore. NULL quando o rótulo não diz.
-  taxHasProLabore       Boolean?
-  externalId            String?       @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
-  foundationDate        DateTime? // Data de abertura da empresa
-  cnaePrincipal         String?       @db.VarChar(20) // Código CNAE principal, ex: 6920-6/01
-  cnaeSecundarios       String?       @db.Text // Lista de códigos CNAE secundários, separados por vírgula
+  taxHasProLabore            Boolean?
+  externalId                 String?        @db.VarChar(60) // ID manual do sistema de domínio (ex: Acessorias) — sem sincronização
+  foundationDate             DateTime? // Data de abertura da empresa
+  cnaePrincipal              String?        @db.VarChar(20) // Código CNAE principal, ex: 6920-6/01
+  cnaeSecundarios            String?        @db.Text // Lista de códigos CNAE secundários, separados por vírgula
   // Endereço
-  zipCode               String?       @db.VarChar(10)
-  addressStreet         String?       @db.VarChar(180)
-  addressNumber         String?       @db.VarChar(20)
-  addressComplement     String?       @db.VarChar(80)
-  neighborhood          String?       @db.VarChar(80)
-  city                  String?       @db.VarChar(80)
-  stateCode             String?       @db.VarChar(2)
+  zipCode                    String?        @db.VarChar(10)
+  addressStreet              String?        @db.VarChar(180)
+  addressNumber              String?        @db.VarChar(20)
+  addressComplement          String?        @db.VarChar(80)
+  neighborhood               String?        @db.VarChar(80)
+  city                       String?        @db.VarChar(80)
+  stateCode                  String?        @db.VarChar(2)
   // Inscrições fiscais
-  stateRegistration     String?       @db.VarChar(40)
+  stateRegistration          String?        @db.VarChar(40)
   /// A situação da IE no CICAD da Receita do PR (robô do Societário,
   /// 30/10/2026): ATIVA, SUSPENSA, BAIXADA ou CANCELADA. Nula enquanto o robô
   /// não leu. Quando foi lida e desde quando está assim. Ver
   /// `src/lib/societario/inscricaoEstadual.ts`.
-  stateRegistrationStatus    String?   @db.VarChar(12)
+  stateRegistrationStatus    String?        @db.VarChar(12)
   stateRegistrationCheckedAt DateTime?
   stateRegistrationChangedAt DateTime?
-  municipalRegistration String?       @db.VarChar(40)
-  nire                  String?       @db.VarChar(20)
+  municipalRegistration      String?        @db.VarChar(40)
+  nire                       String?        @db.VarChar(20)
   /// Código IBGE do município (7 dígitos), vindo do CNPJ ou do CEP (06/11/2026).
-  codMunicipioIbge      String?       @db.VarChar(7)
+  codMunicipioIbge           String?        @db.VarChar(7)
   // Dados do SPED da empresa (06/11/2026): registros 0000, 0005 e 0100 e o
   // COD_CTA/COD_INF dos lançamentos. Todos opcionais — o cadastro salva sem
   // eles. Cada campo tem, no formulário, a dica de onde achar o dado.
   /// COD_VER: versão do leiaute da EFD ICMS/IPI (3 dígitos).
-  spedCodVersao           String?     @db.VarChar(3)
+  spedCodVersao              String?        @db.VarChar(3)
   /// IND_PERFIL: A, B ou C, definido pela SEFAZ da UF.
-  spedIndPerfil           String?     @db.VarChar(1)
+  spedIndPerfil              String?        @db.VarChar(1)
   /// IND_ATIV: 0 = industrial ou equiparado; 1 = outros.
-  spedIndAtividade        String?     @db.VarChar(1)
+  spedIndAtividade           String?        @db.VarChar(1)
   /// Contabilista que assina pela empresa (0100).
-  contabilistaNome        String?     @db.VarChar(100)
-  contabilistaCpf         String?     @db.VarChar(11)
-  contabilistaCrc         String?     @db.VarChar(20)
+  contabilistaNome           String?        @db.VarChar(100)
+  contabilistaCpf            String?        @db.VarChar(11)
+  contabilistaCrc            String?        @db.VarChar(20)
   /// COD_CTA padrão: conta de receita do serviço no plano de contas da empresa.
-  spedContaContabilPadrao String?     @db.VarChar(60)
+  spedContaContabilPadrao    String?        @db.VarChar(60)
   /// COD_INF padrão: código de observação/informação complementar.
-  spedCodObservacaoPadrao String?     @db.VarChar(60)
+  spedCodObservacaoPadrao    String?        @db.VarChar(60)
   // Contato
-  email                 String?       @db.VarChar(120)
-  phone                 String?       @db.VarChar(30)
-  website               String?       @db.VarChar(255)
-  logoUrl               String?       @db.VarChar(255)
+  email                      String?        @db.VarChar(120)
+  phone                      String?        @db.VarChar(30)
+  website                    String?        @db.VarChar(255)
+  logoUrl                    String?        @db.VarChar(255)
   // CRM
-  status                CompanyStatus @default(PROSPECT)
-  source                String?       @db.VarChar(80)
-  responsibleUserId     String?
+  status                     CompanyStatus  @default(PROSPECT)
+  source                     String?        @db.VarChar(80)
+  responsibleUserId          String?
   // Matriz desta filial. Hierarquia EXPLÍCITA, não derivada da raiz do CNPJ:
   // a raiz resolve o caso comum (0001 é matriz, 0002+ são filiais) e falha nos
   // que existem de verdade — filial sem CNPJ próprio ainda em abertura, e
@@ -2234,31 +2272,31 @@ model Company {
   //
   // SetNull, nunca Cascade: apagar a matriz não pode apagar as filiais junto —
   // elas viram matrizes soltas, o que é recuperável, ao contrário de sumir.
-  parentCompanyId       String?
+  parentCompanyId            String?
   // `clientGroupId` (o Cliente da empresa) saiu do schema em 21/10/2026, na
   // etapa 3, e do banco na etapa 4.
   /// O modelo do DRE desta empresa (21/10/2026): vazio é o padrão; "por_area" é
   /// o customizado de despesas por área. Os modelos moram em código — ver
   /// `src/lib/dre/estrutura.ts`.
-  dreModelo             String?       @db.VarChar(30)
+  dreModelo                  String?        @db.VarChar(30)
   /// A Ceci no portal do cliente responde sobre esta empresa (21/10/2026).
   /// Desligada por padrão: o escritório liga empresa a empresa, no piloto, em
   /// Administração › Portal do cliente › Ceci. Ligada na matriz, vale para as
   /// filiais que o acesso vê por ela. Ver src/lib/portal/ceci.ts.
-  ceciNoPortal          Boolean       @default(false)
+  ceciNoPortal               Boolean        @default(false)
   /// O robô da pasta de rede traz os documentos desta empresa para os
   /// Arquivos (21/10/2026). Desligado por padrão: o piloto liga empresa a
   /// empresa em Administração › Arquivos. Ver src/lib/drive/pastaDeRede.ts.
-  pastaDeRedeNoDrive    Boolean       @default(false)
+  pastaDeRedeNoDrive         Boolean        @default(false)
   /// A virada do Omie para o Connect (lote E, 20/10/2026): desde quando o
   /// Connect é a fonte do financeiro desta empresa. Nula enquanto as contas
   /// vêm do Omie — até a virada, a conta que veio de lá é do Omie: o Connect
   /// não a edita, não a baixa nem a cancela, porque a leitura seguinte desfaria.
-  omieCutoverAt         DateTime?
+  omieCutoverAt              DateTime?
   /// O "Código Matriz/Filial" da empresa na Domínio (fila do BPO, 21/10): vai
   /// em toda linha da planilha de importação. É o `empresas.codigo_dominio`
   /// do SPED Generator ("113" + a filial com dois dígitos: matriz 11301).
-  dominioBranchCode     String?       @db.VarChar(20)
+  dominioBranchCode          String?        @db.VarChar(20)
   /// Juros e multa pelo atraso (22/10/2026): a regra da empresa para a janela
   /// da baixa já vir com juros e multa calculados quando o pagamento é depois
   /// do vencimento — e com o desconto, quando é até o vencimento. Multa em %
@@ -2267,79 +2305,79 @@ model Company {
   /// ficam em zero. O fornecedor ou cliente pode ter a dele
   /// (`FinanceCounterparty.lateFinePercent` e as outras). O cálculo é
   /// src/lib/financeiro/baixa/encargos.ts.
-  lateFinePercent       Decimal?      @db.Decimal(7, 4)
-  lateInterestPercent   Decimal?      @db.Decimal(7, 4)
-  earlyDiscountPercent  Decimal?      @db.Decimal(7, 4)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  lateFinePercent            Decimal?       @db.Decimal(7, 4)
+  lateInterestPercent        Decimal?       @db.Decimal(7, 4)
+  earlyDiscountPercent       Decimal?       @db.Decimal(7, 4)
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
 
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  parent      Company?     @relation("CompanyFiliais", fields: [parentCompanyId], references: [id], onDelete: SetNull)
-  filiais     Company[]    @relation("CompanyFiliais")
+  tenant  Tenant    @relation(fields: [tenantId], references: [id])
+  parent  Company?  @relation("CompanyFiliais", fields: [parentCompanyId], references: [id], onDelete: SetNull)
+  filiais Company[] @relation("CompanyFiliais")
 
-  services                 CompanyService[]
-  people                   Person[]
-  departments              Department[]
-  partners                 CompanyPartner[]
-  cargos                   Cargo[]
-  vagas                    Vaga[]
-  payrollCompetencies      PayrollCompetency[]
-  rescisaoConfig           CompanyRescisaoConfig?
-  benefitCatalogs          BenefitCatalog[]
-  workShifts               WorkShift[]
-  meetings                 Meeting[]
-  clientDocuments          ClientDocument[]
-  recurringObligations     RecurringObligation[]
-  obrigacoesGeradas        ObrigacaoGerada[]
-  avaliacoesTributarias    AvaliacaoTributaria[]
-  chatwootContactLinks     ChatwootContactLink[]
-  bpoCredentials           BpoCredential[]
-  fiscalDocuments          FiscalDocument[]
-  omieEmissoes             OmieEmissao[]
-  financeCounterparties    FinanceCounterparty[]
-  financeEntries           FinanceEntry[]
-  bankAccounts             BankAccount[]
-  clientRequests           ClientRequest[]
-  companyMessages          CompanyMessage[]
-  serviceRequests          ServiceRequest[]
-  portalApprovalLimits     PortalApprovalLimit[]
-  collectionAgreements     CollectionAgreement[]
-  collectionReminderOptOut CollectionReminderOptOut?
-  costCenters              CostCenter[]
-  financeProjects          FinanceProject[]
-  dominioAccountMaps       DominioAccountMap[]
-  dominioExportacoes       DominioExportacao[]
-  contabilRegras           ContabilRegra[]
-  contabilContas           ContabilConta[]
-  contabilModelo           ContabilModelo?
-  contabilContasSaida      ContabilContaSaida[]
-  contabilCfopContas       ContabilCfopConta[]
+  services                    CompanyService[]
+  people                      Person[]
+  departments                 Department[]
+  partners                    CompanyPartner[]
+  cargos                      Cargo[]
+  vagas                       Vaga[]
+  payrollCompetencies         PayrollCompetency[]
+  rescisaoConfig              CompanyRescisaoConfig?
+  benefitCatalogs             BenefitCatalog[]
+  workShifts                  WorkShift[]
+  meetings                    Meeting[]
+  clientDocuments             ClientDocument[]
+  recurringObligations        RecurringObligation[]
+  obrigacoesGeradas           ObrigacaoGerada[]
+  avaliacoesTributarias       AvaliacaoTributaria[]
+  chatwootContactLinks        ChatwootContactLink[]
+  bpoCredentials              BpoCredential[]
+  fiscalDocuments             FiscalDocument[]
+  omieEmissoes                OmieEmissao[]
+  financeCounterparties       FinanceCounterparty[]
+  financeEntries              FinanceEntry[]
+  bankAccounts                BankAccount[]
+  clientRequests              ClientRequest[]
+  companyMessages             CompanyMessage[]
+  serviceRequests             ServiceRequest[]
+  portalApprovalLimits        PortalApprovalLimit[]
+  collectionAgreements        CollectionAgreement[]
+  collectionReminderOptOut    CollectionReminderOptOut?
+  costCenters                 CostCenter[]
+  financeProjects             FinanceProject[]
+  dominioAccountMaps          DominioAccountMap[]
+  dominioExportacoes          DominioExportacao[]
+  contabilRegras              ContabilRegra[]
+  contabilContas              ContabilConta[]
+  contabilModelo              ContabilModelo?
+  contabilContasSaida         ContabilContaSaida[]
+  contabilCfopContas          ContabilCfopConta[]
   contabilDocumentosPagamento ContabilDocumentoPagamento[]
-  contabilPagamentos       ContabilPagamento[]
+  contabilPagamentos          ContabilPagamento[]
   contabilPagamentoCategorias ContabilPagamentoCategoria[]
-  contabilPagamentoNomes   ContabilPagamentoNome[]
-  contabilContasPagamento  ContabilContaPagamento[]
-  guias                    Guia[]
-  certidoes                Certidao[]
-  bankReconciliationRules  BankReconciliationRule[]
-  financeRecurrences       FinanceRecurrence[]
-  financeEntryPayments     FinanceEntryPayment[]
-  budgets                  Budget[]
-  societarioProcesses      Process[]
-  licenses                 License[]
-  digitalCertificates      DigitalCertificate[]
-  dreMappings              DreCategoryMapping[]
-  financeCategories        FinanceCategory[]
-  hiddenFinanceCategories  FinanceCategoryHidden[]
-  dreImports               DreImport[]
-  drePublicacoes           DrePublicacao[]
-  drePublicacaoEmpresa     DrePublicacaoEmpresa?
-  processFees              ProcessFee[]
-  portalUserLinks          PortalUserCompany[]
-  announcementLinks        ClientAnnouncementCompany[]
-  revisaoFechamentos       RevisaoFechamento[]
+  contabilPagamentoNomes      ContabilPagamentoNome[]
+  contabilContasPagamento     ContabilContaPagamento[]
+  guias                       Guia[]
+  certidoes                   Certidao[]
+  bankReconciliationRules     BankReconciliationRule[]
+  financeRecurrences          FinanceRecurrence[]
+  financeEntryPayments        FinanceEntryPayment[]
+  budgets                     Budget[]
+  societarioProcesses         Process[]
+  licenses                    License[]
+  digitalCertificates         DigitalCertificate[]
+  dreMappings                 DreCategoryMapping[]
+  financeCategories           FinanceCategory[]
+  hiddenFinanceCategories     FinanceCategoryHidden[]
+  dreImports                  DreImport[]
+  drePublicacoes              DrePublicacao[]
+  drePublicacaoEmpresa        DrePublicacaoEmpresa?
+  processFees                 ProcessFee[]
+  portalUserLinks             PortalUserCompany[]
+  announcementLinks           ClientAnnouncementCompany[]
+  revisaoFechamentos          RevisaoFechamento[]
   // Contábil Core: a empresa do Contábil Core ligada a esta (no máximo uma).
-  coreEmpresa              CoreEmpresa?
+  coreEmpresa                 CoreEmpresa?
 
   // Casar documento fiscal com empresa pelo CNPJ do XML exige que o par seja
   // único: com duas empresas do mesmo tenant sob o mesmo CNPJ o casamento é
@@ -2352,8 +2390,9 @@ model Company {
   // 2026-09-03 e vive em src/lib/companyTaxId.ts: empresa sem documento não
   // recebe documento fiscal. A constraint garante a unicidade; quem garante a
   // regra é o tipo, não o banco.
-  driveFolders          DriveFolder[]
-  driveDaRede           DriveNetworkFile[]
+  driveFolders DriveFolder[]
+  driveDaRede  DriveNetworkFile[]
+
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
   // separados, e não um sobre um campo só de documento: o par (tenant, CPF) e
@@ -2483,22 +2522,22 @@ model Person {
 // "BPO", cada um agrupando um conjunto diferente de clientes/pastas/listas).
 // Toda Lista (Pipeline) pertence a um espaço — nunca solta.
 model Space {
-  id         String   @id @default(uuid())
-  tenantId   String
-  sectorCode String   @db.VarChar(40)
-  name       String   @db.VarChar(80)
-  color      String   @default("#586577") @db.VarChar(7)
+  id                String          @id @default(uuid())
+  tenantId          String
+  sectorCode        String          @db.VarChar(40)
+  name              String          @db.VarChar(80)
+  color             String          @default("#586577") @db.VarChar(7)
   /// O ícone do quadrado do espaço (nome de um ícone de `ICONES_DO_ESPACO`);
   /// sem ele, o quadrado mostra a inicial do nome (05/11/2026).
-  icon        String?         @db.VarChar(40)
-  description String?         @db.Text
+  icon              String?         @db.VarChar(40)
+  description       String?         @db.Text
   /// O que quem é do setor faz no espaço sem coordená-lo (05/11/2026). Os
   /// espaços dos setores que tinham os Quadros bloqueados vieram como
   /// COMENTAR; os outros, como EDITAR, que é o que o colaborador já fazia.
   defaultPermission SpacePermission @default(EDITAR)
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  order             Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   tenant    Tenant     @relation(fields: [tenantId], references: [id])
   folders   Folder[]
@@ -2544,13 +2583,13 @@ model Pipeline {
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
-  tenant               Tenant                @relation(fields: [tenantId], references: [id])
-  space                Space                 @relation(fields: [spaceId], references: [id])
-  folder               Folder?               @relation(fields: [folderId], references: [id])
-  stages               PipelineStage[]
-  items                PipelineItem[]
-  recurringObligations RecurringObligation[]
-  modelosDeObrigacao   ModeloDeObrigacao[]
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
+  space                 Space                   @relation(fields: [spaceId], references: [id])
+  folder                Folder?                 @relation(fields: [folderId], references: [id])
+  stages                PipelineStage[]
+  items                 PipelineItem[]
+  recurringObligations  RecurringObligation[]
+  modelosDeObrigacao    ModeloDeObrigacao[]
   /// Os assuntos das solicitações que viram cartão nesta lista (09/11/2026).
   assuntosDeSolicitacao ServiceRequestSubject[]
 
@@ -2622,22 +2661,22 @@ model PipelineItem {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 
-  tenant      Tenant                 @relation(fields: [tenantId], references: [id])
-  pipeline    Pipeline               @relation(fields: [pipelineId], references: [id])
-  serviceRequest ServiceRequest?     @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
-  stage       PipelineStage          @relation(fields: [stageId], references: [id])
-  parent      PipelineItem?          @relation("SubTasks", fields: [parentItemId], references: [id], onDelete: Cascade)
-  subtasks    PipelineItem[]         @relation("SubTasks")
-  linksFrom   PipelineItemLink[]     @relation("LinkSource")
-  linksTo     PipelineItemLink[]     @relation("LinkTarget")
-  activities  Activity[]
-  assignees   PipelineItemAssignee[]
-  watchers    PipelineItemWatcher[]
-  tags        PipelineItemTag[]
-  checklist   ChecklistItem[]
-  timeEntries TimeEntry[]
-  candidatura Candidatura?
-  meetings    Meeting[]
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id])
+  pipeline        Pipeline               @relation(fields: [pipelineId], references: [id])
+  serviceRequest  ServiceRequest?        @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
+  stage           PipelineStage          @relation(fields: [stageId], references: [id])
+  parent          PipelineItem?          @relation("SubTasks", fields: [parentItemId], references: [id], onDelete: Cascade)
+  subtasks        PipelineItem[]         @relation("SubTasks")
+  linksFrom       PipelineItemLink[]     @relation("LinkSource")
+  linksTo         PipelineItemLink[]     @relation("LinkTarget")
+  activities      Activity[]
+  assignees       PipelineItemAssignee[]
+  watchers        PipelineItemWatcher[]
+  tags            PipelineItemTag[]
+  checklist       ChecklistItem[]
+  timeEntries     TimeEntry[]
+  candidatura     Candidatura?
+  meetings        Meeting[]
   obrigacaoGerada ObrigacaoGerada?
 
   @@index([tenantId, pipelineId])
@@ -2748,15 +2787,15 @@ enum TimeEntrySource {
 }
 
 model TimeEntry {
-  id             String   @id @default(uuid())
+  id             String           @id @default(uuid())
   tenantId       String
   pipelineItemId String?
   processId      String?
   userId         String
   minutes        Int
-  note           String?  @db.VarChar(280)
+  note           String?          @db.VarChar(280)
   loggedOn       DateTime // data-calendário do trabalho (pode ser retroativo)
-  createdAt      DateTime @default(now())
+  createdAt      DateTime         @default(now())
   /// De onde veio a hora (04/11/2026, lote D dos ajustes de 03/11): o
   /// cronômetro ou à mão. Nulo nas de antes, quando não se gravava.
   source         TimeEntrySource?
@@ -2764,7 +2803,7 @@ model TimeEntry {
   /// deixa de ser só do cronômetro, e a tela diz isso.
   editedAt       DateTime?
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
   pipelineItem PipelineItem? @relation(fields: [pipelineItemId], references: [id], onDelete: Cascade)
   process      Process?      @relation(fields: [processId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id])
@@ -2992,52 +3031,52 @@ enum VagaContrato {
 }
 
 model Vaga {
-  id                  String          @id @default(uuid())
-  tenantId            String
-  companyId           String
-  cargoId             String?
-  sectorCode          String          @db.VarChar(40)
-  title               String          @db.VarChar(180)
-  quantity            Int             @default(1)
-  responsibleUserId   String?
-  openedAt            DateTime        @default(now())
-  closedAt            DateTime?
-  status              VagaStatus      @default(ABERTA)
-  priority            VagaPrioridade  @default(MEDIA)
-  notes               String?         @db.Text
+  id                     String          @id @default(uuid())
+  tenantId               String
+  companyId              String
+  cargoId                String?
+  sectorCode             String          @db.VarChar(40)
+  title                  String          @db.VarChar(180)
+  quantity               Int             @default(1)
+  responsibleUserId      String?
+  openedAt               DateTime        @default(now())
+  closedAt               DateTime?
+  status                 VagaStatus      @default(ABERTA)
+  priority               VagaPrioridade  @default(MEDIA)
+  notes                  String?         @db.Text
   // Portal público (/carreiras/[slug]) — isPublic expõe a vaga; a descrição
   // pública é separada de notes (que é anotação interna do recrutador).
-  isPublic            Boolean         @default(false)
-  publicDescription   String?         @db.Text
+  isPublic               Boolean         @default(false)
+  publicDescription      String?         @db.Text
   /// Faixa salarial mensal, em reais. Opcional e só aparece no portal com
   /// `showSalary` — mostrar é decisão vaga a vaga do recrutador (Kauan,
   /// 23/09). Sem faixa, o portal diz "A combinar".
-  salaryMin           Decimal?        @db.Decimal(12, 2)
-  salaryMax           Decimal?        @db.Decimal(12, 2)
-  showSalary          Boolean         @default(false)
+  salaryMin              Decimal?        @db.Decimal(12, 2)
+  salaryMax              Decimal?        @db.Decimal(12, 2)
+  showSalary             Boolean         @default(false)
   /// Filtros do portal. Nulos em vaga antiga: ela aparece na lista sem filtro
   /// e some quando o candidato filtra por um valor — não se inventa modalidade.
-  workMode            VagaModalidade?
-  contractType        VagaContrato?
+  workMode               VagaModalidade?
+  contractType           VagaContrato?
   /// Benefícios, um por linha — a página da vaga mostra como lista.
-  benefits            String?         @db.Text
+  benefits               String?         @db.Text
   /// Último dia de inscrição, data-calendário (meia-noite UTC, como os outros
   /// campos de data do sistema). Vale até o fim desse dia em Brasília; depois
   /// a vaga sai do portal sozinha, sem ninguém precisar despublicar.
-  applicationDeadline DateTime?
+  applicationDeadline    DateTime?
   /// Onde se trabalha, quando não é a cidade da empresa (filial, cliente).
   /// Nulo usa a cidade do cadastro da empresa, como antes.
-  workCity            String?         @db.VarChar(80)
-  workStateCode       String?         @db.VarChar(2)
+  workCity               String?         @db.VarChar(80)
+  workStateCode          String?         @db.VarChar(2)
   /// Quem do Recrutamento vê a vaga (decisão do Kauan, 28/09/2026). A vaga é
   /// do setor que contrata, mas por padrão todo recrutador a enxerga. O
   /// coordenador do Recrutamento pode restringir: com `true`, só os usuários
   /// em `recrutadoresPermitidos` a veem pelo caminho do Recrutamento — lista
   /// vazia esconde de todos os recrutadores. Quem é do setor dono da vaga, o
   /// coordenador do Recrutamento e o admin não são afetados.
-  restrictedToRecruiters Boolean      @default(false)
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  restrictedToRecruiters Boolean         @default(false)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   company Company @relation(fields: [companyId], references: [id])
@@ -3629,125 +3668,135 @@ enum EvaluationSegment {
 /// lançamento — como o Omie. Emissão ficou em standby por decisão de 2026-08-21.
 /// Livro fiscal do Connect: o acervo financeiro continua com seus vínculos originais.
 model SpedFiscalRoot {
-  tenantId String @db.VarChar(191)
-  raiz String @db.VarChar(8)
-  revision Int @default(0)
+  tenantId  String   @db.VarChar(191)
+  raiz      String   @db.VarChar(8)
+  revision  Int      @default(0)
   updatedAt DateTime @updatedAt
+
   @@id([tenantId, raiz])
   @@map("sped_fiscal_roots")
 }
 
 model SpedFiscalProfile {
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  data Json
+  tenantId  String   @db.VarChar(191)
+  companyId String   @db.VarChar(191)
+  data      Json
   updatedAt DateTime @updatedAt
+
   @@id([tenantId, companyId])
   @@map("sped_fiscal_profiles")
 }
 
 model SpedFiscalDocument {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  identity String @db.VarChar(160)
-  sha256 String @db.VarChar(64)
-  data Json
-  sourceName String @db.VarChar(255)
-  sourcePath String @db.VarChar(500)
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  tenantId   String   @db.VarChar(191)
+  identity   String   @db.VarChar(160)
+  sha256     String   @db.VarChar(64)
+  data       Json
+  sourceName String   @db.VarChar(255)
+  sourcePath String   @db.VarChar(500)
+  updatedAt  DateTime @updatedAt
+
   @@unique([tenantId, identity])
   @@map("sped_fiscal_documents")
 }
 
 model SpedFiscalItem {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
+  id         String @id @default(uuid()) @db.VarChar(36)
+  tenantId   String @db.VarChar(191)
   documentId String @db.VarChar(36)
-  position Int
-  data Json
+  position   Int
+  data       Json
+
   @@unique([tenantId, documentId, position])
   @@map("sped_fiscal_items")
 }
 
 model SpedFiscalBook {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
+  id         String @id @default(uuid()) @db.VarChar(36)
+  tenantId   String @db.VarChar(191)
+  companyId  String @db.VarChar(191)
   documentId String @db.VarChar(36)
   competence String @db.VarChar(7)
-  direction String @db.VarChar(7)
+  direction  String @db.VarChar(7)
+
   @@unique([tenantId, companyId, documentId])
   @@index([tenantId, companyId, competence])
   @@map("sped_fiscal_books")
 }
 
 model SpedFiscalSupport {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  identity String @db.VarChar(160)
-  competence String @db.VarChar(7)
-  data Json
-  updatedBy String @db.VarChar(191)
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  tenantId   String   @db.VarChar(191)
+  companyId  String   @db.VarChar(191)
+  identity   String   @db.VarChar(160)
+  competence String   @db.VarChar(7)
+  data       Json
+  updatedBy  String   @db.VarChar(191)
+  updatedAt  DateTime @updatedAt
+
   @@unique([tenantId, companyId, identity])
   @@index([tenantId, companyId, competence])
   @@map("sped_fiscal_support")
 }
 
 model SpedFiscalDecision {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  raiz String @db.VarChar(8)
-  type String @db.VarChar(30)
-  key String @db.VarChar(255)
-  data Json
-  updatedBy String @db.VarChar(191)
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  tenantId  String   @db.VarChar(191)
+  raiz      String   @db.VarChar(8)
+  type      String   @db.VarChar(30)
+  key       String   @db.VarChar(255)
+  data      Json
+  updatedBy String   @db.VarChar(191)
   updatedAt DateTime @updatedAt
+
   @@unique([tenantId, raiz, type, key])
   @@map("sped_fiscal_decisions")
 }
 
 model SpedFiscalPeriod {
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  competence String @db.VarChar(7)
-  data Json
-  updatedAt DateTime @updatedAt
+  tenantId   String   @db.VarChar(191)
+  companyId  String   @db.VarChar(191)
+  competence String   @db.VarChar(7)
+  data       Json
+  updatedAt  DateTime @updatedAt
+
   @@id([tenantId, companyId, competence])
   @@map("sped_fiscal_periods")
 }
 
 /// Revisões imutáveis. Somente os campos de transporte podem ser atualizados.
 model SpedFiscalCalculation {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  period String @db.VarChar(7)
-  scope String @db.VarChar(12)
-  revision Int
-  data Json
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  tenantId  String   @db.VarChar(191)
+  companyId String   @db.VarChar(191)
+  period    String   @db.VarChar(7)
+  scope     String   @db.VarChar(12)
+  revision  Int
+  data      Json
   createdAt DateTime @default(now())
+
   @@unique([tenantId, companyId, period, scope, revision], map: "sped_fiscal_calculations_revision_key")
   @@map("sped_fiscal_calculations")
 }
 
 model SpedFiscalRevision {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  raiz String @db.VarChar(8)
-  competence String @db.VarChar(7)
-  obligation String @db.VarChar(20)
-  revision Int
-  sha256 String @db.VarChar(64)
-  data Json
-  requestedBy String @db.VarChar(191)
-  requestKey String @db.VarChar(100)
-  remoteUploadId String? @db.VarChar(100)
-  remotePackageId String? @db.VarChar(100)
+  id                String   @id @default(uuid()) @db.VarChar(36)
+  tenantId          String   @db.VarChar(191)
+  companyId         String   @db.VarChar(191)
+  raiz              String   @db.VarChar(8)
+  competence        String   @db.VarChar(7)
+  obligation        String   @db.VarChar(20)
+  revision          Int
+  sha256            String   @db.VarChar(64)
+  data              Json
+  requestedBy       String   @db.VarChar(191)
+  requestKey        String   @db.VarChar(100)
+  remoteUploadId    String?  @db.VarChar(100)
+  remotePackageId   String?  @db.VarChar(100)
   remoteExecutionId Int?
-  createdAt DateTime @default(now())
+  createdAt         DateTime @default(now())
+
   @@unique([tenantId, requestKey])
   @@index([tenantId, companyId, competence])
   @@map("sped_fiscal_revisions")
@@ -3758,22 +3807,23 @@ model SpedFiscalRevision {
 /// o pacote da revisão e devolve o TXT em partes. O andamento é o da tarefa;
 /// aqui ficam a revisão pedida e o arquivo que voltou.
 model SpedFiscalGeneration {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  revisionId String @unique @db.VarChar(36)
-  robotTaskId String @unique @db.VarChar(36)
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  tenantId    String    @db.VarChar(191)
+  companyId   String    @db.VarChar(191)
+  revisionId  String    @unique @db.VarChar(36)
+  robotTaskId String    @unique @db.VarChar(36)
   /// O Contribuições é da raiz: a tela de qualquer estabelecimento dela mostra a geração.
-  raiz String @db.VarChar(8)
-  competence String @db.VarChar(7)
-  obligation String @db.VarChar(20)
+  raiz        String    @db.VarChar(8)
+  competence  String    @db.VarChar(7)
+  obligation  String    @db.VarChar(20)
   /// Preenchidos quando o agente devolve o arquivo e o Connect confere tamanho e SHA-256.
-  fileName String? @db.VarChar(200)
-  filePath String? @db.VarChar(500)
-  fileSha256 String? @db.Char(64)
-  fileBytes Int?
-  finishedAt DateTime?
-  createdAt DateTime @default(now())
+  fileName    String?   @db.VarChar(200)
+  filePath    String?   @db.VarChar(500)
+  fileSha256  String?   @db.Char(64)
+  fileBytes   Int?
+  finishedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
   @@index([tenantId, companyId, competence])
   @@index([tenantId, raiz, competence])
   @@map("sped_fiscal_generations")
@@ -3781,21 +3831,22 @@ model SpedFiscalGeneration {
 
 /// Fila retomável: um arquivo por item, aquisição da lease por compare-and-set.
 model SpedFiscalImport {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
-  companyId String @db.VarChar(191)
-  sha256 String @db.VarChar(64)
-  name String @db.VarChar(255)
-  path String @db.VarChar(500)
-  state String @default("pendente") @db.VarChar(20)
-  cursor Int @default(0)
-  total Int @default(0)
-  results Json
-  leaseOwner String? @db.VarChar(36)
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  tenantId   String    @db.VarChar(191)
+  companyId  String    @db.VarChar(191)
+  sha256     String    @db.VarChar(64)
+  name       String    @db.VarChar(255)
+  path       String    @db.VarChar(500)
+  state      String    @default("pendente") @db.VarChar(20)
+  cursor     Int       @default(0)
+  total      Int       @default(0)
+  results    Json
+  leaseOwner String?   @db.VarChar(36)
   leaseUntil DateTime?
-  createdBy String @db.VarChar(191)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdBy  String    @db.VarChar(191)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
   @@unique([tenantId, companyId, sha256])
   @@index([tenantId, companyId, createdAt])
   @@map("sped_fiscal_imports")
@@ -3941,13 +3992,13 @@ model FiscalDocument {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  company      Company       @relation(fields: [companyId], references: [id])
-  uploadedBy   User?         @relation(fields: [uploadedById], references: [id])
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+  company        Company        @relation(fields: [companyId], references: [id])
+  uploadedBy     User?          @relation(fields: [uploadedById], references: [id])
   /// As contas que a nota gerou: uma, ou uma por duplicata (23/10/2026).
   financeEntries FinanceEntry[]
   /// A emissão pelo Connect (via Omie) que gerou esta nota, quando foi assim.
-  omieEmissao  OmieEmissao?
+  omieEmissao    OmieEmissao?
 
   @@unique([tenantId, dedupKey])
   // O nome é citado num FORCE INDEX em src/lib/fiscal/data.ts
@@ -3985,29 +4036,30 @@ model FiscalDocument {
 /// fica guardada, uma linha por arquivo (o SHA-256 junta os reenvios), para a
 /// contagem por município e, depois, para a leitura assistida do resíduo.
 model FiscalXmlRefusal {
-  id String @id @default(uuid()) @db.VarChar(36)
-  tenantId String @db.VarChar(191)
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  tenantId         String   @db.VarChar(191)
   /// A empresa escolhida no envio, quando houve. A recusa vem antes de achar a dona pelo CNPJ.
-  companyId String? @db.VarChar(191)
+  companyId        String?  @db.VarChar(191)
   /// Por onde chegou: `entrada` (Documentos fiscais) ou `sped_local`.
-  source String @db.VarChar(20)
-  fileName String @db.VarChar(255)
-  sha256 String @db.Char(64)
-  bytes Int
+  source           String   @db.VarChar(20)
+  fileName         String   @db.VarChar(255)
+  sha256           String   @db.Char(64)
+  bytes            Int
   /// O `MotivoRecusa` do leitor e o detalhe que ele devolveu, como estavam no último envio.
-  reason String @db.VarChar(40)
-  detail String @db.VarChar(500)
+  reason           String   @db.VarChar(40)
+  detail           String   @db.VarChar(500)
   /// `nfse`, `nfe`, `cte` ou `desconhecido`, pela raiz e pelos nomes das tags.
-  probableType String @db.VarChar(20)
-  rootTag String? @db.VarChar(80)
+  probableType     String   @db.VarChar(20)
+  rootTag          String?  @db.VarChar(80)
   /// Código IBGE (7 dígitos) achado no XML, o da prestação primeiro. Nulo quando não há.
-  municipalityCode String? @db.Char(7)
+  municipalityCode String?  @db.Char(7)
   /// O XML como veio, para a leitura do resíduo. Nulo acima de 1 MiB.
-  xml String? @db.MediumText
-  timesSeen Int @default(1)
-  firstSeenAt DateTime @default(now())
-  lastSeenAt DateTime @default(now())
-  lastSeenById String? @db.VarChar(191)
+  xml              String?  @db.MediumText
+  timesSeen        Int      @default(1)
+  firstSeenAt      DateTime @default(now())
+  lastSeenAt       DateTime @default(now())
+  lastSeenById     String?  @db.VarChar(191)
+
   @@unique([tenantId, sha256])
   @@index([tenantId, probableType, municipalityCode])
   @@index([tenantId, lastSeenAt])
@@ -4071,17 +4123,17 @@ model FinanceCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant                  @relation(fields: [tenantId], references: [id])
-  company     Company?                @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  entries     FinanceEntry[]
-  padraoDe    FinanceCounterparty[]
-  dreMappings DreCategoryMapping[]
-  ocultaEm    FinanceCategoryHidden[]
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
+  company             Company?                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  entries             FinanceEntry[]
+  padraoDe            FinanceCounterparty[]
+  dreMappings         DreCategoryMapping[]
+  ocultaEm            FinanceCategoryHidden[]
   /// Baixas que puseram juros e multa, ou o desconto, nesta categoria.
-  baixasComJuros    FinanceEntryPayment[] @relation("PaymentInterestCategory")
-  baixasComDesconto FinanceEntryPayment[] @relation("PaymentDiscountCategory")
+  baixasComJuros      FinanceEntryPayment[]    @relation("PaymentInterestCategory")
+  baixasComDesconto   FinanceEntryPayment[]    @relation("PaymentDiscountCategory")
   /// Linhas de rateio nesta categoria.
-  allocations       FinanceEntryAllocation[]
+  allocations         FinanceEntryAllocation[]
   reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, scope, name, kind])
@@ -4171,12 +4223,12 @@ model FinanceCounterparty {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant            Tenant                @relation(fields: [tenantId], references: [id])
-  company           Company               @relation(fields: [companyId], references: [id])
-  defaultCategory   FinanceCategory?      @relation(fields: [defaultCategoryId], references: [id])
-  defaultCostCenter CostCenter?           @relation(fields: [defaultCostCenterId], references: [id])
-  entries           FinanceEntry[]
-  agreements        CollectionAgreement[]
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
+  company             Company                  @relation(fields: [companyId], references: [id])
+  defaultCategory     FinanceCategory?         @relation(fields: [defaultCategoryId], references: [id])
+  defaultCostCenter   CostCenter?              @relation(fields: [defaultCostCenterId], references: [id])
+  entries             FinanceEntry[]
+  agreements          CollectionAgreement[]
   reconciliationRules BankReconciliationRule[]
 
   @@unique([tenantId, companyId, document])
@@ -4246,13 +4298,13 @@ model FinanceEntry {
   /// ligadas a ela (a trava da edição, o cancelamento e o estorno valem para
   /// cada uma). Relançar o mesmo documento duplicaria valor no financeiro — o
   /// que impede é o unique de (`fiscalDocumentId`, `fiscalDocumentInstallment`).
-  fiscalDocumentId String?
+  fiscalDocumentId          String?
   /// A posição desta conta entre as que a nota gerou: 1 na conta única e na 1ª
   /// parcela, 2..N nas outras. **Não nulo, padrão 1**, de propósito: todo
   /// lançamento de nota que não diga a posição é o 1º, e o segundo clique de
   /// "lançar" bate no unique antes de qualquer parcela nascer. Sem nota
   /// (`fiscalDocumentId` nulo) o número não significa nada e o unique não casa.
-  fiscalDocumentInstallment Int @default(1)
+  fiscalDocumentInstallment Int     @default(1)
 
   /// Título do Omie que originou o lançamento (`nCodTitulo` dos movimentos
   /// financeiros). É a chave da sincronização: o mesmo título lido de novo
@@ -4347,31 +4399,31 @@ model FinanceEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
-  company               Company                 @relation(fields: [companyId], references: [id])
-  counterparty          FinanceCounterparty     @relation(fields: [counterpartyId], references: [id])
-  category              FinanceCategory?        @relation(fields: [categoryId], references: [id])
-  costCenter            CostCenter?             @relation(fields: [costCenterId], references: [id])
-  project               FinanceProject?         @relation(fields: [projectId], references: [id])
-  bankAccount           BankAccount?            @relation("ContaPrevista", fields: [bankAccountId], references: [id], onDelete: SetNull)
+  tenant                Tenant                   @relation(fields: [tenantId], references: [id])
+  company               Company                  @relation(fields: [companyId], references: [id])
+  counterparty          FinanceCounterparty      @relation(fields: [counterpartyId], references: [id])
+  category              FinanceCategory?         @relation(fields: [categoryId], references: [id])
+  costCenter            CostCenter?              @relation(fields: [costCenterId], references: [id])
+  project               FinanceProject?          @relation(fields: [projectId], references: [id])
+  bankAccount           BankAccount?             @relation("ContaPrevista", fields: [bankAccountId], references: [id], onDelete: SetNull)
   /// O cartão de que esta conta é a fatura.
-  cardAccount           BankAccount?            @relation("FaturasDoCartao", fields: [cardAccountId], references: [id], onDelete: SetNull)
-  fiscalDocument        FiscalDocument?         @relation(fields: [fiscalDocumentId], references: [id])
-  createdBy             User?                   @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
-  reviewedBy            User?                   @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
+  cardAccount           BankAccount?             @relation("FaturasDoCartao", fields: [cardAccountId], references: [id], onDelete: SetNull)
+  fiscalDocument        FiscalDocument?          @relation(fields: [fiscalDocumentId], references: [id])
+  createdBy             User?                    @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id])
+  reviewedBy            User?                    @relation("FinanceEntryReviewedBy", fields: [reviewedById], references: [id])
   /// Os vínculos com as linhas do extrato — um por baixa conciliada (lote C:
   /// a conta paga em duas vezes concilia com duas linhas).
   bankMatches           BankTransactionMatch[]
   /// As baixas — pagamentos ou recebimentos, totais ou parciais.
-  payments              FinanceEntryPayment[]   @relation("BaixasDaConta")
+  payments              FinanceEntryPayment[]    @relation("BaixasDaConta")
   /// Na fatura do cartão: as compras dela — as baixas pagas no cartão.
-  cardPurchases         FinanceEntryPayment[]   @relation("ComprasDaFatura")
+  cardPurchases         FinanceEntryPayment[]    @relation("ComprasDaFatura")
   approvalEvents        FinanceApprovalEvent[]
   clientRequests        ClientRequest[]
-  agreement             CollectionAgreement?    @relation("AgreementInstallments", fields: [agreementId], references: [id], onDelete: Restrict)
-  renegotiatedAgreement CollectionAgreement?    @relation("AgreementOriginals", fields: [renegotiatedAgreementId], references: [id], onDelete: Restrict)
-  lossBy                User?                   @relation("FinanceEntryLossBy", fields: [lossById], references: [id], onDelete: SetNull)
-  collectionOwner       User?                   @relation("FinanceEntryCollectionOwner", fields: [collectionOwnerId], references: [id], onDelete: SetNull)
+  agreement             CollectionAgreement?     @relation("AgreementInstallments", fields: [agreementId], references: [id], onDelete: Restrict)
+  renegotiatedAgreement CollectionAgreement?     @relation("AgreementOriginals", fields: [renegotiatedAgreementId], references: [id], onDelete: Restrict)
+  lossBy                User?                    @relation("FinanceEntryLossBy", fields: [lossById], references: [id], onDelete: SetNull)
+  collectionOwner       User?                    @relation("FinanceEntryCollectionOwner", fields: [collectionOwnerId], references: [id], onDelete: SetNull)
   collectionContacts    CollectionContact[]
   collectionEvents      CollectionEvent[]
   reminderLogs          CollectionReminderLog[]
@@ -4382,9 +4434,9 @@ model FinanceEntry {
   allocations           FinanceEntryAllocation[]
   /// As retenções na fonte desta conta a pagar (lote D, 20/10): o imposto que
   /// o tomador segura do fornecedor e recolhe ele mesmo.
-  retentions            FinanceEntryRetention[] @relation("RetentionsOfEntry")
+  retentions            FinanceEntryRetention[]  @relation("RetentionsOfEntry")
   /// Quando esta conta é a de um imposto retido: a retenção que a gerou.
-  retentionOrigin       FinanceEntryRetention?  @relation("RetentionTaxEntry")
+  retentionOrigin       FinanceEntryRetention?   @relation("RetentionTaxEntry")
   /// A regra de conciliação que criou esta conta, quando foi uma (21/10).
   ruleApplications      BankRuleApplication[]
 
@@ -4524,11 +4576,11 @@ model FinanceProject {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant  Tenant         @relation(fields: [tenantId], references: [id])
-  company Company        @relation(fields: [companyId], references: [id])
-  entries FinanceEntry[]
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
+  company             Company                  @relation(fields: [companyId], references: [id])
+  entries             FinanceEntry[]
   /// Linhas de rateio neste projeto.
-  allocations FinanceEntryAllocation[]
+  allocations         FinanceEntryAllocation[]
   reconciliationRules BankReconciliationRule[]
 
   @@unique([companyId, name])
@@ -4555,12 +4607,12 @@ model CostCenter {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant   Tenant                @relation(fields: [tenantId], references: [id])
-  company  Company               @relation(fields: [companyId], references: [id])
-  entries  FinanceEntry[]
-  padraoDe FinanceCounterparty[]
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
+  company             Company                  @relation(fields: [companyId], references: [id])
+  entries             FinanceEntry[]
+  padraoDe            FinanceCounterparty[]
   /// Linhas de rateio neste centro.
-  allocations FinanceEntryAllocation[]
+  allocations         FinanceEntryAllocation[]
   reconciliationRules BankReconciliationRule[]
 
   @@unique([companyId, name])
@@ -4851,16 +4903,16 @@ model CompanyMessageAttachment {
 // e registra quem leu.
 
 model ClientAnnouncement {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   tenantId    String
   /// Setor que comunica — o cliente vê de qual parte da 41 veio.
-  sectorCode  String   @db.VarChar(40)
-  title       String   @db.VarChar(160)
-  body        String   @db.Text
+  sectorCode  String    @db.VarChar(40)
+  title       String    @db.VarChar(160)
+  body        String    @db.Text
   createdById String?
   /// Quando os avisos por e-mail e push terminaram de sair (o envio é em segundo plano).
   notifiedAt  DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   tenant      Tenant                         @relation(fields: [tenantId], references: [id])
   createdBy   User?                          @relation("ClientAnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -4924,7 +4976,6 @@ model ClientAnnouncementAttachment {
   @@map("client_announcement_attachments")
 }
 
-
 // ─── Solicitações do cliente pelo portal (01/10) ─────────────────────────────
 //
 // O portal virou o caminho único entre a 41 e o cliente, em todos os setores
@@ -4952,28 +5003,28 @@ enum ServiceRequestStatus {
 /// O assunto que o cliente escolhe ao abrir a solicitação. Editável no admin;
 /// desativa-se em vez de apagar, porque as solicitações antigas apontam para ele.
 model ServiceRequestSubject {
-  id           String   @id @default(uuid())
-  tenantId     String
-  label        String   @db.VarChar(120)
+  id             String   @id @default(uuid())
+  tenantId       String
+  label          String   @db.VarChar(120)
   /// Uma linha que ajuda o cliente a escolher ("contrato social, alteração de endereço…").
-  description  String?  @db.VarChar(255)
+  description    String?  @db.VarChar(255)
   /// Aceita pedido por link público (09/11/2026): quem ainda não é cliente
   /// preenche o formulário em /pedido/[slug do escritório]/[id do assunto], sem
   /// login, e o pedido vira solicitação deste assunto. Desligado por padrão. O
   /// id (uuid v4) é o identificador do link: estável e não adivinhável. Ver
   /// src/lib/solicitacoes/pedidoPublico.ts.
-  publicLink   Boolean  @default(false)
+  publicLink     Boolean  @default(false)
   /// Setor que atende as solicitações deste assunto.
-  sectorCode   String   @db.VarChar(40)
+  sectorCode     String   @db.VarChar(40)
   /// Prazo de resposta prometido ao cliente, em dias úteis.
-  responseDays Int
-  active       Boolean  @default(true)
-  order        Int      @default(0)
+  responseDays   Int
+  active         Boolean  @default(true)
+  order          Int      @default(0)
   /// A lista do setor em que a solicitação deste assunto vira cartão
   /// (09/11/2026). Nula = não vira cartão, o padrão. Apagar a lista desliga.
   cardPipelineId String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   tenant       Tenant           @relation(fields: [tenantId], references: [id])
   requests     ServiceRequest[]
@@ -4985,29 +5036,29 @@ model ServiceRequestSubject {
 }
 
 model ServiceRequest {
-  id          String               @id @default(uuid())
-  tenantId    String
+  id                   String               @id @default(uuid())
+  tenantId             String
   /// Protocolo por tenant ("Solicitação nº 12") — o que o cliente cita ao falar dela.
-  number      Int
-  companyId   String
-  subjectId   String
+  number               Int
+  companyId            String
+  subjectId            String
   /// Setor que atende agora: começa no do assunto e muda quando a equipe encaminha.
-  sectorCode  String               @db.VarChar(40)
+  sectorCode           String               @db.VarChar(40)
   /// O que o cliente escreveu ao abrir.
-  description String               @db.Text
-  status      ServiceRequestStatus @default(ABERTA)
+  description          String               @db.Text
+  status               ServiceRequestStatus @default(ABERTA)
   /// Prazo da primeira resposta, prometido ao cliente. Data civil ao meio-dia UTC (ver `lerDataDoCampo`).
-  responseDue DateTime
+  responseDue          DateTime
   /// Primeira resposta da equipe visível ao cliente — é o que cumpre o prazo.
-  firstResponseAt DateTime?
-  assigneeId  String?
+  firstResponseAt      DateTime?
+  assigneeId           String?
   openedByPortalUserId String?
-  closedAt    DateTime?
-  closedById  String?
+  closedAt             DateTime?
+  closedById           String?
   /// Última mensagem visível ao cliente, para ordenar a fila pelo que mexeu por último.
-  lastMessageAt DateTime @default(now())
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  lastMessageAt        DateTime             @default(now())
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   tenant         Tenant                     @relation(fields: [tenantId], references: [id])
   company        Company                    @relation(fields: [companyId], references: [id])
@@ -5070,7 +5121,6 @@ model ServiceRequestAttachment {
   @@index([messageId])
   @@map("service_request_attachments")
 }
-
 
 /// Lembrete automático de pendência vencida — um por (pendência, passo).
 /// Gravado **antes** do envio (ver `pendencias/executarLembretes.ts`): o unique
@@ -5356,8 +5406,8 @@ model BankAccount {
   /// Cartão de crédito (lote D, 20/10): o dia em que a fatura fecha — a compra
   /// desse dia em diante entra na fatura seguinte — e o dia em que ela vence.
   /// Nulos nas outras contas.
-  cardClosingDay Int? @db.TinyInt
-  cardDueDay     Int? @db.TinyInt
+  cardClosingDay Int?     @db.TinyInt
+  cardDueDay     Int?     @db.TinyInt
   /// O limite do cartão (30/10/2026), lido do `valor_limite` do Omie. Nulo
   /// quando o Omie não informa; o Connect só mostra, não trava a compra.
   cardLimit      Decimal? @db.Decimal(14, 2)
@@ -5366,15 +5416,15 @@ model BankAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant       Tenant                @relation(fields: [tenantId], references: [id])
-  company      Company               @relation(fields: [companyId], references: [id])
-  imports      BankStatementImport[]
-  transactions BankTransaction[]
-  payments     FinanceEntryPayment[]
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id])
+  company             Company                  @relation(fields: [companyId], references: [id])
+  imports             BankStatementImport[]
+  transactions        BankTransaction[]
+  payments            FinanceEntryPayment[]
   /// Os títulos que têm esta conta como a prevista.
-  entries      FinanceEntry[]        @relation("ContaPrevista")
+  entries             FinanceEntry[]           @relation("ContaPrevista")
   /// No cartão de crédito: as faturas dele, uma por ciclo.
-  cardInvoices FinanceEntry[]        @relation("FaturasDoCartao")
+  cardInvoices        FinanceEntry[]           @relation("FaturasDoCartao")
   /// As regras de conciliação que valem só nesta conta (21/10).
   reconciliationRules BankReconciliationRule[]
 
@@ -5441,11 +5491,11 @@ model BankTransaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
-  bankAccount  BankAccount            @relation(fields: [bankAccountId], references: [id])
-  import       BankStatementImport    @relation(fields: [importId], references: [id])
-  reconciledBy User?                  @relation("BankTransactionReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull)
-  matches      BankTransactionMatch[]
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id])
+  bankAccount      BankAccount            @relation(fields: [bankAccountId], references: [id])
+  import           BankStatementImport    @relation(fields: [importId], references: [id])
+  reconciledBy     User?                  @relation("BankTransactionReconciledBy", fields: [reconciledById], references: [id], onDelete: SetNull)
+  matches          BankTransactionMatch[]
   /// O lançamento que uma regra de conciliação criou para esta linha (21/10).
   ruleApplications BankRuleApplication[]
 
@@ -5637,30 +5687,30 @@ model DominioExportacao {
 /// fornecedor que ninguém cadastrou. `cfop` vazio é a regra padrão do
 /// fornecedor. As contas são o código reduzido da Domínio, só dígitos.
 model ContabilRegra {
-  id              String   @id @default(uuid())
-  tenantId        String
-  companyId       String
-  cnpjFornecedor  String   @db.VarChar(14)
-  cfop            String   @db.VarChar(4)
-  nomeFornecedor  String   @default("") @db.VarChar(180)
-  contaDebito     String   @default("") @db.VarChar(20)
-  contaCredito    String   @default("") @db.VarChar(20)
-  codigoHistorico String   @default("") @db.VarChar(10)
+  id                 String   @id @default(uuid())
+  tenantId           String
+  companyId          String
+  cnpjFornecedor     String   @db.VarChar(14)
+  cfop               String   @db.VarChar(4)
+  nomeFornecedor     String   @default("") @db.VarChar(180)
+  contaDebito        String   @default("") @db.VarChar(20)
+  contaCredito       String   @default("") @db.VarChar(20)
+  codigoHistorico    String   @default("") @db.VarChar(10)
   /// O complemento do histórico, com os coringas {nf}, {fornecedor}, {data},
   /// {cfop} e {serie}. Vazio usa o padrão, "COMPRAS NF {nf} {fornecedor}".
-  historico       String   @default("") @db.VarChar(255)
-  observacao      String   @default("") @db.VarChar(500)
-  dataLancamento  String   @default("") @db.VarChar(10)
-  valor           Decimal? @db.Decimal(15, 2)
-  iniciaLote      String   @default("") @db.VarChar(1)
-  codigoFilial    String   @default("") @db.VarChar(10)
-  centroCustoDebito  String @default("") @db.VarChar(40)
-  centroCustoCredito String @default("") @db.VarChar(40)
+  historico          String   @default("") @db.VarChar(255)
+  observacao         String   @default("") @db.VarChar(500)
+  dataLancamento     String   @default("") @db.VarChar(10)
+  valor              Decimal? @db.Decimal(15, 2)
+  iniciaLote         String   @default("") @db.VarChar(1)
+  codigoFilial       String   @default("") @db.VarChar(10)
+  centroCustoDebito  String   @default("") @db.VarChar(40)
+  centroCustoCredito String   @default("") @db.VarChar(40)
   /// Fora da contabilidade: as notas deste par saem contadas, sem lançamento.
-  desconsiderar   Boolean  @default(false)
-  updatedById     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  desconsiderar      Boolean  @default(false)
+  updatedById        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -5671,15 +5721,15 @@ model ContabilRegra {
 
 /// Sugestão de débito; só vira regra de fornecedor após confirmação.
 model ContabilCfopConta {
-  id           String @id @default(uuid())
-  tenantId     String
-  companyId    String
-  cfop         String @db.VarChar(4)
-  contaDebito  String @db.VarChar(20)
-  observacao   String @default("") @db.VarChar(500)
-  updatedById  String?
-  updatedAt    DateTime @updatedAt
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  cfop        String   @db.VarChar(4)
+  contaDebito String   @db.VarChar(20)
+  observacao  String   @default("") @db.VarChar(500)
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, cfop])
   @@index([tenantId, companyId])
@@ -5910,7 +5960,6 @@ model ContabilContaSaida {
   @@index([tenantId])
   @@map("contabil_contas_saida")
 }
-
 
 // ─── Regras de conciliação (fila do BPO, 21/10) ─────────────────────────────
 //
@@ -6871,15 +6920,15 @@ model AuditLog {
 }
 
 model Notification {
-  id         String      @id @default(uuid())
-  tenantId   String
-  userId     String
-  type       String      @db.VarChar(60) // ex: HANDOFF_RECEIVED, MENTION, STAGE_OVERDUE
-  entityType EntityType?
-  entityId   String?
-  message    String      @db.VarChar(255)
-  read       Boolean     @default(false)
-  createdAt  DateTime    @default(now())
+  id          String      @id @default(uuid())
+  tenantId    String
+  userId      String
+  type        String      @db.VarChar(60) // ex: HANDOFF_RECEIVED, MENTION, STAGE_OVERDUE
+  entityType  EntityType?
+  entityId    String?
+  message     String      @db.VarChar(255)
+  read        Boolean     @default(false)
+  createdAt   DateTime    @default(now())
   /// Quem causou (05/10/2026) — a foto no sino. Nulo nos alertas automáticos.
   /// Sem FK de propósito: a tabela é grande, e a FK obrigaria o MySQL a
   /// copiá-la inteira na migration. A foto é buscada em lote, e um id que não
@@ -7987,18 +8036,18 @@ model Process {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant    Tenant            @relation(fields: [tenantId], references: [id])
-  company   Company           @relation(fields: [companyId], references: [id])
-  type      ProcessType       @relation(fields: [typeId], references: [id])
-  template  ProcessTemplate   @relation(fields: [templateId], references: [id])
-  owner     User?             @relation("ProcessOwner", fields: [ownerUserId], references: [id])
-  steps     ProcessStep[]
-  protocols ProcessProtocol[]
-  fees      ProcessFee[]
-  messages  ProcessMessage[]
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  company     Company           @relation(fields: [companyId], references: [id])
+  type        ProcessType       @relation(fields: [typeId], references: [id])
+  template    ProcessTemplate   @relation(fields: [templateId], references: [id])
+  owner       User?             @relation("ProcessOwner", fields: [ownerUserId], references: [id])
+  steps       ProcessStep[]
+  protocols   ProcessProtocol[]
+  fees        ProcessFee[]
+  messages    ProcessMessage[]
   timeEntries TimeEntry[]
-  avisos    AvisoDeOrgao[]
-  documents ProcessDocument[]
+  avisos      AvisoDeOrgao[]
+  documents   ProcessDocument[]
 
   @@index([tenantId, status])
   @@index([tenantId, companyId])
@@ -8611,26 +8660,26 @@ enum AgentMessageRating {
 }
 
 model AgentMessage {
-  id             String           @id @default(uuid())
+  id             String              @id @default(uuid())
   conversationId String
   role           AgentMessageRole
-  content        String           @db.Text
+  content        String              @db.Text
   /// As propostas de escrita da resposta, com o estado de cada uma
   /// (`aplicada`). Só no assistente.
   proposals      Json?
   /// A execução que gerou a resposta — liga a mensagem ao custo.
-  runId          String?          @db.VarChar(191)
-  truncated      Boolean          @default(false)
+  runId          String?             @db.VarChar(191)
+  truncated      Boolean             @default(false)
   /// A resposta falhou; `content` é o motivo mostrado à pessoa.
-  failed         Boolean          @default(false)
+  failed         Boolean             @default(false)
   /// O que estava aberto na tela quando a pergunta foi feita ("Processo: …").
-  contextLabel   String?          @db.VarChar(200)
+  contextLabel   String?             @db.VarChar(200)
   /// 👍/👎 de quem perguntou (02/10/2026). Só no assistente; nulo = não avaliou.
   rating         AgentMessageRating?
   /// O motivo do 👎, de uma lista fixa (`MOTIVOS_DO_NAO` em `regras.ts`). Opcional.
-  ratingReason   String?          @db.VarChar(40)
+  ratingReason   String?             @db.VarChar(40)
   ratedAt        DateTime?
-  createdAt      DateTime         @default(now())
+  createdAt      DateTime            @default(now())
 
   conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -8889,12 +8938,12 @@ model WhatsappAtendimento {
   tenantId String
   threadId String
 
-  abertoEm    DateTime  @default(now())
-  encerradoEm DateTime?
+  abertoEm       DateTime  @default(now())
+  encerradoEm    DateTime?
   /// Quem encerrou. Nulo com `encerradoEm` é o próprio candidato (PARAR).
   encerradoPorId String?
   /// Como terminou — os códigos estão em `src/lib/whatsapp/atendimentos.ts`.
-  desfecho String? @db.VarChar(40)
+  desfecho       String?   @db.VarChar(40)
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id])
   thread       WhatsappThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
@@ -9214,23 +9263,23 @@ model ValoraProposta {
 // senha. Lógica em src/lib/certificados.
 
 model DigitalCertificate {
-  id           String   @id @default(uuid())
-  tenantId     String
+  id                     String    @id @default(uuid())
+  tenantId               String
   /// Empresa do Connect com o mesmo CNPJ/CPF; null = titular não cadastrado.
-  companyId    String?
+  companyId              String?
   /// CNPJ | CPF
-  tipo         String   @db.VarChar(4)
+  tipo                   String    @db.VarChar(4)
   /// Só dígitos.
-  documento    String   @db.VarChar(14)
-  titular      String   @db.VarChar(200)
+  documento              String    @db.VarChar(14)
+  titular                String    @db.VarChar(200)
   /// Dia do vencimento (meio-dia UTC), lido de dentro do certificado.
-  expiresAt    DateTime
+  expiresAt              DateTime
   /// Título da entrada do cofre que guarda a senha — o título, nunca a senha.
-  cofreEntrada String?  @db.VarChar(200)
+  cofreEntrada           String?   @db.VarChar(200)
   /// Aviso do script para conferir à mão (senha repetida, vencimento divergente…).
-  conferir     String?  @db.VarChar(300)
+  conferir               String?   @db.VarChar(300)
   /// Última importação em que o certificado estava no relatório.
-  importedAt   DateTime
+  importedAt             DateTime
   /// A renovação deste certificado (05/11/2026): em que pé está, quem cuida,
   /// quanto custa e quem paga — a parte que o Financeiro lê. Nulo = ninguém
   /// mexeu (a tela mostra "A pedir" quando ele já está a renovar).
@@ -9243,8 +9292,8 @@ model DigitalCertificate {
   /// CLIENTE | ESCRITORIO (a 41)
   renovacaoPagaQuem      String?   @db.VarChar(10)
   renovacaoAtualizadaEm  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id])
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -9313,30 +9362,30 @@ model DigitalCertificateUseDay {
 /// é o documento, como nos certificados, e não `companyId` — a filial lê a da
 /// raiz, e apagar e recadastrar a empresa não perde o histórico.
 model AccessAuthorization {
-  id          String                    @id @default(uuid())
-  tenantId    String
+  id              String                    @id @default(uuid())
+  tenantId        String
   /// Raiz do CNPJ (8 dígitos) ou CPF (11). Só dígitos.
-  documento   String                    @db.VarChar(14)
-  status      AccessAuthorizationStatus
+  documento       String                    @db.VarChar(14)
+  status          AccessAuthorizationStatus
   /// Os quatro abaixo são dias de calendário, gravados ao meio-dia UTC.
   /// Dia em que o escritório pediu ao cliente.
-  requestedAt DateTime?
+  requestedAt     DateTime?
   /// Dia em que o cliente cadastrou no Portal — conta os 30 dias para validar.
-  receivedAt  DateTime?
-  validatedAt DateTime?
+  receivedAt      DateTime?
+  validatedAt     DateTime?
   /// Fim da validade escolhida pelo cliente (no máximo 5 anos).
-  expiresAt   DateTime?
+  expiresAt       DateTime?
   /// "Todos os serviços" no Portal, que inclui os que vierem depois. false = só
   /// os códigos de `services`.
-  allServices Boolean                   @default(true)
-  services    String?                   @db.VarChar(500)
-  notes       String?                   @db.Text
+  allServices     Boolean                   @default(true)
+  services        String?                   @db.VarChar(500)
+  notes           String?                   @db.Text
   /// MANUAL (o setor marcou) ou SERPRO (a consulta de procurações conferiu).
-  checkedVia  String                    @default("MANUAL") @db.VarChar(10)
-  checkedAt   DateTime?
+  checkedVia      String                    @default("MANUAL") @db.VarChar(10)
+  checkedAt       DateTime?
   updatedByUserId String?
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
@@ -9372,33 +9421,33 @@ model AccessAuthorizationGrantee {
 /// graça). O preço não fica na linha: depende da faixa que o mês atingir.
 /// O corpo da resposta não é guardado — pode ter dado fiscal do cliente.
 model SerproCall {
-  id              String   @id @default(uuid())
-  tenantId        String
+  id             String   @id @default(uuid())
+  tenantId       String
   /// Apoiar, Consultar, Declarar, Emitir ou Monitorar.
-  caminho         String   @db.VarChar(12)
-  idSistema       String   @db.VarChar(40)
-  idServico       String   @db.VarChar(60)
+  caminho        String   @db.VarChar(12)
+  idSistema      String   @db.VarChar(40)
+  idServico      String   @db.VarChar(60)
   /// CNPJ ou CPF do contribuinte, só dígitos.
-  contribuinte    String   @db.VarChar(14)
+  contribuinte   String   @db.VarChar(14)
   /// Nulo quando não houve resposta (rede, tempo esgotado do lado de cá).
-  httpStatus      Int?
-  cobrada         Boolean
+  httpStatus     Int?
+  cobrada        Boolean
   /// CONSULTA, EMISSAO ou DECLARACAO; nulo nos caminhos gratuitos.
-  tipoDeCobranca  String?  @db.VarChar(12)
+  tipoDeCobranca String?  @db.VarChar(12)
   /// Códigos das mensagens do Serpro, separados por vírgula.
-  mensagens       String?  @db.VarChar(500)
-  duracaoMs       Int
+  mensagens      String?  @db.VarChar(500)
+  duracaoMs      Int
   /// Quem pediu, quando foi uma pessoa; nulo no agendador.
-  userId          String?
+  userId         String?
   /// De onde veio: "autorizacoes", "teste"…
-  origem          String   @db.VarChar(40)
+  origem         String   @db.VarChar(40)
   /// PRODUCAO ou DEMONSTRACAO (o trial do Serpro, sem contrato; 20/10/2026).
   /// A demonstração fica fora do teto e do custo do mês.
-  ambiente        String   @default("PRODUCAO") @db.VarChar(12)
+  ambiente       String   @default("PRODUCAO") @db.VarChar(12)
   /// O X-Request-Tag enviado: liga a linha ao relatório de consumo da Área do
   /// Cliente do Serpro, que traz a coluna TAG. Nulo antes de 20/10/2026.
-  requestTag      String?  @db.VarChar(32)
-  createdAt       DateTime @default(now())
+  requestTag     String?  @db.VarChar(32)
+  createdAt      DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
@@ -9413,33 +9462,33 @@ model SerproCall {
 // aberta, paga, vencida) não é coluna: sai do envio, de `pagaEm` e da data
 // (src/lib/guias/situacao.ts), e não fica desatualizada.
 model Guia {
-  id              String   @id @default(uuid())
-  tenantId        String
-  companyId       String
+  id               String    @id @default(uuid())
+  tenantId         String
+  companyId        String
   /// "DAS", "DAS_MEI", "DCTFWEB", "DARF", "PARCELA" (os da emissão pelo Serpro).
-  tipo            String   @db.VarChar(20)
+  tipo             String    @db.VarChar(20)
   /// "DAS do Simples Nacional · 09/2026" — o rótulo da lista.
-  descricao       String   @db.VarChar(160)
+  descricao        String    @db.VarChar(160)
   /// "AAAA-MM", quando a guia é de uma competência (a parcela não tem).
-  competencia     String?  @db.VarChar(7)
+  competencia      String?   @db.VarChar(7)
   /// "AAAA-MM-DD". A DCTFWeb e a parcela não devolvem em campo: fica nulo.
-  vencimento      String?  @db.VarChar(10)
+  vencimento       String?   @db.VarChar(10)
   /// "AAAA-MM-DD": até quando o banco aceita a guia com este cálculo.
-  validoAte       String?  @db.VarChar(10)
-  valor           Decimal? @db.Decimal(14, 2)
-  numeroDocumento String?  @db.VarChar(60)
-  linhaDigitavel  String?  @db.VarChar(60)
+  validoAte        String?   @db.VarChar(10)
+  valor            Decimal?  @db.Decimal(14, 2)
+  numeroDocumento  String?   @db.VarChar(60)
+  linhaDigitavel   String?   @db.VarChar(60)
   /// "SERPRO" (emitida pela ficha da empresa).
-  origem          String   @db.VarChar(10)
+  origem           String    @db.VarChar(10)
   /// O PDF nos Arquivos da empresa (pasta Guias).
-  driveFileId     String?
+  driveFileId      String?
   /// O envio ao cliente que levou a guia, quando houve.
   clientDocumentId String?
-  pagaEm          DateTime?
-  pagaPorId       String?
-  emitidaPorId    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  pagaEm           DateTime?
+  pagaPorId        String?
+  emitidaPorId     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   driveFile      DriveFile?      @relation(fields: [driveFileId], references: [id], onDelete: SetNull)
@@ -9749,28 +9798,28 @@ enum LeadStatus {
 }
 
 model Lead {
-  id          String     @id @default(uuid())
-  tenantId    String
-  name        String     @db.VarChar(120)
-  email       String?    @db.VarChar(160)
+  id                String     @id @default(uuid())
+  tenantId          String
+  name              String     @db.VarChar(120)
+  email             String?    @db.VarChar(160)
   /// Telefone ou WhatsApp, só dígitos (DDD + número).
-  phone       String?    @db.VarChar(20)
+  phone             String?    @db.VarChar(20)
   /// Nome da empresa como a pessoa escreveu — o lead ainda não é `Company`.
-  companyName String?    @db.VarChar(160)
+  companyName       String?    @db.VarChar(160)
   /// CNPJ só dígitos; opcional, validado pelo dígito verificador quando vem.
-  cnpj        String?    @db.VarChar(14)
+  cnpj              String?    @db.VarChar(14)
   /// O que a pessoa escreveu ("o que você procura").
-  message     String?    @db.Text
+  message           String?    @db.Text
   /// De onde veio: "PORTAL_FICHA" hoje. Texto livre de propósito (ver acima).
-  source      String     @db.VarChar(40)
-  status      LeadStatus @default(NOVO)
-  assigneeId  String?
+  source            String     @db.VarChar(40)
+  status            LeadStatus @default(NOVO)
+  assigneeId        String?
   /// Anotações da equipe — o lead nunca vê.
-  notes       String?    @db.Text
+  notes             String?    @db.Text
   /// Quando a pessoa aceitou a política de privacidade. Nulo numa entrada que não pede aceite.
   privacyAcceptedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   tenant   Tenant @relation(fields: [tenantId], references: [id])
   assignee User?  @relation("LeadResponsavel", fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -9794,33 +9843,33 @@ enum DriveAccessKind {
 
 /// Pasta do Drive. Da empresa (`companyId`) ou interna do escritório (`companyId` NULL).
 model DriveFolder {
-  id          String  @id @default(uuid())
-  tenantId    String
+  id               String    @id @default(uuid())
+  tenantId         String
   /// Empresa dona da pasta. NULL = pasta interna do escritório.
-  companyId   String?
+  companyId        String?
   /// NULL = primeiro nível (da empresa, ou das pastas internas).
-  parentId    String?
-  name        String  @db.VarChar(120)
+  parentId         String?
+  name             String    @db.VarChar(120)
   /// Setor dono: só o setor (e quem vê tudo) enxerga e mexe — e vale para
   /// tudo que está dentro. NULL = quem vê a empresa vê a pasta.
-  sectorCode  String? @db.VarChar(40)
+  sectorCode       String?   @db.VarChar(40)
   /// Pasta da casa, criada pelo Connect: "enviados" (o que o cliente manda pelo
   /// portal) ou "modelo:<id do DriveTemplateFolder>". Não muda de nome, de
   /// lugar, nem vai para a lixeira.
-  systemKey   String? @db.VarChar(60)
+  systemKey        String?   @db.VarChar(60)
   /// O cliente vê a pasta, e tudo que está dentro dela, no portal.
-  sharedWithPortal Boolean @default(false)
-  createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  sharedWithPortal Boolean   @default(false)
+  createdById      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   /// Na lixeira desde. Some de vez 30 dias depois (src/lib/drive/lixeira.ts).
-  deletedAt   DateTime?
-  deletedById String?
+  deletedAt        DateTime?
+  deletedById      String?
 
-  tenant   Tenant        @relation(fields: [tenantId], references: [id])
-  company  Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  parent   DriveFolder?  @relation("DriveFolderArvore", fields: [parentId], references: [id], onDelete: Cascade)
-  children DriveFolder[] @relation("DriveFolderArvore")
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  company  Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent   DriveFolder?     @relation("DriveFolderArvore", fields: [parentId], references: [id], onDelete: Cascade)
+  children DriveFolder[]    @relation("DriveFolderArvore")
   files    DriveFile[]
   vista    DriveFolderSeen?
 
@@ -9852,14 +9901,14 @@ model DriveFolderSeen {
 
 /// Arquivo do Drive. Em disco em storage/drive/<storageKey>.
 model DriveFile {
-  id         String @id @default(uuid())
-  tenantId   String
-  folderId   String
-  name       String @db.VarChar(160)
+  id                     String    @id @default(uuid())
+  tenantId               String
+  folderId               String
+  name                   String    @db.VarChar(160)
   /// "<tenantId>/<uuid>.<ext>" sob storage/drive — nunca vem de quem envia.
-  storageKey String @db.VarChar(255)
-  mimeType   String @db.VarChar(120)
-  sizeBytes  Int
+  storageKey             String    @db.VarChar(255)
+  mimeType               String    @db.VarChar(120)
+  sizeBytes              Int
   uploadedByUserId       String?
   /// Preenchido quando o cliente mandou pelo portal.
   uploadedByPortalUserId String?
@@ -9867,11 +9916,11 @@ model DriveFile {
   /// meia-noite UTC, como toda data-calendário. Alimenta o alerta
   /// DRIVE_FILE_EXPIRING (src/lib/alerts.ts). Veio com a aba Documentos da
   /// empresa, que se juntou aos Arquivos em 09/10/2026.
-  expiresAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-  deletedById String?
+  expiresAt              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+  deletedById            String?
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   folder           DriveFolder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
@@ -9964,15 +10013,15 @@ model DriveTemplateFolder {
 
 /// Simulação fiscal exclusiva do banco local; nunca usada como acervo fiscal real.
 model LocalFiscalScenario {
-  tenantId String
-  userId   String
-  data     Json
+  tenantId  String
+  userId    String
+  data      Json
   favorites Json
-  revision Int @default(1)
+  revision  Int      @default(1)
   updatedAt DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([tenantId, userId])
   @@index([userId])
@@ -9989,23 +10038,23 @@ model LocalFiscalScenario {
 /// As datas ficam em "AAAA-MM-DD", dia de calendário sem fuso, como as contas
 /// as calculam (src/lib/financeiro/repeticao.ts).
 model FinanceRecurrence {
-  id              String  @id @db.VarChar(36)
+  id              String   @id @db.VarChar(36)
   tenantId        String
   companyId       String
   /// MENSAL, QUINZENAL, SEMANAL, ANUAL ou DIARIA (todo dia útil). O
   /// parcelamento (22/10/2026) grava MENSAL com `endMode` VEZES: as parcelas
   /// nascem todas juntas, e a regra só guarda o dia e o ajuste para o "mudar a
   /// série daqui em diante".
-  frequency       String  @db.VarChar(12)
+  frequency       String   @db.VarChar(12)
   /// ADIAR, ANTECIPAR ou MANTER — o vencimento em fim de semana ou feriado.
-  dayAdjust       String  @db.VarChar(10)
+  dayAdjust       String   @db.VarChar(10)
   /// VEZES, ATE (até `endDate`) ou SEM_FIM.
-  endMode         String  @db.VarChar(8)
-  endDate         String? @db.VarChar(10)
+  endMode         String   @db.VarChar(8)
+  endDate         String?  @db.VarChar(10)
   /// Quantas contas a série tem ao todo; nulo na sem fim.
   total           Int?
-  firstDueDate    String  @db.VarChar(10)
-  firstCompetence String  @db.VarChar(7)
+  firstDueDate    String   @db.VarChar(10)
+  firstCompetence String   @db.VarChar(7)
   /// A posição da última conta já criada. A série termina quando chega em `total`.
   lastIndex       Int
   /// O dia do vencimento quando ele mudou depois do lançamento ("mudar a série
@@ -10015,7 +10064,7 @@ model FinanceRecurrence {
   /// mesmos meses — ver `ocorrenciasDaRepeticao`.
   dueDay          Int?
   /// Falso depois do "cancelar esta e as próximas": nada mais nasce.
-  active          Boolean @default(true)
+  active          Boolean  @default(true)
   createdById     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -10995,4 +11044,24 @@ model AtendimentoMensagemPadrao {
 
   @@index([tenantId, ativo])
   @@map("atendimento_mensagens_padrao")
+}
+
+/// Um modelo aprovado pela Meta (11/11/2026): o único jeito de retomar a
+/// conversa depois de 24 h sem mensagem do cliente. O texto é cadastrado aqui
+/// igual ao aprovado lá, com {{1}}, {{2}}…; o {{1}} recebe a assinatura de quem manda.
+model AtendimentoModelo {
+  id         String  @id @default(uuid())
+  tenantId   String
+  rotulo     String  @db.VarChar(80)
+  /// O nome do modelo na Meta, exatamente como foi aprovado (minúsculas e _).
+  nomeNaMeta String  @db.VarChar(120)
+  idioma     String  @default("pt_BR") @db.VarChar(10)
+  texto      String  @db.Text
+  ativo      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, ativo])
+  @@map("atendimento_modelos")
 }

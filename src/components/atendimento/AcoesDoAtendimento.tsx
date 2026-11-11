@@ -20,6 +20,7 @@ import type { DetalheDoAtendimento } from "@/lib/atendimento/consultas";
 import { DESFECHO_OUTRO } from "@/lib/atendimento/regras";
 import {
   buscarEmpresasAction,
+  convidarParaOPortalAction,
   decidirPedidoAction,
   encaminharAction,
   encerrarAction,
@@ -314,7 +315,15 @@ export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimen
               />
             )}
             {buscando && achadas.termo === termo && lista.length === 0 && <p className="text-micro text-fg-muted">Nenhuma empresa com esse nome ou CNPJ.</p>}
-            <p className="text-micro text-fg-muted">O convite para o portal chega no próximo passo do Atendimento; por enquanto, crie o acesso pela ficha da empresa.</p>
+            {d.contato.empresa && escolhida === d.contato.empresa.id && !d.contato.temPortal && d.pode.convidar ? (
+              <ConviteParaOPortal d={d} aoTerminar={aoFechar} />
+            ) : (
+              <p className="text-micro text-fg-muted">
+                {d.contato.temPortal && escolhida === d.contato.empresa?.id
+                  ? "Esta empresa já tem acesso ao portal."
+                  : "Depois de ligar o contato à empresa, o convite para o portal aparece aqui."}
+              </p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -450,5 +459,42 @@ export function JanelaDeTransferir({ d, aberta, aoFechar }: { d: DetalheDoAtendi
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ─── Convite para o portal ───────────────────────────────────────────────────
+
+/** Cria o acesso do cliente à empresa e manda o link de definir a senha pela conversa. */
+function ConviteParaOPortal({ d, aoTerminar }: { d: DetalheDoAtendimento; aoTerminar: () => void }) {
+  const [nome, setNome] = useState(d.contato.nome ?? d.contato.nomeNoWhatsapp ?? "");
+  const [email, setEmail] = useState("");
+  const { ocupado, erro, rodar } = useAcao(aoTerminar);
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-3.5">
+      <b className="text-ui">Convidar para o portal</b>
+      <p className="text-micro text-fg-muted">
+        A {d.contato.empresa?.nome} ainda não tem acesso. O Connect cria o acesso e manda pela conversa o link para definir a senha (vale por 1 hora).
+      </p>
+      {!d.janela.ok && <p className="text-micro text-warning-fg">{d.janela.motivo}</p>}
+      <div className="grid grid-cols-2 gap-3">
+        <Campo rotulo="Nome de quem acessa" htmlFor="atd-convite-nome">
+          <Input id="atd-convite-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+        </Campo>
+        <Campo rotulo="E-mail (o login)" htmlFor="atd-convite-email">
+          <Input id="atd-convite-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Campo>
+      </div>
+      <Erro erro={erro} />
+      <Button
+        variant="secondary"
+        className="self-start"
+        loading={ocupado}
+        loadingLabel="Convidando…"
+        disabled={!nome.trim() || !email.trim() || !d.janela.ok}
+        onClick={() => rodar(() => convidarParaOPortalAction({ cicloId: d.ciclo.id, nome, email }), "Acesso criado e link enviado.")}
+      >
+        Criar acesso e mandar o link
+      </Button>
+    </div>
   );
 }
