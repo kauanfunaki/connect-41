@@ -6,6 +6,10 @@ import { linhaAoLongoDoAno, type DreAnual } from "@/lib/dre/anual";
 import { rotuloEconomico } from "@/lib/dre/economica";
 import { formatarReaisDeCentavos as moeda } from "@/lib/format";
 import { RotuloDaCategoria, RotuloDaLinha, useLinhasAbertas } from "@/components/dre/LinhaQueAbre";
+import { BotaoDaDica } from "@/components/dre/BotaoDaDica";
+import { Accordion } from "@/components/ui/Accordion";
+import { Cartao } from "@/components/shared/ListaResponsiva";
+import { dicaDaLinha } from "@/lib/dre/dicasDaDre";
 
 const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 0 });
 
@@ -17,7 +21,15 @@ type Props = {
    * o ano inteiro da aba Competência do portal (14/10/2026).
    */
   regime?: "caixa" | "competencia";
+  /**
+   * A DRE do cliente (11/11/2026): no celular, um cartão por linha em vez da
+   * grade de quatorze colunas (P18), e a dica do que é cada linha (P16). A
+   * equipe segue com a grade em toda largura.
+   */
+  noPortal?: boolean;
 };
+
+type Linha = ReturnType<typeof modeloDoCodigo>["linhas"][number];
 
 /**
  * As quatorze colunas, com a primeira fixa.
@@ -30,14 +42,15 @@ type Props = {
  * As linhas de grupo abrem nas categorias, com os valores nas mesmas quatorze
  * colunas (13/10/2026) — o mesmo abre e fecha da DRE do mês (`LinhaQueAbre`).
  */
-export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
+export function RelatorioAnual({ anual, regime = "caixa", noPortal = false }: Props) {
   const { aberta, alternar } = useLinhasAbertas();
   const temDetalhe = Object.keys(anual.detalhe).length > 0;
   // As linhas do modelo do DRE da empresa (21/10/2026).
   const LINHAS = modeloDoCodigo(anual.modelo).linhas;
+  const rotuloDe = (linha: Linha) => (regime === "competencia" ? rotuloEconomico(linha.code, linha.label) : linha.label);
 
-  return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-surface shadow-xs">
+  const grade = (
+    <div className={`overflow-x-auto border border-border rounded-lg bg-surface shadow-xs ${noPortal ? "hidden md:block" : ""}`.trim()}>
       <table className="w-full text-fs-2 border-collapse">
         <thead>
           <tr>
@@ -63,13 +76,17 @@ export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
             const destaque = linha.tipo === "subtotal" && linha.destaque;
             const categorias = linha.tipo === "grupo" ? (anual.detalhe[linha.grupo] ?? []) : [];
             const abrir = linha.tipo === "grupo" && aberta(linha.code);
-            const rotulo = regime === "competencia" ? rotuloEconomico(linha.code, linha.label) : linha.label;
+            const rotulo = rotuloDe(linha);
+            // A dica do que é a linha, só no portal (P16). O nome sublinhado em
+            // pontinhos avisa que tem explicação; o de grupo é o botão que abre.
+            const dica = noPortal ? dicaDaLinha(linha.code) : undefined;
 
             return (
               <Fragment key={linha.code}>
                 <tr className={destaque ? "bg-surface-hover" : ehPct ? "" : "border-t border-border-soft"}>
                   <th
                     scope="row"
+                    data-dica={dica}
                     className={`sticky left-0 z-10 text-left px-3 ${ehPct ? "py-0.5" : "py-1.5"} ${
                       destaque
                         ? "bg-surface-hover font-semibold text-fg"
@@ -85,6 +102,8 @@ export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
                         aberta={abrir}
                         onAlternar={() => alternar(linha.code)}
                       />
+                    ) : dica ? (
+                      <span className="cursor-help underline decoration-dotted decoration-fg-muted underline-offset-2">{rotulo}</span>
                     ) : (
                       rotulo
                     )}
@@ -136,6 +155,88 @@ export function RelatorioAnual({ anual, regime = "caixa" }: Props) {
           })}
         </tbody>
       </table>
+    </div>
+  );
+
+  if (!noPortal) return grade;
+
+  // No celular (P18): a grade era de quatorze colunas com a primeira de 256px,
+  // e o cliente rolava de lado para achar o total. Aqui, um cartão por linha
+  // com o que se lê primeiro — o ano e a média, e o percentual das vendas
+  // quando a linha tem — e os meses num recolhível que começa fechado. As
+  // linhas de percentual entram no cartão da linha delas, e não como cartão.
+  const cartoes = LINHAS.filter((l) => l.tipo !== "percentual").map((linha) => {
+    const valores = linhaAoLongoDoAno(anual, linha.code);
+    const pct = LINHAS.find((p) => p.tipo === "percentual" && p.numerador === linha.code);
+    const fracaoDoAno = pct ? (linhaAoLongoDoAno(anual, pct.code)[INDICE_DO_ANO]?.fracao ?? null) : null;
+    return { linha, valores, fracaoDoAno };
+  });
+
+  return (
+    <>
+      <ul className="md:hidden flex flex-col gap-2">
+        {cartoes.map(({ linha, valores, fracaoDoAno }) => {
+          const rotulo = rotuloDe(linha);
+          const dica = dicaDaLinha(linha.code);
+          const destaque = linha.tipo === "subtotal" && linha.destaque;
+          return (
+            <li key={linha.code}>
+              <Cartao className={destaque ? "border-border-strong" : ""}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className={`min-w-0 break-words text-ui ${destaque ? "font-semibold text-fg" : "font-medium text-fg-secondary"}`}>{rotulo}</p>
+                  {dica && <BotaoDaDica rotulo={rotulo} dica={dica} />}
+                </div>
+                <dl className={`mt-2 grid gap-2 ${fracaoDoAno !== null ? "grid-cols-3" : "grid-cols-2"}`}>
+                  <ParDoCartao rotulo="No ano" centavos={valores[INDICE_DO_ANO]?.centavos ?? 0} forte />
+                  <ParDoCartao rotulo="Média por mês" centavos={valores[INDICE_DA_MEDIA]?.centavos ?? 0} />
+                  {fracaoDoAno !== null && (
+                    <div className="min-w-0">
+                      <dt className="text-ui text-fg-muted">Das vendas</dt>
+                      <dd className="text-ui tabular-nums text-fg">{PCT.format(fracaoDoAno)}</dd>
+                    </div>
+                  )}
+                </dl>
+                <Accordion
+                  titulo="Mês a mês"
+                  className="mt-2 border-t border-border-soft pt-1"
+                  classeDoCabecalho="w-full py-2 text-ui font-medium text-fg-secondary"
+                  classeDoConteudo="pb-1"
+                >
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    {anual.colunas.slice(0, INDICE_DA_MEDIA).map((c, i) => {
+                      const centavos = valores[i]?.centavos ?? 0;
+                      return (
+                        <div key={c.rotulo} className="flex items-baseline justify-between gap-2">
+                          <dt className="text-ui text-fg-muted">{c.rotulo}</dt>
+                          <dd className={`text-ui tabular-nums ${centavos < 0 ? "text-danger" : "text-fg"}`}>
+                            <Valor centavos={centavos} />
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                </Accordion>
+              </Cartao>
+            </li>
+          );
+        })}
+      </ul>
+      {grade}
+    </>
+  );
+}
+
+// As duas últimas colunas do ano: média e soma (`montarAnual`).
+const INDICE_DA_MEDIA = 12;
+const INDICE_DO_ANO = 13;
+
+function ParDoCartao({ rotulo, centavos, forte = false }: { rotulo: string; centavos: number; forte?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-ui text-fg-muted">{rotulo}</dt>
+      <dd className={`text-ui tabular-nums ${forte ? "font-semibold" : ""} ${centavos < 0 ? "text-danger" : "text-fg"}`}>
+        <Valor centavos={centavos} />
+      </dd>
     </div>
   );
 }

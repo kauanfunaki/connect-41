@@ -20,6 +20,10 @@ import { moeda } from "@/lib/financeiro/formato";
 import { FAIXAS_DE_ATRASO, type ChaveDaFaixa } from "@/lib/financeiro/analise";
 import { ROTULO_DA_SITUACAO, ROTULO_DO_CANAL, ROTULO_DO_RESULTADO } from "@/lib/financeiro/cobranca/regras";
 import { cobrancaDoCliente, MODULO_DE_COBRANCA } from "@/lib/financeiro/cobranca/consultas";
+import { empresasDoSeletor } from "@/lib/financeiro/consultas";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 
 export const dynamic = "force-dynamic";
 
@@ -33,25 +37,36 @@ const rotuloDoAtraso = (faixa: ChaveDaFaixa) => FAIXAS_DE_ATRASO.find((f) => f.c
  * conversa e os acordos com as parcelas. Só leitura — a cobrança é trabalho da
  * equipe, e o cliente acompanha. A anotação interna do contato não sai daqui.
  */
-export default async function PortalCobrancaPage() {
+export default async function PortalCobrancaPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
   const { escopo, modulos } = await contextoFinanceiroDoPortal();
   if (!modulos.has(MODULO_DE_COBRANCA)) notFound();
   if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/cobranca")) return <TelaIndisponivel />;
 
-  const { titulos, acordos } = await cobrancaDoCliente(escopo, new Date());
+  // A empresa escolhida no portal vale aqui também (11/11/2026, P12): da URL ou
+  // a guardada, e só se for do acesso — senão, todas as do cliente.
+  const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);
+  const empresaId = empresaDaTela((await searchParams).empresa, await empresaGuardadaDoPortal(), empresas.map((e) => e.id));
+  const recorte = empresaId ? { ...escopo, companyIds: [empresaId] } : escopo;
+
+  const { titulos, acordos } = await cobrancaDoCliente(recorte, new Date());
   const vencido = titulos.reduce((n, t) => n + t.valorCentavos, 0);
   const ativos = acordos.filter((a) => a.status === "ATIVO");
 
   return (
     <PageContainer>
+      {/* Sem "títulos" (P21): o cliente fala em valores atrasados e cobranças. */}
       <PortalCabecalho
         titulo="Cobrança"
-        descricao="Contas a receber vencidas das suas empresas, o andamento da cobrança e os acordos."
+        descricao="O que os clientes das suas empresas estão devendo, o andamento da cobrança e os acordos."
       />
+
+      {empresas.length > 1 && (
+        <SeletorDeEmpresaQueNavega acao="/portal/cobranca" empresas={empresas} empresaId={empresaId} permitirTodas />
+      )}
 
       <FaixaDeTotais
         itens={[
-          { rotulo: "Títulos vencidos", valor: String(titulos.length) },
+          { rotulo: "Cobranças atrasadas", valor: String(titulos.length) },
           { rotulo: "Valor vencido", valor: moeda(vencido), tom: vencido > 0 ? "text-danger" : "" },
           { rotulo: "Acordos ativos", valor: String(ativos.length) },
           { rotulo: "Em aberto nos acordos", valor: moeda(ativos.reduce((n, a) => n + a.resumo.emAbertoCentavos, 0)), tom: "text-fg-muted" },
@@ -59,16 +74,16 @@ export default async function PortalCobrancaPage() {
       />
 
       {/* Títulos de seção no desenho do Início (`TituloDeSecao`, 08/10/2026). */}
-      <TituloDeSecao>Títulos em cobrança</TituloDeSecao>
-      {/* No casco da tabela (07/10/2026), como a cobrança da equipe: quantos
-          títulos e quanto somam na barra, e a lista vazia dentro dele. */}
+      <TituloDeSecao>Valores atrasados dos seus clientes</TituloDeSecao>
+      {/* No casco da tabela (07/10/2026), como a cobrança da equipe: quantas
+          cobranças e quanto somam na barra, e a lista vazia dentro dele. */}
       <CascoDaTabela
         className="mb-6"
-        contagem={contarItens(titulos.length, "título", "títulos")}
+        contagem={contarItens(titulos.length, "cobrança", "cobranças")}
         total={titulos.length > 0 ? moeda(vencido) : undefined}
       >
       {titulos.length === 0 ? (
-        <EmptyState icon={<Handshake />} title="Nenhum título vencido" description="Quando um cliente das suas empresas atrasar um pagamento, o título aparece aqui." />
+        <EmptyState icon={<Handshake />} title="Nenhum valor atrasado" description="Quando um cliente das suas empresas atrasar um pagamento, a cobrança aparece aqui." />
       ) : (
         <>
           <CartoesNoCelular>
@@ -207,7 +222,9 @@ export default async function PortalCobrancaPage() {
               {/* Colunas de largura fixa: número, vencimento e valor caem um
                   embaixo do outro em todas as parcelas (no flex solto, cada
                   linha começava o valor num ponto). No celular o selo desce. */}
-              <ul className="flex flex-col gap-1.5 text-fs-2 border-t border-border-soft pt-3">
+              {/* Parcelas em 13px (`text-ui`, P34): em 12px o dono da empresa
+                  não lia vencimento e valor no celular. */}
+              <ul className="flex flex-col gap-1.5 text-ui border-t border-border-soft pt-3">
                 {a.parcelas.map((p, i) => (
                   <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
                     <span className="w-10 shrink-0 text-fg-muted">

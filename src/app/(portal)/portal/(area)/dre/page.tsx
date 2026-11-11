@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { FileText } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
+import { SemEmpresaNoAcesso } from "@/components/portal/SemEmpresaNoAcesso";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 import { DreDoCliente } from "@/components/dre/DreDoCliente";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
@@ -34,11 +35,23 @@ export default async function PortalDrePage({
 
   const params = await searchParams;
   const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);
-  const companyId = params.empresa && empresas.some((e) => e.id === params.empresa) ? params.empresa : empresas[0]?.id;
+  // A da URL, ou a guardada da última escolha no portal (11/11/2026, P12);
+  // sem nenhuma, a primeira — a DRE é sempre de uma empresa.
+  const companyId =
+    empresaDaTela(
+      params.empresa,
+      await empresaGuardadaDoPortal(),
+      empresas.map((e) => e.id)
+    ) ?? empresas[0]?.id;
 
   return (
     <PageContainer>
-      <PortalCabecalho titulo="DRE" descricao="Demonstrativo de resultado por empresa, do mês ou do ano inteiro." />
+      {/* "Resultado do mês (DRE)" (P16): a sigla sozinha não dizia nada ao
+          dono da empresa; ela fica entre parênteses para quem a conhece. */}
+      <PortalCabecalho
+        titulo="Resultado do mês (DRE)"
+        descricao="Quanto a empresa vendeu, gastou e quanto sobrou, mês a mês ou no ano inteiro."
+      />
       {companyId ? (
         <DreDoCliente
           tenantId={escopo.tenantId}
@@ -49,9 +62,7 @@ export default async function PortalDrePage({
           empresas={empresas}
         />
       ) : (
-        <Card>
-          <EmptyState icon={<FileText />} title="Nenhuma empresa vinculada" />
-        </Card>
+        <SemEmpresaNoAcesso tenantId={escopo.tenantId} modulos={modulos} icone={<FileText />} />
       )}
     </PageContainer>
   );

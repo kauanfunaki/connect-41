@@ -5,6 +5,9 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { SemEmpresaNoAcesso } from "@/components/portal/SemEmpresaNoAcesso";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 import { ConversaDaPendencia } from "@/components/pendencias/ConversaDaPendencia";
 import { ResponderPendencia } from "@/components/pendencias/ResponderPendencia";
 import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
@@ -39,8 +42,10 @@ export default async function PortalComunicacaoPage({
   // As empresas do alcance do cliente, e não as ativas do tenant: o portal é dele.
   const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);
   const { empresa: pedida } = await searchParams;
-  // Com uma empresa só, não há o que escolher: abre direto a conversa dela.
-  const selecionada = empresas.find((e) => e.id === pedida) ?? (empresas.length === 1 ? empresas[0] : null);
+  // A da URL, ou a guardada da última escolha no portal (11/11/2026, P12). Com
+  // uma empresa só, não há o que escolher: abre direto a conversa dela.
+  const escolhida = empresaDaTela(pedida, await empresaGuardadaDoPortal(), empresas.map((e) => e.id));
+  const selecionada = empresas.find((e) => e.id === escolhida) ?? (empresas.length === 1 ? empresas[0] : null);
   const conversa = selecionada ? await conversaDaEmpresa(escopo, selecionada.id) : null;
 
   return (
@@ -63,20 +68,20 @@ export default async function PortalComunicacaoPage({
       )}
 
       {empresas.length === 0 ? (
-        <Card>
-          <EmptyState icon={<MessagesSquare />} title="Nenhuma empresa no seu acesso" />
-        </Card>
+        <SemEmpresaNoAcesso tenantId={escopo.tenantId} modulos={modulos} icone={<MessagesSquare />} />
       ) : (
         <>
           {empresas.length > 1 && (
-            <div className="mb-4">
-              <SeletorDeEmpresaQueNavega empresas={empresas} empresaId={selecionada?.id ?? null} acao="/portal/comunicacao" />
-            </div>
+            <SeletorDeEmpresaQueNavega empresas={empresas} empresaId={selecionada?.id ?? null} acao="/portal/comunicacao" />
           )}
 
           {!selecionada ? (
             <Card>
-              <EmptyState icon={<MessagesSquare />} title="Escolha a empresa" description="A conversa é por empresa." />
+              <EmptyState
+                icon={<MessagesSquare />}
+                title="Escolha a empresa"
+                description="A conversa é por empresa: escolha uma no campo Empresa, acima."
+              />
             </Card>
           ) : (
             <>
@@ -103,8 +108,10 @@ export default async function PortalComunicacaoPage({
                 )
               )}
 
+              {/* `key` pela empresa: a troca não remonta a página, e o texto
+                  começado para uma empresa não pode ir para a outra. */}
               {!soConsulta && (
-              <Card className="mt-5 p-4">
+              <Card key={selecionada.id} className="mt-5 p-4">
                 <ResponderPendencia
                   alvo={selecionada.id}
                   campo="companyId"

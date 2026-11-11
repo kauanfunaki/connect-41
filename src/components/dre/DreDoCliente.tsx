@@ -5,6 +5,7 @@ import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePer
 import { RelatorioDoDre } from "@/components/dre/RelatorioDoDre";
 import { RelatorioAnual } from "@/components/dre/RelatorioAnual";
 import { NumerosDaDre } from "@/components/dre/NumerosDaDre";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
 import type { EmpresaParaEscolher } from "@/lib/empresas/opcoesDoSeletor";
 import { comRotulosEconomicos } from "@/lib/dre/economica";
 import { lerDreDoCliente } from "@/lib/dre/doClientePublicado";
@@ -77,7 +78,7 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
     } else {
       mesesNaMedia = leitura.anual.mesesComMovimento;
       atualizadaEm = leitura.atualizadaEm;
-      conteudo = <RelatorioAnual anual={leitura.anual} regime={regime} />;
+      conteudo = <RelatorioAnual anual={leitura.anual} regime={regime} noPortal />;
     }
   } else if (leitura.tipo === "nenhum") {
     conteudo = vazio("Ainda não há DRE para esta empresa", "A DRE aparece aqui quando a equipe publicar o primeiro mês.");
@@ -102,32 +103,59 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
           regime={regime}
           anterior={anterior ? { resultado: anterior, rotulo: rotuloDaCompetencia(somarMeses(leitura.mes, -1)) } : null}
           className="mb-4"
+          dicas
         />
         <RelatorioDoDre resultado={regime === "caixa" ? resultado : comRotulosEconomicos(resultado)} />
       </>
     );
   }
 
+  // A empresa troca no seletor do portal (P11/P13, 11/11/2026), que navega
+  // sozinho e leva o mês, o ano e a aba junto; o mês segue no formulário dele,
+  // com "Aplicar". Os dois na mesma fileira, a empresa primeiro, como nas
+  // outras telas do portal.
+  const escolheEmpresa = Boolean(empresas && empresas.length > 1);
+  const temPeriodo = mes !== undefined || ano !== null;
+  const extrasDoPeriodo = { ...manter, empresa: companyId, regime: regime === "caixa" ? undefined : regime };
+  const filtroDoPeriodo = (naFileira: boolean) => (
+    <FiltroDePeriodo
+      acao={acao}
+      naFileira={naFileira}
+      // Sem mês publicado, não há o que escolher: o campo vazio ("-- de ----")
+      // só confundia.
+      mes={mes ?? undefined}
+      // O mês em número, "10/2026", como nos filtros da DRE da equipe (14/10/2026).
+      mesEmNumero
+      // "Ano inteiro de 2026" na grade do mês (14/10/2026).
+      anoInteiro
+      ano={ano ? String(ano) : undefined}
+      extras={extrasDoPeriodo}
+    />
+  );
+
+  // O regime em uma frase, logo abaixo das abas (P17): "Caixa" e "Competência"
+  // só se explicavam no pé da página, depois da tabela inteira.
+  const fraseDoRegime =
+    regime === "caixa"
+      ? `Caixa: o que foi de fato pago e recebido ${ano ? "em cada mês" : "no mês"}.`
+      : `Competência: o que é ${ano ? "de cada mês" : "do mês"}, mesmo que ainda não tenha sido pago ou recebido.`;
+
   return (
     <>
-      <FiltroDePeriodo
-        acao={acao}
-        empresas={empresas && empresas.length > 1 ? empresas : undefined}
-        empresaId={companyId}
-        // Sem mês publicado, não há o que escolher: o campo vazio ("-- de ----")
-        // só confundia.
-        mes={mes ?? undefined}
-        // O mês em número, "10/2026", como nos filtros da DRE da equipe (14/10/2026).
-        mesEmNumero
-        // "Ano inteiro de 2026" na grade do mês (14/10/2026).
-        anoInteiro
-        ano={ano ? String(ano) : undefined}
-        extras={{
-          ...manter,
-          empresa: empresas && empresas.length > 1 ? undefined : companyId,
-          regime: regime === "caixa" ? undefined : regime,
-        }}
-      />
+      {escolheEmpresa ? (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <SeletorDeEmpresaQueNavega
+            acao={acao}
+            empresas={empresas!}
+            empresaId={companyId}
+            manter={{ ...manter, mes: ano ? undefined : mes, ano: ano ? String(ano) : undefined, regime: regime === "caixa" ? undefined : regime }}
+            className="w-full sm:w-auto"
+          />
+          {temPeriodo && <div className="flex items-center gap-2">{filtroDoPeriodo(true)}</div>}
+        </div>
+      ) : (
+        filtroDoPeriodo(false)
+      )}
       {competenciaLiberada && (
         <AbasDeLink
           abas={[
@@ -139,20 +167,19 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
       )}
       {/* "Atualizada em" (decisão D4): o cliente sabe de quando é o número que
           está vendo — a equipe publica quando confere, não a cada lançamento. */}
-      {atualizadaEm && <p className="text-helper text-fg-muted mb-3">Atualizada em {formatInstantDate(atualizadaEm)}.</p>}
-      {conteudo}
-      {/* Nota em `text-helper` (13px) desde 07/10/2026: era 11px, o tamanho do
-          cabeçalho de tabela, numa explicação que o cliente lê no celular. */}
-      <p className="text-helper text-fg-muted mt-3">
-        {regime === "caixa"
-          ? `Regime de caixa: o que foi efetivamente pago e recebido ${ano ? "em cada mês" : "no mês"}.`
-          : `Regime de competência: o que pertence ${ano ? "a cada mês" : "ao mês"}, pago ou não.`}
-        {/* A média divide pelos meses com movimento, como o AVERAGE do Excel e
-            a DRE da equipe: dividir por doze em setembro diria que a empresa
-            faturou 25% menos. */}
-        {mesesNaMedia !== null &&
-          ` A coluna Média divide por ${mesesNaMedia} ${mesesNaMedia === 1 ? "mês com movimento" : "meses com movimento"}, não por doze.`}
+      <p className="text-helper text-fg-secondary mb-3">
+        {fraseDoRegime}
+        {atualizadaEm && <span className="block text-fg-muted">Atualizada em {formatInstantDate(atualizadaEm)}.</span>}
       </p>
+      {conteudo}
+      {/* A média divide pelos meses com movimento, como o AVERAGE do Excel e
+          a DRE da equipe: dividir por doze em setembro diria que a empresa
+          faturou 25% menos. Nota em `text-helper` (13px) desde 07/10/2026. */}
+      {mesesNaMedia !== null && (
+        <p className="text-helper text-fg-muted mt-3">
+          A média divide por {mesesNaMedia} {mesesNaMedia === 1 ? "mês com movimento" : "meses com movimento"}, não por doze.
+        </p>
+      )}
     </>
   );
 }

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { SeloDoProcesso } from "@/components/portal/SeloDoProcesso";
 import { Card } from "@/components/ui/Card";
 import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
+import { TentarDeNovo } from "@/components/portal/TentarDeNovo";
 import { ModuleIcon } from "@/components/shared/ModuleIcon";
 import { Painel, numero } from "@/components/shared/Graficos";
 import { aprovacoesDoCliente } from "@/lib/financeiro/aprovacao/portal";
@@ -65,8 +66,17 @@ async function tentar<T>(bloco: string, consulta: () => Promise<T>): Promise<T |
   }
 }
 
-function Indisponivel({ texto = "Não deu para carregar agora. Atualize a página em instantes." }: { texto?: string }) {
-  return <p className="text-helper text-fg-muted py-1.5">{texto}</p>;
+/**
+ * O bloco que não carregou. Com o "Tentar de novo" (11/11/2026, P26): o texto
+ * pedia para atualizar a página, e o portal instalado como app não tem onde.
+ */
+function Indisponivel({ texto = "Não deu para carregar agora." }: { texto?: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-1.5">
+      <p className="text-helper text-fg-muted">{texto}</p>
+      <TentarDeNovo />
+    </div>
+  );
 }
 
 // ─── O que precisa de você ───────────────────────────────────────────────────

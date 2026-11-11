@@ -14,7 +14,9 @@ import { blocosDoInicio, destinoDosDocumentos, primeiroNome, saudacaoDaHora } fr
 import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
+import { SeletorDeEmpresaQueNavega } from "@/components/shared/SeletorDeEmpresaQueNavega";
+import { empresaDaTela } from "@/lib/portal/empresaEscolhida";
+import { empresaGuardadaDoPortal } from "@/lib/portal/empresaEscolhidaServidor";
 import {
   AtalhosDoInicio,
   BlocoCarregando,
@@ -68,10 +70,10 @@ export default async function InicioDoPortalPage({
   const companyIds = alcance.tipo === "EMPRESAS" ? alcance.companyIds : [];
   const empresas = companyIds.length > 0 ? await empresasDoSeletor(sessao.tenantId, companyIds) : [];
 
-  // A empresa da URL só vale se for do acesso — senão o Início olha todas as
-  // dele, nunca a de outro cliente (a mesma regra do fluxo de caixa).
-  const pedida = typeof params.empresa === "string" ? params.empresa : null;
-  const empresaId = pedida && companyIds.includes(pedida) ? pedida : null;
+  // A empresa da URL, ou a guardada da última escolha (11/11/2026), só vale se
+  // for do acesso — senão o Início olha todas as dele, nunca a de outro
+  // cliente (a mesma regra do fluxo de caixa).
+  const empresaId = empresaDaTela(params.empresa, await empresaGuardadaDoPortal(), companyIds);
   const escopo = { tenantId: sessao.tenantId, companyIds: empresaId ? [empresaId] : companyIds };
   const alcanceDosDocumentos: AlcanceFiscal = empresaId
     ? { tipo: "EMPRESAS", tenantId: sessao.tenantId, companyIds: [empresaId] }
@@ -101,8 +103,9 @@ export default async function InicioDoPortalPage({
         }
       />
 
-      {/* Só para quem tem mais de uma empresa: o Início olha todas, ou a escolhida. */}
-      {empresas.length > 1 && <FiltroDePeriodo acao="/portal" empresas={empresas} empresaId={empresaId} permitirTodas />}
+      {/* Só para quem tem mais de uma empresa: o Início olha todas, ou a
+          escolhida. Troca ao escolher, sem "Aplicar" (P11): não há mês junto. */}
+      {empresas.length > 1 && <SeletorDeEmpresaQueNavega acao="/portal" empresas={empresas} empresaId={empresaId} permitirTodas />}
 
       <Suspense fallback={<BlocoCarregando baixo className="mb-4" />}>
         <PrecisaDeVoce escopo={escopo} portalUserId={sessao.sub} empresasDaConta={companyIds} atencao={blocos.atencao} />
