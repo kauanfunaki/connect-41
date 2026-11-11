@@ -65,6 +65,12 @@ export type MensagemIgnorada = {
    * como a do documento: o que o provedor precisa de volta para baixar.
    */
   midia?: { referencia: unknown; mimetype: string | null; nomeDoArquivo: string | null };
+  /**
+   * O WhatsApp escondeu o telefone (`@lid`) e o `de` é só um identificador, não
+   * um número. O Atendimento não abre conversa com isso: responder mandaria a
+   * mensagem para um número que não é o do cliente (11/11/2026).
+   */
+  semNumero?: true;
 };
 
 /** Um arquivo para mandar: os bytes, o tipo conferido e o nome que o cliente vê. */
