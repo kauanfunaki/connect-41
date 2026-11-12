@@ -97,6 +97,10 @@ const PUBLIC_PATHS = [
   // não tem login. A página e o envio conferem o escritório, o assunto e se o
   // assunto aceita pedido pelo link; o envio tem anti-robô e limite por IP.
   "/pedido/",
+  // Eventos do mês do DP 2 (12/11/2026) — o cliente informa horas extras,
+  // faltas e comissões sem login. A página e o envio conferem o token do
+  // Dp2PedidoDeEventos (aberto e não vencido); token inexistente é limitado por IP.
+  "/eventos-do-mes/",
   // Logo do escritório (só ele: o nome do arquivo é o id do escritório e a rota
   // aceita só imagem). Aparece em telas de quem não tem sessão da equipe — vagas,
   // admissão, teste do candidato e a entrada do portal —, e com 401 a imagem

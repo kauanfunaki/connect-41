@@ -41,7 +41,7 @@ export const ROTULO_DO_TIPO_DE_CONTA: Record<string, string> = {
   resultado: "Resultado",
 };
 
-export const ABAS = ["importacoes", "extrato", "neo", "regras", "contrapartes", "registros", "configuracoes"] as const;
+export const ABAS = ["importacoes", "extrato", "neo", "regras", "contrapartes", "registros", "conciliacao", "configuracoes"] as const;
 export type Aba = (typeof ABAS)[number];
 
 /** Competência do mês corrente, "AAAA-MM", no fuso do escritório. */
