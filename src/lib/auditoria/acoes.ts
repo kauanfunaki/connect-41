@@ -305,6 +305,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "contabil.core.composicao.alterada": e("alterou a composição da transação"),
   "contabil.core.neo.liberada": e("devolveu ao NEO automático a transação"),
   "contabil.core.exportacao.gerada": o("gerou o arquivo do Domínio"),
+  "contabil.core.conciliacao.gerada": o("conciliou o Razão com o extrato no Contábil Core", { comNome: false }),
   "contabil.sped.execucao.cancelada": e("cancelou o pedido de Contribuições"),
   "contabil.sped.execucao.destravada": e("destravou o pedido de Contribuições"),
   "contabil.sped.arquivo.regerado": c("pediu nova geração do EFD Contribuições"),

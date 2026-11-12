@@ -69,7 +69,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | Fase | Branch | O que entra |
 |---|---|---|
 | B1 | `feat/contabil-core-conciliacao-motores` | Motores puros com gabarito: leitores do Razão (planilha e PDF) e do Razão de apoio, SISPAG, extrato detalhado, cruzamento e composição dos lotes do SISPAG. Sem tela e sem migration. |
-| B2 | — | Conciliação de ponta a ponta: as três conferências, a aba "Conciliação" e o relatório em planilha. |
+| B2 | `feat/contabil-core-conciliacao-tela` | Conciliação de ponta a ponta: as três conferências, a aba "Conciliação" e o relatório em planilha. |
 | B3 | — | Revisão manual salva (decisões e vínculos com versão). Migration. |
 | B4 | — | Conferência do financeiro: documentos, análises salvas e sugestões. Migration. |
 | B5 | — | As tabelas do Bloco B na carga (espelho). |
@@ -115,6 +115,33 @@ Divergências do B1, todas fora do caminho normal:
 - **Cruzamento:**
   - O `IGNORECASE` do Python casa "I" com "ı" e "İ". Os padrões trazem essas letras de forma explícita.
   - As chaves por valor usam o valor normalizado ("10.0" e "10.00" são a mesma chave, como no Python).
+
+### Fase B2: a conciliação de ponta a ponta
+
+| Onde | Porte de |
+|---|---|
+| `conciliacao/servico.ts` (puro) | `conciliar_razao_extrato` (`service.py`) depois das leituras: as conferências, os avisos, o cruzamento, as composições, o resumo e o "por dia" |
+| `servidor/conciliacao.ts` | as leituras do mesmo serviço: empresa do tenant, conta bancária, conta contábil vinculada e o extrato do período. Só lê |
+| `conciliacao/relatorio.ts` | `schemas/conciliacao_bancaria.py`, com `relatorioParaJson` (o dinheiro vai como o texto do `Decimal`) |
+| `conciliacao/planilhaDoRelatorio.ts` | `exportar.py`: as folhas Resumo, Pendências, Por dia e Aplicação não conferida |
+| `api/contabil-core/conciliacao` | `POST /razao-extrato` (JSON ou planilha), com o limite de 25 MB por arquivo e a auditoria `contabil.core.conciliacao.gerada` |
+| aba "Conciliação" (`Conciliacao.tsx`, `telaDaConciliacao.ts`) | `RazaoExtratoTab.tsx`, sem a revisão manual (B3) |
+
+- **Só leitura:** nada é gravado, nem o arquivo nem o relatório. A aba aparece para quem pode operar o módulo (`agir`).
+- **Contas no seletor:** inclui as contas bancárias inativas, como o original, porque o Razão de uma conta encerrada continua conciliável.
+- **Gabarito:** `gabarito_servico_conciliacao.py` grava as chamadas da suíte do original e acrescenta casos dirigidos e sorteados, um por ramo. Ao todo, 247 relatórios ou recusas e 200 planilhas, todos iguais.
+  - A planilha do original é lida de volta pelo openpyxl (valores, tipos, formatos, negrito, preenchimento, larguras, painel congelado e filtro) e comparada com a do porte.
+  - O plugin confere que o banco falso montado a partir da entrada gravada dá o mesmo resultado que o banco de teste do original.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-conciliacao.ts` importa um OFX inventado e concilia um Razão inventado. Confere o caminho normal, cada recusa (empresa, conta contábil, conta bancária, período, mês sem extrato, outro tenant), o aviso de cobertura, a planilha e o extrato desfeito.
+
+Divergências da B2:
+
+- **Empresa de outro tenant:** é recusada antes de tudo. No original, a empresa não achada só pulava a conferência do CNPJ.
+- **Ordem do extrato:** a ordem por data e `ordem` é feita no código, com a `ordem` vazia por último, como o PostgreSQL. No empate, desempata pelo id.
+- **Escala dos valores:** o valor do extrato volta do MySQL sem os zeros à direita e é reescalado para 2 casas, como o PostgreSQL entregava.
+- **Conta contábil vinculada:** é lida dentro do tenant e da empresa.
+- **Somas da tela:** vêm prontas do servidor em decimal exato. O original somava no navegador com `Number()`.
+- **Formato do dinheiro na tela:** é o `moedaDoRelatorio`, que mantém o sinal de valores entre -1 e 0 ("R$ -0,50"). O `reais` do motor perde esse sinal. Os avisos continuam com o `reais` do serviço, conferido pelo gabarito.
 
 ## Arquitetura no Connect
 
