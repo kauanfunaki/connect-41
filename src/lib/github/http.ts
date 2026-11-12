@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { z, ZodError } from "zod";
 import { githubAccess } from "./access";
 import { GithubError, filtersSchema } from "./rules";
-import { integrationView, changeIntegration } from "./service";
+import { integrationView, changeIntegration, repositoryBranches } from "./service";
 import { dashboard, dayEvents } from "./queries";
 import { getConnection } from "./store";
 import { mudarTimes, timesView } from "./times";
@@ -31,7 +31,13 @@ export async function readJson(request: Request) {
   } finally { reader.releaseLock(); }
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
 }
-export async function getIntegration() { const ctx = await githubAccess("configurar"); return integrationView(ctx.tenantId); }
+export async function getIntegration(request?: Request) {
+  const ctx = await githubAccess("configurar");
+  // `?branches=<id do repositório>`: as branches dele, para escolher a da coleta (12/11/2026).
+  const repositoryId = request ? new URL(request.url).searchParams.get("branches") : null;
+  if (repositoryId) return repositoryBranches(ctx.tenantId, z.string().uuid().parse(repositoryId));
+  return integrationView(ctx.tenantId);
+}
 export async function postIntegration(request: Request) { requireOrigin(request); const ctx = await githubAccess("configurar"); return changeIntegration(ctx, await readJson(request)); }
 // Aba Times (04/11/2026): do coordenador do Tech, quem gerencia o módulo.
 export async function getTimes() { const ctx = await githubAccess("gerir"); return timesView(ctx.tenantId); }

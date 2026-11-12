@@ -24,11 +24,15 @@ export const filtersSchema = z.object({
   time: z.string().uuid().optional(),
 });
 export type Filters = z.infer<typeof filtersSchema>;
+/** Nome de branch do git: sem espaço nem os caracteres que o git recusa. */
+export const branchSchema = z.string().min(1).max(255).regex(/^(?!\/)(?!.*\/\/)(?!.*\.\.)(?!.*@\{)[^\s~^:?*[\x5c]+(?<![/.])$/, "Branch inválida.");
 export const settingsSchema = z.object({
   repositories: z.array(z.string().uuid()).max(1000),
   timezone: z.string().max(80).refine(value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }, "Fuso horário inválido."),
   intervalMinutes: z.number().int().min(10).max(1440),
   generation: z.number().int().nonnegative(),
+  // A branch de cada repositório para a coleta de commits; null = a padrão do repositório (12/11/2026).
+  branches: z.record(z.string().uuid(), branchSchema.nullable()).optional(),
 });
 export function dayAt(date: Date, timezone = "America/Sao_Paulo"): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);

@@ -239,6 +239,8 @@ model GithubRepository {
   name                 String @db.VarChar(100)
   fullName             String @db.VarChar(210)
   defaultBranch        String @db.VarChar(255)
+  /// A branch escolhida em Integrações para a coleta de commits; null = a defaultBranch (12/11/2026).
+  branch               String? @db.VarChar(255)
   private              Boolean @default(false)
   fork                 Boolean @default(false)
   archived             Boolean @default(false)

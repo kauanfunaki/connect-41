@@ -4,11 +4,11 @@ import { encryptSecret } from "@/lib/crypto";
 import { logAudit } from "@/lib/audit";
 import { lerConfig } from "@/lib/integracoes/data";
 import type { AuthContext } from "@/lib/auth/context";
-import { GithubClient } from "./client";
+import { GithubClient, repoPath } from "./client";
 import { githubCallback, githubConfigured, githubServerReady } from "./oauth";
 import { credentialsSchema, mergeCredentials } from "./config";
 import { GithubError, identity, loginSchema, settingsSchema } from "./rules";
-import { ensureConnection, getConnection, guardGeneration, queueInventory, queueRepositories } from "./store";
+import { ensureConnection, getConnection, guardGeneration, queueInventory, queueRepositories, queueResource } from "./store";
 import { validToken, withGithubLease } from "./sync";
 import type { IntegrationView } from "./types";
 import { syncProgress } from "./progress";
@@ -29,7 +29,34 @@ export async function integrationView(tenantId: string): Promise<IntegrationView
     error: repos.length > 1000 ? "Mais de 1.000 repositórios encontrados. Refine o acesso da conta para configurar a seleção nesta versão." : connection.lastError,
     inventoryAt: connection.inventoryAt?.toISOString() ?? null, pending: progress.pending, failed: progress.failed, progress,
     repositories: repos.map(repo => ({ id: repo.id, fullName: repo.fullName, owner: repo.owner, private: repo.private, fork: repo.fork,
-      archived: repo.archived, selected: repo.selected, accessible: repo.accessible, error: repo.lastError })) };
+      archived: repo.archived, selected: repo.selected, accessible: repo.accessible, error: repo.lastError,
+      defaultBranch: repo.defaultBranch, branch: repo.branch })) };
+}
+/**
+ * As branches de um repositório, para escolher a da coleta de commits (12/11/2026).
+ * Com o token ainda válido, lê sem a lease: não espera nem disputa com a coleta em curso.
+ */
+export async function repositoryBranches(tenantId: string, repositoryId: string) {
+  const connection = await getConnection(tenantId);
+  if (!connection || connection.status !== "connected" || !connection.githubUserId) throw new GithubError("Reconecte a conta GitHub para continuar.");
+  const repo = await getPrisma().githubRepository.findFirst({ where: { id: repositoryId, tenantId, connectionId: connection.id } });
+  if (!repo) throw new GithubError("Repositório não encontrado.", 404);
+  const read = async (token: string) => {
+    const client = new GithubClient(token), names: string[] = [];
+    for (let page = 1; page <= 10; page++) {
+      const result = await client.page(`${repoPath(repo.owner, repo.name)}/branches?per_page=100&page=${page}`);
+      names.push(...result.items.map(item => z.object({ name: z.string().min(1).max(255) }).parse(item).name));
+      if (!result.next) break;
+    }
+    return names;
+  };
+  const config = lerConfig(connection.integration.configEnc);
+  const fresh = config.accessToken && (!config.expiresAt || Date.parse(config.expiresAt) > Date.now() + 60000);
+  const names = fresh ? await read(config.accessToken!) : await withGithubLease(connection.githubUserId, async owner => read(await validToken(connection, owner)));
+  // A padrão primeiro e a escolhida sempre na lista, mesmo que tenha saído do GitHub.
+  const rest = [...new Set(names)].filter(name => name !== repo.defaultBranch).sort((a, b) => a.localeCompare(b));
+  return { defaultBranch: repo.defaultBranch, branch: repo.branch,
+    branches: [repo.defaultBranch, ...(repo.branch && !names.includes(repo.branch) && repo.branch !== repo.defaultBranch ? [repo.branch] : []), ...rest] };
 }
 const simpleAction = z.object({ action: z.enum(["pause", "resume", "full", "disconnect", "discover", "track", "untrack"]), generation: z.number().int().nonnegative(), login: loginSchema.optional(), userId: z.string().uuid().optional() });
 const AUDIT_ACTIONS = {
@@ -102,13 +129,25 @@ export async function changeIntegration(ctx: AuthContext, input: unknown) {
       await tx.tenantIntegration.update({ where: { id: connection.integrationId }, data: { enabled: enable,
         ...(action === "disconnect" ? { configEnc: encryptSecret(JSON.stringify({ clientId: config.clientId ?? "", clientSecret: config.clientSecret ?? "" })) } : {}) } });
       await tx.githubSyncJob.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId, state: "queued" }, data: { state: "canceled" } });
+      const branchChanged: string[] = [];
       if (settings) {
         await tx.githubRepository.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId }, data: { selected: false } });
         await tx.githubRepository.updateMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId, id: { in: selectedIds } }, data: { selected: true } });
+        // A branch de cada repositório: a padrão do repositório grava null, para seguir a padrão se ela mudar no GitHub.
+        for (const repo of await tx.githubRepository.findMany({ where: { connectionId: connection.id, tenantId: ctx.tenantId, id: { in: Object.keys(settings.branches ?? {}) } } })) {
+          const chosen = settings.branches![repo.id];
+          const branch = chosen && chosen !== repo.defaultBranch ? chosen : null;
+          if (repo.branch === branch) continue;
+          await tx.githubRepository.update({ where: { id: repo.id }, data: { branch } });
+          if ((repo.branch ?? repo.defaultBranch) !== (branch ?? repo.defaultBranch)) branchChanged.push(repo.id);
+        }
       }
       if (enable) {
         const next = { ...connection, generation: generation + 1 };
         await queueInventory(tx, next);
+        // Branch trocada: os commits do repositório são lidos de novo nos 12 meses pela branch nova,
+        // e os que só estavam na antiga deixam de contar (o fim da leitura completa os retira).
+        for (const id of branchChanged.filter(id => selectedIds.includes(id))) await queueResource(tx, next, id, "COMMIT", undefined, undefined, true);
         // Atualização completa: a próxima coleta de cada repositório volta aos 12 meses (26/10/2026).
         await queueRepositories(tx, next, selectedIds.map(id => ({ id })), action === "full");
       }
@@ -117,6 +156,6 @@ export async function changeIntegration(ctx: AuthContext, input: unknown) {
   await logAudit({ tenantId: ctx.tenantId, userId: ctx.userId,
     action: AUDIT_ACTIONS[action],
     entityType: "TenantIntegration", entityId: connection.integrationId,
-    metadata: { ...(settings ? { repositories: settings.repositories.length } : {}) } });
+    metadata: { ...(settings ? { repositories: settings.repositories.length, ...(settings.branches ? { branches: settings.branches } : {}) } : {}) } });
   return { ok: true };
 }
