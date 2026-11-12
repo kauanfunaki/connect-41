@@ -12,7 +12,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
-import { lerPdfDaLicenca, salvarLicenca, type LicencaState } from "@/app/(app)/licencas/actions";
+import { empresasParaNovaLicenca, lerPdfDaLicenca, salvarLicenca, type LicencaState } from "@/app/(app)/licencas/actions";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import type { LeituraDaLicenca } from "@/lib/societario/leituraDaLicenca";
 import { TIPOS_SUGERIDOS, MAX_TIPO, MAX_NUMERO, MAX_OBSERVACOES } from "@/lib/societario/licenca-form";
@@ -264,15 +264,49 @@ function LerPdf({
   );
 }
 
-/** O botão de cadastrar, com o formulário. */
-export function NovaLicenca({ empresas, orgaos }: { empresas: Opcao[]; orgaos: OrgaoDaLicenca[] }) {
+/**
+ * O botão de cadastrar, com o formulário. As empresas do seletor são pedidas
+ * na primeira abertura (12/11/2026, bug-645) e guardadas para as próximas; o
+ * pedido já sai quando o mouse passa no botão, para a janela abrir pronta.
+ */
+export function NovaLicenca({ orgaos }: { orgaos: OrgaoDaLicenca[] }) {
   const [aberto, setAberto] = useState(false);
+  const [empresas, setEmpresas] = useState<Opcao[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  // O pedido em andamento (ou já resolvido): passar o mouse e clicar não pedem duas vezes.
+  const pedido = useRef<Promise<boolean> | null>(null);
+  const [carregando, startCarregar] = useTransition();
+
+  function pedirEmpresas(): Promise<boolean> {
+    pedido.current ??= empresasParaNovaLicenca()
+      .then((r) => {
+        if ("error" in r) throw new Error(r.error);
+        setErro(null);
+        setEmpresas(r.empresas);
+        return true;
+      })
+      .catch((e: unknown) => {
+        // Falhou: o próximo clique tenta de novo.
+        pedido.current = null;
+        setErro(e instanceof Error && e.message ? e.message : "Não deu para carregar as empresas. Tente de novo.");
+        return false;
+      });
+    return pedido.current;
+  }
+
+  function abrir() {
+    startCarregar(async () => {
+      if (await pedirEmpresas()) setAberto(true);
+    });
+  }
+
   return (
     <>
-      <Button variant="primary" onClick={() => setAberto(true)}>
+      <Button variant="primary" onClick={abrir} onMouseEnter={() => void pedirEmpresas()} onFocus={() => void pedirEmpresas()} loading={carregando} loadingLabel="Abrindo…">
         <Plus size={14} /> Nova licença
       </Button>
-      <LicencaModal open={aberto} onClose={() => setAberto(false)} empresas={empresas} orgaos={orgaos} />
+      <LicencaModal open={aberto} onClose={() => setAberto(false)} empresas={empresas ?? []} orgaos={orgaos} />
+      {erro && <span className="text-helper text-danger">{erro}</span>}
     </>
   );
 }

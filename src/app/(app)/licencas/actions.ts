@@ -19,6 +19,8 @@ import { gerarEstruturado } from "@/lib/ai";
 import { saoPauloParts } from "@/lib/agenda";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import type { Opcao } from "@/components/shared/SearchableSelect";
 import { guardarArquivo } from "@/lib/drive/servidor";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
 import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
@@ -45,6 +47,21 @@ async function contexto() {
   if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão no Societário.", ctx: null };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { erro: "O módulo de licenças não está ligado.", ctx: null };
   return { erro: null, ctx };
+}
+
+/**
+ * As empresas do seletor do "Nova licença", pedidas quando a janela abre
+ * (12/11/2026, bug-645). Antes iam inteiras com a tela, em toda página.
+ */
+export async function empresasParaNovaLicenca(): Promise<{ error: string } | { ok: true; empresas: Opcao[] }> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const empresas = await getPrisma().company.findMany({
+    where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+    orderBy: { name: "asc" },
+    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+  });
+  return { ok: true, empresas: opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) }))) };
 }
 
 /** O PDF do formulário, conferido pelos bytes: o nome e o tipo são o que o navegador disse. */
