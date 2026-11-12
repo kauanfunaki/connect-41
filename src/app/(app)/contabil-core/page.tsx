@@ -95,8 +95,6 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
     mesAtual: mesAtual(),
   };
 
-  // A conciliação só envia arquivo; quem só lê o módulo não tem o que fazer nela.
-  const abasVisiveis = ABAS.filter((a) => a !== "conciliacao" || podeAgir);
 
   return (
     <PageContainer>
@@ -118,7 +116,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
       <AbasDeLink
         aria-label="Áreas do Contábil Core"
         ativa={aba}
-        abas={abasVisiveis.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
+        abas={ABAS.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
       />
       {aba === "importacoes" && <AbaImportacoes c={c} />}
       {aba === "extrato" && <AbaExtrato c={c} />}

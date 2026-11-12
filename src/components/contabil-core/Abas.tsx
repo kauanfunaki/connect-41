@@ -420,16 +420,16 @@ export async function AbaRegistros({ c }: { c: ContextoDaAba }) {
 
 // ─── Conciliação ──────────────────────────────────────────────────────────
 
-// Razão × extrato (Bloco B, Fase B2, 12/11/2026). Só envia arquivo e mostra o relatório, que não é
-// gravado; por isso a aba nem aparece para quem só lê o módulo (a rota recusa do mesmo jeito).
+// Razão × extrato (Bloco B, Fase B2, 12/11/2026). Conciliar só envia arquivo e mostra o relatório, que
+// não é gravado. A revisão manual (Fase B3) grava: quem só lê o módulo consulta as revisões salvas e as
+// conferências (o `concilpro.read` do original); conciliar e alterar pede "agir" (as rotas recusam igual).
 export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
-  if (!c.podeAgir) return <Aviso tom="info">A conciliação é de quem opera o Contábil Core. Peça o acesso a quem coordena o setor.</Aviso>;
   const agencias = await listarAgencias(c.tenantId, c.empresaId);
   // Inclui as inativas, como o original: o Razão de uma conta encerrada continua conciliável.
   const opcoesDeConta = agencias.map((a) => ({ value: a.id, label: `${rotuloDaAgencia(a)}${a.ativa ? "" : " (inativa)"}` }));
   if (opcoesDeConta.length === 0) return <Aviso tom="atencao">Cadastre uma conta bancária em Configurações e importe o extrato dela antes de conciliar.</Aviso>;
   // A chave zera a tela ao trocar de empresa, como o `useEffect` do original.
-  return <Conciliacao key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} />;
+  return <Conciliacao key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} podeAgir={c.podeAgir} />;
 }
 
 // ─── Configurações ────────────────────────────────────────────────────────

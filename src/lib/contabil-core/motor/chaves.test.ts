@@ -9,6 +9,7 @@ import {
   registroChaveAtiva,
   registroChavePadraoAtiva,
   regraChaveAtiva,
+  revisaoChaveAtiva,
 } from "./chaves";
 
 const vivo = { deletedAt: null };
@@ -74,5 +75,12 @@ describe("colunas de unicidade (índices parciais do PostgreSQL)", () => {
     expect(decisaoSemRegra({ resultado: "sem_regra", transacaoId: "t" })).toBe("t");
     expect(decisaoSemRegra({ resultado: "associada", transacaoId: "t" })).toBeNull();
     expect(decisaoSemRegra({ resultado: "erro", transacaoId: "t" })).toBeNull();
+  });
+
+  test("revisão da conciliação: a mesma origem viva devolve a existente; excluída, pode ser criada de novo", () => {
+    const hash = "a".repeat(64);
+    expect(revisaoChaveAtiva({ ...vivo, revisaoHash: hash })).toBe(hash);
+    // Exclusão lógica (migration 0042 do original): o mesmo Razão pode ser enviado de novo.
+    expect(revisaoChaveAtiva({ ...apagado, revisaoHash: hash })).toBeNull();
   });
 });

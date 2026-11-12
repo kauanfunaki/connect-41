@@ -70,7 +70,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 |---|---|---|
 | B1 | `feat/contabil-core-conciliacao-motores` | Motores puros com gabarito: leitores do Razão (planilha e PDF) e do Razão de apoio, SISPAG, extrato detalhado, cruzamento e composição dos lotes do SISPAG. Sem tela e sem migration. |
 | B2 | `feat/contabil-core-conciliacao-tela` | Conciliação de ponta a ponta: as três conferências, a aba "Conciliação" e o relatório em planilha. |
-| B3 | — | Revisão manual salva (decisões e vínculos com versão). Migration. |
+| B3 | `feat/contabil-core-conciliacao-revisao` | Revisão manual salva (decisões e vínculos com versão). Migration. |
 | B4 | — | Conferência do financeiro: documentos, análises salvas e sugestões. Migration. |
 | B5 | — | As tabelas do Bloco B na carga (espelho). |
 
@@ -143,6 +143,40 @@ Divergências da B2:
 - **Somas da tela:** vêm prontas do servidor em decimal exato. O original somava no navegador com `Number()`.
 - **Formato do dinheiro na tela:** é o `moedaDoRelatorio`, que mantém o sinal de valores entre -1 e 0 ("R$ -0,50"). O `reais` do motor perde esse sinal. Os avisos continuam com o `reais` do serviço, conferido pelo gabarito.
 
+### Fase B3: a revisão manual
+
+| Onde | Porte de |
+|---|---|
+| `conciliacao/revisao.ts` (puro) | as partes de `RevisaoService` sem banco: `_hash`, `_moeda`, `_identidade_linha`, `_evidencia_extrato`, `ordenar_como_o_extrato`, o snapshot da criação, o Razão de apoio e a validação do vínculo, com as recusas na ordem do original |
+| `servidor/revisao.ts` | `RevisaoService`: criar, obter, listar, renomear, excluir, apoio, vínculo e desfazer, cada escrita numa transação |
+| `entradasRevisao.ts` | `VinculoCreate`, `VinculoDesfazer`, `NomeConciliacao` e `ExclusaoConciliacao` |
+| migration `20261112150000_contabil_core_conciliacao_revisao` | `0040_conciliacao_revisao` e `0042_gestao_revisoes`, com as três checagens como CHECK |
+
+- **O banco guarda o JSON do original.** `snapshot`, `relatorio`, `extratoIds` e `razaoItens` têm as chaves e os valores do `model_dump(mode="json")` (snake_case, dinheiro como o texto do `Decimal`). A carga (B5) copia sem conversão, e o `extrato_hash`, o `revisao_hash` e os `hashes_apoio` continuam valendo. A conversão para a tela (camelCase, `revisaoTipos.ts`) fica no servidor.
+- **O hash é o do Python, byte a byte:** `json.dumps(..., ensure_ascii=False, sort_keys=True, separators=(",", ":"))`, com as chaves por ponto de código.
+- **Versão otimista:** toda escrita é um `updateMany` que exige a versão vista e a revisão viva. Se outra pessoa mudou antes, nada é gravado e a recusa é `VERSAO_DESATUALIZADA`.
+- **Auditoria:** a rota registra. Cada escrita devolve a ação e os mesmos dados do `_auditar` do original. Quando `criar` devolve uma revisão que já existia, não há auditoria.
+- **Gabarito:** `gabarito_revisao.py` grava as chamadas de criar, apoio e vínculo da suíte do original, mais casos inventados para cada ramo, as chamadas diretas de `_hash` (acentos, aspas, barra, controles, emoji, chaves fora de ordem), `_moeda`, `_identidade_linha`, `_evidencia_extrato`, a ordem do extrato e os validadores. Ao todo, 789 casos, todos iguais.
+  - A saída sai do serviço original rodando num SQLite montado só com a entrada gravada.
+  - O plugin confere que esse banco montado repete a suíte de verdade.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-revisao.ts` percorre o caminho normal e cada recusa, inclusive a criação simultânea, o CHECK do MySQL, o extrato desfeito e a exclusão da empresa.
+
+Divergências da B3:
+
+- **Ordem do `conciliados_por_tipo` lido de volta:** o tipo JSON do MySQL guarda as chaves ordenadas (pelo tamanho e depois pelos bytes). O `json` do PostgreSQL mantinha a ordem do `Counter`. O que se grava é igual; só a ordem dos tipos na tela muda.
+- **Recusas da conciliação na criação:** vêm da B2, sem código, a não ser a conta bancária de outra empresa, que vira `NAO_ENCONTRADA`.
+- **Versão:** é aceita como inteiro de 1 até o maior `INT` do banco. O pydantic aceitaria também `true`, "1_0" e inteiros maiores, que no original davam conflito de versão.
+- **Mensagens de formato:** as recusas genéricas do pydantic ("String should have at most…") viram frases em português. As frases próprias ("Informe o motivo…", "Informe um nome…") são as mesmas.
+- **Criação simultânea:** o original usava savepoint e `IntegrityError`. Aqui a coluna única recusa (P2002) e a revisão existente é devolvida, com o mesmo efeito.
+- **Exclusão:** devolve `{ revisao: null, auditoria }`; o original respondia 204.
+- **Vínculo de outra revisão ou id inválido no desfazer:** "não encontrado". O original recusava o id inválido na validação da rota.
+- **Ordem dos vínculos:** por criação e id, com o instante em milissegundos (o PostgreSQL guardava microssegundos).
+- **Nomes de colunas:** `criado_por` virou `criadoPorId` e `usuario_id` (do vínculo) virou `confirmadoPorId`; a carga (B5) mapeia.
+- **Tela:**
+  - **Aba para leitura:** a aba "Conciliação" aparece também para quem só pode ver o módulo. Essas pessoas veem as revisões salvas e as conferências, sem conciliar nem alterar, como o `concilpro.read` do original.
+  - **Acréscimo "Revisar esta pendência":** em cada pendência, abre a revisão com as linhas do extrato dela já marcadas. O original tinha o parâmetro (`extratoInicialIds`), mas nenhum botão o usava.
+  - **Revisão que virou histórico:** o editor e o envio de Razão de apoio ficam ocultos; o original os mostrava desabilitados. Desfazer um vínculo continua permitido, como lá.
+
 ## Arquitetura no Connect
 
 ### Módulo
@@ -205,6 +239,8 @@ Todas as tabelas novas têm prefixo `core_` e `tenantId`. Nenhuma tabela existen
 | `core_registros` | `registros_contabeis` | duas pernas por lançamento (`lancamentoId`) |
 | `core_neo_decisoes` | `neo_decisoes` | |
 | `core_exportacoes` | `export_jobs` | histórico do que foi exportado |
+| `core_conciliacao_revisoes` | `conciliacao_revisoes` | `snapshot` e `relatorio` em JSON, com as chaves do original; `agenciaId` sem chave estrangeira |
+| `core_conciliacao_vinculos` | `conciliacao_vinculos` | `usuario_id` vira `confirmadoPorId` |
 
 **Tipos:**
 - **Identificadores:** VARCHAR(191) com o UUID em minúsculas e com hífens, igual ao `str(uuid)` do Python.
@@ -235,6 +271,7 @@ No MySQL, nulos não colidem num índice único.
 | `uq_registro_transacao_lancamento_dc_ativo` | `core_registros (transacaoId, chaveAtiva)` |
 | `uq_registro_transacao_dc_padrao_ativo` | `core_registros (transacaoId, chavePadraoAtiva)` |
 | `uq_neo_sem_regra_transacao` | `core_neo_decisoes (transacaoSemRegra)` |
+| `uq_conciliacao_revisao_origem` | `core_conciliacao_revisoes (empresaId, agenciaId, chaveAtiva)`; a chave é o próprio `revisao_hash` (hexadecimal) |
 
 **Chave com texto livre vira SHA-256.** A collation do Connect (`utf8mb4_unicode_ci`) ignora acento e maiúscula. Sem o hash, "TARIFÁ" e "tarifa", ou o código "1.1.B.x" e "1.1.b.X", colidiriam no MySQL e não no PostgreSQL, e a carga recusaria dado que a produção aceitou. Com o hash, a igualdade é byte a byte, como no original.
 
