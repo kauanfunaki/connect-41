@@ -62,6 +62,8 @@ export type CartaoDaLista = CartaoParaRecorte & {
   quando: string | null;
   previa: string;
   esperandoResposta: boolean;
+  /** Mensagens do cliente desde a última resposta da equipe (o número da bolinha). */
+  semResposta: number;
 };
 
 export type ListaDoAtendimento = {
@@ -115,6 +117,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
     nomesDosContatos(c.ctx.tenantId, ciclos.map((x) => x.conversa.contato)),
   ]);
   const ultimaPor = new Map(ultimas.map((m) => [m.conversaId, m]));
+  const semRespostaPor = await contarSemResposta(ultimas.filter((m) => m.direcao === "ENTRADA").map((m) => m.conversaId));
   const nomePor = new Map(responsaveis.map((u) => [u.id, u.name]));
 
   const cartoes: CartaoDaLista[] = ciclos.map((x) => {
@@ -134,6 +137,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
       quando: x.conversa.lastMessageAt?.toISOString() ?? null,
       previa: ultima ? previa(ultima.body) : "",
       esperandoResposta: ultima?.direcao === "ENTRADA",
+      semResposta: ultima?.direcao === "ENTRADA" ? Math.max(1, semRespostaPor.get(x.conversa.id) ?? 1) : 0,
     };
   });
 
@@ -149,6 +153,53 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
 }
 
 /** O número do menu: o que espera alguém agir (triagem, pedidos e "sem responsável" dos meus setores). */
+/**
+ * Quantas mensagens o cliente mandou depois da última resposta da equipe, por
+ * conversa (12/11/2026: a bolinha mostrava sempre 1). Notas internas não contam
+ * como resposta.
+ */
+async function contarSemResposta(conversaIds: string[]): Promise<Map<string, number>> {
+  if (conversaIds.length === 0) return new Map();
+  const prisma = getPrisma();
+  const saidas = await prisma.atendimentoMensagem.groupBy({
+    by: ["conversaId"],
+    where: { conversaId: { in: conversaIds }, direcao: "SAIDA", interna: false },
+    _max: { createdAt: true },
+  });
+  const ultimaSaida = new Map(saidas.map((s) => [s.conversaId, s._max.createdAt]));
+  const contagem = await prisma.atendimentoMensagem.groupBy({
+    by: ["conversaId"],
+    where: {
+      direcao: "ENTRADA",
+      OR: conversaIds.map((id) => {
+        const desde = ultimaSaida.get(id);
+        return desde ? { conversaId: id, createdAt: { gt: desde } } : { conversaId: id };
+      }),
+    },
+    _count: { _all: true },
+  });
+  return new Map(contagem.map((x) => [x.conversaId, x._count._all]));
+}
+
+/**
+ * Uma marca barata do que mudou na caixa: a última mensagem do escritório e
+ * quantos atendimentos há em cada situação. A tela confere a cada poucos
+ * segundos e só recarrega a lista quando a marca muda (12/11/2026: conversa
+ * nova só aparecia recarregando a página).
+ */
+export async function marcaDaCaixa(tenantId: string): Promise<string> {
+  const prisma = getPrisma();
+  const [ultima, porSituacao] = await Promise.all([
+    prisma.atendimentoConversa.aggregate({ where: { tenantId }, _max: { lastMessageAt: true } }),
+    prisma.atendimentoCiclo.groupBy({ by: ["situacao"], where: { tenantId }, _count: { _all: true } }),
+  ]);
+  const situacoes = porSituacao
+    .map((s) => `${s.situacao}:${s._count._all}`)
+    .sort()
+    .join(",");
+  return `${ultima._max.lastMessageAt?.toISOString() ?? "-"}|${situacoes}`;
+}
+
 export async function contarParaMenu(c: Contexto): Promise<number> {
   const prisma = getPrisma();
   const e = await escopo(c);
