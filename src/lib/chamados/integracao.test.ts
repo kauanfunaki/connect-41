@@ -43,7 +43,7 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
   let tenantId: string, outroTenant: string, categoriaId: string, solicitante: string, colega: string, gestor: string, operador: string, chefe: string;
   let c: Contexto, equipe: Contexto, gestao: Contexto;
   const artefatos: { fileUrl: string; fileName: string; mimeType: string; sizeBytes: number }[] = [];
-  const contextoUsuario = (userId: string, role: Contexto["ctx"]["role"], sectors: string[]): Contexto => ({ ctx: { userId, role, sectors, tenantId, homeTenantId: tenantId, activeSector: null, subscriptionReadOnly: false, canSelfRegularizeSubscription: false }, config: { enabled: true, sectorCode: "tech" } });
+  const contextoUsuario = (userId: string, role: Contexto["ctx"]["role"], sectors: string[]): Contexto => ({ ctx: { userId, role, sectors, tenantId, homeTenantId: tenantId, activeSector: null, subscriptionReadOnly: false, canSelfRegularizeSubscription: false }, config: { enabled: true, sectorCode: "tech", sectorCodes: ["tech"] } });
   const payload = () => ({ title: "Acesso ao sistema de testes", description: "Preciso de acesso ao ambiente fictício de atendimento para registrar solicitações.", categoryId: categoriaId, requesterSectorCode: "fiscal", priority: "MEDIA", requestData: {}, tags: ["teste"] });
   const novo = async (dados: Record<string, unknown> = {}) => { const d = await criarRascunho(c); const v = await salvarRascunho(c, d.id, d.version, { ...payload(), title: "", ...dados }); return { ...d, version: v.version }; };
   /** A abertura da tela: o chamado nasce em triagem. */

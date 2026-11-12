@@ -51,6 +51,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "helpdesk.access": e("configurou os setores solicitantes dos chamados"),
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),
+  "helpdesk.sectors": e("escolheu os setores que administram os chamados"),
   // O Atendimento, o WhatsApp do escritório (10/11/2026).
   "atendimento.assumir": e("assumiu a conversa do atendimento"),
   "atendimento.responder": o("respondeu ao cliente no atendimento"),

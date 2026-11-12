@@ -1160,8 +1160,10 @@ export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual", "bpo_fluxos"] as co
  * há menu de setor, e os Chamados seguem no Geral. Só lugar no menu: quem abre
  * continua decidido por `temAcessoAoModulo`.
  */
-export function chamadosNoMenuDoSetor(setorAtivo: string | null, setorDosChamados: string): boolean {
-  return !!setorAtivo && setorAtivo === setorDosChamados;
+export function chamadosNoMenuDoSetor(setorAtivo: string | null, setoresDosChamados: string | readonly string[]): boolean {
+  // Um ou mais setores administram os chamados (12/11/2026): no menu de cada um.
+  const setores = typeof setoresDosChamados === "string" ? [setoresDosChamados] : setoresDosChamados;
+  return !!setorAtivo && setores.includes(setorAtivo);
 }
 
 /**

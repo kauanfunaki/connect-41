@@ -10,7 +10,7 @@ import { ControlesBuscaChamados } from "@/components/chamados/ControlesBuscaCham
 import { CartaoDoChamado } from "@/components/chamados/CartaoDoChamado";
 import { RascunhoDaLista } from "@/components/chamados/RascunhoDaLista";
 import { contexto } from "@/lib/chamados/contexto";
-import { podeAbrir, podeGerenciar, podeVerInterno, escoposDaBusca } from "@/lib/chamados/acesso";
+import { podeAbrir, podeGerenciar, podeGerenciarNo, podeVerInterno, escoposDaBusca } from "@/lib/chamados/acesso";
 import { lista, categorias, usuarios, resumoRascunho } from "@/lib/chamados/consultas";
 import { getActiveSectors } from "@/lib/sectors";
 import { aguardandoSolicitante } from "@/lib/chamados/regras";
@@ -42,7 +42,9 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
   }
   const nome = (id: string) => users.find(u => u.id === id)?.name ?? "Usuário indisponível";
   // Quem conta como "Suporte" no log do cartão: a equipe do setor responsável e o administrador.
-  const equipe = new Set(users.filter(u => isFullWrite(u.role) || u.sectors.some(s => s.sectorCode === c.config.sectorCode)).map(u => u.id));
+  const equipe = new Set(users.filter(u => isFullWrite(u.role) || u.sectors.some(s => c.config.sectorCodes.includes(s.sectorCode))).map(u => u.id));
+  // Com mais de um setor administrando (12/11/2026), o cartão diz qual atende.
+  const variosSetores = c.config.sectorCodes.length > 1;
   const agora = new Date();
   const fixadas = await codigosDeTelasFixadas(c.ctx.userId, c.ctx.tenantId);
   function url(alteracoes: Record<string, string | null>) {
@@ -80,8 +82,9 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
         categoria={caminhoDaCategoria(cats, t.categoryId) || t.category.name} corCategoria={corDaCategoria(t.categoryId)}
         setor={{ rotulo: setor?.label ?? t.requesterSectorCode, cor: setor?.color ?? "var(--c41-fg-muted)" }}
         responsaveis={t.assignees.map(a => ({ id: a.userId, nome: nome(a.userId) }))}
+        atende={variosSetores ? setores.find(s => s.code === t.handlingSectorCode)?.label ?? t.handlingSectorCode : undefined}
         prazo={t.cycles[0] ? { vence: t.cycles[0].resolutionDueAt, pausado: !!t.cycles[0].pausedAt, atrasado: slaAtrasado(t.status, t.cycles[0], agora) } : undefined}
-        fila={t.status === "NA_FILA" && posicao ? { posicao, total: dados.totalFila, reordenar } : undefined}
+        fila={t.status === "NA_FILA" && posicao ? { posicao, total: dados.totalFila.get(t.handlingSectorCode) ?? posicao, reordenar: reordenar && podeGerenciarNo(c.ctx, c.config, t.handlingSectorCode) } : undefined}
         atividades={atividadesRecentes(t.events, autoria, nome, dados.comentarios)} ultimaAtividade={t.events[0]?.createdAt ?? t.updatedAt}
         suaVez={!internos && aguardandoSolicitante(t.status)} agora={agora} />;
     })}</div>}
