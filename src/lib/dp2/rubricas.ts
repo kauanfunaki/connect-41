@@ -38,7 +38,11 @@ export type PapelDaRubrica =
   | "AVISO_DESCONTO"
   | "FERIAS_VENCIDAS_INDENIZADAS"
   | "FERIAS_PROPORC_INDENIZADAS"
-  | "TERCO_FERIAS_INDENIZADAS";
+  | "TERCO_FERIAS_INDENIZADAS"
+  // Trabalhador sem vínculo (12/11/2026, fase 3d): o valor do mês de cada categoria.
+  | "PRO_LABORE"
+  | "BOLSA_ESTAGIO"
+  | "SERVICO_AUTONOMO";
 
 /** A rubrica como o motor a recebe. */
 export type RubricaDoMotor = {
@@ -82,10 +86,12 @@ export const PAPEIS_LANCAVEIS: ReadonlySet<PapelDaRubrica> = new Set([
   "ATRASO",
   "ADIANTAMENTO",
   "PENSAO",
+  "SERVICO_AUTONOMO",
 ]);
 
 type Padrao = Omit<RubricaDoMotor, "incideInss" | "incideFgts" | "incideIrrf" | "entraNaMedia"> & {
-  incide: "TODAS" | "NENHUMA" | "SO_FGTS";
+  /** INSS_IRRF: contribuinte individual (sem FGTS); SO_IRRF: bolsa de estágio. */
+  incide: "TODAS" | "NENHUMA" | "SO_FGTS" | "INSS_IRRF" | "SO_IRRF";
   entraNaMedia?: boolean;
 };
 
@@ -120,15 +126,18 @@ const PADRAO: Padrao[] = [
   { codigo: "072", nome: "Férias vencidas indenizadas", tipo: "PROVENTO", papel: "FERIAS_VENCIDAS_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "073", nome: "Férias proporcionais indenizadas", tipo: "PROVENTO", papel: "FERIAS_PROPORC_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "074", nome: "1/3 sobre férias indenizadas", tipo: "PROVENTO", papel: "TERCO_FERIAS_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "080", nome: "Pró-labore", tipo: "PROVENTO", papel: "PRO_LABORE", lancamento: "VALOR", incide: "INSS_IRRF" },
+  { codigo: "081", nome: "Bolsa de estágio", tipo: "PROVENTO", papel: "BOLSA_ESTAGIO", lancamento: "VALOR", incide: "SO_IRRF" },
+  { codigo: "082", nome: "Serviço prestado (RPA)", tipo: "PROVENTO", papel: "SERVICO_AUTONOMO", lancamento: "VALOR", incide: "INSS_IRRF" },
   { codigo: "090", nome: "FGTS do mês", tipo: "INFORMATIVA", papel: "FGTS", lancamento: "VALOR", incide: "NENHUMA" },
 ];
 
 /** As rubricas que todo escritório ganha no primeiro acesso ao DP 2. */
 export const RUBRICAS_PADRAO: readonly RubricaDoMotor[] = PADRAO.map(({ incide, entraNaMedia, ...r }) => ({
   ...r,
-  incideInss: incide === "TODAS",
+  incideInss: incide === "TODAS" || incide === "INSS_IRRF",
   incideFgts: incide === "TODAS" || incide === "SO_FGTS",
-  incideIrrf: incide === "TODAS",
+  incideIrrf: incide === "TODAS" || incide === "INSS_IRRF" || incide === "SO_IRRF",
   entraNaMedia: entraNaMedia ?? false,
 }));
 

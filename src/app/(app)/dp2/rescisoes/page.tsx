@@ -14,6 +14,7 @@ import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDa
 import { Secao } from "@/components/dp2/Secao";
 import { Recibo } from "@/components/dp2/Recibo";
 import { formatCalendarDate } from "@/lib/format";
+import { semVinculo } from "@/lib/dp2/categorias";
 import { colaboradoresDaEmpresa, mediaDaPessoa, tabelasDoEscritorio, vinculoDoMotor } from "@/lib/dp2/servidor";
 import { calcularRescisaoDoDp2 } from "@/lib/dp2/rescisao";
 import { lerInteiro, lerNumero } from "@/lib/dp2/entrada";
@@ -59,7 +60,8 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
     );
   }
 
-  const pessoas = (await colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id)).filter((p) => p.dp2Vinculo);
+  // Sócio, autônomo e estagiário não têm rescisão: o término sai no eSocial (S-2399).
+  const pessoas = (await colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id)).filter((p) => p.dp2Vinculo && !semVinculo(p.dp2Vinculo.categoria));
   const pessoa = params.pessoa ? pessoas.find((p) => p.id === params.pessoa) : undefined;
   const desligamento = /^\d{4}-\d{2}-\d{2}$/.test(params.desligamento ?? "")
     ? params.desligamento!

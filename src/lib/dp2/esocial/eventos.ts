@@ -13,6 +13,7 @@
 //
 // Puro, sem banco.
 
+import { semVinculo } from "../categorias";
 import { el, serializar, decimal, type No } from "./xml";
 import { cnaeDoEsocial, cnpjValido, cpfValido, digitos, idDoEvento, raizDoCnpj } from "./documentos";
 import {
@@ -68,7 +69,17 @@ export type RubricaEsocial = {
 
 export type ItemDaRemuneracao = { codigo: string; tipo: string; referencia: string; valor: number; quantidade: number | null };
 
-export type TrabalhadorEsocial = { personId: string; nome: string; cpf: string | null; matricula: string | null; categoria: string; itens: ItemDaRemuneracao[]; liquido: number };
+export type TrabalhadorEsocial = {
+  personId: string;
+  nome: string;
+  cpf: string | null;
+  matricula: string | null;
+  categoria: string;
+  itens: ItemDaRemuneracao[];
+  liquido: number;
+  /** "AAAA-MM-DD": vai no S-1200 do trabalhador sem vínculo que não tem S-2300 (sem matrícula). */
+  nascimento?: string | null;
+};
 
 /** Gera o Id e o carimbo de um evento; o sequencial evita Id repetido no mesmo segundo. */
 export type GeradorDeId = () => string;
@@ -248,7 +259,11 @@ function pendenciasDoTrabalhador(t: TrabalhadorEsocial): Pendencia[] {
   const link = `/dp2/colaboradores?pessoa=${t.personId}`;
   const p: Pendencia[] = [];
   if (!cpfValido(t.cpf)) p.push({ onde: "colaborador", texto: `${t.nome}: CPF inválido ou ausente.`, link, bloqueia: true });
-  if (!t.matricula) p.push({ onde: "colaborador", texto: `${t.nome}: informe a matrícula do eSocial no contrato.`, link, bloqueia: true });
+  // Sócio e autônomo podem ficar sem S-2300: sem matrícula, o S-1200 leva nome e
+  // nascimento. Estagiário e empregado sempre têm o evento de início, com matrícula.
+  const semS2300 = semVinculo(t.categoria) && t.categoria !== "901" && !t.matricula;
+  if (!t.matricula && !semS2300) p.push({ onde: "colaborador", texto: `${t.nome}: informe a matrícula do eSocial no contrato.`, link, bloqueia: true });
+  if (semS2300 && !t.nascimento) p.push({ onde: "colaborador", texto: `${t.nome}: sem data de nascimento no cadastro (vai no S-1200 de quem não tem S-2300).`, link: `/pessoas/${t.personId}`, bloqueia: true });
   return p;
 }
 
@@ -279,7 +294,10 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
       el("verProc", VERSAO_DO_PROCESSO),
     ]),
     ideEmpregador(e.cnpj),
-    el("ideTrabalhador", [el("cpfTrab", digitos(t.cpf))]),
+    el("ideTrabalhador", [
+      el("cpfTrab", digitos(t.cpf)),
+      semVinculo(t.categoria) && !t.matricula ? el("infoComplem", [el("nmTrab", t.nome.slice(0, 70)), el("dtNascto", t.nascimento ?? null)]) : null,
+    ]),
     el("dmDev", [
       el("ideDmDev", ideDmDev(perApur)),
       el("codCateg", t.categoria),
@@ -308,7 +326,7 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
 }
 
 export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId): EventoGerado {
-  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula"))];
+  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula") && !p.texto.includes("nascimento"))];
   if (!dtPgto) pendencias.push({ onde: "competencia", texto: "Informe a data do pagamento ao gerar os periódicos.", link: null, bloqueia: true });
   const id = novoId();
   const xml = envelope("S-1210", id, [

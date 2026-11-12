@@ -14,6 +14,7 @@ import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDa
 import { Secao } from "@/components/dp2/Secao";
 import { Recibo } from "@/components/dp2/Recibo";
 import { formatCalendarDate } from "@/lib/format";
+import { semVinculo } from "@/lib/dp2/categorias";
 import { colaboradoresDaEmpresa, mediaDaPessoa, tabelasDoEscritorio, vinculoDoMotor } from "@/lib/dp2/servidor";
 import { calcularFerias } from "@/lib/dp2/ferias";
 import { lerInteiro } from "@/lib/dp2/entrada";
@@ -44,7 +45,7 @@ export default async function FeriasDoDp2({ searchParams }: { searchParams: Prom
     );
   }
 
-  const pessoas = (await colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id)).filter((p) => p.dp2Vinculo && !p.dismissalDate);
+  const pessoas = (await colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id)).filter((p) => p.dp2Vinculo && !p.dismissalDate && !semVinculo(p.dp2Vinculo.categoria));
   const pessoa = params.pessoa ? pessoas.find((p) => p.id === params.pessoa) : undefined;
   const inicio = /^\d{4}-\d{2}-\d{2}$/.test(params.inicio ?? "") ? params.inicio! : null;
   const dias = lerInteiro(params.dias ?? "30") ?? 30;

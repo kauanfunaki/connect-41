@@ -39,15 +39,15 @@ export type TrabalhadorCompleto = {
 
 export type SindicatoDoVinculo = { cnpj: string | null; mesDataBase: number | null };
 
-const ideEventoNaoPeriodico = () =>
+export const ideEventoNaoPeriodico = () =>
   el("ideEvento", [el("indRetif", "1"), el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]);
 
 const ideVinculo = (t: { cpf: string | null; matricula: string | null }) => el("ideVinculo", [el("cpfTrab", digitos(t.cpf)), el("matricula", t.matricula)]);
 
-const linkDoContrato = (personId: string) => `/dp2/colaboradores?pessoa=${personId}`;
-const linkDoCadastro = (personId: string) => `/pessoas/${personId}`;
+export const linkDoContrato = (personId: string) => `/dp2/colaboradores?pessoa=${personId}`;
+export const linkDoCadastro = (personId: string) => `/pessoas/${personId}`;
 
-function falta(onde: Pendencia["onde"], texto: string, link: string | null): Pendencia {
+export function falta(onde: Pendencia["onde"], texto: string, link: string | null): Pendencia {
   return { onde, texto, link, bloqueia: true };
 }
 
@@ -107,60 +107,72 @@ function infoContrato(t: TrabalhadorCompleto, cnpjEstab: string): No | null {
   ]);
 }
 
-// ─── S-2200 Admissão ────────────────────────────────────────────────────────
-
-export function eventoS2200(e: EmpregadorEsocial, t: TrabalhadorCompleto, sindicato: SindicatoDoVinculo, novoId: GeradorDeId): EventoGerado {
+/** O que todo evento com o cadastro da pessoa (S-2200, S-2300) precisa: nascimento, sexo, endereço… */
+export function pendenciasPessoais(t: TrabalhadorCompleto): Pendencia[] {
+  const p: Pendencia[] = [];
   const cadastro = linkDoCadastro(t.personId);
   const contrato = linkDoContrato(t.personId);
   const d = t.dados;
-  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoVinculo(t), ...pendenciasDoContrato(t, sindicato)];
-  if (!t.nascimento) pendencias.push(falta("colaborador", `${t.nome}: sem data de nascimento no cadastro.`, cadastro));
-  if (!t.admissao) pendencias.push(falta("colaborador", `${t.nome}: sem data de admissão no cadastro.`, cadastro));
-  if (!d.sexo || !d.racaCor || !d.grauInstrucao) pendencias.push(falta("colaborador", `${t.nome}: informe sexo, raça/cor e grau de instrução no contrato.`, contrato));
-  const cep = digitos(t.endereco.cep);
-  if (!t.endereco.logradouro || cep.length !== 8 || !t.endereco.uf) pendencias.push(falta("colaborador", `${t.nome}: endereço incompleto no cadastro (logradouro, CEP e UF).`, cadastro));
-  if (!d.codigoMunicipio) pendencias.push(falta("colaborador", `${t.nome}: informe o código IBGE do município no contrato.`, contrato));
-  for (const dep of t.dependentes) {
-    if (!dep.nascimento) pendencias.push(falta("colaborador", `${t.nome}: dependente ${dep.nome} sem data de nascimento.`, cadastro));
-    if (dep.irrf && !cpfValido(dep.cpf)) pendencias.push(falta("colaborador", `${t.nome}: dependente ${dep.nome} para o IRRF precisa de CPF.`, cadastro));
+  if (!t.nascimento) p.push(falta("colaborador", `${t.nome}: sem data de nascimento no cadastro.`, cadastro));
+  if (!d.sexo || !d.racaCor || !d.grauInstrucao) p.push(falta("colaborador", `${t.nome}: informe sexo, raça/cor e grau de instrução no contrato.`, contrato));
+  if (!t.endereco.logradouro || digitos(t.endereco.cep).length !== 8 || !t.endereco.uf) {
+    p.push(falta("colaborador", `${t.nome}: endereço incompleto no cadastro (logradouro, CEP e UF).`, cadastro));
   }
+  if (!d.codigoMunicipio) p.push(falta("colaborador", `${t.nome}: informe o código IBGE do município no contrato.`, contrato));
+  for (const dep of t.dependentes) {
+    if (!dep.nascimento) p.push(falta("colaborador", `${t.nome}: dependente ${dep.nome} sem data de nascimento.`, cadastro));
+    if (dep.irrf && !cpfValido(dep.cpf)) p.push(falta("colaborador", `${t.nome}: dependente ${dep.nome} para o IRRF precisa de CPF.`, cadastro));
+  }
+  return p;
+}
+
+/** O grupo "trabalhador" do S-2200 e do S-2300: identificação, nascimento, endereço e dependentes. */
+export function blocoDoTrabalhador(t: TrabalhadorCompleto): No | null {
+  return el("trabalhador", [
+    el("cpfTrab", digitos(t.cpf)),
+    el("nmTrab", t.nome.slice(0, 70)),
+    el("sexo", t.dados.sexo),
+    el("racaCor", t.dados.racaCor),
+    el("estCiv", t.dados.estadoCivil),
+    el("grauInstr", t.dados.grauInstrucao),
+    el("nascimento", [el("dtNascto", t.nascimento), el("paisNascto", "105"), el("paisNac", "105")]),
+    el("endereco", [
+      el("brasil", [
+        el("dscLograd", t.endereco.logradouro?.slice(0, 100)),
+        el("nrLograd", (t.endereco.numero || "S/N").slice(0, 10)),
+        el("complemento", t.endereco.complemento?.slice(0, 30)),
+        el("bairro", t.endereco.bairro?.slice(0, 90)),
+        el("cep", digitos(t.endereco.cep) || null),
+        el("codMunic", t.dados.codigoMunicipio),
+        el("uf", t.endereco.uf),
+      ]),
+    ]),
+    el("infoDeficiencia", [el("defFisica", "N"), el("defVisual", "N"), el("defAuditiva", "N"), el("defMental", "N"), el("defIntelectual", "N"), el("reabReadap", "N")]),
+    ...t.dependentes.map((dep) =>
+      el("dependente", [
+        el("tpDep", dep.tipo),
+        el("nmDep", dep.nome.slice(0, 70)),
+        el("dtNascto", dep.nascimento),
+        el("cpfDep", digitos(dep.cpf) || null),
+        el("depIRRF", dep.irrf ? "S" : "N"),
+        el("depSF", dep.salarioFamilia ? "S" : "N"),
+        el("incTrab", "N"),
+      ])
+    ),
+  ]);
+}
+
+// ─── S-2200 Admissão ────────────────────────────────────────────────────────
+
+export function eventoS2200(e: EmpregadorEsocial, t: TrabalhadorCompleto, sindicato: SindicatoDoVinculo, novoId: GeradorDeId): EventoGerado {
+  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoVinculo(t), ...pendenciasDoContrato(t, sindicato), ...pendenciasPessoais(t)];
+  if (!t.admissao) pendencias.push(falta("colaborador", `${t.nome}: sem data de admissão no cadastro.`, linkDoCadastro(t.personId)));
 
   const id = novoId();
   const xml = envelope("S-2200", id, [
     ideEventoNaoPeriodico(),
     ideEmpregador(e.cnpj),
-    el("trabalhador", [
-      el("cpfTrab", digitos(t.cpf)),
-      el("nmTrab", t.nome.slice(0, 70)),
-      el("sexo", d.sexo),
-      el("racaCor", d.racaCor),
-      el("estCiv", d.estadoCivil),
-      el("grauInstr", d.grauInstrucao),
-      el("nascimento", [el("dtNascto", t.nascimento), el("paisNascto", "105"), el("paisNac", "105")]),
-      el("endereco", [
-        el("brasil", [
-          el("dscLograd", t.endereco.logradouro?.slice(0, 100)),
-          el("nrLograd", (t.endereco.numero || "S/N").slice(0, 10)),
-          el("complemento", t.endereco.complemento?.slice(0, 30)),
-          el("bairro", t.endereco.bairro?.slice(0, 90)),
-          el("cep", cep || null),
-          el("codMunic", d.codigoMunicipio),
-          el("uf", t.endereco.uf),
-        ]),
-      ]),
-      el("infoDeficiencia", [el("defFisica", "N"), el("defVisual", "N"), el("defAuditiva", "N"), el("defMental", "N"), el("defIntelectual", "N"), el("reabReadap", "N")]),
-      ...t.dependentes.map((dep) =>
-        el("dependente", [
-          el("tpDep", dep.tipo),
-          el("nmDep", dep.nome.slice(0, 70)),
-          el("dtNascto", dep.nascimento),
-          el("cpfDep", digitos(dep.cpf) || null),
-          el("depIRRF", dep.irrf ? "S" : "N"),
-          el("depSF", dep.salarioFamilia ? "S" : "N"),
-          el("incTrab", "N"),
-        ])
-      ),
-    ]),
+    blocoDoTrabalhador(t),
     el("vinculo", [
       el("matricula", t.matricula),
       el("tpRegTrab", "1"),

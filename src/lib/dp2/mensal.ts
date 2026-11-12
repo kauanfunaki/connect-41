@@ -39,6 +39,8 @@ export type VinculoDoMotor = {
   periculosidade: boolean;
   valeTransporte: boolean;
   aprendiz: boolean;
+  /** Categoria do eSocial (Tabela 1); sem ela, empregado (101). Ver categorias.ts. */
+  categoria?: string;
 };
 
 export type ConvencaoDoMotor = { he50: number; he100: number; noturno: number; piso: number | null; nome: string | null };
@@ -137,7 +139,7 @@ export function diasNoMes(ano: number, mes: number, admissao: Date | null, desli
   return Math.max(0, Math.min(30, ate - de + 1));
 }
 
-function rubricaDoPapel(rubricas: ReadonlyMap<PapelDaRubrica, RubricaDoMotor>, papel: PapelDaRubrica): RubricaDoMotor {
+export function rubricaDoPapel(rubricas: ReadonlyMap<PapelDaRubrica, RubricaDoMotor>, papel: PapelDaRubrica): RubricaDoMotor {
   const r = rubricas.get(papel);
   if (r) return r;
   // Sem a rubrica no escritório (não deveria: a semeadura cria todas), o motor

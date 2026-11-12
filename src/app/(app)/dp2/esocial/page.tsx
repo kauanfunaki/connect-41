@@ -30,7 +30,9 @@ import {
   gerarAlteracaoAction,
   gerarPeriodicosEsocialAction,
   gerarTabelasEsocialAction,
+  gerarTerminoSemVinculoAction,
 } from "../actions";
+import { semVinculo } from "@/lib/dp2/categorias";
 
 const NOME_DA_SITUACAO: Record<string, string> = { PENDENCIA: "Com pendência", PRONTO: "Pronto", ENVIADO: "Enviado", ACEITO: "Aceito", REJEITADO: "Rejeitado" };
 const TOM: Record<string, "atencao" | "marca" | "sucesso" | "perigo" | "neutro"> = { PENDENCIA: "atencao", PRONTO: "marca", ENVIADO: "neutro", ACEITO: "sucesso", REJEITADO: "perigo" };
@@ -73,7 +75,9 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
   ]);
   const comContrato = pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate);
   const admissaoDe = new Map<string, string>();
-  for (const e of eventos) if (e.tipo === "S-2200" && e.personId && !admissaoDe.has(e.personId)) admissaoDe.set(e.personId, e.situacao);
+  for (const e of eventos) if ((e.tipo === "S-2200" || e.tipo === "S-2300") && e.personId && !admissaoDe.has(e.personId)) admissaoDe.set(e.personId, e.situacao);
+  // Sócio, autônomo e estagiário: início no S-2300 e término no S-2399 (o desligado também aparece no término).
+  const semVinculoComContrato = pessoas.filter((p) => p.dp2Vinculo && semVinculo(p.dp2Vinculo.categoria));
   const filtro = params.tipo && params.tipo in NOME_DO_EVENTO ? params.tipo : null;
   const visiveis = filtro ? eventos.filter((e) => e.tipo === filtro) : eventos;
   const conta = (s: string) => eventos.filter((e) => e.situacao === s).length;
@@ -167,7 +171,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
 
       <Secao
         titulo="Trabalhadores"
-        apoio="Admissão (S-2200), alteração contratual (S-2206) e afastamento (S-2230) a partir do contrato do DP 2 e do cadastro da pessoa. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas."
+        apoio="Admissão (S-2200), alteração contratual (S-2206) e afastamento (S-2230) a partir do contrato do DP 2 e do cadastro da pessoa. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas. Sócio, autônomo e estagiário: início (S-2300) e término (S-2399)."
         className="mb-5"
       >
         {comContrato.length === 0 ? (
@@ -185,13 +189,14 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                   <tr>
                     <th className={TH}>Colaborador</th>
                     <th className={TH}>Matrícula</th>
-                    <th className={TH}>Admissão no eSocial</th>
+                    <th className={TH}>Início no eSocial</th>
                     <th className={TH} />
                   </tr>
                 </thead>
                 <tbody>
                   {comContrato.map((p) => {
                     const s = admissaoDe.get(p.id);
+                    const inicio = semVinculo(p.dp2Vinculo?.categoria) ? "S-2300" : "S-2200";
                     return (
                       <tr key={p.id} className={TR}>
                         <td className={TD}>
@@ -203,7 +208,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                         <td className={TD}>{s ? <Selo tom={TOM[s] ?? "neutro"}>{NOME_DA_SITUACAO[s] ?? s}</Selo> : <span className="text-fg-muted">não gerada</span>}</td>
                         <td className={`${TD} text-right`}>
                           {tela.podeAgir && (
-                            <FormularioDoDp2 acao={gerarAdmissaoAction} rotulo={s ? "Gerar S-2200 de novo" : "Gerar S-2200"} rotuloEnviando="Gerando…" variante="ghost" tamanho="xs">
+                            <FormularioDoDp2 acao={gerarAdmissaoAction} rotulo={s ? `Gerar ${inicio} de novo` : `Gerar ${inicio}`} rotuloEnviando="Gerando…" variante="ghost" tamanho="xs">
                               <input type="hidden" name="personId" value={p.id} />
                             </FormularioDoDp2>
                           )}
@@ -283,6 +288,31 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                     </div>
                   </FormularioDoDp2>
                 </div>
+              </div>
+            )}
+            {tela.podeAgir && semVinculoComContrato.length > 0 && (
+              <div className="mt-5 lg:max-w-[50%]">
+                <h3 className="text-fs-3 font-semibold text-fg mb-2">Término de sócio, autônomo ou estagiário (S-2399)</h3>
+                <p className="text-fs-2 text-fg-muted mb-3">Sem verbas rescisórias: o último pagamento sai na folha do mês.</p>
+                <FormularioDoDp2 acao={gerarTerminoSemVinculoAction} rotulo="Gerar S-2399" rotuloEnviando="Gerando…" variante="secondary">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <CampoForm label="Trabalhador" htmlFor="ter_personId">
+                      <Select id="ter_personId" name="personId" required defaultValue="">
+                        <option value="" disabled>
+                          Escolha…
+                        </option>
+                        {semVinculoComContrato.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </CampoForm>
+                    <CampoForm label="Data do término" htmlFor="termino">
+                      <CampoData id="termino" name="termino" required />
+                    </CampoForm>
+                  </div>
+                </FormularioDoDp2>
               </div>
             )}
           </>
