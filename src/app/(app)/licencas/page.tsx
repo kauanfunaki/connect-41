@@ -9,16 +9,14 @@ import { notFound } from "next/navigation";
 import { getAuthContext, canActOnSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getPrisma } from "@/lib/prisma";
-import { nomeExibicao } from "@/lib/companyName";
-import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { LicencasFila } from "@/components/societario/LicencasFila";
 import { NovaLicenca } from "@/components/societario/LicencaForm";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
-import { resumoDasLicencas } from "@/lib/societario/licencas-data";
-import { situacaoDaLicenca, buscarLicencas, AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
+import { paginaDeLicencas } from "@/lib/societario/licencas-data";
+import { AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Pagination } from "@/components/shared/Pagination";
 
@@ -58,15 +56,22 @@ export default async function LicencasPage({
   const chave = RECORTES.some((r) => r.chave === recorte) ? recorte! : padrao;
 
   const hoje = new Date();
-  const prisma = getPrisma();
-  const [{ linhas, vencidas, aRenovar }, empresas, orgaos, roboLigado, avisoPorEmail, smtp, comCertidoes] = await Promise.all([
-    resumoDasLicencas(ctx.tenantId, hoje),
-    prisma.company.findMany({
-      where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
-      orderBy: { name: "asc" },
-      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
-    }),
-    prisma.processOrgan.findMany({
+  const situacaoDoRecorte = RECORTES.find((r) => r.chave === chave)!.situacao;
+  // O recorte padrão é o que pede ação — é para isso que a tela existe, e
+  // abrir em "todas" faria a renovação atrasada se perder no meio das
+  // vigentes.
+  const noRecorte =
+    chave === "todas"
+      ? undefined
+      : chave === "atencao"
+        ? (s: SituacaoDaLicenca) => s === "vencida" || s === "a_renovar"
+        : (s: SituacaoDaLicenca) => s === situacaoDoRecorte;
+
+  // As empresas do "Nova licença" não vêm mais aqui: a janela as pede ao abrir
+  // (12/11/2026, bug-645). Iam inteiras em toda página e em toda troca de página.
+  const [daTela, orgaos, roboLigado, avisoPorEmail, smtp, comCertidoes] = await Promise.all([
+    paginaDeLicencas(ctx.tenantId, hoje, { busca, noRecorte, pagina, porPagina: POR_PAGINA }),
+    getPrisma().processOrgan.findMany({
       where: { tenantId: ctx.tenantId, active: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
@@ -76,22 +81,9 @@ export default async function LicencasPage({
     temSmtpConfigurado(ctx.tenantId),
     isModuleEnabled(ctx.tenantId, MODULO_DAS_CERTIDOES),
   ]);
+  const { vencidas, aRenovar, vigentes } = daTela;
   const orgaosDoForm = orgaos.map((o) => ({ id: o.id, nome: o.name }));
 
-  const filtradas = buscarLicencas(linhas, busca).filter((l) => {
-    const s = situacaoDaLicenca(l, hoje);
-    if (chave === "todas") return true;
-    // O recorte padrão é o que pede ação — é para isso que a tela existe, e
-    // abrir em "todas" faria a renovação atrasada se perder no meio das
-    // vigentes.
-    if (chave === "atencao") return s === "vencida" || s === "a_renovar";
-    return s === RECORTES.find((r) => r.chave === chave)!.situacao;
-  });
-
-  // A contagem e os totais são da lista inteira; só a tabela vem por página.
-  const totalDePaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
-  const paginaVista = Math.min(pagina, totalDePaginas);
-  const daPagina = filtradas.slice((paginaVista - 1) * POR_PAGINA, paginaVista * POR_PAGINA);
   const hrefDaPagina = (p: number) => {
     const q = new URLSearchParams();
     if (recorte) q.set("recorte", recorte);
@@ -126,10 +118,7 @@ export default async function LicencasPage({
               comCertidoes={comCertidoes}
             />
             <ImportarLicencas />
-            <NovaLicenca
-              empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
-              orgaos={orgaosDoForm}
-            />
+            <NovaLicenca orgaos={orgaosDoForm} />
           </div>
         }
       />
@@ -167,7 +156,7 @@ export default async function LicencasPage({
           },
           {
             rotulo: "Vigentes",
-            valor: formatarNumero(linhas.filter((l) => situacaoDaLicenca(l, hoje) === "vigente").length, 0),
+            valor: formatarNumero(vigentes, 0),
             icone: <ShieldCheck />,
             tom: "text-success-fg",
             detalhe: chave === "vigente" ? "mostrando agora" : undefined,
@@ -177,7 +166,7 @@ export default async function LicencasPage({
         ]}
       />
       <CascoDaTabela
-        contagem={contarItens(filtradas.length, "licença", "licenças")}
+        contagem={contarItens(daTela.total, "licença", "licenças")}
         busca={<DebouncedSearchInput paramName="busca" placeholder="Buscar empresa, cidade ou CNPJ" />}
         filtros={
           <FiltrosDaTela
@@ -194,14 +183,14 @@ export default async function LicencasPage({
         }
       >
         <LicencasFila
-          linhas={daPagina}
+          linhas={daTela.linhas}
           hoje={hoje}
-          filtrado={linhas.length > 0 && filtradas.length === 0}
+          filtrado={daTela.temAlguma && daTela.total === 0}
           orgaos={orgaosDoForm}
           roboLigado={roboLigado}
         />
       </CascoDaTabela>
-      <Pagination page={paginaVista} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={filtradas.length} rotulo="licenças" />
+      <Pagination page={daTela.pagina} totalPages={daTela.totalDePaginas} buildHref={hrefDaPagina} total={daTela.total} rotulo="licenças" />
     </PageContainer>
   );
 }

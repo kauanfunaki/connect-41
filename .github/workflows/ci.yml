@@ -48,3 +48,7 @@ jobs:
         run: npm test
       - name: Build standalone
         run: npm run build
+        # O build passou do heap padrão do Node (~4 GB) em 12/11/2026, depois dos
+        # merges do dia: morria com "JavaScript heap out of memory". O runner tem 16 GB.
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
