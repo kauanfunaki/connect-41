@@ -521,6 +521,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "CoreExportacao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gerou o arquivo de exportação; trilha contábil" },
   { modelo: "CoreConciliacaoRevisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem criou a revisão da conciliação; trilha contábil" },
   { modelo: "CoreConciliacaoVinculo", coluna: "confirmadoPorId", tratamento: "manter", motivo: "quem confirmou o vínculo da revisão (o nome fica em `responsavel`); trilha contábil" },
+  { modelo: "CoreFinanceiroAnalise", coluna: "criadoPorId", tratamento: "manter", motivo: "quem criou a conferência do financeiro; trilha contábil" },
+  { modelo: "CoreFinanceiroVinculo", coluna: "confirmadoPorId", tratamento: "manter", motivo: "quem confirmou a conferência do financeiro (o nome fica em `responsavel`); trilha contábil" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },

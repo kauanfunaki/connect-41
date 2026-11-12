@@ -10917,6 +10917,9 @@ model CoreEmpresa {
   exportacoes  CoreExportacao[]
   revisoes     CoreConciliacaoRevisao[]
   vinculos     CoreConciliacaoVinculo[]
+  financeiroAnalises   CoreFinanceiroAnalise[]
+  financeiroDocumentos CoreFinanceiroDocumento[]
+  financeiroVinculos   CoreFinanceiroVinculo[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11343,6 +11346,112 @@ model CoreConciliacaoVinculo {
   @@index([empresaId])
   @@index([tenantId])
   @@map("core_conciliacao_vinculos")
+}
+
+/// Conferência do financeiro (`financeiro_analises`, Bloco B, Fase B4): documentos do financeiro,
+/// SISPAG, Razão e extrato detalhado comparados lado a lado, como evidência (nunca lançamento).
+/// `snapshot` guarda o JSON do original (snake_case: fontes, linhas, titulos_abertos, avisos), para a
+/// carga copiar sem conversão e as identidades das linhas continuarem valendo.
+model CoreFinanceiroAnalise {
+  id            String    @id @default(uuid())
+  tenantId      String
+  empresaId     String
+  /// Referência documental, sem chave estrangeira (como no original): a análise nunca trava a exclusão da conta bancária.
+  agenciaId     String
+  /// Quem criou (`criado_por`): id de `User`, sem chave, como trilha.
+  criadoPorId   String
+  titulo        String    @db.VarChar(200)
+  /// A `descricao` da conta bancária na criação ("ITAU 1234 56789 0").
+  contaBancaria String    @db.VarChar(255)
+  periodoInicio DateTime  @db.Date
+  periodoFim    DateTime  @db.Date
+  /// SHA-256 da identidade do extrato na criação: se o extrato mudar, só as conferências com o Extrato param.
+  extratoHash   String    @db.Char(64)
+  /// Versão otimista: toda alteração confere a versão que a tela viu.
+  versao        Int       @default(1)
+  /// { fontes, linhas, titulos_abertos, avisos }
+  snapshot      Json
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  empresa    CoreEmpresa               @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  documentos CoreFinanceiroDocumento[]
+  vinculos   CoreFinanceiroVinculo[]
+
+  @@index([empresaId, agenciaId])
+  @@index([empresaId, updatedAt])
+  @@index([tenantId])
+  @@map("core_financeiro_analises")
+}
+
+/// Original de um documento da análise (`financeiro_documentos`). Os bytes ficam em disco, em
+/// storage/contabil-core/financeiro/<storageKey>, e só saem pela análise autorizada.
+model CoreFinanceiroDocumento {
+  /// É o `fonte_id` da fonte no snapshot.
+  id          String    @id @default(uuid())
+  tenantId    String
+  empresaId   String
+  analiseId   String
+  nomeArquivo String    @db.VarChar(255)
+  /// FINANCEIRO | SISPAG | RAZAO | EXTRATO_DETALHADO
+  tipo        String    @db.VarChar(20)
+  /// SHA-256 dos bytes: o mesmo arquivo não entra duas vezes na análise.
+  hashArquivo String    @db.Char(64)
+  mediaType   String    @db.VarChar(100)
+  tamanho     Int
+  /// "<tenantId>/<id>.<ext>" sob storage/contabil-core/financeiro — nunca vem de quem envia.
+  storageKey  String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  empresa CoreEmpresa           @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  analise CoreFinanceiroAnalise @relation(fields: [analiseId], references: [id], onDelete: Restrict)
+
+  @@unique([analiseId, hashArquivo])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_financeiro_documentos")
+}
+
+/// Decisão humana entre o documento base e uma origem de comparação (`financeiro_vinculos`).
+/// Nos tipos RAZAO_*, `financeiroIds` e `totalFinanceiro` guardam o lado base (o Razão).
+model CoreFinanceiroVinculo {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  analiseId       String
+  /// EXTRATO | SISPAG | RAZAO | RAZAO_SISPAG | RAZAO_DETALHADO
+  tipoComparacao  String    @db.VarChar(20)
+  /// Ids das linhas do snapshot (texto do UUID), como no original.
+  financeiroIds   Json
+  comparacaoIds   Json
+  totalFinanceiro Decimal   @db.Decimal(15, 2)
+  totalComparacao Decimal   @db.Decimal(15, 2)
+  /// Comparação − base. Diferente de zero só com observação.
+  diferenca       Decimal   @db.Decimal(15, 2)
+  observacao      String    @db.Text
+  /// ATIVO | DESFEITO
+  estado          String    @default("ATIVO") @db.VarChar(10)
+  /// Quem confirmou (`usuario_id`): id de `User`, sem chave, como trilha.
+  confirmadoPorId String
+  /// O nome de quem confirmou, gravado na hora (fica mesmo se a pessoa sair).
+  responsavel     String    @db.VarChar(200)
+  desfeitoPor     String?   @db.VarChar(200)
+  desfeitoEm      DateTime?
+  motivoDesfazer  String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa CoreEmpresa           @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  analise CoreFinanceiroAnalise @relation(fields: [analiseId], references: [id], onDelete: Restrict)
+
+  @@index([analiseId, estado])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_financeiro_vinculos")
 }
 
 // ─── Atendimento (10/11/2026) ────────────────────────────────────────────────
