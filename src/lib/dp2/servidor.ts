@@ -100,11 +100,13 @@ export async function tabelasDoEscritorio(tenantId: string): Promise<VersaoDaTab
 
 // ─── Empresa ────────────────────────────────────────────────────────────────
 
-export type ConfigDaEmpresa = { empresa: EmpresaDoMotor; convencao: ConvencaoDoMotor; convencaoId: string | null; configurada: boolean };
+export type ContaPagadora = { bancoCodigo: string | null; agencia: string | null; agenciaDigito: string | null; conta: string | null; contaDigito: string | null; convenio: string | null };
+
+export type ConfigDaEmpresa = { empresa: EmpresaDoMotor; convencao: ConvencaoDoMotor; convencaoId: string | null; configurada: boolean; pagadora: ContaPagadora | null };
 
 export async function configDaEmpresa(tenantId: string, companyId: string): Promise<ConfigDaEmpresa> {
   const c = await getPrisma().dp2EmpresaConfig.findFirst({ where: { tenantId, companyId }, include: { convencao: true } });
-  if (!c) return { empresa: { patronalNoDas: false, ratAliquota: 2, fap: 1, terceirosAliquota: 5.8 }, convencao: CONVENCAO_DA_CLT, convencaoId: null, configurada: false };
+  if (!c) return { empresa: { patronalNoDas: false, ratAliquota: 2, fap: 1, terceirosAliquota: 5.8 }, convencao: CONVENCAO_DA_CLT, convencaoId: null, configurada: false, pagadora: null };
   return {
     empresa: { patronalNoDas: c.patronalNoDas, ratAliquota: dec(c.ratAliquota), fap: dec(c.fap), terceirosAliquota: dec(c.terceirosAliquota) },
     convencao: c.convencao
@@ -112,6 +114,7 @@ export async function configDaEmpresa(tenantId: string, companyId: string): Prom
       : CONVENCAO_DA_CLT,
     convencaoId: c.convencaoId,
     configurada: true,
+    pagadora: { bancoCodigo: c.bancoCodigo, agencia: c.agencia, agenciaDigito: c.agenciaDigito, conta: c.conta, contaDigito: c.contaDigito, convenio: c.convenio },
   };
 }
 
@@ -166,7 +169,20 @@ export async function colaboradoresDaCompetencia(tenantId: string, companyId: st
 export async function colaboradoresDaEmpresa(tenantId: string, companyId: string) {
   return getPrisma().person.findMany({
     where: { tenantId, currentCompanyId: companyId, isInternal: false, type: "COLABORADOR" },
-    select: { id: true, name: true, cpf: true, active: true, admissionDate: true, dismissalDate: true, currentSalary: true, dp2Vinculo: true },
+    select: {
+      id: true,
+      name: true,
+      cpf: true,
+      active: true,
+      admissionDate: true,
+      dismissalDate: true,
+      currentSalary: true,
+      bankName: true,
+      bankAgency: true,
+      bankAccount: true,
+      bankAccountType: true,
+      dp2Vinculo: true,
+    },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
 }

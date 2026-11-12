@@ -6745,6 +6745,15 @@ model Dp2EmpresaConfig {
   fap               Decimal  @default(1) @db.Decimal(6, 4)
   /// Terceiros (salário-educação, Sistema S…) em %.
   terceirosAliquota Decimal  @default(5.8) @db.Decimal(5, 2)
+  // Conta pagadora (fase 2, 12/11/2026): de onde sai o salário na remessa CNAB.
+  /// Código do banco (3 dígitos, ex.: "341").
+  bancoCodigo       String?  @db.VarChar(3)
+  agencia           String?  @db.VarChar(10)
+  agenciaDigito     String?  @db.VarChar(2)
+  conta             String?  @db.VarChar(20)
+  contaDigito       String?  @db.VarChar(2)
+  /// O código do convênio de pagamentos que o banco dá à empresa.
+  convenio          String?  @db.VarChar(20)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -6774,6 +6783,15 @@ model Dp2Vinculo {
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
   aprendiz             Boolean  @default(false)
+  // Conta do colaborador (fase 2, 12/11/2026), para a remessa CNAB.
+  /// Código do banco (3 dígitos, ex.: "001").
+  bancoCodigo          String?  @db.VarChar(3)
+  agencia              String?  @db.VarChar(10)
+  agenciaDigito        String?  @db.VarChar(2)
+  conta                String?  @db.VarChar(20)
+  contaDigito          String?  @db.VarChar(2)
+  /// "CORRENTE" ou "POUPANCA".
+  tipoConta            String   @default("CORRENTE") @db.VarChar(10)
   observacoes          String?  @db.Text
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -6810,6 +6828,8 @@ model Dp2Competencia {
   eventos      Dp2Evento[]
   calculos     Dp2Calculo[]
   comparativos Dp2Comparativo[]
+  remessas     Dp2Remessa[]
+  pedidos      Dp2PedidoDeEventos[]
 
   @@unique([companyId, ano, mes, tipo])
   @@index([tenantId, ano, mes])
@@ -6898,6 +6918,68 @@ model Dp2Comparativo {
   @@unique([competenciaId, personId])
   @@index([personId])
   @@map("dp2_comparativos")
+}
+
+/// Uma remessa CNAB 240 de pagamento gerada da competência (fase 2, 12/11/2026).
+/// O arquivo fica guardado como foi gerado: é o que a empresa subiu no banco.
+model Dp2Remessa {
+  id            String   @id @default(uuid())
+  tenantId      String
+  competenciaId String
+  bancoCodigo   String   @db.VarChar(3)
+  /// O número sequencial do arquivo (NSA) na empresa.
+  sequencial    Int
+  /// "AAAA-MM-DD".
+  dataPagamento String   @db.VarChar(10)
+  quantidade    Int
+  total         Decimal  @db.Decimal(14, 2)
+  nomeArquivo   String   @db.VarChar(120)
+  conteudo      String   @db.LongText
+  /// Quem ficou de fora (sem conta, sem CPF), com o motivo.
+  foraDaRemessa Json
+  geradaPorId   String?
+  createdAt     DateTime @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, competenciaId])
+  @@map("dp2_remessas")
+}
+
+/// O link para o cliente informar os eventos do mês sem login (fase 2,
+/// 12/11/2026), como o link de admissão.
+model Dp2PedidoDeEventos {
+  id            String    @id @default(uuid())
+  tenantId      String
+  competenciaId String
+  token         String    @unique @db.VarChar(64)
+  /// "ABERTO", "RESPONDIDO" ou "CANCELADO".
+  situacao      String    @default("ABERTO") @db.VarChar(10)
+  expiraEm      DateTime
+  respondidoEm  DateTime?
+  semEventos    Boolean   @default(false)
+  /// O recado do cliente junto com a resposta.
+  observacao    String?   @db.Text
+  criadoPorId   String?
+  createdAt     DateTime  @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, competenciaId])
+  @@map("dp2_pedidos_de_eventos")
+}
+
+/// As contas contábeis da folha do escritório (fase 2, 12/11/2026): para onde
+/// vão o líquido, os encargos e as provisões. As de cada provento e desconto
+/// ficam na rubrica.
+model Dp2ContasDaFolha {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  /// { salariosAPagar, inssEmpresaDespesa, inssARecolher, fgtsDespesa, … } (ver contabilizacao.ts).
+  contas    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("dp2_contas_da_folha")
 }
 
 model OvertimeEntry {
