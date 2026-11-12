@@ -13,7 +13,7 @@ import "server-only";
 // linha (no pdfminer ele não anda).
 
 import { getDocumentProxy, getResolvedPDFJS } from "unpdf";
-import type { Caractere } from "./plumber";
+import type { Caractere, GlifoMupdf } from "./plumber";
 
 type Matriz = [number, number, number, number, number, number];
 const IDENTIDADE: Matriz = [1, 0, 0, 1, 0, 0];
@@ -40,7 +40,7 @@ function aplicarNoRetangulo(m: Matriz, x0: number, y0: number, x1: number, y1: n
   return [Math.min(l1, l2, r1, r2), Math.min(b1, b2, t1, t2), Math.max(l1, l2, r1, r2), Math.max(b1, b2, t1, t2)];
 }
 
-type Fonte = { nome: string; descida: number; matriz: number[]; vertical: boolean };
+type Fonte = { nome: string; descida: number; matriz: number[]; vertical: boolean; mupdf: [number, number] };
 
 type EstadoDoTexto = {
   fonte: Fonte | null;
@@ -104,6 +104,17 @@ export async function caracteresDoPdf(bytes: Uint8Array, opcoes: { maxPaginas?: 
   }
 }
 
+/** Só o número de páginas (`len(pdf.pages)`), sem interpretar nenhuma. Lança se o arquivo não for um PDF legível. */
+export async function contarPaginas(bytes: Uint8Array): Promise<number> {
+  const doc = await getDocumentProxy(new Uint8Array(bytes), { isEvalSupported: false } as never);
+  try {
+    return doc.numPages;
+  } finally {
+    await doc.cleanup().catch(() => undefined);
+    await (doc as unknown as { loadingTask?: { destroy(): Promise<void> } }).loadingTask?.destroy().catch(() => undefined);
+  }
+}
+
 export class LimiteDePaginas extends Error {
   constructor(
     readonly paginas: number,
@@ -126,6 +137,59 @@ const DESCIDA_PADRAO: Record<string, number> = {
   Symbol: 0, ZapfDingbats: 0,
 };
 
+// A subida e a descida que o MuPDF (por baixo do PyMuPDF) dá às fontes padrão não embutidas: ele usa
+// as fontes Nimbus no lugar delas. Medidas no PyMuPDF 1.26 (caixa da palavra ÷ tamanho); a
+// ZapfDingbats já vem normalizada pela correção do PyMuPDF (subida − descida < 1).
+const SUBSTITUTAS_MUPDF: Record<string, [number, number]> = {
+  Helvetica: [1.075, -0.299],
+  "Helvetica-Bold": [1.07, -0.307],
+  "Helvetica-Oblique": [1.07, -0.284],
+  "Helvetica-BoldOblique": [1.073, -0.309],
+  "Times-Roman": [1.053, -0.281],
+  "Times-Bold": [1.044, -0.341],
+  "Times-Italic": [0.951, -0.27],
+  "Times-BoldItalic": [0.972, -0.324],
+  Courier: [0.932, -0.317],
+  "Courier-Bold": [1.007, -0.393],
+  "Courier-Oblique": [0.92, -0.317],
+  "Courier-BoldOblique": [0.997, -0.393],
+  Symbol: [1.01, -0.293],
+  ZapfDingbats: [0.8504675, -0.1495325],
+};
+const NOMES_SUBSTITUTOS: Record<string, string> = {
+  Arial: "Helvetica",
+  "Arial,Bold": "Helvetica-Bold",
+  "Arial,Italic": "Helvetica-Oblique",
+  "Arial,BoldItalic": "Helvetica-BoldOblique",
+  TimesNewRoman: "Times-Roman",
+  "TimesNewRoman,Bold": "Times-Bold",
+  "TimesNewRoman,Italic": "Times-Italic",
+  "TimesNewRoman,BoldItalic": "Times-BoldItalic",
+  CourierNew: "Courier",
+  "CourierNew,Bold": "Courier-Bold",
+  "CourierNew,Italic": "Courier-Oblique",
+  "CourierNew,BoldItalic": "Courier-BoldOblique",
+};
+
+/**
+ * A subida e a descida da caixa do caractere no MuPDF, já com a correção do `JM_char_quad` do
+ * PyMuPDF. Fonte padrão não embutida: a tabela acima. Fonte embutida: a métrica que o pdf.js leu
+ * dela (o MuPDF lê a do próprio arquivo da fonte; pode diferir em centésimos). Outra fonte não
+ * embutida: a Helvetica, a substituta mais comum.
+ */
+function metricaMupdf(nome: string, f: Record<string, unknown>): [number, number] {
+  const padrao = SUBSTITUTAS_MUPDF[NOMES_SUBSTITUTOS[nome] ?? nome];
+  if (padrao && !nome.includes("+")) return padrao;
+  if (f.missingFile === true) return SUBSTITUTAS_MUPDF.Helvetica;
+  let subida = num(f.ascent, 0.8);
+  let descida = num(f.descent, -0.2);
+  if (descida > 0) descida = -descida;
+  if (subida - descida === 0) [subida, descida] = [0.8, -0.2];
+  if (subida < 1e-3) return [0.9, -0.1];
+  const altura = subida - descida + 1.1920929e-7;
+  return altura < 1 ? [subida / altura, descida / altura] : [subida, descida];
+}
+
 function fonteDe(objs: ObjetosComuns, id: string, cache: Map<string, Fonte>): Fonte {
   const ja = cache.get(id);
   if (ja) return ja;
@@ -140,7 +204,7 @@ function fonteDe(objs: ObjetosComuns, id: string, cache: Map<string, Fonte>): Fo
   const nome = String(f.name ?? f.loadedName ?? id);
   let descida = nome in DESCIDA_PADRAO ? DESCIDA_PADRAO[nome] : num(f.descent);
   if (descida > 0) descida = -descida;
-  const fonte: Fonte = { nome, descida, matriz, vertical: f.vertical === true };
+  const fonte: Fonte = { nome, descida, matriz, vertical: f.vertical === true, mupdf: metricaMupdf(nome, f) };
   cache.set(id, fonte);
   return fonte;
 }
@@ -163,6 +227,12 @@ function interpretar(
 
   const dx0 = r === 0 ? x0 : 0;
   const dtopo = r === 0 ? -y0 : 0;
+  // A matriz do glifo no espaço do dispositivo do MuPDF: [tamanho × escala, 0, 0, tamanho, 0, Ts] ×
+  // a do pdfminer, com o y virado para baixo e a mesma origem dos caracteres.
+  const glifoMupdf = (m: Matriz, tamanho: number, escala: number, elevacao: number, avanco: number, fonte: Fonte): GlifoMupdf => {
+    const [a, b, c, d, e, f] = multiplicar([tamanho * escala, 0, 0, tamanho, 0, elevacao], m);
+    return { trm: [a, -b, c, -d, e + dx0, altura - f + dtopo], avanco, subida: fonte.mupdf[0], descida: fonte.mupdf[1] };
+  };
   const fontes = new Map<string, Fonte>();
   const caracteres: Caractere[] = [];
 
@@ -222,6 +292,7 @@ function interpretar(
         upright: a * d * escala > 0 && b * c <= 0,
         size: fonte.vertical ? cx1 - cx0 : cy1 - cy0,
         fontname: fonte.nome,
+        mupdf: glifoMupdf(m, tamanho, escala, elevacao, larguraDoTexto, fonte),
       });
       if (fonte.vertical) y += avanco;
       else x += avanco;

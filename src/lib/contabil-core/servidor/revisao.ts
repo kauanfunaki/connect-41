@@ -96,7 +96,7 @@ const json = (v: unknown) => v as Prisma.InputJsonValue;
 // ─── Leituras ───────────────────────────────────────────────────────────────
 
 /** `_transacoes`: o extrato vivo da conta no período, na ordem do papel do banco. */
-async function lerExtrato(db: Db, tenantId: string, empresaId: string, agenciaId: string, inicio: string, fim: string): Promise<TransacaoDaRevisao[]> {
+export async function lerExtrato(db: Db, tenantId: string, empresaId: string, agenciaId: string, inicio: string, fim: string): Promise<TransacaoDaRevisao[]> {
   const lidas = await db.coreTransacao.findMany({
     where: { tenantId, empresaId, agenciaId, deletedAt: null, data: { gte: dataDoDia(inicio), lte: dataDoDia(fim) } },
     select: {

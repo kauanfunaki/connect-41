@@ -71,7 +71,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | B1 | `feat/contabil-core-conciliacao-motores` | Motores puros com gabarito: leitores do Razão (planilha e PDF) e do Razão de apoio, SISPAG, extrato detalhado, cruzamento e composição dos lotes do SISPAG. Sem tela e sem migration. |
 | B2 | `feat/contabil-core-conciliacao-tela` | Conciliação de ponta a ponta: as três conferências, a aba "Conciliação" e o relatório em planilha. |
 | B3 | `feat/contabil-core-conciliacao-revisao` | Revisão manual salva (decisões e vínculos com versão). Migration. |
-| B4 | — | Conferência do financeiro: documentos, análises salvas e sugestões. Migration. |
+| B4 | `feat/contabil-core-conciliacao-financeiro` | Conferência do financeiro: documentos, análises salvas e sugestões. Migration. |
 | B5 | — | As tabelas do Bloco B na carga (espelho). |
 
 ### Fase B1: os motores
@@ -177,6 +177,85 @@ Divergências da B3:
   - **Acréscimo "Revisar esta pendência":** em cada pendência, abre a revisão com as linhas do extrato dela já marcadas. O original tinha o parâmetro (`extratoInicialIds`), mas nenhum botão o usava.
   - **Revisão que virou histórico:** o editor e o envio de Razão de apoio ficam ocultos; o original os mostrava desabilitados. Desfazer um vínculo continua permitido, como lá.
 
+### Fase B4: a conferência do financeiro
+
+| Onde | Porte de |
+|---|---|
+| `conciliacao/financeiro.ts` (puro) | as partes de `FinanceiroService` sem banco: `_valor`, `_nome`, `_banco_compativel`, `_linha`, `_identidade_extrato`, `_limites`, `_validar_snapshot`, `confirmar_empresa`, o snapshot da criação, a incorporação de cada tipo de documento (financeiro, SISPAG, Razão e extrato detalhado), `_validar_vinculo`, o lote de sugestões e a conversão para a tela |
+| `servidor/financeiro.ts` | `FinanceiroService`: criar, listar, obter, renomear, excluir, adicionar documento, baixar o original, sugestões, vincular, vincular sugestões e desfazer, cada escrita numa transação |
+| `servidor/originaisFinanceiro.ts` | os originais em disco (o original guardava os bytes no banco) |
+| `entradasFinanceiro.ts` | `AnaliseCreate`, `FinanceiroVinculoCreate`, `FinanceiroSugestoesLote`, `FinanceiroDesfazer` e, da B3, `NomeConciliacao` e `ExclusaoConciliacao` |
+| migration `20261112180000_contabil_core_conciliacao_financeiro` | `0041_financeiro_manual` e `0044_financeiro_razao_sispag`: `core_financeiro_analises`, `core_financeiro_documentos` e `core_financeiro_vinculos`, com as sete checagens como CHECK |
+
+- **O banco guarda o JSON do original.** `snapshot` (`fontes`, `linhas`, `titulos_abertos`, `avisos`), `financeiroIds` e `comparacaoIds` têm as chaves e os valores do `model_dump(mode="json")`, com o dinheiro como o texto do `Decimal` ("-350.00"). A carga (B5) copia sem conversão. O `extrato_hash` usa o mesmo `hashJson` da B3, então os hashes gravados pelo original continuam valendo. A conversão para a tela (`financeiroTipos.ts`, camelCase) fica no servidor.
+- **Os originais ficam em disco**, em `storage/contabil-core/financeiro/<tenantId>/<id do documento>.<ext>`. A linha guarda nome, tipo, SHA-256, tipo de mídia, tamanho e a chave (`storageKey`).
+  - O arquivo é gravado dentro da transação, depois de a versão avançar, e apagado se a transação não vingar.
+  - O download confere tenant, empresa, análise viva e documento antes de ler o disco. A chave tem o formato conferido e o tenant no começo.
+  - A exclusão da empresa lista os originais dentro da transação (`arquivosDaEmpresa`, pasta `contabil-core/financeiro`) e os apaga depois do commit, como os da Revisão do fechamento. A exclusão lógica da análise não apaga o arquivo, como no original.
+- **Unicidade:** a de (análise, hash do arquivo) é total no original e continua como índice único comum. Não há `chaveAtiva`.
+- **Versão otimista:** toda escrita é um `updateMany` que exige a versão vista e a análise viva. Se outra pessoa mudou antes, nada é gravado e a recusa é `VERSAO_DESATUALIZADA`. O envio de documento confere a versão também antes de ler o arquivo, como o original ("A análise mudou. Atualize a tela.").
+- **Leitores:** o serviço lê o documento pelo leitor do tipo (`lerFinanceiro`, `lerSispag`, `lerRazaoDoArquivo`, `lerExtratoDetalhado`), depois de `validarConteudo`. A recusa de um leitor vira a frase dele, como a rota do original fazia. As sugestões são as de `sugerir` (`sugestoesFinanceiro.ts`).
+- **Auditoria:** a rota registra. Cada escrita devolve `{ analise, auditoria }` com os mesmos dados do `_auditar` do original. As ações estão em `ACOES_DO_FINANCEIRO`:
+
+  | Ação no Connect | No original |
+  |---|---|
+  | `contabil.core.financeiro.analise.criada` | `financeiro.analise_criada` |
+  | `contabil.core.financeiro.analise.renomeada` | `financeiro.analise_renomeada` |
+  | `contabil.core.financeiro.analise.excluida` | `financeiro.analise_excluida` |
+  | `contabil.core.financeiro.documento.adicionado` | `financeiro.documento_adicionado` |
+  | `contabil.core.financeiro.vinculo.confirmado` | `financeiro.vinculo_criado` |
+  | `contabil.core.financeiro.vinculos.confirmados` | `financeiro.vinculo_criado`, uma por sugestão do lote |
+  | `contabil.core.financeiro.vinculo.desfeito` | `financeiro.vinculo_desfeito` |
+- **Gabarito:** `gabarito_financeiro_servico.py` grava as chamadas de criar, adicionar documento, vincular e vincular sugestões da suíte do original, mais casos inventados para cada ramo, e as chamadas diretas de `_nome`, `_valor`, `_banco_compativel` e dos validadores. Ao todo, 858 casos, todos iguais: 204 da suíte (68 criações, 87 documentos, 46 vínculos e 3 lotes), 564 inventados e 90 chamadas diretas e de validação, com 408 recusas.
+  - A saída sai do serviço original rodando num SQLite montado só com a entrada gravada. Os leitores e as sugestões são trocados pela saída gravada, para o gabarito não depender do porte deles, que têm gabarito próprio.
+  - Os bytes dos arquivos não vão para o gabarito: o banco montado recebe bytes de enchimento do mesmo tamanho.
+  - O plugin confere que esse banco montado repete a suíte de verdade, com os bytes reais.
+  - Três chamadas da suíte ficam de fora por tamanho (os testes de limite com 600 mil caracteres por linha e 800 transações com 500 ideogramas). Os mesmos ramos estão nos inventados, com limites pequenos.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-financeiro.ts`, com 72 conferências.
+  - Gera planilhas inventadas dos quatro tipos e confere o reenvio recusado e o original baixado igual ao enviado e confinado à empresa, ao tenant e à análise.
+  - Percorre os vínculos (o aceito, o reuso no mesmo tipo, a mesma linha em outro tipo, o sentido misturado, a diferença sem observação), as sugestões e o lote, a versão desatualizada, desfazer, renomear e excluir.
+  - Confere os CHECKs do MySQL e o extrato desfeito: só as conferências com o Extrato param.
+  - No fim, a exclusão da empresa apaga as três tabelas e os originais em disco.
+
+**Leitores e sugestões:**
+
+| Onde | Porte de |
+|---|---|
+| `conciliacao/financeiroDocumentos.ts` (servidor) | `financeiro_documentos.py`: `ler_financeiro` e `validar_conteudo` (planilhas do financeiro com o total declarado conferido, e o PDF de conciliação lido pelas coordenadas dos caracteres, com saldos e totais conferidos) |
+| `conciliacao/financeiroComum.ts`, `financeiroTitulos.ts` e `financeiroOmie.ts` (puros) | `_valor`, `_texto` e `_data_planilha`, mais `financeiro_titulos.py` e `financeiro_omie.py` |
+| `conciliacao/sugestoesFinanceiro.ts` | `sugestoes_financeiro.py`: `sugerir`, `identidade` e `normalizar`. Recebe as linhas e os vínculos do snapshot (snake_case) e devolve o id de cada sugestão com o mesmo sha256 do original |
+| `pdf/mupdf.ts` | o texto e as palavras do PyMuPDF, que o original usa para ler o Omie |
+
+- **Gabarito:** `gabarito_financeiro.py` registra 1.737 chamadas da suíte do original, mais documentos inventados, todas iguais:
+  - 961 dos leitores, cobrindo todas as frases de recusa;
+  - 776 das sugestões;
+  - mais 100 PDFs comparados com o PyMuPDF (o mesmo texto, e as caixas das palavras a menos de 0,02 ponto).
+- **Arquivos reais (só contagens, nada no git):** 121 PDFs e planilhas de Downloads, todos iguais ao original, inclusive nas recusas:
+  - 9 documentos lidos, entre eles um Omie de 85 páginas com 4.662 movimentos e um saldo conciliado de 19 páginas;
+  - 112 recusados com a mesma frase.
+- **Para gerar o gabarito de novo:** o `GABARITO_NOMES` (fora do git) precisa também dos nomes da suíte de integração do original, que aparecem dentro das planilhas de Razão e SISPAG.
+
+Divergências da B4:
+
+- **Original em disco, não no banco.** O original guardava os bytes em `financeiro_documentos.conteudo`, na mesma transação. Aqui o arquivo é gravado na transação e apagado se ela falhar. Se o processo cair entre gravar o arquivo e o commit, sobra um arquivo órfão que ninguém vê. A carga (B5) terá de tirar os bytes de `conteudo` e gravá-los em disco.
+- **Auditoria do lote:** o original gravava uma auditoria `financeiro.vinculo_criado` por sugestão confirmada. Aqui é um registro só, `vinculos.confirmados`, com a lista dos mesmos dados (`{ vinculos: [...] }`).
+- **Códigos de erro:** os `ConflictError` sem código do original viram `VERSAO_DESATUALIZADA` (versão), `EXTRATO_ALTERADO` (o extrato mudou) ou `CONFLITO` (arquivo repetido, movimento já vinculado, sugestão mudou). As frases são as mesmas.
+- **Tipo de mídia:** o original quebrava (500) quando o nome limpo não terminava em .pdf, .xls ou .xlsx. Aqui fica o tipo de mídia enviado. Na prática, `validarConteudo` recusa esses nomes antes.
+- **Exclusão:** devolve `{ analise: null, auditoria }`; o original respondia 204.
+- **Empresa de outro tenant e conta contábil:** a empresa é conferida antes de tudo, com o "não encontrada" do Connect. A conta contábil vinculada é lida só dentro da empresa; o original lia por id e conferia a empresa depois, com a mesma recusa.
+- **Versão e mensagens de formato:** como na B3, a versão é inteiro de 1 até o maior `INT`, e as recusas genéricas do pydantic viram frases em português.
+- **Nome imprimível:** `str.isprintable()` vira as categorias Unicode do JavaScript. Num caractere atribuído só na versão nova do Unicode (o Node tem uma mais nova que o Python), o resultado pode mudar.
+- **Ordem dos vínculos:** por criação e id, com o instante em milissegundos.
+- **Nomes de colunas:** `criado_por` virou `criadoPorId` e `usuario_id` (do vínculo) virou `confirmadoPorId`; a carga (B5) mapeia.
+- **Omie pelo PyMuPDF imitado:** o original lê o Omie com o PyMuPDF. Aqui, `pdf/mupdf.ts` reproduz o texto e as palavras dele a partir dos mesmos caracteres do porte do pdfplumber. As diferenças conhecidas ficam fora desse layout: texto vertical, escrita da direita para a esquerda, glifo sem Unicode, métrica de fonte embutida (vem do pdf.js) e fonte não embutida fora das 14 padrão (aproximada pela Helvetica).
+- **Tempo-limite do Omie (30 s):** começa antes de o pdf.js interpretar o arquivo, então essa interpretação entra na conta.
+- **`validarConteudo` é assíncrona:** contar as páginas do PDF passa pelo pdf.js.
+- **Tela:**
+  - **Onde fica:** é a segunda vista da aba "Conciliação" (`?vista=financeiro`), ao lado de "Razão × extrato", como a terceira aba da Conciliação Bancária do original.
+  - **Somas:** usam `Dec`, então não existe mais o aviso "Valor fora do limite".
+  - **Desfazer:** o motivo é pedido na própria linha, como na B3.
+  - **Ao trocar de empresa,** a tela volta para "Razão × extrato".
+
 ## Arquitetura no Connect
 
 ### Módulo
@@ -241,6 +320,9 @@ Todas as tabelas novas têm prefixo `core_` e `tenantId`. Nenhuma tabela existen
 | `core_exportacoes` | `export_jobs` | histórico do que foi exportado |
 | `core_conciliacao_revisoes` | `conciliacao_revisoes` | `snapshot` e `relatorio` em JSON, com as chaves do original; `agenciaId` sem chave estrangeira |
 | `core_conciliacao_vinculos` | `conciliacao_vinculos` | `usuario_id` vira `confirmadoPorId` |
+| `core_financeiro_analises` | `financeiro_analises` | `snapshot` em JSON, com as chaves do original; `agenciaId` sem chave estrangeira; `criado_por` vira `criadoPorId` |
+| `core_financeiro_documentos` | `financeiro_documentos` | sem os bytes: o original fica em disco (`storageKey`) |
+| `core_financeiro_vinculos` | `financeiro_vinculos` | `usuario_id` vira `confirmadoPorId` |
 
 **Tipos:**
 - **Identificadores:** VARCHAR(191) com o UUID em minúsculas e com hífens, igual ao `str(uuid)` do Python.
