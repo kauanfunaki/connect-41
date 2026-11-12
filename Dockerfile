@@ -17,6 +17,11 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Heap do build: desde os merges de 12/11/2026 o `next build` passa dos ~4 GB
+# padrão do Node e o worker morre com SIGABRT ("JavaScript heap out of memory").
+# O CI já subiu para 8 GB no mesmo dia (.github/workflows/ci.yml). Só no estágio
+# de build: o runtime não herda esta variável.
+ENV NODE_OPTIONS=--max-old-space-size=6144
 # "build" roda `prisma generate && next build` (ver package.json)
 # NEXT_DEPLOYMENT_ID muda a cada build: a aba aberta durante um deploy compara o
 # próprio ID com o do servidor (header x-deployment-id) e recarrega inteira, em vez
