@@ -131,7 +131,7 @@ const TIPO_DA_RUBRICA: Record<RubricaEsocial["tipo"], string> = { PROVENTO: "1",
 
 // ─── Montagem comum ─────────────────────────────────────────────────────────
 
-function ideEmpregador(cnpj: string): No | null {
+export function ideEmpregador(cnpj: string): No | null {
   return el("ideEmpregador", [el("tpInsc", "1"), el("nrInsc", raizDoCnpj(cnpj))]);
 }
 
@@ -139,11 +139,11 @@ function ideEventoDeTabela(): No | null {
   return el("ideEvento", [el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]);
 }
 
-function envelope(tipo: TipoDeEvento, id: string, corpo: (No | null)[]): string {
+export function envelope(tipo: TipoDeEvento, id: string, corpo: (No | null)[]): string {
   return serializar(el("eSocial", [el(TAG_DO_EVENTO[tipo], corpo, { Id: id })], { xmlns: namespaceDoEvento(tipo) }));
 }
 
-function pendenciasDoEmpregador(e: EmpregadorEsocial): Pendencia[] {
+export function pendenciasDoEmpregador(e: EmpregadorEsocial): Pendencia[] {
   const p: Pendencia[] = [];
   if (!cnpjValido(e.cnpj)) p.push({ onde: "empresa", texto: "CNPJ da empresa inválido ou ausente no cadastro.", link: null, bloqueia: true });
   return p;

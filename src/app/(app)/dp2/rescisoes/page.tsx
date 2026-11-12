@@ -20,6 +20,9 @@ import { lerInteiro, lerNumero } from "@/lib/dp2/entrada";
 import { tabelasDaCompetencia } from "@/lib/dp2/tabelas";
 import { MOTIVO_LABEL, type MotivoCanonico } from "@/lib/rescisao/motivos";
 import { abrirTelaDeEmpresaDoDp2, brl } from "@/lib/dp2/tela";
+import { podeNoModulo } from "@/lib/auth/modulo";
+import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { gerarDesligamentoAction } from "../actions";
 
 type Params = {
   empresa?: string;
@@ -70,6 +73,7 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
   const saldoFgts = lerNumero(params.saldoFgts ?? "");
   const adiantado = lerNumero(params.adiantado ?? "") ?? 0;
 
+  const comEsocial = await podeNoModulo(tela.ctx, "dp2_esocial", "agir");
   let resultado: React.ReactNode = null;
   if (pessoa?.dp2Vinculo && desligamento) {
     if (!pessoa.admissionDate) {
@@ -113,6 +117,18 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
               liquido={c.liquido}
               alertas={c.alertas}
             />
+            {comEsocial && tela.podeAgir && (
+              <FormularioDoDp2 acao={gerarDesligamentoAction} rotulo="Gerar o desligamento no eSocial (S-2299)" rotuloEnviando="Gerando…" variante="secondary" className="mt-5">
+                <input type="hidden" name="personId" value={pessoa.id} />
+                <input type="hidden" name="desligamento" value={desligamento} />
+                <input type="hidden" name="motivo" value={motivo} />
+                <input type="hidden" name="aviso" value={aviso} />
+                <input type="hidden" name="vencidos" value={String(vencidos)} />
+                <input type="hidden" name="faltas" value={String(faltas)} />
+                <input type="hidden" name="saldoFgts" value={params.saldoFgts ?? ""} />
+                <input type="hidden" name="adiantado" value={params.adiantado ?? ""} />
+              </FormularioDoDp2>
+            )}
           </Secao>
         );
       }

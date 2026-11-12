@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 // eventos ainda não estão assinados.
 export async function GET(req: NextRequest) {
   const empresa = req.nextUrl.searchParams.get("empresa") ?? "";
-  const grupo = req.nextUrl.searchParams.get("grupo") === "3" ? "3" : "1";
+  const pedido = req.nextUrl.searchParams.get("grupo");
+  const grupo = pedido === "3" ? "3" : pedido === "2" ? "2" : "1";
   const acesso = await acessoAoEsocial(empresa);
   if ("erro" in acesso) return NextResponse.json({ error: acesso.erro }, { status: acesso.status });
   const prisma = getPrisma();

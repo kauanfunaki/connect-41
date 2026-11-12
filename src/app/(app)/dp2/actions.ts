@@ -18,7 +18,9 @@ import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/
 import { lerComparativo } from "@/lib/dp2/comparativo";
 import { lerNumero, lerInteiro } from "@/lib/dp2/entrada";
 import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
-import { gerarPeriodicos, gerarTabelas } from "@/lib/dp2/esocial/servidor";
+import { gerarAdmissao, gerarAfastamento, gerarAlteracao, gerarDesligamento, gerarPeriodicos, gerarTabelas } from "@/lib/dp2/esocial/servidor";
+import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
+import { MOTIVO_LABEL, type MotivoCanonico } from "@/lib/rescisao/motivos";
 
 type Acesso = { ctx: AuthContext; tenantId: string; userId: string };
 
@@ -323,6 +325,18 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,
     matricula: texto(fd, "matricula").slice(0, 30) || null,
+    dadosEsocial: lerDadosEsocial({
+      sexo: texto(fd, "esocial_sexo"),
+      racaCor: texto(fd, "esocial_racaCor"),
+      estadoCivil: texto(fd, "esocial_estadoCivil"),
+      grauInstrucao: texto(fd, "esocial_grauInstrucao"),
+      codigoMunicipio: texto(fd, "esocial_codigoMunicipio"),
+      cbo: texto(fd, "esocial_cbo"),
+      tipoContrato: texto(fd, "esocial_tipoContrato"),
+      dataTermino: texto(fd, "esocial_dataTermino"),
+      tipoJornada: texto(fd, "esocial_tipoJornada"),
+      descricaoJornada: texto(fd, "esocial_descricaoJornada"),
+    }),
     categoria: /^\d{3}$/.test(texto(fd, "categoria")) ? texto(fd, "categoria") : marcado(fd, "aprendiz") ? "103" : "101",
   };
   await prisma.dp2Vinculo.upsert({ where: { personId: pessoa.id }, create: { tenantId: a.tenantId, personId: pessoa.id, ...dados }, update: dados });
@@ -540,6 +554,7 @@ export async function salvarConvencaoAction(_: EstadoDoDp2, fd: FormData): Promi
   const data = {
     nome: nome.slice(0, 160),
     sindicato: texto(fd, "sindicato").slice(0, 160) || null,
+    cnpjSindicato: texto(fd, "cnpjSindicato").replace(/\D/g, "").slice(0, 14) || null,
     dataBase: dataBase && dataBase >= 1 && dataBase <= 12 ? dataBase : null,
     vigenciaInicio: texto(fd, "vigenciaInicio") || null,
     vigenciaFim: texto(fd, "vigenciaFim") || null,
@@ -617,4 +632,124 @@ export async function gerarPeriodicosEsocialAction(_: EstadoDoDp2, fd: FormData)
   });
   revalidatePath("/dp2/esocial");
   return { ok: true, texto: `${r.total} evento(s) periódico(s): ${r.prontos} pronto(s), ${r.comPendencia} com pendência.` };
+}
+
+// ─── eSocial não periódicos (fase 3b, 12/11/2026) ───────────────────────────
+
+/** A pessoa do evento: do escritório, de uma empresa cliente, dentro da faixa. */
+async function pessoaDoEvento(a: Acesso, personId: string): Promise<{ id: string; name: string; companyId: string } | string> {
+  const p = await getPrisma().person.findFirst({
+    where: { id: personId, tenantId: a.tenantId, isInternal: false },
+    select: { id: true, name: true, currentCompanyId: true },
+  });
+  if (!p?.currentCompanyId) return "Colaborador não encontrado.";
+  const recusa = await recusaDoFoco(a.ctx, [p.currentCompanyId]);
+  if (recusa) return recusa;
+  return { id: p.id, name: p.name, companyId: p.currentCompanyId };
+}
+
+function respostaDoEvento(evento: string, nome: string, r: { ok: true; prontos: number } | { ok: false; erro: string }): EstadoDoDp2 {
+  if (!r.ok) return erro(r.erro);
+  revalidatePath("/dp2/esocial");
+  return { ok: true, texto: r.prontos ? `${evento} de ${nome} pronto.` : `${evento} de ${nome} gerado com pendência: veja o que falta na tela do eSocial.` };
+}
+
+export async function gerarAdmissaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const r = await gerarAdmissao(a.tenantId, p.id, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_admissao",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name },
+  });
+  return respostaDoEvento("S-2200", p.name, r);
+}
+
+export async function gerarAlteracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const data = texto(fd, "dataAlteracao");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe a data em que a alteração vale.");
+  const r = await gerarAlteracao(a.tenantId, p.id, data, texto(fd, "descricao") || null, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_alteracao",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, data },
+  });
+  return respostaDoEvento("S-2206", p.name, r);
+}
+
+export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const motivo = (texto(fd, "motivoOutro") || texto(fd, "motivo")).replace(/\D/g, "").padStart(2, "0").slice(-2);
+  const inicio = texto(fd, "inicio");
+  const fim = texto(fd, "fim");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio)) return erro("Informe o início do afastamento.");
+  const r = await gerarAfastamento(
+    a.tenantId,
+    p.id,
+    { motivo, inicio, fim: /^\d{4}-\d{2}-\d{2}$/.test(fim) ? fim : null, observacao: texto(fd, "observacao") || null },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_afastamento",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, motivo, inicio },
+  });
+  return respostaDoEvento("S-2230", p.name, r);
+}
+
+const MOTIVOS_DE_RESCISAO = Object.keys(MOTIVO_LABEL) as MotivoCanonico[];
+
+/** O S-2299 com os mesmos parâmetros do cálculo da tela de Rescisões. */
+export async function gerarDesligamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return erro("Ligue o módulo eSocial do DP 2 para gerar o desligamento.");
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const data = texto(fd, "desligamento");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe o último dia trabalhado.");
+  const motivo = texto(fd, "motivo") as MotivoCanonico;
+  if (!MOTIVOS_DE_RESCISAO.includes(motivo)) return erro("Escolha o motivo do desligamento.");
+  const aviso = texto(fd, "aviso") === "TRABALHADO" ? "TRABALHADO" : texto(fd, "aviso") === "DISPENSADO" ? "DISPENSADO" : "INDENIZADO";
+  const r = await gerarDesligamento(
+    a.tenantId,
+    p.id,
+    {
+      motivo,
+      data,
+      aviso,
+      vencidos: Math.max(0, Math.min(2, lerInteiro(texto(fd, "vencidos")) ?? 0)),
+      faltas: lerInteiro(texto(fd, "faltas")) ?? 0,
+      saldoFgts: lerNumero(texto(fd, "saldoFgts")),
+      adiantado: lerNumero(texto(fd, "adiantado")) ?? 0,
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_desligamento",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, data, motivo },
+  });
+  return respostaDoEvento("S-2299", p.name, r);
 }

@@ -173,7 +173,7 @@ export async function colaboradoresDaCompetencia(tenantId: string, companyId: st
 export async function colaboradoresDaEmpresa(tenantId: string, companyId: string) {
   return getPrisma().person.findMany({
     where: { tenantId, currentCompanyId: companyId, isInternal: false, type: "COLABORADOR" },
-    select: { id: true, name: true, cpf: true, active: true, admissionDate: true, dismissalDate: true, currentSalary: true, dp2Vinculo: true },
+    select: { id: true, name: true, cpf: true, active: true, admissionDate: true, dismissalDate: true, currentSalary: true, education: true, dp2Vinculo: true },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
 }

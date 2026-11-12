@@ -418,6 +418,10 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.convencao_salva": e("salvou a convenção coletiva do DP 2"),
   "folha.esocial_tabelas": c("gerou os eventos de tabela do eSocial no DP 2"),
   "folha.esocial_periodicos": c("gerou os eventos periódicos do eSocial no DP 2"),
+  "folha.esocial_admissao": c("gerou o evento de admissão (S-2200) no DP 2"),
+  "folha.esocial_alteracao": c("gerou o evento de alteração contratual (S-2206) no DP 2"),
+  "folha.esocial_afastamento": c("gerou o evento de afastamento (S-2230) no DP 2"),
+  "folha.esocial_desligamento": c("gerou o evento de desligamento (S-2299) no DP 2"),
 
   // ── Recrutamento ───────────────────────────────────────────────────────────
   "vaga.acesso_recrutadores": e("mudou quem vê a vaga"),

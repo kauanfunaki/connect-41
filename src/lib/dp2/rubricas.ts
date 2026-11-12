@@ -32,7 +32,13 @@ export type PapelDaRubrica =
   | "DECIMO_SEGUNDA"
   | "DECIMO_ADIANTADO"
   | "INSS_DECIMO"
-  | "IRRF_DECIMO";
+  | "IRRF_DECIMO"
+  // Rescisão (12/11/2026, eSocial S-2299): as verbas que só existem no desligamento.
+  | "AVISO_INDENIZADO"
+  | "AVISO_DESCONTO"
+  | "FERIAS_VENCIDAS_INDENIZADAS"
+  | "FERIAS_PROPORC_INDENIZADAS"
+  | "TERCO_FERIAS_INDENIZADAS";
 
 /** A rubrica como o motor a recebe. */
 export type RubricaDoMotor = {
@@ -109,6 +115,11 @@ const PADRAO: Padrao[] = [
   { codigo: "062", nome: "Adiantamento do 13º", tipo: "DESCONTO", papel: "DECIMO_ADIANTADO", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "063", nome: "INSS sobre o 13º", tipo: "DESCONTO", papel: "INSS_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "064", nome: "IRRF sobre o 13º", tipo: "DESCONTO", papel: "IRRF_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "070", nome: "Aviso prévio indenizado", tipo: "PROVENTO", papel: "AVISO_INDENIZADO", lancamento: "VALOR", incide: "SO_FGTS" },
+  { codigo: "071", nome: "Desconto do aviso prévio", tipo: "DESCONTO", papel: "AVISO_DESCONTO", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "072", nome: "Férias vencidas indenizadas", tipo: "PROVENTO", papel: "FERIAS_VENCIDAS_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "073", nome: "Férias proporcionais indenizadas", tipo: "PROVENTO", papel: "FERIAS_PROPORC_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "074", nome: "1/3 sobre férias indenizadas", tipo: "PROVENTO", papel: "TERCO_FERIAS_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "090", nome: "FGTS do mês", tipo: "INFORMATIVA", papel: "FGTS", lancamento: "VALOR", incide: "NENHUMA" },
 ];
 
