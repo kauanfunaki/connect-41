@@ -13,7 +13,9 @@ import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canManageSector } from "@/lib/auth/context";
 import { listarRubricas } from "@/lib/dp2/servidor";
 import { NOME_DO_LANCAMENTO, NOME_DO_TIPO, type LancamentoDaRubrica, type TipoDaRubrica } from "@/lib/dp2/rubricas";
-import { salvarRubricaAction } from "../actions";
+import { contasDaFolha } from "@/lib/dp2/saidas";
+import { CAMPOS_DAS_CONTAS } from "@/lib/dp2/contabilizacao";
+import { salvarContasDaFolhaAction, salvarRubricaAction } from "../actions";
 
 const sim = (v: boolean) => (v ? "sim" : "—");
 
@@ -25,7 +27,7 @@ const sim = (v: boolean) => (v ? "sim" : "—");
 export default async function RubricasDoDp2({ searchParams }: { searchParams: Promise<{ rubrica?: string; nova?: string }> }) {
   const params = await searchParams;
   const { ctx, setor } = await abrirTelaDoModulo("dp2_rubricas");
-  const rubricas = await listarRubricas(ctx.tenantId);
+  const [rubricas, contas] = await Promise.all([listarRubricas(ctx.tenantId), contasDaFolha(ctx.tenantId)]);
   const podeGerir = canManageSector(ctx, setor);
   const aberta = params.rubrica ? rubricas.find((r) => r.id === params.rubrica) : undefined;
   const nova = params.nova === "1" && !aberta;
@@ -152,6 +154,23 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
           </Secao>
         )}
       </div>
+      {podeGerir && (
+        <Secao
+          className="mt-5"
+          titulo="Contas da folha"
+          apoio="Para onde vão o líquido, os encargos da empresa e as provisões nos lançamentos contábeis. As contas de cada provento e desconto ficam na própria rubrica (débito e crédito)."
+        >
+          <FormularioDoDp2 acao={salvarContasDaFolhaAction} rotulo="Salvar contas">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {CAMPOS_DAS_CONTAS.map((c) => (
+                <CampoForm key={c.chave} label={c.rotulo} htmlFor={c.chave} helper={c.ajuda}>
+                  <Input id={c.chave} name={c.chave} maxLength={40} defaultValue={contas[c.chave]} />
+                </CampoForm>
+              ))}
+            </div>
+          </FormularioDoDp2>
+        </Secao>
+      )}
     </PageContainer>
   );
 }

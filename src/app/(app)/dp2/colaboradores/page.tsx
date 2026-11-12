@@ -172,6 +172,38 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                     </Select>
                   </CampoForm>
                 </div>
+
+                <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-2">Conta para o pagamento</h3>
+                <div className="grid gap-4 grid-cols-[90px_1fr_70px] sm:grid-cols-[90px_1fr_70px_1.3fr_70px]">
+                  <CampoForm label="Banco" htmlFor="bancoCodigo" helper="Código, ex.: 341">
+                    <Input id="bancoCodigo" name="bancoCodigo" inputMode="numeric" maxLength={3} defaultValue={v?.bancoCodigo ?? (aberta.bankName?.match(/\d{3}/)?.[0] ?? "")} />
+                  </CampoForm>
+                  <CampoForm label="Agência" htmlFor="agencia">
+                    <Input id="agencia" name="agencia" inputMode="numeric" maxLength={10} defaultValue={v?.agencia ?? (aberta.bankAgency?.replace(/\D/g, "") ?? "")} />
+                  </CampoForm>
+                  <CampoForm label="Dígito" htmlFor="agenciaDigito">
+                    <Input id="agenciaDigito" name="agenciaDigito" maxLength={2} defaultValue={v?.agenciaDigito ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Conta" htmlFor="conta">
+                    <Input id="conta" name="conta" inputMode="numeric" maxLength={20} defaultValue={v?.conta ?? (aberta.bankAccount?.replace(/\D/g, "") ?? "")} />
+                  </CampoForm>
+                  <CampoForm label="Dígito" htmlFor="contaDigito">
+                    <Input id="contaDigito" name="contaDigito" maxLength={2} defaultValue={v?.contaDigito ?? ""} />
+                  </CampoForm>
+                </div>
+                <CampoForm label="Tipo de conta" htmlFor="tipoConta" className="mt-4 max-w-xs">
+                  <Select id="tipoConta" name="tipoConta" defaultValue={v?.tipoConta ?? (/poup/i.test(aberta.bankAccountType ?? "") ? "POUPANCA" : "CORRENTE")}>
+                    <option value="CORRENTE">Conta corrente</option>
+                    <option value="POUPANCA">Poupança</option>
+                  </Select>
+                </CampoForm>
+                {!v && aberta.bankName && (
+                  <p className="text-fs-2 text-fg-muted mt-2">
+                    No cadastro da pessoa: {aberta.bankName}
+                    {aberta.bankAgency ? `, agência ${aberta.bankAgency}` : ""}
+                    {aberta.bankAccount ? `, conta ${aberta.bankAccount}` : ""}. Confira o código do banco e os dígitos.
+                  </p>
+                )}
                 <div className="flex flex-col gap-2 mt-4">
                   <Checkbox id="periculosidade" name="periculosidade" label="Periculosidade (30% do salário)" defaultChecked={v?.periculosidade ?? false} />
                   <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />
