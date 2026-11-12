@@ -1064,6 +1064,26 @@ export async function sendAprovacaoPendenteEmail(input: SendAprovacaoPendenteEma
   return enviarAvisoIndividual(input.tenantId, "sendAprovacaoPendenteEmail", mensagens);
 }
 
+/**
+ * O e-mail diário de vencimentos do Societário (12/11/2026), o que o Radar
+ * Societário mandava. É interno — vai para a lista da tela de Licenças, não
+ * para o cliente —, por isso sai na moldura do Connect, sem a marca do portal.
+ * Um e-mail por endereço, como os outros avisos.
+ */
+export async function sendVencimentosDoSocietarioEmail(input: {
+  tenantId: string;
+  para: string[];
+  assunto: string;
+  corpoHtml: string;
+}): Promise<ResultadoDoAviso> {
+  const html = emailShell(input.corpoHtml, "Societário");
+  return enviarAvisoIndividual(
+    input.tenantId,
+    "sendVencimentosDoSocietarioEmail",
+    input.para.map((to) => ({ to, subject: input.assunto, html }))
+  );
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")

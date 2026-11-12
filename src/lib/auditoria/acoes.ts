@@ -487,6 +487,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "license.reactivate": e("reativou uma licença"),
   "license.import": c("importou licenças de uma planilha"),
   "license.import_radar": c("trouxe as licenças do Radar Societário"),
+  "license.aviso_email": e("configurou o e-mail de vencimentos do Societário"),
+  "license.aviso_email_teste": o("enviou um teste do e-mail de vencimentos do Societário"),
 
   // ── Gestão e Comercial ─────────────────────────────────────────────────────
   "gestao.reatribuir": e("trocou o responsável de"),

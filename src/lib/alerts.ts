@@ -1066,6 +1066,9 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
     // Nem esta: a rotina das certidões do trimestre, um lote por passada (28/10/2026).
     ["certidões", () => rotinaDasCertidoes(tenantId)],
+    // O e-mail diário de vencimentos do Societário (12/11/2026), o que o Radar
+    // Societário mandava: uma vez por dia, a partir das 7h, para a lista da tela de Licenças.
+    ["vencimentos por e-mail", async () => (await import("@/lib/societario/avisoDeVencimentoServidor")).enviarVencimentosDoDia(tenantId, today)],
     ["gestão", () => checkItensDaGestao(tenantId, today)],
     ["risco de multa", () => checkObrigacoesEmRiscoDeMulta(tenantId, today)],
     ["protocolo parado", () => checkProtocolosParados(tenantId, today)],

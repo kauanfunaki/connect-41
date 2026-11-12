@@ -9605,6 +9605,21 @@ model License {
   @@map("licenses")
 }
 
+/// O e-mail diário de vencimentos do Societário (12/11/2026), o que o Radar
+/// Societário mandava: licenças a 90, 60 e 30 dias e vencidas, e certidões
+/// positivas, vencendo e vencidas, numa tabela só, para a lista daqui. Os
+/// itens já avisados ficam em `alert_dispatches` (chave VENC_EMAIL:…).
+model SocietarioAvisoPorEmail {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  ligado    Boolean  @default(true)
+  /// ["pessoa@escritorio.com.br", …], já conferidos e sem repetir.
+  emails    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("societario_avisos_por_email")
+}
+
 /// Uma taxa de processo — DAM, taxa de alvará, taxa de vistoria.
 ///
 /// Fica presa ao processo de propósito: **"quanto este ato custou em taxas" é o
