@@ -13,6 +13,7 @@ import { AlternarAgencia, AlternarRegra, CancelarClassificacao, DesfazerImportac
 import { EnvioDeExtrato } from "./EnvioDeExtrato";
 import { ImportarCadastro } from "./ImportarCadastro";
 import { Exportar } from "./Exportar";
+import { Conciliacao } from "./Conciliacao";
 import { Filtros } from "./Filtros";
 import { FormularioDaAgencia, FormularioDaConta, FormularioDaContraparte, FormularioDaRegra } from "./Formularios";
 import { FilaDoNeo, ProcessarNeo } from "./Neo";
@@ -415,6 +416,20 @@ export async function AbaRegistros({ c }: { c: ContextoDaAba }) {
       </div>
     </div>
   );
+}
+
+// ─── Conciliação ──────────────────────────────────────────────────────────
+
+// Razão × extrato (Bloco B, Fase B2, 12/11/2026). Só envia arquivo e mostra o relatório, que não é
+// gravado; por isso a aba nem aparece para quem só lê o módulo (a rota recusa do mesmo jeito).
+export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
+  if (!c.podeAgir) return <Aviso tom="info">A conciliação é de quem opera o Contábil Core. Peça o acesso a quem coordena o setor.</Aviso>;
+  const agencias = await listarAgencias(c.tenantId, c.empresaId);
+  // Inclui as inativas, como o original: o Razão de uma conta encerrada continua conciliável.
+  const opcoesDeConta = agencias.map((a) => ({ value: a.id, label: `${rotuloDaAgencia(a)}${a.ativa ? "" : " (inativa)"}` }));
+  if (opcoesDeConta.length === 0) return <Aviso tom="atencao">Cadastre uma conta bancária em Configurações e importe o extrato dela antes de conciliar.</Aviso>;
+  // A chave zera a tela ao trocar de empresa, como o `useEffect` do original.
+  return <Conciliacao key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} />;
 }
 
 // ─── Configurações ────────────────────────────────────────────────────────
