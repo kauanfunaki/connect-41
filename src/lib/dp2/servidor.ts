@@ -100,11 +100,17 @@ export async function tabelasDoEscritorio(tenantId: string): Promise<VersaoDaTab
 
 // ─── Empresa ────────────────────────────────────────────────────────────────
 
-export type ConfigDaEmpresa = { empresa: EmpresaDoMotor; convencao: ConvencaoDoMotor; convencaoId: string | null; configurada: boolean };
+export type ConfigDaEmpresa = {
+  empresa: EmpresaDoMotor;
+  convencao: ConvencaoDoMotor;
+  convencaoId: string | null;
+  configurada: boolean;
+  esocial: { fpas: string | null; codTercs: string | null; classTrib: string | null } | null;
+};
 
 export async function configDaEmpresa(tenantId: string, companyId: string): Promise<ConfigDaEmpresa> {
   const c = await getPrisma().dp2EmpresaConfig.findFirst({ where: { tenantId, companyId }, include: { convencao: true } });
-  if (!c) return { empresa: { patronalNoDas: false, ratAliquota: 2, fap: 1, terceirosAliquota: 5.8 }, convencao: CONVENCAO_DA_CLT, convencaoId: null, configurada: false };
+  if (!c) return { empresa: { patronalNoDas: false, ratAliquota: 2, fap: 1, terceirosAliquota: 5.8 }, convencao: CONVENCAO_DA_CLT, convencaoId: null, configurada: false, esocial: null };
   return {
     empresa: { patronalNoDas: c.patronalNoDas, ratAliquota: dec(c.ratAliquota), fap: dec(c.fap), terceirosAliquota: dec(c.terceirosAliquota) },
     convencao: c.convencao
@@ -112,6 +118,7 @@ export async function configDaEmpresa(tenantId: string, companyId: string): Prom
       : CONVENCAO_DA_CLT,
     convencaoId: c.convencaoId,
     configurada: true,
+    esocial: { fpas: c.fpas, codTercs: c.codTercs, classTrib: c.classTrib },
   };
 }
 

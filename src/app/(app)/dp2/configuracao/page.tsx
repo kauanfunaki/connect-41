@@ -77,6 +77,18 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                 <Input id="terceirosAliquota" name="terceirosAliquota" inputMode="decimal" defaultValue={fmt(cfg.empresa.terceirosAliquota)} />
               </CampoForm>
             </div>
+            <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-2">eSocial</h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <CampoForm label="FPAS" htmlFor="fpas" helper="3 dígitos, da atividade (ex.: 515 comércio).">
+                <Input id="fpas" name="fpas" inputMode="numeric" maxLength={3} defaultValue={cfg.esocial?.fpas ?? ""} />
+              </CampoForm>
+              <CampoForm label="Código de terceiros" htmlFor="codTercs" helper="4 dígitos (ex.: 0115).">
+                <Input id="codTercs" name="codTercs" inputMode="numeric" maxLength={4} defaultValue={cfg.esocial?.codTercs ?? ""} />
+              </CampoForm>
+              <CampoForm label="Classificação tributária" htmlFor="classTrib" helper="Tabela 8. Vazio: pelo regime (Simples 01/02, MEI 04, demais 99).">
+                <Input id="classTrib" name="classTrib" inputMode="numeric" maxLength={2} defaultValue={cfg.esocial?.classTrib ?? ""} />
+              </CampoForm>
+            </div>
             <div className="mt-4">
               <Checkbox
                 id="patronalNoDas"

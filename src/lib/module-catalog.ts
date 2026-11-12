@@ -559,6 +559,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Pessoas",
   },
   {
+    code: "dp2_esocial",
+    label: "eSocial",
+    sectorCode: "dp2",
+    description: "Os eventos do eSocial da empresa, com as pendências de cadastro",
+    defaultEnabled: false,
+    icon: "Landmark",
+    group: "Operação",
+  },
+  {
     code: "dp2_configuracao",
     label: "Configuração da empresa",
     sectorCode: "dp2",
@@ -1069,6 +1078,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   dp2_ferias:            "/dp2/ferias",
   dp2_decimo:            "/dp2/decimo-terceiro",
   dp2_rescisoes:         "/dp2/rescisoes",
+  dp2_esocial:           "/dp2/esocial",
   dp2_configuracao:      "/dp2/configuracao",
   dp2_tabelas:           "/dp2/tabelas",
   dp2_rubricas:          "/dp2/rubricas",

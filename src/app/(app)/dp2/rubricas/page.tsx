@@ -127,6 +127,17 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                 </>
               )}
               <div className="grid gap-4 sm:grid-cols-3 mt-4">
+                <CampoForm label="Incidência INSS (eSocial)" htmlFor="codIncCP" helper="Tabela 21. Vazio: o Connect sugere.">
+                  <Input id="codIncCP" name="codIncCP" inputMode="numeric" maxLength={2} defaultValue={aberta?.codIncCP ?? ""} />
+                </CampoForm>
+                <CampoForm label="Incidência IRRF (eSocial)" htmlFor="codIncIRRF" helper="Tabela 22. Vazio: o Connect sugere.">
+                  <Input id="codIncIRRF" name="codIncIRRF" inputMode="numeric" maxLength={2} defaultValue={aberta?.codIncIRRF ?? ""} />
+                </CampoForm>
+                <CampoForm label="Incidência FGTS (eSocial)" htmlFor="codIncFGTS" helper="Tabela 23. Vazio: o Connect sugere.">
+                  <Input id="codIncFGTS" name="codIncFGTS" inputMode="numeric" maxLength={2} defaultValue={aberta?.codIncFGTS ?? ""} />
+                </CampoForm>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3 mt-4">
                 <CampoForm label="Natureza eSocial" htmlFor="naturezaEsocial" helper="Tabela 3, 4 dígitos.">
                   <Input id="naturezaEsocial" name="naturezaEsocial" maxLength={4} defaultValue={aberta?.naturezaEsocial ?? ""} />
                 </CampoForm>

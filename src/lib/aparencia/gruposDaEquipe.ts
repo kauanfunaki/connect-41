@@ -81,6 +81,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   dp2_decimo: "pessoas",
   dp2_rescisoes: "pessoas",
   dp2_configuracao: "pessoas",
+  dp2_esocial: "pessoas",
   dp2_tabelas: "pessoas",
   dp2_rubricas: "pessoas",
   dp2_convencoes: "pessoas",

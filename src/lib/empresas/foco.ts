@@ -64,6 +64,7 @@ export const TELAS_DO_FOCO = [
   "/dp2/decimo-terceiro",
   "/dp2/rescisoes",
   "/dp2/configuracao",
+  "/dp2/esocial",
 ] as const;
 
 /**
@@ -119,6 +120,7 @@ export const MODULOS_DO_FOCO: ReadonlySet<string> = new Set([
   "dp2_decimo",
   "dp2_rescisoes",
   "dp2_configuracao",
+  "dp2_esocial",
 ]);
 
 /**

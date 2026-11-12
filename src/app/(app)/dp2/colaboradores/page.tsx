@@ -157,6 +157,21 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                     <Input id="filhosSalarioFamilia" name="filhosSalarioFamilia" inputMode="numeric" defaultValue={String(v?.filhosSalarioFamilia ?? 0)} />
                   </CampoForm>
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2 mt-4">
+                  <CampoForm label="Matrícula no eSocial" htmlFor="matricula" helper="A mesma do evento de admissão (S-2200).">
+                    <Input id="matricula" name="matricula" maxLength={30} defaultValue={v?.matricula ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Categoria" htmlFor="categoria" helper="Tabela 1 do eSocial.">
+                    <Select id="categoria" name="categoria" defaultValue={v?.categoria ?? "101"}>
+                      <option value="101">101 · Empregado geral</option>
+                      <option value="102">102 · Empregado rural</option>
+                      <option value="103">103 · Aprendiz</option>
+                      <option value="105">105 · Contrato por prazo determinado</option>
+                      <option value="106">106 · Contrato temporário</option>
+                      <option value="111">111 · Contrato intermitente</option>
+                    </Select>
+                  </CampoForm>
+                </div>
                 <div className="flex flex-col gap-2 mt-4">
                   <Checkbox id="periculosidade" name="periculosidade" label="Periculosidade (30% do salário)" defaultChecked={v?.periculosidade ?? false} />
                   <Checkbox id="valeTransporte" name="valeTransporte" label="Vale-transporte (desconta 6% do salário)" defaultChecked={v?.valeTransporte ?? false} />

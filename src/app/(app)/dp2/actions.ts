@@ -18,6 +18,7 @@ import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/
 import { lerComparativo } from "@/lib/dp2/comparativo";
 import { lerNumero, lerInteiro } from "@/lib/dp2/entrada";
 import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
+import { gerarPeriodicos, gerarTabelas } from "@/lib/dp2/esocial/servidor";
 
 type Acesso = { ctx: AuthContext; tenantId: string; userId: string };
 
@@ -321,6 +322,8 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     valeTransporte: marcado(fd, "valeTransporte"),
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,
+    matricula: texto(fd, "matricula").slice(0, 30) || null,
+    categoria: /^\d{3}$/.test(texto(fd, "categoria")) ? texto(fd, "categoria") : marcado(fd, "aprendiz") ? "103" : "101",
   };
   await prisma.dp2Vinculo.upsert({ where: { personId: pessoa.id }, create: { tenantId: a.tenantId, personId: pessoa.id, ...dados }, update: dados });
   await logAudit({
@@ -354,7 +357,22 @@ export async function salvarConfigDaEmpresaAction(_: EstadoDoDp2, fd: FormData):
   if (ratAliquota === null || ratAliquota < 0 || ratAliquota > 3) return erro("RAT entre 0% e 3%.");
   if (fap === null || fap < 0.5 || fap > 2) return erro("FAP entre 0,5 e 2.");
   if (terceirosAliquota === null || terceirosAliquota < 0 || terceirosAliquota > 10) return erro("Terceiros entre 0% e 10%.");
-  const dados = { convencaoId, patronalNoDas: marcado(fd, "patronalNoDas"), ratAliquota, fap, terceirosAliquota };
+  const fpas = texto(fd, "fpas").replace(/\D/g, "");
+  const codTercs = texto(fd, "codTercs").replace(/\D/g, "");
+  const classTrib = texto(fd, "classTrib").replace(/\D/g, "");
+  if (fpas && fpas.length !== 3) return erro("O FPAS tem 3 dígitos.");
+  if (codTercs && codTercs.length !== 4) return erro("O código de terceiros tem 4 dígitos.");
+  if (classTrib && classTrib.length !== 2) return erro("A classificação tributária tem 2 dígitos.");
+  const dados = {
+    convencaoId,
+    patronalNoDas: marcado(fd, "patronalNoDas"),
+    ratAliquota,
+    fap,
+    terceirosAliquota,
+    fpas: fpas || null,
+    codTercs: codTercs || null,
+    classTrib: classTrib || null,
+  };
   await prisma.dp2EmpresaConfig.upsert({ where: { companyId }, create: { tenantId: a.tenantId, companyId, ...dados }, update: dados });
   await logAudit({
     tenantId: a.tenantId,
@@ -437,6 +455,9 @@ export async function salvarRubricaAction(_: EstadoDoDp2, fd: FormData): Promise
     naturezaEsocial: texto(fd, "naturezaEsocial").slice(0, 4) || null,
     contaDebito: texto(fd, "contaDebito").slice(0, 40) || null,
     contaCredito: texto(fd, "contaCredito").slice(0, 40) || null,
+    codIncCP: /^\d{2}$/.test(texto(fd, "codIncCP")) ? texto(fd, "codIncCP") : null,
+    codIncIRRF: /^\d{2}$/.test(texto(fd, "codIncIRRF")) ? texto(fd, "codIncIRRF") : null,
+    codIncFGTS: /^\d{2}$/.test(texto(fd, "codIncFGTS")) ? texto(fd, "codIncFGTS") : null,
   };
   if (id) {
     const atual = await prisma.dp2Rubrica.findFirst({ where: { id, tenantId: a.tenantId } });
@@ -549,4 +570,51 @@ export async function salvarConvencaoAction(_: EstadoDoDp2, fd: FormData): Promi
   });
   revalidatePath("/dp2/convencoes");
   return { ok: true, texto: id ? "Convenção salva." : "Convenção criada." };
+}
+
+// ─── eSocial (fase 3a, 12/11/2026): gerar e conferir, sem assinar e enviar ──
+
+export async function gerarTabelasEsocialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const iniValid = texto(fd, "iniValid");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(iniValid)) return erro("Informe desde quando as tabelas valem.");
+  const r = await gerarTabelas(a.tenantId, companyId, iniValid, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_tabelas",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: { iniValid, total: r.total, prontos: r.prontos },
+  });
+  revalidatePath("/dp2/esocial");
+  return { ok: true, texto: `${r.total} evento(s) de tabela: ${r.prontos} pronto(s), ${r.comPendencia} com pendência.` };
+}
+
+export async function gerarPeriodicosEsocialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const comp = await getPrisma().dp2Competencia.findFirst({ where: { id: competenciaId, tenantId: a.tenantId }, select: { companyId: true } });
+  if (!comp) return erro("Competência não encontrada.");
+  const recusa = await recusaDoFoco(a.ctx, [comp.companyId]);
+  if (recusa) return erro(recusa);
+  const dtPgto = texto(fd, "dtPgto");
+  const r = await gerarPeriodicos(a.tenantId, competenciaId, /^\d{4}-\d{2}-\d{2}$/.test(dtPgto) ? dtPgto : null, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_periodicos",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { total: r.total, prontos: r.prontos },
+  });
+  revalidatePath("/dp2/esocial");
+  return { ok: true, texto: `${r.total} evento(s) periódico(s): ${r.prontos} pronto(s), ${r.comPendencia} com pendência.` };
 }
