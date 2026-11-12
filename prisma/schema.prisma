@@ -11590,6 +11590,11 @@ model AtendimentoConfig {
   /// Os setores que aparecem no "Encaminhar". Nulo = todos os ativos.
   setores Json?
 
+  /// Pessoas e setores que veem todos os atendimentos, sem ser da triagem
+  /// (12/11/2026): [{ tipo: "PESSOA" | "SETOR", id, avisos }]. `avisos` liga o
+  /// aviso de conversa nova; vem desligado. Lido por `lerQuemVeTudo`.
+  veemTudo Json?
+
   /// A Ceci registra uma sugestão de setor em cada triagem, só para medir o
   /// acerto. Ninguém vê a sugestão na conversa.
   ceciLigada Boolean @default(false)

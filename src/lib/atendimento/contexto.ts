@@ -3,7 +3,7 @@
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
 import { getPrisma } from "@/lib/prisma";
 import { isModuleEnabled, setorDoModulo } from "@/lib/modules";
-import { MODULO } from "./regras";
+import { MODULO, lerQuemVeTudo } from "./regras";
 import type { ConfigDeAcesso } from "./acesso";
 
 export type Contexto = { ctx: AuthContext; cfg: ConfigDeAcesso };
@@ -16,8 +16,11 @@ export type Contexto = { ctx: AuthContext; cfg: ConfigDeAcesso };
 export async function configDoAtendimento(tenantId: string): Promise<ConfigDeAcesso> {
   const [enabled, triagem] = await Promise.all([isModuleEnabled(tenantId, MODULO), setorDoModulo(tenantId, MODULO)]);
   if (!enabled || !triagem) return { enabled: false, triagem: triagem ?? "" };
-  const setor = await getPrisma().sector.findFirst({ where: { tenantId, code: triagem, active: true }, select: { id: true } });
-  return { enabled: !!setor, triagem };
+  const [setor, config] = await Promise.all([
+    getPrisma().sector.findFirst({ where: { tenantId, code: triagem, active: true }, select: { id: true } }),
+    getPrisma().atendimentoConfig.findUnique({ where: { tenantId }, select: { veemTudo: true } }),
+  ]);
+  return { enabled: !!setor, triagem, veemTudo: lerQuemVeTudo(config?.veemTudo) };
 }
 
 /** Para ações: sessão válida e módulo ligado, ou erro com a frase para a tela. */

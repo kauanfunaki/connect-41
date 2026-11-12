@@ -15,8 +15,8 @@ import { pediuParaSair, voltouAConversar, CONFIRMACAO_DE_SAIDA } from "@/lib/wha
 import type { MensagemIgnorada, MensagemRecebida, ProvedorWhatsapp } from "@/lib/whatsapp/provedores/tipos";
 import { configDoAtendimento } from "./contexto";
 import { cadastroPeloTelefone, lerConfiguracao, nomesDosContatos } from "./dados";
-import { avisarResposta, avisarTriagem } from "./avisos";
-import { ASSINATURA_AUTOMATICA, decidirChegada, mensagemDeChegada, previa, situacaoAoReabrir, type Situacao } from "./regras";
+import { avisarQuemVeTudo, avisarResposta, avisarTriagem } from "./avisos";
+import { ASSINATURA_AUTOMATICA, decidirChegada, mensagemDeChegada, previa, quemAvisarNaResposta, situacaoAoReabrir, type Situacao } from "./regras";
 import { enviarNoAtendimento, type ConexaoDoAtendimento } from "./transporte";
 import { arquivosDoAtendimento, rotuloDaMidia } from "./midia";
 
@@ -196,9 +196,7 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
       data: decisao.voltaDeAguardando ? { situacao: "EM_ATENDIMENTO" } : {},
       select: { id: true, situacao: true, sectorCode: true, assignedToId: true },
     });
-    if (ciclo.situacao !== "TRIAGEM") {
-      await avisarResposta({ tenantId, cicloId: ciclo.id, paraUserId: ciclo.assignedToId, sectorCode: ciclo.sectorCode, quem: nome, previa: previa(c.texto, 120) });
-    }
+    await avisarResposta({ tenantId, cicloId: ciclo.id, para: quemAvisarNaResposta({ ...ciclo, situacao: ciclo.situacao as Situacao }), quem: nome, previa: previa(c.texto, 120) });
     return "continua";
   }
 
@@ -217,7 +215,13 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
       select: { id: true },
     });
     await prisma.atendimentoMensagem.update({ where: { id: mensagemId }, data: { cicloId: ciclo.id } });
-    await avisarResposta({ tenantId, cicloId: ciclo.id, paraUserId: decisao.assignedToId, sectorCode: decisao.sectorCode, quem: nome, previa: previa(c.texto, 120) });
+    await avisarResposta({
+      tenantId,
+      cicloId: ciclo.id,
+      para: quemAvisarNaResposta({ situacao: situacaoAoReabrir(decisao.assignedToId), sectorCode: decisao.sectorCode, assignedToId: decisao.assignedToId }),
+      quem: nome,
+      previa: previa(c.texto, 120),
+    });
     return "reaberta";
   }
 
@@ -249,5 +253,6 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     });
   }
   await avisarTriagem({ tenantId, cicloId: ciclo.id, triagem: cfg.triagem, quem: nome, previa: previa(c.texto, 120) });
+  await avisarQuemVeTudo({ tenantId, cicloId: ciclo.id, lista: cfg.veemTudo ?? [], triagem: cfg.triagem, quem: nome, previa: previa(c.texto, 120) });
   return "triagem";
 }

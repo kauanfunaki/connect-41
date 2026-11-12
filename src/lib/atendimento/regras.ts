@@ -218,8 +218,11 @@ export const ROTULO_DO_RECORTE: Record<Recorte, string> = {
 /** Quantos dias as encerradas ficam na aba "Encerradas". */
 export const DIAS_DAS_ENCERRADAS = 30;
 
-/** Os recortes da lista para uma pessoa: os da triagem, os do setor, ou só "Minhas". */
-export function recortesDe(e: { triagem: boolean; meus: readonly string[]; geridos: readonly string[] }): Recorte[] {
+/**
+ * Os recortes da lista para uma pessoa: os da triagem, os do setor, ou só
+ * "Minhas". Quem vê todos os atendimentos (sem ser da triagem) ganha "Todas".
+ */
+export function recortesDe(e: { triagem: boolean; meus: readonly string[]; geridos: readonly string[]; veTudo?: boolean }): Recorte[] {
   const lista: Recorte[] = [];
   if (e.triagem) lista.push(...RECORTES_DA_TRIAGEM);
   if (e.meus.length > 0) {
@@ -231,6 +234,10 @@ export function recortesDe(e: { triagem: boolean; meus: readonly string[]; gerid
     lista.push("aguardando", "encerradas");
   }
   if (lista.length === 0) lista.push("minhas", "aguardando", "encerradas");
+  if (e.veTudo && !lista.includes("todas")) {
+    const antesDe = lista.indexOf("aguardando");
+    lista.splice(antesDe === -1 ? lista.length : antesDe, 0, "todas");
+  }
   return lista;
 }
 
@@ -245,8 +252,9 @@ export type CartaoParaRecorte = {
 export function noRecorte(
   c: CartaoParaRecorte,
   r: Recorte,
-  quem: { userId: string; meus: readonly string[]; geridos: readonly string[]; triagem: boolean }
+  quem: { userId: string; meus: readonly string[]; geridos: readonly string[]; triagem: boolean; veTudo?: boolean }
 ): boolean {
+  const geral = quem.triagem || !!quem.veTudo;
   const aberto = c.situacao !== "ENCERRADO";
   const meuSetor = !!c.sectorCode && quem.meus.includes(c.sectorCode);
   const minha = c.assignedToId === quem.userId;
@@ -262,11 +270,11 @@ export function noRecorte(
     case "sem_responsavel":
       return c.situacao === "NO_SETOR" && meuSetor;
     case "aguardando":
-      return c.situacao === "AGUARDANDO_CLIENTE" && (minha || meuSetor || quem.triagem);
+      return c.situacao === "AGUARDANDO_CLIENTE" && (minha || meuSetor || geral);
     case "do_setor":
       return aberto && !!c.sectorCode && quem.geridos.includes(c.sectorCode);
     case "encerradas":
-      return !aberto && (minha || meuSetor || quem.triagem);
+      return !aberto && (minha || meuSetor || geral);
   }
 }
 
@@ -279,4 +287,49 @@ export function recorteValido(pedido: string | null | undefined, disponiveis: re
 export function previa(texto: string, max = 90): string {
   const t = texto.replace(/\s+/g, " ").trim();
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+// ─── Quem vê todos os atendimentos (12/11/2026) ──────────────────────────────
+
+/**
+ * Pessoas ou setores inteiros que veem todos os atendimentos, sem ser da
+ * triagem: só olham (assumir e responder seguem as regras de sempre). Cada um
+ * escolhe se recebe o aviso de conversa nova — vem desligado.
+ */
+export type QuemVeTudo = { tipo: "PESSOA" | "SETOR"; id: string; avisos: boolean };
+
+/** Lê a lista guardada na configuração; o que não tiver o formato certo fica de fora. */
+export function lerQuemVeTudo(guardado: unknown): QuemVeTudo[] {
+  if (!Array.isArray(guardado)) return [];
+  const vistos = new Set<string>();
+  const lista: QuemVeTudo[] = [];
+  for (const x of guardado) {
+    if (!x || typeof x !== "object") continue;
+    const { tipo, id, avisos } = x as Record<string, unknown>;
+    if ((tipo !== "PESSOA" && tipo !== "SETOR") || typeof id !== "string" || !id.trim()) continue;
+    const chave = `${tipo}:${id}`;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    lista.push({ tipo, id: id.trim().slice(0, 64), avisos: avisos === true });
+  }
+  return lista.slice(0, 100);
+}
+
+/** A pessoa está na lista, por nome ou por um dos setores dela? */
+export function estaEmQuemVeTudo(lista: readonly QuemVeTudo[], userId: string, setores: readonly string[], soQuemRecebeAvisos = false): boolean {
+  return lista.some((q) => (!soQuemRecebeAvisos || q.avisos) && (q.tipo === "PESSOA" ? q.id === userId : setores.includes(q.id)));
+}
+
+/**
+ * Quem recebe o aviso quando o cliente escreve de novo: só quem está com a
+ * conversa. Sem responsável, o setor dela; na triagem sem responsável, ninguém
+ * (a triagem já foi avisada quando a conversa chegou).
+ */
+export function quemAvisarNaResposta(c: { situacao: Situacao; sectorCode: string | null; assignedToId: string | null }):
+  | { pessoa: string }
+  | { setor: string }
+  | null {
+  if (c.assignedToId) return { pessoa: c.assignedToId };
+  if (c.situacao === "TRIAGEM" || !c.sectorCode) return null;
+  return { setor: c.sectorCode };
 }

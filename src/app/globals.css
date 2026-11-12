@@ -681,7 +681,10 @@ input[type="search"]::-webkit-search-decoration {
   to   { transform: translateX(0); }
 }
 .slide-over-in {
-  animation: slide-over-in 0.22s ease-out both;
+  /* `backwards`, não `both` (12/11/2026): com `both` o painel ficava com
+     `transform` depois de entrar, e a lista `fixed` de um campo dentro dele
+     (SearchableSelect) passava a se medir pelo painel e abria fora da tela. */
+  animation: slide-over-in 0.22s ease-out backwards;
 }
 @media (prefers-reduced-motion: reduce) {
   .slide-over-in { animation: none; }

@@ -12,6 +12,7 @@ const prisma = {
 };
 const avisarTriagem = vi.fn();
 const avisarResposta = vi.fn();
+const avisarQuemVeTudo = vi.fn();
 const enviarNoAtendimento = vi.fn();
 let moduloLigado = true;
 let respostasAutomaticas = true;
@@ -32,7 +33,11 @@ vi.mock("./dados", () => ({
   }),
   nomesDosContatos: async () => () => ({ titulo: "Rafael", subtitulo: null, empresa: null, pessoa: null }),
 }));
-vi.mock("./avisos", () => ({ avisarTriagem: (...a: unknown[]) => avisarTriagem(...a), avisarResposta: (...a: unknown[]) => avisarResposta(...a) }));
+vi.mock("./avisos", () => ({
+  avisarTriagem: (...a: unknown[]) => avisarTriagem(...a),
+  avisarResposta: (...a: unknown[]) => avisarResposta(...a),
+  avisarQuemVeTudo: (...a: unknown[]) => avisarQuemVeTudo(...a),
+}));
 const gravarAnexos = vi.fn();
 vi.mock("./midia", () => ({ rotuloDaMidia: (t: string) => (t === "image" ? "imagem" : "arquivo"), arquivosDoAtendimento: { gravarAnexos: (...a: unknown[]) => gravarAnexos(...a) } }));
 vi.mock("./transporte", () => ({ enviarNoAtendimento: (...a: unknown[]) => enviarNoAtendimento(...a) }));
@@ -100,8 +105,21 @@ describe("entrada do Atendimento", () => {
     prisma.atendimentoCiclo.update.mockResolvedValue({ id: "cl9", situacao: "EM_ATENDIMENTO", sectorCode: "fiscal", assignedToId: "ana" });
     expect(await atenderEntrada(conexao, provedor, msg("Mandei o comprovante"))).toBe("continua");
     expect(prisma.atendimentoCiclo.update.mock.calls[0]![0].data).toEqual({ situacao: "EM_ATENDIMENTO" });
-    expect(avisarResposta).toHaveBeenCalledWith(expect.objectContaining({ paraUserId: "ana", cicloId: "cl9" }));
+    expect(avisarResposta).toHaveBeenCalledWith(expect.objectContaining({ para: { pessoa: "ana" }, cicloId: "cl9" }));
     expect(avisarTriagem).not.toHaveBeenCalled();
+  });
+
+  it("na triagem, depois que alguém assumiu, a mensagem nova avisa só essa pessoa", async () => {
+    prisma.atendimentoCiclo.findFirst.mockResolvedValue({ id: "cl9", situacao: "TRIAGEM", sectorCode: null, assignedToId: "bia", encerradoEm: null });
+    prisma.atendimentoCiclo.update.mockResolvedValue({ id: "cl9", situacao: "TRIAGEM", sectorCode: null, assignedToId: "bia" });
+    expect(await atenderEntrada(conexao, provedor, msg("Mais uma coisa"))).toBe("continua");
+    expect(avisarResposta).toHaveBeenCalledWith(expect.objectContaining({ para: { pessoa: "bia" } }));
+    expect(avisarTriagem).not.toHaveBeenCalled();
+  });
+
+  it("conversa nova também avisa quem vê tudo", async () => {
+    await atenderEntrada(conexao, provedor, msg("Oi"));
+    expect(avisarQuemVeTudo).toHaveBeenCalledWith(expect.objectContaining({ cicloId: "cl1", triagem: "controladoria" }));
   });
 
   it("encerrado há pouco reabre com o mesmo setor e a mesma pessoa", async () => {
@@ -109,7 +127,7 @@ describe("entrada do Atendimento", () => {
     prisma.atendimentoCiclo.create.mockResolvedValue({ id: "cl10" });
     expect(await atenderEntrada(conexao, provedor, msg("Oi de novo"))).toBe("reaberta");
     expect(prisma.atendimentoCiclo.create.mock.calls[0]![0].data).toMatchObject({ situacao: "EM_ATENDIMENTO", sectorCode: "fiscal", assignedToId: "ana" });
-    expect(avisarResposta).toHaveBeenCalledWith(expect.objectContaining({ paraUserId: "ana" }));
+    expect(avisarResposta).toHaveBeenCalledWith(expect.objectContaining({ para: { pessoa: "ana" } }));
   });
 });
 

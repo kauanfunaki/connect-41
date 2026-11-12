@@ -20,6 +20,7 @@ import {
   podeResponder,
   podeVerCiclo,
   setoresDaPessoa,
+  veTudo,
 } from "./acesso";
 import { desfechosDoEscritorio, lerConfiguracao, mensagensPadraoPara, nomesDosContatos, setoresQueAtendem, telefoneLegivel } from "./dados";
 import { abreNaTela } from "./midia";
@@ -37,7 +38,7 @@ async function escopo(c: Contexto) {
   const atendem = setoresQueAtendem(config.setores, ativos, c.cfg.triagem);
   const meus = setoresDaPessoa(c.ctx, c.cfg, atendem);
   const geridos = meus.filter((s) => canManageSector(c.ctx, s));
-  return { config, maps, atendem, meus, geridos, triagem: ehDaTriagem(c.ctx, c.cfg) };
+  return { config, maps, atendem, meus, geridos, triagem: ehDaTriagem(c.ctx, c.cfg), veTudo: veTudo(c.ctx, c.cfg) };
 }
 
 /** Tudo o que a pessoa pode ver na lista, numa consulta só (a união dos recortes dela). */
@@ -45,7 +46,7 @@ function filtroDaPessoa(c: Contexto, e: Awaited<ReturnType<typeof escopo>>): Pri
   const tenantId = c.ctx.tenantId;
   const desde = new Date(Date.now() - DIAS_DAS_ENCERRADAS * 24 * 60 * 60 * 1000);
   const recentes: Prisma.AtendimentoCicloWhereInput = { OR: [{ situacao: { not: "ENCERRADO" } }, { encerradoEm: { gte: desde } }] };
-  if (e.triagem) return { tenantId, ...recentes };
+  if (e.triagem || e.veTudo) return { tenantId, ...recentes };
   return {
     tenantId,
     AND: [recentes, { OR: [{ assignedToId: c.ctx.userId }, ...(e.meus.length ? [{ sectorCode: { in: e.meus } }] : [])] }],
@@ -73,6 +74,8 @@ export type ListaDoAtendimento = {
   geridos: string[];
   userId: string;
   ehTriagem: boolean;
+  /** Escolhida nas configurações para ver todos os atendimentos. */
+  veTudo: boolean;
   triagem: { code: string; label: string };
 };
 
@@ -148,6 +151,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
     geridos: e.geridos,
     userId: c.ctx.userId,
     ehTriagem: e.triagem,
+    veTudo: e.veTudo,
     triagem: { code: c.cfg.triagem, label: sectorLabel(e.maps.labels, c.cfg.triagem) },
   };
 }
@@ -363,23 +367,27 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
 export type DetalheDoAtendimento = NonNullable<Awaited<ReturnType<typeof lerDetalhe>>>;
 
 /** Empresas para ligar um contato, pelo nome ou CNPJ. */
-export async function buscarEmpresas(c: Contexto, termo: string) {
-  const t = termo.trim();
-  if (t.length < 2) return [];
+/**
+ * As empresas ativas do escritório, para o "Quem é?" escolher numa lista que
+ * filtra enquanto se digita (12/11/2026). Carregadas só quando o painel abre.
+ */
+export async function empresasParaVincular(c: Contexto) {
   const prisma = getPrisma();
-  const empresas = await prisma.company.findMany({
-    where: { tenantId: c.ctx.tenantId, OR: [{ name: { contains: t } }, { displayName: { contains: t } }, { cnpj: { contains: t } }] },
-    select: { id: true, name: true, displayName: true, cnpj: true },
-    take: 8,
-    orderBy: { name: "asc" },
-  });
-  const portais = empresas.length
-    ? await prisma.portalUserCompany.groupBy({
-        by: ["companyId"],
-        where: { tenantId: c.ctx.tenantId, companyId: { in: empresas.map((x) => x.id) } },
-        _count: { _all: true },
-      })
-    : [];
+  const [empresas, portais] = await Promise.all([
+    prisma.company.findMany({
+      where: { tenantId: c.ctx.tenantId, status: "ACTIVE" },
+      select: { id: true, name: true, displayName: true, cnpj: true, logoUrl: true, parentCompanyId: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.portalUserCompany.groupBy({ by: ["companyId"], where: { tenantId: c.ctx.tenantId }, _count: { _all: true } }),
+  ]);
   const comPortal = new Set(portais.map((p) => p.companyId));
-  return empresas.map((x) => ({ id: x.id, nome: nomeExibicao(x), cnpj: x.cnpj, temPortal: comPortal.has(x.id) }));
+  return empresas.map((x) => ({
+    id: x.id,
+    nome: nomeExibicao(x),
+    cnpj: x.cnpj,
+    logoUrl: x.logoUrl,
+    parentCompanyId: x.parentCompanyId,
+    temPortal: comPortal.has(x.id),
+  }));
 }

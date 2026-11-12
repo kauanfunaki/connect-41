@@ -3,7 +3,7 @@
 // Os painéis das ações da conversa: encaminhar (direto ou por pedido), o
 // contato, encerrar e transferir, e a faixa do pedido de encaminhamento.
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Info, Lock } from "lucide-react";
 import { SlideOver } from "@/components/ui/SlideOver";
@@ -12,14 +12,15 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Input } from "@/components/ui/Input";
-import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { useToast } from "@/components/ui/Toast";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
 import type { DetalheDoAtendimento } from "@/lib/atendimento/consultas";
 import { DESFECHO_OUTRO } from "@/lib/atendimento/regras";
 import {
-  buscarEmpresasAction,
+  empresasParaVincularAction,
   convidarParaOPortalAction,
   decidirPedidoAction,
   encaminharAction,
@@ -249,28 +250,36 @@ export function FaixaDoPedido({ d, podeDecidir }: { d: DetalheDoAtendimento; pod
 
 // ─── Contato ─────────────────────────────────────────────────────────────────
 
-type Empresa = Awaited<ReturnType<typeof buscarEmpresasAction>>[number];
+type Empresa = Awaited<ReturnType<typeof empresasParaVincularAction>>[number];
 
 export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimento; aberto: boolean; aoFechar: () => void }) {
   const [tipo, setTipo] = useState<"CLIENTE" | "NOVO">(d.contato.tipo === "NOVO" ? "NOVO" : "CLIENTE");
-  const [termo, setTermo] = useState("");
-  const [achadas, setAchadas] = useState<{ termo: string; lista: Empresa[] }>({ termo: "", lista: [] });
+  const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [escolhida, setEscolhida] = useState<string>(d.contato.empresa?.id ?? "");
-  const [nome, setNome] = useState(d.contato.nome ?? d.contato.nomeNoWhatsapp ?? "");
-  const [interesse, setInteresse] = useState(d.contato.interesse ?? "Abrir empresa");
   const { ocupado, erro, rodar } = useAcao(aoFechar);
 
-  const buscando = tipo === "CLIENTE" && termo.trim().length >= 2;
+  // A lista de empresas vem uma vez, quando o painel abre (12/11/2026): todas
+  // as ativas, e o campo filtra enquanto se digita.
   useEffect(() => {
-    if (!buscando) return;
-    const pedido = termo;
-    const t = window.setTimeout(async () => setAchadas({ termo: pedido, lista: await buscarEmpresasAction(pedido) }), 300);
-    return () => window.clearTimeout(t);
-  }, [termo, buscando]);
-  const lista = buscando && achadas.termo === termo ? achadas.lista : [];
+    if (!aberto || empresas !== null) return;
+    let vivo = true;
+    void empresasParaVincularAction().then((lista) => {
+      if (vivo) setEmpresas(lista);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [aberto, empresas]);
 
-  const atual = d.contato.empresa ? { ...d.contato.empresa, temPortal: d.contato.temPortal } : null;
-  const empresas = [...(atual && !lista.some((a) => a.id === atual.id) ? [atual] : []), ...lista];
+  const opcoes = useMemo(() => {
+    if (!empresas) return [];
+    const portal = new Map(empresas.map((e) => [e.id, e.temPortal]));
+    return opcoesDeEmpresa(empresas).map((o) => ({
+      ...o,
+      descricao: [o.descricao, portal.get(o.value) ? "tem portal" : "sem portal"].filter(Boolean).join(" · "),
+    }));
+  }, [empresas]);
+  const escolhidaTemPortal = !!empresas?.find((e) => e.id === escolhida)?.temPortal;
 
   return (
     <SlideOver open={aberto} onClose={aoFechar} title="Quem é este contato?" width="max-w-lg">
@@ -286,57 +295,37 @@ export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimen
           valor={tipo}
           onChange={(v) => setTipo(v as "CLIENTE" | "NOVO")}
           opcoes={[
-            { valor: "CLIENTE", rotulo: "Sim, ligar a uma empresa", descricao: "O telefone fica guardado; da próxima vez o Connect reconhece sozinho." },
-            { valor: "NOVO", rotulo: "Não, é um contato novo", descricao: "Ainda não é cliente. Fica marcado até virar cliente." },
+            { valor: "CLIENTE", rotulo: "Sim, é contato de uma empresa", descricao: "O telefone fica guardado na empresa; da próxima vez o Connect reconhece sozinho." },
+            { valor: "NOVO", rotulo: "Não, é um contato novo", descricao: "Ainda não é cliente. A Controladoria cuida do resto." },
           ]}
         />
 
-        {tipo === "CLIENTE" ? (
+        {tipo === "CLIENTE" && (
           <div className="flex flex-col gap-3">
-            <Campo rotulo="Empresa" htmlFor="atd-busca-empresa">
-              <Input id="atd-busca-empresa" placeholder="Nome ou CNPJ" value={termo} onChange={(e) => setTermo(e.target.value)} />
+            <Campo rotulo="Empresa" htmlFor="atd-empresa" ajuda="Digite o nome ou o CNPJ: a lista vai filtrando as empresas cadastradas.">
+              {empresas === null ? (
+                <p className="text-ui text-fg-muted">Carregando as empresas…</p>
+              ) : empresas.length === 0 ? (
+                <p className="text-ui text-fg-muted">Não deu para carregar as empresas. Feche e abra de novo.</p>
+              ) : (
+                <SearchableSelect
+                  id="atd-empresa"
+                  name="companyId"
+                  options={opcoes}
+                  defaultValue={escolhida}
+                  onChange={setEscolhida}
+                  avatar
+                  placeholder="Digite o nome ou o CNPJ…"
+                />
+              )}
             </Campo>
-            {empresas.length > 0 && (
-              <RadioGroup
-                aria-label="Empresas encontradas"
-                name="atd-empresa"
-                valor={escolhida || null}
-                onChange={setEscolhida}
-                opcoes={empresas.map((e) => ({
-                  valor: e.id,
-                  rotulo: (
-                    <span className="flex items-center gap-2">
-                      <span className="truncate">{e.nome}</span>
-                      <Selo tom={e.temPortal ? "sucesso" : "atencao"}>{e.temPortal ? "Tem portal" : "Sem portal"}</Selo>
-                    </span>
-                  ),
-                  descricao: e.cnpj ?? undefined,
-                }))}
-              />
-            )}
-            {buscando && achadas.termo === termo && lista.length === 0 && <p className="text-micro text-fg-muted">Nenhuma empresa com esse nome ou CNPJ.</p>}
             {d.contato.empresa && escolhida === d.contato.empresa.id && !d.contato.temPortal && d.pode.convidar ? (
               <ConviteParaOPortal d={d} aoTerminar={aoFechar} />
             ) : (
               <p className="text-micro text-fg-muted">
-                {d.contato.temPortal && escolhida === d.contato.empresa?.id
-                  ? "Esta empresa já tem acesso ao portal."
-                  : "Depois de ligar o contato à empresa, o convite para o portal aparece aqui."}
+                {escolhida && escolhidaTemPortal ? "Esta empresa já tem acesso ao portal." : "Depois de ligar o contato à empresa, o convite para o portal aparece aqui."}
               </p>
             )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <Campo rotulo="Nome" htmlFor="atd-nome">
-              <Input id="atd-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
-            </Campo>
-            <Campo rotulo="Interesse" htmlFor="atd-interesse">
-              <Select id="atd-interesse" value={interesse} onChange={(e) => setInteresse(e.target.value)}>
-                <option>Abrir empresa</option>
-                <option>Trocar de contador</option>
-                <option>Outro assunto</option>
-              </Select>
-            </Campo>
           </div>
         )}
 
@@ -347,18 +336,18 @@ export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimen
           </Button>
           <Button
             loading={ocupado}
-            disabled={tipo === "CLIENTE" ? !escolhida : !nome.trim()}
+            disabled={tipo === "CLIENTE" && !escolhida}
             onClick={() =>
               rodar(
                 () =>
                   tipo === "CLIENTE"
                     ? vincularContatoAction({ cicloId: d.ciclo.id, tipo: "CLIENTE", companyId: escolhida })
-                    : vincularContatoAction({ cicloId: d.ciclo.id, tipo: "NOVO", nome, interesse }),
+                    : vincularContatoAction({ cicloId: d.ciclo.id, tipo: "NOVO" }),
                 "Contato atualizado."
               )
             }
           >
-            {tipo === "CLIENTE" ? "Ligar à empresa" : "Salvar contato novo"}
+            {tipo === "CLIENTE" ? "Ligar à empresa" : "Marcar como contato novo"}
           </Button>
         </div>
       </div>

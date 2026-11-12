@@ -159,7 +159,7 @@ function contextoDo(c: CartaoDaLista): string {
 function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
   const v = useCaixaDoAtendimento();
   const [busca, setBusca] = useState("");
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem));
   const termo = busca.trim().toLowerCase();
   const visiveis = termo ? doRecorte.filter((c) => `${c.titulo} ${c.subtitulo ?? ""} ${c.previa}`.toLowerCase().includes(termo)) : doRecorte;
@@ -269,7 +269,7 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
 /** A lista recolhida: só as iniciais, com a marca de quem espera resposta. */
 function FaixaDaLista({ aoAbrir }: { aoAbrir: () => void }) {
   const v = useCaixaDoAtendimento();
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   const visiveis = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem)).slice(0, 40);
   return (
     <nav aria-label="Conversas recolhidas" className="flex-1 min-h-0 flex flex-col items-center gap-2 py-2 rounded-lg border border-border bg-surface">
@@ -308,7 +308,7 @@ function FaixaDaLista({ aoAbrir }: { aoAbrir: () => void }) {
 /** O painel sem conversa escolhida. */
 export function PainelSemConversa() {
   const v = useCaixaDoAtendimento();
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   const esperando = v.recortes
     .filter((r) => r === "triagem" || r === "pedidos" || r === "sem_responsavel")
     .reduce((n, r) => n + v.cartoes.filter((c) => noRecorte(c, r, quem)).length, 0);
