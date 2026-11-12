@@ -129,19 +129,18 @@ async function main() {
     const { gravar: vinculosOk, semEmpresa } = mapearVinculos(vinculos, porId);
     relatorio.vinculosSemEmpresa = semEmpresa.map((v) => ({ pasta: v.nome_pasta, tipo: v.tipo }));
     if (gravar) {
-      await emLotes(vinculosOk, 200, (lote) =>
-        prisma.$transaction(
-          lote.map((v) => {
-            const nomePastaHash = hashDaPasta(v.nomePasta);
-            const dados = { nomePasta: v.nomePasta, companyId: v.companyId, tipo: v.tipo, vinculadoEm: v.vinculadoEm };
-            return prisma.honorarioVinculoPasta.upsert({
-              where: { tenantId_nomePastaHash: { tenantId, nomePastaHash } },
-              create: { tenantId, nomePastaHash, ...dados },
-              update: dados,
-            });
-          }),
-        ),
-      );
+      // Linha a linha, sem lote em transação: com a latência até a produção, 200 upserts numa
+      // transação passaram dos 5 s do Prisma (12/11/2026). Cada upsert é idempotente, então
+      // uma carga interrompida se completa rodando de novo.
+      for (const v of vinculosOk) {
+        const nomePastaHash = hashDaPasta(v.nomePasta);
+        const dados = { nomePasta: v.nomePasta, companyId: v.companyId, tipo: v.tipo, vinculadoEm: v.vinculadoEm };
+        await prisma.honorarioVinculoPasta.upsert({
+          where: { tenantId_nomePastaHash: { tenantId, nomePastaHash } },
+          create: { tenantId, nomePastaHash, ...dados },
+          update: dados,
+        });
+      }
     }
     conta("vínculos de pasta", vinculos.length, vinculosOk.length, semEmpresa.length);
 
@@ -194,8 +193,8 @@ async function main() {
       if (!lote.length) break;
       textosLidos += lote.length;
       if (gravar) {
-        await prisma.$transaction(
-          lote.map((t) => {
+        // Linha a linha, pelo mesmo motivo dos vínculos (o texto pesa e a latência soma).
+        for (const t of lote) {
             const dados = {
               nomePasta: String(t.nome_pasta),
               caminhoRelativo: String(t.caminho_relativo),
@@ -218,14 +217,12 @@ async function main() {
               cnpjs: texto(t.cnpjs),
             };
             const chave = String(t.chave);
-            return prisma.honorarioTexto.upsert({
+            await prisma.honorarioTexto.upsert({
               where: { tenantId_chave: { tenantId, chave } },
               create: { tenantId, chave, ...dados },
               update: dados,
             });
-          }),
-          { timeout: 60_000 },
-        );
+        }
       }
     }
     conta("textos lidos", Number(totalDeTextos), textosLidos);

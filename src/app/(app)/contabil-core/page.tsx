@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Inbox, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
+import { BookOpen, FileText, Inbox, Scale, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,6 +13,7 @@ import { empresasParaLigar, listarEmpresas, regimeDoCadastro } from "@/lib/conta
 import { LigarEmpresa } from "@/components/contabil-core/Formularios";
 import { SeletorDeEmpresa } from "@/components/contabil-core/SeletorDeEmpresa";
 import {
+  AbaConciliacao,
   AbaConfiguracoes,
   AbaContrapartes,
   AbaExtrato,
@@ -38,6 +39,7 @@ const ROTULO_DA_ABA: Record<Aba, { rotulo: string; icone: React.ReactNode }> = {
   regras: { rotulo: "Regras", icone: <Tags size={16} aria-hidden /> },
   contrapartes: { rotulo: "Contrapartes", icone: <Users size={16} aria-hidden /> },
   registros: { rotulo: "Registros", icone: <BookOpen size={16} aria-hidden /> },
+  conciliacao: { rotulo: "Conciliação", icone: <Scale size={16} aria-hidden /> },
   configuracoes: { rotulo: "Configurações", icone: <SlidersHorizontal size={16} aria-hidden /> },
 };
 
@@ -93,6 +95,9 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
     mesAtual: mesAtual(),
   };
 
+  // A conciliação só envia arquivo; quem só lê o módulo não tem o que fazer nela.
+  const abasVisiveis = ABAS.filter((a) => a !== "conciliacao" || podeAgir);
+
   return (
     <PageContainer>
       <PageHeader
@@ -113,7 +118,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
       <AbasDeLink
         aria-label="Áreas do Contábil Core"
         ativa={aba}
-        abas={ABAS.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
+        abas={abasVisiveis.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
       />
       {aba === "importacoes" && <AbaImportacoes c={c} />}
       {aba === "extrato" && <AbaExtrato c={c} />}
@@ -121,6 +126,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
       {aba === "regras" && <AbaRegras c={c} />}
       {aba === "contrapartes" && <AbaContrapartes c={c} />}
       {aba === "registros" && <AbaRegistros c={c} />}
+      {aba === "conciliacao" && <AbaConciliacao c={c} />}
       {aba === "configuracoes" && <AbaConfiguracoes c={c} />}
     </PageContainer>
   );

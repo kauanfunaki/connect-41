@@ -17,6 +17,9 @@ import { PAPEIS_LANCAVEIS, TIPOS_DE_RUBRICA, ehPapel } from "@/lib/dp2/rubricas"
 import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
 import { lerComparativo } from "@/lib/dp2/comparativo";
 import { lerNumero, lerInteiro } from "@/lib/dp2/entrada";
+import { importarEventos, podeImportar, type RubricaParaImportar } from "@/lib/dp2/importacaoDeEventos";
+import { DIAS_DO_LINK, gerarRemessaDaCompetencia, guardarHoleritesNosArquivos, novoToken } from "@/lib/dp2/saidas";
+import { CAMPOS_DAS_CONTAS } from "@/lib/dp2/contabilizacao";
 import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
 import { gerarAdmissao, gerarAfastamento, gerarAlteracao, gerarDesligamento, gerarPeriodicos, gerarTabelas } from "@/lib/dp2/esocial/servidor";
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
@@ -288,6 +291,18 @@ export async function importarComparativoAction(_: EstadoDoDp2, fd: FormData): P
 
 // ─── Contrato do colaborador ────────────────────────────────────────────────
 
+/** Banco, agência e conta digitados (só dígitos; o dígito verificador à parte). */
+function contaBancaria(fd: FormData) {
+  const banco = texto(fd, "bancoCodigo").replace(/\D/g, "");
+  return {
+    bancoCodigo: banco ? banco.padStart(3, "0").slice(-3) : null,
+    agencia: texto(fd, "agencia").replace(/\D/g, "").slice(0, 10) || null,
+    agenciaDigito: texto(fd, "agenciaDigito").toUpperCase().slice(0, 2) || null,
+    conta: texto(fd, "conta").replace(/\D/g, "").slice(0, 20) || null,
+    contaDigito: texto(fd, "contaDigito").toUpperCase().slice(0, 2) || null,
+  };
+}
+
 const INSALUBRIDADES = ["NENHUM", "MINIMO", "MEDIO", "MAXIMO"];
 
 export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -338,7 +353,10 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
       descricaoJornada: texto(fd, "esocial_descricaoJornada"),
     }),
     categoria: /^\d{3}$/.test(texto(fd, "categoria")) ? texto(fd, "categoria") : marcado(fd, "aprendiz") ? "103" : "101",
+    ...contaBancaria(fd),
+    tipoConta: texto(fd, "tipoConta") === "POUPANCA" ? "POUPANCA" : "CORRENTE",
   };
+  if (dados.bancoCodigo && !/^\d{3}$/.test(dados.bancoCodigo)) return erro("O banco é o código de 3 dígitos (ex.: 341).");
   await prisma.dp2Vinculo.upsert({ where: { personId: pessoa.id }, create: { tenantId: a.tenantId, personId: pessoa.id, ...dados }, update: dados });
   await logAudit({
     tenantId: a.tenantId,
@@ -386,7 +404,10 @@ export async function salvarConfigDaEmpresaAction(_: EstadoDoDp2, fd: FormData):
     fpas: fpas || null,
     codTercs: codTercs || null,
     classTrib: classTrib || null,
+    ...contaBancaria(fd),
+    convenio: texto(fd, "convenio").slice(0, 20) || null,
   };
+  if (dados.bancoCodigo && !/^\d{3}$/.test(dados.bancoCodigo)) return erro("O banco é o código de 3 dígitos (ex.: 341).");
   await prisma.dp2EmpresaConfig.upsert({ where: { companyId }, create: { tenantId: a.tenantId, companyId, ...dados }, update: dados });
   await logAudit({
     tenantId: a.tenantId,
@@ -587,6 +608,188 @@ export async function salvarConvencaoAction(_: EstadoDoDp2, fd: FormData): Promi
   return { ok: true, texto: id ? "Convenção salva." : "Convenção criada." };
 }
 
+// ─── Fase 2 (12/11/2026): eventos importados, link do cliente e saídas ──────
+
+function paraImportar(r: { id: string; codigo: string; nome: string; tipo: string; papel: string | null; lancamento: string; ativa: boolean }): RubricaParaImportar {
+  return {
+    id: r.id,
+    codigo: r.codigo,
+    nome: r.nome,
+    tipo: r.tipo as RubricaParaImportar["tipo"],
+    papel: ehPapel(r.papel) ? r.papel : null,
+    lancamento: r.lancamento as RubricaParaImportar["lancamento"],
+    ativa: r.ativa,
+  };
+}
+
+/**
+ * Eventos colados de uma planilha ou do relatório do Pontomais. Com "trocar",
+ * os lançamentos da mesma origem que já estavam na competência saem antes:
+ * colar o relatório de novo não duplica as horas.
+ */
+export async function importarEventosAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA") return erro("Competência fechada: reabra para lançar.");
+  if (r0.comp.tipo !== "MENSAL") return erro("Lançamentos variáveis são só da folha mensal.");
+  const origem = texto(fd, "origem") === "PONTO" ? "PONTO" : "PLANILHA";
+
+  const prisma = getPrisma();
+  const [rubricas, pessoas] = await Promise.all([
+    prisma.dp2Rubrica.findMany({ where: { tenantId: a.tenantId } }),
+    prisma.person.findMany({
+      where: { tenantId: a.tenantId, currentCompanyId: r0.comp.companyId, isInternal: false, dp2Vinculo: { isNot: null } },
+      select: { id: true, name: true, cpf: true },
+    }),
+  ]);
+  const lido = importarEventos(
+    texto(fd, "texto"),
+    rubricas.map(paraImportar).filter(podeImportar),
+    pessoas.map((p) => ({ id: p.id, nome: p.name, cpf: p.cpf }))
+  );
+  if (lido.eventos.length === 0) return erro(lido.avisos[0] ?? "Nenhum evento encontrado no texto colado.");
+
+  const trocar = marcado(fd, "trocar");
+  await prisma.$transaction([
+    ...(trocar ? [prisma.dp2Evento.deleteMany({ where: { tenantId: a.tenantId, competenciaId, origem } })] : []),
+    prisma.dp2Evento.createMany({
+      data: lido.eventos.map((e) => ({
+        tenantId: a.tenantId,
+        competenciaId,
+        personId: e.personId,
+        rubricaId: e.rubricaId,
+        quantidade: e.quantidade,
+        valor: e.valor,
+        origem,
+        criadoPorId: a.userId,
+      })),
+    }),
+    ...(r0.comp.situacao === "CALCULADA" ? [prisma.dp2Competencia.update({ where: { id: competenciaId }, data: { situacao: "ABERTA" } })] : []),
+  ]);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.eventos_importados",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { origem, eventos: lido.eventos.length, trocou: trocar, avisos: lido.avisos.length },
+  });
+  revalidarCompetencia(competenciaId);
+  const ignoradas = lido.colunas.filter((c) => !c.rubrica).map((c) => c.cabecalho);
+  const partes = [`${lido.eventos.length} lançamento(s) importado(s).`];
+  if (ignoradas.length) partes.push(`Colunas ignoradas: ${ignoradas.join(", ")}.`);
+  if (lido.avisos.length) partes.push(lido.avisos.slice(0, 3).join(" "));
+  return { ok: true, texto: partes.join(" ") };
+}
+
+/** O link para o cliente informar os eventos do mês sem login. Um aberto por competência: pedir de novo cancela o anterior. */
+export async function pedirEventosAoClienteAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA" || r0.comp.tipo !== "MENSAL") return erro("O link é para a folha mensal ainda aberta.");
+  const prisma = getPrisma();
+  const pedido = await prisma.$transaction(async (tx) => {
+    await tx.dp2PedidoDeEventos.updateMany({ where: { tenantId: a.tenantId, competenciaId, situacao: "ABERTO" }, data: { situacao: "CANCELADO" } });
+    return tx.dp2PedidoDeEventos.create({
+      data: { tenantId: a.tenantId, competenciaId, token: novoToken(), expiraEm: new Date(Date.now() + DIAS_DO_LINK * 86_400_000), criadoPorId: a.userId },
+      select: { id: true },
+    });
+  });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.pedido_de_eventos",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { pedidoId: pedido.id },
+  });
+  revalidarCompetencia(competenciaId);
+  return { ok: true, texto: `Link criado. Copie e mande ao cliente (vale por ${DIAS_DO_LINK} dias).` };
+}
+
+export async function cancelarPedidoDeEventosAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const pedido = await prisma.dp2PedidoDeEventos.findFirst({ where: { id: texto(fd, "pedidoId"), tenantId: a.tenantId } });
+  if (!pedido) return erro("Link não encontrado.");
+  const r0 = await competenciaEditavel(a, pedido.competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (pedido.situacao !== "ABERTO") return erro("O link já não está aberto.");
+  await prisma.dp2PedidoDeEventos.update({ where: { id: pedido.id }, data: { situacao: "CANCELADO" } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.pedido_cancelado",
+    entityType: "Dp2Competencia",
+    entityId: pedido.competenciaId,
+  });
+  revalidarCompetencia(pedido.competenciaId);
+  return { ok: true, texto: "Link cancelado: quem abrir verá que ele não vale mais." };
+}
+
+export async function guardarHoleritesAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const r = await guardarHoleritesNosArquivos(a.tenantId, competenciaId, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.holerites_guardados",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+  });
+  revalidatePath("/arquivos");
+  return { ok: true, texto: r.texto };
+}
+
+export async function gerarRemessaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const data = texto(fd, "dataPagamento");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe a data do pagamento.");
+  const r = await gerarRemessaDaCompetencia(a.tenantId, competenciaId, data, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.remessa_gerada",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { remessaId: r.id, dataPagamento: data },
+  });
+  revalidarCompetencia(competenciaId);
+  return { ok: true, texto: r.texto };
+}
+
+export async function salvarContasDaFolhaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_rubricas", "gerir");
+  if (!a) return erro("Só quem gere o DP 2 mexe nas contas da folha.");
+  const contas = Object.fromEntries(CAMPOS_DAS_CONTAS.map((c) => [c.chave, texto(fd, c.chave).slice(0, 40)]));
+  await getPrisma().dp2ContasDaFolha.upsert({ where: { tenantId: a.tenantId }, create: { tenantId: a.tenantId, contas }, update: { contas } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.contas_salvas",
+    entityType: "Dp2Rubrica",
+    metadata: contas,
+  });
+  revalidatePath("/dp2/rubricas");
+  return { ok: true, texto: "Contas da folha salvas." };
+}
 // ─── eSocial (fase 3a, 12/11/2026): gerar e conferir, sem assinar e enviar ──
 
 export async function gerarTabelasEsocialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
