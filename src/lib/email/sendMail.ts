@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 import { getPrisma } from "@/lib/prisma";
 import { decryptSecret } from "@/lib/crypto";
 import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
@@ -36,9 +36,9 @@ export type SmtpResult = { ok: true } | { ok: false; error: string };
  * envio da taxa ao cliente) lê do retorno.
  */
 async function enviarComRegistro(
-  transporter: nodemailer.Transporter,
+  transporter: Transporter,
   rotulo: string,
-  mensagem: Parameters<nodemailer.Transporter["sendMail"]>[0]
+  mensagem: Parameters<Transporter["sendMail"]>[0]
 ) {
   const info = await transporter.sendMail(mensagem);
   console.info(
