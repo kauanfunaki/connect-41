@@ -11054,6 +11054,8 @@ model CoreEmpresa {
   registros    CoreRegistro[]
   decisoes     CoreNeoDecisao[]
   exportacoes  CoreExportacao[]
+  revisoes     CoreConciliacaoRevisao[]
+  vinculos     CoreConciliacaoVinculo[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11400,6 +11402,86 @@ model CoreExportacao {
   @@index([empresaId, status])
   @@index([tenantId])
   @@map("core_exportacoes")
+}
+
+/// Revisão manual da conciliação Razão × extrato (`conciliacao_revisoes`, Bloco B, Fase B3): a cópia
+/// da conferência (o relatório e o snapshot das fontes), independente dos lançamentos e do extrato.
+/// `snapshot` e `relatorio` guardam o JSON do original (snake_case, o `model_dump` do pydantic): a carga
+/// copia sem conversão, e os hashes das evidências continuam valendo.
+model CoreConciliacaoRevisao {
+  id            String    @id @default(uuid())
+  tenantId      String
+  empresaId     String
+  /// Referência documental, sem chave estrangeira (como no original): a revisão nunca trava a exclusão da conta bancária.
+  agenciaId     String
+  /// Quem criou (`criado_por`): id de `User`, sem chave, como trilha.
+  criadoPorId   String
+  nomeArquivo   String    @db.VarChar(255)
+  /// Nome dado pela pessoa; sem ele, a tela mostra o do arquivo.
+  titulo        String?   @db.VarChar(200)
+  contaBancaria String    @db.VarChar(255)
+  periodoInicio DateTime  @db.Date
+  periodoFim    DateTime  @db.Date
+  /// SHA-256 do Razão, do SISPAG e do extrato (`_hash` do original): a mesma combinação viva devolve a revisão existente.
+  revisaoHash   String    @db.Char(64)
+  /// SHA-256 da evidência do extrato na criação: se o extrato mudar, a revisão vira histórico.
+  extratoHash   String    @db.Char(64)
+  /// Versão otimista: toda alteração confere a versão que a tela viu.
+  versao        Int       @default(1)
+  /// { fontes, linhas_razao, extrato, hashes_apoio, avisos }
+  snapshot      Json
+  relatorio     Json
+  /// `revisaoHash` enquanto a revisão vive: ver chaves.ts.
+  chaveAtiva    String?   @db.Char(64)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  empresa  CoreEmpresa              @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  vinculos CoreConciliacaoVinculo[]
+
+  @@unique([empresaId, agenciaId, chaveAtiva])
+  @@index([empresaId, agenciaId])
+  @@index([empresaId, updatedAt])
+  @@index([tenantId])
+  @@map("core_conciliacao_revisoes")
+}
+
+/// Decisão humana registrada numa revisão (`conciliacao_vinculos`): desfazer preserva a composição.
+model CoreConciliacaoVinculo {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  revisaoId       String
+  /// Ids das transações do extrato (texto do UUID), como no original.
+  extratoIds      Json
+  /// [{ "linha_id": …, "dc": "D" | "C" }], como no original.
+  razaoItens      Json
+  totalExtrato    Decimal   @db.Decimal(15, 2)
+  totalRazao      Decimal   @db.Decimal(15, 2)
+  /// Razão − extrato. Diferente de zero só com observação.
+  diferenca       Decimal   @db.Decimal(15, 2)
+  observacao      String    @db.Text
+  /// ATIVO | DESFEITO
+  estado          String    @default("ATIVO") @db.VarChar(10)
+  /// Quem confirmou (`usuario_id`): id de `User`, sem chave, como trilha.
+  confirmadoPorId String
+  /// O nome de quem confirmou, gravado na hora (fica mesmo se a pessoa sair).
+  responsavel     String    @db.VarChar(200)
+  desfeitoPor     String?   @db.VarChar(200)
+  desfeitoEm      DateTime?
+  motivoDesfazer  String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa CoreEmpresa            @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  revisao CoreConciliacaoRevisao @relation(fields: [revisaoId], references: [id], onDelete: Restrict)
+
+  @@index([revisaoId, estado])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_conciliacao_vinculos")
 }
 
 // ─── Atendimento (10/11/2026) ────────────────────────────────────────────────
