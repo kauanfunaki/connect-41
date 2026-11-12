@@ -6725,6 +6725,8 @@ model Dp2Convencao {
   vigenciaInicio String?  @db.VarChar(10)
   vigenciaFim    String?  @db.VarChar(10)
   piso           Decimal? @db.Decimal(12, 2)
+  /// CNPJ do sindicato da categoria (vai no vínculo do eSocial, fase 3b).
+  cnpjSindicato  String?  @db.VarChar(18)
   he50           Decimal  @default(50) @db.Decimal(6, 2)
   he100          Decimal  @default(100) @db.Decimal(6, 2)
   noturno        Decimal  @default(20) @db.Decimal(6, 2)
@@ -6802,6 +6804,10 @@ model Dp2Vinculo {
   matricula            String?  @db.VarChar(30)
   /// Categoria do trabalhador (Tabela 1): "101" empregado geral, "103" aprendiz…
   categoria            String   @default("101") @db.VarChar(3)
+  /// O que o eSocial pede e o cadastro da pessoa não tem (fase 3b, 12/11/2026):
+  /// sexo, raça/cor, estado civil, grau de instrução, município IBGE, CBO,
+  /// tipo de contrato e jornada. Formato em src/lib/dp2/esocial/cadastro.ts.
+  dadosEsocial         Json?
   // Conta do colaborador (fase 2, 12/11/2026), para a remessa CNAB.
   /// Código do banco (3 dígitos, ex.: "001").
   bancoCodigo          String?  @db.VarChar(3)

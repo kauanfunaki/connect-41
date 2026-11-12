@@ -17,6 +17,17 @@ import { formatCalendarDate, formatCpf } from "@/lib/format";
 import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
 import { abrirTelaDeEmpresaDoDp2, brl } from "@/lib/dp2/tela";
 import { reais } from "@/lib/dp2/formato";
+import { CampoData } from "@/components/ui/CampoData";
+import {
+  ESTADOS_CIVIS,
+  GRAUS_DE_INSTRUCAO,
+  RACAS,
+  SEXOS,
+  TIPOS_DE_CONTRATO,
+  TIPOS_DE_JORNADA,
+  lerDadosEsocial,
+  sugerirGrauDeInstrucao,
+} from "@/lib/dp2/esocial/cadastro";
 import { salvarVinculoAction } from "../actions";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
@@ -48,6 +59,18 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
   const pessoas = await colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id);
   const aberta = params.pessoa ? pessoas.find((p) => p.id === params.pessoa) : undefined;
   const v = aberta?.dp2Vinculo;
+  const es = lerDadosEsocial(v?.dadosEsocial);
+  const grauSugerido = es.grauInstrucao ?? sugerirGrauDeInstrucao(aberta?.education);
+  const opcoes = (lista: [string, string][]) => [
+    <option key="" value="">
+      Não informado
+    </option>,
+    ...lista.map(([k, r]) => (
+      <option key={k} value={k}>
+        {k} · {r}
+      </option>
+    )),
+  ];
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
 
   return (
@@ -170,6 +193,60 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                       <option value="106">106 · Contrato temporário</option>
                       <option value="111">111 · Contrato intermitente</option>
                     </Select>
+                  </CampoForm>
+                </div>
+                <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-1">Dados para o eSocial</h3>
+                <p className="text-fs-2 text-fg-muted mb-3">O que a admissão (S-2200) pede e o cadastro da pessoa não tem.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CampoForm label="Sexo" htmlFor="esocial_sexo">
+                    <Select id="esocial_sexo" name="esocial_sexo" defaultValue={es.sexo ?? ""}>
+                      {opcoes(SEXOS)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Raça/cor" htmlFor="esocial_racaCor">
+                    <Select id="esocial_racaCor" name="esocial_racaCor" defaultValue={es.racaCor ?? ""}>
+                      {opcoes(RACAS)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Estado civil" htmlFor="esocial_estadoCivil">
+                    <Select id="esocial_estadoCivil" name="esocial_estadoCivil" defaultValue={es.estadoCivil ?? ""}>
+                      {opcoes(ESTADOS_CIVIS)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm
+                    label="Grau de instrução"
+                    htmlFor="esocial_grauInstrucao"
+                    helper={!es.grauInstrucao && grauSugerido ? `Sugerido pela escolaridade do cadastro: ${aberta.education}` : undefined}
+                  >
+                    <Select id="esocial_grauInstrucao" name="esocial_grauInstrucao" defaultValue={grauSugerido ?? ""}>
+                      {opcoes(GRAUS_DE_INSTRUCAO)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Município (código IBGE)" htmlFor="esocial_codigoMunicipio" helper="7 dígitos (ex.: 4106902 Curitiba).">
+                    <Input id="esocial_codigoMunicipio" name="esocial_codigoMunicipio" inputMode="numeric" maxLength={7} defaultValue={es.codigoMunicipio ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="CBO do cargo" htmlFor="esocial_cbo" helper="6 dígitos.">
+                    <Input id="esocial_cbo" name="esocial_cbo" inputMode="numeric" maxLength={7} defaultValue={es.cbo ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Tipo de contrato" htmlFor="esocial_tipoContrato">
+                    <Select id="esocial_tipoContrato" name="esocial_tipoContrato" defaultValue={es.tipoContrato ?? "1"}>
+                      {TIPOS_DE_CONTRATO.map(([k, r]) => (
+                        <option key={k} value={k}>
+                          {r}
+                        </option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Término (prazo determinado)" htmlFor="esocial_dataTermino">
+                    <CampoData id="esocial_dataTermino" name="esocial_dataTermino" defaultValue={es.dataTermino ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Tipo de jornada" htmlFor="esocial_tipoJornada">
+                    <Select id="esocial_tipoJornada" name="esocial_tipoJornada" defaultValue={es.tipoJornada ?? ""}>
+                      {opcoes(TIPOS_DE_JORNADA)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Jornada por extenso" htmlFor="esocial_descricaoJornada">
+                    <Input id="esocial_descricaoJornada" name="esocial_descricaoJornada" maxLength={999} placeholder="Segunda a sexta, 08:00 às 17:48" defaultValue={es.descricaoJornada ?? ""} />
                   </CampoForm>
                 </div>
 

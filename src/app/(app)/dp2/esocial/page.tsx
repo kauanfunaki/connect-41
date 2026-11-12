@@ -20,7 +20,16 @@ import { abrirTelaDeEmpresaDoDp2, mesAtual, nomeDaCompetencia } from "@/lib/dp2/
 import { GRUPO_DO_EVENTO, NOME_DO_EVENTO, type TipoDeEvento } from "@/lib/dp2/esocial/leiaute";
 import { TRANSMISSAO_PENDENTE } from "@/lib/dp2/esocial/transmissao";
 import type { Pendencia } from "@/lib/dp2/esocial/eventos";
-import { gerarPeriodicosEsocialAction, gerarTabelasEsocialAction } from "../actions";
+import { Input } from "@/components/ui/Input";
+import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
+import { MOTIVOS_DE_AFASTAMENTO } from "@/lib/dp2/esocial/naoPeriodicos";
+import {
+  gerarAdmissaoAction,
+  gerarAfastamentoAction,
+  gerarAlteracaoAction,
+  gerarPeriodicosEsocialAction,
+  gerarTabelasEsocialAction,
+} from "../actions";
 
 const NOME_DA_SITUACAO: Record<string, string> = { PENDENCIA: "Com pendência", PRONTO: "Pronto", ENVIADO: "Enviado", ACEITO: "Aceito", REJEITADO: "Rejeitado" };
 const TOM: Record<string, "atencao" | "marca" | "sucesso" | "perigo" | "neutro"> = { PENDENCIA: "atencao", PRONTO: "marca", ENVIADO: "neutro", ACEITO: "sucesso", REJEITADO: "perigo" };
@@ -46,11 +55,11 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
   }
 
   const prisma = getPrisma();
-  const [eventos, fechadas] = await Promise.all([
+  const [eventos, fechadas, pessoas] = await Promise.all([
     prisma.dp2EventoEsocial.findMany({
       where: { tenantId: tela.tenantId, companyId: tela.empresa.id },
       orderBy: [{ createdAt: "desc" }],
-      select: { id: true, tipo: true, referencia: true, situacao: true, pendencias: true, createdAt: true, person: { select: { name: true } } },
+      select: { id: true, tipo: true, referencia: true, situacao: true, pendencias: true, createdAt: true, personId: true, person: { select: { name: true } } },
       take: 300,
     }),
     prisma.dp2Competencia.findMany({
@@ -59,11 +68,15 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
       select: { id: true, ano: true, mes: true },
       take: 12,
     }),
+    colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
   ]);
+  const comContrato = pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate);
+  const admissaoDe = new Map<string, string>();
+  for (const e of eventos) if (e.tipo === "S-2200" && e.personId && !admissaoDe.has(e.personId)) admissaoDe.set(e.personId, e.situacao);
   const filtro = params.tipo && params.tipo in NOME_DO_EVENTO ? params.tipo : null;
   const visiveis = filtro ? eventos.filter((e) => e.tipo === filtro) : eventos;
   const conta = (s: string) => eventos.filter((e) => e.situacao === s).length;
-  const prontosNoGrupo = (g: "1" | "3") => eventos.filter((e) => e.situacao === "PRONTO" && GRUPO_DO_EVENTO[e.tipo as TipoDeEvento] === g).length;
+  const prontosNoGrupo = (g: "1" | "2" | "3") => eventos.filter((e) => e.situacao === "PRONTO" && GRUPO_DO_EVENTO[e.tipo as TipoDeEvento] === g).length;
 
   // As pendências que bloqueiam, sem repetir (a mesma rubrica sem natureza aparece uma vez).
   const pendencias = new Map<string, Pendencia>();
@@ -138,6 +151,11 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
               </FormularioDoDp2>
             )
           )}
+          {prontosNoGrupo("2") > 0 && (
+            <Button href={`/api/dp2/esocial/lote?empresa=${tela.empresa.id}&grupo=2`} variant="ghost" size="sm" download className="mt-3">
+              Baixar lote de não periódicos para conferência
+            </Button>
+          )}
           {prontosNoGrupo("3") > 0 && (
             <Button href={`/api/dp2/esocial/lote?empresa=${tela.empresa.id}&grupo=3`} variant="ghost" size="sm" download className="mt-3">
               Baixar lote de periódicos para conferência
@@ -145,6 +163,130 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
           )}
         </Secao>
       </div>
+
+      <Secao
+        titulo="Trabalhadores"
+        apoio="Admissão (S-2200), alteração contratual (S-2206) e afastamento (S-2230) a partir do contrato do DP 2 e do cadastro da pessoa. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas."
+        className="mb-5"
+      >
+        {comContrato.length === 0 ? (
+          <p className="text-fs-3 text-fg-muted">
+            Ninguém com contrato no DP 2.{" "}
+            <Link href="/dp2/colaboradores" className="text-brand hover:underline">
+              Criar contratos
+            </Link>
+          </p>
+        ) : (
+          <>
+            <div className="overflow-x-auto mb-5">
+              <table className="w-full min-w-[560px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Matrícula</th>
+                    <th className={TH}>Admissão no eSocial</th>
+                    <th className={TH} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {comContrato.map((p) => {
+                    const s = admissaoDe.get(p.id);
+                    return (
+                      <tr key={p.id} className={TR}>
+                        <td className={TD}>
+                          <Link href={`/dp2/colaboradores?pessoa=${p.id}`} className="text-brand hover:underline">
+                            {p.name}
+                          </Link>
+                        </td>
+                        <td className={`${TD} tabular-nums`}>{p.dp2Vinculo?.matricula ?? <span className="text-warning-fg">sem matrícula</span>}</td>
+                        <td className={TD}>{s ? <Selo tom={TOM[s] ?? "neutro"}>{NOME_DA_SITUACAO[s] ?? s}</Selo> : <span className="text-fg-muted">não gerada</span>}</td>
+                        <td className={`${TD} text-right`}>
+                          {tela.podeAgir && (
+                            <FormularioDoDp2 acao={gerarAdmissaoAction} rotulo={s ? "Gerar S-2200 de novo" : "Gerar S-2200"} rotuloEnviando="Gerando…" variante="ghost" tamanho="xs">
+                              <input type="hidden" name="personId" value={p.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {tela.podeAgir && (
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div>
+                  <h3 className="text-fs-3 font-semibold text-fg mb-2">Alteração contratual (S-2206)</h3>
+                  <p className="text-fs-2 text-fg-muted mb-3">Atualize o contrato em Colaboradores (salário, cargo, jornada) e gere a alteração com a data em que vale.</p>
+                  <FormularioDoDp2 acao={gerarAlteracaoAction} rotulo="Gerar S-2206" rotuloEnviando="Gerando…" variante="secondary">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <CampoForm label="Colaborador" htmlFor="alt_personId">
+                        <Select id="alt_personId" name="personId" required defaultValue="">
+                          <option value="" disabled>
+                            Escolha…
+                          </option>
+                          {comContrato.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </CampoForm>
+                      <CampoForm label="Vale a partir de" htmlFor="dataAlteracao">
+                        <CampoData id="dataAlteracao" name="dataAlteracao" required />
+                      </CampoForm>
+                      <CampoForm label="O que mudou" htmlFor="descricao" className="sm:col-span-2">
+                        <Input id="descricao" name="descricao" maxLength={150} placeholder="Reajuste da convenção coletiva" />
+                      </CampoForm>
+                    </div>
+                  </FormularioDoDp2>
+                </div>
+                <div>
+                  <h3 className="text-fs-3 font-semibold text-fg mb-2">Afastamento (S-2230)</h3>
+                  <p className="text-fs-2 text-fg-muted mb-3">Sem fim, o afastamento fica em aberto; quando a pessoa voltar, gere de novo com o fim.</p>
+                  <FormularioDoDp2 acao={gerarAfastamentoAction} rotulo="Gerar S-2230" rotuloEnviando="Gerando…" variante="secondary">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <CampoForm label="Colaborador" htmlFor="afa_personId">
+                        <Select id="afa_personId" name="personId" required defaultValue="">
+                          <option value="" disabled>
+                            Escolha…
+                          </option>
+                          {comContrato.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </CampoForm>
+                      <CampoForm label="Motivo" htmlFor="motivo">
+                        <Select id="motivo" name="motivo" defaultValue="03">
+                          {MOTIVOS_DE_AFASTAMENTO.map(([k, r]) => (
+                            <option key={k} value={k}>
+                              {k} · {r}
+                            </option>
+                          ))}
+                        </Select>
+                      </CampoForm>
+                      <CampoForm label="Início" htmlFor="inicio">
+                        <CampoData id="inicio" name="inicio" required />
+                      </CampoForm>
+                      <CampoForm label="Fim" htmlFor="fim">
+                        <CampoData id="fim" name="fim" />
+                      </CampoForm>
+                      <CampoForm label="Outro motivo (código)" htmlFor="motivoOutro" helper="Tabela 18; substitui o motivo acima.">
+                        <Input id="motivoOutro" name="motivoOutro" inputMode="numeric" maxLength={2} />
+                      </CampoForm>
+                      <CampoForm label="Observação" htmlFor="observacao">
+                        <Input id="observacao" name="observacao" maxLength={255} />
+                      </CampoForm>
+                    </div>
+                  </FormularioDoDp2>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </Secao>
 
       {(pendencias.size > 0 || avisos.size > 0) && (
         <Secao titulo="O que falta no cadastro" apoio="Corrija e gere os eventos de novo. O que está em “conferir” não impede o envio, mas é um código que o Connect sugeriu." className="mb-5">

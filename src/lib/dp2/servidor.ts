@@ -191,6 +191,7 @@ export async function colaboradoresDaEmpresa(tenantId: string, companyId: string
       bankAgency: true,
       bankAccount: true,
       bankAccountType: true,
+      education: true,
       dp2Vinculo: true,
     },
     orderBy: [{ active: "desc" }, { name: "asc" }],
