@@ -12,6 +12,7 @@ import { calcularRescisaoDoDp2 } from "@/lib/dp2/rescisao";
 import { dataProjetada, diasDeAvisoPrevio } from "@/lib/rescisao/avos";
 import type { MotivoCanonico } from "@/lib/rescisao/motivos";
 import { lerDadosEsocial } from "./cadastro";
+import { eventoS2210, eventoS2220, eventoS2240, lerResponsaveis, type Aso, type Cat, type CondicaoAmbiental, type ResponsaveisDeSst } from "./sst";
 import {
   eventoS2200,
   eventoS2206,
@@ -252,6 +253,34 @@ export async function gerarAfastamento(tenantId: string, personId: string, a: Af
   const v = await doVinculo(tenantId, personId, a.inicio.slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
   const ev = eventoS2230(v.empregador, v.t, a, v.novoId);
+  return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+// ─── Saúde e segurança (fase 3c) ────────────────────────────────────────────
+
+export async function responsaveisDeSst(tenantId: string, companyId: string): Promise<ResponsaveisDeSst> {
+  const cfg = await getPrisma().dp2EmpresaConfig.findFirst({ where: { tenantId, companyId }, select: { sst: true } });
+  return lerResponsaveis(cfg?.sst);
+}
+
+export async function gerarAso(tenantId: string, personId: string, aso: Aso, userId: string): Promise<Resultado> {
+  const v = await doVinculo(tenantId, personId, (aso.data ?? new Date().toISOString()).slice(0, 7));
+  if (!v) return { ok: false, erro: SEM_CONTRATO };
+  const ev = eventoS2220(v.empregador, v.t, aso, await responsaveisDeSst(tenantId, v.companyId), v.novoId);
+  return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+export async function gerarCondicaoAmbiental(tenantId: string, personId: string, c: CondicaoAmbiental, userId: string): Promise<Resultado> {
+  const v = await doVinculo(tenantId, personId, (c.inicio ?? new Date().toISOString()).slice(0, 7));
+  if (!v) return { ok: false, erro: SEM_CONTRATO };
+  const ev = eventoS2240(v.empregador, v.t, c, await responsaveisDeSst(tenantId, v.companyId), v.novoId);
+  return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+export async function gerarCat(tenantId: string, personId: string, c: Cat, userId: string): Promise<Resultado> {
+  const v = await doVinculo(tenantId, personId, (c.dataAcidente ?? new Date().toISOString()).slice(0, 7));
+  if (!v) return { ok: false, erro: SEM_CONTRATO };
+  const ev = eventoS2210(v.empregador, v.t, c, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
 

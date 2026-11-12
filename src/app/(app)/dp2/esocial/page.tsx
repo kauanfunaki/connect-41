@@ -21,6 +21,7 @@ import { GRUPO_DO_EVENTO, NOME_DO_EVENTO, type TipoDeEvento } from "@/lib/dp2/es
 import { TRANSMISSAO_PENDENTE } from "@/lib/dp2/esocial/transmissao";
 import type { Pendencia } from "@/lib/dp2/esocial/eventos";
 import { Input } from "@/components/ui/Input";
+import { FormulariosDeSst } from "@/components/dp2/FormulariosDeSst";
 import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
 import { MOTIVOS_DE_AFASTAMENTO } from "@/lib/dp2/esocial/naoPeriodicos";
 import {
@@ -287,6 +288,16 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
           </>
         )}
       </Secao>
+
+      {comContrato.length > 0 && tela.podeAgir && (
+        <Secao
+          titulo="Saúde e segurança"
+          apoio="ASO (S-2220), condições ambientais (S-2240) e acidente de trabalho (S-2210). O médico do PCMSO e o responsável pelos registros ambientais ficam em Configuração da empresa."
+          className="mb-5"
+        >
+          <FormulariosDeSst pessoas={comContrato.map((p) => ({ id: p.id, name: p.name }))} />
+        </Secao>
+      )}
 
       {(pendencias.size > 0 || avisos.size > 0) && (
         <Secao titulo="O que falta no cadastro" apoio="Corrija e gere os eventos de novo. O que está em “conferir” não impede o envio, mas é um código que o Connect sugeriu." className="mb-5">
