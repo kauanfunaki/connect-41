@@ -2445,6 +2445,7 @@ model Company {
   dp2Config                Dp2EmpresaConfig?
   dp2Vinculos              Dp2Vinculo[]
   dp2Competencias          Dp2Competencia[]
+  dp2EventosEsocial        Dp2EventoEsocial[]
   rescisaoConfig           CompanyRescisaoConfig?
   benefitCatalogs          BenefitCatalog[]
   workShifts               WorkShift[]
@@ -2631,6 +2632,7 @@ model Person {
   dp2Eventos           Dp2Evento[]
   dp2Calculos          Dp2Calculo[]
   dp2Comparativos      Dp2Comparativo[]
+  dp2EventosEsocial    Dp2EventoEsocial[]
   overtimeEntries      OvertimeEntry[]
   benefitAssignments   BenefitAssignment[]
   scheduleEntries      ScheduleEntry[]
@@ -6694,6 +6696,11 @@ model Dp2Rubrica {
   entraNaMedia    Boolean  @default(false)
   contaDebito     String?  @db.VarChar(40)
   contaCredito    String?  @db.VarChar(40)
+  // Códigos de incidência do eSocial (fase 3a, 12/11/2026). Nulo = o que o
+  // Connect sugere pelo papel e pelas incidências (esocial/eventos.ts).
+  codIncCP        String?  @db.VarChar(2)
+  codIncIRRF      String?  @db.VarChar(2)
+  codIncFGTS      String?  @db.VarChar(2)
   ativa           Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -6745,6 +6752,13 @@ model Dp2EmpresaConfig {
   fap               Decimal  @default(1) @db.Decimal(6, 4)
   /// Terceiros (salário-educação, Sistema S…) em %.
   terceirosAliquota Decimal  @default(5.8) @db.Decimal(5, 2)
+  // eSocial (fase 3a, 12/11/2026).
+  /// FPAS da atividade (3 dígitos, ex.: "515" comércio), para a lotação (S-1020).
+  fpas              String?  @db.VarChar(3)
+  /// Código de terceiros (4 dígitos, ex.: "0115"), para a lotação (S-1020).
+  codTercs          String?  @db.VarChar(4)
+  /// Classificação tributária (Tabela 8), quando o regime não diz sozinho.
+  classTrib         String?  @db.VarChar(2)
   // Conta pagadora (fase 2, 12/11/2026): de onde sai o salário na remessa CNAB.
   /// Código do banco (3 dígitos, ex.: "341").
   bancoCodigo       String?  @db.VarChar(3)
@@ -6783,6 +6797,11 @@ model Dp2Vinculo {
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
   aprendiz             Boolean  @default(false)
+  // eSocial (fase 3a, 12/11/2026).
+  /// A matrícula do vínculo no eSocial (a mesma do S-2200).
+  matricula            String?  @db.VarChar(30)
+  /// Categoria do trabalhador (Tabela 1): "101" empregado geral, "103" aprendiz…
+  categoria            String   @default("101") @db.VarChar(3)
   // Conta do colaborador (fase 2, 12/11/2026), para a remessa CNAB.
   /// Código do banco (3 dígitos, ex.: "001").
   bancoCodigo          String?  @db.VarChar(3)
@@ -6828,6 +6847,7 @@ model Dp2Competencia {
   eventos      Dp2Evento[]
   calculos     Dp2Calculo[]
   comparativos Dp2Comparativo[]
+  esocial      Dp2EventoEsocial[]
   remessas     Dp2Remessa[]
   pedidos      Dp2PedidoDeEventos[]
 
@@ -6918,6 +6938,41 @@ model Dp2Comparativo {
   @@unique([competenciaId, personId])
   @@index([personId])
   @@map("dp2_comparativos")
+}
+
+/// Um evento do eSocial gerado pelo DP 2 (fase 3a, 12/11/2026): o XML no
+/// leiaute, ainda sem assinatura, e as pendências de cadastro. A assinatura e o
+/// envio ficam para depois (esocial/transmissao.ts).
+model Dp2EventoEsocial {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  /// A competência dos periódicos; nula nas tabelas.
+  competenciaId String?
+  personId      String?
+  /// "S-1000", "S-1005", "S-1010", "S-1020", "S-1200", "S-1210" ou "S-1299".
+  tipo          String   @db.VarChar(6)
+  /// O que o evento descreve: "2026-11", o código da rubrica, o CPF…
+  referencia    String   @db.VarChar(80)
+  idEvento      String   @unique @db.VarChar(36)
+  /// "PENDENCIA" (falta cadastro), "PRONTO" (para assinar e enviar), "ENVIADO",
+  /// "ACEITO" ou "REJEITADO".
+  situacao      String   @db.VarChar(10)
+  xml           String   @db.LongText
+  pendencias    Json
+  recibo        String?  @db.VarChar(40)
+  geradoPorId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  competencia Dp2Competencia? @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person?         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, tipo])
+  @@index([competenciaId])
+  @@index([personId])
+  @@map("dp2_eventos_esocial")
 }
 
 /// Uma remessa CNAB 240 de pagamento gerada da competência (fase 2, 12/11/2026).

@@ -417,6 +417,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.tabela_salva": e("gravou uma tabela oficial no DP 2"),
   "folha.rubrica_salva": e("salvou a rubrica do DP 2"),
   "folha.convencao_salva": e("salvou a convenção coletiva do DP 2"),
+  "folha.esocial_tabelas": c("gerou os eventos de tabela do eSocial no DP 2"),
+  "folha.esocial_periodicos": c("gerou os eventos periódicos do eSocial no DP 2"),
   "folha.eventos_importados": c("importou os eventos do mês no DP 2"),
   "folha.pedido_de_eventos": c("criou o link para o cliente informar os eventos do mês"),
   "folha.pedido_cancelado": e("cancelou o link de eventos do mês do cliente"),

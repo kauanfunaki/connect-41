@@ -123,6 +123,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "Dp2Competencia", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["competência do DP 2", "competências do DP 2"], historico: true },
   { modelo: "Dp2EmpresaConfig", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "Dp2Vinculo", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["contrato do DP 2", "contratos do DP 2"], historico: true },
+  { modelo: "Dp2EventoEsocial", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["evento do eSocial do DP 2", "eventos do eSocial do DP 2"], historico: true },
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
@@ -227,6 +228,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2Evento", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["lançamento do DP 2", "lançamentos do DP 2"], historico: true },
   { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
   { modelo: "Dp2Comparativo", campo: "person", fk: "personId", tratamento: "cascata" },
+  { modelo: "Dp2EventoEsocial", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["evento do eSocial do DP 2", "eventos do eSocial do DP 2"], historico: true },
 
   { modelo: "ChatwootContactLink", campo: "person", fk: "personId", tratamento: "desligar" },
 ];
@@ -398,6 +400,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Competencia", coluna: "fechadaPorId", tratamento: "manter", motivo: "quem fechou a folha; a auditoria guarda o nome" },
   { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
   { modelo: "Dp2Comparativo", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os valores da Domínio; a tela não mostra o id" },
+  { modelo: "Dp2EventoEsocial", coluna: "geradoPorId", tratamento: "manter", motivo: "quem gerou o evento do eSocial; a auditoria guarda o nome" },
   { modelo: "Dp2Remessa", coluna: "geradaPorId", tratamento: "manter", motivo: "quem gerou o arquivo do banco; a auditoria guarda o nome" },
   { modelo: "Dp2PedidoDeEventos", coluna: "criadoPorId", tratamento: "manter", motivo: "quem pediu os eventos ao cliente; a auditoria guarda o nome" },
   // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
