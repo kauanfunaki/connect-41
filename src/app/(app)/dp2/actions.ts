@@ -21,7 +21,18 @@ import { importarEventos, podeImportar, type RubricaParaImportar } from "@/lib/d
 import { DIAS_DO_LINK, gerarRemessaDaCompetencia, guardarHoleritesNosArquivos, novoToken } from "@/lib/dp2/saidas";
 import { CAMPOS_DAS_CONTAS } from "@/lib/dp2/contabilizacao";
 import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
-import { gerarAdmissao, gerarAfastamento, gerarAlteracao, gerarDesligamento, gerarPeriodicos, gerarTabelas } from "@/lib/dp2/esocial/servidor";
+import {
+  gerarAdmissao,
+  gerarAfastamento,
+  gerarAlteracao,
+  gerarAso,
+  gerarCat,
+  gerarCondicaoAmbiental,
+  gerarDesligamento,
+  gerarPeriodicos,
+  gerarTabelas,
+} from "@/lib/dp2/esocial/servidor";
+import { lerAgentes, lerProcedimentos, lerResponsaveis } from "@/lib/dp2/esocial/sst";
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
 import { MOTIVO_LABEL, type MotivoCanonico } from "@/lib/rescisao/motivos";
 
@@ -419,6 +430,28 @@ export async function salvarConfigDaEmpresaAction(_: EstadoDoDp2, fd: FormData):
   });
   revalidatePath("/dp2/configuracao");
   return { ok: true, texto: "Configuração salva. Recalcule as competências abertas." };
+}
+
+/** Médico do PCMSO e responsável pelos registros ambientais (S-2220 e S-2240). */
+export async function salvarResponsaveisDeSstAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const campos = ["medicoNome", "medicoCpf", "medicoCrm", "medicoUf", "ambientalNome", "ambientalCpf", "ambientalOrgao", "ambientalOrgaoNome", "ambientalNumero", "ambientalUf"];
+  const sst = lerResponsaveis(Object.fromEntries(campos.map((k) => [k, texto(fd, k)])));
+  await getPrisma().dp2EmpresaConfig.upsert({ where: { companyId }, create: { tenantId: a.tenantId, companyId, sst }, update: { sst } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.sst_responsaveis",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: { medico: sst.medicoNome, ambiental: sst.ambientalNome },
+  });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: "Responsáveis de saúde e segurança salvos. Gere de novo os eventos com pendência." };
 }
 
 // ─── Cadastros do escritório ────────────────────────────────────────────────
@@ -917,6 +950,126 @@ export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Prom
     metadata: { nome: p.name, motivo, inicio },
   });
   return respostaDoEvento("S-2230", p.name, r);
+}
+
+const ehData = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+
+export async function gerarAsoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const data = ehData(texto(fd, "dataAso"));
+  if (!data) return erro("Informe a data do ASO.");
+  const r = await gerarAso(
+    a.tenantId,
+    p.id,
+    {
+      tipoExame: texto(fd, "tipoExame"),
+      data,
+      resultado: texto(fd, "resultado") === "2" ? "2" : "1",
+      procedimentos: lerProcedimentos(texto(fd, "procedimentos")),
+      medicoNome: texto(fd, "medicoNome") || null,
+      medicoCrm: texto(fd, "medicoCrm").replace(/\D/g, "") || null,
+      medicoUf: texto(fd, "medicoUf").toUpperCase() || null,
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_aso",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, tipoExame: texto(fd, "tipoExame"), data },
+  });
+  return respostaDoEvento("S-2220", p.name, r);
+}
+
+export async function gerarCondicaoAmbientalAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const inicio = ehData(texto(fd, "inicioCondicao"));
+  if (!inicio) return erro("Informe desde quando vale a condição.");
+  const epc = (k: string) => (["0", "1", "2"].includes(texto(fd, k)) ? texto(fd, k) : "0");
+  const r = await gerarCondicaoAmbiental(
+    a.tenantId,
+    p.id,
+    {
+      inicio,
+      setor: texto(fd, "setor") || null,
+      atividade: texto(fd, "atividade") || null,
+      agentes: lerAgentes(texto(fd, "agentes")),
+      usaEpc: epc("usaEpc"),
+      usaEpi: epc("usaEpi"),
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_ambiente",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, inicio },
+  });
+  return respostaDoEvento("S-2240", p.name, r);
+}
+
+export async function gerarCatAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const dataAcidente = ehData(texto(fd, "dataAcidente"));
+  if (!dataAcidente) return erro("Informe a data do acidente.");
+  const ou = (k: string) => texto(fd, k) || null;
+  const r = await gerarCat(
+    a.tenantId,
+    p.id,
+    {
+      dataAcidente,
+      horaAcidente: ou("horaAcidente"),
+      horasTrabalhadasAntes: ou("horasTrabalhadasAntes"),
+      tipoAcidente: texto(fd, "tipoAcidente"),
+      obito: marcado(fd, "obito"),
+      comunicouPolicia: marcado(fd, "comunicouPolicia"),
+      situacaoGeradora: ou("situacaoGeradora"),
+      ultimoDiaTrabalhado: ehData(texto(fd, "ultimoDiaTrabalhado")) ?? dataAcidente,
+      houveAfastamento: marcado(fd, "houveAfastamento"),
+      localDescricao: ou("localDescricao"),
+      localLogradouro: ou("localLogradouro"),
+      localNumero: ou("localNumero"),
+      localCep: ou("localCep"),
+      localMunicipio: ou("localMunicipio"),
+      localUf: texto(fd, "localUf").toUpperCase() || null,
+      parteAtingida: ou("parteAtingida"),
+      lateralidade: ["0", "1", "2", "3"].includes(texto(fd, "lateralidade")) ? texto(fd, "lateralidade") : "0",
+      agenteCausador: ou("agenteCausador"),
+      dataAtendimento: ehData(texto(fd, "dataAtendimento")),
+      horaAtendimento: ou("horaAtendimento"),
+      internacao: marcado(fd, "internacao"),
+      diasDeTratamento: lerInteiro(texto(fd, "diasDeTratamento")),
+      naturezaDaLesao: ou("naturezaDaLesao"),
+      cid: ou("cid"),
+      emitenteNome: ou("emitenteNome"),
+      emitenteCrm: ou("emitenteCrm"),
+      emitenteUf: texto(fd, "emitenteUf").toUpperCase() || null,
+      observacao: ou("observacaoCat"),
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_cat",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, dataAcidente },
+  });
+  return respostaDoEvento("S-2210", p.name, r);
 }
 
 const MOTIVOS_DE_RESCISAO = Object.keys(MOTIVO_LABEL) as MotivoCanonico[];

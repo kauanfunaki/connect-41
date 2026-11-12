@@ -6761,6 +6761,9 @@ model Dp2EmpresaConfig {
   codTercs          String?  @db.VarChar(4)
   /// Classificação tributária (Tabela 8), quando o regime não diz sozinho.
   classTrib         String?  @db.VarChar(2)
+  /// Responsáveis de SST da empresa (fase 3c, 12/11/2026): o médico do PCMSO
+  /// e o responsável pelos registros ambientais. Formato em esocial/sst.ts.
+  sst               Json?
   // Conta pagadora (fase 2, 12/11/2026): de onde sai o salário na remessa CNAB.
   /// Código do banco (3 dígitos, ex.: "341").
   bancoCodigo       String?  @db.VarChar(3)
