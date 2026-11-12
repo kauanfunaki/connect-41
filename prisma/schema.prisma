@@ -2526,6 +2526,8 @@ model Company {
   honorarioVinculos     HonorarioVinculoPasta[]
   honorarioSemPasta     HonorarioEmpresaSemPasta?
   honorarioManual       HonorarioManual?
+  honorarioContatos     HonorarioContato[]
+  honorarioTermos       HonorarioTermoGerado[]
   honorarioEnvios       HonorarioAcessoriasEnvio[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
@@ -7623,6 +7625,11 @@ model CompanyPartner {
   documentMasked String?   @db.VarChar(20)
   /// De onde veio: "MANUAL" ou "RECEITA".
   origin         String    @default("MANUAL") @db.VarChar(20)
+  /// Para o termo aditivo (12/11/2026): "brasileiro", "casado", "empresário" —
+  /// como vão escritos no texto do contratante.
+  nationality    String?   @db.VarChar(60)
+  maritalStatus  String?   @db.VarChar(40)
+  occupation     String?   @db.VarChar(120)
 
   zipCode           String? @db.VarChar(10)
   addressStreet     String? @db.VarChar(180)
@@ -12366,6 +12373,62 @@ model HonorarioManual {
 
   @@index([tenantId])
   @@map("hon_manuais")
+}
+
+/// Os contatos do contrato da empresa, que entram no termo aditivo (12/11/2026):
+/// o administrativo e o financeiro, um de cada.
+model HonorarioContato {
+  id        String   @id @default(uuid())
+  tenantId  String
+  companyId String
+  /// ADMINISTRATIVO | FINANCEIRO
+  papel     String   @db.VarChar(15)
+  nome      String   @db.VarChar(180)
+  telefone  String?  @db.VarChar(30)
+  email     String?  @db.VarChar(120)
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, papel])
+  @@index([tenantId])
+  @@map("hon_contatos")
+}
+
+/// O modelo .docx do termo aditivo do escritório, enviado na tela (12/11/2026).
+/// Campos: {CONTRATANTE_TEXTO}, {DATA_DOCUMENTO} e {NOME_SOCIO_ASSINATURA} —
+/// os do Aditiva Pronto, para o modelo de lá servir sem mudança.
+model HonorarioModeloDoTermo {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  nomeArquivo String   @db.VarChar(255)
+  conteudo    Bytes    @db.MediumBlob
+  /// A cidade da data: "Curitiba, 12 de novembro de 2026."
+  cidade      String   @db.VarChar(80)
+  /// Nome de quem enviou, como em `informadoPor`.
+  enviadoPor  String   @db.VarChar(150)
+  updatedAt   DateTime @updatedAt
+
+  @@map("hon_modelo_do_termo")
+}
+
+/// Cada termo aditivo gerado (12/11/2026). O arquivo fica nos Arquivos da
+/// empresa; aqui fica quem gerou e quando.
+model HonorarioTermoGerado {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nomeArquivo String   @db.VarChar(255)
+  /// O arquivo nos Arquivos; nulo quando a pasta da empresa não existia.
+  driveFileId String?
+  geradoPor   String   @db.VarChar(150)
+  geradoEm    DateTime @default(now()) @db.DateTime(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, geradoEm])
+  @@index([companyId])
+  @@map("hon_termos_gerados")
 }
 
 /// Última leitura das empresas no Acessórias (trocada inteira a cada "Conferir").

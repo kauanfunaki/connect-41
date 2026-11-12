@@ -114,6 +114,10 @@ export function TabelaDeAditivos({ empresas, ano, raizUnc, filtrado }: { empresa
                         Vincular pasta
                       </Link>
                     )}
+                    {/* O termo aditivo em Word, com o cadastro da empresa (12/11/2026). */}
+                    <Link href={`/honorarios/termo/${id}`} className="mt-1 block text-label text-brand hover:underline">
+                      Gerar termo
+                    </Link>
                   </td>
                 </tr>
                 {expandida && (

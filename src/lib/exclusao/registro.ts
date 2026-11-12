@@ -136,6 +136,8 @@ const EMPRESA: Ligacao[] = [
   { modelo: "HonorarioVinculoPasta", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["pasta de contrato (fica sem empresa)", "pastas de contrato (ficam sem empresa)"] },
   { modelo: "HonorarioEmpresaSemPasta", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "HonorarioManual", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["honorário informado à mão", "honorários informados à mão"] },
+  { modelo: "HonorarioContato", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["contato do contrato", "contatos do contrato"] },
+  { modelo: "HonorarioTermoGerado", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["registro de termo aditivo gerado", "registros de termo aditivo gerado"] },
   { modelo: "HonorarioAcessoriasEnvio", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["envio de honorário ao Acessórias", "envios de honorário ao Acessórias"], historico: true },
   // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
   // a conta continua (com as outras empresas dela, ou sem nenhuma). O
