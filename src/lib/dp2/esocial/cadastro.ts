@@ -25,6 +25,19 @@ export type DadosEsocialDoVinculo = {
   tipoJornada: string | null;
   /** A jornada por extenso ("Segunda a sexta, 08:00 às 17:48, 1h de intervalo"). */
   descricaoJornada: string | null;
+  // Estágio (categoria 901, fase 3d): o que vai no S-2300.
+  /** "O" obrigatório, "N" não obrigatório. */
+  estagioNatureza: string | null;
+  /** 1 fundamental, 2 médio, 3 formação profissional, 4 superior, 8 educação especial. */
+  estagioNivel: string | null;
+  estagioArea: string | null;
+  /** Número da apólice do seguro contra acidentes pessoais. */
+  estagioApolice: string | null;
+  /** "AAAA-MM-DD". */
+  estagioPrevisaoTermino: string | null;
+  estagioCnpjInstituicao: string | null;
+  estagioCnpjAgente: string | null;
+  estagioCpfSupervisor: string | null;
 };
 
 export const DADOS_VAZIOS: DadosEsocialDoVinculo = {
@@ -38,6 +51,14 @@ export const DADOS_VAZIOS: DadosEsocialDoVinculo = {
   dataTermino: null,
   tipoJornada: null,
   descricaoJornada: null,
+  estagioNatureza: null,
+  estagioNivel: null,
+  estagioArea: null,
+  estagioApolice: null,
+  estagioPrevisaoTermino: null,
+  estagioCnpjInstituicao: null,
+  estagioCnpjAgente: null,
+  estagioCpfSupervisor: null,
 };
 
 export const SEXOS: [string, string][] = [
@@ -91,6 +112,19 @@ export const TIPOS_DE_JORNADA: [string, string][] = [
   ["9", "Demais tipos de jornada"],
 ];
 
+export const NATUREZAS_DE_ESTAGIO: [string, string][] = [
+  ["N", "Não obrigatório"],
+  ["O", "Obrigatório"],
+];
+
+export const NIVEIS_DE_ESTAGIO: [string, string][] = [
+  ["1", "Fundamental"],
+  ["2", "Médio"],
+  ["3", "Formação profissional"],
+  ["4", "Superior"],
+  ["8", "Educação especial"],
+];
+
 const de = (lista: [string, string][], v: unknown) => (typeof v === "string" && lista.some(([k]) => k === v) ? v : null);
 
 export function lerDadosEsocial(bruto: unknown): DadosEsocialDoVinculo {
@@ -111,6 +145,14 @@ export function lerDadosEsocial(bruto: unknown): DadosEsocialDoVinculo {
     dataTermino: typeof o.dataTermino === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.dataTermino) ? o.dataTermino : null,
     tipoJornada: de(TIPOS_DE_JORNADA, o.tipoJornada),
     descricaoJornada: texto(o.descricaoJornada, 999),
+    estagioNatureza: de(NATUREZAS_DE_ESTAGIO, o.estagioNatureza),
+    estagioNivel: de(NIVEIS_DE_ESTAGIO, o.estagioNivel),
+    estagioArea: texto(o.estagioArea, 100),
+    estagioApolice: texto(o.estagioApolice, 30),
+    estagioPrevisaoTermino: typeof o.estagioPrevisaoTermino === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.estagioPrevisaoTermino) ? o.estagioPrevisaoTermino : null,
+    estagioCnpjInstituicao: digitos(o.estagioCnpjInstituicao, 14),
+    estagioCnpjAgente: digitos(o.estagioCnpjAgente, 14),
+    estagioCpfSupervisor: digitos(o.estagioCpfSupervisor, 11),
   };
 }
 

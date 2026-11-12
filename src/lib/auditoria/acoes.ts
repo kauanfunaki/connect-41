@@ -422,6 +422,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.esocial_admissao": c("gerou o evento de admissão (S-2200) no DP 2"),
   "folha.esocial_alteracao": c("gerou o evento de alteração contratual (S-2206) no DP 2"),
   "folha.esocial_afastamento": c("gerou o evento de afastamento (S-2230) no DP 2"),
+  "folha.esocial_termino_sem_vinculo": c("gerou o término de sócio, autônomo ou estagiário (S-2399) no DP 2"),
   "folha.esocial_aso": c("gerou o evento de ASO (S-2220) no DP 2"),
   "folha.esocial_ambiente": c("gerou o evento de condições ambientais (S-2240) no DP 2"),
   "folha.esocial_cat": c("gerou a CAT (S-2210) no DP 2"),

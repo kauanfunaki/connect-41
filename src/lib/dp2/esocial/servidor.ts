@@ -12,6 +12,8 @@ import { calcularRescisaoDoDp2 } from "@/lib/dp2/rescisao";
 import { dataProjetada, diasDeAvisoPrevio } from "@/lib/rescisao/avos";
 import type { MotivoCanonico } from "@/lib/rescisao/motivos";
 import { lerDadosEsocial } from "./cadastro";
+import { eventoS2300, eventoS2399 } from "./semVinculo";
+import { semVinculo } from "@/lib/dp2/categorias";
 import { eventoS2210, eventoS2220, eventoS2240, lerResponsaveis, type Aso, type Cat, type CondicaoAmbiental, type ResponsaveisDeSst } from "./sst";
 import {
   eventoS2200,
@@ -144,7 +146,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
 
   const calculos = await prisma.dp2Calculo.findMany({
     where: { tenantId, competenciaId },
-    include: { person: { select: { id: true, name: true, cpf: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true } } } } },
+    include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true } } } } },
   });
   const novoId = geradorDeId(empregador.cnpj || "0", new Date());
   const eventos: EventoGerado[] = [];
@@ -165,6 +167,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       categoria: v?.categoria || (v?.aprendiz ? "103" : "101"),
       itens,
       liquido: n(c.liquido),
+      nascimento: isoDoDia(c.person.birthDate),
     };
     eventos.push(eventoS1200(empregador, perApur, t, novoId));
     eventos.push(eventoS1210(empregador, perApur, dtPgto, t, novoId));
@@ -223,7 +226,9 @@ async function sindicatoDaEmpresa(tenantId: string, companyId: string): Promise<
   return { cnpj: cfg?.convencao?.cnpjSindicato ?? null, mesDataBase: cfg?.convencao?.dataBase ?? null };
 }
 
-type Resultado = { ok: true; total: number; prontos: number; comPendencia: number } | { ok: false; erro: string };
+type Resultado = { ok: true; total: number; prontos: number; comPendencia: number; evento?: string } | { ok: false; erro: string };
+
+const SEM_VINCULO_NAO = "Sócio, autônomo e estagiário não têm esse evento: o início é o S-2300 e o término, o S-2399.";
 
 async function doVinculo(tenantId: string, personId: string, iniValid: string) {
   const r = await trabalhadorCompleto(tenantId, personId);
@@ -238,13 +243,16 @@ const SEM_CONTRATO = "Colaborador sem contrato no DP 2 (crie em DP 2 › Colabor
 export async function gerarAdmissao(tenantId: string, personId: string, userId: string): Promise<Resultado> {
   const v = await doVinculo(tenantId, personId, new Date().toISOString().slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
+  // Sócio, autônomo e estagiário: o início é o S-2300.
+  if (semVinculo(v.t.categoria)) return { ok: true, evento: "S-2300", ...(await guardar(tenantId, v.companyId, null, userId, [eventoS2300(v.empregador, v.t, v.novoId)])) };
   const ev = eventoS2200(v.empregador, v.t, await sindicatoDaEmpresa(tenantId, v.companyId), v.novoId);
-  return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+  return { ok: true, evento: "S-2200", ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
 
 export async function gerarAlteracao(tenantId: string, personId: string, data: string, descricao: string | null, userId: string): Promise<Resultado> {
   const v = await doVinculo(tenantId, personId, data.slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
+  if (semVinculo(v.t.categoria)) return { ok: false, erro: "A alteração de sócio, autônomo e estagiário é o S-2306, que ainda não está no Connect." };
   const ev = eventoS2206(v.empregador, v.t, await sindicatoDaEmpresa(tenantId, v.companyId), { data, descricao }, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
@@ -284,6 +292,15 @@ export async function gerarCat(tenantId: string, personId: string, c: Cat, userI
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
 
+/** O término do sócio, do autônomo ou do estagiário (S-2399). */
+export async function gerarTerminoSemVinculo(tenantId: string, personId: string, termino: string, userId: string): Promise<Resultado> {
+  const v = await doVinculo(tenantId, personId, termino.slice(0, 7));
+  if (!v) return { ok: false, erro: SEM_CONTRATO };
+  if (!semVinculo(v.t.categoria)) return { ok: false, erro: "Empregado: o desligamento (S-2299) sai da tela de Rescisões." };
+  const ev = eventoS2399(v.empregador, v.t, termino, v.novoId);
+  return { ok: true, evento: "S-2399", ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
 export type PedidoDeDesligamento = {
   motivo: MotivoCanonico;
   data: string;
@@ -301,6 +318,7 @@ export type PedidoDeDesligamento = {
 export async function gerarDesligamento(tenantId: string, personId: string, d: PedidoDeDesligamento, userId: string): Promise<Resultado> {
   const v = await doVinculo(tenantId, personId, d.data.slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
+  if (semVinculo(v.t.categoria)) return { ok: false, erro: SEM_VINCULO_NAO };
   if (!v.t.admissao) return { ok: false, erro: "Sem data de admissão no cadastro da pessoa." };
   const prisma = getPrisma();
   const competencia = d.data.slice(0, 7);

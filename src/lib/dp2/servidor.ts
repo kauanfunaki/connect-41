@@ -6,8 +6,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { r2 } from "@/lib/rescisao/constantes";
 import { diasDoMes } from "./calendario";
-import { calcularMes, CONVENCAO_DA_CLT, type CalculoDaPessoa, type ConvencaoDoMotor, type EmpresaDoMotor, type Insalubridade, type ItemDoHolerite, type VinculoDoMotor } from "./mensal";
+import { CONVENCAO_DA_CLT, type CalculoDaPessoa, type ConvencaoDoMotor, type EmpresaDoMotor, type Insalubridade, type ItemDoHolerite, type VinculoDoMotor } from "./mensal";
 import { calcularDecimo } from "./decimo";
+import { calcularMesDaCategoria } from "./semVinculo";
+import { semVinculo as categoriaSemVinculo } from "./categorias";
 import { mediaDeVariaveis, type MesDaMedia } from "./medias";
 import { ehPapel, rubricasQueFaltam, type LancamentoDaRubrica, type PapelDaRubrica, type RubricaDoMotor, type TipoDaRubrica } from "./rubricas";
 import { competenciaDe, lerDadosDaTabela, tabelasDaCompetencia, TIPOS_DE_TABELA, type TipoDeTabela, type VersaoDaTabela } from "./tabelas";
@@ -140,6 +142,7 @@ export function vinculoDoMotor(v: {
   periculosidade: boolean;
   valeTransporte: boolean;
   aprendiz: boolean;
+  categoria?: string;
 }): VinculoDoMotor {
   return {
     salarioBase: dec(v.salarioBase),
@@ -151,6 +154,7 @@ export function vinculoDoMotor(v: {
     periculosidade: v.periculosidade,
     valeTransporte: v.valeTransporte,
     aprendiz: v.aprendiz,
+    categoria: v.categoria ?? "101",
   };
 }
 
@@ -275,10 +279,12 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
       continue;
     }
     const vinculo = vinculoDoMotor(p.dp2Vinculo);
+    // 13º é só de empregado: sócio, autônomo e estagiário ficam fora.
+    if (comp.tipo !== "MENSAL" && categoriaSemVinculo(vinculo.categoria)) continue;
     const daPessoa = eventos.filter((e) => e.personId === p.id);
     let c: CalculoDaPessoa;
     if (comp.tipo === "MENSAL") {
-      c = calcularMes({
+      c = calcularMesDaCategoria({
         ano: comp.ano,
         mes: comp.mes,
         admissao: p.admissionDate,

@@ -31,6 +31,7 @@ import {
   gerarDesligamento,
   gerarPeriodicos,
   gerarTabelas,
+  gerarTerminoSemVinculo,
 } from "@/lib/dp2/esocial/servidor";
 import { lerAgentes, lerProcedimentos, lerResponsaveis } from "@/lib/dp2/esocial/sst";
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
@@ -362,6 +363,14 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
       dataTermino: texto(fd, "esocial_dataTermino"),
       tipoJornada: texto(fd, "esocial_tipoJornada"),
       descricaoJornada: texto(fd, "esocial_descricaoJornada"),
+      estagioNatureza: texto(fd, "esocial_estagioNatureza"),
+      estagioNivel: texto(fd, "esocial_estagioNivel"),
+      estagioArea: texto(fd, "esocial_estagioArea"),
+      estagioApolice: texto(fd, "esocial_estagioApolice"),
+      estagioPrevisaoTermino: texto(fd, "esocial_estagioPrevisaoTermino"),
+      estagioCnpjInstituicao: texto(fd, "esocial_estagioCnpjInstituicao"),
+      estagioCnpjAgente: texto(fd, "esocial_estagioCnpjAgente"),
+      estagioCpfSupervisor: texto(fd, "esocial_estagioCpfSupervisor"),
     }),
     categoria: /^\d{3}$/.test(texto(fd, "categoria")) ? texto(fd, "categoria") : marcado(fd, "aprendiz") ? "103" : "101",
     ...contaBancaria(fd),
@@ -902,9 +911,29 @@ export async function gerarAdmissaoAction(_: EstadoDoDp2, fd: FormData): Promise
     action: "folha.esocial_admissao",
     entityType: "Person",
     entityId: p.id,
-    metadata: { nome: p.name },
+    metadata: { nome: p.name, evento: r.ok ? r.evento : null },
   });
-  return respostaDoEvento("S-2200", p.name, r);
+  return respostaDoEvento(r.ok && r.evento ? r.evento : "S-2200", p.name, r);
+}
+
+/** O término do sócio, do autônomo ou do estagiário (S-2399). */
+export async function gerarTerminoSemVinculoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const termino = texto(fd, "termino");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(termino)) return erro("Informe a data do término.");
+  const r = await gerarTerminoSemVinculo(a.tenantId, p.id, termino, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_termino_sem_vinculo",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, termino },
+  });
+  return respostaDoEvento("S-2399", p.name, r);
 }
 
 export async function gerarAlteracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {

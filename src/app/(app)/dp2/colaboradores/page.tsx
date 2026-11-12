@@ -21,6 +21,8 @@ import { CampoData } from "@/components/ui/CampoData";
 import {
   ESTADOS_CIVIS,
   GRAUS_DE_INSTRUCAO,
+  NATUREZAS_DE_ESTAGIO,
+  NIVEIS_DE_ESTAGIO,
   RACAS,
   SEXOS,
   TIPOS_DE_CONTRATO,
@@ -28,6 +30,7 @@ import {
   lerDadosEsocial,
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
+import { CATEGORIAS } from "@/lib/dp2/categorias";
 import { salvarVinculoAction } from "../actions";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
@@ -146,7 +149,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <FormularioDoDp2 key={aberta.id} acao={salvarVinculoAction} rotulo={v ? "Salvar contrato" : "Criar contrato"}>
                 <input type="hidden" name="personId" value={aberta.id} />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <CampoForm label="Salário" htmlFor="salarioBase" required helper="No horista, o valor da hora.">
+                  <CampoForm label="Salário" htmlFor="salarioBase" required helper="No horista, o valor da hora. Sócio: o pró-labore; estagiário: a bolsa; RPA: o valor fixo do mês (ou 0 e lance o serviço no mês).">
                     <Input
                       id="salarioBase"
                       name="salarioBase"
@@ -181,17 +184,20 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                   </CampoForm>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 mt-4">
-                  <CampoForm label="Matrícula no eSocial" htmlFor="matricula" helper="A mesma do evento de admissão (S-2200).">
+                  <CampoForm
+                    label="Matrícula no eSocial"
+                    htmlFor="matricula"
+                    helper="A mesma do evento de início (S-2200 ou S-2300). Sócio e autônomo sem S-2300: deixe vazia."
+                  >
                     <Input id="matricula" name="matricula" maxLength={30} defaultValue={v?.matricula ?? ""} />
                   </CampoForm>
-                  <CampoForm label="Categoria" htmlFor="categoria" helper="Tabela 1 do eSocial.">
+                  <CampoForm label="Categoria" htmlFor="categoria" helper="Tabela 1 do eSocial. Sócio, autônomo e estagiário não têm FGTS, férias, 13º nem rescisão.">
                     <Select id="categoria" name="categoria" defaultValue={v?.categoria ?? "101"}>
-                      <option value="101">101 · Empregado geral</option>
-                      <option value="102">102 · Empregado rural</option>
-                      <option value="103">103 · Aprendiz</option>
-                      <option value="105">105 · Contrato por prazo determinado</option>
-                      <option value="106">106 · Contrato temporário</option>
-                      <option value="111">111 · Contrato intermitente</option>
+                      {CATEGORIAS.map(([k, r]) => (
+                        <option key={k} value={k}>
+                          {r}
+                        </option>
+                      ))}
                     </Select>
                   </CampoForm>
                 </div>
@@ -247,6 +253,39 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                   </CampoForm>
                   <CampoForm label="Jornada por extenso" htmlFor="esocial_descricaoJornada">
                     <Input id="esocial_descricaoJornada" name="esocial_descricaoJornada" maxLength={999} placeholder="Segunda a sexta, 08:00 às 17:48" defaultValue={es.descricaoJornada ?? ""} />
+                  </CampoForm>
+                </div>
+
+                <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-1">Estágio</h3>
+                <p className="text-fs-2 text-fg-muted mb-3">Só para a categoria 901: o que o início do estagiário (S-2300) pede.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <CampoForm label="Natureza" htmlFor="esocial_estagioNatureza">
+                    <Select id="esocial_estagioNatureza" name="esocial_estagioNatureza" defaultValue={es.estagioNatureza ?? ""}>
+                      {opcoes(NATUREZAS_DE_ESTAGIO)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Nível" htmlFor="esocial_estagioNivel">
+                    <Select id="esocial_estagioNivel" name="esocial_estagioNivel" defaultValue={es.estagioNivel ?? ""}>
+                      {opcoes(NIVEIS_DE_ESTAGIO)}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Área de atuação" htmlFor="esocial_estagioArea">
+                    <Input id="esocial_estagioArea" name="esocial_estagioArea" maxLength={100} defaultValue={es.estagioArea ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Previsão de término" htmlFor="esocial_estagioPrevisaoTermino">
+                    <CampoData id="esocial_estagioPrevisaoTermino" name="esocial_estagioPrevisaoTermino" defaultValue={es.estagioPrevisaoTermino ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="CNPJ da instituição de ensino" htmlFor="esocial_estagioCnpjInstituicao">
+                    <Input id="esocial_estagioCnpjInstituicao" name="esocial_estagioCnpjInstituicao" inputMode="numeric" maxLength={18} defaultValue={es.estagioCnpjInstituicao ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="CNPJ do agente de integração" htmlFor="esocial_estagioCnpjAgente" helper="CIEE, IEL…, quando houver.">
+                    <Input id="esocial_estagioCnpjAgente" name="esocial_estagioCnpjAgente" inputMode="numeric" maxLength={18} defaultValue={es.estagioCnpjAgente ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="CPF do supervisor" htmlFor="esocial_estagioCpfSupervisor">
+                    <Input id="esocial_estagioCpfSupervisor" name="esocial_estagioCpfSupervisor" inputMode="numeric" maxLength={14} defaultValue={es.estagioCpfSupervisor ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Apólice do seguro" htmlFor="esocial_estagioApolice">
+                    <Input id="esocial_estagioApolice" name="esocial_estagioApolice" maxLength={30} defaultValue={es.estagioApolice ?? ""} />
                   </CampoForm>
                 </div>
 
