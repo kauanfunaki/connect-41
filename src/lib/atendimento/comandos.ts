@@ -25,6 +25,8 @@ import {
   MAX_RESUMO,
   assinaturaDe,
   diasDoHorario,
+  lerQuemVeTudo,
+  type QuemVeTudo,
   type Situacao,
 } from "./regras";
 import { conexaoPeloId, enviarNoAtendimento, podeEnviarNaConversa } from "./transporte";
@@ -321,7 +323,7 @@ export async function encerrar(c: Contexto, p: { cicloId: string; desfechoId: st
 
 export async function vincularContato(
   c: Contexto,
-  p: { cicloId: string } & ({ tipo: "CLIENTE"; companyId: string } | { tipo: "NOVO"; nome: string; interesse: string })
+  p: { cicloId: string } & ({ tipo: "CLIENTE"; companyId: string } | { tipo: "NOVO" })
 ) {
   const ciclo = await carregar(c, p.cicloId);
   exigir(podeAgirNoCiclo(c.ctx, c.cfg, alvo(ciclo)), "Você não pode alterar este contato.");
@@ -331,11 +333,11 @@ export async function vincularContato(
     exigir(!!empresa, "Empresa não encontrada.");
     await prisma.atendimentoContato.update({ where: { id: ciclo.conversa.contatoId }, data: { tipo: "CLIENTE", companyId: empresa.id } });
   } else {
-    const nome = p.nome.trim().slice(0, 120);
-    exigir(nome.length > 0, "Escreva o nome do contato.");
+    // Contato novo não pede dados aqui: a Controladoria cuida do resto
+    // (12/11/2026). Fica o nome do WhatsApp.
     await prisma.atendimentoContato.update({
       where: { id: ciclo.conversa.contatoId },
-      data: { tipo: "NOVO", nome, interesse: p.interesse.trim().slice(0, 60) || null, companyId: null, personId: null },
+      data: { tipo: "NOVO", companyId: null, personId: null },
     });
   }
   await prisma.atendimentoMovimento.create({ data: { tenantId: c.ctx.tenantId, cicloId: ciclo.id, tipo: "VINCULOU", porUserId: c.ctx.userId, nota: p.tipo === "CLIENTE" ? "Ligou a uma empresa" : "Marcou como contato novo" } });
@@ -359,6 +361,7 @@ export async function salvarConfiguracao(
     diasParaReabrir: number;
     setores: string[];
     ceciLigada: boolean;
+    veemTudo: QuemVeTudo[];
   }
 ) {
   exigir(podeConfigurar(c.ctx, c.cfg), "Só o administrador ou o gestor da triagem muda as configurações.");
@@ -373,6 +376,15 @@ export async function salvarConfiguracao(
   const maps = await getSectorMaps(c.ctx.tenantId);
   const ativos = new Set(maps.options.map((o) => o.value));
   const setores = p.setores.filter((s) => ativos.has(s) && s !== c.cfg.triagem);
+  // Quem vê tudo: só gente ativa do escritório e setores ativos; a triagem já vê.
+  const pedidos = lerQuemVeTudo(p.veemTudo);
+  const idsDePessoas = pedidos.filter((q) => q.tipo === "PESSOA").map((q) => q.id);
+  const pessoasValidas = new Set(
+    idsDePessoas.length
+      ? (await prisma.user.findMany({ where: { tenantId: c.ctx.tenantId, active: true, id: { in: idsDePessoas } }, select: { id: true } })).map((u) => u.id)
+      : []
+  );
+  const veemTudo = pedidos.filter((q) => (q.tipo === "PESSOA" ? pessoasValidas.has(q.id) : ativos.has(q.id) && q.id !== c.cfg.triagem));
   await lerConfiguracao(c.ctx.tenantId);
   await prisma.atendimentoConfig.update({
     where: { tenantId: c.ctx.tenantId },
@@ -387,6 +399,7 @@ export async function salvarConfiguracao(
       diasParaReabrir: p.diasParaReabrir,
       setores: setores.length > 0 ? setores : undefined,
       ceciLigada: p.ceciLigada,
+      veemTudo,
       updatedById: c.ctx.userId,
     },
   });

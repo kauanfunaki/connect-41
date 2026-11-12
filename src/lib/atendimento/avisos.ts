@@ -5,6 +5,8 @@
 // aviso falhar, e a falha fica no log.
 
 import { notifySector, notifyUser } from "@/lib/notifications";
+import { getPrisma } from "@/lib/prisma";
+import type { QuemVeTudo } from "./regras";
 
 type Base = { tenantId: string; cicloId: string; actorUserId?: string | null };
 
@@ -26,6 +28,31 @@ export function avisarTriagem(p: Base & { triagem: string; quem: string; previa:
       entityId: p.cicloId,
     })
   );
+}
+
+/**
+ * Conversa nova, para quem vê todos os atendimentos e ligou os avisos. Quem é
+ * da triagem fica de fora: já recebeu o aviso da triagem.
+ */
+export function avisarQuemVeTudo(p: Base & { lista: readonly QuemVeTudo[]; triagem: string; quem: string; previa: string }) {
+  const comAviso = p.lista.filter((q) => q.avisos);
+  if (comAviso.length === 0) return Promise.resolve();
+  return seguro(async () => {
+    const pessoas = comAviso.filter((q) => q.tipo === "PESSOA").map((q) => q.id);
+    const setores = comAviso.filter((q) => q.tipo === "SETOR").map((q) => q.id);
+    const gente = await getPrisma().user.findMany({
+      where: {
+        tenantId: p.tenantId,
+        active: true,
+        OR: [{ id: { in: pessoas } }, ...(setores.length ? [{ sectors: { some: { sectorCode: { in: setores } } } }] : [])],
+        NOT: { sectors: { some: { sectorCode: p.triagem } } },
+      },
+      select: { id: true },
+    });
+    for (const u of gente) {
+      await notifyUser(u.id, { tenantId: p.tenantId, type: "ATENDIMENTO_NOVO", message: `${p.quem}: ${p.previa}`, entityId: p.cicloId });
+    }
+  });
 }
 
 /** Encaminhada ao setor (direto ou por pedido aprovado): todos do setor, ou a pessoa escolhida. */
@@ -51,12 +78,18 @@ export function avisarTransferencia(p: Base & { paraUserId: string; quem: string
   );
 }
 
-/** O cliente escreveu numa conversa que já tem responsável (ou que está num setor sem responsável). */
-export function avisarResposta(p: Base & { paraUserId: string | null; sectorCode: string | null; quem: string; previa: string }) {
+/**
+ * O cliente escreveu de novo: só quem está com a conversa (12/11/2026). Depois
+ * de uma transferência, o antigo responsável para de receber e o novo passa a
+ * receber. Sem responsável, o setor da conversa. Quem decide é `quemAvisarNaResposta`.
+ */
+export function avisarResposta(p: Base & { para: { pessoa: string } | { setor: string } | null; quem: string; previa: string }) {
   const input = { tenantId: p.tenantId, type: "ATENDIMENTO_RESPOSTA", message: `${p.quem}: ${p.previa}`, entityId: p.cicloId };
+  const para = p.para;
+  if (!para) return Promise.resolve();
   return seguro(async () => {
-    if (p.paraUserId) await notifyUser(p.paraUserId, input);
-    else if (p.sectorCode) await notifySector(p.sectorCode, input);
+    if ("pessoa" in para) await notifyUser(para.pessoa, input);
+    else await notifySector(para.setor, input);
   });
 }
 

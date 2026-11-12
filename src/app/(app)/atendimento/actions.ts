@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { contexto } from "@/lib/atendimento/contexto";
 import * as cmd from "@/lib/atendimento/comandos";
 import * as midia from "@/lib/atendimento/comandosDeMidia";
-import { buscarEmpresas } from "@/lib/atendimento/consultas";
+import { empresasParaVincular } from "@/lib/atendimento/consultas";
 
 export type Resultado = { ok: true } | { ok: false; erro: string };
 
@@ -55,15 +55,16 @@ export async function encerrarAction(p: { cicloId: string; desfechoId: string; d
 }
 
 export async function vincularContatoAction(
-  p: { cicloId: string } & ({ tipo: "CLIENTE"; companyId: string } | { tipo: "NOVO"; nome: string; interesse: string })
+  p: { cicloId: string } & ({ tipo: "CLIENTE"; companyId: string } | { tipo: "NOVO" })
 ) {
   return rodar((c) => cmd.vincularContato(c, p));
 }
 
-export async function buscarEmpresasAction(termo: string) {
+/** As empresas para o "Quem é?". Falha devolve lista vazia, e a tela avisa. */
+export async function empresasParaVincularAction() {
   try {
     const c = await contexto();
-    return await buscarEmpresas(c, termo);
+    return await empresasParaVincular(c);
   } catch {
     return [];
   }

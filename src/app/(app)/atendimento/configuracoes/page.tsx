@@ -10,7 +10,7 @@ import { conexoesDoEscritorio } from "@/lib/atendimento/transporte";
 import { integracaoDoCatalogo } from "@/lib/integracoes/catalogo";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
-import { diasDoHorario } from "@/lib/atendimento/regras";
+import { diasDoHorario, lerQuemVeTudo } from "@/lib/atendimento/regras";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +18,14 @@ export default async function ConfiguracoesDoAtendimentoPage() {
   const c = await contextoDaTela();
   if (!c || !podeConfigurar(c.ctx, c.cfg)) notFound();
   const tenantId = c.ctx.tenantId;
-  const [config, maps, conexoes, desfechos, mensagens, modelos] = await Promise.all([
+  const [config, maps, conexoes, desfechos, mensagens, modelos, pessoas] = await Promise.all([
     lerConfiguracao(tenantId),
     getSectorMaps(tenantId),
     conexoesDoEscritorio(tenantId),
     desfechosDoEscritorio(tenantId, true),
     getPrisma().atendimentoMensagemPadrao.findMany({ where: { tenantId }, orderBy: [{ titulo: "asc" }] }),
     getPrisma().atendimentoModelo.findMany({ where: { tenantId }, orderBy: [{ rotulo: "asc" }] }),
+    getPrisma().user.findMany({ where: { tenantId, active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
   const ativos = maps.options.map((o) => o.value);
   const marcados = setoresQueAtendem(config.setores, ativos, c.cfg.triagem);
@@ -59,7 +60,9 @@ export default async function ConfiguracoesDoAtendimentoPage() {
           diasParaReabrir: config.diasParaReabrir,
           setores: marcados,
           ceciLigada: config.ceciLigada,
+          veemTudo: lerQuemVeTudo(config.veemTudo),
         }}
+        pessoas={pessoas.map((u) => ({ id: u.id, nome: u.name }))}
         setores={maps.options.filter((o) => o.value !== c.cfg.triagem).map((o) => ({ code: o.value, label: o.label, cor: maps.colors[o.value] ?? "#586577" }))}
         desfechos={desfechos}
         modelos={modelos.map((m) => ({ id: m.id, rotulo: m.rotulo, nomeNaMeta: m.nomeNaMeta, idioma: m.idioma, texto: m.texto, ativo: m.ativo }))}

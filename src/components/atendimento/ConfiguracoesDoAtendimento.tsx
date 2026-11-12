@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Info, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoHora } from "@/components/ui/CampoHora";
+import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import type { QuemVeTudo } from "@/lib/atendimento/regras";
 import { useToast } from "@/components/ui/Toast";
 import {
   criarDesfechoAction,
@@ -35,6 +37,7 @@ type Config = {
   diasParaReabrir: number;
   setores: string[];
   ceciLigada: boolean;
+  veemTudo: QuemVeTudo[];
 };
 type Setor = { code: string; label: string; cor: string };
 type Desfecho = { id: string; label: string; ativo: boolean; ordem: number };
@@ -81,6 +84,7 @@ export function ConfiguracoesDoAtendimento(p: {
   conexoes: Conexao[];
   config: Config;
   setores: Setor[];
+  pessoas: { id: string; nome: string }[];
   desfechos: Desfecho[];
   mensagens: Mensagem[];
   modelos: Modelo[];
@@ -156,6 +160,18 @@ export function ConfiguracoesDoAtendimento(p: {
             </div>
           ))}
         </div>
+      </Bloco>
+
+      <Bloco
+        titulo="Quem vê todos os atendimentos"
+        texto={`Além da ${p.triagem}, que já vê tudo. Pode ser uma pessoa ou um setor inteiro. Só olham: assumir e responder seguem as regras de sempre.`}
+      >
+        <QuemVeTudoNaTela
+          lista={c.veemTudo}
+          mudar={(veemTudo) => mudar({ veemTudo })}
+          pessoas={p.pessoas}
+          setores={p.setores}
+        />
       </Bloco>
 
       <Bloco titulo="Horário e mensagens automáticas" texto="Saem assinadas como “Atendimento 41” para quem escreve pela primeira vez.">
@@ -464,5 +480,103 @@ function ModelosDaMeta({ modelos }: { modelos: Modelo[] }) {
         </div>
       </form>
     </Bloco>
+  );
+}
+
+// ─── Quem vê todos os atendimentos ───────────────────────────────────────────
+
+/**
+ * A lista de quem vê todos os atendimentos (12/11/2026): pessoas ou setores,
+ * cada um com o aviso de conversa nova ligado ou não. Vale ao salvar as
+ * configurações.
+ */
+function QuemVeTudoNaTela(p: {
+  lista: QuemVeTudo[];
+  mudar: (l: QuemVeTudo[]) => void;
+  pessoas: { id: string; nome: string }[];
+  setores: Setor[];
+}) {
+  const [tipo, setTipo] = useState<"PESSOA" | "SETOR">("PESSOA");
+  const [escolha, setEscolha] = useState("");
+  const [rodada, setRodada] = useState(0);
+  const nomeDaPessoa = useMemo(() => new Map(p.pessoas.map((x) => [x.id, x.nome])), [p.pessoas]);
+  const nomeDoSetor = useMemo(() => new Map(p.setores.map((x) => [x.code, x.label])), [p.setores]);
+  const jaNaLista = new Set(p.lista.map((q) => `${q.tipo}:${q.id}`));
+  const opcoesDePessoas = p.pessoas.filter((x) => !jaNaLista.has(`PESSOA:${x.id}`)).map((x) => ({ value: x.id, label: x.nome }));
+  const setoresLivres = p.setores.filter((x) => !jaNaLista.has(`SETOR:${x.code}`));
+
+  function adicionar() {
+    if (!escolha) return;
+    p.mudar([...p.lista, { tipo, id: escolha, avisos: false }]);
+    setEscolha("");
+    setRodada((n) => n + 1);
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {p.lista.length === 0 ? (
+        <p className="text-ui text-fg-muted">Ninguém além da triagem.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {p.lista.map((q, i) => {
+            const nome = q.tipo === "PESSOA" ? (nomeDaPessoa.get(q.id) ?? "Pessoa desativada") : `${nomeDoSetor.get(q.id) ?? q.id} (setor inteiro)`;
+            return (
+              <li key={`${q.tipo}:${q.id}`} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-2.5">
+                <span className="flex-1 min-w-40 text-ui font-semibold text-fg">{nome}</span>
+                <Checkbox
+                  id={`atd-vt-aviso-${i}`}
+                  checked={q.avisos}
+                  onChange={(e) => p.mudar(p.lista.map((x, j) => (j === i ? { ...x, avisos: e.target.checked } : x)))}
+                  label="Receber aviso de conversa nova"
+                />
+                <Button variant="ghost" size="sm" aria-label={"Tirar " + nome} onClick={() => p.mudar(p.lista.filter((_, j) => j !== i))}>
+                  <Trash2 size={14} />
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div className="flex flex-wrap items-end gap-2">
+        <Select
+          aria-label="Pessoa ou setor"
+          value={tipo}
+          onChange={(e) => {
+            setTipo(e.target.value as "PESSOA" | "SETOR");
+            setEscolha("");
+            setRodada((n) => n + 1);
+          }}
+          className="w-36"
+        >
+          <option value="PESSOA">Pessoa</option>
+          <option value="SETOR">Setor inteiro</option>
+        </Select>
+        <div className="flex-1 min-w-56">
+          {tipo === "PESSOA" ? (
+            <SearchableSelect
+              key={`p-${rodada}`}
+              name="atd-vt-pessoa"
+              aria-label="Escolha a pessoa"
+              options={opcoesDePessoas}
+              onChange={setEscolha}
+              placeholder="Digite o nome…"
+            />
+          ) : (
+            <Select key={`s-${rodada}`} aria-label="Escolha o setor" value={escolha} onChange={(e) => setEscolha(e.target.value)}>
+              <option value="">Escolha o setor…</option>
+              {setoresLivres.map((x) => (
+                <option key={x.code} value={x.code}>
+                  {x.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
+        <Button variant="secondary" disabled={!escolha} onClick={adicionar}>
+          <Plus size={14} /> Adicionar
+        </Button>
+      </div>
+      <p className="text-micro text-fg-muted">O aviso vem desligado: ligue só para quem precisa saber de cada conversa nova. Salve as configurações para valer.</p>
+    </div>
   );
 }

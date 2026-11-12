@@ -130,3 +130,40 @@ describe("modelos da Meta", () => {
     expect(nomeDeModeloValido("Retomar atendimento")).toBe(false);
   });
 });
+
+import { estaEmQuemVeTudo, lerQuemVeTudo, quemAvisarNaResposta } from "./regras";
+
+describe("quem vê tudo e quem recebe o aviso", () => {
+  it("lê a lista guardada e descarta o que não serve", () => {
+    expect(
+      lerQuemVeTudo([
+        { tipo: "PESSOA", id: "u1", avisos: true },
+        { tipo: "PESSOA", id: "u1", avisos: false },
+        { tipo: "SETOR", id: "dp" },
+        { tipo: "OUTRO", id: "x" },
+        "lixo",
+      ])
+    ).toEqual([
+      { tipo: "PESSOA", id: "u1", avisos: true },
+      { tipo: "SETOR", id: "dp", avisos: false },
+    ]);
+    expect(lerQuemVeTudo(null)).toEqual([]);
+  });
+  it("acha a pessoa pelo nome ou pelo setor, e filtra quem quer aviso", () => {
+    const l = lerQuemVeTudo([{ tipo: "SETOR", id: "dp", avisos: false }]);
+    expect(estaEmQuemVeTudo(l, "u9", ["dp"])).toBe(true);
+    expect(estaEmQuemVeTudo(l, "u9", ["dp"], true)).toBe(false);
+  });
+  it("quem vê tudo ganha a aba Todas e as encerradas de todos", () => {
+    expect(recortesDe({ triagem: false, meus: ["fiscal"], geridos: [], veTudo: true })).toEqual(["sem_responsavel", "minhas", "todas", "aguardando", "encerradas"]);
+    expect(recortesDe({ triagem: false, meus: [], geridos: [], veTudo: true })).toEqual(["minhas", "todas", "aguardando", "encerradas"]);
+    const quem = { userId: "u1", meus: [], geridos: [], triagem: false, veTudo: true };
+    expect(noRecorte({ situacao: "ENCERRADO", sectorCode: "dp", assignedToId: "x", pedidoPendente: false }, "encerradas", quem)).toBe(true);
+  });
+  it("o aviso de mensagem nova vai só para quem está com a conversa", () => {
+    expect(quemAvisarNaResposta({ situacao: "TRIAGEM", sectorCode: null, assignedToId: "bia" })).toEqual({ pessoa: "bia" });
+    expect(quemAvisarNaResposta({ situacao: "EM_ATENDIMENTO", sectorCode: "fiscal", assignedToId: "ana" })).toEqual({ pessoa: "ana" });
+    expect(quemAvisarNaResposta({ situacao: "NO_SETOR", sectorCode: "fiscal", assignedToId: null })).toEqual({ setor: "fiscal" });
+    expect(quemAvisarNaResposta({ situacao: "TRIAGEM", sectorCode: null, assignedToId: null })).toBeNull();
+  });
+});

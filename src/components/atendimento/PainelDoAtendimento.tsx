@@ -34,7 +34,7 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
   const toast = useToast();
 
   // A anterior e a próxima no recorte que está à vista.
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem));
   const i = doRecorte.findIndex((c) => c.cicloId === d.ciclo.id);
   const anterior = i > 0 ? v.hrefDoCiclo(doRecorte[i - 1]!.cicloId) : null;
