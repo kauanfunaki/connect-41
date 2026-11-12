@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { ConfiguracaoDosChamados } from "@/components/chamados/ConfiguracaoDosChamados";
 import { contexto } from "@/lib/chamados/contexto";
-import { podeGerenciar } from "@/lib/chamados/acesso";
+import { podeEscolherSetores, podeGerenciar } from "@/lib/chamados/acesso";
+import { getActiveSectors } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -16,15 +17,16 @@ export const dynamic = "force-dynamic";
  */
 export default async function ConfiguracaoPage() {
   const c = await contexto().catch(() => null); if (!c || !podeGerenciar(c.ctx, c.config)) notFound();
-  const politicas = await getPrisma().helpdeskSlaPolicy.findMany({ where: { tenantId: c.ctx.tenantId } });
+  const [politicas, ativos] = await Promise.all([getPrisma().helpdeskSlaPolicy.findMany({ where: { tenantId: c.ctx.tenantId } }), getActiveSectors(c.ctx.tenantId)]);
+  const setores = { todos: ativos.map(s => ({ code: s.code, label: s.label })), administram: c.config.sectorCodes, padrao: c.config.sectorCode, editavel: podeEscolherSetores(c.ctx, c.config) };
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Chamados", href: "/chamados" }, { label: "Configurações" }]} />
       <PageHeader
         title="Configurar chamados"
-        subtitle="Prazos de atendimento. A IA interpreta cada pedido e pergunta o que faltar."
+        subtitle="Quem atende e os prazos de atendimento. A IA interpreta cada pedido e sugere o setor."
       />
-      <ConfiguracaoDosChamados politicas={politicas} />
+      <ConfiguracaoDosChamados politicas={politicas} setores={setores} />
     </PageContainer>
   );
 }

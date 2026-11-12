@@ -2,14 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileImage, FileSpreadsheet, FileText, FileVideo, ScanSearch, Upload, X } from "lucide-react";
+import { FileImage, FileSpreadsheet, FileText, FileVideo, ScanSearch, Sparkles, Upload, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
+import { Select } from "@/components/ui/Select";
+import { Campo, CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
 import { IconeDoArquivo } from "./LinhaDoTempo";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { formatInstantTime } from "@/lib/format";
-import { iniciar, guardar, retirarAnexo, abrirChamado } from "@/app/(app)/chamados/actions";
+import { iniciar, guardar, retirarAnexo, abrirChamado, setorSugerido } from "@/app/(app)/chamados/actions";
 import type { DadosDoChamado } from "@/lib/chamados/regras";
 
 // Novo chamado em uma etapa (10/11/2026). Até aqui a pessoa esperava a IA na
@@ -21,9 +22,11 @@ type Anexo = { id: string; fileName: string };
 type Rascunho = { id: string; version: number };
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; anexos: Anexo[] };
 
-export function NovoChamado({ inicial, categorias, setores }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[] }) {
+type Setor = { code: string; label: string };
+/** `atendem`: os setores que administram os chamados (12/11/2026). Com dois ou mais, quem abre escolhe para qual vai, com a sugestão da IA. */
+export function NovoChamado({ inicial, categorias, setores, atendem }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: Setor[]; atendem: Setor[] }) {
   const router = useRouter(), formulario = useRef<HTMLFormElement>(null);
-  const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : "", priority: "MEDIA", requestData: {}, tags: [] });
+  const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : "", priority: "MEDIA", requestData: {}, tags: [], handlingSectorCode: "" });
   const [anexos, setAnexos] = useState(inicial?.anexos ?? []);
   const [busy, setBusy] = useState(""), [erro, setErro] = useState(""), [salvoAs, setSalvoAs] = useState("");
   const abort = useRef<AbortController | null>(null);
@@ -87,12 +90,39 @@ export function NovoChamado({ inicial, categorias, setores }: { inicial: Rascunh
     });
   }
 
+  // A sugestão do setor (12/11/2026): a IA lê a descrição quando a pessoa para de
+  // digitar e preenche "Enviar para" enquanto ela não escolheu. Escolher à mão
+  // vale até o fim; a sugestão segue visível, para comparar.
+  const escolher = atendem.length > 1;
+  const [sugestao, setSugestao] = useState<{ setor: string; motivo: string } | null>(null), [sugerindo, setSugerindo] = useState(false), [tentou, setTentou] = useState(false);
+  const escolhaManual = useRef(!!inicial?.dados.handlingSectorCode), ultimoPedido = useRef("");
+  useEffect(() => {
+    const texto = dados.description.trim();
+    if (!escolher || texto.length < 20 || texto === ultimoPedido.current) return;
+    const t = setTimeout(() => {
+      ultimoPedido.current = texto; setSugerindo(true);
+      void setorSugerido(texto).then(s => {
+        if (ultimoPedido.current !== texto) return;
+        setSugestao(s); setTentou(true);
+        if (s && !escolhaManual.current && dadosRef.current.handlingSectorCode !== s.setor) editar({ ...dadosRef.current, handlingSectorCode: s.setor });
+      }).catch(() => undefined).finally(() => { if (ultimoPedido.current === texto) setSugerindo(false); });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [dados.description, escolher]);
+  const nomeDoSetor = (code: string) => atendem.find(s => s.code === code)?.label ?? code;
+
   const textoDeBusy = busy && busy !== "abrindo" ? busy : "";
   return <form ref={formulario} onSubmit={e => { e.preventDefault(); abrir(); }} className="space-y-5">
     <Card className="p-5 sm:p-6">
       <fieldset disabled={!!busy} className="space-y-5">
         <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
         <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
+        {escolher && <div className="space-y-1.5">
+          <Campo label="Enviar para"><Select required value={dados.handlingSectorCode} onChange={e => { escolhaManual.current = true; editar({ ...dados, handlingSectorCode: e.target.value }); }}><option value="">Selecione o setor que vai atender</option>{atendem.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select></Campo>
+          {sugerindo ? <p role="status" className="text-helper text-fg-muted">A IA está lendo o pedido para sugerir o setor…</p>
+            : sugestao ? <p className="flex flex-wrap items-start gap-1.5 text-helper text-fg-secondary"><Sparkles size={14} aria-hidden className="mt-0.5 shrink-0 text-brand" /><span>Sugestão da IA: <strong className="text-fg">{nomeDoSetor(sugestao.setor)}</strong>{sugestao.motivo ? ` — ${sugestao.motivo}` : ""}</span>{dados.handlingSectorCode !== sugestao.setor && <Button variant="link" onClick={() => { escolhaManual.current = true; editar({ ...dados, handlingSectorCode: sugestao.setor }); }}>Usar a sugestão</Button>}</p>
+            : <p className="text-helper text-fg-muted">{tentou ? "A IA não conseguiu sugerir um setor para este pedido. Escolha qual vai atender." : "Descreva o pedido e a IA sugere o setor. Quem decide é você."}</p>}
+        </div>}
       </fieldset>
     </Card>
     <Card className="min-w-0">

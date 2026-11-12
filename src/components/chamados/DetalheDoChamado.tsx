@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ListChecks, Paperclip, PencilLine, RefreshCw } from "lucide-react";
+import { CalendarClock, ListChecks, Paperclip, PencilLine, RefreshCw, Shuffle } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Accordion } from "@/components/ui/Accordion";
 import { Card } from "@/components/ui/Card";
@@ -28,7 +28,9 @@ import { painelDoPrazo } from "@/lib/chamados/painelDoPrazo";
 
 type Chamado = Awaited<ReturnType<typeof detalhe>>;
 type Usuario = { id: string; name: string; atendente: boolean };
-type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: { code: string; label: string }[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean } };
+type Setor = { code: string; label: string };
+/** `setoresQueAtendem`: os que administram os chamados (12/11/2026); com dois ou mais, a tela mostra qual atende e permite redirecionar. */
+type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: Setor[]; setoresQueAtendem: Setor[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean; redirecionar: boolean } };
 const data = (v: Date | string) => formatInstantDateTime(new Date(v));
 // A linha de ação do pé do cartão "Atendimento": o cabeçalho do Accordion
 // ocupando a linha, em azul de ação, com a seta na ponta.
@@ -43,12 +45,12 @@ function useAgora(inicial: string) {
   useEffect(() => { const id = setInterval(() => setAgora(new Date()), 60_000); return () => clearInterval(id); }, []);
   return agora;
 }
-export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuarios, categorias, setores, permissoes: p }: Props) {
+export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuarios, categorias, setores, setoresQueAtendem, permissoes: p }: Props) {
   const router = useRouter(); const [busy, setBusy] = useState(false), [erro, setErro] = useState("");
   const [checklist, setChecklist] = useState(t.checklist), [situacao, setSituacao] = useState<string>(t.status);
   const [editar, setEditar] = useState(false);
   const agora = useAgora(agoraDoServidor);
-  const dadosAtuais: DadosDoChamado = { title: t.title, description: t.description, categoryId: t.categoryId, requesterSectorCode: t.requesterSectorCode, priority: t.priority, requestData: t.requestData as Record<string, string>, tags: t.tags as string[] };
+  const dadosAtuais: DadosDoChamado = { title: t.title, description: t.description, categoryId: t.categoryId, requesterSectorCode: t.requesterSectorCode, priority: t.priority, requestData: t.requestData as Record<string, string>, tags: t.tags as string[], handlingSectorCode: t.handlingSectorCode };
   const nome = (id: string) => usuarios.find(u => u.id === id)?.name ?? "Usuário indisponível";
   const ciclo = t.cycles[0], encerrado = fechado(t.status), triando = emTriagem(t.status);
   const prazo = painelDoPrazo(ciclo, t.status, agora);
@@ -76,6 +78,9 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
   const [finalPedido, setFinalPedido] = useState<"RESOLVIDO" | "CANCELADO" | null>(null);
   function trocarSituacao(nova: string) { const anterior = situacao; setSituacao(nova); void executar(() => mudar(t.id, t.version, "status", nova)).then(ok => { if (!ok) setSituacao(anterior); }); }
   const podeAjustarPrazo = p.gerenciar && !encerrado && !!ciclo && !ciclo.resolvedAt;
+  const variosSetores = setoresQueAtendem.length > 1, nomeDoSetor = (code: string) => setores.find(s => s.code === code)?.label ?? code;
+  const destinos = setoresQueAtendem.filter(s => s.code !== t.handlingSectorCode);
+  const podeRedirecionar = p.redirecionar && !encerrado && destinos.length > 0;
   const mostraChecklist = !!checklist.length && p.interno;
   const feitos = checklist.filter(i => i.done).length;
   return <div className="space-y-4">
@@ -125,8 +130,11 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
               onAdicionar={p.gerenciar && !encerrado ? id => acao("participantes", [...participantes, id]) : undefined}
               onRetirar={p.gerenciar && !encerrado ? id => acao("participantes", participantes.filter(r => r !== id)) : undefined} />
             {ciclo && <p className="text-helper text-fg-muted">SLA iniciado {data(ciclo.openedAt)}</p>}
+            {variosSetores && <p className="text-ui"><span className="text-fg-secondary">Setor que atende: </span><span className="font-semibold text-fg">{nomeDoSetor(t.handlingSectorCode)}</span></p>}
           </div>
-          {(podeAjustarPrazo || mostraChecklist) && <div className="divide-y divide-border border-t border-border px-5">
+          {(podeAjustarPrazo || mostraChecklist || podeRedirecionar) && <div className="divide-y divide-border border-t border-border px-5">
+            {/* Redirecionar (12/11/2026): os responsáveis saem, a conversa e a situação ficam, e o novo setor é avisado. */}
+            {podeRedirecionar && <Accordion chevron="fim" titulo={<span className="inline-flex items-center gap-1.5"><Shuffle size={14} aria-hidden />Redirecionar para outro setor</span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="pb-4 pt-1"><FormAcao titulo="Enviar o chamado para" disabled={busy} label="Redirecionar" onSubmit={f => acao("redirecionar", { setor: String(f.get("setor")), motivo: String(f.get("motivo") ?? "") })}><Campo label="Setor"><Select name="setor" required defaultValue=""><option value="" disabled>Selecione o setor</option>{destinos.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select></Campo><Campo label="Motivo (opcional)"><Textarea name="motivo" maxLength={1000} rows={2} placeholder="Conte por que o chamado é do outro setor." /></Campo><p className="text-helper text-fg-muted">Os responsáveis atuais saem do chamado, e a equipe do novo setor é avisada.</p></FormAcao></Accordion>}
             {podeAjustarPrazo && <Accordion chevron="fim" titulo={<span className="inline-flex items-center gap-1.5"><CalendarClock size={14} aria-hidden />Ajustar prazo</span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="pb-4 pt-1"><FormAcao titulo="Novo prazo de resolução" disabled={busy} onSubmit={f => acao("prazo", { prazo: new Date(`${f.get("prazo")}:00-03:00`).toISOString(), motivo: String(f.get("motivo")) })}><Campo label="Novo prazo (Brasília)"><CampoDataHora name="prazo" required /></Campo><Campo label="Justificativa"><Textarea name="motivo" required minLength={5} maxLength={1000} /></Campo></FormAcao></Accordion>}
             {mostraChecklist && <Accordion chevron="fim" titulo={<span className="flex items-center gap-1.5"><ListChecks size={14} aria-hidden />Checklist interno<span className="ml-auto font-medium tabular-nums text-fg-secondary">{feitos} de {checklist.length}</span></span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="space-y-2.5 pb-4 pt-1">
               {checklist.map(i => <label key={i.id} className="flex items-start gap-2 text-ui text-fg-secondary"><Checkbox checked={i.done} disabled={busy || !p.operar || encerrado} onChange={e => { const done = e.target.checked; setChecklist(itens => itens.map(item => item.id === i.id ? { ...item, done } : item)); void executar(() => mudar(t.id, t.version, "checklist", { id: i.id, done })).then(ok => { if (!ok) setChecklist(itens => itens.map(item => item.id === i.id ? { ...item, done: !done } : item)); }); }} />{i.label}</label>)}

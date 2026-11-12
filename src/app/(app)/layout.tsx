@@ -240,7 +240,7 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   // No setor que atende os chamados (a Tech), eles saem do Geral e entram no
   // menu do setor (26/10/2026, ver `chamadosNoMenuDoSetor`).
-  const chamadosNoSetor = chamadosLigados && chamadosNoMenuDoSetor(activeSector?.code ?? null, helpdeskConfig.sectorCode);
+  const chamadosNoSetor = chamadosLigados && chamadosNoMenuDoSetor(activeSector?.code ?? null, helpdeskConfig.sectorCodes);
   // As telas do setor, pela mesma regra da tela "Organizar menu" (`telasDoMenuDoSetor`),
   // e a ordem que o super admin escolheu para ele (05/11/2026).
   const activeSectorModules = activeSector ? telasDoMenuDoSetor(moduleStates, activeSector.code, { chamadosNoSetor, solicitacoesLigadas, semMenu }) : [];

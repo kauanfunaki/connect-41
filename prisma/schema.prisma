@@ -764,6 +764,10 @@ model HelpdeskTicket {
   description String @db.Text
   categoryId String
   requesterSectorCode String @db.VarChar(40)
+  /// O setor que atende o chamado (12/11/2026, funcionalidade-640): um dos
+  /// setores que administram os chamados (`setoresDoModulo("helpdesk")`). Quem
+  /// abre escolhe, com a sugestão da IA; a equipe pode redirecionar.
+  handlingSectorCode String @db.VarChar(40)
   createdById String
   status HelpdeskStatus @default(ABERTO)
   priority HelpdeskPriority @default(MEDIA)
@@ -796,6 +800,7 @@ model HelpdeskTicket {
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
+  @@index([tenantId, handlingSectorCode, status])
   @@map("helpdesk_tickets")
 }
 

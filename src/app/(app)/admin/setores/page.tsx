@@ -119,7 +119,7 @@ export default async function SetoresPage({
   const helpdesk = modulos.find((m) => m.code === "helpdesk");
   const telasDoMenu = escolhido
     ? telasDoMenuDoSetor(modulos, escolhido.code, {
-        chamadosNoSetor: !!helpdesk?.enabled && chamadosNoMenuDoSetor(escolhido.code, helpdesk.sectorCode),
+        chamadosNoSetor: !!helpdesk?.enabled && chamadosNoMenuDoSetor(escolhido.code, helpdesk.sectorCodes),
         solicitacoesLigadas: modulos.some((m) => m.code === "portal_solicitacoes" && m.enabled),
         semMenu: MODULOS_FORA_DO_MENU,
       }).filter((t) => !MODULOS_SPED.has(t.code) && t.code !== MODULO_NO_LUGAR_DOS_QUADROS)

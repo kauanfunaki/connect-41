@@ -52,7 +52,7 @@ function ambiente(
   return {
     modulos: new Map(TODOS_OS_MODULOS.map(([codigo, setores]) => [codigo, { ligado: !desligados.has(codigo), setores }])),
     setores: new Set(sobra.setores ?? ["bpo", "fiscal", "contabil", "societario", "dp", "recrutamento", "tech", "comercial", "controladoria"]),
-    helpdesk: { ligado: sobra.helpdesk ?? true, setor: "tech" },
+    helpdesk: { ligado: sobra.helpdesk ?? true, setores: ["tech"] },
   };
 }
 

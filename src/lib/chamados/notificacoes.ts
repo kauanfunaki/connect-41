@@ -24,7 +24,8 @@ export async function despacharEventos(tenantId: string, ticketId?: string) {
     }
     const participantes = [t.createdById, ...t.participants.map(p => p.userId), ...(t.approvalStatus === "PENDING" ? strings(t.approverIds) : [])];
     const usuarios = await getPrisma().user.findMany({ where: { tenantId, active: true, id: { not: e.actorId ?? "" }, OR: [
-      { role: { not: "READONLY" }, sectors: { some: { sectorCode: config.sectorCode } } },
+      // A equipe do setor que atende o chamado (12/11/2026); no redirecionamento, já o novo.
+      { role: { not: "READONLY" }, sectors: { some: { sectorCode: t.handlingSectorCode } } },
       ...(!e.internal ? [{ id: { in: participantes } }, { role: "SECTOR_ADMIN" as const, sectors: { some: { sectorCode: t.requesterSectorCode } } }] : []),
     ] }, select: { id: true } });
     const data = e.data as Record<string, string>;

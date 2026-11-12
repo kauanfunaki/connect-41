@@ -1,6 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { podeAbrir, podeVerInterno, podeVer, escoposDaBusca, type EscopoDaBusca } from "./acesso";
+import { isFullWrite } from "@/lib/auth/papeis";
+import { podeAbrir, podeVerInterno, podeVerInternoNo, podeVer, escoposDaBusca, type EscopoDaBusca } from "./acesso";
 import type { Contexto } from "./contexto";
 import { categoriaSchema, dadosRascunhoSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
 
@@ -20,8 +21,10 @@ export async function temAcessoAoModulo(c: Contexto) {
 export async function contarChamadosDoMenu(c: Contexto): Promise<number> {
   if (!c.config.enabled || !c.ctx.userId) return 0;
   const db = getPrisma(), tenantId = c.ctx.tenantId, userId = c.ctx.userId;
-  const semResponsavel = podeVerInterno(c.ctx, c.config)
-    ? db.helpdeskTicket.count({ where: { tenantId, status: { notIn: ["RESOLVIDO", "CANCELADO"] }, assignees: { none: {} }, views: { none: { userId } } } })
+  // Só os do setor que a pessoa atende (12/11/2026); o administrador, todos.
+  const daEquipe = filtroDaEquipe(c);
+  const semResponsavel = daEquipe
+    ? db.helpdeskTicket.count({ where: { tenantId, ...daEquipe, status: { notIn: ["RESOLVIDO", "CANCELADO"] }, assignees: { none: {} }, views: { none: { userId } } } })
     : Promise.resolve(0);
   const meus = db.helpdeskTicket.findMany({
     where: { tenantId, assignees: { some: { userId } } },
@@ -41,10 +44,24 @@ export async function marcarChamadoVisto(c: Contexto, ticketId: string) {
   const chave = { tenantId: c.ctx.tenantId, ticketId, userId: c.ctx.userId };
   await getPrisma().helpdeskTicketView.upsert({ where: { tenantId_ticketId_userId: chave }, create: chave, update: { viewedAt: new Date() } });
 }
+/**
+ * Os chamados da fila de quem atende (12/11/2026): o administrador vê todos; a
+ * equipe, os dos setores administradores em que está. Nulo = não acompanha fila.
+ */
+function filtroDaEquipe({ ctx, config }: Contexto): Prisma.HelpdeskTicketWhereInput | null {
+  if (!podeVerInterno(ctx, config)) return null;
+  if (isFullWrite(ctx.role)) return {};
+  return { handlingSectorCode: { in: config.sectorCodes.filter(s => ctx.sectors.includes(s)) } };
+}
+/** Só os eventos e mensagens que a pessoa pode ler: os internos, no chamado do setor dela. */
+function soOQuePodeLer({ ctx }: Contexto) {
+  return isFullWrite(ctx.role) ? {} : { OR: [{ internal: false }, { ticket: { handlingSectorCode: { in: ctx.sectors } } }] };
+}
 export function whereVisivel({ ctx, config }: Contexto): Prisma.HelpdeskTicketWhereInput {
   if (!config.enabled) return { tenantId: ctx.tenantId, id: { in: [] } };
-  if (podeVerInterno(ctx, config)) return { tenantId: ctx.tenantId };
+  if (isFullWrite(ctx.role)) return { tenantId: ctx.tenantId };
   return { tenantId: ctx.tenantId, OR: [
+    { handlingSectorCode: { in: ctx.sectors } },
     { createdById: ctx.userId },
     ...(ctx.role === "SECTOR_ADMIN" ? [{ requesterSectorCode: { in: ctx.sectors } }] : []),
   ] };
@@ -72,6 +89,7 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   }
   const base: Prisma.HelpdeskTicketWhereInput = { AND: [whereVisivel(c), await filtroDaBusca(c, filtros.q?.trim().slice(0, 255) ?? "", filtros.em),
     filtros.categoria ? { categoryId: { in: [...idsCategoria] } } : {}, filtros.setor ? { requesterSectorCode: filtros.setor } : {},
+    filtros.atende ? { handlingSectorCode: filtros.atende } : {},
     filtros.responsavel ? { assignees: { some: { userId: filtros.responsavel } } } : {},
     filtros.meus === "1" ? { assignees: { some: { userId: c.ctx.userId } } } : {},
   ] };
@@ -93,18 +111,21 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   const countAba = (aba: string) => getPrisma().helpdeskTicket.count({ where: { AND: [base, estadosPorAba[aba]] } });
   // Os três últimos eventos de cada chamado (03/11/2026): a atividade recente
   // que o cartão mostra ao lado da situação. Quem não é da equipe não vê os internos.
-  const soPublicos = podeVerInterno(c.ctx, c.config) ? {} : { internal: false };
+  const soPublicos = soOQuePodeLer(c);
   const [rows, total, drafts] = await Promise.all([
     getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 }, events: { where: soPublicos, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 3 } }, orderBy: filtros.status === "NA_FILA" || (!filtros.status && (filtros.aba ?? padrao) === "fila") ? [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }] : [{ updatedAt: "desc" }, { id: "desc" }], take: 25, skip: (page - 1) * 25 }),
     getPrisma().helpdeskTicket.count({ where }),
     getPrisma().helpdeskDraft.findMany({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, submittedAt: null }, orderBy: { updatedAt: "desc" }, take: 20 }),
   ]);
   const [abertosCount, filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["abertos", "fila", "aguardando", "pausa", "historico"].map(countAba));
-  const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
+  // Uma fila por setor que atende (12/11/2026): a posição conta dentro do setor do chamado.
+  const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, handlingSectorCode: true } });
+  const porSetor = new Map<string, number>(), posicoes = new Map<string, number>();
+  for (const t of fila) { const n = (porSetor.get(t.handlingSectorCode) ?? 0) + 1; porSetor.set(t.handlingSectorCode, n); posicoes.set(t.id, n); }
   // O texto dos comentários entre esses eventos, para a dica ao lado de "Suporte comentou".
   const idsDosComentarios = rows.flatMap(t => t.events.filter(e => e.type === "comment").map(e => (e.data as { commentId?: unknown } | null)?.commentId)).filter((id): id is string => typeof id === "string");
-  const comentarios = idsDosComentarios.length ? await getPrisma().helpdeskComment.findMany({ where: { tenantId: c.ctx.tenantId, id: { in: idsDosComentarios }, ...soPublicos }, select: { id: true, body: true } }) : [];
-  return { rows, total, page, drafts, comentarios: new Map(comentarios.map(m => [m.id, m.body])), counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes: new Map(fila.map((t, i) => [t.id, i + 1])), totalFila: fila.length };
+  const comentarios = idsDosComentarios.length ? await getPrisma().helpdeskComment.findMany({ where: { tenantId: c.ctx.tenantId, id: { in: idsDosComentarios }, ...soOQuePodeLer(c) }, select: { id: true, body: true } }) : [];
+  return { rows, total, page, drafts, comentarios: new Map(comentarios.map(m => [m.id, m.body])), counts: { abertos: abertosCount, fila: filaCount, aguardando: aguardandoCount, pausa: pausaCount, historico: historicoCount }, posicoes, totalFila: porSetor };
 }
 // A busca procura no escopo escolhido ao lado da caixa (26/10/2026): no próprio
 // chamado (título, descrição, protocolo), em quem abriu, no setor solicitante ou
@@ -127,7 +148,10 @@ async function filtroDaBusca(c: Contexto, q: string, em?: string): Promise<Prism
   return { OR: [{ title: { contains: q } }, { description: { contains: q } }, { id: { startsWith: q } }] };
 }
 export async function detalhe(c: Contexto, id: string) {
-  const interno = podeVerInterno(c.ctx, c.config);
+  // O que é interno é do setor que atende o chamado (12/11/2026).
+  const setor = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, select: { handlingSectorCode: true } });
+  if (!setor) throw new Error("Chamado não encontrado.");
+  const interno = podeVerInternoNo(c.ctx, c.config, setor.handlingSectorCode);
   const t = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, include: {
     category: true, assignees: true, participants: true, cycles: { orderBy: { cycleNumber: "desc" } },
     checklist: interno ? { orderBy: { key: "asc" } } : false,
