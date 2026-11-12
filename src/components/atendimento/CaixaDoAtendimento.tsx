@@ -10,7 +10,8 @@ import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { TomDoSelo } from "@/components/ui/Selo";
 import { quandoCurto } from "@/lib/conversas/caixa";
-import { ATUALIZAR_A_CADA_MS, horaDeAtualizar } from "@/lib/whatsapp/caixa";
+import { horaDeAtualizar } from "@/lib/whatsapp/caixa";
+import { marcaDoAtendimentoAction } from "@/app/(app)/atendimento/contagem-actions";
 import type { CartaoDaLista, ListaDoAtendimento } from "@/lib/atendimento/consultas";
 import { ROTULO_DA_SITUACAO, ROTULO_DO_RECORTE, noRecorte, recorteValido, type Recorte } from "@/lib/atendimento/regras";
 
@@ -94,21 +95,45 @@ export function CaixaDoAtendimento({ dados, cabecalho, children }: { dados: List
   );
 }
 
+/** A cada quantos ms a tela confere a marca da caixa (só com a aba visível). */
+const CONFERIR_A_CADA_MS = 5_000;
+
+/**
+ * A lista e a conversa aberta se atualizam sozinhas. A cada 5 s (aba visível),
+ * uma consulta barata diz se chegou mensagem ou se algum atendimento mudou de
+ * situação; só então a tela recarrega. Além disso, recarrega a cada 30 s, para
+ * o que a marca não pega (nome do contato, responsável trocado no mesmo setor).
+ */
 function useAtualizacaoPeriodica() {
   const router = useRouter();
   useEffect(() => {
     let ultimaEm = Date.now();
-    function talvez() {
-      const agora = Date.now();
-      if (!horaDeAtualizar(ultimaEm, agora, document.visibilityState === "visible")) return;
-      ultimaEm = agora;
+    let marca: string | null = null;
+    let conferindo = false;
+    function recarregar() {
+      ultimaEm = Date.now();
       router.refresh();
     }
-    const intervalo = window.setInterval(talvez, ATUALIZAR_A_CADA_MS / 3);
-    document.addEventListener("visibilitychange", talvez);
+    async function conferir() {
+      if (document.visibilityState !== "visible" || conferindo) return;
+      conferindo = true;
+      try {
+        const nova = await marcaDoAtendimentoAction();
+        if (nova && marca !== null && nova !== marca) recarregar();
+        if (nova) marca = nova;
+      } catch {
+        // Sem rede por um instante: a próxima conferência tenta de novo.
+      } finally {
+        conferindo = false;
+      }
+      if (horaDeAtualizar(ultimaEm, Date.now(), document.visibilityState === "visible")) recarregar();
+    }
+    void conferir();
+    const intervalo = window.setInterval(conferir, CONFERIR_A_CADA_MS);
+    document.addEventListener("visibilitychange", conferir);
     return () => {
       window.clearInterval(intervalo);
-      document.removeEventListener("visibilitychange", talvez);
+      document.removeEventListener("visibilitychange", conferir);
     };
   }, [router]);
 }
@@ -230,7 +255,7 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
               quando={quandoCurto(c.quando ? new Date(c.quando) : null, agora)}
               contexto={contextoDo(c)}
               previa={c.previa}
-              naoLidas={c.esperandoResposta && c.situacao !== "ENCERRADO" ? 1 : 0}
+              naoLidas={c.situacao !== "ENCERRADO" ? c.semResposta : 0}
               rotuloDasNaoLidas="esperando resposta"
               selecionada={c.cicloId === v.abertaId}
             />
