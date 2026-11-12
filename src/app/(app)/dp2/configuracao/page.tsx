@@ -77,6 +77,28 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                 <Input id="terceirosAliquota" name="terceirosAliquota" inputMode="decimal" defaultValue={fmt(cfg.empresa.terceirosAliquota)} />
               </CampoForm>
             </div>
+
+                <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-2">Conta pagadora (de onde sai o salário no arquivo do banco)</h3>
+                <div className="grid gap-4 grid-cols-[90px_1fr_70px] sm:grid-cols-[90px_1fr_70px_1.3fr_70px]">
+                  <CampoForm label="Banco" htmlFor="bancoCodigo" helper="Código, ex.: 341">
+                    <Input id="bancoCodigo" name="bancoCodigo" inputMode="numeric" maxLength={3} defaultValue={cfg.pagadora?.bancoCodigo ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Agência" htmlFor="agencia">
+                    <Input id="agencia" name="agencia" inputMode="numeric" maxLength={10} defaultValue={cfg.pagadora?.agencia ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Dígito" htmlFor="agenciaDigito">
+                    <Input id="agenciaDigito" name="agenciaDigito" maxLength={2} defaultValue={cfg.pagadora?.agenciaDigito ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Conta" htmlFor="conta">
+                    <Input id="conta" name="conta" inputMode="numeric" maxLength={20} defaultValue={cfg.pagadora?.conta ?? ""} />
+                  </CampoForm>
+                  <CampoForm label="Dígito" htmlFor="contaDigito">
+                    <Input id="contaDigito" name="contaDigito" maxLength={2} defaultValue={cfg.pagadora?.contaDigito ?? ""} />
+                  </CampoForm>
+                </div>
+            <CampoForm label="Convênio de pagamentos" htmlFor="convenio" className="mt-4 max-w-sm" helper="O código que o banco dá à empresa para o pagamento por arquivo.">
+              <Input id="convenio" name="convenio" maxLength={20} defaultValue={cfg.pagadora?.convenio ?? ""} />
+            </CampoForm>
             <div className="mt-4">
               <Checkbox
                 id="patronalNoDas"
