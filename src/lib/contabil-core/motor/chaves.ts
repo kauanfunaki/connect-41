@@ -89,3 +89,12 @@ export function registroChavePadraoAtiva(p: Perna): string | null {
 export function decisaoSemRegra(d: { readonly resultado: string; readonly transacaoId: string }): string | null {
   return d.resultado === "sem_regra" ? d.transacaoId : null;
 }
+
+/**
+ * `uq_conciliacao_revisao_origem`: (empresa, agência, `revisao_hash`) entre as revisões vivas. O hash
+ * já é hexadecimal em minúsculas, então a collation do MySQL não muda a igualdade. A agência entra no
+ * índice como coluna.
+ */
+export function revisaoChaveAtiva(r: Vida & { readonly revisaoHash: string }): string | null {
+  return r.deletedAt ? null : r.revisaoHash;
+}

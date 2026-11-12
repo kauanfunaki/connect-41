@@ -1,5 +1,8 @@
 import { AlertTriangle, Bot, CalendarClock, ShieldCheck, ListChecks } from "lucide-react";
 import { ImportarLicencas } from "@/components/societario/ImportarLicencas";
+import { AvisoPorEmail } from "@/components/societario/AvisoPorEmail";
+import { lerConfiguracaoDoAviso, MODULO_DAS_CERTIDOES } from "@/lib/societario/avisoDeVencimentoServidor";
+import { temSmtpConfigurado } from "@/lib/email/sendMail";
 import { Button } from "@/components/ui/Button";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { notFound } from "next/navigation";
@@ -66,7 +69,7 @@ export default async function LicencasPage({
 
   // As empresas do "Nova licença" não vêm mais aqui: a janela as pede ao abrir
   // (12/11/2026, bug-645). Iam inteiras em toda página e em toda troca de página.
-  const [daTela, orgaos, roboLigado] = await Promise.all([
+  const [daTela, orgaos, roboLigado, avisoPorEmail, smtp, comCertidoes] = await Promise.all([
     paginaDeLicencas(ctx.tenantId, hoje, { busca, noRecorte, pagina, porPagina: POR_PAGINA }),
     getPrisma().processOrgan.findMany({
       where: { tenantId: ctx.tenantId, active: true },
@@ -74,6 +77,9 @@ export default async function LicencasPage({
       select: { id: true, name: true },
     }),
     isModuleEnabled(ctx.tenantId, "societario_robo"),
+    lerConfiguracaoDoAviso(ctx.tenantId),
+    temSmtpConfigurado(ctx.tenantId),
+    isModuleEnabled(ctx.tenantId, MODULO_DAS_CERTIDOES),
   ]);
   const { vencidas, aRenovar, vigentes } = daTela;
   const orgaosDoForm = orgaos.map((o) => ({ id: o.id, nome: o.name }));
@@ -104,6 +110,13 @@ export default async function LicencasPage({
               </Button>
             )}
             {/* Importar de planilha (lote B de 03/11/2026), com o modelo do Connect. */}
+            {/* O e-mail diário de vencimentos (12/11/2026), o que o Radar Societário mandava. */}
+            <AvisoPorEmail
+              ligado={avisoPorEmail?.ligado ?? false}
+              emails={avisoPorEmail?.emails ?? []}
+              smtp={smtp}
+              comCertidoes={comCertidoes}
+            />
             <ImportarLicencas />
             <NovaLicenca orgaos={orgaosDoForm} />
           </div>

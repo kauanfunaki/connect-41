@@ -56,6 +56,7 @@ export function descreverEvento(e: Pick<EventoDaLinha, "type" | "actorId" | "dat
     case "sla": return { texto: "O prazo de atendimento venceu" };
     case "category": return { texto: `${quem} alterou a categoria` };
     case "details": return { texto: `${quem} atualizou os dados do chamado` };
+    case "setor": return { texto: typeof d.toLabel === "string" ? `${quem} redirecionou o chamado${typeof d.fromLabel === "string" ? ` de ${d.fromLabel}` : ""} para ${d.toLabel}` : `${quem} redirecionou o chamado para outro setor`, ...(typeof d.motivo === "string" && d.motivo ? { detalhe: d.motivo } : {}) };
     case "triagem": {
       const t = triagemSchema.safeParse(d);
       if (!t.success) return { texto: "A triagem automática terminou" };

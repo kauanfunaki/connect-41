@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState } from "react";
-import { Copy, ExternalLink, RefreshCw } from "lucide-react";
+import { Copy, ExternalLink, GitBranch, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { Input } from "@/components/ui/Input";
@@ -19,7 +19,7 @@ import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { SyncStatus } from "@/components/github/SyncStatus";
 import { githubFetch } from "@/lib/github/browser";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
-import type { IntegrationView } from "@/lib/github/types";
+import type { IntegrationView, RepositoryView } from "@/lib/github/types";
 
 /** Os fusos do Brasil, com o nome que se lê. Um fuso já gravado fora desta lista continua na opção. */
 const FUSOS: [string, string][] = [
@@ -60,6 +60,8 @@ export function GithubIntegration() {
   const [selecao, setSelecao] = useState<string[] | null>(null);
   const [intervalo, setIntervalo] = useState<number | null>(null);
   const [fuso, setFuso] = useState<string | null>(null);
+  // A branch escolhida por repositório (null = a padrão), só a que a pessoa mexeu (12/11/2026).
+  const [ramos, setRamos] = useState<Record<string, string | null> | null>(null);
   const [busca, setBusca] = useState("");
   const [trocandoCredenciais, setTrocandoCredenciais] = useState(false);
   const [credenciaisSujas, setCredenciaisSujas] = useState(false);
@@ -100,7 +102,7 @@ export function GithubIntegration() {
     setEmCurso(action); setError(null);
     try {
       await githubFetch("/api/github/integration", { action, generation: data.generation, ...extras });
-      if (action === "settings" || action === "disconnect") { setSelecao(null); setIntervalo(null); setFuso(null); }
+      if (action === "settings" || action === "disconnect") { setSelecao(null); setIntervalo(null); setFuso(null); setRamos(null); }
       await refresh();
       if (FEITO[action]) toast.success(FEITO[action]);
       return true;
@@ -177,7 +179,9 @@ export function GithubIntegration() {
   const selecionados = selecao ?? salvos;
   const minutos = intervalo ?? data.intervalMinutes;
   const fusoAtual = fuso ?? data.timezone;
-  const mudou = !mesmos(selecionados, salvos) || minutos !== data.intervalMinutes || fusoAtual !== data.timezone;
+  const branchDe = (repo: RepositoryView) => ramos && repo.id in ramos ? ramos[repo.id] : repo.branch;
+  const ramosMudados = Object.fromEntries(data.repositories.filter(repo => selecionados.includes(repo.id) && branchDe(repo) !== repo.branch).map(repo => [repo.id, branchDe(repo)]));
+  const mudou = !mesmos(selecionados, salvos) || minutos !== data.intervalMinutes || fusoAtual !== data.timezone || Object.keys(ramosMudados).length > 0;
   const termo = busca.trim().toLowerCase();
   // Selecionados primeiro, pela seleção salva: a lista não pula enquanto se marca.
   const visiveis = data.repositories
@@ -211,18 +215,23 @@ export function GithubIntegration() {
         {!visiveis.length && <p className="p-3 text-fg-muted">{data.pending && !data.inventoryAt ? "Buscando repositórios…" : "Nenhum repositório encontrado."}</p>}
         {visiveis.map(repo => {
           const tags = [repo.private && "Privado", repo.fork && "Fork", repo.archived && "Arquivado"].filter(Boolean) as string[];
-          return <label key={repo.id} className="flex cursor-pointer items-start gap-3 px-3 py-2 hover:bg-surface-hover">
-            <Checkbox className="mt-0.5" checked={selecionados.includes(repo.id)} disabled={busy || !repo.accessible && !repo.selected}
-              onChange={event => setSelecao(event.target.checked ? [...selecionados, repo.id] : selecionados.filter(id => id !== repo.id))} />
-            <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="break-all text-fg">{repo.fullName}</span>
-                {tags.map(tag => <span key={tag} className="text-fs-1 text-fg-muted">{tag}</span>)}
-                {!repo.accessible && <span className="text-fs-1 text-warning-fg">Sem acesso</span>}
+          const marcado = selecionados.includes(repo.id);
+          return <div key={repo.id} className="px-3 py-2 hover:bg-surface-hover">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox className="mt-0.5" checked={marcado} disabled={busy || !repo.accessible && !repo.selected}
+                onChange={event => setSelecao(event.target.checked ? [...selecionados, repo.id] : selecionados.filter(id => id !== repo.id))} />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="break-all text-fg">{repo.fullName}</span>
+                  {tags.map(tag => <span key={tag} className="text-fs-1 text-fg-muted">{tag}</span>)}
+                  {!repo.accessible && <span className="text-fs-1 text-warning-fg">Sem acesso</span>}
+                </span>
+                {repo.error && <span className="block text-fs-2 text-warning-fg">{repo.error}</span>}
               </span>
-              {repo.error && <span className="block text-fs-2 text-warning-fg">{repo.error}</span>}
-            </span>
-          </label>;
+            </label>
+            {marcado && <BranchDoRepositorio repo={repo} branch={branchDe(repo)} disabled={busy}
+              onChange={branch => setRamos(atual => ({ ...atual, [repo.id]: branch }))} />}
+          </div>;
         })}
       </div>
     </section>
@@ -253,11 +262,52 @@ export function GithubIntegration() {
     </BlocoRecolhivel>
 
     {mudou && <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-1 py-3">
-      <Button variant="ghost" disabled={busy} onClick={() => { setSelecao(null); setIntervalo(null); setFuso(null); }}>Descartar</Button>
+      <Button variant="ghost" disabled={busy} onClick={() => { setSelecao(null); setIntervalo(null); setFuso(null); setRamos(null); }}>Descartar</Button>
       <Button disabled={busy} loading={emCurso === "settings"} loadingLabel="Salvando…"
-        onClick={() => void act("settings", { repositories: selecionados, timezone: fusoAtual, intervalMinutes: minutos })}>Salvar e sincronizar</Button>
+        onClick={() => void act("settings", { repositories: selecionados, timezone: fusoAtual, intervalMinutes: minutos, branches: ramosMudados })}>Salvar e sincronizar</Button>
     </div>}
     {dialog}
+  </div>;
+}
+
+type Branches = { defaultBranch: string; branch: string | null; branches: string[] };
+
+/**
+ * A branch que a coleta de commits lê no repositório marcado (12/11/2026). Por padrão
+ * é a padrão do repositório (a main); "Trocar" busca as branches no GitHub só quando
+ * a pessoa pede, para não consultar todos os repositórios ao abrir a tela.
+ */
+function BranchDoRepositorio({ repo, branch, disabled, onChange }: {
+  repo: RepositoryView; branch: string | null; disabled: boolean; onChange: (branch: string | null) => void;
+}) {
+  const [lista, setLista] = useState<string[] | null>(null);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const atual = branch ?? repo.defaultBranch;
+  const id = useId();
+
+  async function carregar() {
+    setCarregando(true); setErro(null);
+    try {
+      const result = await githubFetch<Branches>(`/api/github/integration?branches=${encodeURIComponent(repo.id)}`);
+      setLista(result.branches.includes(atual) ? result.branches : [...result.branches, atual]);
+    } catch (err) { setErro(err instanceof Error ? err.message : "Não foi possível buscar as branches."); }
+    finally { setCarregando(false); }
+  }
+
+  return <div className="ml-7 mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-2">
+    <GitBranch size={13} className="text-fg-muted" aria-hidden />
+    {lista ? <>
+      <label htmlFor={id} className="sr-only">Branch de {repo.fullName}</label>
+      <Select id={id} compact value={atual} disabled={disabled}
+        onChange={event => onChange(event.target.value === repo.defaultBranch ? null : event.target.value)}>
+        {lista.map(nome => <option key={nome} value={nome}>{nome === repo.defaultBranch ? `${nome} (padrão)` : nome}</option>)}
+      </Select>
+    </> : <>
+      <span className="text-fg-secondary">Branch <strong className="font-medium text-fg">{atual}</strong>{atual === repo.defaultBranch && <span className="text-fg-muted"> (padrão)</span>}</span>
+      <Button variant="link" size="sm" disabled={disabled || carregando} loading={carregando} loadingLabel="Buscando…" onClick={() => void carregar()}>Trocar</Button>
+    </>}
+    {erro && <span className="basis-full text-warning-fg">{erro}</span>}
   </div>;
 }
 

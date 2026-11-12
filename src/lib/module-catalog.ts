@@ -559,6 +559,15 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Pessoas",
   },
   {
+    code: "dp2_esocial",
+    label: "eSocial",
+    sectorCode: "dp2",
+    description: "Os eventos do eSocial da empresa, com as pendências de cadastro",
+    defaultEnabled: false,
+    icon: "Landmark",
+    group: "Operação",
+  },
+  {
     code: "dp2_configuracao",
     label: "Configuração da empresa",
     sectorCode: "dp2",
@@ -1069,6 +1078,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   dp2_ferias:            "/dp2/ferias",
   dp2_decimo:            "/dp2/decimo-terceiro",
   dp2_rescisoes:         "/dp2/rescisoes",
+  dp2_esocial:           "/dp2/esocial",
   dp2_configuracao:      "/dp2/configuracao",
   dp2_tabelas:           "/dp2/tabelas",
   dp2_rubricas:          "/dp2/rubricas",
@@ -1160,8 +1170,10 @@ export const MODULOS_DO_APOIO = ["bpo_senhas", "bpo_manual", "bpo_fluxos"] as co
  * há menu de setor, e os Chamados seguem no Geral. Só lugar no menu: quem abre
  * continua decidido por `temAcessoAoModulo`.
  */
-export function chamadosNoMenuDoSetor(setorAtivo: string | null, setorDosChamados: string): boolean {
-  return !!setorAtivo && setorAtivo === setorDosChamados;
+export function chamadosNoMenuDoSetor(setorAtivo: string | null, setoresDosChamados: string | readonly string[]): boolean {
+  // Um ou mais setores administram os chamados (12/11/2026): no menu de cada um.
+  const setores = typeof setoresDosChamados === "string" ? [setoresDosChamados] : setoresDosChamados;
+  return !!setorAtivo && setores.includes(setorAtivo);
 }
 
 /**

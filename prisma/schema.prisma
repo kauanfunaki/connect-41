@@ -239,6 +239,8 @@ model GithubRepository {
   name                 String @db.VarChar(100)
   fullName             String @db.VarChar(210)
   defaultBranch        String @db.VarChar(255)
+  /// A branch escolhida em Integrações para a coleta de commits; null = a defaultBranch (12/11/2026).
+  branch               String? @db.VarChar(255)
   private              Boolean @default(false)
   fork                 Boolean @default(false)
   archived             Boolean @default(false)
@@ -762,6 +764,10 @@ model HelpdeskTicket {
   description String @db.Text
   categoryId String
   requesterSectorCode String @db.VarChar(40)
+  /// O setor que atende o chamado (12/11/2026, funcionalidade-640): um dos
+  /// setores que administram os chamados (`setoresDoModulo("helpdesk")`). Quem
+  /// abre escolhe, com a sugestão da IA; a equipe pode redirecionar.
+  handlingSectorCode String @db.VarChar(40)
   createdById String
   status HelpdeskStatus @default(ABERTO)
   priority HelpdeskPriority @default(MEDIA)
@@ -794,6 +800,7 @@ model HelpdeskTicket {
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
+  @@index([tenantId, handlingSectorCode, status])
   @@map("helpdesk_tickets")
 }
 
@@ -2445,6 +2452,7 @@ model Company {
   dp2Config                Dp2EmpresaConfig?
   dp2Vinculos              Dp2Vinculo[]
   dp2Competencias          Dp2Competencia[]
+  dp2EventosEsocial        Dp2EventoEsocial[]
   rescisaoConfig           CompanyRescisaoConfig?
   benefitCatalogs          BenefitCatalog[]
   workShifts               WorkShift[]
@@ -2518,6 +2526,8 @@ model Company {
   honorarioVinculos     HonorarioVinculoPasta[]
   honorarioSemPasta     HonorarioEmpresaSemPasta?
   honorarioManual       HonorarioManual?
+  honorarioContatos     HonorarioContato[]
+  honorarioTermos       HonorarioTermoGerado[]
   honorarioEnvios       HonorarioAcessoriasEnvio[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
@@ -2631,6 +2641,7 @@ model Person {
   dp2Eventos           Dp2Evento[]
   dp2Calculos          Dp2Calculo[]
   dp2Comparativos      Dp2Comparativo[]
+  dp2EventosEsocial    Dp2EventoEsocial[]
   overtimeEntries      OvertimeEntry[]
   benefitAssignments   BenefitAssignment[]
   scheduleEntries      ScheduleEntry[]
@@ -6694,6 +6705,11 @@ model Dp2Rubrica {
   entraNaMedia    Boolean  @default(false)
   contaDebito     String?  @db.VarChar(40)
   contaCredito    String?  @db.VarChar(40)
+  // Códigos de incidência do eSocial (fase 3a, 12/11/2026). Nulo = o que o
+  // Connect sugere pelo papel e pelas incidências (esocial/eventos.ts).
+  codIncCP        String?  @db.VarChar(2)
+  codIncIRRF      String?  @db.VarChar(2)
+  codIncFGTS      String?  @db.VarChar(2)
   ativa           Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -6745,6 +6761,13 @@ model Dp2EmpresaConfig {
   fap               Decimal  @default(1) @db.Decimal(6, 4)
   /// Terceiros (salário-educação, Sistema S…) em %.
   terceirosAliquota Decimal  @default(5.8) @db.Decimal(5, 2)
+  // eSocial (fase 3a, 12/11/2026).
+  /// FPAS da atividade (3 dígitos, ex.: "515" comércio), para a lotação (S-1020).
+  fpas              String?  @db.VarChar(3)
+  /// Código de terceiros (4 dígitos, ex.: "0115"), para a lotação (S-1020).
+  codTercs          String?  @db.VarChar(4)
+  /// Classificação tributária (Tabela 8), quando o regime não diz sozinho.
+  classTrib         String?  @db.VarChar(2)
   // Conta pagadora (fase 2, 12/11/2026): de onde sai o salário na remessa CNAB.
   /// Código do banco (3 dígitos, ex.: "341").
   bancoCodigo       String?  @db.VarChar(3)
@@ -6783,6 +6806,11 @@ model Dp2Vinculo {
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
   aprendiz             Boolean  @default(false)
+  // eSocial (fase 3a, 12/11/2026).
+  /// A matrícula do vínculo no eSocial (a mesma do S-2200).
+  matricula            String?  @db.VarChar(30)
+  /// Categoria do trabalhador (Tabela 1): "101" empregado geral, "103" aprendiz…
+  categoria            String   @default("101") @db.VarChar(3)
   // Conta do colaborador (fase 2, 12/11/2026), para a remessa CNAB.
   /// Código do banco (3 dígitos, ex.: "001").
   bancoCodigo          String?  @db.VarChar(3)
@@ -6828,6 +6856,7 @@ model Dp2Competencia {
   eventos      Dp2Evento[]
   calculos     Dp2Calculo[]
   comparativos Dp2Comparativo[]
+  esocial      Dp2EventoEsocial[]
   remessas     Dp2Remessa[]
   pedidos      Dp2PedidoDeEventos[]
 
@@ -6918,6 +6947,41 @@ model Dp2Comparativo {
   @@unique([competenciaId, personId])
   @@index([personId])
   @@map("dp2_comparativos")
+}
+
+/// Um evento do eSocial gerado pelo DP 2 (fase 3a, 12/11/2026): o XML no
+/// leiaute, ainda sem assinatura, e as pendências de cadastro. A assinatura e o
+/// envio ficam para depois (esocial/transmissao.ts).
+model Dp2EventoEsocial {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  /// A competência dos periódicos; nula nas tabelas.
+  competenciaId String?
+  personId      String?
+  /// "S-1000", "S-1005", "S-1010", "S-1020", "S-1200", "S-1210" ou "S-1299".
+  tipo          String   @db.VarChar(6)
+  /// O que o evento descreve: "2026-11", o código da rubrica, o CPF…
+  referencia    String   @db.VarChar(80)
+  idEvento      String   @unique @db.VarChar(36)
+  /// "PENDENCIA" (falta cadastro), "PRONTO" (para assinar e enviar), "ENVIADO",
+  /// "ACEITO" ou "REJEITADO".
+  situacao      String   @db.VarChar(10)
+  xml           String   @db.LongText
+  pendencias    Json
+  recibo        String?  @db.VarChar(40)
+  geradoPorId   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  competencia Dp2Competencia? @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person?         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, tipo])
+  @@index([competenciaId])
+  @@index([personId])
+  @@map("dp2_eventos_esocial")
 }
 
 /// Uma remessa CNAB 240 de pagamento gerada da competência (fase 2, 12/11/2026).
@@ -7561,6 +7625,11 @@ model CompanyPartner {
   documentMasked String?   @db.VarChar(20)
   /// De onde veio: "MANUAL" ou "RECEITA".
   origin         String    @default("MANUAL") @db.VarChar(20)
+  /// Para o termo aditivo (12/11/2026): "brasileiro", "casado", "empresário" —
+  /// como vão escritos no texto do contratante.
+  nationality    String?   @db.VarChar(60)
+  maritalStatus  String?   @db.VarChar(40)
+  occupation     String?   @db.VarChar(120)
 
   zipCode           String? @db.VarChar(10)
   addressStreet     String? @db.VarChar(180)
@@ -9605,6 +9674,21 @@ model License {
   @@map("licenses")
 }
 
+/// O e-mail diário de vencimentos do Societário (12/11/2026), o que o Radar
+/// Societário mandava: licenças a 90, 60 e 30 dias e vencidas, e certidões
+/// positivas, vencendo e vencidas, numa tabela só, para a lista daqui. Os
+/// itens já avisados ficam em `alert_dispatches` (chave VENC_EMAIL:…).
+model SocietarioAvisoPorEmail {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  ligado    Boolean  @default(true)
+  /// ["pessoa@escritorio.com.br", …], já conferidos e sem repetir.
+  emails    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("societario_avisos_por_email")
+}
+
 /// Uma taxa de processo — DAM, taxa de alvará, taxa de vistoria.
 ///
 /// Fica presa ao processo de propósito: **"quanto este ato custou em taxas" é o
@@ -10997,6 +11081,8 @@ model CoreEmpresa {
   registros    CoreRegistro[]
   decisoes     CoreNeoDecisao[]
   exportacoes  CoreExportacao[]
+  revisoes     CoreConciliacaoRevisao[]
+  vinculos     CoreConciliacaoVinculo[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11343,6 +11429,86 @@ model CoreExportacao {
   @@index([empresaId, status])
   @@index([tenantId])
   @@map("core_exportacoes")
+}
+
+/// Revisão manual da conciliação Razão × extrato (`conciliacao_revisoes`, Bloco B, Fase B3): a cópia
+/// da conferência (o relatório e o snapshot das fontes), independente dos lançamentos e do extrato.
+/// `snapshot` e `relatorio` guardam o JSON do original (snake_case, o `model_dump` do pydantic): a carga
+/// copia sem conversão, e os hashes das evidências continuam valendo.
+model CoreConciliacaoRevisao {
+  id            String    @id @default(uuid())
+  tenantId      String
+  empresaId     String
+  /// Referência documental, sem chave estrangeira (como no original): a revisão nunca trava a exclusão da conta bancária.
+  agenciaId     String
+  /// Quem criou (`criado_por`): id de `User`, sem chave, como trilha.
+  criadoPorId   String
+  nomeArquivo   String    @db.VarChar(255)
+  /// Nome dado pela pessoa; sem ele, a tela mostra o do arquivo.
+  titulo        String?   @db.VarChar(200)
+  contaBancaria String    @db.VarChar(255)
+  periodoInicio DateTime  @db.Date
+  periodoFim    DateTime  @db.Date
+  /// SHA-256 do Razão, do SISPAG e do extrato (`_hash` do original): a mesma combinação viva devolve a revisão existente.
+  revisaoHash   String    @db.Char(64)
+  /// SHA-256 da evidência do extrato na criação: se o extrato mudar, a revisão vira histórico.
+  extratoHash   String    @db.Char(64)
+  /// Versão otimista: toda alteração confere a versão que a tela viu.
+  versao        Int       @default(1)
+  /// { fontes, linhas_razao, extrato, hashes_apoio, avisos }
+  snapshot      Json
+  relatorio     Json
+  /// `revisaoHash` enquanto a revisão vive: ver chaves.ts.
+  chaveAtiva    String?   @db.Char(64)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  empresa  CoreEmpresa              @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  vinculos CoreConciliacaoVinculo[]
+
+  @@unique([empresaId, agenciaId, chaveAtiva])
+  @@index([empresaId, agenciaId])
+  @@index([empresaId, updatedAt])
+  @@index([tenantId])
+  @@map("core_conciliacao_revisoes")
+}
+
+/// Decisão humana registrada numa revisão (`conciliacao_vinculos`): desfazer preserva a composição.
+model CoreConciliacaoVinculo {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  revisaoId       String
+  /// Ids das transações do extrato (texto do UUID), como no original.
+  extratoIds      Json
+  /// [{ "linha_id": …, "dc": "D" | "C" }], como no original.
+  razaoItens      Json
+  totalExtrato    Decimal   @db.Decimal(15, 2)
+  totalRazao      Decimal   @db.Decimal(15, 2)
+  /// Razão − extrato. Diferente de zero só com observação.
+  diferenca       Decimal   @db.Decimal(15, 2)
+  observacao      String    @db.Text
+  /// ATIVO | DESFEITO
+  estado          String    @default("ATIVO") @db.VarChar(10)
+  /// Quem confirmou (`usuario_id`): id de `User`, sem chave, como trilha.
+  confirmadoPorId String
+  /// O nome de quem confirmou, gravado na hora (fica mesmo se a pessoa sair).
+  responsavel     String    @db.VarChar(200)
+  desfeitoPor     String?   @db.VarChar(200)
+  desfeitoEm      DateTime?
+  motivoDesfazer  String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa CoreEmpresa            @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  revisao CoreConciliacaoRevisao @relation(fields: [revisaoId], references: [id], onDelete: Restrict)
+
+  @@index([revisaoId, estado])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_conciliacao_vinculos")
 }
 
 // ─── Atendimento (10/11/2026) ────────────────────────────────────────────────
@@ -12207,6 +12373,62 @@ model HonorarioManual {
 
   @@index([tenantId])
   @@map("hon_manuais")
+}
+
+/// Os contatos do contrato da empresa, que entram no termo aditivo (12/11/2026):
+/// o administrativo e o financeiro, um de cada.
+model HonorarioContato {
+  id        String   @id @default(uuid())
+  tenantId  String
+  companyId String
+  /// ADMINISTRATIVO | FINANCEIRO
+  papel     String   @db.VarChar(15)
+  nome      String   @db.VarChar(180)
+  telefone  String?  @db.VarChar(30)
+  email     String?  @db.VarChar(120)
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, papel])
+  @@index([tenantId])
+  @@map("hon_contatos")
+}
+
+/// O modelo .docx do termo aditivo do escritório, enviado na tela (12/11/2026).
+/// Campos: {CONTRATANTE_TEXTO}, {DATA_DOCUMENTO} e {NOME_SOCIO_ASSINATURA} —
+/// os do Aditiva Pronto, para o modelo de lá servir sem mudança.
+model HonorarioModeloDoTermo {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  nomeArquivo String   @db.VarChar(255)
+  conteudo    Bytes    @db.MediumBlob
+  /// A cidade da data: "Curitiba, 12 de novembro de 2026."
+  cidade      String   @db.VarChar(80)
+  /// Nome de quem enviou, como em `informadoPor`.
+  enviadoPor  String   @db.VarChar(150)
+  updatedAt   DateTime @updatedAt
+
+  @@map("hon_modelo_do_termo")
+}
+
+/// Cada termo aditivo gerado (12/11/2026). O arquivo fica nos Arquivos da
+/// empresa; aqui fica quem gerou e quando.
+model HonorarioTermoGerado {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nomeArquivo String   @db.VarChar(255)
+  /// O arquivo nos Arquivos; nulo quando a pasta da empresa não existia.
+  driveFileId String?
+  geradoPor   String   @db.VarChar(150)
+  geradoEm    DateTime @default(now()) @db.DateTime(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, geradoEm])
+  @@index([companyId])
+  @@map("hon_termos_gerados")
 }
 
 /// Última leitura das empresas no Acessórias (trocada inteira a cada "Conferir").

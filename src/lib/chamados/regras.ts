@@ -46,7 +46,9 @@ export const categoriaSchema = z.object({
   }
 });
 export type Categoria = z.infer<typeof categoriaSchema>;
-export const dadosSchema = z.object({ title: z.string().trim().min(3).max(255), description: z.string().trim().min(1).max(15000), categoryId: id, requesterSectorCode: z.string().min(1).max(40), priority: z.enum(PRIORIDADES).default("MEDIA"), requestData: z.record(z.string(), z.string().max(10000)).default({}), tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]) });
+export const dadosSchema = z.object({ title: z.string().trim().min(3).max(255), description: z.string().trim().min(1).max(15000), categoryId: id, requesterSectorCode: z.string().min(1).max(40), priority: z.enum(PRIORIDADES).default("MEDIA"), requestData: z.record(z.string(), z.string().max(10000)).default({}), tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  // O setor que vai atender (12/11/2026): escolhido por quem abre, com a sugestão da IA. Vazio = o padrão do escritório.
+  handlingSectorCode: z.string().trim().max(40).default("") });
 export type DadosDoChamado = z.infer<typeof dadosSchema>;
 // O título é da IA (27/10/2026): o rascunho nasce sem ele e a classificação o
 // preenche; sem IA, sai do começo da descrição.

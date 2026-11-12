@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { Download, Scale, X } from "lucide-react";
+import { ClipboardCheck, Download, Scale, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -26,11 +26,18 @@ import {
   type ComposicaoNaTela,
   type SomasDoGrupo,
 } from "@/lib/contabil-core/conciliacao/telaDaConciliacao";
+import { registroManual, usadosNaRevisao, vinculosAtivos } from "@/lib/contabil-core/conciliacao/telaDaRevisao";
+import type { Revisao } from "@/lib/contabil-core/conciliacao/revisaoTipos";
+import { RevisaoManual, type RevisaoNaTela } from "./RevisaoManual";
 
 // Conciliação Razão × extrato (Bloco B, Fase B2, 12/11/2026): porte do `RazaoExtratoTab.tsx` do
 // Contábil Core. O Razão da conta banco (e, se vier, a consulta do SISPAG) é cruzado no servidor com o
 // extrato já importado; nada é gravado. "Baixar planilha" reenvia os mesmos arquivos pedindo XLSX.
-// A revisão manual do original (análises salvas, vínculos, "Revisar composição") fica para a fase B3.
+//
+// A revisão manual (Fase B3, 12/11/2026) é a parte que grava: "Revisar composição manualmente" salva a
+// análise (o Razão, o relatório e as referências do extrato) e abre a janela das conferências; as
+// revisões salvas reabrem sem reenviar o Razão, e o relatório guardado nelas volta para a tela. Quem só
+// consulta o módulo vê as revisões salvas e as conferências, sem conciliar nem alterar.
 //
 // Dinheiro chega como texto e as somas já vêm prontas da rota (`somas`): a tela só formata.
 
@@ -39,6 +46,9 @@ type Resposta = { relatorio: RelatorioConciliacaoJson; somas: SomasDoGrupo[] };
 type Conciliado = Resposta & { envio: number };
 
 const URL_DA_ROTA = "/api/contabil-core/conciliacao";
+
+/** Identidade de um arquivo escolhido: trocar o arquivo recria a revisão em andamento, como no original. */
+const chaveDoArquivo = (f: File | null) => (f ? `${f.name}:${f.size}:${f.lastModified}` : "");
 const NUMERO = new Intl.NumberFormat("pt-BR");
 
 const VARIANTE: Record<string, VarianteDoBadge> = {
@@ -53,8 +63,9 @@ const VARIANTE: Record<string, VarianteDoBadge> = {
 const TH = "py-2 pr-3 font-medium";
 const CABECALHO = "text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left";
 
-export function Conciliacao({ empresaId, agencias }: { empresaId: string; agencias: Opcao[] }) {
+export function Conciliacao({ empresaId, agencias, podeAgir }: { empresaId: string; agencias: Opcao[]; podeAgir: boolean }) {
   const base = useId();
+  const razaoRef = useRef<HTMLInputElement>(null);
   const sispagRef = useRef<HTMLInputElement>(null);
   // Cada envio ganha um número; a resposta de um envio que ficou para trás (a pessoa trocou a conta ou
   // o arquivo enquanto o servidor conciliava) é descartada.
@@ -66,6 +77,11 @@ export function Conciliacao({ empresaId, agencias }: { empresaId: string; agenci
   const [baixando, setBaixando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [resposta, setResposta] = useState<Conciliado | null>(null);
+  const [revisao, setRevisao] = useState<RevisaoNaTela | null>(null);
+  const [revisaoAberta, setRevisaoAberta] = useState(false);
+  const [extratoInicialIds, setExtratoInicialIds] = useState<string[]>([]);
+  // Abrir uma revisão salva de outra conta troca a conta escolhida: o seletor é recriado com ela.
+  const [versaoDaConta, setVersaoDaConta] = useState(0);
   const toast = useToast();
 
   function mudou() {
@@ -73,6 +89,45 @@ export function Conciliacao({ empresaId, agencias }: { empresaId: string; agenci
     setConciliando(false);
     setResposta(null);
     setErro(null);
+    setRevisao(null);
+    setRevisaoAberta(false);
+    setExtratoInicialIds([]);
+  }
+
+  function revisar(ids: string[] = []) {
+    setExtratoInicialIds(ids);
+    setRevisaoAberta(true);
+  }
+
+  /** A revisão aberta mudou: o relatório guardado nela vai para a tela, sem perder os filtros. */
+  function revisaoMudou(r: RevisaoNaTela) {
+    setRevisao(r);
+    const envio = resposta?.envio ?? ++pedido.current;
+    setResposta({ relatorio: r.revisao.relatorio, somas: r.somas, envio });
+  }
+
+  /** Reabrir uma revisão salva: a conta dela, sem arquivos (o Razão está guardado), e a janela aberta. */
+  function abrirSalva(r: RevisaoNaTela) {
+    const envio = ++pedido.current;
+    setConciliando(false);
+    setErro(null);
+    setAgenciaId(r.revisao.agenciaId);
+    setVersaoDaConta((n) => n + 1);
+    setArquivo(null);
+    setSispag(null);
+    if (razaoRef.current) razaoRef.current.value = "";
+    if (sispagRef.current) sispagRef.current.value = "";
+    setRevisao(r);
+    setResposta({ relatorio: r.revisao.relatorio, somas: r.somas, envio });
+    setExtratoInicialIds([]);
+    setRevisaoAberta(true);
+  }
+
+  function revisaoExcluida(id: string) {
+    if (revisao?.revisao.id !== id) return;
+    setRevisaoAberta(false);
+    setRevisao(null);
+    setResposta(null);
   }
 
   function formulario(formato: "json" | "xlsx", razao: File) {
@@ -91,6 +146,7 @@ export function Conciliacao({ empresaId, agencias }: { empresaId: string; agenci
     if (!arquivo) return setErro("Escolha o arquivo do Razão (Excel ou PDF).");
     const meu = ++pedido.current;
     setResposta(null);
+    setRevisao(null);
     setConciliando(true);
     const resp = await fetch(URL_DA_ROTA, { method: "POST", body: formulario("json", arquivo) }).catch(() => null);
     const corpo = (await resp?.json().catch(() => null)) as (Partial<Resposta> & { error?: string }) | null;
@@ -130,98 +186,150 @@ export function Conciliacao({ empresaId, agencias }: { empresaId: string; agenci
       ? `Conciliação pronta: ${plural(resposta.relatorio.resumo.pendencias, "pendência", "pendências")}.`
       : "";
 
+  const seletorDaConta = (
+    <CampoForm label="Conta bancária" htmlFor={`${base}-ag`} required={podeAgir}>
+      <SearchableSelect
+        key={versaoDaConta}
+        id={`${base}-ag`}
+        name="agencia"
+        options={agencias}
+        defaultValue={agenciaId}
+        onChange={(v) => {
+          setAgenciaId(v);
+          mudou();
+        }}
+        placeholder="Escolha a conta"
+      />
+    </CampoForm>
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4" aria-labelledby={`${base}-titulo`}>
-        <div>
-          <h2 id={`${base}-titulo`} className="text-base font-semibold">
-            Razão × extrato
-          </h2>
-          <p className="text-sm text-fg-muted">
-            Envie o Razão contábil de uma conta bancária (Excel ou PDF). Ele é cruzado com o extrato já importado desta conta no mesmo período, e
-            a tela aponta as pendências. Nada é gravado nem alterado.
-          </p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-3 md:items-start">
-          <CampoForm label="Conta bancária" htmlFor={`${base}-ag`} required>
-            <SearchableSelect
-              id={`${base}-ag`}
-              name="agencia"
-              options={agencias}
-              defaultValue={agenciaId}
-              onChange={(v) => {
-                setAgenciaId(v);
-                mudou();
-              }}
-              placeholder="Escolha a conta"
-            />
-          </CampoForm>
-          <CampoForm label="Razão da conta" htmlFor={`${base}-razao`} required helper="Excel (.xlsx ou .xls) ou PDF, de uma conta só.">
-            <input
-              id={`${base}-razao`}
-              type="file"
-              accept=".xlsx,.XLSX,.xls,.XLS,.pdf,.PDF,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              className="block w-full text-sm"
-              onChange={(e) => {
-                setArquivo(e.target.files?.[0] ?? null);
-                mudou();
-              }}
-            />
-          </CampoForm>
-          <CampoForm
-            label="Consulta de pagamentos do SISPAG (opcional)"
-            htmlFor={`${base}-sispag`}
-            helper="Com ela, os lotes do Itaú (TED e crédito em conta) são separados pagamento a pagamento."
-            acao={
-              sispag && (
-                <Button type="button" size="xs" variant="linkMuted" onClick={tirarSispag}>
-                  <X size={12} aria-hidden /> Tirar
-                </Button>
-              )
-            }
-          >
-            <input
-              id={`${base}-sispag`}
-              ref={sispagRef}
-              type="file"
-              accept=".xlsx,.XLSX,.xls,.XLS,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              className="block w-full text-sm"
-              onChange={(e) => {
-                setSispag(e.target.files?.[0] ?? null);
-                mudou();
-              }}
-            />
-          </CampoForm>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={conciliar} loading={conciliando} loadingLabel="Conciliando…">
-            <Scale size={14} aria-hidden /> Conciliar
-          </Button>
-          {resposta && arquivo && (
-            <Button type="button" variant="secondary" onClick={baixar} loading={baixando} loadingLabel="Gerando…">
-              <Download size={14} aria-hidden /> Baixar planilha
+      {podeAgir ? (
+        <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4" aria-labelledby={`${base}-titulo`}>
+          <div>
+            <h2 id={`${base}-titulo`} className="text-base font-semibold">
+              Razão × extrato
+            </h2>
+            <p className="text-sm text-fg-muted">
+              Envie o Razão contábil de uma conta bancária (Excel ou PDF). Ele é cruzado com o extrato já importado desta conta no mesmo período, e
+              a tela aponta as pendências. Nada é gravado nem alterado, até você salvar a análise para revisar.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3 md:items-start">
+            {seletorDaConta}
+            <CampoForm label="Razão da conta" htmlFor={`${base}-razao`} required helper="Excel (.xlsx ou .xls) ou PDF, de uma conta só.">
+              <input
+                id={`${base}-razao`}
+                ref={razaoRef}
+                type="file"
+                accept=".xlsx,.XLSX,.xls,.XLS,.pdf,.PDF,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                className="block w-full text-sm"
+                onChange={(e) => {
+                  setArquivo(e.target.files?.[0] ?? null);
+                  mudou();
+                }}
+              />
+            </CampoForm>
+            <CampoForm
+              label="Consulta de pagamentos do SISPAG (opcional)"
+              htmlFor={`${base}-sispag`}
+              helper="Com ela, os lotes do Itaú (TED e crédito em conta) são separados pagamento a pagamento."
+              acao={
+                sispag && (
+                  <Button type="button" size="xs" variant="linkMuted" onClick={tirarSispag}>
+                    <X size={12} aria-hidden /> Tirar
+                  </Button>
+                )
+              }
+            >
+              <input
+                id={`${base}-sispag`}
+                ref={sispagRef}
+                type="file"
+                accept=".xlsx,.XLSX,.xls,.XLS,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                className="block w-full text-sm"
+                onChange={(e) => {
+                  setSispag(e.target.files?.[0] ?? null);
+                  mudou();
+                }}
+              />
+            </CampoForm>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={conciliar} loading={conciliando} loadingLabel="Conciliando…">
+              <Scale size={14} aria-hidden /> Conciliar
             </Button>
-          )}
-        </div>
-        <p className="text-micro text-fg-muted">O extrato do período precisa já estar importado nesta conta, na aba Importações.</p>
-        <p aria-live="polite" className="sr-only">
-          {situacao}
-        </p>
-        {erro && (
-          <p role="alert" className="text-helper text-danger">
-            {erro}
+            {resposta && arquivo && (
+              <Button type="button" variant="secondary" onClick={baixar} loading={baixando} loadingLabel="Gerando…">
+                <Download size={14} aria-hidden /> Baixar planilha
+              </Button>
+            )}
+          </div>
+          <p className="text-micro text-fg-muted">O extrato do período precisa já estar importado nesta conta, na aba Importações.</p>
+          <p aria-live="polite" className="sr-only">
+            {situacao}
           </p>
-        )}
-      </section>
+          {erro && (
+            <p role="alert" className="text-helper text-danger">
+              {erro}
+            </p>
+          )}
+        </section>
+      ) : (
+        <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4" aria-labelledby={`${base}-titulo`}>
+          <div>
+            <h2 id={`${base}-titulo`} className="text-base font-semibold">
+              Razão × extrato
+            </h2>
+            <p className="text-sm text-fg-muted">
+              Consulte as revisões salvas da conciliação e as conferências registradas nelas. Conciliar e revisar é de quem opera o Contábil Core.
+            </p>
+          </div>
+          <div className="max-w-md">{seletorDaConta}</div>
+        </section>
+      )}
 
-      {resposta && <Relatorio key={resposta.envio} relatorio={resposta.relatorio} somas={resposta.somas} />}
+      <RevisaoManual
+        key={`${agenciaId}|${chaveDoArquivo(arquivo)}|${chaveDoArquivo(sispag)}`}
+        empresaId={empresaId}
+        empresaNome={resposta?.relatorio.resumo.empresa || "a empresa escolhida"}
+        agenciaId={agenciaId}
+        arquivo={arquivo}
+        sispag={sispag}
+        podeAgir={podeAgir}
+        revisao={revisao}
+        aberta={revisaoAberta}
+        extratoInicialIds={extratoInicialIds}
+        onFechar={() => setRevisaoAberta(false)}
+        onRevisao={revisaoMudou}
+        onAbrirSalva={abrirSalva}
+        onExcluida={revisaoExcluida}
+      />
+
+      {resposta && (
+        <Relatorio
+          key={resposta.envio}
+          relatorio={resposta.relatorio}
+          somas={resposta.somas}
+          revisao={revisao?.revisao ?? null}
+          onRevisar={podeAgir || revisao ? revisar : undefined}
+        />
+      )}
     </div>
   );
 }
 
 // ─── Relatório ────────────────────────────────────────────────────────────
 
-function Relatorio({ relatorio, somas }: Resposta) {
+type DaRevisao = {
+  /** A revisão aberta: marca as pendências com conferência manual registrada. */
+  revisao: Revisao | null;
+  /** Abre a revisão manual, com estas linhas do extrato já escolhidas. Sem ele, a tela não oferece. */
+  onRevisar?: (extratoIds: string[]) => void;
+};
+
+function Relatorio({ relatorio, somas, revisao, onRevisar }: Resposta & DaRevisao) {
   const [dia, setDia] = useState<string | null>(null);
   const r = relatorio.resumo;
   return (
@@ -282,7 +390,7 @@ function Relatorio({ relatorio, somas }: Resposta) {
       </section>
 
       {relatorio.porDia.length > 0 && <PorDia relatorio={relatorio} dia={dia} onDia={setDia} />}
-      <Pendencias relatorio={relatorio} somas={somas} dia={dia} onDia={setDia} />
+      <Pendencias relatorio={relatorio} somas={somas} dia={dia} onDia={setDia} revisao={revisao} onRevisar={onRevisar} />
       {relatorio.aplicacaoSemExtrato.length > 0 && <AplicacaoNaoConferida linhas={relatorio.aplicacaoSemExtrato} />}
     </>
   );
@@ -374,8 +482,11 @@ function Pendencias({
   somas,
   dia,
   onDia,
-}: Resposta & { dia: string | null; onDia: (d: string | null) => void }) {
+  revisao,
+  onRevisar,
+}: Resposta & DaRevisao & { dia: string | null; onDia: (d: string | null) => void }) {
   const base = useId();
+  const extratoVinculado = revisao ? usadosNaRevisao(revisao).extrato : new Set<string>();
   const [filtro, setFiltro] = useState<string | null>(null);
   // O dia escolhido filtra tudo abaixo: os tipos e a lista.
   const doDia = pendenciasDoDia(relatorio.pendencias, dia);
@@ -395,6 +506,18 @@ function Pendencias({
           </Button>
         )}
       </div>
+      {onRevisar && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-micro text-fg-muted">
+            {revisao
+              ? `${plural(vinculosAtivos(revisao.vinculos).length, "conferência manual registrada", "conferências manuais registradas")}. O relatório automático continua disponível.`
+              : "Revise composições ambíguas e registre a conferência para consultar depois."}
+          </p>
+          <Button type="button" size="sm" variant="secondary" onClick={() => onRevisar([])}>
+            <ClipboardCheck size={14} aria-hidden /> {revisao ? "Abrir a revisão manual" : "Revisar composição manualmente"}
+          </Button>
+        </div>
+      )}
       {doDia.length > 0 && (
         <div role="group" aria-label="Filtrar pendências por tipo" className="flex flex-wrap gap-2">
           <Button type="button" size="sm" variant={tipoAtivo === null ? "primary" : "secondary"} aria-pressed={tipoAtivo === null} onClick={() => setFiltro(null)}>
@@ -428,13 +551,16 @@ function Pendencias({
               <span className="text-fg-muted font-normal">{plural(t.pendencias.length, "pendência", "pendências")}</span>
             </h3>
             <ul className="flex flex-col gap-2">
-              {t.pendencias.map(({ indice, grupo }) =>
-                ehLote(grupo) ? (
-                  <Lote key={indice} grupo={grupo} somas={somas[indice]} />
+              {t.pendencias.map(({ indice, grupo }) => {
+                const registro = registroManual(grupo, extratoVinculado);
+                // Abre a revisão já com as linhas do extrato desta pendência escolhidas.
+                const revisarEsta = onRevisar && grupo.extrato.length > 0 ? () => onRevisar(grupo.extrato.map((l) => l.transacaoId)) : undefined;
+                return ehLote(grupo) ? (
+                  <Lote key={indice} grupo={grupo} somas={somas[indice]} registro={registro} onRevisar={revisarEsta} />
                 ) : (
-                  <PendenciaSimples key={indice} grupo={grupo} />
-                ),
-              )}
+                  <PendenciaSimples key={indice} grupo={grupo} registro={registro} onRevisar={revisarEsta} />
+                );
+              })}
             </ul>
           </div>
         ))
@@ -458,9 +584,30 @@ function LinhaDoRazao({ l }: { l: LinhaRazaoJson }) {
   );
 }
 
-function PendenciaSimples({ grupo: g }: { grupo: GrupoConciliacaoJson }) {
+type DaPendencia = {
+  /** "Conferência manual registrada" ou "Conferência parcial (1/3)"; `null` sem conferência. */
+  registro: string | null;
+  onRevisar?: () => void;
+};
+
+function RevisaoDaPendencia({ registro, onRevisar }: DaPendencia) {
+  if (!registro && !onRevisar) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2 sm:col-span-3">
+      {registro && <Selo tom={registro.startsWith("Conferência manual") ? "sucesso" : "marca"}>{registro}</Selo>}
+      {onRevisar && (
+        <Button type="button" size="xs" variant="linkMuted" onClick={onRevisar}>
+          Revisar esta pendência
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function PendenciaSimples({ grupo: g, registro, onRevisar }: { grupo: GrupoConciliacaoJson } & DaPendencia) {
   return (
     <li className="grid gap-3 rounded-lg border border-border bg-surface p-3 text-sm sm:grid-cols-[1fr_1fr_auto]">
+      <RevisaoDaPendencia registro={registro} onRevisar={onRevisar} />
       <div className="flex flex-col gap-2">
         <p className="text-micro uppercase tracking-wide text-fg-muted">Razão</p>
         {g.razao.length === 0 ? <span className="text-fg-muted">—</span> : g.razao.map((l, j) => <LinhaDoRazao key={j} l={l} />)}
@@ -496,7 +643,7 @@ const EXPLICACAO: Record<ComposicaoNaTela["criterio"], string> = {
 };
 
 // Lote: o pagamento sem par vem primeiro, e a composição fica recolhida.
-function Lote({ grupo: g, somas }: { grupo: GrupoConciliacaoJson; somas: SomasDoGrupo | undefined }) {
+function Lote({ grupo: g, somas, registro, onRevisar }: { grupo: GrupoConciliacaoJson; somas: SomasDoGrupo | undefined } & DaPendencia) {
   const base = useId();
   const [escolhido, setEscolhido] = useState<number | null>(null);
   const faltando = g.sispagFaltando;
@@ -517,6 +664,7 @@ function Lote({ grupo: g, somas }: { grupo: GrupoConciliacaoJson; somas: SomasDo
         <span className="tabular-nums">{dataBr(data)}</span>
         <span className={`tabular-nums whitespace-nowrap font-semibold ${valorZerado(g.diferenca) ? "" : "text-warning-fg"}`}>Diferença {moeda(g.diferenca)}</span>
       </div>
+      <RevisaoDaPendencia registro={registro} onRevisar={onRevisar} />
 
       {faltando.length > 0 && (
         <Aviso tom="atencao">

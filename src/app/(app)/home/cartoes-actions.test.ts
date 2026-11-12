@@ -29,7 +29,7 @@ function ambiente(): AmbienteDosCartoes {
   return {
     modulos: new Map([...modulos, ["dp_colaboradores", { ligado: true, setores: ["dp"] }]]),
     setores: new Set(["bpo", "dp", "fiscal"]),
-    helpdesk: { ligado: false, setor: "tech" },
+    helpdesk: { ligado: false, setores: ["tech"] },
   };
 }
 

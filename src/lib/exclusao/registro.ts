@@ -123,6 +123,7 @@ const EMPRESA: Ligacao[] = [
   { modelo: "Dp2Competencia", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["competência do DP 2", "competências do DP 2"], historico: true },
   { modelo: "Dp2EmpresaConfig", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "Dp2Vinculo", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["contrato do DP 2", "contratos do DP 2"], historico: true },
+  { modelo: "Dp2EventoEsocial", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["evento do eSocial do DP 2", "eventos do eSocial do DP 2"], historico: true },
   // As pastas da casa nascem com a empresa; o que conta como histórico são os
   // arquivos dentro delas (contados à parte em `empresa.ts`).
   { modelo: "DriveFolder", campo: "company", fk: "companyId", tratamento: "cascata" },
@@ -135,6 +136,8 @@ const EMPRESA: Ligacao[] = [
   { modelo: "HonorarioVinculoPasta", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["pasta de contrato (fica sem empresa)", "pastas de contrato (ficam sem empresa)"] },
   { modelo: "HonorarioEmpresaSemPasta", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "HonorarioManual", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["honorário informado à mão", "honorários informados à mão"] },
+  { modelo: "HonorarioContato", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["contato do contrato", "contatos do contrato"] },
+  { modelo: "HonorarioTermoGerado", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["registro de termo aditivo gerado", "registros de termo aditivo gerado"] },
   { modelo: "HonorarioAcessoriasEnvio", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["envio de honorário ao Acessórias", "envios de honorário ao Acessórias"], historico: true },
   // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
   // a conta continua (com as outras empresas dela, ou sem nenhuma). O
@@ -227,6 +230,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2Evento", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["lançamento do DP 2", "lançamentos do DP 2"], historico: true },
   { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
   { modelo: "Dp2Comparativo", campo: "person", fk: "personId", tratamento: "cascata" },
+  { modelo: "Dp2EventoEsocial", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["evento do eSocial do DP 2", "eventos do eSocial do DP 2"], historico: true },
 
   { modelo: "ChatwootContactLink", campo: "person", fk: "personId", tratamento: "desligar" },
 ];
@@ -398,6 +402,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Competencia", coluna: "fechadaPorId", tratamento: "manter", motivo: "quem fechou a folha; a auditoria guarda o nome" },
   { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
   { modelo: "Dp2Comparativo", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os valores da Domínio; a tela não mostra o id" },
+  { modelo: "Dp2EventoEsocial", coluna: "geradoPorId", tratamento: "manter", motivo: "quem gerou o evento do eSocial; a auditoria guarda o nome" },
   { modelo: "Dp2Remessa", coluna: "geradaPorId", tratamento: "manter", motivo: "quem gerou o arquivo do banco; a auditoria guarda o nome" },
   { modelo: "Dp2PedidoDeEventos", coluna: "criadoPorId", tratamento: "manter", motivo: "quem pediu os eventos ao cliente; a auditoria guarda o nome" },
   // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
@@ -521,6 +526,8 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "CoreTransacao", coluna: "autoRecusadoPorId", tratamento: "manter", motivo: "quem recusou a classificação automática; trilha contábil" },
   { modelo: "CoreRegistro", coluna: "canceladoPorId", tratamento: "manter", motivo: "quem cancelou o lançamento; trilha contábil" },
   { modelo: "CoreExportacao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gerou o arquivo de exportação; trilha contábil" },
+  { modelo: "CoreConciliacaoRevisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem criou a revisão da conciliação; trilha contábil" },
+  { modelo: "CoreConciliacaoVinculo", coluna: "confirmadoPorId", tratamento: "manter", motivo: "quem confirmou o vínculo da revisão (o nome fica em `responsavel`); trilha contábil" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },
