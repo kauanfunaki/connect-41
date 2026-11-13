@@ -1,7 +1,7 @@
 import { lerJsonOps, responderOps } from "@/lib/ops/http";
 import { ErroOps, autenticarWatcher } from "@/lib/ops/servidor";
 import { slugSchema } from "@/lib/ops/regras";
-import { pedidoDeAssistenciaSchema } from "@/lib/robo/assistencia";
+import { pedidoDeAssistenciaSchema } from "@/lib/robo/assistenciaEsquemas";
 import { abrirAssistencia } from "@/lib/robo/assistenciaServidor";
 export const runtime = "nodejs";
 

@@ -11,7 +11,7 @@ type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
 };
 
-// Mesma classe usada dentro do RichTextEditor (src/components/ui/RichTextEditor.tsx)
+// Mesma classe usada dentro do editor (src/components/ui/RichTextEditorTiptap.tsx)
 // pra renderização e edição terem a mesma tipografia de listas/títulos.
 const RICH_TEXT_CLASS =
   "text-body text-fg-secondary [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-fs-5 [&_h2]:font-semibold [&_h2]:mt-2 [&_p]:my-1";

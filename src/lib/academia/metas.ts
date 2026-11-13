@@ -3,9 +3,12 @@
 // o nível (ou qualquer um), o alvo e o prazo — "60 PPM na digitação, nível
 // médio, até 30/11". O progresso é o melhor resultado valendo desde que a meta
 // foi definida contra o alvo. Uma meta por pessoa: trocar substitui. Puro.
+//
+// Sem zod (13/11/2026, melhoria-661): este arquivo entra no menu de toda tela
+// (AppShell → AcademiaNoTopo → MetaPessoal). O esquema que confere a meta
+// gravada mora em `metaEsquema.ts`, que só o servidor importa.
 
-import { z } from "zod";
-import { NIVEIS, QUESTOES_POR_RODADA, ROTULO_DO_NIVEL, ROTULO_DO_TESTE, TESTES, ehDeDigitar, type Nivel, type Teste } from "./regras";
+import { QUESTOES_POR_RODADA, ROTULO_DO_NIVEL, ROTULO_DO_TESTE, ehDeDigitar, type Nivel, type Teste } from "./regras";
 
 /** O que a meta mede em cada teste: PPM na digitação e nos números, acertos na lógica e nos atalhos. */
 export const UNIDADE_DA_META: Record<Teste, string> = { digitacao: "PPM", numeros: "PPM", logica: "acertos", atalhos: "acertos" };
@@ -13,18 +16,6 @@ export const UNIDADE_DA_META: Record<Teste, string> = { digitacao: "PPM", numero
 export const ALVO_MAXIMO: Record<Teste, number> = { digitacao: 200, numeros: 200, logica: QUESTOES_POR_RODADA, atalhos: 80 };
 /** Até quantos dias à frente o prazo pode ir. */
 export const PRAZO_MAXIMO_DIAS = 366;
-
-export const metaSchema = z
-  .object({
-    teste: z.enum(TESTES, { error: "Escolha o teste." }),
-    nivel: z.enum(NIVEIS).nullable().default(null),
-    alvo: z.coerce.number({ error: "Escreva o alvo." }).int("Use um número inteiro.").min(1, "O alvo precisa ser maior que zero."),
-    prazo: z.string({ error: "Escolha o prazo." }).regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha o prazo."),
-  })
-  .superRefine((m, ctx) => {
-    if (m.alvo > ALVO_MAXIMO[m.teste]) ctx.addIssue({ code: "custom", path: ["alvo"], message: `Em ${ROTULO_DO_TESTE[m.teste]}, o alvo vai até ${ALVO_MAXIMO[m.teste]} ${UNIDADE_DA_META[m.teste]}.` });
-  });
-export type MetaParaGravar = z.output<typeof metaSchema>;
 
 /** O prazo vale: de hoje até `PRAZO_MAXIMO_DIAS` à frente. */
 export function prazoValido(prazo: string, hoje: string, limite: string): boolean {
