@@ -38,7 +38,8 @@ export type QuemVeOsCartoes = Pick<AuthContext, "userId" | "role" | "sectors" | 
 export type AmbienteDosCartoes = {
   modulos: ReadonlyMap<string, { ligado: boolean; setores: readonly string[] }>;
   setores: ReadonlySet<string>;
-  helpdesk: { ligado: boolean; setor: string };
+  /** `setores`: os que administram os chamados (12/11/2026). */
+  helpdesk: { ligado: boolean; setores: string[] };
 };
 
 /** O número de um cartão, como a consulta devolve. */
@@ -160,9 +161,9 @@ const comChamados: DefinicaoDoCartao["pode"] = (_quem, amb) => amb.helpdesk.liga
  */
 const comAcademia: DefinicaoDoCartao["pode"] = (_quem, amb) => !!amb.modulos.get("academia")?.ligado;
 
-/** A fila inteira dos chamados: a equipe do setor responsável e o administrador (`podeVerInterno`). */
+/** A fila dos chamados: a equipe de um setor que administra e o administrador (`podeVerInterno`). */
 const equipeDosChamados: DefinicaoDoCartao["pode"] = (quem, amb) =>
-  amb.helpdesk.ligado && (quem.sectors.includes(amb.helpdesk.setor) || isFullWrite(quem.role));
+  amb.helpdesk.ligado && (amb.helpdesk.setores.some(s => quem.sectors.includes(s)) || isFullWrite(quem.role));
 
 // ─── Tom ───────────────────────────────────────────────────────────────────
 // A cor só onde pede ação (decisão do Kauan): vermelho para o que já passou do

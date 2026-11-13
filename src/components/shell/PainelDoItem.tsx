@@ -7,6 +7,7 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { caminhoDoMenuAtivo as ativa } from "@/lib/caminhoDoMenu";
 import { useNaFaixa } from "@/components/shell/NavLink";
+import { SeloDeManutencaoNoMenu, useConferirManutencao } from "@/components/shell/TelasEmManutencao";
 
 export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode; ativa?: boolean };
 
@@ -61,6 +62,7 @@ export function PainelDoItem({
   children: React.ReactNode | ((props: { aberto: boolean; alternar: () => void; painelId: string }) => React.ReactNode);
 }) {
   const pathname = usePathname();
+  const emManutencao = useConferirManutencao();
   const naFaixa = useNaFaixa();
   const id = useId();
   const [aberto, setAberto] = useState(false);
@@ -239,6 +241,7 @@ export function PainelDoItem({
                         </span>
                       )}
                       <span className="min-w-0 flex-1 truncate">{t.label}</span>
+                      {emManutencao(t.href) && <SeloDeManutencaoNoMenu />}
                       <ChevronRight
                         size={14}
                         aria-hidden

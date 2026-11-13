@@ -10,8 +10,11 @@
 // - só mouse;
 // - espera de 10 min no horário comercial; fora dele, direto para o caminho do PDF;
 // - aviso primeiro para quem pediu e, depois de 2 min sem resposta, para o setor.
+//
+// Sem zod (13/11/2026, melhoria-661): este arquivo entra no menu de toda tela
+// pela chamada do robô (AssistenciaAoVivo). Os esquemas que conferem o que
+// chega na API moram em `assistenciaEsquemas.ts`.
 
-import { z } from "zod";
 import type { TipoDeTarefa } from "./tarefas";
 
 /** Quanto o robô espera alguém resolver, no horário comercial. */
@@ -31,12 +34,8 @@ export type MotivoDaAssistencia = (typeof MOTIVOS_DA_ASSISTENCIA)[number];
 export const FINS_DA_ASSISTENCIA = ["resolvido", "prazo", "desistiu"] as const;
 export type FimDaAssistencia = (typeof FINS_DA_ASSISTENCIA)[number];
 
-export const pedidoDeAssistenciaSchema = z.object({ motivo: z.enum(MOTIVOS_DA_ASSISTENCIA) });
-export const fimDaAssistenciaSchema = z.object({ resultado: z.enum(FINS_DA_ASSISTENCIA) });
-
-/** Onde a pessoa clicou, em fração do quadro (0 a 1): o robô converte para a janela dele. */
-export const cliqueSchema = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) });
-export type Clique = z.infer<typeof cliqueSchema>;
+/** Onde a pessoa clicou, em fração do quadro (0 a 1): o robô converte para a janela dele. Conferido por `cliqueSchema`. */
+export type Clique = { x: number; y: number };
 
 const FUSO_DE_SAO_PAULO_MS = -3 * 60 * 60 * 1000; // sem horário de verão desde 2019
 

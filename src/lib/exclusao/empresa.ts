@@ -63,6 +63,14 @@ function apagarDoCore(modelo: string, apagar: (tx: Tx, where: { tenantId: string
 }
 
 const PASSOS_DO_CONTABIL_CORE: Passo<AlvoEmpresa>[] = [
+  // Conferência do financeiro (B4): vínculos e documentos apontam para a análise. Os originais em disco
+  // saem depois do commit, por `arquivosDaEmpresa`.
+  apagarDoCore("CoreFinanceiroVinculo", (tx, where) => tx.coreFinanceiroVinculo.deleteMany({ where })),
+  apagarDoCore("CoreFinanceiroDocumento", (tx, where) => tx.coreFinanceiroDocumento.deleteMany({ where })),
+  apagarDoCore("CoreFinanceiroAnalise", (tx, where) => tx.coreFinanceiroAnalise.deleteMany({ where })),
+  // Revisão manual da conciliação (B3): os vínculos apontam para a revisão; nenhuma das duas aponta para o extrato.
+  apagarDoCore("CoreConciliacaoVinculo", (tx, where) => tx.coreConciliacaoVinculo.deleteMany({ where })),
+  apagarDoCore("CoreConciliacaoRevisao", (tx, where) => tx.coreConciliacaoRevisao.deleteMany({ where })),
   apagarDoCore("CoreNeoDecisao", (tx, where) => tx.coreNeoDecisao.deleteMany({ where })),
   apagarDoCore("CoreRegistro", (tx, where) => tx.coreRegistro.deleteMany({ where })),
   apagarDoCore("CoreTransacao", (tx, where) => tx.coreTransacao.deleteMany({ where })),
@@ -347,7 +355,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
 export async function arquivosDaEmpresa(tx: Tx, a: AlvoEmpresa, logoUrl: string | null): Promise<ArquivosDoCadastro> {
   const arquivos = semArquivos();
   const vagas = await vagasDaEmpresa(tx, a);
-  const [documentos, enviados, pendencias, mensagens, solicitacoes, processos, guias, drive, candidaturas, anexosDasContas, revisao] = await juntos(tx, [
+  const [documentos, enviados, pendencias, mensagens, solicitacoes, processos, guias, drive, candidaturas, anexosDasContas, revisao, financeiroCore] = await juntos(tx, [
     () => tx.document.findMany({ where: documentosDaEmpresa(a, vagas), select: { fileUrl: true } }),
     () => tx.clientDocument.findMany({ where: daEmpresa(a), select: { fileUrl: true } }),
     () => tx.clientRequestAttachment.findMany({ where: { request: daEmpresa(a) }, select: { fileUrl: true } }),
@@ -364,6 +372,8 @@ export async function arquivosDaEmpresa(tx: Tx, a: AlvoEmpresa, logoUrl: string 
     () => tx.financeEntryAttachment.findMany({ where: { tenantId: a.tenantId, entry: { companyId: a.id } }, select: { fileUrl: true } }),
     // Os originais da Revisão do fechamento: a linha sai em cascata com o fechamento; o arquivo, por aqui.
     () => tx.revisaoDocumento.findMany({ where: { tenantId: a.tenantId, fechamento: { companyId: a.id } }, select: { arquivo: true } }),
+    // Os originais da conferência do financeiro do Contábil Core (B4): a linha sai pelos passos do Core; o arquivo, por aqui.
+    () => tx.coreFinanceiroDocumento.findMany({ where: { tenantId: a.tenantId, empresa: { companyId: a.id } }, select: { storageKey: true } }),
   ]);
   anotar(arquivos, "documents", documentos.map((d) => d.fileUrl));
   anotar(arquivos, "client-documents", enviados.map((d) => d.fileUrl));
@@ -374,6 +384,7 @@ export async function arquivosDaEmpresa(tx: Tx, a: AlvoEmpresa, logoUrl: string 
   anotar(arquivos, "drive", drive.map((d) => d.storageKey));
   anotar(arquivos, "finance-entries", anexosDasContas.map((d) => d.fileUrl));
   anotar(arquivos, "revisao-contabil", revisao.map((d) => d.arquivo));
+  anotar(arquivos, "contabil-core/financeiro", financeiroCore.map((d) => d.storageKey));
   for (const g of guias) if (g.documentUrl) arquivos.guias.push({ tenantId: a.tenantId, documentUrl: g.documentUrl });
   arquivos.curriculos.push(...candidaturas.map((c) => c.resumeUrl).filter((u): u is string => !!u));
   if (logoUrl) arquivos.publicos.push({ pasta: "companies", url: logoUrl });

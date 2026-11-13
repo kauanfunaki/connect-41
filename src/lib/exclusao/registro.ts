@@ -136,6 +136,8 @@ const EMPRESA: Ligacao[] = [
   { modelo: "HonorarioVinculoPasta", campo: "company", fk: "companyId", tratamento: "desligar", rotulo: ["pasta de contrato (fica sem empresa)", "pastas de contrato (ficam sem empresa)"] },
   { modelo: "HonorarioEmpresaSemPasta", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "HonorarioManual", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["honorário informado à mão", "honorários informados à mão"] },
+  { modelo: "HonorarioContato", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["contato do contrato", "contatos do contrato"] },
+  { modelo: "HonorarioTermoGerado", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["registro de termo aditivo gerado", "registros de termo aditivo gerado"] },
   { modelo: "HonorarioAcessoriasEnvio", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["envio de honorário ao Acessórias", "envios de honorário ao Acessórias"], historico: true },
   // Portal por empresa (14/10/2026): sai a ligação da empresa com o acesso, e
   // a conta continua (com as outras empresas dela, ou sem nenhuma). O
@@ -406,6 +408,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
   { modelo: "AtendimentoCiclo", coluna: "assignedToId", tratamento: "manter", motivo: "histórico do atendimento; a tela mostra Alguém da equipe e qualquer pessoa do setor pode assumir" },
   { modelo: "AtendimentoCiclo", coluna: "encerradoPorId", tratamento: "manter", motivo: "histórico do atendimento; a auditoria guarda o nome" },
+  { modelo: "AtendimentoCiclo", coluna: "pedidoAssumirPorId", tratamento: "manter", motivo: "pedido para assumir em aberto; a tela mostra 'Alguém da equipe' quando a pessoa sai, e quem atende recusa" },
   { modelo: "AtendimentoMovimento", coluna: "porUserId", tratamento: "manter", motivo: "o caminho da conversa é histórico; a tela mostra só o nome, que some com a pessoa" },
   { modelo: "AtendimentoMovimento", coluna: "paraUserId", tratamento: "manter", motivo: "o caminho da conversa é histórico; a tela mostra só o nome, que some com a pessoa" },
   { modelo: "AtendimentoPedido", coluna: "decididoPorId", tratamento: "manter", motivo: "histórico do pedido; a auditoria guarda o nome" },
@@ -524,6 +527,10 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "CoreTransacao", coluna: "autoRecusadoPorId", tratamento: "manter", motivo: "quem recusou a classificação automática; trilha contábil" },
   { modelo: "CoreRegistro", coluna: "canceladoPorId", tratamento: "manter", motivo: "quem cancelou o lançamento; trilha contábil" },
   { modelo: "CoreExportacao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gerou o arquivo de exportação; trilha contábil" },
+  { modelo: "CoreConciliacaoRevisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem criou a revisão da conciliação; trilha contábil" },
+  { modelo: "CoreConciliacaoVinculo", coluna: "confirmadoPorId", tratamento: "manter", motivo: "quem confirmou o vínculo da revisão (o nome fica em `responsavel`); trilha contábil" },
+  { modelo: "CoreFinanceiroAnalise", coluna: "criadoPorId", tratamento: "manter", motivo: "quem criou a conferência do financeiro; trilha contábil" },
+  { modelo: "CoreFinanceiroVinculo", coluna: "confirmadoPorId", tratamento: "manter", motivo: "quem confirmou a conferência do financeiro (o nome fica em `responsavel`); trilha contábil" },
   { modelo: "SerproMensagem", coluna: "abertaPorId", tratamento: "manter", motivo: "quem abriu a mensagem deu ciência da intimação" },
   { modelo: "SerproPedido", coluna: "pedidoPorId", tratamento: "desligar" },
   { modelo: "SerproTermo", coluna: "enviadoPorId", tratamento: "desligar" },

@@ -40,6 +40,9 @@ import { contarNovasDaEquipe } from "@/lib/solicitacoes/consultas";
 import { setoresDaFila } from "@/lib/solicitacoes/acesso";
 import { podeAssistir } from "@/lib/robo/assistenciaServidor";
 import { ChamadaDoRobo } from "@/components/robo/ChamadaDoRobo";
+import { ProvedorDaManutencao } from "@/components/shell/TelasEmManutencao";
+import { lerTelasEmManutencao } from "@/lib/manutencao/leitura";
+import { passaPelaManutencao } from "@/lib/manutencao/regras";
 
 export default async function AppLayout({
   children,
@@ -76,6 +79,7 @@ export default async function AppLayout({
     { aparencia },
     foco,
     podeFocar,
+    manutencao,
     chamadaDoRobo,
   ] = await Promise.all([
     getSectorMaps(tenantId),
@@ -128,6 +132,9 @@ export default async function AppLayout({
       console.error("[layout] pode usar o foco", err);
       return false;
     }),
+    // As telas em manutenção (13/11/2026): o selo no menu e a faixa de quem
+    // passa. Não derruba o app — sem a tabela, nenhuma tela está em manutenção.
+    lerTelasEmManutencao(tenantId),
     // A janela do captcha do robô (09/11/2026) só monta para quem passa no
     // portão da tela do robô: quem não pode resolver nem pergunta ao servidor.
     ctx.userId
@@ -240,7 +247,7 @@ export default async function AppLayout({
   const arquivosLigados = moduleStates.some((m) => m.code === "arquivos" && m.enabled);
   // No setor que atende os chamados (a Tech), eles saem do Geral e entram no
   // menu do setor (26/10/2026, ver `chamadosNoMenuDoSetor`).
-  const chamadosNoSetor = chamadosLigados && chamadosNoMenuDoSetor(activeSector?.code ?? null, helpdeskConfig.sectorCode);
+  const chamadosNoSetor = chamadosLigados && chamadosNoMenuDoSetor(activeSector?.code ?? null, helpdeskConfig.sectorCodes);
   // As telas do setor, pela mesma regra da tela "Organizar menu" (`telasDoMenuDoSetor`),
   // e a ordem que o super admin escolheu para ele (05/11/2026).
   const activeSectorModules = activeSector ? telasDoMenuDoSetor(moduleStates, activeSector.code, { chamadosNoSetor, solicitacoesLigadas, semMenu }) : [];
@@ -249,6 +256,12 @@ export default async function AppLayout({
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
   const telasFixadas = telasFixadasVisiveis(codigosFixados, telasNavegaveis);
+  // Só as telas ligadas: desligada, a tela já não aparece nem abre. O setor
+  // dono vai junto para a faixa levar a quem libera até ele.
+  const telasEmManutencao = manutencao.telas.flatMap((t) => {
+    const modulo = moduleStates.find((m) => m.code === t.moduleCode && m.enabled);
+    return modulo ? [{ code: modulo.code, setor: modulo.sectorCode }] : [];
+  });
 
   return (
     <ToastProvider>
@@ -262,6 +275,7 @@ export default async function AppLayout({
           para quem pode usar o foco, com ou sem empresa escolhida, e o
           provedor envolve o casco para o vazio de uma tela abrir a janela dela. */}
       <ProvedorDoFoco companyId={foco?.companyId ?? null} disponivel={podeFocar}>
+      <ProvedorDaManutencao telas={telasEmManutencao} passa={passaPelaManutencao(ctx)} podeLiberar={isAdmin}>
       <AppShell
         faixaDoFoco={
           podeFocar ? (
@@ -310,6 +324,7 @@ export default async function AppLayout({
         {modal}
         <ChatDeIA agentes={agentesDoChatDeIA} nome={me?.name ?? ""} />
       </AppShell>
+      </ProvedorDaManutencao>
       </ProvedorDoFoco>
     </ToastProvider>
   );

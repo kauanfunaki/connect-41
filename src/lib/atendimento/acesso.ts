@@ -9,9 +9,10 @@
 
 import type { AuthContext } from "@/lib/auth/context";
 import { canActOnSector, canManageSector, canViewSector, isFullWrite } from "@/lib/auth/papeis";
-import type { Situacao } from "./regras";
+import { estaEmQuemVeTudo, type QuemVeTudo, type Situacao } from "./regras";
 
-export type ConfigDeAcesso = { enabled: boolean; triagem: string };
+/** `veemTudo`: pessoas e setores que veem todos os atendimentos, sem agir neles. */
+export type ConfigDeAcesso = { enabled: boolean; triagem: string; veemTudo?: readonly QuemVeTudo[] };
 export type CicloParaAcesso = { sectorCode: string | null; assignedToId: string | null; situacao: Situacao };
 
 const soLeitura = (ctx: AuthContext) => ctx.subscriptionReadOnly || ctx.role === "READONLY";
@@ -21,9 +22,14 @@ export function ehDaTriagem(ctx: AuthContext, cfg: ConfigDeAcesso): boolean {
   return cfg.enabled && (ctx.sectors.includes(cfg.triagem) || isFullWrite(ctx.role));
 }
 
+/** Escolhido nas configurações para ver todos os atendimentos (pessoa ou setor). */
+export function veTudo(ctx: AuthContext, cfg: ConfigDeAcesso): boolean {
+  return cfg.enabled && estaEmQuemVeTudo(cfg.veemTudo ?? [], ctx.userId, ctx.sectors);
+}
+
 export function podeVerCiclo(ctx: AuthContext, cfg: ConfigDeAcesso, c: CicloParaAcesso): boolean {
   if (!cfg.enabled) return false;
-  if (ehDaTriagem(ctx, cfg)) return true;
+  if (ehDaTriagem(ctx, cfg) || veTudo(ctx, cfg)) return true;
   if (c.assignedToId && c.assignedToId === ctx.userId) return true;
   return !!c.sectorCode && canViewSector(ctx, c.sectorCode);
 }
@@ -53,6 +59,20 @@ export function podeEncaminharDireto(ctx: AuthContext, cfg: ConfigDeAcesso, c: C
 /** Quem está no setor pede outro setor; a triagem aprova. */
 export function podePedirEncaminhamento(ctx: AuthContext, cfg: ConfigDeAcesso, c: CicloParaAcesso): boolean {
   return !ehDaTriagem(ctx, cfg) && !!c.sectorCode && podeAgirNoCiclo(ctx, cfg, c);
+}
+
+/**
+ * A triagem tira alguém da conversa (13/11/2026), quando vê mau trato ou algo
+ * do tipo: a conversa volta para a triagem, sem responsável.
+ */
+export function podeTirarDaConversa(ctx: AuthContext, cfg: ConfigDeAcesso, c: CicloParaAcesso): boolean {
+  return ehDaTriagem(ctx, cfg) && !soLeitura(ctx) && c.situacao !== "ENCERRADO" && !!c.assignedToId && c.assignedToId !== ctx.userId;
+}
+
+/** Quem está com a conversa (ou a triagem) autoriza ou recusa o pedido para assumir. */
+export function podeDecidirPedidoDeAssumir(ctx: AuthContext, cfg: ConfigDeAcesso, c: CicloParaAcesso): boolean {
+  if (!cfg.enabled || soLeitura(ctx) || c.situacao === "ENCERRADO") return false;
+  return c.assignedToId === ctx.userId || ehDaTriagem(ctx, cfg);
 }
 
 export function podeDecidirPedido(ctx: AuthContext, cfg: ConfigDeAcesso): boolean {

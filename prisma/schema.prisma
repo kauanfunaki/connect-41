@@ -239,6 +239,8 @@ model GithubRepository {
   name                 String @db.VarChar(100)
   fullName             String @db.VarChar(210)
   defaultBranch        String @db.VarChar(255)
+  /// A branch escolhida em Integrações para a coleta de commits; null = a defaultBranch (12/11/2026).
+  branch               String? @db.VarChar(255)
   private              Boolean @default(false)
   fork                 Boolean @default(false)
   archived             Boolean @default(false)
@@ -762,6 +764,10 @@ model HelpdeskTicket {
   description String @db.Text
   categoryId String
   requesterSectorCode String @db.VarChar(40)
+  /// O setor que atende o chamado (12/11/2026, funcionalidade-640): um dos
+  /// setores que administram os chamados (`setoresDoModulo("helpdesk")`). Quem
+  /// abre escolhe, com a sugestão da IA; a equipe pode redirecionar.
+  handlingSectorCode String @db.VarChar(40)
   createdById String
   status HelpdeskStatus @default(ABERTO)
   priority HelpdeskPriority @default(MEDIA)
@@ -794,6 +800,7 @@ model HelpdeskTicket {
   @@index([tenantId, status, queueOrder])
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
+  @@index([tenantId, handlingSectorCode, status])
   @@map("helpdesk_tickets")
 }
 
@@ -1511,6 +1518,7 @@ model Tenant {
   sectors                   Sector[]
   tenantModules             TenantModule[]
   tenantModuleSectors       TenantModuleSector[]
+  telasEmManutencao         TenantModuleMaintenance[]
   localFiscalScenarios      LocalFiscalScenario[]
   tags                      Tag[]
   accessGrants              UserTenantAccess[]
@@ -1946,6 +1954,30 @@ model TenantModuleSector {
   @@unique([tenantId, moduleCode, sectorCode])
   @@index([tenantId])
   @@map("tenant_module_sectors")
+}
+
+// Telas em manutenção (13/11/2026, pedido do Kauan): enquanto a Tech corrige um
+// erro, a tela sai do ar para os setores — quem abre vê o aviso de manutenção,
+// e não a tela pela metade. Uma linha = a tela está em manutenção; liberar
+// apaga a linha (o histórico fica na Auditoria). Quem colocou fica pelo nome,
+// como texto, para o aviso não depender de o usuário continuar ativo.
+// Resolvido em `src/lib/manutencao/`.
+model TenantModuleMaintenance {
+  id         String    @id @default(uuid())
+  tenantId   String
+  moduleCode String    @db.VarChar(60)
+  /// O que a equipe do setor lê no aviso. Opcional.
+  motivo     String?   @db.VarChar(280)
+  /// Quando a tela deve voltar, se a Tech tiver previsão.
+  previsao   DateTime?
+  /// O nome de quem colocou em manutenção, guardado como texto.
+  porNome    String    @db.VarChar(120)
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, moduleCode])
+  @@map("tenant_module_maintenance")
 }
 
 // Catálogo de planos comercializáveis (vive em código+banco, editável só por
@@ -2519,6 +2551,8 @@ model Company {
   honorarioVinculos     HonorarioVinculoPasta[]
   honorarioSemPasta     HonorarioEmpresaSemPasta?
   honorarioManual       HonorarioManual?
+  honorarioContatos     HonorarioContato[]
+  honorarioTermos       HonorarioTermoGerado[]
   honorarioEnvios       HonorarioAcessoriasEnvio[]
   @@unique([tenantId, cnpj])
   // Mesmo desenho do CNPJ, para o cliente pessoa física. Dois índices únicos
@@ -7625,6 +7659,11 @@ model CompanyPartner {
   documentMasked String?   @db.VarChar(20)
   /// De onde veio: "MANUAL" ou "RECEITA".
   origin         String    @default("MANUAL") @db.VarChar(20)
+  /// Para o termo aditivo (12/11/2026): "brasileiro", "casado", "empresário" —
+  /// como vão escritos no texto do contratante.
+  nationality    String?   @db.VarChar(60)
+  maritalStatus  String?   @db.VarChar(40)
+  occupation     String?   @db.VarChar(120)
 
   zipCode           String? @db.VarChar(10)
   addressStreet     String? @db.VarChar(180)
@@ -9669,6 +9708,21 @@ model License {
   @@map("licenses")
 }
 
+/// O e-mail diário de vencimentos do Societário (12/11/2026), o que o Radar
+/// Societário mandava: licenças a 90, 60 e 30 dias e vencidas, e certidões
+/// positivas, vencendo e vencidas, numa tabela só, para a lista daqui. Os
+/// itens já avisados ficam em `alert_dispatches` (chave VENC_EMAIL:…).
+model SocietarioAvisoPorEmail {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  ligado    Boolean  @default(true)
+  /// ["pessoa@escritorio.com.br", …], já conferidos e sem repetir.
+  emails    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("societario_avisos_por_email")
+}
+
 /// Uma taxa de processo — DAM, taxa de alvará, taxa de vistoria.
 ///
 /// Fica presa ao processo de propósito: **"quanto este ato custou em taxas" é o
@@ -11061,6 +11115,11 @@ model CoreEmpresa {
   registros    CoreRegistro[]
   decisoes     CoreNeoDecisao[]
   exportacoes  CoreExportacao[]
+  revisoes     CoreConciliacaoRevisao[]
+  vinculos     CoreConciliacaoVinculo[]
+  financeiroAnalises   CoreFinanceiroAnalise[]
+  financeiroDocumentos CoreFinanceiroDocumento[]
+  financeiroVinculos   CoreFinanceiroVinculo[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11409,6 +11468,192 @@ model CoreExportacao {
   @@map("core_exportacoes")
 }
 
+/// Revisão manual da conciliação Razão × extrato (`conciliacao_revisoes`, Bloco B, Fase B3): a cópia
+/// da conferência (o relatório e o snapshot das fontes), independente dos lançamentos e do extrato.
+/// `snapshot` e `relatorio` guardam o JSON do original (snake_case, o `model_dump` do pydantic): a carga
+/// copia sem conversão, e os hashes das evidências continuam valendo.
+model CoreConciliacaoRevisao {
+  id            String    @id @default(uuid())
+  tenantId      String
+  empresaId     String
+  /// Referência documental, sem chave estrangeira (como no original): a revisão nunca trava a exclusão da conta bancária.
+  agenciaId     String
+  /// Quem criou (`criado_por`): id de `User`, sem chave, como trilha.
+  criadoPorId   String
+  nomeArquivo   String    @db.VarChar(255)
+  /// Nome dado pela pessoa; sem ele, a tela mostra o do arquivo.
+  titulo        String?   @db.VarChar(200)
+  contaBancaria String    @db.VarChar(255)
+  periodoInicio DateTime  @db.Date
+  periodoFim    DateTime  @db.Date
+  /// SHA-256 do Razão, do SISPAG e do extrato (`_hash` do original): a mesma combinação viva devolve a revisão existente.
+  revisaoHash   String    @db.Char(64)
+  /// SHA-256 da evidência do extrato na criação: se o extrato mudar, a revisão vira histórico.
+  extratoHash   String    @db.Char(64)
+  /// Versão otimista: toda alteração confere a versão que a tela viu.
+  versao        Int       @default(1)
+  /// { fontes, linhas_razao, extrato, hashes_apoio, avisos }
+  snapshot      Json
+  relatorio     Json
+  /// `revisaoHash` enquanto a revisão vive: ver chaves.ts.
+  chaveAtiva    String?   @db.Char(64)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  empresa  CoreEmpresa              @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  vinculos CoreConciliacaoVinculo[]
+
+  @@unique([empresaId, agenciaId, chaveAtiva])
+  @@index([empresaId, agenciaId])
+  @@index([empresaId, updatedAt])
+  @@index([tenantId])
+  @@map("core_conciliacao_revisoes")
+}
+
+/// Decisão humana registrada numa revisão (`conciliacao_vinculos`): desfazer preserva a composição.
+model CoreConciliacaoVinculo {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  revisaoId       String
+  /// Ids das transações do extrato (texto do UUID), como no original.
+  extratoIds      Json
+  /// [{ "linha_id": …, "dc": "D" | "C" }], como no original.
+  razaoItens      Json
+  totalExtrato    Decimal   @db.Decimal(15, 2)
+  totalRazao      Decimal   @db.Decimal(15, 2)
+  /// Razão − extrato. Diferente de zero só com observação.
+  diferenca       Decimal   @db.Decimal(15, 2)
+  observacao      String    @db.Text
+  /// ATIVO | DESFEITO
+  estado          String    @default("ATIVO") @db.VarChar(10)
+  /// Quem confirmou (`usuario_id`): id de `User`, sem chave, como trilha.
+  confirmadoPorId String
+  /// O nome de quem confirmou, gravado na hora (fica mesmo se a pessoa sair).
+  responsavel     String    @db.VarChar(200)
+  desfeitoPor     String?   @db.VarChar(200)
+  desfeitoEm      DateTime?
+  motivoDesfazer  String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa CoreEmpresa            @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  revisao CoreConciliacaoRevisao @relation(fields: [revisaoId], references: [id], onDelete: Restrict)
+
+  @@index([revisaoId, estado])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_conciliacao_vinculos")
+}
+
+/// Conferência do financeiro (`financeiro_analises`, Bloco B, Fase B4): documentos do financeiro,
+/// SISPAG, Razão e extrato detalhado comparados lado a lado, como evidência (nunca lançamento).
+/// `snapshot` guarda o JSON do original (snake_case: fontes, linhas, titulos_abertos, avisos), para a
+/// carga copiar sem conversão e as identidades das linhas continuarem valendo.
+model CoreFinanceiroAnalise {
+  id            String    @id @default(uuid())
+  tenantId      String
+  empresaId     String
+  /// Referência documental, sem chave estrangeira (como no original): a análise nunca trava a exclusão da conta bancária.
+  agenciaId     String
+  /// Quem criou (`criado_por`): id de `User`, sem chave, como trilha.
+  criadoPorId   String
+  titulo        String    @db.VarChar(200)
+  /// A `descricao` da conta bancária na criação ("ITAU 1234 56789 0").
+  contaBancaria String    @db.VarChar(255)
+  periodoInicio DateTime  @db.Date
+  periodoFim    DateTime  @db.Date
+  /// SHA-256 da identidade do extrato na criação: se o extrato mudar, só as conferências com o Extrato param.
+  extratoHash   String    @db.Char(64)
+  /// Versão otimista: toda alteração confere a versão que a tela viu.
+  versao        Int       @default(1)
+  /// { fontes, linhas, titulos_abertos, avisos }
+  snapshot      Json
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  empresa    CoreEmpresa               @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  documentos CoreFinanceiroDocumento[]
+  vinculos   CoreFinanceiroVinculo[]
+
+  @@index([empresaId, agenciaId])
+  @@index([empresaId, updatedAt])
+  @@index([tenantId])
+  @@map("core_financeiro_analises")
+}
+
+/// Original de um documento da análise (`financeiro_documentos`). Os bytes ficam em disco, em
+/// storage/contabil-core/financeiro/<storageKey>, e só saem pela análise autorizada.
+model CoreFinanceiroDocumento {
+  /// É o `fonte_id` da fonte no snapshot.
+  id          String    @id @default(uuid())
+  tenantId    String
+  empresaId   String
+  analiseId   String
+  nomeArquivo String    @db.VarChar(255)
+  /// FINANCEIRO | SISPAG | RAZAO | EXTRATO_DETALHADO
+  tipo        String    @db.VarChar(20)
+  /// SHA-256 dos bytes: o mesmo arquivo não entra duas vezes na análise.
+  hashArquivo String    @db.Char(64)
+  mediaType   String    @db.VarChar(100)
+  tamanho     Int
+  /// "<tenantId>/<id>.<ext>" sob storage/contabil-core/financeiro — nunca vem de quem envia.
+  storageKey  String    @db.VarChar(255)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  empresa CoreEmpresa           @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  analise CoreFinanceiroAnalise @relation(fields: [analiseId], references: [id], onDelete: Restrict)
+
+  @@unique([analiseId, hashArquivo])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_financeiro_documentos")
+}
+
+/// Decisão humana entre o documento base e uma origem de comparação (`financeiro_vinculos`).
+/// Nos tipos RAZAO_*, `financeiroIds` e `totalFinanceiro` guardam o lado base (o Razão).
+model CoreFinanceiroVinculo {
+  id              String    @id @default(uuid())
+  tenantId        String
+  empresaId       String
+  analiseId       String
+  /// EXTRATO | SISPAG | RAZAO | RAZAO_SISPAG | RAZAO_DETALHADO
+  tipoComparacao  String    @db.VarChar(20)
+  /// Ids das linhas do snapshot (texto do UUID), como no original.
+  financeiroIds   Json
+  comparacaoIds   Json
+  totalFinanceiro Decimal   @db.Decimal(15, 2)
+  totalComparacao Decimal   @db.Decimal(15, 2)
+  /// Comparação − base. Diferente de zero só com observação.
+  diferenca       Decimal   @db.Decimal(15, 2)
+  observacao      String    @db.Text
+  /// ATIVO | DESFEITO
+  estado          String    @default("ATIVO") @db.VarChar(10)
+  /// Quem confirmou (`usuario_id`): id de `User`, sem chave, como trilha.
+  confirmadoPorId String
+  /// O nome de quem confirmou, gravado na hora (fica mesmo se a pessoa sair).
+  responsavel     String    @db.VarChar(200)
+  desfeitoPor     String?   @db.VarChar(200)
+  desfeitoEm      DateTime?
+  motivoDesfazer  String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  empresa CoreEmpresa           @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  analise CoreFinanceiroAnalise @relation(fields: [analiseId], references: [id], onDelete: Restrict)
+
+  @@index([analiseId, estado])
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_financeiro_vinculos")
+}
+
 // ─── Atendimento (10/11/2026) ────────────────────────────────────────────────
 //
 // A caixa do WhatsApp oficial do ESCRITÓRIO, no menu Geral: todo contato novo
@@ -11451,6 +11696,14 @@ enum AtendimentoMovimentoTipo {
   ENCERROU
   REABRIU
   VINCULOU
+  /// Alguém da equipe começou a conversa com o contato (13/11/2026).
+  INICIOU
+  /// Pediu para assumir a conversa de quem estava com ela.
+  PEDIU_ASSUMIR
+  /// Quem atendia passou a conversa para quem pediu.
+  CEDEU
+  /// A triagem tirou a pessoa da conversa (com o motivo).
+  TIROU
 }
 
 enum AtendimentoPedidoStatus {
@@ -11487,6 +11740,11 @@ model AtendimentoConfig {
 
   /// Os setores que aparecem no "Encaminhar". Nulo = todos os ativos.
   setores Json?
+
+  /// Pessoas e setores que veem todos os atendimentos, sem ser da triagem
+  /// (12/11/2026): [{ tipo: "PESSOA" | "SETOR", id, avisos }]. `avisos` liga o
+  /// aviso de conversa nova; vem desligado. Lido por `lerQuemVeTudo`.
+  veemTudo Json?
 
   /// A Ceci registra uma sugestão de setor em cada triagem, só para medir o
   /// acerto. Ninguém vê a sugestão na conversa.
@@ -11566,6 +11824,16 @@ model AtendimentoCiclo {
   assignedToId String?
   assignedAt   DateTime?
 
+  /// Transferida para uma pessoa que ainda não assumiu (12/11/2026): a conversa
+  /// aparece em destaque para ela, que assume para responder. Limpa ao assumir.
+  transferidaParaId String?   @db.VarChar(191)
+  transferidaEm     DateTime?
+
+  /// Alguém pediu para assumir a conversa de quem está com ela (13/11/2026):
+  /// quem atende autoriza ou recusa. Um pedido por vez; limpa ao decidir.
+  pedidoAssumirPorId String?   @db.VarChar(191)
+  pedidoAssumirEm    DateTime?
+
   abertoEm       DateTime  @default(now())
   encerradoEm    DateTime?
   encerradoPorId String?
@@ -11573,6 +11841,12 @@ model AtendimentoCiclo {
   /// O texto do desfecho no encerramento (o da lista ou o que a pessoa escreveu em "Outro").
   desfechoTexto  String?   @db.VarChar(120)
   resumo         String?   @db.Text
+
+  /// A nota do cliente, de 1 a 5 (12/11/2026): a pergunta sai ao encerrar, e a
+  /// resposta que é só o número vira a nota, sem reabrir a conversa.
+  notaPedidaEm DateTime?
+  nota         Int?
+  notaEm       DateTime?
 
   /// A sugestão interna da Ceci e o setor que a triagem escolheu, lado a lado,
   /// para medir o acerto. Não aparece na conversa.
@@ -11587,6 +11861,8 @@ model AtendimentoCiclo {
   @@index([tenantId, situacao, sectorCode])
   @@index([tenantId, assignedToId, situacao])
   @@index([conversaId, abertoEm])
+  @@index([tenantId, abertoEm])
+  @@index([tenantId, encerradoEm])
   @@map("atendimento_ciclos")
 }
 
@@ -12271,6 +12547,62 @@ model HonorarioManual {
 
   @@index([tenantId])
   @@map("hon_manuais")
+}
+
+/// Os contatos do contrato da empresa, que entram no termo aditivo (12/11/2026):
+/// o administrativo e o financeiro, um de cada.
+model HonorarioContato {
+  id        String   @id @default(uuid())
+  tenantId  String
+  companyId String
+  /// ADMINISTRATIVO | FINANCEIRO
+  papel     String   @db.VarChar(15)
+  nome      String   @db.VarChar(180)
+  telefone  String?  @db.VarChar(30)
+  email     String?  @db.VarChar(120)
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, papel])
+  @@index([tenantId])
+  @@map("hon_contatos")
+}
+
+/// O modelo .docx do termo aditivo do escritório, enviado na tela (12/11/2026).
+/// Campos: {CONTRATANTE_TEXTO}, {DATA_DOCUMENTO} e {NOME_SOCIO_ASSINATURA} —
+/// os do Aditiva Pronto, para o modelo de lá servir sem mudança.
+model HonorarioModeloDoTermo {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  nomeArquivo String   @db.VarChar(255)
+  conteudo    Bytes    @db.MediumBlob
+  /// A cidade da data: "Curitiba, 12 de novembro de 2026."
+  cidade      String   @db.VarChar(80)
+  /// Nome de quem enviou, como em `informadoPor`.
+  enviadoPor  String   @db.VarChar(150)
+  updatedAt   DateTime @updatedAt
+
+  @@map("hon_modelo_do_termo")
+}
+
+/// Cada termo aditivo gerado (12/11/2026). O arquivo fica nos Arquivos da
+/// empresa; aqui fica quem gerou e quando.
+model HonorarioTermoGerado {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nomeArquivo String   @db.VarChar(255)
+  /// O arquivo nos Arquivos; nulo quando a pasta da empresa não existia.
+  driveFileId String?
+  geradoPor   String   @db.VarChar(150)
+  geradoEm    DateTime @default(now()) @db.DateTime(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, geradoEm])
+  @@index([companyId])
+  @@map("hon_termos_gerados")
 }
 
 /// Última leitura das empresas no Acessórias (trocada inteira a cada "Conferir").

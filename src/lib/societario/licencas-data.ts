@@ -1,7 +1,16 @@
 // Leitura de licenças e taxas.
 
 import { getPrisma } from "@/lib/prisma";
-import { ordenarLicencas, contarPendentes, custoEmTaxas, situacaoDaLicenca, AVISO_EM_DIAS, type CustoDoProcesso } from "@/lib/societario/licencas";
+import {
+  ordenarLicencas,
+  contarPendentes,
+  custoEmTaxas,
+  situacaoDaLicenca,
+  buscarLicencas,
+  AVISO_EM_DIAS,
+  type CustoDoProcesso,
+  type SituacaoDaLicenca,
+} from "@/lib/societario/licencas";
 import {
   ehTaxaDoBombeiros,
   arquivarTaxaDeBombeiros,
@@ -28,61 +37,156 @@ export type LinhaDeLicenca = {
   notes: string | null;
 };
 
+const CAMPOS_DA_LINHA = {
+  id: true,
+  companyId: true,
+  kind: true,
+  number: true,
+  organId: true,
+  issuedAt: true,
+  expiresAt: true,
+  revokedAt: true,
+  notes: true,
+  company: { select: { name: true, tradeName: true, cnpj: true, city: true, stateCode: true } },
+  organ: { select: { name: true, acronym: true } },
+} as const;
+
+type LinhaDoBanco = {
+  id: string;
+  companyId: string;
+  kind: string;
+  number: string | null;
+  organId: string | null;
+  issuedAt: Date | null;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
+  notes: string | null;
+  company: { name: string; tradeName: string | null; cnpj: string | null; city: string | null; stateCode: string | null };
+  organ: { name: string; acronym: string | null } | null;
+};
+
+function paraLinha(l: LinhaDoBanco): LinhaDeLicenca {
+  return {
+    id: l.id,
+    companyId: l.companyId,
+    empresaNome: l.company.tradeName || l.company.name,
+    empresaCnpj: l.company.cnpj,
+    cidade: l.company.city?.trim() || null,
+    uf: l.company.stateCode?.trim() || null,
+    kind: l.kind,
+    number: l.number,
+    organId: l.organId,
+    orgaoNome: l.organ ? l.organ.acronym || l.organ.name : null,
+    issuedAt: l.issuedAt,
+    expiresAt: l.expiresAt,
+    revokedAt: l.revokedAt,
+    notes: l.notes,
+  };
+}
+
 /**
- * As licenças do cliente, já na ordem da fila de renovação.
- *
- * Sem paginação: uma carteira de 400 empresas com três licenças cada dá 1.200
- * linhas, que cabe. Quando não couber, o corte natural é por situação — e não
- * por página, porque a fila existe para mostrar o que vence, não para ser
- * folheada.
+ * As licenças de uma empresa, já na ordem da fila de renovação (ficha da
+ * empresa). A tela de Licenças, que é do escritório inteiro, usa
+ * `paginaDeLicencas`.
  */
 export async function listarLicencas(
   tenantId: string,
   hoje: Date,
   companyId?: string
 ): Promise<LinhaDeLicenca[]> {
-  const prisma = getPrisma();
-  const linhas = await prisma.license.findMany({
+  const linhas = await getPrisma().license.findMany({
     where: { tenantId, companyId: companyId || undefined },
-    select: {
-      id: true,
-      companyId: true,
-      kind: true,
-      number: true,
-      organId: true,
-      issuedAt: true,
-      expiresAt: true,
-      revokedAt: true,
-      notes: true,
-      company: { select: { name: true, tradeName: true, cnpj: true, city: true, stateCode: true } },
-      organ: { select: { name: true, acronym: true } },
-    },
+    select: CAMPOS_DA_LINHA,
   });
-
-  return ordenarLicencas(
-    linhas.map((l) => ({
-      id: l.id,
-      companyId: l.companyId,
-      empresaNome: l.company.tradeName || l.company.name,
-      empresaCnpj: l.company.cnpj,
-      cidade: l.company.city?.trim() || null,
-      uf: l.company.stateCode?.trim() || null,
-      kind: l.kind,
-      number: l.number,
-      organId: l.organId,
-      orgaoNome: l.organ ? l.organ.acronym || l.organ.name : null,
-      issuedAt: l.issuedAt,
-      expiresAt: l.expiresAt,
-      revokedAt: l.revokedAt,
-      notes: l.notes,
-    })),
-    hoje
-  );
+  return ordenarLicencas(linhas.map(paraLinha), hoje);
 }
 
-export async function resumoDasLicencas(tenantId: string, hoje: Date) {
-  const linhas = await listarLicencas(tenantId, hoje);
-  return { linhas, ...contarPendentes(linhas, hoje) };
+export type PaginaDeLicencas = {
+  /** Só as licenças da página, completas e na ordem da fila. */
+  linhas: LinhaDeLicenca[];
+  /** Quantas passam no recorte e na busca. */
+  total: number;
+  pagina: number;
+  totalDePaginas: number;
+  /** O escritório tem alguma licença (para a tela vazia dizer "cadastre" ou "troque o filtro"). */
+  temAlguma: boolean;
+  /** Os totais dos cartões: da carteira inteira, sem recorte nem busca. */
+  vencidas: number;
+  aRenovar: number;
+  vigentes: number;
+};
+
+/**
+ * Uma página da tela de Licenças (12/11/2026, bug-645).
+ *
+ * Antes a tela lia todas as licenças com observações, empresa e órgão e cortava
+ * as 50 da página em memória: 1,6 s por página. Agora os totais, o recorte e a
+ * ordem saem só da validade e da revogação (a situação depende do dia em São
+ * Paulo, por isso é decidida aqui, e não no SQL), e os dados completos são
+ * lidos só das licenças da página. A empresa só entra na primeira leitura
+ * quando há busca, que procura por nome, cidade e CNPJ.
+ */
+export async function paginaDeLicencas(
+  tenantId: string,
+  hoje: Date,
+  opcoes: {
+    busca?: string | null;
+    /** Quais situações a página mostra; sem ela, todas. */
+    noRecorte?: (s: SituacaoDaLicenca) => boolean;
+    pagina: number;
+    porPagina: number;
+  }
+): Promise<PaginaDeLicencas> {
+  const prisma = getPrisma();
+  const busca = opcoes.busca?.trim() || null;
+
+  const todas = busca
+    ? (
+        await prisma.license.findMany({
+          where: { tenantId },
+          select: {
+            id: true,
+            expiresAt: true,
+            revokedAt: true,
+            company: { select: { name: true, tradeName: true, cnpj: true, city: true } },
+          },
+        })
+      ).map((l) => ({
+        id: l.id,
+        expiresAt: l.expiresAt,
+        revokedAt: l.revokedAt,
+        empresaNome: l.company.tradeName || l.company.name,
+        empresaCnpj: l.company.cnpj,
+        cidade: l.company.city?.trim() || null,
+      }))
+    : (await prisma.license.findMany({ where: { tenantId }, select: { id: true, expiresAt: true, revokedAt: true } })).map((l) => ({
+        ...l,
+        empresaNome: "",
+        empresaCnpj: null,
+        cidade: null,
+      }));
+
+  const { vencidas, aRenovar } = contarPendentes(todas, hoje);
+  const vigentes = todas.filter((l) => situacaoDaLicenca(l, hoje) === "vigente").length;
+
+  const achadas = buscarLicencas(todas, busca);
+  const filtradas = ordenarLicencas(
+    opcoes.noRecorte ? achadas.filter((l) => opcoes.noRecorte!(situacaoDaLicenca(l, hoje))) : achadas,
+    hoje
+  );
+
+  const totalDePaginas = Math.max(1, Math.ceil(filtradas.length / opcoes.porPagina));
+  const pagina = Math.min(Math.max(1, opcoes.pagina), totalDePaginas);
+  const ids = filtradas.slice((pagina - 1) * opcoes.porPagina, pagina * opcoes.porPagina).map((l) => l.id);
+
+  const completas = ids.length
+    ? await prisma.license.findMany({ where: { tenantId, id: { in: ids } }, select: CAMPOS_DA_LINHA })
+    : [];
+  const porId = new Map(completas.map((l) => [l.id, paraLinha(l)]));
+  // Na ordem da fila; uma licença apagada entre as duas leituras só some da página.
+  const linhas = ids.map((id) => porId.get(id)).filter((l): l is LinhaDeLicenca => l !== undefined);
+
+  return { linhas, total: filtradas.length, pagina, totalDePaginas, temAlguma: todas.length > 0, vencidas, aRenovar, vigentes };
 }
 
 export type LicencaARenovar = { id: string; kind: string; empresaNome: string; expiresAt: Date; revokedAt: null };

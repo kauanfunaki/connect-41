@@ -141,11 +141,13 @@ async function resourceStep(connection: Connection, job: GithubSyncJob, repo: Gi
   }
   const base = repoPath(repo.owner, repo.name), since = new Date(String(cursor.since)), until = new Date(String(cursor.until));
   if (job.resource === "COMMIT" && !cursor.head) {
+    // A branch escolhida em Integrações; sem escolha, a padrão do repositório (12/11/2026).
+    const branch = repo.branch ?? repo.defaultBranch;
     let head: string | null = null;
-    try { head = commitListSchema.parse((await client.request(`${base}/commits?sha=${encodeURIComponent(repo.defaultBranch)}&per_page=1`)).data)[0]?.sha ?? null; }
+    try { head = commitListSchema.parse((await client.request(`${base}/commits?sha=${encodeURIComponent(branch)}&per_page=1`)).data)[0]?.sha ?? null; }
     catch (error) { if (!(error instanceof GithubError) || error.status !== 409) throw error; }
     if (!head) { await finishResource(connection, job, repo, owner, { ...cursor, empty: true }, [], false); return; }
-    cursor = { ...cursor, head, branch: repo.defaultBranch, compare: cursor.phase === "incremental" && typeof cursor.lastHead === "string" };
+    cursor = { ...cursor, head, branch, compare: cursor.phase === "incremental" && typeof cursor.lastHead === "string" };
     await db.$transaction(async tx => { await guardLease(tx, connection, owner); await tx.githubSyncJob.update({ where: { id: job.id }, data: { cursor: cursor as Prisma.InputJsonObject } }); });
     return;
   }

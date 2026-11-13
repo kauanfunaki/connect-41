@@ -19,6 +19,7 @@ import { unstable_rethrow } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { isPrismaMissingTableError } from "@/lib/prismaErrors";
 import type { AuthContext } from "@/lib/auth/context";
+import { isFullWrite } from "@/lib/auth/papeis";
 import { scopedHandoffWhere, scopedPipelineWhere, scopedVagaWhere } from "@/lib/auth/scope";
 import { abasVisiveis, quemVeAsTransferencias, whereDaAba } from "@/lib/handoffAbas";
 import { SITUACOES_COM_O_SETOR } from "@/lib/handoffs";
@@ -95,13 +96,13 @@ export const ambienteDosCartoes = cache(async (tenantId: string): Promise<Ambien
     getActiveSectors(tenantId),
     configDoHelpdesk(tenantId).catch((err: unknown) => {
       console.error("[home] chamados indisponíveis para os cartões", err);
-      return { enabled: false, sectorCode: "" };
+      return { enabled: false, sectorCode: "", sectorCodes: [] };
     }),
   ]);
   return {
     modulos: new Map(estados.map((e) => [e.code, { ligado: e.enabled, setores: e.sectorCodes }])),
     setores: new Set(setores.map((s) => s.code)),
-    helpdesk: { ligado: helpdesk.enabled, setor: helpdesk.sectorCode },
+    helpdesk: { ligado: helpdesk.enabled, setores: helpdesk.sectorCodes },
   };
 });
 
@@ -250,12 +251,18 @@ const chamadosQueAbri = cache((tenantId: string, userId: string) =>
  */
 const SITUACOES_DA_FILA = ["AGUARDANDO_TRIAGEM", "ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO"] as const;
 
-const chamadosNaFila = cache((tenantId: string) =>
-  tentar("chamados na fila", () => getPrisma().helpdeskTicket.count({ where: { tenantId, status: { in: [...SITUACOES_DA_FILA] } } }))
+/**
+ * A fila de quem atende (12/11/2026): a dos setores da pessoa; vazio = todos
+ * (o administrador). Os setores vão juntos numa chave, para o `cache`.
+ */
+/** "" = todos (administrador); sem setor, um código que não existe. */
+const setoresDosChamados = (ctx: AuthContext) => isFullWrite(ctx.role) ? "" : ctx.sectors.length ? [...ctx.sectors].sort().join(",") : "-";
+const chamadosNaFila = cache((tenantId: string, setores: string) =>
+  tentar("chamados na fila", () => getPrisma().helpdeskTicket.count({ where: { tenantId, status: { in: [...SITUACOES_DA_FILA] }, ...(setores ? { handlingSectorCode: { in: setores.split(",") } } : {}) } }))
 );
 
 /** Ciclos de SLA vencidos e ainda abertos — o mesmo predicado do aviso de SLA (`chamados/alertas.ts`). */
-const chamadosAtrasados = cache((tenantId: string) =>
+const chamadosAtrasados = cache((tenantId: string, setores: string) =>
   tentar("chamados atrasados", () =>
     getPrisma().helpdeskSlaCycle.count({
       where: {
@@ -263,7 +270,7 @@ const chamadosAtrasados = cache((tenantId: string) =>
         resolvedAt: null,
         pausedAt: null,
         resolutionDueAt: { lt: new Date() },
-        ticket: { status: { notIn: ["RESOLVIDO", "CANCELADO"] } },
+        ticket: { status: { notIn: ["RESOLVIDO", "CANCELADO"] }, ...(setores ? { handlingSectorCode: { in: setores.split(",") } } : {}) },
       },
     })
   )
@@ -524,9 +531,9 @@ async function numeroDoCartao(
     case "chamados_que_abri":
       return ctx.userId ? await chamadosQueAbri(t, ctx.userId) : { valor: 0 };
     case "chamados_na_fila":
-      return so(await chamadosNaFila(t));
+      return so(await chamadosNaFila(t, setoresDosChamados(ctx)));
     case "chamados_atrasados":
-      return so(await chamadosAtrasados(t));
+      return so(await chamadosAtrasados(t, setoresDosChamados(ctx)));
     case "contas_pagar_vencidas":
     case "contas_receber_vencidas":
     case "contas_pagar_semana": {

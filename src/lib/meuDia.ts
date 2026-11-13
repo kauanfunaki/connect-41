@@ -7,9 +7,9 @@
 // classificação (`classificar`), recortados para a pessoa (ou para o time do
 // coordenador). Aqui só se separa em blocos e se conta — puro, testado.
 
-import { ordemDeAtencao, precisaDeAtencao, type Classificacao, type ItemDeTrabalho } from "@/lib/gestao/regras";
+import { ordemDeAtencao, precisaDeAtencao, type Classificacao, type ItemLeve } from "@/lib/gestao/regras";
 
-type Item = { item: ItemDeTrabalho; c: Classificacao };
+type Item = { item: ItemLeve; c: Classificacao };
 
 export type ResumoDoDia = {
   atrasados: number;
@@ -26,7 +26,7 @@ function aberto(x: Item): boolean {
   return x.c.coluna !== "CONCLUIDO";
 }
 
-export function resumirDia(itens: Item[], agora: Date): ResumoDoDia {
+export function resumirDia(itens: readonly Item[], agora: Date): ResumoDoDia {
   const r: ResumoDoDia = { atrasados: 0, vencendo: 0, parados: 0, andamento: 0, aComecar: 0, concluidosNaSemana: 0 };
   for (const x of itens) {
     if (!aberto(x)) {
@@ -43,20 +43,20 @@ export function resumirDia(itens: Item[], agora: Date): ResumoDoDia {
 }
 
 /** O que pede a pessoa agora: prazo vencido ou vencendo, ou parado além do limite. */
-export function pedeAgora(itens: Item[]): Item[] {
+export function pedeAgora<T extends Item>(itens: readonly T[]): T[] {
   return itens.filter((x) => aberto(x) && precisaDeAtencao(x.c)).sort(ordemDeAtencao);
 }
 
 /** Andando sem alerta — o mais recente primeiro, que é onde a pessoa estava. */
-export function andando(itens: Item[]): Item[] {
+export function andando<T extends Item>(itens: readonly T[]): T[] {
   return itens
     .filter((x) => aberto(x) && !precisaDeAtencao(x.c) && x.c.coluna === "ANDAMENTO")
     .sort((a, b) => b.item.ultimaMovimentacao.getTime() - a.item.ultimaMovimentacao.getTime());
 }
 
 /** Na fila para começar (e os parados de propósito, esperando alguém) — prazo mais perto primeiro. */
-export function paraComecar(itens: Item[]): Item[] {
-  const prazo = (x: Item) => x.item.prazo?.getTime() ?? Number.POSITIVE_INFINITY;
+export function paraComecar<T extends Item>(itens: readonly T[]): T[] {
+  const prazo = (x: T) => x.item.prazo?.getTime() ?? Number.POSITIVE_INFINITY;
   return itens
     .filter((x) => aberto(x) && !precisaDeAtencao(x.c) && x.c.coluna !== "ANDAMENTO")
     .sort((a, b) => prazo(a) - prazo(b) || a.item.ultimaMovimentacao.getTime() - b.item.ultimaMovimentacao.getTime());

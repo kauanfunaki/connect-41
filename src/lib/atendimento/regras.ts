@@ -218,8 +218,11 @@ export const ROTULO_DO_RECORTE: Record<Recorte, string> = {
 /** Quantos dias as encerradas ficam na aba "Encerradas". */
 export const DIAS_DAS_ENCERRADAS = 30;
 
-/** Os recortes da lista para uma pessoa: os da triagem, os do setor, ou só "Minhas". */
-export function recortesDe(e: { triagem: boolean; meus: readonly string[]; geridos: readonly string[] }): Recorte[] {
+/**
+ * Os recortes da lista para uma pessoa: os da triagem, os do setor, ou só
+ * "Minhas". Quem vê todos os atendimentos (sem ser da triagem) ganha "Todas".
+ */
+export function recortesDe(e: { triagem: boolean; meus: readonly string[]; geridos: readonly string[]; veTudo?: boolean }): Recorte[] {
   const lista: Recorte[] = [];
   if (e.triagem) lista.push(...RECORTES_DA_TRIAGEM);
   if (e.meus.length > 0) {
@@ -231,6 +234,10 @@ export function recortesDe(e: { triagem: boolean; meus: readonly string[]; gerid
     lista.push("aguardando", "encerradas");
   }
   if (lista.length === 0) lista.push("minhas", "aguardando", "encerradas");
+  if (e.veTudo && !lista.includes("todas")) {
+    const antesDe = lista.indexOf("aguardando");
+    lista.splice(antesDe === -1 ? lista.length : antesDe, 0, "todas");
+  }
   return lista;
 }
 
@@ -239,14 +246,17 @@ export type CartaoParaRecorte = {
   sectorCode: string | null;
   assignedToId: string | null;
   pedidoPendente: boolean;
+  /** Transferida para alguém que ainda não assumiu. */
+  transferidaParaId?: string | null;
 };
 
 /** O cartão entra neste recorte? É o mesmo corte do servidor, feito no navegador. */
 export function noRecorte(
   c: CartaoParaRecorte,
   r: Recorte,
-  quem: { userId: string; meus: readonly string[]; geridos: readonly string[]; triagem: boolean }
+  quem: { userId: string; meus: readonly string[]; geridos: readonly string[]; triagem: boolean; veTudo?: boolean }
 ): boolean {
+  const geral = quem.triagem || !!quem.veTudo;
   const aberto = c.situacao !== "ENCERRADO";
   const meuSetor = !!c.sectorCode && quem.meus.includes(c.sectorCode);
   const minha = c.assignedToId === quem.userId;
@@ -258,15 +268,16 @@ export function noRecorte(
     case "todas":
       return aberto;
     case "minhas":
-      return aberto && minha;
+      // A transferida para a pessoa, esperando ela assumir, também é dela.
+      return aberto && (minha || (!!c.transferidaParaId && c.transferidaParaId === quem.userId));
     case "sem_responsavel":
       return c.situacao === "NO_SETOR" && meuSetor;
     case "aguardando":
-      return c.situacao === "AGUARDANDO_CLIENTE" && (minha || meuSetor || quem.triagem);
+      return c.situacao === "AGUARDANDO_CLIENTE" && (minha || meuSetor || geral);
     case "do_setor":
       return aberto && !!c.sectorCode && quem.geridos.includes(c.sectorCode);
     case "encerradas":
-      return !aberto && (minha || meuSetor || quem.triagem);
+      return !aberto && (minha || meuSetor || geral);
   }
 }
 
@@ -279,4 +290,115 @@ export function recorteValido(pedido: string | null | undefined, disponiveis: re
 export function previa(texto: string, max = 90): string {
   const t = texto.replace(/\s+/g, " ").trim();
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+// ─── Quem vê todos os atendimentos (12/11/2026) ──────────────────────────────
+
+/**
+ * Pessoas ou setores inteiros que veem todos os atendimentos, sem ser da
+ * triagem: só olham (assumir e responder seguem as regras de sempre). Cada um
+ * escolhe se recebe o aviso de conversa nova — vem desligado.
+ */
+export type QuemVeTudo = { tipo: "PESSOA" | "SETOR"; id: string; avisos: boolean };
+
+/** Lê a lista guardada na configuração; o que não tiver o formato certo fica de fora. */
+export function lerQuemVeTudo(guardado: unknown): QuemVeTudo[] {
+  if (!Array.isArray(guardado)) return [];
+  const vistos = new Set<string>();
+  const lista: QuemVeTudo[] = [];
+  for (const x of guardado) {
+    if (!x || typeof x !== "object") continue;
+    const { tipo, id, avisos } = x as Record<string, unknown>;
+    if ((tipo !== "PESSOA" && tipo !== "SETOR") || typeof id !== "string" || !id.trim()) continue;
+    const chave = `${tipo}:${id}`;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    lista.push({ tipo, id: id.trim().slice(0, 64), avisos: avisos === true });
+  }
+  return lista.slice(0, 100);
+}
+
+/** A pessoa está na lista, por nome ou por um dos setores dela? */
+export function estaEmQuemVeTudo(lista: readonly QuemVeTudo[], userId: string, setores: readonly string[], soQuemRecebeAvisos = false): boolean {
+  return lista.some((q) => (!soQuemRecebeAvisos || q.avisos) && (q.tipo === "PESSOA" ? q.id === userId : setores.includes(q.id)));
+}
+
+/**
+ * Quem recebe o aviso quando o cliente escreve de novo: só quem está com a
+ * conversa. Sem responsável, o setor dela; na triagem sem responsável, ninguém
+ * (a triagem já foi avisada quando a conversa chegou).
+ */
+export function quemAvisarNaResposta(c: { situacao: Situacao; sectorCode: string | null; assignedToId: string | null; transferidaParaId?: string | null }):
+  | { pessoa: string }
+  | { setor: string }
+  | null {
+  if (c.assignedToId) return { pessoa: c.assignedToId };
+  // Transferida e ainda não assumida: quem recebeu a transferência.
+  if (c.transferidaParaId) return { pessoa: c.transferidaParaId };
+  if (c.situacao === "TRIAGEM" || !c.sectorCode) return null;
+  return { setor: c.sectorCode };
+}
+
+/**
+ * A situação depois de transferir para uma pessoa, que ainda vai assumir: na
+ * triagem continua na triagem; em atendimento volta a esperar alguém do setor;
+ * aguardando o cliente continua aguardando.
+ */
+export function situacaoAoTransferir(s: Situacao): Situacao {
+  return s === "EM_ATENDIMENTO" ? "NO_SETOR" : s;
+}
+
+// ─── A nota do cliente (12/11/2026) ─────────────────────────────────────────
+
+/** A pergunta que sai ao encerrar, quando quem encerra deixa marcado. */
+export const PERGUNTA_DA_NOTA = "De 1 a 5, como você avalia este atendimento? Responda só com o número (5 é ótimo).";
+
+/** Por quantas horas depois de encerrar a resposta ainda vale como nota. */
+export const HORAS_PARA_A_NOTA = 72;
+
+/**
+ * A resposta é a nota? Só o número de 1 a 5, com no máximo uma palavra como
+ * "estrelas" ou pontuação — "5", "5!", "4 estrelas", "nota 3". Qualquer outra
+ * coisa é conversa nova e segue o caminho de sempre.
+ */
+export function notaDaResposta(texto: string): number | null {
+  const t = texto.trim().toLowerCase().replace(/[.!]+$/, "").trim();
+  const m = /^(?:nota\s*)?([1-5])(?:\s*(?:estrelas?|⭐+))?$/.exec(t);
+  return m ? Number(m[1]) : null;
+}
+
+/** O último atendimento espera a nota e a resposta chegou a tempo? */
+export function esperaNota(c: { situacao: Situacao; notaPedidaEm: Date | null; nota: number | null }, agora: Date): boolean {
+  return c.situacao === "ENCERRADO" && !!c.notaPedidaEm && c.nota === null && agora.getTime() - c.notaPedidaEm.getTime() <= HORAS_PARA_A_NOTA * 3600_000;
+}
+
+// ─── Iniciar conversa e pedir para assumir (13/11/2026) ──────────────────────
+
+/** Onde está a conversa de um contato, para quem quer falar com ele. */
+export type SituacaoDoContato =
+  | { tipo: "livre" }
+  | { tipo: "comigo"; cicloId: string }
+  | { tipo: "com_outro"; cicloId: string; userId: string }
+  | { tipo: "sem_responsavel"; cicloId: string; situacao: Situacao; sectorCode: string | null };
+
+/**
+ * O atendimento aberto do contato decide o que a pessoa pode fazer: livre,
+ * começa; com ela, abre; com outra pessoa, só pedindo para assumir; sem
+ * responsável, assume se puder.
+ */
+export function situacaoDoContato(aberto: { id: string; situacao: Situacao; sectorCode: string | null; assignedToId: string | null } | null, eu: string): SituacaoDoContato {
+  if (!aberto || aberto.situacao === "ENCERRADO") return { tipo: "livre" };
+  if (aberto.assignedToId === eu) return { tipo: "comigo", cicloId: aberto.id };
+  if (aberto.assignedToId) return { tipo: "com_outro", cicloId: aberto.id, userId: aberto.assignedToId };
+  return { tipo: "sem_responsavel", cicloId: aberto.id, situacao: aberto.situacao, sectorCode: aberto.sectorCode };
+}
+
+/**
+ * O setor da conversa quando ela passa para outra pessoa a pedido: fica no
+ * mesmo setor se a pessoa é dele; senão, vai para o primeiro setor em que ela
+ * atende; sem nenhum, continua onde estava.
+ */
+export function setorAoCeder(setorAtual: string | null, setoresDaPessoa: readonly string[]): string | null {
+  if (setorAtual && setoresDaPessoa.includes(setorAtual)) return setorAtual;
+  return setoresDaPessoa[0] ?? setorAtual;
 }

@@ -3,14 +3,17 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { MessageCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { MessageCircle, MessageCirclePlus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CaixaDeConversas, CartaoDeConversa, ColunaDaLista, Iniciais, PainelVazio, RecortesDaCaixa } from "@/components/conversas/caixa/Caixa";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconButton } from "@/components/ui/IconButton";
+import { NovaConversa } from "./NovaConversa";
 import type { TomDoSelo } from "@/components/ui/Selo";
 import { quandoCurto } from "@/lib/conversas/caixa";
-import { ATUALIZAR_A_CADA_MS, horaDeAtualizar } from "@/lib/whatsapp/caixa";
+import { horaDeAtualizar } from "@/lib/whatsapp/caixa";
+import { marcaDoAtendimentoAction } from "@/app/(app)/atendimento/contagem-actions";
 import type { CartaoDaLista, ListaDoAtendimento } from "@/lib/atendimento/consultas";
 import { ROTULO_DA_SITUACAO, ROTULO_DO_RECORTE, noRecorte, recorteValido, type Recorte } from "@/lib/atendimento/regras";
 
@@ -94,26 +97,51 @@ export function CaixaDoAtendimento({ dados, cabecalho, children }: { dados: List
   );
 }
 
+/** A cada quantos ms a tela confere a marca da caixa (só com a aba visível). */
+const CONFERIR_A_CADA_MS = 5_000;
+
+/**
+ * A lista e a conversa aberta se atualizam sozinhas. A cada 5 s (aba visível),
+ * uma consulta barata diz se chegou mensagem ou se algum atendimento mudou de
+ * situação; só então a tela recarrega. Além disso, recarrega a cada 30 s, para
+ * o que a marca não pega (nome do contato, responsável trocado no mesmo setor).
+ */
 function useAtualizacaoPeriodica() {
   const router = useRouter();
   useEffect(() => {
     let ultimaEm = Date.now();
-    function talvez() {
-      const agora = Date.now();
-      if (!horaDeAtualizar(ultimaEm, agora, document.visibilityState === "visible")) return;
-      ultimaEm = agora;
+    let marca: string | null = null;
+    let conferindo = false;
+    function recarregar() {
+      ultimaEm = Date.now();
       router.refresh();
     }
-    const intervalo = window.setInterval(talvez, ATUALIZAR_A_CADA_MS / 3);
-    document.addEventListener("visibilitychange", talvez);
+    async function conferir() {
+      if (document.visibilityState !== "visible" || conferindo) return;
+      conferindo = true;
+      try {
+        const nova = await marcaDoAtendimentoAction();
+        if (nova && marca !== null && nova !== marca) recarregar();
+        if (nova) marca = nova;
+      } catch {
+        // Sem rede por um instante: a próxima conferência tenta de novo.
+      } finally {
+        conferindo = false;
+      }
+      if (horaDeAtualizar(ultimaEm, Date.now(), document.visibilityState === "visible")) recarregar();
+    }
+    void conferir();
+    const intervalo = window.setInterval(conferir, CONFERIR_A_CADA_MS);
+    document.addEventListener("visibilitychange", conferir);
     return () => {
       window.clearInterval(intervalo);
-      document.removeEventListener("visibilitychange", talvez);
+      document.removeEventListener("visibilitychange", conferir);
     };
   }, [router]);
 }
 
 function seloDo(c: CartaoDaLista): { tom: TomDoSelo; texto: string } | null {
+  if (c.transferidaParaMim) return { tom: "marca", texto: "Passada para você" };
   if (c.pedidoPendente) return { tom: "atencao", texto: "Pedido" };
   if (c.tipoContato === "DESCONHECIDO") return { tom: "atencao", texto: "Contato novo" };
   if (c.tipoContato === "NOVO") return { tom: "marca", texto: "Ainda não é cliente" };
@@ -125,6 +153,7 @@ function contextoDo(c: CartaoDaLista): string {
   if (c.situacao === "TRIAGEM") partes.push("Na triagem");
   else if (c.setor) partes.push(c.setor.label);
   if (c.responsavel) partes.push(c.responsavel);
+  else if (c.transferidaPara) partes.push(c.transferidaParaMim ? "passada para você, assuma para responder" : `passada para ${c.transferidaPara}`);
   else if (c.situacao === "NO_SETOR") partes.push("sem responsável");
   if (c.situacao === "AGUARDANDO_CLIENTE" || c.situacao === "ENCERRADO") partes.push(ROTULO_DA_SITUACAO[c.situacao].toLowerCase());
   if (c.subtitulo) partes.unshift(c.subtitulo);
@@ -134,8 +163,10 @@ function contextoDo(c: CartaoDaLista): string {
 function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
   const v = useCaixaDoAtendimento();
   const [busca, setBusca] = useState("");
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
-  const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem));
+  const [nova, setNova] = useState(false);
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
+  // As passadas para a pessoa sobem para o topo, em destaque, até ela assumir.
+  const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem)).sort((a, b) => Number(b.transferidaParaMim) - Number(a.transferidaParaMim));
   const termo = busca.trim().toLowerCase();
   const visiveis = termo ? doRecorte.filter((c) => `${c.titulo} ${c.subtitulo ?? ""} ${c.previa}`.toLowerCase().includes(termo)) : doRecorte;
   const agora = new Date();
@@ -183,6 +214,10 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
       </div>
       <div className="flex items-center gap-2">
         <CampoDeBusca compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, empresa ou mensagem" aria-label="Buscar conversa" className="flex-1 min-w-0" />
+        <IconButton aria-label="Nova conversa" title="Nova conversa: buscar um contato e começar a falar" onClick={() => setNova(true)}>
+          <MessageCirclePlus size={16} />
+        </IconButton>
+        {nova && <NovaConversa aberta={nova} aoFechar={() => setNova(false)} veTudo={v.ehTriagem || v.veTudo} />}
         {secundarios.length > 0 && (
           <Select
             compact
@@ -230,9 +265,17 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
               quando={quandoCurto(c.quando ? new Date(c.quando) : null, agora)}
               contexto={contextoDo(c)}
               previa={c.previa}
-              naoLidas={c.esperandoResposta && c.situacao !== "ENCERRADO" ? 1 : 0}
+              naoLidas={c.situacao !== "ENCERRADO" ? c.semResposta : 0}
               rotuloDasNaoLidas="esperando resposta"
               selecionada={c.cicloId === v.abertaId}
+              destaque={c.transferidaParaMim}
+              faixa={
+                v.ehTriagem || v.veTudo
+                  ? c.setor
+                    ? { cor: c.setor.cor, rotulo: `Setor: ${c.setor.label}` }
+                    : { cor: v.triagem.cor, rotulo: `Na triagem (${v.triagem.label})` }
+                  : null
+              }
             />
           ))
         )}
@@ -244,7 +287,7 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
 /** A lista recolhida: só as iniciais, com a marca de quem espera resposta. */
 function FaixaDaLista({ aoAbrir }: { aoAbrir: () => void }) {
   const v = useCaixaDoAtendimento();
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   const visiveis = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem)).slice(0, 40);
   return (
     <nav aria-label="Conversas recolhidas" className="flex-1 min-h-0 flex flex-col items-center gap-2 py-2 rounded-lg border border-border bg-surface">
@@ -283,7 +326,7 @@ function FaixaDaLista({ aoAbrir }: { aoAbrir: () => void }) {
 /** O painel sem conversa escolhida. */
 export function PainelSemConversa() {
   const v = useCaixaDoAtendimento();
-  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem };
+  const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   const esperando = v.recortes
     .filter((r) => r === "triagem" || r === "pedidos" || r === "sem_responsavel")
     .reduce((n, r) => n + v.cartoes.filter((c) => noRecorte(c, r, quem)).length, 0);

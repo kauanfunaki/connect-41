@@ -4,7 +4,7 @@ import type { AuthContext } from "@/lib/auth/context";
 import { formatCalendarDate } from "@/lib/format";
 import { moeda } from "@/lib/financeiro/formato";
 import { SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
-import { contarTarefas, totalDaCarteira, AVISO_DAS_FERIAS_DIAS, type FaixaDeVencimento, type Soma } from "@/lib/home/paineis";
+import { totalDaCarteira, AVISO_DAS_FERIAS_DIAS, type FaixaDaTarefa, type FaixaDeVencimento, type Soma } from "@/lib/home/paineis";
 import { tendenciasDaHome } from "@/lib/home/historico";
 import {
   dadosDaCarteira,
@@ -81,28 +81,27 @@ function PainelIndisponivel({ setor, titulo, href }: { setor: SetorDoPainel; tit
  */
 export async function PainelDeTarefas({
   ctx,
-  itens,
+  contagem: c,
+  total,
   atribuidas,
   escopo,
-  inicioDeHoje,
-  fimDeHoje,
 }: {
   ctx: AuthContext;
-  itens: { dueDate: Date | null }[];
+  /** As faixas contadas no banco (`contarTarefasDaHome`, 13/11/2026): eram contadas aqui, a partir de todos os cards. */
+  contagem: Record<FaixaDaTarefa, number>;
+  /** Todos os cards em aberto. */
+  total: number;
   atribuidas: number;
   /** "Seus setores", ou o nome do setor ativo. */
   escopo: string;
-  inicioDeHoje: Date;
-  fimDeHoje: Date;
 }) {
-  const c = contarTarefas(itens, inicioDeHoje, fimDeHoje);
   const t = await tendenciasDaHome(ctx, { tarefas_atrasadas: c.atrasada, tarefas_hoje: c.hoje });
   return (
     <Painel
       setor={escopo}
       titulo="Atividades por prazo"
       href="/tarefas"
-      rodape={itens.length > 0 ? <>{plural(atribuidas, "atribuída a você", "atribuídas a você")}</> : undefined}
+      rodape={total > 0 ? <>{plural(atribuidas, "atribuída a você", "atribuídas a você")}</> : undefined}
       destaque={
         c.atrasada > 0
           ? {
@@ -116,7 +115,7 @@ export async function PainelDeTarefas({
     >
       <Rosca
         titulo="Atividades abertas por prazo"
-        legendaDoTotal={itens.length === 1 ? "aberta" : "abertas"}
+        legendaDoTotal={total === 1 ? "aberta" : "abertas"}
         vazio="Nenhuma atividade aberta nos seus Quadros."
         segmentos={[
           { chave: "atrasada", rotulo: "Atrasadas", valor: c.atrasada, tom: "critico" },

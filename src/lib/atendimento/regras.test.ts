@@ -130,3 +130,94 @@ describe("modelos da Meta", () => {
     expect(nomeDeModeloValido("Retomar atendimento")).toBe(false);
   });
 });
+
+import { estaEmQuemVeTudo, lerQuemVeTudo, quemAvisarNaResposta } from "./regras";
+
+describe("quem vê tudo e quem recebe o aviso", () => {
+  it("lê a lista guardada e descarta o que não serve", () => {
+    expect(
+      lerQuemVeTudo([
+        { tipo: "PESSOA", id: "u1", avisos: true },
+        { tipo: "PESSOA", id: "u1", avisos: false },
+        { tipo: "SETOR", id: "dp" },
+        { tipo: "OUTRO", id: "x" },
+        "lixo",
+      ])
+    ).toEqual([
+      { tipo: "PESSOA", id: "u1", avisos: true },
+      { tipo: "SETOR", id: "dp", avisos: false },
+    ]);
+    expect(lerQuemVeTudo(null)).toEqual([]);
+  });
+  it("acha a pessoa pelo nome ou pelo setor, e filtra quem quer aviso", () => {
+    const l = lerQuemVeTudo([{ tipo: "SETOR", id: "dp", avisos: false }]);
+    expect(estaEmQuemVeTudo(l, "u9", ["dp"])).toBe(true);
+    expect(estaEmQuemVeTudo(l, "u9", ["dp"], true)).toBe(false);
+  });
+  it("quem vê tudo ganha a aba Todas e as encerradas de todos", () => {
+    expect(recortesDe({ triagem: false, meus: ["fiscal"], geridos: [], veTudo: true })).toEqual(["sem_responsavel", "minhas", "todas", "aguardando", "encerradas"]);
+    expect(recortesDe({ triagem: false, meus: [], geridos: [], veTudo: true })).toEqual(["minhas", "todas", "aguardando", "encerradas"]);
+    const quem = { userId: "u1", meus: [], geridos: [], triagem: false, veTudo: true };
+    expect(noRecorte({ situacao: "ENCERRADO", sectorCode: "dp", assignedToId: "x", pedidoPendente: false }, "encerradas", quem)).toBe(true);
+  });
+  it("o aviso de mensagem nova vai só para quem está com a conversa", () => {
+    expect(quemAvisarNaResposta({ situacao: "TRIAGEM", sectorCode: null, assignedToId: "bia" })).toEqual({ pessoa: "bia" });
+    expect(quemAvisarNaResposta({ situacao: "EM_ATENDIMENTO", sectorCode: "fiscal", assignedToId: "ana" })).toEqual({ pessoa: "ana" });
+    expect(quemAvisarNaResposta({ situacao: "NO_SETOR", sectorCode: "fiscal", assignedToId: null })).toEqual({ setor: "fiscal" });
+    expect(quemAvisarNaResposta({ situacao: "TRIAGEM", sectorCode: null, assignedToId: null })).toBeNull();
+  });
+});
+
+import { esperaNota, notaDaResposta, situacaoAoTransferir } from "./regras";
+
+describe("transferir para uma pessoa", () => {
+  it("em atendimento volta a esperar alguém; triagem e aguardando ficam como estão", () => {
+    expect(situacaoAoTransferir("EM_ATENDIMENTO")).toBe("NO_SETOR");
+    expect(situacaoAoTransferir("TRIAGEM")).toBe("TRIAGEM");
+    expect(situacaoAoTransferir("AGUARDANDO_CLIENTE")).toBe("AGUARDANDO_CLIENTE");
+  });
+  it("até assumir, a mensagem nova avisa quem recebeu, e a conversa está em Minhas dela", () => {
+    expect(quemAvisarNaResposta({ situacao: "NO_SETOR", sectorCode: "fiscal", assignedToId: null, transferidaParaId: "bia" })).toEqual({ pessoa: "bia" });
+    const quem = { userId: "bia", meus: ["fiscal"], geridos: [], triagem: false };
+    expect(noRecorte({ situacao: "NO_SETOR", sectorCode: "fiscal", assignedToId: null, pedidoPendente: false, transferidaParaId: "bia" }, "minhas", quem)).toBe(true);
+    expect(noRecorte({ situacao: "NO_SETOR", sectorCode: "fiscal", assignedToId: null, pedidoPendente: false, transferidaParaId: "ana" }, "minhas", quem)).toBe(false);
+  });
+});
+
+describe("nota do cliente", () => {
+  it("só o número de 1 a 5 vale como nota", () => {
+    expect(notaDaResposta("5")).toBe(5);
+    expect(notaDaResposta(" 4! ")).toBe(4);
+    expect(notaDaResposta("3 estrelas")).toBe(3);
+    expect(notaDaResposta("nota 2")).toBe(2);
+    expect(notaDaResposta("6")).toBeNull();
+    expect(notaDaResposta("5 mas a guia veio errada")).toBeNull();
+    expect(notaDaResposta("oi")).toBeNull();
+  });
+  it("espera a nota só no encerrado, com a pergunta feita há até 72 h e sem nota ainda", () => {
+    const agora = new Date("2026-11-12T12:00:00Z");
+    const pedida = new Date("2026-11-11T12:00:00Z");
+    expect(esperaNota({ situacao: "ENCERRADO", notaPedidaEm: pedida, nota: null }, agora)).toBe(true);
+    expect(esperaNota({ situacao: "ENCERRADO", notaPedidaEm: pedida, nota: 4 }, agora)).toBe(false);
+    expect(esperaNota({ situacao: "ENCERRADO", notaPedidaEm: null, nota: null }, agora)).toBe(false);
+    expect(esperaNota({ situacao: "ENCERRADO", notaPedidaEm: new Date("2026-11-08T12:00:00Z"), nota: null }, agora)).toBe(false);
+  });
+});
+
+import { setorAoCeder, situacaoDoContato } from "./regras";
+
+describe("conversa de um contato para quem quer falar com ele", () => {
+  const aberto = { id: "c1", situacao: "EM_ATENDIMENTO" as const, sectorCode: "fiscal", assignedToId: "ana" };
+  it("livre, comigo, com outra pessoa ou sem responsável", () => {
+    expect(situacaoDoContato(null, "eu")).toEqual({ tipo: "livre" });
+    expect(situacaoDoContato({ ...aberto, situacao: "ENCERRADO" }, "eu")).toEqual({ tipo: "livre" });
+    expect(situacaoDoContato({ ...aberto, assignedToId: "eu" }, "eu")).toEqual({ tipo: "comigo", cicloId: "c1" });
+    expect(situacaoDoContato(aberto, "eu")).toEqual({ tipo: "com_outro", cicloId: "c1", userId: "ana" });
+    expect(situacaoDoContato({ ...aberto, situacao: "NO_SETOR", assignedToId: null }, "eu")).toEqual({ tipo: "sem_responsavel", cicloId: "c1", situacao: "NO_SETOR", sectorCode: "fiscal" });
+  });
+  it("ao passar a quem pediu: mesmo setor se ele é de lá; senão o setor dele; sem nenhum, fica", () => {
+    expect(setorAoCeder("fiscal", ["dp", "fiscal"])).toBe("fiscal");
+    expect(setorAoCeder("fiscal", ["dp"])).toBe("dp");
+    expect(setorAoCeder("fiscal", [])).toBe("fiscal");
+  });
+});

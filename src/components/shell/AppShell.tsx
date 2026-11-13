@@ -83,6 +83,7 @@ import { contarSolicitacoesNovas } from "@/app/(app)/solicitacoes/actions";
 import { contarChamadosDoMenuAction } from "@/app/(app)/chamados/contagem-actions";
 import { contarAtendimentoDoMenuAction } from "@/app/(app)/atendimento/contagem-actions";
 import { PularParaOConteudo } from "@/components/shared/PularParaOConteudo";
+import { FaixaDaManutencao } from "@/components/shell/TelasEmManutencao";
 
 type Tenant = { id: string; name: string; logoUrl: string | null };
 type Sector = { code: string; label: string; color: string };
@@ -988,6 +989,9 @@ export function AppShell({
             </Aviso>
           </div>
         )}
+
+        {/* Para a Tech e o administrador, numa tela em manutenção (13/11/2026). */}
+        <FaixaDaManutencao />
 
         {faixaDoFoco}
 

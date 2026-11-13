@@ -8,7 +8,7 @@ beforeAll(() => vi.stubGlobal("React", React));
 afterAll(() => vi.unstubAllGlobals());
 
 const categoria = { ...categoriaSchema.parse({ name: "Infraestrutura", formSchema: [{ key: "local", label: "Local", type: "text" }] }), id: "cat-1" };
-const inicial: DadosDoChamado = { title: "Impressora não imprime", description: "Desde ontem.", categoryId: "cat-1", requesterSectorCode: "bpo", priority: "ALTA", requestData: { local: "2º andar" }, tags: [] };
+const inicial: DadosDoChamado = { title: "Impressora não imprime", description: "Desde ontem.", categoryId: "cat-1", requesterSectorCode: "bpo", priority: "ALTA", requestData: { local: "2º andar" }, tags: [], handlingSectorCode: "" };
 const html = (extra: Partial<React.ComponentProps<typeof EditarDadosDoChamado>> = {}) => renderToStaticMarkup(React.createElement(EditarDadosDoChamado, {
   inicial, categorias: [categoria], setores: [{ code: "bpo", label: "BPO" }], salvando: false, erro: "", onSalvar: () => {}, onFechar: () => {}, ...extra,
 }));

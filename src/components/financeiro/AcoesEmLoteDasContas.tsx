@@ -11,8 +11,6 @@ import { FORM_DAS_CONTAS } from "@/lib/financeiro/contas";
 import { JanelaDaBaixaEmLote } from "./JanelaDaBaixaEmLote";
 import { JanelaDaAlteracaoEmLote } from "./JanelaDaAlteracaoEmLote";
 
-type Empresa = { id: string; nome: string; centros: { id: string; nome: string }[] };
-
 /**
  * As caixas que a pessoa está vendo. Cada conta tem duas: a da linha da tabela
  * e a do cartão do celular, e a que não serve à largura atual fica escondida
@@ -71,7 +69,11 @@ function useContasMarcadas(): { marcadas: number; total: number } {
   return estado;
 }
 
-/** A caixa do cabeçalho da tabela: marca todas, ou desmarca quando já estão. */
+/**
+ * A caixa do cabeçalho da tabela: marca todas as contas **desta página**, ou
+ * desmarca quando já estão. As outras páginas não entram (13/11/2026): a lista
+ * é paginada no servidor, e a página seguinte nem está no navegador.
+ */
 export function MarcarTodasAsContas() {
   const { marcadas, total } = useContasMarcadas();
   const todas = total > 0 && marcadas === total;
@@ -81,7 +83,12 @@ export function MarcarTodasAsContas() {
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = algumas;
   }, [algumas]);
-  return <Checkbox ref={ref} checked={todas} onChange={() => marcarTodas(!todas)} aria-label="Marcar todas as contas" />;
+  const rotulo = todas ? "Desmarcar as contas desta página" : "Marcar as contas desta página";
+  return (
+    <span title={rotulo} className="inline-flex">
+      <Checkbox ref={ref} checked={todas} onChange={() => marcarTodas(!todas)} aria-label={rotulo} />
+    </span>
+  );
 }
 
 /**
@@ -91,11 +98,14 @@ export function MarcarTodasAsContas() {
  * competência, categoria, centro, projeto e conta corrente prevista (lote D,
  * 20/10 — a janela que substituiu o seletor de centro que ficava na barra).
  *
- * As caixas ficam nas linhas da tabela (componente de servidor) e se associam a
- * este formulário pelo atributo `form` — assim a tabela não vira componente de
- * cliente inteira, com as trezentas linhas e as ações de cada uma, só para ter
- * seleção. Os centros vêm agrupados por empresa: a lista mistura empresas, e o
- * centro de uma empresa não vale na outra.
+ * As caixas ficam nas linhas da tabela e se associam a este formulário pelo
+ * atributo `form` — a barra mora acima da tabela, e a tabela não precisa saber
+ * dela. Os centros de custo não vêm mais da tela (13/11/2026): a janela de
+ * alterar pede os das empresas das contas marcadas quando abre.
+ *
+ * A seleção é da página (13/11/2026): a lista é paginada no servidor, e trocar
+ * de página leva as caixas marcadas embora. Com mais de uma página, a barra
+ * diz "nesta página" ao lado do contador.
  *
  * Desde o redesign de 30/09 é a barra de seleção em massa do Connect: só
  * aparece com conta marcada. As janelas ficam fora do formulário: aberta
@@ -103,16 +113,17 @@ export function MarcarTodasAsContas() {
  * o formulário das caixas.
  */
 export function AcoesEmLoteDasContas({
-  empresas,
   comCentro,
   aPagar,
   hojeISO,
+  paginada,
 }: {
-  empresas: Empresa[];
-  /** Mostra o centro de custo na janela de alterar — só quando a lista tem empresa com centro. */
+  /** Mostra o centro de custo na janela de alterar — só quando a empresa usa centro. */
   comCentro: boolean;
   aPagar: boolean;
   hojeISO: string;
+  /** A lista tem mais de uma página: a seleção vale só para a que está na tela. */
+  paginada: boolean;
 }) {
   const [lote, setLote] = useState<string[] | null>(null);
   const [alterar, setAlterar] = useState<string[] | null>(null);
@@ -141,7 +152,7 @@ export function AcoesEmLoteDasContas({
     <>
       {/* Só associa as caixas das linhas: nada se envia por ele. */}
       <form id={FORM_DAS_CONTAS} onSubmit={(e) => e.preventDefault()}>
-        <BulkActionBar count={marcadas} onClear={() => marcarTodas(false)}>
+        <BulkActionBar count={marcadas} onClear={() => marcarTodas(false)} alcance={paginada ? "nesta página" : undefined}>
           <Button type="button" size="sm" onClick={() => setLote(marcadasAgora())}>
             {aPagar ? "Pagar marcadas" : "Receber marcadas"}
           </Button>
@@ -169,7 +180,7 @@ export function AcoesEmLoteDasContas({
       {alterar && (
         <JanelaDaAlteracaoEmLote
           ids={alterar}
-          centros={comCentro ? empresas : null}
+          comCentro={comCentro}
           onFechar={() => setAlterar(null)}
           onAlteradas={(resumo) => {
             setAlterar(null);

@@ -34,6 +34,12 @@ import { AgendaDoSetorForm } from "@/components/agenda/AgendaDoSetorForm";
 import { agendaDosSetores, fontesDoEscritorio } from "@/lib/agendaDoSetorServidor";
 import { agendaDosSetoresNaTela } from "@/lib/agendaDoSetor";
 import { restaurarAgendaDoSetor, salvarAgendaDoSetor } from "../../agenda/preferencias-actions";
+import { Selo } from "@/components/ui/Selo";
+import { ManutencaoDaTela } from "@/components/admin/ManutencaoDaTela";
+import { lerTelasEmManutencao, type TelaEmManutencao } from "@/lib/manutencao/leitura";
+import { quandoNoAviso } from "@/lib/manutencao/regras";
+import { toSaoPauloDateTimeLocal } from "@/lib/agenda";
+import { colocarEmManutencao, tirarDaManutencao } from "./manutencao-actions";
 
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
@@ -59,7 +65,7 @@ export default async function SetoresPage({
   const { setor: setorPedido, novo, editar } = await searchParams;
 
   const prisma = getPrisma();
-  const [sectors, ocultasDoGeral, modulos, pessoasPorSetor, setoresLigados, agendas, fontesDaAgenda] = await Promise.all([
+  const [sectors, ocultasDoGeral, modulos, pessoasPorSetor, setoresLigados, agendas, fontesDaAgenda, manutencao] = await Promise.all([
     getAllSectors(ctx.tenantId),
     lerOcultasDoGeral(ctx.tenantId),
     getTenantModuleStates(ctx.tenantId),
@@ -72,6 +78,8 @@ export default async function SetoresPage({
     // A Agenda de cada setor (10/11/2026): reuniões e fontes de prazo.
     agendaDosSetores(ctx.tenantId),
     fontesDoEscritorio(ctx.tenantId),
+    // As telas em manutenção (13/11/2026).
+    lerTelasEmManutencao(ctx.tenantId),
   ]);
   const quantasPessoas = new Map(pessoasPorSetor.map((p) => [p.sectorCode, p._count._all]));
   const emEdicao = editar ? sectors.find((s) => s.id === editar) : undefined;
@@ -119,7 +127,7 @@ export default async function SetoresPage({
   const helpdesk = modulos.find((m) => m.code === "helpdesk");
   const telasDoMenu = escolhido
     ? telasDoMenuDoSetor(modulos, escolhido.code, {
-        chamadosNoSetor: !!helpdesk?.enabled && chamadosNoMenuDoSetor(escolhido.code, helpdesk.sectorCode),
+        chamadosNoSetor: !!helpdesk?.enabled && chamadosNoMenuDoSetor(escolhido.code, helpdesk.sectorCodes),
         solicitacoesLigadas: modulos.some((m) => m.code === "portal_solicitacoes" && m.enabled),
         semMenu: MODULOS_FORA_DO_MENU,
       }).filter((t) => !MODULOS_SPED.has(t.code) && t.code !== MODULO_NO_LUGAR_DOS_QUADROS)
@@ -128,6 +136,20 @@ export default async function SetoresPage({
 
   const doEscolhido = escolhido ? modulosDo(escolhido.code) : [];
   const ligadosDoEscolhido = doEscolhido.filter((m) => m.enabled).length;
+
+  // Telas em manutenção (13/11/2026): no alto, todas as do escritório, para a
+  // Tech achar sem procurar setor por setor; na linha do módulo, o selo e os
+  // botões. Só as ligadas — desligada, a tela já não abre para ninguém.
+  const agora = new Date();
+  const emManutencao = new Map(manutencao.telas.map((t) => [t.moduleCode, t]));
+  const manutencaoAgora = manutencao.telas.flatMap((t) => {
+    const modulo = modulos.find((m) => m.code === t.moduleCode && m.enabled);
+    return modulo ? [{ modulo, aviso: t }] : [];
+  });
+  const gravada = (t: TelaEmManutencao | undefined) =>
+    t ? { motivo: t.motivo, previsao: t.previsao ? toSaoPauloDateTimeLocal(t.previsao) : "" } : null;
+  const resumoDaManutencao = (t: TelaEmManutencao) =>
+    `Desde ${quandoNoAviso(t.desde, agora)}, por ${t.porNome}${t.previsao ? ` · volta ${quandoNoAviso(t.previsao, agora)}` : ""}`;
 
   return (
     <PageContainer>
@@ -140,6 +162,39 @@ export default async function SetoresPage({
           </Button>
         }
       />
+
+      {manutencaoAgora.length > 0 && (
+        <Card as="section" aria-labelledby="telas-em-manutencao" className="mb-6 overflow-hidden border-warning/30">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-4 pb-3">
+            <h2 id="telas-em-manutencao" className="text-card-title font-semibold text-fg">
+              Telas em manutenção
+            </h2>
+            <p className="text-fs-2 text-fg-muted">Os setores veem o aviso no lugar delas; a Tech e os administradores entram normalmente.</p>
+          </div>
+          <div className="divide-y divide-border border-t border-border">
+            {manutencaoAgora.map(({ modulo, aviso }) => (
+              <div key={modulo.code} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3">
+                <div className="min-w-0 flex-1 basis-64">
+                  <p className="text-fs-3 font-medium text-fg">
+                    {modulo.label} <span className="font-normal text-fg-muted">· {rotuloDo(modulo.sectorCode)}</span>
+                  </p>
+                  <p className="text-fs-1 text-fg-muted">{resumoDaManutencao(aviso)}</p>
+                  {aviso.motivo && <p className="mt-0.5 text-fs-1 text-fg-secondary break-words">{aviso.motivo}</p>}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <ManutencaoDaTela
+                    nome={modulo.label}
+                    gravada={gravada(aviso)}
+                    disponivel={manutencao.disponivel}
+                    colocar={colocarEmManutencao.bind(null, modulo.code)}
+                    liberar={tirarDaManutencao.bind(null, modulo.code)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)] gap-6 items-start">
         <Card as="section" aria-label="Setores" className="overflow-hidden lg:sticky lg:top-4">
@@ -214,8 +269,14 @@ export default async function SetoresPage({
                   {doEscolhido.map((m) => (
                     <div key={m.code} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3">
                       <div className="min-w-0 flex-1 basis-64">
-                        <p className={`text-fs-3 font-medium ${m.enabled ? "text-fg" : "text-fg-muted"}`}>{m.label}</p>
+                        <p className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-3 font-medium ${m.enabled ? "text-fg" : "text-fg-muted"}`}>
+                          {m.label}
+                          {m.enabled && emManutencao.has(m.code) && <Selo tom="atencao">Em manutenção</Selo>}
+                        </p>
                         <p className="text-fs-1 text-fg-muted">{m.description}</p>
+                        {m.enabled && emManutencao.has(m.code) && (
+                          <p className="text-fs-1 text-warning-fg mt-0.5">{resumoDaManutencao(emManutencao.get(m.code)!)}</p>
+                        )}
                         {m.sectorCode !== escolhido?.code ? (
                           <p className="text-fs-1 text-fg-muted mt-0.5">
                             Também aqui · de {rotuloDo(m.sectorCode)}, onde se liga, desliga e move
@@ -247,6 +308,15 @@ export default async function SetoresPage({
                         )}
                         {m.sectorCode === escolhido?.code && (
                           <>
+                            {m.enabled && (
+                              <ManutencaoDaTela
+                                nome={m.label}
+                                gravada={gravada(emManutencao.get(m.code))}
+                                disponivel={manutencao.disponivel}
+                                colocar={colocarEmManutencao.bind(null, m.code)}
+                                liberar={tirarDaManutencao.bind(null, m.code)}
+                              />
+                            )}
                             {!m.fixedSector && <MoverModuloPara
                               nome={m.label}
                               destinos={ativos

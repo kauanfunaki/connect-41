@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 // O módulo segue desligado até a virada do Bloco A (docs/CONTABIL-CORE.md); enquanto isso o time usa o
 // Contábil Core, e esta tela serve para conferir o porte com dados de teste e com a carga ensaiada.
 
-type Busca = { empresa?: string; aba?: string; mes?: string; agencia?: string; busca?: string; pagina?: string; status?: string };
+type Busca = { empresa?: string; aba?: string; mes?: string; agencia?: string; busca?: string; pagina?: string; status?: string; vista?: string };
 
 const ROTULO_DA_ABA: Record<Aba, { rotulo: string; icone: React.ReactNode }> = {
   importacoes: { rotulo: "Importações", icone: <Inbox size={16} aria-hidden /> },
@@ -93,10 +93,9 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
     pagina: Math.max(1, Number.parseInt(q.pagina ?? "1", 10) || 1),
     status: q.status ?? null,
     mesAtual: mesAtual(),
+    vista: q.vista === "financeiro" ? "financeiro" : null,
   };
 
-  // A conciliação só envia arquivo; quem só lê o módulo não tem o que fazer nela.
-  const abasVisiveis = ABAS.filter((a) => a !== "conciliacao" || podeAgir);
 
   return (
     <PageContainer>
@@ -118,7 +117,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
       <AbasDeLink
         aria-label="Áreas do Contábil Core"
         ativa={aba}
-        abas={abasVisiveis.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
+        abas={ABAS.map((a) => ({ chave: a, rotulo: ROTULO_DA_ABA[a].rotulo, icone: ROTULO_DA_ABA[a].icone, href: `/contabil-core?empresa=${empresa.id}&aba=${a}` }))}
       />
       {aba === "importacoes" && <AbaImportacoes c={c} />}
       {aba === "extrato" && <AbaExtrato c={c} />}

@@ -13,7 +13,7 @@ import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { getAuthContext, canActOnSector, canManageSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
-import { listarFila, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
+import { listarFilaLeve, comEtapasAgora, contarPorSituacao, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
 import { ProcessosFila, SITUACAO_LABEL } from "@/components/societario/ProcessosFila";
@@ -22,6 +22,7 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import { contarAvisosPendentes } from "@/lib/societario/avisos";
 import { contarPendentesDoSetor } from "@/lib/ia/propostas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { Pagination } from "@/components/shared/Pagination";
 import { formatarNumero } from "@/lib/format";
 
 // `SECTOR` é o setor de origem, usado só como padrão: acesso e equipe seguem o
@@ -30,6 +31,12 @@ const SECTOR = "societario";
 const MODULE = "societario_processos";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Processos por página (13/11/2026, melhoria-662): a fila ia inteira para a
+ * tela, até 500 linhas. Os contadores seguem contando a fila toda do filtro.
+ */
+const POR_PAGINA = 50;
 
 // A ordem do recorte é a da fila: o que depende de gente primeiro.
 const RECORTES: { chave: string; situacao?: SituacaoDoProcesso }[] = [
@@ -96,7 +103,7 @@ export default async function ProcessosPage({
   // A busca entra antes dos contadores, como os outros filtros: o cartão
   // "Em exigência" diz quantos da busca estão em exigência.
   const todas = filtrarPelaBusca(
-    await listarFila(
+    await listarFilaLeve(
       ctx.tenantId,
       { responsavelId: responsavelFiltro, prioridade: prioridadeFiltro },
       feriados,
@@ -106,6 +113,10 @@ export default async function ProcessosPage({
   );
   const contagem = contarPorSituacao(todas);
   const linhas = recorte.situacao ? todas.filter((l) => l.situacao === recorte.situacao) : todas;
+  // A página pedida, dentro do que existe; as etapas liberadas só dela.
+  const totalDePaginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
+  const pagina = Math.min(Math.max(1, Number.parseInt(params.pagina ?? "1", 10) || 1), totalDePaginas);
+  const daPagina = await comEtapasAgora(ctx.tenantId, linhas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA));
 
   const filtrosNaUrl = new URLSearchParams();
   if (responsavelFiltro) filtrosNaUrl.set("responsavel", responsavelFiltro);
@@ -114,6 +125,13 @@ export default async function ProcessosPage({
   const hrefDoRecorte = (chave: string) => {
     const q = new URLSearchParams(filtrosNaUrl);
     if (chave !== "todos") q.set("situacao", chave);
+    const s = q.toString();
+    return s ? `/processos?${s}` : "/processos";
+  };
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams(filtrosNaUrl);
+    if (recorte.chave !== "todos") q.set("situacao", recorte.chave);
+    if (p > 1) q.set("pagina", String(p));
     const s = q.toString();
     return s ? `/processos?${s}` : "/processos";
   };
@@ -246,11 +264,12 @@ export default async function ProcessosPage({
         }
       >
         <ProcessosFila
-          linhas={linhas}
+          linhas={daPagina}
           filtrado={linhas.length === 0 && (todas.length > 0 || filtroAtivo)}
           agora={agora}
         />
       </CascoDaTabela>
+      <Pagination page={pagina} totalPages={totalDePaginas} buildHref={hrefDaPagina} total={linhas.length} rotulo="processos" />
 
       <div className="mt-6">
         <AssistenteDoSocietario />

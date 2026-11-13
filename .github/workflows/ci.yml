@@ -28,6 +28,10 @@ jobs:
       SPED_API_URL: ""
       SPED_API_TOKEN: ""
       NEXT_TELEMETRY_DISABLED: "1"
+      # Heap de 8 GB em todos os passos (o runner tem 16 GB). Em 12/11/2026 o build
+      # passou do padrão do Node (~4 GB) e morria com "JavaScript heap out of memory";
+      # o `tsc --noEmit` também já usa ~5,3 GB e caía no passo "Tipos" (PR #537).
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:

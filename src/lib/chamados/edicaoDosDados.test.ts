@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { aoFecharEdicao, dadosMudaram } from "./edicaoDosDados";
 import type { DadosDoChamado } from "./regras";
 
-const base: DadosDoChamado = { title: "Impressora não imprime", description: "Desde ontem.", categoryId: "cat-1", requesterSectorCode: "bpo", priority: "ALTA", requestData: { local: "2º andar" }, tags: ["impressora"] };
+const base: DadosDoChamado = { title: "Impressora não imprime", description: "Desde ontem.", categoryId: "cat-1", requesterSectorCode: "bpo", priority: "ALTA", requestData: { local: "2º andar" }, tags: ["impressora"], handlingSectorCode: "" };
 
 describe("janela Editar dados do chamado", () => {
   it("sem mudança, fecha direto; com mudança, pede confirmação", () => {

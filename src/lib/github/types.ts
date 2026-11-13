@@ -12,6 +12,8 @@ export type Contribution = {
 export type RepositoryView = {
   id: string; fullName: string; owner: string; private: boolean; fork: boolean; archived: boolean;
   selected: boolean; accessible: boolean; error: string | null;
+  /** A branch padrão do repositório e a escolhida para a coleta de commits (null = a padrão) (12/11/2026). */
+  defaultBranch: string; branch: string | null;
 };
 export type IntegrationView = {
   serverReady: boolean; callbackUrl: string | null; clientId: string; hasClientSecret: boolean;

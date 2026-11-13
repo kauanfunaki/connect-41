@@ -4,8 +4,8 @@ import { getPrisma } from "@/lib/prisma";
 import { proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { isFullWrite } from "@/lib/auth/papeis";
 import { logAudit } from "@/lib/audit";
-import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestao, exigirOperacao, type Contexto } from "./contexto";
-import { podeResponder, podeVer } from "./acesso";
+import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestaoNo, exigirOperacao, type Contexto } from "./contexto";
+import { podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
 import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado } from "./regras";
 import { anexosDoChamado } from "./armazenamento";
@@ -126,7 +126,7 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     // (10/11/2026, pedido do Kauan), reservado no contador da tela, que fica
     // travado até o fim desta transação.
     const number = await proximoNumero(tx, "chamado", tenantId);
-    const ticket = await tx.helpdeskTicket.create({ data: { tenantId, number, draftId: id, title: dados.title, description: dados.description, categoryId: dados.categoryId, requesterSectorCode: dados.requesterSectorCode, createdById: c.ctx.userId, priority: dados.priority, requestData: json(dados.requestData), tags: dados.tags, approverIds: aprovadores, approvalRequired: comAprovacao, approvalStatus: comAprovacao ? "PENDING" : "NOT_REQUIRED", status: triagem ? "AGUARDANDO_TRIAGEM" : comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO" } });
+    const ticket = await tx.helpdeskTicket.create({ data: { tenantId, number, draftId: id, title: dados.title, description: dados.description, categoryId: dados.categoryId, requesterSectorCode: dados.requesterSectorCode, handlingSectorCode: setorQueAtende(c.config, dados.handlingSectorCode), createdById: c.ctx.userId, priority: dados.priority, requestData: json(dados.requestData), tags: dados.tags, approverIds: aprovadores, approvalRequired: comAprovacao, approvalStatus: comAprovacao ? "PENDING" : "NOT_REQUIRED", status: triagem ? "AGUARDANDO_TRIAGEM" : comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO" } });
     await tx.helpdeskAttachment.updateMany({ where: { tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });
     if (!triagem && cat.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: cat.checklistTemplate.map(i => ({ tenantId, ticketId: ticket.id, key: i.key, label: i.label })) });
     if (comAprovacao) await tx.helpdeskApproval.create({ data: { tenantId, ticketId: ticket.id, cycleNumber: 1 } });
@@ -172,7 +172,7 @@ async function mudarStatus(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof par
   if (novo === "AGUARDANDO_APROVACAO" && t.approvalStatus !== "PENDING") throw new Error("Não há aprovação pendente.");
   let queueOrder: number | null = null;
   if (novo === "NA_FILA") {
-    const max = await tx.helpdeskTicket.aggregate({ where: { tenantId: c.ctx.tenantId, status: "NA_FILA" }, _max: { queueOrder: true } });
+    const max = await tx.helpdeskTicket.aggregate({ where: { tenantId: c.ctx.tenantId, handlingSectorCode: t.handlingSectorCode, status: "NA_FILA" }, _max: { queueOrder: true } });
     queueOrder = t.status === "NA_FILA" ? t.queueOrder : (max._max.queueOrder ?? 0) + 1;
   }
   if (novo === "EM_ANDAMENTO" && (!ciclo || ciclo.resolvedAt)) {
@@ -205,7 +205,7 @@ export async function comentar(c: Contexto, id: string, version: number, input: 
     if (!podeResponder(c.ctx, c.config, { ...t, approverIds: strings(t.approverIds) }, t.status, dados.internal)) throw new Error("Não é possível responder neste estado ou com este acesso.");
     const comentario = await tx.helpdeskComment.create({ data: { tenantId: c.ctx.tenantId, ticketId: id, authorId: c.ctx.userId, ...dados } });
     if (attachmentIds.length && (await tx.helpdeskAttachment.updateMany({ where: { tenantId: c.ctx.tenantId, ticketId: id, id: { in: attachmentIds }, uploadedById: c.ctx.userId, commentId: null, internal: dados.internal }, data: { commentId: comentario.id } })).count !== attachmentIds.length) throw new Error("Os arquivos não puderam ser ligados à mensagem. Atualize a página e tente novamente.");
-    if (!dados.internal && aguardandoSolicitante(t.status) && !c.ctx.sectors.includes(c.config.sectorCode) && !isFullWrite(c.ctx.role)) await mudarStatus(tx, c, t, "EM_ANDAMENTO");
+    if (!dados.internal && aguardandoSolicitante(t.status) && !c.ctx.sectors.includes(t.handlingSectorCode) && !isFullWrite(c.ctx.role)) await mudarStatus(tx, c, t, "EM_ANDAMENTO");
     await evento(tx, c.ctx.tenantId, id, c.ctx.userId, "comment", { commentId: comentario.id, anexos: attachmentIds.length }, dados.internal);
   });
   await depois(c, id, "comment");
@@ -234,15 +234,34 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       await tx.helpdeskReopenRequest.create({ data: { tenantId, ticketId: id, requestedById: c.ctx.userId, reason } });
       await evento(tx, tenantId, id, c.ctx.userId, "reopen_requested");
     } else if (operacao === "decidir_reabertura") {
-      exigirGestao(c);
+      exigirGestaoNo(c, t.handlingSectorCode);
       const d = z.object({ aprovado: z.boolean(), motivo: z.string().trim().min(1).max(2000) }).parse(valor);
       const r = await tx.helpdeskReopenRequest.findFirst({ where: { tenantId, ticketId: id, status: "PENDING" } });
       if (!r || t.status !== "RESOLVIDO") throw new Error("Pedido de reabertura indisponível.");
       await tx.helpdeskReopenRequest.update({ where: { id: r.id }, data: { status: d.aprovado ? "APPROVED" : "REJECTED", decidedById: c.ctx.userId, decidedAt: new Date(), note: d.motivo } });
       if (d.aprovado) await mudarStatus(tx, c, t, "EM_ANDAMENTO");
       await evento(tx, tenantId, id, c.ctx.userId, "reopen_decided", { aprovado: d.aprovado });
+    } else if (operacao === "redirecionar") {
+      // Redirecionar para outro setor administrador (12/11/2026): os responsáveis
+      // eram do setor de antes e saem; na fila, o chamado vai para o fim da fila
+      // do novo setor. A situação e a conversa seguem como estão.
+      if (!podeRedirecionar(c.ctx, c.config, t.handlingSectorCode)) throw new Error("Só a equipe do setor que atende ou o administrador pode redirecionar o chamado.");
+      if (fechado(t.status)) throw new Error("O chamado está encerrado.");
+      const d = z.object({ setor: z.string().trim().min(1).max(40), motivo: z.string().trim().max(1000).default("") }).parse(valor);
+      if (d.setor === t.handlingSectorCode) throw new Error("O chamado já está com este setor.");
+      if (!c.config.sectorCodes.includes(d.setor)) throw new Error("Escolha um dos setores que administram os chamados.");
+      let queueOrder = t.queueOrder;
+      if (t.status === "NA_FILA") {
+        const max = await tx.helpdeskTicket.aggregate({ where: { tenantId, handlingSectorCode: d.setor, status: "NA_FILA" }, _max: { queueOrder: true } });
+        queueOrder = (max._max.queueOrder ?? 0) + 1;
+      }
+      await tx.helpdeskAssignee.deleteMany({ where: { tenantId, ticketId: id } });
+      await tx.helpdeskTicket.update({ where: { id }, data: { handlingSectorCode: d.setor, queueOrder } });
+      // Os nomes vão no evento: a linha do tempo roda no navegador, sem o cadastro de setores.
+      const nomes = new Map((await tx.sector.findMany({ where: { tenantId, code: { in: [t.handlingSectorCode, d.setor] } }, select: { code: true, label: true } })).map(s => [s.code, s.label]));
+      await evento(tx, tenantId, id, c.ctx.userId, "setor", { from: t.handlingSectorCode, to: d.setor, fromLabel: nomes.get(t.handlingSectorCode) ?? t.handlingSectorCode, toLabel: nomes.get(d.setor) ?? d.setor, ...(d.motivo ? { motivo: d.motivo } : {}) });
     } else {
-      exigirOperacao(c);
+      exigirOperacao(c, t.handlingSectorCode);
       if (fechado(t.status)) throw new Error("O chamado está encerrado.");
       // Enquanto a triagem roda (10/11/2026), situação e dados são dela: é ela que
       // grava a categoria, o título e a situação de abertura. O resto (assumir,
@@ -257,8 +276,8 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
         await tx.helpdeskAssignee.upsert({ where: { tenantId_ticketId_userId: { tenantId, ticketId: id, userId: c.ctx.userId } }, create: { tenantId, ticketId: id, userId: c.ctx.userId }, update: {} });
         await evento(tx, tenantId, id, c.ctx.userId, "assignees", { assumiu: true });
       } else if (operacao === "responsaveis" || operacao === "participantes") {
-        exigirGestao(c); const escolhidos = ids.parse(valor);
-        const validos = await tx.user.findMany({ where: { tenantId, active: true, id: { in: escolhidos }, ...(operacao === "responsaveis" ? { role: { not: "READONLY" }, sectors: { some: { sectorCode: c.config.sectorCode } } } : {}) }, select: { id: true } });
+        exigirGestaoNo(c, t.handlingSectorCode); const escolhidos = ids.parse(valor);
+        const validos = await tx.user.findMany({ where: { tenantId, active: true, id: { in: escolhidos }, ...(operacao === "responsaveis" ? { role: { not: "READONLY" }, sectors: { some: { sectorCode: t.handlingSectorCode } } } : {}) }, select: { id: true } });
         if (validos.length !== escolhidos.length) throw new Error("Usuário inválido, de outro escritório ou fora do setor responsável.");
         if (operacao === "responsaveis") {
           await tx.helpdeskAssignee.deleteMany({ where: { tenantId, ticketId: id } });
@@ -295,15 +314,16 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
         if (!(await tx.helpdeskChecklistItem.updateMany({ where: { id: d.id, tenantId, ticketId: id }, data: { done: d.done, doneById: d.done ? c.ctx.userId : null, doneAt: d.done ? new Date() : null } })).count) throw new Error("Item não encontrado.");
         await evento(tx, tenantId, id, c.ctx.userId, "checklist", {}, true);
       } else if (operacao === "prazo") {
-        exigirGestao(c); const d = z.object({ prazo: z.iso.datetime({ offset: true }), motivo: z.string().trim().min(5).max(1000) }).parse(valor);
+        exigirGestaoNo(c, t.handlingSectorCode); const d = z.object({ prazo: z.iso.datetime({ offset: true }), motivo: z.string().trim().min(5).max(1000) }).parse(valor);
         const ciclo = t.cycles[0]; if (!ciclo || ciclo.resolvedAt) throw new Error("O atendimento ainda não possui SLA ativo.");
         if (new Date(d.prazo) <= ciclo.openedAt) throw new Error("O prazo precisa ser posterior ao início do atendimento.");
         await tx.helpdeskSlaCycle.update({ where: { id: ciclo.id }, data: { resolutionDueAt: new Date(d.prazo), manualDeadline: true } });
         await evento(tx, tenantId, id, c.ctx.userId, "deadline", d);
       } else if (operacao === "fila") {
-        exigirGestao(c); const posicao = z.number().int().min(1).max(100000).parse(valor);
+        exigirGestaoNo(c, t.handlingSectorCode); const posicao = z.number().int().min(1).max(100000).parse(valor);
         if (t.status !== "NA_FILA") throw new Error("O chamado não está na fila.");
-        const fila = await tx.helpdeskTicket.findMany({ where: { tenantId, status: "NA_FILA", id: { not: id } }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
+        // Uma fila por setor que atende (12/11/2026).
+        const fila = await tx.helpdeskTicket.findMany({ where: { tenantId, handlingSectorCode: t.handlingSectorCode, status: "NA_FILA", id: { not: id } }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
         fila.splice(Math.min(posicao - 1, fila.length), 0, { id });
         for (const [i, item] of fila.entries()) await tx.helpdeskTicket.update({ where: { id: item.id }, data: { queueOrder: i + 1, ...(item.id !== id ? { version: { increment: 1 } } : {}) } });
         await evento(tx, tenantId, id, c.ctx.userId, "queue", { posicao });

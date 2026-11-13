@@ -14,6 +14,20 @@ export type Caractere = {
   upright: boolean;
   size: number;
   fontname: string;
+  /** O mesmo glifo como o MuPDF o vê (`mupdf.ts`); só nos caracteres de `caracteresDoPdf`. */
+  mupdf?: GlifoMupdf;
+};
+
+/**
+ * Para imitar o texto do PyMuPDF (`mupdf.ts`): a matriz do glifo no espaço do dispositivo do MuPDF
+ * (y para baixo, com tamanho, escala horizontal e elevação), o avanço sem escala e a subida e a
+ * descida da fonte que o MuPDF usa na caixa do caractere.
+ */
+export type GlifoMupdf = {
+  readonly trm: readonly [number, number, number, number, number, number];
+  readonly avanco: number;
+  readonly subida: number;
+  readonly descida: number;
 };
 
 export type Palavra = {

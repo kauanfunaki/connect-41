@@ -40,6 +40,8 @@ type Props = {
   id: string; numero?: number; titulo: string; status: string; prioridade: string; version: number; criadoEm: Date;
   categoria: string; corCategoria: string; setor: { rotulo: string; cor: string };
   responsaveis: { id: string; nome: string }[];
+  /** O setor que atende, quando mais de um setor administra os chamados (12/11/2026). */
+  atende?: string;
   prazo?: { vence: Date; pausado: boolean; atrasado: boolean };
   fila?: { posicao: number; total: number; reordenar: boolean };
   /** Do mais novo para o mais antigo. */
@@ -92,6 +94,10 @@ export function CartaoDoChamado(p: Props) {
           <dt className="text-micro text-fg-muted">Prioridade</dt>
           <dd className={`inline-flex items-center gap-1.5 font-semibold ${TEXTO_DO_TOM[tomDaPrioridade]}`}><span aria-hidden className="size-2 rounded-[2px] bg-current" />{ROTULOS_PRIORIDADE[p.prioridade as Prioridade]}</dd>
         </div>
+        {p.atende && <div className="flex flex-col gap-0.5">
+          <dt className="text-micro text-fg-muted">Setor que atende</dt>
+          <dd className="font-semibold text-fg">{p.atende}</dd>
+        </div>}
         {p.prazo && <div className="flex flex-col gap-0.5">
           <dt className="text-micro text-fg-muted">Prazo{p.prazo.pausado ? " · SLA pausado" : ""}</dt>
           <dd className="tabular-nums text-fg">{formatInstantDate(p.prazo.vence)} <span className={`font-semibold ${p.prazo.atrasado ? "text-danger" : "text-fg-secondary"}`}>· {prazoRelativo(p.prazo.vence, p.agora)}</span></dd>

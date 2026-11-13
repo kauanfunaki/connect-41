@@ -8,7 +8,7 @@ import { FieldGrid } from "@/components/ui/FieldGrid";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { useToast } from "@/components/ui/Toast";
 import { salvarParametros } from "@/app/(app)/valora/actions";
-import { custoPorMinuto, type AjusteSetor, type Catalogo, type ParametrosPreco } from "@/lib/valora/motor";
+import { custoPorMinuto, type AjusteSetor, type ParametrosPreco, type Setor } from "@/lib/valora/motor";
 import { brl } from "@/lib/valora/formato";
 
 type Linha = { codigo: string; nome: string; custoMensal: string; capacidadeHorasMes: string; fatorCalibracao: string };
@@ -16,13 +16,17 @@ type Linha = { codigo: string; nome: string; custoMensal: string; capacidadeHora
 const texto = (n: number) => String(n).replace(".", ",");
 const numero = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 
-/** Custos da equipe e margens. Confidencial: só administrador do setor chega aqui. */
-export function FormParametros({ catalogo, parametros, podeEditar }: { catalogo: Catalogo; parametros: ParametrosPreco; podeEditar: boolean }) {
+/**
+ * Custos da equipe e margens. Confidencial: só administrador do setor chega aqui.
+ * Recebe só os setores (13/11/2026, melhoria-661): o catálogo inteiro, com as
+ * atividades, ia junto para o navegador (28,8 KB) e o formulário não usa.
+ */
+export function FormParametros({ setores, parametros, podeEditar }: { setores: Setor[]; parametros: ParametrosPreco; podeEditar: boolean }) {
   const toast = useToast();
   const [pendente, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [linhas, setLinhas] = useState<Linha[]>(() =>
-    catalogo.setores.map((s) => ({
+    setores.map((s) => ({
       codigo: s.codigo,
       nome: s.nome,
       custoMensal: texto(s.custoMensal),

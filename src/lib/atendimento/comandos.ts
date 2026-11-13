@@ -25,6 +25,10 @@ import {
   MAX_RESUMO,
   assinaturaDe,
   diasDoHorario,
+  lerQuemVeTudo,
+  PERGUNTA_DA_NOTA,
+  situacaoAoTransferir,
+  type QuemVeTudo,
   type Situacao,
 } from "./regras";
 import { conexaoPeloId, enviarNoAtendimento, podeEnviarNaConversa } from "./transporte";
@@ -101,7 +105,7 @@ export async function assumir(c: Contexto, cicloId: string) {
   // Guarda contra dois assumindo ao mesmo tempo: só grava se ninguém mexeu.
   const r = await prisma.atendimentoCiclo.updateMany({
     where: { id: ciclo.id, assignedToId: ciclo.assignedToId, situacao: ciclo.situacao },
-    data: { assignedToId: c.ctx.userId, assignedAt: new Date(), situacao },
+    data: { assignedToId: c.ctx.userId, assignedAt: new Date(), situacao, transferidaParaId: null, transferidaEm: null },
   });
   exigir(r.count === 1, "Alguém mexeu nesta conversa agora há pouco. Atualize a tela.");
   await prisma.atendimentoMovimento.create({
@@ -174,6 +178,8 @@ export async function encaminhar(
       sectorCode: p.sectorCode,
       assignedToId: p.paraUserId,
       assignedAt: p.paraUserId ? new Date() : null,
+      transferidaParaId: null,
+      transferidaEm: null,
       situacao: p.paraUserId ? "EM_ATENDIMENTO" : "NO_SETOR",
       // O setor que a triagem escolheu na primeira vez, ao lado da sugestão da Ceci.
       ...(ciclo.situacao === "TRIAGEM" && !ciclo.triagemSectorCode ? { triagemSectorCode: p.sectorCode } : {}),
@@ -261,7 +267,7 @@ export async function decidirPedido(c: Contexto, p: { pedidoId: string; aprovar:
     where: { id: pedido.id },
     data: { status: "APROVADO", decididoPorId: c.ctx.userId, decididoEm: new Date(), setorAprovado: setor, nota },
   });
-  await prisma.atendimentoCiclo.update({ where: { id: ciclo.id }, data: { sectorCode: setor, assignedToId: null, assignedAt: null, situacao: "NO_SETOR" } });
+  await prisma.atendimentoCiclo.update({ where: { id: ciclo.id }, data: { sectorCode: setor, assignedToId: null, assignedAt: null, transferidaParaId: null, transferidaEm: null, situacao: "NO_SETOR" } });
   await prisma.atendimentoMovimento.create({
     data: { tenantId: c.ctx.tenantId, cicloId: ciclo.id, tipo: "APROVOU", deSector: ciclo.sectorCode, paraSector: setor, porUserId: c.ctx.userId, nota },
   });
@@ -281,9 +287,18 @@ export async function transferir(c: Contexto, cicloId: string, paraUserId: strin
   const prisma = getPrisma();
   const u = await prisma.user.findFirst({ where: { id: paraUserId, tenantId: c.ctx.tenantId, active: true, sectors: { some: { sectorCode: setor } } } });
   exigir(!!u, "Transfira para alguém do mesmo setor. Para outro setor, peça o encaminhamento.");
+  exigir(paraUserId !== ciclo.assignedToId, "A conversa já está com essa pessoa.");
+  // A conversa vai para a pessoa em destaque, mas ela assume para responder
+  // (12/11/2026): até lá, ninguém está com ela e os avisos vão para essa pessoa.
   await prisma.atendimentoCiclo.update({
     where: { id: ciclo.id },
-    data: { assignedToId: paraUserId, assignedAt: new Date(), ...(ciclo.situacao === "NO_SETOR" ? { situacao: "EM_ATENDIMENTO" } : {}) },
+    data: {
+      assignedToId: null,
+      assignedAt: null,
+      transferidaParaId: paraUserId,
+      transferidaEm: new Date(),
+      situacao: situacaoAoTransferir(ciclo.situacao as Situacao),
+    },
   });
   await prisma.atendimentoMovimento.create({ data: { tenantId: c.ctx.tenantId, cicloId: ciclo.id, tipo: "TRANSFERIU", porUserId: c.ctx.userId, paraUserId } });
   await avisarTransferencia({ tenantId: c.ctx.tenantId, cicloId: ciclo.id, paraUserId, quem: await nomeDoCliente(c.ctx.tenantId, ciclo.conversa.contato), actorUserId: c.ctx.userId });
@@ -292,7 +307,10 @@ export async function transferir(c: Contexto, cicloId: string, paraUserId: strin
 
 // ─── Encerrar e vincular ─────────────────────────────────────────────────────
 
-export async function encerrar(c: Contexto, p: { cicloId: string; desfechoId: string; desfechoOutro: string; resumo: string; despedida: string | null }) {
+export async function encerrar(
+  c: Contexto,
+  p: { cicloId: string; desfechoId: string; desfechoOutro: string; resumo: string; despedida: string | null; pedirNota?: boolean }
+) {
   const ciclo = await carregar(c, p.cicloId);
   exigir(podeAgirNoCiclo(c.ctx, c.cfg, alvo(ciclo)), "Você não pode encerrar esta conversa.");
   let desfechoId: string | null = null;
@@ -308,11 +326,28 @@ export async function encerrar(c: Contexto, p: { cicloId: string; desfechoId: st
     desfechoTexto = d.label;
   }
   const resumo = p.resumo.trim().slice(0, MAX_RESUMO) || null;
-  if (p.despedida?.trim()) await mandarSePuder(c, ciclo, p.despedida.trim().slice(0, MAX_TEXTO), c.ctx.userId, ciclo.sectorCode ?? c.cfg.triagem);
+  // A despedida e a pergunta da nota saem numa mensagem só; a nota só fica
+  // esperando resposta se a mensagem saiu (12/11/2026).
+  const despedida = p.despedida?.trim().slice(0, MAX_TEXTO) ?? "";
+  const texto = [despedida, p.pedirNota ? PERGUNTA_DA_NOTA : ""].filter(Boolean).join(`
+
+`);
+  const saiu = texto ? await mandarSePuder(c, ciclo, texto, c.ctx.userId, ciclo.sectorCode ?? c.cfg.triagem) : false;
+  const agora = new Date();
   const prisma = getPrisma();
   await prisma.atendimentoCiclo.update({
     where: { id: ciclo.id },
-    data: { situacao: "ENCERRADO", encerradoEm: new Date(), encerradoPorId: c.ctx.userId, desfechoId, desfechoTexto, resumo },
+    data: {
+      situacao: "ENCERRADO",
+      encerradoEm: agora,
+      encerradoPorId: c.ctx.userId,
+      desfechoId,
+      desfechoTexto,
+      resumo,
+      transferidaParaId: null,
+      transferidaEm: null,
+      ...(p.pedirNota && saiu ? { notaPedidaEm: agora } : {}),
+    },
   });
   await prisma.atendimentoPedido.updateMany({ where: { cicloId: ciclo.id, status: "PENDENTE" }, data: { status: "RECUSADO", decididoPorId: c.ctx.userId, decididoEm: new Date(), nota: "Atendimento encerrado." } });
   await prisma.atendimentoMovimento.create({ data: { tenantId: c.ctx.tenantId, cicloId: ciclo.id, tipo: "ENCERROU", porUserId: c.ctx.userId, nota: desfechoTexto } });
@@ -321,7 +356,7 @@ export async function encerrar(c: Contexto, p: { cicloId: string; desfechoId: st
 
 export async function vincularContato(
   c: Contexto,
-  p: { cicloId: string } & ({ tipo: "CLIENTE"; companyId: string } | { tipo: "NOVO"; nome: string; interesse: string })
+  p: { cicloId: string } & ({ tipo: "CLIENTE"; companyId: string } | { tipo: "NOVO" })
 ) {
   const ciclo = await carregar(c, p.cicloId);
   exigir(podeAgirNoCiclo(c.ctx, c.cfg, alvo(ciclo)), "Você não pode alterar este contato.");
@@ -331,11 +366,11 @@ export async function vincularContato(
     exigir(!!empresa, "Empresa não encontrada.");
     await prisma.atendimentoContato.update({ where: { id: ciclo.conversa.contatoId }, data: { tipo: "CLIENTE", companyId: empresa.id } });
   } else {
-    const nome = p.nome.trim().slice(0, 120);
-    exigir(nome.length > 0, "Escreva o nome do contato.");
+    // Contato novo não pede dados aqui: a Controladoria cuida do resto
+    // (12/11/2026). Fica o nome do WhatsApp.
     await prisma.atendimentoContato.update({
       where: { id: ciclo.conversa.contatoId },
-      data: { tipo: "NOVO", nome, interesse: p.interesse.trim().slice(0, 60) || null, companyId: null, personId: null },
+      data: { tipo: "NOVO", companyId: null, personId: null },
     });
   }
   await prisma.atendimentoMovimento.create({ data: { tenantId: c.ctx.tenantId, cicloId: ciclo.id, tipo: "VINCULOU", porUserId: c.ctx.userId, nota: p.tipo === "CLIENTE" ? "Ligou a uma empresa" : "Marcou como contato novo" } });
@@ -359,6 +394,7 @@ export async function salvarConfiguracao(
     diasParaReabrir: number;
     setores: string[];
     ceciLigada: boolean;
+    veemTudo: QuemVeTudo[];
   }
 ) {
   exigir(podeConfigurar(c.ctx, c.cfg), "Só o administrador ou o gestor da triagem muda as configurações.");
@@ -373,6 +409,15 @@ export async function salvarConfiguracao(
   const maps = await getSectorMaps(c.ctx.tenantId);
   const ativos = new Set(maps.options.map((o) => o.value));
   const setores = p.setores.filter((s) => ativos.has(s) && s !== c.cfg.triagem);
+  // Quem vê tudo: só gente ativa do escritório e setores ativos; a triagem já vê.
+  const pedidos = lerQuemVeTudo(p.veemTudo);
+  const idsDePessoas = pedidos.filter((q) => q.tipo === "PESSOA").map((q) => q.id);
+  const pessoasValidas = new Set(
+    idsDePessoas.length
+      ? (await prisma.user.findMany({ where: { tenantId: c.ctx.tenantId, active: true, id: { in: idsDePessoas } }, select: { id: true } })).map((u) => u.id)
+      : []
+  );
+  const veemTudo = pedidos.filter((q) => (q.tipo === "PESSOA" ? pessoasValidas.has(q.id) : ativos.has(q.id) && q.id !== c.cfg.triagem));
   await lerConfiguracao(c.ctx.tenantId);
   await prisma.atendimentoConfig.update({
     where: { tenantId: c.ctx.tenantId },
@@ -387,6 +432,7 @@ export async function salvarConfiguracao(
       diasParaReabrir: p.diasParaReabrir,
       setores: setores.length > 0 ? setores : undefined,
       ceciLigada: p.ceciLigada,
+      veemTudo,
       updatedById: c.ctx.userId,
     },
   });

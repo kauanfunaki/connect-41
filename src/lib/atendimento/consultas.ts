@@ -17,9 +17,12 @@ import {
   podeDecidirPedido,
   podeEncaminharDireto,
   podePedirEncaminhamento,
+  podeDecidirPedidoDeAssumir,
   podeResponder,
+  podeTirarDaConversa,
   podeVerCiclo,
   setoresDaPessoa,
+  veTudo,
 } from "./acesso";
 import { desfechosDoEscritorio, lerConfiguracao, mensagensPadraoPara, nomesDosContatos, setoresQueAtendem, telefoneLegivel } from "./dados";
 import { abreNaTela } from "./midia";
@@ -37,7 +40,7 @@ async function escopo(c: Contexto) {
   const atendem = setoresQueAtendem(config.setores, ativos, c.cfg.triagem);
   const meus = setoresDaPessoa(c.ctx, c.cfg, atendem);
   const geridos = meus.filter((s) => canManageSector(c.ctx, s));
-  return { config, maps, atendem, meus, geridos, triagem: ehDaTriagem(c.ctx, c.cfg) };
+  return { config, maps, atendem, meus, geridos, triagem: ehDaTriagem(c.ctx, c.cfg), veTudo: veTudo(c.ctx, c.cfg) };
 }
 
 /** Tudo o que a pessoa pode ver na lista, numa consulta só (a união dos recortes dela). */
@@ -45,10 +48,13 @@ function filtroDaPessoa(c: Contexto, e: Awaited<ReturnType<typeof escopo>>): Pri
   const tenantId = c.ctx.tenantId;
   const desde = new Date(Date.now() - DIAS_DAS_ENCERRADAS * 24 * 60 * 60 * 1000);
   const recentes: Prisma.AtendimentoCicloWhereInput = { OR: [{ situacao: { not: "ENCERRADO" } }, { encerradoEm: { gte: desde } }] };
-  if (e.triagem) return { tenantId, ...recentes };
+  if (e.triagem || e.veTudo) return { tenantId, ...recentes };
   return {
     tenantId,
-    AND: [recentes, { OR: [{ assignedToId: c.ctx.userId }, ...(e.meus.length ? [{ sectorCode: { in: e.meus } }] : [])] }],
+    AND: [
+      recentes,
+      { OR: [{ assignedToId: c.ctx.userId }, { transferidaParaId: c.ctx.userId }, ...(e.meus.length ? [{ sectorCode: { in: e.meus } }] : [])] },
+    ],
   };
 }
 
@@ -62,6 +68,12 @@ export type CartaoDaLista = CartaoParaRecorte & {
   quando: string | null;
   previa: string;
   esperandoResposta: boolean;
+  /** Transferida para quem está vendo, esperando que assuma: o cartão fica em destaque. */
+  transferidaParaMim: boolean;
+  /** O nome de quem recebeu a transferência e ainda não assumiu. */
+  transferidaPara: string | null;
+  /** Mensagens do cliente desde a última resposta da equipe (o número da bolinha). */
+  semResposta: number;
 };
 
 export type ListaDoAtendimento = {
@@ -71,7 +83,9 @@ export type ListaDoAtendimento = {
   geridos: string[];
   userId: string;
   ehTriagem: boolean;
-  triagem: { code: string; label: string };
+  /** Escolhida nas configurações para ver todos os atendimentos. */
+  veTudo: boolean;
+  triagem: { code: string; label: string; cor: string };
 };
 
 export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
@@ -87,6 +101,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
       situacao: true,
       sectorCode: true,
       assignedToId: true,
+      transferidaParaId: true,
       conversa: {
         select: {
           id: true,
@@ -109,12 +124,13 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
         })
       : [],
     prisma.user.findMany({
-      where: { tenantId: c.ctx.tenantId, id: { in: [...new Set(ciclos.map((x) => x.assignedToId).filter((x): x is string => !!x))] } },
+      where: { tenantId: c.ctx.tenantId, id: { in: [...new Set(ciclos.flatMap((x) => [x.assignedToId, x.transferidaParaId]).filter((x): x is string => !!x))] } },
       select: { id: true, name: true },
     }),
     nomesDosContatos(c.ctx.tenantId, ciclos.map((x) => x.conversa.contato)),
   ]);
   const ultimaPor = new Map(ultimas.map((m) => [m.conversaId, m]));
+  const semRespostaPor = await contarSemResposta(ultimas.filter((m) => m.direcao === "ENTRADA").map((m) => m.conversaId));
   const nomePor = new Map(responsaveis.map((u) => [u.id, u.name]));
 
   const cartoes: CartaoDaLista[] = ciclos.map((x) => {
@@ -129,11 +145,15 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
       sectorCode: x.sectorCode,
       assignedToId: x.assignedToId,
       pedidoPendente: x.pedidos.length > 0,
+      transferidaParaId: x.transferidaParaId,
+      transferidaParaMim: !!x.transferidaParaId && x.transferidaParaId === c.ctx.userId,
+      transferidaPara: x.transferidaParaId ? (nomePor.get(x.transferidaParaId) ?? null) : null,
       setor: x.sectorCode ? { code: x.sectorCode, label: sectorLabel(e.maps.labels, x.sectorCode), cor: e.maps.colors[x.sectorCode] ?? "#586577" } : null,
       responsavel: x.assignedToId ? (nomePor.get(x.assignedToId) ?? null) : null,
       quando: x.conversa.lastMessageAt?.toISOString() ?? null,
       previa: ultima ? previa(ultima.body) : "",
       esperandoResposta: ultima?.direcao === "ENTRADA",
+      semResposta: ultima?.direcao === "ENTRADA" ? Math.max(1, semRespostaPor.get(x.conversa.id) ?? 1) : 0,
     };
   });
 
@@ -144,11 +164,59 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
     geridos: e.geridos,
     userId: c.ctx.userId,
     ehTriagem: e.triagem,
-    triagem: { code: c.cfg.triagem, label: sectorLabel(e.maps.labels, c.cfg.triagem) },
+    veTudo: e.veTudo,
+    triagem: { code: c.cfg.triagem, label: sectorLabel(e.maps.labels, c.cfg.triagem), cor: e.maps.colors[c.cfg.triagem] ?? "#586577" },
   };
 }
 
 /** O número do menu: o que espera alguém agir (triagem, pedidos e "sem responsável" dos meus setores). */
+/**
+ * Quantas mensagens o cliente mandou depois da última resposta da equipe, por
+ * conversa (12/11/2026: a bolinha mostrava sempre 1). Notas internas não contam
+ * como resposta.
+ */
+async function contarSemResposta(conversaIds: string[]): Promise<Map<string, number>> {
+  if (conversaIds.length === 0) return new Map();
+  const prisma = getPrisma();
+  const saidas = await prisma.atendimentoMensagem.groupBy({
+    by: ["conversaId"],
+    where: { conversaId: { in: conversaIds }, direcao: "SAIDA", interna: false },
+    _max: { createdAt: true },
+  });
+  const ultimaSaida = new Map(saidas.map((s) => [s.conversaId, s._max.createdAt]));
+  const contagem = await prisma.atendimentoMensagem.groupBy({
+    by: ["conversaId"],
+    where: {
+      direcao: "ENTRADA",
+      OR: conversaIds.map((id) => {
+        const desde = ultimaSaida.get(id);
+        return desde ? { conversaId: id, createdAt: { gt: desde } } : { conversaId: id };
+      }),
+    },
+    _count: { _all: true },
+  });
+  return new Map(contagem.map((x) => [x.conversaId, x._count._all]));
+}
+
+/**
+ * Uma marca barata do que mudou na caixa: a última mensagem do escritório e
+ * quantos atendimentos há em cada situação. A tela confere a cada poucos
+ * segundos e só recarrega a lista quando a marca muda (12/11/2026: conversa
+ * nova só aparecia recarregando a página).
+ */
+export async function marcaDaCaixa(tenantId: string): Promise<string> {
+  const prisma = getPrisma();
+  const [ultima, porSituacao] = await Promise.all([
+    prisma.atendimentoConversa.aggregate({ where: { tenantId }, _max: { lastMessageAt: true } }),
+    prisma.atendimentoCiclo.groupBy({ by: ["situacao"], where: { tenantId }, _count: { _all: true } }),
+  ]);
+  const situacoes = porSituacao
+    .map((s) => `${s.situacao}:${s._count._all}`)
+    .sort()
+    .join(",");
+  return `${ultima._max.lastMessageAt?.toISOString() ?? "-"}|${situacoes}`;
+}
+
 export async function contarParaMenu(c: Contexto): Promise<number> {
   const prisma = getPrisma();
   const e = await escopo(c);
@@ -156,6 +224,8 @@ export async function contarParaMenu(c: Contexto): Promise<number> {
   const filtros: Prisma.AtendimentoCicloWhereInput[] = [];
   if (e.triagem) filtros.push({ situacao: "TRIAGEM" }, { situacao: { not: "ENCERRADO" }, pedidos: { some: { status: "PENDENTE" } } });
   if (e.meus.length > 0) filtros.push({ situacao: "NO_SETOR", sectorCode: { in: e.meus } });
+  // Transferida para a pessoa e ainda não assumida (12/11/2026).
+  filtros.push({ transferidaParaId: c.ctx.userId, situacao: { not: "ENCERRADO" } });
   if (filtros.length === 0) return 0;
   return prisma.atendimentoCiclo.count({ where: { tenantId, OR: filtros } });
 }
@@ -211,6 +281,8 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
     if (mv.paraUserId) idsDeGente.add(mv.paraUserId);
   }
   if (ciclo.assignedToId) idsDeGente.add(ciclo.assignedToId);
+  if (ciclo.transferidaParaId) idsDeGente.add(ciclo.transferidaParaId);
+  if (ciclo.pedidoAssumirPorId) idsDeGente.add(ciclo.pedidoAssumirPorId);
   for (const p of ciclo.pedidos) idsDeGente.add(p.pedidoPorId);
   const gente = await prisma.user.findMany({ where: { tenantId, id: { in: [...idsDeGente] } }, select: { id: true, name: true } });
   const nomeDaPessoa = new Map(gente.map((u) => [u.id, u.name]));
@@ -234,6 +306,9 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       situacao: ciclo.situacao as Situacao,
       setor: ciclo.sectorCode ? { code: ciclo.sectorCode, label: rotulo(ciclo.sectorCode)!, cor: e.maps.colors[ciclo.sectorCode] ?? "#586577" } : null,
       responsavel: ciclo.assignedToId ? { id: ciclo.assignedToId, nome: nomeDaPessoa.get(ciclo.assignedToId) ?? "Alguém da equipe" } : null,
+      transferidaPara: ciclo.transferidaParaId
+        ? { id: ciclo.transferidaParaId, nome: nomeDaPessoa.get(ciclo.transferidaParaId) ?? "Alguém da equipe", paraMim: ciclo.transferidaParaId === c.ctx.userId }
+        : null,
       abertoEm: ciclo.abertoEm.toISOString(),
     },
     contato: {
@@ -302,9 +377,15 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       encaminharDireto: podeEncaminharDireto(c.ctx, c.cfg, alvo),
       pedirEncaminhamento: podePedirEncaminhamento(c.ctx, c.cfg, alvo) && !pedido,
       decidirPedido: !!pedido && podeDecidirPedido(c.ctx, c.cfg),
+      decidirPedidoDeAssumir: !!ciclo.pedidoAssumirPorId && podeDecidirPedidoDeAssumir(c.ctx, c.cfg, alvo),
+      tirar: podeTirarDaConversa(c.ctx, c.cfg, alvo),
       vincular: podeAgirNoCiclo(c.ctx, c.cfg, alvo),
       convidar: ehDaTriagem(c.ctx, c.cfg) && !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY" && ciclo.situacao !== "ENCERRADO",
     },
+    /** Alguém pediu para assumir a conversa de quem está com ela (13/11/2026). */
+    pedidoAssumir: ciclo.pedidoAssumirPorId
+      ? { porId: ciclo.pedidoAssumirPorId, por: nomeDaPessoa.get(ciclo.pedidoAssumirPorId) ?? "Alguém da equipe", quando: ciclo.pedidoAssumirEm?.toISOString() ?? null }
+      : null,
     eu: { id: c.ctx.userId },
   };
 }
@@ -312,23 +393,27 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
 export type DetalheDoAtendimento = NonNullable<Awaited<ReturnType<typeof lerDetalhe>>>;
 
 /** Empresas para ligar um contato, pelo nome ou CNPJ. */
-export async function buscarEmpresas(c: Contexto, termo: string) {
-  const t = termo.trim();
-  if (t.length < 2) return [];
+/**
+ * As empresas ativas do escritório, para o "Quem é?" escolher numa lista que
+ * filtra enquanto se digita (12/11/2026). Carregadas só quando o painel abre.
+ */
+export async function empresasParaVincular(c: Contexto) {
   const prisma = getPrisma();
-  const empresas = await prisma.company.findMany({
-    where: { tenantId: c.ctx.tenantId, OR: [{ name: { contains: t } }, { displayName: { contains: t } }, { cnpj: { contains: t } }] },
-    select: { id: true, name: true, displayName: true, cnpj: true },
-    take: 8,
-    orderBy: { name: "asc" },
-  });
-  const portais = empresas.length
-    ? await prisma.portalUserCompany.groupBy({
-        by: ["companyId"],
-        where: { tenantId: c.ctx.tenantId, companyId: { in: empresas.map((x) => x.id) } },
-        _count: { _all: true },
-      })
-    : [];
+  const [empresas, portais] = await Promise.all([
+    prisma.company.findMany({
+      where: { tenantId: c.ctx.tenantId, status: "ACTIVE" },
+      select: { id: true, name: true, displayName: true, cnpj: true, logoUrl: true, parentCompanyId: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.portalUserCompany.groupBy({ by: ["companyId"], where: { tenantId: c.ctx.tenantId }, _count: { _all: true } }),
+  ]);
   const comPortal = new Set(portais.map((p) => p.companyId));
-  return empresas.map((x) => ({ id: x.id, nome: nomeExibicao(x), cnpj: x.cnpj, temPortal: comPortal.has(x.id) }));
+  return empresas.map((x) => ({
+    id: x.id,
+    nome: nomeExibicao(x),
+    cnpj: x.cnpj,
+    logoUrl: x.logoUrl,
+    parentCompanyId: x.parentCompanyId,
+    temPortal: comPortal.has(x.id),
+  }));
 }

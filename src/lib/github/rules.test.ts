@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contributionTitle, dayAt, filtersSchema, identity, normalize, period, safeGithubUrl } from "./rules";
+import { branchSchema, contributionTitle, dayAt, filtersSchema, identity, normalize, period, safeGithubUrl, settingsSchema } from "./rules";
 import { calendarDays, calendarLevel } from "./calendar";
 
 const author = { node_id: "U_fictional", login: "pessoa-ficticia", type: "User" };
@@ -63,5 +63,19 @@ describe("regras do heatmap GitHub", () => {
   it("lê só integrados por padrão e aceita a aba Repositórios", () => {
     expect(filtersSchema.parse({}).all).toBe("0");
     expect(filtersSchema.parse({ all: "1", view: "repositories" })).toMatchObject({ all: "1", view: "repositories" });
+  });
+});
+
+describe("branch da coleta (12/11/2026)", () => {
+  it("aceita nomes de branch do git e recusa os que o git não aceita", () => {
+    for (const nome of ["main", "develop", "feature/novo-fluxo", "release/2026.11"]) expect(branchSchema.safeParse(nome).success).toBe(true);
+    for (const nome of ["", "com espaço", "a..b", "/inicio", "fim/", "fim.", "v1@{0}", "a~1", "a:b"]) expect(branchSchema.safeParse(nome).success).toBe(false);
+  });
+  it("guarda a branch por repositório nas configurações, com null para a padrão", () => {
+    const id = "6f1c2a4e-8b7d-4c3e-9a1f-2b3c4d5e6f70";
+    const base = { repositories: [id], timezone: "America/Sao_Paulo", intervalMinutes: 30, generation: 1 };
+    expect(settingsSchema.parse({ ...base, branches: { [id]: "develop" } }).branches).toEqual({ [id]: "develop" });
+    expect(settingsSchema.parse({ ...base, branches: { [id]: null } }).branches).toEqual({ [id]: null });
+    expect(settingsSchema.safeParse({ ...base, branches: { [id]: "a b" } }).success).toBe(false);
   });
 });

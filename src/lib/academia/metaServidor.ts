@@ -5,7 +5,8 @@
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { somarDias } from "@/lib/datas/calendario";
-import { PRAZO_MAXIMO_DIAS, metaEmTexto, metaSchema, prazoValido, progressoDaMeta } from "./metas";
+import { metaSchema } from "./metaEsquema";
+import { PRAZO_MAXIMO_DIAS, metaEmTexto, prazoValido, progressoDaMeta } from "./metas";
 import { diaDoInstante, ehNivel, ehTeste, mesDoInstante } from "./regras";
 import type { MetaNaTela } from "./tipos";
 

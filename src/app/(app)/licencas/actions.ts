@@ -15,10 +15,14 @@ import {
   type LinhaConferida,
 } from "@/lib/societario/importacaoDeLicencas";
 import { pedirImpressaoDoAlvara } from "@/lib/robo/servidor";
+import { lerEmails } from "@/lib/societario/avisoDeVencimento";
+import { enviarTesteDoAviso, salvarConfiguracaoDoAviso } from "@/lib/societario/avisoDeVencimentoServidor";
 import { gerarEstruturado } from "@/lib/ai";
 import { saoPauloParts } from "@/lib/agenda";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { nomeExibicao } from "@/lib/companyName";
+import { CAMPOS_DA_EMPRESA_NO_SELETOR, opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
+import type { Opcao } from "@/components/shared/SearchableSelect";
 import { guardarArquivo } from "@/lib/drive/servidor";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
 import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
@@ -45,6 +49,21 @@ async function contexto() {
   if (!canActOnSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) return { erro: "Sem permissão no Societário.", ctx: null };
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) return { erro: "O módulo de licenças não está ligado.", ctx: null };
   return { erro: null, ctx };
+}
+
+/**
+ * As empresas do seletor do "Nova licença", pedidas quando a janela abre
+ * (12/11/2026, bug-645). Antes iam inteiras com a tela, em toda página.
+ */
+export async function empresasParaNovaLicenca(): Promise<{ error: string } | { ok: true; empresas: Opcao[] }> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const empresas = await getPrisma().company.findMany({
+    where: { tenantId: ctx.tenantId, status: { in: ["ACTIVE", "PROSPECT"] } },
+    orderBy: { name: "asc" },
+    select: CAMPOS_DA_EMPRESA_NO_SELETOR,
+  });
+  return { ok: true, empresas: opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) }))) };
 }
 
 /** O PDF do formulário, conferido pelos bytes: o nome e o tipo são o que o navegador disse. */
@@ -343,4 +362,60 @@ export async function importarLicencas(form: FormData): Promise<ResultadoDaImpor
   });
   revalidatePath("/licencas");
   return { ok: true, linhas: semDados, criadas: novas.length };
+}
+
+// ─── E-mail de vencimentos (12/11/2026) ───────────────────────────────────
+// O que o Radar Societário mandava: a lista de e-mails e o liga/desliga ficam
+// aqui, na tela de Licenças; o envio diário é do agendador dos alertas.
+
+/** Endereços por lista: cada um recebe o seu e-mail, e cem endereços seriam cem envios por dia. */
+const MAXIMO_DE_EMAILS = 20;
+
+export type AvisoPorEmailState = { error: string } | { success: true } | null;
+
+export async function salvarAvisoPorEmail(_prev: AvisoPorEmailState, form: FormData): Promise<AvisoPorEmailState> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const ligado = form.get("ligado") === "on";
+  const { validos, invalidos } = lerEmails(String(form.get("emails") ?? ""));
+  if (invalidos.length > 0) {
+    const exemplos = invalidos.slice(0, 3).join(", ");
+    return { error: invalidos.length === 1 ? `"${exemplos}" não parece um e-mail.` : `Estes não parecem e-mails: ${exemplos}${invalidos.length > 3 ? "…" : ""}.` };
+  }
+  if (ligado && validos.length === 0) return { error: "Informe ao menos um e-mail para ligar o aviso." };
+  if (validos.length > MAXIMO_DE_EMAILS) return { error: `No máximo ${MAXIMO_DE_EMAILS} e-mails. Para mais gente, use um e-mail de grupo do setor.` };
+
+  await salvarConfiguracaoDoAviso(ctx.tenantId, { ligado, emails: validos });
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "license.aviso_email",
+    entityType: "Tenant",
+    entityId: ctx.tenantId,
+    metadata: { ligado, emails: validos.length },
+  });
+  revalidatePath("/licencas");
+  return { success: true };
+}
+
+export type ResultadoDoTesteDoAviso = { error: string } | { ok: true; texto: string };
+
+export async function enviarTesteDoAvisoPorEmail(): Promise<ResultadoDoTesteDoAviso> {
+  const { erro, ctx } = await contexto();
+  if (erro || !ctx?.tenantId) return { error: erro ?? "Não autenticado" };
+  const r = await enviarTesteDoAviso(ctx.tenantId);
+  if ("erro" in r) return { error: r.erro };
+  if (r.semSmtp) return { error: "O escritório não tem SMTP configurado. Um administrador configura o SMTP em Configurações › Empresa." };
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: "license.aviso_email_teste",
+    entityType: "Tenant",
+    entityId: ctx.tenantId,
+    metadata: { itens: r.itens, enviados: r.enviados, falhas: r.falhas },
+  });
+  if (r.enviados === 0) return { error: "O e-mail não saiu para nenhum endereço. Confira o SMTP em Configurações › Empresa." };
+  const itens = r.itens === 1 ? "1 documento" : `${r.itens} documentos`;
+  const para = r.enviados === 1 ? "1 endereço" : `${r.enviados} endereços`;
+  return { ok: true, texto: `Teste enviado para ${para}, com ${itens}.${r.falhas > 0 ? ` ${r.falhas} não saiu.` : ""}` };
 }

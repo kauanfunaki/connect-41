@@ -1,14 +1,16 @@
 "use server";
 
 // Ações da Gestão (29/09): trocar o responsável de um item parado ou atrasado
-// e ajustar os limites de alerta de cada setor.
+// e ajustar os limites de alerta de cada setor. E, desde 13/11/2026, os itens
+// de uma pessoa nos Coordenadores, lidos quando a linha dela abre.
 
 import { revalidatePath } from "next/cache";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector, isFullWrite } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
-import { contextoDaGestao } from "@/lib/gestao/acesso";
-import { podeVerSetor } from "@/lib/gestao/regras";
+import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
+import { comTitulos, itensDaGestao } from "@/lib/gestao/itens";
+import { ordemDeAtencao, podeVerSetor, type Classificacao, type Origem } from "@/lib/gestao/regras";
 import { setorDoModulo } from "@/lib/modules";
 
 export type AcaoDaGestao = { error: string } | { ok: true };
@@ -104,4 +106,42 @@ export async function salvarLimites(sectorCode: string, diasParado: string, dias
   });
   revalidar();
   return { ok: true };
+}
+
+/** Uma linha da lista de uma pessoa nos Coordenadores. */
+export type ItemDaPessoa = { chave: string; titulo: string; href: string; origem: Origem; rotuloDoSetor: string; c: Classificacao };
+export type ItensDaPessoa = { error: string } | { ok: true; itens: ItemDaPessoa[]; total: number };
+
+/** Quantos itens cada leitura traz; o "Mostrar mais" pede os seguintes. */
+const ITENS_POR_LEITURA = 50;
+
+/**
+ * Os itens em aberto de uma pessoa, do que mais pede atenção ao que menos, a
+ * partir de `desde` (13/11/2026, melhoria-662): os Coordenadores mostravam a
+ * lista de todo mundo na página, duas vezes (cartão e tabela), e ela só
+ * importa para a pessoa cuja linha se abre. Mesmo recorte da tela: os setores
+ * de quem vê, ou só o do filtro.
+ */
+export async function itensDaPessoaNaGestao(userId: string, setor: string | null, desde: number): Promise<ItensDaPessoa> {
+  const g = await contextoDaGestao();
+  if (!g) return { error: "Sem acesso à Gestão." };
+  if (typeof userId !== "string" || !userId || userId.length > 64) return { error: "Pessoa inválida." };
+  const inicio = Number.isInteger(desde) && desde >= 0 ? desde : 0;
+  const { recorte } = recorteComFiltro(g.recorte, g.setores, setor ?? undefined);
+  const abertos = (await itensDaGestao(g.ctx.tenantId, recorte, new Date(), { responsavel: userId }))
+    .filter((x) => x.c.coluna !== "CONCLUIDO" && x.item.responsaveis.includes(userId))
+    .sort(ordemDeAtencao);
+  const linhas = await comTitulos(g.ctx.tenantId, abertos.slice(inicio, inicio + ITENS_POR_LEITURA));
+  return {
+    ok: true,
+    total: abertos.length,
+    itens: linhas.map(({ item, c }) => ({
+      chave: `${item.origem}:${item.id}`,
+      titulo: item.titulo,
+      href: item.href,
+      origem: item.origem,
+      rotuloDoSetor: g.rotuloDoSetor(item.setor),
+      c,
+    })),
+  };
 }
