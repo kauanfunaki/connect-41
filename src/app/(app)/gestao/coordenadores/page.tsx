@@ -1,16 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { Accordion } from "@/components/ui/Accordion";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGestao";
+import { LinhaDaCarga, type CargaDaLinha } from "@/components/gestao/LinhaDaCarga";
 import { getPrisma } from "@/lib/prisma";
 import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
-import { itensDaGestao } from "@/lib/gestao/itens";
-import { cargaPorPessoa, ordemDeAtencao, type CargaDaPessoa } from "@/lib/gestao/regras";
+import { comTitulos, itensDaGestao } from "@/lib/gestao/itens";
+import { cargaPorPessoa, ordemDeAtencao } from "@/lib/gestao/regras";
+import { itensDaPessoaNaGestao } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +17,11 @@ export const dynamic = "force-dynamic";
 // cards, pendências e transferências em aberto, o que está parado e o que
 // está com prazo. Coordenador sem nada em aberto também aparece — é o que
 // mostra quem tem espaço.
+//
+// Desde 13/11/2026 (melhoria-662) a página leva só os números: a lista de
+// cada pessoa vem quando a linha dela abre, e a tabela é uma só — no celular
+// ela esconde as colunas por tipo (o total por tipo aparece na linha aberta).
+// Eram a tabela e os cartões, cada um com a lista de todo mundo.
 export default async function CoordenadoresPage({ searchParams }: { searchParams: Promise<{ setor?: string }> }) {
   const g = await contextoDaGestao();
   if (!g) notFound();
@@ -36,41 +40,22 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
     select: { id: true, name: true, role: true, sectors: { select: { sectorCode: true } } },
   });
 
-  const vazia = (userId: string): CargaDaPessoa => ({
-    userId,
+  const vazia: CargaDaLinha = {
     abertos: 0,
     porOrigem: { PROCESSO: 0, CARD: 0, PENDENCIA: 0, TRANSFERENCIA: 0, SOLICITACAO: 0 },
     parados: 0,
     vencidos: 0,
     vencendo: 0,
-    itens: [],
-  });
+  };
   const linhas = pessoas
-    .map((p) => ({ pessoa: p, carga: carga.get(p.id) ?? vazia(p.id) }))
+    .map((p) => ({ pessoa: p, carga: carga.get(p.id) ?? vazia }))
     .sort((a, b) => b.carga.vencidos - a.carga.vencidos || b.carga.parados - a.carga.parados || b.carga.abertos - a.carga.abertos || a.pessoa.name.localeCompare(b.pessoa.name));
 
   const semDono = itens.filter((x) => x.c.coluna !== "CONCLUIDO" && x.item.responsaveis.length === 0).sort(ordemDeAtencao);
-  const TD = "px-3 tabular-nums";
+  // Título só dos 50 que a lista mostra.
+  const semDonoNaTela = await comTitulos(ctx.tenantId, semDono.slice(0, 50));
   const setoresDe = (p: (typeof pessoas)[number]) => p.sectors.map((s) => g.rotuloDoSetor(s.sectorCode)).join(", ");
-  // A lista que abre embaixo do nome — alinhada à esquerda num bloco
-  // centralizado: a célula é centralizada (`.c41-tabela`), a leitura não.
-  const itensDa = (c: CargaDaPessoa) =>
-    c.itens.length === 0 ? (
-      <p className="mt-2 text-fs-2 text-fg-muted">Nada em aberto.</p>
-    ) : (
-      <ul className="mt-2 mx-auto w-fit max-w-full flex flex-col gap-1.5 text-left">
-        {c.itens.sort(ordemDeAtencao).map((x) => (
-          <li key={`${x.item.origem}:${x.item.id}`} className="flex flex-col">
-            <Link href={x.item.href} className="text-fs-2 text-fg hover:underline">
-              {x.item.titulo}
-            </Link>
-            <span className="flex flex-wrap items-center gap-1 text-fs-1 text-fg-muted">
-              {ORIGEM[x.item.origem]} · {g.rotuloDoSetor(x.item.setor)} <SelosDoItem c={x.c} />
-            </span>
-          </li>
-        ))}
-      </ul>
-    );
+  const TH_POR_TIPO = "px-3 hidden md:table-cell";
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,85 +66,40 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
           <EmptyState title="Ninguém com trabalho em aberto" description="Nenhuma pessoa responde por item em aberto nestes setores." />
         </Card>
       ) : (
-        <>
-          {/* No celular, um cartão por pessoa com a carga em uma linha — a
-              tabela de nove colunas pedia rolagem lateral para chegar nos
-              parados e vencidos, que são o motivo da visita. */}
-          <CartoesNoCelular>
-            {linhas.map(({ pessoa, carga: c }) => (
-              <Cartao key={pessoa.id}>
-                <TopoDoCartao nome={pessoa.name} valor={`${c.abertos} em aberto`} />
-                <InfoDoCartao>{setoresDe(pessoa)}</InfoDoCartao>
-                <PeDoCartao>
-                  {pessoa.role === "SECTOR_ADMIN" && <Badge variant="info">Coordenação</Badge>}
-                  <span className={`text-fs-2 ${c.parados ? "text-warning-fg font-medium" : "text-fg-muted"}`}>{c.parados} parados</span>
-                  <span className={`text-fs-2 ${c.vencidos ? "text-danger font-medium" : "text-fg-muted"}`}>{c.vencidos} vencidos</span>
-                  <span className="text-fs-2 text-fg-muted">{c.vencendo} vencendo</span>
-                </PeDoCartao>
-                {c.itens.length > 0 && (
-                  <Accordion className="mt-2" classeDoCabecalho="text-fs-2 text-fg-secondary" titulo="Ver os itens">
-                    {itensDa(c)}
-                  </Accordion>
-                )}
-              </Cartao>
-            ))}
-          </CartoesNoCelular>
-
-          {/* Casco padrão, centralizado (30/09). Sem funil: a pessoa é única
-              por linha e o resto é número; o setor se escolhe no "Filtros". */}
-          <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px]">
-              <thead>
-                <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
-                  <th className="px-3">Pessoa</th>
-                  <th className="px-3">Em aberto</th>
-                  <th className="px-3">Processos</th>
-                  <th className="px-3">Atividades</th>
-                  <th className="px-3">Pendências</th>
-                  <th className="px-3">Transferências</th>
-                  <th className="px-3">Solicitações</th>
-                  <th className="px-3">Parados</th>
-                  <th className="px-3">Prazo vencido</th>
-                  <th className="px-3">Vencendo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhas.map(({ pessoa, carga: c }) => (
-                  <tr key={pessoa.id} className="border-b border-border align-top">
-                    <td className="px-3">
-                      <Accordion
-                        centralizado
-                        classeDoCabecalho="font-medium text-fg"
-                        titulo={
-                          <>
-                            {pessoa.name}{" "}
-                            {pessoa.role === "SECTOR_ADMIN" && (
-                              <Badge variant="info" className="ml-1">
-                                Coordenação
-                              </Badge>
-                            )}
-                            <span className="block text-fs-1 font-normal text-fg-muted">{setoresDe(pessoa)}</span>
-                          </>
-                        }
-                      >
-                        {itensDa(c)}
-                      </Accordion>
-                    </td>
-                    <td className={`${TD} font-semibold text-fg`}>{c.abertos}</td>
-                    <td className={TD}>{c.porOrigem.PROCESSO}</td>
-                    <td className={TD}>{c.porOrigem.CARD}</td>
-                    <td className={TD}>{c.porOrigem.PENDENCIA}</td>
-                    <td className={TD}>{c.porOrigem.TRANSFERENCIA}</td>
-                    <td className={TD}>{c.porOrigem.SOLICITACAO}</td>
-                    <td className={`${TD} ${c.parados ? "text-warning-fg font-medium" : ""}`}>{c.parados}</td>
-                    <td className={`${TD} ${c.vencidos ? "text-danger font-medium" : ""}`}>{c.vencidos}</td>
-                    <td className={TD}>{c.vencendo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </TabelaNoDesktop>
-        </>
+        // Casco padrão, centralizado (30/09). Sem funil: a pessoa é única por
+        // linha e o resto é número; o setor se escolhe no "Filtros". No celular
+        // ficam a pessoa, o total, os parados e os prazos — o motivo da visita.
+        <div className="c41-tabela bg-surface border border-border rounded-lg overflow-x-auto">
+          <table className="w-full md:min-w-[760px]">
+            <thead>
+              <tr className="border-b border-border text-micro font-semibold uppercase tracking-wide text-fg-muted">
+                <th className="px-3">Pessoa</th>
+                <th className="px-3">Em aberto</th>
+                <th className={TH_POR_TIPO}>Processos</th>
+                <th className={TH_POR_TIPO}>Atividades</th>
+                <th className={TH_POR_TIPO}>Pendências</th>
+                <th className={TH_POR_TIPO}>Transferências</th>
+                <th className={TH_POR_TIPO}>Solicitações</th>
+                <th className="px-3">Parados</th>
+                <th className="px-3">Prazo vencido</th>
+                <th className="px-3">Vencendo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map(({ pessoa, carga: c }) => (
+                <LinhaDaCarga
+                  // Pelo recorte: trocar o setor no filtro não remonta a página,
+                  // e a lista já lida era a do setor anterior.
+                  key={`${pessoa.id}:${setor ?? ""}`}
+                  pessoa={{ id: pessoa.id, nome: pessoa.name, coordenacao: pessoa.role === "SECTOR_ADMIN", setores: setoresDe(pessoa) }}
+                  carga={{ abertos: c.abertos, porOrigem: c.porOrigem, parados: c.parados, vencidos: c.vencidos, vencendo: c.vencendo }}
+                  setor={setor}
+                  carregar={itensDaPessoaNaGestao}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {semDono.length > 0 && (
@@ -171,7 +111,7 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
             Em aberto e sem ninguém designado. Os alertas destes vão para a coordenação do setor. Troque o responsável no painel ou nos alertas.
           </p>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
-            {semDono.slice(0, 50).map((x) => (
+            {semDonoNaTela.map((x) => (
               <li key={`${x.item.origem}:${x.item.id}`} className="px-4 py-2 flex flex-col">
                 <Link href={x.item.href} className="text-fs-3 text-fg hover:underline">
                   {x.item.titulo}

@@ -23,7 +23,7 @@ import { avisoDeContasAPagar, avisoDeOrcamento, avisoDePendenciasVencidas, maior
 import { serieEconomica } from "@/lib/dre/dataEconomica";
 import { orcamentosAprovados, MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import { porGrupoOrcado } from "@/lib/dre/orcamento/grade";
-import { itensDaGestao } from "@/lib/gestao/itens";
+import { comTitulos, itensDaGestao } from "@/lib/gestao/itens";
 import { feriadosDoEscritorio } from "@/lib/feriados";
 import { hojeIso, somarDias } from "@/lib/datas/calendario";
 import { chaveDoRisco, DIAS_DEPOIS_DA_DATA_LEGAL, mensagemDoRisco, riscoDeMulta } from "@/lib/obrigacoes/riscoDeMulta";
@@ -879,8 +879,14 @@ async function checkItensDaGestao(tenantId: string, today: Date): Promise<number
     ).map((e) => e.id)
   );
   let sent = 0;
+  // O título vai na mensagem: busca só dos que podem avisar, parados ou com
+  // prazo (melhoria-662) — e não o de todo item em aberto do escritório.
+  const candidatos = await comTitulos(
+    tenantId,
+    itens.filter(({ item, c }) => item.origem !== "TRANSFERENCIA" && (c.parado !== null || c.prazo !== null))
+  );
 
-  for (const { item, c } of itens) {
+  for (const { item, c } of candidatos) {
     if (item.origem === "TRANSFERENCIA") continue;
     if (item.empresaId && daDemonstracao.has(item.empresaId)) continue;
     // Um tipo para cada (05/10/2026): a pessoa pode desligar o "parado" e

@@ -1,7 +1,7 @@
 // A produtividade por pessoa nos setores (05/11/2026, decisão do Kauan na
 // página "Ajustes de 05/11": Gestão C — a produtividade primeiro, o mapa dos
 // processos depois). Puro: parte dos mesmos itens de trabalho do painel
-// (`ItemDeTrabalho`, processos, cards, pendências, transferências e
+// (`ItemLeve`, processos, cards, pendências, transferências e
 // solicitações) e das horas apontadas.
 //
 // O que se mede, por pessoa e por setor:
@@ -14,7 +14,7 @@
 // Não compara setores entre si: cada setor entrega coisas diferentes (um
 // processo societário não vale um card do BPO). A tela agrupa por setor.
 
-import type { Classificacao, ItemDeTrabalho, Origem } from "./regras";
+import type { Classificacao, ItemLeve, Origem } from "./regras";
 
 export type ProdutividadeDaPessoa = {
   userId: string;
@@ -41,7 +41,7 @@ function diaEmSaoPaulo(d: Date): string {
 }
 
 /** Terminou até o dia do prazo (o prazo é um dia, não uma hora). */
-export function entregueNoPrazo(item: Pick<ItemDeTrabalho, "concluidoEm" | "prazo">): boolean | null {
+export function entregueNoPrazo(item: Pick<ItemLeve, "concluidoEm" | "prazo">): boolean | null {
   if (!item.concluidoEm || !item.prazo) return null;
   return diaEmSaoPaulo(item.concluidoEm) <= diaEmSaoPaulo(item.prazo);
 }
@@ -53,7 +53,7 @@ export type HoraApontada = { userId: string; setor: string; minutos: number; ori
  * Item com mais de um responsável conta para cada um (todos responderam).
  */
 export function produtividadePorPessoa(
-  itens: readonly { item: ItemDeTrabalho; c: Classificacao }[],
+  itens: readonly { item: ItemLeve; c: Classificacao }[],
   horas: readonly HoraApontada[],
   periodo: { de: Date; ate: Date },
 ): ProdutividadeDaPessoa[] {
