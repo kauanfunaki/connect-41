@@ -28,8 +28,8 @@ import { getSectorMaps, getActiveSectors } from "@/lib/sectors";
 import { padraoDoSetor, type TaskWidgetKey } from "@/lib/taskWidgets";
 import { agendaDosSetores, agendaResolvida } from "@/lib/agendaDoSetorServidor";
 import { AGENDA_DO_SETOR_PADRAO } from "@/lib/agendaDoSetor";
-import { itensDaGestao } from "@/lib/gestao/itens";
-import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa, type Origem } from "@/lib/gestao/regras";
+import { chaveDoItem, comTitulos, itensDaGestao, type ItemClassificado } from "@/lib/gestao/itens";
+import { cargaPorPessoa, recorteDaGestao, type CargaDaPessoa, type ItemDeTrabalho, type Origem } from "@/lib/gestao/regras";
 import { LinhasDeSituacao, type LinhaDeSituacao, type Segmento } from "@/components/shared/Graficos";
 import { nomesDasPessoas } from "@/lib/gestao/telas";
 import { andando, paraComecar, pedeAgora, resumirDia } from "@/lib/meuDia";
@@ -90,13 +90,17 @@ const CHAVE_DA_ORIGEM: Record<Origem, TaskWidgetKey> = {
 // src/lib/meuDia/configuracao.ts): desde 10/11/2026 (pedido do Kauan) cada
 // origem das listas e cada bloco ao lado desliga, e o setor que não usa
 // reuniões nasce sem "Próximas reuniões". Bloco desligado nem é buscado.
-type ItemDoDia = Awaited<ReturnType<typeof itensDaGestao>>[number];
+type ItemDoDia = ItemClassificado<ItemDeTrabalho>;
 
-/** Um bloco do Meu dia: título, contagem e os itens (até POR_BLOCO). */
+/**
+ * Um bloco do Meu dia: título, contagem e os itens. `lista` são só os que
+ * aparecem (até POR_BLOCO, já com título); `total` é o tamanho do bloco.
+ */
 function Bloco({
   titulo,
   icone,
   lista,
+  total,
   vazio,
   visaoTime,
   setores,
@@ -105,12 +109,13 @@ function Bloco({
   titulo: string;
   icone: React.ReactNode;
   lista: ItemDoDia[];
+  total: number;
   vazio: string;
   visaoTime: boolean;
   setores: Record<string, { rotulo: string; cor: string }>;
   nomeDe: Map<string, string>;
 }) {
-  const resto = lista.length - POR_BLOCO;
+  const resto = total - lista.length;
   return (
     <section className="bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border">
@@ -119,13 +124,13 @@ function Bloco({
           {titulo}
         </h2>
         {/* No `Contador` (15/10/2026): era o número solto. */}
-        <Contador valor={lista.length} teto={Number.MAX_SAFE_INTEGER} />
+        <Contador valor={total} teto={Number.MAX_SAFE_INTEGER} />
       </header>
-      {lista.length === 0 ? (
+      {total === 0 ? (
         <p className="px-4 py-5 text-body text-fg-muted">{vazio}</p>
       ) : (
         <ul className="divide-y divide-border">
-          {lista.slice(0, POR_BLOCO).map((x) => (
+          {lista.map((x) => (
             <LinhaDoDia
               key={`${x.item.origem}-${x.item.id}`}
               item={x.item}
@@ -284,6 +289,13 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
   const agoraLista = pedeAgora(itens);
   const andandoLista = andando(itens);
   const filaLista = paraComecar(itens);
+  // Título só dos que os blocos mostram (melhoria-662); o resto entra na conta.
+  const titulados = new Map(
+    (await comTitulos(ctx.tenantId, [agoraLista, andandoLista, filaLista].flatMap((l) => l.slice(0, POR_BLOCO)))).map(
+      (x) => [chaveDoItem(x.item.origem, x.item.id), x] as const
+    )
+  );
+  const naTela = (l: typeof itens) => ({ lista: l.slice(0, POR_BLOCO).map((x) => titulados.get(chaveDoItem(x.item.origem, x.item.id))!), total: l.length });
 
   const carga = visaoTime
     ? Array.from(cargaPorPessoa(itens).values()).sort((a, b) => b.vencidos - a.vencidos || b.abertos - a.abertos)
@@ -387,15 +399,15 @@ export default async function MeuDiaPage({ searchParams }: { searchParams: Promi
             {...contexto}
             titulo={visaoTime ? "Pede o time agora" : "Pede você agora"}
             icone={<AlarmClock />}
-            lista={agoraLista}
+            {...naTela(agoraLista)}
             vazio={visaoTime ? "Nada atrasado nem parado no time." : "Nada atrasado nem parado. Bom trabalho."}
           />
-          <Bloco {...contexto} titulo="Em andamento" icone={<Loader />} lista={andandoLista} vazio="Nada em andamento sem alerta." />
+          <Bloco {...contexto} titulo="Em andamento" icone={<Loader />} {...naTela(andandoLista)} vazio="Nada em andamento sem alerta." />
           <Bloco
             {...contexto}
             titulo="Para começar"
             icone={<PlayCircle />}
-            lista={filaLista}
+            {...naTela(filaLista)}
             vazio={visaoTime ? "Nada na fila do time." : "Nada na sua fila."}
           />
         </div>

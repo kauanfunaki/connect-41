@@ -10,7 +10,7 @@ import { ItemDaGestao, SelosDoItem, ORIGEM } from "@/components/gestao/ItemDaGes
 import { getPrisma } from "@/lib/prisma";
 import { setorDoModulo } from "@/lib/modules";
 import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
-import { itensDaGestao } from "@/lib/gestao/itens";
+import { chaveDoItem, comTitulos, itensDaGestao } from "@/lib/gestao/itens";
 import { ordemDeAtencao, precisaDeAtencao, podeVerSetor, type Coluna } from "@/lib/gestao/regras";
 import { inicioDoMes, nomesDasPessoas, pessoasPorSetor } from "@/lib/gestao/telas";
 import { reatribuirItem } from "./actions";
@@ -38,11 +38,20 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
   for (const x of itens) porColuna.get(x.c.coluna)!.push(x);
   const semResponsavel = itens.filter((x) => x.c.coluna !== "CONCLUIDO" && x.item.responsaveis.length === 0).length;
   const atencao = itens.filter((x) => precisaDeAtencao(x.c)).sort(ordemDeAtencao);
+  const ordenarColuna = (a: (typeof itens)[number], b: (typeof itens)[number]) =>
+    ordemDeAtencao(a, b) || b.item.ultimaMovimentacao.getTime() - a.item.ultimaMovimentacao.getTime();
+  const colunas = COLUNAS.map((col) => ({ col, lista: porColuna.get(col.key)!.sort(ordenarColuna) }));
 
-  const [nomeDe, pessoas] = await Promise.all([
-    nomesDasPessoas(ctx.tenantId, itens.flatMap((x) => x.item.responsaveis)),
+  // Título e nome só do que aparece: os 12 de atenção e os primeiros de cada
+  // coluna (melhoria-662) — o resto é número.
+  const visiveis = [...atencao.slice(0, 12), ...colunas.flatMap((x) => x.lista.slice(0, POR_COLUNA))];
+  const [titulados, nomeDe, pessoas] = await Promise.all([
+    comTitulos(ctx.tenantId, visiveis),
+    nomesDasPessoas(ctx.tenantId, visiveis.flatMap((x) => x.item.responsaveis)),
     pessoasPorSetor(ctx, atencao.slice(0, 12)),
   ]);
+  const porChave = new Map(titulados.map((x) => [chaveDoItem(x.item.origem, x.item.id), x]));
+  const comTitulo = (x: (typeof itens)[number]) => porChave.get(chaveDoItem(x.item.origem, x.item.id))!;
 
   // Custos operacionais: as taxas de órgão do Societário no mês — o dinheiro
   // que o escritório adianta para os processos.
@@ -55,9 +64,6 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
         getPrisma().processFee.aggregate({ where: { tenantId: ctx.tenantId, paidAt: { gte: inicio } }, _sum: { amountCents: true }, _count: true }),
       ])
     : [null, null];
-
-  const ordenarColuna = (a: (typeof itens)[number], b: (typeof itens)[number]) =>
-    ordemDeAtencao(a, b) || b.item.ultimaMovimentacao.getTime() - a.item.ultimaMovimentacao.getTime();
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,7 +110,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
           </Card>
         ) : (
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
-            {atencao.slice(0, 12).map((x) => (
+            {atencao.slice(0, 12).map(comTitulo).map((x) => (
               <ItemDaGestao
                 key={`${x.item.origem}:${x.item.id}`}
                 item={x.item}
@@ -124,8 +130,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
           O ciclo do trabalho
         </h2>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {COLUNAS.map((col) => {
-            const lista = porColuna.get(col.key)!.sort(ordenarColuna);
+          {colunas.map(({ col, lista }) => {
             return (
               <Card key={col.key} className="p-4 flex flex-col gap-2 min-w-0">
                 <p className="text-card-title font-semibold text-fg">
@@ -135,7 +140,7 @@ export default async function PainelDeGestaoPage({ searchParams }: { searchParam
                   <p className="text-fs-2 text-fg-muted">{col.vazio}</p>
                 ) : (
                   <ul className="flex flex-col gap-2">
-                    {lista.slice(0, POR_COLUNA).map((x) => (
+                    {lista.slice(0, POR_COLUNA).map(comTitulo).map((x) => (
                       <li key={`${x.item.origem}:${x.item.id}`} className="flex flex-col gap-0.5 min-w-0">
                         <Link href={x.item.href} className="text-fs-2 text-fg hover:underline break-words">
                           {x.item.titulo}

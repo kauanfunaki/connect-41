@@ -19,7 +19,7 @@ import { saoPauloParts } from "../../src/lib/agenda";
 import { centavosDeDecimal, dreDoMes } from "../../src/lib/dre/data";
 import { rankearCandidatos, sugestaoDaTransacao } from "../../src/lib/financeiro/conciliacao/casamento";
 import { saldosDasContas } from "../../src/lib/financeiro/conciliacao/saldoDasContas";
-import { itensDaGestao } from "../../src/lib/gestao/itens";
+import { comTitulos, itensDaGestao } from "../../src/lib/gestao/itens";
 import { cargaPorPessoa } from "../../src/lib/gestao/regras";
 import { nomesDasPessoas } from "../../src/lib/gestao/telas";
 import { runAlertEngine } from "../../src/lib/alerts";
@@ -99,7 +99,7 @@ async function main() {
 
   // ── Meu dia ───────────────────────────────────────────────────────────────
   const meus = await itensDaGestao(t, "todos", new Date(), { responsavel: eu.id });
-  const daDemo = meus.filter((i) => i.item.empresaId && empresas.some((e) => e.id === i.item.empresaId));
+  const daDemo = await comTitulos(t, meus.filter((i) => i.item.empresaId && empresas.some((e) => e.id === i.item.empresaId)));
   console.log(`\nMeu dia de quem apresenta: ${daDemo.length} itens da demonstração`);
   for (const i of daDemo) console.log(`  [${i.item.origem}] ${i.item.titulo} — ${i.c.coluna}${i.c.prazo ? ` (${i.c.prazo.situacao} ${i.c.prazo.dias})` : ""}`);
   conferir(daDemo.some((i) => i.item.origem === "CARD" && i.c.prazo?.situacao === "VENCIDO"), "um card vencido no Meu dia");

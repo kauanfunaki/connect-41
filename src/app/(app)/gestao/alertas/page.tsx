@@ -3,32 +3,48 @@ import { BellOff } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CartoesNoCelular, TabelaNoDesktop } from "@/components/shared/ListaResponsiva";
+import { Pagination } from "@/components/shared/Pagination";
 import { FiltroDeSetor } from "@/components/gestao/FiltroDeSetor";
 import { ItemDaGestao } from "@/components/gestao/ItemDaGestao";
 import { LimitesDoSetor } from "@/components/gestao/LimitesDoSetor";
 import { getPrisma } from "@/lib/prisma";
 import { canManageSector, isFullWrite } from "@/lib/auth/context";
 import { contextoDaGestao, recorteComFiltro } from "@/lib/gestao/acesso";
-import { itensDaGestao } from "@/lib/gestao/itens";
+import { comTitulos, itensDaGestao } from "@/lib/gestao/itens";
 import { LIMITES_PADRAO, ordemDeAtencao, precisaDeAtencao } from "@/lib/gestao/regras";
 import { nomesDasPessoas, pessoasPorSetor } from "@/lib/gestao/telas";
 import { reatribuirItem, salvarLimites } from "../actions";
 
 export const dynamic = "force-dynamic";
 
+/** Alertas por página (melhoria-662): eram todos de uma vez, cada um com o seu "trocar responsável". */
+const POR_PAGINA = 50;
+
 // Os alertas da Gestão: tudo o que está parado ou com prazo vencendo, e os
 // limites de cada setor. Os avisos no sino saem do motor de alertas (uma vez
 // por parada), com esta mesma regra.
-export default async function AlertasDaGestaoPage({ searchParams }: { searchParams: Promise<{ setor?: string }> }) {
+export default async function AlertasDaGestaoPage({ searchParams }: { searchParams: Promise<{ setor?: string; pagina?: string }> }) {
   const g = await contextoDaGestao();
   if (!g) notFound();
   const { ctx } = g;
-  const { recorte, setor } = recorteComFiltro(g.recorte, g.setores, (await searchParams).setor);
+  const params = await searchParams;
+  const { recorte, setor } = recorteComFiltro(g.recorte, g.setores, params.setor);
   const itens = await itensDaGestao(ctx.tenantId, recorte);
   const atencao = itens.filter((x) => precisaDeAtencao(x.c)).sort(ordemDeAtencao);
-  const [nomeDe, pessoas, configs] = await Promise.all([
-    nomesDasPessoas(ctx.tenantId, atencao.flatMap((x) => x.item.responsaveis)),
-    pessoasPorSetor(ctx, atencao),
+  // A página pedida, dentro do que existe: um alerta resolvido pode encolher a lista.
+  const totalDePaginas = Math.max(1, Math.ceil(atencao.length / POR_PAGINA));
+  const pagina = Math.min(Math.max(1, Number.parseInt(params.pagina ?? "1", 10) || 1), totalDePaginas);
+  const daPagina = atencao.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+  const hrefDaPagina = (p: number) => {
+    const q = new URLSearchParams();
+    if (setor) q.set("setor", setor);
+    if (p > 1) q.set("pagina", String(p));
+    return q.size ? `/gestao/alertas?${q}` : "/gestao/alertas";
+  };
+  const [linhas, nomeDe, pessoas, configs] = await Promise.all([
+    comTitulos(ctx.tenantId, daPagina),
+    nomesDasPessoas(ctx.tenantId, daPagina.flatMap((x) => x.item.responsaveis)),
+    pessoasPorSetor(ctx, daPagina),
     getPrisma().sector.findMany({
       where: { tenantId: ctx.tenantId, code: { in: g.setores.map((s) => s.value) } },
       select: { code: true, alertStalledDays: true, alertDueSoonDays: true },
@@ -50,19 +66,22 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
             <EmptyState icon={<BellOff />} title="Nenhum alerta" description="Nada passou do limite de parado nem está com prazo vencendo." />
           </Card>
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
-            {atencao.map((x) => (
-              <ItemDaGestao
-                key={`${x.item.origem}:${x.item.id}`}
-                item={x.item}
-                c={x.c}
-                rotuloDoSetor={g.rotuloDoSetor(x.item.setor)}
-                nomeDe={nomeDe}
-                pessoasDoSetor={pessoas.get(x.item.setor)}
-                reatribuir={reatribuirItem}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
+              {linhas.map((x) => (
+                <ItemDaGestao
+                  key={`${x.item.origem}:${x.item.id}`}
+                  item={x.item}
+                  c={x.c}
+                  rotuloDoSetor={g.rotuloDoSetor(x.item.setor)}
+                  nomeDe={nomeDe}
+                  pessoasDoSetor={pessoas.get(x.item.setor)}
+                  reatribuir={reatribuirItem}
+                />
+              ))}
+            </ul>
+            <Pagination page={pagina} totalPages={totalDePaginas} total={atencao.length} rotulo="alertas" buildHref={hrefDaPagina} />
+          </>
         )}
       </section>
 

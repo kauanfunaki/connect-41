@@ -27,10 +27,16 @@ export type Estado = "NAO_INICIADO" | "ANDAMENTO" | "ESPERANDO_ORGAO" | "ESPERAN
 
 export type Coluna = "INICIADO" | "ANDAMENTO" | "PARADO" | "CONCLUIDO";
 
-export type ItemDeTrabalho = {
+/**
+ * O item como a régua o vê (13/11/2026, melhoria-662): tudo o que
+ * `classificar`, a carga e as contas usam, sem o título. O título pede a
+ * empresa, o tipo do processo, o nome do quadro — era o que pesava a cada
+ * abertura — e só se busca para o que aparece na tela (`comTitulos`, em
+ * `itens.ts`).
+ */
+export type ItemLeve = {
   origem: Origem;
   id: string;
-  titulo: string;
   /** Código do setor que responde pelo item. */
   setor: string;
   /** Quem responde — vazio quando ninguém foi designado. */
@@ -43,6 +49,9 @@ export type ItemDeTrabalho = {
   /** A empresa do item, quando há (card de empresa, pendência, solicitação, processo) — os alertas deixam de fora as de demonstração. */
   empresaId?: string | null;
 };
+
+/** O item com o título — o que uma linha da tela mostra. */
+export type ItemDeTrabalho = ItemLeve & { titulo: string };
 
 export type Limites = { diasParado: number; diasAvisoPrazo: number };
 
@@ -62,7 +71,7 @@ export type Classificacao = {
   prazo: { situacao: "VENCIDO" | "VENCENDO"; dias: number } | null;
 };
 
-export function classificar(item: ItemDeTrabalho, limites: Limites, agora: Date): Classificacao {
+export function classificar(item: Pick<ItemLeve, "estado" | "ultimaMovimentacao" | "prazo">, limites: Limites, agora: Date): Classificacao {
   if (item.estado === "CONCLUIDO") return { coluna: "CONCLUIDO", parado: null, paradoDeProposito: false, prazo: null };
 
   const deProposito = item.estado === "ESPERANDO_CLIENTE" || item.estado === "PAUSADO";
@@ -123,11 +132,11 @@ export type CargaDaPessoa = {
   parados: number;
   vencidos: number;
   vencendo: number;
-  itens: { item: ItemDeTrabalho; c: Classificacao }[];
+  itens: { item: ItemLeve; c: Classificacao }[];
 };
 
 /** A carga de cada pessoa sobre os itens em aberto. Item com dois responsáveis conta para os dois. */
-export function cargaPorPessoa(itens: { item: ItemDeTrabalho; c: Classificacao }[]): Map<string, CargaDaPessoa> {
+export function cargaPorPessoa(itens: readonly { item: ItemLeve; c: Classificacao }[]): Map<string, CargaDaPessoa> {
   const mapa = new Map<string, CargaDaPessoa>();
   for (const x of itens) {
     if (x.c.coluna === "CONCLUIDO") continue;
