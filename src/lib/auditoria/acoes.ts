@@ -436,6 +436,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.comparativo_importado": o("importou os valores da Domínio para comparar no DP 2"),
   "folha.vinculo_salvo": e("salvou o contrato do colaborador no DP 2"),
   "folha.colaboradores_importados": c("importou colaboradores e contratos do eSocial no DP 2"),
+  "folha.busca_esocial_concluida": o("concluiu a busca de colaboradores no eSocial por CPF no DP 2"),
   "folha.empresa_configurada": e("configurou a empresa no DP 2"),
   "folha.tabela_salva": e("gravou uma tabela oficial no DP 2"),
   "folha.rubrica_salva": e("salvou a rubrica do DP 2"),
