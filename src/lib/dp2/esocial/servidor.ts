@@ -105,7 +105,7 @@ export async function gerarTabelas(tenantId: string, companyId: string, iniValid
   return { ok: true as const, ...(await guardar(tenantId, companyId, null, userId, eventos)) };
 }
 
-function rubricaEsocial(r: {
+export function rubricaEsocial(r: {
   codigo: string;
   nome: string;
   tipo: string;
@@ -133,14 +133,25 @@ function rubricaEsocial(r: {
   };
 }
 
-/** Os periódicos da competência mensal fechada: S-1200 e S-1210 de cada pessoa e o S-1299. */
+/**
+ * Os periódicos da competência fechada: S-1200 e S-1210 de cada pessoa e o
+ * S-1299. Na 2ª parcela do 13º, a apuração é anual (perApur "AAAA"): o S-1200
+ * leva o 13º do ano, o adiantamento e os descontos; o S-1210 é o pagamento de
+ * dezembro.
+ */
 export async function gerarPeriodicos(tenantId: string, competenciaId: string, dtPgto: string | null, userId: string) {
   const prisma = getPrisma();
   const comp = await prisma.dp2Competencia.findFirst({ where: { id: competenciaId, tenantId } });
   if (!comp) return { ok: false as const, erro: "Competência não encontrada." };
   if (comp.situacao !== "FECHADA") return { ok: false as const, erro: "Feche a competência antes de gerar os eventos do eSocial." };
-  if (comp.tipo !== "MENSAL") return { ok: false as const, erro: "Por enquanto o eSocial do DP 2 gera os periódicos da folha mensal; o 13º vem em seguida." };
-  const perApur = competenciaDe(comp.ano, comp.mes);
+  if (comp.tipo === "DECIMO_1") {
+    return { ok: false as const, erro: "A 1ª parcela do 13º entra no S-1200 anual: gere os eventos na competência da 2ª parcela, depois de fechá-la." };
+  }
+  if (comp.tipo !== "MENSAL" && comp.tipo !== "DECIMO_2") return { ok: false as const, erro: "Este tipo de competência não gera periódicos do eSocial." };
+  const anual = comp.tipo === "DECIMO_2";
+  // No 13º, a apuração é do ano; o pagamento (S-1210), do mês em que se pagou.
+  const mesDoPagamento = competenciaDe(comp.ano, comp.mes);
+  const perApur = anual ? String(comp.ano) : mesDoPagamento;
   const empregador = await empregadorDaEmpresa(tenantId, comp.companyId, perApur);
   if (!empregador) return { ok: false as const, erro: "Empresa não encontrada." };
 
@@ -170,7 +181,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       nascimento: isoDoDia(c.person.birthDate),
     };
     eventos.push(eventoS1200(empregador, perApur, t, novoId));
-    eventos.push(eventoS1210(empregador, perApur, dtPgto, t, novoId));
+    eventos.push(eventoS1210(empregador, mesDoPagamento, dtPgto, t, novoId, perApur));
   }
   eventos.push(eventoS1299(empregador, perApur, calculos.length > 0, novoId));
   return { ok: true as const, ...(await guardar(tenantId, comp.companyId, competenciaId, userId, eventos)) };

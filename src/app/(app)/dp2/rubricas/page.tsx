@@ -15,6 +15,8 @@ import { listarRubricas } from "@/lib/dp2/servidor";
 import { NOME_DO_LANCAMENTO, NOME_DO_TIPO, type LancamentoDaRubrica, type TipoDaRubrica } from "@/lib/dp2/rubricas";
 import { contasDaFolha } from "@/lib/dp2/saidas";
 import { CAMPOS_DAS_CONTAS } from "@/lib/dp2/contabilizacao";
+import { LeitorDeRubricas } from "@/components/dp2/LeitorDeRubricas";
+import { rubricaEsocial } from "@/lib/dp2/esocial/servidor";
 import { salvarContasDaFolhaAction, salvarRubricaAction } from "../actions";
 
 const sim = (v: boolean) => (v ? "sim" : "—");
@@ -171,6 +173,9 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
           </FormularioDoDp2>
         </Secao>
       )}
+      <div className="mt-5">
+        <LeitorDeRubricas rubricas={rubricas.filter((r) => r.ativa).map((r) => ({ id: r.id, ...rubricaEsocial(r) }))} />
+      </div>
     </PageContainer>
   );
 }

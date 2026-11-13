@@ -66,9 +66,9 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
       take: 300,
     }),
     prisma.dp2Competencia.findMany({
-      where: { tenantId: tela.tenantId, companyId: tela.empresa.id, tipo: "MENSAL", situacao: "FECHADA" },
+      where: { tenantId: tela.tenantId, companyId: tela.empresa.id, tipo: { in: ["MENSAL", "DECIMO_2"] }, situacao: "FECHADA" },
       orderBy: [{ ano: "desc" }, { mes: "desc" }],
-      select: { id: true, ano: true, mes: true },
+      select: { id: true, ano: true, mes: true, tipo: true },
       take: 12,
     }),
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
@@ -127,10 +127,13 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
           )}
         </Secao>
 
-        <Secao titulo="Periódicos" apoio="Remuneração (S-1200) e pagamento (S-1210) de cada colaborador e o fechamento (S-1299), da folha mensal fechada.">
+        <Secao
+          titulo="Periódicos"
+          apoio="Remuneração (S-1200) e pagamento (S-1210) de cada colaborador e o fechamento (S-1299), da folha mensal fechada. O 13º sai da 2ª parcela fechada, na apuração anual (com a 1ª parcela dentro)."
+        >
           {fechadas.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">
-              Nenhuma folha mensal fechada.{" "}
+              Nenhuma folha mensal ou 2ª parcela do 13º fechada.{" "}
               <Link href="/dp2/competencia" className="text-brand hover:underline">
                 Feche a competência
               </Link>{" "}
@@ -144,7 +147,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                     <Select id="competenciaId" name="competenciaId" defaultValue={fechadas[0].id}>
                       {fechadas.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {nomeDaCompetencia(c.ano, c.mes)}
+                          {c.tipo === "DECIMO_2" ? `13º de ${c.ano} (anual)` : nomeDaCompetencia(c.ano, c.mes)}
                         </option>
                       ))}
                     </Select>
