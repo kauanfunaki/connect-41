@@ -49,7 +49,10 @@ function filtroDaPessoa(c: Contexto, e: Awaited<ReturnType<typeof escopo>>): Pri
   if (e.triagem || e.veTudo) return { tenantId, ...recentes };
   return {
     tenantId,
-    AND: [recentes, { OR: [{ assignedToId: c.ctx.userId }, ...(e.meus.length ? [{ sectorCode: { in: e.meus } }] : [])] }],
+    AND: [
+      recentes,
+      { OR: [{ assignedToId: c.ctx.userId }, { transferidaParaId: c.ctx.userId }, ...(e.meus.length ? [{ sectorCode: { in: e.meus } }] : [])] },
+    ],
   };
 }
 
@@ -63,6 +66,10 @@ export type CartaoDaLista = CartaoParaRecorte & {
   quando: string | null;
   previa: string;
   esperandoResposta: boolean;
+  /** Transferida para quem está vendo, esperando que assuma: o cartão fica em destaque. */
+  transferidaParaMim: boolean;
+  /** O nome de quem recebeu a transferência e ainda não assumiu. */
+  transferidaPara: string | null;
   /** Mensagens do cliente desde a última resposta da equipe (o número da bolinha). */
   semResposta: number;
 };
@@ -92,6 +99,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
       situacao: true,
       sectorCode: true,
       assignedToId: true,
+      transferidaParaId: true,
       conversa: {
         select: {
           id: true,
@@ -114,7 +122,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
         })
       : [],
     prisma.user.findMany({
-      where: { tenantId: c.ctx.tenantId, id: { in: [...new Set(ciclos.map((x) => x.assignedToId).filter((x): x is string => !!x))] } },
+      where: { tenantId: c.ctx.tenantId, id: { in: [...new Set(ciclos.flatMap((x) => [x.assignedToId, x.transferidaParaId]).filter((x): x is string => !!x))] } },
       select: { id: true, name: true },
     }),
     nomesDosContatos(c.ctx.tenantId, ciclos.map((x) => x.conversa.contato)),
@@ -135,6 +143,9 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
       sectorCode: x.sectorCode,
       assignedToId: x.assignedToId,
       pedidoPendente: x.pedidos.length > 0,
+      transferidaParaId: x.transferidaParaId,
+      transferidaParaMim: !!x.transferidaParaId && x.transferidaParaId === c.ctx.userId,
+      transferidaPara: x.transferidaParaId ? (nomePor.get(x.transferidaParaId) ?? null) : null,
       setor: x.sectorCode ? { code: x.sectorCode, label: sectorLabel(e.maps.labels, x.sectorCode), cor: e.maps.colors[x.sectorCode] ?? "#586577" } : null,
       responsavel: x.assignedToId ? (nomePor.get(x.assignedToId) ?? null) : null,
       quando: x.conversa.lastMessageAt?.toISOString() ?? null,
@@ -211,6 +222,8 @@ export async function contarParaMenu(c: Contexto): Promise<number> {
   const filtros: Prisma.AtendimentoCicloWhereInput[] = [];
   if (e.triagem) filtros.push({ situacao: "TRIAGEM" }, { situacao: { not: "ENCERRADO" }, pedidos: { some: { status: "PENDENTE" } } });
   if (e.meus.length > 0) filtros.push({ situacao: "NO_SETOR", sectorCode: { in: e.meus } });
+  // Transferida para a pessoa e ainda não assumida (12/11/2026).
+  filtros.push({ transferidaParaId: c.ctx.userId, situacao: { not: "ENCERRADO" } });
   if (filtros.length === 0) return 0;
   return prisma.atendimentoCiclo.count({ where: { tenantId, OR: filtros } });
 }
@@ -266,6 +279,7 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
     if (mv.paraUserId) idsDeGente.add(mv.paraUserId);
   }
   if (ciclo.assignedToId) idsDeGente.add(ciclo.assignedToId);
+  if (ciclo.transferidaParaId) idsDeGente.add(ciclo.transferidaParaId);
   for (const p of ciclo.pedidos) idsDeGente.add(p.pedidoPorId);
   const gente = await prisma.user.findMany({ where: { tenantId, id: { in: [...idsDeGente] } }, select: { id: true, name: true } });
   const nomeDaPessoa = new Map(gente.map((u) => [u.id, u.name]));
@@ -289,6 +303,9 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       situacao: ciclo.situacao as Situacao,
       setor: ciclo.sectorCode ? { code: ciclo.sectorCode, label: rotulo(ciclo.sectorCode)!, cor: e.maps.colors[ciclo.sectorCode] ?? "#586577" } : null,
       responsavel: ciclo.assignedToId ? { id: ciclo.assignedToId, nome: nomeDaPessoa.get(ciclo.assignedToId) ?? "Alguém da equipe" } : null,
+      transferidaPara: ciclo.transferidaParaId
+        ? { id: ciclo.transferidaParaId, nome: nomeDaPessoa.get(ciclo.transferidaParaId) ?? "Alguém da equipe", paraMim: ciclo.transferidaParaId === c.ctx.userId }
+        : null,
       abertoEm: ciclo.abertoEm.toISOString(),
     },
     contato: {

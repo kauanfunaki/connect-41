@@ -16,6 +16,8 @@ import {
 import { accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 import { ehHostDoSite } from "@/lib/site/host";
+import { PAGINA_DE_MANUTENCAO, passaPelaManutencao, telaParaConferir } from "@/lib/manutencao/regras";
+import { ESPERA_MS, ROTA_DAS_TELAS_EM_MANUTENCAO, telasEmManutencaoNoProxy } from "@/lib/manutencao/noProxy";
 import {
   PAGINA_NAO_ENCONTRADA,
   configDeCarreiras,
@@ -154,7 +156,7 @@ function loginRedirect(req: NextRequest): NextResponse {
   return NextResponse.redirect(url);
 }
 
-function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req: NextRequest): void {
+function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req: NextRequest): { tenantId: string; sectors: string[] } {
   // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
   // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
   // Isso evita depender de acesso a banco aqui no proxy. A regra, com os
@@ -176,6 +178,48 @@ function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req
     req.cookies.get(COOKIE_SETOR_ATIVO)?.value ?? null,
   );
   if (hint) headers.set(HEADER_SETOR_ATIVO, hint);
+  return efetiva;
+}
+
+// ── Telas em manutenção (13/11/2026) ─────────────────────────────────────────
+//
+// Uma tela de setor em manutenção abre o aviso no lugar dela, no mesmo
+// endereço — inclusive pela navegação do menu, que não recarrega o layout.
+// Por isso a regra mora aqui, e não em cada página. Quem conserta (Tech e
+// administrador) passa e vê a tela. A lista vem da rota
+// `/api/manutencao/telas`, guardada por alguns segundos (src/lib/manutencao/noProxy.ts):
+// o proxy continua sem ir ao banco. Qualquer falha deixa a tela abrir.
+async function buscarTelasEmManutencao(req: NextRequest, accessToken: string): Promise<ReadonlySet<string>> {
+  const cookies = [`access_token=${accessToken}`];
+  const escritorio = req.cookies.get("active_tenant_id")?.value;
+  if (escritorio) cookies.push(`active_tenant_id=${escritorio}`);
+  const res = await fetch(new URL(ROTA_DAS_TELAS_EM_MANUTENCAO, req.url), {
+    headers: { cookie: cookies.join("; ") },
+    signal: AbortSignal.timeout(ESPERA_MS),
+  });
+  if (!res.ok) throw new Error(`a rota respondeu ${res.status}`);
+  const { codigos } = (await res.json()) as { codigos?: unknown };
+  return new Set(Array.isArray(codigos) ? codigos.filter((c): c is string => typeof c === "string") : []);
+}
+
+/** Segue para a tela pedida — ou para o aviso, se ela estiver em manutenção para quem pede. */
+async function seguirParaATela(
+  req: NextRequest,
+  headers: Headers,
+  payload: AccessTokenPayload,
+  accessToken: string,
+): Promise<NextResponse> {
+  const efetiva = applyIdentityHeaders(headers, payload, req);
+  const tela = telaParaConferir(req.method, req.nextUrl.pathname);
+  if (!tela || passaPelaManutencao({ role: payload.role, sectors: efetiva.sectors })) {
+    return NextResponse.next({ request: { headers } });
+  }
+  const emManutencao = await telasEmManutencaoNoProxy(efetiva.tenantId, () => buscarTelasEmManutencao(req, accessToken));
+  if (!emManutencao.has(tela)) return NextResponse.next({ request: { headers } });
+  const destino = req.nextUrl.clone();
+  destino.pathname = PAGINA_DE_MANUTENCAO;
+  destino.searchParams.set("tela", tela);
+  return NextResponse.rewrite(destino, { request: { headers } });
 }
 
 // Renova o access token via /api/auth/refresh quando ele já expirou mas o
@@ -343,35 +387,32 @@ export async function proxy(req: NextRequest) {
     return loginRedirect(req);
   }
 
-  try {
-    const payload = await verifyAccessEdge(token);
-    applyIdentityHeaders(headers, payload, req);
-    return NextResponse.next({ request: { headers } });
-  } catch {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
-    }
+  // A conferência do token fica sozinha no try: a manutenção (que pergunta à
+  // rota) nunca pode cair no caminho de "token inválido" e mandar ao login.
+  const payload = await verifyAccessEdge(token).catch(() => null);
+  if (payload) return seguirParaATela(req, headers, payload, token);
 
-    const refreshed = await tryRefresh(req);
-    if (refreshed) {
-      try {
-        const payload = await verifyAccessEdge(refreshed.accessToken);
-        applyIdentityHeaders(headers, payload, req);
-        const res = NextResponse.next({ request: { headers } });
-        for (const cookie of refreshed.setCookies) res.headers.append("set-cookie", cookie);
-        return res;
-      } catch {
-        // Token recém-emitido não deveria falhar aqui — mas se falhar, cai
-        // no redirect de login normal abaixo em vez de propagar o erro.
-      }
-    }
-
-    const res = loginRedirect(req);
-    // Apaga com o mesmo domínio com que foi gravado: `delete` sem `domain`
-    // não alcança o cookie de `.useconnect.com.br` (05/10/2026).
-    res.cookies.set("access_token", "", accessCookieOptions(0));
-    return res;
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
   }
+
+  const refreshed = await tryRefresh(req);
+  if (refreshed) {
+    // Token recém-emitido não deveria falhar aqui — mas se falhar, cai no
+    // redirect de login normal abaixo em vez de propagar o erro.
+    const renovado = await verifyAccessEdge(refreshed.accessToken).catch(() => null);
+    if (renovado) {
+      const res = await seguirParaATela(req, headers, renovado, refreshed.accessToken);
+      for (const cookie of refreshed.setCookies) res.headers.append("set-cookie", cookie);
+      return res;
+    }
+  }
+
+  const res = loginRedirect(req);
+  // Apaga com o mesmo domínio com que foi gravado: `delete` sem `domain`
+  // não alcança o cookie de `.useconnect.com.br` (05/10/2026).
+  res.cookies.set("access_token", "", accessCookieOptions(0));
+  return res;
 }
 
 export const config = {

@@ -246,6 +246,8 @@ export type CartaoParaRecorte = {
   sectorCode: string | null;
   assignedToId: string | null;
   pedidoPendente: boolean;
+  /** Transferida para alguém que ainda não assumiu. */
+  transferidaParaId?: string | null;
 };
 
 /** O cartão entra neste recorte? É o mesmo corte do servidor, feito no navegador. */
@@ -266,7 +268,8 @@ export function noRecorte(
     case "todas":
       return aberto;
     case "minhas":
-      return aberto && minha;
+      // A transferida para a pessoa, esperando ela assumir, também é dela.
+      return aberto && (minha || (!!c.transferidaParaId && c.transferidaParaId === quem.userId));
     case "sem_responsavel":
       return c.situacao === "NO_SETOR" && meuSetor;
     case "aguardando":
@@ -325,11 +328,46 @@ export function estaEmQuemVeTudo(lista: readonly QuemVeTudo[], userId: string, s
  * conversa. Sem responsável, o setor dela; na triagem sem responsável, ninguém
  * (a triagem já foi avisada quando a conversa chegou).
  */
-export function quemAvisarNaResposta(c: { situacao: Situacao; sectorCode: string | null; assignedToId: string | null }):
+export function quemAvisarNaResposta(c: { situacao: Situacao; sectorCode: string | null; assignedToId: string | null; transferidaParaId?: string | null }):
   | { pessoa: string }
   | { setor: string }
   | null {
   if (c.assignedToId) return { pessoa: c.assignedToId };
+  // Transferida e ainda não assumida: quem recebeu a transferência.
+  if (c.transferidaParaId) return { pessoa: c.transferidaParaId };
   if (c.situacao === "TRIAGEM" || !c.sectorCode) return null;
   return { setor: c.sectorCode };
+}
+
+/**
+ * A situação depois de transferir para uma pessoa, que ainda vai assumir: na
+ * triagem continua na triagem; em atendimento volta a esperar alguém do setor;
+ * aguardando o cliente continua aguardando.
+ */
+export function situacaoAoTransferir(s: Situacao): Situacao {
+  return s === "EM_ATENDIMENTO" ? "NO_SETOR" : s;
+}
+
+// ─── A nota do cliente (12/11/2026) ─────────────────────────────────────────
+
+/** A pergunta que sai ao encerrar, quando quem encerra deixa marcado. */
+export const PERGUNTA_DA_NOTA = "De 1 a 5, como você avalia este atendimento? Responda só com o número (5 é ótimo).";
+
+/** Por quantas horas depois de encerrar a resposta ainda vale como nota. */
+export const HORAS_PARA_A_NOTA = 72;
+
+/**
+ * A resposta é a nota? Só o número de 1 a 5, com no máximo uma palavra como
+ * "estrelas" ou pontuação — "5", "5!", "4 estrelas", "nota 3". Qualquer outra
+ * coisa é conversa nova e segue o caminho de sempre.
+ */
+export function notaDaResposta(texto: string): number | null {
+  const t = texto.trim().toLowerCase().replace(/[.!]+$/, "").trim();
+  const m = /^(?:nota\s*)?([1-5])(?:\s*(?:estrelas?|⭐+))?$/.exec(t);
+  return m ? Number(m[1]) : null;
+}
+
+/** O último atendimento espera a nota e a resposta chegou a tempo? */
+export function esperaNota(c: { situacao: Situacao; notaPedidaEm: Date | null; nota: number | null }, agora: Date): boolean {
+  return c.situacao === "ENCERRADO" && !!c.notaPedidaEm && c.nota === null && agora.getTime() - c.notaPedidaEm.getTime() <= HORAS_PARA_A_NOTA * 3600_000;
 }

@@ -1,7 +1,7 @@
 import { getAuthContext } from "@/lib/auth/context";
 import { exigirOrigem } from "@/lib/ops/http";
 import { ErroOps } from "@/lib/ops/servidor";
-import { cliqueSchema } from "@/lib/robo/assistencia";
+import { cliqueSchema } from "@/lib/robo/assistenciaEsquemas";
 import { cliqueDaPessoa, podeAssistir } from "@/lib/robo/assistenciaServidor";
 
 export const dynamic = "force-dynamic";

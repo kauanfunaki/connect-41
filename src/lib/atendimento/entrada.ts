@@ -16,13 +16,23 @@ import type { MensagemIgnorada, MensagemRecebida, ProvedorWhatsapp } from "@/lib
 import { configDoAtendimento } from "./contexto";
 import { cadastroPeloTelefone, lerConfiguracao, nomesDosContatos } from "./dados";
 import { avisarQuemVeTudo, avisarResposta, avisarTriagem } from "./avisos";
-import { ASSINATURA_AUTOMATICA, decidirChegada, mensagemDeChegada, previa, quemAvisarNaResposta, situacaoAoReabrir, type Situacao } from "./regras";
+import {
+  ASSINATURA_AUTOMATICA,
+  decidirChegada,
+  esperaNota,
+  mensagemDeChegada,
+  notaDaResposta,
+  previa,
+  quemAvisarNaResposta,
+  situacaoAoReabrir,
+  type Situacao,
+} from "./regras";
 import { enviarNoAtendimento, type ConexaoDoAtendimento } from "./transporte";
 import { arquivosDoAtendimento, rotuloDaMidia } from "./midia";
 
 export type ConexaoDoWebhook = { id: string; tenantId: string; integrationCode: string; enabled: boolean; configEnc: string };
 
-export type DesfechoDaEntrada = "repetida" | "modulo_desligado" | "parou" | "triagem" | "reaberta" | "continua";
+export type DesfechoDaEntrada = "repetida" | "modulo_desligado" | "parou" | "triagem" | "reaberta" | "continua" | "nota";
 
 /** O que chegou, já sem o envelope: texto ou mídia. */
 type Chegada = {
@@ -184,8 +194,18 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
   const ultimo = await prisma.atendimentoCiclo.findFirst({
     where: { conversaId: conversa.id },
     orderBy: { abertoEm: "desc" },
-    select: { id: true, situacao: true, sectorCode: true, assignedToId: true, encerradoEm: true },
+    select: { id: true, situacao: true, sectorCode: true, assignedToId: true, encerradoEm: true, notaPedidaEm: true, nota: true },
   });
+
+  // A nota do cliente (12/11/2026): a resposta que é só o número, logo depois
+  // de encerrar, fica no atendimento encerrado e não reabre a conversa.
+  const nota = !c.midiaTipo ? notaDaResposta(c.texto) : null;
+  if (ultimo && nota !== null && esperaNota({ ...ultimo, situacao: ultimo.situacao as Situacao }, agora)) {
+    await prisma.atendimentoMensagem.update({ where: { id: mensagemId }, data: { cicloId: ultimo.id } });
+    await prisma.atendimentoCiclo.update({ where: { id: ultimo.id }, data: { nota, notaEm: agora } });
+    return "nota";
+  }
+
   const decisao = decidirChegada(ultimo ? { ...ultimo, situacao: ultimo.situacao as Situacao } : null, agora, config.diasParaReabrir);
   const nome = (await nomesDosContatos(tenantId, [contato]))(contato).titulo;
 
@@ -194,7 +214,7 @@ async function processar(conexao: ConexaoDoWebhook, provedor: ProvedorWhatsapp, 
     const ciclo = await prisma.atendimentoCiclo.update({
       where: { id: decisao.cicloId },
       data: decisao.voltaDeAguardando ? { situacao: "EM_ATENDIMENTO" } : {},
-      select: { id: true, situacao: true, sectorCode: true, assignedToId: true },
+      select: { id: true, situacao: true, sectorCode: true, assignedToId: true, transferidaParaId: true },
     });
     await avisarResposta({ tenantId, cicloId: ciclo.id, para: quemAvisarNaResposta({ ...ciclo, situacao: ciclo.situacao as Situacao }), quem: nome, previa: previa(c.texto, 120) });
     return "continua";

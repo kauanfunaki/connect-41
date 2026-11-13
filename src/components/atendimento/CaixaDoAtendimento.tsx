@@ -139,6 +139,7 @@ function useAtualizacaoPeriodica() {
 }
 
 function seloDo(c: CartaoDaLista): { tom: TomDoSelo; texto: string } | null {
+  if (c.transferidaParaMim) return { tom: "marca", texto: "Passada para você" };
   if (c.pedidoPendente) return { tom: "atencao", texto: "Pedido" };
   if (c.tipoContato === "DESCONHECIDO") return { tom: "atencao", texto: "Contato novo" };
   if (c.tipoContato === "NOVO") return { tom: "marca", texto: "Ainda não é cliente" };
@@ -150,6 +151,7 @@ function contextoDo(c: CartaoDaLista): string {
   if (c.situacao === "TRIAGEM") partes.push("Na triagem");
   else if (c.setor) partes.push(c.setor.label);
   if (c.responsavel) partes.push(c.responsavel);
+  else if (c.transferidaPara) partes.push(c.transferidaParaMim ? "passada para você, assuma para responder" : `passada para ${c.transferidaPara}`);
   else if (c.situacao === "NO_SETOR") partes.push("sem responsável");
   if (c.situacao === "AGUARDANDO_CLIENTE" || c.situacao === "ENCERRADO") partes.push(ROTULO_DA_SITUACAO[c.situacao].toLowerCase());
   if (c.subtitulo) partes.unshift(c.subtitulo);
@@ -160,7 +162,8 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
   const v = useCaixaDoAtendimento();
   const [busca, setBusca] = useState("");
   const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
-  const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem));
+  // As passadas para a pessoa sobem para o topo, em destaque, até ela assumir.
+  const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem)).sort((a, b) => Number(b.transferidaParaMim) - Number(a.transferidaParaMim));
   const termo = busca.trim().toLowerCase();
   const visiveis = termo ? doRecorte.filter((c) => `${c.titulo} ${c.subtitulo ?? ""} ${c.previa}`.toLowerCase().includes(termo)) : doRecorte;
   const agora = new Date();
@@ -258,6 +261,7 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
               naoLidas={c.situacao !== "ENCERRADO" ? c.semResposta : 0}
               rotuloDasNaoLidas="esperando resposta"
               selecionada={c.cicloId === v.abertaId}
+              destaque={c.transferidaParaMim}
             />
           ))
         )}
