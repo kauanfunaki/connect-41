@@ -13,7 +13,7 @@ import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorUsers } from "@/lib/sectorUsers";
-import { listarFila, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
+import { listarFilaLeve, feriadosDoTenant, filtrarPelaBusca } from "@/lib/societario/fila";
 import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "@/lib/societario/prioridade";
 import { colunasDoKanban, DIAS_DE_CONCLUIDOS_RECENTES } from "@/lib/societario/prazos";
 import { listarConcluidosRecentes } from "@/lib/societario/painel-data";
@@ -64,7 +64,8 @@ export default async function KanbanDeProcessosPage({
 
   const agora = new Date();
   const [abertos, concluidos] = await Promise.all([
-    listarFila(ctx.tenantId, filtro, feriados, agora),
+    // O cartão não mostra as etapas liberadas: a leitura leve basta.
+    listarFilaLeve(ctx.tenantId, filtro, feriados, agora),
     listarConcluidosRecentes(ctx.tenantId, filtro, feriados, agora, DIAS_DE_CONCLUIDOS_RECENTES),
   ]);
   const noQuadro = filtrarPelaBusca([...abertos, ...concluidos], busca);

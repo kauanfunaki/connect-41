@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { ColunaDoQuadro } from "@/components/kanban/ColunaDoQuadro";
 import { formatInstantDate } from "@/lib/format";
-import type { LinhaDaFila } from "@/lib/societario/fila";
+import type { LinhaDaFilaLeve } from "@/lib/societario/fila";
 import { enderecoDe } from "@/lib/enderecoCurto";
 import type { SituacaoDoProcesso } from "@/lib/societario/processo";
 import { PRIORIDADE_LABEL, PRIORIDADE_VARIANTE } from "@/lib/societario/prioridade";
@@ -12,7 +12,7 @@ import { DIAS_DE_CONCLUIDOS_RECENTES } from "@/lib/societario/prazos";
 import { COR_DO_PRAZO_COMBINADO, PrazoCelula, SITUACAO_LABEL } from "./ProcessosFila";
 
 type Props = {
-  colunas: { situacao: SituacaoDoProcesso; linhas: LinhaDaFila[] }[];
+  colunas: { situacao: SituacaoDoProcesso; linhas: LinhaDaFilaLeve[] }[];
   agora: Date;
 };
 

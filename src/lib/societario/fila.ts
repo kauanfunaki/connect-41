@@ -40,6 +40,13 @@ export type LinhaDaFila = {
 };
 
 /**
+ * A linha sem as etapas liberadas (13/11/2026, melhoria-662): o que ordena,
+ * conta e busca. As etapas pedem o roteiro e as etapas de cada processo, e só
+ * a página que aparece precisa delas — ver `comEtapasAgora`.
+ */
+export type LinhaDaFilaLeve = Omit<LinhaDaFila, "etapasAgora">;
+
+/**
  * O dia do feriado como chave "AAAA-MM-DD", lido em **UTC**.
  *
  * O feriado é dia de calendário gravado como meia-noite UTC
@@ -86,13 +93,13 @@ const PESO_DA_SITUACAO: Record<SituacaoDoProcesso, number> = {
  * previsão, cai para o fim do seu grupo em vez de disputar posição com uma
  * régua que não se aplica a ele.
  */
-export function ordenarFila(linhas: LinhaDaFila[]): LinhaDaFila[] {
+export function ordenarFila<T extends LinhaDaFilaLeve>(linhas: readonly T[]): T[] {
   // Sem previsão é comparado por presença, não por valor. A primeira versão
   // usava `-Infinity` como sentinela e a subtração devolvia `Infinity`, que o
   // guarda de finitude descartava — o alvará ficava onde estava, que era
   // justamente o topo em metade dos casos. Comparar os dois casos
   // explicitamente custa três linhas e não tem aritmética para errar.
-  const semPrevisao = (l: LinhaDaFila): boolean =>
+  const semPrevisao = (l: T): boolean =>
     l.prazo.situacao === "sem_previsao" || l.prazo.previstoMax === null;
 
   return [...linhas].sort((a, b) => {
@@ -126,7 +133,8 @@ export type FiltroDaFila = {
 };
 
 /**
- * Os processos abertos do tenant, já com situação, prazo e etapa atual.
+ * Os processos abertos do tenant, já com situação e prazo, na ordem da fila —
+ * sem as etapas liberadas (`comEtapasAgora`, para as linhas que aparecem).
  *
  * ─── Sobre `Process.status` ──────────────────────────────────────────────────
  *
@@ -139,12 +147,12 @@ export type FiltroDaFila = {
  * alguém precisasse lembrar de atualizar seria estado que mente na primeira vez
  * que uma gravação falhasse no meio.
  */
-export async function listarFila(
+export async function listarFilaLeve(
   tenantId: string,
   filtro: FiltroDaFila,
   feriados: Set<string>,
   agora: Date
-): Promise<LinhaDaFila[]> {
+): Promise<LinhaDaFilaLeve[]> {
   const prisma = getPrisma();
 
   const processos = await prisma.process.findMany({
@@ -171,15 +179,6 @@ export async function listarFila(
       type: {
         select: { name: true, expectedDaysMin: true, expectedDaysMax: true, variableFlow: true },
       },
-      template: {
-        select: {
-          steps: {
-            select: { id: true, position: true, parallelGroup: true, optional: true, label: true },
-            orderBy: { position: "asc" },
-          },
-        },
-      },
-      steps: { select: { templateStepId: true, status: true } },
       protocols: { select: { organId: true, attempt: true, outcome: true } },
     },
     // Teto defensivo: a fila é para trabalhar, não para inventariar. Passando
@@ -187,18 +186,7 @@ export async function listarFila(
     take: 500,
   });
 
-  const linhas: LinhaDaFila[] = processos.map((p) => {
-    const rotuloPor = new Map(p.template.steps.map((s) => [s.id, s.label]));
-    const liberadas = etapasLiberadas(
-      p.template.steps.map((s) => ({
-        templateStepId: s.id,
-        position: s.position,
-        parallelGroup: s.parallelGroup,
-        optional: s.optional,
-      })),
-      p.steps.map((s) => ({ templateStepId: s.templateStepId, status: s.status }))
-    );
-
+  const linhas: LinhaDaFilaLeve[] = processos.map((p) => {
     return {
       id: p.id,
       numero: p.number,
@@ -213,7 +201,6 @@ export async function listarFila(
       situacao: situacaoDoProcesso(p.protocols, p.concludedAt !== null, p.status),
       prazo: prazoDoProcesso(p.type, p, agora, feriados),
       voltas: totalDeVoltas(p.protocols),
-      etapasAgora: liberadas.map((id) => rotuloPor.get(id) ?? "—"),
       iniciadoEm: p.startedAt,
     };
   });
@@ -225,8 +212,53 @@ export async function listarFila(
   return ordenarFila(recortadas);
 }
 
+/**
+ * As mesmas linhas, na mesma ordem, com as etapas que podem ser trabalhadas
+ * agora — pelo roteiro e pelas etapas de cada processo, lidos pelos ids.
+ * Passe só as que a tela mostra (a página da fila).
+ */
+export async function comEtapasAgora(tenantId: string, linhas: readonly LinhaDaFilaLeve[]): Promise<LinhaDaFila[]> {
+  if (linhas.length === 0) return [];
+  const processos = await getPrisma().process.findMany({
+    where: { tenantId, id: { in: linhas.map((l) => l.id) } },
+    select: {
+      id: true,
+      template: {
+        select: {
+          steps: {
+            select: { id: true, position: true, parallelGroup: true, optional: true, label: true },
+            orderBy: { position: "asc" },
+          },
+        },
+      },
+      steps: { select: { templateStepId: true, status: true } },
+    },
+  });
+  const etapas = new Map(
+    processos.map((p) => {
+      const rotuloPor = new Map(p.template.steps.map((s) => [s.id, s.label]));
+      const liberadas = etapasLiberadas(
+        p.template.steps.map((s) => ({
+          templateStepId: s.id,
+          position: s.position,
+          parallelGroup: s.parallelGroup,
+          optional: s.optional,
+        })),
+        p.steps.map((s) => ({ templateStepId: s.templateStepId, status: s.status }))
+      );
+      return [p.id, liberadas.map((id) => rotuloPor.get(id) ?? "—")] as const;
+    })
+  );
+  return linhas.map((l) => ({ ...l, etapasAgora: etapas.get(l.id) ?? [] }));
+}
+
+/** A fila inteira com as etapas de cada linha — para quem lê tudo (a Ceci do Societário). */
+export async function listarFila(tenantId: string, filtro: FiltroDaFila, feriados: Set<string>, agora: Date): Promise<LinhaDaFila[]> {
+  return comEtapasAgora(tenantId, await listarFilaLeve(tenantId, filtro, feriados, agora));
+}
+
 /** Quantos processos em cada situação — para os contadores do filtro. */
-export function contarPorSituacao(linhas: LinhaDaFila[]): Record<SituacaoDoProcesso, number> {
+export function contarPorSituacao(linhas: readonly Pick<LinhaDaFilaLeve, "situacao">[]): Record<SituacaoDoProcesso, number> {
   const contagem: Record<SituacaoDoProcesso, number> = {
     EM_EXIGENCIA: 0,
     AGUARDANDO_ORGAO: 0,
