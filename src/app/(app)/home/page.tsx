@@ -25,6 +25,7 @@ import { formatCalendarDate, formatInstantDate, formatInstantTime } from "@/lib/
 import { BLOCOS_DE_REUNIAO, HOME_WIDGETS, parseHomeWidgets, visibleWidgets, widgetsDisponiveis, type HomeWidgetKey } from "@/lib/homeWidgets";
 import { acessoDosPaineis } from "@/lib/home/acessoDosPaineis";
 import { precarregarHistoricoDaHome } from "@/lib/home/historico";
+import { atividadesPorDia, contarTarefasDaHome, tarefasDoMeuDia } from "@/lib/home/tarefasDaHome";
 import {
   PainelCarregando,
   PainelDeCertificados,
@@ -158,34 +159,23 @@ export default async function HomePage() {
   // Os números dos cartões do topo (empresas ativas, solicitações atrasadas,
   // transferências…) saíram daqui em 10/11/2026: cada cartão conta o seu, e só
   // os quatro que a pessoa tem no topo (`components/home/CartoesDoTopo`).
+  // As atividades em aberto e o histórico de 14 dias são contados no banco
+  // (13/11/2026, melhoria-662): vinham todas as linhas para contar em JS.
   const [
     me,
     tenant,
-    openPipelineItemsRaw,
+    tarefas,
+    meuDiaItems,
     recentActivitiesRaw,
-    activityCreatedDates,
+    atividadesNoDia,
     upcomingMeetings,
     incomingHandoffsRaw,
     selectedWidgets,
   ] = await Promise.all([
     ctx.userId ? prisma.user.findUnique({ where: { id: ctx.userId }, select: { name: true } }) : Promise.resolve(null),
     prisma.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }),
-    prisma.pipelineItem.findMany({
-      where: { tenantId: ctx.tenantId, pipeline: scopedPipelineWhere(ctx), stage: { isTerminal: false } },
-      select: {
-        id: true,
-        number: true,
-        entityId: true,
-        entityType: true,
-        title: true,
-        dueDate: true,
-        createdAt: true,
-        pipelineId: true,
-        stage: { select: { name: true, color: true } },
-        pipeline: { select: { name: true, sectorCode: true } },
-        assignees: { select: { userId: true } },
-      },
-    }),
+    contarTarefasDaHome(ctx, todayStart, todayEnd),
+    tarefasDoMeuDia(ctx),
     prisma.activity.findMany({
       where: { tenantId: ctx.tenantId, pipelineItem: { pipeline: scopedPipelineWhere(ctx) } },
       orderBy: { createdAt: "desc" },
@@ -197,10 +187,7 @@ export default async function HomePage() {
         },
       },
     }),
-    prisma.activity.findMany({
-      where: { tenantId: ctx.tenantId, pipelineItem: { pipeline: scopedPipelineWhere(ctx) }, createdAt: { gte: fourteenDaysAgo } },
-      select: { createdAt: true },
-    }),
+    atividadesPorDia(ctx, fourteenDaysAgo),
     reunioesP,
     incomingHandoffWhere
       ? prisma.handoff.findMany({
@@ -217,30 +204,14 @@ export default async function HomePage() {
 
   // "Meu dia" — itens atribuídos a mim (qualquer prazo) unidos com todo item
   // com prazo definido no meu escopo (inclui vencidos, que a versão antiga
-  // nunca mostrava porque a query só pegava dueDate >= hoje).
-  const assignedToMe = ctx.userId
-    ? openPipelineItemsRaw.filter((i) => i.assignees.some((a) => a.userId === ctx.userId))
-    : [];
-  const withDueDate = openPipelineItemsRaw.filter((i) => i.dueDate);
-  const meuDiaMap = new Map<string, (typeof openPipelineItemsRaw)[number]>();
-  for (const item of [...assignedToMe, ...withDueDate]) meuDiaMap.set(item.id, item);
-  const meuDiaItems = Array.from(meuDiaMap.values())
-    .sort((a, b) => {
-      if (a.dueDate && b.dueDate) return a.dueDate.getTime() - b.dueDate.getTime();
-      if (a.dueDate) return -1;
-      if (b.dueDate) return 1;
-      return b.createdAt.getTime() - a.createdAt.getTime();
-    })
-    .slice(0, 8);
-
-  const vencidosCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate < todayStart).length;
-  const hojeCount = openPipelineItemsRaw.filter((i) => i.dueDate && i.dueDate >= todayStart && i.dueDate <= todayEnd).length;
-  // As atrasadas por setor, da mesma lista: os cartões "Tarefas atrasadas" do
-  // Fiscal e do Contábil (10/11/2026) não contam de novo no banco.
+  // nunca mostrava porque a query só pegava dueDate >= hoje). Os oito
+  // primeiros vêm prontos do banco (`tarefasDoMeuDia`).
+  const vencidosCount = tarefas.porFaixa.atrasada;
+  const hojeCount = tarefas.porFaixa.hoje;
+  // As atrasadas por setor, da mesma contagem: os cartões "Tarefas atrasadas"
+  // do Fiscal e do Contábil (10/11/2026) não contam de novo no banco.
   const atrasadasPorSetor: Record<string, number> = {};
-  for (const i of openPipelineItemsRaw) {
-    if (i.dueDate && i.dueDate < todayStart) atrasadasPorSetor[i.pipeline.sectorCode] = (atrasadasPorSetor[i.pipeline.sectorCode] ?? 0) + 1;
-  }
+  for (const [setor, s] of tarefas.porSetor) if (s.atrasadas > 0) atrasadasPorSetor[setor] = s.atrasadas;
 
   // Nomes das entidades referenciadas (Company ou Person) — item de "Meu dia",
   // atividade recente e transferências para o setor, tudo numa só rodada.
@@ -317,16 +288,13 @@ export default async function HomePage() {
         ? Array.from(sectorsWithModules)
         : ctx.sectors
   ).filter((code) => sectorsWithModules.has(code));
-  const sectorWidgets = visibleSectorCodes.map((code) => {
-    const items = openPipelineItemsRaw.filter((i) => i.pipeline.sectorCode === code);
-    return {
-      code,
-      label: sectorLabel(sectorLabels, code),
-      color: sectorColors[code] ?? "#586577",
-      openCount: items.length,
-      overdueCount: items.filter((i) => i.dueDate && i.dueDate < todayStart).length,
-    };
-  });
+  const sectorWidgets = visibleSectorCodes.map((code) => ({
+    code,
+    label: sectorLabel(sectorLabels, code),
+    color: sectorColors[code] ?? "#586577",
+    openCount: tarefas.porSetor.get(code)?.abertas ?? 0,
+    overdueCount: tarefas.porSetor.get(code)?.atrasadas ?? 0,
+  }));
 
   // Kanban por estágio + movimentações — únicos gráficos mantidos (visão do
   // workspace, só admin/coordenador); cortados os que tinham pouco sinal
@@ -337,20 +305,7 @@ export default async function HomePage() {
   // distintos viravam uma parede de barras. O nome do kanban vira sublabel pra
   // a barra dizer de onde veio.
   const STAGE_CHART_LIMIT = 5;
-  const stageCounts = new Map<string, { label: string; sublabel: string; value: number; color: string }>();
-  for (const item of openPipelineItemsRaw) {
-    const key = `${item.pipelineId}::${item.stage.name}`;
-    const prev = stageCounts.get(key);
-    stageCounts.set(key, {
-      label: item.stage.name,
-      sublabel: item.pipeline.name,
-      value: (prev?.value ?? 0) + 1,
-      color: item.stage.color ?? "#586577",
-    });
-  }
-  const stageChartAll = Array.from(stageCounts.entries())
-    .map(([key, v]) => ({ key, ...v }))
-    .sort((a, b) => b.value - a.value);
+  const stageChartAll = tarefas.colunas;
   const stageChartData = stageChartAll.slice(0, STAGE_CHART_LIMIT);
   const stageChartHiddenCount = stageChartAll.length - stageChartData.length;
 
@@ -360,10 +315,7 @@ export default async function HomePage() {
     const key = formatInstantDate(d, { day: "2-digit", month: "2-digit" });
     dayBuckets.set(key, 0);
   }
-  for (const a of activityCreatedDates) {
-    const key = formatInstantDate(a.createdAt, { day: "2-digit", month: "2-digit" });
-    if (dayBuckets.has(key)) dayBuckets.set(key, (dayBuckets.get(key) ?? 0) + 1);
-  }
+  for (const [key, n] of atividadesNoDia) if (dayBuckets.has(key)) dayBuckets.set(key, n);
   const trendData = Array.from(dayBuckets.entries()).map(([label, value]) => ({ label, value }));
 
   const today = formatInstantDate(new Date(), { day: "2-digit", month: "long", year: "numeric" });
@@ -425,11 +377,10 @@ export default async function HomePage() {
       <Suspense fallback={<PainelCarregando />}>
         <PainelDeTarefas
           ctx={ctx}
-          itens={openPipelineItemsRaw}
-          atribuidas={assignedToMe.length}
+          contagem={tarefas.porFaixa}
+          total={tarefas.total}
+          atribuidas={tarefas.atribuidas}
           escopo={escopoDasTarefas}
-          inicioDeHoje={todayStart}
-          fimDeHoje={todayEnd}
         />
       </Suspense>
     ),
