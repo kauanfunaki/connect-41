@@ -89,8 +89,9 @@ type Props = {
  * Era uma lista de linhas-link sem colunas (até 30/09). Virou tabela no padrão
  * do Connect — centralizada, com funil por coluna — na onda 3 do polimento:
  * com 40 processos abertos, achar "os da Fulana em exigência" era ler a fila
- * inteira. A fila inteira do filtro já vem do servidor, então o funil filtra no
- * navegador (`TabelaFiltravel`).
+ * inteira. O funil filtra no navegador (`TabelaFiltravel`) as linhas da
+ * página; desde 13/11/2026 (melhoria-662) a fila vem de 50 em 50, e o recorte
+ * grande (situação, responsável, prioridade, busca) é o do servidor.
  */
 export function ProcessosFila({ linhas, filtrado, agora }: Props) {
   if (linhas.length === 0) {
