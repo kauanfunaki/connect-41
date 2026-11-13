@@ -35,6 +35,8 @@ import {
 } from "@/lib/dp2/esocial/servidor";
 import { lerAgentes, lerProcedimentos, lerResponsaveis } from "@/lib/dp2/esocial/sst";
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
+import { consolidarTrabalhadores, lerArquivosDoEsocial, type TrabalhadorImportado } from "@/lib/dp2/esocial/importacao";
+import { gravarImportacao, previaDaImportacao, type LinhaDaPrevia, type ResultadoDaImportacao } from "@/lib/dp2/esocial/importacaoServidor";
 import { MOTIVO_LABEL, type MotivoCanonico } from "@/lib/rescisao/motivos";
 
 type Acesso = { ctx: AuthContext; tenantId: string; userId: string };
@@ -1137,4 +1139,66 @@ export async function gerarDesligamentoAction(_: EstadoDoDp2, fd: FormData): Pro
     metadata: { nome: p.name, data, motivo },
   });
   return respostaDoEvento("S-2299", p.name, r);
+}
+
+// ─── Importar colaboradores do eSocial (13/11/2026, funcionalidade-666) ─────
+
+export type EstadoDaImportacao =
+  | { ok: false; texto: string }
+  | { ok: true; etapa: "previa"; previa: LinhaDaPrevia[]; problemas: string[] }
+  | { ok: true; etapa: "feita"; texto: string; resultado: ResultadoDaImportacao }
+  | null;
+
+/** Lê os arquivos do formulário (enviados ou trazidos pelo Assinador) e junta por trabalhador. */
+async function trabalhadoresDoFormulario(a: Acesso, fd: FormData): Promise<{ erro: string } | { companyId: string; trabalhadores: TrabalhadorImportado[]; problemas: string[] }> {
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return { erro: recusa };
+  const empresa = await getPrisma().company.findFirst({ where: { id: companyId, tenantId: a.tenantId }, select: { cnpj: true, kind: true } });
+  if (!empresa?.cnpj || empresa.kind === "PESSOA_FISICA") return { erro: "A empresa precisa de CNPJ no cadastro para conferir os eventos do eSocial." };
+  const arquivos = fd.getAll("arquivo").filter((f): f is File => typeof f !== "string" && f.size > 0);
+  if (arquivos.length === 0) return { erro: "Escolha o .zip ou os .xml do eSocial." };
+  const lidos = await Promise.all(arquivos.map(async (f) => ({ nome: f.name, conteudo: new Uint8Array(await f.arrayBuffer()) })));
+  const leitura = lerArquivosDoEsocial(lidos);
+  const junto = consolidarTrabalhadores(leitura.eventos, empresa.cnpj);
+  if (junto.trabalhadores.length === 0) {
+    return { erro: [...leitura.problemas, ...junto.problemas, "Nenhuma admissão, alteração ou desligamento desta empresa nos arquivos."].join(" ") };
+  }
+  return { companyId, trabalhadores: junto.trabalhadores, problemas: [...leitura.problemas, ...junto.problemas] };
+}
+
+export async function previaDoEsocialAction(_: EstadoDaImportacao, fd: FormData): Promise<EstadoDaImportacao> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return { ok: false, texto: "Sem permissão para isto no DP 2." };
+  const r = await trabalhadoresDoFormulario(a, fd);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  return { ok: true, etapa: "previa", previa: await previaDaImportacao(a.tenantId, r.companyId, r.trabalhadores), problemas: r.problemas };
+}
+
+export async function importarDoEsocialAction(_: EstadoDaImportacao, fd: FormData): Promise<EstadoDaImportacao> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return { ok: false, texto: "Sem permissão para isto no DP 2." };
+  const r = await trabalhadoresDoFormulario(a, fd);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  const resultado = await gravarImportacao(a.tenantId, r.companyId, r.trabalhadores, {
+    incluirDesligados: marcado(fd, "incluirDesligados"),
+    atualizarExistentes: marcado(fd, "atualizarExistentes"),
+    ignorar: new Set(fd.getAll("ignorar").map(String)),
+  });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.colaboradores_importados",
+    entityType: "Company",
+    entityId: r.companyId,
+    metadata: { ...resultado, fora: resultado.fora.length, arquivos: fd.getAll("arquivo").map((f) => (typeof f === "string" ? f : f.name)) },
+  });
+  revalidatePath("/dp2/colaboradores");
+  const partes = [
+    `${resultado.criadas} colaborador(es) novo(s)`,
+    `${resultado.atualizadas} atualizado(s)`,
+    `${resultado.contratos} contrato(s) criado(s)`,
+    `${resultado.dependentes} dependente(s)`,
+  ];
+  return { ok: true, etapa: "feita", texto: `Importado: ${partes.join(", ")}.${resultado.fora.length ? ` ${resultado.fora.length} ficaram de fora.` : ""}`, resultado };
 }

@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Textarea } from "@/components/ui/Textarea";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { ModalDoDp2 } from "@/components/dp2/ModalDoDp2";
+import { ImportarDoEsocial } from "@/components/dp2/ImportarDoEsocial";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { formatCalendarDate, formatCpf } from "@/lib/format";
 import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
@@ -90,10 +91,11 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               ? `Todos com contrato.`
               : `${comContrato} com contrato, ${semContrato} sem contrato (fora do cálculo).`
         }
+        acao={tela.podeAgir ? <ImportarDoEsocial companyId={tela.empresa.id} empresa={tela.empresa.nome} /> : undefined}
       >
         {pessoas.length === 0 ? (
           <p className="text-fs-3 text-fg-muted">
-            Nenhum colaborador nesta empresa. Cadastre em{" "}
+            Nenhum colaborador nesta empresa. Traga do eSocial pelo botão “Importar do eSocial”, ou cadastre um a um em{" "}
             <Link href="/colaboradores-clientes" className="text-brand hover:underline">
               Colaboradores de clientes
             </Link>
