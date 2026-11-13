@@ -1,7 +1,7 @@
 // Telas em manutenção (13/11/2026) — a lista que o proxy confere.
 //
 // O proxy não vai ao banco (ver src/proxy.ts): ele pergunta à rota
-// `/api/manutencao/telas`, como já faz com o /api/auth/refresh, e guarda a
+// `/api/manutencao/telas` (no endereço de `enderecoInternoDaRota`) e guarda a
 // resposta por escritório durante alguns segundos. Sem isso, toda abertura de
 // tela de setor custaria uma ida ao servidor a mais.
 //

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
 import { verifyRefresh } from "@/lib/auth/jwt";
+import { idDoSucessor } from "@/lib/auth/renovacao";
 import crypto from "crypto";
 import { ACCESS_COOKIE, REFRESH_COOKIE, accessCookieOptions, refreshCookieOptions } from "@/lib/auth/cookies";
 
@@ -15,9 +16,12 @@ export async function POST(req: NextRequest) {
       const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
       const prisma = getPrisma();
       const stored = await prisma.refreshToken.findUnique({ where: { id: payload.jti } });
-      if (stored && stored.tokenHash === tokenHash && !stored.revokedAt) {
-        await prisma.refreshToken.update({
-          where: { id: payload.jti },
+      if (stored && stored.tokenHash === tokenHash) {
+        // O sucessor junto (13/11/2026): saindo com um token que acabou de ser
+        // renovado por outro pedido, o sucessor ficaria vivo e a tolerância da
+        // renovação (src/lib/auth/renovacao.ts) ainda o aceitaria.
+        await prisma.refreshToken.updateMany({
+          where: { id: { in: [payload.jti, idDoSucessor(payload.jti)] }, userId: stored.userId, revokedAt: null },
           data: { revokedAt: new Date() },
         });
       }

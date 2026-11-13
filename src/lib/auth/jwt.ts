@@ -19,6 +19,16 @@ export function signRefresh(payload: RefreshTokenPayload, ttl?: string): string 
   });
 }
 
+/**
+ * O refresh token da renovação, com as datas fixadas por quem chama (em
+ * segundos). Mesmas entradas, mesmo token, byte a byte (HS256 não sorteia
+ * nada): é o que deixa dois pedidos que renovam a mesma sessão ao mesmo tempo
+ * entregarem o MESMO sucessor ao navegador (ver src/lib/auth/renovacao.ts).
+ */
+export function signRefreshComDatas(payload: RefreshTokenPayload, datas: { iat: number; exp: number }): string {
+  return jwt.sign({ sub: payload.sub, jti: payload.jti, iat: datas.iat, exp: datas.exp }, env("JWT_REFRESH_SECRET"));
+}
+
 export function verifyAccess(token: string): AccessTokenPayload {
   const payload = jwt.verify(token, env("JWT_ACCESS_SECRET")) as AccessTokenPayload & { kind?: string };
   // Um token de portal nunca vale como sessão interna, mesmo assinado com o
