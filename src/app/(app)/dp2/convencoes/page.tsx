@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { Pencil, Plus, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoData } from "@/components/ui/CampoData";
-import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { ModalDoDp2 } from "@/components/dp2/ModalDoDp2";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canManageSector } from "@/lib/auth/context";
@@ -43,12 +43,12 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
         action={
           podeGerir ? (
             <Button href="/dp2/convencoes?nova=1" scroll={false}>
+              <Plus size={14} aria-hidden="true" />
               Nova convenção
             </Button>
           ) : undefined
         }
       />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
         {convencoes.length === 0 ? (
           <EmptyState icon={<ShieldCheck />} title="Nenhuma convenção cadastrada" description="Sem convenção, a empresa é calculada pela CLT: hora extra 50% e 100%, adicional noturno 20%." />
         ) : (
@@ -63,6 +63,11 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                     <th className={TH_NUM}>HE</th>
                     <th className={TH_NUM}>Noturno</th>
                     <th className={TH_NUM}>Empresas</th>
+                    {podeGerir && (
+                      <th className={TH}>
+                        <span className="sr-only">Ações</span>
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -82,6 +87,14 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                       </td>
                       <td className={TD_NUM}>{pct(c.noturno)}</td>
                       <td className={TD_NUM}>{c._count.empresas}</td>
+                      {podeGerir && (
+                        <td className={`${TD} text-right pr-0`}>
+                          <Button href={`/dp2/convencoes?convencao=${c.id}`} scroll={false} variant="secondary" size="sm" aria-label={`Editar a convenção ${c.nome}`}>
+                            <Pencil size={14} aria-hidden="true" />
+                            Editar
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -91,15 +104,14 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
         )}
 
         {podeGerir && (aberta || nova) && (
-          <Secao
+          <ModalDoDp2
+            key={aberta?.id ?? "nova"}
             titulo={nova ? "Nova convenção" : aberta!.nome}
-            acao={
-              <Button href="/dp2/convencoes" variant="ghost" size="sm" scroll={false}>
-                Fechar
-              </Button>
-            }
+            acao={salvarConvencaoAction}
+            rotulo={nova ? "Criar convenção" : "Salvar convenção"}
+            fecharHref="/dp2/convencoes"
           >
-            <FormularioDoDp2 key={aberta?.id ?? "nova"} acao={salvarConvencaoAction} rotulo={nova ? "Criar convenção" : "Salvar convenção"}>
+            <>
               {aberta && <input type="hidden" name="id" value={aberta.id} />}
               <div className="grid gap-4 sm:grid-cols-2">
                 <CampoForm label="Nome" htmlFor="nome" required className="sm:col-span-2">
@@ -142,10 +154,9 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                   <Checkbox id="ativa" name="ativa" label="Ativa" defaultChecked={aberta.ativa} />
                 </div>
               )}
-            </FormularioDoDp2>
-          </Secao>
+            </>
+          </ModalDoDp2>
         )}
-      </div>
     </PageContainer>
   );
 }

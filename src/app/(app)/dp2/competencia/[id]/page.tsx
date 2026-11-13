@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, ArrowRight, Pencil, Plus } from "lucide-react";
+import { PassosDaCompetencia, type PassoDaCompetencia } from "@/components/dp2/PassosDaCompetencia";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Selo } from "@/components/ui/Selo";
@@ -45,6 +47,7 @@ import {
 } from "../../actions";
 
 const n = (v: unknown) => Number(v ?? 0);
+type Etapa = "abrir" | "eventos" | "calcular" | "conferir" | "fechar";
 const NOME_DA_ORIGEM: Record<string, string> = { DP: "DP", PLANILHA: "Planilha", PONTO: "Pontomais", CLIENTE: "Cliente" };
 const NOME_DO_CAMPO: Record<CampoComparado, string> = { proventos: "Proventos", descontos: "Descontos", liquido: "Líquido", inss: "INSS", irrf: "IRRF", fgts: "FGTS" };
 
@@ -53,9 +56,9 @@ const NOME_DO_CAMPO: Record<CampoComparado, string> = { proventos: "Proventos", 
  * conferir (holerite com memória de cálculo e comparativo com a Domínio) e
  * fechar.
  */
-export default async function CompetenciaDoDp2({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ pessoa?: string }> }) {
+export default async function CompetenciaDoDp2({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ pessoa?: string; etapa?: string }> }) {
   const { id } = await params;
-  const { pessoa: pessoaAberta } = await searchParams;
+  const { pessoa: pessoaAberta, etapa: etapaPedida } = await searchParams;
   // A mesma tela abre as parcelas do 13º: vale o módulo da competência ou o do 13º.
   const modulo = (await podeNoModulo(await getAuthContext(), "dp2_competencia", "ver")) ? "dp2_competencia" : "dp2_decimo";
   const { ctx, setor } = await abrirTelaDoModulo(modulo);
@@ -125,13 +128,46 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     if (r.diverge) divergentes++;
   }
 
-  const etapas = [
-    { nome: "Abrir", feita: true },
-    { nome: mensal ? "Lançar eventos" : "Conferir contratos", feita: eventos.length > 0 || !mensal || comp.situacao !== "ABERTA" },
-    { nome: "Calcular", feita: comp.situacao !== "ABERTA" },
-    { nome: "Conferir", feita: fechada },
-    { nome: "Fechar", feita: fechada },
+  // O passo a passo (13/11/2026): cada etapa mostra só a sua parte da tela.
+  // Abrir, os eventos/contratos e o cálculo ficam liberados enquanto a
+  // competência existe (sem eventos, a folha sai só com o salário); conferir,
+  // depois de calcular; fechar, com a folha calculada e sem lançamento novo.
+  const calculada = calculos.length > 0;
+  const etapas: { chave: Etapa; nome: string; feita: boolean; liberada: boolean }[] = [
+    { chave: "abrir", nome: "Abrir", feita: true, liberada: true },
+    { chave: "eventos", nome: mensal ? "Lançar eventos" : "Conferir contratos", feita: eventos.length > 0 || !mensal || comp.situacao !== "ABERTA", liberada: true },
+    { chave: "calcular", nome: "Calcular", feita: comp.situacao !== "ABERTA", liberada: true },
+    { chave: "conferir", nome: "Conferir", feita: fechada, liberada: calculada },
+    { chave: "fechar", nome: "Fechar", feita: fechada, liberada: comp.situacao !== "ABERTA" },
   ];
+  const sugerida: Etapa = fechada ? "fechar" : comp.situacao === "CALCULADA" ? "conferir" : calculada ? "calcular" : "eventos";
+  const pedida = etapas.find((e) => e.chave === etapaPedida && e.liberada);
+  const etapa: Etapa = pedida?.chave ?? (pessoaAberta && calculada ? "conferir" : sugerida);
+  const indice = etapas.findIndex((e) => e.chave === etapa);
+  const hrefDa = (e: Etapa) => `/dp2/competencia/${comp.id}?etapa=${e}`;
+  const anterior = indice > 0 ? etapas[indice - 1] : undefined;
+  const proxima = etapas[indice + 1]?.liberada ? etapas[indice + 1] : undefined;
+  const passos: PassoDaCompetencia[] = etapas.map((e) => ({
+    label: e.nome,
+    href: hrefDa(e.chave),
+    status: e.chave === etapa ? "current" : e.feita ? "done" : "upcoming",
+    disabled: !e.liberada,
+  }));
+  const avisoSemContrato = semContrato.length > 0 && (
+    <Aviso tom="info">
+      {semContrato.length} colaborador(es) da empresa sem contrato no DP 2 ficam fora do cálculo:{" "}
+      {semContrato.slice(0, 6).map((p, i) => (
+        <span key={p.id}>
+          {i > 0 && ", "}
+          <Link className="text-brand hover:underline" href={`/dp2/colaboradores?pessoa=${p.id}`}>
+            {p.name}
+          </Link>
+        </span>
+      ))}
+      {semContrato.length > 6 && "…"}
+    </Aviso>
+  );
+  const comContrato = pessoas.filter((p) => p.dp2Vinculo);
 
   return (
     <PageContainer>
@@ -149,15 +185,9 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
       />
       <FiltroDaEmpresa foco={foco ? { ...foco, pedida: null } : null} />
 
-      <ol className="flex flex-wrap gap-2 mb-5" aria-label="Etapas da competência">
-        {etapas.map((e, i) => (
-          <li key={e.nome} className={`text-fs-2 rounded-full px-3 py-1 border ${e.feita ? "border-transparent bg-success/10 text-success-fg" : "border-border text-fg-muted"}`}>
-            {i + 1}. {e.nome}
-          </li>
-        ))}
-      </ol>
+      <PassosDaCompetencia passos={passos} />
 
-      {totais && (
+      {totais && etapa !== "abrir" && etapa !== "eventos" && (
         <div className="mb-5">
           <FaixaDeTotais
             itens={[
@@ -180,19 +210,19 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         </Aviso>
       )}
 
-      {podeAgir && (
+      {podeAgir && (etapa === "calcular" || etapa === "fechar") && (
         <div className="flex flex-wrap items-start gap-4 mb-6">
-          {!fechada && (
+          {!fechada && etapa === "calcular" && (
             <FormularioDoDp2 acao={calcularCompetenciaAction} rotulo={calculos.length ? "Calcular de novo" : "Calcular a folha"} rotuloEnviando="Calculando…">
               <input type="hidden" name="competenciaId" value={comp.id} />
             </FormularioDoDp2>
           )}
-          {comp.situacao === "CALCULADA" && (
+          {comp.situacao === "CALCULADA" && etapa === "fechar" && (
             <FormularioDoDp2 acao={fecharCompetenciaAction} rotulo="Fechar competência" rotuloEnviando="Fechando…" variante="secondary">
               <input type="hidden" name="competenciaId" value={comp.id} />
             </FormularioDoDp2>
           )}
-          {fechada && podeGerir && (
+          {fechada && podeGerir && etapa === "fechar" && (
             <FormularioDoDp2 acao={reabrirCompetenciaAction} rotulo="Reabrir" rotuloEnviando="Reabrindo…" variante="secondary" className="flex flex-wrap items-end gap-3">
               <input type="hidden" name="competenciaId" value={comp.id} />
               <CampoForm label="Por que reabrir" htmlFor="motivo">
@@ -204,25 +234,87 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
       )}
 
       <div className="flex flex-col gap-5">
-        {semContrato.length > 0 && (
-          <Aviso tom="info">
-            {semContrato.length} colaborador(es) da empresa sem contrato no DP 2 ficam fora do cálculo:{" "}
-            {semContrato.slice(0, 6).map((p, i) => (
-              <span key={p.id}>
-                {i > 0 && ", "}
-                <Link className="text-brand hover:underline" href={`/dp2/colaboradores?pessoa=${p.id}`}>
-                  {p.name}
-                </Link>
-              </span>
-            ))}
-            {semContrato.length > 6 && "…"}
-          </Aviso>
+        {(etapa === "abrir" || etapa === "calcular") && avisoSemContrato}
+
+        {etapa === "abrir" && (
+          <Secao titulo="Competência aberta" apoio="O que entra nesta folha. Para mudar quem entra, ajuste os contratos em Colaboradores.">
+            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-fs-3">
+              <div>
+                <dt className="text-fs-2 text-fg-muted">Empresa</dt>
+                <dd className="font-medium">{empresa}</dd>
+              </div>
+              <div>
+                <dt className="text-fs-2 text-fg-muted">Folha</dt>
+                <dd className="font-medium">{titulo}</dd>
+              </div>
+              <div>
+                <dt className="text-fs-2 text-fg-muted">Com contrato no DP 2</dt>
+                <dd className="font-medium">{comContrato.length} colaborador(es)</dd>
+              </div>
+              <div>
+                <dt className="text-fs-2 text-fg-muted">Situação</dt>
+                <dd>
+                  <Selo tom={TOM_DA_SITUACAO[comp.situacao] ?? "neutro"}>{NOME_DA_SITUACAO[comp.situacao] ?? comp.situacao}</Selo>
+                </dd>
+              </div>
+            </dl>
+          </Secao>
         )}
 
-        {mensal && (
+        {etapa === "eventos" && !mensal && (
+          <>
+            {avisoSemContrato}
+            <Secao
+              titulo="Quem entra no 13º"
+              apoio="O 13º sai do salário do contrato e das médias. Confira os salários antes de calcular; para corrigir, abra o contrato em Colaboradores."
+            >
+              {comContrato.length === 0 ? (
+                <p className="text-fs-3 text-fg-muted">
+                  Ninguém com contrato no DP 2.{" "}
+                  <Link href="/dp2/colaboradores" className="text-brand hover:underline">
+                    Criar contratos
+                  </Link>
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[480px] text-fs-3">
+                    <thead>
+                      <tr>
+                        <th className={TH}>Colaborador</th>
+                        <th className={`${TH_NUM} pr-10`}>Salário</th>
+                        <th className={TH}>
+                          <span className="sr-only">Ações</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comContrato.map((p) => (
+                        <tr key={p.id} className={TR}>
+                          <td className={`${TD} align-middle`}>{p.name}</td>
+                          <td className={`${TD_NUM} align-middle pr-10`}>
+                            {brl(n(p.dp2Vinculo!.salarioBase))}
+                            {p.dp2Vinculo!.tipoSalario === "HORISTA" ? "/h" : ""}
+                          </td>
+                          <td className={`${TD} align-middle text-right pr-0`}>
+                            <Button href={`/dp2/colaboradores?pessoa=${p.id}`} variant="secondary" size="sm" aria-label={`Editar o contrato de ${p.name}`}>
+                              <Pencil size={14} aria-hidden="true" />
+                              Editar
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Secao>
+          </>
+        )}
+
+        {mensal && etapa === "eventos" && (
           <Secao titulo="Eventos do mês" apoio="Horas extras, adicional noturno, faltas e atrasos em horas ou dias; comissões, adiantamentos e outros em valor. O motor calcula o resto (salário, DSR, INSS, IRRF, FGTS).">
             {podeAgir && !fechada && (
-              <FormularioDoDp2 acao={lancarEventoAction} rotulo="Lançar" rotuloEnviando="Lançando…" className="mb-5">
+              <FormularioDoDp2 acao={lancarEventoAction} rotulo="Lançar" rotuloEnviando="Lançando…" className="mb-5" icone={<Plus size={14} aria-hidden="true" />}>
                 <input type="hidden" name="competenciaId" value={comp.id} />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1.4fr_0.7fr_0.8fr_1.2fr]">
                   <CampoForm label="Colaborador" htmlFor="personId">
@@ -307,7 +399,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           </Secao>
         )}
 
-        {mensal && !fechada && podeAgir && (
+        {mensal && etapa === "eventos" && !fechada && podeAgir && (
           <div className="grid gap-5 xl:grid-cols-2">
             <Secao
               titulo="Pedir os eventos ao cliente"
@@ -369,62 +461,68 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           </div>
         )}
 
-        <Secao
-          titulo="Resultado do cálculo"
-          apoio={
-            calculos.length === 0
-              ? "Calcule a folha para ver o resultado de cada pessoa."
-              : `Clique no nome para ver o holerite com a memória de cálculo.${comparativos.length ? ` ${divergentes} pessoa(s) diferem da Domínio em mais de 1 centavo.` : ""}`
-          }
-        >
-          {calculos.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-fs-3">
-                <thead>
-                  <tr>
-                    <th className={TH}>Colaborador</th>
-                    <th className={TH_NUM}>Proventos</th>
-                    <th className={TH_NUM}>INSS</th>
-                    <th className={TH_NUM}>IRRF</th>
-                    <th className={TH_NUM}>Descontos</th>
-                    <th className={TH_NUM}>Líquido</th>
-                    <th className={TH_NUM}>FGTS</th>
-                    <th className={TH}>Conferência</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {calculos.map((c) => {
-                    const alertas = (c.alertas as string[]) ?? [];
-                    const dif = diferencaDe.get(c.personId);
-                    return (
-                      <tr key={c.id} className={`${TR} ${c.personId === pessoaAberta ? "bg-surface-hover" : ""}`}>
-                        <td className={TD}>
-                          <Link href={`/dp2/competencia/${comp.id}?pessoa=${c.personId}#holerite`} scroll={false} className="text-brand hover:underline font-medium">
-                            {c.person.name}
-                          </Link>
-                        </td>
-                        <td className={TD_NUM}>{brl(n(c.proventos))}</td>
-                        <td className={TD_NUM}>{brl(n(c.inss))}</td>
-                        <td className={TD_NUM}>{brl(n(c.irrf))}</td>
-                        <td className={TD_NUM}>{brl(n(c.descontos))}</td>
-                        <td className={`${TD_NUM} font-medium`}>{brl(n(c.liquido))}</td>
-                        <td className={TD_NUM}>{brl(n(c.fgts))}</td>
-                        <td className={TD}>
-                          <div className="flex flex-wrap gap-1">
-                            {alertas.length > 0 && <Selo tom="atencao">{alertas.length} alerta(s)</Selo>}
-                            {dif && (dif.diverge ? <Selo tom="perigo">difere da Domínio</Selo> : <Selo tom="sucesso">bate com a Domínio</Selo>)}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Secao>
+        {etapa === "calcular" && !calculada && (
+          <p className="text-fs-3 text-fg-muted">Calcule a folha para ver os totais e o resultado de cada pessoa no passo Conferir.</p>
+        )}
 
-        {aberto && (
+        {etapa === "conferir" && (
+          <Secao
+            titulo="Resultado do cálculo"
+            apoio={
+              calculos.length === 0
+                ? "Calcule a folha para ver o resultado de cada pessoa."
+                : `Clique no nome para ver o holerite com a memória de cálculo.${comparativos.length ? ` ${divergentes} pessoa(s) diferem da Domínio em mais de 1 centavo.` : ""}`
+            }
+          >
+            {calculos.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[820px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Colaborador</th>
+                      <th className={TH_NUM}>Proventos</th>
+                      <th className={TH_NUM}>INSS</th>
+                      <th className={TH_NUM}>IRRF</th>
+                      <th className={TH_NUM}>Descontos</th>
+                      <th className={TH_NUM}>Líquido</th>
+                      <th className={TH_NUM}>FGTS</th>
+                      <th className={TH}>Conferência</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calculos.map((c) => {
+                      const alertas = (c.alertas as string[]) ?? [];
+                      const dif = diferencaDe.get(c.personId);
+                      return (
+                        <tr key={c.id} className={`${TR} ${c.personId === pessoaAberta ? "bg-surface-hover" : ""}`}>
+                          <td className={TD}>
+                            <Link href={`/dp2/competencia/${comp.id}?etapa=conferir&pessoa=${c.personId}#holerite`} scroll={false} className="text-brand hover:underline font-medium">
+                              {c.person.name}
+                            </Link>
+                          </td>
+                          <td className={TD_NUM}>{brl(n(c.proventos))}</td>
+                          <td className={TD_NUM}>{brl(n(c.inss))}</td>
+                          <td className={TD_NUM}>{brl(n(c.irrf))}</td>
+                          <td className={TD_NUM}>{brl(n(c.descontos))}</td>
+                          <td className={`${TD_NUM} font-medium`}>{brl(n(c.liquido))}</td>
+                          <td className={TD_NUM}>{brl(n(c.fgts))}</td>
+                          <td className={TD}>
+                            <div className="flex flex-wrap gap-1">
+                              {alertas.length > 0 && <Selo tom="atencao">{alertas.length} alerta(s)</Selo>}
+                              {dif && (dif.diverge ? <Selo tom="perigo">difere da Domínio</Selo> : <Selo tom="sucesso">bate com a Domínio</Selo>)}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Secao>
+        )}
+
+        {etapa === "conferir" && aberto && (
           <div id="holerite">
             <Holerite
               nome={aberto.person.name}
@@ -436,13 +534,13 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
               alertas={(aberto.alertas as string[]) ?? []}
               totais={{ proventos: n(aberto.proventos), descontos: n(aberto.descontos), liquido: n(aberto.liquido), baseInss: n(aberto.baseInss), baseIrrf: n(aberto.baseIrrf), baseFgts: n(aberto.baseFgts) }}
               diferencas={diferencaDe.get(aberto.personId)?.diferencas}
-              fecharHref={`/dp2/competencia/${comp.id}`}
+              fecharHref={hrefDa("conferir")}
               pdfHref={`/api/dp2/competencias/${comp.id}/holerites?pessoa=${aberto.personId}`}
             />
           </div>
         )}
 
-        {calculos.length > 0 && (
+        {etapa === "fechar" && calculada && (
           <Secao
             titulo="Saídas da folha"
             apoio={fechada ? "Holerites, arquivo do banco e lançamentos contábeis desta competência." : "Os holerites e os lançamentos já dão para conferir; guardar nos Arquivos e gerar o arquivo do banco ficam liberados ao fechar a competência."}
@@ -520,19 +618,38 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           </Secao>
         )}
 
-        <Secao
-          titulo="Comparar com a Domínio"
-          apoio="Enquanto o DP 2 roda em paralelo: cole, uma pessoa por linha, CPF; proventos; descontos; líquido; INSS; IRRF; FGTS (pode copiar direto do Excel). Campo vazio não é comparado."
-        >
-          {podeAgir ? (
-            <FormularioDoDp2 acao={importarComparativoAction} rotulo="Comparar" rotuloEnviando="Lendo…" variante="secondary">
-              <input type="hidden" name="competenciaId" value={comp.id} />
-              <Textarea name="texto" rows={4} placeholder={"123.456.789-09; 3.243,89; 277,87; 2.966,02; 277,87; 0,00; 259,51"} aria-label="Valores da Domínio" />
-            </FormularioDoDp2>
-          ) : (
-            <p className="text-fs-3 text-fg-muted">{comparativos.length} pessoa(s) com valores da Domínio.</p>
-          )}
-        </Secao>
+        {etapa === "conferir" && (
+          <Secao
+            titulo="Comparar com a Domínio"
+            apoio="Enquanto o DP 2 roda em paralelo: cole, uma pessoa por linha, CPF; proventos; descontos; líquido; INSS; IRRF; FGTS (pode copiar direto do Excel). Campo vazio não é comparado."
+          >
+            {podeAgir ? (
+              <FormularioDoDp2 acao={importarComparativoAction} rotulo="Comparar" rotuloEnviando="Lendo…" variante="secondary">
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <Textarea name="texto" rows={4} placeholder={"123.456.789-09; 3.243,89; 277,87; 2.966,02; 277,87; 0,00; 259,51"} aria-label="Valores da Domínio" />
+              </FormularioDoDp2>
+            ) : (
+              <p className="text-fs-3 text-fg-muted">{comparativos.length} pessoa(s) com valores da Domínio.</p>
+            )}
+          </Secao>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
+        {anterior ? (
+          <Button href={hrefDa(anterior.chave)} variant="secondary" scroll={false}>
+            <ArrowLeft size={14} aria-hidden="true" />
+            {anterior.nome}
+          </Button>
+        ) : (
+          <span />
+        )}
+        {proxima && (
+          <Button href={hrefDa(proxima.chave)} variant="secondary" scroll={false}>
+            {proxima.nome}
+            <ArrowRight size={14} aria-hidden="true" />
+          </Button>
+        )}
       </div>
     </PageContainer>
   );

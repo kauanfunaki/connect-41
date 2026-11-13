@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -98,7 +98,7 @@ export async function TelaDeCompetencias({ modulo, empresaPedida, soDecimo }: { 
 
         {tela.podeAgir && (
           <Secao titulo="Abrir competência" apoio="Se ela já existe, abre a que existe.">
-            <FormularioDoDp2 acao={abrirCompetenciaAction} rotulo="Abrir" rotuloEnviando="Abrindo…">
+            <FormularioDoDp2 acao={abrirCompetenciaAction} rotulo="Abrir competência" rotuloEnviando="Abrindo…" icone={<Plus size={14} aria-hidden="true" />}>
               <input type="hidden" name="companyId" value={tela.empresa.id} />
               <div className="flex flex-col gap-4">
                 <CampoForm label="Mês" htmlFor="competencia">

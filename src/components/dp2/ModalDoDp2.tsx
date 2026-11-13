@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/Button";
 import type { AcaoDoDp2 } from "@/components/dp2/Formulario";
 
 /**
- * O contrato de um colaborador do DP 2 num modal (13/11/2026). Antes era um
- * painel de 420 px ao lado da lista, com os campos espremidos. A pessoa aberta
- * continua na URL (`?pessoa=`), então o link no nome e o botão Editar abrem o
+ * Um cadastro do DP 2 num modal (13/11/2026): o contrato do colaborador, a
+ * convenção, a rubrica. Antes eram painéis de 420 px ao lado da lista, com os
+ * campos espremidos. O que está aberto continua na URL (`?pessoa=`,
+ * `?convencao=`, `?nova=1`), então o link no nome e o botão Editar abrem o
  * mesmo modal; fechar volta para `fecharHref`. Salvo com sucesso, fecha.
  */
-export function ModalDoContrato({
+export function ModalDoDp2({
   titulo,
   apoio,
   acao,
