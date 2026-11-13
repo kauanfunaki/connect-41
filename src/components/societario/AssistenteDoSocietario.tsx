@@ -16,7 +16,7 @@ import { DetalhesDaProposta } from "@/components/ia/DetalhesDaProposta";
 // A frase e os rótulos do chat da Ceci (09/11/2026): era uma cópia daqui, sem
 // a abertura de processo — os dois cartões dizem o mesmo.
 import { descreverProposta, rotulosDaDecisao, rotulosDoCriado } from "@/lib/ia/chat/regras";
-import { ABRIR_PROCESSO } from "@/lib/societario/abertura";
+import { ABRIR_PROCESSO } from "@/lib/societario/aberturaCartao";
 
 /** O que aconteceu com cada proposta: aplicada (com o link do que criou, se criou) ou o erro. */
 type Aplicada = { ok: true; link?: string } | { erro: string };

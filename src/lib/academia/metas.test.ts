@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { metaEmTexto, metaSchema, prazoValido, progressoDaMeta } from "./metas";
+import { metaSchema } from "./metaEsquema";
+import { metaEmTexto, prazoValido, progressoDaMeta } from "./metas";
 
 describe("metaSchema", () => {
   it("aceita a meta e o nível vazio vira qualquer nível", () => {

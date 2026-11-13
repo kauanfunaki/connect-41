@@ -30,7 +30,7 @@ export default async function ParametrosDoValoraPage() {
         title="Parâmetros do Valora"
         subtitle="Quanto custa cada setor e que margem o preço tem de entregar. Os tempos das atividades vêm dos questionários dos setores."
       />
-      <FormParametros catalogo={catalogo} parametros={parametros} podeEditar={acesso.podeGerir} />
+      <FormParametros setores={catalogo.setores} parametros={parametros} podeEditar={acesso.podeGerir} />
 
       <Card className="p-4 mt-6">
         <h2 className="text-card-title font-semibold text-fg mb-1">Catálogo de atividades</h2>

@@ -6,7 +6,7 @@
 // passo que aparece enquanto ele consulta.
 
 import type { AiChatAudience, UserRole } from "@/generated/prisma/enums";
-import { ABRIR_PROCESSO, descreverAbertura, detalhesDaAbertura, type DetalheDoCartao } from "@/lib/societario/abertura";
+import { ABRIR_PROCESSO, descreverAbertura, detalhesDaAbertura, type DetalheDoCartao } from "@/lib/societario/aberturaCartao";
 
 /** Perguntas por pessoa por dia, somando todos os agentes do chat. */
 export const LIMITE_DE_PERGUNTAS_POR_DIA = 30;
