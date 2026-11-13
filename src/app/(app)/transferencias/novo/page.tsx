@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { HandoffForm } from "@/components/transferencias/HandoffForm";
 import { criarHandoff } from "../actions";
+import { buscarEntidades } from "@/app/(app)/busca-actions";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
 import { scopedCompanyWhere, scopedPersonWhere } from "@/lib/auth/scope";
 import { getSectorMaps } from "@/lib/sectors";
@@ -11,7 +12,6 @@ import { getSectorUsers } from "@/lib/sectorUsers";
 import type { EntityType } from "@/generated/prisma/enums";
 import { mensagemComPropostas } from "@/lib/ia/chat/conversas";
 import { lerPropostas } from "@/lib/ia/chat/regras";
-import { CAMPOS_DA_EMPRESA_NO_SELETOR } from "@/lib/empresas/opcoesDoSeletor";
 import { modelosPorUso } from "@/lib/handoffTemplates";
 import { endereco } from "@/lib/enderecoCurto";
 
@@ -133,23 +133,12 @@ export default async function NovoHandoffPage({
     );
   }
 
-  // Modo 2: acesso direto por /transferencias — escolhe a entidade no próprio formulário
-  const [companies, people] = await Promise.all([
-    prisma.company.findMany({
-      where: await scopedCompanyWhere(ctx),
-      orderBy: { name: "asc" },
-      select: CAMPOS_DA_EMPRESA_NO_SELETOR,
-    }),
-    prisma.person.findMany({
-      where: await scopedPersonWhere(ctx),
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, photoUrl: true },
-    }),
-  ]);
-
+  // Modo 2: acesso direto por /transferencias — escolhe a entidade no próprio
+  // formulário, buscando no servidor enquanto digita (13/11/2026, melhoria-662):
+  // a página levava todas as empresas e todas as pessoas do escritório.
   return (
     <FormShell backHref="/transferencias" backLabel="Transferências">
-      <HandoffForm {...comum} cancelHref="/transferencias" companies={companies} people={people} />
+      <HandoffForm {...comum} cancelHref="/transferencias" buscarEntidades={buscarEntidades} />
     </FormShell>
   );
 }

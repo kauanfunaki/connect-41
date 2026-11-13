@@ -10,6 +10,7 @@ import { BotaoNovaTarefa } from "@/components/kanban/NovaTarefaEmLinha";
 import { DuplicatePipelineButton } from "@/components/kanban/DuplicatePipelineButton";
 import { EditPipelineStagesModal } from "@/components/kanban/EditPipelineStagesModal";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { buscarEntidades } from "@/app/(app)/busca-actions";
 import { moverItem, reposicionarItem, duplicarPipeline, renomearEstagio, atualizarEstagios, criarTarefaRapida, criarSubtarefa, atualizarPrioridadeResponsavel, concluirTarefa, reabrirTarefa, excluirItem } from "../actions";
 import { contarFilhas, montarArvore, type NoDaArvore } from "@/lib/kanban/subatividades";
 import type { SubtaskRow } from "@/components/kanban/TaskListView";
@@ -51,10 +52,13 @@ export default async function KanbanBoardPage({
   const canDelete = podeExcluir(ctx);
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
 
-  const duplicateEntities =
+  // O "Duplicar" escolhe a empresa ou pessoa buscando no servidor (13/11/2026,
+  // melhoria-662): a página trazia todas, num <select> no HTML de todo quadro.
+  // Aqui só se sabe se há alguma para oferecer o botão.
+  const temEntidades =
     pipeline.entityType === "COMPANY"
-      ? (await prisma.company.findMany({ where: await scopedCompanyWhere(ctx), orderBy: { name: "asc" }, select: { id: true, name: true } }))
-      : (await prisma.person.findMany({ where: await scopedPersonWhere(ctx), orderBy: { name: "asc" }, select: { id: true, name: true } }));
+      ? (await prisma.company.count({ where: await scopedCompanyWhere(ctx) })) > 0
+      : (await prisma.person.count({ where: await scopedPersonWhere(ctx) })) > 0;
 
   // Resolve nomes das entidades (Company ou Person) referenciadas pelos itens
   // — nem todo item tem entidade (tarefa sem empresa/pessoa associada).
@@ -152,10 +156,11 @@ export default async function KanbanBoardPage({
               action={atualizarEstagios.bind(null, id)}
               podeExcluirColuna={canDelete}
             />
-            {duplicateEntities.length > 0 && (
+            {temEntidades && (
               <DuplicatePipelineButton
                 action={duplicarPipeline.bind(null, id)}
-                entities={duplicateEntities}
+                entityType={pipeline.entityType === "COMPANY" ? "COMPANY" : "PERSON"}
+                buscar={buscarEntidades}
                 entityLabel={pipeline.entityType === "COMPANY" ? "Empresa" : "Pessoa"}
                 defaultName={`${pipeline.name} — cópia`}
               />

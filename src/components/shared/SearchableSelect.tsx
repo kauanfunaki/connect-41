@@ -33,8 +33,18 @@ type Props = {
    * Necessário porque o valor viaja num `<input type="hidden">`, e mudar o
    * `value` de um hidden pelo React NÃO dispara `change` — um formulário que
    * escuta `onChange` no `<form>` (como o de empresa) nunca ficaria sabendo.
+   * Leva a opção escolhida junto: com `buscar`, quem usa não tem a lista.
    */
-  onChange?: (value: string) => void;
+  onChange?: (value: string, opcao?: Opcao) => void;
+  /**
+   * Busca no servidor (13/11/2026, melhoria-662), para listas grandes demais
+   * para irem inteiras ao navegador (as pessoas do escritório). Com ela,
+   * `options` fica vazio (ou só com a já escolhida) e a lista vem daqui: ao
+   * abrir, as primeiras; a cada termo, depois de uma pausa curta. `incluir` são
+   * os ids que o campo precisa conhecer mesmo fora do resultado — a escolhida
+   * e os recentes —, devolvidos em `incluidas`.
+   */
+  buscar?: (termo: string, incluir: string[]) => Promise<{ opcoes: Opcao[]; incluidas: Opcao[] }>;
   /**
    * Altura das barras de filtro (h-8), ao lado de `Input` e `Select` compactos
    * — é onde a empresa se escolhe nas telas financeiras.
@@ -63,6 +73,8 @@ type Props = {
 
 /** Até quantas opções a lista mostra; acima disso, pede para refinar a busca. */
 const TETO = 100;
+/** A pausa entre a última tecla e a busca no servidor. */
+const PAUSA_DA_BUSCA_MS = 250;
 const QUANTOS_RECENTES = 5;
 
 function chaveDosRecentes(chave: string) {
@@ -119,7 +131,8 @@ export function casaComABusca(o: Opcao, termo: string): boolean {
  *
  * Desde 02/10/2026 (pedido de 01/10): logo ou iniciais (`avatar`), descrição
  * e busca pelo CNPJ, filial recuada embaixo da matriz, "Recentes" no topo, ✓
- * na escolhida e teclado (setas, Enter, Esc).
+ * na escolhida e teclado (setas, Enter, Esc). Desde 13/11/2026, com `buscar`,
+ * a lista vem do servidor em vez de vir inteira em `options`.
  */
 export function SearchableSelect({
   name,
@@ -135,6 +148,7 @@ export function SearchableSelect({
   avatar = false,
   lembrarRecentes,
   textoSemValor,
+  buscar,
 }: Props) {
   const [valor, setValor] = useState(defaultValue);
   const [query, setQuery] = useState("");
@@ -148,17 +162,67 @@ export function SearchableSelect({
   const idDaLista = `${idBase}lista`;
   const idDaOpcao = (indice: number) => `${idBase}op${indice}`;
 
-  const selecionada = useMemo(() => options.find((o) => o.value === valor), [options, valor]);
+  // Busca no servidor: o resultado do último termo e tudo o que já veio (para
+  // achar a escolhida e os recentes pelo valor).
+  const remoto = Boolean(buscar);
+  const [remotas, setRemotas] = useState<Opcao[] | null>(null);
+  const [conhecidas, setConhecidas] = useState<Map<string, Opcao>>(() => new Map());
+  const [buscando, setBuscando] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ultimoPedido = useRef(0);
+  useEffect(
+    () => () => {
+      if (espera.current) clearTimeout(espera.current);
+    },
+    []
+  );
 
-  const encontradas = useMemo(() => options.filter((o) => casaComABusca(o, query)), [options, query]);
+  // Chamada pelos eventos (abrir, digitar), e não por efeito: assim vale a
+  // `buscar` de agora, mesmo que quem usa a recrie a cada renderização.
+  function pedirBusca(termo: string, pausa: number) {
+    if (!buscar) return;
+    if (espera.current) clearTimeout(espera.current);
+    const pedido = ++ultimoPedido.current;
+    setBuscando(true);
+    setFalhou(false);
+    espera.current = setTimeout(() => {
+      const incluir = [valor, ...(lembrarRecentes ? lerRecentes(lembrarRecentes) : [])].filter(Boolean);
+      buscar(termo.trim(), incluir)
+        .then((r) => {
+          // Uma resposta que chega depois de outra mais nova é descartada.
+          if (pedido !== ultimoPedido.current) return;
+          setRemotas(r.opcoes);
+          setConhecidas((antes) => {
+            const m = new Map(antes);
+            for (const o of [...r.opcoes, ...r.incluidas]) m.set(o.value, o);
+            return m;
+          });
+        })
+        .catch(() => {
+          if (pedido === ultimoPedido.current) setFalhou(true);
+        })
+        .finally(() => {
+          if (pedido === ultimoPedido.current) setBuscando(false);
+        });
+    }, pausa);
+  }
+
+  const selecionada = useMemo(() => options.find((o) => o.value === valor) ?? conhecidas.get(valor), [options, conhecidas, valor]);
+
+  // No servidor, a busca já veio filtrada (pelo nome, pelo apelido e pelo CNPJ).
+  const encontradas = useMemo(
+    () => (remoto ? (remotas ?? []) : options.filter((o) => casaComABusca(o, query))),
+    [remoto, remotas, options, query]
+  );
   const filtradas = encontradas.slice(0, TETO);
 
   // "Recentes" só sem busca — com busca, a pessoa já disse o que quer.
   const opcoesRecentes = useMemo(() => {
     if (!lembrarRecentes || query.trim() !== "") return [];
-    const porValor = new Map(options.map((o) => [o.value, o]));
+    const porValor = remoto ? conhecidas : new Map(options.map((o) => [o.value, o]));
     return recentes.map((v) => porValor.get(v)).filter((o): o is Opcao => Boolean(o));
-  }, [lembrarRecentes, query, recentes, options]);
+  }, [lembrarRecentes, query, recentes, options, remoto, conhecidas]);
 
   // A ordem que o teclado percorre: limpar, recentes e a lista.
   const navegaveis = useMemo(
@@ -219,6 +283,7 @@ export function SearchableSelect({
     if (lembrarRecentes) setRecentes(lerRecentes(lembrarRecentes));
     setAtiva(0);
     setAberto(true);
+    pedirBusca(query, 0);
   }
 
   // Fechar volta o foco ao campo (auditoria de UX, 30/10/2026): a busca, onde ele
@@ -230,11 +295,12 @@ export function SearchableSelect({
   }
 
   function escolher(v: string) {
+    const opcao = options.find((o) => o.value === v) ?? conhecidas.get(v);
     setValor(v);
     setQuery("");
     fechar();
     if (v && lembrarRecentes) gravarRecente(lembrarRecentes, v);
-    onChange?.(v);
+    onChange?.(v, opcao);
   }
 
   function noTeclado(e: React.KeyboardEvent) {
@@ -353,6 +419,7 @@ export function SearchableSelect({
                 setQuery(e.target.value);
                 // Com busca, o Enter vai no primeiro resultado, e não no "Todas".
                 setAtiva(e.target.value.trim() && vazioLabel ? 1 : 0);
+                pedirBusca(e.target.value, PAUSA_DA_BUSCA_MS);
               }}
               onKeyDown={noTeclado}
               placeholder={placeholder}
@@ -366,7 +433,7 @@ export function SearchableSelect({
               aria-activedescendant={navegaveis[ativa] ? idDaOpcao(ativa) : undefined}
             />
           </div>
-          <ul ref={listaRef} id={idDaLista} role="listbox" className="scroll-y max-h-72 overflow-y-auto py-1">
+          <ul ref={listaRef} id={idDaLista} role="listbox" aria-busy={buscando || undefined} className="scroll-y max-h-72 overflow-y-auto py-1">
             {vazioLabel && (
               <li role="none">
                 <button
@@ -396,12 +463,27 @@ export function SearchableSelect({
               </>
             )}
             {filtradas.map((o, i) => linha(o, inicioDaLista + i))}
-            {filtradas.length === 0 && (
-              <li className="px-3 py-3 text-helper text-fg-muted">Nada encontrado para “{query}”.</li>
+            {remoto && falhou && (
+              <li className="flex flex-wrap items-center gap-2 px-3 py-3 text-helper text-danger" role="alert">
+                Não deu para buscar.
+                <Button type="button" variant="link" onClick={() => pedirBusca(query, 0)}>
+                  Tentar de novo
+                </Button>
+              </li>
+            )}
+            {remoto && buscando && filtradas.length === 0 && !falhou && (
+              <li className="px-3 py-3 text-helper text-fg-muted" role="status">
+                Buscando…
+              </li>
+            )}
+            {filtradas.length === 0 && !(remoto && (buscando || falhou || remotas === null)) && (
+              <li className="px-3 py-3 text-helper text-fg-muted">
+                {remoto && !query.trim() ? "Nada para escolher." : <>Nada encontrado para “{query}”.</>}
+              </li>
             )}
             {encontradas.length > TETO && (
               <li className="px-3 py-2 text-helper text-fg-muted border-t border-border">
-                Mostrando {TETO} de {encontradas.length}. Digite mais para refinar.
+                {remoto ? <>Mostrando os primeiros {TETO}. Digite mais para refinar.</> : <>Mostrando {TETO} de {encontradas.length}. Digite mais para refinar.</>}
               </li>
             )}
           </ul>
