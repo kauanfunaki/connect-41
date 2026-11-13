@@ -17,7 +17,7 @@ import { Stepper, type StepDef } from "@/components/ui/Stepper";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { SearchableSelect } from "@/components/shared/SearchableSelect";
+import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { MentionTextarea, type MentionUser } from "@/components/transferencias/MentionTextarea";
 import { SectorAssigneePicker } from "@/components/transferencias/SectorAssigneePicker";
 import { ASSUNTO_MAXIMO, HANDOFF_PRIORITY_LABEL, HANDOFF_PRIORITY_OPTIONS, HANDOFF_PRIORITY_TOM } from "@/lib/handoffs";
@@ -29,20 +29,6 @@ import {
   type HandoffTemplate,
 } from "@/lib/handoffTemplates";
 import { formatCnpj } from "@/lib/format";
-import { opcoesDeEmpresa } from "@/lib/empresas/opcoesDoSeletor";
-import { nomeExibicao } from "@/lib/companyName";
-
-type EntityOption = {
-  id: string;
-  name: string;
-  cnpj?: string | null;
-  /** Da empresa, para o seletor com logo e a filial embaixo da matriz. */
-  displayName?: string | null;
-  logoUrl?: string | null;
-  parentCompanyId?: string | null;
-  /** Da pessoa. */
-  photoUrl?: string | null;
-};
 
 type FixedEntity = { entityType: EntityType; entityId: string; entityName: string; entityCnpj?: string | null };
 
@@ -57,8 +43,11 @@ type Props = {
   toSectorOptions: OpcaoDeSetor[];
   cancelHref: string;
   fixedEntity?: FixedEntity;
-  companies?: EntityOption[];
-  people?: EntityOption[];
+  /**
+   * A busca de empresa ou pessoa no servidor (13/11/2026, melhoria-662): a
+   * página mandava todas as empresas e pessoas do escritório para o seletor.
+   */
+  buscarEntidades?: (tipo: EntityType, termo: string, incluir: string[]) => Promise<{ opcoes: Opcao[]; incluidas: Opcao[] }>;
   mentionUsers?: MentionUser[];
   /** Membros elegíveis como responsável por setor de destino (setor + admins do tenant). */
   assigneeOptionsBySector?: Record<string, MentionUser[]>;
@@ -110,8 +99,7 @@ export function HandoffForm({
   toSectorOptions,
   cancelHref,
   fixedEntity,
-  companies = [],
-  people = [],
+  buscarEntidades,
   mentionUsers = [],
   assigneeOptionsBySector = {},
   inicial,
@@ -158,15 +146,13 @@ export function HandoffForm({
   const erroDoServidor = state?.error && !erroDispensado ? { campo: state.campo ?? "geral", texto: state.error } : null;
   const erroDe = (campo: CampoDaTransferencia) => erros[campo] ?? (erroDoServidor?.campo === campo ? erroDoServidor.texto : undefined);
 
-  const entityOptions = entityType === "COMPANY" ? companies : people;
-  // As opções do seletor com busca: empresa com logo, CNPJ, filial e recentes;
-  // pessoa com a foto.
-  const opcoesDoSeletor = useMemo(
-    () =>
-      entityType === "COMPANY"
-        ? opcoesDeEmpresa(companies.map((c) => ({ ...c, nome: nomeExibicao(c) })))
-        : people.map((p) => ({ value: p.id, label: p.name, imagem: p.photoUrl ?? null })),
-    [entityType, companies, people]
+  // A empresa ou pessoa escolhida no seletor: o nome e o CNPJ vêm da opção
+  // (empresa com logo, CNPJ, filial e recentes; pessoa com a foto), que a
+  // busca no servidor devolve — a página não manda mais a lista inteira.
+  const [escolhida, setEscolhida] = useState<{ id: string; name: string; cnpj: string | null } | null>(null);
+  const buscarDoTipo = useMemo(
+    () => (buscarEntidades ? (termo: string, incluir: string[]) => buscarEntidades(entityType, termo, incluir) : undefined),
+    [buscarEntidades, entityType]
   );
 
   const modelos = useMemo(
@@ -200,10 +186,11 @@ export function HandoffForm({
 
   // [EMPRESA]/[CNPJ] são substituídos pela empresa já escolhida — os demais
   // placeholders do modelo ficam por conta de quem preenche.
-  function entidadeAtual(id = entityId): { name?: string; cnpj?: string | null } {
+  function entidadeAtual(id = entityId, opcao: Opcao | undefined = undefined): { name?: string; cnpj?: string | null } {
     if (fixedEntity) return { name: fixedEntity.entityName, cnpj: fixedEntity.entityCnpj ? formatCnpj(fixedEntity.entityCnpj) : null };
-    const found = entityOptions.find((e) => e.id === id);
-    return { name: found ? (entityType === "COMPANY" ? nomeExibicao(found) : found.name) : undefined, cnpj: found?.cnpj ? formatCnpj(found.cnpj) : null };
+    // A opção que acabou de ser escolhida vale antes do estado, que ainda não mudou.
+    if (opcao && opcao.value === id) return { name: opcao.label, cnpj: entityType === "COMPANY" ? (opcao.descricao ?? null) : null };
+    return escolhida && escolhida.id === id ? { name: escolhida.name, cnpj: escolhida.cnpj } : { name: undefined, cnpj: null };
   }
 
   // O modelo escreve a Descrição (o resumo e o que vale para todos) e a
@@ -258,11 +245,13 @@ export function HandoffForm({
 
   // Trocou a empresa depois de escolher o modelo: o texto que o modelo
   // escreveu (e ninguém mexeu) é escrito de novo com a empresa nova.
-  function trocarEntidade(id: string) {
+  function trocarEntidade(id: string, opcao?: Opcao) {
     limparErro("entidade");
     setEntityId(id);
+    // O CNPJ da empresa é a descrição da opção, já formatado.
+    setEscolhida(id && opcao ? { id, name: opcao.label, cnpj: entityType === "COMPANY" ? (opcao.descricao ?? null) : null } : null);
     if (modelo && description === descricaoDoModelo) {
-      aplicarModelo(modelo, entidadeAtual(id), false);
+      aplicarModelo(modelo, entidadeAtual(id, opcao), false);
     }
   }
 
@@ -348,6 +337,7 @@ export function HandoffForm({
                       onChange={(t) => {
                         setEntityType(t);
                         setEntityId("");
+                        setEscolhida(null);
                       }}
                       items={[
                         { key: "COMPANY" as EntityType, label: "Empresa", icon: <Building2 size={13} aria-hidden /> },
@@ -359,18 +349,14 @@ export function HandoffForm({
                     label={entityType === "COMPANY" ? "Empresa" : "Pessoa"}
                     htmlFor="entityId-busca"
                     error={erroDe("entidade")}
-                    helper={
-                      entityOptions.length === 0
-                        ? `Nenhuma ${entityType === "COMPANY" ? "empresa" : "pessoa"} disponível no seu escopo.`
-                        : undefined
-                    }
                   >
                     {/* A chave remonta o campo ao trocar de tipo, que zera a escolha. */}
                     <SearchableSelect
                       key={entityType}
                       id="entityId-busca"
                       name="entityId-busca"
-                      options={opcoesDoSeletor}
+                      options={[]}
+                      buscar={buscarDoTipo}
                       defaultValue={entityId}
                       onChange={trocarEntidade}
                       avatar

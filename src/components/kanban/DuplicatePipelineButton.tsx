@@ -1,19 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Copy } from "lucide-react";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import type { PipelineState } from "@/app/(app)/kanban/actions";
 import { Button } from "@/components/ui/Button";
 
-type EntityOption = { id: string; name: string };
+type Tipo = "COMPANY" | "PERSON";
 
 type Props = {
   action: (prev: PipelineState, form: FormData) => Promise<PipelineState>;
-  entities: EntityOption[];
+  /** De que tipo é a entidade do quadro; a busca é nesse tipo. */
+  entityType: Tipo;
+  /**
+   * A busca no servidor (13/11/2026, melhoria-662): era um `<select>` com
+   * todas as empresas ou pessoas do escritório no HTML de todo quadro.
+   */
+  buscar: (tipo: Tipo, termo: string, incluir: string[]) => Promise<{ opcoes: Opcao[]; incluidas: Opcao[] }>;
   entityLabel: string; // "Empresa" ou "Pessoa"
   defaultName: string;
 };
@@ -22,8 +28,10 @@ type Props = {
 // pra outra empresa/pessoa — usado pra transformar um kanban template (ex.
 // "Implantação - Cliente Novo") num processo real por cliente, sem recriar
 // tudo manualmente a cada novo cliente.
-export function DuplicatePipelineButton({ action, entities, entityLabel, defaultName }: Props) {
+export function DuplicatePipelineButton({ action, entityType, buscar, entityLabel, defaultName }: Props) {
   const [state, formAction, isPending] = useActionState(action, null);
+  // O botão espera a escolha: o campo de busca não é um <select required>.
+  const [entityId, setEntityId] = useState("");
 
   return (
     <Dropdown
@@ -48,18 +56,23 @@ export function DuplicatePipelineButton({ action, entities, entityLabel, default
           <Input id="dup-name" name="name" required defaultValue={defaultName} />
         </CampoForm>
         <CampoForm label={entityLabel} htmlFor="dup-entity" required>
-          <Select id="dup-entity" name="entityId" required defaultValue="">
-            <option value="" disabled>Selecione…</option>
-            {entities.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
-            ))}
-          </Select>
+          <SearchableSelect
+            id="dup-entity"
+            name="entityId"
+            options={[]}
+            buscar={(termo, incluir) => buscar(entityType, termo, incluir)}
+            onChange={setEntityId}
+            avatar
+            textoSemValor="Selecione…"
+            placeholder={entityType === "COMPANY" ? "Buscar empresa…" : "Buscar pessoa…"}
+            lembrarRecentes={entityType === "COMPANY" ? "empresas" : undefined}
+          />
         </CampoForm>
         {state?.error && <p className="text-helper font-medium text-danger">{state.error}</p>}
         <Button
           variant="primary"
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !entityId}
           className="w-full"
         >
           {isPending ? "Duplicando…" : "Duplicar"}
