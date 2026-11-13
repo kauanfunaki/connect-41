@@ -169,7 +169,7 @@ export default async function SetoresPage({
             <h2 id="telas-em-manutencao" className="text-card-title font-semibold text-fg">
               Telas em manutenção
             </h2>
-            <p className="text-fs-2 text-fg-muted">Os setores veem o aviso no lugar delas; a Tech e os administradores entram normalmente.</p>
+            <p className="text-fs-2 text-fg-muted">Bloqueadas para todos. A Tech e os administradores abrem só para si, pelo aviso, para testar.</p>
           </div>
           <div className="divide-y divide-border border-t border-border">
             {manutencaoAgora.map(({ modulo, aviso }) => (

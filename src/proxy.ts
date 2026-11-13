@@ -16,7 +16,7 @@ import {
 import { accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 import { ehHostDoSite } from "@/lib/site/host";
-import { PAGINA_DE_MANUTENCAO, passaPelaManutencao, telaParaConferir } from "@/lib/manutencao/regras";
+import { COOKIE_DE_TESTE, PAGINA_DE_MANUTENCAO, manutencoesEmTeste, passaPelaManutencao, telaParaConferir } from "@/lib/manutencao/regras";
 import { ESPERA_MS, ROTA_DAS_TELAS_EM_MANUTENCAO, telasEmManutencaoNoProxy } from "@/lib/manutencao/noProxy";
 import {
   PAGINA_NAO_ENCONTRADA,
@@ -185,11 +185,12 @@ function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req
 //
 // Uma tela de setor em manutenção abre o aviso no lugar dela, no mesmo
 // endereço — inclusive pela navegação do menu, que não recarrega o layout.
-// Por isso a regra mora aqui, e não em cada página. Quem conserta (Tech e
-// administrador) passa e vê a tela. A lista vem da rota
+// Por isso a regra mora aqui, e não em cada página. A tela fica bloqueada para
+// todos; quem conserta (Tech e administrador) entra só depois de "Abrir para
+// testar", no aviso (o cookie de `COOKIE_DE_TESTE`). A lista vem da rota
 // `/api/manutencao/telas`, guardada por alguns segundos (src/lib/manutencao/noProxy.ts):
 // o proxy continua sem ir ao banco. Qualquer falha deixa a tela abrir.
-async function buscarTelasEmManutencao(req: NextRequest, accessToken: string): Promise<ReadonlySet<string>> {
+async function buscarTelasEmManutencao(req: NextRequest, accessToken: string): Promise<ReadonlyMap<string, string>> {
   const cookies = [`access_token=${accessToken}`];
   const escritorio = req.cookies.get("active_tenant_id")?.value;
   if (escritorio) cookies.push(`active_tenant_id=${escritorio}`);
@@ -198,8 +199,14 @@ async function buscarTelasEmManutencao(req: NextRequest, accessToken: string): P
     signal: AbortSignal.timeout(ESPERA_MS),
   });
   if (!res.ok) throw new Error(`a rota respondeu ${res.status}`);
-  const { codigos } = (await res.json()) as { codigos?: unknown };
-  return new Set(Array.isArray(codigos) ? codigos.filter((c): c is string => typeof c === "string") : []);
+  const { telas } = (await res.json()) as { telas?: unknown };
+  const porCodigo = new Map<string, string>();
+  if (Array.isArray(telas)) {
+    for (const t of telas as { codigo?: unknown; id?: unknown }[]) {
+      if (typeof t?.codigo === "string" && typeof t.id === "string") porCodigo.set(t.codigo, t.id);
+    }
+  }
+  return porCodigo;
 }
 
 /** Segue para a tela pedida — ou para o aviso, se ela estiver em manutenção para quem pede. */
@@ -211,11 +218,14 @@ async function seguirParaATela(
 ): Promise<NextResponse> {
   const efetiva = applyIdentityHeaders(headers, payload, req);
   const tela = telaParaConferir(req.method, req.nextUrl.pathname);
-  if (!tela || passaPelaManutencao({ role: payload.role, sectors: efetiva.sectors })) {
-    return NextResponse.next({ request: { headers } });
-  }
+  if (!tela) return NextResponse.next({ request: { headers } });
   const emManutencao = await telasEmManutencaoNoProxy(efetiva.tenantId, () => buscarTelasEmManutencao(req, accessToken));
-  if (!emManutencao.has(tela)) return NextResponse.next({ request: { headers } });
+  const manutencao = emManutencao.get(tela);
+  if (!manutencao) return NextResponse.next({ request: { headers } });
+  const abriuParaTestar =
+    passaPelaManutencao({ role: payload.role, sectors: efetiva.sectors }) &&
+    manutencoesEmTeste(req.cookies.get(COOKIE_DE_TESTE)?.value).includes(manutencao);
+  if (abriuParaTestar) return NextResponse.next({ request: { headers } });
   const destino = req.nextUrl.clone();
   destino.pathname = PAGINA_DE_MANUTENCAO;
   destino.searchParams.set("tela", tela);

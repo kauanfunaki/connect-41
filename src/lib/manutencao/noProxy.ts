@@ -20,18 +20,19 @@ export const VALIDADE_MS = 10_000;
 export const ESPERA_MS = 1_500;
 const NOVA_TENTATIVA_MS = 5_000;
 
-const NENHUMA: ReadonlySet<string> = new Set();
+const NENHUMA: ReadonlyMap<string, string> = new Map();
 
 type Guardada = {
-  codigos: ReadonlySet<string>;
+  /** Código da tela → id da manutenção (o "Abrir para testar" guarda o id). */
+  codigos: ReadonlyMap<string, string>;
   /** Quando a lista deixa de valer (e a próxima abertura busca a nova). */
   venceEm: number;
-  buscando: Promise<ReadonlySet<string>> | null;
+  buscando: Promise<ReadonlyMap<string, string>> | null;
 };
 
 const porEscritorio = new Map<string, Guardada>();
 
-function buscarDeNovo(tenantId: string, buscar: () => Promise<ReadonlySet<string>>, agora: () => number): Promise<ReadonlySet<string>> {
+function buscarDeNovo(tenantId: string, buscar: () => Promise<ReadonlyMap<string, string>>, agora: () => number): Promise<ReadonlyMap<string, string>> {
   const atual = porEscritorio.get(tenantId);
   if (atual?.buscando) return atual.buscando;
   const anteriores = atual?.codigos ?? NENHUMA;
@@ -51,14 +52,15 @@ function buscarDeNovo(tenantId: string, buscar: () => Promise<ReadonlySet<string
 }
 
 /**
- * Os códigos das telas em manutenção do escritório, pelo cache do processo.
+ * As telas em manutenção do escritório (código → id da manutenção), pelo
+ * cache do processo.
  * `buscar` é quem pergunta à rota (no proxy) — injetado para o teste.
  */
 export async function telasEmManutencaoNoProxy(
   tenantId: string,
-  buscar: () => Promise<ReadonlySet<string>>,
+  buscar: () => Promise<ReadonlyMap<string, string>>,
   agora: () => number = Date.now,
-): Promise<ReadonlySet<string>> {
+): Promise<ReadonlyMap<string, string>> {
   const atual = porEscritorio.get(tenantId);
   if (atual && agora() < atual.venceEm) return atual.codigos;
   // Já teve uma resposta (ou uma falha): segue com ela enquanto a nova chega.

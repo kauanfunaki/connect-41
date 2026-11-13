@@ -6,7 +6,9 @@ import { PageContainer } from "@/components/shared/PageContainer";
 import { getAuthContext } from "@/lib/auth/context";
 import { getModuleDef, getModuleRoute } from "@/lib/module-catalog";
 import { lerTelasEmManutencao } from "@/lib/manutencao/leitura";
-import { quandoNoAviso } from "@/lib/manutencao/regras";
+import { passaPelaManutencao, quandoNoAviso } from "@/lib/manutencao/regras";
+import { isFullWrite } from "@/lib/auth/papeis";
+import { AbrirTelaParaTestar } from "@/components/shell/TelasEmManutencao";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tela em manutenção" };
@@ -15,7 +17,8 @@ export const metadata = { title: "Tela em manutenção" };
  * O aviso de manutenção (13/11/2026). Ninguém chega aqui pelo menu: o proxy
  * mostra esta página no lugar da tela em manutenção, sem mudar o endereço
  * (`?tela=` diz qual é). O motivo e a previsão vêm do banco, frescos — a
- * lista do proxy pode estar alguns segundos atrás.
+ * lista do proxy pode estar alguns segundos atrás. A tela fica bloqueada para
+ * todos: quem conserta (Tech e administrador) vê aqui o "Abrir para testar".
  *
  * Mesma linguagem do "não encontrado" (o disco com o anel tracejado), no tom
  * de atenção: não é erro de quem abriu, e não é vazio.
@@ -30,6 +33,9 @@ export default async function TelaEmManutencao({ searchParams }: { searchParams:
   const aviso = telas.find((t) => t.moduleCode === tela);
   const endereco = getModuleRoute(tela) ?? `/setor/${def.sectorCode}/${tela}`;
   const agora = new Date();
+  // A tela fica bloqueada para todos; quem conserta abre só para si, daqui.
+  const conserta = passaPelaManutencao(ctx);
+  const podeLiberar = isFullWrite(ctx.role);
 
   return (
     <PageContainer>
@@ -82,6 +88,22 @@ export default async function TelaEmManutencao({ searchParams }: { searchParams:
                   Tentar de novo
                 </Button>
               </div>
+
+              {conserta && (
+                <div className="mt-8 w-full max-w-[30rem] border-t border-border pt-5">
+                  <p className="text-fs-2 text-fg-secondary leading-relaxed">
+                    Para conferir a correção antes de liberar, abra a tela só para você. Os setores continuam vendo este aviso.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                    <AbrirTelaParaTestar tela={tela} />
+                    {podeLiberar && (
+                      <Button href={`/admin/setores?setor=${encodeURIComponent(def.sectorCode)}`} variant="ghost" size="sm">
+                        Liberar a tela
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
