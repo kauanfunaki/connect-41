@@ -20,7 +20,6 @@ import { motivosAgrupados, separarAlteracao, type CampoDoLote } from "@/lib/fina
 import type { ForaDoLote } from "@/lib/financeiro/baixa/lote";
 
 type Opcao = { id: string; nome: string };
-type EmpresaComCentros = Opcao & { centros: Opcao[] };
 type Carregado = Extract<DadosDaAlteracao, { ok: true }>;
 type Gravado = Extract<ResultadoDaAlteracao, { ok: true }>;
 
@@ -40,18 +39,18 @@ function resumo(r: Gravado) {
  *
  * Abre com "Carregando…" e pergunta ao servidor as travas de cada conta e as
  * listas: a tabela não sabe o que está conciliado nem de onde a conta veio, e
- * categoria e projeto dependem da empresa — a lista mistura empresas. Os
- * centros vêm da tela, que já os tem por empresa.
+ * categoria, centro e projeto dependem da empresa — a lista mistura empresas.
+ * Os centros também vêm daqui desde 13/11/2026: a tela não os carrega mais.
  */
 export function JanelaDaAlteracaoEmLote({
   ids,
-  centros,
+  comCentro,
   onFechar,
   onAlteradas,
 }: {
   ids: string[];
-  /** Os centros ativos de cada empresa da lista. `null` quando a lista não usa centro: o campo não aparece. */
-  centros: EmpresaComCentros[] | null;
+  /** A tela usa centro de custo: sem isso, o campo não aparece. */
+  comCentro: boolean;
   onFechar: () => void;
   onAlteradas: (resumo: string) => void;
 }) {
@@ -87,7 +86,7 @@ export function JanelaDaAlteracaoEmLote({
       ) : (
         <Formulario
           dados={dados}
-          centros={centros}
+          comCentro={comCentro}
           aoMudarPendente={setPendente}
           onCancelar={onFechar}
           onGravado={(r) => {
@@ -157,13 +156,13 @@ function Linha({
 
 function Formulario({
   dados,
-  centros,
+  comCentro,
   aoMudarPendente,
   onCancelar,
   onGravado,
 }: {
   dados: Carregado;
-  centros: EmpresaComCentros[] | null;
+  comCentro: boolean;
   aoMudarPendente: (p: boolean) => void;
   onCancelar: () => void;
   onGravado: (r: Gravado) => void;
@@ -182,8 +181,7 @@ function Formulario({
   const alternar = (c: CampoDoLote) => setCampos((atual) => (atual.includes(c) ? atual.filter((x) => x !== c) : [...atual, c]));
 
   const variasEmpresas = dados.empresas.length > 1;
-  const daSelecao = new Set(dados.empresas.map((e) => e.id));
-  const comCentros = (centros ?? []).filter((e) => daSelecao.has(e.id) && e.centros.length > 0);
+  const comCentros = dados.empresas.filter((e) => e.centros.length > 0);
   const comProjetos = dados.empresas.filter((e) => e.projetos.length > 0);
   const empresaDoCentro = centroId ? (comCentros.find((e) => e.centros.some((c) => c.id === centroId))?.id ?? null) : null;
   const empresaDoProjeto = projetoId ? (comProjetos.find((e) => e.projetos.some((p) => p.id === projetoId))?.id ?? null) : null;
@@ -298,7 +296,7 @@ function Formulario({
             ))}
           </Select>
         </Linha>
-        {centros && (
+        {comCentro && (
           <Linha
             id={`${id}-m-centro`}
             rotulo="Centro de custo"

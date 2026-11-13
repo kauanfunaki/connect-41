@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthContext, canActOnSector } from "@/lib/auth/context";
-import { getModuleDef } from "@/lib/module-catalog";
-import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
+import { getAuthContext } from "@/lib/auth/context";
 import { saoPauloParts } from "@/lib/agenda";
 import { getPrisma } from "@/lib/prisma";
 import { nomeExibicao } from "@/lib/companyName";
@@ -12,12 +10,14 @@ import { centavosDeDecimal } from "./contas";
 import { listarContas, type LinhaDaConta, type TipoDeConta } from "./data";
 import { csvDasContas, LIMITE_DA_EXPORTACAO, RECORTES_A_PAGAR, RECORTES_A_RECEBER, recorteDaUrl } from "./exportacao";
 import { xlsxDasContas, type ParteNaPlanilha } from "./exportacaoXlsx";
+import { podeUsarATelaDeContas } from "./acessoDaTelaDeContas";
+import { funisDaConsulta } from "./paginaDeContas";
 
 /**
  * A lista de Contas a pagar ou a receber em CSV ou em Excel, com os filtros da
  * tela (lote D, 20/10): a empresa, a competência e o recorte vêm no endereço,
- * do botão "Exportar". Os funis das colunas filtram no navegador e não entram —
- * a exportação é do recorte, e a tela diz isso.
+ * do botão "Exportar". Desde 13/11/2026 os funis das colunas também: passaram
+ * a filtrar pela URL (a lista é paginada), e a exportação leva todas as páginas.
  *
  * `formato=xlsx` (20/10): a planilha numa Tabela do Excel, pronta para a
  * tabela dinâmica — com o rateio aberto em linhas (`exportacaoXlsx.ts`).
@@ -29,10 +29,7 @@ import { xlsxDasContas, type ParteNaPlanilha } from "./exportacaoXlsx";
 export async function exportarContas(req: NextRequest, kind: TipoDeConta, modulo: string): Promise<NextResponse> {
   const ctx = await getAuthContext();
   const naoAchou = NextResponse.json({ error: "Não encontrado" }, { status: 404 });
-  if (!ctx.tenantId || !getModuleDef(modulo)) return naoAchou;
-  const setores = await setoresDoModulo(ctx.tenantId, modulo);
-  if (!setores || !canActOnSector(ctx, setores)) return naoAchou;
-  if (!(await isModuleEnabled(ctx.tenantId, modulo))) return naoAchou;
+  if (!(await podeUsarATelaDeContas(ctx, modulo))) return naoAchou;
 
   const sp = req.nextUrl.searchParams;
   const empresa = sp.get("empresa");
@@ -46,7 +43,7 @@ export async function exportarContas(req: NextRequest, kind: TipoDeConta, modulo
   const { empresaId, empresaIds } = noFoco;
 
   const agora = new Date();
-  const resultado = await listarContas(ctx.tenantId, kind, { recorte, competencia, empresaId, empresaIds }, agora, LIMITE_DA_EXPORTACAO);
+  const resultado = await listarContas(ctx.tenantId, kind, { recorte, competencia, empresaId, empresaIds, funis: funisDaConsulta(sp) }, agora, LIMITE_DA_EXPORTACAO);
   const diaDe = (d: Date) => saoPauloParts(d).dateKey;
   const nome = [kind === "PAGAR" ? "contas-a-pagar" : "contas-a-receber", competencia ?? recorte, saoPauloParts(agora).dateKey].join("-");
   const cabecalhos = (tipo: string, extensao: string) => ({

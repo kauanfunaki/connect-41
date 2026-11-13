@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { formatarCompetencia } from "@/lib/format";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListFilter, Search, X } from "lucide-react";
@@ -434,43 +434,105 @@ export function FiltroDaColuna({
   );
 }
 
+/** Um campo do funil pela URL: o parâmetro e o nome na aba do funil. */
+export type CampoDoFunilNaUrl = { chave: string; rotulo: string };
+
+/** Os valores de um campo, pedidos ao servidor quando o funil abre. */
+export type CarregarValoresDoFunil = (chave: string) => Promise<ValorDoFunil[] | { erro: string }>;
+
+type Carregado = { consulta: string; valores: ValorDoFunil[] } | { consulta: string; erro: string };
+
 /**
- * O funil para tabela **paginada** (Empresas, Pessoas): filtra no
- * servidor, pela URL, e não nas linhas da tela.
+ * O funil para tabela **paginada** (Empresas, Pessoas, Contas a pagar e a
+ * receber): filtra no servidor, pela URL, e não nas linhas da tela.
  *
  * Numa lista de 20 por página, filtrar só as linhas visíveis engana — "Simples
  * Nacional" sumiria da página 1 e continuaria nas outras 19. Aqui os valores e
  * as contagens vêm do banco (a tela inteira, não a página), a escolha vai para
  * a URL como parâmetro repetido (`?regime=A&regime=B`) e a página volta para 1.
  * Por ir ao servidor, aplica no "Aplicar", e não a cada caixa marcada.
+ *
+ * Duas formas (13/11/2026):
+ * - `chave` e `opcoes`: um campo, com os valores já na página (Empresas);
+ * - `campos` e `carregar`: um ou mais campos na mesma coluna, em abas como no
+ *   funil do navegador, com os valores pedidos ao servidor quando o funil abre
+ *   (Contas a pagar e a receber). A lista de fornecedores de um escritório
+ *   pesaria mais na página que as próprias contas; pedida na hora, só pesa
+ *   para quem abre o funil. Fica guardada até a URL mudar.
  */
-export function FiltroDaColunaNaUrl({
-  rotulo,
-  chave,
-  opcoes,
-  align = "left",
-}: {
-  rotulo: string;
-  /** Nome do parâmetro na URL. */
-  chave: string;
-  opcoes: ValorDoFunil[];
-  align?: "left" | "right";
-}) {
+export function FiltroDaColunaNaUrl(
+  props: {
+    rotulo: string;
+    align?: "left" | "right";
+  } & (
+    | {
+        /** Nome do parâmetro na URL. */
+        chave: string;
+        opcoes: ValorDoFunil[];
+        campos?: undefined;
+        carregar?: undefined;
+      }
+    | { campos: CampoDoFunilNaUrl[]; carregar: CarregarValoresDoFunil; chave?: undefined; opcoes?: undefined }
+  )
+) {
+  const { rotulo, align = "left", carregar } = props;
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const naUrl = params.getAll(chave);
-  const [rascunho, setRascunho] = useState<Set<string> | null>(naUrl.length ? new Set(naUrl) : null);
+  const lista: CampoDoFunilNaUrl[] = props.campos ?? [{ chave: props.chave, rotulo }];
+  const [campoAtual, setCampoAtual] = useState(lista[0]?.chave ?? "");
+  const campo = lista.find((c) => c.chave === campoAtual) ?? lista[0];
 
-  function ir(valores: string[] | null) {
+  const aplicados = (chave: string) => params.getAll(chave);
+  const doQueEstaAplicado = (): Record<string, Set<string> | null> =>
+    Object.fromEntries(lista.map((c) => [c.chave, aplicados(c.chave).length ? new Set(aplicados(c.chave)) : null]));
+  const [rascunhos, setRascunhos] = useState<Record<string, Set<string> | null>>(doQueEstaAplicado);
+  // Remonta a lista ao abrir e ao trocar de aba: a busca começa vazia.
+  const [versao, setVersao] = useState(0);
+
+  // Os valores dependem dos outros filtros da URL, não da página que se vê.
+  const semPagina = new URLSearchParams(params.toString());
+  semPagina.delete("pagina");
+  semPagina.delete("page");
+  const consulta = semPagina.toString();
+  const [carregados, setCarregados] = useState<Record<string, Carregado>>({});
+  const pedindo = useRef(new Set<string>());
+
+  function pedirValores(chave: string) {
+    if (!carregar) return;
+    const ja = carregados[chave];
+    const pedido = `${chave}?${consulta}`;
+    if ((ja && ja.consulta === consulta && "valores" in ja) || pedindo.current.has(pedido)) return;
+    pedindo.current.add(pedido);
+    const guardar = (c: Carregado) => setCarregados((atual) => ({ ...atual, [chave]: c }));
+    carregar(chave)
+      .then((r) => guardar(Array.isArray(r) ? { consulta, valores: r } : { consulta, erro: r.erro }))
+      .catch(() => guardar({ consulta, erro: "Não deu para carregar os valores. Tente de novo." }))
+      .finally(() => pedindo.current.delete(pedido));
+  }
+
+  const doCampo = campo ? carregados[campo.chave] : undefined;
+  const atualizado = doCampo && doCampo.consulta === consulta ? doCampo : undefined;
+  const valores = props.opcoes ?? (atualizado && "valores" in atualizado ? atualizado.valores : null);
+  const erro = atualizado && "erro" in atualizado ? atualizado.erro : null;
+
+  const ativo = lista.some((c) => aplicados(c.chave).length > 0);
+  // Um campo com tudo desmarcado não teria o que mostrar: o "Aplicar" trava.
+  const algumVazio = Object.values(rascunhos).some((r) => r !== null && r.size === 0);
+
+  function ir(novos: Record<string, Set<string> | null>) {
     const q = new URLSearchParams(params.toString());
-    q.delete(chave);
-    for (const v of valores ?? []) q.append(chave, v);
+    for (const c of lista) {
+      q.delete(c.chave);
+      for (const v of novos[c.chave] ?? []) q.append(c.chave, v);
+    }
     q.delete("page");
     q.delete("pagina");
     const s = q.toString();
     router.push(s ? `${pathname}?${s}` : pathname);
   }
+
+  if (!campo) return <>{rotulo}</>;
 
   return (
     <CabecalhoComFunil
@@ -482,12 +544,14 @@ export function FiltroDaColunaNaUrl({
           aria-label={`Filtrar ${rotulo.toLowerCase()}`}
           trigger={({ open, toggle }) => (
             <BotaoDoFunil
-              ativo={naUrl.length > 0}
+              ativo={ativo}
               open={open}
               rotulo={rotulo.toLowerCase()}
               onClick={() => {
                 // Abre sempre no que está aplicado, não no rascunho abandonado.
-                setRascunho(naUrl.length ? new Set(naUrl) : null);
+                setRascunhos(doQueEstaAplicado());
+                setVersao((v) => v + 1);
+                if (!open) pedirValores(campo.chave);
                 toggle();
               }}
             />
@@ -495,25 +559,67 @@ export function FiltroDaColunaNaUrl({
         >
           {({ close }) => (
             <div className="flex flex-col gap-2 normal-case tracking-normal font-normal">
-              <ListaDeValores valores={opcoes} aceitos={rascunho} onMudar={setRascunho} rotuloDoCampo={rotulo} />
+              {lista.length > 1 && (
+                <div className="flex rounded-md border border-border p-0.5 gap-0.5" role="tablist">
+                  {lista.map((c) => (
+                    <button
+                      key={c.chave}
+                      type="button"
+                      role="tab"
+                      aria-selected={c.chave === campo.chave}
+                      onClick={() => {
+                        setCampoAtual(c.chave);
+                        setVersao((v) => v + 1);
+                        pedirValores(c.chave);
+                      }}
+                      className={`flex-1 h-7 rounded-sm text-fs-2 font-medium transition-colors ${
+                        c.chave === campo.chave ? "bg-brand-subtle text-brand" : "text-fg-secondary hover:bg-surface-hover"
+                      }`}
+                    >
+                      {c.rotulo}
+                      {aplicados(c.chave).length > 0 && " •"}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {erro ? (
+                <div className="flex flex-col items-start gap-2 px-2 py-2 text-fs-2 text-danger" role="alert">
+                  {erro}
+                  <Button size="xs" variant="secondary" onClick={() => pedirValores(campo.chave)}>
+                    Tentar de novo
+                  </Button>
+                </div>
+              ) : valores === null ? (
+                <p className="px-2 py-6 text-center text-fs-2 text-fg-muted" role="status">
+                  Carregando os valores…
+                </p>
+              ) : (
+                <ListaDeValores
+                  key={`${campo.chave}-${versao}`}
+                  valores={valores}
+                  aceitos={rascunhos[campo.chave] ?? null}
+                  onMudar={(novos) => setRascunhos((atual) => ({ ...atual, [campo.chave]: novos }))}
+                  rotuloDoCampo={campo.rotulo}
+                />
+              )}
               <div className="flex justify-between gap-2 border-t border-border pt-2">
                 <Button
                   size="xs"
                   variant="ghost"
-                  disabled={naUrl.length === 0}
+                  disabled={!ativo}
                   onClick={() => {
                     close();
-                    ir(null);
+                    ir({});
                   }}
                 >
                   Limpar esta coluna
                 </Button>
                 <Button
                   size="xs"
-                  disabled={rascunho !== null && rascunho.size === 0}
+                  disabled={algumVazio}
                   onClick={() => {
                     close();
-                    ir(rascunho ? [...rascunho] : null);
+                    ir(rascunhos);
                   }}
                 >
                   Aplicar
