@@ -42,7 +42,6 @@ import { podeAssistir } from "@/lib/robo/assistenciaServidor";
 import { ChamadaDoRobo } from "@/components/robo/ChamadaDoRobo";
 import { ProvedorDaManutencao } from "@/components/shell/TelasEmManutencao";
 import { lerTelasEmManutencao } from "@/lib/manutencao/leitura";
-import { passaPelaManutencao } from "@/lib/manutencao/regras";
 
 export default async function AppLayout({
   children,
@@ -256,8 +255,7 @@ export default async function AppLayout({
   // abrir agora — fixada de módulo desligado depois continua guardada, só não
   // aparece (ver `telasFixadasVisiveis`).
   const telasFixadas = telasFixadasVisiveis(codigosFixados, telasNavegaveis);
-  // Só as telas ligadas: desligada, a tela já não aparece nem abre. O setor
-  // dono vai junto para a faixa levar a quem libera até ele.
+  // Só as telas ligadas: desligada, a tela já não aparece nem abre.
   const telasEmManutencao = manutencao.telas.flatMap((t) => {
     const modulo = moduleStates.find((m) => m.code === t.moduleCode && m.enabled);
     return modulo ? [{ code: modulo.code, setor: modulo.sectorCode }] : [];
@@ -275,7 +273,7 @@ export default async function AppLayout({
           para quem pode usar o foco, com ou sem empresa escolhida, e o
           provedor envolve o casco para o vazio de uma tela abrir a janela dela. */}
       <ProvedorDoFoco companyId={foco?.companyId ?? null} disponivel={podeFocar}>
-      <ProvedorDaManutencao telas={telasEmManutencao} passa={passaPelaManutencao(ctx)} podeLiberar={isAdmin}>
+      <ProvedorDaManutencao telas={telasEmManutencao}>
       <AppShell
         faixaDoFoco={
           podeFocar ? (

@@ -5,6 +5,8 @@ import { MOTIVO_MAXIMO } from "@/lib/manutencao/regras";
 // Telas em manutenção (13/11/2026) — o que está gravado no banco.
 
 export type TelaEmManutencao = {
+  /** O id desta manutenção: liberada e colocada de novo, é outro. */
+  id: string;
   moduleCode: string;
   motivo: string | null;
   previsao: Date | null;
@@ -25,11 +27,11 @@ export const lerTelasEmManutencao = cache(async (tenantId: string): Promise<{ te
   try {
     const linhas = await getPrisma().tenantModuleMaintenance.findMany({
       where: { tenantId },
-      select: { moduleCode: true, motivo: true, previsao: true, porNome: true, createdAt: true },
+      select: { id: true, moduleCode: true, motivo: true, previsao: true, porNome: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
     return {
-      telas: linhas.map((l) => ({ moduleCode: l.moduleCode, motivo: l.motivo, previsao: l.previsao, porNome: l.porNome, desde: l.createdAt })),
+      telas: linhas.map((l) => ({ id: l.id, moduleCode: l.moduleCode, motivo: l.motivo, previsao: l.previsao, porNome: l.porNome, desde: l.createdAt })),
       disponivel: true,
     };
   } catch (err) {

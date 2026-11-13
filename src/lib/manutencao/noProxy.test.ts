@@ -7,7 +7,7 @@ import { VALIDADE_MS, esquecerTelasEmManutencaoDoProxy, telasEmManutencaoNoProxy
 
 let relogio = 1_000_000;
 const agora = () => relogio;
-const lista = (...codigos: string[]) => new Set(codigos);
+const lista = (...codigos: string[]) => new Map(codigos.map((c) => [c, "id-" + c]));
 
 beforeEach(() => {
   esquecerTelasEmManutencaoDoProxy();
@@ -37,8 +37,8 @@ describe("telasEmManutencaoNoProxy", () => {
   });
 
   it("quem chega junto na primeira vez espera a mesma busca", async () => {
-    let soltar!: (s: Set<string>) => void;
-    const buscar = vi.fn(() => new Promise<Set<string>>((r) => (soltar = r)));
+    let soltar!: (s: Map<string, string>) => void;
+    const buscar = vi.fn(() => new Promise<Map<string, string>>((r) => (soltar = r)));
     const um = telasEmManutencaoNoProxy("a", buscar, agora);
     const dois = telasEmManutencaoNoProxy("a", buscar, agora);
     soltar(lista("fiscal_documentos"));
@@ -48,7 +48,7 @@ describe("telasEmManutencaoNoProxy", () => {
   });
 
   it("falha na primeira vez: nenhuma tela bloqueada, e tenta de novo depois de alguns segundos", async () => {
-    const buscar = vi.fn(async (): Promise<Set<string>> => {
+    const buscar = vi.fn(async (): Promise<Map<string, string>> => {
       throw new Error("a rota respondeu 500");
     });
     expect(await telasEmManutencaoNoProxy("a", buscar, agora)).toEqual(lista());

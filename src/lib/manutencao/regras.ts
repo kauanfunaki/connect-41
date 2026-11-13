@@ -52,10 +52,10 @@ export function telaDoCaminho(caminho: string): string | null {
 }
 
 /**
- * Quem passa pela manutenção e vê a tela como ela está: quem pode colocar e
+ * Quem pode abrir uma tela em manutenção para testar: quem pode colocar e
  * tirar a manutenção (administrador e super admin) e quem é do setor que
- * conserta. Os dois veem a faixa de aviso no alto, para não esquecer que os
- * setores estão vendo o aviso.
+ * conserta. A tela é bloqueada para eles também; entram só pelo "Abrir para
+ * testar" do aviso (13/11/2026, o Kauan pediu o bloqueio no lugar da faixa).
  */
 export function passaPelaManutencao(quem: { role: string; sectors: readonly string[] }): boolean {
   return quem.role === "SUPER_ADMIN" || quem.role === "ADMIN" || quem.sectors.includes(SETOR_QUE_CONSERTA);
@@ -90,4 +90,36 @@ export function telaParaConferir(metodo: string, caminho: string): string | null
   if (metodo !== "GET" && metodo !== "HEAD") return null;
   if (caminho.startsWith("/api/") || caminho.startsWith("/_next/") || dentro(caminho, PAGINA_DE_MANUTENCAO)) return null;
   return telaDoCaminho(caminho);
+}
+
+// ── Abrir para testar (13/11/2026, pedido do Kauan) ──────────────────────────
+//
+// A tela em manutenção fica bloqueada para todos, inclusive para quem conserta.
+// Quem passa pela manutenção vê, no aviso, o botão "Abrir para testar": ele
+// grava neste cookie a manutenção que a pessoa abriu, e o proxy deixa só ela
+// entrar. O cookie guarda o id da manutenção, e não o código da tela: liberada
+// e colocada de novo, a tela volta a bloquear até a pessoa abrir outra vez.
+// O cookie sozinho não abre nada: o proxy confere também o papel e o setor do
+// token.
+
+export const COOKIE_DE_TESTE = "manutencao_em_teste";
+
+/** Quanto dura o "Abrir para testar": um dia de trabalho. */
+export const HORAS_DE_TESTE = 10;
+
+/** Quantas manutenções o cookie guarda — as mais recentes. */
+const MAXIMO_NO_COOKIE = 20;
+
+const ID_VALIDO = /^[0-9a-f-]{36}$/i;
+
+/** As manutenções que a pessoa abriu para testar, do valor do cookie. */
+export function manutencoesEmTeste(valor: string | undefined): string[] {
+  if (!valor) return [];
+  return valor.split(",").filter((id) => ID_VALIDO.test(id));
+}
+
+/** O valor novo do cookie, com a manutenção aberta agora por último. */
+export function comManutencaoEmTeste(valor: string | undefined, id: string): string {
+  const outras = manutencoesEmTeste(valor).filter((x) => x !== id);
+  return [...outras, id].slice(-MAXIMO_NO_COOKIE).join(",");
 }

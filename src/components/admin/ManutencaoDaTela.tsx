@@ -112,8 +112,8 @@ function FormularioDaManutencao({
     <form action={enviar} className="space-y-4">
       {!gravada && (
         <p className="text-body text-fg-secondary">
-          Quem é dos setores passa a ver um aviso de manutenção no lugar da tela. A Tech e os administradores continuam entrando, para
-          testar. Vale em até {SEGUNDOS} segundos.
+          A tela fica bloqueada para todos, com o aviso de manutenção no lugar dela. A Tech e os administradores podem abri-la só para
+          si, pelo próprio aviso, para testar a correção. Vale em até {SEGUNDOS} segundos.
         </p>
       )}
       <CampoForm

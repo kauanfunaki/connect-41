@@ -8,10 +8,11 @@ export const runtime = "nodejs";
 // pergunta é o proxy (src/lib/manutencao/noProxy.ts), com a sessão da pessoa
 // que está abrindo a tela: o escritório vem do cabeçalho que o próprio proxy
 // põe, já conferido contra o token — o de quem visita outro escritório, quando
-// é o caso. Só os códigos: o motivo e a previsão a página do aviso lê no banco.
+// é o caso. Só o código e o id de cada uma (o id é o que o "Abrir para testar"
+// guarda): o motivo e a previsão a página do aviso lê no banco.
 export async function GET() {
   const tenantId = (await headers()).get("x-tenant-id") ?? "";
   if (!tenantId) return Response.json({ error: "Não autenticado." }, { status: 401 });
   const { telas } = await lerTelasEmManutencao(tenantId);
-  return Response.json({ codigos: telas.map((t) => t.moduleCode) }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ telas: telas.map((t) => ({ codigo: t.moduleCode, id: t.id })) }, { headers: { "cache-control": "no-store" } });
 }

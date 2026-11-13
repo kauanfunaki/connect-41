@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODULE_CATALOG, MODULE_ROUTES } from "@/lib/module-catalog";
-import { passaPelaManutencao, quandoNoAviso, telaDoCaminho, telaParaConferir } from "./regras";
+import { comManutencaoEmTeste, manutencoesEmTeste, passaPelaManutencao, quandoNoAviso, telaDoCaminho, telaParaConferir } from "./regras";
 
 // O que se testa: de que tela é cada endereço (o proxy e o selo do menu leem
 // isso), quem passa pela manutenção e quando o proxy confere.
@@ -104,5 +104,28 @@ describe("quandoNoAviso", () => {
   it("outro dia leva a data; outro ano, também o ano", () => {
     expect(quandoNoAviso(new Date("2026-11-20T17:00:00Z"), agora)).toBe("20/11 às 14:00");
     expect(quandoNoAviso(new Date("2027-01-05T12:00:00Z"), agora)).toBe("05/01/2027 às 09:00");
+  });
+});
+
+describe("o cookie do Abrir para testar", () => {
+  const A = "11111111-1111-4111-8111-111111111111";
+  const B = "22222222-2222-4222-8222-222222222222";
+
+  it("lê só ids de manutenção, e nada sem cookie", () => {
+    expect(manutencoesEmTeste(undefined)).toEqual([]);
+    expect(manutencoesEmTeste("")).toEqual([]);
+    expect(manutencoesEmTeste(`${A},qualquer-coisa,${B}`)).toEqual([A, B]);
+  });
+
+  it("acrescenta a manutenção aberta agora, sem repetir", () => {
+    expect(comManutencaoEmTeste(undefined, A)).toBe(A);
+    expect(comManutencaoEmTeste(A, B)).toBe(`${A},${B}`);
+    expect(comManutencaoEmTeste(`${A},${B}`, A)).toBe(`${B},${A}`);
+  });
+
+  it("guarda só as 20 mais recentes", () => {
+    const ids = Array.from({ length: 25 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
+    const valor = ids.reduce<string | undefined>((v, id) => comManutencaoEmTeste(v, id), undefined);
+    expect(manutencoesEmTeste(valor)).toEqual(ids.slice(-20));
   });
 });
