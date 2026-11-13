@@ -408,6 +408,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
   { modelo: "AtendimentoCiclo", coluna: "assignedToId", tratamento: "manter", motivo: "histórico do atendimento; a tela mostra Alguém da equipe e qualquer pessoa do setor pode assumir" },
   { modelo: "AtendimentoCiclo", coluna: "encerradoPorId", tratamento: "manter", motivo: "histórico do atendimento; a auditoria guarda o nome" },
+  { modelo: "AtendimentoCiclo", coluna: "pedidoAssumirPorId", tratamento: "manter", motivo: "pedido para assumir em aberto; a tela mostra 'Alguém da equipe' quando a pessoa sai, e quem atende recusa" },
   { modelo: "AtendimentoMovimento", coluna: "porUserId", tratamento: "manter", motivo: "o caminho da conversa é histórico; a tela mostra só o nome, que some com a pessoa" },
   { modelo: "AtendimentoMovimento", coluna: "paraUserId", tratamento: "manter", motivo: "o caminho da conversa é histórico; a tela mostra só o nome, que some com a pessoa" },
   { modelo: "AtendimentoPedido", coluna: "decididoPorId", tratamento: "manter", motivo: "histórico do pedido; a auditoria guarda o nome" },

@@ -203,3 +203,21 @@ describe("nota do cliente", () => {
     expect(esperaNota({ situacao: "ENCERRADO", notaPedidaEm: new Date("2026-11-08T12:00:00Z"), nota: null }, agora)).toBe(false);
   });
 });
+
+import { setorAoCeder, situacaoDoContato } from "./regras";
+
+describe("conversa de um contato para quem quer falar com ele", () => {
+  const aberto = { id: "c1", situacao: "EM_ATENDIMENTO" as const, sectorCode: "fiscal", assignedToId: "ana" };
+  it("livre, comigo, com outra pessoa ou sem responsável", () => {
+    expect(situacaoDoContato(null, "eu")).toEqual({ tipo: "livre" });
+    expect(situacaoDoContato({ ...aberto, situacao: "ENCERRADO" }, "eu")).toEqual({ tipo: "livre" });
+    expect(situacaoDoContato({ ...aberto, assignedToId: "eu" }, "eu")).toEqual({ tipo: "comigo", cicloId: "c1" });
+    expect(situacaoDoContato(aberto, "eu")).toEqual({ tipo: "com_outro", cicloId: "c1", userId: "ana" });
+    expect(situacaoDoContato({ ...aberto, situacao: "NO_SETOR", assignedToId: null }, "eu")).toEqual({ tipo: "sem_responsavel", cicloId: "c1", situacao: "NO_SETOR", sectorCode: "fiscal" });
+  });
+  it("ao passar a quem pediu: mesmo setor se ele é de lá; senão o setor dele; sem nenhum, fica", () => {
+    expect(setorAoCeder("fiscal", ["dp", "fiscal"])).toBe("fiscal");
+    expect(setorAoCeder("fiscal", ["dp"])).toBe("dp");
+    expect(setorAoCeder("fiscal", [])).toBe("fiscal");
+  });
+});

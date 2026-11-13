@@ -12,6 +12,8 @@ import {
   podeVerCiclo,
   setoresDaPessoa,
   veTudo,
+  podeTirarDaConversa,
+  podeDecidirPedidoDeAssumir,
 } from "./acesso";
 
 const cfg = { enabled: true, triagem: "controladoria" };
@@ -99,5 +101,20 @@ describe("quem vê todos os atendimentos", () => {
   it("sem estar na lista, nada muda", () => {
     expect(veTudo(fiscal, comLista)).toBe(false);
     expect(podeVerCiclo(dp, cfg, noFiscal)).toBe(false);
+  });
+});
+
+describe("tirar da conversa e decidir o pedido para assumir", () => {
+  const comAna = { situacao: "EM_ATENDIMENTO" as const, sectorCode: "fiscal", assignedToId: "ana" };
+  it("só a triagem tira alguém, e só de uma conversa aberta com outra pessoa", () => {
+    expect(podeTirarDaConversa(controladoria, cfg, comAna)).toBe(true);
+    expect(podeTirarDaConversa(fiscal, cfg, comAna)).toBe(false);
+    expect(podeTirarDaConversa(controladoria, cfg, { ...comAna, assignedToId: null })).toBe(false);
+    expect(podeTirarDaConversa(controladoria, cfg, { ...comAna, situacao: "ENCERRADO" })).toBe(false);
+  });
+  it("quem está com a conversa ou a triagem decide o pedido; o resto do setor não", () => {
+    expect(podeDecidirPedidoDeAssumir(fiscal, cfg, comAna)).toBe(true);
+    expect(podeDecidirPedidoDeAssumir(controladoria, cfg, comAna)).toBe(true);
+    expect(podeDecidirPedidoDeAssumir(ctx({ userId: "outro", sectors: ["fiscal"] }), cfg, comAna)).toBe(false);
   });
 });

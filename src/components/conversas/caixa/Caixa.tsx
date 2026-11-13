@@ -165,6 +165,11 @@ export type CartaoDeConversaProps = {
   selecionada?: boolean;
   /** Fundo e borda da marca: pede a atenção de quem vê (a conversa passada para a pessoa). */
   destaque?: boolean;
+  /**
+   * Barra colorida na borda esquerda, com a dica ao passar o mouse (13/11/2026):
+   * no Atendimento, o setor em que a conversa está, para quem vê todas.
+   */
+  faixa?: { cor: string; rotulo: string } | null;
   /** Antes do cartão, fora do link: a caixa de seleção do lote. */
   antes?: ReactNode;
   /** Marca o cartão (`data-cartao`), para a lista achá-lo e trazê-lo à vista. */
@@ -179,6 +184,15 @@ export function CartaoDeConversa(p: CartaoDeConversaProps) {
         p.selecionada ? "border-brand ring-1 ring-brand/30" : p.destaque ? "border-brand/60 bg-brand/5 hover:border-brand" : "border-border hover:border-brand/40"
       }`}
     >
+      {p.faixa && (
+        <span
+          role="img"
+          aria-label={p.faixa.rotulo}
+          title={p.faixa.rotulo}
+          className="w-2 shrink-0 rounded-l-[7px] cursor-help"
+          style={{ backgroundColor: p.faixa.cor }}
+        />
+      )}
       {p.antes}
       <Link
         href={p.href}
