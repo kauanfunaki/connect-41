@@ -105,8 +105,11 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                 <CampoForm label="Nome" htmlFor="nome" required className="sm:col-span-2">
                   <Input id="nome" name="nome" maxLength={160} defaultValue={aberta?.nome ?? ""} placeholder="Comércio varejista de Curitiba 2026/2027" required />
                 </CampoForm>
-                <CampoForm label="Sindicato" htmlFor="sindicato" className="sm:col-span-2">
+                <CampoForm label="Sindicato" htmlFor="sindicato">
                   <Input id="sindicato" name="sindicato" maxLength={160} defaultValue={aberta?.sindicato ?? ""} />
+                </CampoForm>
+                <CampoForm label="CNPJ do sindicato" htmlFor="cnpjSindicato" helper="Vai no vínculo do eSocial.">
+                  <Input id="cnpjSindicato" name="cnpjSindicato" inputMode="numeric" maxLength={18} defaultValue={aberta?.cnpjSindicato ?? ""} />
                 </CampoForm>
                 <CampoForm label="Vigência de" htmlFor="vigenciaInicio">
                   <CampoData id="vigenciaInicio" name="vigenciaInicio" defaultValue={aberta?.vigenciaInicio ?? ""} />

@@ -21,7 +21,21 @@ import { importarEventos, podeImportar, type RubricaParaImportar } from "@/lib/d
 import { DIAS_DO_LINK, gerarRemessaDaCompetencia, guardarHoleritesNosArquivos, novoToken } from "@/lib/dp2/saidas";
 import { CAMPOS_DAS_CONTAS } from "@/lib/dp2/contabilizacao";
 import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
-import { gerarPeriodicos, gerarTabelas } from "@/lib/dp2/esocial/servidor";
+import {
+  gerarAdmissao,
+  gerarAfastamento,
+  gerarAlteracao,
+  gerarAso,
+  gerarCat,
+  gerarCondicaoAmbiental,
+  gerarDesligamento,
+  gerarPeriodicos,
+  gerarTabelas,
+  gerarTerminoSemVinculo,
+} from "@/lib/dp2/esocial/servidor";
+import { lerAgentes, lerProcedimentos, lerResponsaveis } from "@/lib/dp2/esocial/sst";
+import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
+import { MOTIVO_LABEL, type MotivoCanonico } from "@/lib/rescisao/motivos";
 
 type Acesso = { ctx: AuthContext; tenantId: string; userId: string };
 
@@ -338,6 +352,26 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,
     matricula: texto(fd, "matricula").slice(0, 30) || null,
+    dadosEsocial: lerDadosEsocial({
+      sexo: texto(fd, "esocial_sexo"),
+      racaCor: texto(fd, "esocial_racaCor"),
+      estadoCivil: texto(fd, "esocial_estadoCivil"),
+      grauInstrucao: texto(fd, "esocial_grauInstrucao"),
+      codigoMunicipio: texto(fd, "esocial_codigoMunicipio"),
+      cbo: texto(fd, "esocial_cbo"),
+      tipoContrato: texto(fd, "esocial_tipoContrato"),
+      dataTermino: texto(fd, "esocial_dataTermino"),
+      tipoJornada: texto(fd, "esocial_tipoJornada"),
+      descricaoJornada: texto(fd, "esocial_descricaoJornada"),
+      estagioNatureza: texto(fd, "esocial_estagioNatureza"),
+      estagioNivel: texto(fd, "esocial_estagioNivel"),
+      estagioArea: texto(fd, "esocial_estagioArea"),
+      estagioApolice: texto(fd, "esocial_estagioApolice"),
+      estagioPrevisaoTermino: texto(fd, "esocial_estagioPrevisaoTermino"),
+      estagioCnpjInstituicao: texto(fd, "esocial_estagioCnpjInstituicao"),
+      estagioCnpjAgente: texto(fd, "esocial_estagioCnpjAgente"),
+      estagioCpfSupervisor: texto(fd, "esocial_estagioCpfSupervisor"),
+    }),
     categoria: /^\d{3}$/.test(texto(fd, "categoria")) ? texto(fd, "categoria") : marcado(fd, "aprendiz") ? "103" : "101",
     ...contaBancaria(fd),
     tipoConta: texto(fd, "tipoConta") === "POUPANCA" ? "POUPANCA" : "CORRENTE",
@@ -405,6 +439,28 @@ export async function salvarConfigDaEmpresaAction(_: EstadoDoDp2, fd: FormData):
   });
   revalidatePath("/dp2/configuracao");
   return { ok: true, texto: "Configuração salva. Recalcule as competências abertas." };
+}
+
+/** Médico do PCMSO e responsável pelos registros ambientais (S-2220 e S-2240). */
+export async function salvarResponsaveisDeSstAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const campos = ["medicoNome", "medicoCpf", "medicoCrm", "medicoUf", "ambientalNome", "ambientalCpf", "ambientalOrgao", "ambientalOrgaoNome", "ambientalNumero", "ambientalUf"];
+  const sst = lerResponsaveis(Object.fromEntries(campos.map((k) => [k, texto(fd, k)])));
+  await getPrisma().dp2EmpresaConfig.upsert({ where: { companyId }, create: { tenantId: a.tenantId, companyId, sst }, update: { sst } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.sst_responsaveis",
+    entityType: "Company",
+    entityId: companyId,
+    metadata: { medico: sst.medicoNome, ambiental: sst.ambientalNome },
+  });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: "Responsáveis de saúde e segurança salvos. Gere de novo os eventos com pendência." };
 }
 
 // ─── Cadastros do escritório ────────────────────────────────────────────────
@@ -561,6 +617,7 @@ export async function salvarConvencaoAction(_: EstadoDoDp2, fd: FormData): Promi
   const data = {
     nome: nome.slice(0, 160),
     sindicato: texto(fd, "sindicato").slice(0, 160) || null,
+    cnpjSindicato: texto(fd, "cnpjSindicato").replace(/\D/g, "").slice(0, 14) || null,
     dataBase: dataBase && dataBase >= 1 && dataBase <= 12 ? dataBase : null,
     vigenciaInicio: texto(fd, "vigenciaInicio") || null,
     vigenciaFim: texto(fd, "vigenciaFim") || null,
@@ -820,4 +877,264 @@ export async function gerarPeriodicosEsocialAction(_: EstadoDoDp2, fd: FormData)
   });
   revalidatePath("/dp2/esocial");
   return { ok: true, texto: `${r.total} evento(s) periódico(s): ${r.prontos} pronto(s), ${r.comPendencia} com pendência.` };
+}
+
+// ─── eSocial não periódicos (fase 3b, 12/11/2026) ───────────────────────────
+
+/** A pessoa do evento: do escritório, de uma empresa cliente, dentro da faixa. */
+async function pessoaDoEvento(a: Acesso, personId: string): Promise<{ id: string; name: string; companyId: string } | string> {
+  const p = await getPrisma().person.findFirst({
+    where: { id: personId, tenantId: a.tenantId, isInternal: false },
+    select: { id: true, name: true, currentCompanyId: true },
+  });
+  if (!p?.currentCompanyId) return "Colaborador não encontrado.";
+  const recusa = await recusaDoFoco(a.ctx, [p.currentCompanyId]);
+  if (recusa) return recusa;
+  return { id: p.id, name: p.name, companyId: p.currentCompanyId };
+}
+
+function respostaDoEvento(evento: string, nome: string, r: { ok: true; prontos: number } | { ok: false; erro: string }): EstadoDoDp2 {
+  if (!r.ok) return erro(r.erro);
+  revalidatePath("/dp2/esocial");
+  return { ok: true, texto: r.prontos ? `${evento} de ${nome} pronto.` : `${evento} de ${nome} gerado com pendência: veja o que falta na tela do eSocial.` };
+}
+
+export async function gerarAdmissaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const r = await gerarAdmissao(a.tenantId, p.id, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_admissao",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, evento: r.ok ? r.evento : null },
+  });
+  return respostaDoEvento(r.ok && r.evento ? r.evento : "S-2200", p.name, r);
+}
+
+/** O término do sócio, do autônomo ou do estagiário (S-2399). */
+export async function gerarTerminoSemVinculoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const termino = texto(fd, "termino");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(termino)) return erro("Informe a data do término.");
+  const r = await gerarTerminoSemVinculo(a.tenantId, p.id, termino, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_termino_sem_vinculo",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, termino },
+  });
+  return respostaDoEvento("S-2399", p.name, r);
+}
+
+export async function gerarAlteracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const data = texto(fd, "dataAlteracao");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe a data em que a alteração vale.");
+  const r = await gerarAlteracao(a.tenantId, p.id, data, texto(fd, "descricao") || null, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_alteracao",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, data },
+  });
+  return respostaDoEvento("S-2206", p.name, r);
+}
+
+export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const motivo = (texto(fd, "motivoOutro") || texto(fd, "motivo")).replace(/\D/g, "").padStart(2, "0").slice(-2);
+  const inicio = texto(fd, "inicio");
+  const fim = texto(fd, "fim");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inicio)) return erro("Informe o início do afastamento.");
+  const r = await gerarAfastamento(
+    a.tenantId,
+    p.id,
+    { motivo, inicio, fim: /^\d{4}-\d{2}-\d{2}$/.test(fim) ? fim : null, observacao: texto(fd, "observacao") || null },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_afastamento",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, motivo, inicio },
+  });
+  return respostaDoEvento("S-2230", p.name, r);
+}
+
+const ehData = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+
+export async function gerarAsoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const data = ehData(texto(fd, "dataAso"));
+  if (!data) return erro("Informe a data do ASO.");
+  const r = await gerarAso(
+    a.tenantId,
+    p.id,
+    {
+      tipoExame: texto(fd, "tipoExame"),
+      data,
+      resultado: texto(fd, "resultado") === "2" ? "2" : "1",
+      procedimentos: lerProcedimentos(texto(fd, "procedimentos")),
+      medicoNome: texto(fd, "medicoNome") || null,
+      medicoCrm: texto(fd, "medicoCrm").replace(/\D/g, "") || null,
+      medicoUf: texto(fd, "medicoUf").toUpperCase() || null,
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_aso",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, tipoExame: texto(fd, "tipoExame"), data },
+  });
+  return respostaDoEvento("S-2220", p.name, r);
+}
+
+export async function gerarCondicaoAmbientalAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const inicio = ehData(texto(fd, "inicioCondicao"));
+  if (!inicio) return erro("Informe desde quando vale a condição.");
+  const epc = (k: string) => (["0", "1", "2"].includes(texto(fd, k)) ? texto(fd, k) : "0");
+  const r = await gerarCondicaoAmbiental(
+    a.tenantId,
+    p.id,
+    {
+      inicio,
+      setor: texto(fd, "setor") || null,
+      atividade: texto(fd, "atividade") || null,
+      agentes: lerAgentes(texto(fd, "agentes")),
+      usaEpc: epc("usaEpc"),
+      usaEpi: epc("usaEpi"),
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_ambiente",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, inicio },
+  });
+  return respostaDoEvento("S-2240", p.name, r);
+}
+
+export async function gerarCatAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const dataAcidente = ehData(texto(fd, "dataAcidente"));
+  if (!dataAcidente) return erro("Informe a data do acidente.");
+  const ou = (k: string) => texto(fd, k) || null;
+  const r = await gerarCat(
+    a.tenantId,
+    p.id,
+    {
+      dataAcidente,
+      horaAcidente: ou("horaAcidente"),
+      horasTrabalhadasAntes: ou("horasTrabalhadasAntes"),
+      tipoAcidente: texto(fd, "tipoAcidente"),
+      obito: marcado(fd, "obito"),
+      comunicouPolicia: marcado(fd, "comunicouPolicia"),
+      situacaoGeradora: ou("situacaoGeradora"),
+      ultimoDiaTrabalhado: ehData(texto(fd, "ultimoDiaTrabalhado")) ?? dataAcidente,
+      houveAfastamento: marcado(fd, "houveAfastamento"),
+      localDescricao: ou("localDescricao"),
+      localLogradouro: ou("localLogradouro"),
+      localNumero: ou("localNumero"),
+      localCep: ou("localCep"),
+      localMunicipio: ou("localMunicipio"),
+      localUf: texto(fd, "localUf").toUpperCase() || null,
+      parteAtingida: ou("parteAtingida"),
+      lateralidade: ["0", "1", "2", "3"].includes(texto(fd, "lateralidade")) ? texto(fd, "lateralidade") : "0",
+      agenteCausador: ou("agenteCausador"),
+      dataAtendimento: ehData(texto(fd, "dataAtendimento")),
+      horaAtendimento: ou("horaAtendimento"),
+      internacao: marcado(fd, "internacao"),
+      diasDeTratamento: lerInteiro(texto(fd, "diasDeTratamento")),
+      naturezaDaLesao: ou("naturezaDaLesao"),
+      cid: ou("cid"),
+      emitenteNome: ou("emitenteNome"),
+      emitenteCrm: ou("emitenteCrm"),
+      emitenteUf: texto(fd, "emitenteUf").toUpperCase() || null,
+      observacao: ou("observacaoCat"),
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_cat",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, dataAcidente },
+  });
+  return respostaDoEvento("S-2210", p.name, r);
+}
+
+const MOTIVOS_DE_RESCISAO = Object.keys(MOTIVO_LABEL) as MotivoCanonico[];
+
+/** O S-2299 com os mesmos parâmetros do cálculo da tela de Rescisões. */
+export async function gerarDesligamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return erro("Ligue o módulo eSocial do DP 2 para gerar o desligamento.");
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const data = texto(fd, "desligamento");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe o último dia trabalhado.");
+  const motivo = texto(fd, "motivo") as MotivoCanonico;
+  if (!MOTIVOS_DE_RESCISAO.includes(motivo)) return erro("Escolha o motivo do desligamento.");
+  const aviso = texto(fd, "aviso") === "TRABALHADO" ? "TRABALHADO" : texto(fd, "aviso") === "DISPENSADO" ? "DISPENSADO" : "INDENIZADO";
+  const r = await gerarDesligamento(
+    a.tenantId,
+    p.id,
+    {
+      motivo,
+      data,
+      aviso,
+      vencidos: Math.max(0, Math.min(2, lerInteiro(texto(fd, "vencidos")) ?? 0)),
+      faltas: lerInteiro(texto(fd, "faltas")) ?? 0,
+      saldoFgts: lerNumero(texto(fd, "saldoFgts")),
+      adiantado: lerNumero(texto(fd, "adiantado")) ?? 0,
+    },
+    a.userId
+  );
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_desligamento",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, data, motivo },
+  });
+  return respostaDoEvento("S-2299", p.name, r);
 }

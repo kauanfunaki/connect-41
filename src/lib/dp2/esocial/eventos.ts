@@ -13,6 +13,7 @@
 //
 // Puro, sem banco.
 
+import { semVinculo } from "../categorias";
 import { el, serializar, decimal, type No } from "./xml";
 import { cnaeDoEsocial, cnpjValido, cpfValido, digitos, idDoEvento, raizDoCnpj } from "./documentos";
 import {
@@ -68,7 +69,17 @@ export type RubricaEsocial = {
 
 export type ItemDaRemuneracao = { codigo: string; tipo: string; referencia: string; valor: number; quantidade: number | null };
 
-export type TrabalhadorEsocial = { personId: string; nome: string; cpf: string | null; matricula: string | null; categoria: string; itens: ItemDaRemuneracao[]; liquido: number };
+export type TrabalhadorEsocial = {
+  personId: string;
+  nome: string;
+  cpf: string | null;
+  matricula: string | null;
+  categoria: string;
+  itens: ItemDaRemuneracao[];
+  liquido: number;
+  /** "AAAA-MM-DD": vai no S-1200 do trabalhador sem vínculo que não tem S-2300 (sem matrícula). */
+  nascimento?: string | null;
+};
 
 /** Gera o Id e o carimbo de um evento; o sequencial evita Id repetido no mesmo segundo. */
 export type GeradorDeId = () => string;
@@ -131,7 +142,7 @@ const TIPO_DA_RUBRICA: Record<RubricaEsocial["tipo"], string> = { PROVENTO: "1",
 
 // ─── Montagem comum ─────────────────────────────────────────────────────────
 
-function ideEmpregador(cnpj: string): No | null {
+export function ideEmpregador(cnpj: string): No | null {
   return el("ideEmpregador", [el("tpInsc", "1"), el("nrInsc", raizDoCnpj(cnpj))]);
 }
 
@@ -139,11 +150,11 @@ function ideEventoDeTabela(): No | null {
   return el("ideEvento", [el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]);
 }
 
-function envelope(tipo: TipoDeEvento, id: string, corpo: (No | null)[]): string {
+export function envelope(tipo: TipoDeEvento, id: string, corpo: (No | null)[]): string {
   return serializar(el("eSocial", [el(TAG_DO_EVENTO[tipo], corpo, { Id: id })], { xmlns: namespaceDoEvento(tipo) }));
 }
 
-function pendenciasDoEmpregador(e: EmpregadorEsocial): Pendencia[] {
+export function pendenciasDoEmpregador(e: EmpregadorEsocial): Pendencia[] {
   const p: Pendencia[] = [];
   if (!cnpjValido(e.cnpj)) p.push({ onde: "empresa", texto: "CNPJ da empresa inválido ou ausente no cadastro.", link: null, bloqueia: true });
   return p;
@@ -240,15 +251,23 @@ export function eventoS1010(e: EmpregadorEsocial, r: RubricaEsocial, novoId: Ger
 // ─── Periódicos ─────────────────────────────────────────────────────────────
 
 /** O identificador do demonstrativo do mês, que liga o S-1200 ao S-1210. */
+/** perApur "AAAA" é a apuração anual (13º); "AAAA-MM", a mensal. */
+export const apuracaoAnual = (perApur: string) => /^\d{4}$/.test(perApur);
+
+/** O identificador do demonstrativo: FOLHA202611 no mês, DECIMO2026 no 13º. */
 export function ideDmDev(perApur: string): string {
-  return `FOLHA${perApur.replace("-", "")}`;
+  return apuracaoAnual(perApur) ? `DECIMO${perApur}` : `FOLHA${perApur.replace("-", "")}`;
 }
 
 function pendenciasDoTrabalhador(t: TrabalhadorEsocial): Pendencia[] {
   const link = `/dp2/colaboradores?pessoa=${t.personId}`;
   const p: Pendencia[] = [];
   if (!cpfValido(t.cpf)) p.push({ onde: "colaborador", texto: `${t.nome}: CPF inválido ou ausente.`, link, bloqueia: true });
-  if (!t.matricula) p.push({ onde: "colaborador", texto: `${t.nome}: informe a matrícula do eSocial no contrato.`, link, bloqueia: true });
+  // Sócio e autônomo podem ficar sem S-2300: sem matrícula, o S-1200 leva nome e
+  // nascimento. Estagiário e empregado sempre têm o evento de início, com matrícula.
+  const semS2300 = semVinculo(t.categoria) && t.categoria !== "901" && !t.matricula;
+  if (!t.matricula && !semS2300) p.push({ onde: "colaborador", texto: `${t.nome}: informe a matrícula do eSocial no contrato.`, link, bloqueia: true });
+  if (semS2300 && !t.nascimento) p.push({ onde: "colaborador", texto: `${t.nome}: sem data de nascimento no cadastro (vai no S-1200 de quem não tem S-2300).`, link: `/pessoas/${t.personId}`, bloqueia: true });
   return p;
 }
 
@@ -272,14 +291,17 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
   const xml = envelope("S-1200", id, [
     el("ideEvento", [
       el("indRetif", "1"),
-      el("indApuracao", "1"),
+      el("indApuracao", apuracaoAnual(perApur) ? "2" : "1"),
       el("perApur", perApur),
       el("tpAmb", AMBIENTE),
       el("procEmi", PROCESSO_DE_EMISSAO),
       el("verProc", VERSAO_DO_PROCESSO),
     ]),
     ideEmpregador(e.cnpj),
-    el("ideTrabalhador", [el("cpfTrab", digitos(t.cpf))]),
+    el("ideTrabalhador", [
+      el("cpfTrab", digitos(t.cpf)),
+      semVinculo(t.categoria) && !t.matricula ? el("infoComplem", [el("nmTrab", t.nome.slice(0, 70)), el("dtNascto", t.nascimento ?? null)]) : null,
+    ]),
     el("dmDev", [
       el("ideDmDev", ideDmDev(perApur)),
       el("codCateg", t.categoria),
@@ -307,8 +329,12 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
   return { tipo: "S-1200", referencia: `${perApur} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
 
-export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId): EventoGerado {
-  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula"))];
+/**
+ * O pagamento. `perApur` é o mês em que se pagou; `perRef`, o período do
+ * demonstrativo pago (o mesmo mês na folha; o ano no 13º).
+ */
+export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId, perRef: string = perApur): EventoGerado {
+  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula") && !p.texto.includes("nascimento"))];
   if (!dtPgto) pendencias.push({ onde: "competencia", texto: "Informe a data do pagamento ao gerar os periódicos.", link: null, bloqueia: true });
   const id = novoId();
   const xml = envelope("S-1210", id, [
@@ -316,16 +342,22 @@ export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: strin
     ideEmpregador(e.cnpj),
     el("ideBenef", [
       el("cpfBenef", digitos(t.cpf)),
-      el("infoPgto", [el("dtPgto", dtPgto), el("tpPgto", "1"), el("perRef", perApur), el("ideDmDev", ideDmDev(perApur)), el("vrLiq", decimal(t.liquido))]),
+      el("infoPgto", [el("dtPgto", dtPgto), el("tpPgto", "1"), el("perRef", perRef), el("ideDmDev", ideDmDev(perRef)), el("vrLiq", decimal(t.liquido))]),
     ]),
   ]);
-  return { tipo: "S-1210", referencia: `${perApur} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };
+  return { tipo: "S-1210", referencia: `${perRef} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
 
 export function eventoS1299(e: EmpregadorEsocial, perApur: string, comRemuneracao: boolean, novoId: GeradorDeId): EventoGerado {
   const id = novoId();
   const xml = envelope("S-1299", id, [
-    el("ideEvento", [el("indApuracao", "1"), el("perApur", perApur), el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]),
+    el("ideEvento", [
+      el("indApuracao", apuracaoAnual(perApur) ? "2" : "1"),
+      el("perApur", perApur),
+      el("tpAmb", AMBIENTE),
+      el("procEmi", PROCESSO_DE_EMISSAO),
+      el("verProc", VERSAO_DO_PROCESSO),
+    ]),
     ideEmpregador(e.cnpj),
     el("infoFech", [el("evtRemun", comRemuneracao ? "S" : "N"), el("evtComProd", "N"), el("evtContratAvNP", "N"), el("evtInfoComplPer", "N")]),
   ]);

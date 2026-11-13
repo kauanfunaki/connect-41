@@ -12,9 +12,10 @@ import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 import { Secao } from "@/components/dp2/Secao";
 import { getPrisma } from "@/lib/prisma";
 import { configDaEmpresa } from "@/lib/dp2/servidor";
+import { responsaveisDeSst } from "@/lib/dp2/esocial/servidor";
 import { aliquotaPatronal } from "@/lib/dp2/mensal";
 import { abrirTelaDeEmpresaDoDp2 } from "@/lib/dp2/tela";
-import { salvarConfigDaEmpresaAction } from "../actions";
+import { salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
 
 const fmt = (v: number, casas = 2) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: 4 }).format(v);
 
@@ -32,9 +33,10 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
       </PageContainer>
     );
   }
-  const [cfg, convencoes] = await Promise.all([
+  const [cfg, convencoes, sst] = await Promise.all([
     configDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().dp2Convencao.findMany({ where: { tenantId: tela.tenantId, ativa: true }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
+    responsaveisDeSst(tela.tenantId, tela.empresa.id),
   ]);
   const patronal = aliquotaPatronal(cfg.empresa);
 
@@ -122,6 +124,61 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
           </FormularioDoDp2>
         ) : (
           <p className="text-fs-3 text-fg-muted">Você pode ver, mas não alterar a configuração.</p>
+        )}
+      </Secao>
+      <Secao
+        titulo="Saúde e segurança (eSocial)"
+        apoio="Vão nos eventos de ASO (S-2220) e de condições ambientais (S-2240): o médico responsável pelo PCMSO e quem assina o LTCAT."
+        className="mt-5"
+      >
+        {tela.podeAgir ? (
+          <FormularioDoDp2 acao={salvarResponsaveisDeSstAction} rotulo="Salvar responsáveis">
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <h3 className="text-fs-3 font-semibold text-fg mb-3">Médico do PCMSO</h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-5">
+              <CampoForm label="Nome" htmlFor="medicoNome">
+                <Input id="medicoNome" name="medicoNome" maxLength={70} defaultValue={sst.medicoNome ?? ""} />
+              </CampoForm>
+              <CampoForm label="CPF" htmlFor="medicoCpf">
+                <Input id="medicoCpf" name="medicoCpf" inputMode="numeric" maxLength={14} defaultValue={sst.medicoCpf ?? ""} />
+              </CampoForm>
+              <CampoForm label="CRM" htmlFor="medicoCrm">
+                <Input id="medicoCrm" name="medicoCrm" inputMode="numeric" maxLength={10} defaultValue={sst.medicoCrm ?? ""} />
+              </CampoForm>
+              <CampoForm label="UF do CRM" htmlFor="medicoUf">
+                <Input id="medicoUf" name="medicoUf" maxLength={2} defaultValue={sst.medicoUf ?? ""} />
+              </CampoForm>
+            </div>
+            <h3 className="text-fs-3 font-semibold text-fg mb-3">Responsável pelos registros ambientais</h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CampoForm label="Nome" htmlFor="ambientalNome">
+                <Input id="ambientalNome" name="ambientalNome" maxLength={70} defaultValue={sst.ambientalNome ?? ""} />
+              </CampoForm>
+              <CampoForm label="CPF" htmlFor="ambientalCpf">
+                <Input id="ambientalCpf" name="ambientalCpf" inputMode="numeric" maxLength={14} defaultValue={sst.ambientalCpf ?? ""} />
+              </CampoForm>
+              <CampoForm label="Órgão de classe" htmlFor="ambientalOrgao">
+                <Select id="ambientalOrgao" name="ambientalOrgao" defaultValue={sst.ambientalOrgao ?? "4"}>
+                  <option value="1">CRM</option>
+                  <option value="4">CREA</option>
+                  <option value="9">Outro</option>
+                </Select>
+              </CampoForm>
+              <CampoForm label="Qual órgão (se outro)" htmlFor="ambientalOrgaoNome">
+                <Input id="ambientalOrgaoNome" name="ambientalOrgaoNome" maxLength={20} defaultValue={sst.ambientalOrgaoNome ?? ""} />
+              </CampoForm>
+              <CampoForm label="Número no órgão" htmlFor="ambientalNumero">
+                <Input id="ambientalNumero" name="ambientalNumero" maxLength={14} defaultValue={sst.ambientalNumero ?? ""} />
+              </CampoForm>
+              <CampoForm label="UF" htmlFor="ambientalUf">
+                <Input id="ambientalUf" name="ambientalUf" maxLength={2} defaultValue={sst.ambientalUf ?? ""} />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
+        ) : (
+          <p className="text-fs-3 text-fg-muted">
+            PCMSO: {sst.medicoNome ?? "não informado"} · Registros ambientais: {sst.ambientalNome ?? "não informado"}
+          </p>
         )}
       </Secao>
     </PageContainer>
