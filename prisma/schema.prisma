@@ -7046,6 +7046,29 @@ model Dp2Remessa {
 
 /// O link para o cliente informar os eventos do mês sem login (fase 2,
 /// 12/11/2026), como o link de admissão.
+/// A busca de colaboradores no eSocial por CPF e admissão, como a Domínio faz
+/// (13/11/2026, funcionalidade-671). O Assinador local consulta o eSocial com o
+/// certificado de quem está usando; aqui ficam a lista, o que já veio e quantos
+/// acessos ao eSocial a empresa usou em cada dia — o eSocial deixa 10 por dia
+/// por empregador (Manual do Desenvolvedor v1.16, 7.7), então a busca de uma
+/// empresa grande continua nos dias seguintes.
+model Dp2BuscaEsocial {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  /// [{ cpf, admissao "AAAA-MM-DD", situacao, ids[], mensagem }] — ver buscaPorCpf.ts.
+  itens       Json
+  /// { "AAAA-MM-DD": quantos acessos ao eSocial (consulta + download) naquele dia }.
+  acessos     Json
+  concluida   Boolean  @default(false)
+  criadaPorId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, companyId])
+  @@map("dp2_buscas_esocial")
+}
+
 model Dp2PedidoDeEventos {
   id            String    @id @default(uuid())
   tenantId      String
