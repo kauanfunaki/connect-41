@@ -70,7 +70,7 @@ describe("troca de escritório no proxy — usuário comum", () => {
     expect(api.status).toBe(401);
     expect(identidade(api).escritorio).toBeNull();
     const pagina = await abrir("/home", forjado, { escritorio: "escritorio-b", chave: "outra-chave" });
-    expect(pagina.headers.get("location")).toContain("/login");
+    expect(new URL(pagina.headers.get("location")!).pathname).toBe("/api/auth/renovar");
     expect(identidade(pagina).escritorio).toBeNull();
   });
 });
@@ -135,17 +135,17 @@ describe("a `/` do endereço principal é o site (13/10/2026)", () => {
     }
   });
 
-  it("no app. e nos setores, a `/` sem sessão vai para o login, como antes", async () => {
+  it("no app. e nos setores, a `/` sem sessão pede sessão (pela renovação, que leva ao login)", async () => {
     for (const host of ["app.useconnect.com.br", "bpo.useconnect.com.br"]) {
       const res = await visitar(host, "/");
-      expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/api/auth/renovar");
     }
   });
 
   it("só a `/`: o resto do host principal continua pedindo sessão", async () => {
     for (const caminho of ["/home", "/empresas", "/configuracoes"]) {
       const res = await visitar("useconnect.com.br", caminho);
-      expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/api/auth/renovar");
     }
     const api = await visitar("useconnect.com.br", "/api/qualquer");
     expect(api.status).toBe(401);
@@ -154,7 +154,7 @@ describe("a `/` do endereço principal é o site (13/10/2026)", () => {
   it("sem APP_DOMAIN, nenhum host vira site", async () => {
     delete process.env.APP_DOMAIN;
     const res = await visitar("useconnect.com.br", "/");
-    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/api/auth/renovar");
   });
 
   it("cabeçalhos de identidade forjados não passam nem na `/` do site", async () => {
@@ -185,6 +185,6 @@ describe("o link público de pedido (09/11/2026)", () => {
 
   it("só o prefixo do link: `/pedidos` segue pedindo sessão", async () => {
     const res = await proxy(new NextRequest("http://localhost/pedidos"));
-    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/api/auth/renovar");
   });
 });

@@ -13,7 +13,7 @@ import {
   hostSuffixAntigo,
   resolveSectorHint,
 } from "@/lib/auth/activeSector";
-import { accessCookieOptions } from "@/lib/auth/cookies";
+import { RENOVACAO_COOKIE, accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 import { ehHostDoSite } from "@/lib/site/host";
 import { COOKIE_DE_TESTE, PAGINA_DE_MANUTENCAO, manutencoesEmTeste, passaPelaManutencao, telaParaConferir } from "@/lib/manutencao/regras";
@@ -47,6 +47,9 @@ const PUBLIC_PATHS = [
   "/api/auth/login",
   "/api/auth/login-form",
   "/api/auth/refresh",
+  // A volta de quem chega sem access token válido (13/11/2026): é ela que
+  // confere o refresh token, que só vale em /api/auth. Ver `paraARenovacao`.
+  "/api/auth/renovar",
   "/api/auth/logout",
   "/api/health",
   // Chamado por scheduler externo (n8n), sem sessão de usuário — autentica a
@@ -156,6 +159,28 @@ function loginRedirect(req: NextRequest): NextResponse {
   return NextResponse.redirect(url);
 }
 
+// Sem access token que valha, a navegação passa por /api/auth/renovar antes do
+// login (13/11/2026, bug-693). O access token dura 15 minutos e o cookie dele
+// também: quem fecha a aba e volta depois (por um link, pelo endereço, pela
+// aba de novo) chega aqui sem ele. O refresh token renovaria — mas o cookie
+// dele só vai a /api/auth (Path), e o proxy nunca o recebe numa página. Até
+// esta data o proxy tentava renovar aqui mesmo (o `tryRefresh`), sem o cookie
+// e, na produção, pedindo em https://0.0.0.0:3000, onde o servidor não fala
+// https: nunca renovou ninguém, e todo mundo voltava pelo login.
+//
+// A rota renova e devolve a pessoa à página pedida; sem sessão que valha, vai
+// ao login com o destino. Só GET: uma ação (POST) de aba velha não pode virar
+// navegação. E nunca duas vezes seguidas: a rota marca a volta com o cookie
+// `RENOVACAO_COOKIE`, e se a página chegar com ele e ainda sem access token
+// que valha, o cookie novo não pegou no navegador — login, em vez de laço.
+function paraARenovacao(req: NextRequest): NextResponse | null {
+  if (req.method !== "GET" || req.cookies.get(RENOVACAO_COOKIE)?.value) return null;
+  const url = new URL("/api/auth/renovar", req.url);
+  const next = `${req.nextUrl.pathname}${req.nextUrl.search}`;
+  if (next !== "/") url.searchParams.set("next", next);
+  return NextResponse.redirect(url);
+}
+
 function applyIdentityHeaders(headers: Headers, payload: AccessTokenPayload, req: NextRequest): { tenantId: string; sectors: string[] } {
   // Troca de workspace: só tem efeito se o tenant do cookie estiver entre os
   // que o próprio token autoriza (accessibleTenants, só populado p/ SUPER_ADMIN).
@@ -230,30 +255,6 @@ async function seguirParaATela(
   destino.pathname = PAGINA_DE_MANUTENCAO;
   destino.searchParams.set("tela", tela);
   return NextResponse.rewrite(destino, { request: { headers } });
-}
-
-// Renova o access token via /api/auth/refresh quando ele já expirou mas o
-// refresh token (7-30d) ainda é válido — sem isso, abrir um link direto ou
-// voltar numa aba depois de o access token (15min) expirar forçava login
-// mesmo com sessão válida (o refresh silencioso do SessionKeeper só roda com
-// a aba aberta e em foco, não ajuda no primeiro request de uma navegação nova).
-// Delegado à própria rota (Node — Prisma, jsonwebtoken, crypto) em vez de
-// duplicar a lógica de rotação de refresh token aqui no proxy.
-async function tryRefresh(req: NextRequest): Promise<{ accessToken: string; setCookies: string[] } | null> {
-  const refreshToken = req.cookies.get("refresh_token")?.value;
-  if (!refreshToken) return null;
-
-  try {
-    const res = await fetch(new URL("/api/auth/refresh", req.url), {
-      method: "POST",
-      headers: { cookie: `refresh_token=${refreshToken}` },
-    });
-    if (!res.ok) return null;
-    const { accessToken } = (await res.json()) as { accessToken: string };
-    return { accessToken, setCookies: res.headers.getSetCookie() };
-  } catch {
-    return null;
-  }
 }
 
 // ── 41 Carreiras ─────────────────────────────────────────────────────────────
@@ -394,7 +395,7 @@ export async function proxy(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
-    return loginRedirect(req);
+    return paraARenovacao(req) ?? loginRedirect(req);
   }
 
   // A conferência do token fica sozinha no try: a manutenção (que pergunta à
@@ -406,17 +407,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.json({ error: "Token inválido ou expirado" }, { status: 401 });
   }
 
-  const refreshed = await tryRefresh(req);
-  if (refreshed) {
-    // Token recém-emitido não deveria falhar aqui — mas se falhar, cai no
-    // redirect de login normal abaixo em vez de propagar o erro.
-    const renovado = await verifyAccessEdge(refreshed.accessToken).catch(() => null);
-    if (renovado) {
-      const res = await seguirParaATela(req, headers, renovado, refreshed.accessToken);
-      for (const cookie of refreshed.setCookies) res.headers.append("set-cookie", cookie);
-      return res;
-    }
-  }
+  // Sem apagar o access token vencido no caminho da renovação: a resposta de um
+  // pedido simultâneo (um prefetch) chegaria depois e apagaria o novo.
+  const renovar = paraARenovacao(req);
+  if (renovar) return renovar;
 
   const res = loginRedirect(req);
   // Apaga com o mesmo domínio com que foi gravado: `delete` sem `domain`

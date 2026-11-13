@@ -1,78 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
-import { verifyRefresh, signAccess, signRefresh } from "@/lib/auth/jwt";
-import { getAccessibleTenantIds } from "@/lib/auth/tenantAccess";
-import crypto from "crypto";
+import { renovarSessao } from "@/lib/auth/renovacao";
 import {
   ACCESS_COOKIE,
   ACCESS_MAX_AGE,
   REFRESH_COOKIE,
-  REFRESH_MAX_AGE,
   accessCookieOptions,
   refreshCookieOptions,
 } from "@/lib/auth/cookies";
 
 export const dynamic = "force-dynamic";
 
+// A renovação do SessionKeeper, com a aba aberta. A rotação (e a tolerância a
+// dois pedidos com o mesmo token) mora em src/lib/auth/renovacao.ts, que a
+// volta pelo proxy (/api/auth/renovar) também usa.
 export async function POST(req: NextRequest) {
-  const raw = req.cookies.get("refresh_token")?.value;
+  const raw = req.cookies.get(REFRESH_COOKIE)?.value;
   if (!raw) {
     return NextResponse.json({ error: "Refresh token ausente" }, { status: 401 });
   }
 
-  let payload: ReturnType<typeof verifyRefresh>;
-  try {
-    payload = verifyRefresh(raw);
-  } catch {
-    return NextResponse.json({ error: "Refresh token inválido ou expirado" }, { status: 401 });
-  }
-
-  const prisma = getPrisma();
-  const tokenHash = crypto.createHash("sha256").update(raw).digest("hex");
-  const stored = await prisma.refreshToken.findUnique({ where: { id: payload.jti } });
-
-  if (!stored || stored.tokenHash !== tokenHash || stored.revokedAt || stored.expiresAt < new Date()) {
+  const renovacao = await renovarSessao(raw);
+  if (!renovacao.ok) {
     return NextResponse.json({ error: "Refresh token inválido" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: payload.sub, active: true },
-    include: { sectors: true },
-  });
-
-  if (!user) {
-    return NextResponse.json({ error: "Usuário não encontrado" }, { status: 401 });
-  }
-
-  await prisma.refreshToken.update({
-    where: { id: payload.jti },
-    data: { revokedAt: new Date() },
-  });
-
-  const jti = crypto.randomUUID();
-  const newRaw = signRefresh({ sub: user.id, jti });
-  const newHash = crypto.createHash("sha256").update(newRaw).digest("hex");
-  const expiresAt = new Date(Date.now() + 7 * 86_400_000);
-
-  await prisma.refreshToken.create({
-    data: { id: jti, userId: user.id, tokenHash: newHash, expiresAt },
-  });
-
-  const sectors = user.sectors.map((s: { sectorCode: string }) => s.sectorCode);
-  const accessibleTenants = await getAccessibleTenantIds(user.id, user.role, user.tenantId);
-  const accessToken = signAccess({
-    sub: user.id,
-    tenantId: user.tenantId,
-    role: user.role,
-    sectors,
-    accessibleTenants,
-  });
-
-  const res = NextResponse.json({ accessToken });
-
-  res.cookies.set(ACCESS_COOKIE, accessToken, accessCookieOptions(ACCESS_MAX_AGE));
-
-  res.cookies.set(REFRESH_COOKIE, newRaw, refreshCookieOptions(REFRESH_MAX_AGE));
-
+  const res = NextResponse.json({ accessToken: renovacao.accessToken });
+  res.cookies.set(ACCESS_COOKIE, renovacao.accessToken, accessCookieOptions(ACCESS_MAX_AGE));
+  res.cookies.set(REFRESH_COOKIE, renovacao.refresh.token, refreshCookieOptions(renovacao.refresh.maxAge));
   return res;
 }

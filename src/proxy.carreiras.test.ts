@@ -64,13 +64,15 @@ const reescrito = (res: Response) => {
   return url ? new URL(url) : null;
 };
 const passou = (res: Response) => res.headers.get("x-middleware-next") === "1";
-const caminhoDoLogin = (res: Response) => new URL(destino(res)!).pathname;
+// Sem sessão, a navegação passa pela renovação antes do login (13/11/2026, bug-693).
+const SEM_SESSAO = "/api/auth/renovar";
+const caminhoSemSessao = (res: Response) => new URL(destino(res)!).pathname;
 const cabecalho = (res: Response, nome: string) => res.headers.get(`x-middleware-request-${nome}`);
 
 describe("sem as variáveis do portal, tudo como antes", () => {
   it("carreiras.useconnect.com.br é um host do Connect qualquer: `/` pede login", async () => {
     const res = await visitar(PROVISORIO, "/");
-    expect(caminhoDoLogin(res)).toBe("/login");
+    expect(caminhoSemSessao(res)).toBe(SEM_SESSAO);
   });
 
   it("e nunca vira o setor \"carreiras\" — nem com sessão", async () => {
@@ -94,7 +96,7 @@ describe("com o portal ligado, os outros hosts não mudam", () => {
 
   it("app.: `/` e as telas pedem login; a API sem sessão é 401", async () => {
     for (const caminho of ["/", "/home", "/admin", "/vagas"]) {
-      expect(caminhoDoLogin(await visitar("app.useconnect.com.br", caminho)), caminho).toBe("/login");
+      expect(caminhoSemSessao(await visitar("app.useconnect.com.br", caminho)), caminho).toBe(SEM_SESSAO);
     }
     expect((await visitar("app.useconnect.com.br", "/api/qualquer")).status).toBe(401);
   });
@@ -125,7 +127,7 @@ describe("com o portal ligado, os outros hosts não mudam", () => {
       expect(reescrito(res), caminho).toBeNull();
     }
     // O Connect não mudou: arquivo de public/ fora das rotas públicas pede login, como antes.
-    expect(caminhoDoLogin(await visitar("app.useconnect.com.br", "/41-tallent/logo.png"))).toBe("/login");
+    expect(caminhoSemSessao(await visitar("app.useconnect.com.br", "/41-tallent/logo.png"))).toBe(SEM_SESSAO);
   });
 
   it("o site (domínio principal e www.) segue na `/`", async () => {
@@ -134,11 +136,11 @@ describe("com o portal ligado, os outros hosts não mudam", () => {
       expect(passou(res), host).toBe(true);
       expect(reescrito(res), host).toBeNull();
     }
-    expect(caminhoDoLogin(await visitar("useconnect.com.br", "/home"))).toBe("/login");
+    expect(caminhoSemSessao(await visitar("useconnect.com.br", "/home"))).toBe(SEM_SESSAO);
   });
 
   it("os setores seguem: login sem sessão, setor pelo subdomínio com sessão", async () => {
-    expect(caminhoDoLogin(await visitar("bpo.useconnect.com.br", "/"))).toBe("/login");
+    expect(caminhoSemSessao(await visitar("bpo.useconnect.com.br", "/"))).toBe(SEM_SESSAO);
     const res = await visitar("bpo.useconnect.com.br", "/home", { sessao: true });
     expect(cabecalho(res, "x-active-sector")).toBe("bpo");
   });
@@ -284,7 +286,7 @@ describe("endereço provisório → principal", () => {
 describe("configuração errada não derruba o Connect", () => {
   it("o app. na lista de endereços do portal é ignorado", async () => {
     process.env.CARREIRAS_HOSTS = `app.useconnect.com.br,useconnect.com.br,${PROVISORIO}`;
-    expect(caminhoDoLogin(await visitar("app.useconnect.com.br", "/"))).toBe("/login");
+    expect(caminhoSemSessao(await visitar("app.useconnect.com.br", "/"))).toBe(SEM_SESSAO);
     expect(passou(await visitar("useconnect.com.br", "/"))).toBe(true);
     expect(reescrito(await visitar(PROVISORIO, "/"))!.pathname).toBe("/carreiras/41tech");
   });

@@ -80,6 +80,26 @@ export function entradaCookieOptions(maxAge: number): Omit<CookieOptions, "httpO
   return { ...base("/", maxAge), httpOnly: false };
 }
 
+/**
+ * A marca de que a sessão acabou de ser renovada (13/11/2026): o
+ * /api/auth/renovar grava junto com os tokens e manda de volta à página. Se a
+ * página chegar ao proxy com ela e sem access token que valha, o cookie novo
+ * não pegou no navegador — o proxy manda ao login em vez de renovar de novo, e
+ * não entra em laço. Host-only e curta: só precisa durar a volta.
+ */
+export const RENOVACAO_COOKIE = "c41_renovou";
+export const RENOVACAO_MAX_AGE = 30;
+
+export function renovacaoCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true as const,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+  };
+}
+
 /** Um valor novo para a marca da entrada: o instante e um pedaço aleatório, em base 36. */
 export function novaEntrada(agora = Date.now()): string {
   return `${agora.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
