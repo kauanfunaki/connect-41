@@ -16,6 +16,26 @@
 // proxy — a configuração avisa.
 
 export const ROTA_DAS_TELAS_EM_MANUTENCAO = "/api/manutencao/telas";
+
+/**
+ * O endereço da rota no próprio servidor, para o proxy perguntar a ela.
+ *
+ * Na produção (13/11/2026, bug achado pelo Kauan), o `req.url` do proxy é
+ * `https://0.0.0.0:3000/...`: o Next monta o endereço com o host e a porta
+ * em que o servidor escuta (o HOSTNAME e o PORT do Dockerfile) e com o
+ * protocolo do `x-forwarded-proto`, que o proxy do EasyPanel manda como
+ * https. Só que o servidor do Connect fala http (o https termina antes, no
+ * EasyPanel): perguntar em https a ele falha ("fetch failed"), e a tela abria
+ * como se não estivesse em manutenção. Por isso: sempre http, e no 127.0.0.1
+ * quando o host é o "todas as interfaces" (0.0.0.0 ou ::).
+ */
+export function enderecoInternoDaRota(rota: string, urlDoPedido: string): URL {
+  const url = new URL(rota, urlDoPedido);
+  url.protocol = "http:";
+  if (url.hostname === "0.0.0.0" || url.hostname === "[::]") url.hostname = "127.0.0.1";
+  return url;
+}
+
 export const VALIDADE_MS = 10_000;
 export const ESPERA_MS = 1_500;
 const NOVA_TENTATIVA_MS = 5_000;
@@ -42,7 +62,9 @@ function buscarDeNovo(tenantId: string, buscar: () => Promise<ReadonlyMap<string
       return codigos;
     },
     (err) => {
-      console.error("[manutencao] lista do proxy", err instanceof Error ? err.message : err);
+      // A causa junto: "fetch failed" sozinho não diz se foi conexão, TLS ou tempo.
+      const causa = err instanceof Error && err.cause ? ` (${String((err.cause as { code?: unknown }).code ?? err.cause)})` : "";
+      console.error("[manutencao] lista do proxy", err instanceof Error ? `${err.message}${causa}` : err);
       porEscritorio.set(tenantId, { codigos: anteriores, venceEm: agora() + NOVA_TENTATIVA_MS, buscando: null });
       return anteriores;
     },

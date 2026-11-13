@@ -119,6 +119,13 @@ describe("tela em manutenção no proxy", () => {
     expect(reescrita(await abrir("/documentos-fiscais", FISCAL))).toBeNull();
   });
 
+  it("na produção (https://0.0.0.0:3000, do x-forwarded-proto), pergunta ao próprio servidor em http e bloqueia", async () => {
+    const headers = new Headers({ cookie: `access_token=${jwt.sign(FISCAL, CHAVE)}`, "x-forwarded-proto": "https" });
+    const res = await proxy(new NextRequest("https://0.0.0.0:3000/documentos-fiscais", { headers }));
+    expect(lista).toHaveBeenCalledWith("http://127.0.0.1:3000/api/manutencao/telas");
+    expect(reescrita(res)).toBe("/manutencao?tela=fiscal_documentos");
+  });
+
   it("a pergunta leva a sessão de quem abre, para a rota saber o escritório", async () => {
     const fetchEspiado = vi.fn(async (_url: URL | string, init?: RequestInit) => {
       expect(new Headers(init?.headers).get("cookie")).toMatch(/^access_token=.+; active_tenant_id=escritorio-b$/);
