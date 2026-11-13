@@ -26,6 +26,7 @@ export type PastaDoStorage =
   | "drive"
   | "finance-entries"
   | "revisao-contabil"
+  | "contabil-core/financeiro"
   | "resumes";
 
 export type ArquivosDoCadastro = {

@@ -14,6 +14,8 @@ import { EnvioDeExtrato } from "./EnvioDeExtrato";
 import { ImportarCadastro } from "./ImportarCadastro";
 import { Exportar } from "./Exportar";
 import { Conciliacao } from "./Conciliacao";
+import { ConciliacaoFinanceiro } from "./ConciliacaoFinanceiro";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Filtros } from "./Filtros";
 import { FormularioDaAgencia, FormularioDaConta, FormularioDaContraparte, FormularioDaRegra } from "./Formularios";
 import { FilaDoNeo, ProcessarNeo } from "./Neo";
@@ -33,6 +35,8 @@ export type ContextoDaAba = {
   pagina: number;
   status: string | null;
   mesAtual: string;
+  /** Dentro da aba Conciliação: "financeiro" abre a conferência do financeiro (Fase B4). */
+  vista: string | null;
 };
 
 const TH = "py-2 pr-3 font-medium";
@@ -420,7 +424,7 @@ export async function AbaRegistros({ c }: { c: ContextoDaAba }) {
 
 // ─── Conciliação ──────────────────────────────────────────────────────────
 
-// Razão × extrato (Bloco B, Fase B2, 12/11/2026). Conciliar só envia arquivo e mostra o relatório, que
+// Razão × extrato (Bloco B, Fase B2, 12/11/2026) e conferência do financeiro (Fase B4, 12/11/2026). Conciliar só envia arquivo e mostra o relatório, que
 // não é gravado. A revisão manual (Fase B3) grava: quem só lê o módulo consulta as revisões salvas e as
 // conferências (o `concilpro.read` do original); conciliar e alterar pede "agir" (as rotas recusam igual).
 export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
@@ -428,8 +432,29 @@ export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
   // Inclui as inativas, como o original: o Razão de uma conta encerrada continua conciliável.
   const opcoesDeConta = agencias.map((a) => ({ value: a.id, label: `${rotuloDaAgencia(a)}${a.ativa ? "" : " (inativa)"}` }));
   if (opcoesDeConta.length === 0) return <Aviso tom="atencao">Cadastre uma conta bancária em Configurações e importe o extrato dela antes de conciliar.</Aviso>;
-  // A chave zera a tela ao trocar de empresa, como o `useEffect` do original.
-  return <Conciliacao key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} podeAgir={c.podeAgir} />;
+  // A conferência do financeiro (Fase B4) era a terceira aba da Conciliação Bancária do original, ao
+  // lado do Razão × extrato: aqui é a segunda vista da mesma aba, na URL para dar para voltar a ela.
+  const financeiro = c.vista === "financeiro";
+  const href = (vista: string | null) => `/contabil-core?${new URLSearchParams({ empresa: c.empresaId, aba: "conciliacao", ...(vista ? { vista } : {}) })}`;
+  return (
+    <div className="flex flex-col gap-4">
+      <SegmentedControl
+        label="O que conciliar"
+        tocavel
+        active={financeiro ? "financeiro" : "razao"}
+        items={[
+          { key: "razao", label: "Razão × extrato", href: href(null) },
+          { key: "financeiro", label: "Conciliação do financeiro", href: href("financeiro") },
+        ]}
+      />
+      {/* A chave zera a tela ao trocar de empresa, como o `useEffect` do original. */}
+      {financeiro ? (
+        <ConciliacaoFinanceiro key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} podeAgir={c.podeAgir} />
+      ) : (
+        <Conciliacao key={c.empresaId} empresaId={c.empresaId} agencias={opcoesDeConta} podeAgir={c.podeAgir} />
+      )}
+    </div>
+  );
 }
 
 // ─── Configurações ────────────────────────────────────────────────────────

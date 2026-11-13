@@ -167,7 +167,7 @@ class Orcamento {
 // ─── Conferência do .xlsx antes de abrir ────────────────────────────────────
 
 /** `_validar_xlsx`: inspeciona o XML de cada folha antes de materializar a planilha. */
-function validarXlsx(conteudo: Uint8Array, limites: LimitesApoio): void {
+export function validarXlsx(conteudo: Uint8Array, limites: LimitesApoio): void {
   const orcamento = new Orcamento(limites);
   const entradas: { nome: string; tamanho: number }[] = [];
   unzipSync(conteudo, {
