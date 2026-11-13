@@ -251,8 +251,12 @@ export function eventoS1010(e: EmpregadorEsocial, r: RubricaEsocial, novoId: Ger
 // ─── Periódicos ─────────────────────────────────────────────────────────────
 
 /** O identificador do demonstrativo do mês, que liga o S-1200 ao S-1210. */
+/** perApur "AAAA" é a apuração anual (13º); "AAAA-MM", a mensal. */
+export const apuracaoAnual = (perApur: string) => /^\d{4}$/.test(perApur);
+
+/** O identificador do demonstrativo: FOLHA202611 no mês, DECIMO2026 no 13º. */
 export function ideDmDev(perApur: string): string {
-  return `FOLHA${perApur.replace("-", "")}`;
+  return apuracaoAnual(perApur) ? `DECIMO${perApur}` : `FOLHA${perApur.replace("-", "")}`;
 }
 
 function pendenciasDoTrabalhador(t: TrabalhadorEsocial): Pendencia[] {
@@ -287,7 +291,7 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
   const xml = envelope("S-1200", id, [
     el("ideEvento", [
       el("indRetif", "1"),
-      el("indApuracao", "1"),
+      el("indApuracao", apuracaoAnual(perApur) ? "2" : "1"),
       el("perApur", perApur),
       el("tpAmb", AMBIENTE),
       el("procEmi", PROCESSO_DE_EMISSAO),
@@ -325,7 +329,11 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
   return { tipo: "S-1200", referencia: `${perApur} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
 
-export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId): EventoGerado {
+/**
+ * O pagamento. `perApur` é o mês em que se pagou; `perRef`, o período do
+ * demonstrativo pago (o mesmo mês na folha; o ano no 13º).
+ */
+export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId, perRef: string = perApur): EventoGerado {
   const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula") && !p.texto.includes("nascimento"))];
   if (!dtPgto) pendencias.push({ onde: "competencia", texto: "Informe a data do pagamento ao gerar os periódicos.", link: null, bloqueia: true });
   const id = novoId();
@@ -334,16 +342,22 @@ export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: strin
     ideEmpregador(e.cnpj),
     el("ideBenef", [
       el("cpfBenef", digitos(t.cpf)),
-      el("infoPgto", [el("dtPgto", dtPgto), el("tpPgto", "1"), el("perRef", perApur), el("ideDmDev", ideDmDev(perApur)), el("vrLiq", decimal(t.liquido))]),
+      el("infoPgto", [el("dtPgto", dtPgto), el("tpPgto", "1"), el("perRef", perRef), el("ideDmDev", ideDmDev(perRef)), el("vrLiq", decimal(t.liquido))]),
     ]),
   ]);
-  return { tipo: "S-1210", referencia: `${perApur} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };
+  return { tipo: "S-1210", referencia: `${perRef} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
 
 export function eventoS1299(e: EmpregadorEsocial, perApur: string, comRemuneracao: boolean, novoId: GeradorDeId): EventoGerado {
   const id = novoId();
   const xml = envelope("S-1299", id, [
-    el("ideEvento", [el("indApuracao", "1"), el("perApur", perApur), el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]),
+    el("ideEvento", [
+      el("indApuracao", apuracaoAnual(perApur) ? "2" : "1"),
+      el("perApur", perApur),
+      el("tpAmb", AMBIENTE),
+      el("procEmi", PROCESSO_DE_EMISSAO),
+      el("verProc", VERSAO_DO_PROCESSO),
+    ]),
     ideEmpregador(e.cnpj),
     el("infoFech", [el("evtRemun", comRemuneracao ? "S" : "N"), el("evtComProd", "N"), el("evtContratAvNP", "N"), el("evtInfoComplPer", "N")]),
   ]);
