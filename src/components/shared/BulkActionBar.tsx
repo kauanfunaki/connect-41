@@ -5,9 +5,15 @@ type Props = {
   count: number;
   onClear: () => void;
   children: React.ReactNode;
+  /**
+   * O alcance da seleção, ao lado do contador — numa lista paginada, "nesta
+   * página" (Contas a pagar e a receber, 13/11/2026): a caixa do cabeçalho
+   * marca a página, e as outras páginas não entram no lote.
+   */
+  alcance?: React.ReactNode;
 };
 
-export function BulkActionBar({ count, onClear, children }: Props) {
+export function BulkActionBar({ count, onClear, children, alcance }: Props) {
   if (count === 0) return null;
 
   return (
@@ -24,6 +30,7 @@ export function BulkActionBar({ count, onClear, children }: Props) {
     >
       <span aria-live="polite" className="text-label font-semibold text-fg whitespace-nowrap">
         {count} selecionado{count !== 1 ? "s" : ""}
+        {alcance && <span className="font-normal text-fg-muted"> {alcance}</span>}
       </span>
       <div className="hidden sm:block w-px h-5 bg-border flex-shrink-0" />
       <div className="flex flex-wrap items-center justify-center gap-2">{children}</div>

@@ -124,8 +124,12 @@ export type DadosDaAlteracao =
       ok: true;
       kind: "PAGAR" | "RECEBER";
       contas: ContaDaAlteracao[];
-      /** As empresas das contas marcadas, com os projetos e as contas bancárias ativas de cada uma. */
-      empresas: (Opcao & { projetos: Opcao[]; contas: Opcao[] })[];
+      /**
+       * As empresas das contas marcadas, com os centros de custo, os projetos e
+       * as contas bancárias ativas de cada uma. Os centros vêm daqui desde
+       * 13/11/2026 — a tela de contas os mandava, de todas as empresas da lista.
+       */
+      empresas: (Opcao & { centros: Opcao[]; projetos: Opcao[]; contas: Opcao[] })[];
       /** As categorias que valem em todas as empresas marcadas. */
       categorias: Opcao[];
     }
@@ -140,8 +144,13 @@ export async function dadosDaAlteracaoEmLote(valores: string[]): Promise<DadosDa
   const empresas = new Map<string, string>();
   for (const c of contas) empresas.set(c.companyId, nomeExibicao(c.company));
   const ids = [...empresas.keys()];
-  const [categorias, projetos, contasBancarias] = await Promise.all([
+  const [categorias, centros, projetos, contasBancarias] = await Promise.all([
     categoriasDoPlano(tenantId, kind, ids),
+    getPrisma().costCenter.findMany({
+      where: { tenantId, companyId: { in: ids }, active: true },
+      select: { id: true, name: true, companyId: true },
+      orderBy: { name: "asc" },
+    }),
     getPrisma().financeProject.findMany({
       where: { tenantId, companyId: { in: ids }, active: true },
       select: { id: true, name: true, companyId: true },
@@ -162,6 +171,7 @@ export async function dadosDaAlteracaoEmLote(valores: string[]): Promise<DadosDa
       .map(([id, nome]) => ({
         id,
         nome,
+        centros: centros.filter((c) => c.companyId === id).map((c) => ({ id: c.id, nome: c.name })),
         projetos: projetos.filter((p) => p.companyId === id).map((p) => ({ id: p.id, nome: p.name })),
         contas: contasBancarias.filter((c) => c.companyId === id).map((c) => ({ id: c.id, nome: nomeDaContaBancaria(c) })),
       }))

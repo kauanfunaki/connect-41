@@ -311,13 +311,15 @@ export async function totaisDoEscopo(
   e: EscopoFinanceiro,
   kind: "PAGAR" | "RECEBER",
   hojeKey: string,
-  filtro: { competencia?: string } = {}
+  /** `onde`: condições a mais (os funis das colunas da tela de contas, 13/11/2026), num `AND` à parte. */
+  filtro: { competencia?: string; onde?: Prisma.FinanceEntryWhereInput[] } = {}
 ): Promise<TotaisDoEscopo> {
   const prisma = getPrisma();
   const doTipo: Prisma.FinanceEntryWhereInput = {
     ...whereDoEscopo(e),
     kind,
     ...(filtro.competencia ? { competence: filtro.competencia } : {}),
+    ...(filtro.onde?.length ? { AND: filtro.onde } : {}),
   };
   const emAberto: Prisma.FinanceEntryWhereInput = { ...doTipo, paidAt: null, status: { notIn: ["CANCELADO", "PAGO"] } };
   const hoje = inicioDeHoje(hojeKey);
