@@ -71,7 +71,7 @@ export function avisarTransferencia(p: Base & { paraUserId: string; quem: string
     notifyUser(p.paraUserId, {
       tenantId: p.tenantId,
       type: "ATENDIMENTO_TRANSFERIDO",
-      message: `Conversa transferida para você: ${p.quem}`,
+      message: `Conversa passada para você: ${p.quem}. Assuma para responder.`,
       entityId: p.cicloId,
       actorUserId: p.actorUserId,
     })

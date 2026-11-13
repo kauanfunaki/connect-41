@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { Settings } from "lucide-react";
+import { ChartColumn, Settings } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CaixaDoAtendimento } from "@/components/atendimento/CaixaDoAtendimento";
 import { contextoDaTela } from "@/lib/atendimento/contexto";
 import { listar } from "@/lib/atendimento/consultas";
-import { podeConfigurar } from "@/lib/atendimento/acesso";
+import { ehDaTriagem, podeConfigurar, veTudo } from "@/lib/atendimento/acesso";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +34,19 @@ export default async function AtendimentoLayout({ children }: { children: ReactN
                 : "O WhatsApp do escritório: as conversas do seu setor e as que estão com você."
             }
             action={
-              podeConfigurar(c.ctx, c.cfg) ? (
-                <Button href="/atendimento/configuracoes" variant="secondary" size="sm">
-                  <Settings size={14} /> Configurar
-                </Button>
+              ehDaTriagem(c.ctx, c.cfg) || veTudo(c.ctx, c.cfg) || podeConfigurar(c.ctx, c.cfg) ? (
+                <div className="flex flex-wrap gap-2">
+                  {(ehDaTriagem(c.ctx, c.cfg) || veTudo(c.ctx, c.cfg)) && (
+                    <Button href="/atendimento/metricas" variant="secondary" size="sm">
+                      <ChartColumn size={14} /> Métricas
+                    </Button>
+                  )}
+                  {podeConfigurar(c.ctx, c.cfg) && (
+                    <Button href="/atendimento/configuracoes" variant="secondary" size="sm">
+                      <Settings size={14} /> Configurar
+                    </Button>
+                  )}
+                </div>
               ) : undefined
             }
           />

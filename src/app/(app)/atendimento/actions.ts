@@ -50,7 +50,7 @@ export async function transferirAction(cicloId: string, paraUserId: string) {
   return rodar((c) => cmd.transferir(c, cicloId, paraUserId));
 }
 
-export async function encerrarAction(p: { cicloId: string; desfechoId: string; desfechoOutro: string; resumo: string; despedida: string | null }) {
+export async function encerrarAction(p: Parameters<typeof cmd.encerrar>[1]) {
   return rodar((c) => cmd.encerrar(c, p));
 }
 

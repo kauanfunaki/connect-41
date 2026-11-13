@@ -11782,6 +11782,11 @@ model AtendimentoCiclo {
   assignedToId String?
   assignedAt   DateTime?
 
+  /// Transferida para uma pessoa que ainda não assumiu (12/11/2026): a conversa
+  /// aparece em destaque para ela, que assume para responder. Limpa ao assumir.
+  transferidaParaId String?   @db.VarChar(191)
+  transferidaEm     DateTime?
+
   abertoEm       DateTime  @default(now())
   encerradoEm    DateTime?
   encerradoPorId String?
@@ -11789,6 +11794,12 @@ model AtendimentoCiclo {
   /// O texto do desfecho no encerramento (o da lista ou o que a pessoa escreveu em "Outro").
   desfechoTexto  String?   @db.VarChar(120)
   resumo         String?   @db.Text
+
+  /// A nota do cliente, de 1 a 5 (12/11/2026): a pergunta sai ao encerrar, e a
+  /// resposta que é só o número vira a nota, sem reabrir a conversa.
+  notaPedidaEm DateTime?
+  nota         Int?
+  notaEm       DateTime?
 
   /// A sugestão interna da Ceci e o setor que a triagem escolheu, lado a lado,
   /// para medir o acerto. Não aparece na conversa.
@@ -11803,6 +11814,8 @@ model AtendimentoCiclo {
   @@index([tenantId, situacao, sectorCode])
   @@index([tenantId, assignedToId, situacao])
   @@index([conversaId, abertoEm])
+  @@index([tenantId, abertoEm])
+  @@index([tenantId, encerradoEm])
   @@map("atendimento_ciclos")
 }
 
