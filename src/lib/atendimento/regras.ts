@@ -371,3 +371,34 @@ export function notaDaResposta(texto: string): number | null {
 export function esperaNota(c: { situacao: Situacao; notaPedidaEm: Date | null; nota: number | null }, agora: Date): boolean {
   return c.situacao === "ENCERRADO" && !!c.notaPedidaEm && c.nota === null && agora.getTime() - c.notaPedidaEm.getTime() <= HORAS_PARA_A_NOTA * 3600_000;
 }
+
+// ─── Iniciar conversa e pedir para assumir (13/11/2026) ──────────────────────
+
+/** Onde está a conversa de um contato, para quem quer falar com ele. */
+export type SituacaoDoContato =
+  | { tipo: "livre" }
+  | { tipo: "comigo"; cicloId: string }
+  | { tipo: "com_outro"; cicloId: string; userId: string }
+  | { tipo: "sem_responsavel"; cicloId: string; situacao: Situacao; sectorCode: string | null };
+
+/**
+ * O atendimento aberto do contato decide o que a pessoa pode fazer: livre,
+ * começa; com ela, abre; com outra pessoa, só pedindo para assumir; sem
+ * responsável, assume se puder.
+ */
+export function situacaoDoContato(aberto: { id: string; situacao: Situacao; sectorCode: string | null; assignedToId: string | null } | null, eu: string): SituacaoDoContato {
+  if (!aberto || aberto.situacao === "ENCERRADO") return { tipo: "livre" };
+  if (aberto.assignedToId === eu) return { tipo: "comigo", cicloId: aberto.id };
+  if (aberto.assignedToId) return { tipo: "com_outro", cicloId: aberto.id, userId: aberto.assignedToId };
+  return { tipo: "sem_responsavel", cicloId: aberto.id, situacao: aberto.situacao, sectorCode: aberto.sectorCode };
+}
+
+/**
+ * O setor da conversa quando ela passa para outra pessoa a pedido: fica no
+ * mesmo setor se a pessoa é dele; senão, vai para o primeiro setor em que ela
+ * atende; sem nenhum, continua onde estava.
+ */
+export function setorAoCeder(setorAtual: string | null, setoresDaPessoa: readonly string[]): string | null {
+  if (setorAtual && setoresDaPessoa.includes(setorAtual)) return setorAtual;
+  return setoresDaPessoa[0] ?? setorAtual;
+}

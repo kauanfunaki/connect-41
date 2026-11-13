@@ -3,11 +3,13 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { MessageCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { MessageCircle, MessageCirclePlus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { CaixaDeConversas, CartaoDeConversa, ColunaDaLista, Iniciais, PainelVazio, RecortesDaCaixa } from "@/components/conversas/caixa/Caixa";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { Select } from "@/components/ui/Select";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconButton } from "@/components/ui/IconButton";
+import { NovaConversa } from "./NovaConversa";
 import type { TomDoSelo } from "@/components/ui/Selo";
 import { quandoCurto } from "@/lib/conversas/caixa";
 import { horaDeAtualizar } from "@/lib/whatsapp/caixa";
@@ -161,6 +163,7 @@ function contextoDo(c: CartaoDaLista): string {
 function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
   const v = useCaixaDoAtendimento();
   const [busca, setBusca] = useState("");
+  const [nova, setNova] = useState(false);
   const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
   // As passadas para a pessoa sobem para o topo, em destaque, até ela assumir.
   const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem)).sort((a, b) => Number(b.transferidaParaMim) - Number(a.transferidaParaMim));
@@ -211,6 +214,10 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
       </div>
       <div className="flex items-center gap-2">
         <CampoDeBusca compact value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, empresa ou mensagem" aria-label="Buscar conversa" className="flex-1 min-w-0" />
+        <IconButton aria-label="Nova conversa" title="Nova conversa: buscar um contato e começar a falar" onClick={() => setNova(true)}>
+          <MessageCirclePlus size={16} />
+        </IconButton>
+        {nova && <NovaConversa aberta={nova} aoFechar={() => setNova(false)} veTudo={v.ehTriagem || v.veTudo} />}
         {secundarios.length > 0 && (
           <Select
             compact
@@ -262,6 +269,13 @@ function ListaDoAtendimentoNaCaixa({ aoRecolher }: { aoRecolher: () => void }) {
               rotuloDasNaoLidas="esperando resposta"
               selecionada={c.cicloId === v.abertaId}
               destaque={c.transferidaParaMim}
+              faixa={
+                v.ehTriagem || v.veTudo
+                  ? c.setor
+                    ? { cor: c.setor.cor, rotulo: `Setor: ${c.setor.label}` }
+                    : { cor: v.triagem.cor, rotulo: `Na triagem (${v.triagem.label})` }
+                  : null
+              }
             />
           ))
         )}

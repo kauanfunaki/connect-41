@@ -61,6 +61,20 @@ export function podePedirEncaminhamento(ctx: AuthContext, cfg: ConfigDeAcesso, c
   return !ehDaTriagem(ctx, cfg) && !!c.sectorCode && podeAgirNoCiclo(ctx, cfg, c);
 }
 
+/**
+ * A triagem tira alguém da conversa (13/11/2026), quando vê mau trato ou algo
+ * do tipo: a conversa volta para a triagem, sem responsável.
+ */
+export function podeTirarDaConversa(ctx: AuthContext, cfg: ConfigDeAcesso, c: CicloParaAcesso): boolean {
+  return ehDaTriagem(ctx, cfg) && !soLeitura(ctx) && c.situacao !== "ENCERRADO" && !!c.assignedToId && c.assignedToId !== ctx.userId;
+}
+
+/** Quem está com a conversa (ou a triagem) autoriza ou recusa o pedido para assumir. */
+export function podeDecidirPedidoDeAssumir(ctx: AuthContext, cfg: ConfigDeAcesso, c: CicloParaAcesso): boolean {
+  if (!cfg.enabled || soLeitura(ctx) || c.situacao === "ENCERRADO") return false;
+  return c.assignedToId === ctx.userId || ehDaTriagem(ctx, cfg);
+}
+
 export function podeDecidirPedido(ctx: AuthContext, cfg: ConfigDeAcesso): boolean {
   return ehDaTriagem(ctx, cfg) && !soLeitura(ctx);
 }

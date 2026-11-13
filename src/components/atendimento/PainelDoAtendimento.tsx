@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Download, Lock, Paperclip, Send, UserRound, X, Zap } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Download, Lock, Paperclip, Send, UserRound, UserX, X, Zap } from "lucide-react";
 import { AcaoRapida, BarraDoPainel, PainelDeConversa } from "@/components/conversas/caixa/Caixa";
 import { NavegacaoPorTeclado } from "@/components/conversas/caixa/Interativos";
 import { Button } from "@/components/ui/Button";
@@ -18,13 +18,13 @@ import { anotarAction, assumirAction, responderAction, retomarConversaAction, ty
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { useCaixaDoAtendimento } from "./CaixaDoAtendimento";
-import { PainelDeEncaminhar, PainelDoContato, JanelaDeEncerrar, JanelaDeTransferir, FaixaDoPedido } from "./AcoesDoAtendimento";
+import { PainelDeEncaminhar, PainelDoContato, JanelaDeEncerrar, JanelaDeTransferir, JanelaDeTirar, FaixaDoPedido, FaixaDoPedidoDeAssumir } from "./AcoesDoAtendimento";
 
 const hora = (iso: string) => formatInstantTime(new Date(iso), { hour: "2-digit", minute: "2-digit" });
 const dia = (iso: string) => formatInstantDate(new Date(iso), { day: "2-digit", month: "2-digit", year: "numeric" });
 const quando = (iso: string) => `${dia(iso).slice(0, 5)} ${hora(iso)}`;
 
-type Abertura = null | "encaminhar" | "contato" | "encerrar" | "transferir";
+type Abertura = null | "encaminhar" | "contato" | "encerrar" | "transferir" | "tirar";
 
 export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
   const v = useCaixaDoAtendimento();
@@ -103,6 +103,11 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
           Encerrar
         </AcaoRapida>
       )}
+      {d.pode.tirar && (
+        <AcaoRapida icone={<UserX />} onClick={() => setAberto("tirar")}>
+          Tirar da conversa
+        </AcaoRapida>
+      )}
     </div>
   );
 
@@ -118,6 +123,8 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
         aviso={
           d.pedido ? (
             <FaixaDoPedido d={d} podeDecidir={d.pode.decidirPedido} />
+          ) : d.pedidoAssumir ? (
+            <FaixaDoPedidoDeAssumir d={d} />
           ) : d.ciclo.transferidaPara ? (
             <div className="rounded-lg border border-brand/40 bg-brand/5 px-3.5 py-3 text-ui">
               {d.ciclo.transferidaPara.paraMim ? (
@@ -150,6 +157,7 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
       <PainelDoContato d={d} aberto={aberto === "contato"} aoFechar={() => setAberto(null)} />
       <JanelaDeEncerrar d={d} aberta={aberto === "encerrar"} aoFechar={() => setAberto(null)} />
       <JanelaDeTransferir d={d} aberta={aberto === "transferir"} aoFechar={() => setAberto(null)} />
+      {d.pode.tirar && <JanelaDeTirar d={d} aberta={aberto === "tirar"} aoFechar={() => setAberto(null)} />}
     </>
   );
 }
@@ -487,7 +495,15 @@ function frase(mv: DetalheDoAtendimento["caminho"][number]): string {
     case "APROVOU":
       return `${por} aprovou: foi para ${mv.paraSetor ?? "outro setor"}`;
     case "RECUSOU":
-      return `${por} recusou o pedido de encaminhamento`;
+      return mv.nota === "Pedido para assumir" ? `${por} recusou o pedido de ${mv.para ?? "alguém"} para assumir` : `${por} recusou o pedido de encaminhamento`;
+    case "INICIOU":
+      return `${por} começou a conversa${mv.paraSetor ? ` pelo ${mv.paraSetor}` : ""}`;
+    case "PEDIU_ASSUMIR":
+      return `${por} pediu para assumir a conversa de ${mv.para ?? "quem atendia"}`;
+    case "CEDEU":
+      return `${por} passou a conversa para ${mv.para ?? "quem pediu"}`;
+    case "TIROU":
+      return `${por} tirou ${mv.para ?? "a pessoa"} da conversa${mv.nota ? `: ${mv.nota}` : ""}`;
     case "ENCERROU":
       return `${por} encerrou${mv.nota ? `: ${mv.nota}` : ""}`;
     case "REABRIU":

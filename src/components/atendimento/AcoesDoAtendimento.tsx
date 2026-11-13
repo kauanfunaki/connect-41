@@ -23,6 +23,8 @@ import {
   empresasParaVincularAction,
   convidarParaOPortalAction,
   decidirPedidoAction,
+  decidirPedidoDeAssumirAction,
+  tirarDaConversaAction,
   encaminharAction,
   encerrarAction,
   pedirEncaminhamentoAction,
@@ -503,3 +505,65 @@ function ConviteParaOPortal({ d, aoTerminar }: { d: DetalheDoAtendimento; aoTerm
     </div>
   );
 }
+
+// ─── Pedido para assumir e tirar da conversa (13/11/2026) ────────────────────
+
+/**
+ * Alguém pediu para assumir a conversa: quem está com ela (ou a triagem)
+ * passa ou recusa; os outros só veem que há um pedido esperando.
+ */
+export function FaixaDoPedidoDeAssumir({ d }: { d: DetalheDoAtendimento }) {
+  const p = d.pedidoAssumir!;
+  const { ocupado, erro, rodar } = useAcao(() => {});
+  return (
+    <div className="rounded-lg border border-warning/50 bg-warning/10 px-3.5 py-3 flex flex-col gap-2 text-ui">
+      <p>
+        <b>{p.por} pediu para assumir esta conversa.</b>{" "}
+        {d.pode.decidirPedidoDeAssumir ? "Ela só passa se você autorizar." : `Esperando ${d.ciclo.responsavel?.nome ?? "quem atende"} decidir.`}
+      </p>
+      {d.pode.decidirPedidoDeAssumir && (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" loading={ocupado} onClick={() => rodar(() => decidirPedidoDeAssumirAction(d.ciclo.id, true), `Conversa passada para ${p.por}.`)}>
+            Passar para {p.por}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={ocupado} onClick={() => rodar(() => decidirPedidoDeAssumirAction(d.ciclo.id, false), "Pedido recusado.")}>
+            Recusar
+          </Button>
+        </div>
+      )}
+      <Erro erro={erro} />
+    </div>
+  );
+}
+
+/**
+ * A triagem tira a pessoa da conversa (mau trato ou algo do tipo). O motivo é
+ * obrigatório: fica no caminho da conversa e vai no aviso para a pessoa.
+ */
+export function JanelaDeTirar({ d, aberta, aoFechar }: { d: DetalheDoAtendimento; aberta: boolean; aoFechar: () => void }) {
+  const [motivo, setMotivo] = useState("");
+  const { ocupado, erro, rodar } = useAcao(aoFechar);
+  const quem = d.ciclo.responsavel?.nome ?? "a pessoa";
+  return (
+    <Modal open={aberta} onClose={aoFechar} title={`Tirar ${quem} da conversa`} maxWidth="max-w-md">
+      <div className="flex flex-col gap-4">
+        <p className="text-ui text-fg-secondary">
+          A conversa volta para a triagem, sem responsável, e {quem} deixa de poder responder. Depois, a triagem assume ou encaminha.
+        </p>
+        <Campo rotulo="Motivo" htmlFor="atd-tirar-motivo" ajuda="Fica no caminho da conversa e vai no aviso para a pessoa.">
+          <Textarea id="atd-tirar-motivo" rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} />
+        </Campo>
+        <Erro erro={erro} />
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={aoFechar}>
+            Cancelar
+          </Button>
+          <Button variant="danger" loading={ocupado} disabled={!motivo.trim()} onClick={() => rodar(() => tirarDaConversaAction(d.ciclo.id, motivo), "Pessoa tirada da conversa.")}>
+            Tirar da conversa
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+

@@ -11687,6 +11687,14 @@ enum AtendimentoMovimentoTipo {
   ENCERROU
   REABRIU
   VINCULOU
+  /// Alguém da equipe começou a conversa com o contato (13/11/2026).
+  INICIOU
+  /// Pediu para assumir a conversa de quem estava com ela.
+  PEDIU_ASSUMIR
+  /// Quem atendia passou a conversa para quem pediu.
+  CEDEU
+  /// A triagem tirou a pessoa da conversa (com o motivo).
+  TIROU
 }
 
 enum AtendimentoPedidoStatus {
@@ -11811,6 +11819,11 @@ model AtendimentoCiclo {
   /// aparece em destaque para ela, que assume para responder. Limpa ao assumir.
   transferidaParaId String?   @db.VarChar(191)
   transferidaEm     DateTime?
+
+  /// Alguém pediu para assumir a conversa de quem está com ela (13/11/2026):
+  /// quem atende autoriza ou recusa. Um pedido por vez; limpa ao decidir.
+  pedidoAssumirPorId String?   @db.VarChar(191)
+  pedidoAssumirEm    DateTime?
 
   abertoEm       DateTime  @default(now())
   encerradoEm    DateTime?

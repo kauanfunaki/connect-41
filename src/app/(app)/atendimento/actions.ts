@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { contexto } from "@/lib/atendimento/contexto";
 import * as cmd from "@/lib/atendimento/comandos";
 import * as midia from "@/lib/atendimento/comandosDeMidia";
+import * as contato from "@/lib/atendimento/comandosDeContato";
 import { empresasParaVincular } from "@/lib/atendimento/consultas";
 
 export type Resultado = { ok: true } | { ok: false; erro: string };
@@ -112,4 +113,40 @@ export async function salvarModeloAction(p: { id: string | null; rotulo: string;
 
 export async function removerModeloAction(id: string) {
   return rodar((c) => midia.removerModelo(c, id));
+}
+
+// ─── Iniciar conversa, pedir para assumir, tirar da conversa (13/11/2026) ────
+
+/** Os contatos para "Nova conversa". Falha devolve lista vazia, e a tela avisa. */
+export async function buscarContatosAction(termo: string) {
+  try {
+    const c = await contexto();
+    return await contato.buscarContatos(c, termo);
+  } catch (err) {
+    console.error("[atendimento:busca]", err);
+    return [];
+  }
+}
+
+export async function iniciarConversaAction(contatoId: string): Promise<{ ok: true; cicloId: string } | { ok: false; erro: string }> {
+  try {
+    const c = await contexto();
+    const cicloId = await contato.iniciarConversa(c, contatoId);
+    revalidatePath("/atendimento", "layout");
+    return { ok: true, cicloId };
+  } catch (err) {
+    return { ok: false, erro: err instanceof Error ? err.message : "Não deu certo. Tente de novo." };
+  }
+}
+
+export async function pedirParaAssumirAction(cicloId: string) {
+  return rodar((c) => contato.pedirParaAssumir(c, cicloId));
+}
+
+export async function decidirPedidoDeAssumirAction(cicloId: string, aceitar: boolean) {
+  return rodar((c) => contato.decidirPedidoDeAssumir(c, cicloId, aceitar));
+}
+
+export async function tirarDaConversaAction(cicloId: string, motivo: string) {
+  return rodar((c) => contato.tirarDaConversa(c, cicloId, motivo));
 }

@@ -120,3 +120,42 @@ export function avisarDecisao(p: Base & { paraUserId: string; aprovado: boolean;
     })
   );
 }
+
+/** Alguém pediu para assumir a conversa: quem está com ela decide (13/11/2026). */
+export function avisarPedidoDeAssumir(p: Base & { paraUserId: string; quemPede: string; cliente: string }) {
+  return seguro(() =>
+    notifyUser(p.paraUserId, {
+      tenantId: p.tenantId,
+      type: "ATENDIMENTO_PEDIDO_ASSUMIR",
+      message: `${p.quemPede} pediu para assumir a conversa com ${p.cliente}`,
+      entityId: p.cicloId,
+      actorUserId: p.actorUserId,
+    })
+  );
+}
+
+/** O pedido para assumir foi decidido: quem pediu fica sabendo. */
+export function avisarDecisaoDeAssumir(p: Base & { paraUserId: string; aceito: boolean; cliente: string }) {
+  return seguro(() =>
+    notifyUser(p.paraUserId, {
+      tenantId: p.tenantId,
+      type: "ATENDIMENTO_PEDIDO_ASSUMIR_DECIDIDO",
+      message: p.aceito ? `A conversa com ${p.cliente} passou para você` : `O pedido para assumir a conversa com ${p.cliente} foi recusado`,
+      entityId: p.cicloId,
+      actorUserId: p.actorUserId,
+    })
+  );
+}
+
+/** A triagem tirou a pessoa da conversa: ela fica sabendo, com o motivo. */
+export function avisarRetirada(p: Base & { paraUserId: string; cliente: string; motivo: string }) {
+  return seguro(() =>
+    notifyUser(p.paraUserId, {
+      tenantId: p.tenantId,
+      type: "ATENDIMENTO_RETIRADO",
+      message: `A triagem tirou você da conversa com ${p.cliente}: ${p.motivo}`,
+      entityId: p.cicloId,
+      actorUserId: p.actorUserId,
+    })
+  );
+}

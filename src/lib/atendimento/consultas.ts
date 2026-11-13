@@ -17,7 +17,9 @@ import {
   podeDecidirPedido,
   podeEncaminharDireto,
   podePedirEncaminhamento,
+  podeDecidirPedidoDeAssumir,
   podeResponder,
+  podeTirarDaConversa,
   podeVerCiclo,
   setoresDaPessoa,
   veTudo,
@@ -83,7 +85,7 @@ export type ListaDoAtendimento = {
   ehTriagem: boolean;
   /** Escolhida nas configurações para ver todos os atendimentos. */
   veTudo: boolean;
-  triagem: { code: string; label: string };
+  triagem: { code: string; label: string; cor: string };
 };
 
 export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
@@ -163,7 +165,7 @@ export async function listar(c: Contexto): Promise<ListaDoAtendimento> {
     userId: c.ctx.userId,
     ehTriagem: e.triagem,
     veTudo: e.veTudo,
-    triagem: { code: c.cfg.triagem, label: sectorLabel(e.maps.labels, c.cfg.triagem) },
+    triagem: { code: c.cfg.triagem, label: sectorLabel(e.maps.labels, c.cfg.triagem), cor: e.maps.colors[c.cfg.triagem] ?? "#586577" },
   };
 }
 
@@ -280,6 +282,7 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
   }
   if (ciclo.assignedToId) idsDeGente.add(ciclo.assignedToId);
   if (ciclo.transferidaParaId) idsDeGente.add(ciclo.transferidaParaId);
+  if (ciclo.pedidoAssumirPorId) idsDeGente.add(ciclo.pedidoAssumirPorId);
   for (const p of ciclo.pedidos) idsDeGente.add(p.pedidoPorId);
   const gente = await prisma.user.findMany({ where: { tenantId, id: { in: [...idsDeGente] } }, select: { id: true, name: true } });
   const nomeDaPessoa = new Map(gente.map((u) => [u.id, u.name]));
@@ -374,9 +377,15 @@ export async function lerDetalhe(c: Contexto, cicloId: string) {
       encaminharDireto: podeEncaminharDireto(c.ctx, c.cfg, alvo),
       pedirEncaminhamento: podePedirEncaminhamento(c.ctx, c.cfg, alvo) && !pedido,
       decidirPedido: !!pedido && podeDecidirPedido(c.ctx, c.cfg),
+      decidirPedidoDeAssumir: !!ciclo.pedidoAssumirPorId && podeDecidirPedidoDeAssumir(c.ctx, c.cfg, alvo),
+      tirar: podeTirarDaConversa(c.ctx, c.cfg, alvo),
       vincular: podeAgirNoCiclo(c.ctx, c.cfg, alvo),
       convidar: ehDaTriagem(c.ctx, c.cfg) && !c.ctx.subscriptionReadOnly && c.ctx.role !== "READONLY" && ciclo.situacao !== "ENCERRADO",
     },
+    /** Alguém pediu para assumir a conversa de quem está com ela (13/11/2026). */
+    pedidoAssumir: ciclo.pedidoAssumirPorId
+      ? { porId: ciclo.pedidoAssumirPorId, por: nomeDaPessoa.get(ciclo.pedidoAssumirPorId) ?? "Alguém da equipe", quando: ciclo.pedidoAssumirEm?.toISOString() ?? null }
+      : null,
     eu: { id: c.ctx.userId },
   };
 }
