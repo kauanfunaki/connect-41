@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Textarea } from "@/components/ui/Textarea";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
-import { ModalDoContrato } from "@/components/dp2/ModalDoContrato";
+import { ModalDoDp2 } from "@/components/dp2/ModalDoDp2";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { formatCalendarDate, formatCpf } from "@/lib/format";
 import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
@@ -154,7 +154,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </Secao>
 
       {aberta && (
-        <ModalDoContrato
+        <ModalDoDp2
           key={aberta.id}
           titulo={aberta.name}
           apoio={
@@ -375,7 +375,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           ) : (
             <p className="text-fs-3 text-fg-muted pb-1">Você pode ver, mas não alterar contratos no DP 2.</p>
           )}
-        </ModalDoContrato>
+        </ModalDoDp2>
       )}
     </PageContainer>
   );

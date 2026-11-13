@@ -21,8 +21,11 @@ export function FormularioDoDp2({
   variante = "primary",
   tamanho = "md",
   className = "",
+  icone,
   children,
 }: {
+  /** Ícone antes do rótulo: o "+" dos botões que criam ou adicionam. */
+  icone?: React.ReactNode;
   acao: AcaoDoDp2;
   rotulo: string;
   rotuloEnviando?: string;
@@ -37,6 +40,7 @@ export function FormularioDoDp2({
       {children}
       <div className={`flex flex-wrap items-center gap-3 ${children ? "mt-4" : ""}`}>
         <Button type="submit" variant={variante} size={tamanho} loading={enviando} loadingLabel={rotuloEnviando}>
+          {icone}
           {rotulo}
         </Button>
         {estado && (

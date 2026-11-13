@@ -7,7 +7,9 @@ import { CampoForm } from "@/components/ui/CampoForm";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Pencil, Plus } from "lucide-react";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { ModalDoDp2 } from "@/components/dp2/ModalDoDp2";
 import { Secao, TD, TH, TR } from "@/components/dp2/Secao";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { canManageSector } from "@/lib/auth/context";
@@ -43,12 +45,12 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
         action={
           podeGerir ? (
             <Button href="/dp2/rubricas?nova=1" scroll={false}>
+              <Plus size={14} aria-hidden="true" />
               Nova rubrica
             </Button>
           ) : undefined
         }
       />
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
         <Secao titulo={`${rubricas.length} rubricas`} apoio="“Do motor” = o Connect calcula. Rubrica livre = o DP informa o valor no mês.">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-fs-3">
@@ -63,6 +65,11 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                   <th className={TH}>IRRF</th>
                   <th className={TH}>Média</th>
                   <th className={TH} />
+                  {podeGerir && (
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -86,6 +93,14 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                     <td className={TD}>{sim(r.incideIrrf)}</td>
                     <td className={TD}>{sim(r.entraNaMedia)}</td>
                     <td className={TD}>{r.papel ? <Selo tom="neutro">do motor</Selo> : <Selo tom="marca">livre</Selo>}</td>
+                    {podeGerir && (
+                      <td className={`${TD} text-right pr-0`}>
+                        <Button href={`/dp2/rubricas?rubrica=${r.id}`} scroll={false} variant="secondary" size="sm" aria-label={`Editar a rubrica ${r.nome}`}>
+                          <Pencil size={14} aria-hidden="true" />
+                          Editar
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -94,16 +109,15 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
         </Secao>
 
         {podeGerir && (aberta || nova) && (
-          <Secao
+          <ModalDoDp2
+            key={aberta?.id ?? "nova"}
             titulo={nova ? "Nova rubrica" : `${aberta!.codigo} · ${aberta!.nome}`}
             apoio={livre ? "Rubrica livre: o DP informa o valor no mês." : "Do motor: tipo e incidências seguem a lei e não mudam aqui."}
-            acao={
-              <Button href="/dp2/rubricas" variant="ghost" size="sm" scroll={false}>
-                Fechar
-              </Button>
-            }
+            acao={salvarRubricaAction}
+            rotulo={nova ? "Criar rubrica" : "Salvar rubrica"}
+            fecharHref="/dp2/rubricas"
           >
-            <FormularioDoDp2 key={aberta?.id ?? "nova"} acao={salvarRubricaAction} rotulo={nova ? "Criar rubrica" : "Salvar rubrica"}>
+            <>
               {aberta && <input type="hidden" name="id" value={aberta.id} />}
               <div className="grid gap-4 sm:grid-cols-[110px_1fr]">
                 <CampoForm label="Código" htmlFor="codigo">
@@ -152,10 +166,9 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                   <Input id="contaCredito" name="contaCredito" maxLength={40} defaultValue={aberta?.contaCredito ?? ""} />
                 </CampoForm>
               </div>
-            </FormularioDoDp2>
-          </Secao>
+            </>
+          </ModalDoDp2>
         )}
-      </div>
       {podeGerir && (
         <Secao
           className="mt-5"
