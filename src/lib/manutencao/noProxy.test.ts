@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { VALIDADE_MS, esquecerTelasEmManutencaoDoProxy, telasEmManutencaoNoProxy } from "./noProxy";
+import { VALIDADE_MS, enderecoInternoDaRota, esquecerTelasEmManutencaoDoProxy, telasEmManutencaoNoProxy } from "./noProxy";
 
 // O que se testa: a lista que o proxy guarda por escritório. Ninguém espera
 // a busca, a não ser na primeira vez; falha nunca bloqueia tela; e a mesma
@@ -76,5 +76,19 @@ describe("telasEmManutencaoNoProxy", () => {
     await telasEmManutencaoNoProxy("a", async () => lista("bpo_dre"), agora);
     expect(await telasEmManutencaoNoProxy("b", async () => lista(), agora)).toEqual(lista());
     expect(await telasEmManutencaoNoProxy("a", async () => lista(), agora)).toEqual(lista("bpo_dre"));
+  });
+});
+
+describe("enderecoInternoDaRota", () => {
+  const rota = "/api/manutencao/telas";
+
+  it("na produção: o https do x-forwarded-proto vira http, e o 0.0.0.0 vira 127.0.0.1", () => {
+    expect(String(enderecoInternoDaRota(rota, "https://0.0.0.0:3000/pagar?x=1"))).toBe("http://127.0.0.1:3000/api/manutencao/telas");
+    expect(String(enderecoInternoDaRota(rota, "https://[::]:3000/pagar"))).toBe("http://127.0.0.1:3000/api/manutencao/telas");
+  });
+
+  it("local e nos testes: fica como está", () => {
+    expect(String(enderecoInternoDaRota(rota, "http://localhost:3216/pagar"))).toBe("http://localhost:3216/api/manutencao/telas");
+    expect(String(enderecoInternoDaRota(rota, "http://localhost/pagar"))).toBe("http://localhost/api/manutencao/telas");
   });
 });

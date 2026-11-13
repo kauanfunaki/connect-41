@@ -17,7 +17,7 @@ import { accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 import { ehHostDoSite } from "@/lib/site/host";
 import { COOKIE_DE_TESTE, PAGINA_DE_MANUTENCAO, manutencoesEmTeste, passaPelaManutencao, telaParaConferir } from "@/lib/manutencao/regras";
-import { ESPERA_MS, ROTA_DAS_TELAS_EM_MANUTENCAO, telasEmManutencaoNoProxy } from "@/lib/manutencao/noProxy";
+import { ESPERA_MS, ROTA_DAS_TELAS_EM_MANUTENCAO, enderecoInternoDaRota, telasEmManutencaoNoProxy } from "@/lib/manutencao/noProxy";
 import {
   PAGINA_NAO_ENCONTRADA,
   configDeCarreiras,
@@ -194,7 +194,7 @@ async function buscarTelasEmManutencao(req: NextRequest, accessToken: string): P
   const cookies = [`access_token=${accessToken}`];
   const escritorio = req.cookies.get("active_tenant_id")?.value;
   if (escritorio) cookies.push(`active_tenant_id=${escritorio}`);
-  const res = await fetch(new URL(ROTA_DAS_TELAS_EM_MANUTENCAO, req.url), {
+  const res = await fetch(enderecoInternoDaRota(ROTA_DAS_TELAS_EM_MANUTENCAO, req.url), {
     headers: { cookie: cookies.join("; ") },
     signal: AbortSignal.timeout(ESPERA_MS),
   });
