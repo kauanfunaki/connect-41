@@ -6,18 +6,27 @@
 // duas gravam pela mesma função, `abrirProcessoNoServidor`
 // (`aberturaServidor.ts`).
 //
-// Aqui fica o que não precisa de banco — e por isso entra também no cartão do
-// chat, que é componente de cliente: os argumentos da proposta (zod), a
-// conferência deles contra o que o banco devolveu e as frases do cartão.
+// Aqui fica o que não precisa de banco: os argumentos da proposta (zod) e a
+// conferência deles contra o que o banco devolveu. As frases do cartão, que o
+// chat de IA mostra em toda tela, moram em `aberturaCartao.ts`, sem zod
+// (13/11/2026, melhoria-661); elas seguem exportadas daqui também.
 
 import { z } from "zod";
 import { formatCnpj, formatCpf } from "@/lib/format";
 import { MAX_TITULO } from "./dados-do-processo";
 import { lerDataDoCampo } from "./datas";
-import { PRIORIDADES, PRIORIDADE_LABEL, ehPrioridade } from "./prioridade";
+import { PRIORIDADES } from "./prioridade";
+import { dataLegivel, type ResumoDaAbertura } from "./aberturaCartao";
 
-/** A ferramenta de escrita da Ceci do Societário — vira o cartão "Abrir processo". */
-export const ABRIR_PROCESSO = "propor_abrir_processo";
+export {
+  ABRIR_PROCESSO,
+  dataLegivel,
+  descreverAbertura,
+  detalhesDaAbertura,
+  resumoDaProposta,
+  type DetalheDoCartao,
+  type ResumoDaAbertura,
+} from "./aberturaCartao";
 
 /** O tamanho do pedido ao cliente — o mesmo teto da abertura guiada. */
 export const MAX_PEDIDO = 5000;
@@ -46,12 +55,6 @@ export function prazoDoTipo(t: { variableFlow: boolean; expectedDaysMin: number 
     : t.expectedDaysMin === t.expectedDaysMax || t.expectedDaysMin === null
       ? `${t.expectedDaysMax} dias úteis`
       : `${t.expectedDaysMin} a ${t.expectedDaysMax} dias úteis`;
-}
-
-/** "2026-11-20" → "20/11/2026". O que não for data volta como veio. */
-export function dataLegivel(iso: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
 // ─── Os argumentos da proposta ───────────────────────────────────────────────
@@ -127,21 +130,6 @@ export type RoteiroDaAbertura = {
 };
 
 export type EmpresaDaAbertura = { id: string; nome: string; cnpj: string | null; cpf: string | null; situacao: string };
-
-/** O que o cartão mostra — nomes lidos do banco, não o texto do modelo. */
-export type ResumoDaAbertura = {
-  tipo: string;
-  versao: number;
-  etapas: number;
-  empresa: string;
-  documento: string | null;
-  responsavel: string | null;
-  /** Os rótulos, na ordem do roteiro. */
-  jaTemos: string[];
-  aPedir: string[];
-  /** Processos do mesmo tipo, nesta empresa, que ainda não terminaram. */
-  emAndamento: number;
-};
 
 /** Os argumentos que a proposta guarda: os do modelo, conferidos, mais o roteiro e o resumo. */
 export type AberturaPreparada = ArgumentosDaAbertura & { roteiroId: string; resumo: ResumoDaAbertura };
@@ -225,86 +213,4 @@ export function conferirAbertura(
       },
     },
   };
-}
-
-// ─── O cartão ────────────────────────────────────────────────────────────────
-
-const resumoSchema = z.object({
-  tipo: z.string(),
-  versao: z.number(),
-  etapas: z.number(),
-  empresa: z.string(),
-  documento: z.string().nullable(),
-  responsavel: z.string().nullable(),
-  jaTemos: z.array(z.string()),
-  aPedir: z.array(z.string()),
-  emAndamento: z.number(),
-});
-
-/** O resumo gravado na proposta, ou nulo se ela não passou pela conferência (ou veio torta). */
-export function resumoDaProposta(argumentos: Record<string, unknown> | undefined): ResumoDaAbertura | null {
-  const r = resumoSchema.safeParse(argumentos?.resumo);
-  return r.success ? r.data : null;
-}
-
-const textoDe = (v: unknown) => (typeof v === "string" ? v.trim() : "");
-
-/** A frase do cartão: "Abrir processo de Alteração contratual para Padaria Modelo". */
-export function descreverAbertura(argumentos: Record<string, unknown> | undefined): string {
-  const r = resumoDaProposta(argumentos);
-  return r ? `Abrir processo de ${r.tipo} para ${r.empresa}` : "Abrir um processo no Societário";
-}
-
-export type DetalheDoCartao = {
-  rotulo: string;
-  texto: string;
-  /** Texto de várias linhas: quebra como veio e rola dentro do cartão. */
-  longo?: boolean;
-  /** Algo para conferir antes do sim. */
-  atencao?: boolean;
-};
-
-const plural = (n: number, um: string, varios: string) => (n === 1 ? `1 ${um}` : `${n} ${varios}`);
-
-/**
- * As linhas embaixo da frase: o que a pessoa confere antes de abrir. A
- * duplicata vem primeiro — é o erro mais caro de deixar passar ("pedi duas
- * vezes, abriu dois").
- */
-export function detalhesDaAbertura(argumentos: Record<string, unknown> | undefined): DetalheDoCartao[] {
-  const a = argumentos ?? {};
-  const r = resumoDaProposta(a);
-  if (!r) return [{ rotulo: "Atenção", texto: "Esta proposta não foi conferida — peça à Ceci para montar de novo.", atencao: true }];
-
-  const prioridade = textoDe(a.prioridade);
-  const prazo = textoDe(a.prazo);
-  const titulo = textoDe(a.titulo);
-  const pedido = textoDe(a.pedidoAoCliente);
-  const total = r.jaTemos.length + r.aPedir.length;
-
-  const checklist =
-    total === 0
-      ? "O roteiro não tem checklist."
-      : r.jaTemos.length === 0
-        ? `Nenhum dos ${total} itens está com o escritório ainda.`
-        : `${r.jaTemos.length} de ${total} já com o escritório: ${r.jaTemos.join("; ")}.`;
-
-  const semPedido =
-    r.aPedir.length === 0
-      ? "Nada a pedir — o escritório já tem tudo o que o roteiro lista."
-      : `Não mandar. ${plural(r.aPedir.length, "item fica", "itens ficam")} sem pedido ao cliente.`;
-
-  return [
-    ...(r.emAndamento > 0
-      ? [{ rotulo: "Atenção", texto: `Já há ${plural(r.emAndamento, "processo", "processos")} de ${r.tipo} em andamento nesta empresa.`, atencao: true }]
-      : []),
-    { rotulo: "Empresa", texto: r.documento ? `${r.empresa} · ${r.documento}` : r.empresa },
-    { rotulo: "Tipo", texto: `${r.tipo} — roteiro versão ${r.versao}, ${plural(r.etapas, "etapa", "etapas")}` },
-    ...(titulo ? [{ rotulo: "Título", texto: titulo }] : []),
-    { rotulo: "Responsável", texto: r.responsavel ?? "Sem responsável" },
-    { rotulo: "Prioridade", texto: ehPrioridade(prioridade) ? PRIORIDADE_LABEL[prioridade] : "Normal" },
-    { rotulo: "Prazo combinado", texto: prazo ? dataLegivel(prazo) : "Sem prazo combinado" },
-    { rotulo: "Checklist", texto: checklist },
-    pedido ? { rotulo: "Pedido ao cliente", texto: pedido, longo: true } : { rotulo: "Pedido ao cliente", texto: semPedido },
-  ];
 }

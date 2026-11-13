@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useContext } from "react";
 import { caminhoDoMenuAtivo as isActivePath } from "@/lib/caminhoDoMenu";
 import { Contador } from "@/components/ui/Contador";
+import { SeloDeManutencaoNoMenu, useConferirManutencao } from "@/components/shell/TelasEmManutencao";
 
 // ─── A faixa de ícones (14/10/2026) ─────────────────────────────────────────
 //
@@ -164,6 +165,8 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
   const pathname = usePathname();
   const naFaixa = useNaFaixa();
   const active = typeof ativo === "function" ? ativo(pathname) : ativo ?? (exact ? pathname === href : isActivePath(pathname, href));
+  // Tela em manutenção (13/11/2026): a chave inglesa no fim da linha; na faixa, no nome e num ponto.
+  const emManutencao = useConferirManutencao()(href);
 
   if (menu) {
     const focarMenu = () => requestAnimationFrame(() => document.getElementById(menu.painelId)?.querySelector<HTMLElement>("[role='menuitem']")?.focus());
@@ -217,9 +220,10 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
 
   if (naFaixa) {
     return (
-      <Link href={href} aria-current={active ? "page" : undefined} data-grupo={area} {...nomeNaFaixa(contador > 0 ? `${label} (${contador} novas)` : label)} className={classeDoItemNaFaixa(active, area)}>
+      <Link href={href} aria-current={active ? "page" : undefined} data-grupo={area} {...nomeNaFaixa(`${label}${contador > 0 ? ` (${contador} novas)` : ""}${emManutencao ? " (em manutenção)" : ""}`)} className={classeDoItemNaFaixa(active, area)}>
         <IconeNaFaixa icon={icon} active={active} comTelas={comTelas} />
         {contador > 0 && <span aria-hidden className="absolute top-[5px] right-[5px] size-2 rounded-full bg-danger-solid ring-2 ring-surface" />}
+        {emManutencao && <span aria-hidden className="absolute bottom-[5px] right-[5px] size-2 rounded-full bg-warning ring-2 ring-surface" />}
       </Link>
     );
   }
@@ -242,6 +246,7 @@ export function NavItem({ href, icon, label, exact = false, ativo, comTelas = fa
         <span className={`flex-shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${grupo && !active ? "text-grupo" : ""}`.trim()}>{icon}</span>
       )}
       {label}
+      {emManutencao && <SeloDeManutencaoNoMenu naCorDoTexto={active && area === undefined} />}
       {contador > 0 && (
         // Texto `sr-only` em vez de `aria-label` no span, que não é lido com
         // segurança (30/10/2026): "Solicitações, 3 novas".

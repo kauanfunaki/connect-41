@@ -122,6 +122,20 @@ describe("entrada do Atendimento", () => {
     expect(avisarQuemVeTudo).toHaveBeenCalledWith(expect.objectContaining({ cicloId: "cl1", triagem: "controladoria" }));
   });
 
+  it("o número logo depois de pedir a nota vira a nota e não reabre", async () => {
+    prisma.atendimentoCiclo.findFirst.mockResolvedValue({ id: "cl9", situacao: "ENCERRADO", sectorCode: "fiscal", assignedToId: "ana", encerradoEm: new Date(), notaPedidaEm: new Date(), nota: null });
+    expect(await atenderEntrada(conexao, provedor, msg("5"))).toBe("nota");
+    expect(prisma.atendimentoCiclo.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "cl9" }, data: expect.objectContaining({ nota: 5 }) }));
+    expect(prisma.atendimentoCiclo.create).not.toHaveBeenCalled();
+    expect(avisarResposta).not.toHaveBeenCalled();
+  });
+
+  it("depois de pedir a nota, uma conversa de verdade reabre normalmente", async () => {
+    prisma.atendimentoCiclo.findFirst.mockResolvedValue({ id: "cl9", situacao: "ENCERRADO", sectorCode: "fiscal", assignedToId: "ana", encerradoEm: new Date(), notaPedidaEm: new Date(), nota: null });
+    prisma.atendimentoCiclo.create.mockResolvedValue({ id: "cl10" });
+    expect(await atenderEntrada(conexao, provedor, msg("Preciso de outra guia"))).toBe("reaberta");
+  });
+
   it("encerrado há pouco reabre com o mesmo setor e a mesma pessoa", async () => {
     prisma.atendimentoCiclo.findFirst.mockResolvedValue({ id: "cl9", situacao: "ENCERRADO", sectorCode: "fiscal", assignedToId: "ana", encerradoEm: new Date() });
     prisma.atendimentoCiclo.create.mockResolvedValue({ id: "cl10" });

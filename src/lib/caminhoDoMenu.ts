@@ -11,7 +11,7 @@ const ROTAS_DO_MENU = [...new Set(Object.values(MODULE_ROUTES).map((r) => r.spli
  * Telas que acendem o item de outra (lote 9, 28/10/2026): o item do DP abre as
  * Admissões, e Desligamentos e Férias são abas da mesma tela.
  */
-const ACENDEM_JUNTO: Readonly<Record<string, readonly string[]>> = {
+export const ACENDEM_JUNTO: Readonly<Record<string, readonly string[]>> = {
   "/admissoes": ["/desligamentos", "/ferias"],
 };
 

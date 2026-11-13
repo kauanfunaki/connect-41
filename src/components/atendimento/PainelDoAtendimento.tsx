@@ -115,7 +115,23 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
         subtitulo={d.contato.subtitulo ? `${d.contato.subtitulo} · ${d.contato.telefone}` : d.contato.telefone}
         etiquetas={etiquetas}
         acoes={acoes}
-        aviso={d.pedido ? <FaixaDoPedido d={d} podeDecidir={d.pode.decidirPedido} /> : undefined}
+        aviso={
+          d.pedido ? (
+            <FaixaDoPedido d={d} podeDecidir={d.pode.decidirPedido} />
+          ) : d.ciclo.transferidaPara ? (
+            <div className="rounded-lg border border-brand/40 bg-brand/5 px-3.5 py-3 text-ui">
+              {d.ciclo.transferidaPara.paraMim ? (
+                <>
+                  <b>Esta conversa foi passada para você.</b> Assuma para responder ao cliente.
+                </>
+              ) : (
+                <>
+                  <b>Passada para {d.ciclo.transferidaPara.nome}.</b> Esperando a pessoa assumir.
+                </>
+              )}
+            </div>
+          ) : undefined
+        }
         corpo="fixo"
       >
         <div className="flex-1 min-h-0 flex">

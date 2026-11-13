@@ -5,12 +5,12 @@ import {
   QUADRO_PARADO_MS,
   aceitaClique,
   cliqueNaJanela,
-  cliqueSchema,
   dentroDoHorarioComercial,
   estadoDaAssistencia,
   precisaEscalar,
   prazoDaAssistencia,
 } from "./assistencia";
+import { cliqueSchema } from "./assistenciaEsquemas";
 
 // Horário de Brasília = UTC-3. 06/11/2026 é uma sexta; 07/11, sábado.
 const em = (iso: string) => new Date(iso);

@@ -362,6 +362,7 @@ export function JanelaDeEncerrar({ d, aberta, aoFechar }: { d: DetalheDoAtendime
   const [outro, setOutro] = useState("");
   const [resumo, setResumo] = useState("");
   const [despedir, setDespedir] = useState(d.janela.ok);
+  const [pedirNota, setPedirNota] = useState(d.janela.ok);
   const nome = (d.contato.nome ?? d.contato.nomeNoWhatsapp ?? "").split(/\s+/)[0];
   const [despedida, setDespedida] = useState(`${nome ? `${nome}, vou` : "Vou"} encerrar por aqui. Se precisar de mais alguma coisa, é só mandar mensagem neste número.`);
   const { ocupado, erro, rodar } = useAcao(aoFechar);
@@ -394,6 +395,14 @@ export function JanelaDeEncerrar({ d, aberta, aoFechar }: { d: DetalheDoAtendime
           ) : (
             <p className="text-micro text-fg-muted">{d.janela.motivo}</p>
           )}
+          <Checkbox
+            id="atd-pedir-nota"
+            checked={pedirNota && d.janela.ok}
+            disabled={!d.janela.ok}
+            onChange={(e) => setPedirNota(e.target.checked)}
+            label="Pedir uma nota de 1 a 5 ao cliente"
+            helper="Sai junto com a despedida: “De 1 a 5, como você avalia este atendimento?”. A resposta com o número vira a nota do atendimento, sem reabrir a conversa."
+          />
         </div>
         <Erro erro={erro} />
         <div className="flex justify-end gap-2">
@@ -405,7 +414,14 @@ export function JanelaDeEncerrar({ d, aberta, aoFechar }: { d: DetalheDoAtendime
             loadingLabel="Encerrando…"
             disabled={desfecho === DESFECHO_OUTRO && !outro.trim()}
             onClick={() =>
-              rodar(() => encerrarAction({ cicloId: d.ciclo.id, desfechoId: desfecho, desfechoOutro: outro, resumo, despedida: despedir && d.janela.ok ? despedida : null }), "Atendimento encerrado.")
+              rodar(() => encerrarAction({
+                    cicloId: d.ciclo.id,
+                    desfechoId: desfecho,
+                    desfechoOutro: outro,
+                    resumo,
+                    despedida: despedir && d.janela.ok ? despedida : null,
+                    pedirNota: pedirNota && d.janela.ok,
+                  }), "Atendimento encerrado.")
             }
           >
             Encerrar
@@ -425,7 +441,7 @@ export function JanelaDeTransferir({ d, aberta, aoFechar }: { d: DetalheDoAtendi
   return (
     <Modal open={aberta} onClose={aoFechar} title="Transferir conversa" maxWidth="max-w-md">
       <div className="flex flex-col gap-4">
-        <Campo rotulo={`Para quem do ${setor}`} htmlFor="atd-transferir" ajuda="Para outro setor, use Encaminhar.">
+        <Campo rotulo={`Para quem do ${setor}`} htmlFor="atd-transferir" ajuda="A pessoa recebe um aviso e a conversa fica em destaque para ela, que assume para responder. Para outro setor, use Encaminhar.">
           <Select id="atd-transferir" value={para} onChange={(e) => setPara(e.target.value)}>
             {d.pessoasDoSetor.map((p) => (
               <option key={p.id} value={p.id}>
@@ -435,7 +451,7 @@ export function JanelaDeTransferir({ d, aberta, aoFechar }: { d: DetalheDoAtendi
           </Select>
         </Campo>
         <p className="flex items-center gap-1.5 text-micro text-fg-muted">
-          <Lock size={12} aria-hidden /> A pessoa recebe um aviso e passa a assinar as respostas.
+          <Lock size={12} aria-hidden /> Até ela assumir, os avisos de mensagem nova vão para ela, e não mais para você.
         </p>
         <Erro erro={erro} />
         <div className="flex justify-end gap-2">
