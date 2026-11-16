@@ -50,11 +50,15 @@ describe("grupoDaTelaDaEquipe", () => {
     expect(grupoDaTelaDaEquipe("/pagamentos")).toBeNull();
   });
 
-  it("as telas de um grupo do setor levam a área do grupo; a de todas as telas, não (29/10)", () => {
-    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/contas")).toBe("financeiro");
-    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/banco-e-caixa")).toBe("financeiro");
-    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/nao-existe")).toBeNull();
+  // 16/11/2026 (melhoria-712): de 29/10 até aqui a aba de grupo levava a área
+  // da maioria das telas dele (`/setor/bpo/grupo/contas` → financeiro), e o
+  // título mudava de cor ao sair da aba "Tudo". As duas ficam na principal; a
+  // cor da área segue nos cartões e no item do grupo no menu.
+  it("as telas do setor ficam na cor principal, na aba Tudo e nas abas de grupo", () => {
     expect(grupoDaTelaDaEquipe("/setor/bpo/telas")).toBeNull();
+    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/contas")).toBeNull();
+    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/banco-e-caixa")).toBeNull();
+    expect(grupoDaTelaDaEquipe("/setor/bpo/grupo/nao-existe")).toBeNull();
   });
 
   it("todo módulo do mapa existe no catálogo, com endereço", () => {

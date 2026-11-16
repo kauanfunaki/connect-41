@@ -4,8 +4,7 @@ import { getTenantModuleStates } from "@/lib/modules";
 import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { MODULOS_NOS_CADASTROS, grupoDoSlug } from "@/lib/module-catalog";
 import { PageContainer } from "@/components/shared/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Breadcrumb } from "@/components/shared/Breadcrumb";
+import { CabecalhoDasTelasDoSetor } from "@/components/setor/CabecalhoDasTelasDoSetor";
 import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
 import { semTelasDoGeralOcultas } from "@/lib/menuGeral";
@@ -52,10 +51,10 @@ export default async function GrupoDoSetorPage({
 
   return (
     <PageContainer>
-      {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre a tela
-          com todas as telas do setor (a aba "Tudo" dos grupos). */}
-      <Breadcrumb items={[{ label: `Telas · ${sectorLabel(labels, code)}`, href: `/setor/${code}/telas` }, { label: grupo }]} />
-      <PageHeader title={sectorLabel(labels, code)} subtitle={`${grupo} — telas deste grupo.`} />
+      {/* O mesmo cabeçalho da aba "Tudo" (16/11/2026, melhoria-712): sem a
+          trilha e sem o subtítulo com o nome do grupo — quem diz o grupo aberto
+          é a aba marcada, e a volta para todas as telas é a aba "Tudo". */}
+      <CabecalhoDasTelasDoSetor setor={sectorLabel(labels, code)} />
       <ModulosDoSetor code={code} modulos={visiveis} grupoAtivo={grupo} fixadas={fixadas} />
     </PageContainer>
   );

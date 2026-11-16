@@ -35,10 +35,16 @@ export function ModulosDoSetor({
   const fixada = new Set(fixadas);
   const grupos = agruparModulos(modulos);
   const visiveis = grupoAtivo ? grupos.filter((g) => g.grupo === grupoAtivo) : grupos;
+  const comAbas = grupos.length > 1;
+  // O título do grupo só some quando repetiria a aba marcada (16/11/2026,
+  // melhoria-712). Até ali sumia sempre que havia um grupo só na tela, porque
+  // o subtítulo da página dizia o nome dele; o subtítulo saiu, e no setor de
+  // um grupo só (sem abas) a tela ficava sem dizer qual grupo é.
+  const tituloRepeteAAba = comAbas && grupoAtivo !== null;
 
   return (
     <>
-      {grupos.length > 1 && (
+      {comAbas && (
         <AbasDeLink
           ativa={grupoAtivo ?? "tudo"}
           abas={[
@@ -57,9 +63,7 @@ export function ModulosDoSetor({
       <div className="flex flex-col gap-7">
         {visiveis.map(({ grupo, itens }) => (
           <section key={grupo}>
-            {/* Com um grupo só na tela o título do grupo repetiria o subtítulo da
-                página, que já diz o nome dele. */}
-            {visiveis.length > 1 && (
+            {!tituloRepeteAAba && (
               <h2 data-grupo={areaDoGrupoDeTelas(itens.map((m) => m.code)) ?? "marca"} className="c41-rotulo mb-2.5 flex items-center gap-1.5">
                 <span aria-hidden className="h-2 w-2 rounded-sm bg-grupo" />
                 {grupo}
