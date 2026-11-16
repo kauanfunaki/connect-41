@@ -29,9 +29,10 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        {/* "Atividades", o nome dos itens dos Quadros desde 20/10/2026 (Quadro ›
-            Pasta › Tarefa › Atividade): foi "Pipelines" e, depois, "Tarefas". */}
-        <h2 className="text-section font-semibold text-fg mb-4">Atividades</h2>
+        {/* "Nos Quadros" (16/11/2026, bug-708): foi "Pipelines", "Tarefas" e,
+            desde 20/10/2026, "Atividades", o nome dos itens dos Quadros. Com
+            esse nome, este cartão e o de baixo tinham o mesmo título. */}
+        <h2 className="text-section font-semibold text-fg mb-4">Nos Quadros</h2>
         {pipelineItems.length === 0 ? (
           <EmptyState icon={<Columns3 />} title="Nenhuma atividade ligada" description={`Esta ${entityLabel} ainda não está em nenhuma atividade dos Quadros.`} />
         ) : (
@@ -48,8 +49,8 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-section font-semibold text-fg mb-4">Atividades</h2>
-        <ActivityTimeline activities={activities} emptyLabel="Nenhuma atividade registrada nos pipelines desta empresa." />
+        <h2 className="text-section font-semibold text-fg mb-4">Linha do tempo</h2>
+        <ActivityTimeline activities={activities} emptyLabel={`Nada registrado ainda nas atividades desta ${entityLabel}.`} />
       </Card>
     </div>
   );

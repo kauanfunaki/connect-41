@@ -302,7 +302,15 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
               <table className="w-full min-w-[960px]">
                 <thead>
                   <tr>
-                    <th className="c41-a-esquerda px-3">Assunto</th>
+                    {/* O mesmo espaço do ponto de "ainda não aberta" que abre
+                        cada linha (16/11/2026, bug-708): sem ele o cabeçalho
+                        ficava 15px à esquerda do texto do assunto. */}
+                    <th className="c41-a-esquerda px-3">
+                      <span className="inline-flex items-center gap-2">
+                        <span aria-hidden className="w-[7px] flex-shrink-0" />
+                        Assunto
+                      </span>
+                    </th>
                     <th className="px-3">Empresa</th>
                     <th className="px-3">Setores</th>
                     <th className="px-3">Responsável</th>
