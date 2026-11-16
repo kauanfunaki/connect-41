@@ -127,6 +127,20 @@ export type ArquivoAchado = {
   vinculo: VinculoDoArquivo | null;
 };
 
+/**
+ * Uma empresa na lista do início dos Arquivos e no grupo "Empresas" da busca
+ * (16/11/2026, melhoria-716): o que a linha mostra.
+ */
+export type EmpresaNaTela = {
+  id: string;
+  nome: string;
+  cnpj: string | null;
+  /** Arquivos + "Do Connect": o número da etiqueta. */
+  documentos: number;
+  /** Envios do cliente que ninguém da equipe abriu ainda. */
+  novos: number;
+};
+
 /** O nome da raiz das pastas que não são de nenhuma empresa. */
 export const ROTULO_DAS_INTERNAS = "Pastas do escritório";
 

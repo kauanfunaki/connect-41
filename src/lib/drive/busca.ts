@@ -16,6 +16,10 @@
 // consulta dos arquivos. Assim o banco aplica o limite ao que a pessoa vê, e o
 // "Mostrar mais" não pula nem repete arquivo.
 //
+// Desde 16/11/2026 (melhoria-716) a busca é uma só: a caixa da coluna
+// "Empresas" saiu, e o mesmo termo traz, antes dos arquivos, o grupo
+// "Empresas" — as que batem com ele, para abrir a pasta (`empresasDoTermo`).
+//
 // Este arquivo também vai para o navegador (a caixa de busca lê as
 // constantes): nada de banco aqui, e o `Prisma` é só tipo.
 
@@ -51,6 +55,18 @@ export const MAXIMO_DE_PALAVRAS = 5;
 export const DIGITOS_DO_DOCUMENTO = 8;
 /** A espera depois da última tecla antes de buscar. */
 export const ESPERA_DA_DIGITACAO_MS = 400;
+/** Quantas empresas o grupo "Empresas" do resultado mostra, e quantas cada "Mostrar mais" acrescenta. */
+export const EMPRESAS_POR_VEZ = 8;
+/** Até onde o "Mostrar mais" das empresas vai. Daí em diante a tela pede um termo mais fino. */
+export const MAXIMO_DE_EMPRESAS = 40;
+/**
+ * Quantos números o termo precisa ter para o grupo "Empresas" procurar no
+ * CNPJ — a régua que a busca de empresa da tela já usava. Vale só para o termo
+ * que é um número (ver `cnpjDoTermo`).
+ */
+export const DIGITOS_DO_CNPJ_DA_EMPRESA = 3;
+/** O parâmetro da URL com as levas de empresas à vista no resultado (o `pagina` é o dos arquivos). */
+export const PARAMETRO_MAIS_EMPRESAS = "maisEmpresas";
 
 /** O tipo escolhido no filtro: a pasta da casa (pela chave dela) ou o vínculo. */
 export type TipoDaBusca = { pasta: string } | { vinculo: VinculoDoArquivo };
@@ -70,6 +86,10 @@ export type FiltroDaBusca = {
   pagina: number;
   /** Quantos arquivos trazer: `pagina` × 50, até 200. */
   limite: number;
+  /** Quantas levas de 8 empresas estão à vista no grupo "Empresas". */
+  levasDeEmpresas: number;
+  /** Quantas empresas trazer: `levasDeEmpresas` × 8, até 40. */
+  limiteDeEmpresas: number;
 };
 
 // ─── Termo ───────────────────────────────────────────────────────────────────
@@ -110,12 +130,28 @@ export function lerTipo(bruto: string | null | undefined): TipoDaBusca | null {
   return null;
 }
 
-/** O que a URL pede: `q` (o termo), `tipo` e `pagina` (quantas levas de 50). */
-export function lerFiltroDaBusca(params: { q?: string; tipo?: string; pagina?: string }): FiltroDaBusca {
+/** Um número de levas da URL: inteiro de 1 até `ultima`; lixo, zero ou negativo é a primeira. */
+function lerLevas(bruto: string | undefined, ultima: number): number {
+  return Math.min(Math.max(1, Math.floor(Number(bruto)) || 1), ultima);
+}
+
+/**
+ * O que a URL pede: `q` (o termo), `tipo`, `pagina` (quantas levas de 50
+ * arquivos) e `maisEmpresas` (quantas levas de 8 empresas).
+ */
+export function lerFiltroDaBusca(params: { q?: string; tipo?: string; pagina?: string; maisEmpresas?: string }): FiltroDaBusca {
   const termo = (params.q ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
-  const ultima = MAXIMO_DE_ARQUIVOS / ARQUIVOS_POR_VEZ;
-  const pagina = Math.min(Math.max(1, Math.floor(Number(params.pagina)) || 1), ultima);
-  return { termo, palavras: palavrasDaBusca(termo), tipo: lerTipo(params.tipo), pagina, limite: pagina * ARQUIVOS_POR_VEZ };
+  const pagina = lerLevas(params.pagina, MAXIMO_DE_ARQUIVOS / ARQUIVOS_POR_VEZ);
+  const levasDeEmpresas = lerLevas(params.maisEmpresas, MAXIMO_DE_EMPRESAS / EMPRESAS_POR_VEZ);
+  return {
+    termo,
+    palavras: palavrasDaBusca(termo),
+    tipo: lerTipo(params.tipo),
+    pagina,
+    limite: pagina * ARQUIVOS_POR_VEZ,
+    levasDeEmpresas,
+    limiteDeEmpresas: levasDeEmpresas * EMPRESAS_POR_VEZ,
+  };
 }
 
 /** Há o que buscar: uma palavra que vale ou um tipo escolhido. Sem isso, a tela mostra o início dos Arquivos. */
@@ -125,8 +161,10 @@ export function buscaAtiva(filtro: Pick<FiltroDaBusca, "palavras" | "tipo">): bo
 
 /**
  * O endereço da tela com o termo novo: troca o `q`, mantém o tipo (e o resto
- * da query) e volta para os primeiros 50 — o "Mostrar mais" de uma busca não
- * vale para a seguinte.
+ * da query) e volta para os primeiros 50 arquivos e as primeiras 8 empresas —
+ * o "Mostrar mais" de uma busca não vale para a seguinte. A página da lista
+ * de empresas do início (`?lista=`) fica: quem busca e limpa volta para onde
+ * estava (16/11/2026, melhoria-716).
  */
 export function urlDaBusca(caminho: string, query: string, termo: string): string {
   const q = new URLSearchParams(query);
@@ -134,6 +172,22 @@ export function urlDaBusca(caminho: string, query: string, termo: string): strin
   if (t) q.set("q", t);
   else q.delete("q");
   q.delete("pagina");
+  q.delete(PARAMETRO_MAIS_EMPRESAS);
+  const s = q.toString();
+  return s ? `${caminho}?${s}` : caminho;
+}
+
+/**
+ * Para onde vai o endereço antigo da busca de empresa (`/arquivos?empresa=texto`,
+ * até 16/11/2026): o texto vira o `q` da busca única — a não ser que o endereço
+ * já traga um `q`, que vale — e o tipo fica. A página daquela lista filtrada
+ * não tem para onde ir.
+ */
+export function urlDaBuscaAntigaDeEmpresa(caminho: string, params: { empresa: string; q?: string; tipo?: string }): string {
+  const q = new URLSearchParams();
+  const termo = (params.q ?? "").trim() || params.empresa.trim();
+  if (termo) q.set("q", termo);
+  if (params.tipo) q.set("tipo", params.tipo);
   const s = q.toString();
   return s ? `${caminho}?${s}` : caminho;
 }
@@ -249,6 +303,37 @@ export function clausulaDaBusca(input: {
       : {}),
   };
   return { where, caminhos: dentro };
+}
+
+// ─── Grupo "Empresas" do resultado ───────────────────────────────────────────
+
+/**
+ * Os dígitos do termo, quando ele é um número: só números e a pontuação do
+ * CNPJ ("12.345", "123", "12.345.678/0001-90"), com 3 dígitos ou mais. Termo
+ * com letra não vai ao CNPJ — "guia 092026" é nome de arquivo, e traria toda
+ * empresa com esses números no meio do CNPJ.
+ */
+export function cnpjDoTermo(termo: string): string | null {
+  if (!/^[\d./\-\s]+$/.test(termo)) return null;
+  const digitos = termo.replace(/\D/g, "");
+  return digitos.length >= DIGITOS_DO_CNPJ_DA_EMPRESA ? digitos : null;
+}
+
+/**
+ * As empresas do grupo "Empresas" (16/11/2026, melhoria-716): a regra da busca
+ * de empresa que a tela tinha na coluna "Empresas" — o termo inteiro no nome,
+ * no apelido ou no nome fantasia, ou os dígitos dele no CNPJ. Acha também a
+ * empresa inativa, como aquela busca achava. `null` com termo curto demais: a
+ * consulta nem vai ao banco.
+ */
+export function empresasDoTermo(tenantId: string, termo: string): Prisma.CompanyWhereInput | null {
+  const t = termo.trim();
+  if ([...t].length < MINIMO_DO_TERMO) return null;
+  const cnpj = cnpjDoTermo(t);
+  return {
+    tenantId,
+    OR: [{ name: { contains: t } }, { displayName: { contains: t } }, { tradeName: { contains: t } }, ...(cnpj ? [{ cnpj: { contains: cnpj } }] : [])],
+  };
 }
 
 // ─── Filtro da tela ──────────────────────────────────────────────────────────

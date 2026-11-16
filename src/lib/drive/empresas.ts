@@ -1,14 +1,18 @@
 // A lista de empresas da tela inicial dos Arquivos: quantos documentos cada uma
 // tem e o que o cliente mandou que a equipe ainda não abriu. Regras puras em
 // ./listaDeEmpresas.
+//
+// Desde 16/11/2026 (melhoria-716) são duas listas com a mesma conta: a do
+// início (as ativas, 12 por página) e o grupo "Empresas" do resultado da busca
+// (as que batem com o termo, com teto). A busca própria da lista saiu.
 
 import { getPrisma } from "@/lib/prisma";
 import type { AuthContext } from "@/lib/auth/context";
 import { nomeExibicao } from "@/lib/companyName";
-import { digitsOnly } from "@/lib/validation/common";
 import { caminhoDaPasta, caminhoNaLixeira, CHAVE_ENVIADOS, mapaDePastas, podeVerCaminho } from "./regras";
 import { SELECT_PASTA } from "./servidor";
 import { totaisDoConnect } from "./doConnect";
+import { MAXIMO_DE_EMPRESAS, empresasDoTermo } from "./busca";
 import { novosPorPasta, ordenarEmpresas, paginar, type EmpresaNaLista } from "./listaDeEmpresas";
 
 export type EmpresaDosArquivos = EmpresaNaLista & {
@@ -18,32 +22,75 @@ export type EmpresaDosArquivos = EmpresaNaLista & {
   pastaDeEnviados: string | null;
 };
 
+const SELECT_EMPRESA = { id: true, name: true, displayName: true, cnpj: true } as const;
+type EmpresaDoBanco = { id: string; name: string; displayName: string | null; cnpj: string | null };
+
+/** A lista do início: as empresas ativas, quem tem envio novo do cliente primeiro, 12 por página. */
 export async function empresasDosArquivos(
   ctx: AuthContext,
-  { termo, pagina, agora = new Date() }: { termo: string; pagina: number; agora?: Date }
+  { pagina, agora = new Date() }: { pagina: number; agora?: Date }
 ): Promise<{ itens: EmpresaDosArquivos[]; pagina: number; paginas: number; total: number; comNovidade: number }> {
+  const empresas = await getPrisma().company.findMany({
+    where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+    select: SELECT_EMPRESA,
+  });
+  if (empresas.length === 0) return { itens: [], pagina: 1, paginas: 1, total: 0, comNovidade: 0 };
+
+  const { lista, enviadosDa } = await contarNasPastas(ctx, empresas, agora);
+  const pag = paginar(ordenarEmpresas(lista, false), pagina);
+  return {
+    ...pag,
+    // O "Do Connect" só da página: contar os módulos das 400 empresas a cada
+    // abertura da tela custaria seis varreduras grandes para mostrar doze linhas.
+    itens: await comODoConnect(ctx, pag.itens, enviadosDa),
+    comNovidade: lista.filter((e) => e.novos > 0).length,
+  };
+}
+
+/**
+ * O grupo "Empresas" do resultado da busca (16/11/2026, melhoria-716): as
+ * empresas que batem com o termo (`empresasDoTermo`), até `limite` — nunca
+ * mais que 40 —, e quantas batem ao todo. O banco corta pela razão social; as
+ * que ficaram à vista saem na ordem da lista com busca: envio novo do cliente
+ * primeiro, depois o nome. A conta dos documentos e a régua das pastas são as
+ * da lista do início, só para as empresas que voltaram.
+ */
+export async function empresasDaBusca(
+  ctx: AuthContext,
+  { termo, limite, agora = new Date() }: { termo: string; limite: number; agora?: Date }
+): Promise<{ itens: EmpresaDosArquivos[]; total: number }> {
+  const where = empresasDoTermo(ctx.tenantId, termo);
+  if (!where) return { itens: [], total: 0 };
+  const prisma = getPrisma();
+  const [empresas, total] = await Promise.all([
+    prisma.company.findMany({
+      where,
+      // O `id` desempata duas empresas de mesma razão social, para o "Mostrar
+      // mais" só acrescentar.
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: Math.min(Math.max(1, Math.floor(limite) || 1), MAXIMO_DE_EMPRESAS),
+      select: SELECT_EMPRESA,
+    }),
+    prisma.company.count({ where }),
+  ]);
+  if (empresas.length === 0) return { itens: [], total: 0 };
+
+  const { lista, enviadosDa } = await contarNasPastas(ctx, empresas, agora);
+  return { itens: await comODoConnect(ctx, ordenarEmpresas(lista, true), enviadosDa), total: Math.max(total, empresas.length) };
+}
+
+/**
+ * Para as empresas dadas: quantos arquivos cada uma tem nas pastas que quem
+ * pede vê, e o que o cliente mandou que a equipe ainda não abriu.
+ */
+async function contarNasPastas(
+  ctx: AuthContext,
+  empresas: EmpresaDoBanco[],
+  agora: Date
+): Promise<{ lista: EmpresaNaLista[]; enviadosDa: Map<string, string> }> {
   const prisma = getPrisma();
   const tenantId = ctx.tenantId;
-  const digitos = digitsOnly(termo);
-
-  const empresas = await prisma.company.findMany({
-    where: {
-      tenantId,
-      ...(termo
-        ? {
-            OR: [
-              { name: { contains: termo } },
-              { displayName: { contains: termo } },
-              { tradeName: { contains: termo } },
-              ...(digitos && digitos.length >= 3 ? [{ cnpj: { contains: digitos } }] : []),
-            ],
-          }
-        : { status: "ACTIVE" as const }),
-    },
-    select: { id: true, name: true, displayName: true, cnpj: true },
-  });
   const ids = empresas.map((e) => e.id);
-  if (ids.length === 0) return { itens: [], pagina: 1, paginas: 1, total: 0, comNovidade: 0 };
 
   // As pastas das empresas, para contar só o que quem pede vê (pasta de setor,
   // lixeira) — a mesma régua do navegador.
@@ -107,20 +154,18 @@ export async function empresasDosArquivos(
       ultimoMovimento: e?.ultimo ?? null,
     };
   });
-  const pag = paginar(ordenarEmpresas(lista, !!termo), pagina);
-  // O "Do Connect" só da página: contar os módulos das 400 empresas a cada
-  // abertura da tela custaria seis varreduras grandes para mostrar doze linhas.
+  return { lista, enviadosDa };
+}
+
+/** Soma o "Do Connect" de cada empresa da lista (só as que vão para a tela). */
+async function comODoConnect(ctx: AuthContext, itens: EmpresaNaLista[], enviadosDa: ReadonlyMap<string, string>): Promise<EmpresaDosArquivos[]> {
   const doConnect = await totaisDoConnect(
     ctx,
-    pag.itens.map((e) => e.id)
+    itens.map((e) => e.id)
   );
-  return {
-    ...pag,
-    itens: pag.itens.map((e) => ({
-      ...e,
-      documentos: e.arquivos + (doConnect.get(e.id) ?? 0),
-      pastaDeEnviados: enviadosDa.get(e.id) ?? null,
-    })),
-    comNovidade: lista.filter((e) => e.novos > 0).length,
-  };
+  return itens.map((e) => ({
+    ...e,
+    documentos: e.arquivos + (doConnect.get(e.id) ?? 0),
+    pastaDeEnviados: enviadosDa.get(e.id) ?? null,
+  }));
 }

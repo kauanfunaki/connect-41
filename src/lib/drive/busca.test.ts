@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { PastaDoDrive, QuemPede } from "./regras";
 import {
   ARQUIVOS_POR_VEZ,
+  EMPRESAS_POR_VEZ,
   MAXIMO_DE_ARQUIVOS,
+  MAXIMO_DE_EMPRESAS,
   buscaAtiva,
   clausulaDaBusca,
+  cnpjDoTermo,
   documentoDaPalavra,
   empresasDaPalavra,
+  empresasDoTermo,
   filtroDasPastas,
   lerFiltroDaBusca,
   lerTipo,
@@ -14,6 +18,7 @@ import {
   palavrasDaBusca,
   pastasDaBusca,
   urlDaBusca,
+  urlDaBuscaAntigaDeEmpresa,
 } from "./busca";
 
 const pasta = (id: string, parentId: string | null, extra: Partial<PastaDoDrive> = {}): PastaDoDrive => ({
@@ -107,6 +112,14 @@ describe("lerTipo e lerFiltroDaBusca", () => {
     expect(lerFiltroDaBusca({ pagina: "abc" }).pagina).toBe(1);
   });
 
+  it("conta as levas de 8 empresas, até 40, à parte das dos arquivos", () => {
+    expect(lerFiltroDaBusca({ q: "padaria" })).toMatchObject({ levasDeEmpresas: 1, limiteDeEmpresas: EMPRESAS_POR_VEZ });
+    expect(lerFiltroDaBusca({ maisEmpresas: "3", pagina: "2" })).toMatchObject({ levasDeEmpresas: 3, limiteDeEmpresas: 24, pagina: 2, limite: 100 });
+    expect(lerFiltroDaBusca({ maisEmpresas: "99" })).toMatchObject({ levasDeEmpresas: 5, limiteDeEmpresas: MAXIMO_DE_EMPRESAS });
+    expect(lerFiltroDaBusca({ maisEmpresas: "-1" }).limiteDeEmpresas).toBe(EMPRESAS_POR_VEZ);
+    expect(lerFiltroDaBusca({ maisEmpresas: "abc" }).limiteDeEmpresas).toBe(EMPRESAS_POR_VEZ);
+  });
+
   it("busca de verdade só com uma palavra que vale ou um tipo", () => {
     expect(buscaAtiva(lerFiltroDaBusca({ q: "a" }))).toBe(false);
     expect(buscaAtiva(lerFiltroDaBusca({}))).toBe(false);
@@ -123,6 +136,27 @@ describe("urlDaBusca", () => {
   it("termo vazio tira o q", () => {
     expect(urlDaBusca("/arquivos", "q=x&tipo=guia", "  ")).toBe("/arquivos?tipo=guia");
     expect(urlDaBusca("/arquivos", "q=x", "")).toBe("/arquivos");
+  });
+
+  it("termo novo volta para as primeiras 8 empresas", () => {
+    expect(urlDaBusca("/arquivos", "q=velho&maisEmpresas=3", "novo")).toBe("/arquivos?q=novo");
+  });
+
+  it("a página da lista de empresas do início fica, ao buscar e ao limpar", () => {
+    expect(urlDaBusca("/arquivos", "lista=3", "padaria")).toBe("/arquivos?lista=3&q=padaria");
+    expect(urlDaBusca("/arquivos", "lista=3&q=padaria&pagina=2&maisEmpresas=2", "")).toBe("/arquivos?lista=3");
+  });
+});
+
+describe("urlDaBuscaAntigaDeEmpresa — o endereço antigo `?empresa=`", () => {
+  it("o texto da busca de empresa vira o q, e o tipo fica", () => {
+    expect(urlDaBuscaAntigaDeEmpresa("/arquivos", { empresa: " padaria central " })).toBe("/arquivos?q=padaria+central");
+    expect(urlDaBuscaAntigaDeEmpresa("/arquivos", { empresa: "12.345", tipo: "guia" })).toBe("/arquivos?q=12.345&tipo=guia");
+  });
+
+  it("o q que já veio no endereço vale; sem texto nenhum, o início", () => {
+    expect(urlDaBuscaAntigaDeEmpresa("/arquivos", { empresa: "padaria", q: "contrato" })).toBe("/arquivos?q=contrato");
+    expect(urlDaBuscaAntigaDeEmpresa("/arquivos", { empresa: "  " })).toBe("/arquivos");
   });
 });
 
@@ -231,6 +265,38 @@ describe("empresasDaPalavra", () => {
     expect(empresasDaPalavra("t", "12.345.678/0001-90").OR).toEqual(
       expect.arrayContaining([{ cnpj: { contains: "12345678000190" } }, { cpf: { contains: "12345678000190" } }])
     );
+  });
+});
+
+describe("empresasDoTermo — o grupo Empresas do resultado", () => {
+  it("o termo inteiro no nome, no apelido ou no nome fantasia, no escritório de quem busca", () => {
+    expect(empresasDoTermo("t", "  padaria central ")).toEqual({
+      tenantId: "t",
+      OR: [{ name: { contains: "padaria central" } }, { displayName: { contains: "padaria central" } }, { tradeName: { contains: "padaria central" } }],
+    });
+  });
+
+  it("texto curto demais não procura empresa", () => {
+    expect(empresasDoTermo("t", "")).toBeNull();
+    expect(empresasDoTermo("t", " a ")).toBeNull();
+    expect(empresasDoTermo("t", "ab")).not.toBeNull();
+  });
+
+  it("CNPJ só com 3 dígitos ou mais, com ou sem pontuação", () => {
+    expect(cnpjDoTermo("12")).toBeNull();
+    expect(cnpjDoTermo("1.2")).toBeNull();
+    expect(cnpjDoTermo("123")).toBe("123");
+    expect(cnpjDoTermo("12.345")).toBe("12345");
+    expect(cnpjDoTermo("12.345.678/0001-90")).toBe("12345678000190");
+    // Com menos de 3 dígitos o termo ainda procura no nome, só não no CNPJ.
+    expect(empresasDoTermo("t", "12")?.OR).toHaveLength(3);
+    expect(empresasDoTermo("t", "12.345")?.OR).toEqual(expect.arrayContaining([{ cnpj: { contains: "12345" } }]));
+  });
+
+  it("termo com letra não vai ao CNPJ: ano e competência são nome de arquivo", () => {
+    expect(cnpjDoTermo("guia 092026")).toBeNull();
+    expect(cnpjDoTermo("contrato 2026")).toBeNull();
+    expect(empresasDoTermo("t", "guia 092026")?.OR).toHaveLength(3);
   });
 });
 

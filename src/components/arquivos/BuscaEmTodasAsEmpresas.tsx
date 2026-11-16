@@ -14,15 +14,26 @@ import { useNavegarSemRecarregar } from "@/components/shared/NavegacaoSemRecarre
 import { Cartao, CartoesNoCelular, InfoDoCartao, TabelaNoDesktop } from "@/components/shared/ListaResponsiva";
 import { formatarBytes } from "@/lib/fileSize";
 import { formatCnpj, formatInstantDateTime } from "@/lib/format";
-import { ARQUIVOS_POR_VEZ, ESPERA_DA_DIGITACAO_MS, MAXIMO_DE_ARQUIVOS, MINIMO_DO_TERMO, urlDaBusca } from "@/lib/drive/busca";
-import { ROTULO_DAS_INTERNAS, enderecoDoAchado, type ArquivoAchado } from "@/lib/drive/tela";
+import {
+  ARQUIVOS_POR_VEZ,
+  EMPRESAS_POR_VEZ,
+  ESPERA_DA_DIGITACAO_MS,
+  MAXIMO_DE_ARQUIVOS,
+  MAXIMO_DE_EMPRESAS,
+  MINIMO_DO_TERMO,
+  PARAMETRO_MAIS_EMPRESAS,
+  urlDaBusca,
+} from "@/lib/drive/busca";
+import { ROTULO_DAS_INTERNAS, enderecoDoAchado, type ArquivoAchado, type EmpresaNaTela } from "@/lib/drive/tela";
 import { IconeDoArquivo } from "./IconeDoArquivo";
+import { LinhaDaEmpresa } from "./LinhaDaEmpresa";
 
 /**
- * A caixa da busca em todas as empresas, na tela inicial dos Arquivos
- * (09/11/2026). Busca sozinha 400 ms depois da última tecla — o Enter não
- * espera — e navega sem recarregar (`NavegacaoSemRecarregar`): a lista de
- * antes fica esmaecida até a nova chegar, e a caixa não perde o foco.
+ * A caixa da busca dos Arquivos, na tela inicial (09/11/2026) — desde
+ * 16/11/2026 (melhoria-716) a única da tela: acha empresa e arquivo. Busca
+ * sozinha 400 ms depois da última tecla — o Enter não espera — e navega sem
+ * recarregar (`NavegacaoSemRecarregar`): a lista de antes fica esmaecida até a
+ * nova chegar, e a caixa não perde o foco.
  *
  * Refinar o termo troca a entrada do histórico; entrar na busca e sair dela
  * criam uma, para o voltar do navegador levar de volta ao início dos Arquivos.
@@ -85,7 +96,7 @@ export function CampoDaBuscaNosArquivos() {
         enviarAoLimpar
         maxLength={120}
         placeholder="Arquivo, empresa ou CNPJ"
-        aria-label="Buscar arquivo em todas as empresas pelo nome do arquivo, pelo nome da empresa ou pelo CNPJ"
+        aria-label="Buscar empresa ou arquivo pelo nome da empresa, pelo CNPJ ou pelo nome do arquivo"
       />
     </form>
   );
@@ -101,38 +112,131 @@ function enderecoDoArquivo(a: { id: string; previa: boolean }, baixar = false): 
 }
 
 /**
- * O resultado da busca em todas as empresas: tabela no computador, cartões no
- * celular, e o pé com o "Mostrar mais" (de 50 em 50, até 200). Mora no casco
- * da barra de busca, como as listas com `CascoDaTabela`: no computador, barra
- * e lista são um cartão só, e o pé é a faixa de baixo dele.
+ * O resultado da busca dos Arquivos. Mora no casco da barra de busca, como as
+ * listas com `CascoDaTabela`: no computador, barra e resultado são um cartão
+ * só, e cada pé é uma faixa dele.
  *
- * O nome abre o arquivo (PDF e imagem no navegador; o resto baixa), a
- * empresa e o caminho abrem as pastas. No "⋯", baixar e abrir a pasta.
+ * Com texto na busca são dois grupos, nesta ordem (16/11/2026, melhoria-716):
+ * "Empresas" — as que batem com o texto, no desenho da lista do início, de 8
+ * em 8 até 40 — e "Arquivos". Cada grupo tem o seu vazio de uma linha; com os
+ * dois vazios, um vazio só. Só com o tipo escolhido (sem texto) não há o que
+ * procurar em empresa: vem a lista de arquivos, sem título de grupo.
+ *
+ * Os arquivos: tabela no computador, cartões no celular, e o pé com o
+ * "Mostrar mais" (de 50 em 50, até 200). O nome abre o arquivo (PDF e imagem
+ * no navegador; o resto baixa), a empresa e o caminho abrem as pastas. No
+ * "⋯", baixar e abrir a pasta.
  */
 export function ResultadosDaBuscaNosArquivos({
+  empresas,
   itens,
   temMais,
   pagina,
   termo,
   comTipo,
+  rotuloDoTipo,
 }: {
+  /** O grupo "Empresas"; `null` na busca só pelo tipo, que não procura empresa. */
+  empresas: { itens: EmpresaNaTela[]; total: number; levas: number } | null;
   itens: ArquivoAchado[];
   temMais: boolean;
   pagina: number;
   termo: string;
   /** Há um tipo escolhido no filtro — muda o título do vazio. */
   comTipo: boolean;
+  /** O nome do tipo escolhido, ao lado do título "Arquivos": o filtro vale só para eles. */
+  rotuloDoTipo: string | null;
 }) {
-  if (itens.length === 0) {
-    return (
+  if (itens.length === 0 && (!empresas || empresas.itens.length === 0)) {
+    return empresas ? (
       <EmptyState
         icon={<SearchX />}
-        title={termo ? `Nenhum arquivo com “${termo}”${comTipo ? " neste tipo" : ""}` : "Nenhum arquivo deste tipo"}
-        description="A busca olha o nome do arquivo e o nome, o apelido ou o CNPJ da empresa — inteiro ou só a raiz, com ou sem pontos —, em todas as pastas que você vê."
+        title={`Nenhuma empresa ou arquivo com “${termo}”`}
+        description="A busca olha o nome, o apelido e o CNPJ da empresa e o nome do arquivo."
       />
+    ) : (
+      <EmptyState icon={<SearchX />} title="Nenhum arquivo deste tipo" />
     );
   }
 
+  return (
+    <>
+      {empresas && (
+        <>
+          <TituloDoGrupo>Empresas</TituloDoGrupo>
+          {empresas.itens.length === 0 ? (
+            <VazioDoGrupo>Nenhuma empresa com “{termo}”.</VazioDoGrupo>
+          ) : (
+            // No celular o casco não desenha nada: a lista é um cartão próprio,
+            // como a do início. No computador ela é uma faixa do cartão.
+            <ul
+              aria-label="Empresas encontradas"
+              className="bg-surface border border-border rounded-lg shadow-xs divide-y divide-border md:bg-transparent md:border-0 md:rounded-none md:shadow-none"
+            >
+              {empresas.itens.map((e) => (
+                <LinhaDaEmpresa key={e.id} empresa={e} noCasco />
+              ))}
+            </ul>
+          )}
+          {empresas.total > empresas.itens.length && (
+            <p className="mt-3 md:mt-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-fs-2 text-fg-muted">
+              {empresas.levas * EMPRESAS_POR_VEZ < MAXIMO_DE_EMPRESAS ? (
+                <>
+                  <span>
+                    Mostrando {empresas.itens.length} de {empresas.total}.
+                  </span>
+                  <MostrarMais
+                    parametro={PARAMETRO_MAIS_EMPRESAS}
+                    leva={empresas.levas}
+                    quantos={Math.min(EMPRESAS_POR_VEZ, empresas.total - empresas.itens.length)}
+                  />
+                </>
+              ) : (
+                <span>
+                  Mostrando {empresas.itens.length} de {empresas.total}. Para achar as outras, digite mais do nome ou o CNPJ.
+                </span>
+              )}
+            </p>
+          )}
+          <TituloDoGrupo comFioEmCima>
+            Arquivos
+            {rotuloDoTipo && <span className="font-normal text-fg-muted"> · {rotuloDoTipo}</span>}
+          </TituloDoGrupo>
+          {itens.length === 0 && (
+            <VazioDoGrupo>
+              Nenhum arquivo com “{termo}”{comTipo ? " neste tipo" : ""}.
+            </VazioDoGrupo>
+          )}
+        </>
+      )}
+      {itens.length > 0 && <ArquivosAchados itens={itens} temMais={temMais} pagina={pagina} />}
+    </>
+  );
+}
+
+/**
+ * O título de um grupo do resultado. No computador é uma faixa do cartão, com
+ * o respiro lateral da barra; no celular, um título solto em cima da lista.
+ * `comFioEmCima` é do grupo que vem depois de outro: fecha a lista de cima.
+ */
+function TituloDoGrupo({ children, comFioEmCima = false }: { children: React.ReactNode; comFioEmCima?: boolean }) {
+  return (
+    <h2
+      className={`mt-5 mb-2 min-w-0 break-words text-ui font-semibold text-fg md:m-0 md:px-4 md:py-2.5 md:border-b md:border-border ${
+        comFioEmCima ? "md:border-t" : ""
+      }`.trim()}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/** O vazio de um grupo quando o outro achou algo: uma linha, sem ilustração. */
+function VazioDoGrupo({ children }: { children: React.ReactNode }) {
+  return <div className="min-w-0 break-words text-ui text-fg-muted md:px-4 md:py-3">{children}</div>;
+}
+
+function ArquivosAchados({ itens, temMais, pagina }: { itens: ArquivoAchado[]; temMais: boolean; pagina: number }) {
   return (
     <>
       <TabelaNoDesktop padrao>
@@ -233,7 +337,7 @@ export function ResultadosDaBuscaNosArquivos({
           {pagina * ARQUIVOS_POR_VEZ < MAXIMO_DE_ARQUIVOS ? (
             <>
               <span>Mostrando os {itens.length} mais recentes.</span>
-              <MostrarMais pagina={pagina} />
+              <MostrarMais parametro="pagina" leva={pagina} quantos={ARQUIVOS_POR_VEZ} />
             </>
           ) : (
             <span>
@@ -296,21 +400,39 @@ function AcoesDoArquivo({ a, grande = false }: { a: ArquivoAchado; grande?: bool
 }
 
 /**
- * Mais 50 na mesma lista, sem recarregar e sem rolar: a pessoa continua de
- * onde estava. Troca a entrada do histórico — é a mesma busca, mais longa.
+ * Mais uma leva na mesma lista (50 arquivos, 8 empresas), sem recarregar e sem
+ * rolar: a pessoa continua de onde estava. Troca a entrada do histórico — é a
+ * mesma busca, mais longa. `parametro` é o da URL que conta as levas da lista.
+ *
+ * São dois na tela desde 16/11/2026 (melhoria-716), e a transição é uma só
+ * para a tela inteira: "Carregando…" fica só no que foi clicado — o outro
+ * espera, desabilitado. O clique guarda a query em que saiu, e não um "estou
+ * carregando": a lista troca no lugar, sem remontar este botão, e a marca
+ * deixa de valer sozinha quando a URL muda.
  */
-function MostrarMais({ pagina }: { pagina: number }) {
+function MostrarMais({ parametro, leva, quantos }: { parametro: string; leva: number; quantos: number }) {
   const caminho = usePathname();
   const params = useSearchParams();
+  const query = params.toString();
   const { ir, pendente } = useNavegarSemRecarregar();
+  const [pedidoEm, setPedidoEm] = useState<string | null>(null);
   function irParaAProxima() {
-    const q = new URLSearchParams(params.toString());
-    q.set("pagina", String(pagina + 1));
+    const q = new URLSearchParams(query);
+    q.set(parametro, String(leva + 1));
+    setPedidoEm(query);
     ir(`${caminho}?${q.toString()}`, undefined, { substituir: true });
   }
   return (
-    <Button type="button" variant="secondary" size="sm" onClick={irParaAProxima} loading={pendente} loadingLabel="Carregando…">
-      Mostrar mais {ARQUIVOS_POR_VEZ}
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      onClick={irParaAProxima}
+      loading={pendente && pedidoEm === query}
+      disabled={pendente}
+      loadingLabel="Carregando…"
+    >
+      Mostrar mais {quantos}
     </Button>
   );
 }
