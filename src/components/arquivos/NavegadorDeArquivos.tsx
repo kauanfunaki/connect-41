@@ -61,7 +61,8 @@ type Props = {
   /** O primeiro item da trilha: "Pastas da empresa", "Pastas do escritório". */
   rotuloDaRaiz: string;
   /** A tela já mostra a trilha acima do título (as telas de Arquivos): aqui fica
-   *  só o uso e a busca. Na ficha da empresa, a trilha das pastas segue aqui. */
+   *  só o uso, a busca e as ações. Na ficha da empresa, que abre sempre na raiz,
+   *  o rótulo da raiz é o título do bloco (16/11/2026, melhoria-713). */
   trilhaNoCabecalho?: boolean;
   busca?: { termo: string; resultados: ResultadoDaBusca[] } | null;
 };
@@ -144,22 +145,62 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
   // Pelo total da pasta, não pelos arquivos desta página (10/11/2026).
   const vazio = dados.subpastas.length === 0 && dados.paginacao.total === 0;
 
+  // Na raiz, sem a trilha no topo da tela (a aba Arquivos da ficha), a trilha
+  // teria um item só: ele vira o título do bloco, com o peso dos títulos das
+  // outras abas da ficha (16/11/2026, melhoria-713).
+  const tituloDaRaiz = !trilhaNoCabecalho && !pasta;
+  // Com uma busca na tela as ações saem, como antes; e quem só lê, na raiz, não tem nenhuma.
+  const temAcoes = !busca && (podeMexer || (pasta !== null && !vazio));
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Trilha, uso e busca — a trilha, só quando a tela não a mostra no topo. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {!trilhaNoCabecalho && (
-          // O Breadcrumb traz margem de cabeçalho de página; aqui ele divide a linha com a busca.
-          <div className="min-w-0 flex-1 [&>nav]:mb-0">
-            <Breadcrumb items={trilha} />
-          </div>
-        )}
-        <span className={`text-micro text-fg-muted tabular-nums ${trilhaNoCabecalho ? "flex-1" : ""}`.trim()}>
-          {dados.uso.arquivos === 1 ? "1 arquivo" : `${dados.uso.arquivos} arquivos`} · {formatarBytes(dados.uso.bytes)}
-        </span>
+      {/* Uma linha só (16/11/2026, melhoria-713): à esquerda o título ou a trilha,
+          o uso e o que a pasta aberta é; à direita a busca e as ações. Eram duas
+          linhas, e na raiz a de baixo ficava só com o "Nova pasta". O bloco da
+          esquerda cresce e empurra o resto; quando as ações não cabem, descem
+          juntas e ficam encostadas à direita (`justify-end`). */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className={`flex min-w-0 flex-auto flex-wrap gap-x-3 gap-y-1 ${tituloDaRaiz ? "items-baseline" : "items-center"}`}>
+          {tituloDaRaiz ? (
+            <h2 className="min-w-0 break-words text-section font-semibold text-fg">{rotuloDaRaiz}</h2>
+          ) : !trilhaNoCabecalho ? (
+            // O Breadcrumb traz margem de cabeçalho de página; aqui ele divide a linha com a busca.
+            <div className="min-w-0 [&>nav]:mb-0">
+              <Breadcrumb items={trilha} />
+            </div>
+          ) : null}
+          <span className="text-micro text-fg-muted tabular-nums whitespace-nowrap">
+            {dados.uso.arquivos === 1 ? "1 arquivo" : `${dados.uso.arquivos} arquivos`} · {formatarBytes(dados.uso.bytes)}
+          </span>
+          {/* A pasta aberta: do que ela é e quem vê. */}
+          {!busca && pasta?.enviados && <p className="text-fs-3 text-fg-secondary">O que o cliente envia pelo portal cai aqui.</p>}
+          {!busca && pasta && !pasta.enviados && (
+            // `empty:hidden`: pasta do escritório sem setor não tem selo, e a caixa vazia deixaria um vão.
+            <div className="flex flex-wrap items-center gap-1.5 empty:hidden">
+              {pasta.setor && (
+                <Selo tom="atencao">
+                  <Lock size={11} aria-hidden /> Só {pasta.setor}
+                </Selo>
+              )}
+              {pasta.compartilhada ? (
+                <Selo tom="marca">
+                  <Users size={11} aria-hidden /> Compartilhada com o cliente
+                </Selo>
+              ) : pasta.compartilhadaPor ? (
+                <Selo tom="marca">
+                  <Users size={11} aria-hidden /> O cliente vê, por “{pasta.compartilhadaPor}”
+                </Selo>
+              ) : naEmpresa ? (
+                <span className="text-micro text-fg-muted">Só a equipe vê esta pasta.</span>
+              ) : null}
+            </div>
+          )}
+        </div>
+        {/* No celular a busca divide a linha com o botão que couber ao lado e
+            cresce até a borda; sozinha, ocupa a largura toda, como antes. */}
         <form
           role="search"
-          className="w-full sm:w-64"
+          className="min-w-0 grow basis-48 sm:w-64 sm:flex-none"
           onSubmit={(e) => {
             e.preventDefault();
             // Do formulário, e não do estado: no "limpar" o envio vem antes
@@ -181,39 +222,9 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
             aria-label="Buscar arquivo pelo nome"
           />
         </form>
-      </div>
-
-      {busca ? (
-        <ResultadosDaBusca busca={busca} base={base} />
-      ) : (
-        <>
-          {/* A pasta aberta: do que ela é, quem vê, e as ações dela */}
-          <div className="flex flex-wrap items-center gap-2">
-            {pasta?.enviados && (
-              <p className="text-fs-3 text-fg-secondary mr-auto">O que o cliente envia pelo portal cai aqui.</p>
-            )}
-            {pasta && !pasta.enviados && (
-              <div className="flex flex-wrap items-center gap-1.5 mr-auto">
-                {pasta.setor && (
-                  <Selo tom="atencao">
-                    <Lock size={11} aria-hidden /> Só {pasta.setor}
-                  </Selo>
-                )}
-                {pasta.compartilhada ? (
-                  <Selo tom="marca">
-                    <Users size={11} aria-hidden /> Compartilhada com o cliente
-                  </Selo>
-                ) : pasta.compartilhadaPor ? (
-                  <Selo tom="marca">
-                    <Users size={11} aria-hidden /> O cliente vê, por “{pasta.compartilhadaPor}”
-                  </Selo>
-                ) : naEmpresa ? (
-                  <span className="text-micro text-fg-muted">Só a equipe vê esta pasta.</span>
-                ) : null}
-              </div>
-            )}
-            {!pasta && <div className="mr-auto" />}
-
+        {/* As ações da pasta, depois da busca, na ordem de sempre. */}
+        {temAcoes && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {/* Baixar vale para quem vê a pasta, como o "Baixar" de cada arquivo — inclusive o só leitura. */}
             {pasta && !vazio && <BaixarPastaEmZip url={`/api/arquivos/pasta/${pasta.id}/zip`} />}
 
@@ -273,7 +284,13 @@ export function NavegadorDeArquivos({ dados, base, rotuloDaRaiz, trilhaNoCabecal
               </>
             )}
           </div>
+        )}
+      </div>
 
+      {busca ? (
+        <ResultadosDaBusca busca={busca} base={base} />
+      ) : (
+        <>
           {enviando && pasta && podeMexer && (
             <div className="bg-surface border border-border rounded-lg p-4">
               <EnvioDeArquivos
