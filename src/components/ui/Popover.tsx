@@ -11,6 +11,10 @@ type Props = {
   width?: number;
   /** Nome acessível do painel. */
   "aria-label"?: string;
+  /** No celular, abre como folha presa embaixo (ver `PainelFlutuante`): para o
+   *  painel alto demais para caber pendurado no botão — o Configurar do Meu
+   *  dia (16/11/2026, melhoria-714). */
+  folhaNoCelular?: boolean;
 };
 
 /**
@@ -24,7 +28,7 @@ type Props = {
  * botão, e vira para cima quando não cabe embaixo — desde 02/10/2026 pelo
  * `PainelFlutuante`, que o calendário do campo de data também usa.
  */
-export function Popover({ trigger, children, align = "left", width = 240, "aria-label": ariaLabel }: Props) {
+export function Popover({ trigger, children, align = "left", width = 240, "aria-label": ariaLabel, folhaNoCelular = false }: Props) {
   const [open, setOpen] = useState(false);
   const ancoraRef = useRef<HTMLSpanElement>(null);
   const conteudoRef = useRef<HTMLDivElement>(null);
@@ -93,6 +97,7 @@ export function Popover({ trigger, children, align = "left", width = 240, "aria-
         onFechar={close}
         largura={width}
         align={align}
+        folhaNoCelular={folhaNoCelular}
         aria-label={ariaLabel}
         className="p-3 text-dropdown"
       >

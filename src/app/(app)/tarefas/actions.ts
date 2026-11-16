@@ -13,7 +13,7 @@ import { podeConfigurarAPessoa, podeConfigurarOSetor } from "@/lib/meuDia/config
 // Admin) e, desde 10/11/2026 (pedido do Kauan), também o coordenador do setor
 // (SECTOR_ADMIN dele). O Meu dia de cada pessoa — dela, do coordenador para a
 // equipe, do admin para qualquer um — está em `salvarMeuDiaDaPessoa`, abaixo.
-// A action é a barreira real; o que a faixa mostra é só cortesia.
+// A action é a barreira real; o que o painel do Configurar mostra é só cortesia.
 const SEM_PERMISSAO_NO_SETOR = "Só o coordenador do setor, o Admin ou o Super Admin configuram o padrão do setor.";
 
 const FALTA_A_MIGRATION =
