@@ -40,7 +40,7 @@ export async function procurarNoOrquestrador(c: { tenantId: string; userId: stri
   try {
     const texto = JSON.stringify({ pedido: { descricao: dados.description, campos: dados.requestData }, jaExiste: itens.map(paraOModelo) });
     const { valor } = await gerarEstruturado({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT_DO_ORQUESTRADOR, texto, nome: "orquestrador_chamado", schema: SCHEMA_DO_ORQUESTRADOR,
-      maxTokens: 600, estrito: true, timeoutMs: 20000, store: false, contexto: { trigger: "SISTEMA", userId: c.userId, entityType: "HelpdeskTicket", entityId: c.ticketId } });
+      maxTokens: 600, estrito: true, timeoutMs: 30000, esforco: "low", store: false, contexto: { trigger: "SISTEMA", userId: c.userId, entityType: "HelpdeskTicket", entityId: c.ticketId } });
     if (!valor || typeof valor !== "object" || !("existing" in valor)) throw new Error("A IA respondeu sem o campo existing.");
     return { existente: acharExistente((valor as { existing: unknown }).existing, itens), falha: null };
   } catch (err) {

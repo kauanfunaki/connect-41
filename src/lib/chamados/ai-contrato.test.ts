@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
 const m = vi.hoisted(() => ({ config: vi.fn(), preparar: vi.fn(), abrir: vi.fn(), encerrar: vi.fn(), fetch: vi.fn(), criar: vi.fn() }));
@@ -34,6 +35,16 @@ describe("contrato OpenAI do agente de chamados", () => {
   it("modelo legado (sem raciocínio) recebe só o limite pedido", async () => {
     m.preparar.mockResolvedValue({ provider: "OPENAI", apiKey: "chave-ficticia", model: "gpt-4.1-mini" });
     await gerarEstruturado(entrada); expect(JSON.parse(m.fetch.mock.calls[0][1].body).max_output_tokens).toBe(3000);
+  });
+  // bug-720: sem esforço, o gpt-5-nano raciocinava no padrão (medium) e passava do tempo limite.
+  it("pede o esforço de raciocínio ao modelo que raciocina, e não ao legado nem sem pedido", async () => {
+    await gerarEstruturado({ ...entrada, esforco: "low" }); expect(JSON.parse(m.fetch.mock.calls[0][1].body).reasoning).toEqual({ effort: "low" });
+    await gerarEstruturado(entrada); expect(JSON.parse(m.fetch.mock.calls[1][1].body)).not.toHaveProperty("reasoning");
+    m.preparar.mockResolvedValue({ provider: "OPENAI", apiKey: "chave-ficticia", model: "gpt-4.1-mini" });
+    await gerarEstruturado({ ...entrada, esforco: "low" }); expect(JSON.parse(m.fetch.mock.calls[2][1].body)).not.toHaveProperty("reasoning");
+  });
+  it("as chamadas dos chamados pedem esforço baixo e 30 s", () => {
+    for (const f of ["classificacao", "triagem"]) expect(readFileSync(`src/lib/chamados/${f}.ts`, "utf8")).toMatch(/timeoutMs: 30000, esforco: "low"/);
   });
   it.each(["incomplete", "failed"])("recusa resposta com status %s", async status => {
     m.fetch.mockResolvedValue({ ok: true, json: async () => ({ status, output_text: '{"ok":true}' }) }); await expect(gerarEstruturado(entrada)).rejects.toThrow("não concluiu");

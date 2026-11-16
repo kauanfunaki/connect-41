@@ -29,7 +29,7 @@ import {
   type PreparoDaChamada,
 } from "@/lib/ia/data";
 import { conversarComFerramentas } from "@/lib/ia/conversa";
-import { conversarComFerramentasOpenAi, limiteDeSaida } from "@/lib/ia/conversa-openai";
+import { conversarComFerramentasOpenAi, ehModeloDeRaciocinio, limiteDeSaida } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco, TurnoAnterior } from "@/lib/ia/laco";
 import type { AnexoDaPergunta } from "@/lib/ia/chat/anexos";
 import { blocosAnthropicDosAnexos, type AnexoEstruturado } from "@/lib/ia/anexos-estruturados";
@@ -696,6 +696,8 @@ async function chamarComFormato(
     timeoutMs?: number;
     /** Só a OpenAI guarda respostas; no Anthropic não há o que desligar. */
     store?: boolean;
+    /** Ver `esforco` em `gerarEstruturado`. */
+    esforco?: EsforcoDeRaciocinio;
   }
 ): Promise<ComUso<unknown>> {
   if (c.provider === "ANTHROPIC") {
@@ -754,6 +756,8 @@ async function chamarComFormato(
         // O teto conta raciocínio e texto: sem a folga, o modelo que raciocina
         // gasta tudo pensando e a resposta volta incompleta (bug-695).
         ...(p.estrito ? { max_output_tokens: limiteDeSaida(c.model, p.maxTokens) } : {}),
+        // Os legados (gpt-4*) recusam o campo; só vai a quem raciocina (bug-720).
+        ...(p.esforco && ehModeloDeRaciocinio(c.model) ? { reasoning: { effort: p.esforco } } : {}),
         input: [
           {
             role: "user",
@@ -805,6 +809,13 @@ export async function gerarEstruturado(params: {
   estrito?: boolean;
   timeoutMs?: number;
   store?: boolean;
+  /**
+   * O esforço de raciocínio, só na OpenAI e só em modelo que raciocina (16/11/2026,
+   * bug-720). Sem ele vale o padrão do modelo (`medium`): o `gpt-5-nano`
+   * passava dos 20 s da triagem de chamados, e a chamada voltava "OpenAI
+   * indisponível.". Classificar e escolher pedem pouco raciocínio: "low".
+   */
+  esforco?: EsforcoDeRaciocinio;
 }): Promise<{ valor: unknown; runId: string | null }> {
   let runId: string | null = null;
   const valor = await executarAgente({
@@ -827,10 +838,12 @@ export async function gerarEstruturado(params: {
         estrito: params.estrito,
         timeoutMs: params.timeoutMs,
         store: params.store,
+        esforco: params.esforco,
       }),
   });
   return { valor, runId };
 }
+export type EsforcoDeRaciocinio = "low" | "medium" | "high";
 
 const campoDeTexto = (descricao: string) => ({ type: "string", description: descricao });
 
