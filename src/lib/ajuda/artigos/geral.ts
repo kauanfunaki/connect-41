@@ -99,11 +99,12 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como escolher o que o Meu dia mostra",
         passos: [
-          "Clique em “Configurar”, no topo da tela. Uma faixa abre logo abaixo do título.",
+          "Clique em “Configurar”, no topo da tela. Um painel abre no próprio botão.",
           "Em “Nas listas”, ligue ou desligue o que entra nas listas: atividades dos Quadros, processos, pendências com o cliente, solicitações e transferências.",
           "Em “Ao lado”, ligue ou desligue os blocos da direita: “Próximas reuniões”, “No Societário, com você” e “Prazos da semana”.",
-          "Clique em “Concluir” para salvar. Para voltar ao que o seu setor usa, clique em “Voltar ao padrão do setor”.",
-          "Quem coordena um setor escolhe também, em “Configurando o Meu dia de”, o padrão do setor ou o de alguém da equipe.",
+          "Cada troca vale na hora, e a tela atrás do painel já mostra o resultado. Para fechar, clique fora do painel.",
+          "Para voltar ao que o seu setor usa, clique em “Voltar ao padrão do setor”.",
+          "Quem coordena um setor escolhe também, em “Para quem”, o padrão do setor ou o de alguém da equipe.",
         ],
       },
       {

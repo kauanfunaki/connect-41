@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, useSyncExternalStore, useTransition } from "react";
-import { createPortal } from "react-dom";
-import { Check, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
+import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { FilterButtonSection } from "@/components/ui/FilterButton";
+import { Popover } from "@/components/ui/Popover";
 import { Select } from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { useToast } from "@/components/ui/Toast";
+import { criarFilaDeGravacao } from "@/components/tarefas/filaDeGravacao";
 import { TASK_WIDGETS, type TaskWidgetGrupo, type TaskWidgetKey } from "@/lib/taskWidgets";
 import type { ActionState } from "@/lib/actionState";
-
-const semAssinatura = () => () => {};
-
-/** O lugar da faixa de edição, logo abaixo do cabeçalho do Meu dia. */
-export const ID_DA_FAIXA_DO_MEU_DIA = "faixa-do-meu-dia";
 
 /**
  * De quem é o Meu dia que se configura (28/10/2026): o próprio, o de alguém da
@@ -41,172 +38,221 @@ const GRUPOS: { grupo: TaskWidgetGrupo; titulo: string }[] = [
   { grupo: "bloco", titulo: "Ao lado" },
 ];
 
+/** A troca que ainda está indo para o servidor, por alvo (a chave é a do `chaveDo`). */
+type Trocas = Record<string, TaskWidgetKey[]>;
+const SEM_TROCA: Trocas = {};
+
 // Configuração da tela /tarefas.
 //
 // Na própria tela desde 20/10/2026 (escolha 11A dos Ajustes de 15/10, a mesma
-// do Início): o botão abre uma faixa no topo do Meu dia, um interruptor por
-// bloco e Concluir. Desde 28/10/2026 não é mais só do Super Admin, nem só por
-// setor (decisão do Kauan): cada pessoa personaliza o seu, o coordenador
-// configura o da equipe e Admin e Super Admin, o de qualquer um e o padrão de
-// cada setor — o "Para quem" escolhe. Desde 10/11/2026 o coordenador também
-// configura o padrão dos setores dele, e tudo o que a tela monta desliga: as
-// origens das listas e os blocos ao lado. Sem ordem: a do catálogo.
+// do Início). Desde 28/10/2026 não é mais só do Super Admin, nem só por setor
+// (decisão do Kauan): cada pessoa personaliza o seu, o coordenador configura o
+// da equipe e Admin e Super Admin, o de qualquer um e o padrão de cada setor —
+// o "Para quem" escolhe. Desde 10/11/2026 o coordenador também configura o
+// padrão dos setores dele, e tudo o que a tela monta desliga: as origens das
+// listas e os blocos ao lado. Sem ordem: a do catálogo.
+//
+// Desde 16/11/2026 (melhoria-714, alternativa A escolhida pelo Kauan) é um
+// painel no próprio botão, no desenho do painel de Filtros, e não mais a faixa
+// azul embaixo do título, que empurrava a página e juntava título, frase,
+// três botões e os interruptores. Cada interruptor vale na hora: saíram o
+// "Concluir" e o "Cancelar". É o `Popover`, e não o `Dropdown` do Filtros: no
+// celular as ações do cabeçalho descem para a esquerda, e o `Dropdown`, preso
+// ao botão, sairia da tela; o `Popover` se ajusta à tela e, no celular, abre
+// como folha embaixo.
 export function ConfigurarTarefasButton({ alvos, salvarPessoa, restaurarPessoa, salvarSetor, restaurarSetor }: Props) {
-  const [aberto, setAberto] = useState(false);
   const [chave, setChave] = useState(() => (alvos[0] ? chaveDo(alvos[0]) : ""));
   const alvo = alvos.find((a) => chaveDo(a) === chave) ?? alvos[0];
-  const [selected, setSelected] = useState<TaskWidgetKey[]>(() => alvo?.blocos ?? []);
-  const [isPending, startTransition] = useTransition();
+  // O interruptor muda na hora (otimista) e a gravação segue atrás. O que vale
+  // é o que a página manda (`alvo.blocos`): terminada a gravação, a troca sai
+  // daqui e fica o gravado — no erro, o interruptor volta sozinho.
+  const [trocas, mostrar] = useOptimistic(SEM_TROCA, (atuais: Trocas, t: { chave: string; blocos: TaskWidgetKey[] }) => ({
+    ...atuais,
+    [t.chave]: t.blocos,
+  }));
+  const [restaurando, marcarRestaurando] = useOptimistic(false);
+  const [, iniciar] = useTransition();
+  // Uma fila por alvo: a action grava o conjunto inteiro, e duas gravações
+  // cruzadas do mesmo alvo deixariam o conjunto errado (ver `filaDeGravacao`).
+  const filas = useRef(new Map<string, ReturnType<typeof criarFilaDeGravacao>>());
   const toast = useToast();
-
-  // A faixa vai para o lugar dela na página, abaixo do cabeçalho; o botão
-  // fica no cabeçalho. No servidor não há documento (o padrão do SlideOver).
-  const noNavegador = useSyncExternalStore(semAssinatura, () => true, () => false);
-  const lugar = noNavegador && aberto ? document.getElementById(ID_DA_FAIXA_DO_MEU_DIA) : null;
-
-  function escolher(nova: string) {
-    setChave(nova);
-    setSelected(alvos.find((a) => chaveDo(a) === nova)?.blocos ?? []);
-  }
-
-  function abrir() {
-    // Reabrir depois de cancelar não pode manter o rascunho descartado.
-    escolher(chave || (alvos[0] ? chaveDo(alvos[0]) : ""));
-    setAberto(true);
-  }
-
-  function toggle(key: TaskWidgetKey) {
-    setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-  }
-
-  function executar(acao: () => Promise<ActionState>, sucesso: string) {
-    startTransition(async () => {
-      const result = await acao();
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      setAberto(false);
-      toast.success(sucesso);
-    });
-  }
-
-  function save() {
-    if (!alvo) return;
-    if (alvo.tipo === "setor") executar(() => salvarSetor(alvo.code, selected), `Padrão do Meu dia de ${alvo.rotulo} salvo.`);
-    else executar(() => salvarPessoa(alvo.id, selected), alvo.eu ? "Seu Meu dia foi salvo." : `Meu dia de ${alvo.rotulo} salvo.`);
-  }
-
-  function reset() {
-    if (!alvo) return;
-    if (alvo.tipo === "setor") executar(() => restaurarSetor(alvo.code), `${alvo.rotulo} voltou ao padrão.`);
-    else executar(() => restaurarPessoa(alvo.id), alvo.eu ? "Seu Meu dia voltou ao padrão do setor." : `${alvo.rotulo} voltou ao padrão do setor.`);
-  }
 
   if (!alvo) return null;
 
+  const chaveDoAlvo = chaveDo(alvo);
+  const blocos = trocas[chaveDoAlvo] ?? alvo.blocos;
+
+  const filaDo = (qual: string) => {
+    let fila = filas.current.get(qual);
+    if (!fila) {
+      fila = criarFilaDeGravacao();
+      filas.current.set(qual, fila);
+    }
+    return fila;
+  };
+
+  const trocar = (key: TaskWidgetKey, ligado: boolean) => {
+    // As actions gravam o conjunto inteiro: vai o de agora com a troca.
+    const proximo = TASK_WIDGETS.filter((w) => (w.key === key ? ligado : blocos.includes(w.key))).map((w) => w.key);
+    const pedido = alvo.tipo === "setor" ? () => salvarSetor(alvo.code, proximo) : () => salvarPessoa(alvo.id, proximo);
+    iniciar(async () => {
+      mostrar({ chave: chaveDoAlvo, blocos: proximo });
+      const fim = await filaDo(chaveDoAlvo)(pedido);
+      if (!fim.ok && fim.erro) toast.error(fim.erro);
+    });
+  };
+
+  const restaurar = () => {
+    const pedido = alvo.tipo === "setor" ? () => restaurarSetor(alvo.code) : () => restaurarPessoa(alvo.id);
+    const sucesso =
+      alvo.tipo === "setor"
+        ? `${alvo.rotulo} voltou ao padrão.`
+        : alvo.eu
+          ? "Seu Meu dia voltou ao padrão do setor."
+          : `${alvo.rotulo} voltou ao padrão do setor.`;
+    iniciar(async () => {
+      // Trava os interruptores: a troca feita agora partiria do conjunto que
+      // está sendo apagado.
+      marcarRestaurando(true);
+      const fim = await filaDo(chaveDoAlvo)(pedido);
+      if (fim.ok) toast.success(sucesso);
+      else if (fim.erro) toast.error(fim.erro);
+    });
+  };
+
+  return (
+    <Popover
+      align="right"
+      width={280}
+      folhaNoCelular
+      aria-label="Configurar o Meu dia"
+      trigger={({ open, toggle }) => (
+        // Contorno sem fundo em repouso e em `sm`, a altura do "Todas as
+        // tarefas" ao lado (15/10/2026); com o painel aberto, fica marcado.
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          title="Configurar o Meu dia"
+          aria-label="Configurar o Meu dia"
+          className="aria-expanded:bg-surface-hover"
+        >
+          <SlidersHorizontal size={14} />
+          <span className="hidden sm:inline">Configurar</span>
+        </Button>
+      )}
+    >
+      {({ close }) => (
+        <PainelDoMeuDia
+          alvos={alvos}
+          alvo={alvo}
+          blocos={blocos}
+          restaurando={restaurando}
+          onEscolher={setChave}
+          onTrocar={trocar}
+          // Voltar ao padrão fecha o painel, como fechava a faixa: o botão
+          // desabilita em seguida (não há mais o que desfazer) e o foco, que
+          // estava nele, volta para o "Configurar".
+          onRestaurar={() => {
+            close();
+            restaurar();
+          }}
+        />
+      )}
+    </Popover>
+  );
+}
+
+/**
+ * O conteúdo do painel, de cima para baixo: para quem (só com mais de um
+ * alvo), os dois grupos de interruptores e, no pé, a volta ao padrão. No
+ * desenho do painel de Filtros: rótulo em caixa alta e um controle por linha.
+ */
+export function PainelDoMeuDia({
+  alvos,
+  alvo,
+  blocos,
+  restaurando,
+  onEscolher,
+  onTrocar,
+  onRestaurar,
+}: {
+  alvos: AlvoDoMeuDia[];
+  alvo: AlvoDoMeuDia;
+  blocos: TaskWidgetKey[];
+  restaurando: boolean;
+  onEscolher: (chave: string) => void;
+  onTrocar: (key: TaskWidgetKey, ligado: boolean) => void;
+  onRestaurar: () => void;
+}) {
   const eu = alvos.filter((a) => a.tipo === "pessoa" && a.eu);
   const equipe = alvos.filter((a) => a.tipo === "pessoa" && !a.eu);
   const setores = alvos.filter((a) => a.tipo === "setor");
   const temOQueRestaurar = alvo.tipo === "setor" || alvo.proprio;
-  const explicacao =
-    alvo.tipo === "setor"
-      ? "O padrão de quem é do setor e não tem configuração própria — quem participa de mais de um vê a soma dos blocos. O setor que não usa reuniões começa sem “Próximas reuniões”."
-      : alvo.eu
-        ? "Só para você. Vale mais que o padrão do setor; o coordenador também pode ajustar o seu."
-        : `Só para ${alvo.rotulo}. Vale mais que o padrão do setor, e a pessoa também pode ajustar.`;
-
-  const faixa = (
-    <div
-      role="region"
-      aria-label="Configurando o Meu dia"
-      className="sticky top-2 z-20 mb-4 flex flex-col gap-3 rounded-lg border border-brand/30 bg-brand-subtle px-4 py-3 shadow-[var(--c41-shadow-sm)]"
-    >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <SlidersHorizontal size={16} className="flex-shrink-0 text-brand" aria-hidden />
-        <p className="font-semibold text-fg">Configurando o Meu dia de</p>
-        {alvos.length > 1 ? (
-          <Select compact value={chave} onChange={(e) => escolher(e.target.value)} aria-label="Para quem" className="w-60 max-w-full">
-            {eu.map((a) => (
-              <option key={chaveDo(a)} value={chaveDo(a)}>
-                Você
-              </option>
-            ))}
-            {equipe.length > 0 && (
-              <optgroup label="Equipe">
-                {equipe.map((a) => (
-                  <option key={chaveDo(a)} value={chaveDo(a)}>
-                    {a.rotulo}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {setores.length > 0 && (
-              <optgroup label="Padrão do setor">
-                {setores.map((a) => (
-                  <option key={chaveDo(a)} value={chaveDo(a)}>
-                    {a.rotulo}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </Select>
-        ) : (
-          <p className="font-semibold text-fg">você</p>
-        )}
-        <p className="min-w-0 text-fs-2 text-fg-secondary">{explicacao}</p>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {temOQueRestaurar && (
-            <Button variant="ghost" size="sm" onClick={reset} disabled={isPending}>
-              <RotateCcw size={13} /> {alvo.tipo === "setor" ? "Restaurar padrão" : "Voltar ao padrão do setor"}
-            </Button>
-          )}
-          <Button variant="secondary" size="sm" onClick={() => setAberto(false)} disabled={isPending}>
-            Cancelar
-          </Button>
-          <Button size="sm" onClick={save} loading={isPending} loadingLabel="Salvando…">
-            <Check size={13} /> Concluir
-          </Button>
-        </div>
-      </div>
-      {GRUPOS.map((g) => (
-        <div key={g.grupo} role="group" aria-labelledby={`meu-dia-${g.grupo}`} className="flex flex-col gap-2">
-          <p id={`meu-dia-${g.grupo}`} className="c41-rotulo">
-            {g.titulo}
-          </p>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            {TASK_WIDGETS.filter((def) => def.grupo === g.grupo).map((def) => (
-              <span key={def.key} title={def.description} className="inline-flex">
-                <Switch checked={selected.includes(def.key)} onCheckedChange={() => toggle(def.key)} rotulo={def.label} />
-              </span>
-            ))}
-          </div>
-        </div>
-      ))}
-      {selected.length === 0 && (
-        <p className="text-fs-2 text-warning-fg">
-          Sem nenhum bloco ligado, este Meu dia abre numa tela vazia. É uma escolha válida — só não é acidente.
-        </p>
-      )}
-    </div>
-  );
 
   return (
-    <>
-      {/* Contorno sem fundo em repouso e em `sm`, a altura do "Todas as
-          tarefas" ao lado (15/10/2026). */}
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={aberto ? () => setAberto(false) : abrir}
-        aria-pressed={aberto}
-        title="Configurar o Meu dia"
-        aria-label="Configurar o Meu dia"
-      >
-        <SlidersHorizontal size={14} />
-        <span className="hidden sm:inline">Configurar</span>
-      </Button>
-      {lugar && createPortal(faixa, lugar)}
-    </>
+    <div className="flex flex-col gap-3">
+      {/* Em tela baixa quem rola é esta parte, e o pé fica à vista. A folga
+          (`p-1 -m-1`) é do anel de foco, que a rolagem cortaria. */}
+      <div className="scroll-y -m-1 flex max-h-[60dvh] flex-col gap-3 overflow-y-auto p-1">
+        {alvos.length > 1 && (
+          <FilterButtonSection label="Para quem">
+            <Select compact value={chaveDo(alvo)} onChange={(e) => onEscolher(e.target.value)} aria-label="Para quem" className="w-full">
+              {eu.map((a) => (
+                <option key={chaveDo(a)} value={chaveDo(a)}>
+                  Você
+                </option>
+              ))}
+              {equipe.length > 0 && (
+                <optgroup label="Equipe">
+                  {equipe.map((a) => (
+                    <option key={chaveDo(a)} value={chaveDo(a)}>
+                      {a.rotulo}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {setores.length > 0 && (
+                <optgroup label="Padrão do setor">
+                  {setores.map((a) => (
+                    <option key={chaveDo(a)} value={chaveDo(a)}>
+                      {a.rotulo}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </Select>
+          </FilterButtonSection>
+        )}
+        {GRUPOS.map((g) => (
+          <div key={g.grupo} role="group" aria-label={g.titulo}>
+            <FilterButtonSection label={g.titulo}>
+              <div className="flex flex-col">
+                {TASK_WIDGETS.filter((def) => def.grupo === g.grupo).map((def) => (
+                  <div key={def.key} title={def.description}>
+                    {/* O nome à esquerda e o interruptor à direita; a linha
+                        inteira alterna, e no toque ela é mais alta. */}
+                    <Switch
+                      checked={blocos.includes(def.key)}
+                      onCheckedChange={(ligado) => onTrocar(def.key, ligado)}
+                      disabled={restaurando}
+                      rotulo={def.label}
+                      className="w-full flex-row-reverse justify-between px-1 py-1.5 [@media(pointer:coarse)]:py-2.5"
+                    />
+                  </div>
+                ))}
+              </div>
+            </FilterButtonSection>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-border pt-2">
+        <Button variant="ghost" size="sm" onClick={onRestaurar} disabled={!temOQueRestaurar || restaurando} className="-ml-2">
+          <RotateCcw size={13} /> {alvo.tipo === "setor" ? "Restaurar padrão" : "Voltar ao padrão do setor"}
+        </Button>
+      </div>
+    </div>
   );
 }
