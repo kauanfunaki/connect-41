@@ -8,6 +8,7 @@ import { categoriasClassificaveis, caminhoDaCategoria } from "./catalogo";
 import { PROMPT_CLASSIFICACAO, limparTags } from "./classificacao";
 import { motivoDaFalha } from "./falhaDaIa";
 import { dadosRascunhoSchema, MAXIMO_DE_PERGUNTAS, type Pergunta, type RevisaoDaIa } from "./regras";
+import type { SetorDaLista } from "./setorSugerido";
 
 // A revisão antes de abrir (16/11/2026, funcionalidade-702). Uma chamada só à
 // IA, quando a pessoa termina o pedido: o título, a categoria e as perguntas
@@ -25,12 +26,24 @@ Nunca peça senha, usuário, token ou qualquer credencial.
 Prefira perguntas fechadas: quando a resposta for sim ou não, ou uma escolha entre poucas alternativas, preencha options com duas a cinco respostas curtas. Nas perguntas abertas, options vazio.
 As respostas são opcionais: a pessoa pode abrir o chamado sem responder.`;
 
-const SCHEMA = (categorias: string[]) => ({
+/**
+ * O setor que vai atender (16/11/2026, funcionalidade-709), só com dois ou mais
+ * setores administrando. Na dúvida a IA não escolhe: pergunta, e a pessoa
+ * escolhe na tela.
+ */
+export const PROMPT_DO_SETOR_NA_REVISAO = `setores lista os setores do escritório que atendem chamados, cada um com o código (code) e o nome.
+Em sectorCode, escolha o setor cujo trabalho mais combina com o que o pedido quer, pelo sentido e não pelas palavras exatas, e em sectorReason uma frase curta dizendo por quê.
+Se o pedido pode ser de mais de um setor e não dá para saber qual, sectorCode null e, em sectorQuestion, uma pergunta curta que ajude a pessoa a escolher o setor (ex.: "É sobre a folha de pagamento ou sobre o sistema que trava?"). Com o setor escolhido, sectorQuestion vazio.
+Use somente códigos da lista.`;
+
+const SCHEMA = (categorias: string[], setores: string[]) => ({
   type: "object", additionalProperties: false,
   properties: {
     categoryId: { anyOf: [{ type: "string", enum: categorias }, { type: "null" }] }, reason: { type: "string" }, title: { type: "string" }, tags: { type: "array", items: { type: "string" } },
     questions: { type: "array", items: { type: "object", additionalProperties: false, properties: { text: { type: "string" }, options: { type: "array", items: { type: "string" } } }, required: ["text", "options"] } },
-  }, required: ["categoryId", "reason", "title", "tags", "questions"],
+    // Com um setor só, o esquema estrito ainda pede os campos, e só aceita nulo.
+    sectorCode: setores.length > 1 ? { anyOf: [{ type: "string", enum: setores }, { type: "null" }] } : { type: "null" }, sectorReason: { type: "string" }, sectorQuestion: { type: "string" },
+  }, required: ["categoryId", "reason", "title", "tags", "questions", "sectorCode", "sectorReason", "sectorQuestion"],
 });
 
 const texto = (v: unknown, limite: number) => typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, limite) : "";
@@ -42,9 +55,12 @@ const PEDE_CREDENCIAL = /\b(senha|password|token|credencia\w*|chave de api|api k
  * (fora dela, fica sem categoria, e a pessoa escolhe), e as perguntas saem
  * limpas, sem repetição, sem pedir credencial e no máximo três.
  */
-export function lerRevisao(valor: unknown, categorias: readonly string[]): RevisaoDaIa | null {
+export function lerRevisao(valor: unknown, categorias: readonly string[], setores: readonly string[] = []): RevisaoDaIa | null {
   if (!valor || typeof valor !== "object") return null;
-  const v = valor as { categoryId?: unknown; reason?: unknown; title?: unknown; tags?: unknown; questions?: unknown };
+  const v = valor as { categoryId?: unknown; reason?: unknown; title?: unknown; tags?: unknown; questions?: unknown; sectorCode?: unknown; sectorReason?: unknown; sectorQuestion?: unknown };
+  // O setor só vale da lista, e só com dois ou mais; escolhido, a dúvida não aparece.
+  const setor = setores.length > 1 && typeof v.sectorCode === "string" && setores.includes(v.sectorCode) ? v.sectorCode : null;
+  const perguntaDoSetor = setor || setores.length < 2 ? "" : texto(v.sectorQuestion, 300);
   const perguntas: Pergunta[] = [], vistas = new Set<string>();
   for (const q of Array.isArray(v.questions) ? v.questions : []) {
     if (!q || typeof q !== "object") continue;
@@ -61,6 +77,9 @@ export function lerRevisao(valor: unknown, categorias: readonly string[]): Revis
     motivo: texto(v.reason, 300),
     tags: limparTags(Array.isArray(v.tags) ? v.tags.filter((t): t is string => typeof t === "string") : []),
     perguntas,
+    setor,
+    motivoDoSetor: setor ? texto(v.sectorReason, 300) : "",
+    perguntaDoSetor: PEDE_CREDENCIAL.test(perguntaDoSetor) ? "" : perguntaDoSetor,
   };
 }
 
@@ -77,17 +96,19 @@ export async function revisarRascunho(c: Contexto, draftId: string): Promise<Rev
     const linhas = await getPrisma().helpdeskCategory.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, active: true } });
     const opcoes = categoriasClassificaveis(linhas);
     if (!opcoes.length) throw new Error("Sem categorias ativas para classificar.");
+    const setores: SetorDaLista[] = c.config.sectorCodes.length > 1 ? await getPrisma().sector.findMany({ where: { tenantId, code: { in: c.config.sectorCodes }, active: true }, select: { code: true, label: true } }) : [];
     const entrada = JSON.stringify({
       chamado: { description: dados.description, requesterSectorCode: dados.requesterSectorCode, priority: dados.priority, requestData: dados.requestData },
       categorias: opcoes.map(cat => ({ categoryId: cat.id, caminho: caminhoDaCategoria(linhas, cat.id) })),
+      ...(setores.length > 1 ? { setores: setores.map(st => ({ code: st.code, nome: st.label })) } : {}),
     });
     if (entrada.length > 100000) throw new Error("Pedido maior que o limite da revisão.");
     const { valor } = await gerarEstruturado({
-      tenantId, agentCode: "triagem_chamados", sistema: PROMPT_DA_REVISAO, texto: entrada, nome: "revisao_chamado", schema: SCHEMA(opcoes.map(cat => cat.id)),
+      tenantId, agentCode: "triagem_chamados", sistema: setores.length > 1 ? `${PROMPT_DA_REVISAO}\n${PROMPT_DO_SETOR_NA_REVISAO}` : PROMPT_DA_REVISAO, texto: entrada, nome: "revisao_chamado", schema: SCHEMA(opcoes.map(cat => cat.id), setores.map(st => st.code)),
       maxTokens: 1500, estrito: true, timeoutMs: 25000, store: false,
       contexto: { trigger: "USUARIO", userId: c.ctx.userId, entityType: "HelpdeskDraft", entityId: draftId },
     });
-    return lerRevisao(valor, opcoes.map(cat => cat.id));
+    return lerRevisao(valor, opcoes.map(cat => cat.id), setores.map(st => st.code));
   } catch (err) {
     console.warn(`[chamados] a revisão do rascunho ${draftId} não saiu (escritório ${tenantId}): ${motivoDaFalha(err)}`);
     return null;

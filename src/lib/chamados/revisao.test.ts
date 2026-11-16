@@ -10,7 +10,7 @@ describe("revisão antes de abrir (funcionalidade-702)", () => {
     const r = lerRevisao({ categoryId: "senha", reason: "  Pede a recuperação   de senha. ", title: " Recuperar senha do sistema ", tags: [" Senha ", "senha", "ERP"],
       questions: [{ text: "Qual sistema?", options: [] }, { text: "Acontece com todos os usuários?", options: ["Sim", "Não", "Não sei"] }] }, categorias);
     expect(r).toEqual({ titulo: "Recuperar senha do sistema", categoryId: "senha", motivo: "Pede a recuperação de senha.", tags: ["senha", "erp"],
-      perguntas: [{ text: "Qual sistema?", options: [] }, { text: "Acontece com todos os usuários?", options: ["Sim", "Não", "Não sei"] }] });
+      perguntas: [{ text: "Qual sistema?", options: [] }, { text: "Acontece com todos os usuários?", options: ["Sim", "Não", "Não sei"] }], setor: null, motivoDoSetor: "", perguntaDoSetor: "" });
   });
   it("categoria fora da lista fica sem categoria, e a pessoa escolhe", () => {
     expect(lerRevisao({ categoryId: "inventada", reason: "", title: "Pedido", tags: [], questions: [] }, categorias)?.categoryId).toBeNull();
@@ -55,5 +55,25 @@ describe("o que a pessoa aprova na revisão", () => {
     expect(revisaoDoRascunho({ description: "x", _revisao: { categoryId: "senha", tags: ["erp"] } })).toEqual({ categoryId: "senha", tags: ["erp"] });
     expect(revisaoDoRascunho({ description: "x", _revisao: { categoryId: null } })).toEqual({ categoryId: null, tags: [] });
     expect(revisaoDoRascunho({ description: "x" })).toBeNull(); expect(revisaoDoRascunho(null)).toBeNull(); expect(revisaoDoRascunho({ _revisao: "sim" })).toBeNull();
+  });
+});
+
+// O setor na revisão (16/11/2026, funcionalidade-709).
+describe("o setor que vai atender, na revisão", () => {
+  const base = { categoryId: null, reason: "", title: "Pedido", tags: [], questions: [] };
+  it("escolhe um setor da lista, com o motivo, e sem a pergunta de dúvida", () => {
+    const r = lerRevisao({ ...base, sectorCode: "dp", sectorReason: " É sobre a folha. ", sectorQuestion: "Qual setor?" }, categorias, ["tech", "dp"]);
+    expect(r).toMatchObject({ setor: "dp", motivoDoSetor: "É sobre a folha.", perguntaDoSetor: "" });
+  });
+  it("na dúvida, não escolhe e devolve a pergunta para a pessoa", () => {
+    const r = lerRevisao({ ...base, sectorCode: null, sectorReason: "", sectorQuestion: " É sobre a folha ou sobre o sistema? " }, categorias, ["tech", "dp"]);
+    expect(r).toMatchObject({ setor: null, motivoDoSetor: "", perguntaDoSetor: "É sobre a folha ou sobre o sistema?" });
+  });
+  it("setor fora da lista não vale, e com um setor só não há setor nem pergunta", () => {
+    expect(lerRevisao({ ...base, sectorCode: "rh", sectorReason: "x", sectorQuestion: "" }, categorias, ["tech", "dp"])?.setor).toBeNull();
+    expect(lerRevisao({ ...base, sectorCode: "tech", sectorReason: "x", sectorQuestion: "Qual?" }, categorias, ["tech"])).toMatchObject({ setor: null, perguntaDoSetor: "" });
+  });
+  it("pergunta de setor que pede credencial não vai à tela", () => {
+    expect(lerRevisao({ ...base, sectorCode: null, sectorReason: "", sectorQuestion: "Qual a sua senha do sistema?" }, categorias, ["tech", "dp"])?.perguntaDoSetor).toBe("");
   });
 });

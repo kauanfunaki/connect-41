@@ -53,7 +53,7 @@ function SetoresQueAdministram({ todos, administram, padrao: padraoInicial, edit
   return <Card as="section" id="setores" aria-labelledby="titulo-setores" className="p-5 space-y-4">
     <div className="space-y-1">
       <h2 id="titulo-setores" className="font-semibold text-fg">Setores que administram os chamados</h2>
-      <p className="text-ui text-fg-secondary">Cada setor marcado atende os chamados enviados a ele. Com mais de um, quem abre escolhe o setor, com a sugestão da IA, e a equipe pode redirecionar o chamado.</p>
+      <p className="text-ui text-fg-secondary">Cada setor marcado atende os chamados enviados a ele. Com mais de um, a IA propõe o setor na revisão do chamado e quem abre confirma; a equipe pode encaminhar o chamado.</p>
     </div>
     {editavel ? <form className="space-y-4" onSubmit={e => {
       e.preventDefault(); setBusy(true); setErro(""); setOk(false);
