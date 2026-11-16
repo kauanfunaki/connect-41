@@ -12,7 +12,7 @@ O módulo `helpdesk` porta o atendimento do Hub para o Connect: categorias e for
 
 Chamados começa desativado no controle de módulos. Ao ativá-lo, o atalho aparece para quem tem acesso, sem uma ocultação adicional por padrão no menu Geral. Personalizações de visibilidade feitas explicitamente pelo administrador continuam sendo respeitadas.
 
-O setor responsável vem exclusivamente de `TenantModule.sectorCode`, resolvido por `setorDoModulo`. Transferir o módulo transfere o acesso de atendimento da fila inteira. Atribuições antigas são preservadas e sinalizadas para redistribuição; não concedem acesso à equipe anterior.
+Desde 12/11/2026 (funcionalidade-640), um ou mais setores administram os chamados: o padrão é o dono do módulo (`TenantModule.sectorCode`) e os outros são os setores ligados (`TenantModuleSector`), escolhidos pelo administrador em **Chamados → Configurar**. Cada chamado guarda o setor que o atende (`handlingSectorCode`): a equipe desse setor vê e atende o chamado, e o administrador vê todos. Um setor com chamado em aberto só sai da lista depois de a equipe redirecionar esses chamados. Se um setor deixar de administrar, a equipe dele continua vendo os chamados que ficaram com ele, mas não atende mais; o administrador redireciona o que restou.
 
 Para desativar, desligue o módulo em Módulos. Telas, ações e downloads ficam indisponíveis; chamados, anexos e rascunhos permanecem guardados. Reverter a versão da aplicação não exige apagar as tabelas adicionadas. Não remova a migration nem limpe históricos para fazer rollback.
 
