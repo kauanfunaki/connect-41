@@ -36,11 +36,15 @@ export async function retirarAnexo(draftId: string, id: string, version: number)
  * triagem para depois da resposta: quem abriu vai direto para a tela do
  * chamado. Um segundo envio do mesmo rascunho devolve o mesmo chamado, e a
  * triagem repetida não faz nada (`triarChamado` reserva a vez).
+ *
+ * `abertura` (16/11/2026, funcionalidade-702): o que a pessoa aprovou na
+ * revisão antes de abrir — a categoria e as respostas às perguntas da IA.
+ * Sem ela, o chamado abre como foi escrito, e a triagem classifica.
  */
-export async function abrirChamado(id: string, version: number) {
+export async function abrirChamado(id: string, version: number, abertura?: unknown) {
   return executar(async () => {
     const c = await contexto();
-    const { ticketId, numero } = await enviarRascunho(c, id, version);
+    const { ticketId, numero } = await enviarRascunho(c, id, version, abertura);
     const tenantId = c.ctx.tenantId;
     after(async () => {
       try { await triarChamado(tenantId, ticketId); }

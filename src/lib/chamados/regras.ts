@@ -118,7 +118,9 @@ export function mensagemDoExistente(e: Existente) {
 // Orquestrador e a categoria. Sem categoria, o motivo separa a falha (a IA não
 // respondeu) da falta de contexto (respondeu sem conseguir classificar) — até
 // aqui as duas saíam na mesma frase, e quem abriu não sabia qual tinha sido.
-export const MOTIVOS_SEM_CATEGORIA = ["falha", "incerto", "formulario", "aprovador"] as const;
+// "solicitante" (16/11/2026, funcionalidade-702): na revisão antes de abrir,
+// quem abriu preferiu deixar a classificação para a equipe.
+export const MOTIVOS_SEM_CATEGORIA = ["falha", "incerto", "formulario", "aprovador", "solicitante"] as const;
 export type MotivoSemCategoria = (typeof MOTIVOS_SEM_CATEGORIA)[number];
 export const triagemSchema = z.object({
   existente: existenteSchema.nullable().default(null),
@@ -127,6 +129,8 @@ export const triagemSchema = z.object({
   semCategoria: z.enum(MOTIVOS_SEM_CATEGORIA).nullable().default(null),
   /** A justificativa da classificação, para a equipe. */
   justificativa: z.string().max(500).default(""),
+  /** A categoria veio da revisão de quem abriu, e não da classificação da triagem (funcionalidade-702). */
+  confirmadaPorQuemAbriu: z.boolean().default(false),
 });
 export type Triagem = z.infer<typeof triagemSchema>;
 export type ResultadoDaTriagem = "existe" | "classificado" | "a_classificar";
@@ -137,19 +141,61 @@ const SEM_CATEGORIA: Record<MotivoSemCategoria, string> = {
   incerto: "A triagem automática não identificou a categoria só pela descrição. A equipe vai classificar o chamado e pode pedir mais detalhes na conversa.",
   formulario: "A categoria indicada pela triagem pede informações que o pedido não tem. A equipe vai classificar o chamado e pedir o que faltar.",
   aprovador: "A categoria indicada pela triagem exige aprovação, e não há aprovador configurado. A equipe vai classificar o chamado.",
+  solicitante: "Quem abriu deixou a classificação para a equipe.",
 };
+const classificado = (t: Triagem) => t.confirmadaPorQuemAbriu ? `Quem abriu confirmou a categoria ${t.categoria}.` : `A triagem automática classificou o chamado em ${t.categoria}.`;
 /** A frase da tela do chamado, a mesma para quem abriu e para a equipe. */
 export function textoDaTriagem(t: Triagem): string {
   // Com item do Orquestrador e sem categoria, a frase diz também por que não classificou (bug-701).
   if (t.existente) return `${mensagemDoExistente(t.existente)} ${t.categoria ? `O chamado foi classificado em ${t.categoria} e segue com a equipe.` : SEM_CATEGORIA[t.semCategoria ?? "falha"]}`;
-  if (t.categoria) return `A triagem automática classificou o chamado em ${t.categoria}. Ele está com a equipe.`;
+  if (t.categoria) return `${classificado(t)} Ele está com a equipe.`;
   return SEM_CATEGORIA[t.semCategoria ?? "falha"];
 }
 /** O aviso do sino e do push para quem abriu: o resultado e o título do chamado. */
 export function avisoDaTriagem(t: Triagem, titulo: string): string {
   if (t.existente) return `${t.existente.match === "same" ? "Já existe no Orquestrador" : "Pode já existir no Orquestrador"}: o ${ROTULOS_EXISTENTE[t.existente.tipo]} ${t.existente.nome}. Chamado: ${titulo}`;
   if (t.categoria) return `Triagem concluída, chamado classificado em ${t.categoria}: ${titulo}`;
+  if (t.semCategoria === "solicitante") return `Triagem concluída; a equipe vai classificar o chamado: ${titulo}`;
   return `${t.semCategoria === "falha" ? "A triagem automática falhou" : "A triagem não identificou a categoria"}; a equipe vai classificar: ${titulo}`;
+}
+
+// ── Revisão antes de abrir (16/11/2026, funcionalidade-702) ─────────────────
+// Depois do pedido, a IA propõe o título e a categoria e faz até três perguntas.
+// A pessoa confere e abre; responder é opcional. A revisão não é uma conversa:
+// é uma leitura só, e dá para abrir o chamado sem esperar por ela.
+export const MAXIMO_DE_PERGUNTAS = 3;
+/** O que a IA propõe. `categoryId` nulo = ela não soube classificar. */
+export type RevisaoDaIa = { titulo: string; categoryId: string | null; motivo: string; tags: string[]; perguntas: Pergunta[] };
+/**
+ * O que a pessoa aprovou, gravado no rascunho (`_revisao`) para a triagem
+ * respeitar: com `categoryId`, a triagem não classifica de novo; nulo é "a
+ * equipe classifica".
+ */
+export const revisaoAprovadaSchema = z.object({ categoryId: z.string().trim().min(1).max(191).nullable(), tags: z.array(z.string().trim().min(1).max(60)).max(5).default([]) });
+export type RevisaoAprovada = z.infer<typeof revisaoAprovadaSchema>;
+export const respostaSchema = z.object({ pergunta: z.string().trim().min(1).max(500), resposta: z.string().trim().max(2000) });
+/** O que acompanha o envio do rascunho quando a pessoa passou pela revisão. */
+export const aberturaSchema = z.object({ revisao: revisaoAprovadaSchema.nullable().default(null), respostas: z.array(respostaSchema).max(MAXIMO_DE_PERGUNTAS).default([]) });
+export type Abertura = z.infer<typeof aberturaSchema>;
+export const TITULO_DAS_RESPOSTAS = "Respostas às perguntas da triagem:";
+/**
+ * A descrição do chamado com as respostas da revisão no fim, pergunta e
+ * resposta, para a equipe ler junto do pedido. Sem resposta, a descrição sai
+ * como foi escrita. O que passar do limite da descrição é cortado das respostas.
+ */
+export function descricaoComRespostas(descricao: string, respostas: { pergunta: string; resposta: string }[], limite = 15000): string {
+  const dadas = respostas.map(r => ({ pergunta: r.pergunta.trim(), resposta: r.resposta.trim() })).filter(r => r.pergunta && r.resposta);
+  const base = descricao.trim();
+  if (!dadas.length) return base;
+  const bloco = `\n\n${TITULO_DAS_RESPOSTAS}\n${dadas.map(r => `• ${r.pergunta}\n  ${r.resposta}`).join("\n")}`;
+  const cabe = limite - base.length;
+  return cabe < 80 ? base : `${base}${bloco.length <= cabe ? bloco : `${bloco.slice(0, cabe - 1)}…`}`;
+}
+/** A revisão aprovada que a triagem lê do rascunho; nula se não houve ou se o rascunho guarda outra coisa. */
+export function revisaoDoRascunho(payload: unknown): RevisaoAprovada | null {
+  if (!payload || typeof payload !== "object") return null;
+  const r = revisaoAprovadaSchema.safeParse((payload as Record<string, unknown>)._revisao);
+  return r.success ? r.data : null;
 }
 /** De quanto em quanto a tela do chamado confere se a triagem terminou: rápido no primeiro minuto, devagar depois. */
 export const intervaloDaTriagem = (desdeMs: number) => desdeMs < 60_000 ? 3_000 : 15_000;
