@@ -20,11 +20,10 @@ import { navegadorDaEquipe } from "@/lib/drive/servidor";
 import { MODULO_ARQUIVOS } from "@/lib/drive/regras";
 import { isModuleEnabled } from "@/lib/modules";
 import { acessoAsAutorizacoes, autorizacaoDaEmpresa } from "@/lib/autorizacoes/servidor";
-import { AutorizacaoNaFicha } from "@/components/autorizacoes/AutorizacaoNaFicha";
 import { hojeIso } from "@/lib/datas/calendario";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";
 import { receitaDaEmpresa } from "@/lib/serpro/acompanhamento";
-import { ReceitaNaFicha } from "@/components/autorizacoes/ReceitaNaFicha";
+import { ReceitaFederalNaFicha } from "@/components/autorizacoes/ReceitaFederalNaFicha";
 import { guiaDoRegime } from "@/lib/serpro/guias";
 import { CompanyFiliaisSection } from "@/components/empresas/CompanyFiliaisSection";
 import { nomeExibicao, razaoSocialSecundaria } from "@/lib/companyName";
@@ -238,17 +237,27 @@ export default async function EmpresaPage({
           <div className="space-y-4">
             <AiCompanySummary action={gerarResumoEmpresa.bind(null, company.id)} />
             <CompanyOverviewSection company={company} customFields={customFields} />
-            {autorizacao && (
-              <AutorizacaoNaFicha dados={autorizacao} nome={nomeExibicao(company)} hoje={hojeIso()} podeEditar={acessoAutorizacao!.podeEditar} serpro={serproPronto} />
-            )}
-            {receita && (
-              <ReceitaNaFicha
-                dados={receita}
-                companyId={company.id}
-                podePedir={acessoAutorizacao!.podeEditar}
-                podeAbrir={acessoAutorizacao!.podeConfigurar}
-                motivo={prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null}
-                guiaSugerida={guiaDoRegime(company.taxRegimeKind)}
+            {/* Um cartão só para a Receita (16/11/2026, melhoria-715): a autorização
+                e o que vem do Serpro, cada parte com o próprio portão. */}
+            {(autorizacao || receita) && (
+              <ReceitaFederalNaFicha
+                autorizacao={
+                  autorizacao
+                    ? { dados: autorizacao, nome: nomeExibicao(company), hoje: hojeIso(), podeEditar: acessoAutorizacao!.podeEditar, serpro: serproPronto }
+                    : null
+                }
+                receita={
+                  receita
+                    ? {
+                        dados: receita,
+                        companyId: company.id,
+                        podePedir: acessoAutorizacao!.podeEditar,
+                        podeAbrir: acessoAutorizacao!.podeConfigurar,
+                        motivo: prontidaoSerpro && !prontidaoSerpro.pronta ? prontidaoSerpro.motivo : null,
+                        guiaSugerida: guiaDoRegime(company.taxRegimeKind),
+                      }
+                    : null
+                }
               />
             )}
             <ServicesSection

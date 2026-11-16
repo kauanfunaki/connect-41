@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { CartoesNoCelular, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { AbrirMensagem, VerMensagem } from "@/components/autorizacoes/BotoesDaReceita";
-import { situacaoDaMensagem } from "@/components/autorizacoes/ReceitaNaFicha";
+import { situacaoDaMensagem } from "@/components/autorizacoes/ReceitaFederalNaFicha";
 import { getAuthContext } from "@/lib/auth/context";
 import { acessoAsAutorizacoes } from "@/lib/autorizacoes/servidor";
 import { configuracaoDoSerpro, prontidaoDoSerpro } from "@/lib/serpro/cliente";

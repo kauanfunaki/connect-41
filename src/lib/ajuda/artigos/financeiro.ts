@@ -1061,7 +1061,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "Cada conferência no Serpro é uma consulta cobrada. Quando o mês chega no teto, o Connect para de chamar até o mês virar.",
       "O setor recebe aviso faltando 10 e 3 dias para o prazo de validação e no último dia, e 60, 30 e 7 dias antes do fim da validade.",
-      "A situação também aparece na ficha da empresa, na “Visão geral”, com o botão de atualizar.",
+      "A situação também aparece na ficha da empresa, na “Visão geral”, no cartão “Receita Federal”, com o botão “Atualizar”.",
       "Use “Não se aplica” para o cliente que não precisa (por exemplo, o MEI que só emite a guia, que dispensa autorização).",
       "Marcar e atualizar é de quem atua no setor Fiscal; os demais só consultam.",
     ],
