@@ -317,7 +317,7 @@ export type StageInput = { id?: string; name: string; color: string; type: Stage
 export type EditStagesState = { error: string } | null;
 
 // CRUD completo de estágios de uma lista (editar nome/cor/tipo, criar, excluir,
-// reordenar), usado pelo modal "Editar lista". Recebe a lista final desejada
+// reordenar), usado pelo modal "Editar estágios". Recebe a lista final desejada
 // de estágios (com id pros existentes, sem id pros novos) e reconcilia com o
 // banco numa transação — reorder em duas fases (temp negativo -> final) pra
 // não colidir com a constraint única (pipelineId, order).

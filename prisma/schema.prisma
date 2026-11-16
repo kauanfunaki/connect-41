@@ -786,6 +786,7 @@ model HelpdeskTicket {
   category HelpdeskCategory @relation(fields: [tenantId, categoryId], references: [tenantId, id])
   assignees HelpdeskAssignee[]
   participants HelpdeskParticipant[]
+  followingSectors HelpdeskTicketSector[]
   comments HelpdeskComment[]
   attachments HelpdeskAttachment[]
   checklist HelpdeskChecklistItem[]
@@ -816,6 +817,21 @@ model HelpdeskTicketView {
   @@id([tenantId, ticketId, userId])
   @@index([tenantId, userId])
   @@map("helpdesk_ticket_views")
+}
+
+/// Os setores que acompanham o chamado depois de encaminhá-lo para outro setor
+/// continuar (16/11/2026, funcionalidade-709): veem o chamado, inclusive o que
+/// é interno, e são avisados das mudanças de situação, mas não o atendem. O
+/// setor que atende (`handlingSectorCode`) não entra aqui.
+model HelpdeskTicketSector {
+  tenantId String
+  ticketId String
+  sectorCode String @db.VarChar(40)
+  createdAt DateTime @default(now())
+  ticket HelpdeskTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+  @@id([tenantId, ticketId, sectorCode])
+  @@index([tenantId, sectorCode])
+  @@map("helpdesk_ticket_sectors")
 }
 
 model HelpdeskAssignee {

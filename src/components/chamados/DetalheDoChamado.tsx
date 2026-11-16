@@ -12,6 +12,7 @@ import { CampoDataHora } from "@/components/ui/CampoDataHora";
 import { formatInstantDateTime } from "@/lib/format";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { RadioGroup } from "@/components/ui/RadioGroup";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Campo, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
 import { CaixaDeMensagem } from "./CaixaDeMensagem";
@@ -136,18 +137,21 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
             {/* Os dados do chamado, um por linha (16/11/2026, pedido do Kauan): quem
                 abriu, quando e o protocolo saem do pé da Solicitação e vêm para cá,
                 com o protocolo no id curto (chamado-45) em vez do uuid. O início
-                do SLA e o setor que atende, que já ficavam aqui, entram na lista. */}
+                do SLA, o setor que atende e os que acompanham, que já ficavam
+                aqui, entram na lista. */}
             <dl className="space-y-1.5 border-t border-border pt-4 text-ui">
               <DadoDoChamado rotulo="Protocolo"><span className="tabular-nums">{idCurto("chamado", t.number)}</span></DadoDoChamado>
               <DadoDoChamado rotulo="Aberto por">{nome(t.createdById)}</DadoDoChamado>
               <DadoDoChamado rotulo="Aberto em">{data(t.createdAt)}</DadoDoChamado>
               {ciclo && <DadoDoChamado rotulo="SLA iniciado em">{data(ciclo.openedAt)}</DadoDoChamado>}
               {variosSetores && <DadoDoChamado rotulo="Setor que atende">{nomeDoSetor(t.handlingSectorCode)}</DadoDoChamado>}
+              {/* Quem encaminhou para outro setor continuar segue acompanhando (16/11/2026, funcionalidade-709). */}
+              {variosSetores && t.followingSectors.length > 0 && <DadoDoChamado rotulo="Acompanham">{t.followingSectors.map(f => nomeDoSetor(f.sectorCode)).join(", ")}</DadoDoChamado>}
             </dl>
           </div>
           {(podeAjustarPrazo || mostraChecklist || podeRedirecionar) && <div className="divide-y divide-border border-t border-border px-5">
-            {/* Redirecionar (12/11/2026): os responsáveis saem, a conversa e a situação ficam, e o novo setor é avisado. */}
-            {podeRedirecionar && <Accordion chevron="fim" titulo={<span className="inline-flex items-center gap-1.5"><Shuffle size={14} aria-hidden />Redirecionar para outro setor</span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="pb-4 pt-1"><FormAcao titulo="Enviar o chamado para" disabled={busy} label="Redirecionar" onSubmit={f => acao("redirecionar", { setor: String(f.get("setor")), motivo: String(f.get("motivo") ?? "") })}><Campo label="Setor"><Select name="setor" required defaultValue=""><option value="" disabled>Selecione o setor</option>{destinos.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select></Campo><Campo label="Motivo (opcional)"><Textarea name="motivo" maxLength={1000} rows={2} placeholder="Conte por que o chamado é do outro setor." /></Campo><p className="text-helper text-fg-muted">Os responsáveis atuais saem do chamado, e a equipe do novo setor é avisada.</p></FormAcao></Accordion>}
+            {/* Enviar para outro setor (12/11/2026), em dois tipos desde 16/11/2026 (funcionalidade-709): continuar ou corrigir. */}
+            {podeRedirecionar && <Accordion chevron="fim" titulo={<span className="inline-flex items-center gap-1.5"><Shuffle size={14} aria-hidden />Enviar para outro setor</span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="pb-4 pt-1"><EnviarParaOutroSetor destinos={destinos} busy={busy} onEnviar={v => acao("redirecionar", v)} /></Accordion>}
             {podeAjustarPrazo && <Accordion chevron="fim" titulo={<span className="inline-flex items-center gap-1.5"><CalendarClock size={14} aria-hidden />Ajustar prazo</span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="pb-4 pt-1"><FormAcao titulo="Novo prazo de resolução" disabled={busy} onSubmit={f => acao("prazo", { prazo: new Date(`${f.get("prazo")}:00-03:00`).toISOString(), motivo: String(f.get("motivo")) })}><Campo label="Novo prazo (Brasília)"><CampoDataHora name="prazo" required /></Campo><Campo label="Justificativa"><Textarea name="motivo" required minLength={5} maxLength={1000} /></Campo></FormAcao></Accordion>}
             {mostraChecklist && <Accordion chevron="fim" titulo={<span className="flex items-center gap-1.5"><ListChecks size={14} aria-hidden />Checklist interno<span className="ml-auto font-medium tabular-nums text-fg-secondary">{feitos} de {checklist.length}</span></span>} classeDoCabecalho={LINHA_DE_ACAO} classeDoConteudo="space-y-2.5 pb-4 pt-1">
               {checklist.map(i => <label key={i.id} className="flex items-start gap-2 text-ui text-fg-secondary"><Checkbox checked={i.done} disabled={busy || !p.operar || encerrado} onChange={e => { const done = e.target.checked; setChecklist(itens => itens.map(item => item.id === i.id ? { ...item, done } : item)); void executar(() => mudar(t.id, t.version, "checklist", { id: i.id, done })).then(ok => { if (!ok) setChecklist(itens => itens.map(item => item.id === i.id ? { ...item, done: !done } : item)); }); }} />{i.label}</label>)}
@@ -159,4 +163,23 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
       </div>
     </div>
   </div>;
+}
+
+/**
+ * Os dois tipos de envio (16/11/2026, funcionalidade-709). "Continuar": o outro
+ * setor faz a parte dele, e este passa a acompanhar. "Corrigir": o chamado
+ * estava no setor errado, e este sai.
+ */
+function EnviarParaOutroSetor({ destinos, busy, onEnviar }: { destinos: Setor[]; busy: boolean; onEnviar: (v: { setor: string; motivo: string; tipo: "continuar" | "corrigir" }) => void }) {
+  const [tipo, setTipo] = useState<"continuar" | "corrigir">("continuar");
+  const continuar = tipo === "continuar";
+  return <FormAcao titulo="Enviar o chamado para" disabled={busy} label={continuar ? "Encaminhar" : "Corrigir o setor"} onSubmit={f => onEnviar({ setor: String(f.get("setor")), motivo: String(f.get("motivo") ?? ""), tipo })}>
+    <RadioGroup<"continuar" | "corrigir"> legenda="Por que enviar" variante="linha" valor={tipo} onChange={setTipo} opcoes={[
+      { valor: "continuar", rotulo: "Para o outro setor continuar", descricao: "Este setor fez a parte dele e segue acompanhando o chamado." },
+      { valor: "corrigir", rotulo: "O chamado está no setor errado", descricao: "Este setor sai do chamado." },
+    ]} />
+    <Campo label="Setor"><Select name="setor" required defaultValue=""><option value="" disabled>Selecione o setor</option>{destinos.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}</Select></Campo>
+    <Campo label={continuar ? "O que o outro setor precisa fazer" : "Motivo (opcional)"}><Textarea name="motivo" required={continuar} minLength={continuar ? 5 : undefined} maxLength={1000} rows={2} placeholder={continuar ? "Ex.: emitir a guia do INSS com os valores do anexo." : "Conte por que o chamado é do outro setor."} /></Campo>
+    <p className="text-helper text-fg-muted">Os responsáveis atuais saem do chamado, a equipe do outro setor e quem abriu são avisados.</p>
+  </FormAcao>;
 }

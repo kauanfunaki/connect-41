@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo } from "@/components/ui/Selo";
-import { CampoMes } from "@/components/ui/CampoMes";
 import { Button } from "@/components/ui/Button";
+import { MesDoPainel } from "@/components/dp2/MesDoPainel";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
@@ -42,15 +41,12 @@ export default async function PainelDoDp2({ searchParams }: { searchParams: Prom
         title="Painel do DP 2"
         subtitle={`As competências de ${nomeDaCompetencia(ano, m)}${foco ? ` do grupo de ${foco.nome}` : " de todas as empresas"}, pela etapa em que estão.`}
       />
-      <FormularioDeFiltro className="flex flex-wrap items-center gap-3 mb-5">
-        <CampoMes name="mes" defaultValue={mes} aria-label="Mês" compact />
-        <Button type="submit" variant="secondary" size="sm">
-          Ver mês
-        </Button>
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <MesDoPainel mes={mes} />
         <span className="text-fs-2 text-fg-muted">
           {porSituacao.ABERTA} aberta(s) · {porSituacao.CALCULADA} calculada(s) · {porSituacao.FECHADA} fechada(s)
         </span>
-      </FormularioDeFiltro>
+      </div>
 
       {ordenadas.length === 0 ? (
         <EmptyState

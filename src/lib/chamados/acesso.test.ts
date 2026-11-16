@@ -101,3 +101,21 @@ describe("vários setores administrando os chamados", () => {
     expect(setorQueAtende(varios, "")).toBe("tech");
   });
 });
+
+// Encaminhar para outro setor continuar (16/11/2026, funcionalidade-709).
+describe("setor que acompanha o chamado depois de encaminhá-lo", () => {
+  const varios = { enabled: true, sectorCode: "tech", sectorCodes: ["tech", "rh"] };
+  const encaminhado = { ...alvo, handlingSectorCode: "rh", followingSectors: [{ sectorCode: "tech" }] };
+  const tech = { ...ctx, sectors: ["tech"], activeSector: "tech" }, fiscal = { ...ctx, sectors: ["fiscal"] };
+  it("vê o chamado e o que é interno, mas não atende nem responde", () => {
+    expect(podeVer(tech, varios, encaminhado)).toBe(true);
+    expect(podeVerInternoNo(tech, varios, "rh", ["tech"])).toBe(true);
+    expect(podeOperarNo(tech, varios, "rh")).toBe(false);
+    expect(podeResponder(tech, varios, encaminhado, "EM_ANDAMENTO", false)).toBe(false);
+  });
+  it("quem não é do setor que atende nem dos que acompanham segue sem ver", () => {
+    expect(podeVer(fiscal, varios, encaminhado)).toBe(false);
+    expect(podeVerInternoNo(fiscal, varios, "rh", ["tech"])).toBe(false);
+    expect(podeVer(tech, varios, { ...encaminhado, followingSectors: [] })).toBe(false);
+  });
+});

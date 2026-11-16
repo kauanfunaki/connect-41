@@ -9,8 +9,6 @@ import { motivoDaFalha } from "@/lib/chamados/falhaDaIa";
 import { salvarPolitica } from "@/lib/chamados/configuracao";
 import { removerAnexoRascunho } from "@/lib/chamados/anexos";
 import { salvarSetores } from "@/lib/chamados/configuracao";
-import { sugerirSetor } from "@/lib/chamados/setorSugerido";
-import { exigirAbertura } from "@/lib/chamados/contexto";
 import { endereco } from "@/lib/enderecoCurto";
 
 async function executar<T>(fn: () => Promise<T>) {
@@ -25,22 +23,21 @@ export async function responder(id: string, version: number, input: unknown) { r
 export async function politica(input: unknown) { return executar(async () => salvarPolitica(await contexto(), input)); }
 /** Os setores que administram os chamados (12/11/2026): só o administrador do escritório. */
 export async function setoresQueAdministram(input: unknown) { return executar(async () => salvarSetores(await contexto(), input)); }
-/** A sugestão da IA para o setor que vai atender; quem abre decide. Não revalida a tela: só lê. */
-export async function setorSugerido(descricao: string) {
-  try { const c = await contexto(); exigirAbertura(c); return await sugerirSetor(c, String(descricao ?? "")); }
-  catch { return null; }
-}
 export async function retirarAnexo(draftId: string, id: string, version: number) { return executar(async () => removerAnexoRascunho(await contexto(), draftId, id, version)); }
 /**
  * Abre o chamado na hora, em "Aguardando triagem" (10/11/2026), e agenda a
  * triagem para depois da resposta: quem abriu vai direto para a tela do
  * chamado. Um segundo envio do mesmo rascunho devolve o mesmo chamado, e a
  * triagem repetida não faz nada (`triarChamado` reserva a vez).
+ *
+ * `abertura` (16/11/2026, funcionalidade-702): o que a pessoa aprovou na
+ * revisão antes de abrir — a categoria e as respostas às perguntas da IA.
+ * Sem ela, o chamado abre como foi escrito, e a triagem classifica.
  */
-export async function abrirChamado(id: string, version: number) {
+export async function abrirChamado(id: string, version: number, abertura?: unknown) {
   return executar(async () => {
     const c = await contexto();
-    const { ticketId, numero } = await enviarRascunho(c, id, version);
+    const { ticketId, numero } = await enviarRascunho(c, id, version, abertura);
     const tenantId = c.ctx.tenantId;
     after(async () => {
       try { await triarChamado(tenantId, ticketId); }

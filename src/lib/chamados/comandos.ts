@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestaoNo, exigirOperacao, type Contexto } from "./contexto";
 import { podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, aberturaSchema, descricaoComRespostas, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado, type RevisaoAprovada } from "./regras";
 import { anexosDoChamado } from "./armazenamento";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, categoriasClassificaveis } from "./catalogo";
@@ -82,8 +82,13 @@ export async function aprovadoresDaCategoria(tx: Tx, tenantId: string, cat: Cate
  *   terminar.
  * - `confirmado` (a Ceci do chat): a categoria já foi confirmada pela pessoa; o
  *   chamado abre direto, com formulário, aprovação e checklist da categoria.
+ *
+ * `abertura` (16/11/2026, funcionalidade-702) só vale na triagem: o que a pessoa
+ * aprovou na revisão antes de abrir. As respostas às perguntas da IA entram no
+ * fim da descrição; a categoria confirmada fica no rascunho (`_revisao`), e a
+ * triagem a respeita em vez de classificar de novo.
  */
-export async function finalizarRascunho(c: Contexto, id: string, version: number, modo: "triagem" | "confirmado") {
+export async function finalizarRascunho(c: Contexto, id: string, version: number, modo: "triagem" | "confirmado", abertura?: unknown) {
   c = { ...c, config: await configDoHelpdesk(c.ctx.tenantId) };
   if (!c.config.enabled) throw new Error("O módulo de chamados não está disponível neste escritório.");
   const d = await rascunho(c, id);
@@ -91,14 +96,22 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
   exigirAbertura(c);
   if (d.version !== version) throw desatualizado();
   const triagem = modo === "triagem", tenantId = c.ctx.tenantId;
-  let dados: DadosDoChamado;
+  let dados: DadosDoChamado, revisao: RevisaoAprovada | null = null, respondidas = 0;
   if (triagem) {
     // Rascunhos de antes da classificação automática também precisam da categoria de contingência.
     await prepararCatalogo(tenantId);
     const pendente = await getPrisma().helpdeskCategory.findFirst({ where: { tenantId, name: A_CLASSIFICAR, active: true }, select: { id: true } });
     if (!pendente) throw new Error("A categoria A classificar está indisponível. Peça ao gestor para reativá-la.");
     const bruto = dadosRascunhoSchema.parse(d.payload);
-    dados = dadosSchema.parse({ ...bruto, title: bruto.title || tituloDaDescricao(bruto.description), categoryId: pendente.id, tags: [] });
+    const a = aberturaSchema.parse(abertura ?? {});
+    // A categoria aprovada só vale se ainda pode ser escolhida; senão, a triagem classifica.
+    if (a.revisao?.categoryId) {
+      const escolhida = a.revisao.categoryId;
+      const classificaveis = categoriasClassificaveis(await getPrisma().helpdeskCategory.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, active: true } }));
+      if (classificaveis.some(cat => cat.id === escolhida)) revisao = a.revisao;
+    } else revisao = a.revisao;
+    respondidas = a.respostas.filter(r => r.resposta).length;
+    dados = dadosSchema.parse({ ...bruto, title: bruto.title || tituloDaDescricao(bruto.description), description: descricaoComRespostas(bruto.description, a.respostas), categoryId: pendente.id, tags: [] });
   } else {
     dados = dadosSchema.parse(d.payload);
     validarFormulario(dados, (await categoriaAtual(tenantId, dados.categoryId)).categoria, d.attachments);
@@ -108,7 +121,7 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     await travarEscritorio(tx, tenantId);
     const existente = await tx.helpdeskTicket.findFirst({ where: { tenantId, draftId: id } });
     if (existente) return { ticketId: existente.id, numero: existente.number };
-    const reservou = await tx.helpdeskDraft.updateMany({ where: { id, tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { submittedAt: new Date(), version: { increment: 1 }, analysisToken: null } });
+    const reservou = await tx.helpdeskDraft.updateMany({ where: { id, tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { submittedAt: new Date(), version: { increment: 1 }, analysisToken: null, ...(revisao ? { payload: json({ ...(d.payload as Record<string, unknown>), _revisao: revisao }) } : {}) } });
     if (reservou.count !== 1) throw desatualizado();
     // Revalida dentro da transação: categoria e anexos podem ter mudado enquanto
     // a finalização esperava a trava.
@@ -130,15 +143,15 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     await tx.helpdeskAttachment.updateMany({ where: { tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });
     if (!triagem && cat.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: cat.checklistTemplate.map(i => ({ tenantId, ticketId: ticket.id, key: i.key, label: i.label })) });
     if (comAprovacao) await tx.helpdeskApproval.create({ data: { tenantId, ticketId: ticket.id, cycleNumber: 1 } });
-    await evento(tx, tenantId, ticket.id, c.ctx.userId, "created", triagem ? { triagem: true } : { revisadoPelaPessoa: true, classificacao: (d.payload as Record<string, unknown>)._classificacao });
+    await evento(tx, tenantId, ticket.id, c.ctx.userId, "created", triagem ? { triagem: true, ...(revisao ? { revisao: true } : {}), ...(respondidas ? { respostas: respondidas } : {}) } : { revisadoPelaPessoa: true, classificacao: (d.payload as Record<string, unknown>)._classificacao });
     return { ticketId: ticket.id, numero: number };
   });
   // O número vai junto (10/11/2026): a tela e a Ceci levam ao endereço curto.
   await depois(c, ticketId, "created"); return { ticketId, numero };
 }
 /** O envio da tela Novo chamado: o chamado nasce em "Aguardando triagem". */
-export function enviarRascunho(c: Contexto, id: string, version: number) {
-  return finalizarRascunho(c, id, version, "triagem");
+export function enviarRascunho(c: Contexto, id: string, version: number, abertura?: unknown) {
+  return finalizarRascunho(c, id, version, "triagem", abertura);
 }
 // A Ceci do chat (03/11/2026): a pessoa confirmou categoria, título e descrição
 // no cartão da conversa. É o rascunho e a finalização da tela Novo chamado, com
@@ -160,7 +173,7 @@ export async function abrirPelaCeci(c: Contexto, input: unknown) {
 
 export async function paraAgir(tx: Tx, c: Contexto, id: string, version: number) {
   exigirEscrita(c);
-  const t = await tx.helpdeskTicket.findFirst({ where: { id, tenantId: c.ctx.tenantId }, include: { participants: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } } });
+  const t = await tx.helpdeskTicket.findFirst({ where: { id, tenantId: c.ctx.tenantId }, include: { participants: true, assignees: true, followingSectors: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } } });
   if (!t || !podeVer(c.ctx, c.config, { ...t, approverIds: strings(t.approverIds) })) throw new Error("Chamado não encontrado.");
   const r = await tx.helpdeskTicket.updateMany({ where: { id, tenantId: c.ctx.tenantId, version }, data: { version: { increment: 1 } } });
   if (r.count !== 1) throw desatualizado();
@@ -245,9 +258,16 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       // Redirecionar para outro setor administrador (12/11/2026): os responsáveis
       // eram do setor de antes e saem; na fila, o chamado vai para o fim da fila
       // do novo setor. A situação e a conversa seguem como estão.
+      //
+      // Dois tipos desde 16/11/2026 (funcionalidade-709):
+      // - "continuar": o outro setor faz a parte dele, e o de antes passa a
+      //   acompanhar o chamado (vê, é avisado das situações, não atende). O que
+      //   o outro setor precisa fazer é obrigatório.
+      // - "corrigir": o chamado estava no setor errado; o de antes sai, como era.
       if (!podeRedirecionar(c.ctx, c.config, t.handlingSectorCode)) throw new Error("Só a equipe do setor que atende ou o administrador pode redirecionar o chamado.");
       if (fechado(t.status)) throw new Error("O chamado está encerrado.");
-      const d = z.object({ setor: z.string().trim().min(1).max(40), motivo: z.string().trim().max(1000).default("") }).parse(valor);
+      const d = z.object({ setor: z.string().trim().min(1).max(40), motivo: z.string().trim().max(1000).default(""), tipo: z.enum(["continuar", "corrigir"]).default("corrigir") }).parse(valor);
+      if (d.tipo === "continuar" && d.motivo.length < 5) throw new Error("Conte o que o outro setor precisa fazer para continuar.");
       if (d.setor === t.handlingSectorCode) throw new Error("O chamado já está com este setor.");
       if (!c.config.sectorCodes.includes(d.setor)) throw new Error("Escolha um dos setores que administram os chamados.");
       let queueOrder = t.queueOrder;
@@ -257,9 +277,12 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       }
       await tx.helpdeskAssignee.deleteMany({ where: { tenantId, ticketId: id } });
       await tx.helpdeskTicket.update({ where: { id }, data: { handlingSectorCode: d.setor, queueOrder } });
+      // Quem passa a atender deixa de só acompanhar; quem encaminhou para continuar passa a acompanhar.
+      await tx.helpdeskTicketSector.deleteMany({ where: { tenantId, ticketId: id, sectorCode: d.setor } });
+      if (d.tipo === "continuar") await tx.helpdeskTicketSector.upsert({ where: { tenantId_ticketId_sectorCode: { tenantId, ticketId: id, sectorCode: t.handlingSectorCode } }, create: { tenantId, ticketId: id, sectorCode: t.handlingSectorCode }, update: {} });
       // Os nomes vão no evento: a linha do tempo roda no navegador, sem o cadastro de setores.
       const nomes = new Map((await tx.sector.findMany({ where: { tenantId, code: { in: [t.handlingSectorCode, d.setor] } }, select: { code: true, label: true } })).map(s => [s.code, s.label]));
-      await evento(tx, tenantId, id, c.ctx.userId, "setor", { from: t.handlingSectorCode, to: d.setor, fromLabel: nomes.get(t.handlingSectorCode) ?? t.handlingSectorCode, toLabel: nomes.get(d.setor) ?? d.setor, ...(d.motivo ? { motivo: d.motivo } : {}) });
+      await evento(tx, tenantId, id, c.ctx.userId, "setor", { from: t.handlingSectorCode, to: d.setor, fromLabel: nomes.get(t.handlingSectorCode) ?? t.handlingSectorCode, toLabel: nomes.get(d.setor) ?? d.setor, tipo: d.tipo, ...(d.motivo ? { motivo: d.motivo } : {}) });
     } else {
       exigirOperacao(c, t.handlingSectorCode);
       if (fechado(t.status)) throw new Error("O chamado está encerrado.");

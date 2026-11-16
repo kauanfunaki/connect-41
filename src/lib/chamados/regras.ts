@@ -53,11 +53,26 @@ export type DadosDoChamado = z.infer<typeof dadosSchema>;
 // O título é da IA (27/10/2026): o rascunho nasce sem ele e a classificação o
 // preenche; sem IA, sai do começo da descrição.
 export const dadosRascunhoSchema = dadosSchema.extend({ title: z.string().trim().max(255).default(""), categoryId: z.string().trim().max(191).default("") });
-export function tituloDaDescricao(descricao: string) {
-  const linha = descricao.trim().split(/\r?\n/).find(l => l.trim())?.trim().replace(/\s+/g, " ") ?? "";
+// O título provisório pula o cumprimento (16/11/2026, bug-701): um pedido que
+// começa com "Olá, bom dia!" numa linha própria ficava com esse título quando a
+// IA não devolvia outro.
+const CUMPRIMENTO = /^(?:(?:ol[áa]|oi+e?|opa|e a[íi]|bom dia|boa tarde|boa noite|tudo bem|tudo bom|tudo certo|como vai|prezad[oa]s?|pessoal|gente|equipe|time)(?![\p{L}\p{N}])[\s,!.?;:–—-]*)+/iu;
+const encurtar = (linha: string) => {
   const curto = linha.length <= 80 ? linha : `${linha.slice(0, 80).replace(/\s+\S*$/, "")}…`;
   return curto.length >= 3 ? curto : `Chamado: ${curto || "sem descrição"}`;
+};
+const linhasDe = (descricao: string) => descricao.split(/\r?\n/).map(l => l.trim().replace(/\s+/g, " ")).filter(Boolean);
+/** O título como saía até 16/11/2026: a primeira linha, com cumprimento e tudo. */
+const tituloDaPrimeiraLinha = (descricao: string) => encurtar(linhasDe(descricao)[0] ?? "");
+export function tituloDaDescricao(descricao: string) {
+  const linhas = linhasDe(descricao);
+  // A primeira linha que diz algo além do cumprimento; se nenhuma, a primeira como veio.
+  const util = linhas.map(l => l.replace(CUMPRIMENTO, "")).find(l => /[\p{L}\p{N}]{3}/u.test(l));
+  if (!util) return encurtar(linhas[0] ?? "");
+  return encurtar(util[0].toLocaleUpperCase("pt-BR") + util.slice(1));
 }
+/** O título ainda é o provisório (o de hoje ou o de antes de 16/11/2026), e pode dar lugar ao da IA. */
+export const ehTituloProvisorio = (titulo: string, descricao: string) => titulo === tituloDaDescricao(descricao) || titulo === tituloDaPrimeiraLinha(descricao);
 
 export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, anexos: { attachmentKey: string | null; mimeType: string }[]) {
   if (!categoria.active) throw new Error("Esta categoria está desativada.");
@@ -103,7 +118,9 @@ export function mensagemDoExistente(e: Existente) {
 // Orquestrador e a categoria. Sem categoria, o motivo separa a falha (a IA não
 // respondeu) da falta de contexto (respondeu sem conseguir classificar) — até
 // aqui as duas saíam na mesma frase, e quem abriu não sabia qual tinha sido.
-export const MOTIVOS_SEM_CATEGORIA = ["falha", "incerto", "formulario", "aprovador"] as const;
+// "solicitante" (16/11/2026, funcionalidade-702): na revisão antes de abrir,
+// quem abriu preferiu deixar a classificação para a equipe.
+export const MOTIVOS_SEM_CATEGORIA = ["falha", "incerto", "formulario", "aprovador", "solicitante"] as const;
 export type MotivoSemCategoria = (typeof MOTIVOS_SEM_CATEGORIA)[number];
 export const triagemSchema = z.object({
   existente: existenteSchema.nullable().default(null),
@@ -112,6 +129,10 @@ export const triagemSchema = z.object({
   semCategoria: z.enum(MOTIVOS_SEM_CATEGORIA).nullable().default(null),
   /** A justificativa da classificação, para a equipe. */
   justificativa: z.string().max(500).default(""),
+  /** A categoria veio da revisão de quem abriu, e não da classificação da triagem (funcionalidade-702). */
+  confirmadaPorQuemAbriu: z.boolean().default(false),
+  /** O setor que a triagem escolheu para o chamado aberto sem a revisão (funcionalidade-709); nulo = ficou onde estava. */
+  setor: z.string().max(120).nullable().default(null),
 });
 export type Triagem = z.infer<typeof triagemSchema>;
 export type ResultadoDaTriagem = "existe" | "classificado" | "a_classificar";
@@ -122,18 +143,65 @@ const SEM_CATEGORIA: Record<MotivoSemCategoria, string> = {
   incerto: "A triagem automática não identificou a categoria só pela descrição. A equipe vai classificar o chamado e pode pedir mais detalhes na conversa.",
   formulario: "A categoria indicada pela triagem pede informações que o pedido não tem. A equipe vai classificar o chamado e pedir o que faltar.",
   aprovador: "A categoria indicada pela triagem exige aprovação, e não há aprovador configurado. A equipe vai classificar o chamado.",
+  solicitante: "Quem abriu deixou a classificação para a equipe.",
 };
+const classificado = (t: Triagem) => t.confirmadaPorQuemAbriu ? `Quem abriu confirmou a categoria ${t.categoria}.` : `A triagem automática classificou o chamado em ${t.categoria}.`;
 /** A frase da tela do chamado, a mesma para quem abriu e para a equipe. */
 export function textoDaTriagem(t: Triagem): string {
-  if (t.existente) return `${mensagemDoExistente(t.existente)} O chamado segue com a equipe.`;
-  if (t.categoria) return `A triagem automática classificou o chamado em ${t.categoria}. Ele está com a equipe.`;
+  // Com item do Orquestrador e sem categoria, a frase diz também por que não classificou (bug-701).
+  if (t.existente) return `${mensagemDoExistente(t.existente)} ${t.categoria ? `O chamado foi classificado em ${t.categoria} e segue com a equipe.` : SEM_CATEGORIA[t.semCategoria ?? "falha"]}`;
+  if (t.categoria) return `${classificado(t)} Ele está com a equipe.`;
   return SEM_CATEGORIA[t.semCategoria ?? "falha"];
 }
 /** O aviso do sino e do push para quem abriu: o resultado e o título do chamado. */
 export function avisoDaTriagem(t: Triagem, titulo: string): string {
   if (t.existente) return `${t.existente.match === "same" ? "Já existe no Orquestrador" : "Pode já existir no Orquestrador"}: o ${ROTULOS_EXISTENTE[t.existente.tipo]} ${t.existente.nome}. Chamado: ${titulo}`;
   if (t.categoria) return `Triagem concluída, chamado classificado em ${t.categoria}: ${titulo}`;
+  if (t.semCategoria === "solicitante") return `Triagem concluída; a equipe vai classificar o chamado: ${titulo}`;
   return `${t.semCategoria === "falha" ? "A triagem automática falhou" : "A triagem não identificou a categoria"}; a equipe vai classificar: ${titulo}`;
+}
+
+// ── Revisão antes de abrir (16/11/2026, funcionalidade-702) ─────────────────
+// Depois do pedido, a IA propõe o título e a categoria e faz até três perguntas.
+// A pessoa confere e abre; responder é opcional. A revisão não é uma conversa:
+// é uma leitura só, e dá para abrir o chamado sem esperar por ela.
+export const MAXIMO_DE_PERGUNTAS = 3;
+/**
+ * O que a IA propõe. `categoryId` nulo = ela não soube classificar. `setor`
+ * (16/11/2026, funcionalidade-709): o setor que vai atender, com dois ou mais
+ * administrando; nulo com `perguntaDoSetor` = ela ficou em dúvida e pergunta.
+ */
+export type RevisaoDaIa = { titulo: string; categoryId: string | null; motivo: string; tags: string[]; perguntas: Pergunta[]; setor: string | null; motivoDoSetor: string; perguntaDoSetor: string };
+/**
+ * O que a pessoa aprovou, gravado no rascunho (`_revisao`) para a triagem
+ * respeitar: com `categoryId`, a triagem não classifica de novo; nulo é "a
+ * equipe classifica".
+ */
+export const revisaoAprovadaSchema = z.object({ categoryId: z.string().trim().min(1).max(191).nullable(), tags: z.array(z.string().trim().min(1).max(60)).max(5).default([]) });
+export type RevisaoAprovada = z.infer<typeof revisaoAprovadaSchema>;
+export const respostaSchema = z.object({ pergunta: z.string().trim().min(1).max(500), resposta: z.string().trim().max(2000) });
+/** O que acompanha o envio do rascunho quando a pessoa passou pela revisão. */
+export const aberturaSchema = z.object({ revisao: revisaoAprovadaSchema.nullable().default(null), respostas: z.array(respostaSchema).max(MAXIMO_DE_PERGUNTAS).default([]) });
+export type Abertura = z.infer<typeof aberturaSchema>;
+export const TITULO_DAS_RESPOSTAS = "Respostas às perguntas da triagem:";
+/**
+ * A descrição do chamado com as respostas da revisão no fim, pergunta e
+ * resposta, para a equipe ler junto do pedido. Sem resposta, a descrição sai
+ * como foi escrita. O que passar do limite da descrição é cortado das respostas.
+ */
+export function descricaoComRespostas(descricao: string, respostas: { pergunta: string; resposta: string }[], limite = 15000): string {
+  const dadas = respostas.map(r => ({ pergunta: r.pergunta.trim(), resposta: r.resposta.trim() })).filter(r => r.pergunta && r.resposta);
+  const base = descricao.trim();
+  if (!dadas.length) return base;
+  const bloco = `\n\n${TITULO_DAS_RESPOSTAS}\n${dadas.map(r => `• ${r.pergunta}\n  ${r.resposta}`).join("\n")}`;
+  const cabe = limite - base.length;
+  return cabe < 80 ? base : `${base}${bloco.length <= cabe ? bloco : `${bloco.slice(0, cabe - 1)}…`}`;
+}
+/** A revisão aprovada que a triagem lê do rascunho; nula se não houve ou se o rascunho guarda outra coisa. */
+export function revisaoDoRascunho(payload: unknown): RevisaoAprovada | null {
+  if (!payload || typeof payload !== "object") return null;
+  const r = revisaoAprovadaSchema.safeParse((payload as Record<string, unknown>)._revisao);
+  return r.success ? r.data : null;
 }
 /** De quanto em quanto a tela do chamado confere se a triagem terminou: rápido no primeiro minuto, devagar depois. */
 export const intervaloDaTriagem = (desdeMs: number) => desdeMs < 60_000 ? 3_000 : 15_000;

@@ -29,6 +29,9 @@ describe("linha do tempo do chamado", () => {
   it("descreve o fim da triagem pelo resultado", () => {
     const robo = { ref: "robo:x", tipo: "robo", nome: "Robô fictício", responsavel: null, endereco: null, noOps: null, detalhe: null, match: "same", reason: "Faz a mesma conversão." };
     expect(descreverEvento({ type: "triagem", actorId: null, data: { existente: robo, categoria: "Desenvolvimento › Nova Automação" } }, nome)).toEqual({ texto: "A triagem automática encontrou no Orquestrador o robô Robô fictício e classificou o chamado em Desenvolvimento › Nova Automação", detalhe: "Faz a mesma conversão." });
+    expect(descreverEvento({ type: "triagem", actorId: null, data: { existente: robo, semCategoria: "falha" } }, nome).texto).toBe("A triagem automática encontrou no Orquestrador o robô Robô fictício e deixou a classificação para a equipe");
+    expect(descreverEvento({ type: "triagem", actorId: null, data: { categoria: "Suporte › Treinamento", confirmadaPorQuemAbriu: true } }, nome).texto).toBe("A triagem manteve a categoria Suporte › Treinamento, confirmada por quem abriu");
+    expect(descreverEvento({ type: "triagem", actorId: null, data: { existente: robo, categoria: "Suporte › Treinamento", confirmadaPorQuemAbriu: true } }, nome).texto).toBe("A triagem automática encontrou no Orquestrador o robô Robô fictício e manteve a categoria Suporte › Treinamento, confirmada por quem abriu");
     expect(descreverEvento({ type: "triagem", actorId: null, data: { categoria: "Suporte › Treinamento" } }, nome).texto).toBe("A triagem automática classificou o chamado em Suporte › Treinamento");
     const semCategoria = descreverEvento({ type: "triagem", actorId: null, data: { semCategoria: "falha" } }, nome);
     expect(semCategoria.texto).toBe("A triagem automática deixou o chamado para a equipe classificar"); expect(semCategoria.detalhe).toContain("falhou");
@@ -38,5 +41,17 @@ describe("linha do tempo do chamado", () => {
     expect(tamanhoDoArquivo(512)).toBe("512 B");
     expect(tamanhoDoArquivo(2048)).toBe("2 KB");
     expect(tamanhoDoArquivo(1.5 * 1024 * 1024)).toBe("1,5 MB");
+  });
+});
+
+// Os tipos de envio para outro setor (16/11/2026, funcionalidade-709).
+describe("envio para outro setor na linha do tempo", () => {
+  const nome = (id: string) => ({ ana: "Ana" } as Record<string, string>)[id] ?? id;
+  const setor = (data: Record<string, unknown>, actorId: string | null = "ana") => descreverEvento({ type: "setor", actorId, data: { from: "tech", to: "dp", fromLabel: "Tech", toLabel: "DP", ...data } }, nome);
+  it("diz se foi para continuar, para corrigir, pela triagem ou do jeito antigo", () => {
+    expect(setor({ tipo: "continuar", motivo: "Emitir a guia." })).toEqual({ texto: "Ana encaminhou o chamado de Tech para DP continuar", detalhe: "Emitir a guia." });
+    expect(setor({ tipo: "corrigir" }).texto).toBe("Ana corrigiu o setor do chamado de Tech para DP");
+    expect(setor({ pelaTriagem: true }, null).texto).toBe("A triagem automática enviou o chamado para DP");
+    expect(setor({}).texto).toBe("Ana redirecionou o chamado de Tech para DP");
   });
 });

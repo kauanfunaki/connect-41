@@ -35,7 +35,7 @@ function orquestradorFalso(texto: string) {
   const { pedido, jaExiste } = JSON.parse(texto) as { pedido: { descricao: string }; jaExiste: { ref: string; nome: string; descricao: string | null }[] };
   const pedidas = [...radicais(pedido.descricao)];
   const notas = jaExiste.map(i => { const deles = radicais(`${i.nome} ${i.descricao ?? ""}`); return { ref: i.ref, nota: pedidas.filter(p => deles.has(p)).length / Math.max(1, pedidas.length) }; }).sort((a, b) => b.nota - a.nota);
-  return { existing: notas[0] && notas[0].nota >= 0.6 ? { ref: notas[0].ref, match: "same", reason: "Faz a mesma conversão." } : null };
+  return { existing: notas[0] && notas[0].nota >= 0.6 ? { ref: notas[0].ref, does_what_is_asked: true, match: "same", reason: "Faz a mesma conversão." } : null };
 }
 const PEDIDO_DO_CONVERSOR = "Conversor de planilhas de lançamentos em arquivos TXT no layout que o sistema Domínio importa.";
 
@@ -138,6 +138,87 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const depois = await detalhe(equipe, id); expect(depois.status).toBe("ABERTO"); expect(depois.assignees.map(a => a.userId)).toEqual([operador]);
     await expect(alterar(equipe, id, depois.version, "status", "AGUARDANDO_TRIAGEM")).rejects.toThrow("Só a triagem automática");
   });
+  it("com a revisão, as respostas entram na descrição e a triagem mantém a categoria confirmada, sem classificar de novo", async () => {
+    const d = await novo({ title: "Liberar acesso ao ambiente" });
+    const { ticketId: id } = await enviarRascunho(c, d.id, d.version, { revisao: { categoryId: categoriaId, tags: ["Acesso", "acesso"] }, respostas: [{ pergunta: "Qual ambiente?", resposta: "Homologação" }, { pergunta: "Desde quando?", resposta: " " }] });
+    const aberto = await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } });
+    expect(aberto).toMatchObject({ status: "AGUARDANDO_TRIAGEM", title: "Liberar acesso ao ambiente", description: `${payload().description}\n\nRespostas às perguntas da triagem:\n• Qual ambiente?\n  Homologação` });
+    expect((await db!.helpdeskEvent.findFirstOrThrow({ where: { ticketId: id, type: "created" } })).data).toMatchObject({ triagem: true, revisao: true, respostas: 1 });
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    // Só a busca no Orquestrador foi à IA.
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome)).toEqual(["orquestrador_chamado"]);
+    expect(await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: "ABERTO", categoryId: categoriaId, title: "Liberar acesso ao ambiente", tags: ["acesso"] });
+    expect(await triagemDo(id)).toMatchObject({ categoria: "Acesso fictício", semCategoria: null, confirmadaPorQuemAbriu: true });
+    expect(await db!.helpdeskChecklistItem.count({ where: { ticketId: id } })).toBe(1);
+  });
+  it("quem abriu deixa a classificação para a equipe: a triagem não classifica e diz o motivo", async () => {
+    const d = await novo();
+    const { ticketId: id } = await enviarRascunho(c, d.id, d.version, { revisao: { categoryId: null } });
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome)).toEqual(["orquestrador_chamado"]);
+    const t = await db!.helpdeskTicket.findUniqueOrThrow({ where: { id }, include: { category: true } });
+    expect(t.status).toBe("ABERTO"); expect(t.category.name).toBe("A classificar");
+    expect(await triagemDo(id)).toMatchObject({ categoria: null, semCategoria: "solicitante", confirmadaPorQuemAbriu: false });
+  });
+  it("categoria aprovada que não pode ser escolhida é ignorada, e a triagem classifica", async () => {
+    const d = await novo();
+    const { ticketId: id } = await enviarRascunho(c, d.id, d.version, { revisao: { categoryId: randomUUID() } });
+    expect((await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } })).payload).not.toHaveProperty("_revisao");
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome).sort()).toEqual(["classificacao_chamado", "orquestrador_chamado"]);
+    expect(await triagemDo(id)).toMatchObject({ categoria: "Acesso fictício", confirmadaPorQuemAbriu: false });
+  });
+  // Vários setores (16/11/2026, funcionalidade-709): a triagem escolhe o setor de quem
+  // abriu sem escolher, e o envio para outro setor tem dois tipos.
+  const comDoisSetores = async <T,>(teste: () => Promise<T>) => {
+    await db!.tenantModuleSector.create({ data: { tenantId, moduleCode: "helpdesk", sectorCode: "controladoria" } });
+    try { return await teste(); } finally { await db!.tenantModuleSector.deleteMany({ where: { tenantId, moduleCode: "helpdesk" } }); }
+  };
+  const setorFalso = (code: string | null) => (p: { nome: string; texto: string }) => ({ valor: p.nome === "orquestrador_chamado" ? orquestradorFalso(p.texto) : p.nome === "setor_do_chamado" ? { sectorCode: code, reason: "Fictício" } : mocks.classificacao(), runId: "run" });
+  it("aberto sem escolher o setor, a triagem envia para o setor da IA e avisa a equipe dele", () => comDoisSetores(async () => {
+    mocks.gerar.mockImplementation(async (p: { nome: string; texto: string }) => setorFalso("controladoria")(p));
+    const id = await enviar();
+    expect((await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } })).handlingSectorCode).toBe("tech");
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect((await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } })).handlingSectorCode).toBe("controladoria");
+    expect(await triagemDo(id)).toMatchObject({ setor: "controladoria" });
+    expect((await db!.helpdeskEvent.findFirstOrThrow({ where: { ticketId: id, type: "setor" } })).data).toMatchObject({ from: "tech", to: "controladoria", pelaTriagem: true });
+  }));
+  it("com o setor escolhido na revisão, a triagem não pergunta o setor", () => comDoisSetores(async () => {
+    mocks.gerar.mockImplementation(async (p: { nome: string; texto: string }) => setorFalso("controladoria")(p));
+    const id = await enviar({ handlingSectorCode: "tech" });
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome)).not.toContain("setor_do_chamado");
+    expect((await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } })).handlingSectorCode).toBe("tech");
+  }));
+  it("na dúvida da IA, o chamado fica no setor padrão", () => comDoisSetores(async () => {
+    mocks.gerar.mockImplementation(async (p: { nome: string; texto: string }) => setorFalso(null)(p));
+    const id = await enviar();
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect((await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } })).handlingSectorCode).toBe("tech");
+    expect(await triagemDo(id)).toMatchObject({ setor: null });
+  }));
+  it("encaminhar para continuar: o setor de antes acompanha, vê e é avisado da situação; corrigir: sai", () => comDoisSetores(async () => {
+    const id = await abrir(), varios = await configDoHelpdesk(tenantId);
+    const daEquipe = { ...equipe, config: varios };
+    await expect(alterar(daEquipe, id, 0, "redirecionar", { setor: "controladoria", tipo: "continuar" })).rejects.toThrow("o que o outro setor precisa fazer");
+    await alterar(daEquipe, id, 0, "redirecionar", { setor: "controladoria", tipo: "continuar", motivo: "Conferir o lançamento contábil." });
+    expect(await db!.helpdeskTicketSector.findMany({ where: { ticketId: id }, select: { sectorCode: true } })).toEqual([{ sectorCode: "tech" }]);
+    const visto = await detalhe(daEquipe, id); expect(visto.handlingSectorCode).toBe("controladoria"); expect(visto.followingSectors.map(f => f.sectorCode)).toEqual(["tech"]);
+    await expect(alterar(daEquipe, id, visto.version, "assumir", null)).rejects.toThrow("Só a equipe do setor que atende");
+    expect((await db!.helpdeskEvent.findFirstOrThrow({ where: { ticketId: id, type: "setor" } })).data).toMatchObject({ tipo: "continuar", motivo: "Conferir o lançamento contábil." });
+    // A controladoria muda a situação: o Tech, que acompanha, é avisado.
+    const daControladoria = (await db!.user.create({ data: { tenantId, name: "Controladoria fictícia", email: `${randomUUID()}@example.test`, passwordHash: "sem-login-de-teste", role: "SECTOR_USER", sectors: { create: { sectorCode: "controladoria" } } } })).id;
+    const controladoria = { ...contextoUsuario(daControladoria, "SECTOR_USER", ["controladoria"]), config: varios };
+    await alterar(controladoria, id, visto.version, "status", "EM_ANDAMENTO");
+    await despacharEventos(tenantId, id);
+    expect(await db!.notification.count({ where: { tenantId, entityId: id, userId: operador, message: { startsWith: "Situação" } } })).toBe(1);
+    // Volta para o Tech corrigindo: o Tech deixa de acompanhar (agora atende) e a controladoria sai.
+    const agora = await detalhe(controladoria, id);
+    await alterar(controladoria, id, agora.version, "redirecionar", { setor: "tech", tipo: "corrigir" });
+    expect(await db!.helpdeskTicketSector.count({ where: { ticketId: id } })).toBe(0);
+    await expect(detalhe({ ...contextoUsuario(colega, "SECTOR_USER", ["controladoria"]), config: varios }, id)).rejects.toThrow("não encontrado");
+  }));
   it("a categoria com campo que o pedido não tem fica para a equipe classificar", async () => {
     await salvarCategoria(gestao, { name: "Campos da classificação fictícia", formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
     const cat = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Campos da classificação fictícia" } } });
@@ -305,10 +386,18 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const depois = await detalhe(equipe, id); expect(depois.attachments.find(x => x.id === a.id)?.commentId).toBe(depois.comments[0].id);
     expect(depois.events.some(e => e.type === "attachment")).toBe(false);
   });
-  it("trocar o setor responsável esconde a fila; desligar módulo bloqueia as rotas", async () => {
+  // Até 12/11/2026 trocar o setor do módulo escondia a fila da equipe antiga. Desde a
+  // funcionalidade-640 o chamado guarda o setor que o atende: essa equipe segue vendo o
+  // chamado, mas um setor que deixou de administrar não atende até o chamado ser
+  // redirecionado (bug-703: o teste tinha ficado com a regra antiga).
+  it("trocar o setor responsável tira o atendimento da equipe antiga, que segue vendo o chamado; desligar módulo bloqueia as rotas", async () => {
     const id = await abrir();
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { sectorCode: "controladoria" } });
-    const transferido = await configDoHelpdesk(tenantId); await expect(alterar({ ...equipe, config: transferido }, id, 0, "assumir", null)).rejects.toThrow("não encontrado");
+    const transferido = await configDoHelpdesk(tenantId); expect(transferido.enabled).toBe(true); expect(transferido.sectorCodes).not.toContain("tech");
+    await expect(alterar({ ...equipe, config: transferido }, id, 0, "assumir", null)).rejects.toThrow("Só a equipe do setor que atende o chamado");
+    expect((await detalhe({ ...equipe, config: transferido }, id)).id).toBe(id);
+    // Quem não é do setor do chamado nem o abriu continua sem vê-lo.
+    await expect(detalhe({ ...contextoUsuario(colega, "SECTOR_USER", ["fiscal"]), config: transferido }, id)).rejects.toThrow("não encontrado");
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: false } });
     const off = await configDoHelpdesk(tenantId); await expect(detalhe({ ...c, config: off }, id)).rejects.toThrow("não encontrado");
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: true, sectorCode: "tech" } });

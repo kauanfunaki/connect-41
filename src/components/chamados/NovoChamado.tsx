@@ -1,29 +1,43 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileImage, FileSpreadsheet, FileText, FileVideo, ScanSearch, Sparkles, Upload, X } from "lucide-react";
+import { ArrowLeft, FileImage, FileSpreadsheet, FileText, FileVideo, ScanSearch, Sparkles, Upload, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
+import { Aviso } from "@/components/ui/Aviso";
+import { Stepper } from "@/components/ui/Stepper";
 import { Campo, CamposDoChamado, type CategoriaDaTela } from "./CamposDoChamado";
 import { IconeDoArquivo } from "./LinhaDoTempo";
 import { FORMATOS } from "@/lib/chamados/formatos";
 import { formatInstantTime } from "@/lib/format";
-import { iniciar, guardar, retirarAnexo, abrirChamado, setorSugerido } from "@/app/(app)/chamados/actions";
-import type { DadosDoChamado } from "@/lib/chamados/regras";
+import { iniciar, guardar, retirarAnexo, abrirChamado } from "@/app/(app)/chamados/actions";
+import { categoriasClassificaveis, caminhoDaCategoria } from "@/lib/chamados/catalogo";
+import { tituloDaDescricao, type DadosDoChamado, type RevisaoDaIa } from "@/lib/chamados/regras";
 
-// Novo chamado em uma etapa (10/11/2026). Até aqui a pessoa esperava a IA na
-// tela — classificação, conversa e revisão — antes de o chamado existir. Agora
-// o envio cria o chamado na hora, em "Aguardando triagem", e a triagem roda
-// depois: a tela do chamado se atualiza sozinha e o sino avisa o resultado.
+// Novo chamado em duas etapas (16/11/2026, funcionalidade-702): o pedido e a
+// revisão. Na revisão a IA propõe o título e a categoria e faz até três
+// perguntas; a pessoa confere, responde se quiser e abre o chamado. De 10/11 a
+// 16/11 a tela tinha uma etapa só, e ninguém via nem aprovava o que a IA
+// escolhia. Da conversa de antes de 10/11 isto não volta: é uma leitura só da
+// IA, as respostas são opcionais e o "Abrir sem esperar" abre o chamado como
+// foi escrito, sem aguardar a IA.
+//
+// O envio continua criando o chamado na hora, em "Aguardando triagem": a busca
+// no Orquestrador roda depois, e a triagem respeita a categoria confirmada aqui.
 
 type Anexo = { id: string; fileName: string };
 type Rascunho = { id: string; version: number };
 export type RascunhoDaTela = { id: string; version: number; dados: DadosDoChamado; anexos: Anexo[] };
 
 type Setor = { code: string; label: string };
-/** `atendem`: os setores que administram os chamados (12/11/2026). Com dois ou mais, quem abre escolhe para qual vai, com a sugestão da IA. */
+/**
+ * `atendem`: os setores que administram os chamados (12/11/2026). Com dois ou
+ * mais, a revisão mostra o setor que vai atender, proposto pela IA (16/11/2026,
+ * funcionalidade-709); até então quem abria escolhia na etapa Pedido.
+ */
 export function NovoChamado({ inicial, categorias, setores, atendem }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: Setor[]; atendem: Setor[] }) {
   const router = useRouter(), formulario = useRef<HTMLFormElement>(null);
   const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : "", priority: "MEDIA", requestData: {}, tags: [], handlingSectorCode: "" });
@@ -38,7 +52,18 @@ export function NovoChamado({ inicial, categorias, setores, atendem }: { inicial
   const podeSalvar = (d: DadosDoChamado) => !!d.description.trim() && !!d.requesterSectorCode;
   function definirRascunho(d: Rascunho) { draftRef.current = d; }
   function emFila<T>(tarefa: () => Promise<T>) { const p = fila.current.then(tarefa, tarefa); fila.current = p.catch(() => undefined); return p; }
-  function editar(novos: DadosDoChamado) { dadosRef.current = novos; setDados(novos); edicoes.current++; }
+  // A revisão. `undefined`: a IA ainda não leu este pedido; `null`: leu e não respondeu.
+  const [etapa, setEtapa] = useState<1 | 2>(1);
+  const [revisao, setRevisao] = useState<RevisaoDaIa | null | undefined>(undefined);
+  const [categoria, setCategoria] = useState(""), [respostas, setRespostas] = useState<string[]>([]);
+  const pedidoDaRevisao = useRef<AbortController | null>(null);
+  function editar(novos: DadosDoChamado) {
+    // Mudou o pedido: o título e a revisão eram de outro texto.
+    const mudou = novos.description !== dadosRef.current.description;
+    const atual = mudou ? { ...novos, title: "" } : novos;
+    if (mudou) setRevisao(undefined);
+    dadosRef.current = atual; setDados(atual); edicoes.current++;
+  }
   async function obterRascunho() {
     if (draftRef.current) return draftRef.current;
     const r = await iniciar(); if (!r.ok) throw new Error(r.error);
@@ -65,14 +90,61 @@ export function NovoChamado({ inicial, categorias, setores, atendem }: { inicial
   }
   async function rascunhoAtual() { return edicoes.current > salvas.current || !draftRef.current ? salvar() : draftRef.current; }
 
-  function abrir() {
+  /**
+   * Abre o chamado. Com a revisão, segue o que a pessoa aprovou: a categoria
+   * (vazia = a equipe classifica) e as respostas dadas. Sem ela — o "Abrir sem
+   * esperar" —, o chamado abre como foi escrito, e a triagem classifica.
+   */
+  function abrir(comRevisao: boolean) {
     if (!(formulario.current?.reportValidity() ?? false)) return;
+    // Se a IA não respondeu e a pessoa não escolheu categoria, a triagem ainda tenta classificar.
+    const abertura = comRevisao ? {
+      revisao: revisao || categoria ? { categoryId: categoria || null, tags: revisao?.tags ?? [] } : null,
+      respostas: (revisao?.perguntas ?? []).map((q, i) => ({ pergunta: q.text, resposta: (respostas[i] ?? "").trim() })).filter(r => r.resposta),
+    } : undefined;
     void executar("abrindo", async () => {
       const d = await rascunhoAtual();
-      const r = await abrirChamado(d.id, d.version); if (!r.ok) throw new Error(r.error);
+      const r = await abrirChamado(d.id, d.version, abertura); if (!r.ok) throw new Error(r.error);
       router.push(r.valor.endereco);
     });
   }
+  /**
+   * Pede a revisão à IA e vai para a etapa 2. É `fetch` numa rota, e não uma
+   * action: as actions rodam em fila, e o "Abrir sem esperar" ficaria atrás
+   * desta. Se a IA não responder, a etapa 2 abre sem a sugestão.
+   */
+  function continuar() {
+    if (!(formulario.current?.reportValidity() ?? false)) return;
+    if (revisao !== undefined) { setEtapa(2); window.scrollTo({ top: 0 }); return; }
+    const controle = new AbortController(); pedidoDaRevisao.current = controle;
+    setBusy("revisando"); setErro("");
+    void (async () => {
+      try {
+        const d = await emFila(rascunhoAtual);
+        if (controle.signal.aborted) return;
+        const res = await fetch("/api/chamados/revisao", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ draftId: d.id }), signal: controle.signal });
+        const corpo = await res.json() as { revisao?: RevisaoDaIa | null; error?: string };
+        if (!res.ok) throw new Error(corpo.error ?? "Não foi possível revisar o pedido.");
+        if (controle.signal.aborted) return;
+        const nova = corpo.revisao ?? null, atual = dadosRef.current;
+        setRevisao(nova); setCategoria(nova?.categoryId ?? ""); setRespostas((nova?.perguntas ?? []).map(() => ""));
+        // Direto no estado, sem passar por `editar`: o pedido não mudou.
+        const comTitulo = { ...atual, title: nova && nova.titulo.length >= 3 ? nova.titulo : tituloDaDescricao(atual.description), handlingSectorCode: nova?.setor ?? atual.handlingSectorCode };
+        dadosRef.current = comTitulo; setDados(comTitulo); edicoes.current++;
+        setEtapa(2); window.scrollTo({ top: 0 });
+      } catch (e) {
+        if (!controle.signal.aborted) setErro(e instanceof Error ? e.message : "Não foi possível revisar o pedido. Tente de novo ou abra sem esperar.");
+      } finally {
+        if (pedidoDaRevisao.current === controle) pedidoDaRevisao.current = null;
+        setBusy(b => b === "revisando" ? "" : b);
+      }
+    })();
+  }
+  function abrirSemEsperar() { pedidoDaRevisao.current?.abort(); abrir(false); }
+  useEffect(() => () => pedidoDaRevisao.current?.abort(), []);
+  const opcoesDeCategoria = useMemo(() => categoriasClassificaveis(categorias).map(c => ({ id: c.id, caminho: caminhoDaCategoria(categorias, c.id) })).sort((a, b) => a.caminho.localeCompare(b.caminho, "pt-BR")), [categorias]);
+  const caminhoDe = (id: string) => opcoesDeCategoria.find(o => o.id === id)?.caminho ?? "";
+  function responder(i: number, valor: string) { setRespostas(r => r.map((x, j) => j === i ? valor : x)); }
   function subir(file: File) {
     void executar("Enviando arquivo…", async () => {
       const d = await obterRascunho(), form = new FormData(); form.set("id", crypto.randomUUID()); form.set("draftId", d.id); form.set("version", String(d.version)); form.set("file", file); form.set("attachmentKey", "");
@@ -90,52 +162,79 @@ export function NovoChamado({ inicial, categorias, setores, atendem }: { inicial
     });
   }
 
-  // A sugestão do setor (12/11/2026): a IA lê a descrição quando a pessoa para de
-  // digitar e preenche "Enviar para" enquanto ela não escolheu. Escolher à mão
-  // vale até o fim; a sugestão segue visível, para comparar.
+  // O setor que vai atender (16/11/2026, funcionalidade-709): a IA o propõe na
+  // revisão, e a pessoa confirma ou troca. Na dúvida, a IA pergunta e a pessoa
+  // escolhe. Sem a revisão ("Abrir sem esperar"), a triagem decide depois.
   const escolher = atendem.length > 1;
-  const [sugestao, setSugestao] = useState<{ setor: string; motivo: string } | null>(null), [sugerindo, setSugerindo] = useState(false), [tentou, setTentou] = useState(false);
-  const escolhaManual = useRef(!!inicial?.dados.handlingSectorCode), ultimoPedido = useRef("");
-  useEffect(() => {
-    const texto = dados.description.trim();
-    if (!escolher || texto.length < 20 || texto === ultimoPedido.current) return;
-    const t = setTimeout(() => {
-      ultimoPedido.current = texto; setSugerindo(true);
-      void setorSugerido(texto).then(s => {
-        if (ultimoPedido.current !== texto) return;
-        setSugestao(s); setTentou(true);
-        if (s && !escolhaManual.current && dadosRef.current.handlingSectorCode !== s.setor) editar({ ...dadosRef.current, handlingSectorCode: s.setor });
-      }).catch(() => undefined).finally(() => { if (ultimoPedido.current === texto) setSugerindo(false); });
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [dados.description, escolher]);
   const nomeDoSetor = (code: string) => atendem.find(s => s.code === code)?.label ?? code;
 
-  const textoDeBusy = busy && busy !== "abrindo" ? busy : "";
-  return <form ref={formulario} onSubmit={e => { e.preventDefault(); abrir(); }} className="space-y-5">
+  const textoDeBusy = busy && busy !== "abrindo" && busy !== "revisando" ? busy : "";
+  const sugerida = revisao?.categoryId ? caminhoDe(revisao.categoryId) : "", perguntas = revisao?.perguntas ?? [];
+  return <form ref={formulario} onSubmit={e => { e.preventDefault(); if (etapa === 1) continuar(); else abrir(true); }} className="space-y-5">
+    <Stepper steps={[{ label: "Pedido", status: etapa === 1 ? "current" : "done" }, { label: "Revisão", status: etapa === 2 ? "current" : "upcoming" }]} onStepClick={i => { if (i === 0 && etapa === 2 && !busy) setEtapa(1); }} />
+    {etapa === 2 ? <Card className="p-5 sm:p-6">
+      <fieldset disabled={!!busy} className="space-y-5">
+        <div>
+          <h2 className="text-heading font-semibold text-fg">Confira antes de abrir</h2>
+          <p className="mt-1 text-ui text-fg-secondary">{revisao ? "A IA leu o pedido e sugeriu o título e a categoria. Ajuste o que não estiver certo." : "Confira o título e, se souber, escolha a categoria."}</p>
+        </div>
+        {!revisao && <Aviso tom="atencao" icone={<ScanSearch aria-hidden />}>A IA não conseguiu ler o pedido agora. Você pode abrir o chamado mesmo assim: a triagem tenta classificar de novo, e a equipe confere.</Aviso>}
+        <div className="rounded-lg bg-surface-hover p-3">
+          <p className="text-helper font-medium text-fg-secondary">Seu pedido</p>
+          <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-ui text-fg">{dados.description}</p>
+        </div>
+        <Campo label="Título"><Input required minLength={3} maxLength={255} value={dados.title} onChange={e => editar({ ...dados, title: e.target.value })} placeholder="O que você precisa?" /></Campo>
+        <div className="space-y-1.5">
+          <Campo label="Categoria"><Select value={categoria} onChange={e => setCategoria(e.target.value)}><option value="">Deixar para a equipe classificar</option>{opcoesDeCategoria.map(o => <option key={o.id} value={o.id}>{o.caminho}</option>)}</Select></Campo>
+          {sugerida ? <p className="flex flex-wrap items-start gap-1.5 text-helper text-fg-secondary"><Sparkles size={14} aria-hidden className="mt-0.5 shrink-0 text-brand" /><span>Sugestão da IA: <strong className="text-fg">{sugerida}</strong>{revisao?.motivo ? ` — ${revisao.motivo}` : ""}</span>{categoria !== revisao?.categoryId && <Button variant="link" onClick={() => setCategoria(revisao?.categoryId ?? "")}>Usar a sugestão</Button>}</p>
+            : revisao ? <p className="text-helper text-fg-muted">A IA não identificou a categoria só pela descrição. Escolha uma, ou deixe para a equipe classificar.</p> : null}
+        </div>
+        {escolher && <div className="space-y-1.5">
+          <Campo label="Setor que vai atender"><Select required value={dados.handlingSectorCode} onChange={e => editar({ ...dados, handlingSectorCode: e.target.value })}><option value="">Selecione o setor</option>{atendem.map(st => <option key={st.code} value={st.code}>{st.label}</option>)}</Select></Campo>
+          {revisao?.setor ? <p className="flex flex-wrap items-start gap-1.5 text-helper text-fg-secondary"><Sparkles size={14} aria-hidden className="mt-0.5 shrink-0 text-brand" /><span>Sugestão da IA: <strong className="text-fg">{nomeDoSetor(revisao.setor)}</strong>{revisao.motivoDoSetor ? ` — ${revisao.motivoDoSetor}` : ""}</span>{dados.handlingSectorCode !== revisao.setor && <Button variant="link" onClick={() => editar({ ...dados, handlingSectorCode: revisao.setor ?? "" })}>Usar a sugestão</Button>}</p>
+            : revisao?.perguntaDoSetor ? <Aviso tom="info" icone={<Sparkles aria-hidden />}><p className="font-semibold">A IA ficou em dúvida sobre o setor</p><p>{revisao.perguntaDoSetor}</p><p>Escolha acima o setor que vai atender.</p></Aviso>
+            : <p className="text-helper text-fg-muted">Escolha o setor que vai atender o pedido.</p>}
+        </div>}
+        {perguntas.length > 0 && <section aria-labelledby="perguntas-da-ia" className="space-y-4 rounded-lg border border-border p-4">
+          <div>
+            <h3 id="perguntas-da-ia" className="text-ui font-semibold text-fg">Perguntas da IA <span className="font-normal text-fg-muted">(opcional)</span></h3>
+            <p className="mt-1 text-helper text-fg-secondary">Responder ajuda a equipe a começar sem precisar perguntar. Sem resposta, o chamado abre com o que você escreveu.</p>
+          </div>
+          {perguntas.map((q, i) => <div key={q.text} className="space-y-2">
+            <p className="text-ui font-medium text-fg">{q.text}</p>
+            {q.options.length > 0 && <div className="flex flex-wrap gap-2">{q.options.map(o => <button key={o} type="button" aria-pressed={respostas[i] === o} onClick={() => responder(i, respostas[i] === o ? "" : o)} className={`min-h-9 rounded-md border px-3 py-1.5 text-left text-ui font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${respostas[i] === o ? "border-brand bg-brand/8 text-brand" : "border-border-strong text-fg hover:bg-surface-hover"}`}>{o}</button>)}</div>}
+            <Input aria-label={`Resposta: ${q.text}`} maxLength={2000} value={respostas[i] ?? ""} onChange={e => responder(i, e.target.value)} placeholder={q.options.length ? "Ou escreva a resposta" : "Escreva a resposta"} />
+          </div>)}
+        </section>}
+      </fieldset>
+    </Card> : <>
     <Card className="p-5 sm:p-6">
       <fieldset disabled={!!busy} className="space-y-5">
         <h2 className="text-heading font-semibold text-fg">Detalhes do chamado</h2>
         <CamposDoChamado dados={dados} onChange={editar} categorias={categorias} setores={setores} ocultarCategoria ocultarTitulo ocultarTags abertura />
-        {escolher && <div className="space-y-1.5">
-          <Campo label="Enviar para"><Select required value={dados.handlingSectorCode} onChange={e => { escolhaManual.current = true; editar({ ...dados, handlingSectorCode: e.target.value }); }}><option value="">Selecione o setor que vai atender</option>{atendem.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}</Select></Campo>
-          {sugerindo ? <p role="status" className="text-helper text-fg-muted">A IA está lendo o pedido para sugerir o setor…</p>
-            : sugestao ? <p className="flex flex-wrap items-start gap-1.5 text-helper text-fg-secondary"><Sparkles size={14} aria-hidden className="mt-0.5 shrink-0 text-brand" /><span>Sugestão da IA: <strong className="text-fg">{nomeDoSetor(sugestao.setor)}</strong>{sugestao.motivo ? ` — ${sugestao.motivo}` : ""}</span>{dados.handlingSectorCode !== sugestao.setor && <Button variant="link" onClick={() => { escolhaManual.current = true; editar({ ...dados, handlingSectorCode: sugestao.setor }); }}>Usar a sugestão</Button>}</p>
-            : <p className="text-helper text-fg-muted">{tentou ? "A IA não conseguiu sugerir um setor para este pedido. Escolha qual vai atender." : "Descreva o pedido e a IA sugere o setor. Quem decide é você."}</p>}
-        </div>}
       </fieldset>
     </Card>
     <Card className="min-w-0">
       <PainelDeAnexos anexos={anexos} busy={busy} onSubir={subir} onRetirar={retirar} />
     </Card>
+    </>}
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0 max-w-2xl space-y-1">
-        <p className="flex items-start gap-2 text-ui text-fg-secondary"><ScanSearch size={16} aria-hidden className="mt-0.5 shrink-0 text-fg-muted" />O chamado abre na hora. Depois, a IA confere se já existe no Orquestrador algo que faça o pedido e classifica o chamado; você é avisado no sino quando terminar.</p>
+        <p className="flex items-start gap-2 text-ui text-fg-secondary"><ScanSearch size={16} aria-hidden className="mt-0.5 shrink-0 text-fg-muted" />{etapa === 1
+          ? "A IA lê o pedido, sugere o título e a categoria e pode fazer perguntas. Você confere e abre o chamado; responder é opcional."
+          : "O chamado abre com o que está nesta tela. Depois, a IA confere se já existe no Orquestrador algo que faça o pedido; você é avisado no sino."}</p>
+        {busy === "revisando" && <p role="status" className="text-ui text-fg-secondary">A IA está lendo o pedido. Costuma levar alguns segundos; se preferir, abra sem esperar.</p>}
         {salvoAs && <p className="text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
         {textoDeBusy && <p role="status" className="text-ui text-fg-secondary">{textoDeBusy} {textoDeBusy === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}
         {erro && <p role="alert" className="text-ui text-danger">{erro} <Button variant="link" onClick={() => window.location.reload()}>Recarregar rascunho salvo</Button></p>}
       </div>
-      <Button type="submit" size="lg" className="w-full sm:w-auto sm:min-w-56" disabled={!!busy} loading={busy === "abrindo"} loadingLabel="Abrindo o chamado…">Abrir chamado</Button>
+      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+        {etapa === 2 && <Button variant="secondary" size="lg" disabled={!!busy} onClick={() => setEtapa(1)}><ArrowLeft size={16} aria-hidden />Voltar</Button>}
+        {busy === "revisando" && <Button variant="secondary" size="lg" onClick={abrirSemEsperar}>Abrir sem esperar</Button>}
+        {etapa === 1
+          ? <Button type="submit" size="lg" className="w-full sm:w-auto sm:min-w-56" disabled={!!busy} loading={busy === "revisando" || busy === "abrindo"} loadingLabel={busy === "abrindo" ? "Abrindo o chamado…" : "A IA está lendo o pedido…"}>Continuar</Button>
+          : <Button type="submit" size="lg" className="w-full sm:w-auto sm:min-w-56" disabled={!!busy} loading={busy === "abrindo"} loadingLabel="Abrindo o chamado…">Abrir chamado</Button>}
+      </div>
     </div>
   </form>;
 }

@@ -12,7 +12,7 @@ O módulo `helpdesk` porta o atendimento do Hub para o Connect: categorias e for
 
 Chamados começa desativado no controle de módulos. Ao ativá-lo, o atalho aparece para quem tem acesso, sem uma ocultação adicional por padrão no menu Geral. Personalizações de visibilidade feitas explicitamente pelo administrador continuam sendo respeitadas.
 
-O setor responsável vem exclusivamente de `TenantModule.sectorCode`, resolvido por `setorDoModulo`. Transferir o módulo transfere o acesso de atendimento da fila inteira. Atribuições antigas são preservadas e sinalizadas para redistribuição; não concedem acesso à equipe anterior.
+Desde 12/11/2026 (funcionalidade-640), um ou mais setores administram os chamados: o padrão é o dono do módulo (`TenantModule.sectorCode`) e os outros são os setores ligados (`TenantModuleSector`), escolhidos pelo administrador em **Chamados → Configurar**. Cada chamado guarda o setor que o atende (`handlingSectorCode`): a equipe desse setor vê e atende o chamado, e o administrador vê todos. Um setor com chamado em aberto só sai da lista depois de a equipe redirecionar esses chamados. Se um setor deixar de administrar, a equipe dele continua vendo os chamados que ficaram com ele, mas não atende mais; o administrador redireciona o que restou.
 
 Para desativar, desligue o módulo em Módulos. Telas, ações e downloads ficam indisponíveis; chamados, anexos e rascunhos permanecem guardados. Reverter a versão da aplicação não exige apagar as tabelas adicionadas. Não remova a migration nem limpe históricos para fazer rollback.
 
@@ -30,6 +30,41 @@ Para desativar, desligue o módulo em Módulos. Telas, ações e downloads ficam
 Remover um setor solicitante impede novas aberturas, preservando o acompanhamento dos chamados anteriores. A inclusão como responsável não substitui o vínculo com o setor atendente.
 
 ## Abertura e revisão por IA
+
+### Como é desde 16/11/2026
+
+O Novo chamado tem duas etapas (funcionalidade-702):
+
+1. **Pedido.** Setor de origem, prioridade, descrição e anexos. Não há campo de título, categoria nem setor.
+2. **Revisão.** Ao clicar em **Continuar**, a IA lê o pedido uma vez (`src/lib/chamados/revisao.ts`, rota `POST /api/chamados/revisao`) e propõe o título, a categoria e até três perguntas. A pessoa edita o título, confirma ou troca a categoria (ou escolhe **Deixar para a equipe classificar**) e responde às perguntas se quiser. Responder é opcional.
+
+Com dois ou mais setores administrando, a revisão também mostra o **setor que vai atender**, proposto pela IA (funcionalidade-709). Se a IA ficar em dúvida, ela não escolhe: mostra uma pergunta que ajuda a decidir, e a pessoa escolhe o setor. Sem setor escolhido, o chamado não abre pela revisão.
+
+Enquanto a IA lê o pedido, **Abrir sem esperar** abre o chamado como foi escrito, sem a revisão. Se a IA não responder, a etapa 2 abre sem sugestão, e a pessoa ainda confere o título.
+
+O chamado nasce na hora, em **Aguardando triagem** (desde 10/11/2026, melhoria-575). A triagem roda depois da resposta (`src/lib/chamados/triagem-servidor.ts`):
+
+- confere se algum robô, site ou app do Orquestrador já faz o pedido. Só aponta o item quando a IA diz que ele faz a ação pedida (bug-700);
+- classifica o chamado, a não ser que a pessoa tenha passado pela revisão. Nesse caso vale a categoria confirmada, ou "a equipe classifica", e a IA não é perguntada de novo. O que foi aprovado fica em `_revisao`, no rascunho;
+- as respostas às perguntas entram no fim da descrição, sob "Respostas às perguntas da triagem:".
+
+- sem a revisão, com dois ou mais setores, a triagem pergunta à IA para qual setor o chamado vai. O chamado nasce no setor padrão e, se a IA escolher outro, vai para ele, com o evento "A triagem automática enviou o chamado para…" e o aviso à equipe nova. Na dúvida, fica no padrão.
+
+### Enviar para outro setor
+
+Desde 16/11/2026 (funcionalidade-709) o envio tem dois tipos, escolhidos pela equipe do setor que atende ou pelo administrador:
+
+- **Para o outro setor continuar**: o setor de antes fez a parte dele. O chamado vai para o outro setor, e o de antes passa a **acompanhar** (`HelpdeskTicketSector`): vê o chamado, inclusive o que é interno, e é avisado das mudanças de situação, mas não atende. O que o outro setor precisa fazer é obrigatório.
+- **O chamado está no setor errado**: o setor de antes sai, como era até 12/11.
+
+Nos dois, os responsáveis saem, a equipe nova e quem abriu são avisados, e a linha do tempo mostra o tipo. Se o chamado voltar para um setor que acompanha, esse setor volta a atender e deixa de só acompanhar.
+
+A revisão não grava nada: só o envio grava. Ela usa o agente **Triagem de chamados** e os mesmos tetos, com limite de dez revisões por pessoa por minuto.
+
+### Como era até 10/11/2026
+
+Os parágrafos abaixo descrevem a abertura com conversa e parecer, que saiu em 10/11/2026. Ficam como registro: os chamados daquele período guardam o parecer, e a equipe o lê na tela do chamado.
+
 
 Preencha o setor de origem, o título e a descrição. A abertura não exige escolher categoria: ao enviar, a IA identifica o grupo e a categoria pelo conteúdo e pelas respostas do solicitante. O rascunho aceita categoria vazia e pode ser retomado pela lista. Campos e evidências específicos aparecem depois da classificação e continuam obrigatórios antes da abertura. O texto original é preservado.
 

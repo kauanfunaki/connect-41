@@ -445,7 +445,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Para criar uma lista ou uma pasta sem entrar no espaço, clique em “Criar”, ao lado de “Novo espaço”, escolha “Lista” ou “Pasta”, dê o nome, escolha onde fica e clique em “Criar lista” ou “Criar pasta”.",
           "Dentro do espaço, clique em “Nova pasta” ou “Nova lista”, dê um nome e clique em “Criar”.",
           "Para mudar o nome, a cor, o ícone ou a permissão do espaço, abra o espaço e clique em “Editar espaço”.",
-          "Na tarefa, clique em “Editar tarefa” para ajustar os estágios das colunas.",
+          "Na tarefa, clique em “Editar estágios” para ajustar os estágios das colunas.",
           "Para criar uma atividade, na visão “Lista”, clique em “Adicionar atividade” no grupo do status, digite o nome e aperte Enter.",
           "Para criar a atividade de uma empresa ou pessoa, abra o campo de “Adicionar atividade” e clique em “criar para uma empresa ou pessoa”, embaixo dele; escolha quem é e clique em “Criar atividade”.",
           "Para criar uma subatividade, na visão “Lista”, passe o mouse na atividade e clique no “+” ao lado do nome; digite o nome e aperte Enter. A subatividade também pode ter subatividades, até 5 níveis abaixo da atividade.",

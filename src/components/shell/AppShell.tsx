@@ -21,9 +21,8 @@ import {
   Bot,
   CalendarCheck,
   ChevronDown,
+  ChevronLeft,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
   Pin,
   X,
   Building2,
@@ -824,6 +823,38 @@ export function AppShell({
         </aside>
       </ProvedorDaFaixa>
 
+      {/* A alça de recolher e mostrar o menu (16/11/2026, melhoria-697, estilo
+          5 do artefato "Alça do menu lateral"): saiu do cabeçalho e fica na
+          borda do menu, no meio da altura. Em repouso, um traço fino na cor da
+          marca; no mouse ou no Tab, cresce, mostra a seta e a borda inteira
+          acende. Mora numa coluna de largura zero ao lado da lateral, e não
+          dentro dela: o `overflow-hidden` da transição cortaria a metade de
+          fora. Só no computador; na gaveta o hambúrguer continua.
+          `z-50`, o mesmo da lateral: item de flex respeita o z-index mesmo
+          sem `position`, e com menos a lateral cobria a metade de dentro da
+          alça no hover. Vem depois dela no DOM, então ganha o empate; os
+          diálogos, também z-50 e no fim do body, continuam por cima. */}
+      <div className={`${SO_NA_COLUNA} relative z-50 w-0 flex-shrink-0`}>
+        <button
+          type="button"
+          onClick={alternarMenu}
+          aria-label={menuRecolhido ? "Expandir o menu lateral" : "Recolher o menu lateral"}
+          data-dica={menuRecolhido ? "Expandir o menu" : "Recolher o menu"}
+          aria-expanded={!menuRecolhido}
+          aria-controls="menu-lateral"
+          className="peer group/alca absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center h-9 w-1.5 rounded-full bg-brand opacity-55 text-on-brand cursor-pointer transition-[width,border-radius,opacity,background-color] duration-150 motion-reduce:transition-none before:absolute before:-inset-x-2.5 before:-inset-y-1 before:content-[''] hover:w-6 hover:rounded-lg hover:opacity-100 hover:bg-brand-solid focus-visible:w-6 focus-visible:rounded-lg focus-visible:opacity-100 focus-visible:bg-brand-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        >
+          <ChevronLeft
+            size={14}
+            strokeWidth={2.6}
+            aria-hidden
+            className={`opacity-0 transition-[opacity,rotate] duration-150 motion-reduce:transition-none group-hover/alca:opacity-100 group-focus-visible/alca:opacity-100 ${menuRecolhido ? "rotate-180" : ""}`}
+          />
+        </button>
+        {/* A borda do menu acende inteira junto com a alça. */}
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-px w-px bg-brand opacity-0 transition-opacity duration-150 peer-hover:opacity-100 peer-focus-visible:opacity-100" />
+      </div>
+
       {/* ── Main area ── */}
       {/* O brilho mora aqui, e não no <main> (05/10, opção A da revisão de
           fundo): começa no topo da janela, atrás do cabeçalho aberto, e fica
@@ -852,23 +883,8 @@ export function AppShell({
           >
             <Menu size={20} />
           </IconButton>
-          {/* Recolher e mostrar o menu lateral no computador (08/10/2026), à
-              esquerda da troca de setor; no celular a lateral já é gaveta.
-              Um botão de menu por vez (13/10/2026): este só com a coluna
-              fixa, o hambúrguer só na gaveta — o porquê do `max-lg:hidden`, e
-              não `hidden lg:inline-flex`, está em menuLateral.ts. Desde 14/10
-              recolher deixa a faixa de ícones, e o botão a abre de novo. */}
-          <IconButton
-            size="xl"
-            onClick={alternarMenu}
-            aria-label={menuRecolhido ? "Expandir o menu lateral" : "Recolher o menu lateral"}
-            data-dica={menuRecolhido ? "Expandir o menu" : "Recolher o menu"}
-            aria-expanded={!menuRecolhido}
-            aria-controls="menu-lateral"
-            className={`${SO_NA_COLUNA} -ml-2`}
-          >
-            {menuRecolhido ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
-          </IconButton>
+          {/* O botão de recolher o menu, que ficava aqui desde 08/10/2026,
+              virou a alça na borda da lateral (16/11/2026, melhoria-697). */}
           <div className="flex-1 min-w-0 flex items-center gap-3">
             {/* Onde estou: o escritório e o setor ativo, que o cartão embaixo
                 da logo mostrava até a busca ficar com o lugar dele (02/10). */}
