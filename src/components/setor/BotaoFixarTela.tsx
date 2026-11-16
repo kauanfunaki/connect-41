@@ -21,13 +21,17 @@ export function BotaoFixarTela({ code, fixada: inicial }: { code: string; fixada
   const [salvando, startTransition] = useTransition();
   const router = useRouter();
   const toast = useToast();
+  // O que o alfinete faz mora na dica dele (16/11/2026, melhoria-712): era o
+  // subtítulo das telas do setor ("O alfinete fixa a tela no topo da sidebar"),
+  // que saiu. O `title` vira a dica do Connect (`DicaFlutuante`).
+  const dica = fixada ? "Soltar da sidebar" : "Fixar no topo da sidebar";
 
   return (
     <button
       type="button"
       aria-pressed={fixada}
-      title={fixada ? "Soltar da sidebar" : "Fixar na sidebar"}
-      aria-label={fixada ? "Soltar da sidebar" : "Fixar na sidebar"}
+      title={dica}
+      aria-label={dica}
       disabled={salvando}
       onClick={() => {
         const alvo = !fixada;

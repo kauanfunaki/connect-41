@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { LayoutGrid } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageContainer } from "@/components/shared/PageContainer";
+import { CabecalhoDasTelasDoSetor } from "@/components/setor/CabecalhoDasTelasDoSetor";
 import { ModulosDoSetor } from "@/components/setor/ModulosDoSetor";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { codigosDeTelasFixadas } from "@/lib/telasFixadas-data";
@@ -44,7 +44,7 @@ export default async function TelasDoSetorPage({ params }: { params: Promise<{ c
 
   return (
     <PageContainer>
-      <PageHeader title={`Telas · ${sectorLabel(labels, code)}`} subtitle="Tudo o que o setor tem no Connect. O alfinete fixa a tela no topo da sidebar." />
+      <CabecalhoDasTelasDoSetor setor={sectorLabel(labels, code)} />
       {modulos.length === 0 ? (
         <Card>
           <EmptyState
