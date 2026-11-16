@@ -63,7 +63,15 @@ export function CamposDasRetencoes({
           {TRIBUTOS_RETIDOS.map((t) => {
             const s = situacao?.[t];
             return (
-              <CampoForm key={t} label={TRIBUTO[t].rotulo} htmlFor={`retencao-${t}`} helper={s?.texto}>
+              // Travado, o cadeado com o motivo na dica, sem frase embaixo
+              // (16/11/2026, melhoria-717); a situação da conta do imposto fica.
+              <CampoForm
+                key={t}
+                label={TRIBUTO[t].rotulo}
+                htmlFor={`retencao-${t}`}
+                helper={s?.travado ? undefined : s?.texto}
+                travado={s?.travado ? s.texto : undefined}
+              >
                 <Input
                   id={`retencao-${t}`}
                   name={campoDaRetencao(t)}

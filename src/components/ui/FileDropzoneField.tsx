@@ -20,6 +20,12 @@ type Props = {
    */
   compacto?: boolean;
   /**
+   * O que se espera ali, no lugar do "Escolher arquivo" (16/11/2026,
+   * melhoria-717): "Anexar boleto, nota ou comprovante". A própria área diz
+   * para que serve, sem frase de apoio em volta.
+   */
+  convite?: string;
+  /**
    * Avisa quem usa qual arquivo está escolhido — inclusive `null` ao limpar.
    *
    * Para as telas que NÃO submetem o input pelo formulário: o cadastro de
@@ -48,6 +54,7 @@ export function FileDropzoneField({
   required = false,
   id,
   compacto = false,
+  convite,
   onFileChange,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -163,9 +170,10 @@ export function FileDropzoneField({
             <span className="min-w-0 flex-1">
               <span className="block text-ui text-fg">
                 <span className="pointer-coarse:hidden">
-                  <span className="text-brand underline underline-offset-2">Escolher arquivo</span> ou arraste aqui
+                  <span className="text-brand underline underline-offset-2">{convite ?? "Escolher arquivo"}</span>
+                  {convite ? ", ou arraste aqui" : " ou arraste aqui"}
                 </span>
-                <span className="hidden text-brand underline underline-offset-2 pointer-coarse:inline">Toque para escolher</span>
+                <span className="hidden text-brand underline underline-offset-2 pointer-coarse:inline">{convite ?? "Toque para escolher"}</span>
               </span>
               <span className="block text-helper text-fg-muted">
                 {formatosLegiveis} · até {maxSizeMb} MB
@@ -173,11 +181,19 @@ export function FileDropzoneField({
             </span>
           ) : (
             <>
-              <span className="text-body text-fg pointer-coarse:hidden">
-                Arraste o arquivo aqui ou{" "}
-                <span className="text-brand underline underline-offset-2">clique para escolher</span>
+              {convite ? (
+                <span className="text-body text-fg pointer-coarse:hidden">
+                  <span className="text-brand underline underline-offset-2">{convite}</span>, ou arraste aqui
+                </span>
+              ) : (
+                <span className="text-body text-fg pointer-coarse:hidden">
+                  Arraste o arquivo aqui ou{" "}
+                  <span className="text-brand underline underline-offset-2">clique para escolher</span>
+                </span>
+              )}
+              <span className="hidden text-body text-brand underline underline-offset-2 pointer-coarse:inline">
+                {convite ?? "Toque para escolher o arquivo"}
               </span>
-              <span className="hidden text-body text-brand underline underline-offset-2 pointer-coarse:inline">Toque para escolher o arquivo</span>
               <span className="text-helper text-fg-muted">
                 {formatosLegiveis} · até {maxSizeMb} MB
               </span>
