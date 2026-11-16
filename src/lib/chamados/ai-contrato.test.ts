@@ -44,7 +44,7 @@ describe("contrato OpenAI do agente de chamados", () => {
     await gerarEstruturado({ ...entrada, esforco: "low" }); expect(JSON.parse(m.fetch.mock.calls[2][1].body)).not.toHaveProperty("reasoning");
   });
   it("as chamadas dos chamados pedem esforço baixo e 30 s", () => {
-    for (const f of ["classificacao", "triagem"]) expect(readFileSync(`src/lib/chamados/${f}.ts`, "utf8")).toMatch(/timeoutMs: 30000, esforco: "low"/);
+    for (const f of ["classificacao", "triagem", "revisao", "setorSugerido"]) expect(readFileSync(`src/lib/chamados/${f}.ts`, "utf8")).toMatch(/timeoutMs: 30000, esforco: "low"/);
   });
   it.each(["incomplete", "failed"])("recusa resposta com status %s", async status => {
     m.fetch.mockResolvedValue({ ok: true, json: async () => ({ status, output_text: '{"ok":true}' }) }); await expect(gerarEstruturado(entrada)).rejects.toThrow("não concluiu");

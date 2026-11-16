@@ -46,7 +46,7 @@ export async function escolherSetorNaTriagem(c: { tenantId: string; userId: stri
       tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT_DO_SETOR, nome: "setor_do_chamado",
       texto: JSON.stringify({ pedido: texto, setores: setores.map(s => ({ code: s.code, nome: s.label })) }),
       schema: { type: "object", additionalProperties: false, properties: { sectorCode: { anyOf: [{ type: "string", enum: codigos }, { type: "null" }] }, reason: { type: "string" } }, required: ["sectorCode", "reason"] },
-      maxTokens: 300, estrito: true, timeoutMs: 20000, store: false,
+      maxTokens: 300, estrito: true, timeoutMs: 30000, esforco: "low", store: false,
       contexto: { trigger: "SISTEMA", userId: c.userId, entityType: "HelpdeskTicket", entityId: c.ticketId },
     });
     return lerSugestao(valor, codigos);
