@@ -23,6 +23,12 @@ describe("tela que é item próprio debaixo de outro item (04/11/2026)", () => {
     expect(caminhoDoMenuAtivo("/processos/123", "/processos")).toBe(true);
     expect(caminhoDoMenuAtivo("/processos/kanban", "/processos")).toBe(true);
   });
+
+  // 16/11/2026 (melhoria-706): as Entregas deixaram de ser item do menu e são
+  // uma visão do Controle interno — ele fica aceso nelas.
+  it("as Entregas acendem o Controle interno, como as outras visões dele", () => {
+    for (const p of ["/controle-interno", "/controle-interno/historico", "/controle-interno/entregas"]) expect(caminhoDoMenuAtivo(p, "/controle-interno"), p).toBe(true);
+  });
 });
 
 describe("quadrosAtivo", () => {

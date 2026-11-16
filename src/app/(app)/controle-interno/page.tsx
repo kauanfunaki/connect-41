@@ -11,7 +11,7 @@ import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { formatCalendarDate } from "@/lib/format";
-import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/NavegacaoTech";
+import { VisoesDoControle, AcoesDoControle, enderecoDaVisao } from "@/components/tech-interno/NavegacaoTech";
 import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { listarItens, opcoesTech } from "@/lib/tech-interno/servidor";
@@ -43,7 +43,7 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const atual = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "voltar") atual.set(k, v);
   const voltar = atual.toString() ? `${ROTA_TECH_INTERNO}?${atual}` : ROTA_TECH_INTERNO;
   const hrefVisao = (view: string, month = filtros.month) => {
-    if (view === "historico") return `${ROTA_TECH_INTERNO}/historico`;
+    const propria = enderecoDaVisao(view); if (propria) return propria;
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "page" && k !== "pagina") q.set(k, v);
     q.set("visao", view); q.set("mes", month); return `${ROTA_TECH_INTERNO}?${q}`;
   };

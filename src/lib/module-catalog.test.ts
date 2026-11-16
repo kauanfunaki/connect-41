@@ -43,6 +43,16 @@ describe("catálogo de módulos", () => {
     expect(getModuleDef("tech_github_contributions")).toMatchObject({ sectorCode: "tech", fixedSector: true, defaultEnabled: false });
     expect(MODULE_ROUTES.tech_github_contributions).toBe("/produtividade");
   });
+  // 16/11/2026 (melhoria-706): as Entregas da Tech viraram uma visão do
+  // Controle interno. O código saiu do catálogo e das rotas: não liga, não
+  // desliga, não entra em menu, busca nem fixadas, e o endereço é do Controle interno.
+  it("as Entregas da Tech não são mais módulo: o endereço é do Controle interno", () => {
+    expect(getModuleDef("tech_entregas")).toBeUndefined();
+    expect(MODULE_ROUTES.tech_entregas).toBeUndefined();
+    expect(Object.values(MODULE_ROUTES)).not.toContain("/controle-interno/entregas");
+    expect(MODULE_ROUTES.tech_controle_interno).toBe("/controle-interno");
+  });
+
   it("todo módulo tem rota", () => {
     const semRota = MODULE_CATALOG.filter((m) => !MODULE_ROUTES[m.code]).map((m) => m.code);
     expect(semRota).toEqual([]);

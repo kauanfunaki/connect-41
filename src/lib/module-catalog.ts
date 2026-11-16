@@ -151,14 +151,16 @@ export const ICONE_DO_GRUPO: Record<GrupoDeModulo, IconeDeModulo> = {
  * `ORDEM_DOS_GRUPOS`. Cada grupo aqui é um bloco do menu — um grupo de uma tela
  * só vira tela avulsa.
  *
- * - Tech: Orquestrador, Produtividade, Entregas da Tech, Ceci, Chamados e
- *   Certificados digitais. O Controle interno não entra: fica no Geral, no
- *   lugar dos Quadros (`MODULO_NO_LUGAR_DOS_QUADROS`).
+ * - Tech: Orquestrador, Produtividade, Ceci, Chamados e Certificados digitais.
+ *   O Controle interno não entra: fica no Geral, no lugar dos Quadros
+ *   (`MODULO_NO_LUGAR_DOS_QUADROS`). As Entregas da Tech saíram daqui em
+ *   16/11/2026 (melhoria-706): são uma visão do Controle interno, e o grupo
+ *   Desenvolvimento ficou sem tela no menu do setor.
  * - Societário: Operação, Regularização, Exigências e prazos, Relatórios e Hub
  *   de robôs.
  */
 export const ORDEM_DO_MENU_DO_SETOR: Readonly<Record<string, readonly GrupoDeModulo[]>> = {
-  tech: ["Operação", "Relatórios", "Desenvolvimento", "Inteligência artificial", "Atendimento", "Documentos"],
+  tech: ["Operação", "Relatórios", "Inteligência artificial", "Atendimento", "Documentos"],
   societario: ["Operação", "Regularização", "Prazos", "Relatórios", "Automação"],
 };
 
@@ -263,7 +265,7 @@ export const MODULE_CATALOG: ModuleDef[] = [
   },
   {
     code: "tech_controle_interno", label: "Controle interno", sectorCode: "tech",
-    description: "Lista, Kanban e agenda de bugs, melhorias e próximos passos da equipe Tech",
+    description: "Lista, Kanban, histórico e entregas dos bugs, melhorias e próximos passos da equipe Tech",
     defaultEnabled: false, icon: "ClipboardList", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
   },
   {
@@ -282,14 +284,12 @@ export const MODULE_CATALOG: ModuleDef[] = [
     description: "Cada desenvolvedor e cada time no GitHub, e a atividade do time nos repositórios",
     defaultEnabled: false, icon: "ChartColumn", group: "Relatórios", menuDireto: true, fixedSector: true,
   },
-  {
-    // As entregas da Tech (04/11/2026, lote D dos ajustes de 03/11): a produtividade pelo que foi entregue e validado.
-    // Tela avulsa desde 09/11/2026: o Controle interno, de onde ela vinha, foi para o Geral.
-    code: "tech_entregas", label: "Entregas da Tech", sectorCode: "tech",
-    // Desde 05/11/2026 é a lista do que foi entregue.
-    description: "Os itens entregues no período, com tamanho, pontos, ciclo e de onde vieram",
-    defaultEnabled: false, icon: "ChartColumn", group: "Desenvolvimento", menuDireto: true, fixedSector: true,
-  },
+  // As Entregas da Tech (`tech_entregas`, de 04/11 a 16/11/2026) saíram do
+  // catálogo (16/11/2026, melhoria-706): viraram a visão Entregas do Controle
+  // interno, em /controle-interno/entregas, com o gate do `tech_controle_interno`.
+  // Sem migration: a linha do módulo que um escritório tenha gravada (ligado ou
+  // desligado, plano, tela fixada, ordem do menu, manutenção) fica sem efeito,
+  // porque tudo isso é lido a partir do catálogo. Não reaproveitar o código.
   {
     // O Orquestrador (09/11/2026; era "Ops Center"): no menu, só o título, com
     // Robôs, Apps e Sites dentro (ver `subTelas`, no AppShell).
@@ -1048,7 +1048,6 @@ export const MODULE_ROUTES: Record<string, string> = {
   tech_ceci: "/ceci",
   tech_github_contributions: "/produtividade",
   tech_ops_center:         "/ops",
-  tech_entregas: "/controle-interno/entregas",
   academia: "/academia",
   helpdesk: "/chamados",
   controladoria_conversas: "/conversas",

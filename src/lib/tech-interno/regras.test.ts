@@ -69,7 +69,9 @@ describe("controle interno do Tech", () => {
     // O Histórico é uma das visões da lista (10/11/2026): o item aberto de lá volta para lá.
     expect(destinoDeVolta("/controle-interno/historico")).toBe("/controle-interno/historico");
     expect(destinoDeVolta("/controle-interno/historico?q=busca&page=2")).toBe("/controle-interno/historico?q=busca&page=2");
-    for (const ruim of ["/controle-interno/bug-1", "/controle-interno/novo", "/controle-interno/historicox", "/controle-interno/historico/x"]) expect(destinoDeVolta(ruim)).toBe("/controle-interno");
+    // As Entregas também (16/11/2026, melhoria-706): viraram uma visão da lista.
+    expect(destinoDeVolta("/controle-interno/entregas?periodo=anterior")).toBe("/controle-interno/entregas?periodo=anterior");
+    for (const ruim of ["/controle-interno/bug-1", "/controle-interno/novo", "/controle-interno/historicox", "/controle-interno/historico/x", "/controle-interno/entregasx", "/controle-interno/entregas/x"]) expect(destinoDeVolta(ruim)).toBe("/controle-interno");
   });
   it("o endereço curto do item: prefixo do tipo de agora e o número do escritório", () => {
     expect(idCurtoDoItem({ type: "BUG", number: 123 })).toBe("bug-123");
