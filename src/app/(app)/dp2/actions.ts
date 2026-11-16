@@ -17,6 +17,10 @@ import { PAPEIS_LANCAVEIS, TIPOS_DE_RUBRICA, ehPapel } from "@/lib/dp2/rubricas"
 import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
 import { lerComparativo } from "@/lib/dp2/comparativo";
 import { lerNumero, lerInteiro } from "@/lib/dp2/entrada";
+import { PersonEmploymentStatus, PersonType } from "@/generated/prisma/client";
+import { comNovaTentativa, proximoNumero } from "@/lib/enderecoCurtoNumeracao";
+import { formatCpf } from "@/lib/format";
+import { cpfValido } from "@/lib/dp2/esocial/documentos";
 import { importarEventos, podeImportar, type RubricaParaImportar } from "@/lib/dp2/importacaoDeEventos";
 import { DIAS_DO_LINK, gerarRemessaDaCompetencia, guardarHoleritesNosArquivos, novoToken } from "@/lib/dp2/saidas";
 import { CAMPOS_DAS_CONTAS } from "@/lib/dp2/contabilizacao";
@@ -37,6 +41,17 @@ import { lerAgentes, lerProcedimentos, lerResponsaveis } from "@/lib/dp2/esocial
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
 import { consolidarTrabalhadores, lerArquivosDoEsocial, type TrabalhadorImportado } from "@/lib/dp2/esocial/importacao";
 import { gravarImportacao, previaDaImportacao, type LinhaDaPrevia, type ResultadoDaImportacao } from "@/lib/dp2/esocial/importacaoServidor";
+import {
+  LIMITE_DE_ACESSOS_POR_DIA,
+  acessosDoDia,
+  acessosLivres,
+  consultaBloqueadaHoje,
+  hojeEmBrasilia,
+  lerItens,
+  lerListaDeCpfs,
+  type ItemDaBusca,
+  type SituacaoDaBusca,
+} from "@/lib/dp2/esocial/buscaPorCpf";
 import { MOTIVO_LABEL, type MotivoCanonico } from "@/lib/rescisao/motivos";
 
 type Acesso = { ctx: AuthContext; tenantId: string; userId: string };
@@ -1201,4 +1216,207 @@ export async function importarDoEsocialAction(_: EstadoDaImportacao, fd: FormDat
     `${resultado.dependentes} dependente(s)`,
   ];
   return { ok: true, etapa: "feita", texto: `Importado: ${partes.join(", ")}.${resultado.fora.length ? ` ${resultado.fora.length} ficaram de fora.` : ""}`, resultado };
+}
+
+// ─── Buscar colaboradores no eSocial por CPF e admissão (13/11/2026, funcionalidade-671) ─
+
+export type BuscaNaTela = { id: string; itens: ItemDaBusca[]; usadosHoje: number; bloqueadaHoje: boolean };
+export type EstadoDaBusca = { ok: false; texto: string } | { ok: true; busca: BuscaNaTela | null; erros: string[] };
+
+/** Os acessos ao eSocial que a empresa já usou hoje, somando todas as buscas dela. */
+async function usadosHojeNaEmpresa(tenantId: string, companyId: string): Promise<number> {
+  const dia = hojeEmBrasilia();
+  const buscas = await getPrisma().dp2BuscaEsocial.findMany({
+    where: { tenantId, companyId, updatedAt: { gte: new Date(Date.now() - 2 * 86_400_000) } },
+    select: { acessos: true },
+  });
+  return buscas.reduce((s, b) => s + acessosDoDia(b.acessos, dia), 0);
+}
+
+async function buscaNaTela(tenantId: string, companyId: string, id?: string): Promise<BuscaNaTela | null> {
+  const b = await getPrisma().dp2BuscaEsocial.findFirst({
+    where: id ? { id, tenantId, companyId } : { tenantId, companyId, concluida: false },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!b) return null;
+  return { id: b.id, itens: lerItens(b.itens), usadosHoje: await usadosHojeNaEmpresa(tenantId, companyId), bloqueadaHoje: consultaBloqueadaHoje() };
+}
+
+async function acessoABusca(companyId: string): Promise<{ erro: string } | { a: Acesso }> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return { erro: "Sem permissão para isto no DP 2." };
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return { erro: recusa };
+  return { a };
+}
+
+export async function abrirBuscaEsocialAction(companyId: string): Promise<EstadoDaBusca> {
+  const r = await acessoABusca(companyId);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  return { ok: true, busca: await buscaNaTela(r.a.tenantId, companyId), erros: [] };
+}
+
+/** Cria a busca com a lista colada; havendo uma em aberto, junta os CPFs novos nela. */
+export async function criarBuscaEsocialAction(companyId: string, texto: string): Promise<EstadoDaBusca> {
+  const r = await acessoABusca(companyId);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  const { itens, erros } = lerListaDeCpfs(texto);
+  if (itens.length === 0) return { ok: false, texto: erros.length ? erros.join(" ") : "Cole ao menos um CPF com a data de admissão." };
+  const prisma = getPrisma();
+  const aberta = await prisma.dp2BuscaEsocial.findFirst({ where: { tenantId: r.a.tenantId, companyId, concluida: false }, orderBy: { createdAt: "desc" } });
+  let id: string;
+  if (aberta) {
+    const ja = lerItens(aberta.itens);
+    const novos = itens.filter((i) => !ja.some((x) => x.cpf === i.cpf));
+    await prisma.dp2BuscaEsocial.update({ where: { id: aberta.id }, data: { itens: [...ja, ...novos] } });
+    id = aberta.id;
+  } else {
+    id = (await prisma.dp2BuscaEsocial.create({ data: { tenantId: r.a.tenantId, companyId, itens, acessos: {}, criadaPorId: r.a.userId }, select: { id: true } })).id;
+  }
+  return { ok: true, busca: await buscaNaTela(r.a.tenantId, companyId, id), erros };
+}
+
+/**
+ * Guarda um acesso ao eSocial antes de o Assinador chamar: recusa do dia 1 ao
+ * 7 e depois do 10º acesso do dia da empresa. Conta mesmo se a chamada falhar,
+ * como o eSocial conta.
+ */
+export async function reservarAcessoEsocialAction(companyId: string, buscaId: string): Promise<{ ok: true; livres: number } | { ok: false; texto: string }> {
+  const r = await acessoABusca(companyId);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  if (consultaBloqueadaHoje()) return { ok: false, texto: "O eSocial não aceita consultas do dia 1 ao 7 de cada mês. A busca continua a partir do dia 8." };
+  const usados = await usadosHojeNaEmpresa(r.a.tenantId, companyId);
+  if (usados >= LIMITE_DE_ACESSOS_POR_DIA) {
+    return { ok: false, texto: `A empresa já usou os ${LIMITE_DE_ACESSOS_POR_DIA} acessos ao eSocial de hoje. A busca continua amanhã de onde parou.` };
+  }
+  const prisma = getPrisma();
+  const b = await prisma.dp2BuscaEsocial.findFirst({ where: { id: buscaId, tenantId: r.a.tenantId, companyId }, select: { acessos: true } });
+  if (!b) return { ok: false, texto: "Busca não encontrada." };
+  const dia = hojeEmBrasilia();
+  await prisma.dp2BuscaEsocial.update({
+    where: { id: buscaId },
+    data: { acessos: { ...((b.acessos ?? {}) as Record<string, number>), [dia]: acessosDoDia(b.acessos, dia) + 1 } },
+  });
+  return { ok: true, livres: acessosLivres(usados + 1) };
+}
+
+/** O que a consulta ou o download devolveu, para cada CPF. */
+export async function registrarResultadoEsocialAction(
+  companyId: string,
+  buscaId: string,
+  resultados: { cpf: string; situacao: SituacaoDaBusca; ids?: string[]; mensagem?: string | null }[]
+): Promise<EstadoDaBusca> {
+  const r = await acessoABusca(companyId);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  const prisma = getPrisma();
+  const b = await prisma.dp2BuscaEsocial.findFirst({ where: { id: buscaId, tenantId: r.a.tenantId, companyId } });
+  if (!b) return { ok: false, texto: "Busca não encontrada." };
+  const itens = lerItens(b.itens).map((it) => {
+    const novo = resultados.find((x) => x.cpf === it.cpf);
+    if (!novo) return it;
+    return { ...it, situacao: novo.situacao, ids: novo.ids ?? it.ids, mensagem: novo.mensagem?.slice(0, 300) ?? null };
+  });
+  const concluida = itens.every((i) => i.situacao === "BAIXADO" || i.situacao === "NAO_ENCONTRADO");
+  await prisma.dp2BuscaEsocial.update({ where: { id: buscaId }, data: { itens, concluida } });
+  if (concluida) {
+    await logAudit({
+      tenantId: r.a.tenantId,
+      userId: r.a.userId,
+      action: "folha.busca_esocial_concluida",
+      entityType: "Company",
+      entityId: companyId,
+      metadata: { pessoas: itens.length, baixadas: itens.filter((i) => i.situacao === "BAIXADO").length },
+    });
+  }
+  return { ok: true, busca: await buscaNaTela(r.a.tenantId, companyId, buscaId), erros: [] };
+}
+
+/** Recomeça um CPF (data errada, por exemplo): volta a pendente com a nova data. */
+export async function corrigirItemDaBuscaAction(companyId: string, buscaId: string, cpf: string, admissao: string): Promise<EstadoDaBusca> {
+  const r = await acessoABusca(companyId);
+  if ("erro" in r) return { ok: false, texto: r.erro };
+  const lido = lerListaDeCpfs(`${cpf};${admissao}`);
+  if (lido.itens.length === 0) return { ok: false, texto: lido.erros.join(" ") || "Data inválida." };
+  const prisma = getPrisma();
+  const b = await prisma.dp2BuscaEsocial.findFirst({ where: { id: buscaId, tenantId: r.a.tenantId, companyId } });
+  if (!b) return { ok: false, texto: "Busca não encontrada." };
+  const itens = lerItens(b.itens).map((it) => (it.cpf === lido.itens[0].cpf ? lido.itens[0] : it));
+  await prisma.dp2BuscaEsocial.update({ where: { id: buscaId }, data: { itens, concluida: false } });
+  return { ok: true, busca: await buscaNaTela(r.a.tenantId, companyId, buscaId), erros: [] };
+}
+
+// ─── Novo colaborador direto no DP 2 (13/11/2026, funcionalidade-671) ────────
+
+/**
+ * Cadastra a pessoa e o contrato do DP 2 de uma vez, sem passar pelo setor
+ * Recrutamento. CPF já cadastrado no escritório não é duplicado: se for desta
+ * empresa, o DP usa o Editar; se for de outra, avisa onde está.
+ */
+export async function criarColaboradorDp2Action(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+
+  const nome = texto(fd, "novo_nome").replace(/\s+/g, " ");
+  const cpf = texto(fd, "novo_cpf").replace(/\D/g, "");
+  const admissao = texto(fd, "novo_admissao");
+  const nascimento = texto(fd, "novo_nascimento");
+  if (nome.length < 3) return erro("Informe o nome completo.");
+  if (!cpfValido(cpf)) return erro("CPF inválido.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(admissao)) return erro("Informe a data de admissão.");
+  const salarioBase = lerNumero(texto(fd, "salarioBase"));
+  if (salarioBase === null || salarioBase <= 0) return erro("Informe o salário.");
+  const banco = texto(fd, "bancoCodigo").replace(/\D/g, "");
+  if (banco && banco.length !== 3) return erro("O banco é o código de 3 dígitos (ex.: 341).");
+
+  const prisma = getPrisma();
+  const existente = await prisma.person.findFirst({
+    where: { tenantId: a.tenantId, cpf: { in: [cpf, formatCpf(cpf)] } },
+    select: { id: true, name: true, currentCompanyId: true, currentCompany: { select: { name: true, displayName: true } } },
+  });
+  if (existente) {
+    if (existente.currentCompanyId === companyId) return erro(`${existente.name} já está cadastrado nesta empresa: use o Editar na lista.`);
+    const onde = existente.currentCompany?.displayName || existente.currentCompany?.name;
+    return erro(`Este CPF já é de ${existente.name}${onde ? `, cadastrado em ${onde}` : ""}. Transfira a pessoa no cadastro antes de criar o contrato aqui.`);
+  }
+
+  const data = (s: string) => (/^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(`${s}T12:00:00Z`) : null);
+  const nomeDoCargo = texto(fd, "novo_cargo").slice(0, 120);
+  const pessoa = await comNovaTentativa(() =>
+    prisma.$transaction(async (tx) => {
+      const cargo = nomeDoCargo
+        ? ((await tx.cargo.findFirst({ where: { companyId, name: nomeDoCargo }, select: { id: true } })) ??
+          (await tx.cargo.create({ data: { tenantId: a.tenantId, companyId, name: nomeDoCargo }, select: { id: true } })))
+        : null;
+      return tx.person.create({
+        data: {
+          tenantId: a.tenantId,
+          number: await proximoNumero(tx, "pessoa", a.tenantId),
+          name: nome,
+          cpf: formatCpf(cpf),
+          birthDate: data(nascimento),
+          admissionDate: data(admissao),
+          email: texto(fd, "novo_email") || null,
+          phone: texto(fd, "novo_telefone") || null,
+          type: PersonType.COLABORADOR,
+          isInternal: false,
+          currentCompanyId: companyId,
+          employmentStatus: PersonEmploymentStatus.ATIVO,
+          currentSalary: salarioBase,
+          ...(cargo ? { cargoId: cargo.id } : {}),
+        },
+        select: { id: true, name: true },
+      });
+    })
+  );
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "person.create", entityType: "Person", entityId: pessoa.id, metadata: { name: pessoa.name, origem: "dp2" } });
+
+  // O contrato pelo mesmo caminho do Editar (mesmas regras e a mesma Auditoria).
+  fd.set("personId", pessoa.id);
+  const contrato = await salvarVinculoAction(null, fd);
+  if (!contrato?.ok) return erro(`${pessoa.name} foi cadastrado, mas o contrato não: ${contrato?.texto ?? "erro desconhecido"}. Abra pelo Editar e corrija.`);
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${pessoa.name} cadastrado, com o contrato.` };
 }

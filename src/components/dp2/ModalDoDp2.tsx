@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { startTransition, useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -40,7 +40,17 @@ export function ModalDoDp2({
     <Modal open onClose={fechar} title={titulo} maxWidth="max-w-3xl">
       {apoio && <p className="text-fs-2 text-fg-muted -mt-1 mb-2">{apoio}</p>}
       {acao ? (
-        <form action={enviar} onInput={pularAoCompletar}>
+        <form
+          // onSubmit em vez de action={enviar}: com action, o React limpa o
+          // formulário ao terminar, e quem errou um campo perdia tudo o que
+          // tinha digitado (visto no Novo colaborador, 13/11/2026).
+          onSubmit={(e) => {
+            e.preventDefault();
+            const dados = new FormData(e.currentTarget);
+            startTransition(() => enviar(dados));
+          }}
+          onInput={pularAoCompletar}
+        >
           {children}
           <div className="sticky bottom-0 -mx-5 -mb-5 mt-2 flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface-elevated px-5 py-4">
             {estado && !estado.ok && (

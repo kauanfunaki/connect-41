@@ -10,6 +10,7 @@ import { Selo } from "@/components/ui/Selo";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import type { LinhaDaPrevia, SituacaoNaPrevia } from "@/lib/dp2/esocial/importacaoServidor";
+import { BuscaNoEsocial } from "@/components/dp2/BuscaNoEsocial";
 import { importarDoEsocialAction, previaDoEsocialAction, type EstadoDaImportacao } from "@/app/(app)/dp2/actions";
 
 const NOME: Record<SituacaoNaPrevia, string> = { NOVA: "Novo", EXISTE: "Já cadastrado", OUTRA_EMPRESA: "Em outra empresa", DESLIGADO: "Desligado", ERRO: "Com erro" };
@@ -18,16 +19,15 @@ const brl = (v: number) => Number(v).toLocaleString("pt-BR", { style: "currency"
 const dataBr = (s: string | null) => (s ? s.split("-").reverse().join("/") : "—");
 
 /**
- * Importar os colaboradores da empresa do eSocial (13/11/2026,
- * funcionalidade-666), pelo .zip (ou .xml) baixado no portal do eSocial. Nada
- * é gravado antes de "Importar".
- *
- * Buscar direto pelo webservice do eSocial ficou de fora: o Manual do
- * Desenvolvedor (v1.16, seção 7.7) limita a 10 acessos por dia por empregador,
- * proíbe consultas do dia 1 ao 7 e só consulta trabalhador com o CPF, de 31 em
- * 31 dias. Não dá para trazer uma empresa inteira assim.
+ * Importar os colaboradores da empresa do eSocial (13/11/2026). Dois caminhos
+ * que terminam na mesma prévia, e nada é gravado antes de "Importar":
+ * - buscar no eSocial por CPF e admissão, como a Domínio, pelo Assinador do
+ *   Connect (funcionalidade-671, `BuscaNoEsocial`), respeitando os 10 acessos
+ *   por dia por empresa do eSocial;
+ * - enviar o .zip (ou .xml) baixado no portal ou vindo de outro sistema
+ *   (funcionalidade-666).
  */
-export function ImportarDoEsocial({ companyId, empresa }: { companyId: string; empresa: string }) {
+export function ImportarDoEsocial({ companyId, cnpj, empresa }: { companyId: string; cnpj: string | null; empresa: string }) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [arquivos, setArquivos] = useState<File[]>([]);
@@ -75,22 +75,22 @@ export function ImportarDoEsocial({ companyId, empresa }: { companyId: string; e
         <Plus size={14} aria-hidden="true" />
         Importar do eSocial
       </Button>
-      <Modal open={aberto} onClose={fechar} title={`Importar do eSocial · ${empresa}`} maxWidth="max-w-4xl">
+      <Modal open={aberto} onClose={fechar} title={`Importar do eSocial · ${empresa}`} maxWidth="max-w-5xl">
         {!previa && !(estado?.ok && estado.etapa === "feita") && (
           <div className="flex flex-col gap-4">
             <p className="text-fs-3 text-fg-muted">
               Traz os colaboradores da empresa com os contratos, os dependentes e os dados do eSocial. Só lê: nada é enviado ao eSocial, e nada é gravado antes de você conferir.
             </p>
+            <div className="grid gap-4 lg:grid-cols-[3fr_2fr] items-start">
+            <BuscaNoEsocial companyId={companyId} cnpj={cnpj} onArquivos={verPrevia} ocupado={pendente} />
             <section className="rounded-lg border border-border p-4 flex flex-col gap-3">
               <h3 className="text-fs-4 font-semibold text-fg flex items-center gap-2">
                 <FileUp size={18} aria-hidden="true" />
-                Envie o arquivo do eSocial
+                Ou envie os arquivos
               </h3>
-              <ol className="list-decimal pl-5 text-fs-2 text-fg-muted space-y-1">
-                <li>No portal do eSocial, entre com o certificado (o da empresa ou o do escritório com procuração).</li>
-                <li>No menu de download, peça os eventos da empresa desde a admissão mais antiga.</li>
-                <li>Quando o pedido ficar pronto, baixe o .zip e escolha aqui. Pode ser mais de um .zip, ou os .xml soltos.</li>
-              </ol>
+              <p className="text-fs-2 text-fg-muted">
+                Os XML dos eventos do eSocial, soltos ou em .zip: do “eSocial Download” do portal (menu Downloads › Solicitação) ou de outro sistema.
+              </p>
               <label className="text-fs-2 font-medium text-fg" htmlFor="arquivosDoEsocial">
                 Arquivos (.zip ou .xml)
               </label>
@@ -107,6 +107,7 @@ export function ImportarDoEsocial({ companyId, empresa }: { companyId: string; e
                 }}
               />
             </section>
+            </div>
             {pendente && <p className="text-fs-2 text-fg-muted" role="status">Lendo os eventos…</p>}
             {estado && !estado.ok && <Aviso tom="perigo">{estado.texto}</Aviso>}
           </div>
