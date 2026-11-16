@@ -225,44 +225,49 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Tabela dinâmica (20/10/2026) ─────────────────────────────────────────
+  // ─── Tabela dinâmica (20/10/2026; campos e áreas em 16/11/2026, melhoria-719) ─
   {
     chave: "bpo_tabela_dinamica",
     titulo: "Tabela dinâmica",
     caminhos: ["/tabela-dinamica"],
     resumo:
-      "Monta as contas e as baixas em linhas e colunas — por categoria, fornecedor, centro de custo, mês — e soma o valor, o pago, o saldo ou a quantidade, como as tabelas dinâmicas do Omie. Tem visões prontas e leva tudo para o Excel.",
+      "Monta as contas e as baixas em linhas e colunas — por categoria, fornecedor, centro de custo, mês — e soma o valor, o pago, o saldo ou a quantidade, como as tabelas dinâmicas do Omie e do Excel. Você escolhe os campos e onde cada um fica, e a tabela muda na hora. Tem visões prontas e leva tudo para o Excel.",
     secoes: [
       {
         titulo: "Abrir uma visão pronta",
         passos: [
           "Em “Empresa”, no topo, escolha a empresa ou “Todas as empresas” (“Todas da base”, trabalhando numa empresa por vez).",
-          "Clique numa das visões prontas, como “Despesas por categoria” ou “A pagar por fornecedor”. A tabela se monta com a configuração dela.",
-          "Ajuste o que quiser no quadro de configuração e clique em “Aplicar”.",
+          "Clique em “Visões prontas”, na barra, e escolha uma, como “Despesas por categoria” ou “A pagar por fornecedor”. A tabela se monta com a configuração dela, e o botão passa a mostrar o nome da visão.",
+          "Ajuste o que quiser nos campos e nos filtros: a tabela acompanha cada mudança.",
         ],
       },
       {
         titulo: "Montar a sua tabela",
         passos: [
-          "Em “Base”, escolha “Contas” (os títulos, pela competência ou pelo vencimento) ou “Baixas” (o que entrou e saiu de verdade, pelo mês do pagamento).",
-          "Em “Linhas”, escolha o que fica à esquerda — até dois níveis, como “Centro de custo” e depois “Categoria”. Em “Colunas”, o que fica no topo, como o mês.",
-          "Em “Valor”, escolha o que somar: valor, pago ou recebido, saldo em aberto, entradas menos saídas ou a quantidade.",
-          "Filtre pelo tipo (a pagar ou a receber), pelo período e, nas contas, pela situação. Clique em “Aplicar”.",
-          "Com dois níveis de linha, clique numa linha para abrir o detalhe dela.",
+          "Na barra, escolha a base: “Contas” (os títulos, pela competência ou pelo vencimento) ou “Baixas” (o que entrou e saiu de verdade, pelo mês do pagamento).",
+          "Em “Campos”, clique no “+” do campo e escolha “Em linhas” (fica à esquerda) ou “Em colunas” (fica no topo, como o mês). O campo em uso aparece marcado com o lugar onde está.",
+          "Em “Linhas” cabem até três campos, um dentro do outro — como “Centro de custo”, depois “Categoria”, depois “Fornecedor ou cliente”. Use as setas da ficha para subir ou descer um campo, e o “x” para tirar.",
+          "Em “Colunas” fica um campo só; sem nenhum, a tabela mostra só o total.",
+          "Em “Valores”, escolha o que somar: valor, pago ou recebido, saldo em aberto, entradas menos saídas ou a quantidade.",
+          "Clique em “Filtros” para escolher o tipo (a pagar ou a receber), o período e, nas contas, a situação. O que está filtrado aparece ao lado do botão, com um “x” para tirar.",
+          "Com mais de um campo nas linhas, clique numa linha da tabela para abrir o detalhe dela.",
         ],
       },
       {
         titulo: "Levar para o Excel",
         passos: [
-          "Clique em “Exportar Excel”, acima da tabela. Vai a mesma configuração da tela.",
+          "Clique em “Exportar Excel”, na barra. Vai a mesma configuração da tela.",
           "O arquivo traz três abas: a tabela montada, os dados linha a linha numa Tabela do Excel (para você fazer a sua tabela dinâmica lá) e os filtros usados.",
         ],
       },
     ],
     dicas: [
+      "Não há botão de aplicar: cada escolha já refaz a tabela. A de antes fica esmaecida por um instante, até a nova chegar.",
       "Conta com rateio entra em cada categoria, centro e projeto pela parte dela; na quantidade, conta uma vez só.",
       "A tela mostra até 300 linhas e 36 colunas; o resto vai para “Outros”. A exportação leva tudo.",
-      "O link da tela guarda a configuração: dá para salvar nos favoritos ou mandar para alguém.",
+      "As linhas precisam de pelo menos um campo: o último não sai, só troca de lugar com o das colunas.",
+      "Marque “Sem período”, em “Filtros”, para ver o histórico inteiro.",
+      "O link da tela guarda a configuração: dá para salvar nos favoritos ou mandar para alguém. Os links salvos antes continuam abrindo a mesma tabela.",
     ],
   },
   // ─── Fluxo de caixa ───────────────────────────────────────────────────────

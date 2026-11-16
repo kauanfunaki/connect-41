@@ -7,9 +7,18 @@
 //
 // A conta é feita no servidor: o acervo da produção é grande (centenas de
 // empresas), a permissão por setor é de lá, e a tela recebe só a tabela já
-// somada. Linhas (até dois níveis), uma coluna, uma medida e os filtros cobrem
+// somada. Linhas (até três níveis), uma coluna, uma medida e os filtros cobrem
 // o que o setor faz com a tabela dinâmica do Omie; para o resto, a exportação
 // leva os dados numa Tabela do Excel.
+//
+// ─── Campos e áreas (16/11/2026, melhoria-719) ───────────────────────────────
+//
+// A configuração deixou de ser dez seletores e um "Aplicar": a tela mostra os
+// campos da base e as áreas Linhas, Colunas e Valores, como no Excel, e cada
+// mudança já troca a tabela. As regras de colocar, tirar e reordenar um campo
+// (`colocarNasLinhas`, `colocarNaColuna`, `tirarDaTabela`, `moverLinha`,
+// `trocarBase`) ficam aqui, puras, para a tela só desenhar. Os parâmetros do
+// endereço são os mesmos; o terceiro nível é mais um campo em `linhas`.
 
 import { formatarCompetencia } from "@/lib/format";
 
@@ -23,6 +32,9 @@ export const ROTULO_DA_BASE: Record<Base, string> = {
   contas: "Contas (títulos)",
   baixas: "Baixas (caixa realizado)",
 };
+
+/** O nome curto, o do seletor da tela; o comprido segue na exportação e na dica. */
+export const NOME_DA_BASE: Record<Base, string> = { contas: "Contas", baixas: "Baixas" };
 
 export type Dimensao =
   | "empresa"
@@ -96,9 +108,12 @@ export type Fato = {
 export type Situacao = "todas" | "abertas" | "vencidas" | "quitadas";
 export type Tipo = "ambos" | "PAGAR" | "RECEBER";
 
+/** Quantos campos cabem nas linhas: o grupo, o detalhe e o detalhe do detalhe. */
+export const MAXIMO_DE_NIVEIS = 3;
+
 export type Configuracao = {
   base: Base;
-  /** Um ou dois níveis. */
+  /** De um a `MAXIMO_DE_NIVEIS` níveis. */
   linhas: Dimensao[];
   coluna: Dimensao | null;
   medida: Medida;
@@ -126,7 +141,7 @@ export function lerConfiguracao(p: Record<string, string | undefined>, hojeKey: 
   const linhas = (p.linhas ?? "")
     .split(",")
     .filter((d, i, todas) => valeNaBase(d, base) && todas.indexOf(d) === i)
-    .slice(0, 2) as Dimensao[];
+    .slice(0, MAXIMO_DE_NIVEIS) as Dimensao[];
   const coluna = valeNaBase(p.coluna, base) && !linhas.includes(p.coluna as Dimensao) ? (p.coluna as Dimensao) : null;
   const medida = p.medida && p.medida in MEDIDAS && MEDIDAS[p.medida as Medida].bases.includes(base) ? (p.medida as Medida) : "valor";
   const atual = hojeKey.slice(0, 7);
@@ -152,7 +167,7 @@ function somarMesesSimples(comp: string, n: number): string {
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
 }
 
-/** A configuração de volta ao endereço — o que os links e o formulário usam. */
+/** A configuração de volta ao endereço — o que os links, a tela e a exportação usam. */
 export function paramsDaConfiguracao(c: Configuracao, extra: Record<string, string | undefined> = {}): URLSearchParams {
   const q = new URLSearchParams();
   q.set("base", c.base);
@@ -161,12 +176,106 @@ export function paramsDaConfiguracao(c: Configuracao, extra: Record<string, stri
   q.set("medida", c.medida);
   if (c.filtros.tipo !== "ambos") q.set("tipo", c.filtros.tipo);
   if (!c.filtros.de && !c.filtros.ate) q.set("periodo", "todos");
-  if (c.filtros.de) q.set("de", c.filtros.de);
-  if (c.filtros.ate) q.set("ate", c.filtros.ate);
+  else {
+    // A ponta sem limite vai vazia (`de=`), como o formulário mandava: sem o
+    // parâmetro, a leitura poria o padrão de seis meses no lugar, e a tela (que
+    // desde 16/11/2026 navega por aqui) e a exportação recortariam outro período.
+    q.set("de", c.filtros.de ?? "");
+    q.set("ate", c.filtros.ate ?? "");
+  }
   if (c.base === "contas" && c.filtros.periodoPor === "vencimento") q.set("periodoPor", "vencimento");
   if (c.base === "contas" && c.filtros.situacao !== "todas") q.set("situacao", c.filtros.situacao);
   for (const [k, v] of Object.entries(extra)) if (v) q.set(k, v);
   return q;
+}
+
+// ─── Campos e áreas ──────────────────────────────────────────────────────────
+
+/** Os campos que a base tem, na ordem em que a tela os lista. */
+export function dimensoesDaBase(base: Base): Dimensao[] {
+  return (Object.keys(DIMENSOES) as Dimensao[]).filter((d) => DIMENSOES[d].bases.includes(base));
+}
+
+export function medidasDaBase(base: Base): Medida[] {
+  return (Object.keys(MEDIDAS) as Medida[]).filter((m) => MEDIDAS[m].bases.includes(base));
+}
+
+export type Area = "linhas" | "coluna";
+
+/** Em que área o campo está, ou `null` para o que está fora da tabela. */
+export function areaDoCampo(c: Pick<Configuracao, "linhas" | "coluna">, d: Dimensao): Area | null {
+  return c.linhas.includes(d) ? "linhas" : c.coluna === d ? "coluna" : null;
+}
+
+/** O campo pode entrar nas linhas: ainda não está nelas e sobra um nível. */
+export function cabeNasLinhas(c: Pick<Configuracao, "linhas">, d: Dimensao): boolean {
+  return !c.linhas.includes(d) && c.linhas.length < MAXIMO_DE_NIVEIS;
+}
+
+/**
+ * O campo pode ir para a coluna: a tabela precisa de um campo nas linhas, então
+ * o único das linhas só vai se houver um na coluna para trocar de lugar com ele.
+ */
+export function cabeNaColuna(c: Pick<Configuracao, "linhas" | "coluna">, d: Dimensao): boolean {
+  if (c.coluna === d) return false;
+  return !c.linhas.includes(d) || c.linhas.length > 1 || c.coluna !== null;
+}
+
+/** As linhas precisam de um campo: o último não sai. */
+export function podeTirar(c: Pick<Configuracao, "linhas" | "coluna">, d: Dimensao): boolean {
+  return c.coluna === d || (c.linhas.includes(d) && c.linhas.length > 1);
+}
+
+/** O campo entra como o último nível das linhas; se estava na coluna, sai de lá. */
+export function colocarNasLinhas(c: Configuracao, d: Dimensao): Configuracao {
+  if (!valeNaBase(d, c.base) || !cabeNasLinhas(c, d)) return c;
+  return { ...c, linhas: [...c.linhas, d], coluna: c.coluna === d ? null : c.coluna };
+}
+
+/**
+ * O campo vira a coluna (uma só: o que estava lá sai). Vindo das linhas, sai
+ * delas — e, se era o único, o que estava na coluna toma o lugar dele.
+ */
+export function colocarNaColuna(c: Configuracao, d: Dimensao): Configuracao {
+  if (!valeNaBase(d, c.base) || !cabeNaColuna(c, d)) return c;
+  const linhas = c.linhas.filter((l) => l !== d);
+  return { ...c, linhas: linhas.length > 0 ? linhas : [c.coluna!], coluna: d };
+}
+
+/** Tira o campo de onde ele estiver. */
+export function tirarDaTabela(c: Configuracao, d: Dimensao): Configuracao {
+  if (!podeTirar(c, d)) return c;
+  return c.coluna === d ? { ...c, coluna: null } : { ...c, linhas: c.linhas.filter((l) => l !== d) };
+}
+
+/** Sobe (`-1`) ou desce (`1`) um nível das linhas; na ponta, fica como está. */
+export function moverLinha(c: Configuracao, d: Dimensao, passo: -1 | 1): Configuracao {
+  const de = c.linhas.indexOf(d);
+  const para = de + passo;
+  if (de === -1 || para < 0 || para >= c.linhas.length) return c;
+  const linhas = [...c.linhas];
+  [linhas[de], linhas[para]] = [linhas[para]!, linhas[de]!];
+  return { ...c, linhas };
+}
+
+/**
+ * A mesma tabela na outra base. O que não existe nela volta ao padrão dela —
+ * o campo some das linhas, a coluna vira o mês da base, a medida vira o valor —
+ * e os filtros que só as contas têm voltam ao começo.
+ */
+export function trocarBase(c: Configuracao, base: Base): Configuracao {
+  if (base === c.base) return c;
+  const linhas = c.linhas.filter((d) => valeNaBase(d, base));
+  const emLinhas = linhas.length > 0 ? linhas : (["categoria"] as Dimensao[]);
+  const mesDaBase: Dimensao = base === "baixas" ? "pagamento" : "competencia";
+  const coluna = c.coluna === null || valeNaBase(c.coluna, base) ? c.coluna : mesDaBase;
+  return {
+    base,
+    linhas: emLinhas,
+    coluna: coluna && emLinhas.includes(coluna) ? null : coluna,
+    medida: MEDIDAS[c.medida].bases.includes(base) ? c.medida : "valor",
+    filtros: base === "contas" ? c.filtros : { ...c.filtros, periodoPor: "competencia", situacao: "todas" },
+  };
 }
 
 // ─── Visões prontas ──────────────────────────────────────────────────────────
@@ -270,13 +379,14 @@ function ordenar(d: Dimensao, chaves: string[], totais: Map<string, number>): st
 }
 
 /**
- * A tabela: as linhas (um ou dois níveis), as colunas, os totais. Cada célula,
- * cada subtotal e cada total é acumulado à parte — na contagem, somar as
- * células contaria duas vezes a conta que aparece em duas.
+ * A tabela: as linhas (de um a três níveis, cada um dentro do anterior), as
+ * colunas, os totais. Cada célula, cada subtotal e cada total é acumulado à
+ * parte — na contagem, somar as células contaria duas vezes a conta que
+ * aparece em duas. O teto de linhas vale para o primeiro nível, como antes.
  */
 export function montarTabela(fatos: readonly Fato[], c: Pick<Configuracao, "linhas" | "coluna" | "medida">): Tabela {
   const contagem = MEDIDAS[c.medida].tipo === "contagem";
-  const [d1, d2] = c.linhas as [Dimensao, Dimensao | undefined];
+  const d1 = c.linhas[0]!;
   const chaveDe = (f: Fato, d: Dimensao) => f.dims[d] ?? "";
 
   // As colunas e o primeiro nível passam pelo teto antes de acumular.
@@ -305,47 +415,51 @@ export function montarTabela(fatos: readonly Fato[], c: Pick<Configuracao, "linh
   const naTela = new Set(primeiras);
   const linhaDe = (f: Fato) => (naTela.has(chaveDe(f, d1)) ? chaveDe(f, d1) : OUTROS);
 
-  type No = { celulas: Acumulador[]; total: Acumulador; filhas: Map<string, No> };
-  const novo = (): No => ({ celulas: colunas.map(() => new Acumulador(contagem)), total: new Acumulador(contagem), filhas: new Map() });
+  // A célula só nasce quando um fato cai nela (16/11/2026, melhoria-719): com o
+  // terceiro nível são mais nós, e a maioria deles só tem valor em uma ou duas
+  // colunas — criar as 36 de cada um multiplicava a memória por nada.
+  type No = { celulas: (Acumulador | undefined)[]; total: Acumulador; filhas: Map<string, No> };
+  const novo = (): No => ({ celulas: new Array<Acumulador | undefined>(colunas.length).fill(undefined), total: new Acumulador(contagem), filhas: new Map() });
   const raiz = new Map<string, No>();
   const porColuna = colunas.map(() => new Acumulador(contagem));
   const geral = new Acumulador(contagem);
 
   for (const f of fatos) {
     const ci = colunaDe(f);
-    const k1 = linhaDe(f);
-    const n1 = raiz.get(k1) ?? novo();
-    raiz.set(k1, n1);
-    n1.celulas[ci]!.somar(f, c.medida);
-    n1.total.somar(f, c.medida);
-    if (d2) {
-      const k2 = chaveDe(f, d2);
-      const n2 = n1.filhas.get(k2) ?? novo();
-      n1.filhas.set(k2, n2);
-      n2.celulas[ci]!.somar(f, c.medida);
-      n2.total.somar(f, c.medida);
+    // Um nó por nível, cada um dentro do anterior: o fato soma em todos.
+    let nivel = raiz;
+    for (let i = 0; i < c.linhas.length; i++) {
+      const k = i === 0 ? linhaDe(f) : chaveDe(f, c.linhas[i]!);
+      const no = nivel.get(k) ?? novo();
+      nivel.set(k, no);
+      (no.celulas[ci] ??= new Acumulador(contagem)).somar(f, c.medida);
+      no.total.somar(f, c.medida);
+      nivel = no.filhas;
     }
     porColuna[ci]!.somar(f, c.medida);
     geral.somar(f, c.medida);
   }
 
-  const linha = (d: Dimensao, chave: string, no: No): LinhaDaTabela => ({
-    chave,
-    rotulo: rotuloDoValor(d, chave),
-    valores: no.celulas.map((a) => a.valor()),
-    total: no.total.valor(),
-  });
+  /** As linhas de um nível, com as de dentro; `ordem` é a do primeiro nível, que já passou pelo teto. */
+  const montar = (nos: Map<string, No>, i: number, ordem?: string[]): LinhaDaTabela[] => {
+    const d = c.linhas[i]!;
+    const chaves = ordem ?? ordenar(d, [...nos.keys()], new Map([...nos].map(([k, n]) => [k, n.total.valor()])));
+    return chaves
+      .filter((k) => nos.has(k))
+      .map((k) => {
+        const no = nos.get(k)!;
+        const linha: LinhaDaTabela = {
+          chave: k,
+          rotulo: rotuloDoValor(d, k),
+          valores: no.celulas.map((a) => a?.valor() ?? 0),
+          total: no.total.valor(),
+        };
+        return i + 1 < c.linhas.length ? { ...linha, filhas: montar(no.filhas, i + 1) } : linha;
+      });
+  };
   return {
     colunas: colunas.map((k) => ({ chave: k, rotulo: k === TOTAL ? "Total" : rotuloDoValor(c.coluna!, k) })),
-    linhas: primeiras
-      .filter((k) => raiz.has(k))
-      .map((k) => {
-        const no = raiz.get(k)!;
-        const base = linha(d1, k, no);
-        if (!d2) return base;
-        const totais = new Map([...no.filhas].map(([k2, n]) => [k2, n.total.valor()]));
-        return { ...base, filhas: ordenar(d2, [...no.filhas.keys()], totais).map((k2) => linha(d2, k2, no.filhas.get(k2)!)) };
-      }),
+    linhas: montar(raiz, 0, primeiras),
     totalPorColuna: porColuna.map((a) => a.valor()),
     total: geral.valor(),
     linhasAgrupadas,

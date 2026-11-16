@@ -6,8 +6,8 @@
 // Excel atrapalhariam quem filtra e soma), os dados linha a linha — para quem
 // quer montar a própria tabela dinâmica no Excel — e os filtros usados.
 
-import type { AbaDaTabela, ColunaDaTabela, PlanilhaDeTabelas } from "@/lib/planilha/tabelaDoExcel";
-import { DIMENSOES, MEDIDAS, type Configuracao, type Dimensao, type Fato, type Medida, type Tabela } from "./tabelaDinamica";
+import type { AbaDaTabela, CelulaDaTabela, ColunaDaTabela, PlanilhaDeTabelas } from "@/lib/planilha/tabelaDoExcel";
+import { DIMENSOES, MEDIDAS, type Configuracao, type Dimensao, type Fato, type LinhaDaTabela, type Medida, type Tabela } from "./tabelaDinamica";
 
 /** Nomes de coluna repetidos ganham " (2)", " (3)": a Tabela do Excel não aceita dois iguais. */
 function semRepetir(nomes: string[]): string[] {
@@ -26,9 +26,11 @@ export function abaDaTabelaMontada(t: Tabela, c: Configuracao): AbaDaTabela {
   const nomes = semRepetir([...c.linhas.map((d) => DIMENSOES[d].rotulo), ...valores, "Total"]);
   const colunas: ColunaDaTabela[] = nomes.map((nome, i) => ({ nome, tipo: i < c.linhas.length ? "texto" : tipo, largura: i < c.linhas.length ? 32 : 14 }));
   const numeros = (l: { valores: number[]; total: number }) => [...(c.coluna ? l.valores : []), l.total];
-  const linhas = t.linhas.flatMap((l) =>
-    c.linhas.length === 2 && l.filhas ? l.filhas.map((f) => [l.rotulo, f.rotulo, ...numeros(f)]) : [[l.rotulo, ...numeros(l)]]
-  );
+  // Só o último nível vira linha, com os rótulos dos níveis de cima à frente —
+  // dois ou três (16/11/2026, melhoria-719), a mesma regra.
+  const folhas = (l: LinhaDaTabela, acima: string[]): CelulaDaTabela[][] =>
+    l.filhas ? l.filhas.flatMap((f) => folhas(f, [...acima, l.rotulo])) : [[...acima, l.rotulo, ...numeros(l)]];
+  const linhas = t.linhas.flatMap((l) => folhas(l, []));
   return { aba: "Tabela dinâmica", tabela: "TabelaDinamica", colunas, linhas, semLinhas: "Nada neste recorte." };
 }
 
