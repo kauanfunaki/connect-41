@@ -13,7 +13,7 @@ import { procurarNoOrquestrador, type BuscaNoOrquestrador } from "./triagem";
 import { aprovadoresDaCategoria, evento } from "./comandos";
 import { despacharEventos } from "./notificacoes";
 import { motivoDaFalha } from "./falhaDaIa";
-import { categoriaSchema, dadosSchema, emTriagem, resultadoDaTriagem, tituloDaDescricao, validarFormulario, type Categoria, type MotivoSemCategoria, type Triagem } from "./regras";
+import { categoriaSchema, dadosSchema, ehTituloProvisorio, emTriagem, resultadoDaTriagem, validarFormulario, type Categoria, type MotivoSemCategoria, type Triagem } from "./regras";
 
 // A triagem depois do envio (10/11/2026). O chamado da tela nasce em
 // "Aguardando triagem" (`enviarRascunho`); aqui, fora da resposta, a IA confere
@@ -125,7 +125,7 @@ async function concluir(tenantId: string, t: Chamado, d: Decisao): Promise<Triag
     const pendente = await tx.helpdeskCategory.findFirstOrThrow({ where: { tenantId, name: A_CLASSIFICAR }, select: { id: true } });
     const comAprovacao = !!categoria?.requiresApproval;
     // O título provisório (o começo da descrição) dá lugar ao da IA.
-    const titulo = d.classificacao.title.length >= 3 && t.title === tituloDaDescricao(t.description) ? d.classificacao.title : t.title;
+    const titulo = d.classificacao.title.length >= 3 && ehTituloProvisorio(t.title, t.description) ? d.classificacao.title : t.title;
     const triagem: Triagem = { existente: d.busca.existente, categoria: categoria ? caminhoDaCategoria(d.caminhos, categoria.id) : null, semCategoria: categoria ? null : semCategoria ?? "falha", justificativa: d.classificacao.reason.slice(0, 500) };
     const r = await tx.helpdeskTicket.updateMany({ where: { tenantId, id: t.id, status: "AGUARDANDO_TRIAGEM" }, data: {
       status: comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO", categoryId: categoria?.id ?? pendente.id, title: titulo,
