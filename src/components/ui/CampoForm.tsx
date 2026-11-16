@@ -1,4 +1,5 @@
 import { cloneElement, isValidElement } from "react";
+import { Lock } from "lucide-react";
 
 type Props = {
   label: string;
@@ -19,8 +20,29 @@ type Props = {
    * o dado.
    */
   dica?: string;
+  /**
+   * O campo não muda, e por quê (16/11/2026, melhoria-717): um cadeado ao lado
+   * do rótulo, com o motivo na dica — no lugar da frase embaixo do campo, que
+   * se repetia em cada campo travado pelo mesmo motivo. Desabilitar o controle
+   * continua com quem usa.
+   */
+  travado?: string;
   children: React.ReactNode;
 };
+
+/** O cadeado do campo travado, com o motivo na dica. Botão, como o "?": o teclado e o toque alcançam. */
+export function CadeadoDoCampo({ motivo, rotulo }: { motivo: string; rotulo: string }) {
+  return (
+    <button
+      type="button"
+      data-dica={motivo}
+      aria-label={`Travado — ${rotulo}: ${motivo}`}
+      className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm text-fg-muted hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand cursor-help"
+    >
+      <Lock size={12} aria-hidden />
+    </button>
+  );
+}
 
 /** O "?" com a dica de um campo. Botão para o teclado e o toque alcançarem. */
 export function AjudaDoCampo({ texto, rotulo }: { texto: string; rotulo: string }) {
@@ -43,7 +65,7 @@ export function AjudaDoCampo({ texto, rotulo }: { texto: string; rotulo: string 
 // Revisão de alinhamento (30/09): é o único rótulo de campo do app. Havia
 // quatro outros montados à mão (12px cinza, 11px com mb-1…), e campos lado a
 // lado com rótulos de tamanhos diferentes desciam em alturas diferentes.
-export function CampoForm({ label, htmlFor, required = false, helper, error, className = "", acao, dica, children }: Props) {
+export function CampoForm({ label, htmlFor, required = false, helper, error, className = "", acao, dica, travado, children }: Props) {
   // A ajuda e o erro ligados ao campo (auditoria de UX, 30/10/2026): sem o
   // `aria-describedby`, o leitor de tela lia só o rótulo ao focar e o erro
   // ficava mudo. Só quando o filho é o próprio controle rotulado (`id` igual ao
@@ -62,12 +84,13 @@ export function CampoForm({ label, htmlFor, required = false, helper, error, cla
       {required && <span className="text-danger"> *</span>}
     </label>
   );
-  // A dica fica fora do <label>: clicar nela não pode focar o campo, e o texto
-  // dela não entra no nome do campo.
-  const rotulo = dica ? (
+  // A dica e o cadeado ficam fora do <label>: clicar neles não pode focar o
+  // campo, e o texto deles não entra no nome do campo.
+  const rotulo = dica || travado ? (
     <span className="flex items-center gap-1.5 min-w-0">
       {etiqueta}
-      <AjudaDoCampo texto={dica} rotulo={label} />
+      {travado && <CadeadoDoCampo motivo={travado} rotulo={label} />}
+      {dica && <AjudaDoCampo texto={dica} rotulo={label} />}
     </span>
   ) : (
     etiqueta

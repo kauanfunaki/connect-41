@@ -7,8 +7,12 @@ import { CampoForm } from "@/components/ui/CampoForm";
  * **Aparece sempre** (19/10, retorno do BPO: "não achamos o campo de
  * projeto"). Até aqui só aparecia quando a empresa já tinha projeto cadastrado,
  * como o centro de custo — e nenhuma tinha, então o campo pedido não existia
- * para quem foi procurar. Sem projeto, fica desabilitado e diz onde cadastrar,
- * com o link numa aba nova para não perder o que já foi digitado.
+ * para quem foi procurar. Sem projeto, fica desabilitado, dizendo que a
+ * empresa não tem nenhum, com o link "Cadastrar projeto" ao lado do rótulo —
+ * numa aba nova, para não perder o que já foi digitado.
+ *
+ * Sem frase embaixo (16/11/2026, melhoria-717): o link é o caminho, e
+ * "Opcional. Um projeto por lançamento." não dizia nada que o campo não diga.
  */
 export function CampoDeProjeto({
   id,
@@ -29,7 +33,6 @@ export function CampoDeProjeto({
       label="Projeto"
       htmlFor={id}
       className={className}
-      helper={vazio ? "Nenhum projeto nesta empresa. Cadastre em Fornecedores e sacados › Projetos." : "Opcional. Um projeto por lançamento."}
       acao={
         vazio ? (
           <a href={`/fornecedores-e-sacados?empresa=${companyId}&aba=projetos`} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
@@ -39,7 +42,7 @@ export function CampoDeProjeto({
       }
     >
       <Select id={id} name="projectId" defaultValue={vazio ? "" : defaultValue} disabled={vazio}>
-        <option value="">{vazio ? "Nenhum projeto cadastrado" : "Sem projeto"}</option>
+        <option value="">{vazio ? "Nenhum projeto nesta empresa" : "Sem projeto"}</option>
         {projetos.map((p) => (
           <option key={p.id} value={p.id}>
             {p.nome}

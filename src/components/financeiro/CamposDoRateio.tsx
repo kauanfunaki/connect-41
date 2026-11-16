@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CadeadoDoCampo } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { formatarReaisDeCentavos } from "@/lib/format";
@@ -128,8 +129,12 @@ export function CamposDoRateio({
     <div className={`flex flex-col gap-3 rounded-md border border-border p-3 ${className}`.trim()}>
       {!travado && <input type="hidden" name="rateio" value={json} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-label font-semibold text-fg">Rateio</span>
-        {travado && <span className="text-helper text-fg-secondary">{travado}</span>}
+        {/* Travado, o cadeado com o motivo na dica (16/11/2026, melhoria-717):
+            a frase já está no aviso do alto da janela. */}
+        <span className="flex items-center gap-1.5">
+          <span className="text-label font-semibold text-fg">Rateio</span>
+          {travado && <CadeadoDoCampo motivo={travado} rotulo="Rateio" />}
+        </span>
         {!travado && (
           <div className="flex items-center gap-3">
             <div className="inline-flex rounded-md border border-border p-0.5" role="group" aria-label="Ratear por">

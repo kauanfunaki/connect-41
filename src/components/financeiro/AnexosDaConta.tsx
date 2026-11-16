@@ -56,9 +56,9 @@ export function AnexosDaConta({ entryId, iniciais }: { entryId: string; iniciais
   return (
     <div className="flex flex-col gap-2">
       <p className="text-ui font-medium text-fg">Anexos</p>
-      {anexos.length === 0 ? (
-        <p className="text-helper text-fg-muted">Nenhum anexo. Guarde aqui o boleto, a nota ou o comprovante.</p>
-      ) : (
+      {/* Sem anexo, a própria faixa de anexar diz o que guardar ali (16/11/2026,
+          melhoria-717): saiu a frase "Nenhum anexo. Guarde aqui…". */}
+      {anexos.length > 0 && (
         <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
           {anexos.map((a) => (
             <li key={a.id} className="flex items-center gap-2 px-3 py-1.5 text-ui">
@@ -77,7 +77,15 @@ export function AnexosDaConta({ entryId, iniciais }: { entryId: string; iniciais
           ))}
         </ul>
       )}
-      <FileDropzoneField key={escolha} name={CAMPO_DO_ANEXO_DA_CONTA} accept={ACCEPT_DOS_ANEXOS} maxSizeMb={10} compacto onFileChange={anexar} />
+      <FileDropzoneField
+        key={escolha}
+        name={CAMPO_DO_ANEXO_DA_CONTA}
+        accept={ACCEPT_DOS_ANEXOS}
+        maxSizeMb={10}
+        compacto
+        convite="Anexar boleto, nota ou comprovante"
+        onFileChange={anexar}
+      />
       {enviando && <p className="text-helper text-fg-muted">Anexando…</p>}
       {erro && <p className="text-helper text-danger">{erro}</p>}
       {dialog}

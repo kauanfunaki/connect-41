@@ -12,7 +12,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { logAudit } from "@/lib/audit";
 import { saoPauloParts } from "@/lib/agenda";
 import { nomeExibicao } from "@/lib/companyName";
-import { travasDaEdicao, aprovacaoDepoisDaEdicao, type Travas, type CampoEditavel } from "./edicao";
+import { travasDaEdicao, aprovacaoDepoisDaEdicao, type Travas, type CampoEditavel, type MotivoDaTrava } from "./edicao";
 import { categoriaObrigatoria } from "./lancamento";
 import { categoriaDaEmpresa, ondeDaEmpresa } from "./planoDeContas";
 import { centavosDeTexto, decimalDeCentavos, TAMANHO_MAXIMO_DO_NUMERO_DO_DOCUMENTO } from "./manual";
@@ -66,6 +66,12 @@ export type DadosDaEdicao =
         valor: string;
         descricao: string | null;
         pagoEmKey: string | null;
+        /**
+         * Onde se desfaz a conciliação (16/11/2026, melhoria-717): a
+         * Conciliação da conta bancária, nas conciliadas do dia da linha do
+         * extrato. Nulo quando não há linha no Connect (conciliada pelo Omie).
+         */
+        conciliacaoHref: string | null;
         /** De onde veio, para a janela dizer: "da nota NF-e nº 123", "do Omie". */
         origem: "manual" | "nota" | "omie";
         aprovada: boolean;
@@ -73,6 +79,8 @@ export type DadosDaEdicao =
         versao: string;
       };
       travas: Travas;
+      /** Os mesmos campos travados, agrupados pelo motivo: o aviso do alto da janela (16/11/2026, melhoria-717). */
+      motivos: MotivoDaTrava[];
       opcoes: { contrapartes: (Opcao & { documento: string | null })[]; categorias: Opcao[]; centros: Opcao[]; projetos: Opcao[]; contas: Opcao[] };
       /** Os anexos da conta (lote H2). Não têm trava: guardar o boleto não mexe no dinheiro. */
       anexos: AnexoDaConta[];
@@ -108,7 +116,9 @@ const CAMPOS_DA_CONTA = {
   description: true,
   updatedAt: true,
   paidPrincipal: true,
-  bankMatches: { select: { id: true }, take: 1 },
+  // A linha do extrato vem junto (16/11/2026, melhoria-717): a janela oferece
+  // o caminho até ela, que é onde a conciliação se desfaz.
+  bankMatches: { select: { id: true, transaction: { select: { bankAccountId: true, postedAt: true } } }, take: 1 },
   company: { select: { name: true, displayName: true, omieCutoverAt: true } },
   retentionOrigin: { select: { tax: true } },
   cardAccountId: true,
@@ -187,6 +197,9 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
     retencoesDaConta(prisma, tenantId, conta.id),
   ]);
   const comInativo = (o: { id: string; name: string; active: boolean }) => ({ id: o.id, nome: o.active ? o.name : `${o.name} (inativo)` });
+  // A Conciliação filtra por dia (`de`/`ate`): as conciliadas do dia da linha.
+  const linhaDoExtrato = conta.bankMatches[0]?.transaction ?? null;
+  const diaDaLinha = linhaDoExtrato ? saoPauloParts(linhaDoExtrato.postedAt).dateKey : null;
 
   return {
     ok: true,
@@ -212,11 +225,15 @@ export async function dadosParaEditar(entryId: string): Promise<DadosDaEdicao> {
       valor: valorNoCampo(conta.amount),
       descricao: conta.description,
       pagoEmKey: chaveDoDia(conta.paidAt),
+      conciliacaoHref: linhaDoExtrato
+        ? `/conciliacao?empresa=${conta.companyId}&conta=${linhaDoExtrato.bankAccountId}&situacao=conciliadas&de=${diaDaLinha}&ate=${diaDaLinha}`
+        : null,
       origem: conta.fiscalDocumentId ? "nota" : conta.omieTitleId || conta.omieMovementId ? "omie" : "manual",
       aprovada: conta.approvalStatus === "APROVADO",
       versao: conta.updatedAt.toISOString(),
     },
     travas: veredito.travas,
+    motivos: veredito.motivos,
     opcoes: {
       contrapartes: contrapartes.map((c) => ({ ...comInativo(c), documento: c.document })),
       categorias: categorias.map(comInativo),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { travasDaEdicao, aprovacaoDepoisDaEdicao, type ContaParaEditar } from "./edicao";
+import { travasDaEdicao, aprovacaoDepoisDaEdicao, avisoDasTravas, type ContaParaEditar } from "./edicao";
 
 const ABERTA: ContaParaEditar = {
   status: "CONFERIDO",
@@ -97,6 +97,112 @@ describe("travasDaEdicao", () => {
     expect(travasDaEdicao({ ...ABERTA, status: "CANCELADO", closeReason: "PERDA" })).toMatchObject({ pode: false, motivo: expect.stringMatching(/perda/) });
     // O cancelado de antes da coluna `closeReason`.
     expect(travasDaEdicao({ ...ABERTA, status: "CANCELADO" })).toMatchObject({ pode: false });
+  });
+});
+
+// O aviso do alto da janela (16/11/2026, melhoria-717): cada motivo uma vez,
+// com os campos que ele segura — a frase da conciliação aparecia em dois campos.
+describe("motivos da trava e o aviso da janela", () => {
+  const motivos = (c: Partial<ContaParaEditar>) => {
+    const r = travasDaEdicao({ ...ABERTA, ...c });
+    if (!r.pode) throw new Error(r.motivo);
+    return r.motivos;
+  };
+
+  it("em aberto: nenhum motivo, nenhum aviso", () => {
+    expect(motivos({})).toEqual([]);
+    expect(avisoDasTravas(motivos({}), "PAGAR")).toEqual([]);
+  });
+
+  it("conciliada: um motivo só, com o vencimento e o valor", () => {
+    const m = motivos({ conciliada: true });
+    expect(m).toEqual([{ chave: "conciliada", campos: ["vencimento", "valor"] }]);
+    expect(avisoDasTravas(m, "PAGAR")).toEqual([
+      {
+        chave: "conciliada",
+        campos: ["vencimento", "valor"],
+        causa: "Conciliada com o extrato",
+        naoMuda: "vencimento e valor não mudam.",
+        caminho: "Desfaça a conciliação e o pagamento para alterar.",
+      },
+    ]);
+  });
+
+  it("paga e conciliada: um motivo só, com os três campos — a previsão entra na mesma linha", () => {
+    const m = motivos({ status: "PAGO", paidAt: new Date(), conciliada: true, temBaixa: true });
+    expect(m).toEqual([{ chave: "paga_e_conciliada", campos: ["vencimento", "previsao", "valor"] }]);
+    const [linha] = avisoDasTravas(m, "PAGAR");
+    expect(`${linha.causa}: ${linha.naoMuda} ${linha.caminho}`).toBe(
+      "Paga e conciliada com o extrato: vencimento, previsão e valor não mudam. Desfaça a conciliação e o pagamento para alterar."
+    );
+  });
+
+  it("paga, sem conciliação: um motivo, e o caminho é desfazer o pagamento", () => {
+    const m = motivos({ status: "PAGO", paidAt: new Date(), temBaixa: true });
+    expect(m).toEqual([{ chave: "paga", campos: ["vencimento", "previsao", "valor"] }]);
+    expect(avisoDasTravas(m, "PAGAR")[0].caminho).toMatch(/Desfaça o pagamento/);
+  });
+
+  it("dois motivos: a nota segura os campos dela, o pagamento os que sobram", () => {
+    const m = motivos({ fiscalDocumentId: "doc-1", status: "PAGO", paidAt: new Date(), temBaixa: true });
+    expect(m).toEqual([
+      { chave: "nota", campos: ["contraparte", "emissao", "numeroDocumento", "valor"] },
+      { chave: "paga", campos: ["vencimento", "previsao"] },
+    ]);
+    expect(avisoDasTravas(m, "PAGAR").map((l) => `${l.causa}: ${l.naoMuda}`)).toEqual([
+      "Vem da nota fiscal: fornecedor, emissão, nº do documento e valor não mudam.",
+      "Paga: vencimento e previsão não mudam.",
+    ]);
+  });
+
+  it("o motivo que perde todos os campos para um anterior não aparece: Omie paga e conciliada é só Omie", () => {
+    const m = motivos({ doOmie: true, status: "PAGO", paidAt: new Date(), conciliada: true, temBaixa: true });
+    expect(m.map((x) => x.chave)).toEqual(["omie"]);
+  });
+
+  it("baixa parcial: um campo, no singular", () => {
+    const [linha] = avisoDasTravas(motivos({ temBaixa: true }), "PAGAR");
+    expect(linha.naoMuda).toBe("valor não muda.");
+    expect(linha.caminho).toMatch(/Pagamentos/);
+  });
+
+  it("conta a receber: fala em cliente e recebimento, e não lista as retenções, que ela não tem", () => {
+    const paga = avisoDasTravas(motivos({ status: "PAGO", paidAt: new Date(), conciliada: true }), "RECEBER")[0];
+    expect(paga.causa).toBe("Recebida e conciliada com o extrato");
+    expect(paga.caminho).toBe("Desfaça a conciliação e o recebimento para alterar.");
+    const acordo = avisoDasTravas(motivos({ agreementId: "ac-1" }), "RECEBER")[0];
+    expect(acordo.naoMuda).toBe("cliente, vencimento e valor não mudam.");
+    const omie = avisoDasTravas(motivos({ doOmie: true }), "RECEBER")[0];
+    expect(omie.campos).not.toContain("retencoes");
+    expect(avisoDasTravas(motivos({ doOmie: true }), "PAGAR")[0].campos).toContain("retencoes");
+    expect(avisoDasTravas(motivos({ temBaixa: true }), "RECEBER")[0].caminho).toMatch(/Recebimentos/);
+  });
+
+  it("nenhuma trava perde o motivo: todo campo travado está em um motivo, e só em um", () => {
+    const estados: Partial<ContaParaEditar>[] = [
+      { doOmie: true, centroDoOmie: true },
+      { doOmie: true, status: "PAGO", paidAt: new Date(), conciliada: true, temBaixa: true },
+      { fiscalDocumentId: "doc-1", conciliada: true, temBaixa: true },
+      { agreementId: "ac-1", status: "PAGO", paidAt: new Date(), temBaixa: true },
+      { deRetencao: true, temBaixa: true },
+      { daFatura: true, status: "PAGO", paidAt: new Date(), conciliada: true, temBaixa: true },
+      { temBaixa: true },
+    ];
+    for (const estado of estados) {
+      const r = travasDaEdicao({ ...ABERTA, ...estado });
+      if (!r.pode) throw new Error(r.motivo);
+      const nosMotivos = r.motivos.flatMap((m) => m.campos);
+      expect([...nosMotivos].sort()).toEqual(Object.keys(r.travas).sort());
+      expect(new Set(nosMotivos).size).toBe(nosMotivos.length);
+      // No aviso da conta a pagar, os mesmos campos: nada some entre a regra e a tela.
+      expect(avisoDasTravas(r.motivos, "PAGAR").flatMap((l) => l.campos).sort()).toEqual(Object.keys(r.travas).sort());
+    }
+  });
+
+  it("o departamento do Omie é um motivo à parte, só com o centro de custo", () => {
+    const m = motivos({ doOmie: true, centroDoOmie: true });
+    expect(m.map((x) => x.chave)).toEqual(["omie", "omie_departamento"]);
+    expect(m[1].campos).toEqual(["centro"]);
   });
 });
 
