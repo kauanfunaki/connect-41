@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
 import { SeletorDeCor } from "@/components/ui/SeletorDeCor";
-import { StageDot, type StageDotType } from "@/components/kanban/StageDot";
+import type { StageDotType } from "@/components/kanban/StageDot";
 import { isUsableAccent, normalizeAccentColor } from "@/lib/color";
 import type { EditStagesState, StageInput } from "@/app/(app)/kanban/actions";
 import { Aviso } from "@/components/ui/Aviso";
@@ -25,9 +25,10 @@ type Props = {
   podeExcluirColuna: boolean;
 };
 
-// Botão "Editar tarefa" — CRUD completo de estágios (nome, cor, tipo/bolinha,
-// ordem, exclusão) num modal só, reconciliado de uma vez pela action
-// atualizarEstagios ao salvar.
+// Botão "Editar estágios" — CRUD completo de estágios (nome, cor, se conclui
+// as atividades, ordem, exclusão) num modal só, reconciliado de uma vez pela
+// action atualizarEstagios ao salvar. O botão dizia "Editar lista" e a janela,
+// "Editar tarefa" (16/11/2026, bug-708): os dois dizem o que a janela edita.
 export function EditPipelineStagesModal({ initialStages, action, podeExcluirColuna }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>(initialStages);
@@ -91,23 +92,23 @@ export function EditPipelineStagesModal({ initialStages, action, podeExcluirColu
   return (
     <>
       <Button type="button" variant="secondary" onClick={openModal}>
-        <Pencil size={14} /> Editar lista
+        <Pencil size={14} /> Editar estágios
       </Button>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Editar tarefa" maxWidth="max-w-lg">
+      <Modal open={open} onClose={() => setOpen(false)} title="Editar estágios" maxWidth="max-w-lg">
         <div className="space-y-3">
-          {/* Cabeçalho — sem isso "Título do estágio" (nome livre) e "Status
-              da bolinha" (tipo que rege a cor/estado do StageDot) pareciam o
-              mesmo tipo de campo, confundindo o usuário. */}
+          {/* Cabeçalho das colunas. "Conclui atividades" aparece só aqui
+              (16/11/2026, escolha do Kauan): antes se repetia ao lado do
+              interruptor de cada linha, com a bolinha de estado, que repetia
+              a cor que a linha já mostra. */}
           {/* Os espaçadores têm a largura exata de cada peça da linha (o botão
               de arrastar e o de excluir são IconButton `sm`, 28px): com 13px e
-              27px, "Título do estágio" ficava 15px à esquerda do campo. */}
+              27px, o título da coluna ficava 15px à esquerda do campo. */}
           <div className="flex items-center gap-2 px-0.5">
             <span className="w-7 flex-shrink-0" />
             <span className="w-9 flex-shrink-0" />
-            <span className="flex-1 min-w-0 text-fs-1 font-medium text-fg-muted">Título do estágio</span>
-            <span className="w-[150px] flex-shrink-0 text-fs-1 font-medium text-fg-muted">Conclui atividades</span>
-            <span className="w-3.5 flex-shrink-0" />
+            <span className="flex-1 min-w-0 text-fs-1 font-medium text-fg-muted">Estágio</span>
+            <span className="w-[130px] flex-shrink-0 text-center text-fs-1 font-medium text-fg-muted">Conclui atividades</span>
             {algumaLixeira && <span className="w-7 flex-shrink-0" />}
           </div>
           <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
@@ -131,10 +132,9 @@ export function EditPipelineStagesModal({ initialStages, action, podeExcluirColu
                   placeholder={`Estágio ${i + 1}`}
                   className="flex-1 min-w-0"
                 />
-                <div className="w-[150px] flex-shrink-0">
-                  <Switch checked={row.type === "DONE"} onCheckedChange={(checked) => update(i, { type: checked ? "DONE" : "NOT_STARTED" })} rotulo="Conclui atividades" aria-label={`Conclui atividades no estágio ${i + 1}`} size="sm" />
+                <div className="flex w-[130px] flex-shrink-0 justify-center">
+                  <Switch checked={row.type === "DONE"} onCheckedChange={(checked) => update(i, { type: checked ? "DONE" : "NOT_STARTED" })} aria-label={`Conclui atividades no estágio ${row.name.trim() || i + 1}`} size="sm" />
                 </div>
-                <StageDot color={row.color} type={row.type} />
                 {mostraLixeira(row) ? (
                   <IconButton
                     type="button"

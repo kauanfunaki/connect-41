@@ -6,6 +6,8 @@ import { scopedCompanyWhere } from "@/lib/auth/scope";
 import { summarizeCompanyHistory, isAiConfigured } from "@/lib/ai";
 import { formatCalendarDate, formatInstantDate } from "@/lib/format";
 import { logAudit } from "@/lib/audit";
+import { getSectorMaps, sectorLabel } from "@/lib/sectors";
+import { linhaDaTransferencia } from "@/lib/resumoDaEmpresa";
 
 export type AiSummaryState = { error: string } | { summary: string } | null;
 
@@ -64,18 +66,27 @@ export async function gerarResumoEmpresa(companyId: string): Promise<AiSummarySt
     }),
   ]);
 
+  // O setor, a situação e a prioridade vão com o nome da tela ("BPO", "nova",
+  // "média"), e não com o código do banco (16/11/2026, bug-708): a IA repetia
+  // "NEW em bpo; prioridade MEDIUM" no texto do resumo.
+  const { labels } = await getSectorMaps(ctx.tenantId);
+  const rotulo = (codigo: string) => sectorLabel(labels, codigo);
+
   const lines: string[] = [];
   for (const m of meetings) {
-    lines.push(`[Reunião] ${formatInstantDate(m.startAt)} — ${m.title}${m.clientName ? ` (com ${m.clientName})` : ""}${m.sectorCode ? ` · setor ${m.sectorCode}` : ""}`);
+    lines.push(`[Reunião] ${formatInstantDate(m.startAt)} — ${m.title}${m.clientName ? ` (com ${m.clientName})` : ""}${m.sectorCode ? ` · setor ${rotulo(m.sectorCode)}` : ""}`);
   }
   for (const h of handoffs) {
-    const dest = h.sectors.map((s) => `${s.sectorCode}:${s.status}`).join(", ");
-    // O assunto, desde 10/11/2026; as novas não escrevem mais `message`.
-    const resumo = h.subject ?? h.message;
-    lines.push(`[Transferência] ${formatInstantDate(h.createdAt)} — de ${h.fromSector} para ${dest} · prioridade ${h.priority}${resumo ? ` · "${resumo.slice(0, 160)}"` : ""}`);
+    lines.push(
+      linhaDaTransferencia(
+        // O assunto, desde 10/11/2026; as novas não escrevem mais `message`.
+        { data: formatInstantDate(h.createdAt), de: h.fromSector, partes: h.sectors, prioridade: h.priority, resumo: h.subject ?? h.message },
+        rotulo,
+      ),
+    );
   }
   for (const i of items) {
-    lines.push(`[Kanban ${i.pipeline.name} · ${i.pipeline.sectorCode}] etapa "${i.stage.name}"${i.dueDate ? ` · vence ${formatCalendarDate(i.dueDate)}` : ""}${i.description ? ` · ${i.description.slice(0, 160)}` : ""}`);
+    lines.push(`[Kanban ${i.pipeline.name} · ${rotulo(i.pipeline.sectorCode)}] etapa "${i.stage.name}"${i.dueDate ? ` · vence ${formatCalendarDate(i.dueDate)}` : ""}${i.description ? ` · ${i.description.slice(0, 160)}` : ""}`);
   }
   for (const d of clientDocs) {
     // "Envio ao cliente" desde 08/10/2026 (era "Documentos para cliente"): o
