@@ -18,7 +18,7 @@ function orquestradorFalso({ texto }: { texto: string }) {
     const deles = radicais(`${i.nome} ${i.descricao ?? ""}`), nota = pedidas.filter(p => deles.has(p)).length / Math.max(1, pedidas.length);
     if (!melhor || nota > melhor.nota) melhor = { ref: i.ref, nota };
   }
-  return Promise.resolve({ valor: { existing: melhor && melhor.nota >= 0.6 ? { ref: melhor.ref, match: "same", reason: "Converte as planilhas no layout que o sistema importa." } : null }, runId: "run" });
+  return Promise.resolve({ valor: { existing: melhor && melhor.nota >= 0.6 ? { ref: melhor.ref, does_what_is_asked: true, match: "same", reason: "Converte as planilhas no layout que o sistema importa." } : null }, runId: "run" });
 }
 
 const c = { tenantId: "t", userId: "u", ticketId: "chamado" };
@@ -65,8 +65,18 @@ describe("busca no Orquestrador da triagem", () => {
     expect((await procurarNoOrquestrador(c, pedido("Conversor de planilhas"), catalogo)).falha).toContain("sem o campo existing");
   });
   it("ignora item inventado pela IA e monta o cartão com os dados do banco", () => {
-    expect(acharExistente({ ref: "robo:inventado", match: "same", reason: "" }, catalogo)).toBeNull();
-    expect(acharExistente({ ref: "site:1", match: "talvez", reason: "" }, catalogo)).toBeNull();
-    expect(acharExistente({ ref: "site:1", match: "similar", reason: "x".repeat(600) }, catalogo)).toEqual(expect.objectContaining({ nome: "Portal de certidões", endereco: "https://certidoes.exemplo", noOps: "/ops?view=sites", reason: "x".repeat(500) }));
+    expect(acharExistente({ ref: "robo:inventado", does_what_is_asked: true, match: "same", reason: "" }, catalogo)).toBeNull();
+    expect(acharExistente({ ref: "site:1", does_what_is_asked: true, match: "talvez", reason: "" }, catalogo)).toBeNull();
+    expect(acharExistente({ ref: "site:1", does_what_is_asked: true, match: "similar", reason: "x".repeat(600) }, catalogo)).toEqual(expect.objectContaining({ nome: "Portal de certidões", endereco: "https://certidoes.exemplo", noOps: "/ops?view=sites", reason: "x".repeat(500) }));
+  });
+  it("item só do mesmo assunto, que a IA diz não fazer o pedido, não vira cartão (bug-700)", () => {
+    const certificados: ItemExistente[] = [{ ref: "app:receitapr", tipo: "app", nome: "Exportador DFe ReceitaPR", descricao: "Exporta documentos fiscais da Receita PR usando o certificado digital (CertDigital).", detalhe: "victorgomesdesa/receitapr-export", responsavel: "Victor Gomes de Sa", endereco: null }];
+    expect(acharExistente({ ref: "app:receitapr", does_what_is_asked: false, match: "similar", reason: "Trata de certificados digitais, mas não verifica a validade do certificado A3." }, certificados)).toBeNull();
+    // Resposta antiga, sem o campo, também não vale: o sim tem de vir explícito.
+    expect(acharExistente({ ref: "app:receitapr", match: "similar", reason: "" }, certificados)).toBeNull();
+  });
+  it("o prompt separa fazer a ação de tratar do mesmo assunto", () => {
+    expect(PROMPT_DO_ORQUESTRADOR).toContain("Tratar do mesmo assunto não basta");
+    expect(PROMPT_DO_ORQUESTRADOR).not.toContain("só parte do pedido");
   });
 });

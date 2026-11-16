@@ -53,11 +53,26 @@ export type DadosDoChamado = z.infer<typeof dadosSchema>;
 // O título é da IA (27/10/2026): o rascunho nasce sem ele e a classificação o
 // preenche; sem IA, sai do começo da descrição.
 export const dadosRascunhoSchema = dadosSchema.extend({ title: z.string().trim().max(255).default(""), categoryId: z.string().trim().max(191).default("") });
-export function tituloDaDescricao(descricao: string) {
-  const linha = descricao.trim().split(/\r?\n/).find(l => l.trim())?.trim().replace(/\s+/g, " ") ?? "";
+// O título provisório pula o cumprimento (16/11/2026, bug-701): um pedido que
+// começa com "Olá, bom dia!" numa linha própria ficava com esse título quando a
+// IA não devolvia outro.
+const CUMPRIMENTO = /^(?:(?:ol[áa]|oi+e?|opa|e a[íi]|bom dia|boa tarde|boa noite|tudo bem|tudo bom|tudo certo|como vai|prezad[oa]s?|pessoal|gente|equipe|time)(?![\p{L}\p{N}])[\s,!.?;:–—-]*)+/iu;
+const encurtar = (linha: string) => {
   const curto = linha.length <= 80 ? linha : `${linha.slice(0, 80).replace(/\s+\S*$/, "")}…`;
   return curto.length >= 3 ? curto : `Chamado: ${curto || "sem descrição"}`;
+};
+const linhasDe = (descricao: string) => descricao.split(/\r?\n/).map(l => l.trim().replace(/\s+/g, " ")).filter(Boolean);
+/** O título como saía até 16/11/2026: a primeira linha, com cumprimento e tudo. */
+const tituloDaPrimeiraLinha = (descricao: string) => encurtar(linhasDe(descricao)[0] ?? "");
+export function tituloDaDescricao(descricao: string) {
+  const linhas = linhasDe(descricao);
+  // A primeira linha que diz algo além do cumprimento; se nenhuma, a primeira como veio.
+  const util = linhas.map(l => l.replace(CUMPRIMENTO, "")).find(l => /[\p{L}\p{N}]{3}/u.test(l));
+  if (!util) return encurtar(linhas[0] ?? "");
+  return encurtar(util[0].toLocaleUpperCase("pt-BR") + util.slice(1));
 }
+/** O título ainda é o provisório (o de hoje ou o de antes de 16/11/2026), e pode dar lugar ao da IA. */
+export const ehTituloProvisorio = (titulo: string, descricao: string) => titulo === tituloDaDescricao(descricao) || titulo === tituloDaPrimeiraLinha(descricao);
 
 export function validarFormulario(dados: DadosDoChamado, categoria: Categoria, anexos: { attachmentKey: string | null; mimeType: string }[]) {
   if (!categoria.active) throw new Error("Esta categoria está desativada.");
@@ -125,7 +140,8 @@ const SEM_CATEGORIA: Record<MotivoSemCategoria, string> = {
 };
 /** A frase da tela do chamado, a mesma para quem abriu e para a equipe. */
 export function textoDaTriagem(t: Triagem): string {
-  if (t.existente) return `${mensagemDoExistente(t.existente)} O chamado segue com a equipe.`;
+  // Com item do Orquestrador e sem categoria, a frase diz também por que não classificou (bug-701).
+  if (t.existente) return `${mensagemDoExistente(t.existente)} ${t.categoria ? `O chamado foi classificado em ${t.categoria} e segue com a equipe.` : SEM_CATEGORIA[t.semCategoria ?? "falha"]}`;
   if (t.categoria) return `A triagem automática classificou o chamado em ${t.categoria}. Ele está com a equipe.`;
   return SEM_CATEGORIA[t.semCategoria ?? "falha"];
 }

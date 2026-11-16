@@ -49,12 +49,14 @@ export function TriagemEmAndamento({ id, version }: { id: string; version: numbe
 
 /** O resultado da triagem que pede atenção: o que já existe no Orquestrador, ou o porquê de ficar para a equipe classificar. */
 export function ResultadoDaTriagem({ triagem, pedido, podeVerOps, souQuemAbriu }: { triagem: Triagem; pedido: string; podeVerOps: boolean; souQuemAbriu: boolean }) {
-  if (triagem.existente) return <CartaoDoExistente e={triagem.existente} pedido={pedido} podeVerOps={podeVerOps} souQuemAbriu={souQuemAbriu} />;
-  if (triagem.categoria) return null;
-  return <Aviso tom={triagem.semCategoria === "falha" ? "atencao" : "neutro"} icone={<ScanSearch aria-hidden />}>
+  // O cartão do Orquestrador não esconde mais a classificação (16/11/2026,
+  // bug-701): sem categoria, o aviso de "A classificar" vem junto dele.
+  const cartao = triagem.existente && <CartaoDoExistente e={triagem.existente} pedido={pedido} podeVerOps={podeVerOps} souQuemAbriu={souQuemAbriu} />;
+  if (triagem.categoria) return cartao || null;
+  return <>{cartao}<Aviso tom={triagem.semCategoria === "falha" ? "atencao" : "neutro"} icone={<ScanSearch aria-hidden />}>
     <p className="font-semibold">{triagem.semCategoria === "falha" ? "A triagem automática falhou" : "A classificar pela equipe"}</p>
-    <p>{textoDaTriagem(triagem)}</p>
-  </Aviso>;
+    <p>{textoDaTriagem({ ...triagem, existente: null })}</p>
+  </Aviso></>;
 }
 
 const ICONES = { robo: Bot, site: Globe, app: AppWindow };

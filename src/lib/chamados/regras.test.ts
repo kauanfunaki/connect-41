@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, tituloDaDescricao, triagemSchema, textoDaTriagem, avisoDaTriagem, resultadoDaTriagem, intervaloDaTriagem, SITUACOES_MANUAIS, STATUS, ROTULOS, emTriagem } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, tituloDaDescricao, ehTituloProvisorio, triagemSchema, textoDaTriagem, avisoDaTriagem, resultadoDaTriagem, intervaloDaTriagem, SITUACOES_MANUAIS, STATUS, ROTULOS, emTriagem } from "./regras";
 import { minutosUteisEntre, somarMinutosUteis } from "./sla";
 
 const dados = dadosSchema.parse({ title: "Acesso ao sistema", description: "Preciso de acesso ao sistema de atendimento para trabalhar.", categoryId: "cat", requesterSectorCode: "fiscal" });
@@ -47,6 +47,25 @@ describe("abertura sem título", () => {
     const longo = tituloDaDescricao("palavra ".repeat(30));
     expect(longo.length).toBeLessThanOrEqual(81); expect(longo.endsWith("…")).toBe(true); expect(longo).not.toContain("palavra …");
     expect(tituloDaDescricao("ok")).toBe("Chamado: ok");
+  });
+  it("o título provisório pula o cumprimento do começo do pedido (bug-701)", () => {
+    const pedido = "Olá, bom dia!\nTemos o certificado digital A3 do Marcos, porém ao tentar utilizar, não foi possível.\nObrigada!";
+    expect(tituloDaDescricao(pedido)).toBe("Temos o certificado digital A3 do Marcos, porém ao tentar utilizar, não foi…");
+    expect(tituloDaDescricao("Oi, pessoal, tudo bem? preciso de acesso à VPN")).toBe("Preciso de acesso à VPN");
+    expect(tituloDaDescricao("Boa tarde")).toBe("Boa tarde");
+    // Palavra que só começa igual a um cumprimento fica.
+    expect(tituloDaDescricao("Timesheet não abre")).toBe("Timesheet não abre");
+    expect(tituloDaDescricao("Oitava parcela veio errada")).toBe("Oitava parcela veio errada");
+    // O título gravado antes da mudança ("Olá, bom dia!") continua sendo provisório para a IA trocar.
+    expect(ehTituloProvisorio("Olá, bom dia!", pedido)).toBe(true);
+    expect(ehTituloProvisorio(tituloDaDescricao(pedido), pedido)).toBe(true);
+    expect(ehTituloProvisorio("Certificado A3 do Marcos", pedido)).toBe(false);
+  });
+  it("com item do Orquestrador e sem categoria, a frase diz por que não classificou (bug-701)", () => {
+    const existente = { ref: "app:x", tipo: "app" as const, nome: "App fictício", responsavel: null, endereco: null, noOps: null, detalhe: null, match: "similar" as const, reason: "" };
+    expect(textoDaTriagem(triagemSchema.parse({ existente, semCategoria: "falha" }))).toContain("A triagem automática falhou");
+    expect(textoDaTriagem(triagemSchema.parse({ existente, semCategoria: "incerto" }))).toContain("não identificou a categoria");
+    expect(textoDaTriagem(triagemSchema.parse({ existente, categoria: "Suporte › Treinamento" }))).toContain("classificado em Suporte › Treinamento");
   });
   it("lê o parecer antigo, com pergunta em texto, para os chamados da conversa com a IA", () => {
     const p = parecerSchema.parse({ status: "needs_information", summary: "Faltam dados.", questions: ["Qual sistema?"], attachments: [] });

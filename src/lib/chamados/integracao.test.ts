@@ -35,7 +35,7 @@ function orquestradorFalso(texto: string) {
   const { pedido, jaExiste } = JSON.parse(texto) as { pedido: { descricao: string }; jaExiste: { ref: string; nome: string; descricao: string | null }[] };
   const pedidas = [...radicais(pedido.descricao)];
   const notas = jaExiste.map(i => { const deles = radicais(`${i.nome} ${i.descricao ?? ""}`); return { ref: i.ref, nota: pedidas.filter(p => deles.has(p)).length / Math.max(1, pedidas.length) }; }).sort((a, b) => b.nota - a.nota);
-  return { existing: notas[0] && notas[0].nota >= 0.6 ? { ref: notas[0].ref, match: "same", reason: "Faz a mesma conversão." } : null };
+  return { existing: notas[0] && notas[0].nota >= 0.6 ? { ref: notas[0].ref, does_what_is_asked: true, match: "same", reason: "Faz a mesma conversão." } : null };
 }
 const PEDIDO_DO_CONVERSOR = "Conversor de planilhas de lançamentos em arquivos TXT no layout que o sistema Domínio importa.";
 
