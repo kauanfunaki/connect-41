@@ -16,7 +16,7 @@ import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/sh
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { AtualizarEmLote, BotaoDaAutorizacao, ConferirNoSerpro, PedidoAoCliente } from "@/components/autorizacoes/DialogosDaAutorizacao";
-import { TOM_DA_SITUACAO } from "@/components/autorizacoes/AutorizacaoNaFicha";
+import { TOM_DA_SITUACAO } from "@/components/autorizacoes/ReceitaFederalNaFicha";
 import { acessoAsAutorizacoes, carteiraDasAutorizacoes, quemRecebe, sugestaoDeQuemRecebe } from "@/lib/autorizacoes/servidor";
 import {
   andamentoDaAutorizacao,

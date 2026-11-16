@@ -25,6 +25,16 @@ export const ROTULO_DO_EVENTO: Record<Evento, string> = {
   E0701: "Pagamento novo, alterado ou cancelado",
 };
 
+/**
+ * O nome curto de cada evento, para a etiqueta com a data na ficha da empresa
+ * ("DCTFWeb 13/11"). O rótulo por extenso fica na dica (16/11/2026, melhoria-715).
+ */
+export const ROTULO_CURTO_DO_EVENTO: Record<Evento, string> = {
+  E0301: "DCTFWeb",
+  E0601: "Caixa Postal",
+  E0701: "Pagamento",
+};
+
 /** Até quantos contribuintes por pedido. */
 export const LOTE_MAXIMO = 1000;
 /** O mínimo que o Serpro diz para esperar, mais a folga que a documentação recomenda. */
