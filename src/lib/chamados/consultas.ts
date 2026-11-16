@@ -164,7 +164,11 @@ export async function detalhe(c: Contexto, id: string) {
     draft: { include: { messages: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } } },
   } });
   if (!t || !podeVer(c.ctx, c.config, { ...t, approverIds: strings(t.approverIds) })) throw new Error("Chamado não encontrado.");
-  return t;
+  // Para quem não vê o que é interno, `checklist: false` deixa o campo AUSENTE
+  // (o tipo do Prisma diz que ele existe). A tela lia `checklist.length` e
+  // quebrava inteira para quem abriu o chamado de outro setor (16/11/2026,
+  // bug-721). Quem não vê o checklist recebe a lista vazia.
+  return { ...t, checklist: interno ? t.checklist : [] };
 }
 export async function usuarios(c: Contexto) {
   return getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, active: true }, select: { id: true, name: true, role: true, sectors: { select: { sectorCode: true } } }, orderBy: { name: "asc" } });
