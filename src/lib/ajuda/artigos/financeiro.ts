@@ -806,7 +806,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Ver o DRE de um mês",
         passos: [
           "Em “Empresa”, no topo da tela, escolha a empresa. A tela troca sozinha e, da próxima vez, já abre na última empresa que você abriu — ou, trabalhando numa empresa por vez, nela.",
-          "Na aba “Por mês”, o DRE abre no mês mais recente com movimento.",
+          "Em “Por mês”, ao lado dos filtros, o DRE abre no mês mais recente com movimento.",
           "Para ver outro mês, clique em “Filtros” e escolha o “Mês”.",
           "Confira, abaixo do relatório, quantos lançamentos entraram e se algum valor não fechou.",
         ],
@@ -814,9 +814,17 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Ver o ano inteiro",
         passos: [
-          "Clique na aba “Ano inteiro”.",
+          "Clique em “Ano inteiro”, ao lado dos filtros.",
           "Para trocar o ano, clique em “Filtros” e escolha o “Ano”.",
           "Compare os doze meses lado a lado. A coluna “Média” divide pelos meses com movimento, não por doze.",
+        ],
+      },
+      {
+        titulo: "Ver a DRE como o cliente vê",
+        passos: [
+          "Em “Visão”, na fileira dos filtros, clique em “Cliente”. A tela mostra a DRE da empresa como aparece no portal do cliente, só para leitura.",
+          "Para o regime de competência do cliente, clique na aba “Competência”, no alto: a visão continua em “Cliente”.",
+          "Para voltar, clique em “Equipe”. A empresa e o período continuam os mesmos.",
         ],
       },
       {
@@ -876,7 +884,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Ver o resultado do período",
         passos: [
           "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
-          "Escolha a visão nas abas: “Mês”, “Acumulado no ano” ou “Últimos 12 meses”.",
+          "Ao lado do mês, escolha o período: “Mês”, “Acumulado no ano” ou “Últimos 12 meses”.",
           "Leia os cartões do topo: “Receita bruta”, “Margem de contribuição”, “Resultado operacional (EBITDA)” e “Resultado do período”.",
           "No modelo padrão, para tirar os impostos sobre a receita do resultado, clique em “Impostos fora do resultado”, ao lado dos filtros. “Impostos no EBITDA” é o padrão.",
           "Confira os avisos em amarelo, como lançamentos ainda a conferir que entram no resultado.",
@@ -903,6 +911,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "Valores sem grupo ficam fora do resultado. Classifique na tela “DRE”, que usa o mesmo de-para.",
       "O que foi pago e recebido no mês está na “DRE” (caixa). A diferença entre os dois regimes está em “Análises gerenciais”.",
+      "Para ver a competência como aparece no portal do cliente, clique em “Cliente”, em “Visão”, na fileira dos filtros. “Equipe” volta para esta tela.",
     ],
   },
 
@@ -918,7 +927,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         titulo: "Abrir uma análise",
         passos: [
           "Escolha a empresa em “Empresa” (a tela troca sozinha); depois o mês, e clique em “Aplicar”.",
-          "Clique na aba da análise. Trocar de aba mantém a empresa e o mês.",
+          "Em “Análise”, ao lado do mês, escolha a análise. Ela abre na hora, com a mesma empresa e o mesmo mês.",
           "“Econômico × financeiro” põe o resultado por competência ao lado do caixa e mostra os atrasos médios.",
           "“Reconciliação lucro → caixa” explica, passo a passo, por que o lucro do mês é diferente do caixa.",
           "“Indicadores” traz rentabilidade, capital de giro, caixa e risco, com a fórmula de cada um.",
@@ -927,7 +936,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Comparar períodos ou empresas",
         passos: [
-          "Clique na aba “Comparativos”.",
+          "Em “Análise”, escolha “Comparativos”.",
           "Clique em “Filtros” e escolha a “Comparação”, como “Mês × mesmo mês do ano anterior” ou “Empresa × empresa”.",
           "Em “Regime”, escolha “Competência” ou “Caixa”.",
           "Na comparação entre empresas, escolha a outra em “Comparar com”.",
@@ -936,7 +945,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Projetar os próximos meses",
         passos: [
-          "Clique na aba “Forecast”, a projeção dos próximos meses.",
+          "Em “Análise”, escolha “Forecast”, a projeção dos próximos meses.",
           "Clique em “Filtros” e escolha o “Método”: “Tendência linear”, “Média móvel (3 meses)” ou “Sazonalidade”.",
           "A última coluna mostra o que já está lançado vencendo em cada mês.",
         ],
@@ -944,7 +953,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Simular um cenário",
         passos: [
-          "Clique na aba “Cenários”.",
+          "Em “Análise”, escolha “Cenários”.",
           "Em “Cenário”, escolha “Pessimista”, “Base”, “Otimista” ou “Personalizado”.",
           "Ajuste os percentuais de “Receita”, “Custo operacional além da receita”, “Custo administrativo” e “Financiamentos e empréstimos”.",
           "Compare a coluna “Simulado” com a DRE do mês.",
@@ -952,7 +961,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "A aba “CFO” responde perguntas prontas, como “Por que minha margem mudou este mês?”, com diagnóstico, evidências e plano de ação.",
+      "A análise “CFO” responde perguntas prontas, como “Por que minha margem mudou este mês?”, com diagnóstico, evidências e plano de ação.",
       "A projeção pede ao menos três meses com lançamento. A simulação de cenário não é gravada.",
       "Tudo é calculado pelo próprio Connect, sem IA externa.",
     ],

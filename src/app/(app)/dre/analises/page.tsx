@@ -1,22 +1,15 @@
 import { notFound } from "next/navigation";
-import {
-  ArrowLeftRight,
-  Columns2,
-  FileText,
-  Gauge,
-  GitMerge,
-  MessageCircleQuestion,
-  SlidersHorizontal,
-  TrendingUp,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FiltroDePeriodo, AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
+import { FiltroDePeriodo } from "@/components/financeiro/FiltroDePeriodo";
 import { AbasDaDre } from "@/components/dre/AbasDaDre";
+import { SeletorDeAnalise } from "@/components/dre/analises/SeletorDeAnalise";
+import { ANALISES_DA_DRE, analiseDaUrl, hrefDaAnalise } from "@/lib/dre/analisesDaTela";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
@@ -40,23 +33,16 @@ const MODULE = "dre_analises";
 // é só o padrão.
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
 
-// Com ícone, como as abas das outras telas polidas em 30/09.
-const ABAS = [
-  { chave: "economico-financeiro", rotulo: "Econômico × financeiro", icone: <ArrowLeftRight /> },
-  { chave: "reconciliacao", rotulo: "Reconciliação lucro → caixa", icone: <GitMerge /> },
-  { chave: "comparativos", rotulo: "Comparativos", icone: <Columns2 /> },
-  { chave: "forecast", rotulo: "Forecast", icone: <TrendingUp /> },
-  { chave: "cenarios", rotulo: "Cenários", icone: <SlidersHorizontal /> },
-  { chave: "indicadores", rotulo: "Indicadores", icone: <Gauge /> },
-  { chave: "cfo", rotulo: "CFO", icone: <MessageCircleQuestion /> },
-] as const;
-
 /**
- * As análises gerenciais da DRE, numa tela com abas.
+ * As análises gerenciais da DRE, numa tela só.
  *
  * Uma tela e não sete porque todas respondem sobre a mesma empresa e o mesmo
- * mês: trocar de aba não pode perder o filtro, e sete rotas soltas sete vezes
- * o seletor. Cada aba busca só o próprio dado.
+ * mês: trocar de análise não pode perder o filtro, e sete rotas soltas sete
+ * vezes o seletor. Cada análise busca só o próprio dado.
+ *
+ * As sete eram abas, uma segunda fileira embaixo das quatro DREs; desde
+ * 16/11/2026 (melhoria-718) se escolhem no seletor "Análise", na fileira do
+ * mês (`analisesDaTela.ts`). O endereço (`?aba=`) é o mesmo.
  */
 export default async function AnalisesPage({
   searchParams,
@@ -68,7 +54,7 @@ export default async function AnalisesPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const aba = ABAS.find((a) => a.chave === params.aba)?.chave ?? "economico-financeiro";
+  const aba = analiseDaUrl(params.aba);
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026); era a primeira em ordem alfabética.
   const empresas = await empresasDoSeletor(ctx.tenantId);
@@ -110,15 +96,15 @@ export default async function AnalisesPage({
         subtitle={`Análises e reconciliação de ${rotuloDaCompetencia(mes)}, sobre a DRE por competência e o caixa — cálculo determinístico, sem IA externa.`}
       />
       <AbasDaDre ativa="analises" companyId={companyId} mes={mes} />
-      {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
+      {/* A empresa navega sozinha (e vira a última aberta); a análise também,
+          ao escolher; o mês, com "Aplicar". */}
       <FiltroDaEmpresa foco={foco}>
+        <SeletorDeAnalise
+          ativa={aba}
+          analises={ANALISES_DA_DRE.map((a) => ({ ...a, href: hrefDaAnalise(a.chave, companyId, mes) }))}
+        />
         <FiltroDePeriodo acao="/dre/analises" mes={mes} mesEmNumero extras={{ empresa: companyId, aba }} naFileira />
       </FiltroDaEmpresa>
-      <AbasDeLink
-        aria-label="Análises"
-        abas={ABAS.map((a) => ({ ...a, href: `/dre/analises?aba=${a.chave}&empresa=${companyId}&mes=${mes}` }))}
-        ativa={aba}
-      />
 
       {aba === "economico-financeiro" && <AbaEconomicoFinanceiro {...base} />}
       {aba === "reconciliacao" && <AbaReconciliacao {...base} />}

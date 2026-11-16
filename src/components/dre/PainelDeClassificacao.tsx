@@ -60,7 +60,7 @@ export function PainelDeClassificacao({ children, ...dados }: Dados & { children
 /**
  * O painel desta tela, para quem abre a fila de outro lugar — o "⋯" do topo,
  * quando não falta nada a classificar mas há exceções a rever. `null` fora do
- * painel (a aba "Como o cliente vê").
+ * painel (a "Visão: Cliente").
  */
 export function usePainelDeClassificacao(): Contexto | null {
   return useContext(Ctx);

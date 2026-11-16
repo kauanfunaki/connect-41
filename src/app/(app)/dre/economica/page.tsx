@@ -17,6 +17,10 @@ import { Accordion } from "@/components/ui/Accordion";
 import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
 import { ItemDoMenu } from "@/components/ui/Popover";
 import { AbasDaDre } from "@/components/dre/AbasDaDre";
+import { ComoOClienteVe } from "@/components/dre/ComoOClienteVe";
+import { ControleDaVisao } from "@/components/dre/ControleDaVisao";
+import { podeVerComoOCliente } from "@/lib/dre/acesso";
+import { hrefDaVisaoDaEquipe, hrefDaVisaoDoCliente, periodoDoPortal, visaoDaUrl } from "@/lib/dre/visaoDaDre";
 import { FaixaDoRascunho } from "@/components/dre/FaixaDoRascunho";
 import { diferencasDaDre } from "@/lib/dre/publicacao";
 import { fotoAtualDoMes, garantirFotoInicial, publicacoesDaEmpresa } from "@/lib/dre/publicacaoServidor";
@@ -91,10 +95,20 @@ export default async function DreEconomicaPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const ctx = await getAuthContext();
-  if (!ctx.tenantId || !canViewSector(ctx, (await setoresDoModulo(ctx.tenantId, MODULE)) ?? SECTOR)) notFound();
-  if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
+  if (!ctx.tenantId || !(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
+  // "Visão: Cliente" também aqui (16/11/2026, melhoria-718): a competência do
+  // cliente era uma aba dentro da visão do cliente da DRE de caixa, e quem a
+  // via era quem abre a DRE de caixa (`podeVerComoOCliente`) — a régua é a
+  // mesma, só o endereço mudou. A DRE econômica da equipe segue com o gate do
+  // setor; quem só tem um dos dois vê só o que já via.
+  const [podeAEquipe, podeOCliente] = await Promise.all([
+    setoresDoModulo(ctx.tenantId, MODULE).then((setores) => canViewSector(ctx, setores ?? SECTOR)),
+    podeVerComoOCliente(ctx, "competencia"),
+  ]);
+  const comoCliente = visaoDaUrl(params.como, podeOCliente) === "cliente";
+  if (!podeAEquipe && !comoCliente) notFound();
   const visao = VISOES.find((v) => v.chave === params.visao)?.chave ?? "mes";
   // A empresa da URL, a última aberta pela pessoa — ou nenhuma, e a tela pede
   // (13/10/2026); era a primeira em ordem alfabética.
@@ -132,6 +146,33 @@ export default async function DreEconomicaPage({
   const comEmpresa = (tela: React.ReactNode) => (
     <EmpresaDaTela empresa={{ nome: empresa.nome, cnpj: empresa.cnpj }}>{tela}</EmpresaDaTela>
   );
+
+  // "Visão: Cliente": a competência desta empresa como aparece no portal, só
+  // de leitura — o mesmo componente da DRE de caixa, no regime desta aba. Sem
+  // centro de custo, orçado nem rascunho: é o que foi publicado para o cliente.
+  if (comoCliente) {
+    const periodo = periodoDoPortal(params.mes, params.ano);
+    return comEmpresa(
+      <PageContainer>
+        {cabecalho()}
+        <AbasDaDre ativa="competencia" companyId={companyId} mes={periodo.mes} visaoDoCliente={{ ano: periodo.ano }} />
+        <FiltroDaEmpresa className="" foco={foco} />
+        <ComoOClienteVe
+          tenantId={ctx.tenantId}
+          companyId={companyId}
+          regime="competencia"
+          params={{ mes: params.mes, ano: params.ano }}
+          naFileira={
+            <ControleDaVisao
+              ativa="cliente"
+              equipe={podeAEquipe ? hrefDaVisaoDaEquipe("competencia", companyId, periodo) : null}
+              cliente={hrefDaVisaoDoCliente("competencia", companyId, periodo)}
+            />
+          }
+        />
+      </PageContainer>
+    );
+  }
 
   // Sem mês na URL, o mais recente com lançamento — abrir num mês vazio faria
   // a tela parecer quebrada para quem só quer ver o último fechamento.
@@ -272,10 +313,18 @@ export default async function DreEconomicaPage({
         ) : undefined
       )}
       <AbasDaDre ativa="competencia" companyId={companyId} mes={mes} />
-      {/* O mês e o centro de custo seguem no formulário com "Aplicar"; a
-          visão, no seletor ao lado. O centro é da empresa — trocar de empresa
-          o deixa para trás. */}
+      {/* O mês e o centro de custo seguem no formulário com "Aplicar"; o
+          período do relatório, no seletor ao lado. O centro é da empresa —
+          trocar de empresa o deixa para trás. "Visão: Equipe | Cliente" vem
+          primeiro (16/11/2026, melhoria-718), só para quem vê a do cliente. */}
       <FiltroDaEmpresa foco={foco}>
+        {podeOCliente && (
+          <ControleDaVisao
+            ativa="equipe"
+            equipe={hrefDaVisao(visao)}
+            cliente={hrefDaVisaoDoCliente("competencia", companyId, { mes })}
+          />
+        )}
         <FiltroDePeriodo
           acao="/dre/economica"
           mes={mes}

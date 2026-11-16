@@ -16,6 +16,26 @@ describe("hrefDaAbaDaDre", () => {
     expect(hrefDaAbaDaDre("competencia", "emp1", null)).toBe("/dre/economica?empresa=emp1");
     expect(hrefDaAbaDaDre("analises", "emp1", "2026-9")).toBe("/dre/analises?empresa=emp1");
   });
+
+  // 16/11/2026, melhoria-718: na visão do cliente quem troca o regime é a
+  // fileira de cima — Caixa e Competência seguem em "Cliente".
+  it("na visão do cliente, Caixa e Competência seguem nela, com o mês do portal", () => {
+    expect(hrefDaAbaDaDre("caixa", "emp1", "2026-09", {})).toBe("/dre?empresa=emp1&como=cliente&mes=2026-09");
+    expect(hrefDaAbaDaDre("competencia", "emp1", "2026-09", {})).toBe("/dre/economica?empresa=emp1&como=cliente&mes=2026-09");
+    expect(hrefDaAbaDaDre("competencia", "emp1", null, { ano: null })).toBe("/dre/economica?empresa=emp1&como=cliente");
+  });
+
+  it("na visão do cliente, Análises e Orçamento abrem como sempre", () => {
+    expect(hrefDaAbaDaDre("analises", "emp1", "2026-09", {})).toBe("/dre/analises?empresa=emp1&mes=2026-09");
+    expect(hrefDaAbaDaDre("orcamento", "emp1", "2026-09", {})).toBe("/dre/orcamento?empresa=emp1&ano=2026");
+  });
+
+  it("no ano inteiro do cliente, as duas DREs levam o ano; as análises abrem no mês mais recente", () => {
+    expect(hrefDaAbaDaDre("caixa", "emp1", null, { ano: "2026" })).toBe("/dre?empresa=emp1&como=cliente&ano=2026");
+    expect(hrefDaAbaDaDre("competencia", "emp1", null, { ano: "2026" })).toBe("/dre/economica?empresa=emp1&como=cliente&ano=2026");
+    expect(hrefDaAbaDaDre("orcamento", "emp1", null, { ano: "2026" })).toBe("/dre/orcamento?empresa=emp1&ano=2026");
+    expect(hrefDaAbaDaDre("analises", "emp1", null, { ano: "2026" })).toBe("/dre/analises?empresa=emp1");
+  });
 });
 
 describe("abasVisiveis", () => {

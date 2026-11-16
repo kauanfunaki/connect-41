@@ -18,21 +18,31 @@ type Props = {
   companyId: string;
   /** `mes`, `ano` e `regime` da URL — os mesmos do portal. */
   params: { mes?: string; ano?: string; regime?: string };
-  /** O tenant ligou a DRE econômica: a aba Competência aparece. */
-  competenciaLiberada: boolean;
-  /** Rota do filtro e das abas: `/portal/dre`, ou `/dre` na aba "Como o cliente vê". */
+  /** O tenant ligou a DRE econômica: a aba Competência aparece. Só no portal. */
+  competenciaLiberada?: boolean;
+  /**
+   * Na tela da equipe ("Visão: Cliente", 16/11/2026, melhoria-718): o regime é
+   * o da aba de cima — Caixa em `/dre`, Competência em `/dre/economica` —, e a
+   * fileira Caixa | Competência daqui não aparece. Sem isto (o portal), o
+   * regime vem de `params.regime` e das abas.
+   */
+  regimeDaTela?: "caixa" | "competencia";
+  /** Rota do filtro e das abas: `/portal/dre`, ou a da tela da equipe (`/dre`, `/dre/economica`). */
   acao: string;
   /** As empresas do seletor, quando há mais de uma para escolher (portal). */
   empresas?: (EmpresaParaEscolher & { nome: string })[];
   /** O que o filtro e as abas carregam além de empresa, período e regime (o `como=cliente`). */
   manter?: Record<string, string | undefined>;
+  /** Na tela da equipe: o que vem na fileira do filtro, antes do mês (o seletor "Visão"). */
+  naFileira?: React.ReactNode;
 };
 
 /**
  * A DRE do cliente: filtro, abas Caixa e Competência, números do topo, tabela
  * e a nota do regime. É o corpo de `/portal/dre`, e o mesmo corpo aparece na
- * aba "Como o cliente vê" de `/dre` (21/10/2026) — um componente só, para a
- * equipe ver exatamente o que o cliente vê.
+ * "Visão: Cliente" de `/dre` e de `/dre/economica` (21/10/2026; nas duas desde
+ * 16/11/2026) — um componente só, para a equipe ver exatamente o que o cliente
+ * vê. Na tela da equipe as abas Caixa e Competência são as de cima.
  *
  * Desde 05/11/2026 (decisão D4 do Kauan) lê a **última foto publicada** de cada
  * mês, e não os lançamentos ao vivo: importar ou classificar na DRE da equipe
@@ -45,8 +55,20 @@ type Props = {
  * mês ("Ano inteiro de 2026"), e vai na URL como `ano=2026` no lugar de `mes`.
  * Vale nas duas abas: na de Competência, os doze meses pela competência.
  */
-export async function DreDoCliente({ tenantId, companyId, params, competenciaLiberada, acao, empresas, manter }: Props) {
-  const regime = params.regime === "competencia" && competenciaLiberada ? "competencia" : "caixa";
+export async function DreDoCliente({
+  tenantId,
+  companyId,
+  params,
+  competenciaLiberada = false,
+  regimeDaTela,
+  acao,
+  empresas,
+  manter,
+  naFileira,
+}: Props) {
+  const regime = regimeDaTela ?? (params.regime === "competencia" && competenciaLiberada ? "competencia" : "caixa");
+  // Na tela da equipe o regime é a rota: não vai no endereço.
+  const regimeNaUrl = regimeDaTela || regime === "caixa" ? undefined : ("competencia" as const);
 
   await garantirFotoInicial(tenantId, companyId);
   const publicacoes = await publicacoesDaEmpresa(tenantId, companyId);
@@ -117,7 +139,7 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
   // outras telas do portal.
   const escolheEmpresa = Boolean(empresas && empresas.length > 1);
   const temPeriodo = mes !== undefined || ano !== null;
-  const extrasDoPeriodo = { ...manter, empresa: companyId, regime: regime === "caixa" ? undefined : regime };
+  const extrasDoPeriodo = { ...manter, empresa: companyId, regime: regimeNaUrl };
   const filtroDoPeriodo = (naFileira: boolean) => (
     <FiltroDePeriodo
       acao={acao}
@@ -143,13 +165,19 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
 
   return (
     <>
-      {escolheEmpresa ? (
+      {regimeDaTela ? (
+        // Na tela da equipe, uma fileira só: "Visão" e o mês (16/11/2026).
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {naFileira}
+          {temPeriodo && <div className="flex items-center gap-2">{filtroDoPeriodo(true)}</div>}
+        </div>
+      ) : escolheEmpresa ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           <SeletorDeEmpresaQueNavega
             acao={acao}
             empresas={empresas!}
             empresaId={companyId}
-            manter={{ ...manter, mes: ano ? undefined : mes, ano: ano ? String(ano) : undefined, regime: regime === "caixa" ? undefined : regime }}
+            manter={{ ...manter, mes: ano ? undefined : mes, ano: ano ? String(ano) : undefined, regime: regimeNaUrl }}
             className="w-full sm:w-auto"
           />
           {temPeriodo && <div className="flex items-center gap-2">{filtroDoPeriodo(true)}</div>}
@@ -157,7 +185,7 @@ export async function DreDoCliente({ tenantId, companyId, params, competenciaLib
       ) : (
         filtroDoPeriodo(false)
       )}
-      {competenciaLiberada && (
+      {competenciaLiberada && !regimeDaTela && (
         <AbasDeLink
           abas={[
             { chave: "caixa", rotulo: "Caixa", href: base, icone: <Wallet /> },
