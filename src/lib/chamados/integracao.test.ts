@@ -102,6 +102,12 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     expect(avisos.map(n => [n.userId, n.message])).toEqual([[solicitante, "Triagem concluída, chamado classificado em Acesso fictício: Acesso ao ambiente de testes"]]);
     expect((await db!.helpdeskDraft.findFirstOrThrow({ where: { ticket: { id } } })).analysisToken).toBeNull();
   });
+  it("quem abriu, de fora do setor que atende, recebe o checklist vazio, e não ausente; a equipe recebe os itens", async () => {
+    // bug-721 (16/11/2026): sem o campo, a tela do chamado quebrava inteira para quem abriu.
+    const id = await enviar(); await triarChamado(tenantId, id);
+    expect((await detalhe(c, id)).checklist).toEqual([]);
+    expect((await detalhe(equipe, id)).checklist.map(i => i.label)).toEqual(["Conferir o acesso"]);
+  });
   it("o pedido parecido com uma automação cadastrada termina em \"Já existe no Orquestrador\", mesmo sem categoria", async () => {
     // O caso de 10/11/2026: a classificação não achou a categoria, e a busca no Orquestrador nem rodava.
     classificarComo(null);
