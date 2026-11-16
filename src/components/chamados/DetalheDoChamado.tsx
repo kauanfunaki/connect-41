@@ -26,6 +26,7 @@ import { ROTULOS, ROTULOS_PRIORIDADE, emTriagem, fechado, parecerSchema, triagem
 import type { detalhe } from "@/lib/chamados/consultas";
 import { montarLinhaDoTempo } from "@/lib/chamados/linhaDoTempo";
 import { painelDoPrazo } from "@/lib/chamados/painelDoPrazo";
+import { idCurto } from "@/lib/enderecoCurto";
 
 type Chamado = Awaited<ReturnType<typeof detalhe>>;
 type Usuario = { id: string; name: string; atendente: boolean };
@@ -39,6 +40,10 @@ const LINHA_DE_ACAO = "w-full items-center py-2.5 text-ui font-semibold text-bra
 
 function FormAcao({ titulo, children, onSubmit, disabled, label = "Salvar" }: { titulo: string; children: React.ReactNode; onSubmit: (f: FormData) => void; disabled: boolean; label?: string }) {
   return <form onSubmit={e => { e.preventDefault(); onSubmit(new FormData(e.currentTarget)); }} className="space-y-3 border-b border-border pb-4"><fieldset disabled={disabled} className="space-y-3"><h3 className="font-semibold text-fg">{titulo}</h3>{children}<Button type="submit" variant="secondary" size="sm">{label}</Button></fieldset></form>;
+}
+/** Uma linha dos dados do chamado no cartão "Atendimento": o nome à esquerda e o valor à direita. */
+function DadoDoChamado({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return <div className="flex items-baseline justify-between gap-3"><dt className="flex-shrink-0 text-fg-secondary">{rotulo}</dt><dd className="min-w-0 break-words text-right font-medium text-fg">{children}</dd></div>;
 }
 /** O relógio da faixa do prazo: parte da hora do servidor (a mesma na hidratação) e anda de minuto em minuto. */
 function useAgora(inicial: string) {
@@ -101,7 +106,6 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
           {Object.entries(t.requestData as Record<string, string>).map(([key, valor]) => <div key={key} className="text-ui"><span className="font-semibold text-fg">{categorias.find(c => c.id === t.categoryId)?.formSchema.find(f => f.key === key)?.label ?? key}: </span><span className="whitespace-pre-wrap break-words text-fg-secondary">{valor}</span></div>)}
           {!!(t.tags as string[]).length && <p className="text-helper text-fg-muted">Tags: {(t.tags as string[]).join(", ")}</p>}
           {!!daAbertura.length && <div className="flex flex-wrap items-center gap-2"><Paperclip size={14} aria-label="Arquivos da abertura" className="text-fg-muted" />{daAbertura.map(a => <LinkDoAnexo key={a.id} anexo={a} />)}</div>}
-          <p className="text-helper text-fg-muted">Aberto por {nome(t.createdById)} em {data(t.createdAt)} · Protocolo {t.id}</p>
         </Card>
         <Card className="p-5 space-y-4"><h2 className="font-semibold text-fg">Mensagens</h2>
           {linha.length ? <LinhaDoTempo itens={linha} nome={nome} /> : <p className="text-ui text-fg-muted">Ainda não há mensagens de atendimento.</p>}
@@ -130,10 +134,20 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
             <SeletorDePessoas titulo="Participantes" selecionados={participantes} opcoes={usuarios} nome={nome} vazio="Nenhum adicional" disabled={busy || encerrado}
               onAdicionar={p.gerenciar && !encerrado ? id => acao("participantes", [...participantes, id]) : undefined}
               onRetirar={p.gerenciar && !encerrado ? id => acao("participantes", participantes.filter(r => r !== id)) : undefined} />
-            {ciclo && <p className="text-helper text-fg-muted">SLA iniciado {data(ciclo.openedAt)}</p>}
-            {variosSetores && <p className="text-ui"><span className="text-fg-secondary">Setor que atende: </span><span className="font-semibold text-fg">{nomeDoSetor(t.handlingSectorCode)}</span></p>}
-            {/* Quem encaminhou para outro setor continuar segue acompanhando (16/11/2026, funcionalidade-709). */}
-            {variosSetores && t.followingSectors.length > 0 && <p className="text-ui"><span className="text-fg-secondary">Acompanham: </span><span className="text-fg">{t.followingSectors.map(f => nomeDoSetor(f.sectorCode)).join(", ")}</span></p>}
+            {/* Os dados do chamado, um por linha (16/11/2026, pedido do Kauan): quem
+                abriu, quando e o protocolo saem do pé da Solicitação e vêm para cá,
+                com o protocolo no id curto (chamado-45) em vez do uuid. O início
+                do SLA, o setor que atende e os que acompanham, que já ficavam
+                aqui, entram na lista. */}
+            <dl className="space-y-1.5 border-t border-border pt-4 text-ui">
+              <DadoDoChamado rotulo="Protocolo"><span className="tabular-nums">{idCurto("chamado", t.number)}</span></DadoDoChamado>
+              <DadoDoChamado rotulo="Aberto por">{nome(t.createdById)}</DadoDoChamado>
+              <DadoDoChamado rotulo="Aberto em">{data(t.createdAt)}</DadoDoChamado>
+              {ciclo && <DadoDoChamado rotulo="SLA iniciado em">{data(ciclo.openedAt)}</DadoDoChamado>}
+              {variosSetores && <DadoDoChamado rotulo="Setor que atende">{nomeDoSetor(t.handlingSectorCode)}</DadoDoChamado>}
+              {/* Quem encaminhou para outro setor continuar segue acompanhando (16/11/2026, funcionalidade-709). */}
+              {variosSetores && t.followingSectors.length > 0 && <DadoDoChamado rotulo="Acompanham">{t.followingSectors.map(f => nomeDoSetor(f.sectorCode)).join(", ")}</DadoDoChamado>}
+            </dl>
           </div>
           {(podeAjustarPrazo || mostraChecklist || podeRedirecionar) && <div className="divide-y divide-border border-t border-border px-5">
             {/* Enviar para outro setor (12/11/2026), em dois tipos desde 16/11/2026 (funcionalidade-709): continuar ou corrigir. */}
