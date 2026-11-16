@@ -335,10 +335,18 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const depois = await detalhe(equipe, id); expect(depois.attachments.find(x => x.id === a.id)?.commentId).toBe(depois.comments[0].id);
     expect(depois.events.some(e => e.type === "attachment")).toBe(false);
   });
-  it("trocar o setor responsável esconde a fila; desligar módulo bloqueia as rotas", async () => {
+  // Até 12/11/2026 trocar o setor do módulo escondia a fila da equipe antiga. Desde a
+  // funcionalidade-640 o chamado guarda o setor que o atende: essa equipe segue vendo o
+  // chamado, mas um setor que deixou de administrar não atende até o chamado ser
+  // redirecionado (bug-703: o teste tinha ficado com a regra antiga).
+  it("trocar o setor responsável tira o atendimento da equipe antiga, que segue vendo o chamado; desligar módulo bloqueia as rotas", async () => {
     const id = await abrir();
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { sectorCode: "controladoria" } });
-    const transferido = await configDoHelpdesk(tenantId); await expect(alterar({ ...equipe, config: transferido }, id, 0, "assumir", null)).rejects.toThrow("não encontrado");
+    const transferido = await configDoHelpdesk(tenantId); expect(transferido.enabled).toBe(true); expect(transferido.sectorCodes).not.toContain("tech");
+    await expect(alterar({ ...equipe, config: transferido }, id, 0, "assumir", null)).rejects.toThrow("Só a equipe do setor que atende o chamado");
+    expect((await detalhe({ ...equipe, config: transferido }, id)).id).toBe(id);
+    // Quem não é do setor do chamado nem o abriu continua sem vê-lo.
+    await expect(detalhe({ ...contextoUsuario(colega, "SECTOR_USER", ["fiscal"]), config: transferido }, id)).rejects.toThrow("não encontrado");
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: false } });
     const off = await configDoHelpdesk(tenantId); await expect(detalhe({ ...c, config: off }, id)).rejects.toThrow("não encontrado");
     await db!.tenantModule.updateMany({ where: { tenantId, moduleCode: "helpdesk" }, data: { enabled: true, sectorCode: "tech" } });
