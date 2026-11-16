@@ -29,7 +29,7 @@ import {
   type PreparoDaChamada,
 } from "@/lib/ia/data";
 import { conversarComFerramentas } from "@/lib/ia/conversa";
-import { conversarComFerramentasOpenAi } from "@/lib/ia/conversa-openai";
+import { conversarComFerramentasOpenAi, limiteDeSaida } from "@/lib/ia/conversa-openai";
 import type { ResultadoDoLaco, TurnoAnterior } from "@/lib/ia/laco";
 import type { AnexoDaPergunta } from "@/lib/ia/chat/anexos";
 import { blocosAnthropicDosAnexos, type AnexoEstruturado } from "@/lib/ia/anexos-estruturados";
@@ -751,7 +751,9 @@ async function chamarComFormato(
         model: c.model,
         instructions: p.sistema,
         ...(p.store !== undefined ? { store: p.store } : {}),
-        ...(p.estrito ? { max_output_tokens: p.maxTokens } : {}),
+        // O teto conta raciocínio e texto: sem a folga, o modelo que raciocina
+        // gasta tudo pensando e a resposta volta incompleta (bug-695).
+        ...(p.estrito ? { max_output_tokens: limiteDeSaida(c.model, p.maxTokens) } : {}),
         input: [
           {
             role: "user",
