@@ -829,8 +829,12 @@ export function AppShell({
           marca; no mouse ou no Tab, cresce, mostra a seta e a borda inteira
           acende. Mora numa coluna de largura zero ao lado da lateral, e não
           dentro dela: o `overflow-hidden` da transição cortaria a metade de
-          fora. Só no computador; na gaveta o hambúrguer continua. */}
-      <div className={`${SO_NA_COLUNA} relative z-30 w-0 flex-shrink-0`}>
+          fora. Só no computador; na gaveta o hambúrguer continua.
+          `z-50`, o mesmo da lateral: item de flex respeita o z-index mesmo
+          sem `position`, e com menos a lateral cobria a metade de dentro da
+          alça no hover. Vem depois dela no DOM, então ganha o empate; os
+          diálogos, também z-50 e no fim do body, continuam por cima. */}
+      <div className={`${SO_NA_COLUNA} relative z-50 w-0 flex-shrink-0`}>
         <button
           type="button"
           onClick={alternarMenu}
