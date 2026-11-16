@@ -13,7 +13,7 @@ export function idDaNotificacao(eventId: string, userId: string) {
 }
 export async function despacharEventos(tenantId: string, ticketId?: string) {
   const config = await configDoHelpdesk(tenantId); if (!config.enabled) return 0;
-  const eventos = await getPrisma().helpdeskEvent.findMany({ where: { tenantId, dispatchedAt: null, ...(ticketId ? { ticketId } : {}) }, include: { ticket: { include: { participants: true, assignees: true } } }, orderBy: { createdAt: "asc" }, take: 100 });
+  const eventos = await getPrisma().helpdeskEvent.findMany({ where: { tenantId, dispatchedAt: null, ...(ticketId ? { ticketId } : {}) }, include: { ticket: { include: { participants: true, assignees: true, followingSectors: true } } }, orderBy: { createdAt: "asc" }, take: 100 });
   let enviados = 0;
   for (const e of eventos) {
     const t = e.ticket;
@@ -26,6 +26,8 @@ export async function despacharEventos(tenantId: string, ticketId?: string) {
     const usuarios = await getPrisma().user.findMany({ where: { tenantId, active: true, id: { not: e.actorId ?? "" }, OR: [
       // A equipe do setor que atende o chamado (12/11/2026); no redirecionamento, já o novo.
       { role: { not: "READONLY" }, sectors: { some: { sectorCode: t.handlingSectorCode } } },
+      // Os setores que acompanham (funcionalidade-709): só as mudanças de situação, para não encher o sino.
+      ...(e.type === "status" && t.followingSectors.length ? [{ role: { not: "READONLY" as const }, sectors: { some: { sectorCode: { in: t.followingSectors.map(f => f.sectorCode) } } } }] : []),
       ...(!e.internal ? [{ id: { in: participantes } }, { role: "SECTOR_ADMIN" as const, sectors: { some: { sectorCode: t.requesterSectorCode } } }] : []),
     ] }, select: { id: true } });
     const data = e.data as Record<string, string>;

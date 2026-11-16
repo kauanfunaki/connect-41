@@ -131,6 +131,8 @@ export const triagemSchema = z.object({
   justificativa: z.string().max(500).default(""),
   /** A categoria veio da revisão de quem abriu, e não da classificação da triagem (funcionalidade-702). */
   confirmadaPorQuemAbriu: z.boolean().default(false),
+  /** O setor que a triagem escolheu para o chamado aberto sem a revisão (funcionalidade-709); nulo = ficou onde estava. */
+  setor: z.string().max(120).nullable().default(null),
 });
 export type Triagem = z.infer<typeof triagemSchema>;
 export type ResultadoDaTriagem = "existe" | "classificado" | "a_classificar";
@@ -164,8 +166,12 @@ export function avisoDaTriagem(t: Triagem, titulo: string): string {
 // A pessoa confere e abre; responder é opcional. A revisão não é uma conversa:
 // é uma leitura só, e dá para abrir o chamado sem esperar por ela.
 export const MAXIMO_DE_PERGUNTAS = 3;
-/** O que a IA propõe. `categoryId` nulo = ela não soube classificar. */
-export type RevisaoDaIa = { titulo: string; categoryId: string | null; motivo: string; tags: string[]; perguntas: Pergunta[] };
+/**
+ * O que a IA propõe. `categoryId` nulo = ela não soube classificar. `setor`
+ * (16/11/2026, funcionalidade-709): o setor que vai atender, com dois ou mais
+ * administrando; nulo com `perguntaDoSetor` = ela ficou em dúvida e pergunta.
+ */
+export type RevisaoDaIa = { titulo: string; categoryId: string | null; motivo: string; tags: string[]; perguntas: Pergunta[]; setor: string | null; motivoDoSetor: string; perguntaDoSetor: string };
 /**
  * O que a pessoa aprovou, gravado no rascunho (`_revisao`) para a triagem
  * respeitar: com `categoryId`, a triagem não classifica de novo; nulo é "a

@@ -43,3 +43,15 @@ describe("linha do tempo do chamado", () => {
     expect(tamanhoDoArquivo(1.5 * 1024 * 1024)).toBe("1,5 MB");
   });
 });
+
+// Os tipos de envio para outro setor (16/11/2026, funcionalidade-709).
+describe("envio para outro setor na linha do tempo", () => {
+  const nome = (id: string) => ({ ana: "Ana" } as Record<string, string>)[id] ?? id;
+  const setor = (data: Record<string, unknown>, actorId: string | null = "ana") => descreverEvento({ type: "setor", actorId, data: { from: "tech", to: "dp", fromLabel: "Tech", toLabel: "DP", ...data } }, nome);
+  it("diz se foi para continuar, para corrigir, pela triagem ou do jeito antigo", () => {
+    expect(setor({ tipo: "continuar", motivo: "Emitir a guia." })).toEqual({ texto: "Ana encaminhou o chamado de Tech para DP continuar", detalhe: "Emitir a guia." });
+    expect(setor({ tipo: "corrigir" }).texto).toBe("Ana corrigiu o setor do chamado de Tech para DP");
+    expect(setor({ pelaTriagem: true }, null).texto).toBe("A triagem automática enviou o chamado para DP");
+    expect(setor({}).texto).toBe("Ana redirecionou o chamado de Tech para DP");
+  });
+});

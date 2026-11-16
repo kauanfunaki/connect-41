@@ -55,13 +55,15 @@ function filtroDaEquipe({ ctx, config }: Contexto): Prisma.HelpdeskTicketWhereIn
 }
 /** Só os eventos e mensagens que a pessoa pode ler: os internos, no chamado do setor dela. */
 function soOQuePodeLer({ ctx }: Contexto) {
-  return isFullWrite(ctx.role) ? {} : { OR: [{ internal: false }, { ticket: { handlingSectorCode: { in: ctx.sectors } } }] };
+  return isFullWrite(ctx.role) ? {} : { OR: [{ internal: false }, { ticket: { handlingSectorCode: { in: ctx.sectors } } }, { ticket: { followingSectors: { some: { sectorCode: { in: ctx.sectors } } } } }] };
 }
 export function whereVisivel({ ctx, config }: Contexto): Prisma.HelpdeskTicketWhereInput {
   if (!config.enabled) return { tenantId: ctx.tenantId, id: { in: [] } };
   if (isFullWrite(ctx.role)) return { tenantId: ctx.tenantId };
   return { tenantId: ctx.tenantId, OR: [
     { handlingSectorCode: { in: ctx.sectors } },
+    // O setor que encaminhou o chamado para outro continuar segue vendo (funcionalidade-709).
+    { followingSectors: { some: { sectorCode: { in: ctx.sectors } } } },
     { createdById: ctx.userId },
     ...(ctx.role === "SECTOR_ADMIN" ? [{ requesterSectorCode: { in: ctx.sectors } }] : []),
   ] };
@@ -149,11 +151,11 @@ async function filtroDaBusca(c: Contexto, q: string, em?: string): Promise<Prism
 }
 export async function detalhe(c: Contexto, id: string) {
   // O que é interno é do setor que atende o chamado (12/11/2026).
-  const setor = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, select: { handlingSectorCode: true } });
+  const setor = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, select: { handlingSectorCode: true, followingSectors: { select: { sectorCode: true } } } });
   if (!setor) throw new Error("Chamado não encontrado.");
-  const interno = podeVerInternoNo(c.ctx, c.config, setor.handlingSectorCode);
+  const interno = podeVerInternoNo(c.ctx, c.config, setor.handlingSectorCode, setor.followingSectors.map(f => f.sectorCode));
   const t = await getPrisma().helpdeskTicket.findFirst({ where: { AND: [whereVisivel(c), { id }] }, include: {
-    category: true, assignees: true, participants: true, cycles: { orderBy: { cycleNumber: "desc" } },
+    category: true, assignees: true, participants: true, followingSectors: { orderBy: { createdAt: "asc" } }, cycles: { orderBy: { cycleNumber: "desc" } },
     checklist: interno ? { orderBy: { key: "asc" } } : false,
     comments: { where: interno ? {} : { internal: false }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
     attachments: { where: interno ? {} : { internal: false } },

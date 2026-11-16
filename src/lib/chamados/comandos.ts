@@ -173,7 +173,7 @@ export async function abrirPelaCeci(c: Contexto, input: unknown) {
 
 export async function paraAgir(tx: Tx, c: Contexto, id: string, version: number) {
   exigirEscrita(c);
-  const t = await tx.helpdeskTicket.findFirst({ where: { id, tenantId: c.ctx.tenantId }, include: { participants: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } } });
+  const t = await tx.helpdeskTicket.findFirst({ where: { id, tenantId: c.ctx.tenantId }, include: { participants: true, assignees: true, followingSectors: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 } } });
   if (!t || !podeVer(c.ctx, c.config, { ...t, approverIds: strings(t.approverIds) })) throw new Error("Chamado não encontrado.");
   const r = await tx.helpdeskTicket.updateMany({ where: { id, tenantId: c.ctx.tenantId, version }, data: { version: { increment: 1 } } });
   if (r.count !== 1) throw desatualizado();
@@ -258,9 +258,16 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       // Redirecionar para outro setor administrador (12/11/2026): os responsáveis
       // eram do setor de antes e saem; na fila, o chamado vai para o fim da fila
       // do novo setor. A situação e a conversa seguem como estão.
+      //
+      // Dois tipos desde 16/11/2026 (funcionalidade-709):
+      // - "continuar": o outro setor faz a parte dele, e o de antes passa a
+      //   acompanhar o chamado (vê, é avisado das situações, não atende). O que
+      //   o outro setor precisa fazer é obrigatório.
+      // - "corrigir": o chamado estava no setor errado; o de antes sai, como era.
       if (!podeRedirecionar(c.ctx, c.config, t.handlingSectorCode)) throw new Error("Só a equipe do setor que atende ou o administrador pode redirecionar o chamado.");
       if (fechado(t.status)) throw new Error("O chamado está encerrado.");
-      const d = z.object({ setor: z.string().trim().min(1).max(40), motivo: z.string().trim().max(1000).default("") }).parse(valor);
+      const d = z.object({ setor: z.string().trim().min(1).max(40), motivo: z.string().trim().max(1000).default(""), tipo: z.enum(["continuar", "corrigir"]).default("corrigir") }).parse(valor);
+      if (d.tipo === "continuar" && d.motivo.length < 5) throw new Error("Conte o que o outro setor precisa fazer para continuar.");
       if (d.setor === t.handlingSectorCode) throw new Error("O chamado já está com este setor.");
       if (!c.config.sectorCodes.includes(d.setor)) throw new Error("Escolha um dos setores que administram os chamados.");
       let queueOrder = t.queueOrder;
@@ -270,9 +277,12 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       }
       await tx.helpdeskAssignee.deleteMany({ where: { tenantId, ticketId: id } });
       await tx.helpdeskTicket.update({ where: { id }, data: { handlingSectorCode: d.setor, queueOrder } });
+      // Quem passa a atender deixa de só acompanhar; quem encaminhou para continuar passa a acompanhar.
+      await tx.helpdeskTicketSector.deleteMany({ where: { tenantId, ticketId: id, sectorCode: d.setor } });
+      if (d.tipo === "continuar") await tx.helpdeskTicketSector.upsert({ where: { tenantId_ticketId_sectorCode: { tenantId, ticketId: id, sectorCode: t.handlingSectorCode } }, create: { tenantId, ticketId: id, sectorCode: t.handlingSectorCode }, update: {} });
       // Os nomes vão no evento: a linha do tempo roda no navegador, sem o cadastro de setores.
       const nomes = new Map((await tx.sector.findMany({ where: { tenantId, code: { in: [t.handlingSectorCode, d.setor] } }, select: { code: true, label: true } })).map(s => [s.code, s.label]));
-      await evento(tx, tenantId, id, c.ctx.userId, "setor", { from: t.handlingSectorCode, to: d.setor, fromLabel: nomes.get(t.handlingSectorCode) ?? t.handlingSectorCode, toLabel: nomes.get(d.setor) ?? d.setor, ...(d.motivo ? { motivo: d.motivo } : {}) });
+      await evento(tx, tenantId, id, c.ctx.userId, "setor", { from: t.handlingSectorCode, to: d.setor, fromLabel: nomes.get(t.handlingSectorCode) ?? t.handlingSectorCode, toLabel: nomes.get(d.setor) ?? d.setor, tipo: d.tipo, ...(d.motivo ? { motivo: d.motivo } : {}) });
     } else {
       exigirOperacao(c, t.handlingSectorCode);
       if (fechado(t.status)) throw new Error("O chamado está encerrado.");

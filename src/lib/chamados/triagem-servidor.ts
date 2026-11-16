@@ -6,6 +6,8 @@ import { isModuleEnabled } from "@/lib/modules";
 import { catalogoParaTriagem } from "@/lib/ops/catalogo";
 import { MODULO_OPS } from "@/lib/ops/regras";
 import { configDoHelpdesk } from "./contexto";
+import type { ConfigDeAcesso } from "./acesso";
+import { escolherSetorNaTriagem, type SetorSugerido } from "./setorSugerido";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, caminhoDaCategoria, categoriasClassificaveis } from "./catalogo";
 import { classificar, limparTags, type Classificacao } from "./classificacao";
@@ -13,7 +15,7 @@ import { procurarNoOrquestrador, type BuscaNoOrquestrador } from "./triagem";
 import { aprovadoresDaCategoria, evento } from "./comandos";
 import { despacharEventos } from "./notificacoes";
 import { motivoDaFalha } from "./falhaDaIa";
-import { categoriaSchema, dadosSchema, ehTituloProvisorio, emTriagem, resultadoDaTriagem, revisaoDoRascunho, validarFormulario, type Categoria, type MotivoSemCategoria, type RevisaoAprovada, type Triagem } from "./regras";
+import { categoriaSchema, dadosRascunhoSchema, dadosSchema, ehTituloProvisorio, emTriagem, resultadoDaTriagem, revisaoDoRascunho, validarFormulario, type Categoria, type MotivoSemCategoria, type RevisaoAprovada, type Triagem } from "./regras";
 
 // A triagem depois do envio (10/11/2026). O chamado da tela nasce em
 // "Aguardando triagem" (`enviarRascunho`); aqui, fora da resposta, a IA confere
@@ -35,10 +37,12 @@ const RESERVA_MS = 2 * 60_000;
 /** Na retomada, a IA só é chamada para o chamado recente; o antigo vai direto para a equipe. */
 const RETOMADA_COM_IA_MS = 60 * 60_000;
 
-type Chamado = { id: string; draftId: string; title: string; description: string; requesterSectorCode: string; createdById: string; priority: string; requestData: unknown; tags: unknown };
+type Chamado = { id: string; draftId: string; title: string; description: string; requesterSectorCode: string; handlingSectorCode: string; createdById: string; priority: string; requestData: unknown; tags: unknown };
 type Decisao = { classificacao: Classificacao; busca: BuscaNoOrquestrador; categoria: (Categoria & { id: string }) | null; semCategoria: MotivoSemCategoria | null; caminhos: { id: string; name: string; parentId: string | null }[];
   /** A categoria veio da revisão de quem abriu (funcionalidade-702), e não da classificação. */
-  confirmada: boolean };
+  confirmada: boolean;
+  /** O setor que a triagem escolheu, quando ninguém escolheu ao abrir (funcionalidade-709). */
+  setor: { code: string; label: string } | null };
 
 const log = (tenantId: string, ticketId: string, texto: string) => `[chamados] triagem do chamado ${ticketId} (escritório ${tenantId}): ${texto}`;
 
@@ -46,19 +50,20 @@ export type FimDaTriagem = "concluida" | "em_andamento" | "nada_a_fazer";
 
 export async function triarChamado(tenantId: string, ticketId: string, opcoes: { comIA?: boolean } = {}): Promise<FimDaTriagem> {
   const db = getPrisma();
-  if (!(await configDoHelpdesk(tenantId)).enabled) return "nada_a_fazer";
-  const t = await db.helpdeskTicket.findFirst({ where: { tenantId, id: ticketId }, select: { id: true, draftId: true, title: true, description: true, requesterSectorCode: true, createdById: true, priority: true, requestData: true, tags: true, status: true } });
+  const config = await configDoHelpdesk(tenantId);
+  if (!config.enabled) return "nada_a_fazer";
+  const t = await db.helpdeskTicket.findFirst({ where: { tenantId, id: ticketId }, select: { id: true, draftId: true, title: true, description: true, requesterSectorCode: true, handlingSectorCode: true, createdById: true, priority: true, requestData: true, tags: true, status: true } });
   if (!t || !emTriagem(t.status)) return "nada_a_fazer";
   const token = randomUUID(), agora = new Date();
   const reserva = await db.helpdeskDraft.updateMany({ where: { tenantId, id: t.draftId, OR: [{ analysisToken: null }, { analysisStartedAt: { lt: new Date(agora.getTime() - RESERVA_MS) } }] }, data: { analysisToken: token, analysisStartedAt: agora } });
   if (reserva.count !== 1) return "em_andamento";
   try {
     let decisao: Decisao;
-    try { decisao = await decidir(tenantId, t, opcoes.comIA ?? true); }
+    try { decisao = await decidir(tenantId, t, opcoes.comIA ?? true, config); }
     catch (err) {
       // Erro fora da IA (banco, catálogo): o chamado não fica preso, vai para a equipe.
       console.error(log(tenantId, t.id, `falhou antes de concluir, vai para A classificar: ${motivoDaFalha(err)}`));
-      decisao = { classificacao: semClassificacao(motivoDaFalha(err)), busca: { existente: null, falha: null }, categoria: null, semCategoria: "falha", caminhos: [], confirmada: false };
+      decisao = { classificacao: semClassificacao(motivoDaFalha(err)), busca: { existente: null, falha: null }, categoria: null, semCategoria: "falha", caminhos: [], confirmada: false, setor: null };
     }
     const triagem = await concluir(tenantId, t, decisao);
     if (!triagem) return "nada_a_fazer";
@@ -81,8 +86,12 @@ const daRevisao = (r: RevisaoAprovada): Classificacao => ({ categoryId: r.catego
  * outra. Com a revisão de quem abriu no rascunho (16/11/2026,
  * funcionalidade-702), a classificação não é perguntada de novo: vale a
  * categoria que a pessoa confirmou, se ainda puder ser escolhida.
+ *
+ * O setor (16/11/2026, funcionalidade-709): com dois ou mais administrando e
+ * ninguém tendo escolhido ao abrir ("Abrir sem esperar"), a triagem pergunta à
+ * IA para qual setor vai. Na dúvida, fica no setor padrão.
  */
-async function decidir(tenantId: string, t: Chamado, comIA: boolean): Promise<Decisao> {
+async function decidir(tenantId: string, t: Chamado, comIA: boolean, config: ConfigDeAcesso): Promise<Decisao> {
   const db = getPrisma();
   await prepararCatalogo(tenantId);
   const linhas = await db.helpdeskCategory.findMany({ where: { tenantId } });
@@ -92,14 +101,19 @@ async function decidir(tenantId: string, t: Chamado, comIA: boolean): Promise<De
   const dados = dadosSchema.parse({ title: t.title, description: t.description, categoryId: pendente.id, requesterSectorCode: t.requesterSectorCode, priority: t.priority, requestData: t.requestData, tags: t.tags });
   const c = { tenantId, userId: t.createdById, ticketId: t.id };
   const limite = comIA ? hit(`helpdesk-triagem:${tenantId}:${t.createdById}`, 10, 60000) : null;
-  const aprovada = revisaoDoRascunho((await db.helpdeskDraft.findFirst({ where: { tenantId, id: t.draftId }, select: { payload: true } }))?.payload);
+  const payload = (await db.helpdeskDraft.findFirst({ where: { tenantId, id: t.draftId }, select: { payload: true } }))?.payload;
+  const aprovada = revisaoDoRascunho(payload);
+  const escolhido = dadosRascunhoSchema.safeParse(payload).data?.handlingSectorCode ?? "";
+  const setores = config.sectorCodes.length > 1 && !escolhido ? await db.sector.findMany({ where: { tenantId, code: { in: config.sectorCodes }, active: true }, select: { code: true, label: true } }) : [];
   const revisao = aprovada && (aprovada.categoryId === null || categoriasClassificaveis(cats).some(cat => cat.id === aprovada.categoryId)) ? aprovada : null;
   const semIA = !comIA ? "retomada de triagem antiga, sem chamar a IA" : !limite?.allowed ? "limite de triagens por minuto de quem abriu" : null;
   const semBusca: BuscaNoOrquestrador = { existente: null, falha: null };
-  const [classificacao, busca] = await Promise.all([
+  const [classificacao, busca, sugerido] = await Promise.all([
     revisao ? daRevisao(revisao) : semIA ? semClassificacao(semIA) : classificar(c, dados, cats),
     semIA ? semBusca : buscarNoOrquestrador(c, dados),
+    semIA || setores.length < 2 ? Promise.resolve<SetorSugerido>(null) : escolherSetorNaTriagem(c, t.description, setores),
   ]);
+  const setor = sugerido ? setores.find(st => st.code === sugerido.setor) ?? null : null;
 
   if (classificacao.falha) console.error(log(tenantId, t.id, `a classificação falhou, vai para A classificar: ${classificacao.falha}`));
   else if (!classificacao.categoryId && !revisao) console.info(log(tenantId, t.id, "a IA não identificou a categoria (falta de contexto)."));
@@ -114,7 +128,7 @@ async function decidir(tenantId: string, t: Chamado, comIA: boolean): Promise<De
     try { validarFormulario({ ...dados, categoryId: categoria.id }, categoria, anexos); }
     catch { categoria = null; semCategoria = "formulario"; }
   }
-  return { classificacao, busca, categoria, semCategoria, caminhos: linhas, confirmada: !!revisao?.categoryId };
+  return { classificacao, busca, categoria, semCategoria, caminhos: linhas, confirmada: !!revisao?.categoryId, setor };
 }
 
 async function buscarNoOrquestrador(c: { tenantId: string; userId: string; ticketId: string }, dados: { description: string; requestData: Record<string, string> }): Promise<BuscaNoOrquestrador> {
@@ -139,9 +153,12 @@ async function concluir(tenantId: string, t: Chamado, d: Decisao): Promise<Triag
     const comAprovacao = !!categoria?.requiresApproval;
     // O título provisório (o começo da descrição) dá lugar ao da IA.
     const titulo = d.classificacao.title.length >= 3 && ehTituloProvisorio(t.title, t.description) ? d.classificacao.title : t.title;
-    const triagem: Triagem = { existente: d.busca.existente, categoria: categoria ? caminhoDaCategoria(d.caminhos, categoria.id) : null, semCategoria: categoria ? null : semCategoria ?? "falha", justificativa: d.classificacao.reason.slice(0, 500), confirmadaPorQuemAbriu: !!categoria && d.confirmada };
-    const r = await tx.helpdeskTicket.updateMany({ where: { tenantId, id: t.id, status: "AGUARDANDO_TRIAGEM" }, data: {
+    // O setor escolhido pela triagem só troca o do chamado se ninguém o mudou no meio-tempo.
+    const novoSetor = d.setor && d.setor.code !== t.handlingSectorCode ? d.setor : null;
+    const triagem: Triagem = { existente: d.busca.existente, categoria: categoria ? caminhoDaCategoria(d.caminhos, categoria.id) : null, semCategoria: categoria ? null : semCategoria ?? "falha", justificativa: d.classificacao.reason.slice(0, 500), confirmadaPorQuemAbriu: !!categoria && d.confirmada, setor: novoSetor?.label ?? null };
+    const r = await tx.helpdeskTicket.updateMany({ where: { tenantId, id: t.id, status: "AGUARDANDO_TRIAGEM", handlingSectorCode: t.handlingSectorCode }, data: {
       status: comAprovacao ? "AGUARDANDO_APROVACAO" : "ABERTO", categoryId: categoria?.id ?? pendente.id, title: titulo,
+      ...(novoSetor ? { handlingSectorCode: novoSetor.code } : {}),
       ...(d.classificacao.tags.length ? { tags: d.classificacao.tags } : {}),
       approvalRequired: comAprovacao, approvalStatus: comAprovacao ? "PENDING" : "NOT_REQUIRED", approverIds: aprovadores, version: { increment: 1 },
     } });
@@ -149,6 +166,11 @@ async function concluir(tenantId: string, t: Chamado, d: Decisao): Promise<Triag
     if (categoria?.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: categoria.checklistTemplate.map(i => ({ tenantId, ticketId: t.id, key: i.key, label: i.label })) });
     if (comAprovacao) await tx.helpdeskApproval.create({ data: { tenantId, ticketId: t.id, cycleNumber: 1 } });
     await evento(tx, tenantId, t.id, null, "triagem", triagem, false, `triagem:${t.id}`);
+    // O setor novo é avisado como num encaminhamento: o "Chamado aberto" foi para o padrão.
+    if (novoSetor) {
+      const antes = await tx.sector.findFirst({ where: { tenantId, code: t.handlingSectorCode }, select: { label: true } });
+      await evento(tx, tenantId, t.id, null, "setor", { from: t.handlingSectorCode, to: novoSetor.code, fromLabel: antes?.label ?? t.handlingSectorCode, toLabel: novoSetor.label, pelaTriagem: true });
+    }
     return triagem;
   });
 }

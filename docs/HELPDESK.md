@@ -35,8 +35,10 @@ Remover um setor solicitante impede novas aberturas, preservando o acompanhament
 
 O Novo chamado tem duas etapas (funcionalidade-702):
 
-1. **Pedido.** Setor de origem, prioridade, descrição, o setor que vai atender (quando há mais de um) e os anexos. Não há campo de título nem de categoria.
+1. **Pedido.** Setor de origem, prioridade, descrição e anexos. Não há campo de título, categoria nem setor.
 2. **Revisão.** Ao clicar em **Continuar**, a IA lê o pedido uma vez (`src/lib/chamados/revisao.ts`, rota `POST /api/chamados/revisao`) e propõe o título, a categoria e até três perguntas. A pessoa edita o título, confirma ou troca a categoria (ou escolhe **Deixar para a equipe classificar**) e responde às perguntas se quiser. Responder é opcional.
+
+Com dois ou mais setores administrando, a revisão também mostra o **setor que vai atender**, proposto pela IA (funcionalidade-709). Se a IA ficar em dúvida, ela não escolhe: mostra uma pergunta que ajuda a decidir, e a pessoa escolhe o setor. Sem setor escolhido, o chamado não abre pela revisão.
 
 Enquanto a IA lê o pedido, **Abrir sem esperar** abre o chamado como foi escrito, sem a revisão. Se a IA não responder, a etapa 2 abre sem sugestão, e a pessoa ainda confere o título.
 
@@ -45,6 +47,17 @@ O chamado nasce na hora, em **Aguardando triagem** (desde 10/11/2026, melhoria-5
 - confere se algum robô, site ou app do Orquestrador já faz o pedido. Só aponta o item quando a IA diz que ele faz a ação pedida (bug-700);
 - classifica o chamado, a não ser que a pessoa tenha passado pela revisão. Nesse caso vale a categoria confirmada, ou "a equipe classifica", e a IA não é perguntada de novo. O que foi aprovado fica em `_revisao`, no rascunho;
 - as respostas às perguntas entram no fim da descrição, sob "Respostas às perguntas da triagem:".
+
+- sem a revisão, com dois ou mais setores, a triagem pergunta à IA para qual setor o chamado vai. O chamado nasce no setor padrão e, se a IA escolher outro, vai para ele, com o evento "A triagem automática enviou o chamado para…" e o aviso à equipe nova. Na dúvida, fica no padrão.
+
+### Enviar para outro setor
+
+Desde 16/11/2026 (funcionalidade-709) o envio tem dois tipos, escolhidos pela equipe do setor que atende ou pelo administrador:
+
+- **Para o outro setor continuar**: o setor de antes fez a parte dele. O chamado vai para o outro setor, e o de antes passa a **acompanhar** (`HelpdeskTicketSector`): vê o chamado, inclusive o que é interno, e é avisado das mudanças de situação, mas não atende. O que o outro setor precisa fazer é obrigatório.
+- **O chamado está no setor errado**: o setor de antes sai, como era até 12/11.
+
+Nos dois, os responsáveis saem, a equipe nova e quem abriu são avisados, e a linha do tempo mostra o tipo. Se o chamado voltar para um setor que acompanha, esse setor volta a atender e deixa de só acompanhar.
 
 A revisão não grava nada: só o envio grava. Ela usa o agente **Triagem de chamados** e os mesmos tetos, com limite de dez revisões por pessoa por minuto.
 

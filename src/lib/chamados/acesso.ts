@@ -9,7 +9,8 @@ import { canActOnSector, canManageSector, isFullWrite } from "@/lib/auth/papeis"
 // atende (`handlingSectorCode`). Atender, gerir e ver o que é interno passam a
 // valer por chamado, no setor dele.
 export type ConfigDeAcesso = { enabled: boolean; sectorCode: string; sectorCodes: string[] };
-export type Alvo = { tenantId: string; createdById: string; requesterSectorCode: string; handlingSectorCode: string; participants: { userId: string }[]; approverIds: string[] };
+/** `followingSectors` (16/11/2026, funcionalidade-709): os setores que encaminharam o chamado para outro continuar e o acompanham. */
+export type Alvo = { tenantId: string; createdById: string; requesterSectorCode: string; handlingSectorCode: string; participants: { userId: string }[]; approverIds: string[]; followingSectors?: { sectorCode: string }[] };
 
 /** Os setores administradores em que a pessoa atende. */
 export const setoresQueAtendo = (ctx: AuthContext, config: ConfigDeAcesso) =>
@@ -33,8 +34,12 @@ export const podeRedirecionar = (ctx: AuthContext, config: ConfigDeAcesso, setor
 // administrador. O resto vê só o que abriu; o gestor do setor, também o que o
 // setor dele abriu (`podeVer`/`whereVisivel`).
 export const podeVerInterno = (ctx: AuthContext, config: ConfigDeAcesso) => config.enabled && (config.sectorCodes.some(s => ctx.sectors.includes(s)) || isFullWrite(ctx.role));
-/** Vê o que é interno deste chamado: a equipe do setor que atende e o administrador. */
-export const podeVerInternoNo = (ctx: AuthContext, config: ConfigDeAcesso, setor: string) => config.enabled && (ctx.sectors.includes(setor) || isFullWrite(ctx.role));
+/**
+ * Vê o que é interno deste chamado: a equipe do setor que atende, a dos setores
+ * que o acompanham depois de encaminhá-lo (funcionalidade-709) e o administrador.
+ */
+export const podeVerInternoNo = (ctx: AuthContext, config: ConfigDeAcesso, setor: string, acompanham: readonly string[] = []) =>
+  config.enabled && (ctx.sectors.includes(setor) || acompanham.some(s => ctx.sectors.includes(s)) || isFullWrite(ctx.role));
 export const podeVerIndicadores = podeOperar;
 // Onde a busca da lista procura, por papel (27/10/2026): a equipe procura em
 // tudo; o coordenador do setor, também por quem abriu; o resto, só no chamado.
@@ -57,7 +62,7 @@ export function setorQueAtende(config: ConfigDeAcesso, escolhido: string | null 
   return s && config.sectorCodes.includes(s) ? s : config.sectorCode;
 }
 export function podeVer(ctx: AuthContext, config: ConfigDeAcesso, chamado: Alvo) {
-  return ctx.tenantId === chamado.tenantId && config.enabled && (podeVerInternoNo(ctx, config, chamado.handlingSectorCode) || chamado.createdById === ctx.userId || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(chamado.requesterSectorCode)));
+  return ctx.tenantId === chamado.tenantId && config.enabled && (podeVerInternoNo(ctx, config, chamado.handlingSectorCode, (chamado.followingSectors ?? []).map(f => f.sectorCode)) || chamado.createdById === ctx.userId || (ctx.role === "SECTOR_ADMIN" && ctx.sectors.includes(chamado.requesterSectorCode)));
 }
 export function podeResponder(ctx: AuthContext, config: ConfigDeAcesso, chamado: Alvo, status: string, interna: boolean) {
   if (!podeVer(ctx, config, chamado) || ctx.subscriptionReadOnly || ctx.role === "READONLY") return false;
