@@ -189,6 +189,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   // A fila do robô do Societário (30/10/2026): o PDF que a tarefa guardou
   // mora nos Arquivos da empresa, que vão junto.
   { modelo: "RobotTask", coluna: "companyId", tratamento: "apagar" },
+  // A lista de CPFs e os acessos do dia da busca no eSocial: trabalho em andamento, sem valor depois que a empresa sai.
+  { modelo: "Dp2BuscaEsocial", coluna: "companyId", tratamento: "apagar" },
   // O contato do Atendimento (10/11/2026) volta a ser só um telefone.
   { modelo: "AtendimentoContato", coluna: "companyId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; empresa que some vira só o nome do WhatsApp na tela" },
   // XML recusado pelo leitor (06/11/2026): o arquivo é da empresa e guarda os dados dela.
@@ -405,6 +407,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2EventoEsocial", coluna: "geradoPorId", tratamento: "manter", motivo: "quem gerou o evento do eSocial; a auditoria guarda o nome" },
   { modelo: "Dp2Remessa", coluna: "geradaPorId", tratamento: "manter", motivo: "quem gerou o arquivo do banco; a auditoria guarda o nome" },
   { modelo: "Dp2PedidoDeEventos", coluna: "criadoPorId", tratamento: "manter", motivo: "quem pediu os eventos ao cliente; a auditoria guarda o nome" },
+  { modelo: "Dp2BuscaEsocial", coluna: "criadaPorId", tratamento: "manter", motivo: "quem montou a busca no eSocial; a auditoria guarda o nome" },
   // O Atendimento, o WhatsApp do escritório (10/11/2026): ids de gente sem chave, como no WhatsApp do Recrutamento.
   { modelo: "AtendimentoCiclo", coluna: "assignedToId", tratamento: "manter", motivo: "histórico do atendimento; a tela mostra Alguém da equipe e qualquer pessoa do setor pode assumir" },
   { modelo: "AtendimentoCiclo", coluna: "encerradoPorId", tratamento: "manter", motivo: "histórico do atendimento; a auditoria guarda o nome" },
