@@ -95,6 +95,19 @@ export function ehModeloDeRaciocinio(model: string): boolean {
 }
 
 /**
+ * O `max_output_tokens` de um pedido à OpenAI: o limite do texto, mais a
+ * folga do raciocínio quando o modelo raciocina.
+ *
+ * Vale para o chat e para a chamada estrita de `src/lib/ai.ts` (16/11/2026,
+ * bug-695). A triagem de chamados pedia 1.200 e 600 sem a folga, o
+ * `gpt-5-nano` raciocinava até o limite, e toda triagem voltava
+ * "A OpenAI não concluiu a análise". A Ceci, no mesmo modelo, passava.
+ */
+export function limiteDeSaida(model: string, maxTokens: number): number {
+  return maxTokens + (ehModeloDeRaciocinio(model) ? FOLGA_DE_RACIOCINIO : 0);
+}
+
+/**
  * O schema pronto para `strict: true`, ou `null` se ele não cumpre as regras.
  *
  * Único ajuste feito: objeto sem propriedade nenhuma e sem `required` ganha
@@ -221,7 +234,7 @@ export async function conversarComFerramentasOpenAi(
 
   const adaptador: AdaptadorDeProvedor = {
     async rodada() {
-      const limite = (p.maxTokens ?? 4096) + (raciocina ? FOLGA_DE_RACIOCINIO : 0);
+      const limite = limiteDeSaida(p.model, p.maxTokens ?? 4096);
       const pedir = async (maxOutput: number) => {
         const res = await fetch(URL_DA_RESPONSES_API, {
           method: "POST",

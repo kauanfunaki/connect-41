@@ -4,6 +4,8 @@ import {
   schemaParaStrict,
   ferramentaOpenAi,
   ehModeloDeRaciocinio,
+  limiteDeSaida,
+  FOLGA_DE_RACIOCINIO,
   URL_DA_RESPONSES_API,
 } from "./conversa-openai";
 import { FERRAMENTAS, AVISO_DE_PROPOSTA, type ExecutorDeFerramenta } from "./ferramentas";
@@ -300,5 +302,16 @@ describe("ehModeloDeRaciocinio", () => {
   it("linha atual raciocina, gpt-4 legado não", () => {
     expect(ehModeloDeRaciocinio("gpt-5.6-terra")).toBe(true);
     expect(ehModeloDeRaciocinio("gpt-4.1-mini")).toBe(false);
+  });
+});
+
+// bug-695: a triagem de chamados pedia 1.200 tokens ao gpt-5-nano sem folga e
+// o raciocínio comia o limite inteiro ("A OpenAI não concluiu a análise").
+describe("limiteDeSaida", () => {
+  it("soma a folga do raciocínio no modelo que raciocina", () => {
+    expect(limiteDeSaida("gpt-5-nano", 1200)).toBe(1200 + FOLGA_DE_RACIOCINIO);
+  });
+  it("modelo legado fica com o limite pedido", () => {
+    expect(limiteDeSaida("gpt-4.1-mini", 1200)).toBe(1200);
   });
 });

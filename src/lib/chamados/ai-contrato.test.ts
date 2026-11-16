@@ -13,6 +13,7 @@ vi.mock("@anthropic-ai/sdk", async (original) => {
 import Anthropic from "@anthropic-ai/sdk";
 import { gerarEstruturado } from "@/lib/ai";
 import { modeloDaFaixa } from "@/lib/ia/catalogo";
+import { FOLGA_DE_RACIOCINIO } from "@/lib/ia/conversa-openai";
 beforeEach(() => {
   vi.clearAllMocks(); m.config.mockResolvedValue({ provider: "OPENAI", apiKeyEnc: "ficticia", model: null });
   m.preparar.mockResolvedValue({ provider: "OPENAI", apiKey: "chave-ficticia", model: "modelo-de-teste" }); m.abrir.mockResolvedValue("run"); m.encerrar.mockResolvedValue(undefined); vi.stubGlobal("fetch", m.fetch);
@@ -25,9 +26,14 @@ describe("contrato OpenAI do agente de chamados", () => {
   it("usa Responses com store false, timeout, limite de tokens, saída estrita e uso auditado", async () => {
     const r = await gerarEstruturado({ ...entrada, anexos: [{ nome: "print.png", mime: "image/png", base64: "fake", imagem: true }, { nome: "pedido.pdf", mime: "application/pdf", base64: "fake-pdf" }] });
     expect(r.valor).toEqual({ ok: true }); const [url, options] = m.fetch.mock.calls[0]; expect(url).toBe("https://api.openai.com/v1/responses");
-    const body = JSON.parse(options.body); expect(body).toMatchObject({ model: "modelo-de-teste", store: false, max_output_tokens: 3000, text: { format: { type: "json_schema", strict: true } } });
+    const body = JSON.parse(options.body); expect(body).toMatchObject({ model: "modelo-de-teste", store: false, max_output_tokens: 3000 + FOLGA_DE_RACIOCINIO, text: { format: { type: "json_schema", strict: true } } });
     expect(body.input[0].content.map((c: { type: string }) => c.type)).toEqual(["input_image", "input_file", "input_text"]); expect(options.signal).toBeInstanceOf(AbortSignal);
     expect(m.encerrar).toHaveBeenCalledWith("run", expect.objectContaining({ ok: true }), expect.any(Date)); expect(m.criar).not.toHaveBeenCalled();
+  });
+  // bug-695: no modelo que raciocina, o teto conta o raciocínio; sem folga, a triagem voltava incompleta.
+  it("modelo legado (sem raciocínio) recebe só o limite pedido", async () => {
+    m.preparar.mockResolvedValue({ provider: "OPENAI", apiKey: "chave-ficticia", model: "gpt-4.1-mini" });
+    await gerarEstruturado(entrada); expect(JSON.parse(m.fetch.mock.calls[0][1].body).max_output_tokens).toBe(3000);
   });
   it.each(["incomplete", "failed"])("recusa resposta com status %s", async status => {
     m.fetch.mockResolvedValue({ ok: true, json: async () => ({ status, output_text: '{"ok":true}' }) }); await expect(gerarEstruturado(entrada)).rejects.toThrow("não concluiu");
