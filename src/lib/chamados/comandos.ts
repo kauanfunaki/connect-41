@@ -7,7 +7,7 @@ import { logAudit } from "@/lib/audit";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestaoNo, exigirOperacao, type Contexto } from "./contexto";
 import { podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, aberturaSchema, descricaoComRespostas, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado, type RevisaoAprovada } from "./regras";
 import { anexosDoChamado } from "./armazenamento";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, categoriasClassificaveis } from "./catalogo";
@@ -82,8 +82,13 @@ export async function aprovadoresDaCategoria(tx: Tx, tenantId: string, cat: Cate
  *   terminar.
  * - `confirmado` (a Ceci do chat): a categoria já foi confirmada pela pessoa; o
  *   chamado abre direto, com formulário, aprovação e checklist da categoria.
+ *
+ * `abertura` (16/11/2026, funcionalidade-702) só vale na triagem: o que a pessoa
+ * aprovou na revisão antes de abrir. As respostas às perguntas da IA entram no
+ * fim da descrição; a categoria confirmada fica no rascunho (`_revisao`), e a
+ * triagem a respeita em vez de classificar de novo.
  */
-export async function finalizarRascunho(c: Contexto, id: string, version: number, modo: "triagem" | "confirmado") {
+export async function finalizarRascunho(c: Contexto, id: string, version: number, modo: "triagem" | "confirmado", abertura?: unknown) {
   c = { ...c, config: await configDoHelpdesk(c.ctx.tenantId) };
   if (!c.config.enabled) throw new Error("O módulo de chamados não está disponível neste escritório.");
   const d = await rascunho(c, id);
@@ -91,14 +96,22 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
   exigirAbertura(c);
   if (d.version !== version) throw desatualizado();
   const triagem = modo === "triagem", tenantId = c.ctx.tenantId;
-  let dados: DadosDoChamado;
+  let dados: DadosDoChamado, revisao: RevisaoAprovada | null = null, respondidas = 0;
   if (triagem) {
     // Rascunhos de antes da classificação automática também precisam da categoria de contingência.
     await prepararCatalogo(tenantId);
     const pendente = await getPrisma().helpdeskCategory.findFirst({ where: { tenantId, name: A_CLASSIFICAR, active: true }, select: { id: true } });
     if (!pendente) throw new Error("A categoria A classificar está indisponível. Peça ao gestor para reativá-la.");
     const bruto = dadosRascunhoSchema.parse(d.payload);
-    dados = dadosSchema.parse({ ...bruto, title: bruto.title || tituloDaDescricao(bruto.description), categoryId: pendente.id, tags: [] });
+    const a = aberturaSchema.parse(abertura ?? {});
+    // A categoria aprovada só vale se ainda pode ser escolhida; senão, a triagem classifica.
+    if (a.revisao?.categoryId) {
+      const escolhida = a.revisao.categoryId;
+      const classificaveis = categoriasClassificaveis(await getPrisma().helpdeskCategory.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, active: true } }));
+      if (classificaveis.some(cat => cat.id === escolhida)) revisao = a.revisao;
+    } else revisao = a.revisao;
+    respondidas = a.respostas.filter(r => r.resposta).length;
+    dados = dadosSchema.parse({ ...bruto, title: bruto.title || tituloDaDescricao(bruto.description), description: descricaoComRespostas(bruto.description, a.respostas), categoryId: pendente.id, tags: [] });
   } else {
     dados = dadosSchema.parse(d.payload);
     validarFormulario(dados, (await categoriaAtual(tenantId, dados.categoryId)).categoria, d.attachments);
@@ -108,7 +121,7 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     await travarEscritorio(tx, tenantId);
     const existente = await tx.helpdeskTicket.findFirst({ where: { tenantId, draftId: id } });
     if (existente) return { ticketId: existente.id, numero: existente.number };
-    const reservou = await tx.helpdeskDraft.updateMany({ where: { id, tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { submittedAt: new Date(), version: { increment: 1 }, analysisToken: null } });
+    const reservou = await tx.helpdeskDraft.updateMany({ where: { id, tenantId, createdById: c.ctx.userId, version, submittedAt: null }, data: { submittedAt: new Date(), version: { increment: 1 }, analysisToken: null, ...(revisao ? { payload: json({ ...(d.payload as Record<string, unknown>), _revisao: revisao }) } : {}) } });
     if (reservou.count !== 1) throw desatualizado();
     // Revalida dentro da transação: categoria e anexos podem ter mudado enquanto
     // a finalização esperava a trava.
@@ -130,15 +143,15 @@ export async function finalizarRascunho(c: Contexto, id: string, version: number
     await tx.helpdeskAttachment.updateMany({ where: { tenantId, draftId: id, ticketId: null }, data: { ticketId: ticket.id } });
     if (!triagem && cat.checklistTemplate.length) await tx.helpdeskChecklistItem.createMany({ data: cat.checklistTemplate.map(i => ({ tenantId, ticketId: ticket.id, key: i.key, label: i.label })) });
     if (comAprovacao) await tx.helpdeskApproval.create({ data: { tenantId, ticketId: ticket.id, cycleNumber: 1 } });
-    await evento(tx, tenantId, ticket.id, c.ctx.userId, "created", triagem ? { triagem: true } : { revisadoPelaPessoa: true, classificacao: (d.payload as Record<string, unknown>)._classificacao });
+    await evento(tx, tenantId, ticket.id, c.ctx.userId, "created", triagem ? { triagem: true, ...(revisao ? { revisao: true } : {}), ...(respondidas ? { respostas: respondidas } : {}) } : { revisadoPelaPessoa: true, classificacao: (d.payload as Record<string, unknown>)._classificacao });
     return { ticketId: ticket.id, numero: number };
   });
   // O número vai junto (10/11/2026): a tela e a Ceci levam ao endereço curto.
   await depois(c, ticketId, "created"); return { ticketId, numero };
 }
 /** O envio da tela Novo chamado: o chamado nasce em "Aguardando triagem". */
-export function enviarRascunho(c: Contexto, id: string, version: number) {
-  return finalizarRascunho(c, id, version, "triagem");
+export function enviarRascunho(c: Contexto, id: string, version: number, abertura?: unknown) {
+  return finalizarRascunho(c, id, version, "triagem", abertura);
 }
 // A Ceci do chat (03/11/2026): a pessoa confirmou categoria, título e descrição
 // no cartão da conversa. É o rascunho e a finalização da tela Novo chamado, com

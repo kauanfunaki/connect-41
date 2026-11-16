@@ -60,9 +60,9 @@ export function descreverEvento(e: Pick<EventoDaLinha, "type" | "actorId" | "dat
     case "triagem": {
       const t = triagemSchema.safeParse(d);
       if (!t.success) return { texto: "A triagem automática terminou" };
-      const { existente, categoria } = t.data;
-      if (existente) return { texto: `A triagem automática encontrou no Orquestrador o ${ROTULOS_EXISTENTE[existente.tipo]} ${existente.nome}${categoria ? ` e classificou o chamado em ${categoria}` : " e deixou a classificação para a equipe"}`, ...(existente.reason ? { detalhe: existente.reason } : {}) };
-      if (categoria) return { texto: `A triagem automática classificou o chamado em ${categoria}` };
+      const { existente, categoria, confirmadaPorQuemAbriu: confirmada } = t.data;
+      if (existente) return { texto: `A triagem automática encontrou no Orquestrador o ${ROTULOS_EXISTENTE[existente.tipo]} ${existente.nome}${categoria ? confirmada ? ` e manteve a categoria ${categoria}, confirmada por quem abriu` : ` e classificou o chamado em ${categoria}` : " e deixou a classificação para a equipe"}`, ...(existente.reason ? { detalhe: existente.reason } : {}) };
+      if (categoria) return { texto: confirmada ? `A triagem manteve a categoria ${categoria}, confirmada por quem abriu` : `A triagem automática classificou o chamado em ${categoria}` };
       return { texto: "A triagem automática deixou o chamado para a equipe classificar", detalhe: textoDaTriagem(t.data) };
     }
     default: return { texto: `${quem} · ${ROTULOS_EVENTO[e.type] ?? "Atualização"}` };

@@ -31,6 +31,28 @@ Remover um setor solicitante impede novas aberturas, preservando o acompanhament
 
 ## Abertura e revisão por IA
 
+### Como é desde 16/11/2026
+
+O Novo chamado tem duas etapas (funcionalidade-702):
+
+1. **Pedido.** Setor de origem, prioridade, descrição, o setor que vai atender (quando há mais de um) e os anexos. Não há campo de título nem de categoria.
+2. **Revisão.** Ao clicar em **Continuar**, a IA lê o pedido uma vez (`src/lib/chamados/revisao.ts`, rota `POST /api/chamados/revisao`) e propõe o título, a categoria e até três perguntas. A pessoa edita o título, confirma ou troca a categoria (ou escolhe **Deixar para a equipe classificar**) e responde às perguntas se quiser. Responder é opcional.
+
+Enquanto a IA lê o pedido, **Abrir sem esperar** abre o chamado como foi escrito, sem a revisão. Se a IA não responder, a etapa 2 abre sem sugestão, e a pessoa ainda confere o título.
+
+O chamado nasce na hora, em **Aguardando triagem** (desde 10/11/2026, melhoria-575). A triagem roda depois da resposta (`src/lib/chamados/triagem-servidor.ts`):
+
+- confere se algum robô, site ou app do Orquestrador já faz o pedido. Só aponta o item quando a IA diz que ele faz a ação pedida (bug-700);
+- classifica o chamado, a não ser que a pessoa tenha passado pela revisão. Nesse caso vale a categoria confirmada, ou "a equipe classifica", e a IA não é perguntada de novo. O que foi aprovado fica em `_revisao`, no rascunho;
+- as respostas às perguntas entram no fim da descrição, sob "Respostas às perguntas da triagem:".
+
+A revisão não grava nada: só o envio grava. Ela usa o agente **Triagem de chamados** e os mesmos tetos, com limite de dez revisões por pessoa por minuto.
+
+### Como era até 10/11/2026
+
+Os parágrafos abaixo descrevem a abertura com conversa e parecer, que saiu em 10/11/2026. Ficam como registro: os chamados daquele período guardam o parecer, e a equipe o lê na tela do chamado.
+
+
 Preencha o setor de origem, o título e a descrição. A abertura não exige escolher categoria: ao enviar, a IA identifica o grupo e a categoria pelo conteúdo e pelas respostas do solicitante. O rascunho aceita categoria vazia e pode ser retomado pela lista. Campos e evidências específicos aparecem depois da classificação e continuam obrigatórios antes da abertura. O texto original é preservado.
 
 No primeiro rascunho, o servidor prepara a lista padrão: **Desenvolvimento** (10 categorias), **Infraestrutura** (7) e **Suporte** (7), conforme `src/lib/chamados/catalogo.ts`. A preparação reutiliza nomes existentes, vincula categorias soltas ao grupo e preserva formulários, anexos, checklists, aprovações e desativações. Não altera chamados antigos nem exige nova migration. Grupos organizam a lista; a IA escolhe somente folhas ativas, com pais ativos. A lista e o detalhe mostram **Grupo › Categoria**; o filtro de um grupo inclui seus descendentes. A equipe pode corrigir a classificação em **Editar dados**.

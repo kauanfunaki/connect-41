@@ -138,6 +138,36 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     const depois = await detalhe(equipe, id); expect(depois.status).toBe("ABERTO"); expect(depois.assignees.map(a => a.userId)).toEqual([operador]);
     await expect(alterar(equipe, id, depois.version, "status", "AGUARDANDO_TRIAGEM")).rejects.toThrow("Só a triagem automática");
   });
+  it("com a revisão, as respostas entram na descrição e a triagem mantém a categoria confirmada, sem classificar de novo", async () => {
+    const d = await novo({ title: "Liberar acesso ao ambiente" });
+    const { ticketId: id } = await enviarRascunho(c, d.id, d.version, { revisao: { categoryId: categoriaId, tags: ["Acesso", "acesso"] }, respostas: [{ pergunta: "Qual ambiente?", resposta: "Homologação" }, { pergunta: "Desde quando?", resposta: " " }] });
+    const aberto = await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } });
+    expect(aberto).toMatchObject({ status: "AGUARDANDO_TRIAGEM", title: "Liberar acesso ao ambiente", description: `${payload().description}\n\nRespostas às perguntas da triagem:\n• Qual ambiente?\n  Homologação` });
+    expect((await db!.helpdeskEvent.findFirstOrThrow({ where: { ticketId: id, type: "created" } })).data).toMatchObject({ triagem: true, revisao: true, respostas: 1 });
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    // Só a busca no Orquestrador foi à IA.
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome)).toEqual(["orquestrador_chamado"]);
+    expect(await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } })).toMatchObject({ status: "ABERTO", categoryId: categoriaId, title: "Liberar acesso ao ambiente", tags: ["acesso"] });
+    expect(await triagemDo(id)).toMatchObject({ categoria: "Acesso fictício", semCategoria: null, confirmadaPorQuemAbriu: true });
+    expect(await db!.helpdeskChecklistItem.count({ where: { ticketId: id } })).toBe(1);
+  });
+  it("quem abriu deixa a classificação para a equipe: a triagem não classifica e diz o motivo", async () => {
+    const d = await novo();
+    const { ticketId: id } = await enviarRascunho(c, d.id, d.version, { revisao: { categoryId: null } });
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome)).toEqual(["orquestrador_chamado"]);
+    const t = await db!.helpdeskTicket.findUniqueOrThrow({ where: { id }, include: { category: true } });
+    expect(t.status).toBe("ABERTO"); expect(t.category.name).toBe("A classificar");
+    expect(await triagemDo(id)).toMatchObject({ categoria: null, semCategoria: "solicitante", confirmadaPorQuemAbriu: false });
+  });
+  it("categoria aprovada que não pode ser escolhida é ignorada, e a triagem classifica", async () => {
+    const d = await novo();
+    const { ticketId: id } = await enviarRascunho(c, d.id, d.version, { revisao: { categoryId: randomUUID() } });
+    expect((await db!.helpdeskDraft.findUniqueOrThrow({ where: { id: d.id } })).payload).not.toHaveProperty("_revisao");
+    expect(await triarChamado(tenantId, id)).toBe("concluida");
+    expect(mocks.gerar.mock.calls.map(x => x[0].nome).sort()).toEqual(["classificacao_chamado", "orquestrador_chamado"]);
+    expect(await triagemDo(id)).toMatchObject({ categoria: "Acesso fictício", confirmadaPorQuemAbriu: false });
+  });
   it("a categoria com campo que o pedido não tem fica para a equipe classificar", async () => {
     await salvarCategoria(gestao, { name: "Campos da classificação fictícia", formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
     const cat = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Campos da classificação fictícia" } } });

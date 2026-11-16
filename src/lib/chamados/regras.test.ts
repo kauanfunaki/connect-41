@@ -61,6 +61,16 @@ describe("abertura sem título", () => {
     expect(ehTituloProvisorio(tituloDaDescricao(pedido), pedido)).toBe(true);
     expect(ehTituloProvisorio("Certificado A3 do Marcos", pedido)).toBe(false);
   });
+  it("a categoria confirmada por quem abriu e a deixada para a equipe têm frase própria (funcionalidade-702)", () => {
+    const confirmada = triagemSchema.parse({ categoria: "Suporte › Treinamento", confirmadaPorQuemAbriu: true });
+    expect(textoDaTriagem(confirmada)).toBe("Quem abriu confirmou a categoria Suporte › Treinamento. Ele está com a equipe.");
+    expect(avisoDaTriagem(confirmada, "Treinar a equipe")).toBe("Triagem concluída, chamado classificado em Suporte › Treinamento: Treinar a equipe");
+    const deixada = triagemSchema.parse({ semCategoria: "solicitante" });
+    expect(textoDaTriagem(deixada)).toBe("Quem abriu deixou a classificação para a equipe.");
+    expect(avisoDaTriagem(deixada, "Pedido")).toBe("Triagem concluída; a equipe vai classificar o chamado: Pedido");
+    // Evento gravado antes da mudança: sem o campo, a categoria é da triagem.
+    expect(textoDaTriagem(triagemSchema.parse({ categoria: "Suporte › Treinamento" }))).toContain("A triagem automática classificou");
+  });
   it("com item do Orquestrador e sem categoria, a frase diz por que não classificou (bug-701)", () => {
     const existente = { ref: "app:x", tipo: "app" as const, nome: "App fictício", responsavel: null, endereco: null, noOps: null, detalhe: null, match: "similar" as const, reason: "" };
     expect(textoDaTriagem(triagemSchema.parse({ existente, semCategoria: "falha" }))).toContain("A triagem automática falhou");
