@@ -22,13 +22,30 @@ export const ABAS_DA_DRE: { chave: AbaDaDre; rotulo: string }[] = [
  * `mes` é a competência "AAAA-MM". Cada tela lê o mês no seu formato: a DRE de
  * caixa usa "AAAA-M" (sem o zero, o formato dela desde o início), a econômica
  * e as análises usam "AAAA-MM", e o orçamento é por ano.
+ *
+ * `visaoDoCliente` (16/11/2026, melhoria-718): a tela está em "Visão: Cliente".
+ * Caixa e Competência seguem nela (`como=cliente`), com o período no formato
+ * do portal — o mês "AAAA-MM" nas duas, ou `ano` no ano inteiro —, porque na
+ * visão do cliente quem troca o regime é esta fileira. Análises e Orçamento
+ * não têm visão do cliente: abrem como sempre.
  */
-export function hrefDaAbaDaDre(aba: AbaDaDre, companyId: string, mes?: string | null): string {
+export function hrefDaAbaDaDre(
+  aba: AbaDaDre,
+  companyId: string,
+  mes?: string | null,
+  visaoDoCliente?: { ano?: string | null } | null
+): string {
   const q = new URLSearchParams({ empresa: companyId });
+  const doCliente = Boolean(visaoDoCliente) && (aba === "caixa" || aba === "competencia");
+  if (doCliente) q.set("como", "cliente");
+  const anoInteiro = visaoDoCliente?.ano && /^\d{4}$/.test(visaoDoCliente.ano) ? visaoDoCliente.ano : null;
   const partes = mes?.match(/^(\d{4})-(\d{2})$/);
-  if (partes) {
+  if (anoInteiro) {
+    // As análises são de um mês: sem mês na tela, abrem no mais recente.
+    if (doCliente || aba === "orcamento") q.set("ano", anoInteiro);
+  } else if (partes) {
     const [, ano, mm] = partes;
-    if (aba === "caixa") q.set("mes", `${ano}-${Number(mm)}`);
+    if (aba === "caixa" && !doCliente) q.set("mes", `${ano}-${Number(mm)}`);
     else if (aba === "orcamento") q.set("ano", ano!);
     else q.set("mes", mes!);
   }

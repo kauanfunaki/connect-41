@@ -25,6 +25,17 @@ export async function podeAbrirADre(ctx: Quem): Promise<boolean> {
 }
 
 /**
+ * Quem vê "Visão: Cliente" (16/11/2026, melhoria-718) — a mesma régua de quando
+ * ela era a aba "Como o cliente vê" da DRE de caixa: quem abre a DRE de caixa.
+ * A competência do cliente pede também a DRE econômica ligada no escritório,
+ * que é o que libera a aba Competência no portal.
+ */
+export async function podeVerComoOCliente(ctx: Quem, regime: "caixa" | "competencia"): Promise<boolean> {
+  if (!(await podeAbrirADre(ctx))) return false;
+  return regime === "caixa" || isModuleEnabled(ctx.tenantId!, "dre_economica");
+}
+
+/**
  * Quem troca o modelo do DRE de uma empresa (21/10/2026): a coordenação do
  * setor que opera a DRE. A troca refaz a classificação da empresa inteira —
  * é decisão de quem responde pelo relatório, como aprovar o orçamento.

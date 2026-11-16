@@ -4,7 +4,7 @@
 import { canViewSector, type AuthContext } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
 import { getModuleDef } from "@/lib/module-catalog";
-import { podeAbrirADre } from "@/lib/dre/acesso";
+import { podeAbrirADre, podeVerComoOCliente } from "@/lib/dre/acesso";
 import { MODULO_DE_ORCAMENTO } from "@/lib/dre/orcamento/dados";
 import type { AbaDaDre } from "@/lib/dre/abasDaDre";
 
@@ -22,14 +22,22 @@ async function podeVerOModulo(ctx: AuthContext, modulo: string): Promise<boolean
   return isModuleEnabled(ctx.tenantId, modulo);
 }
 
-export async function abasDaDreLiberadas(ctx: AuthContext): Promise<Set<AbaDaDre>> {
-  const [caixa, ...outras] = await Promise.all([
+/**
+ * `visaoDoCliente` (16/11/2026, melhoria-718): na "Visão: Cliente" a aba
+ * Competência é a competência do cliente, e quem a vê é quem via a aba de
+ * dentro da visão do cliente — `podeVerComoOCliente`, e não o setor da DRE
+ * econômica.
+ */
+export async function abasDaDreLiberadas(ctx: AuthContext, { visaoDoCliente = false } = {}): Promise<Set<AbaDaDre>> {
+  const [caixa, competenciaDoCliente, ...outras] = await Promise.all([
     podeAbrirADre(ctx),
+    visaoDoCliente ? podeVerComoOCliente(ctx, "competencia") : false,
     ...(Object.entries(MODULO_DA_ABA) as [AbaDaDre, string][]).map(async ([aba, modulo]) =>
       (await podeVerOModulo(ctx, modulo)) ? aba : null
     ),
   ]);
   const liberadas = new Set<AbaDaDre>(outras.filter((a): a is AbaDaDre => a !== null));
   if (caixa) liberadas.add("caixa");
+  if (competenciaDoCliente) liberadas.add("competencia");
   return liberadas;
 }
