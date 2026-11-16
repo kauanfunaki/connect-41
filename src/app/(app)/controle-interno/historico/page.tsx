@@ -13,7 +13,7 @@ import { CascoDaTabela } from "@/components/shared/CascoDaTabela";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { VisoesDoControle, AcoesDoControle } from "@/components/tech-interno/NavegacaoTech";
+import { VisoesDoControle, AcoesDoControle, enderecoDaVisao } from "@/components/tech-interno/NavegacaoTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
 import { LembrarDaLista } from "@/components/tech-interno/VoltaDaLista";
 
@@ -46,7 +46,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
     if ((m.changes as unknown as Alteracao[]).some(c => c.field === "Situação" && c.after === SITUACOES[item.status])) fechadoEm.set(m.itemId, m.createdAt);
   }
   const data = (d: Date | undefined) => d ? formatInstantDate(d) : "—";
-  const hrefVisao = (v: string) => v === "historico" ? `${ROTA_TECH_INTERNO}/historico` : `${ROTA_TECH_INTERNO}?visao=${v}`;
+  const hrefVisao = (v: string) => enderecoDaVisao(v) ?? `${ROTA_TECH_INTERNO}?visao=${v}`;
   // O item aberto daqui volta para o Histórico, no mesmo recorte (10/11/2026).
   const aquiComPagina = page > 1 ? hrefPagina(page) : `${ROTA_TECH_INTERNO}/historico${aqui.toString() ? `?${aqui}` : ""}`;
   return <PageContainer>

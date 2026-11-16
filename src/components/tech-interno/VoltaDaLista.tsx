@@ -32,7 +32,7 @@ function lerDaAba(): string {
 // O valor só muda quando a própria lista grava, numa tela que não é esta.
 const semAvisos = () => () => {};
 
-/** Fica na lista (Lista e Kanban) e no Histórico: guarda o recorte que está à vista. */
+/** Fica na lista (Lista e Kanban), no Histórico e nas Entregas (16/11/2026, melhoria-706): guarda o recorte que está à vista. */
 export function LembrarDaLista({ endereco }: { endereco: string }) {
   useEffect(() => {
     try {

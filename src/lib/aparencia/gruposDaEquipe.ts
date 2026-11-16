@@ -96,7 +96,6 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   // Escritório: o que é da casa, e não de um cliente.
   helpdesk: "escritorio",
   tech_controle_interno: "escritorio",
-  tech_entregas: "escritorio",
   tech_ceci: "escritorio",
   tech_github_contributions: "escritorio",
   tech_ops_center: "escritorio",

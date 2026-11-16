@@ -128,12 +128,13 @@ export type Filtros = ReturnType<typeof lerFiltros>;
 // O "Voltar para a lista" volta ao recorte de onde a pessoa saiu — visão, filtros
 // e página (26/10/2026). Desde 10/11/2026 o recorte não viaja mais no endereço
 // do item (`?voltar=`): a lista o guarda na aba do navegador (`VoltaDaLista`),
-// e o Histórico também, que é uma das visões dela. Só aceita essas duas telas;
-// o resto cai na lista limpa.
+// e o Histórico também, que é uma das visões dela — e, desde 16/11/2026
+// (melhoria-706), as Entregas. Só aceita essas três telas; o resto cai na
+// lista limpa.
 export function destinoDeVolta(raw: unknown): string {
   if (typeof raw !== "string" || raw.length > 2000 || /[\\\s]|\/\//.test(raw)) return ROTA_TECH_INTERNO;
   const tela = raw.split("?")[0];
-  return tela === ROTA_TECH_INTERNO || tela === `${ROTA_TECH_INTERNO}/historico` ? raw : ROTA_TECH_INTERNO;
+  return tela === ROTA_TECH_INTERNO || tela === `${ROTA_TECH_INTERNO}/historico` || tela === `${ROTA_TECH_INTERNO}/entregas` ? raw : ROTA_TECH_INTERNO;
 }
 export function hojeEmSaoPaulo(agora = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(agora);

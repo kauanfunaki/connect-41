@@ -12,6 +12,12 @@ Clicar em qualquer ponto de um item (linha da lista, cartão do celular, Kanban,
 
 A lista pagina 50 itens. Kanban e agenda paginam 500 itens, com navegação explícita quando o recorte ultrapassa esse volume. A contagem por coluna corresponde à página exibida. A agenda considera o mês escolhido mais os itens sem prazo, respeitando os filtros.
 
+## Visão Entregas
+
+Desde 16/11/2026 (melhoria-706) as Entregas são a quarta visão do Controle interno, depois de Lista, Kanban e Histórico, em `/controle-interno/entregas`. Mostram os itens concluídos no período (este trimestre, o passado ou os últimos 90 dias), com pessoa, data, tamanho, pontos, ciclo, voltas da validação, de onde veio e retrabalho. O seletor de período e o total (itens e pontos) ficam na barra da tabela; a regra dos pontos, no rodapé. O item aberto de lá volta para lá, no mesmo período.
+
+Antes era a tela "Entregas da Tech", do módulo `tech_entregas`, no menu do Tech. O módulo saiu do catálogo: a visão abre para quem vê o Controle interno (`tech_controle_interno`), o item do menu que fica aceso é o Controle interno, e a manutenção do Controle interno vale para ela. Não houve migration: a linha de `tech_entregas` que um escritório tenha em `tenant_modules` (ou num plano, nas telas fixadas, na ordem do menu ou na manutenção) fica sem efeito, porque essas leituras partem do catálogo. O atalho para a Produtividade aparece só para quem vê o módulo do GitHub.
+
 ## Implantação
 
 Aplicar `20261021160000_tech_internal` em ambiente autorizado antes de publicar. A migration apenas cria quatro tabelas e suas relações; não remove dados. Depois, `20261029140000_tech_interno_sistemas_do_ops`: acrescenta ao item as colunas do vínculo com o Ops Center e índices; também não remove dados. Ativar o módulo no escritório após publicar. Planos que usam uma lista restrita de módulos também precisam permitir `tech_controle_interno`.

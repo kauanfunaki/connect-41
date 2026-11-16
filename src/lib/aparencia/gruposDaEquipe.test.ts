@@ -76,6 +76,7 @@ describe("grupoDaTelaDaEquipe", () => {
 
   it("as telas que vieram de outra levam a área da tela de origem", () => {
     expect(grupoDaTelaDaEquipe("/ceci")).toBe("escritorio");
+    // Visão do Controle interno desde 16/11/2026 (melhoria-706): a área é a dele.
     expect(grupoDaTelaDaEquipe("/controle-interno/entregas")).toBe("escritorio");
     expect(grupoDaTelaDaEquipe("/processos/painel")).toBe("processos");
     expect(grupoDaTelaDaEquipe("/processos/orgaos")).toBe("processos");

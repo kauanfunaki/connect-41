@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODULE_CATALOG, MODULE_ROUTES, MODULOS_DE_TODA_A_EQUIPE, MODULOS_FORA_DO_MENU, MODULO_NO_LUGAR_DOS_QUADROS } from "@/lib/module-catalog";
-import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, type BlocoDoMenu } from "./menuDoSetor";
+import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, telasVisiveis, type BlocoDoMenu } from "./menuDoSetor";
 
 // A regra do menu de 05/11/2026 (opção A): grupos por tema em todo setor, grupo
 // de uma tela vira tela solta, e a Tela 2 fica recuada sob a Tela 1.
@@ -38,10 +38,13 @@ describe("montarMenuDoSetor", () => {
     expect(desenho(montarMenuDoSetor(doSetor("societario")))).toEqual(esperado);
   });
 
-  it("Tech: Orquestrador, Produtividade, Entregas da Tech, Ceci, Chamados e Certificados digitais, todos avulsos", () => {
+  // 16/11/2026 (melhoria-706): as Entregas da Tech saíram do menu — são uma
+  // visão do Controle interno, que fica no Geral.
+  it("Tech: Orquestrador, Produtividade, Ceci, Chamados e Certificados digitais, todos avulsos", () => {
     const menu = montarMenuDoSetor(doSetor("tech"), undefined, "tech");
-    expect(desenho(menu)).toEqual(["Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Chamados", "Certificados digitais"]);
+    expect(desenho(menu)).toEqual(["Orquestrador", "Produtividade", "Ceci", "Chamados", "Certificados digitais"]);
     expect(menu.every((b) => b.tipo === "solta")).toBe(true);
+    expect(doSetor("tech").map((t) => t.href)).not.toContain("/controle-interno/entregas");
     // Sem o setor, valeria a ordem global dos grupos — por isso a do Tech fica escrita.
     expect(desenho(montarMenuDoSetor(doSetor("tech")))[1]).not.toBe("Produtividade");
   });
@@ -88,7 +91,14 @@ describe("a ordem escolhida", () => {
 
   it("a ordem escolhida vence a do setor, e o resto segue a do setor", () => {
     const menu = montarMenuDoSetor(doSetor("tech"), { grupos: ["Atendimento"], telas: [] }, "tech");
-    expect(desenho(menu)).toEqual(["Chamados", "Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Certificados digitais"]);
+    expect(desenho(menu)).toEqual(["Chamados", "Orquestrador", "Produtividade", "Ceci", "Certificados digitais"]);
+  });
+
+  // A ordem gravada antes de 16/11/2026 pode citar as Entregas da Tech, que
+  // saíram do catálogo (melhoria-706): o código que não existe mais não muda nada.
+  it("código de tela que saiu do catálogo, na ordem gravada, é ignorado", () => {
+    const gravada = lerOrdemDoMenu('{"grupos":[],"telas":["tech_entregas","tech_ceci"],"ocultas":["tech_entregas"]}');
+    expect(desenho(montarMenuDoSetor(telasVisiveis(doSetor("tech"), gravada), gravada, "tech"))).toEqual(desenho(montarMenuDoSetor(doSetor("tech"), undefined, "tech")));
   });
 
   it("uma tela não sai do grupo dela nem a filha sai de baixo da mãe, mesmo pedindo", () => {

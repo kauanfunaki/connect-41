@@ -346,13 +346,13 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
     expect(tagDoLink(aside, "Hub de robôs")).toContain('href="/robo"');
   });
 
-  // O Tech de 09/11/2026: tudo avulso, menos o Orquestrador.
-  it("Tech: Orquestrador, Produtividade, Entregas da Tech, Ceci, Chamados e Certificados digitais", () => {
+  // O Tech de 09/11/2026: tudo avulso, menos o Orquestrador. Sem as Entregas da
+  // Tech desde 16/11/2026 (melhoria-706): são uma visão do Controle interno.
+  it("Tech: Orquestrador, Produtividade, Ceci, Chamados e Certificados digitais", () => {
     const tech = [
       { code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" },
       { code: "tech_ceci", label: "Ceci", href: "/ceci" },
       { code: "tech_github_contributions", label: "Produtividade", href: "/produtividade" },
-      { code: "tech_entregas", label: "Entregas da Tech", href: "/controle-interno/entregas" },
       { code: "tech_ops_center", label: "Orquestrador", href: "/ops" },
       { code: "helpdesk", label: "Chamados", href: "/chamados" },
       { code: "tech_certificados", label: "Certificados digitais", href: "/certificados" },
@@ -360,10 +360,12 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
     const aside = lateral(casco(false, { telasFixadas: [], activeSector: TECH, activeSectorModules: tech }));
     expect(gruposDoSetor(aside).map((g) => [g.nome, g.telas])).toEqual([["Orquestrador", 3]]);
     const doSetor = aside.slice(aside.indexOf('href="/setor/tech/telas"'));
-    const ordem = ["Orquestrador", "Produtividade", "Entregas da Tech", "Ceci", "Chamados", "Certificados digitais"].map((n) => posicao(doSetor, n));
+    const ordem = ["Orquestrador", "Produtividade", "Ceci", "Chamados", "Certificados digitais"].map((n) => posicao(doSetor, n));
     expect(ordem).toEqual([...ordem].sort((a, b) => a - b));
     // O Controle interno não está entre as telas do Tech: fica no Geral.
     expect(doSetor).not.toContain('href="/controle-interno"');
+    expect(aside).not.toContain("Entregas da Tech");
+    expect(aside).not.toContain('href="/controle-interno/entregas"');
   });
 
   // A Produtividade (09/11/2026): uma tela só, com as abas Pessoas e GitHub dentro.
@@ -419,10 +421,7 @@ describe("o Apoio no Geral", () => {
   // 09/11/2026 (pedido do Kauan): o item do Geral é o próprio Controle interno,
   // e ele sai da lista do Tech.
   describe("na Tech, o Controle interno fica no lugar dos Quadros", () => {
-    const tech = [
-      { code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" },
-      { code: "tech_entregas", label: "Entregas da Tech", href: "/controle-interno/entregas" },
-    ];
+    const tech = [{ code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" }];
     const naTech = (extra: Partial<Props> = {}) =>
       lateral(casco(false, { telasFixadas: [], activeSector: TECH, apoioLigado: { senhas: false, manuais: false }, activeSectorModules: tech, ...extra }));
 
@@ -436,14 +435,17 @@ describe("o Apoio no Geral", () => {
       expect(aside.split('href="/controle-interno"')).toHaveLength(2);
       // No Geral: antes do título do Tech, que abre as telas do setor.
       expect(aside.indexOf('href="/controle-interno"')).toBeLessThan(aside.indexOf('href="/setor/tech/telas"'));
-      expect(tagDoLink(aside, "Entregas da Tech")).not.toContain("aria-current");
     });
 
-    it("nas Entregas, acende só as Entregas", () => {
-      rota.atual = "/controle-interno/entregas";
-      const aside = naTech();
-      expect(tagDoLink(aside, "Controle interno")).not.toContain("aria-current");
-      expect(tagDoLink(aside, "Entregas da Tech")).toContain('aria-current="page"');
+    // 16/11/2026 (melhoria-706): as Entregas são uma visão do Controle interno,
+    // sem item próprio. Antes (PR #458) acendiam só o item "Entregas da Tech".
+    it("aceso em todas as visões: Histórico, Entregas, Resumo e o item aberto", () => {
+      for (const caminho of ["/controle-interno/historico", "/controle-interno/entregas", "/controle-interno/resumo", "/controle-interno/bug-1"]) {
+        rota.atual = caminho;
+        const aside = naTech();
+        expect(tagDoLink(aside, "Controle interno"), caminho).toContain('aria-current="page"');
+        expect(aside, caminho).not.toContain("Entregas da Tech");
+      }
     });
 
     it("com os Quadros escondidos no Geral do setor, o Controle interno continua no menu", () => {

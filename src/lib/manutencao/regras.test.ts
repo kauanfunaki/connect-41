@@ -17,7 +17,9 @@ describe("telaDoCaminho", () => {
     expect(telaDoCaminho("/processos/abc-123")).toBe("societario_processos");
     expect(telaDoCaminho("/dre/economica")).toBe("dre_economica");
     expect(telaDoCaminho("/dre")).toBe("bpo_dre");
-    expect(telaDoCaminho("/controle-interno/entregas")).toBe("tech_entregas");
+    // As Entregas são uma visão do Controle interno (16/11/2026, melhoria-706):
+    // entram em manutenção com ele, e não mais como tela à parte.
+    expect(telaDoCaminho("/controle-interno/entregas")).toBe("tech_controle_interno");
     expect(telaDoCaminho("/sped-fiscal/motor/classificacao")).toBe("fiscal_classificacao");
   });
 
