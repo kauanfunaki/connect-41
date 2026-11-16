@@ -34,7 +34,7 @@ export async function classificar(c: { tenantId: string; userId: string; ticketI
     if (texto.length > 100000) throw new Error("Pedido maior que o limite da classificação.");
     const { valor } = await gerarEstruturado({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT_CLASSIFICACAO, texto, nome: "classificacao_chamado", schema: {
       type: "object", additionalProperties: false, properties: { categoryId: { anyOf: [{ type: "string", enum: opcoes.map(c => c.id) }, { type: "null" }] }, reason: { type: "string" }, title: { type: "string" }, tags: { type: "array", items: { type: "string" } } }, required: ["categoryId", "reason", "title", "tags"],
-    }, maxTokens: 1200, estrito: true, timeoutMs: 20000, store: false, contexto: { trigger: "SISTEMA", userId: c.userId, entityType: "HelpdeskTicket", entityId: c.ticketId } });
+    }, maxTokens: 1200, estrito: true, timeoutMs: 30000, esforco: "low", store: false, contexto: { trigger: "SISTEMA", userId: c.userId, entityType: "HelpdeskTicket", entityId: c.ticketId } });
     const resultado = resultadoSchema.parse(valor);
     const base = { reason: resultado.reason, title: resultado.title, tags: limparTags(resultado.tags), origem: "principal" as const, falha: null };
     // A IA disse que não dá para escolher: é falta de contexto, não falha.

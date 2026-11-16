@@ -105,7 +105,7 @@ export async function revisarRascunho(c: Contexto, draftId: string): Promise<Rev
     if (entrada.length > 100000) throw new Error("Pedido maior que o limite da revisão.");
     const { valor } = await gerarEstruturado({
       tenantId, agentCode: "triagem_chamados", sistema: setores.length > 1 ? `${PROMPT_DA_REVISAO}\n${PROMPT_DO_SETOR_NA_REVISAO}` : PROMPT_DA_REVISAO, texto: entrada, nome: "revisao_chamado", schema: SCHEMA(opcoes.map(cat => cat.id), setores.map(st => st.code)),
-      maxTokens: 1500, estrito: true, timeoutMs: 25000, store: false,
+      maxTokens: 1500, estrito: true, timeoutMs: 30000, esforco: "low", store: false,
       contexto: { trigger: "USUARIO", userId: c.ctx.userId, entityType: "HelpdeskDraft", entityId: draftId },
     });
     return lerRevisao(valor, opcoes.map(cat => cat.id), setores.map(st => st.code));
