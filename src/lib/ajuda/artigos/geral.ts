@@ -199,6 +199,11 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Cadastrar, editar e inativar empresas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
       "Empresa com mais de 2.000 notas fiscais não pode ser excluída por aqui: é histórico de verdade. Inative.",
       "Quem vê cada empresa no portal se define em “Acesso ao portal”, na ficha dela, ou em Configurações › Portal do cliente.",
+      "No cadastro, a etapa “SPED fiscal” é opcional: são os dados que vão no SPED da empresa, e o “?” de cada campo diz onde achar a informação.",
+      "Os responsáveis de cada setor ficam no cartão “Serviços contratados” da ficha, e não no formulário: numa empresa nova, salve e adicione ali os setores contratados.",
+      "O endereço do sócio é o que responde “Reside no local?” na viabilidade do Empresa Fácil. Sem CEP e número, a pergunta volta a ser respondida à mão.",
+      "A “Folha de pagamento” da ficha é controle e conferência dos lançamentos, não motor de cálculo. A “Conferência assistida” aponta o que foge do histórico da empresa para revisão — não é cálculo trabalhista.",
+      "Em “Cálculo de rescisão”, na ficha, cada campo mostra de onde vem o valor atual. O que você muda ali vale só para esta empresa e só nos campos alterados; o resto segue o padrão do escritório.",
     ],
   },
 
@@ -260,6 +265,11 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Esta lista é só da equipe do escritório. Os funcionários das empresas clientes ficam em “Colaboradores de clientes”.",
       "O vínculo da pessoa com a conta de acesso ao Connect é feito pelo administrador, nas configurações.",
       "Cadastrar, editar e inativar pessoas é para administradores e gestores de setor. Excluir de vez é só para administradores.",
+      "O contato de empresa cliente guarda só a empresa, o cargo e o departamento: jornada, admissão e folha existem só para o colaborador interno, que é da equipe do escritório e não pede empresa, cargo nem departamento.",
+      "Os benefícios entram na ficha depois que a pessoa é criada. Os documentos escolhidos no cadastro esperam e sobem quando você clica em “Confirmar e salvar”.",
+      "A conta de acesso criada pela ficha nasce ligada a ela e aparece também em Configurações › Usuários. “Ou ligar a uma conta que já existe” é para quem já entrava no Connect antes de ganhar a ficha: a lista traz só as contas sem pessoa.",
+      "Na conferência da rescisão, o Connect não calcula verbas: registre o que a contabilidade informou e o resultado da sua conferência. O prazo de pagamento é o do art. 477, § 6º, da CLT — 10 dias corridos do término do contrato. O “Cálculo de referência” é para comparar com o que a contabilidade enviou; registre a divergência quando houver.",
+      "O eSocial S-2200 (cadastramento inicial do vínculo e admissão) da ficha é um rascunho para conferência: mostra o que já está preenchido e o que falta. Os campos pendentes se preenchem na ficha antes da geração oficial do evento.",
     ],
   },
 
@@ -502,7 +512,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Abra a pasta e clique em “Enviar arquivos”. Arraste os arquivos ou clique para escolher, e depois em “Enviar”. Cada arquivo pode ter até 10 MB.",
           "Para criar uma pasta, clique em “Nova pasta”. Em “Quem vê”, escolha “Só” um setor quando a pasta for só dele — vale para tudo que estiver dentro.",
           "No “…” de cada pasta ou arquivo, use “Renomear”, “Mover” ou “Mandar para a lixeira”. As pastas do modelo não mudam de nome nem de lugar.",
-          "O que vai para a lixeira fica 30 dias em “Lixeira”, no início dos Arquivos, e dá para restaurar. Depois disso some de vez.",
+          "O que vai para a lixeira fica 30 dias em “Lixeira”, no início dos Arquivos, e dá para restaurar: volta ao lugar de onde saiu. Depois disso some de vez.",
         ],
       },
       {
@@ -548,6 +558,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Com os Arquivos ligados, a aba “Documentos” da ficha da empresa dá lugar à aba “Arquivos”. Os documentos que estavam lá aparecem em “Do Connect”, e os vencimentos deles continuam avisando.",
+      "As “Pastas do escritório” são os arquivos da casa, fora das empresas: não aparecem no portal do cliente.",
     ],
   },
 
@@ -677,7 +688,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Certificados digitais",
     caminhos: ["/certificados"],
     resumo:
-      "Quando vence cada certificado digital A1 dos clientes e em qual entrada do cofre está a senha. O arquivo e a senha não ficam no Connect.",
+      "Quando vence cada certificado digital A1 dos clientes, onde ele é usado, o que para se ele vencer e em qual entrada do cofre está a senha. O arquivo e a senha não ficam no Connect: ficam na pasta de rede e no cofre.",
     secoes: [
       {
         titulo: "Como ver o que precisa ser renovado",
@@ -708,7 +719,9 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "O vencimento é lido de dentro do certificado. Quando o mesmo CNPJ ou CPF ganha um certificado mais novo, o antigo vira “Substituído” e para de avisar.",
-      "O setor recebe avisos 60, 30, 15 e 7 dias antes do vencimento e no próprio dia.",
+      "O setor recebe avisos 60, 30, 15 e 7 dias antes do vencimento e no próprio dia, dizendo o que para.",
+      "Onde o certificado é usado: o ícone de atividade é uso registrado pelo Connect (robô do Societário e Integra Contador), que aparece sozinho e sai da lista depois de 90 dias parado; o lápis é uso marcado à mão por quem coordena, em “Editar”, para o que o Connect não vê sozinho.",
+      "O uso é do CNPJ ou CPF: o certificado que vier na renovação herda os usos do anterior.",
       "O botão “Importar relatório” aparece para quem é do setor e para os administradores.",
     ],
   },
@@ -802,6 +815,9 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "Administradores e quem é do setor Gestão veem todos os setores. O gestor de um setor vê só os setores que coordena.",
       "Só o gestor do setor ou o administrador muda os limites de alerta daquele setor.",
       "As horas entram pelo cronômetro ou pelo lançamento manual, no card e no processo. Para corrigir um lançamento, clique no lápis ao lado dele.",
+      "Em “Limites por setor”, o campo vazio mostra o padrão. Processo esperando o órgão só conta como parado depois de 30 dias, e tarefa que ainda não começou só avisa pelo prazo.",
+      "“Sem responsável”, na aba “Coordenadores”, lista o que está em aberto sem ninguém designado: os alertas desses itens vão para a coordenação do setor.",
+      "Na aba “Produtividade”, entregue é o item concluído no período em que a pessoa responde (com dois responsáveis, conta para os dois), e no prazo é o que terminou até o dia do prazo, entre os que tinham prazo. As horas pelo cronômetro são as do relógio do Connect; o resto foi lançado à mão. Setores não se comparam: cada um entrega coisas diferentes.",
     ],
   },
 
@@ -871,6 +887,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Role a tela até “Relatórios”.",
           "Clique em “Férias”, “Treinamentos”, “Pendências” ou “Distorções salariais”.",
           "Cada relatório traz a lista de quem precisa de ação: férias vencidas e a vencer, treinamentos vencidos, pendências em aberto ou salários fora da faixa do cargo.",
+          "Férias: os períodos aquisitivos em aberto, por urgência — vencida é passivo consumado; a vencer ainda dá para programar. Treinamentos: a validade sai da data da turma e da validade do treinamento, e a reciclagem vencida vem no topo. Pendências: documento com vencimento, admissão em aberto e exame sem ASO conferido, numa lista só. Distorções salariais: o salário atual contra a faixa do cargo, só de quem está fora dela.",
         ],
       },
       {
@@ -931,6 +948,9 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       "“Parâmetros” e “Diagnóstico da carteira” são só para o gestor do setor e os administradores, porque mostram custo de equipe e margem.",
       "O alvo de cada proposta é a foto do dia em que ela foi salva: mudar os parâmetros não reescreve propostas antigas.",
       "Enquanto os custos dos setores não forem informados em “Parâmetros”, o preço da simulação não serve para proposta.",
+      "Na simulação, cada resposta do cliente liga uma atividade dos setores, e o honorário sai do tempo que ela custa. O percentual de cada situação que dá mais trabalho é o que o setor disse que ela acrescenta ao tempo dele; os minutos por atividade já vêm ajustados pela capacidade da equipe, e a complexidade entra depois, no total do setor. O “?” de “Piso” e “Tabela” diz o que cada um significa com os parâmetros atuais.",
+      "Em “Parâmetros”, o custo mensal da equipe é salários, encargos e benefícios de quem atende cliente. A capacidade, o fator e o tempo de cada atividade vêm dos questionários dos setores e mudam quando eles são refeitos, não por ali; o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.",
+      "O “Diagnóstico da carteira” compara o que cada cliente paga com o que custou de verdade, pelas horas apontadas no período. Precisa de proposta ganha ligada a uma empresa e de horas apontadas nos cards e processos dela.",
     ],
   },
 
@@ -973,7 +993,10 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "As alíquotas de CBS e IBS são hipóteses editáveis do estudo, não alíquotas oficiais confirmadas.",
-      "Cada vez que você salva, uma versão fica guardada na aba “Histórico”; “Abrir esta versão” carrega os valores antigos como rascunho.",
+      "Cada vez que você salva, uma versão fica guardada na aba “Histórico”, com uma foto dos dados e das premissas. “Abrir esta versão” carrega os valores antigos como rascunho, e ela só vira a atual quando você salva.",
+      "Na avaliação rápida, informe cada valor uma vez: pessoal e impostos têm campos próprios. Na analítica, o Connect organiza os dados em etapas e pede só o que ainda falta.",
+      "Marque “Atividade sujeita ao Fator R (III / V)” só nas atividades abrangidas por ele; a FS12 deve incluir os componentes legais da folha e dos encargos.",
+      "“Revisei os dados e as premissas deste cenário” é um registro declaratório do responsável, não certificação fiscal. Alterar as premissas tira a marcação.",
       "Avaliações movidas para a lixeira guardam dados e histórico e podem ser restauradas na aba “Lixeira” da lista.",
       "O cálculo é anual: não faz apuração trimestral nem compensação automática de prejuízos, e diferença de carga não é economia garantida.",
     ],

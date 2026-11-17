@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Info, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -121,11 +121,6 @@ export function ConfiguracoesDoAtendimento(p: {
       </Bloco>
 
       <Bloco titulo="Entrada" texto="Toda conversa nova chega na triagem.">
-        <p className="flex gap-2 text-ui text-fg-secondary">
-          <Info size={16} className="text-brand shrink-0 mt-0.5" aria-hidden />
-          Toda conversa nova chega na triagem da {p.triagem}. Quando um setor pede para passar a conversa a outro, o pedido vai para a {p.triagem} aprovar; “A definir” deixa a
-          {` ${p.triagem}`} escolher.
-        </p>
         <div className="flex flex-wrap items-center gap-2 text-ui">
           <label htmlFor="atd-reabrir">Volta para a mesma pessoa até</label>
           <Input id="atd-reabrir" type="number" min={0} max={60} value={c.diasParaReabrir} onChange={(e) => mudar({ diasParaReabrir: Number(e.target.value) })} className="w-20" />
@@ -137,7 +132,6 @@ export function ConfiguracoesDoAtendimento(p: {
             checked={c.ceciLigada}
             onChange={(e) => mudar({ ceciLigada: e.target.checked })}
             label="Ceci registra uma sugestão de setor em cada triagem"
-            helper="Ninguém vê a sugestão na conversa. Ela fica guardada ao lado do setor que a triagem escolheu, para medir se a Ceci está aprendendo. A medição chega numa próxima versão."
           />
         </div>
       </Bloco>
@@ -205,7 +199,6 @@ export function ConfiguracoesDoAtendimento(p: {
             checked={c.respostasAutomaticas}
             onChange={(e) => mudar({ respostasAutomaticas: e.target.checked })}
             label="Mandar respostas automáticas"
-            helper="Desligado, o Connect não manda nada sozinho: nem boas-vindas, nem fora do horário, nem a confirmação de quem pede para parar. As conversas chegam e ficam na triagem do mesmo jeito."
           />
         </div>
         <div className="grid gap-3 md:grid-cols-2">
@@ -218,7 +211,6 @@ export function ConfiguracoesDoAtendimento(p: {
             <Textarea rows={3} value={c.foraDoHorario} onChange={(e) => mudar({ foraDoHorario: e.target.value })} placeholder="Nosso atendimento é de segunda a sexta, das 8h às 18h. Respondemos assim que abrirmos." />
           </label>
         </div>
-        <p className="text-micro text-fg-muted">Só saem com as respostas automáticas ligadas. Texto vazio = não manda nada.</p>
       </Bloco>
 
       <div className="flex justify-end py-4 border-t border-border">
@@ -576,7 +568,6 @@ function QuemVeTudoNaTela(p: {
           <Plus size={14} /> Adicionar
         </Button>
       </div>
-      <p className="text-micro text-fg-muted">O aviso vem desligado: ligue só para quem precisa saber de cada conversa nova. Salve as configurações para valer.</p>
     </div>
   );
 }

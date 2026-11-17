@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { AjudaDoCampo } from "@/components/ui/CampoForm";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { useToast } from "@/components/ui/Toast";
 import { SearchableSelect } from "@/components/shared/SearchableSelect";
@@ -57,14 +58,18 @@ function useAcao(aoTerminar: () => void) {
   return { ocupado, erro, rodar };
 }
 
+// A ajuda no "?" ao lado do rótulo, como no CampoForm — era uma linha embaixo
+// do campo (17/11/2026, melhoria-707).
 function Campo({ rotulo, htmlFor, ajuda, children }: { rotulo: string; htmlFor?: string; ajuda?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-ui font-semibold text-fg">
-        {rotulo}
-      </label>
+      <span className="flex items-center gap-1.5">
+        <label htmlFor={htmlFor} className="text-ui font-semibold text-fg">
+          {rotulo}
+        </label>
+        {ajuda && <AjudaDoCampo texto={ajuda} rotulo={rotulo} />}
+      </span>
       {children}
-      {ajuda && <p className="text-micro text-fg-muted">{ajuda}</p>}
     </div>
   );
 }
@@ -178,8 +183,6 @@ export function PainelDeEncaminhar({ d, aberto, aoFechar }: { d: DetalheDoAtendi
               <p className="text-micro text-fg-muted">{d.janela.motivo}</p>
             ))}
         </div>
-
-        {!direto && <p className="text-micro text-fg-muted">Quando é a própria triagem que encaminha, a conversa vai direto para o setor, sem pedido.</p>}
 
         <Erro erro={erro} />
         <div className="flex justify-end gap-2">
@@ -310,7 +313,7 @@ export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimen
 
         {tipo === "CLIENTE" && (
           <div className="flex flex-col gap-3">
-            <Campo rotulo="Empresa" htmlFor="atd-empresa" ajuda="Digite o nome ou o CNPJ: a lista vai filtrando as empresas cadastradas.">
+            <Campo rotulo="Empresa" htmlFor="atd-empresa">
               {empresas === null ? (
                 <p className="text-ui text-fg-muted">Carregando as empresas…</p>
               ) : empresas.length === 0 ? (
@@ -410,7 +413,6 @@ export function JanelaDeEncerrar({ d, aberta, aoFechar }: { d: DetalheDoAtendime
             disabled={!d.janela.ok}
             onChange={(e) => setPedirNota(e.target.checked)}
             label="Pedir uma nota de 1 a 5 ao cliente"
-            helper="Sai junto com a despedida: “De 1 a 5, como você avalia este atendimento?”. A resposta com o número vira a nota do atendimento, sem reabrir a conversa."
           />
         </div>
         <Erro erro={erro} />

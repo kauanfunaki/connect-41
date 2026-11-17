@@ -83,7 +83,7 @@ export function SmtpConfigForm({ hasConfig, defaultValues }: Props) {
               label="Senha"
               htmlFor="password"
               required={!hasConfig}
-              helper={hasConfig ? "Deixe em branco para manter a senha já salva." : undefined}
+              dica={hasConfig ? "Deixe em branco para manter a senha já salva." : undefined}
             >
               <CampoDeSenha id="password" name="password" required={!hasConfig} placeholder={hasConfig ? "••••••••" : ""} />
             </CampoForm>
@@ -92,7 +92,7 @@ export function SmtpConfigForm({ hasConfig, defaultValues }: Props) {
 
         <FormSection title="Remetente">
           <FieldGrid>
-            <CampoForm label="Nome de exibição" htmlFor="fromName" required helper="Aparece como remetente no e-mail do cliente.">
+            <CampoForm label="Nome de exibição" htmlFor="fromName" required dica="Aparece como remetente no e-mail do cliente.">
               <Input id="fromName" name="fromName" type="text" required defaultValue={defaultValues?.fromName} placeholder="Escritório Contábil" />
             </CampoForm>
             <CampoForm label="E-mail de remetente" htmlFor="fromEmail" required>

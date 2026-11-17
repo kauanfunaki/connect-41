@@ -124,7 +124,6 @@ export function DadosGuiados({ estudo, resultado, edicao, irPara }: Props) {
             <Button variant="secondary" disabled={etapa === 0} onClick={() => edicao.patch({ step: etapa - 1 })}>
               <ArrowLeft size={16} /> Anterior
             </Button>
-            <span className="text-helper text-fg-muted">Salve para retomar em outro momento.</span>
             <Button onClick={() => (etapa >= 6 ? irPara("premissas") : edicao.patch({ step: etapa + 1 }))}>
               {etapa >= 6 ? "Continuar para premissas" : "Continuar"} <ArrowRight size={16} />
             </Button>

@@ -119,7 +119,8 @@ function FormularioDaManutencao({
       <CampoForm
         label="Aviso para a equipe"
         htmlFor={`${id}-motivo`}
-        helper={`Opcional. Aparece no aviso: o que está sendo corrigido, em poucas palavras. ${motivo.length}/${MOTIVO_MAXIMO}`}
+        dica="Aparece no aviso: o que está sendo corrigido, em poucas palavras."
+        acao={<span className="tabular-nums">{motivo.length}/{MOTIVO_MAXIMO}</span>}
       >
         <Textarea
           id={`${id}-motivo`}
@@ -131,7 +132,7 @@ function FormularioDaManutencao({
           placeholder="Ex.: o saldo do extrato está somando duas vezes as tarifas."
         />
       </CampoForm>
-      <CampoForm label="Previsão de volta" htmlFor={`${id}-previsao`} helper="Opcional. Sem previsão, o aviso diz “Sem previsão ainda”.">
+      <CampoForm label="Previsão de volta" htmlFor={`${id}-previsao`} dica="Sem previsão, o aviso diz “Sem previsão ainda”.">
         <CampoDataHora id={`${id}-previsao`} name="previsao" defaultValue={gravada?.previsao ?? ""} />
       </CampoForm>
       <FormFooter

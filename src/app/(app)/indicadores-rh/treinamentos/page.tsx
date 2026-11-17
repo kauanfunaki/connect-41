@@ -28,7 +28,6 @@ export default async function RelatorioTreinamentosPage() {
       <RelatorioHeader
         breadcrumb="Treinamentos"
         title="Relatório de treinamentos"
-        subtitle="Validade calculada a partir da data da turma e da validade do treinamento — reciclagem vencida aparece no topo."
       />
 
       {/* As contagens eram selos soltos numa linha (até 30/09); viraram os

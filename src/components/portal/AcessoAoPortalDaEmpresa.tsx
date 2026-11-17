@@ -171,8 +171,9 @@ export function AcessoAoPortalDaEmpresa({
     );
   }
 
+  // Só o que muda com a empresa (filiais, matriz): a frase fixa do que é a aba
+  // está no artigo de ajuda (17/11/2026, melhoria-707).
   const explicacao = [
-    "Quem entra no portal do cliente e vê esta empresa.",
     temFiliais ? `Quem está ligado com as filiais vê também ${filiaisPorExtenso(empresa.filiais)} — inclusive as cadastradas depois.` : null,
     empresa.matriz ? `Esta empresa é filial de ${empresa.matriz.nome}: quem tem a matriz com as filiais também a vê.` : null,
   ]
@@ -186,7 +187,7 @@ export function AcessoAoPortalDaEmpresa({
           <h2 id="acesso-ao-portal" className="text-section font-semibold text-fg">
             Acesso ao portal
           </h2>
-          <p className="mt-1 max-w-3xl text-helper text-fg-muted">{explicacao}</p>
+          {explicacao && <p className="mt-1 max-w-3xl text-helper text-fg-muted">{explicacao}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" onClick={() => setLigando(true)} disabled={outras.length === 0}>
@@ -209,7 +210,7 @@ export function AcessoAoPortalDaEmpresa({
           <EmptyState
             icon={<UsersRound />}
             title="Ninguém acessa esta empresa pelo portal"
-            description="Crie um acesso em “Novo acesso”, ou ligue um que já existe: a pessoa recebe por e-mail o link para definir a senha."
+            description="Crie um acesso em “Novo acesso” ou ligue um que já existe."
           />
         ) : (
           <>
@@ -332,7 +333,7 @@ function LigarAcessoExistente({
 
   return (
     <form onSubmit={ligar} className="space-y-4">
-      <CampoForm label="Acesso" htmlFor="ligar-acesso" required helper="Busque pelo nome ou pelo e-mail. A conta continua vendo o que já via.">
+      <CampoForm label="Acesso" htmlFor="ligar-acesso" required dica="A conta continua vendo o que já via.">
         <SearchableSelect id="ligar-acesso" name="ligar-acesso" options={opcoes} placeholder="Buscar por nome ou e-mail…" onChange={setConta} />
       </CampoForm>
       {empresa.filiais > 0 && (
@@ -341,7 +342,6 @@ function LigarAcessoExistente({
           checked={comFiliais}
           onChange={(ev) => setComFiliais(ev.target.checked)}
           label={`Incluir ${filiaisPorExtenso(empresa.filiais)}`}
-          helper="A filial cadastrada depois também aparece sozinha."
         />
       )}
       {escolhida && !escolhida.ativo && (

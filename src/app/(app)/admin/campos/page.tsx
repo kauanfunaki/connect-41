@@ -93,7 +93,6 @@ export default async function CamposPage({
     <PageContainer>
       <PageHeader
         title="Campos customizados"
-        subtitle="Campos a mais nas fichas de empresa e de pessoa, por setor, na ordem em que aparecem."
         action={
           setor ? (
             <Button href={`${base}&novo=1`} scroll={false}>

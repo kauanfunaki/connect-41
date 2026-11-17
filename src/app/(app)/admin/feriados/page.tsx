@@ -40,12 +40,6 @@ export default async function FeriadosPage({ searchParams }: { searchParams: Pro
     <PageContainer>
       <PageHeader
         title="Feriados"
-        subtitle={
-          <>
-            Os nacionais entram sozinhos todo ano. Cadastre aqui os estaduais, municipais, pontes e recessos do
-            escritório.
-          </>
-        }
         action={<NovoFeriado action={criarFeriado} />}
       />
 

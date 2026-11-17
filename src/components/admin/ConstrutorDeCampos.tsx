@@ -156,7 +156,6 @@ export function ConstrutorDeCampos({
           <h2 id="campos-da-ficha" className="text-card-title font-semibold text-fg">
             Campos, na ordem da ficha
           </h2>
-          <p className="text-fs-2 text-fg-muted mt-0.5">Arraste pela alça para mudar a ordem, ou use as setas com ela selecionada.</p>
         </div>
         <ol className="divide-y divide-border border-t border-border">
           {visiveis.map((c) => (

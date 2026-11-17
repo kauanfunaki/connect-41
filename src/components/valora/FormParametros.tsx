@@ -39,7 +39,7 @@ export function FormParametros({ setores, parametros, podeEditar }: { setores: S
   const muda = (i: number, campo: keyof Linha, v: string) => setLinhas((ls) => ls.map((l, j) => (j === i ? { ...l, [campo]: v } : l)));
 
   const campoPreco = (chave: keyof ParametrosPreco, rotulo: string, ajuda: string, sufixo?: string, prefixo?: string) => (
-    <CampoForm label={rotulo} htmlFor={`parametro-${chave}`} helper={ajuda}>
+    <CampoForm label={rotulo} htmlFor={`parametro-${chave}`} dica={ajuda}>
       <Input
         id={`parametro-${chave}`}
         inputMode="decimal"
@@ -73,11 +73,7 @@ export function FormParametros({ setores, parametros, podeEditar }: { setores: S
       }}
     >
       <Card className="p-4">
-        <h2 className="text-card-title font-semibold text-fg mb-1">Custo de cada setor</h2>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Custo mensal da equipe: salários, encargos e benefícios de quem atende cliente. A capacidade e o fator vêm dos
-          questionários — o fator encolhe os tempos declarados até a carteira caber nas horas da equipe.
-        </p>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Custo de cada setor</h2>
         {/* Casco padrão dentro do cartão (30/09). Sem funil: é uma linha por
             setor, para preencher. */}
         <div className="c41-tabela overflow-x-auto rounded-lg border border-border">

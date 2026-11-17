@@ -1,6 +1,4 @@
 import { notFound } from "next/navigation";
-import { Info } from "lucide-react";
-import { Aviso } from "@/components/ui/Aviso";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -26,21 +24,9 @@ export default async function AdminRescisaoPage() {
     <PageContainer>
       <PageHeader
         title="Cálculo de rescisão — padrão do escritório"
-        subtitle="Base usada por todas as empresas-cliente. Cada empresa pode sobrescrever o que for diferente na própria ficha."
       />
 
-      {/* No `Aviso` de marca (15/10/2026): era um cartão de borda azul feito à mão. */}
-      <Aviso tom="marca" icone={<Info />} className="mb-4">
-        <p className="text-fg-secondary">
-          O cálculo é <strong className="text-fg">referência para conferência</strong>, não apuração oficial: ele existe
-          pra comparar com o que a contabilidade enviou no TRCT.
-        </p>
-        <p className="text-fs-2 text-fg-muted mt-1.5">
-          Constantes legais (1/3 constitucional, FGTS 8%, multa 40/20/0%, aviso de 30+3 dias por ano) não são
-          configuráveis — vêm da lei e ficam fixas no sistema. Aqui você define só o que varia entre empresas.
-        </p>
-      </Aviso>
-
+      {/* O aviso fixo de como o cálculo funciona foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
       <RescisaoConfigForm action={salvarConfigTenant} valores={valores} nivelEmpresa={false} canEdit />
     </PageContainer>
   );

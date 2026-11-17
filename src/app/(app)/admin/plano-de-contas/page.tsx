@@ -55,8 +55,7 @@ export default async function PlanoDeContasPage({ searchParams }: { searchParams
         title="Plano de contas"
         subtitle={
           <>
-            {categorias.length} categoria{categorias.length !== 1 ? "s" : ""} — é o que classifica
-            o lançamento gerado a partir de um documento fiscal
+            {categorias.length} categoria{categorias.length !== 1 ? "s" : ""}
           </>
         }
         action={
@@ -68,11 +67,6 @@ export default async function PlanoDeContasPage({ searchParams }: { searchParams
           </div>
         }
       />
-      <p className="text-fs-2 text-fg-muted -mt-2 mb-4 max-w-3xl">
-        Este é o plano padrão do escritório, que toda empresa herda. Cada empresa ajusta o dela — categoria própria, o que não
-        usa escondido, outra linha da DRE — em Fornecedores e sacados › Plano de contas.
-      </p>
-
       {ativasParaPagar === 0 && (
         // No `Aviso` de atenção (15/10/2026): era um cartão âmbar montado à mão.
         <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-6">
@@ -90,7 +84,7 @@ export default async function PlanoDeContasPage({ searchParams }: { searchParams
           <EmptyState
             icon={<Landmark />}
             title="Plano de contas vazio"
-            description="Use “Carregar o plano padrão” ou “+ Nova categoria”, no alto da tela, para cadastrar as categorias que classificam despesas e receitas. Elas aparecem na lista quando um documento fiscal vira lançamento."
+            description="Use “Carregar o plano padrão” ou “+ Nova categoria”, no alto da tela, para cadastrar as categorias."
           />
         </Card>
       ) : (

@@ -98,8 +98,8 @@ export function EditarRenovacao({ id, titular, vencimento, status, responsavelId
                 ))}
               </Select>
             </CampoForm>
-            <CampoForm label="Custo da renovação" htmlFor={`${base}-custo`} helper="Em reais, como 190 ou 1.140,00.">
-              <Input id={`${base}-custo`} name="custo" prefix="R$" inputMode="decimal" defaultValue={reais(custoCentavos)} autoComplete="off" />
+            <CampoForm label="Custo da renovação" htmlFor={`${base}-custo`}>
+              <Input id={`${base}-custo`} name="custo" prefix="R$" inputMode="decimal" placeholder="Ex.: 1.140,00" defaultValue={reais(custoCentavos)} autoComplete="off" />
             </CampoForm>
           </div>
           <RadioGroup<PagaQuem>

@@ -136,7 +136,6 @@ export function ControlesDoSimples({
             <Checkbox
               id={`${idBase}-factorR`}
               label="Atividade sujeita ao Fator R (III / V)"
-              helper="Marque apenas para atividades abrangidas pelo Fator R. FS12 deve incluir os componentes legais da folha e encargos."
               checked={d.factorR}
               onChange={(e) => change({ factorR: e.target.checked })}
             />
@@ -237,7 +236,6 @@ export function ControlesDoSimples({
           <Checkbox
             id={`${idBase}-reviewed`}
             label="Revisei os dados e as premissas deste cenário"
-            helper="Registro declaratório do responsável; não é certificação fiscal. Alterar premissas remove esta marcação."
             checked={d.reviewed}
             onChange={(e) => change({ reviewed: e.target.checked })}
           />

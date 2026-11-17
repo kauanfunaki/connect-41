@@ -27,11 +27,6 @@ export function PainelDoOrquestrador({ dados }: { dados: Dados }) {
     <Card className="p-4 flex flex-col gap-4">
       <div>
         <p className="text-fs-4 font-semibold text-fg">Orquestrador do chat — últimos {DIAS_DO_PAINEL} dias</p>
-        <p className="text-fs-2 text-fg-secondary max-w-[70ch]">
-          A Ceci de cada setor reconhece pergunta de outro setor e a passa adiante: para a Ceci daquele setor, se a
-          pessoa tiver acesso, ou como sugestão de transferência. Aqui só aparecem contagens — o que foi perguntado fica com quem perguntou
-          (a exceção são as respostas marcadas como “não ajudou”, no quadro de avaliação).
-        </p>
       </div>
 
       {dados.perguntas.length === 0 ? (

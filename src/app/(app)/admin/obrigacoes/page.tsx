@@ -88,9 +88,6 @@ export default async function ObrigacoesPage() {
     <PageContainer>
       <PageHeader
         title="Obrigações recorrentes"
-        subtitle="DAS, DCTF, folha, título bancário diário, contas a receber semanais e afins — o Connect
-          gera automaticamente o item de kanban na frequência escolhida (diária, semanal, quinzenal
-          ou mensal), com vencimento prorrogado para o próximo dia útil."
         action={
           <>
             {/* As por regime (22/10/2026): o modelo do setor aplicado à carteira, em vez de empresa a empresa. */}

@@ -92,7 +92,8 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
             <CampoForm
               label="Base da insalubridade"
               htmlFor="insalubridadeBase"
-              helper={heranca("insalubridadeBase") ?? "A Súmula Vinculante 4 do STF deixou o tema em aberto."}
+              helper={heranca("insalubridadeBase")}
+              dica="A Súmula Vinculante 4 do STF deixou o tema em aberto."
             >
               <Select id="insalubridadeBase" name="insalubridadeBase" defaultValue={valores.insalubridadeBase} disabled={!canEdit}>
                 {BASE_INSALUBRIDADE_OPTIONS.map((o) => (
@@ -128,7 +129,7 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
       >
         <Card className="p-5">
           <FieldGrid columns="sm:grid-cols-3">
-            <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses") ?? "Entre 3 e 12."}>
+            <CampoForm label="Janela" htmlFor="mediaMeses" helper={heranca("mediaMeses")} dica="Entre 3 e 12.">
               <CampoNumero
                 id="mediaMeses"
                 name="mediaMeses"
@@ -176,7 +177,8 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
             <CampoForm
               label="Tolerância de divergência"
               htmlFor="toleranciaPct"
-              helper={heranca("toleranciaPct") ?? "Máximo 5% — acima disso divergências reais deixariam de acender."}
+              helper={heranca("toleranciaPct")}
+              dica="Máximo 5% — acima disso divergências reais deixariam de acender."
             >
               <Input
                 id="toleranciaPct"
@@ -200,9 +202,6 @@ export function RescisaoConfigForm({ action, valores, origem, nivelEmpresa, canE
               disabled={!canEdit}
               label="A contabilidade apresenta o 1/3 constitucional como item separado"
             />
-            <p className="text-helper text-fg-muted mt-1 ml-6">
-              Desmarque se ela envia o 1/3 embutido nas férias — o item deixa de acusar divergência.
-            </p>
           </div>
         </Card>
       </SecaoDeConfiguracao>

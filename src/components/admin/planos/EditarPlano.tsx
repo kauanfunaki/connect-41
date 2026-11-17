@@ -120,7 +120,7 @@ function CamposDoSiteNoFormulario({ id, modo, site }: { id: string; modo: Manage
       <CampoForm
         label="Para quem é"
         htmlFor={`${id}-para-quem`}
-        helper={`Uma frase embaixo do nome do plano. Vazio, o site usa: “${PARA_QUEM_PADRAO[modo]}”`}
+        dica={`Uma frase embaixo do nome do plano. Vazio, o site usa: “${PARA_QUEM_PADRAO[modo]}”`}
       >
         <Textarea
           id={`${id}-para-quem`}
@@ -144,7 +144,7 @@ function CamposDoSiteNoFormulario({ id, modo, site }: { id: string; modo: Manage
         ))}
       </div>
       <FieldGrid>
-        <CampoForm label="Ordem no site" htmlFor={`${id}-ordem`} helper="O menor aparece primeiro.">
+        <CampoForm label="Ordem no site" htmlFor={`${id}-ordem`} dica="O menor aparece primeiro.">
           <CampoNumero id={`${id}-ordem`} name="ordem" min={1} max={MAX_ORDEM} defaultValue={site.ordem} />
         </CampoForm>
         <div className="flex flex-col gap-1.5">

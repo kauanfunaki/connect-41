@@ -66,9 +66,6 @@ export function SeletorDePaleta({ atual, corDoEscritorio }: { atual: string | nu
         </span>
       }
     >
-      <p className="text-ui text-fg-secondary">
-        A cor dos botões, da aba aberta e do item do menu, e o tom da lateral, só para você. As cores das áreas não mudam.
-      </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Cor de destaque" aria-busy={pendente || undefined}>
         <Amostra nome="Do escritório" cor={corDoEscritorio} ativa={escolhida === null} onClick={() => aplicar(null)} disabled={pendente} />
         {PALETAS.map((p) => (

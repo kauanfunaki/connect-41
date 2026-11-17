@@ -140,10 +140,6 @@ export function FormularioDoAcesso({
           "Ligar". Um botão desligado antes dele faz o Enter não fazer nada:
           reaproveitar um acesso é sempre um clique de propósito. */}
       {existente && <button type="submit" disabled hidden aria-hidden tabIndex={-1} />}
-      <p className="text-helper text-fg-muted">
-        A conta nasce <span className="font-medium text-fg">sem senha</span> — nem quem cria sabe
-        qual é. O cliente recebe por e-mail um link para definir a dele.
-      </p>
       <FieldGrid>
         <CampoForm label="Nome" htmlFor="nome" required>
           <Input id="nome" name="nome" required placeholder="Quem vai acessar" value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -155,7 +151,7 @@ export function FormularioDoAcesso({
           <CampoForm
             label="Empresas"
             htmlFor="novo-acesso-empresas"
-            helper="O que esta conta enxerga no portal. Com “incluir filiais”, a filial cadastrada depois aparece sozinha."
+            dica="O que esta conta enxerga no portal. Com “incluir filiais”, a filial cadastrada depois aparece sozinha."
             required
             className="sm:col-span-2"
           >
@@ -173,7 +169,6 @@ export function FormularioDoAcesso({
                 checked={comFiliais}
                 onChange={(e) => setComFiliais(e.target.checked)}
                 label={`Incluir ${escolha.empresa.filiais === 1 ? "a filial" : `as ${escolha.empresa.filiais} filiais`}`}
-                helper="A filial cadastrada depois também aparece sozinha."
               />
             )}
           </div>
@@ -258,13 +253,13 @@ function EditarAcesso({
         <CampoForm label="Nome" htmlFor="editar-nome" required>
           <Input id="editar-nome" name="nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
         </CampoForm>
-        <CampoForm label="E-mail" htmlFor="editar-email" required helper="É o e-mail com que a pessoa entra no portal.">
+        <CampoForm label="E-mail" htmlFor="editar-email" required dica="É o e-mail com que a pessoa entra no portal.">
           <Input id="editar-email" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </CampoForm>
         <CampoForm
           label="Empresas"
           htmlFor="editar-empresas"
-          helper="O que esta conta enxerga no portal. Com “incluir filiais”, a filial cadastrada depois aparece sozinha."
+          dica="O que esta conta enxerga no portal. Com “incluir filiais”, a filial cadastrada depois aparece sozinha."
           required
           className="sm:col-span-2"
         >
@@ -491,7 +486,7 @@ export function PortalAcessosList({ acessos, empresas, editarAction, podeExcluir
           <EmptyState
             icon={<UsersRound />}
             title="Nenhum acesso criado ainda"
-            description="Crie o primeiro em “Novo acesso”, ou na ficha da empresa, em “Acesso ao portal”: a pessoa recebe por e-mail o link para definir a senha."
+            description="Crie o primeiro em “Novo acesso” ou na ficha da empresa, em “Acesso ao portal”."
           />
         ) : (
           <>

@@ -29,11 +29,6 @@ export default async function AtendimentoLayout({ children }: { children: ReactN
         cabecalho={
           <PageHeader
             title="Atendimento"
-            subtitle={
-              dados.ehTriagem
-                ? `O WhatsApp do escritório. Toda conversa nova chega na triagem da ${dados.triagem.label}.`
-                : "O WhatsApp do escritório: as conversas do seu setor e as que estão com você."
-            }
             action={
               // "+ Nova conversa" no topo, para todos (17/11/2026, melhoria-728); antes era um ícone ao lado da busca.
               <div className="flex flex-wrap gap-2">

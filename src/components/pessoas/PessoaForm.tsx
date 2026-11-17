@@ -455,7 +455,7 @@ export function PessoaForm({
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
             <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
-              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche logradouro, bairro, cidade e UF automaticamente.">
+              <CampoForm label="CEP" htmlFor="zipCode" dica="Preenche logradouro, bairro, cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
               <CampoForm label="Logradouro" htmlFor="addressStreet">
@@ -485,17 +485,7 @@ export function PessoaForm({
         {/* ── 3. Vínculo profissional / Empresa vinculada ── */}
         <div data-step={2} className={step === 2 ? "" : "hidden"}>
           <FormSection title={stepLabels[2]}>
-            {!showEmployment ? (
-              <p className="text-helper text-fg-muted">
-                Para contatos de empresas clientes, guardamos só a empresa, o cargo e o departamento —
-                jornada, admissão e folha só existem para colaboradores internos.
-              </p>
-            ) : (
-              <p className="text-helper text-fg-muted">
-                Colaborador interno é da própria equipe do workspace, não de uma empresa cliente —
-                por isso não pede empresa/cargo/departamento aqui.
-              </p>
-            )}
+            {/* O que cada tipo de cadastro guarda está no artigo de ajuda (17/11/2026, melhoria-707). */}
             {!showEmployment && (
               <FieldGrid columns={GRADE}>
                 {/* O seletor de empresa com busca, logo, CNPJ e recentes
@@ -604,20 +594,10 @@ export function PessoaForm({
             <CampoForm
               label="Observações"
               htmlFor="notes"
-              helper={
-                showEmployment
-                  ? "Anotações livres sobre o colaborador — visível só internamente."
-                  : "Anotações livres sobre o contato — visível só internamente."
-              }
+              dica="Anotações livres, visíveis só internamente."
             >
               <Textarea id="notes" name="notes" rows={3} value={values.notes} />
             </CampoForm>
-
-            {showEmployment && (
-              <p className="text-helper text-fg-muted italic">
-                Benefícios são gerenciados na ficha do colaborador depois de criada.
-              </p>
-            )}
 
             <CustomFieldsSection fields={customFields} />
           </FormSection>
@@ -662,10 +642,6 @@ export function PessoaForm({
               </p>
             ) : (
               <div className="space-y-4">
-                <p className="text-body text-fg-secondary">
-                  Os arquivos ficam aguardando aqui e são enviados assim que a pessoa for criada, na
-                  última etapa.
-                </p>
 
                 {/* A caixa de arquivo (50px) tem outra altura que o Select e o
                     botão (36px): na mesma linha, um dos lados sempre ficava

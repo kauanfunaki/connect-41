@@ -37,8 +37,6 @@ export default async function PermissoesSensiveisPage() {
     <PageContainer>
       <PageHeader
         title="Permissões de campos sensíveis"
-        subtitle="Quem pode ver salário, dados bancários, dados médicos e documentos pessoais.
-          Sem concessão explícita, o acesso é negado — inclusive para o administrador. Toda mudança fica na auditoria."
       />
 
       {/* No celular, um cartão por papel, com os quatro grupos embaixo
@@ -100,9 +98,6 @@ export default async function PermissoesSensiveisPage() {
         </table>
       </TabelaNoDesktop>
 
-      <p className="text-fs-2 text-fg-muted mt-3">
-        O Super Admin (o suporte do Connect) sempre tem acesso — não aparece na matriz.
-      </p>
     </PageContainer>
   );
 }

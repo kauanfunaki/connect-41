@@ -44,7 +44,7 @@ export function CompanyFiliaisSection({ matriz, filiais, statusLabel, statusColo
         <EmptyState
           icon={<Building2 />}
           title="Sem filiais"
-          description="Esta empresa não é filial de nenhuma outra e não tem filiais cadastradas. O vínculo é definido no campo “Empresa matriz”, ao editar."
+          description="O vínculo se define no campo “Empresa matriz”, ao editar a empresa."
         />
       </Card>
     );

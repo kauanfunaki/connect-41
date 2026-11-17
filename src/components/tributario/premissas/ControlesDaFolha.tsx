@@ -88,7 +88,7 @@ export function ControlesDaFolha({ d, change }: { d: Data; change: (p: Partial<D
   const field = (key: CampoDaFolha, label: string, help?: string) => {
     const id = `${idBase}-${key}`;
     return (
-      <CampoForm key={key} label={label} htmlFor={id} helper={help}>
+      <CampoForm key={key} label={label} htmlFor={id} dica={help}>
         <CampoValor
           id={id}
           {...UNIDADE[key]}

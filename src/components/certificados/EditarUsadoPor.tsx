@@ -81,10 +81,7 @@ export function EditarUsadoPor({ documento, titular, declarados, registrados }: 
       </Button>
       <Modal open={aberto} onClose={() => setAberto(false)} title="Onde este certificado é usado" maxWidth="max-w-lg">
         <form onSubmit={salvar} className="flex flex-col gap-4">
-          <p className="text-helper text-fg-muted">
-            {titular}. Marque o que depende deste certificado e o Connect não vê sozinho. Vale também para o certificado
-            que vier na renovação.
-          </p>
+          <p className="text-helper text-fg-muted">{titular}</p>
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-label font-medium text-fg">Usado por</legend>
             {USOS_DECLARAVEIS.map((u) => (
@@ -115,8 +112,7 @@ export function EditarUsadoPor({ documento, titular, declarados, registrados }: 
           )}
           {registrados.length > 0 && (
             <div className="rounded-md border border-border-soft bg-surface-hover px-3 py-2 text-helper text-fg-secondary">
-              <span className="font-medium text-fg">Registrado pelo Connect:</span> {registrados.join("; ")}. Esses
-              usos aparecem sozinhos e saem quando param há 90 dias.
+              <span className="font-medium text-fg">Registrado pelo Connect:</span> {registrados.join("; ")}.
             </div>
           )}
           {erro && (

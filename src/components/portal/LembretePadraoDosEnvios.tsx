@@ -46,7 +46,7 @@ export function LembretePadraoDosEnvios({ dias, definirAction, somenteLeitura = 
       <CampoForm
         label="Lembrete de não lido padrão"
         htmlFor="lembretePadrao"
-        helper="O prazo que um envio novo já traz escolhido. Quem envia ainda troca, envio a envio; os envios que já existem não mudam."
+        dica="O prazo que um envio novo já traz escolhido. Quem envia ainda troca, envio a envio; os envios que já existem não mudam."
       >
         <Select id="lembretePadrao" value={valor} onChange={(e) => trocar(e.target.value)} disabled={somenteLeitura || pendente}>
           {OPCOES_DO_LEMBRETE.map((o) => (

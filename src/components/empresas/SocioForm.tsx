@@ -93,10 +93,10 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
             <CampoForm
               label="CPF ou CNPJ"
               htmlFor="document"
-              helper={
+              dica={
                 defaultValues?.documentMasked && !defaultValues?.document
-                  ? `A Receita divulga só ${defaultValues.documentMasked}. Opcional; se preenchido, precisa ser válido.`
-                  : "Opcional. Se preenchido, precisa ser válido."
+                  ? `A Receita divulga só ${defaultValues.documentMasked}.`
+                  : undefined
               }
             >
               <Input id="document" name="document" type="text" inputMode="numeric" defaultValue={defaultValues?.document ?? ""} />
@@ -106,7 +106,7 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
 
         <FormSection title="Participação na sociedade">
           <FieldGrid columns="sm:grid-cols-3">
-            <CampoForm label="Qualificação" htmlFor="qualification" helper="Como a Receita chama o papel.">
+            <CampoForm label="Qualificação" htmlFor="qualification" dica="Como a Receita chama o papel.">
               <Input
                 id="qualification"
                 name="qualification"
@@ -116,7 +116,7 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
                 defaultValue={defaultValues?.qualification ?? ""}
               />
             </CampoForm>
-            <CampoForm label="Participação" htmlFor="sharePercent" helper="No capital social. Opcional.">
+            <CampoForm label="Participação" htmlFor="sharePercent" dica="No capital social.">
               <Input
                 id="sharePercent"
                 name="sharePercent"
@@ -126,10 +126,10 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
                 defaultValue={defaultValues?.sharePercent ?? ""}
               />
             </CampoForm>
-            <CampoForm label="Quotas" htmlFor="quotas" helper="Do contrato social. Opcional.">
+            <CampoForm label="Quotas" htmlFor="quotas" dica="Do contrato social.">
               <Input id="quotas" name="quotas" type="text" inputMode="numeric" defaultValue={defaultValues?.quotas ?? ""} />
             </CampoForm>
-            <CampoForm label="Capital" htmlFor="capitalAmount" helper="Valor integralizado. Opcional.">
+            <CampoForm label="Capital" htmlFor="capitalAmount" dica="Valor integralizado.">
               <Input
                 id="capitalAmount"
                 name="capitalAmount"
@@ -142,7 +142,7 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
             <CampoForm label="Entrada na sociedade" htmlFor="entryDate">
               <CampoData id="entryDate" name="entryDate" defaultValue={defaultValues?.entryDate ?? ""} />
             </CampoForm>
-            <CampoForm label="Saída da sociedade" htmlFor="exitDate" helper="Preencha quando o sócio sair: ele fica como ex-sócio.">
+            <CampoForm label="Saída da sociedade" htmlFor="exitDate" dica="Preencha quando o sócio sair: ele fica como ex-sócio.">
               <CampoData id="exitDate" name="exitDate" defaultValue={defaultValues?.exitDate ?? ""} />
             </CampoForm>
           </FieldGrid>
@@ -154,11 +154,8 @@ export function SocioForm({ action, companyId, cancelHref, enderecoDaEmpresa, de
         </FormSection>
 
         <FormSection title="Endereço">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <p className="min-w-0 flex-1 basis-64 text-helper text-fg-muted">
-              É daqui que sai a resposta de “Reside no local?” na viabilidade do Empresa Fácil. Sem CEP e número, a pergunta
-              volta a ser respondida à mão.
-            </p>
+          {/* Para que serve o endereço do sócio foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+          <div className="flex flex-wrap items-start justify-end gap-3">
             {/* Era link azul (30/09): copiar é ação, então é botão. */}
             <Button type="button" variant="secondary" size="sm" onClick={copiarEndereco}>
               <Copy size={14} /> Copiar o endereço da empresa

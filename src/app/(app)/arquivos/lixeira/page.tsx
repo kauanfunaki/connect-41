@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { lixeiraDaEquipe } from "@/lib/drive/servidor";
-import { DIAS_NA_LIXEIRA } from "@/lib/drive/regras";
 import { ListaDaLixeira } from "@/components/arquivos/ListaDaLixeira";
 import { abrirArquivos } from "../acesso";
 
@@ -16,10 +15,7 @@ export default async function LixeiraDosArquivosPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Arquivos", href: "/arquivos" }, { label: "Lixeira" }]} />
-      <PageHeader
-        title="Lixeira"
-        subtitle={`O que foi excluído dos Arquivos fica aqui por ${DIAS_NA_LIXEIRA} dias e depois some de vez. Restaurar devolve ao lugar de onde saiu.`}
-      />
+      <PageHeader title="Lixeira" />
       {itens.length === 0 ? (
         <EmptyState icon={<Trash2 />} title="Lixeira vazia" description="Nada foi excluído nos últimos 30 dias." />
       ) : (

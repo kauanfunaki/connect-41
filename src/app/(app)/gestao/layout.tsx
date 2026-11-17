@@ -11,10 +11,9 @@ import { contextoDaGestao } from "@/lib/gestao/acesso";
 export default async function GestaoLayout({ children }: { children: React.ReactNode }) {
   const g = await contextoDaGestao();
   if (!g) notFound();
-  const subtitulo =
-    g.recorte === "todos"
-      ? "Todos os setores num lugar: o que começou, o que anda, o que parou e o que terminou."
-      : `Os setores que você coordena: ${g.setores.map((s) => s.label).join(", ")}.`;
+  // Só o recorte de quem coordena, que muda com a pessoa; a frase fixa de
+  // "todos os setores" foi para o artigo de ajuda (17/11/2026, melhoria-707).
+  const subtitulo = g.recorte === "todos" ? undefined : `Os setores que você coordena: ${g.setores.map((s) => s.label).join(", ")}.`;
   return (
     <PageContainer>
       <PageHeader title="Gestão" subtitle={subtitulo} />

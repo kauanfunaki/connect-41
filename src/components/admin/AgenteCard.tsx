@@ -124,7 +124,7 @@ function DetalheDoAgente({ linha, podeEditar }: { linha: LinhaDeAgente; podeEdit
             <CampoForm
               label="Teto de gasto"
               htmlFor={`cap-cents-${linha.def.code}`}
-              helper={`Em branco usa o padrão: ${moeda(linha.def.tetoMensalCentavos)}. Zero bloqueia.`}
+              dica={`Em branco usa o padrão: ${moeda(linha.def.tetoMensalCentavos)}. Zero bloqueia.`}
             >
               <CampoTetoEmReais
                 id={`cap-cents-${linha.def.code}`}
@@ -137,7 +137,7 @@ function DetalheDoAgente({ linha, podeEditar }: { linha: LinhaDeAgente; podeEdit
             <CampoForm
               label="Teto de chamadas"
               htmlFor={`cap-calls-${linha.def.code}`}
-              helper={`Em branco usa o padrão: ${linha.def.tetoMensalChamadas}. É o que segura quando o preço do modelo é desconhecido.`}
+              dica={`Em branco usa o padrão: ${linha.def.tetoMensalChamadas}. É o que segura quando o preço do modelo é desconhecido.`}
             >
               <Input
                 id={`cap-calls-${linha.def.code}`}
@@ -154,7 +154,7 @@ function DetalheDoAgente({ linha, podeEditar }: { linha: LinhaDeAgente; podeEdit
           <CampoForm
             label="Modelo"
             htmlFor={`model-${linha.def.code}`}
-            helper="Em branco usa o modelo da faixa do agente — o recomendado."
+            dica="Em branco usa o modelo da faixa do agente — o recomendado."
           >
             <Input id={`model-${linha.def.code}`} name="model" defaultValue={linha.override?.model ?? ""} placeholder={linha.model} />
           </CampoForm>

@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AjudaDoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { salvarProposta } from "@/app/(app)/valora/actions";
@@ -130,7 +130,7 @@ export function Simulador({
           <h2 className="text-card-title font-semibold text-fg mb-4">Volumes</h2>
           <FieldGrid>
             {volumes.map((c) => (
-              <CampoForm key={c.chave} label={c.rotulo} htmlFor={`simulacao-volume-${c.chave}`} helper={c.ajuda}>
+              <CampoForm key={c.chave} label={c.rotulo} htmlFor={`simulacao-volume-${c.chave}`} dica={c.ajuda}>
                 <CampoNumero
                   id={`simulacao-volume-${c.chave}`}
                   min={0}
@@ -147,21 +147,25 @@ export function Simulador({
           <h2 className="text-card-title font-semibold text-fg mb-4">Operação</h2>
           <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
             {marcadores.map((c) => (
-              <div key={c.chave} className="min-w-0">
+              // A explicação do marcador no "?" ao lado, como nos campos (17/11/2026, melhoria-707).
+              <div key={c.chave} className="flex min-w-0 items-start gap-1.5">
                 <Checkbox
                   label={c.rotulo}
                   checked={!!perfil.marcadores[c.chave]}
                   onChange={(e) => muda({ marcadores: { ...perfil.marcadores, [c.chave]: e.target.checked } })}
                 />
-                {c.ajuda && <span className="block pl-6 mt-0.5 text-helper text-fg-muted">{c.ajuda}</span>}
+                {c.ajuda && (
+                  <span className="mt-0.5 flex-shrink-0">
+                    <AjudaDoCampo texto={c.ajuda} rotulo={c.rotulo} />
+                  </span>
+                )}
               </div>
             ))}
           </div>
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-card-title font-semibold text-fg mb-1">Situações que dão mais trabalho</h2>
-          <p className="text-fs-2 text-fg-muted mb-4">O percentual é o que cada setor disse que a situação acrescenta ao tempo dele.</p>
+          <h2 className="text-card-title font-semibold text-fg mb-4">Situações que dão mais trabalho</h2>
           {/* Um bloco recolhível por setor MARCADO, fechado de início, com o
               resumo na linha (escolha D do Kauan na página "Valora sem
               poluição", 08/10/2026). Eram 34 caixas sempre à mostra — inclusive
@@ -249,9 +253,6 @@ export function Simulador({
                 </tbody>
               </table>
             </div>
-            <p className="text-micro text-fg-muted mt-2">
-              Minutos já ajustados pela capacidade de cada equipe. A complexidade entra depois, no total do setor.
-            </p>
           </Accordion>
         </Card>
       </div>
@@ -266,12 +267,26 @@ export function Simulador({
           destaque
         />
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-fs-2">
+          {/* O que é piso e tabela, com os números dos parâmetros, no "?" de cada
+              um — era um parágrafo embaixo do cartão (17/11/2026, melhoria-707). */}
           <div>
-            <dt className="text-fg-muted">Piso</dt>
+            <dt className="flex items-center gap-1 text-fg-muted">
+              Piso
+              <AjudaDoCampo
+                rotulo="Piso"
+                texto={`Abaixo do piso, ${parametros.margemPisoPct > 0 ? `a margem fica menor que ${parametros.margemPisoPct}%` : "a empresa paga para atender"}.`}
+              />
+            </dt>
             <dd className="font-medium tabular-nums">{brl(r.mensal.piso)}</dd>
           </div>
           <div>
-            <dt className="text-fg-muted">Tabela</dt>
+            <dt className="flex items-center gap-1 text-fg-muted">
+              Tabela
+              <AjudaDoCampo
+                rotulo="Tabela"
+                texto={`O preço de partida: dá ${parametros.descontoMaximoPct}% de desconto e ainda chega ao alvo.`}
+              />
+            </dt>
             <dd className="font-medium tabular-nums">{brl(r.mensal.tabela)}</dd>
           </div>
           <div>
@@ -287,10 +302,6 @@ export function Simulador({
             <dd className="font-medium tabular-nums">{brl(r.implantacao.alvo)}</dd>
           </div>
         </dl>
-        <p className="text-micro text-fg-muted">
-          Tabela é o preço de partida: dá {parametros.descontoMaximoPct}% de desconto e ainda chega ao alvo. Abaixo do piso,
-          a {parametros.margemPisoPct > 0 ? `margem fica menor que ${parametros.margemPisoPct}%` : "empresa paga para atender"}.
-        </p>
 
         {r.avulsos.length > 0 && (
           <div className="border-t border-border-soft pt-3">

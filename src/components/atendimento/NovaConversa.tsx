@@ -43,9 +43,6 @@ export function NovaConversa({ aberta, aoFechar, veTudo }: { aberta: boolean; ao
   return (
     <SlideOver open={aberta} onClose={aoFechar} title="Nova conversa" width="max-w-lg">
       <div className="flex flex-col gap-4">
-        <p className="text-ui text-fg-secondary">
-          Busque um contato que já falou com o escritório ou foi ligado a uma empresa. Se alguém já estiver atendendo, a conversa continua com essa pessoa até ser passada ou encerrada.
-        </p>
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" aria-hidden />
           <Input
@@ -62,7 +59,7 @@ export function NovaConversa({ aberta, aoFechar, veTudo }: { aberta: boolean; ao
         ) : lista === null ? (
           <p className="text-ui text-fg-muted">Buscando…</p>
         ) : lista.length === 0 ? (
-          <p className="text-ui text-fg-muted">Nenhum contato com essa busca. Só aparecem os contatos que já falaram pelo número do escritório.</p>
+          <p className="text-ui text-fg-muted">Nenhum contato com essa busca.</p>
         ) : (
           <ul className="flex flex-col gap-2" aria-label="Contatos encontrados">
             {lista.map((x) => (

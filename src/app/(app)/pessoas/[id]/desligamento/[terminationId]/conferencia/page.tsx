@@ -148,12 +148,7 @@ export default async function ConferenciaRescisaoPage({
 
       <PageHeader
         title="Conferência da rescisão"
-        subtitle={
-          <>
-            {person.name} — o Connect não calcula verbas: registre aqui o que a contabilidade informou e o resultado da
-            sua conferência.
-          </>
-        }
+        subtitle={person.name}
       />
 
       {/* As quatro contagens eram selos dentro do "Resumo" (até 30/09); subiram
@@ -208,9 +203,6 @@ export default async function ConferenciaRescisaoPage({
                 <span className="text-fg-muted">— faltam {prazo.diasRestantes} dia(s)</span>
               )}
             </p>
-            <p className="text-fs-1 text-fg-muted mt-1">
-              CLT art. 477 §6 — 10 dias corridos contados do término do contrato.
-            </p>
           </div>
         ) : (
           <p className="text-fs-2 text-fg-muted mt-4">
@@ -229,7 +221,6 @@ export default async function ConferenciaRescisaoPage({
           </div>
           <p className="text-fs-2 text-fg-muted mb-3">
             Valor de referência para conferência — <strong className="text-fg-secondary">não é apuração oficial</strong>.
-            Compare com o que a contabilidade enviou e registre a divergência quando houver.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mb-3">

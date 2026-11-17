@@ -80,9 +80,6 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
         {usarCor && (
           <div className="space-y-2">
             <SeletorDeCor valor={cor} onChange={setCor} cores={PALETA} aria-label="Cor principal do portal" />
-            <p className="text-helper text-fg-muted">
-              Vai nos botões, no item aberto do menu, nos links e no cabeçalho das tabelas do portal.
-            </p>
             {avisos.length > 0 && (
               <Aviso tom="info">
                 <p className="font-medium">Ajustamos o tom para o texto ficar legível:</p>
@@ -100,12 +97,6 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
       <div className="space-y-3 border-t border-border pt-5">
         <h3 className="text-label font-semibold text-fg">Cores das áreas de uso</h3>
         <Switch name="coresPorGrupo" checked={porGrupo} onCheckedChange={setPorGrupo} rotulo="Uma cor para cada área de uso" />
-        <p className="text-helper text-fg-muted">
-          Como no Omie, no portal e no Connect da equipe: a cor diz o uso da tela (Finanças, Pessoas, Recrutamento…), não o setor.
-          Aparece no ícone de cada item do menu, no traço do título e no cartão do número de cada tela; no Connect da equipe, também na
-          linha e na etiqueta do cabeçalho, no título, no botão principal e no cabeçalho das tabelas. Desligado, tudo fica na cor
-          principal. Pessoas, Recrutamento e Escritório só aparecem no Connect da equipe.
-        </p>
         {porGrupo && (
           <ul className="divide-y divide-border rounded-md border border-border">
             {GRUPOS_DE_COR.map((g) => {
@@ -149,11 +140,8 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
           onChange={(e) => setLogoNoPortal(e.target.checked)}
           label="Mostrar o logo e o nome do escritório no menu do portal"
           // 22/10/2026: o logo e a cor também vão para a entrada do portal e os e-mails ao cliente.
-          helper={
-            logoUrl
-              ? "No lugar do logo do Connect — também na entrada do portal e no topo dos e-mails ao cliente."
-              : "Adicione o logo primeiro. O envio vale na hora, sem o Salvar."
-          }
+          // Embaixo, só o motivo da trava; onde o logo aparece está no artigo de ajuda (17/11/2026, melhoria-707).
+          helper={logoUrl ? undefined : "Adicione o logo primeiro. O envio vale na hora, sem o Salvar."}
         />
       </div>
 
@@ -166,10 +154,6 @@ export function AparenciaDoPortalForm({ action, inicial, tenantId, escritorio, b
           disabled={!usarCor}
           rotulo="Usar a cor principal também no Connect da equipe"
         />
-        <p className="text-helper text-fg-muted">
-          Desligado, a equipe segue no azul do Connect onde a tela não tem área de uso. As cores das áreas valem para a equipe de
-          qualquer jeito.
-        </p>
       </div>
 
       <div className="space-y-2 border-t border-border pt-5">

@@ -27,7 +27,6 @@ export default async function RelatorioPendenciasPage() {
       <RelatorioHeader
         breadcrumb="Pendências"
         title="Pendências documentais e operacionais"
-        subtitle="Consolida numa lista só o que hoje aparecia espalhado por ficha: documento com vencimento, admissão em aberto e exame sem ASO conferido."
       />
 
       {/* As contagens eram selos soltos numa linha (até 30/09); viraram os

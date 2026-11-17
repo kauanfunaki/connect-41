@@ -34,7 +34,6 @@ export default async function ConfiguracoesDoAtendimentoPage() {
     <PageContainer>
       <PageHeader
         title="Configurações do Atendimento"
-        subtitle="Valem para o WhatsApp do escritório. O WhatsApp do Recrutamento tem as configurações dele."
         action={
           <Button href="/atendimento" variant="secondary" size="sm">
             Voltar ao Atendimento

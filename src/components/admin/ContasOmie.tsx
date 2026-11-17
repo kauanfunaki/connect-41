@@ -394,15 +394,6 @@ export function ContasOmie({
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
           <h3 className="text-card-title font-semibold text-fg">Omie por empresa</h3>
-          <p className="text-fs-2 text-fg-muted mt-0.5 max-w-[680px]">
-            Uma conta do Omie para cada empresa cliente do BPO. A App Key e o App Secret ficam no Omie da empresa, em
-            Configurações › Aplicativos — login e senha não servem para a API. &ldquo;Testar&rdquo; lê os dados da empresa
-            no Omie e confere o CNPJ, para pegar chave colada na empresa errada. As notas de saída emitidas no Omie entram no
-            acervo fiscal a cada 30 minutos (ou em &ldquo;Importar notas&rdquo;), inclusive as das filiais cadastradas no Connect
-            com esta empresa como matriz — cadastre a conta na matriz. As contas a pagar e a receber do Omie entram no
-            financeiro da empresa em &ldquo;Importar contas&rdquo;, depois da prévia, e a partir daí se atualizam sozinhas a cada 6
-            horas. Só leitura: nada é alterado no Omie.
-          </p>
         </div>
         <Button size="sm" onClick={() => setNovo(true)}>
           <Plus size={14} /> Adicionar empresa

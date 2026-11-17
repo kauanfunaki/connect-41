@@ -29,7 +29,6 @@ export default async function ModeloDePastasPage() {
     <PageContainer>
       <PageHeader
         title="Modelo de pastas"
-        subtitle="As pastas que toda empresa ganha nos Arquivos. Mudar nome ou setor vale na hora para todas; pasta nova chega a cada empresa na próxima vez que alguém abrir os Arquivos dela."
         action={<NovaPastaNoModelo setores={setores} />}
       />
       <ModeloDePastas
@@ -47,15 +46,10 @@ export default async function ModeloDePastasPage() {
       {/* A pasta de rede (21/10/2026): o mesmo modelo, agora também na rede.
           Roteiro em docs/PASTA-DE-REDE.md. */}
       <section className="mt-10 space-y-3" aria-labelledby="pasta-de-rede">
-        <div>
-          <h2 id="pasta-de-rede" className="font-display text-card-title font-semibold text-fg">
-            Pasta de rede
-          </h2>
-          <p className="mt-1 text-fs-2 text-fg-muted">
-            O robô do escritório traz para os Arquivos o que a equipe põe na pasta da empresa na rede, nas pastas deste modelo:{" "}
-            <span className="font-mono text-fs-1">CNPJ - Nome/Fiscal/2026/arquivo.pdf</span>. Só entra o que é das empresas ligadas aqui.
-          </p>
-        </div>
+        {/* Como o robô lê a pasta de rede foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+        <h2 id="pasta-de-rede" className="font-display text-card-title font-semibold text-fg">
+          Pasta de rede
+        </h2>
         {daRede === null ? (
           <Aviso tom="atencao">{FALTA_ATUALIZAR_O_BANCO_DA_REDE}</Aviso>
         ) : (

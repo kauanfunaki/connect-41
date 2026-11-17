@@ -33,10 +33,7 @@ export default async function NovaPessoaPage({
     return (
       <PageContainer>
         <BackButton className="mb-3" />
-        <PageHeader
-          title="Nova pessoa"
-          subtitle="Que tipo de cadastro é este? O formulário muda conforme a escolha."
-        />
+        <PageHeader title="Nova pessoa" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
           <TipoCard

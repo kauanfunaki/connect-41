@@ -158,7 +158,6 @@ export default async function EmpresasPage({
           Empresas/Pessoas no alto. */}
       <PageHeader
         title="Empresas"
-        subtitle="As empresas atendidas pelo escritório."
         action={canCreate ? (
           <Button
             href="/empresas/nova"

@@ -75,7 +75,7 @@ export default async function DiagnosticoDaCarteiraPage() {
       <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: "Diagnóstico da carteira" }]} />
       <PageHeader
         title="Diagnóstico da carteira"
-        subtitle={`O que cada cliente paga contra o que custou de verdade, pelas horas apontadas nos ${periodo.rotulo.toLowerCase()}.`}
+        subtitle={periodo.rotulo}
       />
 
       {/* Os números do topo no cartão padrão, com ícone (30/09). */}
@@ -112,7 +112,7 @@ export default async function DiagnosticoDaCarteiraPage() {
         <Card>
           <EmptyState
             title="Nada para comparar ainda"
-            description="O diagnóstico precisa de proposta ganha no Valora ligada a uma empresa, e de horas apontadas nos cards e processos dessa empresa."
+            description="Falta proposta ganha ligada a uma empresa, com horas apontadas nos cards e processos dela."
           />
         </Card>
       ) : (

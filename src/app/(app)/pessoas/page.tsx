@@ -85,7 +85,6 @@ export default async function PessoasPage({
           Empresas/Pessoas no alto. */}
       <PageHeader
         title="Pessoas"
-        subtitle="Os funcionários internos do escritório."
         action={canCreate ? (
           <Button
             href="/pessoas/nova?internal=1"

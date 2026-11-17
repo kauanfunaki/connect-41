@@ -3,7 +3,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 
 type Props = {
   title: string;
-  subtitle: React.ReactNode;
+  /** Só dado que muda; a frase que explica o relatório fica no artigo de ajuda (17/11/2026, melhoria-707). */
+  subtitle?: React.ReactNode;
   /** Rótulo do último item da trilha (o pai é sempre Indicadores de RH). */
   breadcrumb: string;
 };

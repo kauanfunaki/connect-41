@@ -43,7 +43,6 @@ export default async function PlanosPage() {
     <PageContainer>
       <PageHeader
         title="Planos"
-        subtitle="O que a 41 Tech vende: quem administra, como cobra e o que cada plano libera."
         action={
           <div className="flex flex-wrap items-center gap-2">
             {dominio && (

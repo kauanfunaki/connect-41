@@ -366,7 +366,7 @@ export function EmpresaForm({
                 </Select>
               </CampoForm>
               {ehPF ? (
-                <CampoForm label="CPF" htmlFor="cpf" helper="Sem CPF, o cadastro não recebe documento fiscal.">
+                <CampoForm label="CPF" htmlFor="cpf" dica="Sem CPF, o cadastro não recebe documento fiscal.">
                   <Input
                     id="cpf"
                     name="cpf"
@@ -376,7 +376,7 @@ export function EmpresaForm({
                   />
                 </CampoForm>
               ) : (
-                <CampoForm label="CNPJ" htmlFor="cnpj" helper="Preenche os dados sozinho ao completar os dígitos. Sem CNPJ, o cadastro não recebe documento fiscal.">
+                <CampoForm label="CNPJ" htmlFor="cnpj" dica="Preenche os dados sozinho ao completar os dígitos. Sem CNPJ, o cadastro não recebe documento fiscal.">
                   <div className="relative">
                     <Input
                       id="cnpj"
@@ -400,7 +400,7 @@ export function EmpresaForm({
                   ))}
                 </Select>
               </CampoForm>
-              <CampoForm label="ID" htmlFor="externalId" helper="Referência manual (ex: ID do Acessorias) — sem sincronização automática.">
+              <CampoForm label="ID" htmlFor="externalId" dica="Referência manual (ex.: o ID do Acessorias), sem sincronização automática.">
                 <Input id="externalId" name="externalId" type="text" value={values.externalId} placeholder="Ex: 12345" />
               </CampoForm>
 
@@ -423,7 +423,7 @@ export function EmpresaForm({
                 label="Nome no sistema"
                 htmlFor="displayName"
                 className="sm:col-span-2"
-                helper="Como esta empresa aparece nas listas. Útil quando matriz e filiais dividem a mesma razão social — ex: “BLD MOGI - SP”. Em branco, usa a razão social."
+                dica="Como esta empresa aparece nas listas. Útil quando matriz e filiais dividem a mesma razão social. Em branco, usa a razão social."
               >
                 <Input
                   id="displayName"
@@ -460,7 +460,7 @@ export function EmpresaForm({
                 label="Empresa matriz"
                 htmlFor="parentCompanyId"
                 className="sm:col-span-2"
-                helper="Preencha só se esta empresa for filial de outra já cadastrada."
+                dica="Preencha só se esta empresa for filial de outra já cadastrada."
               >
                 {/* Busca em vez de <select>: depois da importação do Acessórias
                     são 396 opções, e a lista nativa obrigava a adivinhar a
@@ -487,7 +487,7 @@ export function EmpresaForm({
         <div data-step={1} className={step === 1 ? "" : "hidden"}>
           <FormSection title="Endereço">
             <FieldGrid columns="sm:grid-cols-[180px_1fr_120px]">
-              <CampoForm label="CEP" htmlFor="zipCode" helper="Preenche logradouro, bairro, cidade e UF automaticamente.">
+              <CampoForm label="CEP" htmlFor="zipCode" dica="Preenche logradouro, bairro, cidade e UF automaticamente.">
                 <Input id="zipCode" name="zipCode" type="text" value={values.zipCode} placeholder="00000-000" maxLength={9} />
               </CampoForm>
               <CampoForm label="Logradouro" htmlFor="addressStreet">
@@ -577,10 +577,10 @@ export function EmpresaForm({
               </CampoForm>
               {!ehPF && (
                 <>
-                  <CampoForm label="CNAE principal" htmlFor="cnaePrincipal" helper="Código da atividade principal, ex: 6920-6/01">
-                    <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="0000-0/00" />
+                  <CampoForm label="CNAE principal" htmlFor="cnaePrincipal">
+                    <Input id="cnaePrincipal" name="cnaePrincipal" type="text" value={values.cnaePrincipal} placeholder="Ex.: 6920-6/01" />
                   </CampoForm>
-                  <CampoForm label="CNAEs secundários" htmlFor="cnaeSecundarios" helper="Separe por vírgula, se houver mais de um" className="lg:col-span-3">
+                  <CampoForm label="CNAEs secundários" htmlFor="cnaeSecundarios" className="lg:col-span-3">
                     <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
                   </CampoForm>
                 </>
@@ -603,9 +603,6 @@ export function EmpresaForm({
               </p>
             ) : (
               <>
-                <p className="text-helper text-fg-muted">
-                  Opcional. Dados que vão no SPED da empresa. Passe o mouse no <strong>?</strong> de cada campo para ver onde encontrar a informação.
-                </p>
                 <FieldGrid columns={GRADE}>
                   <CampoForm label="Perfil" htmlFor="spedIndPerfil" dica={DICAS_SPED.spedIndPerfil}>
                     <Select id="spedIndPerfil" name="spedIndPerfil" value={values.spedIndPerfil}>
@@ -661,16 +658,7 @@ export function EmpresaForm({
                 <Input id="source" name="source" type="text" value={values.source} placeholder="Indicação, evento, site…" />
               </CampoForm>
             </FieldGrid>
-            {defaultValues?.id ? (
-              <p className="text-helper text-fg-muted italic">
-                Responsável por setor/serviço (Contábil → João, etc.) é gerenciado no card
-                &quot;Serviços contratados&quot; da ficha da empresa, não neste formulário.
-              </p>
-            ) : (
-              <p className="text-helper text-fg-muted italic">
-                Após salvar, adicione os setores contratados e seus responsáveis na ficha da empresa.
-              </p>
-            )}
+            {/* Onde ficam os responsáveis por setor saiu daqui para o artigo de ajuda (17/11/2026, melhoria-707). */}
             <CustomFieldsSection fields={customFields} />
           </FormSection>
         </div>

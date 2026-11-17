@@ -83,15 +83,8 @@ export function TelasDoMenuGeral({ setor, telas, personalizado, disponivel, pode
         <h2 id="telas-do-menu-geral" className="text-card-title font-semibold text-fg">
           Telas do menu Geral
         </h2>
-        <p className="text-body text-fg-secondary">
-          Escolha quais telas do grupo Geral aparecem no menu de quem trabalha em {setor}.{" "}
-          {emLista(TELAS_SEMPRE_NO_MENU)} aparecem sempre.
-        </p>
-        <p className="text-fs-2 text-fg-muted">
-          Esconder tira a tela do menu, da busca (Ctrl+K) e das telas fixadas — não bloqueia: quem tiver o endereço
-          ainda consegue abrir. Quem está em mais de um setor vê, em “Todos os setores”, as telas de todos os seus
-          setores juntas. Administradores, em “Todos os setores”, veem o padrão do menu.
-        </p>
+        {/* Fica o que muda com o catálogo; o que esconder faz foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+        <p className="text-body text-fg-secondary">{emLista(TELAS_SEMPRE_NO_MENU)} aparecem sempre.</p>
       </div>
 
       {!disponivel ? (

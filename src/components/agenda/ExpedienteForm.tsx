@@ -102,7 +102,7 @@ export function ExpedienteForm({ action, valor, doEscritorio }: Props) {
             label="Fim"
             htmlFor="agenda-fim"
             required
-            helper="Antes do início, termina no dia seguinte; igual ao início, cobre 24 horas."
+            dica="Antes do início, termina no dia seguinte; igual ao início, cobre 24 horas."
             error={erroDoCampo ?? undefined}
           >
             <Select

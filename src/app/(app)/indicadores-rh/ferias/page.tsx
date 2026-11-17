@@ -27,7 +27,6 @@ export default async function RelatorioFeriasPage() {
       <RelatorioHeader
         breadcrumb="Férias"
         title="Relatório de férias"
-        subtitle="Períodos aquisitivos em aberto, por urgência. Vencida é passivo consumado; a vencer ainda dá pra programar."
       />
 
       {/* As contagens eram selos soltos numa linha (até 30/09); viraram os

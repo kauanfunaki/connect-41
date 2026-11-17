@@ -27,7 +27,6 @@ export default async function AdminPage() {
     <PageContainer>
       <PageHeader
         title="Configurações"
-        subtitle="O que vale para todo o escritório, separado por assunto."
         // A conta da própria pessoa a um clique (05/11/2026, pedido do Kauan): a
         // engrenagem do topo traz quem configura para cá, e "Sua conta" só
         // estava no menu do nome.

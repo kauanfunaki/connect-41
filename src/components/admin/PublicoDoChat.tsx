@@ -20,11 +20,6 @@ export function PublicoDoChat({ todos, disponivel }: { todos: boolean; disponive
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-fs-4 font-semibold text-fg">Chat de IA no canto da tela</p>
-          <p className="text-fs-2 text-fg-secondary max-w-[62ch]">
-            Aparece para quem tem acesso a alguma IA ligada abaixo — a do setor (hoje, Societário, Recrutamento, Fiscal, BPO e DP) ou a Ajuda do
-            Connect. Cada pessoa tem até 30 perguntas por dia, e as conversas são apagadas 90 dias depois da última
-            mensagem.
-          </p>
         </div>
         <Checkbox
           id="chat-para-todos"

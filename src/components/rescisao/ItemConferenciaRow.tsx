@@ -251,7 +251,6 @@ export function ItemConferenciaRow({ item, current, referencia, action, canEdit 
               label="Observação"
               htmlFor={`note-${item.key}`}
               required={status === "DIVERGENTE"}
-              helper={status === "DIVERGENTE" ? "Obrigatória quando o item diverge." : undefined}
             >
               <Textarea
                 id={`note-${item.key}`}

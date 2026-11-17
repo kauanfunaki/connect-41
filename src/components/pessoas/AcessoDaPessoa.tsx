@@ -114,7 +114,7 @@ export async function AcessoDaPessoa({
       <Card className="p-5">
         <h2 className={TITULO}>Criar o acesso</h2>
         <p className="text-helper text-fg-muted mb-5">
-          {pessoa.name} ainda não entra no Connect. A conta nasce ligada a esta ficha e aparece também em Configurações › Usuários.
+          {pessoa.name} ainda não entra no Connect.
         </p>
         {vagas.allowed ? (
           <UsuarioForm
@@ -134,7 +134,6 @@ export async function AcessoDaPessoa({
       {livres.length > 0 && (
         <Card className="p-5">
           <h2 className={TITULO}>Ou ligar a uma conta que já existe</h2>
-          <p className="text-helper text-fg-muted mb-4">Para quem já entrava no Connect antes de ganhar a ficha. A lista traz só as contas sem pessoa.</p>
           <LigarContaExistente personId={pessoa.id} contas={livres.map((c) => ({ id: c.id, nome: c.name, email: c.email }))} ligar={ligarContaDaPessoa} />
         </Card>
       )}

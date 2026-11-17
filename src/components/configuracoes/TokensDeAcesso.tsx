@@ -140,8 +140,8 @@ export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial
   return (
     <div className="flex flex-col gap-6">
       <form onSubmit={criar} className="flex flex-col gap-4" aria-label="Criar token de acesso">
-        <CampoForm label="Nome do token" htmlFor="token-nome" required helper="Onde ele vai ser usado, para você reconhecer depois. Ex.: Claude Code no notebook.">
-          <Input id="token-nome" value={nome} maxLength={120} required autoComplete="off" onChange={e => setNome(e.target.value)} />
+        <CampoForm label="Nome do token" htmlFor="token-nome" required dica="Onde ele vai ser usado, para você reconhecer depois.">
+          <Input id="token-nome" value={nome} maxLength={120} required autoComplete="off" placeholder="Ex.: Claude Code no notebook" onChange={e => setNome(e.target.value)} />
         </CampoForm>
         <RadioGroup<Acesso>
           legenda="O que o token pode fazer"
@@ -186,7 +186,7 @@ export function TokensDeAcesso({ meus: iniciais, doEscritorio: escritorioInicial
               <Button type="button" variant="secondary" aria-label="Copiar o token" onClick={() => copiar(criado.token, "Token")}><Copy size={14} /> Copiar</Button>
             </div>
           </CampoForm>
-          <CampoForm label="Para o Claude Code, rode no terminal" htmlFor="token-comando" helper="Vale para todas as pastas. Depois, abra uma sessão nova do Claude Code: o servidor só carrega quando a sessão começa.">
+          <CampoForm label="Para o Claude Code, rode no terminal" htmlFor="token-comando" dica="Vale para todas as pastas. Depois, abra uma sessão nova do Claude Code: o servidor só carrega quando a sessão começa.">
             <div className="flex gap-2">
               <Input id="token-comando" value={comando} readOnly className="min-w-0 font-mono" onFocus={e => e.target.select()} />
               <Button type="button" variant="secondary" aria-label="Copiar o comando do Claude Code" onClick={() => copiar(comando, "Comando")}><Copy size={14} /> Copiar</Button>
