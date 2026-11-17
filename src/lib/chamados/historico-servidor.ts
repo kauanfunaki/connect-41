@@ -9,12 +9,14 @@ import {
   ORIGEM_HUB,
   PROMPT_DO_HISTORICO,
   TENTATIVAS_DA_IA,
+  casosParecidos,
   categoriaDoConnect,
   lerHistoricoDoHub,
   limparSegredos,
   resultadoDaLeituraSchema,
   situacaoDepoisDaLeitura,
   textoDoCaso,
+  type ExemploDaTriagem,
   type RespostaDaEquipe,
 } from "./historico";
 
@@ -188,7 +190,33 @@ export async function processarTudo(tenantId: string, limiteMs = 10 * 60_000): P
   }
 }
 
-export type DecisaoDaRevisao = { categoryId: string } | { descartar: true };
+/** Quantos casos confirmados entram na busca dos exemplos, os mais recentes primeiro. */
+const CASOS_NA_BUSCA = 3000;
+
+/**
+ * Os exemplos da triagem (17/11/2026, melhoria-766): os casos confirmados mais
+ * parecidos com o pedido. Falha aqui não segura a triagem: sem exemplos, a IA
+ * classifica como antes.
+ */
+export async function exemplosParaATriagem(tenantId: string, pedido: string): Promise<ExemploDaTriagem[]> {
+  try {
+    const casos = await getPrisma().helpdeskHistoricCase.findMany({
+      where: { tenantId, status: "CONFIRMADO", finalCategoryId: { not: null } },
+      select: { title: true, summary: true, description: true, tags: true, finalCategoryId: true },
+      orderBy: { openedAt: "desc" },
+      take: CASOS_NA_BUSCA,
+    });
+    return casosParecidos(
+      pedido.slice(0, 4000),
+      casos.map((c) => ({ titulo: c.title, resumo: c.summary, descricao: c.description, tags: Array.isArray(c.tags) ? c.tags.filter((t): t is string => typeof t === "string") : [], categoryId: c.finalCategoryId! }))
+    );
+  } catch (err) {
+    console.warn(log(`os exemplos da triagem não saíram, segue sem: ${motivoDaFalha(err)}`));
+    return [];
+  }
+}
+
+export type DecisaoDaRevisao ={ categoryId: string } | { descartar: true };
 
 /** A revisão de um caso: a categoria escolhida pela equipe, ou descartado. */
 export async function revisarCaso(tenantId: string, userId: string, casoId: string, decisao: DecisaoDaRevisao): Promise<void> {

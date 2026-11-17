@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriaDoConnect, ehSituacaoDoCaso, lerHistoricoDoHub, limparSegredos, situacaoDepoisDaLeitura, textoDoCaso } from "./historico";
+import { casosParecidos, categoriaDoConnect, ehSituacaoDoCaso, lerHistoricoDoHub, limparSegredos, palavrasDoTexto, PROMPT_DO_HISTORICO, situacaoDepoisDaLeitura, textoDoCaso } from "./historico";
 
 // O histórico de chamados do Hub como casos para a triagem (17/11/2026).
 
@@ -76,6 +76,43 @@ describe("situacaoDepoisDaLeitura", () => {
   it("só as quatro situações existem", () => {
     expect(ehSituacaoDoCaso("A_REVISAR")).toBe(true);
     expect(ehSituacaoDoCaso("lixo")).toBe(false);
+  });
+});
+
+describe("casosParecidos (melhoria-766)", () => {
+  const casos = [
+    { titulo: "Atualizar Domínio do estagiário", resumo: "Atualização do sistema Domínio na máquina", tags: ["domínio", "atualização"], categoryId: "dominio" },
+    { titulo: "Domínio travando ao gerar relatório", resumo: "O Domínio trava ao gerar demonstrativos", tags: ["domínio", "travamento"], categoryId: "dominio" },
+    { titulo: "Incluir e-mail no Acessórias", resumo: "Incluir e-mail da empresa no Acessórias", tags: ["acessórias", "e-mail"], categoryId: "acessorias" },
+    { titulo: "Impressora com erro", resumo: "A impressora não imprime", tags: ["impressora"], categoryId: "hardware" },
+    { titulo: "Instalar assinador da Junta", resumo: "Instalar o assinador da Junta Comercial no PC", tags: ["assinador", "certificado"], categoryId: "certificado" },
+  ];
+
+  it("traz primeiro os casos com mais palavras em comum, sem acento e sem as palavras vazias", () => {
+    const r = casosParecidos("Preciso que atualizem o Dominio da minha máquina", casos);
+    expect(r[0]).toEqual({ pedido: "Atualização do sistema Domínio na máquina", categoryId: "dominio" });
+    expect(r.map((e) => e.categoryId)).not.toContain("hardware");
+  });
+
+  it("sem palavra em comum, ou só com palavra vazia, nenhum exemplo", () => {
+    expect(casosParecidos("Preciso de ajuda, por favor", casos)).toEqual([]);
+    expect(casosParecidos("", casos)).toEqual([]);
+    expect(casosParecidos("Domínio", [])).toEqual([]);
+  });
+
+  it("respeita o limite e usa o título quando não há resumo", () => {
+    const muitos = Array.from({ length: 8 }, (_, i) => ({ titulo: `Acessórias: incluir e-mail ${i}`, resumo: null, tags: ["acessórias"], categoryId: "acessorias" }));
+    const r = casosParecidos("incluir e-mail no acessórias", [...muitos, ...casos], 3);
+    expect(r).toHaveLength(3);
+    expect(r.every((e) => e.categoryId === "acessorias")).toBe(true);
+  });
+
+  it("as palavras que contam", () => {
+    expect([...palavrasDoTexto("O Domínio NÃO abre, erro 404 no PC")]).toEqual(["dominio", "abre", "erro"]);
+  });
+
+  it("a leitura do histórico também sabe das categorias novas", () => {
+    expect(PROMPT_DO_HISTORICO).toContain("Certificado Digital | Assinadores");
   });
 });
 

@@ -15,6 +15,7 @@ import { procurarNoOrquestrador, type BuscaNoOrquestrador } from "./triagem";
 import { aprovadoresDaCategoria, evento } from "./comandos";
 import { despacharEventos } from "./notificacoes";
 import { levarAoHub } from "./hub-servidor";
+import { exemplosParaATriagem } from "./historico-servidor";
 import { motivoDaFalha } from "./falhaDaIa";
 import { categoriaSchema, dadosRascunhoSchema, dadosSchema, ehTituloProvisorio, emTriagem, resultadoDaTriagem, revisaoDoRascunho, validarFormulario, type Categoria, type MotivoSemCategoria, type RevisaoAprovada, type Triagem } from "./regras";
 
@@ -112,7 +113,8 @@ async function decidir(tenantId: string, t: Chamado, comIA: boolean, config: Con
   const semIA = !comIA ? "retomada de triagem antiga, sem chamar a IA" : !limite?.allowed ? "limite de triagens por minuto de quem abriu" : null;
   const semBusca: BuscaNoOrquestrador = { existente: null, falha: null };
   const [classificacao, busca, sugerido] = await Promise.all([
-    revisao ? daRevisao(revisao) : semIA ? semClassificacao(semIA) : classificar(c, dados, cats),
+    // Os casos parecidos do histórico vão como exemplo (17/11/2026, melhoria-766).
+    revisao ? daRevisao(revisao) : semIA ? semClassificacao(semIA) : exemplosParaATriagem(tenantId, `${t.title}\n${t.description}`).then(exemplos => classificar(c, dados, cats, exemplos)),
     semIA ? semBusca : buscarNoOrquestrador(c, dados),
     semIA || setores.length < 2 ? Promise.resolve<SetorSugerido>(null) : escolherSetorNaTriagem(c, t.description, setores),
   ]);

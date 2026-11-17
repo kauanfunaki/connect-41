@@ -122,7 +122,8 @@ Desde 17/11/2026, os chamados antigos do Hub viram **casos** para a triagem por 
 - **Situação:** a IA concorda com a categoria de quem pediu → **Confirmado** sozinho; discorda, não sabe ou o Hub não tem par → **A revisar**; texto que não deixa entender o pedido → **Descartado**.
 - **Revisão:** quem gerencia os chamados escolhe, em cada caso a revisar, a categoria de quem pediu, a sugerida, outra, ou descarta. Dá para mudar depois um confirmado ou descartado.
 - **Por que revisar:** na contagem de 17/11 (262 chamados de 16/03 a 16/11/2026), a equipe nunca corrigiu a categoria escolhida no Hub, então ela não serve de gabarito sozinha.
-- **Ainda não alimenta a triagem:** usar os casos confirmados como exemplos na classificação vem depois da revisão, medindo antes se o acerto sobe.
+- **Exemplos na triagem (melhoria-766, 17/11/2026):** a classificação da triagem e a revisão antes de abrir recebem até 5 casos confirmados parecidos com o pedido, com a categoria que a equipe deu (`exemplosParaATriagem`, `casosParecidos`). Parecido = palavras em comum, pesando mais as raras; sem exemplo que valha, a IA classifica como antes, e falha na busca não segura a triagem. Nos 249 casos do Hub, com a reclassificação abaixo, o primeiro exemplo tem a categoria certa em 45% das vezes e algum dos cinco em 70% — é pista para a IA, não a decisão.
+- **Categorias do histórico:** a análise dos 250 casos (17/11/2026) mostrou três assuntos espalhados por várias categorias, que viraram categorias no catálogo: **Suporte › Sistema Domínio** (o sistema contábil, 40 casos em 12 categorias), **Infraestrutura › Certificado Digital | Assinadores** e **Suporte › Acessórias | E-mails e Tarefas**. O texto da triagem, da revisão e da leitura do histórico explica as três (`DICAS_DAS_CATEGORIAS`). Os casos já confirmados desses assuntos foram passados para elas por UPDATE, depois do deploy.
 
 ## Arquivos
 

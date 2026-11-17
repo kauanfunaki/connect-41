@@ -16,6 +16,13 @@ describe("classificação automática", () => {
     expect(JSON.parse(p.texto).categorias[1].caminho).toBe("Infraestrutura › Acesso | Senhas"); expect(p.store).toBe(false);
     expect(p.contexto).toEqual({ trigger: "SISTEMA", userId: "u", entityType: "HelpdeskTicket", entityId: "chamado" });
   });
+  it("leva os exemplos do histórico com o caminho, só os de categoria que pode ser escolhida (melhoria-766)", async () => {
+    await classificar(c, dados, cats, [{ pedido: "Recuperar a senha do e-mail", categoryId: "senha" }, { pedido: "Grupo", categoryId: "d" }, { pedido: "Desativada", categoryId: "off" }]);
+    expect(JSON.parse(m.gerar.mock.calls[0][0].texto).exemplos).toEqual([{ pedido: "Recuperar a senha do e-mail", categoryId: "senha", caminho: "Infraestrutura › Acesso | Senhas" }]);
+    await classificar(c, dados, cats);
+    expect(JSON.parse(m.gerar.mock.calls[1][0].texto)).not.toHaveProperty("exemplos");
+    expect(m.gerar.mock.calls[1][0].sistema).toContain("sistema contábil Domínio");
+  });
   it("devolve o título sugerido e o exige no esquema estrito", async () => {
     m.gerar.mockResolvedValue({ valor: { categoryId: "senha", reason: "Senha", title: "Recuperar senha do sistema" }, origem: "principal" });
     expect((await classificar(c, dados, cats)).title).toBe("Recuperar senha do sistema");
@@ -45,9 +52,11 @@ describe("classificação automática", () => {
     expect((await classificar(c, dados, [cat("pending", "A classificar")])).falha).toContain("Sem categorias");
     expect(m.gerar).not.toHaveBeenCalled();
   });
-  it("mantém as 24 categorias e os três grupos da referência, com caminho legível", () => {
+  it("mantém as 27 categorias (24 da referência e 3 do histórico do Hub) e os três grupos, com caminho legível", () => {
     expect(Object.keys(CATALOGO_DE_CHAMADOS)).toEqual(["Desenvolvimento", "Infraestrutura", "Suporte"]);
-    expect(Object.values(CATALOGO_DE_CHAMADOS).flat()).toHaveLength(24);
+    expect(Object.values(CATALOGO_DE_CHAMADOS).flat()).toHaveLength(27);
+    expect(CATALOGO_DE_CHAMADOS.Suporte).toEqual(expect.arrayContaining(["Sistema Domínio", "Acessórias | E-mails e Tarefas"]));
+    expect(CATALOGO_DE_CHAMADOS.Infraestrutura).toContain("Certificado Digital | Assinadores");
     expect(caminhoDaCategoria(cats, "treino")).toBe("Suporte › Treinamento");
     expect(categoriasClassificaveis([cat("pai", "Pai", null, false), cat("filho", "Filho", "pai")])).toEqual([]);
   });
