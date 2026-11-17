@@ -104,6 +104,15 @@ Desde 03/11/2026, toda Ceci da equipe (a de cada setor e a da Ajuda) consulta o 
 
 Prompts, documentos e corpos de erro do provedor não são gravados nos logs da triagem. O histórico é dado funcional, protegido pelo acesso ao chamado. Conteúdo fornecido pelo usuário é tratado como dado não confiável, sem ferramentas, comandos ou navegação por links.
 
+## Cópia no Hub
+
+Desde 17/11/2026 (funcionalidade-711), o chamado aberto no Connect também abre no Hub, **só de ida**: a equipe continua atendendo no Connect, e o chamado guarda o link do de lá (linha **No Hub** nos dados do chamado).
+
+- **Quando vai:** quando a triagem conclui (`src/lib/chamados/triagem-servidor.ts` → `levarAoHub`), já com o título e a categoria da triagem ou da revisão. Os chamados de antes não vão.
+- **O que vai:** título, descrição, categoria (pelo nome; "A classificar" não vai), setor que pediu, setor que atende, prioridade, quem abriu (nome e e-mail), o protocolo curto e o link do Connect. O de-para é do Hub: categoria e setor com o mesmo nome; sem par, os padrões `CONNECT41_TICKET_CATEGORY_NAME` e `CONNECT41_REQUESTER_SECTOR_NAME` de lá. Quem abre no Hub é o usuário de sistema (`CONNECT41_SYSTEM_USER_EMAIL`).
+- **Hub fora:** o chamado abre normal no Connect, fica pendente (`hubPending`) e o motor de alertas tenta de novo a cada 15 minutos, até 8 vezes. O motivo da última falha fica em `hubLastError` e no log (`[chamados] Hub, chamado …`). O Hub não duplica: o mesmo chamado do Connect devolve o que já existe.
+- **Para ligar:** no Connect, `HUB_API_URL`, `HUB_SERVICE_TOKEN` (o token de integração do Hub, com escopo `connect41`), `HUB_CHAMADOS_ESCRITORIO` (o slug do escritório que manda, ex.: `41tech`) e `APP_PUBLIC_URL` (para o link de volta). No Hub, a rota `POST /api/integrations/connect41/tickets` (branch `feat/connect41-chamados` do 41-Tech-Hub) e as variáveis `CONNECT41_*` que a tela de login já usava. Sem as três primeiras, nada vai ao Hub.
+
 ## Arquivos
 
 No chamado, os arquivos vão junto com a mensagem: o clipe abre o seletor (vários arquivos de uma vez) e **Ctrl+V** cola prints e arquivos na caixa de texto. Cada arquivo sobe antes da mensagem e fica ligado a ela (`HelpdeskAttachment.commentId`); a mensagem pode ser só de arquivos. "Somente a equipe" vale para a mensagem e os arquivos dela. Os arquivos da abertura aparecem na solicitação.

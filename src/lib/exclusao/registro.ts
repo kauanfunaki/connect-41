@@ -300,6 +300,8 @@ const USUARIO: Ligacao[] = [
   { modelo: "AvaliacaoTributaria", campo: "criadoPor", fk: "criadoPorId", tratamento: "desligar", rotulo: ["avaliação tributária criada por ele (fica, sem o autor)", "avaliações tributárias criadas por ele (ficam, sem o autor)"] },
   { modelo: "AvaliacaoTributaria", campo: "atualizadoPor", fk: "atualizadoPorId", tratamento: "desligar" },
   { modelo: "AvaliacaoTributariaVersao", campo: "autor", fk: "autorId", tratamento: "desligar" },
+  // A tarefa da transferência continua feita, sem quem marcou (17/11/2026, melhoria-705).
+  { modelo: "HandoffSectorTask", campo: "doneBy", fk: "doneById", tratamento: "desligar" },
 
   // Responsável por algo — fica sem responsável.
   { modelo: "Person", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar", rotulo: ["ficha em Pessoas ligada à conta", "fichas em Pessoas ligadas à conta"] },

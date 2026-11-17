@@ -2,7 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { HandoffPriority } from "@/generated/prisma/enums";
 import type { AuthContext } from "@/lib/auth/context";
 import { sectorScope } from "@/lib/auth/activeSector";
-import { isFullAccess } from "@/lib/auth/papeis";
+import { isFullAccess, isFullWrite } from "@/lib/auth/papeis";
 import { SITUACOES_COM_O_SETOR, whereDaSituacao } from "@/lib/handoffs";
 
 // As abas da caixa de entrada de /transferencias (10/11/2026, escolha "B ·
@@ -12,10 +12,11 @@ import { SITUACOES_COM_O_SETOR, whereDaSituacao } from "@/lib/handoffs";
 // tipos), para o teste conferir cada filtro e a Home contar exatamente o que a
 // aba "Para o meu setor" conta.
 
-export type AbaDaTransferencia = "setor" | "comigo" | "enviadas" | "finalizadas";
+export type AbaDaTransferencia = "setor" | "distribuir" | "comigo" | "enviadas" | "finalizadas";
 
 export const ABAS_DA_TRANSFERENCIA: { chave: AbaDaTransferencia; rotulo: string }[] = [
   { chave: "setor", rotulo: "Para o meu setor" },
+  { chave: "distribuir", rotulo: "A distribuir" },
   { chave: "comigo", rotulo: "Comigo" },
   { chave: "enviadas", rotulo: "Enviadas" },
   { chave: "finalizadas", rotulo: "Finalizadas" },
@@ -30,11 +31,35 @@ export type QuemVeAsTransferencias = {
   setorAtivo: string | null;
   /** Papel com visão do escritório inteiro (ADMIN, SUPER_ADMIN, READONLY). */
   visaoGeral: boolean;
+  /**
+   * Os setores que a pessoa coordena, onde escolhe quem cuida da parte
+   * (17/11/2026, melhoria-705): os dela, para a coordenação; null (todos) para o
+   * administrador; vazio para os outros. Sem o campo, vale vazio.
+   */
+  coordena?: string[] | null;
 };
 
 /** Quem olha, a partir do AuthContext — o mesmo para a lista e para o Início. */
 export function quemVeAsTransferencias(ctx: Pick<AuthContext, "userId" | "sectors" | "activeSector" | "role">): QuemVeAsTransferencias {
-  return { userId: ctx.userId, setores: ctx.sectors, setorAtivo: ctx.activeSector, visaoGeral: isFullAccess(ctx.role) };
+  return {
+    userId: ctx.userId,
+    setores: ctx.sectors,
+    setorAtivo: ctx.activeSector,
+    visaoGeral: isFullAccess(ctx.role),
+    coordena: isFullWrite(ctx.role) ? null : ctx.role === "SECTOR_ADMIN" ? ctx.sectors : [],
+  };
+}
+
+/**
+ * Os setores da aba "A distribuir" (17/11/2026, melhoria-705): os que a pessoa
+ * coordena, recortados pelo setor ativo quando ele é um deles; null = todos
+ * (administrador em "Todos os setores"); vazio = a aba não aparece.
+ */
+export function setoresADistribuir(q: QuemVeAsTransferencias): string[] | null {
+  const coordena = q.coordena === undefined ? [] : q.coordena;
+  if (coordena === null) return q.setorAtivo ? [q.setorAtivo] : null;
+  if (q.setorAtivo && coordena.includes(q.setorAtivo)) return [q.setorAtivo];
+  return coordena;
 }
 
 /**
@@ -58,7 +83,9 @@ export function setoresDaCaixa(q: QuemVeAsTransferencias): string[] | null {
 export function abasVisiveis(q: QuemVeAsTransferencias): AbaDaTransferencia[] {
   const setores = setoresDaCaixa(q);
   const temCaixa = setores === null || setores.length > 0;
-  return ABAS_DA_TRANSFERENCIA.map((a) => a.chave).filter((c) => c !== "setor" || temCaixa);
+  const aDistribuir = setoresADistribuir(q);
+  const distribui = aDistribuir === null || aDistribuir.length > 0;
+  return ABAS_DA_TRANSFERENCIA.map((a) => a.chave).filter((c) => (c !== "setor" || temCaixa) && (c !== "distribuir" || distribui));
 }
 
 /**
@@ -93,6 +120,14 @@ export function whereDaAba(aba: AbaDaTransferencia, q: QuemVeAsTransferencias): 
       const setores = setoresDaCaixa(q);
       if (setores === null) return { sectors: { some: { status: COM_O_SETOR } } };
       return { sectors: { some: { sectorCode: { in: setores.length > 0 ? setores : [NENHUM] }, status: COM_O_SETOR } } };
+    }
+    // A parte sem responsável, com o setor, num setor que a pessoa coordena:
+    // "a coordenação do setor decide" quem cuida (17/11/2026, melhoria-705).
+    case "distribuir": {
+      const setores = setoresADistribuir(q);
+      const semResponsavel = { status: COM_O_SETOR, assignees: { none: {} } };
+      if (setores === null) return { sectors: { some: semResponsavel } };
+      return { sectors: { some: { ...semResponsavel, sectorCode: { in: setores.length > 0 ? setores : [NENHUM] } } } };
     }
     // A fila pessoal: a pessoa é responsável por uma parte que está com o setor.
     case "comigo":

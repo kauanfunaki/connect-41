@@ -12,7 +12,7 @@ import { getSectorMaps, sectorLabel } from "@/lib/sectors";
 import { notifySector, notifyUser } from "@/lib/notifications";
 import { findMentionedUserIds } from "@/lib/handoffMentions";
 import { logAudit } from "@/lib/audit";
-import { assuntoParaGravar } from "@/lib/handoffTemplates";
+import { assuntoParaGravar, contatoDoCadastro, detalhesParaGravar, getHandoffTemplate, tarefasParaGravar } from "@/lib/handoffTemplates";
 import { ASSUNTO_MAXIMO, HANDOFF_PRIORITY_LABEL, HANDOFF_STATUS_LABEL, tituloDaTransferencia } from "@/lib/handoffs";
 import {
   TRANSICOES,
@@ -20,9 +20,11 @@ import {
   diferencaDeResponsaveis,
   ehAcaoNaParte,
   juntarNomes,
+  peloSetor,
   podeAgirNaParte,
   podeComentar,
   podeEditarATransferencia,
+  podeMarcarTarefa,
   podeMudarResponsaveis,
   proximaSituacao,
   resumir,
@@ -129,6 +131,22 @@ export async function criarHandoff(
     assigneesBySector[sectorCode] = eligible.map((u) => u.id);
   }
 
+  // As tarefas de cada setor (17/11/2026, melhoria-705): o modelo traz, quem
+  // pede ajusta, e cada uma vira um item marcável na parte do setor.
+  const tarefasPorSetor = Object.fromEntries(
+    toSectors.map((sectorCode) => [sectorCode, tarefasParaGravar(form.getAll(`tarefa_${sectorCode}`).map(String))])
+  );
+
+  // O "O que este modelo precisa saber": as respostas, na ordem do modelo. Em
+  // branco, regime e contato vêm do cadastro da empresa.
+  const modelo = assunto.templateKey ? getHandoffTemplate(assunto.templateKey) : undefined;
+  const respostas = Object.fromEntries((modelo?.campos ?? []).map((c) => [c.chave, (form.get(`detalhe_${c.chave}`) as string | null) ?? ""]));
+  const empresa = entityType === "COMPANY" ? (entity as { taxRegime?: string | null; phone?: string | null; email?: string | null }) : null;
+  const detalhes = detalhesParaGravar(assunto.templateKey, respostas, {
+    regime: empresa?.taxRegime ?? null,
+    contato: contatoDoCadastro(empresa),
+  });
+
   let handoffId: string;
   let numero: number;
   try {
@@ -146,6 +164,7 @@ export async function criarHandoff(
         subject: assunto.subject,
         templateKey: assunto.templateKey,
         description,
+        details: detalhes.length > 0 ? detalhes : undefined,
         priority,
         sectors: {
           create: toSectors.map((sectorCode) => ({
@@ -154,6 +173,9 @@ export async function criarHandoff(
             instruction: (form.get(`instruction_${sectorCode}`) as string)?.trim() || null,
             assignees: {
               create: assigneesBySector[sectorCode].map((userId) => ({ userId })),
+            },
+            tasks: {
+              create: tarefasPorSetor[sectorCode].map((title, position) => ({ tenantId, title, position })),
             },
           })),
         },
@@ -180,17 +202,27 @@ export async function criarHandoff(
 
   const { labels: sectorLabels } = await getSectorMaps(ctx.tenantId);
   const alvo = alvoDoAviso(handoffId);
+  // Quem é avisado de cada parte (17/11/2026, melhoria-705): com responsável,
+  // os responsáveis (o aviso logo abaixo); sem responsável, "a coordenação do
+  // setor decide", e só a coordenação recebe — o setor inteiro recebia antes.
+  // Setor sem coordenação cadastrada continua avisando o setor inteiro.
+  const deOnde = sectorLabels[fromSector] ?? fromSector;
   await Promise.all(
-    toSectors.map((sectorCode) =>
-      notifySector(sectorCode, {
-        tenantId: ctx.tenantId,
-        type: "HANDOFF_RECEIVED",
-        message: `Nova transferência de ${sectorLabels[fromSector] ?? fromSector} para "${entity.name}": ${assunto.subject}`,
-        ...alvo,
-        // Quem pediu — a foto no sino (05/10/2026). Vale para os avisos abaixo.
-        actorUserId: ctx.userId,
+    toSectors
+      .filter((sectorCode) => assigneesBySector[sectorCode].length === 0)
+      .map(async (sectorCode) => {
+        const aviso = {
+          tenantId: ctx.tenantId,
+          type: "HANDOFF_RECEIVED" as const,
+          message: `Nova transferência de ${deOnde} para "${entity.name}": ${assunto.subject}. Escolha quem cuida ${peloSetor(sectorLabels[sectorCode] ?? sectorCode)}.`,
+          ...alvo,
+          // Quem pediu — a foto no sino (05/10/2026). Vale para os avisos abaixo.
+          actorUserId: ctx.userId,
+        };
+        const coordenacao = (await coordenacaoDoSetor(ctx.tenantId, sectorCode)).filter((id) => id !== ctx.userId);
+        if (coordenacao.length === 0) return notifySector(sectorCode, aviso);
+        await Promise.all(coordenacao.map((userId) => notifyUser(userId, aviso)));
       })
-    )
   );
 
   // Responsáveis já definidos na criação (mesmo aviso que atribuirResponsavelSetor
@@ -488,6 +520,60 @@ export async function definirResponsaveisDaParte(handoffSectorId: string, userId
   );
 
   revalidarATransferencia(parte.handoff.id);
+  return { ok: true };
+}
+
+/**
+ * Marca ou desmarca uma tarefa da parte de um setor (17/11/2026, melhoria-705).
+ * Quem pode: quem cuida da parte, enquanto ela está com o setor
+ * (`podeMarcarTarefa`). Guarda quem marcou e quando; desmarcar limpa os dois.
+ */
+export async function marcarTarefaDaParte(taskId: string, feita: boolean): Promise<ResultadoDaTransferencia> {
+  const ctx = await getAuthContext();
+  if (!ctx.tenantId || !ctx.userId) return falha("Não autenticado.");
+  if (typeof taskId !== "string" || !taskId) return falha("Tarefa não encontrada.");
+
+  const prisma = getPrisma();
+  const tarefa = await prisma.handoffSectorTask.findFirst({
+    where: { id: taskId, tenantId: ctx.tenantId },
+    select: {
+      id: true,
+      doneAt: true,
+      handoffSector: { select: { id: true, sectorCode: true, status: true, handoffId: true, assignees: { select: { userId: true } } } },
+    },
+  });
+  if (!tarefa) return falha("Tarefa não encontrada.");
+  const parte = tarefa.handoffSector;
+  const regra = { sectorCode: parte.sectorCode, status: parte.status, responsaveis: parte.assignees.map((a) => a.userId) };
+  if (!podeMarcarTarefa(ctx, regra)) {
+    return falha(
+      parte.status === "NEW" || parte.status === "IN_PROGRESS"
+        ? "Só quem coordena o setor ou é responsável pela parte marca as tarefas."
+        : `Esta parte está ${HANDOFF_STATUS_LABEL[parte.status].toLowerCase()}. Para mexer nas tarefas, reabra a parte.`
+    );
+  }
+  if (Boolean(tarefa.doneAt) === Boolean(feita)) return { ok: true };
+
+  try {
+    await prisma.handoffSectorTask.update({
+      where: { id: tarefa.id },
+      data: feita ? { doneAt: new Date(), doneById: ctx.userId } : { doneAt: null, doneById: null },
+    });
+  } catch (err) {
+    console.error("[marcarTarefaDaParte]", err);
+    return falha("Não foi possível marcar a tarefa. Tente de novo.");
+  }
+
+  await logAudit({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    action: feita ? "handoff.task.done" : "handoff.task.undone",
+    entityType: "Handoff",
+    entityId: parte.handoffId,
+    metadata: { sectorCode: parte.sectorCode, taskId: tarefa.id },
+  });
+
+  revalidarATransferencia(parte.handoffId);
   return { ok: true };
 }
 

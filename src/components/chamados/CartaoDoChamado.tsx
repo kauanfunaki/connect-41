@@ -42,6 +42,12 @@ type Props = {
   responsaveis: { id: string; nome: string }[];
   /** O setor que atende, quando mais de um setor administra os chamados (12/11/2026). */
   atende?: string;
+  /**
+   * O chamado está na lista, mas não é do setor de quem olha (17/11/2026,
+   * bug-724): ele só acompanha (encaminhou para outro setor continuar) ou foi
+   * quem abriu. O selo diz isso, para não parecer trabalho da própria fila.
+   */
+  naoEDoMeuSetor?: "acompanha" | "abriu";
   prazo?: { vence: Date; pausado: boolean; atrasado: boolean };
   fila?: { posicao: number; total: number; reordenar: boolean };
   /** Do mais novo para o mais antigo. */
@@ -61,6 +67,7 @@ export function CartaoDoChamado(p: Props) {
       <div className="flex items-center gap-2">
         <Icone size={18} aria-hidden className="shrink-0" />
         <span className="text-ui font-bold">{p.suaVez ? "Aguardando sua resposta" : ROTULOS[status]}</span>
+        {p.naoEDoMeuSetor && <span data-dica={p.atende ? `Quem atende é ${p.atende}` : undefined} className="relative z-10"><Selo tom="neutro" className="font-semibold">{p.naoEDoMeuSetor === "acompanha" ? "Acompanhando" : "Você abriu"}</Selo></span>}
         {p.prazo?.atrasado && <Selo tom="perigo" className="ml-auto font-semibold">Atrasado</Selo>}
       </div>
       <ol aria-label="Atividade recente" className="border-t border-current/15 pt-3">

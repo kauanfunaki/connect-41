@@ -781,6 +781,15 @@ model HelpdeskTicket {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   closedAt DateTime?
+  /// A cópia no Hub (17/11/2026, funcionalidade-711), só de ida: o id e o link
+  /// do chamado de lá. Nulos até ir, e para sempre nos chamados de antes.
+  hubTicketId String? @db.VarChar(64)
+  hubTicketUrl String? @db.VarChar(500)
+  hubSentAt DateTime?
+  /// Falta ir ao Hub: o motor de alertas tenta de novo (src/lib/chamados/hub-servidor.ts).
+  hubPending Boolean @default(false)
+  hubAttempts Int @default(0)
+  hubLastError String? @db.VarChar(300)
   tenant Tenant @relation(fields: [tenantId], references: [id])
   draft HelpdeskDraft @relation(fields: [tenantId, draftId], references: [tenantId, id])
   category HelpdeskCategory @relation(fields: [tenantId, categoryId], references: [tenantId, id])
@@ -802,6 +811,7 @@ model HelpdeskTicket {
   @@index([tenantId, createdById, createdAt])
   @@index([tenantId, requesterSectorCode, status])
   @@index([tenantId, handlingSectorCode, status])
+  @@index([tenantId, hubPending])
   @@map("helpdesk_tickets")
 }
 
@@ -2121,6 +2131,7 @@ model User {
   activities                  Activity[]
   handoffs                    Handoff[]                  @relation("HandoffRequester")
   handoffSectorAssignees      HandoffSectorAssignee[]
+  handoffSectorTasksDone      HandoffSectorTask[]        @relation("HandoffSectorTaskDoneBy")
   handoffViews                HandoffView[]
   handoffEvents               HandoffEvent[]
   notifications               Notification[]
@@ -7441,6 +7452,10 @@ model Handoff {
   /// (10/11/2026, pedido do Kauan): ordena os mais usados na nova
   /// transferência. Nulo no "Outro assunto" e nas transferências de antes.
   templateKey String?         @db.VarChar(60)
+  /// As respostas ao "O que este modelo precisa saber" (17/11/2026, melhoria-705):
+  /// [{ rotulo, valor }], na ordem do modelo. Era o que ficava entre colchetes
+  /// no texto do modelo. Nulo no "Outro assunto" e nas transferências de antes.
+  details     Json?
   priority    HandoffPriority @default(MEDIUM)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -7474,6 +7489,7 @@ model HandoffSector {
   tenant    Tenant                  @relation(fields: [tenantId], references: [id])
   handoff   Handoff                 @relation(fields: [handoffId], references: [id], onDelete: Cascade)
   assignees HandoffSectorAssignee[]
+  tasks     HandoffSectorTask[]
   events    HandoffEvent[]
 
   @@unique([handoffId, sectorCode])
@@ -7500,6 +7516,31 @@ model HandoffSectorAssignee {
 
   @@id([handoffSectorId, userId])
   @@map("handoff_sector_assignees")
+}
+
+// As tarefas da parte de um setor (17/11/2026, melhoria-705, escolha "A ·
+// Tarefas marcáveis e a coordenação como responsável" do Kauan): o modelo da
+// transferência traz as tarefas de cada setor, quem pede ajusta, e o setor
+// marca o que já fez. Só lista marcável dentro da parte, sem virar atividade
+// nos Quadros. As transferências de antes não têm tarefas.
+model HandoffSectorTask {
+  id              String    @id @default(uuid())
+  tenantId        String
+  handoffSectorId String
+  title           String    @db.VarChar(300)
+  position        Int
+  doneAt          DateTime?
+  /// Quem marcou. Na exclusão do usuário fica nula, e a tarefa continua feita.
+  doneById        String?
+  createdAt       DateTime  @default(now())
+
+  handoffSector HandoffSector @relation(fields: [handoffSectorId], references: [id], onDelete: Cascade)
+  doneBy        User?         @relation("HandoffSectorTaskDoneBy", fields: [doneById], references: [id], onDelete: SetNull)
+
+  @@index([handoffSectorId, position])
+  @@index([tenantId])
+  @@index([doneById])
+  @@map("handoff_sector_tasks")
 }
 
 // Registro de quem visualizou o detalhe de uma transferência — @@unique

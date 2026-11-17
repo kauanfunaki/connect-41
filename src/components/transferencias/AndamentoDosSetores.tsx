@@ -11,6 +11,8 @@ export type ColunaDoAndamento = {
   resumo: ResumoDaParte;
   /** O setor de quem olha (ou a parte em que a pessoa é responsável): fundo de selecionado. */
   doMeuSetor: boolean;
+  /** As tarefas da parte (17/11/2026, melhoria-705); null sem tarefas. */
+  tarefas?: { feitas: number; total: number } | null;
 };
 
 const COR_DO_TEXTO: Record<ResumoDaParte["tom"], string> = {
@@ -45,6 +47,11 @@ export function AndamentoDosSetores({ colunas }: { colunas: ColunaDoAndamento[] 
               {c.resumo.texto}
               {c.resumo.parada && <span className="sr-only">. Parada: sem finalizar há {HANDOFF_PARADA_DIAS} dias ou mais.</span>}
             </span>
+            {c.tarefas && (
+              <span className="text-helper tabular-nums text-fg-secondary">
+                {c.tarefas.feitas} de {c.tarefas.total} {c.tarefas.total === 1 ? "tarefa" : "tarefas"}
+              </span>
+            )}
           </li>
         ))}
       </ol>
