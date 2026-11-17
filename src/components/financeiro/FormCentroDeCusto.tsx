@@ -61,7 +61,7 @@ export function NovoCentroDeCusto({ companyId }: { companyId: string }) {
             <CampoForm label="Nome" htmlFor={`${id}-nome`} required>
               <Input id={`${id}-nome`} name="nome" maxLength={120} required placeholder="Ex.: Loja Centro, Obra 12, Projeto X" />
             </CampoForm>
-            <CampoForm label="Código" htmlFor={`${id}-codigo`} helper="Opcional.">
+            <CampoForm label="Código" htmlFor={`${id}-codigo`}>
               <Input id={`${id}-codigo`} name="codigo" maxLength={30} placeholder="LJ-01" />
             </CampoForm>
           </FieldGrid>

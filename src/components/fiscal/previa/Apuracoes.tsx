@@ -40,7 +40,7 @@ export function FormParametrosFiscal() {
   const iniciais = cenario.parametros[cenario.contexto.empresaId];
   const empresa = cenario.empresas.find((e) => e.id === cenario.contexto.empresaId)!;
   const alterados = (["icms", "ipi", "pis", "cofins"] as const).filter((campo) => parametros[campo] !== iniciais[campo]);
-  return <><BlocoFiscal titulo="Alíquotas demonstrativas" descricao="Parâmetros por empresa. Alterar sinaliza todas as competências da empresa para revisão."><form onSubmit={(e) => {
+  return <><BlocoFiscal titulo="Alíquotas demonstrativas"><form onSubmit={(e) => {
     e.preventDefault();
     const novos = { ...parametros };
     requestConfirm({ title: "Confirmar alteração dos parâmetros", description: `${empresa.nome}: ${alterados.map((campo) => `${campo.toUpperCase()} de ${iniciais[campo]}% para ${novos[campo]}%`).join("; ")}. Todas as competências desta empresa precisarão de nova apuração, e os arquivos afetados serão sinalizados para revisão.`, confirmLabel: "Confirmar alterações" }, async () => { simular({ tipo: "parametros", parametros: novos }); });
@@ -75,19 +75,19 @@ export function ApuracaoFiscal({ aba, imposto }: { aba: string; imposto: Imposto
   const estabelecimento = empresa.estabelecimentos.find((e) => e.id === cenario.contexto.estabelecimentoId);
   const ajustes = cenario.ajustes.filter((a) => mesmoEscopo(a.contexto, cenario.contexto) && a.imposto === imposto && (!estadual || a.obrigacao.includes("DIME") || a.obrigacao.includes("DCIP")));
   if (aba === "sped") return <ArquivosFiscal aba="arquivos" imposto="Contribuições" />;
-  if (aba === "ajustes" || estadual) return <div className="space-y-5"><BlocoFiscal titulo={estadual ? "DCIP e DIME · Santa Catarina" : `Ajustes · ${imposto}`} descricao={estadual ? "Lançamentos demonstrativos das obrigações estaduais e Quadro 12." : "Ajustes demonstrativos com efeito de débito ou crédito."} acao={<Button size="sm" disabled={estadual && estabelecimento?.uf !== "SC"} onClick={() => setNovoAjuste(true)}><Plus size={14} />Novo ajuste</Button>}>
+  if (aba === "ajustes" || estadual) return <div className="space-y-5"><BlocoFiscal titulo={estadual ? "DCIP e DIME · Santa Catarina" : `Ajustes · ${imposto}`} acao={<Button size="sm" disabled={estadual && estabelecimento?.uf !== "SC"} onClick={() => setNovoAjuste(true)}><Plus size={14} />Novo ajuste</Button>}>
     {estadual && estabelecimento?.uf !== "SC" && <Aviso tom="info" className="mb-5">Selecione uma filial de Santa Catarina para testar os lançamentos de DCIP e DIME.</Aviso>}
     <TabelaFiscal colunas={["Código / descrição", "Efeito", "Valor", "Registro / obrigação", "Ações"]} linhas={ajustes.map((a) => ({ id: a.id, celulas: [<span key="codigo">{a.codigo}<span className="block text-helper text-fg-secondary">{a.descricao}</span></span>, a.efeito, reais(a.valor), a.obrigacao, <IconButton key="remover" size="sm" title={`Remover ajuste ${a.codigo}`} className="text-danger! hover:text-danger! hover:bg-danger-bg!" onClick={() => requestConfirm({ title: "Remover ajuste?", description: `${a.codigo} · ${a.descricao} · ${reais(a.valor)}. O ajuste será excluído do cenário, e a apuração precisará ser atualizada.`, confirmLabel: "Remover ajuste", destructive: true }, async () => { simular({ tipo: "remover-ajuste", id: a.id }); })}><Trash2 size={15} /></IconButton>] }))} />
   </BlocoFiscal>{!estadual && <AtalhoFiscal modulo={imposto === "ICMS/IPI" ? "fiscal_icms_ipi" : "fiscal_contribuicoes"} aba={imposto === "ICMS/IPI" ? "apuracao" : "fechamento"}>Revisar apuração</AtalhoFiscal>}{dialog}
     <Modal open={novoAjuste} title="Novo ajuste de teste" onClose={() => setNovoAjuste(false)} maxWidth="max-w-2xl">{novoAjuste && <FormAjuste imposto={imposto} estadual={estadual} onFim={() => setNovoAjuste(false)} />}</Modal>
   </div>;
-  if (aba === "decisoes") return <BlocoFiscal titulo="Decisões por registro" descricao="CST, vínculo e base de crédito do cenário." acao={<AtalhoFiscal modulo="fiscal_classificacao" aba="decisoes">Revisar decisões</AtalhoFiscal>}><TabelaFiscal colunas={["Documento", "CST", "Destinação / vínculo", "Base de crédito", "Situação"]} linhas={docs.filter((d) => d.estado !== "Rejeitado").map((d) => ({ id: d.id, celulas: [`${d.tipo} ${d.numero}`, d.cst, d.destino, reais(d.credito ? d.valor : 0), <EstadoFiscal key="estado">{d.estado}</EstadoFiscal>] }))} /></BlocoFiscal>;
+  if (aba === "decisoes") return <BlocoFiscal titulo="Decisões por registro" acao={<AtalhoFiscal modulo="fiscal_classificacao" aba="decisoes">Revisar decisões</AtalhoFiscal>}><TabelaFiscal colunas={["Documento", "CST", "Destinação / vínculo", "Base de crédito", "Situação"]} linhas={docs.filter((d) => d.estado !== "Rejeitado").map((d) => ({ id: d.id, celulas: [`${d.tipo} ${d.numero}`, d.cst, d.destino, reais(d.credito ? d.valor : 0), <EstadoFiscal key="estado">{d.estado}</EstadoFiscal>] }))} /></BlocoFiscal>;
   const linhasDemonstrativo = [
     ["Receita da competência", totais.saidas], ["Entradas e documentos de apoio", totais.entradas], ["Base de crédito de teste", totais.creditavel],
     ...(imposto === "ICMS/IPI" ? [["ICMS de teste", totais.icms], ["IPI de teste", totais.ipi]] : [["PIS de teste", totais.pis], ["COFINS de teste", totais.cofins]]),
   ] as [string, number][];
   const demonstrativo = <TabelaFiscal colunas={["Composição demonstrativa", "Valor"]} linhas={linhasDemonstrativo.map(([nome, valor]) => ({ id: nome, celulas: [nome, reais(valor)] }))} />;
-  if (aba === "demonstrativo") return <BlocoFiscal titulo={`Demonstrativo · ${imposto}`} descricao="Valores ilustrativos derivados do cenário local, incluindo os ajustes." acao={<Button size="sm" variant="secondary" onClick={() => visualizar(`Prévia do demonstrativo ${imposto}`, demonstrativo)}>Prévia para imprimir / exportar</Button>}>{demonstrativo}</BlocoFiscal>;
+  if (aba === "demonstrativo") return <BlocoFiscal titulo={`Demonstrativo · ${imposto}`} acao={<Button size="sm" variant="secondary" onClick={() => visualizar(`Prévia do demonstrativo ${imposto}`, demonstrativo)}>Prévia para imprimir / exportar</Button>}>{demonstrativo}</BlocoFiscal>;
   const fechado = periodos.length > 0 && periodos.every((p) => p.fechado);
   const apurado = periodos.length > 0 && periodos.every((p) => p.apurado);
   const pendencias = totais.pendentes + totais.rejeitados;

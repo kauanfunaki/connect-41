@@ -17,7 +17,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     if (tela) {
       const aba = params.aba === "entregas" ? "entregas" : "arquivos";
       const [regerar, entregas] = await Promise.all([podeNoModulo(ctx, "fiscal_operacao", "agir"), podeNoModulo(ctx, "fiscal_entregas", "agir")]);
-      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/entregas" abas={[{ chave: "arquivos", rotulo: "SPED gerados" }, { chave: "entregas", rotulo: "Entregas" }]} aba={aba} titulo="SPED gerados" descricao="Versões geradas pelo motor, validação, entrega e decisões depois da geração.">
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/entregas" abas={[{ chave: "arquivos", rotulo: "SPED gerados" }, { chave: "entregas", rotulo: "Entregas" }]} aba={aba} titulo="SPED gerados">
         {aba === "entregas" ? <DecisoesMotor tela={tela} caminho="/sped-fiscal/motor/entregas" aba="entregas" tipos={["entrega_competencia"]} params={params} permissoes={await permissoesDeDecisao(ctx, ["entrega_competencia"])} />
           : <ArquivosMotor tela={tela} params={params} permiteRegerar={regerar && tela.motor.escrita} permiteEntregas={entregas && tela.motor.escrita} />}
       </CascoDoMotor>;

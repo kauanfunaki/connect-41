@@ -18,7 +18,8 @@ export function FormularioLocalSped({ edicao, competencia, onClose, executar, an
   const titulos = { perfil: "Perfil fiscal da empresa", parametros: "Parâmetros da competência", classificar: edicao.chaves?.length === 1 ? "Classificar produto" : `Classificar ${edicao.chaves?.length ?? 0} produtos`, apoio: "Documento sem nota", ajuste: "Ajuste da apuração", tributacao: "Tributação fiscal do item" };
   const d = edicao.dados;
   const lote = (edicao.chaves?.length ?? 0) > 1;
-  function campo(chave: string, rotulo: string, tipo = "text", obrigatorio = false) { return <label key={chave} className="block space-y-1 text-label text-fg-secondary">{rotulo}<Input name={chave} type={tipo} required={obrigatorio} defaultValue={texto(d[chave])} inputMode={/saldo|receita|valor|bruto|liquido|credito/.test(chave) ? "decimal" : undefined} /></label>; }
+  // O `placeholder` substitui a frase que ficava embaixo do campo (17/11/2026, melhoria-707).
+  function campo(chave: string, rotulo: string, tipo = "text", obrigatorio = false, placeholder?: string) { return <label key={chave} className="block space-y-1 text-label text-fg-secondary">{rotulo}<Input name={chave} type={tipo} required={obrigatorio} placeholder={placeholder} defaultValue={texto(d[chave])} inputMode={/saldo|receita|valor|bruto|liquido|credito/.test(chave) ? "decimal" : undefined} /></label>; }
   function select(chave: string, rotulo: string, opcoes: [string, string][]) { return <label key={chave} className="block space-y-1 text-label text-fg-secondary">{rotulo}<Select name={chave} defaultValue={texto(d[chave])}>{opcoes.map(([v, r]) => <option key={v} value={v}>{r}</option>)}</Select></label>; }
   async function salvar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const f = new FormData(e.currentTarget), dados: Record<string, unknown> = Object.fromEntries(f.entries());
@@ -64,11 +65,9 @@ export function FormularioLocalSped({ edicao, competencia, onClose, executar, an
         <Aviso tom="info">A destinação, o CFOP e a decisão de PIS/COFINS valem para este fornecedor e produto na raiz inteira. O crédito de ICMS é desta empresa e período.</Aviso>
         {edicao.produto && <p className="text-ui">{edicao.produto.descricao} · fornecedor {edicao.produto.fornecedor}</p>}
         {select("tipoItem", "Destinação", [...(lote ? [["__manter__", "Manter destinação atual"] as [string, string]] : []), ...Object.entries(TIPO_ITEM)])}
-        {campo("definicao", "Definição do CFOP (três últimos dígitos)")}
-        <p className="text-helper text-fg-muted">Uso e consumo: sugestão 556, sujeita à sua confirmação.</p>
+        {campo("definicao", "Definição do CFOP (três últimos dígitos)", "text", false, "Ex.: 556 (uso e consumo)")}
         {select("creditoPisCofins", "Crédito de PIS/COFINS", [...(lote ? [["__manter__", "Manter decisão atual"] as [string, string]] : []), ["", "Não decidido"], ["S", "Com direito a crédito"], ["N", "Sem direito a crédito"]])}
-        {campo("credito", `${competencia.length === 4 ? "Crédito de ICMS do ano (rateado por competência)" : "Crédito de ICMS do mês"}${lote ? " para cada produto" : ""}`)}
-        <p className="text-helper text-fg-muted">Deixe o crédito vazio para preservar a decisão anterior.</p>
+        {campo("credito", `${competencia.length === 4 ? "Crédito de ICMS do ano (rateado por competência)" : "Crédito de ICMS do mês"}${lote ? " para cada produto" : ""}`, "text", false, "Vazio: preserva a decisão anterior")}
         <Checkbox name="restaurarCredito" label="Remover a decisão de crédito de ICMS e voltar ao valor do documento original" />
         {campo("observacao", "Observação")}
       </>}

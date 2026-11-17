@@ -35,7 +35,7 @@ export default async function XmlRecusadosPage() {
       <Breadcrumb items={[{ label: "Documentos fiscais", href: "/documentos-fiscais" }, { label: "XML recusados" }]} />
       <PageHeader
         title="XML recusados"
-        subtitle={`Arquivos que o leitor não conseguiu ler nos últimos ${DIAS_DO_RESUMO} dias, pela entrada de XML ou pela importação do SPED. Ficam guardados para medir quais municípios fogem do ABRASF e do padrão nacional.`}
+        subtitle={`Últimos ${DIAS_DO_RESUMO} dias`}
         action={
           <Button href="/documentos-fiscais/entrada" variant="secondary">
             Entrada de XML
@@ -68,7 +68,7 @@ export default async function XmlRecusadosPage() {
                 <EmptyState
                   icon={<MapPin />}
                   title="Nenhuma NFS-e entre os recusados"
-                  description="Os arquivos recusados no período são de outros tipos. A lista abaixo mostra cada um."
+                  description="Os arquivos recusados no período são de outros tipos."
                 />
               ) : (
                 <RecusasPorMunicipio linhas={resumo.porMunicipio} />

@@ -87,7 +87,7 @@ export function SimuladorDeCenarios({ bases, modelo: codigoDoModelo }: { bases: 
         </CampoForm>
         <FieldGrid>
           {campos.map((c) => (
-            <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} helper={c.dica}>
+            <CampoForm key={c.chave} label={c.rotulo} htmlFor={`premissa-${c.chave}`} dica={c.dica}>
               <Input
                 id={`premissa-${c.chave}`}
                 type="number"

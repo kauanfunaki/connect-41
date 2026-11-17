@@ -125,7 +125,6 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
     <PageContainer>
       <PageHeader
         title="Autorizações de acesso"
-        subtitle="Quais clientes já autorizaram o escritório na Receita Federal (a antiga procuração do e-CAC). É o que o Serpro confere antes de cada consulta ou guia em nome do cliente."
         action={
           <div className="flex flex-wrap gap-2 justify-end">
             <PedidoAoCliente texto={recebe ? textoDoPedido(recebe) : null} quemRecebe={recebe} sugestao={sugestao} podeConfigurar={acesso.podeConfigurar} />

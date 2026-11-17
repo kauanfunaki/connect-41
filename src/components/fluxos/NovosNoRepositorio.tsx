@@ -20,7 +20,8 @@ export function NovaPastaDeFluxos({ action }: { action: (titulo: string) => Prom
         <FormDeTitulo
           id="fluxos-nova-pasta"
           rotulo="Nome da pasta"
-          helper="O processo do setor, como “Admissão” ou “Folha do mês”. Os fluxos entram depois, pelo “+ Fluxo” da pasta."
+          dica="O processo do setor. Os fluxos entram depois, pelo “+ Fluxo” da pasta."
+          placeholder="Admissão, Folha do mês"
           enviar={action}
           botao="Criar pasta"
           aoCriar={() => fechar()}
@@ -60,7 +61,7 @@ export function NovoFluxo({
   );
 }
 
-function FormDeTitulo({ id, rotulo, helper, enviar, botao, aoCriar, aoCancelar }: { id: string; rotulo: string; helper: string; enviar: (t: string) => Promise<Resultado>; botao: string; aoCriar: (id: string) => void; aoCancelar: () => void }) {
+function FormDeTitulo({ id, rotulo, dica, placeholder, enviar, botao, aoCriar, aoCancelar }: { id: string; rotulo: string; dica: string; placeholder: string; enviar: (t: string) => Promise<Resultado>; botao: string; aoCriar: (id: string) => void; aoCancelar: () => void }) {
   const [titulo, setTitulo] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
@@ -77,8 +78,8 @@ function FormDeTitulo({ id, rotulo, helper, enviar, botao, aoCriar, aoCancelar }
         });
       }}
     >
-      <CampoForm label={rotulo} htmlFor={id} required helper={helper}>
-        <Input id={id} value={titulo} maxLength={160} onChange={(e) => setTitulo(e.target.value)} required autoFocus />
+      <CampoForm label={rotulo} htmlFor={id} required dica={dica}>
+        <Input id={id} value={titulo} maxLength={160} onChange={(e) => setTitulo(e.target.value)} required autoFocus placeholder={placeholder} />
       </CampoForm>
       <FormFooter pending={pendente} pendingLabel="Criando…" submitLabel={botao} onCancel={aoCancelar} erro={erro} />
     </form>
@@ -103,8 +104,8 @@ function FormDoFluxo({ pastas, pastaInicial, action, aoCriar, aoCancelar }: { pa
         });
       }}
     >
-      <CampoForm label="Nome do fluxo" htmlFor="fluxos-novo-titulo" required helper="Como o setor chama o processo: “Admissão de funcionário”.">
-        <Input id="fluxos-novo-titulo" value={titulo} maxLength={160} onChange={(e) => setTitulo(e.target.value)} required autoFocus />
+      <CampoForm label="Nome do fluxo" htmlFor="fluxos-novo-titulo" required>
+        <Input id="fluxos-novo-titulo" value={titulo} maxLength={160} onChange={(e) => setTitulo(e.target.value)} required autoFocus placeholder="Admissão de funcionário" />
       </CampoForm>
       <CampoForm label="Pasta" htmlFor="fluxos-novo-pasta" required>
         <Select id="fluxos-novo-pasta" value={pasta} onChange={(e) => setPasta(e.target.value)} required>

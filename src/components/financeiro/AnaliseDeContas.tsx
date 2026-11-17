@@ -12,7 +12,6 @@ import {
 } from "@/lib/financeiro/analise";
 import { moeda, percentual } from "@/lib/financeiro/formato";
 import { formatarNumero } from "@/lib/format";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 /** Quantos nomes o ranking mostra. */
 const NO_RANKING = 10;
@@ -124,10 +123,6 @@ export function AnaliseDeContas({ linhas, hojeKey, aPagar }: { linhas: ContaPara
           )}
         </Card>
       </div>
-      <NotaDeFonte>
-        Vence hoje conta como a vencer. Cobrança e régua de inadimplência são outra etapa; esta aba só mostra onde está o
-        dinheiro parado.
-      </NotaDeFonte>
     </>
   );
 }

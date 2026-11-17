@@ -73,7 +73,6 @@ export default async function OrcamentoPage({
     // 6A do Kauan): as quatro DREs são abas de uma tela só.
     <PageHeader
       title="DRE"
-      subtitle="Orçado por grupo da DRE, mês a mês — a versão aprovada é comparada com o realizado na aba Competência."
       action={action}
     />
   );
@@ -177,8 +176,8 @@ export default async function OrcamentoPage({
             // O vazio aponta o botão do cabeçalho, e não o repete (P19, 15/10/2026).
             description={
               podeEditar
-                ? "Use “+ Nova versão”, no alto da tela, para criar uma vazia, copiar outra versão com reajuste ou partir do realizado de um ano anterior. Aprovada, ela aparece como orçado × realizado na aba Competência."
-                : "Ninguém criou uma versão para este ano ainda. Com uma versão aprovada, a aba Competência compara o orçado com o realizado."
+                ? "Use “+ Nova versão”, no alto da tela, para criar a primeira."
+                : "Ninguém criou uma versão para este ano ainda."
             }
             icon={<Target />}
           />

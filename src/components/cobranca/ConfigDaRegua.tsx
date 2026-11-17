@@ -61,8 +61,8 @@ export function ConfigDaRegua({ ligada, passos, podeEditar }: { ligada: boolean;
           <Switch id="regua-ligada" name="ligada" value="1" valorDesligado="0" defaultChecked={ligada} disabled={!podeEditar} rotulo="Ligada" />
         </div>
       </CampoForm>
-      <CampoForm label="Passos (dias de atraso)" htmlFor="regua-passos" helper="Separados por vírgula. Padrão: 1, 7, 15, 30.">
-        <Input id="regua-passos" name="passos" defaultValue={passos} disabled={!podeEditar} />
+      <CampoForm label="Passos (dias de atraso)" htmlFor="regua-passos" dica="Separados por vírgula. Padrão: 1, 7, 15, 30.">
+        <Input id="regua-passos" name="passos" defaultValue={passos} disabled={!podeEditar} placeholder="1, 7, 15, 30" />
       </CampoForm>
       {podeEditar && (
         // Na linha dos campos, e não no `FormFooter`: o formulário é uma linha

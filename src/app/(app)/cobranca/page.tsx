@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Selo, tomDaVariante, type TomDoSelo } from "@/components/ui/Selo";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
+import { AjudaDoCampo } from "@/components/ui/CampoForm";
 import { TOM_DA_SITUACAO } from "@/components/financeiro/tomDaSituacao";
 import { Button } from "@/components/ui/Button";
 import { AbasDeLink, FaixaDeTotais } from "@/components/financeiro/FiltroDePeriodo";
@@ -99,7 +100,6 @@ export default async function CobrancaPage({ searchParams }: { searchParams: Pro
     <PageContainer>
       <PageHeader
         title="Cobrança"
-        subtitle="Contas a receber vencidas: quem cobrar hoje, o que foi combinado, acordos e a régua de lembretes por e-mail."
       />
       {aba !== "regua" && (
         <FiltroDaEmpresa foco={foco} />
@@ -323,14 +323,15 @@ function GruposDaFila({ linhas, hojeKey, podeAgir }: { linhas: LinhaDeCobranca[]
         const total = doGrupo.reduce((s, l) => s + l.valorCentavos, 0);
         return (
           <Card key={g.chave} as="section" aria-labelledby={`grupo-${g.chave}`} className="p-4">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
               <h2 id={`grupo-${g.chave}`} className="text-card-title font-semibold">
                 {g.rotulo}
               </h2>
+              {/* O que entra no grupo, no "?" — era uma linha fixa embaixo do título (17/11/2026, melhoria-707). */}
+              <AjudaDoCampo texto={g.explicacao} rotulo={g.rotulo} />
               <Selo tom={TOM_DO_GRUPO[g.chave]}>{doGrupo.length}</Selo>
               <span className="ml-auto text-fs-2 tabular-nums text-fg-muted">{moeda(total)}</span>
             </div>
-            <p className="mb-1 text-micro text-fg-muted">{g.explicacao}</p>
             <ul>
               {doGrupo.slice(0, LIMITE_DO_GRUPO).map((l) => (
                 <LinhaDaFila key={l.id} l={l} grupo={g.chave} hojeKey={hojeKey} podeAgir={podeAgir} />
@@ -731,7 +732,6 @@ async function Regua({
       <h2 id="empresas-fora" className="text-card-title font-semibold">
         Empresas fora da régua
       </h2>
-      <p className="text-helper text-fg-muted">Para o cliente que cobra os próprios sacados. A fila continua mostrando os títulos.</p>
       {d.foraDaRegua.length === 0 ? (
         <p className="text-helper text-fg-muted">Nenhuma empresa fora.</p>
       ) : (

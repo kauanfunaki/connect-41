@@ -92,11 +92,7 @@ export function DestinoControl({ documentoId, destinoAtual, motivoAtual, podeDec
             aplicar("IGNORADO", motivo);
           }}
         >
-          <CampoForm
-            label="Por que fica fora do financeiro?"
-            htmlFor="motivo"
-            helper="Sem isto, ninguém sabe o motivo três meses depois — e o documento vira lixo silencioso."
-          >
+          <CampoForm label="Por que fica fora do financeiro?" htmlFor="motivo">
             <Textarea
               id="motivo"
               rows={2}

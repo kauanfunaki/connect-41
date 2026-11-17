@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/Button";
 import { Aviso } from "@/components/ui/Aviso";
 import { Selo } from "@/components/ui/Selo";
 import { StatusDot } from "@/components/shared/StatusDot";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
@@ -58,7 +57,6 @@ export default async function RegrasDeConciliacaoPage({ searchParams }: { search
   const { escolha, empresa, foco } = await escolherEmpresaDaTela(ctx, params.empresa, empresas, { comFoco: true });
   const companyId = empresa?.id ?? null;
 
-  const subtitulo = "O que se repete no extrato — tarifa, rendimento, aluguel, folha, um fornecedor fixo — vira lançamento sem ninguém digitar.";
   const voltar = (
     <Button href={`/conciliacao${companyId ? `?empresa=${companyId}` : ""}`} variant="ghost" size="sm">
       <ArrowLeft size={14} /> Conciliação
@@ -69,7 +67,7 @@ export default async function RegrasDeConciliacaoPage({ searchParams }: { search
   if (!empresa || !companyId) {
     return (
       <PageContainer>
-        <PageHeader title="Regras de conciliação" subtitle={subtitulo} action={voltar} />
+        <PageHeader title="Regras de conciliação" action={voltar} />
         {empresas.length === 0 ? (
           <EmptyState title="Nenhuma empresa ativa" icon={<Wand2 />} />
         ) : (
@@ -143,7 +141,6 @@ export default async function RegrasDeConciliacaoPage({ searchParams }: { search
       <PageContainer>
         <PageHeader
           title="Regras de conciliação"
-          subtitle={subtitulo}
           action={
             <div className="flex flex-wrap items-center gap-2">
               {voltar}
@@ -277,12 +274,6 @@ export default async function RegrasDeConciliacaoPage({ searchParams }: { search
             </div>
           )}
         </CascoDaTabela>
-        <NotaDeFonte>
-          A regra olha a linha do extrato — entrada ou saída, o texto do histórico, o valor e a conta — e cria o lançamento pago no
-          dia dela, já conciliado. Em “sugerir”, a regra aparece na linha e a pessoa confirma; em “lançar sozinha”, ela lança ao
-          importar o extrato, menos quando há dúvida: outra regra pega a mesma linha, há lançamento em aberto de mesmo valor, ou
-          alguém já desfez o que ela lançou ali. Desfazer cancela o lançamento e devolve a linha às pendentes.
-        </NotaDeFonte>
       </PageContainer>
     </EmpresaDaTela>
   );

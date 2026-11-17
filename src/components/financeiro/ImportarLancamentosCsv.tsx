@@ -69,13 +69,6 @@ export function ImportarLancamentosCsv({ companyId }: { companyId: string }) {
         <Upload size={16} className="text-brand" />
         <h2 className="text-card-title font-semibold text-fg">Importar lançamentos por CSV</h2>
       </div>
-      <p className="text-helper text-fg-secondary max-w-[70ch]">
-        Uma linha por conta. Vírgula ou ponto e vírgula, datas em <code>dd/mm/aaaa</code> ou <code>aaaa-mm-dd</code>.
-        Competência em branco herda o mês do vencimento. A categoria precisa existir no plano de contas com o mesmo
-        tipo. Centro de custo é opcional e casa pelo nome ou pelo código de um centro ativo; em branco, vale o centro
-        padrão da contraparte. Nada é gravado antes de você confirmar, e linha igual a um lançamento que já existe é
-        ignorada.
-      </p>
       <pre className="text-micro bg-surface-hover border border-border rounded-md px-3 py-2 overflow-x-auto">{MODELO}</pre>
 
       {/* A mesma faixa do extrato OFX na conciliação — era o botão nativo do

@@ -16,7 +16,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     if (tela) {
       const atual = aba === "historico" ? "historico" : "executar";
       const [agir, gerir] = await Promise.all([podeNoModulo(ctx, "fiscal_operacao", "agir"), podeNoModulo(ctx, "fiscal_operacao", "gerir")]);
-      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/operacao" abas={[{ chave: "executar", rotulo: "Executar" }, { chave: "historico", rotulo: "Histórico" }]} aba={atual} titulo={atual === "historico" ? "Histórico de execuções" : "Executar"} descricao="Pedidos para a fila do motor SPED. Os agentes do motor executam; aqui se acompanha o log.">
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/operacao" abas={[{ chave: "executar", rotulo: "Executar" }, { chave: "historico", rotulo: "Histórico" }]} aba={atual} titulo={atual === "historico" ? "Histórico de execuções" : "Executar"}>
         <OperacaoMotor tela={tela} aba={atual} params={params} permiteAgir={agir} permiteGerir={gerir} />
       </CascoDoMotor>;
     }

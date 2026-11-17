@@ -223,7 +223,7 @@ export function EditarCategoriaDaEmpresa({
               <Input id={`${id}-grupo`} name="grupoDoPlano" defaultValue={categoria.grupo ?? ""} maxLength={120} />
             </CampoForm>
             {/* Interruptor (15/10/2026), e não lista Ativa/Inativa; envia "sim" ou "nao". */}
-            <CampoForm label="Situação" htmlFor={`${id}-ativa`} helper="Inativa some dos seletores e continua nos relatórios.">
+            <CampoForm label="Situação" htmlFor={`${id}-ativa`} dica="Inativa some dos seletores e continua nos relatórios.">
               <div className="flex min-h-9 items-center">
                 <Switch id={`${id}-ativa`} name="ativa" value="sim" valorDesligado="nao" defaultChecked={categoria.ativa} rotulo="Ativa" />
               </div>

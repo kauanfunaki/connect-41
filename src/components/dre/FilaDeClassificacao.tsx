@@ -109,13 +109,9 @@ export function FilaDeClassificacao({ companyId, modelo: codigoDoModelo, itens, 
             </>
           )}
         </p>
-        {/* O ponto da tela inteira: na planilha esse dinheiro não aparece em
-            linha nenhuma, porque o SUMIF não encontra o que não está na lista. */}
-        {itens.length > 0 && (
-          <p className="text-fs-2 text-fg-muted">
-            Esse valor fica fora do relatório até ter grupo. Escolher o grupo já grava, e o relatório atrás acompanha.
-          </p>
-        )}
+        {/* "Esse valor fica fora do relatório até ter grupo. Escolher o grupo
+            já grava" foi para a ajuda da DRE; a soma acima já diz quanto ficou
+            fora (17/11/2026, melhoria-707). */}
       </div>
 
       {linhas.length > 0 && (

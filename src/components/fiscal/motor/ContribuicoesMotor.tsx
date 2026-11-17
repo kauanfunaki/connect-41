@@ -63,12 +63,12 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
           { rotulo: "Apoio · bruto", valor: reaisDoMotor(b.totais.apoio_bruto), icone: <Receipt />, detalhe: `${contagemDoMotor(b.totais.apoio_documentos)} documento(s)` },
           { rotulo: "Apoio · líquido", valor: reaisDoMotor(b.totais.apoio_liquido), icone: <Wallet />, detalhe: b.totais.fora ? `${contagemDoMotor(b.totais.fora)} fora do fechamento` : undefined },
         ]} />
-        <BlocoFiscal titulo="Documentos fiscais" descricao="Do índice de documentos e, no CT-e de saída, da contagem do último SPED gerado.">
+        <BlocoFiscal titulo="Documentos fiscais">
           <Tabela vazio="Nenhum documento fiscal no período." descricaoVazio="" colunas={["Documento", "Sentido", "Documentos", "Valor", "Sem valor", "Origem"]} linhas={b.fiscais.map((f, i) => ({ id: `${f.tipo}-${f.sentido}-${i}`, celulas: [
             f.rotulo, f.sentido === "entrada" ? "Entrada" : f.sentido === "saida" ? "Saída" : f.sentido || "—", contagemDoMotor(f.documentos), din(f.valor), contagemDoMotor(f.sem_valor), <span key="o" className="block max-w-64 break-words text-helper">{f.origem || "—"}</span>,
           ] }))} />
         </BlocoFiscal>
-        <BlocoFiscal titulo="Documentos de apoio" descricao={`Contratos, recibos e RPA do período.${escrita.visivel ? " Os PDF e a planilha de faturas do BPO importados aqui entram na conferência dos pagamentos abaixo." : ""}`}>
+        <BlocoFiscal titulo="Documentos de apoio" descricao="Contratos, recibos e RPA do período.">
           {escrita.visivel && <div className="mb-4 space-y-2">
             <BlocoRecolhivel titulo="Importar pagamentos de apoio (PDF, até 25 MB por envio)" abertoInicial={false}><div><ImportarPagamentosApoio raiz={contexto.raiz} permissao={escrita} /></div></BlocoRecolhivel>
             <BlocoRecolhivel titulo="Importar a planilha de faturas do BPO (.xlsx e comprovantes, até 25 MB)" abertoInicial={false}><div><ImportarFaturasBpo raiz={contexto.raiz} permissao={escrita} /></div></BlocoRecolhivel>
@@ -81,7 +81,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
       </>;
     })()}
 
-    <BlocoFiscal titulo="Faturamento" descricao="Saídas contra entradas. O CT-e entra só com o valor já apurado no motor.">
+    <BlocoFiscal titulo="Faturamento" descricao="Saídas contra entradas.">
       {d.faturamento.erro !== null ? <ErroDaLeitura falha={d.faturamento} hrefDeNovo={aqui()} /> : (() => {
         const f = d.faturamento.dados;
         const aApurar = f.linhas.filter((l) => l.apurar);
@@ -97,7 +97,7 @@ export async function FechamentoMotor({ tela, params }: { tela: TelaDoMotor; par
       })()}
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Conferência dos pagamentos" descricao={`${d.filaInteira ? "A fila inteira, de todas as competências" : `Período ${d.periodo}`}.${escrita.visivel ? " Aceitar pede o que a coluna “Falta para aceitar” indica; aceitar deixa o SPED de Contribuições do período defasado." : ""}`} acao={<span className="flex flex-wrap gap-2">
+    <BlocoFiscal titulo="Conferência dos pagamentos" descricao={d.filaInteira ? "A fila inteira, de todas as competências." : `Período ${d.periodo}.`} acao={<span className="flex flex-wrap gap-2">
       <Button size="sm" variant="secondary" href={aqui({ fila: d.filaInteira ? null : "toda" })} scroll={false}>{d.filaInteira ? "Só do período" : "Ver a fila inteira"}</Button>
       <Button size="sm" variant="ghost" href={aqui({ sem_credito: d.semCredito ? null : "1" })} scroll={false}>{d.semCredito ? "Esconder os sem crédito" : "Incluir os sem crédito"}</Button>
     </span>}>
@@ -163,7 +163,7 @@ async function DemonstrativoPesado({ tela, filtro, params }: { tela: TelaDoMotor
     <BlocoFiscal titulo="Meses" descricao={`Alíquotas: PIS ${percentualDoMotor(x.aliq_pis)} · COFINS ${percentualDoMotor(x.aliq_cofins)}`}>
       <Tabela vazio="Sem meses." descricaoVazio="" colunas={["Competência", "Arquivo", "Linhas"]} linhas={x.meses.map((m) => ({ id: m.competencia, celulas: [m.competencia, m.arquivo ? `#${m.arquivo.arquivo_id}` : <Selo key="s" tom="atencao">Sem arquivo</Selo>, contagemDoMotor(m.arquivo?.qtd_linhas ?? null)] }))} />
     </BlocoFiscal>
-    <BlocoFiscal titulo="Conferência da cadeia" descricao={divergentes.length ? `${divergentes.length} elo(s) não batem com a competência anterior.` : "Cada competência parte do que a anterior deixou."}>
+    <BlocoFiscal titulo="Conferência da cadeia" descricao={divergentes.length ? `${divergentes.length} elo(s) não batem com a competência anterior.` : undefined}>
       <Tabela vazio="Sem cadeia." descricaoVazio="" colunas={["Competência", "Imposto", "Entrou", "Apurado", "Descontado", "Saiu", "Esperado da anterior", "Situação"]} linhas={x.cadeia.map((c, i) => ({ id: `${c.competencia}-${c.imposto}-${i}`, celulas: [
         c.competencia, c.imposto.toUpperCase() || "—", din(c.entrou), din(c.apurado), din(c.descontado), din(c.saiu), din(c.esperado_da_anterior), <Selo key="b" tom={c.bate ? "sucesso" : "perigo"}>{c.bate ? "Bate" : "Não bate"}</Selo>,
       ] }))} />

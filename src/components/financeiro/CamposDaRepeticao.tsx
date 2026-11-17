@@ -79,7 +79,7 @@ export function CamposDaRepeticao({ className = "", abertoInicial = false }: { c
             </Select>
           </CampoForm>
           {fim === "VEZES" ? (
-            <CampoForm label="Quantas vezes" htmlFor="lancamento-repetir-vezes" helper="Contando esta.">
+            <CampoForm label="Quantas vezes" htmlFor="lancamento-repetir-vezes" dica="Contando esta.">
               <CampoNumero
                 id="lancamento-repetir-vezes"
                 name="repetirVezes"
@@ -91,7 +91,7 @@ export function CamposDaRepeticao({ className = "", abertoInicial = false }: { c
               />
             </CampoForm>
           ) : fim === "ATE" ? (
-            <CampoForm label="Até" htmlFor="lancamento-repetir-ate" helper="O último vencimento da série.">
+            <CampoForm label="Até" htmlFor="lancamento-repetir-ate" dica="O último vencimento da série.">
               <CampoData id="lancamento-repetir-ate" name="repetirAte" value={ate} onChange={setAte} disabled={!repete} required={repete} />
             </CampoForm>
           ) : (
@@ -113,13 +113,6 @@ export function CamposDaRepeticao({ className = "", abertoInicial = false }: { c
             </Select>
           </CampoForm>
         </FieldGrid>
-        <p className="text-helper text-fg-muted">
-          {repete && fim !== "VEZES"
-            ? "As contas do próximo ano nascem agora (dois meses no todo dia útil); as seguintes nascem sozinhas conforme o tempo anda, copiando a última conta da série — o que você mudar numa conta vale para as que vierem depois. Cada uma se edita, paga e cancela sozinha, e \"Cancelar › Esta e as próximas\" encerra a série."
-            : repete
-            ? "As próximas nascem agora, em aberto, com o mesmo valor, contraparte e categoria. Cada uma se edita, paga e cancela sozinha; a competência anda com o mês do vencimento, e os feriados são os de Configurações › Feriados."
-            : "Para aluguel, folha, pró-labore e mensalidades: escolha a frequência, e as próximas contas nascem junto com esta."}
-        </p>
       </div>
     </BlocoRecolhivel>
   );

@@ -36,7 +36,7 @@ export function FiscalPagina({ pagina }: { pagina: PaginaFiscal }) {
   return <>
     {menuPrincipal && acessos.length > 0 && <AbasDeLink className="mb-5" aria-label="Telas do SPED" ativa={acessoAtivo ?? ""} abas={acessos.map((t) => ({ chave: t.label, rotulo: t.label, href: t.href, icone: iconeDaAbaFiscal(t.label) }))} />}
     {abasInternas && <AbasDeLink className="mb-5" aria-label={`Seções de ${definicao.titulo}`} ativa={aba} abas={abas.map(([chave, rotulo]) => ({ chave, rotulo, href: `${pathname}?aba=${chave}`, icone: iconeDaAbaFiscal(chave, rotulo) }))} />}
-    <PageHeader title={titulo} subtitle={definicao.descricao} action={<MenuDoCenarioFiscal />} />
+    <PageHeader title={titulo} action={<MenuDoCenarioFiscal />} />
     <FiltroDoContextoFiscal />
     <AvisosFiscais />
     <fieldset disabled={!pronto} aria-busy={!pronto} className="min-w-0" id="painel-fiscal" aria-label={titulo} key={key}>
