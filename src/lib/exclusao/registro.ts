@@ -157,6 +157,10 @@ const EMPRESA: Ligacao[] = [
   { modelo: "ContabilContaPagamento", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta dos pagamentos sem nota", "contas dos pagamentos sem nota"] },
   { modelo: "ContabilContaSaida", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["conta das saídas", "contas das saídas"] },
   { modelo: "Guia", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["guia emitida", "guias emitidas"] },
+  // A DCTFWeb do mês pelo Serpro (17/11/2026): a marca de quem entra e o
+  // resultado por competência. Os PDFs moram nos Arquivos, que vão junto.
+  { modelo: "SerproDctfwebEmpresa", campo: "company", fk: "companyId", tratamento: "cascata" },
+  { modelo: "SerproDctfweb", campo: "company", fk: "companyId", tratamento: "cascata" },
   { modelo: "Certidao", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["certidão consultada", "certidões consultadas"] },
   { modelo: "BankReconciliationRule", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["regra de conciliação", "regras de conciliação"] },
   { modelo: "FinanceRecurrence", campo: "company", fk: "companyId", tratamento: "cascata", rotulo: ["série de repetição", "séries de repetição"] },

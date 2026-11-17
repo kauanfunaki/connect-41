@@ -1758,6 +1758,9 @@ model Tenant {
   serproPedidos             SerproPedido[]
   serproMensagens           SerproMensagem[]
   serproTermo               SerproTermo?
+  serproDctfwebRotina       SerproDctfwebRotina?
+  serproDctfwebEmpresas     SerproDctfwebEmpresa[]
+  serproDctfweb             SerproDctfweb[]
   omieEmissoes              OmieEmissao[]
   @@map("tenants")
 }
@@ -2591,6 +2594,8 @@ model Company {
   contabilPagamentoNomes   ContabilPagamentoNome[]
   contabilContasPagamento  ContabilContaPagamento[]
   guias                    Guia[]
+  serproDctfwebEmpresa     SerproDctfwebEmpresa?
+  serproDctfweb            SerproDctfweb[]
   certidoes                Certidao[]
   bankReconciliationRules  BankReconciliationRule[]
   financeRecurrences       FinanceRecurrence[]
@@ -10514,6 +10519,76 @@ model SerproTermo {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@map("serpro_termos")
+}
+
+/// A DCTFWeb do mês pelo Serpro (17/11/2026, funcionalidade-734): o ajuste da
+/// rotina que baixa sozinha o recibo e o DARF da DCTFWeb das empresas marcadas.
+model SerproDctfwebRotina {
+  id           String   @id @default(uuid())
+  tenantId     String   @unique
+  /// Desligada, a rotina não chama o Serpro; a tela ainda deixa rodar por clique.
+  ligada       Boolean  @default(false)
+  /// Do mês seguinte à competência: a partir deste dia a rotina tenta uma vez
+  /// mesmo sem o evento da DCTFWeb (o prazo da declaração é o dia 15).
+  diaSemEvento Int      @default(16)
+  /// O quanto a rotina pode gastar no mês, em centavos, além do teto da
+  /// conexão. Nulo = vale só o teto da conexão.
+  tetoCentavos Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("serpro_dctfweb_rotina")
+}
+
+/// As empresas que entram na DCTFWeb do mês (o CNPJ vem do cadastro).
+model SerproDctfwebEmpresa {
+  id        String   @id @default(uuid())
+  tenantId  String
+  companyId String   @unique
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("serpro_dctfweb_empresas")
+}
+
+/// O resultado de cada empresa numa competência: o que já foi baixado não é
+/// pedido de novo, porque cada chamada é cobrada.
+model SerproDctfweb {
+  id                String    @id @default(uuid())
+  tenantId          String
+  companyId         String
+  /// AAAA-MM.
+  competencia       String    @db.VarChar(7)
+  /// PENDENTE, BAIXADO, SEM_DECLARACAO, SEM_DEBITO, SEM_PROCURACAO ou ERRO.
+  situacao          String    @db.VarChar(16)
+  /// Os PDFs nos Arquivos da empresa (pasta Guias).
+  reciboArquivoId   String?
+  darfArquivoId     String?
+  /// Chamadas cobradas desta linha: a consulta do recibo e a emissão do DARF.
+  consultasCobradas Int       @default(0)
+  emissoesCobradas  Int       @default(0)
+  tentativas        Int       @default(0)
+  ultimaTentativa   DateTime?
+  /// Quando a rotina volta a tentar sozinha; nulo = não volta (resolvido, ou
+  /// só com evento novo da DCTFWeb, ou por clique).
+  proximaTentativa  DateTime?
+  /// A trava enquanto um ciclo trabalha na linha.
+  travadaAte        DateTime?
+  erro              String?   @db.VarChar(500)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, companyId, competencia])
+  @@index([tenantId, competencia])
+  @@map("serpro_dctfweb")
 }
 
 // ── Triagem de currículos (R1) ─────────────────────────────────────────────
