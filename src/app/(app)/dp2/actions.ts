@@ -5,6 +5,7 @@
 // nível no setor, o escritório e, nas telas de empresa, a faixa "Trabalhando
 // em" (`recusaDoFoco`).
 
+import { SALARIO_OBRIGATORIO, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
@@ -347,7 +348,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   if (recusa) return erro(recusa);
 
   const salarioBase = lerNumero(texto(fd, "salarioBase"));
-  if (salarioBase === null || salarioBase <= 0) return erro("Informe o salário.");
+  if (!salarioValido(salarioBase, texto(fd, "categoria"))) return erro(SALARIO_OBRIGATORIO);
   const tipoSalario = texto(fd, "tipoSalario") === "HORISTA" ? "HORISTA" : "MENSAL";
   const horasMensais = lerInteiro(texto(fd, "horasMensais")) ?? 220;
   if (horasMensais < 1 || horasMensais > 300) return erro("Horas por mês entre 1 e 300.");
@@ -1367,7 +1368,7 @@ export async function criarColaboradorDp2Action(_: EstadoDoDp2, fd: FormData): P
   if (!cpfValido(cpf)) return erro("CPF inválido.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(admissao)) return erro("Informe a data de admissão.");
   const salarioBase = lerNumero(texto(fd, "salarioBase"));
-  if (salarioBase === null || salarioBase <= 0) return erro("Informe o salário.");
+  if (!salarioValido(salarioBase, texto(fd, "categoria"))) return erro(SALARIO_OBRIGATORIO);
   const banco = texto(fd, "bancoCodigo").replace(/\D/g, "");
   if (banco && banco.length !== 3) return erro("O banco é o código de 3 dígitos (ex.: 341).");
 

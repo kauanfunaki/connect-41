@@ -34,5 +34,17 @@ export function regimeDaCategoria(categoria: string | null | undefined): RegimeD
 /** Sem vínculo de emprego: não entra em 13º, férias, rescisão, S-2200 e S-2299. */
 export const semVinculo = (categoria: string | null | undefined) => regimeDaCategoria(categoria) !== "CLT";
 
+/**
+ * O salário do contrato é obrigatório, exceto no autônomo por RPA (701): ele
+ * pode ficar com 0 e ter o serviço de cada mês lançado na rubrica 082 (o
+ * S-2300 sai como salário variável). Bug-740, 17/11/2026.
+ */
+export function salarioValido(salario: number | null, categoria: string | null | undefined): salario is number {
+  if (salario === null || salario < 0) return false;
+  return salario > 0 || categoria === "701";
+}
+
+export const SALARIO_OBRIGATORIO = "Informe o salário (só o autônomo por RPA pode ficar com 0 e lançar o serviço no mês).";
+
 /** A alíquota do INSS retido do contribuinte individual pela empresa (Lei 10.666/2003, art. 4º). */
 export const INSS_CONTRIBUINTE_INDIVIDUAL = 11;
