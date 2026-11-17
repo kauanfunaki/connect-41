@@ -147,7 +147,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como consultar a ficha de uma empresa",
         passos: [
           "Clique no nome da empresa na lista.",
-          "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para um resumo dos últimos 90 dias.",
+          "Em “Visão geral”, veja os dados cadastrais e os “Serviços contratados”. Clique em “Gerar resumo” para ver, dos últimos 90 dias, “O que aconteceu” e o que pede “Atenção”; “Abrir” leva ao registro.",
           "Use as abas “Filiais”, “Pessoas”, “Documentos”, “Conversas” e “Histórico” para o restante das informações.",
           "Administradores veem também a aba “Acesso ao portal”: quem entra no portal do cliente e vê esta empresa.",
           "Na aba “RH & operação”, entre em “Sócios”, “Cargos”, “Departamentos”, “Benefícios”, “Turnos” e “Folha de pagamento”. “Envios ao cliente” abre a aba “Envios” de Solicitações, já filtrada nesta empresa.",

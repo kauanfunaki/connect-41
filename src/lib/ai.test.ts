@@ -9,7 +9,7 @@ const decryptSecret = vi.fn();
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => ({ tenantAiConfig: { findUnique } }) }));
 vi.mock("@/lib/crypto", () => ({ decryptSecret: (...a: unknown[]) => decryptSecret(...a) }));
 
-const { isAiConfigured, summarizeCompanyHistory, CHAVE_DE_IA_ILEGIVEL } = await import("./ai");
+const { isAiConfigured, gerarEstruturado, CHAVE_DE_IA_ILEGIVEL } = await import("./ai");
 const { ehBloqueioDoAgente } = await import("@/lib/recrutamento/triagem");
 
 beforeEach(() => {
@@ -35,7 +35,10 @@ describe("IA do escritório com a chave ilegível", () => {
   it("a chamada de verdade falha com a mensagem, e não com o erro do crypto", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     findUnique.mockResolvedValue({ provider: "ANTHROPIC", apiKeyEnc: "a:b:c", model: null });
-    await expect(summarizeCompanyHistory("t1", { companyName: "Acme", digest: "…" })).rejects.toThrow(CHAVE_DE_IA_ILEGIVEL);
+    // O resumo da empresa, que desde 17/11/2026 (melhoria-723) sai por `gerarEstruturado`.
+    await expect(
+      gerarEstruturado({ tenantId: "t1", agentCode: "resumo_empresa", sistema: "…", texto: "…", nome: "resumo_da_empresa", schema: {}, maxTokens: 100 }),
+    ).rejects.toThrow(CHAVE_DE_IA_ILEGIVEL);
   });
 
   it("a triagem lê a mensagem como problema do escritório, não do currículo", () => {
