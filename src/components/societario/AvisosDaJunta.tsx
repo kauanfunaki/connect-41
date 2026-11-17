@@ -158,7 +158,7 @@ function CartaoDoAviso({
                   placeholder="O que o órgão pediu para corrigir"
                 />
               </CampoForm>
-              <CampoForm label="Prazo do órgão" htmlFor={`prazo-${aviso.id}`} helper="Opcional.">
+              <CampoForm label="Prazo do órgão" htmlFor={`prazo-${aviso.id}`}>
                 <CampoData
                   id={`prazo-${aviso.id}`}
                  

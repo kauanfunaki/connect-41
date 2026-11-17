@@ -190,10 +190,8 @@ export function ConversasLista() {
                 Encerrar
               </Button>
             </div>
-            <p className="text-micro text-fg-muted">
-              Nada é enviado aos candidatos. Cada conversa passa pela mesma regra de quando é feita uma por vez — a que não puder, fica de
-              fora com o motivo.
-            </p>
+            {/* O "nada é enviado aos candidatos" e a regra de uma por vez estão no
+                artigo de ajuda da tela (17/11/2026, melhoria-707). */}
           </>
         )}
       </div>

@@ -143,7 +143,6 @@ export default async function ProcessosPage({
       {/* Sem "Voltar": é a página principal do setor, e o menu é o caminho de volta. */}
       <PageHeader
         title="Processos"
-        subtitle="Constituição, alteração contratual, baixa e alvarás — com protocolo, exigência e prazo."
         action={
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {/* Eram três links de texto (30/09): botão não é link. O aviso da Junta

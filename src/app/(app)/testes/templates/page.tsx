@@ -51,7 +51,7 @@ export default async function TemplatesPage() {
 
       <PageHeader
         title="Modelos de teste"
-        subtitle={<>{templates.length} modelo{templates.length !== 1 ? "s" : ""} — testes de múltipla escolha reutilizáveis (Português, Matemática...)</>}
+        subtitle={<>{templates.length} modelo{templates.length !== 1 ? "s" : ""}</>}
         action={
           // Ícone no lugar do "+" escrito (DRG-17, 07/10/2026).
           <Button href="/testes/templates/novo" variant="primary">
@@ -66,7 +66,7 @@ export default async function TemplatesPage() {
             icon={<FileQuestion />}
             title="Nenhum modelo cadastrado"
             // Sem repetir o botão de criar: ele mora no cabeçalho (5A, 08/10/2026).
-            description="Crie um modelo de teste (ex.: Português básico) para reaproveitar em vários candidatos, em “Novo modelo”."
+            description="Os modelos de múltipla escolha, para reaproveitar em vários candidatos, aparecem aqui."
           />
         </Card>
       ) : (

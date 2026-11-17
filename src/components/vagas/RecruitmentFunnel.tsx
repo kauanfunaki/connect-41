@@ -447,7 +447,7 @@ export function RecruitmentFunnel({ vagaId, cards: initialCards, encerradas, qua
           setDialogError(null);
         }}
       >
-        <CampoForm label="Motivo" htmlFor="encerrar-motivo" helper="Opcional.">
+        <CampoForm label="Motivo" htmlFor="encerrar-motivo">
           <Textarea
             id="encerrar-motivo"
             rows={3}

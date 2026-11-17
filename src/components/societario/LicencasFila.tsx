@@ -66,7 +66,7 @@ export function LicencasFila({ linhas, hoje, filtrado, orgaos, roboLigado }: Pro
     ) : (
       <EmptyState
         title="Nenhuma licença cadastrada"
-        description="Alvará, licença sanitária, ambiental, bombeiros — o que fica valendo depois que o processo fecha, e cuja validade gera a próxima renovação. Cadastre em “Nova licença”."
+        description="Cadastre em “Nova licença”."
         icon={<ShieldCheck />}
       />
     );

@@ -311,10 +311,7 @@ export default async function VagaPage({
         </div>
 
         {vaga.candidaturas.length === 0 ? (
-          <p className="mt-2 text-fs-3 text-fg-muted">
-            Nenhum candidato vinculado ainda.
-            {canAct && " Em “Adicionar candidato”, busque no banco de talentos ou cadastre quem é novo."}
-          </p>
+          <p className="mt-2 text-fs-3 text-fg-muted">Nenhum candidato vinculado ainda.</p>
         ) : (
           <>
             {/* Board arrastável */}
@@ -329,11 +326,8 @@ export default async function VagaPage({
               encerrarAction={encerrarCandidaturaAction}
               desfazerAction={desfazerContratacaoAction}
             />
-            {canManage && (
-              <p className="text-fs-1 text-fg-muted mt-2">
-                Arraste os candidatos entre as etapas. Soltar em “Contratado” inicia a admissão.
-              </p>
-            )}
+            {/* O "arraste entre as etapas" está no artigo de ajuda da tela
+                (17/11/2026, melhoria-707). */}
 
             {/* Encerrados */}
             {encerrados.length > 0 && (

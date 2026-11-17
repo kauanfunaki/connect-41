@@ -38,7 +38,8 @@ export default async function PainelDoSocietarioPage() {
     <PageContainer>
       <PageHeader
         title="Painel do Societário"
-        subtitle={`O dia do setor numa tela: o que está parado, o que vence e o que pede alguém. ${formatInstantDate(agora, { weekday: "long", day: "2-digit", month: "2-digit" })}.`}
+        // Fica só a data; a frase da tela foi para o artigo de ajuda (17/11/2026, melhoria-707).
+        subtitle={formatInstantDate(agora, { weekday: "long", day: "2-digit", month: "2-digit" })}
       />
 
       <FaixaDeTotais
@@ -101,10 +102,6 @@ export default async function PainelDoSocietarioPage() {
             ))}
           </ul>
         )}
-        <p className="text-micro text-fg-muted">
-          A ordem: protocolo parado e exigência vencendo primeiro; depois processo estourado, exigência da semana, licença vencida, certidão positiva e licença a
-          renovar. A fila mostra até 40 itens; os números do alto contam todos.
-        </p>
       </Card>
     </PageContainer>
   );

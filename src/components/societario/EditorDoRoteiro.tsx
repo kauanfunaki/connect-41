@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, Bot, Plug, Plus, Trash2, User } from "lucide-react"
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AjudaDoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
@@ -277,7 +277,7 @@ export function EditorDoRoteiro({ tipoId, versaoBase, vigente, inicial, orgaos, 
             Etapas
           </h2>
           <p className="text-fs-2 text-fg-muted tabular-nums">
-            {plural(etapas.length, "etapa", "etapas")} em {plural(blocos.length, "posição", "posições")}, na ordem em que o processo anda. Etapas na mesma posição correm ao mesmo tempo.
+            {plural(etapas.length, "etapa", "etapas")} em {plural(blocos.length, "posição", "posições")}
           </p>
         </div>
         <Button
@@ -531,7 +531,7 @@ function EtapaEditavel({
         <CampoForm
           label="Descrição"
           htmlFor={`descricao-${c}`}
-          helper="Orientação para quem toca a etapa. Aparece no processo."
+          dica="Orientação para quem toca a etapa. Aparece no processo."
           error={erroNo("descricao")}
           acao={
             <span className="tabular-nums text-fg-muted">
@@ -559,7 +559,7 @@ function EtapaEditavel({
               ))}
             </Select>
           </CampoForm>
-          <CampoForm label="Órgão" htmlFor={`orgao-${c}`} helper="Com órgão, concluir a etapa abre um protocolo nele." error={erroNo("orgao")}>
+          <CampoForm label="Órgão" htmlFor={`orgao-${c}`} dica="Com órgão, concluir a etapa abre um protocolo nele." error={erroNo("orgao")}>
             <Select id={`orgao-${c}`} value={etapa.orgaoId} error={Boolean(erroNo("orgao"))} onChange={(e) => aoMudar({ orgaoId: e.target.value })}>
               <option value="">Nenhum</option>
               {orgaosDaEtapa.map((o) => (
@@ -573,22 +573,28 @@ function EtapaEditavel({
           </CampoForm>
         </div>
 
+        {/* A explicação de cada caixa no "?" ao lado, como a dica do CampoForm,
+            e não embaixo dela (17/11/2026, melhoria-707). */}
         <div className="flex flex-col gap-3">
-          <Checkbox
-            id={`opcional-${c}`}
-            checked={etapa.opcional}
-            onChange={(e) => aoMudar({ opcional: e.target.checked })}
-            label="Opcional"
-            helper="O processo ganha o botão “Não se aplica” nesta etapa."
-          />
-          {!primeira && (
+          <div className="flex items-center gap-1.5">
             <Checkbox
-              id={`paralela-${c}`}
-              checked={etapa.paralelaAAnterior}
-              onChange={(e) => aoMarcarParalela(e.target.checked)}
-              label="Corre junto com a etapa de cima"
-              helper="As duas ficam na mesma posição e são liberadas ao mesmo tempo."
+              id={`opcional-${c}`}
+              checked={etapa.opcional}
+              onChange={(e) => aoMudar({ opcional: e.target.checked })}
+              label="Opcional"
             />
+            <AjudaDoCampo texto="O processo ganha o botão “Não se aplica” nesta etapa." rotulo="Opcional" />
+          </div>
+          {!primeira && (
+            <div className="flex items-center gap-1.5">
+              <Checkbox
+                id={`paralela-${c}`}
+                checked={etapa.paralelaAAnterior}
+                onChange={(e) => aoMarcarParalela(e.target.checked)}
+                label="Corre junto com a etapa de cima"
+              />
+              <AjudaDoCampo texto="As duas ficam na mesma posição e são liberadas ao mesmo tempo." rotulo="Corre junto com a etapa de cima" />
+            </div>
           )}
         </div>
 
@@ -604,7 +610,7 @@ function EtapaEditavel({
             )}
           </div>
           {etapa.itens.length === 0 ? (
-            <p className="text-fs-2 text-fg-muted">Sem itens. O checklist lista o que a etapa pede; item obrigatório trava a conclusão até ser marcado.</p>
+            <p className="text-fs-2 text-fg-muted">Sem itens.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {etapa.itens.map((item, k) => (

@@ -8,6 +8,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Switch } from "@/components/ui/Switch";
 import { Textarea } from "@/components/ui/Textarea";
 import { CampoForm } from "@/components/ui/CampoForm";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { useToast } from "@/components/ui/Toast";
 import { enviarTesteDoAvisoPorEmail, salvarAvisoPorEmail, type AvisoPorEmailState } from "@/app/(app)/licencas/actions";
 
@@ -57,28 +58,29 @@ export function AvisoPorEmail({ ligado, emails, smtp, comCertidoes }: Props) {
       </Button>
       <Modal open={aberta} onClose={() => !salvando && !testando && setAberta(false)} title="Avisos de vencimento por e-mail" maxWidth="max-w-xl">
         <form action={salvar} className="flex flex-col gap-4">
-          <p className="text-helper text-fg-secondary">
-            Um e-mail por dia, a partir das 7h, com uma tabela do que pede atenção. Cada documento entra uma vez por marco — o que já foi avisado não
-            se repete no dia seguinte.
-          </p>
-          <ul className="flex flex-col gap-1 rounded-md border border-border-soft px-3 py-2 text-fs-2 text-fg">
-            <li>
-              <strong>Licenças:</strong> a 90, 60 e 30 dias do vencimento e quando vencem (até 30 dias depois).
-            </li>
-            <li>
-              <strong>Certidões:</strong>{" "}
-              {comCertidoes
-                ? "quando saem positivas, quando faltam 15 dias e quando vencem."
-                : "entram quando o módulo de Certidões estiver ligado."}
-            </li>
-          </ul>
+          {/* As regras do e-mail num bloco que começa fechado (17/11/2026, melhoria-707):
+              abertas, tomavam o alto da janela antes do que se preenche. */}
+          <BlocoRecolhivel titulo="Quando o e-mail sai" resumo="Um por dia, a partir das 7h">
+            <ul className="flex flex-col gap-1 text-fs-2 text-fg">
+              <li>Cada documento entra uma vez por marco: o que já foi avisado não se repete no dia seguinte.</li>
+              <li>
+                <strong>Licenças:</strong> a 90, 60 e 30 dias do vencimento e quando vencem (até 30 dias depois).
+              </li>
+              <li>
+                <strong>Certidões:</strong>{" "}
+                {comCertidoes
+                  ? "quando saem positivas, quando faltam 15 dias e quando vencem."
+                  : "entram quando o módulo de Certidões estiver ligado."}
+              </li>
+            </ul>
+          </BlocoRecolhivel>
 
           <Switch name="ligado" defaultChecked={ligado} rotulo="Enviar o e-mail diário" />
 
           <CampoForm
             label="Quem recebe"
             htmlFor="aviso-emails"
-            helper="Um e-mail por linha, ou separados por vírgula. Cada endereço recebe o seu e-mail."
+            dica="Um e-mail por linha, ou separados por vírgula. Cada endereço recebe o seu e-mail."
           >
             <Textarea id="aviso-emails" name="emails" rows={4} defaultValue={emails.join("\n")} placeholder="societario@escritorio.com.br" />
           </CampoForm>

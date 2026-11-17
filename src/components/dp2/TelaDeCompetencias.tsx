@@ -24,17 +24,9 @@ import { abrirCompetenciaAction } from "@/app/(app)/dp2/actions";
 export async function TelaDeCompetencias({ modulo, empresaPedida, soDecimo }: { modulo: string; empresaPedida?: string; soDecimo: boolean }) {
   const tela = await abrirTelaDeEmpresaDoDp2(modulo, empresaPedida);
 
-  const cabecalho = soDecimo ? (
-    <PageHeader
-      title="13º salário"
-      subtitle="As duas parcelas do 13º da empresa escolhida na faixa acima: a 1ª até 30 de novembro (metade, sem INSS e IRRF) e a 2ª até 20 de dezembro (o ano inteiro, com INSS e IRRF próprios, descontando a 1ª)."
-    />
-  ) : (
-    <PageHeader
-      title="Competência do mês"
-      subtitle="A folha da empresa escolhida na faixa acima: lance os eventos do mês, calcule, confira e feche."
-    />
-  );
+  // Os subtítulos fixos (os prazos das parcelas do 13º e os passos da folha)
+  // foram para o artigo do DP 2 (17/11/2026, melhoria-707).
+  const cabecalho = <PageHeader title={soDecimo ? "13º salário" : "Competência do mês"} />;
   if (!tela.empresa) {
     return (
       <PageContainer>
@@ -56,7 +48,7 @@ export async function TelaDeCompetencias({ modulo, empresaPedida, soDecimo }: { 
       {cabecalho}
       <FiltroDaEmpresa foco={tela.foco} />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Secao titulo={`Competências de ${tela.empresa.nome}`} apoio="A competência fechada é a que vale para as médias de férias, 13º e rescisão.">
+        <Secao titulo={`Competências de ${tela.empresa.nome}`}>
           {competencias.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">Nenhuma competência ainda. Abra a primeira ao lado.</p>
           ) : (
@@ -97,7 +89,7 @@ export async function TelaDeCompetencias({ modulo, empresaPedida, soDecimo }: { 
         </Secao>
 
         {tela.podeAgir && (
-          <Secao titulo="Abrir competência" apoio="Se ela já existe, abre a que existe.">
+          <Secao titulo="Abrir competência">
             <FormularioDoDp2 acao={abrirCompetenciaAction} rotulo="Abrir competência" rotuloEnviando="Abrindo…" icone={<Plus size={14} aria-hidden="true" />}>
               <input type="hidden" name="companyId" value={tela.empresa.id} />
               <div className="flex flex-col gap-4">

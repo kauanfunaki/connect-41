@@ -59,21 +59,23 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
   );
 
   const aviso = (
+    // Só a situação de agora; o "por partes" e os formatos do extrato estão no
+    // artigo de ajuda (17/11/2026, melhoria-707). O "só OFX" já não valia: o
+    // envio lê PDF e planilha também.
     <Aviso tom="info" className="mb-4">
-      O Contábil Core está sendo trazido para o Connect por partes. Até a virada, continue usando o Contábil Core para o trabalho do dia; aqui só
-      o extrato em OFX é lido.
+      Até a virada, continue usando o Contábil Core para o trabalho do dia.
     </Aviso>
   );
 
   if (empresas.length === 0) {
     return (
       <PageContainer>
-        <PageHeader title="Contábil Core" subtitle="Extratos, regras, classificação pelo NEO e arquivo de importação do Domínio." action={ligar || undefined} />
+        <PageHeader title="Contábil Core" action={ligar || undefined} />
         {aviso}
         <EmptyState
           icon={<BookOpen size={28} aria-hidden />}
           title="Nenhuma empresa no Contábil Core"
-          description="As empresas, os planos de contas, as regras e os lançamentos chegam com a carga dos dados no dia da virada. Para testar antes, ponha uma empresa do cadastro."
+          description="As empresas chegam com a carga dos dados no dia da virada."
         />
       </PageContainer>
     );

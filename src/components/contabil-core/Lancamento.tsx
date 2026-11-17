@@ -51,7 +51,7 @@ export function Reclassificar({ empresaId, transacaoId, contas }: { empresaId: s
           <CampoForm label="Histórico do lançamento" htmlFor={`${base}-hist`} required>
             <Input id={`${base}-hist`} name="descricao" maxLength={500} autoComplete="off" required />
           </CampoForm>
-          <CampoForm label="Motivo" htmlFor={`${base}-mot`} required helper="Fica nas partidas canceladas e na auditoria.">
+          <CampoForm label="Motivo" htmlFor={`${base}-mot`} required dica="Fica nas partidas canceladas e na auditoria.">
             <Input id={`${base}-mot`} name="motivo" maxLength={300} autoComplete="off" required />
           </CampoForm>
           {erro && (

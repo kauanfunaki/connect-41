@@ -73,10 +73,8 @@ export function LeitorDeRubricas({ rubricas }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Secao
-        titulo="Conferência das rubricas"
-        apoio="Cada rubrica do Connect contra o que vai no eSocial: natureza, tipo e os códigos de incidência de INSS, IRRF e FGTS."
-      >
+      {/* As linhas de apoio fixas foram para o artigo do DP 2 (17/11/2026, melhoria-707). */}
+      <Secao titulo="Conferência das rubricas">
         {internas.length === 0 ? (
           <p className="text-fs-3 text-fg-muted">Nenhuma divergência: as {rubricas.length} rubricas batem com o eSocial.</p>
         ) : (
@@ -86,7 +84,6 @@ export function LeitorDeRubricas({ rubricas }: Props) {
 
       <Secao
         titulo="Comparar com o eSocial"
-        apoio="Solte os XML do S-1010 da empresa (baixados do portal do eSocial ou exportados da Domínio) para comparar a tabela que já está no governo com a do Connect. Os arquivos são lidos aqui, no navegador."
         acao={
           doEsocial ? (
             <Button
@@ -125,7 +122,6 @@ export function LeitorDeRubricas({ rubricas }: Props) {
             {comparacao.soNoEsocial.length > 0 && (
               <div>
                 <h3 className="text-fs-3 font-semibold text-fg mb-2">Só no eSocial</h3>
-                <p className="text-fs-2 text-fg-muted mb-2">Rubricas que a empresa usa e o Connect não tem: crie como rubrica livre com o mesmo código, se ainda forem usadas.</p>
                 <ul className="text-fs-3 text-fg grid gap-1 sm:grid-cols-2">
                   {comparacao.soNoEsocial.map((r) => (
                     <li key={`${r.tabela}-${r.codigo}`}>

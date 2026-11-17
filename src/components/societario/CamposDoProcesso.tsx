@@ -31,7 +31,7 @@ export function CamposDoProcesso({ responsaveis, valores, prefixo }: Props) {
       <CampoForm
         label="Título"
         htmlFor={`${prefixo}-titulo`}
-        helper="Opcional — o que diferencia este processo de outro do mesmo tipo na mesma empresa."
+        dica="O que diferencia este processo de outro do mesmo tipo na mesma empresa."
       >
         <Input
           id={`${prefixo}-titulo`}
@@ -67,10 +67,10 @@ export function CamposDoProcesso({ responsaveis, valores, prefixo }: Props) {
       <CampoForm
         label="Prazo combinado"
         htmlFor={`${prefixo}-prazo`}
-        helper="Opcional — a data prometida ao cliente. O prazo previsto do tipo continua sendo contado em dias úteis."
+        dica="A data prometida ao cliente. O prazo previsto do tipo continua sendo contado em dias úteis."
       >
         {/* Largura de data, não a do modal: esticada, o dia ficava num canto e o
-            calendário no outro. A explicação continua na largura toda embaixo. */}
+            calendário no outro. A explicação está no "?" do rótulo (17/11/2026, melhoria-707). */}
         <CampoData
           id={`${prefixo}-prazo`}
           name="dueAt"

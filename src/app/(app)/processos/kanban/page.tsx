@@ -77,7 +77,6 @@ export default async function KanbanDeProcessosPage({
       <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Kanban de processos" }]} />
       <PageHeader
         title="Kanban de processos"
-        subtitle="A coluna é a situação que os protocolos dizem — muda quando o desfecho é registrado no processo, não arrastando o cartão."
         action={
           <Button href="/processos" variant="secondary">
             <List size={14} /> Ver como lista

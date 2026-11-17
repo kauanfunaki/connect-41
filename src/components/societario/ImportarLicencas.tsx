@@ -69,10 +69,7 @@ export function ImportarLicencas() {
         <div className="flex flex-col gap-4">
           {!conferencia ? (
             <>
-              <p className="text-helper text-fg-secondary">
-                Preencha o modelo do Connect — uma licença por linha, com o CNPJ da empresa — e suba aqui. Antes de gravar, a tela mostra o que entra, o
-                que já está cadastrado e o que tem erro.
-              </p>
+              {/* O passo a passo da importação foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
               <div>
                 <Button href="/licencas/modelo" download variant="secondary" size="sm">
                   <Download size={14} /> Baixar o modelo (.xlsx)

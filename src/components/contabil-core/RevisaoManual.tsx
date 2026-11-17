@@ -365,10 +365,7 @@ export function RevisaoManual(props: Props) {
 
       <Modal open={aberta} onClose={() => !ocupado && onFechar()} title="Revisar composição manualmente" maxWidth="max-w-[min(96vw,1440px)]">
         <div className="flex flex-col gap-5">
-          <p className="text-sm text-fg-muted">
-            Registre quais lançamentos compõem o valor do banco. A conferência guarda as referências do Razão e do extrato; nenhum lançamento, saldo
-            ou classificação do NEO muda.
-          </p>
+          {/* O que a revisão registra foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
           {!rev ? (
             podeAgir ? (
               <div className="flex flex-col gap-3">
@@ -403,9 +400,6 @@ export function RevisaoManual(props: Props) {
                 <p className="text-fg-muted break-words">
                   {dataBr(rev.periodoInicio)} a {dataBr(rev.periodoFim)} · {rev.nomeArquivo}
                 </p>
-                <p className="text-micro text-fg-muted">
-                  As sugestões e as pendências do relatório automático continuam na tela. As conferências manuais ficam registradas abaixo.
-                </p>
               </div>
               {rev.avisos.length > 0 && (
                 <Aviso tom="atencao">
@@ -437,14 +431,11 @@ export function RevisaoManual(props: Props) {
                     </ul>
                     {editavel && (
                       <>
-                        <p className="text-sm">
-                          Ponha o Razão de FGTS a recolher, de impostos ou de outras contas para buscar a composição. Provisões de períodos anteriores também
-                          podem ser consultadas.
-                        </p>
+                        {/* O "para que serve" do Razão de apoio foi para a dica, junto do formato (17/11/2026, melhoria-707). */}
                         <CampoForm
                           label="Razão de apoio"
                           htmlFor={`${base}-apoio`}
-                          helper="Excel (.xls ou .xlsx): uma ou várias contas no layout do Razão, com a identificação da conta e os totais. PDF: o Razão de uma conta só."
+                          dica="O Razão de FGTS a recolher, de impostos ou de outras contas, para buscar a composição; vale de períodos anteriores também. Excel (.xls ou .xlsx): uma ou várias contas no layout do Razão, com a identificação da conta e os totais. PDF: o Razão de uma conta só."
                         >
                           <input
                             id={`${base}-apoio`}

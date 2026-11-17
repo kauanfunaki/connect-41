@@ -78,9 +78,8 @@ export function ImportarDoEsocial({ companyId, cnpj, empresa }: { companyId: str
       <Modal open={aberto} onClose={fechar} title={`Importar do eSocial · ${empresa}`} maxWidth="max-w-5xl">
         {!previa && !(estado?.ok && estado.etapa === "feita") && (
           <div className="flex flex-col gap-4">
-            <p className="text-fs-3 text-fg-muted">
-              Traz os colaboradores da empresa com os contratos, os dependentes e os dados do eSocial. Só lê: nada é enviado ao eSocial, e nada é gravado antes de você conferir.
-            </p>
+            {/* O que a importação traz e de onde vêm os arquivos foi para o artigo
+                do DP 2 (17/11/2026, melhoria-707). */}
             <div className="grid gap-4 lg:grid-cols-[3fr_2fr] items-start">
             <BuscaNoEsocial companyId={companyId} cnpj={cnpj} onArquivos={verPrevia} ocupado={pendente} />
             <section className="rounded-lg border border-border p-4 flex flex-col gap-3">
@@ -88,9 +87,6 @@ export function ImportarDoEsocial({ companyId, cnpj, empresa }: { companyId: str
                 <FileUp size={18} aria-hidden="true" />
                 Ou envie os arquivos
               </h3>
-              <p className="text-fs-2 text-fg-muted">
-                Os XML dos eventos do eSocial, soltos ou em .zip: do “eSocial Download” do portal (menu Downloads › Solicitação) ou de outro sistema.
-              </p>
               <label className="text-fs-2 font-medium text-fg" htmlFor="arquivosDoEsocial">
                 Arquivos (.zip ou .xml)
               </label>

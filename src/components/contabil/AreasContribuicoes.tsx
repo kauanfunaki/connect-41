@@ -46,7 +46,7 @@ export async function AreasContribuicoes({ ctx, empresa, mes, secao, params }: {
   else if (secao === "gerar") conteudo = <GeracaoContribuicoes tela={tela} params={params} empresaId={empresa.id} mes={mes} podeAgir={agir} podeGerir={gerir} />;
   else conteudo = <ResumoContribuicoes tela={tela} empresaId={empresa.id} mes={mes} />;
   return <ContextoContribuicoes empresaId={empresa.id}><div className="space-y-4 min-w-0">
-    <p className="text-helper text-fg-secondary">Raiz {raiz} · {matriz.companyNome}. A escrituração reúne matriz e filiais.</p>
+    <p className="text-helper text-fg-secondary">Raiz {raiz} · {matriz.companyNome}</p>
     {!motor.escrita && <Aviso tom="info">Consulta disponível. Falta o token de escrita na integração para alterar ou gerar.</Aviso>}
     {conteudo}
   </div></ContextoContribuicoes>;
@@ -67,7 +67,6 @@ async function ResumoContribuicoes({ tela, empresaId, mes }: { tela: TelaDoMotor
     {vigente && <p className="text-label">{vigente.nome_arquivo}{vigente.defasado && <Selo tom="atencao">Há decisões posteriores</Selo>}</p>}
     <h3 className="text-card-title font-semibold">Últimos pedidos</h3>
     <TabelaContabil colunas={["Pedido", "Estado", "Solicitado em", ""]} linhas={(execucoes.dados?.itens ?? []).map((e) => ({ id: String(e.id), celulas: ["#" + e.id, ESTADO_DA_EXECUCAO[e.estado], quando(e.solicitado_em), <Button key="abrir" size="xs" variant="link" href={href(empresaId, mes, "gerar", { execucao: String(e.id) })}>Acompanhar</Button>] }))} />
-    <p className="text-helper text-fg-muted">As decisões e os parâmetros são os mesmos usados pelo Fiscal. As alterações ficam registradas na auditoria.</p>
   </div>;
 }
 

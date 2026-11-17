@@ -93,7 +93,7 @@ export function FormularioDoFechamento(props: Props) {
           {props.modo === "editar" ? (
             <p className="text-helper text-fg-muted">{props.nomeDaEmpresa}</p>
           ) : (
-            <CampoForm label="Empresa" htmlFor={`${base}-empresa`} required helper="Só aparecem empresas com CNPJ no cadastro.">
+            <CampoForm label="Empresa" htmlFor={`${base}-empresa`} required dica="Só aparecem empresas com CNPJ no cadastro.">
               <SearchableSelect
                 id={`${base}-empresa`}
                 name="companyId"
@@ -115,7 +115,7 @@ export function FormularioDoFechamento(props: Props) {
             label="Regime tributário declarado"
             htmlFor={`${base}-regime`}
             required
-            helper="Vem do cadastro da empresa quando ele diz. Mudança de regime no meio do período pede fechamentos separados."
+            dica="Vem do cadastro da empresa quando ele diz. Mudança de regime no meio do período pede fechamentos separados."
           >
             <Select id={`${base}-regime`} name="regime" value={regime} onChange={(e) => setRegime(e.target.value)}>
               {REGIMES.map((r) => (

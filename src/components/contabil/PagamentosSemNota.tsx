@@ -81,7 +81,6 @@ export function PagamentosSemNota({ painel: p, empresaId, mes, secao, podeAgir, 
       </div>
       {!p.codigoFilial && !!p.lancamentos.length && <Aviso tom="atencao">A matriz não tem o código da filial na Domínio (De-para › Plano e contas). Sem ele a planilha não diz onde lançar.</Aviso>}
       <h3 className="text-card-title font-semibold">Cadastros faltando</h3>
-      <p className="text-helper text-fg-muted">O maior valor primeiro. Cada cadastro resolve todos os pagamentos da linha.</p>
       <TabelaContabil local pesquisar vazio="Nada faltando: todos os pagamentos do mês viraram lançamento." colunas={["Tipo", "Quem", "Falta", "Docs", "Valor", "Por que está fora", ""]} linhas={p.pendencias.map((x) => ({
         id: x.falta + "|" + x.chave,
         celulas: [
@@ -138,7 +137,6 @@ export function PagamentosSemNota({ painel: p, empresaId, mes, secao, podeAgir, 
 
     {secao === "regras-pagamentos" && <>
       <h3 className="text-card-title font-semibold">Regras por categoria</h3>
-      <p className="text-helper text-fg-muted">O débito de cada categoria e, se houver, o crédito padrão. Motorista, aluguel de veículo, aluguel de imóvel e RPA seguem os lançamentos-modelo de Plano e contas, que vencem esta regra.</p>
       <TabelaContabil colunas={["Categoria", "Tipo", "Débito", "Crédito padrão", "Observação", ""]} linhas={CATEGORIAS.map(([c, rotulo]) => {
         const r = p.categorias.find((x) => x.categoria === c);
         const modelo = (CATEGORIAS_COM_MODELO as readonly string[]).includes(c);
@@ -177,7 +175,6 @@ function ContaPorNome({ empresaId, inicial, contas, fechar }: { empresaId: strin
   const { pendente, erro, gravar } = useGravar(fechar);
   return <SlideOver open onClose={fechar} title="Conta do fornecedor sem CPF/CNPJ" width="max-w-xl"><form className="space-y-4" onSubmit={(e) => { e.preventDefault(); gravar(() => salvarContaPorNome({ empresa: empresaId, nome: inicial.nome, contaCredito: conta })); }}>
     <p className="text-label">{inicial.nome}</p>
-    <p className="text-helper text-fg-muted">A conta vale para todo pagamento com este nome (sem acento, pontuação e LTDA/S.A. no fim) que vier sem CPF/CNPJ.</p>
     <CampoConta nome="Conta de crédito" valor={conta} mudar={setConta} contas={contas} />
     {erro && <Aviso tom="perigo">{erro}</Aviso>}
     <Button type="submit" size="sm" loading={pendente}>Usar esta conta</Button>
@@ -194,7 +191,6 @@ function RegraDaCategoria({ empresaId, categoria, atual, contas, fechar }: { emp
     {modelo && <Aviso tom="info">Esta categoria segue o lançamento-modelo de Plano e contas, que vence esta regra. Ela só vale se o modelo for apagado lá.</Aviso>}
     <CampoConta nome="Débito" valor={debito} mudar={setDebito} contas={contas} />
     <CampoConta nome="Crédito padrão (opcional)" valor={credito} mudar={setCredito} contas={contas} />
-    <p className="text-helper text-fg-muted">O crédito padrão só vale quando o fornecedor não tem conta pelo CPF/CNPJ, pelo nome ou no plano.</p>
     <label className="grid gap-1 text-label">Observação<Input value={observacao} maxLength={500} onChange={(e) => setObservacao(e.target.value)} /></label>
     {erro && <Aviso tom="perigo">{erro}</Aviso>}
     <Button type="submit" size="sm" loading={pendente}>Salvar regra</Button>
@@ -206,7 +202,7 @@ function Correcao({ empresaId, linha, fechar }: { empresaId: string; linha: Docu
   const { pendente, erro, gravar } = useGravar(fechar);
   const campo = (chave: keyof typeof v, rotulo: string, atual: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => <label className="grid gap-1 text-label">{rotulo}<Input value={v[chave]} placeholder={atual || "—"} onChange={(e) => setV((x) => ({ ...x, [chave]: e.target.value }))} {...extra} /></label>;
   return <SlideOver open onClose={fechar} title="Corrigir a leitura" width="max-w-xl"><form className="space-y-3" onSubmit={(e) => { e.preventDefault(); gravar(() => corrigirPagamento({ empresa: empresaId, id: linha.id, ...v })); }}>
-    <p className="text-helper text-fg-muted">{linha.arquivo}{linha.pagina ? ` · p.${linha.pagina}` : ""}. Em branco, vale o que a leitura achou (mostrado no campo). A leitura original não se perde.</p>
+    <p className="text-helper text-fg-muted">{linha.arquivo}{linha.pagina ? ` · p.${linha.pagina}` : ""}</p>
     {campo("nome", "Nome", linha.nome, { maxLength: 200 })}
     {campo("documento", "CPF/CNPJ", linha.documento, { inputMode: "numeric" })}
     {campo("valor", "Valor", linha.centavos === null ? "" : (linha.centavos / 100).toFixed(2).replace(".", ","), { inputMode: "decimal" })}
@@ -275,10 +271,10 @@ function Envio({ empresaId }: { empresaId: string }) {
   }
 
   return <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
-    <p className="text-label text-fg-secondary">Envie os PDFs de um tipo de cada vez. O Connect lê o texto de cada página; o que não fechar, ou for imagem, aparece em Documentos lidos para conferir ou preencher à mão.</p>
+    {/* Como o envio funciona foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="grid gap-1 text-label">Tipo do documento<Select value={envio} onChange={(e) => setEnvio(e.target.value as TipoDeEnvio)}>{Object.entries(TIPOS_DE_ENVIO).map(([k, t]) => <option key={k} value={k}>{t.rotulo}</option>)}</Select></label>
-      {!planilha && <label className="grid gap-1 text-label">Pasta (opcional)<Input value={pasta} maxLength={255} placeholder="Ex.: 05.2025 - RPA" onChange={(e) => setPasta(e.target.value)} /><span className="text-helper text-fg-muted">Dá a competência quando o documento não traz data.</span></label>}
+      {!planilha && <label className="grid gap-1 text-label">Pasta (opcional)<Input value={pasta} maxLength={255} placeholder="Ex.: 05.2025 - RPA" onChange={(e) => setPasta(e.target.value)} /></label>}
     </div>
     {planilha && <Checkbox label="Substituir a planilha já enviada com o mesmo nome" checked={substituir} onChange={(e) => setSubstituir(e.target.checked)} />}
     {envio === "fatura_pdf" && <p className="text-helper text-fg-muted">O PDF da fatura não vira lançamento: ele liga às faturas da planilha do BPO pelo número da nota no nome do arquivo.</p>}

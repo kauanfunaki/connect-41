@@ -69,7 +69,7 @@ export function DocumentosDoProcesso({
           }}
         >
           <input type="hidden" name="processId" value={processId} />
-          <CampoForm label="Descrição (opcional)" htmlFor={`doc-desc-${processId}`} helper={dica}>
+          <CampoForm label="Descrição (opcional)" htmlFor={`doc-desc-${processId}`} dica={dica}>
             <Input id={`doc-desc-${processId}`} name="descricao" maxLength={200} placeholder="Ex.: Contrato social registrado" />
           </CampoForm>
           <CampoDeAnexos idBase={`doc-${processId}`} />

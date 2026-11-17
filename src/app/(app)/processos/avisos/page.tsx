@@ -26,12 +26,8 @@ export default async function AvisosDaJuntaPage() {
     <PageContainer>
       {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Processos. */}
       <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Avisos da Junta" }]} />
-      {/* A explicação no `subtitle` do cabeçalho: num <p> depois dele, ela
-          ficava 28px abaixo do título (a margem do cabeçalho). */}
-      <PageHeader
-        title="Avisos da Junta"
-        subtitle="E-mails do Empresa Fácil que chegaram no societario@. O sistema sugere o desfecho; quem aplica é você."
-      />
+      {/* A frase que explicava a tela foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+      <PageHeader title="Avisos da Junta" />
       {avisos.length === 0 ? (
         <Card>
           <EmptyState title="Nenhum aviso para conferir" description="Quando a Junta mandar um e-mail, ele aparece aqui e no processo." />

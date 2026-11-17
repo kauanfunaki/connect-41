@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
@@ -32,9 +31,7 @@ type Params = { empresa?: string; pessoa?: string; inicio?: string; dias?: strin
 export default async function FeriasDoDp2({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams;
   const tela = await abrirTelaDeEmpresaDoDp2("dp2_ferias", params.empresa);
-  const cabecalho = (
-    <PageHeader title="Férias" subtitle="O cálculo de férias de um colaborador da empresa escolhida na faixa acima, com abono, médias e a conta de cada verba." />
-  );
+  const cabecalho = <PageHeader title="Férias" />;
   if (!tela.empresa) {
     return (
       <PageContainer>
@@ -101,9 +98,11 @@ export default async function FeriasDoDp2({ searchParams }: { searchParams: Prom
         />
       ) : (
         <div className="flex flex-col gap-5">
-          <Secao titulo="Calcular férias" apoio="Até 30 dias de direito; o abono vai até 1/3 dele. Faltas injustificadas no período reduzem o direito.">
+          {/* A linha de apoio e o "Falta alguém?" viraram o "?" dos campos
+              (17/11/2026, melhoria-707). */}
+          <Secao titulo="Calcular férias">
             <FormularioDeFiltro className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_0.6fr_0.6fr_0.6fr_auto] items-end">
-              <CampoForm label="Colaborador" htmlFor="pessoa">
+              <CampoForm label="Colaborador" htmlFor="pessoa" dica="Só aparece quem tem contrato no DP 2, em Colaboradores.">
                 <Select id="pessoa" name="pessoa" defaultValue={pessoa?.id ?? ""} required>
                   <option value="" disabled>
                     Escolha…
@@ -118,24 +117,17 @@ export default async function FeriasDoDp2({ searchParams }: { searchParams: Prom
               <CampoForm label="Início do gozo" htmlFor="inicio">
                 <CampoData id="inicio" name="inicio" defaultValue={inicio ?? ""} required />
               </CampoForm>
-              <CampoForm label="Dias" htmlFor="dias">
+              <CampoForm label="Dias" htmlFor="dias" dica="Até 30 dias de direito.">
                 <Input id="dias" name="dias" inputMode="numeric" defaultValue={String(dias)} />
               </CampoForm>
-              <CampoForm label="Abono" htmlFor="abono">
+              <CampoForm label="Abono" htmlFor="abono" dica="Até 1/3 dos dias de direito.">
                 <Input id="abono" name="abono" inputMode="numeric" defaultValue={String(abono)} />
               </CampoForm>
-              <CampoForm label="Faltas" htmlFor="faltas">
+              <CampoForm label="Faltas" htmlFor="faltas" dica="Faltas injustificadas no período reduzem o direito.">
                 <Input id="faltas" name="faltas" inputMode="numeric" defaultValue={String(faltas)} />
               </CampoForm>
               <Button type="submit">Calcular</Button>
             </FormularioDeFiltro>
-            <p className="text-fs-2 text-fg-muted mt-3">
-              Falta alguém?{" "}
-              <Link href="/dp2/colaboradores" className="text-brand hover:underline">
-                Só aparece quem tem contrato no DP 2
-              </Link>
-              .
-            </p>
           </Secao>
           {resultado}
         </div>

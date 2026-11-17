@@ -87,9 +87,11 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
         {trilha}
         <PageHeader
           title={proposta.title}
+          // Pendente, o subtítulo era o passo a passo, que foi para o artigo de
+          // ajuda; fica só a situação da proposta revisada (17/11/2026, melhoria-707).
           subtitle={
             pendente
-              ? "Desmarque o que não quer encaminhar. Encaminhar sobe a prioridade de cada processo para alta e avisa o responsável com o próximo passo."
+              ? undefined
               : proposta.status === "REJEITADA"
                 ? "Proposta rejeitada: nada foi encaminhado."
                 : "O que foi encaminhado."
@@ -148,11 +150,8 @@ export default async function RevisarPropostaPage({ params }: { params: Promise<
         {trilha}
         <PageHeader
           title={proposta.title}
-          subtitle={
-            pendente
-              ? "Confira cada sócio com o contrato ao lado. Corrija o que a IA leu errado e desmarque quem não deve entrar."
-              : "O que foi gravado a partir deste contrato."
-          }
+          // O passo a passo da revisão foi para o artigo de ajuda (17/11/2026, melhoria-707).
+          subtitle={pendente ? undefined : "O que foi gravado a partir deste contrato."}
         />
         {cabecalho}
         {motivo}

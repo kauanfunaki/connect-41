@@ -72,10 +72,7 @@ export default async function TabelasOficiaisDoDp2() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Tabelas oficiais"
-        subtitle="INSS, IRRF, salário mínimo e salário-família, cada uma com a competência em que passa a valer. O cálculo usa a mais nova até o mês da competência."
-      />
+      <PageHeader title="Tabelas oficiais" />
       <div className="grid gap-5 lg:grid-cols-2">
         {TIPOS_DE_TABELA.map((tipo: TipoDeTabela) => {
           const vigente = tabelaVigente(tipo, hoje, doEscritorio);
@@ -100,11 +97,8 @@ export default async function TabelasOficiaisDoDp2() {
         })}
       </div>
       {podeGerir && (
-        <Secao
-          className="mt-5"
-          titulo="Gravar uma tabela do escritório"
-          apoio="Use quando sair uma portaria nova antes de o Connect ser atualizado. Gravar na mesma vigência substitui a versão anterior do escritório."
-        >
+        // Quando gravar uma tabela do escritório está no artigo do DP 2 (17/11/2026, melhoria-707).
+        <Secao className="mt-5" titulo="Gravar uma tabela do escritório">
           <FormularioDeTabela acao={salvarTabelaAction} />
         </Secao>
       )}

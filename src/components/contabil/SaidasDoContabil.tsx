@@ -25,10 +25,7 @@ export function SaidasDoContabil({ painel: p, empresaId, mes, podeAgir }: { pain
   const exportar = (formato: string) => "/api/contabil/saidas?" + new URLSearchParams({ empresa: empresaId, mes, formato });
   return <div className="space-y-4 min-w-0">
     <Card className="p-4 space-y-3">
-      <div>
-        <h3 className="text-card-title font-semibold">Contas das saídas</h3>
-        <p className="text-helper text-fg-secondary">Um lançamento por dia e por tipo, com o total emitido. Valem para a matriz e as filiais.</p>
-      </div>
+      <h3 className="text-card-title font-semibold">Contas das saídas</h3>
       <div className="space-y-2">{TIPOS_DE_SAIDA.map((tipo) => <ContaDoTipo key={tipo} tipo={tipo} inicial={p.contas[tipo]} padrao={!p.gravadas.includes(tipo)} empresaId={empresaId} podeAgir={podeAgir} />)}</div>
     </Card>
     {!p.codigoFilial && <Aviso tom="atencao">A empresa não tem o código da filial na Domínio. Cadastre na ficha da empresa, ou em Plano e contas, para a coluna Matriz/Filial sair preenchida.</Aviso>}

@@ -41,7 +41,6 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
     <PageContainer>
       <PageHeader
         title="Rubricas"
-        subtitle="Proventos e descontos do escritório, com as incidências de INSS, FGTS e IRRF. Valem para todas as empresas."
         action={
           podeGerir ? (
             <Button href="/dp2/rubricas?nova=1" scroll={false}>
@@ -51,7 +50,8 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
           ) : undefined
         }
       />
-        <Secao titulo={`${rubricas.length} rubricas`} apoio="“Do motor” = o Connect calcula. Rubrica livre = o DP informa o valor no mês.">
+        {/* O que é "do motor" e o que é livre foi para o artigo do DP 2 (17/11/2026, melhoria-707). */}
+        <Secao titulo={`${rubricas.length} rubricas`}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-fs-3">
               <thead>
@@ -145,18 +145,18 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                 </>
               )}
               <div className="grid gap-4 sm:grid-cols-3 mt-4">
-                <CampoForm label="Incidência INSS (eSocial)" htmlFor="codIncCP" helper="Tabela 21. Vazio: o Connect sugere.">
+                <CampoForm label="Incidência INSS (eSocial)" htmlFor="codIncCP" dica="Tabela 21. Vazio: o Connect sugere.">
                   <Input id="codIncCP" name="codIncCP" inputMode="numeric" maxLength={2} defaultValue={aberta?.codIncCP ?? ""} />
                 </CampoForm>
-                <CampoForm label="Incidência IRRF (eSocial)" htmlFor="codIncIRRF" helper="Tabela 22. Vazio: o Connect sugere.">
+                <CampoForm label="Incidência IRRF (eSocial)" htmlFor="codIncIRRF" dica="Tabela 22. Vazio: o Connect sugere.">
                   <Input id="codIncIRRF" name="codIncIRRF" inputMode="numeric" maxLength={2} defaultValue={aberta?.codIncIRRF ?? ""} />
                 </CampoForm>
-                <CampoForm label="Incidência FGTS (eSocial)" htmlFor="codIncFGTS" helper="Tabela 23. Vazio: o Connect sugere.">
+                <CampoForm label="Incidência FGTS (eSocial)" htmlFor="codIncFGTS" dica="Tabela 23. Vazio: o Connect sugere.">
                   <Input id="codIncFGTS" name="codIncFGTS" inputMode="numeric" maxLength={2} defaultValue={aberta?.codIncFGTS ?? ""} />
                 </CampoForm>
               </div>
               <div className="grid gap-4 sm:grid-cols-3 mt-4">
-                <CampoForm label="Natureza eSocial" htmlFor="naturezaEsocial" helper="Tabela 3, 4 dígitos.">
+                <CampoForm label="Natureza eSocial" htmlFor="naturezaEsocial" dica="Tabela 3, 4 dígitos.">
                   <Input id="naturezaEsocial" name="naturezaEsocial" maxLength={4} defaultValue={aberta?.naturezaEsocial ?? ""} />
                 </CampoForm>
                 <CampoForm label="Conta débito" htmlFor="contaDebito">
@@ -170,15 +170,11 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
           </ModalDoDp2>
         )}
       {podeGerir && (
-        <Secao
-          className="mt-5"
-          titulo="Contas da folha"
-          apoio="Para onde vão o líquido, os encargos da empresa e as provisões nos lançamentos contábeis. As contas de cada provento e desconto ficam na própria rubrica (débito e crédito)."
-        >
+        <Secao className="mt-5" titulo="Contas da folha">
           <FormularioDoDp2 acao={salvarContasDaFolhaAction} rotulo="Salvar contas">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {CAMPOS_DAS_CONTAS.map((c) => (
-                <CampoForm key={c.chave} label={c.rotulo} htmlFor={c.chave} helper={c.ajuda}>
+                <CampoForm key={c.chave} label={c.rotulo} htmlFor={c.chave} dica={c.ajuda}>
                   <Input id={c.chave} name={c.chave} maxLength={40} defaultValue={contas[c.chave]} />
                 </CampoForm>
               ))}

@@ -81,8 +81,8 @@ export function PainelSemConversa() {
       titulo="Escolha uma conversa"
       texto={
         precisam > 0
-          ? `${precisam === 1 ? "1 conversa precisa" : `${precisam} conversas precisam`} de alguém. Use ↑↓ no painel para passar de uma para outra.`
-          : "Ninguém esperando agora. Abra uma conversa à esquerda para ver as mensagens e responder."
+          ? `${precisam === 1 ? "1 conversa precisa" : `${precisam} conversas precisam`} de alguém.`
+          : "Ninguém esperando agora."
       }
     />
   );

@@ -284,11 +284,10 @@ export function AdicionarCandidato({ vagaId, podeCadastrar }: { vagaId: string; 
                 title="Informe um número de telefone válido"
               />
             </CampoForm>
-            <CampoForm label="Currículo em PDF" htmlFor="novo-curriculo" helper="Opcional.">
+            <CampoForm label="Currículo em PDF" htmlFor="novo-curriculo">
               <FileDropzoneField id="novo-curriculo" name="curriculo" accept=".pdf,application/pdf" maxSizeMb={MAX_MB_DO_CURRICULO} compacto />
             </CampoForm>
             {escolhaDaOrigem}
-            <p className="text-helper text-fg-muted">O resto do cadastro (CPF, endereço, documentos) fica na ficha do candidato.</p>
             {erro && <Aviso>{erro}</Aviso>}
             <div className="mt-auto flex flex-wrap justify-end gap-2 border-t border-border pt-3">
               <Button variant="secondary" onClick={voltarABusca}>

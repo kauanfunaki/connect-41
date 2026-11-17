@@ -103,7 +103,8 @@ export default async function RelatoriosDoSocietarioPage({
     <PageContainer>
       <PageHeader
         title="Relatórios do Societário"
-        subtitle={`Processos abertos agora, mais os concluídos nos últimos ${periodo.rotulo}. Prazo em dias úteis, descontados os feriados do escritório.`}
+        // Fica o período; os dias úteis estão no artigo de ajuda (17/11/2026, melhoria-707).
+        subtitle={`Abertos agora e concluídos nos últimos ${periodo.rotulo}.`}
       />
 
       <FiltrosDaTela
@@ -166,12 +167,9 @@ export default async function RelatoriosDoSocietarioPage({
 
         <Card as="section" aria-labelledby="relatorio-aberto" className="p-4 flex flex-col gap-4 min-w-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <h2 id="relatorio-aberto" className="text-section font-semibold text-fg">
-                {relatorio.rotulo}
-              </h2>
-              <p className="text-fs-2 text-fg-muted max-w-2xl">{relatorio.explicacao}</p>
-            </div>
+            <h2 id="relatorio-aberto" className="min-w-0 text-section font-semibold text-fg">
+              {relatorio.rotulo}
+            </h2>
             <div className="flex flex-wrap items-center gap-2">
               <SegmentedControl
                 label="Ver como"

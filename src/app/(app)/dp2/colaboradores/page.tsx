@@ -45,12 +45,7 @@ const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Ins
 export default async function ColaboradoresDoDp2({ searchParams }: { searchParams: Promise<{ empresa?: string; pessoa?: string; novo?: string }> }) {
   const params = await searchParams;
   const tela = await abrirTelaDeEmpresaDoDp2("dp2_colaboradores", params.empresa);
-  const cabecalho = (
-    <PageHeader
-      title="Colaboradores"
-      subtitle="O contrato de cada colaborador para o cálculo da folha. Quem não tem contrato aqui fica fora do cálculo."
-    />
-  );
+  const cabecalho = <PageHeader title="Colaboradores" />;
   if (!tela.empresa) {
     return (
       <PageContainer>
@@ -89,7 +84,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     <>
       <BlocoDoContrato titulo="Salário e jornada">
         <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
-          <CampoForm label="Salário" htmlFor="salarioBase" required helper="No horista, o valor da hora. Sócio: o pró-labore; estagiário: a bolsa; RPA: o valor fixo do mês (ou 0 e lance o serviço no mês).">
+          <CampoForm label="Salário" htmlFor="salarioBase" required dica="No horista, o valor da hora. Sócio: o pró-labore; estagiário: a bolsa; RPA: o valor fixo do mês (ou 0 e lance o serviço no mês).">
             <Input
               id="salarioBase"
               name="salarioBase"
@@ -105,7 +100,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <option value="HORISTA">Horista</option>
             </Select>
           </CampoForm>
-          <CampoForm label="Horas por mês" htmlFor="horasMensais" helper="220 na jornada de 44 h semanais.">
+          <CampoForm label="Horas por mês" htmlFor="horasMensais" dica="220 na jornada de 44 h semanais.">
             <Input id="horasMensais" name="horasMensais" inputMode="numeric" defaultValue={String(v?.horasMensais ?? 220)} />
           </CampoForm>
           <CampoForm label="Insalubridade" htmlFor="insalubridade">
@@ -124,17 +119,17 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <CampoForm label="Dependentes para o IRRF" htmlFor="dependentesIrrf">
             <Input id="dependentesIrrf" name="dependentesIrrf" inputMode="numeric" defaultValue={String(v?.dependentesIrrf ?? 0)} />
           </CampoForm>
-          <CampoForm label="Filhos para o salário-família" htmlFor="filhosSalarioFamilia" helper="Até 14 anos, ou inválidos.">
+          <CampoForm label="Filhos para o salário-família" htmlFor="filhosSalarioFamilia" dica="Até 14 anos, ou inválidos.">
             <Input id="filhosSalarioFamilia" name="filhosSalarioFamilia" inputMode="numeric" defaultValue={String(v?.filhosSalarioFamilia ?? 0)} />
           </CampoForm>
           <CampoForm
             label="Matrícula no eSocial"
             htmlFor="matricula"
-            helper="A mesma do evento de início (S-2200 ou S-2300). Sócio e autônomo sem S-2300: deixe vazia."
+            dica="A mesma do evento de início (S-2200 ou S-2300). Sócio e autônomo sem S-2300: deixe vazia."
           >
             <Input id="matricula" name="matricula" maxLength={30} defaultValue={v?.matricula ?? ""} />
           </CampoForm>
-          <CampoForm label="Categoria" htmlFor="categoria" helper="Tabela 1 do eSocial. Sócio, autônomo e estagiário não têm FGTS, férias, 13º nem rescisão.">
+          <CampoForm label="Categoria" htmlFor="categoria" dica="Tabela 1 do eSocial. Sócio, autônomo e estagiário não têm FGTS, férias, 13º nem rescisão.">
             <Select id="categoria" name="categoria" defaultValue={v?.categoria ?? "101"}>
               {CATEGORIAS.map(([k, r]) => (
                 <option key={k} value={k}>
@@ -147,7 +142,6 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </BlocoDoContrato>
 
       <BlocoDoContrato titulo="Dados para o eSocial">
-        <p className="text-fs-2 text-fg-muted -mt-1 mb-3">O que a admissão (S-2200) pede e o cadastro da pessoa não tem.</p>
         <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
           <CampoForm label="Sexo" htmlFor="esocial_sexo">
             <Select id="esocial_sexo" name="esocial_sexo" defaultValue={es.sexo ?? ""}>
@@ -167,17 +161,17 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <CampoForm
             label="Grau de instrução"
             htmlFor="esocial_grauInstrucao"
-            helper={!es.grauInstrucao && grauSugerido ? `Sugerido pela escolaridade do cadastro: ${aberta?.education}` : undefined}
+            dica={!es.grauInstrucao && grauSugerido ? `Sugerido pela escolaridade do cadastro: ${aberta?.education}` : undefined}
           >
             <Select id="esocial_grauInstrucao" name="esocial_grauInstrucao" defaultValue={grauSugerido ?? ""}>
               {opcoes(GRAUS_DE_INSTRUCAO)}
             </Select>
           </CampoForm>
-          <CampoForm label="Município (código IBGE)" htmlFor="esocial_codigoMunicipio" helper="7 dígitos (ex.: 4106902 Curitiba).">
-            <Input id="esocial_codigoMunicipio" name="esocial_codigoMunicipio" inputMode="numeric" maxLength={7} defaultValue={es.codigoMunicipio ?? ""} />
+          <CampoForm label="Município (código IBGE)" htmlFor="esocial_codigoMunicipio" dica="7 dígitos (4106902 é Curitiba).">
+            <Input id="esocial_codigoMunicipio" name="esocial_codigoMunicipio" inputMode="numeric" maxLength={7} placeholder="4106902" defaultValue={es.codigoMunicipio ?? ""} />
           </CampoForm>
-          <CampoForm label="CBO do cargo" htmlFor="esocial_cbo" helper="6 dígitos.">
-            <Input id="esocial_cbo" name="esocial_cbo" inputMode="numeric" maxLength={7} defaultValue={es.cbo ?? ""} />
+          <CampoForm label="CBO do cargo" htmlFor="esocial_cbo">
+            <Input id="esocial_cbo" name="esocial_cbo" inputMode="numeric" maxLength={7} placeholder="6 dígitos" defaultValue={es.cbo ?? ""} />
           </CampoForm>
           <CampoForm label="Tipo de contrato" htmlFor="esocial_tipoContrato">
             <Select id="esocial_tipoContrato" name="esocial_tipoContrato" defaultValue={es.tipoContrato ?? "1"}>
@@ -203,7 +197,6 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </BlocoDoContrato>
 
       <BlocoDoContrato titulo="Estágio">
-        <p className="text-fs-2 text-fg-muted -mt-1 mb-3">Só para a categoria 901: o que o início do estagiário (S-2300) pede.</p>
         <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
           <CampoForm label="Natureza" htmlFor="esocial_estagioNatureza">
             <Select id="esocial_estagioNatureza" name="esocial_estagioNatureza" defaultValue={es.estagioNatureza ?? ""}>
@@ -224,7 +217,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <CampoForm label="CNPJ da instituição de ensino" htmlFor="esocial_estagioCnpjInstituicao">
             <Input id="esocial_estagioCnpjInstituicao" name="esocial_estagioCnpjInstituicao" inputMode="numeric" maxLength={18} defaultValue={es.estagioCnpjInstituicao ?? ""} />
           </CampoForm>
-          <CampoForm label="CNPJ do agente de integração" htmlFor="esocial_estagioCnpjAgente" helper="CIEE, IEL…, quando houver.">
+          <CampoForm label="CNPJ do agente de integração" htmlFor="esocial_estagioCnpjAgente" dica="CIEE, IEL…, quando houver.">
             <Input id="esocial_estagioCnpjAgente" name="esocial_estagioCnpjAgente" inputMode="numeric" maxLength={18} defaultValue={es.estagioCnpjAgente ?? ""} />
           </CampoForm>
           <CampoForm label="CPF do supervisor" htmlFor="esocial_estagioCpfSupervisor">
@@ -241,7 +234,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             cursor pula para o próximo campo (data-pular). A conta varia
             de banco para banco e não pula. */}
         <div className="grid gap-3 grid-cols-[88px_minmax(0,1fr)_64px] sm:grid-cols-[88px_minmax(0,1fr)_64px_minmax(0,1.5fr)_64px]">
-          <CampoForm label="Banco" htmlFor="bancoCodigo">
+          <CampoForm label="Banco" htmlFor="bancoCodigo" dica="O código de 3 dígitos do banco (ex.: 341).">
             <Input id="bancoCodigo" name="bancoCodigo" inputMode="numeric" maxLength={3} placeholder="341" data-pular defaultValue={v?.bancoCodigo ?? (aberta?.bankName?.match(/\d{3}/)?.[0] ?? "")} />
           </CampoForm>
           <CampoForm label="Agência" htmlFor="agencia">
@@ -257,6 +250,8 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             <Input id="contaDigito" name="contaDigito" maxLength={1} data-pular defaultValue={v?.contaDigito ?? ""} />
           </CampoForm>
         </div>
+        {/* "O banco é o código de 3 dígitos" saiu do lado do campo e foi para
+            o "?" do Banco (17/11/2026, melhoria-707). */}
         <div className="grid gap-x-5 gap-y-2 sm:grid-cols-2 sm:items-end mt-4">
           <CampoForm label="Tipo de conta" htmlFor="tipoConta">
             <Select id="tipoConta" name="tipoConta" defaultValue={v?.tipoConta ?? (/poup/i.test(aberta?.bankAccountType ?? "") ? "POUPANCA" : "CORRENTE")}>
@@ -264,7 +259,6 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <option value="POUPANCA">Poupança</option>
             </Select>
           </CampoForm>
-          <p className="text-fs-2 text-fg-muted sm:pb-2">O banco é o código de 3 dígitos (ex.: 341).</p>
         </div>
         {!v && aberta?.bankName && (
           <p className="text-fs-2 text-fg-muted mt-3">
@@ -314,13 +308,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
         }
       >
         {pessoas.length === 0 ? (
-          <p className="text-fs-3 text-fg-muted">
-            Nenhum colaborador nesta empresa. Traga do eSocial pelo botão “Importar do eSocial”, ou cadastre um a um em{" "}
-            <Link href="/colaboradores-clientes" className="text-brand hover:underline">
-              Colaboradores de clientes
-            </Link>
-            .
-          </p>
+          <p className="text-fs-3 text-fg-muted">Nenhum colaborador nesta empresa.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-fs-3">
@@ -379,7 +367,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
         <ModalDoDp2
           key="novo"
           titulo="Novo colaborador"
-          apoio={`O cadastro da pessoa e o contrato do DP 2 de uma vez, em ${tela.empresa.nome}.`}
+          apoio={tela.empresa.nome}
           acao={criarColaboradorDp2Action}
           rotulo="Cadastrar colaborador"
           fecharHref="/dp2/colaboradores"
@@ -400,7 +388,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                 <CampoForm label="Admissão" htmlFor="novo_admissao" required>
                   <CampoData id="novo_admissao" name="novo_admissao" />
                 </CampoForm>
-                <CampoForm label="Cargo" htmlFor="novo_cargo" helper="O nome do cargo, como vai no eSocial.">
+                <CampoForm label="Cargo" htmlFor="novo_cargo">
                   <Input id="novo_cargo" name="novo_cargo" maxLength={120} />
                 </CampoForm>
                 <CampoForm label="E-mail" htmlFor="novo_email">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Landmark, PauseCircle, RotateCcw, Timer, Hourglass } from "lucide-react";
+import { Landmark, PauseCircle, Timer, Hourglass } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
@@ -41,7 +41,8 @@ export default async function OrgaosPage({ searchParams }: { searchParams: Promi
     <PageContainer>
       <PageHeader
         title="Órgãos"
-        subtitle="Onde os processos esperam: protocolos em cada órgão, há quanto tempo e quanto ele costuma levar para responder. Resposta média e voltas contam os últimos 90 dias."
+        // Fica só o período; o que a tela mostra foi para o artigo de ajuda (17/11/2026, melhoria-707).
+        subtitle="Resposta média e voltas: últimos 90 dias."
       />
 
       <FaixaDeTotais
@@ -125,9 +126,6 @@ export default async function OrgaosPage({ searchParams }: { searchParams: Promi
               </li>
             ))}
           </ul>
-          <p className="flex items-center gap-1.5 text-micro text-fg-muted">
-            <RotateCcw size={12} aria-hidden /> Os parados ({prazoDoParado}+ dias) também estão em Exigências › Protocolos parados.
-          </p>
         </Card>
       )}
     </PageContainer>

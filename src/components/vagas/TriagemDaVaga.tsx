@@ -149,14 +149,9 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
   return (
     <Card className="p-5 mb-4">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-section font-semibold text-fg">Triagem de currículos</h2>
-          <p className="text-fs-2 text-fg-muted mt-0.5 max-w-[640px]">
-            A IA confere o currículo contra cada requisito e aponta a evidência; a nota sai da tabela abaixo. Ela
-            <strong className="font-medium text-fg-secondary"> só ordena os candidatos — nunca reprova ninguém</strong>. Nome, idade, cidade e
-            foto não chegam ao pontuador.
-          </p>
-        </div>
+        {/* O que a IA faz com o currículo e o "só ordena, nunca reprova" estão
+            no artigo de ajuda da tela (17/11/2026, melhoria-707). */}
+        <h2 className="text-section font-semibold text-fg">Triagem de currículos</h2>
         {requisitos && !editando && podeEditar && (
           <Button variant="secondary" size="sm" onClick={() => setEditando(true)}>
             <Pencil size={13} /> Editar requisitos
@@ -181,10 +176,9 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
               />
             ))}
           </div>
-          <p className="text-helper text-fg-muted">
-            Os pontos são o peso: um é baixo, três é alto. Clique para trocar.
-            {cheio && ` Chegou ao limite de ${MAX_REQUISITOS} requisitos por vaga.`}
-          </p>
+          {/* A regra dos pontos (o peso) foi para o artigo de ajuda; fica o
+              aviso do limite (17/11/2026, melhoria-707). */}
+          {cheio && <p className="text-helper text-fg-muted">Chegou ao limite de {MAX_REQUISITOS} requisitos por vaga.</p>}
 
           <div className="space-y-3">
             <p className="c41-rotulo">Como a nota vira faixa</p>
@@ -213,9 +207,6 @@ export function TriagemDaVaga({ vagaId, requisitos, pendentes, emAndamento, pode
             ) : (
               <Aviso tom="atencao">O corte de Parcial tem de ficar abaixo do de Compatível, os dois entre 1 e 100.</Aviso>
             )}
-            <p className="text-helper text-fg-muted">
-              O peso vai de um a três pontos, e obrigatório pesa o dobro. Localidade não entra aqui: cidade não é avaliada pela IA, o recrutador confere.
-            </p>
           </div>
 
           {erro && <Aviso>{erro}</Aviso>}

@@ -117,9 +117,7 @@ export function BlocoDoCurriculo({ personId, arquivo, resumo, podeEditar, ler }:
         </div>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed border-border-strong p-3">
-          <p className="min-w-0 flex-1 basis-56 text-ui text-fg-muted">
-            Nenhum currículo na ficha. Com o currículo em PDF, a IA lê o arquivo, preenche os campos vazios e escreve um resumo.
-          </p>
+          <p className="min-w-0 flex-1 basis-56 text-ui text-fg-muted">Nenhum currículo na ficha.</p>
           {podeEditar && (
             <Button type="button" variant="secondary" size="sm" onClick={() => setAnexando(true)}>
               <Paperclip size={13} /> Anexar currículo
@@ -151,7 +149,6 @@ export function BlocoDoCurriculo({ personId, arquivo, resumo, podeEditar, ler }:
 
       {podeEditar && (
         <Modal open={anexando} onClose={() => setAnexando(false)} title="Anexar currículo" maxWidth="max-w-xl">
-          <p className="mb-4 text-ui text-fg-secondary">O arquivo entra nos documentos da ficha, na categoria Currículo.</p>
           <DocumentUploadForm
             entityType="PERSON"
             entityId={personId}

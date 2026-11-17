@@ -28,11 +28,9 @@ export function AbaDocumentos({ fechamentoId, documentos, quarentena, podeAgir }
     <div className="flex flex-col gap-4">
       {podeAgir && (
         <Card as="section" className="p-4">
-          <h2 className="text-label font-semibold text-fg">Enviar documentos</h2>
-          <p className="mb-3 text-helper text-fg-muted">
-            PDF com texto, Excel (.xlsx), CSV, TXT ou ZIP, até 10 MB por arquivo: balancete, balanço, DRE, razão, faturamento, relatórios de serviços e de
-            entradas e comprovantes do e-CAC. PDF escaneado precisa de OCR antes.
-          </p>
+          {/* Os formatos e os documentos aceitos estão no artigo de ajuda, e a
+              área de envio já diz o limite (17/11/2026, melhoria-707). */}
+          <h2 className="mb-3 text-label font-semibold text-fg">Enviar documentos</h2>
           <EnvioDeDocumentos fechamentoId={fechamentoId} />
         </Card>
       )}

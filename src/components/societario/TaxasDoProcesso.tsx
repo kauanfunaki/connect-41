@@ -41,7 +41,7 @@ export function TaxasDoProcesso({ taxas, custo, edicao }: Props) {
       </div>
 
       {taxas.length === 0 && (
-        <p className="text-ui text-fg-muted">Nenhuma taxa lançada. Lance a guia da Junta, o DAM ou a taxa do Bombeiros quando sair.</p>
+        <p className="text-ui text-fg-muted">Nenhuma taxa lançada.</p>
       )}
 
       {/* O número que dá causa ao prazo: "trinta dias" sozinho não conta a

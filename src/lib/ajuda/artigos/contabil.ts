@@ -61,6 +61,7 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
     dicas: [
       "A revisão não faz lançamentos, não ajusta saldos e não substitui o revisor. “Confere no escopo” não é aprovação, e teste não executado também não.",
       "Valor sob revisão não é perda confirmada.",
+      "A aba “Manual” segue a ordem do Manual de Conferência do Balanço do time. Item em “Conferência manual” depende de sistema externo e também não é aprovação.",
       "PDF escaneado precisa passar por OCR antes. Planilha .xls precisa ser salva como .xlsx ou CSV.",
       "Uma execução nova começa sem acompanhamento, porque os achados são renumerados. O acompanhamento das anteriores fica no relatório delas.",
       "O mapeamento pelo manual, as gravidades e os critérios internos (saldo antigo acima de 90 dias, janela de 5 dias entre a guia e a baixa, pró-labore até o fim do mês seguinte) ainda estão em validação pelo time contábil.",
@@ -100,13 +101,84 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
           "Leia os avisos: conta sem código reduzido não é importada pelo Domínio.",
         ],
       },
+      {
+        titulo: "Como conciliar o Razão com o extrato",
+        passos: [
+          "Na aba “Conciliação”, em “Razão × extrato”, escolha a conta bancária e envie o “Razão da conta” (Excel ou PDF, de uma conta só).",
+          "Se a conta é do Itaú, anexe também a “Consulta de pagamentos do SISPAG”: com ela, os lotes (TED e crédito em conta) são separados pagamento a pagamento.",
+          "Clique em “Conciliar”. O Razão é cruzado com o extrato já importado desta conta no mesmo período, e a tela aponta as pendências. Nada é gravado até aqui.",
+          "Para registrar quais lançamentos compõem o valor do banco, clique em “Revisar composição manualmente”. A revisão guarda o Razão, o relatório e as referências do Razão e do extrato; nenhum lançamento, saldo ou classificação do NEO muda.",
+          "Na revisão, ponha um “Razão de apoio” (FGTS a recolher, impostos ou outras contas, inclusive de períodos anteriores) para buscar a composição das provisões.",
+        ],
+      },
     ],
     dicas: [
       "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
+      "Antes da virada, quem coordena o setor pode clicar em “Pôr empresa” para testar com uma empresa do cadastro. As empresas, os planos de contas, as regras e os lançamentos de verdade chegam com a carga dos dados.",
+      "A “Conciliação do financeiro” compara os documentos do financeiro com o extrato, o SISPAG ou o Razão — ou o Razão com o extrato detalhado e o SISPAG — sem alterar lançamentos, saldos ou o NEO.",
       "O PDF é lido pelo leitor do banco cadastrado na conta (BB, Bradesco, Itaú, Caixa, Sicredi, Sicoob, Santander, Inter, Stone e outros) e só entra se os saldos do extrato fecharem com os lançamentos.",
       "Na planilha (.xlsx, .xls ou .csv), o Connect acha as colunas pelo cabeçalho (Data, Histórico, Crédito, Débito, Valor, Saldo), e o saldo de cada linha confere os lançamentos.",
       "PDF que é imagem (sem texto selecionável) ainda não é lido: importe o OFX ou a planilha da conta.",
       "Desfazer uma importação inteira é de quem coordena o setor: os lançamentos das transações do arquivo são cancelados antes.",
+    ],
+  },
+  // O SPED do Contábil (17/11/2026, melhoria-707): as frases que explicavam a
+  // tela embaixo do título e de cada bloco vieram para cá.
+  {
+    chave: "contabil_sped",
+    titulo: "SPED",
+    caminhos: ["/sped-contabil"],
+    resumo:
+      "Das notas de entrada à planilha da Domínio: o que fica sem de-para vira regra, e os lançamentos saem completos. Os pagamentos sem nota, as saídas e o lote do ano saem pela mesma tela, e “Gerar SPED Contribuições” manda gerar a EFD Contribuições no motor do SPED.",
+    secoes: [
+      {
+        titulo: "Preparar a empresa uma vez",
+        passos: [
+          "Escolha a empresa e o mês no alto da tela e abra a etapa “De-para”, seção “Plano e contas”.",
+          "Exporte o plano de contas na Domínio, abra no Excel e salve como .xlsx ou .csv. Clique em “Enviar plano de contas”. Enviar de novo substitui o plano inteiro.",
+          "Em “Contas fixas”, preencha o débito que não depende do fornecedor (CT-e, NFS-e, imobilizado) e o código da filial. Em branco, essas notas seguem a regra do fornecedor, como a NF-e.",
+          "Em “Contas dos pagamentos sem nota”, confira os lançamentos-modelo de cada categoria. Eles vencem a regra da categoria; em branco, os pagamentos dela ficam pendentes.",
+        ],
+      },
+      {
+        titulo: "Fechar o de-para e baixar os lançamentos",
+        passos: [
+          "Em “Notas de entrada”, veja o que entrou no mês e o que vira lançamento.",
+          "Em “Pendências”, clique em “Notas e regra” no fornecedor que ficou fora, escolha as contas e clique em “Salvar regra”. Para muitos de uma vez, use “Baixar pendências” e “Importar preenchidas”.",
+          "Em “Lançamentos”, aplique os filtros e baixe a “Planilha” de cada tipo de documento. Cada arquivo leva todos os lançamentos do tipo e dos filtros aplicados, em todas as páginas.",
+        ],
+      },
+      {
+        titulo: "Lançar os pagamentos sem nota",
+        passos: [
+          "Abra a etapa “Pagamentos sem nota” e, em “Enviar documentos”, escolha o “Tipo do documento”. Envie os PDFs de um tipo de cada vez.",
+          "Se o documento não traz data, preencha a “Pasta” (ex.: 05.2025 - RPA): ela dá a competência.",
+          "O Connect lê o texto de cada página. O que não fechar, ou for imagem, aparece em “Documentos lidos” para “Corrigir” ou “Preencher à mão”. Na correção, o campo em branco vale o que a leitura achou, e a leitura original não se perde.",
+          "Em “Lançados e pendências”, a tabela “Cadastros faltando” vem do maior valor para o menor. Cada cadastro resolve todos os pagamentos da linha.",
+          "Em “Regras”, defina o débito de cada categoria e, se houver, o crédito padrão. Motorista, aluguel de veículo, aluguel de imóvel e RPA seguem os lançamentos-modelo de “Plano e contas”, que vencem esta regra.",
+        ],
+      },
+      {
+        titulo: "Saídas e lote do ano",
+        passos: [
+          "Na etapa “Saídas”, confira as contas de cada tipo: sai um lançamento por dia e por tipo, com o total emitido, e as contas valem para a matriz e as filiais.",
+          "Na etapa “Lote do ano”, escolha o ano e o formato e clique em “Baixar o ZIP”. Entra cada mês de janeiro a dezembro (NF-e, CT-e, NFS-e, pagamentos sem nota e saídas); mês sem lançamento não gera arquivo, mas aparece no resumo.",
+        ],
+      },
+      {
+        titulo: "Gerar o SPED Contribuições",
+        passos: [
+          "No menu, abra “Gerar SPED Contribuições”, dentro de SPED.",
+          "Confira as seções de fechamento, apuração e parâmetros. A escrituração reúne a matriz e as filiais da mesma raiz de CNPJ.",
+          "Em “Gerar e acompanhar”, escolha a escrituração (original ou retificadora, com o recibo anterior) e clique em “Gerar no motor”. A geração usa os parâmetros e as decisões desta raiz, e o pedido fica acompanhado na mesma tela.",
+        ],
+      },
+    ],
+    dicas: [
+      "Na filial, plano, contas e regras são os da matriz e valem para as filiais. Os pagamentos sem nota também são lançados na matriz.",
+      "A conta escolhida para um fornecedor sem CPF/CNPJ vale para todo pagamento com esse nome (sem acento, pontuação e LTDA/S.A. no fim).",
+      "O crédito padrão de uma categoria só vale quando o fornecedor não tem conta pelo CPF/CNPJ, pelo nome ou no plano.",
+      "No SPED Contribuições, as decisões e os parâmetros são os mesmos usados pelo Fiscal, e as alterações ficam registradas na auditoria.",
     ],
   },
 ];

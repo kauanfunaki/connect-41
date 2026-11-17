@@ -69,7 +69,7 @@ export function TemplateForm({ action, defaults, cancelHref }: Props) {
         <Input id="name" name="name" type="text" defaultValue={defaults?.name} placeholder="ex: Português Básico" maxLength={120} required />
       </CampoForm>
 
-      <CampoForm label="Descrição" htmlFor="description" helper="Opcional — visível só pra equipe interna.">
+      <CampoForm label="Descrição" htmlFor="description" dica="Visível só para a equipe interna.">
         <Textarea id="description" name="description" rows={2} defaultValue={defaults?.description} maxLength={400} />
       </CampoForm>
 

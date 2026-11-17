@@ -530,7 +530,7 @@ function Protocolo({
                   onChange={(e) => setDescricao(e.target.value)}
                 />
               </CampoForm>
-              <CampoForm label="Prazo do órgão" htmlFor={`prazo-exigencia-${protocolo.id}`} helper="Opcional.">
+              <CampoForm label="Prazo do órgão" htmlFor={`prazo-exigencia-${protocolo.id}`}>
                 <CampoData
                   id={`prazo-exigencia-${protocolo.id}`}
                   value={prazo}

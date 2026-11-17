@@ -207,18 +207,13 @@ export function Conciliacao({ empresaId, agencias, podeAgir }: { empresaId: stri
     <div className="flex flex-col gap-6">
       {podeAgir ? (
         <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4" aria-labelledby={`${base}-titulo`}>
-          <div>
-            <h2 id={`${base}-titulo`} className="text-base font-semibold">
-              Razão × extrato
-            </h2>
-            <p className="text-sm text-fg-muted">
-              Envie o Razão contábil de uma conta bancária (Excel ou PDF). Ele é cruzado com o extrato já importado desta conta no mesmo período, e
-              a tela aponta as pendências. Nada é gravado nem alterado, até você salvar a análise para revisar.
-            </p>
-          </div>
+          {/* O passo a passo do cruzamento foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+          <h2 id={`${base}-titulo`} className="text-base font-semibold">
+            Razão × extrato
+          </h2>
           <div className="grid gap-3 md:grid-cols-3 md:items-start">
             {seletorDaConta}
-            <CampoForm label="Razão da conta" htmlFor={`${base}-razao`} required helper="Excel (.xlsx ou .xls) ou PDF, de uma conta só.">
+            <CampoForm label="Razão da conta" htmlFor={`${base}-razao`} required dica="Excel (.xlsx ou .xls) ou PDF, de uma conta só.">
               <input
                 id={`${base}-razao`}
                 ref={razaoRef}
@@ -234,7 +229,7 @@ export function Conciliacao({ empresaId, agencias, podeAgir }: { empresaId: stri
             <CampoForm
               label="Consulta de pagamentos do SISPAG (opcional)"
               htmlFor={`${base}-sispag`}
-              helper="Com ela, os lotes do Itaú (TED e crédito em conta) são separados pagamento a pagamento."
+              dica="Com ela, os lotes do Itaú (TED e crédito em conta) são separados pagamento a pagamento."
               acao={
                 sispag && (
                   <Button type="button" size="xs" variant="linkMuted" onClick={tirarSispag}>

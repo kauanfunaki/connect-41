@@ -72,7 +72,7 @@ export function HorasDoProcesso({
               decisões, 08/10/2026) — era o de cartão em grade, 14px. */}
           <h2 id="horas-do-processo" className="text-section font-semibold text-fg">Horas trabalhadas</h2>
           <p className="text-fs-2 text-fg-muted">
-            {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."} Entram nas horas de operação da Gestão.
+            {total > 0 ? `${duracao(total)} neste processo` : "Nenhuma hora lançada ainda."}
           </p>
         </div>
         {podeAgir && (

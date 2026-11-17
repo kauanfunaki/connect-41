@@ -32,7 +32,6 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoData } from "@/components/ui/CampoData";
 import { LinkDoCliente } from "@/components/dp2/LinkDoCliente";
 import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
-import { NOME_DA_FORMA } from "@/lib/dp2/cnab240";
 import {
   calcularCompetenciaAction,
   cancelarPedidoDeEventosAction,
@@ -243,7 +242,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         {(etapa === "abrir" || etapa === "calcular") && avisoSemContrato}
 
         {etapa === "abrir" && (
-          <Secao titulo="Competência aberta" apoio="O que entra nesta folha. Para mudar quem entra, ajuste os contratos em Colaboradores.">
+          <Secao titulo="Competência aberta">
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-fs-3">
               <div>
                 <dt className="text-fs-2 text-fg-muted">Empresa</dt>
@@ -270,10 +269,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         {etapa === "eventos" && !mensal && (
           <>
             {avisoSemContrato}
-            <Secao
-              titulo="Quem entra no 13º"
-              apoio="O 13º sai do salário do contrato e das médias. Confira os salários antes de calcular; para corrigir, abra o contrato em Colaboradores."
-            >
+            <Secao titulo="Quem entra no 13º">
               {comContrato.length === 0 ? (
                 <p className="text-fs-3 text-fg-muted">
                   Ninguém com contrato no DP 2.{" "}
@@ -318,7 +314,9 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         )}
 
         {mensal && etapa === "eventos" && (
-          <Secao titulo="Eventos do mês" apoio="Horas extras, adicional noturno, faltas e atrasos em horas ou dias; comissões, adiantamentos e outros em valor. O motor calcula o resto (salário, DSR, INSS, IRRF, FGTS).">
+          // As linhas de apoio fixas das seções saíram para o artigo do DP 2
+          // (17/11/2026, melhoria-707): ficam só as que trazem dado.
+          <Secao titulo="Eventos do mês">
             {podeAgir && !fechada && (
               <FormularioDoDp2 acao={lancarEventoAction} rotulo="Lançar" rotuloEnviando="Lançando…" className="mb-5" icone={<Plus size={14} aria-hidden="true" />}>
                 <input type="hidden" name="competenciaId" value={comp.id} />
@@ -363,7 +361,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
               </FormularioDoDp2>
             )}
             {eventos.length === 0 ? (
-              <p className="text-fs-3 text-fg-muted">Nenhum lançamento. Sem eventos, a folha sai só com salário e adicionais fixos.</p>
+              <p className="text-fs-3 text-fg-muted">Nenhum lançamento.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-fs-3">
@@ -407,10 +405,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
 
         {mensal && etapa === "eventos" && !fechada && podeAgir && (
           <div className="grid gap-5 xl:grid-cols-2">
-            <Secao
-              titulo="Pedir os eventos ao cliente"
-              apoio="Um link sem login em que a empresa informa horas extras, faltas, atrasos e comissões de cada colaborador, ou que não houve nada. O que ela mandar entra aqui como lançamento de origem Cliente."
-            >
+            <Secao titulo="Pedir os eventos ao cliente">
               {pedidoAtual ? (
                 <div className="flex flex-col gap-3">
                   <p className="text-fs-2">
@@ -446,10 +441,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
               )}
             </Secao>
 
-            <Secao
-              titulo="Importar planilha ou Pontomais"
-              apoio="Copie do Excel ou do relatório de totais do Pontomais e cole aqui, com o cabeçalho. Coluna CPF ou Nome, e uma coluna por evento: HE 50%, HE 100%, Noturno, Faltas, Atrasos, ou o código/nome da rubrica. Horas em 10:30 ou 10,5."
-            >
+            <Secao titulo="Importar planilha ou Pontomais">
               <FormularioDoDp2 acao={importarEventosAction} rotulo="Importar" rotuloEnviando="Lendo…" variante="secondary">
                 <input type="hidden" name="competenciaId" value={comp.id} />
                 <Textarea name="texto" rows={5} className="font-mono text-fs-2" placeholder={"Nome\tCPF\tHE 50%\tFaltas\tComissões\nJoana Ribeiro\t123.456.789-09\t10:30\t1\t250,00"} aria-label="Planilha colada" />
@@ -477,7 +469,9 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
             apoio={
               calculos.length === 0
                 ? "Calcule a folha para ver o resultado de cada pessoa."
-                : `Clique no nome para ver o holerite com a memória de cálculo.${comparativos.length ? ` ${divergentes} pessoa(s) diferem da Domínio em mais de 1 centavo.` : ""}`
+                : comparativos.length
+                  ? `${divergentes} pessoa(s) diferem da Domínio em mais de 1 centavo.`
+                  : undefined
             }
           >
             {calculos.length > 0 && (
@@ -549,12 +543,11 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         {etapa === "fechar" && calculada && (
           <Secao
             titulo="Saídas da folha"
-            apoio={fechada ? "Holerites, arquivo do banco e lançamentos contábeis desta competência." : "Os holerites e os lançamentos já dão para conferir; guardar nos Arquivos e gerar o arquivo do banco ficam liberados ao fechar a competência."}
+            apoio={fechada ? undefined : "Guardar nos Arquivos e gerar o arquivo do banco ficam liberados ao fechar a competência."}
           >
             <div className="grid gap-5 lg:grid-cols-3">
               <div className="flex flex-col gap-3">
                 <h3 className="text-fs-3 font-semibold text-fg">Holerites</h3>
-                <p className="text-fs-2 text-fg-muted">Um PDF com uma página por colaborador. Guardados em Arquivos › Departamento Pessoal, seguem ao cliente pelo “Enviar ao cliente” do arquivo.</p>
                 <Button href={`/api/dp2/competencias/${comp.id}/holerites`} variant="secondary" size="sm" download>
                   Baixar holerites (PDF)
                 </Button>
@@ -567,9 +560,6 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
 
               <div className="flex flex-col gap-3">
                 <h3 className="text-fs-3 font-semibold text-fg">Arquivo do banco (CNAB 240)</h3>
-                <p className="text-fs-2 text-fg-muted">
-                  O pagamento do líquido de cada um pela conta pagadora da empresa. Quem está sem banco, agência, conta ou CPF fica de fora (e aparece aqui).
-                </p>
                 {fechada && podeAgir ? (
                   <FormularioDoDp2 acao={gerarRemessaAction} rotulo="Gerar remessa" rotuloEnviando="Gerando…" variante="secondary" tamanho="sm" className="flex flex-wrap items-end gap-3">
                     <input type="hidden" name="competenciaId" value={comp.id} />
@@ -599,7 +589,6 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                     })}
                   </ul>
                 )}
-                <p className="text-fs-1 text-fg-muted">Formas: {(["01", "05", "41"] as const).map((f) => NOME_DA_FORMA[f]).join(", ")}. O primeiro arquivo de cada banco vai para teste no banco antes de valer.</p>
               </div>
 
               <div className="flex flex-col gap-3">
@@ -630,14 +619,13 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         )}
 
         {etapa === "conferir" && (
-          <Secao
-            titulo="Comparar com a Domínio"
-            apoio="Enquanto o DP 2 roda em paralelo: cole, uma pessoa por linha, CPF; proventos; descontos; líquido; INSS; IRRF; FGTS (pode copiar direto do Excel). Campo vazio não é comparado."
-          >
+          <Secao titulo="Comparar com a Domínio">
             {podeAgir ? (
               <FormularioDoDp2 acao={importarComparativoAction} rotulo="Comparar" rotuloEnviando="Lendo…" variante="secondary">
                 <input type="hidden" name="competenciaId" value={comp.id} />
-                <Textarea name="texto" rows={4} placeholder={"123.456.789-09; 3.243,89; 277,87; 2.966,02; 277,87; 0,00; 259,51"} aria-label="Valores da Domínio" />
+                {/* A ordem das colunas, que estava na linha de apoio, vai no
+                    exemplo do campo (17/11/2026, melhoria-707). */}
+                <Textarea name="texto" rows={4} placeholder={"CPF; proventos; descontos; líquido; INSS; IRRF; FGTS\n123.456.789-09; 3.243,89; 277,87; 2.966,02; 277,87; 0,00; 259,51"} aria-label="Valores da Domínio" />
               </FormularioDoDp2>
             ) : (
               <p className="text-fs-3 text-fg-muted">{comparativos.length} pessoa(s) com valores da Domínio.</p>

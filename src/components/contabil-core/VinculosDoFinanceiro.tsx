@@ -119,7 +119,7 @@ export function VinculosDoFinanceiro({ analise, ocupado, podeDesfazer, onDesfaze
                         label="Motivo para desfazer a conferência"
                         htmlFor={`${base}-motivo-${v.id}`}
                         required
-                        helper="Os movimentos voltam a ficar disponíveis nesta comparação. O registro e o motivo continuam no histórico, e nenhum lançamento muda."
+                        dica="Os movimentos voltam a ficar disponíveis nesta comparação. O registro e o motivo continuam no histórico, e nenhum lançamento muda."
                       >
                         <Textarea
                           id={`${base}-motivo-${v.id}`}

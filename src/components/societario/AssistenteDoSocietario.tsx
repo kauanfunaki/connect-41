@@ -46,11 +46,7 @@ export function AssistenteDoSocietario() {
         {/* "Ceci", como o botão do topo e o chat (15/10/2026): era "Assistente do Societário". */}
         Pergunte à Ceci
       </h2>
-      <p className="text-ui text-fg-secondary max-w-[62ch]">
-        Pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para
-        destravar — ou peça para abrir um processo. A Ceci lê os mesmos processos que você vê e{" "}
-        <strong>não altera nada</strong>; toda mudança passa pelo seu clique na sugestão.
-      </p>
+      {/* O que perguntar e o "não altera nada" foram para o artigo de ajuda (17/11/2026, melhoria-707). */}
 
       <Textarea
         value={pergunta}

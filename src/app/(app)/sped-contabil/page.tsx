@@ -51,7 +51,7 @@ export default async function SpedDoContabilPage({ searchParams }: { searchParam
   const href = (mudar: Params) => CAMINHO + "?" + new URLSearchParams(Object.fromEntries(Object.entries({ empresa: companyId, mes, aba, secao, ...mudar }).filter(([, v]) => v)) as Record<string, string>);
   const daMatriz = doContabil && doContabil.baseId !== doContabil.id ? empresas.find((e) => e.id === doContabil.baseId)?.nome ?? "Matriz" : null;
   return <PageContainer>
-    <PageHeader title={titulo} subtitle={contribuicoes ? "Conferência e geração pelo motor remoto." : "Das notas de entrada à planilha da Domínio: o que ficar sem de-para vira regra, e os lançamentos saem completos."} />
+    <PageHeader title={titulo} />
     <FiltroDaEmpresa foco={foco}>
       {companyId && <FiltroDePeriodo acao={CAMINHO} mes={mes} extras={{ empresa: companyId, aba, secao }} naFileira />}
     </FiltroDaEmpresa>

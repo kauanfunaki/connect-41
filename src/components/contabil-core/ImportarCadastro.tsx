@@ -111,7 +111,7 @@ export function ImportarCadastro({ tipo, empresaId, agencias }: { tipo: keyof ty
                 <input id={`${base}-arq`} ref={arquivoRef} type="file" accept={textos.aceita} className="block w-full text-sm" />
               </CampoForm>
               {tipo === "regras" ? (
-                <CampoForm label="Banco das regras" htmlFor={`${base}-banco`} helper="A escolha vale para todas as linhas.">
+                <CampoForm label="Banco das regras" htmlFor={`${base}-banco`} dica="A escolha vale para todas as linhas.">
                   <SearchableSelect
                     id={`${base}-banco`}
                     name="banco"
