@@ -31,10 +31,13 @@ export function CaixaDeConversas({
   painel,
   aberta,
   listaRecolhida = false,
+  colunasDaLista = "lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]",
 }: {
   lista: ReactNode;
   painel: ReactNode;
   aberta: boolean;
+  /** A largura da lista aberta no computador. A do Atendimento é uma tabela, mais larga (melhoria-728). */
+  colunasDaLista?: string;
   /**
    * A lista vira uma faixa estreita no computador (Atendimento, 10/11/2026):
    * quem passa o dia numa conversa ganha espaço sem perder as outras de vista.
@@ -42,10 +45,11 @@ export function CaixaDeConversas({
    */
   listaRecolhida?: boolean;
 }) {
-  const colunas = listaRecolhida ? "lg:grid-cols-[56px_minmax(0,1fr)]" : "lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]";
+  const colunas = listaRecolhida ? "lg:grid-cols-[56px_minmax(0,1fr)]" : colunasDaLista;
   return (
     <div className={`flex-1 min-h-[24rem] grid grid-rows-[minmax(0,1fr)] gap-4 lg:gap-x-3 ${colunas}`}>
-      <div className={`${aberta ? "hidden lg:flex" : "flex"} flex-col min-h-0 min-w-0`}>{lista}</div>
+      {/* `relative`: a lista pode trazer uma alça presa à borda (a do Atendimento). */}
+      <div className={`${aberta ? "hidden lg:flex" : "flex"} relative flex-col min-h-0 min-w-0`}>{lista}</div>
       <div className={`${aberta ? "flex" : "hidden lg:flex"} flex-col min-h-0 min-w-0`}>{painel}</div>
     </div>
   );

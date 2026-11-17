@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Download, Lock, Paperclip, Send, UserRound, UserX, X, Zap } from "lucide-react";
-import { AcaoRapida, BarraDoPainel, PainelDeConversa } from "@/components/conversas/caixa/Caixa";
+import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Copy, Download, ExternalLink, Hand, Lock, Paperclip, Route, Send, Upload, UserRound, UserX, X, Zap } from "lucide-react";
+import { BarraDoPainel, Iniciais } from "@/components/conversas/caixa/Caixa";
 import { NavegacaoPorTeclado } from "@/components/conversas/caixa/Interativos";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
 import { Textarea } from "@/components/ui/Textarea";
 import { Aviso } from "@/components/ui/Aviso";
+import { Modal } from "@/components/ui/Modal";
+import { MenuDeMaisAcoes } from "@/components/ui/MenuDeMaisAcoes";
+import { ItemDoMenu } from "@/components/ui/Popover";
 import { useToast } from "@/components/ui/Toast";
 import type { DetalheDoAtendimento } from "@/lib/atendimento/consultas";
 import { formatInstantDate, formatInstantTime } from "@/lib/format";
 import { ROTULO_DA_SITUACAO, noRecorte, preencherCampos } from "@/lib/atendimento/regras";
-import { anotarAction, assumirAction, responderAction, retomarConversaAction, type Resultado } from "@/app/(app)/atendimento/actions";
+import { anotarAction, assumirAction, pedirParaAssumirAction, responderAction, retomarConversaAction, type Resultado } from "@/app/(app)/atendimento/actions";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { useCaixaDoAtendimento } from "./CaixaDoAtendimento";
@@ -24,14 +26,28 @@ const hora = (iso: string) => formatInstantTime(new Date(iso), { hour: "2-digit"
 const dia = (iso: string) => formatInstantDate(new Date(iso), { day: "2-digit", month: "2-digit", year: "numeric" });
 const quando = (iso: string) => `${dia(iso).slice(0, 5)} ${hora(iso)}`;
 
-type Abertura = null | "encaminhar" | "contato" | "encerrar" | "transferir" | "tirar";
+type Abertura = null | "encaminhar" | "contato" | "encerrar" | "transferir" | "tirar" | "caminho";
 
+/** O arquivo vai ao cliente: precisa ter assumido, a janela de 24 h aberta e o envio de arquivo ligado. */
+const podeMandarArquivo = (d: DetalheDoAtendimento) => d.pode.responder && d.janela.ok && d.enviaArquivo && d.ciclo.situacao !== "ENCERRADO";
+
+/**
+ * A conversa aberta. Desde 17/11/2026 (melhoria-728, protótipo aprovado pelo
+ * Victor): no topo só o "Assumir"; o resto das ações num "…"; a seta ao lado
+ * do nome abre o número, a empresa e o CNPJ; o caminho da conversa abre numa
+ * janela, e não fica mais numa coluna à direita; arrastar um arquivo para a
+ * conversa o anexa, com o texto como legenda.
+ */
 export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
   const v = useCaixaDoAtendimento();
   const [aberto, setAberto] = useState<Abertura>(null);
+  const [dadosAbertos, setDadosAbertos] = useState(false);
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [arrastando, setArrastando] = useState(false);
   const [ocupado, iniciar] = useTransition();
   const router = useRouter();
   const toast = useToast();
+  const geral = v.ehTriagem || v.veTudo;
 
   // A anterior e a próxima no recorte que está à vista.
   const quem = { userId: v.userId, meus: v.meus, geridos: v.geridos, triagem: v.ehTriagem, veTudo: v.veTudo };
@@ -51,77 +67,139 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
     });
   }
 
-  const etiquetas = [
-    <Selo key="sit" tom={d.ciclo.situacao === "TRIAGEM" || d.ciclo.situacao === "NO_SETOR" ? "atencao" : d.ciclo.situacao === "ENCERRADO" ? "neutro" : "marca"}>
-      {d.ciclo.situacao === "TRIAGEM" ? `Na triagem · ${d.setorDaTriagem.label}` : ROTULO_DA_SITUACAO[d.ciclo.situacao]}
-    </Selo>,
-    d.ciclo.setor ? (
-      <Selo key="setor" cor={d.ciclo.setor.cor}>
-        {d.ciclo.setor.label}
-      </Selo>
-    ) : null,
-    d.ciclo.responsavel ? (
-      <span key="resp" className="inline-flex items-center gap-1 text-ui">
-        <UserRound size={14} /> {d.ciclo.responsavel.id === d.eu.id ? "Com você" : d.ciclo.responsavel.nome}
-      </span>
-    ) : null,
-    d.contato.tipo === "DESCONHECIDO" ? (
-      <Selo key="tipo" tom="atencao">
-        Contato novo
-      </Selo>
-    ) : d.contato.tipo === "NOVO" ? (
-      <Selo key="tipo" tom="marca">
-        Ainda não é cliente
-      </Selo>
-    ) : null,
-  ].filter(Boolean) as React.ReactNode[];
+  // Arrastar um arquivo para a conversa (17/11/2026). O `dragleave` dispara a
+  // cada filho que o ponteiro cruza: só vale quando sai do painel inteiro.
+  const temArquivo = (e: DragEvent) => Array.from(e.dataTransfer.types).includes("Files");
+  function aoArrastar(e: DragEvent<HTMLElement>) {
+    if (!temArquivo(e)) return;
+    e.preventDefault();
+    if (!arrastando) setArrastando(true);
+  }
+  function aoSair(e: DragEvent<HTMLElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setArrastando(false);
+  }
+  function aoSoltar(e: DragEvent<HTMLElement>) {
+    if (!temArquivo(e)) return;
+    e.preventDefault();
+    setArrastando(false);
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    if (!podeMandarArquivo(d)) {
+      toast.error(d.pode.responder ? "Arquivo só sai com a conversa aberta pelo cliente nas últimas 24 h." : "Assuma a conversa para mandar arquivos ao cliente.");
+      return;
+    }
+    setArquivo(f);
+  }
 
-  const acoes = (
-    <div className="flex flex-wrap items-center gap-1">
-      {d.pode.assumir && (
-        <Button size="sm" onClick={() => rodar(() => assumirAction(d.ciclo.id), "Conversa assumida.")} loading={ocupado} loadingLabel="Assumindo…">
-          <Check size={14} /> Assumir
-        </Button>
-      )}
-      {(d.pode.encaminharDireto || d.pode.pedirEncaminhamento) && (
-        <AcaoRapida icone={<ArrowRight />} onClick={() => setAberto("encaminhar")}>
-          Encaminhar
-        </AcaoRapida>
-      )}
-      {d.pode.agir && d.pessoasDoSetor.length > 0 && (
-        <AcaoRapida icone={<ArrowRightLeft />} onClick={() => setAberto("transferir")}>
-          Transferir
-        </AcaoRapida>
-      )}
-      {d.pode.vincular && (
-        <AcaoRapida icone={<UserRound />} onClick={() => setAberto("contato")}>
-          {d.contato.tipo === "CLIENTE" ? "Contato" : "Quem é?"}
-        </AcaoRapida>
-      )}
-      {d.pode.agir && (
-        <AcaoRapida icone={<CircleCheck />} onClick={() => setAberto("encerrar")}>
-          Encerrar
-        </AcaoRapida>
-      )}
-      {d.pode.tirar && (
-        <AcaoRapida icone={<UserX />} onClick={() => setAberto("tirar")}>
-          Tirar da conversa
-        </AcaoRapida>
-      )}
-    </div>
-  );
+  const resp = d.ciclo.responsavel;
+  const podePedirAssumir = !!resp && resp.id !== d.eu.id && !d.pedidoAssumir && !d.pode.assumir && d.ciclo.situacao !== "ENCERRADO";
 
   return (
     <>
       <NavegacaoPorTeclado anterior={anterior} proxima={proxima} fechar={v.hrefDaLista} />
-      <PainelDeConversa
-        barra={<BarraDoPainel fecharHref={v.hrefDaLista} anteriorHref={anterior} proximaHref={proxima} data={`Desde ${quando(d.ciclo.abertoEm)}`} />}
-        titulo={d.contato.titulo}
-        subtitulo={d.contato.subtitulo ? `${d.contato.subtitulo} · ${d.contato.telefone}` : d.contato.telefone}
-        etiquetas={etiquetas}
-        acoes={acoes}
-        aviso={
-          d.pedido ? (
+      <section
+        className="relative flex-1 min-h-0 flex flex-col bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden"
+        aria-label={d.contato.titulo}
+        onDragEnter={aoArrastar}
+        onDragOver={aoArrastar}
+        onDragLeave={aoSair}
+        onDrop={aoSoltar}
+      >
+        <BarraDoPainel fecharHref={v.hrefDaLista} anteriorHref={anterior} proximaHref={proxima} data={`Desde ${quando(d.ciclo.abertoEm)}`} />
+        <div className="shrink-0 border-b border-border px-4 py-3 flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <Iniciais nome={d.contato.tipo === "DESCONHECIDO" ? null : d.contato.titulo} tamanho={40} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 min-w-0">
+                <h2 className="truncate text-heading font-semibold text-fg">{d.contato.titulo}</h2>
+                <button
+                  type="button"
+                  onClick={() => setDadosAbertos((x) => !x)}
+                  aria-expanded={dadosAbertos}
+                  aria-label="Dados do contato"
+                  data-dica="Dados do contato"
+                  className="inline-grid place-items-center w-7 h-7 shrink-0 rounded-md text-fg-secondary hover:bg-surface-hover hover:text-fg"
+                >
+                  <ChevronDown size={16} className={`transition-transform duration-150 motion-reduce:transition-none ${dadosAbertos ? "rotate-180" : ""}`} aria-hidden />
+                </button>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {d.contato.subtitulo && <span className="text-micro text-fg-muted">{d.contato.subtitulo}</span>}
+                {d.contato.tipo === "DESCONHECIDO" && <span className="text-micro text-fg-muted">Contato novo</span>}
+                <Selo tom={d.ciclo.situacao === "TRIAGEM" ? "atencao" : d.ciclo.situacao === "NO_SETOR" ? "perigo" : d.ciclo.situacao === "ENCERRADO" ? "sucesso" : d.ciclo.situacao === "AGUARDANDO_CLIENTE" ? "neutro" : "marca"}>
+                  {ROTULO_DA_SITUACAO[d.ciclo.situacao]}
+                </Selo>
+                {/* O setor com a cor, só para quem vê a triagem ou todos os setores; abre o caminho da conversa. */}
+                {geral && (
+                  <button
+                    type="button"
+                    onClick={() => setAberto("caminho")}
+                    data-dica="Ver o caminho da conversa"
+                    className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full border border-border text-micro font-semibold text-fg-secondary hover:border-border-strong hover:text-fg"
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ background: d.ciclo.setor?.cor ?? v.triagem.cor }} aria-hidden />
+                    {d.ciclo.setor?.label ?? d.setorDaTriagem.label}
+                    <Route size={12} aria-hidden />
+                  </button>
+                )}
+                {resp && (
+                  <span className="inline-flex items-center gap-1 text-micro text-fg-secondary">
+                    <UserRound size={13} aria-hidden /> {resp.id === d.eu.id ? "Com você" : resp.nome}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {d.pode.assumir && (
+                <Button size="sm" onClick={() => rodar(() => assumirAction(d.ciclo.id), "Conversa assumida.")} loading={ocupado} loadingLabel="Assumindo…">
+                  <Check size={14} /> Assumir
+                </Button>
+              )}
+              <MenuDeMaisAcoes rotulo="Mais ações da conversa" size="md" width={270} sempreMenu>
+                {({ close }) => {
+                  // O menu fecha antes de abrir a janela da ação, para não ficar por cima dela.
+                  const fechar = (acao: () => void) => {
+                    close();
+                    acao();
+                  };
+                  return (
+                    <>
+                      <ItemDoMenu icone={<Route />} onClick={() => fechar(() => setAberto("caminho"))}>
+                        Caminho da conversa
+                      </ItemDoMenu>
+                      {(d.pode.encaminharDireto || d.pode.pedirEncaminhamento) && (
+                        <ItemDoMenu icone={<ArrowRight />} onClick={() => fechar(() => setAberto("encaminhar"))}>
+                          Encaminhar para outro setor
+                        </ItemDoMenu>
+                      )}
+                      {d.pode.agir && d.pessoasDoSetor.length > 0 && (
+                        <ItemDoMenu icone={<ArrowRightLeft />} onClick={() => fechar(() => setAberto("transferir"))}>
+                          Transferir para outra pessoa
+                        </ItemDoMenu>
+                      )}
+                      {podePedirAssumir && (
+                        <ItemDoMenu icone={<Hand />} onClick={() => fechar(() => rodar(() => pedirParaAssumirAction(d.ciclo.id), `Pedido enviado. ${resp!.nome} decide se passa a conversa.`))}>
+                          Pedir para assumir
+                        </ItemDoMenu>
+                      )}
+                      {d.pode.tirar && (
+                        <ItemDoMenu icone={<UserX />} onClick={() => fechar(() => setAberto("tirar"))}>
+                          Tirar da conversa
+                        </ItemDoMenu>
+                      )}
+                      {d.pode.agir && (
+                        <ItemDoMenu icone={<CircleCheck />} danger onClick={() => fechar(() => setAberto("encerrar"))}>
+                          Encerrar atendimento
+                        </ItemDoMenu>
+                      )}
+                    </>
+                  );
+                }}
+              </MenuDeMaisAcoes>
+            </div>
+          </div>
+          {dadosAbertos && <DadosDoContato d={d} aoAdicionar={() => setAberto("contato")} />}
+          {d.pedido ? (
             <FaixaDoPedido d={d} podeDecidir={d.pode.decidirPedido} />
           ) : d.pedidoAssumir ? (
             <FaixaDoPedidoDeAssumir d={d} />
@@ -137,28 +215,100 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
                 </>
               )}
             </div>
-          ) : undefined
-        }
-        corpo="fixo"
-      >
-        <div className="flex-1 min-h-0 flex">
-          <div className="flex-1 min-w-0 flex flex-col">
-            <Mensagens d={d} />
-            <Escrever d={d} aoAssumir={() => rodar(() => assumirAction(d.ciclo.id), "Conversa assumida.")} ocupado={ocupado} />
-          </div>
-          <aside className="hidden xl:flex w-72 shrink-0 flex-col gap-4 border-l border-border-soft p-4 overflow-y-auto scroll-y" aria-label="Cliente e caminho da conversa">
-            <Cliente d={d} aoConvidar={() => setAberto("contato")} />
-            <Caminho d={d} />
-          </aside>
+          ) : null}
         </div>
-      </PainelDeConversa>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <Mensagens d={d} />
+          <Escrever d={d} arquivo={arquivo} aoMudarArquivo={setArquivo} aoAssumir={() => rodar(() => assumirAction(d.ciclo.id), "Conversa assumida.")} ocupado={ocupado} />
+        </div>
+        {arrastando && (
+          <div className="pointer-events-none absolute inset-2 z-30 grid place-items-center rounded-lg border-2 border-dashed border-[var(--c41-grupo-atendimento)] bg-surface/90" aria-hidden>
+            <span className="flex flex-col items-center gap-2 text-ui font-semibold text-fg">
+              <Upload size={26} />
+              {podeMandarArquivo(d) ? "Solte o arquivo para anexar à conversa" : "Assuma a conversa para mandar arquivos"}
+            </span>
+          </div>
+        )}
+      </section>
 
+      <Modal open={aberto === "caminho"} onClose={() => setAberto(null)} title="Caminho da conversa">
+        <CaminhoDaConversa d={d} />
+      </Modal>
       <PainelDeEncaminhar d={d} aberto={aberto === "encaminhar"} aoFechar={() => setAberto(null)} />
       <PainelDoContato d={d} aberto={aberto === "contato"} aoFechar={() => setAberto(null)} />
       <JanelaDeEncerrar d={d} aberta={aberto === "encerrar"} aoFechar={() => setAberto(null)} />
       <JanelaDeTransferir d={d} aberta={aberto === "transferir"} aoFechar={() => setAberto(null)} />
       {d.pode.tirar && <JanelaDeTirar d={d} aberta={aberto === "tirar"} aoFechar={() => setAberto(null)} />}
     </>
+  );
+}
+
+/**
+ * Os dados do contato, abertos pela seta ao lado do nome: o número e o CNPJ
+ * copiam num clique; a empresa abre a ficha numa nova janela. Sem empresa
+ * ligada, o "Adicionar contato" (que antes era o "Quem é?" das ações).
+ */
+function DadosDoContato({ d, aoAdicionar }: { d: DetalheDoAtendimento; aoAdicionar: () => void }) {
+  const toast = useToast();
+  function copiar(valor: string, rotulo: string) {
+    navigator.clipboard.writeText(valor).then(
+      () => toast.success(`${rotulo} copiado.`),
+      () => toast.error(`Não deu para copiar o ${rotulo.toLowerCase()}.`)
+    );
+  }
+  const copiavel = (valor: string, rotulo: string) => (
+    <button
+      type="button"
+      onClick={() => copiar(valor, rotulo)}
+      data-dica={`Copiar o ${rotulo.toLowerCase()}`}
+      className="inline-flex items-center gap-1.5 self-start text-ui font-semibold text-brand tabular-nums hover:underline"
+    >
+      {valor} <Copy size={13} aria-hidden />
+    </button>
+  );
+  const empresa = d.contato.empresa;
+  return (
+    <div className="grid gap-4 rounded-lg border border-border-soft bg-surface-2 px-3.5 py-3 sm:grid-cols-3">
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Número</span>
+        {copiavel(d.contato.telefone, "Número")}
+      </div>
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">Empresa</span>
+        {empresa ? (
+          <span className="inline-flex items-center gap-1 min-w-0">
+            <span className="truncate text-ui text-fg">{empresa.nome}</span>
+            <a
+              href={`/empresas/${empresa.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Abrir a ficha de ${empresa.nome} numa nova janela`}
+              data-dica="Abrir a ficha da empresa numa nova janela"
+              className="inline-grid place-items-center w-6 h-6 shrink-0 rounded-md text-brand hover:bg-surface-hover"
+            >
+              <ExternalLink size={14} aria-hidden />
+            </a>
+          </span>
+        ) : (
+          <span className="text-ui text-fg-muted">Sem empresa ligada</span>
+        )}
+      </div>
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-micro font-semibold uppercase tracking-wide text-fg-muted">CNPJ</span>
+        {empresa?.cnpj ? copiavel(empresa.cnpj, "CNPJ") : <span className="text-ui text-fg-muted">—</span>}
+      </div>
+      {d.contato.nomeNoWhatsapp && d.contato.nomeNoWhatsapp !== d.contato.titulo && (
+        <p className="sm:col-span-3 text-micro text-fg-muted">No WhatsApp: {d.contato.nomeNoWhatsapp}</p>
+      )}
+      {!empresa && d.pode.vincular && (
+        <div className="sm:col-span-3 flex flex-wrap items-center gap-2">
+          <span className="text-micro text-fg-muted">{d.contato.tipo === "DESCONHECIDO" ? "Contato novo: o nome é o que a pessoa usa no WhatsApp, ou o número." : "Este contato ainda não está ligado a uma empresa."}</span>
+          <Button size="xs" variant="secondary" onClick={aoAdicionar}>
+            <UserRound size={13} /> Adicionar contato
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -242,16 +392,24 @@ function Balao({ m }: { m: DetalheDoAtendimento["mensagens"][number] }) {
   );
 }
 
-function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumir: () => void; ocupado: boolean }) {
+function Escrever({ d, arquivo, aoMudarArquivo: setArquivo, aoAssumir, ocupado }: { d: DetalheDoAtendimento; arquivo: File | null; aoMudarArquivo: (f: File | null) => void; aoAssumir: () => void; ocupado: boolean }) {
   const podeNota = d.pode.agir;
   const podeCliente = d.pode.responder && d.janela.ok;
   // Quem não pode responder ao cliente (ainda não assumiu, janela fechada) cai
   // na nota; ao assumir, a resposta ao cliente volta a ser a aba aberta.
   const [modoEscolhido, setModo] = useState<"cliente" | "nota">("cliente");
-  const modo = podeCliente ? modoEscolhido : "nota";
+  // O arquivo (arrastado ou escolhido) só vai ao cliente: com ele, a aba é a da resposta.
+  const modo = podeCliente ? (arquivo ? "cliente" : modoEscolhido) : "nota";
   const [texto, setTexto] = useState("");
-  const [arquivo, setArquivo] = useState<File | null>(null);
   const campoDoArquivo = useRef<HTMLInputElement>(null);
+  // A prévia da imagem, enquanto o arquivo espera para sair.
+  const previa = useMemo(() => (arquivo && arquivo.type.startsWith("image/") ? URL.createObjectURL(arquivo) : null), [arquivo]);
+  useEffect(
+    () => () => {
+      if (previa) URL.revokeObjectURL(previa);
+    },
+    [previa]
+  );
   const [enviando, iniciar] = useTransition();
   const [padroesAbertos, setPadroesAbertos] = useState(false);
   const router = useRouter();
@@ -355,11 +513,21 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
         {d.pode.responder && !d.janela.ok && d.janela.motivo && <Aviso>{d.janela.motivo}</Aviso>}
         {d.pode.responder && !d.janela.ok && <RetomarConversa d={d} />}
         {arquivo && modo === "cliente" && (
-          <div className="flex items-center gap-2 rounded-md border border-border bg-surface-2 px-2.5 py-1.5 text-ui">
-            <Paperclip size={14} className="text-fg-muted shrink-0" aria-hidden />
-            <span className="min-w-0 truncate">{arquivo.name}</span>
-            <span className="text-micro text-fg-muted shrink-0">o texto abaixo vai como legenda</span>
-            <button type="button" onClick={() => setArquivo(null)} className="ml-auto inline-flex w-7 h-7 items-center justify-center rounded-md hover:bg-surface-hover" aria-label="Tirar o arquivo">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-2 p-2 text-ui">
+            {previa ? (
+              // Prévia local do arquivo escolhido (blob:), sem passar pelo otimizador do Next.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={previa} alt={arquivo.name} className="w-14 h-14 shrink-0 rounded-md object-cover border border-border" />
+            ) : (
+              <span className="w-14 h-14 shrink-0 grid place-items-center rounded-md bg-surface border border-border text-micro font-bold text-fg-secondary uppercase" aria-hidden>
+                {arquivo.name.includes(".") ? arquivo.name.split(".").pop()!.slice(0, 4) : <Paperclip size={16} />}
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium text-fg">{arquivo.name}</span>
+              <span className="block text-micro text-fg-muted">{tamanho(arquivo.size)} · o texto abaixo vai como legenda</span>
+            </span>
+            <button type="button" onClick={() => setArquivo(null)} className="inline-flex w-8 h-8 shrink-0 items-center justify-center rounded-md hover:bg-surface-hover" aria-label="Tirar o arquivo">
               <X size={14} />
             </button>
           </div>
@@ -426,56 +594,12 @@ function Escrever({ d, aoAssumir, ocupado }: { d: DetalheDoAtendimento; aoAssumi
             </div>
           )}
           <span className="flex-1" />
-          <span className="hidden sm:inline text-micro text-fg-muted">Enter envia · Shift+Enter quebra a linha</span>
           <Button size="sm" onClick={enviar} loading={enviando} loadingLabel="Enviando…" disabled={(!texto.trim() && !(arquivo && modo === "cliente")) || (modo === "cliente" && !podeCliente)}>
             <Send size={14} /> {modo === "cliente" ? "Enviar" : "Anotar"}
           </Button>
         </div>
       </div>
     </div>
-  );
-}
-
-function Cliente({ d, aoConvidar }: { d: DetalheDoAtendimento; aoConvidar: () => void }) {
-  const linhas: [string, string][] = [];
-  if (d.contato.empresa) {
-    linhas.push(["Empresa", d.contato.empresa.nome]);
-    if (d.contato.empresa.cnpj) linhas.push(["CNPJ", d.contato.empresa.cnpj]);
-  }
-  if (d.contato.tipo === "NOVO") {
-    if (d.contato.nome) linhas.push(["Nome", d.contato.nome]);
-    if (d.contato.interesse) linhas.push(["Interesse", d.contato.interesse]);
-  }
-  linhas.push(["Telefone", d.contato.telefone]);
-  if (d.contato.nomeNoWhatsapp) linhas.push(["No WhatsApp", d.contato.nomeNoWhatsapp]);
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-ui font-semibold text-fg">Cliente</h3>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-ui">
-        {linhas.map(([r, val]) => (
-          <div key={r} className="contents">
-            <dt className="text-fg-muted">{r}</dt>
-            <dd className="text-fg break-words">{val}</dd>
-          </div>
-        ))}
-        {d.contato.empresa && (
-          <div className="contents">
-            <dt className="text-fg-muted">Portal</dt>
-            <dd className={d.contato.temPortal ? "text-success-fg font-medium" : "text-warning-fg font-medium"}>{d.contato.temPortal ? "Tem acesso" : "Sem acesso"}</dd>
-          </div>
-        )}
-      </dl>
-      {d.contato.empresa && (
-        <Link href={`/empresas/${d.contato.empresa.id}`} className="text-ui font-medium text-brand hover:underline">
-          Abrir a ficha da empresa
-        </Link>
-      )}
-      {d.contato.empresa && !d.contato.temPortal && d.pode.convidar && (
-        <Button size="sm" variant="secondary" className="self-start" onClick={aoConvidar}>
-          Convidar para o portal
-        </Button>
-      )}
-    </section>
   );
 }
 
@@ -515,41 +639,28 @@ function frase(mv: DetalheDoAtendimento["caminho"][number]): string {
   }
 }
 
-/** O caminho da conversa: os 2 eventos mais recentes, e o resto em "Ver mais". */
-function Caminho({ d }: { d: DetalheDoAtendimento }) {
-  const [todos, setTodos] = useState(false);
-  const lista = useMemo(() => (todos ? d.caminho : d.caminho.slice(0, 2)), [todos, d.caminho]);
-  const resto = d.caminho.length - 2;
+/** O caminho da conversa, na janela aberta pelo "…" ou pelo setor ao lado do nome: do mais recente ao primeiro. */
+function CaminhoDaConversa({ d }: { d: DetalheDoAtendimento }) {
+  if (d.caminho.length === 0) return <p className="text-ui text-fg-muted">Nenhum movimento ainda.</p>;
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-baseline gap-2">
-        <h3 className="text-ui font-semibold text-fg flex-1">Caminho da conversa</h3>
-        <span className="text-micro text-fg-muted">mais recente primeiro</span>
-      </div>
-      <ol className="flex flex-col gap-2.5">
-        {lista.map((mv) => (
-          <li key={mv.id} className="flex gap-2 text-ui">
-            <span className="w-11 shrink-0 text-fg-muted tabular-nums">{hora(mv.quando)}</span>
-            <span className="min-w-0 text-fg">{frase(mv)}</span>
-          </li>
-        ))}
-      </ol>
-      {resto > 0 && (
-        <button type="button" onClick={() => setTodos((x) => !x)} className="self-start inline-flex items-center gap-1 text-ui font-medium text-brand hover:underline">
-          {todos ? (
-            <>
-              <ChevronUp size={14} /> Ver menos
-            </>
-          ) : (
-            <>
-              <ChevronDown size={14} /> Ver mais ({resto})
-            </>
-          )}
-        </button>
-      )}
-    </section>
+    <ol className="flex flex-col">
+      {d.caminho.map((mv, i) => (
+        <li key={mv.id} className="flex gap-3">
+          <span className="flex flex-col items-center" aria-hidden>
+            <span className={`mt-1 w-2.5 h-2.5 rounded-full ${i === 0 ? "bg-[var(--c41-grupo-atendimento)]" : "bg-border-strong"}`} />
+            {i < d.caminho.length - 1 && <span className="w-px flex-1 bg-border my-1" />}
+          </span>
+          <span className="pb-3 min-w-0">
+            <span className="block text-ui text-fg">{frase(mv)}</span>
+            <span className="block text-micro text-fg-muted tabular-nums">{quando(mv.quando)}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
+
+const tamanho = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
 /**
  * Passadas 24 h sem mensagem do cliente, só sai modelo aprovado pela Meta. O

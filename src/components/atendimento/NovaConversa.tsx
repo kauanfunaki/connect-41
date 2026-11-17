@@ -171,3 +171,20 @@ function Contato({ x, veTudo, aoMudar, aoAbrir }: { x: ContatoEncontrado; veTudo
     </li>
   );
 }
+
+/**
+ * O "+ Nova conversa" do topo da página (17/11/2026, melhoria-728): saiu do
+ * lado da busca da lista, onde era só um ícone, para o cabeçalho, junto de
+ * Métricas e Configurar.
+ */
+export function BotaoNovaConversa({ veTudo }: { veTudo: boolean }) {
+  const [aberta, setAberta] = useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setAberta(true)}>
+        <MessageCirclePlus size={14} /> Nova conversa
+      </Button>
+      {aberta && <NovaConversa aberta={aberta} aoFechar={() => setAberta(false)} veTudo={veTudo} />}
+    </>
+  );
+}
