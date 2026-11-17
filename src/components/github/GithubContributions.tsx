@@ -186,7 +186,7 @@ function RepositoryCard({ repo, from, to, onDay, paleta, modo }: { repo: Reposit
   // Com "Times · todos" (09/11/2026), uma linha por time com a soma das pessoas dele.
   const linhas = modo === "time"
     ? timesDoRepositorio(repo.contributors, paleta).map(time => ({ id: time.id || "sem-time", total: time.total, counts: time.counts, cor: time.cor,
-      selo: <SeloDoTime nome={time.nome} cor={time.cor} />, nome: <>{time.nome}<span className={styles.developerName}> — {time.pessoas.length} {time.pessoas.length === 1 ? "pessoa" : "pessoas"}</span></> }))
+      selo: <SeloDoTime nome={time.nome} cor={time.cor} pequeno />, nome: <>{time.nome}<span className={styles.developerName}> — {time.pessoas.length} {time.pessoas.length === 1 ? "pessoa" : "pessoas"}</span></> }))
     : repo.contributors.map(person => ({ id: person.id, total: person.total, counts: person.counts as Record<string, number>, cor: corDaPessoa(person.id, paleta, modo),
       selo: <DeveloperAvatar login={person.login} />, nome: <DeveloperName login={person.login} name={person.name} /> }));
   const top = Math.max(0, ...linhas.map(linha => linha.total));
