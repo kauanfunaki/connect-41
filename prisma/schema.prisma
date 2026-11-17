@@ -815,6 +815,55 @@ model HelpdeskTicket {
   @@map("helpdesk_tickets")
 }
 
+// O histórico de chamados do Hub como casos para a triagem por IA (17/11/2026).
+// Não é chamado: não entra na fila, no SLA, nos indicadores nem na numeração.
+// A IA lê o pedido com as respostas da equipe e sugere a categoria do Connect;
+// quando ela bate com a que quem pediu escolheu no Hub, o caso fica
+// CONFIRMADO; senão, A_REVISAR, até alguém da equipe escolher
+// (src/lib/chamados/historico.ts). Os textos chegam sem senha, e-mail,
+// telefone e documento.
+model HelpdeskHistoricCase {
+  id String @id @default(uuid())
+  tenantId String
+  /// De onde veio: "hub".
+  source String @db.VarChar(20)
+  /// O id do chamado lá.
+  externalId String @db.VarChar(64)
+  title String @db.VarChar(255)
+  description String @db.Text
+  /// [{ texto, interno, em }]: os comentários de quem não abriu o chamado.
+  teamReplies Json
+  /// O caminho da categoria escolhida por quem pediu ("SUPORTE › Sistemas Externos").
+  originalCategory String @db.VarChar(255)
+  requesterSector String? @db.VarChar(120)
+  priority String? @db.VarChar(20)
+  sourceStatus String @db.VarChar(30)
+  openedAt DateTime
+  closedAt DateTime?
+  /// O que a IA escreveu: o pedido e a solução, em 1 ou 2 frases.
+  summary String? @db.Text
+  solution String? @db.Text
+  tags Json
+  /// As categorias do Connect: a de mesmo nome da escolhida no Hub, a sugerida pela IA e a que vale.
+  originalCategoryId String?
+  suggestedCategoryId String?
+  finalCategoryId String?
+  /// PROCESSANDO, A_REVISAR, CONFIRMADO ou DESCARTADO.
+  status String @default("PROCESSANDO") @db.VarChar(20)
+  attempts Int @default(0)
+  lastError String? @db.VarChar(300)
+  /// Quem revisou; nulo no confirmado sozinho e depois da exclusão do usuário.
+  reviewedById String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reviewedBy User? @relation("HelpdeskHistoricCaseReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  @@unique([tenantId, source, externalId])
+  @@index([tenantId, status])
+  @@index([reviewedById])
+  @@map("helpdesk_historic_cases")
+}
+
 /// Quando cada pessoa abriu o chamado pela última vez (06/11/2026): é o que
 /// apaga o número do menu — chamado sem responsável ainda não aberto, ou
 /// mudança de outra pessoa num chamado meu depois da minha última visita.
@@ -2132,6 +2181,7 @@ model User {
   handoffs                    Handoff[]                  @relation("HandoffRequester")
   handoffSectorAssignees      HandoffSectorAssignee[]
   handoffSectorTasksDone      HandoffSectorTask[]        @relation("HandoffSectorTaskDoneBy")
+  helpdeskHistoricCasesReviewed HelpdeskHistoricCase[]   @relation("HelpdeskHistoricCaseReviewer")
   handoffViews                HandoffView[]
   handoffEvents               HandoffEvent[]
   notifications               Notification[]

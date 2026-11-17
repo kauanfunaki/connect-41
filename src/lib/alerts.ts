@@ -1047,6 +1047,8 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     ["chamados em triagem", async () => (await import("@/lib/chamados/triagem-servidor")).retomarTriagens(tenantId)],
     // Também não é alerta: manda ao Hub o chamado que não foi na hora (17/11/2026, funcionalidade-711).
     ["chamados no Hub", async () => (await import("@/lib/chamados/hub-servidor")).reenviarAoHub(tenantId)],
+    // Também não é alerta: a IA lê os casos do histórico do Hub que sobraram da importação (17/11/2026).
+    ["histórico de chamados", async () => (await import("@/lib/chamados/historico-servidor")).processarCasos(tenantId)],
     ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
     ["probation", () => checkProbationDeadlines(tenantId, today)],

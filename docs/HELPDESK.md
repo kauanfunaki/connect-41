@@ -113,6 +113,17 @@ Desde 17/11/2026 (funcionalidade-711), o chamado aberto no Connect também abre 
 - **Hub fora:** o chamado abre normal no Connect, fica pendente (`hubPending`) e o motor de alertas tenta de novo a cada 15 minutos, até 8 vezes. O motivo da última falha fica em `hubLastError` e no log (`[chamados] Hub, chamado …`). O Hub não duplica: o mesmo chamado do Connect devolve o que já existe.
 - **Para ligar:** no Connect, `HUB_API_URL`, `HUB_SERVICE_TOKEN` (o token de integração do Hub, com escopo `connect41`), `HUB_CHAMADOS_ESCRITORIO` (o slug do escritório que manda, ex.: `41tech`) e `APP_PUBLIC_URL` (para o link de volta). No Hub, a rota `POST /api/integrations/connect41/tickets` (branch `feat/connect41-chamados` do 41-Tech-Hub) e as variáveis `CONNECT41_*` que a tela de login já usava. Sem as três primeiras, nada vai ao Hub.
 
+## Histórico do Hub
+
+Desde 17/11/2026, os chamados antigos do Hub viram **casos** para a triagem por IA aprender (`HelpdeskHistoricCase`, `src/lib/chamados/historico*.ts`). Não são chamados: não entram na fila, no SLA, nos indicadores nem na numeração.
+
+- **Trazer:** em Chamados › Configurar › **Histórico do Hub**, o botão "Trazer do Hub" busca os chamados na rota `GET /api/integrations/connect41/historico` do Hub (branch `feat/connect41-chamados` do 41-Tech-Hub), com a mesma configuração da cópia no Hub. Os que vieram do próprio Connect ficam de fora; os já trazidos não se repetem. Senha (com ":" ou "="), e-mail, telefone e CPF/CNPJ saem do texto antes de gravar.
+- **A IA lê** cada caso depois da resposta (`after()`), e o motor de alertas lê o que sobrar, 40 por vez: escreve o pedido e a solução em 1 ou 2 frases e sugere a categoria do Connect, olhando também as respostas da equipe. Três falhas seguidas mandam o caso para a revisão sem sugestão.
+- **Situação:** a IA concorda com a categoria de quem pediu → **Confirmado** sozinho; discorda, não sabe ou o Hub não tem par → **A revisar**; texto que não deixa entender o pedido → **Descartado**.
+- **Revisão:** quem gerencia os chamados escolhe, em cada caso a revisar, a categoria de quem pediu, a sugerida, outra, ou descarta. Dá para mudar depois um confirmado ou descartado.
+- **Por que revisar:** na contagem de 17/11 (262 chamados de 16/03 a 16/11/2026), a equipe nunca corrigiu a categoria escolhida no Hub, então ela não serve de gabarito sozinha.
+- **Ainda não alimenta a triagem:** usar os casos confirmados como exemplos na classificação vem depois da revisão, medindo antes se o acerto sobe.
+
 ## Arquivos
 
 No chamado, os arquivos vão junto com a mensagem: o clipe abre o seletor (vários arquivos de uma vez) e **Ctrl+V** cola prints e arquivos na caixa de texto. Cada arquivo sobe antes da mensagem e fica ligado a ela (`HelpdeskAttachment.commentId`); a mensagem pode ser só de arquivos. "Somente a equipe" vale para a mensagem e os arquivos dela. Os arquivos da abertura aparecem na solicitação.

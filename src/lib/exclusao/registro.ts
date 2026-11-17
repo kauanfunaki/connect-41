@@ -302,6 +302,8 @@ const USUARIO: Ligacao[] = [
   { modelo: "AvaliacaoTributariaVersao", campo: "autor", fk: "autorId", tratamento: "desligar" },
   // A tarefa da transferência continua feita, sem quem marcou (17/11/2026, melhoria-705).
   { modelo: "HandoffSectorTask", campo: "doneBy", fk: "doneById", tratamento: "desligar" },
+  // O caso revisado do histórico de chamados fica, sem quem revisou (17/11/2026).
+  { modelo: "HelpdeskHistoricCase", campo: "reviewedBy", fk: "reviewedById", tratamento: "desligar" },
 
   // Responsável por algo — fica sem responsável.
   { modelo: "Person", campo: "linkedUser", fk: "linkedUserId", tratamento: "desligar", rotulo: ["ficha em Pessoas ligada à conta", "fichas em Pessoas ligadas à conta"] },
