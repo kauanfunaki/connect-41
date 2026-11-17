@@ -13,6 +13,8 @@ import {
 import { planejarRenomeacaoContrato, type PlanoRenomeacaoContrato } from '../regras/auditContratosRenomeacao';
 import { ehSubpastaDistrato, paraDistratoDTO, textoDoDistrato, type DistratoDTO } from '../regras/auditDistrato';
 import { carregarDistratos } from './auditDistratoService';
+import { carregarExClientes } from './auditExClientesService';
+import { resumirForaDaAuditoria, type ExClienteResumo } from '../regras/auditExClientes';
 
 export const ROTULO_STATUS_CONTRATO: Record<StatusContrato, string> = {
   NAO_LOCALIZADO:         'Não localizado',
@@ -71,6 +73,8 @@ export interface EmpresaContrato {
   renomeacao:        PlanoRenomeacaoContrato | null;
   /** Distrato da prestação de serviços (tira das pendências) e avisos de BPO/social. */
   distrato:          DistratoDTO | null;
+  /** Tem pasta em Ex Clientes E pasta ativa: continua na auditoria, com aviso (nome da pasta em Ex Clientes). */
+  exCliente:         string | null;
 }
 
 export interface RelatorioContratos {
@@ -85,6 +89,8 @@ export interface RelatorioContratos {
     porStatus: Record<StatusContrato, number>;
     /** Empresas com distrato: ficam na lista, mas fora das pendências e do percentual. */
     distratos: number;
+    /** Pasta só em Ex Clientes: ficam fora do relatório. */
+    exClientes: ExClienteResumo[];
   };
   empresas: EmpresaContrato[];
 }
@@ -116,7 +122,7 @@ export async function montarRelatorioContratos(): Promise<RelatorioContratos> {
   const vazio: RelatorioContratos = {
     job: null,
     raizUnc: config.raizUnc,
-    resumo: { empresas: 0, emDia: 0, revisar: 0, marcadasSemPasta: 0, porStatus: porStatusZerado(), distratos: 0 },
+    resumo: { empresas: 0, emDia: 0, revisar: 0, marcadasSemPasta: 0, porStatus: porStatusZerado(), distratos: 0, exClientes: [] },
     empresas: [],
   };
   if (!ultimo) return vazio;
@@ -163,7 +169,10 @@ export async function montarRelatorioContratos(): Promise<RelatorioContratos> {
   // fora da auditoria. Se ganhar uma pasta depois, volta ao relatório normalmente.
   const marcadas = new Set(marcas.map((marca) => marca.company_id));
   const foraDaAuditoria = (id: string) => marcadas.has(id) && !pastasPorEmpresa.has(id);
-  const empresas = todasAtivas.filter((empresa) => !foraDaAuditoria(empresa.id));
+  const naAuditoria = todasAtivas.filter((empresa) => !foraDaAuditoria(empresa.id));
+  // Ex-cliente: pasta só na pasta de ex-clientes → fora; também com pasta ativa → aviso.
+  const ex = await carregarExClientes(naAuditoria, (id) => pastasPorEmpresa.has(id));
+  const empresas = naAuditoria.filter((empresa) => !ex.fora.has(empresa.id));
 
   const distratos = await carregarDistratos(arquivos, new Map(
     [...pastasPorEmpresa].map(([id, ps]) => [id, ps.map((p) => p.nomePasta)]),
@@ -197,6 +206,7 @@ export async function montarRelatorioContratos(): Promise<RelatorioContratos> {
       warnings: resultado.warnings,
       renomeacao: comDistrato ? null : renomeacao,
       distrato: paraDistratoDTO(distrato),
+      exCliente: ex.aviso.get(empresa.id) ?? null,
     };
   });
   linhas.sort((a, b) =>
@@ -212,9 +222,10 @@ export async function montarRelatorioContratos(): Promise<RelatorioContratos> {
       empresas: linhas.length,
       emDia: linhas.filter((l) => l.emDia).length,
       revisar: linhas.filter((l) => l.status === 'REVISAR').length,
-      marcadasSemPasta: todasAtivas.length - empresas.length,
+      marcadasSemPasta: todasAtivas.length - naAuditoria.length,
       porStatus,
       distratos: porStatus.DISTRATO,
+      exClientes: resumirForaDaAuditoria(ex, naAuditoria),
     },
     empresas: linhas,
   };

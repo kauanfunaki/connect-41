@@ -95,7 +95,7 @@ export function OperacaoFiscal({ aba }: { aba: string }) {
         { rotulo: "Concluídas", valor: execucoes.filter((e) => e.estado === "Concluída").length, icone: <CheckCircle2 />, href: "/sped-fiscal/motor/operacao?aba=historico&estado=concluida" },
         { rotulo: "Com erro", valor: execucoes.filter((e) => e.estado === "Erro").length, icone: <AlertTriangle />, href: "/sped-fiscal/motor/operacao?aba=historico&estado=erro" },
       ]} />
-      <BlocoFiscal titulo="Preparar pedido de teste" descricao="Empresa e estabelecimento são os selecionados acima. Os pedidos ficam salvos até você avançar a simulação.">
+      <BlocoFiscal titulo="Preparar pedido de teste">
         <div className="grid gap-4 sm:grid-cols-3">
           <CampoFiscal nome="Solicitante"><Input aria-label="Solicitante" maxLength={200} placeholder="Nome opcional" value={p.solicitante} onChange={(e) => campo("solicitante", e.target.value)} /></CampoFiscal>
           <CampoFiscal nome="Data inicial"><CampoData aria-label="Data inicial" min="2026-09-01" max="2026-10-31" value={p.dataIni} onChange={(valor) => campo("dataIni", valor)} /></CampoFiscal>

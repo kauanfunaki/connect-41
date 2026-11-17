@@ -13,7 +13,7 @@ export default async function NovoItemTechPage() {
   const { ctx } = await abrirTelaDoModulo(MODULO_TECH_INTERNO);
   if (!await podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir")) notFound();
   const [opcoes, podeDefinirTamanho] = await Promise.all([opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "gerir")]);
-  return <PageContainer><PageHeader title="Novo item" subtitle="Registre o que precisa ser feito pela equipe Tech." action={<VoltarParaALista />} />
+  return <PageContainer><PageHeader title="Novo item" action={<VoltarParaALista />} />
     {/* A largura toda, em duas colunas: o texto à esquerda, os detalhes ao
         lado (05/11/2026, opção A). Os cartões são do próprio formulário. */}
     <FormularioItem {...opcoes} podeEditar podeDefinirTamanho={podeDefinirTamanho} />

@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       const competencias = preparada.contexto ? await competenciasDaConferencia(preparada) : null;
       const tela = preparada.contexto ? { ...preparada, contexto: contextoDaConferencia(preparada.contexto, params, competencias?.dados ?? null) } : preparada;
       const aba = params.aba === "confronto" ? "confronto" : "previa";
-      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/conferencia" abas={[{ chave: "previa", rotulo: "Prévia financeira" }, { chave: "confronto", rotulo: "Confronto de documentos" }]} aba={aba} titulo="Conferência fiscal" descricao="Prévia financeira e confronto de documentos do motor SPED, por raiz." semEstabelecimento>
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/conferencia" abas={[{ chave: "previa", rotulo: "Prévia financeira" }, { chave: "confronto", rotulo: "Confronto de documentos" }]} aba={aba} titulo="Conferência fiscal" semEstabelecimento>
         {competencias && competencias.erro !== null && <div className="mb-5"><ErroDaLeitura falha={competencias} /></div>}
         {competencias?.dados && tela.contexto && !competencias.dados.includes(tela.contexto.competencia) && <div className="mb-5"><Aviso tom="neutro">O motor não tem documentos de {tela.contexto.competencia}{competencias.dados.length ? `; há de ${competencias.dados.slice(0, 6).join(", ")}${competencias.dados.length > 6 ? "…" : ""}` : ""}.</Aviso></div>}
         <Suspense key={JSON.stringify(params)} fallback={<CarregandoLeitura oQue={aba === "previa" ? "a prévia financeira" : "o confronto"} />}>

@@ -55,10 +55,6 @@ export function CamposDasRetencoes({
       abertoInicial={abertoInicial}
     >
       <div className="flex flex-col gap-3 pt-1">
-        <p className="text-helper text-fg-muted">
-          O imposto que fica com você e é recolhido por você. Cada valor vira uma conta a pagar do imposto — à Receita, ou à prefeitura no
-          ISS —, vencendo no dia 20 do mês seguinte à competência (o ISS, no dia 10).
-        </p>
         <FieldGrid columns="sm:grid-cols-3">
           {TRIBUTOS_RETIDOS.map((t) => {
             const s = situacao?.[t];

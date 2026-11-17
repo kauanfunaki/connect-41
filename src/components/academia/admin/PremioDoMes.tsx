@@ -55,12 +55,9 @@ export function PremioDoMes({ premios, meses }: { premios: Premios; meses: strin
   const comPremio = (m: string) => Boolean(premios[m]?.podio || premios[m]?.evolucao);
   return (
     <Card as="section" aria-labelledby="premio-titulo" className="max-w-2xl p-5">
-      <h2 id="premio-titulo" className="mb-1 flex items-center gap-2 text-body font-semibold text-fg">
+      <h2 id="premio-titulo" className="mb-4 flex items-center gap-2 text-body font-semibold text-fg">
         <Gift size={16} aria-hidden className="text-brand" /> Prêmio do mês
       </h2>
-      <p className="mb-4 text-ui text-fg-secondary">
-        Aparece no painel do topo, no Início e no ranking, e fica gravado no Hall dos campeões quando o mês fecha. Deixe vazio para não ter prêmio.
-      </p>
       <form onSubmit={salvar} className="flex flex-col gap-4">
         <CampoForm label="Mês" htmlFor="premio-mes">
           <Select id="premio-mes" value={mes} onChange={(e) => escolherMes(e.target.value)} className="w-full sm:w-60">
@@ -71,11 +68,17 @@ export function PremioDoMes({ premios, meses }: { premios: Premios; meses: strin
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Prêmio do pódio (top 3 de cada teste)" htmlFor="premio-texto" helper={`${texto.length} de 200 caracteres. Ex.: Top 3 de cada teste ganham chocolate.`}>
-          <Input id="premio-texto" value={texto} maxLength={200} onChange={(e) => setTexto(e.target.value)} />
+        {/* O contador ao lado do rótulo e o exemplo no placeholder (17/11/2026, melhoria-707). */}
+        <CampoForm label="Prêmio do pódio (top 3 de cada teste)" htmlFor="premio-texto" acao={<span className="text-fg-muted tabular-nums">{texto.length} de 200</span>}>
+          <Input id="premio-texto" value={texto} maxLength={200} placeholder="Ex.: Top 3 de cada teste ganham chocolate." onChange={(e) => setTexto(e.target.value)} />
         </CampoForm>
-        <CampoForm label="Prêmio da maior evolução" htmlFor="premio-evolucao" helper={`${evolucao.length} de 200 caracteres. Para quem mais melhorou contra a própria média. Ex.: Um vale-café.`}>
-          <Input id="premio-evolucao" value={evolucao} maxLength={200} onChange={(e) => setEvolucao(e.target.value)} />
+        <CampoForm
+          label="Prêmio da maior evolução"
+          htmlFor="premio-evolucao"
+          dica="Para quem mais melhorou contra a própria média."
+          acao={<span className="text-fg-muted tabular-nums">{evolucao.length} de 200</span>}
+        >
+          <Input id="premio-evolucao" value={evolucao} maxLength={200} placeholder="Ex.: Um vale-café." onChange={(e) => setEvolucao(e.target.value)} />
         </CampoForm>
         {erro && <Aviso>{erro}</Aviso>}
         <div>

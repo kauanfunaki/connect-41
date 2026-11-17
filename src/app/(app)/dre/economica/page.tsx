@@ -124,7 +124,7 @@ export default async function DreEconomicaPage({
   // "DRE", com a aba Competência marcada embaixo (05/11/2026, escolha 6A do
   // Kauan): as quatro DREs são abas de uma tela só.
   const cabecalho = (action?: React.ReactNode) => (
-    <PageHeader title="DRE" subtitle="Competência: o mês a que a conta pertence, não o dia em que foi paga." action={action} />
+    <PageHeader title="DRE" action={action} />
   );
   if (!empresa || !companyId) {
     return (
@@ -385,7 +385,7 @@ export default async function DreEconomicaPage({
                 ? "Nenhum lançamento deste centro de custo no período."
                 : ultimoComMovimento
                   ? `O último mês com lançamentos é ${rotuloDaCompetencia(ultimoComMovimento)}.`
-                  : "Esta empresa ainda não tem lançamentos com competência. Contas lançadas por nota ou à mão aparecem aqui no mês a que pertencem."
+                  : "Esta empresa ainda não tem lançamentos com competência."
             }
             action={
               !nomeDoFiltro && ultimoComMovimento ? (
@@ -462,10 +462,6 @@ export default async function DreEconomicaPage({
                 {cobranca.descontos !== 0 && <> descontos de acordo <strong className="tabular-nums">{moeda(Math.abs(cobranca.descontos))}</strong> em outras despesas;</>}
                 {cobranca.perdas !== 0 && <> perdas com clientes <strong className="tabular-nums">{moeda(Math.abs(cobranca.perdas))}</strong> em outras despesas.</>}
               </p>
-              <p className="text-micro text-fg-muted mt-1">
-                Título renegociado ou perdido continua como receita na competência dele; parcela de acordo não é receita, é recebimento.
-                {centros.length > 0 && " A perda segue o centro do título; a diferença de acordo, o centro comum dos títulos renegociados."}
-              </p>
             </Card>
           )}
 
@@ -492,11 +488,8 @@ export default async function DreEconomicaPage({
           leva a bolinha, e não "(inativo)" no texto. */}
       {quadro && (
         <section className="mt-5">
-          <h2 className="text-card-title font-semibold text-fg">Resultado por centro de custo — {periodo}</h2>
-          <p className="text-micro text-fg-muted mt-0.5 mb-2">
-            A conta rateada entra em cada centro pela parte dela: as linhas somam a DRE da empresa sem filtro. Despesas somam
-            todos os grupos de pagamento; o resultado segue a estrutura da DRE, na visão de impostos escolhida.
-          </p>
+          {/* A regra do rateio por centro, que ficava aqui, foi para a ajuda da tela (17/11/2026, melhoria-707). */}
+          <h2 className="text-card-title font-semibold text-fg mb-2">Resultado por centro de custo — {periodo}</h2>
           <div className="c41-tabela scroll-x overflow-x-auto bg-surface border border-border rounded-lg">
             <table className="w-full min-w-[620px]">
               <thead>

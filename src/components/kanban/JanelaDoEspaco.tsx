@@ -122,10 +122,6 @@ function FormularioDoEspaco({
       <input type="hidden" name="color" value={cor} />
       <input type="hidden" name="icon" value={icone ?? ""} />
 
-      <p className="text-helper text-fg-muted -mt-1">
-        Um espaço reúne as pastas e as listas de um trabalho do setor.
-      </p>
-
       <div className="flex items-end gap-3">
         <Popover
           aria-label="Ícone e cor do espaço"
@@ -181,14 +177,14 @@ function FormularioDoEspaco({
         </CampoForm>
       </div>
 
-      <CampoForm label="Descrição" htmlFor={`${id}descricao`} helper="Opcional.">
+      <CampoForm label="Descrição" htmlFor={`${id}descricao`}>
         <Textarea id={`${id}descricao`} name="description" rows={2} defaultValue={inicial?.description ?? ""} />
       </CampoForm>
 
       <CampoForm
         label="Permissão padrão"
         htmlFor={`${id}permissao`}
-        helper={`${DESCRICAO_DA_PERMISSAO[permissao]} ${REGRA_FIXA_DO_ESPACO}`}
+        dica={`${DESCRICAO_DA_PERMISSAO[permissao]} ${REGRA_FIXA_DO_ESPACO}`}
       >
         <Select
           id={`${id}permissao`}

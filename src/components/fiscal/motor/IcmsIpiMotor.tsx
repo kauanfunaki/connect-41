@@ -76,7 +76,7 @@ async function ApuracaoDoArquivo({ tela, arquivo, params }: { tela: TelaDoMotor;
       </BlocoFiscal>
     </div>
 
-    {a.ajustes_arquivo.length > 0 && <BlocoFiscal titulo="Ajustes no arquivo (E111)" descricao="Os que saíram nesta geração. Os gravados agora ficam na aba Ajustes.">
+    {a.ajustes_arquivo.length > 0 && <BlocoFiscal titulo="Ajustes no arquivo (E111)" descricao="Os que saíram nesta geração.">
       <TabelaFiscal colunas={["Código", "Descrição", "Valor"]} linhas={a.ajustes_arquivo.map((x, i) => ({ id: `${x.codigo}-${i}`, celulas: [x.codigo, <span key="d" className="block max-w-96 break-words">{x.descricao}</span>, din(x.valor)] }))} />
     </BlocoFiscal>}
 

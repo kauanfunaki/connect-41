@@ -119,7 +119,7 @@ export function CriarAcordo({
           {/* Parcelas é um número de dois dígitos e a data tem largura fixa:
               colunas estreitas, e o valor fica com o resto. */}
           <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_110px_180px]">
-            <CampoForm label="Valor do acordo" htmlFor="acordo-valor" helper="Vazio = soma dos originais.">
+            <CampoForm label="Valor do acordo" htmlFor="acordo-valor" dica="Vazio = soma dos originais.">
               <Input
                 id="acordo-valor"
                 prefix="R$"
@@ -133,7 +133,7 @@ export function CriarAcordo({
             <CampoForm label="Parcelas" htmlFor="acordo-parcelas" required>
               <CampoNumero id="acordo-parcelas" min={1} max={MAXIMO_DE_PARCELAS} value={parcelas} onChange={(e) => setParcelas(e.target.value)} disabled={confirmando} />
             </CampoForm>
-            <CampoForm label="1ª parcela vence em" htmlFor="acordo-primeiro" required helper="As seguintes, todo mês no mesmo dia.">
+            <CampoForm label="1ª parcela vence em" htmlFor="acordo-primeiro" required dica="As seguintes, todo mês no mesmo dia.">
               <CampoData id="acordo-primeiro" min={hojeISO} value={primeiro} onChange={(v) => setPrimeiro(v)} disabled={confirmando} />
             </CampoForm>
           </FieldGrid>

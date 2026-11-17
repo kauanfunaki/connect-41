@@ -78,12 +78,7 @@ export function AdiantamentosDaEmpresa({
   return (
     <>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-3xl text-helper text-fg-muted">
-            {aPagar
-              ? "O que se pagou ao fornecedor antes da conta. Para usar, pague a conta escolhendo o adiantamento em “Saiu da conta”: a despesa entra na DRE ali, e o banco não se mexe de novo."
-              : "O que o cliente pagou antes da conta. Para usar, receba a conta escolhendo o adiantamento em “Entrou na conta”: a receita entra na DRE ali, e o banco não se mexe de novo."}
-          </p>
+        <div className="flex flex-wrap items-start justify-end gap-3">
           <Button size="sm" variant="secondary" onClick={() => setNovo(true)}>
             <Plus size={14} /> Novo adiantamento
           </Button>
@@ -199,11 +194,6 @@ function JanelaDoAdiantamento({ companyId, aPagar, onFechar, onFeito }: { compan
         >
           <input type="hidden" name="companyId" value={companyId} />
           <input type="hidden" name="kind" value={aPagar ? "PAGAR" : "RECEBER"} />
-          <p className="text-helper text-fg-secondary">
-            {aPagar
-              ? "O dinheiro sai do banco agora e fica no adiantamento do fornecedor, até a conta dele chegar. Não entra na DRE: entra quando a conta for paga com ele."
-              : "O dinheiro entrou no banco e fica no adiantamento do cliente, até a conta a receber dele existir. Não entra na DRE: entra quando a conta for recebida com ele."}
-          </p>
           <FieldGrid>
             <CampoForm label={aPagar ? "Fornecedor" : "Cliente"} htmlFor={`${id}-contraparte`} required>
               <Select id={`${id}-contraparte`} name="counterpartyId" defaultValue="" required>
@@ -227,7 +217,8 @@ function JanelaDoAdiantamento({ companyId, aPagar, onFechar, onFeito }: { compan
               label={aPagar ? "Saiu da conta" : "Entrou na conta"}
               htmlFor={`${id}-conta`}
               required
-              helper={dados.contas.length === 0 ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)." : "A conciliação casa esta saída com a linha do extrato."}
+              travado={dados.contas.length === 0 ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)." : undefined}
+              dica={dados.contas.length === 0 ? undefined : "A conciliação casa este movimento com a linha do extrato."}
             >
               <Select
                 id={`${id}-conta`}

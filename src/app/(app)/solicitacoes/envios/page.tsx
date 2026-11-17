@@ -112,7 +112,6 @@ export default async function EnviosPage({
     <PageContainer>
       <PageHeader
         title="Envios ao cliente"
-        subtitle="Documentos que o escritório manda a uma empresa — guia, contrato, orientação —, com a prova de que o cliente viu e, quando pedido, o aceite. O publicado aparece no portal do cliente e pode ir também por e-mail."
         action={
           podeCriar ? (
             <Button href={rotaDoNovoEnvio(empresaId)}>

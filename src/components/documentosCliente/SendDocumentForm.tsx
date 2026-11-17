@@ -44,12 +44,12 @@ export function SendDocumentForm({ action, documentId, companyId, companyEmail, 
         label={companyEmail ? `Enviar para ${companyEmail} (e-mail cadastrado da empresa)` : "Empresa sem e-mail cadastrado"}
       />
 
-      <CampoForm label="E-mails avulsos" htmlFor="extraEmails" helper="Digite um e-mail e aperte Enter ou vírgula para adicionar.">
+      <CampoForm label="E-mails avulsos" htmlFor="extraEmails" dica="Digite um e-mail e aperte Enter ou vírgula para adicionar.">
         <EmailChipsInput id="extraEmails" name="extraEmails" />
       </CampoForm>
 
       {lembrete !== false && (
-        <CampoForm label="Lembrete de não lido" htmlFor="reminderDays" helper="Se ninguém do cliente abrir no prazo, sai um lembrete só (e-mail e aviso no portal).">
+        <CampoForm label="Lembrete de não lido" htmlFor="reminderDays" dica="Se ninguém do cliente abrir no prazo, sai um lembrete só (e-mail e aviso no portal).">
           <Select id="reminderDays" name="reminderDays" defaultValue={lembrete?.dias ? String(lembrete.dias) : ""}>
             {OPCOES_DO_LEMBRETE.map((o) => (
               <option key={o.value} value={o.value}>

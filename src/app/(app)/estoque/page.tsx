@@ -92,7 +92,6 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
     <PageContainer>
       <PageHeader
         title="Estoque"
-        subtitle="As máquinas e os materiais do escritório: com quem está cada um, o que repor e o que conferir."
         action={podeGerir ? <FormularioDoItem categorias={categorias} action={salvarItemDoEstoque.bind(null, null)} /> : undefined}
       />
 

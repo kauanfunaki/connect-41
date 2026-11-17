@@ -5,6 +5,7 @@ import { FileUp } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Aviso } from "@/components/ui/Aviso";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { Input } from "@/components/ui/Input";
 import { CampoForm } from "@/components/ui/CampoForm";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
@@ -47,19 +48,23 @@ export function ModeloDoTermo({ modelo }: Props) {
       </Button>
       <Modal open={aberta} onClose={() => !enviando && setAberta(false)} title="Modelo do termo aditivo" maxWidth="max-w-xl">
         <form action={enviar} className="flex flex-col gap-4">
-          <p className="text-helper text-fg-secondary">
-            O arquivo do Word com o texto do termo. Onde vão os dados da empresa, escreva os campos entre chaves:{" "}
-            <code className="text-fg">{"{CONTRATANTE_TEXTO}"}</code> (o parágrafo do contratante),{" "}
-            <code className="text-fg">{"{DATA_DOCUMENTO}"}</code> e <code className="text-fg">{"{NOME_SOCIO_ASSINATURA}"}</code>. O modelo do Aditiva Pronto já
-            vem assim.
-          </p>
+          {/* Os campos do modelo num bloco fechado (17/11/2026, melhoria-707):
+              é a referência de quem monta o .docx, não texto para ler a cada envio. */}
+          <BlocoRecolhivel titulo="Campos do modelo" resumo="3 campos entre chaves">
+            <p className="text-helper text-fg-secondary">
+              Onde vão os dados da empresa, escreva os campos entre chaves:{" "}
+              <code className="text-fg">{"{CONTRATANTE_TEXTO}"}</code> (o parágrafo do contratante),{" "}
+              <code className="text-fg">{"{DATA_DOCUMENTO}"}</code> e <code className="text-fg">{"{NOME_SOCIO_ASSINATURA}"}</code>. O modelo do Aditiva Pronto já
+              vem assim.
+            </p>
+          </BlocoRecolhivel>
           {modelo && (
             <p className="rounded-md border border-border-soft px-3 py-2 text-fs-2 text-fg">
               Atual: <strong>{modelo.nomeArquivo}</strong> — enviado por {modelo.enviadoPor} em {modelo.atualizadoEm}.
             </p>
           )}
           <FileDropzoneField id="modelo-do-termo" name="modelo" accept=".docx" maxSizeMb={5} required={!modelo} />
-          <CampoForm label="Cidade da data" htmlFor="cidade-do-termo" required helper="Sai no fim do termo: “Curitiba, 12 de novembro de 2026.”">
+          <CampoForm label="Cidade da data" htmlFor="cidade-do-termo" required dica="Sai no fim do termo: “Curitiba, 12 de novembro de 2026.”">
             <Input id="cidade-do-termo" name="cidade" defaultValue={modelo?.cidade ?? "Curitiba"} maxLength={80} required />
           </CampoForm>
           {erro && <Aviso>{erro}</Aviso>}

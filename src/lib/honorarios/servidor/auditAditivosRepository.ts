@@ -3,6 +3,7 @@
 
 import { db, tenantAtual } from "./contexto";
 import { listarEmpresas } from "./auditRepository";
+import { caminhoEmExClientes, ehPastaDeExClientes } from "../regras/auditExClientes";
 
 export interface ArquivoDoJobRow {
   nome_pasta: string;
@@ -31,16 +32,19 @@ export async function listarArquivosDoJob(jobId: string): Promise<ArquivoDoJobRo
       pasta: { select: { nomePasta: true } },
     },
   });
-  return arquivos.map((a) => ({
-    nome_pasta: a.pasta.nomePasta,
-    caminho_relativo: a.caminhoRelativo,
-    nome: a.nome,
-    ext: a.ext,
-    tamanho: Number(a.tamanho),
-    modificado_em: a.modificadoEm,
-    pdf_assinado: a.pdfAssinado === null ? null : a.pdfAssinado ? 1 : 0,
-    pdf_marca: a.pdfMarca,
-  }));
+  // Nada que esteja na pasta de ex-clientes (como pasta da raiz ou em qualquer nível abaixo).
+  return arquivos
+    .filter((a) => !ehPastaDeExClientes(a.pasta.nomePasta) && !caminhoEmExClientes(a.caminhoRelativo))
+    .map((a) => ({
+      nome_pasta: a.pasta.nomePasta,
+      caminho_relativo: a.caminhoRelativo,
+      nome: a.nome,
+      ext: a.ext,
+      tamanho: Number(a.tamanho),
+      modificado_em: a.modificadoEm,
+      pdf_assinado: a.pdfAssinado === null ? null : a.pdfAssinado ? 1 : 0,
+      pdf_marca: a.pdfMarca,
+    }));
 }
 
 export interface EmpresaAtivaRow {

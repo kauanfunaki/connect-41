@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     if (tela) {
       const aba = params.aba === "importacoes" || params.aba === "cobertura" ? params.aba : "acervo";
       const chave = JSON.stringify(params);
-      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/documentos" abas={[{ chave: "acervo", rotulo: "Acervo" }, { chave: "importacoes", rotulo: "Importações" }, { chave: "cobertura", rotulo: "Cobertura" }]} aba={aba} titulo="Documentos e importações" descricao="Acervo sincronizado, importações, quarentena e cobertura do motor SPED.">
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/documentos" abas={[{ chave: "acervo", rotulo: "Acervo" }, { chave: "importacoes", rotulo: "Importações" }, { chave: "cobertura", rotulo: "Cobertura" }]} aba={aba} titulo="Documentos e importações">
         <Suspense key={chave} fallback={<CarregandoLeitura oQue={aba === "acervo" ? "o acervo" : aba === "importacoes" ? "as importações" : "a cobertura"} />}>
           {aba === "importacoes" ? <ImportacoesMotor tela={tela} params={params} /> : aba === "cobertura" ? <CoberturaMotor tela={tela} params={params} /> : <AcervoMotor tela={tela} params={params} />}
         </Suspense>

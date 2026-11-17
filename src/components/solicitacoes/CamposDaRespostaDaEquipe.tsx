@@ -14,7 +14,7 @@ export function CamposDaRespostaDaEquipe({ id }: { id: string }) {
   const [interna, setInterna] = useState(false);
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-      <CampoForm label="Depois de enviar" htmlFor={`depois-${id}`} helper={interna ? "Nota interna não muda a situação." : undefined}>
+      <CampoForm label="Depois de enviar" htmlFor={`depois-${id}`} travado={interna ? "Nota interna não muda a situação." : undefined}>
         <Select id={`depois-${id}`} name="depois" defaultValue="EM_ANDAMENTO" disabled={interna}>
           {DEPOIS_DA_RESPOSTA.map((d) => (
             <option key={d.valor} value={d.valor}>

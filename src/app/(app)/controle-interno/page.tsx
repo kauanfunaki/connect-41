@@ -55,7 +55,7 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   // O Kanban ocupa a altura da tela, sem rolagem de lado (lote C de 03/11/2026).
   return <PageContainer className={view === "kanban" ? "h-full flex flex-col" : ""}>
     <LembrarDaLista endereco={voltar} />
-    <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech."
+    <PageHeader title="Controle interno"
       action={<AcoesDoControle podeEditar={podeEditar} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
     <div className="flex-shrink-0"><VisoesDoControle ativa={view} href={v => hrefVisao(v)} /></div>
     <CascoDaTabela className={view === "kanban" ? "flex min-h-0 flex-1 flex-col" : ""} buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[

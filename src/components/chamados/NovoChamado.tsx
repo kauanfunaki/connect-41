@@ -197,10 +197,7 @@ export function NovoChamado({ inicial, categorias, setores, atendem, setorPadrao
             : <p className="text-helper text-fg-muted">Escolha o setor que vai atender o pedido.</p>}
         </div>}
         {perguntas.length > 0 && <section aria-labelledby="perguntas-da-ia" className="space-y-4 rounded-lg border border-border p-4">
-          <div>
-            <h3 id="perguntas-da-ia" className="text-ui font-semibold text-fg">Perguntas da IA <span className="font-normal text-fg-muted">(opcional)</span></h3>
-            <p className="mt-1 text-helper text-fg-secondary">Responder ajuda a equipe a começar sem precisar perguntar. Sem resposta, o chamado abre com o que você escreveu.</p>
-          </div>
+          <h3 id="perguntas-da-ia" className="text-ui font-semibold text-fg">Perguntas da IA <span className="font-normal text-fg-muted">(opcional)</span></h3>
           {perguntas.map((q, i) => <div key={q.text} className="space-y-2">
             <p className="text-ui font-medium text-fg">{q.text}</p>
             {q.options.length > 0 && <div className="flex flex-wrap gap-2">{q.options.map(o => <button key={o} type="button" aria-pressed={respostas[i] === o} onClick={() => responder(i, respostas[i] === o ? "" : o)} className={`min-h-9 rounded-md border px-3 py-1.5 text-left text-ui font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${respostas[i] === o ? "border-brand bg-brand/8 text-brand" : "border-border-strong text-fg hover:bg-surface-hover"}`}>{o}</button>)}</div>}
@@ -221,9 +218,7 @@ export function NovoChamado({ inicial, categorias, setores, atendem, setorPadrao
     </>}
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0 max-w-2xl space-y-1">
-        <p className="flex items-start gap-2 text-ui text-fg-secondary"><ScanSearch size={16} aria-hidden className="mt-0.5 shrink-0 text-fg-muted" />{etapa === 1
-          ? "A IA lê o pedido, sugere o título e a categoria e pode fazer perguntas. Você confere e abre o chamado; responder é opcional."
-          : "O chamado abre com o que está nesta tela. Depois, a IA confere se já existe no Orquestrador algo que faça o pedido; você é avisado no sino."}</p>
+        {/* O que a IA faz em cada etapa foi para o artigo de ajuda (17/11/2026, melhoria-707): aqui fica só o andamento. */}
         {busy === "revisando" && <p role="status" className="text-ui text-fg-secondary">A IA está lendo o pedido. Costuma levar alguns segundos; se preferir, abra sem esperar.</p>}
         {salvoAs && <p className="text-helper text-fg-muted" role="status">Rascunho salvo às {salvoAs}</p>}
         {textoDeBusy && <p role="status" className="text-ui text-fg-secondary">{textoDeBusy} {textoDeBusy === "Enviando arquivo…" && <Button variant="link" onClick={() => abort.current?.abort()}>Parar envio</Button>}</p>}

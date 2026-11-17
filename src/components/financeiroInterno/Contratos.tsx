@@ -105,7 +105,7 @@ export function FormularioDoContrato({
             <CampoForm label="Início" htmlFor="contrato-inicio">
               <CampoData id="contrato-inicio" name="startDate" defaultValue={contrato?.startDate ?? ""} />
             </CampoForm>
-            <CampoForm label="Renovação" htmlFor="contrato-renovacao" helper="Avisa 30 dias antes.">
+            <CampoForm label="Renovação" htmlFor="contrato-renovacao" dica="Avisa 30 dias antes.">
               <CampoData id="contrato-renovacao" name="renewalDate" defaultValue={contrato?.renewalDate ?? ""} />
             </CampoForm>
             <CampoForm label="Fim" htmlFor="contrato-fim">
@@ -113,7 +113,7 @@ export function FormularioDoContrato({
             </CampoForm>
           </div>
           <Switch name="autoRenew" value="on" defaultChecked={contrato?.autoRenew ?? false} rotulo="Renova sozinho" />
-          <CampoForm label="Quem responde" htmlFor="contrato-responsavel" helper="Quem aprova a renovação.">
+          <CampoForm label="Quem responde" htmlFor="contrato-responsavel" dica="Quem aprova a renovação.">
             <Select id="contrato-responsavel" name="ownerUserId" defaultValue={contrato?.ownerUserId ?? ""} busca>
               <option value="">Ninguém definido</option>
               {pessoas.map((p) => (

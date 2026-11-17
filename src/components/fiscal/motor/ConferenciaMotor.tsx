@@ -63,7 +63,6 @@ export async function PreviaFinanceiraMotor({ tela, params }: { tela: TelaDoMoto
     </BlocoFiscal>
     <BlocoRecolhivel titulo="Prestadores de NFS-e tomada (MEI e normal)" abertoInicial={false}>
       <div className="space-y-3">
-        {escrita.visivel && <p className="text-helper text-fg-secondary">A correção de regime vale só para este cliente e vence o cadastro global, que continua no painel do motor. “Desfazer correção” volta ao cadastro ou ao palpite pelo nome.</p>}
         {d.prestadores.erro !== null ? <ErroDaLeitura falha={d.prestadores} hrefDeNovo={aqui} /> : <div className="grid gap-5 xl:grid-cols-2">
         {([["MEI", d.prestadores.dados.mei, d.prestadores.dados.prestadores_mei], ["Normal", d.prestadores.dados.normal, d.prestadores.dados.prestadores_normal]] as const).map(([lado, total, lista]) => <section key={lado} aria-label={lado}>
           <h4 className="mb-2 text-label font-semibold text-fg">{lado} · {reaisDoMotor(total)}</h4>
@@ -77,7 +76,7 @@ export async function PreviaFinanceiraMotor({ tela, params }: { tela: TelaDoMoto
     </BlocoRecolhivel>
     {([["Simulações", p.simulacoes], ["CT-e quebrado", p.cte], ["Combustível", p.combustivel], ["Resumo do confronto", p.confronto], ["Resumo da conferência de documentos", p.conferencia]] as const).map(([titulo, valor]) =>
       <BlocoRecolhivel key={titulo} titulo={titulo} abertoInicial={false}><div><BlocoLivre valor={valor} /></div></BlocoRecolhivel>)}
-    {escrita.visivel ? <BlocoFiscal titulo="Simular uma linha" descricao="O valor digitado entra na prévia como simulado. Apagar a simulação volta a linha a “não levantado”, que não é zero.">
+    {escrita.visivel ? <BlocoFiscal titulo="Simular uma linha">
       <SimularLinha raiz={contexto.raiz} competencia={p.competencia} linhas={linhasSimulaveis} gravadas={pend.simulacoes} permissao={escrita} />
     </BlocoFiscal> : <p className="text-helper text-fg-muted">Simular linhas continua no painel do motor.</p>}
   </div>;

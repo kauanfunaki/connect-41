@@ -248,7 +248,6 @@ export function EstacaoSped({ aba, empresa, contexto, base, pode, direitos, grup
       {geracao.motivo && <Aviso tom="atencao">{geracao.motivo}</Aviso>}
       <div className="rounded-lg border border-border bg-surface p-5 space-y-4">
         <h2 className="text-card-title font-semibold">Gerar arquivo da competência</h2>
-        <p className="text-ui text-fg-secondary">O pedido congela uma revisão dos dados e entra na fila. O agente do motor gera o arquivo e devolve aqui. {obrigacao === "contribuicoes" ? "Contribuições abrange matriz e filiais da raiz." : "ICMS/IPI usa o estabelecimento selecionado."}</p>
         <Select aria-label="Tipo do arquivo" className="w-56" value={tipoSped} onChange={e => setTipoSped(e.target.value as "0" | "1")}><option value="0">Original</option><option value="1">Substituto / retificação</option></Select>
         <FaltasDoArquivo faltas={faltasDoArquivo} hrefDaEmpresa={`/empresas/${empresa.id}`} />
         <div className="flex flex-wrap items-center gap-3">

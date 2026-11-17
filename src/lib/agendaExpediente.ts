@@ -107,6 +107,15 @@ export function descreverExpediente(e: Expediente): string {
   return passaDaMeiaNoite(e) && e.fim !== 0 ? `${base} do dia seguinte` : base;
 }
 
+/**
+ * O horário no chip da barra da Agenda (17/11/2026, melhoria-707): "7h às 22h",
+ * "22h às 6h", "24h". A frase inteira fica no título do chip.
+ */
+export function expedienteCurto(e: Expediente): string {
+  if (duracaoEmHoras(e) === 24) return "24h";
+  return `${e.inicio}h às ${e.fim}h`;
+}
+
 // ── Instantes ────────────────────────────────────────────────────────────────
 
 /** Instante em que a coluna do dia `dia` ("YYYY-MM-DD") começa. */

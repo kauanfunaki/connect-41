@@ -14,6 +14,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
+import { ResumoExClientes } from "@/components/honorarios/ExClientes";
 import { BotaoDaPlanilha, hrefDaPlanilha } from "@/components/honorarios/BotaoDaPlanilha";
 import { TabelaDeContratos } from "@/components/honorarios/TabelaDeContratos";
 import { formatarNumero } from "@/lib/format";
@@ -107,6 +108,8 @@ export default async function ContratosPage({ searchParams }: { searchParams: Pr
               },
             ]}
           />
+
+          <ResumoExClientes exClientes={resumo.exClientes} />
 
           <CascoDaTabela
             contagem={contarItens(filtradas.length, "empresa", "empresas")}

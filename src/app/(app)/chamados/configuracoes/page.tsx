@@ -22,10 +22,7 @@ export default async function ConfiguracaoPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Chamados", href: "/chamados" }, { label: "Configurações" }]} />
-      <PageHeader
-        title="Configurar chamados"
-        subtitle="Quem atende e os prazos de atendimento. A IA interpreta cada pedido e sugere o setor."
-      />
+      <PageHeader title="Configurar chamados" />
       <ConfiguracaoDosChamados politicas={politicas} setores={setores} />
     </PageContainer>
   );

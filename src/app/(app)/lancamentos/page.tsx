@@ -37,7 +37,6 @@ import { centrosAtivosDaEmpresa } from "@/lib/financeiro/centroDeCustoServidor";
 import { projetosAtivosDaEmpresa } from "@/lib/financeiro/projetoServidor";
 import { contasBancariasDaEmpresa } from "@/lib/financeiro/contaPrevistaServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { estadoDosAgentes } from "@/lib/ia/data";
 import { AGENTE_DO_BOLETO } from "@/lib/financeiro/leituraDoBoleto";
 
@@ -111,7 +110,6 @@ export default async function LancamentosPage({
   const cabecalho = (action?: React.ReactNode) => (
     <PageHeader
       title="Lançamentos"
-      subtitle="Contas que não nascem de nota fiscal — lançadas à mão ou importadas de planilha."
       action={action}
     />
   );
@@ -172,14 +170,7 @@ export default async function LancamentosPage({
       ) : (
         <>
           <Breadcrumb items={[{ label: "Lançamentos", href: href("lista") }, { label: tela.titulo }]} />
-          <PageHeader
-            title={tela.titulo}
-            subtitle={
-              aba === "novo"
-                ? "Uma conta sem nota fiscal — aluguel, folha, pró-labore, tarifa. Ela entra em Contas a pagar ou a receber como as outras."
-                : "Muitas contas de uma vez, de uma planilha em CSV. Nada é gravado antes da sua confirmação."
-            }
-          />
+          <PageHeader title={tela.titulo} />
         </>
       )}
       {aba === "novo" ? (
@@ -463,18 +454,12 @@ async function ListaDeManuais({
             </TabelaFiltravel>
             {limitado && (
               <p className="text-micro text-fg-muted mt-3">
-                Mostrando os {LIMITE_DA_LISTA} primeiros pelo vencimento. A lista é de uma empresa num mês; passar disto
-                costuma ser importação repetida.
+                Mostrando os {LIMITE_DA_LISTA} primeiros pelo vencimento.
               </p>
             )}
           </>
         )}
       </CascoDaTabela>
-      <NotaDeFonte>
-        Lançamento não é apagado: cancelar tira dos totais e fica no histórico de auditoria. Editar muda a classificação a
-        qualquer momento; valor e vencimento, só com a conta em aberto. A baixa de um lançamento em aberto é feita em
-        Contas a pagar ou a receber, como a de qualquer conta.
-      </NotaDeFonte>
     </>
   );
 }

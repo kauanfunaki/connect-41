@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ROTULO_MOTIVO_CONTRATO, ROTULO_STATUS_CONTRATO, TOM_STATUS_CONTRATO } from "@/lib/honorarios/rotulos";
 import type { ArquivoContratoResumo, EmpresaContrato } from "@/lib/honorarios/servidor/auditContratosService";
 import { AvisoDistrato } from "./AvisoDistrato";
+import { AvisoExCliente } from "./ExClientes";
 import { CopiarCaminho } from "./CopiarCaminho";
 import { IconeDoArquivo, ListaDeArquivos } from "./ArquivoDaPasta";
 
@@ -83,6 +84,7 @@ export function TabelaDeContratos({ empresas, raizUnc, filtrado }: { empresas: E
                     <Selo tom={TOM_STATUS_CONTRATO[e.status]}>{ROTULO_STATUS_CONTRATO[e.status]}</Selo>
                     <span className="mt-0.5 block text-micro text-fg-muted">{ROTULO_MOTIVO_CONTRATO[e.motivo]}</span>
                     <AvisoDistrato distrato={e.distrato} />
+                    <AvisoExCliente pasta={e.exCliente} />
                   </td>
                   <td className="py-2.5 pr-3 max-w-[320px] break-words text-fg-secondary">{e.contratoPrincipal?.nome ?? "—"}</td>
                   <td className="py-2.5 text-right">

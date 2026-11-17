@@ -46,7 +46,7 @@ export function ItemForm({ action, pipelineId, entityType, entities, tags = [], 
         </Aviso>
       )}
 
-      <Field label="Título da atividade" htmlFor="title" helper="Informe um título ou selecione uma empresa/pessoa.">
+      <Field label="Título da atividade" htmlFor="title" dica="Informe um título ou selecione uma empresa/pessoa.">
         <Input id="title" name="title" autoFocus placeholder="Ex.: Conferir documentos" />
       </Field>
       <Field label="Estágio" htmlFor="stageId" required>

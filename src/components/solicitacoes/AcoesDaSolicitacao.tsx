@@ -172,7 +172,7 @@ export function AcoesDaSolicitacao({
               ))}
             </Select>
           </CampoForm>
-          <CampoForm label="Motivo" htmlFor={`encaminhar-motivo-${id}`} helper="Fica numa nota interna. O cliente não vê.">
+          <CampoForm label="Motivo" htmlFor={`encaminhar-motivo-${id}`} dica="Fica numa nota interna. O cliente não vê.">
             <Textarea id={`encaminhar-motivo-${id}`} name="motivo" rows={3} maxLength={500} />
           </CampoForm>
           <div className="flex justify-end gap-2">

@@ -13,6 +13,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
+import { ResumoExClientes } from "@/components/honorarios/ExClientes";
 import { TabelaDePastas } from "@/components/honorarios/TabelaDePastas";
 import { TabelaDeEmpresasSemPasta } from "@/components/honorarios/TabelaDeEmpresasSemPasta";
 
@@ -75,6 +76,8 @@ export default async function PastasPage({ searchParams }: { searchParams: Promi
             {resumo.empresasMarcadasSemPasta > 0 && ` · ${resumo.empresasMarcadasSemPasta} marcada(s) sem pasta, fora da auditoria`}
           </p>
 
+          <ResumoExClientes exClientes={resumo.exClientes} />
+
           <AbasDeLink
             ativa={aba}
             aria-label="Pastas ou empresas"
@@ -133,10 +136,6 @@ export default async function PastasPage({ searchParams }: { searchParams: Promi
                 />
               }
             >
-              <p className="mb-3 text-label text-fg-muted">
-                Se a pasta existe com outro nome, vincule pela sugestão. Se a empresa não tem pasta na rede de propósito, marque como sem pasta: ela sai da
-                auditoria de contratos e aditivos.
-              </p>
               <TabelaDeEmpresasSemPasta
                 empresas={empresasSemPasta.slice(inicio, inicio + POR_PAGINA)}
                 marcadas={q.marca === "marcadas"}

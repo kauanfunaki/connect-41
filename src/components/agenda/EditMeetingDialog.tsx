@@ -76,7 +76,7 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
           </CampoForm>
         </div>
 
-        <CampoForm label="Provedor" htmlFor="provider-readonly" helper="Não é possível trocar o provedor de uma reunião já criada.">
+        <CampoForm label="Provedor" htmlFor="provider-readonly" travado="Não é possível trocar o provedor de uma reunião já criada.">
           <Input id="provider-readonly" value={PROVIDER_LABEL[meeting.provider]} disabled readOnly />
         </CampoForm>
 
@@ -93,7 +93,7 @@ export function EditMeetingDialog({ action, meeting, allUsers, companies, onClos
               placeholder="Buscar empresa…"
             />
           </CampoForm>
-          <CampoForm label="Cliente(s)" htmlFor="clientName" helper="Separe por vírgula, se houver mais de um">
+          <CampoForm label="Cliente(s)" htmlFor="clientName" dica="Separe por vírgula, se houver mais de um.">
             <Input id="clientName" name="clientName" defaultValue={meeting.clientName ?? ""} placeholder="Ex: Bruno, Maria" />
           </CampoForm>
         </div>

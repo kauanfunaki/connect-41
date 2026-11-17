@@ -33,7 +33,7 @@ export function ArquivoDaEtapa({ tela, arquivos, hrefDeNovo, children }: {
       <EmptyState
         icon={<FileText />}
         title={`Ainda não há arquivo de ${mesPorExtenso(tela.competencia)}`}
-        description="A classificação e a apuração são lidas do arquivo que o motor gera. Gere uma primeira versão; depois de decidir, gere de novo para o arquivo levar as decisões."
+        description="Gere uma primeira versão; depois de decidir, gere de novo para o arquivo levar as decisões."
         action={tela.etapas.includes("gerar") ? <Button href={hrefDoSped("gerar", recorte)}>Ir para Gerar SPED</Button> : undefined}
       />
     </Card>;

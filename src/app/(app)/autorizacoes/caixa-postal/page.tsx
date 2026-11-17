@@ -42,7 +42,6 @@ export default async function CaixaPostalPage() {
       <Breadcrumb items={[{ label: "Autorizações de acesso", href: "/autorizacoes" }, { label: "Caixa Postal da Receita" }]} />
       <PageHeader
         title="Caixa Postal da Receita"
-        subtitle="As mensagens da Receita que o Connect trouxe pelo Serpro. A lista vem sozinha quando o Serpro avisa de mensagem nova; abrir uma mensagem dá ciência da intimação, e o prazo começa a contar."
       />
 
       {!pronta.pronta && (

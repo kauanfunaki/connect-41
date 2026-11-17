@@ -3,7 +3,7 @@ import { AvatarImage } from "@/components/shared/AvatarImage";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo } from "@/components/ui/Selo";
 import { ROTULO_DO_TESTE, mesPorExtensoLongo } from "@/lib/academia/regras";
-import { MESES_DA_MEDIA_DA_EVOLUCAO, MINIMO_DE_TENTATIVAS_NA_EVOLUCAO, evolucaoEmTexto, numeroDoMesEmTexto } from "@/lib/academia/evolucao";
+import { MINIMO_DE_TENTATIVAS_NA_EVOLUCAO, evolucaoEmTexto, numeroDoMesEmTexto } from "@/lib/academia/evolucao";
 import type { EvolucaoNaTela, LinhaDaEvolucaoNaTela } from "@/lib/academia/tipos";
 import { BotaoDeParabens, type ParabensDaLinha } from "./BotaoDeParabens";
 
@@ -14,7 +14,6 @@ import { BotaoDeParabens, type ParabensDaLinha } from "./BotaoDeParabens";
  */
 export function TabelaDaEvolucao({ evolucao, parabens }: { evolucao: EvolucaoNaTela; parabens?: ParabensDaLinha }) {
   const { teste, mes, topo, eu, minha } = evolucao;
-  const regra = `O seu número de ${mesPorExtensoLongo(mes)} contra a média dos seus ${MESES_DA_MEDIA_DA_EVOLUCAO} meses anteriores (os meses em que você fez o teste). Entra quem fez pelo menos ${MINIMO_DE_TENTATIVAS_NA_EVOLUCAO} tentativas valendo no mês e melhorou.`;
 
   const minhaFrase = minha
     ? `Sua evolução: ${evolucaoEmTexto(minha.evolucao)} (${numeroDoMesEmTexto(teste, minha.atual)} contra a média de ${numeroDoMesEmTexto(teste, minha.media)}).`
@@ -60,7 +59,6 @@ export function TabelaDaEvolucao({ evolucao, parabens }: { evolucao: EvolucaoNaT
         <h2 id="evolucao-titulo" className="text-body font-semibold text-fg">
           Evolução em {ROTULO_DO_TESTE[teste]} · {mesPorExtensoLongo(mes)}
         </h2>
-        <p className="text-helper text-fg-muted">{regra}</p>
       </div>
       {topo.length === 0 ? (
         <EmptyState icon={<TrendingUp />} title="Ninguém na evolução ainda" description="Assim que alguém fizer as tentativas do mês e melhorar a própria média, aparece aqui." />

@@ -68,7 +68,7 @@ export function FormularioDeExecucao({ raiz, estabelecimentos, estabelecimentoId
   const bloqueado = !podeSolicitar || pendente;
   return <div className="space-y-5">
     {motivo && <Aviso tom="info">{motivo}</Aviso>}
-    <BlocoFiscal titulo="Preparar pedido" descricao="O pedido vai para a fila do motor SPED; um agente do motor executa quando estiver livre. Nada roda dentro do Connect.">
+    <BlocoFiscal titulo="Preparar pedido">
       <div className="grid gap-4 sm:grid-cols-3">
         <CampoFiscal nome="Estabelecimento"><Select aria-label="Estabelecimento" value={estab} onChange={(e) => setEstab(e.target.value)}>
           <option value="">Selecione</option>
@@ -91,7 +91,8 @@ export function FormularioDeExecucao({ raiz, estabelecimentos, estabelecimentoId
       <Button className="mt-4" disabled={bloqueado} loading={pendente && enviando === modo} loadingLabel="Enviando…" onClick={() => solicitar(modo)}>Solicitar {MODOS_EXECUCAO[modo].toLocaleLowerCase("pt-BR")}</Button>
     </BlocoRecolhivel>)}
     <BlocoRecolhivel titulo="Gerar SPED" abertoInicial className="bg-surface">
-      <p className="mb-4 text-ui text-fg-secondary">Um único mês inteiro. ICMS/IPI gera o estabelecimento escolhido; Contribuições gera a raiz inteira pela matriz{matriz ? ` (${matriz.rotulo})` : " — a matriz não está entre as empresas que você acessa"}.</p>
+      {/* Fica só o motivo da trava; o resto foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+      {obrigacao === "sped_contribuicoes" && !matriz && <p className="mb-4 text-ui text-fg-secondary">Contribuições gera a raiz inteira pela matriz, e a matriz não está entre as empresas que você acessa.</p>}
       <div className="grid gap-4 sm:grid-cols-3">
         <CampoFiscal nome="Escrituração"><Select aria-label="Escrituração" value={obrigacao} onChange={(e) => { const m = e.target.value as typeof obrigacao; setObrigacao(m); setP((a) => ({ ...a, saida: m === "sped" ? "saida_sped.txt" : "", forcarErros: false, forcarCobertura: false })); }}><option value="sped">EFD ICMS/IPI</option><option value="sped_contribuicoes">EFD Contribuições · PIS/COFINS</option></Select></CampoFiscal>
         <CampoFiscal nome="Tipo do arquivo"><Select aria-label="Tipo do arquivo" value={p.tipoSped ?? ""} onChange={(e) => campo("tipoSped", e.target.value === "0" || e.target.value === "1" ? e.target.value : undefined)}><option value="">Selecione</option><option value="0">Original</option><option value="1">Substituto</option></Select></CampoFiscal>

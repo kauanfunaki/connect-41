@@ -45,7 +45,7 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
   const docs = documentosDoContexto(cenario);
   const totais = totaisDoContexto(cenario);
   const importacoes = cenario.importacoes.filter((i) => mesmoEscopo(i.contexto, cenario.contexto));
-  if (aba === "importacoes") return <BlocoFiscal titulo="Histórico de importações" descricao="Cada lote mostra recebidos, rejeitados e a origem da entrada." acao={<AtalhoFiscal modulo="fiscal_acervo" aba="envio">Enviar outro lote</AtalhoFiscal>}>
+  if (aba === "importacoes") return <BlocoFiscal titulo="Histórico de importações" acao={<AtalhoFiscal modulo="fiscal_acervo" aba="envio">Enviar outro lote</AtalhoFiscal>}>
     <TabelaFiscal colunas={["Origem", "Recebidos", "Quarentena", "Importado em"]} linhas={importacoes.map((i) => ({ id: i.id, celulas: [i.origem, i.aceitos, i.rejeitados, dataFiscal(i.criadoEm)] }))} />
     {totais.rejeitados > 0 && <div className="mt-5"><AtalhoFiscal modulo="fiscal_acervo" aba="acervo" filtros={{ grupo: "quarentena" }}>Revisar quarentena</AtalhoFiscal></div>}
   </BlocoFiscal>;
@@ -56,7 +56,7 @@ export function DocumentosFiscal({ aba }: { aba: string }) {
       { rotulo: "Prontos para apuração", valor: docs.filter((d) => d.estado === "Classificado").length, icone: <CheckCircle2 />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=todos&situacao=Classificado" },
       { rotulo: "Pendentes de decisão", valor: totais.pendentes, icone: <ListChecks />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=todos&situacao=Pendente", tom: totais.pendentes > 0 ? "text-warning-fg" : undefined },
       { rotulo: "Quarentena", valor: totais.rejeitados, icone: <ShieldOff />, href: "/sped-fiscal/motor/documentos?aba=acervo&grupo=quarentena", tom: totais.rejeitados > 0 ? "text-warning-fg" : undefined },
-    ]} /><BlocoFiscal titulo="Cobertura do estabelecimento" descricao="Tipos de documento e pendências da competência selecionada." acao={<AtalhoFiscal modulo="fiscal_classificacao">Classificar documentos</AtalhoFiscal>}><TabelaFiscal colunas={["Estabelecimento", "NF-e / NFC-e", "CT-e", "NFS-e", "Sem XML", "Pendências"]} linhas={empresa.estabelecimentos.filter((e) => !cenario.contexto.estabelecimentoId || cenario.contexto.estabelecimentoId === e.id).map((e) => { const itens = docs.filter((d) => d.estabelecimentoId === e.id); return { id: e.id, celulas: [e.nome, itens.filter((d) => ["NF-e", "NFC-e"].includes(d.tipo)).length, itens.filter((d) => d.tipo === "CT-e").length, itens.filter((d) => d.tipo === "NFS-e").length, itens.filter((d) => !d.xml).length, itens.filter((d) => d.estado !== "Classificado").length] }; })} /></BlocoFiscal></>;
+    ]} /><BlocoFiscal titulo="Cobertura do estabelecimento" acao={<AtalhoFiscal modulo="fiscal_classificacao">Classificar documentos</AtalhoFiscal>}><TabelaFiscal colunas={["Estabelecimento", "NF-e / NFC-e", "CT-e", "NFS-e", "Sem XML", "Pendências"]} linhas={empresa.estabelecimentos.filter((e) => !cenario.contexto.estabelecimentoId || cenario.contexto.estabelecimentoId === e.id).map((e) => { const itens = docs.filter((d) => d.estabelecimentoId === e.id); return { id: e.id, celulas: [e.nome, itens.filter((d) => ["NF-e", "NFC-e"].includes(d.tipo)).length, itens.filter((d) => d.tipo === "CT-e").length, itens.filter((d) => d.tipo === "NFS-e").length, itens.filter((d) => !d.xml).length, itens.filter((d) => d.estado !== "Classificado").length] }; })} /></BlocoFiscal></>;
   }
   const itens = docs.filter(doGrupo(grupo));
   const quarentena = grupo === "quarentena";
@@ -93,7 +93,7 @@ export function ClassificacaoFiscal({ aba }: { aba: string }) {
   const prontoParaApurar = documentosDoContexto(cenario).length > 0 && documentosDoContexto(cenario).every((d) => d.estado === "Classificado");
   const apuracao = modulos.includes("fiscal_contribuicoes") ? "fiscal_contribuicoes" : "fiscal_icms_ipi";
   return <div className="space-y-5">
-    <BlocoFiscal titulo="Decisão de classificação" descricao="Defina o tratamento e aplique a um item ou aos documentos selecionados.">
+    <BlocoFiscal titulo="Decisão de classificação">
       <div className="grid gap-4 sm:grid-cols-4"><CampoFiscal nome="Destinação"><Select className={classeSelectFiscal} value={destino} onChange={(e) => setDestino(e.target.value)}>{["Revenda", "Insumo", "Uso e consumo", "Ativo imobilizado", "Sem crédito"].map((d) => <option key={d}>{d}</option>)}</Select></CampoFiscal><CampoFiscal nome="CST de teste"><Input value={cst} maxLength={3} onChange={(e) => setCst(e.target.value)} /></CampoFiscal><AlinhadoAoCampo><Checkbox id="fiscal-credito" label="Aproveitar crédito" checked={credito} onChange={(e) => setCredito(e.target.checked)} /></AlinhadoAoCampo><AlinhadoAoCampo><Button disabled={!selecionados.length || !cst.trim()} onClick={() => aplicar(selecionados)}>Aplicar a {selecionados.length} selecionado(s)</Button></AlinhadoAoCampo></div>
     </BlocoFiscal>
     {/* A lista no casco das listas, com as opções na barra (15/10/2026). */}

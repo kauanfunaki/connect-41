@@ -65,7 +65,7 @@ export default async function AnalisesPage({
   if (!empresa || !companyId) {
     return (
       <PageContainer>
-        <PageHeader title="DRE" subtitle="Análises e reconciliação, sobre a DRE por competência e o caixa." />
+        <PageHeader title="DRE" />
         {empresas.length === 0 ? (
           <EmptyState title="Nenhuma empresa ativa" icon={<FileText />} />
         ) : (
@@ -93,7 +93,7 @@ export default async function AnalisesPage({
           escolha 6A do Kauan): as quatro DREs são abas de uma tela só. */}
       <PageHeader
         title="DRE"
-        subtitle={`Análises e reconciliação de ${rotuloDaCompetencia(mes)}, sobre a DRE por competência e o caixa — cálculo determinístico, sem IA externa.`}
+        subtitle={rotuloDaCompetencia(mes)}
       />
       <AbasDaDre ativa="analises" companyId={companyId} mes={mes} />
       {/* A empresa navega sozinha (e vira a última aberta); a análise também,

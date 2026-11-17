@@ -57,10 +57,6 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
         <Upload size={16} className="text-brand" />
         <h2 className="text-card-title font-semibold text-fg">Importar extrato OFX</h2>
       </div>
-      <p className="text-helper text-fg-secondary max-w-[70ch]">
-        Exporte o extrato em OFX (Money/Quicken) no internet banking. O arquivo precisa ser desta conta. Reimportar o
-        mesmo período não duplica nada: o que já entrou é reconhecido e pulado.
-      </p>
       <form
         ref={formRef}
         className="flex flex-col gap-3"
@@ -97,8 +93,7 @@ export function ImportarOfx({ bankAccountId, omie }: { bankAccountId: string; om
       {omie && (
         <div className="flex flex-col gap-2 border-t border-border pt-3">
           <p className="text-helper text-fg-secondary max-w-[70ch]">
-            Sem OFX? Esta conta é a {omie.rotulo ? `"${omie.rotulo}"` : "conta corrente"} no Omie. Traga do Omie o que o BPO já conciliou lá no mês — é um
-            espelho: só entra o lançamento conciliado no Omie, e conta com OFX no mesmo mês é recusada.
+            Sem OFX? Esta conta é a {omie.rotulo ? `"${omie.rotulo}"` : "conta corrente"} no Omie: traga de lá o que o BPO já conciliou no mês.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <CampoMes id={`omie-mes-${bankAccountId}`} value={mesDoOmie} onChange={setMesDoOmie} compact aria-label="Mês do extrato do Omie" />

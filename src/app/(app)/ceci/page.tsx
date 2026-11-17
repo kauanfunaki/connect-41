@@ -51,7 +51,7 @@ export default async function CeciPage() {
     <PageContainer>
       <PageHeader
         title="Ceci"
-        subtitle="Como a assistente do Connect está indo: avaliações, processamento e o que pede atenção. Os números contam os últimos 30 dias; a evolução, as últimas 8 semanas."
+        subtitle="Últimos 30 dias; a evolução, as últimas 8 semanas."
         action={
           ctx.role === "SUPER_ADMIN" ? (
             <Button href="/admin/ia?aba=respostas" variant="secondary">
@@ -102,12 +102,9 @@ export default async function CeciPage() {
 
         <div className="grid gap-5 xl:grid-cols-2">
           <Card as="section" aria-labelledby="melhora" className="p-4 flex flex-col gap-3 min-w-0">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="melhora" className="text-section font-semibold text-fg">
-                Melhora
-              </h2>
-              <p className="text-fs-2 text-fg-muted">Respostas boas entre as avaliadas, semana a semana.</p>
-            </div>
+            <h2 id="melhora" className="text-section font-semibold text-fg">
+              Melhora
+            </h2>
             <Colunas
               titulo="% de respostas boas"
               formatar={(n) => `${n}%`}
@@ -154,12 +151,9 @@ export default async function CeciPage() {
           </Card>
 
           <Card as="section" aria-labelledby="processamento" className="p-4 flex flex-col gap-3 min-w-0">
-            <div className="flex flex-col gap-0.5">
-              <h2 id="processamento" className="text-section font-semibold text-fg">
-                Processamento
-              </h2>
-              <p className="text-fs-2 text-fg-muted">As chamadas de cada Ceci nos últimos 30 dias. P90: 9 em cada 10 respostas saíram em até esse tempo.</p>
-            </div>
+            <h2 id="processamento" className="text-section font-semibold text-fg">
+              Processamento
+            </h2>
             {agentes.length === 0 ? (
               <p className="text-fs-2 text-fg-muted">Nenhuma chamada nos últimos 30 dias.</p>
             ) : (
