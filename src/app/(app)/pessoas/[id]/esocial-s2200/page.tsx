@@ -81,7 +81,6 @@ export default async function EsocialS2200Page({
 
       <PageHeader
         title="eSocial S-2200 — rascunho"
-        subtitle="Cadastramento Inicial do Vínculo e Admissão. Mapeamento dos dados coletados para conferência."
       />
 
       {/* Aviso honesto: não é transmissão oficial */}
@@ -164,7 +163,6 @@ export default async function EsocialS2200Page({
 
       <p className="text-helper text-fg-muted mt-4">
         Admissão {person.admissionDate ? `em ${formatCalendarDate(person.admissionDate)}` : "sem data registrada"}.
-        Campos pendentes precisam ser preenchidos na ficha antes da geração oficial do evento.
       </p>
     </PageContainer>
   );

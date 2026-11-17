@@ -170,7 +170,6 @@ export default async function IndicadoresRhPage({ searchParams }: { searchParams
     <PageContainer>
       <PageHeader
         title="Indicadores de RH"
-        subtitle="Quadro, férias, jornada e recrutamento da equipe, mês a mês, a partir do que é lançado no DP e no Recrutamento."
         action={<ExportIndicadoresButtons />}
       />
 
@@ -272,11 +271,10 @@ export default async function IndicadoresRhPage({ searchParams }: { searchParams
 
       {d.custos && (
         <section className="mt-8" aria-labelledby="custos-titulo">
-          <h2 id="custos-titulo" className="text-section font-semibold text-fg mb-1 flex items-center gap-2">
+          <h2 id="custos-titulo" className="text-section font-semibold text-fg mb-3 flex items-center gap-2">
             <Lock size={16} className="text-fg-muted" aria-hidden />
             Custos
           </h2>
-          <p className="text-helper text-fg-muted mb-3">Só aparece para quem tem permissão de ver salários.</p>
           <FaixaDeTotais
             className=""
             destaque={false}

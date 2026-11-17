@@ -106,7 +106,7 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
         <CampoForm label="Nome" htmlFor="nome" required>
           <Input id="nome" name="nome" required maxLength={160} defaultValue={valores.nome} placeholder="Ex: DAS, DCTFWeb, DEFIS…" />
         </CampoForm>
-        <CampoForm label="Kanban onde a atividade nasce" htmlFor="pipelineId" required helper="O setor da obrigação é o do kanban.">
+        <CampoForm label="Kanban onde a atividade nasce" htmlFor="pipelineId" required dica="O setor da obrigação é o do kanban.">
           <Select id="pipelineId" name="pipelineId" required defaultValue={valores.pipelineId}>
             <option value="">Selecionar…</option>
             {pipelines.map((p) => (
@@ -116,7 +116,7 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Descrição" htmlFor="descricao" helper="Vai na atividade, embaixo das datas.">
+        <CampoForm label="Descrição" htmlFor="descricao" dica="Vai na atividade, embaixo das datas.">
           <Textarea id="descricao" name="descricao" defaultValue={valores.descricao} rows={2} />
         </CampoForm>
       </FormSection>
@@ -130,7 +130,7 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
               <option value="ANUAL">Anual</option>
             </Select>
           </CampoForm>
-          <CampoForm label="Vence quantos meses depois" htmlFor="mesesAposCompetencia" helper="DAS de setembro vence em outubro: 1.">
+          <CampoForm label="Vence quantos meses depois" htmlFor="mesesAposCompetencia" dica="DAS de setembro vence em outubro: 1.">
             <Input id="mesesAposCompetencia" name="mesesAposCompetencia" type="number" min={0} max={24} required defaultValue={valores.mesesAposCompetencia} />
           </CampoForm>
           <CampoForm label="Dia legal" htmlFor="tipoDoDia">
@@ -140,7 +140,7 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
             </Select>
           </CampoForm>
           {!ultimoDiaUtil && (
-            <CampoForm label="Dia" htmlFor="diaLegal" helper="Mês mais curto usa o último dia.">
+            <CampoForm label="Dia" htmlFor="diaLegal" dica="Mês mais curto usa o último dia.">
               <Input id="diaLegal" name="diaLegal" type="number" min={1} max={31} required defaultValue={valores.diaLegal ?? 20} />
             </CampoForm>
           )}
@@ -152,7 +152,7 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
               </Select>
             </CampoForm>
           )}
-          <CampoForm label="Prazo interno (dias úteis antes)" htmlFor="diasUteisAntes" helper="0 = o próprio vencimento. É a data da atividade.">
+          <CampoForm label="Prazo interno (dias úteis antes)" htmlFor="diasUteisAntes" dica="0 = o próprio vencimento. É a data da atividade.">
             <Input id="diasUteisAntes" name="diasUteisAntes" type="number" min={0} max={30} defaultValue={valores.diasUteisAntes} />
           </CampoForm>
         </FieldGrid>
@@ -175,17 +175,17 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
               <option value="SIM">Só sem movimento</option>
             </Select>
           </CampoForm>
-          <CampoForm label="Funcionários" htmlFor="comFuncionarios" helper="Pelo regime ou pelos colaboradores do DP.">
+          <CampoForm label="Funcionários" htmlFor="comFuncionarios" dica="Pelo regime ou pelos colaboradores do DP.">
             <Select id="comFuncionarios" name="comFuncionarios" defaultValue={valores.comFuncionarios}>
               <option value="QUALQUER">Tanto faz</option>
               <option value="SIM">Só com funcionários</option>
               <option value="NAO">Só sem funcionários</option>
             </Select>
           </CampoForm>
-          <CampoForm label="Estados (UF)" htmlFor="estados" helper="Separados por vírgula: SP, MG.">
+          <CampoForm label="Estados (UF)" htmlFor="estados" dica="Separados por vírgula, como SP, MG. Vazio vale para todos.">
             <Input id="estados" name="estados" defaultValue={valores.estados.join(", ")} placeholder="Todos" />
           </CampoForm>
-          <CampoForm label="Cidades" htmlFor="cidades" helper="Separadas por vírgula.">
+          <CampoForm label="Cidades" htmlFor="cidades" dica="Separadas por vírgula. Vazio vale para todas.">
             <Input id="cidades" name="cidades" defaultValue={valores.cidades.join(", ")} placeholder="Todas" />
           </CampoForm>
         </FieldGrid>
@@ -194,7 +194,6 @@ export function ModeloDeObrigacaoForm({ action, previa, cancelHref, pipelines, r
           name="exigeSetorContratado"
           defaultChecked={valores.exigeSetorContratado}
           label="Só empresas com o setor contratado"
-          helper="O responsável do setor na empresa vira o responsável da atividade."
         />
       </FormSection>
 

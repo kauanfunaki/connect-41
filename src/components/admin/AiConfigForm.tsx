@@ -86,7 +86,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
           <CampoForm
             label="Modelo (opcional)"
             htmlFor="model"
-            helper="Deixe em branco: cada agente usa o modelo da sua faixa. Preenchido, vale para todos os agentes."
+            dica="Deixe em branco: cada agente usa o modelo da sua faixa. Preenchido, vale para todos os agentes."
           >
             <Input
               id="model"
@@ -104,7 +104,7 @@ export function AiConfigForm({ hasConfig, defaultValues }: Props) {
           label="Chave de API"
           htmlFor="apiKey"
           required={!hasConfig}
-          helper={hasConfig ? "Deixe em branco para manter a chave já salva." : "Gere em console.anthropic.com ou platform.openai.com."}
+          dica={hasConfig ? "Deixe em branco para manter a chave já salva." : "Gere em console.anthropic.com ou platform.openai.com."}
         >
           <CampoDeSenha id="apiKey" name="apiKey" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "sk-..."} />
         </CampoForm>

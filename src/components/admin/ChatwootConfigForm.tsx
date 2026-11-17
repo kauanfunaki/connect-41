@@ -84,7 +84,7 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
         {/* O ID da conta é um número curto: coluna estreita ao lado da URL.
             Token e segredo do webhook, os dois campos de senha, lado a lado. */}
         <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_10rem]">
-          <CampoForm label="URL base" htmlFor="baseUrl" required helper="Ex: https://app.chatwoot.com ou sua instância self-hosted.">
+          <CampoForm label="URL base" htmlFor="baseUrl" required dica="O da nuvem do Chatwoot ou o da sua instância self-hosted.">
             <Input id="baseUrl" name="baseUrl" type="text" required defaultValue={defaultValues?.baseUrl ?? ""} placeholder="https://app.chatwoot.com" />
           </CampoForm>
           <CampoForm label="ID da conta" htmlFor="accountId" required>
@@ -97,7 +97,7 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
             label="Token de API (api_access_token)"
             htmlFor="apiToken"
             required={!hasConfig}
-            helper={hasConfig ? "Deixe em branco para manter o token já salvo." : "Perfil → Configurações de acesso, no Chatwoot."}
+            dica={hasConfig ? "Deixe em branco para manter o token já salvo." : "Perfil → Configurações de acesso, no Chatwoot."}
           >
             <CampoDeSenha id="apiToken" name="apiToken" required={!hasConfig} placeholder={hasConfig ? "••••••••" : "cw_..."} />
           </CampoForm>
@@ -106,7 +106,7 @@ export function ChatwootConfigForm({ hasConfig, defaultValues, webhookUrl, lastS
             label="Webhook secret"
             htmlFor="webhookSecret"
             required={!hasConfig}
-            helper={
+            dica={
               hasConfig
                 ? "Deixe em branco para manter o segredo já salvo."
                 : "Gerado pelo próprio Chatwoot ao criar o webhook (tela Configurações → Integrações → Webhooks) — cole aqui o valor exibido lá."

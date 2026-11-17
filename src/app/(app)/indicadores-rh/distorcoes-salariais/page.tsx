@@ -27,7 +27,6 @@ export default async function RelatorioDistorcoesPage() {
       <RelatorioHeader
         breadcrumb="Distorções salariais"
         title="Distorções salariais"
-        subtitle="Compara o salário atual com a faixa cadastrada no cargo. Só aparece quem está fora da faixa — quem está dentro não é distorção."
       />
 
       {/* As contagens eram selos soltos numa linha (até 30/09); viraram os

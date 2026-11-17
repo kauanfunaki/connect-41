@@ -107,9 +107,6 @@ export default async function CoordenadoresPage({ searchParams }: { searchParams
           <h2 id="sem-dono" className="text-section font-semibold text-fg">
             Sem responsável ({semDono.length})
           </h2>
-          <p className="text-fs-2 text-fg-muted">
-            Em aberto e sem ninguém designado. Os alertas destes vão para a coordenação do setor. Troque o responsável no painel ou nos alertas.
-          </p>
           <ul className="flex flex-col divide-y divide-border rounded-lg border border-border bg-surface shadow-xs">
             {semDonoNaTela.map((x) => (
               <li key={`${x.item.origem}:${x.item.id}`} className="px-4 py-2 flex flex-col">

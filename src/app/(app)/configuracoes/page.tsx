@@ -105,7 +105,6 @@ export default async function ConfiguracoesPage({ searchParams }: { searchParams
     <PageContainer>
       <PageHeader
         title={temMenu ? "Sua conta" : "Configurações"}
-        subtitle="Sua conta e suas preferências neste workspace."
       />
 
       <SecaoDeConfiguracao titulo="Perfil" descricao="Seu nome e sua foto, como aparecem para a equipe." icone={<UserRound />}>

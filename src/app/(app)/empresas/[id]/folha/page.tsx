@@ -81,7 +81,7 @@ export default async function FolhaPage({
 
       <PageHeader
         title="Folha de pagamento"
-        subtitle={`${competencias.length} competência${competencias.length !== 1 ? "s" : ""} — controle e conferência de lançamentos, não motor de cálculo`}
+        subtitle={`${competencias.length} competência${competencias.length !== 1 ? "s" : ""}`}
         action={canManage ? <NovaCompetenciaDaFolha action={abrirCompetencia} companyId={companyId} /> : undefined}
       />
 

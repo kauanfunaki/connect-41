@@ -56,7 +56,6 @@ export default async function MetricasDoAtendimentoPage({ searchParams }: { sear
     <PageContainer>
       <PageHeader
         title="Métricas do Atendimento"
-        subtitle="Os atendimentos abertos no período. Os tempos são a mediana: o do meio, que um atendimento esquecido não distorce."
         action={
           <Button href="/atendimento" variant="secondary" size="sm">
             Voltar ao Atendimento

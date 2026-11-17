@@ -45,7 +45,6 @@ export default async function ArquivosDaEmpresaPage({
         />
         <PageHeader
           title={empresa.nome}
-          subtitle="Arquivos da empresa. O que estiver numa pasta compartilhada aparece no portal do cliente."
           action={
             <Button href={`/empresas/${id}`} variant="secondary" size="sm">
               <Building2 size={14} /> Ficha da empresa
@@ -72,7 +71,6 @@ export default async function ArquivosDaEmpresaPage({
       <Breadcrumb items={[{ label: "Arquivos", href: "/arquivos" }, ...trilhaDaPasta(dados, base, dados.empresa.nome)]} />
       <PageHeader
         title={dados.empresa.nome}
-        subtitle="Arquivos da empresa. O que estiver numa pasta compartilhada aparece no portal do cliente."
         action={
           <Button href={`/empresas/${id}`} variant="secondary" size="sm">
             <Building2 size={14} /> Ficha da empresa

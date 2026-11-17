@@ -24,7 +24,7 @@ import {
 import { definirTelaDoPortal } from "./telas-actions";
 import { definirCeciDaEmpresa } from "./ceci-actions";
 import { CeciDoPortalAdmin } from "@/components/portal/CeciDoPortalAdmin";
-import { FALTA_ATUALIZAR_O_BANCO_DA_CECI, LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA, empresasDoPortalParaACeci, situacaoDaCeci } from "@/lib/portal/ceci";
+import { FALTA_ATUALIZAR_O_BANCO_DA_CECI, empresasDoPortalParaACeci, situacaoDaCeci } from "@/lib/portal/ceci";
 import { formatarReaisDeCentavos } from "@/lib/format";
 import { FALTA_ATUALIZAR_O_BANCO_DOS_ENVIOS, lerLembretePadrao } from "@/lib/envios/lembretePadrao";
 import { definirLembretePadraoDosEnvios } from "./envios-actions";
@@ -75,8 +75,6 @@ export default async function AdminPortalPage({ searchParams }: { searchParams: 
       {/* A explicação era um parágrafo solto depois do cabeçalho; é o subtítulo dele. */}
       <PageHeader
         title="Portal do cliente"
-        subtitle="Contas de clientes que entram no portal. Cada conta enxerga as empresas ligadas a ela — e, com “incluir
-          filiais”, as filiais delas. Também dá para criar e ligar acessos na ficha de cada empresa."
         action={<NovoAcessoDoPortal empresas={empresas} criarAction={criarAcessoDoPortal} />}
       />
       <AbasDeLink abas={ABAS} ativa="acessos" />
@@ -116,20 +114,11 @@ async function AbaDasTelas({ tenantId, somenteLeitura }: { tenantId: string; som
     <PageContainer>
       <PageHeader
         title="Portal do cliente"
-        subtitle="As telas que os clientes do escritório já podem abrir. Libere cada uma depois de testar."
       />
       <AbasDeLink abas={ABAS} ativa="telas" />
 
       <div className="mb-5 max-w-3xl space-y-2 text-fs-2 text-fg-secondary leading-relaxed">
-        <p>
-          Uma tela <span className="font-medium text-fg">bloqueada</span> some do menu, do Início, da ajuda e do tutorial do
-          portal. Quem abrir pelo endereço ou pelo link de um e-mail vê “Esta tela ainda não está disponível”, com o botão
-          para voltar ao início.
-        </p>
-        <p>
-          Vale na hora e para todos os clientes do escritório. Telas novas que entrarem no portal chegam liberadas. Início,
-          Minha conta e Ajuda ficam sempre liberadas.
-        </p>
+        {/* O que é tela bloqueada foi para o artigo de ajuda; fica a contagem (17/11/2026, melhoria-707). */}
         <p className="font-medium text-fg tabular-nums">
           {liberadas} de {total} {total === 1 ? "tela liberada" : "telas liberadas"}
         </p>
@@ -175,19 +164,11 @@ async function AbaDaCeci({ tenantId, somenteLeitura }: { tenantId: string; somen
     <PageContainer>
       <PageHeader
         title="Portal do cliente"
-        subtitle="A Ceci no portal responde ao cliente sobre as empresas dele: pendências, contas, processos, notas e solicitações."
       />
       <AbasDeLink abas={ABAS} ativa="ceci" />
 
       <div className="mb-5 max-w-3xl space-y-2 text-fs-2 text-fg-secondary leading-relaxed">
-        <p>
-          Ela só consulta o que o portal já mostra ao cliente, e só das empresas ligadas aqui que estão no acesso dele. Não
-          faz nada sozinha: quando o cliente precisa da equipe, ela prepara uma solicitação, que ele mesmo revisa e envia.
-        </p>
-        <p>
-          Ligada na matriz, vale também para as filiais que o acesso vê por ela. Cada cliente faz até{" "}
-          {LIMITE_DE_PERGUNTAS_DO_PORTAL_POR_DIA} perguntas por dia.
-        </p>
+        {/* O que a Ceci faz no portal foi para o artigo de ajuda; fica o uso do mês (17/11/2026, melhoria-707). */}
         <p className="font-medium text-fg tabular-nums">
           {ligadas} {ligadas === 1 ? "empresa ligada" : "empresas ligadas"} · {formatarReaisDeCentavos(situacao.gastoCentavos)} de{" "}
           {formatarReaisDeCentavos(situacao.tetoCentavos)} no mês · {situacao.chamadas} de {situacao.tetoChamadas} perguntas
@@ -233,16 +214,8 @@ async function AbaDosEnvios({ tenantId, somenteLeitura }: { tenantId: string; so
     <PageContainer>
       <PageHeader
         title="Portal do cliente"
-        subtitle="O padrão dos envios de documentos ao cliente, em Solicitações › Envios."
       />
       <AbasDeLink abas={ABAS} ativa="envios" />
-
-      <div className="mb-5 max-w-3xl space-y-2 text-fs-2 text-fg-secondary leading-relaxed">
-        <p>
-          Com lembrete, se ninguém do cliente abrir o documento no prazo, sai um aviso só: o mesmo e-mail do envio, com o
-          texto de lembrete, e o aviso no portal.
-        </p>
-      </div>
 
       {leitura.situacao === "sem-tabela" && (
         <Aviso tom="atencao" className="mb-4 max-w-3xl">

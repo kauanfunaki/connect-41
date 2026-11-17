@@ -59,7 +59,6 @@ export default async function AssuntosPage({ searchParams }: { searchParams: Pro
     <PageContainer>
       <PageHeader
         title="Assuntos das solicitações"
-        subtitle="O que o cliente escolhe ao pedir algo pelo portal. Cada assunto diz o setor que atende, em quantos dias úteis a equipe responde e se aceita pedido por link público, de quem ainda não é cliente."
         action={
           <Button href="/admin/assuntos?novo=1">
             <Plus size={14} /> Novo assunto

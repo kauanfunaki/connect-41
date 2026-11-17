@@ -163,11 +163,11 @@ export function ConfiguracaoDaIntegracao({
                   label={c.label}
                   htmlFor={`${i.code}-${c.name}`}
                   required={c.required && !guardado}
-                  helper={
+                  dica={
                     // Segredo guardado nunca volta para a tela. Dizer "preenchido"
                     // é o que impede alguém de reescrevê-lo sem precisar — e é o
                     // que faz "deixar em branco" significar "mantenha".
-                    guardado ? `Guardado. Deixe em branco para manter. ${c.help ?? ""}` : c.help
+                    guardado ? `Deixe em branco para manter. ${c.help ?? ""}`.trim() : c.help
                   }
                 >
                   {c.type === "certificado" ? (
@@ -201,15 +201,10 @@ export function ConfiguracaoDaIntegracao({
         </FieldGrid>
         )}
 
-        <Checkbox id={`${i.code}-enabled`} name="enabled" defaultChecked={i.enabled} label="Conexão ligada"
-          helper={
-            <>
-              {/* Integração nunca nasce ligada: ligar significa começar a falar
-              com sistema de terceiro usando credencial de alguém. */}
-              Desligada, nada é enviado nem buscado. Ligar é ato deliberado.
-            </>
-          }
-        />
+        {/* Integração nunca nasce ligada: ligar significa começar a falar com
+            sistema de terceiro usando credencial de alguém. O que "desligada"
+            quer dizer foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+        <Checkbox id={`${i.code}-enabled`} name="enabled" defaultChecked={i.enabled} label="Conexão ligada" />
 
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-soft">
           <Button type="submit" disabled={isPending}>

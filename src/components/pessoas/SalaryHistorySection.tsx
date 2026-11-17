@@ -121,7 +121,7 @@ export function SalaryHistorySection({ action, history, cargos }: Props) {
           <CampoForm label="Data do reajuste" htmlFor="effectiveDate" required>
             <CampoData id="effectiveDate" name="effectiveDate" required />
           </CampoForm>
-          <CampoForm label="Novo cargo" htmlFor="cargoId" helper="Só em promoção.">
+          <CampoForm label="Novo cargo" htmlFor="cargoId" dica="Só em promoção.">
             <Select id="cargoId" name="cargoId" defaultValue="">
               <option value="">Sem alteração</option>
               {cargos.map((c) => (

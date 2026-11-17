@@ -46,7 +46,7 @@ export default async function TagsPage({ searchParams }: { searchParams: Promise
     <PageContainer>
       <PageHeader
         title="Tags"
-        subtitle={<>{tags.length} tag{tags.length !== 1 ? "s" : ""} cadastrada{tags.length !== 1 ? "s" : ""} — reutilizáveis em todos os kanbans do mesmo setor</>}
+        subtitle={<>{tags.length} tag{tags.length !== 1 ? "s" : ""} cadastrada{tags.length !== 1 ? "s" : ""}</>}
         action={<><Button
           href="/admin/tags?novo=1"
           variant="primary" className="font-medium"

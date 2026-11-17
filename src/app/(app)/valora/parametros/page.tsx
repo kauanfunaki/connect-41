@@ -28,16 +28,11 @@ export default async function ParametrosDoValoraPage() {
       <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: "Parâmetros" }]} />
       <PageHeader
         title="Parâmetros do Valora"
-        subtitle="Quanto custa cada setor e que margem o preço tem de entregar. Os tempos das atividades vêm dos questionários dos setores."
       />
       <FormParametros setores={catalogo.setores} parametros={parametros} podeEditar={acesso.podeGerir} />
 
       <Card className="p-4 mt-6">
-        <h2 className="text-card-title font-semibold text-fg mb-1">Catálogo de atividades</h2>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Tempo por execução declarado por cada setor, antes do fator. Muda quando os questionários são refeitos — não por
-          aqui.
-        </p>
+        <h2 className="text-card-title font-semibold text-fg mb-3">Catálogo de atividades</h2>
         {catalogo.setores.map((s) => {
           const atividades = catalogo.atividades.filter((a) => a.setor === s.codigo);
           const quandoEntra = (a: (typeof atividades)[number]) => (a.condicao ? (campos.get(a.condicao) ?? "Tem funcionários") : "Sempre");

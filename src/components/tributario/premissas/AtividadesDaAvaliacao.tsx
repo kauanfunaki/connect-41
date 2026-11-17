@@ -214,7 +214,7 @@ export function AtividadesDaAvaliacao({
     // Reais nos mesmos campos em que o original subia o limite para 1e12; o resto é percentual.
     const dinheiro = String(key).includes("Base") || key === "revenue" || key === "currentExtra";
     return (
-      <CampoForm key={key} label={label} htmlFor={id} helper={help}>
+      <CampoForm key={key} label={label} htmlFor={id} dica={help}>
         <CampoValor
           id={id}
           value={a[key]}

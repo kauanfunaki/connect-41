@@ -84,16 +84,7 @@ export async function PapeisDosAtendentes({ tenantId, canEdit }: { tenantId: str
 
   return (
     <section id="papeis-dos-atendentes" className="mt-6 scroll-mt-6">
-      <h3 className="text-card-title font-semibold text-fg">Papéis dos atendentes</h3>
-      <p className="text-helper text-fg-muted mt-0.5 mb-4 max-w-[80ch]">
-        <span className="font-medium text-fg">Recepção</span> é quem recebe o atendimento antes de passar para o setor —
-        a barreira entre a nota de triagem e a de tratativa é a primeira resposta ao cliente de alguém que não está
-        marcado assim. <span className="font-medium text-fg">Automação</span> é a conta que a integração usa para
-        mandar saudação, aviso de fora de horário e agradecimento final: sem a marcação, ela vira &quot;quem
-        atendeu&quot;, porque a mensagem de encerramento é sempre a última. Vale para as próximas avaliações — o
-        histórico só muda quando a repontuação roda. Quem cada atendente é na equipe se escolhe em Usuários, na
-        edição da pessoa.
-      </p>
+      <h3 className="text-card-title font-semibold text-fg mb-4">Papéis dos atendentes</h3>
       {/* No celular, um cartão por atendente, com os dois interruptores
           (15/10/2026): a tabela de 560px rolava de lado. */}
       <CartoesNoCelular>

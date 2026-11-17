@@ -87,10 +87,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Leads"
-        subtitle="Quem quer ser cliente do escritório. A ficha “Quero ser cliente” do portal cai aqui, e o setor é avisado no sino."
-      />
+      <PageHeader title="Leads" />
 
       <CascoDaTabela
         contagem={contarItens(leads.length, "lead", "leads", limitado)}

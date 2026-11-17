@@ -423,7 +423,7 @@ function PainelDeEdicao({
               ))}
             </Select>
           </CampoForm>
-          <CampoForm label="Limite de usuários" htmlFor={`${id}-limite`} helper="Só vale no autoatendimento.">
+          <CampoForm label="Limite de usuários" htmlFor={`${id}-limite`} dica="Só vale no autoatendimento.">
             <CampoNumero id={`${id}-limite`} name="seatLimit" min={1} defaultValue={a?.seatLimit ?? ""} />
           </CampoForm>
           <CampoForm label="Próxima renovação" htmlFor={`${id}-renovacao`}>

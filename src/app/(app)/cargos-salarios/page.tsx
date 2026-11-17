@@ -72,7 +72,7 @@ export default async function CargosSalariosPage() {
         subtitle={
           <>
             {rows.length} cargo{rows.length !== 1 ? "s" : ""} em {grupos.length} família
-            {grupos.length !== 1 ? "s" : ""} — matriz de cargos, trilha de senioridade e faixas salariais.
+            {grupos.length !== 1 ? "s" : ""}
           </>
         }
       />

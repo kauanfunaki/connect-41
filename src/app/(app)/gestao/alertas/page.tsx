@@ -86,16 +86,10 @@ export default async function AlertasDaGestaoPage({ searchParams }: { searchPara
       </section>
 
       <section aria-labelledby="limites" className="flex flex-col gap-2">
-        <div>
-          <h2 id="limites" className="text-section font-semibold text-fg">
-            Limites por setor
-          </h2>
-          <p className="text-fs-2 text-fg-muted">
-            Depois de quantos dias sem movimentação um item conta como parado, e com quantos dias de antecedência o prazo avisa. Vazio usa o
-            padrão ({LIMITES_PADRAO.diasParado} e {LIMITES_PADRAO.diasAvisoPrazo} dias). Processo esperando o órgão só conta como parado depois de 30
-            dias; tarefa que ainda não começou só avisa pelo prazo.
-          </p>
-        </div>
+        {/* O padrão já está no campo vazio; as regras foram para o artigo de ajuda (17/11/2026, melhoria-707). */}
+        <h2 id="limites" className="text-section font-semibold text-fg">
+          Limites por setor
+        </h2>
         {/* No celular, um cartão por setor, com os campos rotulados, em vez da
             tabela de 520px com rolagem lateral (auditoria DRG-31, 07/10/2026). */}
         <CartoesNoCelular>

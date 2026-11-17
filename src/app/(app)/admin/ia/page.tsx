@@ -83,7 +83,6 @@ export default async function AgentesDeIAPage({ searchParams }: { searchParams: 
     <PageContainer>
       <PageHeader
         title="Inteligência artificial"
-        subtitle="Quanto a IA fez e gastou neste mês, e até onde cada agente pode ir."
         // A situação da chave no topo (7A): sem ela, nenhum agente roda.
         action={
           config ? (
@@ -195,9 +194,6 @@ export default async function AgentesDeIAPage({ searchParams }: { searchParams: 
 
       {ativa === "chamadas" && (
         <section className="flex flex-col gap-3" aria-label="Últimas chamadas">
-          <p className="text-fs-3 text-fg-secondary">
-            Quem pediu, sobre o quê e como terminou. É a resposta para “por que esse texto apareceu nesta ficha”.
-          </p>
           <ChamadasDeIA chamadas={chamadas} agora={agora} />
         </section>
       )}

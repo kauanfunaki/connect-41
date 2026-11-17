@@ -51,7 +51,6 @@ export default async function PlanejamentoTributarioPage({ searchParams }: { sea
     <PageContainer>
       <PageHeader
         title="Planejamento tributário"
-        subtitle="Compare Simples Nacional, Simples híbrido, Lucro Presumido e Lucro Real de 2027 a 2033, com os dados de cada empresa e as premissas da reforma."
         action={podeAgir ? <NovaAvaliacao empresas={empresas} anoAtual={new Date().getFullYear()} /> : undefined}
       />
 

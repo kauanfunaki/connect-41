@@ -28,11 +28,6 @@ export default async function AtendimentoLayout({ children }: { children: ReactN
         cabecalho={
           <PageHeader
             title="Atendimento"
-            subtitle={
-              dados.ehTriagem
-                ? `O WhatsApp do escritório. Toda conversa nova chega na triagem da ${dados.triagem.label}.`
-                : "O WhatsApp do escritório: as conversas do seu setor e as que estão com você."
-            }
             action={
               ehDaTriagem(c.ctx, c.cfg) || veTudo(c.ctx, c.cfg) || podeConfigurar(c.ctx, c.cfg) ? (
                 <div className="flex flex-wrap gap-2">

@@ -10,8 +10,9 @@ import { ARTIGOS_GERAIS } from "./artigos/geral";
 import { ARTIGOS_FINANCEIROS } from "./artigos/financeiro";
 import { ARTIGOS_PESSOAS_E_PROCESSOS } from "./artigos/pessoas-e-processos";
 import { ARTIGOS_CONTABEIS } from "./artigos/contabil";
+import { ARTIGOS_DE_CONFIGURACOES } from "./artigos/configuracoes";
 
-export const ARTIGOS: readonly ArtigoDeAjuda[] = [...ARTIGOS_GERAIS, ...ARTIGOS_FINANCEIROS, ...ARTIGOS_PESSOAS_E_PROCESSOS, ...ARTIGOS_CONTABEIS];
+export const ARTIGOS: readonly ArtigoDeAjuda[] = [...ARTIGOS_GERAIS, ...ARTIGOS_FINANCEIROS, ...ARTIGOS_PESSOAS_E_PROCESSOS, ...ARTIGOS_CONTABEIS, ...ARTIGOS_DE_CONFIGURACOES];
 
 export function artigoDaChave(chave: string): ArtigoDeAjuda | null {
   return ARTIGOS.find((a) => a.chave === chave) ?? null;

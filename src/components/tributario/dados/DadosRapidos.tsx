@@ -5,13 +5,13 @@
 // quantos grupos da DRE já foram preenchidos. Sem importação de documentos na
 // Fase 1: os totais são digitados.
 
-import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { FieldGrid } from "@/components/ui/FieldGrid";
 import { dreKeys } from "@/lib/tributario/avaliacao/assessment";
 import type { Study } from "@/lib/tributario/avaliacao/model";
-import { PAINEL, ROTULO, TEXTO_DE_APOIO, TITULO_DA_SECAO } from "../estilos";
+import { PAINEL, ROTULO, TITULO_DA_SECAO } from "../estilos";
 import type { Edicao, IrPara, ResultadoDaAvaliacao } from "../tipos";
 import { CampoDaAvaliacao } from "./CampoDaAvaliacao";
 import { DadosDaEmpresa } from "./DadosDaEmpresa";
@@ -51,7 +51,6 @@ export function DadosRapidos({ estudo, resultado, edicao, irPara }: Props) {
             <div>
               <p className={ROTULO}>Comece pelos totais</p>
               <h2 className={TITULO_DA_SECAO}>Como foi a operação?</h2>
-              <p className={TEXTO_DE_APOIO}>Informe cada valor uma vez. Pessoal e impostos têm campos próprios.</p>
             </div>
             <Zap size={23} className="text-fg-muted" aria-hidden />
           </div>
@@ -89,20 +88,11 @@ export function DadosRapidos({ estudo, resultado, edicao, irPara }: Props) {
           <div className="h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
             <div className="h-full rounded-full bg-brand-solid" style={{ width: `${(100 * preenchidos) / dreKeys.length}%` }} />
           </div>
-          <p className={TEXTO_DE_APOIO}>Continue digitando: seus números ficam guardados nesta avaliação quando você salva.</p>
           <Button onClick={() => irPara("resultado")}>
             Ver comparação <ArrowRight size={17} />
           </Button>
         </section>
-        <section className={PAINEL}>
-          <Sparkles size={22} className="text-brand" aria-hidden />
-          <h3 className="text-card-title font-semibold text-fg">
-            Comece simples.
-            <br />
-            Aprofunde quando quiser.
-          </h3>
-          <p className={TEXTO_DE_APOIO}>Na avaliação analítica, o Connect organiza os dados em etapas e pede somente o que ainda falta.</p>
-        </section>
+        {/* O cartão que só explicava a avaliação analítica foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
       </aside>
     </div>
   );

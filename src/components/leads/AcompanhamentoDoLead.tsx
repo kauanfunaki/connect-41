@@ -65,7 +65,7 @@ export function AcompanhamentoDoLead({
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Responsável" htmlFor={`lead-responsavel-${id}`} helper="Quem do setor faz o contato.">
+        <CampoForm label="Responsável" htmlFor={`lead-responsavel-${id}`} dica="Quem do setor faz o contato.">
           <Select id={`lead-responsavel-${id}`} name="responsavel" defaultValue={responsavelId ?? ""} onChange={() => setSalvo(false)}>
             <option value="">Sem responsável</option>
             {responsaveis.map((p) => (
@@ -76,7 +76,7 @@ export function AcompanhamentoDoLead({
           </Select>
         </CampoForm>
       </div>
-      <CampoForm label="Observações" htmlFor={`lead-observacoes-${id}`} helper="Só a equipe vê. O que foi conversado, o que ficou combinado, por que foi descartado.">
+      <CampoForm label="Observações" htmlFor={`lead-observacoes-${id}`} dica="Só a equipe vê. O que foi conversado, o que ficou combinado, por que foi descartado.">
         <Textarea
           id={`lead-observacoes-${id}`}
           name="observacoes"

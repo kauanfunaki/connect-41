@@ -101,7 +101,7 @@ export function PerfilForm({ action, defaultName, email, photoUrl: initialPhotoU
         <CampoForm label="Nome" htmlFor="name" required>
           <Input id="name" name="name" type="text" required maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
         </CampoForm>
-        <CampoForm label="E-mail" htmlFor="email" helper="Só um administrador pode alterar seu e-mail de acesso.">
+        <CampoForm label="E-mail" htmlFor="email" travado="Só um administrador pode alterar seu e-mail de acesso.">
           <Input id="email" type="email" value={email} readOnly disabled />
         </CampoForm>
       </FieldGrid>

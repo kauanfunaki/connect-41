@@ -242,7 +242,7 @@ export default async function IntegracoesPage({
 
   return (
     <PageContainer>
-      <PageHeader title="Integrações" subtitle="Os sistemas que o Connect opera e as contas ligadas a ele." />
+      <PageHeader title="Integrações" />
 
       {/* O retorno do Google/Microsoft cai aqui: o aviso vem logo abaixo do
           título, e não no meio da tela, onde ficava fora da vista. */}
@@ -287,11 +287,6 @@ export default async function IntegracoesPage({
             />
           ) : bloco.chave === "ia" ? (
             <div className="flex flex-col gap-3">
-              <p className="text-fs-3 text-fg-secondary">
-                Chave usada por todos os agentes de IA do Connect (triagem de currículo, atendimento do WhatsApp, resumos).
-                Cada escritório usa a própria conta — sem configurar aqui, a IA fica desligada. Os agentes, os tetos e o gasto
-                ficam em Configurações › Inteligência artificial.
-              </p>
               <AiConfigForm
                 hasConfig={Boolean(aiConfig)}
                 defaultValues={aiConfig ? { provider: aiConfig.provider, model: aiConfig.model } : undefined}
@@ -305,10 +300,6 @@ export default async function IntegracoesPage({
             <OpsCredentialForm hasToken={Boolean(credencialOps?.tokenHash)} version={credencialOps?.version ?? 0} keys={chavesOps} />
           ) : bloco.chave === "chatwoot" ? (
             <div className="flex flex-col gap-5">
-              <p className="text-fs-3 text-fg-secondary">
-                Histórico de conversas vinculado às empresas e pessoas cadastradas, somente leitura por enquanto. As conversas
-                ficam em Conversas, no menu lateral.
-              </p>
               <ChatwootConfigForm
                 hasConfig={Boolean(chatwootConnection)}
                 defaultValues={chatwootConnection ? { baseUrl: chatwootConnection.baseUrl, accountId: chatwootConnection.accountId } : undefined}
@@ -406,10 +397,6 @@ function ContasDeReuniao({
   ];
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-fs-3 text-fg-secondary">
-        Conecte sua conta pessoal para agendar reuniões (Google Meet ou Microsoft Teams) direto das atividades dos Quadros.
-        Vale só para você.
-      </p>
       {linhas.map((l) => (
         <Card key={l.provedor} className={`flex items-center justify-between gap-4 p-4 ${!l.configurado ? "opacity-60" : ""}`}>
           <div className="min-w-0">

@@ -84,7 +84,7 @@ export default async function ProdutividadeDaGestaoPage({ searchParams }: { sear
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-body text-fg-secondary">
-          {periodo.rotulo}: o que cada pessoa entregou, no prazo, o que carrega agora e as horas apontadas.
+          {periodo.rotulo}
         </p>
         <FiltrosDaTela naBarra campos={campos} />
       </div>
@@ -161,12 +161,6 @@ export default async function ProdutividadeDaGestaoPage({ searchParams }: { sear
         ))
       )}
 
-      <p className="text-micro text-fg-muted">
-        Entregue é o item concluído no período em que a pessoa responde (com dois responsáveis, conta para os dois). No prazo:
-        terminou até o dia do prazo, entre os que tinham prazo. Parado e vencido seguem os limites de cada setor, como no
-        Painel. As horas pelo cronômetro são as marcadas no relógio do Connect; o resto foi lançado à mão. Setores não se
-        comparam: cada um entrega coisas diferentes.
-      </p>
     </div>
   );
 }

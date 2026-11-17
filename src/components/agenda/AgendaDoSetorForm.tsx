@@ -99,10 +99,6 @@ export function AgendaDoSetorForm({ setores, fontes, disponivel, salvar, restaur
 
       <div className="space-y-1">
         <Switch checked={usa} onCheckedChange={setUsa} disabled={!disponivel || isPending} rotulo={`${setor.rotulo} usa reuniões`} />
-        <p className="text-fs-2 text-fg-muted">
-          Desligado, a Agenda de quem é do setor abre em Prazos, sem convite para marcar reunião, e o Meu dia começa sem
-          “Próximas reuniões”. Cada pessoa ainda pode abrir a Semana e ligar o bloco no Meu dia dela.
-        </p>
       </div>
 
       <div className="space-y-2">
@@ -120,10 +116,6 @@ export function AgendaDoSetorForm({ setores, fontes, disponivel, salvar, restaur
             onAlternar={(fonte, ligada) => setOcultas((atual) => alternarFonte(atual, fonte, ligada))}
           />
         )}
-        <p className="text-fs-2 text-fg-muted">
-          Valem para quem é do setor e nunca escolheu as próprias. Quem está em mais de um setor vê a soma; cada fonte só
-          aparece para quem abre a tela de onde ela vem.
-        </p>
         {todasDesligadas && (
           <p className="text-fs-2 text-warning-fg">Com todas as fontes desligadas, a Agenda do setor abre sem prazos.</p>
         )}

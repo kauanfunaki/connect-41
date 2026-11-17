@@ -64,20 +64,20 @@ export function AssuntoForm({
         <Aviso>{state.error}</Aviso>
       )}
 
-      <CampoForm label="Assunto" htmlFor="label" required helper="Como o cliente vê na lista. Ex.: Pedir um documento.">
-        <Input id="label" name="label" required maxLength={120} defaultValue={valores?.label ?? ""} />
+      <CampoForm label="Assunto" htmlFor="label" required dica="Como o cliente vê na lista.">
+        <Input id="label" name="label" required maxLength={120} defaultValue={valores?.label ?? ""} placeholder="Ex.: Pedir um documento" />
       </CampoForm>
 
       <CampoForm
         label="Explicação"
         htmlFor="description"
-        helper="Uma linha que ajuda o cliente a escolher; no link público, é a ajuda da mensagem. Ex.: Contrato social, certidão, guia, balancete…"
+        dica="Uma linha que ajuda o cliente a escolher; no link público, é a ajuda da mensagem."
       >
-        <Input id="description" name="description" maxLength={255} defaultValue={valores?.description ?? ""} />
+        <Input id="description" name="description" maxLength={255} defaultValue={valores?.description ?? ""} placeholder="Ex.: Contrato social, certidão, guia, balancete…" />
       </CampoForm>
 
       <FieldGrid>
-        <CampoForm label="Setor que atende" htmlFor="sectorCode" required helper="Mudar o setor vale para as próximas solicitações.">
+        <CampoForm label="Setor que atende" htmlFor="sectorCode" required dica="Mudar o setor vale para as próximas solicitações.">
           <Select id="sectorCode" name="sectorCode" required value={setor} onChange={(e) => setSetor(e.target.value)}>
             <option value="">Selecionar…</option>
             {setores.map((s) => (
@@ -91,7 +91,7 @@ export function AssuntoForm({
           label="Prazo de resposta (dias úteis)"
           htmlFor="responseDays"
           required
-          helper="O cliente vê este prazo ao escolher o assunto."
+          dica="O cliente vê este prazo ao escolher o assunto."
         >
           <CampoNumero
             id="responseDays"
@@ -111,14 +111,21 @@ export function AssuntoForm({
       <CampoForm
         label="Cartão no quadro"
         htmlFor="cardPipelineId"
-        helper={
+        // Sem setor ou sem lista o campo trava, e o motivo vai no cadeado; a
+        // explicação de para que serve, no "?" (17/11/2026, melhoria-707).
+        travado={
           !setor
             ? "Escolha o setor que atende para ver as listas dos Quadros dele."
             : semListas
               ? "O setor ainda não tem lista nos Quadros. Crie um espaço com o modelo Solicitações de clientes."
-              : listaEscolhida
-                ? "Cada solicitação nova vira um cartão na coluna Nova desta lista, e o cartão anda com a situação dela."
-                : "Escolha uma lista para cada solicitação nova virar um cartão no quadro do setor."
+              : undefined
+        }
+        dica={
+          !setor || semListas
+            ? undefined
+            : listaEscolhida
+              ? "Cada solicitação nova vira um cartão na coluna Nova desta lista, e o cartão anda com a situação dela."
+              : "Escolha uma lista para cada solicitação nova virar um cartão no quadro do setor."
         }
         acao={
           semListas ? (

@@ -128,19 +128,10 @@ export function OrganizarMenu({ setor, codigoDoSetor, telas, ordemInicial, perso
 
   return (
     <section aria-labelledby="ordem-do-menu" className="space-y-4">
-      <div className="space-y-1.5">
-        <h2 id="ordem-do-menu" className="text-card-title font-semibold text-fg">
-          Ordem no menu
-        </h2>
-        <p className="text-body text-fg-secondary">
-          A ordem dos grupos e das telas no menu de quem trabalha em {setor}. Só o Super Admin muda, e vale para todos
-          do setor.
-        </p>
-        <p className="text-fs-2 text-fg-muted">
-          Uma tela fica sempre no grupo dela, e a que veio de outra fica embaixo da tela de origem. Telas que se ligarem
-          depois entram no fim do grupo.
-        </p>
-      </div>
+      {/* As regras da ordem foram para o artigo de ajuda (17/11/2026, melhoria-707). */}
+      <h2 id="ordem-do-menu" className="text-card-title font-semibold text-fg">
+        Ordem no menu
+      </h2>
 
       {!disponivel && (
         <Aviso tom="atencao">

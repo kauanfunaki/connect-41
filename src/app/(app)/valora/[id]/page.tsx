@@ -225,9 +225,6 @@ export default async function PropostaDoValoraPage({ params }: { params: Promise
               ))}
             </ul>
           )}
-          <p className="text-fs-2 text-fg-muted border-t border-border pt-3">
-            É a foto do dia em que a proposta foi salva: mudar custos ou margem em Parâmetros não reescreve esta conta.
-          </p>
         </Card>
       </div>
     </PageContainer>

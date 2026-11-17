@@ -43,7 +43,7 @@ export function CampoGuardarNosArquivos({
     <CampoForm
       label="Guardar também em Arquivos"
       htmlFor={id}
-      helper="Uma cópia vai para a pasta escolhida da empresa. O anexo continua aqui."
+      dica="Uma cópia vai para a pasta escolhida da empresa. O anexo continua aqui."
     >
       <Select id={id} name={CAMPO_DA_PASTA} defaultValue="" key={companyId}>
         <option value="">Não guardar</option>

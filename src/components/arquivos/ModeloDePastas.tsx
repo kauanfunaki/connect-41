@@ -167,9 +167,6 @@ export function ModeloDePastas({ pastas, setores }: { pastas: PastaDoModeloNaTel
           );
         })}
       </ul>
-      <p className="text-micro text-fg-muted">
-        Além destas, toda empresa tem “Enviados pelo cliente”, onde cai o que o cliente manda pelo portal. Desligar uma pasta do modelo não tira a pasta de quem já tem.
-      </p>
 
       {editando && (
         <FormularioDoModelo
@@ -216,7 +213,7 @@ function FormularioDoModelo({
         <CampoForm label="Nome" htmlFor="modelo-nome" required>
           <Input id="modelo-nome" value={nome} onChange={(e) => setNome(e.target.value)} maxLength={120} autoFocus />
         </CampoForm>
-        <CampoForm label="Quem vê" htmlFor="modelo-setor" helper="Pasta de um setor só aparece para quem é do setor, em todas as empresas.">
+        <CampoForm label="Quem vê" htmlFor="modelo-setor" dica="Pasta de um setor só aparece para quem é do setor, em todas as empresas.">
           <Select id="modelo-setor" value={setor} onChange={(e) => setSetor(e.target.value)}>
             <option value="">Todos que veem a empresa</option>
             {setores.map((s) => (
@@ -231,7 +228,6 @@ function FormularioDoModelo({
           checked={compartilhada}
           onChange={(e) => setCompartilhada(e.target.checked)}
           label="Nasce compartilhada com o cliente"
-          helper="Vale para as empresas que ganharem a pasta daqui em diante. Em cada empresa a equipe pode mudar."
         />
         {/* O rodapé padrão das janelas, com o erro ao lado dos botões (P19, 15/10/2026). */}
         <FormFooter

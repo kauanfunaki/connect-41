@@ -148,7 +148,6 @@ export function GithubIntegration() {
       <ol className="space-y-5">
         <Passo n={1} titulo={<a className="inline-flex items-center gap-1 text-brand hover:underline" href={NOVO_OAUTH_APP} target="_blank" rel="noreferrer">Crie o OAuth App no GitHub <ExternalLink size={14} aria-hidden /></a>}>
           <CallbackUrl url={data.callbackUrl} />
-          <p className="text-fs-2 text-fg-muted">A autorização pede o escopo <code>repo</code>; o Connect só faz leituras.</p>
         </Passo>
         <Passo n={2} titulo="Informe as credenciais do app">{credenciais()}</Passo>
         <Passo n={3} titulo="Autorize a conta">{conectar("Conectar GitHub")}</Passo>
@@ -238,10 +237,10 @@ export function GithubIntegration() {
 
     <BlocoRecolhivel titulo="Avançado" classeDoConteudo="space-y-4 px-4 pb-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <CampoForm label="Atualizar a cada (minutos)" htmlFor="github-intervalo" helper="De 10 a 1440.">
+        <CampoForm label="Atualizar a cada (minutos)" htmlFor="github-intervalo" dica="De 10 a 1440.">
           <CampoNumero id="github-intervalo" min={10} max={1440} value={String(minutos)} onChange={event => setIntervalo(Number(event.target.value))} />
         </CampoForm>
-        <CampoForm label="Fuso dos dias" htmlFor="github-fuso" helper="Fica fixo após a primeira coleta.">
+        <CampoForm label="Fuso dos dias" htmlFor="github-fuso" dica="Fica fixo após a primeira coleta.">
           <Select id="github-fuso" value={fusoAtual} onChange={event => setFuso(event.target.value)}>
             {[...new Set([fusoAtual, ...FUSOS.map(f => f[0])])].map(f => <option key={f} value={f}>{FUSOS.find(x => x[0] === f)?.[1] ?? f}</option>)}
           </Select>
@@ -344,7 +343,6 @@ function TrocaDeCredenciais({ data, onFechar, children }: { data: IntegrationVie
       <Button variant="link" size="sm" onClick={onFechar}>Cancelar</Button>
     </div>
     <CallbackUrl url={data.callbackUrl} />
-    {data.login && <p className="text-fs-2 text-fg-muted">Ao trocar, a conta precisa ser autorizada de novo. O histórico é preservado.</p>}
     {children}
   </div>;
 }

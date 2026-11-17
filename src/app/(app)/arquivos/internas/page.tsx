@@ -27,7 +27,7 @@ export default async function PastasDoEscritorioPage({ searchParams }: { searchP
       {/* A trilha acima do título, começando em Arquivos (P04, 15/10/2026): ficava
           embaixo dele, ao lado da busca, e começava na pasta raiz. */}
       <Breadcrumb items={[{ label: "Arquivos", href: "/arquivos" }, ...trilhaDaPasta(dados, "/arquivos/internas", "Pastas do escritório")]} />
-      <PageHeader title="Pastas do escritório" subtitle="Arquivos da casa, fora das empresas. Não aparecem no portal do cliente." />
+      <PageHeader title="Pastas do escritório" />
       <NavegadorDeArquivos
         dados={dados}
         base="/arquivos/internas"

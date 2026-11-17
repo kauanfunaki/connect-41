@@ -122,7 +122,6 @@ export default async function AssinaturasPage() {
     <PageContainer>
       <PageHeader
         title="Assinaturas"
-        subtitle="Plano, situação e uso de cada escritório cliente."
         action={
           <Button href="/admin/planos" variant="secondary">
             <Receipt size={14} /> Planos

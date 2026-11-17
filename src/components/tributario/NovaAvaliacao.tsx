@@ -95,7 +95,7 @@ export function NovaAvaliacao({ empresas, anoAtual }: { empresas: EmpresaParaEsc
           />
 
           {origem === "empresa" ? (
-            <CampoForm label="Empresa" htmlFor="nova-avaliacao-empresa" helper="Nome, CNPJ, regime e UF vêm do cadastro.">
+            <CampoForm label="Empresa" htmlFor="nova-avaliacao-empresa" dica="Nome, CNPJ, regime e UF vêm do cadastro.">
               <SearchableSelect
                 id="nova-avaliacao-empresa"
                 name="empresa"
@@ -110,12 +110,12 @@ export function NovaAvaliacao({ empresas, anoAtual }: { empresas: EmpresaParaEsc
               />
             </CampoForm>
           ) : (
-            <CampoForm label="Nome do prospecto" htmlFor="nova-avaliacao-prospecto" helper="O CNPJ e os demais dados podem ser preenchidos depois.">
+            <CampoForm label="Nome do prospecto" htmlFor="nova-avaliacao-prospecto" dica="O CNPJ e os demais dados podem ser preenchidos depois.">
               <Input id="nova-avaliacao-prospecto" value={prospecto} maxLength={160} onChange={(e) => setProspecto(e.target.value)} />
             </CampoForm>
           )}
 
-          <CampoForm label="Ano dos dados" htmlFor="nova-avaliacao-ano" helper="O período começa em 1º de janeiro e termina em 31 de dezembro; dá para ajustar depois.">
+          <CampoForm label="Ano dos dados" htmlFor="nova-avaliacao-ano" dica="O período começa em 1º de janeiro e termina em 31 de dezembro; dá para ajustar depois.">
             <Select id="nova-avaliacao-ano" value={ano} onChange={(e) => setAno(Number(e.target.value))}>
               {anos.map((a) => (
                 <option key={a} value={a}>

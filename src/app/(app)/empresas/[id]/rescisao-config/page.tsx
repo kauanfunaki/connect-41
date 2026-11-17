@@ -1,7 +1,6 @@
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPrisma } from "@/lib/prisma";
@@ -59,20 +58,16 @@ export default async function EmpresaRescisaoConfigPage({ params }: { params: Pr
 
       <PageHeader
         title="Cálculo de rescisão"
-        subtitle={<>{company.name} — sobrescreve o padrão do escritório apenas nos campos que você alterar.</>}
+        subtitle={company.name}
+        // O botão foi para o topo: o cartão que o levava tinha só a frase de
+        // como a tela funciona, que foi para o artigo de ajuda (17/11/2026, melhoria-707).
+        // Era link de texto sublinhado (30/09): é ação, então é botão.
+        action={
+          <Button href="/admin/rescisao" variant="secondary" size="sm">
+            Ver o padrão do escritório <ArrowRight size={14} />
+          </Button>
+        }
       />
-
-      {/* Aviso e ação na mesma linha. Embaixo, as seções em duas colunas do
-          formulário (1B, 20/10/2026), cada uma com o seu cartão. */}
-      <Card className="p-5 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="min-w-0 text-body text-fg-secondary">
-          Cada campo mostra de onde vem o valor atual. Alterar aqui afeta só esta empresa.
-        </p>
-        {/* Era link de texto sublinhado (30/09): é ação, então é botão. */}
-        <Button href="/admin/rescisao" variant="secondary" size="sm">
-          Ver o padrão do escritório <ArrowRight size={14} />
-        </Button>
-      </Card>
 
       <RescisaoConfigForm
         action={salvarConfigEmpresa.bind(null, companyId)}

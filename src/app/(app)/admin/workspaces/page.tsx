@@ -72,7 +72,7 @@ export default async function WorkspacesPage({ searchParams }: { searchParams: P
     <PageContainer>
       <PageHeader
         title="Workspaces"
-        subtitle={<>{plural(tenants.length, "workspace", "workspaces")} — o plano, o uso e o acesso de cada escritório.</>}
+        subtitle={plural(tenants.length, "workspace", "workspaces")}
         // "+ Novo workspace" numa janela (P19, 15/10/2026): eram dois campos numa página inteira.
         action={<NovoWorkspace key={novo === "1" ? "novo" : "lista"} action={criarWorkspace} abertaDeInicio={novo === "1"} />}
       />

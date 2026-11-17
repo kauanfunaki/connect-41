@@ -20,7 +20,6 @@ export default async function NovaSimulacaoPage() {
       <Breadcrumb items={[{ label: "Valora", href: "/valora" }, { label: "Nova simulação" }]} />
       <PageHeader
         title="Nova simulação"
-        subtitle="Preencha com o cliente: cada resposta liga uma atividade dos setores, e o honorário sai do tempo que ela custa."
       />
       {!configurado && (
         <Aviso tom="atencao" className="mb-4">

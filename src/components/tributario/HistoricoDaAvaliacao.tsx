@@ -8,7 +8,7 @@ import { History } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatInstantDateTime } from "@/lib/format";
-import { PAINEL, TEXTO_DE_APOIO, TITULO_DA_SECAO } from "./estilos";
+import { PAINEL, TITULO_DA_SECAO } from "./estilos";
 
 export type VersaoNaTela = { id: string; revisao: number; acao: string; motor: string; createdAt: Date; autor: string | null };
 
@@ -22,13 +22,7 @@ type Props = {
 export function HistoricoDaAvaliacao({ versoes, revisaoAtual, abrindo, onAbrir }: Props) {
   return (
     <section className={PAINEL}>
-      <div>
-        <h2 className={TITULO_DA_SECAO}>Histórico preservado</h2>
-        <p className={TEXTO_DE_APOIO}>
-          Cada gravação guarda uma foto dos dados e das premissas. Abrir uma versão antiga carrega os valores como rascunho; ela só
-          vira a atual quando você salva.
-        </p>
-      </div>
+      <h2 className={TITULO_DA_SECAO}>Histórico preservado</h2>
       {versoes.length === 0 ? (
         <EmptyState icon={<History />} title="Nenhuma versão ainda" description="Salve a avaliação para começar o histórico." />
       ) : (

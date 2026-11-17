@@ -116,7 +116,7 @@ export function CampoForm({ action, cancelHref, sectorOptions, defaultValues }: 
       </FieldGrid>
 
       {fieldType === "SELECT" && (
-        <Field label="Opções" htmlFor="options" required helper="Separadas por vírgula.">
+        <Field label="Opções" htmlFor="options" required>
           <Input
             id="options"
             name="options"

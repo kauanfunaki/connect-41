@@ -103,10 +103,7 @@ export default async function CompetenciaPage({
           salários: era uma caixa de borda âmbar feita à mão. */}
       {anomalies.length > 0 && (
         <Aviso tom="atencao" icone={<AlertTriangle />} className="mb-4">
-          <h2 className="font-semibold">Conferência assistida</h2>
-          <p className="text-fs-2 text-fg-muted mb-1.5">
-            Pontos fora do padrão histórico — apontamento para revisão, não é cálculo trabalhista.
-          </p>
+          <h2 className="font-semibold mb-1.5">Conferência assistida</h2>
           <div className="divide-y divide-warning/20">
             {anomalies.map((a, idx) => (
               <div key={`${a.personId}-${a.kind}-${idx}`} className="py-1.5">

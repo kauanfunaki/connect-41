@@ -114,7 +114,7 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
               label="Papel"
               htmlFor="role"
               required
-              helper={isSelf ? "Você não pode alterar seu próprio papel." : undefined}
+              travado={isSelf ? "Você não pode alterar seu próprio papel." : undefined}
             >
               <Select
                 id="role"
@@ -177,9 +177,6 @@ export function UsuarioForm({ action, cancelHref, roleOptions, sectorOptions, de
                 </Button>
               </div>
             </div>
-            <p className="text-helper text-fg-muted">
-              Escolha só os setores que este usuário precisa acessar — evite marcar todos por padrão, isso deixa a listagem poluída.
-            </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {sectorOptions.map((s) => {
                 const checked = selectedSectors.has(s.value);

@@ -292,7 +292,7 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: Pr
       {/* Na largura única do app (D5, 15/10/2026): a tela ficava presa em
           1000px, encostada à esquerda. */}
       <>
-        <PageHeader title="Auditoria" subtitle="Quem fez o quê neste escritório, dia a dia." />
+        <PageHeader title="Auditoria" />
 
         <FaixaDeTotais
           itens={[

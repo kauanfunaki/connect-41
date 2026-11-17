@@ -257,7 +257,6 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
     <PageContainer>
       <PageHeader
         title="Certificados digitais"
-        subtitle="Quando vence cada certificado A1, onde ele é usado e o que para se vencer. O arquivo e a senha não entram no Connect: ficam na pasta de rede e no cofre."
         action={acesso.podeImportar ? <ImportarRelatorio /> : undefined}
       />
 
@@ -464,9 +463,7 @@ export default async function CertificadosPage({ searchParams }: { searchParams:
             <p className="text-micro text-fg-muted mt-3 max-w-[90ch]">
               <Activity size={11} className="inline align-[-1px]" aria-hidden /> uso registrado pelo Connect (robô do Societário e
               Integra Contador); <PenLine size={11} className="inline align-[-1px]" aria-hidden /> uso marcado à mão por quem coordena.
-              Um uso registrado sai da lista depois de {DIAS_SEM_USO} dias parado. O uso é do CNPJ/CPF: o certificado renovado
-              herda. Quando o mesmo documento tem um certificado mais novo, o antigo vira &ldquo;substituído&rdquo; e para de avisar.
-              Avisos saem para o setor a 60, 30, 15 e 7 dias e no vencimento, dizendo o que para.
+              {/* Fica a legenda dos ícones e a data; as regras foram para o artigo de ajuda (17/11/2026, melhoria-707). */}
               {ultimaImportacao && <> Última importação: {formatInstantDate(ultimaImportacao)}.</>}
             </p>
           </>

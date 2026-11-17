@@ -72,7 +72,7 @@ export function CargoForm({ action, companyId, cancelHref, defaultValues, famili
             <CampoForm
               label="Família de cargos"
               htmlFor="family"
-              helper="Agrupa a mesma trilha em níveis diferentes (ex: Contábil, Fiscal, Atendimento)."
+              dica="Agrupa a mesma trilha em níveis diferentes (ex.: Contábil, Fiscal, Atendimento)."
             >
               <CampoComSugestoes
                 id="family"

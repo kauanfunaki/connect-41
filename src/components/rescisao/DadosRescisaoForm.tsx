@@ -43,7 +43,7 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
           fecham cheias — o contrato em cima, os insumos da contabilidade
           embaixo — e o "Salvar" foi para o rodapé. */}
       <FieldGrid columns="sm:grid-cols-3">
-        <CampoForm label="Término do contrato" htmlFor="terminationDate" helper="Base do prazo legal de pagamento.">
+        <CampoForm label="Término do contrato" htmlFor="terminationDate" dica="Base do prazo legal de pagamento.">
           <CampoData
             id="terminationDate"
             name="terminationDate"
@@ -80,7 +80,7 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
         {/* Insumos que o Connect não tem como obter sozinho. Sem eles as verbas
             correspondentes ficam "sem referência" em vez de sair com número
             chutado. Campo vazio = não informado (≠ zero). */}
-        <CampoForm label="Saldo do FGTS" htmlFor="fgtsBalanceInformed" helper="Extrato da CAIXA — base da multa rescisória.">
+        <CampoForm label="Saldo do FGTS" htmlFor="fgtsBalanceInformed" dica="Extrato da CAIXA — base da multa rescisória.">
           <Input
             id="fgtsBalanceInformed"
             name="fgtsBalanceInformed"
@@ -109,7 +109,7 @@ export function DadosRescisaoForm({ action, defaults, canEdit }: Props) {
         <CampoForm
           label="Faltas injustificadas"
           htmlFor="unjustifiedAbsences"
-          helper="No período aquisitivo — reduz os dias de férias (art. 130)."
+          dica="No período aquisitivo — reduz os dias de férias (art. 130)."
         >
           <Input
             id="unjustifiedAbsences"

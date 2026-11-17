@@ -77,7 +77,6 @@ export default async function ValoraPage() {
     <PageContainer>
       <PageHeader
         title="Valora"
-        subtitle="Honorário pelo custo real de atender: simule com o cliente, proponha entre o piso e a tabela, e registre o retorno."
         action={
           <div className="flex flex-wrap gap-2">
             {acesso.podeGerir && (
@@ -126,7 +125,7 @@ export default async function ValoraPage() {
         {linhas.length === 0 ? (
           <EmptyState
             title="Nenhuma proposta ainda"
-            description="Toda simulação salva aparece aqui. Registrar se fechou ou perdeu, e por quanto, é o que mostra onde o preço está."
+            description="Toda simulação salva aparece aqui."
             icon={<HandCoins />}
           />
         ) : (
@@ -233,10 +232,6 @@ export default async function ValoraPage() {
                 </table>
               </TabelaNoDesktop>
             </TabelaFiltravel>
-            <p className="text-micro text-fg-muted mt-3">
-              O alvo é a foto do dia em que a proposta foi salva: mudar custos ou margem em Parâmetros não reescreve propostas
-              antigas.
-            </p>
           </>
         )}
       </CascoDaTabela>

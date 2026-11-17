@@ -64,7 +64,7 @@ export function DialogoDeNome({
           <CampoForm
             label="Quem vê"
             htmlFor="drive-setor"
-            helper="Pasta de um setor só aparece para quem é do setor — vale para tudo que estiver dentro dela."
+            dica="Pasta de um setor só aparece para quem é do setor — vale para tudo que estiver dentro dela."
           >
             <Select id="drive-setor" value={setor} onChange={(e) => setSetor(e.target.value)}>
               <option value="">Todos que veem a empresa</option>
@@ -107,7 +107,7 @@ export function DialogoDeVencimento({
         <CampoForm
           label="Vence em"
           htmlFor="drive-vencimento"
-          helper="Quem cuida da empresa é avisado 30 dias antes e no dia. Deixe em branco para tirar o vencimento."
+          dica="Quem cuida da empresa é avisado 30 dias antes e no dia. Deixe em branco para tirar o vencimento."
         >
           <CampoData id="drive-vencimento" value={data} onChange={setData} />
         </CampoForm>
@@ -138,7 +138,7 @@ export function DialogoDeSetor({
           onSalvar(setor || null);
         }}
       >
-        <CampoForm label="Quem vê" htmlFor="drive-setor-pasta" helper="Vale para tudo que está dentro da pasta.">
+        <CampoForm label="Quem vê" htmlFor="drive-setor-pasta" dica="Vale para tudo que está dentro da pasta.">
           <Select id="drive-setor-pasta" value={setor} onChange={(e) => setSetor(e.target.value)}>
             <option value="">Todos que veem a empresa</option>
             {setores.map((s) => (
@@ -308,7 +308,6 @@ export function DialogoDeCompartilhar({
             checked={avisar}
             onChange={(e) => setAvisar(e.target.checked)}
             label="Avisar o cliente agora"
-            helper="E-mail para quem tem acesso ao portal desta empresa, e aviso no celular de quem ativou."
           />
         )}
         {erro && <p className="text-fs-3 text-danger" role="alert">{erro}</p>}

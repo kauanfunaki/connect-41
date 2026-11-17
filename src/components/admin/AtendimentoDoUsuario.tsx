@@ -71,8 +71,7 @@ export function AtendimentoDoUsuario({
           Atendimento
         </h3>
         <p className="mt-0.5 text-fs-2 text-fg-muted">
-          Quem esta conta é na equipe{agentes ? " e no Chatwoot" : ""} — é o que põe o nome e a foto reais na
-          avaliação das conversas. Grava na hora, à parte do Salvar acima — o Cancelar não desfaz esta parte.
+          Grava na hora, à parte do Salvar acima — o Cancelar não desfaz esta parte.
         </p>
       </div>
       {pessoas.length > 0 && (

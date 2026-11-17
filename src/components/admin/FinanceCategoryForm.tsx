@@ -93,7 +93,7 @@ export function FinanceCategoryForm({
         <CampoForm
           label="Grupo do DRE"
           htmlFor="dreGroup"
-          helper="É onde a categoria entra no DRE. Deixar em branco não é erro — a categoria aparece na fila de classificação, com o valor, na tela do DRE."
+          dica="É onde a categoria entra no DRE. Deixar em branco não é erro — a categoria aparece na fila de classificação, com o valor, na tela do DRE."
         >
           <Select id="dreGroup" name="dreGroup" defaultValue={grupoInicial}>
             <option value="">Ainda não classificada</option>

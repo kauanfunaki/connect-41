@@ -36,7 +36,6 @@ export default async function TenantPage() {
     <PageContainer>
       <PageHeader
         title="Empresa (tenant)"
-        subtitle="Os dados deste workspace no Connect."
       />
 
       {/* Seções em duas colunas (escolha 1B dos Ajustes de 15/10): o título e o

@@ -23,10 +23,6 @@ export function AvaliacoesDoChat({ dados }: { dados: Dados }) {
     <Card className="p-4 flex flex-col gap-4">
       <div>
         <p className="text-fs-4 font-semibold text-fg">Avaliação das respostas — últimos {DIAS_DO_PAINEL} dias</p>
-        <p className="text-fs-2 text-fg-secondary max-w-[70ch]">
-          O que as pessoas acharam das respostas (útil ou não ajudou). As que não ajudaram aparecem abaixo com a pergunta,
-          sem o nome de quem perguntou e sem o resto da conversa — quem marca é avisado disso na hora.
-        </p>
       </div>
 
       {dados.avaliacoes.length === 0 ? (

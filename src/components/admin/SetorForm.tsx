@@ -92,11 +92,8 @@ export function SetorForm({ action, cancelHref, defaultValues, focoDisponivel = 
           defaultChecked={focoDisponivel && defaultValues?.companyFocus !== false}
           disabled={!focoDisponivel}
           label="Trabalhar numa empresa por vez"
-          helper={
-            focoDisponivel
-              ? "Quem é do setor escolhe a empresa na faixa “Trabalhando em”, acima das telas (ou na ficha dela), e as telas passam a mostrar e gravar só ela, com a matriz e as filiais. Desligada, a faixa some para o setor."
-              : "As telas deste setor não mostram uma empresa por vez: a faixa da empresa não aparece nelas."
-          }
+          // Embaixo, só o motivo da trava; o que a opção faz está no artigo de ajuda (17/11/2026, melhoria-707).
+          helper={focoDisponivel ? undefined : "As telas deste setor não mostram uma empresa por vez: a faixa da empresa não aparece nelas."}
         />
       )}
 

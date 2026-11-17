@@ -67,7 +67,7 @@ export function AlterarSenhaForm({ action }: Props) {
       </FieldGrid>
 
       <FieldGrid>
-        <CampoForm label="Nova senha" htmlFor="newPassword" required helper="Mínimo de 8 caracteres.">
+        <CampoForm label="Nova senha" htmlFor="newPassword" required dica="Mínimo de 8 caracteres.">
           <CampoDeSenha id="newPassword" name="newPassword" autoComplete="new-password" minLength={8} required />
         </CampoForm>
         <CampoForm label="Confirmar nova senha" htmlFor="confirmPassword" required>

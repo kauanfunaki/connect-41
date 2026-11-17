@@ -155,7 +155,6 @@ export default async function SetoresPage({
     <PageContainer>
       <PageHeader
         title="Setores e módulos"
-        subtitle="Como o trabalho é dividido: cada setor, os módulos que ele opera, o menu Geral e quem é dele."
         action={
           <Button href={`${aqui}${escolhido ? "&" : "?"}novo=1`} scroll={false}>
             <Plus size={14} /> Novo setor
@@ -169,7 +168,6 @@ export default async function SetoresPage({
             <h2 id="telas-em-manutencao" className="text-card-title font-semibold text-fg">
               Telas em manutenção
             </h2>
-            <p className="text-fs-2 text-fg-muted">Bloqueadas para todos. A Tech e os administradores abrem só para si, pelo aviso, para testar.</p>
           </div>
           <div className="divide-y divide-border border-t border-border">
             {manutencaoAgora.map(({ modulo, aviso }) => (
@@ -369,15 +367,10 @@ export default async function SetoresPage({
             {/* A Agenda do setor (10/11/2026, pedido do Kauan): o mesmo
                 formulário que o coordenador tem em Sua conta. */}
             <Card as="section" aria-labelledby="agenda-do-setor-titulo" className="p-5 space-y-4">
-              <div className="space-y-1.5">
-                <h2 id="agenda-do-setor-titulo" className="text-card-title font-semibold text-fg">
-                  Agenda e Meu dia
-                </h2>
-                <p className="text-body text-fg-secondary">
-                  Se {escolhido.label} usa reuniões e quais fontes de prazo a Agenda mostra para quem é do setor. O
-                  coordenador do setor também muda isto, em Sua conta.
-                </p>
-              </div>
+              {/* O que este bloco decide foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+              <h2 id="agenda-do-setor-titulo" className="text-card-title font-semibold text-fg">
+                Agenda e Meu dia
+              </h2>
               <AgendaDoSetorForm
                 key={escolhido.code}
                 setores={agendaDosSetoresNaTela([escolhido], agendas.porSetor)}
@@ -399,7 +392,7 @@ export default async function SetoresPage({
               </div>
               {pessoas.length === 0 ? (
                 <p className="mt-2 text-fs-2 text-fg-muted">
-                  Ninguém da equipe está neste setor ainda. Os setores de cada pessoa se escolhem em Usuários.
+                  Ninguém da equipe está neste setor ainda.
                 </p>
               ) : (
                 <ul className="mt-3 flex flex-wrap gap-2">

@@ -105,9 +105,6 @@ export default async function ObrigacoesPorRegimePage({ searchParams }: { search
     <PageContainer>
       <PageHeader
         title="Obrigações por regime"
-        subtitle="Cadastre a obrigação uma vez por setor e diga a que empresas ela se aplica — regime, sem movimento,
-          funcionários, estado, cidade. O Connect gera as atividades das próximas competências no kanban do setor, com o
-          responsável da empresa, e ajusta sozinho quando a empresa muda de regime."
         action={
           <Button href={`${LISTA}?novo=1`} variant="primary" className="font-medium">
             + Nova obrigação
