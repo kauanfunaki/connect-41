@@ -15,6 +15,7 @@ import {
   podeAgirNaParte,
   podeComentar,
   podeEditarATransferencia,
+  podeMarcarTarefa,
   podeMudarResponsaveis,
   proximaSituacao,
   resumir,
@@ -222,5 +223,22 @@ describe("textos com o nome do setor", () => {
     expect(juntarNomes(["Ana", "Bia"])).toBe("Ana e Bia");
     expect(resumir("  falta   o distrato ", 50)).toBe("falta o distrato");
     expect(resumir("abcdefghij", 6)).toBe("abcde…");
+  });
+});
+
+// As tarefas da parte (17/11/2026, melhoria-705): quem cuida da parte marca,
+// enquanto ela está com o setor.
+describe("podeMarcarTarefa", () => {
+  it("quem cuida da parte marca na nova e na resolvendo", () => {
+    for (const status of ["NEW", "IN_PROGRESS"] as const) {
+      const podem = (Object.keys(PESSOAS) as Pessoa[]).filter((p) => podeMarcarTarefa(PESSOAS[p], parte(status)));
+      expect(podem.sort()).toEqual(["admin", "coordenaODestino", "responsavel", "superAdmin"].sort());
+    }
+  });
+
+  it("ninguém marca na finalizada nem na devolvida", () => {
+    for (const status of ["DONE", "RETURNED"] as const) {
+      expect((Object.keys(PESSOAS) as Pessoa[]).filter((p) => podeMarcarTarefa(PESSOAS[p], parte(status)))).toEqual([]);
+    }
   });
 });

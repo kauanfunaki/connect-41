@@ -34,7 +34,8 @@ import {
   HANDOFF_STATUS_TOM,
   tituloDaTransferencia,
 } from "@/lib/handoffs";
-import { acoesDaParte, aoSetor, podeComentar, podeEditarATransferencia, podeMudarResponsaveis } from "@/lib/handoffTransicoes";
+import { acoesDaParte, aoSetor, podeComentar, podeEditarATransferencia, podeMarcarTarefa, podeMudarResponsaveis } from "@/lib/handoffTransicoes";
+import { lerDetalhes } from "@/lib/handoffTemplates";
 import {
   fraseDoItem,
   itensDaAtividade,
@@ -80,6 +81,8 @@ export default async function HandoffDetailPage({
         orderBy: { createdAt: "asc" },
         include: {
           assignees: { orderBy: { createdAt: "asc" }, include: { user: { select: { id: true, name: true, photoUrl: true } } } },
+          // As tarefas da parte (17/11/2026, melhoria-705).
+          tasks: { orderBy: { position: "asc" }, select: { id: true, title: true, doneAt: true, doneBy: { select: { name: true } } } },
         },
       },
       events: {
@@ -154,8 +157,10 @@ export default async function HandoffDetailPage({
       mudaResponsaveis: podeMudarResponsaveis(ctx, s),
       doMeuSetor: ctx.sectors.includes(s.sectorCode) || responsaveis.includes(ctx.userId),
       resumo: resumoDaParte({ ...s, responsaveis }, eventos, nome, agora),
+      marcaTarefas: podeMarcarTarefa(ctx, { sectorCode: s.sectorCode, status: s.status, responsaveis }),
     };
   });
+  const detalhesDoPedido = lerDetalhes(handoff.details);
 
   const colunas: ColunaDoAndamento[] = partes.map((p) => ({
     id: p.s.id,
@@ -163,6 +168,7 @@ export default async function HandoffDetailPage({
     status: p.s.status,
     resumo: p.resumo,
     doMeuSetor: p.doMeuSetor,
+    tarefas: p.s.tasks.length > 0 ? { feitas: p.s.tasks.filter((t) => t.doneAt).length, total: p.s.tasks.length } : null,
   }));
 
   // As partes em que a pessoa age, a do setor dela primeiro.
@@ -344,6 +350,13 @@ export default async function HandoffDetailPage({
                 responsaveis={p.s.assignees.map((a) => ({ id: a.user.id, nome: a.user.name, foto: a.user.photoUrl }))}
                 opcoesDeResponsavel={p.mudaResponsaveis ? (opcoesPorSetor[p.s.sectorCode] ?? []) : null}
                 doMeuSetor={p.doMeuSetor}
+                tarefas={p.s.tasks.map((t) => ({
+                  id: t.id,
+                  titulo: t.title,
+                  feita: Boolean(t.doneAt),
+                  quem: t.doneAt ? `${t.doneBy?.name ?? "Usuário removido"}, em ${formatInstantDateTime(t.doneAt, DATA_E_HORA)}` : null,
+                }))}
+                podeMarcarTarefas={p.marcaTarefas}
                 nota={
                   p.s.status === "RETURNED"
                     ? `Devolvida ${aoSetor(origem)}. A parte volta para cá quando quem pediu responder e reenviar.`
@@ -356,6 +369,25 @@ export default async function HandoffDetailPage({
         </div>
 
         <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
+          {/* As respostas ao "O que este modelo precisa saber" (17/11/2026, melhoria-705). */}
+          {detalhesDoPedido.length > 0 && (
+            <Card as="section" aria-labelledby="titulo-dados" className="p-5 space-y-3">
+              <h2 id="titulo-dados" className="text-section font-semibold text-fg">
+                Dados do pedido
+              </h2>
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-ui sm:grid-cols-[minmax(8rem,max-content)_minmax(0,1fr)]">
+                {detalhesDoPedido.map((d, i) => (
+                  <div key={`${i}-${d.rotulo}`} className="contents">
+                    <dt className="text-fg-muted">{d.rotulo}</dt>
+                    <dd className="min-w-0 whitespace-pre-wrap break-words text-fg-secondary">
+                      <TextoComLinks texto={d.valor} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </Card>
+          )}
+
           <Card as="section" aria-labelledby="titulo-descricao" className="p-5 space-y-3">
             <h2 id="titulo-descricao" className="text-section font-semibold text-fg">
               Descrição

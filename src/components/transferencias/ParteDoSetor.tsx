@@ -7,15 +7,18 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Selo, type TomDoSelo } from "@/components/ui/Selo";
 import { Textarea } from "@/components/ui/Textarea";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { AvatarImage } from "@/components/shared/AvatarImage";
 import { formatarNumero } from "@/lib/format";
 import { SectorAssigneePicker } from "@/components/transferencias/SectorAssigneePicker";
-import { definirResponsaveisDaParte, mudarAParte } from "@/app/(app)/transferencias/actions";
+import { definirResponsaveisDaParte, marcarTarefaDaParte, mudarAParte } from "@/app/(app)/transferencias/actions";
 import { MOTIVO_MAXIMO, aoSetor, avisoDaAcao, doSetor, rotuloDaAcao, type AcaoNaParte } from "@/lib/handoffTransicoes";
 
 export type PessoaDaParte = { id: string; nome: string; foto: string | null };
+/** Uma tarefa da parte; `quem` é "Ana, em 17 de nov. de 2026, 10:12" quando feita. */
+export type TarefaDaParte = { id: string; titulo: string; feita: boolean; quem: string | null };
 
 type Props = {
   parteId: string;
@@ -37,6 +40,9 @@ type Props = {
   doMeuSetor: boolean;
   /** Uma frase sobre a situação, quando não há botão a mostrar (a parte devolvida). */
   nota?: string | null;
+  /** As tarefas do setor (17/11/2026, melhoria-705); lista vazia nas transferências de antes. */
+  tarefas?: TarefaDaParte[];
+  podeMarcarTarefas?: boolean;
 };
 
 /** A ordem e o peso dos botões: o próximo passo natural é o primário. */
@@ -97,6 +103,33 @@ export function ParteDoSetor(p: Props) {
     });
   }
 
+  // As tarefas marcadas na tela: mudam na hora do clique e voltam se o
+  // servidor recusar, como os responsáveis.
+  const tarefasDoServidor = p.tarefas ?? [];
+  const chaveDasTarefas = tarefasDoServidor.map((x) => `${x.id}:${x.feita ? 1 : 0}`).join(",");
+  const [tarefasVistas, setTarefasVistas] = useState(chaveDasTarefas);
+  const [feitas, setFeitas] = useState(() => new Set(tarefasDoServidor.filter((x) => x.feita).map((x) => x.id)));
+  const [marcando, iniciarMarcacao] = useTransition();
+  if (!marcando && tarefasVistas !== chaveDasTarefas) {
+    setTarefasVistas(chaveDasTarefas);
+    setFeitas(new Set(tarefasDoServidor.filter((x) => x.feita).map((x) => x.id)));
+  }
+
+  function marcar(id: string, feita: boolean) {
+    const antes = feitas;
+    const depois = new Set(feitas);
+    if (feita) depois.add(id);
+    else depois.delete(id);
+    setFeitas(depois);
+    iniciarMarcacao(async () => {
+      const r = await marcarTarefaDaParte(id, feita);
+      if (!r.ok) {
+        setFeitas(antes);
+        toast.error(r.erro);
+      }
+    });
+  }
+
   function agir(acao: AcaoNaParte, texto?: string) {
     setAcaoEmCurso(acao);
     iniciar(async () => {
@@ -151,8 +184,43 @@ export function ParteDoSetor(p: Props) {
         </p>
       ) : p.instrucao ? (
         <p className="text-ui text-fg-secondary whitespace-pre-wrap break-words">{p.instrucao}</p>
-      ) : (
+      ) : tarefasDoServidor.length === 0 ? (
         <p className="text-ui text-fg-muted italic">Sem instrução específica para este setor.</p>
+      ) : null}
+
+      {p.podeLerInstrucao && tarefasDoServidor.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="flex items-center justify-between gap-2 text-helper font-semibold uppercase tracking-wide text-fg-secondary">
+            Tarefas
+            <span className="font-normal normal-case tracking-normal tabular-nums text-fg-muted">
+              {feitas.size} de {tarefasDoServidor.length}
+            </span>
+          </h3>
+          <ul className="flex flex-col gap-0.5">
+            {tarefasDoServidor.map((tarefa) => {
+              const feita = feitas.has(tarefa.id);
+              const idDaTarefa = `tarefa-${tarefa.id}`;
+              return (
+                <li key={tarefa.id} className="flex items-start gap-2 rounded-md px-1 py-1.5">
+                  <Checkbox
+                    id={idDaTarefa}
+                    checked={feita}
+                    disabled={!p.podeMarcarTarefas}
+                    onChange={(e) => marcar(tarefa.id, e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <label
+                    htmlFor={idDaTarefa}
+                    title={feita && tarefa.feita && tarefa.quem ? `Feita por ${tarefa.quem}` : undefined}
+                    className={`min-w-0 break-words text-ui ${feita ? "text-fg-muted line-through" : "text-fg"} ${p.podeMarcarTarefas ? "cursor-pointer" : ""}`}
+                  >
+                    {tarefa.titulo}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       <div className="space-y-2">
@@ -164,6 +232,7 @@ export function ParteDoSetor(p: Props) {
               value={ids}
               onChange={trocarResponsaveis}
               rotulo={`Responsáveis ${doSetor(p.setor)}`}
+              semNinguem={`A coordenação ${doSetor(p.setor)} decide`}
             />
             {salvandoResponsaveis && (
               <span role="status" className="text-helper text-fg-muted">
@@ -181,7 +250,7 @@ export function ParteDoSetor(p: Props) {
             ))}
           </ul>
         ) : (
-          <p className="text-ui text-fg-muted">Sem responsável.</p>
+          <p className="text-ui text-fg-muted">A coordenação {doSetor(p.setor)} decide.</p>
         )}
       </div>
 

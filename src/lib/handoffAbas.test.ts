@@ -5,6 +5,7 @@ import {
   digitosDaBusca,
   lerAba,
   quemVeAsTransferencias,
+  setoresADistribuir,
   setoresDaCaixa,
   whereDaAba,
   whereDaBusca,
@@ -45,9 +46,13 @@ function casaSetor(s: Setor, filtro: Filtro): boolean {
     if (chave === "sectorCode") return casaValor(s.sectorCode, valor);
     if (chave === "status") return casaValor(s.status, valor);
     if (chave === "assignees") {
-      const { some, ...resto } = valor as { some?: { userId: unknown } };
-      if (Object.keys(resto).length > 0 || !some) throw new Error("filtro de responsável não suportado");
-      return s.assignees.some((u) => casaValor(u, some.userId));
+      const { some, none, ...resto } = valor as { some?: { userId: unknown }; none?: Record<string, never> };
+      if (Object.keys(resto).length > 0 || (!some && !none)) throw new Error("filtro de responsável não suportado");
+      if (none) {
+        if (Object.keys(none).length > 0) throw new Error("none com condição não suportado");
+        return s.assignees.length === 0;
+      }
+      return s.assignees.some((u) => casaValor(u, some!.userId));
     }
     throw new Error(`chave de setor não suportada: ${chave}`);
   });
@@ -148,6 +153,42 @@ describe("aba Para o meu setor", () => {
   });
 });
 
+// "A coordenação do setor decide" (17/11/2026, melhoria-705).
+describe("aba A distribuir", () => {
+  const COORDENA_O_FISCAL: QuemVeAsTransferencias = { ...DO_FISCAL, coordena: ["fiscal"] };
+
+  it("é a parte sem responsável, ainda com o setor, num setor que a pessoa coordena", () => {
+    expect(quaisCasam("distribuir", COORDENA_O_FISCAL)).toEqual(["paraOFiscalNova"]);
+  });
+
+  it("a parte com responsável, a finalizada e a devolvida não entram", () => {
+    const casam = quaisCasam("distribuir", { ...COORDENA_O_FISCAL, coordena: ["fiscal", "contabil"] });
+    expect(casam).toEqual(["fiscalJaFinalizou", "paraOFiscalNova", "paraOFiscalResolvendo", "pedidaPorMim", "soContabil"].sort());
+    expect(casam).not.toContain("comigoNoContabil");
+    expect(casam).not.toContain("fiscalDevolveuAMim");
+  });
+
+  it("o administrador vê as de todos os setores; com setor ativo, as dele", () => {
+    const admin = { ...ADMIN_EM_TODOS, coordena: null };
+    expect(setoresADistribuir(admin)).toBeNull();
+    expect(quaisCasam("distribuir", admin)).toContain("soContabil");
+    expect(setoresADistribuir({ ...admin, setorAtivo: "fiscal" })).toEqual(["fiscal"]);
+  });
+
+  it("a coordenação em setor ativo que ela coordena olha só ele; em outro, todos os dela", () => {
+    const deDois = { ...DE_DOIS_SETORES, coordena: ["fiscal", "contabil"] };
+    expect(setoresADistribuir({ ...deDois, setorAtivo: "contabil" })).toEqual(["contabil"]);
+    expect(setoresADistribuir({ ...deDois, setorAtivo: "dp" })).toEqual(["fiscal", "contabil"]);
+  });
+
+  it("só aparece para quem coordena algum setor ou administra", () => {
+    expect(abasVisiveis(DO_FISCAL)).not.toContain("distribuir");
+    expect(abasVisiveis(COORDENA_O_FISCAL)).toEqual(["setor", "distribuir", "comigo", "enviadas", "finalizadas"]);
+    expect(abasVisiveis({ ...ADMIN_EM_TODOS, coordena: null })).toContain("distribuir");
+    expect(lerAba("distribuir", DO_FISCAL)).toBe("setor");
+  });
+});
+
 describe("aba Comigo", () => {
   it("é onde a pessoa responde por um setor que ainda não finalizou", () => {
     expect(quaisCasam("comigo", DO_FISCAL)).toEqual(["comigoNoContabil"]);
@@ -219,8 +260,13 @@ describe("quemVeAsTransferencias", () => {
       setores: ["dp"],
       setorAtivo: "dp",
       visaoGeral: false,
+      coordena: ["dp"],
     });
     expect(quemVeAsTransferencias({ userId: "u1", sectors: [], activeSector: null, role: "READONLY" }).visaoGeral).toBe(true);
+    // Quem coordena: a coordenação nos setores dela, o administrador em todos, o somente leitura em nenhum.
+    expect(quemVeAsTransferencias({ userId: "u1", sectors: ["dp"], activeSector: null, role: "SECTOR_USER" }).coordena).toEqual([]);
+    expect(quemVeAsTransferencias({ userId: "u1", sectors: [], activeSector: null, role: "ADMIN" }).coordena).toBeNull();
+    expect(quemVeAsTransferencias({ userId: "u1", sectors: [], activeSector: null, role: "READONLY" }).coordena).toEqual([]);
   });
 });
 

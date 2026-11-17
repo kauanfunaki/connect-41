@@ -269,15 +269,17 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Transferências",
     caminhos: ["/transferencias"],
     resumo:
-      "O jeito de passar o assunto de uma empresa ou pessoa de um setor para outro, com assunto, prioridade, instrução e responsável por setor, e acompanhar até a finalização.",
+      "O jeito de passar o assunto de uma empresa ou pessoa de um setor para outro, com assunto, prioridade, tarefas e responsável por setor, e acompanhar até a finalização.",
     secoes: [
       {
         titulo: "Como abrir uma transferência",
         passos: [
           "Clique em “+ Nova transferência” na tela de Transferências, ou em “Solicitar transferência” na ficha da empresa ou da pessoa.",
-          "No passo 1, escolha a empresa ou a pessoa (vindo da ficha, ela já vem escolhida), o assunto e a prioridade. Cada bloco de assunto é um modelo: ele marca os setores e escreve as instruções. “Ver os 16 modelos” mostra todos, e “Outro assunto” deixa você escrever o seu.",
-          "Clique em “Continuar”. No passo 2, confira os setores que recebem, abra cada setor para escrever a instrução e escolher os responsáveis, e escreva a “Descrição”. Digite @ para mencionar um colega, que recebe uma notificação.",
-          "Clique em “Continuar”. No passo 3, confira o que cada setor vai receber: o aviso âmbar marca o setor sem instrução ou sem responsável.",
+          "No passo 1, escolha a empresa ou a pessoa (vindo da ficha, ela já vem escolhida), o assunto e a prioridade. Cada bloco de assunto é um modelo e mostra os setores que ele envolve. Use a busca para achar entre os 16, “Ver os outros” para ver todos, ou “Outro assunto” para escrever o seu.",
+          "Clique em “Continuar”. No passo 2, confira os setores que recebem e responda o que o modelo pergunta (a situação da empresa, o valor, as datas). Deixando o regime ou o contato em branco, vai o do cadastro da empresa.",
+          "Abra cada setor para conferir as tarefas que o modelo trouxe: tire o que não vale e acrescente o que faltar. Em “Responsável”, escolha quem cuida ou deixe “A coordenação do setor decide”, para a coordenação escolher.",
+          "Escreva a “Descrição”, se quiser. Digite @ para mencionar um colega, que recebe uma notificação.",
+          "Clique em “Continuar”. No passo 3, confira o que cada setor vai receber: o aviso âmbar marca o setor sem tarefas.",
           "Clique em “Enviar transferência”. A transferência criada abre em seguida.",
         ],
       },
@@ -285,7 +287,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como acompanhar as transferências",
         passos: [
           "Abra “Transferências” na barra lateral.",
-          "As abas separam o que chegou para o seu setor (“Para o meu setor”), o que está com você (“Comigo”), o que você ou o seu setor pediu (“Enviadas”) e as finalizadas. O número na aba é quantas há em cada uma.",
+          "As abas separam o que chegou para o seu setor (“Para o meu setor”), o que está com você (“Comigo”), o que você ou o seu setor pediu (“Enviadas”) e as finalizadas. Quem coordena um setor vê também “A distribuir”: as partes do setor que ainda estão sem responsável. O número na aba é quantas há em cada uma.",
           "Use a busca para achar pelo assunto, pela empresa ou pelo CNPJ, e o “Filtros” para escolher a prioridade, o setor que recebe ou o responsável.",
           "Na coluna “Setores”, cada setor tem o seu sinal: nova, resolvendo, finalizada ou devolvida. O ponto azul antes do assunto marca a transferência que você ainda não abriu, e o relógio âmbar, a que tem setor sem finalizar há 3 dias ou mais. O selo vermelho “Devolvida” marca a que um setor devolveu para quem pediu responder.",
           "Clique em uma transferência para abri-la. No alto, a faixa mostra cada setor: com quem está e desde quando, quem finalizou, ou o motivo da devolução. O seu setor aparece destacado.",
@@ -295,8 +297,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como atender uma transferência que chegou ao seu setor",
         passos: [
           "Abra a transferência pela aba “Para o meu setor”, pelo aviso no sino ou pelo botão “Abrir”, no Início.",
-          "No cartão “Parte do” seu setor, à direita (no celular, logo abaixo da faixa), leia a instrução.",
-          "Se você coordena o setor, use “Responsáveis” para pôr ou tirar pessoas. Quem entra recebe um aviso; quem já estava não é avisado de novo.",
+          "No cartão “Parte do” seu setor, à direita (no celular, logo abaixo da faixa), veja as tarefas do setor. Marque cada uma quando estiver feita: a faixa do alto mostra quantas já foram (“2 de 3 tarefas”).",
+          "Se você coordena o setor, use “Responsáveis” para pôr ou tirar pessoas. Quem entra recebe um aviso; quem já estava não é avisado de novo. A transferência que chega sem responsável avisa só a coordenação, e fica na aba “A distribuir” até alguém ser escolhido.",
           "Clique em “Começar” quando o setor começar a trabalhar e em “Finalizar a parte” quando terminar.",
           "Se falta algo de quem pediu (um documento, uma informação), clique em “Devolver”, escreva o motivo e confirme. A parte volta para quem pediu, que é avisado, e sai da sua caixa até ser reenviada.",
           "Se a parte foi finalizada por engano, clique em “Reabrir a parte”.",
@@ -323,7 +325,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     dicas: [
       "A transferência fica “Nova” enquanto nenhum setor começou, “Finalizada” quando todos terminaram e “Resolvendo” no meio do caminho. Se algum setor devolveu a parte dele, ela fica “Devolvida” até quem pediu responder.",
       "Abrir transferência é para administradores e gestores de setor. Os botões de cada setor são do gestor daquele setor ou de quem é responsável. Responder uma devolução e editar o assunto, a descrição e a prioridade é de quem pediu, do gestor do setor que pediu e dos administradores.",
-      "A instrução escrita para um setor só aparece para esse setor, para quem abriu a transferência e para os administradores.",
+      "As tarefas e a instrução de um setor só aparecem para esse setor, para quem abriu a transferência e para os administradores. Marca as tarefas quem cuida da parte: a coordenação do setor e os responsáveis.",
+      "Os setores e as tarefas de cada modelo são uma proposta de 17/11/2026, a validar com as coordenações. As transferências abertas antes disso não têm tarefas: mostram a instrução escrita.",
       "As transferências abertas antes de 10/11/2026 não têm histórico completo: a Atividade mostra o pedido e as finalizações pelas datas guardadas, com a marca “antes do histórico”.",
     ],
   },
