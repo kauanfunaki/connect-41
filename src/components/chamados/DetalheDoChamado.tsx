@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ListChecks, Paperclip, PencilLine, RefreshCw, Shuffle } from "lucide-react";
+import { CalendarClock, ExternalLink, ListChecks, Paperclip, PencilLine, RefreshCw, Shuffle } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Accordion } from "@/components/ui/Accordion";
 import { Card } from "@/components/ui/Card";
@@ -27,6 +27,7 @@ import type { detalhe } from "@/lib/chamados/consultas";
 import { montarLinhaDoTempo } from "@/lib/chamados/linhaDoTempo";
 import { painelDoPrazo } from "@/lib/chamados/painelDoPrazo";
 import { idCurto } from "@/lib/enderecoCurto";
+import { TENTATIVAS_NO_HUB } from "@/lib/chamados/hub";
 
 type Chamado = Awaited<ReturnType<typeof detalhe>>;
 type Usuario = { id: string; name: string; atendente: boolean };
@@ -147,6 +148,22 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
               {variosSetores && <DadoDoChamado rotulo="Setor que atende">{nomeDoSetor(t.handlingSectorCode)}</DadoDoChamado>}
               {/* Quem encaminhou para outro setor continuar segue acompanhando (16/11/2026, funcionalidade-709). */}
               {variosSetores && t.followingSectors.length > 0 && <DadoDoChamado rotulo="Acompanham">{t.followingSectors.map(f => nomeDoSetor(f.sectorCode)).join(", ")}</DadoDoChamado>}
+              {/* A cópia no Hub, só de ida (17/11/2026, funcionalidade-711). */}
+              {t.hubTicketUrl ? (
+                <DadoDoChamado rotulo="No Hub">
+                  <a href={t.hubTicketUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline">
+                    Abrir<ExternalLink size={13} aria-hidden /><span className="sr-only"> no Hub (abre em outra aba)</span>
+                  </a>
+                </DadoDoChamado>
+              ) : t.hubTicketId ? (
+                <DadoDoChamado rotulo="No Hub">Enviado</DadoDoChamado>
+              ) : t.hubPending ? (
+                <DadoDoChamado rotulo="No Hub">
+                  <span className="font-normal text-fg-muted" title={t.hubLastError ?? undefined}>
+                    {t.hubAttempts >= TENTATIVAS_NO_HUB ? "Não foi enviado" : "Ainda não foi"}
+                  </span>
+                </DadoDoChamado>
+              ) : null}
             </dl>
           </div>
           {(podeAjustarPrazo || mostraChecklist || podeRedirecionar) && <div className="divide-y divide-border border-t border-border px-5">

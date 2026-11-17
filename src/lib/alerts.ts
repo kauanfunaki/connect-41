@@ -1045,6 +1045,8 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     // Não é alerta: retoma a triagem de chamado que ficou em "Aguardando
     // triagem" (10/11/2026). Vem antes de "chamados", que despacha os avisos.
     ["chamados em triagem", async () => (await import("@/lib/chamados/triagem-servidor")).retomarTriagens(tenantId)],
+    // Também não é alerta: manda ao Hub o chamado que não foi na hora (17/11/2026, funcionalidade-711).
+    ["chamados no Hub", async () => (await import("@/lib/chamados/hub-servidor")).reenviarAoHub(tenantId)],
     ["chamados", async () => (await import("@/lib/chamados/alertas")).verificarSla(tenantId, today)],
     ["vacations", () => checkVacationsExpiring(tenantId, today)],
     ["probation", () => checkProbationDeadlines(tenantId, today)],
