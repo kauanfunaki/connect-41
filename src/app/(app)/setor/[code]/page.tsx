@@ -80,7 +80,8 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
         subtitle={
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2 rounded-full flex-shrink-0" style={{ background: corDoSetor }} aria-hidden />
-            {setor} · as listas de tarefas do setor, organizadas em espaços e pastas
+            {/* Só o setor (17/11/2026, melhoria-707): o que são os Quadros está no artigo de ajuda. */}
+            {setor}
           </span>
         }
         action={

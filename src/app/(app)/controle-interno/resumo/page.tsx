@@ -71,7 +71,6 @@ export default async function ResumoTechPage({ searchParams }: { searchParams: P
     <PageContainer>
       <PageHeader
         title="Resumo do Controle interno"
-        subtitle="O que a equipe Tech concluiu, tem em andamento e planejou no período. Concluídos e cancelados contam pela data da mudança de situação; em andamento é a situação de agora."
         action={
           <div className="flex flex-wrap gap-2">
             {!nada && <CopiarResumo texto={texto} />}

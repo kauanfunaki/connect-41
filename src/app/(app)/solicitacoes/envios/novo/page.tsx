@@ -50,11 +50,7 @@ export default async function NovoEnvioPage({
 
       <PageHeader
         title="Novo envio"
-        subtitle={
-          escolhida
-            ? `Para ${nomeExibicao(escolhida)}. Fica como rascunho: ao publicar, aparece no portal do cliente, e o e-mail é opcional.`
-            : "Fica como rascunho: ao publicar, aparece no portal do cliente, e o e-mail é opcional."
-        }
+        subtitle={escolhida ? `Para ${nomeExibicao(escolhida)}.` : undefined}
       />
 
       <div className="w-full max-w-[860px]">

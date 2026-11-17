@@ -107,7 +107,7 @@ export function MetaPessoal({ meta, hoje, podeGravar }: { meta: MetaNaTela | nul
         </>
       )}
       {!editando && !meta && (
-        <p className="text-ui text-fg-secondary">Escolha um alvo e um prazo, como 60 PPM na digitação até o fim do mês. Só você vê a sua meta.</p>
+        <p className="text-ui text-fg-secondary">Escolha um alvo e um prazo, como 60 PPM na digitação até o fim do mês.</p>
       )}
 
       {editando ? (
@@ -134,7 +134,7 @@ export function MetaPessoal({ meta, hoje, podeGravar }: { meta: MetaNaTela | nul
                 ))}
               </Select>
             </CampoForm>
-            <CampoForm label={`Alvo (${UNIDADE_DA_META[teste]})`} htmlFor="meta-alvo" helper={`De 1 a ${ALVO_MAXIMO[teste]}.`}>
+            <CampoForm label={`Alvo (${UNIDADE_DA_META[teste]})`} htmlFor="meta-alvo" dica={`De 1 a ${ALVO_MAXIMO[teste]}.`}>
               <CampoNumero id="meta-alvo" value={alvo} onChange={(e) => setAlvo(e.target.value)} min={1} max={ALVO_MAXIMO[teste]} suffix={UNIDADE_DA_META[teste]} required />
             </CampoForm>
             <CampoForm label="Prazo" htmlFor="meta-prazo">

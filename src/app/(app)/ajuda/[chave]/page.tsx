@@ -136,9 +136,6 @@ export default async function ArtigoDeAjudaPage({
             <p className="flex items-center gap-2 text-fs-4 font-semibold text-fg">
               <LifeBuoy size={16} className="text-brand" /> Não achou o que procurava?
             </p>
-            <p className="text-fs-3 leading-relaxed text-fg-secondary">
-              A central de ajuda reúne o passo a passo de todas as telas que você usa, com busca.
-            </p>
             <Button variant="secondary" size="sm" href="/ajuda" className="self-start">
               Abrir a central de ajuda
             </Button>

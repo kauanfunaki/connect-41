@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AjudaDoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -101,18 +101,21 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
     <Input id="tech-title" name="title" required maxLength={200} defaultValue={item?.title} grande={pagina}
       placeholder={pagina ? "Em uma frase: o que precisa ser feito ou o que está errado" : undefined} />
   </CampoForm>;
-  const descricao = <CampoForm label="Descrição" htmlFor="tech-description" helper={pagina ? "Onde acontece, o que se esperava e os passos para ver de novo." : undefined}>
+  const descricao = <CampoForm label="Descrição" htmlFor="tech-description" dica={pagina ? "Onde acontece, o que se esperava e os passos para ver de novo." : undefined}>
     <Textarea id="tech-description" name="description" rows={pagina ? 12 : 6} maxLength={10000} defaultValue={item?.description ?? ""} />
   </CampoForm>;
   // O critério de aceite fora da descrição (10/11/2026): o modelo aparece no
   // campo vazio, e cada linha de "Aprovado quando" vira um ponto para marcar.
   const criterio = <CampoForm label="Critério de aceite" htmlFor="tech-criteria"
-    helper="Opcional. Um rótulo por linha: Mudança, Antes de testar, Onde testar, Passos (1., 2.) e Aprovado quando (- …). Cada linha de Aprovado quando vira um ponto para conferir no item.">
+    dica="Um rótulo por linha: Mudança, Antes de testar, Onde testar, Passos (1., 2.) e Aprovado quando (- …). Cada linha de Aprovado quando vira um ponto para conferir no item.">
     <Textarea id="tech-criteria" name="acceptanceCriteria" rows={pagina ? 8 : 10} maxLength={10000} defaultValue={item?.acceptanceCriteria ?? ""} placeholder={MODELO_DO_CRITERIO} />
   </CampoForm>;
-  const evidencias = !item && podeEditar && <div role="group" aria-labelledby="tech-anexos-rotulo" aria-describedby="tech-anexos-ajuda" className="flex flex-col gap-1.5 min-w-0">
-    <span id="tech-anexos-rotulo" className="text-label font-medium leading-5 text-fg">Evidências <span className="font-normal text-fg-muted">(opcional)</span></span>
-    <p id="tech-anexos-ajuda" className="text-helper text-fg-muted">Prints de tela, PDFs e planilhas. Sobem junto com o item.</p>
+  const evidencias = !item && podeEditar && <div role="group" aria-labelledby="tech-anexos-rotulo" className="flex flex-col gap-1.5 min-w-0">
+    {/* A frase embaixo do rótulo virou o "?" ao lado dele (17/11/2026, melhoria-707). */}
+    <span className="flex items-center gap-1.5 min-w-0">
+      <span id="tech-anexos-rotulo" className="text-label font-medium leading-5 text-fg">Evidências <span className="font-normal text-fg-muted">(opcional)</span></span>
+      <AjudaDoCampo texto="Prints de tela, PDFs e planilhas. Sobem junto com o item." rotulo="Evidências" />
+    </span>
     <FileDropzone accept={ACCEPT_DO_DRIVE} maxSizeMb={10} multiple colarNaPagina arquivos={fila} desabilitado={pendente} onAdicionar={adicionar} onRemover={remover} />
   </div>;
 
@@ -125,7 +128,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
       <div className="grid grid-cols-1 gap-4 @xs:grid-cols-2">
         {/* Os robôs, sites e apps do Ops Center, com busca: a lista cresce com o
             cadastro de lá (29/10/2026). Inativo só aparece no item que já o usa. */}
-        <CampoForm label="Sistema" htmlFor="tech-system" helper="Do cadastro do Orquestrador." className="@xs:col-span-2 @lg:col-span-1"><Select id="tech-system" busca value={sistema} onChange={e => setSistema(e.target.value)}>
+        <CampoForm label="Sistema" htmlFor="tech-system" dica="Do cadastro do Orquestrador." className="@xs:col-span-2 @lg:col-span-1"><Select id="tech-system" busca value={sistema} onChange={e => setSistema(e.target.value)}>
           <option value="NONE">Sem sistema</option><option value="NEW">Novo sistema</option>
           {(Object.keys(ORIGENS_DO_SISTEMA) as OrigemDoSistema[]).map(origem => {
             const daOrigem = sistemas.filter(s => s.origem === origem && (s.ativo || s.chave === item?.systemKey));
@@ -136,7 +139,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
         </Select></CampoForm>
         <CampoForm label="Situação" htmlFor="tech-status" required className="@xs:col-span-2 @lg:col-span-1"><Select id="tech-status" name="status" defaultValue={item?.status ?? "PENDING"}>{Object.entries(SITUACOES).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</Select></CampoForm>
         <CampoForm label="Responsável" htmlFor="tech-assignee"><Select id="tech-assignee" name="assigneeId" defaultValue={item?.assigneeId ?? ""}><option value="">Sem responsável</option>{responsaveis.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></CampoForm>
-        <CampoForm label="Prazo" htmlFor="tech-due" helper="Opcional."><CampoData id="tech-due" name="dueDate" min="1900-01-01" max="9999-12-31" defaultValue={item?.dueDate ?? ""} /></CampoForm>
+        <CampoForm label="Prazo" htmlFor="tech-due"><CampoData id="tech-due" name="dueDate" min="1900-01-01" max="9999-12-31" defaultValue={item?.dueDate ?? ""} /></CampoForm>
       </div>
     </div>
   </>;
@@ -151,14 +154,14 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
           <span className="text-ui text-fg">{item?.size ? `${item.size} · ${TAMANHOS[item.size]}` : "Sem tamanho"}</span>
           <p className="col-start-2 flex items-center gap-1.5 text-helper text-fg-muted"><Lock size={12} aria-hidden className="shrink-0" />{!podeDefinirTamanho ? "Quem coordena a Tech define." : "Travado: o item já começou."}</p>
         </div>
-        : <LinhaDiscreta rotulo="Tamanho" htmlFor="tech-size" ajuda="P, M ou G — trava quando o item começa.">
-          <Select id="tech-size" name="size" defaultValue={item?.size ?? ""} compact aria-describedby="tech-size-ajuda">
+        : <LinhaDiscreta rotulo="Tamanho" htmlFor="tech-size" dica="P, M ou G — trava quando o item começa.">
+          <Select id="tech-size" name="size" defaultValue={item?.size ?? ""} compact>
             <option value="">Sem tamanho</option>
             {Object.entries(TAMANHOS).map(([v, label]) => <option key={v} value={v}>{v} · {label}</option>)}
           </Select>
         </LinhaDiscreta>}
-      <LinhaDiscreta rotulo="Veio de" htmlFor="tech-origin" ajuda="A entrega que gerou este item — o retrabalho dela.">
-        <Select id="tech-origin" name="originItemId" defaultValue={item?.originItemId ?? ""} compact aria-describedby="tech-origin-ajuda">
+      <LinhaDiscreta rotulo="Veio de" htmlFor="tech-origin" dica="A entrega que gerou este item — o retrabalho dela.">
+        <Select id="tech-origin" name="originItemId" defaultValue={item?.originItemId ?? ""} compact>
           <option value="">Não veio de uma entrega</option>
           {entregas.filter(e => e.id !== item?.id).map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
         </Select>
@@ -166,11 +169,11 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
       {/* A entrega no código (06/11/2026): o PR e o commit da mudança,
           informados ao concluir. Só no item que já existe. */}
       {item && <>
-        <LinhaDiscreta rotulo="PR" htmlFor="tech-pr" ajuda={item.prUrl ? <a href={item.prUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Abrir o PR</a> : "O endereço do PR da mudança."}>
-          <Input id="tech-pr" name="prUrl" type="url" inputMode="url" maxLength={500} defaultValue={item.prUrl ?? ""} placeholder="https://github.com/…/pull/123" aria-describedby="tech-pr-ajuda" compact />
+        <LinhaDiscreta rotulo="PR" htmlFor="tech-pr" ajuda={item.prUrl ? <a href={item.prUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Abrir o PR</a> : undefined}>
+          <Input id="tech-pr" name="prUrl" type="url" inputMode="url" maxLength={500} defaultValue={item.prUrl ?? ""} placeholder="https://github.com/…/pull/123" aria-describedby={item.prUrl ? "tech-pr-ajuda" : undefined} compact />
         </LinhaDiscreta>
-        <LinhaDiscreta rotulo="Commit" htmlFor="tech-commit" ajuda="O hash do commit da mudança.">
-          <Input id="tech-commit" name="commitSha" maxLength={64} pattern="[0-9a-fA-F]{7,64}" defaultValue={item.commitSha ?? ""} placeholder="a1b2c3d" aria-describedby="tech-commit-ajuda" compact className="font-mono" />
+        <LinhaDiscreta rotulo="Commit" htmlFor="tech-commit">
+          <Input id="tech-commit" name="commitSha" maxLength={64} pattern="[0-9a-fA-F]{7,64}" defaultValue={item.commitSha ?? ""} placeholder="a1b2c3d" compact className="font-mono" />
         </LinhaDiscreta>
       </>}
     </div>;
@@ -225,12 +228,19 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
 
 const GRADE_DISCRETA = "grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-1 min-w-0";
 
-/** Rótulo à esquerda e o campo à direita, na fonte de apoio: o campo existe, mas não pede atenção. */
-function LinhaDiscreta({ rotulo, htmlFor, ajuda, children }: { rotulo: string; htmlFor: string; ajuda: React.ReactNode; children: React.ReactNode }) {
+/**
+ * Rótulo à esquerda e o campo à direita, na fonte de apoio: o campo existe, mas não pede atenção.
+ * A explicação vai no "?" ao lado do rótulo (`dica`); embaixo do campo, só o que traz dado, como o
+ * link do PR (17/11/2026, melhoria-707).
+ */
+function LinhaDiscreta({ rotulo, htmlFor, dica, ajuda, children }: { rotulo: string; htmlFor: string; dica?: string; ajuda?: React.ReactNode; children: React.ReactNode }) {
   return <div className={GRADE_DISCRETA}>
-    <label htmlFor={htmlFor} className="text-ui font-medium text-fg-secondary">{rotulo}</label>
+    <span className="flex items-center gap-1.5 min-w-0">
+      <label htmlFor={htmlFor} className="text-ui font-medium text-fg-secondary">{rotulo}</label>
+      {dica && <AjudaDoCampo texto={dica} rotulo={rotulo} />}
+    </span>
     {children}
-    <p id={`${htmlFor}-ajuda`} className="col-start-2 text-helper text-fg-muted">{ajuda}</p>
+    {ajuda && <p id={`${htmlFor}-ajuda`} className="col-start-2 text-helper text-fg-muted">{ajuda}</p>}
   </div>;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Clock, Plus } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { MiniCalendar } from "./MiniCalendar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -10,7 +11,7 @@ import { MesDosPrazos } from "./MesDosPrazos";
 import { ListaDosPrazos } from "./ListaDosPrazos";
 import { BotoesDeFonte } from "./BotoesDeFonte";
 import { shiftAgendaDate, agendaTitle, AGENDA_VIEWS, type AgendaView } from "@/lib/agenda";
-import { slotNoDia, slotParaNovaReuniao, type Expediente, type Slot } from "@/lib/agendaExpediente";
+import { descreverExpediente, expedienteCurto, slotNoDia, slotParaNovaReuniao, type Expediente, type Slot } from "@/lib/agendaExpediente";
 import { alternarFonte, type OrigemDasFontes } from "@/lib/agendaDoSetor";
 import type { FonteDaAgenda } from "@/lib/fontesDaAgenda";
 import type { MeetingState } from "@/app/(app)/agenda/actions";
@@ -50,7 +51,6 @@ type Props = {
   /** O cabeçalho da tela — desenhado aqui para o "Nova reunião" ficar nas
    *  ações dele, ao lado do título (escolha 5A, 08/10/2026). */
   titulo: string;
-  subtitulo: React.ReactNode;
   /** O que vem entre o cabeçalho e a grade: a legenda dos setores e avisos. */
   antesDaGrade?: React.ReactNode;
   view: AgendaView;
@@ -102,7 +102,6 @@ export function agendaHref(view: AgendaView, dateKey: string): string {
 // funcionem; a última escolhida fica gravada para a Agenda abrir nela.
 export function AgendaCalendar({
   titulo,
-  subtitulo,
   antesDaGrade,
   view,
   dateKey,
@@ -179,7 +178,6 @@ export function AgendaCalendar({
       <div className="flex-shrink-0">
         <PageHeader
           title={titulo}
-          subtitle={subtitulo}
           action={
             mostraNovaReuniao && (
               <Button variant="primary" onClick={openDialogForNow}>
@@ -234,6 +232,20 @@ export function AgendaCalendar({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* O horário da grade (17/11/2026, melhoria-707): era uma frase
+                  acima da agenda, com o caminho para mudar; virou chip, e o
+                  caminho foi para o artigo de ajuda. Só nas grades de horas. */}
+              {grade && (
+                <Link
+                  href="/configuracoes#agenda"
+                  title={`Horário da grade: ${descreverExpediente(expediente)}. Clique para mudar.`}
+                  aria-label={`Horário da grade: ${descreverExpediente(expediente)}. Mudar em Configurações`}
+                  className="inline-flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-fs-2 text-fg-secondary tabular-nums hover:border-border-strong hover:text-fg transition-colors"
+                >
+                  <Clock size={12} aria-hidden />
+                  {expedienteCurto(expediente)}
+                </Link>
+              )}
               <SegmentedControl
                 label="Visão da agenda"
                 active={view}

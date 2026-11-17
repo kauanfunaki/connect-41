@@ -91,7 +91,6 @@ export default async function AjudaPage() {
     <PageContainer>
       <PageHeader
         title="Ajuda"
-        subtitle="Primeiros passos e o que cada tela do Connect faz."
         action={<BotaoVerTutorial tutorial={tutorial} concluir={concluirTutorialDaEquipe} />}
       />
       <CentralDeAjuda gerais={gerais} setores={setores} />

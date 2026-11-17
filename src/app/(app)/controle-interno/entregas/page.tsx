@@ -64,7 +64,6 @@ export default async function EntregasDoControlePage({ searchParams }: { searchP
       <LembrarDaLista endereco={hrefDoPeriodo(periodo)} />
       <PageHeader
         title="Controle interno"
-        subtitle="As melhorias, correções e próximos passos da equipe Tech."
         action={
           <AcoesDoControle
             podeEditar={podeEditar}

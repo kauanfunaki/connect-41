@@ -33,7 +33,6 @@ export default async function ComunicadosPage() {
     <PageContainer>
       <PageHeader
         title="Comunicados"
-        subtitle="Avisos do escritório para vários clientes de uma vez. Aparecem no portal, chegam por e-mail e mostram quem já leu."
         action={
           podeEnviar ? (
             <Button href="/solicitacoes/comunicados/novo">

@@ -126,7 +126,8 @@ export function TextosDaAcademia({ textos }: { textos: TextoNaTela[] }) {
               label="Texto"
               htmlFor="texto-conteudo"
               required
-              helper={`${tamanho} de até ${LIMITE.maximo} caracteres (mínimo ${LIMITE.minimo}). Para caber em 60 s: uns 200 no Fácil, 300 no Médio e 400 no Difícil.`}
+              acao={<span className="text-fg-muted tabular-nums">{tamanho} de {LIMITE.maximo}</span>}
+              dica={`Mínimo de ${LIMITE.minimo} caracteres. Para caber em 60 s: uns 200 no Fácil, 300 no Médio e 400 no Difícil.`}
             >
               <Textarea
                 id="texto-conteudo"
