@@ -13,6 +13,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { AbasDeLink } from "@/components/ui/AbasDeLink";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
+import { ResumoExClientes } from "@/components/honorarios/ExClientes";
 import { TabelaDePastas } from "@/components/honorarios/TabelaDePastas";
 import { TabelaDeEmpresasSemPasta } from "@/components/honorarios/TabelaDeEmpresasSemPasta";
 
@@ -74,6 +75,8 @@ export default async function PastasPage({ searchParams }: { searchParams: Promi
             </strong>
             {resumo.empresasMarcadasSemPasta > 0 && ` · ${resumo.empresasMarcadasSemPasta} marcada(s) sem pasta, fora da auditoria`}
           </p>
+
+          <ResumoExClientes exClientes={resumo.exClientes} />
 
           <AbasDeLink
             ativa={aba}

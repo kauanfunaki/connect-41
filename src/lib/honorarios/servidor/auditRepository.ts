@@ -12,6 +12,7 @@
 
 import { createHash } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
+import { ehPastaDeExClientes } from "../regras/auditExClientes";
 import { normalizarNomePasta, REGEX_SUBPASTA_CONTRATO_PADRAO } from "../regras/auditNormalizacao";
 import type { Lote } from "../regras/auditPayload";
 import { db, tenantAtual } from "./contexto";
@@ -28,6 +29,8 @@ export interface AuditConfig {
   pastaFinal: string;
   regexSubpastaContrato: string;
   horarioAgendado: string | null;
+  /** Pasta dos ex-clientes, direto na raiz. null = o robô não lista. */
+  pastaExClientes: string | null;
 }
 
 /**
@@ -41,6 +44,7 @@ export const CONFIG_PADRAO: AuditConfig = {
   pastaFinal: "",
   regexSubpastaContrato: REGEX_SUBPASTA_CONTRATO_PADRAO,
   horarioAgendado: "06:00",
+  pastaExClientes: null,
 };
 
 export interface JobRow {
@@ -142,7 +146,27 @@ export async function obterConfig(): Promise<AuditConfig> {
     pastaFinal: c.pastaFinal,
     regexSubpastaContrato: c.regexSubpastaContrato,
     horarioAgendado: c.horarioAgendado,
+    pastaExClientes: c.pastaExClientes?.trim() || null,
   };
+}
+
+/** Grava os nomes das pastas de ex-clientes que o robô viu na varredura. */
+export async function gravarExClientesDoJob(jobId: string, nomes: string[]): Promise<void> {
+  await db().honorarioSyncJob.updateMany({
+    where: { id: jobId, tenantId: tenantAtual() },
+    data: { exClientes: nomes.map(normalizarNomePasta) },
+  });
+}
+
+/** Lista de ex-clientes da varredura concluída mais recente que trouxe uma (robô 1.2+). null = nenhuma ainda. */
+export async function buscarUltimaListaExClientes(): Promise<string[] | null> {
+  const j = await db().honorarioSyncJob.findFirst({
+    where: { tenantId: tenantAtual(), status: "concluido", exClientes: { not: Prisma.AnyNull } },
+    orderBy: [{ concluidoEm: "desc" }, { solicitadoEm: "desc" }],
+    select: { exClientes: true },
+  });
+  const v = j?.exClientes;
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : null;
 }
 
 // ── Jobs ──────────────────────────────────────────────────────────
@@ -404,7 +428,8 @@ export async function listarPastasDoJob(jobId: string): Promise<PastaDoJobRow[]>
     where: { jobId },
     select: { nomePasta: true, subpastasContrato: true, erro: true, _count: { select: { arquivos: true } } },
   });
-  return pastas.map((p) => ({
+  // A pasta de ex-clientes nunca é pasta de cliente: fica fora de todas as listas.
+  return pastas.filter((p) => !ehPastaDeExClientes(p.nomePasta)).map((p) => ({
     nome_pasta: p.nomePasta,
     subpastas_contrato: Array.isArray(p.subpastasContrato) ? (p.subpastasContrato as string[]) : [],
     erro: p.erro,

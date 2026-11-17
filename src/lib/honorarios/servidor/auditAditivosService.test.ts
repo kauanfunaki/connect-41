@@ -16,6 +16,7 @@ function empresa(
     geradosNoApp: 0, ultimoGeradoNoApp: null,
     alertas: extra.alerta ? ['gerado_no_app_sem_arquivo'] : [],
     distrato: null,
+    exCliente: null,
   };
 }
 

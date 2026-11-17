@@ -10,6 +10,8 @@ import {
   arquivoEmDistrato, ehSubpastaDistrato, paraDistratoDTO, textoDoDistrato, type DistratoDTO,
 } from '../regras/auditDistrato';
 import { carregarDistratos } from './auditDistratoService';
+import { carregarExClientes } from './auditExClientesService';
+import { resumirForaDaAuditoria, type ExClienteResumo } from '../regras/auditExClientes';
 import { classificarAditivo, type ArquivoParaClassificar } from '../regras/auditAditivosClassificador';
 import {
   calcularStatusAditivo, STATUS_ADITIVO,
@@ -60,6 +62,8 @@ export interface EmpresaAditivo {
   alertas:                AlertaAditivo[];
   /** Distrato da prestação de serviços (tira das pendências) e avisos de BPO/social. */
   distrato:               DistratoDTO | null;
+  /** Tem pasta em Ex Clientes E pasta ativa: continua na auditoria, com aviso (nome da pasta em Ex Clientes). */
+  exCliente:              string | null;
 }
 
 export interface RelatorioAditivos {
@@ -78,6 +82,8 @@ export interface RelatorioAditivos {
     decimoTerceiro:        { empresas: number; assinados: number };
     /** Empresas com distrato: ficam na lista, mas fora das pendências e do percentual. */
     distratos:             number;
+    /** Pasta só em Ex Clientes: ficam fora do relatório. */
+    exClientes:            ExClienteResumo[];
   };
   empresas: EmpresaAditivo[];
 }
@@ -115,7 +121,7 @@ export async function montarRelatorioAditivos(anoReferencia: number): Promise<Re
     job: null, anoReferencia, anosDisponiveis: [anoReferencia], raizUnc: config.raizUnc,
     resumo: {
       empresas: 0, emDia: 0, porStatus: porStatusZerado(), geradoNoAppSemArquivo: 0, marcadasSemPasta: 0,
-      decimoTerceiro: { empresas: 0, assinados: 0 }, distratos: 0,
+      decimoTerceiro: { empresas: 0, assinados: 0 }, distratos: 0, exClientes: [],
     },
     empresas: [],
   };
@@ -166,7 +172,10 @@ export async function montarRelatorioAditivos(anoReferencia: number): Promise<Re
   // Se ganhou pasta depois, volta a ser avaliada normalmente.
   const marcadas = new Set(marcas.map((m) => m.company_id));
   const foraDaAuditoria = (id: string) => marcadas.has(id) && !pastasPorEmpresa.has(id);
-  const empresas = todasAtivas.filter((e) => !foraDaAuditoria(e.id));
+  const naAuditoria = todasAtivas.filter((e) => !foraDaAuditoria(e.id));
+  // Ex-cliente: pasta só na pasta de ex-clientes → fora; também com pasta ativa → aviso.
+  const ex = await carregarExClientes(naAuditoria, (id) => pastasPorEmpresa.has(id));
+  const empresas = naAuditoria.filter((e) => !ex.fora.has(e.id));
 
   const distratos = await carregarDistratos(arquivos, new Map(
     [...pastasPorEmpresa].map(([id, ps]) => [id, ps.map((p) => p.nomePasta)]),
@@ -197,6 +206,7 @@ export async function montarRelatorioAditivos(anoReferencia: number): Promise<Re
       ultimoGeradoNoApp:      g?.ultimo ?? null,
       alertas,
       distrato:               paraDistratoDTO(d),
+      exCliente:              ex.aviso.get(e.id) ?? null,
     };
   });
   linhas.sort((a, b) =>
@@ -225,12 +235,13 @@ export async function montarRelatorioAditivos(anoReferencia: number): Promise<Re
       emDia:                 linhas.filter((l) => l.emDia).length,
       porStatus,
       geradoNoAppSemArquivo: linhas.filter((l) => l.alertas.includes('gerado_no_app_sem_arquivo')).length,
-      marcadasSemPasta:      todasAtivas.length - empresas.length,
+      marcadasSemPasta:      todasAtivas.length - naAuditoria.length,
       decimoTerceiro: {
         empresas:  linhas.filter((l) => l.decimoTerceiro).length,
         assinados: linhas.filter((l) => l.decimoTerceiro?.assinado).length,
       },
       distratos: porStatus.DISTRATO,
+      exClientes: resumirForaDaAuditoria(ex, naAuditoria),
     },
     empresas: linhas,
   };
