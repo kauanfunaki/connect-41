@@ -3,7 +3,7 @@ import { calcularIrrf } from "./impostos";
 import { tabelasDaCompetencia } from "./tabelas";
 import { calcularMes, CONVENCAO_DA_CLT, type EmpresaDoMotor, type EntradaMensal, type EventoDoMotor, type VinculoDoMotor } from "./mensal";
 import { calcularMesDaCategoria } from "./semVinculo";
-import { CATEGORIAS, regimeDaCategoria, semVinculo } from "./categorias";
+import { CATEGORIAS, regimeDaCategoria, salarioValido, semVinculo } from "./categorias";
 import { RUBRICAS_PADRAO, type PapelDaRubrica, type RubricaDoMotor } from "./rubricas";
 
 const r = tabelasDaCompetencia("2026-11");
@@ -51,6 +51,15 @@ describe("categorias", () => {
     expect(regimeDaCategoria("901")).toBe("ESTAGIARIO");
     expect(semVinculo("103")).toBe(false);
     expect(CATEGORIAS.map(([k]) => k)).toEqual(expect.arrayContaining(["723", "701", "901"]));
+  });
+
+  it("salário zero só no autônomo por RPA (bug-740)", () => {
+    expect(salarioValido(0, "701")).toBe(true);
+    expect(salarioValido(0, "101")).toBe(false);
+    expect(salarioValido(0, "723")).toBe(false);
+    expect(salarioValido(null, "701")).toBe(false);
+    expect(salarioValido(-1, "701")).toBe(false);
+    expect(salarioValido(2500, "701")).toBe(true);
   });
 
   it("as rubricas novas têm as incidências certas", () => {
