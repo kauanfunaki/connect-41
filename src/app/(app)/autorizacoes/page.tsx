@@ -153,6 +153,11 @@ export default async function AutorizacoesPage({ searchParams }: { searchParams:
               </Button>
             )}
             {serpro && (
+              <Button href="/autorizacoes/dctfweb" variant="secondary" size="sm">
+                DCTFWeb do mês
+              </Button>
+            )}
+            {serpro && (
               <Button href="/autorizacoes/consumo" variant="secondary" size="sm">
                 Consumo do Serpro
               </Button>

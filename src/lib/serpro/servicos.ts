@@ -61,6 +61,7 @@ export const DAS_DO_MEI = servico(18, "PGMEI", "GERARDASPDF21", "Emitir", [], "D
 export const CERTIFICADO_DO_MEI = servico(22, "CCMEI", "EMITIRCCMEI121", "Emitir", [], "Certificado da condição de MEI");
 export const ENVIO_DO_TERMO = servico(57, "AUTENTICAPROCURADOR", "ENVIOXMLASSINADO81", "Apoiar", [], "Enviar o termo de autorização assinado");
 export const GUIA_DA_DCTFWEB = servico(28, "DCTFWEB", "GERARGUIA31", "Emitir", ["00103"], "Guia da DCTFWeb");
+export const RECIBO_DA_DCTFWEB = servico(29, "DCTFWEB", "CONSRECIBO32", "Consultar", ["00103"], "Recibo da DCTFWeb");
 // "Não listado" em Serviços x Procuração: presumido o código do sistema.
 export const GUIA_DA_DCTFWEB_EM_ANDAMENTO = servico(40, "DCTFWEB", "GERARGUIAANDAMENTO313", "Emitir", ["00103"], "Guia de declaração da DCTFWeb em andamento");
 export const DARF_DO_SICALC = servico(46, "SICALC", "CONSOLIDARGERARDARF51", "Emitir", [], "DARF consolidado (Sicalc), PDF e Pix");
@@ -100,7 +101,7 @@ export const SERVICOS_DO_SERPRO: readonly ServicoDoSerpro[] = [
   // DCTFWeb.
   GUIA_DA_DCTFWEB,
   GUIA_DA_DCTFWEB_EM_ANDAMENTO,
-  servico(29, "DCTFWEB", "CONSRECIBO32", "Consultar", ["00103"], "Recibo da DCTFWeb"),
+  RECIBO_DA_DCTFWEB,
   servico(30, "DCTFWEB", "CONSDECCOMPLETA33", "Consultar", ["00103"], "Declaração completa da DCTFWeb"),
   servico(35, "DCTFWEB", "CONSXMLDECLARACAO38", "Consultar", ["00103"], "XML da declaração da DCTFWeb"),
   CONFERIR_PROCURACAO,

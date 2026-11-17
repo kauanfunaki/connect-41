@@ -13,7 +13,8 @@ import type { RegistroDaGuia } from "./registro";
 export async function registrarGuiaEmitida(p: {
   tenantId: string;
   companyId: string;
-  userId: string;
+  /** Nulo quando foi a rotina (DCTFWeb do mês), não uma pessoa. */
+  userId: string | null;
   registro: RegistroDaGuia;
   driveFileId: string;
 }): Promise<string> {

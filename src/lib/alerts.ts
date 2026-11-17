@@ -44,6 +44,7 @@ import { representantesDasChaves, setorDasAutorizacoes } from "@/lib/autorizacoe
 import { processarConferencias } from "@/lib/autorizacoes/serpro";
 import { acompanharNoSerpro } from "@/lib/serpro/acompanhamento";
 import { processarPedidosDoSitfis } from "@/lib/serpro/situacaoFiscal";
+import { rotinaDaDctfweb } from "@/lib/serpro/dctfwebDoMes";
 import { rotinaDasCertidoes } from "@/lib/certidoes/servidor";
 import { chaveDoProtocoloParado, mensagemDoProtocoloParado, protocoloParado } from "@/lib/societario/protocoloParado";
 import { diasParaCobrarOProtocolo } from "@/lib/societario/protocoloParadoServidor";
@@ -1074,6 +1075,8 @@ async function runForTenant(tenantId: string, today: Date): Promise<TenantResult
     // fiscal pedido na ficha, que o Serpro entrega depois do tempo de espera.
     ["serpro eventos", () => acompanharNoSerpro(tenantId)],
     ["serpro sitfis", () => processarPedidosDoSitfis(tenantId)],
+    // A DCTFWeb do mês (17/11/2026): recibo e DARF das empresas marcadas.
+    ["serpro dctfweb", () => rotinaDaDctfweb(tenantId)],
     // Nem esta: a rotina das certidões do trimestre, um lote por passada (28/10/2026).
     ["certidões", () => rotinaDasCertidoes(tenantId)],
     // O e-mail diário de vencimentos do Societário (12/11/2026), o que o Radar

@@ -96,6 +96,7 @@ const valorDe = (v: unknown) => (v instanceof Date ? v.getTime() : (v as number 
 
 function casa(l: Record<string, unknown>, onde: Record<string, unknown> = {}): boolean {
   return Object.entries(onde).every(([k, cond]) => {
+    if (k === "OR") return (cond as Record<string, unknown>[]).some((o) => casa(l, o));
     const v = l[k];
     if (cond && typeof cond === "object" && !(cond instanceof Date) && !Array.isArray(cond)) {
       const c = cond as Record<string, unknown>;
@@ -173,6 +174,11 @@ export function tabela(padroes: Record<string, unknown> = {}) {
       if (l) return { ...Object.assign(l, update, { updatedAt: new Date() }) };
       return { ...nova(create) };
     },
+    deleteMany: async ({ where }: { where: Record<string, unknown> }) => {
+      const fora = linhas.filter((x) => casa(x, where));
+      fora.forEach((l) => linhas.splice(linhas.indexOf(l), 1));
+      return { count: fora.length };
+    },
     zerar: () => {
       linhas.length = 0;
     },
@@ -194,6 +200,20 @@ export function bancoFalso() {
     // Fase 3: o termo de autorização.
     serproTermo: tabela({ aceitoEm: null, erro: null, certificadoTitular: null, enviadoPorId: null }),
     company: tabela({ displayName: null, cpf: null, cnpj: null }),
+    // A DCTFWeb do mês (17/11/2026).
+    serproDctfwebRotina: tabela({ ligada: false, diaSemEvento: 16, tetoCentavos: null }),
+    serproDctfwebEmpresa: tabela(),
+    serproDctfweb: tabela({
+      reciboArquivoId: null,
+      darfArquivoId: null,
+      consultasCobradas: 0,
+      emissoesCobradas: 0,
+      tentativas: 0,
+      ultimaTentativa: null,
+      proximaTentativa: null,
+      travadaAte: null,
+      erro: null,
+    }),
     driveFolder: tabela({ parentId: null, deletedAt: null, systemKey: null }),
     user: tabela(),
     // O registro de uso do certificado (05/11/2026), que toda chamada de
@@ -239,10 +259,10 @@ export function bancoFalso() {
         estado.chamadas.push({ ...data, createdAt: new Date() });
         return {};
       },
-      groupBy: async ({ where }: Onde<{ cobrada: boolean; ambiente?: string }>) => {
+      groupBy: async ({ where }: Onde<{ cobrada: boolean; ambiente?: string; origem?: string }>) => {
         const contagem = new Map<string | null, number>();
         for (const c of estado.chamadas) {
-          if (c.cobrada === where.cobrada && doAmbiente(c, where.ambiente)) contagem.set(c.tipoDeCobranca, (contagem.get(c.tipoDeCobranca) ?? 0) + 1);
+          if (c.cobrada === where.cobrada && doAmbiente(c, where.ambiente) && (where.origem === undefined || c.origem === where.origem)) contagem.set(c.tipoDeCobranca, (contagem.get(c.tipoDeCobranca) ?? 0) + 1);
         }
         return [...contagem].map(([tipoDeCobranca, n]) => ({ tipoDeCobranca, _count: { _all: n } }));
       },
