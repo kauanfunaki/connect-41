@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { CaixaDoAtendimento } from "@/components/atendimento/CaixaDoAtendimento";
+import { BotaoNovaConversa } from "@/components/atendimento/NovaConversa";
 import { contextoDaTela } from "@/lib/atendimento/contexto";
 import { listar } from "@/lib/atendimento/consultas";
 import { ehDaTriagem, podeConfigurar, veTudo } from "@/lib/atendimento/acesso";
@@ -34,20 +35,20 @@ export default async function AtendimentoLayout({ children }: { children: ReactN
                 : "O WhatsApp do escritório: as conversas do seu setor e as que estão com você."
             }
             action={
-              ehDaTriagem(c.ctx, c.cfg) || veTudo(c.ctx, c.cfg) || podeConfigurar(c.ctx, c.cfg) ? (
-                <div className="flex flex-wrap gap-2">
-                  {(ehDaTriagem(c.ctx, c.cfg) || veTudo(c.ctx, c.cfg)) && (
-                    <Button href="/atendimento/metricas" variant="secondary" size="sm">
-                      <ChartColumn size={14} /> Métricas
-                    </Button>
-                  )}
-                  {podeConfigurar(c.ctx, c.cfg) && (
-                    <Button href="/atendimento/configuracoes" variant="secondary" size="sm">
-                      <Settings size={14} /> Configurar
-                    </Button>
-                  )}
-                </div>
-              ) : undefined
+              // "+ Nova conversa" no topo, para todos (17/11/2026, melhoria-728); antes era um ícone ao lado da busca.
+              <div className="flex flex-wrap gap-2">
+                {(ehDaTriagem(c.ctx, c.cfg) || veTudo(c.ctx, c.cfg)) && (
+                  <Button href="/atendimento/metricas" variant="secondary" size="sm">
+                    <ChartColumn size={14} /> Métricas
+                  </Button>
+                )}
+                {podeConfigurar(c.ctx, c.cfg) && (
+                  <Button href="/atendimento/configuracoes" variant="secondary" size="sm">
+                    <Settings size={14} /> Configurar
+                  </Button>
+                )}
+                <BotaoNovaConversa veTudo={dados.ehTriagem || dados.veTudo} />
+              </div>
             }
           />
         }

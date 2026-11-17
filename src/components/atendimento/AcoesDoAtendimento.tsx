@@ -254,6 +254,12 @@ export function FaixaDoPedido({ d, podeDecidir }: { d: DetalheDoAtendimento; pod
 
 type Empresa = Awaited<ReturnType<typeof empresasParaVincularAction>>[number];
 
+/**
+ * O convite para o portal sai da tela do Atendimento por enquanto (17/11/2026,
+ * melhoria-728, pedido do Victor). O código fica: é só ligar de novo.
+ */
+const CONVITE_NA_TELA = false;
+
 export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimento; aberto: boolean; aoFechar: () => void }) {
   const [tipo, setTipo] = useState<"CLIENTE" | "NOVO">(d.contato.tipo === "NOVO" ? "NOVO" : "CLIENTE");
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
@@ -321,13 +327,14 @@ export function PainelDoContato({ d, aberto, aoFechar }: { d: DetalheDoAtendimen
                 />
               )}
             </Campo>
-            {d.contato.empresa && escolhida === d.contato.empresa.id && !d.contato.temPortal && d.pode.convidar ? (
+            {CONVITE_NA_TELA &&
+              (d.contato.empresa && escolhida === d.contato.empresa.id && !d.contato.temPortal && d.pode.convidar ? (
               <ConviteParaOPortal d={d} aoTerminar={aoFechar} />
             ) : (
               <p className="text-micro text-fg-muted">
                 {escolhida && escolhidaTemPortal ? "Esta empresa já tem acesso ao portal." : "Depois de ligar o contato à empresa, o convite para o portal aparece aqui."}
               </p>
-            )}
+              ))}
           </div>
         )}
 
