@@ -52,6 +52,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "helpdesk.category": e("configurou a categoria de chamados"),
   "helpdesk.sla": e("configurou a política de SLA dos chamados"),
   "helpdesk.sectors": e("escolheu os setores que administram os chamados"),
+  "helpdesk.historico.import": c("trouxe o histórico de chamados do Hub"),
+  "helpdesk.historico.review": e("revisou a categoria de um caso do histórico de chamados"),
   // O Atendimento, o WhatsApp do escritório (10/11/2026).
   "atendimento.assumir": e("assumiu a conversa do atendimento"),
   "atendimento.responder": o("respondeu ao cliente no atendimento"),
@@ -800,6 +802,7 @@ export const TIPOS_DE_CADASTRO: Readonly<Record<string, string>> = {
   AtendimentoModelo: "modelo da Meta do atendimento",
   OpsEvent: "evento de robô do Orquestrador",
   HelpdeskCategory: "categoria de chamados",
+  HelpdeskHistoricCase: "caso do histórico de chamados",
   HelpdeskSlaPolicy: "política de SLA dos chamados",
   TechInternalItem: "item do controle interno",
   PersonalApiToken: "token de acesso",

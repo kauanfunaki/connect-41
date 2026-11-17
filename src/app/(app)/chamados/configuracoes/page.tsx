@@ -7,6 +7,8 @@ import { contexto } from "@/lib/chamados/contexto";
 import { podeEscolherSetores, podeGerenciar } from "@/lib/chamados/acesso";
 import { getActiveSectors } from "@/lib/sectors";
 import { getPrisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/Button";
+import { History } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,11 @@ export default async function ConfiguracaoPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Chamados", href: "/chamados" }, { label: "Configurações" }]} />
-      <PageHeader title="Configurar chamados" />
+      <PageHeader
+        title="Configurar chamados"
+        // O histórico de chamados do Hub, para a triagem aprender (17/11/2026).
+        action={<Button href="/chamados/configuracoes/historico" variant="secondary"><History size={14} aria-hidden /> Histórico do Hub</Button>}
+      />
       <ConfiguracaoDosChamados politicas={politicas} setores={setores} />
     </PageContainer>
   );
