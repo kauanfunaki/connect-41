@@ -184,7 +184,7 @@ export function EnvioDeArquivo<T>({ destino, raiz, permissao, campos = {}, aoCon
     <FileDropzone accept={accept} maxSizeMb={tetoMb} multiple={regra.varios} arquivos={fila} desabilitado={!permissao.pode || enviando}
       onAdicionar={adicionar(setFila, regra.varios)} onRemover={(id) => setFila((f) => f.filter((a) => a.id !== id))} />
     {regra.extra && <div className="space-y-1">
-      <p className="text-helper text-fg-secondary">{regra.extra.rotulo[0].toUpperCase() + regra.extra.rotulo.slice(1)} em PDF (opcional): ligam à fatura pelo número da nota no nome do arquivo; o conteúdo não é lido.</p>
+      <p className="text-helper text-fg-secondary">{regra.extra.rotulo[0].toUpperCase() + regra.extra.rotulo.slice(1)} em PDF (opcional).</p>
       <FileDropzone accept=".pdf" maxSizeMb={tetoMb} multiple arquivos={filaExtra} desabilitado={!permissao.pode || enviando}
         onAdicionar={adicionar(setFilaExtra, true)} onRemover={(id) => setFilaExtra((f) => f.filter((a) => a.id !== id))} />
     </div>}

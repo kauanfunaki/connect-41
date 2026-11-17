@@ -155,12 +155,7 @@ export default async function RankingDaAcademiaPage({
         </div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <FiltrosDoRanking teste={teste} mes={mes} nivel={nivel} setor={setor} meses={meses} setores={setores} visao={visao} />
-          <div className="flex flex-col gap-1">
-            <PreferenciaDoRanking aparece={!ranking.foraDoRanking} />
-            <p id="preferencia-do-ranking-ajuda" className="max-w-xs text-helper text-fg-muted">
-              Desligado, você some da lista dos colegas e do post do ranking, e vê só os seus números.
-            </p>
-          </div>
+          <PreferenciaDoRanking aparece={!ranking.foraDoRanking} />
         </div>
       </div>
 

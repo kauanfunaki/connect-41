@@ -75,10 +75,7 @@ export default async function SolicitacoesPage({
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Solicitações recebidas"
-        subtitle="O que os clientes pedem pelo portal. Cada setor vê as suas, com o prazo de resposta prometido ao cliente."
-      />
+      <PageHeader title="Solicitações recebidas" />
 
       <AbasDoAtendimento ativa="solicitacoes" />
 

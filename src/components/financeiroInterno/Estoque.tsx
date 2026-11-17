@@ -81,10 +81,8 @@ export function FormularioDoItem({ item, categorias, action }: { item?: ItemNoFo
                 </label>
               ))}
             </div>
-            <p className="text-fs-1 text-fg-muted">
-              {tipo === "patrimonio" ? "Uma coisa só, com número de patrimônio: notebook, monitor, cadeira." : "Por quantidade: papel, toner, cabos."}
-              {!novo && " O tipo não muda depois de cadastrado."}
-            </p>
+            {/* Fica só o motivo da trava; o que é cada tipo foi para a ajuda da tela (17/11/2026, melhoria-707). */}
+            {!novo && <p className="text-fs-1 text-fg-muted">O tipo não muda depois de cadastrado.</p>}
           </fieldset>
 
           <CampoForm label="Nome" htmlFor="estoque-nome" required>
@@ -101,7 +99,7 @@ export function FormularioDoItem({ item, categorias, action }: { item?: ItemNoFo
 
           {tipo === "patrimonio" ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <CampoForm label="Nº de patrimônio" htmlFor="estoque-patrimonio" helper="A etiqueta do item. Não se repete.">
+              <CampoForm label="Nº de patrimônio" htmlFor="estoque-patrimonio" dica="A etiqueta do item. Não se repete.">
                 <Input id="estoque-patrimonio" name="assetTag" defaultValue={item?.assetTag ?? ""} maxLength={60} />
               </CampoForm>
               <CampoForm label="Nº de série" htmlFor="estoque-serie">
@@ -111,14 +109,14 @@ export function FormularioDoItem({ item, categorias, action }: { item?: ItemNoFo
           ) : (
             <div className="grid gap-4 sm:grid-cols-3">
               {novo && (
-                <CampoForm label="Quantidade" htmlFor="estoque-quantidade" helper="O que há hoje.">
+                <CampoForm label="Quantidade" htmlFor="estoque-quantidade" dica="O que há hoje.">
                   <CampoNumero id="estoque-quantidade" name="quantity" min={0} defaultValue="0" />
                 </CampoForm>
               )}
               <CampoForm label="Unidade" htmlFor="estoque-unidade">
                 <Input id="estoque-unidade" name="unit" defaultValue={item?.unit ?? "un"} maxLength={20} />
               </CampoForm>
-              <CampoForm label="Mínimo" htmlFor="estoque-minimo" helper="Abaixo disto, avisa para repor.">
+              <CampoForm label="Mínimo" htmlFor="estoque-minimo" dica="Abaixo disto, avisa para repor.">
                 <CampoNumero id="estoque-minimo" name="minQuantity" min={0} defaultValue={item?.minQuantity?.toString() ?? ""} />
               </CampoForm>
             </div>
@@ -208,7 +206,7 @@ export function MovimentarItem({
           )}
           {campos.pessoa && (
             <>
-              <CampoForm label="Com quem vai ficar" htmlFor="mov-pessoa" helper="Uma pessoa do Connect, ou escreva o nome abaixo.">
+              <CampoForm label="Com quem vai ficar" htmlFor="mov-pessoa" dica="Uma pessoa do Connect, ou escreva o nome abaixo.">
                 <Select id="mov-pessoa" name="holderUserId" defaultValue="" busca>
                   <option value="">Escolha…</option>
                   {pessoas.map((p) => (

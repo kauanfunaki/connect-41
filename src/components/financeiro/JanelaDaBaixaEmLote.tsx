@@ -201,12 +201,12 @@ function Formulario({
             key={e.id}
             label={`${aPagar ? "Saiu da conta" : "Entrou na conta"}${variasEmpresas ? ` · ${e.nome}` : ""}`}
             htmlFor={`${id}-conta-${e.id}`}
+            travado={e.contas.length === 0 ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)." : undefined}
+            dica={e.contas.length === 0 ? undefined : "É a conta que a conciliação procura."}
             helper={
-              e.contas.length === 0
-                ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
-                : e.contaPrevistaId && contaSugeridaNaBaixa(e.contas, e.contaPrevistaId) === e.contaPrevistaId
-                  ? "A prevista nas contas desta empresa. É a que a conciliação procura."
-                  : "Opcional. É a conta que a conciliação procura."
+              e.contas.length > 0 && e.contaPrevistaId && contaSugeridaNaBaixa(e.contas, e.contaPrevistaId) === e.contaPrevistaId
+                ? "A prevista nas contas desta empresa."
+                : undefined
             }
           >
             <Select
@@ -226,7 +226,7 @@ function Formulario({
         ))}
       </FieldGrid>
 
-      <CampoForm label="Observação" htmlFor={`${id}-obs`} helper="Vai em cada baixa.">
+      <CampoForm label="Observação" htmlFor={`${id}-obs`} dica="Vai em cada baixa.">
         <Input id={`${id}-obs`} name="observacao" maxLength={255} placeholder="Ex.: pagamentos da semana" />
       </CampoForm>
 
@@ -236,11 +236,7 @@ function Formulario({
         checked={comEncargos}
         onChange={(e) => setComEncargos(e.target.checked)}
         disabled={!temRegra}
-        helper={
-          temRegra
-            ? "Pela regra de cada conta — a do fornecedor ou cliente, senão a da empresa —, contando do vencimento dela até a data acima. O desconto vale para quem paga até o vencimento."
-            : "Nenhuma das contas marcadas tem regra de juros e multa (Fornecedores e sacados › Juros e multa)."
-        }
+        helper={temRegra ? undefined : "Nenhuma das contas marcadas tem regra de juros e multa (Fornecedores e sacados › Juros e multa)."}
       />
       {encargos && (
         <p className="text-fs-2 text-fg-secondary" aria-live="polite">
@@ -250,10 +246,6 @@ function Formulario({
         </p>
       )}
 
-      <p className="text-helper text-fg-muted">
-        Cada conta é {aPagar ? "paga" : "recebida"} pelo saldo{comEncargos ? ", com os encargos da regra" : ""}. Para juros digitados à mão ou baixa parcial, use o botão{" "}
-        {aPagar ? "Pagar" : "Receber"} da linha.
-      </p>
 
       <FormFooter
         pending={pendente}

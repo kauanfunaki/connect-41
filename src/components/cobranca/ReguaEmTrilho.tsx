@@ -5,7 +5,6 @@ import { Plus, X } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Aviso } from "@/components/ui/Aviso";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { useConfirm } from "@/components/ui/useConfirm";
 import { salvarRegua } from "@/app/(app)/cobranca/actions";
@@ -105,9 +104,6 @@ export function ReguaEmTrilho({
               </Button>
             )}
           </div>
-          <p className="text-helper text-fg-muted">
-            Os e-mails saem nestes dias de atraso, pelo SMTP do escritório e em nome da empresa credora. Clique num passo para ver o e-mail.
-          </p>
 
           {/* O trilho: um botão por passo, ligados por uma linha. */}
           <ol className="flex flex-wrap items-start gap-y-3" aria-label="Passos da régua">
@@ -178,7 +174,6 @@ export function ReguaEmTrilho({
               {salvo && !mudou && <span className="text-helper text-success-fg">Salvo.</span>}
             </div>
           )}
-          <Aviso tom="neutro">Pausa sozinha com acordo, contestação ou promessa de pagamento. Sacado sem e-mail fica fora.</Aviso>
           {!podeEditar && <p className="text-micro text-fg-muted">Só a coordenação altera a régua.</p>}
         </Card>
         {envios}
@@ -196,7 +191,7 @@ export function ReguaEmTrilho({
               </Button>
             )}
           </div>
-          <p className="text-micro text-fg-muted">Prévia com um título de exemplo. O e-mail é o mesmo em todos os passos; muda o tempo de atraso.</p>
+          <p className="text-micro text-fg-muted">Prévia com um título de exemplo.</p>
           {passo !== null && (
             <div className="rounded-lg border border-border bg-canvas p-3 text-fs-2">
               <p className="text-micro text-fg-muted">

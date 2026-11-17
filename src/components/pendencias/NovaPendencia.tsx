@@ -97,7 +97,7 @@ export function NovaPendencia({
           >
             {setores && setores.length === 1 && <input type="hidden" name="sectorCode" value={setores[0]!.code} />}
             {setores && setores.length > 1 && (
-              <CampoForm label="Setor que pede" htmlFor="pendencia-setor" required helper="O cliente vê de qual setor veio o pedido.">
+              <CampoForm label="Setor que pede" htmlFor="pendencia-setor" required dica="O cliente vê de qual setor veio o pedido.">
                 <Select id="pendencia-setor" name="sectorCode" defaultValue="" required>
                   <option value="" disabled>
                     Escolha o setor
@@ -158,7 +158,7 @@ export function NovaPendencia({
                   ))}
                 </Select>
               </CampoForm>
-              <CampoForm label="Prazo" htmlFor="pendencia-prazo" helper="Opcional.">
+              <CampoForm label="Prazo" htmlFor="pendencia-prazo">
                 <CampoData id="pendencia-prazo" name="dueDate" />
               </CampoForm>
             </FieldGrid>
@@ -167,16 +167,16 @@ export function NovaPendencia({
               label="Título"
               htmlFor="pendencia-titulo"
               required
-              helper="É o que vai no e-mail ao cliente — sem valor nem dado sensível."
+              dica="É o que vai no e-mail ao cliente — sem valor nem dado sensível."
             >
               <Input id="pendencia-titulo" name="title" maxLength={LIMITE_DO_TITULO} required placeholder="Comprovante do aluguel de agosto" />
             </CampoForm>
 
-            <CampoForm label="Descrição" htmlFor="pendencia-descricao" helper="Visível só dentro do portal.">
+            <CampoForm label="Descrição" htmlFor="pendencia-descricao" dica="Visível só dentro do portal.">
               <Textarea id="pendencia-descricao" name="description" rows={4} maxLength={5000} />
             </CampoForm>
 
-            <CampoForm label="Anexos" htmlFor="pendencia-anexo-0" helper="PDF, PNG, JPG ou XML, até 10 MB cada.">
+            <CampoForm label="Anexos" htmlFor="pendencia-anexo-0">
               <CampoDeAnexos idBase="pendencia-anexo" />
             </CampoForm>
             <CampoGuardarNosArquivos companyId={empresaId} id="pendencia-guardar-em-pasta" />

@@ -7,6 +7,7 @@ import { Deslizante } from "@/components/ui/Deslizante";
 import { IconButton } from "@/components/ui/IconButton";
 import { Radio, RadioGroup } from "@/components/ui/RadioGroup";
 import { Switch } from "@/components/ui/Switch";
+import { AjudaDoCampo } from "@/components/ui/CampoForm";
 import {
   ICONE_DO_AVISO,
   assinarPush,
@@ -170,23 +171,31 @@ export function SomEAvisoNoComputador({ publicKey, acoes }: { publicKey: string 
       </div>
 
       <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-        <Switch
-          checked={noComputador}
-          disabled={ocupado || permissao === "carregando" || permissao === "sem_suporte" || permissao === "denied"}
-          onCheckedChange={(ligado) => void (ligado ? ligarNoComputador() : desligarNoComputador())}
-          rotulo="Aviso neste aparelho"
-        />
-        <p className="text-fs-2 leading-snug text-fg-muted">
-          {permissao === "sem_suporte"
-            ? "Este navegador não mostra avisos fora da página."
-            : permissao === "denied"
-              ? "Bloqueado neste navegador. Libere as notificações no cadeado ao lado do endereço e recarregue a página."
-              : noComputador
-                ? publicKey
-                  ? "Aparece no canto da tela do computador (ou nas notificações do celular), como um programa instalado, mesmo com o Connect fechado."
-                  : "Aparece no canto da tela do computador, como um programa instalado, com o Connect aberto em alguma aba."
-                : "Mostra a notificação no canto da tela do computador (ou nas notificações do celular), como um programa instalado."}
-        </p>
+        {/* O que o aviso faz foi para o "?" ao lado do interruptor (17/11/2026, melhoria-707);
+            embaixo dele fica só o motivo de não dar para ligar. */}
+        <span className="inline-flex items-center gap-1.5">
+          <Switch
+            checked={noComputador}
+            disabled={ocupado || permissao === "carregando" || permissao === "sem_suporte" || permissao === "denied"}
+            onCheckedChange={(ligado) => void (ligado ? ligarNoComputador() : desligarNoComputador())}
+            rotulo="Aviso neste aparelho"
+          />
+          <AjudaDoCampo
+            rotulo="Aviso neste aparelho"
+            texto={
+              !publicKey
+                ? "Aparece no canto da tela do computador, como um programa instalado, com o Connect aberto em alguma aba. Vale para este navegador."
+                : "Aparece no canto da tela do computador (ou nas notificações do celular), como um programa instalado, mesmo com o Connect fechado. Vale para este navegador."
+            }
+          />
+        </span>
+        {(permissao === "sem_suporte" || permissao === "denied") && (
+          <p className="text-fs-2 leading-snug text-fg-muted">
+            {permissao === "sem_suporte"
+              ? "Este navegador não mostra avisos fora da página."
+              : "Bloqueado neste navegador. Libere as notificações no cadeado ao lado do endereço e recarregue a página."}
+          </p>
+        )}
         {erro && <p className="text-helper font-medium text-danger">{erro}</p>}
       </div>
 
@@ -195,7 +204,6 @@ export function SomEAvisoNoComputador({ publicKey, acoes }: { publicKey: string 
           Testar
         </Button>
       )}
-      <p className="text-fs-2 leading-snug text-fg-muted">Som e aviso valem para este navegador.</p>
     </div>
   );
 }

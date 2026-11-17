@@ -361,7 +361,6 @@ function ReguaDoSacado({
             })}
           </ol>
           {frases.length > 0 && <p className="text-fs-2 text-fg-muted">{frases.join(" ")}</p>}
-          <p className="text-micro text-fg-muted">Os e-mails param sozinhos com acordo, contestação ou promessa de pagamento.</p>
         </>
       )}
     </Card>

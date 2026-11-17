@@ -30,7 +30,6 @@ import { escolhasDeGrupo } from "@/lib/dre/estrutura";
 import { modeloDaEmpresa } from "@/lib/dre/modeloDaEmpresa";
 import { grupoDeTexto } from "@/lib/dre/mapeamento";
 import { NovaCategoriaDaEmpresa, LinhaDaDre, EsconderDoPadrao, EditarCategoriaDaEmpresa } from "@/components/financeiro/PlanoDaEmpresa";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FormEncargosDaEmpresa } from "@/components/financeiro/FormEncargos";
 import { descricaoDaRegra, regraDasColunas, regraNoCampo } from "@/lib/financeiro/baixa/encargos";
@@ -151,7 +150,6 @@ export default async function CadastrosFinanceirosPage({
   const comAcao = (action?: React.ReactNode) => (
     <PageHeader
       title="Fornecedores e sacados"
-      subtitle="As contrapartes, os centros de custo, os projetos e o plano de contas de cada empresa cliente, e o que a próxima conta herda."
       action={action}
     />
   );
@@ -361,14 +359,6 @@ export default async function CadastrosFinanceirosPage({
       {filtroDaEmpresa}
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
 
-      <p className="mb-4 text-helper text-fg-secondary">
-        {aba === "fornecedores"
-          ? "Fornecedores são os cadastros com contas a pagar nesta empresa."
-          : aba === "sacados"
-            ? "Sacados são os clientes ou devedores com contas a receber nesta empresa."
-            : "Todos os cadastros desta empresa, incluindo os que ainda não têm movimentação."}
-        {" "}Uma mesma ficha pode aparecer nas duas abas quando tem contas a pagar e a receber. Cadastros sem movimentação ficam em Todos.
-      </p>
       <InativosDeFora n={inativosDeFora} um="cadastro inativo" varios="cadastros inativos" href={hrefDeTodos} />
 
       {/* No casco das listas irmãs, com a contagem e a busca na barra
@@ -486,12 +476,6 @@ export default async function CadastrosFinanceirosPage({
         </>
       )}
       </CascoDaTabela>
-      <NotaDeFonte>
-        Inativo continua nas contas antigas e deixa de aparecer no lançamento manual. Cadastro não é apagado: a ficha é
-        o que liga as notas e as contas de um mesmo fornecedor. O e-mail é para onde vai o lembrete da régua de
-        cobrança — sacado sem e-mail fica fora dela. O centro padrão entra na próxima conta quando quem lança não
-        escolhe um centro.
-      </NotaDeFonte>
     </PageContainer>
   );
 }
@@ -609,11 +593,6 @@ async function AbaDeCentros({
       </table>
       </TabelaNoDesktop>
       </CascoDaTabela>
-      <NotaDeFonte>
-        Um centro por lançamento, sem rateio. Inativo some dos seletores e da herança, e continua na DRE por centro com o que
-        já foi lançado nele. Centro de custo não é apagado. Na importação por CSV, a coluna <code>centro_de_custo</code> casa
-        pelo nome ou pelo código.
-      </NotaDeFonte>
     </>
   );
 }
@@ -711,11 +690,6 @@ async function AbaDeProjetos({
           </>
         )}
       </CascoDaTabela>
-      <NotaDeFonte>
-        Um projeto por lançamento, escolhido no lançamento, na conciliação ou na edição da conta. Inativo some dos seletores e
-        continua nas contas que já têm o projeto. Projeto não é apagado. Na importação por CSV, a coluna <code>projeto</code> casa
-        pelo nome.
-      </NotaDeFonte>
     </>
   );
 }
@@ -768,11 +742,11 @@ async function AbaDoPlano({
       {/* "Nova categoria" no cabeçalho da tela (escolha 5A, 08/10/2026): era
           "Categoria só desta empresa", à direita deste parágrafo. */}
       {topo(podeEditar ? <NovaCategoriaDaEmpresa companyId={companyId} linhas={linhas} grupos={grupos} /> : undefined)}
-      <p className="text-helper text-fg-muted max-w-2xl mb-3">
-        O plano padrão do escritório vale para todas as empresas. Aqui ele se ajusta a esta: categoria só dela, o que não se
-        usa escondido e a linha da DRE trocada. Nada é apagado — o que já foi lançado continua na DRE.
-        {daEmpresa > 0 && ` ${daEmpresa} categoria${daEmpresa > 1 ? "s" : ""} só desta empresa.`}
-      </p>
+      {daEmpresa > 0 && (
+        <p className="text-helper text-fg-muted max-w-2xl mb-3">
+          {daEmpresa} categoria{daEmpresa > 1 ? "s" : ""} só desta empresa.
+        </p>
+      )}
       {categorias.length === 0 ? (
         // Em cartão, como o vazio das outras abas (08/10/2026): solto, ele
         // flutuava no fundo da tela.
@@ -944,18 +918,12 @@ async function AbaDeEncargos({ tenantId, companyId, podeEditar }: { tenantId: st
       <Card className="p-5">
         <h2 className="mb-1 text-label font-semibold text-fg">Regra da empresa</h2>
         <p className="mb-4 text-helper text-fg-secondary">
-          {regra ? `${descricaoDaRegra(regra)}.` : "Sem regra: juros, multa e desconto da baixa ficam em zero, e quem baixa preenche."} Ao dar baixa com
-          data depois do vencimento, a janela já vem com a multa e os juros calculados sobre o valor baixado; até o vencimento, com o desconto.
-          Quem baixa ainda pode mudar. A conciliação com o extrato não usa a regra: lá a diferença é a do banco.
+          {regra ? `${descricaoDaRegra(regra)}.` : "Sem regra: juros, multa e desconto da baixa ficam em zero, e quem baixa preenche."}
         </p>
         <FormEncargosDaEmpresa companyId={companyId} valores={regraNoCampo(empresa)} podeEditar={podeEditar} />
       </Card>
       <Card className="p-5">
-        <h2 className="mb-1 text-label font-semibold text-fg">Com regra própria</h2>
-        <p className="mb-3 text-helper text-fg-secondary">
-          Fornecedores e clientes cuja ficha tem juros e multa próprios — passam por cima da regra da empresa. Edite na ficha, em
-          Fornecedores, Sacados ou Todos.
-        </p>
+        <h2 className="mb-3 text-label font-semibold text-fg">Com regra própria</h2>
         {comRegra.length === 0 ? (
           <p className="text-ui text-fg-muted">Nenhum cadastro com regra própria.</p>
         ) : (

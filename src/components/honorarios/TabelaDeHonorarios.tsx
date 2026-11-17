@@ -24,6 +24,7 @@ import {
 import type { DocumentoResumo, EmpresaHonorario } from "@/lib/honorarios/servidor/honorariosService";
 import { removerHonorarioInformado } from "@/app/(app)/honorarios/actions";
 import { AvisoDistrato } from "./AvisoDistrato";
+import { AvisoExCliente } from "./ExClientes";
 import { DialogoDoValor, DialogoAcessoriasCerto } from "./DialogosDoHonorario";
 import { DialogoDeEnvio, DialogoDeLote } from "./DialogosDoAcessorias";
 
@@ -208,6 +209,7 @@ export function TabelaDeHonorarios({
                         )}
                       </div>
                       <AvisoDistrato distrato={e.distrato} />
+                      <AvisoExCliente pasta={e.exCliente} />
                       {alertas.length > 0 && (
                         <ul className="mt-1 space-y-0.5">
                           {alertas.map((a) => (

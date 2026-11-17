@@ -153,7 +153,7 @@ export function QuestoesDaAcademia({ questoes }: { questoes: QuestaoNaTela[] }) 
                 ))}
               </Select>
             </CampoForm>
-            <CampoForm label="Enunciado" htmlFor="questao-enunciado" required helper="Descreva no texto o que a imagem mostra: é o que o leitor de tela lê.">
+            <CampoForm label="Enunciado" htmlFor="questao-enunciado" required dica="Descreva no texto o que a imagem mostra: é o que o leitor de tela lê.">
               <Textarea id="questao-enunciado" rows={4} maxLength={TAMANHO_DO_ENUNCIADO} value={rascunho.enunciado} onChange={(e) => mudar({ enunciado: e.target.value })} />
             </CampoForm>
             <div className="flex flex-col gap-1.5">

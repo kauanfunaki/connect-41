@@ -9,6 +9,8 @@ import { logger } from './log';
 import { deveCriarJobAgendado } from '../regras/auditAgendamento';
 import { normalizarNomePasta } from '../regras/auditNormalizacao';
 import { ehSubpastaDistrato } from '../regras/auditDistrato';
+import { resumirForaDaAuditoria, type ExClienteResumo } from '../regras/auditExClientes';
+import { carregarExClientes } from './auditExClientesService';
 import {
   MAX_ARQUIVOS_POR_LOTE, MAX_PASTAS_POR_LOTE,
   type Lote, type MarcaSemPasta, type VincularPasta,
@@ -182,6 +184,7 @@ export async function concluir(
   jobId: string,
   totais: { pastas: number; arquivos: number },
   agora = new Date(),
+  exClientes?: string[],
 ): Promise<{ vinculosAutomaticos: number }> {
   const r = await repo.concluirJob(jobId, totais, agora);
   if (r.resultado === 'job_inativo') throw new AppError(409, MSG_JOB_INATIVO);
@@ -192,6 +195,9 @@ export async function concluir(
       `${r.recebido.arquivos} de ${totais.arquivos} arquivos. O job foi marcado como erro.`,
     );
   }
+
+  // Robô 1.2+ manda os nomes das pastas de ex-clientes; o robô antigo não manda (as telas usam a última lista).
+  if (exClientes) await repo.gravarExClientesDoJob(jobId, exClientes);
 
   const vinculosAutomaticos = await aplicarVinculosAutomaticos(jobId, agora);
   const apagados = await repo.limparJobsAntigos(agora);
@@ -280,6 +286,8 @@ export interface ListaDePastas {
     /** Sem pasta e SEM a marca — são as que ainda pedem ação. */
     empresasAtivasSemPasta:   number;
     empresasMarcadasSemPasta: number;
+    /** Pasta só em Ex Clientes: não pedem pasta, ficam fora da auditoria. */
+    exClientes:               ExClienteResumo[];
   };
   pastas:           PastaAuditada[];
   empresasSemPasta: EmpresaSemPasta[];
@@ -291,7 +299,7 @@ export async function listarPastas(): Promise<ListaDePastas> {
     job: null,
     resumo: {
       pastas: 0, comSubpastaContrato: 0, automaticas: 0, confirmadas: 0, ignoradas: 0,
-      semVinculo: 0, empresasAtivas: 0, empresasAtivasSemPasta: 0, empresasMarcadasSemPasta: 0,
+      semVinculo: 0, empresasAtivas: 0, empresasAtivasSemPasta: 0, empresasMarcadasSemPasta: 0, exClientes: [],
     },
     pastas: [],
     empresasSemPasta: [],
@@ -342,8 +350,10 @@ export async function listarPastas(): Promise<ListaDePastas> {
   const marcaPorEmpresa = new Map(marcas.map((m) => [m.company_id, m]));
   const pastasLivres = indexarPastas(resultado.filter((p) => !p.vinculo).map((p) => p.nomePasta));
   const indexadaPorId = new Map(ativasIndexadas.map((e) => [e.id, e]));
+  // Ex-cliente (pasta só na pasta de ex-clientes) não pede pasta: sai da lista.
+  const ex = await carregarExClientes(ativas, (id) => empresasComPasta.has(id));
   const semPasta: EmpresaSemPasta[] = ativas
-    .filter((e) => !empresasComPasta.has(e.id))
+    .filter((e) => !empresasComPasta.has(e.id) && !ex.fora.has(e.id))
     .map((e) => {
       const m = marcaPorEmpresa.get(e.id);
       return {
@@ -371,6 +381,7 @@ export async function listarPastas(): Promise<ListaDePastas> {
       empresasAtivas:           ativas.length,
       empresasAtivasSemPasta:   semPasta.filter((e) => !e.marcada).length,
       empresasMarcadasSemPasta: semPasta.filter((e) => e.marcada).length,
+      exClientes:               resumirForaDaAuditoria(ex, ativas),
     },
     pastas:           resultado,
     empresasSemPasta: semPasta,

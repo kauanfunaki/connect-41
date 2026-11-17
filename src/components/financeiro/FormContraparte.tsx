@@ -176,7 +176,7 @@ function FormularioDaContraparte({
           <Input {...campo("phone")} inputMode="tel" maxLength={30} />
         </CampoForm>
       </FieldGrid>
-      <CampoForm label="E-mail" htmlFor={`${id}-email`} helper="Para onde vão os lembretes da régua de cobrança.">
+      <CampoForm label="E-mail" htmlFor={`${id}-email`} dica="Para onde vão os lembretes da régua de cobrança.">
         <Input id={`${id}-email`} name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={180} />
       </CampoForm>
 
@@ -215,8 +215,8 @@ function FormularioDaContraparte({
       <BlocoRecolhivel titulo="Dados bancários e PIX" resumo={resumoDoBanco(ficha)}>
         <div className="flex flex-col gap-4 pt-1">
           <FieldGrid columns="sm:grid-cols-[100px_120px_minmax(0,1fr)]">
-            <CampoForm label="Banco" htmlFor={`${id}-bankCode`} helper="Código, ex.: 341">
-              <Input {...campo("bankCode")} inputMode="numeric" maxLength={3} />
+            <CampoForm label="Banco" htmlFor={`${id}-bankCode`}>
+              <Input {...campo("bankCode")} inputMode="numeric" maxLength={3} placeholder="341" />
             </CampoForm>
             <CampoForm label="Agência" htmlFor={`${id}-bankAgency`}>
               <Input {...campo("bankAgency")} maxLength={10} />
@@ -235,9 +235,6 @@ function FormularioDaContraparte({
           que mora na aba "Juros e multa". Vazio segue a da empresa. */}
       <BlocoRecolhivel titulo="Juros e multa por atraso" resumo={resumoDosEncargos(contraparte?.encargos ?? SEM_ENCARGOS)}>
         <div className="flex flex-col gap-2 pt-1">
-          <p className="text-helper text-fg-muted">
-            Só deste cadastro. Vazio segue a regra da empresa; com algum campo preenchido, a regra é esta, e o vazio vale zero.
-          </p>
           <CamposDosEncargos valores={contraparte?.encargos ?? SEM_ENCARGOS} prefixo="encargos" />
         </div>
       </BlocoRecolhivel>
@@ -246,7 +243,7 @@ function FormularioDaContraparte({
         <CampoForm
           label="Categoria padrão"
           htmlFor={`${id}-categoria`}
-          helper="Vale para contas a pagar."
+          dica="Vale para contas a pagar."
           className={centros.length > 0 ? "" : "sm:col-span-2"}
         >
           <Select id={`${id}-categoria`} name="defaultCategoryId" defaultValue={contraparte?.defaultCategoryId ?? ""}>

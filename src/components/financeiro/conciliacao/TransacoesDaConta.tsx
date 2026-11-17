@@ -510,8 +510,7 @@ export function TransacoesDaConta({
           porQue={
             <>
               Sempre que vier uma linha assim — {dataCurta(regraNova.linha.dataKey)} · {descricaoDaTransacao(regraNova.linha)} ·{" "}
-              <strong className="text-fg">{moeda(regraNova.linha.centavos)}</strong> —, lançar igual. Ajuste o texto e o valor: o que
-              muda todo mês (data, número do documento) não deve entrar.
+              <strong className="text-fg">{moeda(regraNova.linha.centavos)}</strong> —, lançar igual.
             </>
           }
           onClose={() => setRegraNova(null)}
@@ -714,9 +713,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
       <div className="flex flex-col gap-4">
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. Marque um ou mais
-          lançamentos {aPagar ? "a pagar" : "a receber"} cuja soma feche o valor no centavo — ou uma conta só, e
-          lance a diferença como juros, desconto ou baixa parcial.
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>
         </p>
         {/* A caixa de busca do Connect (15/10/2026): Enter busca e o "limpar"
             volta à lista inicial — era um campo comum com o botão "Buscar". O
@@ -745,8 +742,7 @@ function EscolherLancamentos({ transacao, onClose }: { transacao: LinhaDaTransac
             <p className="p-3 text-fs-2 text-fg-muted">Carregando…</p>
           ) : lista.length === 0 ? (
             <p className="p-3 text-fs-2 text-fg-muted">
-              Nenhum lançamento em aberto ou sem conciliação {busca ? "com esta busca" : "perto desta data"}. Busque pelo
-              nome, pelo valor ou pela data, ou crie o lançamento.
+              Nenhum lançamento em aberto ou sem conciliação {busca ? "com esta busca" : "perto desta data"}.
             </p>
           ) : (
             <table className="w-full text-ui">
@@ -934,8 +930,7 @@ function CriarLancamento({
         <input type="hidden" name="transactionId" value={transacao.id} />
         <p className="text-helper text-fg-secondary">
           {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} ·{" "}
-          <strong className="text-fg">{moeda(transacao.centavos)}</strong>. O lançamento nasce pago
-          nesta data, com este valor, e já conciliado.
+          <strong className="text-fg">{moeda(transacao.centavos)}</strong>
         </p>
         {transacao.sugestao?.bloqueio && (
           // O `Aviso` do app (08/10/2026), com o texto em `fg-secondary` como estava.
@@ -977,7 +972,7 @@ function CriarLancamento({
               label="Categoria"
               htmlFor="criar-categoria"
               required={kind === "PAGAR"}
-              helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
+              dica={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
               acao={
                 <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
                   Ratear
@@ -994,7 +989,7 @@ function CriarLancamento({
               </Select>
             </CampoForm>
           )}
-          <CampoForm label="Competência" htmlFor="criar-competencia" required helper="Padrão: o mês do extrato.">
+          <CampoForm label="Competência" htmlFor="criar-competencia" required>
             <CampoMes id="criar-competencia" name="competencia" defaultValue={transacao.dataKey.slice(0, 7)} required />
           </CampoForm>
         </FieldGrid>
@@ -1015,11 +1010,7 @@ function CriarLancamento({
         {!rateando && (
           <FieldGrid columns={centros.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}>
             {centros.length > 0 && (
-              <CampoForm
-                label="Centro de custo"
-                htmlFor="criar-centro"
-                helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional."}
-              >
+              <CampoForm label="Centro de custo" htmlFor="criar-centro">
                 <Select id="criar-centro" name="costCenterId" defaultValue="">
                   <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
                   {centros.map((c) => (
@@ -1102,10 +1093,6 @@ function TransferirEntreContas({
             ))}
           </Select>
         </CampoForm>
-        <p className="text-helper text-fg-muted">
-          Os dois lançamentos — a saída de uma conta e a entrada na outra — nascem pagos neste dia, na categoria de
-          transferência, que fica fora da DRE. Se o extrato da outra conta já tem a linha deste valor, ela é conciliada junto.
-        </p>
         <FormFooter pending={pendente} pendingLabel="Registrando…" submitLabel="Registrar transferência" onCancel={onClose} erro={erro} />
       </form>
     </Modal>
@@ -1134,11 +1121,10 @@ function IgnorarTransacao({ transacao, onClose }: { transacao: LinhaDaTransacao;
         }}
       >
         <p className="text-helper text-fg-secondary">
-          {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} · {moeda(transacao.centavos)}. Ignorada sai das
-          pendentes, mas continua no saldo da conta — o dinheiro passou por ela.
+          {dataCurta(transacao.dataKey)} · {descricaoDaTransacao(transacao)} · {moeda(transacao.centavos)}
         </p>
-        <CampoForm label="Motivo" htmlFor="ignorar-motivo" required helper="Ex.: resgate automático da aplicação, estorno no mesmo dia.">
-          <Textarea id="ignorar-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={255} required />
+        <CampoForm label="Motivo" htmlFor="ignorar-motivo" required>
+          <Textarea id="ignorar-motivo" placeholder="Ex.: resgate automático da aplicação, estorno no mesmo dia" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={255} required />
         </CampoForm>
         <FormFooter
           pending={pendente}

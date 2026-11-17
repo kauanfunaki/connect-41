@@ -95,7 +95,7 @@ export default async function DrePage({
   if (!daTela || !companyId) {
     return (
       <PageContainer>
-        <PageHeader title="DRE" subtitle="Demonstrativo de resultado, por empresa e mês." />
+        <PageHeader title="DRE" />
         {empresas.length === 0 ? (
           <EmptyState title="Nenhuma empresa cadastrada" icon={<FileText />} />
         ) : (
@@ -140,7 +140,8 @@ export default async function DrePage({
     competencia,
     visaoDoCliente,
   }: {
-    subtitulo: string;
+    /** Só o mês da tela; a frase fixa que explicava a DRE foi para a ajuda (17/11/2026, melhoria-707). */
+    subtitulo?: string;
     exportar: string;
     /** Os parâmetros da tela, para a troca dos impostos; `null` onde ela não vale (a visão do cliente). */
     impostosDaTela: Record<string, string | undefined> | null;
@@ -191,7 +192,6 @@ export default async function DrePage({
         {/* O subtítulo dizia "como aparece no portal do cliente. Só leitura.";
             quem diz isso agora é o selo ao lado de "Visão" (16/11/2026). */}
         {topo({
-          subtitulo: "Demonstrativo de resultado, por empresa e mês.",
           exportar,
           impostosDaTela: null,
           competencia: periodo.mes,
@@ -246,7 +246,6 @@ export default async function DrePage({
           desconsideradas={desconsideradasDoPeriodo(desconsideradoDoAno, categoriasDoAno)}
         >
           {topo({
-            subtitulo: "Demonstrativo de resultado de caixa — os doze meses lado a lado.",
             exportar: `/dre/exportar?empresa=${companyId}&visao=ano&ano=${anoEscolhido}${sufixoDosImpostos(opcoes)}`,
             impostosDaTela: { empresa: companyId, visao: "ano", ano: String(anoEscolhido) },
             competencia: null,
@@ -305,7 +304,6 @@ export default async function DrePage({
             aqui que quem ainda monta o DRE fora do Connect começa. */}
         <PageHeader
           title="DRE"
-          subtitle="Demonstrativo de resultado, por empresa e mês."
           action={<ImportarDoOmie companyId={companyId} />}
         />
         <AbasDaDre ativa="caixa" companyId={companyId} />
@@ -314,7 +312,7 @@ export default async function DrePage({
         <Card className="mt-4">
           <EmptyState
             title="Nenhum pagamento ou recebimento nesta empresa"
-            description="O DRE é de caixa: ele monta a partir do que foi efetivamente pago e recebido, não do que foi lançado. Quem ainda monta o DRE no Omie pode começar por “Importar do Omie”, no topo."
+            description="O DRE é de caixa: ele monta a partir do que foi efetivamente pago e recebido, não do que foi lançado."
             icon={<FileText />}
           />
         </Card>
@@ -360,7 +358,7 @@ export default async function DrePage({
             dentro do botão Filtros ("Mais recente (…)"), e a tabela inteira
             aparecia sem dizer de quando. */}
         {topo({
-          subtitulo: `Demonstrativo de resultado de caixa de ${rotuloDoMes(escolhido)} — monta do que foi pago e recebido no mês.`,
+          subtitulo: rotuloDoMes(escolhido),
           exportar: `/dre/exportar?empresa=${companyId}&visao=mes&mes=${escolhido.ano}-${escolhido.mes}${sufixoDosImpostos(opcoes)}`,
           impostosDaTela: { empresa: companyId, mes },
           competencia,
@@ -472,15 +470,8 @@ function PorQueOImpostoFicaFora({ modelo }: { modelo: ModeloDoDre }) {
   if (modelo.impostos === "fora") {
     return <>a margem de contribuição parte da Receita Bruta, como na planilha do modelo “{modelo.nome}”.</>;
   }
-  return (
-    <>
-      é a visão “Impostos fora do resultado”.
-      <span className="block text-fs-2 text-fg-secondary mt-1">
-        Em “Impostos no EBITDA”, o padrão, eles descontam do EBITDA e do resultado. É o padrão que o cliente vê no
-        portal (21/10/2026).
-      </span>
-    </>
-  );
+  // O que é "Impostos no EBITDA" foi para a ajuda da DRE (17/11/2026, melhoria-707).
+  return <>é a visão “Impostos fora do resultado”.</>;
 }
 
 /**

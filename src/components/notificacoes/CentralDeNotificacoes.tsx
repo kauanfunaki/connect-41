@@ -247,10 +247,8 @@ export function CentralDeNotificacoes({
         <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-border">
           <div className="flex items-center gap-3 min-w-0">
             <IconeDaNotificacao icone={cabecalho.icone} tom={cabecalho.tom} />
-            <div className="min-w-0">
-              <h2 className="text-card-title font-semibold text-fg">{cabecalho.rotulo}</h2>
-              <p className="text-fs-2 text-fg-muted">{cabecalho.descricao}</p>
-            </div>
+            {/* Só o nome da aba (17/11/2026, melhoria-707): o que cada uma traz fica na dica da aba e no artigo de ajuda. */}
+            <h2 className="min-w-0 text-card-title font-semibold text-fg">{cabecalho.rotulo}</h2>
           </div>
           {!filtros.arquivadas && (
             <SegmentedControl

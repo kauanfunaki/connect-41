@@ -93,11 +93,22 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”. Conta com rateio fica de fora quando muda a categoria, o centro ou o projeto: esses se mudam nas linhas do rateio, em “Editar”.",
         ],
       },
+      {
+        titulo: "Pagar várias contas de uma vez",
+        passos: [
+          "Marque a caixa à esquerda das contas e clique em “Pagar marcadas”, na barra que aparece.",
+          "Informe a data do pagamento e, para cada empresa, a conta de onde o dinheiro saiu.",
+          "Para cobrar o atraso, marque “Calcular juros e multa pelo atraso”: vale a regra de cada conta — a do fornecedor, senão a da empresa —, do vencimento dela até a data informada, e o desconto vale para quem paga até o vencimento.",
+          "Confira o total e clique no botão “Pagar”, que diz quantas contas e quanto. Cada conta é paga pelo saldo; para juros digitados à mão ou pagamento parcial, use o “Pagar” da linha.",
+        ],
+      },
     ],
     dicas: [
+      "Na baixa, a conta em “Saiu da conta” é a que a conciliação procura no extrato. Juros e multa vão para a categoria de encargos, e o desconto para a de descontos.",
+      "Na aba “Análise”, a conta que vence hoje conta como a vencer.",
       "Conta “Aguardando aprovação” ou “Reprovada” não pode ser paga: o botão “Pagar” fica desativado, e o motivo aparece ao passar o mouse sobre ele.",
       "Pagou o fornecedor antes da conta chegar? Escolha a empresa e, em “Adiantamentos a fornecedores”, clique em “Novo adiantamento”: o dinheiro sai do banco e fica guardado para ele, fora da DRE. Quando a conta chegar, clique em “Pagar” e escolha o adiantamento em “Saiu da conta” — a despesa entra na DRE ali, e o banco não se mexe de novo.",
-      "Pagou no cartão de crédito? Cadastre o cartão uma vez, com a empresa escolhida, em “Cartões de crédito” › “Novo cartão”, com o dia em que a fatura fecha e o dia em que vence. Depois, ao pagar a conta, escolha o cartão em “Saiu da conta” (ou, ao lançar, em “Conta corrente”, com “Já pago em”): a despesa entra na DRE no dia da compra, e a compra vai para a fatura do ciclo — uma conta a pagar ao cartão, criada e somada sozinha. Pague a fatura pelo banco, como qualquer conta; é aí que o dinheiro sai no fluxo de caixa. Para tirar uma compra da fatura, desfaça a baixa da conta; a fatura que já tem pagamento não muda.",
+      "Pagou no cartão de crédito? Cadastre o cartão uma vez, com a empresa escolhida, em “Cartões de crédito” › “Novo cartão”, com o dia em que a fatura fecha e o dia em que vence. Depois, ao pagar a conta, escolha o cartão em “Saiu da conta” (ou, ao lançar, em “Conta corrente”, com “Já pago em”): a despesa entra na DRE no dia da compra, e a compra vai para a fatura do ciclo — uma conta a pagar ao cartão, criada e somada sozinha. Pague a fatura pelo banco, como qualquer conta; é aí que o dinheiro sai no fluxo de caixa. Para tirar uma compra da fatura, desfaça a baixa da conta; a fatura que já tem pagamento não muda. Mudar o dia de fechamento ou de vencimento do cartão vale para as próximas compras: a que já está numa fatura fica nela.",
       "Conta com “R$ X retidos” embaixo do valor tem imposto retido na fonte: o valor é o líquido, e cada imposto tem a conta dele. Para mudar uma retenção, clique em “Editar” na conta do fornecedor e abra “Retenções na fonte”; a conta do imposto acompanha enquanto não tiver baixa. Cancelar a conta do fornecedor cancela as dos impostos em aberto.",
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
       "“Abrir pendência” e “Enviar para aprovação” só aparecem quando o escritório usa esses módulos.",
@@ -153,9 +164,20 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique em “Alterar”. Para tirar o centro, o projeto ou a conta, marque o campo e escolha “Sem centro de custo”, “Sem projeto” ou “Não prevista”. Conta com rateio fica de fora quando muda a categoria, o centro ou o projeto: esses se mudam nas linhas do rateio, em “Editar”.",
         ],
       },
+      {
+        titulo: "Receber várias contas de uma vez",
+        passos: [
+          "Marque a caixa à esquerda das contas e clique em “Receber marcadas”, na barra que aparece.",
+          "Informe a data do recebimento e, para cada empresa, a conta em que o dinheiro entrou.",
+          "Para cobrar o atraso, marque “Calcular juros e multa pelo atraso”: vale a regra de cada conta — a do cliente, senão a da empresa —, do vencimento dela até a data informada, e o desconto vale para quem paga até o vencimento.",
+          "Confira o total e clique no botão “Receber”, que diz quantas contas e quanto. Cada conta é recebida pelo saldo; para juros digitados à mão ou recebimento parcial, use o “Receber” da linha.",
+        ],
+      },
     ],
     dicas: [
       "As contas nascem do lançamento de um documento fiscal ou da tela “Lançamentos”. Não há botão para criar conta nesta tela.",
+      "Na baixa, a conta em “Entrou na conta” é a que a conciliação procura no extrato. Juros e multa vão para a categoria de encargos, e o desconto para a de descontos.",
+      "Na aba “Análise”, a conta que vence hoje conta como a vencer.",
       "Conta “Renegociada” ou “Perda” saiu do em aberto pela tela “Cobrança” (acordo ou baixa por perda).",
       "O cliente pagou antes da conta a receber? Escolha a empresa e, em “Adiantamentos de clientes”, clique em “Novo adiantamento”. Depois, ao receber a conta, escolha o adiantamento em “Entrou na conta”.",
       "Para levar a lista para o Excel, clique em “Exportar” › “Excel”, na barra da tabela: vão a empresa, a competência e o recorte escolhidos (os funis das colunas não entram). O arquivo vem numa Tabela do Excel, com data como data e valor como número — no Excel, “Inserir” › “Tabela dinâmica” já pega a tabela. Conta rateada sai numa linha por parte do rateio. “Exportar” › “CSV” continua para outros sistemas.",
@@ -183,7 +205,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Para dividir a conta entre categorias, centros de custo ou projetos, clique em “Ratear”, ao lado de “Categoria”. Monte as linhas por valor ou por percentual; embaixo aparece o que falta para fechar o valor da conta. A DRE soma cada linha na categoria dela.",
           "Se a nota de um serviço tomado tem imposto retido (IRRF, PIS, COFINS, CSLL, INSS ou ISS), abra “Retenções na fonte” e informe cada um. O “Valor” passa a ser o bruto da nota, a conta do fornecedor fica no líquido, e cada imposto ganha a conta dele, a pagar à Receita (ou à prefeitura, no ISS), vencendo no dia 20 do mês seguinte (o ISS, no dia 10).",
           "Se quiser, escolha a “Conta corrente” por onde a conta deve ser paga ou recebida: a baixa já vem com ela.",
-          "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco.",
+          "Se a conta já foi paga ou recebida, informe a data em “Já pago em” ou “Já recebido em”. Se não, deixe em branco. Com a data, o valor pago em branco quita a conta; para pagamento parcial, informe o valor e acrescente os outros pagamentos, cada um com a sua data.",
           "Clique em “Lançar”. A conta já aparece em Contas a pagar ou a receber e na DRE.",
         ],
       },
@@ -196,6 +218,25 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique em “Lançar”. Com número de vezes, todas as contas nascem junto. Até uma data ou sem fim, nascem as do próximo ano (dois meses no todo dia útil), e as seguintes nascem sozinhas conforme o tempo anda, copiando a última conta da série.",
           "Nas listas, a posição na série aparece antes da descrição, como “3/12”, ou “3/∞” na sem fim. Cada conta se edita, paga e cancela sozinha.",
           "Para parar a série, clique em “Cancelar” numa das contas e escolha “Esta e as próximas da série”. As anteriores e a já paga não mudam, e nenhuma conta nova nasce depois.",
+        ],
+      },
+      {
+        titulo: "Parcelar uma compra",
+        passos: [
+          "No lançamento, abra o bloco “Parcelar” e informe em “Parcelas” em quantas vezes. O “Valor” passa a ser o total de todas as parcelas, e o vencimento, o da 1ª parcela.",
+          "Escolha para onde vão os “Centavos que sobram”, o que fazer “Em fim de semana ou feriado” e a “Competência” das parcelas: a do mês em que cada uma vence, ou a desta conta (a compra é uma só).",
+          "Confira a divisão: dá para mudar o vencimento e o valor de cada parcela, e a soma precisa fechar o total.",
+          "Clique em “Lançar”. Cada parcela vira uma conta em aberto, com o mesmo número de documento, ligada às outras pela série (“3/12”). Cada uma se edita, paga e cancela sozinha.",
+          "Para mudar o valor ou o dia de todas as próximas de uma vez, use “Mudar daqui em diante”, ao lado de “Editar”.",
+        ],
+      },
+      {
+        titulo: "Exportar as baixas para a Domínio",
+        passos: [
+          "Na lista de lançamentos, escolha a empresa e o mês e clique em “Exportar”.",
+          "Em “De-para da empresa”, preencha o código Matriz/Filial e a conta contábil da Domínio de cada banco, categoria e fornecedor que as baixas do mês usam, e clique em “Salvar de-para”. A baixa com alguma conta faltando fica fora do arquivo.",
+          "Clique em “Domínio (.xlsx)” ou “Domínio (.txt)” e importe na Domínio pela importação de lançamentos.",
+          "Se algo mudou depois, baixe a “Correção”: ela leva só as baixas novas e o estorno das que saíram ou mudaram. Baixar o mês inteiro de novo duplica na Domínio o que já foi importado.",
         ],
       },
       {
@@ -222,6 +263,10 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Cancelar não apaga: o lançamento sai dos totais e fica no histórico. Para desfazer, só com um lançamento novo.",
       "Lançamento já pago só é cancelado depois de desfazer a baixa em Contas a pagar ou a receber, que é onde também se registra o pagamento.",
       "Os botões “Novo lançamento” e “Importar CSV” só aparecem para quem atua no setor. Em empresa com alçada de aprovação, a conta a pagar nasce aguardando aprovação.",
+      "Editar muda a classificação a qualquer momento; o valor e o vencimento, só com a conta em aberto.",
+      "Na série que se repete, cada conta nasce em aberto, com o mesmo valor, contraparte e categoria, e a competência anda com o mês do vencimento; os feriados são os de Configurações › Feriados. Na série até uma data ou sem fim, o que você mudar numa conta vale para as que nascerem depois.",
+      "Com retenção na fonte, o rateio e as parcelas são digitados sobre o bruto: cada parcela fica com a parte dela das retenções e paga o líquido dela, e o rateio guarda as linhas na proporção do líquido.",
+      "Na planilha CSV: uma linha por conta, separada por vírgula ou ponto e vírgula, com datas em dd/mm/aaaa ou aaaa-mm-dd. Competência em branco herda o mês do vencimento. A categoria precisa existir no plano de contas com o mesmo tipo. O centro de custo casa pelo nome ou pelo código de um centro ativo; em branco, vale o centro padrão da contraparte. Linha igual a um lançamento que já existe é ignorada.",
     ],
   },
 
@@ -301,7 +346,9 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "Sem conta bancária cadastrada, o fluxo não mostra o saldo real: cadastre a conta e importe o extrato em “Conciliação bancária”.",
       "Contas já vencidas e não pagas ficam fora das janelas da projeção e aparecem num aviso logo abaixo dos cartões.",
-      "A projeção só considera o que já está lançado.",
+      "A projeção só considera o que já está lançado. Com saldo nas contas, o saldo projetado soma o saldo das contas ao que vence em cada janela.",
+      "Na tabela do realizado, o acumulado soma os saldos a partir do primeiro mês da tabela: é movimento de lançamentos, não o saldo da conta, que está no quadro “Saldo das contas”.",
+      "Na aba “Por empresa”, pago e recebido vão pela data da baixa, e as vencidas são a posição de hoje. Empresa sem movimento no mês e sem conta vencida não aparece.",
     ],
   },
 
@@ -343,6 +390,16 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         ],
       },
       {
+        titulo: "Lançar o que se repete com uma regra",
+        passos: [
+          "Na conciliação, clique em “Regras de conciliação” e em “Nova regra”. Ou, depois de criar o lançamento de uma linha, clique em “Criar regra” — a regra já vem com os dados dela.",
+          "Em “Quando a linha do extrato…”, diga se é saída ou entrada, o texto que o histórico ou o favorecido contém, o valor e a conta.",
+          "Em “…lançar como”, escolha o fornecedor ou o cliente, a categoria e, se quiser, o centro de custo, o projeto e a descrição.",
+          "Em “O que a regra faz”, escolha “Sugerir” (a regra aparece na linha e alguém confirma) ou “Lançar sozinha” (lança e concilia ao importar o extrato) e clique em “Criar regra”.",
+          "Para as linhas que já estão pendentes, clique em “Aplicar às pendentes”, confira a prévia, desmarque o que não for e clique em “Lançar”.",
+        ],
+      },
+      {
         titulo: "Ignorar, desfazer ou reabrir uma transação",
         passos: [
           "Para tirar da fila um movimento que não é conta (como um resgate automático), clique em “Ignorar”, escreva o “Motivo” e clique em “Ignorar”.",
@@ -354,7 +411,13 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Conciliar marca os lançamentos como pagos na data do extrato; “Desfazer” devolve cada um ao que era antes.",
-      "Reimportar o mesmo período não duplica nada. Banco e número da conta não mudam depois do primeiro extrato importado.",
+      "Reimportar o mesmo período não duplica nada. O arquivo OFX precisa ser da conta selecionada. Tipo, banco e número da conta não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.",
+      "A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome: nada é conciliado sem confirmação.",
+      "Em “Escolher lançamentos”, dá também para marcar uma conta só e lançar a diferença como juros, desconto ou baixa parcial.",
+      "“Criar lançamento”, a transferência e a regra fazem o lançamento já pago no dia da linha, com o valor dela e a competência do mês dela, e já conciliado. Na transferência nascem os dois lados — a saída de uma conta e a entrada na outra —, na categoria de transferência, fora da DRE; se o extrato da outra conta já tem a linha desse valor, ela é conciliada junto.",
+      "Transação ignorada sai das pendentes, mas continua no saldo da conta: o dinheiro passou por ela.",
+      "A regra em “Lançar sozinha” só sugere quando há dúvida: outra regra pega a mesma linha, há lançamento em aberto de mesmo valor, ou alguém já desfez o que ela lançou ali. Desfazer o que a regra lançou cancela o lançamento e devolve a linha às pendentes.",
+      "Em conta ligada ao Omie, “Trazer do Omie” traz o que o BPO já conciliou lá no mês. É um espelho: só entra o lançamento conciliado no Omie, e conta com OFX no mesmo mês é recusada. A linha do extrato que bate no valor e no dia com uma única baixa já conciliada no Omie sai da fila sozinha, como “Conciliada no Omie”.",
       "Conta travada na aprovação não é conciliada: concilie depois que ela for aprovada, sem criar outro lançamento.",
     ],
   },
@@ -381,7 +444,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       {
         titulo: "Encontrar, editar ou inativar um cadastro",
         passos: [
-          "Use as abas “Fornecedores”, “Sacados” ou “Todos”. Cadastro ainda sem conta aparece nas duas primeiras.",
+          "Use as abas “Fornecedores” (os cadastros com contas a pagar), “Sacados” (com contas a receber) ou “Todos”. A mesma ficha aparece nas duas primeiras quando tem contas a pagar e a receber; cadastro ainda sem conta fica só em “Todos”.",
           "Digite em “Buscar por nome ou documento…” e tecle Enter.",
           "Clique em “Editar” na linha do cadastro.",
           "Altere os dados ou mude a “Situação” para “Inativo” e clique em “Salvar”.",
@@ -405,9 +468,22 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Para criar uma categoria só desta empresa, clique em “Nova categoria”, no topo da tela, preencha “Nome”, “Tipo”, “Grupo do plano” e “Linha da DRE” e clique em “Cadastrar”.",
         ],
       },
+      {
+        titulo: "Cobrar juros e multa pelo atraso",
+        passos: [
+          "Clique na aba “Juros e multa”.",
+          "Em “Regra da empresa”, preencha “Multa”, “Juros ao mês” e “Desconto” e clique em “Salvar regra”. Ao dar baixa com data depois do vencimento, a janela já vem com a multa e os juros calculados sobre o valor baixado; até o vencimento, com o desconto. Quem baixa ainda pode mudar.",
+          "Para um fornecedor ou sacado com regra própria, clique em “Editar” na ficha dele e abra “Juros e multa por atraso”. Vazio segue a regra da empresa; com algum campo preenchido, vale a regra da ficha, e o campo vazio vale zero.",
+          "As fichas com regra própria, que passam por cima da regra da empresa, aparecem em “Com regra própria”, na aba “Juros e multa”.",
+        ],
+      },
     ],
     dicas: [
-      "Cadastro não é apagado: inativo continua nas contas antigas e deixa de aparecer no lançamento manual.",
+      "Cadastro não é apagado: inativo continua nas contas antigas e deixa de aparecer no lançamento manual. A ficha é o que liga as notas e as contas de um mesmo fornecedor.",
+      "O centro de custo padrão entra na próxima conta quando quem lança não escolhe um centro.",
+      "Centro de custo e projeto inativos somem dos seletores e continuam no que já foi lançado; nenhum dos dois é apagado. Na importação por CSV, a coluna centro_de_custo casa pelo nome ou pelo código, e a coluna projeto, pelo nome.",
+      "No plano de contas, nada é apagado: o que já foi lançado continua na DRE.",
+      "A conciliação com o extrato não usa a regra de juros e multa: lá a diferença é a do banco.",
       "O e-mail do sacado é para onde vão os lembretes da régua de cobrança. Sacado sem e-mail fica fora dela.",
       "Só quem atua no setor vê os botões de cadastrar e editar.",
     ],
@@ -455,6 +531,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "Se o prazo passar sem resposta, o cliente recebe lembretes automáticos por e-mail com 1, 3, 7 e 15 dias de atraso.",
       "Pendência resolvida sai da fila e o cliente não consegue mais responder.",
+      "Enquanto a pendência está aberta e com prazo, a ficha dela mostra os lembretes automáticos já enviados ao cliente.",
       "Para pedir algo sobre uma conta específica, use “Abrir pendência” no botão “⋯” da conta em Contas a pagar ou a receber.",
     ],
   },
@@ -571,6 +648,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     dicas: [
       "A carteira são as empresas com o serviço do BPO ativo. Empresa inativa ou que saiu não aparece.",
       "“Sem conta” quer dizer que a empresa não tem conta bancária com extrato cadastrada; “nunca”, que tem conta e nenhum extrato foi importado.",
+      "“Sem extrato” conta os dias desde a última importação de extrato nas contas bancárias ativas; “Saldo não bate” é a conferência da conciliação, o saldo calculado contra o saldo do banco.",
       "O painel mostra a carteira inteira mesmo quando você está trabalhando numa empresa por vez.",
     ],
   },
@@ -627,6 +705,9 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "A régua e as ações “Baixar por perda” e “Reverter perda”, na ficha do título, são só da coordenação do setor.",
       "A régua pausa enquanto o título está em acordo, se o último contato contestou ou até a data prometida passar. Sacado sem e-mail fica fora.",
       "A anotação interna só a equipe vê; o portal do cliente mostra a data, o canal e o resultado do contato.",
+      "Na fila, os vencidos se dividem em grupos — “Ligar hoje”, “Sem contato”, “Em cobrança, sem próxima ação”, “Aguardando o sacado” e “Contestados, em acordo e perdas”. Passe o mouse no “?” ao lado do nome do grupo para ver o que entra nele.",
+      "Os e-mails da régua saem pelo servidor de e-mail do escritório, em nome da empresa credora. Na aba “Régua”, clique num passo para ver a prévia do e-mail, com um título de exemplo: o texto é o mesmo em todos os passos, só muda o tempo de atraso.",
+      "A empresa tirada da régua continua na fila: só os e-mails param.",
     ],
   },
 
@@ -855,7 +936,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
         passos: [
           "Quando aparecer o aviso de categorias sem grupo no DRE, veja a lista logo abaixo dele.",
           "Em cada categoria, escolha o grupo em “Classificar em…”. Para movimentos entre contas da própria empresa, escolha “Transferência entre contas (fora do DRE)”.",
-          "Clique em “Salvar”.",
+          "Escolher o grupo já grava, e o relatório acompanha na hora.",
           "Para desfazer uma classificação feita só para esta empresa, clique em “voltar ao padrão” no quadro “Fora do padrão nesta empresa”.",
         ],
       },
@@ -874,6 +955,9 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Importar de novo o mesmo mês do Omie substitui o que estava lá.",
       "Para o resultado pelo mês a que cada conta pertence, pago ou não, use a “DRE econômica”.",
       "O modelo do DRE é de cada empresa: o padrão, ou um customizado como o de despesas por área. Só a coordenação do setor troca o modelo.",
+      "O modelo do DRE vale para a empresa em todas as telas da DRE: o mês, o ano, a DRE econômica, as análises, o orçamento e a exportação.",
+      "“Impostos no EBITDA” é a visão que o cliente vê no portal.",
+      "Na importação do Omie, cada linha vai para o mês da data de crédito ou débito no extrato.",
     ],
   },
 
@@ -917,6 +1001,8 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "Valores sem grupo ficam fora do resultado. Classifique na tela “DRE”, que usa o mesmo de-para.",
       "O que foi pago e recebido no mês está na “DRE” (caixa). A diferença entre os dois regimes está em “Análises gerenciais”.",
       "Para ver a competência como aparece no portal do cliente, clique em “Cliente”, em “Visão”, na fileira dos filtros. “Equipe” volta para esta tela.",
+      "Título renegociado ou perdido continua como receita na competência dele; parcela de acordo não é receita, é recebimento. Acréscimo de acordo entra em outras receitas; desconto e perda, em outras despesas.",
+      "No “Resultado por centro de custo”, a conta rateada entra em cada centro pela parte dela, e as linhas somam a DRE da empresa sem filtro. A perda segue o centro do título; a diferença de acordo, o centro comum dos títulos renegociados.",
     ],
   },
 
@@ -1078,6 +1164,11 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       "A situação também aparece na ficha da empresa, na “Visão geral”, no cartão “Receita Federal”, com o botão “Atualizar”.",
       "Use “Não se aplica” para o cliente que não precisa (por exemplo, o MEI que só emite a guia, que dispensa autorização).",
       "Marcar e atualizar é de quem atua no setor Fiscal; os demais só consultam.",
+      "A autorização é o que o Serpro confere antes de cada consulta ou guia em nome do cliente.",
+      "Em “Todos os serviços” entram também os serviços que a Receita criar depois. Desmarque só quando o cliente escolheu alguns.",
+      "“Caixa Postal da Receita” traz as mensagens da Receita pelo Serpro; a lista se atualiza sozinha quando o Serpro avisa de mensagem nova. Abrir uma mensagem dá ciência da intimação, e o prazo começa a contar.",
+      "“Consumo do Serpro” mostra as chamadas cobradas do mês e o custo estimado pela tabela da Loja do Serpro. A fatura que vale é a do Serpro.",
+      "“Guias do mês” lista as guias emitidas pelo Connect que vencem no mês, e onde cada uma está: emitida, enviada, aberta pelo cliente, paga ou vencida.",
     ],
   },
 
@@ -1130,8 +1221,252 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Lançar, estornar e mudar o destino são só da coordenação do setor fiscal.",
-      "CT-e não entra no acervo: use “Consultar CT-e” para a consulta ao vivo.",
+      "O acervo espelha o que já foi emitido: nada é emitido nesta tela. O CT-e não entra no acervo — são milhões por mês e vêm sem valor apurado, então não geram lançamento: use “Consultar CT-e” para a consulta ao vivo.",
+      "Em “Consultar CT-e”, o período é pela data de rota, não pela competência — as duas não coincidem. O valor não vem na listagem, só dentro do XML de cada documento.",
+      "Na entrada de XML, cada arquivo tem o seu resultado: nada é aceito ou recusado em bloco. NFS-e de município com layout próprio pode ser recusada, e o resultado diz qual campo faltou.",
+      "O arquivo que o leitor não consegue ler, pela entrada de XML ou pela importação do SPED, fica guardado em “XML recusados”, com o motivo e o município — é o que mostra quais municípios fogem do ABRASF e do padrão nacional.",
+      "O destino é a única decisão do escritório sobre o documento: a origem e a situação vêm de fora.",
+      "O XML é a fonte. Corrigir em “Corrigir documento” faz o acervo divergir dele, e a mudança fica registrada na auditoria. Documento que já virou lançamento só se corrige depois do estorno.",
       "Nota cancelada depois de lançada aparece com aviso na ficha, e o estorno no financeiro é manual.",
+    ],
+  },
+
+  // ─── Emitir NFS-e (17/11/2026, melhoria-707) ──────────────────────────────
+  {
+    chave: "bpo_emitir_nfse",
+    titulo: "Emitir NFS-e",
+    caminhos: ["/emitir-nfse"],
+    resumo:
+      "Pede a nota fiscal de serviço ao Omie da empresa e acompanha a resposta da prefeitura. A nota sai pelo Omie: serviço, tributação e certificado continuam no cadastro do Omie.",
+    secoes: [
+      {
+        titulo: "Emitir uma nota",
+        passos: [
+          "Em “Empresa”, no topo, escolha a empresa. Só aparecem as empresas com a conta do Omie ligada em Integrações.",
+          "Clique em “Nova NFS-e”. A janela lê os tomadores e os serviços do Omie da empresa.",
+          "Escolha o “Tomador” e o “Serviço” e preencha o “Valor” e a “Categoria no Omie”. Se o serviço estiver sem código municipal e sem código da LC 116 no Omie, informe-os nos campos que aparecem.",
+          "Se quiser, escreva a “Descrição do serviço na nota”; em branco, vale a do cadastro do serviço no Omie.",
+          "Clique em “Revisar e emitir”, confira o resumo e clique em “Emitir nota”. Nada é enviado antes dessa confirmação.",
+        ],
+      },
+      {
+        titulo: "Acompanhar e cancelar",
+        passos: [
+          "A nota entra na lista da tela, e a resposta da prefeitura aparece em alguns minutos.",
+          "Se o Omie não confirmar o envio, o Connect confere sozinho em alguns minutos: não peça de novo antes disso.",
+          "Para cancelar, clique no botão “⋯” da linha, escolha “Cancelar a nota” (ou “Cancelar a OS”, quando o Omie recusou o faturamento) e confirme. A prefeitura tem prazo e regras para aceitar o cancelamento.",
+        ],
+      },
+    ],
+    dicas: [
+      "A nota sai com a data do faturamento, no mês corrente: o Omie não recebe competência pela API. Para outra competência, emita pela tela do Omie.",
+      "Cliente com faturamento bloqueado no Omie fica fora da lista de tomadores. A lista traz os primeiros 1.000 clientes; se não achar, use a busca no Omie que aparece embaixo do campo.",
+      "Só o administrador do setor emite e cancela NFS-e; os demais acompanham o que foi pedido.",
+      "A conta do Omie de cada empresa (App Key e App Secret) é cadastrada em Integrações, por quem administra o escritório.",
+    ],
+  },
+
+  // ─── SPED (17/11/2026, melhoria-707) ──────────────────────────────────────
+  {
+    chave: "fiscal_fechamento",
+    titulo: "SPED",
+    caminhos: ["/sped-fiscal", "/sped-fiscal/fechamento"],
+    resumo:
+      "A EFD do mês em quatro etapas — Classificação, Apuração, Fechamento e Gerar SPED. As três primeiras são feitas no Connect, sobre os documentos e o arquivo do motor SPED; o arquivo é gerado pelo agente do motor do escritório.",
+    secoes: [
+      {
+        titulo: "Classificar os produtos de entrada",
+        passos: [
+          "Em “Empresa”, no topo, escolha a empresa e a competência.",
+          "Na etapa “Classificação”, a lista vem do maior valor para o menor. Use “Por CFOP” para ver a destinação que o de-para deu a cada CFOP e filtrar por um deles.",
+          "Clique num produto para decidir a destinação, a definição do CFOP de entrada, o crédito de PIS/COFINS e o crédito de ICMS. O “?” ao lado de cada campo diz até onde vale a decisão.",
+          "Para trazer documentos que já estão no acervo do Connect, use “Trazer do acervo”: os que já estão na escrituração ou na fila ficam de fora.",
+        ],
+      },
+      {
+        titulo: "Gerar o arquivo",
+        passos: [
+          "Na etapa “Gerar SPED”, escolha o tipo do arquivo: original ou substituto (retificação).",
+          "Clique em “Gerar SPED”. O pedido congela uma revisão dos dados e entra na fila; o agente do motor gera o arquivo e devolve para a tela.",
+          "No EFD ICMS/IPI, vale o estabelecimento escolhido; no EFD Contribuições, a matriz e as filiais da raiz.",
+          "Acompanhe o andamento na própria tela. Enquanto houver uma geração na fila ou executando, não dá para pedir outra da mesma obrigação.",
+        ],
+      },
+    ],
+    dicas: [
+      "A classificação e a apuração são lidas do arquivo que o motor gera: depois de decidir, gere de novo para o arquivo levar as decisões.",
+      "Os dados da empresa no perfil vêm do cadastro da empresa. Sem contabilista no cadastro, vale o padrão do escritório.",
+    ],
+  },
+
+  // ─── Motor SPED (17/11/2026, melhoria-707) ────────────────────────────────
+  {
+    chave: "fiscal_painel",
+    titulo: "Motor SPED",
+    caminhos: ["/sped-fiscal/motor"],
+    resumo:
+      "As telas que falam direto com o motor SPED: painel, documentos e importações, classificação, apuração, conferência, execuções e SPED gerados. As gerações e validações rodam nos agentes do motor; o Connect só envia pedidos e consulta.",
+    secoes: [
+      {
+        titulo: "Pedir uma execução ao motor",
+        passos: [
+          "Abra “Executar” e escolha a raiz, o estabelecimento e a competência no topo.",
+          "Em “Gerar SPED”, escolha a escrituração e o tipo do arquivo e clique em “Solicitar geração”. É sempre um mês inteiro: o ICMS/IPI gera o estabelecimento escolhido, e Contribuições gera a raiz inteira pela matriz.",
+          "O pedido vai para a fila do motor, e um agente executa quando estiver livre. Nada roda dentro do Connect.",
+          "Acompanhe na “Fila do motor”: a lista se atualiza ao recarregar a tela, e o log de cada pedido, sozinho. O que já terminou fica em “Ver histórico”.",
+        ],
+      },
+      {
+        titulo: "Enviar documentos e cuidar da quarentena",
+        passos: [
+          "Em “Documentos e importações”, envie XML de NF-e, CT-e e NFS-e, PDF e imagem de documento de apoio, CSV do relatório de NFS-e ou .zip com qualquer desses.",
+          "Até 25 MB vai num envio só; acima disso, até 500 MB, o Connect manda em partes de 8 MB e retoma de onde parou se a conexão cair. Duplicatas são descartadas pelo motor.",
+          "Na “Quarentena”, “Resolver” marca o rejeitado como resolvido sem apagar: o XML continua guardado no motor.",
+          "“Reprocessar quarentena” relê os rejeitados com os leitores de hoje e baixa os que passaram a ser legíveis. Vira um pedido na fila, e as competências com documento recuperado precisam ser geradas de novo.",
+        ],
+      },
+      {
+        titulo: "Conferir PIS e COFINS",
+        passos: [
+          "Em “Apuração”, aba “Fechamento”, os documentos fiscais vêm do índice de documentos e, no CT-e de saída, da contagem do último SPED gerado. No faturamento, o CT-e entra só com o valor já apurado no motor.",
+          "Os PDF de apoio e a planilha de faturas do BPO importados nessa tela entram na conferência dos pagamentos.",
+          "Na conferência dos pagamentos, “Aceitar” pede o que a coluna “Falta para aceitar” indica. Aceitar deixa o SPED de Contribuições do período defasado.",
+          "Em “Corrigir”, só o campo que você mudar é gravado; esvaziar um campo volta ao valor lido do documento. Com “Aceitar junto”, a correção é gravada primeiro: se o motor recusar o aceite, a correção fica.",
+        ],
+      },
+    ],
+    dicas: [
+      "Ao importar PDFs de apoio, escolha o tipo antes: o motor grava cada arquivo com ele, e arquivo já gravado com outro tipo é recusado. Ler por OCR é mais lento e só funciona onde o motor tem OCR.",
+      "Os comprovantes em PDF das faturas do BPO ligam à fatura pelo número da nota no nome do arquivo; o conteúdo não é lido. Marcar “Substituir as faturas…” apaga as faturas da mesma planilha e grava as novas.",
+      "“Apurar CT-e” lê cada SPED gerado inteiro, alguns segundos por arquivo; “Apurar combustível” lê os XML das NF-e de entrada, segundos por filial.",
+      "Na “Conferência fiscal”, a correção de regime de um prestador vale só para este cliente e vence o cadastro global, que continua no painel do motor. “Desfazer correção” volta ao cadastro ou ao palpite pelo nome.",
+      "Ao “Simular uma linha”, o valor digitado entra na prévia como simulado. Apagar a simulação volta a linha a “não levantado”, que não é zero.",
+      "Em “Empresas no motor”, os estabelecimentos se ligam às empresas do escritório pelo CNPJ. Editar o cadastro vai para os registros 0000, 0005 e 0100 dos próximos SPEDs e deixa os já gerados defasados; CNPJ, UF e situação só mudam no painel do motor.",
+      "Para tentar de novo os CT-e com erro de extração, peça a execução “erros” em “Executar”. A lista de NFS-e está no acervo; em “Documentos e importações” aparece só o que chegou sem XML.",
+    ],
+  },
+
+  // ─── Estoque (17/11/2026, melhoria-707) ───────────────────────────────────
+  {
+    chave: "financeiro_estoque",
+    titulo: "Estoque",
+    caminhos: ["/estoque"],
+    resumo:
+      "As máquinas e os materiais do escritório: com quem está cada um, onde fica, o que repor e o que conferir. Patrimônio é uma coisa só, com número de patrimônio (notebook, monitor, cadeira); material é por quantidade (papel, toner, cabos).",
+    secoes: [
+      {
+        titulo: "Cadastrar um item",
+        passos: [
+          "Clique em “Novo item”, no topo da tela.",
+          "Em “O que é”, escolha “Patrimônio” ou “Material”. O tipo não muda depois de cadastrado.",
+          "Preencha “Nome”, “Categoria” e, se quiser, “Onde fica”.",
+          "No patrimônio, informe o “Nº de patrimônio” (a etiqueta do item, que não se repete) e o “Nº de série”. No material, a “Quantidade” de hoje, a “Unidade” e o “Mínimo”: abaixo dele, o item entra em “A repor”.",
+          "Clique em salvar.",
+        ],
+      },
+      {
+        titulo: "Movimentar um item",
+        passos: [
+          "Clique no nome do item para abrir a ficha.",
+          "Clique em “Movimentar” e escolha em “O que aconteceu”: no material, “Entrada”, “Saída”, “Dar baixa” ou “Conferir”; no patrimônio, “Entregar para uso”, “Emprestar”, “Mandar para manutenção”, “Devolver”, “Dar baixa” ou “Conferir”.",
+          "Ao entregar ou emprestar, escolha em “Com quem vai ficar” uma pessoa do Connect, ou escreva o nome em “Ou o nome”.",
+          "Confira “Onde fica agora”, escreva uma “Observação” se precisar e salve. O movimento entra no histórico da ficha.",
+        ],
+      },
+      {
+        titulo: "Achar o que pede atenção",
+        passos: [
+          "Use os cartões do topo: “Itens”, “Com alguém”, “A repor” e “A conferir”. Clique num deles para ver só aqueles.",
+          "Busque por nome, patrimônio, pessoa ou local no campo de busca.",
+        ],
+      },
+    ],
+    dicas: [
+      "Um item entra em “A conferir” quando passa 6 meses sem conferência. “Conferir” acerta a quantidade contada no material e, no patrimônio, só registra a data.",
+      "Item baixado não se movimenta mais. Para tirar de uso sem perder o histórico, use “Dar baixa”; “Excluir” apaga o item e o histórico, e é só do Administrador ou do Super Admin.",
+      "Cadastrar e editar são da coordenação do setor; movimentar, de quem atua nele.",
+    ],
+  },
+
+  // ─── Contratos e assinaturas (17/11/2026, melhoria-707) ───────────────────
+  {
+    chave: "financeiro_contratos",
+    titulo: "Contratos e assinaturas",
+    caminhos: ["/contratos"],
+    resumo:
+      "O que o escritório paga — softwares, serviços, aluguéis: quanto cada contrato pesa por mês, quando renova e quem responde por ele.",
+    secoes: [
+      {
+        titulo: "Cadastrar um contrato",
+        passos: [
+          "Clique em “Novo contrato”, no topo da tela.",
+          "Preencha “Nome”, “Fornecedor”, “Categoria”, “Valor de cada cobrança” e “Cobrança” (mensal, trimestral, semestral ou anual).",
+          "Se tiver, informe “Início”, “Renovação” e “Fim”, e marque “Renova sozinho” quando a renovação é automática.",
+          "Em “Quem responde”, escolha quem aprova a renovação. Salve.",
+        ],
+      },
+      {
+        titulo: "Acompanhar custo e renovações",
+        passos: [
+          "O cartão “Custo por mês” soma os contratos ativos, cada um dividido pelos meses do seu ciclo.",
+          "Com data de renovação, o contrato entra em “A renovar” 30 dias antes, com o selo “Renova em breve”; passada a data, fica “Vencido”.",
+          "Use os cartões ou o “Recorte” para ver “Ativos”, “A renovar” ou “Cancelados”, e busque por nome, fornecedor ou responsável.",
+        ],
+      },
+    ],
+    dicas: [
+      "“Cancelar” tira o contrato do custo por mês e dos avisos de renovação, e ele continua na lista de cancelados. “Excluir” apaga do Connect e é só do Administrador ou do Super Admin.",
+    ],
+  },
+
+  // ─── Contratos e honorários (17/11/2026, melhoria-707) ────────────────────
+  {
+    chave: "controladoria_honorarios",
+    titulo: "Contratos e honorários",
+    caminhos: ["/honorarios"],
+    resumo:
+      "O honorário de cada empresa, lido pelo robô no documento mais recente da pasta de rede — contrato ou termo aditivo — e comparado com o Acessórias; a situação do contrato e do aditivo anual de cada empresa ativa; e o termo aditivo gerado em Word com o cadastro.",
+    secoes: [
+      {
+        titulo: "Conferir o honorário",
+        passos: [
+          "Na aba “Honorários”, cada linha traz o valor lido do documento mais recente e o do Acessórias.",
+          "Contrato digitalizado (foto ou PDF escaneado) não tem texto, e o robô não lê o valor: clique em “Informar valor” e digite à mão. Use “Conferir valor” ou “Alterar valor” para revisar o que já está lá.",
+          "Para pedir uma leitura nova das pastas, clique em “Varrer as pastas”, no topo.",
+        ],
+      },
+      {
+        titulo: "Ver contratos e aditivos",
+        passos: [
+          "Na aba “Contratos”, veja o contrato de prestação de serviços de cada empresa ativa. Pela regra do Societário, “assinado” no nome do arquivo conta como assinado, separado da assinatura digital.",
+          "Na aba “Aditivos”, veja se o termo aditivo anual está na pasta e em que estado. Conta como em dia o aditivo com assinatura digital ou com “assinado” no nome. O termo de 13º só existe para algumas empresas e, sozinho, não substitui o anual.",
+        ],
+      },
+      {
+        titulo: "Gerar o termo aditivo",
+        passos: [
+          "Na aba “Termo aditivo”, escolha a empresa.",
+          "Confira o “Endereço da empresa” (é o do cadastro: mudar aqui muda a ficha), o “Sócio que assina” (o sócio administrador, em Sócios da empresa; os dados pessoais saem no texto como escritos aqui) e os “Contatos do contrato” (entram no fim do parágrafo, só com nome, telefone e e-mail).",
+          "Clique em “Salvar no cadastro”. O “Parágrafo do contratante” mostra como o texto sai, com o cadastro salvo.",
+          "Clique em “Gerar termo (.docx)”. O termo vai para os Arquivos da empresa e é baixado na hora.",
+        ],
+      },
+      {
+        titulo: "Enviar o modelo do termo",
+        passos: [
+          "Na aba “Termo aditivo”, clique em “Modelo do termo”.",
+          "Escolha o arquivo do Word com o texto do termo. Onde vão os dados da empresa, use os campos entre chaves, listados em “Campos do modelo”.",
+          "Informe a “Cidade da data” e clique em “Salvar modelo”.",
+        ],
+      },
+      {
+        titulo: "Ligar as pastas às empresas",
+        passos: [
+          "Na aba “Pastas”, confira as pastas de cliente na rede que ainda não estão ligadas a uma empresa. Quando o nome bate (ou a filial bate com o CNPJ), o vínculo é automático.",
+          "Se a pasta existe com outro nome, clique em “Vincular” pela sugestão.",
+          "Se a empresa não tem pasta na rede de propósito, marque como sem pasta: ela sai da auditoria de contratos e aditivos.",
+        ],
+      },
     ],
   },
 ];

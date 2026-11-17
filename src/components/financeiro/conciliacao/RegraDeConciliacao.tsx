@@ -126,7 +126,7 @@ export function FormularioDaRegra({
         <input type="hidden" name="companyId" value={companyId} />
         {porQue && <p className="text-helper text-fg-secondary">{porQue}</p>}
 
-        <CampoForm label="Nome da regra" htmlFor="regra-nome" required helper="É como a regra aparece na linha do extrato e no registro.">
+        <CampoForm label="Nome da regra" htmlFor="regra-nome" required dica="É como a regra aparece na linha do extrato e no registro.">
           <Input id="regra-nome" name="nome" defaultValue={inicial.nome} maxLength={120} required />
         </CampoForm>
 
@@ -146,7 +146,7 @@ export function FormularioDaRegra({
           <CampoForm
             label="O histórico ou o favorecido contém"
             htmlFor="regra-texto"
-            helper="Sem diferença de acento nem de maiúscula. Deixe de fora a data e o número do documento, que mudam todo mês."
+            dica="Sem diferença de acento nem de maiúscula. Deixe de fora a data e o número do documento, que mudam todo mês."
           >
             <Input id="regra-texto" name="texto" defaultValue={inicial.texto} maxLength={120} placeholder="Ex.: TARIFA BANCARIA" />
           </CampoForm>
@@ -213,7 +213,7 @@ export function FormularioDaRegra({
               </Select>
             </CampoForm>
             {opcoes.centros.length > 0 && (
-              <CampoForm label="Centro de custo" htmlFor="regra-centro" helper="Em branco, herda o padrão da contraparte.">
+              <CampoForm label="Centro de custo" htmlFor="regra-centro">
                 <Select id="regra-centro" name="costCenterId" defaultValue={inicial.costCenterId}>
                   <option value="">Padrão da contraparte</option>
                   {opcoes.centros.map((c) => (
@@ -226,12 +226,9 @@ export function FormularioDaRegra({
             )}
             <CampoDeProjeto id="regra-projeto" companyId={companyId} projetos={opcoes.projetos} defaultValue={inicial.projectId} />
           </FieldGrid>
-          <CampoForm label="Descrição do lançamento" htmlFor="regra-descricao" helper="Em branco, o lançamento leva o histórico do extrato.">
+          <CampoForm label="Descrição do lançamento" htmlFor="regra-descricao" dica="Em branco, o lançamento leva o histórico do extrato.">
             <Input id="regra-descricao" name="descricao" defaultValue={inicial.descricao} maxLength={255} />
           </CampoForm>
-          <p className="text-micro text-fg-muted">
-            O lançamento nasce pago no dia da linha, com o valor dela e a competência do mês dela, e já conciliado.
-          </p>
         </fieldset>
 
         <RadioGroup

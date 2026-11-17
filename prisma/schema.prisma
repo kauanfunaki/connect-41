@@ -12510,6 +12510,9 @@ model HonorarioConfig {
   regexSubpastaContrato String   @db.VarChar(500)
   /// "HH:MM" no horário de Brasília; nulo = sem sincronização automática.
   horarioAgendado       String?  @db.VarChar(5)
+  /// Pasta dos ex-clientes, direto na raiz; o robô (1.2+) manda os nomes das
+  /// pastas dentro dela, e essas empresas saem da auditoria. Nulo = não lista.
+  pastaExClientes       String?  @db.VarChar(300)
   updatedAt             DateTime @updatedAt
 
   @@map("hon_config")
@@ -12536,6 +12539,8 @@ model HonorarioSyncJob {
   pastasRecebidas   Int       @default(0)
   arquivosRecebidos Int       @default(0)
   erro              String?   @db.Text
+  /// Nomes das pastas em Ex Clientes vistos nesta varredura (nulo = robô sem a lista).
+  exClientes        Json?
 
   pastas   HonorarioPasta[]
 

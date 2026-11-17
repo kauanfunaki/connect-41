@@ -35,7 +35,7 @@ export async function AreaLocalSped({ aba, params }: { aba: EtapaDoSped; params:
   }
   const direitos = { importar: await podeNoModulo(tela.ctx, "fiscal_acervo", "agir"), configurar: await podeNoModulo(tela.ctx, "fiscal_configuracoes", "gerir"), entregas: await podeNoModulo(tela.ctx, "fiscal_entregas", "agir"), icms: await podeNoModulo(tela.ctx, "fiscal_icms_ipi", "ver"), contribuicoes: await podeNoModulo(tela.ctx, "fiscal_contribuicoes", "ver") };
   const conteudo = <PageContainer>
-    <PageHeader title="SPED" subtitle="Classificação, apuração e fechamento no Connect. O arquivo é gerado pelo agente do motor do escritório." />
+    <PageHeader title="SPED" />
     <FiltroDaEmpresa foco={tela.foco}>
       <PeriodoLocalSped competencia={tela.competencia} mensal={aba === "gerar"} />
       {tela.empresa && tela.comAbrangencia && <AbrangenciaLocalSped raiz={tela.empresa.cnpj.slice(0, 8)} consolidado={Boolean(tela.contexto?.consolidado)} />}

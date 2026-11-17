@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loteSchema, marcaSemPastaSchema, MAX_ARQUIVOS_POR_LOTE, vincularPastaSchema } from './auditPayload';
+import { concluirSchema, loteSchema, marcaSemPastaSchema, MAX_ARQUIVOS_POR_LOTE, vincularPastaSchema } from './auditPayload';
 
 const arquivo = (n = 1) => ({
   caminhoRelativo: `CONTRATO DE PRESTAÇÃO DE SERVIÇOS/BRIOFLEX - Termo Aditivo ${n}.PDF`,
@@ -99,5 +99,22 @@ describe('marcaSemPastaSchema', () => {
     expect(marcaSemPastaSchema.safeParse({ acao: 'marcar', companyId: id, motivo: 'x'.repeat(301) }).success).toBe(false);
     expect(marcaSemPastaSchema.safeParse({ acao: 'apagar', companyId: id }).success).toBe(false);
     expect(marcaSemPastaSchema.safeParse({ acao: 'desmarcar', companyId: id }).success).toBe(true);
+  });
+});
+
+describe('concluirSchema', () => {
+  const totais = { pastas: 2, arquivos: 10 };
+
+  it('robô antigo, sem a lista de ex-clientes, continua aceito', () => {
+    expect(concluirSchema.parse({ totais })).toEqual({ totais });
+  });
+
+  it('robô 1.2 manda os nomes das pastas de ex-clientes', () => {
+    const r = concluirSchema.parse({ totais, exClientes: [' ALFA LTDA ', 'BETA LTDA'] });
+    expect(r.exClientes).toEqual(['ALFA LTDA', 'BETA LTDA']);
+  });
+
+  it('recusa nome vazio na lista', () => {
+    expect(concluirSchema.safeParse({ totais, exClientes: ['  '] }).success).toBe(false);
   });
 });

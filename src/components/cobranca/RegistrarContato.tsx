@@ -94,12 +94,12 @@ export function RegistrarContato({ entryId, hojeISO }: { entryId: string; hojeIS
           label={resultado === "PROMETEU_PAGAR" ? "Pagamento prometido para" : "Próxima ação"}
           htmlFor={`proximaAcao-${entryId}`}
           required={resultado === "PROMETEU_PAGAR"}
-          helper={resultado === "PROMETEU_PAGAR" ? undefined : "Opcional. Quando voltar a falar com o sacado."}
+          dica={resultado === "PROMETEU_PAGAR" ? undefined : "Quando voltar a falar com o sacado."}
         >
           <CampoData id={`proximaAcao-${entryId}`} name="proximaAcao" min={hojeISO} required={resultado === "PROMETEU_PAGAR"} />
         </CampoForm>
       </FieldGrid>
-      <CampoForm label="Anotação interna" htmlFor={`notas-${entryId}`} helper="Só a equipe vê. O portal mostra data, canal e resultado.">
+      <CampoForm label="Anotação interna" htmlFor={`notas-${entryId}`} dica="Só a equipe vê. O portal mostra data, canal e resultado.">
         <Textarea id={`notas-${entryId}`} name="notas" rows={2} maxLength={TAMANHO_MAXIMO_DA_ANOTACAO} />
       </CampoForm>
       <FormFooter

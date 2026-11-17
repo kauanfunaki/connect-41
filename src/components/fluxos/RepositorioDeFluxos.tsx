@@ -196,7 +196,7 @@ export function RepositorioDeFluxos({
       <div className="flex-shrink-0">
         <PageHeader
           title="Repositório de fluxos"
-          subtitle={`Os fluxogramas e as metodologias de ${setorRotulo}: o setor escreve as etapas em lista, e o Connect desenha.`}
+          subtitle={setorRotulo}
           action={podeEditar && pastas.length > 0 ? <NovoFluxo noCabecalho pastas={listaDePastas} pastaInicial={aberto?.pastaId} action={acoes.criarFluxo} aoCriar={aoCriarFluxo} /> : undefined}
         />
         {seletorDoSetor}
@@ -346,7 +346,7 @@ export function RepositorioDeFluxos({
                   description={
                     pastas.length === 0
                       ? podeEditar
-                        ? "Comece por uma pasta para o processo (ex.: “Admissão”), no pé da coluna. Dentro dela, “+ Fluxo” abre um fluxo já com o Início e o Fim: é só escrever as etapas na ordem, e o desenho se monta sozinho."
+                        ? "Comece por uma pasta para o processo (ex.: “Admissão”), no pé da coluna."
                         : `Peça à coordenação de ${setorRotulo} para criar o primeiro fluxo.`
                       : "Escolha um fluxo na coluna ao lado, ou crie um com “+ Fluxo” dentro de uma pasta."
                   }

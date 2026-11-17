@@ -35,11 +35,10 @@ import { decisaoDaLinha, descricaoDaAcao, EXPLICACAO_DO_SO_SUGERE } from "@/lib/
 import { regrasDaEmpresa, regrasDesfeitas } from "@/lib/financeiro/conciliacao/regrasServidor";
 import { empresaLidaDoOmie } from "@/lib/integracoes/omie/viradaServidor";
 import { ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
-import { TIPOS_COM_PORTA_PROPRIA, ajudaDoTipo, ehContaForaDoCaixa, rotuloDoTipo, temExtrato, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
+import { TIPOS_COM_PORTA_PROPRIA, ehContaForaDoCaixa, rotuloDoTipo, temExtrato, type TipoDeConta } from "@/lib/financeiro/tiposDeConta";
 import { BANCO_SEM_EXTRATO } from "@/lib/financeiro/conciliacao/conta";
 import { nomeDaContaBancaria } from "@/lib/financeiro/contaPrevista";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +98,6 @@ export default async function ConciliacaoPage({
   const cabecalho = (
     <PageHeader
       title="Conciliação bancária"
-      subtitle="O extrato do banco contra os lançamentos: o que já foi pago, o que falta lançar e se o saldo fecha."
     />
   );
 
@@ -161,7 +159,6 @@ export default async function ConciliacaoPage({
           pendências e no resto do app (08/10/2026) — ficava ao lado do h2. */}
       <PageHeader
         title="Conciliação bancária"
-        subtitle="O extrato do banco contra os lançamentos: o que já foi pago, o que falta lançar e se o saldo fecha."
         action={podeAgir ? <ContaBancariaForm companyId={companyId} /> : undefined}
       />
       {filtroDaEmpresa}
@@ -249,10 +246,8 @@ export default async function ConciliacaoPage({
         <Card className="p-4">
           <p className="text-ui font-semibold text-fg">{conta.nickname}</p>
           <p className="mt-1 text-helper text-fg-secondary">
-            {rotuloDoTipo(conta.type)} não tem extrato a conciliar: o saldo é o inicial mais as baixas feitas por ela. Ela entra numa conta a pagar ou a
-            receber em “Saiu da conta” / “Entrou na conta”, e o dinheiro anda entre ela e o banco pela transferência, na linha do extrato do banco.
+            {rotuloDoTipo(conta.type)} não tem extrato a conciliar.
           </p>
-          {ajudaDoTipo(conta.type) && <p className="mt-1 text-helper text-fg-muted">{ajudaDoTipo(conta.type)}</p>}
         </Card>
       )}
     </PageContainer>
@@ -710,13 +705,6 @@ async function ExtratoDaConta({
           </>
         )}
       </CascoDaTabela>
-      <NotaDeFonte>
-        A sugestão aparece só quando um lançamento de mesmo valor se destaca pela data e pelo nome — nada é conciliado
-        sem confirmação. Conciliar marca os lançamentos como pagos na data do extrato; desfazer devolve o estado anterior.
-        Em conta ligada ao Omie, a linha que bate no valor e no dia com uma única baixa já conciliada lá sai da fila
-        sozinha, como “Conciliada no Omie”. As regras de conciliação da empresa aparecem na linha que pegam; a que está em
-        “lançar sozinha” lança na importação do extrato quando não há dúvida.
-      </NotaDeFonte>
     </>
   );
 }

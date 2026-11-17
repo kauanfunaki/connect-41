@@ -22,13 +22,13 @@ export function CamposDosEncargos({ valores, prefixo = "", desabilitado = false 
   const nome = (c: string) => (prefixo ? `${prefixo}${c.charAt(0).toUpperCase()}${c.slice(1)}` : c);
   return (
     <FieldGrid columns="sm:grid-cols-3">
-      <CampoForm label="Multa" htmlFor={`${id}-multa`} helper="Uma vez, no pagamento depois do vencimento.">
+      <CampoForm label="Multa" htmlFor={`${id}-multa`} dica="Uma vez, no pagamento depois do vencimento.">
         <Input id={`${id}-multa`} name={nome("multa")} inputMode="decimal" suffix="%" defaultValue={valores.multa} placeholder="Ex.: 2" disabled={desabilitado} />
       </CampoForm>
-      <CampoForm label="Juros ao mês" htmlFor={`${id}-juros`} helper="Simples, por dia corrido de atraso (mês de 30 dias).">
+      <CampoForm label="Juros ao mês" htmlFor={`${id}-juros`} dica="Simples, por dia corrido de atraso (mês de 30 dias).">
         <Input id={`${id}-juros`} name={nome("juros")} inputMode="decimal" suffix="%" defaultValue={valores.juros} placeholder="Ex.: 1" disabled={desabilitado} />
       </CampoForm>
-      <CampoForm label="Desconto" htmlFor={`${id}-desconto`} helper="Opcional, no pagamento até o vencimento.">
+      <CampoForm label="Desconto" htmlFor={`${id}-desconto`} dica="No pagamento até o vencimento.">
         <Input id={`${id}-desconto`} name={nome("desconto")} inputMode="decimal" suffix="%" defaultValue={valores.desconto} placeholder="Ex.: 5" disabled={desabilitado} />
       </CampoForm>
     </FieldGrid>

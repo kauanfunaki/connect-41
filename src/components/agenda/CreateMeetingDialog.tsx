@@ -95,7 +95,7 @@ export function CreateMeetingDialog({ action, initialStart, initialEnd, hasGoogl
                 placeholder="Buscar empresa…"
               />
             </CampoForm>
-            <CampoForm label="Cliente(s)" htmlFor="clientName" helper="Separe por vírgula, se houver mais de um">
+            <CampoForm label="Cliente(s)" htmlFor="clientName" dica="Separe por vírgula, se houver mais de um.">
               <Input id="clientName" name="clientName" placeholder="Ex: Bruno, Maria" />
             </CampoForm>
           </div>

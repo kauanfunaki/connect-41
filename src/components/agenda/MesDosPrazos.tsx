@@ -214,7 +214,7 @@ export function MesDosPrazos({ days, monthKey, prazos, meetings, actions, hoje, 
         </div>
         {prazosAbertos.length === 0 && reunioesAbertas.length === 0 ? (
           <p className="px-4 py-5 text-body text-fg-muted">
-            Nada neste dia nas fontes ligadas. Escolha outro dia no calendário — as setas do teclado também andam.
+            Nada neste dia nas fontes ligadas.
           </p>
         ) : (
           <ul className="divide-y divide-border px-4 pb-3">

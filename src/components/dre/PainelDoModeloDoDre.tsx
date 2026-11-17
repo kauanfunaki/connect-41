@@ -67,11 +67,6 @@ export function PainelDoModeloDoDre({ companyId, modelo, podeTrocar, aberto, onF
     <>
       <SlideOver open={aberto} onClose={fechar} title="Modelo do DRE desta empresa" width="max-w-xl" fundo="leve">
         <div className="flex flex-col gap-4 px-5 py-4 overflow-y-auto">
-          <p className="text-ui text-fg-secondary">
-            A visualização do DRE depende do cliente. O modelo vale para esta empresa em todas as telas da DRE: o mês, o
-            ano, a DRE econômica, as análises, o orçamento e a exportação.
-          </p>
-
           <RadioGroup<CodigoDoModelo>
             legenda="Modelo"
             legendaOculta

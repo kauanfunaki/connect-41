@@ -7,6 +7,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
+import { AjudaDoCampo } from "@/components/ui/CampoForm";
 import { Input } from "@/components/ui/Input";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -115,7 +116,7 @@ export function PainelDeClassificacao({ raiz, cnpjEmpresa, competencia, produtos
     {verRegra && <RegraPorCfop grupos={porCfop} ativo={cfop} escolher={(c) => { setCfop(c === cfop ? "" : c); setVerRegra(false); reiniciar(); }} />}
 
     <p className="text-helper text-fg-secondary">
-      {contagem(visiveis.length)} produto(s) · {reaisDeCentavos(icmsVisivel)} de ICMS · do maior valor para o menor. Clique num produto para decidir.
+      {contagem(visiveis.length)} produto(s) · {reaisDeCentavos(icmsVisivel)} de ICMS · do maior valor para o menor.
     </p>
 
     <div className="c41-tabela overflow-x-auto rounded-lg border border-border bg-surface">
@@ -178,7 +179,7 @@ function Destinacao({ p }: { p: ProdutoNaTela }) {
 /** A regra em vigor por CFOP: poucas linhas, cada uma valendo muitos itens. O clique filtra a lista. */
 function RegraPorCfop({ grupos, ativo, escolher }: { grupos: GrupoPorCfop[]; ativo: string; escolher: (cfop: string) => void }) {
   return <div className="rounded-lg border border-border bg-surface-2 p-3">
-    <p className="mb-2 px-1 text-helper text-fg-secondary">A destinação que o de-para deu a cada CFOP neste arquivo, do maior ICMS para o menor. Escolha um CFOP para ver só os produtos dele.</p>
+    <p className="mb-2 px-1 text-helper text-fg-secondary">A destinação que o de-para deu a cada CFOP neste arquivo, do maior ICMS para o menor.</p>
     <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
       {grupos.map((g) => <button key={`${g.cfop}-${g.tipoItem}`} type="button" onClick={() => escolher(g.cfop)} aria-pressed={ativo === g.cfop}
         className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-left transition-colors ${ativo === g.cfop ? "border-brand bg-brand-subtle" : "border-border bg-surface hover:bg-surface-hover"}`}>
@@ -293,12 +294,14 @@ function EditarProduto({ produto, fechar, raiz, cnpjEmpresa, competencia, permis
         opcoes={DESTINACOES_OFERECIDAS.map((t) => ({ valor: t, rotulo: rotuloDoTipo(t), descricao: t === produto.tipoItem && !decidido(produto) ? "A que o arquivo trouxe pelo CFOP" : undefined }))} />
 
       <div className="space-y-1.5">
-        <label htmlFor="sped-definicao" className="c41-rotulo">Definição do CFOP de entrada</label>
+        <span className="flex items-center gap-1.5">
+          <label htmlFor="sped-definicao" className="c41-rotulo">Definição do CFOP de entrada</label>
+          <AjudaDoCampo rotulo="Definição do CFOP de entrada" texto="O gerador monta o CFOP com o prefixo da operação e este final. Vale para o produto em todas as competências." />
+        </span>
         <Select id="sped-definicao" value={definicao} disabled={desabilitado} onChange={(e) => setDefinicao(e.target.value)}>
           <option value="">Manter a do de-para</option>
           {DEFINICOES_DE_CFOP.map((d) => <option key={d.valor} value={d.valor}>x{d.valor} · {d.rotulo}</option>)}
         </Select>
-        <p className="text-helper text-fg-muted">O gerador monta o CFOP com o prefixo da operação e este final. Vale para o produto em todas as competências.</p>
       </div>
 
       <div className="space-y-1.5">
@@ -308,9 +311,11 @@ function EditarProduto({ produto, fechar, raiz, cnpjEmpresa, competencia, permis
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="sped-credito" className="c41-rotulo">Crédito de ICMS em {competencia}</label>
+        <span className="flex items-center gap-1.5">
+          <label htmlFor="sped-credito" className="c41-rotulo">Crédito de ICMS em {competencia}</label>
+          <AjudaDoCampo rotulo={`Crédito de ICMS em ${competencia}`} texto="Só desta competência e deste estabelecimento. Zero tira o crédito do produto." />
+        </span>
         <Input id="sped-credito" inputMode="decimal" placeholder={`Vazio: o do arquivo (${decimalDeCentavos(produto.icms)})`} value={credito} disabled={desabilitado} onChange={(e) => setCredito(e.target.value)} />
-        <p className="text-helper text-fg-muted">Só desta competência e deste estabelecimento. Zero tira o crédito do produto.</p>
       </div>
 
       <div className="space-y-1.5">

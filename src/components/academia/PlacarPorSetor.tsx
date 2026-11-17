@@ -12,7 +12,6 @@ import type { PlacarNaTela } from "@/lib/academia/tipos";
  */
 export function PlacarPorSetor({ placar }: { placar: PlacarNaTela }) {
   const { teste, mes, linhas } = placar;
-  const regra = `A média do número de cada pessoa do setor em ${mesPorExtensoLongo(mes)} (o mesmo do ranking geral). Só entram os setores com pelo menos ${MINIMO_DE_PESSOAS_NO_PLACAR} pessoas no mês.`;
   if (placar.foraDoRanking) {
     return (
       <p className="rounded-lg border border-border bg-surface p-4 text-ui text-fg-muted shadow-xs">
@@ -26,7 +25,6 @@ export function PlacarPorSetor({ placar }: { placar: PlacarNaTela }) {
         <h2 id="placar-titulo" className="text-body font-semibold text-fg">
           Placar por setor em {ROTULO_DO_TESTE[teste]} · {mesPorExtensoLongo(mes)}
         </h2>
-        <p className="text-helper text-fg-muted">{regra}</p>
       </div>
       {linhas.length === 0 ? (
         <EmptyState icon={<Users />} title="Nenhum setor no placar ainda" description={`Um setor entra quando ${MINIMO_DE_PESSOAS_NO_PLACAR} pessoas dele fazem o teste valendo no mês.`} />

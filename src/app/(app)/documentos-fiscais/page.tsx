@@ -66,13 +66,6 @@ export default async function DocumentosFiscaisPage({
   const cabecalho = (
     <PageHeader
       title="Documentos fiscais"
-      subtitle={
-        <>
-          NF-e, NFC-e e NFS-e por empresa e competência. O acervo espelha o que já foi
-          emitido — nada é emitido aqui. <strong>CT-e não entra no acervo</strong>: são milhões
-          por mês e vêm sem valor apurado, então ficam na consulta ao vivo.
-        </>
-      }
       action={
         <div className="flex flex-wrap items-center gap-2">
           <Button href="/documentos-fiscais/cte" variant="secondary">
@@ -161,7 +154,7 @@ export default async function DocumentosFiscaisPage({
           <EmptyState
             icon={<FileText />}
             title="Nenhum documento desta empresa no acervo"
-            description="Os documentos chegam pela sincronização com o SPED ou pela entrada de XML. Enquanto a ponte com o SPED não estiver ligada, use a entrada manual."
+            description="Os documentos chegam pela sincronização com o SPED ou pela entrada de XML."
           />
         </Card>
       ) : (

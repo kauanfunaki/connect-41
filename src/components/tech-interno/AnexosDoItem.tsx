@@ -39,7 +39,7 @@ export function AnexosDoItem({ itemId, anexos, podeEditar }: { itemId: string; a
     </div>
     {enviando && <EnvioDeArquivos url={URL_DOS_ANEXOS} campos={{ itemId }} onCancelar={() => setEnviando(false)}
       onTerminou={ids => { if (ids.length) router.refresh(); }} dica="Imagens, PDF, Word, Excel, ZIP ou texto, até 10 MB cada." />}
-    {!anexos.length && !enviando && <p className="text-helper text-fg-muted">Nenhum anexo. Prints de tela e PDFs ajudam a entender o item.</p>}
+    {!anexos.length && !enviando && <p className="text-helper text-fg-muted">Nenhum anexo.</p>}
     {imagens.length > 0 && <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2" aria-label="Imagens">
       {imagens.map(a => <li key={a.id} className="group relative min-w-0 overflow-hidden rounded-md border border-border bg-surface-2">
         <a href={abrir(a.id)} target="_blank" rel="noopener noreferrer" className="block aspect-video" title={a.fileName}>

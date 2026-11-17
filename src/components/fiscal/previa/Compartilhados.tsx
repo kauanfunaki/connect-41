@@ -116,10 +116,10 @@ export function TabelaFiscal({ colunas, linhas: todas, vazio = "Nenhum item nest
   </>;
 }
 /** O rótulo do campo é o do `CampoForm` (15/10/2026); era um <label> à mão. O `erro` vai para a mensagem do `CampoForm`, não para o rótulo (26/10/2026). */
-export function CampoFiscal({ nome, children, className, erro }: { nome: string; children: ReactNode; className?: string; erro?: string }) {
+export function CampoFiscal({ nome, children, className, erro, dica }: { nome: string; children: ReactNode; className?: string; erro?: string; dica?: string }) {
   const id = useId();
   const campo = isValidElement(children) ? cloneElement(children as ReactElement<{ id?: string }>, { id }) : children;
-  return <CampoForm label={nome} htmlFor={id} className={className} error={erro}>{campo}</CampoForm>;
+  return <CampoForm label={nome} htmlFor={id} className={className} error={erro} dica={dica}>{campo}</CampoForm>;
 }
 export function AcoesFiscais({ children }: { children: ReactNode }) { return <div className="flex flex-wrap items-center gap-2">{children}</div>; }
 /** As etapas da extração (`step_types` do motor) em português; a tela mostrava `first_mile` e `last_mile` (26/10/2026). */

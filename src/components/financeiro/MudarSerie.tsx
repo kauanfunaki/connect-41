@@ -133,19 +133,19 @@ function Formulario({
         <CampoForm
           label="Valor novo"
           htmlFor={`${id}-valor`}
-          helper={conta.kind === "PAGAR" ? "Conta aprovada que muda de valor volta para a aprovação." : undefined}
+          dica={conta.kind === "PAGAR" ? "Conta aprovada que muda de valor volta para a aprovação." : undefined}
         >
           <Input id={`${id}-valor`} name="valor" prefix="R$" inputMode="decimal" placeholder={`Manter (${conta.valor})`} />
         </CampoForm>
         <CampoForm
           label="Dia do vencimento"
           htmlFor={`${id}-dia`}
-          helper={
-            dados.dia.pode
-              ? // A série antiga, sem regra (22/10/2026), diz como o dia novo vai ser aplicado.
-                `Hoje, dia ${conta.dia}. ${dados.dia.aviso ?? "No mês sem esse dia, o último; fim de semana e feriado se ajustam como a série."}`
-              : dados.dia.motivo
-          }
+          // O dia de hoje fica embaixo; a regra fixa vai na dica e o motivo
+          // da trava no cadeado (17/11/2026, melhoria-707). A série antiga, sem
+          // regra (22/10/2026), diz como o dia novo vai ser aplicado.
+          helper={dados.dia.pode ? `Hoje, dia ${conta.dia}.${dados.dia.aviso ? ` ${dados.dia.aviso}` : ""}` : undefined}
+          dica={dados.dia.pode && !dados.dia.aviso ? "No mês sem esse dia, o último; fim de semana e feriado se ajustam como a série." : undefined}
+          travado={dados.dia.pode ? undefined : dados.dia.motivo}
         >
           <CampoNumero id={`${id}-dia`} name="dia" min={1} max={31} placeholder="Manter" disabled={!dados.dia.pode} />
         </CampoForm>

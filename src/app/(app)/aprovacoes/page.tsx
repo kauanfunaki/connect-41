@@ -78,7 +78,6 @@ export default async function AprovacoesPage({
     <PageContainer>
       <PageHeader
         title="Aprovações"
-        subtitle="Contas a pagar que esperam o “pode pagar” do cliente ou da coordenação. Aguardando e reprovada não são baixadas."
         action={aba === "alcadas" ? <NovaAlcada companyId={empresaId} usuarios={usuariosDaAlcada} /> : undefined}
       />
       {/* Aba das Solicitações desde 21/10/2026, quando elas estão ligadas: a
@@ -249,7 +248,7 @@ async function Fila({
           <EmptyState
             icon={<ShieldCheck />}
             title="Nada esperando decisão"
-            description="Contas a pagar lançadas em empresas com alçada entram aqui sozinhas. Uma conta antiga pode ser enviada pela tela de contas a pagar."
+            description="Contas a pagar lançadas em empresas com alçada entram aqui sozinhas."
           />
         ) : (
           <>

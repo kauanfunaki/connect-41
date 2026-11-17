@@ -14,6 +14,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
+import { ResumoExClientes } from "@/components/honorarios/ExClientes";
 import { TabelaDeHonorarios } from "@/components/honorarios/TabelaDeHonorarios";
 import { QuadroDoAcessorias } from "@/components/honorarios/QuadroDoAcessorias";
 import { HistoricoDeEnvios } from "@/components/honorarios/HistoricoDeEnvios";
@@ -104,6 +105,8 @@ export default async function HonorariosPage({ searchParams }: { searchParams: P
               },
             ]}
           />
+
+          <ResumoExClientes exClientes={resumo.exClientes} />
 
           <CascoDaTabela
             contagem={contarItens(filtradas.length, "empresa", "empresas")}

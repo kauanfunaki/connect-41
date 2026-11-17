@@ -274,7 +274,7 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
         <CampoForm label="Nome do fluxo" htmlFor="titulo-do-fluxo" required error={erro?.campo === "titulo-do-fluxo" ? erro.mensagem : undefined}>
           <Input id="titulo-do-fluxo" value={titulo} maxLength={160} onChange={(e) => { setTitulo(e.target.value); setErro(null); }} error={erro?.campo === "titulo-do-fluxo"} />
         </CampoForm>
-        <CampoForm label="Dono" htmlFor="dono-do-fluxo" helper="Quem responde pelo processo no setor." error={erro?.campo === "dono" ? erro.mensagem : undefined}>
+        <CampoForm label="Dono" htmlFor="dono-do-fluxo" dica="Quem responde pelo processo no setor." error={erro?.campo === "dono" ? erro.mensagem : undefined}>
           <Select id="dono-do-fluxo" value={donoId} onChange={(e) => setDonoId(e.target.value)}>
             <option value="">Sem dono</option>
             {pessoas.map((p) => (
@@ -284,7 +284,7 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
             ))}
           </Select>
         </CampoForm>
-        <CampoForm label="Revisado em" htmlFor="revisado-em" helper="Hoje, ao salvar a versão." error={erro?.campo === "revisado" ? erro.mensagem : undefined}>
+        <CampoForm label="Revisado em" htmlFor="revisado-em" dica="Hoje, ao salvar a versão." error={erro?.campo === "revisado" ? erro.mensagem : undefined}>
           <CampoData id="revisado-em" value={revisadoEm} onChange={setRevisadoEm} max={hojeIso()} />
         </CampoForm>
       </Card>
@@ -360,9 +360,6 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
               <Square size={14} /> Fim
             </Button>
           </div>
-          <p className="text-fs-2 text-fg-muted">
-            Sem destino escolhido, cada etapa segue para a seguinte da lista. Uma <strong className="font-semibold">volta</strong> é uma etapa que segue para uma de cima — o desenho a mostra tracejada.
-          </p>
         </Card>
 
         <Card as="section" aria-labelledby="desenho-ao-vivo" className="flex min-w-0 flex-col gap-3 p-4 lg:sticky lg:top-4">
@@ -388,7 +385,6 @@ export function EditorDoFluxo({ fluxo, pessoas, setores, telas, setorDaTela, rot
         <h3 id="metodologia-editando" className="text-section font-semibold text-fg">
           Metodologia
         </h3>
-        <p className="text-fs-2 text-fg-muted">Como o setor toca este processo e por quê: o que o desenho não conta.</p>
         <RichTextEditor
           defaultValue={fluxo.metodologia ?? ""}
           onChange={(html) => {
@@ -615,7 +611,7 @@ function EtapaEditavel({
         )}
 
         {(e.tipo === "etapa" || e.tipo === "inicio") && (
-          <CampoForm label="Depois vai para" htmlFor={`proxima-${c}`} helper="Uma etapa de cima vira uma volta, tracejada no desenho." error={erroNo("proxima")}>
+          <CampoForm label="Depois vai para" htmlFor={`proxima-${c}`} dica="Uma etapa de cima vira uma volta, tracejada no desenho." error={erroNo("proxima")}>
             <Select id={`proxima-${c}`} value={e.proxima ?? ""} error={!!erroNo("proxima")} onChange={(ev) => aoMudar({ proxima: ev.target.value || undefined })}>
               <option value="">{seguinte ? `A seguinte da lista (${nomeCurtoDaEtapa(seguinte, numeros)})` : "Escolha (é a última da lista)"}</option>
               {outras.map((x) => (
@@ -658,17 +654,17 @@ function EtapaEditavel({
               <Input id={`prazo-${c}`} value={e.prazo ?? ""} maxLength={LIMITES_DO_FLUXO.texto} placeholder="Ex.: Até 1 dia antes do início" onChange={(ev) => aoMudar({ prazo: ev.target.value })} />
             </CampoForm>
             <div className="grid gap-4 sm:grid-cols-2">
-              <CampoForm label="Entra" htmlFor={`entra-${c}`} helper="O que precisa para começar." error={erroNo("entra")}>
+              <CampoForm label="Entra" htmlFor={`entra-${c}`} dica="O que precisa para começar." error={erroNo("entra")}>
                 <Textarea id={`entra-${c}`} rows={2} value={e.entra ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ entra: ev.target.value })} />
               </CampoForm>
-              <CampoForm label="Sai" htmlFor={`sai-${c}`} helper="O que resulta." error={erroNo("sai")}>
+              <CampoForm label="Sai" htmlFor={`sai-${c}`} dica="O que resulta." error={erroNo("sai")}>
                 <Textarea id={`sai-${c}`} rows={2} value={e.sai ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ sai: ev.target.value })} />
               </CampoForm>
             </div>
             <CampoForm label="Se der erro" htmlFor={`seDerErro-${c}`} error={erroNo("seDerErro")}>
               <Textarea id={`seDerErro-${c}`} rows={2} value={e.seDerErro ?? ""} maxLength={LIMITES_DO_FLUXO.texto} onChange={(ev) => aoMudar({ seDerErro: ev.target.value })} />
             </CampoForm>
-            <CampoForm label="Tela no Connect" htmlFor={`tela-${c}`} helper="Onde a etapa se faz. Quem lê o fluxo abre a tela por um link." error={erroNo("tela")}>
+            <CampoForm label="Tela no Connect" htmlFor={`tela-${c}`} dica="Onde a etapa se faz. Quem lê o fluxo abre a tela por um link." error={erroNo("tela")}>
               <Select id={`tela-${c}`} busca value={e.tela ?? ""} error={!!erroNo("tela")} onChange={(ev) => aoMudar({ tela: ev.target.value || undefined })}>
                 <option value="">Nenhuma</option>
                 {telas.map((t) => (

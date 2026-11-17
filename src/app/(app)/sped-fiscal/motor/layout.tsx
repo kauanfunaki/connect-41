@@ -15,13 +15,11 @@ import { PageContainer } from "@/components/shared/PageContainer";
 export default async function FiscalLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getAuthContext();
   const modo = await modoDoFiscal(ctx);
-  if (modo === "motor") return <PageContainer>
-    {children}
-    <p className="mt-7 text-helper text-fg-muted">Dados do motor SPED. Gerações e validações rodam nos agentes do motor; o Connect só envia pedidos e consulta.</p>
-  </PageContainer>;
+  // A nota fixa do pé ("Dados do motor SPED…") foi para o artigo de ajuda (17/11/2026, melhoria-707).
+  if (modo === "motor") return <PageContainer>{children}</PageContainer>;
   const estados = await getTenantModuleStates(ctx.tenantId);
   const modulos = estados.filter((m) => m.enabled && canViewSector(ctx, m.sectorCodes)).map((m) => m.code);
   const inicial = modo === "local" ? await lerEstadoFiscalLocal(ctx) : null;
-  if (!inicial) return <PageContainer><EmptyState title="Processamento fiscal indisponível" description="O motor SPED ainda precisa ser conectado. Os dados de demonstração ficam disponíveis somente no banco local de testes." /></PageContainer>;
+  if (!inicial) return <PageContainer><EmptyState title="Processamento fiscal indisponível" description="O motor SPED ainda precisa ser conectado." /></PageContainer>;
   return <ContextoFiscalProvider key={`${ctx.tenantId}:${ctx.userId}`} tenantId={ctx.tenantId} userId={ctx.userId} inicial={inicial} modulos={modulos} integrado={modulos.includes("fiscal_documentos")}>{children}</ContextoFiscalProvider>;
 }

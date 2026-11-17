@@ -155,7 +155,7 @@ export default async function SenhasPage({ searchParams }: { searchParams: Promi
       {/* Sem "Voltar" (08/10/2026): é página principal, aberta pelo menu. */}
       <PageHeader
         title="Repositório de senhas"
-        subtitle={`As credenciais de ${apoio.rotulo}: portais, bancos e sistemas, com cada acesso registrado.`}
+        subtitle={apoio.rotulo}
         action={
           // Para todo mundo que usa o Repositório do setor (10/11/2026): quem não
           // coordena cadastra só a pessoal.

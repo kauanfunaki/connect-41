@@ -207,10 +207,7 @@ export default async function EnvioPage({
 
           {canManage && publicado && (
             <Card className="p-5">
-              <h2 className="text-section font-semibold text-fg mb-1">Enviar por e-mail</h2>
-              <p className="text-fs-2 text-fg-muted mb-4">
-                Cada e-mail leva um link próprio para a página do documento, com a mesma prova de leitura e aceite do portal.
-              </p>
+              <h2 className="text-section font-semibold text-fg mb-4">Enviar por e-mail</h2>
               <SendDocumentForm
                 action={enviarDocumento}
                 documentId={document.id}
@@ -225,9 +222,6 @@ export default async function EnvioPage({
         <div className="space-y-5">
           <Card className="p-5">
             <h2 className="text-section font-semibold text-fg mb-1">Prova de recebimento</h2>
-            <p className="text-fs-2 text-fg-muted">
-              Cada abertura — pelo portal ou pelo link do e-mail — e cada download do anexo ficam registrados com data/hora e IP.
-            </p>
             {/* O comprovante em PDF (22/10/2026): a mesma prova, num papel para guardar ou mandar. */}
             <div className="mt-3">
               <Button href={`/solicitacoes/envios/${document.id}/comprovante`} download variant="secondary" size="sm">

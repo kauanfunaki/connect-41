@@ -191,15 +191,11 @@ export function LancamentoCard({
         </p>
       ) : (
         <>
-          <p className="text-helper text-fg-muted mb-4">
-            Vira conta <span className="font-medium text-fg">{direcao === "PAGAR" ? "a pagar" : "a receber"}</span> da
-            empresa. Nasce como <span className="font-medium text-fg">provisório</span> — alguém confere depois.
-          </p>
           <FieldGrid>
             <CampoForm
               label="Categoria"
               htmlFor="categoria"
-              helper={
+              dica={
                 direcao === "PAGAR"
                   ? "Obrigatória: despesa sem classificação não fecha o DRE. Fica como padrão desta contraparte."
                   : "Opcional no recebimento."
@@ -235,7 +231,7 @@ export function LancamentoCard({
               <CampoForm
                 label="Centro de custo"
                 htmlFor="centro-de-custo"
-                helper="Opcional. Em branco, vale o centro padrão da contraparte, se houver."
+                dica="Opcional. Em branco, vale o centro padrão da contraparte, se houver."
               >
                 <Select id="centro-de-custo" value={centroId} onChange={(e) => setCentroId(e.target.value)}>
                   <option value="">Padrão da contraparte / sem centro</option>
