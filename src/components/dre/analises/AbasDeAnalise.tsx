@@ -286,7 +286,7 @@ export async function AbaComparativos({
           {filtros}
           <EmptyState
             title={`Sem orçamento aprovado para ${ano}`}
-            description="O comparativo usa a versão aprovada do ano. Crie e aprove uma versão em Orçamento."
+            description="O comparativo usa a versão aprovada do ano."
             action={
               <Button href={`/dre/orcamento?empresa=${companyId}&ano=${ano}`} variant="secondary" size="sm">
                 <Target size={14} /> Abrir orçamento

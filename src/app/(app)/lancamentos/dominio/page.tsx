@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { EmpresaDaTela } from "@/components/empresas/EmpresaDaTela";
@@ -57,7 +57,6 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
   const cabecalho = (
     <PageHeader
       title="Exportar as baixas"
-      subtitle="As baixas do mês — o que foi pago e recebido, contra o banco — numa planilha para o sistema contábil (no layout de importação da Domínio)."
       action={
         <Button href={`/lancamentos${companyId ? `?empresa=${companyId}&mes=${mes}` : ""}`} variant="ghost" size="sm">
           <ArrowLeft size={14} /> Lançamentos
@@ -324,15 +323,27 @@ export default async function ExportacaoDominioPage({ searchParams }: { searchPa
         <h2 className="text-section font-semibold text-fg mt-8 mb-3">De-para da empresa</h2>
         <DeParaDaDominio companyId={companyId} codigoFilial={r.codigoFilial} grupos={grupos} podeEditar={podeEditar} />
 
-        <NotaDeFonte>
-          O layout é o mesmo da planilha de notas do SPED Generator (aba Planilha1, as dez colunas da Domínio): importe pela importação
-          de lançamentos da Domínio, uma vez por mês e empresa. Entram só as baixas — a provisão das notas de compra continua vindo do
-          SPED Generator. Pagamento: débito na conta do fornecedor (se tiver no de-para) ou da categoria, crédito no banco; recebimento,
-          o contrário. Juros e multa vão na categoria de encargos da baixa, e o desconto na de desconto. A baixa com alguma conta
-          faltando fica inteira fora do arquivo. O código do histórico vai vazio, e o complemento diz a baixa. Toda planilha baixada
-          fica registrada: depois da primeira, a correção leva só o que mudou — as baixas novas e o estorno (débito e crédito
-          trocados, na mesma data) das que saíram ou mudaram. Planilhas baixadas antes de 28/10/2026 não ficaram registradas.
-        </NotaDeFonte>
+        {/* As regras da planilha num bloco fechado, no lugar da nota de rodapé
+            (17/11/2026, melhoria-707): é referência para quem confere a Domínio. */}
+        <BlocoRecolhivel titulo="Como a planilha é montada" resumo="layout, contas e correção" className="mt-6 bg-surface">
+          <div className="space-y-2 text-fs-3 text-fg-secondary">
+            <p>
+              O layout é o mesmo da planilha de notas do SPED Generator (aba Planilha1, as dez colunas da Domínio): importe pela importação
+              de lançamentos da Domínio, uma vez por mês e empresa. Entram só as baixas — a provisão das notas de compra continua vindo do
+              SPED Generator.
+            </p>
+            <p>
+              Pagamento: débito na conta do fornecedor (se tiver no de-para) ou da categoria, crédito no banco; recebimento, o contrário.
+              Juros e multa vão na categoria de encargos da baixa, e o desconto na de desconto. A baixa com alguma conta faltando fica
+              inteira fora do arquivo. O código do histórico vai vazio, e o complemento diz a baixa.
+            </p>
+            <p>
+              Toda planilha baixada fica registrada: depois da primeira, a correção leva só o que mudou — as baixas novas e o estorno
+              (débito e crédito trocados, na mesma data) das que saíram ou mudaram. Planilhas baixadas antes de 28/10/2026 não ficaram
+              registradas.
+            </p>
+          </div>
+        </BlocoRecolhivel>
       </PageContainer>
     </EmpresaDaTela>
   );

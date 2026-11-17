@@ -375,7 +375,7 @@ export function FormLancamentoManual({
               htmlFor="lancamento-categoria"
               required={kind === "PAGAR"}
               className="sm:col-span-2"
-              helper={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
+              dica={kind === "PAGAR" ? "Obrigatória em conta a pagar — despesa sem classificação não fecha o DRE." : undefined}
               acao={
                 <Button type="button" variant="link" className="text-helper" onClick={() => setRateando(true)}>
                   Ratear
@@ -442,11 +442,7 @@ export function FormLancamentoManual({
             {retido > 0 && (
               <p className="text-helper text-fg-secondary">
                 Bruto {formatarReaisDeCentavos(centavosDeTexto(valorTexto) ?? 0)} − retido {formatarReaisDeCentavos(retido)} ={" "}
-                <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}</strong> a pagar ao fornecedor. As
-                contas dos impostos nascem junto.
-                {/* Lote M1 do mercado (23/10/2026): rateio e parcelas são digitados sobre o bruto. */}
-                {parcelando && " As parcelas somam o bruto; cada uma fica com a parte dela das retenções e paga o líquido dela."}
-                {rateando && " O rateio fecha o bruto; a conta guarda as linhas na proporção do líquido."}
+                <strong className="text-fg">{formatarReaisDeCentavos((centavosDeTexto(valorTexto) ?? 0) - retido)}</strong> a pagar ao fornecedor.
               </p>
             )}
           </CamposDasRetencoes>
@@ -460,7 +456,7 @@ export function FormLancamentoManual({
               helper={
                 lido
                   ? `O boleto lido (${lido.arquivo.name}) já vai anexado. Junte outros, se quiser — até 10 MB no total.`
-                  : "PDF, PNG, JPG ou XML — até 10 MB no total."
+                  : undefined
               }
             >
               <CampoDeAnexos idBase="lancamento-anexos" />
@@ -485,18 +481,18 @@ export function FormLancamentoManual({
             </span>
           </button>
           <div id="lancamento-mais-detalhes" className={`${maisDetalhes ? "grid" : "hidden"} gap-4 border-t border-border px-3 py-3 sm:grid-cols-2 lg:grid-cols-3`}>
-            <CampoForm label="Competência" htmlFor="lancamento-competencia" required helper="O mês a que a conta pertence — é o que a DRE econômica soma.">
+            <CampoForm label="Competência" htmlFor="lancamento-competencia" required dica="O mês a que a conta pertence — é o que a DRE econômica soma.">
               <CampoMes id="lancamento-competencia" name="competencia" defaultValue={competenciaPadrao} required />
             </CampoForm>
             {/* A data de previsão (lote D, 20/10): o fluxo de caixa projeta por ela. */}
-            <CampoForm label="Previsão" htmlFor="lancamento-previsao" helper="Quando deve ser paga de fato. Em branco, o vencimento.">
+            <CampoForm label="Previsão" htmlFor="lancamento-previsao" dica="Quando deve ser paga de fato. Em branco, o vencimento.">
               <CampoData id="lancamento-previsao" name="previsao" />
             </CampoForm>
             {!semCentro && !rateando && (
               <CampoForm
                 label="Centro de custo"
                 htmlFor="lancamento-centro"
-                helper={centroPadrao ? `Em branco, herda o padrão da contraparte: ${centroPadrao.nome}.` : "Opcional. Um centro por lançamento."}
+                dica="Um centro por lançamento. Em branco, herda o padrão da contraparte."
               >
                 <Select id="lancamento-centro" name="costCenterId" defaultValue="">
                   <option value="">{centroPadrao ? `Padrão da contraparte (${centroPadrao.nome})` : "Sem centro de custo"}</option>
@@ -514,11 +510,8 @@ export function FormLancamentoManual({
             <CampoForm
               label="Conta corrente"
               htmlFor="lancamento-conta"
-              helper={
-                contasDoTipo.length === 0
-                  ? "Nenhuma conta bancária nesta empresa (Banco e caixa)."
-                  : `Opcional. Por onde deve ser ${kind === "PAGAR" ? "paga" : "recebida"} — a baixa já vem com ela.`
-              }
+              travado={contasDoTipo.length === 0 ? "Nenhuma conta bancária nesta empresa (Banco e caixa)." : undefined}
+              dica={contasDoTipo.length === 0 ? undefined : `Por onde deve ser ${kind === "PAGAR" ? "paga" : "recebida"} — a baixa já vem com ela.`}
             >
               <Select id="lancamento-conta" name="bankAccountId" defaultValue="" disabled={contasDoTipo.length === 0}>
                 <option value="">{contasDoTipo.length === 0 ? "Nenhuma conta cadastrada" : "Não prevista"}</option>
@@ -530,7 +523,7 @@ export function FormLancamentoManual({
               </Select>
             </CampoForm>
             {/* Emissão e número (19/10, pedidos do BPO): opcionais, como no Omie. */}
-            <CampoForm label="Emissão" htmlFor="lancamento-emissao" helper="Data do documento. Opcional.">
+            <CampoForm label="Emissão" htmlFor="lancamento-emissao" dica="Data do documento.">
               <CampoData key={`emissao-${versao}`} id="lancamento-emissao" name="emissao" max={hojeISO} defaultValue={leitura?.emissaoKey ?? undefined} />
             </CampoForm>
             <CampoForm label="Nº do documento" htmlFor="lancamento-numero">

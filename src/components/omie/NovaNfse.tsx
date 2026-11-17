@@ -303,11 +303,12 @@ export function NovaNfse({
               label="Tomador"
               htmlFor={`${id}-tomador`}
               required
-              helper={`Clientes cadastrados no Omie da empresa.${
+              dica="Clientes cadastrados no Omie da empresa."
+              helper={
                 listas.clientesBloqueados > 0
-                  ? ` ${listas.clientesBloqueados === 1 ? "1 cliente com faturamento bloqueado no Omie ficou" : `${listas.clientesBloqueados} clientes com faturamento bloqueado no Omie ficaram`} de fora.`
-                  : ""
-              }`}
+                  ? `${listas.clientesBloqueados === 1 ? "1 cliente com faturamento bloqueado no Omie ficou" : `${listas.clientesBloqueados} clientes com faturamento bloqueado no Omie ficaram`} de fora.`
+                  : undefined
+              }
             >
               <SearchableSelect
                 key={`tomador-${versaoDoTomador}`}
@@ -345,7 +346,7 @@ export function NovaNfse({
                 </div>
               )}
             </CampoForm>
-            <CampoForm label="Serviço" htmlFor={`${id}-servico`} required helper="Do cadastro de serviços do Omie — é de lá que vêm código municipal, tributação e alíquotas.">
+            <CampoForm label="Serviço" htmlFor={`${id}-servico`} required dica="Do cadastro de serviços do Omie — é de lá que vêm código municipal, tributação e alíquotas.">
               <SearchableSelect
                 id={`${id}-servico`}
                 name="servico"
@@ -364,10 +365,11 @@ export function NovaNfse({
                 <CampoForm
                   label="Código de serviço municipal"
                   htmlFor={`${id}-municipal`}
+                  dica="Opcional. Em branco, vale o que o Omie tiver para o serviço."
                   helper={
                     daUltimaOS?.codigoMunicipal
-                      ? `Opcional. Na OS ${daUltimaOS.numeroOS}, a mais recente com este serviço, foi ${daUltimaOS.codigoMunicipal}.`
-                      : "Opcional. Em branco, vale o que o Omie tiver para o serviço."
+                      ? `Na OS ${daUltimaOS.numeroOS}, a mais recente com este serviço, foi ${daUltimaOS.codigoMunicipal}.`
+                      : undefined
                   }
                   acao={
                     daUltimaOS?.codigoMunicipal && codigoMunicipal !== daUltimaOS.codigoMunicipal ? (
@@ -382,10 +384,11 @@ export function NovaNfse({
                 <CampoForm
                   label="Código da LC 116"
                   htmlFor={`${id}-lc116`}
+                  dica="Opcional, no formato do Omie."
                   helper={
                     daUltimaOS?.codigoLC116
-                      ? `Opcional. Na OS ${daUltimaOS.numeroOS}, a mais recente com este serviço, foi ${daUltimaOS.codigoLC116}.`
-                      : "Opcional, no formato do Omie (ex.: 1.07)."
+                      ? `Na OS ${daUltimaOS.numeroOS}, a mais recente com este serviço, foi ${daUltimaOS.codigoLC116}.`
+                      : undefined
                   }
                   acao={
                     daUltimaOS?.codigoLC116 && codigoLC116 !== daUltimaOS.codigoLC116 ? (
@@ -395,7 +398,7 @@ export function NovaNfse({
                     ) : undefined
                   }
                 >
-                  <Input id={`${id}-lc116`} maxLength={20} value={codigoLC116} onChange={(e) => setCodigoLC116(e.target.value)} />
+                  <Input id={`${id}-lc116`} maxLength={20} placeholder="Ex.: 1.07" value={codigoLC116} onChange={(e) => setCodigoLC116(e.target.value)} />
                 </CampoForm>
               </>
             )}
@@ -408,7 +411,7 @@ export function NovaNfse({
             <CampoForm
               label="Competência"
               htmlFor={`${id}-competencia`}
-              helper="O Omie não recebe competência pela API: a nota sai com a data do faturamento, no mês corrente. Para outra competência, emita pela tela do Omie."
+              travado="O Omie não recebe competência pela API: a nota sai com a data do faturamento, no mês corrente. Para outra competência, emita pela tela do Omie."
             >
               <CampoMes id={`${id}-competencia`} value={competenciaAtual} min={competenciaAtual} max={competenciaAtual} disabled />
             </CampoForm>
@@ -416,7 +419,7 @@ export function NovaNfse({
               label="Descrição do serviço na nota"
               htmlFor={`${id}-descricao`}
               className="sm:col-span-2"
-              helper="Em branco, vale a descrição do serviço no cadastro do Omie."
+              dica="Em branco, vale a descrição do serviço no cadastro do Omie."
             >
               <Textarea id={`${id}-descricao`} rows={3} maxLength={MAXIMO_DA_DESCRICAO} value={descricao} onChange={(e) => setDescricao(e.target.value)} />
             </CampoForm>

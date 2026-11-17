@@ -100,7 +100,6 @@ export default async function ContratosPage({ searchParams }: { searchParams: Pr
     <PageContainer>
       <PageHeader
         title="Contratos e assinaturas"
-        subtitle="O que o escritório paga — softwares, serviços, aluguéis: quanto pesa por mês, quando renova e quem responde."
         action={podeGerir ? <FormularioDoContrato pessoas={pessoas} action={salvarContrato.bind(null, null)} /> : undefined}
       />
       <FaixaDeTotais

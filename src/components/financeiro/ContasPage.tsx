@@ -144,16 +144,13 @@ export async function ContasPage({
   const { escolha, foco, empresasDeTodas } = daTela;
   const empresaId = idDaEscolha(escolha);
   const titulo = aPagar ? "Contas a pagar" : "Contas a receber";
-  const subtitulo = aPagar
-    ? "O que as empresas têm a pagar, do documento fiscal à baixa — pelo valor líquido, já com as retenções."
-    : "O que as empresas têm a receber, do documento fiscal emitido ao recebimento.";
   // Trocar de empresa conserva a aba, a competência e o recorte.
   const filtroDaEmpresa = <FiltroDaEmpresa foco={foco} />;
 
   if (escolha.tipo === "escolher") {
     return (
       <PageContainer>
-        <PageHeader title={titulo} subtitle={subtitulo} />
+        <PageHeader title={titulo} />
         {filtroDaEmpresa}
         <EscolhaAEmpresa escolha={escolha} porQue="Para não carregar as contas de todos os clientes de uma vez, a tela abre numa empresa." />
       </PageContainer>
@@ -296,7 +293,7 @@ export async function ContasPage({
     <PageContainer>
       {/* Sem "Voltar": é página principal do setor, não uma ficha aberta de
           uma lista — o menu é o caminho de volta. */}
-      <PageHeader title={titulo} subtitle={subtitulo} />
+      <PageHeader title={titulo} />
       {filtroDaEmpresa}
       {lidaDoOmie && (
         <Aviso tom="marca" className="mb-4">

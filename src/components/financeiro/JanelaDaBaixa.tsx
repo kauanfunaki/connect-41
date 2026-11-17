@@ -246,6 +246,8 @@ function FormularioDaBaixa({
         <CampoForm
           label={aPagar ? "Saiu da conta" : "Entrou na conta"}
           htmlFor={`${id}-conta`}
+          travado={semConta ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)." : undefined}
+          dica={semConta ? undefined : "É a conta que a conciliação procura."}
           helper={
             peloAdiantamento
               ? `Usa o adiantamento: o banco não se mexe agora — o dinheiro saiu quando se adiantou. Disponível: ${reais(dados.adiantamento!.disponivelCentavos)}.`
@@ -255,11 +257,9 @@ function FormularioDaBaixa({
                   : "Entra na fatura do ciclo da data do pagamento."
                 : outra
                   ? `Fica em ${outra.nome}, fora do caixa: o dinheiro anda quando ela for transferida para o banco (ou do banco para ela).`
-                  : semConta
-                  ? "Nenhuma conta bancária cadastrada nesta empresa (Banco e caixa)."
-                  : contaSugerida && contaSugerida === dados.contaPrevistaId && contaEscolhida === contaSugerida
-                    ? "A prevista no título. É a conta que a conciliação procura."
-                    : "Opcional. É a conta que a conciliação procura."
+                  : !semConta && contaSugerida && contaSugerida === dados.contaPrevistaId && contaEscolhida === contaSugerida
+                    ? "A prevista no título."
+                    : undefined
           }
         >
           <Select
@@ -307,7 +307,8 @@ function FormularioDaBaixa({
           label="Valor da baixa"
           htmlFor={`${id}-valor`}
           required
-          helper={legivel && p > 0 && p < dados.saldoCentavos ? `Parcial: fica ${reais(saldoDepois)} em aberto.` : "Do título. Menos que o saldo é baixa parcial."}
+          helper={legivel && p > 0 && p < dados.saldoCentavos ? `Parcial: fica ${reais(saldoDepois)} em aberto.` : undefined}
+          dica="Vem com o saldo do título. Menos que o saldo é baixa parcial."
         >
           <Input id={`${id}-valor`} name="valor" prefix="R$" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} required />
         </CampoForm>
@@ -346,7 +347,7 @@ function FormularioDaBaixa({
       <p className="text-ui text-fg-secondary">
         Total {aPagar ? "pago" : "recebido"}:{" "}
         <strong className="text-fg tabular-nums">{legivel && total >= 0 ? reais(total) : "—"}</strong>
-        <span className="text-helper text-fg-muted"> · valor + juros + multa − desconto. Juros e multa vão para a categoria de encargos, e o desconto para a de descontos.</span>
+        <span className="text-helper text-fg-muted"> · valor + juros + multa − desconto</span>
       </p>
 
       <FormFooter

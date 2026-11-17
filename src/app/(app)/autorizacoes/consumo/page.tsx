@@ -64,7 +64,6 @@ export default async function ConsumoDoSerproPage({ searchParams }: { searchPara
       <Breadcrumb items={[{ label: "Autorizações de acesso", href: "/autorizacoes" }, { label: "Consumo do Serpro" }]} />
       <PageHeader
         title="Consumo do Serpro"
-        subtitle="As chamadas cobradas do mês e o custo estimado pela tabela da Loja do Serpro. A fatura que vale é a do Serpro."
         meta={
           cfg.ambiente === "demonstracao" ? (
             <>

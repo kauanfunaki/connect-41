@@ -43,7 +43,7 @@ function FormDoDocumento({ action, onSucesso, onCancelar }: { action: Acao; onSu
         });
       }}
     >
-      <CampoForm label="Nome da pasta" htmlFor="manual-documento-titulo" required helper="As páginas entram depois, pelo “+ Página” da pasta, na árvore.">
+      <CampoForm label="Nome da pasta" htmlFor="manual-documento-titulo" required dica="As páginas entram depois, pelo “+ Página” da pasta, na árvore.">
         <Input id="manual-documento-titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
       </CampoForm>
       <FormFooter pending={pendente} pendingLabel="Criando…" submitLabel="Criar pasta" onCancel={onCancelar} erro={erro} />

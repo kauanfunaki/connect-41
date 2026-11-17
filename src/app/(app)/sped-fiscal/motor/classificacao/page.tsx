@@ -16,7 +16,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     if (tela) {
       const aba = params.aba === "apoio" ? "apoio" : "produtos";
       const tipos = aba === "apoio" ? (["documento_apoio_categoria", "credito_documento_apoio"] as const) : (["classificacao_item", "credito_icms_item"] as const);
-      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/classificacao" abas={[{ chave: "produtos", rotulo: "Produtos" }, { chave: "apoio", rotulo: "Contratos e recibos" }]} aba={aba} titulo="Classificação" descricao={aba === "apoio" ? "Categoria e crédito dos documentos de apoio, gravados no motor SPED." : "Tipo do item, destinação e crédito por produto, gravados no motor SPED."}>
+      return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/classificacao" abas={[{ chave: "produtos", rotulo: "Produtos" }, { chave: "apoio", rotulo: "Contratos e recibos" }]} aba={aba} titulo="Classificação">
         <DecisoesMotor tela={tela} caminho="/sped-fiscal/motor/classificacao" aba={aba} tipos={[...tipos]} params={params} permissoes={await permissoesDeDecisao(ctx, [...tipos])} />
       </CascoDoMotor>;
     }

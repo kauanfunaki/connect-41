@@ -116,7 +116,6 @@ function Corrigir({ raiz, alvo, inicial, originais, falta, fechar }: {
     setErrosDosCampos(r.campos ?? {});
   });
   return <Modal open title="Corrigir o pagamento" maxWidth="max-w-2xl" onClose={() => fechar()}>
-    <p className="text-ui text-fg-secondary">Só o campo que você mudar é gravado. Esvaziar um campo limpa a correção e volta ao valor lido do documento.</p>
     {falta && <Aviso tom="atencao" className="mt-3">Para aceitar falta: {falta}</Aviso>}
     <div className="mt-4 grid gap-4 sm:grid-cols-2">
       {/* O erro pela prop `erro` (auditoria de UX, 30/10/2026): passado como
@@ -127,7 +126,7 @@ function Corrigir({ raiz, alvo, inicial, originais, falta, fechar }: {
       </CampoFiscal>)}
       <CampoFiscal nome="Motivo" className="sm:col-span-2"><Input maxLength={300} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: conferi o PDF" /></CampoFiscal>
     </div>
-    <Checkbox className="mt-4" label="Aceitar junto" helper="A correção é gravada primeiro; se o motor recusar o aceite, a correção fica." checked={aceitar} onChange={(e) => setAceitar(e.target.checked)} />
+    <Checkbox className="mt-4" label="Aceitar junto" checked={aceitar} onChange={(e) => setAceitar(e.target.checked)} />
     {erro && <Aviso tom="atencao" className="mt-3">{erro}</Aviso>}
     <div className="mt-5 flex flex-wrap gap-3">
       <Button loading={pendente} loadingLabel="Gravando…" onClick={enviar}>{aceitar ? "Corrigir e aceitar" : "Corrigir"}</Button>
@@ -209,7 +208,6 @@ export function ApurarCte({ raiz, ids, tela, permissao }: { raiz: string; ids: n
       <Button size="sm" disabled={!permissao.pode} loading={laco.rodando} loadingLabel={`Apurando ${laco.feitos + 1} de ${laco.total}…`} onClick={() => laco.rodar(pendentes)}>
         {laco.restantes.length ? `Continuar (${laco.restantes.length} arquivo(s))` : `Apurar CT-e (${ids.length} arquivo(s))`}
       </Button>
-      <span className="text-helper text-fg-muted">O motor lê cada SPED gerado inteiro: alguns segundos por arquivo.</span>
     </div>
     <MotivoSemEscrita permissao={permissao} />
     <AvisoDoResultado resultado={laco.resultado} />
@@ -233,13 +231,13 @@ export function ImportarPagamentosApoio({ raiz, permissao }: { raiz: string; per
   const pastaRuim = !pastaValida(pasta.trim());
   return <div className="space-y-3">
     <div className="grid gap-4 sm:grid-cols-3">
-      <CampoFiscal nome="Tipo dos documentos"><Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoDePagamentoApoio)}><option value="">Escolha</option>{TIPOS_DE_PAGAMENTO_APOIO.map((t) => <option key={t} value={t}>{ROTULO_DO_TIPO_DE_APOIO[t]}</option>)}</Select></CampoFiscal>
+      <CampoFiscal nome="Tipo dos documentos" dica="O motor grava cada arquivo com este tipo; arquivo já gravado com outro tipo é recusado."><Select value={tipo} onChange={(e) => setTipo(e.target.value as TipoDePagamentoApoio)}><option value="">Escolha</option>{TIPOS_DE_PAGAMENTO_APOIO.map((t) => <option key={t} value={t}>{ROTULO_DO_TIPO_DE_APOIO[t]}</option>)}</Select></CampoFiscal>
       <CampoFiscal nome="Pasta do lote (opcional)"><Input maxLength={200} value={pasta} error={pastaRuim} placeholder="Ex.: 2026-09/recibos" onChange={(e) => setPasta(e.target.value)} /></CampoFiscal>
-      <div className="flex items-end"><Checkbox label="Ler por OCR as páginas sem texto" helper={semOcr ? "O motor não tem OCR: envie sem." : "Mais lento; só onde o motor tem OCR."} checked={ocr} disabled={semOcr} onChange={(e) => setOcr(e.target.checked)} /></div>
+      <div className="flex items-end"><Checkbox label="Ler por OCR as páginas sem texto" helper={semOcr ? "O motor não tem OCR: envie sem." : undefined} checked={ocr} disabled={semOcr} onChange={(e) => setOcr(e.target.checked)} /></div>
     </div>
     {tipo ? <EnvioDeArquivo<PagamentosApoioImportados> destino="pagamentos_apoio" raiz={raiz} permissao={permissao} campos={{ tipo, pasta: pastaRuim ? "" : pasta.trim(), ocr: ocr ? "true" : "" }} rotuloDoBotao="Importar os pagamentos"
       aoConcluir={setImportado} aoFalhar={(r) => { if (r.codigo === "ocr_indisponivel") { setSemOcr(true); setOcr(false); } }} />
-      : <p className="text-helper text-fg-muted">Escolha o tipo: o motor grava cada arquivo com ele, e arquivo já gravado com outro tipo é recusado.</p>}
+      : <p className="text-helper text-fg-muted">Escolha o tipo para enviar os arquivos.</p>}
     {importado && <div className="space-y-2 text-helper text-fg-secondary">
       <p>Situações: {Object.entries(importado.situacoes).map(([k, n]) => `${k} ${n}`).join(" · ") || "—"}. Soma dos aceitáveis: bruto {reaisDoMotor(importado.soma_ok.bruto)}, líquido {reaisDoMotor(importado.soma_ok.liquido)}.{importado.paginas_sem_texto ? ` ${importado.paginas_sem_texto} página(s) sem texto.` : ""}</p>
       {importado.recusadas.length > 0 && <Aviso tom="atencao">Recusados por já estarem gravados com outro tipo: {importado.recusadas.map((r) => `${r.arquivo} (${r.tipo_no_banco})`).join(", ")}.</Aviso>}
@@ -260,7 +258,7 @@ export function ImportarFaturasBpo({ raiz, permissao }: { raiz: string; permissa
   if (!permissao.visivel) return <MotivoSemEscrita permissao={permissao} />;
   return <div className="space-y-3">
     {existentes !== null && <Aviso tom="atencao">A planilha já tem {existentes} fatura(s) no motor. Marque “substituir” para trocar as faturas dela pelas da planilha enviada.</Aviso>}
-    <Checkbox label="Substituir as faturas já importadas desta planilha" helper="Apaga as faturas da mesma planilha e grava as novas." checked={substituir} onChange={(e) => setSubstituir(e.target.checked)} />
+    <Checkbox label="Substituir as faturas já importadas desta planilha" checked={substituir} onChange={(e) => setSubstituir(e.target.checked)} />
     <EnvioDeArquivo<FaturasBpoImportadas> destino="faturas_bpo" raiz={raiz} permissao={permissao} campos={substituir ? { substituir: "true" } : {}} rotuloDoBotao={substituir ? "Substituir as faturas" : "Importar as faturas"}
       aoConcluir={(d) => { setImportado(d); setExistentes(null); setSubstituir(false); }}
       aoFalhar={(r) => setExistentes(r.codigo === "importacao_existente" && typeof r.detalhe?.existentes === "number" ? r.detalhe.existentes : null)} />

@@ -64,7 +64,6 @@ export function EditarEstabelecimento({ raiz, id, rotulo, valores, sugestoes = {
   return <>
     <Button size="xs" variant="secondary" onClick={() => { setAtuais(iniciais); setErro(null); setAberto(true); }}>Editar</Button>
     <Modal open={aberto} title={`Cadastro no motor · ${rotulo}`} onClose={() => setAberto(false)} maxWidth="max-w-3xl">
-      <p className="mb-4 text-helper text-fg-secondary">Vai para o registro 0000/0005/0100 dos próximos SPEDs e deixa os já gerados defasados. CNPJ, UF e situação só mudam no painel do motor.</p>
       {quantasDoCadastro > 0 && <Aviso tom="info" className="mb-4">{quantasDoCadastro === 1 ? "1 campo vazio no motor veio" : `${quantasDoCadastro} campos vazios no motor vieram`} do cadastro da empresa no Connect. Confira e salve para levar ao motor.</Aviso>}
       {GRUPOS.map(([titulo, campos]) => <FormSection key={titulo} title={titulo}><div className="grid gap-4 sm:grid-cols-3">
         {campos.map(([nome, label, max]) => <CampoFiscal key={nome} nome={label} erro={erro?.campos?.[nome]}><Input maxLength={max} inputMode={nome === "dia_vcto_icms" ? "numeric" : undefined} value={atuais[nome] ?? ""} onChange={(e) => setAtuais((a) => ({ ...a, [nome]: e.target.value }))} /></CampoFiscal>)}

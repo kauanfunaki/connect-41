@@ -15,7 +15,7 @@ import { AcoesDaPendencia } from "@/components/pendencias/AcoesDaPendencia";
 import { SeloDoPrazo, SeloDoStatus } from "@/components/pendencias/SelosDaPendencia";
 import { carregarPendencia, lembretesDaPendencia } from "@/lib/financeiro/pendencias/consultas";
 import { ROTULO_DO_TIPO, emAndamento } from "@/lib/financeiro/pendencias/regras";
-import { passosPorExtenso, rotuloDoPasso, situacaoDoLembrete } from "@/lib/financeiro/pendencias/lembrete";
+import { rotuloDoPasso, situacaoDoLembrete } from "@/lib/financeiro/pendencias/lembrete";
 import { centavosDeDecimal } from "@/lib/financeiro/contas";
 import { moeda } from "@/lib/financeiro/formato";
 import { responderPendenciaEquipe } from "../actions";
@@ -85,7 +85,9 @@ export default async function PendenciaPage({
 
       {/* O que o cliente recebeu sozinho precisa estar à vista de quem cobra: sem isso,
           a equipe liga para lembrar de algo que o e-mail já lembrou ontem. */}
-      {lembretes.length > 0 ? (
+      {/* A frase "Se o prazo passar sem resposta…", quando ainda não havia
+          lembrete, foi para a ajuda da tela (17/11/2026, melhoria-707). */}
+      {lembretes.length > 0 && (
         <Card className="mb-4 p-4 text-fs-2">
           <h2 className="text-card-title font-semibold text-fg mb-2">Lembretes automáticos ao cliente</h2>
           <ul className="flex flex-col gap-1">
@@ -99,13 +101,6 @@ export default async function PendenciaPage({
             })}
           </ul>
         </Card>
-      ) : (
-        p.status === "ABERTA" &&
-        p.prazo && (
-          <p className="mb-4 text-helper text-fg-muted">
-            Se o prazo passar sem resposta, o cliente recebe lembrete por e-mail com {passosPorExtenso()} dias de atraso.
-          </p>
-        )
       )}
 
       {p.lancamento && (

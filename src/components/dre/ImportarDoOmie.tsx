@@ -67,11 +67,6 @@ export function ImportarDoOmie({ companyId }: { companyId: string }) {
       </Button>
       <Modal open={aberto} onClose={() => !enviando && setAberto(false)} title="Importar do Omie">
         <div className="flex flex-col gap-3">
-          <p className="text-helper text-fg-secondary">
-            A planilha de Contas a Pagar ou a Receber exportada do Omie. Cada linha vai para o mês da data de
-            crédito ou débito no extrato, e importar de novo o mesmo mês substitui o que estava lá.
-          </p>
-
           {/* O campo de arquivo do app, como no OFX e no CSV (08/10/2026): era o
               seletor nativo do navegador, "Choose File / No file chosen", com o
               texto no idioma do navegador. */}

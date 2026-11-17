@@ -99,7 +99,6 @@ export default async function EmitirNfsePage({ searchParams }: { searchParams: P
   const cabecalho = (acao?: React.ReactNode) => (
     <PageHeader
       title="Emitir NFS-e"
-      subtitle="A nota sai pelo Omie da empresa, pedida daqui. Serviço, tributação e certificado continuam no cadastro do Omie."
       action={acao}
     />
   );

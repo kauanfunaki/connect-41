@@ -38,11 +38,7 @@ export function CartoesDaEmpresa({ companyId, cartoes }: { companyId: string; ca
   return (
     <>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-3xl text-helper text-fg-muted">
-            A conta paga no cartão entra na fatura do ciclo: em “Pagar”, escolha o cartão em “Saiu da conta” — ou, ao lançar, em “Conta corrente” com “Já
-            pago em”. A despesa entra na DRE no dia da compra; a fatura é uma conta a pagar ao cartão, fora da DRE.
-          </p>
+        <div className="flex flex-wrap items-start justify-end gap-3">
           <Button size="sm" variant="secondary" onClick={() => setEditando("novo")}>
             <Plus size={14} /> Novo cartão
           </Button>
@@ -200,10 +196,10 @@ function JanelaDoCartao({
         <input type="hidden" name="companyId" value={companyId} />
         {cartao && <input type="hidden" name="id" value={cartao.id} />}
         <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_140px]">
-          <CampoForm label="Nome do cartão" htmlFor={`${id}-nome`} required helper="Como a equipe chama o cartão — é também o credor da fatura.">
+          <CampoForm label="Nome do cartão" htmlFor={`${id}-nome`} required dica="Como a equipe chama o cartão — é também o credor da fatura.">
             <Input id={`${id}-nome`} name="nome" maxLength={80} defaultValue={cartao?.nome} placeholder="Itaú Visa empresarial" required />
           </CampoForm>
-          <CampoForm label="Final do cartão" htmlFor={`${id}-final`} required helper="Os 4 últimos números.">
+          <CampoForm label="Final do cartão" htmlFor={`${id}-final`} required dica="Os 4 últimos números.">
             <Input
               id={`${id}-final`}
               name="final"
@@ -216,13 +212,13 @@ function JanelaDoCartao({
           </CampoForm>
         </FieldGrid>
         <FieldGrid columns="sm:grid-cols-3">
-          <CampoForm label="Fecha no dia" htmlFor={`${id}-fechamento`} required helper="A compra deste dia em diante entra na fatura seguinte.">
+          <CampoForm label="Fecha no dia" htmlFor={`${id}-fechamento`} required dica="A compra deste dia em diante entra na fatura seguinte.">
             <Input id={`${id}-fechamento`} name="fechamento" inputMode="numeric" maxLength={2} defaultValue={cartao?.fechamento ?? ""} placeholder="25" required />
           </CampoForm>
           <CampoForm label="Vence no dia" htmlFor={`${id}-vencimento`} required>
             <Input id={`${id}-vencimento`} name="vencimento" inputMode="numeric" maxLength={2} defaultValue={cartao?.vencimento ?? ""} placeholder="5" required />
           </CampoForm>
-          <CampoForm label="Banco (COMPE)" htmlFor={`${id}-banco`} helper="Opcional. Quem emitiu.">
+          <CampoForm label="Banco (COMPE)" htmlFor={`${id}-banco`} dica="O banco que emitiu o cartão.">
             <Input
               id={`${id}-banco`}
               name="banco"
@@ -235,16 +231,13 @@ function JanelaDoCartao({
         </FieldGrid>
         {cartao && (
           <FieldGrid columns="sm:grid-cols-[200px]">
-            <CampoForm label="Situação" htmlFor={`${id}-ativo`} helper="Inativo não aparece para pagar; as faturas ficam.">
+            <CampoForm label="Situação" htmlFor={`${id}-ativo`} dica="Inativo não aparece para pagar; as faturas ficam.">
               <Select id={`${id}-ativo`} name="ativo" defaultValue={cartao.ativo ? "1" : "0"}>
                 <option value="1">Ativo</option>
                 <option value="0">Inativo</option>
               </Select>
             </CampoForm>
           </FieldGrid>
-        )}
-        {cartao && (
-          <p className="text-helper text-fg-muted">Mudar os dias vale para as próximas compras: a que já está numa fatura fica nela.</p>
         )}
         <FormFooter pending={pendente} submitLabel={cartao ? "Salvar" : "Cadastrar cartão"} pendingLabel="Salvando…" onCancel={onFechar} erro={erro} />
       </form>

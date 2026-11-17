@@ -168,7 +168,7 @@ export function EmitirGuia({ companyId, desabilitado, sugestao }: { companyId: s
             <CampoForm
               label="Data de pagamento"
               htmlFor={id("pagamento")}
-              helper={
+              dica={
                 tipo === "DCTFWEB"
                   ? "Para recalcular multa e juros: um dia útil deste mês, a partir de hoje. Em branco, hoje."
                   : "Para recalcular multa e juros com outra data. Em branco, hoje."

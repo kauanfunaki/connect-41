@@ -63,7 +63,7 @@ export default async function ManuaisPage({ searchParams }: { searchParams: Prom
         {/* O "+ Nova pasta" foi para o pé da coluna de pastas (lote C de 03/11/2026). */}
         <PageHeader
           title="Repositório de manuais"
-          subtitle={`As instruções de ${apoio.rotulo}, escritas pela equipe para quem cobre ausências e férias.`}
+          subtitle={apoio.rotulo}
         />
         <SeletorDoSetorDoApoio apoio={apoio} caminho="/manuais" />
       </div>

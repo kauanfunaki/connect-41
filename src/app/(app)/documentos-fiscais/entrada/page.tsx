@@ -32,10 +32,7 @@ export default async function EntradaDeXmlPage() {
     <PageContainer>
       {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): a tela sai de Documentos fiscais. */}
       <Breadcrumb items={[{ label: "Documentos fiscais", href: "/documentos-fiscais" }, { label: "Entrada de XML" }]} />
-      <PageHeader
-        title="Documentos fiscais"
-        subtitle="O formulário de entrada de XML foi aberto em uma janela para você continuar no acervo ao fechar."
-      />
+      <PageHeader title="Documentos fiscais" />
 
       <EntradaXmlModal empresas={empresas} action={importarXmls} />
     </PageContainer>

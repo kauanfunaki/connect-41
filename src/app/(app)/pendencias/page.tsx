@@ -84,7 +84,6 @@ export default async function PendenciasPage({
     <PageContainer>
       <PageHeader
         title="Pendências ao cliente"
-        subtitle="O que a equipe precisa do cliente — documento, informação ou confirmação — e a conversa de cada pedido."
         action={
           podeAgir ? (
             <NovaPendencia

@@ -36,7 +36,7 @@ export async function EmpresasMotor({ tela, permiteGerir }: { tela: TelaDoMotor;
   const sugestoesPorCompany = new Map(cadastros.map((c) => [c.id, camposDoMotorPeloCadastro(c)]));
   return <div className="space-y-5">
     {lista.erro && <Aviso tom="atencao">{lista.erro}</Aviso>}
-    <BlocoFiscal titulo="Estabelecimentos no motor" descricao={`Raiz ${contexto.raiz}. Vinculados às empresas do escritório pelo CNPJ.${!podeEditar ? " Edição indisponível para seu perfil ou sem escrita habilitada." : ""}`}>
+    <BlocoFiscal titulo="Estabelecimentos no motor" descricao={`Raiz ${contexto.raiz}.${!podeEditar ? " Edição indisponível para seu perfil ou sem escrita habilitada." : ""}`}>
       <TabelaFiscal vazio="Nenhum estabelecimento vinculado." descricaoVazio="Cadastre a empresa no Connect com o mesmo CNPJ do motor." colunas={["Estabelecimento", "CNPJ", "Obrigações", "Situação", "Atualizado", ...(podeEditar ? ["Ações"] : [])]} linhas={mapa.visiveis.map((v) => {
         const e = porId.get(v.id);
         const valores: Record<string, string> = {};

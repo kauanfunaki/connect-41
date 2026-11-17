@@ -72,7 +72,6 @@ export default async function FluxoDeCaixaPage({
     <PageContainer>
       <PageHeader
         title="Fluxo de caixa"
-        subtitle="O que entrou e saiu, e o que os títulos em aberto dizem que vai entrar e sair."
       />
       {/* A empresa navega sozinha (e vira a última aberta); o mês, com "Aplicar". */}
       {aba === "fluxo" ? (
@@ -114,18 +113,12 @@ async function Fluxo({ escopo, mes, hojeKey }: { escopo: EscopoFinanceiro; mes: 
 
       <h2 className="text-section font-semibold text-fg mb-2">Realizado — seis meses até {rotuloDaCompetencia(mes)}</h2>
       <TabelaDoRealizado meses={fluxoRealizado(movimentos, competencias)} />
-      <NotaDeFonte className="mb-6">
-        Pela data da baixa. O acumulado soma os saldos do período a partir do primeiro mês da tabela — é movimento
-        de lançamentos, não o saldo da conta, que está no quadro acima.
-      </NotaDeFonte>
 
       <h2 className="text-section font-semibold text-fg mb-2">Projeção — títulos em aberto a partir de hoje</h2>
       <CartoesDaProjecao projecao={projecaoPorJanela(titulos, hojeKey)} saldoInicial={saldo.centavos} />
-      <NotaDeFonte>
-        Cada janela acumula de hoje até o fim dela: a receber menos a pagar, pelo vencimento
-        {saldo.centavos !== null ? "; o saldo projetado soma o saldo das contas" : ""}. Só o que já está lançado
-        {titulos.length >= 5_000 ? " (limitado aos 5.000 títulos mais antigos)" : ""}.
-      </NotaDeFonte>
+      {/* Como a projeção soma está no artigo da tela; aqui fica só o corte,
+          que depende do dado (17/11/2026, melhoria-707). */}
+      {titulos.length >= 5_000 && <NotaDeFonte>A projeção considera só os 5.000 títulos mais antigos.</NotaDeFonte>}
     </>
   );
 }
@@ -148,10 +141,6 @@ async function PorEmpresa({
   return (
     <>
       <TabelaDoConsolidado linhas={linhas} nomes={nomes} linkParaContas />
-      <NotaDeFonte>
-        Pago e recebido em {rotuloDaCompetencia(mes)}, pela data da baixa. Vencidas é a posição de hoje. Empresa sem
-        movimento no mês e sem conta vencida não aparece.
-      </NotaDeFonte>
     </>
   );
 }

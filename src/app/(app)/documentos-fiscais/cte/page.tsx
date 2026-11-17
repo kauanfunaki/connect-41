@@ -119,12 +119,6 @@ export default async function CtePage({
       <Breadcrumb items={[{ label: "Documentos fiscais", href: "/documentos-fiscais" }, { label: "CT-e" }]} />
       <PageHeader
         title="CT-e"
-        subtitle={
-          <>
-            Consulta ao vivo no SPED, por data de rota. <strong>Não entra no acervo</strong> — são
-            milhões por mês, e eles vêm sem valor apurado, então não geram lançamento.
-          </>
-        }
       />
 
       {!creds ? (
@@ -192,7 +186,7 @@ export default async function CtePage({
                   <EmptyState
                     icon={<Truck />}
                     title="Nenhum CT-e nesta janela"
-                    description="Ajuste o período de rota. Lembrando que a janela é de data de rota, e não de competência — elas não coincidem."
+                    description="Ajuste o período de rota."
                   />
                 ) : (
                   <>
@@ -256,9 +250,6 @@ export default async function CtePage({
                 </table>
                     </TabelaNoDesktop>
                   </>
-                )}
-                {documentos.length > 0 && (
-                  <p className="text-micro text-fg-muted mt-3">O valor não vem na listagem — só dentro do XML, por documento.</p>
                 )}
               </CascoDaTabela>
 

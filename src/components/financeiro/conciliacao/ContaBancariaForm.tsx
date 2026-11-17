@@ -44,13 +44,16 @@ export type ContaParaEditar = {
  * Um só componente para os dois casos porque os campos são os mesmos; o que
  * muda é que, com extrato importado, banco e número ficam travados — a action
  * recusaria de qualquer jeito, e campo que aceita e depois recusa é pior que
- * campo travado com o motivo embaixo.
+ * campo travado com o motivo no cadeado.
  */
 export function ContaBancariaForm({ companyId, conta }: { companyId: string; conta?: ContaParaEditar }) {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
   const travado = Boolean(conta?.temTransacoes);
+  // O motivo no cadeado de cada campo travado, no lugar da frase embaixo da
+  // linha (17/11/2026, melhoria-707).
+  const motivoDaTrava = travado ? "Não muda depois do primeiro extrato importado: é o que confere o arquivo." : undefined;
   const prefixo = conta ? `conta-${conta.id}` : "conta-nova";
   const [tipo, setTipo] = useState<TipoDeConta>(conta?.type ?? "CORRENTE");
   // Sem extrato, banco e número não conferem arquivo nenhum: ficam opcionais.
@@ -86,10 +89,10 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
           {conta && <input type="hidden" name="id" value={conta.id} />}
 
           <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_180px]">
-            <CampoForm label="Nome da conta" htmlFor={`${prefixo}-nickname`} required helper="Como a equipe chama esta conta — ex.: Itaú movimento.">
-              <Input id={`${prefixo}-nickname`} name="nickname" maxLength={80} defaultValue={conta?.nickname} required />
+            <CampoForm label="Nome da conta" htmlFor={`${prefixo}-nickname`} required dica="Como a equipe chama esta conta.">
+              <Input id={`${prefixo}-nickname`} name="nickname" maxLength={80} placeholder="Ex.: Itaú movimento" defaultValue={conta?.nickname} required />
             </CampoForm>
-            <CampoForm label="Tipo" htmlFor={`${prefixo}-type`} required>
+            <CampoForm label="Tipo" htmlFor={`${prefixo}-type`} required dica={ajudaDoTipo(tipo) ?? undefined} travado={motivoDaTrava}>
               <Select id={`${prefixo}-type`} name="type" value={tipo} onChange={(e) => setTipo(e.target.value as TipoDeConta)} disabled={travado}>
                 {GRUPOS.map((g) => (
                   <optgroup key={g.grupo} label={g.rotulo}>
@@ -105,18 +108,18 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
               {travado && <input type="hidden" name="type" value={tipo} />}
             </CampoForm>
           </FieldGrid>
-          {ajudaDoTipo(tipo) && <p className="-mt-2 text-helper text-fg-muted">{ajudaDoTipo(tipo)}</p>}
 
           {/* Banco e agência são números curtos: coluna estreita, e a conta
-              fica com o resto. A nota do travamento vale para a linha toda. */}
+              fica com o resto. */}
           <div className="flex flex-col gap-2">
             <FieldGrid columns="sm:grid-cols-[120px_140px_minmax(0,1fr)]">
-              <CampoForm label="Banco (COMPE)" htmlFor={`${prefixo}-bank`} required={comExtrato} helper={comExtrato ? "001, 237, 341…" : "Opcional."}>
+              <CampoForm label="Banco (COMPE)" htmlFor={`${prefixo}-bank`} required={comExtrato} travado={motivoDaTrava}>
                 <Input
                   id={`${prefixo}-bank`}
                   name="bankCode"
                   inputMode="numeric"
                   maxLength={4}
+                  placeholder={comExtrato ? "001" : ""}
                   defaultValue={conta && conta.bankCode !== BANCO_SEM_EXTRATO ? conta.bankCode : ""}
                   readOnly={travado}
                   required={comExtrato}
@@ -125,7 +128,7 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
               <CampoForm label="Agência" htmlFor={`${prefixo}-agency`}>
                 <Input id={`${prefixo}-agency`} name="agency" inputMode="numeric" maxLength={10} defaultValue={conta?.agency ?? ""} />
               </CampoForm>
-              <CampoForm label={comExtrato ? "Conta com dígito" : "Número"} htmlFor={`${prefixo}-number`} required={comExtrato} helper={comExtrato ? undefined : "Opcional."}>
+              <CampoForm label={comExtrato ? "Conta com dígito" : "Número"} htmlFor={`${prefixo}-number`} required={comExtrato} travado={motivoDaTrava}>
                 <Input
                   id={`${prefixo}-number`}
                   name="accountNumber"
@@ -137,18 +140,13 @@ export function ContaBancariaForm({ companyId, conta }: { companyId: string; con
                 />
               </CampoForm>
             </FieldGrid>
-            {travado && (
-              <p className="text-helper text-fg-muted">
-                Tipo, banco e número não mudam depois do primeiro extrato importado: são eles que conferem o arquivo.
-              </p>
-            )}
           </div>
 
           <FieldGrid>
-            <CampoForm label="Saldo inicial" htmlFor={`${prefixo}-saldo`} helper="Opcional. Negativo se começou no cheque especial.">
+            <CampoForm label="Saldo inicial" htmlFor={`${prefixo}-saldo`} dica="Negativo se começou no cheque especial.">
               <Input id={`${prefixo}-saldo`} name="openingBalance" prefix="R$" inputMode="decimal" placeholder="-1.234,56" defaultValue={conta?.saldoInicial ?? ""} />
             </CampoForm>
-            <CampoForm label="Data do saldo inicial" htmlFor={`${prefixo}-saldo-data`} helper="Informe o dia ao qual o saldo inicial se refere, antes das movimentações. O extrato é somado a partir desse dia, inclusive.">
+            <CampoForm label="Data do saldo inicial" htmlFor={`${prefixo}-saldo-data`} dica="O dia ao qual o saldo inicial se refere, antes das movimentações. O extrato é somado a partir desse dia, inclusive.">
               <CampoData id={`${prefixo}-saldo-data`} name="openingBalanceDate" defaultValue={conta?.saldoInicialKey ?? ""} />
             </CampoForm>
           </FieldGrid>
