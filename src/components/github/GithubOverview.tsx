@@ -18,9 +18,10 @@ import styles from "./GithubContributions.module.css";
 
 const number = (value: number) => Number(value).toLocaleString("pt-BR");
 // O selo de um time (05/11/2026): a cor dele com as iniciais, no lugar das fotos.
-export function SeloDoTime({ nome, cor }: { nome: string; cor: string }) {
+// `pequeno`: 24px, o tamanho da foto nas linhas "Por time" do repositório (a coluna da grade tem 24px; com 32px o selo invadia o espaço até o nome, bug-733).
+export function SeloDoTime({ nome, cor, pequeno = false }: { nome: string; cor: string; pequeno?: boolean }) {
   const iniciais = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join("").toLocaleUpperCase("pt-BR") || "?";
-  return <span aria-hidden className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-micro font-bold text-white" style={{ background: cor }}>{iniciais}</span>;
+  return <span aria-hidden className={`inline-flex ${pequeno ? "size-6 text-[10px]" : "size-8 text-micro"} shrink-0 items-center justify-center rounded-md font-bold text-white`} style={{ background: cor }}>{iniciais}</span>;
 }
 // A foto do GitHub; sem login de conta ou com a imagem fora do ar, as iniciais.
 export function DeveloperAvatar({ login }: { login: string }) {

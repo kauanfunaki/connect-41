@@ -91,7 +91,11 @@ export function CaixaDoAtendimento({ dados, cabecalho, children }: { dados: List
         colunasDaLista="lg:grid-cols-[minmax(420px,600px)_minmax(0,1fr)]"
         lista={
           <>
-            {recolhida ? <FaixaDaLista /> : <ListaDoAtendimentoNaCaixa />}
+            {/* Recolher só vale no computador: na tela estreita a lista ocupa a largura toda, e a faixa esticada parecia quebrada. */}
+            {recolhida && <FaixaDaLista />}
+            <div className={recolhida ? "contents lg:hidden" : "contents"}>
+              <ListaDoAtendimentoNaCaixa />
+            </div>
             <AlcaDaLista recolhida={recolhida} aoAlternar={() => alternarLista(!recolhida)} />
           </>
         }
@@ -338,7 +342,7 @@ function FaixaDaLista() {
   const doRecorte = v.cartoes.filter((c) => noRecorte(c, v.recorte, quem));
   const visiveis = [...doRecorte.filter((c) => ehMinha(c, v.userId)), ...doRecorte.filter((c) => !ehMinha(c, v.userId))].slice(0, 40);
   return (
-    <nav aria-label="Conversas recolhidas" className="flex-1 min-h-0 flex flex-col items-center gap-2 py-3 rounded-lg border border-border bg-surface">
+    <nav aria-label="Conversas recolhidas" className="flex-1 min-h-0 hidden lg:flex flex-col items-center gap-2 py-3 rounded-lg border border-border bg-surface">
       <div className="flex-1 min-h-0 overflow-y-auto scroll-y flex flex-col items-center gap-2 px-1">
         {visiveis.map((c) => (
           <Link
