@@ -313,78 +313,9 @@ export async function extractResumeData(
   });
 }
 
-const COMPANY_SUMMARY_SYSTEM_PROMPT =
-  "Você é assistente de uma contabilidade/BPO. Resuma o histórico operacional de uma empresa-cliente para preparar a equipe antes de uma reunião. Escreva em português do Brasil, direto e factual. Estruture em: visão geral (1 parágrafo), principais acontecimentos, pendências/pontos de atenção. Não invente nada que não esteja nos dados.";
-
-async function summarizeCompanyHistoryAnthropic(
-  apiKey: string,
-  model: string,
-  input: { companyName: string; digest: string }
-): Promise<ComUso<string>> {
-  const client = new Anthropic({ apiKey });
-
-  const response = await client.messages.create({
-    model,
-    max_tokens: 4096,
-    thinking: { type: "adaptive" },
-    system: COMPANY_SUMMARY_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Empresa: ${input.companyName}\n\nEventos dos últimos 90 dias:\n${input.digest}`,
-      },
-    ],
-  });
-
-  if (response.stop_reason === "refusal") {
-    throw new Error("A IA não conseguiu gerar o resumo.");
-  }
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Resposta da IA sem conteúdo.");
-  }
-  return { valor: textBlock.text, uso: usoAnthropic(response.usage) };
-}
-
-async function summarizeCompanyHistoryOpenAi(
-  apiKey: string,
-  model: string,
-  input: { companyName: string; digest: string }
-): Promise<ComUso<string>> {
-  const res = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      instructions: COMPANY_SUMMARY_SYSTEM_PROMPT,
-      input: `Empresa: ${input.companyName}\n\nEventos dos últimos 90 dias:\n${input.digest}`,
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Falha ao gerar resumo com a OpenAI: ${await res.text()}`);
-  }
-  const data = await res.json();
-  const text = data.output_text ?? data.output?.find((o: { type: string }) => o.type === "message")?.content?.[0]?.text;
-  if (!text) throw new Error("Resposta da IA sem conteúdo.");
-  return { valor: text as string, uso: usoOpenAi(data.usage) };
-}
-
-export async function summarizeCompanyHistory(
-  tenantId: string,
-  input: { companyName: string; digest: string },
-  contexto?: ContextoDaChamada
-): Promise<string> {
-  return executarAgente({
-    tenantId,
-    agentCode: "resumo_empresa",
-    contexto,
-    chamar: (c) =>
-      c.provider === "ANTHROPIC"
-        ? summarizeCompanyHistoryAnthropic(c.apiKey, c.model, input)
-        : summarizeCompanyHistoryOpenAi(c.apiKey, c.model, input),
-  });
-}
+// O resumo da empresa (agente `resumo_empresa`) saiu daqui em 17/11/2026
+// (melhoria-723): passou a ser saída estruturada, por `gerarEstruturado`, com o
+// prompt e o esquema em src/lib/resumoDaEmpresa.ts.
 
 // Avaliação de Atendimentos — nota de escrita (0-50) de um atendimento do
 // Chatwoot, metade da nota final de 0-100 (a outra metade, SLA, é calculada

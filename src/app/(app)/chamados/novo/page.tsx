@@ -17,5 +17,5 @@ export default async function NovoPage({ searchParams }: { searchParams: Promise
   const vazios: DadosDoChamado = { title: "", description: "", categoryId: "", requesterSectorCode: "", priority: "MEDIA", requestData: {}, tags: [], handlingSectorCode: "" };
   const lidos = dadosRascunhoSchema.safeParse(d?.payload);
   const inicial: RascunhoDaTela | null = d ? { id: d.id, version: d.version, dados: lidos.success ? lidos.data : vazios, anexos: d.attachments.map(a => ({ id: a.id, fileName: a.fileName })) } : null;
-  return <PageContainer><PageHeader title="Novo chamado" /><NovoChamado inicial={inicial} categorias={cats.map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id }))} setores={setoresQuePodemAbrir(c.ctx, c.config, setores).map(s => ({ code: s.code, label: s.label }))} atendem={c.config.sectorCodes.map(code => ({ code, label: setores.find(s => s.code === code)?.label ?? code }))} /></PageContainer>;
+  return <PageContainer><PageHeader title="Novo chamado" /><NovoChamado inicial={inicial} categorias={cats.map(cat => ({ ...categoriaSchema.parse(cat), id: cat.id }))} setores={setoresQuePodemAbrir(c.ctx, c.config, setores).map(s => ({ code: s.code, label: s.label }))} setorPadrao={c.ctx.activeSector ?? undefined} atendem={c.config.sectorCodes.map(code => ({ code, label: setores.find(s => s.code === code)?.label ?? code }))} /></PageContainer>;
 }

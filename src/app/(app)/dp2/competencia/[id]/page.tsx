@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltroDaEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
+import { FocoNaEmpresaDaTela } from "@/components/dp2/FocoNaEmpresaDaTela";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { canActOnSector, canManageSector, getAuthContext } from "@/lib/auth/context";
@@ -69,7 +70,8 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   });
   if (!comp) notFound();
   const empresa = nomeExibicao(comp.company);
-  const foco = (await podeUsarOFoco(ctx)) ? await lerEmpresaEmFoco(ctx) : null;
+  const usaFoco = await podeUsarOFoco(ctx);
+  const foco = usaFoco ? await lerEmpresaEmFoco(ctx) : null;
   const titulo = `${NOME_DO_TIPO_DE_COMPETENCIA[comp.tipo] ?? comp.tipo} · ${nomeDaCompetencia(comp.ano, comp.mes)}`;
 
   if (foco && !foco.grupo.includes(comp.companyId)) {
@@ -171,6 +173,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
 
   return (
     <PageContainer>
+      {usaFoco && !foco && <FocoNaEmpresaDaTela companyId={comp.companyId} />}
       <PageHeader
         title={titulo}
         subtitle={
@@ -218,7 +221,10 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
             </FormularioDoDp2>
           )}
           {comp.situacao === "CALCULADA" && etapa === "fechar" && (
-            <FormularioDoDp2 acao={fecharCompetenciaAction} rotulo="Fechar competência" rotuloEnviando="Fechando…" variante="secondary">
+            <FormularioDoDp2 acao={fecharCompetenciaAction} rotulo="Fechar competência" rotuloEnviando="Fechando…" variante="secondary"
+              confirmar={{ titulo: "Fechar a competência?", rotulo: "Fechar competência", texto: podeGerir
+                ? "A competência fechada passa a valer para médias de férias, 13º e rescisão, e libera o arquivo do banco. Para mudar depois, é preciso reabrir com um motivo."
+                : "A competência fechada passa a valer para médias de férias, 13º e rescisão, e libera o arquivo do banco. Só o gestor do setor consegue reabrir depois." }}>
               <input type="hidden" name="competenciaId" value={comp.id} />
             </FormularioDoDp2>
           )}
@@ -608,9 +614,14 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                   <Aviso tom="atencao">
                     Faltam contas: {contabil.faltam.slice(0, 4).join("; ")}
                     {contabil.faltam.length > 4 ? "…" : "."}{" "}
-                    <Link href="/dp2/rubricas" className="underline">
-                      Configurar em Rubricas
-                    </Link>
+                    {/* Só o gestor edita as rubricas (17/11/2026, bug-724): para o resto, o aviso diz a quem pedir. */}
+                    {podeGerir ? (
+                      <Link href="/dp2/rubricas" className="underline">
+                        Configurar em Rubricas
+                      </Link>
+                    ) : (
+                      "Peça ao gestor do setor para configurar as contas em Rubricas."
+                    )}
                   </Aviso>
                 )}
               </div>

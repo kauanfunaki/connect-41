@@ -620,6 +620,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "handoff.sector.return": e("devolveu a quem pediu a parte de um setor na transferência"),
   "handoff.sector.resend": e("respondeu e reenviou ao setor a parte devolvida da transferência"),
   "handoff.sector.reopen": e("reabriu a parte de um setor na transferência"),
+  "handoff.task.done": e("marcou como feita uma tarefa da transferência"),
+  "handoff.task.undone": e("desmarcou uma tarefa da transferência"),
   "handoff.comment": e("comentou na transferência"),
   "handoff.edit": e("editou a transferência"),
   "meeting.create": c("agendou a reunião"),

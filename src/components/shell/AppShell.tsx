@@ -842,7 +842,7 @@ export function AppShell({
           data-dica={menuRecolhido ? "Expandir o menu" : "Recolher o menu"}
           aria-expanded={!menuRecolhido}
           aria-controls="menu-lateral"
-          className="peer group/alca absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center h-9 w-1.5 rounded-full bg-brand opacity-55 text-on-brand cursor-pointer transition-[width,border-radius,opacity,background-color] duration-150 motion-reduce:transition-none before:absolute before:-inset-x-2.5 before:-inset-y-1 before:content-[''] hover:w-6 hover:rounded-lg hover:opacity-100 hover:bg-brand-solid focus-visible:w-6 focus-visible:rounded-lg focus-visible:opacity-100 focus-visible:bg-brand-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="peer group/alca absolute z-10 left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center h-9 w-1.5 rounded-full bg-brand opacity-55 text-on-brand cursor-pointer transition-[width,border-radius,opacity,background-color] duration-150 motion-reduce:transition-none before:absolute before:-inset-x-2.5 before:-inset-y-1 before:content-[''] hover:w-6 hover:rounded-lg hover:opacity-100 hover:bg-brand-solid focus-visible:w-6 focus-visible:rounded-lg focus-visible:opacity-100 focus-visible:bg-brand-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           <ChevronLeft
             size={14}
@@ -851,7 +851,8 @@ export function AppShell({
             className={`opacity-0 transition-[opacity,rotate] duration-150 motion-reduce:transition-none group-hover/alca:opacity-100 group-focus-visible/alca:opacity-100 ${menuRecolhido ? "rotate-180" : ""}`}
           />
         </button>
-        {/* A borda do menu acende inteira junto com a alça. */}
+        {/* A borda do menu acende inteira junto com a alça. Vem depois do botão (o `peer-*` pede isso)
+            e por isso pintaria por cima dele: o `z-10` do botão deixa a seta na frente da linha (bug-722). */}
         <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-px w-px bg-brand opacity-0 transition-opacity duration-150 peer-hover:opacity-100 peer-focus-visible:opacity-100" />
       </div>
 

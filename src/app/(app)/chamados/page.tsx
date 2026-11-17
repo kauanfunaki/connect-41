@@ -86,6 +86,7 @@ export default async function ChamadosPage({ searchParams }: { searchParams: Pro
         prazo={t.cycles[0] ? { vence: t.cycles[0].resolutionDueAt, pausado: !!t.cycles[0].pausedAt, atrasado: slaAtrasado(t.status, t.cycles[0], agora) } : undefined}
         fila={t.status === "NA_FILA" && posicao ? { posicao, total: dados.totalFila.get(t.handlingSectorCode) ?? posicao, reordenar: reordenar && podeGerenciarNo(c.ctx, c.config, t.handlingSectorCode) } : undefined}
         atividades={atividadesRecentes(t.events, autoria, nome, dados.comentarios)} ultimaAtividade={t.events[0]?.createdAt ?? t.updatedAt}
+        naoEDoMeuSetor={variosSetores && !isFullWrite(c.ctx.role) && !c.ctx.sectors.includes(t.handlingSectorCode) ? (t.createdById === c.ctx.userId ? "abriu" : "acompanha") : undefined}
         suaVez={!internos && aguardandoSolicitante(t.status)} agora={agora} />;
     })}</div>}
     <Pagination page={dados.page} totalPages={Math.max(1, Math.ceil(dados.total / 25))} buildHref={pagina} total={dados.total} rotulo="chamados" />

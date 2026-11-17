@@ -14,6 +14,7 @@ import { classificar, limparTags, type Classificacao } from "./classificacao";
 import { procurarNoOrquestrador, type BuscaNoOrquestrador } from "./triagem";
 import { aprovadoresDaCategoria, evento } from "./comandos";
 import { despacharEventos } from "./notificacoes";
+import { levarAoHub } from "./hub-servidor";
 import { motivoDaFalha } from "./falhaDaIa";
 import { categoriaSchema, dadosRascunhoSchema, dadosSchema, ehTituloProvisorio, emTriagem, resultadoDaTriagem, revisaoDoRascunho, validarFormulario, type Categoria, type MotivoSemCategoria, type RevisaoAprovada, type Triagem } from "./regras";
 
@@ -70,6 +71,8 @@ export async function triarChamado(tenantId: string, ticketId: string, opcoes: {
     await Promise.allSettled([
       logAudit({ tenantId, rotina: "triagemDeChamados", action: "helpdesk.triaged", entityType: "HelpdeskTicket", entityId: t.id, metadata: { resultado: resultadoDaTriagem(triagem), ...(triagem.semCategoria ? { semCategoria: triagem.semCategoria } : {}) } }),
       despacharEventos(tenantId, t.id),
+      // A cópia no Hub, já com a categoria e o título da triagem (17/11/2026, funcionalidade-711).
+      levarAoHub(tenantId, t.id),
     ]);
     return "concluida";
   } finally {

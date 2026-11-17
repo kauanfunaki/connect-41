@@ -38,9 +38,10 @@ type Setor = { code: string; label: string };
  * mais, a revisão mostra o setor que vai atender, proposto pela IA (16/11/2026,
  * funcionalidade-709); até então quem abria escolhia na etapa Pedido.
  */
-export function NovoChamado({ inicial, categorias, setores, atendem }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: Setor[]; atendem: Setor[] }) {
+/** `setorPadrao` (17/11/2026, bug-724): o setor ativo de quem abre, para quem está em mais de um não escolher toda vez. */
+export function NovoChamado({ inicial, categorias, setores, atendem, setorPadrao }: { inicial: RascunhoDaTela | null; categorias: CategoriaDaTela[]; setores: Setor[]; atendem: Setor[]; setorPadrao?: string }) {
   const router = useRouter(), formulario = useRef<HTMLFormElement>(null);
-  const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : "", priority: "MEDIA", requestData: {}, tags: [], handlingSectorCode: "" });
+  const [dados, setDados] = useState<DadosDoChamado>(inicial?.dados ?? { title: "", description: "", categoryId: "", requesterSectorCode: setores.length === 1 ? setores[0].code : setores.some(st => st.code === setorPadrao) ? setorPadrao ?? "" : "", priority: "MEDIA", requestData: {}, tags: [], handlingSectorCode: "" });
   const [anexos, setAnexos] = useState(inicial?.anexos ?? []);
   const [busy, setBusy] = useState(""), [erro, setErro] = useState(""), [salvoAs, setSalvoAs] = useState("");
   const abort = useRef<AbortController | null>(null);

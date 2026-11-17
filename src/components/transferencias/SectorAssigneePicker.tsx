@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, User, X } from "lucide-react";
+import { Check, Search, User, UserCheck, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -22,6 +22,12 @@ type Props = {
   onChange?: (ids: string[]) => void;
   /** O nome do botão para o leitor de tela, quando há um seletor por setor ("Responsáveis do Fiscal"). */
   rotulo?: string;
+  /**
+   * A opção explícita de não escolher ninguém (17/11/2026, melhoria-705): "A
+   * coordenação do Fiscal decide". É o rótulo do botão quando ninguém está
+   * marcado e a primeira linha da lista, que tira todos.
+   */
+  semNinguem?: string;
 };
 
 // Mesmo padrão de busca+lista do AssigneeToggleList (Kanban), agora também
@@ -29,7 +35,7 @@ type Props = {
 // A diferença pro Kanban é que aqui a transferência ainda não existe, então não
 // há action assíncrona por clique: cada selecionado vira um campo hidden que vai
 // junto no submit do formulário inteiro (o servidor lê com form.getAll).
-export function SectorAssigneePicker({ name, options, defaultValue = [], value, onChange, rotulo }: Props) {
+export function SectorAssigneePicker({ name, options, defaultValue = [], value, onChange, rotulo, semNinguem }: Props) {
   const [interno, setInterno] = useState<string[]>(defaultValue);
   const selectedIds = value ?? interno;
   const setSelectedIds = (proximo: string[] | ((anterior: string[]) => string[])) => {
@@ -51,12 +57,12 @@ export function SectorAssigneePicker({ name, options, defaultValue = [], value, 
   }
 
   if (options.length === 0) {
-    return <p className="text-fs-2 text-fg-muted">Nenhum membro elegível neste setor.</p>;
+    return <p className="text-fs-2 text-fg-muted">{semNinguem ?? "Nenhum membro elegível neste setor."}</p>;
   }
 
   const label =
     selectedUsers.length === 0
-      ? "Definir responsáveis"
+      ? (semNinguem ?? "Definir responsáveis")
       : selectedUsers.length === 1
         ? selectedUsers[0].name
         : `${selectedUsers.length} responsáveis`;
@@ -73,12 +79,12 @@ export function SectorAssigneePicker({ name, options, defaultValue = [], value, 
             aria-label={rotulo ? `${rotulo}: ${label}` : undefined}
             // 44px no celular, para o dedo (10/11/2026); 32px na mesa.
             className={`inline-flex items-center gap-1.5 h-11 sm:h-8 px-2.5 rounded-md border text-fs-2 transition-colors ${
-              selectedUsers.length > 0
+              selectedUsers.length > 0 || semNinguem
                 ? "border-border-strong text-fg"
                 : "border-dashed border-border-strong text-fg-muted hover:text-fg hover:bg-surface-hover"
             }`}
           >
-            <User size={12} />
+            {selectedUsers.length === 0 && semNinguem ? <UserCheck size={12} aria-hidden /> : <User size={12} aria-hidden />}
             {label}
           </button>
         )}
@@ -96,6 +102,18 @@ export function SectorAssigneePicker({ name, options, defaultValue = [], value, 
             {/* Sem close() ao escolher: em multi-seleção o normal é marcar
                 vários seguidos, e fechar a cada clique obrigaria a reabrir. */}
             <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
+              {semNinguem && normalizedQuery === "" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  aria-pressed={selectedIds.length === 0}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-fs-2 text-fg-secondary hover:bg-surface-hover hover:text-fg transition-colors"
+                >
+                  <UserCheck size={14} aria-hidden className="flex-shrink-0 text-fg-muted" />
+                  <span className="flex-1">{semNinguem}</span>
+                  {selectedIds.length === 0 && <Check size={14} aria-hidden className="text-brand" />}
+                </button>
+              )}
               {filtered.length === 0 ? (
                 <p className="text-fs-2 text-fg-muted py-1">Nenhum responsável encontrado.</p>
               ) : (

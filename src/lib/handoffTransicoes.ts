@@ -99,6 +99,16 @@ export function podeMudarResponsaveis(quem: QuemAge, parte: Pick<ParteParaARegra
   return canManageSector(quem, parte.sectorCode);
 }
 
+/**
+ * Marcar e desmarcar as tarefas da parte (17/11/2026, melhoria-705): quem cuida
+ * da parte, enquanto ela está com o setor (nova ou resolvendo). A finalizada e a
+ * devolvida ficam como estão até alguém reabrir ou reenviar.
+ */
+export function podeMarcarTarefa(quem: QuemAge, parte: ParteParaARegra): boolean {
+  if (parte.status !== "NEW" && parte.status !== "IN_PROGRESS") return false;
+  return cuidaDaParte(quem, parte);
+}
+
 /** Editar assunto, descrição e prioridade: o lado de quem pediu. */
 export function podeEditarATransferencia(quem: QuemAge, pedido: PedidoParaARegra): boolean {
   return respondePeloPedido(quem, pedido);
