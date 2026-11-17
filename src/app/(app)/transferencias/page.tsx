@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightLeft, Clock, History, Inbox, Plus, Send, UserCheck } from "lucide-react";
+import { ArrowRightLeft, Clock, History, Inbox, Plus, Send, UserCheck, UserPlus } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
 import type { HandoffPriority, HandoffSectorStatus } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/Button";
@@ -56,6 +56,7 @@ const TETO_DA_BUSCA = 500;
 
 const ICONE_DA_ABA: Record<AbaDaTransferencia, React.ReactNode> = {
   setor: <Inbox size={14} aria-hidden />,
+  distribuir: <UserPlus size={14} aria-hidden />,
   comigo: <UserCheck size={14} aria-hidden />,
   enviadas: <Send size={14} aria-hidden />,
   finalizadas: <History size={14} aria-hidden />,
@@ -66,6 +67,10 @@ const VAZIO_DA_ABA: Record<AbaDaTransferencia, { titulo: string; texto: string }
   setor: {
     titulo: "Nada esperando o seu setor",
     texto: "Quando outro setor pedir ao seu para acompanhar uma empresa ou pessoa, a transferência aparece aqui, e o setor é avisado no sino.",
+  },
+  distribuir: {
+    titulo: "Nada para distribuir",
+    texto: "Aqui ficam as partes sem responsável dos setores que você coordena, até alguém ser escolhido para cuidar.",
   },
   comigo: {
     titulo: "Nenhuma transferência com você",
@@ -292,7 +297,7 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
                     <Selo tom={HANDOFF_PRIORITY_TOM[l.priority]}>{HANDOFF_PRIORITY_LABEL[l.priority]}</Selo>
                     <AbertaHa linha={l} />
                     <span className="text-ui text-fg-muted">·</span>
-                    <Responsaveis pessoas={l.responsaveis} />
+                    <Responsaveis pessoas={l.responsaveis} vazio={aba === "finalizadas" ? "Sem responsável" : "A coordenação decide"} />
                   </PeDoCartao>
                 </Cartao>
               ))}
@@ -331,7 +336,7 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
                         <RotaDosSetores de={l.fromSector} para={l.sectors} rotulos={sectorLabels} cores={sectorColors} className="justify-center" />
                       </td>
                       <td className="px-3">
-                        <Responsaveis pessoas={l.responsaveis} />
+                        <Responsaveis pessoas={l.responsaveis} vazio={aba === "finalizadas" ? "Sem responsável" : "A coordenação decide"} />
                       </td>
                       <td className="px-3">
                         <Selo tom={HANDOFF_PRIORITY_TOM[l.priority]}>{HANDOFF_PRIORITY_LABEL[l.priority]}</Selo>
@@ -424,8 +429,8 @@ function AbertaHa({ linha }: { linha: Linha }) {
 
 type Pessoa = { id: string; name: string; photoUrl: string | null };
 
-function Responsaveis({ pessoas }: { pessoas: Pessoa[] }) {
-  if (pessoas.length === 0) return <span className="text-ui text-fg-muted">Sem responsável</span>;
+function Responsaveis({ pessoas, vazio }: { pessoas: Pessoa[]; vazio: string }) {
+  if (pessoas.length === 0) return <span className="text-ui text-fg-muted">{vazio}</span>;
   const [primeira, ...outras] = pessoas;
   return (
     <span className="inline-flex items-center gap-1.5 text-ui text-fg-secondary" title={pessoas.map((p) => p.name).join(", ")}>
@@ -460,6 +465,9 @@ function responsaveisDaLinha(aba: AbaDaTransferencia, setores: SetorDaLinha[], q
   if (aba === "setor") {
     const caixa = setoresDaCaixa(quem);
     daVez = setores.filter((s) => SITUACOES_COM_O_SETOR.includes(s.status) && (caixa === null || caixa.includes(s.sectorCode)));
+  } else if (aba === "distribuir") {
+    // A parte que está para distribuir não tem responsável.
+    daVez = [];
   } else if (aba === "comigo") {
     daVez = setores.filter((s) => SITUACOES_COM_O_SETOR.includes(s.status) && s.assignees.some((a) => a.user.id === quem.userId));
   }

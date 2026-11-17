@@ -1,17 +1,21 @@
-// Modelos de texto para o campo "Descrição" (e as instruções por setor) da
-// Transferência — mesmos padrões usados no Acessórias, portados como
-// referência de conteúdo (não são dados de tenant, não têm tela de edição —
-// lista fixa em código, como OPCOES_DE_REGIME em src/lib/taxRegime.ts).
+// Os 16 modelos da nova transferência — lista fixa em código, como
+// OPCOES_DE_REGIME em src/lib/taxRegime.ts (não são dados de tenant e não têm
+// tela de edição).
 //
-// Cada modelo já vem separado em duas partes, espelhando os dois campos do
-// formulário: `message` = título + empresa/CNPJ + origem + breve resumo (a
-// parte que vale pra qualquer setor que receber a transferência);
-// `description` = o detalhamento operacional (orientações, demandas por
-// setor, responsáveis, documentos, observações).
+// Desde 17/11/2026 (melhoria-705, escolha "A · Tarefas marcáveis e a
+// coordenação como responsável" do Kauan) cada modelo é dado, e não texto:
+// - `setores`: os setores que recebem e, por setor, as tarefas dele, que viram
+//   itens marcáveis na parte do setor;
+// - `campos`: o que o modelo precisa saber de quem pede (situação, valor,
+//   datas…). Era o que ficava entre colchetes no texto, e aparecia cru para
+//   quem pedia e para quem recebia.
+// Empresa e CNPJ já vêm da transferência; regime e contato vêm do cadastro da
+// empresa quando o campo fica em branco (`deCadastro`).
 //
-// [EMPRESA] e [CNPJ] são substituídos automaticamente pela empresa/pessoa
-// selecionada no formulário quando possível; os demais placeholders ficam
-// para o usuário preencher manualmente.
+// Os setores e as tarefas são a proposta de 17/11/2026, para as coordenações
+// validarem. Mudar um modelo é mudar este arquivo: as transferências já
+// enviadas guardam as tarefas delas (HandoffSectorTask) e não mudam.
+
 export type HandoffTemplateKey =
   | "BAIXA_CNPJ"
   | "REGULARIZACAO_BAIXA"
@@ -30,747 +34,281 @@ export type HandoffTemplateKey =
   | "SOLICITACAO_MULTISSETORIAL"
   | "FECHAMENTO_MENSAL_BPO";
 
+/** Uma pergunta do modelo. `longo` é texto de várias linhas; `opcoes`, um seletor. */
+export type CampoDoModelo = {
+  chave: string;
+  rotulo: string;
+  tipo: "texto" | "longo" | "opcoes" | "data";
+  opcoes?: string[];
+  /** Em branco, a transferência leva o dado do cadastro da empresa. */
+  deCadastro?: "regime" | "contato";
+};
+
+/** Um setor do modelo: as palavras que acham o setor do escritório e as tarefas dele. */
+export type SetorDoModelo = { setor: string[]; tarefas: string[] };
+
 export type HandoffTemplate = {
   key: HandoffTemplateKey;
   label: string;
-  message: string;
-  description: string;
-  // Palavras-chave (normalizadas, sem acento) usadas para casar automaticamente
-  // com os setores de destino do tenant — só preenchido nos modelos que têm
-  // blocos "Demanda X:"/"Instruções — X:" claramente separados por setor.
-  sectorHints?: string[];
+  campos: CampoDoModelo[];
+  setores: SetorDoModelo[];
 };
+
+// As palavras de cada setor, comparadas sem acento com o código e o nome do
+// setor do escritório (que são livres por tenant).
+const SOCIETARIO = ["societario"];
+const FISCAL = ["fiscal"];
+const CONTABIL = ["contabil"];
+const DP = ["dp", "pessoal"];
+const FINANCEIRO = ["financeiro"];
+
+const QUEM_PEDIU: CampoDoModelo = { chave: "quemPediu", rotulo: "Quem pediu", tipo: "texto" };
+const CONTATO: CampoDoModelo = { chave: "contato", rotulo: "Contato do cliente", tipo: "texto", deCadastro: "contato" };
+const REGIME: CampoDoModelo = { chave: "regime", rotulo: "Regime tributário", tipo: "texto", deCadastro: "regime" };
+const VALOR: CampoDoModelo = { chave: "valor", rotulo: "Valor acordado", tipo: "texto" };
+const REGIMES = ["MEI", "Simples Nacional", "Lucro Presumido", "Lucro Real"];
 
 export const HANDOFF_TEMPLATES: HandoffTemplate[] = [
   {
     key: "BAIXA_CNPJ",
     label: "Baixa de CNPJ",
-    message: `BAIXA DE CNPJ
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Origem da solicitação: [SOLICITANTE OU CANAL]
-
-O cliente confirmou que deseja prosseguir com a baixa do CNPJ.`,
-    description: `Orientações:
-
-- iniciar o processo de encerramento;
-- seguir as etapas aplicáveis ao processo de baixa;
-- verificar pendências fiscais, contábeis, municipais, estaduais e societárias;
-- verificar se existem obrigações ou documentos pendentes;
-- não realizar cobrança adicional, quando aplicável;
-- após a conclusão, verificar se haverá abertura de uma nova empresa.
-
-Anexos ou comprovações:
-
-- [DOCUMENTO OU CONFIRMAÇÃO]
-
-Observações:
-
-[OBSERVAÇÕES COMPLEMENTARES]`,
+    campos: [QUEM_PEDIU, { chave: "novaEmpresa", rotulo: "Depois da baixa", tipo: "opcoes", opcoes: ["Nada", "Abrir outra empresa", "Abrir MEI", "Ainda não sabe"] }],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Iniciar a baixa nos órgãos", "Acompanhar o encerramento até a conclusão", "Guardar os documentos finais na ficha"] },
+      { setor: FISCAL, tarefas: ["Levantar as pendências fiscais", "Entregar as declarações em atraso e as de encerramento"] },
+      { setor: CONTABIL, tarefas: ["Levantar o balanço de encerramento", "Entregar as obrigações contábeis pendentes"] },
+      { setor: DP, tarefas: ["Conferir funcionários e pró-labores ativos", "Fazer as rescisões e encerrar a folha"] },
+    ],
   },
   {
     key: "REGULARIZACAO_BAIXA",
     label: "Regularização seguida de baixa de CNPJ",
-    message: `REGULARIZAÇÃO E BAIXA DE CNPJ
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Breve resumo:
-
-A empresa encontra-se [INAPTA, SUSPENSA, COM OMISSÃO DE DECLARAÇÕES OU OUTRA SITUAÇÃO].
-
-É necessário regularizar a situação cadastral e fiscal antes de realizar a baixa do CNPJ.`,
-    description: `Demanda fiscal:
-
-- identificar declarações e obrigações omitidas;
-- verificar os períodos pendentes;
-- transmitir as obrigações necessárias;
-- levantar débitos e pendências fiscais;
-- acompanhar a regularização da situação cadastral.
-
-Demanda contábil:
-
-- verificar declarações contábeis pendentes;
-- confirmar quais obrigações já foram entregues;
-- solicitar documentos necessários;
-- analisar balanços, demonstrativos e movimentos pendentes.
-
-Demanda societária:
-
-- iniciar a baixa após a conclusão da regularização;
-- acompanhar o encerramento nos órgãos competentes;
-- após a baixa, iniciar a abertura de [NOVA EMPRESA OU MEI], quando aplicável.
-
-Valor acordado:
-
-[VALOR E CONDIÇÃO COMERCIAL]
-
-Contato do cliente:
-
-Telefone: [TELEFONE]
-E-mail: [EMAIL]
-Canal de atendimento: [CANAL]
-
-Observações:
-
-[DEPENDÊNCIAS, PRAZOS OU PARTICULARIDADES]`,
-    sectorHints: ["fiscal", "contabil", "societario"],
+    campos: [
+      { chave: "situacao", rotulo: "Situação da empresa", tipo: "opcoes", opcoes: ["Inapta", "Suspensa", "Com declarações omitidas", "Outra"] },
+      VALOR,
+      CONTATO,
+      { chave: "depois", rotulo: "Depois da baixa", tipo: "opcoes", opcoes: ["Nada", "Abrir outra empresa", "Abrir MEI"] },
+    ],
+    setores: [
+      {
+        setor: FISCAL,
+        tarefas: ["Identificar as declarações omitidas e os períodos pendentes", "Transmitir as obrigações em atraso", "Levantar os débitos e emitir as guias", "Acompanhar a regularização cadastral"],
+      },
+      { setor: CONTABIL, tarefas: ["Conferir as declarações contábeis pendentes", "Pedir os documentos que faltam", "Fechar balanços e demonstrativos pendentes"] },
+      { setor: SOCIETARIO, tarefas: ["Iniciar a baixa depois da regularização", "Acompanhar o encerramento nos órgãos", "Abrir a nova empresa ou o MEI, se combinado"] },
+    ],
   },
   {
     key: "ALTERACAO_CONTRATUAL",
     label: "Alteração contratual",
-    message: `ALTERAÇÃO CONTRATUAL
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Solicitação recebida de: [SOLICITANTE]`,
-    description: `Alterações solicitadas:
-
-- entrada do sócio [NOME];
-- saída do sócio [NOME];
-- participação societária de [PERCENTUAL];
-- redistribuição das quotas da seguinte forma: [DESCRIÇÃO];
-- administrador da empresa: [NOME];
-- capital social após a alteração: [VALOR];
-- demais alterações: [DESCRIÇÃO].
-
-Dados dos envolvidos:
-
-Nome: [NOME]
-Participação: [PERCENTUAL]
-Função: [SÓCIO, ADMINISTRADOR OU OUTRA]
-E-mail: [EMAIL]
-Telefone: [TELEFONE]
-
-Documentos recebidos:
-
-- documento de identificação;
-- comprovante de endereço;
-- dados pessoais e cadastrais;
-- autorização ou confirmação da solicitação;
-- demais documentos aplicáveis.
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
+    campos: [QUEM_PEDIU, { chave: "mudancas", rotulo: "O que muda", tipo: "longo" }],
+    setores: [
+      {
+        setor: SOCIETARIO,
+        tarefas: ["Conferir os documentos dos sócios", "Redigir a alteração contratual", "Registrar na Junta e atualizar a Receita", "Guardar o contrato registrado na ficha"],
+      },
+      { setor: FISCAL, tarefas: ["Atualizar o cadastro fiscal depois do registro"] },
+      { setor: CONTABIL, tarefas: ["Atualizar o capital social e o quadro de sócios na contabilidade"] },
+    ],
   },
   {
     key: "SETUP_MIGRACAO",
     label: "Setup de migração de cliente",
-    message: `SETUP DE MIGRAÇÃO
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-Regime tributário: [REGIME]
-Data de início da prestação dos serviços: [DATA]
-
-Dados do antigo contador:
-
-Nome ou escritório: [ANTIGO CONTADOR]
-Telefone: [TELEFONE]
-E-mail: [EMAIL]
-
-Informações operacionais:
-
-Quantidade de funcionários ativos: [QUANTIDADE]
-Quantidade de pró-labores ativos: [QUANTIDADE]
-Quantidade de estabelecimentos: [QUANTIDADE]
-Empresas vinculadas: [LISTA]
-
-Breve resumo do cliente:
-
-- porte da empresa;
-- atividade principal;
-- quantidade de unidades ou veículos, quando aplicável;
-- nível atual de organização documental;
-- situação perante o antigo contador;
-- particularidades da operação;
-- informações comerciais relevantes.`,
-    description: `Instruções — Contábil:
-
-- verificar com o antigo contador quais obrigações já foram executadas no exercício;
-- confirmar a existência de balanços e demonstrações contábeis anteriores;
-- verificar lançamentos e movimentos pendentes;
-- solicitar os documentos contábeis necessários;
-- orientar o cliente quanto ao envio periódico da documentação.
-
-Instruções — Fiscal:
-
-- levantar débitos e pendências fiscais;
-- verificar a situação fiscal da empresa nos órgãos competentes;
-- confirmar quais obrigações foram transmitidas;
-- identificar documentos fiscais pendentes;
-- orientar o cliente sobre o envio dos documentos fiscais.
-
-Instruções — Societário:
-
-- verificar alterações cadastrais ou societárias pendentes;
-- confirmar a situação das procurações;
-- verificar inscrições, licenças e cadastros;
-- registrar demandas societárias identificadas.
-
-Instruções — Departamento Pessoal:
-
-- confirmar a quantidade de funcionários ativos;
-- confirmar os pró-labores ativos;
-- verificar admissões, rescisões e afastamentos;
-- verificar folhas e obrigações trabalhistas pendentes;
-- registrar quando não houver funcionários ou folha ativa.
-
-Instruções — Onboarding:
-
-- solicitar a documentação inicial da empresa;
-- entrar em contato com o antigo contador;
-- confirmar o status das obrigações e entregas;
-- apresentar ao cliente os canais de atendimento;
-- orientar sobre os fluxos e prazos de envio de documentos;
-- acompanhar o início da prestação dos serviços.
-
-Instruções — Customer Success:
-
-- acompanhar de perto o início da operação;
-- realizar contatos frequentes nos primeiros meses;
-- reforçar orientações sobre organização documental;
-- acompanhar dificuldades de adaptação;
-- registrar os principais riscos identificados.
-
-Observações gerais:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
-    sectorHints: ["contabil", "fiscal", "societario", "pessoal", "dp", "onboarding", "customer success", "cs"],
+    campos: [
+      REGIME,
+      { chave: "inicio", rotulo: "Início dos serviços", tipo: "data" },
+      { chave: "antigoContador", rotulo: "Antigo contador (nome e contato)", tipo: "texto" },
+      { chave: "funcionarios", rotulo: "Funcionários ativos", tipo: "texto" },
+      { chave: "proLabores", rotulo: "Pró-labores ativos", tipo: "texto" },
+      { chave: "estabelecimentos", rotulo: "Estabelecimentos", tipo: "texto" },
+      { chave: "resumo", rotulo: "Sobre o cliente", tipo: "longo" },
+    ],
+    setores: [
+      {
+        setor: CONTABIL,
+        tarefas: ["Confirmar com o antigo contador o que já foi entregue no ano", "Pedir balanços e demonstrações anteriores", "Orientar o cliente sobre o envio dos documentos"],
+      },
+      { setor: FISCAL, tarefas: ["Levantar débitos e pendências fiscais", "Confirmar as obrigações já transmitidas", "Orientar o cliente sobre o envio das notas"] },
+      { setor: SOCIETARIO, tarefas: ["Conferir alterações cadastrais pendentes", "Confirmar as procurações", "Conferir inscrições, licenças e cadastros"] },
+      { setor: DP, tarefas: ["Confirmar funcionários e pró-labores ativos", "Conferir admissões, rescisões e afastamentos", "Conferir folhas e obrigações pendentes"] },
+    ],
   },
   {
     key: "ABERTURA_NOVA_EMPRESA",
     label: "Abertura de nova empresa",
-    message: `ABERTURA DE NOVA EMPRESA
-
-Solicitante: [SOLICITANTE]
-
-Dados iniciais:
-
-Ramo de atividade: [ATIVIDADE]
-Sócio ou sócios: [NOMES]
-Endereço pretendido: [ENDEREÇO]
-Nome empresarial pretendido: [NOME]
-Nome fantasia pretendido: [NOME]
-Empresa relacionada: [EMPRESA RELACIONADA]`,
-    description: `Informações já confirmadas:
-
-- [INFORMAÇÃO]
-- [INFORMAÇÃO]
-
-Informações pendentes:
-
-- [DADO PENDENTE]
-- [DADO PENDENTE]
-
-Observações:
-
-- verificar a disponibilidade do endereço;
-- validar as atividades informadas;
-- confirmar os dados dos sócios;
-- verificar se existem empresas relacionadas;
-- confirmar as informações faltantes antes do início do processo.`,
+    campos: [
+      QUEM_PEDIU,
+      { chave: "atividade", rotulo: "Ramo de atividade", tipo: "texto" },
+      { chave: "socios", rotulo: "Sócios", tipo: "texto" },
+      { chave: "endereco", rotulo: "Endereço pretendido", tipo: "texto" },
+      { chave: "nome", rotulo: "Nome empresarial pretendido", tipo: "texto" },
+      { chave: "fantasia", rotulo: "Nome fantasia", tipo: "texto" },
+      { chave: "faltando", rotulo: "O que ainda falta", tipo: "longo" },
+    ],
+    setores: [
+      {
+        setor: SOCIETARIO,
+        tarefas: ["Consultar a viabilidade do endereço", "Validar as atividades", "Confirmar os dados dos sócios", "Pedir as informações que faltam", "Iniciar a abertura"],
+      },
+    ],
   },
   {
     key: "SETUP_ABERTURA",
     label: "Setup completo de abertura",
-    message: `SETUP DE ABERTURA
-
-Nome empresarial pretendido: [NOME]
-Nome fantasia: [NOME]
-Regime tributário pretendido: [REGIME]
-Capital social pretendido: [VALOR]`,
-    description: `Atividade principal:
-
-Código CNAE: [CÓDIGO]
-Descrição: [DESCRIÇÃO]
-
-Atividades secundárias:
-
-- [CÓDIGO] — [DESCRIÇÃO]
-- [CÓDIGO] — [DESCRIÇÃO]
-
-Formas de atuação:
-
-- fabricação própria;
-- prestação de serviços;
-- comércio físico;
-- venda direta ao consumidor;
-- comércio eletrônico;
-- marketplaces;
-- distribuição;
-- venda para lojistas;
-- revenda de produtos de terceiros;
-- importação;
-- exportação;
-- desenvolvimento de marca própria;
-- outras formas de atuação: [DESCRIÇÃO].
-
-Endereço da empresa:
-
-Logradouro: [LOGRADOURO]
-Número: [NÚMERO]
-Complemento: [COMPLEMENTO]
-Bairro: [BAIRRO]
-Cidade/UF: [CIDADE/UF]
-CEP: [CEP]
-Inscrição imobiliária: [INSCRIÇÃO]
-Indicação fiscal: [INDICAÇÃO]
-
-Contato da empresa:
-
-Telefone: [TELEFONE]
-E-mail: [EMAIL]
-
-Responsável legal:
-
-Nome: [NOME]
-E-mail: [EMAIL]
-Telefone: [TELEFONE]
-
-Dados dos sócios:
-
-Sócio: [NOME]
-Estado civil: [ESTADO CIVIL]
-Participação societária: [PERCENTUAL]
-Endereço residencial: [ENDEREÇO]
-Documentos recebidos: [DOCUMENTOS]
-
-(Repetir o bloco acima para cada sócio.)
-
-Documentos anexados:
-
-- documento de identificação;
-- comprovante de endereço;
-- documento do imóvel;
-- autorização de uso do endereço;
-- documentos relacionados às atividades;
-- outros documentos: [DOCUMENTOS].
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
+    campos: [
+      { chave: "nome", rotulo: "Nome empresarial", tipo: "texto" },
+      { chave: "fantasia", rotulo: "Nome fantasia", tipo: "texto" },
+      { chave: "regime", rotulo: "Regime pretendido", tipo: "opcoes", opcoes: REGIMES },
+      { chave: "capital", rotulo: "Capital social", tipo: "texto" },
+      { chave: "cnaePrincipal", rotulo: "Atividade principal (CNAE)", tipo: "texto" },
+      { chave: "cnaesSecundarios", rotulo: "Atividades secundárias", tipo: "longo" },
+      { chave: "atuacao", rotulo: "Formas de atuação", tipo: "longo" },
+      { chave: "endereco", rotulo: "Endereço da empresa", tipo: "longo" },
+      { chave: "responsavel", rotulo: "Responsável legal", tipo: "texto" },
+    ],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Registrar a empresa na Junta e na Receita", "Tirar as inscrições municipal e estadual", "Tirar o alvará e as licenças"] },
+      { setor: FISCAL, tarefas: ["Enquadrar o regime tributário", "Liberar a emissão de notas"] },
+      { setor: CONTABIL, tarefas: ["Abrir a contabilidade da empresa", "Lançar o capital social"] },
+    ],
   },
   {
     key: "CONFIGURACAO_EMPRESA_NOVA",
     label: "Configuração e parametrização de empresa nova",
-    message: `CONFIGURAÇÃO E PARAMETRIZAÇÃO DE EMPRESA NOVA
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Data de abertura: [DATA]
-Data de início da prestação dos serviços: [DATA]
-Regime tributário: [REGIME]
-Capital social: [VALOR]`,
-    description: `Procurações e acessos:
-
-- situação da procuração na Receita Federal: [SITUAÇÃO];
-- situação dos acessos municipais: [SITUAÇÃO];
-- situação dos acessos estaduais: [SITUAÇÃO];
-- acessos já disponíveis: [LISTA];
-- acessos pendentes: [LISTA];
-- necessidade de solicitar autorização ao cliente: [SIM OU NÃO].
-
-Instruções do setor:
-
-- verificar quais obrigações já foram realizadas no exercício;
-- confirmar a existência de balanços e demonstrações;
-- verificar documentos e movimentos anteriores;
-- orientar o cliente sobre o envio periódico da documentação;
-- identificar documentos ainda pendentes;
-- confirmar as responsabilidades do setor.
-
-Observações importantes:
-
-[OBSERVAÇÕES]`,
+    campos: [
+      REGIME,
+      { chave: "abertura", rotulo: "Data de abertura", tipo: "data" },
+      { chave: "inicio", rotulo: "Início dos serviços", tipo: "data" },
+      { chave: "capital", rotulo: "Capital social", tipo: "texto" },
+      { chave: "procuracao", rotulo: "Procuração na Receita", tipo: "opcoes", opcoes: ["Ativa", "Pendente", "Não sei"] },
+      { chave: "acessos", rotulo: "Acessos pendentes", tipo: "texto" },
+    ],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Confirmar a procuração na Receita", "Conseguir os acessos municipal e estadual"] },
+      { setor: FISCAL, tarefas: ["Cadastrar a empresa no sistema fiscal", "Conferir as obrigações do ano", "Orientar o cliente sobre o envio das notas"] },
+      { setor: CONTABIL, tarefas: ["Cadastrar a empresa na contabilidade", "Conferir documentos e movimentos anteriores", "Orientar o cliente sobre o envio dos documentos"] },
+      { setor: DP, tarefas: ["Confirmar se há funcionários e pró-labore", "Cadastrar a folha, quando houver"] },
+    ],
   },
   {
     key: "INCLUSAO_CNAE",
     label: "Inclusão de CNAE",
-    message: `INCLUSÃO DE CNAE
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Solicitante: [SOLICITANTE]
-
-CNAE a incluir:
-
-Código: [CÓDIGO CNAE]
-Descrição: [DESCRIÇÃO DA ATIVIDADE]`,
-    description: `Orientações:
-
-- manter os CNAEs atuais, quando aplicável;
-- verificar se a atividade será principal ou secundária;
-- verificar impactos cadastrais e tributários;
-- verificar a necessidade de alteração contratual;
-- consultar a viabilidade da atividade;
-- confirmar eventuais exigências municipais, estaduais ou profissionais.
-
-Documentos ou anexos:
-
-- aprovação do cliente;
-- confirmação da solicitação;
-- documentos relacionados à atividade.
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
+    campos: [
+      QUEM_PEDIU,
+      { chave: "cnae", rotulo: "CNAE a incluir (código e descrição)", tipo: "texto" },
+      { chave: "tipo", rotulo: "A atividade será", tipo: "opcoes", opcoes: ["Principal", "Secundária"] },
+    ],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Consultar a viabilidade da atividade", "Ver se precisa de alteração contratual", "Atualizar na Junta, na Receita e nas inscrições"] },
+      { setor: FISCAL, tarefas: ["Avaliar o impacto tributário da atividade", "Atualizar o cadastro fiscal"] },
+    ],
   },
   {
     key: "ALTERACAO_CNAES",
     label: "Alteração de CNAEs ou atividades",
-    message: `ALTERAÇÃO DE ATIVIDADES
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Origem da solicitação: [SOLICITANTE OU CANAL]`,
-    description: `Atividades a incluir:
-
-- [CÓDIGO CNAE] — [DESCRIÇÃO]
-- [CÓDIGO CNAE] — [DESCRIÇÃO]
-
-Atividades a excluir:
-
-- [CÓDIGO CNAE] — [DESCRIÇÃO]
-
-Atividade principal após a alteração:
-
-[CÓDIGO CNAE] — [DESCRIÇÃO]
-
-Orientações:
-
-- manter as atividades atuais não mencionadas, quando aplicável;
-- validar qual será a atividade principal;
-- verificar a necessidade de alteração contratual;
-- verificar os impactos tributários;
-- verificar os impactos municipais e estaduais;
-- consultar a viabilidade das novas atividades.
-
-Documentos ou anexos:
-
-- confirmação do cliente;
-- autorização para alteração;
-- documentos complementares.
-
-Observações:
-
-[OBSERVAÇÕES]`,
+    campos: [
+      QUEM_PEDIU,
+      { chave: "incluir", rotulo: "Atividades a incluir", tipo: "longo" },
+      { chave: "excluir", rotulo: "Atividades a excluir", tipo: "longo" },
+      { chave: "principal", rotulo: "Atividade principal depois da alteração", tipo: "texto" },
+    ],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Consultar a viabilidade das atividades novas", "Ver se precisa de alteração contratual", "Atualizar na Junta, na Receita e nas inscrições"] },
+      { setor: FISCAL, tarefas: ["Avaliar o impacto tributário, municipal e estadual", "Atualizar o cadastro fiscal"] },
+    ],
   },
   {
     key: "ALTERACAO_ENDERECO_ATIVIDADES",
     label: "Alteração de endereço e atividades",
-    message: `ALTERAÇÃO DE ENDEREÇO E ATIVIDADES
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Origem da solicitação: [SOLICITANTE OU SETUP]`,
-    description: `Novo endereço:
-
-Logradouro: [LOGRADOURO]
-Número: [NÚMERO]
-Complemento: [COMPLEMENTO]
-Bairro: [BAIRRO]
-Cidade/UF: [CIDADE/UF]
-CEP: [CEP]
-
-Atividades a incluir:
-
-- [CÓDIGO CNAE] — [DESCRIÇÃO]
-- [CÓDIGO CNAE] — [DESCRIÇÃO]
-
-Atividades a excluir:
-
-- [CÓDIGO CNAE] — [DESCRIÇÃO]
-
-Orientações adicionais:
-
-- utilizar como referência cadastral a empresa [EMPRESA DE REFERÊNCIA], quando aplicável;
-- verificar a viabilidade do novo endereço;
-- verificar restrições municipais;
-- validar as atividades permitidas no local;
-- verificar a necessidade de alteração contratual;
-- verificar reflexos nas inscrições municipal e estadual.
-
-Documentos ou anexos:
-
-- comprovante do endereço;
-- documento do imóvel;
-- autorização de uso;
-- confirmação da solicitação;
-- documentação complementar.
-
-Observações:
-
-[OBSERVAÇÕES]`,
+    campos: [
+      QUEM_PEDIU,
+      { chave: "endereco", rotulo: "Novo endereço", tipo: "longo" },
+      { chave: "incluir", rotulo: "Atividades a incluir", tipo: "longo" },
+      { chave: "excluir", rotulo: "Atividades a excluir", tipo: "longo" },
+      { chave: "referencia", rotulo: "Empresa de referência", tipo: "texto" },
+    ],
+    setores: [
+      {
+        setor: SOCIETARIO,
+        tarefas: ["Consultar a viabilidade do endereço", "Validar as atividades permitidas no local", "Fazer a alteração contratual", "Atualizar as inscrições municipal e estadual"],
+      },
+      { setor: FISCAL, tarefas: ["Avaliar o impacto da mudança de município ou estado", "Atualizar o cadastro fiscal"] },
+    ],
   },
   {
     key: "NOVO_CLIENTE_CONSTITUIDO",
     label: "Novo cliente constituído pelo próprio escritório",
-    message: `NOVO CLIENTE CONSTITUÍDO PELO ESCRITÓRIO
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-O processo de abertura da empresa foi concluído.
-
-As informações necessárias para o início das atividades estão disponíveis no setup e nos documentos anexados.`,
-    description: `Informações adicionais:
-
-- empresa relacionada: [EMPRESA];
-- vínculo com outros clientes: [DESCRIÇÃO];
-- responsável comercial: [RESPONSÁVEL];
-- origem do cliente: [ORIGEM];
-- particularidades identificadas durante a abertura: [DESCRIÇÃO];
-- setores que devem iniciar a configuração: [SETORES].
-
-Documentos disponíveis:
-
-- setup fiscal;
-- setup contábil;
-- documentos constitutivos;
-- cartão do CNPJ;
-- inscrições;
-- comprovantes;
-- documentos dos sócios;
-- demais documentos aplicáveis.
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
+    campos: [
+      { chave: "comercial", rotulo: "Responsável comercial", tipo: "texto" },
+      { chave: "origem", rotulo: "Origem do cliente", tipo: "texto" },
+      { chave: "relacionada", rotulo: "Empresa relacionada", tipo: "texto" },
+      { chave: "particularidades", rotulo: "Particularidades da abertura", tipo: "longo" },
+    ],
+    setores: [
+      { setor: FISCAL, tarefas: ["Conferir o setup fiscal", "Cadastrar a empresa no sistema fiscal"] },
+      { setor: CONTABIL, tarefas: ["Conferir o setup contábil", "Abrir a contabilidade da empresa"] },
+      { setor: DP, tarefas: ["Confirmar se há funcionários e pró-labore"] },
+    ],
   },
   {
     key: "ENCERRAMENTO_EMPRESA",
     label: "Encerramento de empresa",
-    message: `ENCERRAMENTO DE EMPRESA
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Solicitante: [SOLICITANTE]
-
-Solicitação:
-
-Realizar a baixa e o encerramento formal da empresa.`,
-    description: `Orientações:
-
-- iniciar o processo de encerramento;
-- verificar pendências fiscais;
-- verificar pendências contábeis;
-- verificar pendências societárias;
-- verificar pendências municipais e estaduais;
-- solicitar os documentos faltantes;
-- acompanhar a conclusão nos órgãos envolvidos;
-- armazenar os documentos finais após a conclusão.
-
-Data de início: [DATA]
-Previsão de conclusão: [DATA]
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
+    campos: [QUEM_PEDIU, { chave: "inicio", rotulo: "Data de início", tipo: "data" }, { chave: "previsao", rotulo: "Previsão de conclusão", tipo: "data" }],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Iniciar o encerramento", "Acompanhar a conclusão nos órgãos", "Guardar os documentos finais na ficha"] },
+      { setor: FISCAL, tarefas: ["Levantar as pendências fiscais, municipais e estaduais", "Entregar as declarações de encerramento"] },
+      { setor: CONTABIL, tarefas: ["Levantar as pendências contábeis", "Fechar o balanço de encerramento"] },
+      { setor: DP, tarefas: ["Fazer as rescisões e encerrar a folha"] },
+    ],
   },
   {
     key: "DISTRATO_VARIAS_EMPRESAS",
     label: "Distrato de várias empresas",
-    message: `DISTRATO DE EMPRESAS
-
-Data da solicitação: [DATA]
-Último dia da prestação dos serviços: [DATA]
-
-Empresas incluídas no distrato:
-
-1. [EMPRESA] — [CNPJ]
-2. [EMPRESA] — [CNPJ]
-3. [EMPRESA] — [CNPJ]
-
-Empresas pendentes de confirmação:
-
-1. [EMPRESA] — [CNPJ]
-2. [EMPRESA] — [CNPJ]
-
-Observação importante:
-
-Confirmar com o cliente se as empresas pendentes também deverão ser encerradas ou se ficaram de fora da solicitação por engano.`,
-    description: `Orientações:
-
-- realizar o processo individual de encerramento de cada empresa;
-- acompanhar as obrigações e pendências separadamente;
-- registrar o andamento de cada CNPJ;
-- salvar os documentos finais após cada conclusão;
-- comunicar os responsáveis conforme os processos forem finalizados.
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
+    campos: [
+      { chave: "ultimoDia", rotulo: "Último dia da prestação dos serviços", tipo: "data" },
+      { chave: "empresas", rotulo: "Empresas incluídas (nome e CNPJ)", tipo: "longo" },
+      { chave: "aConfirmar", rotulo: "Empresas a confirmar com o cliente", tipo: "longo" },
+    ],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Confirmar com o cliente as empresas pendentes", "Registrar o andamento de cada CNPJ"] },
+      { setor: FISCAL, tarefas: ["Entregar as obrigações fiscais até o último dia"] },
+      { setor: CONTABIL, tarefas: ["Entregar as obrigações contábeis até o último dia", "Separar os documentos para entregar ao cliente"] },
+      { setor: DP, tarefas: ["Fechar a folha até o último dia"] },
+      { setor: FINANCEIRO, tarefas: ["Encerrar a cobrança depois do último dia"] },
+    ],
   },
   {
     key: "REGULARIZACAO_MUNICIPAL_ESTADUAL",
     label: "Regularização municipal e estadual",
-    message: `REGULARIZAÇÃO MUNICIPAL E ESTADUAL
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Breve resumo:
-
-A empresa encontra-se impedida de [DESCREVER A OPERAÇÃO BLOQUEADA] devido a pendências municipais ou estaduais.`,
-    description: `Situação identificada:
-
-- ausência ou pendência de alvará;
-- solicitação anterior ainda não concluída;
-- bloqueio da emissão de documentos fiscais;
-- pendência na inscrição municipal;
-- pendência na inscrição estadual;
-- necessidade de contato com Prefeitura ou Secretaria da Fazenda;
-- outra situação: [DESCRIÇÃO].
-
-Demanda municipal:
-
-- entrar em contato com a Prefeitura responsável;
-- identificar os documentos e procedimentos necessários;
-- consultar a situação do protocolo existente;
-- verificar se será necessário abrir processo presencial ou eletrônico;
-- prosseguir com a emissão ou regularização do alvará;
-- registrar protocolos, orientações e prazos recebidos.
-
-Demanda estadual:
-
-- entrar em contato com a Secretaria da Fazenda;
-- identificar o motivo do bloqueio;
-- verificar a situação da inscrição estadual;
-- informar sobre o processo de regularização em andamento;
-- solicitar a retomada da emissão de documentos fiscais, quando cabível;
-- acompanhar o processo até a regularização.
-
-Atualizações — registrar:
-
-- contatos realizados;
-- órgãos consultados;
-- protocolos;
-- documentos solicitados;
-- respostas recebidas;
-- prazos informados;
-- evolução do processo;
-- próximos passos.
-
-Prazo para atualização: [DATA]
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
-    sectorHints: ["fiscal"],
+    campos: [
+      { chave: "bloqueio", rotulo: "O que está bloqueado", tipo: "texto" },
+      { chave: "situacao", rotulo: "Situação", tipo: "opcoes", opcoes: ["Sem alvará", "Inscrição municipal pendente", "Inscrição estadual pendente", "Emissão de notas bloqueada", "Outra"] },
+      { chave: "prazo", rotulo: "Prazo para atualizar", tipo: "data" },
+    ],
+    setores: [
+      { setor: SOCIETARIO, tarefas: ["Consultar a Prefeitura e o protocolo existente", "Regularizar o alvará e a inscrição municipal", "Registrar protocolos e prazos"] },
+      { setor: FISCAL, tarefas: ["Consultar a Secretaria da Fazenda e o motivo do bloqueio", "Regularizar a inscrição estadual", "Pedir a volta da emissão de notas"] },
+    ],
   },
   {
+    // O genérico: quem pede escolhe os setores e escreve as tarefas.
     key: "SOLICITACAO_MULTISSETORIAL",
     label: "Solicitação multissetorial (genérico)",
-    message: `[TÍTULO DA SOLICITAÇÃO]
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Origem da solicitação: [ORIGEM]
-
-Breve resumo:
-
-[CONTEXTO DO PEDIDO]`,
-    description: `Demanda — Fiscal:
-
-- [AÇÃO]
-- [AÇÃO]
-
-Demanda — Contábil:
-
-- [AÇÃO]
-- [AÇÃO]
-
-Demanda — Societário:
-
-- [AÇÃO]
-- [AÇÃO]
-
-Demanda — Departamento Pessoal:
-
-- [AÇÃO]
-- [AÇÃO]
-
-Demanda — Onboarding:
-
-- [AÇÃO]
-- [AÇÃO]
-
-Demanda — Customer Success:
-
-- [AÇÃO]
-- [AÇÃO]
-
-Ordem de execução:
-
-1. [PRIMEIRA ETAPA]
-2. [SEGUNDA ETAPA]
-3. [TERCEIRA ETAPA]
-
-Dependências:
-
-- [DEPENDÊNCIA]
-
-Prazo ou previsão: [DATA]
-
-Documentos ou anexos:
-
-- [DOCUMENTO]
-
-Observações:
-
-[INFORMAÇÕES COMPLEMENTARES]`,
-    sectorHints: ["fiscal", "contabil", "societario", "pessoal", "dp", "onboarding", "customer success", "cs"],
+    campos: [QUEM_PEDIU, { chave: "prazo", rotulo: "Prazo", tipo: "data" }],
+    setores: [],
   },
   {
     key: "FECHAMENTO_MENSAL_BPO",
     label: "Fechamento mensal BPO → Fiscal/Contábil",
-    message: `FECHAMENTO MENSAL — BPO FINANCEIRO
-
-Empresa: [EMPRESA]
-CNPJ: [CNPJ]
-
-Competência: [MÊS/ANO]
-
-Fechamento financeiro da competência concluído pelo BPO. Segue a entrega para os setores responsáveis pelas obrigações contábeis e fiscais.`,
-    description: `Entrega — Contábil:
-
-- extratos bancários conciliados da competência;
-- planilha de fechamento (contas a pagar/receber, movimentações);
-- pendências identificadas na conciliação: [DESCRIÇÃO OU "NENHUMA"];
-- lançamentos que exigem atenção contábil: [DESCRIÇÃO].
-
-Entrega — Fiscal:
-
-- XML e relatórios de notas fiscais da competência;
-- guias de imposto pagas no período: [LISTA];
-- pendências de emissão ou apuração: [DESCRIÇÃO OU "NENHUMA"].
-
-Situação de acesso bancário:
-
-- [OK / PENDENTE / BLOQUEADO — DESCREVER SE HOUVER RESTRIÇÃO]
-
-Demais entregas da competência (quando aplicável):
-
-- relatório operacional para o cliente;
-- planilha de fechamento de RH;
-- base Omie atualizada.
-
-Observações:
-
-[PRAZOS, MULTAS EM RISCO OU PARTICULARIDADES DA COMPETÊNCIA]`,
-    sectorHints: ["fiscal", "contabil"],
+    campos: [
+      { chave: "competencia", rotulo: "Competência (mês/ano)", tipo: "texto" },
+      { chave: "acessoBancario", rotulo: "Acesso bancário", tipo: "opcoes", opcoes: ["OK", "Pendente", "Bloqueado"] },
+      { chave: "pendencias", rotulo: "Pendências da conciliação", tipo: "longo" },
+    ],
+    setores: [
+      { setor: CONTABIL, tarefas: ["Receber os extratos conciliados", "Conferir a planilha de fechamento", "Lançar a competência"] },
+      { setor: FISCAL, tarefas: ["Receber os XML e os relatórios de notas", "Conferir as guias pagas", "Apurar a competência"] },
+    ],
   },
 ];
 
@@ -818,27 +356,7 @@ export function assuntoParaGravar(
   return { subject: texto.slice(0, maximo).trimEnd(), templateKey: null };
 }
 
-// Substitui só [EMPRESA]/[CNPJ] pelo que já está selecionado no formulário —
-// os demais placeholders (responsável, prazo, valor...) não são deriváveis de
-// nenhum campo existente e ficam para preenchimento manual, por design.
-export function renderHandoffTemplate(
-  key: string,
-  entity: { name?: string; cnpj?: string | null }
-): { message: string; description: string } {
-  const template = getHandoffTemplate(key);
-  if (!template) return { message: "", description: "" };
-
-  function substitute(text: string): string {
-    let result = text;
-    if (entity.name) result = result.replaceAll("[EMPRESA]", entity.name);
-    if (entity.cnpj) result = result.replaceAll("[CNPJ]", entity.cnpj);
-    return result;
-  }
-
-  return { message: substitute(template.message), description: substitute(template.description) };
-}
-
-function normalize(text: string): string {
+export function normalizarTexto(text: string): string {
   return text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -846,82 +364,111 @@ function normalize(text: string): string {
     .trim();
 }
 
-// Casa os hints de setor do modelo contra os setores REAIS do tenant (código
-// e rótulo são livres por tenant, não um enum fixo) — compara os dois lados
-// normalizados (sem acento/maiúscula) e aceita substring nos dois sentidos,
-// pra "DP" bater com "Departamento Pessoal" e vice-versa.
-export function matchSectorsForTemplate(
-  key: string,
-  sectorOptions: { value: string; label: string }[]
-): string[] {
-  const template = getHandoffTemplate(key);
-  if (!template?.sectorHints || template.sectorHints.length === 0) return [];
+type OpcaoDeSetor = { value: string; label: string };
 
-  const matched: string[] = [];
-  for (const option of sectorOptions) {
-    const code = normalize(option.value);
-    const label = normalize(option.label);
-    const isMatch = template.sectorHints.some((hint) => {
-      const h = normalize(hint);
-      return code.includes(h) || h.includes(code) || label.includes(h) || h.includes(label);
+/**
+ * O setor do escritório que casa com as palavras do modelo (código e nome são
+ * livres por tenant): compara sem acento e sem maiúscula, e aceita um dentro do
+ * outro, para "DP" bater com "Departamento Pessoal". Null quando o escritório
+ * não tem o setor (o modelo de migração cita setores que nem todo escritório tem).
+ */
+function setorDoEscritorio(palavras: string[], opcoes: OpcaoDeSetor[]): string | null {
+  for (const opcao of opcoes) {
+    const code = normalizarTexto(opcao.value);
+    const label = normalizarTexto(opcao.label);
+    const casa = palavras.some((p) => {
+      const h = normalizarTexto(p);
+      return code === h || label === h || code.includes(h) || label.includes(h) || h.includes(code);
     });
-    if (isMatch) matched.push(option.value);
-  }
-  return matched;
-}
-
-// Linha de marcador de bloco por setor dentro da descrição — "Demanda fiscal:",
-// "Demanda — Contábil:", "Instruções — Contábil:", "Entrega — Contábil:" etc.
-// Só reconhece esses prefixos (não qualquer linha terminada em ":", que
-// pegaria "Telefone:"/"Observações:" também) e exige que o texto depois do
-// prefixo bata com um setor de verdade do tenant.
-const SECTOR_MARKER_RE = /^(?:Demanda|Instru(?:ção|ções)|Entrega)\s*(?:[—-]\s*)?(.+?):\s*$/i;
-
-function matchSectorLabel(raw: string, sectorOptions: { value: string; label: string }[]): string | null {
-  const norm = normalize(raw);
-  for (const option of sectorOptions) {
-    const code = normalize(option.value);
-    const label = normalize(option.label);
-    if (norm.includes(code) || code.includes(norm) || norm.includes(label) || label.includes(norm)) return option.value;
+    if (casa) return opcao.value;
   }
   return null;
 }
 
-// Separa a descrição de um modelo em texto geral + um bloco por setor,
-// disparado pelas linhas "Demanda X:"/"Instruções — X:" que os próprios
-// modelos já usam. Antes essas linhas só serviam pra bater sectorHints e
-// marcar os checkboxes — o texto que vinha depois delas ficava preso no
-// campo "Descrição" geral, nunca chegava no campo de instrução do setor.
-export function splitDescriptionBySector(
-  description: string,
-  sectorOptions: { value: string; label: string }[]
-): { general: string; bySector: Record<string, string> } {
-  const lines = description.split("\n");
-  const blocks: { sectorValue: string | null; lines: string[] }[] = [{ sectorValue: null, lines: [] }];
+/**
+ * Os setores que o modelo marca e as tarefas de cada um, na ordem do modelo,
+ * com os setores do escritório. Setor do modelo que o escritório não tem fica
+ * de fora; dois setores do modelo no mesmo setor do escritório juntam as tarefas.
+ */
+export function setoresDoModelo(key: string, opcoes: OpcaoDeSetor[]): { setor: string; tarefas: string[] }[] {
+  const modelo = getHandoffTemplate(key);
+  if (!modelo) return [];
+  const porSetor = new Map<string, string[]>();
+  for (const s of modelo.setores) {
+    const codigo = setorDoEscritorio(s.setor, opcoes);
+    if (!codigo) continue;
+    porSetor.set(codigo, [...(porSetor.get(codigo) ?? []), ...s.tarefas]);
+  }
+  return [...porSetor.entries()].map(([setor, tarefas]) => ({ setor, tarefas }));
+}
 
-  for (const line of lines) {
-    const match = line.trim().match(SECTOR_MARKER_RE);
-    const sectorValue = match ? matchSectorLabel(match[1], sectorOptions) : null;
-    if (sectorValue) {
-      blocks.push({ sectorValue, lines: [] });
-      continue; // a própria linha de marcador não entra no texto do setor
+/** Só os códigos dos setores que o modelo marca. */
+export function matchSectorsForTemplate(key: string, opcoes: OpcaoDeSetor[]): string[] {
+  return setoresDoModelo(key, opcoes).map((s) => s.setor);
+}
+
+/** O tamanho de cada tarefa e quantas cabem numa parte. */
+export const TAREFA_MAXIMA = 300;
+export const TAREFAS_POR_SETOR = 30;
+
+/** As tarefas que vão para a parte de um setor: sem repetição, sem vazio, no tamanho da coluna. */
+export function tarefasParaGravar(textos: (string | null | undefined)[]): string[] {
+  const vistas = new Set<string>();
+  const tarefas: string[] = [];
+  for (const bruto of textos) {
+    const texto = (bruto ?? "").replace(/\s+/g, " ").trim().slice(0, TAREFA_MAXIMA).trimEnd();
+    if (!texto || vistas.has(texto.toLowerCase())) continue;
+    vistas.add(texto.toLowerCase());
+    tarefas.push(texto);
+    if (tarefas.length === TAREFAS_POR_SETOR) break;
+  }
+  return tarefas;
+}
+
+/** Uma resposta do "O que este modelo precisa saber", como fica guardada em `handoffs.details`. */
+export type DadoDoPedido = { rotulo: string; valor: string };
+
+const VALOR_MAXIMO = 2000;
+
+/**
+ * As respostas aos campos do modelo, na ordem do modelo, para gravar. Campo em
+ * branco com `deCadastro` leva o dado do cadastro da empresa (regime, contato);
+ * o resto em branco fica de fora. Resposta de seletor que não é uma das opções
+ * é ignorada. A data chega como AAAA-MM-DD e fica como DD/MM/AAAA.
+ */
+export function detalhesParaGravar(
+  key: string | null | undefined,
+  respostas: Record<string, string | null | undefined>,
+  doCadastro: { regime?: string | null; contato?: string | null } = {}
+): DadoDoPedido[] {
+  const modelo = key ? getHandoffTemplate(key) : undefined;
+  if (!modelo) return [];
+  const dados: DadoDoPedido[] = [];
+  for (const campo of modelo.campos) {
+    let valor = (respostas[campo.chave] ?? "").trim();
+    if (campo.tipo !== "longo") valor = valor.replace(/\s+/g, " ");
+    if (campo.tipo === "opcoes" && valor && !campo.opcoes?.includes(valor)) valor = "";
+    if (campo.tipo === "data" && valor) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+      valor = m ? `${m[3]}/${m[2]}/${m[1]}` : "";
     }
-    blocks[blocks.length - 1].lines.push(line);
+    if (!valor && campo.deCadastro) valor = (doCadastro[campo.deCadastro] ?? "").trim();
+    if (!valor) continue;
+    dados.push({ rotulo: campo.rotulo, valor: valor.slice(0, VALOR_MAXIMO) });
   }
+  return dados;
+}
 
-  const general = blocks
-    .filter((b) => b.sectorValue === null)
-    .map((b) => b.lines.join("\n").trim())
-    .filter(Boolean)
-    .join("\n\n");
+/** Os dados do pedido gravados, lidos de volta do JSON (o que não tem a forma certa fica de fora). */
+export function lerDetalhes(json: unknown): DadoDoPedido[] {
+  if (!Array.isArray(json)) return [];
+  return json.filter(
+    (d): d is DadoDoPedido => typeof d === "object" && d !== null && typeof (d as DadoDoPedido).rotulo === "string" && typeof (d as DadoDoPedido).valor === "string"
+  );
+}
 
-  const bySector: Record<string, string> = {};
-  for (const b of blocks) {
-    if (!b.sectorValue) continue;
-    const text = b.lines.join("\n").trim();
-    if (!text) continue;
-    bySector[b.sectorValue] = bySector[b.sectorValue] ? `${bySector[b.sectorValue]}\n\n${text}` : text;
-  }
-
-  return { general, bySector };
+/** O contato do cadastro da empresa, numa linha: telefone e e-mail. */
+export function contatoDoCadastro(empresa: { phone?: string | null; email?: string | null } | null | undefined): string | null {
+  const partes = [empresa?.phone?.trim(), empresa?.email?.trim()].filter(Boolean);
+  return partes.length > 0 ? partes.join(" · ") : null;
 }
