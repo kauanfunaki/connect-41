@@ -48,7 +48,7 @@ function JanelaDoMotivo({ decisao, aberto, onFechar }: { decisao: Decisao; abert
         }}
       >
         <p className="text-ui text-fg-secondary">{descricao}</p>
-        <CampoForm label="Motivo" htmlFor="motivo-da-cobranca" required={motivoObrigatorio} helper={ajuda}>
+        <CampoForm label="Motivo" htmlFor="motivo-da-cobranca" required={motivoObrigatorio} dica={ajuda}>
           <Textarea
             id="motivo-da-cobranca"
             value={motivo}

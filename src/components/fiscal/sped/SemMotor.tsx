@@ -11,12 +11,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
  */
 export function SemMotor() {
   return <>
-    <PageHeader title="SPED" subtitle="EFD ICMS/IPI: classificar, apurar, fechar e gerar o arquivo do mês." />
+    <PageHeader title="SPED" />
     <Card>
       <EmptyState
         icon={<Settings2 />}
         title="Configure o motor SPED"
-        description="O SPED trabalha sobre os documentos e os arquivos do motor SPED, e é o motor que gera o arquivo. Ligue a integração SPED Generator com a URL, o token de leitura e o token de escrita."
+        description="Ligue a integração SPED Generator com a URL, o token de leitura e o token de escrita."
         action={<Button href="/admin/integracoes">Abrir Integrações</Button>}
       />
     </Card>

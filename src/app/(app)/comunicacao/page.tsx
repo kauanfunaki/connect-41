@@ -161,7 +161,7 @@ export default async function ComunicacaoPage({
   return (
     // A caixa de conversas ocupa o resto da janela, e a página não rola (14/10/2026).
     <PageContainer className="h-full flex flex-col">
-      <PageHeader title="Conversa com o cliente" subtitle="Recado livre por empresa, com anexos. Pedido com prazo é pendência." />
+      <PageHeader title="Conversa com o cliente" />
 
       {substituida && (
         // Revisão de 05/10: botão não é link — "Solicitações" era texto azul no meio da frase.

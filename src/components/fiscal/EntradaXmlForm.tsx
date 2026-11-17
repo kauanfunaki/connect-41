@@ -71,7 +71,7 @@ export function EntradaXmlForm({ empresas, action }: Props) {
           <CampoForm
             label="Arquivos XML"
             htmlFor="xmls"
-            helper="NF-e, NFC-e, CT-e e NFS-e (ABRASF e padrão nacional). Município com layout próprio pode ser recusado — o veredito diz qual campo faltou."
+            dica="NF-e, NFC-e, CT-e e NFS-e (ABRASF e padrão nacional). Município com layout próprio pode ser recusado — o veredito diz qual campo faltou."
           >
             <FileDropzone
               accept=".xml,text/xml,application/xml"
@@ -97,7 +97,7 @@ export function EntradaXmlForm({ empresas, action }: Props) {
           <CampoForm
             label="Empresa"
             htmlFor="companyId"
-            helper="Em branco, a empresa é deduzida do CNPJ do XML. Escolha só quando as duas pontas do documento forem empresas do escritório."
+            dica="Em branco, a empresa é deduzida do CNPJ do XML. Escolha só quando as duas pontas do documento forem empresas do escritório."
           >
             {/* Com busca (achado do polimento de 30/09): eram ~394 empresas num
                 `<select>` nativo, a mesma regra das outras escolhas de empresa. */}
@@ -132,7 +132,6 @@ export function EntradaXmlForm({ empresas, action }: Props) {
           <h2 className="text-section font-semibold text-fg mb-1">Resultado</h2>
           <p className="text-helper text-fg-muted mb-4">
             {vereditos.filter((v) => v.situacao === "aceito").length} de {vereditos.length} entraram no acervo.
-            Cada arquivo tem seu veredito — nada é aceito ou recusado em bloco.
           </p>
           {/* O inválido não se perde mais (06/11/2026): fica guardado e entra na
               contagem por município. A pessoa precisa saber onde ele foi parar. */}

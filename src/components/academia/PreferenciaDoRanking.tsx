@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Switch } from "@/components/ui/Switch";
+import { AjudaDoCampo } from "@/components/ui/CampoForm";
 import { useToast } from "@/components/ui/Toast";
 import { gravarPreferenciaAction } from "@/app/(app)/academia/actions";
 
@@ -31,13 +32,14 @@ export function PreferenciaDoRanking({ aparece: inicial }: { aparece: boolean })
     });
   }
 
+  // A frase embaixo do interruptor virou o "?" ao lado dele (17/11/2026, melhoria-707).
   return (
-    <Switch
-      checked={aparece}
-      onCheckedChange={trocar}
-      disabled={gravando}
-      rotulo="Aparecer no ranking"
-      aria-describedby="preferencia-do-ranking-ajuda"
-    />
+    <span className="inline-flex items-center gap-1.5">
+      <Switch checked={aparece} onCheckedChange={trocar} disabled={gravando} rotulo="Aparecer no ranking" />
+      <AjudaDoCampo
+        texto="Desligado, você some da lista dos colegas e do post do ranking, e vê só os seus números."
+        rotulo="Aparecer no ranking"
+      />
+    </span>
   );
 }

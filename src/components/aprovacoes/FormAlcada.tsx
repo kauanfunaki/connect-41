@@ -51,10 +51,6 @@ export function NovaAlcada({
       </Button>
       <Modal open={aberto} onClose={fechar} title="Nova alçada" maxWidth="max-w-lg">
         <div className="flex flex-col gap-4">
-          <p className="text-helper text-fg-secondary">
-            O usuário do portal aprova contas a pagar desta empresa até o teto. A coordenação aprova sem teto. Com ao menos
-            uma alçada ativa, toda conta a pagar lançada em aberto na empresa nasce aguardando aprovação.
-          </p>
           {!companyId || usuarios.length === 0 ? (
             <>
               <p className="text-helper text-fg-muted">

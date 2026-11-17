@@ -15,13 +15,12 @@ import { FiltroDoMotor } from "./FiltroDoMotor";
  * prévia — menu contextual, abas internas, cabeçalho, recorte, avisos e
  * conteúdo —, com o recorte na URL e os avisos do motor no lugar dos da prévia.
  */
-export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao, semEstabelecimento, children }: {
+export function CascoDoMotor({ tela, caminho, abas, aba, titulo, acao, semEstabelecimento, children }: {
   tela: TelaDoMotor;
   caminho: string;
   abas?: { chave: string; rotulo: string }[];
   aba?: string;
   titulo: string;
-  descricao: string;
   acao?: ReactNode;
   semEstabelecimento?: boolean;
   children: ReactNode;
@@ -41,19 +40,19 @@ export function CascoDoMotor({ tela, caminho, abas, aba, titulo, descricao, acao
     })} />}
     {trocaDeObrigacao && <AbasDeLink className="mb-5" aria-label="Obrigação da apuração" ativa={caminho} abas={obrigacoes.map(([, href, rotulo]) => ({ chave: href, rotulo, href: hrefDoMotor(href, contexto), icone: iconeDaAbaFiscal(rotulo) }))} />}
     {abas && abas.length > 1 && <AbasDeLink className="mb-5" aria-label={`Seções de ${titulo}`} ativa={aba ?? ""} abas={abas.map((a) => ({ chave: a.chave, rotulo: a.rotulo, href: hrefDoMotor(caminho, contexto, { aba: a.chave }), icone: iconeDaAbaFiscal(a.chave, a.rotulo) }))} />}
-    <PageHeader title={titulo} subtitle={descricao} action={acao} />
+    <PageHeader title={titulo} action={acao} />
     {contexto && <FiltroDoMotor raizes={motor.raizes} raiz={contexto.raiz} estabelecimentos={mapa.visiveis.map((e) => ({ id: e.id, rotulo: `${e.companyNome} · ${e.uf}${e.matriz ? " · matriz" : ""}${e.ativo ? "" : " · inativo"}` }))} estabelecimentoId={contexto.estabelecimentoId} competencia={contexto.competencia} semEstabelecimento={semEstabelecimento} />}
     <div className="mb-5 flex flex-col gap-3">
       {tela.erro && <div role="alert"><Aviso tom="atencao">{tela.erro}</Aviso></div>}
       {!motor.escrita && <Aviso tom="info">Escrita do SPED não habilitada: o Connect só consulta o motor. As ações ficam desabilitadas até o token de escrita ser configurado na integração. O Gerar SPED não depende dele.</Aviso>}
     </div>
     {!contexto
-      ? <EmptyState title="Nenhuma raiz de CNPJ liberada" description="Este escritório ainda não tem raiz de CNPJ sincronizada com o SPED. Peça ao responsável pela integração para liberar a raiz do cliente piloto." />
+      ? <EmptyState title="Nenhuma raiz de CNPJ liberada" description="Peça ao responsável pela integração para liberar a raiz do cliente." />
       : children}
   </>;
 }
 
 /** Área que o motor ainda não expõe: escondida, nunca preenchida com dado fictício (§8.3). */
 export function SemFonteNoMotor({ area }: { area: string }) {
-  return <EmptyState title={`${area}: ainda não disponível no Connect`} description="O motor SPED ainda não expõe estes dados pela API. Continue usando o painel do motor para esta área; nada aqui é fictício." />;
+  return <EmptyState title={`${area}: ainda não disponível no Connect`} description="Continue usando o painel do motor para esta área." />;
 }

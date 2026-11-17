@@ -82,9 +82,6 @@ export default async function AcademiaPage() {
                 <CartaoDoTeste key={t} resumo={resumo.testes[t]} podeFazer={podeFazer} />
               ))}
             </div>
-            <p className="mt-3 text-helper text-fg-muted">
-              Valendo: uma tentativa por dia em cada nível de cada teste, e ela conta assim que o texto ou as questões aparecem. No treino livre não há limite, e nada vai para o ranking.
-            </p>
           </section>
           <ConquistasDaPessoa conquistas={conquistas.conquistas} parabensNoMes={conquistas.parabensNoMes} mes={resumo.mes} />
         </div>

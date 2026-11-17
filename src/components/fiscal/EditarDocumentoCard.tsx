@@ -67,11 +67,9 @@ export function EditarDocumentoCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-section font-semibold text-fg mb-1">Corrigir documento</h2>
-          <p className="text-helper text-fg-muted">
-            {editadoEm
-              ? `Corrigido à mão em ${editadoEm}. O que o XML dizia está na auditoria.`
-              : "O XML é a fonte. Corrigir aqui faz o acervo divergir dele, e a mudança fica registrada na auditoria."}
-          </p>
+          {editadoEm && (
+            <p className="text-helper text-fg-muted">Corrigido à mão em {editadoEm}. O que o XML dizia está na auditoria.</p>
+          )}
         </div>
         <Button variant="secondary" size="sm" onClick={() => setAberto((v) => !v)} className="flex-shrink-0">
           {aberto ? "Fechar" : "Editar"}
@@ -147,7 +145,7 @@ export function EditarDocumentoCard({
               <CampoForm label="Emissão" htmlFor="issuedAt">
                 <CampoData id="issuedAt" name="issuedAt" defaultValue={valores.issuedAt} />
               </CampoForm>
-              <CampoForm label="Competência" htmlFor="competence" helper="Em branco, volta a seguir a data de emissão.">
+              <CampoForm label="Competência" htmlFor="competence" dica="Em branco, volta a seguir a data de emissão.">
                 <Input
                   id="competence"
                   name="competence"

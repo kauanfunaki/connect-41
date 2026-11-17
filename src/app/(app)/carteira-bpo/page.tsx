@@ -107,10 +107,7 @@ export default async function CarteiraBpoPage({ searchParams }: { searchParams: 
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Painel da carteira"
-        subtitle="Cada empresa atendida pelo BPO numa linha: o que venceu, há quanto tempo não entra extrato, o que falta conciliar e o que espera o cliente. Clique num número para abrir a tela já na empresa."
-      />
+      <PageHeader title="Painel da carteira" />
 
       <FaixaDeTotais
         itens={[
@@ -212,11 +209,6 @@ export default async function CarteiraBpoPage({ searchParams }: { searchParams: 
           </>
         )}
       </CascoDaTabela>
-      <p className="text-micro text-fg-muted mt-3">
-        A carteira são as empresas com o serviço do BPO ativo. “Sem extrato” conta os dias desde a última importação de extrato nas
-        contas bancárias ativas; “Saldo não bate” é a conferência da conciliação (saldo calculado contra o saldo do banco). Abre nas
-        suas empresas quando você é o analista de alguma — “Todos os analistas” mostra a carteira inteira.
-      </p>
     </PageContainer>
   );
 }

@@ -55,7 +55,7 @@ export function ReprovarComMotivo({
           }}
         >
           <p className="text-ui text-fg-secondary">{descricao}</p>
-          <CampoForm label="Motivo" htmlFor={`motivo-${entryId}`} required helper="Quem lançou a conta recebe este motivo para corrigir ou cancelar.">
+          <CampoForm label="Motivo" htmlFor={`motivo-${entryId}`} required dica="Quem lançou a conta recebe este motivo para corrigir ou cancelar.">
             <Textarea
               id={`motivo-${entryId}`}
               value={motivo}

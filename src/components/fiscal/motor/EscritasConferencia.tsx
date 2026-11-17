@@ -94,7 +94,6 @@ export function ApurarCombustivel({ raiz, competencia, filiais, permissao }: { r
       <Button size="sm" disabled={!permissao.pode} loading={laco.rodando} loadingLabel={`Apurando ${laco.feitos + 1} de ${laco.total}…`} onClick={() => laco.rodar(pendentes)}>
         {laco.restantes.length ? `Continuar (${laco.restantes.length} filial(is))` : `Apurar combustível (${filiais.length} filial(is))`}
       </Button>
-      <span className="text-helper text-fg-muted">Lê os XML das NF-e de entrada da competência: segundos por filial.</span>
     </div>
     <MotivoSemEscrita permissao={permissao} />
     <AvisoDoResultado resultado={laco.resultado} />

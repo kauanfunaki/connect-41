@@ -142,7 +142,6 @@ export function TermoDaEmpresa({ companyId, endereco, socios, socioId, contatos,
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="c41-rotulo">Parágrafo do contratante</h2>
-            <p className="text-helper text-fg-secondary">Como sai no termo, com o cadastro de agora. Salve as mudanças antes de gerar.</p>
           </div>
           {podeAgir && (
             <Button onClick={gerar} disabled={!previa || !temModelo || salvando} loading={gerando} loadingLabel="Gerando…" title={!temModelo ? "O escritório ainda não enviou o modelo do termo." : undefined}>
@@ -166,11 +165,12 @@ export function TermoDaEmpresa({ companyId, endereco, socios, socioId, contatos,
       <form ref={formRef} action={salvar} className="flex flex-col gap-6">
         <input type="hidden" name="companyId" value={companyId} />
 
-        <FormSection title="Endereço da empresa" descricao="É o do cadastro da empresa: mudar aqui muda a ficha.">
+        {/* As frases embaixo do título de cada seção foram para a ajuda da tela (17/11/2026, melhoria-707). */}
+        <FormSection title="Endereço da empresa">
           <CamposDeEndereco prefixo="empresa_" valor={endereco} desabilitado={desabilitado} />
         </FormSection>
 
-        <FormSection title="Sócio que assina" descricao="O sócio administrador, em Sócios da empresa. Os dados pessoais saem no texto como escritos aqui.">
+        <FormSection title="Sócio que assina">
           <CampoForm label="Quem assina" htmlFor="socioId" helper={socios.length === 0 ? "A empresa não tem sócio pessoa física cadastrado: preencha para cadastrar." : undefined}>
             <Select
               id="socioId"
@@ -235,7 +235,7 @@ export function TermoDaEmpresa({ companyId, endereco, socios, socioId, contatos,
           <CamposDeEndereco prefixo="socio_" valor={socio?.endereco ?? vazio} desabilitado={desabilitado} />
         </FormSection>
 
-        <FormSection title="Contatos do contrato" descricao="Entram no fim do parágrafo. Só aparecem com nome, telefone e e-mail.">
+        <FormSection title="Contatos do contrato">
           {(["ADMINISTRATIVO", "FINANCEIRO"] as const).map((papel) => {
             const p = papel.toLowerCase();
             const c = contatos[papel];

@@ -102,12 +102,12 @@ export function NovaVersao({
               </CampoForm>
             )}
             {origem === "realizado" && (
-              <CampoForm label="Ano do realizado" htmlFor="versao-ano-origem" required helper="A DRE econômica de cada mês daquele ano, grupo a grupo.">
+              <CampoForm label="Ano do realizado" htmlFor="versao-ano-origem" required dica="A DRE econômica de cada mês daquele ano, grupo a grupo.">
                 <Input id="versao-ano-origem" name="anoOrigem" type="number" min={2000} max={2100} defaultValue={ano - 1} required />
               </CampoForm>
             )}
             {origem !== "vazia" && (
-              <CampoForm label="Reajuste" htmlFor="versao-reajuste" helper="Aplicado em cada célula, arredondado em centavos.">
+              <CampoForm label="Reajuste" htmlFor="versao-reajuste" dica="Aplicado em cada célula, arredondado em centavos.">
                 <Input id="versao-reajuste" name="reajuste" inputMode="decimal" suffix="%" placeholder="0" />
               </CampoForm>
             )}

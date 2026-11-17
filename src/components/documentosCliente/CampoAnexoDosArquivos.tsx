@@ -40,7 +40,7 @@ export function CampoAnexoDosArquivos({ companyId, inicial }: { companyId: strin
 
   if (escolhido) {
     return (
-      <CampoForm label="Anexo dos Arquivos" htmlFor="tirarArquivo" helper="Uma cópia vai com o envio. Um anexo novo, acima, vale no lugar deste.">
+      <CampoForm label="Anexo dos Arquivos" htmlFor="tirarArquivo" dica="Uma cópia vai com o envio. Um anexo novo, acima, vale no lugar deste.">
         <input type="hidden" name="arquivoId" value={escolhido.id} />
         <div className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-ui">
           <FileText size={14} className="shrink-0 text-fg-muted" />
@@ -67,7 +67,7 @@ export function CampoAnexoDosArquivos({ companyId, inicial }: { companyId: strin
   }
 
   return (
-    <CampoForm label="Ou um arquivo dos Arquivos" htmlFor="buscarArquivo" helper="PDF ou imagem até 10 MB, de uma pasta desta empresa. Busque pelo nome.">
+    <CampoForm label="Ou um arquivo dos Arquivos" htmlFor="buscarArquivo" dica="PDF ou imagem até 10 MB, de uma pasta desta empresa. Busque pelo nome.">
       <div className="flex gap-2">
         <Input
           id="buscarArquivo"

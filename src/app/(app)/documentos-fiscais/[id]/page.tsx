@@ -236,11 +236,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
       </Card>
 
       <Card className="p-5">
-        <h2 className="text-section font-semibold text-fg mb-1">Destino</h2>
-        <p className="text-helper text-fg-muted mb-4">
-          O que o BPO faz com este documento. É o único dos três eixos que é decisão nossa — origem e
-          situação vêm de fora.
-        </p>
+        <h2 className="text-section font-semibold text-fg mb-4">Destino</h2>
         <DestinoControl
           documentoId={doc.id}
           destinoAtual={doc.destination}

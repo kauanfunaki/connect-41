@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { AjudaDoCampo } from "@/components/ui/CampoForm";
 import { CampoData } from "@/components/ui/CampoData";
 import { CampoMes } from "@/components/ui/CampoMes";
 import { FormFooter } from "@/components/ui/FormFooter";
@@ -143,13 +144,13 @@ function Linha({
 }) {
   return (
     <div className="grid gap-2 px-3 py-3 sm:grid-cols-[168px_1fr] sm:items-start">
-      <div className="sm:pt-2">
+      {/* A ajuda no "?" ao lado da caixa, como a dica do CampoForm, e não
+          embaixo do campo (17/11/2026, melhoria-707). */}
+      <div className="flex items-center gap-1.5 sm:pt-2">
         <Checkbox id={id} label={rotulo} checked={marcada} onChange={onAlternar} disabled={desabilitada} />
+        {ajuda && <AjudaDoCampo texto={ajuda} rotulo={rotulo} />}
       </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        {children}
-        {ajuda && <p className="text-helper text-fg-muted">{ajuda}</p>}
-      </div>
+      <div className="flex min-w-0 flex-col gap-1">{children}</div>
     </div>
   );
 }
@@ -241,7 +242,7 @@ function Formulario({
 
       <p className="text-helper text-fg-secondary">
         {contas(dados.contas.length)} {aPagar ? "a pagar" : "a receber"}
-        {variasEmpresas && ` de ${dados.empresas.length} empresas`}. Marque o que muda: o que não for marcado fica como está em cada conta.
+        {variasEmpresas && ` de ${dados.empresas.length} empresas`}.
       </p>
 
       <div className="flex flex-col divide-y divide-border-soft rounded-md border border-border">

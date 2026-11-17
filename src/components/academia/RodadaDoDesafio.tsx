@@ -8,7 +8,7 @@ import { Aviso } from "@/components/ui/Aviso";
 import { Card } from "@/components/ui/Card";
 import { comecarDesafioAction } from "@/app/(app)/academia/actions";
 import { formatarPrecisao } from "@/lib/academia/ranking";
-import { SEQUENCIA_MINIMA_DA_CHAMA, diasEmTexto, type Sequencia } from "@/lib/academia/sequencia";
+import { diasEmTexto, type Sequencia } from "@/lib/academia/sequencia";
 import type { DesafioDeHoje, ResultadoDoEnvio, RodadaServida } from "@/lib/academia/tipos";
 import { ChamaDaSequencia, EVENTO_DA_SEQUENCIA } from "./ChamaDaSequencia";
 import { RodadaDeDigitacao } from "./RodadaDeDigitacao";
@@ -108,9 +108,6 @@ export function RodadaDoDesafio({ inicial, motivoSemTeste }: { inicial: DesafioD
         </div>
       </div>
       <FraseDaSequencia sequencia={inicial.sequencia} />
-      <p className="text-helper text-fg-muted">
-        Sábado e domingo não quebram a sequência, e um dia útil perdido por semana é perdoado. A sequência aparece no chapéu do topo a partir de {SEQUENCIA_MINIMA_DA_CHAMA} dias.
-      </p>
 
       {motivoSemTeste ? (
         <Aviso tom="info">{motivoSemTeste}</Aviso>

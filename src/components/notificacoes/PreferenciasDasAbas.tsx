@@ -71,11 +71,6 @@ function Formulario({ ocultos, onFechar, onSalvo }: { ocultos: string[]; onFecha
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-fs-3 text-fg-secondary leading-relaxed">
-        Desligue o que você não quer ver. O tipo desligado sai do sino e das abas e não manda aviso no celular, mas continua
-        guardado: ligue de novo e ele volta, com o que chegou nesse meio-tempo.
-      </p>
-
       <div className="space-y-2">
         {GRUPOS.map((g) => {
           const tipos = g.tipos.map((t) => t.tipo);

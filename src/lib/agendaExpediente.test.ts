@@ -6,6 +6,7 @@ import {
   descreverExpediente,
   duracaoEmHoras,
   erroDoExpediente,
+  expedienteCurto,
   horasDaGrade,
   intervaloDaBusca,
   lerExpediente,
@@ -116,6 +117,12 @@ describe("rótulos", () => {
     expect(descreverExpediente(NOTURNO)).toBe("22:00 às 6:00 do dia seguinte");
     expect(descreverExpediente({ inicio: 18, fim: 0 })).toBe("18:00 às 0:00");
     expect(descreverExpediente(DIA_INTEIRO)).toBe("24 horas, a partir das 7:00");
+  });
+
+  it("encurta o horário para o chip da barra da Agenda", () => {
+    expect(expedienteCurto(DIURNO)).toBe("7h às 21h");
+    expect(expedienteCurto(NOTURNO)).toBe("22h às 6h");
+    expect(expedienteCurto(DIA_INTEIRO)).toBe("24h");
   });
 });
 

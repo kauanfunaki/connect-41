@@ -103,7 +103,7 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
       { rotulo: "Rejeitados por classe", valor: d.resumo.dados.por_classe.reduce((s, c) => s + c.total, 0), icone: <FileWarning />, detalhe: `${d.resumo.dados.por_classe.length} classe(s)` },
     ]} />}
 
-    {escrita.visivel && <BlocoFiscal titulo="Enviar documentos" descricao="XML de NF-e, CT-e e NFS-e, PDF e imagem de documento de apoio, CSV do relatório de NFS-e e .zip com qualquer desses. Até 25 MB vai num envio só; acima disso, até 500 MB, o Connect manda em partes de 8 MB, com progresso, e retoma de onde parou se a conexão cair. Duplicatas são descartadas pelo motor.">
+    {escrita.visivel && <BlocoFiscal titulo="Enviar documentos">
       <EnviarDocumentos raiz={contexto.raiz} permissao={escrita} />
     </BlocoFiscal>}
 
@@ -127,10 +127,9 @@ export async function ImportacoesMotor({ tela, params }: { tela: TelaDoMotor; pa
       </div>
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Quarentena" descricao={`${d.detalhe?.dados ? `Rejeitados da importação #${d.detalhe.dados.id}` : "Rejeitados de todas as importações"}. Resolver não apaga: o XML continua guardado no motor.`} acao={d.detalhe ? <Button size="sm" variant="ghost" href={aqui({ importacao: null, c_quar: null })} scroll={false}>Ver todas as importações</Button> : undefined}>
+    <BlocoFiscal titulo="Quarentena" descricao={`${d.detalhe?.dados ? `Rejeitados da importação #${d.detalhe.dados.id}` : "Rejeitados de todas as importações"}.`} acao={d.detalhe ? <Button size="sm" variant="ghost" href={aqui({ importacao: null, c_quar: null })} scroll={false}>Ver todas as importações</Button> : undefined}>
       <div className="space-y-3">
         {escrita.visivel && <div className="space-y-1">
-          <p className="text-helper text-fg-secondary">Reprocessar relê os rejeitados com os leitores de hoje e baixa os que passaram a ser legíveis (o XML continua guardado). Vira um pedido na fila do motor; as competências com documento recuperado precisam ser regeradas.</p>
           <ReprocessarQuarentena raiz={contexto.raiz} classes={classes.map((c) => c.classe)} permissao={escrita} hrefFila={hrefFila} />
         </div>}
         {d.resumo.dados && d.resumo.dados.por_motivo.length > 0 && <BlocoRecolhivel titulo="Motivos dos que pedem decisão" abertoInicial={false}>
@@ -213,7 +212,7 @@ export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; para
       ] }))} />}
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="Erros de extração pendentes" descricao={`CT-e com rota de ${contexto.competencia} que não foram extraídos. Para tentar de novo, peça a execução "erros" em Executar.`} acao={tela.modulos.includes("fiscal_operacao") ? <Button size="sm" variant="secondary" href={`/sped-fiscal/motor/operacao?aba=executar&raiz=${contexto.raiz}&competencia=${contexto.competencia}`}>Executar</Button> : undefined}>
+    <BlocoFiscal titulo="Erros de extração pendentes" descricao={`CT-e com rota de ${contexto.competencia} que não foram extraídos.`} acao={tela.modulos.includes("fiscal_operacao") ? <Button size="sm" variant="secondary" href={`/sped-fiscal/motor/operacao?aba=executar&raiz=${contexto.raiz}&competencia=${contexto.competencia}`}>Executar</Button> : undefined}>
       {d.erros.erro !== null ? <ErroDaLeitura falha={d.erros} hrefDeNovo={aqui} /> : <div className="space-y-3">
         <MetricasFiscais itens={[
           { rotulo: "Pendências", valor: d.erros.dados.total, icone: <AlertTriangle />, tom: d.erros.dados.total > 0 ? "text-warning-fg" : undefined },
@@ -229,7 +228,7 @@ export async function CoberturaMotor({ tela, params }: { tela: TelaDoMotor; para
       </div>}
     </BlocoFiscal>
 
-    <BlocoFiscal titulo="NFS-e por competência" descricao={`A lista de NFS-e está no acervo. Aqui, o que chegou sem XML.${d.nfse.dados?.quarentena_por_triar ? ` ${contagemDoMotor(d.nfse.dados.quarentena_por_triar)} na quarentena por triar.` : ""}`}>
+    <BlocoFiscal titulo="NFS-e por competência" descricao={`O que chegou sem XML.${d.nfse.dados?.quarentena_por_triar ? ` ${contagemDoMotor(d.nfse.dados.quarentena_por_triar)} na quarentena por triar.` : ""}`}>
       {d.nfse.erro !== null ? <ErroDaLeitura falha={d.nfse} hrefDeNovo={aqui} /> : <TabelaFiscal vazio="Sem NFS-e no motor." descricaoVazio="" colunas={["Competência", "Sentido", "Quantidade", "Valor", "Sem XML", "Prestadores"]} linhas={(nfseDaCompetencia.length ? nfseDaCompetencia : d.nfse.dados.itens).map((n, i) => ({ id: `${n.competencia}-${n.sentido}-${i}`, celulas: [
         n.competencia, n.sentido === "entrada" ? "Tomada" : n.sentido === "saida" ? "Prestada" : n.sentido || "—", contagemDoMotor(n.quantidade), <span key="v" className="tabular-nums">{reaisDoMotor(n.valor)}</span>,
         n.sem_xml > 0 ? <Selo key="x" tom="atencao">{contagemDoMotor(n.sem_xml)}</Selo> : "0", contagemDoMotor(n.prestadores),

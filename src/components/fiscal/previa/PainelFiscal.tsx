@@ -29,7 +29,7 @@ export function PainelFiscal({ visao }: { visao: string }) {
       { chave: "historico", rotulo: "Histórico", href: "/sped-fiscal/motor?visao=historico", icone: <History /> },
     ]} />
 
-    {visao === "historico" ? <BlocoFiscal titulo="Histórico da competência" descricao="Ações registradas para a empresa, o estabelecimento e o período selecionados.">
+    {visao === "historico" ? <BlocoFiscal titulo="Histórico da competência">
       <TabelaFiscal vazio="Nenhuma ação registrada nesta competência." colunas={["Quando", "O que aconteceu"]} linhas={atividades.map((a) => ({ id: a.id, celulas: [dataFiscal(a.criadoEm), a.mensagem] }))} />
     </BlocoFiscal> : <>
       <Card className="border-brand/30 p-5 sm:p-6">
@@ -51,7 +51,7 @@ export function PainelFiscal({ visao }: { visao: string }) {
         { rotulo: "Etapas concluídas", valor: `${completas} de ${etapas.length}`, icone: <CheckCircle2 />, detalhe: "No recorte selecionado" },
       ]} />
 
-      <BlocoFiscal titulo="Caminho da competência" descricao="Uma etapa por vez. O destaque acima indica onde continuar." acao={<span className="text-ui font-semibold text-brand">{progresso}%</span>}>
+      <BlocoFiscal titulo="Caminho da competência" acao={<span className="text-ui font-semibold text-brand">{progresso}%</span>}>
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-label="Progresso da competência" aria-valuenow={progresso} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progresso}%` }} /></div>
         <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {etapas.map((e, i) => {

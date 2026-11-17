@@ -54,7 +54,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
     // com o vazio, sem dizer em que tela a pessoa estava.
     return (
       <PageContainer>
-        <PageHeader title="Conversas" subtitle="Auditoria de atendimentos do Chatwoot. Somente leitura." />
+        <PageHeader title="Conversas" />
         <EmptyState
           icon={<MessageCircle />}
           title="Chatwoot não configurado"
@@ -88,11 +88,6 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
           escrito à parte, e "Gerenciar atendentes" era um Link estilizado. */}
       <PageHeader
         title="Conversas"
-        subtitle={
-          view === "avaliacao"
-            ? "Nota de 0-100 (escrita + SLA) por atendimento resolvido no Chatwoot — gerada automaticamente pela IA."
-            : "Auditoria de atendimentos do Chatwoot. Somente leitura."
-        }
         action={
           view === "avaliacao" &&
           isFullAccess(ctx.role) && (
@@ -601,16 +596,17 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
     {
       tipo: "TRATATIVA" as const,
       titulo: "Tratativa",
-      descricao: "Da transferência até a resolução — o trabalho do setor.",
+      descricao: null,
       grupos: agrupar("TRATATIVA"),
     },
     {
       tipo: "TRIAGEM" as const,
       titulo: "Triagem",
+      // Só o número fica na tela (17/11/2026, melhoria-707); o que é cada seção está no artigo de ajuda.
       descricao:
         resolvidosNaTriagem > 0
-          ? `Da abertura até o setor assumir — o trabalho da recepção. ${resolvidosNaTriagem} ${resolvidosNaTriagem === 1 ? "atendimento foi resolvido" : "atendimentos foram resolvidos"} sem sair da triagem.`
-          : "Da abertura até o setor assumir — o trabalho da recepção.",
+          ? `${resolvidosNaTriagem} ${resolvidosNaTriagem === 1 ? "atendimento foi resolvido" : "atendimentos foram resolvidos"} sem sair da triagem.`
+          : null,
       grupos: agrupar("TRIAGEM"),
     },
   ].filter((s) => s.grupos.length > 0);
@@ -636,8 +632,8 @@ async function AvaliacaoView({ ctx }: { ctx: Ctx }) {
 
         return (
           <section key={secao.tipo}>
-            <h2 className="text-section font-semibold text-fg">{secao.titulo}</h2>
-            <p className="text-helper text-fg-muted mt-0.5 mb-4">{secao.descricao}</p>
+            <h2 className={`text-section font-semibold text-fg ${secao.descricao ? "" : "mb-4"}`.trim()}>{secao.titulo}</h2>
+            {secao.descricao && <p className="text-helper text-fg-muted mt-0.5 mb-4">{secao.descricao}</p>}
 
             {/* Eram quatro células coladas numa grade de 1px (até 30/09): viraram
                 os cartões de total do resto do Connect. */}

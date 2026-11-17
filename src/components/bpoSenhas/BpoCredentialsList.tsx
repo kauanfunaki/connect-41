@@ -169,7 +169,7 @@ function CredentialFormFields({
       <CampoForm label="Título" htmlFor="title" required>
         <Input id="title" name="title" required defaultValue={defaults?.title} placeholder="Ex: e-CAC, Simples Nacional, Banco Inter" />
       </CampoForm>
-      <CampoForm label="Empresa" htmlFor="companyId" helper="Deixe em branco para uma credencial geral do setor.">
+      <CampoForm label="Empresa" htmlFor="companyId" dica="Deixe em branco para uma credencial geral do setor.">
         <SearchableSelect
           id="companyId"
           name="companyId"
@@ -190,9 +190,14 @@ function CredentialFormFields({
           label="Senha"
           htmlFor="password"
           required={!defaults}
-          helper={defaults ? "Deixe em branco para manter a senha atual." : undefined}
         >
-          <CampoDeSenha id="password" name="password" required={!defaults} autoComplete="new-password" />
+          <CampoDeSenha
+            id="password"
+            name="password"
+            required={!defaults}
+            autoComplete="new-password"
+            placeholder={defaults ? "Em branco, fica a senha atual" : undefined}
+          />
         </CampoForm>
       </FieldGrid>
       <CampoForm label="URL" htmlFor="url">
@@ -510,7 +515,7 @@ export function BpoCredentialsList({ credentials, companies, canManage, setorRot
           description={
             canManage
               ? "Use “+ Nova credencial”, no alto da tela, para cadastrar a primeira do setor."
-              : `Use “+ Nova credencial” para guardar uma senha só sua. As do setor são cadastradas pela coordenação de ${setorRotulo}.`
+              : "Use “+ Nova credencial” para guardar uma senha só sua."
           }
         />
       ) : filteredCredentials.length === 0 ? (

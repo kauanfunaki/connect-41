@@ -370,8 +370,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como ver o mês",
         passos: [
-          "Clique em “Mês”. Cada dia mostra até dois prazos ou reuniões; o “+” diz quantos ainda há.",
-          "Clique em um dia para ver tudo dele ao lado do calendário. O dia de hoje tem um contorno.",
+          "Clique em “Mês”. Cada dia mostra até dois prazos ou reuniões; o “+” diz quantos ainda há.",          "Clique em um dia para ver tudo dele ao lado do calendário. O dia de hoje tem um contorno.",
           "Pelo teclado, as setas andam pelos dias e o dia escolhido abre ao lado.",
         ],
       },
@@ -412,7 +411,8 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como mudar o horário da grade",
         passos: [
-          "Clique na sua foto, no alto da tela, e em “Sua conta”.",
+          "Nas visões “Dia” e “Semana”, o horário da grade aparece num chip com relógio, ao lado das visões — “7h às 22h”, por exemplo. Clique nele para ir direto à configuração.",
+          "Ou clique na sua foto, no alto da tela, e em “Sua conta”.",
           "Em “Agenda”, escolha “Usar o do escritório” ou “Definir o meu”.",
           "Para definir o seu, escolha o “Início” e o “Fim” e clique em “Salvar”. Um fim antes do início termina no dia seguinte — 22:00 às 6:00, por exemplo.",
         ],
@@ -612,12 +612,23 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Escolha a “Empresa”, escreva o “Título” e o “Conteúdo” e, se precisar, anexe o arquivo. Marque “Pedir o aceite eletrônico do cliente” quando ele precisar concordar.",
           "Clique em “Salvar”. O envio fica como rascunho, e só você e a equipe o veem.",
           "Clique em “Publicar” e confirme. O documento aparece no portal do cliente, em “Documentos do escritório”, e quem pede aceite entra no “O que precisa de você” do Início dele.",
-          "Para quem não tem portal, use “Enviar por e-mail”: cada endereço recebe um link próprio para o documento.",
-          "Na ficha do envio, “Prova de recebimento” mostra cada abertura e download, com data, hora e IP, e o aceite com o nome de quem aceitou.",
+          "Para quem não tem portal, use “Enviar por e-mail”: cada endereço recebe um link próprio para o documento, com a mesma prova de leitura e aceite do portal.",
+          "Na ficha do envio, “Prova de recebimento” mostra cada abertura e download do anexo, pelo portal ou pelo link do e-mail, com data, hora e IP, e o aceite com o nome de quem aceitou.",
+        ],
+      },
+      {
+        titulo: "Como mandar um comunicado a vários clientes",
+        passos: [
+          "Abra a aba “Comunicados” e clique em “Novo comunicado”.",
+          "Escolha o “Setor que comunica” (o cliente vê de qual setor veio), escreva o “Título”, que vai no assunto do e-mail, e o “Texto”, que fica inteiro no portal.",
+          "Em “Para quem”, escolha “Empresas do setor”, “Empresas escolhidas” ou “Todas as empresas”. Na lista das escolhidas, marcar uma matriz marca as filiais dela junto; desmarque a filial que não deve receber.",
+          "Clique em “Enviar comunicado” e confirme. Ele sai na hora para o portal das empresas, com um e-mail para cada pessoa com acesso a elas.",
+          "Na ficha do comunicado, acompanhe em quantas empresas ele já foi lido.",
         ],
       },
     ],
     dicas: [
+      "Na aba “Pedidos” fica o que o escritório pede aos clientes — documento, informação ou confirmação —, de todos os seus setores. O cliente responde pelo portal e é lembrado se o prazo passar.",
       "Cada pessoa vê as solicitações dos seus setores e as que estão com ela. Administradores veem todas.",
       "Envio publicado não se edita mais: o cliente precisa ver sempre o mesmo conteúdo. Para corrigir, crie outro envio.",
       "Os cartões da aba “Envios” abrem o que está parado: rascunhos, enviados que ninguém abriu e os que esperam o aceite.",
@@ -657,7 +668,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como ver a avaliação dos atendentes",
         passos: [
           "Clique na aba “Avaliação”.",
-          "Confira os números de “Tratativa” (o trabalho do setor) e de “Triagem” (o trabalho da recepção): atendimentos avaliados, nota média, escrita média e SLA médio.",
+          "Confira os números de “Tratativa” (da transferência até a resolução — o trabalho do setor) e de “Triagem” (da abertura até o setor assumir — o trabalho da recepção): atendimentos avaliados, nota média, escrita média e SLA médio.",
           "Clique no cartão de um atendente e escolha um atendimento da lista para ler a “Justificativa da IA”.",
           "Clique em “Abrir conversa em Conversas” para ler o atendimento inteiro.",
           "Em “Resumo geral”, clique em “Gerar resumo” para juntar os pontos que se repetem nas avaliações daquele atendente.",
@@ -1086,7 +1097,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Abra a aba “Administração” da Academia.",
           "Em “Textos de digitação”, cadastre e edite os textos de cada nível. Para não sortear mais um texto, desligue em vez de excluir.",
           "Em “Questões de lógica”, escreva o enunciado, ponha uma imagem se precisar e cadastre de 2 a 6 alternativas — cada uma com texto, imagem ou os dois — marcando a certa.",
-          "Em “Prêmio do mês”, escreva o prêmio do pódio (por exemplo, “Top 3 ganham chocolate”) e, se quiser, o da maior evolução. Eles aparecem no painel do topo, no Início e no ranking, e ficam gravados no Hall dos campeões quando o mês fecha.",
+          "Em “Prêmio do mês”, escreva o prêmio do pódio (por exemplo, “Top 3 ganham chocolate”) e, se quiser, o da maior evolução. Eles aparecem no painel do topo, no Início e no ranking, e ficam gravados no Hall dos campeões quando o mês fecha. Deixe vazio para o mês não ter prêmio.",
         ],
       },
       {
@@ -1095,7 +1106,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "No Início da Academia (ou no painel do chapéu), clique em “Fazer o desafio”: é 1 minuto de digitação, com o mesmo texto para toda a equipe no dia.",
           "Uma vez por dia. Fazer o desafio conta a sua sequência de dias; o resultado não entra no ranking do mês.",
           "Sábado e domingo não quebram a sequência, e um dia útil perdido por semana é perdoado.",
-          "A partir de 2 dias seguidos, a chama com o número aparece embaixo do chapéu de formatura.",
+          "A partir de 2 dias seguidos, a chama com o número aparece embaixo do chapéu de formatura, no topo da tela.",
         ],
       },
       {
@@ -1117,18 +1128,166 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Evolução, placar por setor e Hall dos campeões",
         passos: [
-          "No “Ranking”, troque a visão para “Evolução”: quem mais melhorou no mês contra a própria média dos 3 meses anteriores, com pelo menos 3 tentativas valendo no mês.",
-          "Em “Por setor”, a média do melhor de cada pessoa do setor. Só entram setores com pelo menos 3 pessoas no mês.",
-          "O “Hall dos campeões” guarda o pódio de cada teste e a maior evolução de cada mês encerrado, com o prêmio.",
-          "No ranking geral do mês, na evolução e no Hall, o botão “Parabéns” manda um aviso para o colega — um por pessoa, mês e tipo.",
+          "No “Ranking”, troque a visão para “Evolução”: quem mais melhorou no mês contra a própria média dos 3 meses anteriores (os meses em que a pessoa fez o teste), com pelo menos 3 tentativas valendo no mês.",
+          "Em “Por setor”, a média do melhor de cada pessoa do setor, o mesmo número do ranking geral. Só entram setores com pelo menos 3 pessoas no mês.",
+          "O “Hall dos campeões” guarda, dos últimos 12 meses encerrados, o pódio de cada teste (o do ranking geral do mês) e a maior evolução da equipe, com o prêmio. Um mês entra no Hall quando fecha.",
+          "No ranking geral do mês, na evolução e no Hall, o botão “Parabéns” manda um aviso para o colega, que chega no sino — um por pessoa, mês e tipo.",
         ],
       },
     ],
     dicas: [
+      "Nada da Academia entra em avaliação de desempenho: é para treinar, aprender e disputar com os colegas.",
       "O Somente leitura vê a Academia e o ranking, mas não faz os testes.",
       "Com “Aparecer no ranking” desligado, você também some da evolução, do placar por setor e do Hall, e não manda nem recebe parabéns.",
       "As imagens das questões aceitam JPG, PNG e WEBP de até 4 MB.",
       "Descreva no enunciado o que a imagem mostra: é o que o leitor de tela lê.",
+    ],
+  },
+
+  // ─── Chamados (17/11/2026, melhoria-707) ───────────────────────────────────
+  // Criado quando as explicações saíram das telas de Chamados: o subtítulo da
+  // lista, o da abertura e os parágrafos da configuração vieram para cá.
+  {
+    chave: "helpdesk",
+    titulo: "Chamados",
+    caminhos: ["/chamados"],
+    resumo:
+      "Os pedidos de suporte da equipe ao setor que atende os chamados: você descreve o que precisa, a IA sugere o título e a categoria, e a equipe acompanha cada chamado até resolver, com prazo de atendimento por prioridade.",
+    secoes: [
+      {
+        titulo: "Como abrir um chamado",
+        passos: [
+          "Abra “Chamados” e clique em “Novo chamado”.",
+          "Escreva na “Descrição” o que você precisa, o sistema ou recurso envolvido e o que aconteceu. Escolha a prioridade e, se quiser, anexe arquivos em “Anexos”.",
+          "Clique em “Continuar”. A IA lê o pedido e sugere o título e a categoria; isso costuma levar alguns segundos, e “Abrir sem esperar” abre o chamado sem a sugestão.",
+          "Em “Confira antes de abrir”, ajuste o título e a categoria se precisar. Quando mais de um setor atende chamados, escolha também o “Setor que vai atender” — a IA sugere um.",
+          "Se a IA fizer perguntas, responda o que souber: ajuda a equipe a começar sem precisar perguntar. Sem resposta, o chamado abre com o que você escreveu.",
+          "Clique em “Abrir chamado”. Depois, a IA confere se já existe no Orquestrador algo que faça o pedido, e você é avisado no sino.",
+        ],
+      },
+      {
+        titulo: "Como acompanhar os chamados",
+        passos: [
+          "A lista mostra os chamados que você pode ver, com o total no alto.",
+          "Use a busca para achar um chamado. Quando aparece a escolha “Buscar em”, dá para procurar pelo chamado, por quem abriu, pelo setor solicitante ou pelo responsável.",
+          "Quem atende pode clicar em “Atribuídos a mim” para ver só os seus.",
+          "Clique no chamado para abrir o atendimento, com a conversa, o prazo e as informações do pedido.",
+        ],
+      },
+      {
+        titulo: "Como configurar quem atende e os prazos (gestão)",
+        passos: [
+          "Na lista, clique na engrenagem “Configurar chamados”.",
+          "Em “Setores que administram os chamados”, marque os setores que atendem e clique em “Salvar setores”. Com mais de um, escolha o “Setor padrão”, que recebe o chamado de quem não escolhe.",
+          "Em “Políticas de SLA”, informe para cada prioridade a “Primeira resposta” e a “Resolução”, em minutos úteis, e clique em “Salvar política”.",
+        ],
+      },
+    ],
+    dicas: [
+      "Quem é da equipe que atende vê e gerencia os chamados do setor. O gestor de outro setor vê os chamados que ele e o seu setor abriram; os demais, os que abriram.",
+      "Cada setor marcado atende os chamados enviados a ele. Com mais de um, a IA propõe o setor na revisão e quem abre confirma; a equipe pode encaminhar o chamado depois.",
+      "Os prazos contam em minutos úteis: de segunda a quinta, das 8h às 18h, e na sexta, das 8h às 17h, no horário de Brasília. O ciclo começa em “Em andamento” e pausa nas situações de espera.",
+      "Quem entrou num setor que passou a atender precisa sair e entrar de novo no Connect para ver a fila.",
+    ],
+  },
+
+  // ─── Controle interno (17/11/2026, melhoria-707) ───────────────────────────
+  {
+    chave: "tech_controle_interno",
+    titulo: "Controle interno",
+    caminhos: ["/controle-interno"],
+    resumo:
+      "As melhorias, correções e próximos passos da equipe Tech: cada item com tipo, prioridade, sistema, situação, responsável, prazo e o critério de aceite para conferir antes de aprovar.",
+    secoes: [
+      {
+        titulo: "Como registrar um item",
+        passos: [
+          "Clique em “Novo item”.",
+          "Escreva o “Título” em uma frase e, na “Descrição”, onde acontece, o que se esperava e os passos para ver de novo.",
+          "Se quiser, preencha o “Critério de aceite”: um rótulo por linha (Mudança, Antes de testar, Onde testar, Passos e Aprovado quando). Cada linha de “Aprovado quando” vira um ponto para conferir no item.",
+          "Escolha o “Tipo”, a “Prioridade”, o “Sistema” (do cadastro do Orquestrador), a “Situação”, o “Responsável” e, se houver, o “Prazo”. Em “Evidências”, anexe prints de tela, PDFs ou planilhas.",
+          "Clique em “Criar item”. O item entra na lista e no kanban.",
+        ],
+      },
+      {
+        titulo: "Como acompanhar",
+        passos: [
+          "Troque a visão entre “Lista”, “Kanban”, “Histórico” e “Entregas”.",
+          "Use a busca e os filtros para achar um item por título, situação, tipo, prioridade, sistema, responsável ou prazo.",
+          "Para concluir, mude a situação e informe, se houver, o PR e o commit da mudança.",
+          "Clique em “Resumo” para ver o que a equipe concluiu, tem em andamento e planejou no período, e copiar o texto.",
+        ],
+      },
+    ],
+    dicas: [
+      "No Resumo, concluídos e cancelados contam pela data da mudança de situação; “em andamento” é a situação de agora.",
+      "O “Tamanho” (P, M ou G) trava quando o item começa, e quem define é a coordenação da Tech. Nas Entregas, só a entrega que passou por “Em validação” e tem tamanho conta pontos.",
+      "“Veio de” liga o item à entrega que o gerou: é o retrabalho daquela entrega.",
+    ],
+  },
+
+  // ─── Ceci (17/11/2026, melhoria-707) ───────────────────────────────────────
+  {
+    chave: "tech_ceci",
+    titulo: "Ceci",
+    caminhos: ["/ceci"],
+    resumo:
+      "Como a assistente do Connect está indo: as avaliações das respostas, o processamento de cada Ceci e o que pede atenção. Os números contam os últimos 30 dias; a evolução, as últimas 8 semanas.",
+    secoes: [
+      {
+        titulo: "Como ler o painel",
+        passos: [
+          "No alto ficam os totais dos últimos 30 dias: perguntas, respostas boas, chamadas com erro, tempo médio e custo.",
+          "Em “Pontos importantes” está o que pede atenção primeiro.",
+          "Em “Melhora”, a porcentagem de respostas boas entre as avaliadas, semana a semana, e a tabela das últimas 8 semanas. Passe o mouse numa coluna para ver os números da semana.",
+          "Em “Processamento”, as chamadas de cada Ceci nos últimos 30 dias, com erros, tempo médio, P90 e custo.",
+        ],
+      },
+    ],
+    dicas: [
+      "P90 é o tempo em que 9 de cada 10 respostas saíram.",
+      "O Super Admin abre as respostas com 👎, uma a uma, pelo botão “Respostas com 👎”, no alto da tela.",
+    ],
+  },
+
+  // ─── Notificações (17/11/2026, melhoria-707) ───────────────────────────────
+  {
+    chave: "geral:notificacoes",
+    titulo: "Notificações",
+    caminhos: ["/notificacoes"],
+    resumo:
+      "Tudo o que chegou para você no sino, separado em abas: “Para mim” (o que alguém da equipe fez para você), “Clientes” (o que veio do portal, de candidatos e do WhatsApp) e “Alertas” (a rotina automática de prazos, vencimentos e varreduras).",
+    secoes: [
+      {
+        titulo: "Como ler e organizar",
+        passos: [
+          "Clique no sino, no alto da tela, ou abra “Notificações”.",
+          "Escolha a aba e, se quiser, mostre só as não lidas.",
+          "Clique numa notificação para abrir o que ela avisa.",
+          "Selecione várias para marcar como lidas, como não lidas ou arquivar. “Arquivar as lidas” limpa a aba de uma vez.",
+          "O que você arquiva sai do sino e das abas sem ser apagado: fica em “Arquivadas”, e “Desarquivar” traz de volta.",
+        ],
+      },
+      {
+        titulo: "Como escolher o que cada aba mostra",
+        passos: [
+          "Em “Preferências”, clique em “O que cada aba mostra”.",
+          "Desligue os tipos que você não quer ver, um a um ou o grupo inteiro.",
+          "Clique em “Salvar”. O tipo desligado sai do sino e das abas e não manda aviso no celular, mas continua guardado: ligue de novo e ele volta, com o que chegou nesse meio-tempo.",
+        ],
+      },
+      {
+        titulo: "Como ligar o som e o aviso no aparelho",
+        passos: [
+          "Em “Preferências”, ligue “Som ao chegar notificação”, escolha o som e ajuste o volume.",
+          "Ligue “Aviso neste aparelho” para a notificação aparecer no canto da tela do computador (ou nas notificações do celular), como um programa instalado.",
+          "Clique em “Testar” para conferir.",
+        ],
+      },
+    ],
+    dicas: [
+      "O som e o aviso valem só para o navegador em que você ligou.",
+      "Se o navegador bloqueou as notificações, libere no cadeado ao lado do endereço e recarregue a página.",
     ],
   },
 ];

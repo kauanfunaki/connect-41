@@ -49,7 +49,6 @@ export default async function GuiasDoMesPage({ searchParams }: { searchParams: P
       <Breadcrumb items={[{ label: "Autorizações de acesso", href: "/autorizacoes" }, { label: "Guias do mês" }]} />
       <PageHeader
         title="Guias do mês"
-        subtitle="As guias emitidas pelo Connect que vencem no mês, e onde cada uma está: emitida, enviada, aberta pelo cliente, paga ou vencida."
         action={
           <FormularioDeFiltro action="/autorizacoes/guias" className="flex items-center gap-2">
             <CampoMes compact name="mes" defaultValue={mes} className="w-40" aria-label="Mês" />

@@ -130,7 +130,7 @@ export function LeituraDoFluxo({ fluxo, versaoAberta, setorRotulo, rotuloDoSetor
           // HTML sanitizado no servidor ao salvar (sanitizeDocumentHtml), como as páginas do manual.
           <div className={`${READING_CLASS} max-w-[72ch]`} dangerouslySetInnerHTML={{ __html: metodologia }} />
         ) : (
-          <p className="text-ui text-fg-muted">{podeEditar ? "Sem metodologia escrita. Em “Editar”, conte como o setor toca este processo e por quê." : "Sem metodologia escrita."}</p>
+          <p className="text-ui text-fg-muted">Sem metodologia escrita.</p>
         )}
       </section>
 
@@ -144,9 +144,7 @@ export function LeituraDoFluxo({ fluxo, versaoAberta, setorRotulo, rotuloDoSetor
 
         {soComecoEFim && (
           <Aviso tom="neutro" icone={<Workflow />}>
-            {podeEditar && !versaoAberta
-              ? "Este fluxo ainda só tem o começo e o fim. Clique em “Editar” e escreva as etapas na ordem: o desenho se monta sozinho."
-              : "Este fluxo ainda só tem o começo e o fim."}
+            Este fluxo ainda só tem o começo e o fim.
           </Aviso>
         )}
 

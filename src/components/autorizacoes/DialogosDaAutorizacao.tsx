@@ -92,7 +92,7 @@ function CamposDaSituacao({ id, campos, mudar, comObservacao = true }: { id: str
             <CampoForm label="Validada em" htmlFor={`${id}-validada`}>
               <CampoData id={`${id}-validada`} value={campos.validatedAt} onChange={(v) => mudar({ validatedAt: v })} />
             </CampoForm>
-            <CampoForm label="Válida até" htmlFor={`${id}-validade`} helper="Está no Portal, na aba “Recebidas”.">
+            <CampoForm label="Válida até" htmlFor={`${id}-validade`} dica="Está no Portal, na aba “Recebidas”.">
               <CampoData id={`${id}-validade`} value={campos.expiresAt} onChange={(v) => mudar({ expiresAt: v })} />
             </CampoForm>
           </div>
@@ -101,11 +101,10 @@ function CamposDaSituacao({ id, campos, mudar, comObservacao = true }: { id: str
             checked={campos.allServices}
             onChange={(e) => mudar({ allServices: e.target.checked })}
             label="Todos os serviços"
-            helper="Inclui os que a Receita criar depois. Desmarque se o cliente escolheu só alguns."
           />
           {!campos.allServices && (
-            <CampoForm label="Códigos dos serviços" htmlFor={`${id}-servicos`} helper="Os códigos de 5 dígitos do Portal, ex.: 00146, 00103.">
-              <Input id={`${id}-servicos`} value={campos.services} onChange={(e) => mudar({ services: e.target.value })} />
+            <CampoForm label="Códigos dos serviços" htmlFor={`${id}-servicos`} dica="Os códigos de 5 dígitos do Portal.">
+              <Input id={`${id}-servicos`} placeholder="Ex.: 00146, 00103" value={campos.services} onChange={(e) => mudar({ services: e.target.value })} />
             </CampoForm>
           )}
         </>
@@ -344,7 +343,7 @@ export function AtualizarEmLote({ hoje }: { hoje: string }) {
           <CampoForm
             label="CNPJs ou CPFs"
             htmlFor="aut-lote-lista"
-            helper="Cole a lista como estiver: um por linha ou não, com ou sem pontuação, com o nome ao lado. Matriz e filial contam uma vez."
+            dica="Cole a lista como estiver: um por linha ou não, com ou sem pontuação, com o nome ao lado. Matriz e filial contam uma vez."
           >
             <Textarea id="aut-lote-lista" rows={6} value={texto} onChange={(e) => setTexto(e.target.value)} />
           </CampoForm>
@@ -419,9 +418,8 @@ function QuemRecebe({
           });
         }}
       >
-        <p className="text-ui text-fg-secondary">O escritório contábil que valida as autorizações no Portal — o mesmo que vai consultar a Receita pelo Serpro.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <CampoForm label="Nome" htmlFor="aut-recebe-nome">
+          <CampoForm label="Nome" htmlFor="aut-recebe-nome" dica="O escritório contábil que valida as autorizações no Portal — o mesmo que vai consultar a Receita pelo Serpro.">
             <Input id="aut-recebe-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
           </CampoForm>
           <CampoForm label="CNPJ" htmlFor="aut-recebe-cnpj">
@@ -491,10 +489,6 @@ export function PedidoAoCliente({
           <QuemRecebe atual={quemRecebe} sugestao={sugestao} podeConfigurar={podeConfigurar} />
           {texto ? (
             <>
-              <p className="text-ui text-fg-secondary">
-                Copie e mande pelo WhatsApp ou por e-mail. Quando o cliente avisar que cadastrou, marque “Cliente cadastrou” — a contagem dos 30 dias
-                começa ali.
-              </p>
               <pre className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface-2 p-3 text-fs-2 text-fg font-sans">{texto}</pre>
             </>
           ) : (

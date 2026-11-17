@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   if (await modoDoFiscal(ctx) === "motor") {
     const tela = await prepararTelaDoMotor(params);
     // De-Para e Regras não têm fonte no motor: qualquer aba abre as empresas, a única tela com dados (26/10/2026).
-    if (tela) return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/configuracoes" titulo="Empresas no motor" descricao="O cadastro de cada estabelecimento no motor SPED e o vínculo com as empresas do escritório.">
+    if (tela) return <CascoDoMotor tela={tela} caminho="/sped-fiscal/motor/configuracoes" titulo="Empresas no motor">
       <EmpresasMotor tela={tela} permiteGerir={await podeNoModulo(ctx, "fiscal_configuracoes", "gerir")} />
     </CascoDoMotor>;
   }

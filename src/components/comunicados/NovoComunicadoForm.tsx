@@ -104,7 +104,7 @@ export function NovoComunicadoForm({
         );
       }}
     >
-      <CampoForm label="Setor que comunica" htmlFor="comunicado-setor" required helper="O cliente vê de qual setor veio.">
+      <CampoForm label="Setor que comunica" htmlFor="comunicado-setor" required dica="O cliente vê de qual setor veio.">
         <Select id="comunicado-setor" name="setor" required value={setor} onChange={(e) => setSetor(e.target.value)}>
           <option value="" disabled>
             Escolha o setor
@@ -117,11 +117,11 @@ export function NovoComunicadoForm({
         </Select>
       </CampoForm>
 
-      <CampoForm label="Título" htmlFor="comunicado-titulo" required helper="Vai no assunto do e-mail.">
+      <CampoForm label="Título" htmlFor="comunicado-titulo" required dica="Vai no assunto do e-mail.">
         <Input id="comunicado-titulo" name="titulo" required maxLength={LIMITE_DO_TITULO} placeholder="Ex.: Recesso de fim de ano" />
       </CampoForm>
 
-      <CampoForm label="Texto" htmlFor="comunicado-texto" required helper="O texto completo fica no portal.">
+      <CampoForm label="Texto" htmlFor="comunicado-texto" required dica="O texto completo fica no portal.">
         <Textarea id="comunicado-texto" name="texto" rows={8} maxLength={10_000} required />
       </CampoForm>
 
@@ -179,13 +179,10 @@ export function NovoComunicadoForm({
             .map((id) => (
               <input key={id} type="hidden" name="empresas" value={id} />
             ))}
-          <p className="border-t border-border px-3 py-2 text-helper text-fg-muted">
-            Marcar uma matriz marca as filiais dela junto; desmarque a filial que não deve receber.
-          </p>
         </div>
       )}
 
-      <CampoForm label="Anexos" htmlFor="comunicado-anexo-0" helper="PDF, PNG, JPG ou XML de até 10 MB cada.">
+      <CampoForm label="Anexos" htmlFor="comunicado-anexo-0" dica="PDF, PNG, JPG ou XML de até 10 MB cada.">
         <CampoDeAnexos idBase="comunicado-anexo" />
       </CampoForm>
 

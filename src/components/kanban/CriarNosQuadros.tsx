@@ -109,7 +109,7 @@ function FormularioDaLista({ espacos, action, onCancelar }: { espacos: EspacoPar
         label="Localização"
         htmlFor={`${id}local`}
         required
-        helper="Num espaço ou numa pasta dele. A lista nasce com as colunas A fazer, Em andamento, Aguardando cliente e Concluído."
+        dica="Num espaço ou numa pasta dele. A lista nasce com as colunas A fazer, Em andamento, Aguardando cliente e Concluído."
       >
         <Select id={`${id}local`} name="local" required defaultValue={espacos[0]?.id}>
           {espacos.map((e) =>

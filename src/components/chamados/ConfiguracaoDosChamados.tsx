@@ -22,7 +22,7 @@ export type SetoresDaConfiguracao = { todos: Setor[]; administram: string[]; pad
 export function ConfiguracaoDosChamados({ politicas, setores }: { politicas: { priority: string; firstResponseMinutes: number; resolutionMinutes: number }[]; setores: SetoresDaConfiguracao }) {
   return <div className="space-y-6">
     <SetoresQueAdministram {...setores} />
-    <Card className="p-5 space-y-5"><h2 className="font-semibold text-fg">Políticas de SLA</h2><p className="text-ui text-fg-secondary">Prazos em minutos úteis. Expediente: segunda a quinta, 08h–18h; sexta, 08h–17h, no horário de Brasília. O ciclo começa em Em andamento e pausa nas situações de espera.</p>
+    <Card className="p-5 space-y-5"><h2 className="font-semibold text-fg">Políticas de SLA</h2>
       <div className="grid gap-4 md:grid-cols-2">{PRIORIDADES.map(p => <Politica key={p} prioridade={p} inicial={politicas.find(s => s.priority === p) ?? SLA_PADRAO[p]} />)}</div>
     </Card>
   </div>;
@@ -51,10 +51,8 @@ function SetoresQueAdministram({ todos, administram, padrao: padraoInicial, edit
     if (!novos.includes(padrao)) setPadrao(novos[0] ?? "");
   }
   return <Card as="section" id="setores" aria-labelledby="titulo-setores" className="p-5 space-y-4">
-    <div className="space-y-1">
-      <h2 id="titulo-setores" className="font-semibold text-fg">Setores que administram os chamados</h2>
-      <p className="text-ui text-fg-secondary">Cada setor marcado atende os chamados enviados a ele. Com mais de um, a IA propõe o setor na revisão do chamado e quem abre confirma; a equipe pode encaminhar o chamado.</p>
-    </div>
+    {/* As explicações dos setores e do SLA foram para o artigo de ajuda (17/11/2026, melhoria-707). */}
+    <h2 id="titulo-setores" className="font-semibold text-fg">Setores que administram os chamados</h2>
     {editavel ? <form className="space-y-4" onSubmit={e => {
       e.preventDefault(); setBusy(true); setErro(""); setOk(false);
       void setoresQueAdministram({ setores: marcados, padrao }).then(r => { if (!r.ok) setErro(r.error); else { setOk(true); router.refresh(); } }).catch(() => setErro("Falha ao salvar.")).finally(() => setBusy(false));

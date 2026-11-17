@@ -70,7 +70,7 @@ export function ArquivosDoFluxo({ fluxoId, anexos, podeAnexar, podeExcluir, excl
     <div className="flex flex-col gap-3">
       {anexos.length === 0 ? (
         <p className="text-fs-2 text-fg-muted">
-          {podeAnexar ? "Nenhum arquivo ainda. Anexe o PDF exportado de outra ferramenta, uma imagem do desenho antigo ou o .drawio." : "Nenhum arquivo anexado."}
+          Nenhum arquivo anexado.
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-border-soft rounded-lg border border-border">
@@ -125,7 +125,6 @@ export function ArquivosDoFluxo({ fluxoId, anexos, podeAnexar, podeExcluir, excl
           <Button variant="ghost" size="sm" className="self-start max-md:h-11" onClick={() => campo.current?.click()} loading={enviando} loadingLabel="Anexando…">
             <Paperclip size={14} /> Anexar arquivo
           </Button>
-          <p className="-mt-2 text-fs-2 text-fg-muted">PDF, imagem (PNG, JPG, WEBP) ou .drawio, até 10 MB.</p>
         </>
       )}
       {dialog}

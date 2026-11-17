@@ -27,16 +27,13 @@ export function PagamentosDoManual({ kind, hojeISO }: { kind: "PAGAR" | "RECEBER
 
   return (
     <>
-      <CampoForm label={kind === "PAGAR" ? "Já pago em" : "Já recebido em"} htmlFor="lancamento-pago-em" helper="Deixe vazio se ainda está em aberto.">
+      <CampoForm label={kind === "PAGAR" ? "Já pago em" : "Já recebido em"} htmlFor="lancamento-pago-em" dica="Deixe vazio se ainda está em aberto.">
         <CampoData id="lancamento-pago-em" name="pagoEm" max={hojeISO} value={primeira.data} onChange={(v) => mudar(0, "data", v)} />
       </CampoForm>
       <input type="hidden" name="pagamentos" value={primeira.data && detalhado ? JSON.stringify(linhas) : ""} />
 
       {primeira.data && (
         <div className="sm:col-span-2 lg:col-span-4 rounded-md border border-border-soft bg-surface-muted/40 p-3 flex flex-col gap-3">
-          <p className="text-micro text-fg-muted">
-            Valor {pago} em branco quita a conta. Para {kind === "PAGAR" ? "pagamento" : "recebimento"} parcial, informe o valor e acrescente os outros, cada um com a sua data.
-          </p>
           {linhas.map((l, i) => (
             <div key={i} className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
               {i > 0 ? (

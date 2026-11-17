@@ -117,7 +117,7 @@ export function CamposDoParcelamento({
         <input type="hidden" name="parcelarAjuste" value={ajuste} />
         <input type="hidden" name="parcelarCompetencia" value={competencia} />
         <FieldGrid columns="sm:grid-cols-2">
-          <CampoForm label="Parcelas" htmlFor="lancamento-parcelas" helper="Em branco, não parcela.">
+          <CampoForm label="Parcelas" htmlFor="lancamento-parcelas" dica="Em branco, não parcela.">
             <CampoNumero
               id="lancamento-parcelas"
               min={2}
@@ -206,13 +206,6 @@ export function CamposDoParcelamento({
           </div>
         )}
 
-        <p className="text-helper text-fg-muted">
-          {parcelando
-            ? `Cada parcela vira uma conta em aberto, ${
-                competencia === "VENCIMENTO" ? "com a competência do mês em que vence" : "com a competência desta (a compra é uma só)"
-              } e o mesmo número de documento, ligada às outras pela série ("3/12"). Cada uma se edita, paga e cancela sozinha, e "Mudar daqui em diante" muda as próximas de uma vez.`
-            : "Para uma compra ou um contrato dividido: o valor acima é o total, e cada parcela vira uma conta. Para a conta que se repete inteira todo mês (aluguel), use Repetir."}
-        </p>
       </div>
     </BlocoRecolhivel>
   );

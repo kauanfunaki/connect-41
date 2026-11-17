@@ -6,7 +6,7 @@
 
 import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/Input";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AjudaDoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { FormFooter } from "@/components/ui/FormFooter";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
@@ -54,16 +54,17 @@ export function DeParaDaDominio({
         <CampoForm
           label="Código Matriz/Filial na Domínio"
           htmlFor="dominio-filial"
-          helper="Vai em toda linha da planilha. É o mesmo do SPED Generator: “113” e a filial com dois dígitos (matriz 11301)."
+          dica="Vai em toda linha da planilha. É o mesmo do SPED Generator: “113” e a filial com dois dígitos (matriz 11301)."
         >
           <Input id="dominio-filial" name="codigoFilial" defaultValue={codigoFilial} inputMode="numeric" maxLength={20} className="max-w-[200px]" disabled={!podeEditar} />
         </CampoForm>
       </Card>
       {grupos.map((g) => (
         <Card key={g.prefixo} className="p-4 flex flex-col gap-3">
-          <div>
+          {/* O que é o grupo, no "?" ao lado do título (17/11/2026, melhoria-707). */}
+          <div className="flex items-center gap-1.5">
             <h3 className="text-card-title font-semibold text-fg">{g.titulo}</h3>
-            <p className="text-helper text-fg-muted">{g.ajuda}</p>
+            <AjudaDoCampo texto={g.ajuda} rotulo={g.titulo} />
           </div>
           {g.itens.length === 0 ? (
             <p className="text-fs-2 text-fg-muted">Nenhum neste mês.</p>
