@@ -121,7 +121,7 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
           <span className="ml-auto text-micro text-fg-muted tabular-nums truncate">Desde {quando(d.ciclo.abertoEm)}</span>
         </div>
         <div className="shrink-0 border-b border-border px-4 py-3 flex flex-col gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <Iniciais nome={d.contato.tipo === "DESCONHECIDO" ? null : d.contato.titulo} tamanho={40} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1 min-w-0">
