@@ -6808,8 +6808,14 @@ model Dp2Rubrica {
   incideInss      Boolean  @default(true)
   incideFgts      Boolean  @default(true)
   incideIrrf      Boolean  @default(true)
-  /// Entra na média de variáveis de férias, 13º e rescisão.
+  /// Obsoleta desde 17/11/2026 (melhoria-742): fica sincronizada (qualquer uma
+  /// das três médias abaixo) até a próxima limpeza. Não ler em código novo.
   entraNaMedia    Boolean  @default(false)
+  /// Entra na média de variáveis de cada cálculo (17/11/2026, melhoria-742):
+  /// férias, 13º e rescisão (aviso prévio e verbas da rescisão). Nenhuma = fora.
+  mediaFerias     Boolean  @default(false)
+  mediaDecimo     Boolean  @default(false)
+  mediaRescisao   Boolean  @default(false)
   contaDebito     String?  @db.VarChar(40)
   contaCredito    String?  @db.VarChar(40)
   // Códigos de incidência do eSocial (fase 3a, 12/11/2026). Nulo = o que o

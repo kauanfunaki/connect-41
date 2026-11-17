@@ -72,6 +72,14 @@ const texto = (fd: FormData, k: string) => {
   return typeof v === "string" ? v.trim() : "";
 };
 const marcado = (fd: FormData, k: string) => fd.get(k) === "on" || fd.get(k) === "true";
+
+/** As três médias da rubrica (17/11/2026, melhoria-742), com a coluna antiga sincronizada. */
+function mediasDoFormulario(fd: FormData) {
+  const mediaFerias = marcado(fd, "mediaFerias");
+  const mediaDecimo = marcado(fd, "mediaDecimo");
+  const mediaRescisao = marcado(fd, "mediaRescisao");
+  return { mediaFerias, mediaDecimo, mediaRescisao, entraNaMedia: mediaFerias || mediaDecimo || mediaRescisao };
+}
 const erro = (t: string): EstadoDoDp2 => ({ ok: false, texto: t });
 const SEM_PERMISSAO = erro("Sem permissão para isto no DP 2.");
 
@@ -569,7 +577,7 @@ export async function salvarRubricaAction(_: EstadoDoDp2, fd: FormData): Promise
               incideInss: marcado(fd, "incideInss"),
               incideFgts: marcado(fd, "incideFgts"),
               incideIrrf: marcado(fd, "incideIrrf"),
-              entraNaMedia: marcado(fd, "entraNaMedia"),
+              ...mediasDoFormulario(fd),
               ativa: marcado(fd, "ativa"),
             }
           : {}),
@@ -604,7 +612,7 @@ export async function salvarRubricaAction(_: EstadoDoDp2, fd: FormData): Promise
       incideInss: marcado(fd, "incideInss"),
       incideFgts: marcado(fd, "incideFgts"),
       incideIrrf: marcado(fd, "incideIrrf"),
-      entraNaMedia: marcado(fd, "entraNaMedia"),
+      ...mediasDoFormulario(fd),
       ...comum,
     },
     select: { id: true },

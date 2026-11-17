@@ -294,13 +294,40 @@ describe("rescisão", () => {
 });
 
 describe("média e rubricas", () => {
-  it("média só das linhas que entram na média", () => {
-    const m = mediaDeVariaveis([
+  it("holerite antigo (só entraNaMedia) vale para os três tipos", () => {
+    const meses = [
       { competencia: "2026-01", itens: [{ valor: 3000, entraNaMedia: false, tipo: "PROVENTO" }, { valor: 300, entraNaMedia: true, tipo: "PROVENTO" }] },
       { competencia: "2026-02", itens: [{ valor: 100, entraNaMedia: true, tipo: "PROVENTO" }] },
-    ]);
-    expect(m.media).toBe(200);
-    expect(m.meses).toBe(2);
+    ];
+    for (const tipo of ["FERIAS", "DECIMO", "RESCISAO"] as const) {
+      const m = mediaDeVariaveis(meses, tipo);
+      expect(m.media).toBe(200);
+      expect(m.meses).toBe(2);
+    }
+  });
+
+  it("cada cálculo soma só as linhas marcadas para ele (melhoria-742)", () => {
+    const meses = [
+      {
+        competencia: "2026-03",
+        itens: [
+          { valor: 600, tipo: "PROVENTO", mediaFerias: true, mediaDecimo: true, mediaRescisao: true }, // horas extras
+          { valor: 400, tipo: "PROVENTO", mediaFerias: false, mediaDecimo: true, mediaRescisao: false }, // gratificação só no 13º
+          { valor: 200, tipo: "PROVENTO", mediaFerias: false, mediaDecimo: false, mediaRescisao: false }, // prêmio fora de todas
+          { valor: 50, tipo: "DESCONTO", mediaFerias: true, mediaDecimo: true, mediaRescisao: true }, // desconto nunca entra
+        ],
+      },
+    ];
+    expect(mediaDeVariaveis(meses, "FERIAS").media).toBe(600);
+    expect(mediaDeVariaveis(meses, "DECIMO").media).toBe(1000);
+    expect(mediaDeVariaveis(meses, "RESCISAO").media).toBe(600);
+  });
+
+  it("as variáveis da lista padrão entram nas três médias; salário em nenhuma", () => {
+    const he = RUBRICAS_PADRAO.find((r) => r.papel === "HE50")!;
+    expect([he.mediaFerias, he.mediaDecimo, he.mediaRescisao]).toEqual([true, true, true]);
+    const salario = RUBRICAS_PADRAO.find((r) => r.papel === "SALARIO")!;
+    expect([salario.mediaFerias, salario.mediaDecimo, salario.mediaRescisao]).toEqual([false, false, false]);
   });
 
   it("semeia a lista inteira na primeira vez e só o que falta depois", () => {

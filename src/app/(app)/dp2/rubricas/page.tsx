@@ -23,6 +23,10 @@ import { salvarContasDaFolhaAction, salvarRubricaAction } from "../actions";
 
 const sim = (v: boolean) => (v ? "sim" : "—");
 
+/** Em quais médias a rubrica entra (17/11/2026, melhoria-742): "Férias, 13º" ou "—". */
+const mediasDaRubrica = (r: { mediaFerias: boolean; mediaDecimo: boolean; mediaRescisao: boolean }) =>
+  [r.mediaFerias && "Férias", r.mediaDecimo && "13º", r.mediaRescisao && "Rescisão"].filter(Boolean).join(", ") || "—";
+
 /**
  * As rubricas do DP 2 (11/11/2026). As do motor nascem da lista padrão e só
  * mudam no nome, na natureza do eSocial e nas contas contábeis — tipo e
@@ -91,7 +95,7 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                     <td className={TD}>{sim(r.incideInss)}</td>
                     <td className={TD}>{sim(r.incideFgts)}</td>
                     <td className={TD}>{sim(r.incideIrrf)}</td>
-                    <td className={TD}>{sim(r.entraNaMedia)}</td>
+                    <td className={TD}>{mediasDaRubrica(r)}</td>
                     <td className={TD}>{r.papel ? <Selo tom="neutro">do motor</Selo> : <Selo tom="marca">livre</Selo>}</td>
                     {podeGerir && (
                       <td className={`${TD} text-right pr-0`}>
@@ -139,7 +143,12 @@ export default async function RubricasDoDp2({ searchParams }: { searchParams: Pr
                     <Checkbox id="incideInss" name="incideInss" label="Incide INSS" defaultChecked={aberta?.incideInss ?? true} />
                     <Checkbox id="incideFgts" name="incideFgts" label="Incide FGTS" defaultChecked={aberta?.incideFgts ?? true} />
                     <Checkbox id="incideIrrf" name="incideIrrf" label="Incide IRRF" defaultChecked={aberta?.incideIrrf ?? true} />
-                    <Checkbox id="entraNaMedia" name="entraNaMedia" label="Entra na média de férias, 13º e rescisão" defaultChecked={aberta?.entraNaMedia ?? false} />
+                    <fieldset className="flex flex-col gap-2">
+                      <legend className="text-fs-2 text-fg-muted mb-1">Entra na média de</legend>
+                      <Checkbox id="mediaFerias" name="mediaFerias" label="Férias" defaultChecked={aberta?.mediaFerias ?? false} />
+                      <Checkbox id="mediaDecimo" name="mediaDecimo" label="13º salário" defaultChecked={aberta?.mediaDecimo ?? false} />
+                      <Checkbox id="mediaRescisao" name="mediaRescisao" label="Rescisão (aviso prévio e verbas)" defaultChecked={aberta?.mediaRescisao ?? false} />
+                    </fieldset>
                     {aberta && <Checkbox id="ativa" name="ativa" label="Ativa (aparece para lançar)" defaultChecked={aberta.ativa} />}
                   </div>
                 </>

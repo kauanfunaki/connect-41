@@ -10,7 +10,7 @@ import { CONVENCAO_DA_CLT, type CalculoDaPessoa, type ConvencaoDoMotor, type Emp
 import { calcularDecimo } from "./decimo";
 import { calcularMesDaCategoria } from "./semVinculo";
 import { semVinculo as categoriaSemVinculo } from "./categorias";
-import { mediaDeVariaveis, type MesDaMedia } from "./medias";
+import { mediaDeVariaveis, type MesDaMedia, type TipoDeMedia } from "./medias";
 import { ehPapel, rubricasQueFaltam, type LancamentoDaRubrica, type PapelDaRubrica, type RubricaDoMotor, type TipoDaRubrica } from "./rubricas";
 import { competenciaDe, lerDadosDaTabela, tabelasDaCompetencia, TIPOS_DE_TABELA, type TipoDeTabela, type VersaoDaTabela } from "./tabelas";
 
@@ -29,7 +29,9 @@ type LinhaDeRubrica = {
   incideInss: boolean;
   incideFgts: boolean;
   incideIrrf: boolean;
-  entraNaMedia: boolean;
+  mediaFerias: boolean;
+  mediaDecimo: boolean;
+  mediaRescisao: boolean;
   ativa: boolean;
 };
 
@@ -43,7 +45,9 @@ export function rubricaDoMotor(r: LinhaDeRubrica): RubricaDoMotor {
     incideInss: r.incideInss,
     incideFgts: r.incideFgts,
     incideIrrf: r.incideIrrf,
-    entraNaMedia: r.entraNaMedia,
+    mediaFerias: r.mediaFerias,
+    mediaDecimo: r.mediaDecimo,
+    mediaRescisao: r.mediaRescisao,
   };
 }
 
@@ -66,7 +70,10 @@ export async function garantirRubricas(tenantId: string): Promise<void> {
       incideInss: r.incideInss,
       incideFgts: r.incideFgts,
       incideIrrf: r.incideIrrf,
-      entraNaMedia: r.entraNaMedia,
+      mediaFerias: r.mediaFerias,
+      mediaDecimo: r.mediaDecimo,
+      mediaRescisao: r.mediaRescisao,
+      entraNaMedia: r.mediaFerias || r.mediaDecimo || r.mediaRescisao,
     })),
     skipDuplicates: true,
   });
@@ -204,8 +211,11 @@ export async function colaboradoresDaEmpresa(tenantId: string, companyId: string
 
 // ─── Médias ─────────────────────────────────────────────────────────────────
 
-/** A média das variáveis da pessoa nas competências mensais fechadas até `ate` ("AAAA-MM"), em até 12 meses. */
-export async function mediaDaPessoa(tenantId: string, personId: string, ate: string, meses = 12) {
+/**
+ * A média das variáveis da pessoa para um cálculo (férias, 13º ou rescisão) nas
+ * competências mensais fechadas até `ate` ("AAAA-MM"), em até 12 meses.
+ */
+export async function mediaDaPessoa(tenantId: string, personId: string, ate: string, tipo: TipoDeMedia, meses = 12) {
   const [anoAte, mesAte] = ate.split("-").map(Number);
   const de = new Date(Date.UTC(anoAte, mesAte - meses, 1));
   const calculos = await getPrisma().dp2Calculo.findMany({
@@ -224,7 +234,7 @@ export async function mediaDaPessoa(tenantId: string, personId: string, ate: str
     .filter((c) => competenciaDe(c.competencia.ano, c.competencia.mes) <= ate)
     .sort((a, b) => a.competencia.ano - b.competencia.ano || a.competencia.mes - b.competencia.mes)
     .map((c) => ({ competencia: competenciaDe(c.competencia.ano, c.competencia.mes), itens: (c.itens as unknown as ItemDoHolerite[]) ?? [] }));
-  return mediaDeVariaveis(doPeriodo);
+  return mediaDeVariaveis(doPeriodo, tipo);
 }
 
 // ─── Competência ────────────────────────────────────────────────────────────
@@ -362,7 +372,7 @@ async function calcularDecimoDaPessoa(
   tabelas: Parameters<typeof calcularDecimo>[0]["tabelas"],
   empresa: EmpresaDoMotor
 ): Promise<CalculoDaPessoa> {
-  const media = await mediaDaPessoa(tenantId, p.id, competenciaDe(ano, Math.max(1, mes - 1)), mes);
+  const media = await mediaDaPessoa(tenantId, p.id, competenciaDe(ano, Math.max(1, mes - 1)), "DECIMO", mes);
   let primeira = 0;
   if (parcela === 2) {
     const anterior = await getPrisma().dp2Calculo.findFirst({
