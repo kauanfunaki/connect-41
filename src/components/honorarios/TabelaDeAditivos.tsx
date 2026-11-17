@@ -10,6 +10,7 @@ import type { ArquivoResumo, EmpresaAditivo } from "@/lib/honorarios/servidor/au
 import type { SinalAssinatura } from "@/lib/honorarios/regras/auditAditivosClassificador";
 import type { StatusAditivo } from "@/lib/honorarios/regras/auditAditivosStatus";
 import { AvisoDistrato } from "./AvisoDistrato";
+import { AvisoExCliente } from "./ExClientes";
 import { CopiarCaminho } from "./CopiarCaminho";
 import { IconeDoArquivo, ListaDeArquivos } from "./ArquivoDaPasta";
 
@@ -95,6 +96,7 @@ export function TabelaDeAditivos({ empresas, ano, raizUnc, filtrado }: { empresa
                       <span className="mt-0.5 block text-micro text-fg-muted">Tem só o termo de 13º em {ano}</span>
                     )}
                     <AvisoDistrato distrato={e.distrato} />
+                    <AvisoExCliente pasta={e.exCliente} />
                   </td>
                   <td className="py-2.5 pr-3">
                     {decimo ? (

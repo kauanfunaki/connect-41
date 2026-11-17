@@ -18,6 +18,7 @@ function empresa(
     warnings: [],
     renomeacao: null,
     distrato: null,
+    exCliente: null,
   };
 }
 

@@ -14,6 +14,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { CabecalhoDosHonorarios } from "@/components/honorarios/CabecalhoDosHonorarios";
 import { SemVarredura } from "@/components/honorarios/SemVarredura";
+import { ResumoExClientes } from "@/components/honorarios/ExClientes";
 import { BotaoDaPlanilha, hrefDaPlanilha } from "@/components/honorarios/BotaoDaPlanilha";
 import { TabelaDeAditivos } from "@/components/honorarios/TabelaDeAditivos";
 import { formatarNumero } from "@/lib/format";
@@ -119,6 +120,8 @@ export default async function AditivosPage({ searchParams }: { searchParams: Pro
               {resumo.marcadasSemPasta > 0 && `${resumo.marcadasSemPasta} empresa(s) marcada(s) como sem pasta ficaram fora da auditoria.`}
             </p>
           )}
+
+          <ResumoExClientes exClientes={resumo.exClientes} />
 
           <CascoDaTabela
             contagem={contarItens(filtradas.length, "empresa", "empresas")}

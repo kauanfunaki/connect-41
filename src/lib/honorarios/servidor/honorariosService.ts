@@ -13,6 +13,8 @@ import { paraJobDTO, type JobDTO } from './auditSyncService';
 import { tipoDoDocumento, type FormaLeitura, type TipoDocumento } from '../regras/honorarioLeitor';
 import { arquivoEmDistrato, paraDistratoDTO, type DistratoDTO } from '../regras/auditDistrato';
 import { carregarDistratos } from './auditDistratoService';
+import { carregarExClientes } from './auditExClientesService';
+import { resumirForaDaAuditoria, type ExClienteResumo } from '../regras/auditExClientes';
 import {
   compararComAcessorias, escolherHonorario, minutaPeloNome, situacaoDoHonorario, SITUACOES_HONORARIO,
   type AlertaHonorario, type ComparacaoAcessorias, type DocumentoDaEmpresa, type EstadoTexto,
@@ -64,6 +66,8 @@ export interface EmpresaHonorario {
   ultimoEnvio: { enviadoEm: Date; conta: string; valorEnviado: number; status: 'ok' | 'erro'; erro: string | null } | null;
   /** Distrato da prestação de serviços (situação DISTRATO, não envia) e avisos de BPO/social. */
   distrato:    DistratoDTO | null;
+  /** Tem pasta em Ex Clientes E pasta ativa: continua, com aviso (nome da pasta em Ex Clientes). */
+  exCliente:   string | null;
 }
 
 export interface RelatorioHonorarios {
@@ -73,7 +77,9 @@ export interface RelatorioHonorarios {
     empresas:    number;
     porSituacao: Record<SituacaoHonorario, number>;
     comValor:    number;
-    textos:      { documentos: number; lidos: number; pendentes: number; semTexto: number };
+    /** Pasta só em Ex Clientes: ficam fora do relatório. */
+    exClientes:  ExClienteResumo[];
+    textos:     { documentos: number; lidos: number; pendentes: number; semTexto: number };
     acessorias:  { conferidoEm: Date | null; iguais: number; diferentes: number; naoEncontradas: number };
   };
   empresas: EmpresaHonorario[];
@@ -99,7 +105,7 @@ export async function montarRelatorioHonorarios(): Promise<RelatorioHonorarios> 
   const vazio: RelatorioHonorarios = {
     job: null, raizUnc: config.raizUnc,
     resumo: {
-      empresas: 0, porSituacao: porSituacaoZerado(), comValor: 0,
+      empresas: 0, porSituacao: porSituacaoZerado(), comValor: 0, exClientes: [],
       textos: { documentos: 0, lidos: 0, pendentes: 0, semTexto: 0 },
       acessorias: { conferidoEm: null, iguais: 0, diferentes: 0, naoEncontradas: 0 },
     },
@@ -179,7 +185,10 @@ export async function montarRelatorioHonorarios(): Promise<RelatorioHonorarios> 
   const envioPorEmpresa = new Map(envios.map((e) => [e.company_id, e]));
 
   const marcadas = new Set(marcas.map((m) => m.company_id));
-  const empresas = ativas.filter((e) => !(marcadas.has(e.id) && !pastasPorEmpresa.has(e.id)));
+  const naAuditoria = ativas.filter((e) => !(marcadas.has(e.id) && !pastasPorEmpresa.has(e.id)));
+  // Ex-cliente (pasta só na pasta de ex-clientes) não recebe honorário: fica fora, como em Aditivos e Contratos.
+  const ex = await carregarExClientes(naAuditoria, (id) => pastasPorEmpresa.has(id));
+  const empresas = naAuditoria.filter((e) => !ex.fora.has(e.id));
   const distratos = await carregarDistratos(arquivos, pastasPorEmpresa);
 
   const linhas: EmpresaHonorario[] = empresas.map((e) => {
@@ -229,6 +238,7 @@ export async function montarRelatorioHonorarios(): Promise<RelatorioHonorarios> 
         ? { enviadoEm: env.enviado_em, conta: env.conta, valorEnviado: Number(env.valor_enviado), status: env.status, erro: env.erro }
         : null,
       distrato: paraDistratoDTO(d),
+      exCliente: ex.aviso.get(e.id) ?? null,
     };
   });
 
@@ -247,6 +257,7 @@ export async function montarRelatorioHonorarios(): Promise<RelatorioHonorarios> 
       empresas: linhas.length,
       porSituacao,
       comValor: linhas.filter((l) => l.valor !== null).length,
+      exClientes: resumirForaDaAuditoria(ex, naAuditoria),
       textos,
       acessorias: {
         conferidoEm,
