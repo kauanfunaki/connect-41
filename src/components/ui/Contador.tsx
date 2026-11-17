@@ -37,7 +37,10 @@ export function Contador({ valor, tom = "neutro", pequeno = false, teto = 99, cl
         pequeno ? "min-w-4 h-4 px-1" : "min-w-5 h-5 px-1.5"
       } ${COR[tom]} ${className}`.trim()}
     >
-      {valor > teto ? `${teto}+` : valor}
+      {/* A linha aparada na altura dos algarismos (do topo à linha de base): assim o
+          centro da pílula é o dos números, e não o da caixa da fonte, que sobra
+          embaixo e deixava o número 1px fora do meio na pílula de 16px (bug-732). */}
+      <span className="block [text-box:trim-both_cap_alphabetic]">{valor > teto ? `${teto}+` : valor}</span>
     </span>
   );
 }
