@@ -51,7 +51,7 @@ export default async function HistoricoTechPage({ searchParams }: { searchParams
   const aquiComPagina = page > 1 ? hrefPagina(page) : `${ROTA_TECH_INTERNO}/historico${aqui.toString() ? `?${aqui}` : ""}`;
   return <PageContainer>
     <LembrarDaLista endereco={aquiComPagina} />
-    <PageHeader title="Controle interno" subtitle="As melhorias, correções e próximos passos da equipe Tech."
+    <PageHeader title="Controle interno"
       action={<AcoesDoControle podeEditar={podeEditar} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
     <VisoesDoControle ativa="historico" href={hrefVisao} />
     <CascoDaTabela buscaAEsquerda

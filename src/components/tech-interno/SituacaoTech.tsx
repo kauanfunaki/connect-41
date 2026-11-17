@@ -59,10 +59,10 @@ export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = 
         setConcluindo(false); gravar("DONE", { prUrl: texto("prUrl"), commitSha: texto("commitSha") });
       }}>
         <p className="text-ui text-fg-secondary break-words">{titulo}</p>
-        <CampoForm label="PR" htmlFor={`pr-${id}`} helper="Opcional. O endereço do PR da mudança.">
+        <CampoForm label="PR" htmlFor={`pr-${id}`}>
           <Input id={`pr-${id}`} name="prUrl" type="url" inputMode="url" maxLength={500} placeholder="https://github.com/…/pull/123" autoFocus />
         </CampoForm>
-        <CampoForm label="Commit" htmlFor={`commit-${id}`} helper="Opcional. O hash do commit.">
+        <CampoForm label="Commit" htmlFor={`commit-${id}`}>
           <Input id={`commit-${id}`} name="commitSha" maxLength={64} pattern="[0-9a-fA-F]{7,64}" title="7 a 64 caracteres, só 0-9 e a-f." placeholder="a1b2c3d" className="font-mono" />
         </CampoForm>
         <div className="flex justify-end gap-2">

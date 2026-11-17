@@ -15,8 +15,7 @@ import {
   parseAgendaView,
   parseAgendaDate,
 } from "@/lib/agenda";
-import Link from "next/link";
-import { descreverExpediente, intervaloDaBusca } from "@/lib/agendaExpediente";
+import { intervaloDaBusca } from "@/lib/agendaExpediente";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { agendaResolvida, agendaDosSetores } from "@/lib/agendaDoSetorServidor";
@@ -27,19 +26,6 @@ import { Aviso } from "@/components/ui/Aviso";
 
 /** Os atrasados que a lista de Prazos busca para trás de hoje: um mês basta para o que ainda pede ação. */
 const DIAS_DE_ATRASO = 30;
-
-const VIEW_HELPER: Record<string, string> = {
-  prazos: "O que vence nos seus setores, dia a dia — e os atrasados no alto.",
-  dia: "Os prazos e as reuniões do dia — clique num horário vazio para agendar.",
-  semana: "Os prazos dos seus setores e as suas reuniões da semana.",
-  mes: "O mês com os prazos e as reuniões de cada dia — clique no dia para ver tudo dele ao lado.",
-};
-const VIEW_HELPER_SEM_REUNIAO: Record<string, string> = {
-  prazos: "O que vence nos seus setores, dia a dia — e os atrasados no alto.",
-  dia: "Os prazos do dia nos seus setores: vencimentos, prazos combinados, férias e exames.",
-  semana: "Os prazos da semana nos seus setores: vencimentos, prazos combinados, férias e exames.",
-  mes: "Os prazos do mês nos seus setores — clique no dia para ver tudo dele ao lado.",
-};
 
 // Agenda interativa em quatro visões (prazos, dia, semana e mês) — Prazos desde
 // 10/11/2026, para o setor que não faz reunião (ver src/lib/agendaDoSetor.ts).
@@ -169,20 +155,8 @@ export default async function AgendaPage({
     <PageContainer className="h-full flex flex-col">
       <AgendaCalendar
         titulo="Agenda"
-        subtitulo={(podeAgendar && agenda.usaReunioes ? VIEW_HELPER : VIEW_HELPER_SEM_REUNIAO)[view]}
         antesDaGrade={
           <>
-            {/* O horário da grade vem de Configurações › Agenda e a tela não
-                dizia (lote 10, 28/10/2026 — item 11 de "Telas e informações
-                repetidas"). Só na visão de dia e de semana, que têm grade. */}
-            {(view === "dia" || view === "semana") && (
-              <p className="mb-2 -mt-1 text-fs-2 text-fg-muted">
-                Horário da grade: {descreverExpediente(expediente)}.{" "}
-                <Link href="/configuracoes#agenda" className="text-brand hover:underline">
-                  Mudar em Configurações › Agenda
-                </Link>
-              </p>
-            )}
             {/* A cor por setor é a das grades de horas; em Prazos e Mês a cor é
                 a da fonte, e os botões das fontes fazem de legenda. */}
             {(view === "dia" || view === "semana") && setoresComPrazo.length > 0 && (

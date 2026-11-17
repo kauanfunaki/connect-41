@@ -6,7 +6,8 @@ export type AbaDaAcademia = "inicio" | "testes" | "ranking" | "hall" | "admin";
 
 /**
  * O cabeçalho de toda página da Academia (10/11/2026, pedido do Kauan): o
- * título, a frase que deixa claro que nada dali vira avaliação, e as abas.
+ * título e as abas. A frase de que nada dali vira avaliação foi para o artigo
+ * de ajuda (17/11/2026, melhoria-707).
  * A Fase 2 (11/11/2026) trouxe o Hall dos campeões; a de administração só
  * aparece para quem administra (Administrador, Super Admin e a coordenação da
  * Tech).
@@ -21,7 +22,7 @@ export function CabecalhoDaAcademia({ ativa, podeAdministrar, acao }: { ativa: A
   ];
   return (
     <>
-      <PageHeader title="Academia" subtitle="Treine, aprenda e dispute com os colegas. Nada daqui entra em avaliação de desempenho." action={acao} />
+      <PageHeader title="Academia" action={acao} />
       <AbasDeLink abas={abas} ativa={ativa} aria-label="Seções da Academia" />
     </>
   );

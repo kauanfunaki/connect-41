@@ -69,7 +69,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
       )}
 
       {empresas && (
-        <CampoForm label="Empresa" htmlFor="companyId" required helper="O documento aparece no portal das pessoas do cliente desta empresa, depois de publicado.">
+        <CampoForm label="Empresa" htmlFor="companyId" required dica="O documento aparece no portal das pessoas do cliente desta empresa, depois de publicado.">
           <SearchableSelect
             id="companyId"
             name="companyId"
@@ -87,7 +87,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
         <Input id="title" name="title" type="text" required defaultValue={defaultValues?.title} placeholder="Ex.: Guia de recolhimento — competência 06/2026" />
       </CampoForm>
 
-      <CampoForm label="Conteúdo" htmlFor="bodyHtml" required helper="O texto que o cliente lê no portal e na página do link por e-mail (não vai no corpo do e-mail).">
+      <CampoForm label="Conteúdo" htmlFor="bodyHtml" required dica="O texto que o cliente lê no portal e na página do link por e-mail (não vai no corpo do e-mail).">
         <RichTextEditor name="bodyHtml" defaultValue={defaultValues?.bodyHtml} />
       </CampoForm>
 
@@ -96,7 +96,8 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
       <CampoForm
         label="Anexo (opcional)"
         htmlFor="file"
-        helper={defaultValues?.fileName ? `Arquivo atual: ${defaultValues.fileName}. Selecionar um novo substitui o anterior.` : "PDF, JPG, PNG ou WEBP — até 10 MB."}
+        helper={defaultValues?.fileName ? `Arquivo atual: ${defaultValues.fileName}.` : undefined}
+        dica="PDF, JPG, PNG ou WEBP — até 10 MB. Um arquivo novo substitui o anterior."
       >
         <FileDropzoneField id="file" name="file" accept=".jpg,.jpeg,.png,.webp,.pdf" maxSizeMb={10} />
       </CampoForm>
@@ -118,7 +119,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
         <CampoForm
           label="Lembrete de não lido"
           htmlFor="reminderDays"
-          helper="Se ninguém do cliente abrir o documento no prazo, sai um lembrete (e-mail a quem recebeu e aviso no portal). Um só por envio."
+          dica="Se ninguém do cliente abrir o documento no prazo, sai um lembrete (e-mail a quem recebeu e aviso no portal). Um só por envio."
         >
           <Select id="reminderDays" name="reminderDays" defaultValue={lembreteInicial ? String(lembreteInicial) : ""}>
             {OPCOES_DO_LEMBRETE.map((o) => (
@@ -141,7 +142,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
               <CampoForm label="Data" htmlFor="agendarData" required>
                 <CampoData id="agendarData" name="agendarData" defaultValue={agendamento?.data} required />
               </CampoForm>
-              <CampoForm label="Hora" htmlFor="agendarHora" helper="Sem hora, 08:00.">
+              <CampoForm label="Hora" htmlFor="agendarHora" dica="Sem hora, 08:00.">
                 <CampoHora id="agendarHora" name="agendarHora" defaultValue={agendamento?.hora} />
               </CampoForm>
             </div>
@@ -150,7 +151,7 @@ export function ClientDocumentForm({ action, companyId, empresas, documentId, ca
               defaultChecked={!agendamento}
               label="Mandar também ao e-mail cadastrado da empresa (se houver)."
             />
-            <CampoForm label="E-mails avulsos" htmlFor="agendarEmails" helper="Até a hora marcada o cliente não vê nada — nem no portal, nem por e-mail.">
+            <CampoForm label="E-mails avulsos" htmlFor="agendarEmails" dica="Até a hora marcada o cliente não vê nada — nem no portal, nem por e-mail.">
               <EmailChipsInput id="agendarEmails" name="agendarEmails" defaultEmails={agendamento?.emails} />
             </CampoForm>
           </div>

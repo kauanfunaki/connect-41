@@ -45,7 +45,7 @@ export default async function NovoComunicadoPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Comunicados", href: "/solicitacoes/comunicados" }, { label: "Novo comunicado" }]} />
-      <PageHeader title="Novo comunicado" subtitle="Sai na hora para o portal das empresas escolhidas, com um e-mail para cada pessoa com acesso a elas." />
+      <PageHeader title="Novo comunicado" />
       <div className="max-w-[820px]">
         <Card className="p-6">
           <NovoComunicadoForm
