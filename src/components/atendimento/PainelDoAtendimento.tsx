@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowRightLeft, Check, ChevronDown, ChevronUp, CircleCheck, Copy, Download, ExternalLink, Hand, Lock, Paperclip, Route, Send, Upload, UserRound, UserX, X, Zap } from "lucide-react";
-import { BarraDoPainel, Iniciais } from "@/components/conversas/caixa/Caixa";
+import Link from "next/link";
+import { Iniciais } from "@/components/conversas/caixa/Caixa";
 import { NavegacaoPorTeclado } from "@/components/conversas/caixa/Interativos";
 import { Button } from "@/components/ui/Button";
 import { Selo } from "@/components/ui/Selo";
@@ -105,7 +106,20 @@ export function PainelDoAtendimento({ d }: { d: DetalheDoAtendimento }) {
         onDragLeave={aoSair}
         onDrop={aoSoltar}
       >
-        <BarraDoPainel fecharHref={v.hrefDaLista} anteriorHref={anterior} proximaHref={proxima} data={`Desde ${quando(d.ciclo.abertoEm)}`} />
+        {/* Só o fechar e a data (17/11/2026, pedido do Victor): saíram as setas de anterior e próxima e a dica
+            "↑↓ para passar pelas conversas". As teclas continuam valendo (NavegacaoPorTeclado). */}
+        <div className="flex items-center gap-2 px-3 h-11 border-b border-border shrink-0">
+          <Link
+            href={v.hrefDaLista}
+            scroll={false}
+            aria-label="Fechar e voltar à lista"
+            title="Fechar (Esc)"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-md text-fg-secondary hover:bg-surface-hover hover:text-fg"
+          >
+            <X size={16} />
+          </Link>
+          <span className="ml-auto text-micro text-fg-muted tabular-nums truncate">Desde {quando(d.ciclo.abertoEm)}</span>
+        </div>
         <div className="shrink-0 border-b border-border px-4 py-3 flex flex-col gap-3">
           <div className="flex items-start gap-3">
             <Iniciais nome={d.contato.tipo === "DESCONHECIDO" ? null : d.contato.titulo} tamanho={40} />
