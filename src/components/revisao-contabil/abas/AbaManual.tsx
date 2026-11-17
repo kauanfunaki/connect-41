@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { tomDoEstado } from "@/components/revisao-contabil/tons";
-import { MANUAL_NOTE, manualSummary } from "@/lib/revisao-contabil/motor/relatorio";
+import { manualSummary } from "@/lib/revisao-contabil/motor/relatorio";
 import type { ItemDoManual } from "@/lib/revisao-contabil/motor/tipos";
 
 /**
@@ -16,7 +16,9 @@ export function AbaManual({ manual }: { manual: ItemDoManual[] | undefined }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-ui text-fg-secondary">
-        {manualSummary(manual)}. {MANUAL_NOTE}
+        {/* Só o resumo, que é dado; a nota fixa do manual foi para o artigo de
+            ajuda e continua no relatório (17/11/2026, melhoria-707). */}
+        {manualSummary(manual)}.
       </p>
       {secoes.map((s) => {
         const itens = manual.filter((m) => m.section === s);

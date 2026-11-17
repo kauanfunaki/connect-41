@@ -49,7 +49,7 @@ function Formulario({ processId, apresentacoes, onClose }: { processId: string; 
       <input type="hidden" name="processId" value={processId} />
       {estado && "error" in estado && <Aviso>{estado.error}</Aviso>}
 
-      <CampoForm label="Taxa" htmlFor="taxa-descricao" required helper="Escolha uma sugestão ou escreva como a guia diz.">
+      <CampoForm label="Taxa" htmlFor="taxa-descricao" required dica="Escolha uma sugestão ou escreva como a guia diz.">
         <CampoComSugestoes id="taxa-descricao" name="description" sugestoes={TAXAS_SUGERIDAS} maxLength={MAX_DESCRICAO} required />
       </CampoForm>
 
@@ -66,7 +66,7 @@ function Formulario({ processId, apresentacoes, onClose }: { processId: string; 
         <CampoForm
           label="Apresentação"
           htmlFor="taxa-apresentacao"
-          helper="Da 2ª apresentação em diante, a taxa conta como custo das voltas do processo."
+          dica="Da 2ª apresentação em diante, a taxa conta como custo das voltas do processo."
         >
           <Select id="taxa-apresentacao" name="protocolId" defaultValue="">
             <option value="">Sem apresentação ligada</option>
@@ -79,7 +79,7 @@ function Formulario({ processId, apresentacoes, onClose }: { processId: string; 
         </CampoForm>
       )}
 
-      <CampoForm label="Já paga em" htmlFor="taxa-paga" helper="Em branco se ainda vai ser paga.">
+      <CampoForm label="Já paga em" htmlFor="taxa-paga" dica="Em branco se ainda vai ser paga.">
         <CampoData id="taxa-paga" name="paidAt" />
       </CampoForm>
 

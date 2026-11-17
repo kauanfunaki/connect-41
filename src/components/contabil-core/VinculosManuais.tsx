@@ -126,7 +126,7 @@ export function VinculosManuais({ revisao, ocupado, podeDesfazer, onDesfazer }: 
                     </p>
                   ) : !podeDesfazer ? null : desfazendo === v.id ? (
                     <div className="flex flex-col gap-2 rounded-md border border-warning/40 p-3">
-                      <CampoForm label="Motivo para desfazer a conferência" htmlFor={`${base}-motivo-${v.id}`} required helper="O registro e o motivo continuam no histórico da revisão.">
+                      <CampoForm label="Motivo para desfazer a conferência" htmlFor={`${base}-motivo-${v.id}`} required dica="O registro e o motivo continuam no histórico da revisão.">
                         <Textarea
                           id={`${base}-motivo-${v.id}`}
                           rows={2}

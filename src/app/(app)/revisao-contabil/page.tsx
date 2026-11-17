@@ -44,7 +44,6 @@ export default async function RevisaoDoFechamentoPage({ searchParams }: { search
     <PageContainer>
       <PageHeader
         title="Revisão do fechamento"
-        subtitle="Confere os documentos do fechamento de cada empresa pelo manual de conferência. Não lança, não ajusta saldo e não substitui o revisor."
         action={podeAgir ? <FormularioDoFechamento modo="novo" empresas={empresas} /> : undefined}
       />
 
@@ -52,7 +51,7 @@ export default async function RevisaoDoFechamentoPage({ searchParams }: { search
         <EmptyState
           icon={<ClipboardCheck size={28} aria-hidden />}
           title="Nenhum fechamento em revisão"
-          description="Abra um fechamento para uma empresa e um período, envie o balancete, o razão e os outros documentos, e execute a análise."
+          description="Os fechamentos abertos para revisão aparecem aqui."
         />
       ) : (
         <CascoDaTabela

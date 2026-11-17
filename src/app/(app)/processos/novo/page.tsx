@@ -70,7 +70,7 @@ export default async function NovoProcessoPage({ searchParams }: { searchParams:
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Novo processo" }]} />
-      <PageHeader title="Novo processo" subtitle="Empresa e tipo, o que o processo pede e o pedido do que falta ao cliente — o processo já nasce com tudo isso." />
+      <PageHeader title="Novo processo" />
       <AberturaGuiada
         empresas={opcoesDeEmpresa(empresas.map((e) => ({ ...e, nome: nomeExibicao(e) })))}
         empresaInicial={empresa && empresas.some((e) => e.id === empresa) ? empresa : ""}

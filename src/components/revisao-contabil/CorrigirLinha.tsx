@@ -59,7 +59,7 @@ export function CorrigirLinha({ fechamentoId, documentoId, linha, conta, lido, c
       <Modal open={aberto} onClose={() => setAberto(false)} title="Corrigir a leitura" maxWidth="max-w-lg">
         <form action={salvar} className="flex flex-col gap-4">
           <p className="text-helper text-fg-muted">
-            {conta} · linha {linha + 1}. Deixe vazio o que foi lido certo.
+            {conta} · linha {linha + 1}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             {CAMPOS_DA_CORRECAO.map((k) => (

@@ -10,6 +10,7 @@ import { AbasDoCiclo } from "@/components/dp/AbasDoCiclo";
 import { formatCalendarDate, formatarNumero } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { SITUACAO_DAS_FERIAS, COR_DAS_FERIAS, SeloDoDP } from "@/components/pessoas/rotulosDoDP";
@@ -49,13 +50,17 @@ export default async function FeriasPage() {
       {/* Os prazos, ditos na tela (lote 9, 28/10/2026 — o Kauan decidiu manter
           os dois números e explicar). Esta lista traz todas as férias em
           aberto; o painel do DP e os Indicadores olham só a janela de
-          de 60 dias (DIAS_DAS_FERIAS_A_VENCER), e o sino avisa com 30. */}
-      <p className="text-helper text-fg-secondary -mt-1 mb-4 max-w-[78ch]">
-        <b className="font-semibold text-fg">Vencida</b>: passou o fim do período concessivo, e as férias saem em dobro.{" "}
-        <b className="font-semibold text-fg">A vencer</b>: ainda no prazo — aqui entram todas. No painel do DP, na Home, e nos
-        Indicadores de RH, “a vencer” conta só as que vencem nos próximos {DIAS_DAS_FERIAS_A_VENCER} dias; o sino avisa quando faltam{" "}
-        {DIAS_DO_AVISO_DAS_FERIAS} dias.
-      </p>
+          de 60 dias (DIAS_DAS_FERIAS_A_VENCER), e o sino avisa com 30.
+          Num bloco que começa fechado desde 17/11/2026 (melhoria-707): o
+          parágrafo aberto tomava o alto da tela. */}
+      <BlocoRecolhivel titulo="Vencida e a vencer" resumo="O que cada prazo quer dizer" className="mb-4 max-w-[78ch] bg-surface">
+        <p className="text-helper text-fg-secondary">
+          <b className="font-semibold text-fg">Vencida</b>: passou o fim do período concessivo, e as férias saem em dobro.{" "}
+          <b className="font-semibold text-fg">A vencer</b>: ainda no prazo — aqui entram todas. No painel do DP, na Home, e nos
+          Indicadores de RH, “a vencer” conta só as que vencem nos próximos {DIAS_DAS_FERIAS_A_VENCER} dias; o sino avisa quando faltam{" "}
+          {DIAS_DO_AVISO_DAS_FERIAS} dias.
+        </p>
+      </BlocoRecolhivel>
 
       <FaixaDeTotais
         itens={[

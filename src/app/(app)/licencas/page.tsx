@@ -16,7 +16,7 @@ import { NovaLicenca } from "@/components/societario/LicencaForm";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { paginaDeLicencas } from "@/lib/societario/licencas-data";
-import { AVISO_EM_DIAS, type SituacaoDaLicenca } from "@/lib/societario/licencas";
+import type { SituacaoDaLicenca } from "@/lib/societario/licencas";
 import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { Pagination } from "@/components/shared/Pagination";
 
@@ -99,7 +99,6 @@ export default async function LicencasPage({
           ao lado, ele ficava alinhado ao traço do setor, acima do título. */}
       <PageHeader
         title="Licenças"
-        subtitle={`Alvará, sanitária, ambiental, bombeiros — o que fica valendo, e o que precisa ser renovado. Entram na fila com ${AVISO_EM_DIAS} dias de antecedência.`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             {/* A fila do robô (30/10/2026): o alvará pedido no ⋯ da licença.

@@ -42,10 +42,11 @@ export default async function RoteiroDoTipoPage({ params }: { params: Promise<{ 
       />
       <PageHeader
         title={roteiro.tipo.nome}
+        // Ficam a versão e a data; o que publicar faz foi para o artigo de ajuda (17/11/2026, melhoria-707).
         subtitle={
           vigente
-            ? `Versão ${vigente.numero} em vigor desde ${formatInstantDate(vigente.desde)}. Publicar cria a versão ${roteiro.versaoBase + 1}, que vale para os processos abertos daqui em diante; os que estão em andamento continuam na versão em que começaram.`
-            : "Este tipo ainda não tem roteiro, e a abertura de processo não o oferece. Monte as etapas e publique."
+            ? `Versão ${vigente.numero} em vigor desde ${formatInstantDate(vigente.desde)}.`
+            : "Este tipo ainda não tem roteiro, e a abertura de processo não o oferece."
         }
         meta={
           !roteiro.tipo.ativo ? (

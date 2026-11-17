@@ -67,7 +67,7 @@ export function EnvioDeExtrato({ empresaId, agencias }: { empresaId: string; age
         <CampoForm label="Conta bancária" htmlFor={`${base}-ag`} required>
           <SearchableSelect id={`${base}-ag`} name="agenciaId" options={agencias} defaultValue={agenciaId} onChange={setAgenciaId} placeholder="Escolha a conta" />
         </CampoForm>
-        <CampoForm label="Arquivo do extrato" htmlFor={`${base}-arq`} required helper="OFX, PDF ou planilha do banco (.xlsx, .xls ou .csv).">
+        <CampoForm label="Arquivo do extrato" htmlFor={`${base}-arq`} required dica="OFX, PDF ou planilha do banco (.xlsx, .xls ou .csv).">
           <input id={`${base}-arq`} ref={arquivoRef} type="file" accept=".ofx,.OFX,.pdf,.PDF,.xlsx,.xlsm,.xls,.csv,.XLS,.XLSX,.CSV,application/x-ofx,application/pdf,text/plain,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="block w-full text-sm" />
         </CampoForm>
         <Button type="button" onClick={() => enviar(false)} loading={enviando} loadingLabel="Importando…">

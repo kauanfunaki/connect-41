@@ -23,7 +23,7 @@ const fmt = (v: number, casas = 2) => new Intl.NumberFormat("pt-BR", { minimumFr
 export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
   const params = await searchParams;
   const tela = await abrirTelaDeEmpresaDoDp2("dp2_configuracao", params.empresa);
-  const cabecalho = <PageHeader title="Configuração da empresa" subtitle="A convenção coletiva e os encargos patronais que o DP 2 usa no cálculo desta empresa." />;
+  const cabecalho = <PageHeader title="Configuração da empresa" />;
   if (!tela.empresa) {
     return (
       <PageContainer>
@@ -58,7 +58,7 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                 label="Convenção coletiva"
                 htmlFor="convencaoId"
                 className="sm:col-span-2"
-                helper="Cadastre em DP 2 › Convenções coletivas."
+                dica="Cadastre em DP 2 › Convenções coletivas."
               >
                 <Select id="convencaoId" name="convencaoId" defaultValue={cfg.convencaoId ?? ""}>
                   <option value="">Sem convenção (CLT)</option>
@@ -69,33 +69,33 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                   ))}
                 </Select>
               </CampoForm>
-              <CampoForm label="RAT (%)" htmlFor="ratAliquota" helper="1, 2 ou 3, pelo CNAE.">
+              <CampoForm label="RAT (%)" htmlFor="ratAliquota" dica="1, 2 ou 3, pelo CNAE.">
                 <Input id="ratAliquota" name="ratAliquota" inputMode="decimal" defaultValue={fmt(cfg.empresa.ratAliquota)} />
               </CampoForm>
-              <CampoForm label="FAP" htmlFor="fap" helper="Entre 0,5 e 2.">
+              <CampoForm label="FAP" htmlFor="fap" dica="Entre 0,5 e 2.">
                 <Input id="fap" name="fap" inputMode="decimal" defaultValue={fmt(cfg.empresa.fap, 4)} />
               </CampoForm>
-              <CampoForm label="Terceiros (%)" htmlFor="terceirosAliquota" helper="Salário-educação, Sistema S… (FPAS).">
+              <CampoForm label="Terceiros (%)" htmlFor="terceirosAliquota" dica="Salário-educação, Sistema S… (FPAS).">
                 <Input id="terceirosAliquota" name="terceirosAliquota" inputMode="decimal" defaultValue={fmt(cfg.empresa.terceirosAliquota)} />
               </CampoForm>
             </div>
             <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-2">eSocial</h3>
             <div className="grid gap-4 sm:grid-cols-3">
-              <CampoForm label="FPAS" htmlFor="fpas" helper="3 dígitos, da atividade (ex.: 515 comércio).">
-                <Input id="fpas" name="fpas" inputMode="numeric" maxLength={3} defaultValue={cfg.esocial?.fpas ?? ""} />
+              <CampoForm label="FPAS" htmlFor="fpas" dica="3 dígitos, da atividade (515 é comércio).">
+                <Input id="fpas" name="fpas" inputMode="numeric" maxLength={3} placeholder="515" defaultValue={cfg.esocial?.fpas ?? ""} />
               </CampoForm>
-              <CampoForm label="Código de terceiros" htmlFor="codTercs" helper="4 dígitos (ex.: 0115).">
-                <Input id="codTercs" name="codTercs" inputMode="numeric" maxLength={4} defaultValue={cfg.esocial?.codTercs ?? ""} />
+              <CampoForm label="Código de terceiros" htmlFor="codTercs">
+                <Input id="codTercs" name="codTercs" inputMode="numeric" maxLength={4} placeholder="0115" defaultValue={cfg.esocial?.codTercs ?? ""} />
               </CampoForm>
-              <CampoForm label="Classificação tributária" htmlFor="classTrib" helper="Tabela 8. Vazio: pelo regime (Simples 01/02, MEI 04, demais 99).">
+              <CampoForm label="Classificação tributária" htmlFor="classTrib" dica="Tabela 8. Vazio: pelo regime (Simples 01/02, MEI 04, demais 99).">
                 <Input id="classTrib" name="classTrib" inputMode="numeric" maxLength={2} defaultValue={cfg.esocial?.classTrib ?? ""} />
               </CampoForm>
             </div>
 
                 <h3 className="text-fs-3 font-semibold text-fg mt-5 mb-2">Conta pagadora (de onde sai o salário no arquivo do banco)</h3>
                 <div className="grid gap-4 grid-cols-[90px_1fr_70px] sm:grid-cols-[90px_1fr_70px_1.3fr_70px]">
-                  <CampoForm label="Banco" htmlFor="bancoCodigo" helper="Código, ex.: 341">
-                    <Input id="bancoCodigo" name="bancoCodigo" inputMode="numeric" maxLength={3} defaultValue={cfg.pagadora?.bancoCodigo ?? ""} />
+                  <CampoForm label="Banco" htmlFor="bancoCodigo" dica="O código de 3 dígitos do banco.">
+                    <Input id="bancoCodigo" name="bancoCodigo" inputMode="numeric" maxLength={3} placeholder="341" defaultValue={cfg.pagadora?.bancoCodigo ?? ""} />
                   </CampoForm>
                   <CampoForm label="Agência" htmlFor="agencia">
                     <Input id="agencia" name="agencia" inputMode="numeric" maxLength={10} defaultValue={cfg.pagadora?.agencia ?? ""} />
@@ -110,7 +110,7 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                     <Input id="contaDigito" name="contaDigito" maxLength={2} defaultValue={cfg.pagadora?.contaDigito ?? ""} />
                   </CampoForm>
                 </div>
-            <CampoForm label="Convênio de pagamentos" htmlFor="convenio" className="mt-4 max-w-sm" helper="O código que o banco dá à empresa para o pagamento por arquivo.">
+            <CampoForm label="Convênio de pagamentos" htmlFor="convenio" className="mt-4 max-w-sm" dica="O código que o banco dá à empresa para o pagamento por arquivo.">
               <Input id="convenio" name="convenio" maxLength={20} defaultValue={cfg.pagadora?.convenio ?? ""} />
             </CampoForm>
             <div className="mt-4">
@@ -126,11 +126,7 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
           <p className="text-fs-3 text-fg-muted">Você pode ver, mas não alterar a configuração.</p>
         )}
       </Secao>
-      <Secao
-        titulo="Saúde e segurança (eSocial)"
-        apoio="Vão nos eventos de ASO (S-2220) e de condições ambientais (S-2240): o médico responsável pelo PCMSO e quem assina o LTCAT."
-        className="mt-5"
-      >
+      <Secao titulo="Saúde e segurança (eSocial)" className="mt-5">
         {tela.podeAgir ? (
           <FormularioDoDp2 acao={salvarResponsaveisDeSstAction} rotulo="Salvar responsáveis">
             <input type="hidden" name="companyId" value={tela.empresa.id} />

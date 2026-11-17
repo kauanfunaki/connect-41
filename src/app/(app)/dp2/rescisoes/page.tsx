@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { FileSignature } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FormularioDeFiltro } from "@/components/shared/NavegacaoSemRecarregar";
@@ -48,7 +47,7 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
   const params = await searchParams;
   const tela = await abrirTelaDeEmpresaDoDp2("dp2_rescisoes", params.empresa);
   const cabecalho = (
-    <PageHeader title="Rescisões" subtitle="As verbas rescisórias de um colaborador da empresa escolhida na faixa acima, com INSS, IRRF e FGTS e a conta de cada verba." />
+    <PageHeader title="Rescisões" />
   );
   if (!tela.empresa) {
     return (
@@ -150,9 +149,11 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
         />
       ) : (
         <div className="flex flex-col gap-5">
-          <Secao titulo="Calcular rescisão" apoio="Saldo de salário, aviso, 13º e férias saem do cálculo de rescisão do Connect; INSS, IRRF e FGTS, das tabelas do DP 2.">
+          {/* A linha de apoio foi para o artigo do DP 2, e o "Só aparece quem tem
+              contrato" para o "?" do Colaborador (17/11/2026, melhoria-707). */}
+          <Secao titulo="Calcular rescisão">
             <FormularioDeFiltro className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-end">
-              <CampoForm label="Colaborador" htmlFor="pessoa">
+              <CampoForm label="Colaborador" htmlFor="pessoa" dica="Só aparece quem tem contrato no DP 2, em Colaboradores.">
                 <Select id="pessoa" name="pessoa" defaultValue={pessoa?.id ?? ""} required>
                   <option value="" disabled>
                     Escolha…
@@ -183,13 +184,13 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
                   <option value="DISPENSADO">Dispensado</option>
                 </Select>
               </CampoForm>
-              <CampoForm label="Períodos de férias vencidos" htmlFor="vencidos" helper="0, 1 ou 2, não gozados.">
+              <CampoForm label="Períodos de férias vencidos" htmlFor="vencidos" dica="0, 1 ou 2, não gozados.">
                 <Input id="vencidos" name="vencidos" inputMode="numeric" defaultValue={String(vencidos)} />
               </CampoForm>
               <CampoForm label="Faltas no período atual" htmlFor="faltas">
                 <Input id="faltas" name="faltas" inputMode="numeric" defaultValue={String(faltas)} />
               </CampoForm>
-              <CampoForm label="Saldo do FGTS" htmlFor="saldoFgts" helper="Do extrato, para a multa.">
+              <CampoForm label="Saldo do FGTS" htmlFor="saldoFgts" dica="Do extrato, para a multa.">
                 <Input id="saldoFgts" name="saldoFgts" inputMode="decimal" prefix="R$" defaultValue={params.saldoFgts ?? ""} />
               </CampoForm>
               <CampoForm label="13º já adiantado" htmlFor="adiantado">
@@ -199,13 +200,6 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
                 <Button type="submit">Calcular</Button>
               </div>
             </FormularioDeFiltro>
-            <p className="text-fs-2 text-fg-muted mt-3">
-              Só aparece quem tem contrato em{" "}
-              <Link href="/dp2/colaboradores" className="text-brand hover:underline">
-                Colaboradores
-              </Link>
-              .
-            </p>
           </Secao>
           {resultado}
         </div>

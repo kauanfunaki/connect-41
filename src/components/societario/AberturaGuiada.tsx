@@ -120,7 +120,8 @@ export function AberturaGuiada({
             label="Tipo de processo"
             htmlFor="typeId"
             required
-            helper={tipo && !tipo.temRoteiro ? "Este tipo ainda não tem roteiro publicado. Configure antes de abrir." : tipo ? `${tipo.prazo} · ${tipo.etapas} etapas` : undefined}
+            // Embaixo do campo, só o que trava o "Continuar"; prazo e etapas já estão no Resumo ao lado (17/11/2026, melhoria-707).
+            helper={tipo && !tipo.temRoteiro ? "Este tipo ainda não tem roteiro publicado. Configure antes de abrir." : undefined}
           >
             <Select id="typeId" name="typeId" value={tipoId} onChange={(e) => trocarTipo(e.target.value)}>
               <option value="" disabled>
@@ -138,10 +139,8 @@ export function AberturaGuiada({
 
         {/* Passo 2 */}
         <Card className={`${passo === 1 ? "flex" : "hidden"} flex-col gap-3 p-4`}>
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-section font-semibold text-fg">O que o processo pede</h2>
-            <p className="text-fs-2 text-fg-muted">Do roteiro de {tipo?.nome ?? "…"}. Marque o que já está com o escritório; o resto vai no pedido ao cliente.</p>
-          </div>
+          {/* O que marcar e o que vai ao cliente estão no artigo de ajuda (17/11/2026, melhoria-707). */}
+          <h2 className="text-section font-semibold text-fg">O que o processo pede</h2>
           {porEtapa.length === 0 ? (
             <p className="text-fs-2 text-fg-muted">O roteiro deste tipo não tem checklist. Siga para o próximo passo.</p>
           ) : (
@@ -173,10 +172,7 @@ export function AberturaGuiada({
 
         {/* Passo 3 */}
         <Card className={`${passo === 2 ? "flex" : "hidden"} flex-col gap-3 p-4`}>
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-section font-semibold text-fg">Pedido ao cliente</h2>
-            <p className="text-fs-2 text-fg-muted">Vai na conversa do processo: o cliente vê no portal e é avisado por e-mail. Confira o texto antes de abrir.</p>
-          </div>
+          <h2 className="text-section font-semibold text-fg">Pedido ao cliente</h2>
           {faltam.length === 0 ? (
             <Aviso tom="neutro">Nada a pedir: o escritório já tem tudo o que o roteiro lista.</Aviso>
           ) : (

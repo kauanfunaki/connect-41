@@ -107,7 +107,7 @@ export function LigarEmpresa({ empresas }: { empresas: (Opcao & { regime: string
       sucesso="Empresa pronta no Contábil Core. Cadastre o plano de contas e as contas bancárias em Configurações."
       salvar={(d) => ligarEmpresaAction(d)}
     >
-      <CampoForm label="Empresa do cadastro" htmlFor={`${base}-empresa`} required helper="Só aparecem as que têm CNPJ e ainda não estão no Contábil Core.">
+      <CampoForm label="Empresa do cadastro" htmlFor={`${base}-empresa`} required dica="Só aparecem as que têm CNPJ e ainda não estão no Contábil Core.">
         <SearchableSelect
           id={`${base}-empresa`}
           name="companyId"
@@ -145,10 +145,10 @@ export function FormularioDaConta({ empresaId, conta, contas }: { empresaId: str
       salvar={(d) => salvarContaAction(empresaId, conta?.id ?? null, d)}
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <CampoForm label="Código (classificação)" htmlFor={`${base}-cod`} required helper={conta ? "Não muda depois de criado." : "Ex.: 1.1.1.01"}>
-          <Input id={`${base}-cod`} name="codigo" defaultValue={conta?.codigo ?? ""} readOnly={!!conta} maxLength={30} autoComplete="off" required />
+        <CampoForm label="Código (classificação)" htmlFor={`${base}-cod`} required travado={conta ? "Não muda depois de criado." : undefined}>
+          <Input id={`${base}-cod`} name="codigo" defaultValue={conta?.codigo ?? ""} readOnly={!!conta} maxLength={30} autoComplete="off" required placeholder={conta ? undefined : "Ex.: 1.1.1.01"} />
         </CampoForm>
-        <CampoForm label="Código reduzido" htmlFor={`${base}-red`} helper="O número que vai para o Domínio.">
+        <CampoForm label="Código reduzido" htmlFor={`${base}-red`} dica="O número que vai para o Domínio.">
           <Input id={`${base}-red`} name="contaNumero" inputMode="numeric" defaultValue={conta?.contaNumero ?? ""} autoComplete="off" />
         </CampoForm>
       </div>
@@ -196,8 +196,8 @@ export function FormularioDaAgencia({ empresaId, agencia, contas }: { empresaId:
       salvar={(d) => salvarAgenciaAction(empresaId, agencia?.id ?? null, d)}
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <CampoForm label="Banco" htmlFor={`${base}-banco`} required helper="Sigla ou código (SICOOB, 756, ITAU…).">
-          <Input id={`${base}-banco`} name="bancoSigla" defaultValue={agencia?.bancoSigla ?? ""} maxLength={20} autoComplete="off" required />
+        <CampoForm label="Banco" htmlFor={`${base}-banco`} required dica="Sigla ou código do banco.">
+          <Input id={`${base}-banco`} name="bancoSigla" defaultValue={agencia?.bancoSigla ?? ""} maxLength={20} autoComplete="off" required placeholder="Ex.: SICOOB, 756, ITAU" />
         </CampoForm>
         <CampoForm label="Agência" htmlFor={`${base}-ag`} required>
           <Input id={`${base}-ag`} name="agencia" inputMode="numeric" defaultValue={agencia?.agencia ?? ""} maxLength={10} autoComplete="off" required />
@@ -212,7 +212,7 @@ export function FormularioDaAgencia({ empresaId, agencia, contas }: { empresaId:
       <CampoForm
         label="Conta contábil do banco"
         htmlFor={`${base}-conta`}
-        helper="Sem ela, o NEO cria uma conta sintética para a contrapartida, e o Domínio não a importa."
+        dica="Sem ela, o NEO cria uma conta sintética para a contrapartida, e o Domínio não a importa."
       >
         <SearchableSelect id={`${base}-conta`} name="contaContabilId" options={contas} defaultValue={agencia?.contaContabilId ?? ""} placeholder="Escolha a conta" vazioLabel="Sem conta vinculada" />
       </CampoForm>
@@ -235,10 +235,10 @@ export function FormularioDaContraparte({ empresaId, contraparte, contas }: { em
       salvar={(d) => salvarContraparteAction(empresaId, contraparte?.id ?? null, { ...d, ativa: d.ativa === "on" })}
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <CampoForm label="CPF ou CNPJ" htmlFor={`${base}-doc`} required helper={contraparte ? "Não muda depois de criado." : undefined}>
+        <CampoForm label="CPF ou CNPJ" htmlFor={`${base}-doc`} required travado={contraparte ? "Não muda depois de criado." : undefined}>
           <Input id={`${base}-doc`} name="documento" defaultValue={contraparte?.documento ?? ""} readOnly={!!contraparte} maxLength={18} autoComplete="off" required />
         </CampoForm>
-        <CampoForm label="Tipo" htmlFor={`${base}-tipo`} required helper="Débito procura fornecedor; crédito, cliente.">
+        <CampoForm label="Tipo" htmlFor={`${base}-tipo`} required dica="Débito procura fornecedor; crédito, cliente.">
           <Select id={`${base}-tipo`} name="tipo" defaultValue={contraparte?.tipo ?? "fornecedor"}>
             <option value="fornecedor">Fornecedor</option>
             <option value="cliente">Cliente</option>
@@ -287,7 +287,7 @@ export function FormularioDaRegra({
       sucesso="Regra salva."
       salvar={(d) => (!regra && d.aplicarAgora === "on" ? criarRegraEAplicarAction(empresaId, d) : salvarRegraAction(empresaId, regra?.id ?? null, d))}
     >
-      <CampoForm label="Texto do extrato" htmlFor={`${base}-hist`} required helper="O NEO ignora acento, maiúscula e pontuação; basta o trecho que se repete.">
+      <CampoForm label="Texto do extrato" htmlFor={`${base}-hist`} required dica="O NEO ignora acento, maiúscula e pontuação; basta o trecho que se repete.">
         <Input id={`${base}-hist`} name="historico" defaultValue={v.historico ?? ""} maxLength={500} autoComplete="off" required />
       </CampoForm>
       <CampoForm label="Histórico do lançamento" htmlFor={`${base}-desc`} required>
@@ -300,7 +300,7 @@ export function FormularioDaRegra({
             <option value="C">Crédito (entrada no banco)</option>
           </Select>
         </CampoForm>
-        <CampoForm label="Conta bancária" htmlFor={`${base}-ag`} helper="Vazio: vale para todos os bancos.">
+        <CampoForm label="Conta bancária" htmlFor={`${base}-ag`}>
           <SearchableSelect id={`${base}-ag`} name="agenciaId" options={agencias} defaultValue={v.agenciaId ?? ""} placeholder="Todos os bancos" vazioLabel="Todos os bancos" />
         </CampoForm>
       </div>

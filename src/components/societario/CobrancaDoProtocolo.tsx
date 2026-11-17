@@ -75,7 +75,7 @@ export function CobrancaDoProtocolo({
       <CampoForm
         label="Cobrar o órgão do protocolo parado"
         htmlFor="cobrancaDoProtocolo"
-        helper={`O protocolo que aguarda o órgão há esse tempo, sem resposta, avisa o responsável do processo (ou a coordenação) para cobrar — e de novo a cada mesmo intervalo. O padrão é ${padrao} dias.`}
+        dica={`O protocolo que aguarda o órgão há esse tempo, sem resposta, avisa o responsável do processo (ou a coordenação) para cobrar — e de novo a cada mesmo intervalo. O padrão é ${padrao} dias.`}
       >
         {seletor}
       </CampoForm>

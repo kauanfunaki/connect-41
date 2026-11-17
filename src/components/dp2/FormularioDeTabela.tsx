@@ -38,13 +38,13 @@ export function FormularioDeTabela({ acao }: { acao: AcaoDoDp2 }) {
           label="Faixas"
           htmlFor="faixas"
           className="mt-4"
-          helper={
+          dica={
             tipo === "INSS"
-              ? "Uma por linha: limite da faixa; alíquota. A última é o teto. Ex.: 1.621,00; 7,5"
-              : "Uma por linha: limite; alíquota; parcela a deduzir. Na última, deixe o limite vazio. Ex.: ; 27,5; 908,73"
+              ? "Uma por linha: limite da faixa; alíquota. A última é o teto."
+              : "Uma por linha: limite; alíquota; parcela a deduzir. Na última, deixe o limite vazio."
           }
         >
-          <Textarea id="faixas" name="faixas" rows={5} className="font-mono" />
+          <Textarea id="faixas" name="faixas" rows={5} className="font-mono" placeholder={tipo === "INSS" ? "1.621,00; 7,5" : "; 27,5; 908,73"} />
         </CampoForm>
       )}
 
@@ -102,7 +102,7 @@ export function FormularioDeTabela({ acao }: { acao: AcaoDoDp2 }) {
         </div>
       )}
 
-      <CampoForm label="Fundamento" htmlFor="observacao" className="mt-4" helper="A portaria ou a lei, para quem conferir depois.">
+      <CampoForm label="Fundamento" htmlFor="observacao" className="mt-4" dica="A portaria ou a lei, para quem conferir depois.">
         <Input id="observacao" name="observacao" maxLength={500} />
       </CampoForm>
     </FormularioDoDp2>

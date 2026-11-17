@@ -122,7 +122,6 @@ export function EnviarTaxaAoCliente({ taxaId, descricao, envio }: Props) {
               label={envio.temGuia ? "Substituir a guia guardada" : "Guia em PDF"}
               htmlFor={`guia-${taxaId}`}
               required={!envio.temGuia}
-              helper={envio.temGuia ? "Opcional." : undefined}
             >
               <FileDropzoneField id={`guia-${taxaId}`} name="guia" accept=".pdf" maxSizeMb={5} required={!envio.temGuia} compacto />
             </CampoForm>

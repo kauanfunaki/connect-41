@@ -157,13 +157,14 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
         </FormSection>
 
         <FormSection title="Portal de vagas">
-          {/* A ajuda repete a regra de `situacaoNoPortal` (lib/recrutamento/fichaDaVaga). */}
+          {/* A regra de `situacaoNoPortal` (lib/recrutamento/fichaDaVaga) saiu de
+              baixo da caixa e foi para a dica de "Inscrições até" e para o
+              artigo de ajuda (17/11/2026, melhoria-707). */}
           <Checkbox
             name="isPublic"
             value="true"
             defaultChecked={defaultValues?.isPublic ?? false}
             label={rotuloDePublicar}
-            helper="A vaga aparece no portal enquanto estiver Aberta e dentro do prazo de inscrição."
           />
           <CampoForm label="Descrição pública da vaga" htmlFor="publicDescription">
             <Textarea
@@ -193,10 +194,10 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
             </CampoForm>
           </FieldGrid>
           <FieldGrid>
-            <CampoForm label="Salário de" htmlFor="salaryMin" helper="Por mês.">
+            <CampoForm label="Salário de" htmlFor="salaryMin" dica="Por mês.">
               <Input id="salaryMin" name="salaryMin" type="text" inputMode="decimal" prefix="R$" defaultValue={defaultValues?.salaryMin ?? ""} placeholder="3.500,00" />
             </CampoForm>
-            <CampoForm label="Salário até" htmlFor="salaryMax" helper="Por mês.">
+            <CampoForm label="Salário até" htmlFor="salaryMax" dica="Por mês.">
               <Input id="salaryMax" name="salaryMax" type="text" inputMode="decimal" prefix="R$" defaultValue={defaultValues?.salaryMax ?? ""} placeholder="4.500,00" />
             </CampoForm>
           </FieldGrid>
@@ -206,7 +207,7 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
             defaultChecked={defaultValues?.showSalary ?? false}
             label="Mostrar a faixa salarial no portal (desmarcado, aparece &quot;A combinar&quot;)"
           />
-          <CampoForm label="Benefícios" htmlFor="benefits" helper="Um por linha.">
+          <CampoForm label="Benefícios" htmlFor="benefits" dica="Um por linha.">
             <Textarea
               id="benefits"
               name="benefits"
@@ -216,10 +217,10 @@ export function VagaForm({ action, cancelHref, companies, cargos, users, sectorO
             />
           </CampoForm>
           <FieldGrid columns="sm:grid-cols-[180px_1fr_200px]">
-            <CampoForm label="Inscrições até" htmlFor="applicationDeadline" helper="Depois desse dia a vaga sai do portal sozinha.">
+            <CampoForm label="Inscrições até" htmlFor="applicationDeadline" dica="A vaga aparece no portal enquanto estiver Aberta e até este dia; depois, sai sozinha.">
               <CampoData id="applicationDeadline" name="applicationDeadline" defaultValue={defaultValues?.applicationDeadline ?? ""} />
             </CampoForm>
-            <CampoForm label="Cidade de trabalho" htmlFor="workCity" helper="Em branco, vale a cidade da empresa.">
+            <CampoForm label="Cidade de trabalho" htmlFor="workCity" dica="Em branco, vale a cidade da empresa.">
               <Input id="workCity" name="workCity" type="text" maxLength={80} defaultValue={defaultValues?.workCity ?? ""} />
             </CampoForm>
             <CampoForm label="UF de trabalho" htmlFor="workStateCode">

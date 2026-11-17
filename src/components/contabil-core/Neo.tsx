@@ -243,10 +243,10 @@ export function FilaDoNeo({
         {criarRegra && (
           <div className="mt-3 flex flex-col gap-3 rounded-md border border-border p-3">
             <div className="grid gap-3 sm:grid-cols-2">
-              <CampoForm label="Texto da regra" htmlFor={`${base}-regra`} required helper="Sugerido pelo trecho que todas as marcadas têm em comum.">
+              <CampoForm label="Texto da regra" htmlFor={`${base}-regra`} required dica="Sugerido pelo trecho que todas as marcadas têm em comum.">
                 <Input id={`${base}-regra`} value={regra} onChange={(e) => { setTextoDaRegra(e.target.value); setSimulacao(null); }} maxLength={500} autoComplete="off" />
               </CampoForm>
-              <CampoForm label="Conta bancária da regra" htmlFor={`${base}-ag`} helper="Vazio: vale para todos os bancos.">
+              <CampoForm label="Conta bancária da regra" htmlFor={`${base}-ag`}>
                 <SearchableSelect id={`${base}-ag`} name="agenciaId" options={agencias} defaultValue={agenciaDaRegra} onChange={(v) => { setAgenciaDaRegra(v); setSimulacao(null); }} placeholder="Todos os bancos" vazioLabel="Todos os bancos" />
               </CampoForm>
             </div>

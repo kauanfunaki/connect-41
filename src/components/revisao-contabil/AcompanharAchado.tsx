@@ -70,7 +70,7 @@ export function AcompanharAchado({ fechamentoId, execucaoId, achadoId, titulo, r
               ))}
             </Select>
           </CampoForm>
-          <CampoForm label="Anotação" htmlFor={`${base}-nota`} helper="Entra no relatório, na pendência.">
+          <CampoForm label="Anotação" htmlFor={`${base}-nota`} dica="Entra no relatório, na pendência.">
             <Textarea id={`${base}-nota`} name="nota" rows={6} maxLength={5000} defaultValue={nota} placeholder="O que foi pedido, a quem, e o que falta." />
           </CampoForm>
           {erro && (

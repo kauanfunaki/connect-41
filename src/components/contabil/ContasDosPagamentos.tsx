@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { CampoForm } from "@/components/ui/CampoForm";
+import { AjudaDoCampo, CampoForm } from "@/components/ui/CampoForm";
 import { useToast } from "@/components/ui/Toast";
 import { CONTAS_DO_MOTOR, type ContasDosPagamentos as Contas } from "@/lib/contabil/pagamentos";
 import { salvarContasDosPagamentos, type ResultadoDosPagamentos } from "@/app/(app)/sped-contabil/pagamentos-actions";
@@ -34,13 +34,16 @@ export function ContasDosPagamentos({ empresaId, contas, gravadas, podeAgir }: {
     <Card className="p-5">
       <h3 className="text-card-title font-semibold text-fg">Contas dos pagamentos sem nota</h3>
       <p className="mt-1 mb-4 text-label text-fg-secondary">
-        Os lançamentos-modelo do contábil, que vencem a regra da categoria. {doMotor ? "Estão com os códigos do motor; grave para usar outros." : "Gravadas para esta empresa."} Em branco, os pagamentos da categoria ficam pendentes.
+        {doMotor ? "Estão com os códigos do motor; grave para usar outros." : "Gravadas para esta empresa."}
       </p>
       <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); iniciar(async () => depois(await salvarContasDosPagamentos({ empresa: empresaId, contas: valores }))); }}>
         {GRUPOS.map((g) => (
           <fieldset key={g.titulo} className="space-y-2">
-            <legend className="text-label font-medium text-fg">{g.titulo}</legend>
-            <p className="text-helper text-fg-muted">{g.ajuda}</p>
+            {/* A regra do grupo no "?" da legenda, e não embaixo dela (17/11/2026, melhoria-707). */}
+            <legend className="flex items-center gap-1 text-label font-medium text-fg">
+              {g.titulo}
+              <AjudaDoCampo texto={g.ajuda} rotulo={g.titulo} />
+            </legend>
             <div className="grid gap-3 sm:grid-cols-3">
               {g.campos.map(([chave, rotulo]) => (
                 <CampoForm key={chave} label={rotulo} htmlFor={`pagamento-${chave}`} helper={valores[chave] !== CONTAS_DO_MOTOR[chave] ? `No motor: ${CONTAS_DO_MOTOR[chave]}` : undefined}>

@@ -243,6 +243,100 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── DP 2: a folha calculada ──────────────────────────────────────────────
+  // Escrito em 17/11/2026 (melhoria-707) com o que os subtítulos e as linhas de
+  // apoio das telas do DP 2 explicavam — eles saíram da tela e moram aqui.
+  {
+    chave: "dp2_painel",
+    titulo: "DP 2",
+    caminhos: ["/dp2"],
+    resumo:
+      "O DP que calcula a folha: o contrato de cada colaborador, os eventos do mês, o cálculo, a conferência e o fechamento, o 13º, as férias, a rescisão e os eventos do eSocial. As telas de empresa trabalham uma empresa por vez, a escolhida na faixa “Trabalhando em”.",
+    secoes: [
+      {
+        titulo: "Acompanhar o mês no painel",
+        passos: [
+          "Abra “Painel do DP 2” e escolha o mês. A tela mostra as competências do mês de todas as empresas (ou do grupo em foco), com a etapa em que cada uma está.",
+          "Clique no nome da empresa para abrir a competência dela.",
+          "A coluna “Alertas” conta os avisos do cálculo, como salário abaixo do piso da convenção.",
+        ],
+      },
+      {
+        titulo: "Cadastrar os contratos dos colaboradores",
+        passos: [
+          "Em “Colaboradores”, cada pessoa da empresa aparece com “Com contrato” ou “Sem contrato”. Quem não tem contrato no DP 2 fica fora do cálculo da folha, do 13º, das férias e da rescisão.",
+          "Clique em “Editar” para abrir o contrato: salário, jornada, dependentes, dados do eSocial, conta para o pagamento e adicionais. Em “Dados para o eSocial” vai o que a admissão (S-2200) pede e o cadastro da pessoa não tem; o bloco “Estágio” é só da categoria 901 (S-2300).",
+          "Para uma pessoa nova, “Novo colaborador” cria o cadastro da pessoa e o contrato do DP 2 de uma vez.",
+          "Para trazer a empresa inteira, clique em “Importar do eSocial”. Ela traz os colaboradores com os contratos, os dependentes e os dados do eSocial; só lê, nada é enviado ao eSocial, e nada é gravado antes de você conferir a prévia.",
+          "Na importação, busque por CPF e admissão (um por linha, em “Montar a lista” e “Buscar no eSocial”), com o certificado ligado no CertDigital deste computador, ou envie os XML dos eventos, soltos ou em .zip, baixados no “eSocial Download” do portal (menu Downloads › Solicitação) ou de outro sistema.",
+        ],
+      },
+      {
+        titulo: "Configurar a empresa",
+        passos: [
+          "Em “Configuração da empresa”, escolha a convenção coletiva e informe RAT, FAP, terceiros, os códigos do eSocial e a conta pagadora de onde sai o salário no arquivo do banco.",
+          "Em “Saúde e segurança (eSocial)”, informe o médico responsável pelo PCMSO e quem assina o LTCAT: eles vão nos eventos de ASO (S-2220) e de condições ambientais (S-2240).",
+          "As convenções ficam em “Convenções coletivas”: os percentuais de hora extra e de adicional noturno que o cálculo usa e o piso, que dispara o alerta de salário abaixo dele. Sem convenção, a empresa é calculada pela CLT: hora extra de 50% e 100% e adicional noturno de 20%.",
+        ],
+      },
+      {
+        titulo: "Calcular e fechar a folha do mês",
+        passos: [
+          "Em “Competência do mês”, escolha o mês e o tipo e clique em “Abrir competência”. Se ela já existe, abre a que existe.",
+          "No passo “Lançar eventos”, lance horas extras, adicional noturno, faltas e atrasos em horas ou dias, e comissões, adiantamentos e outros em valor. O resto (salário, DSR, INSS, IRRF e FGTS) o cálculo faz. Sem eventos, a folha sai só com o salário e os adicionais fixos.",
+          "Para receber os eventos da empresa, use “Pedir os eventos ao cliente”: o link, sem login, deixa a empresa informar horas extras, faltas, atrasos e comissões de cada colaborador, ou que não houve nada. O que ela mandar entra como lançamento de origem Cliente.",
+          "Para importar, copie do Excel ou do relatório de totais do Pontomais e cole com o cabeçalho: uma coluna CPF ou Nome e uma por evento (HE 50%, HE 100%, Noturno, Faltas, Atrasos, ou o código ou o nome da rubrica). Horas valem em 10:30 ou 10,5.",
+          "Clique em “Calcular a folha”. No passo “Conferir”, clique no nome de cada pessoa para ver o holerite com a memória de cálculo.",
+          "Enquanto o DP 2 roda em paralelo com a Domínio, em “Comparar com a Domínio” cole uma pessoa por linha: CPF; proventos; descontos; líquido; INSS; IRRF; FGTS. Campo vazio não é comparado.",
+          "No passo “Fechar”, clique em “Fechar competência”. A competência fechada é a que vale para as médias de férias, 13º e rescisão.",
+        ],
+      },
+      {
+        titulo: "Pagar e entregar a folha",
+        passos: [
+          "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
+          "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
+          "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",
+          "“Baixar lançamentos (CSV)” traz os lançamentos contábeis da folha, pelas contas das rubricas e das contas da folha.",
+        ],
+      },
+      {
+        titulo: "Calcular 13º, férias e rescisão",
+        passos: [
+          "Em “13º salário”, abra as parcelas: a 1ª vai até 30 de novembro (metade, sem INSS e IRRF) e a 2ª até 20 de dezembro (o ano inteiro, com INSS e IRRF próprios, descontando a 1ª). O 13º sai do salário do contrato e das médias: confira os salários antes de calcular.",
+          "Em “Férias”, escolha o colaborador, o início do gozo, os dias, o abono e as faltas e clique em “Calcular”. O resultado traz o abono, as médias e a conta de cada verba.",
+          "Em “Rescisões”, informe o último dia trabalhado, o motivo, o aviso, as férias vencidas, o saldo do FGTS e o 13º já adiantado e clique em “Calcular”. Saldo de salário, aviso, 13º e férias saem do cálculo de rescisão do Connect; INSS, IRRF e FGTS, das tabelas do DP 2.",
+          "Férias e rescisões só listam quem tem contrato no DP 2.",
+        ],
+      },
+      {
+        titulo: "Gerar os eventos do eSocial",
+        passos: [
+          "Em “eSocial”, comece por “Gerar tabelas”: empregador (S-1000), estabelecimento (S-1005), lotação (S-1020) e as rubricas ativas (S-1010). Depois de corrigir o cadastro, gere de novo: o evento não enviado é trocado.",
+          "Em “Periódicos”, gere a remuneração (S-1200), o pagamento (S-1210) e o fechamento (S-1299) da folha mensal fechada. O 13º sai da 2ª parcela fechada, na apuração anual, com a 1ª parcela dentro.",
+          "Em “Trabalhadores”, gere a admissão (S-2200), a alteração contratual (S-2206) e o afastamento (S-2230) a partir do contrato e do cadastro. Para a alteração, atualize antes o contrato em Colaboradores e informe a data em que vale. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas; sócio, autônomo e estagiário têm início (S-2300) e término (S-2399).",
+          "Em “Saúde e segurança”, gere um ASO (S-2220) por exame, as condições ambientais (S-2240) na admissão e quando a condição mudar, e o acidente de trabalho (S-2210).",
+          "Em “O que falta no cadastro”, corrija o que está como “falta” e gere os eventos de novo. O que está em “conferir” não impede o envio: é um código que o Connect sugeriu.",
+        ],
+      },
+      {
+        titulo: "Manter rubricas e tabelas",
+        passos: [
+          "Em “Rubricas” ficam os proventos e descontos do escritório, com as incidências de INSS, FGTS e IRRF. Valem para todas as empresas.",
+          "A rubrica “do motor” o Connect calcula, e o tipo e as incidências dela seguem a lei. Na rubrica livre, o DP informa o valor no mês.",
+          "Em “Contas da folha”, informe para onde vão o líquido, os encargos da empresa e as provisões nos lançamentos contábeis. As contas de cada provento e desconto ficam na própria rubrica (débito e crédito).",
+          "Em “Conferência das rubricas”, cada rubrica é comparada com o que vai no eSocial. Para comparar com a tabela que já está no governo, solte em “Comparar com o eSocial” os XML do S-1010 da empresa (do portal do eSocial ou da Domínio); eles são lidos no navegador. Rubrica que só existe no eSocial e ainda é usada: crie como rubrica livre com o mesmo código.",
+          "Em “Tabelas oficiais”, cada tabela (INSS, IRRF, salário mínimo e salário-família) tem a competência em que passa a valer, e o cálculo usa a mais nova até o mês da competência. Quando sair uma portaria antes de o Connect ser atualizado, use “Gravar uma tabela do escritório”; gravar na mesma vigência substitui a versão anterior do escritório.",
+        ],
+      },
+    ],
+    dicas: [
+      "Para mudar quem entra numa folha, ajuste os contratos em Colaboradores e calcule de novo.",
+      "Depois de fechada, a competência só muda se for reaberta com um motivo, e só o gestor do setor reabre.",
+      "A busca no eSocial por CPF tem limite: 10 acessos por dia por empresa (cerca de 9 pessoas) e nenhum do dia 1 ao 7. O que faltar continua no dia seguinte.",
+    ],
+  },
+
   // ─── Recrutamento: Vagas ──────────────────────────────────────────────────
   {
     chave: "recrutamento_vagas",
@@ -274,9 +368,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Abra a vaga e vá até “Funil de recrutamento”.",
           "Clique em “Adicionar candidato”. No painel, busque pelo nome, CPF ou e-mail, escolha a “Origem” (Indicação, Portal, WhatsApp, LinkedIn ou Outra…) e clique em “Vincular”.",
-          "Se a pessoa ainda não está no banco, clique em “Não achou? Cadastrar novo candidato”, preencha o nome, o e-mail e o telefone (o currículo em PDF é opcional) e clique em “Cadastrar e vincular”.",
+          "Se a pessoa ainda não está no banco, clique em “Não achou? Cadastrar novo candidato”, preencha o nome, o e-mail e o telefone (o currículo em PDF é opcional) e clique em “Cadastrar e vincular”. O resto do cadastro (CPF, endereço, documentos) fica na ficha do candidato.",
           "No topo de cada coluna aparecem quantos estão na etapa agora, quantos chegaram até ela e quantos passaram da etapa anterior.",
-          "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão.",
+          "Arraste o cartão do candidato entre as etapas “Triagem”, “Entrevista”, “Teste”, “Proposta” e “Contratado”, ou escolha a etapa na lista do próprio cartão. Soltar em “Contratado” inicia a admissão.",
           "Para tirar alguém do funil, clique no botão “⋯” do cartão e escolha “Reprovar” ou “Desistiu”.",
           "Informe o “Motivo”, se quiser, e confirme. O candidato vai para a faixa de encerrados.",
         ],
@@ -284,8 +378,8 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pontuar os currículos com a IA",
         passos: [
-          "Na seção “Triagem de currículos”, escreva cada requisito no campo “Adicionar obrigatório” ou “Adicionar desejável” e tecle Enter. Obrigatório pesa o dobro.",
-          "Marque o peso nos três pontos ao lado de cada requisito: um é baixo, três é alto. O “×” tira o requisito.",
+          "Na seção “Triagem de currículos”, escreva cada requisito no campo “Adicionar obrigatório” ou “Adicionar desejável” e tecle Enter. Obrigatório pesa o dobro. A IA confere o currículo contra cada requisito e aponta a evidência.",
+          "Marque o peso nos três pontos ao lado de cada requisito: um é baixo, três é alto (clique para trocar). O “×” tira o requisito.",
           "Ajuste “Parcial a partir de” e “Compatível a partir de”, se quiser. A régua de 0 a 100 mostra onde começa cada faixa.",
           "Clique em “Salvar requisitos”.",
           "Clique em “Pontuar pendentes” para a IA dar nota aos currículos ainda sem nota, ou em “Reprocessar todas” para refazer todas.",
@@ -305,7 +399,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "Mover para “Contratado” transforma o candidato em colaborador com a admissão em andamento, que aparece para o DP em “Admissões”. Depois disso, o cartão não muda mais de etapa.",
-      "A nota da triagem só ordena os candidatos — nunca reprova ninguém. Nome, idade, cidade e foto não chegam à IA.",
+      "A nota da triagem só ordena os candidatos — nunca reprova ninguém: quem avança ou reprova é o recrutador. Nome, idade, cidade e foto não chegam à IA.",
+      "Localidade não entra nos requisitos da triagem: a IA não avalia a cidade, quem confere é o recrutador.",
+      "A vaga aparece no portal enquanto estiver Aberta e até o dia de “Inscrições até”; depois, sai do portal sozinha. Sem “Cidade de trabalho”, vale a cidade da empresa.",
       "O botão “Perguntar à Ceci sobre esta vaga” abre a Ceci já com a vaga como assunto. Ela responde sobre os candidatos e sugere movimentos, mas não altera nada: cada sugestão só vale depois que você clica em “Aplicar”.",
     ],
   },
@@ -369,8 +465,9 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
-      "A leitura do currículo precisa de um PDF: o enviado pela candidatura no portal ou um documento da categoria Currículo na ficha. Vale o mais recente.",
+      "A leitura do currículo precisa de um PDF: o enviado pela candidatura no portal ou um documento da categoria Currículo na ficha. Vale o mais recente. O currículo anexado pelo bloco “Currículo” entra nos documentos da ficha, nessa categoria.",
       "Marcar tags deixa o candidato fácil de achar no banco de talentos, mesmo que ele não avance na vaga atual.",
+      "As tags do Recrutamento são cadastradas em Configurações › Setores e módulos › Tags.",
     ],
   },
 
@@ -449,7 +546,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Clique em “Selecionar”, ao lado da busca da lista.",
           "Marque as conversas, ou “Selecionar todas”, no fim da lista.",
-          "Escolha para quem transferir ou como encerrar e clique no botão ao lado. A que não puder, fica de fora com o motivo.",
+          "Escolha para quem transferir ou como encerrar e clique no botão ao lado. Nada é enviado aos candidatos, e cada conversa passa pela mesma regra de quando é feita uma por vez: a que não puder, fica de fora com o motivo.",
         ],
       },
       {
@@ -474,6 +571,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       "Se o candidato pediu para parar (situação “Não quer mensagens”), ninguém pode responder, assumir nem devolver a conversa ao assistente. Ela só volta quando o próprio candidato escrever de novo.",
       "Na situação “Fora da janela”, o WhatsApp não deixa retomar a conversa pela tela: ligue para o candidato ou aguarde ele escrever.",
       "Só quem assumiu a conversa pode soltá-la.",
+      "Transferir uma conversa não manda nada ao candidato: ela passa a ser de quem recebe, e essa pessoa é avisada no sino.",
     ],
   },
 
@@ -483,7 +581,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     titulo: "Testes",
     caminhos: ["/testes"],
     resumo:
-      "Envia testes de perfil comportamental (DISC) e de múltipla escolha para candidatos e reúne as respostas e os resultados.",
+      "Envia testes de perfil comportamental (DISC) e de múltipla escolha para candidatos e reúne as respostas e os resultados. Os de múltipla escolha saem de modelos (Português, Matemática…) que se reaproveitam em vários candidatos.",
     secoes: [
       {
         titulo: "Enviar um teste a um candidato",
@@ -540,10 +638,12 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Abrir um processo",
         passos: [
-          "Clique em “Abrir processo”.",
-          "Busque a “Empresa” e escolha o “Tipo de processo”. O prazo previsto aparece ao lado de cada tipo.",
-          "Se quiser, preencha “Título”, “Responsável”, “Prioridade” e “Prazo combinado”.",
-          "Clique em “Abrir”.",
+          "Clique em “Abrir processo”. A abertura tem três passos: “Empresa e tipo”, “O que o processo pede” e “Pedido ao cliente”.",
+          "Busque a “Empresa” e escolha o “Tipo de processo”. O prazo previsto e as etapas do tipo aparecem no “Resumo”, ao lado. Tipo sem roteiro publicado não deixa continuar.",
+          "Se quiser, preencha “Título” (o que diferencia este processo de outro do mesmo tipo na mesma empresa), “Responsável”, “Prioridade” e “Prazo combinado” (a data prometida ao cliente), e clique em “Continuar →”.",
+          "Em “O que o processo pede”, a lista vem do checklist do roteiro do tipo. Marque o que já está com o escritório: o resto vai no pedido ao cliente.",
+          "Em “Pedido ao cliente”, confira a “Mensagem”. Ela vai na conversa do processo: o cliente vê no portal e é avisado por e-mail.",
+          "Clique em “Abrir processo”. Para abrir sem mandar nada ao cliente, use “Abrir sem pedir nada” ou desmarque “Mandar o pedido ao cliente ao abrir o processo”.",
         ],
       },
       {
@@ -575,11 +675,45 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Para voltar a tocar o processo, clique em “Retomar”.",
         ],
       },
+      {
+        titulo: "Conferir os avisos da Junta",
+        passos: [
+          "Quando há aviso para conferir, o botão “avisos da Junta” aparece no alto de “Processos”, com a quantidade. Clique nele.",
+          "Cada aviso é um e-mail do Empresa Fácil que chegou no endereço do Societário. O Connect lê o e-mail e sugere o desfecho.",
+          "Confira o texto do órgão e clique em “Aplicar no protocolo”, ou em “Descartar” se não houver nada novo. Quem aplica é você.",
+          "Os avisos de um processo também aparecem dentro dele, em “Avisos da Junta por e-mail”.",
+        ],
+      },
+      {
+        titulo: "Revisar as propostas da Ceci",
+        passos: [
+          "Clique em “Ceci · Societário”, no alto de “Processos”. O botão aparece para a coordenação.",
+          "Clique em “Rodar varredura” para a Ceci procurar as pendências do setor. A leitura de contrato social fica na tela de sócios de cada empresa.",
+          "Em “Esperando revisão”, clique em “Revisar →” na proposta.",
+          "Na varredura, desmarque o que não quer encaminhar e clique em “Encaminhar”. Encaminhar sobe a prioridade de cada processo para alta e avisa o responsável com o próximo passo.",
+          "No contrato social, confira cada sócio com o contrato ao lado, corrija o que a IA leu errado e desmarque quem não deve entrar.",
+          "Em “Qualidade da IA, últimos 6 meses”, veja quanto do que a IA propõe é aprovado como veio, quanto precisa de ajuste, quanto é rejeitado e quanto custou.",
+        ],
+      },
+      {
+        titulo: "Montar o roteiro de um tipo de processo",
+        passos: [
+          "No botão “⋯” do alto de “Processos”, escolha “Roteiros dos processos” e abra o tipo.",
+          "As etapas ficam na ordem em que o processo anda. Marque “Corre junto com a etapa de cima” para as duas ficarem na mesma posição e serem liberadas ao mesmo tempo.",
+          "Com “Órgão”, concluir a etapa abre um protocolo nele. Com “Opcional”, o processo ganha o botão “Não se aplica” nesta etapa.",
+          "No “Checklist”, liste o que a etapa pede. Item obrigatório trava a conclusão da etapa até ser marcado.",
+          "Clique em “Publicar versão”. A versão nova vale para os processos abertos daqui em diante; os que estão em andamento continuam na versão em que começaram.",
+        ],
+      },
     ],
     dicas: [
       "Uma etapa com item obrigatório do checklist em aberto não pode ser concluída.",
-      "O cliente vê no portal o motivo de pausa ou encerramento e tudo o que for escrito em “Conversa com o cliente”.",
-      "“Ver no kanban” mostra a mesma fila em colunas por situação. O cartão muda de coluna quando o desfecho é registrado no processo, e não arrastando.",
+      "O cliente vê no portal o motivo de pausa ou encerramento e tudo o que for escrito em “Mensagens”, e é avisado por e-mail. Para anotação interna, use as observações do processo.",
+      "O roteiro do processo é congelado na abertura, para o processo não mudar embaixo de quem está tocando ele. A versão aparece no pé da tela do processo.",
+      "Em “Taxas”, lance a guia da Junta, o DAM ou a taxa do Bombeiros quando sair. Ligada da 2ª apresentação em diante, a taxa conta como custo das voltas do processo.",
+      "As horas lançadas em “Horas trabalhadas” entram nas horas de operação da Gestão.",
+      "Em “Pergunte à Ceci”, no fim de “Processos”, pergunte sobre a fila — o que está parado, o que está em exigência, o que dá para destravar — ou peça para abrir um processo. A Ceci lê os mesmos processos que você vê e não altera nada: toda mudança passa pelo seu clique na sugestão.",
+      "“Ver no kanban” mostra a mesma fila em colunas por situação. A coluna é a situação que os protocolos dizem: o cartão muda de coluna quando o desfecho é registrado no processo, e não arrastando.",
     ],
   },
 
@@ -596,8 +730,27 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
         passos: [
           "Clique em “Nova licença”.",
           "Busque a “Empresa” e, em “Licença”, escolha uma sugestão ou escreva o nome que o órgão usa.",
-          "Preencha “Órgão”, “Número”, “Emissão” e “Validade”. Deixe a validade em branco se a licença não vence.",
+          "Preencha “Órgão”, “Número”, “Emissão” e “Validade”. Deixe a validade em branco se a licença não vence (a inscrição municipal, por exemplo).",
+          "Para não digitar, use “Ler do PDF”: a IA lê o alvará ou a licença e preenche número, emissão e validade. Nada é gravado antes de você conferir e salvar, e o PDF vai para Arquivos › Societário junto com a licença.",
           "Clique em “Cadastrar”.",
+        ],
+      },
+      {
+        titulo: "Importar licenças de uma planilha",
+        passos: [
+          "Clique em “Importar planilha” e em “Baixar o modelo (.xlsx)”.",
+          "Preencha o modelo do Connect: uma licença por linha, com o CNPJ da empresa.",
+          "Suba a planilha e clique em “Conferir”. Antes de gravar, a tela mostra o que entra, o que já está cadastrado e o que tem erro.",
+          "Clique em “Importar”. Só as novas são gravadas; as linhas com erro ficam de fora para corrigir e importar de novo.",
+        ],
+      },
+      {
+        titulo: "Receber os vencimentos por e-mail",
+        passos: [
+          "Clique em “Avisos por e-mail”.",
+          "Ligue “Enviar o e-mail diário” e escreva em “Quem recebe” um e-mail por linha, ou separados por vírgula.",
+          "Clique em “Salvar” e, se quiser, em “Enviar teste” para mandar agora à lista salva o que está na janela hoje.",
+          "O e-mail sai uma vez por dia, a partir das 7h, com uma tabela do que pede atenção. Cada documento entra uma vez por marco: o que já foi avisado não se repete no dia seguinte.",
         ],
       },
       {
@@ -619,6 +772,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
     ],
     dicas: [
       "As licenças entram na fila de renovação 60 dias antes de vencer.",
+      "No e-mail diário, as licenças entram a 90, 60 e 30 dias do vencimento e quando vencem (até 30 dias depois); as certidões, quando o módulo de Certidões está ligado.",
       "Revogar não apaga a licença: o histórico continua na empresa.",
     ],
   },
@@ -714,16 +868,145 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Ler os quadros",
         passos: [
-          "Em “SLA por tipo”, compare os dias úteis consumidos com o previsto de cada tipo de processo.",
-          "Em “Processos que mais voltaram”, veja os processos com mais reapresentações e clique para abri-los.",
-          "Em “Produtividade por responsável”, veja os concluídos e a carteira aberta de cada pessoa.",
-          "Em “Custo em taxas por processo”, veja o total gasto em taxas e quanto foi de reapresentação.",
+          "Em “SLA por tipo”, compare os dias úteis consumidos com o previsto de cada tipo de processo. As voltas ficam na mesma linha porque são a causa do estouro.",
+          "Em “Processos que mais voltaram”, veja os processos com reapresentação, do que mais voltou para o que menos voltou, e clique para abri-los.",
+          "Em “Produtividade por responsável”, veja os concluídos no período ao lado da carteira aberta de cada pessoa.",
+          "Em “Tempo por etapa”, veja quanto cada etapa do roteiro leva, por tipo de processo, nas etapas concluídas no período — em dias úteis, do início ao fim da etapa.",
+          "Em “Custo em taxas por processo”, veja quanto cada processo custou em taxas e quanto disso veio de reapresentação.",
+          "Embaixo de cada relatório, a frase de leitura diz o que o número quer dizer.",
         ],
       },
     ],
     dicas: [
       "Os prazos são contados em dias úteis, descontando os feriados do escritório.",
       "A produtividade conta para o responsável atual do processo: se o processo mudou de mãos, o crédito fica todo com quem está com ele agora.",
+    ],
+  },
+
+  // ─── Societário: Painel ───────────────────────────────────────────────────
+  // Os artigos abaixo vieram do texto que saiu das telas (17/11/2026, melhoria-707).
+  {
+    chave: "societario_painel",
+    titulo: "Painel do Societário",
+    caminhos: ["/processos/painel"],
+    resumo:
+      "O dia do setor numa tela: o que está parado, o que vence e o que pede alguém, em números no alto e numa fila do que fazer hoje.",
+    secoes: [
+      {
+        titulo: "Ler os números do dia",
+        passos: [
+          "Confira os cartões do alto: “Protocolos parados”, “Exigências em 7 dias”, “Processos estourados” e “Licenças a renovar” — e “Certidões positivas” e “Robô”, quando esses módulos estão ligados.",
+          "Clique num cartão para abrir a tela com a lista completa daquele número.",
+        ],
+      },
+      {
+        titulo: "Andar com a fila do dia",
+        passos: [
+          "Em “O que fazer hoje”, a fila vem da mais urgente para a menos: protocolo parado e exigência vencendo primeiro; depois processo estourado, exigência da semana, licença vencida, certidão positiva e licença a renovar.",
+          "Clique no item, ou em “Abrir”, para ir ao processo, à licença ou à certidão.",
+          "No protocolo parado, clique em “Registrar cobrança” depois de cobrar o órgão.",
+        ],
+      },
+    ],
+    dicas: [
+      "A fila mostra até 40 itens; os números do alto contam todos.",
+    ],
+  },
+
+  // ─── Societário: Órgãos ───────────────────────────────────────────────────
+  {
+    chave: "societario_orgaos",
+    titulo: "Órgãos",
+    caminhos: ["/processos/orgaos"],
+    resumo:
+      "Onde os processos esperam: os protocolos em cada órgão, há quanto tempo e quanto o órgão costuma levar para responder.",
+    secoes: [
+      {
+        titulo: "Ver onde os processos esperam",
+        passos: [
+          "Confira os cartões do alto: “Protocolos esperando”, os parados, a “Resposta média” e os “Órgãos com protocolo”.",
+          "Na tabela, cada órgão mostra quantos protocolos esperam, quantos estão parados, a resposta média, as voltas por protocolo e a última resposta.",
+          "Clique em “Ver protocolos” para ver os protocolos que esperam naquele órgão, com a empresa, o número e há quantos dias.",
+          "No protocolo parado, clique em “Registrar cobrança” depois de cobrar o órgão.",
+        ],
+      },
+    ],
+    dicas: [
+      "Resposta média e voltas por protocolo contam os últimos 90 dias.",
+      "Os protocolos parados também estão em “Exigências e prazos”, na aba “Protocolos parados”.",
+    ],
+  },
+
+  // ─── Societário: Certidões ────────────────────────────────────────────────
+  {
+    chave: "societario_certidoes",
+    titulo: "Certidões",
+    caminhos: ["/certidoes"],
+    resumo:
+      "As certidões federal, FGTS, trabalhista, estadual e municipal de cada empresa da carteira, renovadas sozinhas a cada trimestre pela InfoSimples.",
+    secoes: [
+      {
+        titulo: "Encontrar as certidões de uma empresa",
+        passos: [
+          "Busque a empresa pelo nome ou pelo CNPJ.",
+          "Use os atalhos “Todas”, “Positivas a ver”, “Sem certidão” e “Vencendo em 15 dias” para recortar a lista. O número ao lado é quantas empresas há em cada um.",
+          "Clique no nome da empresa (no celular, em “Ver certidões”) para abrir o painel com cada certidão, a situação e o PDF.",
+        ],
+      },
+      {
+        titulo: "Emitir uma certidão fora da rotina",
+        passos: [
+          "Na linha da empresa, clique em “Emitir” e escolha a certidão, ou “Emitir todas”. No painel da empresa, cada certidão tem o seu “Emitir”.",
+          "Confirme. Cada emissão é uma consulta cobrada pela InfoSimples, e pode levar alguns minutos.",
+          "Quando a certidão sai, o PDF aparece no painel da empresa, em “PDF”.",
+        ],
+      },
+      {
+        titulo: "Tratar uma certidão positiva",
+        passos: [
+          "Clique em “Positivas a ver” para ver as empresas com certidão positiva que ninguém do setor viu.",
+          "Abra a empresa, confira o PDF e trate com o setor da certidão.",
+          "Clique em “Marcar como vista”. A empresa sai do atalho “Positivas a ver”.",
+        ],
+      },
+    ],
+    dicas: [
+      "Federal, FGTS e trabalhista valem para a raiz do CNPJ e saem pela matriz; a estadual do PR, uma por raiz entre os estabelecimentos do estado; a municipal, por estabelecimento em Curitiba.",
+      "A rotina consulta um terço da carteira em cada mês do trimestre, para o custo ficar no mínimo da InfoSimples, e tenta de novo, até três vezes, a que não saiu.",
+      "A certidão regular vai para Arquivos › Certidões, que o cliente vê no portal. A positiva fica em Arquivos › Societário até o setor decidir, e avisa o Societário e o setor da certidão.",
+      "A certidão simplificada da Junta não entra: é paga a cada pedido.",
+      "O cartão “Gasto no mês” soma só as consultas que a InfoSimples cobra, contra o teto configurado.",
+    ],
+  },
+
+  // ─── Societário: Hub de robôs ─────────────────────────────────────────────
+  {
+    chave: "societario_robo",
+    titulo: "Hub de robôs",
+    caminhos: ["/robo"],
+    resumo:
+      "O que a máquina do TI faz nos sites dos órgãos: a fila, o que já foi e o que parou para alguém olhar. Hoje o robô do Societário imprime o alvará de Curitiba, lê a situação da inscrição estadual no PR e acompanha os protocolos do SIMA.",
+    secoes: [
+      {
+        titulo: "Pedir a impressão do alvará",
+        passos: [
+          "Em “Licenças”, clique no botão “⋯” de uma licença de alvará e escolha “Imprimir pelo robô”.",
+          "A tarefa entra na fila do Hub de robôs como “Na fila”. A máquina do TI busca a tarefa na próxima volta.",
+          "Quando termina, clique em “Abrir o PDF” na linha. O PDF fica em Arquivos › Societário.",
+        ],
+      },
+      {
+        titulo: "Resolver o captcha do robô",
+        passos: [
+          "Quando o robô para no “Não sou um robô”, o aviso chega no sino e no celular, e a linha da tarefa mostra “Resolver o captcha”.",
+          "Clique em “Resolver o captcha” e, na tela ao vivo, clique na caixa “Não sou um robô”. Se aparecer um desafio de imagens, clique nas imagens pedidas e depois em Verificar.",
+          "O robô continua sozinho assim que o site liberar. Se o prazo acabar, a tarefa segue pelo caminho do PDF.",
+        ],
+      },
+    ],
+    dicas: [
+      "Para tirar da fila uma tarefa que ainda não começou, clique em “Cancelar” na linha. Dá para pedir de novo pela licença.",
+      "Se a máquina do robô não responde, nada é lido: ligue a máquina ou rode a tarefa robo-societario no Agendador de Tarefas.",
     ],
   },
 ];

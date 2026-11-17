@@ -272,7 +272,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
             <CampoForm
               label="Passar esta conversa para"
               htmlFor="transferir-para"
-              helper="Nada é enviado ao candidato. A conversa passa a ser de quem recebe, e essa pessoa é avisada no sino."
+              dica="Nada é enviado ao candidato. A conversa passa a ser de quem recebe, e essa pessoa é avisada no sino."
             >
               <Select id="transferir-para" value={paraQuem} onChange={(e) => setParaQuem(e.target.value)}>
                 <option value="">Selecione…</option>
@@ -320,7 +320,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
             <CampoForm
               label="Como terminou este atendimento?"
               htmlFor="desfecho"
-              helper="Nada é enviado ao candidato. A conversa volta ao assistente, sem responsável, e a próxima mensagem dele abre um novo atendimento."
+              dica="Nada é enviado ao candidato. A conversa volta ao assistente, sem responsável, e a próxima mensagem dele abre um novo atendimento."
             >
               <Select id="desfecho" value={desfecho} onChange={(e) => setDesfecho(e.target.value)}>
                 <option value="">Selecione…</option>
@@ -526,7 +526,7 @@ export function Conversa({ conversa, agora, candidaturas }: Props) {
         <p className="text-fs-2 text-warning-fg">O vínculo automático não confirmou quem é (ou foi desfeito). Só se liga à mão.</p>
       )}
       <FieldGrid columns="sm:grid-cols-[minmax(0,1fr)_auto]">
-        <CampoForm label="Quem é esta pessoa?" htmlFor="vinculo" helper="O assistente só consulta o processo depois disto.">
+        <CampoForm label="Quem é esta pessoa?" htmlFor="vinculo" dica="O assistente só consulta o processo depois disto.">
           <Select id="vinculo" value={escolhida} onChange={(e) => setEscolhida(e.target.value)}>
             <option value="">Selecione a candidatura…</option>
             {candidaturas.map((c) => (

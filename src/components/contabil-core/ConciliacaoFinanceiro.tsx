@@ -359,15 +359,10 @@ export function ConciliacaoFinanceiro({ empresaId, agencias, podeAgir }: Props) 
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4" aria-labelledby={`${base}-titulo`}>
-        <div>
-          <h2 id={`${base}-titulo`} className="text-base font-semibold">
-            Conciliação do financeiro
-          </h2>
-          <p className="text-sm text-fg-muted">
-            Compare os documentos do financeiro com o extrato, o SISPAG ou o Razão — ou o Razão com o extrato detalhado e o SISPAG — sem alterar
-            lançamentos, saldos ou o NEO.
-          </p>
-        </div>
+        {/* O que a conciliação compara foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+        <h2 id={`${base}-titulo`} className="text-base font-semibold">
+          Conciliação do financeiro
+        </h2>
 
         {analise ? (
           <div className="flex flex-col gap-2 rounded-md bg-surface-2 p-3 sm:flex-row sm:items-start sm:justify-between">
@@ -418,7 +413,7 @@ export function ConciliacaoFinanceiro({ empresaId, agencias, podeAgir }: Props) 
                 <CampoForm
                   label={documentoBase === "RAZAO" ? "Razão da conta banco" : "Documentos do financeiro"}
                   htmlFor={`${base}-arquivos`}
-                  helper={
+                  dica={
                     documentoBase === "RAZAO"
                       ? "Razão de uma única conta bancária, em planilha ou PDF. Não é preciso enviar documentos do financeiro."
                       : "Pagamentos e recebimentos podem ser escolhidos juntos (Excel ou PDF)."
@@ -467,7 +462,7 @@ export function ConciliacaoFinanceiro({ empresaId, agencias, podeAgir }: Props) 
                   <CampoForm
                     label={`Arquivo de ${NOMES_DAS_FONTES[origem]}`}
                     htmlFor={`${base}-origem`}
-                    helper={
+                    dica={
                       origem === "EXTRATO_DETALHADO"
                         ? "Extrato do Itaú com Razão Social e CPF/CNPJ em cada linha. É lido inteiro e recusado se algum saldo diário não fechar."
                         : origem === "SISPAG"

@@ -43,10 +43,9 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
     <div className="grid gap-6">
       <div className="grid gap-5 lg:grid-cols-2">
         <div>
+          {/* As linhas de apoio de cada formulário viraram o "?" dos campos e o
+              artigo do DP 2 (17/11/2026, melhoria-707). */}
           <h3 className="text-fs-3 font-semibold text-fg mb-2">ASO (S-2220)</h3>
-          <p className="text-fs-2 text-fg-muted mb-3">
-            Um por exame. Os procedimentos são os códigos da Tabela 27 que estão no ASO (o exame clínico é 0295), separados por vírgula.
-          </p>
           <FormularioDoDp2 acao={gerarAsoAction} rotulo="Gerar S-2220" rotuloEnviando="Gerando…" variante="secondary">
             <div className="grid gap-4 sm:grid-cols-2">
               <Colaborador id="aso_personId" pessoas={pessoas} />
@@ -68,7 +67,7 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
                   <option value="2">Inapto</option>
                 </Select>
               </CampoForm>
-              <CampoForm label="Procedimentos (Tabela 27)" htmlFor="procedimentos" className="sm:col-span-2">
+              <CampoForm label="Procedimentos (Tabela 27)" htmlFor="procedimentos" className="sm:col-span-2" dica="Os códigos que estão no ASO, separados por vírgula. O exame clínico é 0295.">
                 <Input id="procedimentos" name="procedimentos" placeholder="0295" defaultValue="0295" />
               </CampoForm>
               <CampoForm label="Médico que assinou" htmlFor="aso_medicoNome" className="sm:col-span-2">
@@ -86,9 +85,6 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
 
         <div>
           <h3 className="text-fs-3 font-semibold text-fg mb-2">Condições ambientais (S-2240)</h3>
-          <p className="text-fs-2 text-fg-muted mb-3">
-            Na admissão e quando a condição mudar. Sem agente nocivo, deixe os agentes vazios: o evento sai com {SEM_AGENTE_NOCIVO} (ausência de agente).
-          </p>
           <FormularioDoDp2 acao={gerarCondicaoAmbientalAction} rotulo="Gerar S-2240" rotuloEnviando="Gerando…" variante="secondary">
             <div className="grid gap-4 sm:grid-cols-2">
               <Colaborador id="amb_personId" pessoas={pessoas} />
@@ -98,8 +94,8 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
               <CampoForm label="Setor" htmlFor="setor">
                 <Input id="setor" name="setor" maxLength={100} placeholder="Produção" />
               </CampoForm>
-              <CampoForm label="Agentes nocivos (Tabela 24)" htmlFor="agentes" helper="Ex.: 01.18.001, 02.01.006. Vazio: sem agente.">
-                <Input id="agentes" name="agentes" />
+              <CampoForm label="Agentes nocivos (Tabela 24)" htmlFor="agentes" dica={`Separados por vírgula. Sem agente nocivo, deixe vazio: o evento sai com ${SEM_AGENTE_NOCIVO} (ausência de agente).`}>
+                <Input id="agentes" name="agentes" placeholder="01.18.001, 02.01.006" />
               </CampoForm>
               <CampoForm label="Atividade" htmlFor="atividade" className="sm:col-span-2">
                 <Textarea id="atividade" name="atividade" rows={2} maxLength={999} />
@@ -129,9 +125,6 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
 
       <div>
         <h3 className="text-fs-3 font-semibold text-fg mb-2">Acidente de trabalho (CAT, S-2210)</h3>
-        <p className="text-fs-2 text-fg-muted mb-3">
-          Prazo: até o 1º dia útil seguinte ao acidente (de imediato, em caso de óbito). Os códigos de 9 dígitos são das Tabelas 13 a 17 do eSocial.
-        </p>
         <FormularioDoDp2 acao={gerarCatAction} rotulo="Gerar S-2210" rotuloEnviando="Gerando…" variante="secondary">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Colaborador id="cat_personId" pessoas={pessoas} />
@@ -144,16 +137,16 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
                 ))}
               </Select>
             </CampoForm>
-            <CampoForm label="Data do acidente" htmlFor="dataAcidente">
+            <CampoForm label="Data do acidente" htmlFor="dataAcidente" dica="Prazo da CAT: até o 1º dia útil seguinte ao acidente (de imediato, em caso de óbito).">
               <CampoData id="dataAcidente" name="dataAcidente" required />
             </CampoForm>
-            <CampoForm label="Hora" htmlFor="horaAcidente" helper="HH:MM">
+            <CampoForm label="Hora" htmlFor="horaAcidente">
               <Input id="horaAcidente" name="horaAcidente" inputMode="numeric" maxLength={5} placeholder="09:30" />
             </CampoForm>
-            <CampoForm label="Horas trabalhadas antes" htmlFor="horasTrabalhadasAntes" helper="HH:MM">
-              <Input id="horasTrabalhadasAntes" name="horasTrabalhadasAntes" inputMode="numeric" maxLength={5} />
+            <CampoForm label="Horas trabalhadas antes" htmlFor="horasTrabalhadasAntes">
+              <Input id="horasTrabalhadasAntes" name="horasTrabalhadasAntes" inputMode="numeric" maxLength={5} placeholder="HH:MM" />
             </CampoForm>
-            <CampoForm label="Último dia trabalhado" htmlFor="ultimoDiaTrabalhado" helper="Vazio: o dia do acidente.">
+            <CampoForm label="Último dia trabalhado" htmlFor="ultimoDiaTrabalhado" dica="Vazio: o dia do acidente.">
               <CampoData id="ultimoDiaTrabalhado" name="ultimoDiaTrabalhado" />
             </CampoForm>
             <CampoForm label="Situação geradora (Tabela 15)" htmlFor="situacaoGeradora">
@@ -195,8 +188,8 @@ export function FormulariosDeSst({ pessoas }: { pessoas: Pessoa[] }) {
             <CampoForm label="Data do atendimento" htmlFor="dataAtendimento">
               <CampoData id="dataAtendimento" name="dataAtendimento" />
             </CampoForm>
-            <CampoForm label="Hora do atendimento" htmlFor="horaAtendimento" helper="HH:MM">
-              <Input id="horaAtendimento" name="horaAtendimento" inputMode="numeric" maxLength={5} />
+            <CampoForm label="Hora do atendimento" htmlFor="horaAtendimento">
+              <Input id="horaAtendimento" name="horaAtendimento" inputMode="numeric" maxLength={5} placeholder="HH:MM" />
             </CampoForm>
             <CampoForm label="Natureza da lesão (Tabela 17)" htmlFor="naturezaDaLesao">
               <Input id="naturezaDaLesao" name="naturezaDaLesao" inputMode="numeric" maxLength={9} />

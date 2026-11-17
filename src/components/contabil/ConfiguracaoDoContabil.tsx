@@ -12,14 +12,16 @@ import { contarItens } from "@/components/shared/CascoDaTabela";
 import type { ConfiguracaoDoContabil as Configuracao } from "@/lib/contabil/servidor";
 import { carregarPlano, salvarModelos, type ResultadoDoContabil } from "@/app/(app)/sped-contabil/actions";
 
-const CAMPOS = [
-  { chave: "debitoCte", rotulo: "Débito do CT-e (frete)", ajuda: "Ex.: 312 Fretes e carretos." },
-  { chave: "debitoNfse", rotulo: "Débito da NFS-e (serviço tomado)", ajuda: "Ex.: 362 Serviços prestados por terceiros." },
-  { chave: "contaImobilizado", rotulo: "Conta do imobilizado", ajuda: "A genérica dos CFOPs 1551, 2551, 3551, 1406 e 2406." },
-  { chave: "historicoImobilizado", rotulo: "Histórico do imobilizado", ajuda: "Código do histórico padrão da Domínio." },
-  { chave: "prefixoFornecedores", rotulo: "Classificação dos fornecedores", ajuda: "Ex.: 2.1.3.01. Liga a sugestão de conta pelo nome." },
-  { chave: "codigoFilial", rotulo: "Código da filial na Domínio", ajuda: "Vai na coluna Matriz/Filial da planilha." },
-] as const;
+// O exemplo vai no placeholder e a explicação no "?" do rótulo; embaixo do
+// campo não fica texto (17/11/2026, melhoria-707).
+const CAMPOS: readonly { chave: string; rotulo: string; dica?: string; exemplo?: string }[] = [
+  { chave: "debitoCte", rotulo: "Débito do CT-e (frete)", exemplo: "Ex.: 312 Fretes e carretos" },
+  { chave: "debitoNfse", rotulo: "Débito da NFS-e (serviço tomado)", exemplo: "Ex.: 362 Serviços prestados por terceiros" },
+  { chave: "contaImobilizado", rotulo: "Conta do imobilizado", dica: "A genérica dos CFOPs 1551, 2551, 3551, 1406 e 2406." },
+  { chave: "historicoImobilizado", rotulo: "Histórico do imobilizado", dica: "Código do histórico padrão da Domínio." },
+  { chave: "prefixoFornecedores", rotulo: "Classificação dos fornecedores", dica: "Liga a sugestão de conta pelo nome.", exemplo: "Ex.: 2.1.3.01" },
+  { chave: "codigoFilial", rotulo: "Código da filial na Domínio", dica: "Vai na coluna Matriz/Filial da planilha." },
+];
 
 /**
  * O que a empresa precisa uma vez só: o plano de contas da Domínio e as contas
@@ -53,7 +55,6 @@ export function ConfiguracaoDoContabil({ empresaId, configuracao, podeAgir, daMa
               : "Ainda não carregado. Sem ele, a tela mostra só os códigos e não sugere conta."}
           </p>
         </div>
-        <p className="text-helper text-fg-muted">Exporte o plano na Domínio, abra no Excel e salve como .xlsx ou .csv. Enviar de novo substitui o plano inteiro.</p>
         {podeAgir && (
           <>
             <input ref={arquivo} type="file" accept=".xlsx,.csv,.txt" className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => enviarPlano(e.target.files)} />
@@ -62,12 +63,11 @@ export function ConfiguracaoDoContabil({ empresaId, configuracao, podeAgir, daMa
         )}
       </Card>
       <Card className="p-5">
-        <h3 className="text-card-title font-semibold text-fg">Contas fixas</h3>
-        <p className="mt-1 mb-4 text-label text-fg-secondary">O débito que não depende do fornecedor. Em branco, essas notas seguem a regra do fornecedor, como a NF-e.</p>
+        <h3 className="mb-4 text-card-title font-semibold text-fg">Contas fixas</h3>
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); iniciar(async () => depois(await salvarModelos({ empresa: empresaId, ...valores }))); }}>
           {CAMPOS.map((c) => (
-            <CampoForm key={c.chave} label={c.rotulo} htmlFor={`modelo-${c.chave}`} helper={c.ajuda}>
-              <Input id={`modelo-${c.chave}`} compact disabled={!podeAgir} inputMode={c.chave === "prefixoFornecedores" ? "decimal" : "numeric"} value={valores[c.chave] ?? ""} onChange={(e) => setValores((v) => ({ ...v, [c.chave]: e.target.value }))} />
+            <CampoForm key={c.chave} label={c.rotulo} htmlFor={`modelo-${c.chave}`} dica={c.dica}>
+              <Input id={`modelo-${c.chave}`} compact disabled={!podeAgir} inputMode={c.chave === "prefixoFornecedores" ? "decimal" : "numeric"} placeholder={c.exemplo} value={valores[c.chave] ?? ""} onChange={(e) => setValores((v) => ({ ...v, [c.chave]: e.target.value }))} />
             </CampoForm>
           ))}
           {podeAgir && <div className="sm:col-span-2"><Button type="submit" size="sm" disabled={pendente}>Salvar contas</Button></div>}

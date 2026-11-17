@@ -46,7 +46,7 @@ const TOM: Record<string, "atencao" | "marca" | "sucesso" | "perigo" | "neutro">
 export default async function EsocialDoDp2({ searchParams }: { searchParams: Promise<{ empresa?: string; tipo?: string }> }) {
   const params = await searchParams;
   const tela = await abrirTelaDeEmpresaDoDp2("dp2_esocial", params.empresa);
-  const cabecalho = <PageHeader title="eSocial" subtitle="Os eventos do eSocial da empresa escolhida na faixa acima, gerados do que o DP 2 já tem, com o que falta no cadastro." />;
+  const cabecalho = <PageHeader title="eSocial" />;
   if (!tela.empresa) {
     return (
       <PageContainer>
@@ -111,11 +111,13 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2 mb-5">
-        <Secao titulo="Tabelas" apoio="Empregador (S-1000), estabelecimento (S-1005), lotação (S-1020) e as rubricas ativas (S-1010). Gere de novo depois de corrigir o cadastro: o evento não enviado é trocado.">
+        {/* As linhas de apoio que listavam os eventos de cada bloco foram para o
+            artigo do DP 2 (17/11/2026, melhoria-707). */}
+        <Secao titulo="Tabelas">
           {tela.podeAgir && (
             <FormularioDoDp2 acao={gerarTabelasEsocialAction} rotulo="Gerar tabelas" rotuloEnviando="Gerando…" variante="secondary">
               <input type="hidden" name="companyId" value={tela.empresa.id} />
-              <CampoForm label="Valem desde" htmlFor="iniValid" helper="O primeiro mês em que a empresa entra no eSocial pelo Connect.">
+              <CampoForm label="Valem desde" htmlFor="iniValid" dica="O primeiro mês em que a empresa entra no eSocial pelo Connect.">
                 <CampoMes id="iniValid" name="iniValid" defaultValue={mesAtual()} required />
               </CampoForm>
             </FormularioDoDp2>
@@ -127,10 +129,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
           )}
         </Secao>
 
-        <Secao
-          titulo="Periódicos"
-          apoio="Remuneração (S-1200) e pagamento (S-1210) de cada colaborador e o fechamento (S-1299), da folha mensal fechada. O 13º sai da 2ª parcela fechada, na apuração anual (com a 1ª parcela dentro)."
-        >
+        <Secao titulo="Periódicos">
           {fechadas.length === 0 ? (
             <p className="text-fs-3 text-fg-muted">
               Nenhuma folha mensal ou 2ª parcela do 13º fechada.{" "}
@@ -152,7 +151,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                       ))}
                     </Select>
                   </CampoForm>
-                  <CampoForm label="Data do pagamento" htmlFor="dtPgto" helper="Vai no S-1210.">
+                  <CampoForm label="Data do pagamento" htmlFor="dtPgto" dica="Vai no S-1210.">
                     <CampoData id="dtPgto" name="dtPgto" required />
                   </CampoForm>
                 </div>
@@ -172,11 +171,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
         </Secao>
       </div>
 
-      <Secao
-        titulo="Trabalhadores"
-        apoio="Admissão (S-2200), alteração contratual (S-2206) e afastamento (S-2230) a partir do contrato do DP 2 e do cadastro da pessoa. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas. Sócio, autônomo e estagiário: início (S-2300) e término (S-2399)."
-        className="mb-5"
-      >
+      <Secao titulo="Trabalhadores" className="mb-5">
         {comContrato.length === 0 ? (
           <p className="text-fs-3 text-fg-muted">
             Ninguém com contrato no DP 2.{" "}
@@ -226,7 +221,6 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
               <div className="grid gap-5 lg:grid-cols-2">
                 <div>
                   <h3 className="text-fs-3 font-semibold text-fg mb-2">Alteração contratual (S-2206)</h3>
-                  <p className="text-fs-2 text-fg-muted mb-3">Atualize o contrato em Colaboradores (salário, cargo, jornada) e gere a alteração com a data em que vale.</p>
                   <FormularioDoDp2 acao={gerarAlteracaoAction} rotulo="Gerar S-2206" rotuloEnviando="Gerando…" variante="secondary">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <CampoForm label="Colaborador" htmlFor="alt_personId">
@@ -252,7 +246,6 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                 </div>
                 <div>
                   <h3 className="text-fs-3 font-semibold text-fg mb-2">Afastamento (S-2230)</h3>
-                  <p className="text-fs-2 text-fg-muted mb-3">Sem fim, o afastamento fica em aberto; quando a pessoa voltar, gere de novo com o fim.</p>
                   <FormularioDoDp2 acao={gerarAfastamentoAction} rotulo="Gerar S-2230" rotuloEnviando="Gerando…" variante="secondary">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <CampoForm label="Colaborador" htmlFor="afa_personId">
@@ -279,10 +272,10 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                       <CampoForm label="Início" htmlFor="inicio">
                         <CampoData id="inicio" name="inicio" required />
                       </CampoForm>
-                      <CampoForm label="Fim" htmlFor="fim">
+                      <CampoForm label="Fim" htmlFor="fim" dica="Sem fim, o afastamento fica em aberto; quando a pessoa voltar, gere de novo com o fim.">
                         <CampoData id="fim" name="fim" />
                       </CampoForm>
-                      <CampoForm label="Outro motivo (código)" htmlFor="motivoOutro" helper="Tabela 18; substitui o motivo acima.">
+                      <CampoForm label="Outro motivo (código)" htmlFor="motivoOutro" dica="Tabela 18; substitui o motivo acima.">
                         <Input id="motivoOutro" name="motivoOutro" inputMode="numeric" maxLength={2} />
                       </CampoForm>
                       <CampoForm label="Observação" htmlFor="observacao">
@@ -296,7 +289,6 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
             {tela.podeAgir && semVinculoComContrato.length > 0 && (
               <div className="mt-5 lg:max-w-[50%]">
                 <h3 className="text-fs-3 font-semibold text-fg mb-2">Término de sócio, autônomo ou estagiário (S-2399)</h3>
-                <p className="text-fs-2 text-fg-muted mb-3">Sem verbas rescisórias: o último pagamento sai na folha do mês.</p>
                 <FormularioDoDp2 acao={gerarTerminoSemVinculoAction} rotulo="Gerar S-2399" rotuloEnviando="Gerando…" variante="secondary">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <CampoForm label="Trabalhador" htmlFor="ter_personId">
@@ -311,7 +303,7 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                         ))}
                       </Select>
                     </CampoForm>
-                    <CampoForm label="Data do término" htmlFor="termino">
+                    <CampoForm label="Data do término" htmlFor="termino" dica="Sem verbas rescisórias: o último pagamento sai na folha do mês.">
                       <CampoData id="termino" name="termino" required />
                     </CampoForm>
                   </div>
@@ -323,17 +315,13 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
       </Secao>
 
       {comContrato.length > 0 && tela.podeAgir && (
-        <Secao
-          titulo="Saúde e segurança"
-          apoio="ASO (S-2220), condições ambientais (S-2240) e acidente de trabalho (S-2210). O médico do PCMSO e o responsável pelos registros ambientais ficam em Configuração da empresa."
-          className="mb-5"
-        >
+        <Secao titulo="Saúde e segurança" className="mb-5">
           <FormulariosDeSst pessoas={comContrato.map((p) => ({ id: p.id, name: p.name }))} />
         </Secao>
       )}
 
       {(pendencias.size > 0 || avisos.size > 0) && (
-        <Secao titulo="O que falta no cadastro" apoio="Corrija e gere os eventos de novo. O que está em “conferir” não impede o envio, mas é um código que o Connect sugeriu." className="mb-5">
+        <Secao titulo="O que falta no cadastro" className="mb-5">
           <ul className="flex flex-col gap-2 text-fs-3">
             {[...pendencias.values()].map((p) => (
               <li key={p.texto} className="flex flex-wrap items-baseline gap-2">

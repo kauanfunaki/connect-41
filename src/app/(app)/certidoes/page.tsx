@@ -4,7 +4,6 @@ import { AlertTriangle, CheckCircle2, FileText, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Pagination } from "@/components/shared/Pagination";
-import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Aviso } from "@/components/ui/Aviso";
@@ -69,7 +68,7 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
 
   return (
     <PageContainer>
-      <PageHeader title="Certidões" subtitle="Federal, FGTS, trabalhista, estadual e municipal de cada empresa, renovadas sozinhas a cada trimestre." />
+      <PageHeader title="Certidões" />
 
       {!conexao.pronta && <Aviso tom="atencao" className="mb-4">{conexao.motivo} Sem ela, a rotina não roda e não dá para emitir pela tela.</Aviso>}
       {/* Token recusado para um serviço (10/11/2026): em novembro a InfoSimples
@@ -164,14 +163,8 @@ export default async function CertidoesPage({ searchParams }: { searchParams: Pr
         />
       )}
       <Pagination page={lista.pagina} totalPages={lista.totalDePaginas} buildHref={(p) => href({ pagina: p })} total={lista.total} rotulo="empresas" />
-
-      <NotaDeFonte>
-        Federal, FGTS e trabalhista valem para a raiz do CNPJ e saem pela matriz; a estadual do PR, uma por raiz entre os estabelecimentos do
-        estado; a municipal, por estabelecimento em Curitiba. A rotina consulta um terço da carteira em cada mês do trimestre, para o custo
-        ficar no mínimo da InfoSimples, e tenta de novo, até três vezes, a que não saiu. A certidão regular vai para Arquivos › Certidões, que o
-        cliente vê no portal; a positiva fica em Arquivos › Societário até o setor decidir, e avisa o Societário e o setor da certidão. A
-        certidão simplificada da Junta não entra: é paga a cada pedido.
-      </NotaDeFonte>
+      {/* A nota de como a rotina consulta e onde guarda cada certidão foi para o
+          artigo de ajuda (17/11/2026, melhoria-707). */}
     </PageContainer>
   );
 }

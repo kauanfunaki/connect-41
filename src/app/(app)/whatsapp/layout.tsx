@@ -24,7 +24,6 @@ export default async function WhatsappLayout({ children }: { children: ReactNode
         cabecalho={
           <PageHeader
             title="WhatsApp do Recrutamento"
-            subtitle="O assistente responde o que sabe; o que sai do combinado aparece aqui, esperando alguém."
             action={<EstadoDasConexoes conexoes={conexoes} podeConfigurar={isFullWrite(ctx.role)} />}
           />
         }

@@ -39,7 +39,6 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
     <PageContainer>
       <PageHeader
         title="Convenções coletivas"
-        subtitle="Percentuais de hora extra e adicional noturno que o cálculo usa, e o piso para o alerta de salário abaixo dele."
         action={
           podeGerir ? (
             <Button href="/dp2/convencoes?nova=1" scroll={false}>
@@ -50,7 +49,7 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
         }
       />
         {convencoes.length === 0 ? (
-          <EmptyState icon={<ShieldCheck />} title="Nenhuma convenção cadastrada" description="Sem convenção, a empresa é calculada pela CLT: hora extra 50% e 100%, adicional noturno 20%." />
+          <EmptyState icon={<ShieldCheck />} title="Nenhuma convenção cadastrada" description="Sem convenção, a empresa é calculada pela CLT." />
         ) : (
           <Secao titulo={`${convencoes.length} convenção(ões)`}>
             <div className="overflow-x-auto">
@@ -120,7 +119,7 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                 <CampoForm label="Sindicato" htmlFor="sindicato">
                   <Input id="sindicato" name="sindicato" maxLength={160} defaultValue={aberta?.sindicato ?? ""} />
                 </CampoForm>
-                <CampoForm label="CNPJ do sindicato" htmlFor="cnpjSindicato" helper="Vai no vínculo do eSocial.">
+                <CampoForm label="CNPJ do sindicato" htmlFor="cnpjSindicato" dica="Vai no vínculo do eSocial.">
                   <Input id="cnpjSindicato" name="cnpjSindicato" inputMode="numeric" maxLength={18} defaultValue={aberta?.cnpjSindicato ?? ""} />
                 </CampoForm>
                 <CampoForm label="Vigência de" htmlFor="vigenciaInicio">
@@ -129,8 +128,8 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                 <CampoForm label="até" htmlFor="vigenciaFim">
                   <CampoData id="vigenciaFim" name="vigenciaFim" defaultValue={aberta?.vigenciaFim ?? ""} />
                 </CampoForm>
-                <CampoForm label="Mês da data-base" htmlFor="dataBase" helper="1 a 12.">
-                  <Input id="dataBase" name="dataBase" inputMode="numeric" defaultValue={aberta?.dataBase ? String(aberta.dataBase) : ""} />
+                <CampoForm label="Mês da data-base" htmlFor="dataBase">
+                  <Input id="dataBase" name="dataBase" inputMode="numeric" placeholder="1 a 12" defaultValue={aberta?.dataBase ? String(aberta.dataBase) : ""} />
                 </CampoForm>
                 <CampoForm label="Piso salarial" htmlFor="piso">
                   <Input id="piso" name="piso" inputMode="decimal" prefix="R$" defaultValue={num(aberta?.piso)} />

@@ -86,7 +86,6 @@ export default async function ColaboradoresClientesPage({
   const cabecalho = (
     <PageHeader
       title="Colaboradores de clientes"
-      subtitle="As pessoas que trabalham nas empresas clientes — é este cadastro que alimenta admissão, férias e rescisão no DP. A tela mostra a empresa escolhida na faixa acima."
       action={
         canCreate ? (
           <Button href="/pessoas/nova?tipo=cliente" variant="primary">
@@ -194,7 +193,7 @@ export default async function ColaboradoresClientesPage({
       empresas.length === 0 ? (
         <EmptyState icon={<Users />} title="Nenhuma empresa ativa" description="Os colaboradores aparecem aqui por empresa cliente." />
       ) : (
-        <EscolhaAEmpresa escolha={escolha} porQue="A lista mostra o pessoal de uma empresa por vez. Para achar alguém sem saber a empresa, use a busca em todas as empresas, ao lado do campo." />
+        <EscolhaAEmpresa escolha={escolha} porQue="A lista mostra o pessoal de uma empresa por vez." />
       )
     );
   }

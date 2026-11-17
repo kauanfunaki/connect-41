@@ -116,7 +116,7 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         label="Licença"
         htmlFor={`${prefixo}-tipo`}
         required
-        helper="Escolha uma sugestão ou escreva como o órgão chama."
+        dica="Escolha uma sugestão ou escreva como o órgão chama."
       >
         {/* Sugestões próprias (08/10/2026), no lugar do `<datalist>`: a lista
             do navegador vinha misturada ao histórico do Chrome e sem o tema. */}
@@ -155,7 +155,9 @@ function Formulario({ onClose, orgaos, empresas, licenca }: Omit<ModalProps, "op
         <CampoForm
           label="Validade"
           htmlFor={`${prefixo}-validade`}
-          helper={confira("validade") ?? (l?.semValidade ? "O PDF diz que não vence: fica em branco." : "Em branco quando não vence — inscrição municipal, por exemplo.")}
+          // Embaixo fica o que a leitura do PDF achou; a regra fixa vai no "?" (17/11/2026, melhoria-707).
+          helper={confira("validade") ?? (l?.semValidade ? "O PDF diz que não vence: fica em branco." : undefined)}
+          dica="Em branco quando não vence — inscrição municipal, por exemplo."
         >
           <CampoData key={`validade-${versao}`} id={`${prefixo}-validade`} name="expiresAt" defaultValue={validade} />
         </CampoForm>
@@ -248,7 +250,7 @@ function LerPdf({
       <div className="flex items-center gap-2 text-fs-2 text-fg">
         <ScanText size={16} className="flex-shrink-0 text-brand" />
         <span>
-          <strong>Ler do PDF</strong> — a IA lê o alvará ou a licença e preenche número, emissão e validade. Nada é gravado antes de você conferir e salvar.
+          <strong>Ler do PDF</strong> — a IA preenche número, emissão e validade.
         </span>
       </div>
       <div className="flex flex-wrap items-end gap-2">

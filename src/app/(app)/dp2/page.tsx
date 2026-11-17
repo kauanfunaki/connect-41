@@ -39,7 +39,7 @@ export default async function PainelDoDp2({ searchParams }: { searchParams: Prom
     <PageContainer>
       <PageHeader
         title="Painel do DP 2"
-        subtitle={`As competências de ${nomeDaCompetencia(ano, m)}${foco ? ` do grupo de ${foco.nome}` : " de todas as empresas"}, pela etapa em que estão.`}
+        subtitle={`${nomeDaCompetencia(ano, m)} · ${foco ? `grupo de ${foco.nome}` : "todas as empresas"}`}
       />
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <MesDoPainel mes={mes} />

@@ -31,10 +31,7 @@ export default async function RoteirosPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Roteiros" }]} />
-      <PageHeader
-        title="Roteiros dos processos"
-        subtitle="As etapas, os órgãos e o checklist que cada tipo de processo segue. Publicar um roteiro cria uma versão nova para os processos abertos daqui em diante — os que estão em andamento continuam na versão em que começaram."
-      />
+      <PageHeader title="Roteiros dos processos" />
 
       <Card as="section" aria-labelledby="tabela-roteiros" className="p-4 flex flex-col gap-3">
         <h2 id="tabela-roteiros" className="sr-only">
@@ -44,7 +41,7 @@ export default async function RoteirosPage() {
           <EmptyState
             icon={<ListOrdered />}
             title="Nenhum tipo de processo"
-            description="Os tipos e os roteiros padrão entram na configuração do Societário. Peça à 41 Tech para incluir os tipos do escritório."
+            description="Peça à 41 Tech para incluir os tipos do escritório."
           />
         ) : (
           <div className="c41-tabela overflow-x-auto rounded-lg border border-border">

@@ -61,8 +61,7 @@ export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props
 
   return (
     <Card className="p-5">
-      <h2 className="text-section font-semibold text-fg">Tags</h2>
-      <p className="mb-3 text-helper text-fg-muted">Deixam o candidato fácil de achar no banco de talentos.</p>
+      <h2 className="mb-3 text-section font-semibold text-fg">Tags</h2>
 
       <div className="flex flex-wrap items-center gap-1.5">
         {/* A `EtiquetaColorida`, como na lista de candidatos (15/10/2026, D4):
@@ -104,7 +103,7 @@ export function TagsDoCandidato({ todas, marcadas, alternar, podeEditar }: Props
             )}
           >
             {todas.length === 0 ? (
-              <p className="text-fs-2 text-fg-muted">Nenhuma tag cadastrada para o Recrutamento. Cadastre em Configurações › Setores e módulos › Tags.</p>
+              <p className="text-fs-2 text-fg-muted">Nenhuma tag cadastrada para o Recrutamento.</p>
             ) : (
               <div className="space-y-2.5">
                 {/* Com o "limpar" do campo de busca do Connect (15/10/2026). */}

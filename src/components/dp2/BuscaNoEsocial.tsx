@@ -174,10 +174,9 @@ export function BuscaNoEsocial({ companyId, cnpj, onArquivos, ocupado }: { compa
         <CloudDownload size={18} aria-hidden="true" />
         Buscar no eSocial por CPF e admissão
       </h3>
-      <p className="text-fs-2 text-fg-muted">
-        Como na Domínio: informe o CPF e a admissão de cada um, e o Connect busca no eSocial com o certificado ligado no CertDigital deste computador. O eSocial deixa {LIMITE_DE_ACESSOS_POR_DIA}{" "}
-        acessos por dia por empresa (cerca de 9 pessoas) e nenhum do dia 1 ao 7; o que faltar continua no dia seguinte.
-      </p>
+      {/* O certificado e o limite de acessos do eSocial foram para o artigo do
+          DP 2 (17/11/2026, melhoria-707): o contador e os avisos de bloqueio
+          aparecem quando a lista é montada. */}
 
       {semAssinador ? (
         <Aviso tom="atencao">

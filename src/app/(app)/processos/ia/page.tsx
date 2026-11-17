@@ -70,7 +70,6 @@ export default async function IaDoSocietarioPage() {
       <Breadcrumb items={[{ label: "Processos", href: "/processos" }, { label: "Ceci · Societário" }]} />
       <PageHeader
         title="Ceci · Societário"
-        subtitle="A Ceci propõe; a coordenação aprova, corrige ou rejeita. Nada é gravado sem aprovação."
         action={<RodarVarredura rodar={rodarVarreduraAction} desligada={!varreduraLigada} />}
       />
 
@@ -122,14 +121,9 @@ export default async function IaDoSocietarioPage() {
       </section>
 
       <section aria-labelledby="qualidade" className="mb-6 flex flex-col gap-2">
-        <div>
-          <h2 id="qualidade" className="text-section font-semibold text-fg">
-            Qualidade da IA, últimos 6 meses
-          </h2>
-          <p className="text-fs-2 text-fg-muted">
-            Quanto do que a IA propõe é aprovado como veio, quanto precisa de ajuste e quanto é descartado — e quanto custou.
-          </p>
-        </div>
+        <h2 id="qualidade" className="text-section font-semibold text-fg">
+          Qualidade da IA, últimos 6 meses
+        </h2>
         {qualidade.length === 0 ? (
           <p className="text-fs-3 text-fg-muted">Ainda não há proposta para medir.</p>
         ) : (

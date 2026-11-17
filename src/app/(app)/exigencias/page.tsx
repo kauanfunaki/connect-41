@@ -125,7 +125,6 @@ export default async function ExigenciasPage({
     <PageContainer>
       <PageHeader
         title="Exigências e prazos"
-        subtitle="O que os órgãos devolveram e os protocolos que estão parados no órgão."
         action={
           // A agenda própria do Societário saiu (04/11/2026): repetia a Agenda
           // geral, que já tem os prazos do setor. Abre filtrada nele.

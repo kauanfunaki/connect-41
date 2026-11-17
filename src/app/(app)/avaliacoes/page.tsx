@@ -62,11 +62,6 @@ export default async function AvaliacoesPage({
     <PageContainer>
       <PageHeader
         title="Avaliações de desempenho"
-        subtitle={
-          aba === "competencias"
-            ? "O que se avalia em cada ciclo, com a nota de 0 a 10 de cada competência."
-            : "Os ciclos de avaliação e as competências avaliadas em cada um."
-        }
         // O criar no cabeçalho, com o formulário numa janela — era um formulário
         // aberto no topo da lista (escolha 5A do Kauan, 08/10/2026). Cada aba
         // cria o que ela lista.
@@ -181,8 +176,8 @@ function AbaDasCompetencias({
           title="Nenhuma competência cadastrada"
           description={
             podeEditar
-              ? "Cadastre em “Nova competência” o que se avalia nos ciclos. Sem nenhuma, não dá para avaliar."
-              : "Quem gere as avaliações ainda não cadastrou as competências. Sem nenhuma, não dá para avaliar."
+              ? "Cadastre em “Nova competência” o que se avalia nos ciclos."
+              : "Quem gere as avaliações ainda não cadastrou as competências."
           }
         />
       </Card>

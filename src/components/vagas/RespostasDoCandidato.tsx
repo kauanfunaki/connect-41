@@ -80,7 +80,7 @@ export function RespostasDoCandidato({
               letras e quebravam em duas linhas na coluna de um terço, descendo
               o campo; a unidade já vem no R$ e no "min". */}
           <FieldGrid columns="sm:grid-cols-3">
-            <CampoForm label="Pretensão salarial" htmlFor="resposta-pretensao" helper="Por mês.">
+            <CampoForm label="Pretensão salarial" htmlFor="resposta-pretensao" dica="Por mês.">
               <Input id="resposta-pretensao" prefix="R$" inputMode="decimal" value={form.pretensaoSalarial} onChange={(e) => setForm({ ...form, pretensaoSalarial: e.target.value })} />
             </CampoForm>
             <CampoForm label="Disponibilidade" htmlFor="resposta-disponibilidade">

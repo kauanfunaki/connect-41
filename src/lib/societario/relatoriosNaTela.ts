@@ -13,29 +13,25 @@ export const RELATORIOS = [
   {
     chave: "sla",
     rotulo: "SLA por tipo",
-    explicacao: "Dias úteis consumidos contra o previsto do tipo. As voltas ficam na mesma linha porque são a causa do estouro.",
   },
   {
     chave: "voltas",
     rotulo: "Processos que mais voltaram",
-    explicacao: "Os processos com reapresentação, do que mais voltou para o que menos voltou.",
   },
   {
     chave: "produtividade",
     rotulo: "Produtividade por responsável",
-    explicacao:
-      "Concluídos no período, ao lado da carteira aberta. O crédito é do responsável atual do processo — não há histórico de redistribuição.",
   },
   {
     chave: "tempo",
     rotulo: "Tempo por etapa",
-    explicacao: "Quanto cada etapa do roteiro leva, por tipo de processo, nas etapas concluídas no período. Dias úteis, do início ao fim da etapa.",
   },
   {
     chave: "custo",
     rotulo: "Custo em taxas por processo",
-    explicacao: "Quanto cada processo custou em taxas, e quanto disso veio de reapresentação.",
   },
+  // A frase que explicava cada relatório saiu da tela e foi para o artigo de
+  // ajuda; a leitura do número continua (17/11/2026, melhoria-707).
 ] as const;
 
 export type ChaveDoRelatorio = (typeof RELATORIOS)[number]["chave"];

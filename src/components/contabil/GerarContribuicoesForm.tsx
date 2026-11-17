@@ -28,7 +28,8 @@ export function GerarContribuicoesForm({ empresaId, mes, pode, motivo, tipoInici
       {tipo === "1" && <label className="grid gap-1 text-label text-fg-secondary flex-1">Recibo anterior<Input value={recibo} maxLength={60} required onChange={(e) => { setRecibo(e.target.value); setDuplicado(false); }} /></label>}
       <Button type="submit" loading={pendente} disabled={!pode || (tipo === "1" && !recibo.trim())}>{duplicado ? "Gerar mesmo assim" : "Gerar no motor"}</Button>
     </div>
-    <p className="text-helper text-fg-secondary">{motivo || "A geração usa os parâmetros e as decisões desta raiz. O pedido será acompanhado abaixo."}</p>
+    {/* Só o motivo de trava; o "como funciona" foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+    {motivo && <p className="text-helper text-fg-secondary">{motivo}</p>}
     {erro && <Aviso tom={duplicado ? "atencao" : "perigo"}>{erro}</Aviso>}
   </form>;
 }

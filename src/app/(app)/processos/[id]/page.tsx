@@ -483,14 +483,9 @@ export default async function ProcessoDetalhePage({
 
           {avisos.length > 0 && (
             <Card as="section" aria-labelledby="avisos-da-junta" className="p-4 flex flex-col gap-4">
-              <div className="flex flex-col gap-0.5">
-                <h2 id="avisos-da-junta" className="text-section font-semibold text-fg">
-                  Avisos da Junta por e-mail
-                </h2>
-                <p className="text-fs-2 text-fg-muted">
-                  O sistema leu o e-mail e sugere o desfecho. Confira o texto do órgão antes de aplicar.
-                </p>
-              </div>
+              <h2 id="avisos-da-junta" className="text-section font-semibold text-fg">
+                Avisos da Junta por e-mail
+              </h2>
               <AvisosDaJunta avisos={avisos} acoes={{ aplicar: aplicarAviso, descartar: descartarAviso }} embutido />
             </Card>
           )}
@@ -580,13 +575,8 @@ export default async function ProcessoDetalhePage({
           {conversa && (
             <ConversaEmPainel resumo={resumoDaConversa}>
               <section aria-labelledby="painel-conversa" className="flex flex-col gap-4">
-                <div className="flex flex-col gap-0.5">
-                  <h3 id="painel-conversa" className="text-ui font-semibold text-fg">Mensagens</h3>
-                  <p className="text-fs-2 text-fg-muted">
-                    O cliente vê tudo o que for escrito aqui no portal, e é avisado por e-mail. Para anotação
-                    interna, use as observações do processo.
-                  </p>
-                </div>
+                {/* Quem vê a mensagem está no artigo de ajuda e no botão "Enviar ao cliente" (17/11/2026, melhoria-707). */}
+                <h3 id="painel-conversa" className="text-ui font-semibold text-fg">Mensagens</h3>
                 {conversa.limitada && (
                   <p className="text-fs-2 text-fg-muted">Mostrando só as mensagens mais recentes.</p>
                 )}
@@ -626,10 +616,8 @@ export default async function ProcessoDetalhePage({
         </div>
       </div>
 
-      <p className="mt-6 text-micro text-fg-muted">
-        Roteiro versão {processo.template.version} — congelado na abertura, para o processo não
-        mudar embaixo de quem está tocando ele.
-      </p>
+      {/* Fica a versão; o porquê do congelamento foi para o artigo de ajuda (17/11/2026, melhoria-707). */}
+      <p className="mt-6 text-micro text-fg-muted">Roteiro versão {processo.template.version}, congelado na abertura.</p>
     </PageContainer>
   );
 }
