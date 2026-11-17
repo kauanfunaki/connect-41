@@ -32,6 +32,8 @@ export function MesDoPainel({ mes }: { mes: string }) {
       defaultValue={mes}
       aria-label="Mês"
       compact
+      // A largura das outras telas com o mês compacto (17/11/2026, bug-724): sem ela, o campo tomava a linha inteira.
+      className="w-40"
       onChange={(v) => {
         clearTimeout(espera.current);
         if (!v || v === mes) return;
