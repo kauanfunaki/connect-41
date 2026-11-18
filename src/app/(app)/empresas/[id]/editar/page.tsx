@@ -66,6 +66,7 @@ export default async function EditarEmpresaPage({
             foundationDate:        company.foundationDate?.toISOString().slice(0, 10),
             cnaePrincipal:         company.cnaePrincipal         ?? undefined,
             cnaeSecundarios:       company.cnaeSecundarios       ?? undefined,
+            naturezaJuridica:      company.naturezaJuridica      ?? undefined,
             zipCode:               company.zipCode               ?? undefined,
             addressStreet:         company.addressStreet         ?? undefined,
             addressNumber:         company.addressNumber         ?? undefined,

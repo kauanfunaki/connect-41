@@ -16,6 +16,7 @@ import { ReviewBlock } from "@/components/ui/ReviewBlock";
 import { formatCnpj, formatCpf, formatPhone, formatCep } from "@/lib/format";
 import { OPCOES_DE_REGIME } from "@/lib/taxRegime";
 import { ATIVIDADES, DICAS_SPED, PERFIS, atividadePeloCnae, formatarCnae } from "@/lib/empresas/camposSped";
+import { NATUREZA_JURIDICA_MAX, naturezaJuridicaDaConsulta } from "@/lib/empresas/naturezaJuridica";
 import { SearchableSelect, type Opcao } from "@/components/shared/SearchableSelect";
 import { Aviso } from "@/components/ui/Aviso";
 
@@ -59,6 +60,7 @@ export type EmpresaDefaultValues = {
   nire?: string;
   cnaePrincipal?: string;
   cnaeSecundarios?: string;
+  naturezaJuridica?: string;
   email?: string;
   phone?: string;
   website?: string;
@@ -128,6 +130,7 @@ export function EmpresaForm({
     nire: defaultValues?.nire ?? "",
     cnaePrincipal: defaultValues?.cnaePrincipal ?? "",
     cnaeSecundarios: defaultValues?.cnaeSecundarios ?? "",
+    naturezaJuridica: defaultValues?.naturezaJuridica ?? "",
     source: defaultValues?.source ?? "",
     parentCompanyId: defaultValues?.parentCompanyId ?? "",
     codMunicipioIbge: defaultValues?.codMunicipioIbge ?? "",
@@ -272,6 +275,7 @@ export function EmpresaForm({
               .join(", ")
           : undefined
       );
+      seVazio("naturezaJuridica", naturezaJuridicaDaConsulta(d));
       seVazio("foundationDate", d.data_inicio_atividade);
       seVazio("spedIndAtividade", atividadePeloCnae(d.cnae_fiscal));
 
@@ -583,6 +587,20 @@ export function EmpresaForm({
                   <CampoForm label="CNAEs secundários" htmlFor="cnaeSecundarios" className="lg:col-span-3">
                     <Input id="cnaeSecundarios" name="cnaeSecundarios" type="text" value={values.cnaeSecundarios} placeholder="0000-0/00, 0000-0/00" />
                   </CampoForm>
+                  {/* Código e descrição juntos, como no cartão CNPJ; vem da
+                      consulta do CNPJ quando está vazio (18/11/2026). Na
+                      última linha, com duas colunas: o texto é longo. */}
+                  <CampoForm label="Natureza jurídica" htmlFor="naturezaJuridica" className="sm:col-span-2">
+                    <Input
+                      id="naturezaJuridica"
+                      name="naturezaJuridica"
+                      type="text"
+                      value={values.naturezaJuridica}
+                      placeholder="Ex.: 206-2 - Sociedade Empresária Limitada"
+                      maxLength={NATUREZA_JURIDICA_MAX}
+                      title={values.naturezaJuridica || undefined}
+                    />
+                  </CampoForm>
                 </>
               )}
             </FieldGrid>
@@ -716,6 +734,7 @@ export function EmpresaForm({
                   : [
                       { label: "CNAE principal", value: values.cnaePrincipal },
                       { label: "CNAEs secundários", value: values.cnaeSecundarios },
+                      { label: "Natureza jurídica", value: values.naturezaJuridica },
                     ]),
               ]}
             />
