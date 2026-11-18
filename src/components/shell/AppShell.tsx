@@ -170,7 +170,7 @@ type Props = {
    * As telas do Apoio ligadas no escritório (05/11/2026): Repositório de senhas
    * e de manuais, no grupo Apoio do Geral, para todo setor (cada um vê os seus).
    */
-  apoioLigado?: { senhas: boolean; manuais: boolean; fluxos?: boolean };
+  apoioLigado?: { senhas: boolean; manuais: boolean; fluxos?: boolean; calculos?: boolean };
   /** A Academia ligada no escritório (10/11/2026): o chapéu de formatura no topo, antes do tema. */
   academiaLigada?: boolean;
   /** A sequência de dias do desafio do dia (Academia, Fase 2): a chama do chapéu, de 2 dias em diante. */
@@ -349,6 +349,8 @@ export function AppShell({
       ...(apoioLigado.manuais ? [{ chave: "manuais", label: "Repositório de manuais", href: "/manuais", icon: <ModuleIcon code="bpo_manual" />, area: areaDoModulo("bpo_manual") ?? "marca" }] : []),
       // O Repositório de fluxos (10/11/2026), ao lado dos manuais.
       ...(apoioLigado.fluxos ? [{ chave: "fluxos", label: "Repositório de fluxos", href: "/fluxos", icon: <ModuleIcon code="bpo_fluxos" />, area: areaDoModulo("bpo_fluxos") ?? "marca" }] : []),
+      // Cálculos do DP 2 (18/11/2026): só chega aqui ligado para quem é do DP 2 (ver o layout).
+      ...(apoioLigado.calculos ? [{ chave: "calculos", label: "Cálculos", href: "/dp2/calculos", icon: <ModuleIcon code="dp2_calculos" />, area: areaDoModulo("dp2_calculos") ?? "marca" }] : []),
       ...(quadros ? [quadros] : []),
     ];
     return telas;
@@ -385,7 +387,7 @@ export function AppShell({
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const atendimento = areaDoModulo("atendimento") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
-    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", quadros?.label].filter(Boolean) as string[];
+    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", apoioLigado.calculos && "Cálculos", quadros?.label].filter(Boolean) as string[];
     const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; existe?: boolean; no: React.ReactNode }[] = [
       {
         chave: "apoio",
