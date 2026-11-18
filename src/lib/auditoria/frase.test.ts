@@ -63,6 +63,46 @@ describe("frase da linha do tempo", () => {
     ).toBe("Carla Mendes editou no modelo de pastas a pasta Fiscal 2026");
   });
 
+  describe("chamado (melhoria-785)", () => {
+    it("que ainda existe: número e título como link para o chamado", () => {
+      const p = fraseDoEvento(
+        evento({
+          acao: "helpdesk.created",
+          entityType: "HelpdeskTicket",
+          metadata: { operacao: "created", numero: 12, titulo: "Impressora não imprime" },
+          alvo: { nome: "#12 · Impressora não imprime", href: "/chamados/chamado-12" },
+        })
+      );
+      expect(fraseEmTexto(p)).toBe("Carla Mendes abriu o chamado #12 · Impressora não imprime");
+      expect(p).toContainEqual({ tipo: "link", texto: "#12 · Impressora não imprime", href: "/chamados/chamado-12" });
+    });
+
+    it("linha antiga, sem os detalhes: o nome vem do chamado achado no banco", () => {
+      const p = fraseDoEvento(
+        evento({
+          acao: "helpdesk.updated",
+          entityType: "HelpdeskTicket",
+          metadata: { operacao: "comment" },
+          alvo: { nome: "#7 · Acesso ao sistema", href: "/chamados/chamado-7" },
+        })
+      );
+      expect(fraseEmTexto(p)).toBe("Carla Mendes atualizou o chamado #7 · Acesso ao sistema");
+    });
+
+    it("que não existe mais: número e título guardados, em negrito, sem link", () => {
+      const p = fraseDoEvento(
+        evento({ acao: "helpdesk.triaged", entityType: "HelpdeskTicket", metadata: { resultado: "categoria", numero: 3, titulo: "VPN cai à tarde" } })
+      );
+      expect(fraseEmTexto(p)).toBe("Carla Mendes concluiu a triagem do chamado #3 · VPN cai à tarde");
+      expect(p[p.length - 1]).toEqual({ tipo: "forte", texto: "#3 · VPN cai à tarde" });
+    });
+
+    it("linha antiga de chamado que não existe mais: fica como antes", () => {
+      const p = fraseDoEvento(evento({ acao: "helpdesk.created", entityType: "HelpdeskTicket", metadata: { operacao: "created" } }));
+      expect(fraseEmTexto(p)).toBe("Carla Mendes abriu o chamado");
+    });
+  });
+
   it("código antigo sem frase diz o código e o tipo do cadastro", () => {
     expect(fraseEmTexto(fraseDoEvento(evento({ acao: "coisa.velha.sync", entityType: "FinanceEntry" })))).toBe(
       "Carla Mendes registrou “coisa.velha.sync” em lançamento"

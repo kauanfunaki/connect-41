@@ -4,6 +4,7 @@ import { getPrisma } from "@/lib/prisma";
 import { proximoNumero } from "@/lib/enderecoCurtoNumeracao";
 import { isFullWrite } from "@/lib/auth/papeis";
 import { logAudit } from "@/lib/audit";
+import { chamadoNosDetalhes } from "@/lib/auditoria/metadados";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestaoNo, exigirOperacao, type Contexto } from "./contexto";
 import { podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
@@ -25,11 +26,20 @@ export async function evento(tx: Tx, tenantId: string, ticketId: string, actorId
 export async function travarEscritorio(tx: Tx, tenantId: string) {
   await tx.$queryRaw`SELECT id FROM tenants WHERE id = ${tenantId} FOR UPDATE`;
 }
+/**
+ * O número e o título do chamado para a auditoria dizer qual foi (18/11/2026,
+ * melhoria-785). Sem o chamado, ou se a leitura falhar, a linha sai sem eles.
+ */
+export async function chamadoParaAuditoria(tenantId: string, id: string): Promise<{ numero?: number; titulo?: string }> {
+  const t = await getPrisma().helpdeskTicket.findFirst({ where: { tenantId, id }, select: { number: true, title: true } }).catch(() => null);
+  return t ? chamadoNosDetalhes(t) : {};
+}
 export async function depois(c: Contexto, id: string, action: string) {
+  const chamado = await chamadoParaAuditoria(c.ctx.tenantId, id);
   // Falhas de entrega não transformam uma gravação confirmada em "falha":
   // eventos pendentes serão retomados pelo motor de alertas.
   await Promise.allSettled([
-    logAudit({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, action: action === "created" ? "helpdesk.created" : "helpdesk.updated", entityType: "HelpdeskTicket", entityId: id, metadata: { operacao: action } }),
+    logAudit({ tenantId: c.ctx.tenantId, userId: c.ctx.userId, action: action === "created" ? "helpdesk.created" : "helpdesk.updated", entityType: "HelpdeskTicket", entityId: id, metadata: { operacao: action, ...chamado } }),
     despacharEventos(c.ctx.tenantId, id),
   ]);
 }
