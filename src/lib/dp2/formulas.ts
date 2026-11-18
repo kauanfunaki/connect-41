@@ -182,8 +182,9 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
   const media = mediaDeVariaveis(
     [450, 600, 300].map((valor, i) => ({
       competencia: `mês ${i + 1}`,
-      itens: [{ valor, entraNaMedia: true, tipo: "PROVENTO" }],
-    }))
+      itens: [{ valor, mediaFerias: true, tipo: "PROVENTO" }],
+    })),
+    "FERIAS"
   );
 
   const ferias = calcularFerias({
@@ -508,7 +509,7 @@ export const FORMULAS: readonly Formula[] = [
     tema: "MEDIAS",
     nome: "Média de variáveis",
     conta: "Soma das rubricas que entram na média em cada competência fechada da janela ÷ número de competências que existem (até 12).",
-    detalhe: "Quem tem 4 meses de casa tem média de 4 meses. Entram as rubricas marcadas com \"entra na média\" (horas extras, adicional noturno, DSR, comissões, gratificação).",
+    detalhe: "Quem tem 4 meses de casa tem média de 4 meses. Cada rubrica marca em quais médias entra — férias, 13º e rescisão — (horas extras, adicional noturno, DSR, comissões, gratificação). O exemplo é a média de férias.",
     baseLegal: "CLT art. 142, §§ 5º e 6º; Lei 4.090/1962",
     papeis: [],
     funcao: "mediaDeVariaveis · mediaDaPessoa (medias.ts, servidor.ts)",
