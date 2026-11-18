@@ -6,7 +6,8 @@
 // número pra a conferência ser auditável.
 
 /** Versão do motor, gravada no snapshot de cada item conferido (auditoria). */
-export const MOTOR_VERSAO = "1.0.0";
+// 1.0.1 (18/11/2026, bug-779): desconto do aviso não cumprido fixo em 30 dias.
+export const MOTOR_VERSAO = "1.0.1";
 
 export const FUNDAMENTO = {
   DIVISOR_MES: "CLT art. 64",

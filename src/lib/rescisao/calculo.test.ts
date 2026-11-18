@@ -97,6 +97,18 @@ describe("matriz legal por motivo", () => {
     expect(r.totalDescontos).toBeGreaterThan(0);
   });
 
+  it("o desconto do aviso no pedido de demissão é de 30 dias, mesmo com anos de casa (bug-779)", () => {
+    // Admissão em 2022: 4 anos completos dariam 42 dias de aviso a favor do empregado.
+    const r = calcularRescisao(input({ motivo: "PEDIDO_DEMISSAO", avisoIndenizado: false, admissao: d("2022-03-10") }), cfg());
+    expect(r.verbas.aviso_previo!.valor).toBe(-3000); // 3000 ÷ 30 × 30
+    expect(r.verbas.aviso_previo!.formula).toContain("× 30 dias");
+  });
+
+  it("o aviso indenizado a favor do empregado continua proporcional", () => {
+    const r = calcularRescisao(input({ motivo: "DISPENSA_SEM_JUSTA_CAUSA", admissao: d("2022-03-10") }), cfg());
+    expect(r.verbas.aviso_previo!.valor).toBe(4200); // 3000 ÷ 30 × 42
+  });
+
   it("acordo 484-A dá 20% de multa, não 40%", () => {
     const acordo = calcularRescisao(input({ motivo: "ACORDO_MUTUO" }), cfg());
     const dispensa = calcularRescisao(input({ motivo: "DISPENSA_SEM_JUSTA_CAUSA" }), cfg());
