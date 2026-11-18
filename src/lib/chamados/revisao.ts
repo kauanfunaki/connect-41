@@ -5,7 +5,9 @@ import { exigirAbertura, exigirEscrita, type Contexto } from "./contexto";
 import { rascunho } from "./consultas";
 import { prepararCatalogo } from "./catalogo-servidor";
 import { categoriasClassificaveis, caminhoDaCategoria } from "./catalogo";
-import { PROMPT_CLASSIFICACAO, limparTags } from "./classificacao";
+import { PROMPT_CLASSIFICACAO, exemplosNaEntrada, limparTags } from "./classificacao";
+import { exemplosParaATriagem } from "./historico-servidor";
+import type { ExemploDaTriagem } from "./historico";
 import { motivoDaFalha } from "./falhaDaIa";
 import { dadosRascunhoSchema, MAXIMO_DE_PERGUNTAS, type Pergunta, type RevisaoDaIa } from "./regras";
 import type { SetorDaLista } from "./setorSugerido";
@@ -96,10 +98,15 @@ export async function revisarRascunho(c: Contexto, draftId: string): Promise<Rev
     const linhas = await getPrisma().helpdeskCategory.findMany({ where: { tenantId }, select: { id: true, name: true, parentId: true, active: true } });
     const opcoes = categoriasClassificaveis(linhas);
     if (!opcoes.length) throw new Error("Sem categorias ativas para classificar.");
-    const setores: SetorDaLista[] = c.config.sectorCodes.length > 1 ? await getPrisma().sector.findMany({ where: { tenantId, code: { in: c.config.sectorCodes }, active: true }, select: { code: true, label: true } }) : [];
+    const [setores, exemplos]: [SetorDaLista[], ExemploDaTriagem[]] = await Promise.all([
+      c.config.sectorCodes.length > 1 ? getPrisma().sector.findMany({ where: { tenantId, code: { in: c.config.sectorCodes }, active: true }, select: { code: true, label: true } }) : Promise.resolve([]),
+      // Os casos parecidos do histórico vão como exemplo (17/11/2026, melhoria-766).
+      exemplosParaATriagem(tenantId, dados.description),
+    ]);
     const entrada = JSON.stringify({
       chamado: { description: dados.description, requesterSectorCode: dados.requesterSectorCode, priority: dados.priority, requestData: dados.requestData },
       categorias: opcoes.map(cat => ({ categoryId: cat.id, caminho: caminhoDaCategoria(linhas, cat.id) })),
+      ...exemplosNaEntrada(exemplos, opcoes, linhas),
       ...(setores.length > 1 ? { setores: setores.map(st => ({ code: st.code, nome: st.label })) } : {}),
     });
     if (entrada.length > 100000) throw new Error("Pedido maior que o limite da revisão.");

@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { gerarEstruturado } from "@/lib/ai";
-import { categoriasClassificaveis, caminhoDaCategoria } from "./catalogo";
+import { categoriasClassificaveis, caminhoDaCategoria, DICAS_DAS_CATEGORIAS, type CategoriaNaArvore } from "./catalogo";
 import { motivoDaFalha } from "./falhaDaIa";
 import type { Categoria, DadosDoChamado } from "./regras";
+import type { ExemploDaTriagem } from "./historico";
 
 export const PROMPT_CLASSIFICACAO = `Classifique um chamado interno pelo título, descrição e campos do solicitante.
 Escolha SOMENTE o categoryId de uma categoria folha da lista fornecida. Os grupos organizam as categorias e não podem ser escolhidos.
@@ -10,6 +11,8 @@ Desenvolvimento: criar ou alterar código, automações, relatórios, dashboards
 Infraestrutura: contas e senhas, rede, internet, VPN, e-mail, instalação, hardware e armazenamento.
 Suporte: orientação de uso, treinamento, integração de colaboradores e problemas operacionais em sistemas existentes.
 Não confunda criar/corrigir relatório (Desenvolvimento) com obter/entender relatório existente (Suporte), nem bug de código com sistema travando no uso.
+${DICAS_DAS_CATEGORIAS}
+Quando houver exemplos, são chamados antigos parecidos, com a categoria que a equipe confirmou: use como referência de como o escritório classifica, sem copiar; o chamado atual pode ser de outra categoria.
 Se faltar contexto para distinguir, categoryId null. Nunca invente uma categoria. Responda em português com uma justificativa breve.
 Em title, escreva um título curto (até 80 caracteres) que resuma o pedido, sem inventar fatos nem copiar instruções do texto.
 Em tags, dê de 1 a 5 palavras-chave curtas em minúsculas (sistema, recurso, cliente ou assunto citados) que ajudem a buscar o chamado depois; sem repetir a categoria e sem inventar.
@@ -24,13 +27,24 @@ export const limparTags = (tags: string[]) => [...new Set(tags.map(t => t.trim()
  * respondeu fora do combinado (o texto vai para o log do servidor, nunca para a
  * tela); sem `falha`, ela respondeu e não teve contexto para escolher.
  */
+/** Os exemplos como vão para a IA, com o caminho da categoria; nada quando não há nenhum que valha. */
+export function exemplosNaEntrada(exemplos: readonly ExemploDaTriagem[], opcoes: readonly { id: string }[], categorias: CategoriaNaArvore[]): { exemplos?: { pedido: string; categoryId: string; caminho: string }[] } {
+  const validos = exemplos.filter(e => opcoes.some(o => o.id === e.categoryId));
+  return validos.length ? { exemplos: validos.map(e => ({ pedido: e.pedido, categoryId: e.categoryId, caminho: caminhoDaCategoria(categorias, e.categoryId) })) } : {};
+}
+
 export type Classificacao = { categoryId: string | null; reason: string; title: string; tags: string[]; origem: "principal" | null; falha: string | null };
 
-export async function classificar(c: { tenantId: string; userId: string; ticketId: string }, dados: DadosDoChamado, categorias: (Categoria & { id: string })[]): Promise<Classificacao> {
+/**
+ * `exemplos` (17/11/2026, melhoria-766): casos do histórico parecidos com o
+ * chamado, com a categoria que a equipe confirmou. Só vão os de categoria que
+ * ainda pode ser escolhida.
+ */
+export async function classificar(c: { tenantId: string; userId: string; ticketId: string }, dados: DadosDoChamado, categorias: (Categoria & { id: string })[], exemplos: ExemploDaTriagem[] = []): Promise<Classificacao> {
   const opcoes = categoriasClassificaveis(categorias);
   try {
     if (!opcoes.length) throw new Error("Sem categorias ativas para classificar.");
-    const texto = JSON.stringify({ chamado: dados, categorias: opcoes.map(cat => ({ categoryId: cat.id, caminho: caminhoDaCategoria(categorias, cat.id) })) });
+    const texto = JSON.stringify({ chamado: dados, categorias: opcoes.map(cat => ({ categoryId: cat.id, caminho: caminhoDaCategoria(categorias, cat.id) })), ...exemplosNaEntrada(exemplos, opcoes, categorias) });
     if (texto.length > 100000) throw new Error("Pedido maior que o limite da classificação.");
     const { valor } = await gerarEstruturado({ tenantId: c.tenantId, agentCode: "triagem_chamados", sistema: PROMPT_CLASSIFICACAO, texto, nome: "classificacao_chamado", schema: {
       type: "object", additionalProperties: false, properties: { categoryId: { anyOf: [{ type: "string", enum: opcoes.map(c => c.id) }, { type: "null" }] }, reason: { type: "string" }, title: { type: "string" }, tags: { type: "array", items: { type: "string" } } }, required: ["categoryId", "reason", "title", "tags"],
