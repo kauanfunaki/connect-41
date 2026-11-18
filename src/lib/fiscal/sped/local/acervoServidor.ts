@@ -19,6 +19,7 @@ import { mesesDoPeriodo, obrigacaoSchema } from "./dominio";
 import {
   TAMANHO_DO_LOTE,
   buscarLote,
+  deveRetomar,
   identificadorDoMotor,
   mensagemDoMotor,
   naEmpresa,
@@ -53,7 +54,7 @@ export type ResumoDoAcervo = {
 
 export type RespostaDoAcervo = {
   resumo: ResumoDoAcervo;
-  /** Na primeira volta: as importações do acervo que ficaram na fila sem ser lidas, por empresa. */
+  /** Na primeira volta: as importações do acervo que ficaram na fila sem ser lidas ou com erro na leitura, por empresa. */
   retomar: { empresa: string; ids: string[] }[];
   /** O lote desta volta; `null` quando não havia nada a pedir. */
   lote: { empresa: string; ids: string[]; contadores: ContadoresDoAcervo; pedidos: number } | null;
@@ -116,8 +117,8 @@ async function umaVolta(ctx: AuthContext, tela: Awaited<ReturnType<typeof prepar
     const importacoes = await db.spedFiscalImport.findMany({ where: { tenantId: ctx.tenantId, companyId: { in: ids }, name: { in: parte } }, select: { id: true, companyId: true, name: true, state: true } });
     for (const i of importacoes) {
       naFila.add(naEmpresa(i.companyId, i.name));
-      // O que ficou na fila sem ser lido (pausa, aba fechada) é retomado antes de pedir mais ao motor.
-      if (i.state === "pendente" || i.state === "processando") aRetomar.set(i.companyId, [...(aRetomar.get(i.companyId) ?? []), i.id]);
+      // O que ficou na fila sem ser lido (pausa, aba fechada) ou deu erro na leitura é lido de novo antes de pedir mais ao motor.
+      if (deveRetomar(i.state)) aRetomar.set(i.companyId, [...(aRetomar.get(i.companyId) ?? []), i.id]);
     }
   }
 

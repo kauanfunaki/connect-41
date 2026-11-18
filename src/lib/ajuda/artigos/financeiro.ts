@@ -1280,7 +1280,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Em “Empresa”, no topo, escolha a empresa e a competência.",
           "Na etapa “Classificação”, a lista vem do maior valor para o menor. Use “Por CFOP” para ver a destinação que o de-para deu a cada CFOP e filtrar por um deles.",
           "Clique num produto para decidir a destinação, a definição do CFOP de entrada, o crédito de PIS/COFINS e o crédito de ICMS. O “?” ao lado de cada campo diz até onde vale a decisão.",
-          "Para trazer documentos que já estão no acervo do Connect, use “Trazer do acervo”: os que já estão na escrituração ou na fila ficam de fora.",
+          "Para trazer documentos que já estão no acervo do Connect, use “Trazer do acervo”: os que já estão na escrituração ficam de fora, e os que estão na fila sem ser lidos ou com erro na leitura são lidos de novo.",
         ],
       },
       {

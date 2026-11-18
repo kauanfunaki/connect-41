@@ -6,6 +6,7 @@ import {
   MENSAGEM_SEM_ROTA,
   TAMANHO_DO_LOTE,
   buscarLote,
+  deveRetomar,
   identificadorDoMotor,
   medirZip,
   mensagemDoMotor,
@@ -75,6 +76,18 @@ describe("seleção do acervo", () => {
   it("ordena por empresa e id, que é a ordem do cursor", () => {
     const s = selecionarDoAcervo([nfe(3, "emp-b"), nfe(2), nfe(1, "emp-b")], vazio);
     expect(s.aPedir.map(posicaoNoAcervo)).toEqual(["emp-a|doc-00002", "emp-b|doc-00001", "emp-b|doc-00003"]);
+  });
+});
+
+describe("o que a primeira volta lê de novo", () => {
+  it("relê o que ficou sem ser lido e o que deu erro na leitura (bug-627)", () => {
+    expect(deveRetomar("pendente")).toBe(true);
+    expect(deveRetomar("processando")).toBe(true);
+    // A NFS-e nacional recusada pelo leitor antigo ficou com erro na fila; sem isto, nunca era relida.
+    expect(deveRetomar("erro")).toBe(true);
+  });
+  it("não mexe no que terminou, foi cancelado ou é anexo", () => {
+    for (const estado of ["concluido", "cancelado", "anexo"]) expect(deveRetomar(estado)).toBe(false);
   });
 });
 
