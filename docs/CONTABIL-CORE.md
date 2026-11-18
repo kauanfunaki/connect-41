@@ -72,7 +72,7 @@ Cada fase tem sua branch e seu PR. Uma fase que começa antes do merge da anteri
 | B2 | `feat/contabil-core-conciliacao-tela` | Conciliação de ponta a ponta: as três conferências, a aba "Conciliação" e o relatório em planilha. |
 | B3 | `feat/contabil-core-conciliacao-revisao` | Revisão manual salva (decisões e vínculos com versão). Migration. |
 | B4 | `feat/contabil-core-conciliacao-financeiro` | Conferência do financeiro: documentos, análises salvas e sugestões. Migration. |
-| B5 | — | As tabelas do Bloco B na carga (espelho). |
+| B5 | `feat/contabil-core-carga-conciliacao` | As tabelas do Bloco B na carga (espelho), com os originais do financeiro em disco. Sem migration. |
 
 ### Fase B1: os motores
 
@@ -464,7 +464,7 @@ Toda divergência entra aqui, com o porquê.
 
 ### Como funciona (`scripts/contabil-core/carga.ts`, `src/lib/contabil-core/carga/mapear.ts`)
 
-- **Ordem:** empresa → plano de contas (sem o pai; o pai numa segunda passada) → faixas → agências → contrapartes → regras → importações → transações → decisões do NEO → partidas → exportações.
+- **Ordem:** empresa → plano de contas (sem o pai; o pai numa segunda passada) → faixas → agências → contrapartes → regras → importações → transações → decisões do NEO → partidas → exportações → (Bloco B) revisões → vínculos da revisão → análises do financeiro → documentos, com o original em disco → vínculos do financeiro.
 - **Idempotente:** cada linha entra com o UUID do original (`upsert`). Rodar de novo atualiza o espelho, sem duplicar. O que alguém editar no Connect numa empresa espelhada é sobrescrito na rodada seguinte.
 - **Retrato consistente:** a leitura é uma transação `REPEATABLE READ READ ONLY` no original.
 - **Empresas:** ligadas à `Company` do escritório de destino (`CARGA_TENANT_ID`) pelos dígitos do CNPJ. Empresa sem par, com mais de um par, ou já ligada no Contábil Core do Connect com outro cadastro fica de fora e vai para o relatório.
@@ -472,8 +472,30 @@ Toda divergência entra aqui, com o porquê.
 - **Colunas de unicidade** (`codigoAtivo`, `chaveAtiva`, `hashAtivo`, `chave`, `transacaoSemRegra`…): calculadas pelas mesmas funções que o Connect usa ao gravar (`motor/chaves.ts`).
 - **Recusa por linha:** um lote de 200 que o banco recusa é refeito linha a linha, e só a linha que bateu fica de fora, nomeada no relatório.
 - **Saída:** o terminal mostra contagens e o CNPJ mascarado; o que identifica empresa ou pessoa vai para o relatório, um arquivo local (por padrão na pasta temporária) que não vai para o git.
-- **Fica para a virada:** o `audit_logs` do original (`contabil.core.legado.*`) e as tabelas dos Blocos B, C e D.
+- **Fica para a virada:** o `audit_logs` do original (`contabil.core.legado.*`) e as tabelas dos Blocos C e D.
 - **Limite do espelho:** linha apagada de verdade no original (não por `deleted_at`) continua no Connect. O original apaga por `deleted_at` em quase tudo.
+
+**Bloco B (Fase B5, 18/11/2026):** as cinco tabelas da conciliação, só das empresas espelhadas, depois das transações (o `extrato_hash` é calculado sobre elas).
+
+| Tabela no original | No Connect | Copiado | Calculado ou ligado |
+|---|---|---|---|
+| `conciliacao_revisoes` | `core_conciliacao_revisoes` | `snapshot`, `relatorio`, hashes, período, versão, título | `chaveAtiva` (`revisaoChaveAtiva`); `criado_por` → `criadoPorId` |
+| `conciliacao_vinculos` | `core_conciliacao_vinculos` | `extrato_ids`, `razao_itens`, totais, estado e desfazer | `usuario_id` → `confirmadoPorId` |
+| `financeiro_analises` | `core_financeiro_analises` | `snapshot`, `extrato_hash`, período, versão, título | `criado_por` → `criadoPorId` |
+| `financeiro_documentos` | `core_financeiro_documentos` | nome, tipo, `hash_arquivo`, tipo de mídia, tamanho | `storageKey` (`chaveDoOriginal`); `conteudo` → arquivo em disco |
+| `financeiro_vinculos` | `core_financeiro_vinculos` | `financeiro_ids`, `comparacao_ids`, totais, estado e desfazer | `usuario_id` → `confirmadoPorId` |
+
+- **JSON sem conversão.** O leitor recebe as colunas `json` como texto (o `JSON.parse` do `pg` arredondaria em silêncio um inteiro grande), e `jsonDoOriginal` confere e lê. Nos esquemas do Bloco B só há texto, inteiro, booleano e nulo: o dinheiro é o texto do `Decimal` ("-350.00"), e não há número fracionário. O único valor que mudaria é um inteiro fora de ±2^53, e aí a linha é recusada. A ordem das chaves o MySQL refaz, sem mudar valor (ver a divergência da B3). Os hashes gravados (`extrato_hash`, `revisao_hash`, `hashes_apoio`) e os ids das sugestões continuam valendo. Dinheiro das colunas `Numeric(15,2)` vai como o texto do PostgreSQL.
+- **Pessoa em coluna obrigatória.** `criadoPorId` e `confirmadoPorId` não aceitam nulo. Sem par no Connect, a coluna recebe `contabil-core:<uuid do original>` em vez de pular a linha. Pular perderia a revisão ou a análise inteira, com os vínculos, e o nome de quem confirmou já fica em `responsavel`. É o mesmo estado de quem foi excluído do Connect: essas colunas são trilha sem chave estrangeira, com tratamento "manter" em `exclusao/registro.ts`, e nada as lê para mostrar nome. O prefixo deixa claro que o id não é de `User`. A pessoa vai para `pessoasSemPar` no relatório.
+- **Conta bancária.** `agenciaId` é referência sem chave, como no original; a agência veio antes, com o mesmo UUID. Revisão ou análise cuja agência não veio (apagada de verdade no original) entra assim mesmo e é listada em `semAgencia` no relatório. No Connect, como no original, ela abre como histórico (`fontesValidas` falso).
+- **Páginas.** Revisões e análises são lidas em páginas de 50, dentro do mesmo retrato, e gravadas em lotes de 10, porque um snapshot pode ter milhares de linhas.
+- **Originais em disco.** Os bytes de `financeiro_documentos.conteudo` são lidos um documento por vez. Antes de gravar, o SHA-256 é conferido contra `hash_arquivo` e o tamanho contra `tamanho`; se algum diferir, a linha é recusada e nomeada no relatório.
+  - O arquivo vai para `storage/contabil-core/financeiro/<tenantId do Connect>/<id do documento>.<ext>`, por `chaveDoOriginal` e `gravarOriginal`, as mesmas funções do serviço (B4).
+  - **Idempotente:** arquivo que já está lá com o mesmo SHA-256 não é regravado; com outro conteúdo, é reescrito. O terminal mostra novos, iguais e reescritos.
+  - Se o banco recusar a linha de um arquivo gravado naquela rodada, o arquivo é apagado.
+  - Sem `--gravar`, os hashes são conferidos e nada vai para o disco.
+  - Rode a carga da pasta raiz do Connect: o `storage/` é relativo a ela.
+- **Exclusão:** a exclusão da empresa no Connect apaga as cinco tabelas e esses arquivos (`arquivosDaEmpresa`), como os criados pela tela.
 
 ### Conferência (`scripts/contabil-core/conferir-carga.ts`)
 
@@ -481,7 +503,12 @@ Só lê, dos dois lados, para cada empresa espelhada:
 
 - contagem por tabela (total e vivas);
 - soma por mês e lado (D/C) das transações vivas e das partidas vigentes;
-- com `--dominio=<pasta>`, o TXT do Domínio que o Connect gera, comparado byte a byte com o baixado do Contábil Core (Exportar › Lançamentos para importação, TXT), nomeado `<CNPJ>_<AAAA-MM>.txt`.
+- com `--dominio=<pasta>`, o TXT do Domínio que o Connect gera, comparado byte a byte com o baixado do Contábil Core (Exportar › Lançamentos para importação, TXT), nomeado `<CNPJ>_<AAAA-MM>.txt`;
+- Bloco B (só contagens de iguais e diferentes, porque o JSON e os arquivos têm dado de cliente):
+  - o JSON gravado igual ao do original, valor a valor (`mesmoJson`: listas na ordem, chaves em qualquer ordem): snapshot e relatório de cada revisão, snapshot de cada análise e os ids de cada vínculo;
+  - o `extrato_hash` recalculado no Connect a partir das transações espelhadas, por `lerExtrato` com `evidenciaDoExtrato` e `hashJson` (revisão) ou `identidadeDoExtrato` (análise). O resultado é comparado ao gravado e à mesma conta feita no original com as transações de lá. Assim a validade (`fontesValidas`, `extratoValido`) é a mesma nos dois lados; quando o extrato não mudou, continua verdadeira depois da carga;
+  - cada revisão e análise viva aberta pelos serviços (`obterRevisao`, `obterAnalise`), com a validade e o número de vínculos iguais aos do original;
+  - o SHA-256 de cada original em disco igual ao `hash_arquivo`, e o original baixado por `originalDoDocumento` igual, nos documentos vivos de análises vivas.
 
 A ideia do plano de recalcular a chave de duplicidade não se sustenta: o original não guarda o `fitid` da transação, só o hash. A carga copia o hash como está, e é ele que barra o mesmo extrato reimportado depois da virada.
 
@@ -500,10 +527,21 @@ npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-c
 
 1. Um PostgreSQL local para o original (porta 5435) e as migrations dele (`alembic upgrade head`).
 2. `scripts/contabil-core/povoar_core_local.py`: dados **inventados** pelos serviços do próprio original (importar OFX, NEO, classificação manual, cancelamento, reclassificação, composição, desfazer importação e exportação). Grava o TXT do Domínio de cada empresa e mês, que é o gabarito da conferência. Uma empresa tem par no Connect; a outra não, de propósito.
-3. `scripts/contabil-core/preparar-ensaio-carga.ts`: cria no Connect local a empresa com par.
-4. A carga (simular e gravar duas vezes) e a conferência.
+3. `scripts/contabil-core/povoar_conciliacao_local.py` (B5), no mesmo banco, depois do anterior. Acrescenta a cada empresa uma conta Itaú ligada à conta contábil e o extrato de abril. Depois, pelos serviços do original (`RevisaoService`, `FinanceiroService`), cria dados inventados:
+   - **revisões:** uma com SISPAG e Razão de apoio, com vínculos ativos, um desfeito e refeito, e um confirmado pela pessoa sem par; uma renomeada; uma excluída e criada de novo (o mesmo `revisao_hash` vivo e apagado);
+   - **análises:** uma com os quatro tipos de documento (planilhas inventadas), com um vínculo direto, um lote de sugestões, uma sugestão confirmada pela pessoa sem par e um vínculo desfeito; outra com documento, renomeada e excluída.
+4. `scripts/contabil-core/preparar-ensaio-carga.ts`: cria no Connect local a empresa com par.
+5. A carga (simular e gravar duas vezes) e a conferência.
 
 Resultado em 10/11/2026: tudo igual ao original, inclusive o TXT do Domínio byte a byte; a segunda rodada não duplicou nem recusou nada.
+
+Resultado da B5 em 18/11/2026, na empresa com par:
+- **Lidas e gravadas:** 4 revisões (1 excluída), 4 vínculos da revisão, 2 análises (1 excluída), 5 documentos e 5 vínculos do financeiro. Nada recusado. A outra empresa ficou de fora.
+- **Primeira rodada:** 5 arquivos novos em disco.
+- **Segunda rodada:** 0 novos, 5 iguais e 0 reescritos, sem duplicar nem recusar nada.
+- **Conferência:** 29 itens iguais, entre eles os 5 originais em disco e os 4 baixados pelo serviço. O JSON de 4 revisões, 2 análises e 9 vínculos saiu igual, e as 6 têm o extrato da criação. O Domínio continua byte a byte.
+- **No Connect:** a revisão abre com `fontesValidas` verdadeiro e a análise com `extratoValido` verdadeiro, pelos serviços.
+- **Ensaio negativo:** dois arquivos adulterados ou apagados em disco aparecem na conferência (DIFERE) e voltam na rodada seguinte. Bytes adulterados no original recusam a linha ("SHA-256 do conteúdo diferente do hash_arquivo do original").
 
 ## Como testar localmente (Fase 2)
 

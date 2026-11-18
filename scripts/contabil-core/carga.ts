@@ -17,6 +17,12 @@
 //
 // O terminal mostra só contagens; o que identifica empresa ou pessoa (CNPJ, nome, e-mail) vai para
 // o relatório, um arquivo local (por padrão na pasta temporária), que não deve ir para o git.
+//
+// Bloco B (Fase B5, 18/11/2026): depois das exportações, a conciliação — revisões, vínculos da
+// revisão, análises do financeiro, documentos (com o original em disco) e vínculos do financeiro.
+// Os originais (`financeiro_documentos.conteudo`) vão para storage/contabil-core/financeiro, pelas
+// mesmas funções do serviço (`originaisFinanceiro.ts`), um documento por vez e com o SHA-256 conferido
+// antes de gravar. Rode a carga da pasta raiz do Connect (o `storage/` é relativo a ela).
 
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,6 +30,7 @@ import { join } from "node:path";
 import pg from "pg";
 import { getPrisma } from "../../src/lib/prisma";
 import * as mapear from "../../src/lib/contabil-core/carga/mapear";
+import { apagarOriginal, chaveDoOriginal, gravarOriginal, lerOriginal } from "../../src/lib/contabil-core/servidor/originaisFinanceiro";
 
 const gravar = process.argv.includes("--gravar");
 const relatorioArg = process.argv.find((a) => a.startsWith("--relatorio="))?.slice("--relatorio=".length);
@@ -37,16 +44,29 @@ const tenantId: string = tenantDoAmbiente;
 
 // `date` do PostgreSQL como texto: convertido para instante pelo `pg`, o fuso local mudaria o dia.
 pg.types.setTypeParser(1082, (v) => v);
+// `json` e `jsonb` como texto: o `JSON.parse` do `pg` arredondaria em silêncio um inteiro grande;
+// `mapear.jsonDoOriginal` confere antes de ler (Bloco B).
+pg.types.setTypeParser(114, (v) => v);
+pg.types.setTypeParser(3802, (v) => v);
 
 const prisma = getPrisma();
 type Modelo = { upsert(args: { where: { id: string }; create: object; update: object }): Promise<unknown> };
+type Contagem = {
+  lidas: number;
+  gravadas: number;
+  recusadas: { id: string; erro: string }[];
+  /** Só nos documentos do financeiro: os originais em disco. */
+  arquivos?: { gravados: number; jaIguais: number; reescritos: number };
+  /** Revisões e análises cuja conta bancária (referência sem chave) não veio na carga. */
+  semAgencia?: string[];
+};
 
 const relatorio: {
   modo: string;
   empresasSemPar: { idOriginal: string; cnpj: string; razaoSocial: string }[];
   empresasJaLigadas: { idOriginal: string; cnpj: string; idNoConnect: string }[];
   pessoasSemPar: { idOriginal: string; email: string }[];
-  porEmpresa: Record<string, Record<string, { lidas: number; gravadas: number; recusadas: { id: string; erro: string }[] }>>;
+  porEmpresa: Record<string, Record<string, Contagem>>;
 } = { modo: gravar ? "gravar" : "simular", empresasSemPar: [], empresasJaLigadas: [], pessoasSemPar: [], porEmpresa: {} };
 
 /** CNPJ mascarado para o terminal: o completo fica só no relatório. */
@@ -55,7 +75,7 @@ const mascara = (cnpj: string) => {
   return d.length === 14 ? `${d.slice(0, 2)}.${d.slice(2, 5)}.***/****-**` : "***";
 };
 
-async function upsertMuitos(modelo: Modelo, linhas: { id: string }[], conta: { gravadas: number; recusadas: { id: string; erro: string }[] }, semAtualizar: string[] = []) {
+async function upsertMuitos(modelo: Modelo, linhas: { id: string }[], conta: Contagem, semAtualizar: string[] = [], tamanhoDoLote = 200) {
   if (!gravar) return;
   const args = (l: { id: string }) => {
     const update: Record<string, unknown> = { ...l };
@@ -63,8 +83,8 @@ async function upsertMuitos(modelo: Modelo, linhas: { id: string }[], conta: { g
     for (const c of semAtualizar) delete update[c];
     return { where: { id: l.id }, create: l, update };
   };
-  for (let i = 0; i < linhas.length; i += 200) {
-    const lote = linhas.slice(i, i + 200);
+  for (let i = 0; i < linhas.length; i += tamanhoDoLote) {
+    const lote = linhas.slice(i, i + tamanhoDoLote);
     try {
       await prisma.$transaction(lote.map((l) => modelo.upsert(args(l)) as never));
       conta.gravadas += lote.length;
@@ -147,7 +167,8 @@ async function main() {
         }
       }
       await etapa("faixas", prisma.corePlanoFaixa as unknown as Modelo, (await daEmpresa("plano_contas_faixas_tipo")).map((l) => mapear.faixa(l, tenantId)));
-      await etapa("agencias", prisma.coreAgencia as unknown as Modelo, (await daEmpresa("agencias_bancarias")).map((l) => mapear.agencia(l, tenantId)));
+      const agenciasLidas = await daEmpresa("agencias_bancarias");
+      await etapa("agencias", prisma.coreAgencia as unknown as Modelo, agenciasLidas.map((l) => mapear.agencia(l, tenantId)));
       await etapa("contrapartes", prisma.coreContraparte as unknown as Modelo, (await daEmpresa("contrapartes")).map((l) => mapear.contraparte(l, tenantId, pessoas)));
       await etapa("regras", prisma.coreRegra as unknown as Modelo, (await daEmpresa("regras")).map((l) => mapear.regra(l, tenantId)));
       await etapa("importacoes", prisma.coreImportacao as unknown as Modelo, (await daEmpresa("extrato_importacoes")).map((l) => mapear.importacao(l, tenantId, pessoas)));
@@ -156,8 +177,114 @@ async function main() {
       await etapa("registros", prisma.coreRegistro as unknown as Modelo, (await daEmpresa("registros_contabeis")).map((l) => mapear.registro(l, tenantId, pessoas)));
       await etapa("exportacoes", prisma.coreExportacao as unknown as Modelo, (await daEmpresa("export_jobs")).map((l) => mapear.exportacao(l, tenantId, pessoas)));
 
+      // ── Bloco B (B5): a conciliação. Depois das transações, de que o `extrato_hash` depende. ──
+      const nova = (nome: string): Contagem => (contagem[nome] = { lidas: 0, gravadas: 0, recusadas: [] });
+      /** Linha a linha: a que não converte (JSON com inteiro fora do limite) fica de fora, nomeada. */
+      const converter = <T>(linhas: mapear.Linha[], fn: (l: mapear.Linha) => T, conta: Contagem): T[] => {
+        const ok: T[] = [];
+        for (const l of linhas) {
+          try {
+            ok.push(fn(l));
+          } catch (e) {
+            conta.recusadas.push({ id: String(l.id), erro: String((e as Error).message).slice(0, 200) });
+          }
+        }
+        return ok;
+      };
+      /** Revisões e análises em páginas de 50: o snapshot de uma só pode ter milhares de linhas. O retrato é o mesmo (REPEATABLE READ). */
+      const emPaginas = async (tabela: string, fn: (pagina: mapear.Linha[]) => Promise<void>) => {
+        for (let desde = 0; ; desde += 50) {
+          const pagina = await q(`SELECT * FROM ${tabela} WHERE empresa_id = $1 ORDER BY created_at, id LIMIT 50 OFFSET ${desde}`, [idOriginal]);
+          if (!pagina.length) break;
+          await fn(pagina);
+        }
+      };
+      // `agenciaId` é referência sem chave estrangeira; a agência veio acima, com o mesmo UUID. A que não veio (apagada de verdade no original) vai para o relatório.
+      const agencias = new Set(agenciasLidas.map((l) => String(l.id)));
+      const conferirAgencia = (conta: Contagem, pagina: mapear.Linha[]) => {
+        for (const l of pagina) if (!agencias.has(String(l.agencia_id))) (conta.semAgencia ??= []).push(String(l.id));
+      };
+
+      const revisoes = nova("revisoes");
+      await emPaginas("conciliacao_revisoes", async (pagina) => {
+        revisoes.lidas += pagina.length;
+        conferirAgencia(revisoes, pagina);
+        await upsertMuitos(prisma.coreConciliacaoRevisao as unknown as Modelo, converter(pagina, (l) => mapear.revisao(l, tenantId, pessoas), revisoes), revisoes, [], 10);
+      });
+      const vinculosDaRevisao = nova("vinculos_revisao");
+      const lidosDaRevisao = await daEmpresa("conciliacao_vinculos");
+      vinculosDaRevisao.lidas = lidosDaRevisao.length;
+      await upsertMuitos(prisma.coreConciliacaoVinculo as unknown as Modelo, converter(lidosDaRevisao, (l) => mapear.vinculoDaRevisao(l, tenantId, pessoas), vinculosDaRevisao), vinculosDaRevisao);
+
+      const analises = nova("analises");
+      await emPaginas("financeiro_analises", async (pagina) => {
+        analises.lidas += pagina.length;
+        conferirAgencia(analises, pagina);
+        await upsertMuitos(prisma.coreFinanceiroAnalise as unknown as Modelo, converter(pagina, (l) => mapear.analise(l, tenantId, pessoas), analises), analises, [], 10);
+      });
+
+      // Documentos: os bytes de um por vez, conferidos contra o `hash_arquivo` antes de ir para o disco.
+      const documentos = nova("documentos");
+      const arquivos = (documentos.arquivos = { gravados: 0, jaIguais: 0, reescritos: 0 });
+      const metas = await q(
+        "SELECT id, empresa_id, analise_id, nome_arquivo, tipo, hash_arquivo, media_type, tamanho, created_at, updated_at, deleted_at FROM financeiro_documentos WHERE empresa_id = $1 ORDER BY created_at, id",
+        [idOriginal],
+      );
+      documentos.lidas = metas.length;
+      const linhasDosDocumentos: { id: string }[] = [];
+      const criadosAgora = new Map<string, string>();
+      for (const m of metas) {
+        const id = String(m.id);
+        const [linha] = await q("SELECT conteudo FROM financeiro_documentos WHERE id = $1", [id]);
+        const conteudo = linha?.conteudo as Buffer | null | undefined;
+        const motivo = mapear.conferirOriginal(conteudo, m);
+        if (motivo || !conteudo) {
+          documentos.recusadas.push({ id, erro: motivo ?? "documento sem conteúdo no original" });
+          continue;
+        }
+        const storageKey = chaveDoOriginal(tenantId, id, String(m.nome_arquivo));
+        if (gravar) {
+          try {
+            // Idempotente: o arquivo que já está lá com o mesmo SHA-256 fica como está.
+            const atual = await lerOriginal(tenantId, storageKey);
+            if (atual && mapear.sha256Hex(atual) === String(m.hash_arquivo)) {
+              arquivos.jaIguais++;
+            } else {
+              await gravarOriginal(tenantId, storageKey, conteudo);
+              if (atual) arquivos.reescritos++;
+              else {
+                arquivos.gravados++;
+                criadosAgora.set(id, storageKey);
+              }
+            }
+          } catch (e) {
+            documentos.recusadas.push({ id, erro: `original não gravado em disco: ${String((e as Error).message).slice(0, 150)}` });
+            continue;
+          }
+        }
+        linhasDosDocumentos.push(mapear.documento(m, tenantId, storageKey));
+      }
+      await upsertMuitos(prisma.coreFinanceiroDocumento as unknown as Modelo, linhasDosDocumentos, documentos);
+      // O arquivo gravado nesta rodada cuja linha o banco recusou não fica órfão.
+      for (const r of documentos.recusadas) {
+        const chave = criadosAgora.get(r.id);
+        if (chave) await apagarOriginal(tenantId, chave);
+      }
+
+      const vinculosDoFinanceiro = nova("vinculos_financeiro");
+      const lidosDoFinanceiro = await daEmpresa("financeiro_vinculos");
+      vinculosDoFinanceiro.lidas = lidosDoFinanceiro.length;
+      await upsertMuitos(prisma.coreFinanceiroVinculo as unknown as Modelo, converter(lidosDoFinanceiro, (l) => mapear.vinculoDoFinanceiro(l, tenantId, pessoas), vinculosDoFinanceiro), vinculosDoFinanceiro);
+
       const resumo = Object.entries(contagem)
-        .map(([t, c]) => `${t} ${gravar ? `${c.gravadas}/${c.lidas}` : c.lidas}${c.recusadas.length ? ` (${c.recusadas.length} recusadas)` : ""}`)
+        .map(([t, c]) => {
+          const extra = [
+            c.recusadas.length ? `${c.recusadas.length} recusadas` : "",
+            c.semAgencia?.length ? `${c.semAgencia.length} sem a conta bancária` : "",
+            c.arquivos && gravar ? `arquivos: ${c.arquivos.gravados} novos, ${c.arquivos.jaIguais} iguais, ${c.arquivos.reescritos} reescritos` : "",
+          ].filter(Boolean);
+          return `${t} ${gravar ? `${c.gravadas}/${c.lidas}` : c.lidas}${extra.length ? ` (${extra.join("; ")})` : ""}`;
+        })
         .join(", ");
       console.log(`empresa ${mascara(cnpj)}: ${resumo}`);
     }
