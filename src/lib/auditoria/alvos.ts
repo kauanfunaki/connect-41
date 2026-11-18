@@ -13,7 +13,8 @@ import { TIPO_LABEL } from "@/lib/fiscal/rotulos";
 import { getModuleDef } from "@/lib/module-catalog";
 import { enderecoDoItem } from "@/lib/tech-interno/regras";
 import { enderecoDe } from "@/lib/enderecoCurto";
-import { empresaNosDetalhes, idsCitados } from "./metadados";
+import { configDoHelpdesk } from "@/lib/chamados/contexto";
+import { empresaNosDetalhes, idsCitados, nomeDoChamado } from "./metadados";
 
 export type Referencia = { entityType: string | null; entityId: string | null; metadata: unknown };
 
@@ -260,6 +261,18 @@ const BUSCADORES: Readonly<Record<string, Buscador>> = {
       href: null,
       empresaId: r.companyId,
     })),
+  // O chamado (18/11/2026, melhoria-785): "#12 · Impressora não imprime", com o
+  // título de agora — também nas linhas antigas, que não guardaram nenhum dos dois.
+  // A Auditoria é só do SUPER_ADMIN, que vê todo chamado do escritório
+  // (`podeVer`, src/lib/chamados/acesso.ts); com o módulo desligado a tela do
+  // chamado não abre, e o nome fica sem link.
+  HelpdeskTicket: async (tenantId, ids) => {
+    const [linhas, config] = await Promise.all([
+      getPrisma().helpdeskTicket.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, number: true, title: true } }),
+      configDoHelpdesk(tenantId),
+    ]);
+    return linhas.map((r) => ({ id: r.id, nome: nomeDoChamado(r.number, r.title), href: config.enabled ? enderecoDe("chamado", r) : null, empresaId: null }));
+  },
   // O item do Controle interno abre no endereço curto (10/11/2026), com o título de agora.
   TechInternalItem: async (tenantId, ids) =>
     (await getPrisma().techInternalItem.findMany({ where: { tenantId, id: { in: ids } }, select: { id: true, title: true, type: true, number: true } })).map((r) => ({

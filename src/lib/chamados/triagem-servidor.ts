@@ -12,7 +12,7 @@ import { prepararCatalogo } from "./catalogo-servidor";
 import { A_CLASSIFICAR, caminhoDaCategoria, categoriasClassificaveis } from "./catalogo";
 import { classificar, limparTags, type Classificacao } from "./classificacao";
 import { procurarNoOrquestrador, type BuscaNoOrquestrador } from "./triagem";
-import { aprovadoresDaCategoria, evento } from "./comandos";
+import { aprovadoresDaCategoria, chamadoParaAuditoria, evento } from "./comandos";
 import { despacharEventos } from "./notificacoes";
 import { levarAoHub } from "./hub-servidor";
 import { exemplosParaATriagem } from "./historico-servidor";
@@ -69,8 +69,10 @@ export async function triarChamado(tenantId: string, ticketId: string, opcoes: {
     }
     const triagem = await concluir(tenantId, t, decisao);
     if (!triagem) return "nada_a_fazer";
+    // Lido depois da triagem: ela pode ter trocado o título provisório.
+    const chamado = await chamadoParaAuditoria(tenantId, t.id);
     await Promise.allSettled([
-      logAudit({ tenantId, rotina: "triagemDeChamados", action: "helpdesk.triaged", entityType: "HelpdeskTicket", entityId: t.id, metadata: { resultado: resultadoDaTriagem(triagem), ...(triagem.semCategoria ? { semCategoria: triagem.semCategoria } : {}) } }),
+      logAudit({ tenantId, rotina: "triagemDeChamados", action: "helpdesk.triaged", entityType: "HelpdeskTicket", entityId: t.id, metadata: { resultado: resultadoDaTriagem(triagem), ...(triagem.semCategoria ? { semCategoria: triagem.semCategoria } : {}), ...chamado } }),
       despacharEventos(tenantId, t.id),
       // A cópia no Hub, já com a categoria e o título da triagem (17/11/2026, funcionalidade-711).
       levarAoHub(tenantId, t.id),

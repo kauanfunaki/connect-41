@@ -1,5 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { empresaNosDetalhes, fatosDoRegistro, idsCitados, mudancasDoRegistro, nomeNosDetalhes, registroCompleto, valorLegivel } from "./metadados";
+import {
+  TITULO_DO_CHAMADO_NA_AUDITORIA,
+  chamadoNosDetalhes,
+  empresaNosDetalhes,
+  fatosDoRegistro,
+  idsCitados,
+  mudancasDoRegistro,
+  nomeDoChamado,
+  nomeNosDetalhes,
+  registroCompleto,
+  valorLegivel,
+} from "./metadados";
+
+describe("o chamado nos detalhes (melhoria-785)", () => {
+  it("grava o número e o título", () => {
+    expect(chamadoNosDetalhes({ number: 12, title: "  Impressora   não imprime " })).toEqual({ numero: 12, titulo: "Impressora não imprime" });
+  });
+
+  it("corta o título longo", () => {
+    const { titulo } = chamadoNosDetalhes({ number: 1, title: "a".repeat(300) });
+    expect(titulo).toHaveLength(TITULO_DO_CHAMADO_NA_AUDITORIA);
+    expect(titulo.endsWith("…")).toBe(true);
+  });
+
+  it("vira o nome da frase só com número e título", () => {
+    expect(nomeDoChamado(12, "Impressora não imprime")).toBe("#12 · Impressora não imprime");
+    expect(nomeNosDetalhes({ operacao: "created", numero: 12, titulo: "Impressora não imprime" })).toBe("#12 · Impressora não imprime");
+    expect(nomeNosDetalhes({ operacao: "created" })).toBeNull();
+    expect(nomeNosDetalhes({ numero: 4, de: "ABERTA", para: "CONCLUIDA" })).toBeNull();
+  });
+});
 
 const ID_A = "11111111-1111-4111-8111-111111111111";
 const ID_B = "22222222-2222-4222-8222-222222222222";

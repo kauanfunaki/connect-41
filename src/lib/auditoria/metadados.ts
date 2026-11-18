@@ -327,6 +327,10 @@ export function fatosDoRegistro(metadata: unknown, nomes: Nomes = SEM_NOMES, jaN
 /** O nome do cadastro que os detalhes guardaram — o que sobra quando o cadastro já não existe. */
 export function nomeNosDetalhes(metadata: unknown, chaveDoNome?: string): string | null {
   if (!ehObjeto(metadata)) return null;
+  // O chamado guarda o número e o título (18/11/2026, melhoria-785): "#12 · Impressora não imprime".
+  if (!chaveDoNome && typeof metadata.numero === "number" && typeof metadata.titulo === "string" && metadata.titulo.trim()) {
+    return nomeDoChamado(metadata.numero, metadata.titulo);
+  }
   const chaves = chaveDoNome ? [chaveDoNome] : ["nome", "name", "title", "label"];
   for (const k of chaves) {
     const v = metadata[k];
@@ -349,6 +353,30 @@ export function empresaNosDetalhes(metadata: unknown): string | null {
   if (!ehObjeto(metadata)) return null;
   const v = metadata.companyId;
   return typeof v === "string" && v ? v : null;
+}
+
+// ─── O chamado ───────────────────────────────────────────────────────────────
+
+/** O título do chamado guardado na auditoria e mostrado na frase: o começo, até aqui. */
+export const TITULO_DO_CHAMADO_NA_AUDITORIA = 120;
+
+function tituloCurto(titulo: string): string {
+  const t = titulo.replace(/\s+/g, " ").trim();
+  return t.length > TITULO_DO_CHAMADO_NA_AUDITORIA ? `${t.slice(0, TITULO_DO_CHAMADO_NA_AUDITORIA - 1).trimEnd()}…` : t;
+}
+
+/** "#12 · Impressora não imprime": o chamado na frase da auditoria. */
+export function nomeDoChamado(numero: number, titulo: string): string {
+  return `#${numero} · ${tituloCurto(titulo)}`;
+}
+
+/**
+ * Os detalhes que as ações do chamado (`helpdesk.*` sobre `HelpdeskTicket`)
+ * gravam para a auditoria dizer qual chamado foi — o número e o título,
+ * cortado. O título é o que a pessoa escreveu ao abrir.
+ */
+export function chamadoNosDetalhes(chamado: { number: number; title: string }): { numero: number; titulo: string } {
+  return { numero: chamado.number, titulo: tituloCurto(chamado.title) };
 }
 
 // ─── O registro completo ─────────────────────────────────────────────────────
