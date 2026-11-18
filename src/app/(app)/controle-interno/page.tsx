@@ -10,7 +10,9 @@ import { CascoDaTabela } from "@/components/shared/CascoDaTabela";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatInstantDate } from "@/lib/format";
+import { FiltrosSalvos } from "@/components/tech-interno/FiltrosSalvos";
+import { listarFiltrosSalvos } from "@/lib/tech-interno/filtrosSalvosServidor";
 import { VisoesDoControle, AcoesDoControle, enderecoDaVisao } from "@/components/tech-interno/NavegacaoTech";
 import { VisoesTech } from "@/components/tech-interno/VisoesTech";
 import { SituacaoTech } from "@/components/tech-interno/SituacaoTech";
@@ -30,8 +32,8 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
   const agendaHref = `/agenda?view=mes&setor=${encodeURIComponent(setorDoTech)}`;
   if (filtros.view === "agenda") redirect(agendaHref);
   const view = filtros.view === "kanban" ? "kanban" : "lista";
-  const [lista, opcoes, podeEditar] = await Promise.all([
-    listarItens(ctx, filtros), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"),
+  const [lista, opcoes, podeEditar, filtrosSalvos] = await Promise.all([
+    listarItens(ctx, filtros), opcoesTech(ctx), podeNoModulo(ctx, MODULO_TECH_INTERNO, "agir"), listarFiltrosSalvos(ctx),
   ]);
   const hrefPagina = (page: number) => {
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "pagina") q.set(k, v);
@@ -58,7 +60,7 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
     <PageHeader title="Controle interno"
       action={<AcoesDoControle podeEditar={podeEditar} novoHref={`${ROTA_TECH_INTERNO}/novo`} />} />
     <div className="flex-shrink-0"><VisoesDoControle ativa={view} href={v => hrefVisao(v)} /></div>
-    <CascoDaTabela className={view === "kanban" ? "flex min-h-0 flex-1 flex-col" : ""} buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra campos={[
+    <CascoDaTabela className={view === "kanban" ? "flex min-h-0 flex-1 flex-col" : ""} buscaAEsquerda contagem={`${lista.total} ${lista.total === 1 ? "item" : "itens"}`} busca={<DebouncedSearchInput key={filtros.q} paramName="q" placeholder="Buscar título ou descrição" />} filtros={<FiltrosDaTela naBarra aoLado={<FiltrosSalvos salvos={filtrosSalvos} />} campos={[
       { chave: "situacao", rotulo: "Situação", vazioLabel: view === "kanban" ? "Todas" : "Em aberto", opcoes: [...Object.entries(SITUACOES).map(([value, label]) => ({ value, label })), ...(view !== "kanban" || filtros.status === "ALL" ? [{ value: "ALL", label: "Todos" }] : [])] },
       { chave: "tipo", rotulo: "Tipo", opcoes: Object.entries(TIPOS).map(([value, label]) => ({ value, label })) },
       { chave: "prioridade", rotulo: "Prioridade", opcoes: PRIORIDADES.map((label, i) => ({ value: String(i), label })) },
@@ -71,14 +73,16 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
           <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={enderecoDoItem(item)}>{item.title}</Link>} />
           <InfoDoCartao>{TIPOS[item.type]} · {PRIORIDADES[item.priority]}</InfoDoCartao><InfoDoCartao>{nomeSistema(item)}</InfoDoCartao>
           <InfoDoCartao>{item.assignee?.name ?? "Sem responsável"} · {prazoDoItem(item)}</InfoDoCartao>
+          <InfoDoCartao>Aberto em {formatInstantDate(item.createdAt)}</InfoDoCartao>
           <PeDoCartao><SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></PeDoCartao>
         </Cartao>)}</CartoesNoCelular>
-        <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Tipo", "Prioridade", "Sistema", "Situação", "Responsável", "Prazo"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
+        <TabelaNoDesktop padrao><table className="w-full text-ui"><thead><tr>{["Título", "Tipo", "Prioridade", "Sistema", "Situação", "Responsável", "Data de abertura", "Prazo"].map(label => <th key={label} className="text-left px-4 py-3 font-medium text-fg-secondary">{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-border">{lista.items.map(item => <tr key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
             <td className="px-4 py-3 min-w-48 max-w-xs break-words"><Link href={enderecoDoItem(item)} className={`font-medium text-fg hover:text-brand ${LINK_DO_ITEM}`}>{item.title}</Link></td>
             <td className="px-4 py-3">{TIPOS[item.type]}</td><td className={`px-4 py-3 ${item.priority >= 2 ? "font-semibold" : ""}`}>{PRIORIDADES[item.priority]}</td>
             <td className="px-4 py-3 break-words max-w-48">{nomeSistema(item)}</td><td className="relative h-12 w-44 min-w-40 !p-0"><SituacaoTech key={`${item.id}:${item.version}`} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} /></td>
-            <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td><td className="px-4 py-3 whitespace-nowrap">{prazoDoItem(item)}</td>
+            <td className="px-4 py-3">{item.assignee?.name ?? "Sem responsável"}</td>
+            <td className="px-4 py-3 whitespace-nowrap tabular-nums">{formatInstantDate(item.createdAt)}</td><td className="px-4 py-3 whitespace-nowrap">{prazoDoItem(item)}</td>
           </tr>)}</tbody>
         </table></TabelaNoDesktop>
       </>}
