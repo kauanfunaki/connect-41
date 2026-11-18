@@ -39,7 +39,7 @@ const doOps = { select: { name: true, isActive: true } } as const;
 const incluir = { tool: { select: { name: true, active: true } }, opsWatcher: doOps, opsSite: doOps, opsApp: doOps, assignee: { select: { name: true, active: true } }, originItem: { select: { title: true, type: true, number: true } } } as const;
 type ItemCompleto = Prisma.TechInternalItemGetPayload<{ include: typeof incluir }>;
 
-async function conferirAcesso(ctx: AuthContext, nivel: NivelNoModulo) {
+export async function conferirAcesso(ctx: AuthContext, nivel: NivelNoModulo) {
   if (!ctx.userId || !ctx.tenantId || !await podeNoModulo(ctx, MODULO_TECH_INTERNO, nivel)) {
     throw new ErroTechInterno("Controle interno indisponível para este acesso.", "forbidden");
   }

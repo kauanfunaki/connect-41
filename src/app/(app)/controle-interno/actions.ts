@@ -5,6 +5,7 @@ import { salvarItem, comentarItem, mudarSituacaoItem, conferirCriterio, conferir
 import type { ResultadoDaConferencia } from "@/lib/tech-interno/conferenciaDaEntrega";
 import { ROTA_TECH_INTERNO } from "@/lib/tech-interno/regras";
 import { removerAnexo } from "@/lib/tech-interno/anexos";
+import { salvarFiltro, excluirFiltroSalvo } from "@/lib/tech-interno/filtrosSalvosServidor";
 import { getAuthContext } from "@/lib/auth/context";
 
 // As telas agem com a pessoa da sessão; a API e o MCP, com a dona do token
@@ -42,6 +43,21 @@ export async function conferirCriterioTech(id: string, posicao: number, texto: s
 export async function conferirEntregaTech(id: string): Promise<{ ok: true; resumo: string; resultados: ResultadoDaConferencia[] } | { error: string }> {
   const result = await conferirEntrega(await getAuthContext(), id);
   if ("ok" in result) { revalidarItens(); return { ok: true, resumo: result.resumo, resultados: result.resultados }; }
+  return { error: result.error };
+}
+/**
+ * Os filtros salvos da lista (18/11/2026, funcionalidade-783): só da pessoa da
+ * sessão. `query` é a query da URL da lista; o servidor normaliza e tira a
+ * página e a visão.
+ */
+export async function salvarFiltroTech(nome: string, query: string): Promise<{ ok: true; nome: string } | { error: string }> {
+  const result = await salvarFiltro(await getAuthContext(), { nome, query });
+  if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); return { ok: true, nome: result.nome }; }
+  return { error: result.error };
+}
+export async function excluirFiltroTech(id: string): Promise<{ ok: true } | { error: string }> {
+  const result = await excluirFiltroSalvo(await getAuthContext(), id);
+  if ("ok" in result) { revalidatePath(ROTA_TECH_INTERNO); return { ok: true }; }
   return { error: result.error };
 }
 export async function removerAnexoTech(id: string): Promise<{ error: string } | null> {

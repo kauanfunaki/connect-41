@@ -204,6 +204,28 @@ model TechInternalAcceptanceCheck {
   @@map("tech_internal_acceptance_checks")
 }
 
+/// Os filtros salvos da lista do Controle interno (18/11/2026,
+/// funcionalidade-783): cada um é só de quem salvou — ninguém vê nem mexe no
+/// de outra pessoa. `query` é a combinação de filtros normalizada (ver
+/// `src/lib/tech-interno/filtrosSalvos.ts`), sem página nem visão. Some com a
+/// pessoa.
+model TechInternalSavedFilter {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  name      String   @db.VarChar(80)
+  query     String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, name])
+  @@index([tenantId, userId])
+  @@index([userId])
+  @@map("tech_internal_saved_filters")
+}
+
 /// Conta compartilhada do escritório. A credencial existe somente em TenantIntegration.configEnc.
 model GithubConnection {
   id                   String @id @default(uuid())
@@ -1551,6 +1573,7 @@ model Tenant {
   techInternalChanges TechInternalChange[]
   techInternalAttachments TechInternalAttachment[]
   techInternalAcceptanceChecks TechInternalAcceptanceCheck[]
+  techInternalSavedFilters TechInternalSavedFilter[]
   opsWatchers             OpsWatcher[]
   opsSites                OpsSite[]
   opsApps                 OpsApp[]
@@ -2148,6 +2171,7 @@ model Subscription {
 
 model User {
   techInternalAssignments TechInternalItem[]
+  techInternalSavedFilters TechInternalSavedFilter[]
   personalApiTokens       PersonalApiToken[]
   academiaSessoes         AcademiaSessao[]
   academiaResultados      AcademiaResultado[]

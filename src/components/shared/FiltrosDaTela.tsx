@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useOptimistic, useState } from "react";
+import { useMemo, useOptimistic, useState, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Check, Search, X } from "lucide-react";
 import { FilterButton } from "@/components/ui/FilterButton";
@@ -53,6 +53,7 @@ export function FiltrosDaTela({
   campos,
   className = "",
   naBarra = false,
+  aoLado,
 }: {
   campos: CampoDeFiltro[];
   className?: string;
@@ -60,6 +61,9 @@ export function FiltrosDaTela({
    *  preso à ponta direita do botão. Desde 09/11/2026 o botão vem primeiro
    *  também aqui, com as etiquetas à direita dele. */
   naBarra?: boolean;
+  /** Outro botão colado ao Filtros, antes das etiquetas (18/11/2026: os
+   *  "Filtros salvos" do Controle interno) — fica parado, como o Filtros. */
+  aoLado?: ReactNode;
 }) {
   const pathname = usePathname();
   const paramsDaUrl = useSearchParams();
@@ -269,6 +273,7 @@ export function FiltrosDaTela({
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
       {botao}
+      {aoLado}
       {etiquetas}
     </div>
   );

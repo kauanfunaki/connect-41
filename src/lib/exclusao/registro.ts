@@ -392,6 +392,9 @@ const USUARIO: Ligacao[] = [
   // Os cartões do topo do Início que a pessoa escolheu (10/11/2026): preferência
   // dela, sem nada para passar a ninguém — sai junto com a conta.
   { modelo: "UserHomeCards", campo: "user", fk: "userId", tratamento: "cascata" },
+  // Os filtros salvos do Controle interno (18/11/2026): são só de quem salvou —
+  // saem junto com a conta.
+  { modelo: "TechInternalSavedFilter", campo: "user", fk: "userId", tratamento: "cascata" },
   // A Academia (10/11/2026): os resultados e as rodadas são da própria pessoa
   // e não do escritório — saem junto com a conta, como as notificações.
   { modelo: "AcademiaResultado", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["resultado da Academia", "resultados da Academia"] },
