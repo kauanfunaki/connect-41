@@ -24,7 +24,7 @@ export type CicloDoPainel = {
 };
 
 /** O tom da barra. O texto do `rotulo` vai sempre junto: a cor nunca é a única pista. */
-export type TomDoPrazo = "ok" | "atencao" | "perigo" | "pausado" | "resolvido";
+export type TomDoPrazo = "ok" | "atencao" | "perigo" | "pausado" | "resolvido" | "cancelado";
 
 export type PainelDoPrazo = {
   titulo: string;
@@ -62,6 +62,12 @@ export function duracao(minutos: number): string {
 }
 
 export function painelDoPrazo(ciclo: CicloDoPainel | undefined, status: string, agora: Date): PainelDoPrazo {
+  // Cancelar também fecha o ciclo (resolvedAt), mas cancelado não é resolvido
+  // (18/11/2026, bug-787): a faixa diz que foi cancelado, sem "no prazo".
+  if (status === "CANCELADO") {
+    const prazo = ciclo ? `O prazo era ${quandoCurto(data(ciclo.resolutionDueAt), agora)}${ciclo.manualDeadline ? " (ajustado)" : ""}.` : null;
+    return { titulo: "Chamado cancelado", restante: prazo, primeiraResposta: null, usado: null, tom: "cancelado", rotulo: "Cancelado" };
+  }
   if (!ciclo) {
     if (fechado(status)) return { titulo: "Chamado encerrado", restante: null, primeiraResposta: null, usado: null, tom: "resolvido", rotulo: "Encerrado" };
     if (emTriagem(status)) return { titulo: "Triagem em andamento", restante: "O prazo começa a contar quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem prazo" };
