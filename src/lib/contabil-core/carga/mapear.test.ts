@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { agenciaChave, codigoAtivo, contraparteChaveAtiva, decisaoSemRegra, hashAtivo, regraChaveAtiva, registroChaveAtiva, registroChavePadraoAtiva } from "../motor/chaves";
+import { agenciaChave, codigoAtivo, contraparteChaveAtiva, decisaoSemRegra, hashAtivo, regraChaveAtiva, registroChaveAtiva, registroChavePadraoAtiva, revisaoChaveAtiva } from "../motor/chaves";
 import * as mapear from "./mapear";
 
 const T = "tenant-1";
@@ -61,5 +61,90 @@ describe("carga: linha do original → Connect", () => {
   it("CNPJ comparado só pelos dígitos", () => {
     expect(mapear.digitos("31.415.926/0001-71")).toBe("31415926000171");
     expect(mapear.digitos(null)).toBe("");
+  });
+});
+
+describe("carga do Bloco B (B5): conciliação", () => {
+  // O texto da coluna `json` como o SQLAlchemy grava (`json.dumps`: separadores com espaço, `ensure_ascii`).
+  const snapshot = '{"fontes": [{"id": "f1", "nome_arquivo": "Extrato j\\u00e1 importado", "tem_original": false}], "linhas": [{"valor": "-350.00", "ordem": 3, "observacao": null}], "avisos": []}';
+
+  it("revisão: JSON copiado sem conversão, chave ativa só da viva, pessoa sem par com o prefixo", () => {
+    const base = {
+      id: "r1", empresa_id: "e1", agencia_id: "a1", criado_por: "u-original", nome_arquivo: "razao.xlsx", titulo: null, conta_bancaria: "ITAU 7285 12287 0",
+      periodo_inicio: "2026-04-01", periodo_fim: "2026-04-30", revisao_hash: "a".repeat(64), extrato_hash: "b".repeat(64), versao: 7,
+      snapshot, relatorio: '{"resumo": {"conciliados_por_tipo": {"MESMO_DIA": 2}}}', created_at: quando, updated_at: quando, deleted_at: null,
+    };
+    const r = mapear.revisao(base, T, pessoas);
+    expect(r.snapshot).toEqual(JSON.parse(snapshot));
+    expect((r.snapshot as { fontes: { nome_arquivo: string }[] }).fontes[0].nome_arquivo).toBe("Extrato já importado");
+    expect(r.relatorio).toEqual({ resumo: { conciliados_por_tipo: { MESMO_DIA: 2 } } });
+    expect(r.chaveAtiva).toBe(revisaoChaveAtiva({ revisaoHash: "a".repeat(64), deletedAt: null }));
+    expect(r.criadoPorId).toBe("u-connect");
+    expect(r.periodoFim.toISOString()).toBe("2026-04-30T00:00:00.000Z");
+    expect(r.versao).toBe(7);
+
+    const apagada = mapear.revisao({ ...base, deleted_at: quando, criado_por: "u-sem-par" }, T, pessoas);
+    expect(apagada.chaveAtiva).toBeNull();
+    expect(apagada.criadoPorId).toBe(`${mapear.PESSOA_DO_ORIGINAL}u-sem-par`);
+    expect(mapear.revisao({ ...base, criado_por: "nunca-vista" }, T, pessoas).criadoPorId).toBe("contabil-core:nunca-vista");
+  });
+
+  it("vínculos: ids e itens em JSON, dinheiro como texto, desfazer e pessoa", () => {
+    const v = mapear.vinculoDaRevisao({
+      id: "v1", empresa_id: "e1", revisao_id: "r1", extrato_ids: '["t1", "t2"]', razao_itens: '[{"linha_id": "l1", "dc": "C"}]',
+      total_extrato: "350.00", total_razao: "350.00", diferenca: "0.00", observacao: "", estado: "DESFEITO", usuario_id: "u-original",
+      responsavel: "Pessoa", desfeito_por: "Pessoa", desfeito_em: quando, motivo_desfazer: "Conta errada", created_at: quando, updated_at: quando, deleted_at: null,
+    }, T, pessoas);
+    expect(v.extratoIds).toEqual(["t1", "t2"]);
+    expect(v.razaoItens).toEqual([{ linha_id: "l1", dc: "C" }]);
+    expect([v.totalExtrato, v.diferenca, v.estado, v.confirmadoPorId, v.motivoDesfazer]).toEqual(["350.00", "0.00", "DESFEITO", "u-connect", "Conta errada"]);
+
+    const f = mapear.vinculoDoFinanceiro({
+      id: "v2", empresa_id: "e1", analise_id: "a1", tipo_comparacao: "RAZAO_DETALHADO", financeiro_ids: '["x"]', comparacao_ids: '["y", "z"]',
+      total_financeiro: "1000.00", total_comparacao: "1000.00", diferenca: "0.00", observacao: "ok", estado: "ATIVO", usuario_id: "u-sem-par",
+      responsavel: "Pessoa Ausente", desfeito_por: null, desfeito_em: null, motivo_desfazer: null, created_at: quando, updated_at: quando, deleted_at: null,
+    }, T, pessoas);
+    expect(f.comparacaoIds).toEqual(["y", "z"]);
+    expect(f.confirmadoPorId).toBe("contabil-core:u-sem-par");
+    expect(f.desfeitoEm).toBeNull();
+  });
+
+  it("análise e documento: snapshot sem conversão, a chave do disco vem de fora", () => {
+    const a = mapear.analise({
+      id: "a1", empresa_id: "e1", agencia_id: "ag", criado_por: "u-original", titulo: "Abril", conta_bancaria: "ITAU", periodo_inicio: "2026-04-01",
+      periodo_fim: "2026-04-30", extrato_hash: "c".repeat(64), versao: 9, snapshot, created_at: quando, updated_at: quando, deleted_at: quando,
+    }, T, pessoas);
+    expect(a.snapshot).toEqual(JSON.parse(snapshot));
+    expect(a.deletedAt).toEqual(quando);
+    const d = mapear.documento({ id: "d1", empresa_id: "e1", analise_id: "a1", nome_arquivo: "x.xlsx", tipo: "SISPAG", hash_arquivo: "f".repeat(64), media_type: "application/pdf", tamanho: 10, created_at: quando, updated_at: quando, deleted_at: null }, T, "t/d1.xlsx");
+    expect(d).toMatchObject({ storageKey: "t/d1.xlsx", tamanho: 10, mediaType: "application/pdf" });
+    expect(d).not.toHaveProperty("conteudo");
+  });
+
+  it("original do financeiro: SHA-256 e tamanho conferidos antes de gravar", () => {
+    const bytes = new TextEncoder().encode("planilha inventada");
+    const certo = { hash_arquivo: mapear.sha256Hex(bytes), tamanho: bytes.length };
+    expect(mapear.conferirOriginal(bytes, certo)).toBeNull();
+    expect(mapear.conferirOriginal(bytes, { ...certo, hash_arquivo: "0".repeat(64) })).toMatch(/SHA-256/);
+    expect(mapear.conferirOriginal(bytes, { ...certo, tamanho: 1 })).toMatch(/tamanho/);
+    expect(mapear.conferirOriginal(new Uint8Array(), certo)).toMatch(/sem conteúdo/);
+    expect(mapear.conferirOriginal(null, certo)).toMatch(/sem conteúdo/);
+  });
+
+  it("JSON do original: só como texto, e inteiro fora de ±2^53 recusa a linha", () => {
+    expect(() => mapear.jsonDoOriginal({ ja: "lido" })).toThrow(/como texto/);
+    expect(() => mapear.jsonDoOriginal("null")).toThrow(/sem objeto/);
+    expect(() => mapear.jsonDoOriginal('{"n": 9007199254740993}')).toThrow(/fora do limite/);
+    expect(mapear.jsonDoOriginal('{"n": 9007199254740991, "t": "9007199254740993", "q": "a\\"1e999999999999999999"}')).toEqual({ n: 9007199254740991, t: "9007199254740993", q: 'a"1e999999999999999999' });
+    expect(mapear.inteiroForaDoLimite('[-12345678901234567890]')).toBe("-12345678901234567890");
+    expect(mapear.inteiroForaDoLimite('["\\\\", 1, true, null, -0, 1.5e3]')).toBeNull();
+  });
+
+  it("igualdade valor a valor: a ordem das chaves não conta, a das listas conta", () => {
+    expect(mapear.mesmoJson({ a: [1, { b: "x", c: null }] }, { a: [1, { c: null, b: "x" }] })).toBe(true);
+    expect(mapear.mesmoJson([1, 2], [2, 1])).toBe(false);
+    expect(mapear.mesmoJson({ a: "1" }, { a: 1 })).toBe(false);
+    expect(mapear.mesmoJson({ a: null }, {})).toBe(false);
+    expect(mapear.mesmoJson([], {})).toBe(false);
   });
 });

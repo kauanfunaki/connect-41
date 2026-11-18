@@ -8,10 +8,19 @@
 // - Pessoa (criado por, cancelado por…) é ligada ao `User` do Connect pelo e-mail; sem par, fica nula.
 // - Datas de calendário (`date` no PostgreSQL) chegam como texto "AAAA-MM-DD" (o leitor não as
 //   converte para instante, para o fuso não mudar o dia).
+//
+// Bloco B (Fase B5, 18/11/2026): as cinco tabelas da conciliação, no fim do arquivo.
+// - As colunas JSON (`snapshot`, `relatorio`, `extrato_ids`, `razao_itens`, `financeiro_ids`,
+//   `comparacao_ids`) são copiadas SEM conversão: o Connect guarda o JSON do original (snake_case,
+//   dinheiro como o texto do `Decimal`), e os hashes gravados (`extrato_hash`, `revisao_hash`,
+//   `hashes_apoio`, ids das sugestões) continuam valendo. Ver `jsonDoOriginal`.
+// - Pessoa em coluna obrigatória (`criadoPorId`, `confirmadoPorId`) sem par no Connect: ver
+//   `pessoaObrigatoria`.
 
+import { createHash } from "node:crypto";
 import {
   agenciaChave, codigoAtivo, contraparteChaveAtiva, decisaoSemRegra, hashAtivo, regraChaveAtiva,
-  registroChaveAtiva, registroChavePadraoAtiva,
+  registroChaveAtiva, registroChavePadraoAtiva, revisaoChaveAtiva,
 } from "../motor/chaves";
 
 /** Linha crua do PostgreSQL (`pg`): números decimais vêm como texto, instantes como `Date`. */
@@ -150,5 +159,153 @@ export function exportacao(l: Linha, tenantId: string, pessoas: Pessoas) {
     totalRegistros: l.total_registros === null || l.total_registros === undefined ? null : Number(l.total_registros),
     arquivoPath: texto(l.arquivo_path), erroMsg: texto(l.erro_msg), criadoPorId: pessoa(pessoas, l.criado_por),
     createdAt: instante(l.created_at)!, finishedAt: instante(l.finished_at),
+  };
+}
+
+// ─── Bloco B: a conciliação (Fase B5) ───────────────────────────────────────
+
+/** Prefixo da pessoa do original sem par no Connect, em coluna que não aceita nulo. */
+export const PESSOA_DO_ORIGINAL = "contabil-core:";
+
+/**
+ * Pessoa em coluna obrigatória (`criado_por` da revisão e da análise, `usuario_id` dos vínculos).
+ * Com par, o `User` do Connect. Sem par, a regra da Fase 5 deixaria nulo, e a coluna não aceita:
+ * fica "contabil-core:<uuid do original>". É o mesmo estado de quem foi excluído do Connect (essas
+ * colunas são trilha sem chave estrangeira, com tratamento "manter" em `exclusao/registro.ts`), e o
+ * prefixo deixa claro que o id não é de `User`. Nada no Connect lê essas colunas para mostrar
+ * nome: o vínculo grava o nome em `responsavel`. A pessoa vai para o relatório (`pessoasSemPar`).
+ */
+export function pessoaObrigatoria(pessoas: Pessoas, v: unknown): string {
+  return pessoas.get(String(v)) ?? `${PESSOA_DO_ORIGINAL}${String(v)}`;
+}
+
+/**
+ * Uma coluna `json` do original, lida como TEXTO (o leitor da carga não deixa o `pg` converter), para
+ * conferir o que o `JSON.parse` perderia. O que o original guardou é o `json.dumps` do
+ * `model_dump(mode="json")`: textos, inteiros, booleanos, nulos, listas e objetos — o dinheiro vai
+ * como o texto do `Decimal` ("-350.00") e não há número fracionário nos esquemas do Bloco B. O único
+ * valor que o `JSON.parse` mudaria é o inteiro fora de ±2^53; aí a linha é recusada, em vez de
+ * gravada com outro número. Textos (inclusive os `\uXXXX` do `ensure_ascii`) voltam iguais; a ordem
+ * das chaves o MySQL refaz, sem mudar valor.
+ */
+export function jsonDoOriginal(v: unknown): object {
+  if (typeof v !== "string") throw new Error("Coluna JSON do original deve chegar como texto.");
+  const grande = inteiroForaDoLimite(v);
+  if (grande) throw new Error(`Inteiro fora do limite exato do JavaScript no JSON do original (${grande.slice(0, 30)}).`);
+  const valor: unknown = JSON.parse(v);
+  if (valor === null || typeof valor !== "object") throw new Error("Coluna JSON do original sem objeto nem lista.");
+  return valor;
+}
+
+/** O primeiro número inteiro do texto JSON que o `Number` não representa exatamente, ou `null`. */
+export function inteiroForaDoLimite(json: string): string | null {
+  for (let i = 0; i < json.length; ) {
+    const c = json[i];
+    if (c === '"') {
+      // Pula o texto inteiro, com os escapes.
+      for (i++; i < json.length && json[i] !== '"'; i++) if (json[i] === "\\") i++;
+      i++;
+    } else if (c === "-" || (c >= "0" && c <= "9")) {
+      let j = i;
+      while (j < json.length && /[-+0-9.eE]/.test(json[j])) j++;
+      const numero = json.slice(i, j);
+      if (/^-?\d+$/.test(numero) && !Number.isSafeInteger(Number(numero))) return numero;
+      i = j;
+    } else i++;
+  }
+  return null;
+}
+
+/** Igualdade valor a valor de dois JSON já lidos: listas na ordem, objetos pelas chaves (em qualquer ordem). */
+export function mesmoJson(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    const bb = b as unknown[];
+    return a.length === bb.length && a.every((x, i) => mesmoJson(x, bb[i]));
+  }
+  const ka = Object.keys(a);
+  const ob = b as Record<string, unknown>;
+  return ka.length === Object.keys(ob).length && ka.every((k) => Object.hasOwn(ob, k) && mesmoJson((a as Record<string, unknown>)[k], ob[k]));
+}
+
+export function revisao(l: Linha, tenantId: string, pessoas: Pessoas) {
+  const deletedAt = instante(l.deleted_at);
+  const revisaoHash = String(l.revisao_hash);
+  return {
+    id: String(l.id), tenantId, empresaId: String(l.empresa_id), agenciaId: String(l.agencia_id),
+    criadoPorId: pessoaObrigatoria(pessoas, l.criado_por),
+    nomeArquivo: String(l.nome_arquivo), titulo: texto(l.titulo), contaBancaria: String(l.conta_bancaria),
+    periodoInicio: diaUtc(l.periodo_inicio)!, periodoFim: diaUtc(l.periodo_fim)!,
+    revisaoHash, extratoHash: String(l.extrato_hash), versao: Number(l.versao),
+    snapshot: jsonDoOriginal(l.snapshot), relatorio: jsonDoOriginal(l.relatorio),
+    chaveAtiva: revisaoChaveAtiva({ revisaoHash, deletedAt }),
+    createdAt: instante(l.created_at)!, updatedAt: instante(l.updated_at)!, deletedAt,
+  };
+}
+
+/** Desfazer, comum aos vínculos da revisão e do financeiro. */
+const desfeito = (l: Linha) => ({
+  estado: String(l.estado), responsavel: String(l.responsavel),
+  desfeitoPor: texto(l.desfeito_por), desfeitoEm: instante(l.desfeito_em), motivoDesfazer: texto(l.motivo_desfazer),
+});
+
+export function vinculoDaRevisao(l: Linha, tenantId: string, pessoas: Pessoas) {
+  return {
+    id: String(l.id), tenantId, empresaId: String(l.empresa_id), revisaoId: String(l.revisao_id),
+    extratoIds: jsonDoOriginal(l.extrato_ids), razaoItens: jsonDoOriginal(l.razao_itens),
+    totalExtrato: String(l.total_extrato), totalRazao: String(l.total_razao), diferenca: String(l.diferenca),
+    observacao: String(l.observacao ?? ""), confirmadoPorId: pessoaObrigatoria(pessoas, l.usuario_id), ...desfeito(l),
+    createdAt: instante(l.created_at)!, updatedAt: instante(l.updated_at)!, deletedAt: instante(l.deleted_at),
+  };
+}
+
+export function analise(l: Linha, tenantId: string, pessoas: Pessoas) {
+  return {
+    id: String(l.id), tenantId, empresaId: String(l.empresa_id), agenciaId: String(l.agencia_id),
+    criadoPorId: pessoaObrigatoria(pessoas, l.criado_por),
+    titulo: String(l.titulo), contaBancaria: String(l.conta_bancaria),
+    periodoInicio: diaUtc(l.periodo_inicio)!, periodoFim: diaUtc(l.periodo_fim)!,
+    extratoHash: String(l.extrato_hash), versao: Number(l.versao), snapshot: jsonDoOriginal(l.snapshot),
+    createdAt: instante(l.created_at)!, updatedAt: instante(l.updated_at)!, deletedAt: instante(l.deleted_at),
+  };
+}
+
+/**
+ * O documento sem os bytes (`conteudo`), que vão para o disco. A chave (`storageKey`) vem de quem
+ * grava o arquivo (`chaveDoOriginal`, do serviço do Connect), para o lugar ser o mesmo.
+ */
+export function documento(l: Linha, tenantId: string, storageKey: string) {
+  return {
+    id: String(l.id), tenantId, empresaId: String(l.empresa_id), analiseId: String(l.analise_id),
+    nomeArquivo: String(l.nome_arquivo), tipo: String(l.tipo), hashArquivo: String(l.hash_arquivo),
+    mediaType: String(l.media_type), tamanho: Number(l.tamanho), storageKey,
+    createdAt: instante(l.created_at)!, updatedAt: instante(l.updated_at)!, deletedAt: instante(l.deleted_at),
+  };
+}
+
+/** SHA-256 em hexadecimal, como o `hash_arquivo` do original. */
+export const sha256Hex = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
+
+/**
+ * Os bytes de `financeiro_documentos.conteudo` são os que o original registrou? O SHA-256 tem de
+ * ser o `hash_arquivo` e o tamanho o `tamanho`. Devolve o motivo da recusa, ou `null`.
+ */
+export function conferirOriginal(conteudo: Uint8Array | null | undefined, l: Linha): string | null {
+  if (!conteudo || conteudo.length === 0) return "documento sem conteúdo no original";
+  if (sha256Hex(conteudo) !== String(l.hash_arquivo)) return "SHA-256 do conteúdo diferente do hash_arquivo do original";
+  if (conteudo.length !== Number(l.tamanho)) return "tamanho do conteúdo diferente do registrado no original";
+  return null;
+}
+
+export function vinculoDoFinanceiro(l: Linha, tenantId: string, pessoas: Pessoas) {
+  return {
+    id: String(l.id), tenantId, empresaId: String(l.empresa_id), analiseId: String(l.analise_id),
+    tipoComparacao: String(l.tipo_comparacao),
+    financeiroIds: jsonDoOriginal(l.financeiro_ids), comparacaoIds: jsonDoOriginal(l.comparacao_ids),
+    totalFinanceiro: String(l.total_financeiro), totalComparacao: String(l.total_comparacao), diferenca: String(l.diferenca),
+    observacao: String(l.observacao ?? ""), confirmadoPorId: pessoaObrigatoria(pessoas, l.usuario_id), ...desfeito(l),
+    createdAt: instante(l.created_at)!, updatedAt: instante(l.updated_at)!, deletedAt: instante(l.deleted_at),
   };
 }
