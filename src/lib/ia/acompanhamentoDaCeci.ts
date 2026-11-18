@@ -10,8 +10,28 @@
 import { getPrisma } from "@/lib/prisma";
 import { AGENTES_DO_CHAT, MOTIVOS_DO_NAO, ehMotivoDoNao, type MotivoDoNao } from "./chat/regras";
 import { nomeDaAssistente, especialidadeDoAgente } from "./ceci";
+import { agenteDoCatalogo } from "./catalogo";
 
 export const SEMANAS = 8;
+
+/**
+ * A IA dos chamados (melhoria-781): roda por `gerarEstruturado`, sem conversa
+ * nem 👍/👎. Entra no processamento, nos erros e no custo; fica fora do que é
+ * do chat (perguntas, avaliações, a evolução por semana).
+ */
+export const AGENTE_DOS_CHAMADOS = "triagem_chamados";
+
+/**
+ * As três partes da IA dos chamados, pelo `entityType` que cada uma grava na
+ * chamada: triagem do chamado aberto (orquestrador, categoria e setor), revisão
+ * do rascunho antes de abrir e leitura do histórico do Hub. Chamada sem
+ * `entityType` (anterior ao registro do contexto) fica na linha do agente.
+ */
+const PARTES_DOS_CHAMADOS: Readonly<Record<string, { chave: string; parte: string }>> = {
+  HelpdeskTicket: { chave: "triagem", parte: "chamado aberto" },
+  HelpdeskDraft: { chave: "revisao", parte: "revisão antes de abrir" },
+  HelpdeskHistoricCase: { chave: "historico", parte: "histórico do Hub" },
+};
 /** Chamada sem fim há mais que isto morreu no meio. */
 export const TRAVADA_DEPOIS_DE_MS = 10 * 60 * 1000;
 /** As falhas técnicas que a tela lista. */
@@ -36,6 +56,8 @@ export type ChamadaDaCeci = {
   ok: boolean | null;
   error: string | null;
   costCents: number | null;
+  /** Sobre o que foi a chamada; separa as partes da IA dos chamados. */
+  entityType?: string | null;
 };
 
 export type SemanaDaCeci = {
@@ -49,8 +71,12 @@ export type SemanaDaCeci = {
 };
 
 export type AgenteDaCeci = {
+  /** A linha da tabela: o agente, ou o agente e a parte (`triagem_chamados:revisao`). */
+  chave: string;
   agentCode: string;
   nome: string;
+  /** Agente do chat: tem conversa e 👍/👎. */
+  doChat: boolean;
   chamadas: number;
   erros: number;
   travadas: number;
@@ -65,7 +91,21 @@ export type AgenteDaCeci = {
 
 export type PontoDaCeci = { tom: "perigo" | "atencao" | "sucesso" | "neutro"; texto: string };
 
-export const nomeDoAgente = (code: string) => nomeDaAssistente(especialidadeDoAgente(code) ?? code);
+/** "Ceci · BPO" para o chat; fora dele, o rótulo do catálogo ("Triagem de chamados"). */
+export function nomeDoAgente(code: string): string {
+  const especialidade = especialidadeDoAgente(code);
+  if (especialidade) return nomeDaAssistente(especialidade);
+  return agenteDoCatalogo(code)?.label ?? nomeDaAssistente(code);
+}
+
+/** A linha de uma chamada: a IA dos chamados se separa pela parte; os outros, pelo agente. */
+export function linhaDaChamada(c: Pick<ChamadaDaCeci, "agentCode" | "entityType">): { chave: string; nome: string } {
+  const parte = c.agentCode === AGENTE_DOS_CHAMADOS && c.entityType ? PARTES_DOS_CHAMADOS[c.entityType] : undefined;
+  if (!parte) return { chave: c.agentCode, nome: nomeDoAgente(c.agentCode) };
+  return { chave: `${c.agentCode}:${parte.chave}`, nome: `${nomeDoAgente(c.agentCode)} · ${parte.parte}` };
+}
+
+const ehDoChat = (code: string) => AGENTES_DO_CHAT.has(code);
 
 /** A segunda-feira (UTC) da semana do instante, como chave de dia. */
 export function segundaDaSemana(d: Date): string {
@@ -74,8 +114,12 @@ export function segundaDaSemana(d: Date): string {
   return new Date(dia.getTime() - recuo * DIA_MS).toISOString().slice(0, 10);
 }
 
-/** As últimas `SEMANAS` semanas, da mais antiga para a atual, mesmo as vazias. */
-export function semanasDaCeci(mensagens: MensagemDaCeci[], chamadas: ChamadaDaCeci[], agora: Date): SemanaDaCeci[] {
+/**
+ * As últimas `SEMANAS` semanas, da mais antiga para a atual, mesmo as vazias.
+ * É a evolução do chat: o custo da semana é só o dos agentes do chat.
+ */
+export function semanasDaCeci(mensagens: MensagemDaCeci[], todasAsChamadas: ChamadaDaCeci[], agora: Date): SemanaDaCeci[] {
+  const chamadas = todasAsChamadas.filter((c) => ehDoChat(c.agentCode));
   const atual = segundaDaSemana(agora);
   const chaves = Array.from({ length: SEMANAS }, (_, i) => new Date(new Date(`${atual}T00:00:00Z`).getTime() - (SEMANAS - 1 - i) * 7 * DIA_MS).toISOString().slice(0, 10));
   const por = new Map(chaves.map((k) => [k, { inicio: k, perguntas: 0, boas: 0, ruins: 0, falhas: 0, custoCents: 0 }]));
@@ -100,19 +144,23 @@ function percentil(valores: number[], p: number): number | null {
   return ordenados[Math.min(ordenados.length - 1, Math.ceil((p / 100) * ordenados.length) - 1)];
 }
 
-/** Processamento e avaliações por agente, no período. O de mais chamadas primeiro. */
+/**
+ * Processamento e avaliações por linha (agente, ou parte da IA dos chamados),
+ * no período. A de mais chamadas primeiro.
+ */
 export function agentesDaCeci(mensagens: MensagemDaCeci[], chamadas: ChamadaDaCeci[], agora: Date): AgenteDaCeci[] {
   const por = new Map<string, AgenteDaCeci & { tempos: number[] }>();
-  const linha = (code: string) => {
-    let l = por.get(code);
+  const linha = (code: string, chave: string, nome: string) => {
+    let l = por.get(chave);
     if (!l) {
-      l = { agentCode: code, nome: nomeDoAgente(code), chamadas: 0, erros: 0, travadas: 0, mediaMs: null, p90Ms: null, custoCents: 0, semCusto: 0, boas: 0, ruins: 0, cortadas: 0, tempos: [] };
-      por.set(code, l);
+      l = { chave, agentCode: code, nome, doChat: ehDoChat(code), chamadas: 0, erros: 0, travadas: 0, mediaMs: null, p90Ms: null, custoCents: 0, semCusto: 0, boas: 0, ruins: 0, cortadas: 0, tempos: [] };
+      por.set(chave, l);
     }
     return l;
   };
   for (const c of chamadas) {
-    const l = linha(c.agentCode);
+    const { chave, nome } = linhaDaChamada(c);
+    const l = linha(c.agentCode, chave, nome);
     l.chamadas++;
     if (c.ok === false) l.erros++;
     if (c.ok === null && c.finishedAt === null && agora.getTime() - c.startedAt.getTime() > TRAVADA_DEPOIS_DE_MS) l.travadas++;
@@ -122,7 +170,8 @@ export function agentesDaCeci(mensagens: MensagemDaCeci[], chamadas: ChamadaDaCe
   }
   for (const m of mensagens) {
     if (m.role !== "ASSISTENTE") continue;
-    const l = linha(m.agentCode);
+    const l = linha(m.agentCode, m.agentCode, nomeDoAgente(m.agentCode));
+    l.doChat = true;
     if (m.rating === "BOA") l.boas++;
     if (m.rating === "RUIM") l.ruins++;
     if (m.truncated) l.cortadas++;
@@ -178,8 +227,9 @@ export function pontosDaCeci({
   }
 
   for (const ag of agentes) {
+    // Avaliação só existe no chat; a IA dos chamados entra nos pontos de erro, travada e custo.
     const avaliadas = ag.boas + ag.ruins;
-    if (avaliadas >= 5 && pct(ag.ruins, avaliadas) >= 30) {
+    if (ag.doChat && avaliadas >= 5 && pct(ag.ruins, avaliadas) >= 30) {
       pontos.push({ tom: "atencao", texto: `${ag.nome}: ${pct(ag.ruins, avaliadas)}% das respostas avaliadas levaram 👎 (${ag.ruins} de ${avaliadas}).` });
     }
     if (ag.chamadas >= 10 && pct(ag.erros, ag.chamadas) >= 5) {
@@ -208,7 +258,7 @@ export function pontosDaCeci({
 /** Busca o período (as 8 semanas) e monta a tela. */
 export async function acompanhamentoDaCeci(tenantId: string, agora = new Date()) {
   const desde = new Date(new Date(`${segundaDaSemana(agora)}T00:00:00Z`).getTime() - (SEMANAS - 1) * 7 * DIA_MS);
-  const agentes = [...AGENTES_DO_CHAT];
+  const agentes = [...AGENTES_DO_CHAT, AGENTE_DOS_CHAMADOS];
   const prisma = getPrisma();
   const [mensagensBrutas, chamadas] = await Promise.all([
     prisma.agentMessage.findMany({
@@ -218,7 +268,7 @@ export async function acompanhamentoDaCeci(tenantId: string, agora = new Date())
     }),
     prisma.agentRun.findMany({
       where: { tenantId, agentCode: { in: agentes }, startedAt: { gte: desde } },
-      select: { agentCode: true, startedAt: true, finishedAt: true, ok: true, error: true, costCents: true },
+      select: { agentCode: true, startedAt: true, finishedAt: true, ok: true, error: true, costCents: true, entityType: true },
       orderBy: { startedAt: "desc" },
       take: 50_000,
     }),
@@ -229,7 +279,7 @@ export async function acompanhamentoDaCeci(tenantId: string, agora = new Date())
   const falhas = chamadas
     .filter((c) => c.ok === false)
     .slice(0, FALHAS_NA_TELA)
-    .map((c) => ({ agentCode: c.agentCode, nome: nomeDoAgente(c.agentCode), quando: c.startedAt, erro: (c.error ?? "sem mensagem").slice(0, 300) }));
+    .map((c) => ({ agentCode: c.agentCode, nome: linhaDaChamada(c).nome, quando: c.startedAt, erro: (c.error ?? "sem mensagem").slice(0, 300) }));
   return {
     desde,
     semanas: semanasDaCeci(mensagens, chamadas, agora),

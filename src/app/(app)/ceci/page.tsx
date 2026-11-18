@@ -161,7 +161,7 @@ export default async function CeciPage() {
                 <table className="w-full min-w-[560px]">
                   <thead>
                     <tr>
-                      {["Ceci", "Chamadas", "Erros", "Média", "P90", "Custo"].map((c) => (
+                      {["Agente", "Chamadas", "Erros", "Média", "P90", "Custo"].map((c) => (
                         <th key={c} className="px-3 py-2">
                           {c}
                         </th>
@@ -170,8 +170,10 @@ export default async function CeciPage() {
                   </thead>
                   <tbody>
                     {agentes.map((g) => (
-                      <tr key={g.agentCode} className="border-b border-border-soft tabular-nums">
-                        <td className="px-3 py-2 font-medium">{g.nome}</td>
+                      <tr key={g.chave} className="border-b border-border-soft tabular-nums">
+                        <td className="px-3 py-2 font-medium max-w-[16rem] truncate" title={g.nome}>
+                          {g.nome}
+                        </td>
                         <td className="px-3 py-2">{g.chamadas}</td>
                         <td className={`px-3 py-2 ${g.erros > 0 ? "text-danger font-medium" : ""}`}>
                           {g.erros}
