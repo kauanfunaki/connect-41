@@ -63,7 +63,9 @@ export type ItemDoHolerite = {
   incideInss: boolean;
   incideFgts: boolean;
   incideIrrf: boolean;
-  entraNaMedia: boolean;
+  mediaFerias: boolean;
+  mediaDecimo: boolean;
+  mediaRescisao: boolean;
 };
 
 export type Encargos = {
@@ -157,7 +159,9 @@ export function rubricaDoPapel(rubricas: ReadonlyMap<PapelDaRubrica, RubricaDoMo
     incideInss: false,
     incideFgts: false,
     incideIrrf: false,
-    entraNaMedia: false,
+    mediaFerias: false,
+    mediaDecimo: false,
+    mediaRescisao: false,
   };
 }
 
@@ -173,7 +177,9 @@ export function itemDaRubrica(r: RubricaDoMotor, valor: number, referencia: stri
     incideInss: r.incideInss,
     incideFgts: r.incideFgts,
     incideIrrf: r.incideIrrf,
-    entraNaMedia: r.entraNaMedia,
+    mediaFerias: r.mediaFerias,
+    mediaDecimo: r.mediaDecimo,
+    mediaRescisao: r.mediaRescisao,
   };
 }
 

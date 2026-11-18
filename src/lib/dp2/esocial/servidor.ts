@@ -337,7 +337,7 @@ export async function gerarDesligamento(tenantId: string, personId: string, d: P
   if (!tab.ok) return { ok: false, erro: `Faltam tabelas para ${competencia}: ${tab.faltam.join(", ")}.` };
   const [pessoa, media] = await Promise.all([
     prisma.person.findFirst({ where: { id: personId, tenantId }, select: { dp2Vinculo: true } }),
-    mediaDaPessoa(tenantId, personId, competencia),
+    mediaDaPessoa(tenantId, personId, competencia, "RESCISAO"),
   ]);
   await garantirRubricas(tenantId);
   const rubricas = await prisma.dp2Rubrica.findMany({ where: { tenantId }, select: { codigo: true, papel: true } });

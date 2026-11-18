@@ -54,7 +54,10 @@ export type RubricaDoMotor = {
   incideInss: boolean;
   incideFgts: boolean;
   incideIrrf: boolean;
-  entraNaMedia: boolean;
+  /** Entra na média de férias, de 13º e de rescisão (17/11/2026, melhoria-742). */
+  mediaFerias: boolean;
+  mediaDecimo: boolean;
+  mediaRescisao: boolean;
 };
 
 export const TIPOS_DE_RUBRICA: readonly TipoDaRubrica[] = ["PROVENTO", "DESCONTO", "INFORMATIVA"];
@@ -89,7 +92,7 @@ export const PAPEIS_LANCAVEIS: ReadonlySet<PapelDaRubrica> = new Set([
   "SERVICO_AUTONOMO",
 ]);
 
-type Padrao = Omit<RubricaDoMotor, "incideInss" | "incideFgts" | "incideIrrf" | "entraNaMedia"> & {
+type Padrao = Omit<RubricaDoMotor, "incideInss" | "incideFgts" | "incideIrrf" | "mediaFerias" | "mediaDecimo" | "mediaRescisao"> & {
   /** INSS_IRRF: contribuinte individual (sem FGTS); SO_IRRF: bolsa de estágio. */
   incide: "TODAS" | "NENHUMA" | "SO_FGTS" | "INSS_IRRF" | "SO_IRRF";
   entraNaMedia?: boolean;
@@ -138,7 +141,10 @@ export const RUBRICAS_PADRAO: readonly RubricaDoMotor[] = PADRAO.map(({ incide, 
   incideInss: incide === "TODAS" || incide === "INSS_IRRF",
   incideFgts: incide === "TODAS" || incide === "SO_FGTS",
   incideIrrf: incide === "TODAS" || incide === "INSS_IRRF" || incide === "SO_IRRF",
-  entraNaMedia: entraNaMedia ?? false,
+  // As variáveis da lista padrão entram nas três médias; o escritório separa depois.
+  mediaFerias: entraNaMedia ?? false,
+  mediaDecimo: entraNaMedia ?? false,
+  mediaRescisao: entraNaMedia ?? false,
 }));
 
 export const PAPEIS: ReadonlySet<string> = new Set(RUBRICAS_PADRAO.map((r) => r.papel).filter((p): p is PapelDaRubrica => p !== null));

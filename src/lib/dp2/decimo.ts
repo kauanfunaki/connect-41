@@ -80,7 +80,9 @@ function rubrica(rubricas: ReadonlyMap<PapelDaRubrica, RubricaDoMotor>, papel: P
       incideInss: false,
       incideFgts: false,
       incideIrrf: false,
-      entraNaMedia: false,
+      mediaFerias: false,
+      mediaDecimo: false,
+      mediaRescisao: false,
     }
   );
 }

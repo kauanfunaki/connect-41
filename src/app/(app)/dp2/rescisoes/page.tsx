@@ -85,7 +85,7 @@ export default async function RescisoesDoDp2({ searchParams }: { searchParams: P
       if (!tab.ok) {
         resultado = <Aviso tom="perigo">Faltam tabelas para {competencia}: {tab.faltam.join(", ")}.</Aviso>;
       } else {
-        const media = await mediaDaPessoa(tela.tenantId, pessoa.id, competencia);
+        const media = await mediaDaPessoa(tela.tenantId, pessoa.id, competencia, "RESCISAO");
         const c = calcularRescisaoDoDp2({
           motivo,
           admissao: pessoa.admissionDate,

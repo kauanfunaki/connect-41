@@ -56,7 +56,7 @@ export default async function FeriasDoDp2({ searchParams }: { searchParams: Prom
     if (!tab.ok) {
       resultado = <Aviso tom="perigo">Faltam tabelas para {competencia}: {tab.faltam.join(", ")}.</Aviso>;
     } else {
-      const media = await mediaDaPessoa(tela.tenantId, pessoa.id, competencia);
+      const media = await mediaDaPessoa(tela.tenantId, pessoa.id, competencia, "FERIAS");
       const c = calcularFerias({
         inicio: new Date(`${inicio}T00:00:00.000Z`),
         diasDeGozo: dias,
