@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { isFullWrite } from "@/lib/auth/papeis";
 import { podeAbrir, podeVerInterno, podeVerInternoNo, podeVer, escoposDaBusca, type EscopoDaBusca } from "./acesso";
 import type { Contexto } from "./contexto";
+import { ordemDaLista, ORDEM_DE_ATENDIMENTO } from "./ordem";
 import { categoriaSchema, dadosRascunhoSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
 
 export const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
@@ -115,13 +116,14 @@ export async function lista(c: Contexto, filtros: Record<string, string | undefi
   // que o cartão mostra ao lado da situação. Quem não é da equipe não vê os internos.
   const soPublicos = soOQuePodeLer(c);
   const [rows, total, drafts] = await Promise.all([
-    getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 }, events: { where: soPublicos, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 3 } }, orderBy: filtros.status === "NA_FILA" || (!filtros.status && (filtros.aba ?? padrao) === "fila") ? [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }] : [{ updatedAt: "desc" }, { id: "desc" }], take: 25, skip: (page - 1) * 25 }),
+    getPrisma().helpdeskTicket.findMany({ where, include: { category: true, assignees: true, cycles: { orderBy: { cycleNumber: "desc" }, take: 1 }, events: { where: soPublicos, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 3 } }, orderBy: ordemDaLista(), take: 25, skip: (page - 1) * 25 }),
     getPrisma().helpdeskTicket.count({ where }),
     getPrisma().helpdeskDraft.findMany({ where: { tenantId: c.ctx.tenantId, createdById: c.ctx.userId, submittedAt: null }, orderBy: { updatedAt: "desc" }, take: 20 }),
   ]);
   const [abertosCount, filaCount, aguardandoCount, pausaCount, historicoCount] = await Promise.all(["abertos", "fila", "aguardando", "pausa", "historico"].map(countAba));
   // Uma fila por setor que atende (12/11/2026): a posição conta dentro do setor do chamado.
-  const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true, handlingSectorCode: true } });
+  // A lista vem do mais recente (melhoria-784); a posição segue a ordem de atendimento.
+  const fila = await getPrisma().helpdeskTicket.findMany({ where: { AND: [whereVisivel(c), { status: "NA_FILA" }] }, orderBy: ORDEM_DE_ATENDIMENTO, select: { id: true, handlingSectorCode: true } });
   const porSetor = new Map<string, number>(), posicoes = new Map<string, number>();
   for (const t of fila) { const n = (porSetor.get(t.handlingSectorCode) ?? 0) + 1; porSetor.set(t.handlingSectorCode, n); posicoes.set(t.id, n); }
   // O texto dos comentários entre esses eventos, para a dica ao lado de "Suporte comentou".
