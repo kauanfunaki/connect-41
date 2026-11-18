@@ -53,7 +53,7 @@ describe("faixa do prazo no cartão Atendimento", () => {
   it("pausado, ajustado, sem primeira resposta", () => {
     const p = painelDoPrazo(ciclo({ pausedAt: "2026-11-05T14:00:00Z", manualDeadline: true, firstResponseAt: null }), "AGUARDANDO_USUARIO", agora);
     expect(p.titulo).toBe("Resolver até hoje, 14:30 (ajustado)");
-    expect(p.restante).toBe("SLA pausado desde hoje, 11:00");
+    expect(p.restante).toBe("Prazo parado desde hoje, 11:00");
     expect(p.primeiraResposta).toBe("primeira resposta atrasada (era até hoje, 08:40)");
     expect(p).toMatchObject({ tom: "pausado", rotulo: "Pausado" });
   });
@@ -62,8 +62,8 @@ describe("faixa do prazo no cartão Atendimento", () => {
     expect(painelDoPrazo(ciclo({ resolvedAt: "2026-11-05T19:00:00Z" }), "RESOLVIDO", agora)).toMatchObject({ tom: "perigo", rotulo: "Resolvido fora do prazo" });
   });
   it("sem ciclo: o SLA ainda não começou, sem barra", () => {
-    expect(painelDoPrazo(undefined, "NA_FILA", agora)).toMatchObject({ titulo: "SLA ainda não começou", usado: null });
+    expect(painelDoPrazo(undefined, "NA_FILA", agora)).toMatchObject({ titulo: "O prazo ainda não começou", usado: null });
     expect(painelDoPrazo(undefined, "CANCELADO", agora)).toMatchObject({ titulo: "Chamado encerrado", usado: null });
-    expect(painelDoPrazo(undefined, "AGUARDANDO_TRIAGEM", agora)).toMatchObject({ titulo: "Triagem em andamento", usado: null, rotulo: "Sem SLA" });
+    expect(painelDoPrazo(undefined, "AGUARDANDO_TRIAGEM", agora)).toMatchObject({ titulo: "Triagem em andamento", usado: null, rotulo: "Sem prazo" });
   });
 });

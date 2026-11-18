@@ -26,6 +26,35 @@ export function montarLinhaDoTempo({ mensagens, anexos, eventos }: { mensagens: 
   return itens.sort((a, b) => a.quando.getTime() - b.quando.getTime() || a.id.localeCompare(b.id));
 }
 
+export type EventoNaLinha = Extract<ItemDaLinha, { tipo: "evento" }>;
+export type BlocoDaLinha = { tipo: "item"; item: ItemDaLinha } | { tipo: "eventos"; id: string; eventos: EventoNaLinha[] };
+/**
+ * A conversa com os eventos recolhidos (18/11/2026, melhoria-782): dois ou mais
+ * eventos seguidos viram um bloco ("3 alterações") que abre; um evento sozinho,
+ * as mensagens e os arquivos ficam como estão. `soMensagens` tira os eventos e
+ * deixa mensagens e arquivos.
+ */
+export function agruparLinha(itens: ItemDaLinha[], { soMensagens = false }: { soMensagens?: boolean } = {}): BlocoDaLinha[] {
+  const blocos: BlocoDaLinha[] = [];
+  let seguidos: EventoNaLinha[] = [];
+  const fechar = () => {
+    if (seguidos.length === 1) blocos.push({ tipo: "item", item: seguidos[0] });
+    else if (seguidos.length > 1) blocos.push({ tipo: "eventos", id: `eventos-${seguidos[0].id}`, eventos: seguidos });
+    seguidos = [];
+  };
+  for (const item of itens) {
+    if (item.tipo === "evento") { if (!soMensagens) seguidos.push(item); continue; }
+    fechar(); blocos.push({ tipo: "item", item });
+  }
+  fechar();
+  return blocos;
+}
+/** O nome do bloco recolhido: "3 alterações", "2 alterações internas" quando todas são só da equipe. */
+export function rotuloDoBloco(eventos: Pick<EventoDaLinha, "internal">[]): string {
+  const internas = eventos.every(e => e.internal);
+  return `${eventos.length} ${eventos.length === 1 ? "alteração" : "alterações"}${internas ? eventos.length === 1 ? " interna" : " internas" : ""}`;
+}
+
 const lista = (ids: unknown, nome: (id: string) => string) => Array.isArray(ids) ? ids.filter((v): v is string => typeof v === "string").map(nome).join(", ") : null;
 /**
  * Quem fez e o quê, numa frase: "Ana alterou a situação para Em andamento".

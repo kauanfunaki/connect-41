@@ -64,8 +64,8 @@ export function duracao(minutos: number): string {
 export function painelDoPrazo(ciclo: CicloDoPainel | undefined, status: string, agora: Date): PainelDoPrazo {
   if (!ciclo) {
     if (fechado(status)) return { titulo: "Chamado encerrado", restante: null, primeiraResposta: null, usado: null, tom: "resolvido", rotulo: "Encerrado" };
-    if (emTriagem(status)) return { titulo: "Triagem em andamento", restante: "O SLA começa depois, quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem SLA" };
-    return { titulo: "SLA ainda não começou", restante: "Começa quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem SLA" };
+    if (emTriagem(status)) return { titulo: "Triagem em andamento", restante: "O prazo começa a contar quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem prazo" };
+    return { titulo: "O prazo ainda não começou", restante: "Começa quando o atendimento passa para Em andamento.", primeiraResposta: null, usado: null, tom: "pausado", rotulo: "Sem prazo" };
   }
   const aberto = data(ciclo.openedAt), vence = data(ciclo.resolutionDueAt);
   const total = Math.max(1, minutosUteisEntre(aberto, vence) - ciclo.pausedMinutes);
@@ -86,7 +86,7 @@ export function painelDoPrazo(ciclo: CicloDoPainel | undefined, status: string, 
   if (ciclo.pausedAt) {
     const pausa = data(ciclo.pausedAt);
     const usado = Math.min(1, Math.max(0, (total - minutosUteisEntre(pausa, vence)) / total));
-    return { titulo, restante: `SLA pausado desde ${quandoCurto(pausa, agora)}`, primeiraResposta, usado, tom: "pausado", rotulo: "Pausado" };
+    return { titulo, restante: `Prazo parado desde ${quandoCurto(pausa, agora)}`, primeiraResposta, usado, tom: "pausado", rotulo: "Pausado" };
   }
   if (vence < agora) return { titulo, restante: `atrasado há ${duracao(minutosUteisEntre(vence, agora))} úteis`, primeiraResposta, usado: 1, tom: "perigo", rotulo: "Atrasado" };
   const falta = minutosUteisEntre(agora, vence);
