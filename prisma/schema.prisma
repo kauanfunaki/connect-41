@@ -2449,6 +2449,11 @@ model Company {
   foundationDate        DateTime? // Data de abertura da empresa
   cnaePrincipal         String?       @db.VarChar(20) // Código CNAE principal, ex: 6920-6/01
   cnaeSecundarios       String?       @db.Text // Lista de códigos CNAE secundários, separados por vírgula
+  /// Natureza jurídica da tabela da Receita, código e descrição juntos como no
+  /// cartão CNPJ: "206-2 - Sociedade Empresária Limitada" (18/11/2026). Vem da
+  /// consulta do CNPJ no formulário; o código é o começo do texto. Ver
+  /// src/lib/empresas/naturezaJuridica.ts.
+  naturezaJuridica      String?       @db.VarChar(120)
   // Endereço
   zipCode               String?       @db.VarChar(10)
   addressStreet         String?       @db.VarChar(180)

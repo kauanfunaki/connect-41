@@ -17,6 +17,7 @@ import { validarMatriz } from "@/lib/companyHierarchyDb";
 import { rotuloDoDocumento } from "@/lib/companyTaxId";
 import { camposDoRegime } from "@/lib/taxRegime";
 import { dadosSpedDoFormulario, erroDosDadosSped } from "@/lib/empresas/camposSped";
+import { erroDaNaturezaJuridica, naturezaJuridicaDoFormulario } from "@/lib/empresas/naturezaJuridica";
 import { ASSINATURA_SOMENTE_LEITURA, papelExclui } from "@/lib/exclusao/comum";
 import { SO_ADMIN_EXCLUI } from "@/lib/auth/papeis";
 import { excluirEmpresasEmMassa as excluirEmpresasEmMassaDeVez } from "@/lib/exclusao/empresa";
@@ -39,6 +40,7 @@ function companyData(form: FormData) {
     foundationDate:        pickDate(form, "foundationDate"),
     cnaePrincipal:         pick(form, "cnaePrincipal"),
     cnaeSecundarios:       pick(form, "cnaeSecundarios"),
+    naturezaJuridica:      naturezaJuridicaDoFormulario(form),
     zipCode:               pick(form, "zipCode"),
     addressStreet:         pick(form, "addressStreet"),
     addressNumber:         pick(form, "addressNumber"),
@@ -92,6 +94,8 @@ async function validateCompany(
   // Nenhum é obrigatório; só o formato do que veio preenchido.
   const erroSped = erroDosDadosSped(data);
   if (erroSped) return erroSped;
+  const erroNatureza = erroDaNaturezaJuridica(data.naturezaJuridica);
+  if (erroNatureza) return erroNatureza;
 
   const documento = ehPF ? data.cpf : data.cnpj;
   const rotulo = rotuloDoDocumento(data.kind);

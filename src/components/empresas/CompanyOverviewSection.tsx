@@ -60,6 +60,7 @@ type Props = {
     nire: string | null;
     cnaePrincipal: string | null;
     cnaeSecundarios: string | null;
+    naturezaJuridica: string | null;
     source: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -142,7 +143,11 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
 
       {(company.municipalRegistration ||
         (!ehPF &&
-          (company.stateRegistration || company.nire || company.cnaePrincipal || company.cnaeSecundarios))) && (
+          (company.stateRegistration ||
+            company.nire ||
+            company.cnaePrincipal ||
+            company.cnaeSecundarios ||
+            company.naturezaJuridica))) && (
         <Card className="p-5">
           <h2 className={TITULO}>Dados fiscais</h2>
           {/* Os mesmos campos que o formulário não pede para PF não aparecem
@@ -156,6 +161,8 @@ export function CompanyOverviewSection({ company, customFields }: Props) {
                 <InfoRow label="NIRE" value={company.nire} mono />
                 <InfoRow label="CNAE principal" value={company.cnaePrincipal} mono />
                 <InfoRow label="CNAEs secundários" value={company.cnaeSecundarios} mono className="sm:col-span-2 lg:col-span-4" />
+                {/* Na mesma ordem do formulário: depois dos CNAEs, em duas colunas. */}
+                <InfoRow label="Natureza jurídica" value={company.naturezaJuridica} className="sm:col-span-2" />
               </>
             )}
           </div>
