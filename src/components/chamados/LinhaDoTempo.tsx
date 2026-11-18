@@ -1,9 +1,13 @@
 import { AlarmClock, ArrowRightLeft, CalendarClock, CircleDot, FilePlay, Flag, ListChecks, ListOrdered, Lock, Paperclip, Pencil, RotateCcw, ShieldCheck, ShieldX, Tag, Ticket, UserPlus, Users, type LucideIcon } from "lucide-react";
 import { IconeDoArquivo as IconeDosArquivos } from "@/components/arquivos/IconeDoArquivo";
-import { formatInstantDateTime } from "@/lib/format";
-import { descreverEvento, tamanhoDoArquivo, type AnexoDaLinha, type ItemDaLinha } from "@/lib/chamados/linhaDoTempo";
+import { formatInstantDateTime, formatInstantTime } from "@/lib/format";
+import { Accordion } from "@/components/ui/Accordion";
+import { agruparLinha, descreverEvento, rotuloDoBloco, tamanhoDoArquivo, type AnexoDaLinha, type EventoNaLinha, type ItemDaLinha } from "@/lib/chamados/linhaDoTempo";
 
 const data = (v: Date | string) => formatInstantDateTime(new Date(v));
+/** O fim de um intervalo: só a hora quando cai no mesmo dia do começo. */
+const dia = (v: Date | string) => formatInstantDateTime(new Date(v), { day: "2-digit", month: "2-digit", year: "numeric" });
+const hora = (fim: Date | string, inicio: Date | string) => dia(fim) === dia(inicio) ? formatInstantTime(new Date(fim), { hour: "2-digit", minute: "2-digit" }) : data(fim);
 export const iniciais = (nome: string) => nome.trim().split(/\s+/).filter(Boolean).map(p => p[0]).filter((_, i, partes) => i === 0 || i === partes.length - 1).join("").toLocaleUpperCase("pt-BR") || "?";
 export function Avatar({ nome, className = "size-7 text-micro" }: { nome: string; className?: string }) {
   return <span aria-hidden className={`inline-flex shrink-0 items-center justify-center rounded-full bg-brand-subtle font-semibold text-brand ${className}`}>{iniciais(nome)}</span>;
@@ -23,15 +27,39 @@ export function LinkDoAnexo({ anexo }: { anexo: Pick<AnexoDaLinha, "id" | "fileN
 const ICONE_DO_EVENTO: Record<string, LucideIcon> = { created: Ticket, status: ArrowRightLeft, assignees: UserPlus, participants: Users, priority: Flag, checklist: ListChecks, deadline: CalendarClock, queue: ListOrdered, reopen_requested: RotateCcw, reopen_decided: RotateCcw, sla: AlarmClock, category: Tag, details: Pencil };
 const Interno = () => <span className="inline-flex items-center gap-1 text-warning-fg"><Lock size={11} aria-hidden />Somente a equipe</span>;
 
-// Mensagens em cartão, arquivos e eventos em uma linha com ícone (26/10/2026).
-export function LinhaDoTempo({ itens, nome }: { itens: ItemDaLinha[]; nome: (id: string) => string }) {
-  return <ol aria-label="Conversa e histórico do chamado" className="space-y-3">{itens.map(item => {
+/**
+ * Mensagens em cartão, arquivos e eventos em uma linha com ícone (26/10/2026).
+ *
+ * Desde 18/11/2026 (melhoria-782, alternativa C) dois ou mais eventos seguidos
+ * viram uma linha recolhida ("3 alterações", com o resumo) que abre no clique,
+ * e a mensagem ganha a letra de leitura: a conversa é o que se lê, o histórico
+ * fica um degrau abaixo. `soMensagens` esconde os eventos.
+ */
+export function LinhaDoTempo({ itens, nome, soMensagens = false }: { itens: ItemDaLinha[]; nome: (id: string) => string; soMensagens?: boolean }) {
+  return <ol aria-label={soMensagens ? "Mensagens do chamado" : "Conversa e histórico do chamado"} className="space-y-3">{agruparLinha(itens, { soMensagens }).map(bloco =>
+    bloco.tipo === "eventos" ? <BlocoDeEventos key={bloco.id} eventos={bloco.eventos} nome={nome} /> : <ItemDaConversa key={bloco.item.id} item={bloco.item} nome={nome} />)}</ol>;
+}
+
+function BlocoDeEventos({ eventos, nome }: { eventos: EventoNaLinha[]; nome: (id: string) => string }) {
+  const resumo = eventos.map(e => descreverEvento(e.evento, nome).texto).join("; ");
+  const primeiro = eventos[0].evento.createdAt, ultimo = eventos[eventos.length - 1].evento.createdAt;
+  const horas = data(primeiro) === data(ultimo) ? data(primeiro) : `${data(primeiro)} a ${hora(ultimo, primeiro)}`;
+  return <li>
+    <Accordion classeDoCabecalho="w-full items-center gap-2 rounded-md py-1 pl-1.5 pr-2 text-helper text-fg-secondary hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand"
+      classeDoConteudo="pt-2"
+      titulo={<span className="flex min-w-0 items-baseline gap-2"><span className="shrink-0 font-semibold text-fg">{rotuloDoBloco(eventos.map(e => e.evento))}</span><span className="min-w-0 flex-1 truncate" data-dica={resumo}>{resumo}</span><span className="shrink-0 tabular-nums text-fg-muted max-sm:hidden">{horas}</span></span>}>
+      <ol className="space-y-3 border-l border-dashed border-border-strong pl-2 ml-3">{eventos.map(e => <ItemDaConversa key={e.id} item={e} nome={nome} />)}</ol>
+    </Accordion>
+  </li>;
+}
+
+function ItemDaConversa({ item, nome }: { item: ItemDaLinha; nome: (id: string) => string }) {
     if (item.tipo === "mensagem") {
       const m = item.mensagem;
       return <li key={item.id} className="flex gap-2.5"><Avatar nome={nome(m.authorId)} className="mt-0.5 size-8 text-helper" />
         <div className={`min-w-0 flex-1 rounded-lg border p-3 ${m.internal ? "border-warning/30 bg-warning/5" : "border-border bg-surface"}`}>
           <p className="mb-1 flex flex-wrap items-center gap-x-2 text-helper text-fg-muted"><span className="font-semibold text-fg">{nome(m.authorId)}</span><time dateTime={new Date(m.createdAt).toISOString()}>{data(m.createdAt)}</time>{m.internal && <Interno />}</p>
-          {m.body && <p className="whitespace-pre-wrap break-words text-ui text-fg-secondary">{m.body}</p>}
+          {m.body && <p className="whitespace-pre-wrap break-words text-body leading-relaxed text-fg">{m.body}</p>}
           {!!item.anexos.length && <div className={`flex flex-wrap gap-2 ${m.body ? "mt-2" : ""}`}>{item.anexos.map(a => <LinkDoAnexo key={a.id} anexo={a} />)}</div>}
         </div></li>;
     }
@@ -44,5 +72,4 @@ export function LinhaDoTempo({ itens, nome }: { itens: ItemDaLinha[]; nome: (id:
     const Icone = e.type === "approval" ? ((e.data as { aprovado?: boolean })?.aprovado ? ShieldCheck : ShieldX) : ICONE_DO_EVENTO[e.type] ?? CircleDot;
     return <li key={item.id} className="flex items-start gap-2.5 pl-1 text-helper text-fg-secondary"><span aria-hidden className={`mt-px inline-flex size-6 shrink-0 items-center justify-center rounded-full ${e.internal ? "bg-warning/10 text-warning-fg" : "bg-surface-hover text-fg-muted"}`}><Icone size={13} /></span>
       <div className="min-w-0 flex-1 pt-0.5"><p className="flex flex-wrap items-center gap-x-2"><span className="break-words">{texto}</span><time className="text-fg-muted" dateTime={new Date(e.createdAt).toISOString()}>{data(e.createdAt)}</time>{e.internal && <Interno />}</p>{detalhe && <p className="mt-0.5 whitespace-pre-wrap break-words text-fg-muted">{detalhe}</p>}</div></li>;
-  })}</ol>;
 }

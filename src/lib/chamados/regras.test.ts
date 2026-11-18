@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, tituloDaDescricao, ehTituloProvisorio, triagemSchema, textoDaTriagem, avisoDaTriagem, resultadoDaTriagem, intervaloDaTriagem, SITUACOES_MANUAIS, STATUS, ROTULOS, emTriagem } from "./regras";
+import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, parecerSchema, tituloDaDescricao, ehTituloProvisorio, triagemSchema, textoDaTriagem, avisoDaTriagem, resultadoDaTriagem, intervaloDaTriagem, SITUACOES_MANUAIS, STATUS, ROTULOS, emTriagem, situacoesPermitidas, situacoesDoSeletor } from "./regras";
 import { minutosUteisEntre, somarMinutosUteis } from "./sla";
 
 const dados = dadosSchema.parse({ title: "Acesso ao sistema", description: "Preciso de acesso ao sistema de atendimento para trabalhar.", categoryId: "cat", requesterSectorCode: "fiscal" });
@@ -106,5 +106,39 @@ describe("triagem depois do envio", () => {
   });
   it("confere de 3 em 3 segundos no primeiro minuto e depois de 15 em 15", () => {
     expect(intervaloDaTriagem(0)).toBe(3000); expect(intervaloDaTriagem(59_999)).toBe(3000); expect(intervaloDaTriagem(60_000)).toBe(15000);
+  });
+});
+describe("trocas de situação oferecidas na tela (melhoria-782)", () => {
+  const sem = "NOT_REQUIRED";
+  it("a equipe vê todas as situações manuais menos a atual e Aguardando aprovação", () => {
+    expect(situacoesPermitidas({ status: "EM_ANDAMENTO", approvalStatus: sem }, "equipe")).toEqual(["ABERTO", "NA_FILA", "AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE", "STANDBY", "RESOLVIDO", "CANCELADO"]);
+    expect(situacoesPermitidas({ status: "ABERTO", approvalStatus: "APPROVED" }, "equipe")).toEqual(["NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE", "STANDBY", "RESOLVIDO", "CANCELADO"]);
+    expect(situacoesPermitidas({ status: "STANDBY", approvalStatus: "REJECTED" }, "equipe")).not.toContain("AGUARDANDO_APROVACAO");
+  });
+  it("com aprovação pendente, só cancelar (e Aguardando aprovação se ainda não estiver nela)", () => {
+    expect(situacoesPermitidas({ status: "AGUARDANDO_APROVACAO", approvalStatus: "PENDING" }, "equipe")).toEqual(["CANCELADO"]);
+    expect(situacoesPermitidas({ status: "ABERTO", approvalStatus: "PENDING" }, "equipe")).toEqual(["AGUARDANDO_APROVACAO", "CANCELADO"]);
+  });
+  it("Aguardando aprovação sem aprovação pendente pode ir para qualquer outra, menos ela mesma", () => {
+    expect(situacoesPermitidas({ status: "AGUARDANDO_APROVACAO", approvalStatus: "APPROVED" }, "equipe")).toEqual(["ABERTO", "NA_FILA", "EM_ANDAMENTO", "AGUARDANDO_USUARIO", "AGUARDANDO_REQUERENTE", "STANDBY", "RESOLVIDO", "CANCELADO"]);
+  });
+  it("nada muda durante a triagem, depois de encerrado ou para quem pediu", () => {
+    expect(situacoesPermitidas({ status: "AGUARDANDO_TRIAGEM", approvalStatus: sem }, "equipe")).toEqual([]);
+    expect(situacoesPermitidas({ status: "RESOLVIDO", approvalStatus: sem }, "equipe")).toEqual([]);
+    expect(situacoesPermitidas({ status: "CANCELADO", approvalStatus: sem }, "equipe")).toEqual([]);
+    for (const status of STATUS) for (const approvalStatus of [sem, "PENDING", "APPROVED"]) expect(situacoesPermitidas({ status, approvalStatus }, "solicitante")).toEqual([]);
+  });
+  it("nunca oferece Aguardando triagem nem a situação atual", () => {
+    for (const status of STATUS) for (const approvalStatus of [sem, "PENDING"]) {
+      const lista = situacoesPermitidas({ status, approvalStatus }, "equipe");
+      expect(lista).not.toContain("AGUARDANDO_TRIAGEM"); expect(lista).not.toContain(status);
+    }
+  });
+  it("o seletor junta Aguardando usuário e Aguardando requerente numa opção só", () => {
+    expect(situacoesDoSeletor({ status: "EM_ANDAMENTO", approvalStatus: sem }, "equipe")).toEqual(["ABERTO", "NA_FILA", "AGUARDANDO_USUARIO", "STANDBY", "RESOLVIDO", "CANCELADO"]);
+    expect(situacoesDoSeletor({ status: "AGUARDANDO_REQUERENTE", approvalStatus: sem }, "equipe")).toEqual(["ABERTO", "NA_FILA", "EM_ANDAMENTO", "STANDBY", "RESOLVIDO", "CANCELADO"]);
+    expect(situacoesDoSeletor({ status: "AGUARDANDO_USUARIO", approvalStatus: sem }, "equipe")).not.toContain("AGUARDANDO_REQUERENTE");
+    expect(situacoesDoSeletor({ status: "AGUARDANDO_APROVACAO", approvalStatus: "PENDING" }, "equipe")).toEqual(["CANCELADO"]);
+    expect(situacoesDoSeletor({ status: "EM_ANDAMENTO", approvalStatus: sem }, "solicitante")).toEqual([]);
   });
 });

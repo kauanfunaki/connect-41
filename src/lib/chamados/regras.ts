@@ -20,6 +20,37 @@ export const fechado = (status: string) => status === "RESOLVIDO" || status === 
 export const pausado = (status: string) => ["AGUARDANDO_USUARIO", "AGUARDANDO_APROVACAO", "AGUARDANDO_REQUERENTE", "STANDBY"].includes(status);
 export const aguardandoSolicitante = (status: string) => status === "AGUARDANDO_USUARIO" || status === "AGUARDANDO_REQUERENTE";
 
+// ── As trocas de situação que a tela oferece (18/11/2026, melhoria-782) ─────
+// Não há tabela de transições: o servidor (`alterar` e `mudarStatus`, em
+// comandos.ts) só barra alguns casos. Estas funções repetem as MESMAS regras,
+// para o seletor não oferecer o que daria erro depois do clique; quem guarda
+// continua sendo o servidor.
+/** "equipe": atende no setor do chamado e pode escrever. "solicitante": o resto (quem pediu, o gestor do setor dele). */
+export type PapelNoChamado = "equipe" | "solicitante";
+/**
+ * Para onde o chamado pode ir, sem repetir a atual:
+ * - só a equipe muda a situação (`exigirOperacao`);
+ * - encerrado não muda, e durante a triagem a situação é dela;
+ * - "Aguardando triagem" não se escolhe;
+ * - com aprovação pendente, só "Aguardando aprovação" e "Cancelado";
+ * - "Aguardando aprovação" só com aprovação pendente.
+ */
+export function situacoesPermitidas(chamado: { status: string; approvalStatus: string }, papel: PapelNoChamado): Status[] {
+  if (papel !== "equipe" || fechado(chamado.status) || emTriagem(chamado.status)) return [];
+  const pendente = chamado.approvalStatus === "PENDING";
+  return SITUACOES_MANUAIS.filter(s => s !== chamado.status && (pendente ? s === "AGUARDANDO_APROVACAO" || s === "CANCELADO" : s !== "AGUARDANDO_APROVACAO"));
+}
+/**
+ * O que o seletor mostra: as permitidas, com "Aguardando usuário" e
+ * "Aguardando requerente" numa opção só — no servidor as duas fazem a mesma
+ * coisa (pausam o prazo e liberam a resposta de quem pediu). Fica "Aguardando
+ * usuário"; o chamado que já está em "Aguardando requerente" não ganha a outra.
+ * As duas continuam no banco e nas listas.
+ */
+export function situacoesDoSeletor(chamado: { status: string; approvalStatus: string }, papel: PapelNoChamado): Status[] {
+  return situacoesPermitidas(chamado, papel).filter(s => s !== "AGUARDANDO_REQUERENTE" && !(s === "AGUARDANDO_USUARIO" && chamado.status === "AGUARDANDO_REQUERENTE"));
+}
+
 const id = z.string().trim().min(1).max(191);
 export const campoSchema = z.object({
   key: z.string().regex(/^[a-zA-Z0-9_-]+$/).max(80), label: z.string().trim().min(1).max(120),
