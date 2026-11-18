@@ -1,11 +1,11 @@
-import { AlertTriangle, CheckCircle2, CircleCheck, OctagonAlert, Pause, Timer } from "lucide-react";
+import { AlertTriangle, Ban, CheckCircle2, CircleCheck, OctagonAlert, Pause, Timer } from "lucide-react";
 import type { PainelDoPrazo, TomDoPrazo } from "@/lib/chamados/painelDoPrazo";
 
 // A cor da barra e do rótulo por tom. O rótulo ("No prazo", "Atrasado"…) e o
 // ícone vão sempre junto da barra: a cor reforça, nunca é a única pista.
-const BARRA: Record<TomDoPrazo, string> = { ok: "bg-success", atencao: "bg-warning", perigo: "bg-danger", pausado: "bg-fg-muted", resolvido: "bg-success" };
-const TEXTO: Record<TomDoPrazo, string> = { ok: "text-success-fg", atencao: "text-warning-fg", perigo: "text-danger", pausado: "text-fg-secondary", resolvido: "text-success-fg" };
-const ICONE: Record<TomDoPrazo, typeof Timer> = { ok: CircleCheck, atencao: AlertTriangle, perigo: OctagonAlert, pausado: Pause, resolvido: CheckCircle2 };
+const BARRA: Record<TomDoPrazo, string> = { ok: "bg-success", atencao: "bg-warning", perigo: "bg-danger", pausado: "bg-fg-muted", resolvido: "bg-success", cancelado: "bg-fg-muted" };
+const TEXTO: Record<TomDoPrazo, string> = { ok: "text-success-fg", atencao: "text-warning-fg", perigo: "text-danger", pausado: "text-fg-secondary", resolvido: "text-success-fg", cancelado: "text-fg-secondary" };
+const ICONE: Record<TomDoPrazo, typeof Timer> = { ok: CircleCheck, atencao: AlertTriangle, perigo: OctagonAlert, pausado: Pause, resolvido: CheckCircle2, cancelado: Ban };
 const maiuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**

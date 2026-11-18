@@ -63,7 +63,14 @@ describe("faixa do prazo no cartão Atendimento", () => {
   });
   it("sem ciclo: o SLA ainda não começou, sem barra", () => {
     expect(painelDoPrazo(undefined, "NA_FILA", agora)).toMatchObject({ titulo: "O prazo ainda não começou", usado: null });
-    expect(painelDoPrazo(undefined, "CANCELADO", agora)).toMatchObject({ titulo: "Chamado encerrado", usado: null });
+    expect(painelDoPrazo(undefined, "RESOLVIDO", agora)).toMatchObject({ titulo: "Chamado encerrado", usado: null });
+    expect(painelDoPrazo(undefined, "CANCELADO", agora)).toMatchObject({ titulo: "Chamado cancelado", restante: null, usado: null, tom: "cancelado", rotulo: "Cancelado" });
+  });
+  it("cancelado depois de o prazo começar não vira resolvido (bug-787)", () => {
+    // Cancelar fecha o ciclo como resolver: o resolvedAt vem preenchido.
+    const p = painelDoPrazo(ciclo({ resolvedAt: "2026-11-05T16:00:00Z" }), "CANCELADO", agora);
+    expect(p).toEqual({ titulo: "Chamado cancelado", restante: "O prazo era hoje, 14:30.", primeiraResposta: null, usado: null, tom: "cancelado", rotulo: "Cancelado" });
+    expect(painelDoPrazo(ciclo({ resolvedAt: "2026-11-05T16:00:00Z", manualDeadline: true }), "CANCELADO", agora).restante).toBe("O prazo era hoje, 14:30 (ajustado).");
     expect(painelDoPrazo(undefined, "AGUARDANDO_TRIAGEM", agora)).toMatchObject({ titulo: "Triagem em andamento", usado: null, rotulo: "Sem prazo" });
   });
 });
