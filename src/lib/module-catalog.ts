@@ -26,6 +26,7 @@ export type IconeDeModulo =
   | "Bot"
   | "Briefcase"
   | "Building2"
+  | "Calculator"
   | "CalendarClock"
   | "ChartColumn"
   | "ChartLine"
@@ -603,6 +604,21 @@ export const MODULE_CATALOG: ModuleDef[] = [
     icon: "ShieldCheck",
     group: "Cadastros",
   },
+  // Apoio › Cálculos (18/11/2026, funcionalidade-778, pedido do Victor): as
+  // fórmulas do motor, com exemplo calculado. Fica no grupo Apoio do Geral,
+  // ao lado dos repositórios, mas só para quem vê o setor do módulo (o DP 2):
+  // por isso está em MODULOS_DO_MENU_GERAL (sai do menu do setor) e não em
+  // MODULOS_DO_APOIO (que abre para todo setor). Ver `apoioLigado.calculos`
+  // no layout.
+  {
+    code: "dp2_calculos",
+    label: "Cálculos",
+    sectorCode: "dp2",
+    description: "Todas as fórmulas da folha, com exemplo calculado pelo motor e as tabelas da competência",
+    defaultEnabled: true,
+    icon: "Calculator",
+    group: "Apoio",
+  },
   {
     code: "gestao_cargos_salarios",
     label: "Cargos e salários",
@@ -1082,6 +1098,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   dp2_tabelas:           "/dp2/tabelas",
   dp2_rubricas:          "/dp2/rubricas",
   dp2_convencoes:        "/dp2/convencoes",
+  dp2_calculos:          "/dp2/calculos",
   gestao_cargos_salarios:  "/cargos-salarios",
   gestao_indicadores_rh:   "/indicadores-rh",
   gestao_valora:           "/valora",
@@ -1150,7 +1167,7 @@ export const MODULOS_DE_TODA_A_EQUIPE: ReadonlySet<string> = new Set(["academia"
  * dono: o setor só serve para ligar e desligar o módulo. Solicitações, Arquivos
  * e Chamados são para todos; os de `MODULOS_NOS_CADASTROS`, só para o setor.
  */
-export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", "atendimento", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", "bpo_fluxos", ...MODULOS_DE_TODA_A_EQUIPE]);
+export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solicitacoes", "arquivos", "helpdesk", "atendimento", ...MODULOS_NOS_CADASTROS, "bpo_senhas", "bpo_manual", "bpo_fluxos", "dp2_calculos", ...MODULOS_DE_TODA_A_EQUIPE]);
 
 /**
  * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e

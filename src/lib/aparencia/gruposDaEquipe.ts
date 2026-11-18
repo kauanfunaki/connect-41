@@ -85,6 +85,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   dp2_tabelas: "pessoas",
   dp2_rubricas: "pessoas",
   dp2_convencoes: "pessoas",
+  dp2_calculos: "pessoas",
   gestao_cargos_salarios: "pessoas",
   gestao_indicadores_rh: "pessoas",
   // Recrutamento.

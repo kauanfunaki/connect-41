@@ -231,7 +231,15 @@ export default async function AppLayout({
   // com os seus — quem pode agir em algum setor vê (a tela decide qual).
   const doApoio = (code: string) => moduleStates.some((m) => m.code === code && m.enabled) && ctx.role !== "READONLY";
   // O Repositório de fluxos (10/11/2026) entra no mesmo grupo, com a mesma regra.
-  const apoioLigado = { senhas: doApoio("bpo_senhas"), manuais: doApoio("bpo_manual"), fluxos: doApoio("bpo_fluxos") };
+  // Cálculos do DP 2 (18/11/2026, funcionalidade-778): no mesmo grupo, mas só
+  // para quem vê o setor do módulo, e só dentro dele ou em "Todos os setores".
+  const calculos = moduleStates.find((m) => m.code === "dp2_calculos" && m.enabled);
+  const apoioLigado = {
+    senhas: doApoio("bpo_senhas"),
+    manuais: doApoio("bpo_manual"),
+    fluxos: doApoio("bpo_fluxos"),
+    calculos: !!calculos && canViewSector(ctx, calculos.sectorCodes) && (!activeSector || calculos.sectorCodes.includes(activeSector.code)),
+  };
   const telasNavegaveis = semTelasDoGeralOcultas(
     moduleStates
       .filter((m) => m.enabled && !semMenu.has(m.code) && (m.code === "helpdesk" ? chamadosLigados : MODULOS_DE_TODA_A_EQUIPE.has(m.code) || m.code === "atendimento" ? true : (MODULOS_DO_APOIO as readonly string[]).includes(m.code) ? ctx.role !== "READONLY" : canViewSector(ctx, m.sectorCodes)))
