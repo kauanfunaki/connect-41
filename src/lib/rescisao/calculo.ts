@@ -9,6 +9,7 @@
 // sozinho é inauditável — o conferente precisa ver COMO chegou ali.
 
 import {
+  AVISO_DIAS_BASE,
   DIVISOR_MES,
   TERCO_CONSTITUCIONAL,
   FGTS_ALIQUOTA,
@@ -347,7 +348,10 @@ export function calcularRescisao(input: RescisaoInput, config: RescisaoConfig): 
     );
   } else {
     const fator = tratamento === "METADE" ? 0.5 : 1;
-    const valor = (remuneracao / DIVISOR_MES) * diasAviso * fator;
+    // O desconto do aviso não cumprido é sempre de 30 dias: a proporcionalidade
+    // da Lei 12.506/2011 vale só a favor do empregado (bug-779, 18/11/2026).
+    const dias = tratamento === "DESCONTO" ? AVISO_DIAS_BASE : diasAviso;
+    const valor = (remuneracao / DIVISOR_MES) * dias * fator;
     const sinal = tratamento === "DESCONTO" ? -1 : 1;
     const rotulo =
       tratamento === "DESCONTO"
@@ -359,7 +363,7 @@ export function calcularRescisao(input: RescisaoInput, config: RescisaoConfig): 
       calculado(
         "aviso_previo",
         valor * sinal,
-        `${rotulo}: R$ ${remuneracao.toFixed(2)} ÷ ${DIVISOR_MES} × ${diasAviso} dias${fator !== 1 ? " × 50%" : ""} = R$ ${r2(valor * sinal).toFixed(2)}`,
+        `${rotulo}: R$ ${remuneracao.toFixed(2)} ÷ ${DIVISOR_MES} × ${dias} dias${fator !== 1 ? " × 50%" : ""} = R$ ${r2(valor * sinal).toFixed(2)}`,
         tratamento === "DESCONTO" ? FUNDAMENTO.AVISO_DESCONTO : FUNDAMENTO.AVISO_PROPORCIONAL,
         tratamento === "DESCONTO" ? ["desconto fixo de 30 dias — proporcionalidade beneficia só o empregado"] : [],
         base.confianca
