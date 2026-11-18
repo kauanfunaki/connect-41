@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Selo } from "@/components/ui/Selo";
 import { Button } from "@/components/ui/Button";
 import { MesDoPainel } from "@/components/dp2/MesDoPainel";
+import { EmpresaDoPainel } from "@/components/dp2/EmpresaDoPainel";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { abrirTelaDoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
@@ -16,18 +17,31 @@ import type { TotaisDaCompetencia } from "@/lib/dp2/servidor";
 
 /**
  * Painel do DP 2 (11/11/2026): as competências do mês de todas as empresas,
- * pela etapa em que estão. Não segue a faixa da empresa — é a visão do
- * escritório —, mas com uma empresa em foco mostra só o grupo dela.
+ * pela etapa em que estão. É a visão do escritório: abre com todas, e o filtro
+ * de empresa escolhe uma (17/11/2026, melhoria-741). Antes seguia a empresa em
+ * foco, e como o painel não tem a faixa de abas, não havia como ver todas.
  */
-export default async function PainelDoDp2({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
+export default async function PainelDoDp2({ searchParams }: { searchParams: Promise<{ mes?: string; empresa?: string }> }) {
   const params = await searchParams;
   const { ctx } = await abrirTelaDoModulo("dp2_painel");
   const mes = /^\d{4}-\d{2}$/.test(params.mes ?? "") ? params.mes! : mesAtual();
   const [ano, m] = mes.split("-").map(Number);
   const foco = (await podeUsarOFoco(ctx)) ? await lerEmpresaEmFoco(ctx) : null;
+  const prisma = getPrisma();
 
-  const competencias = await getPrisma().dp2Competencia.findMany({
-    where: { tenantId: ctx.tenantId, ano, mes: m, ...(foco ? { companyId: { in: foco.grupo } } : {}) },
+  // As empresas do filtro: as que já usam o DP 2 (têm alguma competência).
+  const comCompetencia = await prisma.dp2Competencia.findMany({
+    where: { tenantId: ctx.tenantId },
+    distinct: ["companyId"],
+    select: { company: { select: { id: true, name: true, tradeName: true, displayName: true } } },
+  });
+  const empresas = comCompetencia
+    .map((c) => ({ id: c.company.id, nome: nomeExibicao(c.company) }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const filtro = empresas.find((c) => c.id === params.empresa) ?? null;
+
+  const competencias = await prisma.dp2Competencia.findMany({
+    where: { tenantId: ctx.tenantId, ano, mes: m, ...(filtro ? { companyId: filtro.id } : {}) },
     include: { company: { select: { id: true, name: true, tradeName: true, displayName: true } }, _count: { select: { eventos: true } } },
     orderBy: [{ situacao: "asc" }],
   });
@@ -39,10 +53,11 @@ export default async function PainelDoDp2({ searchParams }: { searchParams: Prom
     <PageContainer>
       <PageHeader
         title="Painel do DP 2"
-        subtitle={`${nomeDaCompetencia(ano, m)} · ${foco ? `grupo de ${foco.nome}` : "todas as empresas"}`}
+        subtitle={`${nomeDaCompetencia(ano, m)} · ${filtro ? filtro.nome : "todas as empresas"}`}
       />
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <MesDoPainel mes={mes} />
+        {empresas.length > 1 && <EmpresaDoPainel empresa={filtro?.id ?? ""} empresas={empresas} emFoco={foco?.companyId ?? null} />}
         <span className="text-fs-2 text-fg-muted">
           {porSituacao.ABERTA} aberta(s) · {porSituacao.CALCULADA} calculada(s) · {porSituacao.FECHADA} fechada(s)
         </span>
