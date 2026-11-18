@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ordemDaLista, ORDEM_DE_ATENDIMENTO } from "./ordem";
+import { avisoDaNovaPosicao, ordemDaLista, ORDEM_DE_ATENDIMENTO } from "./ordem";
 
 type Linha = { id: string; createdAt: Date; queueOrder: number | null };
 
@@ -47,5 +47,10 @@ describe("ordem da lista de chamados (melhoria-784)", () => {
     expect(ORDEM_DE_ATENDIMENTO).toEqual([{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]);
     const naFila = chamados.filter(c => c.queueOrder !== null);
     expect(ordenar(naFila, ORDEM_DE_ATENDIMENTO)).toEqual(["b", "c", "a"]);
+  });
+
+  it("o aviso de adiantar ou atrasar diz a posição nova e o tamanho da fila", () => {
+    expect(avisoDaNovaPosicao(2, 5)).toBe("Agora na posição 2 de 5");
+    expect(avisoDaNovaPosicao(1, 1)).toBe("Agora na posição 1 de 1");
   });
 });

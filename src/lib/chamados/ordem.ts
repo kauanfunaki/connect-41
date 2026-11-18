@@ -19,3 +19,12 @@ export function ordemDaLista(): Ordem {
  * posições iguais o mais antigo primeiro. É a que numera o "Posição N de M".
  */
 export const ORDEM_DE_ATENDIMENTO: Ordem = [{ queueOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }];
+
+/**
+ * O aviso depois de adiantar ou atrasar um chamado na fila: o cartão não muda
+ * de lugar (a lista vem pela data de abertura), então o aviso diz a posição nova.
+ * O comando "fila" põe o chamado na posição pedida; as setas só pedem de 1 a `total`.
+ */
+export function avisoDaNovaPosicao(destino: number, total: number): string {
+  return `Agora na posição ${destino} de ${total}`;
+}
