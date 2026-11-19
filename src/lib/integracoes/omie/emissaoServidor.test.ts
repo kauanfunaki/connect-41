@@ -204,6 +204,23 @@ describe("as listas do formulário", () => {
     const r = await listasParaEmitir("t1", "erdias");
     expect(r).toMatchObject({ ok: true, listas: { categoriaSugerida: null } });
   });
+
+  it("Omie sem serviço ou sem cliente cadastrado abre o formulário com a lista vazia, sem erro", async () => {
+    const vazia = () => ({ status: 500, corpo: { faultstring: "ERROR: Não existem registros para a página [1]!" } });
+    respostas.ListarCadastroServico = vazia;
+    respostas.ListarClientes = vazia;
+    const r = await listasParaEmitir("t1", "erdias");
+    if (!r.ok) throw new Error(r.erro);
+    expect(r.listas).toMatchObject({ servicos: [], clientes: [], clientesBloqueados: 0, clientesCortados: false, servicosCortados: false });
+    expect(chamadas.filter((c) => c.call === "ListarCadastroServico")).toHaveLength(1);
+  });
+
+  it("outro erro do Omie na lista de serviços continua barrando, com a mensagem dele", async () => {
+    respostas.ListarCadastroServico = () => ({ status: 500, corpo: { faultstring: "ERROR: Chave de acesso inválida" } });
+    const r = await listasParaEmitir("t1", "erdias");
+    expect(r).toMatchObject({ ok: false });
+    if (!r.ok) expect(r.erro).toContain("Chave de acesso inválida");
+  });
 });
 
 describe("emitir", () => {

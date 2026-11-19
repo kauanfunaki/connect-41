@@ -38,6 +38,7 @@ import {
   dataDoOmie,
   desfechoDoStatus,
   ehNaoEncontrada,
+  ehPaginaVazia,
   ehOsJaCadastrada,
   ehSemResposta,
   lerRespostaDaOS,
@@ -155,6 +156,16 @@ export function esquecerListas(): void {
   cacheDasListas.clear();
 }
 
+/** Página de lista; a vazia (cadastro sem nada) volta `null` em vez de erro. */
+async function paginaOuVazia(cred: CredencialOmie, servico: string, metodo: string, param: Record<string, unknown>): Promise<unknown | null> {
+  try {
+    return await chamarOmieNaFila(cred, servico, metodo, param);
+  } catch (err) {
+    if (ehPaginaVazia(err)) return null;
+    throw err;
+  }
+}
+
 async function lerListas(cred: CredencialOmie): Promise<ListasDoOmie> {
   // Em sequência: cada método tem a sua fila, mas pressa nenhuma aqui justifica
   // somar chamadas simultâneas na mesma conta.
@@ -167,9 +178,9 @@ async function lerListas(cred: CredencialOmie): Promise<ListasDoOmie> {
   let pagina = 1;
   let total = 1;
   do {
-    const r = clientesDaPagina(
-      await chamarOmieNaFila(cred, "geral/clientes", "ListarClientes", { pagina, registros_por_pagina: 100, apenas_importado_api: "N" })
-    );
+    const corpo = await paginaOuVazia(cred, "geral/clientes", "ListarClientes", { pagina, registros_por_pagina: 100, apenas_importado_api: "N" });
+    if (corpo === null) break;
+    const r = clientesDaPagina(corpo);
     clientes.push(...r.clientes);
     clientesBloqueados.push(...r.bloqueados);
     total = r.totalDePaginas;
@@ -182,7 +193,9 @@ async function lerListas(cred: CredencialOmie): Promise<ListasDoOmie> {
   total = 1;
   do {
     // 50 é o máximo por página deste método, pela documentação.
-    const r = servicosDaPagina(await chamarOmieNaFila(cred, "servicos/servico", "ListarCadastroServico", { nPagina: pagina, nRegPorPagina: 50 }));
+    const corpo = await paginaOuVazia(cred, "servicos/servico", "ListarCadastroServico", { nPagina: pagina, nRegPorPagina: 50 });
+    if (corpo === null) break;
+    const r = servicosDaPagina(corpo);
     servicos.push(...r.servicos);
     total = r.totalDePaginas;
     pagina++;
