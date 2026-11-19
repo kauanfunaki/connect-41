@@ -131,6 +131,21 @@ Regras de leitura:
 - O ICMS/IPI é por estabelecimento. O Contribuições usa os estabelecimentos da raiz, com a identificação em cada documento.
 - O hash é o SHA-256 do JSON em UTF-8, sem BOM e sem quebra de linha no fim, com as chaves de todos os objetos em ordem pelo código UTF-16; os arrays mantêm a ordem. A implementação de referência é `serializarPacote`, em `src/lib/fiscal/sped/local/pacote.ts`. Não confira o hash de uma reserialização com outra ordem, outros espaços ou outro escape.
 
+### Notas de crédito e de débito (finNFe 5 e 6)
+
+Desde 19/11/2026 (funcionalidade-793), cada documento do pacote traz a finalidade da NF-e e o que a reforma tributária acrescentou ao `ide`:
+
+| Campo do documento | Conteúdo |
+|---|---|
+| `finalidadeNfe` | `ide/finNFe`: `"1"` normal, `"2"` complementar, `"3"` ajuste, `"4"` devolução, `"5"` nota de crédito, `"6"` nota de débito. Documento do TXT, CT-e, NFS-e e documento gravado antes vêm `"1"`. |
+| `tipoAjuste` | `ide/tpNFCredito` (nota 5) ou `ide/tpNFDebito` (nota 6), `"01"`..`"08"`; texto vazio nas outras. |
+| `referenciadas` | As chaves de `ide/NFref/refNFe` (e de `ide/gPagAntecipado/refNFe`), sem a chave do próprio documento. |
+| `valorIbs`, `valorCbs` | `total/IBSCBSTot/gIBS/vIBS` e `total/IBSCBSTot/gCBS/vCBS`; `null` quando a nota não tem o grupo. |
+
+As notas 5 e 6 ajustam **só IBS/CBS** da nota referenciada. Na `apuracao` do Connect elas ficam fora de `linhas`, `tributos`, `totalEntradas` e `totalSaidas`, e vêm à parte em `apuracao.ajustesIbsCbs` (documento, número, finalidade, motivo, valor, IBS, CBS e referenciadas). O documento continua em `documentos`, com os itens.
+
+**O motor precisa tratar `finalidadeNfe` 5 e 6 do lado dele**: não somar essas notas no C100/C170/C190 como venda ou compra, nem no ICMS/IPI/PIS/COFINS. O Connect não decide como o EFD escritura o documento de ajuste; só deixa de contá-lo na apuração que calcula. Revisão congelada antes de 19/11/2026 não tem os campos.
+
 ### Tamanho do pacote
 
 Medido em 06/11/2026 com CT-e fictícios, pelo `serializarPacote` de verdade: cerca de **1.160 bytes por CT-e**, somando o documento, o item e a parte dele no bloco `escrituracao`.

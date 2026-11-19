@@ -16,6 +16,7 @@ import { criarSugestor, type Sugestao } from "./sugestao";
 import { contasDaEmpresa, linhasDasSaidas, saidasPorDia, type ContasDasSaidas, type DiaDeSaidas, type TipoDeSaida } from "./saidas";
 import type { AuthContext } from "@/lib/auth/context";
 import { scopedCompanyWhere } from "@/lib/auth/scope";
+import { SEM_AJUSTE_IBS_CBS } from "@/lib/fiscal/finalidade";
 
 const TIPO_DO_ACERVO = { NFE, CTE, NFSE } as const;
 
@@ -33,11 +34,14 @@ export async function empresaContabilVisivel(ctx: AuthContext, id: string) {
   return c ? empresaDoContabil(ctx.tenantId, c.id) : null;
 }
 
-/** As entradas da empresa no mês: notas do acervo em que ela é a destinatária (a tomadora, no CT-e). */
+/**
+ * As entradas da empresa no mês: notas do acervo em que ela é a destinatária (a tomadora, no CT-e).
+ * Sem as notas de crédito/débito da reforma (finNFe 5/6, 19/11/2026): ajustam só IBS/CBS e não são compra.
+ */
 export async function entradasDoMes(tenantId: string, empresa: EmpresaDoContabil, competencia: string, fornecedor?: string): Promise<Entrada[]> {
   if (!empresa.cnpj) return [];
   const docs = await getPrisma().fiscalDocument.findMany({
-    where: { tenantId, companyId: empresa.id, competence: competencia, recipientDocument: empresa.cnpj, ...(fornecedor ? { issuerDocument: fornecedor } : {}), type: { in: ["NFE", "CTE", "NFSE"] }, removedAtOrigin: false },
+    where: { tenantId, companyId: empresa.id, competence: competencia, recipientDocument: empresa.cnpj, ...(fornecedor ? { issuerDocument: fornecedor } : {}), type: { in: ["NFE", "CTE", "NFSE"] }, removedAtOrigin: false, AND: [SEM_AJUSTE_IBS_CBS] },
     select: { id: true, type: true, accessKey: true, number: true, series: true, issuerName: true, issuerDocument: true, amount: true, issuedAt: true, situation: true, cfops: true },
   });
   return docs.map((d) => ({

@@ -46,7 +46,18 @@ describe("mapearNotaOmie", () => {
       valor: 1530.45,
       situacao: "AUTORIZADA",
       omieIdNF: "987654",
+      // Sem `finNFe` na resposta: não se sabe, e não "normal".
+      finalidade: null,
     });
+  });
+
+  it("lê a finalidade quando o Omie manda (nota de débito da reforma, 19/11/2026)", () => {
+    const r = mapearNotaOmie(nota({ finNFe: "6" }), CNPJ);
+    expect("fora" in r ? null : r.finalidade).toBe("6");
+    const normal = mapearNotaOmie(nota({ finNFe: 1 }), CNPJ);
+    expect("fora" in normal ? null : normal.finalidade).toBe("1");
+    const estranha = mapearNotaOmie(nota({ finNFe: "9" }), CNPJ);
+    expect("fora" in estranha ? null : estranha.finalidade).toBeNull();
   });
 
   it("deixa de fora entrada, homologação, denegada e outro modelo", () => {

@@ -1,5 +1,6 @@
 import type { BaseLocal } from "./servidor";
 import { somar, type Obrigacao } from "./dominio";
+import { FINALIDADE_LABEL } from "@/lib/fiscal/finalidade";
 export function relatorioLocal(base: BaseLocal, aba: string, obrigacao: Obrigacao): { nome: string; colunas: string[]; linhas: (string | null)[][] }[] {
   const a = obrigacao === "icms_ipi" ? base.icms : base.contribuicoes;
   const apoio = { nome: "Documentos de apoio", colunas: ["Identificação", "Empresa", "Pessoa", "CPF ou CNPJ", "Competência", "Categoria", "Bruto", "Líquido", "Crédito", "Decisão"], linhas: base.apoios.map(p => [p.identidade, p.companyId, p.nome, p.documento, p.competencia, p.categoria, p.bruto, p.liquido, p.credito, p.decisao]) };
@@ -12,6 +13,8 @@ export function relatorioLocal(base: BaseLocal, aba: string, obrigacao: Obrigaca
     { nome: "Documentos fiscais", colunas: ["Identidade", "Empresa", "Tipo", "Número", "Competência", "Sentido", "Valor", "Cancelado", "Completo"], linhas: [...base.documentos.map(d => [d.identidade, d.companyId, d.tipo, d.numero, d.competencia, d.sentido, d.valor, d.cancelado ? "Sim" : "Não", d.completo ? "Sim" : "Não"]), ...base.acervo.map(d => [d.dedupKey, d.companyId, d.type, d.number, d.competence, "Acervo sem itens", d.amount, d.situation === "CANCELADA" ? "Sim" : "Não", "Não"])] }, apoio,
     { nome: "Duplicidades", colunas: ["Pessoa", "Documento", "Competência", "Pagamento", "Bruto", "Ocorrências"], linhas: base.fechamento.duplicatas.map(g => [g[0].nome, g[0].documento, g[0].competencia, g[0].dataPagamento, g[0].bruto, String(g.length)]) },
     { nome: "Faturamento", colunas: ["Grupo", "Valor", "Cobertura"], linhas: [["Saídas fiscais escrituradas", base.icms.totalSaidas], ["Entradas escrituradas com nota", base.icms.totalEntradas], ["Pagamentos sem nota", base.fechamento.bruto], ["Saídas menos entradas escrituradas", somar([base.icms.totalSaidas, `-${base.icms.totalEntradas}`, `-${base.fechamento.bruto}`])]].map(l => [...l, base.acervo.length ? `${base.acervo.length} documento(s) do acervo aguardam itens e não entram nestes totais.` : "Acervo com itens disponível."]) },
+    // As notas de crédito e de débito da reforma (finNFe 5/6, 19/11/2026): fora dos totais acima, informadas à parte.
+    { nome: "Notas de crédito e débito", colunas: ["Nota", "Empresa", "Competência", "Sentido", "Finalidade", "Motivo", "Valor", "IBS", "CBS", "Notas referenciadas"], linhas: (base.icms.ajustesIbsCbs ?? []).map(j => [j.numero, j.empresaId, j.competencia, j.sentido, FINALIDADE_LABEL[j.finalidade], j.motivo, j.valor, j.valorIbs, j.valorCbs, j.referenciadas.join(", ")]) },
   ];
   return [
     { nome: "Apuração", colunas: ["Tributo", "Débitos", "Créditos", "Saldo anterior", "A recolher", "A transportar"], linhas: a.tributos.map(t => [t.tributo, t.debitos, t.creditos, t.saldoAnterior, t.recolher, t.transportar]) },

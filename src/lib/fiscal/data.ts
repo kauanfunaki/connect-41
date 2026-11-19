@@ -12,6 +12,7 @@ import type {
   FiscalDocumentSituation,
 } from "@/generated/prisma/enums";
 import { whereDoAlcance, type AlcanceFiscal } from "./alcance";
+import { whereDaFinalidade, type FinalidadeNfe } from "./finalidade";
 
 export type FiltroDoAcervo = {
   companyId?: string;
@@ -19,6 +20,11 @@ export type FiltroDoAcervo = {
   tipo?: FiscalDocumentType;
   destino?: FiscalDocumentDestination;
   situacao?: FiscalDocumentSituation;
+  /**
+   * A finalidade da NF-e (19/11/2026) — ver src/lib/fiscal/finalidade.ts. "1"
+   * (normal) inclui a nota sem a marca: CT-e, NFS-e e nota anterior à coluna.
+   */
+  finalidade?: FinalidadeNfe;
   /** Número da nota ou nome da contraparte. */
   busca?: string;
   /**
@@ -71,7 +77,9 @@ const TETO_DA_CONTAGEM = 1000;
  * competência, e aí são poucas linhas.
  */
 export function contagemExata(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): boolean {
-  return alcance.tipo === "EMPRESAS" && !filtro.busca?.trim();
+  // A finalidade (19/11/2026) não está no índice da contagem: com ela, conta-se
+  // até o teto, como na busca. É filtro raro, e numa empresa só.
+  return alcance.tipo === "EMPRESAS" && !filtro.busca?.trim() && !filtro.finalidade;
 }
 
 /** As linhas do `groupBy` por destino viram o resumo, com zero no destino que não veio. */
@@ -180,7 +188,9 @@ export function mesclarCompetencias(listas: string[][], limite = MESES_NO_FILTRO
 export function whereDoFiltro(alcance: AlcanceFiscal, filtro: FiltroDoAcervo): Prisma.FiscalDocumentWhereInput {
   const busca = filtro.busca?.trim();
   return {
-    AND: [whereDoAlcance(alcance)],
+    // A finalidade vai no `AND`, ao lado do alcance: o "normal" é um `OR` (com a
+    // nota sem a marca), e a busca por texto, abaixo, já usa o `OR` de cima.
+    AND: [whereDoAlcance(alcance), ...(filtro.finalidade ? [whereDaFinalidade(filtro.finalidade)] : [])],
     // Documento removido na origem sai da listagem — é o "a projeção apaga" do
     // contrato. A linha continua no banco de propósito (ver `removedAtOrigin`
     // no schema), e quem abre o link direto ainda a encontra, com o aviso.
@@ -250,6 +260,7 @@ export async function listarPaginaDoAcervo(
       destination: true,
       completude: true,
       renderizavel: true,
+      finalidade: true,
       company: { select: { id: true, name: true, displayName: true, kind: true, cnpj: true, cpf: true } },
     },
   });
@@ -327,6 +338,20 @@ export async function obterDocumento(alcance: AlcanceFiscal, id: string) {
         },
       },
     },
+  });
+}
+
+/**
+ * As notas referenciadas que estão no acervo, dentro do alcance (19/11/2026): a
+ * ficha da nota de crédito/débito liga cada chave à nota quando ela existe aqui.
+ * Pelo índice `(tenantId, accessKey)`; a chave que não está no acervo some do
+ * resultado, e a tela mostra a chave formatada.
+ */
+export async function documentosPorChave(alcance: AlcanceFiscal, chaves: string[]) {
+  if (chaves.length === 0) return [];
+  return getPrisma().fiscalDocument.findMany({
+    where: { AND: [whereDoAlcance(alcance)], accessKey: { in: chaves.slice(0, 999) } },
+    select: { id: true, accessKey: true, type: true, number: true, series: true },
   });
 }
 

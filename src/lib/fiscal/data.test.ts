@@ -84,6 +84,8 @@ describe("contagem exata (10/11/2026)", () => {
   it("o escritório inteiro e a busca por texto seguem com o teto", () => {
     expect(contagemExata(ESCRITORIO, {})).toBe(false);
     expect(contagemExata(EMPRESA, { busca: "fornecedor" })).toBe(false);
+    // A finalidade não está no índice da contagem (19/11/2026).
+    expect(contagemExata(EMPRESA, { finalidade: "5" })).toBe(false);
   });
 
   it("o resumo preenche com zero o destino que o groupBy não trouxe", () => {

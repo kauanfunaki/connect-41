@@ -1,6 +1,7 @@
-import { chaveCredito, chaveProduto, decimal, mesesDoPeriodo, parametrosSchema, percentual, somar, unidades, type AjusteFiscal, type ApoioEscriturado, type Classificacao, type DecisaoFiscal, type DocumentoEscriturado, type ParametrosFiscais, type ProdutoFiscal, type Obrigacao } from "./dominio";
+import { ajustaSoIbsCbs, chaveCredito, chaveProduto, decimal, mesesDoPeriodo, parametrosSchema, percentual, somar, unidades, type AjusteFiscal, type ApoioEscriturado, type Classificacao, type DecisaoFiscal, type DocumentoEscriturado, type ParametrosFiscais, type ProdutoFiscal, type Obrigacao } from "./dominio";
 import depara from "./depara.json";
 import desempate from "./desempate.json";
+import { motivoDoAjuste } from "@/lib/fiscal/finalidade";
 
 /** Espelha cfop_depara._prefixo_entrada: o prefixo do emitente tem precedência sobre a UF. */
 export function cfopEfetivo(cfop: string | null, ncm: string, sentido: "entrada" | "saida", fonte: "xml" | "txt", decisao: Classificacao | null): string | null {
@@ -24,7 +25,8 @@ export function produtosDaBase(documentos: DocumentoEscriturado[], decisoes: Dec
   const creditos = new Map(decisoes.filter(d => d.tipo === "credito_icms").map(d => [d.chave, String(d.dados.valor)]));
   const produtos = new Map<string, ProdutoFiscal>();
   const creditosDoProduto = new Map<string, Map<string, string>>();
-  for (const doc of documentos.filter(d => d.sentido === "entrada" && !d.cancelado)) for (const item of doc.itens) {
+  // A nota de crédito/débito (finNFe 5/6) não é compra de produto: ajusta só IBS/CBS (19/11/2026).
+  for (const doc of documentos.filter(d => d.sentido === "entrada" && !d.cancelado && !ajustaSoIbsCbs(d))) for (const item of doc.itens) {
     const chave = chaveProduto(doc.emitente, item.codigo);
     const classificacao = decisoesPorChave.get(chave) ?? null;
     const credito = creditos.get(chaveCredito(doc.cnpjEmpresa, doc.competencia, chave));
@@ -44,7 +46,17 @@ export function produtosDaBase(documentos: DocumentoEscriturado[], decisoes: Dec
 }
 export type LinhaFiscal = { documentoId: string; empresaId: string; competencia: string; numero: string; sentido: string; fornecedor: string; descricao: string; cfop: string | null; cst: string; aliquota: string | null; valor: string; base: string | null; imposto: string | null; tributos: Record<string, string | null>; bases: Record<string, string | null>; csts: Record<string, string>; aliquotas: Record<string, string | null>; isentas: string; outras: string };
 export type ResumoTributo = { tributo: string; debitos: string; creditos: string; saldoAnterior: string | null; recolher: string | null; transportar: string | null };
-export type ApuracaoLocal = { obrigacao: Obrigacao; linhas: LinhaFiscal[]; tributos: ResumoTributo[]; pendencias: string[]; ajustes: AjusteFiscal[]; totalEntradas: string; totalSaidas: string };
+/**
+ * Uma nota de crédito ou de débito da reforma (finNFe 5/6, 19/11/2026): ajusta só
+ * IBS/CBS da nota referenciada. Fica fora das `linhas`, dos tributos e dos totais de
+ * entradas e saídas, e é informada aqui, à parte — ver src/lib/fiscal/finalidade.ts.
+ */
+export type AjusteIbsCbs = { documentoId: string; empresaId: string; competencia: string; numero: string; sentido: string; finalidade: "5" | "6"; tipoAjuste: string; motivo: string | null; valor: string; valorIbs: string | null; valorCbs: string | null; referenciadas: string[] };
+export type ApuracaoLocal = { obrigacao: Obrigacao; linhas: LinhaFiscal[]; tributos: ResumoTributo[]; pendencias: string[]; ajustes: AjusteFiscal[]; totalEntradas: string; totalSaidas: string; ajustesIbsCbs?: AjusteIbsCbs[] };
+/** As notas 5/6 não canceladas, para `ajustesIbsCbs`. */
+export function ajustesIbsCbsDe(documentos: DocumentoEscriturado[]): AjusteIbsCbs[] {
+  return documentos.filter(d => !d.cancelado && ajustaSoIbsCbs(d)).map(d => ({ documentoId: d.id, empresaId: d.companyId, competencia: d.competencia, numero: d.numero, sentido: d.sentido, finalidade: d.finalidadeNfe as "5" | "6", tipoAjuste: d.tipoAjuste, motivo: motivoDoAjuste(d.finalidadeNfe, d.tipoAjuste), valor: d.valor, valorIbs: d.valorIbs, valorCbs: d.valorCbs, referenciadas: d.referenciadas }));
+}
 export function apurarBase(documentos: DocumentoEscriturado[], decisoes: DecisaoFiscal[], ajustes: AjusteFiscal[], parametros: ParametrosFiscais, obrigacao: Obrigacao, apoios: ApoioEscriturado[] = []): ApuracaoLocal {
   const tributos = obrigacao === "icms_ipi" ? ["icms", "ipi"] as const : ["pis", "cofins"] as const;
   const linhas: LinhaFiscal[] = [], pendencias = new Set<string>();
@@ -55,7 +67,9 @@ export function apurarBase(documentos: DocumentoEscriturado[], decisoes: Decisao
   const somas = Object.fromEntries(tributos.map(t => [t, { debitos: BigInt(0), creditos: BigInt(0) }]));
   const incompletos = new Set<string>();
   if (!documentos.length && !parametros.semMovimento) pendencias.add("Sem documentos fiscais importados. Confira a cobertura ou confirme o período sem movimento.");
-  for (const doc of documentos.filter(d => !d.cancelado)) {
+  // Notas de crédito/débito (finNFe 5/6) ficam fora do ICMS/IPI/PIS/COFINS, das linhas e dos totais (19/11/2026).
+  const escriturados = documentos.filter(d => !ajustaSoIbsCbs(d));
+  for (const doc of escriturados.filter(d => !d.cancelado)) {
     if (!doc.completo) pendencias.add(`Documento ${doc.numero}: dados fiscais incompletos.`);
     for (const item of doc.itens) {
       const produto = chaveProduto(doc.emitente, item.codigo), decisao = classificacoes.get(produto) ?? null;
@@ -118,7 +132,7 @@ export function apurarBase(documentos: DocumentoEscriturado[], decisoes: Decisao
     const diferenca = somas[t].debitos - somas[t].creditos - unidades(saldo ?? "0");
     return { tributo: t, debitos: decimal(somas[t].debitos), creditos: decimal(somas[t].creditos), saldoAnterior: saldo, recolher: saldo === null || incompletos.has(t) ? null : decimal(diferenca > BigInt(0) ? diferenca : BigInt(0)), transportar: saldo === null || incompletos.has(t) ? null : decimal(diferenca < BigInt(0) ? -diferenca : BigInt(0)) };
   });
-  return { obrigacao, linhas, tributos: resultado, pendencias: [...pendencias], ajustes: aplicaveis, totalEntradas: somar(documentos.filter(d => !d.cancelado && d.sentido === "entrada").map(d => d.valor)), totalSaidas: somar(documentos.filter(d => !d.cancelado && d.sentido === "saida").map(d => d.valor)) };
+  return { obrigacao, linhas, tributos: resultado, pendencias: [...pendencias], ajustes: aplicaveis, totalEntradas: somar(escriturados.filter(d => !d.cancelado && d.sentido === "entrada").map(d => d.valor)), totalSaidas: somar(escriturados.filter(d => !d.cancelado && d.sentido === "saida").map(d => d.valor)), ajustesIbsCbs: ajustesIbsCbsDe(documentos) };
 }
 export function quadroPorCfop(linhas: LinhaFiscal[]) {
   const grupos = new Map<string, { cfop: string | null; sentido: string; cst: string; aliquota: string | null; valor: string; base: string | null; imposto: string | null; registros: number }>();
@@ -163,7 +177,7 @@ export function apurarPeriodos(documentos: DocumentoEscriturado[], decisoes: Dec
     recolher: somarNullable(resultados.flatMap(r => r.tributos.filter(j => j.tributo === t.tributo).map(j => j.recolher))),
     transportar: somarNullable(ultimos.flatMap(r => r.filter(j => j.tributo === t.tributo).map(j => j.transportar))),
   })) ?? [];
-  return { obrigacao, tributos, linhas: resultados.flatMap(r => r.linhas), pendencias: [...new Set(resultados.flatMap(r => r.pendencias))], ajustes: resultados.flatMap(r => r.ajustes), totalEntradas: somar(resultados.map(r => r.totalEntradas)), totalSaidas: somar(resultados.map(r => r.totalSaidas)) };
+  return { obrigacao, tributos, linhas: resultados.flatMap(r => r.linhas), pendencias: [...new Set(resultados.flatMap(r => r.pendencias))], ajustes: resultados.flatMap(r => r.ajustes), totalEntradas: somar(resultados.map(r => r.totalEntradas)), totalSaidas: somar(resultados.map(r => r.totalSaidas)), ajustesIbsCbs: resultados.flatMap(r => r.ajustesIbsCbs ?? []) };
 }
 export function conferirApoios(apoios: ApoioEscriturado[]) {
   const grupos = new Map<string, ApoioEscriturado[]>();

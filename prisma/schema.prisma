@@ -4201,6 +4201,24 @@ model FiscalDocument {
   /// Nulo é "não se sabe" — NFS-e, que não tem CFOP, e nota que chegou sem
   /// XML (o índice do SPED não manda o CFOP).
   cfops           String?  @db.VarChar(200)
+  /// A finalidade da NF-e (`ide/finNFe`, 19/11/2026): "1" normal, "2"
+  /// complementar, "3" ajuste, "4" devolução, "5" nota de crédito, "6" nota de
+  /// débito — ver src/lib/fiscal/finalidade.ts. As duas últimas, da reforma
+  /// tributária, ajustam só IBS/CBS de uma nota anterior: ficam fora do
+  /// faturamento e entram `IGNORADO`, sem virar conta. Nulo é "não se sabe" —
+  /// CT-e, NFS-e, índice do SPED sem XML e nota anterior à coluna.
+  finalidade          String?  @db.VarChar(1)
+  /// O motivo da nota de crédito (`ide/tpNFCredito`) ou de débito
+  /// (`ide/tpNFDebito`), "01".."08". Só nas finalidades 5 e 6.
+  tipoAjuste          String?  @db.VarChar(2)
+  /// As chaves das notas referenciadas (`ide/NFref/refNFe`), separadas por
+  /// vírgula como `cfops`. Texto e não JSON: é lista de chaves de tamanho fixo,
+  /// lida inteira e comparada com `accessKey`; o leiaute aceita até 999, por
+  /// isso Text e não VarChar.
+  chavesReferenciadas String?  @db.Text
+  /// Totais de IBS e de CBS da nota (`total/IBSCBSTot`), quando o grupo existe.
+  valorIbs            Decimal? @db.Decimal(12, 2)
+  valorCbs            Decimal? @db.Decimal(12, 2)
   issuedAt        DateTime
 
   /// Competência "AAAA-MM" — string e não data, porque é agrupador de mês e não

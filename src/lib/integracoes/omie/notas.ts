@@ -5,7 +5,7 @@
 //   { pagina, total_de_paginas, registros, total_de_registros, nfCadastro: [ {
 //       compl: { cChaveNFe, nIdNF },
 //       ide: { nNF: "000006014", serie, dEmi: "dd/mm/aaaa", hEmi: "hh:mm:ss",
-//              tpNF: "0"|"1", mod: "55", tpAmb, dCan, cDeneg },
+//              tpNF: "0"|"1", mod: "55", tpAmb, dCan, cDeneg, finNFe },
 //       nfDestInt: { cRazao, cnpj_cpf: "00.000.000/0000-00" },
 //       total: { ICMSTot: { vNF } } } ] }
 //
@@ -16,6 +16,7 @@
 
 import { chaveDeDeduplicacao } from "@/lib/fiscal/documentos";
 import type { FiscalDocumentSituation } from "@/generated/prisma/enums";
+import { ehFinalidade, type FinalidadeNfe } from "@/lib/fiscal/finalidade";
 
 export type NotaDoOmie = {
   dedupKey: string;
@@ -31,6 +32,13 @@ export type NotaDoOmie = {
   valor: number | null;
   situacao: FiscalDocumentSituation;
   omieIdNF: string | null;
+  /**
+   * A finalidade (`ide.finNFe`, 19/11/2026), quando o Omie manda: a nota de
+   * débito da reforma (6) é de saída e chega por aqui. Sem o campo, `null`
+   * ("não se sabe"), e não "1": o Omie não traz o XML para conferir. O motivo
+   * e o IBS/CBS não vêm no `ListarNF` — só a finalidade.
+   */
+  finalidade: FinalidadeNfe | null;
 };
 
 /** Por que a nota ficou de fora — vira contador da execução, não erro. */
@@ -163,6 +171,7 @@ export function mapearNotaOmie(item: unknown, cnpjs: string | ReadonlySet<string
     // data de verdade conta: campo vazio ou zerado não cancela nada.
     situacao: instanteDoOmie(ide.dCan, null) ? "CANCELADA" : "AUTORIZADA",
     omieIdNF: idNF && idNF !== "0" ? idNF : null,
+    finalidade: ehFinalidade(texto(ide.finNFe)) ? (texto(ide.finNFe) as FinalidadeNfe) : null,
   };
 }
 

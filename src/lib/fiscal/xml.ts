@@ -16,6 +16,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { hojeIso } from "@/lib/datas/calendario";
 import { centavosDaDuplicata, duplicatasParaGravar, type DuplicataDaNota } from "./duplicatas";
+import { ajustaSoIbsCbs, ehFinalidade, type FinalidadeNfe } from "./finalidade";
 
 export type TipoDocumentoFiscal = "NFE" | "NFCE" | "CTE" | "NFSE";
 
@@ -127,6 +128,32 @@ export type DocumentoFiscalExtraido = {
    * fornecedor. NFS-e não tem CFOP: fica de fora (`undefined`).
    */
   cfops?: string[];
+  /**
+   * A finalidade da NF-e/NFC-e (`ide/finNFe`, 19/11/2026): "1" normal, "2"
+   * complementar, "3" ajuste, "4" devolução, "5" nota de crédito, "6" nota de
+   * débito — ver src/lib/fiscal/finalidade.ts. Ausente no XML é "1" (o campo é
+   * obrigatório no leiaute). CT-e e NFS-e não têm: `undefined`.
+   */
+  finalidade?: FinalidadeNfe;
+  /**
+   * O motivo da nota de crédito (`ide/tpNFCredito`) ou de débito
+   * (`ide/tpNFDebito`), "01".."08". Só nas finalidades 5 e 6; `null` nas outras.
+   */
+  tipoAjuste?: string | null;
+  /**
+   * As notas que esta referencia (`ide/NFref/refNFe` e, na nota de débito de
+   * pagamento antecipado, `ide/gPagAntecipado/refNFe`): chaves de 44 dígitos
+   * conferidas, em ordem e sem repetir. **Nunca** a chave desta nota — ver
+   * `chaveDoId`.
+   */
+  chavesReferenciadas?: string[];
+  /**
+   * O total de IBS e de CBS da nota (`total/IBSCBSTot/gIBS/vIBS` e
+   * `total/IBSCBSTot/gCBS/vCBS`), em decimal como veio. `null` quando o grupo
+   * não existe — nota anterior à reforma ou sem IBS/CBS.
+   */
+  valorIbs?: string | null;
+  valorCbs?: string | null;
 };
 
 export type MotivoRecusa =
@@ -712,7 +739,44 @@ function lerNfe(nfe: unknown): ResultadoLeitura {
       cancelada: false,
       duplicatas: duplicatasDaNfe(inf, ide),
       cfops: cfopsUnicos(filhos(inf, "det").map((d) => texto(caminho(d, "prod", "CFOP")))),
+      ...finalidadeDaNfe(inf, ide, chave),
     },
+  };
+}
+
+/** Decimal do grupo de IBS/CBS que cabe no `Decimal(12,2)` do acervo; outro formato vira nulo. */
+function valorDoTotal(v: unknown): string | null {
+  const t = texto(v);
+  return t && /^\d{1,10}(\.\d{1,2})?$/.test(t) ? t : null;
+}
+
+/**
+ * Finalidade, motivo do ajuste, notas referenciadas e totais de IBS/CBS
+ * (funcionalidade-793, 19/11/2026) — ver src/lib/fiscal/finalidade.ts.
+ *
+ * As referenciadas saem **só** de `NFref/refNFe` (e de `gPagAntecipado/refNFe`),
+ * nunca de um `<chNFe>` solto, e a chave desta nota fica fora da lista: é a
+ * mesma armadilha de `chaveDoId`, ao contrário.
+ */
+function finalidadeDaNfe(inf: unknown, ide: unknown, propria: string) {
+  const lida = texto(filho(ide, "finNFe"));
+  // O campo é obrigatório no leiaute; ausente (emissor antigo) ou fora da
+  // lista vale como normal, que é o que a nota sempre foi para o Connect.
+  const finalidade: FinalidadeNfe = ehFinalidade(lida) ? lida : "1";
+  const tipo = ajustaSoIbsCbs(finalidade)
+    ? texto(filho(ide, finalidade === "5" ? "tpNFCredito" : "tpNFDebito"))
+    : null;
+  const referenciadas = [
+    ...filhos(ide, "NFref").map((r) => digitos(filho(r, "refNFe"))),
+    ...filhos(filho(ide, "gPagAntecipado"), "refNFe").map((r) => digitos(r)),
+  ].filter((c): c is string => !!c && c !== propria && chaveDeAcessoValida(c));
+  const totais = caminho(inf, "total", "IBSCBSTot");
+  return {
+    finalidade,
+    tipoAjuste: tipo && /^\d{2}$/.test(tipo) ? tipo : null,
+    chavesReferenciadas: [...new Set(referenciadas)],
+    valorIbs: valorDoTotal(caminho(totais, "gIBS", "vIBS")),
+    valorCbs: valorDoTotal(caminho(totais, "gCBS", "vCBS")),
   };
 }
 

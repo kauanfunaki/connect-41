@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const livro = new ExcelJS.Workbook();
     for (const r of relatorios) {
       const folha = livro.addWorksheet(r.nome); folha.addRow(r.colunas); folha.getRow(1).font = { bold: true };
-      const monetarias = new Set(["Valor", "ICMS", "IPI", "PIS", "COFINS", "Base", "Base IPI", "Base COFINS", "Débitos", "Créditos", "Saldo anterior", "A recolher", "A transportar", "Imposto", "Bruto", "Líquido", "Isentas", "Outras"]);
+      const monetarias = new Set(["Valor", "ICMS", "IPI", "PIS", "COFINS", "Base", "Base IPI", "Base COFINS", "Débitos", "Créditos", "Saldo anterior", "A recolher", "A transportar", "Imposto", "Bruto", "Líquido", "Isentas", "Outras", "IBS", "CBS"]);
       for (const linha of r.linhas) folha.addRow(linha.map((v, i) => v !== null && monetarias.has(r.colunas[i]) && /^-?\d{1,12}(\.\d{1,2})?$/.test(v) ? Number(v) : v ?? "Não levantado"));
       folha.columns.forEach((c, i) => { c.width = 24; c.numFmt = monetarias.has(r.colunas[i]) ? "#,##0.00" : "@"; });
       folha.views = [{ state: "frozen", ySplit: 1 }]; folha.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(folha.rowCount, 1), column: r.colunas.length } };

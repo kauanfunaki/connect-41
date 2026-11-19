@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { lerXmlFiscal } from "@/lib/fiscal/xml";
 import { registrarRecusaSemTravar } from "@/lib/fiscal/recusasServidor";
 import { chaveDeDeduplicacao, competenciaDaEmissao } from "@/lib/fiscal/documentos";
+import { colunasDaFinalidade } from "@/lib/fiscal/finalidade";
 import { documentoDaEmpresa } from "@/lib/companyTaxId";
 import { alcanceDaEquipe } from "../alcance";
 import { acharPorDedupKey } from "@/lib/fiscal/data";
@@ -177,6 +178,10 @@ export async function importarXmls(_anterior: EstadoDaEntrada, form: FormData): 
           // NFS-e pode chegar já cancelada, no mesmo envelope. Entrar como
           // autorizada colocaria uma nota morta na fila de lançamento.
           situation: doc.cancelada ? "CANCELADA" : "AUTORIZADA",
+          // Finalidade, notas referenciadas e IBS/CBS (19/11/2026). A nota de
+          // crédito/débito (finNFe 5/6) já nasce IGNORADO, com o motivo: ajusta
+          // só IBS/CBS e não vira conta — ver src/lib/fiscal/finalidade.ts.
+          ...colunasDaFinalidade(doc),
           uploadedById: ctx.userId,
         },
         select: { id: true },

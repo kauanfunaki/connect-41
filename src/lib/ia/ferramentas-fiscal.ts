@@ -26,6 +26,7 @@ import type { AlcanceFiscal } from "@/lib/fiscal/alcance";
 import { nomeExibicao } from "@/lib/companyName";
 import { DESTINO_LABEL, SITUACAO_LABEL, TIPO_LABEL } from "@/lib/fiscal/rotulos";
 import { chavesLegiveis, linkDaTela, mesLegivel, situacaoLegivel } from "@/lib/ia/legivel";
+import { FINALIDADE_LABEL, ajustaSoIbsCbs, finalidadeEmDestaque } from "@/lib/fiscal/finalidade";
 
 /** A situação da empresa no escritório, como o cadastro escreve. */
 const SITUACAO_DA_EMPRESA: Readonly<Record<string, string>> = {
@@ -110,7 +111,39 @@ const PEDE_EMPRESA_E_COMPETENCIA = {
   additionalProperties: false,
 } as const;
 
-type Grupo = { type: string; situation: string; destination: string; completude: string; _count: { _all: number }; _sum: { amount: Prisma.Decimal | null } };
+type Grupo = {
+  type: string;
+  situation: string;
+  destination: string;
+  completude: string;
+  /** A finalidade da NF-e (19/11/2026); nula em CT-e, NFS-e e nota anterior à coluna. */
+  finalidade?: string | null;
+  _count: { _all: number };
+  _sum: { amount: Prisma.Decimal | null; valorIbs?: Prisma.Decimal | null; valorCbs?: Prisma.Decimal | null };
+};
+
+/**
+ * As notas de crédito e de débito da reforma (finNFe 5/6, 19/11/2026) à parte:
+ * ajustam só IBS/CBS da nota referenciada e não são venda nem compra, então não
+ * entram no total emitido/recebido. `null` quando não há nenhuma — a IA não
+ * precisa falar delas no mês que não tem.
+ */
+export function resumoDosAjustesIbsCbs(grupos: Grupo[]) {
+  const ajustes = grupos.filter((g) => ajustaSoIbsCbs(g.finalidade) && g.situation !== "CANCELADA");
+  if (ajustes.length === 0) return null;
+  const soma = (f: (g: Grupo) => Prisma.Decimal | null | undefined) =>
+    Math.round(ajustes.reduce((s, g) => s + Number(f(g) ?? 0), 0) * 100) / 100;
+  const quantas = (finalidade: string) => ajustes.filter((g) => g.finalidade === finalidade).reduce((n, g) => n + g._count._all, 0);
+  return {
+    notasDeCredito: quantas("5"),
+    notasDeDebito: quantas("6"),
+    valor: soma((g) => g._sum.amount),
+    ibs: soma((g) => g._sum.valorIbs),
+    cbs: soma((g) => g._sum.valorCbs),
+    observacao:
+      "Ajustam só o IBS e a CBS de uma nota anterior: ficam fora do total emitido/recebido e do faturamento, e entram ignoradas no financeiro (não viram conta).",
+  };
+}
 
 /** Soma os grupos por tipo — quantidade e valor autorizados, canceladas à parte. */
 export function somarPorTipo(grupos: Grupo[]) {
@@ -198,7 +231,7 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
     def: {
       nome: "resumo_fiscal_do_mes",
       descricao:
-        "O resumo de uma empresa numa competência: notas emitidas e recebidas por tipo (quantidade e valor, canceladas à parte), quantas ainda sem destino no financeiro (pendentes), lançadas e ignoradas, e quantas com XML incompleto. Traz o link da tela filtrada.",
+        "O resumo de uma empresa numa competência: notas emitidas e recebidas por tipo (quantidade e valor, canceladas à parte), quantas ainda sem destino no financeiro (pendentes), lançadas e ignoradas, e quantas com XML incompleto. As notas de crédito e de débito da reforma (IBS/CBS) vêm à parte, fora do emitido/recebido. Traz o link da tela filtrada.",
       parametros: PEDE_EMPRESA_E_COMPETENCIA as unknown as Record<string, unknown>,
       natureza: "leitura",
     },
@@ -215,16 +248,19 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
       const prisma = getPrisma();
       const agrupar = (where: Prisma.FiscalDocumentWhereInput) =>
         prisma.fiscalDocument.groupBy({
-          by: ["type", "situation", "destination", "completude"],
+          by: ["type", "situation", "destination", "completude", "finalidade"],
           where,
           _count: { _all: true },
-          _sum: { amount: true },
+          _sum: { amount: true, valorIbs: true, valorCbs: true },
         }) as unknown as Promise<Grupo[]>;
       const [emitidas, recebidas] = await Promise.all([
         documento ? agrupar({ ...base, issuerDocument: documento }) : Promise.resolve([] as Grupo[]),
         agrupar(documento ? { ...base, NOT: { issuerDocument: documento } } : base),
       ]);
       const todas = [...emitidas, ...recebidas];
+      // Notas de crédito/débito (finNFe 5/6) fora do emitido/recebido, informadas à parte (19/11/2026).
+      const semAjustes = (grupos: Grupo[]) => grupos.filter((g) => !ajustaSoIbsCbs(g.finalidade));
+      const ajustesIbsCbs = resumoDosAjustesIbsCbs(todas);
       const autorizadas = todas.filter((g) => g.situation === "AUTORIZADA");
       const porDestino = Object.fromEntries(
         DESTINOS.map((d) => [d, autorizadas.filter((g) => g.destination === d).reduce((n, g) => n + g._count._all, 0)])
@@ -232,8 +268,9 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
       return {
         empresa: nomeExibicao(empresa),
         competencia,
-        emitidas: chavesLegiveis(somarPorTipo(emitidas), TIPO_LABEL),
-        recebidas: chavesLegiveis(somarPorTipo(recebidas), TIPO_LABEL),
+        emitidas: chavesLegiveis(somarPorTipo(semAjustes(emitidas)), TIPO_LABEL),
+        recebidas: chavesLegiveis(somarPorTipo(semAjustes(recebidas)), TIPO_LABEL),
+        ...(ajustesIbsCbs ? { notasDeCreditoEDebitoIbsCbs: ajustesIbsCbs } : {}),
         noFinanceiro: chavesLegiveis(porDestino, NO_FINANCEIRO),
         comXmlIncompleto: todas.filter((g) => g.completude === "PARCIAL").reduce((n, g) => n + g._count._all, 0),
         link: linkDaTela(`Abrir os documentos de ${mesLegivel(competencia)}`, linkDoAcervo({ empresa: empresa.id, competencia })),
@@ -281,6 +318,8 @@ export const FERRAMENTAS_DE_FISCAL: Record<string, FerramentaRegistrada> = {
           emitidaEm: d.issuedAt.toISOString().slice(0, 10),
           situacao: situacaoLegivel(d.situation, SITUACAO_LABEL),
           noFinanceiro: situacaoLegivel(d.destination, DESTINO_LABEL),
+          // Só quando não é a normal: nota de crédito, de débito, complementar, ajuste ou devolução (19/11/2026).
+          ...(finalidadeEmDestaque(d.finalidade) ? { finalidade: FINALIDADE_LABEL[finalidadeEmDestaque(d.finalidade)!] } : {}),
           xmlIncompleto: d.completude === "PARCIAL",
           link: linkDaTela(`${TIPO_LABEL[d.type] ?? d.type} ${d.series ? `${d.number}/${d.series}` : d.number}`, `/documentos-fiscais/${d.id}`),
         })),

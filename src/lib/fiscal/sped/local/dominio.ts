@@ -41,8 +41,26 @@ export const documentoSchema = z.object({
   emitidoEm: z.string(), competencia: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), valor: dinheiroSchema,
   cancelado: z.boolean().default(false), fonte: z.enum(["xml", "txt"]), completo: z.boolean(), itens: z.array(itemSchema),
   referencias: z.record(z.string(), z.string()).default({}),
+  // A finalidade da NF-e e as notas de crédito/débito da reforma (19/11/2026, ver
+  // src/lib/fiscal/finalidade.ts). `finalidadeNfe` e não `finalidade`, para não
+  // confundir com a `finalidade` do pacote. Com default: documento gravado antes
+  // (e o do TXT, que não traz) vale como normal, sem ajuste nem referenciadas.
+  finalidadeNfe: z.enum(["1", "2", "3", "4", "5", "6"]).default("1"),
+  /** Motivo da nota 5 (`tpNFCredito`) ou 6 (`tpNFDebito`); vazio nas outras. */
+  tipoAjuste: z.string().regex(/^(\d{2})?$/).default(""),
+  /** Chaves das notas referenciadas (`NFref/refNFe`). */
+  referenciadas: z.array(z.string().regex(/^\d{44}$/)).default([]),
+  /** Totais de IBS e CBS (`total/IBSCBSTot`); `null` quando a nota não tem o grupo. */
+  valorIbs: dinheiroSchema.nullable().default(null),
+  valorCbs: dinheiroSchema.nullable().default(null),
 });
 export type DocumentoFiscal = z.infer<typeof documentoSchema>;
+/**
+ * Nota de crédito ou de débito (finNFe 5/6): ajusta só IBS/CBS de uma nota
+ * anterior e fica fora do faturamento, dos produtos e da apuração de
+ * ICMS/IPI/PIS/COFINS — vai à parte em `ajustesIbsCbs`. Ver src/lib/fiscal/finalidade.ts.
+ */
+export const ajustaSoIbsCbs = (d: Pick<DocumentoFiscal, "finalidadeNfe">) => d.finalidadeNfe === "5" || d.finalidadeNfe === "6";
 /**
  * O sentido do documento na escrituração de uma empresa (06/11/2026). Emitido
  * por outro é entrada. Emitido pela própria empresa é saída, menos a nota de
