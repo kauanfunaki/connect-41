@@ -11,6 +11,7 @@ import "server-only";
 // O cálculo nunca fica guardado.
 
 import { randomUUID } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { dataBR } from "@/lib/datas/calendario";
 import {
   MENSAGEM_DA_FALHA,
@@ -49,14 +50,37 @@ export function calculadoraConfigurada(): boolean {
   return baseDaCalculadora(process.env.CALCULADORA_RTC_URL) !== null;
 }
 
+type Resolver = (host: string) => Promise<{ address: string; family: number }>;
+
+/**
+ * O endereço que o servidor da calculadora aceita (bug-799, 19/11/2026).
+ *
+ * O nome interno do EasyPanel é "projeto_serviço" (ex.: app_calculadora-rtc),
+ * e o Tomcat do Spring Boot recusa com HTTP 400 todo cabeçalho Host com
+ * sublinhado ("The character [_] is never valid in a domain name"). O `fetch`
+ * do Node não deixa trocar o Host, então, quando o nome tem "_", ele é
+ * resolvido para o IP antes da chamada: o Host vira o IP, que o Tomcat aceita.
+ * Só em http — é o caso do endereço interno; em https o IP quebraria o
+ * certificado. Nome sem sublinhado segue como está.
+ */
+export async function enderecoAceitoPeloServico(base: string, resolver: Resolver = (h) => lookup(h)): Promise<string> {
+  const u = new URL(base);
+  if (u.protocol !== "http:" || !u.hostname.includes("_")) return base;
+  const { address, family } = await resolver(u.hostname);
+  u.hostname = family === 6 ? `[${address}]` : address;
+  return u.toString().replace(/\/+$/, "");
+}
+
 async function chamar(
   caminho: string,
   { metodo = "GET", corpo, tempoMs = TEMPO_DA_CONSULTA_MS }: { metodo?: "GET" | "POST"; corpo?: unknown; tempoMs?: number } = {}
 ): Promise<{ ok: true; status: number; json: unknown; simulado: boolean } | { ok: false; falha: FalhaDoServico | "nao-encontrado"; status?: number }> {
-  const base = baseDaCalculadora(process.env.CALCULADORA_RTC_URL);
-  if (!base) return { ok: false, falha: "nao-configurada" };
+  const configurada = baseDaCalculadora(process.env.CALCULADORA_RTC_URL);
+  if (!configurada) return { ok: false, falha: "nao-configurada" };
   let r: Response;
   try {
+    // Dentro do try: nome que não resolve é serviço fora do ar, como a recusa de conexão.
+    const base = await enderecoAceitoPeloServico(configurada);
     r = await fetch(`${base}/api${caminho}`, {
       method: metodo,
       headers: corpo !== undefined ? { "content-type": "application/json", accept: "application/json" } : { accept: "application/json" },
