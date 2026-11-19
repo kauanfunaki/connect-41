@@ -114,6 +114,20 @@ export function selecionarDoAcervo(
 
 export const TAMANHO_DO_LOTE = MAXIMO_DE_XMLS_POR_PEDIDO;
 
+/**
+ * Importação que a primeira volta lê de novo antes de pedir mais ao motor: a
+ * que ficou sem ser lida (pausa, aba fechada) e a que deu erro na leitura.
+ *
+ * O erro entrou em 18/11/2026 (bug-627): as 1.760 NFS-e nacionais que o leitor
+ * antigo recusou ficaram na fila com erro e contavam como "já na fila", então o
+ * "Trazer do acervo" não as pedia ao motor nem as relia — só "Retomar" uma a
+ * uma. Ler de novo o arquivo guardado basta: o XML é o mesmo, o leitor é que
+ * mudou. Se a leitura falhar outra vez, a rodada conta como recusado e segue.
+ */
+export function deveRetomar(estado: string): boolean {
+  return estado === "pendente" || estado === "processando" || estado === "erro";
+}
+
 /** Quantos ainda faltam depois do cursor. */
 export function restantesDepois(aPedir: readonly CandidatoDoAcervo[], depois: string | null): number {
   return depois === null ? aPedir.length : aPedir.filter((d) => posicaoNoAcervo(d) > depois).length;
