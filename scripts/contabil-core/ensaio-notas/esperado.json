@@ -1,0 +1,45 @@
+{
+  "empresa": "12345678000780",
+  "arquivos": {
+    "nfe-assinada.xml": {
+      "tipo": "nfe",
+      "numero": "84086",
+      "cnpj_emitente": "99.999.999/0001-91",
+      "cnpj_destinatario": "12.345.678/0007-80",
+      "valor": "800.00",
+      "data_emissao": "2026-01-06T10:00:00-03:00",
+      "chave_acesso": "35260199999999000191550010000840861000840866",
+      "assinatura_nao_verificada": null
+    },
+    "nfe-alterada.xml": {
+      "tipo": "nfe",
+      "numero": "84087",
+      "cnpj_emitente": "99.999.999/0001-91",
+      "cnpj_destinatario": "12.345.678/0007-80",
+      "valor": "1500.50",
+      "data_emissao": "2026-01-06T10:00:00-03:00",
+      "chave_acesso": "35260199999999000191550010000840871000840877",
+      "assinatura_nao_verificada": "assinatura não confere (InvalidDigest)"
+    },
+    "nfse-assinada.xml": {
+      "tipo": "nfse",
+      "numero": "2026",
+      "cnpj_emitente": "12.345.678/0007-80",
+      "cnpj_destinatario": "11.111.111/0001-91",
+      "valor": "350.00",
+      "data_emissao": "2026-01-07T09:30:00",
+      "chave_acesso": null,
+      "assinatura_nao_verificada": null
+    },
+    "nfe-de-outra-empresa.xml": {
+      "tipo": "nfe",
+      "numero": "84088",
+      "cnpj_emitente": "99.999.999/0001-91",
+      "cnpj_destinatario": "11.111.111/0001-91",
+      "valor": "99.90",
+      "data_emissao": "2026-01-06T10:00:00-03:00",
+      "chave_acesso": "35260199999999000191550010000840881000840888",
+      "assinatura_nao_verificada": null
+    }
+  }
+}

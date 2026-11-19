@@ -111,6 +111,15 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
           "Na revisão, ponha um “Razão de apoio” (FGTS a recolher, impostos ou outras contas, inclusive de períodos anteriores) para buscar a composição das provisões.",
         ],
       },
+      {
+        titulo: "Como importar e associar notas fiscais",
+        passos: [
+          "Na aba “Notas”, clique em “Importar notas” ou arraste para a área os arquivos: XML de NF-e ou NFS-e, ZIP com vários XML, PDF do DANFe ou imagem.",
+          "A nota precisa ter a empresa como emitente ou destinatária. A repetida é ignorada, e cada arquivo recusado aparece com o motivo.",
+          "Nota com o selo “assinatura não conferida” foi autorizada pela SEFAZ, mas o arquivo foi alterado depois de assinado; passe o mouse no selo para ver o motivo. “OCR” é a nota lida de PDF ou imagem.",
+          "Clique em “Associar” e escolha a transação pendente do extrato que paga ou recebe a nota. “Remover associação” desfaz; “Cancelar” tira a nota das associações.",
+        ],
+      },
     ],
     dicas: [
       "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
@@ -120,6 +129,8 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
       "Na planilha (.xlsx, .xls ou .csv), o Connect acha as colunas pelo cabeçalho (Data, Histórico, Crédito, Débito, Valor, Saldo), e o saldo de cada linha confere os lançamentos.",
       "PDF que é imagem (sem texto selecionável) ainda não é lido: importe o OFX ou a planilha da conta.",
       "Desfazer uma importação inteira é de quem coordena o setor: os lançamentos das transações do arquivo são cancelados antes.",
+      "PDF e imagem de nota fiscal são lidos pela IA do escritório, que vem desligada: até ela ser ligada, importe o XML da nota.",
+      "Desfazer a classificação de uma transação solta as notas associadas a ela, que voltam para pendente.",
     ],
   },
   // O SPED do Contábil (17/11/2026, melhoria-707): as frases que explicavam a

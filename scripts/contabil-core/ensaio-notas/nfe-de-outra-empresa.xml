@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><NFe><infNFe Id="NFe35260199999999000191550010000840881000840888" versao="4.00"><ide><serie>1</serie><nNF>84088</nNF><dhEmi>2026-01-06T10:00:00-03:00</dhEmi></ide><emit><CNPJ>99999999000191</CNPJ><xNome>FORNECEDORA FICTICIA DO ENSAIO LTDA</xNome></emit><dest><CNPJ>11111111000191</CNPJ><xNome>EMPRESA ENSAIO NOTAS LTDA</xNome></dest><total><ICMSTot><vNF>99.90</vNF></ICMSTot></total></infNFe><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><ds:Reference URI="#NFe35260199999999000191550010000840881000840888"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ds:DigestValue>sJBOK2+LARiRYEtInmomAYgsY50=</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue>i6Ka3xrB0gAN5cVcHCvEsun/rAK+LqMtenp5utLoC1nwCgBvxdJIKIKpMjv3Dd2wFINdhOkJGirgt4/t2bgh21WMSAluotqClMSK0jjPwVvypuybwEH9Evw/IHIFuQLY9sXu4lR7OTmKMoKAP9Y5kKYl0E7W809Jr0qlmjjLUEEJMLLsidhjC4du1WHxfq4zo9bG+PqergxPa8VV55+rPUyO8UwT3+qbxBWESrHyRjOCF+kDV/Fnrfmq6tKjXzO2y2SxT3cP4UniLTzldzww+aa+5d78npRXfy9wL/GyXF3cUrXFgfXiPf5ATBiz9s+f16Bs5PupZLNnnue8nx/f1A==</ds:SignatureValue><ds:KeyInfo><ds:X509Data><ds:X509Certificate>MIIC4TCCAcmgAwIBAgIBKTANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDDClFTVBS
+RVNBIEZJQ1RJQ0lBIERPIEVOU0FJTzo5OTk5OTk5OTAwMDE5MTAeFw0yNjAxMDEw
+MDAwMDBaFw0zNTEyMzAwMDAwMDBaMDQxMjAwBgNVBAMMKUVNUFJFU0EgRklDVElD
+SUEgRE8gRU5TQUlPOjk5OTk5OTk5MDAwMTkxMIIBIjANBgkqhkiG9w0BAQEFAAOC
+AQ8AMIIBCgKCAQEAnKr3cion/kQ7yDegRlQU+vrah5rrwWT2MVsDaPdaw4K3WMGF
+whjzGmw0xJ+4/sPlnqj2wCFjA7+D2Dmz3BifrLTQ+cxtGNnuF8ji2lRlzrdpjBBz
+6kBJg0VIaJal/srWsm0AsSKGI6pAw+Ns5RwYzDfcWxnScUagwyoNEdGvG/eRQIk8
+c5dX0IPtIqQ9mlu3ayC3g4LBq7wEdlpcr/pM+JvNAeMdWqjHF5sVossDlvxzSs6m
+NjnvCsh/ctKQtQkR3GYNu1ATri+ePVhyb+o2OuOvDyHR4PG/VGjmHxiJ/MYVZf7B
+TpbBdK4IQSXlbRnXyg9NRxPg8RlBHg0+/En28wIDAQABMA0GCSqGSIb3DQEBCwUA
+A4IBAQBwTTd4ewMvztkAm0y5ClOt9Gp06CaLNJlG/3fy/vPXqmJSFca2ihGlFyKv
+Ag7ZTuwUMjSyqiXrJgBZxmW4UzeCxBM+qkC7O/Q7yv+JXgh3RoTdWwQgWat9WSuB
+WBLb7MiA8xA3k6D7dJMVCY1Fjew5bBWhTCPFV8ARXZRSVXdOkMxv0fLxTk7eeqpA
+Lbm0QrC26RnYydeJpmMEL+TgtsQWIxjuHWCZg82ySUKY9wxdnSb9DAHWImboVgyQ
+uTRBPh84i75tD+jYNQhXKv+AifO2BWphntDatzd1TYvuDUKlwVLEbimRacYU1CqH
+N8AbUhtaMtGY1my948qaX/spBmbc
+</ds:X509Certificate></ds:X509Data></ds:KeyInfo></ds:Signature></NFe><protNFe versao="4.00"><infProt><chNFe>35260199999999000191550010000840881000840888</chNFe><dhRecbto>2026-01-06T10:00:05-03:00</dhRecbto><nProt>135260000084088</nProt><cStat>100</cStat></infProt></protNFe></nfeProc>

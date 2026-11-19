@@ -256,6 +256,109 @@ Divergências da B4:
   - **Desfazer:** o motivo é pedido na própria linha, como na B3.
   - **Ao trocar de empresa,** a tela volta para "Razão × extrato".
 
+## Bloco C: documentos
+
+### Decisões (Angelo, 18/11/2026)
+
+- **A leitura por IA passa pela fundação do Connect** (`src/lib/ia`: a chave do escritório, o teto de gasto e o uso registrado), e não pela OpenAI chamada direto, como no original.
+- **A leitura por IA vem desligada por padrão**, como o `ALLOW_FINANCIAL_DATA_TO_OPENAI=false` do original. Desligada (ou sem provedor no escritório), o PDF e a imagem que precisariam dela são recusados com a frase do leitor, e a tela mostra. O XML não depende de IA.
+
+### O que o original faz
+
+- **Notas fiscais:** NF-e e NFS-e importadas do XML (com a assinatura conferida e o protocolo da SEFAZ obrigatório), do ZIP com vários XML, ou do PDF e da imagem pela IA, além do cadastro à mão. A procedência fica registrada. A nota é associada à mão a uma transação do extrato, e o NEO a usa para achar a contraparte.
+- **Comprovantes de pagamento:** o PDF do banco lido (e, sem texto, pela IA), com favorecido, documento e valor, ligado à transação.
+- **Cartões:** faturas importadas e distribuídas em lançamentos.
+
+### Fases do Bloco C
+
+| Fase | Branch | O que entra |
+|---|---|---|
+| C1 | `feat/contabil-core-notas` | Notas fiscais: os leitores (XML com a assinatura conferida; PDF e imagem pela IA, atrás da chave), o serviço, as rotas e a aba "Notas". Migration. Ver "Fase C1". |
+| C2 | — | Comprovantes de pagamento, e o uso das notas e dos comprovantes pelo NEO (candidata pelo valor e pela data, contraparte pelo documento, número da nota no histórico). |
+| C3 | — | Cartões. |
+| C4 | — | As tabelas do Bloco C na carga (espelho). |
+
+### Fase C1: as notas fiscais
+
+| Onde | Porte de |
+|---|---|
+| `notas/servico.ts` (puro) | as partes de `NotaService` sem banco: a validação do `NotaFiscalCreate`, `_normalizar_chave_acesso`, `_calcular_identidade_nota` (o `dedup_key`), a procedência, a conferência do CNPJ da empresa (com a filial apontada), `_validar_zip` e a abertura do ZIP, as recusas de associar e desassociar e os filtros de `listar` |
+| `servidor/notas.ts` | `NotaService`: listar, obter, criar, importar (XML, ZIP, PDF e imagem), associar, desassociar e cancelar, cada escrita numa transação |
+| `notas/rotaDasNotas.ts` e `api/contabil-core/notas/**` | `src/api/v1/notas.py`: a lista com filtros e paginação, uma nota, o cadastro à mão, a importação (um arquivo por envio, até 25 MB), associar (`POST`) e desassociar (`DELETE`) e cancelar, mais as transações pendentes para associar |
+| aba "Notas" (`Notas.tsx`, `notas/telaDasNotas.ts`) | `Notas.tsx` do contabil-front |
+| migration `20261118180000_contabil_core_notas_fiscais` | `notas_fiscais` (0001, 0010, 0018 e 0035): `core_notas_fiscais`, com os três enums como CHECK |
+
+Os leitores (`notas/xml.ts`, com a assinatura em `notas/assinatura.ts`, e `notas/visual.ts`, pela IA) e a leitura por IA têm gabarito próprio.
+
+- **Unicidade:** as duas do original (`uq_nota_empresa_chave` e `uq_nota_empresa_dedup`) são TOTAIS, não parciais, e continuam como índices únicos comuns, por empresa. Não há `chaveAtiva`.
+- **A identidade é a do original byte a byte.** A NF-e é identificada pela chave; a NFS-e e a NF-e sem chave, por emitente, número, série, valor (2 casas, meio para par, o `quantize` do Python) e emissão em UTC no formato do `isoformat()` do Python. A carga (C4) copia o `dedup_key`, e uma nota já importada no Contábil Core continua reconhecida.
+- **A transação ligada:** `transacaoId` é chave estrangeira para `core_transacoes`, como no original. A transação nunca sai de verdade (só `deletedAt`), então a chave não trava o desfazer da importação; a exclusão da empresa apaga as notas antes das transações.
+- **Quando a transação some** (como no original, por `cancelar_lancamento`): desfazer a classificação, reclassificar ou desfazer a importação de uma transação classificada **desvincula** a nota, que volta para "pendente" (`cancelarLancamento` em `servidor/neo.ts`). A transação sem lançamento sai na importação desfeita com a nota ainda ligada a ela; a tela mostra "A importação desta transação foi desfeita", e a pessoa desassocia.
+- **Importar:** o arquivo é lido inteiro antes de gravar (a IA pode levar segundos e fica fora da transação). As notas são gravadas numa transação, na ordem, com a duplicidade decidida contra o banco e contra as anteriores do mesmo arquivo. Se outra importação gravar a mesma nota nesse intervalo, a coluna única recusa (P2002) e a gravação é refeita uma vez, com a nota contada como duplicada.
+- **Associar, desassociar e cancelar:** cada um é um `updateMany` que exige o estado lido (status e transação), para duas pessoas não ligarem a mesma nota a transações diferentes ao mesmo tempo.
+- **Auditoria:** o original só registrava em log. Aqui a rota registra, com as ações em `ACOES_DAS_NOTAS`:
+
+  | Ação no Connect | Log do original |
+  |---|---|
+  | `contabil.core.nota.criada` | `nota.criada` (cadastro à mão) |
+  | `contabil.core.notas.importadas` | `nota.criada`, uma por nota; aqui um registro por arquivo, com os ids, só quando alguma nota entra |
+  | `contabil.core.nota.associada` | `nota.associada` |
+  | `contabil.core.nota.desassociada` | `nota.desassociada` |
+  | `contabil.core.nota.cancelada` | `nota.cancelada` |
+- **Acesso:** ler pede "ver"; importar, cadastrar, associar e cancelar pedem "agir" (o `notas.read` e o `notas.write` do original).
+- **Gabarito:** `gabarito_notas_servico.py` grava as chamadas de `criar`, `importar_xml`, `importar_visual`, `associar_transacao`, `desassociar_transacao`, `cancelar` e `listar` da suíte do original, mais casos inventados com semente fixa para cada ramo (inclusive `importar_zip`, que a suíte não chama, com ZIPs inventados) e chamadas diretas do `NotaFiscalCreate`. Ao todo, 621 casos, todos iguais: 44 da suíte, 531 inventados e 46 de validação.
+  - A saída sai do serviço original rodando num SQLite montado só com a entrada gravada. Os leitores são trocados pela saída gravada.
+  - O plugin confere que esse banco montado repete a suíte de verdade.
+  - As divergências abaixo são contadas no teste, uma a uma.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-notas.ts`, com XMLs inventados e assinados de verdade (`ensaio_notas_xml.py`, conferidos com o leitor do original): NF-e assinada, NF-e alterada depois de assinada, NFS-e, a repetida, a de outra empresa, o ZIP, o PDF e a imagem sem a IA, o cadastro à mão, a lista, o isolamento, cada recusa, a classificação desfeita, a importação desfeita, os CHECKs e a exclusão da empresa.
+
+**Leitores e IA:**
+
+| Onde | Porte de |
+|---|---|
+| `notas/xml.ts`, `xmlArvore.ts`, `c14n.ts`, `esquemaDsig.ts` e `assinatura.ts` | `xml_parser.py`: NF-e 4.0 e NFS-e ABRASF, eventos recusados com a frase própria e a conferência da assinatura, que emula o `signxml.verify` com `node:crypto`, sem dependência nova. Inclui a árvore como o `ElementTree`, a C14N como o lxml e o esquema XSD do DSig |
+| `notas/visual.ts` | `visual_parser.py`: o PDF com texto vai para a IA de texto; o PDF sem texto e a imagem vão para a IA de visão. Tem orçamento de 60 s, 120 páginas, 30 chamadas e até 30 s por chamada, e a resposta da IA é conferida como no original |
+| `ia/leituraPorIa.ts` | a peça comum "documento → IA" que a C2 e a C3 reaproveitam: confere a chave do escritório e o provedor, chama a fundação de IA (`gerarTexto` em `src/lib/ai.ts`, com catálogo, teto do mês e auditoria por chamada) e devolve o texto ou a recusa |
+
+- **Agentes no catálogo** (`src/lib/ia/catalogo.ts`), do setor `contabil` e desligados por padrão, como o catálogo exige:
+  - `leitor_de_nota_texto`, faixa rápida;
+  - `leitor_de_nota_imagem`, faixa padrão.
+
+  O original fixava `gpt-4o-mini` e `gpt-4o`. O catálogo do Connect só aceita modelos da tabela de faixas, com preço conhecido, e os 4o já saíram dela. Quem quiser outro modelo escolhe por agente em Integrações › Inteligência artificial.
+- **A chave do escritório** (o `ALLOW_FINANCIAL_DATA_TO_OPENAI` do original): fica em `TenantContabilCoreConfig.iaDocumentosFinanceiros` (`tenant_contabil_core_configs`, na migration desta fase), **desligada por padrão**.
+  - Quem pode "gerir" liga e desliga em Contábil Core › Configurações › "Leitura de notas por IA".
+  - A ação tem confirmação e auditoria (`contabil.core.ia_documentos.alterada`, gravada só quando o valor muda).
+  - Com a chave desligada, PDF e imagem são recusados com a frase do original adaptada, dizendo onde ligar. Sem provedor configurado, a frase manda para Integrações.
+- **Gabarito dos leitores:** `gabarito_notas.py`, com 399 chamadas, todas iguais. O plugin assina NF-e e NFS-e com certificados de teste gerados nele mesmo. Os cenários visuais usam a IA simulada com as respostas da suíte do original: as chamadas (texto ou imagem, e o texto enviado) e o resultado são idênticos. As chamadas reais de IA não entram no gabarito.
+- **Conferência com arquivos reais:** os Downloads não têm XML de nota. Os 5 XMLs que havia dentro de ZIPs não são notas, e original e porte deram a mesma saída nos 5.
+- **Achados sobre o original:**
+  - **A assinatura de uma NF-e real nunca confere no original.** Com o `signxml` 5.2 e o `lxml` 6.1, a assinatura no padrão da NF-e (`<Signature xmlns="…xmldsig#">`, sem prefixo) sai sempre "assinatura não confere (InvalidInput)". O lxml canonicaliza o `SignedInfo` como raiz e deixa um `xmlns=""` falso. Só a assinatura com prefixo `ds:` chega a ser conferida.
+  - O porte reproduz isso de propósito: toda NF-e real entra como `xml_nao_verificado`, como no original, e a carga (C4) não muda de procedência.
+  - Corrigir é uma decisão à parte, que vale para os dois sistemas.
+  - **Certificado vencido:** o `signxml` confere a validade no momento da importação, não na emissão. Uma nota assinada por certificado já vencido entra como `xml_nao_verificado` ("InvalidCertificate"), ao contrário do que diz um comentário do original. O porte segue o comportamento real.
+
+Divergências da C1:
+
+- **O motivo da assinatura é gravado.** O original tem a coluna `assinatura_motivo` e a tela a mostra, mas `criar` não a passava ao modelo: o motivo nunca chegava ao banco. Aqui ele é gravado.
+- **Valor acima de `Decimal(15,2)`:** é recusado com frase ("O valor da nota passa do limite aceito."), antes de qualquer outra conferência. No original, a gravação falhava no PostgreSQL (erro 500).
+- **Associar a uma transação desfeita:** é recusado ("Transação não encontrada nesta empresa."). O original não olhava o `deleted_at` da transação.
+- **Busca da lista:** o `%` e o `_` digitados são procurados como texto (no `ilike` do original eram curingas), e a collation do MySQL ignora acento além de maiúscula ("sao jose" acha "São José"). Na mesma emissão, a ordem desempata pelo id. O tipo ou a situação inexistente devolve lista vazia (no PostgreSQL, erro do enum).
+- **Datas do filtro:** "AAAA-MM-DD" é o dia inteiro no fuso do escritório. O original mandava o início em UTC e o fim no fuso do navegador.
+- **Mensagens:** as recusas genéricas do pydantic ("1 validation error for NotaFiscalCreate…") viram frases em português; as dos validadores próprios são as mesmas. O ZIP que não abre diz "Arquivo ZIP inválido: o arquivo não é um ZIP ou está corrompido." (o original repetia a frase do Python, em inglês).
+- **Recusa do leitor:** toda recusa do leitor de XML vira linha de erro do arquivo, inclusive a codificação desconhecida, que no original escapava como `LookupError` (erro 500).
+- **Dígitos de outras escritas:** são aceitos onde o `\d` do Python aceita. Os sobrescritos ("²"), que o `isdigit()` do validador de CNPJ do original contava e depois quebravam no `int()`, ficam de fora.
+- **Página de PDF para a IA de visão:** vai como PDF de uma página, não como PNG de 200 dpi, porque desenhar PDF em imagem exigiria dependência nova. A ordem, o orçamento e a contagem de chamadas são os mesmos.
+- **Exceção crua do original vira recusa com frase:** a falha do provedor na leitura por imagem, o PDF ilegível ou sem páginas (no original, `FileDataError`/`EmptyFileError` do PyMuPDF, erro 500) e a codificação desconhecida.
+- **Codificações:** as de 1 byte fora da lista (latin-1, cp1252, iso8859-15, ascii e utf-8) são recusadas como desconhecidas. O DTD em UTF-16 é recusado com a frase do DTD.
+- **Fica como no original, mas merece decisão:** a nota cadastrada à mão nasce com a procedência `xml_assinado` (o padrão do `NotaFiscalCreate`, que a tela do original não mudava).
+- **Fora da C1:** o uso das notas pelo NEO (`_selecionar_nota_candidata`, a contraparte pela nota e o número da nota no histórico) vai para a C2, junto dos comprovantes, porque o motor usa os dois do mesmo jeito. A exportação das notas (`nfe_entrada`, `nfse_tomado`…) e os números do painel ficam para o Bloco D.
+- **Tela:**
+  - **O texto do cancelamento** diz que a associação sai junto, como o serviço faz. O original dizia que ela seria mantida.
+  - **O dia da emissão:** a nota sem hora (a NFS-e só com a data e o cadastro à mão) é gravada à meia-noite UTC, como no original, e aparece no dia gravado; o original a mostrava no dia anterior.
+  - **Associar** tem busca pelo histórico (o original listava as 100 primeiras pendentes).
+  - **A transação ligada** vem no resumo da lista (o original fazia uma leitura por transação na tela).
+  - **No extrato e no NEO** a nota não aparece: o original também não a mostra ali, a não ser na contagem de notas que o NEO associou, que vem com a C2.
+
 ## Arquitetura no Connect
 
 ### Módulo
@@ -323,6 +426,7 @@ Todas as tabelas novas têm prefixo `core_` e `tenantId`. Nenhuma tabela existen
 | `core_financeiro_analises` | `financeiro_analises` | `snapshot` em JSON, com as chaves do original; `agenciaId` sem chave estrangeira; `criado_por` vira `criadoPorId` |
 | `core_financeiro_documentos` | `financeiro_documentos` | sem os bytes: o original fica em disco (`storageKey`) |
 | `core_financeiro_vinculos` | `financeiro_vinculos` | `usuario_id` vira `confirmadoPorId` |
+| `core_notas_fiscais` | `notas_fiscais` | unicidades totais por empresa (chave de acesso e `dedupKey`); `transacaoId` → `core_transacoes` |
 
 **Tipos:**
 - **Identificadores:** VARCHAR(191) com o UUID em minúsculas e com hífens, igual ao `str(uuid)` do Python.

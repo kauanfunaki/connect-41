@@ -1,0 +1,10 @@
+
+    <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+      <infNFe Id="NFe31830378337113503936828345267101408259634207">
+        <ide><nNF>42</nNF><serie>1</serie><dhEmi>2026-01-01T10:00:00-03:00</dhEmi></ide>
+        <emit><CNPJ>12345678000195</CNPJ><xNome>Emitente</xNome></emit>
+        <dest><CNPJ>97742561813540</CNPJ></dest>
+        <total><ICMSTot><vNF>100.00</vNF></ICMSTot></total>
+      </infNFe>
+    </NFe>
+    

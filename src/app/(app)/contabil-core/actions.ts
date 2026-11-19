@@ -39,6 +39,7 @@ import {
   type Simulacao,
 } from "@/lib/contabil-core/servidor/neoAvancado";
 import { valorDoComponente } from "@/lib/contabil-core/motor/fila";
+import { definirIaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
 
 // As ações do Contábil Core (Fase 2, 09/11/2026). Trabalhar (cadastrar regra e contraparte,
 // classificar, cancelar uma classificação) é "agir" no setor. Mexer na estrutura da empresa — pôr a
@@ -400,4 +401,25 @@ export async function criarRegraEAplicarAction(empresaId: unknown, form: unknown
   await logAudit({ tenantId: c.tenantId, userId: c.userId, action: "contabil.core.regra.criada", entityType: "CoreRegra", entityId: r.valor.regraId, metadata: { nome: v.data.historico, aplicadaEm: r.valor.associadas } });
   revalidatePath(ROTA);
   return { ok: true, associadas: r.valor.associadas };
+}
+
+// ─── Leitura por IA (gerir) ────────────────────────────────────────────────
+
+/**
+ * A chave do escritório que libera mandar documento financeiro (nota em PDF ou imagem) à IA. É de
+ * quem coordena: liga um envio de dado de cliente para fora, e fica na auditoria.
+ */
+export async function definirIaParaDocumentosAction(ligada: unknown): Promise<Retorno> {
+  const c = await contexto("gerir");
+  if (!c) return { error: SEM_ACESSO };
+  if (typeof ligada !== "boolean") return { error: "Valor inválido." };
+  const { antes } = await definirIaParaDocumentos(c.tenantId, ligada);
+  if (antes !== ligada) {
+    await logAudit({
+      tenantId: c.tenantId, userId: c.userId, action: "contabil.core.ia_documentos.alterada",
+      entityType: "TenantContabilCoreConfig", entityId: c.tenantId, metadata: { de: antes, para: ligada },
+    });
+  }
+  revalidatePath(ROTA);
+  return { ok: true };
 }

@@ -433,6 +433,38 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // Contábil Core, Bloco C (19/11/2026): a leitura da nota fiscal em PDF ou imagem que o original
+  // fazia na OpenAI (`visual_parser.py`). Duas faixas, como lá: o texto do PDF vai à rápida (lá,
+  // gpt-4o-mini) e a página ou a imagem vai à padrão (lá, gpt-4o, que lê imagem). Uma volta, sem
+  // ferramenta; o que lê é conferido no código (CNPJ com dígito, valor, data) e a nota entra marcada
+  // como `ocr`. Além do agente ligado, vale a chave do escritório para documento financeiro ir à IA
+  // (`src/lib/contabil-core/ia/leituraPorIa.ts`).
+  {
+    code: "leitor_de_nota_texto",
+    label: "Leitura de nota fiscal (texto do PDF)",
+    sectorCode: "contabil",
+    description:
+      "Lê o texto do DANFE ou da NFS-e em PDF e devolve número, série, CNPJs, valor, emissão e chave de acesso; o Contábil Core confere cada campo antes de importar",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
+    code: "leitor_de_nota_imagem",
+    label: "Leitura de nota fiscal (imagem)",
+    sectorCode: "contabil",
+    description:
+      "Lê a imagem da nota (foto, PDF escaneado, uma página por chamada) quando o PDF não tem texto ou o texto não bastou; o Contábil Core confere cada campo antes de importar",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 20_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
   {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",

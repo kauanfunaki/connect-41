@@ -3,6 +3,7 @@
 import { AcaoComMotivo, BotaoDeAcao } from "./Acoes";
 import {
   cancelarClassificacaoAction,
+  definirIaParaDocumentosAction,
   desfazerImportacaoAction,
   excluirContaAction,
   liberarParaAutomaticoAction,
@@ -83,6 +84,27 @@ export function LiberarParaAutomatico({ empresaId, transacaoId }: { empresaId: s
       variante="link"
       sucesso="A transação volta a ser classificada pelo NEO na próxima execução."
       acao={() => liberarParaAutomaticoAction(empresaId, transacaoId)}
+    />
+  );
+}
+
+/** A chave do escritório para documento financeiro (nota em PDF ou imagem) ir à IA. */
+export function AlternarIaParaDocumentos({ ligada }: { ligada: boolean }) {
+  return (
+    <BotaoDeAcao
+      rotulo={ligada ? "Desligar" : "Ligar"}
+      variante={ligada ? "ghost" : "secondary"}
+      sucesso={ligada ? "Leitura por IA desligada. PDF e imagem de nota passam a ser recusados." : "Leitura por IA ligada."}
+      confirmar={
+        ligada
+          ? undefined
+          : {
+              titulo: "Enviar documentos financeiros à IA?",
+              texto:
+                "O PDF ou a imagem da nota fiscal do cliente vai ao provedor de IA do escritório (Integrações › Inteligência artificial). Os agentes de leitura de nota também precisam estar ligados lá.",
+            }
+      }
+      acao={() => definirIaParaDocumentosAction(!ligada)}
     />
   );
 }
