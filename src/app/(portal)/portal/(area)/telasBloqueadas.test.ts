@@ -25,6 +25,8 @@ const TODOS = new Set([
   "bpo_pendencias",
   "bpo_aprovacoes",
   "bpo_comunicacao",
+  // O Simulador da reforma (19/11/2026).
+  "fiscal_calculadora",
 ]);
 
 const m = vi.hoisted(() => ({
@@ -72,6 +74,8 @@ vi.mock("@/app/(portal)/alcance", () => ({
   alcanceDoCliente: async () => ({ tipo: "EMPRESAS", tenantId: "t1", companyIds: ["c1"] }),
 }));
 vi.mock("@/lib/modules", () => ({ getEnabledModuleCodes: async () => TODOS }));
+// O cliente da calculadora da reforma é `server-only`, que só o Next resolve.
+vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => undefined }) }));
 
 const { TelaIndisponivel } = await import("@/components/portal/TelaIndisponivel");

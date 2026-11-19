@@ -1172,6 +1172,54 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
     ],
   },
 
+  // ─── Calculadora da reforma ───────────────────────────────────────────────
+  {
+    chave: "fiscal_calculadora",
+    titulo: "Calculadora da reforma",
+    caminhos: ["/calculadora-tributaria"],
+    resumo:
+      "CBS, IBS e Imposto Seletivo de uma operação, item a item, pela calculadora oficial da Receita Federal, com a memória de cálculo. Serve para conferir uma nota e orientar o cliente; o cliente tem a versão de simulação no portal.",
+    secoes: [
+      {
+        titulo: "Calcular uma operação",
+        passos: [
+          "Abra “Calculadora da reforma” na barra lateral do setor Fiscal.",
+          "Em “Operação”, confira a “Data do fato gerador” (começa em hoje) e escolha a “UF” e o “Município”. Digite parte do nome para achar o município.",
+          "Em cada item, digite o NCM (8 dígitos) ou a NBS (9 dígitos). Ao sair do campo, a descrição da tabela da Receita aparece embaixo.",
+          "Escolha a “Classificação tributária (cClassTrib)”. A lista mostra só as que servem para NCM ou para NBS, agrupadas por CST, e o CST vem da classificação.",
+          "Informe a “Base de cálculo”. “Quantidade” e “Unidade” são opcionais. Para mais itens, clique em “Adicionar item” (até 50).",
+          "Clique em “Calcular”.",
+        ],
+      },
+      {
+        titulo: "A partir de 2027: as alíquotas",
+        passos: [
+          "Com a data em 2027 ou depois, aparecem os campos “CBS”, “IBS estadual” e “IBS municipal”: a Receita exige as alíquotas no pedido.",
+          "Quando a Receita publicar as alíquotas de referência do ano, os campos vêm preenchidos com elas, e você pode mudar.",
+          "Enquanto ela não publicar, informe as alíquotas do estudo. O resultado sai como “Simulado”.",
+          "Até 31/12/2026 os campos não aparecem: a calculadora usa as alíquotas de teste que a Receita publicou (a nota embaixo da operação diz quais).",
+        ],
+      },
+      {
+        titulo: "Ler o resultado",
+        passos: [
+          "No topo do resultado ficam os totais: base de cálculo, CBS, IBS (estadual e municipal), Imposto Seletivo quando houver e o total de tributos.",
+          "Cada item mostra o estado: “Calculado”, “Simulado”, “Corrigir a entrada”, “Sem cálculo da Receita” ou “Falha na calculadora”.",
+          "Nos itens calculados, a tabela traz a alíquota, a redução e a alíquota efetiva de cada tributo, e o valor.",
+          "Quando a Receita recusa o item, o aviso diz o que aconteceu, o que fazer e o texto da Receita com o código do erro.",
+          "Clique em “Memória de cálculo” para ver como a Receita chegou ao valor, com o artigo da lei.",
+        ],
+      },
+    ],
+    dicas: [
+      "Os totais somam só os itens calculados: item com erro fica de fora.",
+      "Diferimento, suspensão e parte das reduções pedem o grupo de tributação regular, e produtos com Imposto Seletivo pedem os dados dele. Esta tela ainda não coleta esses grupos.",
+      "O rodapé do resultado diz a versão da calculadora e a data da base da Receita usadas na conta.",
+      "Contábil e BPO também podem usar a tela: o administrador compartilha o módulo com o setor em Configurações › Setores e módulos (“Compartilhar”).",
+      "O cliente vê o “Simulador da reforma” no portal quando o módulo está ligado. Para deixar só a equipe usar, bloqueie a tela em Configurações › Portal do cliente › Telas liberadas antes de ligar o módulo.",
+    ],
+  },
+
   // ─── Documentos Fiscais ───────────────────────────────────────────────────
   {
     chave: "fiscal_documentos",

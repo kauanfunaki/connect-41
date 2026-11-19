@@ -36,6 +36,7 @@ export const GRUPO_DO_MODULO: Readonly<Record<string, GrupoDeCor>> = {
   bpo_emitir_nfse: "fiscal",
   fiscal_documentos: "fiscal",
   fiscal_autorizacoes: "fiscal",
+  fiscal_calculadora: "fiscal",
   fiscal_painel: "fiscal",
   fiscal_classificacao: "fiscal",
   fiscal_operacao: "fiscal",

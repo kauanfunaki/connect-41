@@ -65,6 +65,18 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     grupo: "fiscal",
     descricao: "Notas emitidas e recebidas pelas suas empresas.",
   },
+  // O Simulador da reforma (19/11/2026, funcionalidade-794): a Calculadora da
+  // reforma da equipe, com o aviso de que é simulação. Liga com o mesmo
+  // módulo; o escritório que quiser só a da equipe bloqueia esta tela em
+  // Telas liberadas — antes de ligar o módulo, para o cliente não a ver.
+  {
+    href: "/portal/calculadora-tributaria",
+    rotulo: "Simulador da reforma",
+    modulo: "fiscal_calculadora",
+    secao: null,
+    grupo: "fiscal",
+    descricao: "Quanto de CBS e IBS incide numa venda ou num serviço, pelo cálculo oficial da Receita Federal.",
+  },
   // Os nomes em palavras do cliente (polimento do portal, 11/11/2026): "DRE" e
   // "Relatório" não diziam o que havia dentro. A sigla fica entre parênteses —
   // é como o contador fala com ele — e a Ajuda explica o termo.
