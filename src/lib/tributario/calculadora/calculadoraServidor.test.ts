@@ -5,7 +5,7 @@ import aliquotaUniao2027 from "./gabarito/aliquota-uniao-2027-404.json";
 
 vi.mock("server-only", () => ({}));
 
-const { aliquotasDeReferencia, calcularNaReceita, calculadoraConfigurada, descreverCodigo, ufsDaCalculadora } = await import("./calculadoraServidor");
+const { aliquotasDeReferencia, calcularNaReceita, calculadoraConfigurada, descreverCodigo, enderecoAceitoPeloServico, ufsDaCalculadora } = await import("./calculadoraServidor");
 
 const pedido = {
   id: "p",
@@ -88,5 +88,34 @@ describe("cliente da calculadora", () => {
     const b = await ufsDaCalculadora();
     expect(a).toEqual(b);
     expect(espiao).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("endereço que o servidor da calculadora aceita (bug-799)", () => {
+  // O Tomcat recusa com 400 o Host com sublinhado, e o nome interno do EasyPanel é "projeto_serviço".
+  const resolver = vi.fn(async () => ({ address: "10.0.1.23", family: 4 }));
+
+  it("nome com sublinhado vira o IP, com a mesma porta", async () => {
+    expect(await enderecoAceitoPeloServico("http://app_calculadora-rtc:8080", resolver)).toBe("http://10.0.1.23:8080");
+    expect(resolver).toHaveBeenCalledWith("app_calculadora-rtc");
+  });
+
+  it("IPv6 vai entre colchetes", async () => {
+    const v6 = vi.fn(async () => ({ address: "fd00::5", family: 6 }));
+    expect(await enderecoAceitoPeloServico("http://app_calculadora-rtc:8080", v6)).toBe("http://[fd00::5]:8080");
+  });
+
+  it("nome sem sublinhado e https ficam como estão, sem resolver", async () => {
+    const espiao = vi.fn(resolver);
+    expect(await enderecoAceitoPeloServico("http://calculadora-rtc:8080", espiao)).toBe("http://calculadora-rtc:8080");
+    expect(await enderecoAceitoPeloServico("https://calc_rtc.exemplo.com", espiao)).toBe("https://calc_rtc.exemplo.com");
+    expect(espiao).not.toHaveBeenCalled();
+  });
+
+  it("nome que não resolve é serviço fora do ar", async () => {
+    vi.stubEnv("CALCULADORA_RTC_URL", "http://nao_existe.invalid:8080");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await calcularNaReceita(pedido)).toMatchObject({ ok: false, falha: "fora-do-ar" });
+    vi.unstubAllEnvs();
   });
 });
