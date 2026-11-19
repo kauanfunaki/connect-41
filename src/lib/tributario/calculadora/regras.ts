@@ -17,7 +17,6 @@ import { lerNumeroDigitado } from "../numeroDigitado";
 
 export const MODULO_DA_CALCULADORA = "fiscal_calculadora";
 export const ROTA_DA_CALCULADORA = "/calculadora-tributaria";
-export const ROTA_DA_CALCULADORA_NO_PORTAL = "/portal/calculadora-tributaria";
 
 /** O primeiro dia em que a Receita exige as alíquotas nominais no pedido (e antes disso as proíbe). */
 export const INICIO_DAS_ALIQUOTAS_NOMINAIS = "2027-01-01";

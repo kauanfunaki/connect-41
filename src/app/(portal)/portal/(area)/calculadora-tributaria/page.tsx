@@ -9,7 +9,7 @@ import { CalculadoraDaReforma } from "@/components/tributario/calculadora/Calcul
 import { clienteAtivoDoPortal } from "@/app/(portal)/usuario";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { hojeIso } from "@/lib/datas/calendario";
-import { MODULO_DA_CALCULADORA, ROTA_DA_CALCULADORA_NO_PORTAL } from "@/lib/tributario/calculadora/regras";
+import { MODULO_DA_CALCULADORA } from "@/lib/tributario/calculadora/regras";
 import { dadosIniciaisDaCalculadora } from "@/lib/tributario/calculadora/calculadoraServidor";
 import { consultarCalculadoraDoPortal } from "./actions";
 
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalCalculadoraPage() {
   const cliente = await clienteAtivoDoPortal();
   if (!cliente || !cliente.modulos.has(MODULO_DA_CALCULADORA)) notFound();
-  if (await telaBloqueadaNoPortal(cliente.tenantId, ROTA_DA_CALCULADORA_NO_PORTAL)) return <TelaIndisponivel />;
+  if (await telaBloqueadaNoPortal(cliente.tenantId, "/portal/calculadora-tributaria")) return <TelaIndisponivel />;
 
   const hoje = hojeIso();
   const iniciais = await dadosIniciaisDaCalculadora(hoje);
