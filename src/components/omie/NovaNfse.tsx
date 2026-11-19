@@ -307,7 +307,9 @@ export function NovaNfse({
               helper={
                 listas.clientesBloqueados > 0
                   ? `${listas.clientesBloqueados === 1 ? "1 cliente com faturamento bloqueado no Omie ficou" : `${listas.clientesBloqueados} clientes com faturamento bloqueado no Omie ficaram`} de fora.`
-                  : undefined
+                  : opcoesDeTomador.length === 0
+                    ? "O Omie desta empresa não tem cliente cadastrado. Cadastre o tomador no Omie e atualize as listas."
+                    : undefined
               }
             >
               <SearchableSelect
@@ -346,7 +348,9 @@ export function NovaNfse({
                 </div>
               )}
             </CampoForm>
-            <CampoForm label="Serviço" htmlFor={`${id}-servico`} required dica="Do cadastro de serviços do Omie — é de lá que vêm código municipal, tributação e alíquotas.">
+            <CampoForm label="Serviço" htmlFor={`${id}-servico`} required dica="Do cadastro de serviços do Omie — é de lá que vêm código municipal, tributação e alíquotas."
+              helper={opcoesDeServico.length === 0 ? "O Omie desta empresa não tem serviço cadastrado. Cadastre o serviço no Omie e atualize as listas." : undefined}
+            >
               <SearchableSelect
                 id={`${id}-servico`}
                 name="servico"

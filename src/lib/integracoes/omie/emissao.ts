@@ -598,6 +598,14 @@ export function ehNaoEncontrada(err: unknown): boolean {
 }
 
 /**
+ * Lista vazia: o Omie responde "Não existem registros para a página [1]!" como
+ * erro quando o cadastro não tem nada (empresa sem serviço ou sem cliente).
+ */
+export function ehPaginaVazia(err: unknown): boolean {
+  return err instanceof ErroDoOmie && /n[aã]o existem registros para a p[aá]gina/i.test(err.message);
+}
+
+/**
  * Sem resposta conclusiva: rede, tempo esgotado, HTTP de erro sem a mensagem do
  * Omie (a ajuda diz que pode ser instabilidade), ou o `PROTO_BYEBYE`, que o
  * Omie diz poder deixar registro pela metade. O pedido pode ter chegado — não

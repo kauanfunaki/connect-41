@@ -9,6 +9,7 @@ import {
   dataDoOmie,
   desfechoDoStatus,
   ehNaoEncontrada,
+  ehPaginaVazia,
   ehOsJaCadastrada,
   ehSemResposta,
   lerRespostaDaOS,
@@ -457,6 +458,12 @@ describe("respostas da OS", () => {
 });
 
 describe("erros que mudam o caminho", () => {
+  it("página vazia de lista não se confunde com outro \"não existe\"", () => {
+    expect(ehPaginaVazia(new ErroDoOmie("ERROR: Não existem registros para a página [1]!", null, 500))).toBe(true);
+    expect(ehPaginaVazia(new ErroDoOmie("ERROR: Ordem de Serviço não cadastrada para o código de integração [abc]", null, 500))).toBe(false);
+    expect(ehPaginaVazia(new Error("Não existem registros para a página [1]!"))).toBe(false);
+  });
+
   it("OS repetida, OS não encontrada e falta de resposta", () => {
     expect(ehOsJaCadastrada(new ErroDoOmie("ERROR: Ordem de Serviço já cadastrada para o código de integração [abc]", null, 500))).toBe(true);
     expect(ehNaoEncontrada(new ErroDoOmie("ERROR: Ordem de Serviço não cadastrada para o código de integração [abc]", null, 500))).toBe(true);
