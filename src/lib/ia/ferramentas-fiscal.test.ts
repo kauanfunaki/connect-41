@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Prisma } from "@/generated/prisma/client";
-import { competenciaPedida, linkDoAcervo, soDigitos, somarPorTipo } from "./ferramentas-fiscal";
+import { competenciaPedida, linkDoAcervo, resumoDosAjustesIbsCbs, soDigitos, somarPorTipo } from "./ferramentas-fiscal";
 
 describe("ferramentas da IA do Fiscal", () => {
   it("competência só no formato AAAA-MM", () => {
@@ -34,6 +34,27 @@ describe("ferramentas da IA do Fiscal", () => {
     expect(somarPorTipo([g("NFE", "AUTORIZADA", 2, "100.10"), g("NFE", "AUTORIZADA", 1, "0.20"), g("NFE", "CANCELADA", 1, "999")])).toEqual({
       NFE: { quantidade: 3, valor: 100.3, canceladas: 1 },
     });
+  });
+
+  it("separa as notas de crédito e de débito da reforma, com IBS e CBS (19/11/2026)", () => {
+    const g = (finalidade: string | null, situation: string, n: number, v: string, ibs: string | null, cbs: string | null) => ({
+      type: "NFE",
+      situation,
+      destination: "IGNORADO",
+      completude: "COMPLETO",
+      finalidade,
+      _count: { _all: n },
+      _sum: { amount: new Prisma.Decimal(v), valorIbs: ibs === null ? null : new Prisma.Decimal(ibs), valorCbs: cbs === null ? null : new Prisma.Decimal(cbs) },
+    });
+    expect(resumoDosAjustesIbsCbs([g("1", "AUTORIZADA", 4, "1000", null, null), g(null, "AUTORIZADA", 1, "5", null, null)])).toBeNull();
+    expect(
+      resumoDosAjustesIbsCbs([
+        g("1", "AUTORIZADA", 4, "1000", null, null),
+        g("5", "AUTORIZADA", 2, "30.00", "0.20", "1.80"),
+        g("6", "AUTORIZADA", 1, "12.30", "0.10", null),
+        g("6", "CANCELADA", 1, "999", "9", "9"),
+      ])
+    ).toMatchObject({ notasDeCredito: 2, notasDeDebito: 1, valor: 42.3, ibs: 0.3, cbs: 1.8 });
   });
 });
 

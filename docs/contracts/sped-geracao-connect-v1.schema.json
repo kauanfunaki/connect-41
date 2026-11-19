@@ -516,6 +516,55 @@
               "type": "string"
             }
           },
+          "finalidadeNfe": {
+            "default": "1",
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6"
+            ]
+          },
+          "tipoAjuste": {
+            "default": "",
+            "type": "string",
+            "pattern": "^(\\d{2})?$"
+          },
+          "referenciadas": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^\\d{44}$"
+            }
+          },
+          "valorIbs": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{1,14}(\\.\\d{1,2})?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "valorCbs": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{1,14}(\\.\\d{1,2})?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "type": "string",
             "minLength": 1,
@@ -558,6 +607,11 @@
           "completo",
           "itens",
           "referencias",
+          "finalidadeNfe",
+          "tipoAjuste",
+          "referenciadas",
+          "valorIbs",
+          "valorCbs",
           "id",
           "companyId",
           "cnpjEmpresa",
@@ -946,33 +1000,21 @@
                 "type": "string"
               },
               "saldoAnterior": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "string",
+                  "null"
                 ]
               },
               "recolher": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "string",
+                  "null"
                 ]
               },
               "transportar": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "string",
+                  "null"
                 ]
               }
             },
@@ -1008,6 +1050,81 @@
         },
         "totalSaidas": {
           "type": "string"
+        },
+        "ajustesIbsCbs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "documentoId": {
+                "type": "string"
+              },
+              "empresaId": {
+                "type": "string"
+              },
+              "competencia": {
+                "type": "string"
+              },
+              "numero": {
+                "type": "string"
+              },
+              "sentido": {
+                "type": "string"
+              },
+              "finalidade": {
+                "type": "string",
+                "enum": [
+                  "5",
+                  "6"
+                ]
+              },
+              "tipoAjuste": {
+                "type": "string"
+              },
+              "motivo": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "valor": {
+                "type": "string"
+              },
+              "valorIbs": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "valorCbs": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "referenciadas": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "documentoId",
+              "empresaId",
+              "competencia",
+              "numero",
+              "sentido",
+              "finalidade",
+              "tipoAjuste",
+              "motivo",
+              "valor",
+              "valorIbs",
+              "valorCbs",
+              "referenciadas"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [
@@ -1215,13 +1332,9 @@
                       "type": "string"
                     },
                     "vProd": {
-                      "anyOf": [
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
+                      "type": [
+                        "string",
+                        "null"
                       ]
                     },
                     "vDesc": {
@@ -1249,23 +1362,15 @@
                     "type": "string"
                   },
                   "chaveRef": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   },
                   "tomador": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                    "type": [
+                      "string",
+                      "null"
                     ]
                   },
                   "munIni": {

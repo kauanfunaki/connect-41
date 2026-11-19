@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Info } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { Breadcrumb } from "@/components/shared/Breadcrumb";
@@ -8,7 +9,18 @@ import { Selo, tomDaVariante } from "@/components/ui/Selo";
 import { InfoRow } from "@/components/empresas/InfoRow";
 import { getAuthContext, canActOnSector, canManageSector, podeExcluir } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
-import { obterDocumento } from "@/lib/fiscal/data";
+import { obterDocumento, documentosPorChave } from "@/lib/fiscal/data";
+import { Badge } from "@/components/ui/Badge";
+import {
+  FINALIDADE_LABEL,
+  FINALIDADE_VARIANTE,
+  ajustaSoIbsCbs,
+  chaveFormatada,
+  chavesReferenciadasDaColuna,
+  ehFinalidade,
+  finalidadeEmDestaque,
+  motivoDoAjuste,
+} from "@/lib/fiscal/finalidade";
 import { alcanceDaEquipe } from "../alcance";
 import { definirDestino } from "./actions";
 import { DestinoControl } from "@/components/fiscal/DestinoControl";
@@ -139,6 +151,17 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
 
   const titulo = `${TIPO_LABEL[doc.type]} nº ${doc.number}${doc.series ? `/${doc.series}` : ""}`;
 
+  // Finalidade, notas referenciadas e IBS/CBS (19/11/2026). A referenciada que
+  // está no acervo vira link para a ficha dela; a que não está, a chave formatada.
+  const finalidade = ehFinalidade(doc.finalidade) ? doc.finalidade : null;
+  const emDestaque = finalidadeEmDestaque(finalidade);
+  const ajusteIbsCbs = ajustaSoIbsCbs(finalidade);
+  const motivo = motivoDoAjuste(finalidade, doc.tipoAjuste);
+  const chavesReferenciadas = chavesReferenciadasDaColuna(doc.chavesReferenciadas);
+  const noAcervo = new Map(
+    (await documentosPorChave(alcanceDaEquipe(ctx.tenantId), chavesReferenciadas)).map((r) => [r.accessKey, r])
+  );
+
   return (
     <PageContainer>
       {/* Trilha no lugar do "← Voltar" (P04, 15/10/2026): o pai é sempre a lista
@@ -159,6 +182,7 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
           <>
             <Selo tom={tomDaVariante(SITUACAO_VARIANTE[doc.situation])}>{SITUACAO_LABEL[doc.situation]}</Selo>
             <Selo tom={tomDaVariante(DESTINO_VARIANTE[doc.destination])}>{DESTINO_LABEL[doc.destination]}</Selo>
+            {emDestaque && <Badge variant={FINALIDADE_VARIANTE[emDestaque]}>{FINALIDADE_LABEL[emDestaque]}</Badge>}
           </>
         }
       />
@@ -172,6 +196,19 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
                 fica aqui: se já tiver virado lançamento, alguém precisa decidir o estorno.
                 {doc.removedAtOriginAt ? ` Detectado em ${formatInstantDate(doc.removedAtOriginAt)}.` : ""}
               </p>
+        </Aviso>
+      )}
+
+      {/* Nota de crédito/débito (finNFe 5/6): diz por que está fora do faturamento
+          e do financeiro antes de alguém mudar o destino e lançar em dobro. */}
+      {ajusteIbsCbs && (
+        <Aviso tom="info" icone={<Info />} className="mb-4">
+          <p className="font-semibold">{finalidade === "5" ? "Nota de crédito" : "Nota de débito"} da reforma tributária</p>
+          <p className="text-helper text-fg-secondary mt-0.5">
+            Ajusta só o IBS e a CBS da nota referenciada. Fica fora do faturamento e da apuração de ICMS, IPI,
+            PIS e COFINS, e entrou ignorada no financeiro: os juros e as reduções já estão nas duplicatas da
+            nota original, e lançar esta também contaria o valor duas vezes.
+          </p>
         </Aviso>
       )}
 
@@ -206,6 +243,10 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
             />
           )}
           <InfoRow label="Competência" value={formatarCompetencia(doc.competence)} />
+          {finalidade && <InfoRow label="Finalidade" value={FINALIDADE_LABEL[finalidade]} />}
+          {ajusteIbsCbs && <InfoRow label={finalidade === "5" ? "Motivo do crédito" : "Motivo do débito"} value={motivo ?? "Não informado no XML"} />}
+          {doc.valorIbs !== null && <InfoRow label="IBS" value={formatarReais(Number(doc.valorIbs))} />}
+          {doc.valorCbs !== null && <InfoRow label="CBS" value={formatarReais(Number(doc.valorCbs))} />}
           <InfoRow label="Chave de acesso" value={doc.accessKey} mono />
           <InfoRow
             label="Origem"
@@ -216,6 +257,34 @@ export default async function DocumentoFiscalPage({ params }: { params: Promise<
             }
           />
         </div>
+        {chavesReferenciadas.length > 0 && (
+          <div className="mt-4 border-t border-border-soft pt-4">
+            <h3 className="text-helper text-fg-muted mb-2">
+              {chavesReferenciadas.length === 1 ? "Nota referenciada" : `Notas referenciadas (${chavesReferenciadas.length})`}
+            </h3>
+            <ul className="space-y-1.5">
+              {chavesReferenciadas.map((chave) => {
+                const r = noAcervo.get(chave);
+                return (
+                  <li key={chave} className="min-w-0 text-body">
+                    {r ? (
+                      <Link
+                        href={`/documentos-fiscais/${r.id}`}
+                        className="text-brand hover:underline focus-visible:underline rounded-sm"
+                      >
+                        {TIPO_LABEL[r.type]} nº {r.number}
+                        {r.series ? `/${r.series}` : ""}
+                      </Link>
+                    ) : (
+                      <span className="text-fg-secondary">Fora do acervo</span>
+                    )}
+                    <span className="block tnum text-helper text-fg-muted break-all">{chaveFormatada(chave)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </Card>
 
       <Card className="p-5 mb-4">

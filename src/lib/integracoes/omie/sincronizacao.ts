@@ -18,6 +18,7 @@ import { executar, lerConfig } from "@/lib/integracoes/data";
 import { chamarOmie } from "./cliente";
 import { instanciaDaEmpresa, PREFIXO_DA_EMPRESA } from "./contas";
 import { mapearNotaOmie, paginaDoListarNF, type NotaDoOmie } from "./notas";
+import { colunasDaFinalidade } from "@/lib/fiscal/finalidade";
 
 const POR_PAGINA = 100;
 /** Páginas por execução e por conta: 1.000 notas, ~10 chamadas em sequência. */
@@ -61,13 +62,17 @@ async function gravarNotas(tenantId: string, companyId: string, emitente: string
       competence: n.competencia,
       situation: n.situacao,
       omieIdNF: n.omieIdNF,
+      // A finalidade, quando o Omie manda (19/11/2026). Na atualização entra só ela,
+      // e só quando veio: o destino é decisão de alguém e não se sobrescreve.
+      ...(n.finalidade ? { finalidade: n.finalidade } : {}),
     };
     const atual = porChave.get(n.dedupKey);
 
     if (!atual) {
       try {
         // Sem XML guardado no SPED: `renderizavel` falso, para ninguém pedir PDF de lá.
-        await prisma.fiscalDocument.create({ data: { tenantId, dedupKey: n.dedupKey, origin: "OMIE", renderizavel: false, ...dados } });
+        // A nota de débito da reforma (finNFe 6) nasce IGNORADO, sem virar conta — ver src/lib/fiscal/finalidade.ts.
+        await prisma.fiscalDocument.create({ data: { tenantId, dedupKey: n.dedupKey, origin: "OMIE", renderizavel: false, ...dados, ...(n.finalidade ? colunasDaFinalidade({ finalidade: n.finalidade }) : {}) } });
         c.novas++;
       } catch (err) {
         // Corrida com a sincronização do SPED gravando a mesma chave: quem chegou

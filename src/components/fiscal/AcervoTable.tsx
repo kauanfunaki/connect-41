@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Selo, tomDaVariante } from "@/components/ui/Selo";
+import { Badge } from "@/components/ui/Badge";
+import { FINALIDADE_LABEL, FINALIDADE_VARIANTE, finalidadeEmDestaque } from "@/lib/fiscal/finalidade";
 import { Pagination } from "@/components/shared/Pagination";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { formatCalendarDate, formatarReais, formatarCompetencia } from "@/lib/format";
@@ -85,6 +87,14 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
     </>
   );
 
+  // A finalidade quando não é a normal (19/11/2026): nota de crédito, de débito,
+  // complementar, ajuste ou devolução. Em Badge, porque é categoria do documento,
+  // como o tipo — não situação da linha.
+  const finalidade = (d: LinhaDoAcervo) => {
+    const f = finalidadeEmDestaque(d.finalidade);
+    return f ? <Badge variant={FINALIDADE_VARIANTE[f]}>{FINALIDADE_LABEL[f]}</Badge> : null;
+  };
+
   const numero = (d: LinhaDoAcervo) => (
     <Link href={`/documentos-fiscais/${d.id}`} className="font-semibold text-fg hover:text-brand transition-colors">
       {d.number}
@@ -112,7 +122,10 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
             <InfoDoCartao>
               {formatCalendarDate(d.issuedAt)} · {formatarCompetencia(d.competence)} · {direcao}
             </InfoDoCartao>
-            <PeDoCartao>{selos(d, estorno)}</PeDoCartao>
+            <PeDoCartao>
+              {finalidade(d)}
+              {selos(d, estorno)}
+            </PeDoCartao>
           </Cartao>
         ))}
       </CartoesNoCelular>
@@ -121,9 +134,10 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
           se recalculam a cada filtro aplicado e a tabela "dança" — foi o mesmo
           defeito corrigido na listagem de empresas em 02/09. */}
       <TabelaNoDesktop padrao>
-        <table className="w-full table-fixed min-w-[1080px]">
+        <table className="w-full table-fixed min-w-[1140px]">
           <colgroup>
-            <col className="w-[92px]" />
+            {/* 152px: cabe o Badge "Nota de crédito" embaixo do tipo (19/11/2026). */}
+            <col className="w-[152px]" />
             <col className="w-[132px]" />
             <col />
             <col className="w-[112px]" />
@@ -145,7 +159,10 @@ export function AcervoTable({ documentos }: { documentos: LinhaDoAcervo[] }) {
           <tbody>
             {linhas.map(({ d, contraparte, direcao, estorno }) => (
               <tr key={d.id} className="border-b border-border">
-                <td className="px-4 py-3 text-fg-secondary">{TIPO_LABEL[d.type]}</td>
+                <td className="px-4 py-3 text-fg-secondary">
+                  <span className="block">{TIPO_LABEL[d.type]}</span>
+                  {finalidade(d) && <span className="mt-1 block">{finalidade(d)}</span>}
+                </td>
                 <td className="px-4 py-3 tnum whitespace-nowrap">{numero(d)}</td>
                 <td className="px-4 py-3 min-w-0">
                   <span className="block text-fg truncate" title={nomeExibicao(d.company)}>

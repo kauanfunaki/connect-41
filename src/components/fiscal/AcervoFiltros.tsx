@@ -5,6 +5,7 @@ import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { FiltrosDaTela } from "@/components/shared/FiltrosDaTela";
 import { useNavegarSemRecarregar } from "@/components/shared/NavegacaoSemRecarregar";
 import { TIPO_LABEL, DESTINO_LABEL } from "@/lib/fiscal/rotulos";
+import { FINALIDADE_LABEL } from "@/lib/fiscal/finalidade";
 import { formatarCompetencia } from "@/lib/format";
 
 /**
@@ -61,8 +62,12 @@ export function BuscaDoAcervo() {
 }
 
 /**
- * Competência, tipo e destino. A empresa saiu daqui em 13/10/2026: é o
- * seletor da fileira de cima, e o acervo mostra uma empresa por vez.
+ * Competência, tipo, finalidade e destino. A empresa saiu daqui em 13/10/2026:
+ * é o seletor da fileira de cima, e o acervo mostra uma empresa por vez.
+ *
+ * A finalidade (19/11/2026) acha as notas de crédito e de débito da reforma e
+ * as devoluções. "Normal" inclui o documento sem a marca (CT-e, NFS-e e nota
+ * anterior a 19/11/2026).
  */
 export function FiltrosDoAcervo({ competencias }: { competencias: string[] }) {
   return (
@@ -80,6 +85,12 @@ export function FiltrosDoAcervo({ competencias }: { competencias: string[] }) {
           rotulo: "Tipo",
           vazioLabel: "Todos",
           opcoes: Object.entries(TIPO_LABEL).map(([value, label]) => ({ value, label })),
+        },
+        {
+          chave: "finalidade",
+          rotulo: "Finalidade",
+          vazioLabel: "Todas",
+          opcoes: Object.entries(FINALIDADE_LABEL).map(([value, label]) => ({ value, label })),
         },
         {
           chave: "destino",

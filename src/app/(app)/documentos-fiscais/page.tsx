@@ -22,6 +22,7 @@ import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { alcanceFiscalDaEscolha } from "@/lib/empresas/escopoDaEscolha";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import type { FiscalDocumentType, FiscalDocumentDestination } from "@/generated/prisma/enums";
+import { ehFinalidade } from "@/lib/fiscal/finalidade";
 
 // `SECTOR` é a chave do dado (onde o módulo nasce) e o padrão do gate; o
 // acesso segue o setor que opera o módulo neste tenant — ver `setorDoModulo`.
@@ -97,6 +98,8 @@ export default async function DocumentosFiscaisPage({
     competencia: params.competencia || undefined,
     tipo: (params.tipo as FiscalDocumentType) || undefined,
     destino: (params.destino as FiscalDocumentDestination) || undefined,
+    // Finalidade da NF-e (19/11/2026): só um dos seis códigos; outro valor na URL é ignorado.
+    finalidade: ehFinalidade(params.finalidade) ? params.finalidade : undefined,
     busca: params.q || undefined,
   };
   const pagina = Math.max(1, Number(params.pagina) || 1);
@@ -125,7 +128,7 @@ export default async function DocumentosFiscaisPage({
     }
   }
 
-  const semFiltro = !params.q && !params.competencia && !params.tipo && !params.destino;
+  const semFiltro = !params.q && !params.competencia && !params.tipo && !params.destino && !params.finalidade;
   const semNenhum = documentos.length === 0 && pagina === 1 && semFiltro;
 
   // O cartão de destino é atalho para o recorte, mantendo os outros filtros; o

@@ -11,7 +11,14 @@ export const pacoteGeracaoSchema = z.object({
   apoios: z.array(apoioSchema.extend({ id: identificador, companyId: identificador, autor: z.string(), em: z.string() })),
   decisoes: z.array(z.object({ chave: z.string(), tipo: z.string(), dados: z.record(z.string(), z.unknown()), autor: z.string(), em: z.string() })),
   parametros: z.array(parametrosSchema.extend({ companyId: identificador, competencia: z.string() })),
-  apuracao: z.object({ obrigacao: obrigacaoSchema, linhas: z.array(z.record(z.string(), z.unknown())), tributos: z.array(z.object({ tributo: z.string(), debitos: z.string(), creditos: z.string(), saldoAnterior: z.string().nullable(), recolher: z.string().nullable(), transportar: z.string().nullable() })), pendencias: z.array(z.string()), ajustes: z.array(z.record(z.string(), z.unknown())), totalEntradas: z.string(), totalSaidas: z.string() }),
+  apuracao: z.object({ obrigacao: obrigacaoSchema, linhas: z.array(z.record(z.string(), z.unknown())), tributos: z.array(z.object({ tributo: z.string(), debitos: z.string(), creditos: z.string(), saldoAnterior: z.string().nullable(), recolher: z.string().nullable(), transportar: z.string().nullable() })), pendencias: z.array(z.string()), ajustes: z.array(z.record(z.string(), z.unknown())), totalEntradas: z.string(), totalSaidas: z.string(),
+    /**
+     * 19/11/2026: as notas de crédito e de débito da reforma (finNFe 5/6), que
+     * ajustam só IBS/CBS e por isso ficam fora de `linhas`, `tributos` e dos
+     * totais. Os documentos seguem em `documentos`, com `finalidadeNfe`. Opcional:
+     * pacote congelado antes disto não tem.
+     */
+    ajustesIbsCbs: z.array(z.object({ documentoId: z.string(), empresaId: z.string(), competencia: z.string(), numero: z.string(), sentido: z.string(), finalidade: z.enum(["5", "6"]), tipoAjuste: z.string(), motivo: z.string().nullable(), valor: z.string(), valorIbs: z.string().nullable(), valorCbs: z.string().nullable(), referenciadas: z.array(z.string()) })).optional() }),
   /**
    * 06/11/2026: o que o EFD ICMS/IPI exige e os blocos acima não trazem (cadastro
    * do estabelecimento, endereço dos participantes, unidade, origem e valor
