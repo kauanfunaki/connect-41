@@ -745,6 +745,22 @@ export const MODULE_CATALOG: ModuleDef[] = [
     group: "Apoio",
     menuDireto: true,
   },
+  {
+    // Calculadora da reforma (19/11/2026, funcionalidade-794): CBS, IBS e
+    // Imposto Seletivo pelo cálculo oficial da Receita, que roda como serviço
+    // interno (infra/calculadora-rtc, variável CALCULADORA_RTC_URL). No Fiscal,
+    // em Apuração, ao lado de ICMS e IPI e de PIS e COFINS — os tributos que a
+    // CBS e o IBS substituem. Contábil e BPO entram pelos setores da tela
+    // (Administração › Módulos). Nasce desligada: sem o serviço no ar, a tela
+    // só sabe dizer "não configurada". A mesma liga a tela do portal.
+    code: "fiscal_calculadora",
+    label: "Calculadora da reforma",
+    sectorCode: "fiscal",
+    description: "CBS, IBS e Imposto Seletivo de uma operação, item a item, pelo cálculo oficial da Receita Federal, com a memória de cálculo",
+    defaultEnabled: false,
+    icon: "Calculator",
+    group: "Apuração",
+  },
   // O menu do Societário (09/11/2026, pedido do Kauan): Operação (Processos,
   // Painel e Órgãos), Regularização (Licenças e Certidões), e avulsas
   // Exigências e prazos, Relatórios e Hub de robôs — nessa ordem (ver
@@ -1109,6 +1125,7 @@ export const MODULE_ROUTES: Record<string, string> = {
   bpo_fluxos:              "/fluxos",
   fiscal_documentos:      "/documentos-fiscais",
   fiscal_autorizacoes:     "/autorizacoes",
+  fiscal_calculadora:      "/calculadora-tributaria",
   fiscal_painel:           "/sped-fiscal/motor",
   fiscal_classificacao:    "/sped-fiscal/motor/classificacao",
   fiscal_operacao:         "/sped-fiscal/motor/operacao",

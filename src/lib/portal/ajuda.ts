@@ -332,6 +332,22 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       "Se faltar alguma nota que você esperava ver, fale com a equipe.",
     ],
   },
+  // O Simulador da reforma (19/11/2026, funcionalidade-794).
+  {
+    chave: "simulador",
+    titulo: "Simular a CBS e o IBS de uma venda",
+    resumo: "Quanto dos tributos novos da reforma incide num produto ou num serviço, pelo cálculo oficial da Receita.",
+    icone: "documentos",
+    modulos: ["fiscal_calculadora"],
+    telas: ["/portal/calculadora-tributaria"],
+    passos: [
+      "Abra Simulador da reforma no menu.",
+      "Em Operação, confira a data e escolha a UF e o município de onde a venda acontece.",
+      "Em cada item, digite o NCM do produto ou a NBS do serviço, como aparece na nota, escolha a classificação tributária e informe o valor em Base de cálculo. Para mais de um produto, toque em Adicionar item.",
+      "Toque em Calcular. O resultado mostra a CBS, o IBS e o total de cada item e da venda.",
+      "É uma simulação: antes de mudar preço, nota ou contrato, fale com a equipe do escritório. Se não souber a classificação, pergunte a ela.",
+    ],
+  },
   {
     chave: "empresa",
     titulo: "Trocar de empresa",

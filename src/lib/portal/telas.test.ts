@@ -39,7 +39,15 @@ describe("menuDoPortal — o que pede ação sobe (11/11/2026)", () => {
   it("Pendências, Aprovações e Solicitações logo depois do Início, antes dos documentos fiscais", () => {
     // Sem a Conversa: com as solicitações ligadas, ela sai do menu.
     const menu = menuDoPortal(telasVisiveis(TODOS));
-    expect(hrefs(menu.topo)).toEqual(["/portal", "/portal/pendencias", "/portal/aprovacoes", "/portal/solicitacoes", "/portal/documentos"]);
+    // O Simulador da reforma (19/11/2026) é tela geral, logo depois dos documentos fiscais.
+    expect(hrefs(menu.topo)).toEqual([
+      "/portal",
+      "/portal/pendencias",
+      "/portal/aprovacoes",
+      "/portal/solicitacoes",
+      "/portal/documentos",
+      "/portal/calculadora-tributaria",
+    ]);
   });
 
   it("as que subiram não se repetem em “Com a equipe”, e a seção fica com o resto", () => {

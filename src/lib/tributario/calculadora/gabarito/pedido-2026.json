@@ -1,0 +1,39 @@
+{
+  "id": "teste-2026",
+  "versao": "1.0.0",
+  "dhFatoGerador": "2026-11-19T10:00:00-03:00",
+  "municipio": 4314902,
+  "uf": "RS",
+  "itens": [
+    {
+      "numero": 1,
+      "ncm": "10063021",
+      "cst": "200",
+      "cClassTrib": "200003",
+      "baseCalculo": 100,
+      "quantidade": 20,
+      "unidade": "KG"
+    },
+    {
+      "numero": 2,
+      "nbs": "122011200",
+      "cst": "200",
+      "cClassTrib": "200028",
+      "baseCalculo": 1200
+    },
+    {
+      "numero": 3,
+      "ncm": "02013000",
+      "cst": "200",
+      "cClassTrib": "200035",
+      "baseCalculo": 80
+    },
+    {
+      "numero": 4,
+      "ncm": "84713012",
+      "cst": "000",
+      "cClassTrib": "000001",
+      "baseCalculo": 5000
+    }
+  ]
+}

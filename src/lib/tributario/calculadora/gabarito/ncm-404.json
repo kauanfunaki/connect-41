@@ -1,0 +1,8 @@
+{
+  "type": "http://localhost/errors/ncm-nao-encontrada",
+  "title": "NCM não encontrada",
+  "status": 404,
+  "detail": "NCM de código 99999999 não encontrada para a data 2026-11-19",
+  "instance": "/api/calculadora/dados-abertos/ncm",
+  "timestamp": "2026-11-19T14:17:48.464962746Z"
+}

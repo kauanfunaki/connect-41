@@ -1,0 +1,8 @@
+{
+  "type": "http://localhost/errors/aliquota-nao-encontrada",
+  "title": "Alíquota não encontrada",
+  "status": 404,
+  "detail": "Alíquota de referencia ou padrão não encontrada para o tributo com id 2, UF null, município null e data 2027-03-10",
+  "instance": "/api/calculadora/dados-abertos/aliquota-uniao",
+  "timestamp": "2026-11-19T14:17:49.737614679Z"
+}
