@@ -254,8 +254,8 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
     passos: [
       "Abra Aprovações para ver as contas que esperam você.",
       "Toque em Aprovar na conta, ou marque várias e toque em Aprovar selecionadas.",
-      "\"Marcar todas dentro do meu teto\" seleciona de uma vez as contas que você pode aprovar.",
-      "Uma conta \"Fora do teto\" passa do valor que você pode aprovar e precisa de alguém da sua empresa com teto maior.",
+      "\"Marcar todas que você pode aprovar\" seleciona de uma vez as contas dentro do seu limite.",
+      "Uma conta \"Acima do seu limite\" passa do valor que você pode aprovar: aparece como \"Outra pessoa aprova\" e fica para alguém da sua empresa com limite maior.",
       "Para reprovar, toque em Reprovar e escreva o motivo. Ele vai para quem lançou a conta.",
     ],
   },

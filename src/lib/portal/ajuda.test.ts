@@ -81,6 +81,15 @@ describe("passosDoPortal — o cliente só lê sobre o que está no menu dele", 
     expect(texto).toMatch(/\bToque em\b/);
   });
 
+  it("as aprovações falam em “limite”, como a tela, e não em “teto” nem “alçada” (19/11/2026)", () => {
+    const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
+    const texto = todos.flatMap((p) => [p.titulo, p.resumo, ...p.passos]).join("\n");
+    expect(texto).not.toMatch(/\bteto\b|al[çc]ada/i);
+    const aprovar = todos.find((p) => p.chave === "aprovar")!.passos.join("\n");
+    expect(aprovar).toContain("Marcar todas que você pode aprovar");
+    expect(aprovar).toContain("Acima do seu limite");
+  });
+
   it("todo passo que aparece tem ao menos uma linha", () => {
     const todos = passosDoPortal(new Set(TELAS_DO_PORTAL.flatMap((t) => (t.modulo ? [t.modulo] : []))), { variasEmpresas: true });
     // 16 desde 09/10/2026 (o passo dos Arquivos); 17 desde 21/10/2026, com a sugestão do portal.
