@@ -913,3 +913,87 @@ export async function avaliarRequisitos(
     resumo: humanizarTexto(String(bruto.resumo ?? ""), entrada.requisitos).slice(0, 1000),
   };
 }
+
+// ─── Texto livre de uma volta, com anexo (Contábil Core, 19/11/2026) ────────
+//
+// A leitura de documento financeiro por IA (nota fiscal em PDF ou imagem; depois comprovante e
+// fatura de cartão) pede ao modelo um JSON e confere a resposta no código, como o Contábil Core fazia
+// com a OpenAI: sem `json_schema`, porque a conferência é do original (aceita a resposta cercada por
+// ```json, o primeiro item de uma lista, e recusa com a frase de cada campo). Quem chama é
+// `src/lib/contabil-core/ia/leituraPorIa.ts`, que confere antes a chave do escritório.
+//
+// Sem `temperature`: nenhuma chamada do Connect manda, e os modelos que raciocinam a recusam.
+
+/** Uma volta, sem ferramenta e sem formato: devolve o texto da resposta (pode vir vazio). */
+export async function gerarTexto(params: {
+  tenantId: string;
+  agentCode: string;
+  sistema: string;
+  texto: string;
+  /** Imagem (PNG/JPEG/GIF/WEBP) ou PDF; vão antes do texto, como no original. */
+  anexos?: AnexoEstruturado[];
+  maxTokens: number;
+  timeoutMs?: number;
+  contexto?: ContextoDaChamada;
+}): Promise<string> {
+  return executarAgente({
+    tenantId: params.tenantId,
+    agentCode: params.agentCode,
+    contexto: params.contexto,
+    chamar: async (c) => {
+      if (c.provider === "ANTHROPIC") {
+        const client = new Anthropic({ apiKey: c.apiKey });
+        const anexos = params.anexos?.length ? await blocosAnthropicDosAnexos(params.anexos) : [];
+        const response = await client.messages.create(
+          {
+            model: c.model,
+            max_tokens: params.maxTokens,
+            system: params.sistema,
+            messages: [{ role: "user", content: [...anexos, { type: "text" as const, text: params.texto }] }],
+          },
+          // Chamada paga não se repete sozinha: o orçamento de chamadas é de quem chama.
+          { ...(params.timeoutMs ? { timeout: params.timeoutMs } : {}), maxRetries: 0 }
+        );
+        if (response.stop_reason === "refusal") throw new Error("A IA recusou processar este conteúdo.");
+        const texto = response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+        return { valor: texto, uso: usoAnthropic(response.usage) };
+      }
+      if (c.provider !== "OPENAI") throw new Error(`Provedor de IA não suportado: ${String(c.provider)}.`);
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${c.apiKey}`, "Content-Type": "application/json" },
+        ...(params.timeoutMs ? { signal: AbortSignal.timeout(params.timeoutMs) } : {}),
+        body: JSON.stringify({
+          model: c.model,
+          instructions: params.sistema,
+          store: false,
+          max_output_tokens: limiteDeSaida(c.model, params.maxTokens),
+          input: [
+            {
+              role: "user",
+              content: [
+                ...(params.anexos ?? []).map((a) =>
+                  a.imagem || a.mime.startsWith("image/")
+                    ? { type: "input_image", image_url: `data:${a.mime};base64,${a.base64}`, detail: "high" }
+                    : { type: "input_file", filename: a.nome, file_data: `data:${a.mime};base64,${a.base64}` }
+                ),
+                { type: "input_text", text: params.texto },
+              ],
+            },
+          ],
+        }),
+      });
+      // O corpo do erro pode ecoar o documento enviado: fica fora da mensagem.
+      if (!res.ok) throw new Error(`OpenAI indisponível (HTTP ${res.status}).`);
+      const data = await res.json();
+      const texto =
+        data.output_text ??
+        (data.output ?? [])
+          .filter((o: { type: string }) => o.type === "message")
+          .flatMap((o: { content?: { type: string; text?: string }[] }) => o.content ?? [])
+          .map((b: { type: string; text?: string }) => (b.type === "output_text" ? (b.text ?? "") : ""))
+          .join("");
+      return { valor: String(texto ?? ""), uso: usoOpenAi(data.usage) };
+    },
+  });
+}

@@ -288,6 +288,14 @@ export async function cancelarLancamento(tx: Tx, base: { tenantId: string; empre
     data: { deletedAt: agora, canceladoEm: agora, canceladoPorId: userId, motivoCancelamento: corta(motivo, 300), chaveAtiva: null, chavePadraoAtiva: null },
   });
   await tx.coreTransacao.update({ where: { id: transacaoId }, data: { status: "pendente", autoRecusadoEm: agora, autoRecusadoPorId: userId } });
+  // Notas fiscais (Fase C1): são DESVINCULADAS, nunca apagadas, como em `cancelar_lancamento` do original.
+  // O documento não tem nada de errado e precisa ficar livre para a próxima classificação reencontrá-lo.
+  // Vale também para reclassificar e para desfazer a importação (a transação sem lançamento sai com a
+  // nota ainda ligada, como lá).
+  await tx.coreNotaFiscal.updateMany({
+    where: { tenantId: base.tenantId, empresaId: base.empresaId, transacaoId, deletedAt: null },
+    data: { transacaoId: null, status: "pendente" },
+  });
   await gravarDecisao(tx, base, transacaoId, { resultado: "sem_regra", estrategia: "manual", motivo: `Classificação cancelada: ${motivo}` });
   return partidas.length;
 }

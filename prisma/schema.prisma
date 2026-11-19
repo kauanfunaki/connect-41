@@ -1668,6 +1668,7 @@ model Tenant {
   aparencia                 TenantAparencia?
   enviosConfig              TenantEnviosConfig?
   societarioConfig          TenantSocietarioConfig?
+  contabilCoreConfig        TenantContabilCoreConfig?
   quadrosBloqueados         SectorQuadrosBloqueados[]
   userAgendaConfigs         UserAgendaConfig[]
   userAgendaViews           UserAgendaView[]
@@ -11360,6 +11361,7 @@ model CoreEmpresa {
   financeiroAnalises   CoreFinanceiroAnalise[]
   financeiroDocumentos CoreFinanceiroDocumento[]
   financeiroVinculos   CoreFinanceiroVinculo[]
+  notasFiscais         CoreNotaFiscal[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11594,6 +11596,7 @@ model CoreTransacao {
   importacao CoreImportacao?  @relation(fields: [importacaoId], references: [id], onDelete: Restrict)
   registros  CoreRegistro[]
   decisoes   CoreNeoDecisao[]
+  notas      CoreNotaFiscal[]
 
   @@unique([empresaId, hashAtivo])
   @@index([empresaId, status, autoRecusadoEm])
@@ -11892,6 +11895,71 @@ model CoreFinanceiroVinculo {
   @@index([empresaId])
   @@index([tenantId])
   @@map("core_financeiro_vinculos")
+}
+
+/// A configuração do Contábil Core do escritório (Bloco C, 19/11/2026). Uma linha por tenant; sem linha
+/// vale o padrão.
+model TenantContabilCoreConfig {
+  tenantId                String   @id
+  /// Libera mandar documento financeiro (nota fiscal em PDF ou imagem; depois comprovante e fatura)
+  /// ao provedor de IA do escritório — o `ALLOW_FINANCIAL_DATA_TO_OPENAI` do original. Desligada por
+  /// padrão; quem coordena o Contábil Core ("gerir") liga em Configurações. Lida em
+  /// `src/lib/contabil-core/servidor/notas.ts` (`iaLiberadaParaDocumentos`).
+  iaDocumentosFinanceiros Boolean  @default(false)
+  updatedAt               DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_contabil_core_configs")
+}
+
+/// NF-e e NFS-e da empresa (`notas_fiscais`, Bloco C, Fase C1), importadas do XML, do PDF ou da
+/// imagem, ou cadastradas à mão, e ligadas à mão a uma transação do extrato.
+/// As duas unicidades do original são TOTAIS (não só das vivas): continuam como índice único comum.
+model CoreNotaFiscal {
+  id               String    @id @default(uuid())
+  tenantId         String
+  empresaId        String
+  /// nfe | nfse
+  tipo             String    @db.VarChar(5)
+  numero           String    @db.VarChar(50)
+  serie            String?   @db.VarChar(10)
+  /// Formatado (00.000.000/0000-00), como o original grava.
+  cnpjEmitente     String    @db.VarChar(18)
+  nomeEmitente     String?   @db.VarChar(300)
+  cnpjDestinatario String?   @db.VarChar(18)
+  valor            Decimal   @db.Decimal(15, 2)
+  /// O instante da emissão, em UTC (no original, `timestamptz`).
+  dataEmissao      DateTime
+  /// pendente | associada | cancelada
+  status           String    @default("pendente") @db.VarChar(10)
+  /// A transação do extrato ligada à nota. Fica apontando para a transação mesmo depois que ela sai
+  /// numa importação desfeita sem lançamento (como no original).
+  transacaoId      String?
+  /// Os 44 dígitos.
+  chaveAcesso      String?   @db.VarChar(44)
+  /// Por que a assinatura do XML não conferiu (com `origem` = xml_nao_verificado).
+  assinaturaMotivo String?   @db.VarChar(200)
+  /// SHA-256 da identidade da nota (`_calcular_identidade_nota`): a NF-e pela chave; a NFS-e e a NF-e
+  /// sem chave por emitente, número, série, valor e emissão.
+  dedupKey         String    @db.Char(64)
+  observacao       String?   @db.VarChar(500)
+  /// Procedência, da mais confiável para a menos: xml_assinado | xml_nao_verificado | ocr
+  origem           String    @default("xml_assinado") @db.VarChar(20)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  empresa   CoreEmpresa    @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  transacao CoreTransacao? @relation(fields: [transacaoId], references: [id], onDelete: Restrict)
+
+  @@unique([empresaId, chaveAcesso])
+  @@unique([empresaId, dedupKey])
+  @@index([empresaId, status])
+  @@index([empresaId, dataEmissao])
+  @@index([transacaoId])
+  @@index([tenantId])
+  @@map("core_notas_fiscais")
 }
 
 // ─── Atendimento (10/11/2026) ────────────────────────────────────────────────

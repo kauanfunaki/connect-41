@@ -71,6 +71,8 @@ const PASSOS_DO_CONTABIL_CORE: Passo<AlvoEmpresa>[] = [
   // Revisão manual da conciliação (B3): os vínculos apontam para a revisão; nenhuma das duas aponta para o extrato.
   apagarDoCore("CoreConciliacaoVinculo", (tx, where) => tx.coreConciliacaoVinculo.deleteMany({ where })),
   apagarDoCore("CoreConciliacaoRevisao", (tx, where) => tx.coreConciliacaoRevisao.deleteMany({ where })),
+  // Notas fiscais (C1): apontam para a transação do extrato, então saem antes dela.
+  apagarDoCore("CoreNotaFiscal", (tx, where) => tx.coreNotaFiscal.deleteMany({ where })),
   apagarDoCore("CoreNeoDecisao", (tx, where) => tx.coreNeoDecisao.deleteMany({ where })),
   apagarDoCore("CoreRegistro", (tx, where) => tx.coreRegistro.deleteMany({ where })),
   apagarDoCore("CoreTransacao", (tx, where) => tx.coreTransacao.deleteMany({ where })),

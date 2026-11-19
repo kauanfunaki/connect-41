@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<CompNfse xmlns="http://www.abrasf.org.br/nfse.xsd"><Nfse versao="2.04"><InfNfse Id="nfse2026"><Numero>2026</Numero><CodigoVerificacao>ABC12345</CodigoVerificacao><DataEmissao>2026-01-07T09:30:00</DataEmissao><Servico><Valores><ValorServicos>350.00</ValorServicos><ValorIss>17.50</ValorIss></Valores></Servico><PrestadorServico><IdentificacaoPrestador><Cnpj>12345678000780</Cnpj></IdentificacaoPrestador><RazaoSocial>EMPRESA ENSAIO NOTAS LTDA</RazaoSocial></PrestadorServico><TomadorServico><IdentificacaoTomador><CpfCnpj><Cnpj>11111111000191</Cnpj></CpfCnpj></IdentificacaoTomador></TomadorServico></InfNfse><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><ds:Reference URI="#nfse2026"><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ds:DigestValue>uSzkE+3964vnfxd77BsId8oQvIo=</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue>YGGkHcr+jLX5niRng6ssC760IM7E0wLu4quyRxTurVUeat5aLG3lCIXs36GnFNXSRY8ujk1ru53Jr4pdHFo8bDVXcCMYTLC/BKmS14r2F6g4XC3XXXjQ017gTWPXQ9fPS1n4pzTH1xJEcBDSpQQ8VKbXVJbm03/scJTVQw6Usdx7vRdboNtHW+m0sOeqWmDP3H/O1MMlyoMjKcnh6R+ypqeRxGpEnWoUlDE2S0QEXDFRToy328Sb4GvMium0lpidc+auLq0c1vA3/9zdoVXdOsdvRNrFGNjzRltJdeNilZeLK3gLEmlI7LoVVrEr3JmrHkcml5qMT9UjWkxZ6oaOpQ==</ds:SignatureValue><ds:KeyInfo><ds:X509Data><ds:X509Certificate>MIIC4TCCAcmgAwIBAgIBKTANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDDClFTVBS
+RVNBIEZJQ1RJQ0lBIERPIEVOU0FJTzo5OTk5OTk5OTAwMDE5MTAeFw0yNjAxMDEw
+MDAwMDBaFw0zNTEyMzAwMDAwMDBaMDQxMjAwBgNVBAMMKUVNUFJFU0EgRklDVElD
+SUEgRE8gRU5TQUlPOjk5OTk5OTk5MDAwMTkxMIIBIjANBgkqhkiG9w0BAQEFAAOC
+AQ8AMIIBCgKCAQEAnKr3cion/kQ7yDegRlQU+vrah5rrwWT2MVsDaPdaw4K3WMGF
+whjzGmw0xJ+4/sPlnqj2wCFjA7+D2Dmz3BifrLTQ+cxtGNnuF8ji2lRlzrdpjBBz
+6kBJg0VIaJal/srWsm0AsSKGI6pAw+Ns5RwYzDfcWxnScUagwyoNEdGvG/eRQIk8
+c5dX0IPtIqQ9mlu3ayC3g4LBq7wEdlpcr/pM+JvNAeMdWqjHF5sVossDlvxzSs6m
+NjnvCsh/ctKQtQkR3GYNu1ATri+ePVhyb+o2OuOvDyHR4PG/VGjmHxiJ/MYVZf7B
+TpbBdK4IQSXlbRnXyg9NRxPg8RlBHg0+/En28wIDAQABMA0GCSqGSIb3DQEBCwUA
+A4IBAQBwTTd4ewMvztkAm0y5ClOt9Gp06CaLNJlG/3fy/vPXqmJSFca2ihGlFyKv
+Ag7ZTuwUMjSyqiXrJgBZxmW4UzeCxBM+qkC7O/Q7yv+JXgh3RoTdWwQgWat9WSuB
+WBLb7MiA8xA3k6D7dJMVCY1Fjew5bBWhTCPFV8ARXZRSVXdOkMxv0fLxTk7eeqpA
+Lbm0QrC26RnYydeJpmMEL+TgtsQWIxjuHWCZg82ySUKY9wxdnSb9DAHWImboVgyQ
+uTRBPh84i75tD+jYNQhXKv+AifO2BWphntDatzd1TYvuDUKlwVLEbimRacYU1CqH
+N8AbUhtaMtGY1my948qaX/spBmbc
+</ds:X509Certificate></ds:X509Data></ds:KeyInfo></ds:Signature></Nfse></CompNfse>

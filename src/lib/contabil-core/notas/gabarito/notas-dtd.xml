@@ -1,0 +1,1 @@
+<!DOCTYPE NFe [<!ENTITY x "valor">]><NFe>&x;</NFe>

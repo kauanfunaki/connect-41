@@ -9,7 +9,7 @@ import { filaAgrupada } from "@/lib/contabil-core/servidor/neoAvancado";
 import { texto as textoDec } from "@/lib/contabil-core/motor/decimal";
 import { listarExtrato, listarRegistros, POR_PAGINA, ultimoMesComLancamento } from "@/lib/contabil-core/servidor/consultas";
 import { moeda, moedaComSinal, ROTULO_DO_TIPO_DE_CONTA, rotuloDaAgencia, rotuloDaConta } from "@/lib/contabil-core/tela";
-import { AlternarAgencia, AlternarRegra, CancelarClassificacao, DesfazerImportacao, ExcluirConta } from "./Botoes";
+import { AlternarAgencia, AlternarIaParaDocumentos, AlternarRegra, CancelarClassificacao, DesfazerImportacao, ExcluirConta } from "./Botoes";
 import { EnvioDeExtrato } from "./EnvioDeExtrato";
 import { ImportarCadastro } from "./ImportarCadastro";
 import { Exportar } from "./Exportar";
@@ -20,6 +20,8 @@ import { Filtros } from "./Filtros";
 import { FormularioDaAgencia, FormularioDaConta, FormularioDaContraparte, FormularioDaRegra } from "./Formularios";
 import { FilaDoNeo, ProcessarNeo } from "./Neo";
 import { Compor, Reclassificar } from "./Lancamento";
+import { Notas } from "./Notas";
+import { iaLiberadaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
 // confere tenant e empresa) e passam para o navegador só o que a tela mostra.
@@ -422,6 +424,15 @@ export async function AbaRegistros({ c }: { c: ContextoDaAba }) {
   );
 }
 
+// ─── Notas fiscais ────────────────────────────────────────────────────────
+
+// Bloco C, Fase C1 (18/11/2026): a aba "Notas" do original. A lista, os filtros e as ações vão pela API
+// (`/api/contabil-core/notas`), que confere tenant, empresa e permissão; quem só lê o módulo vê a lista.
+export function AbaNotas({ c }: { c: ContextoDaAba }) {
+  // A chave zera a tela (filtros, resultado da importação) ao trocar de empresa.
+  return <Notas key={c.empresaId} empresaId={c.empresaId} podeAgir={c.podeAgir} />;
+}
+
 // ─── Conciliação ──────────────────────────────────────────────────────────
 
 // Razão × extrato (Bloco B, Fase B2, 12/11/2026) e conferência do financeiro (Fase B4, 12/11/2026). Conciliar só envia arquivo e mostra o relatório, que
@@ -460,9 +471,21 @@ export async function AbaConciliacao({ c }: { c: ContextoDaAba }) {
 // ─── Configurações ────────────────────────────────────────────────────────
 
 export async function AbaConfiguracoes({ c }: { c: ContextoDaAba }) {
-  const { contas, agencias, todasAsContas, opcoesDeConta } = await opcoes(c);
+  const [{ contas, agencias, todasAsContas, opcoesDeConta }, iaLigada] = await Promise.all([opcoes(c), iaLiberadaParaDocumentos(c.tenantId)]);
   return (
     <div className="flex flex-col gap-6">
+      <section>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">Leitura de notas por IA</h2>
+          {c.podeGerir && <AlternarIaParaDocumentos ligada={iaLigada} />}
+        </div>
+        <p className="text-sm text-fg-muted">
+          {iaLigada
+            ? "Ligada para o escritório: a nota fiscal em PDF ou imagem vai ao provedor de IA configurado em Integrações › Inteligência artificial."
+            : "Desligada: nenhum documento financeiro vai à IA, e a nota em PDF ou imagem é recusada na importação. O XML não usa IA."}
+        </p>
+      </section>
+
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Contas bancárias</h2>
