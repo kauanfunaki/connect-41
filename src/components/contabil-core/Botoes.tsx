@@ -94,14 +94,14 @@ export function AlternarIaParaDocumentos({ ligada }: { ligada: boolean }) {
     <BotaoDeAcao
       rotulo={ligada ? "Desligar" : "Ligar"}
       variante={ligada ? "ghost" : "secondary"}
-      sucesso={ligada ? "Leitura por IA desligada. PDF e imagem de nota passam a ser recusados." : "Leitura por IA ligada."}
+      sucesso={ligada ? "Leitura por IA desligada. PDF e imagem de nota, e comprovante que os rótulos não leem, passam a ser recusados." : "Leitura por IA ligada."}
       confirmar={
         ligada
           ? undefined
           : {
               titulo: "Enviar documentos financeiros à IA?",
               texto:
-                "O PDF ou a imagem da nota fiscal do cliente vai ao provedor de IA do escritório (Integrações › Inteligência artificial). Os agentes de leitura de nota também precisam estar ligados lá.",
+                "O PDF ou a imagem da nota fiscal e do comprovante de pagamento do cliente vai ao provedor de IA do escritório (Integrações › Inteligência artificial). Os agentes de leitura de nota e de comprovante também precisam estar ligados lá.",
             }
       }
       acao={() => definirIaParaDocumentosAction(!ligada)}

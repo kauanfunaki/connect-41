@@ -120,6 +120,15 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
           "Clique em “Associar” e escolha a transação pendente do extrato que paga ou recebe a nota. “Remover associação” desfaz; “Cancelar” tira a nota das associações.",
         ],
       },
+      {
+        titulo: "Como cadastrar comprovantes de pagamento",
+        passos: [
+          "Na aba “Comprovantes”, arraste para a área um ou vários PDFs ou imagens de comprovante (PIX, TED, DOC, boleto pago), ou clique em “Escolher arquivos”.",
+          "Cada arquivo abre o cadastro com os campos lidos do comprovante. Revise o favorecido, o valor pago e as datas e clique em “Cadastrar comprovante” (na fila, “Salvar e continuar”; “Pular este” segue para o próximo).",
+          "Nota fiscal e arquivo já cadastrado são pulados sozinhos, com o motivo. Se já existir um comprovante de mesmo valor, dia e favorecido, a tela pergunta: confirme só se forem dois pagamentos diferentes.",
+          "Clique em “Associar” e escolha a transação pendente do extrato que o comprovante paga. “Remover associação” desfaz; “Excluir” tira o comprovante da lista, e o arquivo pode ser cadastrado de novo.",
+        ],
+      },
     ],
     dicas: [
       "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
@@ -129,8 +138,10 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
       "Na planilha (.xlsx, .xls ou .csv), o Connect acha as colunas pelo cabeçalho (Data, Histórico, Crédito, Débito, Valor, Saldo), e o saldo de cada linha confere os lançamentos.",
       "PDF que é imagem (sem texto selecionável) ainda não é lido: importe o OFX ou a planilha da conta.",
       "Desfazer uma importação inteira é de quem coordena o setor: os lançamentos das transações do arquivo são cancelados antes.",
-      "PDF e imagem de nota fiscal são lidos pela IA do escritório, que vem desligada: até ela ser ligada, importe o XML da nota.",
-      "Desfazer a classificação de uma transação solta as notas associadas a ela, que voltam para pendente.",
+      "PDF e imagem de nota fiscal são lidos pela IA do escritório, que vem desligada: até ela ser ligada, importe o XML da nota. Quem coordena liga em Configurações › “Leitura de documentos por IA”.",
+      "O comprovante em PDF com texto é lido pelos rótulos (Favorecido, Valor pago, Data do pagamento), sem IA. A IA só entra quando os rótulos não acham o valor, e para a imagem e o PDF escaneado; desligada, preencha os campos à mão.",
+      "Ao rodar, o NEO liga sozinho a nota fiscal e o comprovante que batem com a transação (valor com até R$ 0,01 de diferença; 7 dias para a nota e 3 para o comprovante, que só vale para débito), quando há exatamente um. Sem regra, a contraparte sai do CNPJ da nota (e o número dela vai no histórico) ou do comprovante.",
+      "Desfazer a classificação de uma transação solta as notas e os comprovantes associados a ela; a nota volta para pendente.",
     ],
   },
   // O SPED do Contábil (17/11/2026, melhoria-707): as frases que explicavam a

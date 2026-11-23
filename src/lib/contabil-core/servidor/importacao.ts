@@ -331,7 +331,7 @@ export async function desfazerImportacao(
       const agora = new Date();
       let lancamentos = 0;
       for (const t of transacoes) {
-        const partidas = await cancelarLancamento(tx, { tenantId, empresaId }, t.id, `Importação cancelada: ${texto}`, userId);
+        const { partidas } = await cancelarLancamento(tx, { tenantId, empresaId }, t.id, `Importação cancelada: ${texto}`, userId);
         lancamentos += partidas / 2;
       }
       // A transação sai e solta o hash: o mesmo extrato pode entrar de novo (o fluxo de conserto).

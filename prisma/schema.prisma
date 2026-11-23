@@ -11380,6 +11380,7 @@ model CoreEmpresa {
   financeiroDocumentos CoreFinanceiroDocumento[]
   financeiroVinculos   CoreFinanceiroVinculo[]
   notasFiscais         CoreNotaFiscal[]
+  comprovantes         CoreComprovante[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11464,6 +11465,7 @@ model CoreAgencia {
   importacoes   CoreImportacao[]
   transacoes    CoreTransacao[]
   registros     CoreRegistro[]
+  comprovantes  CoreComprovante[]
 
   @@unique([empresaId, chave])
   @@index([tenantId, empresaId])
@@ -11615,6 +11617,7 @@ model CoreTransacao {
   registros  CoreRegistro[]
   decisoes   CoreNeoDecisao[]
   notas      CoreNotaFiscal[]
+  comprovantes CoreComprovante[]
 
   @@unique([empresaId, hashAtivo])
   @@index([empresaId, status, autoRecusadoEm])
@@ -11917,6 +11920,52 @@ model CoreFinanceiroVinculo {
 
 /// A configuração do Contábil Core do escritório (Bloco C, 19/11/2026). Uma linha por tenant; sem linha
 /// vale o padrão.
+/// Comprovante de pagamento (PIX, TED, DOC, boleto pago) da empresa (`comprovantes`, Bloco C, Fase C2),
+/// lido do PDF ou da imagem, ou cadastrado à mão, e ligado a uma transação do extrato (à mão ou pelo NEO).
+/// O arquivo fica em disco (`storage/contabil-core/comprovantes/<tenantId>/<id>.<ext>`), não no banco.
+model CoreComprovante {
+  id             String    @id @default(uuid())
+  tenantId       String
+  empresaId      String
+  agenciaId      String?
+  /// A transação do extrato ligada. Fica apontando para a transação mesmo depois que ela sai numa
+  /// importação desfeita sem lançamento (como no original).
+  transacaoId    String?
+  favorecido     String?   @db.VarChar(300)
+  cpfCnpj        String?   @db.VarChar(18)
+  /// Instantes em UTC (no original, `timestamptz`). O leitor grava a meia-noite UTC do dia lido.
+  dataPagamento  DateTime?
+  dataVencimento DateTime?
+  valorDocumento Decimal?  @db.Decimal(15, 2)
+  valorPago      Decimal   @db.Decimal(15, 2)
+  juros          Decimal   @default(0) @db.Decimal(15, 2)
+  multa          Decimal   @default(0) @db.Decimal(15, 2)
+  desconto       Decimal   @default(0) @db.Decimal(15, 2)
+  observacao     String?   @db.VarChar(500)
+  arquivoNome    String?   @db.VarChar(255)
+  /// SHA-256 dos BYTES do arquivo: o mesmo arquivo reenviado é o mesmo comprovante.
+  arquivoSha256  String?   @db.Char(64)
+  arquivoTipo    String?   @db.VarChar(100)
+  arquivoTamanho Int?
+  /// "<tenantId>/<id>.<ext>" sob storage/contabil-core/comprovantes — nunca vem de quem envia.
+  storageKey     String?   @db.VarChar(255)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  empresa   CoreEmpresa    @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  agencia   CoreAgencia?   @relation(fields: [agenciaId], references: [id], onDelete: Restrict)
+  transacao CoreTransacao? @relation(fields: [transacaoId], references: [id], onDelete: Restrict)
+
+  @@index([empresaId])
+  @@index([transacaoId])
+  // Sem UNIQUE, de propósito, como no original: a base dele já tem duplicados de antes do hash, e
+  // quem barra o arquivo repetido é o serviço.
+  @@index([empresaId, arquivoSha256])
+  @@index([tenantId])
+  @@map("core_comprovantes")
+}
+
 model TenantContabilCoreConfig {
   tenantId                String   @id
   /// Libera mandar documento financeiro (nota fiscal em PDF ou imagem; depois comprovante e fatura)

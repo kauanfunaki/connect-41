@@ -204,7 +204,7 @@ export function jsonPython(texto: string): ValorPy {
 }
 
 /** `bool(v)` do Python. */
-function verdadeiro(v: ValorPy | undefined): boolean {
+export function verdadeiro(v: ValorPy | undefined): boolean {
   if (v === undefined || v === null) return false;
   if (typeof v === "boolean") return v;
   if (typeof v === "string") return v.length > 0;

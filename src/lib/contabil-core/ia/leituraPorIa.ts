@@ -15,7 +15,8 @@ import "server-only";
 // 2. se o escritório tem provedor de IA configurado;
 // 3. o orçamento do arquivo (tempo e chamadas) — esgotado, LANÇA `OrcamentoEsgotado`, como o original.
 // Depois chama o agente e devolve o texto cru da resposta. A interpretação (JSON, campos) é de quem
-// chama: a nota fiscal (`notas/visual.ts`), depois os comprovantes e as faturas.
+// chama: a nota fiscal (`notas/visual.ts`), o comprovante de pagamento (`comprovantes/leitor.ts`, C2) e,
+// depois, as faturas.
 
 import { gerarTexto, isAiConfigured, type ContextoDaChamada } from "@/lib/ai";
 
@@ -30,28 +31,38 @@ export class OrcamentoEsgotado extends Error {
   }
 }
 
+/** As frases do orçamento esgotado. Cada leitor do original tinha as suas (o de comprovante fala em "PDF"). */
+export type FrasesDoOrcamento = { tempo: string; chamadas: string };
+
+const FRASES_PADRAO: FrasesDoOrcamento = {
+  tempo: "Processamento do arquivo excedeu o tempo limite.",
+  chamadas: "Arquivo excedeu o limite de chamadas ao serviço de IA.",
+};
+
 /** O `_Budget` do original: um por arquivo, com o relógio monotônico. */
 export class Orcamento {
   readonly prazo: number;
   readonly maxPaginas: number;
   chamadasRestantes: number;
+  private readonly frases: FrasesDoOrcamento;
 
   constructor(
-    limites: { segundos?: number; maxPaginas?: number; maxChamadas?: number } = {},
+    limites: { segundos?: number; maxPaginas?: number; maxChamadas?: number; frases?: FrasesDoOrcamento } = {},
     private readonly agora: () => number = () => performance.now(),
   ) {
     this.prazo = this.agora() + (limites.segundos ?? ORCAMENTO_PADRAO.segundos) * 1000;
     this.maxPaginas = limites.maxPaginas ?? ORCAMENTO_PADRAO.maxPaginas;
     this.chamadasRestantes = limites.maxChamadas ?? ORCAMENTO_PADRAO.maxChamadas;
+    this.frases = limites.frases ?? FRASES_PADRAO;
   }
 
   verificarTempo(): void {
-    if (this.agora() > this.prazo) throw new OrcamentoEsgotado("Processamento do arquivo excedeu o tempo limite.");
+    if (this.agora() > this.prazo) throw new OrcamentoEsgotado(this.frases.tempo);
   }
 
   consumirChamada(): void {
     this.verificarTempo();
-    if (this.chamadasRestantes <= 0) throw new OrcamentoEsgotado("Arquivo excedeu o limite de chamadas ao serviço de IA.");
+    if (this.chamadasRestantes <= 0) throw new OrcamentoEsgotado(this.frases.chamadas);
     this.chamadasRestantes -= 1;
   }
 
@@ -93,7 +104,7 @@ export type ResultadoDaLeitura = { ok: true; texto: string } | { ok: false; moti
 
 /** A frase do original ("OCR externo desabilitado..."), dizendo o que ligar no Connect. */
 export const LEITURA_DESLIGADA =
-  "OCR externo desabilitado. Ligue, em Contábil Core › Configurações › Leitura de notas por IA, o consentimento explícito para enviar dados financeiros ao provedor de IA.";
+  "OCR externo desabilitado. Ligue, em Contábil Core › Configurações › Leitura de documentos por IA, o consentimento explícito para enviar dados financeiros ao provedor de IA.";
 export const SEM_PROVEDOR =
   "OCR externo desabilitado. Nenhuma chave de IA configurada: configure em Integrações › Inteligência artificial.";
 
