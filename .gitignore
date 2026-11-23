@@ -90,3 +90,7 @@ android/replay_pid*.log
 
 # vídeos da ajuda gravados localmente (scripts/videos) — sobem no YouTube, não no git
 /videos/
+
+# Cache do Python (scripts de gabarito do Contábil Core)
+__pycache__/
+*.pyc
