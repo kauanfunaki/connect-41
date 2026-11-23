@@ -47,6 +47,8 @@ import {
 } from "../../actions";
 
 const n = (v: unknown) => Number(v ?? 0);
+/** Depois de lançar, o colaborador fica para a próxima rubrica (bug-795). */
+const MANTER_NO_LANCAMENTO = ["personId"];
 type Etapa = "abrir" | "eventos" | "calcular" | "conferir" | "fechar";
 const NOME_DA_ORIGEM: Record<string, string> = { DP: "DP", PLANILHA: "Planilha", PONTO: "Pontomais", CLIENTE: "Cliente" };
 const NOME_DO_CAMPO: Record<CampoComparado, string> = { proventos: "Proventos", descontos: "Descontos", liquido: "Líquido", inss: "INSS", irrf: "IRRF", fgts: "FGTS" };
@@ -318,7 +320,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           // (17/11/2026, melhoria-707): ficam só as que trazem dado.
           <Secao titulo="Eventos do mês">
             {podeAgir && !fechada && (
-              <FormularioDoDp2 acao={lancarEventoAction} rotulo="Lançar" rotuloEnviando="Lançando…" className="mb-5" icone={<Plus size={14} aria-hidden="true" />}>
+              <FormularioDoDp2 acao={lancarEventoAction} rotulo="Lançar" rotuloEnviando="Lançando…" className="mb-5" icone={<Plus size={14} aria-hidden="true" />} manterAposEnviar={MANTER_NO_LANCAMENTO}>
                 <input type="hidden" name="competenciaId" value={comp.id} />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1.4fr_0.7fr_0.8fr_1.2fr]">
                   <CampoForm label="Colaborador" htmlFor="personId">

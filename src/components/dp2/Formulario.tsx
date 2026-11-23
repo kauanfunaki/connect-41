@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
@@ -24,8 +24,16 @@ export function FormularioDoDp2({
   className = "",
   icone,
   confirmar,
+  manterAposEnviar,
   children,
 }: {
+  /**
+   * Campos que voltam com o valor enviado depois de um envio que deu certo
+   * (19/11/2026, bug-795). O React limpa o formulário inteiro depois da ação;
+   * no lançamento de eventos o colaborador fica, para lançar outra rubrica para
+   * a mesma pessoa, e o resto (rubrica, horas, valor) volta limpo.
+   */
+  manterAposEnviar?: string[];
   /**
    * Pede confirmação antes de enviar (17/11/2026, bug-724): para o que a pessoa
    * não consegue desfazer sozinha, como fechar a competência.
@@ -43,8 +51,26 @@ export function FormularioDoDp2({
 }) {
   const [estado, enviar, enviando] = useActionState(acao, null);
   const formulario = useRef<HTMLFormElement>(null), [perguntando, setPerguntando] = useState(false);
+  // Com campos a manter (bug-795), o envio é por onSubmit: com `action`, o
+  // React limpa o formulário inteiro ao fim da ação, e a volta dos campos
+  // brigava com essa limpeza. Aqui a limpeza é nossa, depois do sucesso.
+  const limparDepois = useRef(false);
+  useEffect(() => {
+    const f = formulario.current;
+    if (!f || !estado?.ok || !limparDepois.current || !manterAposEnviar) return;
+    limparDepois.current = false;
+    limparMenos(f, manterAposEnviar);
+  }, [estado, manterAposEnviar]);
+  const aoEnviar = manterAposEnviar
+    ? (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const dados = new FormData(e.currentTarget);
+        limparDepois.current = true;
+        startTransition(() => enviar(dados));
+      }
+    : undefined;
   return (
-    <form ref={formulario} action={enviar} className={className}>
+    <form ref={formulario} action={manterAposEnviar ? undefined : enviar} onSubmit={aoEnviar} className={className}>
       {children}
       <div className={`flex flex-wrap items-center gap-3 ${children ? "mt-4" : ""}`}>
         <Button type={confirmar ? "button" : "submit"} onClick={confirmar ? () => { if (formulario.current?.reportValidity()) setPerguntando(true); } : undefined} variant={variante} size={tamanho} loading={enviando} loadingLabel={rotuloEnviando}>
@@ -63,4 +89,23 @@ export function FormularioDoDp2({
       </div>
     </form>
   );
+}
+
+/**
+ * Limpa os campos do formulário, menos os de `manter` e os escondidos (que
+ * levam o contexto, como a competência). O `select.value = ""` passa pelo
+ * aviso do Select do Connect, que atualiza o que mostra.
+ */
+function limparMenos(f: HTMLFormElement, manter: readonly string[]): void {
+  for (const el of Array.from(f.elements)) {
+    if (el instanceof HTMLSelectElement) {
+      if (!el.name || manter.includes(el.name) || el.value === "") continue;
+      el.value = "";
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    } else if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      if (!el.name || manter.includes(el.name) || el.type === "hidden" || el.type === "checkbox" || el.type === "radio" || el.value === "") continue;
+      el.value = "";
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
 }
