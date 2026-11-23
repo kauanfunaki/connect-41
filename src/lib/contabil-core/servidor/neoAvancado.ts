@@ -47,7 +47,7 @@ export async function reclassificar(
   const historico = p.descricao.trim();
   return prisma.$transaction(async (tx) => {
     const n = await cancelarLancamento(tx, base, t.id, p.motivo, userId);
-    if (!n) return falha<{ historico: string }>("Lançamento não encontrado ou já cancelado.");
+    if (!n.partidas) return falha<{ historico: string }>("Lançamento não encontrado ou já cancelado.");
     if (!(await tomar(tx, t, { automatico: false }))) throw new Error("transação não voltou para pendente");
     await gravarPartidas(tx, base, t, { contaId: conta.id, descricao: historico, historico, dc: t.dc as Dc, tipoRegra: "manual" }, contaBanco);
     await gravarDecisao(tx, base, t.id, { resultado: "associada", contaId: conta.id, estrategia: "manual", motivo: `Associação manual: ${historico}` });

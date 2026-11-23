@@ -9,12 +9,30 @@ import "server-only";
 // `count` vem zero e a transação é pulada. As colunas de unicidade (`chavePadraoAtiva`,
 // `transacaoSemRegra`) são a segunda barreira: dois pares automáticos vivos para a mesma transação o
 // banco recusa.
+//
+// Notas fiscais e comprovantes (Bloco C, Fase C2, 19/11/2026): as notas pendentes e os comprovantes sem
+// transação perto das datas das pendências são lidos uma vez (`DocumentosDoNeo`), e o motor escolhe a
+// candidata única de cada transação. A ligação é gravada na mesma transação do lançamento, por
+// `updateMany` que exige o documento ainda livre (`transacaoId` nulo; a nota, também "pendente"): é o
+// lugar do `with_for_update(skip_locked=True)` do original. Se outra pessoa (ou outra execução) ligou o
+// documento nesse meio-tempo, ele simplesmente não é ligado. Ligado ou não, sai do conjunto da execução.
 
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { codigoAtivo, decisaoSemRegra, registroChaveAtiva, registroChavePadraoAtiva } from "../motor/chaves";
-import { codigoContaSintetica, decidir, historicoManual, pernas, type ContraparteDoNeo, type Decisao, type Partidas, type RegraDoNeo } from "../motor/neo";
+import {
+  codigoContaSintetica,
+  decidir,
+  DocumentosDoNeo,
+  historicoManual,
+  pernas,
+  type ContraparteDoNeo,
+  type Decisao,
+  type Partidas,
+  type RegraDoNeo,
+  type Vinculos,
+} from "../motor/neo";
 import { ESTRATEGIA_VALOR_SUSPEITO, motivoParaNaoContabilizar, ordenarRegras, type Dc } from "../motor/regras";
 import { normalizarParaMatch } from "../motor/texto";
 import { corta } from "@/lib/revisao-contabil/motor/py";
@@ -31,6 +49,9 @@ export type ResultadoDoNeo = {
   erros: number;
   classificadasPorContraparte: number;
   bloqueadasValorSuspeito: number;
+  /** Os documentos que o NEO ligou às transações que classificou nesta execução. */
+  comprovantesAssociados: number;
+  notasAssociadas: number;
 };
 
 export type TransacaoLida = { id: string; agenciaId: string; historico: string; dc: string; valor: Prisma.Decimal; data: Date };
@@ -105,6 +126,54 @@ export async function gravarDecisao(tx: Tx, base: { tenantId: string; empresaId:
   return tx.coreNeoDecisao.create({ data: { ...base, transacaoId, ...dados }, select: { id: true } });
 }
 
+/**
+ * Liga à transação a nota e o comprovante que o motor escolheu (`_vincular_nota`, `_vincular_comprovante`),
+ * só se ainda estiverem livres. Devolve o que de fato ligou.
+ */
+export async function vincularDocumentos(tx: Tx, base: { tenantId: string; empresaId: string }, transacaoId: string, v: Vinculos): Promise<{ comprovante: boolean; nota: boolean }> {
+  let comprovante = false;
+  let nota = false;
+  if (v.comprovante) {
+    const r = await tx.coreComprovante.updateMany({
+      where: { id: v.comprovante.id, tenantId: base.tenantId, empresaId: base.empresaId, transacaoId: null, deletedAt: null },
+      data: { transacaoId },
+    });
+    comprovante = r.count === 1;
+  }
+  if (v.nota) {
+    const r = await tx.coreNotaFiscal.updateMany({
+      where: { id: v.nota.id, tenantId: base.tenantId, empresaId: base.empresaId, transacaoId: null, status: "pendente", deletedAt: null },
+      data: { transacaoId, status: "associada" },
+    });
+    nota = r.count === 1;
+  }
+  return { comprovante, nota };
+}
+
+const DIA_MS = 86_400_000;
+
+/** As notas pendentes e os comprovantes livres que podem ser candidatos das pendências (7 e 3 dias em volta). */
+async function documentosDasPendencias(tenantId: string, empresaId: string, datas: Date[]): Promise<DocumentosDoNeo> {
+  if (!datas.length) return new DocumentosDoNeo([], []);
+  const menor = Math.min(...datas.map((d) => d.getTime()));
+  const maior = Math.max(...datas.map((d) => d.getTime()));
+  const prisma = getPrisma();
+  const [notas, comprovantes] = await Promise.all([
+    prisma.coreNotaFiscal.findMany({
+      where: { tenantId, empresaId, transacaoId: null, deletedAt: null, status: "pendente", dataEmissao: { gte: new Date(menor - 7 * DIA_MS), lte: new Date(maior + 7 * DIA_MS) } },
+      select: { id: true, numero: true, cnpjEmitente: true, cnpjDestinatario: true, valor: true, dataEmissao: true },
+    }),
+    prisma.coreComprovante.findMany({
+      where: { tenantId, empresaId, transacaoId: null, deletedAt: null, dataPagamento: { gte: new Date(menor - 3 * DIA_MS), lte: new Date(maior + 3 * DIA_MS) } },
+      select: { id: true, cpfCnpj: true, valorPago: true, dataPagamento: true },
+    }),
+  ]);
+  return new DocumentosDoNeo(
+    notas.map((n) => ({ ...n, valor: decDoBanco(n.valor) })),
+    comprovantes.map((c) => ({ ...c, valorPago: decDoBanco(c.valorPago) })),
+  );
+}
+
 /** Toma a transação pendente para classificar. Falso: outra execução chegou antes. */
 export async function tomar(tx: Tx, t: { id: string }, extra: { automatico: boolean }): Promise<boolean> {
   const r = await tx.coreTransacao.updateMany({
@@ -158,14 +227,24 @@ export async function processarNeo(tenantId: string, empresaId: string, filtro: 
   const abertas = new Set(
     (await prisma.coreNeoDecisao.findMany({ where: { empresaId, transacaoSemRegra: { in: pendentes.map((p) => p.id) } }, select: { transacaoId: true } })).map((d) => d.transacaoId),
   );
+  const documentos = await documentosDasPendencias(tenantId, empresaId, pendentes.map((p) => p.data));
 
   const contasDoBanco = new Map<string, string>();
-  const r: ResultadoDoNeo = { totalPendentes: pendentes.length, associadas: 0, semRegra: 0, erros: 0, classificadasPorContraparte: 0, bloqueadasValorSuspeito: 0 };
+  const r: ResultadoDoNeo = {
+    totalPendentes: pendentes.length,
+    associadas: 0,
+    semRegra: 0,
+    erros: 0,
+    classificadasPorContraparte: 0,
+    bloqueadasValorSuspeito: 0,
+    comprovantesAssociados: 0,
+    notasAssociadas: 0,
+  };
 
   for (const t of pendentes) {
     const decisao: Decisao = decidir(
-      { id: t.id, agenciaId: t.agenciaId, historico: t.historico, dc: t.dc as Dc, valor: decDoBanco(t.valor) },
-      { regras, contrapartes, cnpjDaEmpresa: empresa.cnpj, formaDeMatch },
+      { id: t.id, agenciaId: t.agenciaId, historico: t.historico, dc: t.dc as Dc, valor: decDoBanco(t.valor), data: t.data },
+      { regras, contrapartes, cnpjDaEmpresa: empresa.cnpj, formaDeMatch, documentos },
     );
     try {
       if (decisao.tipo === "valor_suspeito") {
@@ -186,7 +265,7 @@ export async function processarNeo(tenantId: string, empresaId: string, filtro: 
       let contaBanco = contasDoBanco.get(t.agenciaId);
       if (!contaBanco) contasDoBanco.set(t.agenciaId, (contaBanco = await contaBancaria(tenantId, empresaId, t.agenciaId)));
       const feito = await prisma.$transaction(async (tx) => {
-        if (!(await tomar(tx, t, { automatico: true }))) return false;
+        if (!(await tomar(tx, t, { automatico: true }))) return null;
         await gravarPartidas(tx, base, t, decisao.partidas, contaBanco);
         if (decisao.tipo === "regra") {
           const s = decisao.sombra;
@@ -197,14 +276,18 @@ export async function processarNeo(tenantId: string, empresaId: string, filtro: 
         } else {
           await gravarDecisao(tx, base, t.id, { resultado: "associada", contaId: decisao.contraparte.contaContabilId, estrategia: "contraparte", motivo: decisao.motivo });
         }
-        return true;
+        // Depois das partidas, como o original: se algo antes falhar, nenhum documento fica ligado.
+        return vincularDocumentos(tx, base, t.id, decisao.vincular);
       });
       if (!feito) {
         r.totalPendentes--;
         continue;
       }
+      documentos.consumir(decisao.vincular);
       r.associadas++;
       if (decisao.tipo === "contraparte") r.classificadasPorContraparte++;
+      if (feito.comprovante) r.comprovantesAssociados++;
+      if (feito.nota) r.notasAssociadas++;
     } catch (e) {
       // Erro de dado (banco recusou) vira decisão `erro` e não para o extrato; erro de programação sobe.
       if (!(e instanceof Prisma.PrismaClientKnownRequestError)) throw e;
@@ -274,41 +357,48 @@ export async function classificarManual(tenantId: string, empresaId: string, d: 
 
 // ─── Cancelar e liberar ───────────────────────────────────────────────────
 
+/** O que um cancelamento desfez: as partidas e os documentos soltos (`CancelamentoResultado` do original). */
+export type Cancelamento = { partidas: number; notasDesvinculadas: number; comprovantesDesvinculados: number };
+
 /**
  * Desfaz o lançamento de uma transação (todos os pares vivos, inclusive de composição) e a devolve à
  * fila para decisão HUMANA (`autoRecusadoEm`): sem isso, a mesma regra reclassificaria na próxima
  * execução e desfazer não teria efeito. A decisão é log: o cancelamento vira uma linha nova.
  */
-export async function cancelarLancamento(tx: Tx, base: { tenantId: string; empresaId: string }, transacaoId: string, motivo: string, userId: string | null): Promise<number> {
+export async function cancelarLancamento(tx: Tx, base: { tenantId: string; empresaId: string }, transacaoId: string, motivo: string, userId: string | null): Promise<Cancelamento> {
   const agora = new Date();
   const partidas = await tx.coreRegistro.findMany({ where: { empresaId: base.empresaId, transacaoId, deletedAt: null }, select: { id: true } });
-  if (!partidas.length) return 0;
+  if (!partidas.length) return { partidas: 0, notasDesvinculadas: 0, comprovantesDesvinculados: 0 };
   await tx.coreRegistro.updateMany({
     where: { id: { in: partidas.map((p) => p.id) } },
     data: { deletedAt: agora, canceladoEm: agora, canceladoPorId: userId, motivoCancelamento: corta(motivo, 300), chaveAtiva: null, chavePadraoAtiva: null },
   });
   await tx.coreTransacao.update({ where: { id: transacaoId }, data: { status: "pendente", autoRecusadoEm: agora, autoRecusadoPorId: userId } });
-  // Notas fiscais (Fase C1): são DESVINCULADAS, nunca apagadas, como em `cancelar_lancamento` do original.
-  // O documento não tem nada de errado e precisa ficar livre para a próxima classificação reencontrá-lo.
-  // Vale também para reclassificar e para desfazer a importação (a transação sem lançamento sai com a
-  // nota ainda ligada, como lá).
-  await tx.coreNotaFiscal.updateMany({
+  // Notas fiscais (C1) e comprovantes (C2): são DESVINCULADOS, nunca apagados, como em `cancelar_lancamento`
+  // do original. O documento não tem nada de errado e precisa ficar livre para a próxima classificação
+  // reencontrá-lo. Vale também para reclassificar e para desfazer a importação (a transação sem
+  // lançamento sai com o documento ainda ligado, como lá).
+  const notas = await tx.coreNotaFiscal.updateMany({
     where: { tenantId: base.tenantId, empresaId: base.empresaId, transacaoId, deletedAt: null },
     data: { transacaoId: null, status: "pendente" },
   });
+  const comprovantes = await tx.coreComprovante.updateMany({
+    where: { tenantId: base.tenantId, empresaId: base.empresaId, transacaoId, deletedAt: null },
+    data: { transacaoId: null },
+  });
   await gravarDecisao(tx, base, transacaoId, { resultado: "sem_regra", estrategia: "manual", motivo: `Classificação cancelada: ${motivo}` });
-  return partidas.length;
+  return { partidas: partidas.length, notasDesvinculadas: notas.count, comprovantesDesvinculados: comprovantes.count };
 }
 
-export async function cancelarClassificacao(tenantId: string, userId: string, empresaId: string, transacaoId: string, motivo: string): Promise<Resultado<{ partidas: number; historico: string }>> {
+export async function cancelarClassificacao(tenantId: string, userId: string, empresaId: string, transacaoId: string, motivo: string): Promise<Resultado<Cancelamento & { historico: string }>> {
   if (!(await empresaDoTenant(tenantId, empresaId))) return falha(NAO_ENCONTRADA);
   const prisma = getPrisma();
   return prisma.$transaction(async (tx) => {
     const t = await tx.coreTransacao.findFirst({ where: { id: transacaoId, empresaId, deletedAt: null }, select: { id: true, historico: true } });
-    if (!t) return falha<{ partidas: number; historico: string }>("Transação não encontrada.");
-    const n = await cancelarLancamento(tx, { tenantId, empresaId }, t.id, motivo, userId);
-    if (!n) return falha<{ partidas: number; historico: string }>("Lançamento não encontrado ou já cancelado.");
-    return ok({ partidas: n, historico: t.historico });
+    if (!t) return falha<Cancelamento & { historico: string }>("Transação não encontrada.");
+    const c = await cancelarLancamento(tx, { tenantId, empresaId }, t.id, motivo, userId);
+    if (!c.partidas) return falha<Cancelamento & { historico: string }>("Lançamento não encontrado ou já cancelado.");
+    return ok({ ...c, historico: t.historico });
   });
 }
 

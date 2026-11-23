@@ -21,6 +21,7 @@ import { FormularioDaAgencia, FormularioDaConta, FormularioDaContraparte, Formul
 import { FilaDoNeo, ProcessarNeo } from "./Neo";
 import { Compor, Reclassificar } from "./Lancamento";
 import { Notas } from "./Notas";
+import { Comprovantes } from "./Comprovantes";
 import { iaLiberadaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
@@ -433,6 +434,15 @@ export function AbaNotas({ c }: { c: ContextoDaAba }) {
   return <Notas key={c.empresaId} empresaId={c.empresaId} podeAgir={c.podeAgir} />;
 }
 
+// ─── Comprovantes de pagamento ────────────────────────────────────────────
+
+// Bloco C, Fase C2 (19/11/2026): a página "Comprovantes" do original. A lista e as ações vão pela API
+// (`/api/contabil-core/comprovantes`), que confere tenant, empresa e permissão; quem só lê vê a lista.
+export function AbaComprovantes({ c }: { c: ContextoDaAba }) {
+  // A chave zera a tela (fila de arquivos, filtro) ao trocar de empresa.
+  return <Comprovantes key={c.empresaId} empresaId={c.empresaId} podeAgir={c.podeAgir} />;
+}
+
 // ─── Conciliação ──────────────────────────────────────────────────────────
 
 // Razão × extrato (Bloco B, Fase B2, 12/11/2026) e conferência do financeiro (Fase B4, 12/11/2026). Conciliar só envia arquivo e mostra o relatório, que
@@ -476,13 +486,13 @@ export async function AbaConfiguracoes({ c }: { c: ContextoDaAba }) {
     <div className="flex flex-col gap-6">
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Leitura de notas por IA</h2>
+          <h2 className="text-base font-semibold">Leitura de documentos por IA</h2>
           {c.podeGerir && <AlternarIaParaDocumentos ligada={iaLigada} />}
         </div>
         <p className="text-sm text-fg-muted">
           {iaLigada
-            ? "Ligada para o escritório: a nota fiscal em PDF ou imagem vai ao provedor de IA configurado em Integrações › Inteligência artificial."
-            : "Desligada: nenhum documento financeiro vai à IA, e a nota em PDF ou imagem é recusada na importação. O XML não usa IA."}
+            ? "Ligada para o escritório: a nota fiscal e o comprovante de pagamento em PDF ou imagem vão ao provedor de IA configurado em Integrações › Inteligência artificial."
+            : "Desligada: nenhum documento financeiro vai à IA. A nota em PDF ou imagem é recusada na importação (o XML não usa IA), e o comprovante só é lido pelos rótulos do texto do PDF; o resto se preenche à mão."}
         </p>
       </section>
 

@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Inbox, Receipt, Scale, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
+import { BookOpen, FileCheck, FileText, Inbox, Receipt, Scale, SlidersHorizontal, Tags, Users, Zap } from "lucide-react";
 import { abrirTelaDoModulo, podeNoModulo } from "@/lib/auth/modulo";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,6 +13,7 @@ import { empresasParaLigar, listarEmpresas, regimeDoCadastro } from "@/lib/conta
 import { LigarEmpresa } from "@/components/contabil-core/Formularios";
 import { SeletorDeEmpresa } from "@/components/contabil-core/SeletorDeEmpresa";
 import {
+  AbaComprovantes,
   AbaConciliacao,
   AbaConfiguracoes,
   AbaContrapartes,
@@ -41,6 +42,7 @@ const ROTULO_DA_ABA: Record<Aba, { rotulo: string; icone: React.ReactNode }> = {
   contrapartes: { rotulo: "Contrapartes", icone: <Users size={16} aria-hidden /> },
   registros: { rotulo: "Registros", icone: <BookOpen size={16} aria-hidden /> },
   notas: { rotulo: "Notas", icone: <Receipt size={16} aria-hidden /> },
+  comprovantes: { rotulo: "Comprovantes", icone: <FileCheck size={16} aria-hidden /> },
   conciliacao: { rotulo: "Conciliação", icone: <Scale size={16} aria-hidden /> },
   configuracoes: { rotulo: "Configurações", icone: <SlidersHorizontal size={16} aria-hidden /> },
 };
@@ -130,6 +132,7 @@ export default async function ContabilCorePage({ searchParams }: { searchParams:
       {aba === "contrapartes" && <AbaContrapartes c={c} />}
       {aba === "registros" && <AbaRegistros c={c} />}
       {aba === "notas" && <AbaNotas c={c} />}
+      {aba === "comprovantes" && <AbaComprovantes c={c} />}
       {aba === "conciliacao" && <AbaConciliacao c={c} />}
       {aba === "configuracoes" && <AbaConfiguracoes c={c} />}
     </PageContainer>

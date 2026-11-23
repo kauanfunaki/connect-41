@@ -265,7 +265,13 @@ export async function cancelarClassificacaoAction(empresaId: unknown, transacaoI
   if (!r.ok) return { error: r.erro };
   await logAudit({
     tenantId: c.tenantId, userId: c.userId, action: "contabil.core.lancamento.cancelado", entityType: "CoreTransacao", entityId: t,
-    metadata: { nome: r.valor.historico, motivo: texto, partidas: r.valor.partidas },
+    metadata: {
+      nome: r.valor.historico,
+      motivo: texto,
+      partidas: r.valor.partidas,
+      notas_desvinculadas: r.valor.notasDesvinculadas,
+      comprovantes_desvinculados: r.valor.comprovantesDesvinculados,
+    },
   });
   revalidatePath(ROTA);
   return { ok: true };

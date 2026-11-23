@@ -274,7 +274,7 @@ Divergências da B4:
 | Fase | Branch | O que entra |
 |---|---|---|
 | C1 | `feat/contabil-core-notas` | Notas fiscais: os leitores (XML com a assinatura conferida; PDF e imagem pela IA, atrás da chave), o serviço, as rotas e a aba "Notas". Migration. Ver "Fase C1". |
-| C2 | — | Comprovantes de pagamento, e o uso das notas e dos comprovantes pelo NEO (candidata pelo valor e pela data, contraparte pelo documento, número da nota no histórico). |
+| C2 | `feat/contabil-core-comprovantes` | Comprovantes de pagamento (o leitor em camadas, o serviço, o arquivo em disco, as rotas e a aba "Comprovantes"), e o uso das notas e dos comprovantes pelo NEO (candidata pelo valor e pela data, contraparte pelo documento, número da nota no histórico). Migration. Ver "Fase C2". |
 | C3 | — | Cartões. |
 | C4 | — | As tabelas do Bloco C na carga (espelho). |
 
@@ -326,7 +326,7 @@ Os leitores (`notas/xml.ts`, com a assinatura em `notas/assinatura.ts`, e `notas
 
   O original fixava `gpt-4o-mini` e `gpt-4o`. O catálogo do Connect só aceita modelos da tabela de faixas, com preço conhecido, e os 4o já saíram dela. Quem quiser outro modelo escolhe por agente em Integrações › Inteligência artificial.
 - **A chave do escritório** (o `ALLOW_FINANCIAL_DATA_TO_OPENAI` do original): fica em `TenantContabilCoreConfig.iaDocumentosFinanceiros` (`tenant_contabil_core_configs`, na migration desta fase), **desligada por padrão**.
-  - Quem pode "gerir" liga e desliga em Contábil Core › Configurações › "Leitura de notas por IA".
+  - Quem pode "gerir" liga e desliga em Contábil Core › Configurações › "Leitura de notas por IA" (na C2, "Leitura de documentos por IA", porque a mesma chave passou a valer para os comprovantes).
   - A ação tem confirmação e auditoria (`contabil.core.ia_documentos.alterada`, gravada só quando o valor muda).
   - Com a chave desligada, PDF e imagem são recusados com a frase do original adaptada, dizendo onde ligar. Sem provedor configurado, a frase manda para Integrações.
 - **Gabarito dos leitores:** `gabarito_notas.py`, com 399 chamadas, todas iguais. O plugin assina NF-e e NFS-e com certificados de teste gerados nele mesmo. Os cenários visuais usam a IA simulada com as respostas da suíte do original: as chamadas (texto ou imagem, e o texto enviado) e o resultado são idênticos. As chamadas reais de IA não entram no gabarito.
@@ -358,6 +358,99 @@ Divergências da C1:
   - **Associar** tem busca pelo histórico (o original listava as 100 primeiras pendentes).
   - **A transação ligada** vem no resumo da lista (o original fazia uma leitura por transação na tela).
   - **No extrato e no NEO** a nota não aparece: o original também não a mostra ali, a não ser na contagem de notas que o NEO associou, que vem com a C2.
+
+### Fase C2: os comprovantes de pagamento e o NEO com notas e comprovantes
+
+| Onde | Porte de |
+|---|---|
+| `comprovantes/leitor.ts` | `pdf_parser.py`: os rótulos do texto do PDF (`_parse_por_regex`), a recusa da nota fiscal (`_parece_nota_fiscal` e `_recusar_se_nota_pela_ia`), a IA de texto e a de imagem, a conferência da resposta (`_comprovante_from_item`), o orçamento (`_PDFBudget`) e as frases de `_dica_camadas_ia` |
+| `comprovantes/servico.ts` (puro) | as partes de `ComprovanteService` sem banco: a validação do `ComprovanteCreate`, o arquivo repetido (`buscar_por_arquivo`, `erro_ja_importado`), o mesmo pagamento (`_mesmo_pagamento`), `_descrever`, `_resumo`, `_brl` e as recusas de associar e desassociar |
+| `servidor/comprovantes.ts` | `ComprovanteService` (listar, obter, criar, associar, desassociar e excluir) e a rota `extrair_dados_pdf`, mais o download |
+| `servidor/originaisComprovantes.ts` | o arquivo em disco (o original guardava o base64 numa coluna) |
+| `comprovantes/rotaDosComprovantes.ts` e `api/contabil-core/comprovantes/**` | `src/api/v1/comprovantes.py`: a lista com os filtros (conta bancária, transação e status `associado`/`nao_associado`) e a paginação, um comprovante, o cadastro (JSON ou formulário com o arquivo), ler o arquivo para pré-preencher (`extrair`), associar (`POST`) e desassociar (`DELETE`), excluir, o arquivo e as transações pendentes para associar |
+| aba "Comprovantes" (`Comprovantes.tsx`, `comprovantes/telaDosComprovantes.ts`) | `Comprovantes.tsx` do contabil-front: arrastar vários arquivos, a fila (um por vez, pular, descartar com confirmação), o pré-preenchimento, o possível duplicado com confirmação, a nota e o arquivo repetido pulados sozinhos |
+| `motor/neo.ts` e `servidor/neo.ts` | o que faltava de `neo/engine.py`: `_selecionar_comprovante_candidato`, `_selecionar_nota_candidata`, `_direcao_nota`, `_resolver_contraparte_candidata` (a nota primeiro, o comprovante depois), o modo sombra com nota e comprovante, `_vincular_*`, os consumidos da execução e as contagens `comprovantes_associados` e `notas_associadas`; e, de `neo/cancelamento.py`, os comprovantes soltos (`comprovantes_desvinculados`) |
+| migration `20261119200000_contabil_core_comprovantes` | `comprovantes` (0002 e 0037): `core_comprovantes`, com as restrições do `ComprovanteCreate` como CHECK |
+
+- **O leitor tem as camadas do original**, e para na primeira que acha o valor pago:
+  - o texto do PDF (o porte do pdfplumber) linha a linha, pelos rótulos, com o valor na mesma linha ou na seguinte;
+  - o mesmo texto à IA de texto, quando os rótulos não acham o valor;
+  - o PDF sem texto e a imagem à IA de imagem, uma página por chamada.
+  Antes dos rótulos, o texto que parece nota fiscal (DANFSe, DANFE, prestador e tomador, o endereço do portal da prefeitura) é recusado com `DOCUMENTO_NAO_E_COMPROVANTE`, e a tela pula o arquivo. A IA também declara o tipo do documento.
+- **A IA é a da C1** (`ia/leituraPorIa.ts`): os agentes `leitor_de_comprovante_texto` (faixa rápida) e `leitor_de_comprovante_imagem` (faixa padrão), do setor `contabil` e desligados por padrão, e a MESMA chave do escritório (`TenantContabilCoreConfig.iaDocumentosFinanceiros`, desligada por padrão). Como ela agora vale também para os comprovantes, o bloco de Configurações passou a se chamar "Leitura de documentos por IA", e as frases dizem nota e comprovante. A página do PDF escaneado vai como um PDF de uma página, como na C1. O orçamento ganhou as frases próprias de cada leitor (o do comprovante fala em "PDF").
+- **Unicidade:** como no original, NÃO há índice único. O índice de (empresa, SHA-256) é comum, de propósito: a base do original tem duplicados de antes do hash, e um índice único derrubaria a carga. Quem barra o arquivo repetido é o serviço:
+  - o mesmo arquivo (o SHA-256 dos BYTES) num comprovante vivo da empresa é sempre recusado (`COMPROVANTE_JA_IMPORTADO`), na leitura (antes de gastar IA) e no cadastro, mesmo com a confirmação. O excluído não conta: excluir é como se corrige uma importação errada;
+  - o mesmo pagamento com outro arquivo (mesmo valor, mesmo dia em UTC e o mesmo documento, ou o mesmo nome quando falta documento) pede confirmação (`COMPROVANTE_POSSIVEL_DUPLICADO`, com os detalhes do que já existe);
+  - o cadastro trava a linha da empresa (`SELECT … FOR UPDATE`) durante a conferência e a gravação, para dois envios do mesmo arquivo ao mesmo tempo não passarem os dois (no original, passavam).
+- **O arquivo fica em disco**, como na B4: `storage/contabil-core/comprovantes/<tenantId>/<id>.<ext>`. A linha guarda o nome, o tipo (pelo conteúdo), o tamanho, o SHA-256 e a chave (`storageKey`).
+  - O arquivo é gravado dentro da transação, depois da linha, e apagado se ela não vingar.
+  - O download confere tenant, empresa e comprovante vivo antes de ler o disco; PDF, PNG e JPEG abrem na tela (`inline`, como o original), sempre com `nosniff` e sem cache.
+  - A exclusão lógica não apaga o arquivo (o base64 ficava na linha excluída, lá). A exclusão da empresa apaga as linhas pelos passos do Core e os arquivos depois do commit (`arquivosDaEmpresa`, pasta `contabil-core/comprovantes`).
+  - **A carga (C4) converte o `arquivo_base64` do original para o disco**: decodifica, grava em `storage/contabil-core/comprovantes/<tenantId>/<id>.<ext>` e preenche `storageKey`, `arquivoTipo` e `arquivoTamanho`. O `arquivo_sha256` vem como está (o original o calculava sobre os bytes decodificados, como aqui); o base64 inválido, que lá ficou sem hash, entra sem arquivo.
+- **A transação ligada:** `transacaoId` é chave estrangeira para `core_transacoes`. Desfazer a classificação, reclassificar ou desfazer a importação de uma transação classificada SOLTA o comprovante (`cancelarLancamento`, que agora devolve as partidas, as notas e os comprovantes soltos; a auditoria de `lancamento.cancelado` leva as duas contagens, como o `dados_depois` do original). A transação sem lançamento sai na importação desfeita com o comprovante ainda ligado, como no original, e a tela mostra.
+- **Associar, desassociar e excluir:** cada um é um `updateMany` que exige o estado lido (transação e vivo).
+- **Auditoria:** o original só registrava em log. Aqui a rota registra, com as ações em `ACOES_DOS_COMPROVANTES`:
+
+  | Ação no Connect | Log do original |
+  |---|---|
+  | `contabil.core.comprovante.criado` | `comprovante.criado` |
+  | `contabil.core.comprovante.associado` | `comprovante.associado` |
+  | `contabil.core.comprovante.desassociado` | `comprovante.desassociado` |
+  | `contabil.core.comprovante.excluido` | `comprovante.deletado` |
+
+  Ler o arquivo para pré-preencher não grava nada e não audita; cada chamada à IA fica na auditoria da fundação.
+- **Acesso:** ler (a lista, um comprovante, o arquivo) pede "ver"; cadastrar, associar, desassociar e excluir pedem "agir" (`comprovantes.read` e `comprovantes.write`). Ler o arquivo para pré-preencher também pede "agir" (ver as divergências).
+
+**O NEO com notas e comprovantes:**
+
+- **A candidata** é escolhida pelo motor puro (`notaCandidata`, `comprovanteCandidato`) sobre os documentos livres da execução (`DocumentosDoNeo`), lidos uma vez no começo: as notas pendentes e os comprovantes sem transação, vivos, perto das datas das pendências.
+  - A nota: valor a até R$ 0,01, emitida a até 7 dias e na direção da transação (`_direcao_nota`: emitida pela empresa é crédito; recebida por ela, débito; o CNPJ da empresa nas duas pontas, nenhuma).
+  - O comprovante: só para débito, valor a até R$ 0,01 e pago a até 3 dias.
+  - Só quando há EXATAMENTE um; dois ou mais, nenhum.
+  - A janela é a do PostgreSQL: o dia do extrato menos e mais N dias vira a meia-noite (UTC) daqueles dias, e as pontas entram.
+- **A contraparte** (`resolverContraparte`): a nota candidata (o emitente no débito, o destinatário no crédito), depois o documento do comprovante candidato, depois o documento impresso no histórico e por último o nome. O número da nota vai para o histórico gerado ("PGTO REF NF 4321 - …") quando a contraparte veio da nota; pelo documento do histórico, não (a nota é de outro CNPJ). Pelo nome, vai, como no original (ver os achados).
+- **Com regra**, a contraparte é só medida (modo sombra): a decisão grava a contraparte, a conta, a origem (agora também `nota_fiscal` e `comprovante`) e a divergência de conta, e a classificação é a da regra.
+- **A ligação:** quem classifica (pela regra ou pela contraparte) liga os dois candidatos, depois das partidas, na mesma transação do lançamento, por `updateMany` que exige o documento ainda livre (`transacaoId` nulo; a nota, também "pendente"). É o lugar do `with_for_update(skip_locked=True)`: se outra pessoa ou outra execução ligou o documento nesse meio-tempo, ele simplesmente não é ligado. Ligado ou não, sai do conjunto da execução (os consumidos). As contagens `comprovantesAssociados` e `notasAssociadas` contam só o que de fato ligou, e a aba NEO as mostra no resumo da execução.
+
+**Gabaritos:**
+
+- `gabarito_comprovantes.py` (o leitor): 350 chamadas, todas iguais. 43 de `_parse_valor`, 18 de `_parse_data`, 173 de `_parse_por_regex`, 18 de `_parece_nota_fiscal`, 30 de `_comprovante_from_item`, 6 de `_extrair_linhas` (o texto do pdfplumber em PDFs gerados) e 62 leituras inteiras com a IA simulada. Destas, 16 são as da suíte do original, gravadas automaticamente e repetidas pelo plugin (com a entrada original o resultado tem de ser o da suíte; a sanitizada vai para o gabarito). As outras 46 cobrem as quatro combinações das chaves da IA, o orçamento esgotado, a página que traz o valor, a nota reconhecida pela IA e a falha do provedor. As chamadas à IA (texto ou imagem, o texto enviado) são as mesmas.
+- `gabarito_comprovantes_servico.py` (o serviço): 524 casos, todos iguais. 55 da suíte (29 cadastros, 6 associações, 2 desassociações, 2 exclusões, 3 leituras, 10 listas e 3 buscas por arquivo), 430 inventados e 39 chamadas diretas do `ComprovanteCreate`. A saída sai do serviço original num SQLite montado só com a entrada; o arquivo não vai para o gabarito (o SHA-256 dos bytes fica no lugar). O banco montado ordena a lista como o PostgreSQL (o pagamento sem data PRIMEIRO na ordem decrescente) e devolve as datas com o fuso; para a conferência com a suíte vale a ordem do SQLite.
+- `gabarito_neo_documentos.py` (o NEO): 300 casos, todos iguais. 16 da suíte `test_neo.py` (4 execuções do `processar` com nota ou comprovante, 2 escolhas de comprovante, 2 de nota, 4 associações diretas, 1 resolução de contraparte e 3 medições da sombra) e 284 mundos inventados, sorteados em volta das tolerâncias, da direção da nota, dos dois candidatos, do número no histórico e da sombra, inclusive as pontas da janela uma a uma (3/4 e 7/8 dias, à meia-noite, um segundo depois e às 23h59). Ao todo, 19 comprovantes e 34 notas ligados. O teste (`motor/neoDocumentos.test.ts`) repete o laço do servidor sobre a entrada e confere as contagens, o status de cada transação, a decisão gravada, a partida da classificação e a ligação de cada documento. O banco montado compara a janela de datas como o PostgreSQL (o SQLite deixava de fora o pagamento à meia-noite do último dia).
+- Para gerar de novo, o `GABARITO_NOMES` (fora do git) precisa também dos nomes reais do teste do leitor do original (o comprovante do Sicredi em `test_comprovantes_pdf_parser.py`), inclusive o trecho do CNPJ que aparece junto do nome do destinatário.
+- **Rotas:** `api/contabil-core/comprovantes/route.test.ts`, 15 testes (permissão, empresa e id conferidos, a consulta, o cadastro em JSON e em formulário, os códigos com os detalhes do duplicado, o download e as ações auditadas iguais às do serviço).
+- **Arquivos reais (só contagens, nada no git):** os 4 comprovantes de Downloads (2 PDFs e 2 imagens), com a IA desligada, deram a mesma saída no original e no porte: os 2 PDFs lidos pelos rótulos (com as mesmas linhas do pdfplumber) e as 2 imagens recusadas com a mesma frase.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-comprovantes.ts`, com 52 conferências, rodado 3 vezes seguidas. Percorre a leitura (PDF com texto, imagem e PDF escaneado sem a IA, PDF sem rótulo, nota fiscal, formato não suportado), o cadastro com o arquivo em disco e o download, o arquivo repetido (na leitura e no cadastro), o mesmo pagamento sem e com a confirmação, a lista, o isolamento entre escritórios e empresas, associar, desassociar e excluir com cada recusa, e o NEO: a contraparte pelo comprovante único, pela nota única com o número no histórico, dois comprovantes candidatos (nenhum ligado), a regra com o comprovante (a sombra pelo comprovante), a gravação condicionada, desfazer a classificação e desfazer a importação soltando os dois. Confere os CHECKs e, no fim, a exclusão da empresa apaga as linhas e os arquivos em disco.
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **O número de nota de outro CNPJ vai para o histórico pela via do nome.** `_resolver_contraparte_candidata` explica que o `numero_nf` NÃO viaja pela via do documento no histórico, porque chegar ali significa que a nota candidata é de outro CNPJ. Mas a via do nome, logo abaixo, devolve o `numero_nf` junto. Uma transação sem regra cuja nota candidata é de um CNPJ sem contraparte cadastrada, e cujo histórico traz o nome de uma contraparte, sai com "PGTO REF NF <número daquela nota> - <a contraparte do nome>". O porte faz igual; corrigir é decisão à parte.
+- **A nota emitida para destinatário sem CNPJ** tem direção "crédito" e é candidata, mas não dá documento para a contraparte: a resolução cai no histórico e no nome, levando o número (pelo item acima).
+- **A regra liga os candidatos mesmo quando eles apontam para outra contraparte** (a ligação não depende da resolução): é o desenho do original, e o porte segue.
+- **A suíte do original roda em SQLite**, que compara a janela de datas como texto: o comprovante pago à meia-noite do último dia (o que o leitor grava) fica de fora na suíte e entra na produção (PostgreSQL). E a lista de comprovantes põe o sem data por último na suíte e primeiro na produção. O porte segue a produção, e os gabaritos foram montados assim.
+- **O cadastro aceitava** a transação desfeita, qualquer conteúdo em base64 (sem conferir o formato) e texto mais longo que a coluna (erro 500 no PostgreSQL); a leitura do arquivo pedia só leitura no módulo.
+- **O teste do leitor do original tem nomes e CNPJs reais** de um comprovante do Sicredi (`test_extrai_comprovante_pix_sicredi`). O gabarito sai sanitizado; vale limpar o teste lá.
+
+Divergências da C2:
+
+- **Arquivo em disco, não em base64 no banco** (decisão da B4). O cadastro recebe o arquivo no formulário, e só PDF, PNG e JPEG (o original guardava qualquer base64). O tipo guardado vem do conteúdo; o original deduzia do nome no download, e o "blob" sem extensão saía como `application/octet-stream`.
+- **A empresa inexistente** é "não encontrada" antes de tudo (no original, a gravação esbarrava na chave estrangeira). Conferido no gabarito: 1 caso.
+- **A transação desfeita é recusada** no cadastro e na associação ("Transação não encontrada nesta empresa."), como nas notas da C1; o original não olhava o `deleted_at`. Conferido no gabarito: 4 casos.
+- **Texto mais longo que a coluna e valor acima de `Decimal(15,2)`** são recusados com frase ("O favorecido passa de 300 caracteres.", "O valor passa do limite aceito."); no original, erro 500 do PostgreSQL. Conferido no gabarito: 4 e 1 casos.
+- **Mensagens de validação:** as recusas genéricas do pydantic viram frases em português. `permitir_duplicado` só aceita verdadeiro ou falso (o pydantic aceitava também "true", "yes", "1"…), e a data aceita ISO 8601 de 1000 a 9999 e segundos Unix.
+- **O cadastro trava a linha da empresa** para a conferência de duplicidade e a gravação não se intercalarem (no original, dois envios simultâneos do mesmo arquivo entravam os dois).
+- **Ler o arquivo para pré-preencher pede "agir"** (no original, `comprovantes.read`): serve a quem cadastra e gasta a IA do escritório.
+- **Exceção crua do original vira recusa com frase:** o PDF que nem o PyMuPDF abre ("Não foi possível abrir este PDF. Preencha os campos manualmente.", 4 casos no gabarito) e a falha do provedor na camada de imagem (a frase da fundação, 2 casos).
+- **As frases da IA desligada** dizem onde ligar no Connect: "OCR externo desabilitado. Ligue, em Contábil Core › Configurações › Leitura de documentos por IA…" e a dica "(a leitura assistida por IA está desligada neste escritório: …)", no lugar das variáveis do servidor (`OPENAI_API_KEY`, `ALLOW_FINANCIAL_DATA_TO_OPENAI`). A dica segue a ordem do original (primeiro o provedor, depois a chave); a recusa da camada de imagem segue a da peça comum (primeiro a chave).
+- **O tempo-limite da leitura (65 s)** devolve a frase do original, mas a leitura em andamento não é interrompida (o pdf.js e a chamada à IA terminam sozinhos, sem efeito).
+- **A lista** desempata pelo id no mesmo instante, com o sem data primeiro escrito por extenso (o MySQL o poria por último).
+- **Excluir** devolve `{ ok: true }`; o original respondia 204.
+- **O NEO lê os documentos livres uma vez por execução** (o original os relia a cada transação): o documento cadastrado durante a execução só entra na próxima. A ligação é gravada condicionada, no lugar do `skip_locked` (no original, o documento travado por outra execução saía da contagem de candidatos; aqui ele entra na escolha e só não é ligado). A janela de datas é comparada em UTC (a sessão do PostgreSQL da produção). Os dígitos do CNPJ são os de `\p{Nd}` (o `isdigit()` do original aceita também sobrescritos).
+- **Tela:**
+  - o arquivo abre em outra aba (o original o mostrava num diálogo com o PDF embutido);
+  - a lista mostra a transação ligada (o histórico, a data, o valor) e avisa quando a importação dela foi desfeita;
+  - associar tem busca pelo histórico, como nas notas;
+  - as contagens de documentos ligados pelo NEO entram no resumo da execução (o original as mostrava num quadro).
 
 ## Arquitetura no Connect
 

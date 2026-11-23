@@ -33,7 +33,10 @@ export function ProcessarNeo({ empresaId, agenciaId, mes }: { empresaId: string;
       setResumo(
         `${v.totalPendentes} pendência(s): ${v.associadas} classificada(s)` +
           `${v.classificadasPorContraparte ? ` (${v.classificadasPorContraparte} pela contraparte)` : ""}, ${v.semRegra} sem regra` +
-          `${v.bloqueadasValorSuspeito ? ` (${v.bloqueadasValorSuspeito} com valor suspeito)` : ""}${v.erros ? `, ${v.erros} com erro` : ""}.`,
+          `${v.bloqueadasValorSuspeito ? ` (${v.bloqueadasValorSuspeito} com valor suspeito)` : ""}${v.erros ? `, ${v.erros} com erro` : ""}.` +
+          // Os documentos ligados, como o quadro do original ("Comprovantes vinculados", "Notas fiscais vinculadas").
+          `${v.comprovantesAssociados ? ` ${v.comprovantesAssociados} comprovante(s) vinculado(s).` : ""}` +
+          `${v.notasAssociadas ? ` ${v.notasAssociadas} nota(s) fiscal(is) vinculada(s).` : ""}`,
       );
       router.refresh();
     });

@@ -465,6 +465,36 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // Contábil Core, Bloco C, Fase C2 (19/11/2026): a leitura do comprovante de pagamento (PIX, TED, DOC,
+  // boleto pago) em PDF ou imagem que o original fazia na OpenAI (`comprovantes/pdf_parser.py`), quando os
+  // rótulos do texto não acham o valor pago. As mesmas duas faixas da nota; a IA também diz se o arquivo é
+  // nota fiscal, que é recusada. Vale a mesma chave do escritório para documento financeiro ir à IA.
+  {
+    code: "leitor_de_comprovante_texto",
+    label: "Leitura de comprovante de pagamento (texto do PDF)",
+    sectorCode: "contabil",
+    description:
+      "Lê o texto do comprovante em PDF quando os rótulos não bastam e devolve favorecido, CPF/CNPJ, valor pago, datas, juros, multa e desconto, para a pessoa revisar antes de salvar",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
+    code: "leitor_de_comprovante_imagem",
+    label: "Leitura de comprovante de pagamento (imagem)",
+    sectorCode: "contabil",
+    description:
+      "Lê a imagem do comprovante (foto, print do app do banco, PDF escaneado, uma página por chamada) e devolve os mesmos campos, para a pessoa revisar antes de salvar",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 20_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
   {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",
