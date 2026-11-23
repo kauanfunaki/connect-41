@@ -66,7 +66,7 @@ async function importarLinhas(
     return await prisma.$transaction(
       async (tx) => {
         const onde = { tenantId, empresaId };
-        const [faixas, existentes, maximo, comLancamento] = await Promise.all([
+        const [faixas, existentes, maximo, comLancamento, comGastoDeCartao] = await Promise.all([
           tx.corePlanoFaixa.findMany({ where: { ...onde, deletedAt: null }, select: { tipo: true, codigoDe: true, codigoAte: true } }),
           tx.corePlanoConta.findMany({
             where: { ...onde, deletedAt: null },
@@ -76,13 +76,15 @@ async function importarLinhas(
           tx.corePlanoConta.aggregate({ where: onde, _max: { contaNumero: true } }),
           // O original conta todo lançamento da conta, inclusive os excluídos.
           tx.coreRegistro.groupBy({ by: ["contaId"], where: onde }),
+          // E o gasto de cartão com a conta (C3), também o excluído, como `_tem_movimentacao`.
+          tx.coreLancamentoCartao.groupBy({ by: ["contaId"], where: { ...onde, contaId: { not: null } } }),
         ]);
 
         const plano = planejarLote({
           linhas,
           faixas,
           existentes,
-          movimentadas: new Set(comLancamento.map((r) => r.contaId)),
+          movimentadas: new Set([...comLancamento.map((r) => r.contaId), ...comGastoDeCartao.map((r) => r.contaId!)]),
           proximoNumero: (maximo._max.contaNumero ?? 0) + 1,
           falhaAoCriar: (c) => (numeroForaDoLimite(c.contaNumero) ? MENSAGEM_NUMERO : null),
         });

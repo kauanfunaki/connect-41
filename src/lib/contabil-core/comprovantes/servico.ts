@@ -92,7 +92,7 @@ function textoOpcional(v: unknown, campo: string): Validacao<string | null> {
 }
 
 /** `Decimal` do pydantic: número finito do JSON ou texto que o `Decimal` lê. */
-function decimalDoCampo(v: unknown, campo: string): Validacao<Dec> {
+export function decimalDoCampo(v: unknown, campo: string): Validacao<Dec> {
   let d: Dec | typeof NAO_FINITO | null = null;
   if (typeof v === "object" && v !== null && "coeficiente" in v) d = v as Dec;
   else if (typeof v === "number") d = Number.isFinite(v) ? decimal(String(v)) : NAO_FINITO;
@@ -103,7 +103,7 @@ function decimalDoCampo(v: unknown, campo: string): Validacao<Dec> {
 }
 
 /** `datetime | None` do pydantic: texto ISO 8601 (sem fuso vale UTC, como o banco do original o lia) ou segundos Unix. */
-function dataDoCampo(v: unknown, campo: string): Validacao<Date | null> {
+export function dataDoCampo(v: unknown, campo: string): Validacao<Date | null> {
   if (v === null || v === undefined) return { ok: true, valor: null };
   if (typeof v === "number" && Number.isFinite(v)) {
     // O pydantic lê número como segundos desde 1970 (ou milissegundos, acima de 2×10¹⁰).

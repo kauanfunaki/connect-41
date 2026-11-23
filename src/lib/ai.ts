@@ -924,6 +924,17 @@ export async function avaliarRequisitos(
 //
 // Sem `temperature`: nenhuma chamada do Connect manda, e os modelos que raciocinam a recusam.
 
+/**
+ * A resposta parou antes do fim (o limite de saída acabou): o `finish_reason != "stop"` do original. Só
+ * `gerarTexto` com `exigirFim` lança; quem não pede continua recebendo o texto cortado, como antes.
+ */
+export class RespostaIncompletaDaIa extends Error {
+  constructor() {
+    super("A resposta da IA veio incompleta.");
+    this.name = "RespostaIncompletaDaIa";
+  }
+}
+
 /** Uma volta, sem ferramenta e sem formato: devolve o texto da resposta (pode vir vazio). */
 export async function gerarTexto(params: {
   tenantId: string;
@@ -935,6 +946,8 @@ export async function gerarTexto(params: {
   maxTokens: number;
   timeoutMs?: number;
   contexto?: ContextoDaChamada;
+  /** Recusa a resposta cortada pelo limite de saída (lança `RespostaIncompletaDaIa`). A fatura de cartão (C3) pede. */
+  exigirFim?: boolean;
 }): Promise<string> {
   return executarAgente({
     tenantId: params.tenantId,
@@ -955,6 +968,7 @@ export async function gerarTexto(params: {
           { ...(params.timeoutMs ? { timeout: params.timeoutMs } : {}), maxRetries: 0 }
         );
         if (response.stop_reason === "refusal") throw new Error("A IA recusou processar este conteúdo.");
+        if (params.exigirFim && response.stop_reason === "max_tokens") throw new RespostaIncompletaDaIa();
         const texto = response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
         return { valor: texto, uso: usoAnthropic(response.usage) };
       }
@@ -986,6 +1000,7 @@ export async function gerarTexto(params: {
       // O corpo do erro pode ecoar o documento enviado: fica fora da mensagem.
       if (!res.ok) throw new Error(`OpenAI indisponível (HTTP ${res.status}).`);
       const data = await res.json();
+      if (params.exigirFim && data.status === "incomplete") throw new RespostaIncompletaDaIa();
       const texto =
         data.output_text ??
         (data.output ?? [])

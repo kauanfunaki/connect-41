@@ -129,6 +129,16 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
           "Clique em “Associar” e escolha a transação pendente do extrato que o comprovante paga. “Remover associação” desfaz; “Excluir” tira o comprovante da lista, e o arquivo pode ser cadastrado de novo.",
         ],
       },
+      {
+        titulo: "Como lançar e distribuir a fatura do cartão",
+        passos: [
+          "Na aba “Cartões”, cadastre o cartão (nome, bandeira, dias de fechamento e vencimento) e clique em “Faturas”. Em “Nova fatura”, escolha a competência: cada cartão tem uma fatura por mês.",
+          "Na fatura, lance os gastos à mão em “Novo gasto” ou importe o CSV (colunas data, descrição e valor) ou o PDF da fatura em “Importar CSV ou PDF”. O mesmo arquivo enviado de novo não duplica as compras.",
+          "Para conferir antes de importar, use “Enviar PDF para revisão”, em “Documentos e revisão”: a leitura aparece como rascunho. Revise os itens e o total, marque que resolveu as pendências e clique em “Confirmar fonte principal” (substitui os gastos) ou “Manter só como complementar”.",
+          "Feche a fatura e, em “Pagamento”, clique em “Associar pagamento”: escolha o débito do extrato com o valor exato do total. A fatura fica paga e não aceita mais gastos; “Desvincular pagamento” volta para fechada.",
+          "Em “Distribuir o pagamento entre contas”, escolha a conta de cada gasto (ou divida um gasto entre contas), salve e clique em “Aplicar ao pagamento”, com o motivo. A transação do extrato ganha um lançamento para cada parte; “Desfazer a distribuição aplicada” devolve a classificação de antes.",
+        ],
+      },
     ],
     dicas: [
       "O módulo está sendo trazido do Contábil Core por partes. Até a virada, o trabalho do dia continua no Contábil Core.",
@@ -142,6 +152,8 @@ export const ARTIGOS_CONTABEIS: ArtigoDeAjuda[] = [
       "O comprovante em PDF com texto é lido pelos rótulos (Favorecido, Valor pago, Data do pagamento), sem IA. A IA só entra quando os rótulos não acham o valor, e para a imagem e o PDF escaneado; desligada, preencha os campos à mão.",
       "Ao rodar, o NEO liga sozinho a nota fiscal e o comprovante que batem com a transação (valor com até R$ 0,01 de diferença; 7 dias para a nota e 3 para o comprovante, que só vale para débito), quando há exatamente um. Sem regra, a contraparte sai do CNPJ da nota (e o número dela vai no histórico) ou do comprovante.",
       "Desfazer a classificação de uma transação solta as notas e os comprovantes associados a ela; a nota volta para pendente.",
+      "O PDF da fatura é lido pelo texto (data, descrição, parcela e valor) e conferido com o total declarado. A IA só entra quando o layout não é reconhecido, e para o PDF escaneado na revisão; vem desligada, e quem coordena liga em Configurações › “Leitura de documentos por IA”. Desligada, importe o CSV ou lance os gastos à mão.",
+      "Se a classificação do pagamento mudar no NEO depois da distribuição aplicada, desfazer pede para “preservar a classificação atual”: o controle da fatura é encerrado sem mexer no que o NEO tem.",
     ],
   },
   // O SPED do Contábil (17/11/2026, melhoria-707): as frases que explicavam a

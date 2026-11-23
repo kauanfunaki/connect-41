@@ -96,9 +96,14 @@ export type PedidoDeLeitura = {
   anexo?: { nome: string; mime: string; bytes: Uint8Array };
   maxTokens: number;
   orcamento: Orcamento;
+  /**
+   * A resposta cortada pelo limite de saída vira a recusa `incompleta` (o `finish_reason != "stop"` da
+   * leitura da fatura por imagem, C3). Sem isso, como antes: o texto cortado volta como veio.
+   */
+  exigirFim?: boolean;
 };
 
-export type MotivoDaRecusa = "desligada" | "sem_provedor" | "falha";
+export type MotivoDaRecusa = "desligada" | "sem_provedor" | "falha" | "incompleta";
 
 export type ResultadoDaLeitura = { ok: true; texto: string } | { ok: false; motivo: MotivoDaRecusa; mensagem: string };
 
@@ -146,6 +151,7 @@ export async function lerPorIa(
         : undefined,
       maxTokens: pedido.maxTokens,
       timeoutMs,
+      ...(pedido.exigirFim ? { exigirFim: true } : {}),
       contexto: quem.contexto ?? {
         userId: quem.userId ?? null,
         entityType: quem.empresaId ? "core_empresa" : null,
@@ -154,6 +160,8 @@ export async function lerPorIa(
     });
     return { ok: true, texto };
   } catch (e) {
+    // `RespostaIncompletaDaIa` (src/lib/ai.ts), reconhecida pelo nome: os testes trocam a fundação inteira.
+    if (e instanceof Error && e.name === "RespostaIncompletaDaIa") return { ok: false, motivo: "incompleta", mensagem: e.message };
     return { ok: false, motivo: "falha", mensagem: e instanceof Error ? e.message : String(e) };
   }
 }

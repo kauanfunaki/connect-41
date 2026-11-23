@@ -495,6 +495,37 @@ export const AGENT_CATALOG: AgenteDef[] = [
     tetoMensalChamadas: 3_000,
     padraoLigado: false,
   },
+  // Contábil Core, Bloco C, Fase C3 (23/11/2026): a fatura de cartão de crédito que o original mandava à
+  // OpenAI. O texto vai quando as linhas do PDF não batem com o layout genérico da fatura
+  // (`cartoes/pdf_parser.py`, camada 2); a imagem, página a página, quando o documento da fatura não tem
+  // texto (`cartoes/documentos.py`, a transcrição que a pessoa revisa antes de virar gasto). Vale a mesma
+  // chave do escritório para documento financeiro ir à IA.
+  {
+    code: "leitor_de_fatura_texto",
+    label: "Leitura de fatura de cartão (texto do PDF)",
+    sectorCode: "contabil",
+    description:
+      "Lê o texto da fatura de cartão em PDF quando o layout não é o genérico e devolve as compras (data, descrição, valor e parcela); o total declarado na fatura é conferido antes de importar",
+    faixa: "rapido",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 5_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
+  {
+    code: "leitor_de_fatura_imagem",
+    label: "Leitura de fatura de cartão (imagem)",
+    sectorCode: "contabil",
+    description:
+      "Transcreve a fatura de cartão escaneada, uma página por chamada: compras, total, pendências e pagamentos da fatura anterior, para a pessoa revisar antes de virar gasto",
+    faixa: "padrao",
+    escreve: false,
+    ferramentas: [],
+    tetoMensalCentavos: 20_000,
+    tetoMensalChamadas: 3_000,
+    padraoLigado: false,
+  },
   {
     code: "resumo_agente",
     label: "Resumo de avaliações do atendente",

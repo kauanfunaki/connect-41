@@ -110,12 +110,25 @@ export async function alterarComposicao(
 ): Promise<Resultado<{ antes: Composicao["componentes"]; depois: Composicao["componentes"] }>> {
   if (!(await empresaDoTenant(tenantId, empresaId))) return falha(NAO_ENCONTRADA);
   const prisma = getPrisma();
-  const base = { tenantId, empresaId };
   const contas = [...new Set(p.componentes.map((c) => c.contaId))];
   const achadas = await prisma.corePlanoConta.count({ where: { id: { in: contas }, empresaId, deletedAt: null } });
   if (achadas !== contas.length) return falha("Uma das contas contábeis não pertence a esta empresa.");
+  return prisma.$transaction((tx) => alterarComposicaoNaTransacao(tx, { tenantId, empresaId }, userId, p));
+}
 
-  return prisma.$transaction(async (tx) => {
+/**
+ * O corpo de `alterarComposicao` dentro da transação de quem chama, depois de conferir as contas. A
+ * distribuição da fatura de cartão (C3) compõe o pagamento na mesma transação em que guarda a aplicação,
+ * como o original (`alterar_composicao` roda na sessão de `DistribuicaoService`).
+ */
+export async function alterarComposicaoNaTransacao(
+  tx: Tx,
+  base: { tenantId: string; empresaId: string },
+  userId: string | null,
+  p: { transacaoId: string; lancamentoVigenteId: string; componentes: ComponenteDaComposicao[]; motivo: string },
+): Promise<Resultado<{ antes: Composicao["componentes"]; depois: Composicao["componentes"] }>> {
+  const { empresaId } = base;
+  {
     // Trava a transação: duas composições ao mesmo tempo não podem se sobrepor.
     await tx.$queryRaw`SELECT id FROM core_transacoes WHERE id = ${p.transacaoId} FOR UPDATE`;
     const r = await lerComposicaoTx(tx, empresaId, p.transacaoId);
@@ -156,10 +169,11 @@ export async function alterarComposicao(
     await tx.coreTransacao.update({ where: { id: r.t.id }, data: { autoRecusadoEm: null, autoRecusadoPorId: null } });
     const antes = r.componentes.map((x) => ({ lancamentoId: x.lancamentoId, contaId: x.contaId, historico: x.historico, valor: x.valor.toString() }));
     return ok({ antes, depois });
-  });
+  }
 }
 
-async function lerComposicaoTx(tx: Tx, empresaId: string, transacaoId: string) {
+/** Os pares vivos da transação, conferidos (`_transacao_vigente` e `_partidas_vigentes`); texto é a recusa. */
+export async function lerComposicaoTx(tx: Tx, empresaId: string, transacaoId: string) {
   const t = await tx.coreTransacao.findFirst({ where: { id: transacaoId, empresaId, deletedAt: null }, select: { id: true, historico: true, dc: true, valor: true, status: true, agenciaId: true } });
   if (!t) return "Transação bancária não encontrada.";
   if (t.status !== "processada") return "A transação não possui classificação vigente.";
