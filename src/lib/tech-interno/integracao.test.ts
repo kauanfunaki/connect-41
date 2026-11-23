@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import type { AuthContext } from "@/lib/auth/context";
-import { CONFLITO, lerFiltros } from "./regras";
+import { CARTOES_POR_COLUNA, CONFLITO, lerFiltros } from "./regras";
 
 const url = process.env.TECH_INTERNAL_TEST_DATABASE_URL;
 const destino = url ? new URL(url) : null;
@@ -253,5 +253,18 @@ describe.skipIf(!url)("controle interno com MySQL descartável", () => {
     const urgent = id(await salvarItem(ctx, criar({ title: prefixo + " urgente", priority: 3, dueDate: "2019-01-01" })));
     const low = id(await salvarItem(ctx, criar({ title: prefixo + " baixa", priority: 0, dueDate: "2018-01-01" })));
     const todos = await listarItens(ctx, lerFiltros({ q: prefixo })); expect(todos.items[0].id).toBe(urgent); expect(todos.items.some(i => i.id === low)).toBe(false);
+  });
+  it("Kanban conta cada situação inteira e não deixa concluídos tomarem o lugar dos abertos", async () => {
+    // 23/11/2026: com 806 itens, o corte de 500 por prioridade tirava do quadro
+    // pendentes de prioridade baixa, e as colunas contavam só o que veio.
+    assumir(contexto()); const prefixo = randomUUID();
+    await db!.techInternalItem.createMany({ data: Array.from({ length: CARTOES_POR_COLUNA.fechada + 1 }, (_, i) => ({ tenantId, number: 200000 + i, title: `${prefixo} ${i}`, type: "TEST" as const, priority: 3, status: "DONE" as const, systemMode: "NEW" as const, updatedAt: new Date(Date.UTC(2026, 0, 1, 0, i)) })) });
+    const baixa = id(await salvarItem(ctx, criar({ title: prefixo + " baixa", priority: 0 })));
+    const kanban = await listarItens(ctx, lerFiltros({ q: prefixo, visao: "kanban" }));
+    expect(kanban.total).toBe(CARTOES_POR_COLUNA.fechada + 2);
+    expect(kanban.porSituacao).toEqual({ DONE: CARTOES_POR_COLUNA.fechada + 1, PENDING: 1 });
+    expect(kanban.items.some(i => i.id === baixa)).toBe(true);
+    const concluidos = kanban.items.filter(i => i.status === "DONE");
+    expect(concluidos).toHaveLength(CARTOES_POR_COLUNA.fechada); expect(concluidos.some(i => i.title === `${prefixo} 0`)).toBe(false);
   });
 });

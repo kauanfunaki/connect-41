@@ -22,8 +22,15 @@ export type ItemVisualTech = {
  * lote C dos ajustes de 03/11/2026: as cinco colunas dividem a largura, e cada
  * uma rola por dentro. No celular, as colunas voltam a ficar lado a lado, com
  * rolagem. A agenda que morava aqui saiu para a Agenda geral.
+ *
+ * `totais` (23/11/2026): a contagem real de cada situação, que vai no
+ * cabeçalho. A coluna pode trazer menos cartões que isso (`CARTOES_POR_COLUNA`);
+ * aí o pé dela diz quantos aparecem e leva à lista com aquela situação.
  */
-export function VisoesTech({ items, today, canEdit }: { items: ItemVisualTech[]; today: string; canEdit: boolean }) {
+export function VisoesTech({ items, today, canEdit, totais, verTodos }: {
+  items: ItemVisualTech[]; today: string; canEdit: boolean;
+  totais: Partial<Record<keyof typeof SITUACOES, number>>; verTodos: Record<keyof typeof SITUACOES, string>;
+}) {
   const router = useRouter(), [pending, startTransition] = useTransition(), toast = useToast();
   function move(item: ItemVisualTech, status: string) {
     if (!canEdit || pending || item.status === status) return;
@@ -57,11 +64,13 @@ export function VisoesTech({ items, today, canEdit }: { items: ItemVisualTech[];
     {legenda}
     <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto md:grid md:overflow-visible" style={{ gridTemplateColumns: `repeat(${situacoes.length}, minmax(0, 1fr))` }} aria-label="Kanban do Tech">
       {situacoes.map(([status, label]) => {
-        const column = items.filter(item => item.status === status);
+        const column = items.filter(item => item.status === status), total = Math.max(totais[status] ?? 0, column.length);
+        const fechada = !(EM_ABERTO as readonly string[]).includes(status);
         return <section key={status} aria-label={label} className="flex min-h-0 w-72 shrink-0 flex-col rounded-lg border-t-4 bg-surface-2 md:w-auto" style={{ borderTopColor: CORES_DA_SITUACAO[status].fundo }}
           onDragOver={e => { if (canEdit && !pending) e.preventDefault(); }} onDrop={e => { e.preventDefault(); const item = items.find(i => i.id === e.dataTransfer.getData("text/plain")); if (item) move(item, status); }}>
-          <h2 className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2 font-semibold text-ui text-fg"><span aria-hidden className="size-3 rounded-sm" style={{ backgroundColor: CORES_DA_SITUACAO[status].fundo }} />{label} <span className="text-fg-muted">({column.length})</span></h2>
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3">{column.map(item => card(item))}{!column.length && <p className="text-helper text-fg-muted">Nenhum item</p>}</div>
+          <h2 className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2 font-semibold text-ui text-fg"><span aria-hidden className="size-3 rounded-sm" style={{ backgroundColor: CORES_DA_SITUACAO[status].fundo }} />{label} <span className="text-fg-muted">({total})</span></h2>
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3">{column.map(item => card(item))}{!column.length && <p className="text-helper text-fg-muted">Nenhum item</p>}
+            {column.length < total && <p className="pt-1 text-helper text-fg-muted">Mostrando {fechada ? `os ${column.length} mais recentes` : `${column.length}`} de {total}. <Link href={verTodos[status]} className="font-medium text-brand hover:underline">Ver todos na lista</Link></p>}</div>
         </section>;
       })}
     </div>

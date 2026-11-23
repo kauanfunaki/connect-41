@@ -7,7 +7,7 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { logAudit } from "@/lib/audit";
 import { intervaloMes } from "./agenda";
 import {
-  MODULO_TECH_INTERNO, TAMANHO_PAGINA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
+  MODULO_TECH_INTERNO, TAMANHO_PAGINA, CARTOES_POR_COLUNA, TIPOS, SITUACOES, PRIORIDADES, EM_ABERTO, TAMANHOS,
   CONFLITO, SEM_VINCULO, CAMPO_DO_CRITERIO, itemSchema, comentarioSchema, versaoSchema, hojeEmSaoPaulo, diferencas,
   vinculoDoSistema, chaveDoSistema, nomeDoSistema, entregaSchema, enderecoDoItem, ehUuid, lerIdCurto,
   type DadosItem, type Filtros, type SistemaTech, type Alteracao,
@@ -115,14 +115,29 @@ export async function listarItens(ctx: AuthContext, filtros: Filtros) {
   const mes = intervaloMes(filtros.month);
   const where: Prisma.TechInternalItemWhereInput = filtros.view === "agenda"
     ? { AND: [base, { OR: [{ dueDate: null }, { dueDate: { gte: mes.inicio, lt: mes.fim } }] }] } : base;
+  const ordem: Prisma.TechInternalItemOrderByWithRelationInput[] = [{ priority: "desc" }, { dueDate: { sort: "asc", nulls: "last" } }, { updatedAt: "desc" }, { id: "asc" }];
   // Uma mesma fotografia para contagem e página, inclusive com gravações simultâneas.
   return db.$transaction(async tx => {
     const total = await tx.techInternalItem.count({ where });
+    // O Kanban (23/11/2026): contagem real por situação e cartões buscados por
+    // coluna — as abertas por prioridade, as fechadas pelas mais recentes.
+    if (filtros.view === "kanban") {
+      const grupos = await tx.techInternalItem.groupBy({ by: ["status"], where, _count: { _all: true } });
+      const porSituacao: Partial<Record<keyof typeof SITUACOES, number>> = Object.fromEntries(grupos.map(g => [g.status, g._count._all]));
+      // Uma consulta de cada vez: a transação usa uma conexão só.
+      const items = [];
+      for (const s of (Object.keys(SITUACOES) as (keyof typeof SITUACOES)[]).filter(s => porSituacao[s])) {
+        const aberta = (EM_ABERTO as readonly string[]).includes(s);
+        items.push(...await tx.techInternalItem.findMany({ where: { AND: [where, { status: s }] }, include: incluir,
+          take: aberta ? CARTOES_POR_COLUNA.aberta : CARTOES_POR_COLUNA.fechada,
+          orderBy: aberta ? ordem : [{ updatedAt: "desc" }, { id: "asc" }] }));
+      }
+      return { total, pages: 1, page: 1, items, porSituacao };
+    }
     const tamanho = filtros.view === "lista" ? TAMANHO_PAGINA : 500;
     const pages = Math.max(1, Math.ceil(total / tamanho)), page = Math.min(filtros.page, pages);
-    const items = await tx.techInternalItem.findMany({ where, include: incluir, take: tamanho, skip: (page - 1) * tamanho,
-      orderBy: [{ priority: "desc" }, { dueDate: { sort: "asc", nulls: "last" } }, { updatedAt: "desc" }, { id: "asc" }] });
-    return { total, pages, page, items };
+    const items = await tx.techInternalItem.findMany({ where, include: incluir, take: tamanho, skip: (page - 1) * tamanho, orderBy: ordem });
+    return { total, pages, page, items, porSituacao: undefined };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 }
 
