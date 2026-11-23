@@ -16,8 +16,10 @@ import { ImportarDoEsocial } from "@/components/dp2/ImportarDoEsocial";
 import { getPrisma } from "@/lib/prisma";
 import { Secao, TD, TD_NUM, TH, TH_NUM, TR } from "@/components/dp2/Secao";
 import { formatCalendarDate, formatCpf } from "@/lib/format";
-import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
-import { abrirTelaDeEmpresaDoDp2, brl } from "@/lib/dp2/tela";
+import { colaboradoresDaEmpresa, listarRubricas } from "@/lib/dp2/servidor";
+import { RubricasFixasDoContrato } from "@/components/dp2/RubricasFixasDoContrato";
+import { regraDeLancamento } from "@/lib/dp2/rubricas";
+import { abrirTelaDeEmpresaDoDp2, brl, mesAtual } from "@/lib/dp2/tela";
 import { reais } from "@/lib/dp2/formato";
 import { CampoData } from "@/components/ui/CampoData";
 import {
@@ -56,14 +58,27 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
+    listarRubricas(tela.tenantId),
   ]);
+  // As rubricas que podem ser fixas no contrato: as mesmas que o DP lança no mês (funcionalidade-767).
+  const paraFixar = linhasDeRubrica
+    .filter((r) => r.ativa && regraDeLancamento(r).lancavel)
+    .map((r) => ({
+      id: r.id,
+      rotulo: `${r.codigo} · ${r.nome}`,
+      unidade: regraDeLancamento(r).porQuantidade ? (r.lancamento === "DIAS" ? ("dias" as const) : ("horas" as const)) : null,
+    }));
   // O CNPJ vai para o Assinador escolher o certificado e montar a consulta ao eSocial.
   const cnpjDaEmpresa = cadastroDaEmpresa?.kind === "PESSOA_FISICA" ? null : (cadastroDaEmpresa?.cnpj ?? null);
   const aberta = params.pessoa ? pessoas.find((p) => p.id === params.pessoa) : undefined;
   const v = aberta?.dp2Vinculo;
+  const fixasDaPessoa = aberta
+    ? await getPrisma().dp2RubricaFixa.findMany({ where: { tenantId: tela.tenantId, personId: aberta.id }, orderBy: { createdAt: "asc" } })
+    : [];
+  const decimalTexto = (d: unknown, casas?: number) => (d === null || d === undefined ? "" : (casas === undefined ? String(d) : Number(d).toFixed(casas)).replace(".", ","));
   const es = lerDadosEsocial(v?.dadosEsocial);
   const grauSugerido = es.grauInstrucao ?? sugerirGrauDeInstrucao(aberta?.education);
   const opcoes = (lista: [string, string][]) => [
@@ -267,6 +282,22 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             {aberta?.bankAccount ? `, conta ${aberta?.bankAccount}` : ""}. Confira o código do banco e os dígitos.
           </p>
         )}
+      </BlocoDoContrato>
+
+      <BlocoDoContrato titulo="Rubricas fixas">
+        <RubricasFixasDoContrato
+          key={aberta?.id ?? "novo"}
+          rubricas={paraFixar}
+          mesPadrao={mesAtual()}
+          iniciais={fixasDaPessoa.map((f) => ({
+            rubricaId: f.rubricaId,
+            quantidade: decimalTexto(f.quantidade),
+            valor: decimalTexto(f.valor, 2),
+            inicio: f.inicio,
+            fim: f.fim ?? "",
+            observacao: f.observacao ?? "",
+          }))}
+        />
       </BlocoDoContrato>
 
       <BlocoDoContrato titulo="Adicionais">

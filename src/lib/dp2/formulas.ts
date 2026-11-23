@@ -89,7 +89,7 @@ export const CENARIOS: readonly { nome: string; descricao: string }[] = [
   {
     nome: "Mensalista",
     descricao:
-      "Salário R$ 3.000,00, 220 h, insalubridade grau médio, vale-transporte, 1 dependente de IRRF. No mês: 10 h extras 50%, 4 h extras 100%, 20 h noturnas, 1 falta com o DSR, 2 h de atraso, comissão de R$ 500,00, pensão de R$ 300,00 e adiantamento de R$ 1.200,00. Convenção da CLT (50%, 100% e 20%). Empresa do lucro presumido: RAT 2%, FAP 1, terceiros 5,8%.",
+      "Salário R$ 3.000,00, 220 h, insalubridade grau médio, vale-transporte, 1 dependente de IRRF. No mês: 10 h extras 50%, 4 h extras 100%, 20 h noturnas, 1 falta com o DSR, 2 h de atraso, comissão de R$ 500,00, pensão de R$ 300,00 e adiantamento de R$ 1.200,00. No contrato, uma gratificação fixa de R$ 200,00. Convenção da CLT (50%, 100% e 20%). Empresa do lucro presumido: RAT 2%, FAP 1, terceiros 5,8%.",
   },
   { nome: "Admitido no mês", descricao: "Salário de R$ 1.700,00, admitido no dia 11, 2 filhos com direito ao salário-família." },
   { nome: "Horista", descricao: "R$ 12,00 a hora, 220 h no mês, com periculosidade." },
@@ -108,6 +108,7 @@ const RUBRICAS_DO_MOTOR: ReadonlyMap<PapelDaRubrica, RubricaDoMotor> = new Map(
   RUBRICAS_PADRAO.filter((r): r is RubricaDoMotor & { papel: PapelDaRubrica } => r.papel !== null).map((r) => [r.papel, r])
 );
 const COMISSAO = RUBRICAS_PADRAO.find((r) => r.codigo === "009")!;
+const GRATIFICACAO = RUBRICAS_PADRAO.find((r) => r.codigo === "010")!;
 
 const SALARIO_ALTO = 8000;
 
@@ -160,6 +161,8 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
       evento("DSR_FALTA", 1, null),
       evento("ATRASO", 2, null),
       { rubrica: COMISSAO, quantidade: null, valor: 500 },
+      // Rubrica fixa do contrato (funcionalidade-767): entra sozinha todo mês.
+      { rubrica: GRATIFICACAO, quantidade: null, valor: 200, origem: "FIXA" },
       evento("PENSAO", null, 300),
       evento("ADIANTAMENTO", null, 1200),
     ],
@@ -431,6 +434,21 @@ export const FORMULAS: readonly Formula[] = [
     },
   },
   {
+    id: "rubrica-fixa",
+    tema: "MENSAL",
+    nome: "Rubricas fixas do contrato",
+    conta: "A rubrica fixa entra sozinha em cada folha mensal, do mês inicial ao final (sem final, até sair do contrato), com o valor ou as horas do contrato, como se o DP tivesse lançado no mês.",
+    detalhe:
+      "Cadastra-se no contrato do colaborador (DP 2 › Colaboradores). O valor entra cheio, sem proporcionalizar pela admissão ou pelo desligamento. Se o DP lançar a mesma rubrica no mês para a pessoa, vale o lançamento e a fixa fica de fora naquele mês. O 13º não usa fixas. A linha do holerite termina com \"rubrica fixa do contrato\".",
+    baseLegal: "Processos › Lançamentos › Automáticos, na Domínio",
+    papeis: [],
+    funcao: "separarFixasDoMes (rubricasFixas.ts) · calcularCompetencia (servidor.ts)",
+    exemplo: (x) => {
+      const fixa = x.clt.itens.find((i) => i.codigo === GRATIFICACAO.codigo);
+      return fixa ? [`${fixa.nome}: ${reais(fixa.valor)} = ${fixa.memoria}`] : [];
+    },
+  },
+  {
     id: "liquido",
     tema: "MENSAL",
     nome: "Bases e líquido",
@@ -619,7 +637,7 @@ export const FORMULAS: readonly Formula[] = [
     nome: "Aviso prévio",
     conta: "Dias de aviso = 30 + 3 por ano completo de casa, até 90. Indenizado = salário ÷ 30 × dias (no acordo, metade). Pedido de demissão sem cumprir: desconta 30 dias.",
     detalhe:
-      "O aviso indenizado projeta o tempo de serviço para os avos de férias e 13º. Só tem FGTS: sem INSS e sem IRRF. Atenção: hoje o motor desconta os dias proporcionais também no pedido de demissão (veja o exemplo), e o certo são 30 dias — correção no bug-779.",
+      "O aviso indenizado projeta o tempo de serviço para os avos de férias e 13º. Só tem FGTS: sem INSS e sem IRRF.",
     baseLegal: "CLT arts. 487 e 484-A; Lei 12.506/2011",
     papeis: ["AVISO_INDENIZADO", "AVISO_DESCONTO"],
     funcao: "calcularRescisao (rescisao/calculo.ts)",

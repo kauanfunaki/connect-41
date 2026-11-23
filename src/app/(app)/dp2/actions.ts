@@ -5,6 +5,7 @@
 // nível no setor, o escritório e, nas telas de empresa, a faixa "Trabalhando
 // em" (`recusaDoFoco`).
 
+import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
 import { SALARIO_OBRIGATORIO, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -13,8 +14,8 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
-import { calcularCompetencia, garantirRubricas } from "@/lib/dp2/servidor";
-import { PAPEIS_LANCAVEIS, TIPOS_DE_RUBRICA, ehPapel } from "@/lib/dp2/rubricas";
+import { calcularCompetencia, garantirRubricas, gravarRubricasFixas } from "@/lib/dp2/servidor";
+import { TIPOS_DE_RUBRICA, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
 import { lerComparativo } from "@/lib/dp2/comparativo";
 import { lerNumero, lerInteiro } from "@/lib/dp2/entrada";
@@ -225,10 +226,9 @@ export async function lancarEventoAction(_: EstadoDoDp2, fd: FormData): Promise<
   if (!pessoa) return erro("Escolha um colaborador desta empresa.");
   const rubrica = await prisma.dp2Rubrica.findFirst({ where: { id: texto(fd, "rubricaId"), tenantId: a.tenantId, ativa: true } });
   if (!rubrica) return erro("Escolha a rubrica.");
-  const lancavel = rubrica.papel ? ehPapel(rubrica.papel) && PAPEIS_LANCAVEIS.has(rubrica.papel) : rubrica.tipo !== "INFORMATIVA";
+  const { lancavel, porQuantidade } = regraDeLancamento(rubrica);
   if (!lancavel) return erro(`${rubrica.nome} é calculada pelo motor, não se lança.`);
 
-  const porQuantidade = rubrica.papel !== null && rubrica.lancamento !== "VALOR";
   const quantidade = porQuantidade ? lerNumero(texto(fd, "quantidade")) : null;
   const valor = porQuantidade ? null : lerNumero(texto(fd, "valor"));
   if (porQuantidade && (quantidade === null || quantidade <= 0)) return erro(`Informe ${rubrica.lancamento === "HORAS" ? "as horas" : "os dias"}.`);
@@ -403,17 +403,30 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     tipoConta: texto(fd, "tipoConta") === "POUPANCA" ? "POUPANCA" : "CORRENTE",
   };
   if (dados.bancoCodigo && !/^\d{3}$/.test(dados.bancoCodigo)) return erro("O banco é o código de 3 dígitos (ex.: 341).");
-  await prisma.dp2Vinculo.upsert({ where: { personId: pessoa.id }, create: { tenantId: a.tenantId, personId: pessoa.id, ...dados }, update: dados });
+  const fixas = await rubricasFixasDoFormulario(a.tenantId, fd);
+  if (!fixas.ok) return erro(fixas.erro);
+  await prisma.$transaction(async (tx) => {
+    await tx.dp2Vinculo.upsert({ where: { personId: pessoa.id }, create: { tenantId: a.tenantId, personId: pessoa.id, ...dados }, update: dados });
+    // Só quem manda a lista (o modal do contrato) troca as rubricas fixas.
+    if (fd.has("rubricasFixas")) await gravarRubricasFixas(a.tenantId, pessoa.id, fixas.fixas, a.userId, tx);
+  });
   await logAudit({
     tenantId: a.tenantId,
     userId: a.userId,
     action: "folha.vinculo_salvo",
     entityType: "Person",
     entityId: pessoa.id,
-    metadata: { nome: pessoa.name, salarioBase, tipoSalario },
+    metadata: { nome: pessoa.name, salarioBase, tipoSalario, rubricasFixas: fd.has("rubricasFixas") ? fixas.fixas.length : null },
   });
   revalidatePath("/dp2/colaboradores");
   return { ok: true, texto: `Contrato de ${pessoa.name} salvo.` };
+}
+
+/** As rubricas fixas do formulário do contrato (campo JSON `rubricasFixas`), conferidas (funcionalidade-767). */
+async function rubricasFixasDoFormulario(tenantId: string, fd: FormData) {
+  if (!fd.has("rubricasFixas")) return { ok: true as const, fixas: [] };
+  const rubricas = await getPrisma().dp2Rubrica.findMany({ where: { tenantId }, select: { id: true, nome: true, papel: true, tipo: true, lancamento: true, ativa: true } });
+  return lerRubricasFixas(texto(fd, "rubricasFixas"), rubricas);
 }
 
 // ─── Configuração da empresa ────────────────────────────────────────────────
@@ -1379,6 +1392,9 @@ export async function criarColaboradorDp2Action(_: EstadoDoDp2, fd: FormData): P
   if (!salarioValido(salarioBase, texto(fd, "categoria"))) return erro(SALARIO_OBRIGATORIO);
   const banco = texto(fd, "bancoCodigo").replace(/\D/g, "");
   if (banco && banco.length !== 3) return erro("O banco é o código de 3 dígitos (ex.: 341).");
+  // As rubricas fixas são conferidas antes de criar a pessoa, para não sobrar cadastro sem contrato.
+  const fixas = await rubricasFixasDoFormulario(a.tenantId, fd);
+  if (!fixas.ok) return erro(fixas.erro);
 
   const prisma = getPrisma();
   const existente = await prisma.person.findFirst({
