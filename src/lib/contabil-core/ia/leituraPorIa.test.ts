@@ -79,6 +79,18 @@ describe("lerPorIa", () => {
     });
   });
 
+  it("resposta cortada pelo limite de saída: só quem pede `exigirFim` recebe a recusa `incompleta`", async () => {
+    const cortada = Object.assign(new Error("A resposta da IA veio incompleta."), { name: "RespostaIncompletaDaIa" });
+    const { ia, gerarTexto } = simulada(cortada);
+    const quem = { tenantId: "t", documentosFinanceirosLiberados: true };
+    expect(await lerPorIa(quem, { ...pedido(), exigirFim: true }, ia)).toEqual({ ok: false, motivo: "incompleta", mensagem: "A resposta da IA veio incompleta." });
+    expect((gerarTexto.mock.calls[0] as unknown as [Record<string, unknown>])[0].exigirFim).toBe(true);
+    // Sem pedir, a fundação nem recebe a opção (e o texto cortado volta como antes).
+    const outra = simulada("{");
+    expect(await lerPorIa(quem, pedido(), outra.ia)).toEqual({ ok: true, texto: "{" });
+    expect((outra.gerarTexto.mock.calls[0] as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("exigirFim");
+  });
+
   it("orçamento do arquivo: as chamadas acabam e o tempo acaba com as frases do original", async () => {
     const { ia } = simulada();
     const quem = { tenantId: "t", documentosFinanceirosLiberados: true };

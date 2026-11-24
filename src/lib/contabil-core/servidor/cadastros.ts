@@ -111,8 +111,9 @@ export async function editarConta(tenantId: string, empresaId: string, contaId: 
 }
 
 /**
- * Exclui (soft delete) a conta. Recusa conta em uso por regra, contraparte, conta bancária ou
- * lançamento vivo, e conta com filhas: o original deixava isso para a tela; aqui o servidor garante.
+ * Exclui (soft delete) a conta. Recusa conta em uso por regra, contraparte, conta bancária,
+ * lançamento vivo ou gasto de cartão vivo (C3, o `_tem_movimentacao` do original), e conta com filhas: o
+ * original deixava isso para a tela; aqui o servidor garante.
  */
 export async function excluirConta(tenantId: string, empresaId: string, contaId: string): Promise<Resultado<{ nome: string }>> {
   if (!(await empresaDoTenant(tenantId, empresaId))) return falha(NAO_ENCONTRADA);
@@ -120,12 +121,13 @@ export async function excluirConta(tenantId: string, empresaId: string, contaId:
   return prisma.$transaction(async (tx) => {
     const conta = await tx.corePlanoConta.findFirst({ where: { id: contaId, tenantId, empresaId, deletedAt: null }, select: { id: true, codigo: true, descricao: true } });
     if (!conta) return falha<{ nome: string }>("Conta não encontrada nesta empresa.");
-    const [filhas, regras, contrapartes, agencias, registros] = await Promise.all([
+    const [filhas, regras, contrapartes, agencias, registros, gastosDeCartao] = await Promise.all([
       tx.corePlanoConta.count({ where: { paiId: contaId, deletedAt: null } }),
       tx.coreRegra.count({ where: { contaId, deletedAt: null, ativa: true } }),
       tx.coreContraparte.count({ where: { contaContabilId: contaId, deletedAt: null, ativa: true } }),
       tx.coreAgencia.count({ where: { contaContabilId: contaId, deletedAt: null } }),
       tx.coreRegistro.count({ where: { contaId, deletedAt: null } }),
+      tx.coreLancamentoCartao.count({ where: { contaId, empresaId, deletedAt: null } }),
     ]);
     const usos = [
       filhas && `${filhas} conta(s) filha(s)`,
@@ -133,6 +135,7 @@ export async function excluirConta(tenantId: string, empresaId: string, contaId:
       contrapartes && `${contrapartes} contraparte(s)`,
       agencias && "a conta bancária",
       registros && `${registros} lançamento(s)`,
+      gastosDeCartao && `${gastosDeCartao} gasto(s) de cartão`,
     ].filter(Boolean);
     if (usos.length) return falha<{ nome: string }>(`A conta ${conta.codigo} está em uso (${usos.join(", ")}). Troque antes de excluir.`);
     const agora = new Date();

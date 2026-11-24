@@ -275,7 +275,7 @@ Divergências da B4:
 |---|---|---|
 | C1 | `feat/contabil-core-notas` | Notas fiscais: os leitores (XML com a assinatura conferida; PDF e imagem pela IA, atrás da chave), o serviço, as rotas e a aba "Notas". Migration. Ver "Fase C1". |
 | C2 | `feat/contabil-core-comprovantes` | Comprovantes de pagamento (o leitor em camadas, o serviço, o arquivo em disco, as rotas e a aba "Comprovantes"), e o uso das notas e dos comprovantes pelo NEO (candidata pelo valor e pela data, contraparte pelo documento, número da nota no histórico). Migration. Ver "Fase C2". |
-| C3 | — | Cartões. |
+| C3 | `feat/contabil-core-cartoes` | Cartões de crédito: cartões, faturas, gastos (à mão, CSV e PDF), os documentos da fatura para revisão (composição, texto e imagem pela IA, atrás da chave), o pagamento pela transação do extrato e a distribuição da fatura sobre ela pela composição do NEO. Migration. Ver "Fase C3". |
 | C4 | — | As tabelas do Bloco C na carga (espelho). |
 
 ### Fase C1: as notas fiscais
@@ -451,6 +451,87 @@ Divergências da C2:
   - a lista mostra a transação ligada (o histórico, a data, o valor) e avisa quando a importação dela foi desfeita;
   - associar tem busca pelo histórico, como nas notas;
   - as contagens de documentos ligados pelo NEO entram no resumo da execução (o original as mostrava num quadro).
+
+### Fase C3: os cartões de crédito
+
+| Onde | Porte de |
+|---|---|
+| `cartoes/leitor.ts` | `pdf_parser.py`: o texto do PDF (porte do pdfplumber) pelas linhas de compra (`_LINHA_RE`, mês numérico ou abreviado, hora, parcela, "R$", o negativo que é pagamento), o ano pelo vencimento (`_referencia_fatura`), a IA de texto, o total declarado conferido e o orçamento |
+| `cartoes/documentos.ts` e `pdf/tabelas.ts` | `documentos.py`: a leitura revisável (composição pelas tabelas do pdfplumber, texto com total explícito, imagem pela IA, uma página por chamada), `_dinheiro` e `validar_itens`. `pdf/tabelas.ts` porta o `extract_tables` (estratégia "lines"), com os traços do PDF que `pdf/caracteres.ts` passou a devolver |
+| `cartoes/servico.ts` (puro) | as partes de `CartaoService` e `DistribuicaoService` sem banco e os esquemas de `schemas/cartoes.py`: a validação, a identidade da compra importada (`_identificador_compra` e o `uuid5`), o CSV como o `csv.DictReader`, o `_parse_data`/`_parse_valor` do serviço, o hash da classificação bancária (`_hash`, o `repr` do Python), a vista (`obter`) e as conferências de salvar, aplicar, desfazer e confirmar documento |
+| `servidor/cartoes.ts` | `CartaoService`: cartões, faturas, pagamento (associar e desassociar), gastos (à mão, CSV, PDF pela rota `importar_pdf`, remover) e os pagamentos possíveis para a tela |
+| `servidor/faturas.ts` | `DistribuicaoService` e `processar_documento`: obter, salvar, aplicar e desfazer a distribuição; enviar, reler, ler em segundo plano, confirmar e baixar o documento |
+| `servidor/originaisFaturas.ts` | o PDF em disco (o original guardava os bytes na coluna `conteudo`) |
+| `cartoes/rotaDosCartoes.ts` e `api/contabil-core/cartoes/**` | `src/api/v1/cartoes.py`, com os ids no caminho (`/cartoes/[cartaoId]/faturas/[faturaId]/…`) |
+| aba "Cartões" (`Cartoes.tsx`, `cartoes/telaDosCartoes.ts`) | `Cartoes.tsx` e `FaturaDistribuicao.tsx` do contabil-front |
+| migration `20261123140000_contabil_core_cartoes` | `cartoes_credito`, `faturas_cartao` e `lancamentos_cartao` (0004 e 0011) e `fatura_documentos` e `fatura_distribuicoes` (0043): `core_cartoes_credito`, `core_faturas_cartao`, `core_lancamentos_cartao`, `core_fatura_documentos` e `core_fatura_distribuicoes` |
+
+- **Unicidade:** as quatro do original são TOTAIS e continuam como índices únicos comuns: (cartão, competência), a transação que quitou a fatura, (fatura, hash do PDF) e a distribuição por fatura. Não há `chaveAtiva`. O serviço confere a competência só entre as faturas vivas, como lá; a coluna recusa o resto (P2002 vira a mesma frase).
+- **CHECKs:** o enum do status da fatura, a bandeira, os dias de 1 a 28, o status do documento, o gasto não negativo e a versão não negativa. Ficam de fora a parcela (o leitor do original grava "00/03" como parcela 0) e o limite do cartão (o `CartaoUpdate` aceita negativo). O gasto pode ser 0,00: "0,004" passa no esquema e arredonda na coluna, lá e aqui.
+- **Os ids da compra importada são os do original** (`uuid5(fatura, sha256 da identidade)`; na confirmação do documento, `uuid5(documento, "<versão>:<n>")`): o mesmo CSV ou PDF reenviado não duplica, também depois da carga.
+- **Travas:** o que o original fazia com `with_for_update` sobre a fatura (alterar, pagar, desvincular, lançar, importar, remover gasto, e toda a distribuição e os documentos) roda numa transação que trava a linha da fatura (`SELECT … FOR UPDATE`); o pagamento também é travado. A versão da distribuição avança por `updateMany` condicionado à versão vista (`_avancar`).
+- **A distribuição usa a composição do NEO da Fase 3.** `alterarComposicao` foi partida em duas (`alterarComposicaoNaTransacao`), para a aplicação compor o pagamento na mesma transação em que grava a aplicação, como o original. O pagamento pendente é classificado antes na conta do primeiro componente (`classificar_manualmente_lote`: valor suspeito e falta de histórico recusam). Desfazer devolve a composição de antes (ou cancela o lançamento com `cancelarLancamento`, que solta notas e comprovantes); se a classificação mudou no NEO depois, só com "preservar a classificação atual". A aplicação guarda o `NeoComposicaoResponse` inteiro em `antes` e o hash, com as chaves do original, para a carga.
+- **O hash da classificação** (`hashDaClassificacao`) é o `sha256(repr((id, valor, data, dc, status, agência, [partidas])))` do Python byte a byte: o hash gravado pelo original continua conferindo depois da carga.
+- **Documentos:** o PDF (até 25 MiB; até 32 documentos e 100 MiB por fatura) vai para `storage/contabil-core/faturas/<tenantId>/<id>.pdf` e a linha nasce "processando". A leitura roda depois da resposta (`after` do Next, o `BackgroundTasks` do original), fora de qualquer transação, e grava "revisar" ou "falhou" só se o documento ainda estiver na mesma tentativa ("processando" e o mesmo `updatedAt`). A leitura presa há mais que o prazo da imagem (300 s) mais 60 s aparece como "falhou" ("A leitura foi interrompida; tente novamente.") e pode ser reenviada, como o `leitura_expirada` do original. Nenhuma compra entra sem a revisão: a fonte principal substitui os gastos (pede "substituir" quando já há gastos), a complementar só fica guardada.
+- **A IA é a da C1** (`ia/leituraPorIa.ts`): `leitor_de_fatura_texto` (faixa rápida, a camada 2 do leitor) e `leitor_de_fatura_imagem` (faixa padrão, a leitura por imagem do documento), do setor `contabil` e desligados por padrão, com a MESMA chave do escritório (`TenantContabilCoreConfig.iaDocumentosFinanceiros`). A página escaneada vai como PDF de uma página. A fundação ganhou, de forma aditiva, o aviso de resposta cortada (`exigirFim` em `gerarTexto`, `RespostaIncompletaDaIa`), para a frase "A leitura por imagem veio incompleta…" (o `finish_reason != "stop"` do original).
+- **Fora do módulo:** excluir a conta contábil usada por um gasto de cartão vivo é recusado (`excluirConta`, "N gasto(s) de cartão"), e a importação do plano conta o gasto de cartão (também o excluído, como `_tem_movimentacao`) entre as contas movimentadas, que não mudam de natureza. A trava de agência do original (`_referencias_restantes` do reapontamento da conta sintética) não tem onde entrar: o Connect não portou o reapontamento. A exclusão da empresa apaga as cinco tabelas antes das transações e do plano, e os PDFs depois do commit (`arquivosDaEmpresa`, pasta `contabil-core/faturas`). O original não usa cartões na exportação, no painel, no cancelamento do NEO nem no desfazer da importação: não há o que levar ao Bloco D.
+- **Auditoria:** a rota registra; cada escrita devolve a lista de auditorias (a aplicação e o desfazer levam também a do NEO, antes da da fatura):
+
+  | Ação no Connect | No original |
+  |---|---|
+  | `contabil.core.cartao.criado` / `.alterado` / `.removido` | log `cartao.criado` / — / — |
+  | `contabil.core.fatura.criada` | log `fatura.criada` |
+  | `contabil.core.fatura.alterada` | `fatura.status_atualizado` (só quando o status muda) |
+  | `contabil.core.fatura.paga` / `.pagamento_desassociado` | `fatura.paga` / `fatura.pagamento_desassociado` |
+  | `contabil.core.fatura.lancamento.criado` / `.removido` | — |
+  | `contabil.core.fatura.lancamentos.importados` | log `fatura.csv_importado` / `fatura.pdf_importado` (aqui só quando algo entra) |
+  | `contabil.core.fatura.distribuicao.salva` / `.aplicada` / `.desfeita` | `fatura.distribuicao_salva` / `_aplicada` / `_desfeita` |
+  | `contabil.core.fatura.documento.adicionado` / `.revisado` | `fatura.documento_adicionado` / `fatura.documento_revisado` |
+  | `contabil.core.fatura.documento.relido` | — |
+  | `contabil.core.composicao.alterada` / `contabil.core.lancamento.cancelado` | `neo.composicao_alterada` / o cancelamento do NEO |
+- **Acesso:** ler (listas, distribuição, o PDF) pede "ver"; cadastrar, lançar, importar, pagar, distribuir, aplicar, desfazer e enviar documento pedem "agir" (`cartoes.write`, `cartoes.execute` e `neo.execute`).
+
+**Gabaritos:**
+
+- `gabarito_cartoes.py` (os leitores): 1.107 chamadas, todas iguais fora as divergências contadas. Do leitor: 26 de `_parse_valor`, 128 de `_parse_data`, 10 de `_referencia_fatura`, 571 de `_parse_por_regex`, 113 de `_validar_total_declarado`, 19 de `_parse_ai_response`, 53 de `_lancamento_from_ai`, 4 de `_extrair_linhas` e 32 cenários de `parse_pdf`. Do documento: 42 de `_dinheiro`, 39 de `validar_itens`, 8 de `_vision` e 56 cenários de `ler_documento`; mais o `extract_tables` em 6 PDFs de grade. Da suíte do original, 4 cenários de `ler_documento` e 1 de `_vision`, repetidos pelo plugin com a entrada original; as chamadas puras da suíte entram sanitizadas. As chamadas à IA (sistema, texto, limite) são conferidas com a IA simulada. Regerado na verificação final: o conteúdo é o mesmo (os PDFs do PyMuPDF mudam de bytes a cada execução, pela data e pelo /ID).
+- `gabarito_cartoes_servico.py` (o serviço): 1.012 casos, todos iguais fora as divergências contadas: 160 da suíte (`test_cartoes`, `test_fatura_distribuicao` e a parte de cartões de `test_auditoria`), 577 inventados (semente 20261123) e 275 chamadas diretas (os esquemas, `normalizar_competencia`, 40 de `_identificador_compra`, 6 de `uuid5`, 25 de `_parse_data`, 21 de `_parse_valor`, 20 do `csv.DictReader`, 30 de `_hash` e 8 de `leitura_expirada`). A saída sai do serviço original num SQLite montado só com a entrada; o plugin confere que ele repete as 160 da suíte. O SQLite foi corrigido para o PostgreSQL onde divergia (datas com fuso em UTC, o arredondamento do `Numeric(15,2)` na gravação, texto e valor acima da coluna e a chave estrangeira como erro do banco, a afinidade numérica da coluna UUID). Em `aplicar` e `desfazer`, o hash depois do NEO depende de ids aleatórios: o teste confere a decisão, a versão e o que é pedido ao NEO (componentes, classificação, cancelamento e o `antes`); as partidas ficam para o ensaio. Os dois casos de `test_mil_gastos` ficaram fora por tamanho (430 KB cada); entrou um inventado com 60 gastos.
+- Para gerar de novo, o `GABARITO_NOMES` (fora do git) precisa também dos nomes de estabelecimentos dos testes do original (4 em `test_cartoes_pdf_parser.py` e 4 em `test_cartoes.py` e `test_fatura_documentos.py`); o CNPJ real de `test_cartoes.py` é trocado pelo sanitizador.
+- **Rotas:** `api/contabil-core/cartoes/route.test.ts`, 10 testes (permissão, empresa e ids conferidos, os nomes do original no corpo, os códigos 404/409/422, CSV × PDF, o pagamento, as auditorias da aplicação na ordem, a leitura depois da resposta, o download e as ações iguais às do serviço e do catálogo da auditoria).
+- **Arquivos reais (só contagens, nada no git):** 9 PDFs de Downloads (3 de fatura ou composição de cartão e 6 "fatura-*"/"nota-fiscal-fatura-*"), com a IA desligada, deram a mesma saída no original e no porte. `parse_pdf` recusou os 9 com a mesma frase (8 por layout não reconhecido, inclusive uma fatura Sicredi real, e 1 sem texto). `ler_documento` leu a composição real (22 itens, que só fecham o total com o `extract_tables`: a descrição quebra dentro da célula) e recusou 8 por "imagem não autorizada".
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-cartoes.ts`, com 71 conferências, rodado 3 vezes seguidas. Percorre o cartão e a fatura com as recusas, os gastos (à mão, CSV com reenvio e linha errada, compra removida e reimportada, PDF com texto e escaneado), os documentos (composição lida, escaneado sem a IA, mesmo PDF, reler, complementar, principal com substituição, o PDF baixado), o pagamento (valor, crédito, a transação de outra fatura), a distribuição (excesso, conta sintética, versão velha, hash errado, aplicar no pagamento pendente e desfazer, a classificação mudada no NEO e "preservar", aplicar no pagamento classificado e desfazer devolvendo a composição), as travas (conta do plano, cartão com fatura aberta e com distribuição aplicada, desvincular com a aplicação), o isolamento, os CHECKs e as colunas únicas e, no fim, a exclusão da empresa com os PDFs em disco.
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **Desvincular o pagamento de uma fatura sem pagamento a fecha:** `desassociar_transacao` não confere se havia transação e põe "fechada" (numa fatura aberta, também).
+- **A fatura paga não aceita nem a observação:** `data.status != "paga"` vale para o status ausente, e a atualização sem status é recusada ("Faturas pagas não podem ser reabertas.").
+- **O limite do cartão aceita negativo na edição** (o `CartaoUpdate` não tem o `ge=0` do cadastro), e o pydantic aceita `true` como dia 1.
+- **A "outra fatura" que já usou a transação** é procurada em qualquer empresa e também entre as excluídas; `remover_cartao` conta a distribuição aplicada de fatura excluída.
+- **O que derrubava o original com erro 500**, e aqui é frase: a compra removida e reimportada (a chave primária do `uuid5` repetida), a linha do CSV com coluna a menos, o `\r` solto e as aspas abertas, o valor acima de `Decimal(15,2)` e a descrição acima de 500 (no PostgreSQL), o NaN e o infinito no valor (`[<class 'decimal.InvalidOperation'>]` na linha), `ultimos_digitos` numérico, e, no leitor, o item da IA que não é objeto, a parcela infinita e o "NaN" com total declarado.
+- **No leitor:** a parcela "2.0" escrita como texto descarta o lançamento inteiro; `pagamentos_anteriores` nulo vira a falha genérica e um texto vira uma entrada por letra; o dia impossível na composição ("31-fev") vira a falha genérica; `_dinheiro` aceita e guarda "20.000"; o "TOTAL FATURA" que decide a composição diferencia maiúscula, a busca do valor dele não.
+- **A suíte do original em SQLite** guarda o UUID com afinidade numérica: `test_mil_gastos` falhou uma vez com um uuid4 só de dígitos e um "e" (instabilidade do próprio original).
+- **Os testes do original têm nomes de estabelecimentos e um CNPJ que parecem reais**: o gabarito sai sanitizado; vale limpar lá.
+
+Divergências da C3:
+
+- **PDF em disco, não na coluna** (decisão da B4). A carga (C4) tira os bytes de `fatura_documentos.conteudo`, grava em `storage/contabil-core/faturas/<tenantId>/<id>.pdf` e preenche `storageKey` e `tamanho`; o `hash_arquivo` vem como está. As outras quatro tabelas vêm sem conversão (os ids, o `resultado`, as `distribuicoes` e a `aplicacao` com o hash).
+- **As exceções cruas do original viram recusa com frase** (a lista dos achados). Contadas nos testes: no serviço, 11 de coluna (`alemDaColuna`), 7 do `decimal`, 3 de CSV, 2 de compra removida, 1 do validador e 3 do esquema (o `true` como dia, o limite e o valor acima do banco); no leitor, 3 cenários de `parse_pdf` (`RESPOSTA_FORA_DO_FORMATO`).
+- **A empresa inexistente** é "não encontrada" antes de tudo (1 caso). **A transação desfeita não paga a fatura** ("Transação não encontrada para esta empresa."), como nas notas e nos comprovantes; o original não olhava o `deleted_at`.
+- **PDF sem páginas:** o PyMuPDF abre e recusa por "Quantidade de páginas…"; o pdf.js não abre, e cai na falha genérica (1 caso).
+- **Mensagens:** as recusas genéricas do pydantic viram frases em português. As frases da IA desligada dizem onde ligar no Connect ("Leitura por imagem não autorizada na configuração: ligue em Contábil Core › Configurações › Leitura de documentos por IA…").
+- **Respostas:** o dinheiro sai sempre com 2 casas (o original devolvia o limite como foi enviado, "50000", e o gasto arredondado meio para par); as exclusões devolvem `{ ok: true, <chave>: null }` (o original respondia 204); a lista de faturas traz o resumo da transação que pagou.
+- **Ordens:** os cartões por nome e id; os gastos pela data, pela criação e pelo id; os documentos pela criação e pelo id.
+- **A IA de imagem:** a página vai como PDF de uma página, com uma linha de texto (a fundação exige) e sem pedir o formato JSON; "incompleta" só aparece quando a fundação sinaliza o corte (uma recusa da Anthropic vira a falha genérica). As coordenadas dos traços (pdf.js) diferem do original na sexta casa decimal.
+- **A leitura em segundo plano** não é interrompida pelo prazo (300 + 10 s): o resultado chega e é descartado se a tentativa mudou, como lá.
+- **`contaBancaria`** (a conta sintética do banco, quando a agência não tem conta) é criada numa transação própria, antes da aplicação: se a aplicação for recusada depois, a conta sintética fica, como na classificação manual do Connect.
+- **Reler o documento** fica na auditoria (o original não registrava).
+- **Tela:** editar e ativar/inativar o cartão e reabrir a fatura fechada sem pagamento são novos (o serviço já aceitava); os pagamentos possíveis vêm de uma rota própria (débitos vivos com o valor exato, até 100); motivo e confirmações em diálogos (o original usava `window.prompt`/`confirm`); um botão só para importar CSV ou PDF (o PDF vai ao leitor direto; a revisão fica em "Enviar PDF para revisão"); o PDF baixa como "fatura.pdf"; as somas da tela são em centavos. A tela consulta a distribuição a cada 2 s enquanto um documento é lido, e `obter` trava a fatura como o original: pesa, mas funciona (ver as decisões).
+
+**Precisam de decisão:**
+
+- `obter` trava a fatura (`for_update`, como o original) e a tela consulta a cada 2 s durante a leitura: tirar a trava da leitura?
+- O reapontamento da conta sintética (`ReapontamentoService`) não foi portado; a trava dos gastos de cartão dele fica para quando vier.
+- `editarConta` do Connect não recusa mudar a natureza (tipo e S/A) de conta movimentada, como o `atualizar` do original; com os cartões, o gasto também contaria. É anterior à C3.
+- A transação desfeita pagar a fatura: o porte recusa (como C1 e C2); o original aceitava.
 
 ## Arquitetura no Connect
 

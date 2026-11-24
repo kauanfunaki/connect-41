@@ -28,6 +28,7 @@ export type PastaDoStorage =
   | "revisao-contabil"
   | "contabil-core/financeiro"
   | "contabil-core/comprovantes"
+  | "contabil-core/faturas"
   | "resumes";
 
 export type ArquivosDoCadastro = {

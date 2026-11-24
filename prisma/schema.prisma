@@ -11413,6 +11413,11 @@ model CoreEmpresa {
   financeiroVinculos   CoreFinanceiroVinculo[]
   notasFiscais         CoreNotaFiscal[]
   comprovantes         CoreComprovante[]
+  cartoes              CoreCartaoCredito[]
+  faturasCartao        CoreFaturaCartao[]
+  lancamentosCartao    CoreLancamentoCartao[]
+  faturaDocumentos     CoreFaturaDocumento[]
+  faturaDistribuicoes  CoreFaturaDistribuicao[]
 
   @@unique([tenantId, cnpj])
   @@map("core_empresas")
@@ -11448,6 +11453,7 @@ model CorePlanoConta {
   registros           CoreRegistro[]
   decisoes            CoreNeoDecisao[]  @relation("CoreDecisaoConta")
   decisoesContraparte CoreNeoDecisao[]  @relation("CoreDecisaoContaContraparte")
+  lancamentosCartao   CoreLancamentoCartao[]
 
   @@unique([empresaId, codigoAtivo])
   @@index([tenantId, empresaId])
@@ -11650,6 +11656,7 @@ model CoreTransacao {
   decisoes   CoreNeoDecisao[]
   notas      CoreNotaFiscal[]
   comprovantes CoreComprovante[]
+  faturas      CoreFaturaCartao[]
 
   @@unique([empresaId, hashAtivo])
   @@index([empresaId, status, autoRecusadoEm])
@@ -11996,6 +12003,144 @@ model CoreComprovante {
   @@index([empresaId, arquivoSha256])
   @@index([tenantId])
   @@map("core_comprovantes")
+}
+
+/// Cartão de crédito da empresa (`cartoes_credito`, Fase C3).
+model CoreCartaoCredito {
+  id             String    @id @default(uuid())
+  tenantId       String
+  empresaId      String
+  nome           String    @db.VarChar(200)
+  /// visa | mastercard | elo | amex | hipercard | outros
+  bandeira       String    @db.VarChar(20)
+  ultimosDigitos String?   @db.VarChar(4)
+  diaFechamento  Int
+  diaVencimento  Int
+  limite         Decimal?  @db.Decimal(15, 2)
+  ativo          Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  empresa CoreEmpresa         @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  faturas CoreFaturaCartao[]
+
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_cartoes_credito")
+}
+
+/// Fatura mensal de um cartão (`faturas_cartao`). O total é sempre a soma dos lançamentos vivos;
+/// `valorTotal` fica só para a carga (o original também nunca o atualizava).
+model CoreFaturaCartao {
+  id             String    @id @default(uuid())
+  tenantId       String
+  empresaId      String
+  cartaoId       String
+  /// "AAAA-MM". Única por cartão (TOTAL, como `uq_fatura_cartao_competencia`).
+  competencia    String    @db.VarChar(7)
+  dataFechamento DateTime?
+  dataVencimento DateTime?
+  valorTotal     Decimal   @default(0) @db.Decimal(15, 2)
+  /// aberta | fechada | paga
+  status         String    @default("aberta") @db.VarChar(10)
+  /// A transação do extrato que pagou a fatura: uma transação quita no máximo uma fatura (`uq_fatura_transacao`).
+  transacaoId    String?   @unique
+  observacao     String?   @db.VarChar(500)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  empresa      CoreEmpresa              @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  cartao       CoreCartaoCredito        @relation(fields: [cartaoId], references: [id], onDelete: Restrict)
+  transacao    CoreTransacao?           @relation(fields: [transacaoId], references: [id], onDelete: Restrict)
+  lancamentos  CoreLancamentoCartao[]
+  documentos   CoreFaturaDocumento[]
+  distribuicao CoreFaturaDistribuicao?
+
+  @@unique([cartaoId, competencia])
+  @@index([empresaId, status])
+  @@index([tenantId])
+  @@map("core_faturas_cartao")
+}
+
+/// Gasto de uma fatura (`lancamentos_cartao`). O id da compra importada é o `uuid5` do original.
+model CoreLancamentoCartao {
+  id           String    @id @default(uuid())
+  tenantId     String
+  empresaId    String
+  faturaId     String
+  /// Instante em UTC (no original, `timestamptz`); a importação grava a meia-noite UTC do dia.
+  dataCompra   DateTime
+  descricao    String    @db.VarChar(500)
+  valor        Decimal   @db.Decimal(15, 2)
+  contaId      String?
+  parcelaAtual Int?
+  parcelaTotal Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  empresa CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fatura  CoreFaturaCartao @relation(fields: [faturaId], references: [id], onDelete: Restrict)
+  conta   CorePlanoConta?  @relation(fields: [contaId], references: [id], onDelete: Restrict)
+
+  @@index([faturaId])
+  @@index([contaId])
+  @@index([tenantId])
+  @@map("core_lancamentos_cartao")
+}
+
+/// O PDF enviado da fatura e o rascunho lido (`fatura_documentos`): nenhuma compra entra sem revisão.
+model CoreFaturaDocumento {
+  id          String    @id @default(uuid())
+  tenantId    String
+  empresaId   String
+  faturaId    String
+  nome        String    @db.VarChar(255)
+  /// SHA-256 dos bytes: o mesmo PDF não entra duas vezes na fatura (`uq_fatura_documento_hash`).
+  hashArquivo String    @db.Char(64)
+  tamanho     Int
+  /// "<tenantId>/<id>.pdf" sob storage/contabil-core/faturas — nunca vem de quem envia. O original
+  /// guardava os bytes na coluna `conteudo`.
+  storageKey  String?   @db.VarChar(255)
+  /// processando | revisar | falhou | principal | complementar
+  status      String    @db.VarChar(30)
+  resultado   Json
+  erro        String?   @db.VarChar(1000)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  empresa CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fatura  CoreFaturaCartao @relation(fields: [faturaId], references: [id], onDelete: Restrict)
+
+  @@unique([faturaId, hashArquivo])
+  @@index([tenantId])
+  @@map("core_fatura_documentos")
+}
+
+/// O estado versionado da distribuição da fatura e a evidência da aplicação no pagamento (`fatura_distribuicoes`).
+model CoreFaturaDistribuicao {
+  id            String    @id @default(uuid())
+  tenantId      String
+  empresaId     String
+  faturaId      String    @unique
+  versao        Int
+  /// { "<id do gasto>": [{ conta_id, historico, valor }] }, como o original.
+  distribuicoes Json
+  /// { antes, transacao_id, hash } enquanto aplicada; nula quando não.
+  aplicacao     Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  empresa CoreEmpresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fatura  CoreFaturaCartao @relation(fields: [faturaId], references: [id], onDelete: Restrict)
+
+  @@index([empresaId])
+  @@index([tenantId])
+  @@map("core_fatura_distribuicoes")
 }
 
 model TenantContabilCoreConfig {

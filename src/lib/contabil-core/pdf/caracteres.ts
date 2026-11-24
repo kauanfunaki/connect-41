@@ -68,7 +68,15 @@ const estadoNovo = (): EstadoDoTexto => ({
 
 type Glifo = { unicode?: string; width?: number; isSpace?: boolean; originalCharCode?: number } | number | null;
 
-export type PaginaComCaracteres = { largura: number; altura: number; caracteres: Caractere[] };
+export type PaginaComCaracteres = { largura: number; altura: number; caracteres: Caractere[]; tracos: Traco[] };
+
+/**
+ * Um traço desenhado (o `LTLine`, `LTRect` ou `LTCurve` do pdfminer, como o pdfplumber o entrega em
+ * `page.lines`, `page.rects` e `page.curves`), nas coordenadas dos caracteres: x da esquerda, `top` de cima.
+ * `pts` são os pontos de cada segmento (o fim de cada operação; o `h` repete o começo). As tabelas do
+ * pdfplumber (`pdf/tabelas.ts`, C3) são achadas por eles.
+ */
+export type Traco = { tipo: "line" | "rect" | "curve"; x0: number; x1: number; top: number; bottom: number; pts: [number, number][] };
 
 const num = (v: unknown, padrao = 0) => (typeof v === "number" && Number.isFinite(v) ? v : padrao);
 function comoMatriz(args: unknown[]): Matriz | null {
@@ -235,6 +243,7 @@ function interpretar(
   };
   const fontes = new Map<string, Fonte>();
   const caracteres: Caractere[] = [];
+  const tracos: Traco[] = [];
 
   // Cada formulário roda com estado novo (render_contents → init_state), e volta ao do pai no fim.
   type Quadro = { ctm: Matriz; texto: EstadoDoTexto; pilha: { ctm: Matriz; texto: EstadoDoTexto }[] };
@@ -409,7 +418,77 @@ function interpretar(
         q.texto.espacoCaractere = num(args[1]);
         mostrar((args[2] as Glifo[]) ?? []);
         break;
+      case OPS.constructPath:
+        // O caminho só vira objeto quando é pintado (o `n`, que só recorta, não: `do_n` do pdfminer).
+        if (args[0] !== OPS.endPath) {
+          const dados = (args[1] as (ArrayLike<number> | null)[] | undefined)?.[0];
+          if (dados) pintarCaminho(segmentosDoCaminho(dados), q.ctm, (x, y) => [x + dx0, altura - y + dtopo], tracos);
+        }
+        break;
     }
   }
-  return { largura, altura, caracteres };
+  return { largura, altura, caracteres, tracos };
+}
+
+// ─── Os caminhos (o `paint_path` do pdfminer) ───────────────────────────────
+
+type Segmento = ["m" | "l" | "c" | "h", ...number[]];
+
+/** O caminho do pdf.js (moveTo 0, lineTo 1, curveTo 2, quadraticCurveTo 3, closePath 4) como o do pdfminer. */
+function segmentosDoCaminho(d: ArrayLike<number>): Segmento[] {
+  const s: Segmento[] = [];
+  for (let i = 0; i < d.length; ) {
+    const op = d[i++];
+    if (op === 0) s.push(["m", d[i++], d[i++]]);
+    else if (op === 1) s.push(["l", d[i++], d[i++]]);
+    else if (op === 2) s.push(["c", d[i++], d[i++], d[i++], d[i++], d[i++], d[i++]]);
+    else if (op === 3) s.push(["c", d[i++], d[i++], d[i++], d[i++]]);
+    else if (op === 4) s.push(["h"]);
+    else break;
+  }
+  return s;
+}
+
+/**
+ * `PDFLayoutAnalyzer.paint_path` do pdfminer: cada subcaminho (de um `m` ao próximo) vira linha (`ml`,
+ * `mlh`), retângulo (`mlllh`/`mllll` fechado e com os lados alinhados) ou curva. O caminho que não começa
+ * com `m` é ignorado inteiro, como lá.
+ */
+function pintarCaminho(caminho: Segmento[], ctm: Matriz, paraPagina: (x: number, y: number) => [number, number], tracos: Traco[]): void {
+  let forma = caminho.map((p) => p[0]).join("");
+  if (forma.slice(0, 1) !== "m") return;
+  if ((forma.match(/m/g) ?? []).length > 1) {
+    for (const m of forma.matchAll(/m[^m]+/g)) pintarCaminho(caminho.slice(m.index, m.index + m[0].length), ctm, paraPagina, tracos);
+    return;
+  }
+  const [a, b, c, d, e, f] = ctm;
+  const pts: [number, number][] = caminho.map((p) => {
+    const [x, y] = p[0] === "h" ? (caminho[0].slice(-2) as number[]) : (p.slice(-2) as number[]);
+    return [a * x + c * y + e, b * x + d * y + f];
+  });
+  const igual = (p: [number, number], q2: [number, number]) => p[0] === q2[0] && p[1] === q2[1];
+  // A linha redundante antes do `h` sai ("Drop a redundant l on a path closed with h").
+  if (forma.length > 3 && forma.slice(-2) === "lh" && igual(pts[pts.length - 2], pts[0])) {
+    forma = forma.slice(0, -2) + "h";
+    pts.pop();
+  }
+  const objeto = (tipo: Traco["tipo"], pontos: [number, number][]) => {
+    const xs = pontos.map((p) => p[0]);
+    const ys = pontos.map((p) => p[1]);
+    const [x0, top] = paraPagina(Math.min(...xs), Math.max(...ys));
+    const [x1, bottom] = paraPagina(Math.max(...xs), Math.min(...ys));
+    tracos.push({ tipo, x0, x1, top, bottom, pts: pontos.map(([x, y]) => paraPagina(x, y)) });
+  };
+  if (forma === "mlh" || forma === "ml") return objeto("line", [pts[0], pts[1]]);
+  if (forma === "mlllh" || forma === "mllll") {
+    const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = pts;
+    const fechado = igual(pts[0], pts[4]);
+    const alinhado = (x0 === x1 && y1 === y2 && x2 === x3 && y3 === y0) || (y0 === y1 && x1 === x2 && y2 === y3 && x3 === x0);
+    if (fechado && alinhado) {
+      // `LTRect(bbox=(*pts[0], *pts[2]))`: os quatro cantos do retângulo de pts[0] a pts[2].
+      const [p0, p2] = [pts[0], pts[2]];
+      return objeto("rect", [[p0[0], p0[1]], [p2[0], p0[1]], [p2[0], p2[1]], [p0[0], p2[1]]]);
+    }
+  }
+  objeto("curve", pts);
 }

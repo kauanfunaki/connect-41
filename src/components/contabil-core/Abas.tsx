@@ -22,6 +22,7 @@ import { FilaDoNeo, ProcessarNeo } from "./Neo";
 import { Compor, Reclassificar } from "./Lancamento";
 import { Notas } from "./Notas";
 import { Comprovantes } from "./Comprovantes";
+import { Cartoes } from "./Cartoes";
 import { iaLiberadaParaDocumentos } from "@/lib/contabil-core/servidor/notas";
 
 // As abas do Contábil Core (Fase 2, 09/11/2026). Componentes de servidor: leem pelo serviço (que
@@ -441,6 +442,17 @@ export function AbaNotas({ c }: { c: ContextoDaAba }) {
 export function AbaComprovantes({ c }: { c: ContextoDaAba }) {
   // A chave zera a tela (fila de arquivos, filtro) ao trocar de empresa.
   return <Comprovantes key={c.empresaId} empresaId={c.empresaId} podeAgir={c.podeAgir} />;
+}
+
+// ─── Cartões de crédito ──────────────────────────────────────────────────
+
+// Bloco C, Fase C3 (23/11/2026): a página "Cartão de Crédito" do original. Os cartões, as faturas, os gastos,
+// o pagamento, os documentos e a distribuição vão pela API (`/api/contabil-core/cartoes`), que confere tenant,
+// empresa e permissão; quem só lê vê tudo, sem os botões. As contas analíticas vêm daqui, como no NEO.
+export async function AbaCartoes({ c }: { c: ContextoDaAba }) {
+  const { opcoesDeConta } = await opcoes(c);
+  // A chave zera a tela (o cartão e a fatura abertos) ao trocar de empresa.
+  return <Cartoes key={c.empresaId} empresaId={c.empresaId} podeAgir={c.podeAgir} contas={opcoesDeConta} />;
 }
 
 // ─── Conciliação ──────────────────────────────────────────────────────────
