@@ -154,6 +154,15 @@ export function ehPapel(v: unknown): v is PapelDaRubrica {
 }
 
 /**
+ * Se a rubrica pode ser lançada pelo DP (no mês ou como fixa do contrato) e se
+ * vai por quantidade (horas ou dias) ou por valor (19/11/2026, funcionalidade-767).
+ */
+export function regraDeLancamento(r: { papel: string | null; tipo: string; lancamento: string }): { lancavel: boolean; porQuantidade: boolean } {
+  const lancavel = r.papel ? ehPapel(r.papel) && PAPEIS_LANCAVEIS.has(r.papel) : r.tipo !== "INFORMATIVA";
+  return { lancavel, porQuantidade: r.papel !== null && r.lancamento !== "VALOR" };
+}
+
+/**
  * As rubricas do motor que o escritório ainda não tem (pelo papel): a
  * semeadura do primeiro acesso, e a de quando uma rubrica de papel nova entra
  * no código. As livres da lista padrão só entram na primeira vez.

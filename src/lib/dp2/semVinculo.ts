@@ -27,6 +27,7 @@ import {
   diasNoMes,
   INSS_EMPRESA_ALIQUOTA,
   itemDaRubrica,
+  marcarFixa,
   rubricaDoPapel,
   type CalculoDaPessoa,
   type Encargos,
@@ -81,7 +82,9 @@ export function calcularMesDaCategoria(e: EntradaMensal): CalculoDaPessoa {
       continue;
     }
     if (r.papel === "PENSAO") pensao += ev.valor;
+    const antes = itens.length;
     itens.push(itemDaRubrica(r, ev.valor, "", r.papel === "PENSAO" ? "Valor informado (deduz da base do IRRF)" : "Valor informado"));
+    marcarFixa(itens, antes, ev);
   }
 
   // ── INSS do contribuinte individual: 11% até o teto ──

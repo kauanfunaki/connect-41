@@ -2,6 +2,7 @@
 // nos arquivos puros ao lado (`mensal.ts`, `tabelas.ts`…); aqui só se junta o
 // que eles precisam e se guarda o que devolvem.
 
+import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { r2 } from "@/lib/rescisao/constantes";
@@ -209,6 +210,28 @@ export async function colaboradoresDaEmpresa(tenantId: string, companyId: string
   });
 }
 
+// ─── Rubricas fixas do contrato (19/11/2026, funcionalidade-767) ────────────
+
+/** As rubricas fixas que valem na competência "AAAA-MM" para as pessoas dadas. */
+export async function rubricasFixasDoMes(tenantId: string, personIds: string[], competencia: string) {
+  if (personIds.length === 0) return [];
+  return getPrisma().dp2RubricaFixa.findMany({
+    where: { tenantId, personId: { in: personIds }, inicio: { lte: competencia }, OR: [{ fim: null }, { fim: { gte: competencia } }] },
+    include: { rubrica: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/** Troca as rubricas fixas do contrato da pessoa pelas do formulário (nenhuma = apaga todas). */
+export async function gravarRubricasFixas(tenantId: string, personId: string, fixas: readonly RubricaFixa[], userId: string, tx?: Prisma.TransactionClient) {
+  const db = tx ?? getPrisma();
+  await db.dp2RubricaFixa.deleteMany({ where: { tenantId, personId } });
+  if (fixas.length === 0) return;
+  await db.dp2RubricaFixa.createMany({
+    data: fixas.map((f) => ({ tenantId, personId, rubricaId: f.rubricaId, quantidade: f.quantidade, valor: f.valor, inicio: f.inicio, fim: f.fim, observacao: f.observacao, criadoPorId: userId })),
+  });
+}
+
 // ─── Médias ─────────────────────────────────────────────────────────────────
 
 /**
@@ -278,6 +301,12 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
     colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes),
     prisma.dp2Evento.findMany({ where: { tenantId, competenciaId }, include: { rubrica: true } }),
   ]);
+  // As rubricas fixas do contrato que valem no mês entram como eventos (funcionalidade-767),
+  // menos as que o DP lançou no mês para a mesma pessoa e rubrica: aí vale o lançamento.
+  const { entram: fixas } = separarFixasDoMes(
+    comp.tipo === "MENSAL" ? await rubricasFixasDoMes(tenantId, pessoas.map((p) => p.id), competencia) : [],
+    eventos
+  );
   const rubricas = rubricasPorPapel(linhasDeRubrica);
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
 
@@ -300,7 +329,12 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         admissao: p.admissionDate,
         desligamento: p.dismissalDate,
         vinculo,
-        eventos: daPessoa.map((e) => ({ rubrica: rubricaDoMotor(e.rubrica), quantidade: decOuNulo(e.quantidade), valor: decOuNulo(e.valor) })),
+        eventos: [
+          ...daPessoa.map((e) => ({ rubrica: rubricaDoMotor(e.rubrica), quantidade: decOuNulo(e.quantidade), valor: decOuNulo(e.valor) })),
+          ...fixas
+            .filter((f) => f.personId === p.id && f.rubrica.ativa)
+            .map((f) => ({ rubrica: rubricaDoMotor(f.rubrica), quantidade: decOuNulo(f.quantidade), valor: decOuNulo(f.valor), origem: "FIXA" as const })),
+        ],
         rubricas,
         tabelas: tab.tabelas,
         convencao: cfg.convencao,

@@ -24,6 +24,7 @@ import { calcularInss, calcularIrrf, type ResultadoInss, type ResultadoIrrf } fr
 import { reais, pct, num } from "./formato";
 import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
 import type { TabelasDaCompetencia } from "./tabelas";
+import { MARCA_DA_FIXA } from "./rubricasFixas";
 
 export type Insalubridade = "NENHUM" | "MINIMO" | "MEDIO" | "MAXIMO";
 
@@ -49,7 +50,18 @@ export const CONVENCAO_DA_CLT: ConvencaoDoMotor = { he50: 50, he100: 100, noturn
 
 export type EmpresaDoMotor = { patronalNoDas: boolean; ratAliquota: number; fap: number; terceirosAliquota: number };
 
-export type EventoDoMotor = { rubrica: RubricaDoMotor; quantidade: number | null; valor: number | null };
+/** `origem` "FIXA" = rubrica fixa do contrato (19/11/2026, funcionalidade-767): só muda a memória do holerite. */
+export type EventoDoMotor = { rubrica: RubricaDoMotor; quantidade: number | null; valor: number | null; origem?: "FIXA" };
+
+/**
+ * Linha que veio de rubrica fixa (23/11/2026): a memória termina dizendo isso,
+ * em qualquer rubrica — também nas de horas, como uma hora extra fixa.
+ */
+export function marcarFixa(itens: ItemDoHolerite[], antes: number, ev: EventoDoMotor): void {
+  if (ev.origem !== "FIXA" || itens.length <= antes) return;
+  const ultimo = itens[itens.length - 1];
+  itens[itens.length - 1] = { ...ultimo, memoria: `${ultimo.memoria} · ${MARCA_DA_FIXA}` };
+}
 
 export type ItemDoHolerite = {
   codigo: string;
@@ -301,6 +313,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   for (const ev of e.eventos) {
     const r = ev.rubrica;
     const q = ev.quantidade ?? 0;
+    const antes = itens.length;
     switch (r.papel) {
       case "HE50":
       case "HE100": {
@@ -335,6 +348,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
         }
         itens.push(itemDaRubrica(r, ev.valor, "", "Valor informado"));
     }
+    marcarFixa(itens, antes, ev);
   }
 
   if (variaveisParaDsr > 0 && e.diasUteis > 0) {

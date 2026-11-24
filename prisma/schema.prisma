@@ -2776,6 +2776,7 @@ model Person {
   payrollEntries       PayrollEntry[]
   dp2Vinculo           Dp2Vinculo?
   dp2Eventos           Dp2Evento[]
+  dp2RubricasFixas     Dp2RubricaFixa[]
   dp2Calculos          Dp2Calculo[]
   dp2Comparativos      Dp2Comparativo[]
   dp2EventosEsocial    Dp2EventoEsocial[]
@@ -6876,6 +6877,7 @@ model Dp2Rubrica {
   updatedAt       DateTime @updatedAt
 
   eventos Dp2Evento[]
+  fixas   Dp2RubricaFixa[]
 
   @@unique([tenantId, codigo])
   @@index([tenantId, papel])
@@ -7061,6 +7063,36 @@ model Dp2Evento {
   @@index([rubricaId])
   @@index([personId])
   @@map("dp2_eventos")
+}
+
+/// Rubrica fixa do contrato (19/11/2026, funcionalidade-767): o que se repete
+/// todo mês para a pessoa (gratificação de função, quebra de caixa, desconto de
+/// plano de saúde…). O cálculo da folha mensal a lança sozinho de `inicio` até
+/// `fim`, junto com os eventos do mês. Zero, uma ou várias por pessoa.
+model Dp2RubricaFixa {
+  id          String   @id @default(uuid())
+  tenantId    String
+  personId    String
+  rubricaId   String
+  /// Horas ou dias, nas rubricas lançadas assim.
+  quantidade  Decimal? @db.Decimal(10, 2)
+  /// Valor, nas rubricas de valor informado.
+  valor       Decimal? @db.Decimal(12, 2)
+  /// "AAAA-MM": a primeira competência em que entra.
+  inicio      String   @db.VarChar(7)
+  /// "AAAA-MM": a última; vazio = sem fim.
+  fim         String?  @db.VarChar(7)
+  observacao  String?  @db.VarChar(300)
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  person  Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  rubrica Dp2Rubrica @relation(fields: [rubricaId], references: [id])
+
+  @@index([tenantId, personId])
+  @@index([rubricaId])
+  @@map("dp2_rubricas_fixas")
 }
 
 /// O resultado do motor para uma pessoa na competência, com a memória de cálculo.

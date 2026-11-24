@@ -23,7 +23,9 @@ import { nomeExibicao } from "@/lib/companyName";
 import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
 import { formatCpf, formatInstantDateTime } from "@/lib/format";
 import { num } from "@/lib/dp2/formato";
-import { colaboradoresDaCompetencia, listarRubricas, type TotaisDaCompetencia } from "@/lib/dp2/servidor";
+import { colaboradoresDaCompetencia, listarRubricas, rubricasFixasDoMes, type TotaisDaCompetencia } from "@/lib/dp2/servidor";
+import { competenciaDe } from "@/lib/dp2/tabelas";
+import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
 import { PAPEIS_LANCAVEIS, ehPapel } from "@/lib/dp2/rubricas";
 import { compararValores, type CampoComparado } from "@/lib/dp2/comparativo";
 import { brl, nomeDaCompetencia, NOME_DA_SITUACAO, NOME_DO_TIPO_DE_COMPETENCIA, TOM_DA_SITUACAO } from "@/lib/dp2/tela";
@@ -109,6 +111,15 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     }),
   ]);
   const pedidoAtual = pedidos.find((p) => p.situacao !== "CANCELADO") ?? null;
+  // As rubricas fixas do contrato que valem no mês: entram no cálculo sozinhas (funcionalidade-767).
+  // Fechada, o cálculo já foi: só aparece o que de fato entrou (nos holerites).
+  const fixasVigentes = mensal && !fechada
+    ? (await rubricasFixasDoMes(ctx.tenantId, pessoas.filter((p) => p.dp2Vinculo).map((p) => p.id), competenciaDe(comp.ano, comp.mes))).filter((f) => f.rubrica.ativa)
+    : [];
+  // A que o DP lançou no mês para a mesma pessoa e rubrica fica de fora (vale o lançamento).
+  const { substituidas } = separarFixasDoMes(fixasVigentes, eventos);
+  const fixasDoMes = fixasVigentes.map((f) => ({ ...f, substituida: substituidas.includes(f) }));
+  const nomeDe = new Map(pessoas.map((p) => [p.id, p.name]));
   const contabil = calculos.length > 0 ? await lancamentosDaCompetencia(ctx.tenantId, id) : null;
   const urlPublica = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
@@ -362,7 +373,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 </div>
               </FormularioDoDp2>
             )}
-            {eventos.length === 0 ? (
+            {eventos.length === 0 && fixasDoMes.length === 0 ? (
               <p className="text-fs-3 text-fg-muted">Nenhum lançamento.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -395,6 +406,23 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                               <input type="hidden" name="eventoId" value={e.id} />
                             </FormularioDoDp2>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                    {fixasDoMes.map((f) => (
+                      <tr key={`fixa-${f.id}`} className={`${TR} ${f.substituida ? "text-fg-muted line-through decoration-fg-muted/50" : ""}`.trim()}>
+                        <td className={TD}>{nomeDe.get(f.personId) ?? "—"}</td>
+                        <td className={TD}>
+                          {f.rubrica.codigo} · {f.rubrica.nome}
+                        </td>
+                        <td className={TD_NUM}>{f.quantidade !== null ? num(n(f.quantidade)) : "—"}</td>
+                        <td className={TD_NUM}>{f.valor !== null ? brl(n(f.valor)) : "—"}</td>
+                        <td className={TD}>{f.substituida ? <span className="text-fg-muted">Fixa · substituída pelo lançamento do mês</span> : "Fixa do contrato"}</td>
+                        <td className={`${TD} text-fg-muted`}>{f.observacao ?? ""}</td>
+                        <td className={`${TD} text-right`}>
+                          <Link href={`/dp2/colaboradores?pessoa=${f.personId}`} className="text-fs-2 text-brand hover:underline">
+                            No contrato
+                          </Link>
                         </td>
                       </tr>
                     ))}
