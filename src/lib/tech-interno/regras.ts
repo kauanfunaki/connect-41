@@ -7,6 +7,14 @@ export const ROTA_TECH_INTERNO = "/controle-interno";
 // situação, uma camada acima, continua mudando ali mesmo.
 export const LINK_DO_ITEM = "after:absolute after:inset-0 after:content-['']";
 export const TAMANHO_PAGINA = 50;
+/**
+ * Quantos cartões cada coluna do Kanban carrega (23/11/2026). A contagem do
+ * cabeçalho é sempre a real, por situação; o corte vale só para os cartões.
+ * Antes, o Kanban buscava 500 itens no total, por prioridade, e contava as
+ * colunas sobre eles: com 806 itens, os concluídos de prioridade alta tomavam
+ * o lugar dos pendentes de prioridade baixa, que sumiam do quadro.
+ */
+export const CARTOES_POR_COLUNA = { aberta: 500, fechada: 100 } as const;
 export const TIPOS = { BUG: "Bug", IMPROVEMENT: "Melhoria", FEATURE: "Nova funcionalidade", TEST: "Teste", MIGRATION: "Migração" } as const;
 export type TipoTech = keyof typeof TIPOS;
 

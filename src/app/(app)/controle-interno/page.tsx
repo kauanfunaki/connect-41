@@ -49,7 +49,12 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
     const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && k !== "page" && k !== "pagina") q.set(k, v);
     q.set("visao", view); q.set("mes", month); return `${ROTA_TECH_INTERNO}?${q}`;
   };
-  const prazoDoItem = (item: typeof lista.items[number]) => {
+  // O "Ver todos na lista" de cada coluna do Kanban: os mesmos filtros, com a situação da coluna.
+  const verTodos = Object.fromEntries((Object.keys(SITUACOES) as (keyof typeof SITUACOES)[]).map(s => {
+    const q = new URLSearchParams(); for (const [k, v] of Object.entries(params)) if (typeof v === "string" && !["page", "pagina", "visao", "situacao"].includes(k)) q.set(k, v);
+    q.set("visao", "lista"); q.set("situacao", s); return [s, `${ROTA_TECH_INTERNO}?${q}`];
+  })) as Record<keyof typeof SITUACOES, string>;
+  const prazoDoItem =(item: typeof lista.items[number]) => {
     const atrasado = item.dueDate && item.dueDate.toISOString().slice(0, 10) < hoje && (EM_ABERTO as readonly string[]).includes(item.status);
     return <span className={atrasado ? "text-danger font-medium" : ""}>{item.dueDate ? formatCalendarDate(item.dueDate) : "Sem prazo"}{atrasado ? " · Atrasado" : ""}</span>;
   };
@@ -68,7 +73,7 @@ export default async function ControleInternoPage({ searchParams }: { searchPara
       { chave: "responsavel", rotulo: "Responsável", opcoes: [{ value: "me", label: "Comigo" }, { value: "none", label: "Sem responsável" }, ...opcoes.users.map(u => ({ value: u.id, label: u.name }))] },
       { chave: "atrasados", rotulo: "Prazo", vazioLabel: "Todos", opcoes: [{ value: "1", label: "Atrasados" }] },
     ]} />}>
-      {view === "kanban" ? <div className="min-h-0 flex-1 rounded-lg border border-border bg-surface"><VisoesTech today={hoje} canEdit={podeEditar} items={lista.items.map(item => ({ id: item.id, endereco: enderecoDoItem(item), title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /></div> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
+      {view === "kanban" ? <div className="min-h-0 flex-1 rounded-lg border border-border bg-surface"><VisoesTech today={hoje} canEdit={podeEditar} totais={lista.porSituacao ?? {}} verTodos={verTodos} items={lista.items.map(item => ({ id: item.id, endereco: enderecoDoItem(item), title: item.title, type: item.type, status: item.status, priority: item.priority, version: item.version, dueDate: item.dueDate?.toISOString().slice(0, 10) ?? null, assignee: item.assignee?.name ?? null, system: nomeSistema(item) }))} /></div> : !lista.items.length ? <EmptyState icon={<ClipboardList />} title="Nenhum item neste recorte" description="Cadastre uma pendência ou ajuste os filtros para encontrar outros itens." /> : <>
         <CartoesNoCelular>{lista.items.map(item => <Cartao key={item.id} className="relative cursor-pointer hover:bg-surface-hover">
           <TopoDoCartao nome={<Link className={`text-fg hover:text-brand ${LINK_DO_ITEM}`} href={enderecoDoItem(item)}>{item.title}</Link>} />
           <InfoDoCartao>{TIPOS[item.type]} · {PRIORIDADES[item.priority]}</InfoDoCartao><InfoDoCartao>{nomeSistema(item)}</InfoDoCartao>
