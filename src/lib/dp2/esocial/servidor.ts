@@ -12,7 +12,7 @@ import { calcularRescisaoDoDp2 } from "@/lib/dp2/rescisao";
 import { dataProjetada, diasDeAvisoPrevio } from "@/lib/rescisao/avos";
 import type { MotivoCanonico } from "@/lib/rescisao/motivos";
 import { lerDadosEsocial } from "./cadastro";
-import { eventoS2300, eventoS2399 } from "./semVinculo";
+import { eventoS2300, eventoS2306, eventoS2399 } from "./semVinculo";
 import { semVinculo } from "@/lib/dp2/categorias";
 import { eventoS2210, eventoS2220, eventoS2240, lerResponsaveis, type Aso, type Cat, type CondicaoAmbiental, type ResponsaveisDeSst } from "./sst";
 import {
@@ -267,7 +267,8 @@ export async function gerarAdmissao(tenantId: string, personId: string, userId: 
 export async function gerarAlteracao(tenantId: string, personId: string, data: string, descricao: string | null, userId: string): Promise<Resultado> {
   const v = await doVinculo(tenantId, personId, data.slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
-  if (semVinculo(v.t.categoria)) return { ok: false, erro: "A alteração de sócio, autônomo e estagiário é o S-2306, que ainda não está no Connect." };
+  // Sócio, autônomo e estagiário: a alteração é o S-2306 (funcionalidade-756).
+  if (semVinculo(v.t.categoria)) return { ok: true, evento: "S-2306", ...(await guardar(tenantId, v.companyId, null, userId, [eventoS2306(v.empregador, v.t, data, v.novoId)])) };
   const ev = eventoS2206(v.empregador, v.t, await sindicatoDaEmpresa(tenantId, v.companyId), { data, descricao }, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }

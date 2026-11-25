@@ -1443,9 +1443,9 @@ export async function gerarAlteracaoAction(_: EstadoDoDp2, fd: FormData): Promis
     action: "folha.esocial_alteracao",
     entityType: "Person",
     entityId: p.id,
-    metadata: { nome: p.name, data },
+    metadata: { nome: p.name, data, evento: r.ok ? (r.evento ?? "S-2206") : null },
   });
-  return respostaDoEvento("S-2206", p.name, r);
+  return respostaDoEvento(r.ok && r.evento ? r.evento : "S-2206", p.name, r);
 }
 
 export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {

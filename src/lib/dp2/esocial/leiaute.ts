@@ -22,7 +22,7 @@ export const TABELA_DE_RUBRICAS = "DP2";
 /** O código da lotação tributária única que o DP 2 usa por empresa (S-1020). */
 export const LOTACAO_PADRAO = "LOT001";
 
-export type TipoDeEvento = "S-1000" | "S-1005" | "S-1010" | "S-1020" | "S-1200" | "S-1210" | "S-1299" | "S-2200" | "S-2206" | "S-2210" | "S-2220" | "S-2230" | "S-2240" | "S-2299" | "S-2300" | "S-2399";
+export type TipoDeEvento = "S-1000" | "S-1005" | "S-1010" | "S-1020" | "S-1200" | "S-1210" | "S-1299" | "S-2200" | "S-2206" | "S-2210" | "S-2220" | "S-2230" | "S-2240" | "S-2299" | "S-2300" | "S-2306" | "S-2399";
 
 export const NOME_DO_EVENTO: Record<TipoDeEvento, string> = {
   "S-1000": "Informações do empregador",
@@ -40,6 +40,7 @@ export const NOME_DO_EVENTO: Record<TipoDeEvento, string> = {
   "S-2240": "Condições ambientais",
   "S-2299": "Desligamento",
   "S-2300": "Início sem vínculo (sócio, autônomo, estagiário)",
+  "S-2306": "Alteração sem vínculo (sócio, autônomo, estagiário)",
   "S-2399": "Término sem vínculo",
 };
 
@@ -60,6 +61,7 @@ export const TAG_DO_EVENTO: Record<TipoDeEvento, string> = {
   "S-2240": "evtExpRisco",
   "S-2299": "evtDeslig",
   "S-2300": "evtTSVInicio",
+  "S-2306": "evtTSVAltContr",
   "S-2399": "evtTSVTermino",
 };
 
@@ -80,6 +82,7 @@ export const GRUPO_DO_EVENTO: Record<TipoDeEvento, "1" | "2" | "3"> = {
   "S-2240": "2",
   "S-2299": "2",
   "S-2300": "2",
+  "S-2306": "2",
   "S-2399": "2",
 };
 

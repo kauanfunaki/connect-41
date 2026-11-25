@@ -220,8 +220,8 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
             {tela.podeAgir && (
               <div className="grid gap-5 lg:grid-cols-2">
                 <div>
-                  <h3 className="text-fs-3 font-semibold text-fg mb-2">Alteração contratual (S-2206)</h3>
-                  <FormularioDoDp2 acao={gerarAlteracaoAction} rotulo="Gerar S-2206" rotuloEnviando="Gerando…" variante="secondary">
+                  <h3 className="text-fs-3 font-semibold text-fg mb-2">Alteração contratual (S-2206; S-2306 para sócio, autônomo e estagiário)</h3>
+                  <FormularioDoDp2 acao={gerarAlteracaoAction} rotulo="Gerar alteração" rotuloEnviando="Gerando…" variante="secondary">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <CampoForm label="Colaborador" htmlFor="alt_personId">
                         <Select id="alt_personId" name="personId" required defaultValue="">
