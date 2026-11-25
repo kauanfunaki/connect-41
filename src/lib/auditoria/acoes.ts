@@ -440,6 +440,14 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "dre.publicar": e("publicou para o cliente a DRE de um mês da empresa"),
   // Correção feita por script, com o "de → para" em `linhaDaDre` (14/10/2026).
   "dre.categoria.linha_corrigida": e("corrigiu a linha da DRE da categoria"),
+  // Categorias do cliente no fluxo de caixa (25/11/2026), na empresa (`entityId`).
+  "fluxo.categoria_cliente.criar": e("criou uma categoria do cliente no fluxo de caixa da empresa"),
+  "fluxo.categoria_cliente.editar": e("editou uma categoria do cliente no fluxo de caixa da empresa"),
+  "fluxo.categoria_cliente.apagar": e("apagou uma categoria do cliente no fluxo de caixa da empresa"),
+  "fluxo.categoria_cliente.ligar": e("ligou uma categoria do Omie a uma categoria do cliente"),
+  "fluxo.categoria_cliente.desligar": e("desligou uma categoria do Omie da categoria do cliente"),
+  "fluxo.categoria_cliente.importar": e("importou o de-para das categorias do cliente"),
+  "fluxo.categoria_cliente.copiar": e("copiou de outra empresa as categorias do cliente"),
   "dre.budget.created": c("criou o orçamento"),
   "dre.budget.saved": e("salvou o orçamento"),
   "dre.budget.approved": e("aprovou o orçamento"),

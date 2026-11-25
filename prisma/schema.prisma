@@ -1765,6 +1765,8 @@ model Tenant {
   coreEmpresas              CoreEmpresa[]
   processFees               ProcessFee[]
   dreMappings               DreCategoryMapping[]
+  clientCategories          ClientCategory[]
+  clientCategoryMappings    ClientCategoryMapping[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
   drePublicacoes            DrePublicacao[]
@@ -2635,6 +2637,8 @@ model Company {
   licenses                 License[]
   digitalCertificates      DigitalCertificate[]
   dreMappings              DreCategoryMapping[]
+  clientCategories         ClientCategory[]
+  clientCategoryMappings   ClientCategoryMapping[]
   financeCategories        FinanceCategory[]
   hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
@@ -4421,6 +4425,8 @@ model FinanceCategory {
   entries     FinanceEntry[]
   padraoDe    FinanceCounterparty[]
   dreMappings DreCategoryMapping[]
+  /// O de-para do cliente que liga esta categoria à nomenclatura dele (25/11/2026).
+  clientCategoryMappings ClientCategoryMapping[]
   ocultaEm    FinanceCategoryHidden[]
   /// Baixas que puseram juros e multa, ou o desconto, nesta categoria.
   baixasComJuros    FinanceEntryPayment[] @relation("PaymentInterestCategory")
@@ -10025,6 +10031,61 @@ model DreCategoryMapping {
   @@unique([companyId, categoryId])
   @@index([tenantId, companyId])
   @@map("dre_category_mappings")
+}
+
+/// Categoria do cliente (25/11/2026, funcionalidade-837): o nome que o cliente
+/// dá às categorias do Omie, para o fluxo de caixa sair na nomenclatura dele.
+///
+/// É da empresa, e só dela: nada aqui muda `FinanceCategory`, o plano padrão do
+/// escritório nem as categorias de outro cliente. Cada categoria do cliente cai
+/// numa linha do fluxo (`line`), e as categorias do Omie da empresa apontam
+/// para ela por `ClientCategoryMapping`. Quem mantém é o BPO; o cliente só vê.
+model ClientCategory {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String @db.VarChar(120)
+
+  /// Código da linha em `src/lib/fluxoDeCaixa/estrutura.ts`. Texto, como o `grupo`
+  /// da DRE: a estrutura do fluxo é da 41, não do banco.
+  line     String @db.VarChar(40)
+  /// Ordem dentro da linha, como o cliente lê.
+  position Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant                  @relation(fields: [tenantId], references: [id])
+  company  Company                 @relation(fields: [companyId], references: [id])
+  mappings ClientCategoryMapping[]
+
+  @@unique([companyId, name])
+  @@index([tenantId, companyId])
+  @@map("client_categories")
+}
+
+/// O de-para do cliente: "nesta empresa, esta categoria do Omie é esta
+/// categoria do cliente". Uma por categoria do Omie e empresa, como o
+/// `DreCategoryMapping`; apagar a categoria do cliente leva as ligações junto.
+model ClientCategoryMapping {
+  id               String @id @default(uuid())
+  tenantId         String
+  companyId        String
+  categoryId       String
+  clientCategoryId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
+  category       FinanceCategory @relation(fields: [categoryId], references: [id])
+  clientCategory ClientCategory  @relation(fields: [clientCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, categoryId])
+  @@index([tenantId, companyId])
+  @@index([clientCategoryId])
+  @@map("client_category_mappings")
 }
 
 /// Um arquivo de export do Omie, já lido.
