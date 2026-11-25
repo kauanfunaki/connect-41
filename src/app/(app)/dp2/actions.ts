@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { SALARIO_OBRIGATORIO, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -282,6 +283,61 @@ export async function removerEventoAction(_: EstadoDoDp2, fd: FormData): Promise
   return { ok: true, texto: "Lançamento retirado." };
 }
 
+// ─── Informações da apuração ────────────────────────────────────────────────
+
+/**
+ * Retenção de INSS sofrida e compensações de INSS, IRRF e PIS do mês
+ * (25/11/2026, funcionalidade-769, parte 2; "Processos › Informações" da
+ * Domínio). Não mudam o cálculo das pessoas: entram na apuração do que se
+ * recolhe, que a tela refaz na hora.
+ */
+export async function incluirInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA") return erro("Competência fechada: reabra para mexer nas informações da apuração.");
+  if (r0.comp.tipo !== "MENSAL") return erro("As informações da apuração são da folha mensal.");
+  const lido = lerInformacao({ tipo: texto(fd, "tipo"), valor: texto(fd, "valor"), documento: texto(fd, "documento"), referencia: texto(fd, "referencia"), observacao: texto(fd, "observacao") });
+  if (!lido.ok) return erro(lido.erro);
+  const { info } = lido;
+  await getPrisma().dp2InformacaoDaApuracao.create({ data: { tenantId: a.tenantId, competenciaId, ...info, criadoPorId: a.userId } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.informacao_apuracao_incluida",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { tipo: TIPOS_DE_INFORMACAO[info.tipo].curto, valor: info.valor, documento: info.documento, referencia: info.referencia },
+  });
+  revalidarCompetencia(competenciaId);
+  return { ok: true, texto: `${TIPOS_DE_INFORMACAO[info.tipo].curto} incluída na apuração.` };
+}
+
+export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const info = await prisma.dp2InformacaoDaApuracao.findFirst({ where: { id: texto(fd, "informacaoId"), tenantId: a.tenantId } });
+  if (!info) return erro("Informação não encontrada.");
+  const r0 = await competenciaEditavel(a, info.competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA") return erro("Competência fechada: reabra para mexer nas informações da apuração.");
+  await prisma.dp2InformacaoDaApuracao.delete({ where: { id: info.id } });
+  const nome = ehTipoDeInformacao(info.tipo) ? TIPOS_DE_INFORMACAO[info.tipo].curto : info.tipo;
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.informacao_apuracao_retirada",
+    entityType: "Dp2Competencia",
+    entityId: info.competenciaId,
+    metadata: { tipo: nome, valor: Number(info.valor), documento: info.documento, referencia: info.referencia },
+  });
+  revalidarCompetencia(info.competenciaId);
+  return { ok: true, texto: `${nome} retirada da apuração.` };
+}
+
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
 
 export async function importarComparativoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -457,6 +513,7 @@ export async function salvarConfigDaEmpresaAction(_: EstadoDoDp2, fd: FormData):
   const dados = {
     convencaoId,
     patronalNoDas: marcado(fd, "patronalNoDas"),
+    pisSobreFolha: marcado(fd, "pisSobreFolha"),
     ratAliquota,
     fap,
     terceirosAliquota,

@@ -117,6 +117,8 @@ export type ConfigDaEmpresa = {
   convencao: ConvencaoDoMotor;
   convencaoId: string | null;
   configurada: boolean;
+  /** PIS sobre a folha (1%), das entidades sem fins lucrativos (funcionalidade-769). */
+  pisSobreFolha: boolean;
   pagadora: ContaPagadora | null;
   esocial: { fpas: string | null; codTercs: string | null; classTrib: string | null } | null;
 };
@@ -124,7 +126,7 @@ export type ConfigDaEmpresa = {
 export async function configDaEmpresa(tenantId: string, companyId: string): Promise<ConfigDaEmpresa> {
   const c = await getPrisma().dp2EmpresaConfig.findFirst({ where: { tenantId, companyId }, include: { convencao: true } });
   if (!c) {
-    return { empresa: { patronalNoDas: false, ratAliquota: 2, fap: 1, terceirosAliquota: 5.8 }, convencao: CONVENCAO_DA_CLT, convencaoId: null, configurada: false, pagadora: null, esocial: null };
+    return { empresa: { patronalNoDas: false, ratAliquota: 2, fap: 1, terceirosAliquota: 5.8 }, convencao: CONVENCAO_DA_CLT, convencaoId: null, configurada: false, pisSobreFolha: false, pagadora: null, esocial: null };
   }
   return {
     empresa: { patronalNoDas: c.patronalNoDas, ratAliquota: dec(c.ratAliquota), fap: dec(c.fap), terceirosAliquota: dec(c.terceirosAliquota) },
@@ -133,6 +135,7 @@ export async function configDaEmpresa(tenantId: string, companyId: string): Prom
       : CONVENCAO_DA_CLT,
     convencaoId: c.convencaoId,
     configurada: true,
+    pisSobreFolha: c.pisSobreFolha,
     esocial: { fpas: c.fpas, codTercs: c.codTercs, classTrib: c.classTrib },
     pagadora: { bancoCodigo: c.bancoCodigo, agencia: c.agencia, agenciaDigito: c.agenciaDigito, conta: c.conta, contaDigito: c.contaDigito, convenio: c.convenio },
   };

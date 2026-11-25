@@ -416,6 +416,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Competencia", coluna: "fechadaPorId", tratamento: "manter", motivo: "quem fechou a folha; a auditoria guarda o nome" },
   { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
   { modelo: "Dp2RubricaFixa", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou a rubrica fixa; a auditoria guarda o nome" },
+  { modelo: "Dp2InformacaoDaApuracao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a retenção ou compensação; a auditoria guarda o nome" },
   { modelo: "Dp2Comparativo", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os valores da Domínio; a tela não mostra o id" },
   { modelo: "Dp2EventoEsocial", coluna: "geradoPorId", tratamento: "manter", motivo: "quem gerou o evento do eSocial; a auditoria guarda o nome" },
   { modelo: "Dp2Remessa", coluna: "geradaPorId", tratamento: "manter", motivo: "quem gerou o arquivo do banco; a auditoria guarda o nome" },
