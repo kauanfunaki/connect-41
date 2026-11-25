@@ -299,6 +299,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pagar e entregar a folha",
         passos: [
+          "Termo de quitação anual (art. 507-B da CLT): em DP 2 › Colaboradores, escolha o colaborador e o ano e baixe o termo em PDF. Ele soma por rubrica o que as competências fechadas do ano pagaram (folha e 13º), o líquido e o FGTS, com as assinaturas do empregador, do empregado e do sindicato da categoria.",
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
           "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
           "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",
