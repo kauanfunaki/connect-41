@@ -83,6 +83,7 @@ export default async function PortalFluxoDeCaixaPage({
           <PrevistoDoFluxo
             dados={await dadosDoPrevisto({ tenantId: escopo.tenantId, companyId: empresaDoPrevisto, granularidade: ver, celula: celulaDeTexto(params.celula) })}
             enderecoDaVisao={enderecoDaVisao}
+            exportarHref={`/portal/fluxo-de-caixa/exportar?empresa=${empresaDoPrevisto}`}
             noPortal
           />
         ) : (

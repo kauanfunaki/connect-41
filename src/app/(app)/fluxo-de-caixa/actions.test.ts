@@ -7,7 +7,7 @@ import type { AuthContext } from "@/lib/auth/context";
 
 type CatCliente = { id: string; tenantId: string; companyId: string; name: string; line: string; position: number };
 type Ligacao = { tenantId: string; companyId: string; categoryId: string; clientCategoryId: string };
-type DataDeCaixa = { tenantId: string; companyId: string; receivableDays: number; payableDays: number };
+type DataDeCaixa = { tenantId: string; companyId: string; receivableDays: number; payableDays: number; balanceSource?: string | null };
 
 const estado = vi.hoisted(() => ({
   ctx: null as unknown as AuthContext,
@@ -254,8 +254,8 @@ describe("importar o de-para", () => {
 describe("data de caixa", () => {
   it("grava os dias da empresa, só nela, e regrava sem duplicar", async () => {
     expect(await salvarDataDeCaixa("e1", 1, 0)).toEqual({ success: true });
-    expect(await salvarDataDeCaixa("e1", 2, 1)).toEqual({ success: true });
-    expect(estado.datas).toEqual([{ tenantId: "t1", companyId: "e1", receivableDays: 2, payableDays: 1 }]);
+    expect(await salvarDataDeCaixa("e1", 2, 1, "omie")).toEqual({ success: true });
+    expect(estado.datas).toEqual([{ tenantId: "t1", companyId: "e1", receivableDays: 2, payableDays: 1, balanceSource: "omie" }]);
     expect(estado.auditoria.map((a) => a.action)).toEqual(["fluxo.data_de_caixa", "fluxo.data_de_caixa"]);
   });
 
@@ -264,5 +264,13 @@ describe("data de caixa", () => {
     expect(await salvarDataDeCaixa("e1", 1.5, 0)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
     expect(await salvarDataDeCaixa("e1", 0, 31)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
     expect(estado.datas).toEqual([]);
+  });
+});
+
+describe("origem do saldo", () => {
+  it("automático grava nulo, e origem desconhecida é recusada", async () => {
+    expect(await salvarDataDeCaixa("e1", 0, 0, "auto")).toEqual({ success: true });
+    expect(estado.datas[0]?.balanceSource).toBeNull();
+    expect(await salvarDataDeCaixa("e1", 0, 0, "banco" as never)).toEqual({ error: "Origem do saldo desconhecida." });
   });
 });

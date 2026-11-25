@@ -469,6 +469,11 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
       ? `${n("lancamentos_de_conta_novos")} lançamentos de conta sem título (tarifa, rendimento…) ${gravou ? "lançados" : "a lançar"}`
       : null,
     n("extrato_conciliado_pelo_omie") ? `${n("extrato_conciliado_pelo_omie")} linhas do extrato conciliadas pelo Omie` : null,
+    // O saldo de cada conta no Omie, para o fluxo previsto (25/11/2026).
+    n("saldos_lidos") ? `saldo de ${n("saldos_lidos")} conta(s) lido no Omie` : null,
+    n("saldos_com_erro") || n("saldos_sem_valor")
+      ? `${n("saldos_com_erro") + n("saldos_sem_valor")} conta(s) sem saldo lido no Omie (o fluxo previsto fica com o da conciliação)`
+      : null,
     ...(Object.keys(MOTIVO_DA_LINHA) as MotivoDaLinhaFora[])
       .filter((m) => n(`conta_fora_${m}`) > 0)
       .map((m) => `${n(`conta_fora_${m}`)} ${MOTIVO_DA_LINHA[m]}`),
