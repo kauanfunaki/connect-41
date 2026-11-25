@@ -292,6 +292,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Clique em “Calcular a folha”. No passo “Conferir”, clique no nome de cada pessoa para ver o holerite com a memória de cálculo.",
           "Para corrigir um valor que o cálculo deu (uma linha do holerite, o INSS, o IRRF, o FGTS ou uma provisão de férias ou 13º), use “Ajustes manuais” no holerite da pessoa: escolha o valor, informe o novo e o motivo. A folha é recalculada na hora, a linha fica marcada como “ajustado” e o ajuste vai para a Auditoria. Calcular de novo mantém o ajuste; “Retirar” volta ao valor do cálculo.",
           "Enquanto o DP 2 roda em paralelo com a Domínio, em “Comparar com a Domínio” cole uma pessoa por linha: CPF; proventos; descontos; líquido; INSS; IRRF; FGTS. Campo vazio não é comparado.",
+          "Ainda em “Conferir”, “Apuração da competência” mostra o INSS (DCTFWeb), o IRRF e, para entidade sem fins lucrativos (opção na Configuração), o PIS de 1% sobre a folha a recolher. Inclua ali as retenções de 11% sofridas (CNPJ do tomador e nota) e as compensações de INSS, IRRF e PIS (mês de origem): elas abatem o devido, e o que sobrar aparece como saldo.",
           "No passo “Fechar”, clique em “Fechar competência”. A competência fechada é a que vale para as médias de férias, 13º e rescisão.",
         ],
       },

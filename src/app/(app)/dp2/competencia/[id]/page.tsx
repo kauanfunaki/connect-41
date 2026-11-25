@@ -23,7 +23,8 @@ import { nomeExibicao } from "@/lib/companyName";
 import { lerEmpresaEmFoco, podeUsarOFoco } from "@/lib/empresas/focoServidor";
 import { formatCpf, formatInstantDateTime } from "@/lib/format";
 import { num } from "@/lib/dp2/formato";
-import { colaboradoresDaCompetencia, listarRubricas, rubricasFixasDoMes, type TotaisDaCompetencia } from "@/lib/dp2/servidor";
+import { colaboradoresDaCompetencia, configDaEmpresa, listarRubricas, rubricasFixasDoMes, type TotaisDaCompetencia } from "@/lib/dp2/servidor";
+import { TIPOS_DE_INFORMACAO, apurarCompetencia, ehTipoDeInformacao } from "@/lib/dp2/apuracao";
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
 import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
@@ -42,6 +43,8 @@ import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
 import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
+  incluirInformacaoDaApuracaoAction,
+  retirarInformacaoDaApuracaoAction,
   copiarOutrasBasesInssAction,
   incluirOutraBaseInssAction,
   retirarOutraBaseInssAction,
@@ -104,7 +107,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const fechada = comp.situacao === "FECHADA";
   const mensal = comp.tipo === "MENSAL";
 
-  const [calculos, eventos, comparativos, rubricas, pessoas, pedidos, remessas, outrasBases, ajustes] = await Promise.all([
+  const [calculos, eventos, comparativos, rubricas, pessoas, pedidos, remessas, informacoes, cfgDaEmpresa, outrasBases, ajustes] = await Promise.all([
     prisma.dp2Calculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, include: { person: { select: { id: true, name: true, cpf: true } } } }),
     prisma.dp2Evento.findMany({
       where: { tenantId: ctx.tenantId, competenciaId: id },
@@ -120,12 +123,30 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
       orderBy: { createdAt: "desc" },
       select: { id: true, nomeArquivo: true, dataPagamento: true, quantidade: true, total: true, foraDaRemessa: true, createdAt: true },
     }),
+    // Informações da apuração (funcionalidade-769, parte 2): retenções e compensações do mês.
+    prisma.dp2InformacaoDaApuracao.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
+    configDaEmpresa(ctx.tenantId, comp.companyId),
     // Outras bases de INSS de quem tem mais de um vínculo (funcionalidade-769).
     prisma.dp2OutraBaseInss.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
     // Ajustes manuais do cálculo (funcionalidade-768).
     prisma.dp2AjusteDeCalculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
   ]);
   const ajustesDe = (personId: string) => ajustes.filter((a) => a.personId === personId);
+  const apuracao =
+    mensal && calculos.length > 0
+      ? apurarCompetencia({
+          calculos: calculos.map((c) => ({
+            proventos: n(c.proventos),
+            inss: n(c.inss),
+            irrf: n(c.irrf),
+            encargos: c.encargos as unknown as Encargos,
+            itens: (c.itens as unknown as ItemDoHolerite[]) ?? [],
+            empregado: regimeDaCategoria(pessoas.find((p) => p.id === c.personId)?.dp2Vinculo?.categoria) === "CLT",
+          })),
+          informacoes: informacoes.map((i) => ({ tipo: i.tipo, valor: n(i.valor) })),
+          pisSobreFolha: cfgDaEmpresa.pisSobreFolha,
+        })
+      : null;
   const pedidoAtual = pedidos.find((p) => p.situacao !== "CANCELADO") ?? null;
   // As rubricas fixas do contrato que valem no mês: entram no cálculo sozinhas (funcionalidade-767).
   // Fechada, o cálculo já foi: só aparece o que de fato entrou (nos holerites).
@@ -730,6 +751,129 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
               pdfHref={`/api/dp2/competencias/${comp.id}/holerites?pessoa=${aberto.personId}`}
             />
           </div>
+        )}
+
+        {etapa === "conferir" && apuracao && (
+          <Secao titulo="Apuração da competência" apoio="O que se recolhe no mês, com as retenções e compensações informadas abaixo.">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-fs-3">
+                <tbody>
+                  <tr className={TR}>
+                    <td className={TD}>INSS dos segurados</td>
+                    <td className={TD_NUM}>{brl(apuracao.segurados)}</td>
+                  </tr>
+                  <tr className={TR}>
+                    <td className={TD}>INSS da empresa (patronal) + RAT</td>
+                    <td className={TD_NUM}>{brl(apuracao.patronal + apuracao.rat)}</td>
+                  </tr>
+                  <tr className={TR}>
+                    <td className={TD}>(−) Salário-família, retenções e compensações de INSS</td>
+                    <td className={TD_NUM}>{brl(-apuracao.deducoesUsadas)}</td>
+                  </tr>
+                  <tr className={TR}>
+                    <td className={TD}>Terceiros (outras entidades)</td>
+                    <td className={TD_NUM}>{brl(apuracao.terceiros)}</td>
+                  </tr>
+                  <tr className={`${TR} font-semibold`}>
+                    <td className={TD}>INSS a recolher (DCTFWeb)</td>
+                    <td className={TD_NUM}>{brl(apuracao.inssARecolher)}</td>
+                  </tr>
+                  <tr className={`${TR} font-semibold`}>
+                    <td className={TD}>IRRF a recolher {apuracao.compensacoesIrrf > 0 && <span className="font-normal text-fg-muted">(retido {brl(apuracao.irrfRetido)} − compensações {brl(apuracao.compensacoesIrrf)})</span>}</td>
+                    <td className={TD_NUM}>{brl(apuracao.irrfARecolher)}</td>
+                  </tr>
+                  {apuracao.pisSobreFolha && (
+                    <tr className={`${TR} font-semibold`}>
+                      <td className={TD}>
+                        PIS sobre a folha a recolher <span className="font-normal text-fg-muted">(1% de {brl(apuracao.basePis)})</span>
+                      </td>
+                      <td className={TD_NUM}>{brl(apuracao.pisARecolher)}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {(apuracao.saldoCp > 0 || apuracao.saldoIrrf > 0 || apuracao.saldoPis > 0) && (
+              <Aviso tom="info" className="mt-3">
+                Sobrou crédito para o mês seguinte ou restituição:
+                {apuracao.saldoCp > 0 && ` INSS ${brl(apuracao.saldoCp)}.`}
+                {apuracao.saldoIrrf > 0 && ` IRRF ${brl(apuracao.saldoIrrf)}.`}
+                {apuracao.saldoPis > 0 && ` PIS ${brl(apuracao.saldoPis)}.`}
+              </Aviso>
+            )}
+            <ul className="mt-3 space-y-0.5 text-fs-2 text-fg-muted">
+              {apuracao.memoria.map((l) => (
+                <li key={l}>{l}</li>
+              ))}
+            </ul>
+
+            <h3 className="mt-6 mb-2 font-semibold text-fg text-fs-3">Retenções e compensações do mês</h3>
+            {informacoes.length > 0 && (
+              <div className="overflow-x-auto mb-4">
+                <table className="w-full min-w-[640px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Tipo</th>
+                      <th className={TH}>Tomador / origem</th>
+                      <th className={TH_NUM}>Valor</th>
+                      <th className={TH}>Observação</th>
+                      <th className={TH} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {informacoes.map((i) => (
+                      <tr key={i.id} className={TR}>
+                        <td className={TD}>{ehTipoDeInformacao(i.tipo) ? TIPOS_DE_INFORMACAO[i.tipo].curto : i.tipo}</td>
+                        <td className={`${TD} tabular-nums`}>
+                          {i.documento ? `${i.documento.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")} · ${i.referencia ?? ""}` : `Crédito de ${i.referencia ?? "—"}`}
+                        </td>
+                        <td className={TD_NUM}>{brl(n(i.valor))}</td>
+                        <td className={`${TD} text-fg-muted`}>{i.observacao ?? ""}</td>
+                        <td className={`${TD} text-right`}>
+                          {podeAgir && !fechada && (
+                            <FormularioDoDp2 acao={retirarInformacaoDaApuracaoAction} rotulo="Retirar" rotuloEnviando="Retirando…" variante="ghost" tamanho="xs">
+                              <input type="hidden" name="informacaoId" value={i.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {podeAgir && !fechada && (
+              <FormularioDoDp2 acao={incluirInformacaoDaApuracaoAction} rotulo="Incluir" rotuloEnviando="Incluindo…" variante="secondary" icone={<Plus size={14} aria-hidden="true" />}>
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.6fr_0.8fr_1.2fr_1.2fr]">
+                  <CampoForm label="Tipo" htmlFor="info-tipo">
+                    <Select id="info-tipo" name="tipo" required defaultValue="">
+                      <option value="" disabled>
+                        Escolha…
+                      </option>
+                      {Object.entries(TIPOS_DE_INFORMACAO).map(([k, t]) => (
+                        <option key={k} value={k}>
+                          {t.nome}
+                        </option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Valor" htmlFor="info-valor">
+                    <Input id="info-valor" name="valor" inputMode="decimal" prefix="R$" placeholder="0,00" required />
+                  </CampoForm>
+                  <CampoForm label="CNPJ do tomador (retenção)" htmlFor="info-documento">
+                    <Input id="info-documento" name="documento" inputMode="numeric" placeholder="00.000.000/0000-00" />
+                  </CampoForm>
+                  <CampoForm label="Nº da nota (retenção) ou mês de origem (compensação)" htmlFor="info-referencia">
+                    <Input id="info-referencia" name="referencia" maxLength={30} placeholder="NF 123 ou 2026-10" />
+                  </CampoForm>
+                  <CampoForm label="Observação" htmlFor="info-observacao" className="sm:col-span-2 lg:col-span-4">
+                    <Input id="info-observacao" name="observacao" maxLength={300} />
+                  </CampoForm>
+                </div>
+              </FormularioDoDp2>
+            )}
+          </Secao>
         )}
 
         {etapa === "fechar" && calculada && (
