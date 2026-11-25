@@ -6,7 +6,7 @@ import { isFullWrite } from "@/lib/auth/papeis";
 import { logAudit } from "@/lib/audit";
 import { chamadoNosDetalhes } from "@/lib/auditoria/metadados";
 import { configDoHelpdesk, exigirAbertura, exigirEscrita, exigirGestaoNo, exigirOperacao, type Contexto } from "./contexto";
-import { podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
+import { podeOperarNo, podeRedirecionar, podeResponder, podeVer, setorQueAtende } from "./acesso";
 import { categoriaAtual, categorias, rascunho, strings } from "./consultas";
 import { categoriaSchema, dadosSchema, dadosRascunhoSchema, validarFormulario, tituloDaDescricao, aberturaSchema, descricaoComRespostas, emTriagem, fechado, pausado, aguardandoSolicitante, STATUS, PRIORIDADES, type Categoria, type Status, type DadosDoChamado, type RevisaoAprovada } from "./regras";
 import { anexosDoChamado } from "./armazenamento";
@@ -234,6 +234,27 @@ export async function comentar(c: Contexto, id: string, version: number, input: 
   await depois(c, id, "comment");
 }
 
+/**
+ * O que muda na aprovação quando o chamado troca de categoria: a nova pede
+ * aprovação, e o chamado volta para "Aguardando aprovação" com os aprovadores
+ * dela; não pede, e a aprovação sai. Com aprovação pendente, decide-se antes.
+ * Serve ao "Editar dados" da equipe e à troca avulsa do administrador.
+ */
+async function aprovacaoDaNovaCategoria(tx: Tx, c: Contexto, t: Awaited<ReturnType<typeof paraAgir>>, cat: Categoria) {
+  const tenantId = c.ctx.tenantId, id = t.id;
+  if (t.approvalStatus === "PENDING") throw new Error("Decida a aprovação pendente antes de mudar a categoria.");
+  if (cat.requiresApproval) {
+    const aprovadores = (await tx.user.findMany({ where: { tenantId, active: true, role: { not: "READONLY" }, ...(cat.approvalMode === "SPECIFIC_USERS" ? { id: { in: cat.approvalUserIds, not: t.createdById } } : { id: { not: t.createdById }, OR: [{ role: { in: ["ADMIN", "SUPER_ADMIN"] } }, { role: "SECTOR_ADMIN", sectors: { some: { sectorCode: t.requesterSectorCode } } }] }) }, select: { id: true } })).map(u => u.id);
+    if (!aprovadores.length) throw new Error("Não há aprovador ativo para a nova categoria.");
+    const ultima = await tx.helpdeskApproval.aggregate({ where: { tenantId, ticketId: id }, _max: { cycleNumber: true } });
+    await tx.helpdeskApproval.create({ data: { tenantId, ticketId: id, cycleNumber: (ultima._max.cycleNumber ?? 0) + 1 } });
+    await tx.helpdeskTicket.update({ where: { id }, data: { approvalRequired: true, approvalStatus: "PENDING", approverIds: aprovadores } });
+    await mudarStatus(tx, c, { ...t, approvalStatus: "PENDING" }, "AGUARDANDO_APROVACAO");
+  } else {
+    await tx.helpdeskTicket.update({ where: { id }, data: { approvalRequired: false, approvalStatus: "NOT_REQUIRED", approverIds: [] } });
+  }
+}
+
 export async function alterar(c: Contexto, id: string, version: number, operacao: string, valor: unknown) {
   await getPrisma().$transaction(async tx => {
     await travarEscritorio(tx, c.ctx.tenantId);
@@ -293,6 +314,21 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
       // Os nomes vão no evento: a linha do tempo roda no navegador, sem o cadastro de setores.
       const nomes = new Map((await tx.sector.findMany({ where: { tenantId, code: { in: [t.handlingSectorCode, d.setor] } }, select: { code: true, label: true } })).map(s => [s.code, s.label]));
       await evento(tx, tenantId, id, c.ctx.userId, "setor", { from: t.handlingSectorCode, to: d.setor, fromLabel: nomes.get(t.handlingSectorCode) ?? t.handlingSectorCode, toLabel: nomes.get(d.setor) ?? d.setor, tipo: d.tipo, ...(d.motivo ? { motivo: d.motivo } : {}) });
+    } else if (operacao === "categoria") {
+      // Trocar a categoria (25/11/2026, funcionalidade-827): o administrador
+      // corrige a da triagem mesmo sem ser do setor que atende — o "Editar
+      // dados" é só da equipe. Muda só a categoria: título, descrição e campos
+      // ficam como estão, e a aprovação segue a regra da nova categoria.
+      if (!isFullWrite(c.ctx.role) && !podeOperarNo(c.ctx, c.config, t.handlingSectorCode)) throw new Error("Só o administrador ou a equipe do setor que atende troca a categoria.");
+      if (fechado(t.status)) throw new Error("O chamado está encerrado.");
+      if (emTriagem(t.status)) throw new Error("A triagem automática ainda está analisando este chamado. Aguarde alguns segundos e tente de novo.");
+      const categoryId = z.string().trim().min(1).max(64).parse(valor);
+      if (categoryId === t.categoryId) throw new Error("O chamado já está nessa categoria.");
+      if (!categoriasClassificaveis(await categorias(c, true)).some(cat => cat.id === categoryId)) throw new Error("Escolha uma categoria ativa da árvore de chamados, e não um grupo.");
+      const cat = categoriaSchema.parse(await tx.helpdeskCategory.findFirstOrThrow({ where: { tenantId, id: categoryId } }));
+      await aprovacaoDaNovaCategoria(tx, c, t, cat);
+      await tx.helpdeskTicket.update({ where: { id }, data: { categoryId } });
+      await evento(tx, tenantId, id, c.ctx.userId, "category", { from: t.categoryId, to: categoryId, manual: true });
     } else {
       exigirOperacao(c, t.handlingSectorCode);
       if (fechado(t.status)) throw new Error("O chamado está encerrado.");
@@ -329,17 +365,7 @@ export async function alterar(c: Contexto, id: string, version: number, operacao
         const catRow = await tx.helpdeskCategory.findFirstOrThrow({ where: { tenantId, id: d.categoryId } });
         const cat = categoriaSchema.parse(catRow);
         validarFormulario(d, cat, await tx.helpdeskAttachment.findMany({ where: { tenantId, ticketId: id } }));
-        if (d.categoryId !== t.categoryId && t.approvalStatus === "PENDING") throw new Error("Decida a aprovação pendente antes de mudar a categoria.");
-        if (d.categoryId !== t.categoryId && cat.requiresApproval) {
-          const aprovadores = (await tx.user.findMany({ where: { tenantId, active: true, role: { not: "READONLY" }, ...(cat.approvalMode === "SPECIFIC_USERS" ? { id: { in: cat.approvalUserIds, not: t.createdById } } : { id: { not: t.createdById }, OR: [{ role: { in: ["ADMIN", "SUPER_ADMIN"] } }, { role: "SECTOR_ADMIN", sectors: { some: { sectorCode: t.requesterSectorCode } } }] }) }, select: { id: true } })).map(u => u.id);
-          if (!aprovadores.length) throw new Error("Não há aprovador ativo para a nova categoria.");
-          const ultima = await tx.helpdeskApproval.aggregate({ where: { tenantId, ticketId: id }, _max: { cycleNumber: true } });
-          await tx.helpdeskApproval.create({ data: { tenantId, ticketId: id, cycleNumber: (ultima._max.cycleNumber ?? 0) + 1 } });
-          await tx.helpdeskTicket.update({ where: { id }, data: { approvalRequired: true, approvalStatus: "PENDING", approverIds: aprovadores } });
-          await mudarStatus(tx, c, { ...t, approvalStatus: "PENDING" }, "AGUARDANDO_APROVACAO");
-        } else if (d.categoryId !== t.categoryId) {
-          await tx.helpdeskTicket.update({ where: { id }, data: { approvalRequired: false, approvalStatus: "NOT_REQUIRED", approverIds: [] } });
-        }
+        if (d.categoryId !== t.categoryId) await aprovacaoDaNovaCategoria(tx, c, t, cat);
         await tx.helpdeskTicket.update({ where: { id }, data: { title: d.title, description: d.description, categoryId: d.categoryId, requestData: json(d.requestData), tags: d.tags, priority: d.priority } });
         await evento(tx, tenantId, id, c.ctx.userId, d.categoryId === t.categoryId ? "details" : "category");
       } else if (operacao === "checklist") {

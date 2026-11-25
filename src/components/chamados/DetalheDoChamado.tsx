@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ExternalLink, Hourglass, Info, Link2, ListChecks, MessageSquareReply, Paperclip, PencilLine, RefreshCw, RotateCcw, ScanSearch, Shuffle, UserPlus } from "lucide-react";
+import { CalendarClock, ExternalLink, Hourglass, Info, Link2, ListChecks, MessageSquareReply, Paperclip, PencilLine, RefreshCw, RotateCcw, ScanSearch, Shuffle, Tags, UserPlus } from "lucide-react";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Accordion } from "@/components/ui/Accordion";
 import { Aviso } from "@/components/ui/Aviso";
@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Campo, nomeDaCategoria, type CategoriaDaTela } from "./CamposDoChamado";
 import { CaixaDeMensagem } from "./CaixaDeMensagem";
 import { EditarDadosDoChamado } from "./EditarDadosDoChamado";
+import { TrocarCategoria } from "./TrocarCategoria";
 import { FaixaDoPrazo } from "./FaixaDoPrazo";
 import { Avatar, LinhaDoTempo, LinkDoAnexo } from "./LinhaDoTempo";
 import { SeletorDePessoas } from "./SeletorDePessoas";
@@ -43,10 +44,10 @@ type Chamado = Awaited<ReturnType<typeof detalhe>>;
 type Usuario = { id: string; name: string; atendente: boolean };
 type Setor = { code: string; label: string };
 /** `setoresQueAtendem`: os que administram os chamados (12/11/2026); com dois ou mais, a tela mostra qual atende e permite redirecionar. */
-type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: Setor[]; setoresQueAtendem: Setor[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean; redirecionar: boolean } };
+type Props = { chamado: Chamado; eu: string; agora: string; usuarios: Usuario[]; categorias: CategoriaDaTela[]; setores: Setor[]; setoresQueAtendem: Setor[]; permissoes: { operar: boolean; gerenciar: boolean; responder: boolean; interno: boolean; aprovar: boolean; escrever: boolean; verOrquestrador: boolean; redirecionar: boolean; reclassificar: boolean } };
 type Resultado = { ok: true; valor: unknown } | { ok: false; error: string };
 /** As janelas que saem do menu "…" e dos avisos do alto (18/11/2026): os formulários deixaram de morar no cartão. */
-type Janela = "editar" | "setor" | "prazo" | "aprovar" | "recusar" | "reabrir" | "recusar_reabertura" | "pedir_reabertura";
+type Janela = "editar" | "categoria" | "setor" | "prazo" | "aprovar" | "recusar" | "reabrir" | "recusar_reabertura" | "pedir_reabertura";
 const data = (v: Date | string) => formatInstantDateTime(new Date(v));
 const ID_DA_CAIXA = "caixa-de-resposta";
 // O cabeçalho de um recolhível do cartão: a linha inteira, com o resumo à direita e a seta na ponta.
@@ -134,6 +135,8 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
   const podeRedirecionar = p.redirecionar && !encerrado && destinos.length > 0;
   const podeAjustarPrazo = p.gerenciar && p.escrever && !encerrado && !!ciclo && !ciclo.resolvedAt;
   const podeEditar = papel === "equipe" && !encerrado && !triando;
+  // O administrador fora do setor que atende troca só a categoria (funcionalidade-827).
+  const podeTrocarCategoria = !podeEditar && p.reclassificar && p.escrever && !encerrado && !triando;
   const mostraChecklist = !!checklist.length && p.interno;
   const feitos = checklist.filter(i => i.done).length;
   const aprovacaoPendente = t.approvalStatus === "PENDING" && t.status === "AGUARDANDO_APROVACAO";
@@ -200,6 +203,7 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
       <MenuDeMaisAcoes sempreMenu size="md" width={232} rotulo="Mais ações do chamado">
         {({ close }) => <>
           {podeEditar && <ItemDoMenu icone={<PencilLine />} onClick={() => { close(); abrirJanela("editar"); }}>Editar dados</ItemDoMenu>}
+          {podeTrocarCategoria && <ItemDoMenu icone={<Tags />} onClick={() => { close(); abrirJanela("categoria"); }}>Trocar categoria</ItemDoMenu>}
           {podeRedirecionar && <ItemDoMenu icone={<Shuffle />} onClick={() => { close(); abrirJanela("setor"); }}>Enviar para outro setor</ItemDoMenu>}
           {podeAjustarPrazo && <ItemDoMenu icone={<CalendarClock />} onClick={() => { close(); abrirJanela("prazo"); }}>Ajustar prazo</ItemDoMenu>}
           {podePedirReabertura && <ItemDoMenu icone={<RotateCcw />} onClick={() => { close(); abrirJanela("pedir_reabertura"); }}>Pedir reabertura</ItemDoMenu>}
@@ -224,6 +228,8 @@ export function DetalheDoChamado({ chamado: t, eu, agora: agoraDoServidor, usuar
       onConfirm={() => { if (finalPedido) trocarSituacao(finalPedido); setFinalPedido(null); }} onCancel={() => setFinalPedido(null)} />
     {janela === "editar" && <EditarDadosDoChamado inicial={dadosAtuais} categorias={categorias} setores={setores} salvando={salvando === "janela"} erro={erroDaJanela} onFechar={fecharJanela}
       onSalvar={dados => enviarDaJanela("dados", dados)} />}
+    {janela === "categoria" && <TrocarCategoria inicial={dadosAtuais} categorias={categorias} setores={setores} salvando={salvando === "janela"} erro={erroDaJanela} onFechar={fecharJanela}
+      onSalvar={categoryId => enviarDaJanela("categoria", categoryId)} />}
     {/* Enviar para outro setor (12/11/2026), em dois tipos desde 16/11/2026 (funcionalidade-709): continuar ou corrigir. */}
     {janela === "setor" && <EnviarParaOutroSetor destinos={destinos} salvando={salvando === "janela"} erro={erroDaJanela} onFechar={fecharJanela} onEnviar={v => enviarDaJanela("redirecionar", v)} />}
     <JanelaDeAcao titulo="Ajustar prazo" aberta={janela === "prazo"} salvando={salvando === "janela"} erro={erroDaJanela} rotulo="Salvar prazo" onFechar={fecharJanela}
