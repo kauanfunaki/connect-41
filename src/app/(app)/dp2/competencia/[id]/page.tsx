@@ -28,7 +28,9 @@ import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
 import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
-import { PAPEIS_LANCAVEIS, ehPapel } from "@/lib/dp2/rubricas";
+import { totaisPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
+import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
+import { PAPEIS_LANCAVEIS, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { compararValores, type CampoComparado } from "@/lib/dp2/comparativo";
 import { brl, nomeDaCompetencia, NOME_DA_SITUACAO, NOME_DO_TIPO_DE_COMPETENCIA, TOM_DA_SITUACAO } from "@/lib/dp2/tela";
 import type { Encargos, ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
@@ -48,6 +50,7 @@ import {
   importarComparativoAction,
   importarEventosAction,
   lancarEventoAction,
+  lancarPorRubricaAction,
   pedirEventosAoClienteAction,
   reabrirCompetenciaAction,
   removerEventoAction,
@@ -102,7 +105,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     prisma.dp2Calculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, include: { person: { select: { id: true, name: true, cpf: true } } } }),
     prisma.dp2Evento.findMany({
       where: { tenantId: ctx.tenantId, competenciaId: id },
-      include: { person: { select: { name: true } }, rubrica: { select: { codigo: true, nome: true, lancamento: true, papel: true } } },
+      include: { person: { select: { name: true } }, rubrica: { select: { id: true, codigo: true, nome: true, tipo: true, lancamento: true, papel: true } } },
       orderBy: { createdAt: "asc" },
     }),
     prisma.dp2Comparativo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id } }),
@@ -133,6 +136,13 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const totais = (comp.totais ?? null) as TotaisDaCompetencia | null;
   const semContrato = pessoas.filter((p) => !p.dp2Vinculo);
   const lancaveis = rubricas.filter((r) => r.ativa && (r.papel ? ehPapel(r.papel) && PAPEIS_LANCAVEIS.has(r.papel) : r.tipo !== "INFORMATIVA"));
+  // Lançar por rubrica e em grupo, e a consulta por rubrica (funcionalidade-767, 1.1).
+  const rubricasParaLancar = lancaveis.map((r) => {
+    const porQuantidade = regraDeLancamento(r).porQuantidade;
+    return { id: r.id, rotulo: `${r.codigo} · ${r.nome}`, unidade: porQuantidade ? (r.lancamento === "DIAS" ? ("dias" as const) : ("horas" as const)) : null };
+  });
+  const pessoasParaLancar = pessoas.filter((p) => p.dp2Vinculo).map((p) => ({ id: p.id, nome: p.name }));
+  const porRubrica = totaisPorRubrica(eventos, fixasDoMes.filter((f) => !f.substituida));
   const comparativoDe = new Map(comparativos.map((c) => [c.personId, c]));
   const aberto = pessoaAberta ? calculos.find((c) => c.personId === pessoaAberta) : undefined;
 
@@ -517,6 +527,47 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 </table>
               </div>
             )}
+          </Secao>
+        )}
+
+        {mensal && etapa === "eventos" && porRubrica.length > 0 && (
+          <Secao titulo="Consulta por rubrica">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Rubrica</th>
+                    <th className={TH_NUM}>Colaboradores</th>
+                    <th className={TH_NUM}>Lançamentos</th>
+                    <th className={TH_NUM}>Horas/dias</th>
+                    <th className={TH_NUM}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porRubrica.map((t) => (
+                    <tr key={t.rubricaId} className={TR}>
+                      <td className={TD}>
+                        {t.codigo} · {t.nome}
+                        {t.tipo === "DESCONTO" && <span className="ml-2 text-fs-2 text-fg-muted">desconto</span>}
+                      </td>
+                      <td className={TD_NUM}>{t.pessoas}</td>
+                      <td className={TD_NUM}>
+                        {t.lancamentos}
+                        {t.fixas > 0 && <span className="ml-1 text-fs-2 text-fg-muted">({t.fixas === t.lancamentos ? "fixas" : `${t.fixas} ${t.fixas === 1 ? "fixa" : "fixas"}`})</span>}
+                      </td>
+                      <td className={TD_NUM}>{t.quantidade !== null ? num(t.quantidade) : "—"}</td>
+                      <td className={TD_NUM}>{t.valor !== null ? brl(t.valor) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Secao>
+        )}
+
+        {mensal && etapa === "eventos" && !fechada && podeAgir && pessoasParaLancar.length > 0 && (
+          <Secao titulo="Lançar por rubrica ou em grupo">
+            <LancarPorRubrica acao={lancarPorRubricaAction} competenciaId={comp.id} rubricas={rubricasParaLancar} pessoas={pessoasParaLancar} />
           </Secao>
         )}
 
