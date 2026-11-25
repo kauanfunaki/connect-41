@@ -2777,6 +2777,7 @@ model Person {
   dp2Vinculo           Dp2Vinculo?
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
+  dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
   dp2Calculos          Dp2Calculo[]
   dp2Comparativos      Dp2Comparativo[]
   dp2EventosEsocial    Dp2EventoEsocial[]
@@ -7031,6 +7032,7 @@ model Dp2Competencia {
   esocial      Dp2EventoEsocial[]
   remessas     Dp2Remessa[]
   pedidos      Dp2PedidoDeEventos[]
+  ajustes    Dp2AjusteDeCalculo[]
 
   @@unique([companyId, ano, mes, tipo])
   @@index([tenantId, ano, mes])
@@ -7125,6 +7127,34 @@ model Dp2Calculo {
   @@unique([competenciaId, personId])
   @@index([personId])
   @@map("dp2_calculos")
+}
+
+/// Ajuste manual do cálculo (25/11/2026, funcionalidade-768): o DP corrige um
+/// valor que o motor calculou — linha do holerite (`ITEM:<código>`), `FGTS` ou
+/// uma provisão do mês (`PROV_FERIAS`, `PROV_TERCO`, `PROV_ENC_FERIAS`,
+/// `PROV_DECIMO`, `PROV_ENC_DECIMO`) —, sempre com motivo. Fica à parte do
+/// Dp2Calculo e é aplicado por cima do motor a cada cálculo: recalcular mantém.
+model Dp2AjusteDeCalculo {
+  id             String   @id @default(uuid())
+  tenantId       String
+  competenciaId  String
+  personId       String
+  campo          String   @db.VarChar(40)
+  valor          Decimal  @db.Decimal(12, 2)
+  /// O valor do motor quando o ajuste foi feito (para a auditoria e a tela).
+  valorCalculado Decimal? @db.Decimal(12, 2)
+  motivo         String   @db.VarChar(500)
+  criadoPorId    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([competenciaId, personId, campo])
+  @@index([tenantId, competenciaId])
+  @@index([personId])
+  @@map("dp2_ajustes_de_calculo")
 }
 
 /// Os valores da Domínio para a mesma pessoa e competência, enquanto o DP 2

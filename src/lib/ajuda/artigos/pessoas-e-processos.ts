@@ -287,6 +287,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Para receber os eventos da empresa, use “Pedir os eventos ao cliente”: o link, sem login, deixa a empresa informar horas extras, faltas, atrasos e comissões de cada colaborador, ou que não houve nada. O que ela mandar entra como lançamento de origem Cliente.",
           "Para importar, copie do Excel ou do relatório de totais do Pontomais e cole com o cabeçalho: uma coluna CPF ou Nome e uma por evento (HE 50%, HE 100%, Noturno, Faltas, Atrasos, ou o código ou o nome da rubrica). Horas valem em 10:30 ou 10,5.",
           "Clique em “Calcular a folha”. No passo “Conferir”, clique no nome de cada pessoa para ver o holerite com a memória de cálculo.",
+          "Para corrigir um valor que o cálculo deu (uma linha do holerite, o INSS, o IRRF, o FGTS ou uma provisão de férias ou 13º), use “Ajustes manuais” no holerite da pessoa: escolha o valor, informe o novo e o motivo. A folha é recalculada na hora, a linha fica marcada como “ajustado” e o ajuste vai para a Auditoria. Calcular de novo mantém o ajuste; “Retirar” volta ao valor do cálculo.",
           "Enquanto o DP 2 roda em paralelo com a Domínio, em “Comparar com a Domínio” cole uma pessoa por linha: CPF; proventos; descontos; líquido; INSS; IRRF; FGTS. Campo vazio não é comparado.",
           "No passo “Fechar”, clique em “Fechar competência”. A competência fechada é a que vale para as médias de férias, 13º e rescisão.",
         ],
