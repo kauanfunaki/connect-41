@@ -274,6 +274,8 @@ export type TotaisDaCompetencia = {
   provisoes: number;
   alertas: number;
   semVinculo: number;
+  /** Quem tem rescisão gravada no mês e saiu da folha mensal (funcionalidade-746). */
+  rescindidos?: string[];
 };
 
 export type ResultadoDoCalculo = { ok: true; totais: TotaisDaCompetencia } | { ok: false; erro: string };
@@ -310,11 +312,30 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const rubricas = rubricasPorPapel(linhasDeRubrica);
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
 
+  // Rescisão gravada com desligamento no mês (funcionalidade-746): as verbas do mês
+  // estão na rescisão e vão no S-2299, então a pessoa sai da folha mensal.
+  const rescindidos =
+    comp.tipo === "MENSAL"
+      ? new Set(
+          (
+            await prisma.dp2Rescisao.findMany({
+              where: { tenantId, personId: { in: pessoas.map((p) => p.id) }, desligamento: { gte: new Date(Date.UTC(comp.ano, comp.mes - 1, 1)), lte: new Date(Date.UTC(comp.ano, comp.mes, 0)) } },
+              select: { personId: true },
+            })
+          ).map((r) => r.personId)
+        )
+      : new Set<string>();
+  const nomesRescindidos: string[] = [];
+
   const resultados: { personId: string; c: CalculoDaPessoa }[] = [];
   let semVinculo = 0;
   for (const p of pessoas) {
     if (!p.dp2Vinculo) {
       semVinculo++;
+      continue;
+    }
+    if (rescindidos.has(p.id)) {
+      nomesRescindidos.push(p.name);
       continue;
     }
     const vinculo = vinculoDoMotor(p.dp2Vinculo);
@@ -348,7 +369,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
     resultados.push({ personId: p.id, c });
   }
 
-  const totais: TotaisDaCompetencia = { pessoas: resultados.length, proventos: 0, descontos: 0, liquido: 0, inss: 0, irrf: 0, fgts: 0, encargos: 0, provisoes: 0, alertas: 0, semVinculo };
+  const totais: TotaisDaCompetencia = { pessoas: resultados.length, proventos: 0, descontos: 0, liquido: 0, inss: 0, irrf: 0, fgts: 0, encargos: 0, provisoes: 0, alertas: 0, semVinculo, ...(nomesRescindidos.length ? { rescindidos: nomesRescindidos } : {}) };
   for (const { c } of resultados) {
     totais.proventos += c.proventos;
     totais.descontos += c.descontos;

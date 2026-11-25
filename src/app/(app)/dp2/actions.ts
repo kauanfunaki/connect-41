@@ -6,7 +6,8 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
-import { SALARIO_OBRIGATORIO, salarioValido } from "@/lib/dp2/categorias";
+import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from "@/lib/dp2/rescisaoServidor";
+import { SALARIO_OBRIGATORIO, regimeDaCategoria, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
@@ -14,7 +15,7 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
-import { calcularCompetencia, garantirRubricas, gravarRubricasFixas } from "@/lib/dp2/servidor";
+import { calcularCompetencia, colaboradoresDaEmpresa, garantirRubricas, gravarRubricasFixas } from "@/lib/dp2/servidor";
 import { TIPOS_DE_RUBRICA, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
 import { lerComparativo } from "@/lib/dp2/comparativo";
@@ -38,6 +39,7 @@ import {
   gerarPeriodicos,
   gerarTabelas,
   gerarTerminoSemVinculo,
+  SITUACOES_ABERTAS,
 } from "@/lib/dp2/esocial/servidor";
 import { lerAgentes, lerProcedimentos, lerResponsaveis } from "@/lib/dp2/esocial/sst";
 import { lerDadosEsocial } from "@/lib/dp2/esocial/cadastro";
@@ -1142,39 +1144,168 @@ export async function gerarCatAction(_: EstadoDoDp2, fd: FormData): Promise<Esta
 
 const MOTIVOS_DE_RESCISAO = Object.keys(MOTIVO_LABEL) as MotivoCanonico[];
 
-/** O S-2299 com os mesmos parâmetros do cálculo da tela de Rescisões. */
+const avisoDaTela = (v: string): AvisoDaRescisao => (v === "TRABALHADO" ? "TRABALHADO" : v === "DISPENSADO" ? "DISPENSADO" : "INDENIZADO");
+
+/** A folha mensal do mês do desligamento: fechada barra; calculada volta a aberta. */
+async function folhaDoDesligamento(tenantId: string, companyId: string, data: Date) {
+  return getPrisma().dp2Competencia.findFirst({
+    where: { tenantId, companyId, tipo: "MENSAL", ano: data.getUTCFullYear(), mes: data.getUTCMonth() + 1 },
+    select: { id: true, ano: true, mes: true, situacao: true },
+  });
+}
+
+/**
+ * Grava a rescisão (25/11/2026, funcionalidade-746, entrega 2.3): refaz o
+ * cálculo no servidor com as entradas da tela, liga ao desligamento em
+ * andamento da pessoa e tira a pessoa da folha mensal do mês (as verbas do mês
+ * estão na rescisão e vão no S-2299). Uma rescisão por pessoa.
+ */
+export async function gravarRescisaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_rescisoes", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId"));
+  if (!pessoa?.dp2Vinculo || regimeDaCategoria(pessoa.dp2Vinculo.categoria) !== "CLT") return erro("Escolha um empregado com contrato no DP 2.");
+  const desligamento = texto(fd, "desligamento");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desligamento)) return erro("Informe o último dia trabalhado.");
+  const motivo = texto(fd, "motivo") as MotivoCanonico;
+  if (!MOTIVOS_DE_RESCISAO.includes(motivo)) return erro("Escolha o motivo do desligamento.");
+  const entrada = {
+    desligamento,
+    motivo,
+    aviso: avisoDaTela(texto(fd, "aviso")),
+    vencidos: Math.max(0, Math.min(2, lerInteiro(texto(fd, "vencidos")) ?? 0)),
+    faltas: lerInteiro(texto(fd, "faltas")) ?? 0,
+    saldoFgts: lerNumero(texto(fd, "saldoFgts")),
+    adiantado: lerNumero(texto(fd, "adiantado")) ?? 0,
+  };
+  const prisma = getPrisma();
+  const ja = await prisma.dp2Rescisao.findFirst({ where: { tenantId: a.tenantId, personId: pessoa.id }, select: { desligamento: true } });
+  if (ja) return erro(`${pessoa.name} já tem rescisão gravada (desligamento em ${ja.desligamento.toISOString().slice(0, 10)}): exclua a gravada para gravar outra.`);
+  const data = new Date(`${desligamento}T00:00:00.000Z`);
+  if (pessoa.admissionDate && data < pessoa.admissionDate) return erro("O desligamento vem antes da admissão.");
+  const folha = await folhaDoDesligamento(a.tenantId, companyId, data);
+  if (folha?.situacao === "FECHADA") return erro(`A folha de ${String(folha.mes).padStart(2, "0")}/${folha.ano} está fechada: reabra para gravar a rescisão nesse mês.`);
+  const r = await calcularRescisaoDaPessoa(a.tenantId, pessoa, entrada);
+  if (!r.ok) return erro(r.erro);
+  const desligando = await prisma.termination.findFirst({
+    where: { tenantId: a.tenantId, personId: pessoa.id, status: { notIn: ["FINALIZADO", "CANCELADO"] } },
+    orderBy: { requestedAt: "desc" },
+    select: { id: true },
+  });
+  const gravada = await prisma.dp2Rescisao.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId,
+      personId: pessoa.id,
+      terminationId: desligando?.id ?? null,
+      desligamento: data,
+      motivo,
+      aviso: entrada.aviso,
+      periodosVencidos: entrada.vencidos,
+      faltas: entrada.faltas,
+      saldoFgts: entrada.saldoFgts,
+      decimoAdiantado: entrada.adiantado,
+      ...dadosDaRescisao(r.calculo, r.media),
+      criadoPorId: a.userId,
+    },
+    select: { id: true },
+  });
+  if (folha?.situacao === "CALCULADA") await prisma.dp2Competencia.update({ where: { id: folha.id }, data: { situacao: "ABERTA" } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.rescisao_gravada",
+    entityType: "Dp2Rescisao",
+    entityId: gravada.id,
+    metadata: { pessoa: pessoa.name, desligamento, motivo, aviso: entrada.aviso, liquido: r.calculo.liquido, desligamentoEmAndamento: desligando?.id ?? null },
+  });
+  revalidatePath("/dp2/rescisoes");
+  revalidatePath("/desligamentos");
+  if (folha) revalidarCompetencia(folha.id);
+  return {
+    ok: true,
+    texto: `Rescisão de ${pessoa.name} gravada${desligando ? " e ligada ao desligamento em andamento" : ""}. ${pessoa.name} sai da folha mensal do mês do desligamento.`,
+  };
+}
+
+/** Exclui a rescisão gravada: só com a folha do mês aberta e o S-2299 ainda não enviado. */
+export async function excluirRescisaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_rescisoes", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const r = await prisma.dp2Rescisao.findFirst({ where: { id: texto(fd, "rescisaoId"), tenantId: a.tenantId }, include: { person: { select: { name: true } } } });
+  if (!r) return erro("Rescisão não encontrada.");
+  const recusa = await empresaDoEscritorio(a, r.companyId);
+  if (recusa) return erro(recusa);
+  const folha = await folhaDoDesligamento(a.tenantId, r.companyId, r.desligamento);
+  if (folha?.situacao === "FECHADA") return erro(`A folha de ${String(folha.mes).padStart(2, "0")}/${folha.ano} está fechada: reabra para excluir a rescisão.`);
+  const evento = r.eventoEsocialId ? await prisma.dp2EventoEsocial.findFirst({ where: { id: r.eventoEsocialId, tenantId: a.tenantId }, select: { id: true, situacao: true } }) : null;
+  if (evento && !(SITUACOES_ABERTAS as readonly string[]).includes(evento.situacao)) return erro("O S-2299 desta rescisão já foi enviado ao eSocial: a exclusão sai pelo S-3000.");
+  await prisma.$transaction([
+    ...(evento ? [prisma.dp2EventoEsocial.delete({ where: { id: evento.id } })] : []),
+    prisma.dp2Rescisao.delete({ where: { id: r.id } }),
+    ...(folha?.situacao === "CALCULADA" ? [prisma.dp2Competencia.update({ where: { id: folha.id }, data: { situacao: "ABERTA" } })] : []),
+  ]);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.rescisao_excluida",
+    entityType: "Dp2Rescisao",
+    entityId: r.id,
+    metadata: { pessoa: r.person.name, desligamento: r.desligamento.toISOString().slice(0, 10), s2299Apagado: Boolean(evento) },
+  });
+  revalidatePath("/dp2/rescisoes");
+  revalidatePath("/desligamentos");
+  if (folha) revalidarCompetencia(folha.id);
+  return { ok: true, texto: `Rescisão de ${r.person.name} excluída${evento ? ", com o S-2299 que ainda não tinha sido enviado" : ""}.` };
+}
+
+/** O S-2299 a partir da rescisão gravada, ligado a ela (funcionalidade-746). */
 export async function gerarDesligamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
   const a = await acesso("dp2_esocial", "agir");
   if (!a) return erro("Ligue o módulo eSocial do DP 2 para gerar o desligamento.");
-  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  const prisma = getPrisma();
+  const resc = await prisma.dp2Rescisao.findFirst({ where: { id: texto(fd, "rescisaoId"), tenantId: a.tenantId } });
+  if (!resc) return erro("Grave a rescisão antes de gerar o S-2299.");
+  const p = await pessoaDoEvento(a, resc.personId);
   if (typeof p === "string") return erro(p);
-  const data = texto(fd, "desligamento");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return erro("Informe o último dia trabalhado.");
-  const motivo = texto(fd, "motivo") as MotivoCanonico;
-  if (!MOTIVOS_DE_RESCISAO.includes(motivo)) return erro("Escolha o motivo do desligamento.");
-  const aviso = texto(fd, "aviso") === "TRABALHADO" ? "TRABALHADO" : texto(fd, "aviso") === "DISPENSADO" ? "DISPENSADO" : "INDENIZADO";
+  const data = resc.desligamento.toISOString().slice(0, 10);
+  const motivo = resc.motivo as MotivoCanonico;
+  const antes = new Date(Date.now() - 1000);
   const r = await gerarDesligamento(
     a.tenantId,
     p.id,
     {
       motivo,
       data,
-      aviso,
-      vencidos: Math.max(0, Math.min(2, lerInteiro(texto(fd, "vencidos")) ?? 0)),
-      faltas: lerInteiro(texto(fd, "faltas")) ?? 0,
-      saldoFgts: lerNumero(texto(fd, "saldoFgts")),
-      adiantado: lerNumero(texto(fd, "adiantado")) ?? 0,
+      aviso: avisoDaTela(resc.aviso),
+      vencidos: resc.periodosVencidos,
+      faltas: resc.faltas,
+      saldoFgts: resc.saldoFgts === null ? null : Number(resc.saldoFgts),
+      adiantado: Number(resc.decimoAdiantado),
     },
     a.userId
   );
+  if (r.ok) {
+    const ev = await prisma.dp2EventoEsocial.findFirst({
+      where: { tenantId: a.tenantId, personId: p.id, tipo: "S-2299", createdAt: { gte: antes } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (ev) await prisma.dp2Rescisao.update({ where: { id: resc.id }, data: { eventoEsocialId: ev.id } });
+  }
   await logAudit({
     tenantId: a.tenantId,
     userId: a.userId,
     action: "folha.esocial_desligamento",
     entityType: "Person",
     entityId: p.id,
-    metadata: { nome: p.name, data, motivo },
+    metadata: { nome: p.name, data, motivo, rescisao: resc.id },
   });
+  revalidatePath("/dp2/rescisoes");
   return respostaDoEvento("S-2299", p.name, r);
 }
 

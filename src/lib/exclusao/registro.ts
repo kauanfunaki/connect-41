@@ -195,6 +195,7 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "RobotTask", coluna: "companyId", tratamento: "apagar" },
   // A lista de CPFs e os acessos do dia da busca no eSocial: trabalho em andamento, sem valor depois que a empresa sai.
   { modelo: "Dp2BuscaEsocial", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2Rescisao", coluna: "companyId", tratamento: "apagar" },
   // O contato do Atendimento (10/11/2026) volta a ser só um telefone.
   { modelo: "AtendimentoContato", coluna: "companyId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; empresa que some vira só o nome do WhatsApp na tela" },
   // XML recusado pelo leitor (06/11/2026): o arquivo é da empresa e guarda os dados dela.
@@ -235,6 +236,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2Vinculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["contrato do DP 2", "contratos do DP 2"], historico: true },
   { modelo: "Dp2Evento", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["lançamento do DP 2", "lançamentos do DP 2"], historico: true },
   { modelo: "Dp2RubricaFixa", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["rubrica fixa do DP 2", "rubricas fixas do DP 2"], historico: true },
+  { modelo: "Dp2Rescisao", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["rescisão do DP 2", "rescisões do DP 2"], historico: true },
   { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
   { modelo: "Dp2Comparativo", campo: "person", fk: "personId", tratamento: "cascata" },
   { modelo: "Dp2EventoEsocial", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["evento do eSocial do DP 2", "eventos do eSocial do DP 2"], historico: true },
@@ -416,6 +418,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Competencia", coluna: "fechadaPorId", tratamento: "manter", motivo: "quem fechou a folha; a auditoria guarda o nome" },
   { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
   { modelo: "Dp2RubricaFixa", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou a rubrica fixa; a auditoria guarda o nome" },
+  { modelo: "Dp2Rescisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou a rescisão; a auditoria guarda o nome" },
   { modelo: "Dp2Comparativo", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os valores da Domínio; a tela não mostra o id" },
   { modelo: "Dp2EventoEsocial", coluna: "geradoPorId", tratamento: "manter", motivo: "quem gerou o evento do eSocial; a auditoria guarda o nome" },
   { modelo: "Dp2Remessa", coluna: "geradaPorId", tratamento: "manter", motivo: "quem gerou o arquivo do banco; a auditoria guarda o nome" },
