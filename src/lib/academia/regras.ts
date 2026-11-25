@@ -24,6 +24,14 @@ export const SETOR_DA_ACADEMIA = "tech";
  */
 export const TESTES = ["digitacao", "numeros", "logica", "atalhos"] as const;
 export type Teste = (typeof TESTES)[number];
+/**
+ * A "Média de todos os testes" do ranking (melhoria-823, 25/11/2026): a aba que
+ * junta os testes num pódio só (`montarMediaDosTestes`, em `ranking.ts`). Vai
+ * na URL no lugar do teste (`?teste=media`), mas não é um teste: fica fora dos
+ * `TESTES` e não grava resultado.
+ */
+export const RANKING_DA_MEDIA = "media";
+export const ROTULO_DA_MEDIA = "Média de todos os testes";
 export const NIVEIS = ["facil", "medio", "dificil"] as const;
 export type Nivel = (typeof NIVEIS)[number];
 

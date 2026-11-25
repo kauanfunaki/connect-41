@@ -44,7 +44,11 @@ export default async function AcademiaPage() {
         <CartaoDoDesafio desafio={resumo.desafio} podeFazer={podeFazer} />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      {/* Melhoria-823 (25/11/2026): esta grade e a de baixo têm as mesmas
+          colunas e o mesmo vão — 3 no lg, 5 no xl —, e o bloco da direita
+          (meta e ranking) começa na borda de um cartão de cima, em vez dos
+          360 px fixos que não casavam com nada. */}
+      <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
         {TESTES.map((t) => {
           const r = resumo.testes[t];
           return (
@@ -71,21 +75,22 @@ export default async function AcademiaPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <section aria-labelledby="testes-titulo">
-            <h2 id="testes-titulo" className="mb-3 text-body font-semibold text-fg">
-              Testes
-            </h2>
-            <div className="grid gap-3 md:grid-cols-2">
-              {TESTES.map((t) => (
-                <CartaoDoTeste key={t} resumo={resumo.testes[t]} podeFazer={podeFazer} />
-              ))}
-            </div>
-          </section>
-          <ConquistasDaPessoa conquistas={conquistas.conquistas} parabensNoMes={conquistas.parabensNoMes} mes={resumo.mes} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-6">
+      {/* As duas colunas terminam na mesma linha: os cartões dos testes
+          dividem a altura por igual, e o ranking estica até o fim da coluna. */}
+      <div className="grid gap-4 lg:grid-cols-3 xl:grid-cols-5">
+        <section aria-labelledby="testes-titulo" className="flex min-w-0 flex-col lg:col-span-2 xl:col-span-3">
+          {/* Altura fixa (24 px + 12 px de margem): a coluna da direita desce
+              os mesmos 36 px (`lg:pt-9`), e a meta começa na linha dos cartões. */}
+          <h2 id="testes-titulo" className="mb-3 h-6 text-body leading-6 font-semibold text-fg">
+            Testes
+          </h2>
+          <div className="grid flex-1 gap-4 md:grid-cols-2 md:auto-rows-fr">
+            {TESTES.map((t) => (
+              <CartaoDoTeste key={t} resumo={resumo.testes[t]} podeFazer={podeFazer} />
+            ))}
+          </div>
+        </section>
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-1 xl:col-span-2 lg:pt-9">
           <MetaPessoal
             key={resumo.meta ? `${resumo.meta.teste}-${resumo.meta.nivel}-${resumo.meta.alvo}-${resumo.meta.prazo}` : "sem-meta"}
             meta={resumo.meta}
@@ -95,6 +100,9 @@ export default async function AcademiaPage() {
           <RankingDoInicio resumo={resumo} />
         </div>
       </div>
+
+      {/* As conquistas num bloco recolhível, com "4 de 12" na linha (melhoria-823). */}
+      <ConquistasDaPessoa conquistas={conquistas.conquistas} parabensNoMes={conquistas.parabensNoMes} mes={resumo.mes} className="mt-4" />
     </PageContainer>
   );
 }
