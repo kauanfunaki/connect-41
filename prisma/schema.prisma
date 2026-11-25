@@ -1767,6 +1767,7 @@ model Tenant {
   dreMappings               DreCategoryMapping[]
   clientCategories          ClientCategory[]
   clientCategoryMappings    ClientCategoryMapping[]
+  cashFlowSettings          CashFlowSettings[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
   drePublicacoes            DrePublicacao[]
@@ -2639,6 +2640,7 @@ model Company {
   dreMappings              DreCategoryMapping[]
   clientCategories         ClientCategory[]
   clientCategoryMappings   ClientCategoryMapping[]
+  cashFlowSettings         CashFlowSettings?
   financeCategories        FinanceCategory[]
   hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
@@ -10086,6 +10088,29 @@ model ClientCategoryMapping {
   @@index([tenantId, companyId])
   @@index([clientCategoryId])
   @@map("client_category_mappings")
+}
+
+/// A data de caixa da empresa no fluxo projetado (25/11/2026, funcionalidade-837):
+/// quantos dias depois da previsão (ou do vencimento) o dinheiro cai na conta,
+/// a receber e a pagar, antes de passar para o próximo dia útil. Sem linha, vale
+/// zero dos dois lados. Tabela à parte, e não coluna em `Company`: a empresa é
+/// lida em toda tela, e a coluna nova derrubaria as leituras até a migration.
+model CashFlowSettings {
+  id        String @id @default(uuid())
+  tenantId  String
+  companyId String @unique
+
+  receivableDays Int @default(0)
+  payableDays    Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([tenantId])
+  @@map("cash_flow_settings")
 }
 
 /// Um arquivo de export do Omie, já lido.

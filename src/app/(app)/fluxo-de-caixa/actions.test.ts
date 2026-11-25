@@ -7,12 +7,14 @@ import type { AuthContext } from "@/lib/auth/context";
 
 type CatCliente = { id: string; tenantId: string; companyId: string; name: string; line: string; position: number };
 type Ligacao = { tenantId: string; companyId: string; categoryId: string; clientCategoryId: string };
+type DataDeCaixa = { tenantId: string; companyId: string; receivableDays: number; payableDays: number };
 
 const estado = vi.hoisted(() => ({
   ctx: null as unknown as AuthContext,
   moduloLigado: true,
   categorias: [] as CatCliente[],
   ligacoes: [] as Ligacao[],
+  datas: [] as DataDeCaixa[],
   auditoria: [] as { action: string; entityId?: string }[],
   seq: 0,
 }));
@@ -94,11 +96,28 @@ const banco = {
       return { count: antes - estado.ligacoes.length };
     },
   },
+  cashFlowSettings: {
+    findFirst: async ({ where }: { where: Onde }) => estado.datas.find((d) => casa(d, where)) ?? null,
+    upsert: async ({ where, create, update }: { where: { companyId: string }; create: DataDeCaixa; update: Partial<DataDeCaixa> }) => {
+      const atual = estado.datas.find((d) => d.companyId === where.companyId);
+      if (atual) Object.assign(atual, update);
+      else estado.datas.push(create);
+      return {};
+    },
+  },
   $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(banco),
 };
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => banco }));
 
-import { apagarCategoriaDoCliente, copiarDePara, criarCategoriaDoCliente, importarDePara, ligarCategoria, preverImportacaoDoDePara } from "./actions";
+import {
+  apagarCategoriaDoCliente,
+  copiarDePara,
+  criarCategoriaDoCliente,
+  importarDePara,
+  ligarCategoria,
+  preverImportacaoDoDePara,
+  salvarDataDeCaixa,
+} from "./actions";
 
 function planilha(texto: string): FormData {
   const f = new FormData();
@@ -120,6 +139,7 @@ beforeEach(() => {
   estado.moduloLigado = true;
   estado.categorias = [];
   estado.ligacoes = [];
+  estado.datas = [];
   estado.auditoria = [];
   estado.seq = 0;
 });
@@ -228,5 +248,21 @@ describe("importar o de-para", () => {
     ]);
     expect(estado.ligacoes.filter((l) => l.companyId === "e2").map((l) => l.categoryId)).toEqual(["fp1", "fp2"]);
     expect(await copiarDePara("e2", "e1")).toEqual({ error: "Não há nada a copiar: o de-para desta empresa já é igual." });
+  });
+});
+
+describe("data de caixa", () => {
+  it("grava os dias da empresa, só nela, e regrava sem duplicar", async () => {
+    expect(await salvarDataDeCaixa("e1", 1, 0)).toEqual({ success: true });
+    expect(await salvarDataDeCaixa("e1", 2, 1)).toEqual({ success: true });
+    expect(estado.datas).toEqual([{ tenantId: "t1", companyId: "e1", receivableDays: 2, payableDays: 1 }]);
+    expect(estado.auditoria.map((a) => a.action)).toEqual(["fluxo.data_de_caixa", "fluxo.data_de_caixa"]);
+  });
+
+  it("recusa número fora de 0 a 30 ou quebrado", async () => {
+    expect(await salvarDataDeCaixa("e1", -1, 0)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
+    expect(await salvarDataDeCaixa("e1", 1.5, 0)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
+    expect(await salvarDataDeCaixa("e1", 0, 31)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
+    expect(estado.datas).toEqual([]);
   });
 });
