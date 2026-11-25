@@ -7,7 +7,7 @@ import { contextoFinanceiroDoPortal } from "@/app/(portal)/financeiro";
 import { telaBloqueadaNoPortal } from "@/lib/portal/telasBloqueadas";
 import { empresasDoSeletor } from "@/lib/financeiro/consultas";
 import { contentDispositionDeAnexo } from "@/lib/drive/zip";
-import { baseDoPrevisto, entradaDaPlanilha } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { baseDoPrevisto, entradaDaPlanilha, premissasDaEmpresa } from "@/lib/fluxoDeCaixa/previstoServidor";
 import { gerarPlanilhaDoPrevisto, nomeDoArquivoDoPrevisto } from "@/lib/fluxoDeCaixa/planilhaDoPrevisto";
 import { TIPO_DO_XLSX } from "@/lib/planilha/tabelaDoExcel";
 
@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
   if (!empresa) return naoEncontrado;
 
   const base = await baseDoPrevisto(escopo.tenantId, empresa.id);
-  const arquivo = await gerarPlanilhaDoPrevisto(entradaDaPlanilha(base, empresa.nome));
+  // As premissas do BPO só vão quando o cliente vê o cenário; sem isso, a aba Premissas sai só com as linhas livres.
+  const premissas = base.configuracao.cenarioNoPortal ? await premissasDaEmpresa(escopo.tenantId, empresa.id) : [];
+  const arquivo = await gerarPlanilhaDoPrevisto({ ...entradaDaPlanilha(base, empresa.nome), premissas });
   return new NextResponse(new Uint8Array(arquivo), {
     headers: {
       "Content-Type": TIPO_DO_XLSX,

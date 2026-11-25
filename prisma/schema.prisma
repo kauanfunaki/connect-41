@@ -1769,6 +1769,9 @@ model Tenant {
   clientCategoryMappings    ClientCategoryMapping[]
   cashFlowSettings          CashFlowSettings[]
   omieAccountBalances       OmieAccountBalance[]
+  salesOrders               SalesOrder[]
+  omieOrderStages           OmieOrderStage[]
+  cashFlowAssumptions       CashFlowAssumption[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
   drePublicacoes            DrePublicacao[]
@@ -2643,6 +2646,9 @@ model Company {
   clientCategoryMappings   ClientCategoryMapping[]
   cashFlowSettings         CashFlowSettings?
   omieAccountBalances      OmieAccountBalance[]
+  salesOrders              SalesOrder[]
+  omieOrderStages          OmieOrderStage[]
+  cashFlowAssumptions      CashFlowAssumption[]
   financeCategories        FinanceCategory[]
   hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
@@ -10166,6 +10172,13 @@ model CashFlowSettings {
   /// saldo das contas no Connect) ou "omie" (o que o Omie diz, `OmieAccountBalance`).
   /// Nulo: a conciliação quando ela tem saldo, senão o do Omie.
   balanceSource String? @db.VarChar(20)
+  /// Fase 2 (funcionalidade-838): a sincronização lê os pedidos de venda do Omie
+  /// desta empresa, e os das etapas escolhidas (códigos do Omie separados por
+  /// vírgula, "20,50") entram no previsto como recebimento.
+  salesOrdersEnabled Boolean @default(false)
+  salesOrderStages   String? @db.VarChar(200)
+  /// O cliente vê a aba Cenário (as premissas) no portal.
+  scenarioVisibleToClient Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -10175,6 +10188,82 @@ model CashFlowSettings {
 
   @@index([tenantId])
   @@map("cash_flow_settings")
+}
+
+/// Um pedido de venda do Omie ainda não faturado (26/11/2026, funcionalidade-838),
+/// lido pela sincronização quando a empresa liga os pedidos no Modelo do fluxo.
+/// As parcelas (`installments`) vão como o Omie diz — vencimento, dias depois da
+/// previsão de faturamento e valor —, e o previsto as põe como recebimento.
+/// A sincronização regrava a lista da empresa a cada passada.
+model SalesOrder {
+  id           String    @id @default(uuid())
+  tenantId     String
+  companyId    String
+  /// `codigo_pedido` do Omie.
+  omieOrderId  String    @db.VarChar(30)
+  number       String    @db.VarChar(20)
+  stageCode    String    @db.VarChar(4)
+  customerName String    @db.VarChar(180)
+  /// A previsão de faturamento (`data_previsao`).
+  forecastDate DateTime?
+  totalAmount  Decimal   @db.Decimal(15, 2)
+  /// [{ "vencimento": "AAAA-MM-DD" | null, "dias": number | null, "centavos": number }]
+  installments Json
+  fetchedAt    DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, omieOrderId])
+  @@index([tenantId, companyId])
+  @@map("sales_orders")
+}
+
+/// O nome de cada etapa de faturamento no Omie da empresa (`ListarEtapasFaturamento`):
+/// a descrição é da empresa ("Em produção", "Venda efetivada"), o código é do Omie.
+model OmieOrderStage {
+  id        String  @id @default(uuid())
+  tenantId  String
+  companyId String
+  code      String  @db.VarChar(4)
+  name      String  @db.VarChar(60)
+  inactive  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@index([tenantId, companyId])
+  @@map("omie_order_stages")
+}
+
+/// Uma premissa do cenário do fluxo de caixa (26/11/2026, funcionalidade-838):
+/// um custo previsto que ainda não é conta lançada, por mês — valor fixo ("fixo",
+/// em reais) ou parte das vendas do mês ("percentual", em %). O cenário soma
+/// as premissas ao previsto, mês a mês, sem mudar o previsto. Quem mantém é o BPO.
+model CashFlowAssumption {
+  id        String  @id @default(uuid())
+  tenantId  String
+  companyId String
+  name      String  @db.VarChar(80)
+  kind      String  @db.VarChar(12)
+  amount    Decimal @db.Decimal(15, 4)
+  position  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([tenantId, companyId])
+  @@map("cash_flow_assumptions")
 }
 
 /// O saldo de cada conta corrente da empresa no Omie (25/11/2026, funcionalidade-837),

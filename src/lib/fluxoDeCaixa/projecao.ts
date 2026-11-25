@@ -32,6 +32,8 @@ export type TituloDoPrevisto = TituloEmAberto & {
   categoryId: string | null;
   contraparte: string;
   descricao: string | null;
+  /** A parcela de um pedido de venda ainda não faturado (fase 2), com o nome da etapa. */
+  pedido?: { etapa: string } | null;
 };
 
 /** Onde a conta entra: a linha do fluxo e o nome que aparece dentro dela. */

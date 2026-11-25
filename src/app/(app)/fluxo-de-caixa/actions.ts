@@ -18,7 +18,7 @@ import { logAudit } from "@/lib/audit";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
 import { linhasDoCsv, ErroCsv } from "@/lib/contabil-core/planilha/csv";
-import { chaveDeTexto, linhaDoCodigo } from "@/lib/fluxoDeCaixa/estrutura";
+import { chaveDeTexto, linhaDeCategoriaValida } from "@/lib/fluxoDeCaixa/estrutura";
 import {
   MAX_NOME_DO_CLIENTE,
   lerDePara,
@@ -30,6 +30,7 @@ import {
 } from "@/lib/fluxoDeCaixa/dePara";
 import { planoDaEmpresaParaODePara } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
 import { origemDoSaldoValida, type OrigemDoSaldo } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { premissaValida, type Premissa } from "@/lib/fluxoDeCaixa/cenario";
 
 const MODULE = "bpo_fluxo_caixa";
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
@@ -78,7 +79,7 @@ export async function criarCategoriaDoCliente(companyId: string, nome: string, l
   if (!c.ok) return { error: c.erro };
   const limpo = nomeLimpo(nome);
   if (!limpo) return { error: `Escreva o nome, com até ${MAX_NOME_DO_CLIENTE} letras.` };
-  if (!linhaDoCodigo(linha)) return { error: "Escolha a linha do fluxo." };
+  if (!linhaDeCategoriaValida(linha)) return { error: "Escolha a linha do fluxo." };
   if (await nomeEmUso(c, companyId, limpo)) return { error: JA_EXISTE };
 
   const ultima = await c.prisma.clientCategory.aggregate({ where: { tenantId: c.tenantId, companyId }, _max: { position: true } });
@@ -114,7 +115,7 @@ export async function editarCategoriaDoCliente(
     data.name = limpo;
   }
   if (mudanca.linha !== undefined) {
-    if (!linhaDoCodigo(mudanca.linha)) return { error: "Linha do fluxo desconhecida." };
+    if (!linhaDeCategoriaValida(mudanca.linha)) return { error: "Linha do fluxo desconhecida." };
     data.line = mudanca.linha;
   }
   if (Object.keys(data).length === 0) return { success: true };
@@ -216,6 +217,61 @@ export async function salvarDataDeCaixa(
     diasPagar,
     saldoAntes: antes?.balanceSource ?? "auto",
     saldo: origemDoSaldo,
+  });
+  revalidatePath("/fluxo-de-caixa");
+  revalidatePath("/portal/fluxo-de-caixa");
+  return { success: true };
+}
+
+// ─── Fase 2: pedidos de venda e cenário (26/11/2026, funcionalidade-838) ────
+
+export type PedidosECenario = {
+  pedidos: boolean;
+  /** Códigos das etapas do Omie cujos pedidos entram no previsto. */
+  etapas: string[];
+  cenarioNoPortal: boolean;
+  premissas: { nome: string; tipo: string; valor: number }[];
+};
+
+const MAXIMO_DE_PREMISSAS = 30;
+
+/** Liga os pedidos, escolhe as etapas e regrava as premissas do cenário, de uma vez. */
+export async function salvarPedidosECenario(companyId: string, dados: PedidosECenario): Promise<AcaoDasCategorias> {
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+  const etapas = [...new Set(dados.etapas.map((e) => String(e).trim()).filter((e) => /^\d{1,4}$/.test(e)))];
+  if (etapas.join(",").length > 200) return { error: "Etapas demais." };
+  if (dados.premissas.length > MAXIMO_DE_PREMISSAS) return { error: `Até ${MAXIMO_DE_PREMISSAS} premissas por empresa.` };
+  const premissas: Premissa[] = [];
+  for (const p of dados.premissas) {
+    const v = premissaValida(p);
+    if (!v.ok) return { error: v.erro };
+    premissas.push(v.premissa);
+  }
+  const ajustes = {
+    salesOrdersEnabled: Boolean(dados.pedidos),
+    salesOrderStages: etapas.length ? etapas.join(",") : null,
+    scenarioVisibleToClient: Boolean(dados.cenarioNoPortal),
+  };
+  await c.prisma.$transaction(async (tx) => {
+    await tx.cashFlowSettings.upsert({
+      where: { companyId },
+      create: { tenantId: c.tenantId, companyId, ...ajustes },
+      update: ajustes,
+      select: { id: true },
+    });
+    await tx.cashFlowAssumption.deleteMany({ where: { tenantId: c.tenantId, companyId } });
+    if (premissas.length) {
+      await tx.cashFlowAssumption.createMany({
+        data: premissas.map((p, i) => ({ tenantId: c.tenantId, companyId, name: p.nome, kind: p.tipo, amount: p.valor.toFixed(4), position: i })),
+      });
+    }
+  });
+  await auditar(c, companyId, "fluxo.pedidos_e_cenario", {
+    pedidos: ajustes.salesOrdersEnabled ? "sim" : "não",
+    etapas: ajustes.salesOrderStages,
+    cenarioNoPortal: ajustes.scenarioVisibleToClient ? "sim" : "não",
+    premissas: premissas.map((p) => `${p.nome} (${p.tipo === "fixo" ? `R$ ${p.valor}/mês` : `${p.valor}%`})`).join("; ").slice(0, 500),
   });
   revalidatePath("/fluxo-de-caixa");
   revalidatePath("/portal/fluxo-de-caixa");

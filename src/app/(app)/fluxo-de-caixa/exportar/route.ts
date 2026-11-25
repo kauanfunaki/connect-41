@@ -8,7 +8,7 @@ import { getModuleDef } from "@/lib/module-catalog";
 import { getPrisma } from "@/lib/prisma";
 import { leituraNoFoco } from "@/lib/empresas/focoServidor";
 import { contentDispositionDeAnexo } from "@/lib/drive/zip";
-import { baseDoPrevisto, entradaDaPlanilha } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { baseDoPrevisto, entradaDaPlanilha, premissasDaEmpresa } from "@/lib/fluxoDeCaixa/previstoServidor";
 import { gerarPlanilhaDoPrevisto, nomeDoArquivoDoPrevisto } from "@/lib/fluxoDeCaixa/planilhaDoPrevisto";
 import { TIPO_DO_XLSX } from "@/lib/planilha/tabelaDoExcel";
 
@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
 
   const nome = empresa.tradeName || empresa.name;
   const base = await baseDoPrevisto(ctx.tenantId, empresa.id);
-  const arquivo = await gerarPlanilhaDoPrevisto(entradaDaPlanilha(base, nome));
+  const premissas = await premissasDaEmpresa(ctx.tenantId, empresa.id);
+  const arquivo = await gerarPlanilhaDoPrevisto({ ...entradaDaPlanilha(base, nome), premissas });
   return new NextResponse(new Uint8Array(arquivo), {
     headers: {
       "Content-Type": TIPO_DO_XLSX,

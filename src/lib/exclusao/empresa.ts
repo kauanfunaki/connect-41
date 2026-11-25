@@ -296,6 +296,9 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "ClientCategory", acao: "apagar", executar: (tx, a) => n(tx.clientCategory.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "CashFlowSettings", acao: "apagar", executar: (tx, a) => n(tx.cashFlowSettings.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "OmieAccountBalance", acao: "apagar", executar: (tx, a) => n(tx.omieAccountBalance.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "SalesOrder", acao: "apagar", executar: (tx, a) => n(tx.salesOrder.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "OmieOrderStage", acao: "apagar", executar: (tx, a) => n(tx.omieOrderStage.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "CashFlowAssumption", acao: "apagar", executar: (tx, a) => n(tx.cashFlowAssumption.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "FinanceCategory", acao: "apagar", executar: (tx, a) => n(tx.financeCategory.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "BankAccount", acao: "apagar", executar: (tx, a) => n(tx.bankAccount.deleteMany({ where: daEmpresa(a) })) },
 

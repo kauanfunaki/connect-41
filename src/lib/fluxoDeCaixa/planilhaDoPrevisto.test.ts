@@ -53,6 +53,8 @@ describe("Excel do previsto", () => {
       "13 semanas",
       "12 meses",
       "Dia a dia",
+      "Cenário",
+      "Premissas",
       "Lançamentos",
       "Atrasados",
       "Saldos",

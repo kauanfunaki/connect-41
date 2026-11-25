@@ -23,7 +23,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { FileDropzoneField } from "@/components/ui/FileDropzoneField";
 import { useConfirm } from "@/components/ui/useConfirm";
-import { GRUPOS_DO_FLUXO, LINHAS_DO_FLUXO, chaveDeTexto, rotuloDaLinha } from "@/lib/fluxoDeCaixa/estrutura";
+import { GRUPOS_DO_FLUXO, LINHAS_DAS_CATEGORIAS, LINHAS_DO_FLUXO, chaveDeTexto, rotuloDaLinha } from "@/lib/fluxoDeCaixa/estrutura";
 import type { DadosDasCategoriasDoCliente, CategoriaDoClienteNaTela, CategoriaDoOmieNaTela } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
 import {
   apagarCategoriaDoCliente,
@@ -53,7 +53,7 @@ function OpcoesDeLinha() {
     <>
       {GRUPOS_DO_FLUXO.map((g) => (
         <optgroup key={g.code} label={g.label}>
-          {LINHAS_DO_FLUXO.filter((l) => l.grupo === g.code).map((l) => (
+          {LINHAS_DAS_CATEGORIAS.filter((l) => l.grupo === g.code).map((l) => (
             <option key={l.code} value={l.code}>
               {l.label}
             </option>
