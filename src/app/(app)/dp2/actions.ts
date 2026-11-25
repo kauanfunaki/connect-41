@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
 import { camposAjustaveis, lerAjuste, nomeDoCampo } from "@/lib/dp2/ajustesDoCalculo";
@@ -735,6 +736,47 @@ export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: Form
   return { ok: true, texto: `${nome} retirada da apuração.` };
 }
 
+// ─── Horários de trabalho (25/11/2026, funcionalidade-752) ──────────────────
+
+export async function criarHorarioAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerHorario({
+    nome: texto(fd, "nome"),
+    dias: fd.getAll("dias").map(String),
+    entrada: texto(fd, "entrada"),
+    saida: texto(fd, "saida"),
+    intervalo: texto(fd, "intervalo"),
+    tipoJornada: texto(fd, "tipoJornada"),
+  });
+  if (!lido.ok) return erro(lido.erro);
+  const h = await getPrisma().dp2Horario.create({ data: { tenantId: a.tenantId, companyId, ...lido.horario, criadoPorId: a.userId }, select: { id: true } });
+  const horas = horasDoHorario(lido.horario);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.horario_criado", entityType: "Dp2Horario", entityId: h.id, metadata: { companyId, ...lido.horario, semanais: horas.semanais } });
+  revalidatePath("/dp2/configuracao");
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Horário "${lido.horario.nome}" criado: ${horas.semanais} h por semana, ${horas.mensais} h por mês.` };
+}
+
+export async function excluirHorarioAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const h = await prisma.dp2Horario.findFirst({ where: { id: texto(fd, "horarioId"), tenantId: a.tenantId }, select: { id: true, nome: true, companyId: true } });
+  if (!h) return erro("Horário não encontrado.");
+  const recusa = await empresaDoEscritorio(a, h.companyId);
+  if (recusa) return erro(recusa);
+  const emUso = await prisma.dp2Vinculo.count({ where: { tenantId: a.tenantId, horarioId: h.id } });
+  if (emUso > 0) return erro(`O horário está em ${emUso} contrato(s): troque o horário deles antes de excluir.`);
+  await prisma.dp2Horario.delete({ where: { id: h.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.horario_excluido", entityType: "Dp2Horario", entityId: h.id, metadata: { nome: h.nome } });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: `Horário "${h.nome}" excluído.` };
+}
+
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────
 
 export async function importarComparativoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -811,7 +853,14 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   const salarioBase = lerNumero(texto(fd, "salarioBase"));
   if (!salarioValido(salarioBase, texto(fd, "categoria"))) return erro(SALARIO_OBRIGATORIO);
   const tipoSalario = texto(fd, "tipoSalario") === "HORISTA" ? "HORISTA" : "MENSAL";
-  const horasMensais = lerInteiro(texto(fd, "horasMensais")) ?? 220;
+  // Horário de trabalho (funcionalidade-752): com ele, as horas por mês e a jornada do eSocial saem do horário.
+  const horarioId = texto(fd, "horarioId") || null;
+  const horario = horarioId
+    ? await prisma.dp2Horario.findFirst({ where: { id: horarioId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId } })
+    : null;
+  if (horarioId && !horario) return erro("Horário não encontrado nesta empresa.");
+  const doHorario = horario ? horasDoHorario(horario) : null;
+  const horasMensais = doHorario?.mensais ?? lerInteiro(texto(fd, "horasMensais")) ?? 220;
   if (horasMensais < 1 || horasMensais > 300) return erro("Horas por mês entre 1 e 300.");
   const dependentesIrrf = lerInteiro(texto(fd, "dependentesIrrf")) ?? 0;
   const filhosSalarioFamilia = lerInteiro(texto(fd, "filhosSalarioFamilia")) ?? 0;
@@ -828,6 +877,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     insalubridade,
     periculosidade: marcado(fd, "periculosidade"),
     valeTransporte: marcado(fd, "valeTransporte"),
+    horarioId,
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,
     matricula: texto(fd, "matricula").slice(0, 30) || null,
@@ -840,8 +890,8 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
       cbo: texto(fd, "esocial_cbo"),
       tipoContrato: texto(fd, "esocial_tipoContrato"),
       dataTermino: texto(fd, "esocial_dataTermino"),
-      tipoJornada: texto(fd, "esocial_tipoJornada"),
-      descricaoJornada: texto(fd, "esocial_descricaoJornada"),
+      tipoJornada: horario?.tipoJornada ?? texto(fd, "esocial_tipoJornada"),
+      descricaoJornada: doHorario?.descricao ?? texto(fd, "esocial_descricaoJornada"),
       estagioNatureza: texto(fd, "esocial_estagioNatureza"),
       estagioNivel: texto(fd, "esocial_estagioNivel"),
       estagioArea: texto(fd, "esocial_estagioArea"),
