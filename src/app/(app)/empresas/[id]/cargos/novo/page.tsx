@@ -50,9 +50,8 @@ export default async function NovoCargoPage({
         ]}
       />
 
-      <PageHeader title="Novo cargo" subtitle={company.name} />
-
-      <div className="w-full max-w-[720px]">
+      <div className="mx-auto w-full max-w-[720px]">
+        <PageHeader title="Novo cargo" subtitle={company.name} />
         <Card className="p-6">
           <CargoForm
             action={criarCargo}
