@@ -2791,6 +2791,7 @@ model Person {
   dp2Vinculo           Dp2Vinculo?
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
+  dp2Totalizadores     Dp2TotalizadorEsocial[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
   dp2Calculos          Dp2Calculo[]
@@ -7051,6 +7052,7 @@ model Dp2Competencia {
   pedidos      Dp2PedidoDeEventos[]
   ajustes    Dp2AjusteDeCalculo[]
   outrasBasesInss Dp2OutraBaseInss[]
+  totalizadores Dp2TotalizadorEsocial[]
 
   @@unique([companyId, ano, mes, tipo])
   @@index([tenantId, ano, mes])
@@ -7199,6 +7201,41 @@ model Dp2OutraBaseInss {
   @@index([tenantId, competenciaId])
   @@index([personId])
   @@map("dp2_outras_bases_inss")
+}
+
+/// Totalizador do eSocial (26/11/2026, funcionalidade-755): o que o eSocial
+/// devolveu calculado dos periódicos — S-5001 (INSS), S-5002 (IRRF) e S-5003
+/// (FGTS) por trabalhador; S-5011 (INSS) e S-5013 (FGTS) da empresa. Lido dos
+/// XML de retorno e comparado com o cálculo da competência. Importar de novo
+/// troca o do mesmo tipo, período e CPF.
+model Dp2TotalizadorEsocial {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  competenciaId String?
+  personId      String?
+  /// "S-5001", "S-5002", "S-5003", "S-5011" ou "S-5013".
+  tipo          String   @db.VarChar(6)
+  /// "AAAA-MM" ou "AAAA" (13º).
+  perApur       String   @db.VarChar(7)
+  /// CPF do trabalhador; nulo nos da empresa.
+  cpf           String?  @db.VarChar(11)
+  /// Recibo do evento de origem (S-1200, S-1210 ou S-1299) e o evento da fila com esse recibo.
+  reciboBase    String?  @db.VarChar(40)
+  eventoId      String?  @db.VarChar(36)
+  /// Os valores lidos (INSS calculado e descontado, IRRF, base e depósito do FGTS, contribuições por código).
+  valores       Json
+  arquivo       String?  @db.VarChar(255)
+  importadoPorId String?
+  createdAt     DateTime @default(now())
+
+  competencia Dp2Competencia? @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person?         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId, perApur])
+  @@index([competenciaId])
+  @@index([personId])
+  @@map("dp2_totalizadores_esocial")
 }
 
 /// Os valores da Domínio para a mesma pessoa e competência, enquanto o DP 2
