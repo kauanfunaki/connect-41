@@ -1,4 +1,4 @@
-import { Building2, Tags, TrendingUp } from "lucide-react";
+import { Building2, CalendarRange, FlaskConical, Tags, TrendingUp } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -25,6 +25,12 @@ import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { escopoFinanceiroDaEscolha } from "@/lib/empresas/escopoDaEscolha";
 import { CategoriasDoCliente } from "@/components/financeiro/CategoriasDoCliente";
 import { dadosDasCategoriasDoCliente } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
+import { DataDeCaixa } from "@/components/financeiro/DataDeCaixa";
+import { PrevistoDoFluxo } from "@/components/financeiro/PrevistoDoFluxo";
+import { dadosDoCenario, dadosDoPrevisto, configuracaoDoFluxo, pedidosECenarioDaEmpresa } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { CenarioDoFluxo } from "@/components/financeiro/CenarioDoFluxo";
+import { PedidosECenario } from "@/components/financeiro/PedidosECenario";
+import { celulaDeTexto, granularidadeValida, type Granularidade } from "@/lib/fluxoDeCaixa/projecao";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +57,8 @@ export default async function FluxoDeCaixaPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const aba = params.aba === "empresas" ? "empresas" : params.aba === "categorias" ? "categorias" : "fluxo";
+  const aba = params.aba === "empresas" || params.aba === "categorias" || params.aba === "previsto" || params.aba === "cenario" ? params.aba : "fluxo";
+  const ver = granularidadeValida(params.ver);
   const agora = new Date();
   const hojeKey = saoPauloParts(agora).dateKey;
   const mes = competenciaValida(params.mes) ?? competenciaDoInstante(agora);
@@ -69,6 +76,8 @@ export default async function FluxoDeCaixaPage({
 
   // A empresa segue nas duas abas, para quem vai a "Por empresa" e volta.
   const qs = (a: string) => `/fluxo-de-caixa?mes=${mes}${empresaId ? `&empresa=${empresaId}` : ""}${a === "fluxo" ? "" : `&aba=${a}`}`;
+  // O Previsto não tem mês: a visão (dias, semanas, meses) e a empresa.
+  const enderecoDaVisao = (g: Granularidade) => `/fluxo-de-caixa?aba=previsto&ver=${g}${empresaId ? `&empresa=${empresaId}` : ""}`;
 
   return (
     <PageContainer>
@@ -80,8 +89,8 @@ export default async function FluxoDeCaixaPage({
         <FiltroDaEmpresa foco={foco}>
           <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ empresa: empresaId ?? undefined }} naFileira />
         </FiltroDaEmpresa>
-      ) : aba === "categorias" ? (
-        // A nomenclatura é da empresa, sem mês: só o filtro da empresa.
+      ) : aba === "categorias" || aba === "previsto" || aba === "cenario" ? (
+        // O modelo e o previsto são da empresa, sem mês: só o filtro da empresa.
         <FiltroDaEmpresa foco={foco} />
       ) : (
         <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ aba, empresa: empresaId ?? undefined }} />
@@ -89,8 +98,10 @@ export default async function FluxoDeCaixaPage({
       <AbasDeLink
         abas={[
           { chave: "fluxo", rotulo: "Realizado e projeção", href: qs("fluxo"), icone: <TrendingUp /> },
+          { chave: "previsto", rotulo: "Previsto", href: enderecoDaVisao(ver), icone: <CalendarRange /> },
+          { chave: "cenario", rotulo: "Cenário", href: qs("cenario"), icone: <FlaskConical /> },
           { chave: "empresas", rotulo: "Por empresa", href: qs("empresas"), icone: <Building2 /> },
-          { chave: "categorias", rotulo: "Categorias do cliente", href: qs("categorias"), icone: <Tags /> },
+          { chave: "categorias", rotulo: "Modelo do fluxo", href: qs("categorias"), icone: <Tags /> },
         ]}
         ativa={aba}
       />
@@ -99,9 +110,31 @@ export default async function FluxoDeCaixaPage({
         <PorEmpresa tenantId={ctx.tenantId} companyIds={empresasDeTodas} mes={mes} hojeKey={hojeKey} />
       ) : aba === "categorias" ? (
         empresaId ? (
-          <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
+          <>
+            <DataDeCaixa companyId={empresaId} atual={await configuracaoDoFluxo(ctx.tenantId, empresaId)} />
+            <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
+            <div className="mt-4">
+              <PedidosECenario companyId={empresaId} dados={await pedidosECenarioDaEmpresa(ctx.tenantId, empresaId)} />
+            </div>
+          </>
         ) : (
-          <EscolhaAEmpresa escolha={escolha} porQue="As categorias do cliente são de uma empresa por vez: cada cliente tem a nomenclatura dele." />
+          <EscolhaAEmpresa escolha={escolha} porQue="O modelo do fluxo é de uma empresa por vez: cada cliente tem a nomenclatura e a data de caixa dele." />
+        )
+      ) : aba === "cenario" ? (
+        empresaId ? (
+          <CenarioDoFluxo dados={await dadosDoCenario(ctx.tenantId, empresaId)} />
+        ) : (
+          <EscolhaAEmpresa escolha={escolha} porQue="O cenário é de uma empresa por vez: as premissas são da empresa." />
+        )
+      ) : aba === "previsto" ? (
+        empresaId ? (
+          <PrevistoDoFluxo
+            dados={await dadosDoPrevisto({ tenantId: ctx.tenantId, companyId: empresaId, granularidade: ver, celula: celulaDeTexto(params.celula) })}
+            enderecoDaVisao={enderecoDaVisao}
+            exportarHref={`/fluxo-de-caixa/exportar?empresa=${empresaId}`}
+          />
+        ) : (
+          <EscolhaAEmpresa escolha={escolha} porQue="O previsto é de uma empresa por vez: o saldo, a data de caixa e as categorias são da empresa." />
         )
       ) : escopo ? (
         <Fluxo escopo={escopo} mes={mes} hojeKey={hojeKey} />

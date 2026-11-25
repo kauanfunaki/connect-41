@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import type { AiSummaryState } from "@/app/(app)/empresas/[id]/ai-actions";
 import { Aviso } from "@/components/ui/Aviso";
 import { SectorChip } from "@/components/ui/SectorChip";
@@ -61,6 +61,11 @@ export function AiCompanySummary({ action }: Props) {
   // cima dele, sem apagar o que a pessoa já estava lendo.
   const [gerado, setGerado] = useState<Gerado | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  // Recolher depois de gerado (25/11/2026, melhoria-834): o resumo pode ficar
+  // grande e empurrar a ficha para baixo. Recolhido, fica só o cabeçalho, com
+  // quando foi gerado; gerar ou atualizar abre de novo.
+  const [recolhido, setRecolhido] = useState(false);
+  const idDoConteudo = useId();
 
   function handleClick() {
     startTransition(async () => {
@@ -68,6 +73,7 @@ export function AiCompanySummary({ action }: Props) {
       if (resposta && "resumo" in resposta) {
         setGerado(resposta);
         setErro(null);
+        setRecolhido(false);
       } else {
         setErro(resposta?.error ?? "Não foi possível gerar o resumo. Tente de novo.");
       }
@@ -87,17 +93,25 @@ export function AiCompanySummary({ action }: Props) {
             {gerado ? `gerado em ${gerado.geradoEm}` : "Consolida reuniões, transferências, kanban e documentos num briefing pré-reunião."}
           </p>
         </div>
-        <Button type="button" onClick={handleClick} disabled={isPending} className="flex-shrink-0">
-          <Sparkles size={14} />
-          {gerado ? (isPending ? "Atualizando…" : "Atualizar") : isPending ? "Gerando…" : "Gerar resumo"}
-        </Button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {gerado && (
+            <Button type="button" variant="ghost" onClick={() => setRecolhido((r) => !r)} aria-expanded={!recolhido} aria-controls={idDoConteudo}>
+              {recolhido ? <ChevronDown size={14} aria-hidden /> : <ChevronUp size={14} aria-hidden />}
+              {recolhido ? "Mostrar" : "Recolher"}
+            </Button>
+          )}
+          <Button type="button" onClick={handleClick} disabled={isPending}>
+            <Sparkles size={14} />
+            {gerado ? (isPending ? "Atualizando…" : "Atualizar") : isPending ? "Gerando…" : "Gerar resumo"}
+          </Button>
+        </div>
       </div>
 
       <div aria-live="polite">
         {erro && <Aviso className="mt-4">{erro}</Aviso>}
 
-        {gerado && (
-          <>
+        {gerado && !recolhido && (
+          <div id={idDoConteudo}>
             <p className="mt-4 text-body text-fg break-words">{gerado.resumo.resumo}</p>
             {/* Blocos curtos no lugar dos três parágrafos da IA: lado a lado
                 em tela larga, empilhados em tela estreita. */}
@@ -132,7 +146,7 @@ export function AiCompanySummary({ action }: Props) {
                 )}
               </Bloco>
             </div>
-          </>
+          </div>
         )}
       </div>
     </Card>

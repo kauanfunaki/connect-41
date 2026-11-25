@@ -48,12 +48,11 @@ export default async function NovoEnvioPage({
     <PageContainer>
       <Breadcrumb items={[{ label: "Envios ao cliente", href: rotaDosEnvios(escolhida?.id) }, { label: "Novo envio" }]} />
 
-      <PageHeader
-        title="Novo envio"
-        subtitle={escolhida ? `Para ${nomeExibicao(escolhida)}.` : undefined}
-      />
-
-      <div className="w-full max-w-[860px]">
+      <div className="mx-auto w-full max-w-[860px]">
+        <PageHeader
+          title="Novo envio"
+          subtitle={escolhida ? `Para ${nomeExibicao(escolhida)}.` : undefined}
+        />
         <Card className="p-6">
           <ClientDocumentForm
             action={criarDocumento}

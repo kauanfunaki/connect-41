@@ -45,8 +45,8 @@ export default async function NovoComunicadoPage() {
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Comunicados", href: "/solicitacoes/comunicados" }, { label: "Novo comunicado" }]} />
-      <PageHeader title="Novo comunicado" />
-      <div className="max-w-[820px]">
+      <div className="mx-auto w-full max-w-[820px]">
+        <PageHeader title="Novo comunicado" />
         <Card className="p-6">
           <NovoComunicadoForm
             setores={porSetor}

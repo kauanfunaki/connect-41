@@ -20,7 +20,7 @@
 // Puro, sem banco.
 
 import { r2 } from "@/lib/rescisao/constantes";
-import { calcularInss, calcularIrrf, type ResultadoInss, type ResultadoIrrf } from "./impostos";
+import { calcularInssComOutrasBases, calcularIrrf, type ResultadoInss, type ResultadoIrrf } from "./impostos";
 import { reais, pct, num } from "./formato";
 import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
 import type { TabelasDaCompetencia } from "./tabelas";
@@ -131,6 +131,11 @@ export type EntradaMensal = {
   empresa: EmpresaDoMotor;
   diasUteis: number;
   diasDeDescanso: number;
+  /**
+   * Remuneração do colaborador em outra(s) empresa(s) no mês (funcionalidade-769):
+   * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
+   */
+  outrasBasesInss?: number;
 };
 
 export const FGTS_ALIQUOTA = 8;
@@ -366,7 +371,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── Bases, INSS e salário-família ──
   const baseInss = baseDe(itens, "incideInss");
-  const inss = calcularInss(baseInss, e.tabelas.inss.dados);
+  const inss = calcularInssComOutrasBases(baseInss, e.outrasBasesInss ?? 0, e.tabelas.inss.dados);
   const sf = e.tabelas.salarioFamilia.dados;
   if (v.filhosSalarioFamilia > 0 && baseInss <= sf.limite && dias > 0) {
     const valor = (v.filhosSalarioFamilia * sf.cota * dias) / 30;

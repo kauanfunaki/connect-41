@@ -54,9 +54,8 @@ export default async function EditarCargoPage({
         ]}
       />
 
-      <PageHeader title="Editar cargo" subtitle={company.name} />
-
-      <div className="w-full max-w-[720px]">
+      <div className="mx-auto w-full max-w-[720px]">
+        <PageHeader title="Editar cargo" subtitle={company.name} />
         <Card className="p-6">
           <CargoForm
             action={atualizarCargo}

@@ -47,9 +47,8 @@ export default async function EditarEnvioPage({
         ]}
       />
 
-      <PageHeader title="Editar envio" subtitle={`Para ${nomeExibicao(document.company)}.`} />
-
-      <div className="w-full max-w-[860px]">
+      <div className="mx-auto w-full max-w-[860px]">
+        <PageHeader title="Editar envio" subtitle={`Para ${nomeExibicao(document.company)}.`} />
         {travado ? (
           // Aviso neutro onde estaria o formulário (15/10/2026), como a pendência
           // encerrada no portal: era texto cinza num cartão.

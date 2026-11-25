@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 /**
  * O casco da lista com a barra no topo (revisão de 05/10/2026, opção B
@@ -22,6 +23,7 @@ import type { ReactNode } from "react";
 export function CascoDaTabela({
   contagem,
   total,
+  fora,
   busca,
   filtros,
   acoes,
@@ -33,6 +35,8 @@ export function CascoDaTabela({
   contagem?: ReactNode;
   /** O valor somado da lista, quando ela é de dinheiro. */
   total?: ReactNode;
+  /** O que a lista esconde por padrão (os inativos), ao lado da contagem. Ver `ForaDaLista`. */
+  fora?: ReactNode;
   busca?: ReactNode;
   /** O `FiltrosDaTela` com `naBarra` — o botão e as etiquetas. */
   filtros?: ReactNode;
@@ -43,12 +47,13 @@ export function CascoDaTabela({
   /** Busca na frente, ocupando o espaço livre, e a contagem à direita (27/10/2026, como em Chamados). */
   buscaAEsquerda?: boolean;
 }) {
-  const temResumo = Boolean(contagem || total);
+  const temResumo = Boolean(contagem || total || fora);
   const temControles = Boolean(busca || filtros || acoes);
   const resumo = temResumo && (
     <p className={`flex flex-wrap items-baseline gap-x-2 min-w-0 text-ui${buscaAEsquerda ? " ml-auto" : ""}`}>
       {contagem && <span className="font-semibold text-fg">{contagem}</span>}
       {total && <span className="text-fg-muted tabular-nums">{total}</span>}
+      {fora}
     </p>
   );
   if (buscaAEsquerda) return (
@@ -68,6 +73,7 @@ export function CascoDaTabela({
           <p className="flex flex-wrap items-baseline gap-x-2 min-w-0 text-ui">
             {contagem && <span className="font-semibold text-fg">{contagem}</span>}
             {total && <span className="text-fg-muted tabular-nums">{total}</span>}
+            {fora}
           </p>
         )}
         {temControles && (
@@ -80,6 +86,23 @@ export function CascoDaTabela({
       </div>
       {children}
     </div>
+  );
+}
+
+/**
+ * "· 12 inativas ocultas · Mostrar todas", ao lado da contagem (25/11/2026,
+ * melhoria-814): era uma frase acima da tabela, fora dela ("12 empresas
+ * inativas ou canceladas fora desta lista."). Sem nada escondido, nada.
+ */
+export function ForaDaLista({ n, um, varios, href, acao = "Mostrar todos" }: { n: number; um: string; varios: string; href: string; acao?: string }) {
+  if (n <= 0) return null;
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-2 text-fs-2 text-fg-muted">
+      <span aria-hidden>·</span>
+      <span className="tabular-nums">{NUMERO.format(n)} {n === 1 ? um : varios}</span>
+      <span aria-hidden>·</span>
+      <Link href={href} className="font-medium text-brand hover:underline">{acao}</Link>
+    </span>
   );
 }
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { UserRole } from "@/generated/prisma/enums";
-import { COOKIE_DE_TESTE } from "@/lib/manutencao/regras";
+import { COOKIE_DE_ENTRADA, COOKIE_DE_TESTE } from "@/lib/manutencao/regras";
 
 // O que se testa: o "Abrir para testar" do aviso de manutenção (13/11/2026).
 // Só quem conserta (Tech e administrador) abre a tela; o cookie guarda o id da
@@ -45,6 +45,14 @@ describe("POST /api/manutencao/testar", () => {
     expect(linha).toMatch(/HttpOnly/i);
     expect(linha).toMatch(/Max-Age=36000/);
     expect(linha).toMatch(/Path=\//);
+  });
+
+  it("grava também o passe de entrada, de um minuto, para a recarga abrir a tela (bug-833)", async () => {
+    const res = await pedir("bpo_contas_pagar");
+    const passe = res.headers.getSetCookie().find((c) => c.startsWith(`${COOKIE_DE_ENTRADA}=`)) ?? "";
+    expect(passe.split(";")[0]).toBe(`${COOKIE_DE_ENTRADA}=${MANUTENCAO}`);
+    expect(passe).toMatch(/HttpOnly/i);
+    expect(passe).toMatch(/Max-Age=60(;|$)/);
   });
 
   it("o administrador também abre, e o que já estava aberto continua", async () => {
