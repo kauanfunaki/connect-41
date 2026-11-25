@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { FaixaDeTotais } from "@/components/ui/FaixaDeTotais";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CascoDaTabela, ForaDaLista, contarItens } from "@/components/shared/CascoDaTabela";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { ColaboradoresTable, type LinhaDaTabelaDeColaboradores } from "@/components/colaboradores/ColaboradoresTable";
 import { PessoasFilterButton } from "@/components/pessoas/PessoasFilterButton";
@@ -113,19 +113,10 @@ export default async function ColaboradoresClientesPage({
       rotuloDaSituacao="Cadastro"
     />
   );
-  /** O aviso dos inativos fora da lista, com o "Mostrar todos". */
+  /** O aviso dos inativos fora da lista, na barra, ao lado da contagem (25/11/2026, melhoria-814). */
   function avisoDosInativos(ocultos: number, todosHref: string) {
-    if (!estaOcultandoInativos(filtro) || ocultos === 0) return undefined;
-    return (
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-fs-2 text-fg-muted">
-        <span>
-          {ocultos} colaborador{ocultos !== 1 ? "es" : ""} inativo{ocultos !== 1 ? "s" : ""} fora desta lista.
-        </span>
-        <Button href={todosHref} variant="ghost" size="xs">
-          Mostrar todos
-        </Button>
-      </span>
-    );
+    if (!estaOcultandoInativos(filtro)) return undefined;
+    return <ForaDaLista n={ocultos} um="inativo oculto" varios="inativos ocultos" href={todosHref} />;
   }
   function href(extra: Record<string, string | undefined>) {
     const q = new URLSearchParams();
@@ -161,7 +152,7 @@ export default async function ColaboradoresClientesPage({
             </>
           }
           filtros={filtros}
-          acoes={avisoDosInativos(inativos, href({ situacao: SITUACAO_TODOS }))}
+          fora={avisoDosInativos(inativos, href({ situacao: SITUACAO_TODOS }))}
         >
           {itens.length === 0 ? (
             <EmptyState
@@ -219,7 +210,7 @@ export default async function ColaboradoresClientesPage({
       <CascoDaTabela
         contagem={contarItens(total, "colaborador", "colaboradores")}
         filtros={filtros}
-        acoes={avisoDosInativos(inativos, href({ situacao: SITUACAO_TODOS }))}
+        fora={avisoDosInativos(inativos, href({ situacao: SITUACAO_TODOS }))}
       >
         {linhas.length === 0 ? (
           <EmptyState

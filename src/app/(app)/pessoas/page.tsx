@@ -1,6 +1,6 @@
 import { Pagination } from "@/components/shared/Pagination";
 import { Plus, Users } from "lucide-react";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CascoDaTabela, ForaDaLista, contarItens } from "@/components/shared/CascoDaTabela";
 import { getPrisma } from "@/lib/prisma";
 import { PersonType } from "@/generated/prisma/enums";
 import { getAuthContext, canWrite } from "@/lib/auth/context";
@@ -97,17 +97,6 @@ export default async function PessoasPage({
 
       <div id="cadastros-content">
 
-      {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
-      {ocultos > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
-          <p>
-            {ocultos} pessoa{ocultos !== 1 ? "s" : ""} inativa{ocultos !== 1 ? "s" : ""} fora desta lista.
-          </p>
-          <Button href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} variant="ghost" size="xs">
-            Mostrar todas
-          </Button>
-        </div>
-      )}
 
       {/* Contagem, busca e filtro na barra do casco (07/10/2026), como as
           filas irmãs de 05/10: eram a busca e o filtro soltos acima da
@@ -115,6 +104,8 @@ export default async function PessoasPage({
           painel do Filtros continua o mesmo (modelo aprovado), na barra. */}
       <CascoDaTabela
         contagem={contarItens(total, "pessoa", "pessoas")}
+        // O aviso dos inativos fica na barra, ao lado da contagem (25/11/2026, melhoria-814).
+        fora={<ForaDaLista n={ocultos} um="inativa oculta" varios="inativas ocultas" href={buildUrl({ situacao: SITUACAO_TODOS, page: "1" })} acao="Mostrar todas" />}
         busca={<DebouncedSearchInput placeholder="Buscar por nome…" className="w-72 max-w-full" />}
         filtros={
           // Sem filtro de empresa: interno da 41 não tem empresa cliente.
