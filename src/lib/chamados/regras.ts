@@ -247,3 +247,16 @@ export const parecerSchema = z.object({ status: z.enum(["sufficient", "needs_inf
   if ((v.status === "sufficient" && v.questions.length) || (v.status === "needs_information" && !v.questions.length)) ctx.addIssue({ code: "custom", message: "Parecer inconsistente." });
 });
 export type Parecer = z.infer<typeof parecerSchema>;
+
+/**
+ * O número do chamado que a busca da tela digitou (25/11/2026, bug-819): o id
+ * curto do cartão ("chamado-45", sem diferença de maiúsculas), "#45" ou só
+ * "45". `null` quando o termo não é um número de chamado — aí a busca segue só
+ * no título, na descrição e no protocolo.
+ */
+export function numeroDaBusca(termo: string): number | null {
+  const achado = /^(?:chamado-|#)?\s*([1-9][0-9]{0,9})$/i.exec(termo.trim());
+  if (!achado) return null;
+  const numero = Number(achado[1]);
+  return numero <= 2147483647 ? numero : null;
+}

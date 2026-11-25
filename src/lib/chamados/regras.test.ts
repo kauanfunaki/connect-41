@@ -142,3 +142,22 @@ describe("trocas de situação oferecidas na tela (melhoria-782)", () => {
     expect(situacoesDoSeletor({ status: "EM_ANDAMENTO", approvalStatus: sem }, "solicitante")).toEqual([]);
   });
 });
+
+describe("busca pelo número do chamado (bug-819)", () => {
+  it("lê o id curto do cartão, o #45 e o número sozinho", async () => {
+    const { numeroDaBusca } = await import("./regras");
+    expect(numeroDaBusca("chamado-45")).toBe(45);
+    expect(numeroDaBusca(" Chamado-45 ")).toBe(45);
+    expect(numeroDaBusca("#45")).toBe(45);
+    expect(numeroDaBusca("45")).toBe(45);
+  });
+
+  it("texto, zero à esquerda e número grande demais não são número de chamado", async () => {
+    const { numeroDaBusca } = await import("./regras");
+    expect(numeroDaBusca("impressora")).toBeNull();
+    expect(numeroDaBusca("chamado 45")).toBeNull();
+    expect(numeroDaBusca("045")).toBeNull();
+    expect(numeroDaBusca("0")).toBeNull();
+    expect(numeroDaBusca("99999999999")).toBeNull();
+  });
+});
