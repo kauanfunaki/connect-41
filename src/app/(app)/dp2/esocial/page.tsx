@@ -23,11 +23,12 @@ import type { Pendencia } from "@/lib/dp2/esocial/eventos";
 import { Input } from "@/components/ui/Input";
 import { FormulariosDeSst } from "@/components/dp2/FormulariosDeSst";
 import { colaboradoresDaEmpresa } from "@/lib/dp2/servidor";
-import { MOTIVOS_DE_AFASTAMENTO } from "@/lib/dp2/esocial/naoPeriodicos";
+import { MOTIVOS_DE_AFASTAMENTO, TIPOS_DE_REINTEGRACAO } from "@/lib/dp2/esocial/naoPeriodicos";
 import {
   gerarAdmissaoAction,
   gerarAfastamentoAction,
   gerarAlteracaoAction,
+  gerarReintegracaoAction,
   gerarPeriodicosEsocialAction,
   gerarTabelasEsocialAction,
   gerarTerminoSemVinculoAction,
@@ -74,6 +75,8 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
   ]);
   const comContrato = pessoas.filter((p) => p.dp2Vinculo && !p.dismissalDate);
+  // Reintegração (S-2298, funcionalidade-756): empregados desligados.
+  const desligados = pessoas.filter((p) => p.dp2Vinculo && p.dismissalDate && !semVinculo(p.dp2Vinculo.categoria));
   const admissaoDe = new Map<string, string>();
   for (const e of eventos) if ((e.tipo === "S-2200" || e.tipo === "S-2300") && e.personId && !admissaoDe.has(e.personId)) admissaoDe.set(e.personId, e.situacao);
   // Sócio, autônomo e estagiário: início no S-2300 e término no S-2399 (o desligado também aparece no término).
@@ -284,6 +287,48 @@ export default async function EsocialDoDp2({ searchParams }: { searchParams: Pro
                     </div>
                   </FormularioDoDp2>
                 </div>
+                {desligados.length > 0 && (
+                  <div>
+                    <h3 className="text-fs-3 font-semibold text-fg mb-2">Reintegração (S-2298)</h3>
+                    <FormularioDoDp2 acao={gerarReintegracaoAction} rotulo="Gerar S-2298" rotuloEnviando="Gerando…" variante="secondary">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <CampoForm label="Colaborador desligado" htmlFor="rei_personId">
+                          <Select id="rei_personId" name="personId" required defaultValue="">
+                            <option value="" disabled>
+                              Escolha…
+                            </option>
+                            {desligados.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </CampoForm>
+                        <CampoForm label="Tipo" htmlFor="tipoReintegracao">
+                          <Select id="tipoReintegracao" name="tipoReintegracao" defaultValue="1">
+                            {TIPOS_DE_REINTEGRACAO.map(([k, r]) => (
+                              <option key={k} value={k}>
+                                {k} · {r}
+                              </option>
+                            ))}
+                          </Select>
+                        </CampoForm>
+                        <CampoForm label="Retorno ao trabalho" htmlFor="retorno">
+                          <CampoData id="retorno" name="retorno" required />
+                        </CampoForm>
+                        <CampoForm label="Início dos efeitos financeiros" htmlFor="efeito" dica="Em branco, o próprio retorno.">
+                          <CampoData id="efeito" name="efeito" />
+                        </CampoForm>
+                        <CampoForm label="Processo judicial" htmlFor="processo" dica="Na reintegração judicial: 20 algarismos.">
+                          <Input id="processo" name="processo" inputMode="numeric" maxLength={25} />
+                        </CampoForm>
+                        <CampoForm label="Lei de anistia" htmlFor="leiAnistia" dica="Na anistia: número e ano (ex.: 8878/1994).">
+                          <Input id="leiAnistia" name="leiAnistia" maxLength={13} />
+                        </CampoForm>
+                      </div>
+                    </FormularioDoDp2>
+                  </div>
+                )}
               </div>
             )}
             {tela.podeAgir && semVinculoComContrato.length > 0 && (

@@ -47,6 +47,7 @@ import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
 import {
   gerarAdmissao,
   gerarAfastamento,
+  gerarReintegracao,
   gerarAlteracao,
   gerarAso,
   gerarCat,
@@ -1472,6 +1473,29 @@ export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Prom
     metadata: { nome: p.name, motivo, inicio },
   });
   return respostaDoEvento("S-2230", p.name, r);
+}
+
+/** S-2298: a reintegração de quem foi desligado (funcionalidade-756). */
+export async function gerarReintegracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const retorno = texto(fd, "retorno");
+  const efeito = texto(fd, "efeito") || retorno;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(retorno)) return erro("Informe a data do retorno ao trabalho.");
+  const tipo = texto(fd, "tipoReintegracao");
+  const r = await gerarReintegracao(a.tenantId, p.id, { tipo, processo: texto(fd, "processo") || null, leiAnistia: texto(fd, "leiAnistia") || null, retorno, efeito }, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_reintegracao",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, tipo, retorno, efeito },
+  });
+  const resposta = respostaDoEvento("S-2298", p.name, r);
+  return resposta?.ok ? { ...resposta, texto: `${resposta.texto} Tire a data de desligamento do cadastro da pessoa para ela voltar à folha.` } : resposta;
 }
 
 const ehData = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
