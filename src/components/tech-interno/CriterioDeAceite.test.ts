@@ -99,6 +99,16 @@ describe("CriterioDeAceite", () => {
     expect(h.indexOf("PR mergeado")).toBeLessThan(h.indexOf("Ligar o módulo."));
   });
 
+  // melhoria-826 (25/11/2026).
+  it("Antes de testar com tudo feito recolhe numa linha com a contagem", () => {
+    const texto = ["Antes de testar:", "- Ligar o módulo.", "Aprovado quando:", "- a"].join("\n");
+    const marca = { por: "Pessoa fictícia", quando: "11/11/2026, 09:00" };
+    const h = html({ texto, marcasDoPreparo: { 1: marca }, automaticas: [{ chave: "pr", rotulo: "PR mergeado", marca }] });
+    expect(h).toContain("2 de 2 feitos");
+    expect(h).not.toContain(">Antes de testar</h3>");
+    expect(h).toMatch(/aria-expanded="false"/);
+  });
+
   it("sem \"Antes de testar\" no critério, as conferências do PR entram antes dos passos", () => {
     const h = html({ texto: "Passos:\n1. Abra.\nAprovado quando:\n- a", automaticas: [{ chave: "pr", rotulo: "PR mergeado", marca: null }] });
     expect(h.indexOf(">Antes de testar</h3>")).toBeGreaterThan(-1);

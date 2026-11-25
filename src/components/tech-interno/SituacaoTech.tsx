@@ -14,11 +14,15 @@ import { SITUACOES } from "@/lib/tech-interno/regras";
 import { CORES_DA_SITUACAO } from "@/lib/tech-interno/cores";
 
 type Situacao = keyof typeof SITUACOES;
-type Props = { id: string; titulo: string; status: Situacao; version: number; podeEditar: boolean; forma?: "celula" | "selo" };
+type Props = {
+  id: string; titulo: string; status: Situacao; version: number; podeEditar: boolean; forma?: "celula" | "selo";
+  /** O PR e o commit que o item já tem: com os dois, concluir não pergunta de novo (melhoria-826). */
+  prUrl?: string | null; commitSha?: string | null;
+};
 
 // A situação muda na própria lista, no Kanban e na Agenda (26/10/2026); o servidor
 // grava quem mudou e o valor anterior no histórico do item.
-export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = "celula" }: Props) {
+export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = "celula", prUrl = null, commitSha = null }: Props) {
   const router = useRouter(), toast = useToast(), [pendente, iniciar] = useTransition(), [atual, setAtual] = useState(status);
   // Concluir pede o PR e o commit da mudança (06/11/2026) — opcionais.
   const [concluindo, setConcluindo] = useState(false);
@@ -28,7 +32,9 @@ export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = 
   function mudar(proxima: Situacao, fechar: () => void) {
     fechar();
     if (proxima === atual || pendente) return;
-    if (proxima === "DONE") { setConcluindo(true); return; }
+    // Com PR e commit já no item (25/11/2026, melhoria-826), concluir grava
+    // direto: a janela só pergunta o que falta, e já vem com o que existe.
+    if (proxima === "DONE" && !(prUrl && commitSha)) { setConcluindo(true); return; }
     gravar(proxima);
   }
   function gravar(proxima: Situacao, entrega?: { prUrl?: string; commitSha?: string }) {
@@ -60,10 +66,10 @@ export function SituacaoTech({ id, titulo, status, version, podeEditar, forma = 
       }}>
         <p className="text-ui text-fg-secondary break-words">{titulo}</p>
         <CampoForm label="PR" htmlFor={`pr-${id}`}>
-          <Input id={`pr-${id}`} name="prUrl" type="url" inputMode="url" maxLength={500} placeholder="https://github.com/…/pull/123" autoFocus />
+          <Input id={`pr-${id}`} name="prUrl" type="url" inputMode="url" maxLength={500} placeholder="https://github.com/…/pull/123" defaultValue={prUrl ?? undefined} autoFocus={!prUrl} />
         </CampoForm>
         <CampoForm label="Commit" htmlFor={`commit-${id}`}>
-          <Input id={`commit-${id}`} name="commitSha" maxLength={64} pattern="[0-9a-fA-F]{7,64}" title="7 a 64 caracteres, só 0-9 e a-f." placeholder="a1b2c3d" className="font-mono" />
+          <Input id={`commit-${id}`} name="commitSha" maxLength={64} pattern="[0-9a-fA-F]{7,64}" title="7 a 64 caracteres, só 0-9 e a-f." placeholder="a1b2c3d" className="font-mono" defaultValue={commitSha ?? undefined} autoFocus={!!prUrl} />
         </CampoForm>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => setConcluindo(false)}>Cancelar</Button>
