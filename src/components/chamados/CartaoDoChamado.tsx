@@ -8,7 +8,7 @@ import { formatInstantDate, formatInstantDateTime } from "@/lib/format";
 import { tempoRelativo } from "@/lib/notificacoes/tempo";
 import { idadeDaAtividade, prazoRelativo, type Atividade } from "@/lib/chamados/atividade";
 import { ROTULOS, ROTULOS_PRIORIDADE, fechado, type Prioridade, type Status } from "@/lib/chamados/regras";
-import { enderecoDe } from "@/lib/enderecoCurto";
+import { enderecoDe, idCurto } from "@/lib/enderecoCurto";
 import { TOM_DA_PRIORIDADE, TOM_DA_SITUACAO } from "@/lib/chamados/tons";
 
 // O cartão da lista de chamados (proposta C, escolhida em 03/11/2026): à
@@ -93,6 +93,8 @@ export function CartaoDoChamado(p: Props) {
         <span data-dica={`Última atividade em ${formatInstantDateTime(p.ultimaAtividade)}`} className="relative z-10 shrink-0"><Selo tom={tomDaAtividade} className="font-semibold">{tempoRelativo(p.ultimaAtividade, p.agora)}</Selo></span>
       </div>
       <p className="flex flex-wrap items-center gap-1.5 text-helper">
+        {/* O id curto, o mesmo do endereço e da busca (25/11/2026, bug-819). */}
+        {typeof p.numero === "number" && <span aria-label="Número do chamado" className="font-mono tabular-nums text-fg-muted">{idCurto("chamado", p.numero)}</span>}
         <span aria-label="Grupo e categoria" className="inline-flex items-center rounded-md border px-2 py-0.5 font-medium" style={{ color: p.corCategoria, borderColor: `color-mix(in srgb, ${p.corCategoria} 32%, transparent)`, backgroundColor: `color-mix(in srgb, ${p.corCategoria} 10%, var(--c41-surface))` }}>{p.categoria}</span>
         <span className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5" style={{ color: p.setor.cor, backgroundColor: `color-mix(in srgb, ${p.setor.cor} 10%, var(--c41-surface))` }}><span aria-hidden className="size-1.5 rounded-full" style={{ backgroundColor: p.setor.cor }} />{p.setor.rotulo}</span>
       </p>

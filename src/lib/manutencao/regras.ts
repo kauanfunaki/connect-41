@@ -123,3 +123,88 @@ export function comManutencaoEmTeste(valor: string | undefined, id: string): str
   const outras = manutencoesEmTeste(valor).filter((x) => x !== id);
   return [...outras, id].slice(-MAXIMO_NO_COOKIE).join(",");
 }
+
+/** O valor novo do cookie, sem a manutenção — vazio quando não sobra nenhuma. */
+export function semManutencaoEmTeste(valor: string | undefined, id: string): string {
+  return manutencoesEmTeste(valor).filter((x) => x !== id).join(",");
+}
+
+// ── O aviso a cada entrada (25/11/2026, bug-833) ─────────────────────────────
+//
+// Até aqui, o "Abrir para testar" valia pelas 10 horas do cookie: depois do
+// clique, o aviso nunca mais aparecia para quem conserta, que esquecia que a
+// tela estava em manutenção. Agora o aviso volta toda vez que a pessoa ENTRA
+// na tela; o teste vale enquanto ela está DENTRO dela.
+//
+// - Entrar: o "Abrir para testar" grava, além do cookie de teste, um passe de
+//   entrada de um minuto, gasto na primeira abertura da tela.
+// - Estar dentro: o pedido vem da própria tela (o Referer é dela) — os
+//   cliques e filtros de dentro, a navegação para uma página de dentro dela.
+// - Vindo de fora (menu, outra tela, link), o aviso aparece de novo, e o teste
+//   sai do cookie: até o "Tentar de novo" do aviso pede outro clique.
+// - Recarregar a página (F5) conta como entrar: o navegador repete o Referer
+//   de quando a página abriu.
+
+/** As opções dos dois cookies: fora do alcance do JavaScript, no site inteiro. */
+export function opcoesDoCookieDeTeste(maxAge: number) {
+  return { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge };
+}
+
+/** O passe de entrada, gravado pelo "Abrir para testar" e gasto pelo proxy. */
+export const COOKIE_DE_ENTRADA = "manutencao_entrada";
+
+/** Quanto dura o passe: o tempo de a página recarregar. */
+export const SEGUNDOS_DE_ENTRADA = 60;
+
+/** O caminho de um Referer, ou `null` sem Referer ou com um que não se lê. */
+export function caminhoDoReferer(referer: string | null | undefined): string | null {
+  if (!referer) return null;
+  try {
+    return new URL(referer).pathname;
+  } catch {
+    return null;
+  }
+}
+
+export type TesteNaManutencao = {
+  /** A tela abre para a pessoa (e não o aviso). */
+  abre: boolean;
+  /** O passe de entrada foi usado agora: o proxy apaga o cookie dele. */
+  gastaEntrada: boolean;
+  /** O teste desta manutenção sai do cookie (o aviso voltou a aparecer). */
+  tiraDoTeste: boolean;
+};
+
+/**
+ * Se quem conserta entra na tela em manutenção, ou vê o aviso. Quem não
+ * conserta nunca entra, e nada muda nos cookies dele. Prefetch (o Next
+ * buscando de antemão o link do menu) não mexe nos cookies: a pessoa ainda
+ * não saiu de onde está.
+ */
+export function testeNaManutencao(p: {
+  conserta: boolean;
+  manutencao: string;
+  tela: string;
+  cookieDeTeste: string | undefined;
+  cookieDeEntrada: string | undefined;
+  referer: string | null | undefined;
+  prefetch: boolean;
+}): TesteNaManutencao {
+  const emTeste = p.conserta && manutencoesEmTeste(p.cookieDeTeste).includes(p.manutencao);
+  if (!emTeste) return { abre: false, gastaEntrada: false, tiraDoTeste: false };
+  const deDentro = (() => {
+    const caminho = caminhoDoReferer(p.referer);
+    return caminho !== null && caminho !== PAGINA_DE_MANUTENCAO && telaDoCaminho(caminho) === p.tela;
+  })();
+  if (deDentro) return { abre: true, gastaEntrada: false, tiraDoTeste: false };
+  const comPasse = p.cookieDeEntrada === p.manutencao;
+  if (comPasse) return { abre: true, gastaEntrada: !p.prefetch, tiraDoTeste: false };
+  return { abre: false, gastaEntrada: false, tiraDoTeste: !p.prefetch };
+}
+
+/** O pedido é um prefetch do Next (o link buscado de antemão), e não a pessoa abrindo. */
+export function ehPrefetch(cabecalhos: { get(nome: string): string | null }): boolean {
+  if (cabecalhos.get("next-router-prefetch")) return true;
+  const proposito = `${cabecalhos.get("sec-purpose") ?? ""} ${cabecalhos.get("purpose") ?? ""}`;
+  return /prefetch/i.test(proposito);
+}

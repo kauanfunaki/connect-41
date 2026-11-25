@@ -7,7 +7,16 @@ import type { AuthContext } from "@/lib/auth/context";
 
 type CatCliente = { id: string; tenantId: string; companyId: string; name: string; line: string; position: number };
 type Ligacao = { tenantId: string; companyId: string; categoryId: string; clientCategoryId: string };
-type DataDeCaixa = { tenantId: string; companyId: string; receivableDays: number; payableDays: number };
+type DataDeCaixa = {
+  tenantId: string;
+  companyId: string;
+  receivableDays?: number;
+  payableDays?: number;
+  balanceSource?: string | null;
+  salesOrdersEnabled?: boolean;
+  salesOrderStages?: string | null;
+  scenarioVisibleToClient?: boolean;
+};
 
 const estado = vi.hoisted(() => ({
   ctx: null as unknown as AuthContext,
@@ -15,6 +24,7 @@ const estado = vi.hoisted(() => ({
   categorias: [] as CatCliente[],
   ligacoes: [] as Ligacao[],
   datas: [] as DataDeCaixa[],
+  premissas: [] as { companyId: string; name: string; kind: string; amount: string; position: number }[],
   auditoria: [] as { action: string; entityId?: string }[],
   seq: 0,
 }));
@@ -105,6 +115,16 @@ const banco = {
       return {};
     },
   },
+  cashFlowAssumption: {
+    deleteMany: async ({ where }: { where: Onde }) => {
+      estado.premissas = estado.premissas.filter((p) => p.companyId !== where.companyId);
+      return {};
+    },
+    createMany: async ({ data }: { data: (typeof estado.premissas)[number][] }) => {
+      estado.premissas.push(...data);
+      return { count: data.length };
+    },
+  },
   $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(banco),
 };
 vi.mock("@/lib/prisma", () => ({ getPrisma: () => banco }));
@@ -117,6 +137,7 @@ import {
   ligarCategoria,
   preverImportacaoDoDePara,
   salvarDataDeCaixa,
+  salvarPedidosECenario,
 } from "./actions";
 
 function planilha(texto: string): FormData {
@@ -140,6 +161,7 @@ beforeEach(() => {
   estado.categorias = [];
   estado.ligacoes = [];
   estado.datas = [];
+  estado.premissas = [];
   estado.auditoria = [];
   estado.seq = 0;
 });
@@ -254,8 +276,8 @@ describe("importar o de-para", () => {
 describe("data de caixa", () => {
   it("grava os dias da empresa, só nela, e regrava sem duplicar", async () => {
     expect(await salvarDataDeCaixa("e1", 1, 0)).toEqual({ success: true });
-    expect(await salvarDataDeCaixa("e1", 2, 1)).toEqual({ success: true });
-    expect(estado.datas).toEqual([{ tenantId: "t1", companyId: "e1", receivableDays: 2, payableDays: 1 }]);
+    expect(await salvarDataDeCaixa("e1", 2, 1, "omie")).toEqual({ success: true });
+    expect(estado.datas).toEqual([{ tenantId: "t1", companyId: "e1", receivableDays: 2, payableDays: 1, balanceSource: "omie" }]);
     expect(estado.auditoria.map((a) => a.action)).toEqual(["fluxo.data_de_caixa", "fluxo.data_de_caixa"]);
   });
 
@@ -263,6 +285,46 @@ describe("data de caixa", () => {
     expect(await salvarDataDeCaixa("e1", -1, 0)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
     expect(await salvarDataDeCaixa("e1", 1.5, 0)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
     expect(await salvarDataDeCaixa("e1", 0, 31)).toEqual({ error: "Use um número inteiro de 0 a 30 dias." });
+    expect(estado.datas).toEqual([]);
+  });
+});
+
+describe("origem do saldo", () => {
+  it("automático grava nulo, e origem desconhecida é recusada", async () => {
+    expect(await salvarDataDeCaixa("e1", 0, 0, "auto")).toEqual({ success: true });
+    expect(estado.datas[0]?.balanceSource).toBeNull();
+    expect(await salvarDataDeCaixa("e1", 0, 0, "banco" as never)).toEqual({ error: "Origem do saldo desconhecida." });
+  });
+});
+
+describe("pedidos e cenário", () => {
+  it("liga os pedidos com as etapas e regrava as premissas da empresa", async () => {
+    expect(
+      await salvarPedidosECenario("e1", {
+        pedidos: true,
+        etapas: ["20", "50", "x"],
+        cenarioNoPortal: true,
+        premissas: [
+          { nome: " Frete ", tipo: "fixo", valor: 8000 },
+          { nome: "Comissões", tipo: "percentual", valor: 5 },
+        ],
+      })
+    ).toEqual({ success: true });
+    expect(estado.datas[0]).toMatchObject({ companyId: "e1", salesOrdersEnabled: true, salesOrderStages: "20,50", scenarioVisibleToClient: true });
+    expect(estado.premissas.map((p) => [p.name, p.kind, p.amount, p.position])).toEqual([
+      ["Frete", "fixo", "8000.0000", 0],
+      ["Comissões", "percentual", "5.0000", 1],
+    ]);
+    // Regravar troca a lista inteira.
+    await salvarPedidosECenario("e1", { pedidos: false, etapas: [], cenarioNoPortal: false, premissas: [] });
+    expect(estado.premissas).toEqual([]);
+    expect(estado.auditoria.at(-1)?.action).toBe("fluxo.pedidos_e_cenario");
+  });
+
+  it("recusa premissa sem nome ou acima de 100% e não grava nada", async () => {
+    expect(await salvarPedidosECenario("e1", { pedidos: false, etapas: [], cenarioNoPortal: false, premissas: [{ nome: "X", tipo: "percentual", valor: 150 }] })).toEqual({
+      error: "“X” passa de 100% das vendas.",
+    });
     expect(estado.datas).toEqual([]);
   });
 });

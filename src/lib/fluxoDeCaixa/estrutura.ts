@@ -13,7 +13,11 @@
 
 export type GrupoDoFluxo = "operacional" | "investimento" | "financiamento" | "fora";
 
-export type LinhaDoFluxo = { code: string; label: string; grupo: GrupoDoFluxo };
+/**
+ * `automatica`: a linha é preenchida pelo Connect, não por categoria (os
+ * pedidos de venda, fase 2): não aparece para escolher no de-para.
+ */
+export type LinhaDoFluxo = { code: string; label: string; grupo: GrupoDoFluxo; automatica?: true };
 
 export const GRUPOS_DO_FLUXO: { code: GrupoDoFluxo; label: string }[] = [
   { code: "operacional", label: "Operacional" },
@@ -24,6 +28,8 @@ export const GRUPOS_DO_FLUXO: { code: GrupoDoFluxo; label: string }[] = [
 
 export const LINHAS_DO_FLUXO: LinhaDoFluxo[] = [
   { code: "recebimentos", label: "Recebimentos de clientes", grupo: "operacional" },
+  // Os pedidos de venda do Omie ainda não faturados (26/11/2026, funcionalidade-838).
+  { code: "pedidos", label: "Pedidos a faturar", grupo: "operacional", automatica: true },
   { code: "outras_entradas", label: "Outras entradas operacionais", grupo: "operacional" },
   { code: "impostos", label: "Impostos e contribuições", grupo: "operacional" },
   { code: "materia_prima", label: "Fornecedores e matéria-prima", grupo: "operacional" },
@@ -47,6 +53,14 @@ const POR_CODIGO = new Map(LINHAS_DO_FLUXO.map((l) => [l.code, l]));
 
 export function linhaDoCodigo(code: string): LinhaDoFluxo | null {
   return POR_CODIGO.get(code) ?? null;
+}
+
+/** As linhas que uma categoria do cliente pode ter (sem as automáticas). */
+export const LINHAS_DAS_CATEGORIAS = LINHAS_DO_FLUXO.filter((l) => !l.automatica);
+
+/** A linha existe e pode ser escolhida para uma categoria do cliente. */
+export function linhaDeCategoriaValida(code: string): boolean {
+  return LINHAS_DAS_CATEGORIAS.some((l) => l.code === code);
 }
 
 export function rotuloDaLinha(code: string): string {
@@ -105,11 +119,11 @@ const OUTROS_NOMES: Record<string, string> = {
 export function linhaDeTexto(texto: string): string | null {
   const k = chaveDeTexto(texto);
   if (!k) return null;
-  for (const l of LINHAS_DO_FLUXO) {
+  for (const l of LINHAS_DAS_CATEGORIAS) {
     if (k === l.code || k === chaveDeTexto(l.label)) return l.code;
   }
   const curta = semParenteses(texto);
-  for (const l of LINHAS_DO_FLUXO) {
+  for (const l of LINHAS_DAS_CATEGORIAS) {
     if (curta === semParenteses(l.label)) return l.code;
   }
   return OUTROS_NOMES[k] ?? OUTROS_NOMES[curta] ?? OUTROS_NOMES[k.replace(/[()]/g, "").replace(/\s+/g, " ")] ?? null;

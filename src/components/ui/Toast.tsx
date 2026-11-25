@@ -100,11 +100,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPausado(false);
         }}
-        className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 w-[min(360px,calc(100vw-2rem))]"
+        // Só os avisos recebem o ponteiro (bug-839, 25/11/2026): sem aviso, as
+        // duas regiões vazias com o `gap-2` entre elas davam ~8 px de altura ao
+        // contêiner, que ficava por cima da tela e engolia o clique no canto
+        // inferior direito. A pausa continua: o hover e o foco chegam aqui
+        // pelos avisos.
+        className="pointer-events-none fixed bottom-20 right-4 z-50 flex flex-col gap-2 w-[min(360px,calc(100vw-2rem))]"
       >
         {/* As duas regiões ficam montadas e visíveis mesmo vazias (sem
             `hidden`): fora da árvore de acessibilidade, o leitor de tela não
-            anuncia o que entra nelas. Vazias, não ocupam altura. */}
+            anuncia o que entra nelas. */}
         <div role="alert" className="flex flex-col gap-2">
           {toasts.filter((t) => t.kind === "error").map(item)}
         </div>
@@ -147,7 +152,7 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
   if (aviso.aoClicar) {
     const aoClicar = aviso.aoClicar;
     return (
-      <div className="c41-surgir w-full flex items-start rounded-md border border-border-strong bg-surface-elevated text-ui text-fg shadow-lg">
+      <div className="pointer-events-auto c41-surgir w-full flex items-start rounded-md border border-border-strong bg-surface-elevated text-ui text-fg shadow-lg">
         <button
           type="button"
           onClick={() => {
@@ -188,7 +193,7 @@ function ItemDoAviso({ aviso, pausado, onFechar }: { aviso: Toast; pausado: bool
       type="button"
       onClick={() => onFechar(aviso.id)}
       title="Fechar"
-      className={`c41-surgir w-full flex items-start text-left rounded-md border border-border-strong bg-surface-elevated text-ui text-fg shadow-lg ${
+      className={`pointer-events-auto c41-surgir w-full flex items-start text-left rounded-md border border-border-strong bg-surface-elevated text-ui text-fg shadow-lg ${
         aviso.corpo ? "px-3 py-3" : "gap-2.5 px-3.5 py-2.5"
       }`}
     >

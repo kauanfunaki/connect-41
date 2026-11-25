@@ -193,14 +193,8 @@ function Preparo({ pontos, otimistas, podeEditar, alternar, automaticas }: Props
   const total = automaticas.length + pontos.length;
   const feitos = automaticas.filter(a => a.marca).length + pontos.filter(p => otimistas[chaveDoPonto("antes", p.posicao)]).length;
   const pendente = feitos < total;
-  return <div className="flex flex-col gap-2">
-    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-      <h3 id="tech-antes-de-testar" className="flex items-center gap-1.5 text-ui font-semibold text-fg-secondary">
-        {pendente && <TriangleAlert size={14} aria-hidden className="shrink-0 text-warning-fg" />}Antes de testar
-      </h3>
-      <span className="text-helper tabular-nums text-fg-muted" aria-live="polite">{feitos} de {total} feito{total === 1 ? "" : "s"}</span>
-    </div>
-    <ul aria-labelledby="tech-antes-de-testar" className={`flex flex-col divide-y overflow-hidden rounded-md border ${pendente ? "divide-warning/20 border-warning/30" : "divide-border border-border"}`}>
+  const contagem = <span className="text-helper tabular-nums text-fg-muted" aria-live="polite">{feitos} de {total} feito{total === 1 ? "" : "s"}</span>;
+  const linhas = <>
       {automaticas.map(a => {
         const id = `tech-auto-${a.chave}`;
         return <li key={a.chave} className={`flex gap-3 px-3 py-2.5 ${a.marca ? "bg-success/5" : "bg-warning/5"}`}>
@@ -216,6 +210,26 @@ function Preparo({ pontos, otimistas, podeEditar, alternar, automaticas }: Props
         </li>;
       })}
       {pontos.map(ponto => <PontoParaMarcar key={ponto.posicao} secao="antes" ponto={ponto} otimistas={otimistas} podeEditar={podeEditar} alternar={alternar} />)}
+  </>;
+  // Tudo feito (25/11/2026, melhoria-826): a seção recolhe numa linha com a
+  // contagem e abre num clique. Desmarcar um ponto lá dentro a devolve aberta,
+  // em destaque de atenção.
+  if (!pendente) return <Accordion className="rounded-md border border-border" classeDoCabecalho="w-full px-3 py-2.5" classeDoConteudo="border-t border-border"
+    titulo={<span className="flex w-full flex-wrap items-baseline justify-between gap-x-3">
+      <span className="flex items-center gap-1.5 text-ui font-semibold text-fg-secondary"><CircleCheck size={14} aria-hidden className="shrink-0 text-success-fg" />Antes de testar</span>
+      {contagem}
+    </span>}>
+    <ul aria-label="Antes de testar" className="flex flex-col divide-y divide-border">{linhas}</ul>
+  </Accordion>;
+  return <div className="flex flex-col gap-2">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+      <h3 id="tech-antes-de-testar" className="flex items-center gap-1.5 text-ui font-semibold text-fg-secondary">
+        <TriangleAlert size={14} aria-hidden className="shrink-0 text-warning-fg" />Antes de testar
+      </h3>
+      {contagem}
+    </div>
+    <ul aria-labelledby="tech-antes-de-testar" className="flex flex-col divide-y divide-warning/20 overflow-hidden rounded-md border border-warning/30">
+      {linhas}
     </ul>
   </div>;
 }

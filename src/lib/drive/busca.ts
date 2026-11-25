@@ -61,10 +61,18 @@ export const EMPRESAS_POR_VEZ = 8;
 export const MAXIMO_DE_EMPRESAS = 40;
 /**
  * Quantos números o termo precisa ter para o grupo "Empresas" procurar no
- * CNPJ — a régua que a busca de empresa da tela já usava. Vale só para o termo
- * que é um número (ver `cnpjDoTermo`).
+ * CNPJ: o mesmo mínimo do termo (`MINIMO_DO_TERMO`), para quem digita o começo
+ * do CNPJ achar todas as filiais já no segundo dígito (25/11/2026, bug-832 —
+ * antes eram 3, e "17" achava só a empresa com "17" no nome). Vale só para o
+ * termo que é um número (ver `cnpjDoTermo`).
  */
-export const DIGITOS_DO_CNPJ_DA_EMPRESA = 3;
+export const DIGITOS_DO_CNPJ_DA_EMPRESA = 2;
+/**
+ * A partir de quantos números o termo procura em qualquer parte do CNPJ
+ * ("0001", o fim da matriz); abaixo disso, só no começo — "17" no meio do CNPJ
+ * traria quase todas as empresas.
+ */
+export const DIGITOS_PARA_O_MEIO_DO_CNPJ = 3;
 /** O parâmetro da URL com as levas de empresas à vista no resultado (o `pagina` é o dos arquivos). */
 export const PARAMETRO_MAIS_EMPRESAS = "maisEmpresas";
 
@@ -309,7 +317,7 @@ export function clausulaDaBusca(input: {
 
 /**
  * Os dígitos do termo, quando ele é um número: só números e a pontuação do
- * CNPJ ("12.345", "123", "12.345.678/0001-90"), com 3 dígitos ou mais. Termo
+ * CNPJ ("12.345", "17", "12.345.678/0001-90"), com 2 dígitos ou mais. Termo
  * com letra não vai ao CNPJ — "guia 092026" é nome de arquivo, e traria toda
  * empresa com esses números no meio do CNPJ.
  */
@@ -330,9 +338,11 @@ export function empresasDoTermo(tenantId: string, termo: string): Prisma.Company
   const t = termo.trim();
   if ([...t].length < MINIMO_DO_TERMO) return null;
   const cnpj = cnpjDoTermo(t);
+  // Dois dígitos, só no começo do CNPJ; três ou mais, em qualquer parte (bug-832).
+  const noCnpj = cnpj ? [{ cnpj: cnpj.length >= DIGITOS_PARA_O_MEIO_DO_CNPJ ? { contains: cnpj } : { startsWith: cnpj } }] : [];
   return {
     tenantId,
-    OR: [{ name: { contains: t } }, { displayName: { contains: t } }, { tradeName: { contains: t } }, ...(cnpj ? [{ cnpj: { contains: cnpj } }] : [])],
+    OR: [{ name: { contains: t } }, { displayName: { contains: t } }, { tradeName: { contains: t } }, ...noCnpj],
   };
 }
 

@@ -39,6 +39,7 @@ import {
   type EmpregadorEsocial,
   type EventoGerado,
   type RubricaEsocial,
+  type TrabalhadorEsocial,
 } from "./eventos";
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -159,6 +160,8 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
     where: { tenantId, competenciaId },
     include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true } } } } },
   });
+  // Outras bases de INSS (funcionalidade-769): vão no infoMV do S-1200, com o indMV do cálculo.
+  const outrasBases = await prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } });
   const novoId = geradorDeId(empregador.cnpj || "0", new Date());
   const eventos: EventoGerado[] = [];
   for (const c of calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"))) {
@@ -179,6 +182,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       itens,
       liquido: n(c.liquido),
       nascimento: isoDoDia(c.person.birthDate),
+      infoMV: infoMVDoCalculo(c.memoria, outrasBases.filter((o) => o.personId === c.person.id)),
     };
     eventos.push(eventoS1200(empregador, perApur, t, novoId));
     eventos.push(eventoS1210(empregador, mesDoPagamento, dtPgto, t, novoId, perApur));
@@ -369,4 +373,14 @@ export async function gerarDesligamento(tenantId: string, personId: string, d: P
   const fimProjetado = indenizado ? dataProjetada(desligamento, diasDeAvisoPrevio(admissao, desligamento)).toISOString().slice(0, 10) : null;
   const ev = eventoS2299(v.empregador, v.t, { motivo: d.motivo, data: d.data, avisoIndenizado: indenizado, fimProjetado, verbas }, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+/** O infoMV do S-1200: o indMV que o cálculo gravou e as outras empresas do mês. */
+function infoMVDoCalculo(
+  memoria: unknown,
+  outras: readonly { tpInsc: number; nrInsc: string; codCateg: string; remuneracao: unknown }[]
+): TrabalhadorEsocial["infoMV"] {
+  const indMV = (memoria as { infoMV?: { indMV?: number } } | null)?.infoMV?.indMV;
+  if (!outras.length || (indMV !== 1 && indMV !== 2 && indMV !== 3)) return null;
+  return { indMV, outras: outras.map((o) => ({ tpInsc: o.tpInsc === 2 ? 2 : 1, nrInsc: o.nrInsc, codCateg: o.codCateg, valor: Number(o.remuneracao) })) };
 }

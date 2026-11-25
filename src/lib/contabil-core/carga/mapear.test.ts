@@ -148,3 +148,145 @@ describe("carga do Bloco B (B5): conciliação", () => {
     expect(mapear.mesmoJson([], {})).toBe(false);
   });
 });
+
+describe("carga do Bloco C (C4): documentos", () => {
+  const datas = { created_at: quando, updated_at: quando, deleted_at: null };
+  const hex = (b: Uint8Array) => Buffer.from(b).toString("hex");
+
+  it("nota: dedup_key, chave, procedência e a transação ligada copiados como estão", () => {
+    const n = mapear.notaFiscal({
+      id: "n1", empresa_id: "e1", tipo: "nfe", numero: "5101", serie: "1", cnpj_emitente: "99.000.001/0001-01", nome_emitente: "ALFA",
+      cnpj_destinatario: "31.415.926/0001-71", valor: "800.00", data_emissao: quando, status: "associada", transacao_id: "t1",
+      chave_acesso: "3".repeat(44), assinatura_motivo: null, dedup_key: "d".repeat(64), observacao: null, origem: "xml_nao_verificado", ...datas,
+    }, T);
+    expect(n).toMatchObject({ dedupKey: "d".repeat(64), origem: "xml_nao_verificado", chaveAcesso: "3".repeat(44), transacaoId: "t1", valor: "800.00", status: "associada" });
+    expect(n.dataEmissao).toEqual(quando);
+    expect(n.serie).toBe("1");
+    expect(mapear.notaFiscal({ ...n, id: "n2", empresa_id: "e1", cnpj_emitente: "x", dedup_key: "k", tipo: "nfse", numero: "7", valor: "1.00", data_emissao: quando, status: "pendente", origem: "ocr", ...datas }, T).chaveAcesso).toBeNull();
+  });
+
+  it("base64 decodificado como o b64decode do Python (sem validate)", () => {
+    // Saídas do Python (base64.b64decode), uma a uma.
+    const casos: [string, string | null][] = [
+      ["QUJD", "414243"], ["QUI=", "4142"], ["QQ==", "41"], ["QUJD\nREVG\n", "414243444546"], ["QU JD!!", "414243"],
+      ["QQ=Q=", "4104"], ["Q=Q==", "41"], ["QUI=QQ==", "4142"], ["QUJ=D", "4142"], ["QQ=a=", "4106"], ["====", ""],
+      ["dataQUJD", "75ab5a414243"],
+      ["Q", null], ["QUI", null], ["QQ", null], ["QU=I", null], ["QUJDRA", null], ["isto-nao-e-base64!", null], ["a/pdf;base64,QUJD", null], ["QéUJD", null],
+    ];
+    for (const [entrada, esperado] of casos) {
+      const r = mapear.base64DoPython(entrada);
+      expect(r === null ? null : hex(r), entrada).toBe(esperado);
+    }
+  });
+
+  it("arquivo do comprovante: sem arquivo, base64 inválido, hash conferido, hash ausente calculado", () => {
+    const bytes = new TextEncoder().encode("%PDF-1.4 comprovante inventado");
+    const base64 = Buffer.from(bytes).toString("base64");
+    const sha = mapear.sha256Hex(bytes);
+    expect(mapear.arquivoDoComprovante({ arquivo_base64: null, arquivo_sha256: null })).toEqual({ tipo: "sem_arquivo" });
+    expect(mapear.arquivoDoComprovante({ arquivo_base64: "", arquivo_sha256: null })).toEqual({ tipo: "sem_arquivo" });
+    expect(mapear.arquivoDoComprovante({ arquivo_base64: "isto-nao-e-base64!", arquivo_sha256: null })).toEqual({ tipo: "base64_invalido" });
+    expect(mapear.arquivoDoComprovante({ arquivo_base64: "isto-nao-e-base64!", arquivo_sha256: sha })).toMatchObject({ tipo: "recusa" });
+    const certo = mapear.arquivoDoComprovante({ arquivo_base64: base64.replace(/(.{8})/g, "$1\n"), arquivo_sha256: sha });
+    expect(certo).toMatchObject({ tipo: "arquivo", sha256: sha, calculado: false });
+    expect(certo.tipo === "arquivo" && hex(certo.bytes)).toBe(hex(bytes));
+    expect(mapear.arquivoDoComprovante({ arquivo_base64: base64, arquivo_sha256: null })).toMatchObject({ tipo: "arquivo", sha256: sha, calculado: true });
+    expect(mapear.arquivoDoComprovante({ arquivo_base64: base64, arquivo_sha256: "0".repeat(64) })).toEqual({ tipo: "recusa", motivo: "SHA-256 do arquivo diferente do arquivo_sha256 do original" });
+  });
+
+  it("comprovante: com o arquivo em disco, e sem ele com o hash do original", () => {
+    const base = {
+      id: "c1", empresa_id: "e1", agencia_id: null, transacao_id: "t9", favorecido: "DELTA", cpf_cnpj: "96.000.004/0001-49", data_pagamento: quando,
+      data_vencimento: null, valor_documento: null, valor_pago: "250.00", juros: "3.00", multa: "0.00", desconto: "0.00", observacao: null,
+      arquivo_nome: "boleto.pdf", arquivo_sha256: "a".repeat(64), ...datas,
+    };
+    const com = mapear.comprovante(base, T, { sha256: "b".repeat(64), tamanho: 99, tipo: "application/pdf", storageKey: `${T}/c1.pdf` });
+    expect(com).toMatchObject({ arquivoSha256: "b".repeat(64), arquivoTamanho: 99, arquivoTipo: "application/pdf", storageKey: `${T}/c1.pdf`, valorPago: "250.00", juros: "3.00", transacaoId: "t9" });
+    expect(com).not.toHaveProperty("arquivoBase64");
+    const sem = mapear.comprovante({ ...base, arquivo_sha256: null }, T, null);
+    expect([sem.arquivoSha256, sem.arquivoTipo, sem.arquivoTamanho, sem.storageKey, sem.arquivoNome]).toEqual([null, null, null, null, "boleto.pdf"]);
+  });
+
+  it("cartão, fatura e gasto: números, datas e ligações", () => {
+    const c = mapear.cartao({ id: "k1", empresa_id: "e1", nome: "Corporativo", bandeira: "visa", ultimos_digitos: "1234", dia_fechamento: 5, dia_vencimento: 15, limite: "20000.00", ativo: false, ...datas }, T);
+    expect(c).toMatchObject({ diaFechamento: 5, diaVencimento: 15, limite: "20000.00", ativo: false, ultimosDigitos: "1234" });
+    const f = mapear.fatura({ id: "f1", empresa_id: "e1", cartao_id: "k1", competencia: "2026-05", data_fechamento: null, data_vencimento: quando, valor_total: "0.00", status: "paga", transacao_id: "t1", observacao: null, ...datas }, T);
+    expect(f).toMatchObject({ cartaoId: "k1", competencia: "2026-05", status: "paga", transacaoId: "t1", dataFechamento: null, valorTotal: "0.00" });
+    const g = mapear.lancamentoCartao({ id: "uuid5", empresa_id: "e1", fatura_id: "f1", data_compra: quando, descricao: "MERCADO", valor: "180.40", conta_id: null, parcela_atual: 1, parcela_total: 3, ...datas }, T);
+    expect(g).toMatchObject({ id: "uuid5", faturaId: "f1", valor: "180.40", parcelaAtual: 1, parcelaTotal: 3, contaId: null });
+    expect(mapear.lancamentoCartao({ ...g, id: "g2", empresa_id: "e1", fatura_id: "f1", data_compra: quando, descricao: "x", valor: "1.00", parcela_atual: null, parcela_total: undefined, ...datas }, T).parcelaAtual).toBeNull();
+  });
+
+  it("documento e distribuição da fatura: JSON sem conversão, aplicação nula, PDF conferido", () => {
+    const resultado = '{"itens": [{"data": "2026-05-02", "descricao": "RESTAURANTE", "valor": "1200.00"}], "total": "1200.00", "pendencias": [], "metodo": "COMPOSICAO", "revisado_por": "u-original"}';
+    const d = mapear.faturaDocumento({ id: "d1", empresa_id: "e1", fatura_id: "f1", nome: "composicao.pdf", hash_arquivo: "c".repeat(64), status: "principal", resultado, erro: null, ...datas }, T, { storageKey: `${T}/d1.pdf`, tamanho: 1234 });
+    expect(d.resultado).toEqual(JSON.parse(resultado));
+    expect(d).toMatchObject({ storageKey: `${T}/d1.pdf`, tamanho: 1234, hashArquivo: "c".repeat(64), status: "principal" });
+    expect(d).not.toHaveProperty("conteudo");
+
+    const aplicada = mapear.faturaDistribuicao({ id: "x1", empresa_id: "e1", fatura_id: "f1", versao: 4, distribuicoes: '{"g1": [{"conta_id": "c1", "historico": "H", "valor": "10.00"}]}', aplicacao: '{"antes": null, "transacao_id": "t1", "hash": "h"}', ...datas }, T);
+    expect(aplicada.aplicacao).toEqual({ antes: null, transacao_id: "t1", hash: "h" });
+    expect(aplicada.distribuicoes).toEqual({ g1: [{ conta_id: "c1", historico: "H", valor: "10.00" }] });
+    expect(aplicada.versao).toBe(4);
+    expect(mapear.faturaDistribuicao({ id: "x2", empresa_id: "e1", fatura_id: "f2", versao: 0, distribuicoes: "{}", aplicacao: null, ...datas }, T).aplicacao).toBeNull();
+    expect(mapear.faturaDistribuicao({ id: "x3", empresa_id: "e1", fatura_id: "f3", versao: 0, distribuicoes: "{}", aplicacao: "null", ...datas }, T).aplicacao).toBeNull();
+
+    const pdf = new TextEncoder().encode("%PDF-1.7 fatura");
+    expect(mapear.conferirPdfDaFatura(pdf, { hash_arquivo: mapear.sha256Hex(pdf) })).toBeNull();
+    expect(mapear.conferirPdfDaFatura(pdf, { hash_arquivo: "0".repeat(64) })).toMatch(/SHA-256/);
+    expect(mapear.conferirPdfDaFatura(null, { hash_arquivo: "0".repeat(64) })).toMatch(/sem conteúdo/);
+  });
+
+  it("travas do Connect: a linha que o MySQL recusaria fica de fora, com o motivo, e quem depende dela cai junto", () => {
+    const vazio: mapear.LinhasDoBlocoC = { notas: [], comprovantes: [], cartoes: [], faturas: [], lancamentos: [], documentos: [], distribuicoes: [] };
+    const comp = (id: string, extra: object) => ({ id, empresa_id: "e1", valor_pago: "10.00", juros: "0.00", multa: "0.00", desconto: "0.00", data_pagamento: quando, data_vencimento: null, ...datas, ...extra });
+    const puladas = mapear.puladasPelasTravas({
+      ...vazio,
+      comprovantes: [comp("ok", {}), comp("zero", { valor_pago: "0.00" }), comp("juros", { juros: "-1.00" }), comp("ano", { data_pagamento: new Date("0999-12-31T00:00:00Z") })],
+      cartoes: [
+        { id: "k-ok", bandeira: "visa", dia_fechamento: 5, dia_vencimento: 28, ...datas },
+        { id: "k-master", bandeira: "master", dia_fechamento: 30, dia_vencimento: 10, ...datas },
+        { id: "k-dia", bandeira: "elo", dia_fechamento: 30, dia_vencimento: 10, ...datas },
+      ],
+      faturas: [
+        { id: "f-ok", cartao_id: "k-ok", competencia: "2026-05", status: "aberta", transacao_id: "t1", ...datas },
+        { id: "f-dep", cartao_id: "k-master", competencia: "2026-05", status: "aberta", transacao_id: null, ...datas },
+        { id: "f-rep", cartao_id: "k-ok", competencia: "2026-05", status: "fechada", transacao_id: null, ...datas },
+        { id: "f-tx", cartao_id: "k-ok", competencia: "2026-06", status: "paga", transacao_id: "t1", ...datas },
+      ],
+      lancamentos: [
+        { id: "g-ok", fatura_id: "f-ok", valor: "0.00", data_compra: quando, ...datas },
+        { id: "g-neg", fatura_id: "f-ok", valor: "-10.00", data_compra: quando, ...datas },
+        { id: "g-dep", fatura_id: "f-dep", valor: "10.00", data_compra: quando, ...datas },
+      ],
+      documentos: [
+        { id: "d-ok", fatura_id: "f-ok", status: "revisar", hash_arquivo: "AB", ...datas },
+        { id: "d-caixa", fatura_id: "f-ok", status: "falhou", hash_arquivo: "ab", ...datas },
+        { id: "d-status", fatura_id: "f-ok", status: "erro", hash_arquivo: "cd", ...datas },
+        { id: "d-dep", fatura_id: "f-dep", status: "revisar", hash_arquivo: "ef", ...datas },
+      ],
+      distribuicoes: [{ id: "x-ok", fatura_id: "f-ok", versao: 0, ...datas }, { id: "x-neg", fatura_id: "f-tx", versao: -1, ...datas }, { id: "x-dep", fatura_id: "f-dep", versao: 1, ...datas }],
+      notas: [
+        { id: "n-ok", empresa_id: "e1", tipo: "nfe", status: "pendente", origem: "ocr", chave_acesso: null, dedup_key: "aa", data_emissao: quando, ...datas },
+        { id: "n-sem-chave", empresa_id: "e1", tipo: "nfe", status: "pendente", origem: "ocr", chave_acesso: null, dedup_key: "bb", data_emissao: quando, ...datas },
+        { id: "n-dedup", empresa_id: "e1", tipo: "nfse", status: "pendente", origem: "ocr", chave_acesso: null, dedup_key: "AA", data_emissao: quando, ...datas },
+      ],
+    });
+    expect([...puladas.keys()].sort()).toEqual(["ano", "d-caixa", "d-dep", "d-status", "f-dep", "f-rep", "f-tx", "g-dep", "g-neg", "juros", "k-dia", "k-master", "n-dedup", "x-dep", "x-neg", "zero"].sort());
+    expect(puladas.get("zero")).toMatch(/ck_core_comprovante_valor_pago/);
+    expect(puladas.get("juros")).toMatch(/ck_core_comprovante_acrescimos/);
+    expect(puladas.get("ano")).toMatch(/data_pagamento fora do que o MySQL guarda/);
+    expect(puladas.get("k-master")).toBe("bandeira fora da lista (ck_core_cartao_bandeira); dia de fechamento ou de vencimento fora de 1 a 28 (ck_core_cartao_dias)");
+    expect(puladas.get("k-dia")).toMatch(/ck_core_cartao_dias/);
+    expect(puladas.get("f-dep")).toBe("o cartão k-master ficou de fora");
+    expect(puladas.get("g-dep")).toBe("a fatura f-dep ficou de fora");
+    expect(puladas.get("g-neg")).toMatch(/ck_core_lancamento_cartao_valor/);
+    expect(puladas.get("f-rep")).toMatch(/cartão, competência/);
+    expect(puladas.get("f-tx")).toMatch(/transação que pagou/);
+    expect(puladas.get("x-neg")).toMatch(/a fatura f-tx ficou de fora/);
+    expect(puladas.get("d-caixa")).toMatch(/hash do arquivo/);
+    expect(puladas.get("d-status")).toMatch(/ck_core_fatura_documento_status/);
+    expect(puladas.get("n-dedup")).toMatch(/dedup_key/);
+    expect(mapear.puladasPelasTravas(vazio).size).toBe(0);
+  });
+});

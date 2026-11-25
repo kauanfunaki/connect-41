@@ -20,7 +20,7 @@
 // Puro, sem banco.
 
 import { r2 } from "@/lib/rescisao/constantes";
-import { calcularInss, calcularIrrf, type ResultadoInss, type ResultadoIrrf } from "./impostos";
+import { calcularInssComOutrasBases, calcularIrrf, type ResultadoInss, type ResultadoIrrf } from "./impostos";
 import type { FeriasNoMes } from "./periodosDeFerias";
 import { reais, pct, num } from "./formato";
 import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
@@ -137,6 +137,11 @@ export type EntradaMensal = {
    * dias fora delas, e as férias entram para o INSS e o FGTS do mês.
    */
   ferias?: readonly FeriasNoMes[];
+  /**
+   * Remuneração do colaborador em outra(s) empresa(s) no mês (funcionalidade-769):
+   * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
+   */
+  outrasBasesInss?: number;
 };
 
 export const FGTS_ALIQUOTA = 8;
@@ -394,7 +399,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── Bases, INSS e salário-família ──
   const baseInss = baseDe(itens, "incideInss");
-  const inss = calcularInss(baseInss, e.tabelas.inss.dados);
+  const inss = calcularInssComOutrasBases(baseInss, e.outrasBasesInss ?? 0, e.tabelas.inss.dados);
   const sf = e.tabelas.salarioFamilia.dados;
   if (v.filhosSalarioFamilia > 0 && baseInss <= sf.limite && dias > 0) {
     const valor = (v.filhosSalarioFamilia * sf.cota * dias) / 30;

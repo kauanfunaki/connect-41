@@ -16,7 +16,18 @@ import {
 import { RENOVACAO_COOKIE, accessCookieOptions } from "@/lib/auth/cookies";
 import { identidadeNoEscritorio } from "@/lib/auth/trocaDeEscritorio";
 import { ehHostDoSite } from "@/lib/site/host";
-import { COOKIE_DE_TESTE, PAGINA_DE_MANUTENCAO, manutencoesEmTeste, passaPelaManutencao, telaParaConferir } from "@/lib/manutencao/regras";
+import {
+  COOKIE_DE_ENTRADA,
+  COOKIE_DE_TESTE,
+  HORAS_DE_TESTE,
+  PAGINA_DE_MANUTENCAO,
+  ehPrefetch,
+  opcoesDoCookieDeTeste,
+  passaPelaManutencao,
+  semManutencaoEmTeste,
+  telaParaConferir,
+  testeNaManutencao,
+} from "@/lib/manutencao/regras";
 import { ESPERA_MS, ROTA_DAS_TELAS_EM_MANUTENCAO, enderecoInternoDaRota, telasEmManutencaoNoProxy } from "@/lib/manutencao/noProxy";
 import {
   PAGINA_NAO_ENCONTRADA,
@@ -247,14 +258,32 @@ async function seguirParaATela(
   const emManutencao = await telasEmManutencaoNoProxy(efetiva.tenantId, () => buscarTelasEmManutencao(req, accessToken));
   const manutencao = emManutencao.get(tela);
   if (!manutencao) return NextResponse.next({ request: { headers } });
-  const abriuParaTestar =
-    passaPelaManutencao({ role: payload.role, sectors: efetiva.sectors }) &&
-    manutencoesEmTeste(req.cookies.get(COOKIE_DE_TESTE)?.value).includes(manutencao);
-  if (abriuParaTestar) return NextResponse.next({ request: { headers } });
+  // O aviso volta a cada entrada na tela (25/11/2026, bug-833): ver `testeNaManutencao`.
+  const cookieDeTeste = req.cookies.get(COOKIE_DE_TESTE)?.value;
+  const teste = testeNaManutencao({
+    conserta: passaPelaManutencao({ role: payload.role, sectors: efetiva.sectors }),
+    manutencao,
+    tela,
+    cookieDeTeste,
+    cookieDeEntrada: req.cookies.get(COOKIE_DE_ENTRADA)?.value,
+    referer: req.headers.get("referer"),
+    prefetch: ehPrefetch(req.headers),
+  });
+  if (teste.abre) {
+    const res = NextResponse.next({ request: { headers } });
+    if (teste.gastaEntrada) res.cookies.delete(COOKIE_DE_ENTRADA);
+    return res;
+  }
   const destino = req.nextUrl.clone();
   destino.pathname = PAGINA_DE_MANUTENCAO;
   destino.searchParams.set("tela", tela);
-  return NextResponse.rewrite(destino, { request: { headers } });
+  const res = NextResponse.rewrite(destino, { request: { headers } });
+  if (teste.tiraDoTeste) {
+    const resto = semManutencaoEmTeste(cookieDeTeste, manutencao);
+    if (resto) res.cookies.set(COOKIE_DE_TESTE, resto, opcoesDoCookieDeTeste(HORAS_DE_TESTE * 60 * 60));
+    else res.cookies.delete(COOKIE_DE_TESTE);
+  }
+  return res;
 }
 
 // ── 41 Carreiras ─────────────────────────────────────────────────────────────

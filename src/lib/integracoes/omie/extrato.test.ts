@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avisoDoQueFicouFora, dataDoExtrato, lerExtratoDoOmie, periodoDoMes } from "./extrato";
+import { avisoDoQueFicouFora, dataDoExtrato, lerExtratoDoOmie, periodoDoMes, saldoAtualDoExtrato } from "./extrato";
 
 const PERIODO = { inicioKey: "2026-10-01", fimKey: "2026-10-31" };
 
@@ -58,5 +58,17 @@ describe("extrato da conta pelo Omie", () => {
     expect(dataDoExtrato("2026-02-05")).toBeNull();
     expect(periodoDoMes("2026-02")).toEqual({ inicial: "01/02/2026", final: "28/02/2026", inicioKey: "2026-02-01", fimKey: "2026-02-28" });
     expect(periodoDoMes("2028-02").final).toBe("29/02/2028");
+  });
+});
+
+describe("saldo da conta pelo Omie (25/11/2026)", () => {
+  it("lê o saldo atual em número ou em texto com vírgula, em centavos", () => {
+    expect(saldoAtualDoExtrato({ nCodCC: 1, nSaldoAtual: 12345.67, nSaldoDisponivel: 2000 })).toBe(1234567);
+    expect(saldoAtualDoExtrato({ nSaldoAtual: "-1.234,50" })).toBe(-123450);
+  });
+
+  it("sem o campo, ou sem resposta, não inventa zero", () => {
+    expect(saldoAtualDoExtrato({ nSaldoDisponivel: 10 })).toBeNull();
+    expect(saldoAtualDoExtrato(null)).toBeNull();
   });
 });

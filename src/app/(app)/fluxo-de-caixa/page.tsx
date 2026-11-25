@@ -1,4 +1,4 @@
-import { Building2, CalendarRange, Tags, TrendingUp } from "lucide-react";
+import { Building2, CalendarRange, FlaskConical, Tags, TrendingUp } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -27,7 +27,9 @@ import { CategoriasDoCliente } from "@/components/financeiro/CategoriasDoCliente
 import { dadosDasCategoriasDoCliente } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
 import { DataDeCaixa } from "@/components/financeiro/DataDeCaixa";
 import { PrevistoDoFluxo } from "@/components/financeiro/PrevistoDoFluxo";
-import { dadosDoPrevisto, dataDeCaixaDaEmpresa } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { dadosDoCenario, dadosDoPrevisto, configuracaoDoFluxo, pedidosECenarioDaEmpresa } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { CenarioDoFluxo } from "@/components/financeiro/CenarioDoFluxo";
+import { PedidosECenario } from "@/components/financeiro/PedidosECenario";
 import { celulaDeTexto, granularidadeValida, type Granularidade } from "@/lib/fluxoDeCaixa/projecao";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +57,7 @@ export default async function FluxoDeCaixaPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const aba = params.aba === "empresas" || params.aba === "categorias" || params.aba === "previsto" ? params.aba : "fluxo";
+  const aba = params.aba === "empresas" || params.aba === "categorias" || params.aba === "previsto" || params.aba === "cenario" ? params.aba : "fluxo";
   const ver = granularidadeValida(params.ver);
   const agora = new Date();
   const hojeKey = saoPauloParts(agora).dateKey;
@@ -87,7 +89,7 @@ export default async function FluxoDeCaixaPage({
         <FiltroDaEmpresa foco={foco}>
           <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ empresa: empresaId ?? undefined }} naFileira />
         </FiltroDaEmpresa>
-      ) : aba === "categorias" || aba === "previsto" ? (
+      ) : aba === "categorias" || aba === "previsto" || aba === "cenario" ? (
         // O modelo e o previsto são da empresa, sem mês: só o filtro da empresa.
         <FiltroDaEmpresa foco={foco} />
       ) : (
@@ -97,6 +99,7 @@ export default async function FluxoDeCaixaPage({
         abas={[
           { chave: "fluxo", rotulo: "Realizado e projeção", href: qs("fluxo"), icone: <TrendingUp /> },
           { chave: "previsto", rotulo: "Previsto", href: enderecoDaVisao(ver), icone: <CalendarRange /> },
+          { chave: "cenario", rotulo: "Cenário", href: qs("cenario"), icone: <FlaskConical /> },
           { chave: "empresas", rotulo: "Por empresa", href: qs("empresas"), icone: <Building2 /> },
           { chave: "categorias", rotulo: "Modelo do fluxo", href: qs("categorias"), icone: <Tags /> },
         ]}
@@ -108,17 +111,27 @@ export default async function FluxoDeCaixaPage({
       ) : aba === "categorias" ? (
         empresaId ? (
           <>
-            <DataDeCaixa companyId={empresaId} atual={await dataDeCaixaDaEmpresa(ctx.tenantId, empresaId)} />
+            <DataDeCaixa companyId={empresaId} atual={await configuracaoDoFluxo(ctx.tenantId, empresaId)} />
             <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
+            <div className="mt-4">
+              <PedidosECenario companyId={empresaId} dados={await pedidosECenarioDaEmpresa(ctx.tenantId, empresaId)} />
+            </div>
           </>
         ) : (
           <EscolhaAEmpresa escolha={escolha} porQue="O modelo do fluxo é de uma empresa por vez: cada cliente tem a nomenclatura e a data de caixa dele." />
+        )
+      ) : aba === "cenario" ? (
+        empresaId ? (
+          <CenarioDoFluxo dados={await dadosDoCenario(ctx.tenantId, empresaId)} />
+        ) : (
+          <EscolhaAEmpresa escolha={escolha} porQue="O cenário é de uma empresa por vez: as premissas são da empresa." />
         )
       ) : aba === "previsto" ? (
         empresaId ? (
           <PrevistoDoFluxo
             dados={await dadosDoPrevisto({ tenantId: ctx.tenantId, companyId: empresaId, granularidade: ver, celula: celulaDeTexto(params.celula) })}
             enderecoDaVisao={enderecoDaVisao}
+            exportarHref={`/fluxo-de-caixa/exportar?empresa=${empresaId}`}
           />
         ) : (
           <EscolhaAEmpresa escolha={escolha} porQue="O previsto é de uma empresa por vez: o saldo, a data de caixa e as categorias são da empresa." />

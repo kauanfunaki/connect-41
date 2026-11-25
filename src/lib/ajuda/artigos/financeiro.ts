@@ -349,13 +349,22 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Em cima ficam o saldo das contas hoje, o menor saldo previsto e o dia dele, e quantos períodos passam pelo negativo.",
           "Escolha “Dias”, “Semanas” ou “Meses”. A grade mostra os grupos fechados: clique no nome para abrir as linhas do fluxo e, nelas, as categorias do cliente.",
           "Clique num valor para ver as contas que o formam.",
+          "Clique em “Baixar em Excel” para o arquivo com o painel, as 13 semanas, os 12 meses, o dia a dia e a base de lançamentos. As visões são fórmulas: mudar um lançamento na base muda o resto. O cliente baixa o mesmo arquivo no portal.",
+        ],
+      },
+      {
+        titulo: "Ver o cenário",
+        passos: [
+          "Clique na aba “Cenário”. Ela mostra o saldo no fim de cada mês, previsto e com as premissas da empresa (custos que ainda não são conta lançada).",
+          "As premissas se cadastram em “Modelo do fluxo” › “Pedidos de venda e cenário”: um nome, “Fixo por mês” (em R$) ou “% das vendas”, e o valor. Clique em “Salvar”.",
+          "Marque “O cliente vê a aba Cenário no portal” para o cliente ver também.",
         ],
       },
       {
         titulo: "Cadastrar as categorias do cliente",
         passos: [
           "Clique na aba “Modelo do fluxo”, com a empresa escolhida na faixa “Trabalhando em”.",
-          "Em “Data de caixa”, diga quantos dias depois da previsão o dinheiro a receber entra e o a pagar sai, e clique em “Salvar”.",
+          "Em “Data de caixa e saldo”, diga quantos dias depois da previsão o dinheiro a receber entra e o a pagar sai, e de onde vem o saldo inicial: da conciliação do Connect ou do Omie, para a empresa que concilia lá. Clique em “Salvar”.",
           "Em “Nova categoria do cliente”, escreva o nome que o cliente usa (por exemplo, “Folha”), escolha a linha do fluxo e clique em “Criar”.",
           "Em “Categorias do Omie”, escolha para cada uma a categoria do cliente. Escolher já grava. Marque “Só as sem categoria do cliente” para ver o que falta.",
           "Para trazer o de-para da planilha do cliente, abra “Importar o de-para de uma planilha” e escolha o arquivo (.xlsx ou .csv). Confira a prévia e clique em “Importar”.",
@@ -364,6 +373,7 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
       },
     ],
     dicas: [
+      "Para os pedidos de venda do Omie entrarem no Previsto, marque “Ler os pedidos de venda do Omie” em Modelo do fluxo e, depois da próxima sincronização, as etapas que contam (por exemplo, “Em produção”). Eles aparecem na linha “Pedidos a faturar”.",
       "No Previsto, cada conta entra na previsão (senão no vencimento) mais os dias da data de caixa, passada para o próximo dia útil. O que já venceu e não foi pago fica fora da grade, num aviso logo abaixo dela.",
       "As categorias do cliente valem só para a empresa: o plano de contas e as outras empresas não mudam. Categoria do Omie sem categoria do cliente fica na linha sugerida pelo nome.",
       "A planilha do de-para tem a categoria no Omie (nome ou código), a categoria do cliente e, se quiser, a linha do fluxo. A planilha que liga só a categoria do cliente à linha, sem a coluna do Omie, também serve.",
