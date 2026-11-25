@@ -18,12 +18,18 @@ export type ListaDoMenu =
   /** O que fica dentro de um menu (as filhas e as abas da tela, ou o Apoio), na ordem da tela. */
   | { tipo: "dentro"; mae: string; chaves: string[] };
 
-/** Os itens do Geral que o organizador ordena (as chaves do `itensDoGeral` do AppShell). */
-export const CHAVES_DO_GERAL = ["apoio", "cadastros", "transferencias", "solicitacoes", "atendimento", "chamados", "arquivos", "agenda"] as const;
+/**
+ * Os itens do Geral que o organizador ordena (as chaves do `itensDoGeral` do
+ * AppShell). "quadros" é o Quadro de tarefas — ou o Controle interno, na Tech
+ * —, item próprio do Geral desde 25/11/2026 (melhoria-842); antes ficava
+ * dentro do Apoio.
+ */
+export const CHAVES_DO_GERAL = ["cadastros", "quadros", "transferencias", "solicitacoes", "atendimento", "chamados", "arquivos", "agenda", "apoio"] as const;
 
 /**
  * Os itens do Geral que são grupo, com telas dentro que o organizador ordena e
- * esconde (a chave em `dentro` e `ocultasDentro`): o Apoio (05/11/2026) e os
+ * esconde (a chave em `dentro` e `ocultasDentro`): o Apoio (05/11/2026; sem o
+ * Quadro de tarefas desde 25/11/2026) e os
  * Cadastros (10/11/2026, pedido do Kauan — Empresas, Pessoas e, no BPO,
  * Fornecedores e sacados).
  */

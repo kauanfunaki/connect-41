@@ -25,11 +25,11 @@ export function caminhoDoMenuAtivo(pathname: string, href: string): boolean {
 }
 
 /**
- * O item "Quadros" (`/setor/{code}`) acende nos Quadros — a raiz, os espaços,
- * as pastas e as listas, que abrem em `/kanban` — e não em qualquer
- * `/setor/{code}/…` (Ajustes 15/10, G6): as telas do setor (`/grupo`,
- * `/telas`, os módulos sem rota própria) moram debaixo do mesmo endereço e
- * acendiam Quadros junto.
+ * O item "Quadro de tarefas" (`/setor/{code}`; "Quadros" até 25/11/2026,
+ * melhoria-842) acende na tela dele — a raiz, os espaços, as pastas e as
+ * listas, que abrem em `/kanban` — e não em qualquer `/setor/{code}/…`
+ * (Ajustes 15/10, G6): as telas do setor (`/grupo`, `/telas`, os módulos sem
+ * rota própria) moram debaixo do mesmo endereço e acendiam o item junto.
  */
 export function quadrosAtivo(pathname: string, code: string): boolean {
   const base = `/setor/${code}`;

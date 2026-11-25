@@ -8,7 +8,7 @@ import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, telasVisiveis, type Bl
 const telas = (...codes: string[]) => codes.map((code) => ({ code, label: MODULE_CATALOG.find((m) => m.code === code)!.label, href: MODULE_ROUTES[code]! }));
 /**
  * As telas do menu de um setor como o layout entrega: na ordem do catálogo, sem
- * as de fora do menu, sem o Controle interno, que é o Quadros do Geral, e sem
+ * as de fora do menu, sem o Controle interno, que é o Quadro de tarefas do Geral, e sem
  * a Academia (10/11/2026), que é de toda a equipe e mora no topo.
  */
 const doSetor = (setor: string) =>
@@ -49,7 +49,7 @@ describe("montarMenuDoSetor", () => {
     expect(desenho(montarMenuDoSetor(doSetor("tech")))[1]).not.toBe("Produtividade");
   });
 
-  it("Tech: o Controle interno não vem na lista do setor — é o Quadros do Geral", () => {
+  it("Tech: o Controle interno não vem na lista do setor — é o Quadro de tarefas do Geral", () => {
     expect(doSetor("tech").map((t) => t.code)).not.toContain(MODULO_NO_LUGAR_DOS_QUADROS);
     expect(MODULE_CATALOG.find((m) => m.code === MODULO_NO_LUGAR_DOS_QUADROS)?.sectorCode).toBe("tech");
   });

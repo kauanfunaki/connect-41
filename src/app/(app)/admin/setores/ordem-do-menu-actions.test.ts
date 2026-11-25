@@ -92,9 +92,16 @@ describe("organizar no próprio menu (09/11/2026)", () => {
 
   it("o Geral e a ordem de dentro: só chaves e menus que existem", async () => {
     // Os Cadastros são grupo do Geral desde 10/11/2026, como o Apoio.
-    const json = JSON.stringify({ grupos: [], telas: [], geral: ["agenda", "inventado"], dentro: { tech_ops_center: ["sub:Apps"], menu_que_nao_existe: ["x"], apoio: ["quadros"], cadastros: ["pessoas", "empresas"] } });
+    const json = JSON.stringify({ grupos: [], telas: [], geral: ["agenda", "inventado"], dentro: { tech_ops_center: ["sub:Apps"], menu_que_nao_existe: ["x"], apoio: ["senhas", "manuais"], cadastros: ["pessoas", "empresas"] } });
     expect(await salvarOrdemDoMenuPeloCodigo("tech", json)).toBeNull();
-    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], geral: ["agenda"], dentro: { tech_ops_center: ["sub:Apps"], apoio: ["quadros"], cadastros: ["pessoas", "empresas"] } });
+    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], geral: ["agenda"], dentro: { tech_ops_center: ["sub:Apps"], apoio: ["senhas", "manuais"], cadastros: ["pessoas", "empresas"] } });
+  });
+
+  // 25/11/2026 (melhoria-842): o Quadro de tarefas é item do Geral ("quadros"), e não mais do Apoio.
+  it("o Quadro de tarefas grava no Geral; dentro do Apoio, ele sai", async () => {
+    const json = JSON.stringify({ grupos: [], telas: [], geral: ["cadastros", "quadros", "apoio"], ocultasGeral: ["quadros"], dentro: { apoio: ["quadros", "senhas"] } });
+    expect(await salvarOrdemDoMenuPeloCodigo("tech", json)).toBeNull();
+    expect(JSON.parse(m.gravado!.create.ordem)).toEqual({ grupos: [], telas: [], geral: ["cadastros", "quadros", "apoio"], dentro: { apoio: ["senhas"] }, ocultasGeral: ["quadros"] });
   });
 
   it("escondidos do Geral e de dentro dos menus: só chaves e menus que existem", async () => {
