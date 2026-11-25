@@ -475,6 +475,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.evento_lancado": c("lançou um evento na competência do DP 2"),
   "folha.eventos_lancados_por_rubrica": c("lançou uma rubrica para vários colaboradores na competência do DP 2"),
   "folha.evento_removido": x("retirou um lançamento da competência do DP 2"),
+  "folha.informacao_apuracao_incluida": c("incluiu uma retenção ou compensação na apuração da competência do DP 2"),
+  "folha.informacao_apuracao_retirada": x("retirou uma retenção ou compensação da apuração da competência do DP 2"),
   "folha.outra_base_inss_incluida": c("informou a remuneração de outra empresa (mais de um vínculo) no DP 2"),
   "folha.outra_base_inss_retirada": x("retirou a remuneração de outra empresa (mais de um vínculo) no DP 2"),
   "folha.outras_bases_inss_copiadas": c("copiou do mês anterior as remunerações de outras empresas no DP 2"),
