@@ -320,6 +320,8 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Em “Trabalhadores”, gere a admissão (S-2200), a alteração contratual (S-2206) e o afastamento (S-2230) a partir do contrato e do cadastro. Para a alteração, atualize antes o contrato em Colaboradores e informe a data em que vale. O desligamento (S-2299) sai da tela de Rescisões, com as verbas calculadas; sócio, autônomo e estagiário têm início (S-2300) e término (S-2399).",
           "Em “Saúde e segurança”, gere um ASO (S-2220) por exame, as condições ambientais (S-2240) na admissão e quando a condição mudar, e o acidente de trabalho (S-2210).",
           "Em “O que falta no cadastro”, corrija o que está como “falta” e gere os eventos de novo. O que está em “conferir” não impede o envio: é um código que o Connect sugeriu.",
+          "Enviou um evento por fora do Connect? Na fila, use “Registrar recibo” com o nº que o eSocial devolveu: o evento fica aceito. Um evento aceito de trabalhador ou da folha pode ser excluído com “Excluir no eSocial (S-3000)”; quando o recibo do S-3000 é registrado, o original fica como excluído.",
+          "Para corrigir uma folha já fechada no eSocial (S-1299 aceito), reabra a competência no DP 2: o S-1298 (reabertura) sai junto na fila. Com o recibo do S-1298 registrado, feche a competência de novo e gere os periódicos: quem já tinha S-1200 ou S-1210 aceito recebe a retificação, com o recibo do original, e sai um novo S-1299.",
         ],
       },
       {
