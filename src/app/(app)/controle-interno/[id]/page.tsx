@@ -168,7 +168,7 @@ function DadosDoItem({ item, podeEditar }: { item: Item; podeEditar: boolean }) 
   const atrasado = !!prazo && prazo < hojeEmSaoPaulo() && (EM_ABERTO as readonly string[]).includes(item.status);
   const commit = item.commitSha ? linkDoCommit(item.prUrl, item.commitSha) : null;
   const linhas: [string, React.ReactNode][] = [
-    ["Situação", <SituacaoTech key={item.version} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} forma="selo" />],
+    ["Situação", <SituacaoTech key={item.version} id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={podeEditar} forma="selo" prUrl={item.prUrl} commitSha={item.commitSha} />],
     ["Tipo", <span key="t" className="inline-flex items-center gap-1.5"><span aria-hidden className="size-2.5 shrink-0 rounded-sm" style={{ backgroundColor: CORES_DO_TIPO[item.type] }} />{TIPOS[item.type]}</span>],
     ["Prioridade", <span key="p" className={item.priority >= 2 ? "font-semibold" : undefined}>{PRIORIDADES[item.priority] ?? "—"}</span>],
     ["Sistema", nomeDoSistema(item, true)],

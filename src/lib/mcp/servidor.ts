@@ -44,6 +44,7 @@ const camposEditaveis = {
     "O critério de aceite, em campo próprio (não na descrição): o que se confere para dar o item por aprovado. A tela mostra numa seção à parte, com os passos numerados e cada linha de \"Aprovado quando\" como um ponto para marcar. "
     + "Formato, um rótulo por linha: \"CRITÉRIO DE ACEITE (dd/mm/aaaa)\" (opcional, a data em que foi escrito); \"Mudança: …\" (PR, se tem migration); \"Termos: …\" (opcional); \"Antes de testar: …\"; \"Onde testar: …\"; "
     + "\"Passos:\" e, nas linhas seguintes, \"1. …\", \"2. …\"; \"Aprovado quando:\" e, nas linhas seguintes, \"- …\"; \"Observação: …\" (opcional). "
+    + "Sem repetir (melhoria-826): os Passos dizem só o que fazer, sem o resultado; o \"Aprovado quando\" diz só o resultado que se confere, sem refazer o passo. Quando os pontos já dizem onde e o que olhar, deixe os Passos de fora. "
     + "Ao reescrever, mande o critério inteiro: o anterior fica no histórico do item, e as marcas dos pontos reescritos deixam de valer. null limpa."),
   priority: PRIORIDADE.optional(),
   systemKey: z.string().max(191).nullable().optional().describe("A key de um sistema do Orquestrador, de ver_opcoes (ex.: \"robo:...\", \"site:...\", \"app:...\"). null = sem sistema."),
