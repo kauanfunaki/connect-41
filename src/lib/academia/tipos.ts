@@ -7,7 +7,7 @@ import type { CorrecaoDoPedido, OndeDoAtalho } from "./atalhos";
 import type { LinhaDaEvolucao, LinhaDoPlacar } from "./evolucao";
 import type { CategoriaDoHall } from "./hall";
 import type { ProgressoDaMeta } from "./metas";
-import type { PosicaoNoRanking } from "./ranking";
+import type { PosicaoNaMedia, PosicaoNoRanking } from "./ranking";
 import type { Nivel, Teste } from "./regras";
 import type { Sequencia } from "./sequencia";
 
@@ -29,7 +29,22 @@ export type RankingNaTela = {
   meusNumeros: PosicaoNoRanking | null;
 };
 
-export type MelhorDoMes = { nivel: Nivel; ppm: number | null; acertos: number | null; total: number | null; precisao: number };
+/** Uma linha da "Média de todos os testes" na tela (melhoria-823). */
+export type LinhaDaMediaNaTela = PosicaoNaMedia & ComNome;
+
+export type MediaNaTela = {
+  mes: string;
+  foraDoRanking: boolean;
+  topo: LinhaDaMediaNaTela[];
+  eu: LinhaDaMediaNaTela | null;
+  participantes: number;
+  /** A média de quem olha — também para quem está fora do ranking. */
+  meusNumeros: PosicaoNaMedia | null;
+  /** Quantos testes contaram na média do mês (os que alguém fez). */
+  testesNoMes: number;
+};
+
+export type MelhorDoMes ={ nivel: Nivel; ppm: number | null; acertos: number | null; total: number | null; precisao: number };
 
 export type ResumoDoTeste = {
   teste: Teste;

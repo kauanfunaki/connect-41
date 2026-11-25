@@ -35,6 +35,10 @@ const LISTAS_NO_CARTAO = 4;
  *
  * 14/10/2026: a tela passou a se chamar "Quadros" (no menu e no título), a
  * pedido do Kauan. Os espaços, os cartões desta tela, continuam "espaço".
+ *
+ * 25/11/2026 (melhoria-842): "Quadro de tarefas", o nome novo no menu e aqui.
+ * "Tarefas" sozinho confundiria com as tarefas de dentro da tela e com
+ * "Todas as tarefas" (/kanban).
  */
 export default async function EspacosDoSetorPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -76,11 +80,11 @@ export default async function EspacosDoSetorPage({ params }: { params: Promise<{
   return (
     <PageContainer>
       <PageHeader
-        title="Quadros"
+        title="Quadro de tarefas"
         subtitle={
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2 rounded-full flex-shrink-0" style={{ background: corDoSetor }} aria-hidden />
-            {/* Só o setor (17/11/2026, melhoria-707): o que são os Quadros está no artigo de ajuda. */}
+            {/* Só o setor (17/11/2026, melhoria-707): o que é o Quadro de tarefas está no artigo de ajuda. */}
             {setor}
           </span>
         }

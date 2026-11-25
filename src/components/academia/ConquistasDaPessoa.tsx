@@ -2,7 +2,7 @@ import {
   Award, CalendarCheck, Crown, Flame, Footprints, Gauge, Keyboard, Lock, Medal, PartyPopper, Puzzle, TrendingUp, Zap,
   type LucideIcon,
 } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { nomeDoMes } from "@/lib/academia/regras";
 import type { CodigoDaConquista, ConquistaNaTela } from "@/lib/academia/conquistas";
 
@@ -24,26 +24,41 @@ const ICONE: Record<CodigoDaConquista, LucideIcon> = {
 /**
  * As conquistas (Fase 2, 11/11/2026): as medalhas por marcos, só para a
  * própria pessoa. As que faltam aparecem apagadas, com o que pedem.
+ *
+ * Desde a melhoria-823 (25/11/2026), num bloco recolhível que começa fechado,
+ * com "4 de 12" na linha: as doze medalhas abertas empurravam o resto do
+ * Início para baixo.
  */
-export function ConquistasDaPessoa({ conquistas, parabensNoMes, mes }: { conquistas: ConquistaNaTela[]; parabensNoMes: number; mes: string }) {
+export function ConquistasDaPessoa({
+  conquistas,
+  parabensNoMes,
+  mes,
+  className = "",
+}: {
+  conquistas: ConquistaNaTela[];
+  parabensNoMes: number;
+  mes: string;
+  className?: string;
+}) {
   const tem = conquistas.filter((c) => c.tem).length;
   return (
-    <Card as="section" aria-labelledby="conquistas-titulo" className="flex flex-col gap-3 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="conquistas-titulo" className="flex items-center gap-2 text-body font-semibold text-fg">
+    <BlocoRecolhivel
+      className={`bg-surface shadow-xs ${className}`.trim()}
+      classeDoConteudo="flex flex-col gap-3 px-4 pb-4"
+      titulo={
+        <span className="flex items-center gap-2 text-body">
           <Medal size={16} aria-hidden className="text-warning-fg" /> Conquistas
-        </h2>
-        <span className="text-helper text-fg-muted tabular-nums">
-          {tem} de {conquistas.length}
         </span>
-      </div>
+      }
+      resumo={`${tem} de ${conquistas.length}`}
+    >
       {parabensNoMes > 0 && (
         <p className="flex items-center gap-1.5 text-ui text-fg-secondary">
           <PartyPopper size={14} aria-hidden className="text-brand" />
           {parabensNoMes === 1 ? "1 colega deu" : `${parabensNoMes} colegas deram`} parabéns para você em {nomeDoMes(mes)}.
         </p>
       )}
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {conquistas.map((c) => {
           const Icone = c.tem ? ICONE[c.codigo] : Lock;
           return (
@@ -65,6 +80,6 @@ export function ConquistasDaPessoa({ conquistas, parabensNoMes, mes }: { conquis
           );
         })}
       </ul>
-    </Card>
+    </BlocoRecolhivel>
   );
 }

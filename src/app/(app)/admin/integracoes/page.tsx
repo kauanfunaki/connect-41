@@ -223,7 +223,7 @@ export default async function IntegracoesPage({
     chave: "reunioes",
     nome: "Reuniões (Google e Microsoft)",
     icone: <Video />,
-    descricao: "Sua conta pessoal, para agendar reuniões direto das atividades dos Quadros.",
+    descricao: "Sua conta pessoal, para agendar reuniões direto das atividades do Quadro de tarefas.",
     selo: expirada
       ? { tom: "perigo", rotulo: "Conexão expirada" }
       : contasConectadas.length > 0

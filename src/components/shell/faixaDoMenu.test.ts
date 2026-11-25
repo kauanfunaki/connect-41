@@ -17,6 +17,7 @@ vi.mock("next/navigation", () => ({
 import { AppShell } from "./AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { classeDoItem, NavItem, ProvedorDaFaixa } from "./NavLink";
+import { lerOrdemDoMenu } from "@/lib/menuDoSetor";
 
 beforeAll(() => vi.stubGlobal("React", React));
 afterAll(() => vi.unstubAllGlobals());
@@ -151,7 +152,7 @@ describe("menu recolhido: a faixa de ícones", () => {
     const aside = lateral(casco(true));
     const links = linksDoMenu(aside);
     // Cadastros é um grupo desde 10/11/2026: botão com a janela, e não link.
-    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadros", "Transferências", "Agenda", "Apuração", "Colaboradores", "Horas extras"]);
+    expect(links.map((l) => /aria-label="([^"]*)"/.exec(l.tag)?.[1])).toEqual(["Início", "Meu dia", "Quadro de tarefas", "Transferências", "Agenda", "Apuração", "Colaboradores", "Horas extras"]);
     expect(botaoComJanela(aside, "Cadastros").telas).toBe(2);
     for (const l of links) {
       expect(l.texto).toBe("");
@@ -398,29 +399,91 @@ describe("menu do setor: grupos e telas com filhas abrem a janela ao lado", () =
   });
 });
 
-// O Apoio do Geral (05/11/2026): Senhas, Manuais e Quadros num grupo do Geral,
-// para todo setor; na Tech, os Quadros levam ao Controle interno.
+/**
+ * Os itens do Geral na ordem do menu: o nome de cada link e de cada botão com
+ * janela (Cadastros, Apoio), do "Meu dia" até o título do setor.
+ */
+function itensDoGeral(html: string, setor: string): string[] {
+  const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
+  const trecho = nav.slice(nav.indexOf('href="/tarefas"'), nav.indexOf(`href="/setor/${setor}/telas"`));
+  // O trecho começa no meio da tag do Meu dia: o primeiro casamento já é o primeiro item do Geral.
+  return [...trecho.matchAll(/<(a|button) [^>]*>([\s\S]*?)<\/\1>/g)]
+    .map((m) => (/<span class="truncate">([^<]*)<\/span>/.exec(m[2]!)?.[1] ?? m[2]!.replace(/<[^>]+>/g, "")).trim());
+}
+
+// O Apoio do Geral (05/11/2026): Senhas, Manuais e os outros repositórios num
+// grupo do Geral, para todo setor. Até 25/11/2026 os Quadros também ficavam
+// nele; agora o Quadro de tarefas é item próprio (melhoria-842).
 describe("o Apoio no Geral", () => {
   const TECH = { code: "tech", label: "Tech", color: "#1A84C2" };
 
-  it("Senhas, Manuais e Quadros na janela do Apoio, acesa na tela de um deles", () => {
+  it("Senhas e Manuais na janela do Apoio, acesa na tela de um deles; o Quadro de tarefas fora dela", () => {
     rota.atual = "/senhas";
     const aside = lateral(casco(false, { telasFixadas: [], apoioLigado: { senhas: true, manuais: true } }));
     const apoio = botaoComJanela(aside, "Apoio");
-    expect(apoio.telas).toBe(3);
+    expect(apoio.telas).toBe(2);
     expect(apoio.tag).toContain('aria-current="true"');
     expect(aside).not.toContain('href="/senhas"');
+    expect(tagDoLink(aside, "Quadro de tarefas")).toContain('href="/setor/dp"');
   });
 
-  it("com o Apoio desligado, o Quadros fica sozinho, solto", () => {
+  // 25/11/2026 (melhoria-842, pedido do Kauan): Cadastros, logo depois o
+  // Quadro de tarefas, e o Apoio por último no Geral.
+  it("a ordem do Geral: Cadastros, Quadro de tarefas, … e o Apoio no fim", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], apoioLigado: { senhas: true, manuais: true }, chamadosLigados: true, solicitacoesLigadas: true, arquivosLigados: true }));
+    const geral = itensDoGeral(aside, "dp");
+    expect(geral.slice(0, 2)).toEqual(["Cadastros", "Quadro de tarefas"]);
+    expect(geral.at(-1)).toBe("Apoio");
+    // Os outros seguem com as cores juntas, entre os dois.
+    expect(geral).toContain("Solicitações");
+    expect(geral.indexOf("Arquivos")).toBeLessThan(geral.indexOf("Apoio"));
+  });
+
+  it("com uma tela só no Apoio, ela fica solta, também no fim do Geral", () => {
+    const geral = itensDoGeral(lateral(casco(false, { telasFixadas: [], apoioLigado: { senhas: true, manuais: false } })), "dp");
+    expect(geral.slice(0, 2)).toEqual(["Cadastros", "Quadro de tarefas"]);
+    expect(geral.at(-1)).toBe("Repositório de senhas");
+  });
+
+  it("com o Apoio desligado, o Quadro de tarefas continua solto, logo depois de Cadastros", () => {
     const aside = lateral(casco(false, { telasFixadas: [] }));
     expect(botoesComJanela(aside).map((b) => b.nome)).not.toContain("Apoio");
-    expect(tagDoLink(aside, "Quadros")).toContain('href="/setor/dp"');
+    expect(tagDoLink(aside, "Quadro de tarefas")).toContain('href="/setor/dp"');
+    expect(itensDoGeral(aside, "dp").slice(0, 2)).toEqual(["Cadastros", "Quadro de tarefas"]);
+  });
+
+  it("aceso na própria tela, nos espaços e nas listas; apagado nas telas do setor", () => {
+    for (const caminho of ["/setor/dp", "/setor/dp/espacos/e1", "/kanban/l1"]) {
+      rota.atual = caminho;
+      expect(tagDoLink(lateral(casco(false, { telasFixadas: [] })), "Quadro de tarefas"), caminho).toContain('aria-current="page"');
+    }
+    rota.atual = "/setor/dp/telas";
+    expect(tagDoLink(lateral(casco(false, { telasFixadas: [] })), "Quadro de tarefas")).not.toContain("aria-current");
+  });
+
+  it("escondido no Geral do setor, some do menu", () => {
+    const aside = lateral(casco(false, { telasFixadas: [], telasDoGeral: ["cadastros", "transferencias", "agenda"] }));
+    expect(linksDoMenu(aside).map((l) => l.texto)).not.toContain("Quadro de tarefas");
+  });
+
+  // A ordem gravada no organizador antes de 25/11/2026 não conhece o item do
+  // Geral: ele entra logo depois de Cadastros, e o Apoio fica onde o setor o pôs.
+  it("com a ordem do Geral gravada antes da mudança, sai do Apoio e entra depois de Cadastros", () => {
+    const ordemDoMenu = { grupos: [], telas: [], geral: ["apoio", "cadastros", "transferencias", "agenda"], dentro: { apoio: ["quadros", "senhas", "manuais"] } };
+    const aside = lateral(casco(false, { telasFixadas: [], apoioLigado: { senhas: true, manuais: true }, ordemDoMenu: lerOrdemDoMenu(JSON.stringify(ordemDoMenu)) }));
+    expect(itensDoGeral(aside, "dp")).toEqual(["Apoio", "Cadastros", "Quadro de tarefas", "Transferências", "Agenda"]);
+    expect(botaoComJanela(aside, "Apoio").telas).toBe(2);
+  });
+
+  it("escondido pelo olho dentro do Apoio, na ordem antiga, continua fora do menu", () => {
+    const ordemDoMenu = lerOrdemDoMenu(JSON.stringify({ grupos: [], telas: [], ocultasDentro: { apoio: ["quadros"] } }));
+    const aside = lateral(casco(false, { telasFixadas: [], ordemDoMenu }));
+    expect(linksDoMenu(aside).map((l) => l.texto)).not.toContain("Quadro de tarefas");
   });
 
   // 09/11/2026 (pedido do Kauan): o item do Geral é o próprio Controle interno,
   // e ele sai da lista do Tech.
-  describe("na Tech, o Controle interno fica no lugar dos Quadros", () => {
+  describe("na Tech, o Controle interno fica no lugar do Quadro de tarefas", () => {
     const tech = [{ code: "tech_controle_interno", label: "Controle interno", href: "/controle-interno" }];
     const naTech = (extra: Partial<Props> = {}) =>
       lateral(casco(false, { telasFixadas: [], activeSector: TECH, apoioLigado: { senhas: false, manuais: false }, activeSectorModules: tech, ...extra }));
@@ -428,7 +491,7 @@ describe("o Apoio no Geral", () => {
     it("no Geral, com o nome dele, uma vez só, e aceso na tela dele", () => {
       rota.atual = "/controle-interno";
       const aside = naTech();
-      expect(linksDoMenu(aside).map((l) => l.texto)).not.toContain("Quadros");
+      expect(linksDoMenu(aside).map((l) => l.texto)).not.toContain("Quadro de tarefas");
       const controle = tagDoLink(aside, "Controle interno");
       expect(controle).toContain('href="/controle-interno"');
       expect(controle).toContain('aria-current="page"');
@@ -448,17 +511,22 @@ describe("o Apoio no Geral", () => {
       }
     });
 
-    it("com os Quadros escondidos no Geral do setor, o Controle interno continua no menu", () => {
+    it("com o Quadro de tarefas escondido no Geral do setor, o Controle interno continua no menu", () => {
       const aside = naTech({ telasDoGeral: ["cadastros", "transferencias", "agenda"] });
       expect(tagDoLink(aside, "Controle interno")).toContain('href="/controle-interno"');
     });
 
-    it("com o Apoio ligado, entra na janela do Apoio no lugar dos Quadros", () => {
+    // Até 25/11/2026 entrava na janela do Apoio; agora fica solto, depois de Cadastros (melhoria-842).
+    it("com o Apoio ligado, fica solto logo depois de Cadastros, fora da janela do Apoio", () => {
       rota.atual = "/controle-interno";
       const aside = naTech({ apoioLigado: { senhas: true, manuais: true } });
       const apoio = botaoComJanela(aside, "Apoio");
-      expect(apoio.telas).toBe(3);
-      expect(apoio.tag).toContain('aria-current="true"');
+      expect(apoio.telas).toBe(2);
+      expect(apoio.tag).not.toContain("aria-current");
+      expect(tagDoLink(aside, "Controle interno")).toContain('aria-current="page"');
+      const geral = itensDoGeral(aside, "tech");
+      expect(geral.slice(0, 2)).toEqual(["Cadastros", "Controle interno"]);
+      expect(geral.at(-1)).toBe("Apoio");
     });
   });
 
@@ -572,7 +640,8 @@ describe("a ordem do menu escolhida", () => {
   });
 
   it("dentro do Apoio, a tela escondida sai e o Apoio fica com as outras", () => {
-    const apoio = { senhas: true, manuais: true };
+    // Com os fluxos: desde 25/11/2026 o Quadro de tarefas não conta no Apoio.
+    const apoio = { senhas: true, manuais: true, fluxos: true };
     const todas = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, apoioLigado: apoio }));
     expect(botaoComJanela(todas, "Apoio").telas).toBe(3);
     const semSenhas = lateral(casco(false, { telasFixadas: [], activeSector: SOCIETARIO, activeSectorModules: soc, apoioLigado: apoio, ordemDoMenu: { grupos: [], telas: [], ocultasDentro: { apoio: ["senhas"] } } }));

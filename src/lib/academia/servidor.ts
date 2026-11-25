@@ -30,11 +30,11 @@ import { atalhoPorId, avaliarAtalhos, sortearPedidos } from "./atalhos";
 import { indiceDoDesafio, sequenciaDeDias, type Sequencia } from "./sequencia";
 import { metaDaPessoa } from "./metaServidor";
 import {
-  melhorDoMes, montarRanking, posicaoDe, recorteDoRanking, semQuemSaiu,
+  melhorDoMes, montarMediaDosTestes, montarRanking, posicaoDe, recorteDoRanking, semQuemSaiu,
   type LinhaDoResultado, type PosicaoNoRanking,
 } from "./ranking";
 import type {
-  DesafioDeHoje, LinhaDaTela, QuestaoNaTela, RankingNaTela, ResultadoDoEnvio, ResumoDaAcademia, ResumoDoTeste, RodadaServida, TextoNaTela,
+  DesafioDeHoje, LinhaDaTela, MediaNaTela, QuestaoNaTela, RankingNaTela, ResultadoDoEnvio, ResumoDaAcademia, ResumoDoTeste, RodadaServida, TextoNaTela,
 } from "./tipos";
 
 type Quem = Pick<AuthContext, "userId" | "tenantId" | "homeTenantId" | "role" | "sectors" | "subscriptionReadOnly" | "activeSector">;
@@ -130,6 +130,34 @@ export async function rankingParaTela(ctx: Pick<Quem, "tenantId" | "userId">, f:
   const corte = recorteDoRanking(ranking, ctx.userId, n);
   const [topo, eu] = await Promise.all([comNomes(ctx.tenantId, corte.topo, ctx.userId), comNomes(ctx.tenantId, corte.eu ? [corte.eu] : [], ctx.userId)]);
   return { ...f, foraDoRanking: false, topo, eu: eu[0] ?? null, participantes: corte.participantes, meusNumeros };
+}
+
+/**
+ * A "Média de todos os testes" (melhoria-823, 25/11/2026): o ranking geral de
+ * cada teste no mês (todos os níveis e setores), juntado por
+ * `montarMediaDosTestes`. Quatro leituras de um mês, como o Início já faz.
+ */
+export async function mediaParaTela(ctx: Pick<Quem, "tenantId" | "userId">, mes: string, n = 10): Promise<MediaNaTela> {
+  const [porTeste, fora, aparece] = await Promise.all([
+    Promise.all(TESTES.map((teste) => linhasDoMes(ctx.tenantId, { teste, mes, nivel: null, setor: null }))),
+    foraDoRanking(ctx.tenantId),
+    apareceNoRanking(ctx),
+  ]);
+  const media = (deFora: ReadonlySet<string>) =>
+    montarMediaDosTestes(Object.fromEntries(TESTES.map((teste, i) => [teste, montarRanking(teste, semQuemSaiu(porTeste[i], deFora), null)])));
+  const ranking = media(fora);
+  const testesNoMes = ranking[0]?.testesNoMes ?? 0;
+  if (!aparece) {
+    // Quem saiu vê os próprios números: entra na conta só para isso (e, se for
+    // o melhor de algum teste, é o líder dessa conta, que só ele vê).
+    const comigo = new Set(fora);
+    comigo.delete(ctx.userId);
+    const meusNumeros = posicaoDe(media(comigo), ctx.userId);
+    return { mes, foraDoRanking: true, topo: [], eu: null, participantes: ranking.length, meusNumeros, testesNoMes };
+  }
+  const corte = recorteDoRanking(ranking, ctx.userId, n);
+  const [topo, eu] = await Promise.all([comNomes(ctx.tenantId, corte.topo, ctx.userId), comNomes(ctx.tenantId, corte.eu ? [corte.eu] : [], ctx.userId)]);
+  return { mes, foraDoRanking: false, topo, eu: eu[0] ?? null, participantes: corte.participantes, meusNumeros: posicaoDe(ranking, ctx.userId), testesNoMes };
 }
 
 // ─── O resumo da pessoa (Início e o painel do topo) ──────────────────────────

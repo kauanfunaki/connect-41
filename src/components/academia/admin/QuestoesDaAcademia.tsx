@@ -23,6 +23,7 @@ import { NIVEIS, ROTULO_DO_NIVEL, type Nivel } from "@/lib/academia/regras";
 import { MAXIMO_DE_ALTERNATIVAS, MINIMO_DE_ALTERNATIVAS, TAMANHO_DA_ALTERNATIVA, TAMANHO_DO_ENUNCIADO, letraDaAlternativa } from "@/lib/academia/logica";
 import type { QuestaoNaTela } from "@/lib/academia/tipos";
 import { CampoDeImagem } from "./CampoDeImagem";
+import { AtivoNaLinha, AtivosPorNivel, FiltrosDoBanco, SEM_FILTRO, filtrar } from "./FiltrosDoBanco";
 
 type AlternativaNoRascunho = { texto: string; imagemUrl: string | null };
 type Rascunho = { id?: string; nivel: Nivel; enunciado: string; imagemUrl: string | null; alternativas: AlternativaNoRascunho[]; correta: number; ativo: boolean };
@@ -44,6 +45,7 @@ const doCadastro = (q: QuestaoNaTela): Rascunho => ({
  */
 export function QuestoesDaAcademia({ questoes }: { questoes: QuestaoNaTela[] }) {
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  const [filtro, setFiltro] = useState(SEM_FILTRO);
   const [erro, setErro] = useState("");
   const [salvando, iniciar] = useTransition();
   const router = useRouter();
@@ -60,7 +62,7 @@ export function QuestoesDaAcademia({ questoes }: { questoes: QuestaoNaTela[] }) 
     });
   }
 
-  function salvar(e: React.FormEvent) {
+  function salvar(e: React.SyntheticEvent, outra = false) {
     e.preventDefault();
     if (!rascunho) return;
     setErro("");
@@ -71,7 +73,8 @@ export function QuestoesDaAcademia({ questoes }: { questoes: QuestaoNaTela[] }) 
         return;
       }
       toast.success(rascunho.id ? "Questão atualizada." : "Questão cadastrada.");
-      setRascunho(null);
+      // A próxima nasce no mesmo nível (melhoria-823): quem cadastra em série cadastra um nível de cada vez.
+      setRascunho(outra ? { ...NOVA, nivel: rascunho.nivel } : null);
       router.refresh();
     });
   }
@@ -82,58 +85,76 @@ export function QuestoesDaAcademia({ questoes }: { questoes: QuestaoNaTela[] }) 
     </Button>
   );
   const temImagem = (q: QuestaoNaTela) => Boolean(q.imagemUrl) || q.alternativas.some((a) => a.imagemUrl);
+  const visiveis = filtrar(questoes, filtro);
+  const detalhe = (q: QuestaoNaTela) =>
+    [`${q.alternativas.length} alternativas`, temImagem(q) ? "com imagem" : null, q.doHub ? "veio do 41 Hub" : null].filter(Boolean).join(" · ");
+  const ativa = (q: QuestaoNaTela) => (
+    <AtivoNaLinha
+      key={`${q.id}-${q.ativo}`}
+      ativo={q.ativo}
+      rotulo={`Questão ${ROTULO_DO_NIVEL[q.nivel]}: ${q.enunciado.slice(0, 40)}`}
+      salvar={(ligado) => salvarQuestaoAction({ ...doCadastro(q), ativo: ligado })}
+      aoSalvar={() => router.refresh()}
+    />
+  );
 
   return (
     <>
       {questoes.length === 0 ? (
         <EmptyState icon={<Puzzle />} title="Nenhuma questão ainda" description="Cadastre questões de cada nível para o teste de lógica. As do 41 Hub entram pela importação." action={nova} />
       ) : (
-        <CascoDaTabela contagem={contarItens(questoes.length, "questão", "questões")} acoes={nova}>
+        <CascoDaTabela
+          contagem={contarItens(visiveis.length, "questão", "questões")}
+          total={<AtivosPorNivel itens={questoes} />}
+          filtros={<FiltrosDoBanco filtro={filtro} onChange={setFiltro} feminino />}
+          acoes={nova}
+        >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th scope="col" className="py-2 pr-3 w-28">Nível</th>
+                  <th scope="col" className="py-2 pr-3 w-24">Nível</th>
                   <th scope="col" className="py-2 pr-3">Enunciado</th>
-                  <th scope="col" className="py-2 pr-3 w-32">Alternativas</th>
-                  <th scope="col" className="py-2 pr-3 w-28">Situação</th>
-                  <th scope="col" className="py-2 pr-3 w-12"><span className="sr-only">Ações</span></th>
+                  <th scope="col" className="py-2 pr-3 w-20">Certa</th>
+                  <th scope="col" className="py-2 pr-3 w-16">Ativa</th>
+                  <th scope="col" className="py-2 pr-3 w-12"><span className="sr-only">Editar</span></th>
                 </tr>
               </thead>
               <tbody>
-                {questoes.map((q) => (
-                  <tr key={q.id} className="border-b border-border-soft">
-                    <td className="py-2.5 pr-3 text-ui">{ROTULO_DO_NIVEL[q.nivel]}</td>
-                    <td className="py-2.5 pr-3 text-ui text-fg-secondary">
-                      <span className="line-clamp-2">{q.enunciado}</span>
-                      {(temImagem(q) || q.doHub) && (
-                        <span className="inline-flex items-center gap-1 text-helper text-fg-muted">
-                          {temImagem(q) && <><ImageIcon size={12} aria-hidden /> com imagem</>}
-                          {temImagem(q) && q.doHub && " · "}
-                          {q.doHub && "veio do 41 Hub"}
-                        </span>
-                      )}
+                {visiveis.map((q) => (
+                  <tr key={q.id} className={`border-b border-border-soft ${q.ativo ? "" : "text-fg-muted"}`}>
+                    <td className="py-1.5 pr-3 text-ui">{ROTULO_DO_NIVEL[q.nivel]}</td>
+                    <td className="max-w-0 py-1.5 pr-3 text-ui text-fg-secondary" title={detalhe(q)}>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        {temImagem(q) && <ImageIcon size={13} aria-label="com imagem" className="flex-shrink-0 text-fg-muted" />}
+                        <span className="truncate">{q.enunciado}</span>
+                      </span>
                     </td>
-                    <td className="py-2.5 pr-3 text-ui tabular-nums">{q.alternativas.length} · certa {letraDaAlternativa(q.correta)}</td>
-                    <td className="py-2.5 pr-3"><Selo tom={q.ativo ? "sucesso" : "neutro"}>{q.ativo ? "Ativa" : "Desligada"}</Selo></td>
-                    <td className="py-2.5 pr-3 text-right">
+                    <td className="py-1.5 pr-3 text-ui tabular-nums">{letraDaAlternativa(q.correta)} de {q.alternativas.length}</td>
+                    <td className="py-1.5 pr-3">{ativa(q)}</td>
+                    <td className="py-1.5 pr-3 text-right">
                       <IconButton title="Editar questão" onClick={() => setRascunho(doCadastro(q))}>
                         <Pencil size={14} />
                       </IconButton>
                     </td>
                   </tr>
                 ))}
+                {visiveis.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-ui text-fg-muted">Nenhuma questão neste filtro.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </TabelaNoDesktop>
           <CartoesNoCelular>
-            {questoes.map((q) => (
+            {visiveis.map((q) => (
               <Cartao key={q.id}>
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-ui font-medium">{ROTULO_DO_NIVEL[q.nivel]}</span>
-                  <Selo tom={q.ativo ? "sucesso" : "neutro"}>{q.ativo ? "Ativa" : "Desligada"}</Selo>
+                <div className="flex items-center justify-between gap-2">
+                  <Selo tom={q.ativo ? "sucesso" : "neutro"}>{ROTULO_DO_NIVEL[q.nivel]}</Selo>
+                  {ativa(q)}
                 </div>
-                <p className="mt-1 line-clamp-3 text-ui text-fg-secondary">{q.enunciado}</p>
+                <p className="mt-1 line-clamp-2 text-ui text-fg-secondary">{q.enunciado}</p>
                 <Button size="sm" variant="secondary" className="mt-2 min-h-11" onClick={() => setRascunho(doCadastro(q))}>
                   <Pencil size={14} aria-hidden /> Editar
                 </Button>
@@ -206,8 +227,13 @@ export function QuestoesDaAcademia({ questoes }: { questoes: QuestaoNaTela[] }) 
 
             <Switch checked={rascunho.ativo} onCheckedChange={(ativo) => mudar({ ativo })} rotulo="Ativa (entra no sorteio das rodadas)" />
             {erro && <Aviso>{erro}</Aviso>}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setRascunho(null)}>Cancelar</Button>
+              {!rascunho.id && (
+                <Button type="button" variant="secondary" disabled={salvando} onClick={(e) => salvar(e, true)}>
+                  Salvar e cadastrar outra
+                </Button>
+              )}
               <Button type="submit" loading={salvando}>Salvar</Button>
             </div>
           </form>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  melhorDoMes, montarRanking, posicaoDe, recorteDoRanking, resultadoEmTexto, semQuemSaiu, temCertificado, type LinhaDoResultado,
+  mediaEmTexto, melhorDoMes, montarMediaDosTestes, montarRanking, posicaoDe, recorteDoRanking, resultadoEmTexto, semQuemSaiu, temCertificado,
+  type LinhaDoResultado,
 } from "./ranking";
 import type { Nivel } from "./regras";
 
@@ -157,5 +158,60 @@ describe("atalhos", () => {
   it("o texto do resultado e o melhor do mês", () => {
     const m = melhorDoMes("atalhos", [ata("ana", "facil", 12, 15), ata("ana", "facil", 18, 20)]);
     expect(resultadoEmTexto("atalhos", m!)).toBe("18 acertos · 90%");
+  });
+});
+
+// A média de todos os testes (melhoria-823, 25/11/2026): o percentual do
+// líder do mês em cada teste; o teste que a pessoa não fez vale 0.
+describe("média de todos os testes", () => {
+  const digitacao = montarRanking("digitacao", [dig("ana", "facil", 80, 100), dig("bia", "facil", 40, 100), dig("caio", "facil", 60, 100)], null);
+  const logica = montarRanking("logica", [log("bia", "facil", 10, 60_000), log("ana", "facil", 5, 60_000)], null);
+  const atalhos = montarRanking("atalhos", [ata("davi", "facil", 30, 30)], null);
+
+  it("cada teste vira o percentual dos pontos do líder, e a média divide pelos testes do mês", () => {
+    const r = montarMediaDosTestes({ digitacao, logica, atalhos });
+    // ana: 100 (dig) + 50 (lóg) + 0 (atalhos) = 150 ÷ 3 = 50
+    // bia: 50 (dig) + 100 (lóg) + 0 = 150 ÷ 3 = 50 — empate com a ana, e as duas fizeram 2 testes: pelo id
+    // caio: 75 + 0 + 0 = 25; davi: 0 + 0 + 100 = 33,3
+    expect(r.map((p) => [p.posicao, p.userId, p.media, p.testesFeitos])).toEqual([
+      [1, "ana", 50, 2],
+      [2, "bia", 50, 2],
+      [3, "davi", 33.3, 1],
+      [4, "caio", 25, 1],
+    ]);
+    expect(r[0].porTeste).toEqual({ digitacao: 100, logica: 50 });
+    expect(r.every((p) => p.testesNoMes === 3)).toBe(true);
+  });
+
+  it("quem fez um teste só, e foi o único, não ganha de quem fez todos", () => {
+    const r = montarMediaDosTestes({
+      digitacao: montarRanking("digitacao", [dig("ana", "facil", 50, 100), dig("bia", "facil", 45, 100)], null),
+      logica: montarRanking("logica", [log("ana", "facil", 9, 60_000)], null),
+      atalhos: montarRanking("atalhos", [ata("bia", "facil", 20, 20), ata("ana", "facil", 18, 20)], null),
+      numeros: montarRanking("numeros", [dig("caio", "facil", 70, 100)], null),
+    });
+    expect(r[0].userId).toBe("ana");
+    expect(r.find((p) => p.userId === "caio")?.media).toBe(25);
+  });
+
+  it("empate na média: quem fez mais testes vem antes", () => {
+    const r = montarMediaDosTestes({
+      digitacao: montarRanking("digitacao", [dig("ana", "facil", 50, 100), dig("bia", "facil", 25, 100)], null),
+      logica: montarRanking("logica", [log("bia", "facil", 5, 60_000), log("caio", "facil", 10, 60_000)], null),
+    });
+    // ana: (100 + 0) ÷ 2 = 50; bia: (50 + 50) ÷ 2 = 50; caio: (0 + 100) ÷ 2 = 50
+    expect(r.map((p) => p.userId)).toEqual(["bia", "ana", "caio"]);
+  });
+
+  it("teste que ninguém fez, ou em que o líder fez 0, fica fora da conta", () => {
+    const zerada = montarRanking("logica", [log("ana", "facil", 0, 60_000)], null);
+    const r = montarMediaDosTestes({ digitacao: montarRanking("digitacao", [dig("ana", "facil", 60, 100)], null), logica: zerada, numeros: [] });
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ userId: "ana", media: 100, testesFeitos: 2, testesNoMes: 1, porTeste: { digitacao: 100, logica: 0 } });
+  });
+
+  it("sem resultado no mês, ninguém entra", () => {
+    expect(montarMediaDosTestes({})).toEqual([]);
+    expect(mediaEmTexto(87.5)).toBe("87,5%");
   });
 });

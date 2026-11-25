@@ -32,9 +32,9 @@ export function CompanyHistorySection({ pipelineItems, activities, entityLabel =
         {/* "Nos Quadros" (16/11/2026, bug-708): foi "Pipelines", "Tarefas" e,
             desde 20/10/2026, "Atividades", o nome dos itens dos Quadros. Com
             esse nome, este cartão e o de baixo tinham o mesmo título. */}
-        <h2 className="text-section font-semibold text-fg mb-4">Nos Quadros</h2>
+        <h2 className="text-section font-semibold text-fg mb-4">No Quadro de tarefas</h2>
         {pipelineItems.length === 0 ? (
-          <EmptyState icon={<Columns3 />} title="Nenhuma atividade ligada" description={`Esta ${entityLabel} ainda não está em nenhuma atividade dos Quadros.`} />
+          <EmptyState icon={<Columns3 />} title="Nenhuma atividade ligada" description={`Esta ${entityLabel} ainda não está em nenhuma atividade do Quadro de tarefas.`} />
         ) : (
           // O `Button` com `href` (15/10/2026), e não pílulas-link montadas à mão.
           <div className="flex flex-wrap gap-2">

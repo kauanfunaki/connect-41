@@ -45,7 +45,7 @@ describe("telaDoCaminho", () => {
     expect(telaDoCaminho(`/setor/outro/${semRota.code}/detalhe`)).toBe(semRota.code);
   });
 
-  it("os grupos e os Quadros do setor não são tela", () => {
+  it("os grupos e o Quadro de tarefas do setor não são tela", () => {
     expect(telaDoCaminho("/setor/bpo")).toBeNull();
     expect(telaDoCaminho("/setor/bpo/grupo/banco-e-caixa")).toBeNull();
   });
