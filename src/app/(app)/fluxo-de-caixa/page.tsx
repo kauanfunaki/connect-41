@@ -1,4 +1,4 @@
-import { Building2, TrendingUp } from "lucide-react";
+import { Building2, Tags, TrendingUp } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getAuthContext, canViewSector } from "@/lib/auth/context";
 import { isModuleEnabled, setoresDoModulo } from "@/lib/modules";
@@ -23,6 +23,8 @@ import { NotaDeFonte } from "@/components/shared/NotaDeFonte";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { escolherEmpresaDaTela } from "@/lib/empresas/ultimaEmpresa";
 import { escopoFinanceiroDaEscolha } from "@/lib/empresas/escopoDaEscolha";
+import { CategoriasDoCliente } from "@/components/financeiro/CategoriasDoCliente";
+import { dadosDasCategoriasDoCliente } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +51,7 @@ export default async function FluxoDeCaixaPage({
   if (!(await isModuleEnabled(ctx.tenantId, MODULE))) notFound();
 
   const params = await searchParams;
-  const aba = params.aba === "empresas" ? "empresas" : "fluxo";
+  const aba = params.aba === "empresas" ? "empresas" : params.aba === "categorias" ? "categorias" : "fluxo";
   const agora = new Date();
   const hojeKey = saoPauloParts(agora).dateKey;
   const mes = competenciaValida(params.mes) ?? competenciaDoInstante(agora);
@@ -78,6 +80,9 @@ export default async function FluxoDeCaixaPage({
         <FiltroDaEmpresa foco={foco}>
           <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ empresa: empresaId ?? undefined }} naFileira />
         </FiltroDaEmpresa>
+      ) : aba === "categorias" ? (
+        // A nomenclatura é da empresa, sem mês: só o filtro da empresa.
+        <FiltroDaEmpresa foco={foco} />
       ) : (
         <FiltroDePeriodo acao="/fluxo-de-caixa" mes={mes} extras={{ aba, empresa: empresaId ?? undefined }} />
       )}
@@ -85,12 +90,19 @@ export default async function FluxoDeCaixaPage({
         abas={[
           { chave: "fluxo", rotulo: "Realizado e projeção", href: qs("fluxo"), icone: <TrendingUp /> },
           { chave: "empresas", rotulo: "Por empresa", href: qs("empresas"), icone: <Building2 /> },
+          { chave: "categorias", rotulo: "Categorias do cliente", href: qs("categorias"), icone: <Tags /> },
         ]}
         ativa={aba}
       />
 
       {aba === "empresas" ? (
         <PorEmpresa tenantId={ctx.tenantId} companyIds={empresasDeTodas} mes={mes} hojeKey={hojeKey} />
+      ) : aba === "categorias" ? (
+        empresaId ? (
+          <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
+        ) : (
+          <EscolhaAEmpresa escolha={escolha} porQue="As categorias do cliente são de uma empresa por vez: cada cliente tem a nomenclatura dele." />
+        )
       ) : escopo ? (
         <Fluxo escopo={escopo} mes={mes} hojeKey={hojeKey} />
       ) : (

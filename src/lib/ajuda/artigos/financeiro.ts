@@ -342,8 +342,20 @@ export const ARTIGOS_FINANCEIROS: ArtigoDeAjuda[] = [
           "Clique no número de “Vencidas a pagar” ou “Vencidas a receber” para abrir a lista dessas contas.",
         ],
       },
+      {
+        titulo: "Cadastrar as categorias do cliente",
+        passos: [
+          "Clique na aba “Categorias do cliente”, com a empresa escolhida na faixa “Trabalhando em”.",
+          "Em “Nova categoria do cliente”, escreva o nome que o cliente usa (por exemplo, “Folha”), escolha a linha do fluxo e clique em “Criar”.",
+          "Em “Categorias do Omie”, escolha para cada uma a categoria do cliente. Escolher já grava. Marque “Só as sem categoria do cliente” para ver o que falta.",
+          "Para trazer o de-para da planilha do cliente, abra “Importar o de-para de uma planilha” e escolha o arquivo (.xlsx ou .csv). Confira a prévia e clique em “Importar”.",
+          "Para matriz e filiais com a mesma nomenclatura, abra “Copiar de outra empresa”, escolha a empresa, confira a prévia e clique em “Copiar”.",
+        ],
+      },
     ],
     dicas: [
+      "As categorias do cliente valem só para a empresa: o plano de contas e as outras empresas não mudam. Categoria do Omie sem categoria do cliente fica na linha sugerida pelo nome.",
+      "A planilha do de-para tem a categoria no Omie (nome ou código), a categoria do cliente e, se quiser, a linha do fluxo. A planilha que liga só a categoria do cliente à linha, sem a coluna do Omie, também serve.",
       "Sem conta bancária cadastrada, o fluxo não mostra o saldo real: cadastre a conta e importe o extrato em “Conciliação bancária”.",
       "Contas já vencidas e não pagas ficam fora das janelas da projeção e aparecem num aviso logo abaixo dos cartões.",
       "A projeção só considera o que já está lançado. Com saldo nas contas, o saldo projetado soma o saldo das contas ao que vence em cada janela.",
