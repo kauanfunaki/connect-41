@@ -121,6 +121,15 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
                 label="Simples Nacional com a contribuição patronal no DAS (anexos I, II, III e V)"
               />
             </div>
+            <div className="mt-3">
+              <Checkbox
+                id="pisSobreFolha"
+                name="pisSobreFolha"
+                defaultChecked={cfg.pisSobreFolha}
+                label="Entidade sem fins lucrativos: PIS de 1% sobre a folha de salários"
+                helper="Entra na apuração da competência, com as compensações de PIS do mês."
+              />
+            </div>
           </FormularioDoDp2>
         ) : (
           <p className="text-fs-3 text-fg-muted">Você pode ver, mas não alterar a configuração.</p>
