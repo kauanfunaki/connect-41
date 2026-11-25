@@ -3,6 +3,7 @@
 // que eles precisam e se guarda o que devolvem.
 
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
+import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
@@ -226,6 +227,40 @@ export async function rubricasFixasDoMes(tenantId: string, personIds: string[], 
   });
 }
 
+/**
+ * As férias gravadas das pessoas que caem no mês (funcionalidade-745), já na
+ * parte de cada mês. O gozo tem até 30 dias: começa no mês ou no anterior.
+ */
+export async function feriasDoMes(tenantId: string, personIds: string[], ano: number, mes: number): Promise<Map<string, FeriasNoMes[]>> {
+  const porPessoa = new Map<string, FeriasNoMes[]>();
+  if (personIds.length === 0) return porPessoa;
+  const gravadas = await getPrisma().dp2Ferias.findMany({
+    where: { tenantId, personId: { in: personIds }, inicioGozo: { gte: new Date(Date.UTC(ano, mes - 2, 1)), lte: new Date(Date.UTC(ano, mes, 0)) } },
+    orderBy: { inicioGozo: "asc" },
+  });
+  for (const g of gravadas) {
+    const parte = feriasNoMes(
+      { inicioGozo: g.inicioGozo, diasGozo: g.diasGozo, ferias: dec(g.ferias), terco: dec(g.terco), abono: dec(g.abono), tercoAbono: dec(g.tercoAbono), inss: dec(g.inss), irrf: dec(g.irrf) },
+      ano,
+      mes
+    );
+    if (parte) porPessoa.set(g.personId, [...(porPessoa.get(g.personId) ?? []), parte]);
+  }
+  return porPessoa;
+}
+
+/** Os períodos aquisitivos da pessoa com as férias gravadas (funcionalidade-745). */
+export async function periodosDaPessoa(tenantId: string, p: { id: string; admissionDate: Date | null; dismissalDate: Date | null }, hoje: Date = new Date()): Promise<PeriodoAquisitivo[]> {
+  if (!p.admissionDate) return [];
+  const gravadas = await getPrisma().dp2Ferias.findMany({ where: { tenantId, personId: p.id }, select: { aquisitivoInicio: true, diasGozo: true, diasAbono: true, faltas: true, terco: true, tercoAbono: true } });
+  return periodosAquisitivos(
+    p.admissionDate,
+    hoje,
+    gravadas.map((g) => ({ aquisitivoInicio: g.aquisitivoInicio.toISOString().slice(0, 10), diasGozo: g.diasGozo, diasAbono: g.diasAbono, faltas: g.faltas, terco: dec(g.terco), tercoAbono: dec(g.tercoAbono) })),
+    p.dismissalDate
+  );
+}
+
 /** Troca as rubricas fixas do contrato da pessoa pelas do formulário (nenhuma = apaga todas). */
 export async function gravarRubricasFixas(tenantId: string, personId: string, fixas: readonly RubricaFixa[], userId: string, tx?: Prisma.TransactionClient) {
   const db = tx ?? getPrisma();
@@ -320,6 +355,8 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   );
   const rubricas = rubricasPorPapel(linhasDeRubrica);
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
+  // Férias gravadas que caem no mês (funcionalidade-745).
+  const feriasDe = comp.tipo === "MENSAL" ? await feriasDoMes(tenantId, pessoas.map((p) => p.id), comp.ano, comp.mes) : new Map<string, FeriasNoMes[]>();
 
   const resultados: { personId: string; c: CalculoDaPessoa; aplicados: AjusteAplicado[] }[] = [];
   let semVinculo = 0;
@@ -352,6 +389,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         empresa: cfg.empresa,
         diasUteis,
         diasDeDescanso,
+        ferias: feriasDe.get(p.id),
         outrasBasesInss: outrasDe(p.id),
       });
     } else {
