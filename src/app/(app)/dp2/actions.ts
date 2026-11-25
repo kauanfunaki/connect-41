@@ -15,7 +15,8 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
-import { calcularCompetencia, garantirRubricas, gravarRubricasFixas } from "@/lib/dp2/servidor";
+import { calcularCompetencia, colaboradoresDaCompetencia, garantirRubricas, gravarRubricasFixas } from "@/lib/dp2/servidor";
+import { camposDoFormulario, lerLancamentoPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { TIPOS_DE_RUBRICA, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
 import { lerComparativo } from "@/lib/dp2/comparativo";
@@ -251,6 +252,58 @@ export async function lancarEventoAction(_: EstadoDoDp2, fd: FormData): Promise<
   });
   revalidarCompetencia(competenciaId);
   return { ok: true, texto: `${rubrica.nome} lançado para ${pessoa.name}.` };
+}
+
+/**
+ * Lançar por rubrica e em grupo (25/11/2026, funcionalidade-767, parte 1.1): a
+ * mesma rubrica para vários colaboradores numa tela só ("Por Rubrica" e "Em
+ * Grupo" na Domínio). Cada campo `item_<personId>` traz as horas, os dias ou o
+ * valor da pessoa; vazio = fica de fora. Tudo ou nada: um valor errado não
+ * lança ninguém. Como no lançamento por pessoa, soma ao que já houver no mês.
+ */
+export async function lancarPorRubricaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  if (comp.situacao === "FECHADA") return erro("Competência fechada: reabra para lançar.");
+  if (comp.tipo !== "MENSAL") return erro("Lançamentos variáveis são só da folha mensal.");
+
+  const prisma = getPrisma();
+  const rubrica = await prisma.dp2Rubrica.findFirst({ where: { id: texto(fd, "rubricaId"), tenantId: a.tenantId, ativa: true } });
+  if (!rubrica) return erro("Escolha a rubrica.");
+  const { lancavel, porQuantidade } = regraDeLancamento(rubrica);
+  if (!lancavel) return erro(`${rubrica.nome} é calculada pelo motor, não se lança.`);
+
+  // Só quem tem contrato no DP 2 e está na folha do mês.
+  const pessoas = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes)).filter((p) => p.dp2Vinculo);
+  const nomes = new Map(pessoas.map((p) => [p.id, p.name]));
+  const campos = camposDoFormulario(fd.entries());
+  if (campos.some((c) => c.texto.trim() && !nomes.has(c.personId))) return erro("Há colaborador que não está na folha deste mês. Recarregue a tela.");
+  const lido = lerLancamentoPorRubrica(campos, porQuantidade, (id) => nomes.get(id) ?? "colaborador");
+  if (!lido.ok) return erro(lido.erro);
+
+  const observacao = texto(fd, "observacao").slice(0, 300) || null;
+  await prisma.$transaction([
+    prisma.dp2Evento.createMany({
+      data: lido.itens.map((i) => ({ tenantId: a.tenantId, competenciaId, personId: i.personId, rubricaId: rubrica.id, quantidade: i.quantidade, valor: i.valor, origem: "DP" as const, observacao, criadoPorId: a.userId })),
+    }),
+    // Lançamento novo deixa o cálculo velho: a competência volta a "aberta".
+    ...(comp.situacao === "CALCULADA" ? [prisma.dp2Competencia.update({ where: { id: competenciaId }, data: { situacao: "ABERTA" } })] : []),
+  ]);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.eventos_lancados_por_rubrica",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { rubrica: rubrica.nome, pessoas: lido.itens.length },
+  });
+  revalidarCompetencia(competenciaId);
+  const k = lido.itens.length;
+  return { ok: true, texto: `${rubrica.nome} lançado para ${k} ${k === 1 ? "colaborador" : "colaboradores"}.` };
 }
 
 /**

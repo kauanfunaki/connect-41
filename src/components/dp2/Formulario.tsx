@@ -25,8 +25,15 @@ export function FormularioDoDp2({
   icone,
   confirmar,
   manterAposEnviar,
+  aoConcluir,
   children,
 }: {
+  /**
+   * Chamado com o resultado de cada envio (25/11/2026, funcionalidade-767): para
+   * quem guarda os campos em estado próprio limpar só depois do sucesso, como
+   * o lançamento por rubrica.
+   */
+  aoConcluir?: (estado: NonNullable<EstadoDoDp2>) => void;
   /**
    * Campos que voltam com o valor enviado depois de um envio que deu certo
    * (19/11/2026, bug-795). O React limpa o formulário inteiro depois da ação;
@@ -61,6 +68,13 @@ export function FormularioDoDp2({
     limparDepois.current = false;
     limparMenos(f, manterAposEnviar);
   }, [estado, manterAposEnviar]);
+  const concluir = useRef(aoConcluir);
+  useEffect(() => {
+    concluir.current = aoConcluir;
+  });
+  useEffect(() => {
+    if (estado) concluir.current?.(estado);
+  }, [estado]);
   const aoEnviar = manterAposEnviar
     ? (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
