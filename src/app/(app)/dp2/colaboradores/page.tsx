@@ -58,10 +58,12 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa, linhasDeRubrica] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, centrosDeCusto] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
     listarRubricas(tela.tenantId),
+    // Centros de custo do BPO da empresa (funcionalidade-751).
+    getPrisma().costCenter.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
   // As rubricas que podem ser fixas no contrato: as mesmas que o DP lança no mês (funcionalidade-767).
   const paraFixar = linhasDeRubrica
@@ -282,6 +284,25 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             {aberta?.bankAccount ? `, conta ${aberta?.bankAccount}` : ""}. Confira o código do banco e os dígitos.
           </p>
         )}
+      </BlocoDoContrato>
+
+      <BlocoDoContrato titulo="Centro de custo">
+        <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+          <CampoForm label="Centro de custo" htmlFor="costCenterId" dica="Os centros de custo do BPO da empresa. A contabilização e o resumo da folha saem por centro.">
+            <Select id="costCenterId" name="costCenterId" defaultValue={v?.costCenterId ?? ""}>
+              <option value="">Sem centro de custo</option>
+              {centrosDeCusto.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code ? `${c.code} · ${c.name}` : c.name}
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Departamento" htmlFor="departamento">
+            <Input id="departamento" name="departamento" maxLength={80} defaultValue={v?.departamento ?? ""} />
+          </CampoForm>
+        </div>
+        {centrosDeCusto.length === 0 && <p className="text-fs-2 text-fg-muted mt-2">A empresa ainda não tem centros de custo: cadastre no BPO para escolher aqui.</p>}
       </BlocoDoContrato>
 
       <BlocoDoContrato titulo="Rubricas fixas">

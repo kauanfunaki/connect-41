@@ -39,7 +39,8 @@ import type { Encargos, ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { CampoData } from "@/components/ui/CampoData";
 import { LinkDoCliente } from "@/components/dp2/LinkDoCliente";
-import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
+import { centrosDeCustoDasPessoas, lancamentosDaCompetencia } from "@/lib/dp2/saidas";
+import { resumoPorCentro } from "@/lib/dp2/contabilizacao";
 import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
@@ -158,6 +159,22 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const fixasDoMes = fixasVigentes.map((f) => ({ ...f, substituida: substituidas.includes(f) }));
   const nomeDe = new Map(pessoas.map((p) => [p.id, p.name]));
   const contabil = calculos.length > 0 ? await lancamentosDaCompetencia(ctx.tenantId, id) : null;
+  // A folha por centro de custo (funcionalidade-751), quando algum contrato tem centro.
+  const centroDe = calculos.length > 0 ? await centrosDeCustoDasPessoas(ctx.tenantId, comp.companyId, calculos.map((c) => c.personId)) : new Map<string, string>();
+  const porCentro =
+    centroDe.size > 0
+      ? resumoPorCentro(
+          calculos.map((c) => ({
+            centro: centroDe.get(c.personId) ?? null,
+            proventos: n(c.proventos),
+            descontos: n(c.descontos),
+            liquido: n(c.liquido),
+            fgts: n(c.fgts),
+            encargos: n((c.encargos as { total?: number } | null)?.total),
+            provisoes: n((c.provisoes as { total?: number } | null)?.total),
+          }))
+        )
+      : [];
   const urlPublica = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
   const totais = (comp.totais ?? null) as TotaisDaCompetencia | null;
@@ -944,6 +961,39 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                   </Aviso>
                 )}
               </div>
+            </div>
+          </Secao>
+        )}
+
+        {etapa === "conferir" && porCentro.length > 0 && (
+          <Secao titulo="Folha por centro de custo" apoio="Pelo centro de custo do contrato de cada pessoa (DP 2 › Colaboradores). A contabilização sai separada do mesmo jeito.">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Centro de custo</th>
+                    <th className={TH_NUM}>Pessoas</th>
+                    <th className={TH_NUM}>Proventos</th>
+                    <th className={TH_NUM}>Líquido</th>
+                    <th className={TH_NUM}>FGTS</th>
+                    <th className={TH_NUM}>Encargos</th>
+                    <th className={TH_NUM}>Provisões</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porCentro.map((r) => (
+                    <tr key={r.centro} className={TR}>
+                      <td className={TD}>{r.centro}</td>
+                      <td className={TD_NUM}>{r.pessoas}</td>
+                      <td className={TD_NUM}>{brl(r.proventos)}</td>
+                      <td className={TD_NUM}>{brl(r.liquido)}</td>
+                      <td className={TD_NUM}>{brl(r.fgts)}</td>
+                      <td className={TD_NUM}>{brl(r.encargos)}</td>
+                      <td className={TD_NUM}>{brl(r.provisoes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </Secao>
         )}
