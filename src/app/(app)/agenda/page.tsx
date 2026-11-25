@@ -15,7 +15,8 @@ import {
   parseAgendaView,
   parseAgendaDate,
 } from "@/lib/agenda";
-import { intervaloDaBusca } from "@/lib/agendaExpediente";
+import { EXPEDIENTE_PADRAO, intervaloDaBusca } from "@/lib/agendaExpediente";
+import { salvarMeuExpediente } from "@/app/(app)/configuracoes/actions";
 import { carregarExpedientes } from "@/lib/agendaExpedienteDb";
 import { prazosDoPeriodo } from "@/lib/prazosDaAgenda";
 import { agendaResolvida, agendaDosSetores } from "@/lib/agendaDoSetorServidor";
@@ -65,7 +66,8 @@ export default async function AgendaPage({
     view === "prazos" && de <= todayKey && todayKey <= ate ? [de, addDaysToKey(todayKey, -DIAS_DE_ATRASO)].sort()[0] : de;
   // Expediente (05/10): o horário da grade de dia/semana. Vem antes da busca
   // porque, passando da meia-noite, a coluna do último dia entra no seguinte.
-  const { efetivo: expediente } = await carregarExpedientes(ctx.tenantId, ctx.userId);
+  const { efetivo: expediente, escritorio: expedienteDoEscritorio, pessoa: expedienteDaPessoa } = await carregarExpedientes(ctx.tenantId, ctx.userId);
+  const doEscritorio = expedienteDoEscritorio ?? EXPEDIENTE_PADRAO;
   const busca = intervaloDaBusca(expediente, de, ate);
 
   const prisma = getPrisma();
@@ -213,6 +215,7 @@ export default async function AgendaPage({
         restaurarFontes={restaurarFontesDaAgenda}
         lembrarVisao={lembrarVisaoDaAgenda}
         expediente={expediente}
+        horarioDaGrade={{ valor: expedienteDaPessoa ?? doEscritorio, doEscritorio: { expediente: doEscritorio, seguindo: expedienteDaPessoa === null }, salvar: salvarMeuExpediente }}
         setorInicial={setorRaw && setores[setorRaw] ? setorRaw : null}
       />
     </PageContainer>
