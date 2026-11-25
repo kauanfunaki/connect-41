@@ -16,6 +16,7 @@ import { diasDoMes } from "./calendario";
 import { INSS_CONTRIBUINTE_INDIVIDUAL } from "./categorias";
 import { calcularDecimo, type CalculoDoDecimo } from "./decimo";
 import { calcularFerias, type CalculoDeFerias } from "./ferias";
+import { NOME_DA_SITUACAO_DO_PERIODO, feriasNoMes, periodosAquisitivos } from "./periodosDeFerias";
 import { reais, pct } from "./formato";
 import { calcularInss, calcularIrrf, type ResultadoIrrf } from "./impostos";
 import { mediaDeVariaveis } from "./medias";
@@ -73,6 +74,8 @@ export type ExemplosDoMotor = {
   irrfAlto: ResultadoIrrf;
   media: ReturnType<typeof mediaDeVariaveis>;
   ferias: CalculoDeFerias;
+  /** A folha do mês das férias do exemplo (gozo de 20 dias a partir do dia 3). */
+  feriasNaFolha: CalculoDaPessoa | null;
   decimo1: CalculoDoDecimo;
   decimo2: CalculoDoDecimo;
   /** Dispensa sem justa causa, aviso indenizado, 1 período vencido. */
@@ -200,6 +203,25 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
     tabelas,
   });
 
+  const valorDoRecibo = (nome: string) => (ferias.ok ? (ferias.linhas.find((l) => l.nome === nome)?.valor ?? 0) : 0);
+  const parteDoMes = ferias.ok
+    ? feriasNoMes(
+        {
+          inicioGozo: new Date(Date.UTC(ano, mes - 1, 3)),
+          diasGozo: 20,
+          ferias: valorDoRecibo("Férias"),
+          terco: valorDoRecibo("1/3 constitucional"),
+          abono: valorDoRecibo("Abono pecuniário"),
+          tercoAbono: valorDoRecibo("1/3 do abono"),
+          inss: ferias.inss.valor,
+          irrf: ferias.irrf.valor,
+        },
+        ano,
+        mes
+      )
+    : null;
+  const feriasNaFolha = parteDoMes ? calcularMesDaCategoria({ ...base, vinculo: VINCULO, eventos: [], ferias: [parteDoMes] }) : null;
+
   const decimoBase = {
     ano,
     admissao: new Date(Date.UTC(ano, 2, 10)),
@@ -239,6 +261,7 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
     irrfAlto,
     media,
     ferias,
+    feriasNaFolha,
     decimo1,
     decimo2,
     rescisao,
@@ -565,6 +588,45 @@ export const FORMULAS: readonly Formula[] = [
     papeis: [],
     funcao: "calcularFerias (ferias.ts)",
     exemplo: (x) => [...linhaDoRecibo(x.ferias, "Abono pecuniário"), ...linhaDoRecibo(x.ferias, "1/3 do abono")],
+  },
+  {
+    id: "ferias-na-folha",
+    tema: "FERIAS",
+    nome: "Férias na folha do mês",
+    conta:
+      "Salário = salário ÷ 30 × (30 − dias de férias no mês). Férias e 1/3 da parte do mês entram no INSS e no FGTS do mês (o INSS da linha é o do mês inteiro); abono e 1/3 do abono, no mês do início. Saem como desconto o líquido do recibo e o IRRF das férias (tributação separada).",
+    detalhe:
+      "Gozo que passa para o mês seguinte divide férias, 1/3 e INSS do recibo pelos dias corridos de cada mês. O IRRF do salário não soma as férias e deduz só o INSS que não é das férias. As provisões do mês não contam as férias gozadas.",
+    baseLegal: "CLT arts. 142 e 145; Lei 8.212/1991, art. 28; RIR/2018, art. 682",
+    papeis: ["FERIAS_GOZADAS", "TERCO_FERIAS", "ABONO_FERIAS", "TERCO_ABONO_FERIAS", "FERIAS_LIQUIDO_PAGO", "IRRF_FERIAS"],
+    funcao: "feriasNoMes (periodosDeFerias.ts) · calcularMes (mensal.ts)",
+    exemplo: (x) =>
+      x.feriasNaFolha
+        ? (["SALARIO", "FERIAS_GOZADAS", "TERCO_FERIAS", "INSS", "FERIAS_LIQUIDO_PAGO"] as const).flatMap((p) => {
+            const i = x.feriasNaFolha!.itens.find((l) => l.papel === p);
+            return i ? [`${i.nome}: ${reais(i.valor)} = ${i.memoria}`] : [];
+          })
+        : [],
+  },
+  {
+    id: "periodos-aquisitivos",
+    tema: "FERIAS",
+    nome: "Períodos aquisitivos",
+    conta: "Cada 12 meses da admissão dão um período aquisitivo; as férias dele são concedidas nos 12 meses seguintes (concessivo). Passado o concessivo com saldo, são devidas em dobro.",
+    detalhe: "O saldo do período é o direito (pelas faltas) menos os dias de gozo e de abono já gravados. O 1/3 pago no período fica somado no controle.",
+    baseLegal: "CLT arts. 130, 134 e 137",
+    papeis: [],
+    funcao: "periodosAquisitivos (periodosDeFerias.ts)",
+    exemplo: (x) => {
+      // O mensalista dos exemplos, admitido em 10/03 três anos antes, com as férias do exemplo no período mais antigo.
+      const ano = Number(x.competencia.slice(0, 4));
+      const mes = Number(x.competencia.slice(5, 7));
+      const admissao = new Date(Date.UTC(ano - 3, 2, 10));
+      const gozo = { aquisitivoInicio: admissao.toISOString().slice(0, 10), diasGozo: 20, diasAbono: 10, faltas: 0, terco: 0, tercoAbono: 0 };
+      return periodosAquisitivos(admissao, new Date(Date.UTC(ano, mes - 1, 15)), [gozo]).map(
+        (p) => `${p.inicio} a ${p.fim} (concessivo até ${p.concessivoFim}): direito ${p.direito}, usados ${p.usados}, saldo ${p.saldo} — ${NOME_DA_SITUACAO_DO_PERIODO[p.situacao]}`
+      );
+    },
   },
   {
     id: "ferias-descontos",
