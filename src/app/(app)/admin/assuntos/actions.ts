@@ -47,7 +47,7 @@ async function listaDoFormulario(tenantId: string, form: FormData, sectorCode: s
   return listaDoAssunto(tenantId, String(form.get("cardPipelineId") ?? "").trim(), sectorCode);
 }
 
-const LISTA_INVALIDA = "Escolha uma lista dos Quadros do setor que atende — ou deixe sem cartão.";
+const LISTA_INVALIDA = "Escolha uma lista do Quadro de tarefas do setor que atende — ou deixe sem cartão.";
 
 /** O interruptor "Aceita pedido por link público": envia "1" ligado e nada desligado. */
 function linkPublicoDoFormulario(form: FormData): boolean {

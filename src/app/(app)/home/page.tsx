@@ -497,7 +497,7 @@ export default async function HomePage() {
             <p className="c41-rotulo mb-2.5">
               Top {STAGE_CHART_LIMIT} · tarefas por estágio
             </p>
-            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma atividade em aberto nos seus Quadros." />
+            <HorizontalBarChart data={stageChartData} emptyLabel="Nenhuma atividade em aberto no Quadro de tarefas dos seus setores." />
             {stageChartHiddenCount > 0 && (
               <p className="text-fs-1 text-fg-muted mt-2.5">
                 + {stageChartHiddenCount} outro{stageChartHiddenCount !== 1 ? "s" : ""} estágio

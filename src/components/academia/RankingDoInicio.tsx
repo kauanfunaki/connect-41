@@ -18,18 +18,22 @@ export function RankingDoInicio({ resumo }: { resumo: ResumoDaAcademia }) {
   const mes = nomeDoMes(resumo.mes);
   const r = resumo.testes[teste];
   return (
-    <section aria-labelledby="ranking-do-mes-titulo" className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-xs">
+    // `flex-1` (melhoria-823): no Início, o bloco estica até o fim da coluna,
+    // e o fim dele casa com o dos cartões dos testes ao lado.
+    <section aria-labelledby="ranking-do-mes-titulo" className="flex flex-1 flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-xs">
       <h2 id="ranking-do-mes-titulo" className="text-body font-semibold text-fg">
         Ranking de {mes}
       </h2>
-      <SegmentedControl
-        label="Teste do ranking"
-        active={teste}
-        onChange={setTeste}
-        tocavel
-        className="self-start"
-        items={TESTES.map((t) => ({ key: t, label: ROTULO_CURTO_DO_TESTE[t] }))}
-      />
+      {/* Na coluna estreita (lg), as quatro abas rolam em vez de vazar do cartão. */}
+      <div className="scroll-x -mx-1 max-w-full self-start overflow-x-auto px-1 pb-0.5">
+        <SegmentedControl
+          label="Teste do ranking"
+          active={teste}
+          onChange={setTeste}
+          tocavel
+          items={TESTES.map((t) => ({ key: t, label: ROTULO_CURTO_DO_TESTE[t] }))}
+        />
+      </div>
       {!resumo.aparece ? (
         <p className="text-ui text-fg-muted">
           Você escolheu não aparecer no ranking, e por isso também não vê o dos colegas. Seus números continuam nos cartões ao lado.
@@ -56,7 +60,7 @@ export function RankingDoInicio({ resumo }: { resumo: ResumoDaAcademia }) {
           </span>
         </p>
       )}
-      <Button href={`/academia/ranking?teste=${teste}`} variant="secondary" size="sm" className="self-start min-h-11 sm:min-h-0">
+      <Button href={`/academia/ranking?teste=${teste}`} variant="secondary" size="sm" className="mt-auto self-start min-h-11 sm:min-h-0">
         Ver o ranking completo
       </Button>
     </section>

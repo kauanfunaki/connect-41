@@ -60,23 +60,28 @@ export type DefDaTelaDoGeral = {
 /**
  * Na ordem do menu.
  *
- * "Quadros" se chamava "Espaços" até 14/10/2026 (pedido do Kauan). A chave
- * continua `espacos`: é ela que fica gravada nas telas escondidas de cada setor
- * (`sector_menu_views.hiddenScreens`), e não o rótulo. O espaço, o contêiner
- * de pastas e listas dentro da tela, segue se chamando espaço.
+ * "Quadro de tarefas" se chamava "Quadros" até 25/11/2026 (melhoria-842) e
+ * "Espaços" até 14/10/2026, os dois a pedido do Kauan. "Tarefas", sozinho,
+ * ficou de fora: é o nível de dentro da tela (Espaço › Pasta › Tarefa ›
+ * Atividade), o nome da tela /kanban ("Todas as tarefas") e o antigo nome do
+ * Meu dia, que segue em /tarefas. A chave continua `espacos`: é ela que fica
+ * gravada nas telas escondidas de cada setor (`sector_menu_views.hiddenScreens`),
+ * e não o rótulo. O espaço, o contêiner de pastas e listas dentro da tela,
+ * segue se chamando espaço. Desde 25/11/2026 vem logo depois de Cadastros,
+ * como no menu, e não mais dentro do Apoio.
  */
 export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
   { chave: "chamados", rotulo: "Chamados", descricao: "Solicitações internas e acompanhamento do atendimento.", modulo: "helpdesk" },
   {
-    chave: "espacos",
-    rotulo: "Quadros",
-    descricao: "As tarefas do setor, com as atividades em lista ou em kanban, organizadas em espaços e pastas.",
-    soDentroDoSetor: true,
-  },
-  {
     chave: "cadastros",
     rotulo: "Cadastros",
     descricao: "Empresas e pessoas do escritório.",
+  },
+  {
+    chave: "espacos",
+    rotulo: "Quadro de tarefas",
+    descricao: "As tarefas do setor, com as atividades em lista ou em kanban, organizadas em espaços e pastas.",
+    soDentroDoSetor: true,
   },
   {
     chave: "transferencias",

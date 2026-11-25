@@ -75,7 +75,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     titulo: "Meu dia",
     caminhos: ["/tarefas"],
     resumo:
-      "Tudo o que é seu, de todos os setores, numa tela só: processos, atividades dos Quadros, pendências, transferências e solicitações, na ordem do que é mais urgente.",
+      "Tudo o que é seu, de todos os setores, numa tela só: processos, atividades do Quadro de tarefas, pendências, transferências e solicitações, na ordem do que é mais urgente.",
     secoes: [
       {
         titulo: "Como começar o dia pelo Meu dia",
@@ -100,7 +100,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
         titulo: "Como escolher o que o Meu dia mostra",
         passos: [
           "Clique em “Configurar”, no topo da tela. Um painel abre no próprio botão.",
-          "Em “Nas listas”, ligue ou desligue o que entra nas listas: atividades dos Quadros, processos, pendências com o cliente, solicitações e transferências.",
+          "Em “Nas listas”, ligue ou desligue o que entra nas listas: atividades do Quadro de tarefas, processos, pendências com o cliente, solicitações e transferências.",
           "Em “Ao lado”, ligue ou desligue os blocos da direita: “Próximas reuniões”, “No Societário, com você” e “Prazos da semana”.",
           "Cada troca vale na hora, e a tela atrás do painel já mostra o resultado. Para fechar, clique fora do painel.",
           "Para voltar ao que o seu setor usa, clique em “Voltar ao padrão do setor”.",
@@ -230,7 +230,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
           "Em “Visão geral”, veja identificação, contato, endereço e a “Conta de acesso” ao Connect.",
           "Em “Vínculo”, veja a empresa, o cargo e o departamento.",
           "Em “Dados trabalhistas”, veja admissão, jornada, carga horária e dependentes.",
-          "Use “Documentos”, “Conversas” e “Histórico” para os arquivos, os atendimentos e as movimentações nos Quadros.",
+          "Use “Documentos”, “Conversas” e “Histórico” para os arquivos, os atendimentos e as movimentações no Quadro de tarefas.",
           "Para passar um assunto da pessoa a outro setor, clique em “Solicitar transferência”.",
         ],
       },
@@ -432,12 +432,13 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
     ],
   },
 
-  // ─── Quadros ───────────────────────────────────────────────────────────────
-  // Chamava-se "Espaços" até 14/10/2026. A chave fica `geral:espacos`: é o
-  // endereço do artigo (`/ajuda/geral:espacos`) e a chave do vídeo 27.
+  // ─── Quadro de tarefas ─────────────────────────────────────────────────────
+  // Chamava-se "Espaços" até 14/10/2026 e "Quadros" até 25/11/2026
+  // (melhoria-842). A chave fica `geral:espacos`: é o endereço do artigo
+  // (`/ajuda/geral:espacos`) e a chave do vídeo 27.
   {
     chave: "geral:espacos",
-    titulo: "Quadros",
+    titulo: "Quadro de tarefas",
     caminhos: ["/kanban", "/setor"],
     resumo:
       "As tarefas de cada setor, organizadas em espaços e pastas. Dentro de cada tarefa ficam as atividades, para ver em lista ou em kanban, cada uma com situação, responsáveis, prazo e comentários.",
@@ -445,7 +446,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como encontrar uma tarefa",
         passos: [
-          "Entre no setor e clique em “Quadros”, na barra lateral.",
+          "Entre no setor e clique em “Quadro de tarefas”, no Geral da barra lateral, logo abaixo de “Cadastros”.",
           "Cada cartão é um espaço, com as tarefas logo abaixo do nome. Clique em uma tarefa para abri-la.",
           "Clique no nome do espaço para ver as “Pastas” e as “Tarefas” que estão nele — as das pastas também, com a pasta de cada uma.",
           "Dentro da tarefa, troque entre “Lista” e “Kanban” para ver as atividades em linhas ou em colunas por status.",
@@ -455,7 +456,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como criar espaços, pastas, tarefas e atividades",
         passos: [
-          "Na tela Quadros, clique em “Novo espaço”. Clique no quadrado com a inicial para escolher a cor e o ícone, dê um “Nome”, escolha a “Permissão padrão” e, se quiser, um modelo em “Usar modelo”. Clique em “Criar espaço”.",
+          "No Quadro de tarefas, clique em “Novo espaço”. Clique no quadrado com a inicial para escolher a cor e o ícone, dê um “Nome”, escolha a “Permissão padrão” e, se quiser, um modelo em “Usar modelo”. Clique em “Criar espaço”.",
           "Para criar uma lista ou uma pasta sem entrar no espaço, clique em “Criar”, ao lado de “Novo espaço”, escolha “Lista” ou “Pasta”, dê o nome, escolha onde fica e clique em “Criar lista” ou “Criar pasta”.",
           "Dentro do espaço, clique em “Nova pasta” ou “Nova lista”, dê um nome e clique em “Criar”.",
           "Para mudar o nome, a cor, o ícone ou a permissão do espaço, abra o espaço e clique em “Editar espaço”.",

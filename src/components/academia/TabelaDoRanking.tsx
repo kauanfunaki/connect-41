@@ -12,7 +12,10 @@ import { BotaoDeParabens, type ParabensDaLinha } from "./BotaoDeParabens";
 
 const numero = (teste: Teste, l: LinhaDaTela) => numeroEmTexto(teste, l);
 
-function Posicao({ l }: { l: LinhaDaTela }) {
+/** O que a posição e o nome precisam — também a linha da média (melhoria-823). */
+type Pessoa = Pick<LinhaDaTela, "posicao" | "nome" | "fotoUrl" | "eu">;
+
+export function Posicao({ l }: { l: Pessoa }) {
   return (
     <span className={`inline-flex size-7 flex-shrink-0 items-center justify-center rounded-full text-helper font-semibold tabular-nums ${l.posicao <= 3 ? "bg-brand-subtle text-brand" : "bg-surface-2 text-fg-secondary"}`}>
       {l.posicao}º
@@ -20,7 +23,7 @@ function Posicao({ l }: { l: LinhaDaTela }) {
   );
 }
 
-function Nome({ l }: { l: LinhaDaTela }) {
+export function Nome({ l }: { l: Pessoa }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
       <AvatarImage src={l.fotoUrl} name={l.nome} size={24} fontSize={10} />

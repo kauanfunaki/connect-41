@@ -6939,6 +6939,9 @@ model Dp2EmpresaConfig {
   convencaoId       String?
   /// Simples Nacional (anexos I a III e V): a contribuição patronal vai no DAS.
   patronalNoDas     Boolean  @default(false)
+  /// PIS sobre a folha de salários (1%), das entidades sem fins lucrativos
+  /// (funcionalidade-769): entra na apuração da competência.
+  pisSobreFolha     Boolean  @default(false)
   /// RAT/SAT em %: 1, 2 ou 3.
   ratAliquota       Decimal  @default(2) @db.Decimal(5, 2)
   fap               Decimal  @default(1) @db.Decimal(6, 4)
@@ -7050,6 +7053,7 @@ model Dp2Competencia {
   remessas     Dp2Remessa[]
   pedidos      Dp2PedidoDeEventos[]
   ajustes    Dp2AjusteDeCalculo[]
+  informacoesDaApuracao Dp2InformacaoDaApuracao[]
   outrasBasesInss Dp2OutraBaseInss[]
 
   @@unique([companyId, ano, mes, tipo])
@@ -7173,6 +7177,31 @@ model Dp2AjusteDeCalculo {
   @@index([tenantId, competenciaId])
   @@index([personId])
   @@map("dp2_ajustes_de_calculo")
+}
+
+/// Informações da apuração da competência (25/11/2026, funcionalidade-769,
+/// parte 2): "Processos › Informações" da Domínio. `tipo`: RETENCAO_INSS
+/// (11% retido pelo tomador, com o CNPJ dele e a nota), COMPENSACAO_INSS,
+/// COMPENSACAO_IRRF ou COMPENSACAO_PIS (com o período de origem AAAA-MM).
+/// Entram na apuração do que se recolhe (src/lib/dp2/apuracao.ts).
+model Dp2InformacaoDaApuracao {
+  id            String   @id @default(uuid())
+  tenantId      String
+  competenciaId String
+  tipo          String   @db.VarChar(20)
+  valor         Decimal  @db.Decimal(12, 2)
+  /// CNPJ do tomador, na retenção.
+  documento     String?  @db.VarChar(14)
+  /// Número da nota (retenção) ou período de origem AAAA-MM (compensação).
+  referencia    String?  @db.VarChar(30)
+  observacao    String?  @db.VarChar(300)
+  criadoPorId   String?
+  createdAt     DateTime @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, competenciaId])
+  @@map("dp2_informacoes_da_apuracao")
 }
 
 /// Outras bases de INSS (25/11/2026, funcionalidade-769): a remuneração do

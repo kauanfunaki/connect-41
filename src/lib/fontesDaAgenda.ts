@@ -84,7 +84,7 @@ export const FONTES_DA_AGENDA: readonly DefDaFonte[] = [
   {
     chave: "tarefas",
     rotulo: "Tarefas",
-    descricao: "O prazo das atividades dos Quadros.",
+    descricao: "O prazo das atividades do Quadro de tarefas.",
     cor: "var(--c41-brand)",
     tipos: ["tarefa"],
     modulos: [],

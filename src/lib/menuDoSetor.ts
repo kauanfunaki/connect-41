@@ -124,7 +124,7 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
     const dentro = porMenu(o.dentro);
     const ocultasDentro = porMenu(o.ocultasDentro);
     const ocultasGeral = lista(o.ocultasGeral);
-    return {
+    return comQuadroForaDoApoio({
       grupos: lista(o.grupos),
       telas: lista(o.telas),
       ...(ocultas.length ? { ocultas } : {}),
@@ -132,10 +132,67 @@ export function lerOrdemDoMenu(json: string | null | undefined): OrdemDoMenu {
       ...(Object.keys(dentro).length ? { dentro } : {}),
       ...(ocultasGeral.length ? { ocultasGeral } : {}),
       ...(Object.keys(ocultasDentro).length ? { ocultasDentro } : {}),
-    };
+    });
   } catch {
     return ORDEM_PADRAO;
   }
+}
+
+/** A chave do Quadro de tarefas (ou do Controle interno, na Tech) no Geral e, até 25/11/2026, dentro do Apoio. */
+const QUADRO = "quadros";
+
+/**
+ * A ordem gravada antes de o Quadro de tarefas sair do Apoio (25/11/2026,
+ * melhoria-842), lida no jeito novo — sem script de banco: a correção vale na
+ * leitura e fica gravada no próximo "Concluir" do organizador.
+ *
+ * - Na ordem do Geral que não conhece o item, ele entra logo depois de
+ *   Cadastros (o lugar que o Kauan pediu); sem Cadastros na lista, onde estava
+ *   o Apoio, que era a casa dele. Sem nenhum dos dois, fica de fora e vai para
+ *   o fim, como qualquer item novo (`pelaOrdem`).
+ * - Escondido pelo olho dentro do Apoio continua escondido, agora no Geral.
+ * - A posição dele dentro do Apoio sai: não há mais o que ordenar ali.
+ *
+ * O Apoio fica onde o setor o pôs. Ir para o fim do Geral é a ordem padrão;
+ * quem gravou uma ordem a mantém até "Restaurar padrão".
+ */
+export function comQuadroForaDoApoio(ordem: OrdemDoMenu): OrdemDoMenu {
+  const tirar = (l: readonly string[] | undefined) => (l ?? []).filter((c) => c !== QUADRO);
+  const escondidoNoApoio = !!ordem.ocultasDentro?.apoio?.includes(QUADRO);
+  const tinhaNoApoio = escondidoNoApoio || !!ordem.dentro?.apoio?.includes(QUADRO);
+  const geralTemOItem = !!ordem.geral?.includes(QUADRO);
+  if (!tinhaNoApoio && (geralTemOItem || !ordem.geral?.length)) return ordem;
+
+  let geral = ordem.geral ? [...ordem.geral] : undefined;
+  if (geral && !geralTemOItem) {
+    const cadastros = geral.indexOf("cadastros");
+    const apoio = geral.indexOf("apoio");
+    if (cadastros >= 0) geral.splice(cadastros + 1, 0, QUADRO);
+    else if (apoio >= 0) geral.splice(apoio, 0, QUADRO);
+  }
+  const porMenu = (x: Record<string, string[]> | undefined) => {
+    if (!x) return undefined;
+    const r: Record<string, string[]> = {};
+    for (const [mae, l] of Object.entries(x)) {
+      const sobra = mae === "apoio" ? tirar(l) : l;
+      if (sobra.length) r[mae] = sobra;
+    }
+    return Object.keys(r).length ? r : undefined;
+  };
+  const dentro = porMenu(ordem.dentro);
+  const ocultasDentro = porMenu(ordem.ocultasDentro);
+  const ocultasGeral = escondidoNoApoio && !ordem.ocultasGeral?.includes(QUADRO) ? [...(ordem.ocultasGeral ?? []), QUADRO] : ordem.ocultasGeral;
+  geral = geral?.length ? geral : undefined;
+
+  return {
+    grupos: ordem.grupos,
+    telas: ordem.telas,
+    ...(ordem.ocultas ? { ocultas: ordem.ocultas } : {}),
+    ...(geral ? { geral } : {}),
+    ...(dentro ? { dentro } : {}),
+    ...(ocultasGeral?.length ? { ocultasGeral } : {}),
+    ...(ocultasDentro ? { ocultasDentro } : {}),
+  };
 }
 
 /** Ordena pela posição na lista escolhida; quem não está nela vai depois, na ordem em que veio. */

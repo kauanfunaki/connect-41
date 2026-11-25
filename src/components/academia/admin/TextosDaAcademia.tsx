@@ -19,25 +19,32 @@ import { useToast } from "@/components/ui/Toast";
 import { salvarTextoAction } from "@/app/(app)/academia/actions";
 import { NIVEIS, ROTULO_DO_NIVEL, type Nivel } from "@/lib/academia/regras";
 import type { TextoNaTela } from "@/lib/academia/tipos";
+import { AtivoNaLinha, AtivosPorNivel, FiltrosDoBanco, SEM_FILTRO, filtrar } from "./FiltrosDoBanco";
 
 type Rascunho = { id?: string; nivel: Nivel; conteudo: string; ativo: boolean };
 const NOVO: Rascunho = { nivel: "medio", conteudo: "", ativo: true };
 const LIMITE = { minimo: 40, maximo: 1500 };
+
+const doCadastro = (t: TextoNaTela): Rascunho => ({ id: t.id, nivel: t.nivel, conteudo: t.conteudo, ativo: t.ativo });
 
 /**
  * Os textos da digitação (10/11/2026): nível, o texto e se está ativo. Não se
  * exclui texto — desliga (o histórico de quem já digitou fica de pé). O texto
  * tem de caber em 60 s para quem digita bem: a precisão do Hub desconta o que
  * ficou sem digitar.
+ *
+ * Melhoria-823 (25/11/2026): linha de uma altura só, o liga/desliga na linha,
+ * filtro de nível e situação, e "Salvar e cadastrar outro" no formulário.
  */
 export function TextosDaAcademia({ textos }: { textos: TextoNaTela[] }) {
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  const [filtro, setFiltro] = useState(SEM_FILTRO);
   const [erro, setErro] = useState("");
   const [salvando, iniciar] = useTransition();
   const router = useRouter();
   const toast = useToast();
 
-  function salvar(e: React.FormEvent) {
+  function salvar(e: React.SyntheticEvent, outro = false) {
     e.preventDefault();
     if (!rascunho) return;
     setErro("");
@@ -48,7 +55,8 @@ export function TextosDaAcademia({ textos }: { textos: TextoNaTela[] }) {
         return;
       }
       toast.success(rascunho.id ? "Texto atualizado." : "Texto cadastrado.");
-      setRascunho(null);
+      // O próximo nasce no mesmo nível: quem cadastra em série cadastra um nível de cada vez.
+      setRascunho(outro ? { ...NOVO, nivel: rascunho.nivel } : null);
       router.refresh();
     });
   }
@@ -59,51 +67,71 @@ export function TextosDaAcademia({ textos }: { textos: TextoNaTela[] }) {
       <Plus size={14} aria-hidden /> Novo texto
     </Button>
   );
+  const visiveis = filtrar(textos, filtro);
+  const detalhe = (t: TextoNaTela) => `${t.conteudo.length} caracteres${t.doHub ? " · veio do 41 Hub" : ""}`;
+  const ativo = (t: TextoNaTela) => (
+    <AtivoNaLinha
+      key={`${t.id}-${t.ativo}`}
+      ativo={t.ativo}
+      rotulo={`Texto ${ROTULO_DO_NIVEL[t.nivel]}: ${t.conteudo.slice(0, 40)}`}
+      salvar={(ligado) => salvarTextoAction({ ...doCadastro(t), ativo: ligado })}
+      aoSalvar={() => router.refresh()}
+    />
+  );
 
   return (
     <>
       {textos.length === 0 ? (
         <EmptyState icon={<FileText />} title="Nenhum texto ainda" description="Cadastre textos de cada nível para o teste de digitação. Os do 41 Hub entram pela importação." action={novo} />
       ) : (
-        <CascoDaTabela contagem={contarItens(textos.length, "texto", "textos")} acoes={novo}>
+        <CascoDaTabela
+          contagem={contarItens(visiveis.length, "texto", "textos")}
+          total={<AtivosPorNivel itens={textos} />}
+          filtros={<FiltrosDoBanco filtro={filtro} onChange={setFiltro} />}
+          acoes={novo}
+        >
           <TabelaNoDesktop padrao>
-            <table className="w-full min-w-[720px]">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th scope="col" className="py-2 pr-3 w-28">Nível</th>
+                  <th scope="col" className="py-2 pr-3 w-24">Nível</th>
                   <th scope="col" className="py-2 pr-3">Texto</th>
-                  <th scope="col" className="py-2 pr-3 w-28">Situação</th>
-                  <th scope="col" className="py-2 pr-3 w-12"><span className="sr-only">Ações</span></th>
+                  <th scope="col" className="py-2 pr-3 w-16">Ativo</th>
+                  <th scope="col" className="py-2 pr-3 w-12"><span className="sr-only">Editar</span></th>
                 </tr>
               </thead>
               <tbody>
-                {textos.map((t) => (
-                  <tr key={t.id} className="border-b border-border-soft">
-                    <td className="py-2.5 pr-3 text-ui">{ROTULO_DO_NIVEL[t.nivel]}</td>
-                    <td className="py-2.5 pr-3 text-ui text-fg-secondary">
-                      <span className="line-clamp-2">{t.conteudo}</span>
-                      <span className="text-helper text-fg-muted">{t.conteudo.length} caracteres{t.doHub ? " · veio do 41 Hub" : ""}</span>
+                {visiveis.map((t) => (
+                  <tr key={t.id} className={`border-b border-border-soft ${t.ativo ? "" : "text-fg-muted"}`}>
+                    <td className="py-1.5 pr-3 text-ui">{ROTULO_DO_NIVEL[t.nivel]}</td>
+                    <td className="max-w-0 py-1.5 pr-3 text-ui text-fg-secondary" title={detalhe(t)}>
+                      <span className="block truncate">{t.conteudo}</span>
                     </td>
-                    <td className="py-2.5 pr-3"><Selo tom={t.ativo ? "sucesso" : "neutro"}>{t.ativo ? "Ativo" : "Desligado"}</Selo></td>
-                    <td className="py-2.5 pr-3 text-right">
-                      <IconButton title="Editar texto" onClick={() => setRascunho({ id: t.id, nivel: t.nivel, conteudo: t.conteudo, ativo: t.ativo })}>
+                    <td className="py-1.5 pr-3">{ativo(t)}</td>
+                    <td className="py-1.5 pr-3 text-right">
+                      <IconButton title="Editar texto" onClick={() => setRascunho(doCadastro(t))}>
                         <Pencil size={14} />
                       </IconButton>
                     </td>
                   </tr>
                 ))}
+                {visiveis.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-ui text-fg-muted">Nenhum texto neste filtro.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </TabelaNoDesktop>
           <CartoesNoCelular>
-            {textos.map((t) => (
+            {visiveis.map((t) => (
               <Cartao key={t.id}>
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-ui font-medium">{ROTULO_DO_NIVEL[t.nivel]}</span>
-                  <Selo tom={t.ativo ? "sucesso" : "neutro"}>{t.ativo ? "Ativo" : "Desligado"}</Selo>
+                <div className="flex items-center justify-between gap-2">
+                  <Selo tom={t.ativo ? "sucesso" : "neutro"}>{ROTULO_DO_NIVEL[t.nivel]}</Selo>
+                  {ativo(t)}
                 </div>
-                <p className="mt-1 line-clamp-3 text-ui text-fg-secondary">{t.conteudo}</p>
-                <Button size="sm" variant="secondary" className="mt-2 min-h-11" onClick={() => setRascunho({ id: t.id, nivel: t.nivel, conteudo: t.conteudo, ativo: t.ativo })}>
+                <p className="mt-1 line-clamp-2 text-ui text-fg-secondary">{t.conteudo}</p>
+                <Button size="sm" variant="secondary" className="mt-2 min-h-11" onClick={() => setRascunho(doCadastro(t))}>
                   <Pencil size={14} aria-hidden /> Editar
                 </Button>
               </Cartao>
@@ -114,7 +142,7 @@ export function TextosDaAcademia({ textos }: { textos: TextoNaTela[] }) {
 
       <Modal open={rascunho !== null} onClose={() => setRascunho(null)} title={rascunho?.id ? "Editar texto" : "Novo texto"} maxWidth="max-w-2xl">
         {rascunho && (
-          <form onSubmit={salvar} className="flex flex-col gap-4">
+          <form onSubmit={(e) => salvar(e)} className="flex flex-col gap-4">
             <CampoForm label="Nível" htmlFor="texto-nivel" required>
               <Select id="texto-nivel" value={rascunho.nivel} onChange={(e) => setRascunho({ ...rascunho, nivel: e.target.value as Nivel })}>
                 {NIVEIS.map((n) => (
@@ -139,8 +167,13 @@ export function TextosDaAcademia({ textos }: { textos: TextoNaTela[] }) {
             </CampoForm>
             <Switch checked={rascunho.ativo} onCheckedChange={(ativo) => setRascunho({ ...rascunho, ativo })} rotulo="Ativo (entra no sorteio das rodadas)" />
             {erro && <Aviso>{erro}</Aviso>}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setRascunho(null)}>Cancelar</Button>
+              {!rascunho.id && (
+                <Button type="button" variant="secondary" disabled={salvando} onClick={(e) => salvar(e, true)}>
+                  Salvar e cadastrar outro
+                </Button>
+              )}
               <Button type="submit" loading={salvando}>Salvar</Button>
             </div>
           </form>

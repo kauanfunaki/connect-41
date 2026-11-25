@@ -478,6 +478,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.esocial_recibo_registrado": e("registrou o recibo de um evento do eSocial no DP 2"),
   "folha.esocial_exclusao": c("gerou a exclusão (S-3000) de um evento do eSocial no DP 2"),
   "folha.esocial_reabertura": c("gerou a reabertura (S-1298) de um período no eSocial do DP 2"),
+  "folha.informacao_apuracao_incluida": c("incluiu uma retenção ou compensação na apuração da competência do DP 2"),
+  "folha.informacao_apuracao_retirada": x("retirou uma retenção ou compensação da apuração da competência do DP 2"),
   "folha.outra_base_inss_incluida": c("informou a remuneração de outra empresa (mais de um vínculo) no DP 2"),
   "folha.outra_base_inss_retirada": x("retirou a remuneração de outra empresa (mais de um vínculo) no DP 2"),
   "folha.outras_bases_inss_copiadas": c("copiou do mês anterior as remunerações de outras empresas no DP 2"),
@@ -714,10 +716,10 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   // O padrão dos cartões do topo do Início do setor (10/11/2026); a troca pessoal não vai à trilha.
   "sector.inicio.cartao": e("trocou um cartão do Início do setor", { chaveDoNome: "setor" }),
   // Os Quadros do setor (28/10/2026): o coordenador bloqueia ou libera a criação e a edição pelos colaboradores.
-  "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores nos Quadros do setor"),
-  "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores nos Quadros do setor"),
+  "sector.quadros.bloquear": e("bloqueou a criação de tarefas pelos colaboradores no Quadro de tarefas do setor"),
+  "sector.quadros.liberar": e("liberou a criação de tarefas pelos colaboradores no Quadro de tarefas do setor"),
   // 05/11/2026: o interruptor virou a permissão padrão de cada espaço; mudar fica aqui.
-  "sector.quadros.permissao": e("mudou a permissão dos colaboradores num espaço dos Quadros do setor"),
+  "sector.quadros.permissao": e("mudou a permissão dos colaboradores num espaço do Quadro de tarefas do setor"),
   "module.enable": e("ligou o módulo"),
   "module.disable": e("desligou o módulo"),
   "module.transfer": e("passou para outro setor o módulo"),

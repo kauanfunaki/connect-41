@@ -35,7 +35,7 @@ export function AssuntoForm({
   action: (prev: AssuntoState, form: FormData) => Promise<AssuntoState>;
   cancelHref: string;
   setores: { value: string; label: string }[];
-  /** As listas ativas dos Quadros, de todos os setores — o campo mostra as do setor escolhido. */
+  /** As listas ativas do Quadro de tarefas, de todos os setores — o campo mostra as do setor escolhido. */
   listas: ListaParaOAssunto[];
   valores?: AssuntoValores;
   /**
@@ -115,9 +115,9 @@ export function AssuntoForm({
         // explicação de para que serve, no "?" (17/11/2026, melhoria-707).
         travado={
           !setor
-            ? "Escolha o setor que atende para ver as listas dos Quadros dele."
+            ? "Escolha o setor que atende para ver as listas do Quadro de tarefas dele."
             : semListas
-              ? "O setor ainda não tem lista nos Quadros. Crie um espaço com o modelo Solicitações de clientes."
+              ? "O setor ainda não tem lista no Quadro de tarefas. Crie um espaço com o modelo Solicitações de clientes."
               : undefined
         }
         dica={
@@ -130,7 +130,7 @@ export function AssuntoForm({
         acao={
           semListas ? (
             <a href={`/setor/${setor}`} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
-              Abrir os Quadros do setor
+              Abrir o Quadro de tarefas do setor
             </a>
           ) : undefined
         }

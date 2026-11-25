@@ -12,7 +12,7 @@ const TELAS_GERAIS: readonly TelaDoConnect[] = [
   { href: "/empresas", rotulo: "Empresas", modulo: null },
   { href: "/pessoas", rotulo: "Pessoas", modulo: null },
   { href: "/agenda", rotulo: "Agenda", modulo: null },
-  { href: "/kanban", rotulo: "Quadros", modulo: null },
+  { href: "/kanban", rotulo: "Quadro de tarefas", modulo: null },
 ];
 
 function montar(): TelaDoConnect[] {
