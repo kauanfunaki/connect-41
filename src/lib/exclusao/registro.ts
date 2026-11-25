@@ -92,6 +92,7 @@ const EMPRESA: Ligacao[] = [
   // Fluxo de caixa (25/11/2026): a nomenclatura própria do cliente e o de-para do Omie para ela.
   { modelo: "ClientCategory", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["categoria do cliente", "categorias do cliente"], historico: true },
   { modelo: "ClientCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["ligação do de-para do cliente", "ligações do de-para do cliente"], historico: true },
+  { modelo: "CashFlowSettings", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["data de caixa do fluxo", "datas de caixa do fluxo"], historico: true },
   { modelo: "DrePublicacao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mês da DRE publicado no portal", "meses da DRE publicados no portal"], historico: true },
   { modelo: "DrePublicacaoEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["marca da foto inicial da DRE", "marcas da foto inicial da DRE"], historico: true },
   { modelo: "OmieEmissao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["nota emitida pelo Omie", "notas emitidas pelo Omie"], historico: true },

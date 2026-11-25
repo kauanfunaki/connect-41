@@ -177,6 +177,34 @@ export async function ligarCategoria(companyId: string, categoryId: string, clie
   return { success: true };
 }
 
+// ─── A data de caixa ────────────────────────────────────────────────────────
+
+const MAXIMO_DE_DIAS = 30;
+
+/** Quantos dias depois da previsão o dinheiro anda, a receber e a pagar. */
+export async function salvarDataDeCaixa(companyId: string, diasReceber: number, diasPagar: number): Promise<AcaoDasCategorias> {
+  const c = await contexto(companyId);
+  if (!c.ok) return { error: c.erro };
+  for (const d of [diasReceber, diasPagar]) {
+    if (!Number.isInteger(d) || d < 0 || d > MAXIMO_DE_DIAS) return { error: `Use um número inteiro de 0 a ${MAXIMO_DE_DIAS} dias.` };
+  }
+  const antes = await c.prisma.cashFlowSettings.findFirst({ where: { tenantId: c.tenantId, companyId }, select: { receivableDays: true, payableDays: true } });
+  await c.prisma.cashFlowSettings.upsert({
+    where: { companyId },
+    create: { tenantId: c.tenantId, companyId, receivableDays: diasReceber, payableDays: diasPagar },
+    update: { receivableDays: diasReceber, payableDays: diasPagar },
+  });
+  await auditar(c, companyId, "fluxo.data_de_caixa", {
+    diasReceberAntes: antes?.receivableDays ?? 0,
+    diasReceber,
+    diasPagarAntes: antes?.payableDays ?? 0,
+    diasPagar,
+  });
+  revalidatePath("/fluxo-de-caixa");
+  revalidatePath("/portal/fluxo-de-caixa");
+  return { success: true };
+}
+
 // ─── Importar e copiar ──────────────────────────────────────────────────────
 
 export type PreviaDoDePara = {

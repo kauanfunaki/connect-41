@@ -448,6 +448,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "fluxo.categoria_cliente.desligar": e("desligou uma categoria do Omie da categoria do cliente"),
   "fluxo.categoria_cliente.importar": e("importou o de-para das categorias do cliente"),
   "fluxo.categoria_cliente.copiar": e("copiou de outra empresa as categorias do cliente"),
+  "fluxo.data_de_caixa": e("mudou a data de caixa do fluxo da empresa"),
   "dre.budget.created": c("criou o orçamento"),
   "dre.budget.saved": e("salvou o orçamento"),
   "dre.budget.approved": e("aprovou o orçamento"),

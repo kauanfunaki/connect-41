@@ -94,7 +94,7 @@ export const TELAS_DO_PORTAL: readonly TelaDoPortal[] = [
     modulo: "bpo_fluxo_caixa",
     secao: "Financeiro",
     grupo: "financeiro",
-    descricao: "O que entrou e saiu nos últimos seis meses, e o que vence daqui para frente.",
+    descricao: "O saldo das suas contas, o que está previsto entrar e sair, e o que já aconteceu.",
   },
   {
     href: "/portal/relatorios",
