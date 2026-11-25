@@ -116,7 +116,7 @@ export async function PainelDeTarefas({
       <Rosca
         titulo="Atividades abertas por prazo"
         legendaDoTotal={total === 1 ? "aberta" : "abertas"}
-        vazio="Nenhuma atividade aberta nos seus Quadros."
+        vazio="Nenhuma atividade aberta no Quadro de tarefas dos seus setores."
         segmentos={[
           { chave: "atrasada", rotulo: "Atrasadas", valor: c.atrasada, tom: "critico" },
           { chave: "hoje", rotulo: "Para hoje", valor: c.hoje, tom: "atencao" },

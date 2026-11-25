@@ -89,10 +89,10 @@ describe("agruparPorCor", () => {
 
   it("junta as cores do Geral: os azuis (sem área e Escritório) e depois o atendimento", () => {
     const geral: [string, string | null][] = [
-      ["Quadros", "marca"], ["Cadastros", "marca"], ["Solicitações", "atendimento"],
+      ["Cadastros", "marca"], ["Quadro de tarefas", "marca"], ["Solicitações", "atendimento"],
       ["Chamados", "escritorio"], ["Arquivos", "atendimento"], ["Agenda", null],
     ];
-    expect(agruparPorCor(geral, area).map((i) => i[0])).toEqual(["Quadros", "Cadastros", "Chamados", "Agenda", "Solicitações", "Arquivos"]);
+    expect(agruparPorCor(geral, area).map((i) => i[0])).toEqual(["Cadastros", "Quadro de tarefas", "Chamados", "Agenda", "Solicitações", "Arquivos"]);
   });
 
   it("não mexe em quem já está junto", () => {

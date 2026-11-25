@@ -279,7 +279,7 @@ const PESSOA_SOLTAS: ColunaSolta[] = [
 
 const USUARIO: Ligacao[] = [
   // Autor obrigatório no banco — passa para quem exclui.
-  { modelo: "Activity", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação nos Quadros", "comentários e movimentações nos Quadros"], historico: true },
+  { modelo: "Activity", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["comentário ou movimentação no Quadro de tarefas", "comentários e movimentações no Quadro de tarefas"], historico: true },
   { modelo: "TimeEntry", campo: "user", fk: "userId", tratamento: "reatribuir", rotulo: ["apontamento de horas", "apontamentos de horas"], historico: true },
   { modelo: "Document", campo: "uploadedBy", fk: "uploadedById", tratamento: "reatribuir", rotulo: ["documento anexado", "documentos anexados"], historico: true },
   { modelo: "ClientDocument", campo: "createdBy", fk: "createdById", tratamento: "reatribuir", rotulo: ["documento enviado ao cliente", "documentos enviados ao cliente"], historico: true },
@@ -379,7 +379,7 @@ const USUARIO: Ligacao[] = [
   { modelo: "AgentConversation", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["conversa com a Ceci", "conversas com a Ceci"] },
   { modelo: "Notification", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["notificação", "notificações"] },
   { modelo: "PersonalApiToken", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["token de acesso", "tokens de acesso"] },
-  { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de atividade dos Quadros (a atividade fica, sem ele)", "atribuições de atividade dos Quadros (as atividades ficam, sem ele)"] },
+  { modelo: "PipelineItemAssignee", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["atribuição de atividade do Quadro de tarefas (a atividade fica, sem ele)", "atribuições de atividade do Quadro de tarefas (as atividades ficam, sem ele)"] },
   { modelo: "VagaRecrutador", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "PipelineItemWatcher", campo: "user", fk: "userId", tratamento: "cascata" },
   { modelo: "HandoffSectorAssignee", campo: "user", fk: "userId", tratamento: "cascata" },
@@ -507,7 +507,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "ContabilContaPagamento", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou as contas dos pagamentos sem nota" },
   { modelo: "ContabilContaSaida", coluna: "updatedById", tratamento: "manter", motivo: "quem gravou as contas das saídas" },
   { modelo: "Guia", coluna: "pagaPorId", tratamento: "manter", motivo: "quem marcou a guia como paga; a tela não expõe o id" },
-  { modelo: "SectorQuadrosBloqueados", coluna: "createdById", tratamento: "manter", motivo: "quem bloqueou os Quadros do setor; a tela não expõe o id, e a auditoria guarda o nome" },
+  { modelo: "SectorQuadrosBloqueados", coluna: "createdById", tratamento: "manter", motivo: "quem bloqueou o Quadro de tarefas do setor; a tela não expõe o id, e a auditoria guarda o nome" },
   { modelo: "Guia", coluna: "emitidaPorId", tratamento: "manter", motivo: "quem emitiu a guia; a tela não expõe o id" },
   { modelo: "Certidao", coluna: "pedidaPorId", tratamento: "manter", motivo: "quem pediu a certidão; a tela não expõe o id" },
   { modelo: "Certidao", coluna: "vistaPorId", tratamento: "manter", motivo: "quem viu a positiva; a tela não expõe o id" },
