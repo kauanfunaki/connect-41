@@ -106,7 +106,7 @@ export function AgendaDoSetorForm({ setores, fontes, disponivel, salvar, restaur
           Fontes padrão da Agenda
         </p>
         {fontes.length === 0 ? (
-          <p className="text-fs-2 text-fg-muted">Nenhuma fonte de prazo neste escritório além das atividades dos Quadros.</p>
+          <p className="text-fs-2 text-fg-muted">Nenhuma fonte de prazo neste escritório além das atividades do Quadro de tarefas.</p>
         ) : (
           <BotoesDeFonte
             rotulo="Fontes padrão da Agenda"

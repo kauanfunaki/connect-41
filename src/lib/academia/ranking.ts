@@ -24,7 +24,7 @@
 // Quem desligou "Aparecer no ranking" sai antes da conta: as posições dos
 // outros ficam seguidas, sem buraco.
 
-import { NIVEIS, type Nivel, type Teste } from "./regras";
+import { NIVEIS, TESTES, type Nivel, type Teste } from "./regras";
 
 export type LinhaDoResultado = {
   userId: string;
@@ -194,14 +194,14 @@ export function semQuemSaiu<T extends { userId: string }>(linhas: readonly T[], 
  * ela está abaixo deles — nunca o fim da lista (pedido do Kauan: ninguém vê
  * quem ficou por último).
  */
-export function recorteDoRanking(ranking: readonly PosicaoNoRanking[], userId: string | null, n = 10): { topo: PosicaoNoRanking[]; eu: PosicaoNoRanking | null; participantes: number } {
+export function recorteDoRanking<P extends { posicao: number; userId: string }>(ranking: readonly P[], userId: string | null, n = 10): { topo: P[]; eu: P | null; participantes: number } {
   const topo = ranking.slice(0, n);
   const minha = userId ? ranking.find((p) => p.userId === userId) ?? null : null;
   return { topo, eu: minha && minha.posicao > n ? minha : null, participantes: ranking.length };
 }
 
 /** A posição de quem olha, ou nulo (sem resultado no mês, ou fora do ranking). */
-export const posicaoDe = (ranking: readonly PosicaoNoRanking[], userId: string) => ranking.find((p) => p.userId === userId) ?? null;
+export const posicaoDe = <P extends { userId: string }>(ranking: readonly P[], userId: string): P | null => ranking.find((p) => p.userId === userId) ?? null;
 
 /** O certificado de destaque: o pódio (1º a 3º) do ranking geral de um mês que já acabou. */
 export const PODIO = 3;
@@ -235,5 +235,73 @@ export function resultadoEmTexto(teste: Teste, r: { ppm: number | null; acertos:
 }
 /** 96 → "96"; 96,5 → "96,5". */
 export const formatarPrecisao = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ","));
+
+// ─── Média de todos os testes (melhoria-823, 25/11/2026) ─────────────────────
+//
+// Pedido do Kauan: um pódio só no fim do mês, e não um por teste. O problema é
+// juntar PPM, acertos em 60 segundos e a soma ponderada da lógica, que não se
+// somam. A régua escolhida: em cada teste, a pessoa vale o percentual dos
+// pontos do 1º lugar do mês naquele teste (os `pontos` do ranking geral, todos
+// os níveis). Quem fez os pontos do líder tem 100; quem fez metade, 50.
+//
+// Por que o percentual do melhor, e não a média das posições: a posição não
+// diz a distância (o 2º colado no 1º e o 2º a anos-luz valeriam o mesmo), e
+// num teste com 3 pessoas o último lugar pesaria igual ao 3º de um teste com
+// 30. O percentual mede quão perto do melhor a pessoa chegou, na mesma escala
+// de 0 a 100 em qualquer teste.
+//
+// Quem não fez um teste fica com 0 nele: a média divide pelos testes que
+// alguém fez valendo no mês, e não pelos que a pessoa fez. Sem isso, quem
+// fizesse só um teste — e fosse o único a fazê-lo — teria 100 de média e
+// ganharia de quem fez todos. Teste que ninguém fez (ou em que o líder fez
+// 0 pontos) não entra na conta de ninguém. Só entra quem tem ao menos um
+// resultado valendo no mês; empate na média, ganha quem fez mais testes.
+
+export type PosicaoNaMedia = {
+  posicao: number;
+  userId: string;
+  sectorCode: string | null;
+  /** A média dos percentuais, de 0 a 100, com uma casa. */
+  media: number;
+  /** O percentual do líder em cada teste que a pessoa fez (0 a 100, uma casa). */
+  porTeste: Partial<Record<Teste, number>>;
+  /** Quantos testes a pessoa fez valendo no mês. */
+  testesFeitos: number;
+  /** Quantos testes contaram na média (os que alguém fez no mês). */
+  testesNoMes: number;
+};
+
+const umaCasa = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * A média de todos os testes, com posição. Recebe o ranking geral do mês de
+ * cada teste (todos os níveis, já sem quem saiu), como `montarRanking` devolve.
+ */
+export function montarMediaDosTestes(rankings: Partial<Record<Teste, readonly PosicaoNoRanking[]>>): PosicaoNaMedia[] {
+  const testes = TESTES.flatMap((teste) => {
+    const ranking = rankings[teste] ?? [];
+    return ranking.length ? [{ teste, ranking, lider: ranking.reduce((m, p) => Math.max(m, p.pontos), 0) }] : [];
+  });
+  const porPessoa = new Map<string, { sectorCode: string | null; soma: number; porTeste: Partial<Record<Teste, number>>; feitos: number }>();
+  for (const { teste, ranking, lider } of testes) {
+    for (const p of ranking) {
+      let pessoa = porPessoa.get(p.userId);
+      if (!pessoa) porPessoa.set(p.userId, (pessoa = { sectorCode: p.sectorCode, soma: 0, porTeste: {}, feitos: 0 }));
+      pessoa.feitos++;
+      const pct = lider > 0 ? (Math.max(0, p.pontos) / lider) * 100 : 0;
+      pessoa.porTeste[teste] = umaCasa(pct);
+      pessoa.soma += pct;
+    }
+  }
+  const testesNoMes = testes.filter((t) => t.lider > 0).length;
+  const semPosicao = [...porPessoa].map(([userId, p]) => ({
+    userId, sectorCode: p.sectorCode, exata: testesNoMes ? p.soma / testesNoMes : 0, porTeste: p.porTeste, testesFeitos: p.feitos, testesNoMes,
+  }));
+  semPosicao.sort((a, b) => b.exata - a.exata || b.testesFeitos - a.testesFeitos || a.userId.localeCompare(b.userId));
+  return semPosicao.map(({ exata, ...p }, i) => ({ ...p, media: umaCasa(exata), posicao: i + 1 }));
+}
+
+/** 87,5 → "87,5%"; 100 → "100%". */
+export const mediaEmTexto = (media: number) => `${formatarPrecisao(media)}%`;
 
 export { NIVEIS };

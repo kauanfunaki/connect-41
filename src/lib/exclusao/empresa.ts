@@ -375,6 +375,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "RobotTask", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.robotTask.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2BuscaEsocial", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2BuscaEsocial.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Rescisao", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Rescisao.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "Dp2Ferias", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Ferias.deleteMany({ where: daEmpresa(a) })) },
   // XML recusado pelo leitor (06/11/2026): o arquivo guarda os dados da empresa e sai com ela.
   { modelo: "FiscalXmlRefusal", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.fiscalXmlRefusal.deleteMany({ where: daEmpresa(a) })) },
 
@@ -477,7 +478,7 @@ async function previaDe(db: Tx, tenantId: string, e: EmpresaDaPrevia): Promise<P
       item("DriveFile.folder", arquivos, ["arquivo em Arquivos", "arquivos em Arquivos"], "apagar", true),
       item("BenefitAssignment.benefit", beneficios, ["benefício atribuído a funcionário", "benefícios atribuídos a funcionários"], "apagar", true),
       item("Handoff.entityId", transferencias, ["transferência entre setores", "transferências entre setores"], "apagar", true),
-      item("PipelineItem.entityId", tarefas, ["atividade dos Quadros (fica, sem a empresa)", "atividades dos Quadros (ficam, sem a empresa)"], "desligar"),
+      item("PipelineItem.entityId", tarefas, ["atividade do Quadro de tarefas (fica, sem a empresa)", "atividades do Quadro de tarefas (ficam, sem a empresa)"], "desligar"),
       item("ValoraProposta.companyId", propostas, ["proposta do Valora (fica, sem a empresa)", "propostas do Valora (ficam, sem a empresa)"], "desligar"),
     ]),
   ];

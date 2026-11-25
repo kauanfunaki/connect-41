@@ -169,7 +169,9 @@ export const ORDEM_DO_MENU_DO_SETOR: Readonly<Record<string, readonly GrupoDeMod
  * O módulo que ocupa o lugar dos Quadros no Geral (09/11/2026, pedido do
  * Kauan): na Tech, o item Quadros do Geral é o Controle interno — com o nome,
  * o ícone e o destaque dele —, e por isso ele sai da lista de telas do setor.
- * Desde 05/11/2026 o Quadros da Tech já levava ao Controle interno.
+ * Desde 05/11/2026 o Quadros da Tech já levava ao Controle interno. O item se
+ * chama "Quadro de tarefas" desde 25/11/2026 (melhoria-842), solto no Geral
+ * logo depois de Cadastros; o nome da constante ficou.
  */
 export const MODULO_NO_LUGAR_DOS_QUADROS = "tech_controle_interno";
 
@@ -1189,7 +1191,8 @@ export const MODULOS_DO_MENU_GERAL: ReadonlySet<string> = new Set(["portal_solic
 /**
  * O Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de senhas e
  * Repositório de manuais deixaram de ser do BPO e viraram um grupo do Geral,
- * para todo setor, junto dos Quadros. Cada setor vê os seus (cofre por setor).
+ * para todo setor (com o Quadro de tarefas até 25/11/2026, quando ele virou
+ * item próprio do Geral — melhoria-842). Cada setor vê os seus (cofre por setor).
  * O módulo segue ligado e desligado pelo escritório, no BPO de Setores e módulos.
  * O Repositório de fluxos entrou no grupo em 10/11/2026.
  */

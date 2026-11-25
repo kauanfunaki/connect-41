@@ -62,7 +62,7 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   {
     key: "painel-tarefas",
     label: "Atividades por prazo",
-    description: "Rosca com os prazos das atividades abertas nos seus Quadros.",
+    description: "Rosca com os prazos das atividades abertas no Quadro de tarefas dos seus setores.",
     slot: "paineis",
   },
   {
@@ -143,7 +143,7 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
   {
     key: "atividade",
     label: "Atividade",
-    description: "O que o time mexeu recentemente nos seus Quadros.",
+    description: "O que o time mexeu recentemente no Quadro de tarefas dos seus setores.",
     slot: "side",
   },
   {

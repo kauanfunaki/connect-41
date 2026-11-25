@@ -303,7 +303,7 @@ export function AppShell({
   // O menu do setor (05/11/2026): os blocos por tema (`montarMenuDoSetor`).
   // As telas escondidas pelo olho do "Organizar menu" (09/11/2026) saem daqui;
   // no modo de edição elas aparecem apagadas, no lugar delas. O Controle
-  // interno também sai (09/11/2026): ele é o item Quadros do Geral (`quadrosDoSetor`).
+  // interno também sai (09/11/2026): ele é o item Quadro de tarefas do Geral (`quadrosDoSetor`).
   const telasDoSetor = activeSector ? activeSectorModules.filter((m) => !MODULOS_SPED.has(m.code) && m.code !== MODULO_NO_LUGAR_DOS_QUADROS) : [];
   const setorDoMenu = activeSector?.code ?? null;
   // Com a ordem escolhida pelo super admin, ela vence o "cores juntas" (28/10/2026).
@@ -341,9 +341,12 @@ export function AppShell({
       : []),
   ];
   // O grupo Apoio do Geral (05/11/2026, pedido do Kauan): Repositório de
-  // senhas, Repositório de manuais e Quadros, para todo setor — cada setor vê
-  // os seus. Com uma tela só, ela fica solta (a regra dos grupos do menu).
-  const apoioBruto = (quadros: ItemDoGrupo | null): ItemDoGrupo[] => {
+  // senhas, Repositório de manuais e os outros repositórios, para todo setor —
+  // cada setor vê os seus. Com uma tela só, ela fica solta (a regra dos grupos
+  // do menu). O Quadro de tarefas (era "Quadros") saiu daqui em 25/11/2026
+  // (melhoria-842): dentro do Apoio a pessoa não o achava; é item próprio do
+  // Geral, logo depois de Cadastros (`listaDoGeral`).
+  const apoioBruto = (): ItemDoGrupo[] => {
     const telas: ItemDoGrupo[] = [
       ...(apoioLigado.senhas ? [{ chave: "senhas", label: "Repositório de senhas", href: "/senhas", icon: <ModuleIcon code="bpo_senhas" />, area: areaDoModulo("bpo_senhas") ?? "marca" }] : []),
       ...(apoioLigado.manuais ? [{ chave: "manuais", label: "Repositório de manuais", href: "/manuais", icon: <ModuleIcon code="bpo_manual" />, area: areaDoModulo("bpo_manual") ?? "marca" }] : []),
@@ -351,7 +354,6 @@ export function AppShell({
       ...(apoioLigado.fluxos ? [{ chave: "fluxos", label: "Repositório de fluxos", href: "/fluxos", icon: <ModuleIcon code="bpo_fluxos" />, area: areaDoModulo("bpo_fluxos") ?? "marca" }] : []),
       // Cálculos do DP 2 (18/11/2026): só chega aqui ligado para quem é do DP 2 (ver o layout).
       ...(apoioLigado.calculos ? [{ chave: "calculos", label: "Cálculos", href: "/dp2/calculos", icon: <ModuleIcon code="dp2_calculos" />, area: areaDoModulo("dp2_calculos") ?? "marca" }] : []),
-      ...(quadros ? [quadros] : []),
     ];
     return telas;
   };
@@ -364,8 +366,8 @@ export function AppShell({
     const ocultas = comOcultas ? [] : escolha?.ocultasDentro?.[grupo] ?? [];
     return pelaOrdem(bruto, (i) => i.chave, escolha?.dentro?.[grupo] ?? []).filter((i) => !ocultas.includes(i.chave));
   };
-  const telasDoApoio = (quadros: ItemDoGrupo | null, comAOrdemEscolhida = true, comOcultas = false) =>
-    telasDoGrupo("apoio", apoioBruto(quadros), comAOrdemEscolhida, comOcultas);
+  const telasDoApoio = (comAOrdemEscolhida = true, comOcultas = false) =>
+    telasDoGrupo("apoio", apoioBruto(), comAOrdemEscolhida, comOcultas);
   const telasDeCadastros = (comAOrdemEscolhida = true, comOcultas = false) => telasDoGrupo("cadastros", cadastrosBruto(), comAOrdemEscolhida, comOcultas);
   /** O grupo no menu: nenhuma tela, nada; uma, ela solta; mais de uma, a janela ao lado. */
   const blocoDoGrupo = (telas: ItemDoGrupo[], grupo: { label: string; icon: React.ReactNode; area: string }) => {
@@ -376,28 +378,28 @@ export function AppShell({
     // Mais de uma: a janela ao lado, como os grupos do setor (05/11/2026, opção C).
     return <ItemComJanela label={grupo.label} icon={grupo.icon} area={grupo.area} telas={telas.map((i) => ({ label: i.label, href: i.href, icon: i.icon, ativa: acesa(i) }))} />;
   };
-  const blocoDoApoio = (quadros: ItemDoGrupo | null) => blocoDoGrupo(telasDoApoio(quadros), { label: "Apoio", icon: <BookOpen size={16} />, area: "escritorio" });
+  const blocoDoApoio = () => blocoDoGrupo(telasDoApoio(), { label: "Apoio", icon: <BookOpen size={16} />, area: "escritorio" });
   // O mesmo trecho nos dois modos (dentro de um setor e em "Todos os setores").
   // O Geral com as cores juntas (28/10/2026): os azuis — sem área e Chamados —
-  // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo,
-  // que entra no grupo Apoio (05/11/2026). Desde 09/11/2026 o setor pode
-  // escolher a ordem do Geral no organizador (`ordemDoMenu.geral`), só dentro dele.
+  // e depois os de Clientes e atendimento. `quadros` é o item do setor ativo:
+  // o Quadro de tarefas, ou o Controle interno na Tech. Desde 09/11/2026 o
+  // setor pode escolher a ordem do Geral no organizador (`ordemDoMenu.geral`),
+  // só dentro dele.
+  //
+  // 25/11/2026 (melhoria-842, pedido do Kauan): Cadastros, logo depois o
+  // Quadro de tarefas — que saiu de dentro do Apoio —, e o Apoio no fim do
+  // Geral. Na ordem padrão o Apoio fica fora do "cores juntas": ele é azul, e
+  // a conta o puxaria de volta para o meio, antes de Solicitações e Arquivos.
+  // Na ordem escolhida no organizador, o Apoio fica onde o setor o pôs; o
+  // Quadro de tarefas, quando a ordem gravada não o conhece, entra logo depois
+  // de Cadastros (`comQuadroForaDoApoio`, em menuDoSetor.ts).
   const listaDoGeral = (quadros: ItemDoGrupo | null = null, comAOrdemEscolhida = true, comOcultas = false) => {
     const solicitacoes = areaDoModulo("portal_solicitacoes") ?? "marca";
     const chamados = areaDoModulo("helpdesk") ?? "marca";
     const atendimento = areaDoModulo("atendimento") ?? "marca";
     const arquivos = areaDoModulo("arquivos") ?? "marca";
-    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", apoioLigado.calculos && "Cálculos", quadros?.label].filter(Boolean) as string[];
+    const apoio = [apoioLigado.senhas && "Repositório de senhas", apoioLigado.manuais && "Repositório de manuais", apoioLigado.fluxos && "Repositório de fluxos", apoioLigado.calculos && "Cálculos"].filter(Boolean) as string[];
     const itens: { chave: string; area: string; label: string; icon: React.ReactNode; filhos?: ItemDentro[]; existe?: boolean; no: React.ReactNode }[] = [
-      {
-        chave: "apoio",
-        area: "escritorio",
-        label: apoio.length === 1 ? apoio[0]! : "Apoio",
-        icon: apoio.length === 1 && quadros ? quadros.icon : <BookOpen size={16} />,
-        filhos: telasDoApoio(quadros, comAOrdemEscolhida, comOcultas).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
-        existe: apoioBruto(quadros).length > 0,
-        no: blocoDoApoio(quadros),
-      },
       {
         chave: "cadastros",
         area: "marca",
@@ -408,33 +410,48 @@ export function AppShell({
         existe: noGeral("cadastros"),
         no: noGeral("cadastros") && blocoDoGrupo(telasDeCadastros(), { label: "Cadastros", icon: <ContactRound size={16} />, area: "marca" }),
       },
+      ...(quadros
+        ? [{ chave: "quadros", area: quadros.area, label: quadros.label, icon: quadros.icon, no: <NavItem href={quadros.href} ativo={quadros.ativo} icon={quadros.icon} label={quadros.label} area={quadros.area} /> }]
+        : []),
       { chave: "transferencias", area: "marca", label: "Transferências", icon: <ArrowRightLeft size={16} />, no: noGeral("transferencias") && <NavItem href="/transferencias" icon={<ArrowRightLeft size={16} />} label="Transferências" area="marca" /> },
       { chave: "solicitacoes", area: solicitacoes, label: "Solicitações", icon: <Inbox size={16} />, no: solicitacoesLigadas && noGeral("solicitacoes") && <NavItem href="/solicitacoes" ativo={(p) => ["/solicitacoes", ...TELAS_DO_BPO_NAS_SOLICITACOES.map((t) => t.href)].some((h) => caminhoDoMenuAtivo(p, h))} icon={<Inbox size={16} />} label="Solicitações" contador={novasSolicitacoes} area={solicitacoes} /> },
       { chave: "atendimento", area: atendimento, label: "Atendimento", icon: <ModuleIcon code="atendimento" />, no: atendimentoLigado && noGeral("atendimento") && <NavItem href="/atendimento" icon={<ModuleIcon code="atendimento" />} label="Atendimento" contador={novosAtendimentos} area={atendimento} /> },
       { chave: "chamados", area: chamados, label: "Chamados", icon: <ModuleIcon code="helpdesk" />, no: chamadosLigados && noGeral("chamados") && <NavItem href="/chamados" icon={<ModuleIcon code="helpdesk" />} label="Chamados" contador={novosChamados} area={chamados} /> },
       { chave: "arquivos", area: arquivos, label: "Arquivos", icon: <FolderOpen size={16} />, no: arquivosLigados && noGeral("arquivos") && <NavItem href="/arquivos" icon={<FolderOpen size={16} />} label="Arquivos" area={arquivos} /> },
       { chave: "agenda", area: "marca", label: "Agenda", icon: <CalendarDays size={16} />, no: noGeral("agenda") && <NavItem href="/agenda" icon={<CalendarDays size={16} />} label="Agenda" area="marca" /> },
+      {
+        chave: "apoio",
+        area: "escritorio",
+        label: apoio.length === 1 ? apoio[0]! : "Apoio",
+        icon: <BookOpen size={16} />,
+        filhos: telasDoApoio(comAOrdemEscolhida, comOcultas).map((t) => ({ chave: t.chave, label: t.label, icon: t.icon })),
+        existe: apoioBruto().length > 0,
+        no: blocoDoApoio(),
+      },
     ];
     const escolha = escolhaDoSetor(comAOrdemEscolhida);
     const ocultas = comOcultas ? [] : escolha?.ocultasGeral ?? [];
     // O Apoio existe mesmo com todas as telas dele escondidas: no organizador ele aparece.
     const presentes = itens.filter((i) => (i.existe ?? !!i.no) && !ocultas.includes(i.chave) && (comOcultas || !!i.no));
     const escolhida = escolha?.geral ?? [];
-    return escolhida.length > 0 ? pelaOrdem(presentes, (i) => i.chave, escolhida) : agruparPorCor(presentes, (i) => i.area);
+    if (escolhida.length > 0) return pelaOrdem(presentes, (i) => i.chave, escolhida);
+    const noFim = (i: (typeof presentes)[number]) => i.chave === "apoio";
+    return [...agruparPorCor(presentes.filter((i) => !noFim(i)), (i) => i.area), ...presentes.filter(noFim)];
   };
   const itensDoGeral = (quadros: ItemDoGrupo | null = null) => listaDoGeral(quadros).map((i) => <Fragment key={i.chave}>{i.no}</Fragment>);
-  // Na Tech, os Quadros são o Controle interno (decisão do Kauan, 05/11/2026).
+  // Na Tech, o Quadro de tarefas é o Controle interno (decisão do Kauan, 05/11/2026).
   // Desde 09/11/2026 o item é o próprio Controle interno, com o nome, o ícone e
-  // o destaque dele, e a tela sai da lista do setor. Não depende do "Quadros"
-  // ligado no Geral do setor: escondido lá, o Controle interno ficaria sem
-  // entrada no menu. Quem quiser tirá-lo usa o olho do organizador.
+  // o destaque dele, e a tela sai da lista do setor. Não depende do Quadro de
+  // tarefas ligado no Geral do setor: escondido lá, o Controle interno ficaria
+  // sem entrada no menu. Quem quiser tirá-lo usa o olho do organizador. A chave
+  // "quadros" é a do item no Geral (`ordemDoMenu.geral`), e não muda com o nome.
   const controleInterno = activeSectorModules.find((m) => m.code === MODULO_NO_LUGAR_DOS_QUADROS);
   const quadrosDoSetor: ItemDoGrupo | null = !activeSector
     ? null
     : controleInterno
       ? { chave: "quadros", label: controleInterno.label, href: controleInterno.href, icon: <ModuleIcon code={controleInterno.code} />, area: areaDoModulo(controleInterno.code) ?? "marca" }
       : noGeral("espacos")
-        ? { chave: "quadros", label: "Quadros", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) }
+        ? { chave: "quadros", label: "Quadro de tarefas", href: `/setor/${activeSector.code}`, icon: <FolderKanban size={16} />, area: "marca", ativo: quadrosAtivo(pathname, activeSector.code) }
         : null;
   // Organizar no próprio menu (09/11/2026): o rodapé da lateral abre o modo de edição.
   const organizacao = useOrganizarMenu({
@@ -603,9 +620,10 @@ export function AppShell({
 
                 {/* Transversais. NUNCA somem por causa do setor ativo: transferência
                     é setor↔setor por natureza, e cadastro é do tenant. Isolar os
-                    dois mataria a razão de existir do Connect. Quadros entra aqui:
-                    é a mesma tela em todo setor, e solto no topo parecia um módulo.
-                    (Chamava-se "Espaços" até 14/10/2026; a chave segue `espacos`.)
+                    dois mataria a razão de existir do Connect. O Quadro de tarefas
+                    entra aqui: é a mesma tela em todo setor, e solto no topo
+                    parecia um módulo. (Chamava-se "Espaços" até 14/10/2026 e
+                    "Quadros" até 25/11/2026; a chave segue `espacos`.)
 
                     30/09: Conversas foi para o setor Controladoria e Gestão para o
                     setor Gestão (pedido do Kauan: o Geral é só o que serve a

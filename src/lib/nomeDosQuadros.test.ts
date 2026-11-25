@@ -23,10 +23,35 @@ function semComentarios(arquivo: string): string {
 
 const quadros = TELAS_DO_GERAL.find((t) => t.chave === "espacos");
 
-describe("a tela Quadros (antes Espaços)", () => {
+// 25/11/2026 (melhoria-842): "Quadros" virou "Quadro de tarefas". "Tarefas"
+// sozinho ficou de fora: é o nível de dentro (Espaço › Pasta › Tarefa), o nome
+// de /kanban ("Todas as tarefas") e o nome antigo do Meu dia (/tarefas).
+describe("a tela Quadro de tarefas (antes Quadros e Espaços)", () => {
   it("no menu Geral, com a chave de sempre", () => {
-    expect(quadros?.rotulo).toBe("Quadros");
+    expect(quadros?.rotulo).toBe("Quadro de tarefas");
     expect(quadros?.descricao).toMatch(/espaços/);
+  });
+
+  it("o nome não repete o de outra tela do Geral nem o do nível de dentro", () => {
+    const nomes = [...TELAS_DO_GERAL.map((t) => t.rotulo), "Início", "Meu dia", "Todas as tarefas"];
+    expect(nomes.filter((n) => n === quadros?.rotulo)).toHaveLength(1);
+    expect(quadros?.rotulo).not.toBe("Tarefas");
+  });
+
+  it("nenhum texto que a pessoa lê chama a tela de Quadros", () => {
+    for (const arquivo of [
+      "src/lib/menuGeral.ts",
+      "src/lib/ia/ferramentas-ajuda.ts",
+      "src/lib/ia/chat/telas.ts",
+      "src/lib/fluxos/telas.ts",
+      "src/lib/ajuda/artigos/geral.ts",
+      "src/lib/taskWidgets.ts",
+      "src/lib/homeWidgets.ts",
+      "src/components/shell/AppShell.tsx",
+      "src/app/(app)/setor/[code]/page.tsx",
+    ]) {
+      expect(semComentarios(arquivo), arquivo).not.toMatch(/\bQuadros\b/);
+    }
   });
 
   it("a central de Ajuda e a Ceci usam o nome do menu", () => {
@@ -47,11 +72,11 @@ describe("a tela Quadros (antes Espaços)", () => {
 
   it("o item do menu e o título da tela", () => {
     const menu = semComentarios("src/components/shell/AppShell.tsx");
-    // Como prop (`label="Quadros"`) ou, desde 05/11/2026, como item do grupo Apoio (`label: "Quadros"`).
-    expect(menu).toMatch(/label(=|: )"Quadros"/);
+    // O item do Geral (`label: "Quadro de tarefas"`), solto desde 25/11/2026.
+    expect(menu).toMatch(/label(=|: )"Quadro de tarefas"/);
     expect(menu).not.toContain("Espaços");
     const tela = semComentarios("src/app/(app)/setor/[code]/page.tsx");
-    expect(tela).toContain('title="Quadros"');
+    expect(tela).toContain('title="Quadro de tarefas"');
     expect(tela).not.toContain("Espaços");
   });
 

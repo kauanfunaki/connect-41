@@ -18,19 +18,23 @@ export default async function TestesDaAcademiaPage() {
     <PageContainer>
       <CabecalhoDaAcademia ativa="testes" podeAdministrar={podeAdministrar} />
       {!podeFazer && <Aviso tom="info" className="mb-4">{motivoSemTeste(ctx)}</Aviso>}
-      <div className="mb-3">
+      <div className="mb-4">
         <CartaoDoDesafio desafio={resumo.desafio} podeFazer={podeFazer} />
       </div>
-      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
         {TESTES.map((t) => (
           <CartaoDoTeste key={t} resumo={resumo.testes[t]} podeFazer={podeFazer} />
         ))}
       </div>
       {/* As regras num bloco que começa fechado (17/11/2026, melhoria-707): o
           cartão aberto tomava a tela, e o "nada entra em avaliação" que
-          repetia o cabeçalho foi para o artigo de ajuda. */}
-      <BlocoRecolhivel titulo="Como funciona" resumo="Valendo, treino livre, desafio e ranking" className="mt-6 max-w-3xl bg-surface">
-        <ul className="flex list-disc flex-col gap-1.5 pl-5 text-ui text-fg-secondary">
+          repetia o cabeçalho foi para o artigo de ajuda. Na melhoria-823
+          (25/11/2026) ele ganhou a largura da grade e o mesmo vão de 16 px dos
+          cartões: com o `max-w-3xl` ele terminava no meio da tela, e o vão
+          de 24 px o soltava do resto. */}
+      <BlocoRecolhivel titulo="Como funciona" resumo="Valendo, treino livre, desafio e ranking" className="mt-4 bg-surface shadow-xs">
+        {/* Em duas colunas na tela larga: a linha da largura toda ficaria longa demais para ler. */}
+        <ul className="grid list-disc gap-x-10 gap-y-1.5 pl-5 text-ui text-fg-secondary lg:grid-cols-2">
           <li>Valendo: uma tentativa por dia em cada nível (Fácil, Médio e Difícil) de cada teste. Ela conta assim que o texto ou as questões aparecem, mesmo se você sair no meio.</li>
           <li>Treino livre: os mesmos testes, quantas vezes quiser. Nada vai para o ranking.</li>
           <li>Na digitação, o relógio de 60 segundos começa na primeira tecla. Colar não vale, e o texto que ficar sem digitar desconta da precisão.</li>

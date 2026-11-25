@@ -95,7 +95,9 @@ export function MetaPessoal({ meta, hoje, podeGravar }: { meta: MetaNaTela | nul
 
   const tituloId = "meta-pessoal-titulo";
   return (
-    <Card as="section" aria-labelledby={tituloId} className="flex flex-col gap-3 p-4">
+    // `@container` (melhoria-823): na coluna da direita do Início, o formulário
+    // fica em duas colunas só quando o cartão tem largura para isso, e não pela tela.
+    <Card as="section" aria-labelledby={tituloId} className="@container flex flex-col gap-3 p-4">
       <h2 id={tituloId} className="flex items-center gap-2 text-body font-semibold text-fg">
         <Target size={16} aria-hidden className="text-brand" /> Sua meta
       </h2>
@@ -112,7 +114,7 @@ export function MetaPessoal({ meta, hoje, podeGravar }: { meta: MetaNaTela | nul
 
       {editando ? (
         <form onSubmit={salvar} className="flex flex-col gap-3">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 @md:grid-cols-2">
             <CampoForm label="Teste" htmlFor="meta-teste">
               <Select id="meta-teste" value={teste} onChange={(e) => {
                   if (ehTeste(e.target.value)) setTeste(e.target.value);

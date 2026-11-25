@@ -86,14 +86,14 @@ describe("o Geral e o que fica dentro de cada menu (09/11/2026)", () => {
       geral: ["agenda"],
       dentro: { tech_ops_center: ["sub:Apps", "sub:Robôs"] },
     });
-    expect(ordemEhPadrao({ grupos: [], telas: [], dentro: { apoio: ["quadros"] } })).toBe(false);
+    expect(ordemEhPadrao({ grupos: [], telas: [], dentro: { apoio: ["manuais"] } })).toBe(false);
     expect(ordemEhPadrao({ grupos: [], telas: [], geral: ["agenda"] })).toBe(false);
   });
 
   it("a ordem gravada leva o Geral e os menus com alguma ordem", () => {
-    const ordem = ordemDosBlocos(montarMenuDoSetor(soc), { geral: ["agenda", "cadastros"], dentro: { apoio: ["quadros", "senhas"], vazio: [] } });
-    expect(ordem.geral).toEqual(["agenda", "cadastros"]);
-    expect(ordem.dentro).toEqual({ apoio: ["quadros", "senhas"] });
+    const ordem = ordemDosBlocos(montarMenuDoSetor(soc), { geral: ["agenda", "cadastros", "quadros"], dentro: { apoio: ["manuais", "senhas"], vazio: [] } });
+    expect(ordem.geral).toEqual(["agenda", "cadastros", "quadros"]);
+    expect(ordem.dentro).toEqual({ apoio: ["manuais", "senhas"] });
   });
 
   it("o olho no Geral e dentro dos menus vai para a ordem gravada, e a leitura volta igual", () => {
@@ -109,5 +109,35 @@ describe("o Geral e o que fica dentro de cada menu (09/11/2026)", () => {
     const blocos = montarMenuDoSetor(soc);
     expect(moverNoMenu(blocos, { tipo: "geral" }, 0, 2)).toEqual(blocos);
     expect(moverNoMenu(blocos, { tipo: "dentro", mae: "apoio", chaves: ["a", "b"] }, 0, 2)).toEqual(blocos);
+  });
+});
+
+// 25/11/2026 (melhoria-842): o Quadro de tarefas saiu do Apoio. A ordem gravada
+// antes disso é lida no jeito novo, sem script de banco.
+describe("ordem gravada com o Quadro de tarefas dentro do Apoio", () => {
+  const ler = (o: object) => lerOrdemDoMenu(JSON.stringify({ grupos: [], telas: [], ...o }));
+
+  it("o item entra no Geral logo depois de Cadastros, e o Apoio fica onde o setor o pôs", () => {
+    const lida = ler({ geral: ["apoio", "cadastros", "transferencias", "agenda"], dentro: { apoio: ["senhas", "quadros", "manuais"] } });
+    expect(lida.geral).toEqual(["apoio", "cadastros", "quadros", "transferencias", "agenda"]);
+    expect(lida.dentro).toEqual({ apoio: ["senhas", "manuais"] });
+  });
+
+  it("sem Cadastros na ordem, entra onde estava o Apoio", () => {
+    expect(ler({ geral: ["transferencias", "apoio", "agenda"] }).geral).toEqual(["transferencias", "quadros", "apoio", "agenda"]);
+  });
+
+  it("escondido pelo olho dentro do Apoio continua escondido, agora no Geral", () => {
+    const lida = ler({ ocultasGeral: ["agenda"], ocultasDentro: { apoio: ["quadros"], tech_ops_center: ["sub:Sites"] } });
+    expect(lida.ocultasGeral).toEqual(["agenda", "quadros"]);
+    expect(lida.ocultasDentro).toEqual({ tech_ops_center: ["sub:Sites"] });
+  });
+
+  it("a ordem que já conhece o item, ou sem ordem do Geral, não muda", () => {
+    const nova = { grupos: [], telas: [], geral: ["cadastros", "agenda", "quadros", "apoio"], ocultasGeral: ["quadros"] };
+    expect(lerOrdemDoMenu(JSON.stringify(nova))).toEqual(nova);
+    expect(ler({ ocultas: ["x"] })).toEqual({ grupos: [], telas: [], ocultas: ["x"] });
+    // Só a posição no Apoio: sai, e a ordem volta a ser a padrão.
+    expect(ordemEhPadrao(ler({ dentro: { apoio: ["quadros"] } }))).toBe(true);
   });
 });

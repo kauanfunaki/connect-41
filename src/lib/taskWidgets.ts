@@ -42,8 +42,8 @@ export type TaskWidgetDef = {
 export const TASK_WIDGETS: TaskWidgetDef[] = [
   {
     key: "cards-kanban",
-    label: "Atividades dos Quadros",
-    description: "As atividades dos Quadros em que você responde.",
+    label: "Atividades do Quadro de tarefas",
+    description: "As atividades do Quadro de tarefas em que você responde.",
     slot: "main",
     grupo: "origem",
   },

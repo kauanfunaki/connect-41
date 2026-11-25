@@ -259,7 +259,7 @@ export default async function SetoresPage({
                   <EmptyState
                     icon={<LayoutGrid />}
                     title="Nenhum módulo neste setor"
-                    description="Para trazer um módulo para cá, abra o setor que o opera hoje e use “Mover” ou “Compartilhar” na linha dele."
+                    description="Use “Mover” ou “Compartilhar” no setor que opera o módulo."
                   />
                 </div>
               ) : (
@@ -275,21 +275,22 @@ export default async function SetoresPage({
                         {m.enabled && emManutencao.has(m.code) && (
                           <p className="text-fs-1 text-warning-fg mt-0.5">{resumoDaManutencao(emManutencao.get(m.code)!)}</p>
                         )}
+                        {/* A origem numa linha só (25/11/2026, melhoria-820): eram até três
+                            linhas soltas embaixo da descrição. O "onde se liga, desliga e
+                            move" foi para a dica. */}
                         {m.sectorCode !== escolhido?.code ? (
                           <p className="text-fs-1 text-fg-muted mt-0.5">
-                            Também aqui · de {rotuloDo(m.sectorCode)}, onde se liga, desliga e move
+                            <span data-dica={`Liga, desliga e move em ${rotuloDo(m.sectorCode)}`}>Compartilhado · de {rotuloDo(m.sectorCode)}</span>
                           </p>
                         ) : (
-                          <>
-                            {m.sectorCode !== m.catalogSectorCode && (
-                              <p className="text-fs-1 text-fg-muted mt-0.5">Veio de {rotuloDo(m.catalogSectorCode)}</p>
-                            )}
-                            {m.sectorCodes.length > 1 && (
-                              <p className="text-fs-1 text-fg-muted mt-0.5">
-                                Também em {m.sectorCodes.slice(1).map(rotuloDo).join(", ")}
-                              </p>
-                            )}
-                          </>
+                          (m.sectorCode !== m.catalogSectorCode || m.sectorCodes.length > 1) && (
+                            <p className="text-fs-1 text-fg-muted mt-0.5">
+                              {[
+                                m.sectorCode !== m.catalogSectorCode ? `Veio de ${rotuloDo(m.catalogSectorCode)}` : null,
+                                m.sectorCodes.length > 1 ? `Também em ${m.sectorCodes.slice(1).map(rotuloDo).join(", ")}` : null,
+                              ].filter(Boolean).join(" · ")}
+                            </p>
+                          )
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
