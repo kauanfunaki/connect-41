@@ -6,9 +6,10 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
 import { camposAjustaveis, lerAjuste, nomeDoCampo } from "@/lib/dp2/ajustesDoCalculo";
 import type { ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
-import { SALARIO_OBRIGATORIO, salarioValido } from "@/lib/dp2/categorias";
+import { SALARIO_OBRIGATORIO, regimeDaCategoria, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthContext, type AuthContext } from "@/lib/auth/context";
@@ -335,6 +336,120 @@ export async function removerEventoAction(_: EstadoDoDp2, fd: FormData): Promise
   });
   revalidarCompetencia(evento.competenciaId);
   return { ok: true, texto: "Lançamento retirado." };
+}
+
+// ─── Outras bases de INSS (mais de um vínculo) ──────────────────────────────
+
+/** A competência mensal ainda aberta da tela; o que muda deixa o cálculo velho. */
+async function competenciaMensalAberta(a: Acesso, competenciaId: string) {
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return r0;
+  if (r0.comp.situacao === "FECHADA") return { erro: "Competência fechada: reabra para mexer nas outras bases de INSS." } as const;
+  if (r0.comp.tipo !== "MENSAL") return { erro: "Outras bases de INSS são da folha mensal." } as const;
+  return r0;
+}
+
+async function calculoFicouVelho(comp: { id: string; situacao: string }) {
+  if (comp.situacao === "CALCULADA") await getPrisma().dp2Competencia.update({ where: { id: comp.id }, data: { situacao: "ABERTA" } });
+}
+
+/**
+ * Remuneração do colaborador em outra empresa no mês (25/11/2026,
+ * funcionalidade-769, "Outras bases INSS" da Domínio): o INSS daqui respeita o
+ * teto somando as bases e o S-1200 leva o infoMV. Uma linha por empresa.
+ */
+export async function incluirOutraBaseInssAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaMensalAberta(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  const prisma = getPrisma();
+  const pessoa = (await colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador desta folha.");
+  // Por enquanto, só empregado (CLT): estagiário não tem INSS, e sócio/autônomo têm outra regra.
+  if (regimeDaCategoria(pessoa.dp2Vinculo?.categoria) !== "CLT") return erro(`${pessoa.name} não é empregado (CLT): outras bases de INSS valem só para empregados por enquanto.`);
+  const empresa = await prisma.company.findFirst({ where: { id: comp.companyId, tenantId: a.tenantId }, select: { cnpj: true } });
+  const lido = lerOutraBase(texto(fd, "documento"), texto(fd, "codCateg"), texto(fd, "remuneracao"), empresa?.cnpj);
+  if (!lido.ok) return erro(lido.erro);
+  const repetida = await prisma.dp2OutraBaseInss.findFirst({ where: { tenantId: a.tenantId, competenciaId, personId: pessoa.id, nrInsc: lido.base.nrInsc }, select: { id: true } });
+  if (repetida) return erro("Essa empresa já está informada para este colaborador no mês: retire a linha para trocar o valor.");
+  await prisma.dp2OutraBaseInss.create({ data: { tenantId: a.tenantId, competenciaId, personId: pessoa.id, ...lido.base, criadoPorId: a.userId } });
+  await calculoFicouVelho(comp);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.outra_base_inss_incluida",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { pessoa: pessoa.name, outraEmpresa: lido.base.nrInsc, remuneracao: lido.base.remuneracao },
+  });
+  revalidarCompetencia(competenciaId);
+  return { ok: true, texto: `Outra base de ${pessoa.name} informada. Calcule de novo para o INSS considerar.` };
+}
+
+export async function retirarOutraBaseInssAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const linha = await prisma.dp2OutraBaseInss.findFirst({ where: { id: texto(fd, "outraBaseId"), tenantId: a.tenantId }, include: { person: { select: { name: true } } } });
+  if (!linha) return erro("Linha não encontrada.");
+  const r0 = await competenciaMensalAberta(a, linha.competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  await prisma.dp2OutraBaseInss.delete({ where: { id: linha.id } });
+  await calculoFicouVelho(r0.comp);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.outra_base_inss_retirada",
+    entityType: "Dp2Competencia",
+    entityId: linha.competenciaId,
+    metadata: { pessoa: linha.person.name, outraEmpresa: linha.nrInsc, remuneracao: Number(linha.remuneracao) },
+  });
+  revalidarCompetencia(linha.competenciaId);
+  return { ok: true, texto: "Outra base retirada. Calcule de novo para o INSS considerar." };
+}
+
+/**
+ * Copia do mês anterior as outras bases de quem está nesta folha e ainda não
+ * tem nenhuma informada aqui (o comum é a outra empresa pagar o mesmo todo mês).
+ */
+export async function copiarOutrasBasesInssAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaMensalAberta(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  const prisma = getPrisma();
+  const { ano, mes } = mesAnterior(comp.ano, comp.mes);
+  const anterior = await prisma.dp2Competencia.findFirst({ where: { tenantId: a.tenantId, companyId: comp.companyId, ano, mes, tipo: "MENSAL" }, select: { id: true } });
+  if (!anterior) return erro("Não há folha mensal do mês anterior para copiar.");
+  const [deLa, daqui, pessoas] = await Promise.all([
+    prisma.dp2OutraBaseInss.findMany({ where: { tenantId: a.tenantId, competenciaId: anterior.id } }),
+    prisma.dp2OutraBaseInss.findMany({ where: { tenantId: a.tenantId, competenciaId }, select: { personId: true } }),
+    colaboradoresDaCompetencia(a.tenantId, comp.companyId, comp.ano, comp.mes),
+  ]);
+  const naFolha = new Set(pessoas.filter((p) => p.dp2Vinculo).map((p) => p.id));
+  const jaTem = new Set(daqui.map((d) => d.personId));
+  const copiar = deLa.filter((o) => naFolha.has(o.personId) && !jaTem.has(o.personId));
+  if (copiar.length === 0) return erro(deLa.length ? "Quem tinha outra base no mês anterior já tem aqui (ou saiu da folha)." : "O mês anterior não tem outras bases de INSS.");
+  await prisma.dp2OutraBaseInss.createMany({
+    data: copiar.map((o) => ({ tenantId: a.tenantId, competenciaId, personId: o.personId, tpInsc: o.tpInsc, nrInsc: o.nrInsc, codCateg: o.codCateg, remuneracao: o.remuneracao, criadoPorId: a.userId })),
+  });
+  await calculoFicouVelho(comp);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.outras_bases_inss_copiadas",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { de: anterior.id, linhas: copiar.length },
+  });
+  revalidarCompetencia(competenciaId);
+  const pessoasCopiadas = new Set(copiar.map((o) => o.personId)).size;
+  return { ok: true, texto: `Copiadas ${copiar.length} linha(s) de ${pessoasCopiadas} colaborador(es). Confira os valores e calcule de novo.` };
 }
 
 // ─── Ajuste manual do cálculo ───────────────────────────────────────────────
