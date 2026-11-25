@@ -6,6 +6,7 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
 import { camposAjustaveis, lerAjuste, nomeDoCampo } from "@/lib/dp2/ajustesDoCalculo";
@@ -733,6 +734,80 @@ export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: Form
   });
   revalidarCompetencia(info.competenciaId);
   return { ok: true, texto: `${nome} retirada da apuração.` };
+}
+
+// ─── Saldo inicial das médias (25/11/2026, funcionalidade-747) ──────────────
+
+/**
+ * Grava o saldo inicial colado da Domínio ("Lançamento de Rubricas para
+ * Médias"): as rubricas de cada mês antes do DP 2. Importar de novo troca o da
+ * mesma pessoa, mês e rubrica. Entra como "a conferir": só vale na média
+ * depois do Conferir.
+ */
+export async function importarSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const colado = texto(fd, "texto");
+  if (!colado) return erro("Cole as linhas da Domínio: CPF; competência; rubrica; valor.");
+  const prisma = getPrisma();
+  const [pessoas, rubricas, primeira] = await Promise.all([
+    colaboradoresDaEmpresa(a.tenantId, companyId),
+    prisma.dp2Rubrica.findMany({ where: { tenantId: a.tenantId }, select: { id: true, codigo: true, nome: true, tipo: true, mediaFerias: true, mediaDecimo: true, mediaRescisao: true } }),
+    prisma.dp2Competencia.findFirst({ where: { tenantId: a.tenantId, companyId, tipo: "MENSAL" }, orderBy: [{ ano: "asc" }, { mes: "asc" }], select: { ano: true, mes: true } }),
+  ]);
+  const antesDe = primeira ? `${primeira.ano}-${String(primeira.mes).padStart(2, "0")}` : undefined;
+  const lido = lerSaldoInicial(colado, pessoas, rubricas, antesDe);
+  if (lido.erros.length > 0) {
+    const mais = lido.erros.length > 8 ? ` E mais ${lido.erros.length - 8}.` : "";
+    return erro(`Nada gravado: corrija ${lido.erros.length === 1 ? "a linha" : `as ${lido.erros.length} linhas`} e cole de novo. ${lido.erros.slice(0, 8).join(" ")}${mais}`);
+  }
+  if (lido.linhas.length === 0) return erro("Nenhuma linha com CPF, competência, rubrica e valor.");
+  await prisma.$transaction(
+    lido.linhas.map((l) =>
+      prisma.dp2SaldoInicialMedia.upsert({
+        where: { personId_competencia_rubricaId: { personId: l.personId, competencia: l.competencia, rubricaId: l.rubricaId } },
+        create: { tenantId: a.tenantId, companyId, ...l, criadoPorId: a.userId },
+        update: { valor: l.valor, conferidoEm: null, criadoPorId: a.userId },
+      })
+    )
+  );
+  const quantas = new Set(lido.linhas.map((l) => l.personId)).size;
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_importado", entityType: "Company", entityId: companyId, metadata: { linhas: lido.linhas.length, pessoas: quantas } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${lido.linhas.length} linha(s) de ${quantas} colaborador(es) a conferir.${lido.avisos.length ? ` ${lido.avisos.join(" ")}` : ""}` };
+}
+
+/** Confere o saldo inicial de uma pessoa (ou de todas da empresa): a partir daí ele entra na média. */
+export async function conferirSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const personId = texto(fd, "personId") || undefined;
+  const r = await getPrisma().dp2SaldoInicialMedia.updateMany({ where: { tenantId: a.tenantId, companyId, personId, conferidoEm: null }, data: { conferidoEm: new Date() } });
+  if (r.count === 0) return erro("Não há saldo inicial a conferir.");
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_conferido", entityType: personId ? "Person" : "Company", entityId: personId ?? companyId, metadata: { linhas: r.count } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${r.count} linha(s) conferida(s): já entram nas médias.` };
+}
+
+/** Apaga o saldo inicial de uma pessoa, para importar de novo. */
+export async function apagarSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const personId = texto(fd, "personId");
+  if (!personId) return erro("Escolha o colaborador.");
+  const r = await getPrisma().dp2SaldoInicialMedia.deleteMany({ where: { tenantId: a.tenantId, companyId, personId } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_apagado", entityType: "Person", entityId: personId, metadata: { linhas: r.count } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Saldo inicial apagado (${r.count} linha(s)).` };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────

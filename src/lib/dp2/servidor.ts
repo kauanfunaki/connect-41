@@ -2,6 +2,7 @@
 // nos arquivos puros ao lado (`mensal.ts`, `tabelas.ts`…); aqui só se junta o
 // que eles precisam e se guarda o que devolvem.
 
+import { mesesDoSaldoInicial } from "./saldoInicial";
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
 import { feriasNoMes, periodosAquisitivos, type FeriasNoMes, type PeriodoAquisitivo } from "./periodosDeFerias";
 import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
@@ -296,6 +297,25 @@ export async function mediaDaPessoa(tenantId: string, personId: string, ate: str
     .filter((c) => competenciaDe(c.competencia.ano, c.competencia.mes) <= ate)
     .sort((a, b) => a.competencia.ano - b.competencia.ano || a.competencia.mes - b.competencia.mes)
     .map((c) => ({ competencia: competenciaDe(c.competencia.ano, c.competencia.mes), itens: (c.itens as unknown as ItemDoHolerite[]) ?? [] }));
+  // Os meses de antes do DP 2, do saldo inicial conferido (funcionalidade-747).
+  const desde = competenciaDe(de.getUTCFullYear(), de.getUTCMonth() + 1);
+  const saldo = await getPrisma().dp2SaldoInicialMedia.findMany({
+    where: { tenantId, personId, conferidoEm: { not: null }, competencia: { gte: desde, lte: ate } },
+    select: { competencia: true, valor: true, rubricaId: true },
+  });
+  if (saldo.length > 0) {
+    const rubricas = await getPrisma().dp2Rubrica.findMany({
+      where: { tenantId, id: { in: [...new Set(saldo.map((l) => l.rubricaId))] } },
+      select: { id: true, tipo: true, mediaFerias: true, mediaDecimo: true, mediaRescisao: true },
+    });
+    const porId = new Map(rubricas.map((r) => [r.id, r]));
+    const anteriores = mesesDoSaldoInicial(
+      saldo.flatMap((l) => (porId.has(l.rubricaId) ? [{ competencia: l.competencia, valor: Number(l.valor), rubrica: porId.get(l.rubricaId)! }] : [])),
+      new Set(doPeriodo.map((m) => m.competencia))
+    );
+    doPeriodo.push(...anteriores);
+    doPeriodo.sort((x, y) => x.competencia.localeCompare(y.competencia));
+  }
   return mediaDeVariaveis(doPeriodo, tipo);
 }
 

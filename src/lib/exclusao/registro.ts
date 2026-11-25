@@ -205,6 +205,7 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   // A lista de CPFs e os acessos do dia da busca no eSocial: trabalho em andamento, sem valor depois que a empresa sai.
   { modelo: "Dp2BuscaEsocial", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Ferias", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2SaldoInicialMedia", coluna: "companyId", tratamento: "apagar" },
   // O contato do Atendimento (10/11/2026) volta a ser só um telefone.
   { modelo: "AtendimentoContato", coluna: "companyId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; empresa que some vira só o nome do WhatsApp na tela" },
   // XML recusado pelo leitor (06/11/2026): o arquivo é da empresa e guarda os dados dela.
@@ -246,6 +247,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2Evento", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["lançamento do DP 2", "lançamentos do DP 2"], historico: true },
   { modelo: "Dp2RubricaFixa", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["rubrica fixa do DP 2", "rubricas fixas do DP 2"], historico: true },
   { modelo: "Dp2Ferias", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["férias gravadas do DP 2", "férias gravadas do DP 2"], historico: true },
+  { modelo: "Dp2SaldoInicialMedia", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["linha do saldo inicial das médias do DP 2", "linhas do saldo inicial das médias do DP 2"], historico: true },
   { modelo: "Dp2OutraBaseInss", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["outra base de INSS do DP 2", "outras bases de INSS do DP 2"], historico: true },
   { modelo: "Dp2AjusteDeCalculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["ajuste manual do cálculo do DP 2", "ajustes manuais do cálculo do DP 2"], historico: true },
   { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
@@ -430,6 +432,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
   { modelo: "Dp2RubricaFixa", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou a rubrica fixa; a auditoria guarda o nome" },
   { modelo: "Dp2Ferias", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou as férias; a auditoria guarda o nome" },
+  { modelo: "Dp2SaldoInicialMedia", coluna: "criadoPorId", tratamento: "manter", motivo: "quem importou o saldo inicial; a auditoria guarda o nome" },
   { modelo: "Dp2InformacaoDaApuracao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a retenção ou compensação; a auditoria guarda o nome" },
   { modelo: "Dp2OutraBaseInss", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a outra base de INSS; a auditoria guarda o nome" },
   { modelo: "Dp2AjusteDeCalculo", coluna: "criadoPorId", tratamento: "manter", motivo: "quem ajustou o cálculo; a auditoria guarda o nome" },

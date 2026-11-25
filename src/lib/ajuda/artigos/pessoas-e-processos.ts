@@ -294,6 +294,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
           "Enquanto o DP 2 roda em paralelo com a Domínio, em “Comparar com a Domínio” cole uma pessoa por linha: CPF; proventos; descontos; líquido; INSS; IRRF; FGTS. Campo vazio não é comparado.",
           "Ainda em “Conferir”, “Apuração da competência” mostra o INSS (DCTFWeb), o IRRF e, para entidade sem fins lucrativos (opção na Configuração), o PIS de 1% sobre a folha a recolher. Inclua ali as retenções de 11% sofridas (CNPJ do tomador e nota) e as compensações de INSS, IRRF e PIS (mês de origem): elas abatem o devido, e o que sobrar aparece como saldo.",
           "No passo “Fechar”, clique em “Fechar competência”. A competência fechada é a que vale para as médias de férias, 13º e rescisão.",
+          "Para quem já trabalhava antes do DP 2, traga o histórico das médias em DP 2 › Colaboradores › “Saldo inicial das médias”: copie da Domínio (Utilitários › Lançamentos › Lançamento de Rubricas para Médias) uma linha por rubrica e mês, CPF; competência; código da rubrica; valor, e clique em “Importar saldo inicial”. Confira o total de cada pessoa e clique em “Conferir”: só então os meses entram na média de férias, 13º e rescisão, nos meses sem competência fechada no DP 2.",
         ],
       },
       {
