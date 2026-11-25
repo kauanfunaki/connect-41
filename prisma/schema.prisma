@@ -1574,6 +1574,7 @@ model Tenant {
   techInternalAttachments TechInternalAttachment[]
   techInternalAcceptanceChecks TechInternalAcceptanceCheck[]
   techInternalSavedFilters TechInternalSavedFilter[]
+  bpoModelosDaTabela      BpoModeloDaTabela[]
   opsWatchers             OpsWatcher[]
   opsSites                OpsSite[]
   opsApps                 OpsApp[]
@@ -2180,6 +2181,7 @@ model Subscription {
 model User {
   techInternalAssignments TechInternalItem[]
   techInternalSavedFilters TechInternalSavedFilter[]
+  bpoModelosDaTabela      BpoModeloDaTabela[]
   personalApiTokens       PersonalApiToken[]
   academiaSessoes         AcademiaSessao[]
   academiaResultados      AcademiaResultado[]
@@ -8654,6 +8656,34 @@ model BpoCredential {
   @@index([tenantId, companyId])
   @@index([tenantId, sectorCode])
   @@map("bpo_credentials")
+}
+
+/// Os modelos da Tabela dinâmica do BPO (25/11/2026, funcionalidade-816): a
+/// configuração da tabela salva com um nome. `setor` nulo é o modelo pessoal
+/// (só quem criou vê); com o código do setor, todo o setor vê. Os parâmetros
+/// são os do endereço da tela e passam pela mesma leitura dele ao aplicar.
+/// `periodo`: "relativo" (os últimos 6 meses, andando com o calendário) ou
+/// "fixo" (o de/até guardado nos parâmetros).
+model BpoModeloDaTabela {
+  id          String   @id @default(uuid())
+  tenantId    String
+  criadoPorId String
+  /// Código de `Sector`, sem FK; nulo = pessoal.
+  setor       String?  @db.VarChar(40)
+  nome        String   @db.VarChar(80)
+  parametros  Json
+  periodo     String   @db.VarChar(10)
+  comFiltros  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  criadoPor User   @relation(fields: [criadoPorId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, criadoPorId])
+  @@index([tenantId, setor])
+  @@index([criadoPorId])
+  @@map("bpo_modelos_da_tabela")
 }
 
 // Preferências pessoais do usuário — uma linha por usuário, criada sob demanda

@@ -409,6 +409,10 @@ const USUARIO: Ligacao[] = [
   // Os filtros salvos do Controle interno (18/11/2026): são só de quem salvou —
   // saem junto com a conta.
   { modelo: "TechInternalSavedFilter", campo: "user", fk: "userId", tratamento: "cascata" },
+  // Os modelos da Tabela dinâmica do BPO (25/11/2026, funcionalidade-816): o
+  // pessoal é gosto de quem criou, e o do setor é uma tabela montada que
+  // qualquer um refaz e salva de novo em um minuto — saem junto com a conta.
+  { modelo: "BpoModeloDaTabela", campo: "criadoPor", fk: "criadoPorId", tratamento: "cascata", rotulo: ["modelo da Tabela dinâmica", "modelos da Tabela dinâmica"] },
   // A Academia (10/11/2026): os resultados e as rodadas são da própria pessoa
   // e não do escritório — saem junto com a conta, como as notificações.
   { modelo: "AcademiaResultado", campo: "user", fk: "userId", tratamento: "cascata", rotulo: ["resultado da Academia", "resultados da Academia"] },
