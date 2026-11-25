@@ -21,6 +21,7 @@
 
 import { r2 } from "@/lib/rescisao/constantes";
 import { calcularInssComOutrasBases, calcularIrrf, type ResultadoInss, type ResultadoIrrf } from "./impostos";
+import type { FeriasNoMes } from "./periodosDeFerias";
 import { reais, pct, num } from "./formato";
 import type { PapelDaRubrica, RubricaDoMotor } from "./rubricas";
 import type { TabelasDaCompetencia } from "./tabelas";
@@ -132,6 +133,11 @@ export type EntradaMensal = {
   diasUteis: number;
   diasDeDescanso: number;
   /**
+   * Férias gravadas que caem no mês (funcionalidade-745): o salário paga só os
+   * dias fora delas, e as férias entram para o INSS e o FGTS do mês.
+   */
+  ferias?: readonly FeriasNoMes[];
+  /**
    * Remuneração do colaborador em outra(s) empresa(s) no mês (funcionalidade-769):
    * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
    */
@@ -166,7 +172,7 @@ export function rubricaDoPapel(rubricas: ReadonlyMap<PapelDaRubrica, RubricaDoMo
   return {
     codigo: "—",
     nome: papel,
-    tipo: ["FALTA", "DSR_FALTA", "ATRASO", "INSS", "IRRF", "VALE_TRANSPORTE", "ADIANTAMENTO", "PENSAO", "DECIMO_ADIANTADO", "INSS_DECIMO", "IRRF_DECIMO"].includes(papel)
+    tipo: ["FALTA", "DSR_FALTA", "ATRASO", "INSS", "IRRF", "VALE_TRANSPORTE", "ADIANTAMENTO", "PENSAO", "DECIMO_ADIANTADO", "INSS_DECIMO", "IRRF_DECIMO", "FERIAS_LIQUIDO_PAGO", "IRRF_FERIAS"].includes(papel)
       ? "DESCONTO"
       : papel === "FGTS"
         ? "INFORMATIVA"
@@ -277,6 +283,10 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   const salarioMinimo = e.tabelas.salarioMinimo.dados.valor;
 
   const dias = diasNoMes(e.ano, e.mes, e.admissao, e.desligamento);
+  // Férias no mês (funcionalidade-745): o salário e os adicionais pagam só os dias fora delas.
+  const feriasDoMes = e.ferias ?? [];
+  const diasDeFerias = Math.min(dias, feriasDoMes.reduce((s, f) => s + f.diasDeFerias, 0));
+  const diasDeSalario = dias - diasDeFerias;
   const cheio = salarioMensalCheio(v);
   const { insalubridade, periculosidade } = adicionaisFixos(v, salarioMinimo);
   const horaNormal = v.tipoSalario === "HORISTA" ? v.salarioBase : cheio / v.horasMensais;
@@ -284,16 +294,17 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   const diaDoSalario = cheio / 30;
 
   // ── Salário e adicionais fixos ──
-  const salario = (cheio * dias) / 30;
+  const salario = (cheio * diasDeSalario) / 30;
+  const deFerias = diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "";
   itens.push(
     itemDaRubrica(
       R("SALARIO"),
       salario,
-      `${dias} dias`,
+      `${diasDeSalario} dias`,
       v.tipoSalario === "HORISTA"
-        ? `${reais(v.salarioBase)}/h × ${v.horasMensais} h${dias < 30 ? ` × ${dias}/30` : ""}`
-        : dias < 30
-          ? `${reais(cheio)} × ${dias}/30`
+        ? `${reais(v.salarioBase)}/h × ${v.horasMensais} h${diasDeSalario < 30 ? ` × ${diasDeSalario}/30` : ""}${deFerias}`
+        : diasDeSalario < 30
+          ? `${reais(cheio)} × ${diasDeSalario}/30${deFerias}`
           : `${reais(cheio)} (mês cheio)`
     )
   );
@@ -301,15 +312,32 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
     itens.push(
       itemDaRubrica(
         R("INSALUBRIDADE"),
-        (insalubridade * dias) / 30,
+        (insalubridade * diasDeSalario) / 30,
         pct(PERCENTUAL_DA_INSALUBRIDADE[v.insalubridade]),
-        `${pct(PERCENTUAL_DA_INSALUBRIDADE[v.insalubridade])} × salário mínimo ${reais(salarioMinimo)}${dias < 30 ? ` × ${dias}/30` : ""}`
+        `${pct(PERCENTUAL_DA_INSALUBRIDADE[v.insalubridade])} × salário mínimo ${reais(salarioMinimo)}${diasDeSalario < 30 ? ` × ${diasDeSalario}/30` : ""}`
       )
     );
   }
   if (periculosidade > 0) {
-    itens.push(itemDaRubrica(R("PERICULOSIDADE"), (periculosidade * dias) / 30, "30%", `30% × ${reais(cheio)}${dias < 30 ? ` × ${dias}/30` : ""}`));
+    itens.push(itemDaRubrica(R("PERICULOSIDADE"), (periculosidade * diasDeSalario) / 30, "30%", `30% × ${reais(cheio)}${diasDeSalario < 30 ? ` × ${diasDeSalario}/30` : ""}`));
   }
+
+  // ── Férias do mês (funcionalidade-745) ──
+  // Pagas antes, no recibo; aqui entram para o INSS e o FGTS do mês (o IRRF das
+  // férias é separado), e o que o recibo já pagou sai como desconto.
+  const comIncidencia = (i: ItemDoHolerite, inss: boolean): ItemDoHolerite => ({ ...i, incideInss: inss, incideFgts: inss, incideIrrf: false });
+  let inssDasFerias = 0;
+  let baseDasFerias = 0;
+  for (const f of feriasDoMes) {
+    const ref = `${f.diasCorridos} dias`;
+    itens.push(comIncidencia(itemDaRubrica(R("FERIAS_GOZADAS"), f.ferias, ref, `Férias de ${f.periodo}: parte deste mês (${f.diasCorridos} dias corridos)`), true));
+    itens.push(comIncidencia(itemDaRubrica(R("TERCO_FERIAS"), f.terco, "1/3", `1/3 das férias deste mês`), true));
+    if (f.abono > 0) itens.push(comIncidencia(itemDaRubrica(R("ABONO_FERIAS"), f.abono, "", "Abono pecuniário (isento)"), false));
+    if (f.tercoAbono > 0) itens.push(comIncidencia(itemDaRubrica(R("TERCO_ABONO_FERIAS"), f.tercoAbono, "", "1/3 do abono (isento)"), false));
+    inssDasFerias += f.inssRetido;
+    baseDasFerias += f.ferias + f.terco;
+  }
+  inssDasFerias = r2(inssDasFerias);
 
   // ── Eventos do mês ──
   let variaveisParaDsr = 0;
@@ -384,7 +412,10 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
       )
     );
   }
-  if (inss.valor > 0) itens.push(itemDaRubrica(R("INSS"), inss.valor, inss.faixas.length ? pct(r2((inss.valor / inss.baseLimitada) * 100)) : "", inss.memoria.join("; ")));
+  if (inss.valor > 0) {
+    const ja = inssDasFerias > 0 ? `; inclui ${reais(inssDasFerias)} já descontados no recibo de férias` : "";
+    itens.push(itemDaRubrica(R("INSS"), inss.valor, inss.faixas.length ? pct(r2((inss.valor / inss.baseLimitada) * 100)) : "", `${inss.memoria.join("; ")}${ja}`));
+  }
 
   // ── FGTS ──
   const baseFgts = baseDe(itens, "incideFgts");
@@ -394,8 +425,24 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── IRRF ──
   const rendimentos = baseDe(itens, "incideIrrf");
-  const irrf = calcularIrrf({ rendimentos, inss: inss.valor, dependentes: v.dependentesIrrf, pensao }, e.tabelas.irrf.dados);
+  // O INSS das férias já deduziu no IRRF delas (tributação separada).
+  const irrf = calcularIrrf({ rendimentos, inss: r2(Math.max(0, inss.valor - inssDasFerias)), dependentes: v.dependentesIrrf, pensao }, e.tabelas.irrf.dados);
   if (irrf.valor > 0) itens.push(itemDaRubrica(R("IRRF"), irrf.valor, pct(irrf.aliquota), irrf.memoria.join("; ")));
+
+  // O recibo de férias já pagou: o líquido dele e o IRRF retido nele saem da folha.
+  for (const f of feriasDoMes) {
+    if (f.irrfRetido > 0) itens.push(itemDaRubrica(R("IRRF_FERIAS"), f.irrfRetido, "", "IRRF das férias, retido no recibo (tributação separada)"));
+    if (f.liquidoPago > 0) {
+      itens.push(
+        itemDaRubrica(
+          R("FERIAS_LIQUIDO_PAGO"),
+          f.liquidoPago,
+          "",
+          `Pago no recibo de férias: ${reais(r2(f.ferias + f.terco + f.abono + f.tercoAbono))} − INSS ${reais(f.inssRetido)}${f.irrfRetido ? ` − IRRF ${reais(f.irrfRetido)}` : ""}`
+        )
+      );
+    }
+  }
   if (irrf.naoRetido) alertas.push(`IRRF de ${reais(irrf.devido)} não retido (abaixo do mínimo de ${reais(e.tabelas.irrf.dados.minimoRetencao)}).`);
 
   // ── Totais ──
@@ -421,7 +468,9 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   if (e.desligamento && dias > 0) alertas.push("Desligamento no mês: as verbas rescisórias saem na tela de Rescisões.");
 
   const encargos = calcularEncargos(baseInss, fgts, e.empresa);
-  const provisoes = calcularProvisoes(baseInss, e.empresa, v.aprendiz);
+  // A provisão é do salário do mês: as férias gozadas não provisionam férias de novo.
+  const provisoes = calcularProvisoes(r2(Math.max(0, baseInss - baseDasFerias)), e.empresa, v.aprendiz);
+  if (feriasDoMes.length) alertas.push(`Férias no mês (${feriasDoMes.map((f) => f.periodo).join(", ")}): pagas no recibo; aqui entram no INSS e no FGTS do mês.`);
 
   return { itens, proventos, descontos, liquido, baseInss, baseFgts, inss, irrf, fgts, encargos, provisoes, diasTrabalhados: dias, alertas };
 }

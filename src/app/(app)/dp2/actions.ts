@@ -19,10 +19,22 @@ import { podeNoModulo, type NivelNoModulo } from "@/lib/auth/modulo";
 import { getPrisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { recusaDoFoco } from "@/lib/empresas/focoServidor";
-import { calcularCompetencia, colaboradoresDaCompetencia, garantirRubricas, gravarRubricasFixas } from "@/lib/dp2/servidor";
+import {
+  calcularCompetencia,
+  colaboradoresDaCompetencia,
+  colaboradoresDaEmpresa,
+  garantirRubricas,
+  gravarRubricasFixas,
+  mediaDaPessoa,
+  periodosDaPessoa,
+  tabelasDoEscritorio,
+  vinculoDoMotor,
+} from "@/lib/dp2/servidor";
+import { calcularFerias } from "@/lib/dp2/ferias";
+import type { Prisma } from "@/generated/prisma/client";
 import { camposDoFormulario, lerLancamentoPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { TIPOS_DE_RUBRICA, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
-import { lerDadosDaTabela, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
+import { lerDadosDaTabela, tabelasDaCompetencia, TIPOS_DE_TABELA, type TipoDeTabela } from "@/lib/dp2/tabelas";
 import { lerComparativo } from "@/lib/dp2/comparativo";
 import { lerNumero, lerInteiro } from "@/lib/dp2/entrada";
 import { PersonEmploymentStatus, PersonType } from "@/generated/prisma/client";
@@ -338,6 +350,143 @@ export async function removerEventoAction(_: EstadoDoDp2, fd: FormData): Promise
   });
   revalidarCompetencia(evento.competenciaId);
   return { ok: true, texto: "Lançamento retirado." };
+}
+
+// ─── Férias gravadas ────────────────────────────────────────────────────────
+
+const DIA_EM_MS = 24 * 60 * 60 * 1000;
+
+/** As folhas mensais dos meses do gozo: fechada barra; calculada volta a aberta. */
+async function folhasDoGozo(tenantId: string, companyId: string, inicio: Date, dias: number) {
+  const fim = new Date(inicio.getTime() + (dias - 1) * DIA_EM_MS);
+  const meses = [
+    { ano: inicio.getUTCFullYear(), mes: inicio.getUTCMonth() + 1 },
+    { ano: fim.getUTCFullYear(), mes: fim.getUTCMonth() + 1 },
+  ];
+  return getPrisma().dp2Competencia.findMany({
+    where: { tenantId, companyId, tipo: "MENSAL", OR: meses.map((m) => ({ ano: m.ano, mes: m.mes })) },
+    select: { id: true, ano: true, mes: true, situacao: true },
+  });
+}
+
+/**
+ * Grava as férias de um colaborador (25/11/2026, funcionalidade-745, entrega
+ * 2.1): refaz o cálculo no servidor, liga ao período aquisitivo escolhido e
+ * deixa a folha dos meses do gozo para calcular de novo — ela lança a parte de
+ * cada mês. Período que passou do concessivo é devido em dobro (CLT art. 137),
+ * que o DP 2 ainda não calcula: esse não grava.
+ */
+export async function gravarFeriasAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_ferias", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId"));
+  if (!pessoa?.dp2Vinculo || pessoa.dismissalDate || regimeDaCategoria(pessoa.dp2Vinculo.categoria) !== "CLT") return erro("Escolha um empregado ativo com contrato no DP 2.");
+  if (!pessoa.admissionDate) return erro(`${pessoa.name} está sem data de admissão: preencha no cadastro.`);
+  const inicioTxt = texto(fd, "inicio");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(inicioTxt)) return erro("Informe o início do gozo.");
+  const inicio = new Date(`${inicioTxt}T00:00:00.000Z`);
+  const dias = lerInteiro(texto(fd, "dias")) ?? 0;
+  const abono = lerInteiro(texto(fd, "abono")) ?? 0;
+  const faltas = lerInteiro(texto(fd, "faltas")) ?? 0;
+  const pagamentoTxt = texto(fd, "dataPagamento");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pagamentoTxt)) return erro("Informe a data do pagamento.");
+  const dataPagamento = new Date(`${pagamentoTxt}T00:00:00.000Z`);
+
+  // A situação de cada período no dia em que o gozo começa (vale programar férias futuras).
+  const periodos = await periodosDaPessoa(a.tenantId, pessoa, inicio);
+  const periodo = periodos.find((p) => p.inicio === texto(fd, "aquisitivoInicio"));
+  if (!periodo) return erro("Escolha o período aquisitivo.");
+  if (periodo.situacao === "EM_AQUISICAO") return erro(`O período ${periodo.inicio} a ${periodo.fim} ainda estará em aquisição no início do gozo.`);
+  if (periodo.situacao === "QUITADO" || periodo.saldo < dias + abono) return erro(`O período ${periodo.inicio} a ${periodo.fim} tem saldo de ${periodo.saldo} dia(s): gozo e abono somam ${dias + abono}.`);
+  if (periodo.situacao === "EM_DOBRO" || inicioTxt > periodo.concessivoFim) {
+    return erro(`O período ${periodo.inicio} a ${periodo.fim} passou do concessivo (${periodo.concessivoFim}): as férias são devidas em dobro (CLT art. 137), e o DP 2 ainda não calcula a dobra.`);
+  }
+
+  const prisma = getPrisma();
+  const fim = new Date(inicio.getTime() + (dias - 1) * DIA_EM_MS);
+  const sobrepostas = await prisma.dp2Ferias.findMany({ where: { tenantId: a.tenantId, personId: pessoa.id, inicioGozo: { lte: fim } }, select: { inicioGozo: true, diasGozo: true } });
+  if (sobrepostas.some((s) => new Date(s.inicioGozo.getTime() + (s.diasGozo - 1) * DIA_EM_MS) >= inicio)) return erro("Já há férias gravadas nesses dias para esta pessoa.");
+  const folhas = await folhasDoGozo(a.tenantId, companyId, inicio, Math.max(1, dias));
+  const fechada = folhas.find((f) => f.situacao === "FECHADA");
+  if (fechada) return erro(`A folha de ${String(fechada.mes).padStart(2, "0")}/${fechada.ano} está fechada: reabra para gravar férias nesse mês.`);
+
+  const competencia = inicioTxt.slice(0, 7);
+  const tab = tabelasDaCompetencia(competencia, await tabelasDoEscritorio(a.tenantId));
+  if (!tab.ok) return erro(`Faltam tabelas para ${competencia}: ${tab.faltam.join(", ")}.`);
+  const media = await mediaDaPessoa(a.tenantId, pessoa.id, competencia, "FERIAS");
+  const c = calcularFerias({ inicio, diasDeGozo: dias, diasDeAbono: abono, faltas, vinculo: vinculoDoMotor(pessoa.dp2Vinculo), mediaVariaveis: media.media, tabelas: tab.tabelas });
+  if (!c.ok) return erro(c.erro);
+  const valor = (nome: string) => c.linhas.find((l) => l.nome === nome)?.valor ?? 0;
+
+  const gravada = await prisma.dp2Ferias.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId,
+      personId: pessoa.id,
+      aquisitivoInicio: new Date(`${periodo.inicio}T00:00:00.000Z`),
+      aquisitivoFim: new Date(`${periodo.fim}T00:00:00.000Z`),
+      inicioGozo: inicio,
+      diasGozo: dias,
+      diasAbono: abono,
+      faltas,
+      dataPagamento,
+      remuneracao: c.remuneracao,
+      ferias: valor("Férias"),
+      terco: valor("1/3 constitucional"),
+      abono: valor("Abono pecuniário"),
+      tercoAbono: valor("1/3 do abono"),
+      inss: c.inss.valor,
+      irrf: c.irrf.valor,
+      liquido: c.liquido,
+      fgts: c.fgts,
+      recibo: { linhas: c.linhas, memoria: [...c.memoria, `Média: ${media.memoria}`], alertas: c.alertas } as Prisma.InputJsonValue,
+      criadoPorId: a.userId,
+    },
+    select: { id: true },
+  });
+  for (const f of folhas) if (f.situacao === "CALCULADA") await prisma.dp2Competencia.update({ where: { id: f.id }, data: { situacao: "ABERTA" } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.ferias_gravadas",
+    entityType: "Dp2Ferias",
+    entityId: gravada.id,
+    metadata: { pessoa: pessoa.name, aquisitivo: `${periodo.inicio} a ${periodo.fim}`, inicio: inicioTxt, dias, abono, liquido: c.liquido },
+  });
+  revalidatePath("/dp2/ferias");
+  for (const f of folhas) revalidarCompetencia(f.id);
+  const aviso = dataPagamento.getTime() > c.pagamentoAte.getTime() ? " Atenção: o pagamento ficou depois do prazo (2 dias antes do início, CLT art. 145)." : "";
+  return { ok: true, texto: `Férias de ${pessoa.name} gravadas. A folha dos meses do gozo lança a parte de cada mês ao calcular.${aviso}` };
+}
+
+/** Exclui férias gravadas enquanto nenhuma folha do gozo está fechada. */
+export async function excluirFeriasAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_ferias", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const f = await prisma.dp2Ferias.findFirst({ where: { id: texto(fd, "feriasId"), tenantId: a.tenantId }, include: { person: { select: { name: true } } } });
+  if (!f) return erro("Férias não encontradas.");
+  const recusa = await empresaDoEscritorio(a, f.companyId);
+  if (recusa) return erro(recusa);
+  const folhas = await folhasDoGozo(a.tenantId, f.companyId, f.inicioGozo, f.diasGozo);
+  const fechada = folhas.find((x) => x.situacao === "FECHADA");
+  if (fechada) return erro(`A folha de ${String(fechada.mes).padStart(2, "0")}/${fechada.ano} está fechada: reabra para excluir estas férias.`);
+  await prisma.dp2Ferias.delete({ where: { id: f.id } });
+  for (const x of folhas) if (x.situacao === "CALCULADA") await prisma.dp2Competencia.update({ where: { id: x.id }, data: { situacao: "ABERTA" } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.ferias_excluidas",
+    entityType: "Dp2Ferias",
+    entityId: f.id,
+    metadata: { pessoa: f.person.name, inicio: f.inicioGozo.toISOString().slice(0, 10), dias: f.diasGozo, liquido: Number(f.liquido) },
+  });
+  revalidatePath("/dp2/ferias");
+  for (const x of folhas) revalidarCompetencia(x.id);
+  return { ok: true, texto: `Férias de ${f.person.name} excluídas.` };
 }
 
 // ─── Outras bases de INSS (mais de um vínculo) ──────────────────────────────
