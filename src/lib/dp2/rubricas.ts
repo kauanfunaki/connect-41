@@ -39,6 +39,13 @@ export type PapelDaRubrica =
   | "FERIAS_VENCIDAS_INDENIZADAS"
   | "FERIAS_PROPORC_INDENIZADAS"
   | "TERCO_FERIAS_INDENIZADAS"
+  // Férias gozadas lançadas na folha do mês (25/11/2026, funcionalidade-745).
+  | "FERIAS_GOZADAS"
+  | "TERCO_FERIAS"
+  | "ABONO_FERIAS"
+  | "TERCO_ABONO_FERIAS"
+  | "FERIAS_LIQUIDO_PAGO"
+  | "IRRF_FERIAS"
   // Trabalhador sem vínculo (12/11/2026, fase 3d): o valor do mês de cada categoria.
   | "PRO_LABORE"
   | "BOLSA_ESTAGIO"
@@ -94,7 +101,7 @@ export const PAPEIS_LANCAVEIS: ReadonlySet<PapelDaRubrica> = new Set([
 
 type Padrao = Omit<RubricaDoMotor, "incideInss" | "incideFgts" | "incideIrrf" | "mediaFerias" | "mediaDecimo" | "mediaRescisao"> & {
   /** INSS_IRRF: contribuinte individual (sem FGTS); SO_IRRF: bolsa de estágio. */
-  incide: "TODAS" | "NENHUMA" | "SO_FGTS" | "INSS_IRRF" | "SO_IRRF";
+  incide: "TODAS" | "NENHUMA" | "SO_FGTS" | "INSS_IRRF" | "SO_IRRF" | "INSS_FGTS";
   entraNaMedia?: boolean;
 };
 
@@ -110,6 +117,14 @@ const PADRAO: Padrao[] = [
   { codigo: "009", nome: "Comissões", tipo: "PROVENTO", papel: null, lancamento: "VALOR", incide: "TODAS", entraNaMedia: true },
   { codigo: "010", nome: "Gratificação", tipo: "PROVENTO", papel: null, lancamento: "VALOR", incide: "TODAS", entraNaMedia: true },
   { codigo: "011", nome: "Prêmio", tipo: "PROVENTO", papel: null, lancamento: "VALOR", incide: "NENHUMA" },
+  // Férias na folha do mês (funcionalidade-745): o IRRF das férias é separado,
+  // então férias e 1/3 entram no INSS e no FGTS do mês, mas não no IRRF.
+  { codigo: "040", nome: "Férias", tipo: "PROVENTO", papel: "FERIAS_GOZADAS", lancamento: "VALOR", incide: "INSS_FGTS" },
+  { codigo: "041", nome: "1/3 de férias", tipo: "PROVENTO", papel: "TERCO_FERIAS", lancamento: "VALOR", incide: "INSS_FGTS" },
+  { codigo: "042", nome: "Abono pecuniário de férias", tipo: "PROVENTO", papel: "ABONO_FERIAS", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "043", nome: "1/3 do abono de férias", tipo: "PROVENTO", papel: "TERCO_ABONO_FERIAS", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "044", nome: "Líquido de férias pago", tipo: "DESCONTO", papel: "FERIAS_LIQUIDO_PAGO", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "045", nome: "IRRF sobre férias", tipo: "DESCONTO", papel: "IRRF_FERIAS", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "050", nome: "Faltas", tipo: "DESCONTO", papel: "FALTA", lancamento: "DIAS", incide: "TODAS" },
   { codigo: "051", nome: "DSR das faltas", tipo: "DESCONTO", papel: "DSR_FALTA", lancamento: "DIAS", incide: "TODAS" },
   { codigo: "052", nome: "Atrasos", tipo: "DESCONTO", papel: "ATRASO", lancamento: "HORAS", incide: "TODAS" },
@@ -138,8 +153,8 @@ const PADRAO: Padrao[] = [
 /** As rubricas que todo escritório ganha no primeiro acesso ao DP 2. */
 export const RUBRICAS_PADRAO: readonly RubricaDoMotor[] = PADRAO.map(({ incide, entraNaMedia, ...r }) => ({
   ...r,
-  incideInss: incide === "TODAS" || incide === "INSS_IRRF",
-  incideFgts: incide === "TODAS" || incide === "SO_FGTS",
+  incideInss: incide === "TODAS" || incide === "INSS_IRRF" || incide === "INSS_FGTS",
+  incideFgts: incide === "TODAS" || incide === "SO_FGTS" || incide === "INSS_FGTS",
   incideIrrf: incide === "TODAS" || incide === "INSS_IRRF" || incide === "SO_IRRF",
   // As variáveis da lista padrão entram nas três médias; o escritório separa depois.
   mediaFerias: entraNaMedia ?? false,
