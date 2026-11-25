@@ -2791,6 +2791,7 @@ model Person {
   dp2Vinculo           Dp2Vinculo?
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
+  dp2Ferias            Dp2Ferias[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
   dp2Calculos          Dp2Calculo[]
@@ -7149,6 +7150,44 @@ model Dp2Calculo {
   @@unique([competenciaId, personId])
   @@index([personId])
   @@map("dp2_calculos")
+}
+
+/// Férias gravadas (25/11/2026, funcionalidade-745, entrega 2.1): o recibo de
+/// férias de uma pessoa, ligado ao período aquisitivo, com os valores do
+/// cálculo no dia em que se gravou. A folha mensal dos meses do gozo lança a
+/// parte de cada mês (src/lib/dp2/periodosDeFerias.ts → calcularMes).
+model Dp2Ferias {
+  id               String   @id @default(uuid())
+  tenantId         String
+  companyId        String
+  personId         String
+  aquisitivoInicio DateTime @db.Date
+  aquisitivoFim    DateTime @db.Date
+  inicioGozo       DateTime @db.Date
+  diasGozo         Int
+  diasAbono        Int      @default(0)
+  /// Faltas injustificadas no período aquisitivo (reduzem o direito).
+  faltas           Int      @default(0)
+  dataPagamento    DateTime @db.Date
+  remuneracao      Decimal  @db.Decimal(12, 2)
+  ferias           Decimal  @db.Decimal(12, 2)
+  terco            Decimal  @db.Decimal(12, 2)
+  abono            Decimal  @default(0) @db.Decimal(12, 2)
+  tercoAbono       Decimal  @default(0) @db.Decimal(12, 2)
+  inss             Decimal  @db.Decimal(12, 2)
+  irrf             Decimal  @db.Decimal(12, 2)
+  liquido          Decimal  @db.Decimal(12, 2)
+  fgts             Decimal  @db.Decimal(12, 2)
+  /// As linhas do recibo e a memória, como saíram do cálculo.
+  recibo           Json
+  criadoPorId      String?
+  createdAt        DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@map("dp2_ferias")
 }
 
 /// Ajuste manual do cálculo (25/11/2026, funcionalidade-768): o DP corrige um
