@@ -354,7 +354,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como navegar pela agenda",
         passos: [
-          "Abra “Agenda” na barra lateral.",
+          "Abra o Meu dia e clique em “Agenda”, no alto da tela. (Se o seu setor trouxe a Agenda de volta ao menu, ela também fica na barra lateral.)",
           "Escolha a visão em “Prazos”, “Dia”, “Semana” ou “Mês”. Da próxima vez, a Agenda abre na última visão que você escolheu.",
           "Use as setas para ir ao período anterior ou ao próximo, e “Hoje” para voltar à data atual. O ícone de calendário ao lado (“Escolher data”) leva direto a uma data.",
           "Clique em um prazo para abrir o item na tela de onde ele vem.",
