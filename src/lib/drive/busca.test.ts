@@ -282,15 +282,23 @@ describe("empresasDoTermo — o grupo Empresas do resultado", () => {
     expect(empresasDoTermo("t", "ab")).not.toBeNull();
   });
 
-  it("CNPJ só com 3 dígitos ou mais, com ou sem pontuação", () => {
-    expect(cnpjDoTermo("12")).toBeNull();
-    expect(cnpjDoTermo("1.2")).toBeNull();
+  it("CNPJ com 2 dígitos ou mais, com ou sem pontuação", () => {
+    expect(cnpjDoTermo("1")).toBeNull();
+    expect(cnpjDoTermo("12")).toBe("12");
+    expect(cnpjDoTermo("1.2")).toBe("12");
     expect(cnpjDoTermo("123")).toBe("123");
     expect(cnpjDoTermo("12.345")).toBe("12345");
     expect(cnpjDoTermo("12.345.678/0001-90")).toBe("12345678000190");
-    // Com menos de 3 dígitos o termo ainda procura no nome, só não no CNPJ.
-    expect(empresasDoTermo("t", "12")?.OR).toHaveLength(3);
     expect(empresasDoTermo("t", "12.345")?.OR).toEqual(expect.arrayContaining([{ cnpj: { contains: "12345" } }]));
+  });
+
+  it("dois dígitos procuram no começo do CNPJ e no nome: \"17\" acha todas as filiais do CNPJ 17… (bug-832)", () => {
+    expect(empresasDoTermo("t", "17")).toEqual({
+      tenantId: "t",
+      OR: [{ name: { contains: "17" } }, { displayName: { contains: "17" } }, { tradeName: { contains: "17" } }, { cnpj: { startsWith: "17" } }],
+    });
+    // A partir de 3, em qualquer parte: "0001" acha a matriz pelo fim do CNPJ.
+    expect(empresasDoTermo("t", "0001")?.OR).toEqual(expect.arrayContaining([{ cnpj: { contains: "0001" } }]));
   });
 
   it("termo com letra não vai ao CNPJ: ano e competência são nome de arquivo", () => {

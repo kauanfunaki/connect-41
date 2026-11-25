@@ -14,6 +14,7 @@ import { SituacaoTech } from "./SituacaoTech";
 export type ItemVisualTech = {
   id: string; title: string; status: keyof typeof SITUACOES; type: keyof typeof TIPOS;
   priority: number; dueDate: string | null; version: number; assignee: string | null; system: string;
+  prUrl?: string | null; commitSha?: string | null;
   /** O endereço curto do item (`enderecoDoItem`, 10/11/2026). */
   endereco: string;
 };
@@ -51,7 +52,7 @@ export function VisoesTech({ items, today, canEdit, totais, verTodos }: {
       <Link href={item.endereco} draggable={false} className={`block font-medium text-fg hover:text-brand break-words ${LINK_DO_ITEM}`}>{item.title}</Link>
       <p className="text-helper text-fg-muted break-words">{item.system} · {item.assignee ?? "Sem responsável"}</p>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={canEdit} />
+        <SituacaoTech key={`${item.id}:${item.version}`} forma="selo" id={item.id} titulo={item.title} status={item.status} version={item.version} podeEditar={canEdit} prUrl={item.prUrl} commitSha={item.commitSha} />
         <span className={`text-helper ${late ? "text-danger font-medium" : "text-fg-muted"}`}>{item.dueDate ? `${item.dueDate.split("-").reverse().join("/")}${late ? " · Atrasado" : ""}` : "Sem prazo"}</span>
       </div>
     </article>;
