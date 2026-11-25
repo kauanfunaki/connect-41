@@ -111,9 +111,12 @@ export function AcademiaNoTopo({ naAcademia = false, sequencia = 0 }: { naAcadem
         aria-label="Academia"
         className="p-0! flex flex-col"
       >
+        {/* Menos texto (25/11/2026, melhoria-814): o título leva o mês, e a
+            frase "Seus melhores em…" saiu — a lista já diz o que é. */}
         <div className="px-4 pt-3 pb-2">
-          <p className="text-body font-semibold text-fg">Academia</p>
-          <p className="text-helper text-fg-muted">{mes ? `Seus melhores em ${mes}` : "Seus melhores do mês"}</p>
+          <p className="text-body font-semibold text-fg">
+            Academia{mes && <span className="font-normal text-fg-muted"> · {mes}</span>}
+          </p>
         </div>
 
         <div className="border-t border-border px-4 py-3" aria-live="polite" aria-busy={carregando}>
@@ -148,18 +151,16 @@ export function AcademiaNoTopo({ naAcademia = false, sequencia = 0 }: { naAcadem
                   );
                 })}
               </ul>
-              <p className="mt-3 text-helper text-fg-muted">
-                {!dados.aparece
-                  ? "Você está fora do ranking: seus números ficam só para você."
-                  : dados.melhorPosicao
-                    ? `Sua melhor posição em ${mes}: ${dados.melhorPosicao.posicao}º em ${ROTULO_CURTO_DO_TESTE[dados.melhorPosicao.teste]}, entre ${dados.melhorPosicao.participantes}.`
-                    : `Faça um teste valendo para entrar no ranking de ${mes}.`}
-              </p>
+              {(!dados.aparece || !dados.melhorPosicao) && (
+                <p className="mt-3 text-helper text-fg-muted">
+                  {!dados.aparece ? "Fora do ranking: só você vê seus números." : "Faça um teste valendo para entrar no ranking."}
+                </p>
+              )}
               {dados.premio && (
                 <p className="mt-2 flex items-start gap-1.5 text-helper text-fg-secondary">
                   <Gift size={14} aria-hidden className="mt-0.5 flex-shrink-0 text-brand" />
                   <span>
-                    <span className="font-medium text-fg">Prêmio do mês:</span> {dados.premio}
+                    <span className="font-medium text-fg">Prêmio:</span> {dados.premio}
                   </span>
                 </p>
               )}

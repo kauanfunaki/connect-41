@@ -9,11 +9,10 @@ import { formatCnpj, formatCpf } from "@/lib/format";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Card } from "@/components/ui/Card";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CascoDaTabela, ForaDaLista, contarItens } from "@/components/shared/CascoDaTabela";
 import { Badge } from "@/components/ui/Badge";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, TopoDoCartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
-import { Button } from "@/components/ui/Button";
 import { FiltrosDaTela, type CampoDeFiltro } from "@/components/shared/FiltrosDaTela";
 import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
 import { AbasDeLink } from "@/components/financeiro/FiltroDePeriodo";
@@ -89,21 +88,6 @@ const FILTRO_DA_SITUACAO: CampoDeFiltro[] = [
     ],
   },
 ];
-
-/** "3 cadastros inativos fora desta lista. [Mostrar todos]" — o aviso de Pessoas. */
-function InativosDeFora({ n, um, varios, href }: { n: number; um: string; varios: string; href: string }) {
-  if (n === 0) return null;
-  return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
-      <p>
-        {n} {n === 1 ? um : varios} fora desta lista.
-      </p>
-      <Button href={href} variant="ghost" size="xs">
-        Mostrar todos
-      </Button>
-    </div>
-  );
-}
 
 /**
  * Fornecedores e sacados da empresa cliente, e os centros de custo dela.
@@ -359,11 +343,10 @@ export default async function CadastrosFinanceirosPage({
       {filtroDaEmpresa}
       <AbasDeLink abas={ABAS.map((a) => ({ ...a, href: href(a.chave) }))} ativa={aba} />
 
-      <InativosDeFora n={inativosDeFora} um="cadastro inativo" varios="cadastros inativos" href={hrefDeTodos} />
 
       {/* No casco das listas irmãs, com a contagem e a busca na barra
           (08/10/2026): a busca ficava solta acima da tabela, sem contagem. */}
-      <CascoDaTabela
+      <CascoDaTabela fora={<ForaDaLista n={inativosDeFora} um="inativo oculto" varios="inativos ocultos" href={hrefDeTodos} />}
         contagem={contarItens(visiveis.length, "cadastro", "cadastros")}
         busca={
           <FormularioDeFiltro action="/fornecedores-e-sacados" className="max-w-full">
@@ -503,8 +486,7 @@ async function AbaDeCentros({
   if (centros.length === 0) {
     return (
       <>
-        <InativosDeFora n={inativosDeFora} um="centro de custo inativo" varios="centros de custo inativos" href={hrefDeTodos} />
-        <CascoDaTabela contagem={contarItens(0, "centro de custo", "centros de custo")} filtros={filtros}>
+        <CascoDaTabela fora={<ForaDaLista n={inativosDeFora} um="inativo oculto" varios="inativos ocultos" href={hrefDeTodos} />} contagem={contarItens(0, "centro de custo", "centros de custo")} filtros={filtros}>
           <EmptyState
             title={
               situacao === "inativos"
@@ -541,8 +523,7 @@ async function AbaDeCentros({
 
   return (
     <>
-      <InativosDeFora n={inativosDeFora} um="centro de custo inativo" varios="centros de custo inativos" href={hrefDeTodos} />
-      <CascoDaTabela contagem={contarItens(centros.length, "centro de custo", "centros de custo")} filtros={filtros}>
+      <CascoDaTabela fora={<ForaDaLista n={inativosDeFora} um="inativo oculto" varios="inativos ocultos" href={hrefDeTodos} />} contagem={contarItens(centros.length, "centro de custo", "centros de custo")} filtros={filtros}>
       <CartoesNoCelular>
         {centros.map((c) => (
           <Cartao key={c.id}>
@@ -634,8 +615,7 @@ async function AbaDeProjetos({
 
   return (
     <>
-      <InativosDeFora n={inativosDeFora} um="projeto inativo" varios="projetos inativos" href={hrefDeTodos} />
-      <CascoDaTabela contagem={contarItens(projetos.length, "projeto", "projetos")} filtros={filtros}>
+      <CascoDaTabela fora={<ForaDaLista n={inativosDeFora} um="inativo oculto" varios="inativos ocultos" href={hrefDeTodos} />} contagem={contarItens(projetos.length, "projeto", "projetos")} filtros={filtros}>
         {projetos.length === 0 ? (
           <EmptyState
             title={
