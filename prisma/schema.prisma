@@ -2792,6 +2792,7 @@ model Person {
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
   dp2Ferias            Dp2Ferias[]
+  dp2Ocorrencias       Dp2Ocorrencia[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
   dp2Calculos          Dp2Calculo[]
@@ -7188,6 +7189,31 @@ model Dp2Ferias {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_ferias")
+}
+
+/// Ocorrência do contrato (25/11/2026, funcionalidade-763): advertência ou
+/// suspensão disciplinar, com o documento para assinatura. Os dias da
+/// suspensão saem do salário do mês (src/lib/dp2/ocorrencias.ts).
+model Dp2Ocorrencia {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  personId    String
+  /// "ADVERTENCIA" ou "SUSPENSAO".
+  tipo        String   @db.VarChar(12)
+  /// A data da advertência ou o primeiro dia da suspensão.
+  data        DateTime @db.Date
+  /// Dias de suspensão (0 na advertência).
+  dias        Int      @default(0)
+  motivo      String   @db.Text
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([personId])
+  @@map("dp2_ocorrencias")
 }
 
 /// Ajuste manual do cálculo (25/11/2026, funcionalidade-768): o DP corrige um

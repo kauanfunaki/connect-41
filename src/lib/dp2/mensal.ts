@@ -142,6 +142,8 @@ export type EntradaMensal = {
    * o INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases.
    */
   outrasBasesInss?: number;
+  /** Dias de suspensão disciplinar no mês (funcionalidade-763): saem do salário. */
+  diasDeSuspensao?: number;
 };
 
 export const FGTS_ALIQUOTA = 8;
@@ -286,7 +288,9 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // Férias no mês (funcionalidade-745): o salário e os adicionais pagam só os dias fora delas.
   const feriasDoMes = e.ferias ?? [];
   const diasDeFerias = Math.min(dias, feriasDoMes.reduce((s, f) => s + f.diasDeFerias, 0));
-  const diasDeSalario = dias - diasDeFerias;
+  // Suspensão disciplinar (funcionalidade-763): os dias não são remunerados.
+  const diasSuspenso = Math.min(dias - diasDeFerias, Math.max(0, e.diasDeSuspensao ?? 0));
+  const diasDeSalario = dias - diasDeFerias - diasSuspenso;
   const cheio = salarioMensalCheio(v);
   const { insalubridade, periculosidade } = adicionaisFixos(v, salarioMinimo);
   const horaNormal = v.tipoSalario === "HORISTA" ? v.salarioBase : cheio / v.horasMensais;
@@ -295,7 +299,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
 
   // ── Salário e adicionais fixos ──
   const salario = (cheio * diasDeSalario) / 30;
-  const deFerias = diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "";
+  const deFerias = (diasDeFerias > 0 ? ` (${diasDeFerias} dia(s) de férias)` : "") + (diasSuspenso > 0 ? ` (${diasSuspenso} dia(s) de suspensão)` : "");
   itens.push(
     itemDaRubrica(
       R("SALARIO"),

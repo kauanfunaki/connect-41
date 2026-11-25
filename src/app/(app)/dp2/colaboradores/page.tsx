@@ -35,7 +35,8 @@ import {
   sugerirGrauDeInstrucao,
 } from "@/lib/dp2/esocial/cadastro";
 import { CATEGORIAS } from "@/lib/dp2/categorias";
-import { criarColaboradorDp2Action, salvarVinculoAction } from "../actions";
+import { criarColaboradorDp2Action, excluirOcorrenciaAction, registrarOcorrenciaAction, salvarVinculoAction } from "../actions";
+import { FormularioDoDp2 } from "@/components/dp2/Formulario";
 
 const NOME_DA_INSALUBRIDADE: Record<string, string> = { NENHUM: "", MINIMO: "Insalubridade 10%", MEDIO: "Insalubridade 20%", MAXIMO: "Insalubridade 40%" };
 
@@ -91,6 +92,10 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       </option>
     )),
   ];
+  // Advertências e suspensões da empresa (funcionalidade-763).
+  const empresaId = tela.empresa.id;
+  const ocorrencias = await getPrisma().dp2Ocorrencia.findMany({ where: { tenantId: tela.tenantId, companyId: empresaId }, orderBy: { data: "desc" }, take: 100 });
+  const nomeDaPessoa = new Map(pessoas.map((p) => [p.id, p.name]));
   const comContrato = pessoas.filter((p) => p.dp2Vinculo).length;
   const semContrato = pessoas.length - comContrato;
 
@@ -393,6 +398,100 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           </div>
         )}
       </Secao>
+
+      {pessoas.length > 0 && (
+        <Secao
+          titulo="Advertências e suspensões"
+          apoio="O registro na ficha e o documento para assinatura. Os dias da suspensão saem do salário quando a folha do mês é calculada."
+        >
+          {ocorrencias.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[720px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH}>Tipo</th>
+                    <th className={TH}>Data</th>
+                    <th className={TH}>Motivo</th>
+                    <th className={TH}>
+                      <span className="sr-only">Ações</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ocorrencias.map((o) => (
+                    <tr key={o.id} className={TR}>
+                      <td className={`${TD} align-middle`}>{nomeDaPessoa.get(o.personId) ?? "Fora desta empresa"}</td>
+                      <td className={`${TD} align-middle`}>
+                        <Selo tom={o.tipo === "SUSPENSAO" ? "perigo" : "atencao"}>{o.tipo === "SUSPENSAO" ? `Suspensão · ${o.dias} dia(s)` : "Advertência"}</Selo>
+                      </td>
+                      <td className={`${TD} align-middle tabular-nums`}>{formatCalendarDate(o.data)}</td>
+                      <td className={`${TD} align-middle max-w-[320px] truncate`} title={o.motivo}>
+                        {o.motivo}
+                      </td>
+                      <td className={`${TD} align-middle text-right pr-0`}>
+                        <span className="inline-flex gap-2">
+                          <Button href={`/api/dp2/ocorrencias/${o.id}`} variant="secondary" size="sm" download>
+                            Documento (PDF)
+                          </Button>
+                          {tela.podeAgir && (
+                            <FormularioDoDp2
+                              acao={excluirOcorrenciaAction}
+                              rotulo="Excluir"
+                              rotuloEnviando="Excluindo…"
+                              variante="secondary"
+                              tamanho="sm"
+                              confirmar={{ titulo: "Excluir a ocorrência?", texto: "Ela sai da ficha do colaborador. Se era suspensão de um mês já calculado, calcule a folha de novo.", rotulo: "Excluir" }}
+                            >
+                              <input type="hidden" name="ocorrenciaId" value={o.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {tela.podeAgir && (
+            <FormularioDoDp2 acao={registrarOcorrenciaAction} rotulo="Registrar" rotuloEnviando="Registrando…" variante="secondary">
+              <input type="hidden" name="companyId" value={empresaId} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <CampoForm label="Colaborador" htmlFor="oc-personId">
+                  <Select id="oc-personId" name="personId" defaultValue="" required>
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {pessoas
+                      .filter((p) => p.dp2Vinculo && !p.dismissalDate)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Tipo" htmlFor="oc-tipo">
+                  <Select id="oc-tipo" name="tipo" defaultValue="ADVERTENCIA">
+                    <option value="ADVERTENCIA">Advertência</option>
+                    <option value="SUSPENSAO">Suspensão</option>
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Data (ou início da suspensão)" htmlFor="oc-data">
+                  <CampoData id="oc-data" name="data" required />
+                </CampoForm>
+                <CampoForm label="Dias de suspensão" htmlFor="oc-dias" dica="Só na suspensão: de 1 a 30 dias seguidos.">
+                  <Input id="oc-dias" name="dias" inputMode="numeric" maxLength={2} />
+                </CampoForm>
+              </div>
+              <CampoForm label="Motivo" htmlFor="oc-motivo" className="mt-4" dica="O fato e quando aconteceu: vai no documento.">
+                <Textarea id="oc-motivo" name="motivo" rows={3} required />
+              </CampoForm>
+            </FormularioDoDp2>
+          )}
+        </Secao>
+      )}
 
       {params.novo === "1" && !aberta && tela.podeAgir && (
         <ModalDoDp2
