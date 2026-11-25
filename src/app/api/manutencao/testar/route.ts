@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthContext } from "@/lib/auth/context";
 import { lerTelasEmManutencao } from "@/lib/manutencao/leitura";
-import { COOKIE_DE_TESTE, HORAS_DE_TESTE, comManutencaoEmTeste, passaPelaManutencao } from "@/lib/manutencao/regras";
+import {
+  COOKIE_DE_ENTRADA,
+  COOKIE_DE_TESTE,
+  HORAS_DE_TESTE,
+  SEGUNDOS_DE_ENTRADA,
+  comManutencaoEmTeste,
+  opcoesDoCookieDeTeste,
+  passaPelaManutencao,
+} from "@/lib/manutencao/regras";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,12 +38,9 @@ export async function POST(req: NextRequest) {
   if (!manutencao) return NextResponse.json({ ok: true, liberada: true });
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE_DE_TESTE, comManutencaoEmTeste(req.cookies.get(COOKIE_DE_TESTE)?.value, manutencao.id), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: HORAS_DE_TESTE * 60 * 60,
-  });
+  res.cookies.set(COOKIE_DE_TESTE, comManutencaoEmTeste(req.cookies.get(COOKIE_DE_TESTE)?.value, manutencao.id), opcoesDoCookieDeTeste(HORAS_DE_TESTE * 60 * 60));
+  // O passe de entrada (25/11/2026, bug-833): abre a tela na recarga que vem
+  // agora; depois, o aviso volta a cada entrada (ver `testeNaManutencao`).
+  res.cookies.set(COOKIE_DE_ENTRADA, manutencao.id, opcoesDoCookieDeTeste(SEGUNDOS_DE_ENTRADA));
   return res;
 }

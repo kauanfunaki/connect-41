@@ -79,7 +79,9 @@ export function CampoDataHora({
         required={required}
         disabled={disabled}
         compact={compact}
-        className="w-[92px] flex-shrink-0"
+        // 92 px cortava o "09:30" na fonte de 16 px (bug-817, 25/11/2026):
+        // a caixa leva o relógio e as margens, e sobravam ~48 px para o texto.
+        className={`${compact ? "w-24" : "w-28"} flex-shrink-0`}
         aria-label={ariaLabel ? `${ariaLabel} — hora` : "Hora"}
       />
     </div>

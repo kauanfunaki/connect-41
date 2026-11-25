@@ -1,7 +1,6 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import Link from "next/link";
 import { ChevronLeft, ChevronRight, Clock, Plus } from "lucide-react";
 import { CreateMeetingDialog } from "./CreateMeetingDialog";
 import { MiniCalendar } from "./MiniCalendar";
@@ -10,6 +9,8 @@ import { TimeGrid } from "./TimeGrid";
 import { MesDosPrazos } from "./MesDosPrazos";
 import { ListaDosPrazos } from "./ListaDosPrazos";
 import { BotoesDeFonte } from "./BotoesDeFonte";
+import { ExpedienteForm } from "./ExpedienteForm";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { shiftAgendaDate, agendaTitle, AGENDA_VIEWS, type AgendaView } from "@/lib/agenda";
 import { descreverExpediente, expedienteCurto, slotNoDia, slotParaNovaReuniao, type Expediente, type Slot } from "@/lib/agendaExpediente";
 import { alternarFonte, type OrigemDasFontes } from "@/lib/agendaDoSetor";
@@ -82,6 +83,15 @@ type Props = {
   /** Horário da grade de dia/semana — o da pessoa ou o do escritório. */
   expediente: Expediente;
   /**
+   * O horário da pessoa, para mudar na própria Agenda (25/11/2026,
+   * melhoria-824): o mesmo formulário de Configurações › Agenda.
+   */
+  horarioDaGrade?: {
+    valor: Expediente;
+    doEscritorio: { expediente: Expediente; seguindo: boolean };
+    salvar: (prev: { error: string } | { success: true } | null, form: FormData) => Promise<{ error: string } | { success: true } | null>;
+  };
+  /**
    * Abre mostrando só os prazos deste setor (`?setor=`): o "Ver prazos na
    * Agenda" das Exigências (04/11/2026), que substituiu a agenda própria do
    * Societário. É estado da tela, e não da URL: trocar de semana mantém o
@@ -125,6 +135,7 @@ export function AgendaCalendar({
   restaurarFontes,
   lembrarVisao,
   expediente,
+  horarioDaGrade,
   setorInicial = null,
 }: Props) {
   const [dialogSlot, setDialogSlot] = useState<Slot | null>(null);
@@ -235,16 +246,35 @@ export function AgendaCalendar({
               {/* O horário da grade (17/11/2026, melhoria-707): era uma frase
                   acima da agenda, com o caminho para mudar; virou chip, e o
                   caminho foi para o artigo de ajuda. Só nas grades de horas. */}
-              {grade && (
-                <Link
-                  href="/configuracoes#agenda"
-                  title={`Horário da grade: ${descreverExpediente(expediente)}. Clique para mudar.`}
-                  aria-label={`Horário da grade: ${descreverExpediente(expediente)}. Mudar em Configurações`}
-                  className="inline-flex h-7 items-center gap-1 rounded-full border border-border px-2.5 text-fs-2 text-fg-secondary tabular-nums hover:border-border-strong hover:text-fg transition-colors"
+              {/* Desde 25/11/2026 (melhoria-824) o chip abre o horário ali
+                  mesmo, num painel, em vez de levar a Configurações. */}
+              {grade && horarioDaGrade && (
+                <Dropdown
+                  align="right"
+                  width={420}
+                  alturaMaxima="max-h-[80vh]"
+                  trigger={({ open, toggle }) => (
+                    <button
+                      type="button"
+                      onClick={toggle}
+                      aria-expanded={open}
+                      title={`Horário da grade: ${descreverExpediente(expediente)}. Clique para mudar.`}
+                      aria-label={`Horário da grade: ${descreverExpediente(expediente)}. Mudar`}
+                      className={`inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-fs-2 tabular-nums transition-colors ${open ? "border-brand/40 bg-brand-subtle text-fg" : "border-border text-fg-secondary hover:border-border-strong hover:text-fg"}`}
+                    >
+                      <Clock size={12} aria-hidden />
+                      {expedienteCurto(expediente)}
+                    </button>
+                  )}
                 >
-                  <Clock size={12} aria-hidden />
-                  {expedienteCurto(expediente)}
-                </Link>
+                  <div className="space-y-3 p-1">
+                    <div>
+                      <p className="text-ui font-semibold text-fg">Horário da agenda</p>
+                      <p className="text-helper text-fg-muted">As horas que a grade de dia e de semana mostra para você.</p>
+                    </div>
+                    <ExpedienteForm action={horarioDaGrade.salvar} valor={horarioDaGrade.valor} doEscritorio={horarioDaGrade.doEscritorio} />
+                  </div>
+                </Dropdown>
               )}
               <SegmentedControl
                 label="Visão da agenda"

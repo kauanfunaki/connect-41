@@ -225,6 +225,21 @@ describe.skipIf(!url)("helpdesk com MySQL descartável e notificações simulada
     expect(await db!.helpdeskTicketSector.count({ where: { ticketId: id } })).toBe(0);
     await expect(detalhe({ ...contextoUsuario(colega, "SECTOR_USER", ["controladoria"]), config: varios }, id)).rejects.toThrow("não encontrado");
   }));
+  it("o administrador fora do setor que atende troca só a categoria; quem pediu não troca (funcionalidade-827)", async () => {
+    await salvarCategoria(gestao, { name: "Categoria fictícia trocada" });
+    const nova = (await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Categoria fictícia trocada" } } })).id;
+    const id = await abrir();
+    const antes = await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } });
+    await expect(alterar(c, id, 0, "categoria", nova)).rejects.toThrow("Só o administrador");
+    const adminId = (await db!.user.create({ data: { tenantId, name: "Administrador fictício", email: `${randomUUID()}@example.test`, passwordHash: "sem-login-de-teste", role: "ADMIN" } })).id;
+    const admin = contextoUsuario(adminId, "ADMIN", []);
+    await alterar(admin, id, 0, "categoria", nova);
+    const depois = await db!.helpdeskTicket.findUniqueOrThrow({ where: { id } });
+    expect(depois.categoryId).toBe(nova);
+    expect({ title: depois.title, description: depois.description }).toEqual({ title: antes.title, description: antes.description });
+    expect((await db!.helpdeskEvent.findFirstOrThrow({ where: { ticketId: id, type: "category" } })).data).toMatchObject({ from: categoriaId, to: nova, manual: true });
+    await expect(alterar(admin, id, depois.version, "categoria", nova)).rejects.toThrow("já está nessa categoria");
+  });
   it("a categoria com campo que o pedido não tem fica para a equipe classificar", async () => {
     await salvarCategoria(gestao, { name: "Campos da classificação fictícia", formSchema: [{ key: "sistema", label: "Sistema", type: "text", required: true }] });
     const cat = await db!.helpdeskCategory.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "Campos da classificação fictícia" } } });
