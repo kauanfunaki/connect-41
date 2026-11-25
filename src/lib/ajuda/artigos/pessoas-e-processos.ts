@@ -299,6 +299,7 @@ export const ARTIGOS_PESSOAS_E_PROCESSOS: ArtigoDeAjuda[] = [
       {
         titulo: "Pagar e entregar a folha",
         passos: [
+          "Com a competência fechada, “Lançar no Contas a pagar” (em Saídas da folha) cria no Contas a pagar da empresa os líquidos dos colaboradores (vencem no 5º dia útil do mês seguinte), o DARF da DCTFWeb com INSS e IRRF e o FGTS Digital (dia 20) e o PIS sobre a folha, quando houver (dia 25). A categoria vem do plano de contas pelo nome (salários, INSS, FGTS, PIS); sem ela, a conta fica provisória para o BPO classificar. Lançar de novo atualiza as que seguem em aberto e não mexe nas pagas.",
           "Em “Saídas da folha”, “Baixar holerites (PDF)” gera um PDF com uma página por colaborador. Com a competência fechada, “Guardar nos Arquivos” guarda em Arquivos › Departamento Pessoal, de onde seguem ao cliente pelo “Enviar ao cliente” do arquivo.",
           "“Gerar remessa” monta o arquivo do banco (CNAB 240) com o líquido de cada um, pela conta pagadora da empresa, em crédito em conta corrente, crédito em poupança ou TED para outro banco. Quem está sem banco, agência, conta ou CPF fica de fora e aparece listado ali.",
           "O primeiro arquivo de cada banco vai para teste no banco antes de valer.",

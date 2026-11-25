@@ -52,6 +52,7 @@ import {
   fecharCompetenciaAction,
   gerarRemessaAction,
   guardarHoleritesAction,
+  lancarContasAPagarAction,
   importarComparativoAction,
   importarEventosAction,
   lancarEventoAction,
@@ -886,6 +887,18 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                     <input type="hidden" name="competenciaId" value={comp.id} />
                   </FormularioDoDp2>
                 )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-fs-3 font-semibold text-fg">Contas a pagar</h3>
+                {fechada && podeAgir ? (
+                  <FormularioDoDp2 acao={lancarContasAPagarAction} rotulo="Lançar no Contas a pagar" rotuloEnviando="Lançando…" variante="secondary" tamanho="sm">
+                    <input type="hidden" name="competenciaId" value={comp.id} />
+                  </FormularioDoDp2>
+                ) : (
+                  <p className="text-fs-2 text-fg-muted">Feche a competência para lançar.</p>
+                )}
+                <p className="text-fs-2 text-fg-muted">Líquidos (5º dia útil), DARF da DCTFWeb e FGTS (dia 20) e PIS (dia 25) do mês seguinte. Lançar de novo atualiza as que seguem em aberto.</p>
               </div>
 
               <div className="flex flex-col gap-3">
