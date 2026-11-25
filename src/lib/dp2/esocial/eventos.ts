@@ -81,6 +81,11 @@ export type TrabalhadorEsocial = {
   liquido: number;
   /** "AAAA-MM-DD": vai no S-1200 do trabalhador sem vínculo que não tem S-2300 (sem matrícula). */
   nascimento?: string | null;
+  /**
+   * Mais de um vínculo (funcionalidade-769): o indMV do cálculo e a remuneração
+   * em cada outra empresa (ideTrabalhador/infoMV no S-1200).
+   */
+  infoMV?: { indMV: 1 | 2 | 3; outras: { tpInsc: 1 | 2; nrInsc: string; codCateg: string; valor: number }[] } | null;
 };
 
 /** Gera o Id e o carimbo de um evento; o sequencial evita Id repetido no mesmo segundo. */
@@ -308,6 +313,14 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
     ideEmpregador(e.cnpj),
     el("ideTrabalhador", [
       el("cpfTrab", digitos(t.cpf)),
+      t.infoMV && t.infoMV.outras.length > 0
+        ? el("infoMV", [
+            el("indMV", String(t.infoMV.indMV)),
+            ...t.infoMV.outras.map((o) =>
+              el("remunOutrEmpr", [el("tpInsc", String(o.tpInsc)), el("nrInsc", digitos(o.nrInsc)), el("codCateg", o.codCateg), el("vlrRemunOE", decimal(o.valor))])
+            ),
+          ])
+        : null,
       semVinculo(t.categoria) && !t.matricula ? el("infoComplem", [el("nmTrab", t.nome.slice(0, 70)), el("dtNascto", t.nascimento ?? null)]) : null,
     ]),
     el("dmDev", [

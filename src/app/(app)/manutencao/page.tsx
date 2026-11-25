@@ -92,7 +92,8 @@ export default async function TelaEmManutencao({ searchParams }: { searchParams:
               {conserta && (
                 <div className="mt-8 w-full max-w-[30rem] border-t border-border pt-5">
                   <p className="text-fs-2 text-fg-secondary leading-relaxed">
-                    Para conferir a correção antes de liberar, abra a tela só para você. Os setores continuam vendo este aviso.
+                    Para conferir a correção antes de liberar, abra a tela só para você. Os setores continuam vendo este aviso, e ele
+                    volta para você também sempre que entrar de novo na tela.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                     <AbrirTelaParaTestar tela={tela} />

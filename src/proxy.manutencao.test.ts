@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
 import { esquecerTelasEmManutencaoDoProxy } from "@/lib/manutencao/noProxy";
-import { COOKIE_DE_TESTE } from "@/lib/manutencao/regras";
+import { COOKIE_DE_ENTRADA, COOKIE_DE_TESTE } from "@/lib/manutencao/regras";
 
 // Telas em manutenção vistas de fora (13/11/2026): quem abre uma tela em
 // manutenção recebe o aviso no mesmo endereço (reescrita para
@@ -57,6 +57,13 @@ function reescrita(res: Response): string | null {
   return `${url.pathname}${url.search}`;
 }
 
+/** O valor que a resposta grava num cookie ("" quando apaga), ou `null` quando não mexe nele. */
+function cookieNaResposta(res: Response, nome: string): string | null {
+  const linha = res.headers.getSetCookie().find((c) => c.startsWith(`${nome}=`));
+  if (!linha) return null;
+  return decodeURIComponent(linha.split(";")[0].slice(nome.length + 1));
+}
+
 describe("tela em manutenção no proxy", () => {
   it("quem é do setor recebe o aviso no lugar da tela, com a identidade de sempre", async () => {
     const res = await abrir("/documentos-fiscais", FISCAL);
@@ -80,12 +87,56 @@ describe("tela em manutenção no proxy", () => {
     }
   });
 
-  it("quem conserta e abriu para testar entra na tela, inclusive no que mora dentro dela", async () => {
-    const cookie = `${COOKIE_DE_TESTE}=${MANUTENCAO}`;
+  it("quem conserta e abriu para testar entra na tela pelo passe, e o passe é gasto", async () => {
+    const cookie = `${COOKIE_DE_TESTE}=${MANUTENCAO}; ${COOKIE_DE_ENTRADA}=${MANUTENCAO}`;
     for (const quem of CONSERTAM) {
-      expect(reescrita(await abrir("/documentos-fiscais", quem, { cookie })), quem.role).toBeNull();
-      expect(reescrita(await abrir("/documentos-fiscais/abc", quem, { cookie })), quem.role).toBeNull();
+      const res = await abrir("/documentos-fiscais", quem, { cookie });
+      expect(reescrita(res), quem.role).toBeNull();
+      expect(cookieNaResposta(res, COOKIE_DE_ENTRADA), quem.role).toBe("");
     }
+  });
+
+  it("dentro da tela, os pedidos que vêm dela seguem abrindo — inclusive o que mora dentro dela", async () => {
+    const cookie = `${COOKIE_DE_TESTE}=${MANUTENCAO}`;
+    const cabecalhos = { referer: "http://localhost/documentos-fiscais?pagina=2" };
+    for (const quem of CONSERTAM) {
+      expect(reescrita(await abrir("/documentos-fiscais", quem, { cookie, cabecalhos })), quem.role).toBeNull();
+      expect(reescrita(await abrir("/documentos-fiscais/abc?_rsc=1", quem, { cookie, cabecalhos: { ...cabecalhos, rsc: "1" } })), quem.role).toBeNull();
+    }
+  });
+
+  it("entrando de novo (de fora, sem passe), o aviso volta e o teste sai do cookie (bug-833)", async () => {
+    const outra = "99999999-9999-4999-8999-999999999999";
+    for (const referer of [undefined, "http://localhost/home", "http://localhost/pagar"]) {
+      const res = await abrir("/documentos-fiscais", CONSERTAM[0], {
+        cookie: `${COOKIE_DE_TESTE}=${outra},${MANUTENCAO}`,
+        cabecalhos: referer ? { referer } : {},
+      });
+      expect(reescrita(res), referer).toBe("/manutencao?tela=fiscal_documentos");
+      expect(cookieNaResposta(res, COOKIE_DE_TESTE), referer).toBe(outra);
+    }
+    const sozinha = await abrir("/documentos-fiscais", CONSERTAM[0], { cookie: `${COOKIE_DE_TESTE}=${MANUTENCAO}` });
+    expect(cookieNaResposta(sozinha, COOKIE_DE_TESTE)).toBe("");
+  });
+
+  it("prefetch de fora mostra o aviso sem mexer nos cookies; com passe, abre sem gastá-lo", async () => {
+    const semPasse = await abrir("/documentos-fiscais", CONSERTAM[0], { cookie: `${COOKIE_DE_TESTE}=${MANUTENCAO}`, cabecalhos: { "next-router-prefetch": "1" } });
+    expect(reescrita(semPasse)).toBe("/manutencao?tela=fiscal_documentos");
+    expect(cookieNaResposta(semPasse, COOKIE_DE_TESTE)).toBeNull();
+    const comPasse = await abrir("/documentos-fiscais", CONSERTAM[0], {
+      cookie: `${COOKIE_DE_TESTE}=${MANUTENCAO}; ${COOKIE_DE_ENTRADA}=${MANUTENCAO}`,
+      cabecalhos: { "sec-purpose": "prefetch" },
+    });
+    expect(reescrita(comPasse)).toBeNull();
+    expect(cookieNaResposta(comPasse, COOKIE_DE_ENTRADA)).toBeNull();
+  });
+
+  it("o passe e o Referer de dentro não abrem sem o cookie de teste", async () => {
+    const res = await abrir("/documentos-fiscais", CONSERTAM[0], {
+      cookie: `${COOKIE_DE_ENTRADA}=${MANUTENCAO}`,
+      cabecalhos: { referer: "http://localhost/documentos-fiscais" },
+    });
+    expect(reescrita(res)).toBe("/manutencao?tela=fiscal_documentos");
   });
 
   it("o cookie de teste não abre para quem é só do setor", async () => {

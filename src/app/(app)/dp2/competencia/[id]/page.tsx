@@ -26,6 +26,8 @@ import { num } from "@/lib/dp2/formato";
 import { colaboradoresDaCompetencia, listarRubricas, rubricasFixasDoMes, type TotaisDaCompetencia } from "@/lib/dp2/servidor";
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
+import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
+import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
 import { camposAjustaveis, nomeDoCampo, type AjusteAplicado } from "@/lib/dp2/ajustesDoCalculo";
 import { totaisPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
@@ -40,6 +42,9 @@ import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
 import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
+  copiarOutrasBasesInssAction,
+  incluirOutraBaseInssAction,
+  retirarOutraBaseInssAction,
   cancelarPedidoDeEventosAction,
   fecharCompetenciaAction,
   gerarRemessaAction,
@@ -99,7 +104,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const fechada = comp.situacao === "FECHADA";
   const mensal = comp.tipo === "MENSAL";
 
-  const [calculos, eventos, comparativos, rubricas, pessoas, pedidos, remessas, ajustes] = await Promise.all([
+  const [calculos, eventos, comparativos, rubricas, pessoas, pedidos, remessas, outrasBases, ajustes] = await Promise.all([
     prisma.dp2Calculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, include: { person: { select: { id: true, name: true, cpf: true } } } }),
     prisma.dp2Evento.findMany({
       where: { tenantId: ctx.tenantId, competenciaId: id },
@@ -115,6 +120,8 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
       orderBy: { createdAt: "desc" },
       select: { id: true, nomeArquivo: true, dataPagamento: true, quantidade: true, total: true, foraDaRemessa: true, createdAt: true },
     }),
+    // Outras bases de INSS de quem tem mais de um vínculo (funcionalidade-769).
+    prisma.dp2OutraBaseInss.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
     // Ajustes manuais do cálculo (funcionalidade-768).
     prisma.dp2AjusteDeCalculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
   ]);
@@ -445,6 +452,86 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                           <Link href={`/dp2/colaboradores?pessoa=${f.personId}`} className="text-fs-2 text-brand hover:underline">
                             No contrato
                           </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Secao>
+        )}
+
+        {mensal && etapa === "eventos" && (outrasBases.length > 0 || (podeAgir && !fechada)) && (
+          <Secao titulo="Outras bases de INSS (mais de um vínculo)">
+            {podeAgir && !fechada && (
+              <div className="mb-5 flex flex-col gap-4">
+                <FormularioDoDp2 acao={incluirOutraBaseInssAction} rotulo="Incluir" rotuloEnviando="Incluindo…" icone={<Plus size={14} aria-hidden="true" />} manterAposEnviar={["personId"]}>
+                  <input type="hidden" name="competenciaId" value={comp.id} />
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1.2fr_1fr_0.9fr]">
+                    <CampoForm label="Colaborador" htmlFor="outra-personId">
+                      <Select id="outra-personId" name="personId" required defaultValue="">
+                        <option value="" disabled>
+                          Escolha…
+                        </option>
+                        {pessoas
+                          .filter((p) => p.dp2Vinculo && regimeDaCategoria(p.dp2Vinculo.categoria) === "CLT")
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </Select>
+                    </CampoForm>
+                    <CampoForm label="CNPJ (ou CPF) da outra empresa" htmlFor="outra-documento">
+                      <Input id="outra-documento" name="documento" inputMode="numeric" required placeholder="00.000.000/0000-00" />
+                    </CampoForm>
+                    <CampoForm label="Categoria lá" htmlFor="outra-codCateg">
+                      <Select id="outra-codCateg" name="codCateg" defaultValue="101">
+                        {CATEGORIAS.map(([codigo, nome]) => (
+                          <option key={codigo} value={codigo}>
+                            {nome}
+                          </option>
+                        ))}
+                      </Select>
+                    </CampoForm>
+                    <CampoForm label="Remuneração no mês" htmlFor="outra-remuneracao">
+                      <Input id="outra-remuneracao" name="remuneracao" inputMode="decimal" prefix="R$" placeholder="0,00" required />
+                    </CampoForm>
+                  </div>
+                </FormularioDoDp2>
+                <FormularioDoDp2 acao={copiarOutrasBasesInssAction} rotulo="Copiar do mês anterior" rotuloEnviando="Copiando…" variante="ghost" tamanho="sm">
+                  <input type="hidden" name="competenciaId" value={comp.id} />
+                </FormularioDoDp2>
+              </div>
+            )}
+            {outrasBases.length === 0 ? (
+              <p className="text-fs-3 text-fg-muted">Ninguém com remuneração em outra empresa neste mês.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Colaborador</th>
+                      <th className={TH}>Outra empresa</th>
+                      <th className={TH}>Categoria</th>
+                      <th className={TH_NUM}>Remuneração</th>
+                      <th className={TH} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {outrasBases.map((o) => (
+                      <tr key={o.id} className={TR}>
+                        <td className={TD}>{nomeDe.get(o.personId) ?? "—"}</td>
+                        <td className={`${TD} tabular-nums`}>{documentoFormatado(o.tpInsc, o.nrInsc)}</td>
+                        <td className={TD}>{o.codCateg}</td>
+                        <td className={TD_NUM}>{brl(n(o.remuneracao))}</td>
+                        <td className={`${TD} text-right`}>
+                          {podeAgir && !fechada && (
+                            <FormularioDoDp2 acao={retirarOutraBaseInssAction} rotulo="Retirar" rotuloEnviando="Retirando…" variante="ghost" tamanho="xs">
+                              <input type="hidden" name="outraBaseId" value={o.id} />
+                            </FormularioDoDp2>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -43,6 +43,7 @@ import {
   type EmpregadorEsocial,
   type EventoGerado,
   type RubricaEsocial,
+  type TrabalhadorEsocial,
 } from "./eventos";
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -175,6 +176,8 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
     select: { id: true, tipo: true, referencia: true, personId: true, recibo: true },
   });
   const aceitoDe = (tipo: string, personId: string, periodo: string) => aceitos.find((a) => a.tipo === tipo && a.personId === personId && a.referencia.startsWith(`${periodo} · `) && a.recibo);
+  // Outras bases de INSS (funcionalidade-769): vão no infoMV do S-1200, com o indMV do cálculo.
+  const outrasBases = await prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } });
   const novoId = geradorDeId(empregador.cnpj || "0", new Date());
   const eventos: EventoGerado[] = [];
   for (const c of calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"))) {
@@ -195,6 +198,7 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       itens,
       liquido: n(c.liquido),
       nascimento: isoDoDia(c.person.birthDate),
+      infoMV: infoMVDoCalculo(c.memoria, outrasBases.filter((o) => o.personId === c.person.id)),
     };
     const r1200 = aceitoDe("S-1200", c.person.id, perApur);
     const r1210 = aceitoDe("S-1210", c.person.id, perApur);
@@ -458,4 +462,14 @@ export async function gerarReabertura(tenantId: string, competenciaId: string, u
   if (!empregador) return { ok: false, erro: "Empresa não encontrada." };
   const ev = eventoS1298(empregador, perApur, geradorDeId(empregador.cnpj || "0", new Date()));
   return { ok: true, ...(await guardar(tenantId, comp.companyId, competenciaId, userId, [{ ...ev, alvoId: fechamento.id }])) };
+}
+
+/** O infoMV do S-1200: o indMV que o cálculo gravou e as outras empresas do mês. */
+function infoMVDoCalculo(
+  memoria: unknown,
+  outras: readonly { tpInsc: number; nrInsc: string; codCateg: string; remuneracao: unknown }[]
+): TrabalhadorEsocial["infoMV"] {
+  const indMV = (memoria as { infoMV?: { indMV?: number } } | null)?.infoMV?.indMV;
+  if (!outras.length || (indMV !== 1 && indMV !== 2 && indMV !== 3)) return null;
+  return { indMV, outras: outras.map((o) => ({ tpInsc: o.tpInsc === 2 ? 2 : 1, nrInsc: o.nrInsc, codCateg: o.codCateg, valor: Number(o.remuneracao) })) };
 }

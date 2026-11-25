@@ -4,7 +4,7 @@ import { isFullWrite } from "@/lib/auth/papeis";
 import { podeAbrir, podeVerInterno, podeVerInternoNo, podeVer, escoposDaBusca, type EscopoDaBusca } from "./acesso";
 import type { Contexto } from "./contexto";
 import { ordemDaLista, ORDEM_DE_ATENDIMENTO } from "./ordem";
-import { categoriaSchema, dadosRascunhoSchema, tituloDaDescricao, PRIORIDADES, STATUS, fechado } from "./regras";
+import { categoriaSchema, dadosRascunhoSchema, tituloDaDescricao, numeroDaBusca, PRIORIDADES, STATUS, fechado } from "./regras";
 
 export const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 export async function temAcessoAoModulo(c: Contexto) {
@@ -149,7 +149,9 @@ async function filtroDaBusca(c: Contexto, q: string, em?: string): Promise<Prism
     const pessoas = await getPrisma().user.findMany({ where: { tenantId: c.ctx.tenantId, name: { contains: q } }, select: { id: true }, take: 200 });
     return { assignees: { some: { userId: { in: pessoas.map(u => u.id) } } } };
   }
-  return { OR: [{ title: { contains: q } }, { description: { contains: q } }, { id: { startsWith: q } }] };
+  // O número do cartão ("chamado-45", "#45", "45") acha o chamado (bug-819).
+  const numero = numeroDaBusca(q);
+  return { OR: [{ title: { contains: q } }, { description: { contains: q } }, { id: { startsWith: q } }, ...(numero ? [{ number: numero }] : [])] };
 }
 export async function detalhe(c: Contexto, id: string) {
   // O que é interno é do setor que atende o chamado (12/11/2026).

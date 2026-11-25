@@ -152,6 +152,15 @@ describe("eventos periódicos", () => {
     expect(ev.xml).toContain("<qtdRubr>12.50</qtdRubr><vrRubr>255.69</vrRubr>");
   });
 
+  it("S-1200 de quem tem mais de um vínculo leva o infoMV logo depois do CPF (funcionalidade-769)", () => {
+    const t = { ...trabalhador, infoMV: { indMV: 2 as const, outras: [{ tpInsc: 1 as const, nrInsc: "11.222.333/0001-81", codCateg: "101", valor: 4000 }] } };
+    const ev = eventoS1200(empregador, "2026-11", t, geradorDeId(empregador.cnpj, quando));
+    expect(ev.xml).toContain(
+      "<cpfTrab>52998224725</cpfTrab><infoMV><indMV>2</indMV><remunOutrEmpr><tpInsc>1</tpInsc><nrInsc>11222333000181</nrInsc><codCateg>101</codCateg><vlrRemunOE>4000.00</vlrRemunOE></remunOutrEmpr></infoMV>"
+    );
+    expect(eventoS1200(empregador, "2026-11", trabalhador, geradorDeId(empregador.cnpj, quando)).xml).not.toContain("infoMV");
+  });
+
   it("S-1200 sem CPF válido e sem matrícula bloqueia", () => {
     const ev = eventoS1200(empregador, "2026-11", { ...trabalhador, cpf: null, matricula: null }, geradorDeId(empregador.cnpj, quando));
     expect(ev.pendencias.filter((p) => p.bloqueia)).toHaveLength(2);

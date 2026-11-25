@@ -71,6 +71,8 @@ import { modeloDoCodigo } from "@/lib/dre/estrutura";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
+import { saldoAtualDoExtrato } from "./extrato";
+import { lerEtapas, lerPedido, type PedidoDoOmie } from "./pedidos";
 import { instanciaDaEmpresa, PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro } from "./contas";
 import {
   centrosDosDepartamentos,
@@ -135,6 +137,8 @@ function mesmasLinhas(
 const POR_PAGINA = 500;
 const MAX_PAGINAS = 20;
 const MAX_PAGINAS_DE_CADASTRO = 10;
+/** Pedidos de venda: 100 por página (o máximo do Omie), até 40 páginas por leitura. */
+const MAXIMO_DE_PAGINAS_DE_PEDIDOS = 40;
 
 const emAndamento = new Set<string>();
 
@@ -434,6 +438,122 @@ export async function sincronizarFinanceiroDaEmpresa(
         jaUsadas.add(o.id);
       } catch (err) {
         if (!isPrismaUniqueError(err)) throw err;
+      }
+    }
+
+    // ─── saldo das contas no Omie (25/11/2026, funcionalidade-837) ─────────
+    // O ponto de partida do fluxo previsto para a empresa que concilia no Omie:
+    // o "saldo atual" de cada conta corrente ativa, pelo `ListarExtrato` só com
+    // o saldo. Uma falha numa conta não derruba a leitura dos títulos.
+    if (opcoes.gravar) {
+      const hoje = saoPauloParts(new Date()).dateKey;
+      const dataDoOmie = `${hoje.slice(8, 10)}/${hoje.slice(5, 7)}/${hoje.slice(0, 4)}`;
+      for (const o of contasDoOmie) {
+        if (o.inativa) continue;
+        try {
+          const corpo = await chamarOmie(cred, "financas/extrato", "ListarExtrato", {
+            nCodCC: Number(o.id),
+            dPeriodoInicial: dataDoOmie,
+            dPeriodoFinal: dataDoOmie,
+            cExibirApenasSaldo: "S",
+          });
+          const saldo = saldoAtualDoExtrato(corpo);
+          if (saldo === null) {
+            somar("saldos_sem_valor");
+            continue;
+          }
+          const balance = (saldo / 100).toFixed(2);
+          await prisma.omieAccountBalance.upsert({
+            where: { companyId_omieAccountId: { companyId, omieAccountId: o.id } },
+            create: { tenantId, companyId, omieAccountId: o.id, label: o.rotulo, balance, fetchedAt: new Date() },
+            update: { label: o.rotulo, balance, fetchedAt: new Date() },
+            select: { id: true },
+          });
+          somar("saldos_lidos");
+        } catch (err) {
+          console.error("[omie/saldo]", companyId, o.id, err instanceof Error ? err.message : err);
+          somar("saldos_com_erro");
+        }
+      }
+    }
+
+    // ─── pedidos de venda (26/11/2026, funcionalidade-838) ─────────────────
+    // Só para a empresa que ligou os pedidos no Modelo do fluxo: são chamadas
+    // a mais ao Omie, e quase nenhum cliente precisa delas. Lê as etapas de
+    // faturamento (o nome é da empresa) e os pedidos com previsão de um mês
+    // para trás a um ano para frente; os abertos regravam a lista da empresa.
+    // Uma falha aqui não derruba a leitura dos títulos.
+    const comPedidos = await prisma.cashFlowSettings.findFirst({ where: { tenantId, companyId, salesOrdersEnabled: true }, select: { id: true } });
+    if (opcoes.gravar && comPedidos) {
+      try {
+        const emLista = (v: unknown): unknown[] => (Array.isArray(v) ? v : v && typeof v === "object" ? [v] : []);
+        // A listagem das etapas aceita até 50 por página (a de cadastro pede 500).
+        const cadastros: unknown[] = [];
+        for (let pagina = 1; pagina <= MAX_PAGINAS_DE_CADASTRO; pagina++) {
+          const corpo = obj(await chamarOmie(cred, "produtos/etapafat", "ListarEtapasFaturamento", { pagina, registros_por_pagina: 50 }));
+          cadastros.push(...emLista(corpo.cadastros));
+          const total = Number(corpo.total_de_paginas ?? 1);
+          if (!Number.isFinite(total) || pagina >= total) break;
+        }
+        const etapas = lerEtapas(cadastros);
+        const hoje = saoPauloParts(new Date()).dateKey;
+        const omieData = (k: string) => `${k.slice(8, 10)}/${k.slice(5, 7)}/${k.slice(0, 4)}`;
+        const de = new Date(`${hoje}T00:00:00Z`);
+        de.setUTCDate(de.getUTCDate() - 31);
+        const ate = new Date(`${hoje}T00:00:00Z`);
+        ate.setUTCDate(ate.getUTCDate() + 366);
+        const pedidos: PedidoDoOmie[] = [];
+        for (let pagina = 1; pagina <= MAXIMO_DE_PAGINAS_DE_PEDIDOS; pagina++) {
+          const corpo = obj(
+            await chamarOmie(cred, "produtos/pedido", "ListarPedidos", {
+              pagina,
+              registros_por_pagina: 100,
+              apenas_importado_api: "N",
+              data_previsao_de: omieData(de.toISOString().slice(0, 10)),
+              data_previsao_ate: omieData(ate.toISOString().slice(0, 10)),
+            })
+          );
+          for (const item of emLista(corpo.pedido_venda_produto)) {
+            const p = lerPedido(item);
+            if (p) pedidos.push(p);
+          }
+          const total = Number(corpo.total_de_paginas ?? 1);
+          if (!Number.isFinite(total) || pagina >= total) break;
+        }
+        const abertos = pedidos.filter((p) => p.aberto);
+        const agora = new Date();
+        await prisma.$transaction(async (tx) => {
+          for (const e of etapas) {
+            await tx.omieOrderStage.upsert({
+              where: { companyId_code: { companyId, code: e.code } },
+              create: { tenantId, companyId, code: e.code, name: e.name, inactive: e.inactive },
+              update: { name: e.name, inactive: e.inactive },
+              select: { id: true },
+            });
+          }
+          await tx.salesOrder.deleteMany({ where: { tenantId, companyId } });
+          if (abertos.length) {
+            await tx.salesOrder.createMany({
+              data: abertos.map((p) => ({
+                tenantId,
+                companyId,
+                omieOrderId: p.omieOrderId,
+                number: p.number,
+                stageCode: p.stageCode,
+                customerName: (p.customerCode ? doOmieContrapartes.get(p.customerCode)?.nome : null)?.slice(0, 180) ?? `Cliente ${p.customerCode ?? "sem código"} do Omie`,
+                forecastDate: p.forecastKey ? new Date(`${p.forecastKey}T12:00:00Z`) : null,
+                totalAmount: (p.totalCentavos / 100).toFixed(2),
+                installments: p.installments,
+                fetchedAt: agora,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        });
+        somar("pedidos_abertos", abertos.length);
+      } catch (err) {
+        console.error("[omie/pedidos]", companyId, err instanceof Error ? err.message : err);
+        somar("pedidos_com_erro");
       }
     }
 

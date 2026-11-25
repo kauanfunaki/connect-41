@@ -7,6 +7,8 @@ import { BulkActionBar } from "@/components/shared/BulkActionBar";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { TabelaFiltravel, LinhaFiltravel, FiltroDaColuna } from "@/components/shared/FiltroDeColunas";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CampoDeBusca } from "@/components/ui/CampoDeBusca";
+import { normalizar } from "@/lib/buscaDeTelas";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { SectorChip } from "@/components/ui/SectorChip";
@@ -59,9 +61,15 @@ export function UsuariosTable({
   // administrador, e o diálogo diz quando a conta não pode sair (a própria, o
   // último administrador, Super Admin pelas mãos de um Admin).
   const [excluindo, setExcluindo] = useState<Row | null>(null);
+  // A busca (25/11/2026, melhoria-810): pelo nome ou pelo e-mail, sem acento
+  // e sem caixa. A lista vem inteira, então filtra no navegador, junto com o
+  // funil das colunas.
+  const [busca, setBusca] = useState("");
+  const termo = normalizar(busca);
+  const visiveis = termo ? users.filter((u) => normalizar(`${u.name} ${u.email}`).includes(termo)) : users;
 
 
-  const selecionaveis = users.filter((u) => u.id !== currentUserId && naTela.has(u.id));
+  const selecionaveis = visiveis.filter((u) => u.id !== currentUserId && naTela.has(u.id));
   const allSelected = selecionaveis.length > 0 && selecionaveis.every((u) => selected.has(u.id));
   // A ação em massa leva só o que está à vista.
   const selecionadosNaTela = new Set([...selected].filter((id) => naTela.has(id)));
@@ -243,6 +251,22 @@ export function UsuariosTable({
 
   return (
     <>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <CampoDeBusca
+          compact
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou e-mail"
+          aria-label="Buscar usuários"
+          className="w-80 max-w-full"
+        />
+        {termo && (
+          <span className="text-ui text-fg-muted tabular-nums" role="status">
+            {visiveis.length === 1 ? "1 usuário" : `${visiveis.length} usuários`}
+          </span>
+        )}
+      </div>
+
       {/* Abaixo de md, cartões; de md para cima, a tabela. As duas
           compartilham a seleção — quem esconde uma delas é o CSS. */}
       <div className="md:hidden bg-surface border border-border rounded-lg shadow-[var(--c41-shadow-xs)] overflow-hidden">
@@ -252,15 +276,21 @@ export function UsuariosTable({
             Selecionar todos
           </span>
         </div>
-        {users.map((u) => cartaoUsuario(u))}
+        {visiveis.map((u) => cartaoUsuario(u))}
+        {!visiveis.length && <p className="px-4 py-6 text-center text-ui text-fg-muted">Nenhum usuário com “{busca.trim()}”.</p>}
       </div>
+      {!visiveis.length && (
+        <p className="hidden md:block mb-3 rounded-lg border border-border bg-surface px-4 py-6 text-center text-ui text-fg-muted">
+          Nenhum usuário com “{busca.trim()}”.
+        </p>
+      )}
 
       {/* Casco padrão e funil nas colunas de valor repetido — papel, setores e
           status (polimento de 30/09). A lista vem inteira, então o funil filtra
           no navegador. Setores filtra pela combinação que a pessoa tem. */}
       <TabelaFiltravel
         onLinhasVisiveis={setNaTela}
-        linhas={users.map((u) => ({
+        linhas={visiveis.map((u) => ({
           id: u.id,
           valores: {
             papel: u.roleLabel,
@@ -296,7 +326,7 @@ export function UsuariosTable({
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
+              {visiveis.map((u) => {
                 const isSelf = u.id === currentUserId;
                 return (
                   <LinhaFiltravel
