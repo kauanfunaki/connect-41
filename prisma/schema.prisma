@@ -2791,6 +2791,7 @@ model Person {
   dp2Vinculo           Dp2Vinculo?
   dp2Eventos           Dp2Evento[]
   dp2RubricasFixas     Dp2RubricaFixa[]
+  dp2OutrasBasesInss   Dp2OutraBaseInss[]
   dp2AjustesDeCalculo  Dp2AjusteDeCalculo[]
   dp2Calculos          Dp2Calculo[]
   dp2Comparativos      Dp2Comparativo[]
@@ -7049,6 +7050,7 @@ model Dp2Competencia {
   remessas     Dp2Remessa[]
   pedidos      Dp2PedidoDeEventos[]
   ajustes    Dp2AjusteDeCalculo[]
+  outrasBasesInss Dp2OutraBaseInss[]
 
   @@unique([companyId, ano, mes, tipo])
   @@index([tenantId, ano, mes])
@@ -7171,6 +7173,32 @@ model Dp2AjusteDeCalculo {
   @@index([tenantId, competenciaId])
   @@index([personId])
   @@map("dp2_ajustes_de_calculo")
+}
+
+/// Outras bases de INSS (25/11/2026, funcionalidade-769): a remuneração do
+/// colaborador em outra empresa no mês, quando ele tem mais de um vínculo. O
+/// INSS daqui ocupa as faixas depois dela e respeita o teto somando as bases;
+/// vai no S-1200 (ideTrabalhador/infoMV/remunOutrEmpr). Uma linha por empresa.
+model Dp2OutraBaseInss {
+  id            String   @id @default(uuid())
+  tenantId      String
+  competenciaId String
+  personId      String
+  /// 1 = CNPJ, 2 = CPF (tpInsc do eSocial).
+  tpInsc        Int      @db.TinyInt
+  nrInsc        String   @db.VarChar(14)
+  /// Categoria do trabalhador na outra empresa (codCateg, ex.: 101).
+  codCateg      String   @default("101") @db.VarChar(3)
+  remuneracao   Decimal  @db.Decimal(12, 2)
+  criadoPorId   String?
+  createdAt     DateTime @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, competenciaId])
+  @@index([personId])
+  @@map("dp2_outras_bases_inss")
 }
 
 /// Os valores da Domínio para a mesma pessoa e competência, enquanto o DP 2

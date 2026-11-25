@@ -298,14 +298,17 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const tab = tabelasDaCompetencia(competencia, await tabelasDoEscritorio(tenantId));
   if (!tab.ok) return { ok: false, erro: `Faltam tabelas para ${competencia}: ${tab.faltam.join(", ")}.` };
 
-  const [linhasDeRubrica, cfg, pessoas, eventos, ajustes] = await Promise.all([
+  const [linhasDeRubrica, cfg, pessoas, eventos, outrasBases, ajustes] = await Promise.all([
     listarRubricas(tenantId),
     configDaEmpresa(tenantId, comp.companyId),
     colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes),
     prisma.dp2Evento.findMany({ where: { tenantId, competenciaId }, include: { rubrica: true } }),
+    // Outras bases de INSS de quem tem mais de um vínculo (funcionalidade-769).
+    prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, select: { personId: true, remuneracao: true } }),
     // Os ajustes manuais (funcionalidade-768) entram por cima do motor: recalcular mantém.
     prisma.dp2AjusteDeCalculo.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } }),
   ]);
+  const outrasDe = (personId: string) => r2(outrasBases.filter((o) => o.personId === personId).reduce((s, o) => s + dec(o.remuneracao), 0));
   // As rubricas fixas do contrato que valem no mês entram como eventos (funcionalidade-767),
   // menos as que o DP lançou no mês para a mesma pessoa e rubrica: aí vale o lançamento.
   const { entram: fixas } = separarFixasDoMes(
@@ -346,6 +349,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         empresa: cfg.empresa,
         diasUteis,
         diasDeDescanso,
+        outrasBasesInss: outrasDe(p.id),
       });
     } else {
       c = await calcularDecimoDaPessoa(tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo === "DECIMO_1" ? 1 : 2, p, vinculo, rubricas, tab.tabelas, cfg.empresa);
@@ -389,7 +393,13 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         baseFgts: c.baseFgts,
         fgts: c.fgts,
         itens: json(c.itens),
-        memoria: json({ inss: c.inss.memoria, irrf: c.irrf.memoria, diasTrabalhados: c.diasTrabalhados, ajustes: aplicados }),
+        memoria: json({
+          inss: c.inss.memoria,
+          irrf: c.irrf.memoria,
+          diasTrabalhados: c.diasTrabalhados,
+          ajustes: aplicados,
+          ...(c.inss.indMV ? { infoMV: { indMV: c.inss.indMV, outrasBases: c.inss.outrasBases ?? 0 } } : {}),
+        }),
         encargos: json(c.encargos),
         provisoes: json(c.provisoes),
         alertas: json(c.alertas),
