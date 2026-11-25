@@ -6,6 +6,9 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerGuiaDoFgts } from "@/lib/dp2/guiasDaFolha";
+import { guardarArquivo } from "@/lib/drive/servidor";
+import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
 import { camposAjustaveis, lerAjuste, nomeDoCampo } from "@/lib/dp2/ajustesDoCalculo";
@@ -584,6 +587,61 @@ export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: Form
   });
   revalidarCompetencia(info.competenciaId);
   return { ok: true, texto: `${nome} retirada da apuração.` };
+}
+
+// ─── Guias da folha (26/11/2026, funcionalidade-744) ────────────────────────
+
+/**
+ * Anexa a GFD (guia do FGTS Digital) da competência: o FGTS Digital não tem
+ * API, então o DP baixa a guia no portal e anexa aqui o PDF, com o valor e o
+ * vencimento. O PDF vai para Arquivos › Guias da empresa e a guia entra na
+ * lista de guias (tipo FGTS); a competência confere o valor com o FGTS do mês.
+ */
+export async function anexarGfdAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  if (comp.tipo !== "MENSAL") return erro("A GFD daqui é a da folha mensal.");
+  const lido = lerGuiaDoFgts(texto(fd, "valor"), texto(fd, "vencimento"));
+  if (!lido.ok) return erro(lido.erro);
+  const pdf = fd.get("arquivo");
+  if (!(pdf instanceof File) || pdf.size === 0) return erro("Anexe o PDF da GFD.");
+  if (pdf.size > 5 * 1024 * 1024) return erro("O PDF passa de 5 MB.");
+  const pasta = await pastaDoModeloDaEmpresa(a.tenantId, comp.companyId, "guias");
+  if (!pasta) return erro("A empresa não tem a pasta Guias nos Arquivos (ela vem do modelo de pastas do escritório).");
+  const competencia = `${comp.ano}-${String(comp.mes).padStart(2, "0")}`;
+  const nome = `GFD FGTS Digital ${String(comp.mes).padStart(2, "0")}-${comp.ano}.pdf`;
+  const guardado = await guardarArquivo({ tenantId: a.tenantId, folderId: pasta, arquivo: new File([await pdf.arrayBuffer()], nome, { type: pdf.type || "application/pdf" }), uploadedByUserId: a.userId });
+  if (!guardado.ok) return erro(`Não deu para guardar o PDF: ${guardado.erro}`);
+  const guia = await getPrisma().guia.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId: comp.companyId,
+      tipo: "FGTS",
+      descricao: `GFD do FGTS Digital · ${String(comp.mes).padStart(2, "0")}/${comp.ano}`,
+      competencia,
+      vencimento: lido.vencimento,
+      valor: lido.valor,
+      origem: "DP2",
+      driveFileId: guardado.arquivoId,
+      emitidaPorId: a.userId,
+    },
+    select: { id: true },
+  });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.gfd_anexada",
+    entityType: "Guia",
+    entityId: guia.id,
+    metadata: { competencia, valor: lido.valor, vencimento: lido.vencimento },
+  });
+  revalidarCompetencia(competenciaId);
+  revalidatePath("/guias");
+  return { ok: true, texto: "GFD anexada: está em Arquivos › Guias e na lista de guias." };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────

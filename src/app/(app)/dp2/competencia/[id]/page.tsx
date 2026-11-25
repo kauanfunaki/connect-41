@@ -27,6 +27,7 @@ import { colaboradoresDaCompetencia, configDaEmpresa, listarRubricas, rubricasFi
 import { TIPOS_DE_INFORMACAO, apurarCompetencia, ehTipoDeInformacao } from "@/lib/dp2/apuracao";
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
+import { conferirGuias, NOME_DA_SITUACAO_DA_GUIA } from "@/lib/dp2/guiasDaFolha";
 import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
 import { camposAjustaveis, nomeDoCampo, type AjusteAplicado } from "@/lib/dp2/ajustesDoCalculo";
@@ -43,6 +44,7 @@ import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
 import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
+  anexarGfdAction,
   incluirInformacaoDaApuracaoAction,
   retirarInformacaoDaApuracaoAction,
   copiarOutrasBasesInssAction,
@@ -148,6 +150,16 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         })
       : null;
   const pedidoAtual = pedidos.find((p) => p.situacao !== "CANCELADO") ?? null;
+  // Guias da folha (funcionalidade-744): o DARF da DCTFWeb baixado pelo Serpro e a GFD anexada.
+  const competenciaDasGuias = `${comp.ano}-${String(comp.mes).padStart(2, "0")}`;
+  const [guiasDoMes, rotinaDctfweb] = mensal
+    ? await Promise.all([
+        prisma.guia.findMany({ where: { tenantId: ctx.tenantId, companyId: comp.companyId, competencia: competenciaDasGuias, tipo: { in: ["DCTFWEB", "FGTS"] } }, orderBy: { createdAt: "desc" } }),
+        prisma.serproDctfweb.findFirst({ where: { tenantId: ctx.tenantId, companyId: comp.companyId, competencia: competenciaDasGuias }, select: { situacao: true, darfArquivoId: true } }),
+      ])
+    : [[], null];
+  const darfDoMes = guiasDoMes.find((g) => g.tipo === "DCTFWEB");
+  const gfdDoMes = guiasDoMes.find((g) => g.tipo === "FGTS");
   // As rubricas fixas do contrato que valem no mês: entram no cálculo sozinhas (funcionalidade-767).
   // Fechada, o cálculo já foi: só aparece o que de fato entrou (nos holerites).
   const fixasVigentes = mensal && !fechada
@@ -867,6 +879,77 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 </div>
               </FormularioDoDp2>
             )}
+          </Secao>
+        )}
+
+        {etapa === "fechar" && apuracao && (
+          <Secao titulo="Guias da folha" apoio="O DARF da DCTFWeb (baixado pela rotina do Serpro) e a GFD do FGTS Digital, conferidos com a apuração da competência.">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Guia</th>
+                    <th className={TH_NUM}>Apurado</th>
+                    <th className={TH_NUM}>Na guia</th>
+                    <th className={TH_NUM}>Diferença</th>
+                    <th className={TH}>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conferirGuias({
+                    inssARecolher: apuracao.inssARecolher,
+                    irrfARecolher: apuracao.irrfARecolher,
+                    fgtsDoMes: calculos.reduce((s, c) => s + n(c.fgts), 0),
+                    valorDarf: darfDoMes?.valor != null ? n(darfDoMes.valor) : null,
+                    valorGfd: gfdDoMes?.valor != null ? n(gfdDoMes.valor) : null,
+                  }).map((l) => {
+                    const g = l.guia === "DCTFWEB" ? darfDoMes : gfdDoMes;
+                    return (
+                      <tr key={l.guia} className={TR}>
+                        <td className={TD}>
+                          {l.nome}
+                          {g?.driveFileId && (
+                            <a href={`/api/arquivos/${g.driveFileId}?ver=1`} target="_blank" rel="noreferrer" className="ml-2 text-fs-2 text-brand hover:underline">
+                              PDF
+                            </a>
+                          )}
+                          {g?.vencimento && <span className="block text-fs-2 text-fg-muted">Vence em {g.vencimento.split("-").reverse().join("/")}</span>}
+                          <span className="block text-fs-2 text-fg-muted">{l.memoria}</span>
+                          {l.guia === "DCTFWEB" && !darfDoMes && (
+                            <span className="block text-fs-2 text-fg-muted">
+                              {rotinaDctfweb ? `Rotina da DCTFWeb no Serpro: ${rotinaDctfweb.situacao.toLowerCase().replace(/_/g, " ")}.` : "A rotina da DCTFWeb ainda não trouxe o DARF deste mês."}
+                            </span>
+                          )}
+                        </td>
+                        <td className={TD_NUM}>{brl(l.esperado)}</td>
+                        <td className={TD_NUM}>{l.valorDaGuia !== null ? brl(l.valorDaGuia) : "—"}</td>
+                        <td className={`${TD_NUM} ${l.situacao === "DIFERE" ? "text-danger font-medium" : ""}`}>{l.diferenca !== null ? brl(l.diferenca) : "—"}</td>
+                        <td className={TD}>
+                          <Selo tom={l.situacao === "BATE" ? "sucesso" : l.situacao === "DIFERE" ? "perigo" : "neutro"}>{NOME_DA_SITUACAO_DA_GUIA[l.situacao]}</Selo>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {podeAgir && (
+              <FormularioDoDp2 acao={anexarGfdAction} rotulo={gfdDoMes ? "Anexar outra GFD" : "Anexar a GFD"} rotuloEnviando="Anexando…" variante="secondary" className="mt-4">
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
+                  <CampoForm label="PDF da GFD (FGTS Digital)" htmlFor="gfd-arquivo" dica="Baixe a guia no portal do FGTS Digital: ele não tem API para o Connect buscar.">
+                    <input id="gfd-arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required className="text-fs-3" />
+                  </CampoForm>
+                  <CampoForm label="Valor total" htmlFor="gfd-valor">
+                    <Input id="gfd-valor" name="valor" inputMode="decimal" prefix="R$" placeholder="0,00" required />
+                  </CampoForm>
+                  <CampoForm label="Vencimento" htmlFor="gfd-vencimento">
+                    <CampoData id="gfd-vencimento" name="vencimento" required />
+                  </CampoForm>
+                </div>
+              </FormularioDoDp2>
+            )}
+            <p className="mt-2 text-fs-2 text-fg-muted">O PIS sobre a folha, quando houver, sai em DARF à parte (código 8301), fora da DCTFWeb.</p>
           </Secao>
         )}
 
