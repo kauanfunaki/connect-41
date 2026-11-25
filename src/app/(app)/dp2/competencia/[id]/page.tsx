@@ -881,6 +881,9 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 <Button href={`/api/dp2/competencias/${comp.id}/holerites`} variant="secondary" size="sm" download>
                   Baixar holerites (PDF)
                 </Button>
+                <Button href={`/api/dp2/competencias/${comp.id}/relatorios`} variant="secondary" size="sm" download>
+                  Relatórios da folha (Excel)
+                </Button>
                 {fechada && podeAgir && (
                   <FormularioDoDp2 acao={guardarHoleritesAction} rotulo="Guardar nos Arquivos" rotuloEnviando="Guardando…" variante="ghost" tamanho="sm">
                     <input type="hidden" name="competenciaId" value={comp.id} />
