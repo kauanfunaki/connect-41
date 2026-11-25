@@ -303,7 +303,7 @@ const CATALOGO: readonly PassoDoCatalogo[] = [
       },
       {
         texto:
-          "Fluxo de caixa abre no “Previsto”: o saldo das suas contas e o que está previsto entrar e sair por dia, semana ou mês, com o menor saldo e quando ele acontece. Toque num valor para ver as contas. “Já aconteceu” mostra os últimos seis meses.",
+          "Fluxo de caixa abre no “Previsto”: o saldo das suas contas e o que está previsto entrar e sair por dia, semana ou mês, com o menor saldo e quando ele acontece. Toque num valor para ver as contas. “Baixar em Excel” traz a mesma visão numa planilha para você mexer nos dados. Quando a equipe libera, a aba “Cenário” mostra o saldo com os custos previstos que ainda não são conta. “Já aconteceu” mostra os últimos seis meses.",
         modulos: ["bpo_fluxo_caixa"],
         telas: ["/portal/fluxo-de-caixa"],
       },
