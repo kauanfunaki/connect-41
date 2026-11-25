@@ -6995,6 +6995,9 @@ model Dp2Vinculo {
   insalubridade        String   @default("NENHUM") @db.VarChar(10)
   periculosidade       Boolean  @default(false)
   valeTransporte       Boolean  @default(false)
+  /// Custo diário do vale-transporte (tarifas × viagens por dia), 25/11/2026,
+  /// funcionalidade-753: limita o desconto de 6% e dá o pedido do mês.
+  vtCustoDiario        Decimal? @db.Decimal(10, 2)
   aprendiz             Boolean  @default(false)
   // eSocial (fase 3a, 12/11/2026).
   /// A matrícula do vínculo no eSocial (a mesma do S-2200).

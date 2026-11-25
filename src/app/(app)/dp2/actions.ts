@@ -828,6 +828,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     insalubridade,
     periculosidade: marcado(fd, "periculosidade"),
     valeTransporte: marcado(fd, "valeTransporte"),
+    vtCustoDiario: lerNumero(texto(fd, "vtCustoDiario")),
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,
     matricula: texto(fd, "matricula").slice(0, 30) || null,

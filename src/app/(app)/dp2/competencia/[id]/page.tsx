@@ -34,6 +34,7 @@ import { totaisPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
 import { PAPEIS_LANCAVEIS, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { compararValores, type CampoComparado } from "@/lib/dp2/comparativo";
+import { diasDoMes } from "@/lib/dp2/calendario";
 import { brl, nomeDaCompetencia, NOME_DA_SITUACAO, NOME_DO_TIPO_DE_COMPETENCIA, TOM_DA_SITUACAO } from "@/lib/dp2/tela";
 import type { Encargos, ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -161,6 +162,20 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const urlPublica = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
   const totais = (comp.totais ?? null) as TotaisDaCompetencia | null;
+  // Pedido do vale-transporte (funcionalidade-753): custo diário × dias úteis do mês, e o desconto que a folha fez.
+  const diasUteisDoMes = diasDoMes(comp.ano, comp.mes).diasUteis;
+  const pedidoDeVt = mensal
+    ? pessoas
+        .filter((p) => p.dp2Vinculo?.valeTransporte)
+        .map((p) => {
+          const custoDiario = p.dp2Vinculo?.vtCustoDiario != null ? Number(p.dp2Vinculo.vtCustoDiario) : null;
+          const compra = custoDiario !== null ? Math.round(custoDiario * diasUteisDoMes * 100) / 100 : null;
+          const calc = calculos.find((c) => c.personId === p.id);
+          const desconto = calc ? ((calc.itens as unknown as { papel: string | null; valor: number }[]) ?? []).filter((i) => i.papel === "VALE_TRANSPORTE").reduce((x, i) => x + i.valor, 0) : null;
+          return { personId: p.id, nome: p.name, custoDiario, compra, desconto };
+        })
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    : [];
   const semContrato = pessoas.filter((p) => !p.dp2Vinculo);
   const lancaveis = rubricas.filter((r) => r.ativa && (r.papel ? ehPapel(r.papel) && PAPEIS_LANCAVEIS.has(r.papel) : r.tipo !== "INFORMATIVA"));
   // Lançar por rubrica e em grupo, e a consulta por rubrica (funcionalidade-767, 1.1).
@@ -944,6 +959,42 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                   </Aviso>
                 )}
               </div>
+            </div>
+          </Secao>
+        )}
+
+        {etapa === "conferir" && pedidoDeVt.length > 0 && (
+          <Secao titulo="Vale-transporte do mês" apoio={`O pedido: custo diário × ${diasUteisDoMes} dias úteis. O desconto é o que a folha fez (6% do salário, limitado ao custo); a diferença é o custo da empresa.`}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH_NUM}>Custo diário</th>
+                    <th className={TH_NUM}>Pedido do mês</th>
+                    <th className={TH_NUM}>Desconto na folha</th>
+                    <th className={TH_NUM}>Custo da empresa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedidoDeVt.map((l) => (
+                    <tr key={l.personId} className={TR}>
+                      <td className={TD}>{l.nome}</td>
+                      <td className={TD_NUM}>{l.custoDiario !== null ? brl(l.custoDiario) : <span className="text-fg-muted">sem custo no contrato</span>}</td>
+                      <td className={TD_NUM}>{l.compra !== null ? brl(l.compra) : "—"}</td>
+                      <td className={TD_NUM}>{l.desconto !== null ? brl(l.desconto) : "—"}</td>
+                      <td className={TD_NUM}>{l.compra !== null && l.desconto !== null ? brl(Math.max(0, Math.round((l.compra - l.desconto) * 100) / 100)) : "—"}</td>
+                    </tr>
+                  ))}
+                  <tr className={`${TR} font-semibold`}>
+                    <td className={TD}>Total</td>
+                    <td className={TD_NUM} />
+                    <td className={TD_NUM}>{brl(pedidoDeVt.reduce((x, l) => x + (l.compra ?? 0), 0))}</td>
+                    <td className={TD_NUM}>{brl(pedidoDeVt.reduce((x, l) => x + (l.desconto ?? 0), 0))}</td>
+                    <td className={TD_NUM}>{brl(pedidoDeVt.reduce((x, l) => x + (l.compra !== null && l.desconto !== null ? Math.max(0, l.compra - l.desconto) : 0), 0))}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </Secao>
         )}
