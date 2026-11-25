@@ -23,14 +23,26 @@
 // Os originais (`financeiro_documentos.conteudo`) vão para storage/contabil-core/financeiro, pelas
 // mesmas funções do serviço (`originaisFinanceiro.ts`), um documento por vez e com o SHA-256 conferido
 // antes de gravar. Rode a carga da pasta raiz do Connect (o `storage/` é relativo a ela).
+//
+// Bloco C (Fase C4, 25/11/2026): no fim, os documentos — notas, comprovantes (o `arquivo_base64` vai
+// para storage/contabil-core/comprovantes), cartões, faturas, gastos, documentos da fatura (o
+// `conteudo` vai para storage/contabil-core/faturas) e distribuições —, cada arquivo pelas funções do
+// serviço (`originaisComprovantes.ts`, `originaisFaturas.ts`) e com o SHA-256 conferido. As linhas que
+// as travas novas do Connect recusariam (CHECKs da C2 e da C3, unicidades) são decididas ANTES de gravar
+// (`mapear.puladasPelasTravas`) e ficam de fora com o motivo no relatório, sem parar a carga.
 
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pg from "pg";
+import { Prisma } from "../../src/generated/prisma/client";
 import { getPrisma } from "../../src/lib/prisma";
 import * as mapear from "../../src/lib/contabil-core/carga/mapear";
+import { formatoDoComprovante } from "../../src/lib/contabil-core/comprovantes/leitor";
+import { tipoDoArquivo } from "../../src/lib/contabil-core/comprovantes/servico";
 import { apagarOriginal, chaveDoOriginal, gravarOriginal, lerOriginal } from "../../src/lib/contabil-core/servidor/originaisFinanceiro";
+import * as arquivosDosComprovantes from "../../src/lib/contabil-core/servidor/originaisComprovantes";
+import * as arquivosDasFaturas from "../../src/lib/contabil-core/servidor/originaisFaturas";
 
 const gravar = process.argv.includes("--gravar");
 const relatorioArg = process.argv.find((a) => a.startsWith("--relatorio="))?.slice("--relatorio=".length);
@@ -55,10 +67,18 @@ type Contagem = {
   lidas: number;
   gravadas: number;
   recusadas: { id: string; erro: string }[];
-  /** Só nos documentos do financeiro: os originais em disco. */
+  /** Nos documentos do financeiro, nos comprovantes e nos documentos da fatura: os arquivos em disco. */
   arquivos?: { gravados: number; jaIguais: number; reescritos: number };
   /** Revisões e análises cuja conta bancária (referência sem chave) não veio na carga. */
   semAgencia?: string[];
+  /** Bloco C: as linhas que as travas do Connect recusariam, deixadas de fora ANTES de gravar. */
+  puladas?: { id: string; motivo: string }[];
+  /** Comprovantes sem o `arquivo_sha256` no original (de antes da migration 0037): o hash calculado aqui. */
+  sha256Calculado?: string[];
+  /** Comprovantes com base64 que o Python não decodifica (lá, sem hash): entram sem arquivo. */
+  base64Invalido?: string[];
+  /** Notas, comprovantes e faturas ligados a uma transação desfeita (importação desfeita): entram assim, como no original. */
+  comTransacaoDesfeita?: string[];
 };
 
 const relatorio: {
@@ -101,6 +121,62 @@ async function upsertMuitos(modelo: Modelo, linhas: { id: string }[], conta: Con
     }
   }
 }
+
+/** As funções de disco de um serviço (originais do financeiro, comprovantes, faturas). */
+type Disco = {
+  ler(tenantId: string, chave: string): Promise<Buffer | null>;
+  gravar(tenantId: string, chave: string, conteudo: Uint8Array): Promise<void>;
+  apagar(tenantId: string, chave: string): Promise<void>;
+};
+const discoDoFinanceiro: Disco = { ler: lerOriginal, gravar: gravarOriginal, apagar: apagarOriginal };
+const discoDosComprovantes: Disco = { ler: arquivosDosComprovantes.lerArquivo, gravar: arquivosDosComprovantes.gravarArquivo, apagar: arquivosDosComprovantes.apagarArquivo };
+const discoDasFaturas: Disco = { ler: arquivosDasFaturas.lerArquivo, gravar: arquivosDasFaturas.gravarArquivo, apagar: arquivosDasFaturas.apagarArquivo };
+
+/**
+ * Os bytes (já conferidos) no disco, pela função do serviço. Idempotente: o arquivo que já está lá com o
+ * mesmo SHA-256 fica como está; com outro conteúdo, é reescrito. Sem `--gravar`, nada vai para o disco.
+ * O arquivo criado nesta rodada fica em `criadosAgora`, para não sobrar órfão se o banco recusar a linha.
+ */
+async function paraODisco(disco: Disco, conta: Contagem, id: string, chave: string, bytes: Uint8Array, sha256: string, criadosAgora: Map<string, string>): Promise<boolean> {
+  if (!gravar) return true;
+  const arquivos = (conta.arquivos ??= { gravados: 0, jaIguais: 0, reescritos: 0 });
+  try {
+    const atual = await disco.ler(tenantId, chave);
+    if (atual && mapear.sha256Hex(atual) === sha256) {
+      arquivos.jaIguais++;
+    } else {
+      await disco.gravar(tenantId, chave, bytes);
+      if (atual) arquivos.reescritos++;
+      else {
+        arquivos.gravados++;
+        criadosAgora.set(id, chave);
+      }
+    }
+    return true;
+  } catch (e) {
+    conta.recusadas.push({ id, erro: `original não gravado em disco: ${String((e as Error).message).slice(0, 150)}` });
+    return false;
+  }
+}
+
+/** O arquivo gravado nesta rodada cuja linha o banco recusou não fica órfão. */
+async function semOrfaos(disco: Disco, conta: Contagem, criadosAgora: Map<string, string>) {
+  for (const r of conta.recusadas) {
+    const chave = criadosAgora.get(r.id);
+    if (chave) await disco.apagar(tenantId, chave);
+  }
+}
+
+/** O tipo de mídia do comprovante pelo conteúdo, como o cadastro do serviço; o formato que ele não aceita fica pelo nome. */
+function tipoDoComprovante(nome: string, bytes: Uint8Array): string {
+  const formato = formatoDoComprovante(nome, "", bytes);
+  return formato ? (formato.pdf ? "application/pdf" : formato.tipoMime) : tipoDoArquivo(nome);
+}
+
+/** As colunas lidas sem o arquivo (o `arquivo_base64` e o `conteudo` são lidos um por vez). */
+const COLUNAS_DO_COMPROVANTE =
+  "id, empresa_id, agencia_id, transacao_id, favorecido, cpf_cnpj, data_pagamento, data_vencimento, valor_documento, valor_pago, juros, multa, desconto, observacao, arquivo_nome, arquivo_sha256, created_at, updated_at, deleted_at";
+const COLUNAS_DO_DOCUMENTO_DA_FATURA = "id, empresa_id, fatura_id, nome, hash_arquivo, status, resultado, erro, created_at, updated_at, deleted_at";
 
 async function main() {
   const origem = new pg.Client({ connectionString: origemUrl, ssl: process.env.CARGA_ORIGEM_SSL === "1" ? { rejectUnauthorized: true } : undefined });
@@ -225,7 +301,7 @@ async function main() {
 
       // Documentos: os bytes de um por vez, conferidos contra o `hash_arquivo` antes de ir para o disco.
       const documentos = nova("documentos");
-      const arquivos = (documentos.arquivos = { gravados: 0, jaIguais: 0, reescritos: 0 });
+      documentos.arquivos = { gravados: 0, jaIguais: 0, reescritos: 0 };
       const metas = await q(
         "SELECT id, empresa_id, analise_id, nome_arquivo, tipo, hash_arquivo, media_type, tamanho, created_at, updated_at, deleted_at FROM financeiro_documentos WHERE empresa_id = $1 ORDER BY created_at, id",
         [idOriginal],
@@ -243,43 +319,122 @@ async function main() {
           continue;
         }
         const storageKey = chaveDoOriginal(tenantId, id, String(m.nome_arquivo));
-        if (gravar) {
-          try {
-            // Idempotente: o arquivo que já está lá com o mesmo SHA-256 fica como está.
-            const atual = await lerOriginal(tenantId, storageKey);
-            if (atual && mapear.sha256Hex(atual) === String(m.hash_arquivo)) {
-              arquivos.jaIguais++;
-            } else {
-              await gravarOriginal(tenantId, storageKey, conteudo);
-              if (atual) arquivos.reescritos++;
-              else {
-                arquivos.gravados++;
-                criadosAgora.set(id, storageKey);
-              }
-            }
-          } catch (e) {
-            documentos.recusadas.push({ id, erro: `original não gravado em disco: ${String((e as Error).message).slice(0, 150)}` });
-            continue;
-          }
-        }
+        if (!(await paraODisco(discoDoFinanceiro, documentos, id, storageKey, conteudo, String(m.hash_arquivo), criadosAgora))) continue;
         linhasDosDocumentos.push(mapear.documento(m, tenantId, storageKey));
       }
       await upsertMuitos(prisma.coreFinanceiroDocumento as unknown as Modelo, linhasDosDocumentos, documentos);
-      // O arquivo gravado nesta rodada cuja linha o banco recusou não fica órfão.
-      for (const r of documentos.recusadas) {
-        const chave = criadosAgora.get(r.id);
-        if (chave) await apagarOriginal(tenantId, chave);
-      }
+      await semOrfaos(discoDoFinanceiro, documentos, criadosAgora);
 
       const vinculosDoFinanceiro = nova("vinculos_financeiro");
       const lidosDoFinanceiro = await daEmpresa("financeiro_vinculos");
       vinculosDoFinanceiro.lidas = lidosDoFinanceiro.length;
       await upsertMuitos(prisma.coreFinanceiroVinculo as unknown as Modelo, converter(lidosDoFinanceiro, (l) => mapear.vinculoDoFinanceiro(l, tenantId, pessoas), vinculosDoFinanceiro), vinculosDoFinanceiro);
 
+      // ── Bloco C (C4): os documentos, na ordem das chaves estrangeiras. Sem coluna de pessoa. ──
+      const blocoC: mapear.LinhasDoBlocoC = {
+        notas: await daEmpresa("notas_fiscais"),
+        comprovantes: await q(`SELECT ${COLUNAS_DO_COMPROVANTE} FROM comprovantes WHERE empresa_id = $1 ORDER BY created_at, id`, [idOriginal]),
+        cartoes: await daEmpresa("cartoes_credito"),
+        faturas: await daEmpresa("faturas_cartao"),
+        lancamentos: await daEmpresa("lancamentos_cartao"),
+        documentos: await q(`SELECT ${COLUNAS_DO_DOCUMENTO_DA_FATURA} FROM fatura_documentos WHERE empresa_id = $1 ORDER BY created_at, id`, [idOriginal]),
+        distribuicoes: await daEmpresa("fatura_distribuicoes"),
+      };
+      const puladas = mapear.puladasPelasTravas(blocoC);
+      const desfeitas = new Set((await q("SELECT id FROM transacoes WHERE empresa_id = $1 AND deleted_at IS NOT NULL", [idOriginal])).map((l) => String(l.id)));
+      /** A etapa do Bloco C: as linhas que as travas recusariam ficam de fora com o motivo; as ligadas a transação desfeita, anotadas. */
+      const doBlocoC = (nome: string, linhas: mapear.Linha[]) => {
+        const conta = nova(nome);
+        conta.lidas = linhas.length;
+        const ficam: mapear.Linha[] = [];
+        for (const l of linhas) {
+          const motivo = puladas.get(String(l.id));
+          if (motivo) (conta.puladas ??= []).push({ id: String(l.id), motivo });
+          else ficam.push(l);
+          if (l.transacao_id && desfeitas.has(String(l.transacao_id))) (conta.comTransacaoDesfeita ??= []).push(String(l.id));
+        }
+        return { conta, ficam };
+      };
+
+      const notas = doBlocoC("notas", blocoC.notas);
+      await upsertMuitos(prisma.coreNotaFiscal as unknown as Modelo, notas.ficam.map((l) => mapear.notaFiscal(l, tenantId)), notas.conta);
+
+      // Comprovantes: o base64 de um por vez, decodificado como o original e conferido antes de ir para o disco.
+      const comprovantes = doBlocoC("comprovantes", blocoC.comprovantes);
+      comprovantes.conta.arquivos = { gravados: 0, jaIguais: 0, reescritos: 0 };
+      const linhasDosComprovantes: { id: string }[] = [];
+      const comprovantesCriadosAgora = new Map<string, string>();
+      for (const m of comprovantes.ficam) {
+        const id = String(m.id);
+        const [linha] = await q("SELECT arquivo_base64 FROM comprovantes WHERE id = $1", [id]);
+        const arquivo = mapear.arquivoDoComprovante({ ...m, arquivo_base64: linha?.arquivo_base64 });
+        if (arquivo.tipo === "recusa") {
+          comprovantes.conta.recusadas.push({ id, erro: arquivo.motivo });
+          continue;
+        }
+        if (arquivo.tipo === "base64_invalido") (comprovantes.conta.base64Invalido ??= []).push(id);
+        if (arquivo.tipo !== "arquivo") {
+          linhasDosComprovantes.push(mapear.comprovante(m, tenantId, null));
+          continue;
+        }
+        if (arquivo.calculado) (comprovantes.conta.sha256Calculado ??= []).push(id);
+        const nome = String(m.arquivo_nome ?? "");
+        const storageKey = arquivosDosComprovantes.chaveDoArquivo(tenantId, id, nome);
+        if (!(await paraODisco(discoDosComprovantes, comprovantes.conta, id, storageKey, arquivo.bytes, arquivo.sha256, comprovantesCriadosAgora))) continue;
+        linhasDosComprovantes.push(
+          mapear.comprovante(m, tenantId, { sha256: arquivo.sha256, tamanho: arquivo.bytes.length, tipo: tipoDoComprovante(nome, arquivo.bytes), storageKey }),
+        );
+      }
+      await upsertMuitos(prisma.coreComprovante as unknown as Modelo, linhasDosComprovantes, comprovantes.conta);
+      await semOrfaos(discoDosComprovantes, comprovantes.conta, comprovantesCriadosAgora);
+
+      const cartoes = doBlocoC("cartoes", blocoC.cartoes);
+      await upsertMuitos(prisma.coreCartaoCredito as unknown as Modelo, cartoes.ficam.map((l) => mapear.cartao(l, tenantId)), cartoes.conta);
+      const faturas = doBlocoC("faturas", blocoC.faturas);
+      await upsertMuitos(prisma.coreFaturaCartao as unknown as Modelo, faturas.ficam.map((l) => mapear.fatura(l, tenantId)), faturas.conta);
+      const lancamentos = doBlocoC("lancamentos_cartao", blocoC.lancamentos);
+      await upsertMuitos(prisma.coreLancamentoCartao as unknown as Modelo, lancamentos.ficam.map((l) => mapear.lancamentoCartao(l, tenantId)), lancamentos.conta);
+
+      // Documentos da fatura: o PDF de um por vez, conferido contra o `hash_arquivo` antes de ir para o disco.
+      const documentosDaFatura = doBlocoC("documentos_fatura", blocoC.documentos);
+      documentosDaFatura.conta.arquivos = { gravados: 0, jaIguais: 0, reescritos: 0 };
+      const linhasDosPdfs: { id: string }[] = [];
+      const pdfsCriadosAgora = new Map<string, string>();
+      for (const m of documentosDaFatura.ficam) {
+        const id = String(m.id);
+        const [linha] = await q("SELECT conteudo FROM fatura_documentos WHERE id = $1", [id]);
+        const conteudo = linha?.conteudo as Buffer | null | undefined;
+        const motivo = mapear.conferirPdfDaFatura(conteudo, m);
+        if (motivo || !conteudo) {
+          documentosDaFatura.conta.recusadas.push({ id, erro: motivo ?? "documento sem conteúdo no original" });
+          continue;
+        }
+        const storageKey = arquivosDasFaturas.chaveDoArquivo(tenantId, id);
+        try {
+          const dados = mapear.faturaDocumento(m, tenantId, { storageKey, tamanho: conteudo.length });
+          if (!(await paraODisco(discoDasFaturas, documentosDaFatura.conta, id, storageKey, conteudo, String(m.hash_arquivo), pdfsCriadosAgora))) continue;
+          linhasDosPdfs.push(dados);
+        } catch (e) {
+          // O `resultado` com inteiro fora do limite (`jsonDoOriginal`): a linha fica de fora, nomeada.
+          documentosDaFatura.conta.recusadas.push({ id, erro: String((e as Error).message).slice(0, 200) });
+        }
+      }
+      await upsertMuitos(prisma.coreFaturaDocumento as unknown as Modelo, linhasDosPdfs, documentosDaFatura.conta);
+      await semOrfaos(discoDasFaturas, documentosDaFatura.conta, pdfsCriadosAgora);
+
+      const distribuicoes = doBlocoC("distribuicoes_fatura", blocoC.distribuicoes);
+      // A `aplicacao` nula vai como NULL do banco (o Prisma não aceita `null` puro numa coluna JSON).
+      const linhasDasDistribuicoes = converter(distribuicoes.ficam, (l) => mapear.faturaDistribuicao(l, tenantId), distribuicoes.conta).map((d) => ({ ...d, aplicacao: d.aplicacao ?? Prisma.DbNull }));
+      await upsertMuitos(prisma.coreFaturaDistribuicao as unknown as Modelo, linhasDasDistribuicoes, distribuicoes.conta);
+
       const resumo = Object.entries(contagem)
         .map(([t, c]) => {
           const extra = [
             c.recusadas.length ? `${c.recusadas.length} recusadas` : "",
+            c.puladas?.length ? `${c.puladas.length} puladas pelas travas do Connect` : "",
+            c.sha256Calculado?.length ? `${c.sha256Calculado.length} com o SHA-256 calculado aqui` : "",
+            c.base64Invalido?.length ? `${c.base64Invalido.length} sem arquivo (base64 inválido)` : "",
+            c.comTransacaoDesfeita?.length ? `${c.comTransacaoDesfeita.length} ligadas a transação desfeita` : "",
             c.semAgencia?.length ? `${c.semAgencia.length} sem a conta bancária` : "",
             c.arquivos && gravar ? `arquivos: ${c.arquivos.gravados} novos, ${c.arquivos.jaIguais} iguais, ${c.arquivos.reescritos} reescritos` : "",
           ].filter(Boolean);
@@ -294,13 +449,16 @@ async function main() {
   }
 
   writeFileSync(caminhoDoRelatorio, JSON.stringify(relatorio, null, 1), "utf8");
-  const recusadas = Object.values(relatorio.porEmpresa).flatMap((t) => Object.values(t)).reduce((s, c) => s + c.recusadas.length, 0);
+  const contagens = Object.values(relatorio.porEmpresa).flatMap((t) => Object.values(t));
+  const recusadas = contagens.reduce((s, c) => s + c.recusadas.length, 0);
+  const puladas = contagens.reduce((s, c) => s + (c.puladas?.length ?? 0), 0);
   console.log(
     `\n${gravar ? "Carga gravada" : "Simulação (nada gravado; use --gravar)"}: ${Object.keys(relatorio.porEmpresa).length} empresa(s), ` +
       `${relatorio.empresasSemPar.length} sem par, ${relatorio.empresasJaLigadas.length} já ligada(s) com outro cadastro, ` +
-      `${relatorio.pessoasSemPar.length} pessoa(s) sem par, ${recusadas} linha(s) recusada(s).\nRelatório: ${caminhoDoRelatorio}`,
+      `${relatorio.pessoasSemPar.length} pessoa(s) sem par, ${recusadas} linha(s) recusada(s), ${puladas} pulada(s) pelas travas do Connect.\nRelatório: ${caminhoDoRelatorio}`,
   );
-  process.exitCode = recusadas ? 1 : 0;
+  // A pulada também pede atenção: o dado está no original e não veio (o motivo está no relatório).
+  process.exitCode = recusadas || puladas ? 1 : 0;
 }
 
 main().finally(() => prisma.$disconnect());

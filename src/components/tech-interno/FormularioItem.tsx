@@ -107,7 +107,7 @@ export function FormularioItem({ item, sistemas, users, entregas = [], podeEdita
   // O critério de aceite fora da descrição (10/11/2026): o modelo aparece no
   // campo vazio, e cada linha de "Aprovado quando" vira um ponto para marcar.
   const criterio = <CampoForm label="Critério de aceite" htmlFor="tech-criteria"
-    dica="Um rótulo por linha: Mudança, Antes de testar, Onde testar, Passos (1., 2.) e Aprovado quando (- …). Cada linha de Aprovado quando vira um ponto para conferir no item.">
+    dica="Um rótulo por linha: Mudança, Antes de testar, Onde testar, Passos (1., 2.) e Aprovado quando (- …). Cada linha de Aprovado quando vira um ponto para conferir no item. Passos são o que fazer; Aprovado quando, o resultado — sem repetir um no outro.">
     <Textarea id="tech-criteria" name="acceptanceCriteria" rows={pagina ? 8 : 10} maxLength={10000} defaultValue={item?.acceptanceCriteria ?? ""} placeholder={MODELO_DO_CRITERIO} />
   </CampoForm>;
   const evidencias = !item && podeEditar && <div role="group" aria-labelledby="tech-anexos-rotulo" className="flex flex-col gap-1.5 min-w-0">
