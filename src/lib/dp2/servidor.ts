@@ -3,6 +3,7 @@
 // que eles precisam e se guarda o que devolvem.
 
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
+import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { r2 } from "@/lib/rescisao/constantes";
@@ -276,6 +277,8 @@ export type TotaisDaCompetencia = {
   semVinculo: number;
   /** Quem tem rescisão gravada no mês e saiu da folha mensal (funcionalidade-746). */
   rescindidos?: string[];
+  /** Ajustes manuais que entraram no cálculo (funcionalidade-768). */
+  ajustes?: number;
 };
 
 export type ResultadoDoCalculo = { ok: true; totais: TotaisDaCompetencia } | { ok: false; erro: string };
@@ -297,11 +300,13 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const tab = tabelasDaCompetencia(competencia, await tabelasDoEscritorio(tenantId));
   if (!tab.ok) return { ok: false, erro: `Faltam tabelas para ${competencia}: ${tab.faltam.join(", ")}.` };
 
-  const [linhasDeRubrica, cfg, pessoas, eventos] = await Promise.all([
+  const [linhasDeRubrica, cfg, pessoas, eventos, ajustes] = await Promise.all([
     listarRubricas(tenantId),
     configDaEmpresa(tenantId, comp.companyId),
     colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes),
     prisma.dp2Evento.findMany({ where: { tenantId, competenciaId }, include: { rubrica: true } }),
+    // Os ajustes manuais (funcionalidade-768) entram por cima do motor: recalcular mantém.
+    prisma.dp2AjusteDeCalculo.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } }),
   ]);
   // As rubricas fixas do contrato que valem no mês entram como eventos (funcionalidade-767),
   // menos as que o DP lançou no mês para a mesma pessoa e rubrica: aí vale o lançamento.
@@ -327,7 +332,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
       : new Set<string>();
   const nomesRescindidos: string[] = [];
 
-  const resultados: { personId: string; c: CalculoDaPessoa }[] = [];
+  const resultados: { personId: string; c: CalculoDaPessoa; aplicados: AjusteAplicado[] }[] = [];
   let semVinculo = 0;
   for (const p of pessoas) {
     if (!p.dp2Vinculo) {
@@ -366,10 +371,15 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
     } else {
       c = await calcularDecimoDaPessoa(tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo === "DECIMO_1" ? 1 : 2, p, vinculo, rubricas, tab.tabelas, cfg.empresa);
     }
-    resultados.push({ personId: p.id, c });
+    const { calculo, aplicados } = aplicarAjustes(
+      c,
+      ajustes.filter((a) => a.personId === p.id).map((a) => ({ campo: a.campo, valor: dec(a.valor), motivo: a.motivo }))
+    );
+    resultados.push({ personId: p.id, c: calculo, aplicados });
   }
 
   const totais: TotaisDaCompetencia = { pessoas: resultados.length, proventos: 0, descontos: 0, liquido: 0, inss: 0, irrf: 0, fgts: 0, encargos: 0, provisoes: 0, alertas: 0, semVinculo, ...(nomesRescindidos.length ? { rescindidos: nomesRescindidos } : {}) };
+  totais.ajustes = resultados.reduce((s, r) => s + r.aplicados.length, 0);
   for (const { c } of resultados) {
     totais.proventos += c.proventos;
     totais.descontos += c.descontos;
@@ -386,7 +396,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   await prisma.$transaction([
     prisma.dp2Calculo.deleteMany({ where: { tenantId, competenciaId } }),
     prisma.dp2Calculo.createMany({
-      data: resultados.map(({ personId, c }) => ({
+      data: resultados.map(({ personId, c, aplicados }) => ({
         tenantId,
         competenciaId,
         personId,
@@ -400,7 +410,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         baseFgts: c.baseFgts,
         fgts: c.fgts,
         itens: json(c.itens),
-        memoria: json({ inss: c.inss.memoria, irrf: c.irrf.memoria, diasTrabalhados: c.diasTrabalhados }),
+        memoria: json({ inss: c.inss.memoria, irrf: c.irrf.memoria, diasTrabalhados: c.diasTrabalhados, ajustes: aplicados }),
         encargos: json(c.encargos),
         provisoes: json(c.provisoes),
         alertas: json(c.alertas),
