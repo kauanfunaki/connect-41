@@ -36,6 +36,18 @@ function centavos(v: unknown): number | null {
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }
 
+/**
+ * O saldo da conta no `ListarExtrato` pedido só com o saldo (`cExibirApenasSaldo:
+ * "S"`), em centavos (25/11/2026, funcionalidade-837). É o "saldo atual" do Omie
+ * — o mesmo que a planilha do n8n grava como "Saldo Atual" —, e não o do banco:
+ * serve de ponto de partida do previsto para a empresa que concilia no Omie.
+ * Nulo quando a resposta não traz o campo.
+ */
+export function saldoAtualDoExtrato(corpo: unknown): number | null {
+  if (!corpo || typeof corpo !== "object") return null;
+  return centavos((corpo as Record<string, unknown>).nSaldoAtual);
+}
+
 /** "DD/MM/AAAA" → "AAAA-MM-DD". */
 export function dataDoExtrato(v: unknown): string | null {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto(v));

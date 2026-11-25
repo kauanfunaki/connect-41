@@ -1768,6 +1768,7 @@ model Tenant {
   clientCategories          ClientCategory[]
   clientCategoryMappings    ClientCategoryMapping[]
   cashFlowSettings          CashFlowSettings[]
+  omieAccountBalances       OmieAccountBalance[]
   hiddenFinanceCategories   FinanceCategoryHidden[]
   dreImports                DreImport[]
   drePublicacoes            DrePublicacao[]
@@ -2641,6 +2642,7 @@ model Company {
   clientCategories         ClientCategory[]
   clientCategoryMappings   ClientCategoryMapping[]
   cashFlowSettings         CashFlowSettings?
+  omieAccountBalances      OmieAccountBalance[]
   financeCategories        FinanceCategory[]
   hiddenFinanceCategories  FinanceCategoryHidden[]
   dreImports               DreImport[]
@@ -10132,6 +10134,10 @@ model CashFlowSettings {
 
   receivableDays Int @default(0)
   payableDays    Int @default(0)
+  /// De onde vem o saldo inicial do previsto (25/11/2026): "conciliacao" (o
+  /// saldo das contas no Connect) ou "omie" (o que o Omie diz, `OmieAccountBalance`).
+  /// Nulo: a conciliação quando ela tem saldo, senão o do Omie.
+  balanceSource String? @db.VarChar(20)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -10141,6 +10147,32 @@ model CashFlowSettings {
 
   @@index([tenantId])
   @@map("cash_flow_settings")
+}
+
+/// O saldo de cada conta corrente da empresa no Omie (25/11/2026, funcionalidade-837),
+/// lido pela sincronização do financeiro (`ListarExtrato` só com o saldo). Para a
+/// empresa que concilia no Omie e não no Connect, é o ponto de partida do previsto.
+/// Uma linha por conta do Omie; a sincronização regrava a cada passada.
+model OmieAccountBalance {
+  id            String   @id @default(uuid())
+  tenantId      String
+  companyId     String
+  /// `nCodCC` da conta no Omie.
+  omieAccountId String   @db.VarChar(30)
+  label         String   @db.VarChar(120)
+  /// O "saldo atual" do Omie, em reais.
+  balance       Decimal  @db.Decimal(15, 2)
+  fetchedAt     DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, omieAccountId])
+  @@index([tenantId, companyId])
+  @@map("omie_account_balances")
 }
 
 /// Um arquivo de export do Omie, já lido.

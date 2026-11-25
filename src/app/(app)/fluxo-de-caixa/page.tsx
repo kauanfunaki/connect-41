@@ -27,7 +27,7 @@ import { CategoriasDoCliente } from "@/components/financeiro/CategoriasDoCliente
 import { dadosDasCategoriasDoCliente } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
 import { DataDeCaixa } from "@/components/financeiro/DataDeCaixa";
 import { PrevistoDoFluxo } from "@/components/financeiro/PrevistoDoFluxo";
-import { dadosDoPrevisto, dataDeCaixaDaEmpresa } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { dadosDoPrevisto, configuracaoDoFluxo } from "@/lib/fluxoDeCaixa/previstoServidor";
 import { celulaDeTexto, granularidadeValida, type Granularidade } from "@/lib/fluxoDeCaixa/projecao";
 
 export const dynamic = "force-dynamic";
@@ -108,7 +108,7 @@ export default async function FluxoDeCaixaPage({
       ) : aba === "categorias" ? (
         empresaId ? (
           <>
-            <DataDeCaixa companyId={empresaId} atual={await dataDeCaixaDaEmpresa(ctx.tenantId, empresaId)} />
+            <DataDeCaixa companyId={empresaId} atual={await configuracaoDoFluxo(ctx.tenantId, empresaId)} />
             <CategoriasDoCliente companyId={empresaId} dados={await dadosDasCategoriasDoCliente(ctx.tenantId, empresaId)} />
           </>
         ) : (
@@ -119,6 +119,7 @@ export default async function FluxoDeCaixaPage({
           <PrevistoDoFluxo
             dados={await dadosDoPrevisto({ tenantId: ctx.tenantId, companyId: empresaId, granularidade: ver, celula: celulaDeTexto(params.celula) })}
             enderecoDaVisao={enderecoDaVisao}
+            exportarHref={`/fluxo-de-caixa/exportar?empresa=${empresaId}`}
           />
         ) : (
           <EscolhaAEmpresa escolha={escolha} porQue="O previsto é de uma empresa por vez: o saldo, a data de caixa e as categorias são da empresa." />

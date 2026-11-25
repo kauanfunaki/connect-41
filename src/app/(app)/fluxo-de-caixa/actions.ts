@@ -29,6 +29,7 @@ import {
   type PlanoDoDePara,
 } from "@/lib/fluxoDeCaixa/dePara";
 import { planoDaEmpresaParaODePara } from "@/lib/fluxoDeCaixa/categoriasDoClienteServidor";
+import { origemDoSaldoValida, type OrigemDoSaldo } from "@/lib/fluxoDeCaixa/previstoServidor";
 
 const MODULE = "bpo_fluxo_caixa";
 const SECTOR = getModuleDef(MODULE)!.sectorCode;
@@ -181,24 +182,40 @@ export async function ligarCategoria(companyId: string, categoryId: string, clie
 
 const MAXIMO_DE_DIAS = 30;
 
-/** Quantos dias depois da previsão o dinheiro anda, a receber e a pagar. */
-export async function salvarDataDeCaixa(companyId: string, diasReceber: number, diasPagar: number): Promise<AcaoDasCategorias> {
+/**
+ * Quantos dias depois da previsão o dinheiro anda, a receber e a pagar, e de
+ * onde vem o saldo inicial do previsto ("auto" grava nulo).
+ */
+export async function salvarDataDeCaixa(
+  companyId: string,
+  diasReceber: number,
+  diasPagar: number,
+  origemDoSaldo: OrigemDoSaldo = "auto"
+): Promise<AcaoDasCategorias> {
   const c = await contexto(companyId);
   if (!c.ok) return { error: c.erro };
   for (const d of [diasReceber, diasPagar]) {
     if (!Number.isInteger(d) || d < 0 || d > MAXIMO_DE_DIAS) return { error: `Use um número inteiro de 0 a ${MAXIMO_DE_DIAS} dias.` };
   }
-  const antes = await c.prisma.cashFlowSettings.findFirst({ where: { tenantId: c.tenantId, companyId }, select: { receivableDays: true, payableDays: true } });
+  if (origemDoSaldoValida(origemDoSaldo) !== origemDoSaldo) return { error: "Origem do saldo desconhecida." };
+  const balanceSource = origemDoSaldo === "auto" ? null : origemDoSaldo;
+  const antes = await c.prisma.cashFlowSettings.findFirst({
+    where: { tenantId: c.tenantId, companyId },
+    select: { receivableDays: true, payableDays: true, balanceSource: true },
+  });
   await c.prisma.cashFlowSettings.upsert({
     where: { companyId },
-    create: { tenantId: c.tenantId, companyId, receivableDays: diasReceber, payableDays: diasPagar },
-    update: { receivableDays: diasReceber, payableDays: diasPagar },
+    create: { tenantId: c.tenantId, companyId, receivableDays: diasReceber, payableDays: diasPagar, balanceSource },
+    update: { receivableDays: diasReceber, payableDays: diasPagar, balanceSource },
+    select: { id: true },
   });
   await auditar(c, companyId, "fluxo.data_de_caixa", {
     diasReceberAntes: antes?.receivableDays ?? 0,
     diasReceber,
     diasPagarAntes: antes?.payableDays ?? 0,
     diasPagar,
+    saldoAntes: antes?.balanceSource ?? "auto",
+    saldo: origemDoSaldo,
   });
   revalidatePath("/fluxo-de-caixa");
   revalidatePath("/portal/fluxo-de-caixa");

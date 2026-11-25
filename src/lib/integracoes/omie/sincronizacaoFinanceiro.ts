@@ -71,6 +71,7 @@ import { modeloDoCodigo } from "@/lib/dre/estrutura";
 import { escopoDa, ondeDaEmpresa } from "@/lib/financeiro/planoDeContas";
 import { isPrismaUniqueError } from "@/lib/prismaErrors";
 import { chamarOmie } from "./cliente";
+import { saldoAtualDoExtrato } from "./extrato";
 import { instanciaDaEmpresa, PREFIXO_DO_FINANCEIRO, instanciaDoFinanceiro } from "./contas";
 import {
   centrosDosDepartamentos,
@@ -434,6 +435,42 @@ export async function sincronizarFinanceiroDaEmpresa(
         jaUsadas.add(o.id);
       } catch (err) {
         if (!isPrismaUniqueError(err)) throw err;
+      }
+    }
+
+    // ─── saldo das contas no Omie (25/11/2026, funcionalidade-837) ─────────
+    // O ponto de partida do fluxo previsto para a empresa que concilia no Omie:
+    // o "saldo atual" de cada conta corrente ativa, pelo `ListarExtrato` só com
+    // o saldo. Uma falha numa conta não derruba a leitura dos títulos.
+    if (opcoes.gravar) {
+      const hoje = saoPauloParts(new Date()).dateKey;
+      const dataDoOmie = `${hoje.slice(8, 10)}/${hoje.slice(5, 7)}/${hoje.slice(0, 4)}`;
+      for (const o of contasDoOmie) {
+        if (o.inativa) continue;
+        try {
+          const corpo = await chamarOmie(cred, "financas/extrato", "ListarExtrato", {
+            nCodCC: Number(o.id),
+            dPeriodoInicial: dataDoOmie,
+            dPeriodoFinal: dataDoOmie,
+            cExibirApenasSaldo: "S",
+          });
+          const saldo = saldoAtualDoExtrato(corpo);
+          if (saldo === null) {
+            somar("saldos_sem_valor");
+            continue;
+          }
+          const balance = (saldo / 100).toFixed(2);
+          await prisma.omieAccountBalance.upsert({
+            where: { companyId_omieAccountId: { companyId, omieAccountId: o.id } },
+            create: { tenantId, companyId, omieAccountId: o.id, label: o.rotulo, balance, fetchedAt: new Date() },
+            update: { label: o.rotulo, balance, fetchedAt: new Date() },
+            select: { id: true },
+          });
+          somar("saldos_lidos");
+        } catch (err) {
+          console.error("[omie/saldo]", companyId, o.id, err instanceof Error ? err.message : err);
+          somar("saldos_com_erro");
+        }
       }
     }
 

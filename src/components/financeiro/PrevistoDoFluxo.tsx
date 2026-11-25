@@ -6,6 +6,7 @@
 // a dia em miniatura. Embaixo, a troca entre dias, semanas e meses e a grade.
 // Uma célula clicada abre o painel com as contas que a formam.
 
+import { Download } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Aviso } from "@/components/ui/Aviso";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -44,14 +45,17 @@ function dias(n: number): string {
 export function PrevistoDoFluxo({
   dados,
   enderecoDaVisao,
+  exportarHref,
   noPortal = false,
 }: {
   dados: DadosDoPrevisto;
+  /** O endereço do Excel da empresa. */
+  exportarHref: string;
   /** O endereço da tela numa visão, sem célula: `?aba=previsto&ver=semanas&empresa=…`. */
   enderecoDaVisao: (g: Granularidade) => string;
   noPortal?: boolean;
 }) {
-  const { previsto, dataDeCaixa, celula } = dados;
+  const { previsto, configuracao: dataDeCaixa, celula, saldoInicial } = dados;
   const g = previsto.granularidade;
   const [um, varios] = NOME_DO_PERIODO[g];
   const { saldoHoje, menor, periodosNegativos, primeiroNegativo, serieDiaria } = previsto.indicadores;
@@ -84,8 +88,10 @@ export function PrevistoDoFluxo({
           ) : (
             <p className={`text-section font-semibold tabular-nums mt-0.5 ${tom(saldoHoje)}`}>{moeda(saldoHoje)}</p>
           )}
-          <p className={`${apoio} text-fg-muted`}>
-            {dados.saldo.atualizadoAteKey ? `extrato até ${dm(dados.saldo.atualizadoAteKey)}` : "sem extrato importado"}
+          <p className={`${apoio} text-fg-muted truncate`} title={saldoInicial.contas.map((c) => `${c.nome}: ${moeda(c.centavos)}`).join(" · ") || undefined}>
+            {saldoInicial.origem === null
+              ? "sem saldo das contas"
+              : `${saldoInicial.contas.length === 1 ? "1 conta" : `${saldoInicial.contas.length} contas`}${saldoInicial.referencia ? ` · ${saldoInicial.referencia}` : ""}`}
           </p>
         </Card>
         <Card className="p-3">
@@ -116,7 +122,8 @@ export function PrevistoDoFluxo({
           <Aviso tom="neutro">O saldo das suas contas ainda não está aqui. Por enquanto, o previsto mostra só o que vai entrar e sair, a partir de zero.</Aviso>
         ) : (
           <Aviso tom="atencao">
-            Sem saldo das contas: o previsto parte de zero. Cadastre a conta e importe o extrato em “Conciliação bancária”.
+            Sem saldo das contas: o previsto parte de zero. Importe o extrato em “Conciliação bancária” ou, se a empresa concilia no Omie,
+            escolha “Do Omie” em Modelo do fluxo › Data de caixa e saldo (o saldo chega na próxima sincronização).
           </Aviso>
         ))}
 
@@ -131,9 +138,21 @@ export function PrevistoDoFluxo({
           }))}
           tocavel={noPortal}
         />
-        <p className={`${apoio} text-fg-muted`}>
-          A receber entra {dias(dataDeCaixa.diasReceber)} da previsão, a pagar sai {dias(dataDeCaixa.diasPagar)}, sempre em dia útil.
-        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className={`${apoio} text-fg-muted`}>
+            A receber entra {dias(dataDeCaixa.diasReceber)} da previsão, a pagar sai {dias(dataDeCaixa.diasPagar)}, sempre em dia útil.
+          </p>
+          {/* Link de arquivo, e não <Link>: a navegação do Next buscaria a rota como página. */}
+          <a
+            href={exportarHref}
+            download
+            className={`inline-flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-ui font-medium text-fg hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              noPortal ? "min-h-11 sm:min-h-8" : "h-8"
+            }`}
+          >
+            <Download size={14} aria-hidden /> Baixar em Excel
+          </a>
+        </div>
       </div>
 
       <GradeDoPrevisto previsto={previsto} base={base} celulaAtiva={painel?.texto ?? null} />
