@@ -7,6 +7,8 @@
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
 import { lerOutraBase, mesAnterior } from "@/lib/dp2/outrasBasesInss";
+import { camposAjustaveis, lerAjuste, nomeDoCampo } from "@/lib/dp2/ajustesDoCalculo";
+import type { ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
 import { SALARIO_OBRIGATORIO, regimeDaCategoria, salarioValido } from "@/lib/dp2/categorias";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -448,6 +450,84 @@ export async function copiarOutrasBasesInssAction(_: EstadoDoDp2, fd: FormData):
   revalidarCompetencia(competenciaId);
   const pessoasCopiadas = new Set(copiar.map((o) => o.personId)).size;
   return { ok: true, texto: `Copiadas ${copiar.length} linha(s) de ${pessoasCopiadas} colaborador(es). Confira os valores e calcule de novo.` };
+}
+
+// ─── Ajuste manual do cálculo ───────────────────────────────────────────────
+
+/**
+ * Ajuste manual de um valor calculado (25/11/2026, funcionalidade-768): linha
+ * do holerite, FGTS ou provisão do mês, sempre com motivo. Um ajuste por campo
+ * e pessoa na competência (ajustar de novo troca o anterior). Fica guardado à
+ * parte e a competência é recalculada na hora, com o ajuste por cima do motor;
+ * recalcular depois mantém. Vai para a Auditoria com o de/para e o motivo.
+ */
+export async function ajustarCalculoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA") return erro("Competência fechada: reabra para ajustar o cálculo.");
+  const lido = lerAjuste(texto(fd, "campo"), texto(fd, "valor"), texto(fd, "motivo"));
+  if (!lido.ok) return erro(lido.erro);
+  const { ajuste } = lido;
+
+  const prisma = getPrisma();
+  const personId = texto(fd, "personId");
+  const calculo = await prisma.dp2Calculo.findFirst({ where: { tenantId: a.tenantId, competenciaId, personId }, include: { person: { select: { name: true } } } });
+  if (!calculo) return erro("Calcule a folha antes de ajustar o cálculo desta pessoa.");
+  const itens = calculo.itens as unknown as ItemDoHolerite[];
+  const opcao = camposAjustaveis({ itens, fgts: Number(calculo.fgts), provisoes: calculo.provisoes as unknown as Provisoes }).find((o) => o.campo === ajuste.campo);
+  if (!opcao) return erro("Esse valor não está no cálculo desta pessoa.");
+
+  const chave = { competenciaId_personId_campo: { competenciaId, personId, campo: ajuste.campo } };
+  const anterior = await prisma.dp2AjusteDeCalculo.findUnique({ where: chave });
+  // O valor do motor: o guardado no primeiro ajuste (o cálculo de agora já traz o ajuste).
+  const valorCalculado = anterior ? anterior.valorCalculado : opcao.valor;
+  await prisma.dp2AjusteDeCalculo.upsert({
+    where: chave,
+    create: { tenantId: a.tenantId, competenciaId, personId, campo: ajuste.campo, valor: ajuste.valor, valorCalculado, motivo: ajuste.motivo, criadoPorId: a.userId },
+    update: { valor: ajuste.valor, motivo: ajuste.motivo, criadoPorId: a.userId },
+  });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.calculo_ajustado",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { pessoa: calculo.person.name, campo: opcao.nome, de: opcao.valor, para: ajuste.valor, calculado: valorCalculado === null ? null : Number(valorCalculado), motivo: ajuste.motivo },
+  });
+  const r = await calcularCompetencia(a.tenantId, competenciaId);
+  revalidarCompetencia(competenciaId);
+  if (!r.ok) return erro(`Ajuste guardado, mas o cálculo não refez: ${r.erro}`);
+  return { ok: true, texto: `${opcao.nome} de ${calculo.person.name} ajustado. Competência recalculada.` };
+}
+
+/** Retirar o ajuste: volta o valor do motor e recalcula. */
+export async function retirarAjusteAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const ajuste = await prisma.dp2AjusteDeCalculo.findFirst({ where: { id: texto(fd, "ajusteId"), tenantId: a.tenantId }, include: { person: { select: { name: true } } } });
+  if (!ajuste) return erro("Ajuste não encontrado.");
+  const r0 = await competenciaEditavel(a, ajuste.competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  if (r0.comp.situacao === "FECHADA") return erro("Competência fechada: reabra para mexer nos ajustes.");
+  const calculo = await prisma.dp2Calculo.findFirst({ where: { tenantId: a.tenantId, competenciaId: ajuste.competenciaId, personId: ajuste.personId }, select: { itens: true } });
+  const nome = nomeDoCampo(ajuste.campo, (calculo?.itens ?? []) as unknown as ItemDoHolerite[]);
+  await prisma.dp2AjusteDeCalculo.delete({ where: { id: ajuste.id } });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.ajuste_retirado",
+    entityType: "Dp2Competencia",
+    entityId: ajuste.competenciaId,
+    metadata: { pessoa: ajuste.person.name, campo: nome, valor: Number(ajuste.valor), motivo: ajuste.motivo },
+  });
+  const r = await calcularCompetencia(a.tenantId, ajuste.competenciaId);
+  revalidarCompetencia(ajuste.competenciaId);
+  if (!r.ok) return erro(`Ajuste retirado, mas o cálculo não refez: ${r.erro}`);
+  return { ok: true, texto: `Ajuste de ${nome} retirado. Competência recalculada.` };
 }
 
 // ─── Comparativo com a Domínio ──────────────────────────────────────────────

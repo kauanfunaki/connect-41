@@ -89,6 +89,10 @@ const EMPRESA: Ligacao[] = [
   // extratos, regras e lançamentos, apagados em ordem por `PASSOS_DO_CONTABIL_CORE` (sem cascata no banco).
   { modelo: "CoreEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["empresa no Contábil Core", "empresas no Contábil Core"], historico: true },
   { modelo: "DreCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["classificação da DRE", "classificações da DRE"], historico: true },
+  // Fluxo de caixa (25/11/2026): a nomenclatura própria do cliente e o de-para do Omie para ela.
+  { modelo: "ClientCategory", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["categoria do cliente", "categorias do cliente"], historico: true },
+  { modelo: "ClientCategoryMapping", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["ligação do de-para do cliente", "ligações do de-para do cliente"], historico: true },
+  { modelo: "CashFlowSettings", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["data de caixa do fluxo", "datas de caixa do fluxo"], historico: true },
   { modelo: "DrePublicacao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["mês da DRE publicado no portal", "meses da DRE publicados no portal"], historico: true },
   { modelo: "DrePublicacaoEmpresa", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["marca da foto inicial da DRE", "marcas da foto inicial da DRE"], historico: true },
   { modelo: "OmieEmissao", campo: "company", fk: "companyId", tratamento: "apagar", rotulo: ["nota emitida pelo Omie", "notas emitidas pelo Omie"], historico: true },
@@ -236,6 +240,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2Evento", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["lançamento do DP 2", "lançamentos do DP 2"], historico: true },
   { modelo: "Dp2RubricaFixa", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["rubrica fixa do DP 2", "rubricas fixas do DP 2"], historico: true },
   { modelo: "Dp2OutraBaseInss", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["outra base de INSS do DP 2", "outras bases de INSS do DP 2"], historico: true },
+  { modelo: "Dp2AjusteDeCalculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["ajuste manual do cálculo do DP 2", "ajustes manuais do cálculo do DP 2"], historico: true },
   { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
   { modelo: "Dp2Comparativo", campo: "person", fk: "personId", tratamento: "cascata" },
   { modelo: "Dp2EventoEsocial", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["evento do eSocial do DP 2", "eventos do eSocial do DP 2"], historico: true },
@@ -418,6 +423,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2Evento", coluna: "criadoPorId", tratamento: "manter", motivo: "quem lançou o evento; a auditoria guarda o nome" },
   { modelo: "Dp2RubricaFixa", coluna: "criadoPorId", tratamento: "manter", motivo: "quem cadastrou a rubrica fixa; a auditoria guarda o nome" },
   { modelo: "Dp2OutraBaseInss", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a outra base de INSS; a auditoria guarda o nome" },
+  { modelo: "Dp2AjusteDeCalculo", coluna: "criadoPorId", tratamento: "manter", motivo: "quem ajustou o cálculo; a auditoria guarda o nome" },
   { modelo: "Dp2Comparativo", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os valores da Domínio; a tela não mostra o id" },
   { modelo: "Dp2EventoEsocial", coluna: "geradoPorId", tratamento: "manter", motivo: "quem gerou o evento do eSocial; a auditoria guarda o nome" },
   { modelo: "Dp2Remessa", coluna: "geradaPorId", tratamento: "manter", motivo: "quem gerou o arquivo do banco; a auditoria guarda o nome" },

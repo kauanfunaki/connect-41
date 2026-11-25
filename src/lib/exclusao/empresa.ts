@@ -281,6 +281,20 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
         })
       ),
   },
+  // O de-para do cliente (25/11/2026): o desta empresa e o que outra empresa
+  // tenha ligado a uma categoria desta, antes das categorias.
+  {
+    modelo: "ClientCategoryMapping",
+    acao: "apagar",
+    executar: (tx, a) =>
+      n(
+        tx.clientCategoryMapping.deleteMany({
+          where: { tenantId: a.tenantId, OR: [{ companyId: a.id }, { category: { companyId: a.id } }] },
+        })
+      ),
+  },
+  { modelo: "ClientCategory", acao: "apagar", executar: (tx, a) => n(tx.clientCategory.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "CashFlowSettings", acao: "apagar", executar: (tx, a) => n(tx.cashFlowSettings.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "FinanceCategory", acao: "apagar", executar: (tx, a) => n(tx.financeCategory.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "BankAccount", acao: "apagar", executar: (tx, a) => n(tx.bankAccount.deleteMany({ where: daEmpresa(a) })) },
 

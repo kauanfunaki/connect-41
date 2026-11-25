@@ -3,6 +3,7 @@
 // que eles precisam e se guarda o que devolvem.
 
 import { separarFixasDoMes, type RubricaFixa } from "./rubricasFixas";
+import { aplicarAjustes, type AjusteAplicado } from "./ajustesDoCalculo";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { r2 } from "@/lib/rescisao/constantes";
@@ -274,6 +275,8 @@ export type TotaisDaCompetencia = {
   provisoes: number;
   alertas: number;
   semVinculo: number;
+  /** Ajustes manuais que entraram no cálculo (funcionalidade-768). */
+  ajustes?: number;
 };
 
 export type ResultadoDoCalculo = { ok: true; totais: TotaisDaCompetencia } | { ok: false; erro: string };
@@ -295,13 +298,15 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const tab = tabelasDaCompetencia(competencia, await tabelasDoEscritorio(tenantId));
   if (!tab.ok) return { ok: false, erro: `Faltam tabelas para ${competencia}: ${tab.faltam.join(", ")}.` };
 
-  const [linhasDeRubrica, cfg, pessoas, eventos, outrasBases] = await Promise.all([
+  const [linhasDeRubrica, cfg, pessoas, eventos, outrasBases, ajustes] = await Promise.all([
     listarRubricas(tenantId),
     configDaEmpresa(tenantId, comp.companyId),
     colaboradoresDaCompetencia(tenantId, comp.companyId, comp.ano, comp.mes),
     prisma.dp2Evento.findMany({ where: { tenantId, competenciaId }, include: { rubrica: true } }),
     // Outras bases de INSS de quem tem mais de um vínculo (funcionalidade-769).
     prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, select: { personId: true, remuneracao: true } }),
+    // Os ajustes manuais (funcionalidade-768) entram por cima do motor: recalcular mantém.
+    prisma.dp2AjusteDeCalculo.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } }),
   ]);
   const outrasDe = (personId: string) => r2(outrasBases.filter((o) => o.personId === personId).reduce((s, o) => s + dec(o.remuneracao), 0));
   // As rubricas fixas do contrato que valem no mês entram como eventos (funcionalidade-767),
@@ -313,7 +318,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   const rubricas = rubricasPorPapel(linhasDeRubrica);
   const { diasUteis, diasDeDescanso } = diasDoMes(comp.ano, comp.mes);
 
-  const resultados: { personId: string; c: CalculoDaPessoa }[] = [];
+  const resultados: { personId: string; c: CalculoDaPessoa; aplicados: AjusteAplicado[] }[] = [];
   let semVinculo = 0;
   for (const p of pessoas) {
     if (!p.dp2Vinculo) {
@@ -349,10 +354,15 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
     } else {
       c = await calcularDecimoDaPessoa(tenantId, comp.companyId, comp.ano, comp.mes, comp.tipo === "DECIMO_1" ? 1 : 2, p, vinculo, rubricas, tab.tabelas, cfg.empresa);
     }
-    resultados.push({ personId: p.id, c });
+    const { calculo, aplicados } = aplicarAjustes(
+      c,
+      ajustes.filter((a) => a.personId === p.id).map((a) => ({ campo: a.campo, valor: dec(a.valor), motivo: a.motivo }))
+    );
+    resultados.push({ personId: p.id, c: calculo, aplicados });
   }
 
   const totais: TotaisDaCompetencia = { pessoas: resultados.length, proventos: 0, descontos: 0, liquido: 0, inss: 0, irrf: 0, fgts: 0, encargos: 0, provisoes: 0, alertas: 0, semVinculo };
+  totais.ajustes = resultados.reduce((s, r) => s + r.aplicados.length, 0);
   for (const { c } of resultados) {
     totais.proventos += c.proventos;
     totais.descontos += c.descontos;
@@ -369,7 +379,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
   await prisma.$transaction([
     prisma.dp2Calculo.deleteMany({ where: { tenantId, competenciaId } }),
     prisma.dp2Calculo.createMany({
-      data: resultados.map(({ personId, c }) => ({
+      data: resultados.map(({ personId, c, aplicados }) => ({
         tenantId,
         competenciaId,
         personId,
@@ -387,6 +397,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
           inss: c.inss.memoria,
           irrf: c.irrf.memoria,
           diasTrabalhados: c.diasTrabalhados,
+          ajustes: aplicados,
           ...(c.inss.indMV ? { infoMV: { indMV: c.inss.indMV, outrasBases: c.inss.outrasBases ?? 0 } } : {}),
         }),
         encargos: json(c.encargos),
