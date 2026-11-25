@@ -28,6 +28,7 @@ import { TIPOS_DE_INFORMACAO, apurarCompetencia, ehTipoDeInformacao } from "@/li
 import { regimeDaCategoria } from "@/lib/dp2/categorias";
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
+import { camposAjustaveis, nomeDoCampo, type AjusteAplicado } from "@/lib/dp2/ajustesDoCalculo";
 import { totaisPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
 import { PAPEIS_LANCAVEIS, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
@@ -39,6 +40,7 @@ import { CampoData } from "@/components/ui/CampoData";
 import { LinkDoCliente } from "@/components/dp2/LinkDoCliente";
 import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
 import {
+  ajustarCalculoAction,
   calcularCompetenciaAction,
   incluirInformacaoDaApuracaoAction,
   retirarInformacaoDaApuracaoAction,
@@ -53,6 +55,7 @@ import {
   pedirEventosAoClienteAction,
   reabrirCompetenciaAction,
   removerEventoAction,
+  retirarAjusteAction,
 } from "../../actions";
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -100,7 +103,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const fechada = comp.situacao === "FECHADA";
   const mensal = comp.tipo === "MENSAL";
 
-  const [calculos, eventos, comparativos, rubricas, pessoas, pedidos, remessas, informacoes, cfgDaEmpresa] = await Promise.all([
+  const [calculos, eventos, comparativos, rubricas, pessoas, pedidos, remessas, informacoes, cfgDaEmpresa, ajustes] = await Promise.all([
     prisma.dp2Calculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, include: { person: { select: { id: true, name: true, cpf: true } } } }),
     prisma.dp2Evento.findMany({
       where: { tenantId: ctx.tenantId, competenciaId: id },
@@ -119,7 +122,10 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     // Informações da apuração (funcionalidade-769, parte 2): retenções e compensações do mês.
     prisma.dp2InformacaoDaApuracao.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
     configDaEmpresa(ctx.tenantId, comp.companyId),
+    // Ajustes manuais do cálculo (funcionalidade-768).
+    prisma.dp2AjusteDeCalculo.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id }, orderBy: { createdAt: "asc" } }),
   ]);
+  const ajustesDe = (personId: string) => ajustes.filter((a) => a.personId === personId);
   const apuracao =
     mensal && calculos.length > 0
       ? apurarCompetencia({
@@ -254,6 +260,12 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
       {comp.situacao === "ABERTA" && calculos.length > 0 && (
         <Aviso tom="atencao" className="mb-5">
           Houve lançamento depois do último cálculo: calcule de novo antes de conferir.
+        </Aviso>
+      )}
+
+      {ajustes.length > 0 && (etapa === "calcular" || etapa === "conferir") && (
+        <Aviso tom="info" className="mb-5">
+          {ajustes.length === 1 ? "Há 1 ajuste manual" : `Há ${ajustes.length} ajustes manuais`} no cálculo desta competência. Calcular de novo mantém os ajustes; para voltar ao valor do motor, retire o ajuste no holerite da pessoa.
         </Aviso>
       )}
 
@@ -612,6 +624,7 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                           <td className={TD}>
                             <div className="flex flex-wrap gap-1">
                               {alertas.length > 0 && <Selo tom="atencao">{alertas.length} alerta(s)</Selo>}
+                              {ajustesDe(c.personId).length > 0 && <Selo tom="marca">ajustado</Selo>}
                               {dif && (dif.diverge ? <Selo tom="perigo">difere da Domínio</Selo> : <Selo tom="sucesso">bate com a Domínio</Selo>)}
                             </div>
                           </td>
@@ -631,7 +644,12 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
               nome={aberto.person.name}
               cpf={aberto.person.cpf}
               itens={(aberto.itens as unknown as ItemDoHolerite[]) ?? []}
-              memoria={aberto.memoria as { inss?: string[]; irrf?: string[]; diasTrabalhados?: number }}
+              memoria={aberto.memoria as { inss?: string[]; irrf?: string[]; diasTrabalhados?: number; ajustes?: AjusteAplicado[] }}
+              ajustes={ajustesDe(aberto.personId).map((a) => ({ id: a.id, campo: a.campo, valor: n(a.valor), valorCalculado: a.valorCalculado === null ? null : n(a.valorCalculado), motivo: a.motivo }))}
+              podeAjustar={podeAgir && !fechada}
+              competenciaId={comp.id}
+              personId={aberto.personId}
+              fgts={n(aberto.fgts)}
               encargos={aberto.encargos as unknown as Encargos}
               provisoes={aberto.provisoes as unknown as Provisoes}
               alertas={(aberto.alertas as string[]) ?? []}
@@ -892,11 +910,21 @@ function Holerite({
   diferencas,
   fecharHref,
   pdfHref,
+  ajustes,
+  podeAjustar,
+  competenciaId,
+  personId,
+  fgts,
 }: {
   nome: string;
   cpf: string | null;
   itens: ItemDoHolerite[];
-  memoria: { inss?: string[]; irrf?: string[]; diasTrabalhados?: number };
+  memoria: { inss?: string[]; irrf?: string[]; diasTrabalhados?: number; ajustes?: AjusteAplicado[] };
+  ajustes: { id: string; campo: string; valor: number; valorCalculado: number | null; motivo: string }[];
+  podeAjustar: boolean;
+  competenciaId: string;
+  personId: string;
+  fgts: number;
   encargos: Encargos;
   provisoes: Provisoes;
   alertas: string[];
@@ -907,6 +935,9 @@ function Holerite({
 }) {
   const linhas = itens.filter((i) => i.tipo !== "INFORMATIVA");
   const informativas = itens.filter((i) => i.tipo === "INFORMATIVA");
+  // As linhas, o FGTS e as provisões que o ajuste manual mudou (funcionalidade-768).
+  const ajustados = new Set((memoria.ajustes ?? []).map((a) => a.campo));
+  const opcoes = camposAjustaveis({ itens, fgts, provisoes });
   return (
     <Secao
       titulo={`Holerite de ${nome}`}
@@ -947,7 +978,14 @@ function Holerite({
             {linhas.map((i, k) => (
               <tr key={`${i.codigo}-${k}`} className={TR}>
                 <td className={`${TD} text-fg-muted tabular-nums`}>{i.codigo}</td>
-                <td className={TD}>{i.nome}</td>
+                <td className={TD}>
+                  {i.nome}
+                  {ajustados.has(`ITEM:${i.codigo}`) && (
+                    <Selo tom="marca" className="ml-2">
+                      ajustado
+                    </Selo>
+                  )}
+                </td>
                 <td className={`${TD} whitespace-nowrap`}>{i.referencia}</td>
                 <td className={TD_NUM}>{i.tipo === "PROVENTO" ? brl(i.valor) : ""}</td>
                 <td className={TD_NUM}>{i.tipo === "DESCONTO" ? brl(i.valor) : ""}</td>
@@ -988,11 +1026,86 @@ function Holerite({
           <h3 className="font-semibold text-fg mb-1">Custo para a empresa</h3>
           <ul className="text-fg-muted space-y-0.5">{encargos.memoria.map((l) => <li key={l}>{l}</li>)}</ul>
           <p className="mt-1">Total {brl(encargos.total)}</p>
+          {ajustados.has("FGTS") && <p className="mt-1 text-brand">FGTS ajustado manualmente</p>}
           <h3 className="font-semibold text-fg mt-3 mb-1">Provisões do mês</h3>
           <ul className="text-fg-muted space-y-0.5">{provisoes.memoria.map((l) => <li key={l}>{l}</li>)}</ul>
           <p className="mt-1">Total {brl(provisoes.total)}</p>
         </div>
       </div>
+
+      {(ajustes.length > 0 || podeAjustar) && (
+        <div className="mt-6 border-t border-border pt-5">
+          <h3 className="font-semibold text-fg text-fs-3 mb-2">Ajustes manuais</h3>
+          {ajustes.length > 0 && (
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Valor ajustado</th>
+                    <th className={TH_NUM}>Do motor</th>
+                    <th className={TH_NUM}>Ajustado para</th>
+                    <th className={TH}>Motivo</th>
+                    <th className={TH} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {ajustes.map((a) => {
+                    const aplicado = (memoria.ajustes ?? []).find((x) => x.campo === a.campo);
+                    return (
+                      <tr key={a.id} className={TR}>
+                        <td className={TD}>
+                          {aplicado?.nome ?? nomeDoCampo(a.campo, itens)}
+                          {!aplicado && (
+                            <Selo tom="atencao" className="ml-2">
+                              não entrou
+                            </Selo>
+                          )}
+                        </td>
+                        <td className={TD_NUM}>{a.valorCalculado !== null ? brl(a.valorCalculado) : "—"}</td>
+                        <td className={`${TD_NUM} font-medium`}>{brl(a.valor)}</td>
+                        <td className={`${TD} text-fg-muted max-w-[42ch]`}>{a.motivo}</td>
+                        <td className={`${TD} text-right`}>
+                          {podeAjustar && (
+                            <FormularioDoDp2 acao={retirarAjusteAction} rotulo="Retirar" rotuloEnviando="Retirando…" variante="ghost" tamanho="xs">
+                              <input type="hidden" name="ajusteId" value={a.id} />
+                            </FormularioDoDp2>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {podeAjustar && (
+            <FormularioDoDp2 acao={ajustarCalculoAction} rotulo="Ajustar e recalcular" rotuloEnviando="Recalculando…" variante="secondary">
+              <input type="hidden" name="competenciaId" value={competenciaId} />
+              <input type="hidden" name="personId" value={personId} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.6fr_0.8fr_2fr]">
+                <CampoForm label="Valor a ajustar" htmlFor="ajuste-campo">
+                  <Select id="ajuste-campo" name="campo" required defaultValue="">
+                    <option value="" disabled>
+                      Escolha…
+                    </option>
+                    {opcoes.map((o) => (
+                      <option key={o.campo} value={o.campo}>
+                        {o.nome} ({brl(o.valor)})
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+                <CampoForm label="Novo valor" htmlFor="ajuste-valor">
+                  <Input id="ajuste-valor" name="valor" inputMode="decimal" prefix="R$" placeholder="0,00" required />
+                </CampoForm>
+                <CampoForm label="Motivo" htmlFor="ajuste-motivo">
+                  <Input id="ajuste-motivo" name="motivo" maxLength={500} required placeholder="Ex.: valor conferido com a Domínio, acordo com o cliente" />
+                </CampoForm>
+              </div>
+            </FormularioDoDp2>
+          )}
+        </div>
+      )}
 
       {diferencas && Object.keys(diferencas).length > 0 && (
         <div className="mt-5">
