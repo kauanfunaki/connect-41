@@ -113,8 +113,14 @@ export const TELAS_DO_GERAL: readonly DefDaTelaDoGeral[] = [
   },
 ];
 
-/** A disponibilidade inicial é controlada pelos módulos, sem ocultação adicional. */
-export const TELAS_OCULTAS_POR_PADRAO: readonly TelaDoGeral[] = [];
+/**
+ * As telas que nascem fora do menu; cada setor pode trazê-las de volta em
+ * Configurações › Setores (`visiveis`). A Agenda desde 25/11/2026
+ * (melhoria-843, pedido do Kauan): o uso é baixo, e ela se abre pelo botão
+ * "Agenda" no topo do Meu dia. Continua no endereço /agenda para quem tem o
+ * link — é visibilidade, não permissão.
+ */
+export const TELAS_OCULTAS_POR_PADRAO: readonly TelaDoGeral[] = ["agenda"];
 
 /** Visibilidade efetiva do setor: padrões, escolhas explícitas e registros antigos. */
 export function telasOcultasDoGeralDoSetor(

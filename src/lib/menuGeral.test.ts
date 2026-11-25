@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UserRole } from "@/generated/prisma/enums";
 import {
+  TELAS_OCULTAS_POR_PADRAO,
   TODAS_AS_TELAS_DO_GERAL,
   alternarTelaOculta,
   gravarTelasOcultas,
@@ -22,7 +23,9 @@ import { getModuleDef } from "./module-catalog";
 
 const TUDO = [...TODAS_AS_TELAS_DO_GERAL];
 const sem = (...fora: TelaDoGeral[]) => TUDO.filter((t) => !fora.includes(t));
-const PADRAO = TUDO;
+// O padrão: tudo menos o que nasce escondido (a Agenda, desde 25/11/2026, melhoria-843).
+const PADRAO = TUDO.filter((t) => !TELAS_OCULTAS_POR_PADRAO.includes(t));
+const padraoSem = (...fora: TelaDoGeral[]) => PADRAO.filter((t) => !fora.includes(t));
 
 describe("lerTelasOcultas", () => {
   it("sem configuração, nada escondido", () => {
@@ -94,7 +97,7 @@ describe("telasDoGeralVisiveis", () => {
   });
 
   it("um setor: o que ele escondeu sai", () => {
-    expect(telasDoGeralVisiveis(["recrutamento"], recrutamentoSemSolicitacoes)).toEqual(sem("solicitacoes", "transferencias"));
+    expect(telasDoGeralVisiveis(["recrutamento"], recrutamentoSemSolicitacoes)).toEqual(padraoSem("solicitacoes", "transferencias"));
   });
 
   it("mais de um setor: a união — some só o que todos esconderam", () => {
@@ -102,9 +105,15 @@ describe("telasDoGeralVisiveis", () => {
       recrutamento: ["solicitacoes", "transferencias"] as TelaDoGeral[],
       comercial: ["transferencias", "agenda"] as TelaDoGeral[],
     };
-    expect(telasDoGeralVisiveis(["recrutamento", "comercial"], config)).toEqual(sem("transferencias"));
-    // Com um setor sem configuração na conta, tudo volta.
-    expect(telasDoGeralVisiveis(["recrutamento", "dp"], config)).toEqual(TUDO);
+    expect(telasDoGeralVisiveis(["recrutamento", "comercial"], config)).toEqual(padraoSem("transferencias"));
+    // Com um setor sem configuração na conta, volta o padrão.
+    expect(telasDoGeralVisiveis(["recrutamento", "dp"], config)).toEqual(PADRAO);
+  });
+
+  it("a Agenda nasce escondida, e o setor pode trazê-la de volta (melhoria-843)", () => {
+    expect(telasDoGeralVisiveis(["dp"], {})).not.toContain("agenda");
+    expect(telasDoGeralVisiveis(["dp"], {}, { dp: ["agenda"] })).toContain("agenda");
+    expect(telasDoGeralVisiveis(null, {})).not.toContain("agenda");
   });
 
   it("um setor pode esconder todas — Início e Meu dia não entram nesta conta", () => {
@@ -124,7 +133,7 @@ describe("telasDoGeralVisiveis", () => {
     );
     // O administrador em Todos vê tudo; dentro do Recrutamento, confere o que o setor vê.
     expect(telasDoGeralVisiveis(setoresQueDecidemOGeral(null, [], true), config)).toEqual(PADRAO);
-    expect(telasDoGeralVisiveis(setoresQueDecidemOGeral("recrutamento", [], true), config)).toEqual(sem("solicitacoes", "transferencias"));
+    expect(telasDoGeralVisiveis(setoresQueDecidemOGeral("recrutamento", [], true), config)).toEqual(padraoSem("solicitacoes", "transferencias"));
   });
 });
 
