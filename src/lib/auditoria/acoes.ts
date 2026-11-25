@@ -473,6 +473,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.evento_lancado": c("lançou um evento na competência do DP 2"),
   "folha.eventos_lancados_por_rubrica": c("lançou uma rubrica para vários colaboradores na competência do DP 2"),
   "folha.evento_removido": x("retirou um lançamento da competência do DP 2"),
+  "folha.calculo_ajustado": e("ajustou à mão um valor do cálculo da folha no DP 2"),
+  "folha.ajuste_retirado": x("retirou um ajuste manual do cálculo da folha no DP 2"),
   "folha.comparativo_importado": o("importou os valores da Domínio para comparar no DP 2"),
   "folha.vinculo_salvo": e("salvou o contrato do colaborador no DP 2"),
   "folha.colaboradores_importados": c("importou colaboradores e contratos do eSocial no DP 2"),
