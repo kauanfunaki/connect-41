@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppWindow, Bot, Check, Copy, ExternalLink, Globe, LoaderCircle, ScanSearch } from "lucide-react";
 import { Aviso } from "@/components/ui/Aviso";
 import { Button } from "@/components/ui/Button";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
 import { situacaoDaTriagem } from "@/app/(app)/chamados/triagem-actions";
 import { ROTULOS_EXISTENTE, emTriagem, intervaloDaTriagem, textoDaTriagem, type Existente, type Triagem } from "@/lib/chamados/regras";
 
@@ -69,8 +70,14 @@ function CartaoDoExistente({ e, pedido, podeVerOps, souQuemAbriu }: { e: Existen
   const mensagem = `Oi, ${primeiroNome}! Tudo bem? Abri um chamado e a triagem apontou o ${rotulo} "${e.nome}", que fica com você. Ele atende ao que eu preciso?${resumo ? `\n\nO que eu preciso:\n${resumo}` : ""}\n\nSe atender, como faço para usar?`;
   const [copiado, setCopiado] = useState(false);
   function copiar() { navigator.clipboard.writeText(mensagem).then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2000); }, () => {}); }
-  return <section aria-labelledby="titulo-existente" className="rounded-lg border border-brand/30 bg-surface p-5 shadow-[var(--c41-shadow-xs)]">
-    <h2 id="titulo-existente" className="mb-3 text-ui font-semibold text-brand">{e.match === "same" ? "Já existe no Orquestrador" : "Pode já existir no Orquestrador"}</h2>
+  // Recolhível, e começa fechado (25/11/2026, melhoria-821): o cartão inteiro
+  // tomava a tela do chamado. Na linha fica o que se acha no Orquestrador.
+  return <BlocoRecolhivel
+    titulo={<span className="text-brand">{e.match === "same" ? "Já existe no Orquestrador" : "Pode já existir no Orquestrador"}</span>}
+    resumo={<span className="inline-flex max-w-[45vw] items-center gap-1.5 sm:max-w-[18rem]"><Icone size={14} aria-hidden className="shrink-0 text-brand" /><span className="truncate">{e.nome}</span></span>}
+    className="border-brand/30! bg-surface shadow-[var(--c41-shadow-xs)]"
+    classeDoConteudo="px-5 pb-5 pt-1"
+  >
     <div className="flex items-start gap-3">
       <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-subtle text-brand"><Icone size={20} /></span>
       <div className="min-w-0">
@@ -94,5 +101,5 @@ function CartaoDoExistente({ e, pedido, podeVerOps, souQuemAbriu }: { e: Existen
       </div>
       <p className="whitespace-pre-line break-words text-ui text-fg">{mensagem}</p>
     </div>}
-  </section>;
+  </BlocoRecolhivel>;
 }
