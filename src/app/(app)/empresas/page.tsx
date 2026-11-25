@@ -1,5 +1,5 @@
 import { Building2, Plus } from "lucide-react";
-import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
+import { CascoDaTabela, ForaDaLista, contarItens } from "@/components/shared/CascoDaTabela";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -170,19 +170,6 @@ export default async function EmpresasPage({
 
       <div id="cadastros-content">
 
-      {/* Esconder sem avisar faria a base parecer menor do que é. */}
-      {/* Revisão de 05/10: botão não é link — o "Mostrar todas" era texto azul. */}
-      {ocultas > 0 && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-fs-2 text-fg-muted mb-4">
-          <p>
-            {ocultas} empresa{ocultas !== 1 ? "s" : ""} inativa{ocultas !== 1 ? "s" : ""} ou cancelada
-            {ocultas !== 1 ? "s" : ""} fora desta lista.
-          </p>
-          <Button href={buildUrl({ status: STATUS_TODOS, page: "1" })} variant="ghost" size="xs">
-            Mostrar todas
-          </Button>
-        </div>
-      )}
 
       {/* Contagem, busca e filtro na barra do casco (07/10/2026), como as
           filas irmãs de 05/10: eram a busca e o filtro soltos acima da
@@ -190,6 +177,9 @@ export default async function EmpresasPage({
           painel do Filtros continua o mesmo (modelo aprovado), na barra. */}
       <CascoDaTabela
         contagem={contarItens(total, "empresa", "empresas")}
+        // Esconder sem avisar faria a base parecer menor do que é; o aviso
+        // fica na barra, ao lado da contagem (25/11/2026, melhoria-814).
+        fora={<ForaDaLista n={ocultas} um="inativa oculta" varios="inativas ocultas" href={buildUrl({ status: STATUS_TODOS, page: "1" })} acao="Mostrar todas" />}
         busca={<DebouncedSearchInput placeholder="Buscar por nome ou ID…" className="w-72 max-w-full" />}
         filtros={
           // O painel do "Filtros" das outras telas, com a etiqueta "×" do que
