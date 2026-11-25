@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserRole } from "@/generated/prisma/enums";
-import { TODAS_AS_TELAS_DO_GERAL } from "./menuGeral";
+import { TELAS_OCULTAS_POR_PADRAO, TODAS_AS_TELAS_DO_GERAL } from "./menuGeral";
 
 // O que se testa: a leitura do menu Geral por setor. Erro de banco — a tabela
 // ainda não existir, inclusive (deploy antes da migration) — nunca lança e
@@ -13,7 +13,8 @@ vi.mock("@/lib/prisma", () => ({ getPrisma: () => db }));
 const { lerOcultasDoGeral, telasDoGeralDaPessoa } = await import("./menuGeralDb");
 
 const semTabela = () => Object.assign(new Error("The table `sector_menu_views` does not exist"), { code: "P2021" });
-const TUDO = [...TODAS_AS_TELAS_DO_GERAL];
+// O padrão: tudo menos o que nasce escondido (a Agenda, melhoria-843).
+const TUDO = TODAS_AS_TELAS_DO_GERAL.filter((t) => !TELAS_OCULTAS_POR_PADRAO.includes(t));
 
 function pessoa(parcial: { role?: UserRole; sectors?: string[]; activeSector?: string | null } = {}) {
   return { tenantId: "t1", role: "SECTOR_USER" as UserRole, sectors: ["recrutamento"], activeSector: "recrutamento", ...parcial };

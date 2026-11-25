@@ -25,7 +25,7 @@ import { lerOrdemDoMenuDoSetor } from "@/lib/menuDoSetorDb";
 import { OrganizarMenu } from "@/components/admin/OrganizarMenu";
 import { salvarOrdemDoMenu, restaurarOrdemDoMenu } from "./ordem-do-menu-actions";
 import { lerOcultasDoGeral } from "@/lib/menuGeralDb";
-import { TELAS_DO_GERAL, podeConfigurarMenuGeral } from "@/lib/menuGeral";
+import { TELAS_DO_GERAL, podeConfigurarMenuGeral, telasOcultasDoGeralDoSetor } from "@/lib/menuGeral";
 import { atualizarSetor, criarSetor } from "./actions";
 import { setoresDoFoco } from "@/lib/empresas/foco";
 import { alternarModulo, ligarModuloAoSetor, transferirModulo } from "./modulos-actions";
@@ -107,7 +107,8 @@ export default async function SetoresPage({
   // O menu Geral do setor (14/10/2026): o que está escondido e, nas telas que
   // dependem de módulo, se o módulo está ligado no escritório.
   const ligados = new Set(modulos.filter((m) => m.enabled).map((m) => m.code));
-  const ocultas = new Set(escolhido ? (ocultasDoGeral.porSetor[escolhido.code] ?? []) : []);
+  // Com os padrões (a Agenda nasce escondida, melhoria-843): a mesma conta do menu.
+  const ocultas = new Set(escolhido ? telasOcultasDoGeralDoSetor(escolhido.code, ocultasDoGeral.porSetor, ocultasDoGeral.visiveisPorSetor) : []);
   const telasDoGeral: TelaDaConfiguracao[] = TELAS_DO_GERAL.map((t) => ({
     chave: t.chave,
     rotulo: t.rotulo,
@@ -356,7 +357,7 @@ export default async function SetoresPage({
                 key={escolhido.code}
                 setor={escolhido.label}
                 telas={telasDoGeral}
-                personalizado={ocultas.size > 0}
+                personalizado={(ocultasDoGeral.porSetor[escolhido.code]?.length ?? 0) + (ocultasDoGeral.visiveisPorSetor[escolhido.code]?.length ?? 0) > 0}
                 disponivel={ocultasDoGeral.disponivel}
                 podeEditar={podeConfigurarMenuGeral(ctx)}
                 alternar={alternarTelaDoGeral.bind(null, escolhido.id)}
