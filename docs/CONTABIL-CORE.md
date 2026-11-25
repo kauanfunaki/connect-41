@@ -276,7 +276,9 @@ Divergências da B4:
 | C1 | `feat/contabil-core-notas` | Notas fiscais: os leitores (XML com a assinatura conferida; PDF e imagem pela IA, atrás da chave), o serviço, as rotas e a aba "Notas". Migration. Ver "Fase C1". |
 | C2 | `feat/contabil-core-comprovantes` | Comprovantes de pagamento (o leitor em camadas, o serviço, o arquivo em disco, as rotas e a aba "Comprovantes"), e o uso das notas e dos comprovantes pelo NEO (candidata pelo valor e pela data, contraparte pelo documento, número da nota no histórico). Migration. Ver "Fase C2". |
 | C3 | `feat/contabil-core-cartoes` | Cartões de crédito: cartões, faturas, gastos (à mão, CSV e PDF), os documentos da fatura para revisão (composição, texto e imagem pela IA, atrás da chave), o pagamento pela transação do extrato e a distribuição da fatura sobre ela pela composição do NEO. Migration. Ver "Fase C3". |
-| C4 | — | As tabelas do Bloco C na carga (espelho). |
+| C4 | `feat/contabil-core-carga-documentos` | As tabelas do Bloco C na carga (espelho), com os arquivos dos comprovantes e os PDFs das faturas em disco e as travas novas do Connect decididas antes de gravar. Sem migration. Ver "Carga dos dados", parte do Bloco C. |
+
+**O Bloco C está completo** com a C4 (25/11/2026): notas, comprovantes e cartões, com a carga e a conferência. Como os outros, vai para a produção desligado até a virada única.
 
 ### Fase C1: as notas fiscais
 
@@ -742,7 +744,7 @@ Toda divergência entra aqui, com o porquê.
 
 ### Como funciona (`scripts/contabil-core/carga.ts`, `src/lib/contabil-core/carga/mapear.ts`)
 
-- **Ordem:** empresa → plano de contas (sem o pai; o pai numa segunda passada) → faixas → agências → contrapartes → regras → importações → transações → decisões do NEO → partidas → exportações → (Bloco B) revisões → vínculos da revisão → análises do financeiro → documentos, com o original em disco → vínculos do financeiro.
+- **Ordem:** empresa → plano de contas (sem o pai; o pai numa segunda passada) → faixas → agências → contrapartes → regras → importações → transações → decisões do NEO → partidas → exportações → (Bloco B) revisões → vínculos da revisão → análises do financeiro → documentos, com o original em disco → vínculos do financeiro → (Bloco C) notas → comprovantes, com o arquivo em disco → cartões → faturas → gastos → documentos da fatura, com o PDF em disco → distribuições.
 - **Idempotente:** cada linha entra com o UUID do original (`upsert`). Rodar de novo atualiza o espelho, sem duplicar. O que alguém editar no Connect numa empresa espelhada é sobrescrito na rodada seguinte.
 - **Retrato consistente:** a leitura é uma transação `REPEATABLE READ READ ONLY` no original.
 - **Empresas:** ligadas à `Company` do escritório de destino (`CARGA_TENANT_ID`) pelos dígitos do CNPJ. Empresa sem par, com mais de um par, ou já ligada no Contábil Core do Connect com outro cadastro fica de fora e vai para o relatório.
@@ -750,7 +752,8 @@ Toda divergência entra aqui, com o porquê.
 - **Colunas de unicidade** (`codigoAtivo`, `chaveAtiva`, `hashAtivo`, `chave`, `transacaoSemRegra`…): calculadas pelas mesmas funções que o Connect usa ao gravar (`motor/chaves.ts`).
 - **Recusa por linha:** um lote de 200 que o banco recusa é refeito linha a linha, e só a linha que bateu fica de fora, nomeada no relatório.
 - **Saída:** o terminal mostra contagens e o CNPJ mascarado; o que identifica empresa ou pessoa vai para o relatório, um arquivo local (por padrão na pasta temporária) que não vai para o git.
-- **Fica para a virada:** o `audit_logs` do original (`contabil.core.legado.*`) e as tabelas dos Blocos C e D.
+- **Fica para a virada:** o `audit_logs` do original (`contabil.core.legado.*`) e as tabelas do Bloco D.
+- **Não vem do original:** `tenant_contabil_core_configs` (a chave "Leitura de documentos por IA" do escritório). Lá era a variável de ambiente `ALLOW_FINANCIAL_DATA_TO_OPENAI`, sem tabela; aqui nasce desligada e quem pode "gerir" liga em Configurações.
 - **Limite do espelho:** linha apagada de verdade no original (não por `deleted_at`) continua no Connect. O original apaga por `deleted_at` em quase tudo.
 
 **Bloco B (Fase B5, 18/11/2026):** as cinco tabelas da conciliação, só das empresas espelhadas, depois das transações (o `extrato_hash` é calculado sobre elas).
@@ -775,6 +778,31 @@ Toda divergência entra aqui, com o porquê.
   - Rode a carga da pasta raiz do Connect: o `storage/` é relativo a ela.
 - **Exclusão:** a exclusão da empresa no Connect apaga as cinco tabelas e esses arquivos (`arquivosDaEmpresa`), como os criados pela tela.
 
+**Bloco C (Fase C4, 25/11/2026):** as sete tabelas dos documentos, só das empresas espelhadas, depois do Bloco B e na ordem das chaves estrangeiras. Nenhuma tem coluna de pessoa nem `chaveAtiva` (as unicidades do original são totais e continuam como índices únicos comuns), então nada é calculado além do que vai para o disco.
+
+| Tabela no original | No Connect | Copiado | Calculado ou ligado |
+|---|---|---|---|
+| `notas_fiscais` | `core_notas_fiscais` | tudo, inclusive o `dedup_key`, a chave de acesso, a procedência (`origem`), o `assinatura_motivo` e a transação ligada | — |
+| `comprovantes` | `core_comprovantes` | tudo menos o `arquivo_base64`; o `arquivo_sha256` como está | `arquivo_base64` → arquivo em disco; `storageKey` (`chaveDoArquivo`), `arquivoTipo` (pelo conteúdo, como o cadastro) e `arquivoTamanho`; o SHA-256 ausente é calculado |
+| `cartoes_credito` | `core_cartoes_credito` | tudo | — |
+| `faturas_cartao` | `core_faturas_cartao` | tudo, inclusive o `valor_total` e a transação que pagou | — |
+| `lancamentos_cartao` | `core_lancamentos_cartao` | tudo, com os ids (`uuid5`) das compras importadas | — |
+| `fatura_documentos` | `core_fatura_documentos` | nome, `hash_arquivo`, status, `resultado` (JSON) e erro | `conteudo` → PDF em disco; `storageKey` (`chaveDoArquivo`) e `tamanho` |
+| `fatura_distribuicoes` | `core_fatura_distribuicoes` | versão, `distribuicoes` e `aplicacao` (JSON, com o `antes` e o hash) | a `aplicacao` nula vai como NULL do banco |
+
+- **Os ids e as chaves do original continuam valendo.** A nota já importada no Contábil Core é reconhecida pelo `dedup_key`; a compra reenviada por CSV ou PDF, pelo `uuid5`; a aplicação da distribuição, pelo hash da classificação (`hashDaClassificacao`, o `repr` do Python), que a conferência recalcula nos dois lados. O JSON vem sem conversão (`jsonDoOriginal`), como na B5; o `revisado_por` dentro do `resultado` continua o id da pessoa no original (ninguém lê esse campo para mostrar nome).
+- **Arquivos dos comprovantes.** O `arquivo_base64` de um comprovante por vez é decodificado como o `base64.b64decode` do Python (`base64DoPython`: os caracteres fora do alfabeto são ignorados, o bloco incompleto é erro), que era o que o original usava para o hash. O Node aceita mais do que isso, por isso a conta própria. Depois:
+  - o SHA-256 dos bytes é conferido contra o `arquivo_sha256`; se diferir, a linha é recusada e nomeada no relatório, como o original do financeiro na B5;
+  - sem o `arquivo_sha256` (as linhas de antes da migration 0037 cujo backfill não rodou), o hash é calculado aqui, gravado e listado em `sha256Calculado` no relatório;
+  - o base64 que o Python não decodifica (lá, o comprovante ficou sem hash) entra sem arquivo, listado em `base64Invalido`; o nome do arquivo fica;
+  - o arquivo vai para `storage/contabil-core/comprovantes/<tenantId do Connect>/<id>.<ext>` por `chaveDoArquivo` e `gravarArquivo`, as funções do serviço (C2). A extensão vem do nome (sem uma das aceitas, `.bin`) e o tipo de mídia do conteúdo (`formatoDoComprovante`), como no cadastro; o formato que o Connect não aceita no cadastro fica `application/octet-stream`.
+- **PDFs das faturas.** O `conteudo` de um documento por vez, com o SHA-256 conferido contra o `hash_arquivo` (se diferir, a linha é recusada), para `storage/contabil-core/faturas/<tenantId do Connect>/<id>.pdf` (`originaisFaturas.ts`, C3). O tamanho vem dos bytes (o original não o guardava).
+- **Idempotente, como na B5:** o arquivo que já está em disco com o mesmo SHA-256 não é regravado; com outro conteúdo, é reescrito; o gravado na rodada cuja linha o banco recusou é apagado. A função de disco é a mesma para os três (`paraODisco`).
+- **Travas novas do Connect.** O MySQL tem travas que o PostgreSQL do original não tinha: os CHECKs da C2 (valor pago maior que zero; juros, multa e desconto não negativos) e da C3 (bandeira da lista, dias de 1 a 28, status da fatura e do documento, gasto não negativo, versão não negativa), as unicidades sob a comparação do MySQL (que não diferencia maiúscula) e a faixa do `DATETIME` (anos 1000 a 9999). Como na B5, a carga não para no meio nem corrige nada em silêncio: `puladasPelasTravas` decide ANTES de gravar quais linhas o banco recusaria, e elas ficam de fora com o motivo (todos, quando há mais de um) em `puladas` no relatório. Quem depende de uma linha pulada cai junto, com o motivo (a fatura do cartão pulado; os gastos, os documentos e a distribuição da fatura pulada). O terminal mostra a contagem, e a carga termina com código 1 quando há linha pulada ou recusada: o dado existe no original e não veio, então alguém decide (corrigir lá, pela tela do original, e rodar de novo). Falhar logo no começo travaria todas as empresas por uma linha; pular e nomear é o que a B5 fez com as recusas.
+- **Transação desfeita.** A nota, o comprovante ou a fatura ligados a uma transação cuja importação foi desfeita entram assim, como o original deixa e o próprio Connect representa (a tela mostra "A importação desta transação foi desfeita"). A recusa da C1, C2 e C3 vale para associar de novo, não para o que já está ligado. Vão para o relatório em `comTransacaoDesfeita`, só como informação.
+- **Decisões do NEO com evidência de nota ou comprovante** (`origem_evidencia` "nota_fiscal" e "comprovante", a sombra da regra, já copiadas desde a Fase 5): passam sem ajuste. A coluna é texto de até 20 caracteres, sem CHECK, e a conferência compara as decisões uma a uma.
+- **Exclusão:** a exclusão da empresa no Connect apaga as sete tabelas e os arquivos das pastas `contabil-core/comprovantes` e `contabil-core/faturas`, como os criados pela tela.
+
 ### Conferência (`scripts/contabil-core/conferir-carga.ts`)
 
 Só lê, dos dois lados, para cada empresa espelhada:
@@ -787,6 +815,13 @@ Só lê, dos dois lados, para cada empresa espelhada:
   - o `extrato_hash` recalculado no Connect a partir das transações espelhadas, por `lerExtrato` com `evidenciaDoExtrato` e `hashJson` (revisão) ou `identidadeDoExtrato` (análise). O resultado é comparado ao gravado e à mesma conta feita no original com as transações de lá. Assim a validade (`fontesValidas`, `extratoValido`) é a mesma nos dois lados; quando o extrato não mudou, continua verdadeira depois da carga;
   - cada revisão e análise viva aberta pelos serviços (`obterRevisao`, `obterAnalise`), com a validade e o número de vínculos iguais aos do original;
   - o SHA-256 de cada original em disco igual ao `hash_arquivo`, e o original baixado por `originalDoDocumento` igual, nos documentos vivos de análises vivas.
+- Bloco C (também só contagens). As linhas puladas pelas travas, decididas pela mesma `puladasPelasTravas`, ficam fora da conta e aparecem como informação:
+  - contagem das sete tabelas (total e vivas);
+  - cada linha campo a campo: dinheiro com 2 casas, instantes em UTC, JSON valor a valor (`mesmoJson`), inclusive a transação ligada, o `dedup_key` e a procedência;
+  - a transação ligada à nota, ao comprovante e à fatura igual nos dois lados (data, valor, D/C e desfeita ou não);
+  - cada arquivo em disco com o SHA-256 e o tamanho dos bytes do original: o base64 do comprovante decodificado como o Python e o `conteudo` do documento da fatura (o SHA-256 calculado pelo PostgreSQL); o comprovante sem arquivo continua sem;
+  - as decisões do NEO com evidência de nota ou comprovante iguais;
+  - os serviços do Connect abrindo o que veio: `listarNotas`, `listarComprovantes` e `arquivoDoComprovante`, `listarCartoes`, `listarFaturas`, `listarLancamentos` (ids e total), `obterDistribuicao` (a aplicação "APLICADA" ou "DESATUALIZADA" igual à do original, com o hash da classificação recalculado lá com as partidas de lá, e os documentos) e `arquivoDoDocumento`.
 
 A ideia do plano de recalcular a chave de duplicidade não se sustenta: o original não guarda o `fitid` da transação, só o hash. A carga copia o hash como está, e é ele que barra o mesmo extrato reimportado depois da virada.
 
@@ -808,8 +843,13 @@ npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-c
 3. `scripts/contabil-core/povoar_conciliacao_local.py` (B5), no mesmo banco, depois do anterior. Acrescenta a cada empresa uma conta Itaú ligada à conta contábil e o extrato de abril. Depois, pelos serviços do original (`RevisaoService`, `FinanceiroService`), cria dados inventados:
    - **revisões:** uma com SISPAG e Razão de apoio, com vínculos ativos, um desfeito e refeito, e um confirmado pela pessoa sem par; uma renomeada; uma excluída e criada de novo (o mesmo `revisao_hash` vivo e apagado);
    - **análises:** uma com os quatro tipos de documento (planilhas inventadas), com um vínculo direto, um lote de sugestões, uma sugestão confirmada pela pessoa sem par e um vínculo desfeito; outra com documento, renomeada e excluída.
-4. `scripts/contabil-core/preparar-ensaio-carga.ts`: cria no Connect local a empresa com par.
-5. A carga (simular e gravar duas vezes) e a conferência.
+4. `scripts/contabil-core/povoar_documentos_local.py` (C4), no mesmo banco, depois dos dois anteriores (`python -I`, da raiz do contabil-core). Acrescenta a cada empresa o extrato de maio na conta do banco cooperativo e, pelos serviços do original (`NotaService`, `ComprovanteService`, `CartaoService`, `DistribuicaoService` e o NEO), dados inventados (CNPJs novos começando com 9; a IA não é chamada):
+   - **notas:** duas NF-e com XML assinado de verdade (ligadas pelo NEO: uma sem regra, com a contraparte pela nota; outra pela regra da tarifa, com a nota na sombra), uma NF-e alterada depois de assinada (`xml_nao_verificado`, ligada à mão), uma NFS-e da empresa (pendente), uma NF-e "lida pela IA" (`ocr`: a leitura é simulada, a gravação é a do serviço) e uma cadastrada à mão e cancelada;
+   - **comprovantes:** dois PDFs ligados pelo NEO (a contraparte e a sombra pelo comprovante), uma imagem com o base64 quebrado em linhas e ligada à mão, um sem arquivo, um excluído, um com o `arquivo_sha256` apagado por SQL (como antes da 0037), um com base64 inválido e um ligado a uma transação cuja importação foi desfeita;
+   - **cartões:** um com a fatura de abril fechada (gastos à mão, parcelado e com conta, por CSV e um removido; distribuição salva e não aplicada) e a de maio paga (a composição em PDF lida e confirmada, um PDF que a leitura não leu, o pagamento e a distribuição aplicada); e um cartão removido;
+   - **o que as travas do Connect recusariam**, direto por SQL (o serviço do original não deixa): comprovante com valor pago zero, comprovante com juros negativo, cartão com bandeira "master" e dia de fechamento 30 (com uma fatura e um gasto, que caem junto) e um gasto negativo.
+5. `scripts/contabil-core/preparar-ensaio-carga.ts`: cria no Connect local a empresa com par.
+6. A carga (simular e gravar duas vezes) e a conferência.
 
 Resultado em 10/11/2026: tudo igual ao original, inclusive o TXT do Domínio byte a byte; a segunda rodada não duplicou nem recusou nada.
 
@@ -820,6 +860,13 @@ Resultado da B5 em 18/11/2026, na empresa com par:
 - **Conferência:** 29 itens iguais, entre eles os 5 originais em disco e os 4 baixados pelo serviço. O JSON de 4 revisões, 2 análises e 9 vínculos saiu igual, e as 6 têm o extrato da criação. O Domínio continua byte a byte.
 - **No Connect:** a revisão abre com `fontesValidas` verdadeiro e a análise com `extratoValido` verdadeiro, pelos serviços.
 - **Ensaio negativo:** dois arquivos adulterados ou apagados em disco aparecem na conferência (DIFERE) e voltam na rodada seguinte. Bytes adulterados no original recusam a linha ("SHA-256 do conteúdo diferente do hash_arquivo do original").
+
+Resultado da C4 em 25/11/2026, na empresa com par (a outra ficou de fora):
+- **Lidas:** 6 notas, 10 comprovantes, 3 cartões, 3 faturas, 9 gastos, 2 documentos da fatura e 2 distribuições (1 aplicada). 6 linhas puladas pelas travas, cada uma com o motivo no relatório: os 2 comprovantes (valor pago zero; juros negativo), o cartão "master" com dia 30 (os dois motivos), a fatura dele e o gasto dela, e o gasto negativo. Nada recusado. No relatório também: 1 comprovante com o SHA-256 calculado aqui, 1 sem arquivo (base64 inválido) e 1 ligado a transação desfeita.
+- **Primeira rodada:** 5 arquivos de comprovante e 2 PDFs de fatura novos em disco; as tabelas da Fase 5 e da B5 continuaram iguais (os 5 originais do financeiro "iguais").
+- **Segunda e terceira rodadas:** 0 arquivos novos e 0 reescritos, nenhuma linha duplicada nem recusada; as mesmas 6 puladas.
+- **Conferência:** 56 itens iguais, 27 deles do Bloco C: as sete contagens e os sete campo a campo, o `dedup_key` e a procedência, as 8 ligações com o extrato, os 8 comprovantes e os 2 PDFs em disco, as 2 decisões do NEO com evidência de nota e de comprovante, e os serviços (6 notas, 7 comprovantes e 4 arquivos baixados, o cartão, as 2 faturas com os gastos, as 2 distribuições, com a aplicada "APLICADA" no Connect como no original, e os 2 PDFs baixados). O Domínio continua byte a byte.
+- **Ensaio negativo:** o PNG de um comprovante adulterado em disco, o PDF de uma fatura apagado e o valor de uma nota mudado no PostgreSQL deram 5 DIFERE na conferência. Os bytes adulterados no original (o base64 de um comprovante e o `conteudo` de um documento) recusaram as duas linhas com o motivo, e a conferência continuou apontando os dois arquivos. Com o original restaurado, a rodada seguinte reescreveu 1 arquivo, gravou 1 PDF de novo e a conferência voltou a dar tudo igual.
 
 ## Como testar localmente (Fase 2)
 
