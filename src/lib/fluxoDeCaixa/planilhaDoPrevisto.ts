@@ -16,11 +16,12 @@
 import ExcelJS from "exceljs";
 import { GRUPOS_DO_FLUXO, LINHAS_DO_FLUXO, rotuloDaLinha } from "./estrutura";
 import { periodosDoPrevisto, somarDias, type Periodo } from "./projecao";
+import { ROTULO_DO_TIPO, type Premissa } from "./cenario";
 
 export type ContaDaPlanilha = {
   dataDeCaixa: string;
   vencimento: string;
-  tipo: "A receber" | "A pagar";
+  tipo: "A receber" | "A pagar" | "Pedido";
   contraparte: string;
   documento: string;
   categoriaDoOmie: string;
@@ -44,6 +45,8 @@ export type EntradaDaPlanilha = {
   /** As categorias do Omie de cada categoria do cliente, para quem conferir. */
   omieDaCategoria: Map<string, string[]>;
   saldos: { conta: string; centavos: number }[];
+  /** As premissas do cenário (fase 2); o Excel deixa linhas livres para o cliente simular. */
+  premissas?: Premissa[];
   /** "da conciliação do Connect", "do Omie" ou nulo. */
   origemDoSaldo: string | null;
 };
@@ -59,7 +62,19 @@ const CINZA = "FF5A6782";
 const FUNDO_DO_CABECALHO = "FFE6EDFB";
 const FUNDO_DO_GRUPO = "FFF1F5FE";
 
-const ABA = { painel: "Painel", leia: "Leia-me", semanas: "13 semanas", meses: "12 meses", dias: "Dia a dia", base: "Lançamentos", atrasados: "Atrasados", saldos: "Saldos", dePara: "De-para" };
+const ABA = {
+  painel: "Painel",
+  leia: "Leia-me",
+  semanas: "13 semanas",
+  meses: "12 meses",
+  dias: "Dia a dia",
+  cenario: "Cenário",
+  premissas: "Premissas",
+  base: "Lançamentos",
+  atrasados: "Atrasados",
+  saldos: "Saldos",
+  dePara: "De-para",
+};
 const ref = (aba: string) => `'${aba}'`;
 
 function dataExcel(key: string): Date {
@@ -154,7 +169,7 @@ function abaDoDePara(livro: ExcelJS.Workbook, e: EntradaDaPlanilha) {
 type Visao = { aba: string; periodos: Periodo[]; comCategorias: boolean };
 
 /** Onde está o saldo final de cada visão, para o Painel. */
-type Posicao = { linhaDoSaldoFinal: number; primeiraColuna: number; ultimaColuna: number };
+type Posicao = { linhaDoSaldoFinal: number; primeiraColuna: number; ultimaColuna: number; saldosFinais: number[] };
 
 function somaDe(e: EntradaDaPlanilha, filtro: { linha: string; categoria?: string }, p: Periodo): number {
   let s = 0;
@@ -249,11 +264,13 @@ function abaDaVisao(livro: ExcelJS.Workbook, e: EntradaDaPlanilha, v: Visao, sal
   estilo(ws.getCell(linhaDoSaldoFinal, 2), { fill: preenchido(FUNDO_DO_CABECALHO) });
 
   let saldo = saldoInicialCentavos;
+  const saldosFinais: number[] = [];
   for (let i = 0; i < n; i++) {
     const c = col(i);
     const variacao = valoresDosGrupos.reduce((s, g) => s + g[i]!, 0);
     const inicial = saldo;
     saldo += variacao;
+    saldosFinais.push(saldo);
     estilo(
       Object.assign(ws.getCell(linhaDoSaldoInicial, C0 + i), {
         value: { formula: i === 0 ? `${ref(ABA.painel)}!$B$4` : `${col(i - 1)}${linhaDoSaldoFinal}`, result: reais(inicial) },
@@ -270,7 +287,125 @@ function abaDaVisao(livro: ExcelJS.Workbook, e: EntradaDaPlanilha, v: Visao, sal
       fill: preenchido(FUNDO_DO_CABECALHO),
     });
   }
-  return { linhaDoSaldoFinal, primeiraColuna: C0, ultimaColuna: C0 + n - 1 };
+  return { linhaDoSaldoFinal, primeiraColuna: C0, ultimaColuna: C0 + n - 1, saldosFinais };
+}
+
+// ─── Cenário (fase 2, 26/11/2026) ───────────────────────────────────────────
+
+/** Linhas livres na aba Premissas, para o cliente simular custos novos. */
+export const PREMISSAS_LIVRES = 5;
+
+/**
+ * As premissas e o cenário: o saldo previsto dos 12 meses com os custos
+ * previstos somados, mês a mês. Premissa em "% das vendas" usa as vendas do
+ * mês (recebimentos de clientes e pedidos a faturar, na base).
+ */
+function abaDoCenario(livro: ExcelJS.Workbook, e: EntradaDaPlanilha, meses: Periodo[], posMeses: Posicao) {
+  const premissas = e.premissas ?? [];
+  const k = premissas.length + PREMISSAS_LIVRES;
+
+  // O Cenário antes das Premissas, na ordem das abas.
+  const ws = livro.addWorksheet(ABA.cenario, { views: [{ state: "frozen", xSplit: 1, ySplit: 4 }] });
+
+  // As premissas: entrada do cliente, em azul.
+  const wp = livro.addWorksheet(ABA.premissas);
+  [34, 16, 16].forEach((w, i) => (wp.getColumn(i + 1).width = w));
+  ["Premissa", "Tipo", "Valor"].forEach((t, i) => estilo(Object.assign(wp.getCell(1, i + 1), { value: t }), { font: { bold: true }, fill: preenchido(FUNDO_DO_CABECALHO) }));
+  for (let i = 0; i < k; i++) {
+    const p = premissas[i];
+    estilo(Object.assign(wp.getCell(i + 2, 1), { value: p?.nome ?? null }), { font: { color: { argb: AZUL } } });
+    estilo(Object.assign(wp.getCell(i + 2, 2), { value: p ? ROTULO_DO_TIPO[p.tipo] : null }), { font: { color: { argb: AZUL } } });
+    estilo(Object.assign(wp.getCell(i + 2, 3), { value: p?.valor ?? null }), { numFmt: "#,##0.00", font: { color: { argb: AZUL } } });
+    wp.getCell(i + 2, 2).dataValidation = { type: "list", allowBlank: true, formulae: [`"${ROTULO_DO_TIPO.fixo},${ROTULO_DO_TIPO.percentual}"`] };
+  }
+  estilo(
+    Object.assign(wp.getCell(k + 3, 1), {
+      value: `Tipo: “${ROTULO_DO_TIPO.fixo}” (valor em R$ por mês) ou “${ROTULO_DO_TIPO.percentual}” (valor em %, ex.: 5 = 5%). As linhas em branco servem para simular.`,
+    }),
+    { font: { color: { argb: CINZA } } }
+  );
+
+  // O cenário, com fórmulas.
+  const C0 = 2;
+  const n = meses.length;
+  const col = (i: number) => letra(C0 + i);
+  ws.getColumn(1).width = 40;
+  for (let i = 0; i < n; i++) ws.getColumn(C0 + i).width = 15;
+  estilo(Object.assign(ws.getCell("A1"), { value: `Cenário · ${e.empresa} · o previsto dos 12 meses com as premissas` }), { font: { bold: true, size: 12 } });
+  estilo(Object.assign(ws.getCell("A2"), { value: "De" }), { font: { color: { argb: CINZA } } });
+  estilo(Object.assign(ws.getCell("A3"), { value: "Até" }), { font: { color: { argb: CINZA } } });
+  estilo(Object.assign(ws.getCell("A4"), { value: "R$" }), { font: { bold: true }, fill: preenchido(FUNDO_DO_CABECALHO) });
+  meses.forEach((p, i) => {
+    estilo(Object.assign(ws.getCell(2, C0 + i), { value: dataExcel(p.inicioKey) }), { numFmt: DATA, font: { color: { argb: CINZA } } });
+    estilo(Object.assign(ws.getCell(3, C0 + i), { value: dataExcel(p.fimKey) }), { numFmt: DATA, font: { color: { argb: CINZA } } });
+    estilo(Object.assign(ws.getCell(4, C0 + i), { value: p.rotulo }), { font: { bold: true }, fill: preenchido(FUNDO_DO_CABECALHO), alignment: { horizontal: "right" } });
+  });
+
+  const base = ref(ABA.base);
+  const premissasRef = ref(ABA.premissas);
+  const vendasDe = (c: string, linha: string) =>
+    `SUMIFS(${base}!$J:$J,${base}!$I:$I,"${rotuloDaLinha(linha)}",${base}!$B:$B,">="&${c}$2,${base}!$B:$B,"<="&${c}$3,${base}!$A:$A,1)`;
+  const vendas = meses.map((p) => somaDe(e, { linha: "recebimentos" }, p) + somaDe(e, { linha: "pedidos" }, p));
+
+  const R_PREVISTO = 5;
+  const R_VENDAS = 6;
+  const R_PRIMEIRA = 8;
+  const R_TOTAL = R_PRIMEIRA + k;
+  const R_ACUMULADO = R_TOTAL + 1;
+  const R_COM = R_ACUMULADO + 2;
+
+  estilo(Object.assign(ws.getCell(R_PREVISTO, 1), { value: "Saldo previsto no fim do mês" }), { font: { bold: true } });
+  estilo(Object.assign(ws.getCell(R_VENDAS, 1), { value: "Vendas do mês (base do %)" }), { font: { color: { argb: CINZA } } });
+  estilo(Object.assign(ws.getCell(R_TOTAL, 1), { value: "Total das premissas no mês" }), { font: { bold: true } });
+  estilo(Object.assign(ws.getCell(R_ACUMULADO, 1), { value: "Premissas acumuladas" }), { font: { color: { argb: CINZA } } });
+  estilo(Object.assign(ws.getCell(R_COM, 1), { value: "Saldo com as premissas" }), { font: { bold: true }, fill: preenchido(FUNDO_DO_CABECALHO) });
+
+  let acumulado = 0;
+  for (let i = 0; i < n; i++) {
+    const c = col(i);
+    const cMeses = letra(posMeses.primeiraColuna + i);
+    estilo(
+      Object.assign(ws.getCell(R_PREVISTO, C0 + i), {
+        value: { formula: `${ref(ABA.meses)}!${cMeses}${posMeses.linhaDoSaldoFinal}`, result: reais(posMeses.saldosFinais[i]!) },
+      }),
+      { numFmt: REAIS, font: { bold: true } }
+    );
+    estilo(Object.assign(ws.getCell(R_VENDAS, C0 + i), { value: { formula: `${vendasDe(c, "recebimentos")}+${vendasDe(c, "pedidos")}`, result: reais(vendas[i]!) } }), {
+      numFmt: REAIS,
+      font: { color: { argb: CINZA } },
+    });
+    let total = 0;
+    for (let j = 0; j < k; j++) {
+      const r = R_PRIMEIRA + j;
+      const pr = j + 2;
+      const p = premissas[j];
+      const v = !p ? 0 : -(p.tipo === "fixo" ? Math.round(p.valor * 100) : Math.round((Math.max(vendas[i]!, 0) * p.valor) / 100));
+      total += v;
+      if (i === 0) {
+        estilo(Object.assign(ws.getCell(r, 1), { value: { formula: `${premissasRef}!A${pr}&""`, result: p?.nome ?? "" } }), { font: { color: { argb: CINZA } } });
+      }
+      // Linha livre (vazia) dá zero: célula vazia vale 0 na conta. Sem N(), que nem toda planilha tem.
+      const formula = `-IF(${premissasRef}!$B${pr}="${ROTULO_DO_TIPO.percentual}",${premissasRef}!$C${pr}/100*MAX(${c}$${R_VENDAS},0),${premissasRef}!$C${pr}*1)`;
+      estilo(Object.assign(ws.getCell(r, C0 + i), { value: { formula, result: reais(v) } }), { numFmt: REAIS });
+    }
+    acumulado += total;
+    estilo(Object.assign(ws.getCell(R_TOTAL, C0 + i), { value: { formula: `SUM(${c}${R_PRIMEIRA}:${c}${R_TOTAL - 1})`, result: reais(total) } }), {
+      numFmt: REAIS,
+      font: { bold: true },
+    });
+    estilo(
+      Object.assign(ws.getCell(R_ACUMULADO, C0 + i), {
+        value: { formula: i === 0 ? `${c}${R_TOTAL}` : `${col(i - 1)}${R_ACUMULADO}+${c}${R_TOTAL}`, result: reais(acumulado) },
+      }),
+      { numFmt: REAIS, font: { color: { argb: CINZA } } }
+    );
+    estilo(
+      Object.assign(ws.getCell(R_COM, C0 + i), {
+        value: { formula: `${c}${R_PREVISTO}+${c}${R_ACUMULADO}`, result: reais(posMeses.saldosFinais[i]! + acumulado) },
+      }),
+      { numFmt: REAIS, font: { bold: true }, fill: preenchido(FUNDO_DO_CABECALHO) }
+    );
+  }
 }
 
 // ─── Painel, saldos, atrasados, leia-me ─────────────────────────────────────
@@ -351,6 +486,7 @@ function abaDoLeiaMe(ws: ExcelJS.Worksheet) {
     "• O saldo inicial é a soma da aba Saldos. As células em azul são as de entrada.",
     "• Nas visões, as categorias ficam recolhidas debaixo de cada linha: o “+” à esquerda abre.",
     "• O que já venceu e não foi pago fica na aba Atrasados, fora das visões.",
+    "• Cenário: os 12 meses com as premissas da aba Premissas (custo fixo por mês ou % das vendas). Escreva numa linha em branco para simular um custo novo.",
     "• O arquivo é uma foto do dia em que foi gerado. Para os números novos, baixe de novo no Connect.",
   ];
   texto.forEach((t, i) => estilo(Object.assign(ws.getCell(i + 1, 1), { value: t }), { font: i === 0 ? { bold: true, size: 12 } : {}, alignment: { wrapText: true } }));
@@ -378,6 +514,7 @@ export async function gerarPlanilhaDoPrevisto(e: EntradaDaPlanilha): Promise<Buf
   abaDaVisao(livro, e, { aba: ABA.semanas, periodos: semanas, comCategorias: true }, saldoCentavos);
   const posMeses = abaDaVisao(livro, e, { aba: ABA.meses, periodos: meses, comCategorias: true }, saldoCentavos);
   const posDias = abaDaVisao(livro, e, { aba: ABA.dias, periodos: dias, comCategorias: false }, saldoCentavos);
+  abaDoCenario(livro, e, meses, posMeses);
   abaDaBase(livro, e);
   abaDosAtrasados(livro, e);
   const celulaDoSaldo = abaDosSaldos(livro, e);

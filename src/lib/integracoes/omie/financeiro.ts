@@ -474,6 +474,9 @@ export function mensagemDoFinanceiro(c: Record<string, number>, gravou: boolean)
     n("saldos_com_erro") || n("saldos_sem_valor")
       ? `${n("saldos_com_erro") + n("saldos_sem_valor")} conta(s) sem saldo lido no Omie (o fluxo previsto fica com o da conciliação)`
       : null,
+    // Os pedidos de venda ainda não faturados, para o fluxo previsto (26/11/2026).
+    n("pedidos_abertos") ? `${n("pedidos_abertos")} pedido(s) de venda em aberto lido(s) no Omie` : null,
+    n("pedidos_com_erro") ? "os pedidos de venda não puderam ser lidos no Omie desta vez (o fluxo previsto fica com os da leitura anterior)" : null,
     ...(Object.keys(MOTIVO_DA_LINHA) as MotivoDaLinhaFora[])
       .filter((m) => n(`conta_fora_${m}`) > 0)
       .map((m) => `${n(`conta_fora_${m}`)} ${MOTIVO_DA_LINHA[m]}`),

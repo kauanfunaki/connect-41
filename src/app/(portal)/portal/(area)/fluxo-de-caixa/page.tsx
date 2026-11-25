@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CalendarRange, History } from "lucide-react";
+import { CalendarRange, FlaskConical, History } from "lucide-react";
 import { PageContainer } from "@/components/shared/PageContainer";
 import { PortalCabecalho } from "@/components/portal/PortalCabecalho";
 import { TituloDeSecao } from "@/components/portal/TituloDeSecao";
@@ -17,7 +17,8 @@ import { TelaIndisponivel } from "@/components/portal/TelaIndisponivel";
 import { empresasDoSeletor, movimentosRealizados, titulosEmAberto, type EscopoFinanceiro } from "@/lib/financeiro/consultas";
 import { fluxoRealizado, projecaoPorJanela } from "@/lib/financeiro/fluxo";
 import { competenciaDoInstante, competenciasAte } from "@/lib/financeiro/periodo";
-import { dadosDoPrevisto } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { configuracaoDoFluxo, dadosDoCenario, dadosDoPrevisto } from "@/lib/fluxoDeCaixa/previstoServidor";
+import { CenarioDoFluxo } from "@/components/financeiro/CenarioDoFluxo";
 import { celulaDeTexto, granularidadeValida, type Granularidade } from "@/lib/fluxoDeCaixa/projecao";
 import { saoPauloParts } from "@/lib/agenda";
 
@@ -42,7 +43,7 @@ export default async function PortalFluxoDeCaixaPage({
   if (await telaBloqueadaNoPortal(escopo.tenantId, "/portal/fluxo-de-caixa")) return <TelaIndisponivel />;
 
   const params = await searchParams;
-  const aba = params.aba === "realizado" ? "realizado" : "previsto";
+  const pedida = params.aba === "realizado" || params.aba === "cenario" ? params.aba : "previsto";
   const ver = granularidadeValida(params.ver);
   const empresas = await empresasDoSeletor(escopo.tenantId, escopo.companyIds ?? []);
   // A da URL, ou a guardada da última escolha no portal (11/11/2026).
@@ -53,6 +54,10 @@ export default async function PortalFluxoDeCaixaPage({
   );
   // Com uma empresa só, o previsto é dela, mesmo sem escolha.
   const empresaDoPrevisto = empresaId ?? (empresas.length === 1 ? empresas[0]!.id : null);
+
+  // A aba Cenário só aparece quando a equipe deixa o cliente ver (Modelo do fluxo).
+  const comCenario = empresaDoPrevisto ? (await configuracaoDoFluxo(escopo.tenantId, empresaDoPrevisto)).cenarioNoPortal : false;
+  const aba = pedida === "cenario" && !comCenario ? "previsto" : pedida;
 
   const comEmpresa = (q: string) => `/portal/fluxo-de-caixa?${q}${empresaId ? `&empresa=${empresaId}` : ""}`;
   const enderecoDaVisao = (g: Granularidade) => comEmpresa(`aba=previsto&ver=${g}`);
@@ -73,6 +78,7 @@ export default async function PortalFluxoDeCaixaPage({
       <AbasDeLink
         abas={[
           { chave: "previsto", rotulo: "Previsto", href: enderecoDaVisao(ver), icone: <CalendarRange /> },
+          ...(comCenario ? [{ chave: "cenario", rotulo: "Cenário", href: comEmpresa("aba=cenario"), icone: <FlaskConical /> }] : []),
           { chave: "realizado", rotulo: "Já aconteceu", href: comEmpresa("aba=realizado"), icone: <History /> },
         ]}
         ativa={aba}
@@ -94,6 +100,8 @@ export default async function PortalFluxoDeCaixaPage({
             />
           </Card>
         )
+      ) : aba === "cenario" && empresaDoPrevisto ? (
+        <CenarioDoFluxo dados={await dadosDoCenario(escopo.tenantId, empresaDoPrevisto)} noPortal />
       ) : (
         <JaAconteceu escopo={empresaId ? { ...escopo, companyIds: [empresaId] } : escopo} />
       )}

@@ -13,6 +13,8 @@ import { saldoBancarioDoEscopo } from "@/lib/financeiro/conciliacao/saldoDasCont
 import { sugerirLinha } from "./sugestao";
 import { diaPrevisto } from "@/lib/financeiro/fluxo";
 import type { AtrasadaDaPlanilha, ContaDaPlanilha, EntradaDaPlanilha } from "./planilhaDoPrevisto";
+import { vencimentoDaParcela, type ParcelaDoPedido } from "@/lib/integracoes/omie/pedidos";
+import { montarCenario, type Cenario, type Premissa } from "./cenario";
 import {
   contasDaCelula,
   dataDeCaixa,
@@ -36,14 +38,29 @@ export function origemDoSaldoValida(texto: string | null | undefined): OrigemDoS
   return texto === "conciliacao" || texto === "omie" ? texto : "auto";
 }
 
-export type ConfiguracaoDoFluxo = { diasReceber: number; diasPagar: number; origemDoSaldo: OrigemDoSaldo };
+export type ConfiguracaoDoFluxo = {
+  diasReceber: number;
+  diasPagar: number;
+  origemDoSaldo: OrigemDoSaldo;
+  /** Fase 2: os pedidos de venda do Omie entram, nas etapas escolhidas (códigos). */
+  pedidos: boolean;
+  etapas: string[];
+  cenarioNoPortal: boolean;
+};
 
 export async function configuracaoDoFluxo(tenantId: string, companyId: string): Promise<ConfiguracaoDoFluxo> {
   const c = await getPrisma().cashFlowSettings.findFirst({
     where: { tenantId, companyId },
-    select: { receivableDays: true, payableDays: true, balanceSource: true },
+    select: { receivableDays: true, payableDays: true, balanceSource: true, salesOrdersEnabled: true, salesOrderStages: true, scenarioVisibleToClient: true },
   });
-  return { diasReceber: c?.receivableDays ?? 0, diasPagar: c?.payableDays ?? 0, origemDoSaldo: origemDoSaldoValida(c?.balanceSource) };
+  return {
+    diasReceber: c?.receivableDays ?? 0,
+    diasPagar: c?.payableDays ?? 0,
+    origemDoSaldo: origemDoSaldoValida(c?.balanceSource),
+    pedidos: c?.salesOrdersEnabled ?? false,
+    etapas: (c?.salesOrderStages ?? "").split(",").map((e) => e.trim()).filter(Boolean),
+    cenarioNoPortal: c?.scenarioVisibleToClient ?? false,
+  };
 }
 
 /** O saldo de onde o previsto parte, com a origem dita na tela. */
@@ -108,6 +125,48 @@ export type BaseDoPrevisto = {
   noTeto: boolean;
 };
 
+/**
+ * As parcelas dos pedidos de venda abertos nas etapas escolhidas (fase 2,
+ * 26/11/2026), como contas a receber: o vencimento é o da parcela, ou a
+ * previsão de faturamento mais os dias dela. Parcela sem data, ou com a data no
+ * passado, fica de fora.
+ */
+async function titulosDosPedidos(tenantId: string, companyId: string, c: ConfiguracaoDoFluxo, hojeKey: string): Promise<TituloDoPrevisto[]> {
+  if (!c.pedidos || c.etapas.length === 0) return [];
+  const prisma = getPrisma();
+  const [pedidos, etapas] = await Promise.all([
+    prisma.salesOrder.findMany({
+      where: { tenantId, companyId, stageCode: { in: c.etapas } },
+      select: { id: true, number: true, stageCode: true, customerName: true, forecastDate: true, installments: true },
+      take: TETO_DE_CONTAS,
+    }),
+    prisma.omieOrderStage.findMany({ where: { tenantId, companyId }, select: { code: true, name: true } }),
+  ]);
+  const nomeDaEtapa = new Map(etapas.map((e) => [e.code, e.name]));
+  const saida: TituloDoPrevisto[] = [];
+  for (const p of pedidos) {
+    const previsao = p.forecastDate ? saoPauloParts(p.forecastDate).dateKey : null;
+    const parcelas = (Array.isArray(p.installments) ? p.installments : []) as unknown as ParcelaDoPedido[];
+    parcelas.forEach((parcela, i) => {
+      const vencimento = vencimentoDaParcela(previsao, parcela);
+      // Pedido com a data no passado ainda não é título: não é atraso, fica de fora (como na planilha do cliente).
+      if (!vencimento || vencimento < hojeKey || !parcela.centavos) return;
+      saida.push({
+        id: `pedido:${p.id}:${i + 1}`,
+        kind: "RECEBER",
+        centavos: parcela.centavos,
+        vencimentoKey: vencimento,
+        previsaoKey: null,
+        categoryId: null,
+        contraparte: p.customerName,
+        descricao: `Pedido ${p.number}${parcelas.length > 1 ? ` · parcela ${i + 1}/${parcelas.length}` : ""}`,
+        pedido: { etapa: nomeDaEtapa.get(p.stageCode) ?? `Etapa ${p.stageCode}` },
+      });
+    });
+  }
+  return saida;
+}
+
 /** "Sem categoria" de cada lado: o nome tem de dizer o lado, porque vira linha no Excel. */
 export const SEM_CATEGORIA = { RECEBER: "Sem categoria (a receber)", PAGAR: "Sem categoria (a pagar)" } as const;
 
@@ -116,7 +175,7 @@ export async function baseDoPrevisto(tenantId: string, companyId: string, agora:
   const hojeKey = saoPauloParts(agora).dateKey;
   const configuracao = await configuracaoDoFluxo(tenantId, companyId);
 
-  const [linhas, ligacoes, saldoInicial] = await Promise.all([
+  const [linhas, ligacoes, saldoInicial, pedidos] = await Promise.all([
     prisma.financeEntry.findMany({
       where: { tenantId, companyId, paidAt: null, status: { not: "CANCELADO" } },
       select: {
@@ -140,6 +199,7 @@ export async function baseDoPrevisto(tenantId: string, companyId: string, agora:
       select: { categoryId: true, category: { select: { name: true } }, clientCategory: { select: { name: true, line: true } } },
     }),
     saldoInicialDaEmpresa(tenantId, companyId, configuracao.origemDoSaldo),
+    titulosDosPedidos(tenantId, companyId, configuracao, hojeKey),
   ]);
 
   const titulos: TituloDoPrevisto[] = linhas.map((l) => ({
@@ -153,12 +213,14 @@ export async function baseDoPrevisto(tenantId: string, companyId: string, agora:
     contraparte: l.counterparty.name,
     descricao: [l.documentNumber, l.description].filter(Boolean).join(" · ") || null,
   }));
+  titulos.push(...pedidos);
   const nomeDaCategoria = new Map(linhas.filter((l) => l.categoryId).map((l) => [l.categoryId!, l.category?.name ?? ""]));
   const doCliente = new Map(ligacoes.map((l) => [l.categoryId, l.clientCategory]));
 
   // A categoria do cliente, quando há; senão a do Omie, na linha sugerida pelo
   // nome; sem categoria, "outras" do lado da conta.
   const classificar = (t: TituloDoPrevisto): Classificacao => {
+    if (t.pedido) return { linha: "pedidos", item: t.pedido.etapa };
     if (!t.categoryId) return { linha: t.kind === "RECEBER" ? "outras_entradas" : "outras_saidas", item: SEM_CATEGORIA[t.kind] };
     const c = doCliente.get(t.categoryId);
     if (c) return { linha: c.line, item: c.name };
@@ -231,7 +293,7 @@ export function entradaDaPlanilha(b: BaseDoPrevisto, empresa: string, agora: Dat
   const atrasadas: AtrasadaDaPlanilha[] = [];
   for (const t of b.titulos) {
     if (t.centavos === 0) continue;
-    const tipo = t.kind === "RECEBER" ? "A receber" : "A pagar";
+    const tipo = t.pedido ? "Pedido" : t.kind === "RECEBER" ? "A receber" : "A pagar";
     const { linha } = b.classificar(t);
     let { item } = b.classificar(t);
     const ja = linhaDaCategoria.get(item);
@@ -270,5 +332,60 @@ export function entradaDaPlanilha(b: BaseDoPrevisto, empresa: string, agora: Dat
     omieDaCategoria,
     saldos: b.saldoInicial.contas.map((c) => ({ conta: c.nome, centavos: c.centavos })),
     origemDoSaldo: b.saldoInicial.origem === "omie" ? "do Omie" : b.saldoInicial.origem === "conciliacao" ? "da conciliação do Connect" : null,
+  };
+}
+
+// ─── Fase 2: o cenário e a configuração dos pedidos ─────────────────────────
+
+/** As premissas do cenário da empresa, na ordem em que foram cadastradas. */
+export async function premissasDaEmpresa(tenantId: string, companyId: string): Promise<Premissa[]> {
+  const linhas = await getPrisma().cashFlowAssumption.findMany({
+    where: { tenantId, companyId },
+    select: { name: true, kind: true, amount: true },
+    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+  });
+  return linhas.map((l) => ({ nome: l.name, tipo: l.kind === "percentual" ? "percentual" : "fixo", valor: Number(l.amount) }));
+}
+
+export type DadosDoCenario = { cenario: Cenario; saldoInicial: SaldoInicial; premissas: Premissa[] };
+
+/** O previsto mês a mês com as premissas. */
+export async function dadosDoCenario(tenantId: string, companyId: string, agora?: Date): Promise<DadosDoCenario> {
+  const [b, premissas] = await Promise.all([baseDoPrevisto(tenantId, companyId, agora), premissasDaEmpresa(tenantId, companyId)]);
+  const previsto = montarPrevisto({
+    titulos: b.titulos,
+    classificar: b.classificar,
+    regras: b.regras,
+    hojeKey: b.hojeKey,
+    granularidade: "meses",
+    saldoInicial: b.saldoInicial.centavos,
+  });
+  return { cenario: montarCenario(previsto, premissas), saldoInicial: b.saldoInicial, premissas };
+}
+
+/** O que o cartão "Pedidos de venda e cenário" do Modelo do fluxo mostra. */
+export type PedidosECenarioDaEmpresa = {
+  configuracao: ConfiguracaoDoFluxo;
+  etapas: { code: string; name: string; inactive: boolean; pedidos: number }[];
+  ultimaLeitura: string | null;
+  premissas: Premissa[];
+};
+
+export async function pedidosECenarioDaEmpresa(tenantId: string, companyId: string): Promise<PedidosECenarioDaEmpresa> {
+  const prisma = getPrisma();
+  const [configuracao, etapas, contagem, ultimo, premissas] = await Promise.all([
+    configuracaoDoFluxo(tenantId, companyId),
+    prisma.omieOrderStage.findMany({ where: { tenantId, companyId }, select: { code: true, name: true, inactive: true }, orderBy: { code: "asc" } }),
+    prisma.salesOrder.groupBy({ by: ["stageCode"], where: { tenantId, companyId }, _count: { _all: true } }),
+    prisma.salesOrder.findFirst({ where: { tenantId, companyId }, select: { fetchedAt: true }, orderBy: { fetchedAt: "desc" } }),
+    premissasDaEmpresa(tenantId, companyId),
+  ]);
+  const porEtapa = new Map(contagem.map((c) => [c.stageCode, c._count._all]));
+  const p = ultimo ? saoPauloParts(ultimo.fetchedAt) : null;
+  return {
+    configuracao,
+    etapas: etapas.map((e) => ({ ...e, pedidos: porEtapa.get(e.code) ?? 0 })),
+    ultimaLeitura: p ? `${dm(p.dateKey)} ${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}` : null,
+    premissas,
   };
 }
