@@ -7205,11 +7205,16 @@ model Dp2EventoEsocial {
   referencia    String   @db.VarChar(80)
   idEvento      String   @unique @db.VarChar(36)
   /// "PENDENCIA" (falta cadastro), "PRONTO" (para assinar e enviar), "ENVIADO",
-  /// "ACEITO" ou "REJEITADO".
+  /// "ACEITO" ou "REJEITADO"; e, depois de outro evento aceito sobre este,
+  /// "RETIFICADO", "EXCLUIDO" ou "REABERTO" (funcionalidade-754).
   situacao      String   @db.VarChar(10)
   xml           String   @db.LongText
   pendencias    Json
   recibo        String?  @db.VarChar(40)
+  /// O evento que este retifica (S-1200/S-1210 com indRetif 2), exclui (S-3000)
+  /// ou reabre (S-1298 → S-1299). Funcionalidade-754. Quando este é aceito, o
+  /// alvo passa a RETIFICADO, EXCLUIDO ou REABERTO.
+  alvoId        String?  @db.VarChar(36)
   geradoPorId   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

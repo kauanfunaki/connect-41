@@ -37,6 +37,8 @@ export type EventoGerado = {
   idEvento: string;
   xml: string;
   pendencias: Pendencia[];
+  /** O evento da fila que este retifica, exclui (S-3000) ou reabre (S-1298). Funcionalidade-754. */
+  alvoId?: string | null;
 };
 
 export type EmpregadorEsocial = {
@@ -271,7 +273,12 @@ function pendenciasDoTrabalhador(t: TrabalhadorEsocial): Pendencia[] {
   return p;
 }
 
-export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: TrabalhadorEsocial, novoId: GeradorDeId): EventoGerado {
+/**
+ * O S-1200 do trabalhador. Com `retifica` (o recibo do S-1200 aceito da mesma
+ * pessoa e período), sai como retificação: indRetif 2 e nrRecibo (leiaute
+ * S-1.3; período já fechado no eSocial pede o S-1298 antes). Funcionalidade-754.
+ */
+export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: TrabalhadorEsocial, novoId: GeradorDeId, retifica: string | null = null): EventoGerado {
   const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t)];
   // Uma linha por rubrica: horas extras lançadas pelo DP e informadas pelo
   // cliente são a mesma rubrica no demonstrativo, com quantidade e valor somados.
@@ -290,7 +297,8 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
   const id = novoId();
   const xml = envelope("S-1200", id, [
     el("ideEvento", [
-      el("indRetif", "1"),
+      el("indRetif", retifica ? "2" : "1"),
+      el("nrRecibo", retifica),
       el("indApuracao", apuracaoAnual(perApur) ? "2" : "1"),
       el("perApur", perApur),
       el("tpAmb", AMBIENTE),
@@ -333,12 +341,12 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
  * O pagamento. `perApur` é o mês em que se pagou; `perRef`, o período do
  * demonstrativo pago (o mesmo mês na folha; o ano no 13º).
  */
-export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId, perRef: string = perApur): EventoGerado {
+export function eventoS1210(e: EmpregadorEsocial, perApur: string, dtPgto: string | null, t: TrabalhadorEsocial, novoId: GeradorDeId, perRef: string = perApur, retifica: string | null = null): EventoGerado {
   const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoTrabalhador(t).filter((p) => !p.texto.includes("matrícula") && !p.texto.includes("nascimento"))];
   if (!dtPgto) pendencias.push({ onde: "competencia", texto: "Informe a data do pagamento ao gerar os periódicos.", link: null, bloqueia: true });
   const id = novoId();
   const xml = envelope("S-1210", id, [
-    el("ideEvento", [el("indRetif", "1"), el("perApur", perApur), el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]),
+    el("ideEvento", [el("indRetif", retifica ? "2" : "1"), el("nrRecibo", retifica), el("perApur", perApur), el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]),
     ideEmpregador(e.cnpj),
     el("ideBenef", [
       el("cpfBenef", digitos(t.cpf)),
@@ -362,6 +370,78 @@ export function eventoS1299(e: EmpregadorEsocial, perApur: string, comRemuneraca
     el("infoFech", [el("evtRemun", comRemuneracao ? "S" : "N"), el("evtComProd", "N"), el("evtContratAvNP", "N"), el("evtInfoComplPer", "N")]),
   ]);
   return { tipo: "S-1299", referencia: perApur, personId: null, idEvento: id, xml, pendencias: pendenciasDoEmpregador(e) };
+}
+
+// ─── Reabertura e exclusão (25/11/2026, funcionalidade-754) ─────────────────
+
+/** S-1298: reabre o período já fechado (S-1299 aceito) para retificar os periódicos. Leiaute S-1.3. */
+export function eventoS1298(e: EmpregadorEsocial, perApur: string, novoId: GeradorDeId): EventoGerado {
+  const id = novoId();
+  const xml = envelope("S-1298", id, [
+    el("ideEvento", [
+      el("indApuracao", apuracaoAnual(perApur) ? "2" : "1"),
+      el("perApur", perApur),
+      el("tpAmb", AMBIENTE),
+      el("procEmi", PROCESSO_DE_EMISSAO),
+      el("verProc", VERSAO_DO_PROCESSO),
+    ]),
+    ideEmpregador(e.cnpj),
+  ]);
+  return { tipo: "S-1298", referencia: perApur, personId: null, idEvento: id, xml, pendencias: pendenciasDoEmpregador(e) };
+}
+
+const numeroDoEvento = (tipo: string) => Number(tipo.replace(/\D/g, ""));
+/** Eventos que o S-3000 exclui e que identificam o trabalhador (S-2190 a S-2420, S-8200, S-8299, S-1200 a S-1210). */
+export function exclusaoPedeTrabalhador(tipo: string): boolean {
+  const n = numeroDoEvento(tipo);
+  return (n >= 2190 && n <= 2420) || n === 8200 || n === 8299 || (n >= 1200 && n <= 1210);
+}
+/** Periódicos (S-1200 a S-1280 e S-1300): a exclusão leva o período de apuração. */
+export function exclusaoPedePeriodo(tipo: string): boolean {
+  const n = numeroDoEvento(tipo);
+  return (n >= 1200 && n <= 1280) || n === 1300;
+}
+/** O indicativo de apuração só vai para S-1200, S-1202, S-1207, S-1280 e S-1300 (não para o S-1210). */
+const exclusaoPedeIndApuracao = (tipo: string) => ["S-1200", "S-1202", "S-1207", "S-1280", "S-1300"].includes(tipo);
+/** O que o S-3000 pode excluir: os periódicos e os não periódicos de trabalhador. Tabelas excluem pelo próprio evento; o S-1299 se desfaz com o S-1298. */
+export function podeExcluirPeloS3000(tipo: string): boolean {
+  return tipo !== "S-1299" && (exclusaoPedePeriodo(tipo) || exclusaoPedeTrabalhador(tipo));
+}
+
+/** O nº do recibo do eSocial: dígitos e pontos (ex.: 1.2.0000000000000000001). */
+export function reciboValido(v: string): boolean {
+  return /^\d[\d.]{4,38}\d$/.test(v.trim());
+}
+
+export type EventoAExcluir = { tipo: string; recibo: string | null; cpf: string | null; perApur: string | null };
+
+/**
+ * S-3000: exclui um evento aceito, pelo recibo (leiaute S-1.3, NT 08/2026):
+ * ideTrabalhador nos de trabalhador; ideFolhaPagto nos periódicos, com o
+ * indApuracao só em S-1200/1202/1207/1280/1300.
+ */
+export function eventoS3000(e: EmpregadorEsocial, alvo: EventoAExcluir, novoId: GeradorDeId): EventoGerado {
+  const pendencias = [...pendenciasDoEmpregador(e)];
+  if (!podeExcluirPeloS3000(alvo.tipo)) pendencias.push({ onde: "competencia", texto: `O ${alvo.tipo} não se exclui pelo S-3000.`, link: null, bloqueia: true });
+  if (!alvo.recibo) pendencias.push({ onde: "competencia", texto: `Sem o recibo do ${alvo.tipo} a excluir.`, link: null, bloqueia: true });
+  const comTrabalhador = exclusaoPedeTrabalhador(alvo.tipo);
+  const comPeriodo = exclusaoPedePeriodo(alvo.tipo);
+  if (comTrabalhador && !cpfValido(alvo.cpf)) pendencias.push({ onde: "colaborador", texto: `O ${alvo.tipo} a excluir é de trabalhador: falta o CPF.`, link: null, bloqueia: true });
+  if (comPeriodo && !alvo.perApur) pendencias.push({ onde: "competencia", texto: `O ${alvo.tipo} a excluir é periódico: falta o período de apuração.`, link: null, bloqueia: true });
+  const id = novoId();
+  const xml = envelope("S-3000", id, [
+    el("ideEvento", [el("tpAmb", AMBIENTE), el("procEmi", PROCESSO_DE_EMISSAO), el("verProc", VERSAO_DO_PROCESSO)]),
+    ideEmpregador(e.cnpj),
+    el("infoExclusao", [
+      el("tpEvento", alvo.tipo),
+      el("nrRecEvt", alvo.recibo),
+      comTrabalhador ? el("ideTrabalhador", [el("cpfTrab", digitos(alvo.cpf))]) : null,
+      comPeriodo && alvo.perApur
+        ? el("ideFolhaPagto", [exclusaoPedeIndApuracao(alvo.tipo) ? el("indApuracao", apuracaoAnual(alvo.perApur) ? "2" : "1") : null, el("perApur", alvo.perApur)])
+        : null,
+    ]),
+  ]);
+  return { tipo: "S-3000", referencia: `${alvo.tipo} · ${alvo.recibo ?? "sem recibo"}`, personId: null, idEvento: id, xml, pendencias };
 }
 
 // ─── Lote (para conferência; o envio assina cada evento antes) ──────────────
