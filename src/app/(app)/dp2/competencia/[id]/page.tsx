@@ -27,6 +27,8 @@ import { colaboradoresDaCompetencia, configDaEmpresa, listarRubricas, rubricasFi
 import { TIPOS_DE_INFORMACAO, apurarCompetencia, ehTipoDeInformacao } from "@/lib/dp2/apuracao";
 import { competenciaDe } from "@/lib/dp2/tabelas";
 import { separarFixasDoMes } from "@/lib/dp2/rubricasFixas";
+import { conferirGuias, NOME_DA_SITUACAO_DA_GUIA } from "@/lib/dp2/guiasDaFolha";
+import { conferirTotalizadores, type Diferenca } from "@/lib/dp2/esocial/totalizadores";
 import { documentoFormatado } from "@/lib/dp2/outrasBasesInss";
 import { CATEGORIAS, regimeDaCategoria } from "@/lib/dp2/categorias";
 import { camposAjustaveis, nomeDoCampo, type AjusteAplicado } from "@/lib/dp2/ajustesDoCalculo";
@@ -34,6 +36,7 @@ import { totaisPorRubrica } from "@/lib/dp2/lancamentoPorRubrica";
 import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
 import { PAPEIS_LANCAVEIS, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { compararValores, type CampoComparado } from "@/lib/dp2/comparativo";
+import { diasDoMes } from "@/lib/dp2/calendario";
 import { brl, nomeDaCompetencia, NOME_DA_SITUACAO, NOME_DO_TIPO_DE_COMPETENCIA, TOM_DA_SITUACAO } from "@/lib/dp2/tela";
 import type { Encargos, ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -43,6 +46,8 @@ import { lancamentosDaCompetencia } from "@/lib/dp2/saidas";
 import {
   ajustarCalculoAction,
   calcularCompetenciaAction,
+  anexarGfdAction,
+  importarTotalizadoresAction,
   incluirInformacaoDaApuracaoAction,
   retirarInformacaoDaApuracaoAction,
   copiarOutrasBasesInssAction,
@@ -52,6 +57,7 @@ import {
   fecharCompetenciaAction,
   gerarRemessaAction,
   guardarHoleritesAction,
+  lancarContasAPagarAction,
   importarComparativoAction,
   importarEventosAction,
   lancarEventoAction,
@@ -148,6 +154,25 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         })
       : null;
   const pedidoAtual = pedidos.find((p) => p.situacao !== "CANCELADO") ?? null;
+  // Guias da folha (funcionalidade-744): o DARF da DCTFWeb baixado pelo Serpro e a GFD anexada.
+  const competenciaDasGuias = `${comp.ano}-${String(comp.mes).padStart(2, "0")}`;
+  const [guiasDoMes, rotinaDctfweb] = mensal
+    ? await Promise.all([
+        prisma.guia.findMany({ where: { tenantId: ctx.tenantId, companyId: comp.companyId, competencia: competenciaDasGuias, tipo: { in: ["DCTFWEB", "FGTS"] } }, orderBy: { createdAt: "desc" } }),
+        prisma.serproDctfweb.findFirst({ where: { tenantId: ctx.tenantId, companyId: comp.companyId, competencia: competenciaDasGuias }, select: { situacao: true, darfArquivoId: true } }),
+      ])
+    : [[], null];
+  const darfDoMes = guiasDoMes.find((g) => g.tipo === "DCTFWEB");
+  const gfdDoMes = guiasDoMes.find((g) => g.tipo === "FGTS");
+  // Totalizadores do eSocial (funcionalidade-755): o que o eSocial calculou, contra o cálculo do DP 2.
+  const totalizadores = calculos.length > 0 ? await prisma.dp2TotalizadorEsocial.findMany({ where: { tenantId: ctx.tenantId, competenciaId: id } }) : [];
+  const conferenciaEsocial =
+    totalizadores.length > 0
+      ? conferirTotalizadores(
+          calculos.map((c) => ({ personId: c.personId, nome: c.person.name, cpf: c.person.cpf, inss: n(c.inss), irrf: n(c.irrf), baseFgts: n(c.baseFgts), fgts: n(c.fgts) })),
+          totalizadores.map((t) => ({ tipo: t.tipo as "S-5001", cpf: t.cpf, valores: t.valores as Record<string, number> }))
+        )
+      : null;
   // As rubricas fixas do contrato que valem no mês: entram no cálculo sozinhas (funcionalidade-767).
   // Fechada, o cálculo já foi: só aparece o que de fato entrou (nos holerites).
   const fixasVigentes = mensal && !fechada
@@ -161,6 +186,20 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
   const urlPublica = (process.env.APP_PUBLIC_URL ?? "").replace(/\/$/, "");
   calculos.sort((a, b) => a.person.name.localeCompare(b.person.name, "pt-BR"));
   const totais = (comp.totais ?? null) as TotaisDaCompetencia | null;
+  // Pedido do vale-transporte (funcionalidade-753): custo diário × dias úteis do mês, e o desconto que a folha fez.
+  const diasUteisDoMes = diasDoMes(comp.ano, comp.mes).diasUteis;
+  const pedidoDeVt = mensal
+    ? pessoas
+        .filter((p) => p.dp2Vinculo?.valeTransporte)
+        .map((p) => {
+          const custoDiario = p.dp2Vinculo?.vtCustoDiario != null ? Number(p.dp2Vinculo.vtCustoDiario) : null;
+          const compra = custoDiario !== null ? Math.round(custoDiario * diasUteisDoMes * 100) / 100 : null;
+          const calc = calculos.find((c) => c.personId === p.id);
+          const desconto = calc ? ((calc.itens as unknown as { papel: string | null; valor: number }[]) ?? []).filter((i) => i.papel === "VALE_TRANSPORTE").reduce((x, i) => x + i.valor, 0) : null;
+          return { personId: p.id, nome: p.name, custoDiario, compra, desconto };
+        })
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    : [];
   const semContrato = pessoas.filter((p) => !p.dp2Vinculo);
   const lancaveis = rubricas.filter((r) => r.ativa && (r.papel ? ehPapel(r.papel) && PAPEIS_LANCAVEIS.has(r.papel) : r.tipo !== "INFORMATIVA"));
   // Lançar por rubrica e em grupo, e a consulta por rubrica (funcionalidade-767, 1.1).
@@ -261,6 +300,12 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
             ]}
           />
         </div>
+      )}
+
+      {totais?.rescindidos && totais.rescindidos.length > 0 && etapa !== "abrir" && (
+        <Aviso tom="info" className="mb-5">
+          Com rescisão gravada no mês, fora desta folha: {totais.rescindidos.join(", ")}. As verbas do mês estão na rescisão (DP 2 › Rescisões) e vão no S-2299.
+        </Aviso>
       )}
 
       {comp.situacao === "ABERTA" && calculos.length > 0 && (
@@ -870,6 +915,150 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
           </Secao>
         )}
 
+        {etapa === "fechar" && apuracao && (
+          <Secao titulo="Guias da folha" apoio="O DARF da DCTFWeb (baixado pela rotina do Serpro) e a GFD do FGTS Digital, conferidos com a apuração da competência.">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Guia</th>
+                    <th className={TH_NUM}>Apurado</th>
+                    <th className={TH_NUM}>Na guia</th>
+                    <th className={TH_NUM}>Diferença</th>
+                    <th className={TH}>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {conferirGuias({
+                    inssARecolher: apuracao.inssARecolher,
+                    irrfARecolher: apuracao.irrfARecolher,
+                    fgtsDoMes: calculos.reduce((s, c) => s + n(c.fgts), 0),
+                    valorDarf: darfDoMes?.valor != null ? n(darfDoMes.valor) : null,
+                    valorGfd: gfdDoMes?.valor != null ? n(gfdDoMes.valor) : null,
+                  }).map((l) => {
+                    const g = l.guia === "DCTFWEB" ? darfDoMes : gfdDoMes;
+                    return (
+                      <tr key={l.guia} className={TR}>
+                        <td className={TD}>
+                          {l.nome}
+                          {g?.driveFileId && (
+                            <a href={`/api/arquivos/${g.driveFileId}?ver=1`} target="_blank" rel="noreferrer" className="ml-2 text-fs-2 text-brand hover:underline">
+                              PDF
+                            </a>
+                          )}
+                          {g?.vencimento && <span className="block text-fs-2 text-fg-muted">Vence em {g.vencimento.split("-").reverse().join("/")}</span>}
+                          <span className="block text-fs-2 text-fg-muted">{l.memoria}</span>
+                          {l.guia === "DCTFWEB" && !darfDoMes && (
+                            <span className="block text-fs-2 text-fg-muted">
+                              {rotinaDctfweb ? `Rotina da DCTFWeb no Serpro: ${rotinaDctfweb.situacao.toLowerCase().replace(/_/g, " ")}.` : "A rotina da DCTFWeb ainda não trouxe o DARF deste mês."}
+                            </span>
+                          )}
+                        </td>
+                        <td className={TD_NUM}>{brl(l.esperado)}</td>
+                        <td className={TD_NUM}>{l.valorDaGuia !== null ? brl(l.valorDaGuia) : "—"}</td>
+                        <td className={`${TD_NUM} ${l.situacao === "DIFERE" ? "text-danger font-medium" : ""}`}>{l.diferenca !== null ? brl(l.diferenca) : "—"}</td>
+                        <td className={TD}>
+                          <Selo tom={l.situacao === "BATE" ? "sucesso" : l.situacao === "DIFERE" ? "perigo" : "neutro"}>{NOME_DA_SITUACAO_DA_GUIA[l.situacao]}</Selo>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {podeAgir && (
+              <FormularioDoDp2 acao={anexarGfdAction} rotulo={gfdDoMes ? "Anexar outra GFD" : "Anexar a GFD"} rotuloEnviando="Anexando…" variante="secondary" className="mt-4">
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr]">
+                  <CampoForm label="PDF da GFD (FGTS Digital)" htmlFor="gfd-arquivo" dica="Baixe a guia no portal do FGTS Digital: ele não tem API para o Connect buscar.">
+                    <input id="gfd-arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required className="text-fs-3" />
+                  </CampoForm>
+                  <CampoForm label="Valor total" htmlFor="gfd-valor">
+                    <Input id="gfd-valor" name="valor" inputMode="decimal" prefix="R$" placeholder="0,00" required />
+                  </CampoForm>
+                  <CampoForm label="Vencimento" htmlFor="gfd-vencimento">
+                    <CampoData id="gfd-vencimento" name="vencimento" required />
+                  </CampoForm>
+                </div>
+              </FormularioDoDp2>
+            )}
+            <p className="mt-2 text-fs-2 text-fg-muted">O PIS sobre a folha, quando houver, sai em DARF à parte (código 8301), fora da DCTFWeb.</p>
+          </Secao>
+        )}
+
+        {etapa === "conferir" && calculos.length > 0 && (mensal || comp.tipo === "DECIMO_2") && (
+          <Secao
+            titulo="Totalizadores do eSocial"
+            apoio={
+              conferenciaEsocial
+                ? conferenciaEsocial.divergentes
+                  ? `${conferenciaEsocial.divergentes} pessoa(s) com diferença entre o cálculo e o eSocial.`
+                  : "O cálculo bate com o que o eSocial totalizou."
+                : "Importe os XML de retorno do eSocial (S-5001, S-5002, S-5003, S-5011 e S-5013) para conferir com o cálculo."
+            }
+          >
+            {podeAgir && (
+              <FormularioDoDp2 acao={importarTotalizadoresAction} rotulo="Importar totalizadores" rotuloEnviando="Lendo…" variante="secondary" className="mb-4">
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <CampoForm label="XML de retorno ou .zip do eSocial" htmlFor="arquivo-totalizadores" dica="Do “eSocial Download” do portal ou do retorno da consulta do lote. Importar de novo troca os do mesmo tipo e CPF.">
+                  <input id="arquivo-totalizadores" name="arquivo" type="file" multiple accept=".xml,.zip" required className="text-fs-3" />
+                </CampoForm>
+              </FormularioDoDp2>
+            )}
+            {conferenciaEsocial && (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Colaborador</th>
+                      <th className={TH_NUM}>INSS (S-5001)</th>
+                      <th className={TH_NUM}>IRRF (S-5002)</th>
+                      <th className={TH_NUM}>FGTS (S-5003)</th>
+                      <th className={TH}>Conferência</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {conferenciaEsocial.linhas.map((l) => (
+                      <tr key={l.cpf ?? l.personId ?? l.nome} className={TR}>
+                        <td className={TD}>
+                          {l.nome}
+                          {l.cpf && <span className="block text-fs-2 text-fg-muted">{formatCpf(l.cpf)}</span>}
+                        </td>
+                        <td className={TD_NUM}>
+                          <CelulaDoTotalizador d={l.inss} />
+                        </td>
+                        <td className={TD_NUM}>
+                          <CelulaDoTotalizador d={l.irrf} />
+                        </td>
+                        <td className={TD_NUM}>
+                          <CelulaDoTotalizador d={l.fgts} />
+                        </td>
+                        <td className={TD}>
+                          {l.diverge ? <Selo tom="perigo">difere do eSocial</Selo> : l.inss.esocial === null && l.irrf.esocial === null && l.fgts.esocial === null ? <span className="text-fg-muted">sem totalizador</span> : <Selo tom="sucesso">bate</Selo>}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className={`${TR} font-semibold`}>
+                      <td className={TD}>Empresa (S-5011 e S-5013)</td>
+                      <td className={TD_NUM}>
+                        <CelulaDoTotalizador d={conferenciaEsocial.total.inss} />
+                      </td>
+                      <td className={TD_NUM}>
+                        <CelulaDoTotalizador d={conferenciaEsocial.total.irrf} />
+                      </td>
+                      <td className={TD_NUM}>
+                        <CelulaDoTotalizador d={conferenciaEsocial.total.fgts} />
+                      </td>
+                      <td className={TD} />
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="mt-2 text-fs-2 text-fg-muted">Em cada célula: o valor do cálculo, o do eSocial e a diferença (cálculo − eSocial). INSS é o descontado do trabalhador; no total, o do S-5011.</p>
+              </div>
+            )}
+          </Secao>
+        )}
+
         {etapa === "fechar" && calculada && (
           <Secao
             titulo="Saídas da folha"
@@ -881,11 +1070,26 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                 <Button href={`/api/dp2/competencias/${comp.id}/holerites`} variant="secondary" size="sm" download>
                   Baixar holerites (PDF)
                 </Button>
+                <Button href={`/api/dp2/competencias/${comp.id}/relatorios`} variant="secondary" size="sm" download>
+                  Relatórios da folha (Excel)
+                </Button>
                 {fechada && podeAgir && (
                   <FormularioDoDp2 acao={guardarHoleritesAction} rotulo="Guardar nos Arquivos" rotuloEnviando="Guardando…" variante="ghost" tamanho="sm">
                     <input type="hidden" name="competenciaId" value={comp.id} />
                   </FormularioDoDp2>
                 )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <h3 className="text-fs-3 font-semibold text-fg">Contas a pagar</h3>
+                {fechada && podeAgir ? (
+                  <FormularioDoDp2 acao={lancarContasAPagarAction} rotulo="Lançar no Contas a pagar" rotuloEnviando="Lançando…" variante="secondary" tamanho="sm">
+                    <input type="hidden" name="competenciaId" value={comp.id} />
+                  </FormularioDoDp2>
+                ) : (
+                  <p className="text-fs-2 text-fg-muted">Feche a competência para lançar.</p>
+                )}
+                <p className="text-fs-2 text-fg-muted">Líquidos (5º dia útil), DARF da DCTFWeb e FGTS (dia 20) e PIS (dia 25) do mês seguinte. Lançar de novo atualiza as que seguem em aberto.</p>
               </div>
 
               <div className="flex flex-col gap-3">
@@ -944,6 +1148,42 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
                   </Aviso>
                 )}
               </div>
+            </div>
+          </Secao>
+        )}
+
+        {etapa === "conferir" && pedidoDeVt.length > 0 && (
+          <Secao titulo="Vale-transporte do mês" apoio={`O pedido: custo diário × ${diasUteisDoMes} dias úteis. O desconto é o que a folha fez (6% do salário, limitado ao custo); a diferença é o custo da empresa.`}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-fs-3">
+                <thead>
+                  <tr>
+                    <th className={TH}>Colaborador</th>
+                    <th className={TH_NUM}>Custo diário</th>
+                    <th className={TH_NUM}>Pedido do mês</th>
+                    <th className={TH_NUM}>Desconto na folha</th>
+                    <th className={TH_NUM}>Custo da empresa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedidoDeVt.map((l) => (
+                    <tr key={l.personId} className={TR}>
+                      <td className={TD}>{l.nome}</td>
+                      <td className={TD_NUM}>{l.custoDiario !== null ? brl(l.custoDiario) : <span className="text-fg-muted">sem custo no contrato</span>}</td>
+                      <td className={TD_NUM}>{l.compra !== null ? brl(l.compra) : "—"}</td>
+                      <td className={TD_NUM}>{l.desconto !== null ? brl(l.desconto) : "—"}</td>
+                      <td className={TD_NUM}>{l.compra !== null && l.desconto !== null ? brl(Math.max(0, Math.round((l.compra - l.desconto) * 100) / 100)) : "—"}</td>
+                    </tr>
+                  ))}
+                  <tr className={`${TR} font-semibold`}>
+                    <td className={TD}>Total</td>
+                    <td className={TD_NUM} />
+                    <td className={TD_NUM}>{brl(pedidoDeVt.reduce((x, l) => x + (l.compra ?? 0), 0))}</td>
+                    <td className={TD_NUM}>{brl(pedidoDeVt.reduce((x, l) => x + (l.desconto ?? 0), 0))}</td>
+                    <td className={TD_NUM}>{brl(pedidoDeVt.reduce((x, l) => x + (l.compra !== null && l.desconto !== null ? Math.max(0, l.compra - l.desconto) : 0), 0))}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </Secao>
         )}
@@ -1208,5 +1448,17 @@ function Holerite({
         </div>
       )}
     </Secao>
+  );
+}
+
+/** Cálculo, eSocial e a diferença numa célula (funcionalidade-755). */
+function CelulaDoTotalizador({ d }: { d: Diferenca }) {
+  if (d.esocial === null) return <span className="text-fg-muted">{brl(d.calculo)} · —</span>;
+  const difere = d.diferenca !== null && Math.abs(d.diferenca) > 0.01;
+  return (
+    <span className="whitespace-nowrap">
+      {brl(d.calculo)} · {brl(d.esocial)}
+      {difere && <span className="block text-danger font-medium">{d.diferenca! > 0 ? "+" : ""}{brl(d.diferenca)}</span>}
+    </span>
   );
 }

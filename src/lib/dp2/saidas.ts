@@ -18,6 +18,7 @@ import { BANCOS, gerarRemessa, problemaDoPagamento, type PagamentoDaRemessa } fr
 import { contabilizar, lerContasDaFolha, type CalculoContabil, type ContasDaFolha, type RubricaContabil } from "./contabilizacao";
 import { NOME_DO_TIPO_DE_COMPETENCIA, nomeDaCompetencia } from "./tela";
 import type { ItemDoHolerite } from "./mensal";
+import type { CalculoDoRelatorio } from "./relatoriosDaFolha";
 
 const n = (v: unknown) => Number(v ?? 0);
 
@@ -217,4 +218,39 @@ export const DIAS_DO_LINK = 15;
 
 export function novoToken(): string {
   return randomBytes(24).toString("base64url");
+}
+
+// ─── Relatórios da folha (25/11/2026, funcionalidade-748) ──────────────────
+
+export async function dadosDosRelatorios(tenantId: string, competenciaId: string): Promise<{ titulo: string; nomeDoArquivo: string; calculos: CalculoDoRelatorio[] } | null> {
+  const prisma = getPrisma();
+  const comp = await prisma.dp2Competencia.findFirst({
+    where: { id: competenciaId, tenantId },
+    include: { company: { select: { name: true, tradeName: true, displayName: true } } },
+  });
+  if (!comp) return null;
+  const calculos = await prisma.dp2Calculo.findMany({ where: { tenantId, competenciaId }, include: { person: { select: { name: true, cpf: true } } } });
+  const n = (v: unknown) => Number(v ?? 0);
+  const referencia = `${String(comp.mes).padStart(2, "0")}/${comp.ano}`;
+  const empresa = nomeExibicao(comp.company);
+  return {
+    titulo: `${empresa} · ${NOME_DO_TIPO_DE_COMPETENCIA[comp.tipo] ?? comp.tipo} ${referencia}`,
+    nomeDoArquivo: `Relatorios folha ${referencia.replace("/", "-")} ${empresa}.xlsx`.replace(/[\/:*?"<>|]/g, ""),
+    calculos: calculos.map((c) => ({
+      nome: c.person.name,
+      cpf: c.person.cpf,
+      itens: (c.itens as unknown as ItemDoHolerite[]) ?? [],
+      proventos: n(c.proventos),
+      descontos: n(c.descontos),
+      liquido: n(c.liquido),
+      baseInss: n(c.baseInss),
+      inss: n(c.inss),
+      baseIrrf: n(c.baseIrrf),
+      irrf: n(c.irrf),
+      baseFgts: n(c.baseFgts),
+      fgts: n(c.fgts),
+      encargos: (c.encargos as CalculoDoRelatorio["encargos"]) ?? null,
+      provisoes: (c.provisoes as CalculoDoRelatorio["provisoes"]) ?? null,
+    })),
+  };
 }

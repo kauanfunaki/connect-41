@@ -36,8 +36,12 @@ import {
   eventoS1020,
   eventoS1200,
   eventoS1210,
+  eventoS1298,
   eventoS1299,
+  eventoS3000,
   geradorDeId,
+  podeExcluirPeloS3000,
+  reciboValido,
   type EmpregadorEsocial,
   type EventoGerado,
   type RubricaEsocial,
@@ -87,6 +91,7 @@ async function guardar(tenantId: string, companyId: string, competenciaId: strin
           situacao: ev.pendencias.some((p) => p.bloqueia) ? "PENDENCIA" : "PRONTO",
           xml: ev.xml,
           pendencias: ev.pendencias as unknown as Prisma.InputJsonValue,
+          alvoId: ev.alvoId ?? null,
           geradoPorId: userId,
         },
       });
@@ -157,11 +162,22 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
   const perApur = anual ? String(comp.ano) : mesDoPagamento;
   const empregador = await empregadorDaEmpresa(tenantId, comp.companyId, perApur);
   if (!empregador) return { ok: false as const, erro: "Empresa não encontrada." };
+  // Período já fechado no eSocial: retificar pede o S-1298 antes (funcionalidade-754).
+  if (await fechamentoAceito(tenantId, comp.companyId, perApur)) {
+    return { ok: false as const, erro: `O período ${perApur} está fechado no eSocial (S-1299 aceito): reabra a competência com o S-1298 antes de gerar de novo.` };
+  }
 
   const calculos = await prisma.dp2Calculo.findMany({
     where: { tenantId, competenciaId },
     include: { person: { select: { id: true, name: true, cpf: true, birthDate: true, dp2Vinculo: { select: { matricula: true, categoria: true, aprendiz: true } } } } },
   });
+  // Os S-1200/S-1210 já aceitos do período: o novo sai como retificação, com o recibo (funcionalidade-754).
+  const aceitos = await prisma.dp2EventoEsocial.findMany({
+    where: { tenantId, companyId: comp.companyId, tipo: { in: ["S-1200", "S-1210"] }, situacao: "ACEITO", personId: { in: calculos.map((c) => c.person.id) } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, tipo: true, referencia: true, personId: true, recibo: true },
+  });
+  const aceitoDe = (tipo: string, personId: string, periodo: string) => aceitos.find((a) => a.tipo === tipo && a.personId === personId && a.referencia.startsWith(`${periodo} · `) && a.recibo);
   // Outras bases de INSS (funcionalidade-769): vão no infoMV do S-1200, com o indMV do cálculo.
   const outrasBases = await prisma.dp2OutraBaseInss.findMany({ where: { tenantId, competenciaId }, orderBy: { createdAt: "asc" } });
   const novoId = geradorDeId(empregador.cnpj || "0", new Date());
@@ -186,8 +202,10 @@ export async function gerarPeriodicos(tenantId: string, competenciaId: string, d
       nascimento: isoDoDia(c.person.birthDate),
       infoMV: infoMVDoCalculo(c.memoria, outrasBases.filter((o) => o.personId === c.person.id)),
     };
-    eventos.push(eventoS1200(empregador, perApur, t, novoId));
-    eventos.push(eventoS1210(empregador, mesDoPagamento, dtPgto, t, novoId, perApur));
+    const r1200 = aceitoDe("S-1200", c.person.id, perApur);
+    const r1210 = aceitoDe("S-1210", c.person.id, perApur);
+    eventos.push({ ...eventoS1200(empregador, perApur, t, novoId, r1200?.recibo ?? null), alvoId: r1200?.id ?? null });
+    eventos.push({ ...eventoS1210(empregador, mesDoPagamento, dtPgto, t, novoId, perApur, r1210?.recibo ?? null), alvoId: r1210?.id ?? null });
   }
   eventos.push(eventoS1299(empregador, perApur, calculos.length > 0, novoId));
   return { ok: true as const, ...(await guardar(tenantId, comp.companyId, competenciaId, userId, eventos)) };
@@ -388,6 +406,77 @@ export async function gerarDesligamento(tenantId: string, personId: string, d: P
   const fimProjetado = indenizado ? dataProjetada(desligamento, diasDeAvisoPrevio(admissao, desligamento)).toISOString().slice(0, 10) : null;
   const ev = eventoS2299(v.empregador, v.t, { motivo: d.motivo, data: d.data, avisoIndenizado: indenizado, fimProjetado, verbas }, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+// ─── Recibo, exclusão e reabertura (25/11/2026, funcionalidade-754) ────────
+
+/** O que acontece com o alvo quando o evento que aponta para ele é aceito. */
+const SITUACAO_DO_ALVO: Record<string, string> = { "S-3000": "EXCLUIDO", "S-1298": "REABERTO", "S-1200": "RETIFICADO", "S-1210": "RETIFICADO" };
+
+
+/**
+ * Registra o recibo de um evento enviado por fora do Connect (o envio pelo
+ * Assinador ainda não está ligado, funcionalidade-668): o evento fica ACEITO e
+ * passa a poder ser retificado ou excluído. Se ele retifica, exclui ou reabre
+ * outro, o alvo muda de situação.
+ */
+export async function registrarRecibo(tenantId: string, eventoId: string, recibo: string): Promise<{ ok: true; tipo: string; alvo: string | null } | { ok: false; erro: string }> {
+  const prisma = getPrisma();
+  const ev = await prisma.dp2EventoEsocial.findFirst({ where: { id: eventoId, tenantId }, select: { id: true, tipo: true, situacao: true, alvoId: true } });
+  if (!ev) return { ok: false, erro: "Evento não encontrado." };
+  if (!["PRONTO", "ENVIADO"].includes(ev.situacao)) return { ok: false, erro: "Só evento pronto ou enviado recebe o recibo." };
+  const nr = recibo.trim();
+  if (!reciboValido(nr)) return { ok: false, erro: "Informe o nº do recibo como o eSocial devolve (dígitos e pontos)." };
+  const repetido = await prisma.dp2EventoEsocial.findFirst({ where: { tenantId, recibo: nr }, select: { id: true } });
+  if (repetido) return { ok: false, erro: "Esse recibo já está em outro evento da fila." };
+  const novaDoAlvo = ev.alvoId ? SITUACAO_DO_ALVO[ev.tipo] : undefined;
+  await prisma.$transaction([
+    prisma.dp2EventoEsocial.update({ where: { id: ev.id }, data: { situacao: "ACEITO", recibo: nr } }),
+    ...(ev.alvoId && novaDoAlvo ? [prisma.dp2EventoEsocial.updateMany({ where: { id: ev.alvoId, tenantId }, data: { situacao: novaDoAlvo } })] : []),
+  ]);
+  return { ok: true, tipo: ev.tipo, alvo: novaDoAlvo ?? null };
+}
+
+/** S-3000 de um evento aceito da fila, ligado a ele. */
+export async function gerarExclusao(tenantId: string, eventoId: string, userId: string): Promise<Resultado> {
+  const prisma = getPrisma();
+  const alvo = await prisma.dp2EventoEsocial.findFirst({
+    where: { id: eventoId, tenantId },
+    include: { person: { select: { cpf: true } }, competencia: { select: { ano: true, mes: true, tipo: true } } },
+  });
+  if (!alvo) return { ok: false, erro: "Evento não encontrado." };
+  if (alvo.situacao !== "ACEITO" || !alvo.recibo) return { ok: false, erro: "Só evento aceito, com o recibo registrado, se exclui pelo S-3000." };
+  if (!podeExcluirPeloS3000(alvo.tipo)) return { ok: false, erro: alvo.tipo === "S-1299" ? "O fechamento (S-1299) se desfaz com a reabertura (S-1298), na competência." : `O ${alvo.tipo} não se exclui pelo S-3000.` };
+  const empregador = await empregadorDaEmpresa(tenantId, alvo.companyId, competenciaDe(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1));
+  if (!empregador) return { ok: false, erro: "Empresa não encontrada." };
+  // O período: o da competência; sem ela, o começo da referência ("2026-11 · CPF").
+  const perApur = alvo.competencia
+    ? alvo.competencia.tipo === "DECIMO_2"
+      ? String(alvo.competencia.ano)
+      : competenciaDe(alvo.competencia.ano, alvo.competencia.mes)
+    : /^\d{4}(-\d{2})?$/.test(alvo.referencia.split(" · ")[0]) ? alvo.referencia.split(" · ")[0] : null;
+  const ev = eventoS3000(empregador, { tipo: alvo.tipo, recibo: alvo.recibo, cpf: alvo.person?.cpf ?? null, perApur }, geradorDeId(empregador.cnpj || "0", new Date()));
+  return { ok: true, ...(await guardar(tenantId, alvo.companyId, alvo.competenciaId, userId, [{ ...ev, personId: alvo.personId, alvoId: alvo.id }])) };
+}
+
+/** O S-1299 aceito (e ainda não reaberto) do período da competência, se houver. */
+async function fechamentoAceito(tenantId: string, companyId: string, perApur: string) {
+  return getPrisma().dp2EventoEsocial.findFirst({ where: { tenantId, companyId, tipo: "S-1299", referencia: perApur, situacao: "ACEITO" }, orderBy: { createdAt: "desc" }, select: { id: true } });
+}
+
+/** S-1298 do período da competência, quando o S-1299 dele foi aceito. */
+export async function gerarReabertura(tenantId: string, competenciaId: string, userId: string): Promise<Resultado> {
+  const prisma = getPrisma();
+  const comp = await prisma.dp2Competencia.findFirst({ where: { id: competenciaId, tenantId } });
+  if (!comp) return { ok: false, erro: "Competência não encontrada." };
+  if (comp.tipo !== "MENSAL" && comp.tipo !== "DECIMO_2") return { ok: false, erro: "Este tipo de competência não tem periódicos no eSocial." };
+  const perApur = comp.tipo === "DECIMO_2" ? String(comp.ano) : competenciaDe(comp.ano, comp.mes);
+  const fechamento = await fechamentoAceito(tenantId, comp.companyId, perApur);
+  if (!fechamento) return { ok: false, erro: `O período ${perApur} não está fechado no eSocial (sem S-1299 aceito).` };
+  const empregador = await empregadorDaEmpresa(tenantId, comp.companyId, perApur);
+  if (!empregador) return { ok: false, erro: "Empresa não encontrada." };
+  const ev = eventoS1298(empregador, perApur, geradorDeId(empregador.cnpj || "0", new Date()));
+  return { ok: true, ...(await guardar(tenantId, comp.companyId, competenciaId, userId, [{ ...ev, alvoId: fechamento.id }])) };
 }
 
 /** O infoMV do S-1200: o indMV que o cálculo gravou e as outras empresas do mês. */

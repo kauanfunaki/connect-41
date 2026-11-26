@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function ConfiguracaoPage() {
   const c = await contexto().catch(() => null); if (!c || !podeGerenciar(c.ctx, c.config)) notFound();
   const [politicas, ativos] = await Promise.all([getPrisma().helpdeskSlaPolicy.findMany({ where: { tenantId: c.ctx.tenantId } }), getActiveSectors(c.ctx.tenantId)]);
-  const setores = { todos: ativos.map(s => ({ code: s.code, label: s.label })), administram: c.config.sectorCodes, padrao: c.config.sectorCode, editavel: podeEscolherSetores(c.ctx, c.config) };
+  const setores = { todos: ativos.map(s => ({ code: s.code, label: s.label, cor: s.color })), administram: c.config.sectorCodes, padrao: c.config.sectorCode, editavel: podeEscolherSetores(c.ctx, c.config) };
   return (
     <PageContainer>
       <Breadcrumb items={[{ label: "Chamados", href: "/chamados" }, { label: "Configurações" }]} />

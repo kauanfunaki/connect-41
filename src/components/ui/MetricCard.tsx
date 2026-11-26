@@ -81,6 +81,12 @@ type Props = {
    * aparecer ao passar o mouse.
    */
   canto?: React.ReactNode;
+  /**
+   * O cartão menor (melhoria-822, 25/11/2026): menos respiro e o valor um
+   * degrau abaixo, para quando a faixa de totais é apoio e o gráfico logo
+   * abaixo é o principal da tela (Resumo do Controle interno).
+   */
+  compacto?: boolean;
   /** Atraso do stagger de entrada, em ms. */
   delay?: number;
 };
@@ -138,6 +144,7 @@ export function MetricCard({
   rotuloInteiro = false,
   rodape,
   canto,
+  compacto = false,
   delay = 0,
 }: Props) {
   const tomEfetivo: TomDaMetrica | undefined = tom ?? (highlight ? "atencao" : undefined);
@@ -170,7 +177,7 @@ export function MetricCard({
           o que ainda cortar ganha a dica. */}
       <div className="flex items-baseline gap-2 min-w-0">
         <p
-          className={`font-display text-[clamp(1.0625rem,4.6vw,1.25rem)] sm:text-title 2xl:text-metric font-semibold tnum leading-none min-w-0 truncate c41-cortavel ${cores.valor}`}
+          className={`font-display ${compacto ? "text-card-title" : "text-[clamp(1.0625rem,4.6vw,1.25rem)] sm:text-title 2xl:text-metric"} font-semibold tnum leading-none min-w-0 truncate c41-cortavel ${cores.valor}`}
         >
           {typeof value === "number" ? NUMERO.format(value) : value}
         </p>
@@ -198,7 +205,7 @@ export function MetricCard({
       : "bg-surface border-border";
   // Com ação no canto, o cartão mora dentro de uma caixa que é o item da grade:
   // ele estica até a altura dela, para os cartões da faixa ficarem iguais.
-  const cls = `reveal-in min-w-0 border rounded-lg px-4 py-3.5 flex flex-col gap-2 shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${canto ? "h-full" : ""} ${fundo}`;
+  const cls = `reveal-in min-w-0 border rounded-lg ${compacto ? "px-3.5 py-2.5 gap-1" : "px-4 py-3.5 gap-2"} flex flex-col shadow-xs transition-[border-color,box-shadow,transform] duration-150 ${canto ? "h-full" : ""} ${fundo}`;
   const atual = ativo ? ("true" as const) : undefined;
 
   // Sem anel de foco próprio: o `:focus-visible` global já desenha o dele.
