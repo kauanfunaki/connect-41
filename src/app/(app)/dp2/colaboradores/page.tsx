@@ -417,6 +417,21 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           />
         </div>
         <CampoForm
+          label="Previdência complementar (por mês)"
+          htmlFor="previdenciaComplementar"
+          className="mt-4 max-w-xs"
+          dica="A contribuição do empregado ao PGBL ou fundo de pensão: desconta na folha e deduz da base do IRRF."
+        >
+          <Input
+            id="previdenciaComplementar"
+            name="previdenciaComplementar"
+            inputMode="decimal"
+            prefix="R$"
+            placeholder="0,00"
+            defaultValue={v?.previdenciaComplementar != null ? reais(Number(v.previdenciaComplementar)) : ""}
+          />
+        </CampoForm>
+        <CampoForm
           label="Custo diário do vale-transporte"
           htmlFor="vtCustoDiario"
           className="mt-4 max-w-xs"

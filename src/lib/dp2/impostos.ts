@@ -102,6 +102,8 @@ export type EntradaIrrf = {
   inss: number;
   dependentes: number;
   pensao: number;
+  /** Contribuição do empregado à previdência complementar (funcionalidade-762): dedução legal. */
+  previdenciaComplementar?: number;
   /** 13º: tributação exclusiva — a redução da Lei 15.270 só entra se a tabela disser. */
   decimo?: boolean;
 };
@@ -132,7 +134,9 @@ function impostoPelaTabela(base: number, tabela: TabelaIrrf) {
 
 export function calcularIrrf(e: EntradaIrrf, tabela: TabelaIrrf): ResultadoIrrf {
   const rendimentos = r2(Math.max(0, e.rendimentos));
-  const legal = r2(e.inss + e.dependentes * tabela.deducaoDependente + e.pensao);
+  // A previdência complementar do empregado é dedução legal (Lei 9.250/1995, art. 4º, V; funcionalidade-762).
+  const previdencia = r2(Math.max(0, e.previdenciaComplementar ?? 0));
+  const legal = r2(e.inss + e.dependentes * tabela.deducaoDependente + e.pensao + previdencia);
   const simplificado = tabela.descontoSimplificado;
   const usaSimplificado = simplificado > legal;
   const deducao = usaSimplificado ? simplificado : legal;
@@ -141,7 +145,7 @@ export function calcularIrrf(e: EntradaIrrf, tabela: TabelaIrrf): ResultadoIrrf 
 
   const memoria: string[] = [`Rendimentos tributáveis ${reais(rendimentos)}`];
   memoria.push(
-    `Deduções legais ${reais(legal)} (INSS ${reais(e.inss)} + ${e.dependentes} dependente(s) × ${reais(tabela.deducaoDependente)}${e.pensao > 0 ? ` + pensão ${reais(e.pensao)}` : ""}) × desconto simplificado ${reais(simplificado)}: usa ${usaSimplificado ? "o simplificado" : "as legais"}`
+    `Deduções legais ${reais(legal)} (INSS ${reais(e.inss)} + ${e.dependentes} dependente(s) × ${reais(tabela.deducaoDependente)}${e.pensao > 0 ? ` + pensão ${reais(e.pensao)}` : ""}${previdencia > 0 ? ` + previdência complementar ${reais(previdencia)}` : ""}) × desconto simplificado ${reais(simplificado)}: usa ${usaSimplificado ? "o simplificado" : "as legais"}`
   );
   memoria.push(`Base ${reais(rendimentos)} − ${reais(deducao)} = ${reais(base)}`);
   memoria.push(
