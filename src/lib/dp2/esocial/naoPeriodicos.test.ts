@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { geradorDeId, type EmpregadorEsocial } from "./eventos";
-import { eventoS2200, eventoS2206, eventoS2230, eventoS2299, MOTIVO_DO_DESLIGAMENTO, type TrabalhadorCompleto } from "./naoPeriodicos";
+import { eventoS2200, eventoS2206, eventoS2230, eventoS2298, eventoS2299, MOTIVO_DO_DESLIGAMENTO, type TrabalhadorCompleto } from "./naoPeriodicos";
 import { DADOS_VAZIOS, horasSemanais, lerDadosEsocial, sugerirGrauDeInstrucao } from "./cadastro";
 import { RUBRICAS_PADRAO } from "../rubricas";
 
@@ -112,6 +112,20 @@ describe("S-2206, S-2230 e S-2299", () => {
     const outro = eventoS2230(empregador, t, { motivo: "21", inicio: "2026-11-10", fim: null, observacao: null }, geradorDeId(empregador.cnpj, quando));
     expect(outro.pendencias).toEqual([expect.objectContaining({ bloqueia: false })]);
     expect(outro.xml).not.toContain("fimAfastamento");
+  });
+
+  it("S-2298 reintegração judicial, por anistia e as datas", () => {
+    const t = trabalhador();
+    const id = () => geradorDeId(empregador.cnpj, quando);
+    const judicial = eventoS2298(empregador, t, { tipo: "1", processo: "0001234-56.2026.5.09.0001", leiAnistia: null, retorno: "2026-12-01", efeito: "2026-11-15", desligamento: "2026-08-31" }, id());
+    expect(judicial.pendencias).toEqual([]);
+    expect(judicial.xml).toContain('xmlns="http://www.esocial.gov.br/schema/evt/evtReintegr/v_S_01_03_00"');
+    expect(judicial.xml).toContain("<ideVinculo><cpfTrab>52998224725</cpfTrab><matricula>000123</matricula></ideVinculo><infoReintegr><tpReint>1</tpReint><nrProcJud>00012345620265090001</nrProcJud><dtEfetRetorno>2026-12-01</dtEfetRetorno><dtEfeito>2026-11-15</dtEfeito></infoReintegr>");
+    const anistia = eventoS2298(empregador, t, { tipo: "2", processo: null, leiAnistia: "8878/1994", retorno: "2026-12-01", efeito: "2026-12-01", desligamento: "2026-08-31" }, id());
+    expect(anistia.xml).toContain("<tpReint>2</tpReint><nrLeiAnistia>8878/1994</nrLeiAnistia>");
+    const ruim = eventoS2298(empregador, t, { tipo: "1", processo: "123", leiAnistia: null, retorno: "2026-08-01", efeito: "2026-09-01", desligamento: "2026-08-31" }, id());
+    const textos = ruim.pendencias.map((p) => p.texto).join(" | ");
+    for (const x of ["20 algarismos", "no retorno ou antes", "depois do desligamento"]) expect(textos).toContain(x);
   });
 
   it("S-2299 com motivo, aviso indenizado e as verbas", () => {
