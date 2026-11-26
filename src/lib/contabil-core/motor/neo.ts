@@ -235,9 +235,11 @@ function peloNome(ctx: ContextoDoNeo, t: TransacaoDoNeo): Resolucao {
  * como o banco escreveu. A ordem: a nota candidata (o emitente no débito, o destinatário no crédito), o
  * comprovante candidato, o documento impresso no histórico e o nome.
  *
- * O número da nota vai para o histórico quando a contraparte veio da nota (e, como no original, também
- * quando veio do nome). Pelo documento do histórico, NÃO: chegar até ali com a nota candidata significa
- * que ela é de OUTRO CNPJ, e o número apontaria o lançamento para uma nota que não é dele.
+ * O número da nota vai para o histórico SÓ quando a contraparte veio da própria nota candidata. Pelo
+ * documento do histórico e pelo nome, NÃO: chegar até ali com a nota candidata significa que ela é de
+ * OUTRO CNPJ, e o número apontaria o lançamento para uma nota que não é dele. O original levava o número
+ * pela via do nome (divergência deliberada da D0, decisão do Angelo em 26/11/2026; contada em
+ * `neoDocumentos.test.ts`).
  */
 export function resolverContraparte(
   ctx: ContextoDoNeo,
@@ -274,7 +276,7 @@ export function resolverContraparte(
   const nome = peloNome(ctx, t);
   // A última recusa é a que fica, como no original (o dicionário é sobrescrito).
   if (nome && "recusa" in nome) return { achada: null, recusa: nome.recusa };
-  if (nome) return { achada: { ...nome, numeroNf }, recusa };
+  if (nome) return { achada: nome, recusa };
   return { achada: null, recusa };
 }
 

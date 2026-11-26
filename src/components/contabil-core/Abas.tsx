@@ -10,6 +10,7 @@ import { texto as textoDec } from "@/lib/contabil-core/motor/decimal";
 import { listarExtrato, listarRegistros, POR_PAGINA, ultimoMesComLancamento } from "@/lib/contabil-core/servidor/consultas";
 import { moeda, moedaComSinal, ROTULO_DO_TIPO_DE_CONTA, rotuloDaAgencia, rotuloDaConta } from "@/lib/contabil-core/tela";
 import { AlternarAgencia, AlternarIaParaDocumentos, AlternarRegra, CancelarClassificacao, DesfazerImportacao, ExcluirConta } from "./Botoes";
+import { CorrigirContaDoRazao } from "./CorrigirContaDoRazao";
 import { EnvioDeExtrato } from "./EnvioDeExtrato";
 import { ImportarCadastro } from "./ImportarCadastro";
 import { Exportar } from "./Exportar";
@@ -511,7 +512,12 @@ export async function AbaConfiguracoes({ c }: { c: ContextoDaAba }) {
       <section>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Contas bancárias</h2>
-          {c.podeGerir && <FormularioDaAgencia empresaId={c.empresaId} contas={opcoesDeConta} />}
+          {c.podeGerir && (
+            <div className="flex flex-wrap gap-2">
+              {agencias.length > 0 && <CorrigirContaDoRazao empresaId={c.empresaId} />}
+              <FormularioDaAgencia empresaId={c.empresaId} contas={opcoesDeConta} />
+            </div>
+          )}
         </div>
         {agencias.length === 0 ? (
           <p className="text-sm text-fg-muted">Nenhuma conta bancária cadastrada.</p>

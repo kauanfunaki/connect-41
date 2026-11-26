@@ -11,7 +11,11 @@ import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { agenciaChave, codigoAtivo, contraparteChaveAtiva, historicoNormalizado, regraChaveAtiva } from "../motor/chaves";
 import type { EntradaAgencia, EntradaConta, EntradaContraparte, EntradaRegra } from "../entradas";
+import { descricaoDaAgencia, reapontar, type BancoDoReapontamento, type ItemDoReapontamento } from "../cadastro/reapontamento";
+import type { Distribuicoes } from "../cartoes/servico";
 import { ehDuplicado, empresaDoTenant, falha, NAO_ENCONTRADA, ok, type Resultado } from "./base";
+
+export { descricaoDaAgencia };
 
 const REGIMES = ["simples_nacional", "lucro_presumido", "lucro_real"] as const;
 export type Regime = (typeof REGIMES)[number];
@@ -158,11 +162,6 @@ export async function listarAgencias(tenantId: string, empresaId: string) {
   });
 }
 
-/** "SICOOB 1234 98765 4", como a `descricao` do original. */
-export function descricaoDaAgencia(a: { bancoSigla: string; agencia: string; numero: string; digito: string | null }): string {
-  return [a.bancoSigla, a.agencia, a.numero, a.digito].filter(Boolean).join(" ");
-}
-
 export async function salvarAgencia(tenantId: string, empresaId: string, agenciaId: string | null, d: EntradaAgencia): Promise<Resultado<{ id: string; nome: string }>> {
   if (!(await empresaDoTenant(tenantId, empresaId))) return falha(NAO_ENCONTRADA);
   const prisma = getPrisma();
@@ -198,6 +197,86 @@ export async function mudarAtivaDaAgencia(tenantId: string, empresaId: string, a
   if (!a) return falha("Conta bancária não encontrada nesta empresa.");
   await prisma.coreAgencia.update({ where: { id: agenciaId }, data: { ativa } });
   return ok({ nome: descricaoDaAgencia(a) });
+}
+
+// ─── Reapontamento da conta sintética (Fase D0) ───────────────────────────
+
+/** A ação da auditoria do reapontamento (no original, só o log `agencias.reapontamento`). */
+export const ACAO_DO_REAPONTAMENTO = "contabil.core.contas_sinteticas.reapontadas";
+
+export type ResultadoDoReapontamento = {
+  relatorio: ItemDoReapontamento[];
+  /** Nula quando não havia nada a corrigir. */
+  auditoria: { acao: string; dados: Record<string, unknown> } | null;
+};
+
+/** O componente salvo numa distribuição de fatura aponta para a conta? */
+function distribuicaoUsaConta(distribuicoes: unknown, contaId: string): boolean {
+  if (!distribuicoes || typeof distribuicoes !== "object" || Array.isArray(distribuicoes)) return false;
+  return Object.values(distribuicoes as Distribuicoes).some((partes) => Array.isArray(partes) && partes.some((c) => c && typeof c === "object" && c.conta_id === contaId));
+}
+
+/** As leituras e gravações do reapontamento, na transação, presas ao tenant e à empresa. */
+function bancoDoReapontamento(tx: Prisma.TransactionClient, tenantId: string, empresaId: string): BancoDoReapontamento {
+  const daEmpresa = { tenantId, empresaId };
+  return {
+    agenciasVinculadas: async () => {
+      const linhas = await tx.coreAgencia.findMany({
+        where: { ...daEmpresa, deletedAt: null, contaContabilId: { not: null } },
+        select: { id: true, bancoSigla: true, agencia: true, numero: true, digito: true, contaContabilId: true },
+        orderBy: [{ bancoSigla: "asc" }, { agencia: "asc" }, { numero: "asc" }, { id: "asc" }],
+      });
+      return linhas.map((a) => ({ ...a, contaContabilId: a.contaContabilId! }));
+    },
+    // Pelo `codigoAtivo` (o SHA-256 do código): a collation do MySQL acharia também "1.1.b.ABC…".
+    sinteticaViva: (codigo) =>
+      tx.corePlanoConta.findFirst({ where: { ...daEmpresa, deletedAt: null, codigoAtivo: codigoAtivo({ codigo, deletedAt: null }) }, select: { id: true, codigo: true } }),
+    mover: async (de, para) => {
+      const registros = await tx.coreRegistro.updateMany({ where: { ...daEmpresa, contaId: de }, data: { contaId: para } });
+      const decisoes = await tx.coreNeoDecisao.updateMany({ where: { ...daEmpresa, contaId: de }, data: { contaId: para } });
+      const contrapartes = await tx.coreNeoDecisao.updateMany({ where: { ...daEmpresa, contaContraparteId: de }, data: { contaContraparteId: para } });
+      return { registros: registros.count, decisoes: decisoes.count + contrapartes.count };
+    },
+    contarReferencias: async (contaId) => {
+      // As três do original contam também as linhas apagadas, como lá (`select count(...) where coluna == conta`).
+      const [regras, contrapartes, lancamentosCartao, agencias, contasFilhas, distribuicoes] = await Promise.all([
+        tx.coreRegra.count({ where: { ...daEmpresa, contaId } }),
+        tx.coreContraparte.count({ where: { ...daEmpresa, contaContabilId: contaId } }),
+        tx.coreLancamentoCartao.count({ where: { ...daEmpresa, contaId } }),
+        tx.coreAgencia.count({ where: { ...daEmpresa, contaContabilId: contaId, deletedAt: null } }),
+        tx.corePlanoConta.count({ where: { ...daEmpresa, paiId: contaId, deletedAt: null } }),
+        tx.coreFaturaDistribuicao.findMany({ where: { ...daEmpresa, fatura: { deletedAt: null } }, select: { distribuicoes: true } }),
+      ]);
+      const distribuicoesFatura = distribuicoes.filter((d) => distribuicaoUsaConta(d.distribuicoes, contaId)).length;
+      return { regras, contrapartes, lancamentosCartao, agencias, contasFilhas, distribuicoesFatura };
+    },
+    desativar: async (contaId) => {
+      await tx.corePlanoConta.updateMany({ where: { ...daEmpresa, id: contaId, deletedAt: null }, data: { deletedAt: new Date(), codigoAtivo: null } });
+    },
+  };
+}
+
+/**
+ * `ReapontamentoService.reapontar` (o `POST /empresas/{id}/agencias/reapontar-contas-sinteticas` do original):
+ * move as partidas e as decisões do NEO da conta sintética de cada conta bancária para a conta vinculada e
+ * desativa a sintética quando nada mais aponta para ela. Tudo numa transação, com as contas bancárias
+ * vinculadas travadas (`FOR UPDATE`), para ninguém trocar o vínculo no meio. O laço é o de
+ * `cadastro/reapontamento.ts`.
+ */
+export async function reapontarContasSinteticas(tenantId: string, empresaId: string): Promise<Resultado<ResultadoDoReapontamento>> {
+  const empresa = await empresaDoTenant(tenantId, empresaId);
+  if (!empresa) return falha(NAO_ENCONTRADA);
+  const { relatorio, passos } = await getPrisma().$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM core_agencias WHERE tenantId = ${tenantId} AND empresaId = ${empresaId} AND deletedAt IS NULL AND contaContabilId IS NOT NULL FOR UPDATE`;
+      return reapontar(bancoDoReapontamento(tx, tenantId, empresaId));
+    },
+    { timeout: 60_000 },
+  );
+  const auditoria = relatorio.length
+    ? { acao: ACAO_DO_REAPONTAMENTO, dados: { nome: empresa.razaoSocial, contas: relatorio.map((r, k) => ({ ...passos[k], ...r })) } }
+    : null;
+  return ok({ relatorio, auditoria });
 }
 
 // ─── Contrapartes ─────────────────────────────────────────────────────────
