@@ -819,7 +819,10 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
 
   const salarioBase = lerNumero(texto(fd, "salarioBase"));
   if (!salarioValido(salarioBase, texto(fd, "categoria"))) return erro(SALARIO_OBRIGATORIO);
-  const tipoSalario = texto(fd, "tipoSalario") === "HORISTA" ? "HORISTA" : "MENSAL";
+  const tipoSalario = texto(fd, "tipoSalario") === "HORISTA" ? "HORISTA" : texto(fd, "tipoSalario") === "HORA_AULA" ? "HORA_AULA" : "MENSAL";
+  // Professor (funcionalidade-773): as aulas por semana; o salário do contrato é o valor da hora-aula.
+  const aulasSemanais = tipoSalario === "HORA_AULA" ? lerInteiro(texto(fd, "aulasSemanais")) : null;
+  if (tipoSalario === "HORA_AULA" && (!aulasSemanais || aulasSemanais < 1 || aulasSemanais > 60)) return erro("Informe as aulas por semana do professor (1 a 60).");
   const horasMensais = lerInteiro(texto(fd, "horasMensais")) ?? 220;
   if (horasMensais < 1 || horasMensais > 300) return erro("Horas por mês entre 1 e 300.");
   const dependentesIrrf = lerInteiro(texto(fd, "dependentesIrrf")) ?? 0;
@@ -831,6 +834,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     companyId: pessoa.currentCompanyId,
     salarioBase,
     tipoSalario,
+    aulasSemanais,
     horasMensais,
     dependentesIrrf,
     filhosSalarioFamilia,

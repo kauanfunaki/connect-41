@@ -113,7 +113,11 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
             <Select id="tipoSalario" name="tipoSalario" defaultValue={v?.tipoSalario ?? "MENSAL"}>
               <option value="MENSAL">Mensalista</option>
               <option value="HORISTA">Horista</option>
+              <option value="HORA_AULA">Professor (hora-aula)</option>
             </Select>
+          </CampoForm>
+          <CampoForm label="Aulas por semana (professor)" htmlFor="aulasSemanais" dica="Só no professor: o salário é o valor da hora-aula, e o mês é aulas × 4,5 semanas × valor + 1/6 de DSR.">
+            <Input id="aulasSemanais" name="aulasSemanais" inputMode="numeric" maxLength={2} defaultValue={v?.aulasSemanais != null ? String(v.aulasSemanais) : ""} />
           </CampoForm>
           <CampoForm label="Horas por mês" htmlFor="horasMensais" dica="220 na jornada de 44 h semanais.">
             <Input id="horasMensais" name="horasMensais" inputMode="numeric" defaultValue={String(v?.horasMensais ?? 220)} />
@@ -366,7 +370,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
                     </td>
                     <td className={`${TD} align-middle tabular-nums`}>{p.admissionDate ? formatCalendarDate(p.admissionDate) : "—"}</td>
                     <td className={`${TD_NUM} align-middle pr-10`}>
-                      {p.dp2Vinculo ? `${brl(Number(p.dp2Vinculo.salarioBase))}${p.dp2Vinculo.tipoSalario === "HORISTA" ? "/h" : ""}` : "—"}
+                      {p.dp2Vinculo ? `${brl(Number(p.dp2Vinculo.salarioBase))}${p.dp2Vinculo.tipoSalario === "HORISTA" ? "/h" : p.dp2Vinculo.tipoSalario === "HORA_AULA" ? "/aula" : ""}` : "—"}
                     </td>
                     <td className={`${TD} align-middle`}>
                       {p.dp2Vinculo ? (
