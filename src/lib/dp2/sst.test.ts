@@ -34,3 +34,12 @@ describe("cadastros de SST", () => {
     expect((await PDFDocument.load(pdf)).getPageCount()).toBeGreaterThan(1);
   });
 });
+
+describe("médicos do ASO", () => {
+  it("valida nome, CRM e UF", async () => {
+    const { lerMedico } = await import("./sst");
+    expect(lerMedico({ nome: " Dra. Ana ", crm: "CRM 12.345", uf: "pr" })).toEqual({ ok: true, medico: { nome: "Dra. Ana", crm: "12345", uf: "PR" } });
+    expect(lerMedico({ nome: "Dra. Ana", crm: "", uf: "PR" })).toMatchObject({ ok: false });
+    expect(lerMedico({ nome: "Dra. Ana", crm: "123", uf: "XX" })).toMatchObject({ ok: false, erro: expect.stringMatching(/UF/) });
+  });
+});

@@ -151,3 +151,20 @@ export async function pdfDaFichaDeEpi(
   texto("Colaborador(a)", m, 9);
   return pdf.save();
 }
+
+// ─── Médicos (entrega 2) ────────────────────────────────────────────────────
+
+const UFS = new Set("AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" "));
+
+export type Medico = { nome: string; crm: string; uf: string };
+
+/** O médico que assina o ASO, escolhido no S-2220 em vez de digitado a cada exame. */
+export function lerMedico(e: { nome: string; crm: string; uf: string }): { ok: true; medico: Medico } | { ok: false; erro: string } {
+  const nome = e.nome.trim().slice(0, 70);
+  if (!nome) return { ok: false, erro: "Informe o nome do médico." };
+  const crm = e.crm.replace(/\D/g, "");
+  if (!crm || crm.length > 10) return { ok: false, erro: "Informe o CRM (só números, até 10 dígitos)." };
+  const uf = e.uf.trim().toUpperCase();
+  if (!UFS.has(uf)) return { ok: false, erro: "Informe a UF do CRM." };
+  return { ok: true, medico: { nome, crm, uf } };
+}

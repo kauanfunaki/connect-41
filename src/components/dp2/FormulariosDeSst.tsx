@@ -40,7 +40,9 @@ const EPC_EPI: [string, string][] = [
 
 type Ambiente = { id: string; nome: string; agentes: string };
 
-export function FormulariosDeSst({ pessoas, ambientes = [] }: { pessoas: Pessoa[]; ambientes?: Ambiente[] }) {
+type Medico = { id: string; nome: string; crm: string; uf: string };
+
+export function FormulariosDeSst({ pessoas, ambientes = [], medicos = [] }: { pessoas: Pessoa[]; ambientes?: Ambiente[]; medicos?: Medico[] }) {
   return (
     <div className="grid gap-6">
       <div className="grid gap-5 lg:grid-cols-2">
@@ -72,6 +74,18 @@ export function FormulariosDeSst({ pessoas, ambientes = [] }: { pessoas: Pessoa[
               <CampoForm label="Procedimentos (Tabela 27)" htmlFor="procedimentos" className="sm:col-span-2" dica="Os códigos que estão no ASO, separados por vírgula. O exame clínico é 0295.">
                 <Input id="procedimentos" name="procedimentos" placeholder="0295" defaultValue="0295" />
               </CampoForm>
+              {medicos.length > 0 && (
+                <CampoForm label="Médico cadastrado" htmlFor="medicoId" className="sm:col-span-2" dica="Nome e CRM vêm do cadastro (DP 2 › Configuração da empresa), a não ser que você digite abaixo.">
+                  <Select id="medicoId" name="medicoId" defaultValue="">
+                    <option value="">Digitar abaixo</option>
+                    {medicos.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {`${m.nome} · CRM ${m.crm}/${m.uf}`}
+                      </option>
+                    ))}
+                  </Select>
+                </CampoForm>
+              )}
               <CampoForm label="Médico que assinou" htmlFor="aso_medicoNome" className="sm:col-span-2">
                 <Input id="aso_medicoNome" name="medicoNome" maxLength={70} />
               </CampoForm>
@@ -91,9 +105,9 @@ export function FormulariosDeSst({ pessoas, ambientes = [] }: { pessoas: Pessoa[
             <div className="grid gap-4 sm:grid-cols-2">
               <Colaborador id="amb_personId" pessoas={pessoas} />
               {ambientes.length > 0 && (
-                <CampoForm label="Ambiente cadastrado" htmlFor="ambienteId" className="sm:col-span-2" dica="O que ficar em branco abaixo vem do ambiente (DP 2 › Configuração da empresa).">
+                <CampoForm label="Ambiente cadastrado" htmlFor="ambienteId" className="sm:col-span-2" dica="O que ficar em branco abaixo vem do ambiente (DP 2 › Configuração da empresa). Sem escolha, vale o ambiente do contrato.">
                   <Select id="ambienteId" name="ambienteId" defaultValue="">
-                    <option value="">Digitar abaixo</option>
+                    <option value="">O do contrato, ou digitar abaixo</option>
                     {ambientes.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.agentes ? `${a.nome} · ${a.agentes}` : a.nome}

@@ -16,7 +16,7 @@ import { configDaEmpresa } from "@/lib/dp2/servidor";
 import { responsaveisDeSst } from "@/lib/dp2/esocial/servidor";
 import { aliquotaPatronal } from "@/lib/dp2/mensal";
 import { abrirTelaDeEmpresaDoDp2 } from "@/lib/dp2/tela";
-import { criarAmbienteAction, criarEpiAction, criarHorarioAction, excluirAmbienteAction, excluirEpiAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
+import { criarAmbienteAction, criarEpiAction, criarHorarioAction, criarMedicoAction, excluirAmbienteAction, excluirEpiAction, excluirMedicoAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
 import { situacaoDoCa } from "@/lib/dp2/sst";
 import { CampoData } from "@/components/ui/CampoData";
 import { Selo } from "@/components/ui/Selo";
@@ -53,9 +53,10 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
   );
   const patronal = aliquotaPatronal(cfg.empresa);
   // Cadastros de SST (funcionalidade-761): ambientes de trabalho e EPIs.
-  const [ambientes, epis] = await Promise.all([
+  const [ambientes, epis, medicos] = await Promise.all([
     getPrisma().dp2Ambiente.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
     getPrisma().dp2Epi.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" }, include: { _count: { select: { entregas: true } } } }),
+    getPrisma().dp2Medico.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
   ]);
   const hoje = new Date().toISOString().slice(0, 10);
 
@@ -299,6 +300,63 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
           <p className="text-fs-3 text-fg-muted">
             PCMSO: {sst.medicoNome ?? "não informado"} · Registros ambientais: {sst.ambientalNome ?? "não informado"}
           </p>
+        )}
+      </Secao>
+      <Secao titulo="Médicos do ASO" className="mt-5" apoio="Os médicos que assinam os atestados de saúde ocupacional. No S-2220 (DP 2 › eSocial), escolha o médico em vez de digitar nome e CRM.">
+        {medicos.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full min-w-[480px] text-fs-3">
+              <thead>
+                <tr>
+                  <th className={TH}>Médico</th>
+                  <th className={TH}>CRM</th>
+                  <th className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicos.map((m) => (
+                  <tr key={m.id} className={TR}>
+                    <td className={`${TD} font-medium`}>{m.nome}</td>
+                    <td className={`${TD} tabular-nums`}>
+                      {m.crm}/{m.uf}
+                    </td>
+                    <td className={`${TD} text-right pr-0`}>
+                      {tela.podeAgir && (
+                        <FormularioDoDp2
+                          acao={excluirMedicoAction}
+                          rotulo="Excluir"
+                          rotuloEnviando="Excluindo…"
+                          variante="secondary"
+                          tamanho="sm"
+                          confirmar={{ titulo: "Excluir o médico?", texto: `${m.nome} sai da lista. Os ASOs já gerados ficam como estão.`, rotulo: "Excluir" }}
+                        >
+                          <input type="hidden" name="medicoId" value={m.id} />
+                        </FormularioDoDp2>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tela.podeAgir && (
+          <FormularioDoDp2 acao={criarMedicoAction} rotulo="Cadastrar médico" rotuloEnviando="Cadastrando…" variante="secondary">
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <CampoForm label="Nome" htmlFor="med-nome">
+                <Input id="med-nome" name="nome" maxLength={70} required />
+              </CampoForm>
+              <CampoForm label="CRM" htmlFor="med-crm">
+                <Input id="med-crm" name="crm" inputMode="numeric" maxLength={10} required />
+              </CampoForm>
+              <CampoForm label="UF do CRM" htmlFor="med-uf">
+                <Input id="med-uf" name="uf" maxLength={2} required />
+              </CampoForm>
+            </div>
+          </FormularioDoDp2>
         )}
       </Secao>
       <Secao titulo="Ambientes de trabalho" className="mt-5" apoio="Os setores do LTCAT, com os agentes nocivos (Tabela 24) e o uso de EPC e EPI. O S-2240 do colaborador sai do ambiente escolhido em DP 2 › eSocial.">

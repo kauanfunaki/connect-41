@@ -65,7 +65,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto, ambientesDeTrabalho] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
     listarRubricas(tela.tenantId),
@@ -73,6 +73,8 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     getPrisma().dp2Horario.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
     // Centros de custo do BPO da empresa (funcionalidade-751).
     getPrisma().costCenter.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
+    // Ambientes de trabalho da empresa (funcionalidade-761).
+    getPrisma().dp2Ambiente.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, select: { id: true, nome: true }, orderBy: { nome: "asc" } }),
   ]);
   // As rubricas que podem ser fixas no contrato: as mesmas que o DP lança no mês (funcionalidade-767).
   const paraFixar = linhasDeRubrica
@@ -398,6 +400,18 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
           <CampoForm label="Departamento" htmlFor="departamento">
             <Input id="departamento" name="departamento" maxLength={80} defaultValue={v?.departamento ?? ""} />
           </CampoForm>
+          {ambientesDeTrabalho.length > 0 && (
+            <CampoForm label="Ambiente de trabalho (SST)" htmlFor="ambienteId" dica="Os ambientes do LTCAT (DP 2 › Configuração da empresa). O S-2240 do colaborador sai deste ambiente.">
+              <Select id="ambienteId" name="ambienteId" defaultValue={v?.ambienteId ?? ""}>
+                <option value="">Sem ambiente</option>
+                {ambientesDeTrabalho.map((amb) => (
+                  <option key={amb.id} value={amb.id}>
+                    {amb.nome}
+                  </option>
+                ))}
+              </Select>
+            </CampoForm>
+          )}
         </div>
         {centrosDeCusto.length === 0 && <p className="text-fs-2 text-fg-muted mt-2">A empresa ainda não tem centros de custo: cadastre no BPO para escolher aqui.</p>}
       </BlocoDoContrato>

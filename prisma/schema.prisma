@@ -7045,6 +7045,9 @@ model Dp2Vinculo {
   /// funcionalidade-751: a contabilização e o resumo da folha saem por centro.
   costCenterId         String?
   departamento         String?  @db.VarChar(80)
+  /// Ambiente de trabalho (Dp2Ambiente), 26/11/2026, funcionalidade-761: o
+  /// S-2240 do colaborador sai dele quando nenhum outro é escolhido.
+  ambienteId           String?
   /// Custo diário do vale-transporte (tarifas × viagens por dia), 25/11/2026,
   /// funcionalidade-753: limita o desconto de 6% e dá o pedido do mês.
   vtCustoDiario        Decimal? @db.Decimal(10, 2)
@@ -7304,6 +7307,22 @@ model Dp2Alocacao {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_alocacoes")
+}
+
+/// Médico que assina o ASO, escolhido no S-2220 (26/11/2026,
+/// funcionalidade-761, entrega 2).
+model Dp2Medico {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nome        String   @db.VarChar(70)
+  crm         String   @db.VarChar(10)
+  uf          String   @db.VarChar(2)
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, companyId])
+  @@map("dp2_medicos")
 }
 
 /// Ambiente de trabalho da empresa, como está no LTCAT (26/11/2026,
