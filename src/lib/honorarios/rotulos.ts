@@ -107,7 +107,32 @@ export const ROTULO_MOTIVO_CONTRATO: Record<MotivoStatusContrato, string> = {
   DISTRATO_PRESTACAO: "Distrato da prestação de serviços",
 };
 
+/**
+ * O selo curto da linha de Contratos (26/11/2026, melhoria-813): o selo cabe
+ * numa linha só, e o rótulo inteiro com o motivo vai para a dica e o painel.
+ */
+export function rotuloCurtoDoContrato(status: StatusContrato, motivo: MotivoStatusContrato): string {
+  if (status === "NAO_LOCALIZADO") {
+    if (motivo === "SEM_VINCULO") return "Sem pasta";
+    if (motivo === "SEM_PASTA_CONTRATO") return "Sem subpasta";
+  }
+  if (status === "AGUARDANDO_ASSINATURA") return "Sem assinatura";
+  return ROTULO_STATUS_CONTRATO[status];
+}
+
 // ── Aditivos ───────────────────────────────────────────────────────
+
+/** O selo curto da linha de Aditivos (26/11/2026, melhoria-813); o rótulo inteiro vai para a dica. */
+export const ROTULO_CURTO_ADITIVO: Record<StatusAditivo, string> = {
+  SEM_VINCULO: "Sem pasta",
+  SEM_PASTA_CONTRATO: "Sem subpasta",
+  SEM_ADITIVO: "Sem aditivo",
+  SO_DOCX: "Só o Word",
+  PDF_SEM_ASSINATURA: "Sem assinatura",
+  ASSINADO_PELO_NOME: "Assinado (nome)",
+  ASSINADO_DIGITAL: "Assinado",
+  DISTRATO: "Distrato",
+};
 
 export const ROTULO_STATUS_ADITIVO: Record<StatusAditivo, string> = {
   SEM_VINCULO: "Sem pasta vinculada",

@@ -10,12 +10,6 @@ export function IconeDoArquivo({ formato, ext }: { formato?: string; ext?: strin
   return <File size={14} className={classe} aria-hidden />;
 }
 
-/** Uma lista de arquivos com título; vazia diz "Nenhum.". */
-export function ListaDeArquivos({ titulo, children, vazia, esmaecida = false }: { titulo: string; children: React.ReactNode; vazia: boolean; esmaecida?: boolean }) {
-  return (
-    <div className={esmaecida ? "opacity-70" : undefined}>
-      <p className="font-semibold text-fg">{titulo}</p>
-      {vazia ? <p className="text-fg-muted">Nenhum.</p> : <ul className="mt-1 space-y-1">{children}</ul>}
-    </div>
-  );
-}
+// A `ListaDeArquivos` (título + lista em "·") saiu em 26/11/2026
+// (melhoria-813): os arquivos de Contratos e Aditivos vão no painel lateral,
+// cada lista na sua seção (`SecaoDoPainel`).

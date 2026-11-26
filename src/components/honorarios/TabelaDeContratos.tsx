@@ -1,18 +1,26 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import Link from "next/link";
-import { AlertTriangle, ChevronRight, FileSignature } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Ban, Building2, CircleCheck, CircleX, Copy, Eye, FileSignature, FolderPlus, Hourglass, PenLine, TriangleAlert, UserMinus } from "lucide-react";
 import { Selo } from "@/components/ui/Selo";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ROTULO_MOTIVO_CONTRATO, ROTULO_STATUS_CONTRATO, TOM_STATUS_CONTRATO } from "@/lib/honorarios/rotulos";
+import { SlideOver } from "@/components/ui/SlideOver";
+import { BlocoRecolhivel } from "@/components/ui/BlocoRecolhivel";
+import { ROTULO_MOTIVO_CONTRATO, ROTULO_STATUS_CONTRATO, rotuloCurtoDoContrato, TOM_STATUS_CONTRATO } from "@/lib/honorarios/rotulos";
+import type { StatusContrato } from "@/lib/honorarios/regras/auditContratosStatus";
 import type { ArquivoContratoResumo, EmpresaContrato } from "@/lib/honorarios/servidor/auditContratosService";
-import { AvisoDistrato } from "./AvisoDistrato";
-import { AvisoExCliente } from "./ExClientes";
-import { CopiarCaminho } from "./CopiarCaminho";
-import { IconeDoArquivo, ListaDeArquivos } from "./ArquivoDaPasta";
+import { AvisoDistrato, linhasDoDistrato } from "./AvisoDistrato";
+import { caminhoDaPasta, useCopiarCaminho } from "./CopiarCaminho";
+import { IconeDoArquivo } from "./ArquivoDaPasta";
+import { AcoesDaLinha, CLASSE_DA_TABELA, NomeQueAbre, PeDoPainel, SecaoDoPainel, SeloDaSituacao, SubtituloDoPainel, type AcaoPrincipal } from "./PecasDaLista";
 
-function sufixos(a: ArquivoContratoResumo): string {
+// Aba Contratos no padrão da alternativa A (26/11/2026, melhoria-813): selo
+// curto na Situação (o motivo vai na dica e no painel), o nome do contrato
+// numa linha só, cortado, e uma ação por linha — "Copiar caminho" ou
+// "Vincular pasta", agora os dois como botão — com o ⋯. O detalhe (candidatos,
+// descartados e a renomeação sugerida) abre num painel, cada um na sua seção.
+
+function sufixos(a: ArquivoContratoResumo): string[] {
   const s: string[] = [];
   if (a.assinatura.digital) s.push("assinatura digital");
   else if (a.assinatura.peloNome) s.push("assinado pelo nome");
@@ -20,135 +28,216 @@ function sufixos(a: ArquivoContratoResumo): string {
   if (a.icp) s.push("ICP-Brasil");
   if (a.antigo) s.push("antigo");
   if (a.motivoExclusao) s.push(a.motivoExclusao);
-  return s.length ? ` · ${s.join(" · ")}` : "";
+  return s;
+}
+
+const ICONE_DO_STATUS: Record<StatusContrato, ReactNode> = {
+  NAO_LOCALIZADO: <CircleX aria-hidden />,
+  MINUTA: <PenLine aria-hidden />,
+  AGUARDANDO_ASSINATURA: <Hourglass aria-hidden />,
+  REVISAR: <TriangleAlert aria-hidden />,
+  ASSINADO: <CircleCheck aria-hidden />,
+  DISTRATO: <Ban aria-hidden />,
+};
+
+const LINK_DO_VINCULO = "/honorarios/pastas?aba=empresas";
+
+/** A ação de pasta da empresa: copiar o caminho, ou vincular a pasta quando não há. */
+function acaoDaPasta(e: EmpresaContrato, raizUnc: string, copiar: (c: string) => void): AcaoPrincipal | null {
+  if (!e.pastas.length) return { rotulo: "Vincular pasta", icone: <FolderPlus aria-hidden />, href: LINK_DO_VINCULO, titulo: "A empresa ainda não tem pasta na rede vinculada" };
+  const alvo = caminhoDaPasta(raizUnc, e.pastas);
+  if (!alvo) return null;
+  return { rotulo: "Copiar caminho", icone: <Copy aria-hidden />, onClick: () => copiar(alvo.caminho), titulo: alvo.caminho };
 }
 
 export function TabelaDeContratos({ empresas, raizUnc, filtrado }: { empresas: EmpresaContrato[]; raizUnc: string; filtrado: boolean }) {
-  const [aberta, setAberta] = useState<string | null>(null);
+  const [painel, setPainel] = useState<string | null>(null);
+  const copiar = useCopiarCaminho();
 
   if (!empresas.length) {
     return (
-      <EmptyState
-        title={filtrado ? "Nenhuma empresa neste filtro" : "Nenhuma empresa ativa com CNPJ"}
-        description={filtrado ? "Troque o filtro ou a busca acima para ver as outras." : undefined}
-        icon={<FileSignature />}
-      />
+      <div className="c41-sem-linhas">
+        <EmptyState
+          title={filtrado ? "Nenhuma empresa neste filtro" : "Nenhuma empresa ativa com CNPJ"}
+          description={filtrado ? "Troque o filtro ou a busca acima para ver as outras." : undefined}
+          icon={<FileSignature />}
+        />
+      </div>
     );
   }
 
+  const aberta = empresas.find((e) => e.empresa.id === painel) ?? null;
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[860px]">
-        <thead>
-          <tr className="text-micro uppercase tracking-wide text-fg-muted border-b border-border text-left">
-            <th className="w-8 py-2"><span className="sr-only">Detalhes</span></th>
-            <th className="py-2 pr-3 font-medium">Empresa</th>
-            <th className="py-2 pr-3 font-medium">Situação</th>
-            <th className="py-2 pr-3 font-medium">Contrato escolhido</th>
-            <th className="py-2 font-medium">
-              <span className="sr-only">Ações</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {empresas.map((e) => {
-            const id = e.empresa.id;
-            const temDetalhe = e.contratos.length > 0 || e.descartados.length > 0 || e.warnings.length > 0;
-            const expandida = aberta === id;
-            return (
-              <Fragment key={id}>
-                <tr className="border-b border-border-soft align-top hover:bg-surface-hover transition-colors">
-                  <td className="py-2.5">
-                    {temDetalhe && (
-                      <button
-                        type="button"
-                        onClick={() => setAberta(expandida ? null : id)}
-                        aria-expanded={expandida}
-                        aria-label={`${expandida ? "Esconder" : "Ver"} detalhes de ${e.empresa.razaoSocial}`}
-                        className="grid h-7 w-7 place-items-center rounded text-fg-muted hover:bg-surface-2 hover:text-fg"
-                      >
-                        <ChevronRight size={16} className={`transition-transform motion-reduce:transition-none ${expandida ? "rotate-90" : ""}`} aria-hidden />
-                      </button>
-                    )}
+    <>
+      <div className={CLASSE_DA_TABELA}>
+        <table className="w-full min-w-[820px]">
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>Situação</th>
+              <th>Contrato escolhido</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {empresas.map((e) => {
+              const id = e.empresa.id;
+              const nome = e.empresa.razaoSocial;
+              const dica = [
+                `${ROTULO_STATUS_CONTRATO[e.status]}: ${ROTULO_MOTIVO_CONTRATO[e.motivo]}`,
+                ...e.warnings.map((w) => `• ${w}`),
+                ...(e.exCliente ? [`• Também tem pasta em Ex Clientes (“${e.exCliente}”)`] : []),
+                ...linhasDoDistrato(e.distrato).map((l) => `• ${l}`),
+              ].join("\n");
+              return (
+                <tr key={id}>
+                  <td>
+                    <NomeQueAbre
+                      nome={nome}
+                      aberto={painel === id}
+                      aoAbrir={() => setPainel(id)}
+                      sub={
+                        <>
+                          {e.empresa.cnpj}
+                          {e.empresa.responsavel && ` · ${e.empresa.responsavel}`}
+                        </>
+                      }
+                    />
                   </td>
-                  <td className="py-2.5 pr-3">
-                    <Link href={`/empresas/${id}`} className="font-semibold text-fg hover:text-brand transition-colors">
-                      {e.empresa.razaoSocial}
-                    </Link>
-                    <span className="block text-micro text-fg-muted tabular-nums">
-                      {e.empresa.cnpj}
-                      {e.empresa.responsavel && ` · ${e.empresa.responsavel}`}
-                    </span>
+                  <td>
+                    <SeloDaSituacao
+                      tom={TOM_STATUS_CONTRATO[e.status]}
+                      icone={ICONE_DO_STATUS[e.status]}
+                      mais={e.warnings.length + (e.exCliente ? 1 : 0)}
+                      dica={dica}
+                    >
+                      {rotuloCurtoDoContrato(e.status, e.motivo)}
+                    </SeloDaSituacao>
                   </td>
-                  <td className="py-2.5 pr-3 max-w-[320px]">
-                    <Selo tom={TOM_STATUS_CONTRATO[e.status]}>{ROTULO_STATUS_CONTRATO[e.status]}</Selo>
-                    <span className="mt-0.5 block text-micro text-fg-muted">{ROTULO_MOTIVO_CONTRATO[e.motivo]}</span>
-                    <AvisoDistrato distrato={e.distrato} />
-                    <AvisoExCliente pasta={e.exCliente} />
-                  </td>
-                  <td className="py-2.5 pr-3 max-w-[320px] break-words text-fg-secondary">{e.contratoPrincipal?.nome ?? "—"}</td>
-                  <td className="py-2.5 text-right">
-                    {e.pastas.length > 0 ? (
-                      <CopiarCaminho raizUnc={raizUnc} pastas={e.pastas} />
+                  <td>
+                    {e.contratoPrincipal ? (
+                      <span className="inline-block max-w-[16rem] truncate align-bottom text-fg-secondary" title={e.contratoPrincipal.caminhoRelativo}>
+                        {e.contratoPrincipal.nome}
+                      </span>
                     ) : (
-                      <Link href="/honorarios/pastas?aba=empresas" className="text-label text-brand hover:underline">
-                        Vincular pasta
-                      </Link>
+                      <span className="text-fg-muted">—</span>
                     )}
+                  </td>
+                  <td>
+                    <AcoesDaLinha
+                      nome={nome}
+                      principal={acaoDaPasta(e, raizUnc, copiar)}
+                      menu={[
+                        { rotulo: "Ver detalhes", icone: <Eye />, onClick: () => setPainel(id) },
+                        { rotulo: "Abrir empresa", icone: <Building2 />, href: `/empresas/${id}` },
+                      ]}
+                    />
                   </td>
                 </tr>
-                {expandida && (
-                  <tr className="border-b border-border-soft bg-surface-2/50">
-                    <td />
-                    <td colSpan={4} className="space-y-3 py-3 pr-3 text-label">
-                      {e.warnings.length > 0 && (
-                        <ul className="space-y-0.5">
-                          {e.warnings.map((w) => (
-                            <li key={w} className="flex items-start gap-1 text-warning-fg">
-                              <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" aria-hidden /> {w}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <ListaDeArquivos titulo="Contratos candidatos" vazia={e.contratos.length === 0}>
-                        {e.contratos.map((a) => (
-                          <li key={`${a.nomePasta}/${a.caminhoRelativo}`} className="flex items-start gap-1.5 text-fg-secondary">
-                            <IconeDoArquivo formato={a.formato} />
-                            <span className="min-w-0 break-words">
-                              {a.caminhoRelativo}
-                              {e.contratoPrincipal?.caminhoRelativo === a.caminhoRelativo && <strong className="text-fg"> · escolhido</strong>}
-                              {sufixos(a)}
-                            </span>
-                          </li>
-                        ))}
-                      </ListaDeArquivos>
-                      {e.descartados.length > 0 && (
-                        <ListaDeArquivos titulo="Documentos descartados pela classificação" vazia={false} esmaecida>
-                          {e.descartados.map((a) => (
-                            <li key={`${a.nomePasta}/${a.caminhoRelativo}`} className="flex items-start gap-1.5 text-fg-muted">
-                              <IconeDoArquivo formato={a.formato} />
-                              <span className="min-w-0 break-words">
-                                {a.caminhoRelativo}
-                                {sufixos(a)}
-                              </span>
-                            </li>
-                          ))}
-                        </ListaDeArquivos>
-                      )}
-                      {e.renomeacao?.recomendado && (
-                        <p className="text-fg-muted">
-                          <strong className="text-fg-secondary">Renomeação sugerida (só sugestão, nada é renomeado):</strong> {e.renomeacao.caminhoOriginal} →{" "}
-                          {e.renomeacao.caminhoDestino}
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <SlideOver open={!!aberta} onClose={() => setPainel(null)} title={aberta?.empresa.razaoSocial} width="max-w-lg">
+        {aberta && <PainelDoContrato e={aberta} acao={acaoDaPasta(aberta, raizUnc, copiar)} />}
+      </SlideOver>
+    </>
+  );
+}
+
+function Arquivos({ arquivos, escolhido }: { arquivos: ArquivoContratoResumo[]; escolhido?: string }) {
+  if (!arquivos.length) return <p className="text-fg-muted">Nenhum.</p>;
+  return (
+    <ul className="space-y-1.5">
+      {arquivos.map((a) => {
+        const s = sufixos(a);
+        return (
+          <li key={`${a.nomePasta}/${a.caminhoRelativo}`} className="flex items-start gap-2">
+            <IconeDoArquivo formato={a.formato} />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5">
+                <span className="truncate text-fg" title={a.caminhoRelativo}>
+                  {a.nome}
+                </span>
+                {escolhido === a.caminhoRelativo && <Selo tom="marca">Escolhido</Selo>}
+              </span>
+              {s.length > 0 && <span className="block text-micro text-fg-muted">{s.join(" · ")}</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function PainelDoContrato({ e, acao }: { e: EmpresaContrato; acao: AcaoPrincipal | null }) {
+  const temDistrato = linhasDoDistrato(e.distrato).length > 0;
+  return (
+    <>
+      <SubtituloDoPainel partes={[e.empresa.cnpj, e.empresa.responsavel]} empresaId={e.empresa.id} />
+
+      <SecaoDoPainel rotulo="Situação">
+        <p className="flex flex-wrap items-center gap-2">
+          <Selo tom={TOM_STATUS_CONTRATO[e.status]} className="gap-1 [&>svg]:size-3">
+            {ICONE_DO_STATUS[e.status]}
+            {ROTULO_STATUS_CONTRATO[e.status]}
+          </Selo>
+          <span>{ROTULO_MOTIVO_CONTRATO[e.motivo]}</span>
+        </p>
+        {e.exCliente && (
+          <p className="mt-2 flex items-start gap-2 text-warning-fg">
+            <UserMinus size={14} className="mt-0.5 shrink-0" aria-hidden />
+            Também tem pasta em Ex Clientes (“{e.exCliente}”). Confira se ela ainda é cliente.
+          </p>
+        )}
+      </SecaoDoPainel>
+
+      {e.warnings.length > 0 && (
+        <SecaoDoPainel rotulo={`Pontos de atenção (${e.warnings.length})`}>
+          <ul className="space-y-1">
+            {e.warnings.map((w) => (
+              <li key={w} className="flex items-start gap-2 text-warning-fg">
+                <TriangleAlert size={14} className="mt-0.5 shrink-0" aria-hidden /> {w}
+              </li>
+            ))}
+          </ul>
+        </SecaoDoPainel>
+      )}
+
+      {temDistrato && (
+        <SecaoDoPainel rotulo="Distrato">
+          <AvisoDistrato distrato={e.distrato} />
+        </SecaoDoPainel>
+      )}
+
+      <SecaoDoPainel rotulo={`Contratos candidatos (${e.contratos.length})`}>
+        <Arquivos arquivos={e.contratos} escolhido={e.contratoPrincipal?.caminhoRelativo} />
+      </SecaoDoPainel>
+
+      {e.descartados.length > 0 && (
+        <SecaoDoPainel rotulo="Descartados pela classificação">
+          <BlocoRecolhivel titulo="Documentos descartados" resumo={e.descartados.length === 1 ? "1 arquivo" : `${e.descartados.length} arquivos`}>
+            <Arquivos arquivos={e.descartados} />
+          </BlocoRecolhivel>
+        </SecaoDoPainel>
+      )}
+
+      {e.renomeacao?.recomendado && (
+        <SecaoDoPainel rotulo="Renomeação sugerida">
+          <p className="text-fg-muted">Só sugestão: nada é renomeado pelo Connect.</p>
+          <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            <dt className="text-fg-muted">De</dt>
+            <dd className="break-words text-fg">{e.renomeacao.caminhoOriginal}</dd>
+            <dt className="text-fg-muted">Para</dt>
+            <dd className="break-words text-fg">{e.renomeacao.caminhoDestino}</dd>
+          </dl>
+        </SecaoDoPainel>
+      )}
+
+      <PeDoPainel nome={e.empresa.razaoSocial} menu={[{ rotulo: "Abrir empresa", icone: <Building2 />, href: `/empresas/${e.empresa.id}` }]} principal={acao} />
+    </>
   );
 }
