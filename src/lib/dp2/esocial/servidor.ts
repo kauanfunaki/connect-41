@@ -12,16 +12,18 @@ import { calcularRescisaoDoDp2 } from "@/lib/dp2/rescisao";
 import { dataProjetada, diasDeAvisoPrevio } from "@/lib/rescisao/avos";
 import type { MotivoCanonico } from "@/lib/rescisao/motivos";
 import { lerDadosEsocial } from "./cadastro";
-import { eventoS2300, eventoS2399 } from "./semVinculo";
+import { eventoS2300, eventoS2306, eventoS2399 } from "./semVinculo";
 import { semVinculo } from "@/lib/dp2/categorias";
 import { eventoS2210, eventoS2220, eventoS2240, lerResponsaveis, type Aso, type Cat, type CondicaoAmbiental, type ResponsaveisDeSst } from "./sst";
 import {
   eventoS2200,
   eventoS2206,
   eventoS2230,
+  eventoS2298,
   eventoS2299,
   PAPEL_DA_VERBA,
   type Afastamento,
+  type Reintegracao,
   type SindicatoDoVinculo,
   type TrabalhadorCompleto,
 } from "./naoPeriodicos";
@@ -285,7 +287,8 @@ export async function gerarAdmissao(tenantId: string, personId: string, userId: 
 export async function gerarAlteracao(tenantId: string, personId: string, data: string, descricao: string | null, userId: string): Promise<Resultado> {
   const v = await doVinculo(tenantId, personId, data.slice(0, 7));
   if (!v) return { ok: false, erro: SEM_CONTRATO };
-  if (semVinculo(v.t.categoria)) return { ok: false, erro: "A alteração de sócio, autônomo e estagiário é o S-2306, que ainda não está no Connect." };
+  // Sócio, autônomo e estagiário: a alteração é o S-2306 (funcionalidade-756).
+  if (semVinculo(v.t.categoria)) return { ok: true, evento: "S-2306", ...(await guardar(tenantId, v.companyId, null, userId, [eventoS2306(v.empregador, v.t, data, v.novoId)])) };
   const ev = eventoS2206(v.empregador, v.t, await sindicatoDaEmpresa(tenantId, v.companyId), { data, descricao }, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
@@ -295,6 +298,18 @@ export async function gerarAfastamento(tenantId: string, personId: string, a: Af
   if (!v) return { ok: false, erro: SEM_CONTRATO };
   const ev = eventoS2230(v.empregador, v.t, a, v.novoId);
   return { ok: true, ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
+}
+
+/** O S-2298 de quem foi desligado e volta (funcionalidade-756). */
+export async function gerarReintegracao(tenantId: string, personId: string, r: Omit<Reintegracao, "desligamento">, userId: string): Promise<Resultado> {
+  const v = await doVinculo(tenantId, personId, r.retorno.slice(0, 7));
+  if (!v) return { ok: false, erro: SEM_CONTRATO };
+  if (semVinculo(v.t.categoria)) return { ok: false, erro: "A reintegração (S-2298) é de empregado; sócio, autônomo e estagiário voltam com um novo S-2300." };
+  const p = await getPrisma().person.findFirst({ where: { id: personId, tenantId }, select: { dismissalDate: true } });
+  const desligamento = p?.dismissalDate ? p.dismissalDate.toISOString().slice(0, 10) : null;
+  if (!desligamento) return { ok: false, erro: "A pessoa não tem desligamento no cadastro: a reintegração é de quem foi desligado." };
+  const ev = eventoS2298(v.empregador, v.t, { ...r, desligamento }, v.novoId);
+  return { ok: true, evento: "S-2298", ...(await guardar(tenantId, v.companyId, null, userId, [ev])) };
 }
 
 // ─── Saúde e segurança (fase 3c) ────────────────────────────────────────────

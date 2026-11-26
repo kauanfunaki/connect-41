@@ -22,7 +22,7 @@ export const TABELA_DE_RUBRICAS = "DP2";
 /** O código da lotação tributária única que o DP 2 usa por empresa (S-1020). */
 export const LOTACAO_PADRAO = "LOT001";
 
-export type TipoDeEvento = "S-1000" | "S-1005" | "S-1010" | "S-1020" | "S-1200" | "S-1210" | "S-1299" | "S-2200" | "S-2206" | "S-2210" | "S-2220" | "S-2230" | "S-2240" | "S-2299" | "S-2300" | "S-2399" | "S-1298" | "S-3000";
+export type TipoDeEvento = "S-1000" | "S-1005" | "S-1010" | "S-1020" | "S-1200" | "S-1210" | "S-1298" | "S-1299" | "S-2200" | "S-2206" | "S-2210" | "S-2220" | "S-2230" | "S-2240" | "S-2298" | "S-2299" | "S-2300" | "S-2306" | "S-2399" | "S-3000";
 
 export const NOME_DO_EVENTO: Record<TipoDeEvento, string> = {
   "S-1000": "Informações do empregador",
@@ -38,8 +38,10 @@ export const NOME_DO_EVENTO: Record<TipoDeEvento, string> = {
   "S-2220": "Monitoramento da saúde (ASO)",
   "S-2230": "Afastamento",
   "S-2240": "Condições ambientais",
+  "S-2298": "Reintegração",
   "S-2299": "Desligamento",
   "S-2300": "Início sem vínculo (sócio, autônomo, estagiário)",
+  "S-2306": "Alteração sem vínculo (sócio, autônomo, estagiário)",
   "S-2399": "Término sem vínculo",
   "S-1298": "Reabertura dos periódicos",
   "S-3000": "Exclusão de evento",
@@ -60,8 +62,10 @@ export const TAG_DO_EVENTO: Record<TipoDeEvento, string> = {
   "S-2220": "evtMonit",
   "S-2230": "evtAfastTemp",
   "S-2240": "evtExpRisco",
+  "S-2298": "evtReintegr",
   "S-2299": "evtDeslig",
   "S-2300": "evtTSVInicio",
+  "S-2306": "evtTSVAltContr",
   "S-2399": "evtTSVTermino",
   "S-1298": "evtReabreEvPer",
   "S-3000": "evtExclusao",
@@ -82,8 +86,10 @@ export const GRUPO_DO_EVENTO: Record<TipoDeEvento, "1" | "2" | "3"> = {
   "S-2220": "2",
   "S-2230": "2",
   "S-2240": "2",
+  "S-2298": "2",
   "S-2299": "2",
   "S-2300": "2",
+  "S-2306": "2",
   "S-2399": "2",
   "S-1298": "3",
   "S-3000": "2",
