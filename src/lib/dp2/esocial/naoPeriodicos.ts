@@ -243,6 +243,46 @@ export function eventoS2230(e: EmpregadorEsocial, t: { personId: string; nome: s
   return { tipo: "S-2230", referencia: `${digitos(t.cpf) || t.nome} · ${a.inicio}`, personId: t.personId, idEvento: id, xml, pendencias };
 }
 
+// ─── S-2298 Reintegração (25/11/2026, funcionalidade-756) ───────────────────
+
+/** Tipo de reintegração que uma empresa privada informa (os outros são de servidor público e militar). */
+export const TIPOS_DE_REINTEGRACAO: [string, string][] = [
+  ["1", "Reintegração por decisão judicial"],
+  ["2", "Reintegração por anistia legal"],
+  ["9", "Outros"],
+];
+
+export type Reintegracao = { tipo: string; processo: string | null; leiAnistia: string | null; retorno: string; efeito: string; desligamento: string | null };
+
+const dataIso = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+
+export function eventoS2298(e: EmpregadorEsocial, t: { personId: string; nome: string; cpf: string | null; matricula: string | null }, r: Reintegracao, novoId: GeradorDeId): EventoGerado {
+  const pendencias = [...pendenciasDoEmpregador(e), ...pendenciasDoVinculo(t)];
+  if (!TIPOS_DE_REINTEGRACAO.some(([k]) => k === r.tipo)) pendencias.push(falta("colaborador", "Escolha o tipo da reintegração.", null));
+  const processo = digitos(r.processo);
+  if (r.tipo === "1" && processo.length !== 20) pendencias.push(falta("colaborador", "Na reintegração judicial, informe o número do processo (20 algarismos).", null));
+  if (r.tipo === "2" && !r.leiAnistia) pendencias.push(falta("colaborador", "Na anistia, informe a lei (número e ano).", null));
+  if (!dataIso(r.retorno) || !dataIso(r.efeito)) pendencias.push(falta("colaborador", "Informe a data do retorno e a dos efeitos financeiros.", null));
+  else if (r.efeito > r.retorno) pendencias.push(falta("colaborador", "Os efeitos financeiros começam no retorno ou antes dele.", null));
+  if (r.desligamento && ((dataIso(r.retorno) && r.retorno <= r.desligamento) || (dataIso(r.efeito) && r.efeito <= r.desligamento))) {
+    pendencias.push(falta("colaborador", `O retorno e os efeitos são depois do desligamento (${r.desligamento.split("-").reverse().join("/")}).`, null));
+  }
+  const id = novoId();
+  const xml = envelope("S-2298", id, [
+    ideEventoNaoPeriodico(),
+    ideEmpregador(e.cnpj),
+    ideVinculo(t),
+    el("infoReintegr", [
+      el("tpReint", r.tipo),
+      el("nrProcJud", r.tipo === "1" ? processo : null),
+      el("nrLeiAnistia", r.tipo === "2" ? r.leiAnistia?.slice(0, 13) : null),
+      el("dtEfetRetorno", dataIso(r.retorno)),
+      el("dtEfeito", dataIso(r.efeito)),
+    ]),
+  ]);
+  return { tipo: "S-2298", referencia: `${digitos(t.cpf) || t.nome} · ${r.retorno}`, personId: t.personId, idEvento: id, xml, pendencias };
+}
+
 // ─── S-2299 Desligamento ────────────────────────────────────────────────────
 
 /** Motivo do desligamento (Tabela 19) a partir do motivo do cálculo de rescisão. */

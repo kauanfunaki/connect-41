@@ -6,6 +6,13 @@
 // em" (`recusaDoFoco`).
 
 import { lerRubricasFixas } from "@/lib/dp2/rubricasFixas";
+import { lerOcorrencia } from "@/lib/dp2/ocorrencias";
+import { horasDoHorario, lerHorario } from "@/lib/dp2/horarios";
+import { lancarContasDaFolha } from "@/lib/dp2/contasAPagarServidor";
+import { lerSaldoInicial } from "@/lib/dp2/saldoInicial";
+import { lerGuiaDoFgts } from "@/lib/dp2/guiasDaFolha";
+import { guardarArquivo } from "@/lib/drive/servidor";
+import { pastaDoModeloDaEmpresa } from "@/lib/serpro/situacaoFiscal";
 import { lerTotalizadores } from "@/lib/dp2/esocial/totalizadores";
 import { calcularRescisaoDaPessoa, dadosDaRescisao, type AvisoDaRescisao } from "@/lib/dp2/rescisaoServidor";
 import { TIPOS_DE_INFORMACAO, ehTipoDeInformacao, lerInformacao } from "@/lib/dp2/apuracao";
@@ -49,6 +56,7 @@ import type { EstadoDoDp2 } from "@/components/dp2/Formulario";
 import {
   gerarAdmissao,
   gerarAfastamento,
+  gerarReintegracao,
   gerarAlteracao,
   gerarAso,
   gerarCat,
@@ -745,6 +753,218 @@ export async function retirarInformacaoDaApuracaoAction(_: EstadoDoDp2, fd: Form
   return { ok: true, texto: `${nome} retirada da apuração.` };
 }
 
+// ─── Advertências e suspensões (25/11/2026, funcionalidade-763) ────────────
+
+export async function registrarOcorrenciaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const pessoa = (await colaboradoresDaEmpresa(a.tenantId, companyId)).find((p) => p.id === texto(fd, "personId") && p.dp2Vinculo);
+  if (!pessoa) return erro("Escolha um colaborador com contrato no DP 2.");
+  const lido = lerOcorrencia({ tipo: texto(fd, "tipo"), data: texto(fd, "data"), dias: texto(fd, "dias"), motivo: texto(fd, "motivo") });
+  if (!lido.ok) return erro(lido.erro);
+  const o = lido.ocorrencia;
+  const criada = await getPrisma().dp2Ocorrencia.create({
+    data: { tenantId: a.tenantId, companyId, personId: pessoa.id, tipo: o.tipo, data: new Date(`${o.data}T00:00:00Z`), dias: o.dias, motivo: o.motivo, criadoPorId: a.userId },
+    select: { id: true },
+  });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ocorrencia_registrada", entityType: "Person", entityId: pessoa.id, metadata: { ocorrencia: criada.id, tipo: o.tipo, data: o.data, dias: o.dias } });
+  revalidatePath("/dp2/colaboradores");
+  return {
+    ok: true,
+    texto:
+      o.tipo === "SUSPENSAO"
+        ? `Suspensão de ${pessoa.name} registrada (${o.dias} dia(s)). Imprima o documento para assinatura; os dias saem do salário ao calcular a folha do mês.`
+        : `Advertência de ${pessoa.name} registrada. Imprima o documento para assinatura.`,
+  };
+}
+
+export async function excluirOcorrenciaAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const o = await prisma.dp2Ocorrencia.findFirst({ where: { id: texto(fd, "ocorrenciaId"), tenantId: a.tenantId }, select: { id: true, companyId: true, personId: true, tipo: true } });
+  if (!o) return erro("Ocorrência não encontrada.");
+  const recusa = await empresaDoEscritorio(a, o.companyId);
+  if (recusa) return erro(recusa);
+  await prisma.dp2Ocorrencia.delete({ where: { id: o.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.ocorrencia_excluida", entityType: "Person", entityId: o.personId, metadata: { ocorrencia: o.id, tipo: o.tipo } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: "Ocorrência excluída. Se era suspensão de um mês já calculado, calcule a folha de novo." };
+}
+
+// ─── Horários de trabalho (25/11/2026, funcionalidade-752) ──────────────────
+
+export async function criarHorarioAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const lido = lerHorario({
+    nome: texto(fd, "nome"),
+    dias: fd.getAll("dias").map(String),
+    entrada: texto(fd, "entrada"),
+    saida: texto(fd, "saida"),
+    intervalo: texto(fd, "intervalo"),
+    tipoJornada: texto(fd, "tipoJornada"),
+  });
+  if (!lido.ok) return erro(lido.erro);
+  const h = await getPrisma().dp2Horario.create({ data: { tenantId: a.tenantId, companyId, ...lido.horario, criadoPorId: a.userId }, select: { id: true } });
+  const horas = horasDoHorario(lido.horario);
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.horario_criado", entityType: "Dp2Horario", entityId: h.id, metadata: { companyId, ...lido.horario, semanais: horas.semanais } });
+  revalidatePath("/dp2/configuracao");
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Horário "${lido.horario.nome}" criado: ${horas.semanais} h por semana, ${horas.mensais} h por mês.` };
+}
+
+export async function excluirHorarioAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_configuracao", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const prisma = getPrisma();
+  const h = await prisma.dp2Horario.findFirst({ where: { id: texto(fd, "horarioId"), tenantId: a.tenantId }, select: { id: true, nome: true, companyId: true } });
+  if (!h) return erro("Horário não encontrado.");
+  const recusa = await empresaDoEscritorio(a, h.companyId);
+  if (recusa) return erro(recusa);
+  const emUso = await prisma.dp2Vinculo.count({ where: { tenantId: a.tenantId, horarioId: h.id } });
+  if (emUso > 0) return erro(`O horário está em ${emUso} contrato(s): troque o horário deles antes de excluir.`);
+  await prisma.dp2Horario.delete({ where: { id: h.id } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.horario_excluido", entityType: "Dp2Horario", entityId: h.id, metadata: { nome: h.nome } });
+  revalidatePath("/dp2/configuracao");
+  return { ok: true, texto: `Horário "${h.nome}" excluído.` };
+}
+
+// ─── Saldo inicial das médias (25/11/2026, funcionalidade-747) ──────────────
+
+/**
+ * Grava o saldo inicial colado da Domínio ("Lançamento de Rubricas para
+ * Médias"): as rubricas de cada mês antes do DP 2. Importar de novo troca o da
+ * mesma pessoa, mês e rubrica. Entra como "a conferir": só vale na média
+ * depois do Conferir.
+ */
+export async function importarSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const colado = texto(fd, "texto");
+  if (!colado) return erro("Cole as linhas da Domínio: CPF; competência; rubrica; valor.");
+  const prisma = getPrisma();
+  const [pessoas, rubricas, primeira] = await Promise.all([
+    colaboradoresDaEmpresa(a.tenantId, companyId),
+    prisma.dp2Rubrica.findMany({ where: { tenantId: a.tenantId }, select: { id: true, codigo: true, nome: true, tipo: true, mediaFerias: true, mediaDecimo: true, mediaRescisao: true } }),
+    prisma.dp2Competencia.findFirst({ where: { tenantId: a.tenantId, companyId, tipo: "MENSAL" }, orderBy: [{ ano: "asc" }, { mes: "asc" }], select: { ano: true, mes: true } }),
+  ]);
+  const antesDe = primeira ? `${primeira.ano}-${String(primeira.mes).padStart(2, "0")}` : undefined;
+  const lido = lerSaldoInicial(colado, pessoas, rubricas, antesDe);
+  if (lido.erros.length > 0) {
+    const mais = lido.erros.length > 8 ? ` E mais ${lido.erros.length - 8}.` : "";
+    return erro(`Nada gravado: corrija ${lido.erros.length === 1 ? "a linha" : `as ${lido.erros.length} linhas`} e cole de novo. ${lido.erros.slice(0, 8).join(" ")}${mais}`);
+  }
+  if (lido.linhas.length === 0) return erro("Nenhuma linha com CPF, competência, rubrica e valor.");
+  await prisma.$transaction(
+    lido.linhas.map((l) =>
+      prisma.dp2SaldoInicialMedia.upsert({
+        where: { personId_competencia_rubricaId: { personId: l.personId, competencia: l.competencia, rubricaId: l.rubricaId } },
+        create: { tenantId: a.tenantId, companyId, ...l, criadoPorId: a.userId },
+        update: { valor: l.valor, conferidoEm: null, criadoPorId: a.userId },
+      })
+    )
+  );
+  const quantas = new Set(lido.linhas.map((l) => l.personId)).size;
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_importado", entityType: "Company", entityId: companyId, metadata: { linhas: lido.linhas.length, pessoas: quantas } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${lido.linhas.length} linha(s) de ${quantas} colaborador(es) a conferir.${lido.avisos.length ? ` ${lido.avisos.join(" ")}` : ""}` };
+}
+
+/** Confere o saldo inicial de uma pessoa (ou de todas da empresa): a partir daí ele entra na média. */
+export async function conferirSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const personId = texto(fd, "personId") || undefined;
+  const r = await getPrisma().dp2SaldoInicialMedia.updateMany({ where: { tenantId: a.tenantId, companyId, personId, conferidoEm: null }, data: { conferidoEm: new Date() } });
+  if (r.count === 0) return erro("Não há saldo inicial a conferir.");
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_conferido", entityType: personId ? "Person" : "Company", entityId: personId ?? companyId, metadata: { linhas: r.count } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `${r.count} linha(s) conferida(s): já entram nas médias.` };
+}
+
+/** Apaga o saldo inicial de uma pessoa, para importar de novo. */
+export async function apagarSaldoInicialAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_colaboradores", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const companyId = texto(fd, "companyId");
+  const recusa = await empresaDoEscritorio(a, companyId);
+  if (recusa) return erro(recusa);
+  const personId = texto(fd, "personId");
+  if (!personId) return erro("Escolha o colaborador.");
+  const r = await getPrisma().dp2SaldoInicialMedia.deleteMany({ where: { tenantId: a.tenantId, companyId, personId } });
+  await logAudit({ tenantId: a.tenantId, userId: a.userId, action: "folha.saldo_inicial_apagado", entityType: "Person", entityId: personId, metadata: { linhas: r.count } });
+  revalidatePath("/dp2/colaboradores");
+  return { ok: true, texto: `Saldo inicial apagado (${r.count} linha(s)).` };
+}
+
+// ─── Guias da folha (26/11/2026, funcionalidade-744) ────────────────────────
+
+/**
+ * Anexa a GFD (guia do FGTS Digital) da competência: o FGTS Digital não tem
+ * API, então o DP baixa a guia no portal e anexa aqui o PDF, com o valor e o
+ * vencimento. O PDF vai para Arquivos › Guias da empresa e a guia entra na
+ * lista de guias (tipo FGTS); a competência confere o valor com o FGTS do mês.
+ */
+export async function anexarGfdAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const comp = r0.comp;
+  if (comp.tipo !== "MENSAL") return erro("A GFD daqui é a da folha mensal.");
+  const lido = lerGuiaDoFgts(texto(fd, "valor"), texto(fd, "vencimento"));
+  if (!lido.ok) return erro(lido.erro);
+  const pdf = fd.get("arquivo");
+  if (!(pdf instanceof File) || pdf.size === 0) return erro("Anexe o PDF da GFD.");
+  if (pdf.size > 5 * 1024 * 1024) return erro("O PDF passa de 5 MB.");
+  const pasta = await pastaDoModeloDaEmpresa(a.tenantId, comp.companyId, "guias");
+  if (!pasta) return erro("A empresa não tem a pasta Guias nos Arquivos (ela vem do modelo de pastas do escritório).");
+  const competencia = `${comp.ano}-${String(comp.mes).padStart(2, "0")}`;
+  const nome = `GFD FGTS Digital ${String(comp.mes).padStart(2, "0")}-${comp.ano}.pdf`;
+  const guardado = await guardarArquivo({ tenantId: a.tenantId, folderId: pasta, arquivo: new File([await pdf.arrayBuffer()], nome, { type: pdf.type || "application/pdf" }), uploadedByUserId: a.userId });
+  if (!guardado.ok) return erro(`Não deu para guardar o PDF: ${guardado.erro}`);
+  const guia = await getPrisma().guia.create({
+    data: {
+      tenantId: a.tenantId,
+      companyId: comp.companyId,
+      tipo: "FGTS",
+      descricao: `GFD do FGTS Digital · ${String(comp.mes).padStart(2, "0")}/${comp.ano}`,
+      competencia,
+      vencimento: lido.vencimento,
+      valor: lido.valor,
+      origem: "DP2",
+      driveFileId: guardado.arquivoId,
+      emitidaPorId: a.userId,
+    },
+    select: { id: true },
+  });
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.gfd_anexada",
+    entityType: "Guia",
+    entityId: guia.id,
+    metadata: { competencia, valor: lido.valor, vencimento: lido.vencimento },
+  });
+  revalidarCompetencia(competenciaId);
+  revalidatePath("/guias");
+  return { ok: true, texto: "GFD anexada: está em Arquivos › Guias e na lista de guias." };
+}
+
 // ─── Totalizadores do eSocial (26/11/2026, funcionalidade-755) ─────────────
 
 /**
@@ -910,12 +1130,24 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
   // Professor (funcionalidade-773): as aulas por semana; o salário do contrato é o valor da hora-aula.
   const aulasSemanais = tipoSalario === "HORA_AULA" ? lerInteiro(texto(fd, "aulasSemanais")) : null;
   if (tipoSalario === "HORA_AULA" && (!aulasSemanais || aulasSemanais < 1 || aulasSemanais > 60)) return erro("Informe as aulas por semana do professor (1 a 60).");
-  const horasMensais = lerInteiro(texto(fd, "horasMensais")) ?? 220;
+  // Horário de trabalho (funcionalidade-752): com ele, as horas por mês e a jornada do eSocial saem do horário.
+  const horarioId = texto(fd, "horarioId") || null;
+  const horario = horarioId
+    ? await prisma.dp2Horario.findFirst({ where: { id: horarioId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId } })
+    : null;
+  if (horarioId && !horario) return erro("Horário não encontrado nesta empresa.");
+  const doHorario = horario ? horasDoHorario(horario) : null;
+  const horasMensais = doHorario?.mensais ?? lerInteiro(texto(fd, "horasMensais")) ?? 220;
   if (horasMensais < 1 || horasMensais > 300) return erro("Horas por mês entre 1 e 300.");
   const dependentesIrrf = lerInteiro(texto(fd, "dependentesIrrf")) ?? 0;
   const filhosSalarioFamilia = lerInteiro(texto(fd, "filhosSalarioFamilia")) ?? 0;
   if (dependentesIrrf < 0 || dependentesIrrf > 30 || filhosSalarioFamilia < 0 || filhosSalarioFamilia > 30) return erro("Confira dependentes e filhos.");
   const insalubridade = INSALUBRIDADES.includes(texto(fd, "insalubridade")) ? texto(fd, "insalubridade") : "NENHUM";
+  // Centro de custo (funcionalidade-751): um dos centros do BPO da mesma empresa.
+  const costCenterId = texto(fd, "costCenterId") || null;
+  if (costCenterId && !(await prisma.costCenter.findFirst({ where: { id: costCenterId, tenantId: a.tenantId, companyId: pessoa.currentCompanyId }, select: { id: true } }))) {
+    return erro("Centro de custo não encontrado nesta empresa.");
+  }
 
   const dados = {
     companyId: pessoa.currentCompanyId,
@@ -928,6 +1160,10 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     insalubridade,
     periculosidade: marcado(fd, "periculosidade"),
     valeTransporte: marcado(fd, "valeTransporte"),
+    horarioId,
+    costCenterId,
+    departamento: texto(fd, "departamento").slice(0, 80) || null,
+    vtCustoDiario: lerNumero(texto(fd, "vtCustoDiario")),
     aprendiz: marcado(fd, "aprendiz"),
     observacoes: texto(fd, "observacoes") || null,
     matricula: texto(fd, "matricula").slice(0, 30) || null,
@@ -940,8 +1176,8 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
       cbo: texto(fd, "esocial_cbo"),
       tipoContrato: texto(fd, "esocial_tipoContrato"),
       dataTermino: texto(fd, "esocial_dataTermino"),
-      tipoJornada: texto(fd, "esocial_tipoJornada"),
-      descricaoJornada: texto(fd, "esocial_descricaoJornada"),
+      tipoJornada: horario?.tipoJornada ?? texto(fd, "esocial_tipoJornada"),
+      descricaoJornada: doHorario?.descricao ?? texto(fd, "esocial_descricaoJornada"),
       estagioNatureza: texto(fd, "esocial_estagioNatureza"),
       estagioNivel: texto(fd, "esocial_estagioNivel"),
       estagioArea: texto(fd, "esocial_estagioArea"),
@@ -1369,6 +1605,39 @@ export async function cancelarPedidoDeEventosAction(_: EstadoDoDp2, fd: FormData
   return { ok: true, texto: "Link cancelado: quem abrir verá que ele não vale mais." };
 }
 
+/**
+ * Lança as contas da folha fechada no Contas a pagar da empresa
+ * (funcionalidade-770): líquidos, DARF da DCTFWeb, FGTS e PIS. Lançar de novo
+ * atualiza as que seguem em aberto; as já pagas ficam como estão.
+ */
+export async function lancarContasAPagarAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_competencia", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const competenciaId = texto(fd, "competenciaId");
+  const r0 = await competenciaEditavel(a, competenciaId);
+  if ("erro" in r0) return erro(r0.erro!);
+  const r = await lancarContasDaFolha(a.tenantId, competenciaId, a.userId);
+  if (!r.ok) return erro(r.erro);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.contas_a_pagar_lancadas",
+    entityType: "Dp2Competencia",
+    entityId: competenciaId,
+    metadata: { criadas: r.criadas, atualizadas: r.atualizadas, jaPagas: r.jaPagas, semCategoria: r.semCategoria },
+  });
+  revalidatePath("/pagar");
+  const nome = { LIQUIDOS: "líquidos", DARF: "DARF", FGTS: "FGTS", PIS: "PIS" } as const;
+  const lista = (t: (keyof typeof nome)[]) => t.map((x) => nome[x]).join(", ");
+  const partes = [
+    r.criadas.length ? `Lançadas: ${lista(r.criadas)}.` : "",
+    r.atualizadas.length ? `Atualizadas: ${lista(r.atualizadas)}.` : "",
+    r.jaPagas.length ? `Já pagas, ficaram como estavam: ${lista(r.jaPagas)}.` : "",
+    r.semCategoria.length ? `Sem categoria no plano de contas (ficam provisórias para o BPO classificar): ${lista(r.semCategoria)}.` : "",
+  ].filter(Boolean);
+  return { ok: true, texto: `${partes.join(" ")} Veja em Contas a pagar.` };
+}
+
 export async function guardarHoleritesAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
   const a = await acesso("dp2_competencia", "agir");
   if (!a) return SEM_PERMISSAO;
@@ -1615,9 +1884,9 @@ export async function gerarAlteracaoAction(_: EstadoDoDp2, fd: FormData): Promis
     action: "folha.esocial_alteracao",
     entityType: "Person",
     entityId: p.id,
-    metadata: { nome: p.name, data },
+    metadata: { nome: p.name, data, evento: r.ok ? (r.evento ?? "S-2206") : null },
   });
-  return respostaDoEvento("S-2206", p.name, r);
+  return respostaDoEvento(r.ok && r.evento ? r.evento : "S-2206", p.name, r);
 }
 
 export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
@@ -1644,6 +1913,29 @@ export async function gerarAfastamentoAction(_: EstadoDoDp2, fd: FormData): Prom
     metadata: { nome: p.name, motivo, inicio },
   });
   return respostaDoEvento("S-2230", p.name, r);
+}
+
+/** S-2298: a reintegração de quem foi desligado (funcionalidade-756). */
+export async function gerarReintegracaoAction(_: EstadoDoDp2, fd: FormData): Promise<EstadoDoDp2> {
+  const a = await acesso("dp2_esocial", "agir");
+  if (!a) return SEM_PERMISSAO;
+  const p = await pessoaDoEvento(a, texto(fd, "personId"));
+  if (typeof p === "string") return erro(p);
+  const retorno = texto(fd, "retorno");
+  const efeito = texto(fd, "efeito") || retorno;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(retorno)) return erro("Informe a data do retorno ao trabalho.");
+  const tipo = texto(fd, "tipoReintegracao");
+  const r = await gerarReintegracao(a.tenantId, p.id, { tipo, processo: texto(fd, "processo") || null, leiAnistia: texto(fd, "leiAnistia") || null, retorno, efeito }, a.userId);
+  await logAudit({
+    tenantId: a.tenantId,
+    userId: a.userId,
+    action: "folha.esocial_reintegracao",
+    entityType: "Person",
+    entityId: p.id,
+    metadata: { nome: p.name, tipo, retorno, efeito },
+  });
+  const resposta = respostaDoEvento("S-2298", p.name, r);
+  return resposta?.ok ? { ...resposta, texto: `${resposta.texto} Tire a data de desligamento do cadastro da pessoa para ela voltar à folha.` } : resposta;
 }
 
 const ehData = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
