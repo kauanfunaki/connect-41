@@ -189,3 +189,28 @@ describe("eventos periódicos", () => {
     expect(lote).toContain(`<evento Id="${ev.idEvento}"><eSocial`);
   });
 });
+
+describe("S-1200 com diferenças de meses anteriores (funcionalidade-760)", () => {
+  it("infoPerAnt: um ideADC por instrumento e um idePeriodo por mês, depois do infoPerApur", () => {
+    const comDiferencas: TrabalhadorEsocial = {
+      ...trabalhador,
+      perAnt: [
+        {
+          instrumento: "C",
+          dataInstrumento: "2027-05-20",
+          descricao: "Convenção 2027",
+          periodos: [
+            { perRef: "2027-03", itens: [{ codigo: "012", tipo: "PROVENTO", referencia: "", valor: 150, quantidade: null }, { codigo: "066", tipo: "DESCONTO", referencia: "", valor: 18, quantidade: null }] },
+            { perRef: "2027-04", itens: [{ codigo: "012", tipo: "PROVENTO", referencia: "", valor: 150, quantidade: null }] },
+          ],
+        },
+      ],
+    };
+    const ev = eventoS1200(empregador, "2027-06", comDiferencas, geradorDeId(empregador.cnpj, quando));
+    expect(ev.xml).toContain("<infoPerAnt><ideADC><dtAcConv>2027-05-20</dtAcConv><tpAcConv>C</tpAcConv><dsc>Convenção 2027</dsc><remunSuc>N</remunSuc><idePeriodo><perRef>2027-03</perRef>");
+    expect(ev.xml.match(/<idePeriodo>/g)).toHaveLength(2);
+    expect(ev.xml).toContain("<remunPerAnt><matricula>");
+    expect(ev.xml.indexOf("</infoPerApur>")).toBeLessThan(ev.xml.indexOf("<infoPerAnt>"));
+    expect(ev.pendencias.some((p) => !p.bloqueia && p.texto.includes("infoPerAnt"))).toBe(true);
+  });
+});

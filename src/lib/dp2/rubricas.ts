@@ -51,7 +51,12 @@ export type PapelDaRubrica =
   // Trabalhador sem vínculo (12/11/2026, fase 3d): o valor do mês de cada categoria.
   | "PRO_LABORE"
   | "BOLSA_ESTAGIO"
-  | "SERVICO_AUTONOMO";
+  | "SERVICO_AUTONOMO"
+  // Diferenças de meses anteriores (26/11/2026, funcionalidade-760): pagas no mês,
+  // com o INSS apurado mês a mês (vai no infoPerAnt do S-1200).
+  | "DIFERENCA_RETROATIVA"
+  | "INSS_DIFERENCA"
+  | "SALARIO_FAMILIA_RETROATIVO";
 
 /** A rubrica como o motor a recebe. */
 export type RubricaDoMotor = {
@@ -119,6 +124,9 @@ const PADRAO: Padrao[] = [
   { codigo: "009", nome: "Comissões", tipo: "PROVENTO", papel: null, lancamento: "VALOR", incide: "TODAS", entraNaMedia: true },
   { codigo: "010", nome: "Gratificação", tipo: "PROVENTO", papel: null, lancamento: "VALOR", incide: "TODAS", entraNaMedia: true },
   { codigo: "011", nome: "Prêmio", tipo: "PROVENTO", papel: null, lancamento: "VALOR", incide: "NENHUMA" },
+  // Diferenças retroativas (funcionalidade-760): o INSS sai mês a mês na rubrica 066, não na base do mês.
+  { codigo: "012", nome: "Diferenças salariais retroativas", tipo: "PROVENTO", papel: "DIFERENCA_RETROATIVA", lancamento: "VALOR", incide: "TODAS" },
+  { codigo: "013", nome: "Salário-família retroativo", tipo: "PROVENTO", papel: "SALARIO_FAMILIA_RETROATIVO", lancamento: "VALOR", incide: "NENHUMA" },
   // Férias na folha do mês (funcionalidade-745): o IRRF das férias é separado,
   // então férias e 1/3 entram no INSS e no FGTS do mês, mas não no IRRF.
   { codigo: "040", nome: "Férias", tipo: "PROVENTO", papel: "FERIAS_GOZADAS", lancamento: "VALOR", incide: "INSS_FGTS" },
@@ -143,6 +151,7 @@ const PADRAO: Padrao[] = [
   { codigo: "063", nome: "INSS sobre o 13º", tipo: "DESCONTO", papel: "INSS_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "064", nome: "IRRF sobre o 13º", tipo: "DESCONTO", papel: "IRRF_DECIMO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "065", nome: "Previdência complementar", tipo: "DESCONTO", papel: "PREVIDENCIA_COMPLEMENTAR", lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "066", nome: "INSS sobre diferenças retroativas", tipo: "DESCONTO", papel: "INSS_DIFERENCA", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "070", nome: "Aviso prévio indenizado", tipo: "PROVENTO", papel: "AVISO_INDENIZADO", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "071", nome: "Desconto do aviso prévio", tipo: "DESCONTO", papel: "AVISO_DESCONTO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "072", nome: "Férias vencidas indenizadas", tipo: "PROVENTO", papel: "FERIAS_VENCIDAS_INDENIZADAS", lancamento: "VALOR", incide: "NENHUMA" },

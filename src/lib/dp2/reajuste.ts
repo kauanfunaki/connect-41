@@ -52,3 +52,25 @@ export function preverReajuste(
     return { personId: c.personId, nome: c.nome, antes: c.salarioBase, depois, pelo };
   });
 }
+
+// ─── O salário vigente no mês (funcionalidade-760) ──────────────────────────
+
+/**
+ * O salário que vale no mês, pelo histórico: a última mudança com data até o
+ * fim do mês. Antes da primeira mudança registrada, vale o salário de antes
+ * dela (salarioAnterior); sem histórico, o salário do contrato. Assim um
+ * reajuste com data futura não muda os meses de antes, e recalcular um mês
+ * antigo usa o salário daquele mês.
+ */
+export function salarioNoMes(
+  historico: readonly { data: string; salario: number; salarioAnterior: number | null }[],
+  fimDoMes: string,
+  doContrato: number
+): number {
+  if (historico.length === 0) return doContrato;
+  const ordem = [...historico].sort((a, b) => a.data.localeCompare(b.data));
+  let vigente: number | null = null;
+  for (const h of ordem) if (h.data <= fimDoMes) vigente = h.salario;
+  if (vigente !== null) return vigente;
+  return ordem[0].salarioAnterior ?? doContrato;
+}

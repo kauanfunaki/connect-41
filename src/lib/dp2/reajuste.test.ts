@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lerReajuste, preverReajuste, salarioReajustado } from "./reajuste";
+import { lerReajuste, preverReajuste, salarioReajustado, salarioNoMes } from "./reajuste";
 
 describe("reajuste coletivo", () => {
   it("lê percentual e piso e recusa o vazio", () => {
@@ -30,5 +30,22 @@ describe("reajuste coletivo", () => {
       ["b", 2000, "PISO"],
       ["c", 2500, "SEM_MUDANCA"],
     ]);
+  });
+});
+
+describe("salário vigente no mês", () => {
+  const h = [
+    { data: "2027-03-01", salario: 3300, salarioAnterior: 3000 },
+    { data: "2027-07-15", salario: 3600, salarioAnterior: 3300 },
+  ];
+  it("vale a última mudança até o fim do mês", () => {
+    expect(salarioNoMes(h, "2027-02-28", 3600)).toBe(3000);
+    expect(salarioNoMes(h, "2027-03-31", 3600)).toBe(3300);
+    expect(salarioNoMes(h, "2027-06-30", 3600)).toBe(3300);
+    expect(salarioNoMes(h, "2027-07-31", 3600)).toBe(3600);
+  });
+  it("sem histórico, vale o contrato", () => {
+    expect(salarioNoMes([], "2027-07-31", 2500)).toBe(2500);
+    expect(salarioNoMes([{ data: "2027-08-01", salario: 2800, salarioAnterior: null }], "2027-07-31", 2800)).toBe(2800);
   });
 });

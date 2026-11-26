@@ -72,7 +72,7 @@ export const CONVENCAO_DA_CLT: ConvencaoDoMotor = { he50: 50, he100: 100, noturn
 export type EmpresaDoMotor = { patronalNoDas: boolean; ratAliquota: number; fap: number; terceirosAliquota: number };
 
 /** `origem` "FIXA" = rubrica fixa do contrato (19/11/2026, funcionalidade-767): só muda a memória do holerite. */
-export type EventoDoMotor = { rubrica: RubricaDoMotor; quantidade: number | null; valor: number | null; origem?: "FIXA" };
+export type EventoDoMotor = { rubrica: RubricaDoMotor; quantidade: number | null; valor: number | null; origem?: "FIXA"; /** A memória do lançamento, quando não é "Valor informado" (diferenças retroativas). */ memoria?: string };
 
 /**
  * Linha que veio de rubrica fixa (23/11/2026): a memória termina dizendo isso,
@@ -446,6 +446,8 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   // ── Eventos do mês ──
   let variaveisParaDsr = 0;
   let pensao = 0;
+  let diferencasRetroativas = 0;
+  let inssDasDiferencas = 0;
   const horaTxt = reais(r2(horaComAdicionais));
   for (const ev of e.eventos) {
     const r = ev.rubrica;
@@ -472,6 +474,15 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
         break;
       case "ATRASO":
         itens.push(itemDaRubrica(r, q * horaNormal, `${num(q)} h`, `${num(q)} h × ${reais(r2(horaNormal))}`));
+        break;
+      case "DIFERENCA_RETROATIVA":
+        // O INSS da diferença é apurado mês a mês (rubrica do INSS sobre diferenças); fora da base do mês.
+        diferencasRetroativas += ev.valor ?? 0;
+        itens.push({ ...itemDaRubrica(r, ev.valor ?? 0, "", ev.memoria ?? "Diferenças de meses anteriores (INSS apurado mês a mês)"), incideInss: false });
+        break;
+      case "INSS_DIFERENCA":
+        inssDasDiferencas += ev.valor ?? 0;
+        itens.push(itemDaRubrica(r, ev.valor ?? 0, "", ev.memoria ?? "INSS das diferenças, pela tabela de cada mês"));
         break;
       case "PENSAO":
         pensao += ev.valor ?? 0;
@@ -554,7 +565,7 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   if (previdenciaComplementar > 0) {
     itens.push(itemDaRubrica(R("PREVIDENCIA_COMPLEMENTAR"), previdenciaComplementar, "", "Contribuição do empregado à previdência complementar, deduzida da base do IRRF"));
   }
-  const irrf = calcularIrrf({ rendimentos, inss: r2(Math.max(0, inss.valor - inssDasFerias)), dependentes: v.dependentesIrrf, pensao, previdenciaComplementar }, e.tabelas.irrf.dados);
+  const irrf = calcularIrrf({ rendimentos, inss: r2(Math.max(0, inss.valor - inssDasFerias) + inssDasDiferencas), dependentes: v.dependentesIrrf, pensao, previdenciaComplementar }, e.tabelas.irrf.dados);
   if (irrf.valor > 0) itens.push(itemDaRubrica(R("IRRF"), irrf.valor, pct(irrf.aliquota), irrf.memoria.join("; ")));
 
   // O recibo de férias já pagou: o líquido dele e o IRRF retido nele saem da folha.
@@ -595,7 +606,9 @@ export function calcularMes(e: EntradaMensal): CalculoDaPessoa {
   if (dias < 30 && dias > 0) alertas.push(`Mês proporcional: ${dias} dias.`);
   if (e.desligamento && dias > 0) alertas.push("Desligamento no mês: as verbas rescisórias saem na tela de Rescisões.");
 
-  const encargos = ehDomestico(v.categoria) ? encargosDoDomestico(baseInss, fgts) : calcularEncargos(baseInss, fgts, e.empresa);
+  // Os encargos patronais das diferenças retroativas entram no custo do mês.
+  const baseDosEncargos = r2(baseInss + diferencasRetroativas);
+  const encargos = ehDomestico(v.categoria) ? encargosDoDomestico(baseDosEncargos, fgts) : calcularEncargos(baseDosEncargos, fgts, e.empresa);
   // A provisão é do salário do mês: as férias gozadas não provisionam férias de novo.
   const provisoes = calcularProvisoes(r2(Math.max(0, baseInss - baseDasFerias)), e.empresa, v.aprendiz, ehDomestico(v.categoria));
   if (feriasDoMes.length) alertas.push(`Férias no mês (${feriasDoMes.map((f) => f.periodo).join(", ")}): pagas no recibo; aqui entram no INSS e no FGTS do mês.`);
