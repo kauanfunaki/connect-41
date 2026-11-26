@@ -28,6 +28,7 @@ export type PapelDaRubrica =
   | "ADIANTAMENTO"
   | "PENSAO"
   | "PREVIDENCIA_COMPLEMENTAR"
+  | "CONTRIBUICAO_SINDICAL"
   | "FGTS"
   | "DECIMO_PRIMEIRA"
   | "DECIMO_SEGUNDA"
@@ -135,6 +136,7 @@ const PADRAO: Padrao[] = [
   { codigo: "056", nome: "Adiantamento salarial", tipo: "DESCONTO", papel: "ADIANTAMENTO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "057", nome: "Pensão alimentícia", tipo: "DESCONTO", papel: "PENSAO", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "058", nome: "Desconto diverso", tipo: "DESCONTO", papel: null, lancamento: "VALOR", incide: "NENHUMA" },
+  { codigo: "059", nome: "Contribuição sindical", tipo: "DESCONTO", papel: "CONTRIBUICAO_SINDICAL", lancamento: "VALOR", incide: "NENHUMA" },
   { codigo: "060", nome: "13º salário — 1ª parcela", tipo: "PROVENTO", papel: "DECIMO_PRIMEIRA", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "061", nome: "13º salário", tipo: "PROVENTO", papel: "DECIMO_SEGUNDA", lancamento: "VALOR", incide: "SO_FGTS" },
   { codigo: "062", nome: "Adiantamento do 13º", tipo: "DESCONTO", papel: "DECIMO_ADIANTADO", lancamento: "VALOR", incide: "SO_FGTS" },

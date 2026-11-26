@@ -143,6 +143,12 @@ export default async function ConvencoesDoDp2({ searchParams }: { searchParams: 
                 <CampoForm label="Adicional noturno (%)" htmlFor="noturno">
                   <Input id="noturno" name="noturno" inputMode="decimal" defaultValue={aberta ? num(aberta.noturno) : "20"} />
                 </CampoForm>
+                <CampoForm label="Mês da contribuição sindical" htmlFor="contribuicaoMes" dica="1 a 12. Em branco, março. Só desconta de quem autorizou no contrato.">
+                  <Input id="contribuicaoMes" name="contribuicaoMes" inputMode="numeric" maxLength={2} defaultValue={aberta?.contribuicaoMes != null ? String(aberta.contribuicaoMes) : ""} />
+                </CampoForm>
+                <CampoForm label="Contribuição sindical (% do salário)" htmlFor="contribuicaoPercentual" dica="Em branco, um dia de trabalho (salário ÷ 30).">
+                  <Input id="contribuicaoPercentual" name="contribuicaoPercentual" inputMode="decimal" defaultValue={aberta?.contribuicaoPercentual != null ? num(aberta.contribuicaoPercentual) : ""} />
+                </CampoForm>
               </div>
               <CampoForm label="Observações" htmlFor="observacoes" className="mt-4">
                 <Textarea id="observacoes" name="observacoes" rows={3} defaultValue={aberta?.observacoes ?? ""} />

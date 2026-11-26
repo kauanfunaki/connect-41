@@ -75,6 +75,8 @@ export type ExemplosDoMotor = {
   media: ReturnType<typeof mediaDeVariaveis>;
   /** O mensalista que contribui para a previdência complementar (funcionalidade-762). */
   previdencia: CalculoDaPessoa;
+  /** O mensalista que autorizou a contribuição sindical, no mês da convenção (funcionalidade-774). */
+  sindical: CalculoDaPessoa;
   ferias: CalculoDeFerias;
   /** A folha do mês das férias do exemplo (gozo de 20 dias a partir do dia 3). */
   feriasNaFolha: CalculoDaPessoa | null;
@@ -272,6 +274,7 @@ export function calcularExemplos(competencia: string, tabelas: TabelasDaCompeten
     autonomo: semVinculo("701", 2000),
     estagiario: semVinculo("901", 1500),
     previdencia: calcularMesDaCategoria({ ...base, vinculo: { ...VINCULO, salarioBase: SALARIO_ALTO, previdenciaComplementar: 400 }, eventos: [] }),
+    sindical: calcularMesDaCategoria({ ...base, convencao: { ...CONVENCAO_DA_CLT, contribuicaoMes: mes }, vinculo: { ...VINCULO, contribuicaoSindical: true }, eventos: [] }),
   };
 }
 
@@ -423,6 +426,17 @@ export const FORMULAS: readonly Formula[] = [
     papeis: ["SALARIO_FAMILIA"],
     funcao: "calcularMes (mensal.ts)",
     exemplo: (x) => linha(x.proporcional, "SALARIO_FAMILIA"),
+  },
+  {
+    id: "contribuicao-sindical",
+    tema: "MENSAL",
+    nome: "Contribuição sindical do empregado",
+    conta: "Um dia de trabalho (salário ÷ 30) ou o percentual da convenção, uma vez por ano, no mês da convenção (março, sem ela).",
+    detalhe: "Só desconta quem autorizou por escrito (marcação no contrato). O mês e o percentual vêm da convenção coletiva da empresa.",
+    baseLegal: "CLT arts. 545, 578 e 582 (Lei 13.467/2017)",
+    papeis: ["CONTRIBUICAO_SINDICAL"],
+    funcao: "calcularMes (mensal.ts)",
+    exemplo: (x) => linha(x.sindical, "CONTRIBUICAO_SINDICAL"),
   },
   {
     id: "previdencia-complementar",

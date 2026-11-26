@@ -1203,6 +1203,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     periculosidade: marcado(fd, "periculosidade"),
     valeTransporte: marcado(fd, "valeTransporte"),
     previdenciaComplementar: lerNumero(texto(fd, "previdenciaComplementar")),
+    contribuicaoSindical: marcado(fd, "contribuicaoSindical"),
     horarioId,
     costCenterId,
     departamento: texto(fd, "departamento").slice(0, 80) || null,
@@ -1504,7 +1505,14 @@ export async function salvarConvencaoAction(_: EstadoDoDp2, fd: FormData): Promi
   if (he50 < 50) return erro("Hora extra de no mínimo 50% (CF art. 7º, XVI).");
   if (noturno < 20) return erro("Adicional noturno de no mínimo 20% (CLT art. 73).");
   const dataBase = lerInteiro(texto(fd, "dataBase"));
+  // Contribuição sindical (funcionalidade-774): mês do desconto e percentual; vazios = março e um dia.
+  const contribuicaoMes = lerInteiro(texto(fd, "contribuicaoMes"));
+  const contribuicaoPercentual = lerNumero(texto(fd, "contribuicaoPercentual"));
+  if (contribuicaoMes !== null && (contribuicaoMes < 1 || contribuicaoMes > 12)) return erro("O mês da contribuição vai de 1 a 12.");
+  if (contribuicaoPercentual !== null && (contribuicaoPercentual <= 0 || contribuicaoPercentual > 20)) return erro("O percentual da contribuição vai de 0 a 20%.");
   const data = {
+    contribuicaoMes,
+    contribuicaoPercentual,
     nome: nome.slice(0, 160),
     sindicato: texto(fd, "sindicato").slice(0, 160) || null,
     cnpjSindicato: texto(fd, "cnpjSindicato").replace(/\D/g, "").slice(0, 14) || null,
