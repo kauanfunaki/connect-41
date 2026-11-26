@@ -36,6 +36,16 @@ type Props = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "multiple" | "s
    * `LIMITE_SEM_BUSCA`.
    */
   busca?: boolean;
+  /**
+   * O grupo (`<optgroup>`) da escolhida aparece apagado antes dela no campo,
+   * "Desenvolvimento › Bug | Correção" — na lista ela já fica embaixo do
+   * rótulo do grupo (26/11/2026, melhoria-809: a categoria do chamado).
+   */
+  grupoNoCampo?: boolean;
+  /** Quantas opções cada grupo tem, à direita do rótulo dele na lista (só com mais de uma). */
+  contarNosGrupos?: boolean;
+  /** Algo a mais na linha da opção, antes do visto: a sugestão da IA no Novo chamado. */
+  marcaDaOpcao?: (valor: string) => React.ReactNode;
 };
 
 /** Quanto tempo as letras digitadas seguidas contam como uma busca só ("são p"). */
@@ -100,6 +110,9 @@ export function Select({
   error = false,
   compact = false,
   busca: sempreComBusca = false,
+  grupoNoCampo = false,
+  contarNosGrupos = false,
+  marcaDaOpcao,
   className = "",
   disabled = false,
   children,
@@ -132,11 +145,21 @@ export function Select({
   const [interno, setInterno] = useState(() => paraTexto(defaultValue));
   const mostrada = opcaoMostrada(opcoes, controlado ? paraTexto(value) : interno);
   const vazia = !mostrada || mostrada.valor === "";
+  // O grupo antes da opção, se pedido e se diz algo a mais ("A classificar ›
+  // A classificar" não diz).
+  const grupoDe = (o: OpcaoDoSelect | null) =>
+    grupoNoCampo && o && o.valor !== "" && o.grupo && o.grupo !== o.rotulo ? o.grupo : null;
+  const grupoMostrado = grupoDe(mostrada);
   // O campo tem a largura da maior opção, como o `<select>` tinha — numa
   // fileira de filtros sem largura definida, ele não pula ao trocar de opção.
   const maisLonga = useMemo(
-    () => opcoes.reduce((maior, o) => (o.rotulo.length > maior.length ? o.rotulo : maior), ""),
-    [opcoes]
+    () =>
+      opcoes.reduce((maior, o) => {
+        const grupo = grupoNoCampo && o.valor !== "" && o.grupo && o.grupo !== o.rotulo ? `${o.grupo} › ` : "";
+        const texto = grupo + o.rotulo;
+        return texto.length > maior.length ? texto : maior;
+      }, ""),
+    [opcoes, grupoNoCampo]
   );
 
   const [aberto, setAberto] = useState(false);
@@ -377,6 +400,7 @@ export function Select({
       >
         <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)]">
           <span className={`col-start-1 row-start-1 truncate ${vazia ? "text-fg-muted" : ""}`}>
+            {grupoMostrado && <span className="text-fg-muted">{grupoMostrado} › </span>}
             {mostrada?.rotulo || " "}
           </span>
           <span aria-hidden className="invisible col-start-1 row-start-1 h-0 overflow-hidden whitespace-nowrap">
@@ -468,6 +492,7 @@ export function Select({
                   }`}
                 >
                   <span className="min-w-0 flex-1 break-words">{o.rotulo || " "}</span>
+                  {marcaDaOpcao?.(o.valor)}
                   {escolhida && <Check size={14} aria-hidden className="flex-shrink-0 text-brand" />}
                 </div>
               );
@@ -476,8 +501,13 @@ export function Select({
             const idDoGrupo = `${idBase}g${s}`;
             return (
               <div key={`s${s}`} role="group" aria-labelledby={idDoGrupo}>
-                <p id={idDoGrupo} className="c41-rotulo px-2.5 pt-2.5 pb-1">
-                  {secao.grupo}
+                <p id={idDoGrupo} className="c41-rotulo flex items-baseline justify-between gap-2 px-2.5 pt-2.5 pb-1">
+                  <span className="min-w-0">{secao.grupo}</span>
+                  {contarNosGrupos && secao.itens.length > 1 && (
+                    <span aria-hidden className="shrink-0 tabular-nums">
+                      {secao.itens.length}
+                    </span>
+                  )}
                 </p>
                 {linhas}
               </div>

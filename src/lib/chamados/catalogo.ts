@@ -26,6 +26,47 @@ export function caminhoDaCategoria(categorias: CategoriaNaArvore[], id: string):
   }
   return partes.join(" › ");
 }
+/**
+ * As categorias que o "Editar dados" e o "Trocar categoria" oferecem: as
+ * ativas (e a atual do chamado, mesmo inativa) que não têm filha ativa. Uma
+ * raiz sem filhas, como "A classificar", entra ela mesma. É a conta da grade
+ * de botões que existia até 26/11/2026 (melhoria-809).
+ */
+export function categoriasDaEdicao<T extends CategoriaNaArvore>(categorias: T[], atual: string): T[] {
+  const ativas = categorias.filter(c => c.active || c.id === atual);
+  return ativas.filter(c => !ativas.some(f => f.parentId === c.id));
+}
+
+export type GrupoDeCategorias = { id: string; nome: string; opcoes: { id: string; nome: string }[] };
+
+/**
+ * As escolhíveis agrupadas pela raiz da árvore, para o campo de categoria
+ * (26/11/2026, melhoria-809): os grupos na ordem das raízes e, dentro de cada
+ * um, as opções na ordem em que vieram. O nome da opção é o caminho sem a raiz
+ * ("Bug | Correção", ou "Sub › Folha" numa árvore mais funda); a raiz que é
+ * ela mesma escolhível leva o próprio nome.
+ */
+export function gruposDeCategorias(categorias: CategoriaNaArvore[], escolhiveis: CategoriaNaArvore[]): GrupoDeCategorias[] {
+  const porId = new Map(categorias.map(c => [c.id, c]));
+  const raizDe = (c: CategoriaNaArvore) => {
+    let raiz = c; const vistos = new Set([c.id]);
+    while (raiz.parentId && !vistos.has(raiz.parentId)) {
+      const pai = porId.get(raiz.parentId); if (!pai) break;
+      vistos.add(pai.id); raiz = pai;
+    }
+    return raiz;
+  };
+  const grupos = new Map<string, GrupoDeCategorias>();
+  for (const c of escolhiveis) {
+    const raiz = raizDe(c), caminho = caminhoDaCategoria(categorias, c.id).split(" › ");
+    const grupo = grupos.get(raiz.id) ?? { id: raiz.id, nome: raiz.name, opcoes: [] };
+    grupo.opcoes.push({ id: c.id, nome: caminho.length > 1 ? caminho.slice(1).join(" › ") : c.name });
+    grupos.set(raiz.id, grupo);
+  }
+  const ordem = new Map(categorias.map((c, i) => [c.id, i]));
+  return [...grupos.values()].sort((a, b) => (ordem.get(a.id) ?? 0) - (ordem.get(b.id) ?? 0));
+}
+
 export function categoriasClassificaveis<T extends CategoriaNaArvore>(categorias: T[]): T[] {
   const porId = new Map(categorias.map(c => [c.id, c]));
   return categorias.filter(c => {
