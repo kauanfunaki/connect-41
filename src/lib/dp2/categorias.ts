@@ -17,6 +17,7 @@ export const CATEGORIAS: [string, string][] = [
   ["101", "101 · Empregado geral"],
   ["102", "102 · Empregado rural"],
   ["103", "103 · Aprendiz"],
+  ["104", "104 · Empregado doméstico"],
   ["105", "105 · Contrato por prazo determinado"],
   ["106", "106 · Contrato temporário"],
   ["111", "111 · Contrato intermitente"],
@@ -48,3 +49,6 @@ export const SALARIO_OBRIGATORIO = "Informe o salário (só o autônomo por RPA 
 
 /** A alíquota do INSS retido do contribuinte individual pela empresa (Lei 10.666/2003, art. 4º). */
 export const INSS_CONTRIBUINTE_INDIVIDUAL = 11;
+
+/** Empregado doméstico (categoria 104): encargos da LC 150/2015 e o DAE do Simples Doméstico (funcionalidade-777). */
+export const ehDomestico = (categoria: string | null | undefined) => categoria === "104";
