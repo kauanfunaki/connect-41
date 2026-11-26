@@ -501,7 +501,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como achar as pastas de uma empresa",
         passos: [
-          "Abra “Arquivos” na barra lateral e digite na busca o nome ou o CNPJ da empresa. O resultado vem em dois grupos: “Empresas”, com as que batem com o texto, e “Arquivos”. Clique na empresa para abrir as pastas dela. Pela ficha da empresa, a aba “Arquivos” mostra as mesmas pastas.",
+          "Na barra lateral, clique em “Atendimento ao cliente” e escolha “Arquivos”. Digite na busca o nome ou o CNPJ da empresa. O resultado vem em dois grupos: “Empresas”, com as que batem com o texto, e “Arquivos”. Clique na empresa para abrir as pastas dela. Pela ficha da empresa, a aba “Arquivos” mostra as mesmas pastas.",
           "Na lista de empresas, o número à direita é quantos documentos a empresa tem (pastas e “Do Connect”). Âmbar com “!” é envio do cliente que ninguém da equipe abriu ainda: a empresa vem no topo, e o clique abre direto em “Enviados pelo cliente”.",
           "A lista mostra 12 empresas por página — primeiro as com envio novo, depois as com movimento mais recente. Use “Próxima” ou a busca para achar as outras.",
           "Clique numa pasta para abrir. A trilha no topo leva de volta a qualquer nível.",
@@ -577,7 +577,7 @@ export const ARTIGOS_GERAIS: ArtigoDeAjuda[] = [
       {
         titulo: "Como acompanhar a fila",
         passos: [
-          "Abra “Solicitações” na barra lateral. A aba “Recebidas” mostra as que estão em aberto.",
+          "Na barra lateral, clique em “Atendimento ao cliente” e escolha “Solicitações”. A aba “Recebidas” mostra as que estão em aberto.",
           "Use os cartões “Novas”, “Minhas”, “Resposta atrasada” e “Aguardando cliente” para abrir cada recorte.",
           "Clique em “Filtros” para escolher a “Situação”, o “Setor”, a “Empresa” ou só as com resposta atrasada.",
           "Em cada linha, confira a data em “Resposta até” e o selo do prazo: “No prazo”, “Responder hoje” ou “Resposta atrasada”.",
