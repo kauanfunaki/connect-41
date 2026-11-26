@@ -101,21 +101,26 @@ export function indiceDoDestaque(itens: ItemDeTotal[]): number | null {
  * cada um reservando duas linhas para os valores ficarem na mesma altura (ver
  * `rotuloInteiro` no `MetricCard`) — para rótulo comprido que não pode perder
  * o fim, como o mês em "Desligamentos em setembro".
+ * `compacta` (melhoria-822, 25/11/2026) desenha os cartões menores, quatro numa
+ * linha já no `md`, para a faixa ser apoio de um gráfico logo abaixo.
  */
 export function FaixaDeTotais({
   itens,
   className = "mb-5",
   destaque = true,
   rotulosInteiros = false,
+  compacta = false,
 }: {
   itens: ItemDeTotal[];
   className?: string;
   destaque?: boolean;
   rotulosInteiros?: boolean;
+  compacta?: boolean;
 }) {
   const principal = destaque ? indiceDoDestaque(itens) : null;
+  const colunas = compacta && itens.length === 4 ? "md:grid-cols-4" : (COLUNAS[itens.length] ?? "xl:grid-cols-4");
   return (
-    <div className={`grid grid-cols-2 ${COLUNAS[itens.length] ?? "xl:grid-cols-4"} gap-3 sm:gap-4 ${className}`.trim()}>
+    <div className={`grid grid-cols-2 ${colunas} ${compacta ? "gap-2 sm:gap-3" : "gap-3 sm:gap-4"} ${className}`.trim()}>
       {itens.map((i, n) => (
         <MetricCard
           key={i.rotulo}
@@ -130,6 +135,7 @@ export function FaixaDeTotais({
           ativo={i.ativo}
           destaque={n === principal}
           rotuloInteiro={rotulosInteiros}
+          compacto={compacta}
           delay={n * 40}
         />
       ))}
