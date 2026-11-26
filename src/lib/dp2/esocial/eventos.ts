@@ -86,6 +86,20 @@ export type TrabalhadorEsocial = {
    * em cada outra empresa (ideTrabalhador/infoMV no S-1200).
    */
   infoMV?: { indMV: 1 | 2 | 3; outras: { tpInsc: 1 | 2; nrInsc: string; codCateg: string; valor: number }[] } | null;
+  /**
+   * Diferenças de meses anteriores (funcionalidade-760): o grupo infoPerAnt, um
+   * ideADC por instrumento e um idePeriodo por mês de referência.
+   */
+  perAnt?: PeriodosAnteriores[];
+};
+
+/** Um instrumento (convenção, acordo, dissídio…) e as diferenças de cada mês. */
+export type PeriodosAnteriores = {
+  /** tpAcConv: A, B, C, D, G, J… */
+  instrumento: string;
+  dataInstrumento: string | null;
+  descricao: string;
+  periodos: { perRef: string; itens: ItemDaRemuneracao[] }[];
 };
 
 /** Gera o Id e o carimbo de um evento; o sequencial evita Id repetido no mesmo segundo. */
@@ -127,13 +141,13 @@ export function incidencias(r: RubricaEsocial): { cp: string; irrf: string; fgts
   const conferir: string[] = [];
   const decimo = r.papel === "DECIMO_PRIMEIRA" || r.papel === "DECIMO_SEGUNDA" || r.papel === "DECIMO_ADIANTADO";
   let cp = r.incideInss ? (decimo ? "12" : "11") : "00";
-  if (r.papel === "INSS") cp = "31";
+  if (r.papel === "INSS" || r.papel === "INSS_DIFERENCA") cp = "31";
   if (r.papel === "INSS_DECIMO") cp = "32";
-  if (r.papel === "SALARIO_FAMILIA") cp = "51";
+  if (r.papel === "SALARIO_FAMILIA" || r.papel === "SALARIO_FAMILIA_RETROATIVO") cp = "51";
   let irrf = r.incideIrrf ? (decimo ? "12" : "11") : "00";
   if (r.papel === "IRRF") irrf = "31";
   if (r.papel === "IRRF_DECIMO") irrf = "32";
-  if (r.papel === "INSS" || r.papel === "INSS_DECIMO" || r.papel === "PENSAO" || r.papel === "SALARIO_FAMILIA" || (!r.papel && !r.incideIrrf)) {
+  if (r.papel === "INSS" || r.papel === "INSS_DECIMO" || r.papel === "INSS_DIFERENCA" || r.papel === "PENSAO" || r.papel === "SALARIO_FAMILIA" || r.papel === "SALARIO_FAMILIA_RETROATIVO" || (!r.papel && !r.incideIrrf)) {
     conferir.push("IRRF");
   }
   const fgts = r.incideFgts ? (decimo ? "12" : "11") : "00";
@@ -298,7 +312,28 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
     }
   }
   const itens = [...porRubrica.values()];
-  if (itens.length === 0) pendencias.push({ onde: "competencia", texto: `${t.nome}: sem rubricas com valor no mês.`, link: null, bloqueia: true });
+  const perAnt = (t.perAnt ?? []).filter((a) => a.periodos.some((p) => p.itens.some((i) => i.valor > 0)));
+  if (itens.length === 0 && perAnt.length === 0) pendencias.push({ onde: "competencia", texto: `${t.nome}: sem rubricas com valor no mês.`, link: null, bloqueia: true });
+  if (perAnt.length > 0) {
+    pendencias.push({
+      onde: "competencia",
+      texto: `${t.nome}: diferenças de meses anteriores no grupo infoPerAnt (${perAnt.map((a) => `${a.instrumento} ${a.periodos.map((p) => p.perRef).join(", ")}`).join("; ")}). Confira o instrumento e os meses antes do envio.`,
+      link: null,
+      bloqueia: false,
+    });
+  }
+  const remunDosItens = (lista: readonly ItemDaRemuneracao[]) =>
+    lista
+      .filter((i) => i.valor > 0)
+      .map((i) =>
+        el("itensRemun", [
+          el("codRubr", i.codigo),
+          el("ideTabRubr", TABELA_DE_RUBRICAS),
+          el("qtdRubr", i.quantidade !== null && i.quantidade > 0 ? decimal(i.quantidade) : null),
+          el("vrRubr", decimal(i.valor)),
+          el("indApurIR", "0"),
+        ])
+      );
   const id = novoId();
   const xml = envelope("S-1200", id, [
     el("ideEvento", [
@@ -345,6 +380,25 @@ export function eventoS1200(e: EmpregadorEsocial, perApur: string, t: Trabalhado
           ]),
         ]),
       ]),
+      perAnt.length
+        ? el(
+            "infoPerAnt",
+            perAnt.slice(0, 8).map((a) =>
+              el("ideADC", [
+                el("dtAcConv", a.dataInstrumento),
+                el("tpAcConv", a.instrumento),
+                el("dsc", a.descricao.slice(0, 255)),
+                el("remunSuc", "N"),
+                ...a.periodos.map((p) =>
+                  el("idePeriodo", [
+                    el("perRef", p.perRef),
+                    el("ideEstabLot", [el("tpInsc", "1"), el("nrInsc", digitos(e.cnpj)), el("codLotacao", LOTACAO_PADRAO), el("remunPerAnt", [el("matricula", t.matricula), ...remunDosItens(p.itens)])]),
+                  ])
+                ),
+              ])
+            )
+          )
+        : null,
     ]),
   ]);
   return { tipo: "S-1200", referencia: `${perApur} · ${digitos(t.cpf) || t.nome}`, personId: t.personId, idEvento: id, xml, pendencias };

@@ -2819,6 +2819,7 @@ model Person {
   dp2Alocacoes         Dp2Alocacao[]
   dp2EntregasDeEpi     Dp2EntregaDeEpi[]
   dp2HistoricoSalarial Dp2HistoricoSalarial[]
+  dp2DiferencasRetroativas Dp2DiferencaRetroativa[]
   dp2Ocorrencias       Dp2Ocorrencia[]
   dp2SaldoInicial      Dp2SaldoInicialMedia[]
   dp2OutrasBasesInss   Dp2OutraBaseInss[]
@@ -7115,6 +7116,9 @@ model Dp2Vinculo {
   /// Ambiente de trabalho (Dp2Ambiente), 26/11/2026, funcionalidade-761: o
   /// S-2240 do colaborador sai dele quando nenhum outro é escolhido.
   ambienteId           String?
+  /// Nível salarial (Dp2NivelSalarial), 26/11/2026, funcionalidade-760: o
+  /// salário segue a faixa do tempo de casa.
+  nivelId              String?
   /// Custo diário do vale-transporte (tarifas × viagens por dia), 25/11/2026,
   /// funcionalidade-753: limita o desconto de 6% e dá o pedido do mês.
   vtCustoDiario        Decimal? @db.Decimal(10, 2)
@@ -7180,6 +7184,7 @@ model Dp2Competencia {
   informacoesDaApuracao Dp2InformacaoDaApuracao[]
   outrasBasesInss Dp2OutraBaseInss[]
   totalizadores Dp2TotalizadorEsocial[]
+  diferencasRetroativas Dp2DiferencaRetroativa[]
 
   @@unique([companyId, ano, mes, tipo])
   @@index([tenantId, ano, mes])
@@ -7471,6 +7476,59 @@ model Dp2Transferencia {
   @@index([tenantId, companyId])
   @@index([personId])
   @@map("dp2_transferencias")
+}
+
+/// Diferença de um mês anterior paga na competência (26/11/2026,
+/// funcionalidade-760): convenção, acordo ou dissídio retroativo, rubrica paga a
+/// menor ou salário-família retroativo. Cada linha é uma pessoa e um mês de
+/// referência (perRef); o cálculo da competência soma as linhas nas rubricas de
+/// diferenças, e o S-1200 leva as de instrumento no grupo infoPerAnt.
+model Dp2DiferencaRetroativa {
+  id              String    @id @default(uuid())
+  tenantId        String
+  companyId       String
+  competenciaId   String
+  personId        String
+  /// O lançamento que gerou a linha: as linhas de um lançamento saem juntas.
+  loteId          String    @db.VarChar(36)
+  /// "SALARIO", "RUBRICA" ou "SALARIO_FAMILIA".
+  origem          String    @db.VarChar(20)
+  /// "AAAA-MM": o mês a que a diferença se refere.
+  perRef          String    @db.VarChar(7)
+  /// Tipo do instrumento (tpAcConv do eSocial); nulo no salário-família.
+  instrumento     String?   @db.VarChar(1)
+  dataInstrumento DateTime? @db.Date
+  descricao       String    @db.VarChar(255)
+  valor           Decimal   @db.Decimal(12, 2)
+  inss            Decimal   @default(0) @db.Decimal(12, 2)
+  memoria         String    @db.Text
+  criadoPorId     String?
+  createdAt       DateTime  @default(now())
+
+  competencia Dp2Competencia @relation(fields: [competenciaId], references: [id], onDelete: Cascade)
+  person      Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, companyId])
+  @@index([competenciaId, personId])
+  @@index([personId])
+  @@map("dp2_diferencas_retroativas")
+}
+
+/// Nível salarial da empresa (26/11/2026, funcionalidade-760): faixas de
+/// classe e referência com o tempo de casa mínimo e o valor. O contrato
+/// escolhe o nível e o salário segue a faixa do tempo de casa.
+model Dp2NivelSalarial {
+  id          String   @id @default(uuid())
+  tenantId    String
+  companyId   String
+  nome        String   @db.VarChar(80)
+  /// [{ classe, referencia, meses, valor }], na ordem de progressão.
+  faixas      Json
+  criadoPorId String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, companyId])
+  @@map("dp2_niveis_salariais")
 }
 
 /// Histórico salarial do contrato (26/11/2026, funcionalidade-760): cada

@@ -2,6 +2,7 @@
 // nos arquivos puros ao lado (`mensal.ts`, `tabelas.ts`…); aqui só se junta o
 // que eles precisam e se guarda o que devolvem.
 
+import { salarioNoMes } from "./reajuste";
 import { periodoNaEmpresa } from "./transferencia";
 import { avisosDeVencimento } from "./avisos";
 import { lerDadosEsocial } from "./esocial/cadastro";
@@ -493,6 +494,36 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
         )
       : new Set<string>();
   const nomesRescindidos: string[] = [];
+  // Diferenças retroativas lançadas na competência (funcionalidade-760): uma rubrica para
+  // as diferenças, uma para o INSS delas (apurado mês a mês) e uma para o salário-família.
+  const diferencas =
+    comp.tipo === "MENSAL" ? await prisma.dp2DiferencaRetroativa.findMany({ where: { tenantId, competenciaId }, orderBy: [{ perRef: "asc" }] }) : [];
+  const eventosDasDiferencas = (personId: string) => {
+    const daPessoa = diferencas.filter((d) => d.personId === personId);
+    if (daPessoa.length === 0) return [];
+    const soma = (ls: typeof daPessoa, campo: "valor" | "inss") => Math.round(ls.reduce((t, d) => t + Number(d[campo]), 0) * 100) / 100;
+    const salariais = daPessoa.filter((d) => d.origem !== "SALARIO_FAMILIA");
+    const familia = daPessoa.filter((d) => d.origem === "SALARIO_FAMILIA");
+    const saida: { rubrica: RubricaDoMotor; quantidade: null; valor: number; memoria: string }[] = [];
+    const add = (papel: PapelDaRubrica, valor: number, memoria: string) => {
+      const r = rubricas.get(papel);
+      if (r && valor > 0) saida.push({ rubrica: r, quantidade: null, valor, memoria: memoria.slice(0, 900) });
+    };
+    add("DIFERENCA_RETROATIVA", soma(salariais, "valor"), salariais.map((d) => `${d.descricao}: ${d.memoria.split("; INSS")[0]}`).join(" | "));
+    add("INSS_DIFERENCA", soma(salariais, "inss"), salariais.map((d) => `${d.perRef}: R$ ${Number(d.inss).toFixed(2).replace(".", ",")}`).join("; ") + " (INSS pela tabela de cada mês)");
+    add("SALARIO_FAMILIA_RETROATIVO", soma(familia, "valor"), familia.map((d) => d.memoria).join(" | "));
+    return saida;
+  };
+  // Histórico salarial (funcionalidade-760): o salário de cada um no mês.
+  const fimDoMesIso = new Date(Date.UTC(comp.ano, comp.mes, 0)).toISOString().slice(0, 10);
+  const historicoSalarial =
+    comp.tipo === "MENSAL"
+      ? await prisma.dp2HistoricoSalarial.findMany({ where: { tenantId, personId: { in: pessoas.map((p) => p.id) } }, select: { personId: true, data: true, salario: true, salarioAnterior: true } })
+      : [];
+  const historicoDe = (personId: string) =>
+    historicoSalarial
+      .filter((h) => h.personId === personId)
+      .map((h) => ({ data: h.data.toISOString().slice(0, 10), salario: Number(h.salario), salarioAnterior: h.salarioAnterior === null ? null : Number(h.salarioAnterior) }));
 
   const resultados: { personId: string; c: CalculoDaPessoa; aplicados: AjusteAplicado[] }[] = [];
   let semVinculo = 0;
@@ -505,7 +536,8 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
       nomesRescindidos.push(p.name);
       continue;
     }
-    const vinculo = vinculoDoMotor(p.dp2Vinculo);
+    // O salário vigente no mês, pelo histórico salarial (funcionalidade-760).
+    const vinculo = { ...vinculoDoMotor(p.dp2Vinculo), ...(comp.tipo === "MENSAL" ? { salarioBase: salarioNoMes(historicoDe(p.id), fimDoMesIso, Number(p.dp2Vinculo.salarioBase)) } : {}) };
     // 13º é só de empregado: sócio, autônomo e estagiário ficam fora.
     if (comp.tipo !== "MENSAL" && categoriaSemVinculo(vinculo.categoria)) continue;
     const daPessoa = eventos.filter((e) => e.personId === p.id);
@@ -522,6 +554,7 @@ export async function calcularCompetencia(tenantId: string, competenciaId: strin
           ...fixas
             .filter((f) => f.personId === p.id && f.rubrica.ativa)
             .map((f) => ({ rubrica: rubricaDoMotor(f.rubrica), quantidade: decOuNulo(f.quantidade), valor: decOuNulo(f.valor), origem: "FIXA" as const })),
+          ...eventosDasDiferencas(p.id),
         ],
         rubricas,
         tabelas: tab.tabelas,

@@ -38,6 +38,8 @@ import { LancarPorRubrica } from "@/components/dp2/LancarPorRubrica";
 import { PAPEIS_LANCAVEIS, ehPapel, regraDeLancamento } from "@/lib/dp2/rubricas";
 import { compararValores, type CampoComparado } from "@/lib/dp2/comparativo";
 import { diasDoMes } from "@/lib/dp2/calendario";
+import { INSTRUMENTOS } from "@/lib/dp2/diferencasRetroativas";
+import { CampoMes } from "@/components/ui/CampoMes";
 import { brl, nomeDaCompetencia, NOME_DA_SITUACAO, NOME_DO_TIPO_DE_COMPETENCIA, TOM_DA_SITUACAO } from "@/lib/dp2/tela";
 import type { Encargos, ItemDoHolerite, Provisoes } from "@/lib/dp2/mensal";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -66,6 +68,8 @@ import {
   lancarEventoAction,
   lancarPorRubricaAction,
   lancarAdiantamentoAction,
+  lancarDiferencasAction,
+  excluirDiferencasAction,
   pedirEventosAoClienteAction,
   reabrirCompetenciaAction,
   removerEventoAction,
@@ -270,6 +274,23 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
     return { id: r.id, rotulo: `${r.codigo} · ${r.nome}`, unidade: porQuantidade ? (r.lancamento === "DIAS" ? ("dias" as const) : ("horas" as const)) : null };
   });
   const pessoasParaLancar = pessoas.filter((p) => p.dp2Vinculo).map((p) => ({ id: p.id, nome: p.name }));
+  // Diferenças retroativas da competência (funcionalidade-760), por lançamento.
+  const rubricasParaDiferenca = rubricas.filter((r) => r.ativa && r.tipo === "PROVENTO" && r.papel !== "DIFERENCA_RETROATIVA" && r.papel !== "SALARIO_FAMILIA_RETROATIVO");
+  const linhasDeDiferenca = mensal ? await prisma.dp2DiferencaRetroativa.findMany({ where: { tenantId: ctx.tenantId, competenciaId: comp.id }, orderBy: [{ createdAt: "asc" }, { perRef: "asc" }] }) : [];
+  const NOME_DA_ORIGEM_DA_DIFERENCA: Record<string, string> = { SALARIO: "Salário", RUBRICA: "Rubrica paga a menor", SALARIO_FAMILIA: "Salário-família" };
+  const lotesDeDiferencas = [...new Set(linhasDeDiferenca.map((l) => l.loteId))].map((loteId) => {
+    const ls = linhasDeDiferenca.filter((l) => l.loteId === loteId);
+    const meses = [...new Set(ls.map((l) => l.perRef))].sort();
+    return {
+      loteId,
+      descricao: ls[0].descricao,
+      tipo: `${NOME_DA_ORIGEM_DA_DIFERENCA[ls[0].origem] ?? ls[0].origem}${ls[0].instrumento ? ` · tpAcConv ${ls[0].instrumento}` : ""}`,
+      meses: meses.length > 2 ? `${meses[0].split("-").reverse().join("/")} a ${meses[meses.length - 1].split("-").reverse().join("/")}` : meses.map((m) => m.split("-").reverse().join("/")).join(", "),
+      pessoas: new Set(ls.map((l) => l.personId)).size,
+      valor: Math.round(ls.reduce((t, l) => t + Number(l.valor), 0) * 100) / 100,
+      inss: Math.round(ls.reduce((t, l) => t + Number(l.inss), 0) * 100) / 100,
+    };
+  });
   const porRubrica = totaisPorRubrica(eventos, fixasDoMes.filter((f) => !f.substituida));
   const comparativoDe = new Map(comparativos.map((c) => [c.personId, c]));
   const aberto = pessoaAberta ? calculos.find((c) => c.personId === pessoaAberta) : undefined;
@@ -713,6 +734,130 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
             <FormularioDoDp2 acao={lancarAdiantamentoAction} rotulo="Lançar o adiantamento" rotuloEnviando="Lançando…" variante="secondary">
               <input type="hidden" name="competenciaId" value={comp.id} />
             </FormularioDoDp2>
+          </Secao>
+        )}
+
+        {mensal && etapa === "eventos" && podeAgir && (pessoasParaLancar.length > 0 || lotesDeDiferencas.length > 0) && (
+          <Secao
+            titulo="Diferenças retroativas"
+            apoio="Convenção, acordo ou dissídio que saiu depois da data-base, rubrica paga a menor ou salário-família que faltou: o Connect refaz os meses fechados do período e lança a diferença nesta folha. O INSS é apurado mês a mês; no eSocial, as diferenças vão no S-1200 deste mês, grupo infoPerAnt."
+          >
+            {lotesDeDiferencas.length > 0 && (
+              <div className="overflow-x-auto mb-4">
+                <table className="w-full min-w-[720px] text-fs-3">
+                  <thead>
+                    <tr>
+                      <th className={TH}>Lançamento</th>
+                      <th className={TH}>Meses</th>
+                      <th className={TH_NUM}>Pessoas</th>
+                      <th className={TH_NUM}>Diferença</th>
+                      <th className={TH_NUM}>INSS</th>
+                      <th className={TH}>
+                        <span className="sr-only">Ações</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lotesDeDiferencas.map((l) => (
+                      <tr key={l.loteId} className={TR}>
+                        <td className={`${TD} align-middle`}>
+                          {l.descricao}
+                          <span className="block text-fg-muted">{l.tipo}</span>
+                        </td>
+                        <td className={`${TD} align-middle tabular-nums`}>{l.meses}</td>
+                        <td className={`${TD_NUM} align-middle`}>{l.pessoas}</td>
+                        <td className={`${TD_NUM} align-middle`}>{brl(l.valor)}</td>
+                        <td className={`${TD_NUM} align-middle`}>{l.inss ? brl(l.inss) : "—"}</td>
+                        <td className={`${TD} align-middle text-right pr-0`}>
+                          {!fechada && (
+                            <FormularioDoDp2
+                              acao={excluirDiferencasAction}
+                              rotulo="Excluir"
+                              rotuloEnviando="Excluindo…"
+                              variante="secondary"
+                              tamanho="sm"
+                              confirmar={{ titulo: "Excluir as diferenças?", texto: "As diferenças desse lançamento saem da folha. Calcule a folha de novo depois.", rotulo: "Excluir" }}
+                            >
+                              <input type="hidden" name="loteId" value={l.loteId} />
+                            </FormularioDoDp2>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {!fechada && pessoasParaLancar.length > 0 && (
+              <FormularioDoDp2
+                acao={lancarDiferencasAction}
+                rotulo="Calcular e lançar as diferenças"
+                rotuloEnviando="Calculando…"
+                variante="secondary"
+                confirmar={{ titulo: "Lançar as diferenças?", texto: "O Connect refaz os meses fechados do período com o novo salário (ou rubrica) e lança a diferença nesta folha.", rotulo: "Lançar" }}
+              >
+                <input type="hidden" name="competenciaId" value={comp.id} />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <CampoForm label="O que mudou" htmlFor="dif-tipo">
+                    <Select id="dif-tipo" name="tipo" defaultValue="SALARIO">
+                      <option value="SALARIO">Salário (percentual e/ou piso)</option>
+                      <option value="RUBRICA">Uma rubrica paga a menor</option>
+                      <option value="SALARIO_FAMILIA">Salário-família que faltou</option>
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Instrumento" htmlFor="dif-instrumento" dica="Vai no eSocial (tpAcConv). No salário-família, não se usa.">
+                    <Select id="dif-instrumento" name="instrumento" defaultValue="C">
+                      {INSTRUMENTOS.map(([k, nome]) => (
+                        <option key={k} value={k}>
+                          {`${k} · ${nome}`}
+                        </option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Data de assinatura" htmlFor="dif-data" dica="Obrigatória para convenção, acordo, dissídio e legislação.">
+                    <CampoData id="dif-data" name="dataInstrumento" />
+                  </CampoForm>
+                  <CampoForm label="Descrição" htmlFor="dif-descricao">
+                    <Input id="dif-descricao" name="descricao" maxLength={255} placeholder="Convenção 2027/2028, cláusula 3ª" />
+                  </CampoForm>
+                  <CampoForm label="Do mês" htmlFor="dif-de">
+                    <CampoMes id="dif-de" name="de" />
+                  </CampoForm>
+                  <CampoForm label="Até o mês" htmlFor="dif-ate">
+                    <CampoMes id="dif-ate" name="ate" />
+                  </CampoForm>
+                  <CampoForm label="Percentual (%)" htmlFor="dif-percentual" dica="Salário: o reajuste. Rubrica: quanto faltou sobre o valor pago.">
+                    <Input id="dif-percentual" name="percentual" inputMode="decimal" placeholder="5,00" />
+                  </CampoForm>
+                  <CampoForm label="Piso (R$)" htmlFor="dif-piso" dica="Só no salário: quem ganhava abaixo do piso sobe para ele.">
+                    <Input id="dif-piso" name="piso" inputMode="decimal" placeholder="1.800,00" />
+                  </CampoForm>
+                  <CampoForm label="Rubrica" htmlFor="dif-rubrica" dica="Só na rubrica paga a menor.">
+                    <Select id="dif-rubrica" name="rubrica" defaultValue="">
+                      <option value="">—</option>
+                      {rubricasParaDiferenca.map((r) => (
+                        <option key={r.codigo} value={r.codigo}>
+                          {`${r.codigo} · ${r.nome}`}
+                        </option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                  <CampoForm label="Filhos" htmlFor="dif-filhos" dica="Só no salário-família: filhos com direito no período.">
+                    <Input id="dif-filhos" name="filhos" inputMode="numeric" maxLength={2} />
+                  </CampoForm>
+                  <CampoForm label="Colaborador" htmlFor="dif-pessoa" className="sm:col-span-2">
+                    <Select id="dif-pessoa" name="personId" defaultValue="">
+                      <option value="">Todos com cálculo no período</option>
+                      {pessoasParaLancar.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nome}
+                        </option>
+                      ))}
+                    </Select>
+                  </CampoForm>
+                </div>
+              </FormularioDoDp2>
+            )}
           </Secao>
         )}
 

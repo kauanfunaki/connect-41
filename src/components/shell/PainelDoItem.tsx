@@ -7,9 +7,21 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { caminhoDoMenuAtivo as ativa } from "@/lib/caminhoDoMenu";
 import { useNaFaixa } from "@/components/shell/NavLink";
+import { Contador } from "@/components/ui/Contador";
 import { SeloDeManutencaoNoMenu, useConferirManutencao } from "@/components/shell/TelasEmManutencao";
 
-export type TelaDoPainel = { label: string; href: string; icon?: React.ReactNode; ativa?: boolean };
+export type TelaDoPainel = {
+  label: string;
+  href: string;
+  icon?: React.ReactNode;
+  ativa?: boolean;
+  /**
+   * O que espera a pessoa nesta tela (26/11/2026, melhoria-871): o número na
+   * linha dela, dentro da janela — o item do grupo mostra a soma, e sem isto
+   * não dava para saber de qual tela vinha (as conversas novas do Atendimento).
+   */
+  contador?: number;
+};
 
 /** Um painel aberto por vez: quem abre avisa, e os outros fecham. */
 const EVENTO_ABRIU = "c41-painel-do-item";
@@ -240,8 +252,15 @@ export function PainelDoItem({
                           {t.icon}
                         </span>
                       )}
-                      <span className="min-w-0 flex-1 truncate">{t.label}</span>
+                      <span className="min-w-0 flex-1 truncate" title={t.label}>{t.label}</span>
                       {emManutencao(t.href) && <SeloDeManutencaoNoMenu />}
+                      {/* O número da tela, como no item solto do menu: vermelho, com o texto para o leitor de tela. */}
+                      {!!t.contador && t.contador > 0 && (
+                        <span className="flex-shrink-0">
+                          <span aria-hidden><Contador valor={t.contador} tom="alerta" pequeno /></span>
+                          <span className="sr-only">, {t.contador} {t.contador === 1 ? "nova" : "novas"}</span>
+                        </span>
+                      )}
                       <ChevronRight
                         size={14}
                         aria-hidden

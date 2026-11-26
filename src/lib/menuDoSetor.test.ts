@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MODULE_CATALOG, MODULE_ROUTES, MODULOS_DE_TODA_A_EQUIPE, MODULOS_FORA_DO_MENU, MODULO_NO_LUGAR_DOS_QUADROS } from "@/lib/module-catalog";
-import { lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, telasVisiveis, type BlocoDoMenu } from "./menuDoSetor";
+import { comAtendimentoAoClienteEmGrupo, lerOrdemDoMenu, montarMenuDoSetor, telasDoBloco, telasVisiveis, type BlocoDoMenu } from "./menuDoSetor";
 
 // A regra do menu de 05/11/2026 (opção A): grupos por tema em todo setor, grupo
 // de uma tela vira tela solta, e a Tela 2 fica recuada sob a Tela 1.
@@ -116,5 +116,60 @@ describe("a ordem escolhida", () => {
     expect(lerOrdemDoMenu(null)).toEqual({ grupos: [], telas: [] });
     expect(lerOrdemDoMenu("não é json")).toEqual({ grupos: [], telas: [] });
     expect(lerOrdemDoMenu('{"grupos":["Contas","Contas",3],"telas":"x"}')).toEqual({ grupos: ["Contas"], telas: [] });
+  });
+});
+
+// 26/11/2026 (melhoria-871): Solicitações, Atendimento e Arquivos viraram o
+// grupo "Atendimento ao cliente" (chave `clientes`) do Geral. A ordem gravada
+// com as três soltas é lida no jeito novo.
+describe("a ordem gravada com Solicitações, Atendimento e Arquivos soltos", () => {
+  it("o grupo entra no lugar da primeira das três, e as outras saem do Geral", () => {
+    const ordem = comAtendimentoAoClienteEmGrupo({ grupos: [], telas: [], geral: ["cadastros", "arquivos", "quadros", "solicitacoes", "chamados", "atendimento", "apoio"] });
+    expect(ordem.geral).toEqual(["cadastros", "clientes", "quadros", "chamados", "apoio"]);
+    // A ordem em que o setor as tinha vira a de dentro do grupo.
+    expect(ordem.dentro).toEqual({ clientes: ["arquivos", "solicitacoes", "atendimento"] });
+  });
+
+  it("a escondida pelo olho no Geral continua escondida, agora dentro do grupo", () => {
+    const ordem = comAtendimentoAoClienteEmGrupo({ grupos: [], telas: [], geral: ["solicitacoes", "atendimento", "arquivos", "agenda"], ocultasGeral: ["agenda", "atendimento"] });
+    expect(ordem.geral).toEqual(["clientes", "agenda"]);
+    expect(ordem.ocultasGeral).toEqual(["agenda"]);
+    expect(ordem.ocultasDentro).toEqual({ clientes: ["atendimento"] });
+  });
+
+  it("só escondida, sem ordem do Geral: só o olho muda de lugar", () => {
+    expect(comAtendimentoAoClienteEmGrupo({ grupos: [], telas: [], ocultasGeral: ["solicitacoes", "arquivos"] })).toEqual({
+      grupos: [],
+      telas: [],
+      ocultasDentro: { clientes: ["solicitacoes", "arquivos"] },
+    });
+  });
+
+  it("a ordem de dentro que o setor já escolheu no grupo vence, e o resto da ordem fica igual", () => {
+    const ordem = comAtendimentoAoClienteEmGrupo({
+      grupos: ["Contas"],
+      telas: ["bpo_contas_pagar"],
+      ocultas: ["bpo_dre"],
+      geral: ["cadastros", "clientes", "solicitacoes", "arquivos"],
+      dentro: { clientes: ["arquivos", "solicitacoes"], apoio: ["manuais", "senhas"] },
+    });
+    expect(ordem).toEqual({
+      grupos: ["Contas"],
+      telas: ["bpo_contas_pagar"],
+      ocultas: ["bpo_dre"],
+      geral: ["cadastros", "clientes"],
+      dentro: { clientes: ["arquivos", "solicitacoes"], apoio: ["manuais", "senhas"] },
+    });
+  });
+
+  it("sem nenhuma das três na ordem gravada, nada muda — o grupo vai para o fim, como item novo", () => {
+    const gravada = { grupos: [], telas: [], geral: ["cadastros", "agenda"], ocultasGeral: ["agenda"] };
+    expect(comAtendimentoAoClienteEmGrupo(gravada)).toBe(gravada);
+  });
+
+  it("vale na leitura da ordem gravada, e ler de novo o que foi convertido não muda nada", () => {
+    const lida = lerOrdemDoMenu(JSON.stringify({ grupos: [], telas: [], geral: ["cadastros", "quadros", "atendimento", "arquivos"], ocultasGeral: ["arquivos"] }));
+    expect(lida).toEqual({ grupos: [], telas: [], geral: ["cadastros", "quadros", "clientes"], dentro: { clientes: ["atendimento", "arquivos"] }, ocultasDentro: { clientes: ["arquivos"] } });
+    expect(lerOrdemDoMenu(JSON.stringify(lida))).toEqual(lida);
   });
 });
