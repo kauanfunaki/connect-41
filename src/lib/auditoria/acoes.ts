@@ -475,6 +475,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.evento_lancado": c("lançou um evento na competência do DP 2"),
   "folha.eventos_lancados_por_rubrica": c("lançou uma rubrica para vários colaboradores na competência do DP 2"),
   "folha.evento_removido": x("retirou um lançamento da competência do DP 2"),
+  "folha.rescisao_gravada": c("gravou a rescisão de um colaborador no DP 2"),
+  "folha.rescisao_excluida": x("excluiu a rescisão gravada de um colaborador no DP 2"),
   "folha.ferias_gravadas": c("gravou as férias de um colaborador no DP 2"),
   "folha.ferias_excluidas": x("excluiu férias gravadas no DP 2"),
   "folha.informacao_apuracao_incluida": c("incluiu uma retenção ou compensação na apuração da competência do DP 2"),
