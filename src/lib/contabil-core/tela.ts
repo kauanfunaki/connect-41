@@ -41,8 +41,9 @@ export const ROTULO_DO_TIPO_DE_CONTA: Record<string, string> = {
   resultado: "Resultado",
 };
 
-// "painel" (Fase D1) é a primeira e a que abre: era a tela inicial do original (o `Dashboard`).
-export const ABAS = ["painel", "importacoes", "extrato", "neo", "regras", "contrapartes", "registros", "notas", "comprovantes", "cartoes", "conciliacao", "configuracoes"] as const;
+// "painel" (Fase D1) é a primeira e a que abre: era a tela inicial do original (o `Dashboard`). "relatorios"
+// (Fase D2) é a página Relatórios do original (DRE, Balancete e Livro Caixa).
+export const ABAS = ["painel", "importacoes", "extrato", "neo", "regras", "contrapartes", "registros", "notas", "comprovantes", "cartoes", "conciliacao", "relatorios", "configuracoes"] as const;
 export type Aba = (typeof ABAS)[number];
 
 /** Competência do mês corrente, "AAAA-MM", no fuso do escritório. */
