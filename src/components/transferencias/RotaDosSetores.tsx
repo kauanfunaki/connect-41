@@ -17,10 +17,10 @@ const COR_DO_SINAL: Record<HandoffSectorStatus, string> = {
   RETURNED: "text-danger",
 };
 
-/** A ordem dos sinais na legenda: o caminho da parte, e a devolução no fim. */
-const ORDEM_DA_LEGENDA: HandoffSectorStatus[] = ["NEW", "IN_PROGRESS", "DONE", "RETURNED"];
-
-/** O desenho do sinal, sem texto: quem usa põe o nome da situação ao lado (legenda) ou no chip. */
+/**
+ * O desenho do sinal, sem texto: quem usa põe o nome da situação ao lado (a
+ * legenda, em LegendaDosSinais.tsx desde 26/11/2026, melhoria-811) ou no chip.
+ */
 export function SinalDoSetor({ status, tamanho = 13 }: { status: HandoffSectorStatus; tamanho?: number }) {
   return (
     <svg
@@ -94,25 +94,5 @@ export function RotaDosSetores({
         </SectorChip>
       ))}
     </span>
-  );
-}
-
-/** A legenda dos sinais, embaixo da lista. */
-export function LegendaDosSinais({ comNaoLida = true }: { comNaoLida?: boolean }) {
-  return (
-    <p className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-helper text-fg-muted" aria-hidden>
-      {comNaoLida && (
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-[7px] rounded-full bg-brand" />
-          ainda não aberta por você
-        </span>
-      )}
-      {ORDEM_DA_LEGENDA.map((s) => (
-        <span key={s} className="inline-flex items-center gap-1">
-          <SinalDoSetor status={s} />
-          {HANDOFF_STATUS_LABEL[s].toLowerCase()}
-        </span>
-      ))}
-    </p>
   );
 }

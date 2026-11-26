@@ -14,7 +14,8 @@ import { CascoDaTabela, contarItens } from "@/components/shared/CascoDaTabela";
 import { CartoesNoCelular, TabelaNoDesktop, Cartao, InfoDoCartao, PeDoCartao } from "@/components/shared/ListaResponsiva";
 import { DebouncedSearchInput } from "@/components/shared/DebouncedSearchInput";
 import { AvatarImage } from "@/components/shared/AvatarImage";
-import { RotaDosSetores, LegendaDosSinais } from "@/components/transferencias/RotaDosSetores";
+import { RotaDosSetores } from "@/components/transferencias/RotaDosSetores";
+import { BotaoDaLegenda } from "@/components/transferencias/LegendaDosSinais";
 import { getPrisma } from "@/lib/prisma";
 import { getSectorMaps } from "@/lib/sectors";
 import { getAuthContext, isFullWrite } from "@/lib/auth/context";
@@ -261,6 +262,9 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
         filtros={
           <FiltrosDaTela
             naBarra
+            // A legenda dos sinais (26/11/2026, melhoria-811): era uma linha
+            // embaixo da tabela, sempre à vista; virou o botão ao lado do Filtros.
+            aoLado={<BotaoDaLegenda />}
             campos={[
               {
                 chave: "prioridade",
@@ -307,15 +311,10 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
               <table className="w-full min-w-[960px]">
                 <thead>
                   <tr>
-                    {/* O mesmo espaço do ponto de "ainda não aberta" que abre
-                        cada linha (16/11/2026, bug-708): sem ele o cabeçalho
-                        ficava 15px à esquerda do texto do assunto. */}
-                    <th className="c41-a-esquerda px-3">
-                      <span className="inline-flex items-center gap-2">
-                        <span aria-hidden className="w-[7px] flex-shrink-0" />
-                        Assunto
-                      </span>
-                    </th>
+                    {/* Centralizado como as outras colunas (26/11/2026,
+                        melhoria-811). Era à esquerda, com o espaço do ponto de
+                        "ainda não aberta" (bug-708) para alinhar com o texto. */}
+                    <th className="px-3">Assunto</th>
                     <th className="px-3">Empresa</th>
                     <th className="px-3">Setores</th>
                     <th className="px-3">Responsável</th>
@@ -328,8 +327,8 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
                     // A linha inteira abre a transferência: o link do assunto se
                     // estica sobre ela (o mesmo jeito do Controle interno).
                     <tr key={l.id} className="relative border-b border-border-soft">
-                      <td className="c41-a-esquerda px-3 max-w-xs">
-                        <Assunto linha={l} />
+                      <td className="px-3">
+                        <Assunto linha={l} naTabela />
                       </td>
                       <td className="px-3 text-fg-secondary">{l.entidade ?? <span className="text-fg-muted">(removido)</span>}</td>
                       <td className="px-3">
@@ -353,11 +352,6 @@ export default async function HandoffsPage({ searchParams }: { searchParams: Pro
         )}
       </CascoDaTabela>
 
-      {linhas.length > 0 && (
-        <div className="mt-3">
-          <LegendaDosSinais />
-        </div>
-      )}
       <Pagination page={pagina} totalPages={ultima} buildHref={(p) => href({ pagina: p > 1 ? String(p) : null })} total={total} rotulo="transferências" />
     </PageContainer>
   );
@@ -378,30 +372,59 @@ type Linha = {
  * O assunto como link esticado sobre a linha (ou o cartão), com o ponto de
  * "ainda não aberta" e, quando um setor devolveu a parte, o selo "Devolvida"
  * (10/11/2026): em "Enviadas" é o que pede resposta de quem pediu.
+ *
+ * Na tabela (26/11/2026, melhoria-811) o assunto é centralizado como as outras
+ * colunas e fica numa linha só: o texto longo corta com reticências e mostra o
+ * assunto inteiro na dica, e o selo vem colado ao texto, sem cortar. Antes a
+ * coluna era à esquerda e quebrava em linhas — o selo descia para a linha de
+ * baixo e começava antes do texto, na altura do espaço do ponto. No cartão do
+ * celular o assunto continua inteiro, à esquerda, e o selo quebra junto com o
+ * texto, alinhado a ele.
  */
-function Assunto({ linha }: { linha: Linha }) {
+function Assunto({ linha, naTabela = false }: { linha: Linha; naTabela?: boolean }) {
+  const ponto = linha.naoLida ? (
+    <span aria-hidden className="size-[7px] flex-shrink-0 rounded-full bg-brand" title="Ainda não aberta por você" />
+  ) : null;
+  const link = (
+    <Link
+      href={linha.href}
+      title={linha.assunto ?? undefined}
+      className={`min-w-0 hover:text-brand after:absolute after:inset-0 after:content-[''] ${naTabela ? "truncate" : "break-words"} ${
+        linha.naoLida ? "font-bold text-fg" : "font-medium text-fg"
+      }`}
+    >
+      {linha.naoLida && <span className="sr-only">Ainda não aberta por você: </span>}
+      {linha.assunto ?? <span className="font-normal text-fg-muted">{SEM_ASSUNTO}</span>}
+      {linha.devolvida && <span className="sr-only"> (devolvida: espera resposta de quem pediu)</span>}
+    </Link>
+  );
+  const selo = linha.devolvida ? (
+    <span aria-hidden className="relative z-10 inline-flex flex-shrink-0" title="Um setor devolveu a parte dele: espera a resposta de quem pediu">
+      <Selo tom={HANDOFF_STATUS_TOM.RETURNED}>{HANDOFF_STATUS_LABEL.RETURNED}</Selo>
+    </span>
+  ) : null;
+
+  if (naTabela) {
+    // `max-w-xs` no próprio bloco, e não na célula: largura máxima em <td> não
+    // vale na tabela automática, e o texto sem quebra alargaria a coluna.
+    return (
+      <span className="inline-flex max-w-xs min-w-0 items-center justify-center gap-2 align-middle">
+        {ponto}
+        {link}
+        {selo}
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center gap-2 min-w-0 flex-wrap">
-      {linha.naoLida ? (
-        <span aria-hidden className="size-[7px] flex-shrink-0 rounded-full bg-brand" title="Ainda não aberta por você" />
-      ) : (
-        <span aria-hidden className="w-[7px] flex-shrink-0" />
-      )}
-      <Link
-        href={linha.href}
-        className={`min-w-0 break-words hover:text-brand after:absolute after:inset-0 after:content-[''] ${
-          linha.naoLida ? "font-bold text-fg" : "font-medium text-fg"
-        }`}
-      >
-        {linha.naoLida && <span className="sr-only">Ainda não aberta por você: </span>}
-        {linha.assunto ?? <span className="font-normal text-fg-muted">{SEM_ASSUNTO}</span>}
-        {linha.devolvida && <span className="sr-only"> (devolvida: espera resposta de quem pediu)</span>}
-      </Link>
-      {linha.devolvida && (
-        <span aria-hidden className="relative z-10 inline-flex" title="Um setor devolveu a parte dele: espera a resposta de quem pediu">
-          <Selo tom={HANDOFF_STATUS_TOM.RETURNED}>{HANDOFF_STATUS_LABEL.RETURNED}</Selo>
-        </span>
-      )}
+    <span className="flex min-w-0 items-start gap-2">
+      {/* O ponto (ou o espaço dele) na altura da primeira linha do texto. */}
+      <span aria-hidden className="flex h-[1lh] w-[7px] flex-shrink-0 items-center">
+        {ponto}
+      </span>
+      <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {link}
+        {selo}
+      </span>
     </span>
   );
 }
