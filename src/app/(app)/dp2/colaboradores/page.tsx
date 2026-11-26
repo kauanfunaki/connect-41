@@ -607,7 +607,7 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
       )}
 
       {pessoas.some((p) => p.dp2Vinculo) && (
-        <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado e o contrato de experiência em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
+        <Secao titulo="Documentos do contrato" apoio="A ficha de registro de empregado, o contrato de experiência e o histórico PPP em PDF, do cadastro e do contrato do DP 2. O que faltar no cadastro sai com um traço.">
           <form action="/api/dp2/documentos" method="get" target="_blank" className="flex flex-wrap items-end gap-4">
             <CampoForm label="Colaborador" htmlFor="doc-pessoa">
               <Select id="doc-pessoa" name="pessoa" defaultValue="" required>
@@ -627,13 +627,14 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <Select id="doc-tipo" name="tipo" defaultValue="FICHA">
                 <option value="FICHA">Ficha de registro de empregado</option>
                 <option value="EXPERIENCIA">Contrato de experiência</option>
+                <option value="PPP">Histórico PPP (S-2240 e ASO)</option>
               </Select>
             </CampoForm>
             <Button type="submit" variant="secondary">
               Baixar (PDF)
             </Button>
           </form>
-          <p className="mt-2 text-fs-2 text-fg-muted">O contrato de experiência sai do contrato por prazo determinado (tipo 2 e data de término nos dados do eSocial), com o termo de prorrogação no fim.</p>
+          <p className="mt-2 text-fs-2 text-fg-muted">O contrato de experiência sai do contrato por prazo determinado (tipo 2 e data de término nos dados do eSocial), com o termo de prorrogação no fim. O histórico PPP junta os S-2240 e os ASOs gerados em DP 2 › eSocial.</p>
         </Secao>
       )}
 
