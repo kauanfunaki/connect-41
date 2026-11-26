@@ -17,6 +17,7 @@ import { formatarReais } from "@/lib/format";
 import {
   ROTULO_DO_ESTADO,
   anoDaData,
+  memoriaFormatada,
   oQueFazerNoPortal,
   percentual,
   resumoDaClassificacao,
@@ -279,11 +280,11 @@ function CartaoDoItem({
               {memorias.map(({ rotulo, parcela }) => (
                 <div key={rotulo}>
                   <dt className="text-label font-medium text-fg">{rotulo}</dt>
-                  <dd className="mt-0.5 text-ui leading-relaxed text-fg-secondary">{parcela.memoria}</dd>
+                  <dd className="mt-0.5 text-ui leading-relaxed text-fg-secondary">{parcela.memoria && memoriaFormatada(parcela.memoria)}</dd>
                 </div>
               ))}
             </dl>
-            {variante === "equipe" && <p className="mt-3 text-helper text-fg-muted">Texto da calculadora da Receita, como ela devolve.</p>}
+            {variante === "equipe" && <p className="mt-3 text-helper text-fg-muted">Texto da calculadora da Receita, com os números no padrão brasileiro.</p>}
           </BlocoRecolhivel>
         )}
       </Card>
