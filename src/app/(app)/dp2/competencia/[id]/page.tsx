@@ -264,6 +264,12 @@ export default async function CompetenciaDoDp2({ params, searchParams }: { param
         </div>
       )}
 
+      {totais?.rescindidos && totais.rescindidos.length > 0 && etapa !== "abrir" && (
+        <Aviso tom="info" className="mb-5">
+          Com rescisão gravada no mês, fora desta folha: {totais.rescindidos.join(", ")}. As verbas do mês estão na rescisão (DP 2 › Rescisões) e vão no S-2299.
+        </Aviso>
+      )}
+
       {comp.situacao === "ABERTA" && calculos.length > 0 && (
         <Aviso tom="atencao" className="mb-5">
           Houve lançamento depois do último cálculo: calcule de novo antes de conferir.

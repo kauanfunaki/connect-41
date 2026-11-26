@@ -124,7 +124,7 @@ describe("resumo em blocos da empresa", () => {
         { tipo: "setor", rotulo: "Fiscal", cor: "#222222", situacao: "RETURNED" },
         { tipo: "prioridade", prioridade: "HIGH" },
       ],
-      href: "/transferencias/transferencia-12",
+      href: "/transferencias/tra-12",
     });
     expect(r.aconteceu[1].selos).toEqual([{ tipo: "setor", rotulo: "BPO", cor: "#111111", situacao: null }]);
     // Reunião sem setor: sem selo.
@@ -132,7 +132,7 @@ describe("resumo em blocos da empresa", () => {
     expect(r.aconteceu[3].selos).toEqual([{ tipo: "setor", rotulo: "Fiscal", cor: "#222222", situacao: null }]);
     expect(r.aconteceu[4].selos).toEqual([{ tipo: "envio", publicado: false }]);
     // A reunião não tem tela própria: fica sem link.
-    expect(r.atencao.map((i) => i.href)).toEqual(["/transferencias/transferencia-12", "/kanban/quadro-1/itens/tarefa-77", "/solicitacoes/envios/id-do-envio", null]);
+    expect(r.atencao.map((i) => i.href)).toEqual(["/transferencias/tra-12", "/kanban/quadro-1/itens/tar-77", "/solicitacoes/envios/id-do-envio", null]);
   });
 
   it("descarta identificador que não existe, item sem texto e evento repetido na mesma lista", () => {
