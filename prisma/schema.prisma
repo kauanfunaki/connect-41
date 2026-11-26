@@ -7001,6 +7001,9 @@ model Dp2Vinculo {
   /// "MENSAL" ou "HORISTA" (no horista, `salarioBase` é o valor da hora).
   tipoSalario          String   @default("MENSAL") @db.VarChar(10)
   horasMensais         Int      @default(220)
+  /// Professor (tipoSalario "HORA_AULA", 26/11/2026, funcionalidade-773): as aulas por
+  /// semana; o salarioBase é o valor da hora-aula.
+  aulasSemanais        Int?
   dependentesIrrf      Int      @default(0)
   filhosSalarioFamilia Int      @default(0)
   /// "NENHUM", "MINIMO" (10%), "MEDIO" (20%) ou "MAXIMO" (40%), sobre o salário mínimo.

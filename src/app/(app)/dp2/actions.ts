@@ -1215,7 +1215,10 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
 
   const salarioBase = lerNumero(texto(fd, "salarioBase"));
   if (!salarioValido(salarioBase, texto(fd, "categoria"))) return erro(SALARIO_OBRIGATORIO);
-  const tipoSalario = texto(fd, "tipoSalario") === "HORISTA" ? "HORISTA" : "MENSAL";
+  const tipoSalario = texto(fd, "tipoSalario") === "HORISTA" ? "HORISTA" : texto(fd, "tipoSalario") === "HORA_AULA" ? "HORA_AULA" : "MENSAL";
+  // Professor (funcionalidade-773): as aulas por semana; o salário do contrato é o valor da hora-aula.
+  const aulasSemanais = tipoSalario === "HORA_AULA" ? lerInteiro(texto(fd, "aulasSemanais")) : null;
+  if (tipoSalario === "HORA_AULA" && (!aulasSemanais || aulasSemanais < 1 || aulasSemanais > 60)) return erro("Informe as aulas por semana do professor (1 a 60).");
   // Horário de trabalho (funcionalidade-752): com ele, as horas por mês e a jornada do eSocial saem do horário.
   const horarioId = texto(fd, "horarioId") || null;
   const horario = horarioId
@@ -1239,6 +1242,7 @@ export async function salvarVinculoAction(_: EstadoDoDp2, fd: FormData): Promise
     companyId: pessoa.currentCompanyId,
     salarioBase,
     tipoSalario,
+    aulasSemanais,
     horasMensais,
     dependentesIrrf,
     filhosSalarioFamilia,
