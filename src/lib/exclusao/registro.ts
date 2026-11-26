@@ -207,6 +207,8 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2TotalizadorEsocial", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Rescisao", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Ferias", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2Transferencia", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2Transferencia", coluna: "deCompanyId", tratamento: "manter", motivo: "a empresa de origem fica no histórico da transferência; a pessoa já está na outra empresa" },
   // O contato do Atendimento (10/11/2026) volta a ser só um telefone.
   { modelo: "AtendimentoContato", coluna: "companyId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; empresa que some vira só o nome do WhatsApp na tela" },
   // XML recusado pelo leitor (06/11/2026): o arquivo é da empresa e guarda os dados dela.
@@ -250,6 +252,7 @@ const PESSOA: Ligacao[] = [
   { modelo: "Dp2TotalizadorEsocial", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["totalizador do eSocial do DP 2", "totalizadores do eSocial do DP 2"], historico: true },
   { modelo: "Dp2Rescisao", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["rescisão do DP 2", "rescisões do DP 2"], historico: true },
   { modelo: "Dp2Ferias", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["férias gravadas do DP 2", "férias gravadas do DP 2"], historico: true },
+  { modelo: "Dp2Transferencia", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["transferência do DP 2", "transferências do DP 2"], historico: true },
   { modelo: "Dp2OutraBaseInss", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["outra base de INSS do DP 2", "outras bases de INSS do DP 2"], historico: true },
   { modelo: "Dp2AjusteDeCalculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["ajuste manual do cálculo do DP 2", "ajustes manuais do cálculo do DP 2"], historico: true },
   { modelo: "Dp2Calculo", campo: "person", fk: "personId", tratamento: "cascata", rotulo: ["holerite do DP 2", "holerites do DP 2"], historico: true },
@@ -440,6 +443,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2TotalizadorEsocial", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os totalizadores; a auditoria guarda o nome" },
   { modelo: "Dp2Rescisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou a rescisão; a auditoria guarda o nome" },
   { modelo: "Dp2Ferias", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou as férias; a auditoria guarda o nome" },
+  { modelo: "Dp2Transferencia", coluna: "criadoPorId", tratamento: "manter", motivo: "quem transferiu; a auditoria guarda o nome" },
   { modelo: "Dp2InformacaoDaApuracao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a retenção ou compensação; a auditoria guarda o nome" },
   { modelo: "Dp2OutraBaseInss", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a outra base de INSS; a auditoria guarda o nome" },
   { modelo: "Dp2AjusteDeCalculo", coluna: "criadoPorId", tratamento: "manter", motivo: "quem ajustou o cálculo; a auditoria guarda o nome" },
