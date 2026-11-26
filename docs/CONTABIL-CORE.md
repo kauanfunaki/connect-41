@@ -353,7 +353,7 @@ Divergências da C1:
 - **Exceção crua do original vira recusa com frase:** a falha do provedor na leitura por imagem, o PDF ilegível ou sem páginas (no original, `FileDataError`/`EmptyFileError` do PyMuPDF, erro 500) e a codificação desconhecida.
 - **Codificações:** as de 1 byte fora da lista (latin-1, cp1252, iso8859-15, ascii e utf-8) são recusadas como desconhecidas. O DTD em UTF-16 é recusado com a frase do DTD.
 - **Fica como no original (decidido pelo Angelo em 26/11/2026):** a nota cadastrada à mão nasce com a procedência `xml_assinado` (o padrão do `NotaFiscalCreate`, que a tela do original não mudava).
-- **Fora da C1:** o uso das notas pelo NEO (`_selecionar_nota_candidata`, a contraparte pela nota e o número da nota no histórico) vai para a C2, junto dos comprovantes, porque o motor usa os dois do mesmo jeito. A exportação das notas (`nfe_entrada`, `nfse_tomado`…) e os números do painel ficam para o Bloco D.
+- **Fora da C1:** o uso das notas pelo NEO (`_selecionar_nota_candidata`, a contraparte pela nota e o número da nota no histórico) vai para a C2, junto dos comprovantes, porque o motor usa os dois do mesmo jeito. A exportação das notas (`nfe_entrada`, `nfse_tomado`…) e os números do painel vieram na Fase D1 (ver "Fase D1").
 - **Tela:**
   - **O texto do cancelamento** diz que a associação sai junto, como o serviço faz. O original dizia que ela seria mantida.
   - **O dia da emissão:** a nota sem hora (a NFS-e só com a data e o cadastro à mão) é gravada à meia-noite UTC, como no original, e aparece no dia gravado; o original a mostrava no dia anterior.
@@ -1095,3 +1095,123 @@ O gabarito (`extrato/gabarito.json`) ganhou as funções do `planilha_parser`, o
 - o módulo não aparece para ninguém enquanto não for ligado.
 
 **Não entra:** telas de trabalho, gravação no banco, PDF e planilha de extrato, carga.
+
+## Fase D1: exportações, "Conflitos e qualidade", painel e carteira
+
+Branch `feat/contabil-core-exportacoes-painel` (26/11/2026). Só lê o banco: **sem migration**. Seção autocontida do Bloco D (a tabela de fases do bloco fica na seção dele).
+
+| Onde | Porte de |
+|---|---|
+| `exportacao/arquivos.ts` (puro) | `ExportacaoService` (`src/domain/exportacao/service.py`) sem o banco: as recusas de `exportar`, `_registros_vigentes`, `_exportar_lancamentos` (`_lancamentos_csv` e `_lancamentos_xlsx`), `_exportar_extrato`, `_exportar_notas` e `_exportar_conferencia` (com `_valor_assinado` e `_sanitize_cnpj`). O Domínio continua em `motor/exportacao.ts` |
+| `exportacao/planilha.ts` | `_new_workbook` e `_dicts_to_xlsx` (`formatos.py`), com o exceljs |
+| `servidor/exportacao.ts` | as leituras de cada tipo (tenant e empresa conferidos, já recortadas pelo período) e o registro em `core_exportacoes`. `gerarArquivoDoDominio` (Fase 2) passou a usar o mesmo caminho |
+| `api/contabil-core/exportacao` | `POST /exportacao/gerar`: os tipos e os formatos novos, na rota da Fase 2 (sem `tipo`, continua sendo o Domínio) |
+| `painel/painel.ts` (puro) | `consultar_divergencias` (`neo/consultas.py`) depois da leitura, `StatsService.obter` depois das contagens e `listar_carteira` depois do agrupamento, mais o `round` do Python (`arredondaPy`) |
+| `servidor/painel.ts` | as leituras: as decisões medidas da sombra, as contagens das estatísticas (contagens e `GROUP BY` por mês no MySQL) e o agrupamento da carteira |
+| `api/contabil-core/neo/divergencias`, `painel` e `carteira` | `GET /neo/divergencias` (`neo.read`), `GET /stats` (`stats.read`) e `GET /carteira` |
+| escolha do arquivo na aba Registros (`Exportar.tsx`) e botões da aba Extrato (`ExportarExtrato`) | as "Exportações Especializadas" da tela Registros e o "Exportar" da tela Extrato do original |
+| vista "Conflitos e qualidade" da aba NEO (`ConflitosQualidade.tsx`) | `ConflitosQualidadeTab` da página Classificação |
+| aba "Painel" (`Painel.tsx`) | a tela `Dashboard` (a carteira operacional e as estatísticas da empresa) |
+
+**Exportações:**
+
+| Tipo | Formatos | O que sai |
+|---|---|---|
+| `lancamentos` | CSV, XLSX | as partidas vivas (a cancelada não sai), das contas bancárias ativas (ou todas, com a opção), na ordem da data do lançamento |
+| `lancamentos_importacao` | TXT, CSV, XLSX | o arquivo do Domínio da Fase 2; o XLSX é novo no Connect (o original já tinha) |
+| `extrato` | CSV, XLSX | as transações com os filtros da aba Extrato (competência, conta, situação e busca; a rota aceita também D/C e a faixa de valor), na ordem da tela, sem a paginação |
+| `nfe_entrada`, `nfe_saida`, `nfse_tomado`, `nfse_prestado` | CSV, XLSX | as notas vivas do tipo emitidas na competência, com a empresa como destinatária (entrada, tomada) ou emitente (saída, prestada), e a transação ligada. O CNPJ da empresa inválido é recusado com a frase do original |
+| `conferencia` | CSV, XLSX | uma linha por transação viva (mais uma por documento além do primeiro), com as notas e os comprovantes ligados, o total, a divergência assinada (o débito é negativo) e a situação (Pendente, Conciliado, Divergente) |
+
+- **Mesmas colunas, ordem, formatação de número e data e recusas do original:**
+  - o CSV com BOM, vírgula e `\r\n`;
+  - o dinheiro com o texto do `Decimal` (`1500.00`);
+  - `data_lancamento` como o `isoformat()` do instante (`2026-01-10T00:00:00+00:00`), a data do extrato como `dd/mm/aaaa`, a da nota em UTC (`aaaa-mm-dd`);
+  - a conta do extrato com a descrição do original (`ITAU 7531 13579 2`);
+  - toda célula de texto passa pela `celulaSegura`;
+  - as recusas: "Formato deve ser 'csv', 'xlsx' ou 'txt'.", "Tipo de exportação inválido: '…'.", "O formato 'txt' só está disponível para 'lancamentos_importacao' por enquanto." e a do CNPJ da empresa.
+- **XLSX:** o exceljs no lugar do openpyxl. O gabarito compara o CONTEÚDO lido de volta (o título da folha, o valor de cada célula, texto ou número, o negrito do cabeçalho e os formatos), não os bytes: as duas bibliotecas escrevem o XML de jeitos diferentes. O `\r` vai como `_x000D_`, a forma do OOXML: escrito cru, a leitura do XML o trocaria por quebra de linha.
+- **Período:** a competência (`bounds_do_mes`: do primeiro ao último instante do mês, em UTC; nas colunas de data, os dias do mês). Só o extrato sai sem ela, como a aba Extrato filtra.
+- **Acesso e auditoria:** como na exportação da Fase 2. Pede "agir" (o `exportacao.execute`) e registra `contabil.core.exportacao.gerada`, agora com o `tipo` nos detalhes (a frase da auditoria passou a "gerou um arquivo de exportação do Contábil Core"). Cada exportação fica em `core_exportacoes` (formato, período e total). O artigo de ajuda do módulo ganhou os passos das exportações, do Painel e de "Conflitos e qualidade".
+- **Tela:** a aba Registros ganhou a escolha do arquivo, com os formatos de cada um, a conta bancária só onde vale e a opção do histórico do banco só no Domínio. A aba Extrato ganhou "Excel" e "CSV", que levam os filtros da tela.
+
+**"Conflitos e qualidade":**
+
+- **O que mede:** quando uma regra classifica, o NEO mede em paralelo a conta que a contraparte daria e grava se as duas divergem (`contaDivergente` em `core_neo_decisoes`, desde a Fase 2 e a C2).
+- **O que a consulta resume:** as decisões MEDIDAS (verdadeiro e falso; nulo é "não medido"), recortadas pelo mês e pela conta bancária da transação:
+  - avaliadas, divergentes e o percentual (o `round(…, 2)` do Python);
+  - o valor total;
+  - os pares de contas, pela soma decrescente;
+  - a amostra dos 10 maiores valores.
+- **Onde fica:** é a segunda vista da aba NEO (`?vista=conflitos`, ao lado de "Pendências"), no padrão da Conciliação (B4). Ela mede o que o NEO decidiu, e no Connect as regras e as contrapartes, que formavam com ela a página Classificação do original, já são abas próprias.
+- **O NEO não mudou:** só se lê a decisão gravada. Pede "ver".
+
+**Painel e carteira:** a aba "Painel" é a primeira do módulo e a que abre (era a tela inicial do original). Pede "ver" (o `stats.read`).
+
+- **Carteira do escritório:** as empresas ativas do Contábil Core no escritório, com as transações vivas da competência (importadas, classificadas, pendências, erros e o valor pendente), as de mais pendências primeiro.
+  - A empresa sem extrato no mês aparece zerada.
+  - A linha abre a empresa no NEO (ou em Importações, quando não há extrato).
+  - "Todas as empresas" é o escritório: no Connect não há permissão por empresa no módulo, e quem vê o módulo vê as mesmas empresas do seletor de empresa.
+- **Números da empresa:** o resumo (transações, com e sem lançamento vivo, partidas, notas, comprovantes e o percentual), a classificação por conta bancária ativa e a atividade dos últimos 12 meses (transações, partidas, comprovantes e notas por mês).
+- **Partes fora do porte:** nenhum número do painel nem da carteira do original depende de Open Banking, aplicações financeiras, ConcilPro ou relatórios. O `StatsService` e o `listar_carteira` só leem transações, partidas, notas, comprovantes e contas bancárias, e a tela `Dashboard` só mostra os dois. Nada foi zerado nem omitido.
+
+**Gabaritos:**
+
+- `gabarito_exportacao.py` (as exportações): **750 casos, todos iguais** fora as divergências contadas.
+  - 60 da suíte (`test_exportacao.py`): 50 chamadas de `exportar` e 10 dos exportadores chamados direto.
+  - 651 inventados (semente 20261126, 16 mundos): período por competência e por datas com fuso; contas ativas, inativas e apagadas; partidas vigentes e canceladas, composições e lançamento sem par; notas de cada recorte e direção, com o CNPJ com e sem máscara, e o CNPJ da empresa inválido; conferência com e sem nota e comprovante; valores negativos e de 13 dígitos; os filtros do extrato com acento e curinga.
+  - 39 diretos: 9 de `_dicts_to_csv` e `_dicts_to_xlsx` e 30 do `ExportJobCreate`.
+  - 202 são planilhas e 36 são recusas. Os mundos ficam em `exportacao-mundos.json`; a pasta tem `.gitattributes` com `* -text`.
+- `gabarito_painel.py` (divergências, estatísticas e carteira): **275 casos, todos iguais** fora as divergências contadas. 12 da suíte (2 de divergências, 8 de estatísticas e 2 de carteira) e 263 inventados (112, 51 e 100), mais 13 testes do `round` do Python.
+- **Como a saída é gravada:** o serviço original roda num SQLite montado só com a entrada, e o plugin confere que ele repete a suíte de verdade.
+  - O banco montado se comporta como o PostgreSQL da produção nos instantes (comparados em UTC, com o fuso na volta) e no `ilike` (minúscula Unicode, `%` e `_` curingas).
+  - As razões sociais da suíte não são gravadas: viram "EMPRESA NN LTDA", na mesma ordem. O `GABARITO_NOMES` não foi preciso.
+- **Para gerar de novo,** a partir da raiz do contabil-core, com a pasta `scripts/contabil-core` do Connect no caminho e o `GABARITO_DIR` apontando para a pasta `gabarito` de cada um:
+  - `-p gabarito_exportacao tests/integration/test_exportacao.py tests/unit/test_exportacao_historico.py`;
+  - `-p gabarito_painel tests/integration/test_neo.py tests/integration/test_stats.py tests/integration/test_fase3_backend.py -k "divergencias or stats or carteira"`.
+- **Rotas:** `exportacao/route.test.ts` (4 testes), `neo/divergencias/route.test.ts` (3), `painel/route.test.ts` (3) e `carteira/route.test.ts` (3): permissão, empresa conferida, os filtros repassados, a resposta e, na exportação, a auditoria.
+- **Ensaio no banco local:** `scripts/contabil-core/ensaio-exportacoes-painel.ts`, com 25 conferências, rodado 3 vezes seguidas.
+  - Cria duas empresas "Ensaio D1" e importa um OFX inventado em cada uma.
+  - Roda o NEO com uma regra que diverge da conta da contraparte, uma que concorda e uma sem contraparte; depois cadastra notas e um comprovante e os liga.
+  - Gera cada exportação (lançamentos em CSV e XLSX, o Domínio em TXT e XLSX, o extrato com a busca e sem competência, as quatro baixas e a conferência) e confere a recusa do TXT, a conta inativa, o lançamento cancelado e o registro em `core_exportacoes`.
+  - Consulta as divergências, o painel (inclusive a virada do mês no fuso do escritório) e a carteira.
+  - Confere o isolamento entre escritórios e empresas e, no fim, apaga tudo pela exclusão da empresa.
+
+  `node scripts/local/com-banco-local.mjs npx tsx --require ./scripts/contabil-core/sem-server-only.cjs scripts/contabil-core/ensaio-exportacoes-painel.ts`
+
+Divergências da D1 (as que mudam a saída são contadas nos testes):
+
+- **Busca do extrato:** é a da aba Extrato do Connect (o `contains` do MySQL, que ignora acento e maiúscula, com `%` e `_` como texto), para o arquivo bater com a tela. No original era o `ilike` (distingue acento; `%` e `_` são curingas). 7 casos no gabarito; com o `ilike` no lugar, saem iguais.
+- **Empates de ordem:**
+  - a conferência ordena só pela data no original (o empate fica com o plano do banco); aqui desempata pela ordem do extrato (lote, posição e id). 32 casos, conferidos bloco a bloco por dia;
+  - na carteira, o empate de pendências e de razão social desempata pelo id (26 casos);
+  - nos pares de contas das divergências, pelos códigos e ids (nenhum caso no gabarito);
+  - nas partidas e nas notas, por criação e id (a divergência 1 da Fase 2);
+  - a conta bancária do painel sai por banco, agência e número. O original não ordena; é a ordem que o SQLite da suíte devolve (nenhum caso).
+- **Validação da rota:** a competência "0000-01" (o pydantic aceita o ano zero) e a vazia (aqui, "sem competência"), 2 casos. As frases de recusa são as do Connect, e os erros de validação são 400 (no original, 422).
+- **Período:** a rota recebe a competência, como a exportação do Domínio da Fase 2, e não as datas livres do original. O pedido sem competência só vale para o extrato.
+- **Mês corrente** (a série do painel e a carteira sem competência): o do escritório. No original era o de UTC; os dois diferem das 21h à meia-noite do último dia do mês. O ensaio confere a virada.
+- **Carteira:** sem a permissão por empresa do original (ver acima). A ordem alfabética é a do português (`Intl.Collator`), não a do PostgreSQL.
+- **Rótulos:** o "Conciliados" do painel do original virou "Com lançamento": é a transação com partida viva, não a conciliação bancária, que no Connect é outra aba. A atividade mensal sai numa tabela, do mês mais recente para o mais antigo (no original, um gráfico de barras), e a classificação por conta bancária usa as barras de situação dos painéis do Connect.
+- **Resposta:**
+  - as rotas novas devolvem camelCase, com o dinheiro como texto de duas casas;
+  - a recusa do CNPJ inválido vai só com a frase, sem os detalhes (`empresa_id`, `cnpj`);
+  - o nome do arquivo baixado é `<tipo>-<cnpj>-<competência>.<formato>` (no original, `<tipo>_<empresa>.<formato>`).
+
+**Achados sobre o original (reproduzidos de propósito):**
+
+- **As divergências contam decisão de transação desfeita e decisão antiga.** A consulta não olha o `deleted_at` da transação, e a decisão é registro: reclassificar ou desfazer a importação deixa as medições antigas valendo no total e no percentual.
+- **As notas usam UTC no corte e na data.** A NF-e emitida depois das 21h do último dia do mês (horário de Brasília) cai no mês seguinte, e a data impressa é a de UTC: no ensaio, a NFS-e de 20/01 às 22h30 sai como 21/01. A tela de Notas do Connect mostra o dia no fuso do escritório.
+- **A tela Registros mandava a data final no fuso do navegador** (`T23:59:59` local convertido para UTC), e a conferência usa o `.date()` desse instante: o arquivo levava um dia a mais.
+- **O painel conta a conta bancária apagada que ficou ativa:** `_por_agencia` olha só o `ativa`.
+- **A nota mostra a transação ligada mesmo desfeita:** a transação é lida só pelo id.
+- **Ordens sem desempate** na conferência, nos pares de contas, na conta bancária do painel e na carteira.
+
+**Precisam de decisão:**
+
+- As divergências: contar só a decisão vigente de transação viva?
+- As baixas de notas: cortar a competência e imprimir a data pelo dia do escritório, com a regra da tela de Notas (a nota à meia-noite UTC fica no dia gravado)?
+- O painel: tirar a conta bancária apagada da classificação por conta?
+- O Painel como aba inicial do módulo (antes era Importações).
+- A carteira mostra todas as empresas do escritório a quem vê o módulo.
+- Datas livres na exportação (o original aceitava `data_de` e `data_ate`), além da competência?

@@ -140,14 +140,58 @@ const competencia = z
     return !!m && Number(m[1]) > 0 && Number(m[2]) >= 1 && Number(m[2]) <= 12;
   }, "Competência deve estar no formato AAAA-MM, com mês entre 01 e 12.");
 
-export const exportacaoSchema = z.object({
-  mes: competencia,
-  agenciaId: idOpcional("a conta bancária"),
-  formato: z.enum(["txt", "csv"], { error: "Formato deve ser TXT ou CSV." }),
-  usarHistoricoExtrato: booleano,
-  incluirContasInativas: booleano,
-});
+/** Valor de filtro (`valor_min`/`valor_max` do `ExportJobCreate`): decimal, zero ou mais. */
+const valorDoFiltro = (nome: string) =>
+  z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => (v ? v : null))
+    .refine((v) => v === null || /^\d+(?:\.\d+)?$/.test(v), `${nome} deve ser um número maior ou igual a zero.`);
+
+/**
+ * A exportação (Fase 2; tipos e filtros do extrato na Fase D1, 26/11/2026). O tipo e o formato são
+ * conferidos depois, por `conferirPedido`, com as frases e a ordem do original. A competência é o período,
+ * como na exportação do Domínio da Fase 2; só o extrato pode sair sem ela (a aba Extrato filtra sem mês).
+ */
+export const exportacaoSchema = z
+  .object({
+    tipo: z.string().trim().nullish().transform((v) => v || "lancamentos_importacao"),
+    formato: z.string().trim(),
+    mes: competencia.nullish().or(z.literal("")).transform((v) => (v ? v : null)),
+    agenciaId: idOpcional("a conta bancária"),
+    usarHistoricoExtrato: booleano,
+    incluirContasInativas: booleano,
+    status: opcional(12, "a situação"),
+    busca: opcional(500, "a busca"),
+    dc: z.enum(["D", "C"], { error: "Escolha débito (D) ou crédito (C)." }).nullish().transform((v) => v ?? null),
+    valorMin: valorDoFiltro("O valor mínimo"),
+    valorMax: valorDoFiltro("O valor máximo"),
+  })
+  .refine((v) => v.mes !== null || v.tipo === "extrato", { message: "Informe a competência.", path: ["mes"] });
 export type EntradaExportacao = z.infer<typeof exportacaoSchema>;
+
+/** "Conflitos e qualidade" (Fase D1): competência e conta bancária opcionais, como o `GET /neo/divergencias`. */
+export const divergenciasSchema = z.object({
+  mes: competencia.nullish().or(z.literal("")).transform((v) => (v ? v : null)),
+  agenciaId: idOpcional("a conta bancária"),
+});
+
+/** O painel da empresa (Fase D1): a série de 1 a 24 meses, 12 se não vier (o `meses` do `GET /stats`). */
+export const painelSchema = z.object({
+  meses: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => (v ? v : "12"))
+    .refine((v) => /^\d{1,2}$/.test(v) && Number(v) >= 1 && Number(v) <= 24, "Escolha de 1 a 24 meses.")
+    .transform(Number),
+});
+
+/** A carteira do escritório (Fase D1): a competência, ou a do mês corrente se não vier. */
+export const carteiraSchema = z.object({
+  mes: competencia.nullish().or(z.literal("")).transform((v) => (v ? v : null)),
+});
 
 export const processarNeoSchema = z.object({
   agenciaId: idOpcional("a conta bancária"),

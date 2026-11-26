@@ -323,7 +323,7 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "contabil.core.lancamento.reclassificado": e("reclassificou a transação"),
   "contabil.core.composicao.alterada": e("alterou a composição da transação"),
   "contabil.core.neo.liberada": e("devolveu ao NEO automático a transação"),
-  "contabil.core.exportacao.gerada": o("gerou o arquivo do Domínio"),
+  "contabil.core.exportacao.gerada": o("gerou um arquivo de exportação do Contábil Core"),
   "contabil.core.conciliacao.gerada": o("conciliou o Razão com o extrato no Contábil Core", { comNome: false }),
   "contabil.core.conciliacao.revisao.criada": c("salvou para revisão uma conciliação do Razão com o extrato", { comNome: false }),
   "contabil.core.conciliacao.revisao.renomeada": e("renomeou uma revisão da conciliação bancária", { comNome: false }),
