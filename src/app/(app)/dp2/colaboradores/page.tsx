@@ -19,6 +19,7 @@ import { formatCalendarDate, formatCpf } from "@/lib/format";
 import { colaboradoresDaEmpresa, listarRubricas } from "@/lib/dp2/servidor";
 import { RubricasFixasDoContrato } from "@/components/dp2/RubricasFixasDoContrato";
 import { regraDeLancamento } from "@/lib/dp2/rubricas";
+import { horasDoHorario } from "@/lib/dp2/horarios";
 import { abrirTelaDeEmpresaDoDp2, brl, mesAtual } from "@/lib/dp2/tela";
 import { reais } from "@/lib/dp2/formato";
 import { CampoData } from "@/components/ui/CampoData";
@@ -60,10 +61,12 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
     );
   }
 
-  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, centrosDeCusto] = await Promise.all([
+  const [pessoas, cadastroDaEmpresa, linhasDeRubrica, horarios, centrosDeCusto] = await Promise.all([
     colaboradoresDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().company.findFirst({ where: { id: tela.empresa.id, tenantId: tela.tenantId }, select: { cnpj: true, kind: true } }),
     listarRubricas(tela.tenantId),
+    // Horários de trabalho da empresa (funcionalidade-752).
+    getPrisma().dp2Horario.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
     // Centros de custo do BPO da empresa (funcionalidade-751).
     getPrisma().costCenter.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
@@ -132,7 +135,17 @@ export default async function ColaboradoresDoDp2({ searchParams }: { searchParam
               <option value="HORISTA">Horista</option>
             </Select>
           </CampoForm>
-          <CampoForm label="Horas por mês" htmlFor="horasMensais" dica="220 na jornada de 44 h semanais.">
+          <CampoForm label="Horário de trabalho" htmlFor="horarioId" dica="Os horários da Configuração da empresa. Com um horário, as horas por mês e a jornada do eSocial saem dele.">
+            <Select id="horarioId" name="horarioId" defaultValue={v?.horarioId ?? ""}>
+              <option value="">Sem horário (informar as horas)</option>
+              {horarios.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nome} · {horasDoHorario(h).mensais} h/mês
+                </option>
+              ))}
+            </Select>
+          </CampoForm>
+          <CampoForm label="Horas por mês" htmlFor="horasMensais" dica="220 na jornada de 44 h semanais. Com horário escolhido, vale o do horário.">
             <Input id="horasMensais" name="horasMensais" inputMode="numeric" defaultValue={String(v?.horasMensais ?? 220)} />
           </CampoForm>
           <CampoForm label="Insalubridade" htmlFor="insalubridade">

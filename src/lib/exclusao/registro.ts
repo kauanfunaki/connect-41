@@ -207,6 +207,7 @@ const EMPRESA_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2TotalizadorEsocial", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Rescisao", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2Ferias", coluna: "companyId", tratamento: "apagar" },
+  { modelo: "Dp2Horario", coluna: "companyId", tratamento: "apagar" },
   { modelo: "Dp2SaldoInicialMedia", coluna: "companyId", tratamento: "apagar" },
   // O contato do Atendimento (10/11/2026) volta a ser só um telefone.
   { modelo: "AtendimentoContato", coluna: "companyId", tratamento: "manter", motivo: "o contato do Atendimento é do telefone; empresa que some vira só o nome do WhatsApp na tela" },
@@ -442,6 +443,7 @@ const USUARIO_SOLTAS: ColunaSolta[] = [
   { modelo: "Dp2TotalizadorEsocial", coluna: "importadoPorId", tratamento: "manter", motivo: "quem importou os totalizadores; a auditoria guarda o nome" },
   { modelo: "Dp2Rescisao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou a rescisão; a auditoria guarda o nome" },
   { modelo: "Dp2Ferias", coluna: "criadoPorId", tratamento: "manter", motivo: "quem gravou as férias; a auditoria guarda o nome" },
+  { modelo: "Dp2Horario", coluna: "criadoPorId", tratamento: "manter", motivo: "quem criou o horário; a auditoria guarda o nome" },
   { modelo: "Dp2SaldoInicialMedia", coluna: "criadoPorId", tratamento: "manter", motivo: "quem importou o saldo inicial; a auditoria guarda o nome" },
   { modelo: "Dp2InformacaoDaApuracao", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a retenção ou compensação; a auditoria guarda o nome" },
   { modelo: "Dp2OutraBaseInss", coluna: "criadoPorId", tratamento: "manter", motivo: "quem informou a outra base de INSS; a auditoria guarda o nome" },

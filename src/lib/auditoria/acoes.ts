@@ -488,6 +488,8 @@ export const ACOES: Readonly<Record<string, DescricaoDaAcao>> = {
   "folha.rescisao_excluida": x("excluiu a rescisão gravada de um colaborador no DP 2"),
   "folha.ferias_gravadas": c("gravou as férias de um colaborador no DP 2"),
   "folha.ferias_excluidas": x("excluiu férias gravadas no DP 2"),
+  "folha.horario_criado": c("criou um horário de trabalho no DP 2"),
+  "folha.horario_excluido": x("excluiu um horário de trabalho do DP 2"),
   "folha.saldo_inicial_importado": c("importou o saldo inicial das médias no DP 2"),
   "folha.saldo_inicial_conferido": c("conferiu o saldo inicial das médias no DP 2"),
   "folha.saldo_inicial_apagado": x("apagou o saldo inicial das médias de um colaborador no DP 2"),

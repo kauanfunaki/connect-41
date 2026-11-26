@@ -377,6 +377,7 @@ export const PLANO_DA_EMPRESA: readonly Passo<AlvoEmpresa>[] = [
   { modelo: "Dp2TotalizadorEsocial", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2TotalizadorEsocial.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Rescisao", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Rescisao.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2Ferias", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Ferias.deleteMany({ where: daEmpresa(a) })) },
+  { modelo: "Dp2Horario", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2Horario.deleteMany({ where: daEmpresa(a) })) },
   { modelo: "Dp2SaldoInicialMedia", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.dp2SaldoInicialMedia.deleteMany({ where: daEmpresa(a) })) },
   // XML recusado pelo leitor (06/11/2026): o arquivo guarda os dados da empresa e sai com ela.
   { modelo: "FiscalXmlRefusal", acao: "apagar", coluna: "companyId", executar: (tx, a) => n(tx.fiscalXmlRefusal.deleteMany({ where: daEmpresa(a) })) },
