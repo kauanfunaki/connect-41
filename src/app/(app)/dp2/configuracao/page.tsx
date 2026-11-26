@@ -9,13 +9,14 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Aviso } from "@/components/ui/Aviso";
 import { FiltroDaEmpresa, EscolhaAEmpresa } from "@/components/empresas/FiltroDaEmpresa";
 import { FormularioDoDp2 } from "@/components/dp2/Formulario";
-import { Secao } from "@/components/dp2/Secao";
+import { Secao, TD, TH, TR } from "@/components/dp2/Secao";
+import { horasDoHorario, NOMES_DOS_DIAS } from "@/lib/dp2/horarios";
 import { getPrisma } from "@/lib/prisma";
 import { configDaEmpresa } from "@/lib/dp2/servidor";
 import { responsaveisDeSst } from "@/lib/dp2/esocial/servidor";
 import { aliquotaPatronal } from "@/lib/dp2/mensal";
 import { abrirTelaDeEmpresaDoDp2 } from "@/lib/dp2/tela";
-import { salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
+import { criarHorarioAction, excluirHorarioAction, salvarConfigDaEmpresaAction, salvarResponsaveisDeSstAction } from "../actions";
 
 const fmt = (v: number, casas = 2) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: 4 }).format(v);
 
@@ -33,11 +34,18 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
       </PageContainer>
     );
   }
-  const [cfg, convencoes, sst] = await Promise.all([
+  const [cfg, convencoes, sst, horarios] = await Promise.all([
     configDaEmpresa(tela.tenantId, tela.empresa.id),
     getPrisma().dp2Convencao.findMany({ where: { tenantId: tela.tenantId, ativa: true }, orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
     responsaveisDeSst(tela.tenantId, tela.empresa.id),
+    // Horários de trabalho (funcionalidade-752), com quantos contratos usam cada um.
+    getPrisma().dp2Horario.findMany({ where: { tenantId: tela.tenantId, companyId: tela.empresa.id }, orderBy: { nome: "asc" } }),
   ]);
+  const usoDoHorario = new Map(
+    (
+      await getPrisma().dp2Vinculo.groupBy({ by: ["horarioId"], where: { tenantId: tela.tenantId, horarioId: { in: horarios.map((h) => h.id) } }, _count: { _all: true } })
+    ).map((g) => [g.horarioId, g._count._all])
+  );
   const patronal = aliquotaPatronal(cfg.empresa);
 
   return (
@@ -133,6 +141,89 @@ export default async function ConfiguracaoDaEmpresaNoDp2({ searchParams }: { sea
           </FormularioDoDp2>
         ) : (
           <p className="text-fs-3 text-fg-muted">Você pode ver, mas não alterar a configuração.</p>
+        )}
+      </Secao>
+      <Secao titulo="Horários de trabalho" className="mt-5" apoio="O contrato de cada colaborador escolhe um horário: as horas por mês do cálculo e a jornada do eSocial saem dele.">
+        {horarios.length > 0 && (
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full min-w-[640px] text-fs-3">
+              <thead>
+                <tr>
+                  <th className={TH}>Horário</th>
+                  <th className={TH}>Jornada</th>
+                  <th className={TH}>Horas</th>
+                  <th className={TH}>Contratos</th>
+                  <th className={TH}>
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {horarios.map((h) => {
+                  const horas = horasDoHorario(h);
+                  const uso = usoDoHorario.get(h.id) ?? 0;
+                  return (
+                    <tr key={h.id} className={TR}>
+                      <td className={`${TD} font-medium`}>{h.nome}</td>
+                      <td className={TD}>{horas.descricao}</td>
+                      <td className={`${TD} tabular-nums whitespace-nowrap`}>
+                        {fmt(horas.semanais, 0)} h/semana · {horas.mensais} h/mês
+                      </td>
+                      <td className={`${TD} tabular-nums`}>{uso}</td>
+                      <td className={`${TD} text-right pr-0`}>
+                        {tela.podeAgir && uso === 0 && (
+                          <FormularioDoDp2
+                            acao={excluirHorarioAction}
+                            rotulo="Excluir"
+                            rotuloEnviando="Excluindo…"
+                            variante="secondary"
+                            tamanho="sm"
+                            confirmar={{ titulo: "Excluir o horário?", texto: `O horário "${h.nome}" sai da lista da empresa.`, rotulo: "Excluir" }}
+                          >
+                            <input type="hidden" name="horarioId" value={h.id} />
+                          </FormularioDoDp2>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tela.podeAgir && (
+          <FormularioDoDp2 acao={criarHorarioAction} rotulo="Criar horário" rotuloEnviando="Criando…" variante="secondary">
+            <input type="hidden" name="companyId" value={tela.empresa.id} />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CampoForm label="Nome" htmlFor="horario-nome">
+                <Input id="horario-nome" name="nome" maxLength={80} placeholder="Comercial 44 h" required />
+              </CampoForm>
+              <CampoForm label="Entrada" htmlFor="horario-entrada">
+                <Input id="horario-entrada" name="entrada" placeholder="08:00" defaultValue="08:00" required />
+              </CampoForm>
+              <CampoForm label="Saída" htmlFor="horario-saida">
+                <Input id="horario-saida" name="saida" placeholder="17:48" defaultValue="17:48" required />
+              </CampoForm>
+              <CampoForm label="Intervalo (minutos)" htmlFor="horario-intervalo">
+                <Input id="horario-intervalo" name="intervalo" inputMode="numeric" defaultValue="60" />
+              </CampoForm>
+            </div>
+            <fieldset className="mt-4">
+              <legend className="text-label text-fg-secondary mb-2">Dias da semana</legend>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {NOMES_DOS_DIAS.map((d, i) => (
+                  <Checkbox key={d} id={`horario-dia-${i}`} name="dias" value={String(i)} label={d[0].toUpperCase() + d.slice(1)} defaultChecked={i < 5} />
+                ))}
+              </div>
+            </fieldset>
+            <CampoForm label="Tipo de jornada (eSocial)" htmlFor="horario-tipo" className="mt-4 max-w-sm">
+              <Select id="horario-tipo" name="tipoJornada" defaultValue="9">
+                <option value="9">9 · Demais tipos de jornada</option>
+                <option value="2">2 · 12 x 36</option>
+                <option value="3">3 · Fixa, com folga fixa no domingo</option>
+              </Select>
+            </CampoForm>
+          </FormularioDoDp2>
         )}
       </Secao>
       <Secao titulo="Saúde e segurança (eSocial)" className="mt-5">
